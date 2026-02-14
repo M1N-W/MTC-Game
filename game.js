@@ -397,6 +397,7 @@ async function initAI() {
     }
 }
 
+// Expose to global scope for HTML onclick
 window.startGame = function() {
     Audio.init();
     player = new Player();
@@ -425,6 +426,7 @@ window.startGame = function() {
     requestAnimationFrame(gameLoop);
 };
 
+// Expose to global scope
 window.endGame = async function(result) {
     gameState = 'GAMEOVER';
     
@@ -449,6 +451,12 @@ window.endGame = async function(result) {
         }
     }
 };
+
+// Make startGame available immediately
+if (typeof window !== 'undefined') {
+    window.startGame = window.startGame;
+    window.endGame = window.endGame;
+}
 
 // ==================== INPUT ====================
 window.addEventListener('keydown', e => {
