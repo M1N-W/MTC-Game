@@ -1,4 +1,4 @@
-# 🎮 MTC: ENHANCED EDITION
+# 🎮 MTC the Game
 
 ## 📁 Modular Structure
 
