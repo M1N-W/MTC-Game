@@ -59,7 +59,7 @@ class GeminiAI {
     }
 }
 
-const Gemini = new GeminiAI(API_KEY);
+const Gemini = new GeminiAI("AIzaSyAZrYjazB7HHLERjKFtVazz-Mi5dfmR0v8");
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { GeminiAI, Gemini };
