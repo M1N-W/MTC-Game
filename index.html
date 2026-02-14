@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MTC: Enhanced Edition</title>
+    <title>MTC: Enhanced Edition v2.0</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;600;800&family=Orbitron:wght@700;900&display=swap');
 
@@ -91,6 +91,45 @@
         .en-fill {
             background: linear-gradient(90deg, #fbbf24, #f59e0b);
             box-shadow: 0 0 10px #fbbf24;
+        }
+
+        /* NEW: Level and EXP bar */
+        .level-info {
+            margin-top: 8px;
+        }
+
+        .level-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        #player-level {
+            font-weight: bold;
+            color: #8b5cf6;
+            font-size: 14px;
+            background: rgba(139, 92, 246, 0.2);
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid #8b5cf6;
+        }
+
+        .exp-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+
+        #exp-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            box-shadow: 0 0 10px #8b5cf6;
+            transition: width 0.3s ease-out;
         }
 
         .stats-box {
@@ -306,6 +345,7 @@
             justify-content: center;
             gap: 15px;
             flex-wrap: wrap;
+            align-items: flex-end;
         }
 
         .skill-icon {
@@ -327,6 +367,38 @@
             border-color: #facc15;
             box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
             transform: scale(1.1);
+        }
+
+        /* NEW: Passive Skill Icon */
+        #passive-skill {
+            border-color: #fbbf24;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+            background: rgba(251, 191, 36, 0.1);
+            display: none;
+        }
+
+        #passive-skill.unlocked {
+            display: flex;
+            animation: pulseGold 2s infinite;
+        }
+
+        @keyframes pulseGold {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(251, 191, 36, 1);
+            }
+        }
+
+        .skill-name {
+            position: absolute;
+            bottom: -20px;
+            font-size: 9px;
+            color: #fbbf24;
+            font-weight: bold;
+            white-space: nowrap;
+            text-align: center;
         }
 
         .cooldown-mask {
@@ -395,6 +467,15 @@
             margin-bottom: 30px;
         }
 
+        .version-badge {
+            background: #8b5cf6;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
         .instructions {
             color: #cbd5e1;
             text-align: center;
@@ -413,6 +494,33 @@
             color: #60a5fa;
             font-style: italic;
             font-size: 18px;
+        }
+
+        .new-features {
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid #8b5cf6;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            max-width: 600px;
+        }
+
+        .new-features h3 {
+            color: #a855f7;
+            margin-bottom: 10px;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         #report-card {
@@ -510,6 +618,9 @@
                 font-size: 14px;
                 padding: 8px 16px;
             }
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -522,7 +633,7 @@
 
     <div class="weapon-indicator">
         <div class="weapon-name" id="weapon-name">AUTO RIFLE</div>
-        <div class="weapon-hint">กด Q เพื่อสลับอาวุธ</div>
+        <div class="weapon-hint">กด Q เพื่อสลับอาวุธ | Burst Fire: 3 นัดติด</div>
     </div>
 
     <div id="ui-layer">
@@ -537,6 +648,16 @@
                         <div id="en-bar" class="bar-fill en-fill" style="width: 100%;"></div>
                     </div>
                     <div style="font-size: 11px; color:#94a3b8;">HP & FOCUS</div>
+                    
+                    <!-- NEW: Level and EXP -->
+                    <div class="level-info">
+                        <div class="level-display">
+                            <span id="player-level">Lv.1</span>
+                            <div class="exp-bar-bg">
+                                <div id="exp-bar"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="stats-box">
@@ -570,13 +691,36 @@
                 📖
                 <div class="cooldown-mask" id="stealth-cd"></div>
             </div>
+            <!-- NEW: Passive Skill Icon -->
+            <div class="skill-icon" id="passive-skill">
+                <div style="font-size: 20px;">✨</div>
+                <div class="skill-name">ซุ่มเสรี</div>
+            </div>
         </div>
     </div>
 
     <div id="overlay">
-        <div class="title">MTC<br><span class="subtitle">ENHANCED EDITION</span></div>
+        <div class="title">
+            MTC<br>
+            <span class="subtitle">ENHANCED EDITION <span class="version-badge">v2.0</span></span>
+        </div>
 
         <div id="mission-brief">กำลังโหลดภารกิจ...</div>
+
+        <!-- NEW: Features -->
+        <div class="new-features">
+            <h3>✨ ฟีเจอร์ใหม่ v2.0</h3>
+            <div class="feature-list">
+                <div class="feature-item">🎯 ระบบ Level & EXP</div>
+                <div class="feature-item">✨ Passive Skill "ซุ่มเสรี"</div>
+                <div class="feature-item">🔫 Burst Fire (Auto)</div>
+                <div class="feature-item">🏫 MTC Room (Safe Zone)</div>
+                <div class="feature-item">🎨 โมเดลปืนใหม่</div>
+                <div class="feature-item">🔊 เสียงนุ่มนวล</div>
+                <div class="feature-item">🗺️ แมพสะอาด 50%</div>
+                <div class="feature-item">🐛 แก้ Bug ทั้งหมด</div>
+            </div>
+        </div>
 
         <div id="report-card">
             <div class="report-title">
@@ -587,20 +731,20 @@
         </div>
 
         <div class="instructions">
-            <p style="font-size:18px; margin-bottom:15px;">🎯 <strong>ภารกิจ:</strong> รับบทเป็น "เก้า" ต่อสู้ในห้องเรียน MTC</p>
-            <p style="margin-bottom:10px;">🔫 <strong>NEW!</strong> 3 โหมดอาวุธ: Auto / Sniper / Shotgun</p>
+            <p style="font-size:18px; margin-bottom:15px;">🎯 <strong>ภารกิจ:</strong> ฆ่าศัตรู > Level Up > ปลดล็อค Passive!</p>
+            <p style="margin-bottom:10px;">🌟 <strong>Passive "ซุ่มเสรี":</strong> Lv.3 + ใช้ Stealth 5 ครั้ง</p>
             <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin:15px 0; font-size:14px;">
                 <div>🎮 <strong>WASD</strong> - เคลื่อนที่</div>
-                <div>🔫 <strong>คลิกซ้าย</strong> - ยิง</div>
+                <div>🔫 <strong>คลิกซ้าย</strong> - ยิง (Burst x3)</div>
                 <div>📖 <strong>คลิกขวา</strong> - ซุ่มอ่าน</div>
                 <div>💨 <strong>SPACE</strong> - พุ่งตัว</div>
                 <div>🔄 <strong>Q</strong> - สลับปืน</div>
-                <div>🏫 <strong></strong> - แมพโรงเรียน</div>
+                <div>🏫 <strong>MTC Room</strong> - Safe Zone</div>
             </div>
-            <p style="font-size:14px; color:#94a3b8;">💡 ลอง Sniper (2x dmg) และ Shotgun (3x dmg ระยะใกล้)!</p>
+            <p style="font-size:14px; color:#94a3b8;">💡 Tips: หา MTC Room เพื่อรักษาตัว (5 วินาที)!</p>
         </div>
 
-        <button class="btn" onclick="startGame()">✨ START GAME</button>
+        <button class="btn" onclick="startGame()">✨ START GAME v2.0</button>
         <div id="ai-loading">Connecting to AI...</div>
     </div>
 
