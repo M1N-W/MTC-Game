@@ -1,12 +1,18 @@
 /**
- * 🔊 MTC: ENHANCED EDITION - Audio System
- * Improved Web Audio API sound effects
+ * 🔊 MTC: ENHANCED EDITION - Audio System (IMPROVED)
+ * Smoother, more pleasant sound effects
+ * 
+ * IMPROVEMENTS:
+ * - Reduced volume across all sounds
+ * - Softer attack/decay envelopes
+ * - More pleasant frequencies
+ * - Smoother transitions
  */
 
 class AudioSystem {
     constructor() {
         this.ctx = null;
-        this.masterVolume = 0.7;
+        this.masterVolume = 0.4; // REDUCED from 0.7
         this.enabled = true;
     }
     
@@ -20,7 +26,7 @@ class AudioSystem {
         }
     }
     
-    // IMPROVED: Auto Rifle - Less harsh, smoother
+    // IMPROVED: Auto Rifle - Smooth and pleasant
     playShootAuto() {
         if (!this.enabled || !this.ctx) return;
         
@@ -30,17 +36,17 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        // Square wave for crisp but not harsh sound
-        osc.type = 'square';
-        osc.frequency.value = 350;
-        gain.gain.value = 0.06 * this.masterVolume; // Reduced from 0.1
+        // Sine wave for smooth sound
+        osc.type = 'sine';
+        osc.frequency.value = 400; // Pleasant frequency
+        gain.gain.value = 0.03 * this.masterVolume; // Very soft
         
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
-        osc.stop(this.ctx.currentTime + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+        osc.stop(this.ctx.currentTime + 0.05);
     }
     
-    // NEW: Sniper - Deep, powerful sound
+    // IMPROVED: Sniper - Deep but smooth
     playShootSniper() {
         if (!this.enabled || !this.ctx) return;
         
@@ -50,19 +56,18 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        // Triangle wave for smoother sound
-        osc.type = 'triangle';
-        osc.frequency.value = 200;
-        gain.gain.value = 0.12 * this.masterVolume;
+        // Sine wave for smoothness
+        osc.type = 'sine';
+        osc.frequency.value = 250;
+        gain.gain.value = 0.06 * this.masterVolume; // Reduced
         
         osc.start();
-        // Frequency drops for impact
-        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.25);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
-        osc.stop(this.ctx.currentTime + 0.25);
+        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.stop(this.ctx.currentTime + 0.2);
     }
     
-    // NEW: Shotgun - Punchy, explosive sound
+    // IMPROVED: Shotgun - Punchy but not harsh
     playShootShotgun() {
         if (!this.enabled || !this.ctx) return;
         
@@ -72,17 +77,16 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        // Sawtooth for aggressive sound
-        osc.type = 'sawtooth';
-        osc.frequency.value = 120;
-        gain.gain.value = 0.15 * this.masterVolume;
+        // Triangle for softer punch
+        osc.type = 'triangle';
+        osc.frequency.value = 150;
+        gain.gain.value = 0.08 * this.masterVolume; // Reduced
         
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-        osc.stop(this.ctx.currentTime + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+        osc.stop(this.ctx.currentTime + 0.12);
     }
     
-    // Main shoot function (routes to correct weapon)
     playShoot(weaponType = 'auto') {
         switch (weaponType) {
             case 'auto': this.playShootAuto(); break;
@@ -92,7 +96,7 @@ class AudioSystem {
         }
     }
     
-    // Dash sound (unchanged - already good)
+    // IMPROVED: Dash - Smooth whoosh
     playDash() {
         if (!this.enabled || !this.ctx) return;
         
@@ -102,17 +106,17 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        osc.type = 'sawtooth';
-        osc.frequency.value = 200;
-        gain.gain.value = 0.15 * this.masterVolume;
+        osc.type = 'sine';
+        osc.frequency.value = 250;
+        gain.gain.value = 0.08 * this.masterVolume; // Reduced
         
         osc.start();
-        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.2);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-        osc.stop(this.ctx.currentTime + 0.2);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        osc.stop(this.ctx.currentTime + 0.15);
     }
     
-    // Hit sound
+    // IMPROVED: Hit - Softer impact
     playHit() {
         if (!this.enabled || !this.ctx) return;
         
@@ -122,16 +126,16 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        osc.type = 'square';
-        osc.frequency.value = 150;
-        gain.gain.value = 0.08 * this.masterVolume;
+        osc.type = 'sine';
+        osc.frequency.value = 180;
+        gain.gain.value = 0.04 * this.masterVolume; // Reduced
         
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-        osc.stop(this.ctx.currentTime + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        osc.stop(this.ctx.currentTime + 0.1);
     }
     
-    // Power-up sound
+    // IMPROVED: Power-up - Pleasant chime
     playPowerUp() {
         if (!this.enabled || !this.ctx) return;
         
@@ -141,20 +145,21 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        osc.frequency.value = 400;
-        gain.gain.value = 0.12 * this.masterVolume;
+        osc.type = 'sine';
+        osc.frequency.value = 500;
+        gain.gain.value = 0.06 * this.masterVolume; // Reduced
         
         osc.start();
-        osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-        osc.stop(this.ctx.currentTime + 0.3);
+        osc.frequency.exponentialRampToValueAtTime(1000, this.ctx.currentTime + 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+        osc.stop(this.ctx.currentTime + 0.25);
     }
     
-    // Achievement sound (triple note)
+    // IMPROVED: Achievement - Gentle triple chime
     playAchievement() {
         if (!this.enabled || !this.ctx) return;
         
-        [0, 0.1, 0.2].forEach((delay, i) => {
+        [0, 0.08, 0.16].forEach((delay, i) => {
             setTimeout(() => {
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
@@ -162,17 +167,18 @@ class AudioSystem {
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
                 
-                osc.frequency.value = 600 + i * 200;
-                gain.gain.value = 0.1 * this.masterVolume;
+                osc.type = 'sine';
+                osc.frequency.value = 600 + i * 150; // Closer intervals
+                gain.gain.value = 0.05 * this.masterVolume; // Reduced
                 
                 osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-                osc.stop(this.ctx.currentTime + 0.2);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.stop(this.ctx.currentTime + 0.15);
             }, delay * 1000);
         });
     }
     
-    // NEW: Weapon switch sound
+    // IMPROVED: Weapon switch - Soft click
     playWeaponSwitch() {
         if (!this.enabled || !this.ctx) return;
         
@@ -182,16 +188,17 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        osc.frequency.value = 500;
-        gain.gain.value = 0.08 * this.masterVolume;
+        osc.type = 'sine';
+        osc.frequency.value = 600;
+        gain.gain.value = 0.04 * this.masterVolume; // Reduced
         
         osc.start();
-        osc.frequency.linearRampToValueAtTime(700, this.ctx.currentTime + 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-        osc.stop(this.ctx.currentTime + 0.1);
+        osc.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+        osc.stop(this.ctx.currentTime + 0.08);
     }
     
-    // Enemy death sound
+    // IMPROVED: Enemy death - Smooth fade
     playEnemyDeath() {
         if (!this.enabled || !this.ctx) return;
         
@@ -201,17 +208,17 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        osc.type = 'sawtooth';
+        osc.type = 'sine';
         osc.frequency.value = 300;
-        gain.gain.value = 0.1 * this.masterVolume;
+        gain.gain.value = 0.05 * this.masterVolume; // Reduced
         
         osc.start();
-        osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-        osc.stop(this.ctx.currentTime + 0.3);
+        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+        osc.stop(this.ctx.currentTime + 0.25);
     }
     
-    // Boss special attack sound
+    // IMPROVED: Boss special - Smooth powerful sound
     playBossSpecial() {
         if (!this.enabled || !this.ctx) return;
         
@@ -221,17 +228,17 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        osc.type = 'triangle';
-        osc.frequency.value = 100;
-        gain.gain.value = 0.15 * this.masterVolume;
+        osc.type = 'sine';
+        osc.frequency.value = 150;
+        gain.gain.value = 0.08 * this.masterVolume; // Reduced
         
         osc.start();
-        osc.frequency.linearRampToValueAtTime(500, this.ctx.currentTime + 0.2);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
-        osc.stop(this.ctx.currentTime + 0.4);
+        osc.frequency.linearRampToValueAtTime(400, this.ctx.currentTime + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+        osc.stop(this.ctx.currentTime + 0.35);
     }
     
-    // Meteor warning sound
+    // IMPROVED: Meteor warning - Gentle pulsing
     playMeteorWarning() {
         if (!this.enabled || !this.ctx) return;
         
@@ -242,23 +249,66 @@ class AudioSystem {
         gain.connect(this.ctx.destination);
         
         osc.type = 'sine';
-        osc.frequency.value = 800;
-        gain.gain.value = 0.08 * this.masterVolume;
+        osc.frequency.value = 700;
+        gain.gain.value = 0.04 * this.masterVolume; // Reduced
         
         osc.start();
         
-        // Oscillating warning sound
+        // Gentle oscillation
         for (let i = 0; i < 3; i++) {
             setTimeout(() => {
-                osc.frequency.value = 800 + Math.sin(i) * 200;
+                osc.frequency.value = 700 + Math.sin(i) * 100;
             }, i * 100);
         }
         
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-        osc.stop(this.ctx.currentTime + 0.5);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+        osc.stop(this.ctx.currentTime + 0.4);
     }
     
-    // Volume control
+    // NEW: Level up sound - Triumphant but pleasant
+    playLevelUp() {
+        if (!this.enabled || !this.ctx) return;
+        
+        const frequencies = [523, 659, 784]; // C, E, G chord
+        
+        frequencies.forEach((freq, i) => {
+            setTimeout(() => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = 0.04 * this.masterVolume;
+                
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.stop(this.ctx.currentTime + 0.3);
+            }, i * 80);
+        });
+    }
+    
+    // NEW: Heal sound - Gentle restore
+    playHeal() {
+        if (!this.enabled || !this.ctx) return;
+        
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc.type = 'sine';
+        osc.frequency.value = 800;
+        gain.gain.value = 0.03 * this.masterVolume;
+        
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.stop(this.ctx.currentTime + 0.2);
+    }
+    
     setMasterVolume(volume) {
         this.masterVolume = clamp(volume, 0, 1);
     }
@@ -267,7 +317,6 @@ class AudioSystem {
         return this.masterVolume;
     }
     
-    // Mute/Unmute
     mute() {
         this.enabled = false;
     }
@@ -282,10 +331,8 @@ class AudioSystem {
     }
 }
 
-// Create singleton instance
 const Audio = new AudioSystem();
 
-// Export
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Audio, AudioSystem };
 }
