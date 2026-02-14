@@ -188,7 +188,11 @@ class Boss extends Entity {
             for (let i = 0; i < 3; i++) setTimeout(() => window.powerups.push(new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))), i * 200);
             window.boss = null;
             Achievements.check('boss_down');
-            setTimeout(() => { nextWave(); if (getWave() > 5) window.endGame('victory'); }, 2000);
+            setTimeout(() => { 
+                setWave(getWave() + 1);
+                if (getWave() > 5) window.endGame('victory');
+                else startNextWave();
+            }, 2000);
         }
     }
     
@@ -238,7 +242,7 @@ class Boss extends Entity {
 }
 
 // ==================== WAVE SYSTEM ====================
-function nextWave() {
+function startNextWave() {
     resetEnemiesKilled();
     waveStartDamage = Achievements.stats.damageTaken;
     setElementText('wave-badge', `WAVE ${getWave()}`);
@@ -251,7 +255,7 @@ function nextWave() {
         setTimeout(() => {
             window.boss = new Boss(Math.floor(getWave() / BALANCE.waves.bossEveryNWaves));
             UIManager.updateBossHUD(window.boss);
-            setElementText('boss-name', `KRU MANOP - LEVEL ${Math.floor(getWave() / BALANCE.waves.bossEveryNWaves)} <span class="ai-badge">AI</span>`);
+            document.getElementById('boss-name').innerHTML = `KRU MANOP - LEVEL ${Math.floor(getWave() / BALANCE.waves.bossEveryNWaves)} <span class="ai-badge">AI</span>`;
             spawnFloatingText('BOSS INCOMING!', player.x, player.y - 100, '#ef4444', 35);
             addScreenShake(15);
         }, 3000);
@@ -303,9 +307,9 @@ function updateGame(dt) {
     
     if (getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss) {
         if (Achievements.stats.damageTaken === waveStartDamage && getEnemiesKilled() >= 5) Achievements.check('no_damage');
-        nextWave();
         setWave(getWave() + 1);
         Achievements.check('wave_1');
+        startNextWave();
     }
     
     for (let i = specialEffects.length - 1; i >= 0; i--) {
@@ -397,8 +401,7 @@ async function initAI() {
     }
 }
 
-// Expose to global scope for HTML onclick
-window.startGame = function() {
+function startGame() {
     Audio.init();
     player = new Player();
     enemies = [];
@@ -420,14 +423,13 @@ window.startGame = function() {
     hideElement('overlay');
     hideElement('report-card');
     
-    nextWave();
+    startNextWave();
     gameState = 'PLAYING';
     resetTime();
     requestAnimationFrame(gameLoop);
-};
+}
 
-// Expose to global scope
-window.endGame = async function(result) {
+async function endGame(result) {
     gameState = 'GAMEOVER';
     
     if (result === 'victory') {
@@ -450,12 +452,6 @@ window.endGame = async function(result) {
             document.getElementById('report-text').textContent = "ตั้งใจเรียนให้มากกว่านี้นะ...";
         }
     }
-};
-
-// Make startGame available immediately
-if (typeof window !== 'undefined') {
-    window.startGame = window.startGame;
-    window.endGame = window.endGame;
 }
 
 // ==================== INPUT ====================
@@ -502,12 +498,12 @@ window.addEventListener('mouseup', e => {
 
 window.addEventListener('contextmenu', e => e.preventDefault());
 
+// ==================== EXPOSE TO GLOBAL ====================
+window.startGame = startGame;
+window.endGame = endGame;
+
 // Init on load
 window.onload = () => {
     initCanvas();
     initAI();
 };
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Boss, gameLoop, startGame, endGame, nextWave, spawnEnemies };
-}
