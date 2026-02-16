@@ -156,8 +156,8 @@ class MTCRoom {
         this.y = y;
         this.w = 200;
         this.h = 200;
-        this.healRate = 10; // HP per second
-        this.maxStayTime = 5; // seconds
+        this.healRate = 20; // HP per second
+        this.maxStayTime = 4; // seconds
         this.playerStayTime = 0;
         this.cooldownTime = 10; // seconds before can use again
         this.cooldown = 0;
@@ -282,7 +282,7 @@ class MTCRoom {
             CTX.globalAlpha = 1;
             CTX.font = 'bold 14px Arial';
             CTX.fillText('SAFE ZONE - เข้ามารักษาตัว', screen.x + this.w / 2, screen.y + this.h / 2 + 20);
-            CTX.fillText('(5 วินาที)', screen.x + this.w / 2, screen.y + this.h / 2 + 40);
+            CTX.fillText('(4 วินาที)', screen.x + this.w / 2, screen.y + this.h / 2 + 40);
         }
         
         // Show timer when player is inside
