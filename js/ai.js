@@ -17,7 +17,7 @@ const AI_CONFIG = {
     
     timeout: 5000,              // เวลารอสูงสุด (ms)
     maxRetries: 1,              // จำนวนครั้งที่ลองใหม่
-    enabled: true,              // เปิด/ปิด AI (false = ใช้ fallback เท่านั้น)
+    enabled: false,              // เปิด/ปิด AI (false = ใช้ fallback เท่านั้น)
     
     // API endpoint
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/models'
