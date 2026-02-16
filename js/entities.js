@@ -1,11 +1,11 @@
 /**
  * 👾 MTC: ENHANCED EDITION - Game Entities (FIXED)
  * Player, Enemies, Boss, PowerUps with Level System & Passive Skills
- * 
- * FIXED BUGS:
+ * * FIXED BUGS:
  * - Added base crit chance (5%)
  * - Passive skill adds +2% crit chance on top of base
  * - Fixed damage calculation
+ * - Syntax errors resolved
  */
 
 // Base Entity Class
@@ -66,70 +66,9 @@ class Player extends Entity {
         this.goldenAuraTimer = 0;
     }
     
-    
-  update(dt, keys, mouse) {
-    let ax = 0, ay = 0;
-    let isTouchMove = false;
-
-    if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
-      ax = window.touchJoystickLeft.nx;
-      ay = window.touchJoystickLeft.ny;
-      isTouchMove = true;
-    } else {
-      if (keys.w) ay -= 1;
-      if (keys.s) ay += 1;
-      if (keys.a) ax -= 1;
-      if (keys.d) ax += 1;
-    }
-
-    if (this.isConfused) { ax *= -1; ay *= -1; }
-
-    if (ax !== 0 || ay !== 0) {
-      if (!isTouchMove) {
-        const len = Math.hypot(ax, ay) || 1;
-        ax /= len; ay /= len;
-      }
-      this.walkCycle += dt * 15;
-    } else {
-      this.walkCycle = 0;
-    }
-
-    let speedMult = (this.isInvisible ? BALANCE.player.stealthSpeedBonus : 1) * this.speedBoost;
-    if (this.speedBoostTimer > 0) speedMult += BALANCE.player.speedOnHit / BALANCE.player.moveSpeed;
-
-    if (!this.isDashing) {
-      this.vx += ax * BALANCE.player.acceleration * dt;
-      this.vy += ay * BALANCE.player.acceleration * dt;
-      this.vx *= BALANCE.player.friction;
-      this.vy *= BALANCE.player.friction;
-      const cs = Math.hypot(this.vx, this.vy);
-      if (cs > BALANCE.player.moveSpeed * speedMult) {
-        const scale = BALANCE.player.moveSpeed * speedMult / cs;
-        this.vx *= scale; this.vy *= scale;
-      }
-    }
-
-    this.applyPhysics(dt);
-    this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
-    this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
-
-    if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
-    if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
-
-    if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
-    if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= BALANCE.player.stealthCost) {
-      this.activateStealth();
-      mouse.right = 0;
-    }
-
-    if (window.touchJoystickRight && window.touchJoystickRight.active && (window.touchJoystickRight.nx !== 0 || window.touchJoystickRight.ny !== 0)) {
-      this.angle = Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
-    } else {
-      this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
-    }
-  }
-
-        
+    // ✅ This single, combined update method fixes the syntax error
+    update(dt, keys, mouse) {
+        // Status Effects
         if (this.isBurning) {
             this.burnTimer -= dt;
             this.hp -= this.burnDamage * dt;
@@ -283,9 +222,6 @@ class Player extends Entity {
     
     // Check and unlock passive skill
     checkPassiveUnlock() {
-        // Debug logging
-        console.log(`🔍 Checking passive: Level ${this.level}/3, Stealth ${this.stealthUseCount}/5, Unlocked: ${this.passiveUnlocked}`);
-        
         if (!this.passiveUnlocked && this.level >= 3 && this.stealthUseCount >= 5) {
             this.passiveUnlocked = true;
             
@@ -301,13 +237,7 @@ class Player extends Entity {
             this.goldenAuraTimer = 3;
             
             Audio.playAchievement();
-            
-            // Show notification
             showVoiceBubble("ทักษะ 'ซุ่มเสรี' ปลดล็อคแล้ว!", this.x, this.y - 40);
-            
-            console.log('🌟 Passive Skill Unlocked: ซุ่มเสรี');
-            console.log(`Max HP: ${this.maxHp} (+50%)`);
-            console.log('Lifesteal: 2% | Crit Chance: +3.5%');
         }
     }
     
@@ -342,8 +272,6 @@ class Player extends Entity {
         
         // Check passive unlock after level up
         this.checkPassiveUnlock();
-        
-        console.log(`🎉 Level Up! Now Level ${this.level}`);
     }
     
     takeDamage(amt) {
@@ -390,7 +318,7 @@ class Player extends Entity {
         
         // FIXED: Lifesteal only if passive is active
         if (this.passiveUnlocked) {
-            const healAmount = damage * 0.02;// +2% per hit from passive
+            const healAmount = damage * 0.02; // +2% per hit from passive
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             
             if (Math.random() < 0.3) {
@@ -953,7 +881,6 @@ class PowerUp {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Entity, Player, Enemy, TankEnemy, MageEnemy, PowerUp };
 }
-
 
 // ===== SAFE MOBILE PATCH (non-destructive wrapper) =====
 if (typeof Player !== "undefined") {
