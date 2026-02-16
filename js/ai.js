@@ -229,13 +229,9 @@ class GeminiAI {
     async getMissionName() {
         const fallbacks = [
             "พิชิตครูมานพ",
-            "สงครามสมการ",
-            "ปฏิบัติการคณิตศาสตร์",
-            "ภารกิจเลขลึกลับ",
-            "ผจญภัยห้องคณิต",
-            "ลุยสูตรสมการ",
-            "ศึกคณิตมรณะ",
-            "บททดสอบสุดโหด"
+            "Equation War",
+            "Math Operation",
+            "MTC Adventure",
         ];
         
         // ลองใช้ AI
