@@ -4,7 +4,7 @@
  */
 
 // API Configuration
-const API_KEY = ""; // Add your Gemini API key here
+const API_KEY = CONFIG_SECRETS.GEMINI_API_KEY; 
 
 // Enhanced Balance Configuration
 const BALANCE = {
