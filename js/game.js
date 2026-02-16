@@ -1,6 +1,11 @@
 /**
- * 🎮 MTC: ENHANCED EDITION - Main Game Loop
+ * 🎮 MTC: ENHANCED EDITION - Main Game Loop (FIXED)
  * Game state, Boss, waves, input, loop
+ * 
+ * FIXED BUGS:
+ * - Proper burst fire integration in game loop
+ * - Better mouse input handling
+ * - Continuous fire for auto rifle during burst
  */
 
 // Game State
@@ -61,6 +66,7 @@ class Boss extends Entity {
             spawnFloatingText("ENRAGED!", this.x, this.y - 80, '#ef4444', 40);
             addScreenShake(20);
             this.speak("Enough playing around!");
+            Audio.playBossSpecial();
         }
         
         if (this.log457State === 'charging') {
@@ -131,6 +137,7 @@ class Boss extends Entity {
                 }
                 addScreenShake(15);
                 spawnFloatingText("POP QUIZ!", this.x, this.y - 80, '#facc15', 40);
+                Audio.playBossSpecial();
                 this.state = 'CHASE';
                 this.timer = -1;
             }
@@ -147,6 +154,7 @@ class Boss extends Entity {
         addScreenShake(15);
         spawnFloatingText("EQUATION SLAM!", this.x, this.y - 80, '#facc15', 30);
         this.speak("Equation Slam!");
+        Audio.playBossSpecial();
         window.specialEffects.push(new EquationSlam(this.x, this.y));
     }
     
@@ -155,6 +163,7 @@ class Boss extends Entity {
         this.state = 'CHASE';
         spawnFloatingText("DEADLY GRAPH!", this.x, this.y - 80, '#3b82f6', 30);
         this.speak("Feel the power of y=x!");
+        Audio.playBossSpecial();
         window.specialEffects.push(new DeadlyGraph(this.x, this.y, player.x, player.y));
     }
     
@@ -164,6 +173,7 @@ class Boss extends Entity {
         this.log457Timer = 0;
         this.state = 'CHASE';
         spawnFloatingText("log 4.57 = ?", this.x, this.y - 80, '#ef4444', 30);
+        Audio.playBossSpecial();
     }
     
     async speak(context) {
@@ -185,6 +195,7 @@ class Boss extends Entity {
             spawnFloatingText("CLASS DISMISSED!", this.x, this.y, '#facc15', 35);
             addScore(BALANCE.score.boss * this.difficulty);
             UIManager.updateBossHUD(null);
+            Audio.playAchievement();
             for (let i = 0; i < 3; i++) setTimeout(() => window.powerups.push(new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))), i * 200);
             window.boss = null;
             Achievements.check('boss_down');
@@ -258,6 +269,7 @@ function startNextWave() {
             document.getElementById('boss-name').innerHTML = `KRU MANOP - LEVEL ${Math.floor(getWave() / BALANCE.waves.bossEveryNWaves)} <span class="ai-badge">AI</span>`;
             spawnFloatingText('BOSS INCOMING!', player.x, player.y - 100, '#ef4444', 35);
             addScreenShake(15);
+            Audio.playBossSpecial();
         }, 3000);
     }
 }
@@ -298,6 +310,12 @@ function updateGame(dt) {
     player.update(dt, keys, mouse);
     weaponSystem.update(dt);
     
+    // FIXED: Update burst fire and add projectiles
+    const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
+    if (burstProjectiles.length > 0) {
+        projectileManager.add(burstProjectiles);
+    }
+    
     if (boss) boss.update(dt, player);
     
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -325,6 +343,13 @@ function updateGame(dt) {
     
     for (let i = meteorZones.length - 1; i >= 0; i--) {
         meteorZones[i].life -= dt;
+        
+        // Damage player in meteor zones
+        const d = dist(meteorZones[i].x, meteorZones[i].y, player.x, player.y);
+        if (d < meteorZones[i].radius) {
+            player.takeDamage(meteorZones[i].damage * dt);
+        }
+        
         if (meteorZones[i].life <= 0) meteorZones.splice(i, 1);
     }
     
@@ -480,11 +505,14 @@ window.addEventListener('mousemove', e => {
     updateMouseWorld();
 });
 
+// FIXED: Better mouse input handling for burst fire
 window.addEventListener('mousedown', e => {
     if (e.button === 0) {
         mouse.left = 1;
+        // Fire immediately on click
         if (gameState === 'PLAYING' && weaponSystem.canShoot()) {
-            projectileManager.add(weaponSystem.shoot(player, player.damageBoost));
+            const projectiles = weaponSystem.shoot(player, player.damageBoost);
+            projectileManager.add(projectiles);
         }
     }
     if (e.button === 2) mouse.right = 1;
