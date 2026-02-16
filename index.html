@@ -97,7 +97,6 @@
             box-shadow: 0 0 10px #fbbf24;
         }
 
-        /* NEW: Level and EXP bar */
         .level-info {
             margin-top: 8px;
         }
@@ -213,14 +212,8 @@
         }
 
         @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         .achievement-title {
@@ -373,7 +366,6 @@
             transform: scale(1.1);
         }
 
-        /* NEW: Passive Skill Icon */
         #passive-skill {
             border-color: #fbbf24;
             box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
@@ -387,12 +379,8 @@
         }
 
         @keyframes pulseGold {
-            0%, 100% {
-                box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
-            }
-            50% {
-                box-shadow: 0 0 30px rgba(251, 191, 36, 1);
-            }
+            0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); }
+            50% { box-shadow: 0 0 30px rgba(251, 191, 36, 1); }
         }
 
         .skill-name {
@@ -429,19 +417,36 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
+        /* --- ส่วนจัดการ UI หน้าต่างก่อนเริ่มเกม --- */
         #overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.97), rgba(30, 41, 59, 0.97));
+            background: rgba(15, 23, 42, 0.85); 
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
             pointer-events: auto;
+            backdrop-filter: blur(8px);
+        }
+            
+        .menu-container {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 800px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
 
         .title {
@@ -457,12 +462,8 @@
         }
 
         @keyframes glow {
-            0%, 100% {
-                filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5));
-            }
-            50% {
-                filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.8));
-            }
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5)); }
+            50% { filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.8)); }
         }
 
         .subtitle {
@@ -480,19 +481,6 @@
             margin-left: 10px;
         }
 
-        .instructions {
-            color: #cbd5e1;
-            text-align: center;
-            max-width: 700px;
-            margin-bottom: 30px;
-            font-size: 16px;
-            line-height: 1.6;
-            background: rgba(30, 41, 59, 0.5);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #334155;
-        }
-
         #mission-brief {
             margin-bottom: 20px;
             color: #60a5fa;
@@ -500,31 +488,50 @@
             font-size: 18px;
         }
 
+        /* จัดกริด 2 คอลัมน์สำหรับกล่องอธิบายวิธีเล่น */
+        .info-section {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
         .new-features {
-            background: rgba(139, 92, 246, 0.2);
-            border: 2px solid #8b5cf6;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            max-width: 600px;
+            flex: 1;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 20px;
+            border-radius: 16px;
         }
 
         .new-features h3 {
             color: #a855f7;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .feature-list {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             font-size: 14px;
         }
 
         .feature-item {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+        }
+
+        .instructions {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 16px;
+            color: #cbd5e1;
+            text-align: left;
+            font-size: 15px;
+            line-height: 1.6;
         }
 
         #report-card {
@@ -540,20 +547,6 @@
             display: none;
         }
 
-        .report-title {
-            font-weight: bold;
-            border-bottom: 2px solid #ef4444;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .report-content {
-            font-style: italic;
-            font-size: 16px;
-            line-height: 1.5;
-        }
-
         .btn {
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: white;
@@ -562,12 +555,13 @@
             font-size: 22px;
             font-family: 'Kanit', sans-serif;
             font-weight: bold;
-            border-radius: 50px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s;
             box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
             pointer-events: auto;
             margin: 5px;
+            letter-spacing: 1px;
         }
 
         .btn:hover {
@@ -579,18 +573,14 @@
         #ai-loading {
             font-size: 14px;
             color: #60a5fa;
-            margin-top: 10px;
+            margin-top: 15px;
             display: none;
             animation: pulse 1s infinite;
         }
 
         @keyframes pulse {
-            0%, 100% {
-                opacity: 0.5;
-            }
-            50% {
-                opacity: 1;
-            }
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
 
         #victory-screen {
@@ -608,23 +598,10 @@
         }
 
         @media (max-width: 768px) {
-            .title {
-                font-size: 40px;
-            }
-            .subtitle {
-                font-size: 18px;
-            }
-            .instructions {
-                font-size: 14px;
-                padding: 15px;
-            }
-            .weapon-indicator {
-                font-size: 14px;
-                padding: 8px 16px;
-            }
-            .feature-list {
-                grid-template-columns: 1fr;
-            }
+            .title { font-size: 40px; }
+            .subtitle { font-size: 18px; }
+            .info-section { flex-direction: column; }
+            .weapon-indicator { font-size: 14px; padding: 8px 16px; }
         }
     </style>
 </head>
@@ -653,7 +630,6 @@
                     </div>
                     <div style="font-size: 11px; color:#94a3b8;">HP & FOCUS</div>
                     
-                    <!-- NEW: Level and EXP -->
                     <div class="level-info">
                         <div class="level-display">
                             <span id="player-level">Lv.1</span>
@@ -695,7 +671,6 @@
                 📖
                 <div class="cooldown-mask" id="stealth-cd"></div>
             </div>
-            <!-- NEW: Passive Skill Icon -->
             <div class="skill-icon" id="passive-skill">
                 <div style="font-size: 20px;">✨</div>
                 <div class="skill-name">ซุ่มเสรี</div>
@@ -704,48 +679,42 @@
     </div>
 
     <div id="overlay">
-        <div class="title">
-            MTC<br>
-            <span class="subtitle">BETA EDITION <span class="version-badge">v2.0</span></span>
-        </div>
-
-        <div id="mission-brief">กำลังโหลดภารกิจ...</div>
-
-        <!-- NEW: Features -->
-        <div class="new-features">
-            <h3>✨ ฟีเจอร์ใหม่ (v.2)</h3>
-            <div class="feature-list">
-                <div class="feature-item">🎯 ระบบ Level & EXP</div>
-                <div class="feature-item">✨ Passive Skill "ซุ่มเสรี"</div>
-                <div class="feature-item">🔫 Burst Fire (Auto)</div>
-                <div class="feature-item">🏫 MTC Room (Safe Zone)</div>
+        <div class="menu-container">
+            <div class="title">
+                MTC
+                <span class="subtitle">BETA EDITION <span class="version-badge">v2.0</span></span>
             </div>
-        </div>
 
-        <div id="report-card">
-            <div class="report-title">
-                <span>ใบแจ้งเกรด</span>
-                <span style="color:#ef4444; font-weight:900;">"F(uck)"</span>
+            <div id="mission-brief">กำลังโหลดภารกิจ...</div>
+            <div id="report-card"></div>
+
+            <div class="info-section">
+                <div class="new-features">
+                    <h3>✨ ฟีเจอร์ใหม่</h3>
+                    <div class="feature-list">
+                        <div class="feature-item">🎯 ระบบ Level & EXP</div>
+                        <div class="feature-item">✨ Passive Skill "ซุ่มเสรี"</div>
+                        <div class="feature-item">🏫 MTC Room (Safe Zone)</div>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <p style="color: #fff; margin-bottom: 15px;"><strong>🎯</strong> ฆ่าศัตรู+กำจัดบอส > Level Up > ปลดล็อค Passive!</p>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+                        <div>🎮 <strong>WASD</strong> เคลื่อนที่</div>
+                        <div>🔫 <strong>L-Click</strong> กดยิง</div>
+                        <div>📖 <strong>R-Click</strong> สกิลซุ่มอ่าน</div>
+                        <div>💨 <strong>SPACE</strong> พุ่งตัว</div>
+                        <div>🔄 <strong>Q</strong> สลับปืน</div>
+                        <div>🏫 <strong>MTC Room</strong> Safe Zone</div>
+                    </div>
+                    <p style="font-size:13px; color:#facc15;">💡 Tips : เข้า MTC Room เพื่อฟื้นฟูเลือดอย่างต่อเนื่อง</p>
+                </div>
             </div>
-            <div class="report-content" id="report-text">กำลังรอครูมานพตรวจข้อสอบ...</div>
-        </div>
 
-        <div class="instructions">
-            <p style="font-size:18px; margin-bottom:15px;">🎯 <strong>ภารกิจ</strong> ฆ่าศัตรู+กำจัดบอส > Level Up > ปลดล็อค Passive!</p>
-            <p style="margin-bottom:10px;">🌟 <strong>Passive Skill "ซุ่มเสรี"</strong> Lv.3 + ใช้ Stealth 5 ครั้ง</p>
-            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin:15px 0; font-size:14px;">
-                <div>🎮 <strong>WASD</strong> - เคลื่อนที่</div>
-                <div>🔫 <strong>คลิกซ้าย</strong> - ยิง(สลับโหมดยิงได้)</div>
-                <div>📖 <strong>คลิกขวา</strong> - สกิลซุ่มอ่าน</div>
-                <div>💨 <strong>SPACE</strong> - พุ่งตัว</div>
-                <div>🔄 <strong>Q</strong> - สลับปืน</div>
-                <div>🏫 <strong>MTC Room</strong> - Safe Zone</div>
-            </div>
-            <p style="font-size:14px; color:#94a3b8;">💡 Tips : เดินเข้า MTC Room เพื่อฟื้นฟู HP</p>
+            <button class="btn" onclick="startGame()">START MISSION</button>
+            <div id="ai-loading">Connecting to AI...</div>
         </div>
-
-        <button class="btn" onclick="startGame()">START GAME</button>
-        <div id="ai-loading">Connecting to AI...</div>
     </div>
 
     <div id="victory-screen">
@@ -755,7 +724,6 @@
         <button class="btn" onclick="location.reload()">🔄 PLAY AGAIN</button>
     </div>
 
-    <!-- Load modules in correct order -->
     <script src="js/secrets.js"></script>
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
