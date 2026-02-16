@@ -677,8 +677,150 @@
             .info-section { flex-direction: column; }
             .weapon-indicator { font-size: 14px; padding: 8px 16px; }
             .report-stats { grid-template-columns: 1fr; }
+
         }
+        /* ================= MOBILE UI CSS ================= */
+        #mobile-ui {
+            display: none; /* ซ่อนบน PC */
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 9999;
+            pointer-events: none; /* ปล่อยให้คลิกทะลุได้ในส่วนที่ไม่มีปุ่ม */
+        }
+
+        /* ตรวจจับอุปกรณ์มือถือ หรือหน้าจอเล็กกว่า 1024px ให้แสดง UI */
+        @media (max-width: 1024px), (pointer: coarse) {
+            #mobile-ui { display: block; }
+        }
+
+        /* โซนทัชสกรีนซ้ายและขวา กว้างฝั่งละ 45% (เว้นตรงกลางไว้ 10%) */
+        .joystick-zone {
+            position: absolute;
+            width: 45vw; height: 65vh;
+            bottom: 0;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        .joystick-zone.left { left: 0; }
+        .joystick-zone.right { right: 0; }
+
+        .joystick-base {
+            position: absolute;
+            width: 120px; height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: none; /* จะแสดงเมื่อนิ้วสัมผัสจอเท่านั้น (Floating) */
+        }
+
+        .joystick-stick {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+        }
+        /* เปลี่ยนสีจอยขวา (ยิง) เป็นสีแดง */
+        .joystick-zone.right .joystick-stick {
+            background: rgba(239, 68, 68, 0.6);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+        }
+
+        .action-btn {
+            position: absolute;
+            width: 55px; height: 55px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white; font-size: 24px;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: none; pointer-events: auto;
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+        }
+        .action-btn:active {
+            background: rgba(59, 130, 246, 0.8);
+            transform: scale(0.9);
+        }
+        
+        /* วางปุ่ม Action เรียงเป็นแนวโค้งหลบจอยสติ๊กทางขวา */
+        #btn-dash { right: 20px; bottom: 220px; }
+        #btn-skill { right: 85px; bottom: 170px; }
+        #btn-switch { right: 135px; bottom: 100px; }
     </style>
+
+<style>
+body, html {
+  touch-action: none;
+  -ms-touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#mobile-ui {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 9999;
+  pointer-events: none;
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  #mobile-ui { display: block; }
+}
+.joystick-zone {
+  position: absolute;
+  width: 45vw;
+  height: 65vh;
+  bottom: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+.joystick-zone.left { left: 0; }
+.joystick-zone.right { right: 0; }
+.joystick-base {
+  position: absolute;
+  width: 120px; height: 120px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.14);
+  border-radius: 50%;
+  display: none;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.joystick-stick {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: rgba(59,130,246,0.5);
+  pointer-events: none;
+}
+.joystick-zone.right .joystick-stick {
+  background: rgba(239,68,68,0.5);
+}
+.action-btn {
+  position: absolute;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: rgba(15,23,42,0.75);
+  border: 2px solid rgba(255,255,255,0.12);
+  color: white;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 10000;
+}
+#btn-dash  { right: 18px; bottom: 200px; }
+#btn-skill { right: 86px; bottom: 150px; }
+#btn-switch { right: 142px; bottom: 92px; }
+</style>
+
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
@@ -691,7 +833,23 @@
         <div class="weapon-name" id="weapon-name">AUTO RIFLE</div>
         <div class="weapon-hint">กด Q เพื่อสลับอาวุธ</div>
     </div>
+<div id="mobile-ui">
+        <div id="joystick-left-zone" class="joystick-zone left">
+            <div id="joystick-left-base" class="joystick-base">
+                <div id="joystick-left-stick" class="joystick-stick"></div>
+            </div>
+        </div>
 
+        <div id="joystick-right-zone" class="joystick-zone right">
+            <div id="joystick-right-base" class="joystick-base">
+                <div id="joystick-right-stick" class="joystick-stick"></div>
+            </div>
+        </div>
+
+        <button id="btn-switch" class="action-btn">🔄</button>
+        <button id="btn-skill" class="action-btn">📖</button>
+        <button id="btn-dash" class="action-btn">💨</button>
+    </div>
     <div id="ui-layer">
         <div class="hud-top">
             <div class="player-card">
@@ -827,5 +985,22 @@
     <script src="js/ai.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/game.js"></script>
+
+<div id="mobile-ui">
+  <div id="joystick-left-zone" class="joystick-zone left">
+    <div id="joystick-left-base" class="joystick-base">
+      <div id="joystick-left-stick" class="joystick-stick"></div>
+    </div>
+  </div>
+  <div id="joystick-right-zone" class="joystick-zone right">
+    <div id="joystick-right-base" class="joystick-base">
+      <div id="joystick-right-stick" class="joystick-stick"></div>
+    </div>
+  </div>
+  <button id="btn-switch" class="action-btn">🔄</button>
+  <button id="btn-skill" class="action-btn">📖</button>
+  <button id="btn-dash" class="action-btn">💨</button>
+</div>
+
 </body>
 </html>
