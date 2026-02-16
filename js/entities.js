@@ -1,12 +1,11 @@
 /**
- * 👾 MTC: ENHANCED EDITION - Game Entities (UPGRADED)
+ * 👾 MTC: ENHANCED EDITION - Game Entities (FIXED)
  * Player, Enemies, Boss, PowerUps with Level System & Passive Skills
  * 
- * NEW FEATURES:
- * - Level system
- * - Passive skill "ซุ่มเสรี" (unlocks at level 3 + 5 stealth uses)
- * - Fixed meteor spawn rate (0.5%)
- * - Improved player stats
+ * FIXED BUGS:
+ * - Added base crit chance (5%)
+ * - Passive skill adds +2% crit chance on top of base
+ * - Fixed damage calculation
  */
 
 // Base Entity Class
@@ -53,12 +52,15 @@ class Player extends Entity {
         this.burnTimer = 0;
         this.burnDamage = 0;
         
-        // NEW: Level system
+        // Level system
         this.level = 1;
         this.exp = 0;
         this.expToNextLevel = 100;
         
-        // NEW: Passive skill "ซุ่มเสรี"
+        // FIXED: Base crit chance
+        this.baseCritChance = 0.05; // 5% base crit chance
+        
+        // Passive skill "ซุ่มเสรี"
         this.passiveUnlocked = false;
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
@@ -199,7 +201,7 @@ class Player extends Entity {
         this.cooldowns.stealth = BALANCE.player.stealthCooldown;
     }
     
-    // NEW: Check and unlock passive skill
+    // Check and unlock passive skill
     checkPassiveUnlock() {
         if (!this.passiveUnlocked && this.level >= 3 && this.stealthUseCount >= 5) {
             this.passiveUnlocked = true;
@@ -226,7 +228,7 @@ class Player extends Entity {
         }
     }
     
-    // NEW: Gain experience
+    // Gain experience
     gainExp(amount) {
         this.exp += amount;
         spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, '#8b5cf6', 14);
@@ -239,7 +241,7 @@ class Player extends Entity {
         this.updateUI();
     }
     
-    // NEW: Level up
+    // Level up
     levelUp() {
         this.exp -= this.expToNextLevel;
         this.level++;
@@ -253,7 +255,7 @@ class Player extends Entity {
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
         addScreenShake(12);
-        Audio.playAchievement();
+        Audio.playLevelUp();
         
         // Check passive unlock after level up
         this.checkPassiveUnlock();
@@ -273,24 +275,37 @@ class Player extends Entity {
         spawnFloatingText(Math.round(amt), this.x, this.y - 30, '#ef4444');
         spawnParticles(this.x, this.y, 8, '#ef4444');
         addScreenShake(8);
+        Audio.playHit();
         Achievements.stats.damageTaken += amt;
         
         if (this.hp <= 0) window.endGame('defeat');
     }
     
-    // NEW: Deal damage with lifesteal if passive is active
+    // FIXED: Deal damage with proper crit chance and lifesteal
     dealDamage(baseDamage) {
         let damage = baseDamage;
         let isCrit = false;
         
-        // Passive skill: 2% extra crit chance
-        if (this.passiveUnlocked && Math.random() < 0.02) {
-            damage *= BALANCE.player.critMultiplier;
-            isCrit = true;
-            this.goldenAuraTimer = 1;
+        // FIXED: Base crit chance (5%) + passive bonus (2%)
+        let critChance = this.baseCritChance;
+        if (this.passiveUnlocked) {
+            critChance += 0.02; // +2% from passive
         }
         
-        // Passive skill: 1% lifesteal
+        // Check for crit
+        if (Math.random() < critChance) {
+            damage *= BALANCE.player.critMultiplier;
+            isCrit = true;
+            
+            if (this.passiveUnlocked) {
+                this.goldenAuraTimer = 1;
+            }
+            
+            Achievements.stats.crits++;
+            Achievements.check('crit_master');
+        }
+        
+        // FIXED: Lifesteal only if passive is active
         if (this.passiveUnlocked) {
             const healAmount = damage * 0.01;
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
@@ -307,6 +322,7 @@ class Player extends Entity {
         this.hp = Math.min(this.maxHp, this.hp + amt);
         spawnFloatingText(`+${amt} HP`, this.x, this.y - 30, '#10b981');
         spawnParticles(this.x, this.y, 10, '#10b981');
+        Audio.playHeal();
     }
     
     addSpeedBoost() {
@@ -501,12 +517,15 @@ class Player extends Entity {
         const passiveEl = document.getElementById('passive-skill');
         if (passiveEl) {
             if (this.passiveUnlocked) {
-                passiveEl.style.display = 'flex';
+                passiveEl.classList.add('unlocked');
                 passiveEl.style.opacity = '1';
             } else if (this.level >= 3) {
                 passiveEl.style.display = 'flex';
                 passiveEl.style.opacity = '0.5';
-                passiveEl.querySelector('.skill-name').textContent = `${this.stealthUseCount}/5`;
+                const skillName = passiveEl.querySelector('.skill-name');
+                if (skillName) {
+                    skillName.textContent = `${this.stealthUseCount}/5`;
+                }
             }
         }
     }
@@ -558,6 +577,7 @@ class Enemy extends Entity {
             spawnParticles(this.x, this.y, 20, this.color);
             addScore(BALANCE.score.basicEnemy * getWave());
             addEnemyKill();
+            Audio.playEnemyDeath();
             
             // Give EXP to player
             if (player) player.gainExp(this.expValue);
@@ -635,6 +655,7 @@ class TankEnemy extends Entity {
             spawnParticles(this.x, this.y, 30, this.color);
             addScore(BALANCE.score.tank * getWave()); 
             addEnemyKill(); 
+            Audio.playEnemyDeath();
             
             if (player) player.gainExp(this.expValue);
             
@@ -718,13 +739,14 @@ class MageEnemy extends Entity {
             this.soundWaveCD = BALANCE.mage.soundWaveCooldown;
         }
         
-        // FIXED: Reduced from 0.02 (2%) to 0.005 (0.5%)
+        // Meteor spawn (0.5% chance)
         if (this.meteorCD <= 0 && Math.random() < 0.005) {
             window.specialEffects.push(new MeteorStrike(
                 player.x + rand(-300, 300), 
                 player.y + rand(-300, 300)
             ));
             this.meteorCD = BALANCE.mage.meteorCooldown;
+            Audio.playMeteorWarning();
         }
     }
     
@@ -735,6 +757,7 @@ class MageEnemy extends Entity {
             spawnParticles(this.x, this.y, 25, this.color);
             addScore(BALANCE.score.mage * getWave()); 
             addEnemyKill(); 
+            Audio.playEnemyDeath();
             
             if (player) player.gainExp(this.expValue);
             
