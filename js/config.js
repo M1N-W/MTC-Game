@@ -61,7 +61,7 @@ const BALANCE = {
         },
         
         // Skills
-        critMultiplier: 2.9,
+        critMultiplier: 3,
         dashCooldown: 1.65,     // Increased from 1.2
         stealthCooldown: 5.5,  // Increased from 5.0
         stealthCost: 25,
@@ -151,13 +151,13 @@ const BALANCE = {
     
     // 💎 POWER-UPS (REBALANCED)
     powerups: {
-        dropRate: 0.2,
-        lifetime: 12,
+        dropRate: 0.35,
+        lifetime: 13,
         healAmount: 45,        // Reduced from 50
-        damageBoost: 1.6,      // Reduced from 2.0
-        damageBoostDuration: 11,
-        speedBoost: 1.3,       // Reduced from 1.5
-        speedBoostDuration: 11
+        damageBoost: 1.75,      // Reduced from 2.0
+        damageBoostDuration: 12,
+        speedBoost: 1.35,       // Reduced from 1.5
+        speedBoostDuration: 12
     },
     
     // 🌊 WAVE SYSTEM (REBALANCED)
