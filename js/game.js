@@ -3,9 +3,9 @@
  * Game state, Boss, waves, input, loop
  * 
  * FIXED BUGS:
+ * - Added continuous fire when holding mouse button
  * - Proper burst fire integration in game loop
  * - Better mouse input handling
- * - Continuous fire for auto rifle during burst
  */
 
 // Game State
@@ -316,6 +316,14 @@ function updateGame(dt) {
         projectileManager.add(burstProjectiles);
     }
     
+    // FIXED: Continuous fire when holding mouse button
+    if (mouse.left && weaponSystem.canShoot()) {
+        const projectiles = weaponSystem.shoot(player, player.damageBoost);
+        if (projectiles.length > 0) {
+            projectileManager.add(projectiles);
+        }
+    }
+    
     if (boss) boss.update(dt, player);
     
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -499,24 +507,17 @@ window.addEventListener('keyup', e => {
 });
 
 window.addEventListener('mousemove', e => {
-    if (!CANVAS) return; // Guard against undefined canvas
+    if (!CANVAS) return;
     const r = CANVAS.getBoundingClientRect();
     mouse.x = e.clientX - r.left;
     mouse.y = e.clientY - r.top;
     updateMouseWorld();
 });
 
-// FIXED: Better mouse input handling for burst fire
+// FIXED: Better mouse input - removed immediate fire on mousedown (continuous fire handles it)
 window.addEventListener('mousedown', e => {
-    if (!CANVAS) return; // Guard against undefined canvas
-    if (e.button === 0) {
-        mouse.left = 1;
-        // Fire immediately on click
-        if (gameState === 'PLAYING' && weaponSystem.canShoot()) {
-            const projectiles = weaponSystem.shoot(player, player.damageBoost);
-            projectileManager.add(projectiles);
-        }
-    }
+    if (!CANVAS) return;
+    if (e.button === 0) mouse.left = 1;
     if (e.button === 2) mouse.right = 1;
     e.preventDefault();
 });
