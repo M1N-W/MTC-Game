@@ -11,7 +11,7 @@ const BALANCE = {
     // 👨‍🎓 PLAYER STATS
     player: {
         // Health & Energy
-        hp: 100,
+        hp: 125,
         maxHp: 125,
         energy: 100,
         maxEnergy: 100,
@@ -27,7 +27,7 @@ const BALANCE = {
         weapons: {
             auto: {
                 name: 'AUTO RIFLE',
-                damage: 22,
+                damage: 23,
                 cooldown: 0.195,
                 range: 900,
                 speed: 900,
