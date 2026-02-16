@@ -11,8 +11,8 @@ const BALANCE = {
     // 👨‍🎓 PLAYER STATS
     player: {
         // Health & Energy
-        hp: 100,
-        maxHp: 100,
+        hp: 125,
+        maxHp: 125,
         energy: 100,
         maxEnergy: 100,
         
@@ -28,7 +28,7 @@ const BALANCE = {
             auto: {
                 name: 'AUTO RIFLE',
                 damage: 22,
-                cooldown: 0.2,
+                cooldown: 0.19,
                 range: 900,
                 speed: 900,
                 spread: 0,
@@ -39,7 +39,7 @@ const BALANCE = {
             sniper: {
                 name: 'SNIPER',
                 damage: 44,        // 2x damage
-                cooldown: 0.8,     // Slow fire rate
+                cooldown: 0.9,     // Slow fire rate
                 range: 1200,       // Longest range
                 speed: 1200,
                 spread: 0,
@@ -61,9 +61,9 @@ const BALANCE = {
         },
         
         // Skills
-        critMultiplier: 3.0,
+        critMultiplier: 2.8,
         dashCooldown: 1.8,     // Increased from 1.2
-        stealthCooldown: 6.0,  // Increased from 5.0
+        stealthCooldown: 5.5,  // Increased from 5.0
         stealthCost: 25,
         stealthDrain: 35,
         stealthSpeedBonus: 1.3,
@@ -87,11 +87,11 @@ const BALANCE = {
     
     // 🛡️ TANK ENEMY (REBALANCED)
     tank: {
-        baseHp: 110,           // Reduced from 120
+        baseHp: 115,           // Reduced from 120
         hpPerWave: 18,         // Reduced from 20
         baseSpeed: 65,         // Reduced from 70
         speedPerWave: 4,       // Reduced from 5
-        baseDamage: 22,        // Reduced from 25
+        baseDamage: 20,        // Reduced from 25
         damagePerWave: 4,      // Reduced from 5
         meleeRange: 55
     },
@@ -106,9 +106,9 @@ const BALANCE = {
         damagePerWave: 2,      // Reduced from 3
         
         // Sound Wave
-        soundWaveCooldown: 9,
-        soundWaveRange: 320,
-        soundWaveConfuseDuration: 1.2,
+        soundWaveCooldown: 10,
+        soundWaveRange: 300,
+        soundWaveConfuseDuration: 0.8,
         
         // Meteor
         meteorCooldown: 13,
@@ -136,9 +136,9 @@ const BALANCE = {
         slamRadius: 280,       // Reduced from 300
         slamCooldown: 16,
         
-        graphDamage: 32,       // Reduced from 35
-        graphLength: 750,      // Reduced from 800
-        graphCooldown: 22,
+        graphDamage: 40,       
+        graphLength: 850,      // Reduced from 800
+        graphCooldown: 20,
         
         log457ChargeDuration: 2,
         log457ActiveDuration: 5,
