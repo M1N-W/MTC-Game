@@ -424,18 +424,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.85); 
+            background: rgba(15, 23, 42, 0.95); 
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
             pointer-events: auto;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
         }
             
         .menu-container {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             border-radius: 24px;
@@ -486,6 +486,7 @@
             color: #60a5fa;
             font-style: italic;
             font-size: 18px;
+            text-align: center;
         }
 
         /* จัดกริด 2 คอลัมน์สำหรับกล่องอธิบายวิธีเล่น */
@@ -534,17 +535,89 @@
             line-height: 1.6;
         }
 
+        /* ✨ IMPROVED: Report Card - ไพ่รายงานของครู */
         #report-card {
-            background: white;
-            color: #1e293b;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 400px;
-            text-align: left;
-            margin-bottom: 20px;
-            transform: rotate(-1deg);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            padding: 25px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             display: none;
+            backdrop-filter: blur(8px);
+        }
+
+        #report-card.show {
+            display: block;
+            animation: reportSlideIn 0.5s ease-out;
+        }
+
+        @keyframes reportSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .report-header {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ef4444;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .report-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-family: 'Orbitron', sans-serif;
+            color: #60a5fa;
+            font-weight: bold;
+        }
+
+        #report-text {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-style: italic;
+            color: #fbbf24;
+            line-height: 1.6;
+        }
+
+        #report-text::before {
+            content: '💬 ';
+            font-size: 20px;
         }
 
         .btn {
@@ -595,6 +668,7 @@
             justify-content: center;
             align-items: center;
             flex-direction: column;
+            backdrop-filter: blur(10px);
         }
 
         @media (max-width: 768px) {
@@ -602,6 +676,7 @@
             .subtitle { font-size: 18px; }
             .info-section { flex-direction: column; }
             .weapon-indicator { font-size: 14px; padding: 8px 16px; }
+            .report-stats { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -686,7 +761,24 @@
             </div>
 
             <div id="mission-brief">กำลังโหลดภารกิจ...</div>
-            <div id="report-card"></div>
+            
+            <!-- ✨ IMPROVED: Report Card with proper structure -->
+            <div id="report-card">
+                <div class="report-header">
+                    📋 รายงานผลการเรียน
+                </div>
+                <div class="report-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">คะแนน</div>
+                        <div class="stat-value" id="report-score">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Wave</div>
+                        <div class="stat-value" id="report-wave">0</div>
+                    </div>
+                </div>
+                <div id="report-text">กำลังรอความเห็นจากครู...</div>
+            </div>
 
             <div class="info-section">
                 <div class="new-features">
@@ -713,7 +805,7 @@
             </div>
 
             <button class="btn" onclick="startGame()">START MISSION</button>
-            <div id="ai-loading">Connecting to AI...</div>
+            <div id="ai-loading">🤖 Connecting to AI...</div>
         </div>
     </div>
 
