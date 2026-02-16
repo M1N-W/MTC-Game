@@ -499,6 +499,7 @@ window.addEventListener('keyup', e => {
 });
 
 window.addEventListener('mousemove', e => {
+    if (!CANVAS) return; // Guard against undefined canvas
     const r = CANVAS.getBoundingClientRect();
     mouse.x = e.clientX - r.left;
     mouse.y = e.clientY - r.top;
@@ -507,6 +508,7 @@ window.addEventListener('mousemove', e => {
 
 // FIXED: Better mouse input handling for burst fire
 window.addEventListener('mousedown', e => {
+    if (!CANVAS) return; // Guard against undefined canvas
     if (e.button === 0) {
         mouse.left = 1;
         // Fire immediately on click
