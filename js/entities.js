@@ -203,11 +203,14 @@ class Player extends Entity {
     
     // Check and unlock passive skill
     checkPassiveUnlock() {
+        // Debug logging
+        console.log(`🔍 Checking passive: Level ${this.level}/3, Stealth ${this.stealthUseCount}/5, Unlocked: ${this.passiveUnlocked}`);
+        
         if (!this.passiveUnlocked && this.level >= 3 && this.stealthUseCount >= 5) {
             this.passiveUnlocked = true;
             
             // Apply passive bonuses
-            const hpBonus = this.maxHp * 0.5;
+            const hpBonus = Math.floor(this.maxHp * 0.5);
             this.maxHp += hpBonus;
             this.hp += hpBonus;
             
