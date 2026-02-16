@@ -17,10 +17,10 @@ const BALANCE = {
         maxEnergy: 100,
         
         // Movement (REBALANCED)
-        moveSpeed: 320,        // Reduced from 380
+        moveSpeed: 350,        // Reduced from 380
         dashSpeed: 550,        // Reduced from 1000
         dashDistance: 180,     // Reduced from 200
-        friction: 0.88,        // Increased from 0.85 (stops faster)
+        friction: 0.88,        
         acceleration: 1800,
         
         // Weapon System (NEW)
@@ -38,7 +38,7 @@ const BALANCE = {
             },
             sniper: {
                 name: 'SNIPER',
-                damage: 44,        // 2x damage
+                damage: 88,        
                 cooldown: 0.9,     // Slow fire rate
                 range: 1200,       // Longest range
                 speed: 1200,
@@ -66,10 +66,10 @@ const BALANCE = {
         stealthCooldown: 5.5,  // Increased from 5.0
         stealthCost: 25,
         stealthDrain: 35,
-        stealthSpeedBonus: 1.3,
+        stealthSpeedBonus: 1.5,
         
         // Speed on Hit (REBALANCED)
-        speedOnHit: 18,        // Reduced from 25
+        speedOnHit: 20,        // Reduced from 25
         speedOnHitDuration: 0.4
     },
     
@@ -98,7 +98,7 @@ const BALANCE = {
     
     // 🧙 MAGE ENEMY (REBALANCED)
     mage: {
-        baseHp: 32,            // Reduced from 35
+        baseHp: 30,            // Reduced from 35
         hpPerWave: 7,          // Reduced from 8
         baseSpeed: 75,         // Reduced from 80
         speedPerWave: 7,       // Reduced from 8
@@ -108,7 +108,7 @@ const BALANCE = {
         // Sound Wave
         soundWaveCooldown: 10,
         soundWaveRange: 300,
-        soundWaveConfuseDuration: 0.8,
+        soundWaveConfuseDuration: 0.6,
         
         // Meteor
         meteorCooldown: 13,
@@ -122,14 +122,14 @@ const BALANCE = {
         baseHp: 2300,          // Reduced from 2500
         hpMultiplier: 1,
         moveSpeed: 130,        // Reduced from 150
-        phase2Speed: 185,      // Reduced from 200
+        phase2Speed: 180,      // Reduced from 200
         phase2Threshold: 0.5,
         
         // Basic Attacks
-        chalkDamage: 14,       // Reduced from 15
+        chalkDamage: 13,       
         ultimateDamage: 26,    // Reduced from 30
-        ultimateBullets: 20,   // Reduced from 24
-        phase2UltimateBullets: 28, // Reduced from 32
+        ultimateBullets: 18,   // Reduced from 24
+        phase2UltimateBullets: 26, // Reduced from 32
         
         // Special Skills
         slamDamage: 35,        // Reduced from 40
@@ -137,7 +137,7 @@ const BALANCE = {
         slamCooldown: 16,
         
         graphDamage: 40,       
-        graphLength: 900,      
+        graphLength: 850,      
         graphCooldown: 18,
         
         log457ChargeDuration: 2,
