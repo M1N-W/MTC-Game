@@ -427,11 +427,19 @@ function drawGrid() {
 // ==================== INIT & START ====================
 async function initAI() {
     const brief = document.getElementById('mission-brief');
+    
+    if (!brief) {
+        console.warn('⚠️ mission-brief element not found');
+        return;
+    }
+    
     brief.textContent = "กำลังโหลดภารกิจ...";
+    
     try {
         const name = await Gemini.getMissionName();
         brief.textContent = `ภารกิจ "${name}"`;
     } catch (e) {
+        console.warn('Failed to get mission name:', e);
         brief.textContent = 'ภารกิจ "พิชิตครูมานพ"';
     }
 }
@@ -480,18 +488,33 @@ async function endGame(result) {
         setElementText('final-wave', `WAVES CLEARED ${getWave() - 1}`);
     } else {
         showElement('overlay');
-        document.querySelector('.title').innerHTML = `GAME OVER<br><span class="subtitle">SCORE ${getScore()} | WAVE ${getWave()}</span>`;
+        const titleEl = document.querySelector('.title');
+        if (titleEl) {
+            titleEl.innerHTML = `GAME OVER<br><span class="subtitle">SCORE ${getScore()} | WAVE ${getWave()}</span>`;
+        }
+        
         const rc = document.getElementById('report-card');
-        rc.style.display = 'block';
+        if (rc) rc.style.display = 'block';
+        
         const ld = document.getElementById('ai-loading');
-        ld.style.display = 'block';
+        if (ld) ld.style.display = 'block';
+        
         try {
             const comment = await Gemini.getReportCard(getScore(), getWave());
-            ld.style.display = 'none';
-            document.getElementById('report-text').textContent = comment;
+            if (ld) ld.style.display = 'none';
+            
+            const reportText = document.getElementById('report-text');
+            if (reportText) {
+                reportText.textContent = comment;
+            }
         } catch (e) {
-            ld.style.display = 'none';
-            document.getElementById('report-text').textContent = "ตั้งใจเรียนให้มากกว่านี้นะ...";
+            console.warn('Failed to get AI report card:', e);
+            if (ld) ld.style.display = 'none';
+            
+            const reportText = document.getElementById('report-text');
+            if (reportText) {
+                reportText.textContent = "ตั้งใจเรียนให้มากกว่านี้นะ...";
+            }
         }
     }
 }
