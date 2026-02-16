@@ -204,7 +204,7 @@ class EquationSlam {
 
 // Deadly Graph Effect
 class DeadlyGraph {
-    constructor(startX, startY, targetX, targetY) {
+    constructor(startX, startY, targetX, targetY, duration = null) {
         this.startX = startX;
         this.startY = startY;
         this.angle = Math.atan2(targetY - startY, targetX - startX);
@@ -215,6 +215,10 @@ class DeadlyGraph {
         this.phase = 'expanding'; // expanding, blocking, active
         this.timer = 0;
         this.hasHit = false;
+        
+        // ⭐ ใช้ duration จาก config หรือค่า default 10 วินาที
+        this.blockingDuration = duration !== null ? duration / 2 : 5;  // ครึ่งหนึ่งสำหรับ blocking
+        this.activeDuration = duration !== null ? duration / 2 : 5;    // อีกครึ่งสำหรับ active
     }
     
     update(dt, player) {
@@ -241,7 +245,8 @@ class DeadlyGraph {
                 this.timer = 0;
             }
         } else if (this.phase === 'blocking') {
-            if (this.timer >= 5) {
+            // ⭐ ใช้ค่า blockingDuration จาก config
+            if (this.timer >= this.blockingDuration) {
                 this.phase = 'active';
                 this.timer = 0;
             }
@@ -256,7 +261,8 @@ class DeadlyGraph {
             
             player.onGraph = (pd < 25);
             
-            if (this.timer >= 5) {
+            // ⭐ ใช้ค่า activeDuration จาก config
+            if (this.timer >= this.activeDuration) {
                 player.onGraph = false;
                 return true; // Remove
             }
