@@ -953,3 +953,46 @@ class PowerUp {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Entity, Player, Enemy, TankEnemy, MageEnemy, PowerUp };
 }
+
+
+// ===== SAFE MOBILE PATCH (non-destructive wrapper) =====
+if (typeof Player !== "undefined") {
+  const __originalUpdate = Player.prototype.update;
+
+  Player.prototype.update = function(dt, keys, mouse) {
+
+    // Inject mobile movement input
+    if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
+      keys.w = keys.a = keys.s = keys.d = 0;
+      this.__mobile_ax = window.touchJoystickLeft.nx;
+      this.__mobile_ay = window.touchJoystickLeft.ny;
+    } else {
+      this.__mobile_ax = null;
+      this.__mobile_ay = null;
+    }
+
+    // Call original update
+    __originalUpdate.call(this, dt, keys, mouse);
+
+    // Override movement velocity if mobile joystick active
+    if (this.__mobile_ax !== null) {
+      const ax = this.__mobile_ax;
+      const ay = this.__mobile_ay;
+      const len = Math.hypot(ax, ay) || 1;
+      const nx = ax / len;
+      const ny = ay / len;
+
+      this.vx += nx * BALANCE.player.acceleration * dt;
+      this.vy += ny * BALANCE.player.acceleration * dt;
+    }
+
+    // Override aiming for twin-stick
+    if (window.touchJoystickRight && window.touchJoystickRight.active &&
+        (window.touchJoystickRight.nx !== 0 || window.touchJoystickRight.ny !== 0)) {
+      this.angle = Math.atan2(
+        window.touchJoystickRight.ny,
+        window.touchJoystickRight.nx
+      );
+    }
+  };
+}
