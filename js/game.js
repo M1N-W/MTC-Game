@@ -10,6 +10,7 @@
 
 // Game State
 let gameState = 'MENU';
+let loopRunning = false; //เมื่อรีสตาร์ทเกมแล้วจะไม่เกิด Loop ที่ทำให้เกมช้าลง
 const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0 };
 
 // Game objects (global for easy access)
@@ -443,6 +444,7 @@ function startGame() {
     specialEffects = [];
     meteorZones = [];
     boss = null;
+    UIManager.updateBossHUD(null);// ซ่อนหลอดเลือดบอสตอนเริ่มเกมใหม่
     resetScore();
     setWave(1);
     projectileManager.clear();
@@ -461,8 +463,11 @@ function startGame() {
     gameState = 'PLAYING';
     resetTime();
     
-    console.log('✅ Game started! Auto-fire enabled.');
-    requestAnimationFrame(gameLoop);
+    console.log('✅ Game started!');
+    if (!loopRunning) {
+        loopRunning = true;
+        requestAnimationFrame(gameLoop);
+    }
 }
 
 async function endGame(result) {
