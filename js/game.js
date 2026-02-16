@@ -1,11 +1,11 @@
 /**
- * 🎮 MTC: ENHANCED EDITION - Main Game Loop (FIXED)
+ * 🎮 MTC: ENHANCED EDITION - Main Game Loop (FIXED V2)
  * Game state, Boss, waves, input, loop
  * 
  * FIXED BUGS:
- * - Added continuous fire when holding mouse button
- * - Proper burst fire integration in game loop
- * - Better mouse input handling
+ * - ✅ Auto-fire now works continuously when holding mouse
+ * - ✅ Proper burst fire for auto rifle
+ * - ✅ All weapon types work correctly
  */
 
 // Game State
@@ -308,19 +308,23 @@ function updateGame(dt) {
     updateMouseWorld();
     
     player.update(dt, keys, mouse);
+    
+    // ✅ FIXED: Weapon system update (includes burst fire)
     weaponSystem.update(dt);
     
-    // FIXED: Update burst fire and add projectiles
+    // ✅ FIXED: Check for continuous burst fire projectiles
     const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
-    if (burstProjectiles.length > 0) {
+    if (burstProjectiles && burstProjectiles.length > 0) {
         projectileManager.add(burstProjectiles);
     }
     
-    // FIXED: Continuous fire when holding mouse button
-    if (mouse.left && weaponSystem.canShoot()) {
-        const projectiles = weaponSystem.shoot(player, player.damageBoost);
-        if (projectiles.length > 0) {
-            projectileManager.add(projectiles);
+    // ✅ FIXED: Auto-fire when holding mouse button
+    if (mouse.left === 1 && gameState === 'PLAYING') {
+        if (weaponSystem.canShoot()) {
+            const projectiles = weaponSystem.shoot(player, player.damageBoost);
+            if (projectiles && projectiles.length > 0) {
+                projectileManager.add(projectiles);
+            }
         }
     }
     
@@ -352,7 +356,6 @@ function updateGame(dt) {
     for (let i = meteorZones.length - 1; i >= 0; i--) {
         meteorZones[i].life -= dt;
         
-        // Damage player in meteor zones
         const d = dist(meteorZones[i].x, meteorZones[i].y, player.x, player.y);
         if (d < meteorZones[i].radius) {
             player.takeDamage(meteorZones[i].damage * dt);
@@ -435,6 +438,7 @@ async function initAI() {
 }
 
 function startGame() {
+    console.log('🎮 Starting game...');
     Audio.init();
     player = new Player();
     enemies = [];
@@ -459,6 +463,8 @@ function startGame() {
     startNextWave();
     gameState = 'PLAYING';
     resetTime();
+    
+    console.log('✅ Game started! Auto-fire enabled.');
     requestAnimationFrame(gameLoop);
 }
 
@@ -489,6 +495,7 @@ async function endGame(result) {
 
 // ==================== INPUT ====================
 window.addEventListener('keydown', e => {
+    if (gameState !== 'PLAYING') return;
     if (e.code === 'KeyW') keys.w = 1;
     if (e.code === 'KeyS') keys.s = 1;
     if (e.code === 'KeyA') keys.a = 1;
@@ -503,7 +510,12 @@ window.addEventListener('keyup', e => {
     if (e.code === 'KeyA') keys.a = 0;
     if (e.code === 'KeyD') keys.d = 0;
     if (e.code === 'Space') keys.space = 0;
-    if (e.code === 'KeyQ') { weaponSystem.switchWeapon(); keys.q = 0; }
+    if (e.code === 'KeyQ') { 
+        if (gameState === 'PLAYING') {
+            weaponSystem.switchWeapon(); 
+        }
+        keys.q = 0; 
+    }
 });
 
 window.addEventListener('mousemove', e => {
@@ -514,16 +526,22 @@ window.addEventListener('mousemove', e => {
     updateMouseWorld();
 });
 
-// FIXED: Better mouse input - removed immediate fire on mousedown (continuous fire handles it)
+// ✅ FIXED: Mouse button tracking
 window.addEventListener('mousedown', e => {
     if (!CANVAS) return;
-    if (e.button === 0) mouse.left = 1;
+    if (e.button === 0) {
+        mouse.left = 1;
+        console.log('🖱️ Mouse down - auto-fire active');
+    }
     if (e.button === 2) mouse.right = 1;
     e.preventDefault();
 });
 
 window.addEventListener('mouseup', e => {
-    if (e.button === 0) mouse.left = 0;
+    if (e.button === 0) {
+        mouse.left = 0;
+        console.log('🖱️ Mouse up - auto-fire stopped');
+    }
     if (e.button === 2) mouse.right = 0;
 });
 
@@ -535,6 +553,7 @@ window.endGame = endGame;
 
 // Init on load
 window.onload = () => {
+    console.log('🚀 Initializing game...');
     initCanvas();
     initAI();
 };
