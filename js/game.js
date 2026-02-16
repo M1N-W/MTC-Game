@@ -475,11 +475,11 @@ async function endGame(result) {
     
     if (result === 'victory') {
         showElement('victory-screen');
-        setElementText('final-score', `SCORE: ${getScore()}`);
-        setElementText('final-wave', `WAVES CLEARED: ${getWave() - 1}`);
+        setElementText('final-score', `SCORE ${getScore()}`);
+        setElementText('final-wave', `WAVES CLEARED ${getWave() - 1}`);
     } else {
         showElement('overlay');
-        document.querySelector('.title').innerHTML = `GAME OVER<br><span class="subtitle">SCORE: ${getScore()} | WAVE: ${getWave()}</span>`;
+        document.querySelector('.title').innerHTML = `GAME OVER<br><span class="subtitle">SCORE ${getScore()} | WAVE ${getWave()}</span>`;
         const rc = document.getElementById('report-card');
         rc.style.display = 'block';
         const ld = document.getElementById('ai-loading');
