@@ -181,7 +181,7 @@ const BALANCE = {
     // 🏫 MAP SETTINGS (NEW)
     map: {
         size: 3000,            // Map size (3000x3000)
-        objectDensity: 0.25,    // 30% chance of object spawning
+        objectDensity: 0.2,    
         objectTypes: ['desk', 'chair', 'cabinet', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
