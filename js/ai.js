@@ -38,9 +38,9 @@ class GeminiAI {
         if (!result) {
             const fallbacks = [
                 "ทำการบ้านมาหรือเปล่า!",
-                "เกรดแย่แบบนี้จะสอบติดมั้ย?",
+                "เกรดแย่แบบนี้จะสอบติดมั้ยเนี่ย ?",
                 "สมการนี้ง่ายนิดเดียว!",
-                "มาเรียนพิเศษเสาร์-อาทิตย์ไหม?"
+                "อ่อนเลขขนาดนี้ มาเรียนพิเศษเสาร์-อาทิตย์ไหม ?"
             ];
             return randomChoice(fallbacks);
         }
@@ -55,7 +55,7 @@ class GeminiAI {
     
     async getMissionName() {
         const prompt = `สร้างชื่อภารกิจคณิตศาสตร์สั้นๆ ภาษาไทย (ไม่เกิน 6 คำ)`;
-        return await this.generate(prompt) || "ภารกิจพิชิตสมการ";
+        return await this.generate(prompt) || "พิชิตครูมานพ", "สงครามสมการ";
     }
 }
 
