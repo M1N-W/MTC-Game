@@ -165,7 +165,8 @@ class Boss extends Entity {
         spawnFloatingText("DEADLY GRAPH!", this.x, this.y - 80, '#3b82f6', 30);
         this.speak("Feel the power of y=x!");
         Audio.playBossSpecial();
-        window.specialEffects.push(new DeadlyGraph(this.x, this.y, player.x, player.y));
+        // ⭐ ส่งค่า graphDuration จาก config ไปด้วย
+        window.specialEffects.push(new DeadlyGraph(this.x, this.y, player.x, player.y, BALANCE.boss.graphDuration));
     }
     
     useLog457() {
@@ -426,7 +427,7 @@ function drawGrid() {
 // ==================== INIT & START ====================
 async function initAI() {
     const brief = document.getElementById('mission-brief');
-    brief.textContent = "กำลังโหลดภารกิจจาก AI...";
+    brief.textContent = "กำลังโหลดภารกิจ...";
     try {
         const name = await Gemini.getMissionName();
         brief.textContent = `ภารกิจ "${name}"`;
