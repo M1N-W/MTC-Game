@@ -138,7 +138,7 @@ const BALANCE = {
         
         graphDamage: 40,       
         graphLength: 1000,
-        graphDuration: 10,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที) - แก้เลขตรงนี้เพื่อปรับระยะเวลา
+        graphDuration: 15,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที) - แก้เลขตรงนี้เพื่อปรับระยะเวลา
         graphCooldown: 16,
         
         log457ChargeDuration: 2,
