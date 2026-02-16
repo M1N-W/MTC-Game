@@ -11,7 +11,7 @@ const BALANCE = {
     // 👨‍🎓 PLAYER STATS
     player: {
         // Health & Energy
-        hp: 125,
+        hp: 100,
         maxHp: 125,
         energy: 100,
         maxEnergy: 100,
@@ -27,7 +27,7 @@ const BALANCE = {
         weapons: {
             auto: {
                 name: 'AUTO RIFLE',
-                damage: 23,
+                damage: 22,
                 cooldown: 0.195,
                 range: 900,
                 speed: 900,
@@ -61,8 +61,8 @@ const BALANCE = {
         },
         
         // Skills
-        critMultiplier: 2.95,
-        dashCooldown: 1.6,     // Increased from 1.2
+        critMultiplier: 2.9,
+        dashCooldown: 1.7,     // Increased from 1.2
         stealthCooldown: 5.5,  // Increased from 5.0
         stealthCost: 25,
         stealthDrain: 35,
@@ -180,7 +180,7 @@ const BALANCE = {
     
     //    MTC ROOM SETTINGS
     mtcRoom: {
-        healRate: 50,      // เลือดที่ฟื้นฟูต่อวินาที
+        healRate: 35,      // เลือดที่ฟื้นฟูต่อวินาที
         maxStayTime: 4,    // ระยะเวลาที่อยู่ได้นานที่สุด (วินาที)
         cooldownTime: 10,  // ระยะเวลารอคอยก่อนเข้าได้ใหม่ (วินาที)
         size: 300          // ขนาดของห้อง
