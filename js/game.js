@@ -309,16 +309,13 @@ function updateGame(dt) {
     
     player.update(dt, keys, mouse);
     
-    // ✅ FIXED: Weapon system update (includes burst fire)
     weaponSystem.update(dt);
     
-    // ✅ FIXED: Check for continuous burst fire projectiles
     const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
     if (burstProjectiles && burstProjectiles.length > 0) {
         projectileManager.add(burstProjectiles);
     }
     
-    // ✅ FIXED: Auto-fire when holding mouse button
     if (mouse.left === 1 && gameState === 'PLAYING') {
         if (weaponSystem.canShoot()) {
             const projectiles = weaponSystem.shoot(player, player.damageBoost);
@@ -431,9 +428,9 @@ async function initAI() {
     brief.textContent = "กำลังโหลดภารกิจจาก AI...";
     try {
         const name = await Gemini.getMissionName();
-        brief.textContent = `ภารกิจ: "${name}"`;
+        brief.textContent = `ภารกิจ "${name}"`;
     } catch (e) {
-        brief.textContent = 'ภารกิจ: "สมการพิชิตครูมานพ"';
+        brief.textContent = 'ภารกิจ "พิชิตครูมานพ"';
     }
 }
 
@@ -526,7 +523,6 @@ window.addEventListener('mousemove', e => {
     updateMouseWorld();
 });
 
-// ✅ FIXED: Mouse button tracking
 window.addEventListener('mousedown', e => {
     if (!CANVAS) return;
     if (e.button === 0) {
