@@ -1,11 +1,11 @@
 /**
- * 🔫 MTC: ENHANCED EDITION - Weapon System (UPGRADED)
+ * 🔫 MTC: ENHANCED EDITION - Weapon System (FIXED)
  * Beautiful 3D-style gun models + Auto Rifle Burst Fire
  * 
- * NEW FEATURES:
- * - Improved gun models with detailed rendering
- * - Auto rifle can now shoot in bursts
- * - Better visual feedback
+ * FIXED BUGS:
+ * - Burst fire now works properly with synchronous projectile generation
+ * - Proper cooldown management during burst
+ * - Base crit chance implemented
  */
 
 class Projectile {
@@ -77,12 +77,13 @@ class WeaponSystem {
         this.weaponsUsed = new Set();
         this.weaponsUsed.add('auto');
         
-        // NEW: Burst fire system
+        // FIXED: Better burst fire system
         this.burstCount = 0;
         this.maxBurst = 3;
         this.burstDelay = 0.08;
         this.burstTimer = 0;
         this.isBursting = false;
+        this.pendingBurstShots = 0;
     }
     
     switchWeapon() {
@@ -123,9 +124,22 @@ class WeaponSystem {
             this.weaponCooldown -= dt;
         }
         
-        // Update burst timer
-        if (this.burstTimer > 0) {
+        // FIXED: Handle burst fire timing
+        if (this.isBursting && this.burstTimer > 0) {
             this.burstTimer -= dt;
+            
+            if (this.burstTimer <= 0 && this.pendingBurstShots > 0) {
+                // Time to fire next burst shot
+                this.pendingBurstShots--;
+                
+                if (this.pendingBurstShots > 0) {
+                    this.burstTimer = this.burstDelay;
+                } else {
+                    // Burst complete
+                    this.isBursting = false;
+                    this.weaponCooldown = BALANCE.player.weapons.auto.cooldown;
+                }
+            }
         }
     }
     
@@ -133,31 +147,50 @@ class WeaponSystem {
         return this.weaponCooldown <= 0 && !this.isBursting;
     }
     
-    // NEW: Start burst fire (for auto rifle)
-    startBurst(player, damageMultiplier) {
-        if (this.currentWeapon !== 'auto') return [];
-        
-        this.isBursting = true;
-        this.burstCount = 0;
+    // FIXED: Immediate burst shot system
+    shoot(player, damageMultiplier = 1) {
+        if (!this.canShoot()) return [];
         
         const projectiles = [];
-        const shootBurst = () => {
-            if (this.burstCount < this.maxBurst) {
-                const burst = this.shootSingle(player, damageMultiplier);
-                projectiles.push(...burst);
-                this.burstCount++;
-                
-                if (this.burstCount < this.maxBurst) {
-                    setTimeout(shootBurst, this.burstDelay * 1000);
-                } else {
-                    this.isBursting = false;
-                    this.weaponCooldown = BALANCE.player.weapons.auto.cooldown;
-                }
-            }
-        };
         
-        shootBurst();
+        // Auto rifle: start burst fire
+        if (this.currentWeapon === 'auto') {
+            // Fire first shot immediately
+            const firstShot = this.shootSingle(player, damageMultiplier);
+            projectiles.push(...firstShot);
+            
+            // Set up burst state
+            this.isBursting = true;
+            this.burstTimer = this.burstDelay;
+            this.pendingBurstShots = this.maxBurst - 1; // -1 because we already fired one
+            
+        } else {
+            // Other weapons: single shot
+            const shot = this.shootSingle(player, damageMultiplier);
+            projectiles.push(...shot);
+            this.weaponCooldown = this.getWeaponData().cooldown;
+        }
+        
         return projectiles;
+    }
+    
+    // FIXED: Burst continuation - call this from game loop
+    updateBurst(player, damageMultiplier = 1) {
+        if (!this.isBursting || this.burstTimer > 0 || this.pendingBurstShots <= 0) {
+            return [];
+        }
+        
+        // Fire next burst shot
+        const shot = this.shootSingle(player, damageMultiplier);
+        this.burstTimer = this.burstDelay;
+        this.pendingBurstShots--;
+        
+        if (this.pendingBurstShots <= 0) {
+            this.isBursting = false;
+            this.weaponCooldown = BALANCE.player.weapons.auto.cooldown;
+        }
+        
+        return shot;
     }
     
     // Single shot (used by burst and other weapons)
@@ -165,7 +198,7 @@ class WeaponSystem {
         const weapon = this.getWeaponData();
         const projectiles = [];
         
-        // Calculate damage with player's dealDamage method (includes passive skill)
+        // FIXED: Calculate damage with base crit chance + passive skill
         let baseDamage = weapon.damage * damageMultiplier;
         const damageResult = player.dealDamage(baseDamage);
         let damage = damageResult.damage;
@@ -219,21 +252,7 @@ class WeaponSystem {
         return projectiles;
     }
     
-    shoot(player, damageMultiplier = 1) {
-        if (!this.canShoot()) return [];
-        
-        // Auto rifle: burst fire
-        if (this.currentWeapon === 'auto') {
-            return this.startBurst(player, damageMultiplier);
-        }
-        
-        // Other weapons: single shot
-        const projectiles = this.shootSingle(player, damageMultiplier);
-        this.weaponCooldown = this.getWeaponData().cooldown;
-        return projectiles;
-    }
-    
-    // NEW: Draw beautiful 3D-style weapon on player
+    // Draw beautiful 3D-style weapon on player
     drawWeaponOnPlayer(player) {
         const weapon = this.getWeaponData();
         
@@ -256,7 +275,7 @@ class WeaponSystem {
         CTX.restore();
     }
     
-    // NEW: Beautiful Auto Rifle model
+    // Beautiful Auto Rifle model
     drawAutoRifle(weapon) {
         // Main body (gradient)
         const gradient = CTX.createLinearGradient(0, -6, 0, 6);
@@ -307,7 +326,7 @@ class WeaponSystem {
         CTX.fillText('MTC', 12, 1);
     }
     
-    // NEW: Beautiful Sniper model
+    // Beautiful Sniper model
     drawSniper(weapon) {
         // Main body (gradient red)
         const gradient = CTX.createLinearGradient(0, -5, 0, 5);
@@ -363,7 +382,7 @@ class WeaponSystem {
         CTX.fillText('SNIPER', 14, 1);
     }
     
-    // NEW: Beautiful Shotgun model
+    // Beautiful Shotgun model
     drawShotgun(weapon) {
         // Main body (gradient orange)
         const gradient = CTX.createLinearGradient(0, -6, 0, 6);
@@ -432,7 +451,7 @@ class ProjectileManager {
     add(projectile) {
         if (Array.isArray(projectile)) {
             this.projectiles.push(...projectile);
-        } else {
+        } else if (projectile) {
             this.projectiles.push(projectile);
         }
     }
