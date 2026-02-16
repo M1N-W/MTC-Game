@@ -66,12 +66,69 @@ class Player extends Entity {
         this.goldenAuraTimer = 0;
     }
     
-    update(dt, keys, mouse) {
-        // Status effects
-        if (this.isConfused) {
-            this.confusedTimer -= dt;
-            if (this.confusedTimer <= 0) this.isConfused = false;
-        }
+    
+  update(dt, keys, mouse) {
+    let ax = 0, ay = 0;
+    let isTouchMove = false;
+
+    if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
+      ax = window.touchJoystickLeft.nx;
+      ay = window.touchJoystickLeft.ny;
+      isTouchMove = true;
+    } else {
+      if (keys.w) ay -= 1;
+      if (keys.s) ay += 1;
+      if (keys.a) ax -= 1;
+      if (keys.d) ax += 1;
+    }
+
+    if (this.isConfused) { ax *= -1; ay *= -1; }
+
+    if (ax !== 0 || ay !== 0) {
+      if (!isTouchMove) {
+        const len = Math.hypot(ax, ay) || 1;
+        ax /= len; ay /= len;
+      }
+      this.walkCycle += dt * 15;
+    } else {
+      this.walkCycle = 0;
+    }
+
+    let speedMult = (this.isInvisible ? BALANCE.player.stealthSpeedBonus : 1) * this.speedBoost;
+    if (this.speedBoostTimer > 0) speedMult += BALANCE.player.speedOnHit / BALANCE.player.moveSpeed;
+
+    if (!this.isDashing) {
+      this.vx += ax * BALANCE.player.acceleration * dt;
+      this.vy += ay * BALANCE.player.acceleration * dt;
+      this.vx *= BALANCE.player.friction;
+      this.vy *= BALANCE.player.friction;
+      const cs = Math.hypot(this.vx, this.vy);
+      if (cs > BALANCE.player.moveSpeed * speedMult) {
+        const scale = BALANCE.player.moveSpeed * speedMult / cs;
+        this.vx *= scale; this.vy *= scale;
+      }
+    }
+
+    this.applyPhysics(dt);
+    this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
+    this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
+
+    if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
+    if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
+
+    if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
+    if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= BALANCE.player.stealthCost) {
+      this.activateStealth();
+      mouse.right = 0;
+    }
+
+    if (window.touchJoystickRight && window.touchJoystickRight.active && (window.touchJoystickRight.nx !== 0 || window.touchJoystickRight.ny !== 0)) {
+      this.angle = Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
+    } else {
+      this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
+    }
+  }
+
         
         if (this.isBurning) {
             this.burnTimer -= dt;
@@ -85,28 +142,36 @@ class Player extends Entity {
         // Golden aura animation
         if (this.goldenAuraTimer > 0) {
             this.goldenAuraTimer -= dt;
-            if (Math.random() < 0.5) {
-                spawnParticles(
-                    this.x + rand(-25, 25), 
-                    this.y + rand(-25, 25), 
-                    1, 
-                    '#fbbf24'
-                );
-            }
+            if (Math.random() < 0.5) spawnParticles(this.x + rand(-25, 25), this.y + rand(-25, 25), 1, '#fbbf24');
         }
         
-        // Movement input
+        // ==========================================
+        // 🎮 [MOBILE & PC] MOVEMENT (เดิน)
+        // ==========================================
         let ax = 0, ay = 0;
-        if (keys.w) ay -= 1;
-        if (keys.s) ay += 1;
-        if (keys.a) ax -= 1;
-        if (keys.d) ax += 1;
+        let isTouchMove = false;
+        
+        // เช็คว่ามี Input จากจอยสติ๊กซ้าย (มือถือ) หรือไม่
+        if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
+            ax = window.touchJoystickLeft.nx;
+            ay = window.touchJoystickLeft.ny;
+            isTouchMove = true;
+        } else {
+            // ถ้าไม่มี ให้ใช้คีย์บอร์ด (PC)
+            if (keys.w) ay -= 1;
+            if (keys.s) ay += 1;
+            if (keys.a) ax -= 1;
+            if (keys.d) ax += 1;
+        }
         
         if (this.isConfused) { ax *= -1; ay *= -1; }
         
         if (ax || ay) {
-            const len = Math.hypot(ax, ay);
-            ax /= len; ay /= len;
+            // ถ้ารับค่ามาจากคีย์บอร์ด (PC) ต้อง Normalize เพื่อไม่ให้เดินทแยงแล้วเร็วขึ้น
+            if (!isTouchMove) {
+                const len = Math.hypot(ax, ay);
+                ax /= len; ay /= len;
+            }
             this.walkCycle += dt * 15;
         } else {
             this.walkCycle = 0;
@@ -131,23 +196,38 @@ class Player extends Entity {
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         
-        // Skills
+        // ==========================================
+        // ⚔️ SKILLS & COOLDOWNS (สกิลและปุ่ม Action)
+        // ==========================================
         if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
-        if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax, ay); keys.space = 0; }
+        if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
         
         if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
-        if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= BALANCE.player.stealthCost) {
-            this.activateStealth(); mouse.right = 0;
+        if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= BALANCE.player.stealthCost) { 
+            this.activateStealth(); 
+            mouse.right = 0; 
         }
         
         if (this.isInvisible) {
             this.energy -= BALANCE.player.stealthDrain * dt;
-            if (this.energy <= 0) { this.energy = 0; this.breakStealth(); }
+            if (this.energy <= 0) {
+                this.energy = 0;
+                this.breakStealth();
+            }
         } else {
             this.energy = Math.min(this.maxEnergy, this.energy + 15 * dt);
         }
         
-        this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
+        // ==========================================
+        // 🎯 [MOBILE & PC] AIMING (เล็งและยิงปืน)
+        // ==========================================
+        if (window.touchJoystickRight && window.touchJoystickRight.active) {
+            // ถ้าเล่นบนมือถือ (Twin-stick) ให้หันหน้าตัวละครตามจอยสติ๊กขวา
+            this.angle = Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
+        } else {
+            // ถ้าเล่นบน PC ให้หันหน้าตามจุดของเมาส์
+            this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
+        }
         
         for (let i = this.afterImages.length - 1; i >= 0; i--) {
             this.afterImages[i].life -= dt * 5;
