@@ -582,3 +582,221 @@ window.onload = () => {
     initCanvas();
     initAI();
 };
+// ==========================================================
+// 📱 MOBILE TOUCH CONTROLS (TWIN-STICK SHOOTER)
+// ==========================================================
+window.touchJoystickLeft = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
+window.touchJoystickRight = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
+
+function initMobileControls() {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice && window.innerWidth > 1024) return; 
+
+    const maxRadius = 50; // ระยะดึงจอยสติ๊กสูงสุด
+    const zoneL = document.getElementById('joystick-left-zone');
+    const baseL = document.getElementById('joystick-left-base');
+    const stickL = document.getElementById('joystick-left-stick');
+
+    const zoneR = document.getElementById('joystick-right-zone');
+    const baseR = document.getElementById('joystick-right-base');
+    const stickR = document.getElementById('joystick-right-stick');
+
+    function handleTouchStart(e, joystick, baseElem, stickElem, isRight = false) {
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        joystick.id = touch.identifier;
+        joystick.active = true;
+        
+        // เซ็ตจุดศูนย์กลางตอนที่นิ้วแตะ (Floating Base)
+        joystick.originX = touch.clientX;
+        joystick.originY = touch.clientY;
+        
+        const zoneRect = e.target.getBoundingClientRect();
+        baseElem.style.display = 'block';
+        baseElem.style.left = (touch.clientX - zoneRect.left) + 'px';
+        baseElem.style.top = (touch.clientY - zoneRect.top) + 'px';
+        stickElem.style.transform = `translate(-50%, -50%)`;
+        
+        // ถ้าเป็นจอยขวา ให้ตั้งค่า mouse.left = 1 เพื่อยิงอัตโนมัติ
+        if (isRight) mouse.left = 1; 
+    }
+
+    function handleTouchMove(e, joystick, stickElem) {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            if (touch.identifier === joystick.id) {
+                let dx = touch.clientX - joystick.originX;
+                let dy = touch.clientY - joystick.originY;
+                let distance = Math.hypot(dx, dy);
+                
+                // จำกัดขอบเขตการลาก
+                if (distance > maxRadius) {
+                    dx = (dx / distance) * maxRadius;
+                    dy = (dy / distance) * maxRadius;
+                }
+                
+                // คำนวณเป็น Vector -1 ถึง 1
+                joystick.nx = dx / maxRadius;
+                joystick.ny = dy / maxRadius;
+                
+                stickElem.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            }
+        }
+    }
+
+    function handleTouchEnd(e, joystick, baseElem, stickElem, isRight = false) {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            if (touch.identifier === joystick.id) {
+                joystick.active = false;
+                joystick.id = null;
+                joystick.nx = 0;
+                joystick.ny = 0;
+                baseElem.style.display = 'none';
+                stickElem.style.transform = `translate(-50%, -50%)`;
+                
+                if (isRight) mouse.left = 0; // ปล่อยจอยขวา = หยุดยิง
+            }
+        }
+    }
+
+    // --- Events: จอยซ้าย ---
+    zoneL.addEventListener('touchstart', (e) => handleTouchStart(e, window.touchJoystickLeft, baseL, stickL), {passive: false});
+    zoneL.addEventListener('touchmove', (e) => handleTouchMove(e, window.touchJoystickLeft, stickL), {passive: false});
+    zoneL.addEventListener('touchend', (e) => handleTouchEnd(e, window.touchJoystickLeft, baseL, stickL), {passive: false});
+    zoneL.addEventListener('touchcancel', (e) => handleTouchEnd(e, window.touchJoystickLeft, baseL, stickL), {passive: false});
+
+    // --- Events: จอยขวา ---
+    zoneR.addEventListener('touchstart', (e) => handleTouchStart(e, window.touchJoystickRight, baseR, stickR, true), {passive: false});
+    zoneR.addEventListener('touchmove', (e) => handleTouchMove(e, window.touchJoystickRight, stickR), {passive: false});
+    zoneR.addEventListener('touchend', (e) => handleTouchEnd(e, window.touchJoystickRight, baseR, stickR, true), {passive: false});
+    zoneR.addEventListener('touchcancel', (e) => handleTouchEnd(e, window.touchJoystickRight, baseR, stickR, true), {passive: false});
+
+    // --- Events: ปุ่ม Action (ใช้ e.stopPropagation() เพื่อไม่ให้จอยสติ๊กไปทับซ้อนเวลากด) ---
+    const btnDash = document.getElementById('btn-dash');
+    btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, {passive: false});
+    btnDash.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 0; }, {passive: false});
+
+    const btnSkill = document.getElementById('btn-skill');
+    btnSkill.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); mouse.right = 1; }, {passive: false});
+    btnSkill.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); mouse.right = 0; }, {passive: false});
+
+    const btnSwitch = document.getElementById('btn-switch');
+    btnSwitch.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); e.stopPropagation();
+        if (gameState === 'PLAYING' && typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon(); 
+    }, {passive: false});
+    
+    // บล็อคการ Swipe/Scroll ของบราวเซอร์ทั้งหมด ยกเว้นจุดที่เราตั้งค่าไว้
+    document.addEventListener('touchmove', function(e) {
+        if (!e.target.closest('.joystick-zone') && !e.target.closest('.action-btn')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+}
+
+// ผูกฟังก์ชันเริ่มระบบเมื่อโหลดหน้าเสร็จ
+window.addEventListener('DOMContentLoaded', initMobileControls);
+
+/* ===== MOBILE TWIN-STICK CONTROLS ===== */
+window.touchJoystickLeft  = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
+window.touchJoystickRight = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
+
+function initMobileControls() {
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!isTouchDevice && window.innerWidth > 1024) return;
+
+  const maxRadius = 60;
+  const zoneL = document.getElementById('joystick-left-zone');
+  const baseL = document.getElementById('joystick-left-base');
+  const stickL = document.getElementById('joystick-left-stick');
+
+  const zoneR = document.getElementById('joystick-right-zone');
+  const baseR = document.getElementById('joystick-right-base');
+  const stickR = document.getElementById('joystick-right-stick');
+
+  function startJoystick(e, joystick, baseElem, stickElem, isRight = false) {
+    e.preventDefault();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (joystick.id === null) {
+        joystick.id = touch.identifier;
+        joystick.active = true;
+        joystick.originX = touch.clientX;
+        joystick.originY = touch.clientY;
+        const zoneRect = (isRight ? zoneR : zoneL).getBoundingClientRect();
+        baseElem.style.display = 'block';
+        baseElem.style.left = (touch.clientX - zoneRect.left) + 'px';
+        baseElem.style.top  = (touch.clientY - zoneRect.top)  + 'px';
+        stickElem.style.transform = 'translate(-50%, -50%)';
+        if (isRight) mouse.left = 1;
+        break;
+      }
+    }
+  }
+
+  function moveJoystick(e, joystick, stickElem) {
+    e.preventDefault();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === joystick.id) {
+        let dx = touch.clientX - joystick.originX;
+        let dy = touch.clientY - joystick.originY;
+        let dist = Math.hypot(dx, dy);
+        if (dist > maxRadius) {
+          dx = (dx / dist) * maxRadius;
+          dy = (dy / dist) * maxRadius;
+        }
+        joystick.nx = dx / maxRadius;
+        joystick.ny = dy / maxRadius;
+        stickElem.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      }
+    }
+  }
+
+  function endJoystick(e, joystick, baseElem, stickElem, isRight = false) {
+    e.preventDefault();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === joystick.id) {
+        joystick.active = false;
+        joystick.id = null;
+        joystick.nx = 0;
+        joystick.ny = 0;
+        baseElem.style.display = 'none';
+        stickElem.style.transform = 'translate(-50%, -50%)';
+        if (isRight) mouse.left = 0;
+      }
+    }
+  }
+
+  zoneL.addEventListener('touchstart', (e) => startJoystick(e, window.touchJoystickLeft, baseL, stickL), { passive: false });
+  zoneL.addEventListener('touchmove',  (e) => moveJoystick(e, window.touchJoystickLeft, stickL), { passive: false });
+  zoneL.addEventListener('touchend',   (e) => endJoystick(e, window.touchJoystickLeft, baseL, stickL), { passive: false });
+  zoneL.addEventListener('touchcancel',(e) => endJoystick(e, window.touchJoystickLeft, baseL, stickL), { passive: false });
+
+  zoneR.addEventListener('touchstart', (e) => startJoystick(e, window.touchJoystickRight, baseR, stickR, true), { passive: false });
+  zoneR.addEventListener('touchmove',  (e) => moveJoystick(e, window.touchJoystickRight, stickR), { passive: false });
+  zoneR.addEventListener('touchend',   (e) => endJoystick(e, window.touchJoystickRight, baseR, stickR, true), { passive: false });
+  zoneR.addEventListener('touchcancel',(e) => endJoystick(e, window.touchJoystickRight, baseR, stickR, true), { passive: false });
+
+  const btnDash  = document.getElementById('btn-dash');
+  const btnSkill = document.getElementById('btn-skill');
+  const btnSwitch= document.getElementById('btn-switch');
+
+  if (btnDash) {
+    btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
+    btnDash.addEventListener('touchend',   (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 0; }, { passive: false });
+  }
+  if (btnSkill) {
+    btnSkill.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); mouse.right = 1; }, { passive: false });
+    btnSkill.addEventListener('touchend',   (e) => { e.preventDefault(); e.stopPropagation(); mouse.right = 0; }, { passive: false });
+  }
+  if (btnSwitch) {
+    btnSwitch.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (gameState === 'PLAYING' && weaponSystem) weaponSystem.switchWeapon(); }, { passive: false });
+  }
+}
+
+window.addEventListener('DOMContentLoaded', initMobileControls);
