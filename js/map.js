@@ -156,7 +156,7 @@ class MTCRoom {
         this.y = y;
         this.w = 200;
         this.h = 200;
-        this.healRate = 20; // HP per second
+        this.healRate = 40; // HP per second
         this.maxStayTime = 4; // seconds
         this.playerStayTime = 0;
         this.cooldownTime = 10; // seconds before can use again
