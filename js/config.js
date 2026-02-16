@@ -62,7 +62,7 @@ const BALANCE = {
         
         // Skills
         critMultiplier: 2.9,
-        dashCooldown: 1.7,     // Increased from 1.2
+        dashCooldown: 1.65,     // Increased from 1.2
         stealthCooldown: 5.5,  // Increased from 5.0
         stealthCost: 25,
         stealthDrain: 35,
@@ -228,13 +228,13 @@ const GAME_CONFIG = {
 const ACHIEVEMENT_DEFS = [
     { id: 'first_blood', name: 'First Blood', desc: 'ฆ่าศัตรูตัวแรก', icon: '⚔️' },
     { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave 1', icon: '🌊' },
-    { id: 'boss_down', name: 'Manop Slayer', desc: 'เอาชนะครูมานพ', icon: '👑' },
+    { id: 'boss_down', name: 'Manop Slayer', desc: 'เอาชนะครูมานพครั้งแรก', icon: '👑' },
     { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️' },
-    { id: 'crit_master', name: 'Critical Master', desc: 'ทำ Crit 5 ครั้ง', icon: '💥' },
+    { id: 'crit_master', name: 'Critical Master', desc: 'ตีติดคริติคอล 5 ครั้ง', icon: '💥' },
     { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡' },
     { id: 'ghost', name: 'The Ghost MTC', desc: 'ใช้ Stealth 10 ครั้ง', icon: '👻' },
-    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 อัน', icon: '💎' },
-    { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนทั้ง 3 แบบ', icon: '🔫' }
+    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎' },
+    { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' }
 ];
 
 // Export for use in other modules
