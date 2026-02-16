@@ -4,7 +4,7 @@
  */
 
 // API Configuration
-const API_KEY = ""; // Add your Gemini API key here
+const API_KEY = "AIzaSyAZrYjazB7HHLERjKFtVazz-Mi5dfmR0v8"; // Add your Gemini API key here
 
 // Enhanced Balance Configuration
 const BALANCE = {
@@ -28,7 +28,7 @@ const BALANCE = {
             auto: {
                 name: 'AUTO RIFLE',
                 damage: 22,
-                cooldown: 0.14,
+                cooldown: 0.2,
                 range: 900,
                 speed: 900,
                 spread: 0,
@@ -108,18 +108,18 @@ const BALANCE = {
         // Sound Wave
         soundWaveCooldown: 9,
         soundWaveRange: 320,
-        soundWaveConfuseDuration: 2.2,
+        soundWaveConfuseDuration: 1.2,
         
         // Meteor
         meteorCooldown: 13,
         meteorDamage: 28,      // Reduced from 30
         meteorBurnDuration: 3,
-        meteorBurnDPS: 4       // Reduced from 5
+        meteorBurnDPS: 4.5       // Reduced from 5
     },
     
     // 👑 BOSS (REBALANCED)
     boss: {
-        baseHp: 2200,          // Reduced from 2500
+        baseHp: 2222,          // Reduced from 2500
         hpMultiplier: 1,
         moveSpeed: 140,        // Reduced from 150
         phase2Speed: 185,      // Reduced from 200
@@ -150,13 +150,13 @@ const BALANCE = {
     
     // 💎 POWER-UPS (REBALANCED)
     powerups: {
-        dropRate: 0.16,
-        lifetime: 11,
+        dropRate: 0.2,
+        lifetime: 12,
         healAmount: 45,        // Reduced from 50
-        damageBoost: 1.8,      // Reduced from 2.0
-        damageBoostDuration: 9,
-        speedBoost: 1.4,       // Reduced from 1.5
-        speedBoostDuration: 9
+        damageBoost: 1.6,      // Reduced from 2.0
+        damageBoostDuration: 11,
+        speedBoost: 1.3,       // Reduced from 1.5
+        speedBoostDuration: 11
     },
     
     // 🌊 WAVE SYSTEM (REBALANCED)
@@ -181,7 +181,7 @@ const BALANCE = {
     // 🏫 MAP SETTINGS (NEW)
     map: {
         size: 3000,            // Map size (3000x3000)
-        objectDensity: 0.3,    // 30% chance of object spawning
+        objectDensity: 0.25,    // 30% chance of object spawning
         objectTypes: ['desk', 'chair', 'cabinet', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
@@ -220,12 +220,12 @@ const GAME_CONFIG = {
 const ACHIEVEMENT_DEFS = [
     { id: 'first_blood', name: 'First Blood', desc: 'ฆ่าศัตรูตัวแรก', icon: '⚔️' },
     { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave 1', icon: '🌊' },
-    { id: 'boss_down', name: 'Boss Slayer', desc: 'เอาชนะครูมานพ', icon: '👑' },
+    { id: 'boss_down', name: 'Manop Slayer', desc: 'เอาชนะครูมานพ', icon: '👑' },
     { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️' },
-    { id: 'crit_master', name: 'Crit Master', desc: 'ทำ Crit 5 ครั้ง', icon: '💥' },
+    { id: 'crit_master', name: 'Critical Master', desc: 'ทำ Crit 5 ครั้ง', icon: '💥' },
     { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡' },
-    { id: 'ghost', name: 'Ghost', desc: 'ใช้ Stealth 10 ครั้ง', icon: '👻' },
-    { id: 'collector', name: 'Collector', desc: 'เก็บ Power-up 10 อัน', icon: '💎' },
+    { id: 'ghost', name: 'The Ghost MTC', desc: 'ใช้ Stealth 10 ครั้ง', icon: '👻' },
+    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 อัน', icon: '💎' },
     { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนทั้ง 3 แบบ', icon: '🔫' }
 ];
 
