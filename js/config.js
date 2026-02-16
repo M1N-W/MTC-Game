@@ -119,9 +119,9 @@ const BALANCE = {
     
     // 👑 BOSS (REBALANCED)
     boss: {
-        baseHp: 2222,          // Reduced from 2500
+        baseHp: 2300,          // Reduced from 2500
         hpMultiplier: 1,
-        moveSpeed: 140,        // Reduced from 150
+        moveSpeed: 130,        // Reduced from 150
         phase2Speed: 185,      // Reduced from 200
         phase2Threshold: 0.5,
         
@@ -137,8 +137,8 @@ const BALANCE = {
         slamCooldown: 16,
         
         graphDamage: 40,       
-        graphLength: 850,      // Reduced from 800
-        graphCooldown: 20,
+        graphLength: 900,      
+        graphCooldown: 18,
         
         log457ChargeDuration: 2,
         log457ActiveDuration: 5,
