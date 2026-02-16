@@ -27,8 +27,8 @@ const BALANCE = {
         weapons: {
             auto: {
                 name: 'AUTO RIFLE',
-                damage: 22,
-                cooldown: 0.19,
+                damage: 23,
+                cooldown: 0.195,
                 range: 900,
                 speed: 900,
                 spread: 0,
@@ -39,7 +39,7 @@ const BALANCE = {
             sniper: {
                 name: 'SNIPER',
                 damage: 88,        
-                cooldown: 0.9,     // Slow fire rate
+                cooldown: 0.95,     // Slow fire rate
                 range: 1200,       // Longest range
                 speed: 1200,
                 spread: 0,
@@ -61,8 +61,8 @@ const BALANCE = {
         },
         
         // Skills
-        critMultiplier: 2.8,
-        dashCooldown: 1.8,     // Increased from 1.2
+        critMultiplier: 2.95,
+        dashCooldown: 1.6,     // Increased from 1.2
         stealthCooldown: 5.5,  // Increased from 5.0
         stealthCost: 25,
         stealthDrain: 35,
@@ -119,10 +119,10 @@ const BALANCE = {
     
     // 👑 BOSS (REBALANCED)
     boss: {
-        baseHp: 2300,          // Reduced from 2500
+        baseHp: 2250,          // Reduced from 2500
         hpMultiplier: 1,
         moveSpeed: 130,        // Reduced from 150
-        phase2Speed: 180,      // Reduced from 200
+        phase2Speed: 175,      // Reduced from 200
         phase2Threshold: 0.5,
         
         // Basic Attacks
@@ -137,8 +137,8 @@ const BALANCE = {
         slamCooldown: 16,
         
         graphDamage: 40,       
-        graphLength: 950,      
-        graphCooldown: 18,
+        graphLength: 1000,      
+        graphCooldown: 16,
         
         log457ChargeDuration: 2,
         log457ActiveDuration: 5,
@@ -181,7 +181,7 @@ const BALANCE = {
     // 🏫 MAP SETTINGS (NEW)
     map: {
         size: 3000,            // Map size (3000x3000)
-        objectDensity: 0.2,    
+        objectDensity: 0.15,    
         objectTypes: ['desk', 'chair', 'cabinet', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
