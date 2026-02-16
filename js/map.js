@@ -269,7 +269,7 @@ class MTCRoom {
             CTX.fillStyle = '#64748b';
             CTX.fillText('MTC ROOM', screen.x + this.w / 2, screen.y + this.h / 2 - 20);
             CTX.font = 'bold 16px Arial';
-            CTX.fillText(`COOLDOWN: ${Math.ceil(this.cooldown)}s`, screen.x + this.w / 2, screen.y + this.h / 2 + 20);
+            CTX.fillText(`COOLDOWN ${Math.ceil(this.cooldown)}s`, screen.x + this.w / 2, screen.y + this.h / 2 + 20);
         } else {
             const pulse = Math.sin(performance.now() / 300) * 0.3 + 0.7;
             CTX.globalAlpha = pulse;
@@ -280,9 +280,8 @@ class MTCRoom {
             
             CTX.shadowBlur = 0;
             CTX.globalAlpha = 1;
-            CTX.font = 'bold 14px Arial';
-            CTX.fillText('SAFE ZONE - เข้ามารักษาตัว', screen.x + this.w / 2, screen.y + this.h / 2 + 20);
-            CTX.fillText('(4 วินาที)', screen.x + this.w / 2, screen.y + this.h / 2 + 40);
+            CTX.font = 'bold 15px Arial';
+            CTX.fillText('SAFE ZONE - ฟื้นฟู HP', screen.x + this.w / 2, screen.y + this.h / 2 + 20);
         }
         
         // Show timer when player is inside
