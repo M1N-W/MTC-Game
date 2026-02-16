@@ -137,7 +137,7 @@ const BALANCE = {
         slamCooldown: 16,
         
         graphDamage: 40,       
-        graphLength: 850,      
+        graphLength: 950,      
         graphCooldown: 18,
         
         log457ChargeDuration: 2,
