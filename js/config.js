@@ -119,7 +119,7 @@ const BALANCE = {
     
     // 👑 BOSS (REBALANCED)
     boss: {
-        baseHp: 2250,          // Reduced from 2500
+        baseHp: 2350,          // Reduced from 2500
         hpMultiplier: 1,
         moveSpeed: 130,        // Reduced from 150
         phase2Speed: 175,      // Reduced from 200
@@ -136,10 +136,10 @@ const BALANCE = {
         slamRadius: 280,       // Reduced from 300
         slamCooldown: 16,
         
-        graphDamage: 40,       
-        graphLength: 1000,
-        graphDuration: 15,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที) - แก้เลขตรงนี้เพื่อปรับระยะเวลา
-        graphCooldown: 16,
+        graphDamage: 45,       
+        graphLength: 1500,
+        graphDuration: 18,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที) - แก้เลขตรงนี้เพื่อปรับระยะเวลา
+        graphCooldown: 15,
         
         log457ChargeDuration: 2,
         log457ActiveDuration: 5,
