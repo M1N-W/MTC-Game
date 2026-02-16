@@ -154,12 +154,12 @@ class MTCRoom {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.w = 200;
-        this.h = 200;
-        this.healRate = 40; // HP per second
-        this.maxStayTime = 4; // seconds
+        this.w = BALANCE.mtcRoom.size;
+        this.h = BALANCE.mtcRoom.size;
+        this.healRate = BALANCE.mtcRoom.healRate; // HP per second
+        this.maxStayTime = BALANCE.mtcRoom.maxStayTime; // seconds
+        this.cooldownTime = BALANCE.mtcRoom.cooldownTime; // seconds before can use again
         this.playerStayTime = 0;
-        this.cooldownTime = 10; // seconds before can use again
         this.cooldown = 0;
         this.isPlayerInside = false;
     }
