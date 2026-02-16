@@ -4,7 +4,7 @@
  */
 
 // API Configuration
-const API_KEY = "AIzaSyAZrYjazB7HHLERjKFtVazz-Mi5dfmR0v8"; // Add your Gemini API key here
+const API_KEY = ""; // Add your Gemini API key here
 
 // Enhanced Balance Configuration
 const BALANCE = {
