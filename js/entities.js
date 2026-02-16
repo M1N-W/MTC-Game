@@ -227,7 +227,7 @@ class Player extends Entity {
             
             console.log('🌟 Passive Skill Unlocked: ซุ่มเสรี');
             console.log(`Max HP: ${this.maxHp} (+50%)`);
-            console.log('Lifesteal: 1% | Crit Chance: +2%');
+            console.log('Lifesteal: 2% | Crit Chance: +3.5%');
         }
     }
     
@@ -289,10 +289,10 @@ class Player extends Entity {
         let damage = baseDamage;
         let isCrit = false;
         
-        // FIXED: Base crit chance (5%) + passive bonus (2%)
+        // FIXED: Base crit chance (5%) + passive bonus (3.5%)
         let critChance = this.baseCritChance;
         if (this.passiveUnlocked) {
-            critChance += 0.02; // +2% from passive
+            critChance += 0.035; // +3.5% from passive
         }
         
         // Check for crit
@@ -310,7 +310,7 @@ class Player extends Entity {
         
         // FIXED: Lifesteal only if passive is active
         if (this.passiveUnlocked) {
-            const healAmount = damage * 0.01;
+            const healAmount = damage * 0.02;// +2% per hit from passive
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             
             if (Math.random() < 0.3) {
