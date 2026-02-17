@@ -1426,6 +1426,7 @@ function drawDayNightHUD() {
     for (let x = ox; x < CANVAS.width; x += sz) { CTX.moveTo(x, 0); CTX.lineTo(x, CANVAS.height); }
     for (let y = oy; y < CANVAS.height; y += sz) { CTX.moveTo(0, y); CTX.lineTo(CANVAS.width, y); }
     CTX.stroke();
+}
 
 // ==================== POOM ATTACK SYSTEM ====================
 function shootPoom(player) {
