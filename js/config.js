@@ -10,11 +10,15 @@ const API_KEY = CONFIG_SECRETS.GEMINI_API_KEY;
 const BALANCE = {
     // 👨‍🎓 PLAYER STATS
     player: {
+        // Entity
+        radius: 20,            // Collision radius (pixels)
+
         // Health & Energy
         hp: 110,
         maxHp: 110,
         energy: 100,
         maxEnergy: 100,
+        energyRegen: 15,       // Energy restored per second (passive)
         
         // Movement (REBALANCED)
         moveSpeed: 350,        // Reduced from 380
@@ -61,12 +65,24 @@ const BALANCE = {
         },
         
         // Skills
+        baseCritChance: 0.05,       // Base critical hit chance
         critMultiplier: 3,
         dashCooldown: 1.65,     // Increased from 1.2
         stealthCooldown: 5.5,  // Increased from 5.0
         stealthCost: 25,
         stealthDrain: 35,
         stealthSpeedBonus: 1.5,
+
+        // Level & EXP
+        expToNextLevel: 100,       // Starting EXP threshold for level 2
+        expLevelMult: 1.5,         // EXP threshold multiplier per level-up
+
+        // Passive Unlock ("ซุ่มเสรี")
+        passiveUnlockLevel: 3,         // Min player level required
+        passiveUnlockStealthCount: 5,  // Stealth uses required
+        passiveHpBonusPct: 0.5,        // +50% maxHp on passive unlock
+        passiveCritBonus: 0.035,       // Extra crit chance when passive active
+        passiveLifesteal: 0.02,        // Lifesteal fraction of damage dealt
         
         // Speed on Hit (REBALANCED)
         speedOnHit: 20,        // Reduced from 25
@@ -75,11 +91,19 @@ const BALANCE = {
 
     // 🌾 POOM CHARACTER STATS
     poom: {
+        // Entity
+        radius: 20,            // Collision radius (pixels)
+
         // Health & Energy
         hp: 135,
         maxHp: 135,
         energy: 100,
         maxEnergy: 100,
+        energyRegen: 12,       // Energy restored per second (passive)
+
+        // Level & EXP
+        expToNextLevel: 100,   // Starting EXP threshold for level 2
+        expLevelMult: 1.5,     // EXP threshold multiplier per level-up
 
         // Movement (ช้ากว่าเก้าเล็กน้อย — เน้น Skill มากกว่า Speed)
         moveSpeed: 300,
@@ -120,6 +144,13 @@ const BALANCE = {
     
     // 👾 BASIC ENEMY (REBALANCED)
     enemy: {
+        // Entity
+        radius: 18,                                    // Collision radius
+        colors: ['#ef4444', '#f59e0b', '#8b5cf6'],    // Random colour pool
+        expValue: 10,                                  // EXP awarded on kill
+        chaseRange: 150,                               // Distance at which enemy stops closing in
+        projectileSpeed: 500,                          // Enemy bullet speed
+
         baseHp: 45,            // Reduced from 50
         hpPerWave: 8,          // Reduced from 10
         baseSpeed: 95,         // Reduced from 100
@@ -132,6 +163,12 @@ const BALANCE = {
     
     // 🛡️ TANK ENEMY (REBALANCED)
     tank: {
+        // Entity
+        radius: 25,              // Collision radius
+        color: '#78716c',       // Tank body colour
+        expValue: 25,           // EXP awarded on kill
+        powerupDropMult: 1.5,   // Multiplier on BALANCE.powerups.dropRate
+
         baseHp: 115,           // Reduced from 120
         hpPerWave: 18,         // Reduced from 20
         baseSpeed: 65,         // Reduced from 70
@@ -143,6 +180,14 @@ const BALANCE = {
     
     // 🧙 MAGE ENEMY (REBALANCED)
     mage: {
+        // Entity
+        radius: 16,              // Collision radius
+        color: '#a855f7',       // Mage body colour
+        expValue: 30,           // EXP awarded on kill
+        powerupDropMult: 1.3,   // Multiplier on BALANCE.powerups.dropRate
+        orbitDistance: 300,     // Preferred orbit distance (pulls back if closer)
+        orbitDistanceBuffer: 100, // Approaches if > orbitDistance + buffer
+
         baseHp: 30,            // Reduced from 35
         hpPerWave: 7,          // Reduced from 8
         baseSpeed: 75,         // Reduced from 80
@@ -164,6 +209,20 @@ const BALANCE = {
     
     // 👑 BOSS (REBALANCED)
     boss: {
+        // Entity
+        radius: 50,                   // Collision radius
+        spawnY: -600,                 // World Y spawn position
+        contactDamage: 25,            // Damage per second when touching player
+        speechInterval: 10,           // Seconds between taunts
+        nextWaveDelay: 2000,          // ms before next wave starts after boss dies
+        log457HealRate: 0.1,          // Fraction of maxHp healed per second during charge
+
+        // Attack fire rates
+        chalkProjectileSpeed: 600,    // Speed of chalk projectiles
+        attackFireRate: 0.1,          // Seconds between shots (phase 1)
+        phase2AttackFireRate: 0.05,   // Seconds between shots (phase 2)
+        ultimateProjectileSpeed: 400, // Speed of ultimate ring bullets
+
         baseHp: 2350,          // Reduced from 2500
         hpMultiplier: 1,
         moveSpeed: 130,        // Reduced from 150
@@ -196,6 +255,8 @@ const BALANCE = {
     
     // 💎 POWER-UPS (REBALANCED)
     powerups: {
+        radius: 20,            // Pickup collision radius
+
         dropRate: 0.35,
         lifetime: 13,
         healAmount: 45,        // Reduced from 50
@@ -207,6 +268,11 @@ const BALANCE = {
     
     // 🌊 WAVE SYSTEM (REBALANCED)
     waves: {
+        spawnDistance: 800,          // World units from player where enemies spawn
+        bossSpawnDelay: 3000,        // ms after wave start before boss appears
+        maxWaves: 5,                 // Wave count that triggers victory
+        minKillsForNoDamage: 5,      // Min kills required for "no damage" achievement
+
         enemiesBase: 4,        // Reduced from 5
         enemiesPerWave: 3,
         tankSpawnChance: 0.18, // Reduced from 0.20
@@ -299,7 +365,10 @@ const GAME_CONFIG = {
     visual: {
         particleLifetime: [0.3, 0.8],
         textFloatSpeed: -80,
-        screenShakeDecay: 0.9
+        screenShakeDecay: 0.9,
+        bgColorTop: '#0f172a',                 // Background gradient top
+        bgColorBottom: '#1e293b',             // Background gradient bottom
+        gridColor: 'rgba(30, 41, 59, 0.5)'    // Grid line colour
     },
     
     input: {

@@ -29,7 +29,7 @@ class Entity {
 // ────────────────────────────────────────────────────────────
 class Player extends Entity {
     constructor() {
-        super(0, 0, 20);
+        super(0, 0, BALANCE.player.radius);
         this.hp = BALANCE.player.hp;
         this.maxHp = BALANCE.player.maxHp;
         this.energy = BALANCE.player.energy;
@@ -46,8 +46,8 @@ class Player extends Entity {
         this.onGraph = false;
         this.isConfused = false; this.confusedTimer = 0;
         this.isBurning = false; this.burnTimer = 0; this.burnDamage = 0;
-        this.level = 1; this.exp = 0; this.expToNextLevel = 100;
-        this.baseCritChance = 0.05;
+        this.level = 1; this.exp = 0; this.expToNextLevel = BALANCE.player.expToNextLevel;
+        this.baseCritChance = BALANCE.player.baseCritChance;
         this.passiveUnlocked = false;
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
@@ -112,7 +112,7 @@ class Player extends Entity {
         if (this.isInvisible) {
             this.energy -= BALANCE.player.stealthDrain * dt;
             if (this.energy <= 0) { this.energy = 0; this.breakStealth(); }
-        } else { this.energy = Math.min(this.maxEnergy, this.energy + 15 * dt); }
+        } else { this.energy = Math.min(this.maxEnergy, this.energy + BALANCE.player.energyRegen * dt); }
 
         // ── Aiming ──
         if (window.touchJoystickRight && window.touchJoystickRight.active) {
@@ -154,9 +154,9 @@ class Player extends Entity {
     breakStealth() { this.isInvisible = false; this.cooldowns.stealth = BALANCE.player.stealthCooldown; }
 
     checkPassiveUnlock() {
-        if (!this.passiveUnlocked && this.level >= 3 && this.stealthUseCount >= 5) {
+        if (!this.passiveUnlocked && this.level >= BALANCE.player.passiveUnlockLevel && this.stealthUseCount >= BALANCE.player.passiveUnlockStealthCount) {
             this.passiveUnlocked = true;
-            const hpBonus = Math.floor(this.maxHp * 0.5);
+            const hpBonus = Math.floor(this.maxHp * BALANCE.player.passiveHpBonusPct);
             this.maxHp += hpBonus; this.hp += hpBonus;
             spawnFloatingText('ปลดล็อค: ซุ่มเสรี!', this.x, this.y - 60, '#fbbf24', 30);
             spawnParticles(this.x, this.y, 50, '#fbbf24');
@@ -176,7 +176,7 @@ class Player extends Entity {
     levelUp() {
         this.exp -= this.expToNextLevel;
         this.level++;
-        this.expToNextLevel = Math.floor(this.expToNextLevel * 1.5);
+        this.expToNextLevel = Math.floor(this.expToNextLevel * BALANCE.player.expLevelMult);
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -198,14 +198,14 @@ class Player extends Entity {
     dealDamage(baseDamage) {
         let damage = baseDamage, isCrit = false;
         let critChance = this.baseCritChance;
-        if (this.passiveUnlocked) critChance += 0.035;
+        if (this.passiveUnlocked) critChance += BALANCE.player.passiveCritBonus;
         if (Math.random() < critChance) {
             damage *= BALANCE.player.critMultiplier; isCrit = true;
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
             Achievements.stats.crits++; Achievements.check('crit_master');
         }
         if (this.passiveUnlocked) {
-            const healAmount = damage * 0.02;
+            const healAmount = damage * BALANCE.player.passiveLifesteal;
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3) spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
         }
@@ -315,7 +315,7 @@ class Player extends Entity {
 // ────────────────────────────────────────────────────────────
 class PoomPlayer extends Entity {
     constructor() {
-        super(0, 0, 20);
+        super(0, 0, BALANCE.poom.radius);
         this.hp = BALANCE.poom.hp;
         this.maxHp = BALANCE.poom.maxHp;
         this.energy = BALANCE.poom.energy;
@@ -336,7 +336,7 @@ class PoomPlayer extends Entity {
         this.currentSpeedMult = 1;   // Skill 1 ปรับ speed (ลบ currentAttackMult — ใช้ critBonus แทน)
         this.nagaCount = 0;
         // Level
-        this.level = 1; this.exp = 0; this.expToNextLevel = 100;
+        this.level = 1; this.exp = 0; this.expToNextLevel = BALANCE.poom.expToNextLevel;
         this.baseCritChance = BALANCE.poom.critChance;
     }
 
@@ -413,7 +413,7 @@ class PoomPlayer extends Entity {
         if (keys.r && this.cooldowns.naga <= 0) { this.summonNaga(); keys.r = 0; }
 
         // Energy regen
-        this.energy = Math.min(this.maxEnergy, this.energy + 12 * dt);
+        this.energy = Math.min(this.maxEnergy, this.energy + BALANCE.poom.energyRegen * dt);
 
         // ── Aiming ──
         if (window.touchJoystickRight && window.touchJoystickRight.active) {
@@ -518,7 +518,7 @@ class PoomPlayer extends Entity {
 
     levelUp() {
         this.exp -= this.expToNextLevel; this.level++;
-        this.expToNextLevel = Math.floor(this.expToNextLevel * 1.5);
+        this.expToNextLevel = Math.floor(this.expToNextLevel * BALANCE.poom.expLevelMult);
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -776,25 +776,25 @@ class NagaEntity {
 // ────────────────────────────────────────────────────────────
 class Enemy extends Entity {
     constructor(x, y) {
-        super(x, y, 18);
+        super(x, y, BALANCE.enemy.radius);
         this.maxHp = BALANCE.enemy.baseHp + getWave() * BALANCE.enemy.hpPerWave;
         this.hp = this.maxHp;
         this.speed = BALANCE.enemy.baseSpeed + getWave() * BALANCE.enemy.speedPerWave;
         this.damage = BALANCE.enemy.baseDamage + getWave() * BALANCE.enemy.damagePerWave;
         this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
-        this.color = randomChoice(['#ef4444', '#f59e0b', '#8b5cf6']);
-        this.type = 'basic'; this.expValue = 10;
+        this.color = randomChoice(BALANCE.enemy.colors);
+        this.type = 'basic'; this.expValue = BALANCE.enemy.expValue;
     }
     update(dt, player) {
         if (this.dead) return;
         const dx = player.x - this.x, dy = player.y - this.y, d = dist(this.x, this.y, player.x, player.y);
         this.angle = Math.atan2(dy, dx);
-        if (d > 150 && !player.isInvisible) { this.vx = Math.cos(this.angle)*this.speed; this.vy = Math.sin(this.angle)*this.speed; }
+        if (d > BALANCE.enemy.chaseRange && !player.isInvisible) { this.vx = Math.cos(this.angle)*this.speed; this.vy = Math.sin(this.angle)*this.speed; }
         else { this.vx *= 0.9; this.vy *= 0.9; }
         this.applyPhysics(dt);
         this.shootTimer -= dt;
         if (this.shootTimer <= 0 && d < BALANCE.enemy.shootRange && !player.isInvisible) {
-            projectileManager.add(new Projectile(this.x, this.y, this.angle, 500, this.damage, '#fff', false, 'enemy'));
+            projectileManager.add(new Projectile(this.x, this.y, this.angle, BALANCE.enemy.projectileSpeed, this.damage, '#fff', false, 'enemy'));
             this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
         }
         if (d < this.radius + player.radius) player.takeDamage(this.damage * dt * 3);
@@ -825,12 +825,12 @@ class Enemy extends Entity {
 
 class TankEnemy extends Entity {
     constructor(x, y) {
-        super(x, y, 25);
+        super(x, y, BALANCE.tank.radius);
         this.maxHp = BALANCE.tank.baseHp + getWave() * BALANCE.tank.hpPerWave;
         this.hp = this.maxHp;
         this.speed = BALANCE.tank.baseSpeed + getWave() * BALANCE.tank.speedPerWave;
         this.damage = BALANCE.tank.baseDamage + getWave() * BALANCE.tank.damagePerWave;
-        this.color = '#78716c'; this.type = 'tank'; this.expValue = 25;
+        this.color = BALANCE.tank.color; this.type = 'tank'; this.expValue = BALANCE.tank.expValue;
     }
     update(dt, player) {
         if (this.dead) return;
@@ -849,7 +849,7 @@ class TankEnemy extends Entity {
             addScore(BALANCE.score.tank*getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
             Achievements.stats.kills++;
-            if (Math.random() < BALANCE.powerups.dropRate*1.5) window.powerups.push(new PowerUp(this.x,this.y));
+            if (Math.random() < BALANCE.powerups.dropRate * BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x,this.y));
         }
     }
     draw() {
@@ -868,20 +868,20 @@ class TankEnemy extends Entity {
 
 class MageEnemy extends Entity {
     constructor(x, y) {
-        super(x, y, 16);
+        super(x, y, BALANCE.mage.radius);
         this.maxHp = BALANCE.mage.baseHp + getWave()*BALANCE.mage.hpPerWave;
         this.hp = this.maxHp;
         this.speed = BALANCE.mage.baseSpeed + getWave()*BALANCE.mage.speedPerWave;
         this.damage = BALANCE.mage.baseDamage + getWave()*BALANCE.mage.damagePerWave;
-        this.color = '#a855f7'; this.type = 'mage';
-        this.soundWaveCD = 0; this.meteorCD = 0; this.expValue = 30;
+        this.color = BALANCE.mage.color; this.type = 'mage';
+        this.soundWaveCD = 0; this.meteorCD = 0; this.expValue = BALANCE.mage.expValue;
     }
     update(dt, player) {
         if (this.dead) return;
-        const d = dist(this.x,this.y,player.x,player.y), od = 300;
+        const d = dist(this.x,this.y,player.x,player.y), od = BALANCE.mage.orbitDistance;
         this.angle = Math.atan2(player.y-this.y, player.x-this.x);
         if (d < od && !player.isInvisible) { this.vx=-Math.cos(this.angle)*this.speed; this.vy=-Math.sin(this.angle)*this.speed; }
-        else if (d > od+100) { this.vx=Math.cos(this.angle)*this.speed; this.vy=Math.sin(this.angle)*this.speed; }
+        else if (d > od + BALANCE.mage.orbitDistanceBuffer) { this.vx=Math.cos(this.angle)*this.speed; this.vy=Math.sin(this.angle)*this.speed; }
         else { this.vx*=0.95; this.vy*=0.95; }
         this.applyPhysics(dt);
         if (this.soundWaveCD > 0) this.soundWaveCD -= dt;
@@ -909,7 +909,7 @@ class MageEnemy extends Entity {
             addScore(BALANCE.score.mage*getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
             Achievements.stats.kills++;
-            if (Math.random() < BALANCE.powerups.dropRate*1.3) window.powerups.push(new PowerUp(this.x,this.y));
+            if (Math.random() < BALANCE.powerups.dropRate * BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x,this.y));
         }
     }
     draw() {
@@ -934,7 +934,7 @@ class MageEnemy extends Entity {
 // ────────────────────────────────────────────────────────────
 class PowerUp {
     constructor(x, y) {
-        this.x=x; this.y=y; this.radius=20; this.life=BALANCE.powerups.lifetime;
+        this.x=x; this.y=y; this.radius=BALANCE.powerups.radius; this.life=BALANCE.powerups.lifetime;
         this.bobTimer=Math.random()*Math.PI*2;
         this.type=randomChoice(['heal','damage','speed']);
         this.icons={heal:'❤️',damage:'⚡',speed:'🚀'};

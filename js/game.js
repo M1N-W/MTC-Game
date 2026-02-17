@@ -25,7 +25,7 @@ let waveStartDamage = 0;
 // ==================== BOSS ====================
 class Boss extends Entity {
     constructor(difficulty = 1) {
-        super(0, -600, 50);
+        super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
         this.maxHp = BALANCE.boss.baseHp * difficulty;
         this.hp = this.maxHp;
         this.name = "KRU MANOP";
@@ -56,7 +56,7 @@ class Boss extends Entity {
         
         for (let s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
         
-        if (this.sayTimer > 10 && Math.random() < 0.1) {
+        if (this.sayTimer > BALANCE.boss.speechInterval && Math.random() < 0.1) {
             this.speak("Player at " + Math.round(player.hp) + " HP");
             this.sayTimer = 0;
         }
@@ -73,7 +73,7 @@ class Boss extends Entity {
         if (this.log457State === 'charging') {
             this.log457Timer += dt;
             this.isInvulnerable = true;
-            this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.1 * dt);
+            this.hp = Math.min(this.maxHp, this.hp + this.maxHp * BALANCE.boss.log457HealRate * dt);
             if (this.log457Timer >= BALANCE.boss.log457ChargeDuration) {
                 this.log457State = 'active';
                 this.log457Timer = 0;
@@ -118,12 +118,12 @@ class Boss extends Entity {
             }
         } else if (this.state === 'ATTACK') {
             this.vx *= 0.9; this.vy *= 0.9;
-            const fr = this.phase === 2 ? 0.05 : 0.1, bf = fr / (1 + this.log457AttackBonus);
+            const fr = this.phase === 2 ? BALANCE.boss.phase2AttackFireRate : BALANCE.boss.attackFireRate, bf = fr / (1 + this.log457AttackBonus);
             if (this.timer > bf) {
-                projectileManager.add(new Projectile(this.x, this.y, this.angle, 600, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
+                projectileManager.add(new Projectile(this.x, this.y, this.angle, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
                 if (this.phase === 2) {
-                    projectileManager.add(new Projectile(this.x, this.y, this.angle + 0.3, 600, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
-                    projectileManager.add(new Projectile(this.x, this.y, this.angle - 0.3, 600, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
+                    projectileManager.add(new Projectile(this.x, this.y, this.angle + 0.3, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
+                    projectileManager.add(new Projectile(this.x, this.y, this.angle - 0.3, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
                 }
                 this.timer = 0;
                 if (Math.random() < 0.08) this.state = 'CHASE';
@@ -134,7 +134,7 @@ class Boss extends Entity {
                 const bullets = this.phase === 2 ? BALANCE.boss.phase2UltimateBullets : BALANCE.boss.ultimateBullets;
                 for (let i = 0; i < bullets; i++) {
                     const a = (Math.PI * 2 / bullets) * i;
-                    projectileManager.add(new Projectile(this.x, this.y, a, 400, BALANCE.boss.ultimateDamage, '#ef4444', true, 'enemy'));
+                    projectileManager.add(new Projectile(this.x, this.y, a, BALANCE.boss.ultimateProjectileSpeed, BALANCE.boss.ultimateDamage, '#ef4444', true, 'enemy'));
                 }
                 addScreenShake(15);
                 spawnFloatingText("POP QUIZ!", this.x, this.y - 80, '#facc15', 40);
@@ -144,7 +144,7 @@ class Boss extends Entity {
             }
         }
         
-        if (d < this.radius + player.radius) player.takeDamage(25 * dt * (1 + this.log457AttackBonus));
+        if (d < this.radius + player.radius) player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
         UIManager.updateBossHUD(this);
         UIManager.updateBossSpeech(this);
     }
@@ -203,9 +203,9 @@ class Boss extends Entity {
             Achievements.check('boss_down');
             setTimeout(() => { 
                 setWave(getWave() + 1);
-                if (getWave() > 5) window.endGame('victory');
+                if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
                 else startNextWave();
-            }, 2000);
+            }, BALANCE.boss.nextWaveDelay);
         }
     }
     
@@ -272,18 +272,18 @@ function startNextWave() {
             spawnFloatingText('BOSS INCOMING!', player.x, player.y - 100, '#ef4444', 35);
             addScreenShake(15);
             Audio.playBossSpecial();
-        }, 3000);
+        }, BALANCE.waves.bossSpawnDelay);
     }
 }
 
 function spawnEnemies(count) {
     for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const distance = 800;
+        const distance = BALANCE.waves.spawnDistance;
         let x = player.x + Math.cos(angle) * distance;
         let y = player.y + Math.sin(angle) * distance;
         
-        const safe = mapSystem.findSafeSpawn(x, y, 20);
+        const safe = mapSystem.findSafeSpawn(x, y, BALANCE.enemy.radius);
         x = safe.x; y = safe.y;
         
         const r = Math.random();
@@ -365,7 +365,7 @@ function updateGame(dt) {
     }
     
     if (getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss) {
-        if (Achievements.stats.damageTaken === waveStartDamage && getEnemiesKilled() >= 5) Achievements.check('no_damage');
+        if (Achievements.stats.damageTaken === waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) Achievements.check('no_damage');
         setWave(getWave() + 1);
         Achievements.check('wave_1');
         startNextWave();
@@ -402,8 +402,8 @@ function updateGame(dt) {
 
 function drawGame() {
     const grad = CTX.createLinearGradient(0, 0, 0, CANVAS.height);
-    grad.addColorStop(0, '#0f172a');
-    grad.addColorStop(1, '#1e293b');
+    grad.addColorStop(0, GAME_CONFIG.visual.bgColorTop);
+    grad.addColorStop(1, GAME_CONFIG.visual.bgColorBottom);
     CTX.fillStyle = grad;
     CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
     
@@ -440,7 +440,7 @@ function drawGrid() {
     const ox = -getCamera().x % sz;
     const oy = -getCamera().y % sz;
     
-    CTX.strokeStyle = 'rgba(30, 41, 59, 0.5)';
+    CTX.strokeStyle = GAME_CONFIG.visual.gridColor;
     CTX.lineWidth = 1;
     CTX.beginPath();
     for (let x = ox; x < CANVAS.width; x += sz) {
