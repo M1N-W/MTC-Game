@@ -25,6 +25,7 @@
         };
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
         body {
@@ -66,13 +67,26 @@
             height: 300px;
         }
 
-        /* AI Content Styling */
+        /* AI Content Styling - สำหรับ marked.js output */
         .ai-content h1, .ai-content h2, .ai-content h3 { color: #92400e; font-weight: 700; margin-top: 1em; margin-bottom: 0.5em; }
+        .ai-content h1 { font-size: 1.2em; }
+        .ai-content h2 { font-size: 1.1em; }
+        .ai-content h3 { font-size: 1em; border-bottom: 1px solid #fde68a; padding-bottom: 0.2em; }
         .ai-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 0.75rem; }
         .ai-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 0.75rem; }
-        .ai-content li { margin-bottom: 0.25rem; }
+        .ai-content li { margin-bottom: 0.35rem; line-height: 1.6; }
+        .ai-content li > ul, .ai-content li > ol { margin-top: 0.25rem; margin-bottom: 0.25rem; }
         .ai-content strong { font-weight: 700; color: #b45309; }
+        .ai-content em { font-style: italic; color: #57534e; }
         .ai-content p { margin-bottom: 0.75rem; line-height: 1.7; }
+        .ai-content code { background: #f5f5f4; color: #e11d48; padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.85em; font-family: monospace; }
+        .ai-content pre { background: #1c1917; color: #e7e5e4; padding: 1rem; border-radius: 8px; overflow-x: auto; margin-bottom: 0.75rem; }
+        .ai-content pre code { background: transparent; color: inherit; padding: 0; }
+        .ai-content blockquote { border-left: 3px solid #f59e0b; padding-left: 1rem; color: #78716c; margin: 0.75rem 0; font-style: italic; }
+        .ai-content hr { border-color: #e7e5e4; margin: 1rem 0; }
+        .ai-content table { width: 100%; border-collapse: collapse; margin-bottom: 0.75rem; font-size: 0.85em; }
+        .ai-content th { background: #fef3c7; padding: 0.5rem; text-align: left; font-weight: 700; border: 1px solid #fde68a; }
+        .ai-content td { padding: 0.4rem 0.5rem; border: 1px solid #e7e5e4; }
         
         /* Loading Animation */
         .loading-dots:after {
@@ -426,90 +440,10 @@
         }
 
         function formatAIResponse(text) {
-            let lines = text.split('\n');
-            let html = '';
-            let inUL = false;
-            let inOL = false;
-
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i];
-
-                // --- หรือ *** → <hr>
-                if (/^\s*[-*_]{3,}\s*$/.test(line)) {
-                    if (inUL) { html += '</ul>'; inUL = false; }
-                    if (inOL) { html += '</ol>'; inOL = false; }
-                    html += '<hr class="my-3 border-stone-200">';
-                    continue;
-                }
-
-                // ### Heading 3
-                if (/^### (.+)/.test(line)) {
-                    if (inUL) { html += '</ul>'; inUL = false; }
-                    if (inOL) { html += '</ol>'; inOL = false; }
-                    html += '<h3 class="text-base font-bold text-amber-700 mt-4 mb-1 border-b border-amber-100 pb-1">' + line.replace(/^### /, '') + '</h3>';
-                    continue;
-                }
-
-                // ## Heading 2
-                if (/^## (.+)/.test(line)) {
-                    if (inUL) { html += '</ul>'; inUL = false; }
-                    if (inOL) { html += '</ol>'; inOL = false; }
-                    html += '<h2 class="text-lg font-bold text-amber-800 mt-5 mb-1">' + line.replace(/^## /, '') + '</h2>';
-                    continue;
-                }
-
-                // # Heading 1
-                if (/^# (.+)/.test(line)) {
-                    if (inUL) { html += '</ul>'; inUL = false; }
-                    if (inOL) { html += '</ol>'; inOL = false; }
-                    html += '<h1 class="text-xl font-bold text-amber-900 mt-5 mb-2">' + line.replace(/^# /, '') + '</h1>';
-                    continue;
-                }
-
-                // Numbered list 1. 2. 3.
-                if (/^\d+\. (.+)/.test(line)) {
-                    if (inUL) { html += '</ul>'; inUL = false; }
-                    if (!inOL) { html += '<ol class="list-decimal pl-5 space-y-1 my-2 text-stone-700">'; inOL = true; }
-                    html += '<li>' + inlineFormat(line.replace(/^\d+\. /, '')) + '</li>';
-                    continue;
-                }
-
-                // Bullet list * - •
-                if (/^[\*\-\u2022] (.+)/.test(line)) {
-                    if (inOL) { html += '</ol>'; inOL = false; }
-                    if (!inUL) { html += '<ul class="list-disc pl-5 space-y-1 my-2 text-stone-700">'; inUL = true; }
-                    html += '<li>' + inlineFormat(line.replace(/^[\*\-\u2022] /, '')) + '</li>';
-                    continue;
-                }
-
-                // บรรทัดว่าง
-                if (line.trim() === '') {
-                    if (inUL) { html += '</ul>'; inUL = false; }
-                    if (inOL) { html += '</ol>'; inOL = false; }
-                    html += '<br>';
-                    continue;
-                }
-
-                // paragraph ปกติ
-                if (inUL) { html += '</ul>'; inUL = false; }
-                if (inOL) { html += '</ol>'; inOL = false; }
-                html += '<p class="mb-1">' + inlineFormat(line) + '</p>';
-            }
-
-            if (inUL) html += '</ul>';
-            if (inOL) html += '</ol>';
-
+            // ใช้ marked.js แปลง Markdown → HTML (รองรับ nested lists, bold, code, ฯลฯ)
+            marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
+            const html = marked.parse(text);
             return '<div class="ai-rendered-content text-sm leading-relaxed">' + html + '</div>';
-        }
-
-        function inlineFormat(text) {
-            return text
-                .replace(/`([^`]+)`/g, '<code class="bg-stone-100 text-rose-600 px-1 rounded text-xs font-mono">$1</code>')
-                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-                .replace(/\*\*(.+?)\*\*/g, '<strong class="text-stone-800">$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                .replace(/__(.+?)__/g, '<strong class="text-stone-800">$1</strong>')
-                .replace(/_(.+?)_/g, '<em>$1</em>');
         }
 
         // ========================================
