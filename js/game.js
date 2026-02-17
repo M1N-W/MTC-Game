@@ -26,10 +26,13 @@
  * - ✅ drawGame() calls drone.draw() between map objects and player
  * - ✅ endGame() nullifies window.drone to prevent stale references
  *
- * (Boss Dog Rider — v6 — unchanged):
+ * (Boss Dog Rider — v6 — UPDATED v7 PROGRESSION):
+ * - ✅ bossEncounterCount tracks how many bosses have been spawned this run
+ * - ✅ Encounter 1 → normal Boss (no dog, bark disabled)
+ * - ✅ Encounter 2+ → Boss with isRider=true (Dog Rider form + bark enabled)
  * - ✅ Boss draws a fully animated dog underneath (4 legs, tail, head)
+ * - ✅ Dog legs use ctx.save/translate/rotate/restore for pendulum motion
  * - ✅ Dog color driven by BALANCE.boss.phase2.dogColor (amber/brown)
- * - ✅ Dog legs animate via Math.sin keyed to this.dogLegTimer
  * - ✅ Enrage at HP < 50%: dog turns red, speed *= enrageSpeedMult, particles
  * - ✅ New bark() attack: emits BarkWave cone, damages + pushes player
  * - ✅ BarkWave class: expanding arc rings with glow; auto-removed after 0.6s
@@ -53,9 +56,6 @@ let loopRunning = false;
 const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0 };
 
 // ─── Day / Night cycle ────────────────────────────────────
-// Monotonically increasing timer (seconds). Drives the
-// BALANCE.LIGHTING.ambientLight sine-wave oscillation each frame.
-// Reset to 0 on startGame() so every run begins at the same phase.
 let dayNightTimer = 0;
 
 // ─── Game Objects (global) ────────────────────────────────
@@ -65,30 +65,30 @@ window.boss           = null;
 window.powerups       = [];
 window.specialEffects = [];
 window.meteorZones    = [];
-window.drone          = null;   // ← Engineering Drone companion
+window.drone          = null;
 let waveStartDamage   = 0;
 
-// ─── MTC Database Server ──────────────────────────────────
+// ─── Boss Progression Counter ─────────────────────────────
 /**
- * Fixed world-space position of the interactive "MTC Database" server.
- * Placed at (350, -350) — away from spawn so players must explore to find it.
+ * Incremented each time a boss is spawned during a run.
+ * Encounter 1 → plain boss (no dog).
+ * Encounter 2+ → Dog Rider form (isRider = true).
+ * Reset to 0 on startGame() so every fresh run begins cleanly.
  */
+let bossEncounterCount = 0;
+
+// ─── MTC Database Server ──────────────────────────────────
 const MTC_DATABASE_SERVER = {
     x: 350,
     y: -350,
-    INTERACTION_RADIUS: 90   // world units — must be within this to interact
+    INTERACTION_RADIUS: 90
 };
 
 // ─── MTC Shop Location ────────────────────────────────────
-/**
- * Fixed world-space position of the in-game shop kiosk.
- * Placed at (-350, 350) — the opposite diagonal from the database server
- * so players naturally discover both as they explore.
- */
 const MTC_SHOP_LOCATION = {
     x: -350,
     y:  350,
-    INTERACTION_RADIUS: 90   // world units
+    INTERACTION_RADIUS: 90
 };
 
 // ─── External Database URL ────────────────────────────────
@@ -133,7 +133,6 @@ function resumeGame() {
     if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
 }
 
-// Backward-compatible aliases
 function openDatabase()   { openExternalDatabase(); }
 function showMathModal()  { openExternalDatabase(); }
 function closeMathModal() { resumeGame(); }
@@ -144,11 +143,9 @@ window.resumeGame           = resumeGame;
 window.showMathModal        = showMathModal;
 window.closeMathModal       = closeMathModal;
 
-// ── Window Focus / Blur Listeners ────────────────────────
 window.addEventListener('blur', () => {
     if (gameState === 'PLAYING') {
         gameState = 'PAUSED';
-        // Only show the generic resume prompt if shop is NOT open
         const shopModal = document.getElementById('shop-modal');
         const shopOpen  = shopModal && shopModal.style.display === 'flex';
         if (!shopOpen) showResumePrompt(true);
@@ -163,7 +160,6 @@ window.addEventListener('focus', () => {
     }
 });
 
-// ─── Draw the Database Server on the map ─────────────────
 function drawDatabaseServer() {
     const screen = worldToScreen(MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     const t    = performance.now() / 600;
@@ -229,7 +225,6 @@ function drawDatabaseServer() {
     CTX.restore();
 }
 
-// ─── Proximity UI updater (DB) ────────────────────────────
 function updateDatabaseServerUI() {
     if (!player) return;
     const d    = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
@@ -456,20 +451,8 @@ window.buyItem    = buyItem;
 
 // ══════════════════════════════════════════════════════════════
 // 🐕 BARK WAVE — Sonic cone visual emitted by Bark attack
-//
-// Spawned into window.specialEffects by Boss.bark().
-// Each frame: expands outward from origin along bossAngle,
-// drawing BARK_RINGS concentric arc segments inside the cone.
-// Removed automatically when timer >= duration.
 // ══════════════════════════════════════════════════════════════
 class BarkWave {
-    /**
-     * @param {number} x          World X of boss when bark fired
-     * @param {number} y          World Y
-     * @param {number} angle      Direction the bark travels (radians)
-     * @param {number} coneHalf   Half-angle of the cone (radians)
-     * @param {number} range      Max world-unit radius of the cone
-     */
     constructor(x, y, angle, coneHalf, range) {
         this.x        = x;
         this.y        = y;
@@ -477,30 +460,28 @@ class BarkWave {
         this.coneHalf = coneHalf;
         this.range    = range;
         this.timer    = 0;
-        this.duration = 0.55;   // seconds until auto-removal
-        this.rings    = 5;      // number of concentric arc rings
+        this.duration = 0.55;
+        this.rings    = 5;
     }
 
-    // update() must return true to signal removal from specialEffects
-    update(dt /*, player, meteorZones — unused */) {
+    update(dt) {
         this.timer += dt;
         return this.timer >= this.duration;
     }
 
     draw() {
         const screen   = worldToScreen(this.x, this.y);
-        const progress = this.timer / this.duration; // 0 → 1
-        const alpha    = 1 - progress;               // fade out over lifetime
+        const progress = this.timer / this.duration;
+        const alpha    = 1 - progress;
 
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
         for (let i = 0; i < this.rings; i++) {
-            // Each ring starts offset by its index and expands outward
             const frac = (progress + i / this.rings) % 1;
             const r    = frac * this.range;
-            if (r < 4) continue; // skip degenerate arcs at origin
+            if (r < 4) continue;
 
             const ringAlpha = alpha * (1 - i / this.rings) * 0.75;
             if (ringAlpha <= 0) continue;
@@ -513,12 +494,10 @@ class BarkWave {
             CTX.shadowColor   = '#d97706';
             CTX.lineCap       = 'round';
 
-            // Main arc in the forward cone
             CTX.beginPath();
             CTX.arc(0, 0, r, -this.coneHalf, this.coneHalf);
             CTX.stroke();
 
-            // Left bounding ray segment
             CTX.beginPath();
             CTX.moveTo(Math.cos(-this.coneHalf) * Math.max(0, r - 25),
                        Math.sin(-this.coneHalf) * Math.max(0, r - 25));
@@ -526,7 +505,6 @@ class BarkWave {
                        Math.sin(-this.coneHalf) * r);
             CTX.stroke();
 
-            // Right bounding ray segment
             CTX.beginPath();
             CTX.moveTo(Math.cos(this.coneHalf) * Math.max(0, r - 25),
                        Math.sin(this.coneHalf) * Math.max(0, r - 25));
@@ -537,7 +515,6 @@ class BarkWave {
             CTX.restore();
         }
 
-        // Central muzzle flash at origin
         if (progress < 0.25) {
             const flashAlpha = (1 - progress / 0.25) * 0.8;
             CTX.globalAlpha = flashAlpha;
@@ -555,9 +532,17 @@ class BarkWave {
 
 // ══════════════════════════════════════════════════════════════
 // 👑 BOSS — "KRU MANOP THE DOG RIDER"
+//
+// Progression:
+//   isRider = false  →  Encounter 1: plain teacher (no dog, no bark)
+//   isRider = true   →  Encounter 2+: Dog Rider form fully enabled
 // ══════════════════════════════════════════════════════════════
 class Boss extends Entity {
-    constructor(difficulty = 1) {
+    /**
+     * @param {number}  difficulty  — scales HP
+     * @param {boolean} isRider     — enables Dog Rider form (set by bossEncounterCount)
+     */
+    constructor(difficulty = 1, isRider = false) {
         super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
         this.maxHp      = BALANCE.boss.baseHp * difficulty;
         this.hp         = this.maxHp;
@@ -569,12 +554,16 @@ class Boss extends Entity {
         this.phase      = 1;
         this.sayTimer   = 0;
 
-        // ── Existing skill timers ──
+        // ── 🐕 Dog Rider progression flag ─────────────────────
+        // false → plain boss (encounter 1), true → full Dog Rider
+        this.isRider = isRider;
+
+        // ── Skill timers ──
         this.skills = {
             slam:  { cd: 0, max: BALANCE.boss.slamCooldown },
             graph: { cd: 0, max: BALANCE.boss.graphCooldown },
             log:   { cd: 0, max: BALANCE.boss.log457Cooldown },
-            // 🐕 NEW — Bark Wave attack (available in all phases, priority ↑ in phase 2)
+            // bark only fires when isRider === true
             bark:  { cd: 0, max: BALANCE.boss.phase2.barkCooldown }
         };
 
@@ -584,11 +573,9 @@ class Boss extends Entity {
         this.log457AttackBonus = 0;
         this.isInvulnerable    = false;
 
-        // ── 🐕 Dog Rider state (NEW) ──────────────────────────
-        // isEnraged  — true once HP drops below 50%; triggers once only
-        // dogLegTimer — monotonically increasing timer that drives leg sin waves
-        this.isEnraged    = false;
-        this.dogLegTimer  = 0;
+        // ── 🐕 Dog Rider state ────────────────────────────────
+        this.isEnraged   = false;
+        this.dogLegTimer = 0; // drives pendulum leg animation
     }
 
     // ──────────────────────────────────────────────────────────
@@ -603,37 +590,37 @@ class Boss extends Entity {
         this.timer   += dt;
         this.sayTimer += dt;
 
-        // ── Dog leg animation timer (faster when enraged) ──
-        this.dogLegTimer += dt * (this.isEnraged ? 2.5 : 1.0);
+        // Dog leg animation timer (only ticks when isRider)
+        if (this.isRider) {
+            this.dogLegTimer += dt * (this.isEnraged ? 2.5 : 1.0);
+        }
 
-        // ── Tick all skill cooldowns ──
+        // Tick all skill cooldowns
         for (let s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
 
-        // ── Periodic speech ──
+        // Periodic speech
         if (this.sayTimer > BALANCE.boss.speechInterval && Math.random() < 0.1) {
             this.speak("Player at " + Math.round(player.hp) + " HP");
             this.sayTimer = 0;
         }
 
         // ── 🔥 ENRAGE — triggers ONCE when HP < 50% ──────────
-        // Replaces the old phase2Speed transition.
-        // moveSpeed is set to base × enrageSpeedMult for a sharper jump.
         if (this.hp < this.maxHp * BALANCE.boss.phase2Threshold && this.phase === 1) {
             this.phase     = 2;
             this.isEnraged = true;
-            // Use enrageSpeedMult against the original base speed so the
-            // value is predictable regardless of shop or status buffs.
             this.moveSpeed = BALANCE.boss.moveSpeed * BALANCE.boss.phase2.enrageSpeedMult;
             spawnFloatingText("ENRAGED!", this.x, this.y - 80, '#ef4444', 40);
-            spawnFloatingText("🐕 DOG RIDER!", this.x, this.y - 120, '#d97706', 32);
+            if (this.isRider) {
+                spawnFloatingText("🐕 DOG RIDER!", this.x, this.y - 120, '#d97706', 32);
+            }
             addScreenShake(20);
             spawnParticles(this.x, this.y, 35, '#ef4444');
             spawnParticles(this.x, this.y, 20, '#d97706');
-            this.speak("Hop on, boy! Let's go!");
+            this.speak(this.isRider ? "Hop on, boy! Let's go!" : "You think you can stop me?!");
             Audio.playBossSpecial();
         }
 
-        // ── log457 state machine (unchanged) ──
+        // ── log457 state machine ──
         if (this.log457State === 'charging') {
             this.log457Timer += dt;
             this.isInvulnerable = true;
@@ -663,7 +650,7 @@ class Boss extends Entity {
                 this.log457State       = null;
                 this.log457AttackBonus = 0;
             }
-            return; // skip rest of update while stunned
+            return;
         }
 
         // ── State machine ──
@@ -676,12 +663,13 @@ class Boss extends Entity {
 
             if (this.timer > 2) {
                 this.timer = 0;
-                // Priority order — bark is inserted between graph and slam.
-                // Phase 2 doubles bark chance since the dog is now active.
-                const barkChance = this.phase === 2 ? 0.40 : 0.18;
+                // Bark only available when Dog Rider form is active
+                const barkChance = (this.isRider && this.phase === 2) ? 0.40
+                                 : (this.isRider)                     ? 0.18
+                                 : 0;
                 if      (this.skills.log.cd   <= 0 && Math.random() < 0.20) this.useLog457();
                 else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) this.useDeadlyGraph(player);
-                else if (this.skills.bark.cd  <= 0 && Math.random() < barkChance) this.bark(player);
+                else if (this.isRider && this.skills.bark.cd <= 0 && Math.random() < barkChance) this.bark(player);
                 else if (this.skills.slam.cd  <= 0 && Math.random() < 0.30) this.useEquationSlam();
                 else this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
             }
@@ -714,7 +702,7 @@ class Boss extends Entity {
             }
         }
 
-        // ── Contact damage ──
+        // Contact damage
         if (d < this.radius + player.radius) {
             player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
         }
@@ -724,41 +712,31 @@ class Boss extends Entity {
     }
 
     // ──────────────────────────────────────────────────────────
-    // 🐕 bark(player) — NEW
-    // Emits a BarkWave special effect and deals instant damage +
-    // pushback if the player is inside the cone.
+    // 🐕 bark(player) — only called when this.isRider is true
     // ──────────────────────────────────────────────────────────
     bark(player) {
         const P2       = BALANCE.boss.phase2;
         this.skills.bark.cd = this.skills.bark.max;
-        this.state = 'CHASE'; // keep chasing while barking
+        this.state = 'CHASE';
 
         const barkAngle = Math.atan2(player.y - this.y, player.x - this.x);
-        const coneHalf  = Math.PI / 3.5; // ~51° half-angle → ~103° total cone
+        const coneHalf  = Math.PI / 3.5;
 
-        // ── Spawn visual effect ──
         window.specialEffects.push(new BarkWave(this.x, this.y, barkAngle, coneHalf, P2.barkRange));
 
-        // ── Damage check: is player inside cone AND within range? ──
-        const dx       = player.x - this.x, dy = player.y - this.y;
-        const d        = Math.hypot(dx, dy);
+        const dx = player.x - this.x, dy = player.y - this.y;
+        const d  = Math.hypot(dx, dy);
         if (d > 0 && d < P2.barkRange) {
-            // Signed angular difference — keep result in [-PI, PI]
             const playerAngle = Math.atan2(dy, dx);
             let   diff        = playerAngle - barkAngle;
-            // Wrap to [-PI, PI]
             while (diff >  Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
 
             if (Math.abs(diff) < coneHalf) {
-                // Damage
                 player.takeDamage(P2.barkDamage);
-
-                // Pushback — launches player away from boss
                 const pushMag = 480;
                 player.vx += (dx / d) * pushMag;
                 player.vy += (dy / d) * pushMag;
-
                 spawnFloatingText('BARK! 🐕', player.x, player.y - 55, '#f59e0b', 26);
                 addScreenShake(10);
             }
@@ -771,7 +749,7 @@ class Boss extends Entity {
     }
 
     // ──────────────────────────────────────────────────────────
-    // Existing special attacks (unchanged)
+    // Existing special attacks
     // ──────────────────────────────────────────────────────────
     useEquationSlam() {
         this.skills.slam.cd = this.skills.slam.max;
@@ -836,18 +814,23 @@ class Boss extends Entity {
 
     // ──────────────────────────────────────────────────────────
     // draw()
-    // Render order (all in rotated boss space):
-    //   1. Enrage red aura / log charging aura
-    //   2. 🐕 Dog body, legs, tail, head (drawn FIRST so boss sits on top)
-    //   3. Original boss body (shirt, ruler, face, etc.)
+    // Render order:
+    //   1. Aura / log glow effects
+    //   2. 🐕 Dog body (ONLY when isRider) — drawn first so boss sits on top
+    //   3. Boss body — shifted up by RIDER_OFFSET_Y when isRider so he
+    //      visually sits on the dog's saddle rather than floating inside it
     //   4. Enrage anger particles
     // ──────────────────────────────────────────────────────────
     draw() {
         const screen = worldToScreen(this.x, this.y);
+
+        // When riding, the boss sprite is elevated above the dog's back
+        const RIDER_OFFSET_Y = this.isRider ? -22 : 0;
+
         CTX.save();
         CTX.translate(screen.x, screen.y);
 
-        // ── log457 charging scale + aura ──
+        // log457 charging scale + aura
         if (this.log457State === 'charging') {
             const sc = 1 + (this.log457Timer / 2) * 0.3;
             CTX.scale(sc, sc);
@@ -856,46 +839,33 @@ class Boss extends Entity {
             CTX.fillStyle = `rgba(239, 68, 68, ${pu * 0.3})`; CTX.fill();
         }
 
-        // ── Phase 2 / active log glow ──
         if (this.log457State === 'active')  { CTX.shadowBlur = 20; CTX.shadowColor = '#facc15'; }
         if (this.log457State === 'stunned') {
             CTX.font = 'bold 30px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', 0, -70);
         }
 
-        // ── Ultimate windup ring ──
         if (this.state === 'ULTIMATE') {
             CTX.beginPath(); CTX.arc(0, 0, 70, 0, Math.PI * 2);
             CTX.strokeStyle = `rgba(239, 68, 68, ${Math.random()})`;
             CTX.lineWidth = 5; CTX.stroke();
         }
 
-        // ── Phase 2 red shadow (only when not log-charging) ──
         if (this.phase === 2 && this.log457State !== 'charging') {
             CTX.shadowBlur = 20; CTX.shadowColor = '#ef4444';
         }
 
-        // ── Rotate to face player ──
+        // Rotate to face player
         CTX.rotate(this.angle);
 
-        // ════════════════════════════════════════════════════
-        // 🐕 DOG — drawn in rotated boss-local space BEFORE
-        //          the boss body so the boss appears to sit on top.
-        //
-        // Coordinate system after rotate(this.angle):
-        //   +x = forward (toward player)
-        //   +y = down (screen space, roughly)
-        //
-        // Dog layout:
-        //   Head  →  forward at (52, 18)
-        //   Body  →  center   ( 8, 32)  elongated ellipse
-        //   Tail  →  behind   (-48, 22) wagging arc
-        //   4 legs attached to body corners, animated via sin
-        // ════════════════════════════════════════════════════
-        this._drawDog();
+        // ── 🐕 DOG — drawn before boss body (only in Rider form) ──
+        if (this.isRider) {
+            this._drawDog();
+        }
 
-        // ════════════════════════════════════════════════════
-        // 👑 BOSS BODY — original art (preserved exactly)
-        // ════════════════════════════════════════════════════
+        // ── 👑 BOSS BODY — translated up onto the saddle when riding ──
+        CTX.save();
+        CTX.translate(0, RIDER_OFFSET_Y);
+
         CTX.fillStyle = '#f8fafc'; CTX.fillRect(-30, -30, 60, 60);
         CTX.fillStyle = '#e2e8f0';
         CTX.beginPath(); CTX.moveTo(-30,-30); CTX.lineTo(-20,-20); CTX.lineTo(20,-20); CTX.lineTo(30,-30); CTX.closePath(); CTX.fill();
@@ -912,7 +882,7 @@ class Boss extends Entity {
         CTX.fillStyle = '#facc15'; CTX.fillRect(25, 12, 60, 10);
         CTX.fillStyle = '#000'; CTX.font = 'bold 8px Arial'; CTX.fillText('30cm', 50, 17);
 
-        // ── Enrage angry particles overlay on boss face ──
+        // Enrage anger particles overlay on boss face
         if (this.isEnraged) {
             const t = performance.now() / 80;
             for (let i = 0; i < 4; i++) {
@@ -931,104 +901,131 @@ class Boss extends Entity {
             CTX.shadowBlur  = 0;
         }
 
-        CTX.restore();
+        CTX.restore(); // end boss body translate
+
+        CTX.restore(); // end outer translate/rotate
     }
 
     // ──────────────────────────────────────────────────────────
     // _drawDog()
-    // Internal helper — renders the animated dog in the
-    // already-rotated boss local coordinate system.
-    // Called only from draw().
+    // Renders the animated dog in the already-rotated boss-local
+    // coordinate system.  Legs use ctx.save/translate/rotate/restore
+    // for a proper pendulum swing — no stretching artefacts.
+    //
+    // Coordinate system (after outer CTX.rotate(this.angle)):
+    //   +x = forward (toward player)   +y = down
+    //
+    // Layout:
+    //   Body ellipse  center  ( 6, 32)
+    //   Saddle patch  center  ( 0, 22)  — where boss sits
+    //   Head circle   center  (52, 20)
+    //   Tail          behind  (-40, 24) → wagging quadratic curve
+    //   4 legs        pivot points on the underside of the body ellipse
     // ──────────────────────────────────────────────────────────
     _drawDog() {
         const P2       = BALANCE.boss.phase2;
-        // Colors shift to red/dark-red when enraged
-        const bodyCol  = this.isEnraged ? '#dc2626' : P2.dogColor;       // main body
-        const darkCol  = this.isEnraged ? '#991b1b' : '#92400e';         // stroke / underside
-        const lightCol = this.isEnraged ? '#ef4444' : '#b45309';         // saddle / snout patch
-        const eyeCol   = this.isEnraged ? '#facc15' : '#1e293b';         // eye fill
+        const bodyCol  = this.isEnraged ? '#dc2626' : P2.dogColor;
+        const darkCol  = this.isEnraged ? '#991b1b' : '#92400e';
+        const lightCol = this.isEnraged ? '#ef4444' : '#b45309';
+        const eyeCol   = this.isEnraged ? '#facc15' : '#1e293b';
 
-        // Dog leg animation — two diagonal pairs swing opposite phase
+        // Pendulum swing angle (radians) — varies per leg pair for a trot gait
         const legSpeed  = this.isEnraged ? 9 : 4.5;
-        const legSwing  = Math.sin(this.dogLegTimer * legSpeed) * 10;
-        const legSwing2 = -legSwing; // opposite pair
+        const swingAmt  = 0.45; // max swing in radians (~26°)
+        const swingA    =  Math.sin(this.dogLegTimer * legSpeed) * swingAmt; // front-L / back-R
+        const swingB    = -swingA;                                            // front-R / back-L
 
-        // ── Ground shadow for dog (slightly ahead of boss shadow) ──
+        const LEG_LEN  = 20; // pixels, drawn downward from pivot
+        const PAW_RY   = 4;  // paw ellipse radii
+
+        // ── Ground shadow (slightly offset forward) ──────────
         CTX.save();
         CTX.globalAlpha = 0.22;
         CTX.fillStyle   = 'rgba(0,0,0,0.9)';
         CTX.beginPath();
-        CTX.ellipse(8, 60, 44, 11, 0, 0, Math.PI * 2);
+        CTX.ellipse(6, 62, 44, 10, 0, 0, Math.PI * 2);
         CTX.fill();
         CTX.restore();
 
-        // ── 4 Legs — drawn BEFORE body so body overlaps leg tops ──
-        CTX.strokeStyle = darkCol;
-        CTX.lineCap     = 'round';
+        // ── Helper: draw one leg + paw from a pivot point ────
+        // pivotX/Y = attachment point on body underside
+        // swingAngle = current pendulum rotation (0 = straight down)
+        const drawLeg = (pivotX, pivotY, swingAngle, pawTiltSign) => {
+            CTX.save();
+            CTX.translate(pivotX, pivotY);
+            CTX.rotate(swingAngle);
 
-        // Front-left leg  (swings with legSwing)
-        CTX.lineWidth = 7;
-        CTX.beginPath();
-        CTX.moveTo(-10, 38);
-        CTX.lineTo(-14, 55 + legSwing);
-        CTX.stroke();
-        // Paw
-        CTX.fillStyle = darkCol;
-        CTX.beginPath(); CTX.ellipse(-15, 57 + legSwing, 6, 4, 0.3, 0, Math.PI * 2); CTX.fill();
+            // Upper leg segment (thigh)
+            CTX.strokeStyle = darkCol;
+            CTX.lineWidth   = 7;
+            CTX.lineCap     = 'round';
+            CTX.beginPath();
+            CTX.moveTo(0, 0);
+            CTX.lineTo(0, LEG_LEN);
+            CTX.stroke();
 
-        // Front-right leg (swings opposite)
-        CTX.beginPath();
-        CTX.moveTo(20, 38);
-        CTX.lineTo(26, 55 + legSwing2);
-        CTX.stroke();
-        CTX.beginPath(); CTX.ellipse(27, 57 + legSwing2, 6, 4, -0.3, 0, Math.PI * 2); CTX.fill();
+            // Knee joint
+            CTX.fillStyle = darkCol;
+            CTX.beginPath();
+            CTX.arc(0, LEG_LEN, 3.5, 0, Math.PI * 2);
+            CTX.fill();
 
-        // Back-left leg  (swings opposite)
-        CTX.beginPath();
-        CTX.moveTo(-22, 34);
-        CTX.lineTo(-28, 52 + legSwing2);
-        CTX.stroke();
-        CTX.beginPath(); CTX.ellipse(-29, 54 + legSwing2, 6, 4, 0.3, 0, Math.PI * 2); CTX.fill();
+            // Lower leg (shin) with slight kick-back curve
+            CTX.strokeStyle = darkCol;
+            CTX.lineWidth   = 5;
+            CTX.beginPath();
+            CTX.moveTo(0, LEG_LEN);
+            CTX.lineTo(pawTiltSign * 3, LEG_LEN + 11);
+            CTX.stroke();
 
-        // Back-right leg (swings with legSwing)
-        CTX.beginPath();
-        CTX.moveTo(34, 34);
-        CTX.lineTo(40, 52 + legSwing);
-        CTX.stroke();
-        CTX.beginPath(); CTX.ellipse(41, 54 + legSwing, 6, 4, -0.3, 0, Math.PI * 2); CTX.fill();
+            // Paw ellipse
+            CTX.fillStyle = darkCol;
+            CTX.beginPath();
+            CTX.ellipse(pawTiltSign * 3, LEG_LEN + 13, 6, PAW_RY, pawTiltSign * 0.25, 0, Math.PI * 2);
+            CTX.fill();
 
-        // ── Dog body — main ellipse ──
+            CTX.restore();
+        };
+
+        // Pivot points: front pair (toward head) and back pair (toward tail)
+        // Y = 36 — bottom edge of body ellipse
+        // Front legs lean slightly forward (positive X offset ~+14); back legs slightly back (~-22)
+        drawLeg( 14, 36,  swingA, -1); // front-left
+        drawLeg( 26, 36,  swingB,  1); // front-right
+        drawLeg(-14, 36,  swingB, -1); // back-left
+        drawLeg( -2, 36,  swingA,  1); // back-right
+
+        // ── Dog body — main ellipse (drawn over leg tops) ────
         CTX.fillStyle   = bodyCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2.5;
         CTX.beginPath();
-        CTX.ellipse(6, 32, 44, 20, 0, 0, Math.PI * 2);
+        CTX.ellipse(6, 28, 44, 18, 0, 0, Math.PI * 2);
         CTX.fill();
         CTX.stroke();
 
-        // Saddle patch (where boss sits)
+        // Saddle patch (lighter, where boss sits — matches RIDER_OFFSET_Y)
         CTX.fillStyle = lightCol;
         CTX.beginPath();
-        CTX.ellipse(0, 25, 24, 11, 0, 0, Math.PI * 2);
+        CTX.ellipse(0, 20, 22, 10, 0, 0, Math.PI * 2);
         CTX.fill();
 
-        // ── Dog tail — animated quadratic curve behind body ──
-        const tailWag  = Math.sin(this.dogLegTimer * (this.isEnraged ? 12 : 6)) * 18;
-        const tailX    = -50; // starts behind the body
+        // ── Tail — wagging quadratic Bézier curve ─────────── ──
+        const tailWag = Math.sin(this.dogLegTimer * (this.isEnraged ? 12 : 6)) * 18;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 6;
         CTX.lineCap     = 'round';
         CTX.beginPath();
-        CTX.moveTo(-40, 24);
-        CTX.quadraticCurveTo(tailX - 10, 10, tailX - 5 + tailWag * 0.4, -8 + tailWag);
+        CTX.moveTo(-44, 22);
+        CTX.quadraticCurveTo(-58, 8, -55 + tailWag * 0.35, -6 + tailWag);
         CTX.stroke();
-        // Fluffy tail tip
+        // Fluffy tip
         CTX.fillStyle = bodyCol;
         CTX.beginPath();
-        CTX.arc(tailX - 5 + tailWag * 0.4, -9 + tailWag, 7, 0, Math.PI * 2);
+        CTX.arc(-55 + tailWag * 0.35, -7 + tailWag, 7, 0, Math.PI * 2);
         CTX.fill();
 
-        // ── Dog head — circle forward of body ──
+        // ── Dog head ─────────────────────────────────────────
         CTX.fillStyle   = bodyCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2.5;
@@ -1060,28 +1057,28 @@ class Boss extends Entity {
         CTX.arc(71, 20, 3.5, 0, Math.PI * 2);
         CTX.fill();
 
-        // Dog eye (glows yellow when enraged)
-        CTX.fillStyle = eyeCol;
+        // Eye (glows when enraged)
+        CTX.fillStyle   = eyeCol;
         CTX.shadowBlur  = this.isEnraged ? 8 : 0;
         CTX.shadowColor = '#facc15';
         CTX.beginPath();
         CTX.arc(56, 13, 4, 0, Math.PI * 2);
         CTX.fill();
-        // Pupil
         CTX.shadowBlur = 0;
         CTX.fillStyle  = '#1e293b';
         CTX.beginPath();
         CTX.arc(57, 13, 2, 0, Math.PI * 2);
         CTX.fill();
 
-        // Mouth / smile / panting tongue
+        // Mouth / smile
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2;
         CTX.lineCap     = 'round';
         CTX.beginPath();
         CTX.arc(63, 24, 5, 0.1, Math.PI - 0.1);
         CTX.stroke();
-        // Tongue (visible when enraged — panting fast)
+
+        // Panting tongue (visible when enraged or during fast leg cycle)
         if (this.isEnraged || Math.sin(this.dogLegTimer * 3) > 0.2) {
             CTX.fillStyle = '#fb7185';
             CTX.beginPath();
@@ -1089,13 +1086,13 @@ class Boss extends Entity {
             CTX.fill();
         }
 
-        // ── Enrage aura on dog body ──
+        // ── Enrage aura on dog body ───────────────────────────
         if (this.isEnraged) {
             const t = performance.now() / 120;
             CTX.save();
             for (let i = 0; i < 5; i++) {
                 const ex = Math.sin(t * 0.7 + i * 1.26) * 36;
-                const ey = Math.cos(t * 0.9 + i * 1.26) * 16 + 30;
+                const ey = Math.cos(t * 0.9 + i * 1.26) * 16 + 28;
                 const er = 3 + Math.sin(t * 1.5 + i) * 1.5;
                 CTX.globalAlpha = 0.5 + Math.sin(t + i) * 0.3;
                 CTX.fillStyle   = i % 2 === 0 ? '#ef4444' : '#f97316';
@@ -1122,11 +1119,26 @@ function startNextWave() {
 
     if (getWave() % BALANCE.waves.bossEveryNWaves === 0) {
         setTimeout(() => {
-            window.boss = new Boss(Math.floor(getWave() / BALANCE.waves.bossEveryNWaves));
+            // ── Boss Progression: track encounter number ──────────
+            bossEncounterCount++;
+            // Encounter 1 → plain boss (no dog/bark)
+            // Encounter 2+ → Dog Rider form enabled
+            const isRider      = bossEncounterCount >= 2;
+            const bossLevel    = Math.floor(getWave() / BALANCE.waves.bossEveryNWaves);
+
+            window.boss = new Boss(bossLevel, isRider);
             UIManager.updateBossHUD(window.boss);
+
+            const riderTag = isRider ? ' 🐕 DOG RIDER' : '';
             document.getElementById('boss-name').innerHTML =
-                `KRU MANOP - LEVEL ${Math.floor(getWave() / BALANCE.waves.bossEveryNWaves)} <span class="ai-badge">AI</span>`;
-            spawnFloatingText('BOSS INCOMING!', player.x, player.y - 100, '#ef4444', 35);
+                `KRU MANOP - LEVEL ${bossLevel}${riderTag} <span class="ai-badge">AI</span>`;
+
+            spawnFloatingText(
+                isRider ? 'BOSS INCOMING! 🐕' : 'BOSS INCOMING!',
+                player.x, player.y - 100,
+                isRider ? '#d97706' : '#ef4444',
+                35
+            );
             addScreenShake(15);
             Audio.playBossSpecial();
         }, BALANCE.waves.bossSpawnDelay);
@@ -1170,16 +1182,12 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
-    // ── 🌅 Day / Night cycle ──────────────────────────────────────
-    // Sine wave drives ambientLight between nightMinLight (0.12) and
-    // dayMaxLight (0.95) over cycleDuration seconds.
+    // ── Day / Night cycle ──────────────────────────────────────
     dayNightTimer += dt;
     {
         const L   = BALANCE.LIGHTING;
-        // Normalised phase: 0 at dawn, 0.5 at dusk (one full sine period = one day)
         const phi = (dayNightTimer / L.cycleDuration) * Math.PI * 2;
-        // Math.sin: -1 = midnight, +1 = noon
-        const dayPhase = Math.sin(phi) * 0.5 + 0.5;   // 0 → 1
+        const dayPhase = Math.sin(phi) * 0.5 + 0.5;
         L.ambientLight = L.nightMinLight + dayPhase * (L.dayMaxLight - L.nightMinLight);
     }
 
@@ -1208,7 +1216,7 @@ function updateGame(dt) {
         }
     }
 
-    // ── Database server: check E key ──
+    // Database server: check E key
     const dToServer = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
         keys.e = 0;
@@ -1216,7 +1224,7 @@ function updateGame(dt) {
         return;
     }
 
-    // ── Shop: check B key ──
+    // Shop: check B key
     const dToShop = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
     if (dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
         keys.b = 0;
@@ -1226,7 +1234,7 @@ function updateGame(dt) {
 
     player.update(dt, keys, mouse);
 
-    // ── Weapon system (non-Poom) ──
+    // Weapon system (non-Poom)
     if (!(player instanceof PoomPlayer)) {
         weaponSystem.update(dt);
         const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
@@ -1239,7 +1247,7 @@ function updateGame(dt) {
         }
     }
 
-    // ── Poom input ──
+    // Poom input
     if (player instanceof PoomPlayer) {
         if (mouse.left === 1 && gameState === 'PLAYING') shootPoom(player);
         if (mouse.right === 1) {
@@ -1253,7 +1261,7 @@ function updateGame(dt) {
         UIManager.updateSkillIcons(player);
     }
 
-    // ── 🤖 Drone update ──
+    // 🤖 Drone update
     if (window.drone && player && !player.dead) {
         window.drone.update(dt, player);
     }
@@ -1299,7 +1307,6 @@ function updateGame(dt) {
     updateScreenShake();
     Achievements.checkAll();
 
-    // ── Proximity UI ──
     updateDatabaseServerUI();
     updateShopProximityUI();
 }
@@ -1328,34 +1335,20 @@ function drawGame() {
     drawDatabaseServer();
     drawShopObject();
 
-    // ── VIEW-CULLED ENTITY DRAWS ──────────────────────────────
-    // update() runs for every entity every frame (so AI, physics,
-    // and collisions are always accurate). draw() is skipped when
-    // the entity's bounding circle is fully off-screen, saving
-    // canvas state saves/restores and all subordinate draw calls.
-    //
-    // PowerUps — small interactive pickups, cull with 60 px margin
     for (const p of powerups) {
         if (p.isOnScreen ? p.isOnScreen(60) : true) p.draw();
     }
 
-    // Special effects (BarkWave, EquationSlam, etc.) — always draw;
-    // they are typically near the boss/player so culling is rarely useful
-    // and their update() already self-removes when expired.
     specialEffects.forEach(e => e.draw());
 
-    // Drone — always near player, never culled
     if (window.drone) window.drone.draw();
 
-    // Player — always draw (camera follows player, always on-screen)
     player.draw();
 
-    // Enemies — cull with 80 px buffer (enemy radius ≤ 25, boss ≤ 50)
     for (const e of enemies) {
         if (e.isOnScreen(80)) e.draw();
     }
 
-    // Boss — large sprite; use 200 px buffer to account for dog + ruler
     if (boss && !boss.dead && boss.isOnScreen(200)) boss.draw();
     projectileManager.draw();
     particleSystem.draw();
@@ -1363,25 +1356,18 @@ function drawGame() {
 
     CTX.restore();
 
-    // ── 🌑 LIGHTING OVERLAY ──────────────────────────────────────
-    // Called OUTSIDE the shake-translated save/restore block so the
-    // full-screen darkness quad always covers the entire canvas.
-    // Light positions are adjusted by shake manually inside drawLighting().
     {
-        // Gather projectile list safely — projectileManager lives in another module
         const allProj = (typeof projectileManager !== 'undefined' && projectileManager.projectiles)
             ? projectileManager.projectiles
             : [];
 
         mapSystem.drawLighting(player, allProj, [
-            // MTC Database Server — cool cyan lamp
             {
                 x: MTC_DATABASE_SERVER.x,
                 y: MTC_DATABASE_SERVER.y,
                 radius: BALANCE.LIGHTING.mtcServerLightRadius,
                 type: 'cool'
             },
-            // MTC Co-op Shop — warm amber kiosk glow
             {
                 x: MTC_SHOP_LOCATION.x,
                 y: MTC_SHOP_LOCATION.y,
@@ -1391,21 +1377,15 @@ function drawGame() {
         ]);
     }
 
-    // ── 🌙 DAY / NIGHT HUD INDICATOR ─────────────────────────────
-    // Drawn in raw screen-space (no camera or shake transforms).
-    // Positioned top-right, away from the main HUD panel.
     drawDayNightHUD();
 }
 
 // ══════════════════════════════════════════════════════════════
-// 🌞 DAY / NIGHT HUD — small orbital clock top-right corner
-// Shows sun/moon icon, a circular phase arc, and the current
-// period label. Stays bright even when the world is dark
-// because it is drawn directly to CTX with no darkness overlay.
+// 🌞 DAY / NIGHT HUD
 // ══════════════════════════════════════════════════════════════
 function drawDayNightHUD() {
     const L       = BALANCE.LIGHTING;
-    const phase   = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight); // 0→1
+    const phase   = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight);
     const isDawn  = phase > 0.5;
 
     const cx = CANVAS.width  - 52;
@@ -1414,7 +1394,6 @@ function drawDayNightHUD() {
 
     CTX.save();
 
-    // Background disc
     CTX.fillStyle   = isDawn ? 'rgba(255, 210, 80, 0.18)' : 'rgba(80, 110, 255, 0.18)';
     CTX.strokeStyle = isDawn ? 'rgba(255, 210, 80, 0.55)' : 'rgba(130, 160, 255, 0.55)';
     CTX.lineWidth   = 2;
@@ -1423,7 +1402,6 @@ function drawDayNightHUD() {
     CTX.fill();
     CTX.stroke();
 
-    // Phase fill arc (sweeps from top, clockwise with the day phase)
     CTX.strokeStyle = isDawn ? '#fbbf24' : '#818cf8';
     CTX.lineWidth   = 3.5;
     CTX.lineCap     = 'round';
@@ -1434,13 +1412,11 @@ function drawDayNightHUD() {
     CTX.stroke();
     CTX.shadowBlur  = 0;
 
-    // Icon — sun during day, moon at night
     CTX.font          = `${r}px Arial`;
     CTX.textAlign     = 'center';
     CTX.textBaseline  = 'middle';
     CTX.fillText(isDawn ? '☀️' : '🌙', cx, cy);
 
-    // Period label
     CTX.fillStyle     = isDawn ? '#fde68a' : '#c7d2fe';
     CTX.font          = 'bold 8px Arial';
     CTX.textAlign     = 'center';
@@ -1450,6 +1426,7 @@ function drawDayNightHUD() {
 
     CTX.restore();
 }
+
 function drawGrid() {
     const sz = GAME_CONFIG.physics.gridSize;
     const ox = -getCamera().x % sz;
@@ -1505,11 +1482,15 @@ function startGame(charType = 'kao') {
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss = null;
 
-    // ── Reset day/night to dawn (bright start) ──────────────────
+    // Reset day/night to dawn
     dayNightTimer  = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
-    // ── Reset shop buff state on every fresh start ──
+    // ── Reset boss progression counter ────────────────────────
+    bossEncounterCount = 0;
+    console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
+
+    // Reset shop buff state
     player.shopDamageBoostActive = false;
     player.shopDamageBoostTimer  = 0;
     player._baseDamageBoost      = undefined;
@@ -1517,7 +1498,7 @@ function startGame(charType = 'kao') {
     player.shopSpeedBoostTimer   = 0;
     player._baseMoveSpeed        = undefined;
 
-    // ── 🤖 Create the Engineering Drone ──
+    // 🤖 Create the Engineering Drone
     window.drone = new Drone();
     window.drone.x = player.x;
     window.drone.y = player.y;
