@@ -659,6 +659,10 @@ function startGame(charType = 'kao') {
     floatingTextSystem.clear();
     mapSystem.init();
 
+    // ── FIX: Tell WeaponSystem which char is active BEFORE updateWeaponUI()
+    //    so it reads BALANCE.characters[charType].weapons, not BALANCE.player.weapons ──
+    weaponSystem.setActiveChar(charType);
+
     if (!(player instanceof PoomPlayer)) weaponSystem.updateWeaponUI();
     UIManager.setupCharacterHUD(player);
 
