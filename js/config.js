@@ -76,8 +76,8 @@ const BALANCE = {
     // 🌾 POOM CHARACTER STATS
     poom: {
         // Health & Energy
-        hp: 120,
-        maxHp: 120,
+        hp: 135,
+        maxHp: 135,
         energy: 100,
         maxEnergy: 100,
 
@@ -91,7 +91,7 @@ const BALANCE = {
 
         // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
         riceDamage: 35,
-        riceCooldown: 0.67,
+        riceCooldown: 0.6,
         riceSpeed: 600,
         riceRange: 700,
         riceColor: '#ffffff',        // สีข้าวเหนียวขาวสะอาด
@@ -235,7 +235,7 @@ const BALANCE = {
     // 🏫 MAP SETTINGS
     map: {
         size: 3000,            // Map size (3000x3000)
-        objectDensity: 0.12,    
+        objectDensity: 0.12,   // ความหนาแน่นของวัตถุ (0.12 = 12% ของพื้นที่)
         objectTypes: ['desk', 'chair', 'cabinet', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
