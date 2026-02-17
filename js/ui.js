@@ -1,9 +1,9 @@
 /**
- * 📊 MTC: ENHANCED EDITION - UI System
+ * MTC: ENHANCED EDITION - UI System
  * Achievements, HUD, and UI management
  *
  * REFACTORED:
- * - ✅ All BALANCE.poom.* → BALANCE.characters.poom.*
+ * - All BALANCE.poom.* -> BALANCE.characters.poom.*
  */
 
 class AchievementSystem {
@@ -72,23 +72,21 @@ class AchievementSystem {
 }
 
 class UIManager {
+
     static showVoiceBubble(text, x, y) {
         const bubble = document.getElementById('voice-bubble');
         if (!bubble) return;
-
         const screen = worldToScreen(x, y - 40);
         bubble.textContent = text;
         bubble.style.left = screen.x + 'px';
         bubble.style.top  = screen.y + 'px';
         bubble.classList.add('visible');
-
         setTimeout(() => bubble.classList.remove('visible'), 1500);
     }
 
     static updateBossHUD(boss) {
         const hud   = document.getElementById('boss-hud');
         const hpBar = document.getElementById('boss-hp-bar');
-
         if (boss && !boss.dead) {
             hud.classList.add('active');
             hpBar.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
@@ -100,7 +98,6 @@ class UIManager {
     static updateBossSpeech(boss) {
         const speech = document.getElementById('boss-speech');
         if (!speech || !boss) return;
-
         if (speech.classList.contains('visible')) {
             const screen = worldToScreen(boss.x, boss.y - 80);
             speech.style.left = screen.x + 'px';
@@ -111,39 +108,30 @@ class UIManager {
     static showBossSpeech(text) {
         const speech = document.getElementById('boss-speech');
         if (!speech) return;
-
         speech.textContent = text;
         speech.classList.add('visible');
-
         setTimeout(() => speech.classList.remove('visible'), 3000);
     }
 
-    /**
-     * 🎮 setupCharacterHUD — เรียกครั้งเดียวตอนเริ่มเกม
-     * ตั้งค่า HUD ให้ตรงกับตัวละครที่เลือก
-     */
     static setupCharacterHUD(player) {
         const isPoom = player instanceof PoomPlayer;
 
-        // Weapon indicator: ซ่อนสำหรับภูมิ
         const weaponIndicator = document.querySelector('.weapon-indicator');
         if (weaponIndicator) {
             weaponIndicator.style.display = isPoom ? 'none' : '';
         }
 
-        // Player avatar icon
         const playerAvatar = document.getElementById('player-avatar');
         if (playerAvatar) {
-            playerAvatar.textContent = isPoom ? '🌾' : '👨‍🎓';
+            playerAvatar.textContent = isPoom ? '\u{1F33E}' : '\u{1F468}\u200D\u{1F393}';
         }
 
-        // Skill 1 icon & label
         const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
         if (skill1El) {
             if (isPoom) {
                 skill1El.id = 'eat-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '🍙';
+                if (emojiEl) emojiEl.textContent = '\u{1F359}';
                 const hintEl = document.getElementById('skill1-hint');
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
@@ -151,7 +139,7 @@ class UIManager {
             } else {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '📖';
+                if (emojiEl) emojiEl.textContent = '\u{1F4D6}';
                 const hintEl = document.getElementById('skill1-hint');
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
@@ -159,30 +147,21 @@ class UIManager {
             }
         }
 
-        // Skill 2 (naga) slot: แสดงเฉพาะภูมิ
         const nagaSlot = document.getElementById('naga-icon');
         if (nagaSlot) nagaSlot.style.display = isPoom ? 'flex' : 'none';
 
-        // Mobile: btn-naga
         const btnNaga = document.getElementById('btn-naga');
         if (btnNaga) btnNaga.style.display = isPoom ? 'flex' : 'none';
 
-        // Mobile: btn-skill icon
         const btnSkill = document.getElementById('btn-skill');
-        if (btnSkill) btnSkill.textContent = isPoom ? '🍙' : '📖';
+        if (btnSkill) btnSkill.textContent = isPoom ? '\u{1F359}' : '\u{1F4D6}';
     }
 
-    /**
-     * 🔁 updateSkillIcons — เรียกทุก Frame ขณะเล่นเป็นภูมิ
-     * อัปเดต Cooldown bar ของสกิล 1 (eat-cd) และสกิล 2 (naga-cd)
-     * ดึงค่า cooldown สูงสุดจาก BALANCE.characters.poom
-     */
     static updateSkillIcons(player) {
         if (!(player instanceof PoomPlayer)) return;
 
-        const S = BALANCE.characters.poom; // ← refactored: จาก BALANCE.poom
+        const S = BALANCE.characters.poom;
 
-        // ── Skill 1 (กินข้าวเหนียว) ──
         const eatIcon = document.getElementById('eat-icon');
         const eatCd   = document.getElementById('eat-cd');
         if (eatCd) {
@@ -198,7 +177,6 @@ class UIManager {
             }
         }
 
-        // ── Skill 2 (อัญเชิญพญานาค) ──
         const nagaIcon  = document.getElementById('naga-icon');
         const nagaCd    = document.getElementById('naga-cd');
         const nagaTimer = document.getElementById('naga-timer');
@@ -207,7 +185,6 @@ class UIManager {
                 ? 100
                 : Math.min(100, (1 - player.cooldowns.naga / S.nagaCooldown) * 100);
             nagaCd.style.height = `${100 - np}%`;
-
             if (nagaIcon) {
                 if (player.cooldowns.naga <= 0) nagaIcon.classList.add('active');
                 else nagaIcon.classList.remove('active');
@@ -223,41 +200,31 @@ class UIManager {
         }
     }
 
-    /**
-     * 💀 showGameOver(score, wave)
-     * Centralises all DOM writes for the Game Over report card.
-     * Called by endGame() BEFORE the async AI call so stat boxes
-     * are never left at their default 0.
-     */
+    // ------------------------------------------------------------------
+    // Game Over helpers
+    // Called by endGame() in game.js BEFORE the async AI call,
+    // so the stat boxes are never left at their HTML default of 0.
+    // ------------------------------------------------------------------
+
     static showGameOver(score, wave) {
-        // Title bar
         const titleEl = document.querySelector('.title');
         if (titleEl) {
             titleEl.innerHTML =
-                `GAME OVER<br><span class="subtitle">SCORE ${score.toLocaleString()} | WAVE ${wave}</span>`;
+                'GAME OVER<br><span class="subtitle">SCORE ' + score.toLocaleString() + ' | WAVE ' + wave + '</span>';
         }
-
-        // Stat boxes — these were the elements always showing 0
         const reportScoreEl = document.getElementById('report-score');
         if (reportScoreEl) reportScoreEl.textContent = score.toLocaleString();
 
         const reportWaveEl = document.getElementById('report-wave');
         if (reportWaveEl) reportWaveEl.textContent = wave;
 
-        // Reset commentary placeholder while AI loads
         const reportText = document.getElementById('report-text');
-        if (reportText) reportText.textContent = 'กำลังรอความเห็นจากครู...';
+        if (reportText) reportText.textContent = 'Loading...';
 
-        // Show report card container
         const rc = document.getElementById('report-card');
         if (rc) rc.style.display = 'block';
     }
 
-    /**
-     * resetGameOverUI()
-     * Resets all report-card fields to defaults.
-     * Called from startGame() so replays never show stale data.
-     */
     static resetGameOverUI() {
         const reportScoreEl = document.getElementById('report-score');
         if (reportScoreEl) reportScoreEl.textContent = '0';
@@ -266,8 +233,9 @@ class UIManager {
         if (reportWaveEl) reportWaveEl.textContent = '0';
 
         const reportText = document.getElementById('report-text');
-        if (reportText) reportText.textContent = 'กำลังรอความเห็นจากครู...';
+        if (reportText) reportText.textContent = 'Loading...';
     }
+
 }
 
 const Achievements = new AchievementSystem();
