@@ -26,7 +26,7 @@
  * - ✅ drawGame() calls drone.draw() between map objects and player
  * - ✅ endGame() nullifies window.drone to prevent stale references
  *
- * (Boss Dog Rider — v6 — NEW):
+ * (Boss Dog Rider — v6 — unchanged):
  * - ✅ Boss draws a fully animated dog underneath (4 legs, tail, head)
  * - ✅ Dog color driven by BALANCE.boss.phase2.dogColor (amber/brown)
  * - ✅ Dog legs animate via Math.sin keyed to this.dogLegTimer
@@ -34,6 +34,14 @@
  * - ✅ New bark() attack: emits BarkWave cone, damages + pushes player
  * - ✅ BarkWave class: expanding arc rings with glow; auto-removed after 0.6s
  * - ✅ Bark mixed into CHASE decision tree alongside Slam / Graph / Summon
+ *
+ * (Glitch Wave — v7 — NEW):
+ * - ✅ isGlitchWave flag — true on every 5th wave (wave % 5 === 0)
+ * - ✅ glitchIntensity — ramps 0→1 over 2 s at wave start, fades on end
+ * - ✅ Glitch enemies: 2× spawn count, 50% HP (die faster but swarm hard)
+ * - ✅ Control inversion: random bursts flip W↔S and A↔D, timer-driven
+ * - ✅ drawGlitchEffect(glitchIntensity, controlsInverted) called after lighting
+ * - ✅ Glitch state fully reset on wave clear, boss defeat, and endGame()
  */
 
 // ─── Game State ───────────────────────────────────────────
@@ -42,9 +50,6 @@ let loopRunning = false;
 const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0 };
 
 // ─── Day / Night cycle ────────────────────────────────────
-// Monotonically increasing timer (seconds). Drives the
-// BALANCE.LIGHTING.ambientLight sine-wave oscillation each frame.
-// Reset to 0 on startGame() so every run begins at the same phase.
 let dayNightTimer = 0;
 
 // ─── Game Objects (global) ────────────────────────────────
@@ -54,30 +59,32 @@ window.boss           = null;
 window.powerups       = [];
 window.specialEffects = [];
 window.meteorZones    = [];
-window.drone          = null;   // ← Engineering Drone companion
+window.drone          = null;
 let waveStartDamage   = 0;
 
+// ─── ⚡ GLITCH WAVE STATE ──────────────────────────────────
+// isGlitchWave      — true for the entire duration of a glitch wave
+// glitchIntensity   — 0→1 float, drives all visual effect strengths
+//                     ramps up at wave start, fades after wave ends
+// controlsInverted  — when true W↔S and A↔D are swapped each frame
+// glitchControlTimer — seconds until the next control-flip toggle
+let isGlitchWave       = false;
+let glitchIntensity    = 0;
+let controlsInverted   = false;
+let glitchControlTimer = 0;
+
 // ─── MTC Database Server ──────────────────────────────────
-/**
- * Fixed world-space position of the interactive "MTC Database" server.
- * Placed at (350, -350) — away from spawn so players must explore to find it.
- */
 const MTC_DATABASE_SERVER = {
     x: 350,
     y: -350,
-    INTERACTION_RADIUS: 90   // world units — must be within this to interact
+    INTERACTION_RADIUS: 90
 };
 
 // ─── MTC Shop Location ────────────────────────────────────
-/**
- * Fixed world-space position of the in-game shop kiosk.
- * Placed at (-350, 350) — the opposite diagonal from the database server
- * so players naturally discover both as they explore.
- */
 const MTC_SHOP_LOCATION = {
     x: -350,
     y:  350,
-    INTERACTION_RADIUS: 90   // world units
+    INTERACTION_RADIUS: 90
 };
 
 // ─── External Database URL ────────────────────────────────
@@ -137,7 +144,6 @@ window.closeMathModal       = closeMathModal;
 window.addEventListener('blur', () => {
     if (gameState === 'PLAYING') {
         gameState = 'PAUSED';
-        // Only show the generic resume prompt if shop is NOT open
         const shopModal = document.getElementById('shop-modal');
         const shopOpen  = shopModal && shopModal.style.display === 'flex';
         if (!shopOpen) showResumePrompt(true);
@@ -445,20 +451,8 @@ window.buyItem    = buyItem;
 
 // ══════════════════════════════════════════════════════════════
 // 🐕 BARK WAVE — Sonic cone visual emitted by Bark attack
-//
-// Spawned into window.specialEffects by Boss.bark().
-// Each frame: expands outward from origin along bossAngle,
-// drawing BARK_RINGS concentric arc segments inside the cone.
-// Removed automatically when timer >= duration.
 // ══════════════════════════════════════════════════════════════
 class BarkWave {
-    /**
-     * @param {number} x          World X of boss when bark fired
-     * @param {number} y          World Y
-     * @param {number} angle      Direction the bark travels (radians)
-     * @param {number} coneHalf   Half-angle of the cone (radians)
-     * @param {number} range      Max world-unit radius of the cone
-     */
     constructor(x, y, angle, coneHalf, range) {
         this.x        = x;
         this.y        = y;
@@ -466,30 +460,28 @@ class BarkWave {
         this.coneHalf = coneHalf;
         this.range    = range;
         this.timer    = 0;
-        this.duration = 0.55;   // seconds until auto-removal
-        this.rings    = 5;      // number of concentric arc rings
+        this.duration = 0.55;
+        this.rings    = 5;
     }
 
-    // update() must return true to signal removal from specialEffects
-    update(dt /*, player, meteorZones — unused */) {
+    update(dt) {
         this.timer += dt;
         return this.timer >= this.duration;
     }
 
     draw() {
         const screen   = worldToScreen(this.x, this.y);
-        const progress = this.timer / this.duration; // 0 → 1
-        const alpha    = 1 - progress;               // fade out over lifetime
+        const progress = this.timer / this.duration;
+        const alpha    = 1 - progress;
 
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
         for (let i = 0; i < this.rings; i++) {
-            // Each ring starts offset by its index and expands outward
             const frac = (progress + i / this.rings) % 1;
             const r    = frac * this.range;
-            if (r < 4) continue; // skip degenerate arcs at origin
+            if (r < 4) continue;
 
             const ringAlpha = alpha * (1 - i / this.rings) * 0.75;
             if (ringAlpha <= 0) continue;
@@ -502,12 +494,10 @@ class BarkWave {
             CTX.shadowColor   = '#d97706';
             CTX.lineCap       = 'round';
 
-            // Main arc in the forward cone
             CTX.beginPath();
             CTX.arc(0, 0, r, -this.coneHalf, this.coneHalf);
             CTX.stroke();
 
-            // Left bounding ray segment
             CTX.beginPath();
             CTX.moveTo(Math.cos(-this.coneHalf) * Math.max(0, r - 25),
                        Math.sin(-this.coneHalf) * Math.max(0, r - 25));
@@ -515,7 +505,6 @@ class BarkWave {
                        Math.sin(-this.coneHalf) * r);
             CTX.stroke();
 
-            // Right bounding ray segment
             CTX.beginPath();
             CTX.moveTo(Math.cos(this.coneHalf) * Math.max(0, r - 25),
                        Math.sin(this.coneHalf) * Math.max(0, r - 25));
@@ -526,7 +515,6 @@ class BarkWave {
             CTX.restore();
         }
 
-        // Central muzzle flash at origin
         if (progress < 0.25) {
             const flashAlpha = (1 - progress / 0.25) * 0.8;
             CTX.globalAlpha = flashAlpha;
@@ -558,31 +546,22 @@ class Boss extends Entity {
         this.phase      = 1;
         this.sayTimer   = 0;
 
-        // ── Existing skill timers ──
         this.skills = {
             slam:  { cd: 0, max: BALANCE.boss.slamCooldown },
             graph: { cd: 0, max: BALANCE.boss.graphCooldown },
             log:   { cd: 0, max: BALANCE.boss.log457Cooldown },
-            // 🐕 NEW — Bark Wave attack (available in all phases, priority ↑ in phase 2)
             bark:  { cd: 0, max: BALANCE.boss.phase2.barkCooldown }
         };
 
-        // ── log457 state machine ──
         this.log457State       = null;
         this.log457Timer       = 0;
         this.log457AttackBonus = 0;
         this.isInvulnerable    = false;
 
-        // ── 🐕 Dog Rider state (NEW) ──────────────────────────
-        // isEnraged  — true once HP drops below 50%; triggers once only
-        // dogLegTimer — monotonically increasing timer that drives leg sin waves
         this.isEnraged    = false;
         this.dogLegTimer  = 0;
     }
 
-    // ──────────────────────────────────────────────────────────
-    // update(dt, player)
-    // ──────────────────────────────────────────────────────────
     update(dt, player) {
         if (this.dead) return;
 
@@ -592,26 +571,18 @@ class Boss extends Entity {
         this.timer   += dt;
         this.sayTimer += dt;
 
-        // ── Dog leg animation timer (faster when enraged) ──
         this.dogLegTimer += dt * (this.isEnraged ? 2.5 : 1.0);
 
-        // ── Tick all skill cooldowns ──
         for (let s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
 
-        // ── Periodic speech ──
         if (this.sayTimer > BALANCE.boss.speechInterval && Math.random() < 0.1) {
             this.speak("Player at " + Math.round(player.hp) + " HP");
             this.sayTimer = 0;
         }
 
-        // ── 🔥 ENRAGE — triggers ONCE when HP < 50% ──────────
-        // Replaces the old phase2Speed transition.
-        // moveSpeed is set to base × enrageSpeedMult for a sharper jump.
         if (this.hp < this.maxHp * BALANCE.boss.phase2Threshold && this.phase === 1) {
             this.phase     = 2;
             this.isEnraged = true;
-            // Use enrageSpeedMult against the original base speed so the
-            // value is predictable regardless of shop or status buffs.
             this.moveSpeed = BALANCE.boss.moveSpeed * BALANCE.boss.phase2.enrageSpeedMult;
             spawnFloatingText("ENRAGED!", this.x, this.y - 80, '#ef4444', 40);
             spawnFloatingText("🐕 DOG RIDER!", this.x, this.y - 120, '#d97706', 32);
@@ -622,7 +593,6 @@ class Boss extends Entity {
             Audio.playBossSpecial();
         }
 
-        // ── log457 state machine (unchanged) ──
         if (this.log457State === 'charging') {
             this.log457Timer += dt;
             this.isInvulnerable = true;
@@ -652,10 +622,9 @@ class Boss extends Entity {
                 this.log457State       = null;
                 this.log457AttackBonus = 0;
             }
-            return; // skip rest of update while stunned
+            return;
         }
 
-        // ── State machine ──
         if (this.state === 'CHASE') {
             if (!player.isInvisible) {
                 this.vx = Math.cos(this.angle) * this.moveSpeed;
@@ -665,8 +634,6 @@ class Boss extends Entity {
 
             if (this.timer > 2) {
                 this.timer = 0;
-                // Priority order — bark is inserted between graph and slam.
-                // Phase 2 doubles bark chance since the dog is now active.
                 const barkChance = this.phase === 2 ? 0.40 : 0.18;
                 if      (this.skills.log.cd   <= 0 && Math.random() < 0.20) this.useLog457();
                 else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) this.useDeadlyGraph(player);
@@ -703,7 +670,6 @@ class Boss extends Entity {
             }
         }
 
-        // ── Contact damage ──
         if (d < this.radius + player.radius) {
             player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
         }
@@ -712,42 +678,29 @@ class Boss extends Entity {
         UIManager.updateBossSpeech(this);
     }
 
-    // ──────────────────────────────────────────────────────────
-    // 🐕 bark(player) — NEW
-    // Emits a BarkWave special effect and deals instant damage +
-    // pushback if the player is inside the cone.
-    // ──────────────────────────────────────────────────────────
     bark(player) {
         const P2       = BALANCE.boss.phase2;
         this.skills.bark.cd = this.skills.bark.max;
-        this.state = 'CHASE'; // keep chasing while barking
+        this.state = 'CHASE';
 
         const barkAngle = Math.atan2(player.y - this.y, player.x - this.x);
-        const coneHalf  = Math.PI / 3.5; // ~51° half-angle → ~103° total cone
+        const coneHalf  = Math.PI / 3.5;
 
-        // ── Spawn visual effect ──
         window.specialEffects.push(new BarkWave(this.x, this.y, barkAngle, coneHalf, P2.barkRange));
 
-        // ── Damage check: is player inside cone AND within range? ──
         const dx       = player.x - this.x, dy = player.y - this.y;
         const d        = Math.hypot(dx, dy);
         if (d > 0 && d < P2.barkRange) {
-            // Signed angular difference — keep result in [-PI, PI]
             const playerAngle = Math.atan2(dy, dx);
             let   diff        = playerAngle - barkAngle;
-            // Wrap to [-PI, PI]
             while (diff >  Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
 
             if (Math.abs(diff) < coneHalf) {
-                // Damage
                 player.takeDamage(P2.barkDamage);
-
-                // Pushback — launches player away from boss
                 const pushMag = 480;
                 player.vx += (dx / d) * pushMag;
                 player.vy += (dy / d) * pushMag;
-
                 spawnFloatingText('BARK! 🐕', player.x, player.y - 55, '#f59e0b', 26);
                 addScreenShake(10);
             }
@@ -759,9 +712,6 @@ class Boss extends Entity {
         this.speak("BARK BARK BARK!");
     }
 
-    // ──────────────────────────────────────────────────────────
-    // Existing special attacks (unchanged)
-    // ──────────────────────────────────────────────────────────
     useEquationSlam() {
         this.skills.slam.cd = this.skills.slam.max;
         this.state = 'CHASE';
@@ -815,6 +765,8 @@ class Boss extends Entity {
             }
             window.boss = null;
             Achievements.check('boss_down');
+            // ── Reset glitch state when boss dies ──
+            _resetGlitchState();
             setTimeout(() => {
                 setWave(getWave() + 1);
                 if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
@@ -823,20 +775,11 @@ class Boss extends Entity {
         }
     }
 
-    // ──────────────────────────────────────────────────────────
-    // draw()
-    // Render order (all in rotated boss space):
-    //   1. Enrage red aura / log charging aura
-    //   2. 🐕 Dog body, legs, tail, head (drawn FIRST so boss sits on top)
-    //   3. Original boss body (shirt, ruler, face, etc.)
-    //   4. Enrage anger particles
-    // ──────────────────────────────────────────────────────────
     draw() {
         const screen = worldToScreen(this.x, this.y);
         CTX.save();
         CTX.translate(screen.x, screen.y);
 
-        // ── log457 charging scale + aura ──
         if (this.log457State === 'charging') {
             const sc = 1 + (this.log457Timer / 2) * 0.3;
             CTX.scale(sc, sc);
@@ -845,46 +788,25 @@ class Boss extends Entity {
             CTX.fillStyle = `rgba(239, 68, 68, ${pu * 0.3})`; CTX.fill();
         }
 
-        // ── Phase 2 / active log glow ──
         if (this.log457State === 'active')  { CTX.shadowBlur = 20; CTX.shadowColor = '#facc15'; }
         if (this.log457State === 'stunned') {
             CTX.font = 'bold 30px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', 0, -70);
         }
 
-        // ── Ultimate windup ring ──
         if (this.state === 'ULTIMATE') {
             CTX.beginPath(); CTX.arc(0, 0, 70, 0, Math.PI * 2);
             CTX.strokeStyle = `rgba(239, 68, 68, ${Math.random()})`;
             CTX.lineWidth = 5; CTX.stroke();
         }
 
-        // ── Phase 2 red shadow (only when not log-charging) ──
         if (this.phase === 2 && this.log457State !== 'charging') {
             CTX.shadowBlur = 20; CTX.shadowColor = '#ef4444';
         }
 
-        // ── Rotate to face player ──
         CTX.rotate(this.angle);
 
-        // ════════════════════════════════════════════════════
-        // 🐕 DOG — drawn in rotated boss-local space BEFORE
-        //          the boss body so the boss appears to sit on top.
-        //
-        // Coordinate system after rotate(this.angle):
-        //   +x = forward (toward player)
-        //   +y = down (screen space, roughly)
-        //
-        // Dog layout:
-        //   Head  →  forward at (52, 18)
-        //   Body  →  center   ( 8, 32)  elongated ellipse
-        //   Tail  →  behind   (-48, 22) wagging arc
-        //   4 legs attached to body corners, animated via sin
-        // ════════════════════════════════════════════════════
         this._drawDog();
 
-        // ════════════════════════════════════════════════════
-        // 👑 BOSS BODY — original art (preserved exactly)
-        // ════════════════════════════════════════════════════
         CTX.fillStyle = '#f8fafc'; CTX.fillRect(-30, -30, 60, 60);
         CTX.fillStyle = '#e2e8f0';
         CTX.beginPath(); CTX.moveTo(-30,-30); CTX.lineTo(-20,-20); CTX.lineTo(20,-20); CTX.lineTo(30,-30); CTX.closePath(); CTX.fill();
@@ -897,11 +819,9 @@ class Boss extends Entity {
             CTX.fillStyle = '#ef4444';
             CTX.fillRect(-12,-5,10,3); CTX.fillRect(2,-5,10,3);
         }
-        // Ruler
         CTX.fillStyle = '#facc15'; CTX.fillRect(25, 12, 60, 10);
         CTX.fillStyle = '#000'; CTX.font = 'bold 8px Arial'; CTX.fillText('30cm', 50, 17);
 
-        // ── Enrage angry particles overlay on boss face ──
         if (this.isEnraged) {
             const t = performance.now() / 80;
             for (let i = 0; i < 4; i++) {
@@ -923,26 +843,17 @@ class Boss extends Entity {
         CTX.restore();
     }
 
-    // ──────────────────────────────────────────────────────────
-    // _drawDog()
-    // Internal helper — renders the animated dog in the
-    // already-rotated boss local coordinate system.
-    // Called only from draw().
-    // ──────────────────────────────────────────────────────────
     _drawDog() {
         const P2       = BALANCE.boss.phase2;
-        // Colors shift to red/dark-red when enraged
-        const bodyCol  = this.isEnraged ? '#dc2626' : P2.dogColor;       // main body
-        const darkCol  = this.isEnraged ? '#991b1b' : '#92400e';         // stroke / underside
-        const lightCol = this.isEnraged ? '#ef4444' : '#b45309';         // saddle / snout patch
-        const eyeCol   = this.isEnraged ? '#facc15' : '#1e293b';         // eye fill
+        const bodyCol  = this.isEnraged ? '#dc2626' : P2.dogColor;
+        const darkCol  = this.isEnraged ? '#991b1b' : '#92400e';
+        const lightCol = this.isEnraged ? '#ef4444' : '#b45309';
+        const eyeCol   = this.isEnraged ? '#facc15' : '#1e293b';
 
-        // Dog leg animation — two diagonal pairs swing opposite phase
         const legSpeed  = this.isEnraged ? 9 : 4.5;
         const legSwing  = Math.sin(this.dogLegTimer * legSpeed) * 10;
-        const legSwing2 = -legSwing; // opposite pair
+        const legSwing2 = -legSwing;
 
-        // ── Ground shadow for dog (slightly ahead of boss shadow) ──
         CTX.save();
         CTX.globalAlpha = 0.22;
         CTX.fillStyle   = 'rgba(0,0,0,0.9)';
@@ -951,42 +862,35 @@ class Boss extends Entity {
         CTX.fill();
         CTX.restore();
 
-        // ── 4 Legs — drawn BEFORE body so body overlaps leg tops ──
         CTX.strokeStyle = darkCol;
         CTX.lineCap     = 'round';
 
-        // Front-left leg  (swings with legSwing)
         CTX.lineWidth = 7;
         CTX.beginPath();
         CTX.moveTo(-10, 38);
         CTX.lineTo(-14, 55 + legSwing);
         CTX.stroke();
-        // Paw
         CTX.fillStyle = darkCol;
         CTX.beginPath(); CTX.ellipse(-15, 57 + legSwing, 6, 4, 0.3, 0, Math.PI * 2); CTX.fill();
 
-        // Front-right leg (swings opposite)
         CTX.beginPath();
         CTX.moveTo(20, 38);
         CTX.lineTo(26, 55 + legSwing2);
         CTX.stroke();
         CTX.beginPath(); CTX.ellipse(27, 57 + legSwing2, 6, 4, -0.3, 0, Math.PI * 2); CTX.fill();
 
-        // Back-left leg  (swings opposite)
         CTX.beginPath();
         CTX.moveTo(-22, 34);
         CTX.lineTo(-28, 52 + legSwing2);
         CTX.stroke();
         CTX.beginPath(); CTX.ellipse(-29, 54 + legSwing2, 6, 4, 0.3, 0, Math.PI * 2); CTX.fill();
 
-        // Back-right leg (swings with legSwing)
         CTX.beginPath();
         CTX.moveTo(34, 34);
         CTX.lineTo(40, 52 + legSwing);
         CTX.stroke();
         CTX.beginPath(); CTX.ellipse(41, 54 + legSwing, 6, 4, -0.3, 0, Math.PI * 2); CTX.fill();
 
-        // ── Dog body — main ellipse ──
         CTX.fillStyle   = bodyCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2.5;
@@ -995,15 +899,13 @@ class Boss extends Entity {
         CTX.fill();
         CTX.stroke();
 
-        // Saddle patch (where boss sits)
         CTX.fillStyle = lightCol;
         CTX.beginPath();
         CTX.ellipse(0, 25, 24, 11, 0, 0, Math.PI * 2);
         CTX.fill();
 
-        // ── Dog tail — animated quadratic curve behind body ──
         const tailWag  = Math.sin(this.dogLegTimer * (this.isEnraged ? 12 : 6)) * 18;
-        const tailX    = -50; // starts behind the body
+        const tailX    = -50;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 6;
         CTX.lineCap     = 'round';
@@ -1011,13 +913,11 @@ class Boss extends Entity {
         CTX.moveTo(-40, 24);
         CTX.quadraticCurveTo(tailX - 10, 10, tailX - 5 + tailWag * 0.4, -8 + tailWag);
         CTX.stroke();
-        // Fluffy tail tip
         CTX.fillStyle = bodyCol;
         CTX.beginPath();
         CTX.arc(tailX - 5 + tailWag * 0.4, -9 + tailWag, 7, 0, Math.PI * 2);
         CTX.fill();
 
-        // ── Dog head — circle forward of body ──
         CTX.fillStyle   = bodyCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2.5;
@@ -1026,7 +926,6 @@ class Boss extends Entity {
         CTX.fill();
         CTX.stroke();
 
-        // Floppy ear
         CTX.fillStyle   = darkCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 1.5;
@@ -1034,7 +933,6 @@ class Boss extends Entity {
         CTX.ellipse(44, 8, 9, 15, -0.5, 0, Math.PI * 2);
         CTX.fill();
 
-        // Snout
         CTX.fillStyle   = lightCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 1.5;
@@ -1043,34 +941,29 @@ class Boss extends Entity {
         CTX.fill();
         CTX.stroke();
 
-        // Nose
         CTX.fillStyle = '#1e293b';
         CTX.beginPath();
         CTX.arc(71, 20, 3.5, 0, Math.PI * 2);
         CTX.fill();
 
-        // Dog eye (glows yellow when enraged)
         CTX.fillStyle = eyeCol;
         CTX.shadowBlur  = this.isEnraged ? 8 : 0;
         CTX.shadowColor = '#facc15';
         CTX.beginPath();
         CTX.arc(56, 13, 4, 0, Math.PI * 2);
         CTX.fill();
-        // Pupil
         CTX.shadowBlur = 0;
         CTX.fillStyle  = '#1e293b';
         CTX.beginPath();
         CTX.arc(57, 13, 2, 0, Math.PI * 2);
         CTX.fill();
 
-        // Mouth / smile / panting tongue
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2;
         CTX.lineCap     = 'round';
         CTX.beginPath();
         CTX.arc(63, 24, 5, 0.1, Math.PI - 0.1);
         CTX.stroke();
-        // Tongue (visible when enraged — panting fast)
         if (this.isEnraged || Math.sin(this.dogLegTimer * 3) > 0.2) {
             CTX.fillStyle = '#fb7185';
             CTX.beginPath();
@@ -1078,7 +971,6 @@ class Boss extends Entity {
             CTX.fill();
         }
 
-        // ── Enrage aura on dog body ──
         if (this.isEnraged) {
             const t = performance.now() / 120;
             CTX.save();
@@ -1099,12 +991,42 @@ class Boss extends Entity {
     }
 }
 
+// ══════════════════════════════════════════════════════════════
+// ⚡ GLITCH WAVE — internal helpers
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * _resetGlitchState()
+ * Cleanly tears down all glitch-wave variables.
+ * Called from: wave-clear path, boss takeDamage (on death), endGame().
+ */
+function _resetGlitchState() {
+    isGlitchWave       = false;
+    glitchIntensity    = 0;
+    controlsInverted   = false;
+    glitchControlTimer = 0;
+}
+
 // ==================== WAVE SYSTEM ====================
 function startNextWave() {
     resetEnemiesKilled();
     waveStartDamage = Achievements.stats.damageTaken;
     setElementText('wave-badge', `WAVE ${getWave()}`);
     spawnFloatingText(`WAVE ${getWave()}`, player.x, player.y - 100, '#8b5cf6', 40);
+
+    // ── ⚡ Glitch Wave detection ─────────────────────────────────
+    // Every 5th wave (5, 10, 15 …) triggers Glitch Mode.
+    // isGlitchWave is always reset first so leaving a glitch wave
+    // and immediately starting the next non-glitch wave is clean.
+    _resetGlitchState();
+    if (getWave() % 5 === 0) {
+        isGlitchWave       = true;
+        glitchIntensity    = 0;          // ramped up in updateGame()
+        glitchControlTimer = 4 + Math.random() * 3; // first flip after 4–7 s
+        spawnFloatingText('⚡ GLITCH WAVE ⚡', player.x, player.y - 140, '#d946ef', 44);
+        addScreenShake(18);
+        Audio.playBossSpecial();
+    }
 
     const count = BALANCE.waves.enemiesBase + (getWave() - 1) * BALANCE.waves.enemiesPerWave;
     spawnEnemies(count);
@@ -1123,17 +1045,32 @@ function startNextWave() {
 }
 
 function spawnEnemies(count) {
-    for (let i = 0; i < count; i++) {
+    // ── Glitch Wave: double the spawn count, halve each enemy's HP ──
+    // This creates a frantic swarm of fragile enemies that still
+    // deal full damage — "more targets, lower individual threat."
+    const spawnCount = isGlitchWave ? count * 2 : count;
+
+    for (let i = 0; i < spawnCount; i++) {
         const angle    = Math.random() * Math.PI * 2;
         const distance = BALANCE.waves.spawnDistance;
         let x = player.x + Math.cos(angle) * distance;
         let y = player.y + Math.sin(angle) * distance;
         const safe = mapSystem.findSafeSpawn(x, y, BALANCE.enemy.radius);
         x = safe.x; y = safe.y;
+
         const r = Math.random();
-        if      (r < BALANCE.waves.mageSpawnChance) window.enemies.push(new MageEnemy(x, y));
-        else if (r < BALANCE.waves.mageSpawnChance + BALANCE.waves.tankSpawnChance) window.enemies.push(new TankEnemy(x, y));
-        else    window.enemies.push(new Enemy(x, y));
+        let enemy;
+        if      (r < BALANCE.waves.mageSpawnChance) enemy = new MageEnemy(x, y);
+        else if (r < BALANCE.waves.mageSpawnChance + BALANCE.waves.tankSpawnChance) enemy = new TankEnemy(x, y);
+        else    enemy = new Enemy(x, y);
+
+        // Glitch debuff: 50% HP so enemies are "corrupted" and fragile
+        if (isGlitchWave) {
+            enemy.hp    = Math.ceil(enemy.hp    * 0.5);
+            enemy.maxHp = Math.ceil(enemy.maxHp * 0.5);
+        }
+
+        window.enemies.push(enemy);
     }
 }
 
@@ -1160,16 +1097,37 @@ function updateGame(dt) {
     updateMouseWorld();
 
     // ── 🌅 Day / Night cycle ──────────────────────────────────────
-    // Sine wave drives ambientLight between nightMinLight (0.12) and
-    // dayMaxLight (0.95) over cycleDuration seconds.
     dayNightTimer += dt;
     {
         const L   = BALANCE.LIGHTING;
-        // Normalised phase: 0 at dawn, 0.5 at dusk (one full sine period = one day)
         const phi = (dayNightTimer / L.cycleDuration) * Math.PI * 2;
-        // Math.sin: -1 = midnight, +1 = noon
-        const dayPhase = Math.sin(phi) * 0.5 + 0.5;   // 0 → 1
+        const dayPhase = Math.sin(phi) * 0.5 + 0.5;
         L.ambientLight = L.nightMinLight + dayPhase * (L.dayMaxLight - L.nightMinLight);
+    }
+
+    // ── ⚡ Glitch Wave runtime logic ──────────────────────────────
+    if (isGlitchWave) {
+        // Ramp intensity from 0 → 1 over the first 2 seconds
+        glitchIntensity = Math.min(1, glitchIntensity + dt * 0.5);
+
+        // Control-inversion timer: flip W↔S and A↔D at random intervals
+        glitchControlTimer -= dt;
+        if (glitchControlTimer <= 0) {
+            controlsInverted   = !controlsInverted;
+            // Next flip in 2–6 seconds
+            glitchControlTimer = 2 + Math.random() * 4;
+            if (controlsInverted) {
+                spawnFloatingText('⚡ CONTROLS INVERTED!', player.x, player.y - 70, '#d946ef', 22);
+            } else {
+                spawnFloatingText('CONTROLS RESTORED', player.x, player.y - 70, '#34d399', 18);
+            }
+        }
+    } else {
+        // Graceful fade-out after the glitch wave ends
+        if (glitchIntensity > 0) {
+            glitchIntensity = Math.max(0, glitchIntensity - dt * 2);
+        }
+        controlsInverted = false;
     }
 
     // ── Shop buff timers ──
@@ -1177,11 +1135,7 @@ function updateGame(dt) {
         player.shopDamageBoostTimer -= dt;
         if (player.shopDamageBoostTimer <= 0) {
             player.shopDamageBoostActive = false;
-            if (player._baseDamageBoost !== undefined) {
-                player.damageBoost = player._baseDamageBoost;
-            } else {
-                player.damageBoost = 1.0;
-            }
+            player.damageBoost = (player._baseDamageBoost !== undefined) ? player._baseDamageBoost : 1.0;
             spawnFloatingText('DMG Boost หมดแล้ว', player.x, player.y - 50, '#94a3b8', 14);
         }
     }
@@ -1190,9 +1144,7 @@ function updateGame(dt) {
         player.shopSpeedBoostTimer -= dt;
         if (player.shopSpeedBoostTimer <= 0) {
             player.shopSpeedBoostActive = false;
-            if (player._baseMoveSpeed !== undefined) {
-                player.moveSpeed = player._baseMoveSpeed;
-            }
+            if (player._baseMoveSpeed !== undefined) player.moveSpeed = player._baseMoveSpeed;
             spawnFloatingText('SPD Boost หมดแล้ว', player.x, player.y - 50, '#94a3b8', 14);
         }
     }
@@ -1213,7 +1165,22 @@ function updateGame(dt) {
         return;
     }
 
+    // ── ⚡ Apply control inversion (non-destructive key swap) ─────
+    // We swap the keys object's values before passing to player.update,
+    // then swap them back immediately after. This is the cleanest
+    // approach — player code is completely unaware of the inversion.
+    if (controlsInverted) {
+        [keys.w, keys.s] = [keys.s, keys.w];
+        [keys.a, keys.d] = [keys.d, keys.a];
+    }
+
     player.update(dt, keys, mouse);
+
+    // Restore keys after player reads them
+    if (controlsInverted) {
+        [keys.w, keys.s] = [keys.s, keys.w];
+        [keys.a, keys.d] = [keys.d, keys.a];
+    }
 
     // ── Weapon system (non-Poom) ──
     if (!(player instanceof PoomPlayer)) {
@@ -1258,6 +1225,8 @@ function updateGame(dt) {
         if (Achievements.stats.damageTaken === waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
         }
+        // ── Reset glitch before the next wave sets its own flags ──
+        _resetGlitchState();
         setWave(getWave() + 1);
         Achievements.check('wave_1');
         startNextWave();
@@ -1331,24 +1300,18 @@ function drawGame() {
     CTX.restore();
 
     // ── 🌑 LIGHTING OVERLAY ──────────────────────────────────────
-    // Called OUTSIDE the shake-translated save/restore block so the
-    // full-screen darkness quad always covers the entire canvas.
-    // Light positions are adjusted by shake manually inside drawLighting().
     {
-        // Gather projectile list safely — projectileManager lives in another module
         const allProj = (typeof projectileManager !== 'undefined' && projectileManager.projectiles)
             ? projectileManager.projectiles
             : [];
 
         mapSystem.drawLighting(player, allProj, [
-            // MTC Database Server — cool cyan lamp
             {
                 x: MTC_DATABASE_SERVER.x,
                 y: MTC_DATABASE_SERVER.y,
                 radius: BALANCE.LIGHTING.mtcServerLightRadius,
                 type: 'cool'
             },
-            // MTC Co-op Shop — warm amber kiosk glow
             {
                 x: MTC_SHOP_LOCATION.x,
                 y: MTC_SHOP_LOCATION.y,
@@ -1358,21 +1321,23 @@ function drawGame() {
         ]);
     }
 
-    // ── 🌙 DAY / NIGHT HUD INDICATOR ─────────────────────────────
-    // Drawn in raw screen-space (no camera or shake transforms).
-    // Positioned top-right, away from the main HUD panel.
+    // ── 🌙 DAY / NIGHT HUD ───────────────────────────────────────
     drawDayNightHUD();
+
+    // ── ⚡ GLITCH WAVE OVERLAY ───────────────────────────────────
+    // Drawn LAST so it sits on top of every other layer including the
+    // lighting pass. Only fires when there is something to draw.
+    if (glitchIntensity > 0) {
+        drawGlitchEffect(glitchIntensity, controlsInverted);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════
-// 🌞 DAY / NIGHT HUD — small orbital clock top-right corner
-// Shows sun/moon icon, a circular phase arc, and the current
-// period label. Stays bright even when the world is dark
-// because it is drawn directly to CTX with no darkness overlay.
+// 🌞 DAY / NIGHT HUD
 // ══════════════════════════════════════════════════════════════
 function drawDayNightHUD() {
     const L       = BALANCE.LIGHTING;
-    const phase   = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight); // 0→1
+    const phase   = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight);
     const isDawn  = phase > 0.5;
 
     const cx = CANVAS.width  - 52;
@@ -1381,7 +1346,6 @@ function drawDayNightHUD() {
 
     CTX.save();
 
-    // Background disc
     CTX.fillStyle   = isDawn ? 'rgba(255, 210, 80, 0.18)' : 'rgba(80, 110, 255, 0.18)';
     CTX.strokeStyle = isDawn ? 'rgba(255, 210, 80, 0.55)' : 'rgba(130, 160, 255, 0.55)';
     CTX.lineWidth   = 2;
@@ -1390,7 +1354,6 @@ function drawDayNightHUD() {
     CTX.fill();
     CTX.stroke();
 
-    // Phase fill arc (sweeps from top, clockwise with the day phase)
     CTX.strokeStyle = isDawn ? '#fbbf24' : '#818cf8';
     CTX.lineWidth   = 3.5;
     CTX.lineCap     = 'round';
@@ -1401,13 +1364,11 @@ function drawDayNightHUD() {
     CTX.stroke();
     CTX.shadowBlur  = 0;
 
-    // Icon — sun during day, moon at night
     CTX.font          = `${r}px Arial`;
     CTX.textAlign     = 'center';
     CTX.textBaseline  = 'middle';
     CTX.fillText(isDawn ? '☀️' : '🌙', cx, cy);
 
-    // Period label
     CTX.fillStyle     = isDawn ? '#fde68a' : '#c7d2fe';
     CTX.font          = 'bold 8px Arial';
     CTX.textAlign     = 'center';
@@ -1417,13 +1378,18 @@ function drawDayNightHUD() {
 
     CTX.restore();
 }
+
+// ══════════════════════════════════════════════════════════════
+// 🔲 GRID
+// ══════════════════════════════════════════════════════════════
+function drawGrid() {
     const sz = GAME_CONFIG.physics.gridSize;
     const ox = -getCamera().x % sz;
     const oy = -getCamera().y % sz;
     CTX.strokeStyle = GAME_CONFIG.visual.gridColor;
     CTX.lineWidth = 1;
     CTX.beginPath();
-    for (let x = ox; x < CANVAS.width; x += sz) { CTX.moveTo(x, 0); CTX.lineTo(x, CANVAS.height); }
+    for (let x = ox; x < CANVAS.width;  x += sz) { CTX.moveTo(x, 0); CTX.lineTo(x, CANVAS.height); }
     for (let y = oy; y < CANVAS.height; y += sz) { CTX.moveTo(0, y); CTX.lineTo(CANVAS.width, y); }
     CTX.stroke();
 }
@@ -1471,11 +1437,14 @@ function startGame(charType = 'kao') {
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss = null;
 
-    // ── Reset day/night to dawn (bright start) ──────────────────
+    // ── Reset day/night to dawn ──────────────────────────────────
     dayNightTimer  = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
-    // ── Reset shop buff state on every fresh start ──
+    // ── Reset glitch state ──────────────────────────────────────
+    _resetGlitchState();
+
+    // ── Reset shop buff state ──
     player.shopDamageBoostActive = false;
     player.shopDamageBoostTimer  = 0;
     player._baseDamageBoost      = undefined;
@@ -1544,6 +1513,9 @@ async function endGame(result) {
 
     showResumePrompt(false);
     ShopManager.close();
+
+    // ── Reset glitch so no overlay lingers on the game-over screen ──
+    _resetGlitchState();
 
     window.drone = null;
 
