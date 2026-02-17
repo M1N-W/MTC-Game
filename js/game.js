@@ -666,11 +666,14 @@ function startGame(charType = 'kao') {
     floatingTextSystem.clear();
     mapSystem.init();
 
-    // ── FIX: Tell WeaponSystem which char is active BEFORE updateWeaponUI()
-    //    so it reads BALANCE.characters[charType].weapons, not BALANCE.player.weapons ──
+    // ── Tell WeaponSystem which char is active BEFORE updateWeaponUI().
+    //    Wrapped in try-catch so a UI failure never aborts game start. ──
     weaponSystem.setActiveChar(charType);
-
-    if (!(player instanceof PoomPlayer)) weaponSystem.updateWeaponUI();
+    try {
+        weaponSystem.updateWeaponUI();   // safe for Kao AND Poom (Poom shim in WeaponSystem)
+    } catch (err) {
+        console.error('[startGame] updateWeaponUI threw — continuing anyway:', err);
+    }
     UIManager.setupCharacterHUD(player);
 
     Achievements.stats.damageTaken = 0;
@@ -692,6 +695,12 @@ function startGame(charType = 'kao') {
     gameState = 'PLAYING';
     resetTime();
 
+    // ── Show mobile controls now that we're in-game, and focus the window
+    //    so keyboard events are captured correctly after button tap. ──
+    const mobileUI = document.getElementById('mobile-ui');
+    if (mobileUI) mobileUI.style.display = 'block';
+    window.focus();
+
     console.log('✅ Game started!');
     if (!loopRunning) {
         loopRunning = true;
@@ -701,6 +710,10 @@ function startGame(charType = 'kao') {
 
 async function endGame(result) {
     gameState = 'GAMEOVER';
+
+    // ── Hide mobile joystick zones so they don't block overlay touches ──
+    const mobileUI = document.getElementById('mobile-ui');
+    if (mobileUI) mobileUI.style.display = 'none';
 
     // Force-close DB modal if open
     if (isMathOpen) {
@@ -824,6 +837,7 @@ function initMobileControls() {
     const stickR = document.getElementById('joystick-right-stick');
 
     function startJoystick(e, joystick, baseElem, stickElem, zoneElem, isRight = false) {
+        if (gameState !== 'PLAYING') return;  // ← FIX: never intercept menu/gameover touches
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];

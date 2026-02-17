@@ -78,14 +78,44 @@ class WeaponSystem {
         this.activeChar = charType || 'kao';
     }
 
-    /** Safe helper — falls back to 'kao' if activeChar has no weapons. */
+    /**
+     * Safe helper — returns the weapons map for the active character.
+     *
+     * • Kao  → BALANCE.characters.kao.weapons  (standard weapons object)
+     * • Poom → synthetic shim built from poom's flat rice* stats so that any
+     *           accidental call to getWeaponData() / getCharWeapons() on a Poom
+     *           session never throws.  The shim is NOT used for Poom's actual
+     *           shooting (shootPoom() in game.js handles that separately).
+     * • Unknown char → falls back to kao weapons with a console warning.
+     */
     getCharWeapons() {
         const charData = BALANCE.characters[this.activeChar];
-        if (!charData || !charData.weapons) {
-            console.warn(`[WeaponSystem] No weapons for char "${this.activeChar}". Falling back to kao.`);
+
+        // ── Char not found at all ──
+        if (!charData) {
+            console.warn(`[WeaponSystem] Unknown char "${this.activeChar}". Falling back to kao.`);
             return BALANCE.characters.kao.weapons;
         }
-        return charData.weapons;
+
+        // ── Char has a standard weapons object (Kao and future chars) ──
+        if (charData.weapons) return charData.weapons;
+
+        // ── Poom: no weapons object → build a minimal shim ──
+        // This prevents any crash if getWeaponData() is ever called during a
+        // Poom session (e.g., a code path that doesn't check instanceof PoomPlayer).
+        const S = charData;
+        const riceWeapon = {
+            name:    '🍙 ข้าวเหนียว',
+            damage:  S.riceDamage   ?? 42.5,
+            cooldown:S.riceCooldown ?? 0.46,
+            range:   S.riceRange    ?? 750,
+            speed:   S.riceSpeed    ?? 600,
+            spread:  0,
+            pellets: 1,
+            color:   S.riceColor    ?? '#ffffff',
+            icon:    '🍙'
+        };
+        return { auto: riceWeapon, sniper: riceWeapon, shotgun: riceWeapon };
     }
 
     switchWeapon() {
@@ -99,16 +129,27 @@ class WeaponSystem {
         if (this.weaponsUsed.size >= 3) Achievements.check('weapon_master');
     }
 
-    /** FIXED: was BALANCE.player.weapons[...] */
+    /** FIXED: was BALANCE.player.weapons[...]. Poom shows rice icon instead. */
     updateWeaponUI() {
-        const weapons = this.getCharWeapons();
-        const weaponData = weapons[this.currentWeapon];
-        if (!weaponData) {
-            console.warn(`[WeaponSystem] Weapon "${this.currentWeapon}" not in char "${this.activeChar}".`);
-            return;
+        try {
+            // Poom uses a completely different attack system — show a dedicated label
+            if (this.activeChar === 'poom') {
+                const nameEl = document.getElementById('weapon-name');
+                if (nameEl) { nameEl.textContent = '🍙 ข้าวเหนียว'; nameEl.style.color = '#ffffff'; }
+                return;
+            }
+
+            const weapons    = this.getCharWeapons();
+            const weaponData = weapons[this.currentWeapon];
+            if (!weaponData) {
+                console.warn(`[WeaponSystem] Weapon "${this.currentWeapon}" not in char "${this.activeChar}".`);
+                return;
+            }
+            const nameEl = document.getElementById('weapon-name');
+            if (nameEl) { nameEl.textContent = weaponData.name; nameEl.style.color = weaponData.color; }
+        } catch (err) {
+            console.error('[WeaponSystem] updateWeaponUI failed:', err);
         }
-        const nameEl = document.getElementById('weapon-name');
-        if (nameEl) { nameEl.textContent = weaponData.name; nameEl.style.color = weaponData.color; }
     }
 
     getCurrentWeapon() { return this.currentWeapon; }

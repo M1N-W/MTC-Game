@@ -528,6 +528,8 @@
             cursor: pointer; transition: all 0.3s;
             box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
             pointer-events: auto; margin: 5px; letter-spacing: 1px;
+            touch-action: manipulation;              /* ← removes iOS 300ms tap delay */
+            -webkit-tap-highlight-color: transparent; /* ← removes blue flash on iOS */
         }
 
         .btn:hover { transform: scale(1.05) translateY(-2px); background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
@@ -555,6 +557,8 @@
             padding: 18px 22px; min-width: 180px; max-width: 220px;
             flex: 1; text-align: center; cursor: pointer;
             transition: all 0.25s; position: relative; pointer-events: auto;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .char-card:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3); }
@@ -579,13 +583,11 @@
 
         /* ================== MOBILE UI ================== */
         #mobile-ui {
-            display: none;
+            display: none;   /* JS shows this in startGame() — keeps joystick zones off the menu */
             position: absolute; top: 0; left: 0;
             width: 100vw; height: 100vh;
             z-index: 9999; pointer-events: none;
         }
-
-        @media (max-width: 1024px), (pointer: coarse) { #mobile-ui { display: block; } }
 
         .joystick-zone {
             position: absolute;
@@ -851,7 +853,10 @@
                 </div>
             </div>
 
-            <button class="btn" id="start-btn" onclick="startGame(_selectedChar)">🎓 START MISSION</button>
+            <button class="btn" id="start-btn"
+                    onclick="startGame(_selectedChar)"
+                    ontouchstart="event.preventDefault(); startGame(_selectedChar);"
+                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer;">🎓 START MISSION</button>
             <div id="ai-loading">🤖 Connecting to AI...</div>
         </div>
     </div>
