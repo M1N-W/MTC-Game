@@ -11,8 +11,8 @@ const BALANCE = {
     // 👨‍🎓 PLAYER STATS
     player: {
         // Health & Energy
-        hp: 125,
-        maxHp: 125,
+        hp: 110,
+        maxHp: 110,
         energy: 100,
         maxEnergy: 100,
         
@@ -91,7 +91,7 @@ const BALANCE = {
 
         // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
         riceDamage: 35,
-        riceCooldown: 0.4,
+        riceCooldown: 0.67,
         riceSpeed: 600,
         riceRange: 700,
         riceColor: '#ffffff',        // สีข้าวเหนียวขาวสะอาด
@@ -100,7 +100,7 @@ const BALANCE = {
 
         // 🥢 Skill 1: กินข้าวเหนียว — Buff ตัวเอง
         eatRiceCooldown: 12,         // cooldown 12s
-        eatRiceDuration: 6,          // buff ยาว 6s
+        eatRiceDuration: 5,          // buff ยาว 5s
         eatRiceSpeedMult: 1.3,       // +30% move speed (ตาม Spec)
         eatRiceCritBonus: 0.25,      // +25% crit chance ขณะ Buff (ตาม Spec)
 
@@ -235,7 +235,7 @@ const BALANCE = {
     // 🏫 MAP SETTINGS
     map: {
         size: 3000,            // Map size (3000x3000)
-        objectDensity: 0.15,    
+        objectDensity: 0.12,    
         objectTypes: ['desk', 'chair', 'cabinet', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
@@ -278,7 +278,7 @@ const ACHIEVEMENT_DEFS = [
     { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️' },
     { id: 'crit_master', name: 'Critical Master', desc: 'ตีติดคริติคอล 5 ครั้ง', icon: '💥' },
     { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡' },
-    { id: 'ghost', name: 'The Ghost MTC', desc: 'ใช้ Stealth 10 ครั้ง', icon: '👻' },
+    { id: 'ghost', name: 'The Ghost of MTC', desc: 'ซุ่มอ่าน 10 ครั้ง', icon: '👻' },
     { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎' },
     { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' },
     { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍' }

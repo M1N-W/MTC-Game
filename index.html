@@ -1023,7 +1023,7 @@ body, html {
         <div class="menu-container">
             <div class="title">
                 MTC
-                <span class="subtitle">BETA EDITION <span class="version-badge">v2.0</span></span>
+                <span class="subtitle">BETA EDITION <span class="version-badge">v.1.0</span></span>
             </div>
 
             <div id="mission-brief">กำลังโหลดภารกิจ...</div>
@@ -1036,15 +1036,15 @@ body, html {
                     <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
                         <div class="char-avatar">👨‍🎓</div>
                         <div class="char-name">เก้า (KAO)</div>
-                        <div class="char-desc">นักเรียน MTC ผู้คล่องแคล่ว<br>ปืน 3 แบบ + ซุ่มอ่านหนังสือ</div>
-                        <div class="char-tag">🔵 สายปืน</div>
+                        <div class="char-desc">MTC สายซุ่ม<br>🔫 สลับโหมดการยิง 3 แบบ | Skill 📖 ซุ่มอ่านหนังสือ+ซุ่มเสรี</div>
+                        <div class="char-tag">🔵สายซุ่ม</div>
                     </div>
                     <!-- การ์ด: ภูมิ (คนอีสาน) -->
                     <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
                         <div class="char-avatar">🌾</div>
                         <div class="char-name">ภูมิ (POOM)</div>
-                        <div class="char-desc">สายอีสาน: ปาข้าวเหนียว &amp; อัญเชิญพญานาค<br>Skill 1: 🍙 กินข้าว | Skill 2: 🐉 นาค</div>
-                        <div class="char-tag">🟢 สายอีสาน</div>
+                        <div class="char-desc">MTC คนอีสาน<br>Skill 1 🍙 ข้าวเหนียว | Skill 2 🐉 พญานาค</div>
+                        <div class="char-tag">🟢สายอีสาน</div>
                     </div>
                 </div>
             </div>
@@ -1058,14 +1058,14 @@ body, html {
                     if (card) card.classList.add('selected');
                     // อัปเดตคำอธิบายปุ่ม
                     const startBtn = document.getElementById('start-btn');
-                    if (startBtn) startBtn.textContent = charType === 'poom' ? '🌾 START — สายอีสาน' : '🎓 START MISSION';
+                    if (startBtn) startBtn.textContent = charType === 'poom' ? '🌾 START MISSION' : '🎓 START MISSION';
                 }
             </script>
             
             <!-- ✨ IMPROVED: Report Card with proper structure -->
             <div id="report-card">
                 <div class="report-header">
-                    📋รายงานผลการเรียน : "F(uck)"
+                    📋รายงานผลการเรียน"F(uck)"
                 </div>
                 <div class="report-stats">
                     <div class="stat-item">
@@ -1084,14 +1084,13 @@ body, html {
                 <div class="new-features">
                     <h3>✨ ฟีเจอร์ใหม่</h3>
                     <div class="feature-list">
-                        <div class="feature-item">🎯 ระบบ Level & EXP</div>
-                        <div class="feature-item">✨ Passive Skill "ซุ่มเสรี"</div>
-                        <div class="feature-item">🏫 MTC Room (Safe Zone)</div>
+                        <div class="feature-item">🌾ตัวละครใหม่ "ภูมิ"คนอีสาน</div>
+                        <div class="feature-item">🐉สกิลรูปแบบใหม่-อัญเชิญพญานาค</div>
                     </div>
                 </div>
 
                 <div class="instructions">
-                    <p style="color: #fff; margin-bottom: 15px;"><strong>🎯</strong> ฆ่าศัตรู+กำจัดบอส > Level Up > ปลดล็อค Passive!</p>
+                    <p style="color: #fff; margin-bottom: 15px;"><strong>🎯</strong>เลือกตัว>สังหารศัตรู>เลเวลอัพ>ต่อสู้กับบอส!</p>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
                         <div>🎮 <strong>WASD</strong> เคลื่อนที่</div>
                         <div>🔫 <strong>L-Click</strong> กดยิง</div>
