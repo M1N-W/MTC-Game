@@ -2,1130 +2,561 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MTC the Game (Beta Edition)</title>
-    
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e293b'/><text x='50' y='70' font-family='Arial' font-size='60' font-weight='bold' fill='%233b82f6' text-anchor='middle'>M</text></svg>">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมสำรวจสัญลักษณ์คณิตศาสตร์ + AI Tutor Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- เพิ่ม MathJax สำหรับแปลง LaTeX เป็นสมการคณิตศาสตร์ -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;600;800&family=Orbitron:wght@700;900&display=swap');
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            overflow: hidden;
-            background-color: #0f172a;
-            font-family: 'Kanit', sans-serif;
-            color: white;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
+            font-family: 'Noto Sans Thai', sans-serif;
+            background-color: #fcfbf9;
+            color: #4a4a4a;
         }
-
-        #gameCanvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            cursor: crosshair;
+        .symbol-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 15px;
-            z-index: 10;
+        .symbol-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
         }
-
-        .hud-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 10px;
+        .quiz-mode .meaning, .quiz-mode .name-en, .quiz-mode .desc-text {
+            filter: blur(8px);
+            opacity: 0.2;
+            transition: all 0.3s ease;
         }
-
-        .player-card {
-            display: flex;
-            gap: 12px;
-            background: rgba(15, 23, 42, 0.9);
-            padding: 10px 15px;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            backdrop-filter: blur(6px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-        }
-
-        .status-bars {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-width: 150px;
-        }
-
-        .bar-wrap {
-            height: 8px;
-            background: #1e293b;
-            border-radius: 4px;
-            margin: 3px 0;
-            overflow: hidden;
-        }
-
-        .bar-fill {
-            height: 100%;
-            transition: width 0.1s linear;
-        }
-
-        .hp-fill {
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-            box-shadow: 0 0 10px #ef4444;
-        }
-
-        .en-fill {
-            background: linear-gradient(90deg, #fbbf24, #f59e0b);
-            box-shadow: 0 0 10px #fbbf24;
-        }
-
-        .level-info {
-            margin-top: 8px;
-        }
-
-        .level-display {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        #player-level {
-            font-weight: bold;
-            color: #8b5cf6;
-            font-size: 14px;
-            background: rgba(139, 92, 246, 0.2);
-            padding: 2px 8px;
-            border-radius: 8px;
-            border: 1px solid #8b5cf6;
-        }
-
-        .exp-bar-bg {
-            flex: 1;
-            height: 6px;
-            background: #1e293b;
-            border-radius: 3px;
-            overflow: hidden;
-            border: 1px solid #334155;
-        }
-
-        #exp-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #8b5cf6, #a855f7);
-            box-shadow: 0 0 10px #8b5cf6;
-            transition: width 0.3s ease-out;
-        }
-
-        .stats-box {
-            text-align: right;
-            background: rgba(15, 23, 42, 0.9);
-            padding: 10px 15px;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            backdrop-filter: blur(6px);
-        }
-
-        .score-num {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 28px;
-            color: #60a5fa;
-            text-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
-        }
-
-        .wave-badge {
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 5px;
-            display: inline-block;
-        }
-
-        .weapon-indicator {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.95);
-            padding: 12px 24px;
-            border-radius: 15px;
-            border: 2px solid #3b82f6;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
-            font-size: 18px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 15;
-        }
-
-        .weapon-name {
-            color: #60a5fa;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .weapon-hint {
-            font-size: 11px;
-            color: #94a3b8;
-            margin-top: 4px;
-            text-align: center;
-        }
-
-        #achievements {
-            position: absolute;
-            top: 80px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        .achievement {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
-            padding: 12px 20px;
-            border-radius: 12px;
-            border: 2px solid #fff;
-            box-shadow: 0 4px 20px rgba(251, 191, 36, 0.6);
-            animation: slideIn 0.5s ease-out;
-            max-width: 300px;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        .achievement-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #000;
-        }
-
-        .achievement-desc {
-            font-size: 12px;
-            color: #422006;
-        }
-
-        #boss-hud {
-            position: absolute;
-            top: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60%;
-            max-width: 600px;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-
-        #boss-hud.active {
-            display: flex;
+        .quiz-mode .symbol-card:hover .meaning, .quiz-mode .symbol-card:hover .name-en, .quiz-mode .symbol-card:hover .desc-text {
+            filter: blur(0);
             opacity: 1;
         }
-
-        .boss-name {
-            font-size: 22px;
-            font-weight: bold;
-            color: #ef4444;
-            text-transform: uppercase;
-            text-shadow: 0 0 10px black, 0 2px 4px rgba(0,0,0,0.8);
-            margin-bottom: 8px;
-            letter-spacing: 2px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .ai-badge {
-            font-size: 11px;
-            background: #facc15;
-            color: black;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .boss-hp-bg {
-            width: 100%;
-            height: 18px;
-            background: #330000;
-            border: 2px solid #7f1d1d;
-            border-radius: 4px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-        }
-
-        .boss-hp-fill {
-            height: 100%;
-            width: 100%;
-            background: linear-gradient(90deg, #dc2626, #991b1b);
-            transition: width 0.2s ease-out;
-            box-shadow: 0 0 10px #dc2626;
-        }
-
-        #boss-speech {
-            position: absolute;
-            background: white;
-            color: #1e293b;
-            padding: 12px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 15px;
-            max-width: 300px;
-            text-align: center;
-            opacity: 0;
-            transition: all 0.3s;
-            pointer-events: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            border: 3px solid #cbd5e1;
-            z-index: 50;
-        }
-
-        #boss-speech::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-top: 10px solid white;
-        }
-
-        #boss-speech.visible {
-            opacity: 1;
-        }
-
-        #voice-bubble {
-            position: absolute;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 15px;
-            font-weight: bold;
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 60;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            border: 2px solid rgba(255,255,255,0.3);
-        }
-
-        #voice-bubble.visible {
-            opacity: 1;
-        }
-
-        .hud-bottom {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-        }
-
-        .skill-icon {
-            width: 58px;
-            height: 58px;
-            background: rgba(30, 41, 59, 0.95);
-            border: 2px solid #475569;
-            border-radius: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
+        .chart-container {
             position: relative;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-            transition: all 0.2s;
-        }
-
-        .skill-icon.active {
-            border-color: #facc15;
-            box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
-            transform: scale(1.1);
-        }
-
-        #passive-skill {
-            border-color: #fbbf24;
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
-            background: rgba(251, 191, 36, 0.1);
-            display: none;
-        }
-
-        #passive-skill.unlocked {
-            display: flex;
-            animation: pulseGold 2s infinite;
-        }
-
-        @keyframes pulseGold {
-            0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); }
-            50% { box-shadow: 0 0 30px rgba(251, 191, 36, 1); }
-        }
-
-        .skill-name {
-            position: absolute;
-            bottom: -20px;
-            font-size: 9px;
-            color: #fbbf24;
-            font-weight: bold;
-            white-space: nowrap;
-            text-align: center;
-        }
-
-        .cooldown-mask {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.8);
-            height: 0%;
-            border-radius: 10px;
-            transition: height 0.1s linear;
-        }
-
-        .key-hint {
-            position: absolute;
-            top: -8px;
-            left: -8px;
-            background: #3b82f6;
-            color: white;
-            font-size: 9px;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        /* --- ส่วนจัดการ UI หน้าต่างก่อนเริ่มเกม --- */
-        #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.95); 
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            pointer-events: auto;
-            backdrop-filter: blur(10px);
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
         }
-            
-        .menu-container {
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 800px;
-            width: 90%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        @media (min-width: 768px) {
+            .chart-container { height: 380px; }
         }
-
-        .title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 56px;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6, #facc15);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            text-align: center;
-            animation: glow 2s ease-in-out infinite;
-        }
-
-        @keyframes glow {
-            0%, 100% { filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5)); }
-            50% { filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.8)); }
-        }
-
-        .subtitle {
-            font-size: 24px;
-            color: #94a3b8;
-            margin-bottom: 30px;
-        }
-
-        .version-badge {
-            background: #8b5cf6;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-left: 10px;
-        }
-
-        #mission-brief {
-            margin-bottom: 20px;
-            color: #60a5fa;
-            font-style: italic;
-            font-size: 18px;
-            text-align: center;
-        }
-
-        /* จัดกริด 2 คอลัมน์สำหรับกล่องอธิบายวิธีเล่น */
-        .info-section {
-            display: flex;
-            gap: 20px;
-            width: 100%;
-            margin-bottom: 30px;
-        }
-
-        .new-features {
-            flex: 1;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            padding: 20px;
-            border-radius: 16px;
-        }
-
-        .new-features h3 {
-            color: #a855f7;
-            margin-bottom: 15px;
-        }
-
-        .feature-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            font-size: 14px;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .instructions {
-            flex: 1;
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.6));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 16px;
-            color: #cbd5e1;
-            text-align: left;
-            font-size: 15px;
-            line-height: 1.6;
-        }
-
-        /* ✨ IMPROVED: Report Card - ไพ่รายงานของครู */
-        #report-card {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
-            border: 2px solid rgba(239, 68, 68, 0.3);
-            padding: 25px;
-            border-radius: 16px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            margin-bottom: 25px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            display: none;
-            backdrop-filter: blur(8px);
-        }
-
-        #report-card.show {
-            display: block;
-            animation: reportSlideIn 0.5s ease-out;
-        }
-
-        @keyframes reportSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .report-header {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ef4444;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .report-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-item {
-            background: rgba(15, 23, 42, 0.5);
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-family: 'Orbitron', sans-serif;
-            color: #60a5fa;
-            font-weight: bold;
-        }
-
-        #report-text {
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-style: italic;
-            color: #fbbf24;
-            line-height: 1.6;
-        }
-
-        #report-text::before {
-            content: '💬 ';
-            font-size: 20px;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            border: none;
-            padding: 15px 45px;
-            font-size: 22px;
-            font-family: 'Kanit', sans-serif;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
-            pointer-events: auto;
-            margin: 5px;
-            letter-spacing: 1px;
-        }
-
-        .btn:hover {
-            transform: scale(1.05) translateY(-2px);
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
-        }
-
-        #ai-loading {
-            font-size: 14px;
-            color: #60a5fa;
-            margin-top: 15px;
-            display: none;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        #victory-screen {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.95);
-            z-index: 101;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            backdrop-filter: blur(10px);
-        }
-
-        /* ──────────── CHARACTER SELECTION ──────────── */
-        .char-select-section {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .char-select-section h3 {
-            color: #60a5fa;
-            font-size: 16px;
-            text-align: center;
-            margin-bottom: 12px;
-            letter-spacing: 1px;
-        }
-
-        .char-cards {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .char-card {
-            background: rgba(15, 23, 42, 0.8);
-            border: 2px solid #334155;
-            border-radius: 16px;
-            padding: 18px 22px;
-            min-width: 180px;
-            max-width: 220px;
-            flex: 1;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.25s;
-            position: relative;
-            pointer-events: auto;
-        }
-
-        .char-card:hover {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
-        }
-
-        .char-card.selected {
-            border-color: #facc15;
-            background: rgba(250, 204, 21, 0.08);
-            box-shadow: 0 0 25px rgba(250, 204, 21, 0.4);
-        }
-
-        .char-card .char-avatar {
-            font-size: 48px;
-            margin-bottom: 8px;
-        }
-
-        .char-card .char-name {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
-            font-weight: bold;
-            color: #e2e8f0;
-            margin-bottom: 6px;
-        }
-
-        .char-card .char-desc {
-            font-size: 11px;
-            color: #94a3b8;
-            line-height: 1.5;
-        }
-
-        .char-card .char-tag {
-            margin-top: 10px;
-            display: inline-block;
-            font-size: 10px;
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid #8b5cf6;
-            color: #a78bfa;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        .char-card[data-char="poom"] .char-tag {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: #10b981;
-            color: #34d399;
-        }
-
-        /* ── Naga cooldown timer text ── */
-        #naga-timer {
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 9px;
-            font-weight: bold;
-            color: #10b981;
-            pointer-events: none;
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .title { font-size: 40px; }
-            .subtitle { font-size: 18px; }
-            .info-section { flex-direction: column; }
-            .weapon-indicator { font-size: 14px; padding: 8px 16px; }
-            .report-stats { grid-template-columns: 1fr; }
-            .char-cards { flex-direction: column; align-items: center; }
-        }
-        /* ================= MOBILE UI CSS ================= */
-        #mobile-ui {
-            display: none; /* ซ่อนบน PC */
-            position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 9999;
-            pointer-events: none; /* ปล่อยให้คลิกทะลุได้ในส่วนที่ไม่มีปุ่ม */
-        }
-
-        /* ตรวจจับอุปกรณ์มือถือ หรือหน้าจอเล็กกว่า 1024px ให้แสดง UI */
-        @media (max-width: 1024px), (pointer: coarse) {
-            #mobile-ui { display: block; }
-        }
-
-        /* โซนทัชสกรีนซ้ายและขวา กว้างฝั่งละ 45% (เว้นตรงกลางไว้ 10%) */
-        .joystick-zone {
-            position: absolute;
-            width: 45vw; height: 65vh;
-            bottom: 0;
-            pointer-events: auto;
-            touch-action: none;
-        }
-        .joystick-zone.left { left: 0; }
-        .joystick-zone.right { right: 0; }
-
-        .joystick-base {
-            position: absolute;
-            width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            display: none; /* จะแสดงเมื่อนิ้วสัมผัสจอเท่านั้น (Floating) */
-        }
-
-        .joystick-stick {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            background: rgba(59, 130, 246, 0.6);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
-        }
-        /* เปลี่ยนสีจอยขวา (ยิง) เป็นสีแดง */
-        .joystick-zone.right .joystick-stick {
-            background: rgba(239, 68, 68, 0.6);
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
-        }
-
-        .action-btn {
-            position: absolute;
-            width: 55px; height: 55px;
-            border-radius: 50%;
-            background: rgba(15, 23, 42, 0.7);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            color: white; font-size: 24px;
-            display: flex; align-items: center; justify-content: center;
-            touch-action: none; pointer-events: auto;
-            backdrop-filter: blur(4px);
-            z-index: 10000;
-        }
-        .action-btn:active {
-            background: rgba(59, 130, 246, 0.8);
-            transform: scale(0.9);
-        }
+        .ai-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 0.75rem; }
+        .ai-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 0.75rem; }
+        .ai-content strong { font-weight: 700; color: #b45309; }
+        .ai-content p { margin-bottom: 0.75rem; }
         
-        /* วางปุ่ม Action เรียงเป็นแนวโค้งหลบจอยสติ๊กทางขวา */
-        #btn-dash { right: 20px; bottom: 220px; }
-        #btn-skill { right: 85px; bottom: 170px; }
-        #btn-switch { right: 135px; bottom: 100px; }
+        .loading-dots:after {
+            content: ' .';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: ' .'; }
+            40% { content: ' ..'; }
+            60% { content: ' ...'; }
+            80%, 100% { content: ' ....'; }
+        }
+        mjx-container { font-size: 110% !important; }
     </style>
-
-<style>
-body, html {
-  touch-action: none;
-  -ms-touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-#mobile-ui {
-  display: none;
-  position: absolute;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  z-index: 9999;
-  pointer-events: none;
-}
-@media (max-width: 1024px), (pointer: coarse) {
-  #mobile-ui { display: block; }
-}
-.joystick-zone {
-  position: absolute;
-  width: 45vw;
-  height: 65vh;
-  bottom: 0;
-  pointer-events: auto;
-  touch-action: none;
-}
-.joystick-zone.left { left: 0; }
-.joystick-zone.right { right: 0; }
-.joystick-base {
-  position: absolute;
-  width: 120px; height: 120px;
-  background: rgba(255,255,255,0.08);
-  border: 2px solid rgba(255,255,255,0.14);
-  border-radius: 50%;
-  display: none;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-.joystick-stick {
-  position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: rgba(59,130,246,0.5);
-  pointer-events: none;
-}
-.joystick-zone.right .joystick-stick {
-  background: rgba(239,68,68,0.5);
-}
-.action-btn {
-  position: absolute;
-  width: 56px; height: 56px;
-  border-radius: 50%;
-  background: rgba(15,23,42,0.75);
-  border: 2px solid rgba(255,255,255,0.12);
-  color: white;
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  touch-action: none;
-  z-index: 10000;
-}
-#btn-dash  { right: 18px; bottom: 200px; }
-#btn-skill { right: 86px; bottom: 150px; }
-#btn-switch { right: 142px; bottom: 92px; }
-</style>
-
 </head>
-<body>
-    <canvas id="gameCanvas"></canvas>
+<body class="min-h-screen flex flex-col">
 
-    <div id="boss-speech"></div>
-    <div id="voice-bubble"></div>
-    <div id="achievements"></div>
-
-    <div class="weapon-indicator">
-        <div class="weapon-name" id="weapon-name">AUTO RIFLE</div>
-        <div class="weapon-hint">กด Q เพื่อสลับอาวุธ</div>
-    </div>
-<div id="mobile-ui">
-        <div id="joystick-left-zone" class="joystick-zone left">
-            <div id="joystick-left-base" class="joystick-base">
-                <div id="joystick-left-stick" class="joystick-stick"></div>
-            </div>
-        </div>
-
-        <div id="joystick-right-zone" class="joystick-zone right">
-            <div id="joystick-right-base" class="joystick-base">
-                <div id="joystick-right-stick" class="joystick-stick"></div>
-            </div>
-        </div>
-
-        <button id="btn-switch" class="action-btn">🔄</button>
-        <button id="btn-skill" class="action-btn">📖</button>
-        <button id="btn-dash" class="action-btn">💨</button>
-        <!-- ปุ่ม Skill 2 ภูมิ: 🐉 อัญเชิญพญานาค — ซ่อนโดย default, setupCharacterHUD จะ toggle -->
-        <button id="btn-naga" class="action-btn" style="display:none; right:18px; bottom:270px; border-color:#10b981; background:rgba(16,185,129,0.2);">🐉</button>
-    </div>
-    <div id="ui-layer">
-        <div class="hud-top">
-            <div class="player-card">
-                <div style="font-size:20px" id="player-avatar">👨‍🎓</div>
-                <div class="status-bars">
-                    <div class="bar-wrap">
-                        <div id="hp-bar" class="bar-fill hp-fill" style="width: 100%;"></div>
-                    </div>
-                    <div class="bar-wrap">
-                        <div id="en-bar" class="bar-fill en-fill" style="width: 100%;"></div>
-                    </div>
-                    <div style="font-size: 11px; color:#94a3b8;">HP & FOCUS</div>
-                    
-                    <div class="level-info">
-                        <div class="level-display">
-                            <span id="player-level">Lv.1</span>
-                            <div class="exp-bar-bg">
-                                <div id="exp-bar"></div>
-                            </div>
-                        </div>
+    <!-- Header Section -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-stone-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-3xl">📐</span>
+                    <div>
+                        <h1 class="text-xl font-bold text-stone-800 leading-none">Math Explorer Pro</h1>
+                        <p class="text-[10px] uppercase tracking-widest text-amber-600 font-bold mt-1">AI Integrated System ✨</p>
                     </div>
                 </div>
-            </div>
-            <div class="stats-box">
-                <div class="score-num" id="score">0</div>
-                <div style="color:#94a3b8; font-size:12px;">SCORE</div>
-                <div class="wave-badge" id="wave-badge">WAVE 1</div>
-            </div>
-        </div>
-
-        <div id="boss-hud">
-            <div class="boss-name" id="boss-name">
-                KRU MANOP <span class="ai-badge">AI</span>
-            </div>
-            <div class="boss-hp-bg">
-                <div id="boss-hp-bar" class="boss-hp-fill"></div>
-            </div>
-        </div>
-
-        <div class="hud-bottom">
-            <div class="skill-icon">
-                <div class="key-hint">L-Click</div>
-                ⚔️
-            </div>
-            <div class="skill-icon" id="dash-icon">
-                <div class="key-hint">SPACE</div>
-                💨
-                <div class="cooldown-mask" id="dash-cd"></div>
-            </div>
-            <!-- Skill 1: 📖 สำหรับเก้า / 🍙 สำหรับภูมิ — setupCharacterHUD จะสลับ id และ icon -->
-            <div class="skill-icon" id="stealth-icon">
-                <div class="key-hint" id="skill1-hint">R-Click</div>
-                <span id="skill1-emoji">📖</span>
-                <div class="cooldown-mask" id="stealth-cd"></div>
-            </div>
-            <!-- Skill 2 (Ultimate): 🐉 พญานาค — แสดงเฉพาะภูมิ -->
-            <div class="skill-icon" id="naga-icon" style="display:none; border-color:#10b981; box-shadow:0 0 15px rgba(16,185,129,0.4);">
-                <div class="key-hint" style="background:#10b981;">Q</div>
-                🐉
-                <div class="cooldown-mask" id="naga-cd"></div>
-                <span id="naga-timer"></span>
-            </div>
-            <div class="skill-icon" id="passive-skill">
-                <div style="font-size: 20px;">✨</div>
-                <div class="skill-name">ซุ่มเสรี</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="overlay">
-        <div class="menu-container">
-            <div class="title">
-                MTC
-                <span class="subtitle">BETA EDITION <span class="version-badge">v.1.0</span></span>
-            </div>
-
-            <div id="mission-brief">กำลังโหลดภารกิจ...</div>
-
-            <!-- ✨ CHARACTER SELECTION -->
-            <div class="char-select-section">
-                <h3>🎮 เลือกตัวละคร</h3>
-                <div class="char-cards">
-                    <!-- การ์ด: เก้า (นักเรียน MTC ดั้งเดิม) -->
-                    <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
-                        <div class="char-avatar">👨‍🎓</div>
-                        <div class="char-name">เก้า (KAO)</div>
-                        <div class="char-desc">MTC สายซุ่ม<br>🔫 สลับโหมดการยิง 3 แบบ | Skill 📖 ซุ่มอ่านหนังสือ+ซุ่มเสรี</div>
-                        <div class="char-tag">🔵สายซุ่ม</div>
-                    </div>
-                    <!-- การ์ด: ภูมิ (คนอีสาน) -->
-                    <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
-                        <div class="char-avatar">🌾</div>
-                        <div class="char-name">ภูมิ (POOM)</div>
-                        <div class="char-desc">MTC คนอีสาน<br>Skill 1 🍙 ข้าวเหนียว | Skill 2 🐉 พญานาค</div>
-                        <div class="char-tag">🟢สายอีสาน</div>
-                    </div>
+                <div class="flex items-center gap-3">
+                    <button id="quizToggle" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-semibold transition-all text-xs border border-stone-200">
+                        <span id="quizIcon">👁️</span>
+                        <span id="quizText">โหมดท่องจำ (Quiz Mode)</span>
+                    </button>
                 </div>
             </div>
+        </div>
+    </header>
 
-            <script>
-                let _selectedChar = 'kao';
-                function selectCharacter(charType) {
-                    _selectedChar = charType;
-                    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
-                    const card = document.getElementById('card-' + charType);
-                    if (card) card.classList.add('selected');
-                    // อัปเดตคำอธิบายปุ่ม
-                    const startBtn = document.getElementById('start-btn');
-                    if (startBtn) startBtn.textContent = charType === 'poom' ? '🌾 START MISSION' : '🎓 START MISSION';
-                }
-            </script>
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-8">
+        <!-- AI Welcome Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 p-6 rounded-2xl shadow-sm relative overflow-hidden">
+                <div class="relative z-10">
+                    <h2 class="text-xl font-bold text-amber-900 mb-2 flex items-center gap-2">
+                        <span>✨</span> ยกระดับการเรียนรู้ด้วย Gemini AI
+                    </h2>
+                    <p class="text-amber-800/80 text-sm leading-relaxed mb-4">
+                        แอปพลิเคชันนี้ใช้ขุมพลังจาก <strong>Gemini AI</strong> ในการช่วยอธิบายสัญลักษณ์ทางคณิตศาสตร์ น้องๆ สามารถเลือกโหมด "ถาม AI" เพื่อรับคำอธิบาย ตัวอย่าง หรือโจทย์ท้าทายได้ทันที
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-white/60 rounded-full text-[11px] font-bold text-amber-700 border border-amber-200">อธิบายง่าย</span>
+                        <span class="px-3 py-1 bg-white/60 rounded-full text-[11px] font-bold text-amber-700 border border-amber-200">ตัวอย่างจริง</span>
+                        <span class="px-3 py-1 bg-white/60 rounded-full text-[11px] font-bold text-amber-700 border border-amber-200">โจทย์ท้าทาย</span>
+                    </div>
+                </div>
+                <div class="absolute -bottom-4 -right-4 opacity-10 text-8xl grayscale">🤖</div>
+            </div>
             
-            <!-- ✨ IMPROVED: Report Card with proper structure -->
-            <div id="report-card">
-                <div class="report-header">
-                    📋รายงานผลเกรด "F(uck)"
-                </div>
-                <div class="report-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">Score</div>
-                        <div class="stat-value" id="report-score">0</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Wave</div>
-                        <div class="stat-value" id="report-wave">0</div>
-                    </div>
-                </div>
-                <div id="report-text">กำลังรอความเห็นจากครู...</div>
+            <div class="bg-white border border-stone-200 p-6 rounded-2xl shadow-sm flex flex-col justify-center items-center text-center">
+                <p class="text-xs text-stone-400 uppercase font-bold tracking-tighter mb-2">Current AI Model</p>
+                <h3 id="roadmapTitle" class="text-lg font-bold text-stone-800 mb-3">แผนการเรียนรู้ ✨</h3>
+                <button onclick="generateRoadmap()" id="categoryRoadmapBtn" class="w-full py-2.5 px-4 bg-stone-800 hover:bg-stone-900 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 group">
+                    <span class="group-hover:rotate-12 transition-transform">✨</span> สร้างแผนติวหัวข้อนี้
+                </button>
             </div>
+        </section>
 
-            <div class="info-section">
-                <div class="new-features">
-                    <h3>✨ ฟีเจอร์ใหม่</h3>
-                    <div class="feature-list">
-                        <div class="feature-item">🌾ตัวละครใหม่ "ภูมิ"คนอีสาน</div>
-                        <div class="feature-item">🐉สกิลรูปแบบใหม่-อัญเชิญพญานาค</div>
+        <!-- Roadmap Result Section -->
+        <section id="roadmapSection" class="hidden bg-stone-900 text-stone-200 p-6 rounded-2xl shadow-lg border border-stone-800 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">🗺️</div>
+            <div class="flex justify-between items-start mb-4 relative z-10">
+                <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <span>🚀</span> AI Roadmap: <span id="roadmapCategoryName" class="text-white">General</span>
+                </h3>
+                <button onclick="closeRoadmap()" class="text-stone-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div id="roadmapResult" class="text-sm leading-relaxed space-y-3 relative z-10 ai-content"></div>
+        </section>
+
+        <!-- Category Filter -->
+        <section class="bg-white border border-stone-200 p-5 rounded-2xl shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-bold text-stone-800 flex items-center gap-2">
+                    <span>🔍</span> หมวดหมู่ + การค้นหา
+                </h2>
+                <span id="modelLabel" class="text-[9px] font-bold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">GEMINI-1.5-PRO</span>
+            </div>
+            <div class="space-y-3">
+                <div id="categoryContainer" class="flex flex-wrap gap-2"></div>
+                <input id="searchInput" type="text" placeholder="ค้นหาสัญลักษณ์... (เช่น integral, log, sin)" class="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none transition-all">
+            </div>
+        </section>
+
+        <!-- Symbol Grid -->
+        <section>
+            <div id="emptyState" class="hidden text-center py-16">
+                <span class="text-6xl mb-4 inline-block">🔍</span>
+                <p class="text-stone-400 font-medium text-sm">ไม่พบสัญลักษณ์ที่ตรงกับการค้นหา</p>
+            </div>
+            <div id="gridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        </section>
+
+        <!-- Statistics Chart -->
+        <section class="bg-white border border-stone-200 p-6 rounded-2xl shadow-sm">
+            <h2 class="text-base font-bold text-stone-800 mb-4 flex items-center gap-2">
+                <span>📊</span> สถิติสัญลักษณ์ตามหมวดหมู่
+            </h2>
+            <div class="chart-container">
+                <canvas id="distributionChart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <!-- AI Modal -->
+    <div id="aiModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div id="aiModalContent" class="bg-white rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden shadow-2xl transform scale-95 opacity-0 transition-all duration-300">
+            <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span id="modalSymbolIcon" class="text-4xl">∑</span>
+                    <div>
+                        <h3 id="modalTitle" class="text-xl font-bold">Summation (ผลรวม)</h3>
+                        <p class="text-xs text-amber-100 mt-1">เลือกหัวข้อด้านล่างเพื่อคุยกับ Gemini AI</p>
                     </div>
                 </div>
-
-                <div class="instructions">
-                    <p style="color: #fff; margin-bottom: 15px;"><strong>🎯</strong>เลือกตัว⮕สังหารศัตรู⮕เลเวลอัพ⮕สู้กับบอส!</p>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
-                        <div>🎮 <strong>WASD</strong> เคลื่อนที่</div>
-                        <div>🔫 <strong>L-Click</strong> กดยิง</div>
-                        <div>📖 <strong>R-Click</strong> สกิลซุ่มอ่าน</div>
-                        <div>💨 <strong>SPACE</strong> พุ่งตัว</div>
-                        <div>🔄 <strong>Q</strong> สลับปืน</div>
-                        <div>🏫 <strong>MTC Room</strong> Safe Zone</div>
-                    </div>
-                    <p style="font-size:13px; color:#facc15;">💡 Tips : เข้า MTC Room เพื่อฟื้นฟูเลือดอย่างต่อเนื่อง</p>
+                <button id="closeModal" class="text-white/80 hover:text-white text-2xl transition-colors">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <button onclick="askAI('explain')" class="p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-xs font-bold text-amber-700 transition-all">
+                        📚 อธิบายแนวคิด
+                    </button>
+                    <button onclick="askAI('example')" class="p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-xs font-bold text-blue-700 transition-all">
+                        💡 ยกตัวอย่าง
+                    </button>
+                    <button onclick="askAI('problem')" class="p-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl text-xs font-bold text-green-700 transition-all">
+                        🎯 โจทย์ท้าทาย
+                    </button>
+                    <button onclick="askAI('realworld')" class="p-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-xs font-bold text-purple-700 transition-all">
+                        🌍 ใช้งานจริง
+                    </button>
+                </div>
+                <div id="aiResponse" class="text-sm text-stone-600 leading-relaxed bg-stone-50 p-5 rounded-xl border border-stone-200 ai-content">
+                    <p class="text-center opacity-30 py-8 italic text-xs">เลือกหัวข้อด้านบนเพื่อคุยกับ AI</p>
                 </div>
             </div>
-
-            <button class="btn" id="start-btn" onclick="startGame(_selectedChar)">🎓 START MISSION</button>
-            <div id="ai-loading">🤖 Connecting to AI...</div>
         </div>
     </div>
 
-    <div id="victory-screen">
-        <div class="title">🎉 VICTORY! 🎉</div>
-        <div style="font-size:36px; color:#facc15; margin:20px 0;" id="final-score">SCORE: 0</div>
-        <div style="font-size:24px; color:#cbd5e1; margin-bottom:30px;" id="final-wave">WAVES CLEARED: 0</div>
-        <button class="btn" onclick="location.reload()">🔄 PLAY AGAIN</button>
-    </div>
+    <footer class="bg-white border-t border-stone-200 py-4 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-xs text-stone-500">Math Explorer Pro • Powered by Gemini AI • <span id="symbolCount">0</span> สัญลักษณ์</p>
+        </div>
+    </footer>
 
-    <script src="js/secrets.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/effects.js"></script>
-    <script src="js/weapons.js"></script>
-    <script src="js/map.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/ai.js"></script>
-    <script src="js/entities.js"></script>
-    <script src="js/game.js"></script>
+    <script>
 
+        const GEMINI_API_KEY = 'AIzaSyDLVAl9YqyJK3lSDXWp4-P6tAt-5IEV1Go'; // ⚠️ แทนที่ด้วย API Key จริงของคุณ
+        const modelName = 'gemini-3-flash-preview';
+        
+        let currentSymbolContext = null;
+
+        // ========================================
+        // 📊 SYMBOL DATA
+        // ========================================
+        const symbolData = [
+            { s: "∑", en: "Summation", th: "ผลรวม", desc: "sigma", cat: "Special" },
+            { s: "∏", en: "Product", th: "ผลคูณ", desc: "pi", cat: "Special" },
+            { s: "∞", en: "Infinity", th: "อนันต์", desc: "", cat: "Special" },
+            { s: "∀", en: "For All", th: "สำหรับทุก", desc: "", cat: "Logic" },
+            { s: "∃", en: "Exists", th: "มีอยู่", desc: "", cat: "Logic" },
+            { s: "∄", en: "Not Exists", th: "ไม่มีอยู่", desc: "", cat: "Logic" },
+            { s: "⇒", en: "Implies", th: "นัยว่า", desc: "", cat: "Logic" },
+            { s: "⇔", en: "Iff", th: "ก็ต่อเมื่อ", desc: "", cat: "Logic" },
+            { s: "¬", en: "Not", th: "ไม่ใช่", desc: "", cat: "Logic" },
+            { s: "∧", en: "And", th: "และ", desc: "", cat: "Logic" },
+            { s: "∨", en: "Or", th: "หรือ", desc: "", cat: "Logic" },
+            { s: "∈", en: "Element of", th: "เป็นสมาชิก", desc: "", cat: "Set Theory" },
+            { s: "∉", en: "Not Element of", th: "ไม่ใช่สมาชิก", desc: "", cat: "Set Theory" },
+            { s: "⊆", en: "Subset", th: "สับเซต", desc: "", cat: "Set Theory" },
+            { s: "⊂", en: "Proper Subset", th: "สับเซตแท้", desc: "", cat: "Set Theory" },
+            { s: "∪", en: "Union", th: "ยูเนียน", desc: "", cat: "Set Theory" },
+            { s: "∩", en: "Intersection", th: "อินเตอร์เซก", desc: "", cat: "Set Theory" },
+            { s: "∅", en: "Empty Set", th: "เซตว่าง", desc: "null", cat: "Set Theory" },
+            { s: "ℕ", en: "Natural", th: "จำนวนนับ", desc: "", cat: "Number Sets" },
+            { s: "ℤ", en: "Integer", th: "จำนวนเต็ม", desc: "", cat: "Number Sets" },
+            { s: "ℚ", en: "Rational", th: "ตรรกยะ", desc: "", cat: "Number Sets" },
+            { s: "ℝ", en: "Real", th: "จำนวนจริง", desc: "", cat: "Number Sets" },
+            { s: "ℂ", en: "Complex", th: "จำนวนเชิงซ้อน", desc: "", cat: "Number Sets" },
+            { s: "≈", en: "Approx", th: "ประมาณ", desc: "", cat: "Comparison" },
+            { s: "≠", en: "Not Equal", th: "ไม่เท่า", desc: "", cat: "Comparison" },
+            { s: "≤", en: "Less Equal", th: "น้อยกว่าหรือเท่า", desc: "", cat: "Comparison" },
+            { s: "≥", en: "Greater Equal", th: "มากกว่าหรือเท่า", desc: "", cat: "Comparison" },
+            { s: "≪", en: "Much Less", th: "น้อยกว่ามาก", desc: "", cat: "Comparison" },
+            { s: "≫", en: "Much Greater", th: "มากกว่ามาก", desc: "", cat: "Comparison" },
+            { s: "∝", en: "Proportional", th: "สัดส่วน", desc: "", cat: "Comparison" },
+            { s: "√", en: "Square Root", th: "รากที่สอง", desc: "", cat: "Special" },
+            { s: "∛", en: "Cube Root", th: "รากที่สาม", desc: "", cat: "Special" },
+            { s: "π", en: "Pi", th: "ไพ", desc: "3.14159...", cat: "Special" },
+            { s: "e", en: "Euler", th: "อีออยเลอร์", desc: "2.718...", cat: "Special" },
+            { s: "∫", en: "Integral", th: "อินทิกรัล", desc: "", cat: "Calculus" },
+            { s: "∂", en: "Partial", th: "ดิฟย่อย", desc: "", cat: "Calculus" },
+            { s: "∆", en: "Delta", th: "เดลตา", desc: "ผลต่าง", cat: "Calculus" },
+            { s: "∇", en: "Nabla", th: "นาบลา", desc: "เกรเดียนต์", cat: "Calculus" },
+            { s: "→", en: "Vector", th: "เวกเตอร์", desc: "", cat: "Vectors" },
+            { s: "‖v‖", en: "Norm", th: "ขนาดเวกเตอร์", desc: "", cat: "Vectors" },
+            { s: "det", en: "Determinant", th: "ดีเทอร์มิแนนต์", desc: "", cat: "Vectors" },
+            { s: "T", en: "Transpose", th: "ทรานสโพส", desc: "", cat: "Vectors" },
+            { s: "·", en: "Dot Product", th: "ดอท", desc: "", cat: "Vectors" },
+            { s: "×", en: "Cross Product", th: "ครอส", desc: "", cat: "Vectors" },
+            { s: "∠", en: "Angle", th: "มุม", desc: "", cat: "Geometry" },
+            { s: "△", en: "Triangle", th: "สามเหลี่ยม", desc: "", cat: "Geometry" },
+            { s: "∥", en: "Parallel", th: "ขนาน", desc: "", cat: "Geometry" },
+            { s: "⊥", en: "Perpendicular", th: "ตั้งฉาก", desc: "", cat: "Geometry" },
+            { s: "°", en: "Degree", th: "องศา", desc: "", cat: "Geometry" },
+            { s: "≅", en: "Congruent", th: "เท่ากันทุกประการ", desc: "", cat: "Geometry" },
+            { s: "∣", en: "Divides", th: "หารลงตัว", desc: "", cat: "Number Theory" },
+            { s: "∤", en: "No divide", th: "ไม่ลงตัว", desc: "", cat: "Number Theory" },
+            { s: "≡", en: "Congruence", th: "สมภาค", desc: "mod", cat: "Number Theory" },
+            { s: "gcd", en: "GCD", th: "ห.ร.ม.", desc: "", cat: "Number Theory" },
+            { s: "lcm", en: "LCM", th: "ค.ร.น.", desc: "", cat: "Number Theory" },
+            { s: "f(x)", en: "Function", th: "ฟังก์ชัน", desc: "", cat: "Functions" },
+            { s: "log", en: "Log", th: "ลอการิทึม", desc: "", cat: "Functions" },
+            { s: "ln", en: "Natural Log", th: "ln", desc: "", cat: "Functions" },
+            { s: "sin", en: "Sine", th: "ไซน์", desc: "", cat: "Functions" },
+            { s: "⊢", en: "Turnstile", th: "พิสูจน์ได้", desc: "", cat: "Adv Logic" },
+            { s: "⊨", en: "Double Turnstile", th: "สมเหตุสมผล", desc: "", cat: "Adv Logic" }
+        ];
+
+        let currentCategory = 'All';
+        let searchQuery = '';
+        let quizMode = false;
+        const categories = ['All', ...new Set(symbolData.map(d => d.cat))];
+
+        const gridContainer = document.getElementById('gridContainer');
+        const categoryContainer = document.getElementById('categoryContainer');
+        const searchInput = document.getElementById('searchInput');
+        const emptyState = document.getElementById('emptyState');
+        const quizToggle = document.getElementById('quizToggle');
+        const quizText = document.getElementById('quizText');
+        const body = document.body;
+        const aiModal = document.getElementById('aiModal');
+        const aiModalContent = document.getElementById('aiModalContent');
+        const closeModalBtn = document.getElementById('closeModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalSymbolIcon = document.getElementById('modalSymbolIcon');
+        const aiResponse = document.getElementById('aiResponse');
+        const modelLabel = document.getElementById('modelLabel');
+        const symbolCount = document.getElementById('symbolCount');
+
+        // ========================================
+        // 🤖 GEMINI API FUNCTIONS
+        // ========================================
+        
+        async function callGeminiAPI(prompt) {
+            if (GEMINI_API_KEY === 'YOUR_API_KEY_HERE') {
+                return '⚠️ กรุณาใส่ Gemini API Key ในโค้ด (บรรทัด 233)\n\nวิธีการรับ API Key:\n1. ไปที่ https://makersuite.google.com/app/apikey\n2. สร้าง API Key ใหม่\n3. คัดลอกมาใส่ในตัวแปร GEMINI_API_KEY';
+            }
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            maxOutputTokens: 1024,
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || 'API Error');
+                }
+
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error('Gemini API Error:', error);
+                return `❌ เกิดข้อผิดพลาด: ${error.message}\n\nกรุณาตรวจสอบ:\n1. API Key ถูกต้องหรือไม่\n2. เชื่อมต่ออินเทอร์เน็ตหรือไม่\n3. API Quota เหลืออยู่หรือไม่`;
+            }
+        }
+
+        async function askAI(mode) {
+            if (!currentSymbolContext) return;
+            
+            const item = currentSymbolContext;
+            const modes = {
+                'explain': `อธิบายสัญลักษณ์ทางคณิตศาสตร์ "${item.s}" (${item.en} / ${item.th}) ให้เข้าใจง่าย เหมาะสำหรับนักเรียนมัธยม พร้อมบอกที่มาและความหมาย`,
+                'example': `ยกตัวอย่างการใช้งานสัญลักษณ์ "${item.s}" (${item.en}) ในโจทย์คณิตศาสตร์ 2-3 ตัวอย่าง พร้อมเฉลย`,
+                'problem': `สร้างโจทย์ท้าทายเกี่ยวกับ "${item.s}" (${item.en}) ระดับกลางถึงยาก 1 ข้อ พร้อมคำใบ้`,
+                'realworld': `บอกตัวอย่างการนำ "${item.s}" (${item.en}) ไปใช้ในชีวิตจริง วิทยาศาสตร์ หรือวิศวกรรม`
+            };
+
+            const prompt = modes[mode] || modes['explain'];
+            
+            aiResponse.innerHTML = `<div class="text-center py-8"><div class="inline-block animate-spin text-3xl">⚙️</div><p class="text-xs text-stone-400 mt-3 loading-dots">AI กำลังคิด</p></div>`;
+            
+            const result = await callGeminiAPI(prompt);
+            aiResponse.innerHTML = `<div class="prose prose-sm max-w-none">${formatAIResponse(result)}</div>`;
+            
+            // Render LaTeX if present
+            if (window.MathJax) {
+                MathJax.typesetPromise([aiResponse]).catch(err => console.log('MathJax error:', err));
+            }
+        }
+
+        async function generateRoadmap() {
+            const roadmapSection = document.getElementById('roadmapSection');
+            const roadmapResult = document.getElementById('roadmapResult');
+            const roadmapCategoryName = document.getElementById('roadmapCategoryName');
+            
+            const catDisplay = currentCategory === 'All' ? 'คณิตศาสตร์ทั่วไป' : currentCategory;
+            roadmapCategoryName.textContent = catDisplay;
+            
+            roadmapSection.classList.remove('hidden');
+            roadmapResult.innerHTML = `<div class="text-center py-8"><div class="inline-block animate-spin text-3xl">⚙️</div><p class="text-xs text-stone-400 mt-3 loading-dots">AI กำลังสร้างแผนการเรียน</p></div>`;
+            
+            const prompt = `สร้างแผนการเรียนรู้ (Roadmap) สำหรับหัวข้อ "${catDisplay}" โดยแบ่งเป็นขั้นตอน พร้อมแนะนำทรัพยากร และเคล็ดลับการเรียนรู้ เหมาะสำหรับนักเรียนมัธยม`;
+            
+            const result = await callGeminiAPI(prompt);
+            roadmapResult.innerHTML = formatAIResponse(result);
+        }
+
+        function closeRoadmap() {
+            document.getElementById('roadmapSection').classList.add('hidden');
+        }
+
+        function formatAIResponse(text) {
+            // Convert markdown-like formatting to HTML
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^### (.*$)/gim, '<h3 class="text-base font-bold text-amber-600 mt-4 mb-2">$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold text-amber-700 mt-4 mb-2">$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold text-amber-800 mt-4 mb-2">$1</h1>')
+                .replace(/\n\n/g, '</p><p class="mb-3">')
+                .replace(/^- (.*$)/gim, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/s, '<ul class="list-disc ml-6 mb-3">$1</ul>')
+                .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+                .trim();
+        }
+
+        // ========================================
+        // 🎨 UI RENDERING FUNCTIONS
+        // ========================================
+
+        function renderCategories() {
+            modelLabel.textContent = modelName.toUpperCase();
+            categoryContainer.innerHTML = categories.map(cat => {
+                const isActive = currentCategory === cat;
+                const activeClass = isActive ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-stone-600 border border-stone-200';
+                const thaiNames = { 
+                    'All': 'ทั้งหมด', 
+                    'Number Sets': 'เซตตัวเลข', 
+                    'Set Theory': 'เซต', 
+                    'Logic': 'ตรรกศาสตร์', 
+                    'Comparison': 'เปรียบเทียบ', 
+                    'Special': 'พิเศษ', 
+                    'Calculus': 'แคลคูลัส', 
+                    'Vectors': 'เวกเตอร์', 
+                    'Geometry': 'เรขาคณิต', 
+                    'Number Theory': 'ทฤษฎีจำนวน', 
+                    'Functions': 'ฟังก์ชัน', 
+                    'Adv Logic': 'ตรรกศาสตร์สูง' 
+                };
+                return `<button onclick="setCategory('${cat}')" class="${activeClass} px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all">${thaiNames[cat] || cat}</button>`;
+            }).join('');
+        }
+
+        function renderGrid() {
+            gridContainer.innerHTML = '';
+            const filtered = symbolData.filter(item => {
+                const matchesCat = currentCategory === 'All' || item.cat === currentCategory;
+                const query = searchQuery.toLowerCase();
+                return matchesCat && (item.s.toLowerCase().includes(query) || item.en.toLowerCase().includes(query) || item.th.toLowerCase().includes(query));
+            });
+            
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = `symbol-card bg-white p-5 rounded-2xl border border-stone-100 flex flex-col items-center text-center group h-full justify-between`;
+                    card.innerHTML = `
+                        <div class="mb-4 h-16 flex items-center justify-center">
+                            <span class="text-4xl font-serif text-stone-800">${item.s}</span>
+                        </div>
+                        <div class="w-full space-y-1 mb-4">
+                            <h3 class="text-base font-bold text-amber-600 name-en">${item.en}</h3>
+                            <p class="text-stone-700 font-semibold meaning text-xs">${item.th}</p>
+                        </div>
+                        <button onclick="openAiModal(${index})" class="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg transition-colors border border-amber-100">✨ ถาม AI</button>
+                    `;
+                    gridContainer.appendChild(card);
+                });
+            }
+            
+            symbolCount.textContent = symbolData.length;
+        }
+
+        function setCategory(cat) { 
+            currentCategory = cat; 
+            renderCategories(); 
+            renderGrid(); 
+        }
+
+        function openAiModal(index) {
+            const filtered = symbolData.filter(item => {
+                const matchesCat = currentCategory === 'All' || item.cat === currentCategory;
+                const query = searchQuery.toLowerCase();
+                return matchesCat && (item.s.toLowerCase().includes(query) || item.en.toLowerCase().includes(query) || item.th.toLowerCase().includes(query));
+            });
+            const item = filtered[index];
+            currentSymbolContext = item;
+            modalTitle.textContent = `${item.en} (${item.th})`;
+            modalSymbolIcon.textContent = item.s;
+            aiResponse.innerHTML = `<p class="text-center opacity-30 py-8 italic text-xs">เลือกหัวข้อด้านบนเพื่อคุยกับ AI</p>`;
+            aiModal.classList.remove('hidden');
+            setTimeout(() => { 
+                aiModalContent.classList.remove('scale-95', 'opacity-0'); 
+                aiModalContent.classList.add('scale-100', 'opacity-100'); 
+            }, 10);
+        }
+
+        function closeModal() {
+            aiModalContent.classList.remove('scale-100', 'opacity-100');
+            aiModalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => { aiModal.classList.add('hidden'); }, 300);
+            currentSymbolContext = null;
+        }
+
+        // ========================================
+        // 📊 CHART INITIALIZATION
+        // ========================================
+
+        function initChart() {
+            const ctx = document.getElementById('distributionChart').getContext('2d');
+            const counts = {};
+            symbolData.forEach(item => { 
+                counts[item.cat] = (counts[item.cat] || 0) + 1; 
+            });
+            const labels = categories.filter(c => c !== 'All');
+            const data = labels.map(cat => counts[cat]);
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        label: 'Symbols', 
+                        data: data, 
+                        backgroundColor: '#fbbf24', 
+                        borderRadius: 4 
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        y: { beginAtZero: true }, 
+                        x: { ticks: { font: { size: 9 } } } 
+                    } 
+                }
+            });
+        }
+
+        // ========================================
+        // 🎮 EVENT LISTENERS
+        // ========================================
+
+        searchInput.addEventListener('input', (e) => { 
+            searchQuery = e.target.value; 
+            renderGrid(); 
+        });
+
+        quizToggle.addEventListener('click', () => {
+            quizMode = !quizMode;
+            if (quizMode) { 
+                body.classList.add('quiz-mode'); 
+                quizToggle.classList.replace('bg-stone-100', 'bg-amber-500'); 
+                quizToggle.classList.replace('text-stone-600', 'text-white'); 
+                quizText.textContent = "ปิดโหมดท่องจำ"; 
+            } else { 
+                body.classList.remove('quiz-mode'); 
+                quizToggle.classList.replace('bg-amber-500', 'bg-stone-100'); 
+                quizToggle.classList.replace('text-white', 'text-stone-600'); 
+                quizText.textContent = "โหมดท่องจำ (Quiz Mode)"; 
+            }
+        });
+
+        closeModalBtn.addEventListener('click', closeModal);
+
+        // ========================================
+        // 🚀 INITIALIZE APP
+        // ========================================
+
+        renderCategories();
+        renderGrid();
+        initChart();
+    </script>
 </body>
 </html>
