@@ -233,16 +233,54 @@ const BALANCE = {
     },
 
     // 🏫 MAP SETTINGS
+    // 🏫 MAP SETTINGS
     map: {
         size: 3000,            // Map size (3000x3000)
         objectDensity: 0.2,   // ความหนาแน่นของวัตถุ (20% ของพื้นที่)
-        objectTypes: ['wall', 'chair', 'cabinet', 'blackboard'],
+        objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
             { x: 1450, y: -50, w: 50, h: 100 },
             { x: -50, y: -1500, w: 100, h: 50 },
             { x: -50, y: 1450, w: 100, h: 50 }
-        ]
+        ],
+
+        // 🎨 MAP COLOR PALETTE — used by all procedural draw helpers in map.js
+        mapColors: {
+            // Floor (MTC Room parquet tiles)
+            floor:            '#d4c5a0',
+            floorAlt:         '#c9b892',
+
+            // Tech Trees
+            treeLight:        '#86efac',
+            treeMid:          '#4ade80',
+            treeDark:         '#16a34a',
+            treeTrunk:        '#92400e',
+
+            // Desks
+            deskTop:          '#854d0e',
+            deskLegs:         '#713f12',
+
+            // Server rack
+            serverBody:       '#1e293b',
+            serverLightOn:    '#22c55e',
+            serverLightOff:   '#166534',
+
+            // Data Pillar (circuit-pattern)
+            pillarBase:       '#475569',
+            pillarCircuit:    '#06b6d4',
+
+            // Books (cycled per book spine)
+            bookColors: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#f97316'],
+
+            // Walls
+            wallColor:        '#e2d5c0',
+            wallBrick:        '#c9b18a',
+
+            // Blackboard / Whiteboard
+            whiteboardGreen:  '#1a4731',
+            chalkWhite:       '#f0ebe0'
+        }
     }
 };
 
