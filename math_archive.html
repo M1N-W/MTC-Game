@@ -25,7 +25,7 @@
         };
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4/marked.min.js"></script>
 
     <style>
         body {
@@ -266,7 +266,7 @@
         // ========================================
         
         // API Key จากที่คุณระบุมา
-        const GEMINI_API_KEY = 'AIzaSyBiOq45ORuHn_9-09GbCbM79o7tncOkkY4'; 
+        const GEMINI_API_KEY = 'AIzaSyB8-_e4Kn7FRLHJ0Xnu0YcKBH5jgrr_ILU'; 
         const MODEL_NAME = 'gemini-2.5-flash'; 
 
         let currentSymbolContext = null;
@@ -440,9 +440,23 @@
         }
 
         function formatAIResponse(text) {
-            // ใช้ marked.js แปลง Markdown → HTML (รองรับ nested lists, bold, code, ฯลฯ)
-            marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
-            const html = marked.parse(text);
+            // ตั้งค่า marked.js v4
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: false,
+                mangle: false,
+                smartLists: true,
+            });
+
+            let html;
+            try {
+                html = marked.parse(text);
+            } catch(e) {
+                // fallback: แสดงเป็น plain text ถ้า marked ยังโหลดไม่เสร็จ
+                html = '<p>' + text.replace(/\n/g, '<br>') + '</p>';
+            }
+
             return '<div class="ai-rendered-content text-sm leading-relaxed">' + html + '</div>';
         }
 
