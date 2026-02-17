@@ -224,6 +224,52 @@ class UIManager {
     }
 }
 
+/**
+     * ðŸ'€ showGameOver(score, wave)
+     * Centralises all DOM writes for the Game Over report card.
+     * Called by endGame() BEFORE the async AI call so stat boxes
+     * are never left at their default 0.
+     */
+    static showGameOver(score, wave) {
+        // Title bar
+        const titleEl = document.querySelector('.title');
+        if (titleEl) {
+            titleEl.innerHTML =
+                `GAME OVER<br><span class="subtitle">SCORE ${score.toLocaleString()} | WAVE ${wave}</span>`;
+        }
+
+        // Stat boxes
+        const reportScoreEl = document.getElementById('report-score');
+        if (reportScoreEl) reportScoreEl.textContent = score.toLocaleString();
+
+        const reportWaveEl = document.getElementById('report-wave');
+        if (reportWaveEl) reportWaveEl.textContent = wave;
+
+        // Reset commentary placeholder
+        const reportText = document.getElementById('report-text');
+        if (reportText) reportText.textContent = 'กำลังรอความเห็นจากครู...';
+
+        // Show report card container
+        const rc = document.getElementById('report-card');
+        if (rc) rc.style.display = 'block';
+    }
+
+    /**
+     * Resets all report-card fields to defaults.
+     * Call from startGame() so replays never show stale data.
+     */
+    static resetGameOverUI() {
+        const reportScoreEl = document.getElementById('report-score');
+        if (reportScoreEl) reportScoreEl.textContent = '0';
+
+        const reportWaveEl = document.getElementById('report-wave');
+        if (reportWaveEl) reportWaveEl.textContent = '0';
+
+        const reportText = document.getElementById('report-text');
+        if (reportText) reportText.textContent = 'กำลังรอความเห็นจากครู...';
+    }
+}
+
 const Achievements = new AchievementSystem();
 
 function showVoiceBubble(text, x, y) {

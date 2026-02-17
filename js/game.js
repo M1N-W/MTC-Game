@@ -679,6 +679,9 @@ function startGame(charType = 'kao') {
     hideElement('overlay');
     hideElement('report-card');
 
+    // ── FIX: Reset report-card stat boxes so replays don't show stale data ──
+    UIManager.resetGameOverUI();
+
     // Clean up modal state if restarting
     const modal = document.getElementById('math-modal');
     if (modal) modal.classList.remove('open');
@@ -713,23 +716,28 @@ async function endGame(result) {
         setElementText('final-score', `SCORE ${getScore()}`);
         setElementText('final-wave',  `WAVES CLEARED ${getWave() - 1}`);
     } else {
+        // ── FIX: Snapshot score/wave NOW — async awaits below must not read
+        //    stale values if resetScore() is ever called before the promise resolves ──
+        const finalScore = getScore();
+        const finalWave  = getWave();
+
         showElement('overlay');
-        const titleEl = document.querySelector('.title');
-        if (titleEl) titleEl.innerHTML = `GAME OVER<br><span class="subtitle">SCORE ${getScore()} | WAVE ${getWave()}</span>`;
-        const rc = document.getElementById('report-card');
-        if (rc) rc.style.display = 'block';
+
+        // ── Delegate all DOM writes to UIManager (single source of truth) ──
+        UIManager.showGameOver(finalScore, finalWave);
+
+        // ── AI commentary (async — uses snapshotted values, not live getScore()) ──
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';
+        const reportText = document.getElementById('report-text');
         try {
-            const comment = await Gemini.getReportCard(getScore(), getWave());
+            const comment = await Gemini.getReportCard(finalScore, finalWave);
             if (ld) ld.style.display = 'none';
-            const reportText = document.getElementById('report-text');
             if (reportText) reportText.textContent = comment;
         } catch (e) {
             console.warn('Failed to get AI report card:', e);
             if (ld) ld.style.display = 'none';
-            const reportText = document.getElementById('report-text');
-            if (reportText) reportText.textContent = "ตั้งใจเรียนให้มากกว่านี้นะ...";
+            if (reportText) reportText.textContent = 'ตั้งใจเรียนให้มากกว่านี้นะ...';
         }
     }
 }
