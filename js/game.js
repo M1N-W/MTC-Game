@@ -19,14 +19,21 @@
  * - ✅ gameState = 'PAUSED' when DB is opened or window loses focus (blur)
  * - ✅ resumeGame()  → restores gameState = 'PLAYING', resets keys, hides prompt
  *
- * (Drone Feature — v5 — NEW):
+ * (Drone Feature — v5 — unchanged):
  * - ✅ window.drone global — holds the active Drone instance
  * - ✅ startGame() creates a fresh Drone at player spawn
  * - ✅ updateGame() calls drone.update(dt, player)
  * - ✅ drawGame() calls drone.draw() between map objects and player
  * - ✅ endGame() nullifies window.drone to prevent stale references
- * - ✅ Drone is paused automatically because updateGame() is skipped
- *       while gameState === 'PAUSED' — no extra logic needed
+ *
+ * (Boss Dog Rider — v6 — NEW):
+ * - ✅ Boss draws a fully animated dog underneath (4 legs, tail, head)
+ * - ✅ Dog color driven by BALANCE.boss.phase2.dogColor (amber/brown)
+ * - ✅ Dog legs animate via Math.sin keyed to this.dogLegTimer
+ * - ✅ Enrage at HP < 50%: dog turns red, speed *= enrageSpeedMult, particles
+ * - ✅ New bark() attack: emits BarkWave cone, damages + pushes player
+ * - ✅ BarkWave class: expanding arc rings with glow; auto-removed after 0.6s
+ * - ✅ Bark mixed into CHASE decision tree alongside Slam / Graph / Summon
  */
 
 // ─── Game State ───────────────────────────────────────────
@@ -224,19 +231,12 @@ function updateDatabaseServerUI() {
 // 🛒 SHOP — DRAW, PROXIMITY, OPEN, CLOSE, BUY
 // ══════════════════════════════════════════════════════════════
 
-/**
- * drawShopObject()
- * Draws a glowing golden market kiosk at MTC_SHOP_LOCATION.
- * Deliberately distinct from the cyan database server.
- * Called inside drawGame() every frame.
- */
 function drawShopObject() {
     const screen = worldToScreen(MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
     const t      = performance.now() / 700;
     const glow   = Math.abs(Math.sin(t)) * 0.5 + 0.5;
-    const bounce = Math.sin(performance.now() / 500) * 3; // gentle float
+    const bounce = Math.sin(performance.now() / 500) * 3;
 
-    // Interaction radius ring (visible when nearby)
     if (player) {
         const d = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
         if (d < MTC_SHOP_LOCATION.INTERACTION_RADIUS * 2) {
@@ -254,7 +254,6 @@ function drawShopObject() {
         }
     }
 
-    // Shadow
     CTX.fillStyle = 'rgba(0,0,0,0.4)';
     CTX.beginPath();
     CTX.ellipse(screen.x, screen.y + 32, 22, 8, 0, 0, Math.PI * 2);
@@ -265,9 +264,7 @@ function drawShopObject() {
     CTX.shadowBlur  = 18 * glow;
     CTX.shadowColor = '#facc15';
 
-    // ── Kiosk body ──────────────────────────────────────
-    // Base counter
-    CTX.fillStyle   = '#78350f';  // dark amber wood
+    CTX.fillStyle   = '#78350f';
     CTX.strokeStyle = '#facc15';
     CTX.lineWidth   = 2;
     CTX.beginPath();
@@ -275,7 +272,6 @@ function drawShopObject() {
     CTX.fill();
     CTX.stroke();
 
-    // Counter top surface
     CTX.fillStyle = '#92400e';
     CTX.beginPath();
     CTX.roundRect(-22, -6, 44, 10, 3);
@@ -284,13 +280,11 @@ function drawShopObject() {
     CTX.lineWidth = 1.5;
     CTX.stroke();
 
-    // Awning poles (left & right)
     CTX.strokeStyle = '#d97706';
     CTX.lineWidth   = 3;
     CTX.beginPath(); CTX.moveTo(-18, -6); CTX.lineTo(-18, -34); CTX.stroke();
     CTX.beginPath(); CTX.moveTo( 18, -6); CTX.lineTo( 18, -34); CTX.stroke();
 
-    // Awning fabric
     CTX.fillStyle = `rgba(250,204,21,${0.85 + glow * 0.15})`;
     CTX.beginPath();
     CTX.moveTo(-26, -34);
@@ -303,7 +297,6 @@ function drawShopObject() {
     CTX.lineWidth   = 1.5;
     CTX.stroke();
 
-    // Awning scallop trim
     CTX.fillStyle = '#f59e0b';
     for (let i = 0; i < 5; i++) {
         CTX.beginPath();
@@ -311,19 +304,16 @@ function drawShopObject() {
         CTX.fill();
     }
 
-    // Shop icon on counter
     CTX.font          = '16px Arial';
     CTX.textAlign     = 'center';
     CTX.textBaseline  = 'middle';
     CTX.shadowBlur    = 0;
     CTX.fillText('🛒', 0, 10);
 
-    // Floating coin above awning (animated)
     const coinBounce = Math.sin(performance.now() / 350) * 4;
     CTX.font     = '14px Arial';
     CTX.fillText('🪙', 0, -46 + coinBounce);
 
-    // Label below kiosk
     CTX.shadowBlur   = 0;
     CTX.fillStyle    = '#fbbf24';
     CTX.font         = 'bold 7px Arial';
@@ -334,11 +324,6 @@ function drawShopObject() {
     CTX.restore();
 }
 
-/**
- * updateShopProximityUI()
- * Shows/hides the "Press B" prompt and HUD/mobile shortcuts.
- * Called each frame while PLAYING.
- */
 function updateShopProximityUI() {
     if (!player) return;
     const d    = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
@@ -353,16 +338,10 @@ function updateShopProximityUI() {
     if (btnShop)  btnShop.style.display  = near ? 'flex'  : 'none';
 }
 
-/**
- * openShop()
- * Pauses the game, renders shop items, and opens the shop modal.
- * Called when the player presses 'B' (or taps btn-shop) while near the kiosk.
- */
 function openShop() {
     if (gameState !== 'PLAYING') return;
     gameState = 'PAUSED';
 
-    // Hide proximity prompt so it doesn't show behind the modal
     const promptEl = document.getElementById('shop-prompt');
     if (promptEl) promptEl.style.display = 'none';
 
@@ -372,11 +351,6 @@ function openShop() {
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
 }
 
-/**
- * closeShop()
- * Closes the shop modal and resumes the game.
- * Called by the modal's close button.
- */
 function closeShop() {
     if (gameState !== 'PAUSED') return;
     gameState = 'PLAYING';
@@ -384,7 +358,6 @@ function closeShop() {
     ShopManager.close();
     showResumePrompt(false);
 
-    // Reset all held keys to prevent stuck movement on resume
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
     keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0;
 
@@ -393,16 +366,6 @@ function closeShop() {
     if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
 }
 
-/**
- * buyItem(itemId)
- * Deducts score and applies the purchased item's effect to the player.
- * Called by each shop card's Buy button (onclick in ui.js renderItems).
- *
- * Effects:
- *   potion   — instant HP heal (capped at maxHp)
- *   damageUp — multiplies player.damageBoost for 30 s, restores on expiry
- *   speedUp  — multiplies player.moveSpeed for 30 s, restores on expiry
- */
 function buyItem(itemId) {
     const item = SHOP_ITEMS[itemId];
     if (!item) { console.warn('buyItem: unknown itemId', itemId); return; }
@@ -417,12 +380,9 @@ function buyItem(itemId) {
         return;
     }
 
-    // ── Deduct the cost ──────────────────────────────────────────
     addScore(-item.cost);
 
-    // ── Apply item effect ────────────────────────────────────────
     if (itemId === 'potion') {
-        // Instant heal — capped at maxHp
         const maxHp   = player.maxHp || BALANCE.characters[player.charType]?.maxHp || 110;
         const lacking = maxHp - player.hp;
         const healAmt = Math.min(item.heal, lacking);
@@ -437,11 +397,9 @@ function buyItem(itemId) {
 
     } else if (itemId === 'damageUp') {
         if (player.shopDamageBoostActive) {
-            // Stack timer rather than multiplying damage twice
             player.shopDamageBoostTimer += item.duration;
             spawnFloatingText('🔧 DMG เวลา +30s!', player.x, player.y - 70, '#f59e0b', 22);
         } else {
-            // Store original so we can restore it precisely on expiry
             player._baseDamageBoost   = player.damageBoost || 1.0;
             player.damageBoost        = (player.damageBoost || 1.0) * item.mult;
             player.shopDamageBoostActive = true;
@@ -466,47 +424,159 @@ function buyItem(itemId) {
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
     }
 
-    // ── Update HUD score ─────────────────────────────────────────
     const scoreEl = document.getElementById('score');
     if (scoreEl) scoreEl.textContent = getScore().toLocaleString();
 
-    // ── Achievement tracking ─────────────────────────────────────
     Achievements.stats.shopPurchases = (Achievements.stats.shopPurchases || 0) + 1;
     Achievements.check('shopaholic');
 
-    // ── Refresh button affordability ─────────────────────────────
     ShopManager.updateButtons();
 }
 
-// Expose shop functions globally for onclick handlers and mobile buttons
 window.openShop   = openShop;
 window.closeShop  = closeShop;
 window.buyItem    = buyItem;
 
-// ==================== BOSS ====================
+// ══════════════════════════════════════════════════════════════
+// 🐕 BARK WAVE — Sonic cone visual emitted by Bark attack
+//
+// Spawned into window.specialEffects by Boss.bark().
+// Each frame: expands outward from origin along bossAngle,
+// drawing BARK_RINGS concentric arc segments inside the cone.
+// Removed automatically when timer >= duration.
+// ══════════════════════════════════════════════════════════════
+class BarkWave {
+    /**
+     * @param {number} x          World X of boss when bark fired
+     * @param {number} y          World Y
+     * @param {number} angle      Direction the bark travels (radians)
+     * @param {number} coneHalf   Half-angle of the cone (radians)
+     * @param {number} range      Max world-unit radius of the cone
+     */
+    constructor(x, y, angle, coneHalf, range) {
+        this.x        = x;
+        this.y        = y;
+        this.angle    = angle;
+        this.coneHalf = coneHalf;
+        this.range    = range;
+        this.timer    = 0;
+        this.duration = 0.55;   // seconds until auto-removal
+        this.rings    = 5;      // number of concentric arc rings
+    }
+
+    // update() must return true to signal removal from specialEffects
+    update(dt /*, player, meteorZones — unused */) {
+        this.timer += dt;
+        return this.timer >= this.duration;
+    }
+
+    draw() {
+        const screen   = worldToScreen(this.x, this.y);
+        const progress = this.timer / this.duration; // 0 → 1
+        const alpha    = 1 - progress;               // fade out over lifetime
+
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+
+        for (let i = 0; i < this.rings; i++) {
+            // Each ring starts offset by its index and expands outward
+            const frac = (progress + i / this.rings) % 1;
+            const r    = frac * this.range;
+            if (r < 4) continue; // skip degenerate arcs at origin
+
+            const ringAlpha = alpha * (1 - i / this.rings) * 0.75;
+            if (ringAlpha <= 0) continue;
+
+            CTX.save();
+            CTX.globalAlpha   = ringAlpha;
+            CTX.strokeStyle   = i % 2 === 0 ? '#f59e0b' : '#fbbf24';
+            CTX.lineWidth     = Math.max(1, 3.5 - i * 0.5);
+            CTX.shadowBlur    = 12;
+            CTX.shadowColor   = '#d97706';
+            CTX.lineCap       = 'round';
+
+            // Main arc in the forward cone
+            CTX.beginPath();
+            CTX.arc(0, 0, r, -this.coneHalf, this.coneHalf);
+            CTX.stroke();
+
+            // Left bounding ray segment
+            CTX.beginPath();
+            CTX.moveTo(Math.cos(-this.coneHalf) * Math.max(0, r - 25),
+                       Math.sin(-this.coneHalf) * Math.max(0, r - 25));
+            CTX.lineTo(Math.cos(-this.coneHalf) * r,
+                       Math.sin(-this.coneHalf) * r);
+            CTX.stroke();
+
+            // Right bounding ray segment
+            CTX.beginPath();
+            CTX.moveTo(Math.cos(this.coneHalf) * Math.max(0, r - 25),
+                       Math.sin(this.coneHalf) * Math.max(0, r - 25));
+            CTX.lineTo(Math.cos(this.coneHalf) * r,
+                       Math.sin(this.coneHalf) * r);
+            CTX.stroke();
+
+            CTX.restore();
+        }
+
+        // Central muzzle flash at origin
+        if (progress < 0.25) {
+            const flashAlpha = (1 - progress / 0.25) * 0.8;
+            CTX.globalAlpha = flashAlpha;
+            CTX.fillStyle   = '#fbbf24';
+            CTX.shadowBlur  = 20;
+            CTX.shadowColor = '#f59e0b';
+            CTX.beginPath();
+            CTX.arc(0, 0, 14 * (1 - progress / 0.25), 0, Math.PI * 2);
+            CTX.fill();
+        }
+
+        CTX.restore();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 👑 BOSS — "KRU MANOP THE DOG RIDER"
+// ══════════════════════════════════════════════════════════════
 class Boss extends Entity {
     constructor(difficulty = 1) {
         super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
-        this.maxHp     = BALANCE.boss.baseHp * difficulty;
-        this.hp        = this.maxHp;
-        this.name      = "KRU MANOP";
-        this.state     = 'CHASE';
-        this.timer     = 0;
-        this.moveSpeed = BALANCE.boss.moveSpeed;
+        this.maxHp      = BALANCE.boss.baseHp * difficulty;
+        this.hp         = this.maxHp;
+        this.name       = "KRU MANOP";
+        this.state      = 'CHASE';
+        this.timer      = 0;
+        this.moveSpeed  = BALANCE.boss.moveSpeed;
         this.difficulty = difficulty;
-        this.phase     = 1;
-        this.sayTimer  = 0;
+        this.phase      = 1;
+        this.sayTimer   = 0;
+
+        // ── Existing skill timers ──
         this.skills = {
             slam:  { cd: 0, max: BALANCE.boss.slamCooldown },
             graph: { cd: 0, max: BALANCE.boss.graphCooldown },
-            log:   { cd: 0, max: BALANCE.boss.log457Cooldown }
+            log:   { cd: 0, max: BALANCE.boss.log457Cooldown },
+            // 🐕 NEW — Bark Wave attack (available in all phases, priority ↑ in phase 2)
+            bark:  { cd: 0, max: BALANCE.boss.phase2.barkCooldown }
         };
+
+        // ── log457 state machine ──
         this.log457State       = null;
         this.log457Timer       = 0;
         this.log457AttackBonus = 0;
         this.isInvulnerable    = false;
+
+        // ── 🐕 Dog Rider state (NEW) ──────────────────────────
+        // isEnraged  — true once HP drops below 50%; triggers once only
+        // dogLegTimer — monotonically increasing timer that drives leg sin waves
+        this.isEnraged    = false;
+        this.dogLegTimer  = 0;
     }
 
+    // ──────────────────────────────────────────────────────────
+    // update(dt, player)
+    // ──────────────────────────────────────────────────────────
     update(dt, player) {
         if (this.dead) return;
 
@@ -516,22 +586,37 @@ class Boss extends Entity {
         this.timer   += dt;
         this.sayTimer += dt;
 
+        // ── Dog leg animation timer (faster when enraged) ──
+        this.dogLegTimer += dt * (this.isEnraged ? 2.5 : 1.0);
+
+        // ── Tick all skill cooldowns ──
         for (let s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
 
+        // ── Periodic speech ──
         if (this.sayTimer > BALANCE.boss.speechInterval && Math.random() < 0.1) {
             this.speak("Player at " + Math.round(player.hp) + " HP");
             this.sayTimer = 0;
         }
 
+        // ── 🔥 ENRAGE — triggers ONCE when HP < 50% ──────────
+        // Replaces the old phase2Speed transition.
+        // moveSpeed is set to base × enrageSpeedMult for a sharper jump.
         if (this.hp < this.maxHp * BALANCE.boss.phase2Threshold && this.phase === 1) {
             this.phase     = 2;
-            this.moveSpeed = BALANCE.boss.phase2Speed;
+            this.isEnraged = true;
+            // Use enrageSpeedMult against the original base speed so the
+            // value is predictable regardless of shop or status buffs.
+            this.moveSpeed = BALANCE.boss.moveSpeed * BALANCE.boss.phase2.enrageSpeedMult;
             spawnFloatingText("ENRAGED!", this.x, this.y - 80, '#ef4444', 40);
+            spawnFloatingText("🐕 DOG RIDER!", this.x, this.y - 120, '#d97706', 32);
             addScreenShake(20);
-            this.speak("Enough playing around!");
+            spawnParticles(this.x, this.y, 35, '#ef4444');
+            spawnParticles(this.x, this.y, 20, '#d97706');
+            this.speak("Hop on, boy! Let's go!");
             Audio.playBossSpecial();
         }
 
+        // ── log457 state machine (unchanged) ──
         if (this.log457State === 'charging') {
             this.log457Timer += dt;
             this.isInvulnerable = true;
@@ -561,9 +646,10 @@ class Boss extends Entity {
                 this.log457State       = null;
                 this.log457AttackBonus = 0;
             }
-            return;
+            return; // skip rest of update while stunned
         }
 
+        // ── State machine ──
         if (this.state === 'CHASE') {
             if (!player.isInvisible) {
                 this.vx = Math.cos(this.angle) * this.moveSpeed;
@@ -573,8 +659,12 @@ class Boss extends Entity {
 
             if (this.timer > 2) {
                 this.timer = 0;
+                // Priority order — bark is inserted between graph and slam.
+                // Phase 2 doubles bark chance since the dog is now active.
+                const barkChance = this.phase === 2 ? 0.40 : 0.18;
                 if      (this.skills.log.cd   <= 0 && Math.random() < 0.20) this.useLog457();
                 else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) this.useDeadlyGraph(player);
+                else if (this.skills.bark.cd  <= 0 && Math.random() < barkChance) this.bark(player);
                 else if (this.skills.slam.cd  <= 0 && Math.random() < 0.30) this.useEquationSlam();
                 else this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
             }
@@ -607,13 +697,65 @@ class Boss extends Entity {
             }
         }
 
+        // ── Contact damage ──
         if (d < this.radius + player.radius) {
             player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
         }
+
         UIManager.updateBossHUD(this);
         UIManager.updateBossSpeech(this);
     }
 
+    // ──────────────────────────────────────────────────────────
+    // 🐕 bark(player) — NEW
+    // Emits a BarkWave special effect and deals instant damage +
+    // pushback if the player is inside the cone.
+    // ──────────────────────────────────────────────────────────
+    bark(player) {
+        const P2       = BALANCE.boss.phase2;
+        this.skills.bark.cd = this.skills.bark.max;
+        this.state = 'CHASE'; // keep chasing while barking
+
+        const barkAngle = Math.atan2(player.y - this.y, player.x - this.x);
+        const coneHalf  = Math.PI / 3.5; // ~51° half-angle → ~103° total cone
+
+        // ── Spawn visual effect ──
+        window.specialEffects.push(new BarkWave(this.x, this.y, barkAngle, coneHalf, P2.barkRange));
+
+        // ── Damage check: is player inside cone AND within range? ──
+        const dx       = player.x - this.x, dy = player.y - this.y;
+        const d        = Math.hypot(dx, dy);
+        if (d > 0 && d < P2.barkRange) {
+            // Signed angular difference — keep result in [-PI, PI]
+            const playerAngle = Math.atan2(dy, dx);
+            let   diff        = playerAngle - barkAngle;
+            // Wrap to [-PI, PI]
+            while (diff >  Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+
+            if (Math.abs(diff) < coneHalf) {
+                // Damage
+                player.takeDamage(P2.barkDamage);
+
+                // Pushback — launches player away from boss
+                const pushMag = 480;
+                player.vx += (dx / d) * pushMag;
+                player.vy += (dy / d) * pushMag;
+
+                spawnFloatingText('BARK! 🐕', player.x, player.y - 55, '#f59e0b', 26);
+                addScreenShake(10);
+            }
+        }
+
+        spawnFloatingText('WOOF WOOF!', this.x, this.y - 100, '#d97706', 30);
+        spawnParticles(this.x, this.y, 12, '#d97706');
+        Audio.playBossSpecial();
+        this.speak("BARK BARK BARK!");
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Existing special attacks (unchanged)
+    // ──────────────────────────────────────────────────────────
     useEquationSlam() {
         this.skills.slam.cd = this.skills.slam.max;
         this.state = 'CHASE';
@@ -675,11 +817,20 @@ class Boss extends Entity {
         }
     }
 
+    // ──────────────────────────────────────────────────────────
+    // draw()
+    // Render order (all in rotated boss space):
+    //   1. Enrage red aura / log charging aura
+    //   2. 🐕 Dog body, legs, tail, head (drawn FIRST so boss sits on top)
+    //   3. Original boss body (shirt, ruler, face, etc.)
+    //   4. Enrage anger particles
+    // ──────────────────────────────────────────────────────────
     draw() {
         const screen = worldToScreen(this.x, this.y);
         CTX.save();
         CTX.translate(screen.x, screen.y);
 
+        // ── log457 charging scale + aura ──
         if (this.log457State === 'charging') {
             const sc = 1 + (this.log457Timer / 2) * 0.3;
             CTX.scale(sc, sc);
@@ -688,17 +839,46 @@ class Boss extends Entity {
             CTX.fillStyle = `rgba(239, 68, 68, ${pu * 0.3})`; CTX.fill();
         }
 
+        // ── Phase 2 / active log glow ──
         if (this.log457State === 'active')  { CTX.shadowBlur = 20; CTX.shadowColor = '#facc15'; }
-        if (this.log457State === 'stunned') { CTX.font = 'bold 30px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', 0, -70); }
+        if (this.log457State === 'stunned') {
+            CTX.font = 'bold 30px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', 0, -70);
+        }
 
+        // ── Ultimate windup ring ──
         if (this.state === 'ULTIMATE') {
             CTX.beginPath(); CTX.arc(0, 0, 70, 0, Math.PI * 2);
             CTX.strokeStyle = `rgba(239, 68, 68, ${Math.random()})`;
             CTX.lineWidth = 5; CTX.stroke();
         }
-        if (this.phase === 2 && this.log457State !== 'charging') { CTX.shadowBlur = 20; CTX.shadowColor = '#ef4444'; }
 
+        // ── Phase 2 red shadow (only when not log-charging) ──
+        if (this.phase === 2 && this.log457State !== 'charging') {
+            CTX.shadowBlur = 20; CTX.shadowColor = '#ef4444';
+        }
+
+        // ── Rotate to face player ──
         CTX.rotate(this.angle);
+
+        // ════════════════════════════════════════════════════
+        // 🐕 DOG — drawn in rotated boss-local space BEFORE
+        //          the boss body so the boss appears to sit on top.
+        //
+        // Coordinate system after rotate(this.angle):
+        //   +x = forward (toward player)
+        //   +y = down (screen space, roughly)
+        //
+        // Dog layout:
+        //   Head  →  forward at (52, 18)
+        //   Body  →  center   ( 8, 32)  elongated ellipse
+        //   Tail  →  behind   (-48, 22) wagging arc
+        //   4 legs attached to body corners, animated via sin
+        // ════════════════════════════════════════════════════
+        this._drawDog();
+
+        // ════════════════════════════════════════════════════
+        // 👑 BOSS BODY — original art (preserved exactly)
+        // ════════════════════════════════════════════════════
         CTX.fillStyle = '#f8fafc'; CTX.fillRect(-30, -30, 60, 60);
         CTX.fillStyle = '#e2e8f0';
         CTX.beginPath(); CTX.moveTo(-30,-30); CTX.lineTo(-20,-20); CTX.lineTo(20,-20); CTX.lineTo(30,-30); CTX.closePath(); CTX.fill();
@@ -711,9 +891,205 @@ class Boss extends Entity {
             CTX.fillStyle = '#ef4444';
             CTX.fillRect(-12,-5,10,3); CTX.fillRect(2,-5,10,3);
         }
+        // Ruler
         CTX.fillStyle = '#facc15'; CTX.fillRect(25, 12, 60, 10);
         CTX.fillStyle = '#000'; CTX.font = 'bold 8px Arial'; CTX.fillText('30cm', 50, 17);
+
+        // ── Enrage angry particles overlay on boss face ──
+        if (this.isEnraged) {
+            const t = performance.now() / 80;
+            for (let i = 0; i < 4; i++) {
+                const px = Math.sin(t * 0.9 + i * 1.57) * 18;
+                const py = -Math.abs(Math.cos(t * 1.1 + i * 1.57)) * 22 - 30;
+                const ps = 3 + Math.sin(t + i) * 1.5;
+                CTX.globalAlpha = 0.55 + Math.sin(t + i) * 0.3;
+                CTX.fillStyle   = i % 2 === 0 ? '#ef4444' : '#f97316';
+                CTX.shadowBlur  = 8;
+                CTX.shadowColor = '#ef4444';
+                CTX.beginPath();
+                CTX.arc(px, py, ps, 0, Math.PI * 2);
+                CTX.fill();
+            }
+            CTX.globalAlpha = 1;
+            CTX.shadowBlur  = 0;
+        }
+
         CTX.restore();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // _drawDog()
+    // Internal helper — renders the animated dog in the
+    // already-rotated boss local coordinate system.
+    // Called only from draw().
+    // ──────────────────────────────────────────────────────────
+    _drawDog() {
+        const P2       = BALANCE.boss.phase2;
+        // Colors shift to red/dark-red when enraged
+        const bodyCol  = this.isEnraged ? '#dc2626' : P2.dogColor;       // main body
+        const darkCol  = this.isEnraged ? '#991b1b' : '#92400e';         // stroke / underside
+        const lightCol = this.isEnraged ? '#ef4444' : '#b45309';         // saddle / snout patch
+        const eyeCol   = this.isEnraged ? '#facc15' : '#1e293b';         // eye fill
+
+        // Dog leg animation — two diagonal pairs swing opposite phase
+        const legSpeed  = this.isEnraged ? 9 : 4.5;
+        const legSwing  = Math.sin(this.dogLegTimer * legSpeed) * 10;
+        const legSwing2 = -legSwing; // opposite pair
+
+        // ── Ground shadow for dog (slightly ahead of boss shadow) ──
+        CTX.save();
+        CTX.globalAlpha = 0.22;
+        CTX.fillStyle   = 'rgba(0,0,0,0.9)';
+        CTX.beginPath();
+        CTX.ellipse(8, 60, 44, 11, 0, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.restore();
+
+        // ── 4 Legs — drawn BEFORE body so body overlaps leg tops ──
+        CTX.strokeStyle = darkCol;
+        CTX.lineCap     = 'round';
+
+        // Front-left leg  (swings with legSwing)
+        CTX.lineWidth = 7;
+        CTX.beginPath();
+        CTX.moveTo(-10, 38);
+        CTX.lineTo(-14, 55 + legSwing);
+        CTX.stroke();
+        // Paw
+        CTX.fillStyle = darkCol;
+        CTX.beginPath(); CTX.ellipse(-15, 57 + legSwing, 6, 4, 0.3, 0, Math.PI * 2); CTX.fill();
+
+        // Front-right leg (swings opposite)
+        CTX.beginPath();
+        CTX.moveTo(20, 38);
+        CTX.lineTo(26, 55 + legSwing2);
+        CTX.stroke();
+        CTX.beginPath(); CTX.ellipse(27, 57 + legSwing2, 6, 4, -0.3, 0, Math.PI * 2); CTX.fill();
+
+        // Back-left leg  (swings opposite)
+        CTX.beginPath();
+        CTX.moveTo(-22, 34);
+        CTX.lineTo(-28, 52 + legSwing2);
+        CTX.stroke();
+        CTX.beginPath(); CTX.ellipse(-29, 54 + legSwing2, 6, 4, 0.3, 0, Math.PI * 2); CTX.fill();
+
+        // Back-right leg (swings with legSwing)
+        CTX.beginPath();
+        CTX.moveTo(34, 34);
+        CTX.lineTo(40, 52 + legSwing);
+        CTX.stroke();
+        CTX.beginPath(); CTX.ellipse(41, 54 + legSwing, 6, 4, -0.3, 0, Math.PI * 2); CTX.fill();
+
+        // ── Dog body — main ellipse ──
+        CTX.fillStyle   = bodyCol;
+        CTX.strokeStyle = darkCol;
+        CTX.lineWidth   = 2.5;
+        CTX.beginPath();
+        CTX.ellipse(6, 32, 44, 20, 0, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.stroke();
+
+        // Saddle patch (where boss sits)
+        CTX.fillStyle = lightCol;
+        CTX.beginPath();
+        CTX.ellipse(0, 25, 24, 11, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        // ── Dog tail — animated quadratic curve behind body ──
+        const tailWag  = Math.sin(this.dogLegTimer * (this.isEnraged ? 12 : 6)) * 18;
+        const tailX    = -50; // starts behind the body
+        CTX.strokeStyle = darkCol;
+        CTX.lineWidth   = 6;
+        CTX.lineCap     = 'round';
+        CTX.beginPath();
+        CTX.moveTo(-40, 24);
+        CTX.quadraticCurveTo(tailX - 10, 10, tailX - 5 + tailWag * 0.4, -8 + tailWag);
+        CTX.stroke();
+        // Fluffy tail tip
+        CTX.fillStyle = bodyCol;
+        CTX.beginPath();
+        CTX.arc(tailX - 5 + tailWag * 0.4, -9 + tailWag, 7, 0, Math.PI * 2);
+        CTX.fill();
+
+        // ── Dog head — circle forward of body ──
+        CTX.fillStyle   = bodyCol;
+        CTX.strokeStyle = darkCol;
+        CTX.lineWidth   = 2.5;
+        CTX.beginPath();
+        CTX.arc(52, 20, 18, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.stroke();
+
+        // Floppy ear
+        CTX.fillStyle   = darkCol;
+        CTX.strokeStyle = darkCol;
+        CTX.lineWidth   = 1.5;
+        CTX.beginPath();
+        CTX.ellipse(44, 8, 9, 15, -0.5, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Snout
+        CTX.fillStyle   = lightCol;
+        CTX.strokeStyle = darkCol;
+        CTX.lineWidth   = 1.5;
+        CTX.beginPath();
+        CTX.ellipse(64, 23, 12, 8, 0.2, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.stroke();
+
+        // Nose
+        CTX.fillStyle = '#1e293b';
+        CTX.beginPath();
+        CTX.arc(71, 20, 3.5, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Dog eye (glows yellow when enraged)
+        CTX.fillStyle = eyeCol;
+        CTX.shadowBlur  = this.isEnraged ? 8 : 0;
+        CTX.shadowColor = '#facc15';
+        CTX.beginPath();
+        CTX.arc(56, 13, 4, 0, Math.PI * 2);
+        CTX.fill();
+        // Pupil
+        CTX.shadowBlur = 0;
+        CTX.fillStyle  = '#1e293b';
+        CTX.beginPath();
+        CTX.arc(57, 13, 2, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Mouth / smile / panting tongue
+        CTX.strokeStyle = darkCol;
+        CTX.lineWidth   = 2;
+        CTX.lineCap     = 'round';
+        CTX.beginPath();
+        CTX.arc(63, 24, 5, 0.1, Math.PI - 0.1);
+        CTX.stroke();
+        // Tongue (visible when enraged — panting fast)
+        if (this.isEnraged || Math.sin(this.dogLegTimer * 3) > 0.2) {
+            CTX.fillStyle = '#fb7185';
+            CTX.beginPath();
+            CTX.ellipse(63, 32, 5, 7, 0, 0, Math.PI * 2);
+            CTX.fill();
+        }
+
+        // ── Enrage aura on dog body ──
+        if (this.isEnraged) {
+            const t = performance.now() / 120;
+            CTX.save();
+            for (let i = 0; i < 5; i++) {
+                const ex = Math.sin(t * 0.7 + i * 1.26) * 36;
+                const ey = Math.cos(t * 0.9 + i * 1.26) * 16 + 30;
+                const er = 3 + Math.sin(t * 1.5 + i) * 1.5;
+                CTX.globalAlpha = 0.5 + Math.sin(t + i) * 0.3;
+                CTX.fillStyle   = i % 2 === 0 ? '#ef4444' : '#f97316';
+                CTX.shadowBlur  = 10;
+                CTX.shadowColor = '#ef4444';
+                CTX.beginPath();
+                CTX.arc(ex, ey, er, 0, Math.PI * 2);
+                CTX.fill();
+            }
+            CTX.restore();
+        }
     }
 }
 
@@ -763,10 +1139,7 @@ function gameLoop(now) {
         updateGame(dt);
         drawGame();
     } else if (gameState === 'PAUSED') {
-        // Render frozen scene behind whichever overlay is active.
-        // The drone is naturally frozen here because updateGame() is not called.
         drawGame();
-        // Tick shop button states while shop is open
         const shopModal = document.getElementById('shop-modal');
         if (shopModal && shopModal.style.display === 'flex') {
             ShopManager.tick();
@@ -780,13 +1153,11 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
-    // ── Shop buff timers ─────────────────────────────────────────
-    // Damage boost expiry
+    // ── Shop buff timers ──
     if (player.shopDamageBoostActive) {
         player.shopDamageBoostTimer -= dt;
         if (player.shopDamageBoostTimer <= 0) {
             player.shopDamageBoostActive = false;
-            // Restore exact original value
             if (player._baseDamageBoost !== undefined) {
                 player.damageBoost = player._baseDamageBoost;
             } else {
@@ -796,7 +1167,6 @@ function updateGame(dt) {
         }
     }
 
-    // Speed boost expiry
     if (player.shopSpeedBoostActive) {
         player.shopSpeedBoostTimer -= dt;
         if (player.shopSpeedBoostTimer <= 0) {
@@ -808,7 +1178,7 @@ function updateGame(dt) {
         }
     }
 
-    // ── Database server: check E key BEFORE player.update()
+    // ── Database server: check E key ──
     const dToServer = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
         keys.e = 0;
@@ -816,7 +1186,7 @@ function updateGame(dt) {
         return;
     }
 
-    // ── Shop: check B key ─────────────────────────────────────────
+    // ── Shop: check B key ──
     const dToShop = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
     if (dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
         keys.b = 0;
@@ -853,8 +1223,7 @@ function updateGame(dt) {
         UIManager.updateSkillIcons(player);
     }
 
-    // ── 🤖 Drone update ────────────────────────────────────────────
-    // Safe guard: only update if the drone exists and the player is alive.
+    // ── 🤖 Drone update ──
     if (window.drone && player && !player.dead) {
         window.drone.update(dt, player);
     }
@@ -926,14 +1295,11 @@ function drawGame() {
     }
 
     mapSystem.draw();
-    drawDatabaseServer();      // ← MTC Database server object
-    drawShopObject();          // ← MTC Co-op Store kiosk
+    drawDatabaseServer();
+    drawShopObject();
     powerups.forEach(p => p.draw());
     specialEffects.forEach(e => e.draw());
 
-    // ── 🤖 Draw drone BEFORE the player so it appears to hover
-    //    behind the player's sprite — feels more natural as a
-    //    companion that follows rather than leads.
     if (window.drone) window.drone.draw();
 
     player.draw();
@@ -991,16 +1357,10 @@ function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
     Audio.init();
 
-    // ── 💾 Load persistent save data ────────────────────────────────────
-    // Reads high score + unlocked passives from localStorage before the
-    // player entity is constructed so the Player constructor can restore
-    // the passive state immediately (see entities.js checkPassiveUnlock).
     const saveData = getSaveData();
     console.log('[MTC Save] Loaded save data:', saveData);
 
-    // Display the all-time high score on the main menu title section
     UIManager.updateHighScoreDisplay(saveData.highScore);
-    // ─────────────────────────────────────────────────────────────────────
 
     player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
 
@@ -1015,13 +1375,10 @@ function startGame(charType = 'kao') {
     player.shopSpeedBoostTimer   = 0;
     player._baseMoveSpeed        = undefined;
 
-    // ── 🤖 Create the Engineering Drone ─────────────────────────
-    // Spawned at the player's starting position so it doesn't lerp
-    // in from (0, 0) on the first frame.
+    // ── 🤖 Create the Engineering Drone ──
     window.drone = new Drone();
     window.drone.x = player.x;
     window.drone.y = player.y;
-    // Announce the companion
     spawnFloatingText('🤖 DRONE ONLINE', player.x, player.y - 90, '#00e5ff', 20);
     console.log('🤖 Engineering Drone initialised');
 
@@ -1050,7 +1407,6 @@ function startGame(charType = 'kao') {
 
     UIManager.resetGameOverUI();
 
-    // Ensure overlays are hidden on fresh game start
     showResumePrompt(false);
     ShopManager.close();
 
@@ -1058,10 +1414,6 @@ function startGame(charType = 'kao') {
     gameState = 'PLAYING';
     resetTime();
 
-    // ── Mobile UI visibility — show only on genuine touch devices ──────────
-    // The #mobile-ui container is display:none in CSS by default.
-    // We reveal it here only when the browser reports touch support,
-    // so desktop players never see the joysticks or action buttons.
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) {
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -1082,33 +1434,22 @@ async function endGame(result) {
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
 
-    // Force-hide all overlays
     showResumePrompt(false);
     ShopManager.close();
 
-    // ── 🤖 Deactivate drone on game over ────────────────────────
-    // Setting to null prevents update/draw calls on a stale entity
-    // and lets the GC collect it cleanly.
     window.drone = null;
 
-    // ── 💾 Auto-save High Score ──────────────────────────────────
-    // Runs for both 'victory' and 'gameover' so a perfect clear also
-    // updates the record.  updateSaveData() is a safe try-catch wrapper
-    // so a failed write never interrupts the game-over flow.
     {
         const runScore  = getScore();
         const existing  = getSaveData();
         if (runScore > existing.highScore) {
             updateSaveData({ highScore: runScore });
             console.log(`[MTC Save] 🏆 New high score: ${runScore}`);
-            // Reflect the new record in the menu immediately
             UIManager.updateHighScoreDisplay(runScore);
         } else {
-            // Still refresh the display in case it wasn't set yet this session
             UIManager.updateHighScoreDisplay(existing.highScore);
         }
     }
-    // ─────────────────────────────────────────────────────────────
 
     if (result === 'victory') {
         showElement('victory-screen');
@@ -1138,16 +1479,12 @@ async function endGame(result) {
 
 // ==================== INPUT ====================
 window.addEventListener('keydown', e => {
-    // While PAUSED: any key closes the shop (if open) or resumes
     if (gameState === 'PAUSED') {
         const shopModal = document.getElementById('shop-modal');
         const shopOpen  = shopModal && shopModal.style.display === 'flex';
 
-        // Escape always closes the shop if it's open
         if (shopOpen && e.code === 'Escape') { closeShop(); return; }
-        // For the resume-only overlay (DB pause), any key resumes
         if (!shopOpen) { resumeGame(); return; }
-        // While shop is open, all other keys are captured (no movement)
         return;
     }
 
@@ -1160,7 +1497,7 @@ window.addEventListener('keydown', e => {
     if (e.code === 'Space') { keys.space = 1; e.preventDefault(); }
     if (e.code === 'KeyQ')   keys.q     = 1;
     if (e.code === 'KeyE')   keys.e     = 1;
-    if (e.code === 'KeyB')   keys.b     = 1;   // ← Open shop
+    if (e.code === 'KeyB')   keys.b     = 1;
 });
 
 window.addEventListener('keyup', e => {
@@ -1218,9 +1555,6 @@ window.touchJoystickLeft  = { active: false, id: null, originX: 0, originY: 0, n
 window.touchJoystickRight = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
 
 function initMobileControls() {
-    // Only attach touch listeners and show mobile controls on genuine touch devices.
-    // Relying solely on screen width is unreliable (e.g. DevTools responsive mode,
-    // tablet-laptop hybrids). Touch API presence is the authoritative signal.
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (!isTouchDevice) return;
 
@@ -1320,7 +1654,6 @@ function initMobileControls() {
         }, { passive: false });
     }
 
-    // ── Database button (mobile) ──
     if (btnDatabase) {
         btnDatabase.addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation();
@@ -1329,13 +1662,11 @@ function initMobileControls() {
         }, { passive: false });
     }
 
-    // ── Shop button (mobile) ──
     if (btnShop) {
         btnShop.addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING') openShop();
             else if (gameState === 'PAUSED') {
-                // If shop is open, close it; otherwise ignore
                 const shopModal = document.getElementById('shop-modal');
                 if (shopModal && shopModal.style.display === 'flex') closeShop();
             }

@@ -291,7 +291,24 @@ const BALANCE = {
         log457StunDuration: 1.2,
         log457Cooldown: 26,
         log457AttackBonus: 0.09,
-        log457AttackGrowth: 0.04
+        log457AttackGrowth: 0.04,
+
+        // ──────────────────────────────────────────────────────
+        // 🐕 PHASE 2 — "Manop the Dog Rider" upgrade stats
+        // Activated when Boss HP drops below 50%.
+        // barkDamage      — flat hit when player is inside the bark cone
+        // barkRange       — max world-unit reach of the sonic cone
+        // barkCooldown    — seconds between each Bark Wave use
+        // enrageSpeedMult — multiplied against the BASE moveSpeed (130)
+        // dogColor        — amber/brown fill for the dog body & limbs
+        // ──────────────────────────────────────────────────────
+        phase2: {
+            barkDamage:      25,
+            barkRange:       600,
+            barkCooldown:    2.5,
+            enrageSpeedMult: 1.8,
+            dogColor:        '#d97706'
+        }
     },
 
     // ──────────────────────────────────────────────────────────────
