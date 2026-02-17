@@ -280,7 +280,7 @@ const BALANCE = {
     powerups: {
         radius: 20,
 
-        dropRate: 0.35,
+        dropRate: 0.2, // Chance for an enemy to drop a power-up
         lifetime: 13,
         healAmount: 45,
         damageBoost: 1.75,
