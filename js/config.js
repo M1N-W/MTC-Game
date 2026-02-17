@@ -38,8 +38,8 @@ const BALANCE = {
             },
             sniper: {
                 name: 'SNIPER',
-                damage: 88,        
-                cooldown: 0.95,     // Slow fire rate
+                damage: 115,        
+                cooldown: 0.9,     // Slow fire rate
                 range: 1200,       // Longest range
                 speed: 1200,
                 spread: 0,
@@ -90,12 +90,12 @@ const BALANCE = {
         dashCooldown: 1.65,
 
         // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
-        riceDamage: 35,
+        riceDamage: 38,
         riceCooldown: 0.6,
         riceSpeed: 600,
-        riceRange: 700,
+        riceRange: 750,
         riceColor: '#ffffff',        // สีข้าวเหนียวขาวสะอาด
-        critChance: 0.05,            // Base 5% crit chance (เท่ากับเก้า)
+        critChance: 0.07,            // Base 7% crit chance
         critMultiplier: 3,           // Crit multiplier
 
         // 🥢 Skill 1: กินข้าวเหนียว — Buff ตัวเอง
@@ -108,7 +108,7 @@ const BALANCE = {
         nagaCooldown: 25,            // cooldown 25s (ตาม Spec)
         nagaDuration: 8,             // นาคคงอยู่ 8s (ตาม Spec)
         nagaDamage: 50,              // damage ต่อการสัมผัส (ตาม Spec)
-        nagaSpeed: 450,              // ความเร็วนาค (ตาม Spec)
+        nagaSpeed: 500,              // ความเร็วนาค
         nagaSegments: 12,            // 12 ปล้อง (ตาม Spec)
         nagaSegmentDistance: 28,     // ระยะห่างระหว่างปล้อง
         nagaRadius: 20,              // ขนาด hitbox ต่อปล้อง
@@ -153,7 +153,7 @@ const BALANCE = {
         // Sound Wave
         soundWaveCooldown: 10,
         soundWaveRange: 300,
-        soundWaveConfuseDuration: 0.6,
+        soundWaveConfuseDuration: 0.8,
         
         // Meteor
         meteorCooldown: 13,
@@ -184,7 +184,7 @@ const BALANCE = {
         graphDamage: 45,       
         graphLength: 1500,
         graphDuration: 18,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที)
-        graphCooldown: 15,
+        graphCooldown: 18,
         
         log457ChargeDuration: 2,
         log457ActiveDuration: 5,
@@ -210,7 +210,7 @@ const BALANCE = {
         enemiesBase: 4,        // Reduced from 5
         enemiesPerWave: 3,
         tankSpawnChance: 0.18, // Reduced from 0.20
-        mageSpawnChance: 0.14, // Reduced from 0.15
+        mageSpawnChance: 0.15, // Reduced from 0.15
         bossEveryNWaves: 3
     },
     
@@ -226,7 +226,7 @@ const BALANCE = {
     
     // 🏫 MTC ROOM SETTINGS
     mtcRoom: {
-        healRate: 35,      // เลือดที่ฟื้นฟูต่อวินาที
+        healRate: 40,      // เลือดที่ฟื้นฟูต่อวินาที
         maxStayTime: 4,    // ระยะเวลาที่อยู่ได้นานที่สุด (วินาที)
         cooldownTime: 10,  // ระยะเวลารอคอยก่อนเข้าได้ใหม่ (วินาที)
         size: 300          // ขนาดของห้อง
@@ -236,7 +236,7 @@ const BALANCE = {
     // 🏫 MAP SETTINGS
     map: {
         size: 3000,            // Map size (3000x3000)
-        objectDensity: 0.2,   // ความหนาแน่นของวัตถุ (20% ของพื้นที่)
+        objectDensity: 0.12,   // ความหนาแน่นของวัตถุ (12% ของพื้นที่)
         objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
