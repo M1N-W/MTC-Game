@@ -2,6 +2,25 @@
  * 🎮 MTC: ENHANCED EDITION - Main Game Loop
  * Game state, Boss, waves, input, loop
  *
+ * REFACTORED (Admin Console — v9 — NEW):
+ * - ✅ #admin-console overlay — CRT/hacker terminal aesthetic
+ * - ✅ 'T' key opens terminal when player is near MTC_DATABASE_SERVER
+ * - ✅ AdminConsole.open() / .close() — manages gameState = 'PAUSED'
+ * - ✅ AdminConsole.parseCommand(cmd) — command parser:
+ *       sudo heal  → restore 100 HP
+ *       sudo score → +5000 score
+ *       sudo next  → kill all enemies / end wave
+ *       help       → print command list
+ *       clear      → clear output log
+ *       exit       → close terminal
+ *       (anything else) → "ACCESS DENIED"
+ * - ✅ Input field steals keyboard focus while open — game hotkeys suppressed
+ * - ✅ updateDatabaseServerUI() now also drives console-prompt + console-hud-icon
+ * - ✅ keys.t added to key map; 'T' keydown triggers openAdminConsole()
+ * - ✅ Mobile btn-terminal shown when near server, fires openAdminConsole()
+ * - ✅ closeAdminConsole() is globally exposed via window.*
+ * - ✅ AdminConsole.addLine() typed-print effect for immersive feel
+ *
  * REFACTORED (Shop Feature — v4):
  * - ✅ MTC_SHOP_LOCATION — fixed world position for the interactive shop kiosk
  * - ✅ Proximity detection → shows shop-prompt + HUD icon
@@ -40,12 +59,9 @@
  *
  * (View Culling & Particle Cap — v8 — NEW):
  * - ✅ Entity.isOnScreen(buffer) added to base class in entities.js
- *       → one worldToScreen call per entity, reused for the cull decision
- * - ✅ drawGame(): enemy.draw(), powerup.draw(), boss.draw() guarded by
- *       isOnScreen() — update() still runs for ALL entities every frame
+ * - ✅ drawGame(): enemy.draw(), powerup.draw(), boss.draw() guarded by isOnScreen()
  * - ✅ map.js MapSystem.draw(): explicit CULL constant, consistent x+y checks
- * - ✅ map.js drawLighting(): off-screen datapillar/server objects skip the
- *       radial-gradient API entirely (largest lighting perf win)
+ * - ✅ map.js drawLighting(): off-screen datapillar/server objects skip radial-gradient API
  * - ✅ effects.js ParticleSystem: hard cap of 150 — oldest particle evicted on overflow
  * - ✅ effects.js Particle.draw(): shadowBlur skipped for radius < 3 px particles
  */
@@ -53,7 +69,7 @@
 // ─── Game State ───────────────────────────────────────────
 let gameState  = 'MENU';
 let loopRunning = false;
-const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0 };
+const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0, t: 0 };
 
 // ─── Day / Night cycle ────────────────────────────────────
 let dayNightTimer = 0;
@@ -69,12 +85,6 @@ window.drone          = null;
 let waveStartDamage   = 0;
 
 // ─── Boss Progression Counter ─────────────────────────────
-/**
- * Incremented each time a boss is spawned during a run.
- * Encounter 1 → plain boss (no dog).
- * Encounter 2+ → Dog Rider form (isRider = true).
- * Reset to 0 on startGame() so every fresh run begins cleanly.
- */
 let bossEncounterCount = 0;
 
 // ─── MTC Database Server ──────────────────────────────────
@@ -93,6 +103,323 @@ const MTC_SHOP_LOCATION = {
 
 // ─── External Database URL ────────────────────────────────
 const MTC_DB_URL = 'https://claude.ai/public/artifacts/9779928b-11d1-442b-b17d-2ef5045b9660';
+
+// ══════════════════════════════════════════════════════════════
+// 💻 ADMIN CONSOLE MANAGER
+// ══════════════════════════════════════════════════════════════
+const AdminConsole = (() => {
+    // Command history (up-arrow navigation)
+    const history  = [];
+    let histIdx    = -1;
+    let isOpen     = false;
+
+    // Typed-print timing (ms per char)
+    const CHAR_DELAY = 18;
+
+    // ── Private: add a styled line to the output ────────────
+    function _appendLine(text, cssClass = 'cline-info', instant = false) {
+        const output = document.getElementById('console-output');
+        if (!output) return;
+
+        const div = document.createElement('div');
+        div.className = 'console-line ' + cssClass;
+
+        if (instant || text.length === 0) {
+            div.textContent = text;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+            return;
+        }
+
+        // Typed-print effect
+        div.textContent = '';
+        output.appendChild(div);
+        let i = 0;
+        const tick = () => {
+            if (i < text.length) {
+                div.textContent += text[i++];
+                output.scrollTop = output.scrollHeight;
+                setTimeout(tick, CHAR_DELAY);
+            }
+        };
+        tick();
+    }
+
+    // ── Private: parse & execute a command ──────────────────
+    function _parse(raw) {
+        const cmd = raw.trim().toLowerCase();
+        if (!cmd) return;
+
+        // Echo user command
+        _appendLine('root@mtcserver:~# ' + raw, 'cline-cmd', true);
+
+        history.unshift(raw);
+        histIdx = -1;
+
+        if (!window.player) {
+            _appendLine('ERROR: No active player session.', 'cline-error');
+            return;
+        }
+
+        // ── Command routing ─────────────────────────────────
+        switch (cmd) {
+
+            // ─ SUDO HEAL ─────────────────────────────────
+            case 'sudo heal': {
+                const maxHp  = window.player.maxHp || 110;
+                const before = window.player.hp;
+                window.player.hp = Math.min(maxHp, window.player.hp + 100);
+                const gained = Math.round(window.player.hp - before);
+                _appendLine('Authenticating root privilege... OK', 'cline-info');
+                _appendLine(`Injecting ${gained} HP units into player entity...`, 'cline-info');
+                _appendLine(`COMMAND EXECUTED — HP: ${Math.round(window.player.hp)} / ${maxHp}`, 'cline-ok');
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText(`+${gained} HP 💉 [ADMIN]`, window.player.x, window.player.y - 70, '#00ff41', 22);
+                if (typeof spawnParticles === 'function')
+                    spawnParticles(window.player.x, window.player.y, 14, '#00ff41');
+                if (typeof Audio !== 'undefined' && Audio.playHeal) Audio.playHeal();
+                break;
+            }
+
+            // ─ SUDO SCORE ────────────────────────────────
+            case 'sudo score': {
+                _appendLine('Authenticating root privilege... OK', 'cline-info');
+                _appendLine('Patching score register... +5000', 'cline-info');
+                if (typeof addScore === 'function') addScore(5000);
+                _appendLine(`COMMAND EXECUTED — Score: ${typeof getScore === 'function' ? getScore().toLocaleString() : '?'}`, 'cline-ok');
+                const scoreEl = document.getElementById('score');
+                if (scoreEl && typeof getScore === 'function') scoreEl.textContent = getScore().toLocaleString();
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('+5000 🪙 [ADMIN]', window.player.x, window.player.y - 70, '#fbbf24', 22);
+                if (typeof spawnParticles === 'function')
+                    spawnParticles(window.player.x, window.player.y, 14, '#fbbf24');
+                if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+                break;
+            }
+
+            // ─ SUDO NEXT ─────────────────────────────────
+            case 'sudo next': {
+                _appendLine('Authenticating root privilege... OK', 'cline-info');
+                _appendLine('Sending SIGKILL to all enemy processes...', 'cline-info');
+                let killed = 0;
+                if (window.enemies && window.enemies.length > 0) {
+                    for (const e of window.enemies) {
+                        if (e && !e.dead && typeof e.takeDamage === 'function') {
+                            e.takeDamage(99999);
+                            killed++;
+                        }
+                    }
+                }
+                if (window.boss && !window.boss.dead && typeof window.boss.takeDamage === 'function') {
+                    window.boss.takeDamage(99999);
+                    killed++;
+                }
+                _appendLine(`COMMAND EXECUTED — ${killed} process(es) terminated. Wave advancing...`, 'cline-ok');
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('💀 WAVE SKIP [ADMIN]', window.player.x, window.player.y - 80, '#ef4444', 26);
+                if (typeof addScreenShake === 'function') addScreenShake(18);
+                if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+                // Auto-close after a brief delay so the user sees the message
+                setTimeout(() => closeAdminConsole(), 1800);
+                break;
+            }
+
+            // ─ HELP ──────────────────────────────────────
+            case 'help': {
+                const helpLines = [
+                    '┌─────────────────────────────────────────────┐',
+                    '│  MTC ADMIN TERMINAL — AVAILABLE COMMANDS     │',
+                    '├─────────────────────────────────────────────┤',
+                    '│  sudo heal   Restore 100 HP to player        │',
+                    '│  sudo score  Add 5000 to current score       │',
+                    '│  sudo next   Kill all enemies, skip wave      │',
+                    '│  help        Show this command list           │',
+                    '│  clear       Clear terminal output            │',
+                    '│  exit        Close admin terminal             │',
+                    '└─────────────────────────────────────────────┘',
+                ];
+                helpLines.forEach((l, i) => {
+                    setTimeout(() => _appendLine(l, 'cline-info', true), i * 40);
+                });
+                break;
+            }
+
+            // ─ CLEAR ─────────────────────────────────────
+            case 'clear': {
+                const output = document.getElementById('console-output');
+                if (output) output.innerHTML = '';
+                break;
+            }
+
+            // ─ EXIT ──────────────────────────────────────
+            case 'exit':
+            case 'quit':
+            case 'q': {
+                _appendLine('Closing session...', 'cline-info');
+                setTimeout(() => closeAdminConsole(), 500);
+                break;
+            }
+
+            // ─ EASTER EGGS ───────────────────────────────
+            case 'sudo rm -rf /':
+            case 'sudo rm -rf *': {
+                _appendLine('nice try lol', 'cline-warn');
+                _appendLine('ACCESS DENIED — MTC Policy §4.2 violation logged.', 'cline-error');
+                break;
+            }
+
+            case 'whoami': {
+                _appendLine('root (player infiltrated server)', 'cline-ok');
+                break;
+            }
+
+            case 'ls':
+            case 'ls -la': {
+                _appendLine('drwxr-xr-x  secrets/', 'cline-info', true);
+                _appendLine('drwxr-xr-x  grades/', 'cline-info', true);
+                _appendLine('-rw-------  kru_manop_passwords.txt', 'cline-warn', true);
+                _appendLine('-rw-r--r--  exam_answers_2024.pdf', 'cline-ok', true);
+                break;
+            }
+
+            case 'cat kru_manop_passwords.txt': {
+                _appendLine('hunter2', 'cline-ok');
+                _appendLine('...wait, you weren\'t supposed to see that.', 'cline-warn');
+                break;
+            }
+
+            case 'sudo make me a sandwich': {
+                _appendLine('What? Make it yourself.', 'cline-warn');
+                break;
+            }
+
+            // ─ DEFAULT / ACCESS DENIED ────────────────────
+            default: {
+                if (cmd.startsWith('sudo ')) {
+                    _appendLine(`sudo: ${raw.slice(5)}: command not found`, 'cline-error');
+                    _appendLine('ACCESS DENIED — Unknown sudo command.', 'cline-error');
+                } else {
+                    _appendLine(`bash: ${raw}: command not found`, 'cline-error');
+                    _appendLine('Type "help" for available commands.', 'cline-info');
+                }
+                break;
+            }
+        }
+    }
+
+    // ── Public API ───────────────────────────────────────────
+    return {
+        open() {
+            if (isOpen) return;
+            isOpen = true;
+
+            const modal  = document.getElementById('admin-console');
+            const inner  = document.getElementById('console-inner');
+            const input  = document.getElementById('console-input');
+            const prompt = document.getElementById('console-prompt');
+
+            if (modal)  modal.style.display  = 'flex';
+            if (prompt) prompt.style.display = 'none';
+
+            // Animate in
+            requestAnimationFrame(() => {
+                if (inner) inner.classList.add('console-visible');
+            });
+
+            // Print welcome line
+            _appendLine('Session started. Welcome, root.', 'cline-ok');
+            _appendLine('Run "help" to list available commands.', 'cline-info');
+
+            // Focus input — prevents game hotkeys from firing
+            if (input) {
+                input.value = '';
+                setTimeout(() => input.focus(), 120);
+
+                // Enter key → parse command
+                input._onKeydown = (e) => {
+                    e.stopPropagation(); // Block game key listeners
+
+                    if (e.key === 'Enter') {
+                        const val = input.value;
+                        input.value = '';
+                        _parse(val);
+                        histIdx = -1;
+                    } else if (e.key === 'Escape') {
+                        closeAdminConsole();
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (histIdx < history.length - 1) {
+                            histIdx++;
+                            input.value = history[histIdx] || '';
+                        }
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (histIdx > 0) {
+                            histIdx--;
+                            input.value = history[histIdx] || '';
+                        } else {
+                            histIdx = -1;
+                            input.value = '';
+                        }
+                    }
+                };
+                input.addEventListener('keydown', input._onKeydown);
+            }
+
+            if (typeof spawnFloatingText === 'function' && window.player)
+                spawnFloatingText('💻 ADMIN TERMINAL', window.player.x, window.player.y - 70, '#00ff41', 20);
+            if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+        },
+
+        close() {
+            if (!isOpen) return;
+            isOpen = false;
+
+            const modal = document.getElementById('admin-console');
+            const inner = document.getElementById('console-inner');
+            const input = document.getElementById('console-input');
+
+            // Remove listener before hiding
+            if (input && input._onKeydown) {
+                input.removeEventListener('keydown', input._onKeydown);
+                input._onKeydown = null;
+            }
+
+            if (inner) inner.classList.remove('console-visible');
+            setTimeout(() => {
+                if (modal) modal.style.display = 'none';
+            }, 220);
+        },
+
+        get isOpen() { return isOpen; },
+
+        addLine(text, cls = 'cline-info') { _appendLine(text, cls); }
+    };
+})();
+
+function openAdminConsole() {
+    if (gameState !== 'PLAYING') return;
+    gameState = 'PAUSED';
+    AdminConsole.open();
+}
+
+function closeAdminConsole() {
+    AdminConsole.close();
+    if (gameState === 'PAUSED') gameState = 'PLAYING';
+    showResumePrompt(false);
+
+    // Reset all keys so movement doesn't 'stick'
+    keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.t = 0;
+
+    window.focus();
+
+    if (typeof spawnFloatingText === 'function' && window.player)
+        spawnFloatingText('▶ RESUMED', window.player.x, window.player.y - 50, '#34d399', 18);
+}
+
+window.openAdminConsole  = openAdminConsole;
+window.closeAdminConsole = closeAdminConsole;
 
 // ══════════════════════════════════════════════════════════════
 // DATABASE / PAUSE HELPERS
@@ -121,12 +448,14 @@ function openExternalDatabase() {
 
 function resumeGame() {
     if (gameState !== 'PAUSED') return;
+    // Don't resume if admin console is still open
+    if (AdminConsole.isOpen) { closeAdminConsole(); return; }
     gameState = 'PLAYING';
 
     showResumePrompt(false);
 
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
-    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.t = 0;
 
     window.focus();
 
@@ -146,19 +475,25 @@ window.closeMathModal       = closeMathModal;
 window.addEventListener('blur', () => {
     if (gameState === 'PLAYING') {
         gameState = 'PAUSED';
-        const shopModal = document.getElementById('shop-modal');
-        const shopOpen  = shopModal && shopModal.style.display === 'flex';
-        if (!shopOpen) showResumePrompt(true);
+        const shopModal   = document.getElementById('shop-modal');
+        const shopOpen    = shopModal && shopModal.style.display === 'flex';
+        const consoleOpen = AdminConsole.isOpen;
+        if (!shopOpen && !consoleOpen) showResumePrompt(true);
     }
 });
 
 window.addEventListener('focus', () => {
     if (gameState === 'PAUSED') {
-        const shopModal = document.getElementById('shop-modal');
-        const shopOpen  = shopModal && shopModal.style.display === 'flex';
-        if (!shopOpen) showResumePrompt(true);
+        const shopModal   = document.getElementById('shop-modal');
+        const shopOpen    = shopModal && shopModal.style.display === 'flex';
+        const consoleOpen = AdminConsole.isOpen;
+        if (!shopOpen && !consoleOpen) showResumePrompt(true);
     }
 });
+
+// ══════════════════════════════════════════════════════════════
+// DATABASE SERVER — DRAW + PROXIMITY UI
+// ══════════════════════════════════════════════════════════════
 
 function drawDatabaseServer() {
     const screen = worldToScreen(MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
@@ -215,6 +550,15 @@ function drawDatabaseServer() {
         CTX.fill();
     }
 
+    // Terminal green indicator light (shows admin console available)
+    const tGlow = Math.abs(Math.sin(performance.now() / 400)) * 0.6 + 0.4;
+    CTX.fillStyle  = `rgba(0,255,65,${tGlow})`;
+    CTX.shadowBlur  = 8;
+    CTX.shadowColor = '#00ff41';
+    CTX.beginPath();
+    CTX.arc(-10, 15, 3, 0, Math.PI * 2);
+    CTX.fill();
+
     CTX.shadowBlur = 0;
     CTX.fillStyle  = '#67e8f9';
     CTX.font       = 'bold 7px Arial';
@@ -230,13 +574,19 @@ function updateDatabaseServerUI() {
     const d    = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     const near = d < MTC_DATABASE_SERVER.INTERACTION_RADIUS;
 
-    const promptEl  = document.getElementById('db-prompt');
-    const hudIcon   = document.getElementById('db-hud-icon');
-    const btnDb     = document.getElementById('btn-database');
+    const promptEl     = document.getElementById('db-prompt');
+    const hudIcon      = document.getElementById('db-hud-icon');
+    const btnDb        = document.getElementById('btn-database');
+    const consolePrompt = document.getElementById('console-prompt');
+    const consoleHud   = document.getElementById('console-hud-icon');
+    const btnTerminal  = document.getElementById('btn-terminal');
 
-    if (promptEl) promptEl.style.display = near ? 'block' : 'none';
-    if (hudIcon)  hudIcon.style.display  = near ? 'flex'  : 'none';
-    if (btnDb)    btnDb.style.display    = near ? 'flex'  : 'none';
+    if (promptEl)      promptEl.style.display     = near ? 'block' : 'none';
+    if (hudIcon)       hudIcon.style.display       = near ? 'flex'  : 'none';
+    if (btnDb)         btnDb.style.display         = near ? 'flex'  : 'none';
+    if (consolePrompt) consolePrompt.style.display = near ? 'block' : 'none';
+    if (consoleHud)    consoleHud.style.display    = near ? 'flex'  : 'none';
+    if (btnTerminal)   btnTerminal.style.display   = near ? 'flex'  : 'none';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -371,7 +721,7 @@ function closeShop() {
     showResumePrompt(false);
 
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
-    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.t = 0;
 
     window.focus();
 
@@ -532,16 +882,8 @@ class BarkWave {
 
 // ══════════════════════════════════════════════════════════════
 // 👑 BOSS — "KRU MANOP THE DOG RIDER"
-//
-// Progression:
-//   isRider = false  →  Encounter 1: plain teacher (no dog, no bark)
-//   isRider = true   →  Encounter 2+: Dog Rider form fully enabled
 // ══════════════════════════════════════════════════════════════
 class Boss extends Entity {
-    /**
-     * @param {number}  difficulty  — scales HP
-     * @param {boolean} isRider     — enables Dog Rider form (set by bossEncounterCount)
-     */
     constructor(difficulty = 1, isRider = false) {
         super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
         this.maxHp      = BALANCE.boss.baseHp * difficulty;
@@ -554,33 +896,24 @@ class Boss extends Entity {
         this.phase      = 1;
         this.sayTimer   = 0;
 
-        // ── 🐕 Dog Rider progression flag ─────────────────────
-        // false → plain boss (encounter 1), true → full Dog Rider
         this.isRider = isRider;
 
-        // ── Skill timers ──
         this.skills = {
             slam:  { cd: 0, max: BALANCE.boss.slamCooldown },
             graph: { cd: 0, max: BALANCE.boss.graphCooldown },
             log:   { cd: 0, max: BALANCE.boss.log457Cooldown },
-            // bark only fires when isRider === true
             bark:  { cd: 0, max: BALANCE.boss.phase2.barkCooldown }
         };
 
-        // ── log457 state machine ──
         this.log457State       = null;
         this.log457Timer       = 0;
         this.log457AttackBonus = 0;
         this.isInvulnerable    = false;
 
-        // ── 🐕 Dog Rider state ────────────────────────────────
         this.isEnraged   = false;
-        this.dogLegTimer = 0; // drives pendulum leg animation
+        this.dogLegTimer = 0;
     }
 
-    // ──────────────────────────────────────────────────────────
-    // update(dt, player)
-    // ──────────────────────────────────────────────────────────
     update(dt, player) {
         if (this.dead) return;
 
@@ -590,21 +923,17 @@ class Boss extends Entity {
         this.timer   += dt;
         this.sayTimer += dt;
 
-        // Dog leg animation timer (only ticks when isRider)
         if (this.isRider) {
             this.dogLegTimer += dt * (this.isEnraged ? 2.5 : 1.0);
         }
 
-        // Tick all skill cooldowns
         for (let s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
 
-        // Periodic speech
         if (this.sayTimer > BALANCE.boss.speechInterval && Math.random() < 0.1) {
             this.speak("Player at " + Math.round(player.hp) + " HP");
             this.sayTimer = 0;
         }
 
-        // ── 🔥 ENRAGE — triggers ONCE when HP < 50% ──────────
         if (this.hp < this.maxHp * BALANCE.boss.phase2Threshold && this.phase === 1) {
             this.phase     = 2;
             this.isEnraged = true;
@@ -620,7 +949,6 @@ class Boss extends Entity {
             Audio.playBossSpecial();
         }
 
-        // ── log457 state machine ──
         if (this.log457State === 'charging') {
             this.log457Timer += dt;
             this.isInvulnerable = true;
@@ -653,7 +981,6 @@ class Boss extends Entity {
             return;
         }
 
-        // ── State machine ──
         if (this.state === 'CHASE') {
             if (!player.isInvisible) {
                 this.vx = Math.cos(this.angle) * this.moveSpeed;
@@ -663,7 +990,6 @@ class Boss extends Entity {
 
             if (this.timer > 2) {
                 this.timer = 0;
-                // Bark only available when Dog Rider form is active
                 const barkChance = (this.isRider && this.phase === 2) ? 0.40
                                  : (this.isRider)                     ? 0.18
                                  : 0;
@@ -702,7 +1028,6 @@ class Boss extends Entity {
             }
         }
 
-        // Contact damage
         if (d < this.radius + player.radius) {
             player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
         }
@@ -711,9 +1036,6 @@ class Boss extends Entity {
         UIManager.updateBossSpeech(this);
     }
 
-    // ──────────────────────────────────────────────────────────
-    // 🐕 bark(player) — only called when this.isRider is true
-    // ──────────────────────────────────────────────────────────
     bark(player) {
         const P2       = BALANCE.boss.phase2;
         this.skills.bark.cd = this.skills.bark.max;
@@ -748,9 +1070,6 @@ class Boss extends Entity {
         this.speak("BARK BARK BARK!");
     }
 
-    // ──────────────────────────────────────────────────────────
-    // Existing special attacks
-    // ──────────────────────────────────────────────────────────
     useEquationSlam() {
         this.skills.slam.cd = this.skills.slam.max;
         this.state = 'CHASE';
@@ -812,25 +1131,13 @@ class Boss extends Entity {
         }
     }
 
-    // ──────────────────────────────────────────────────────────
-    // draw()
-    // Render order:
-    //   1. Aura / log glow effects
-    //   2. 🐕 Dog body (ONLY when isRider) — drawn first so boss sits on top
-    //   3. Boss body — shifted up by RIDER_OFFSET_Y when isRider so he
-    //      visually sits on the dog's saddle rather than floating inside it
-    //   4. Enrage anger particles
-    // ──────────────────────────────────────────────────────────
     draw() {
         const screen = worldToScreen(this.x, this.y);
-
-        // When riding, the boss sprite is elevated above the dog's back
         const RIDER_OFFSET_Y = this.isRider ? -22 : 0;
 
         CTX.save();
         CTX.translate(screen.x, screen.y);
 
-        // log457 charging scale + aura
         if (this.log457State === 'charging') {
             const sc = 1 + (this.log457Timer / 2) * 0.3;
             CTX.scale(sc, sc);
@@ -854,15 +1161,12 @@ class Boss extends Entity {
             CTX.shadowBlur = 20; CTX.shadowColor = '#ef4444';
         }
 
-        // Rotate to face player
         CTX.rotate(this.angle);
 
-        // ── 🐕 DOG — drawn before boss body (only in Rider form) ──
         if (this.isRider) {
             this._drawDog();
         }
 
-        // ── 👑 BOSS BODY — translated up onto the saddle when riding ──
         CTX.save();
         CTX.translate(0, RIDER_OFFSET_Y);
 
@@ -878,11 +1182,9 @@ class Boss extends Entity {
             CTX.fillStyle = '#ef4444';
             CTX.fillRect(-12,-5,10,3); CTX.fillRect(2,-5,10,3);
         }
-        // Ruler
         CTX.fillStyle = '#facc15'; CTX.fillRect(25, 12, 60, 10);
         CTX.fillStyle = '#000'; CTX.font = 'bold 8px Arial'; CTX.fillText('30cm', 50, 17);
 
-        // Enrage anger particles overlay on boss face
         if (this.isEnraged) {
             const t = performance.now() / 80;
             for (let i = 0; i < 4; i++) {
@@ -901,27 +1203,10 @@ class Boss extends Entity {
             CTX.shadowBlur  = 0;
         }
 
-        CTX.restore(); // end boss body translate
-
-        CTX.restore(); // end outer translate/rotate
+        CTX.restore();
+        CTX.restore();
     }
 
-    // ──────────────────────────────────────────────────────────
-    // _drawDog()
-    // Renders the animated dog in the already-rotated boss-local
-    // coordinate system.  Legs use ctx.save/translate/rotate/restore
-    // for a proper pendulum swing — no stretching artefacts.
-    //
-    // Coordinate system (after outer CTX.rotate(this.angle)):
-    //   +x = forward (toward player)   +y = down
-    //
-    // Layout:
-    //   Body ellipse  center  ( 6, 32)
-    //   Saddle patch  center  ( 0, 22)  — where boss sits
-    //   Head circle   center  (52, 20)
-    //   Tail          behind  (-40, 24) → wagging quadratic curve
-    //   4 legs        pivot points on the underside of the body ellipse
-    // ──────────────────────────────────────────────────────────
     _drawDog() {
         const P2       = BALANCE.boss.phase2;
         const bodyCol  = this.isEnraged ? '#dc2626' : P2.dogColor;
@@ -929,16 +1214,14 @@ class Boss extends Entity {
         const lightCol = this.isEnraged ? '#ef4444' : '#b45309';
         const eyeCol   = this.isEnraged ? '#facc15' : '#1e293b';
 
-        // Pendulum swing angle (radians) — varies per leg pair for a trot gait
         const legSpeed  = this.isEnraged ? 9 : 4.5;
-        const swingAmt  = 0.45; // max swing in radians (~26°)
-        const swingA    =  Math.sin(this.dogLegTimer * legSpeed) * swingAmt; // front-L / back-R
-        const swingB    = -swingA;                                            // front-R / back-L
+        const swingAmt  = 0.45;
+        const swingA    =  Math.sin(this.dogLegTimer * legSpeed) * swingAmt;
+        const swingB    = -swingA;
 
-        const LEG_LEN  = 20; // pixels, drawn downward from pivot
-        const PAW_RY   = 4;  // paw ellipse radii
+        const LEG_LEN  = 20;
+        const PAW_RY   = 4;
 
-        // ── Ground shadow (slightly offset forward) ──────────
         CTX.save();
         CTX.globalAlpha = 0.22;
         CTX.fillStyle   = 'rgba(0,0,0,0.9)';
@@ -947,15 +1230,11 @@ class Boss extends Entity {
         CTX.fill();
         CTX.restore();
 
-        // ── Helper: draw one leg + paw from a pivot point ────
-        // pivotX/Y = attachment point on body underside
-        // swingAngle = current pendulum rotation (0 = straight down)
         const drawLeg = (pivotX, pivotY, swingAngle, pawTiltSign) => {
             CTX.save();
             CTX.translate(pivotX, pivotY);
             CTX.rotate(swingAngle);
 
-            // Upper leg segment (thigh)
             CTX.strokeStyle = darkCol;
             CTX.lineWidth   = 7;
             CTX.lineCap     = 'round';
@@ -964,13 +1243,11 @@ class Boss extends Entity {
             CTX.lineTo(0, LEG_LEN);
             CTX.stroke();
 
-            // Knee joint
             CTX.fillStyle = darkCol;
             CTX.beginPath();
             CTX.arc(0, LEG_LEN, 3.5, 0, Math.PI * 2);
             CTX.fill();
 
-            // Lower leg (shin) with slight kick-back curve
             CTX.strokeStyle = darkCol;
             CTX.lineWidth   = 5;
             CTX.beginPath();
@@ -978,7 +1255,6 @@ class Boss extends Entity {
             CTX.lineTo(pawTiltSign * 3, LEG_LEN + 11);
             CTX.stroke();
 
-            // Paw ellipse
             CTX.fillStyle = darkCol;
             CTX.beginPath();
             CTX.ellipse(pawTiltSign * 3, LEG_LEN + 13, 6, PAW_RY, pawTiltSign * 0.25, 0, Math.PI * 2);
@@ -987,15 +1263,11 @@ class Boss extends Entity {
             CTX.restore();
         };
 
-        // Pivot points: front pair (toward head) and back pair (toward tail)
-        // Y = 36 — bottom edge of body ellipse
-        // Front legs lean slightly forward (positive X offset ~+14); back legs slightly back (~-22)
-        drawLeg( 14, 36,  swingA, -1); // front-left
-        drawLeg( 26, 36,  swingB,  1); // front-right
-        drawLeg(-14, 36,  swingB, -1); // back-left
-        drawLeg( -2, 36,  swingA,  1); // back-right
+        drawLeg( 14, 36,  swingA, -1);
+        drawLeg( 26, 36,  swingB,  1);
+        drawLeg(-14, 36,  swingB, -1);
+        drawLeg( -2, 36,  swingA,  1);
 
-        // ── Dog body — main ellipse (drawn over leg tops) ────
         CTX.fillStyle   = bodyCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2.5;
@@ -1004,13 +1276,11 @@ class Boss extends Entity {
         CTX.fill();
         CTX.stroke();
 
-        // Saddle patch (lighter, where boss sits — matches RIDER_OFFSET_Y)
         CTX.fillStyle = lightCol;
         CTX.beginPath();
         CTX.ellipse(0, 20, 22, 10, 0, 0, Math.PI * 2);
         CTX.fill();
 
-        // ── Tail — wagging quadratic Bézier curve ─────────── ──
         const tailWag = Math.sin(this.dogLegTimer * (this.isEnraged ? 12 : 6)) * 18;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 6;
@@ -1019,13 +1289,11 @@ class Boss extends Entity {
         CTX.moveTo(-44, 22);
         CTX.quadraticCurveTo(-58, 8, -55 + tailWag * 0.35, -6 + tailWag);
         CTX.stroke();
-        // Fluffy tip
         CTX.fillStyle = bodyCol;
         CTX.beginPath();
         CTX.arc(-55 + tailWag * 0.35, -7 + tailWag, 7, 0, Math.PI * 2);
         CTX.fill();
 
-        // ── Dog head ─────────────────────────────────────────
         CTX.fillStyle   = bodyCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2.5;
@@ -1034,7 +1302,6 @@ class Boss extends Entity {
         CTX.fill();
         CTX.stroke();
 
-        // Floppy ear
         CTX.fillStyle   = darkCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 1.5;
@@ -1042,7 +1309,6 @@ class Boss extends Entity {
         CTX.ellipse(44, 8, 9, 15, -0.5, 0, Math.PI * 2);
         CTX.fill();
 
-        // Snout
         CTX.fillStyle   = lightCol;
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 1.5;
@@ -1051,13 +1317,11 @@ class Boss extends Entity {
         CTX.fill();
         CTX.stroke();
 
-        // Nose
         CTX.fillStyle = '#1e293b';
         CTX.beginPath();
         CTX.arc(71, 20, 3.5, 0, Math.PI * 2);
         CTX.fill();
 
-        // Eye (glows when enraged)
         CTX.fillStyle   = eyeCol;
         CTX.shadowBlur  = this.isEnraged ? 8 : 0;
         CTX.shadowColor = '#facc15';
@@ -1070,7 +1334,6 @@ class Boss extends Entity {
         CTX.arc(57, 13, 2, 0, Math.PI * 2);
         CTX.fill();
 
-        // Mouth / smile
         CTX.strokeStyle = darkCol;
         CTX.lineWidth   = 2;
         CTX.lineCap     = 'round';
@@ -1078,7 +1341,6 @@ class Boss extends Entity {
         CTX.arc(63, 24, 5, 0.1, Math.PI - 0.1);
         CTX.stroke();
 
-        // Panting tongue (visible when enraged or during fast leg cycle)
         if (this.isEnraged || Math.sin(this.dogLegTimer * 3) > 0.2) {
             CTX.fillStyle = '#fb7185';
             CTX.beginPath();
@@ -1086,7 +1348,6 @@ class Boss extends Entity {
             CTX.fill();
         }
 
-        // ── Enrage aura on dog body ───────────────────────────
         if (this.isEnraged) {
             const t = performance.now() / 120;
             CTX.save();
@@ -1119,12 +1380,9 @@ function startNextWave() {
 
     if (getWave() % BALANCE.waves.bossEveryNWaves === 0) {
         setTimeout(() => {
-            // ── Boss Progression: track encounter number ──────────
             bossEncounterCount++;
-            // Encounter 1 → plain boss (no dog/bark)
-            // Encounter 2+ → Dog Rider form enabled
-            const isRider      = bossEncounterCount >= 2;
-            const bossLevel    = Math.floor(getWave() / BALANCE.waves.bossEveryNWaves);
+            const isRider   = bossEncounterCount >= 2;
+            const bossLevel = Math.floor(getWave() / BALANCE.waves.bossEveryNWaves);
 
             window.boss = new Boss(bossLevel, isRider);
             UIManager.updateBossHUD(window.boss);
@@ -1182,7 +1440,6 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
-    // ── Day / Night cycle ──────────────────────────────────────
     dayNightTimer += dt;
     {
         const L   = BALANCE.LIGHTING;
@@ -1224,6 +1481,13 @@ function updateGame(dt) {
         return;
     }
 
+    // Admin Console: check T key (same server proximity zone)
+    if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.t === 1) {
+        keys.t = 0;
+        openAdminConsole();
+        return;
+    }
+
     // Shop: check B key
     const dToShop = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
     if (dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
@@ -1234,7 +1498,6 @@ function updateGame(dt) {
 
     player.update(dt, keys, mouse);
 
-    // Weapon system (non-Poom)
     if (!(player instanceof PoomPlayer)) {
         weaponSystem.update(dt);
         const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
@@ -1247,7 +1510,6 @@ function updateGame(dt) {
         }
     }
 
-    // Poom input
     if (player instanceof PoomPlayer) {
         if (mouse.left === 1 && gameState === 'PLAYING') shootPoom(player);
         if (mouse.right === 1) {
@@ -1261,7 +1523,6 @@ function updateGame(dt) {
         UIManager.updateSkillIcons(player);
     }
 
-    // 🤖 Drone update
     if (window.drone && player && !player.dead) {
         window.drone.update(dt, player);
     }
@@ -1482,11 +1743,9 @@ function startGame(charType = 'kao') {
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss = null;
 
-    // Reset day/night to dawn
     dayNightTimer  = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
-    // ── Reset boss progression counter ────────────────────────
     bossEncounterCount = 0;
     console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
 
@@ -1533,6 +1792,11 @@ function startGame(charType = 'kao') {
     showResumePrompt(false);
     ShopManager.close();
 
+    // Clear and close admin console if somehow open
+    if (AdminConsole.isOpen) AdminConsole.close();
+    const consoleOutput = document.getElementById('console-output');
+    if (consoleOutput) consoleOutput.innerHTML = '';
+
     startNextWave();
     gameState = 'PLAYING';
     resetTime();
@@ -1559,6 +1823,9 @@ async function endGame(result) {
 
     showResumePrompt(false);
     ShopManager.close();
+
+    // Close admin console if open
+    if (AdminConsole.isOpen) AdminConsole.close();
 
     window.drone = null;
 
@@ -1602,12 +1869,18 @@ async function endGame(result) {
 
 // ==================== INPUT ====================
 window.addEventListener('keydown', e => {
-    if (gameState === 'PAUSED') {
-        const shopModal = document.getElementById('shop-modal');
-        const shopOpen  = shopModal && shopModal.style.display === 'flex';
+    // ── If admin console input has focus, ignore all game hotkeys ──
+    const consoleInput = document.getElementById('console-input');
+    if (consoleInput && document.activeElement === consoleInput) return;
 
-        if (shopOpen && e.code === 'Escape') { closeShop(); return; }
-        if (!shopOpen) { resumeGame(); return; }
+    if (gameState === 'PAUSED') {
+        const shopModal    = document.getElementById('shop-modal');
+        const shopOpen     = shopModal && shopModal.style.display === 'flex';
+        const consoleOpen  = AdminConsole.isOpen;
+
+        if (consoleOpen && e.code === 'Escape') { closeAdminConsole(); return; }
+        if (shopOpen   && e.code === 'Escape') { closeShop();         return; }
+        if (!shopOpen && !consoleOpen)          { resumeGame();        return; }
         return;
     }
 
@@ -1621,6 +1894,7 @@ window.addEventListener('keydown', e => {
     if (e.code === 'KeyQ')   keys.q     = 1;
     if (e.code === 'KeyE')   keys.e     = 1;
     if (e.code === 'KeyB')   keys.b     = 1;
+    if (e.code === 'KeyT')   keys.t     = 1;
 });
 
 window.addEventListener('keyup', e => {
@@ -1631,6 +1905,7 @@ window.addEventListener('keyup', e => {
     if (e.code === 'Space') keys.space = 0;
     if (e.code === 'KeyE')  keys.e     = 0;
     if (e.code === 'KeyB')  keys.b     = 0;
+    if (e.code === 'KeyT')  keys.t     = 0;
     if (e.code === 'KeyQ') {
         if (gameState === 'PLAYING') {
             if (player instanceof PoomPlayer) keys.q = 0;
@@ -1752,6 +2027,7 @@ function initMobileControls() {
     const btnSwitch   = document.getElementById('btn-switch');
     const btnNaga     = document.getElementById('btn-naga');
     const btnDatabase = document.getElementById('btn-database');
+    const btnTerminal = document.getElementById('btn-terminal');
     const btnShop     = document.getElementById('btn-shop');
 
     if (btnDash) {
@@ -1782,6 +2058,14 @@ function initMobileControls() {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING') openExternalDatabase();
             else if (gameState === 'PAUSED') resumeGame();
+        }, { passive: false });
+    }
+
+    if (btnTerminal) {
+        btnTerminal.addEventListener('touchstart', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (gameState === 'PLAYING') openAdminConsole();
+            else if (gameState === 'PAUSED' && AdminConsole.isOpen) closeAdminConsole();
         }, { passive: false });
     }
 
