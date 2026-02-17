@@ -222,10 +222,9 @@ class UIManager {
             }
         }
     }
-}
 
-/**
-     * ðŸ'€ showGameOver(score, wave)
+    /**
+     * 💀 showGameOver(score, wave)
      * Centralises all DOM writes for the Game Over report card.
      * Called by endGame() BEFORE the async AI call so stat boxes
      * are never left at their default 0.
@@ -238,14 +237,14 @@ class UIManager {
                 `GAME OVER<br><span class="subtitle">SCORE ${score.toLocaleString()} | WAVE ${wave}</span>`;
         }
 
-        // Stat boxes
+        // Stat boxes — these were the elements always showing 0
         const reportScoreEl = document.getElementById('report-score');
         if (reportScoreEl) reportScoreEl.textContent = score.toLocaleString();
 
         const reportWaveEl = document.getElementById('report-wave');
         if (reportWaveEl) reportWaveEl.textContent = wave;
 
-        // Reset commentary placeholder
+        // Reset commentary placeholder while AI loads
         const reportText = document.getElementById('report-text');
         if (reportText) reportText.textContent = 'กำลังรอความเห็นจากครู...';
 
@@ -255,8 +254,9 @@ class UIManager {
     }
 
     /**
+     * resetGameOverUI()
      * Resets all report-card fields to defaults.
-     * Call from startGame() so replays never show stale data.
+     * Called from startGame() so replays never show stale data.
      */
     static resetGameOverUI() {
         const reportScoreEl = document.getElementById('report-score');
