@@ -6,6 +6,7 @@
  * - Passive skill adds +2% crit chance on top of base
  * - Fixed damage calculation
  * - Syntax errors resolved
+ * - ✅ FIXED: Confused status timer now properly counts down and expires
  */
 
 // Base Entity Class
@@ -74,6 +75,15 @@ class Player extends Entity {
             this.hp -= this.burnDamage * dt;
             if (this.burnTimer <= 0) this.isBurning = false;
             if (Math.random() < 0.3) spawnParticles(this.x + rand(-15, 15), this.y + rand(-15, 15), 1, '#f59e0b');
+        }
+        
+        // ✅ FIXED: นับถอยหลังและปิดสถานะมึนงง
+        if (this.isConfused) {
+            this.confusedTimer -= dt;
+            if (this.confusedTimer <= 0) {
+                this.isConfused = false;
+                this.confusedTimer = 0;
+            }
         }
         
         if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
