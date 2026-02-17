@@ -1,9 +1,10 @@
 /**
  * MTC: ENHANCED EDITION - UI System
- * Achievements, HUD, and UI management
+ * Achievements, HUD, Shop, and UI management
  *
  * REFACTORED:
  * - All BALANCE.poom.* -> BALANCE.characters.poom.*
+ * - Added ShopManager for the in-game shop system
  */
 
 class AchievementSystem {
@@ -17,6 +18,7 @@ class AchievementSystem {
             dashes: 0,
             stealths: 0,
             powerups: 0,
+            shopPurchases: 0,
             weaponsUsed: new Set()
         };
     }
@@ -40,6 +42,7 @@ class AchievementSystem {
             case 'collector':     unlock = this.stats.powerups >= 10; break;
             case 'weapon_master': unlock = this.stats.weaponsUsed.size >= 3; break;
             case 'naga_summoner': unlock = window.player instanceof PoomPlayer && window.player.nagaCount >= 3; break;
+            case 'shopaholic':    unlock = this.stats.shopPurchases >= 5; break;
         }
 
         if (unlock) this.unlock(ach);
@@ -71,6 +74,159 @@ class AchievementSystem {
     }
 }
 
+// ══════════════════════════════════════════════════════════════
+// 🛒 SHOP MANAGER
+// Handles rendering, button state, and the shop overlay.
+// All purchase logic lives in buyItem() in game.js — ShopManager
+// is purely a UI concern.
+// ══════════════════════════════════════════════════════════════
+class ShopManager {
+
+    // ------------------------------------------------------------------
+    // open()
+    // Renders item cards with live score data, then shows the modal.
+    // Called by openShop() in game.js after gameState is set to 'PAUSED'.
+    // ------------------------------------------------------------------
+    static open() {
+        ShopManager.renderItems();
+        const modal = document.getElementById('shop-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            // Trigger entrance animation
+            requestAnimationFrame(() => {
+                const inner = modal.querySelector('.shop-inner');
+                if (inner) inner.classList.add('shop-visible');
+            });
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // close()
+    // Hides the shop modal. Resuming the game is handled by closeShop()
+    // in game.js which calls this then sets gameState = 'PLAYING'.
+    // ------------------------------------------------------------------
+    static close() {
+        const modal = document.getElementById('shop-modal');
+        if (!modal) return;
+        const inner = modal.querySelector('.shop-inner');
+        if (inner) inner.classList.remove('shop-visible');
+        // Give the CSS transition time to finish before hiding
+        setTimeout(() => { modal.style.display = 'none'; }, 260);
+    }
+
+    // ------------------------------------------------------------------
+    // renderItems()
+    // Clears and re-populates the #shop-items grid with one card per
+    // item defined in SHOP_ITEMS (config.js).
+    // ------------------------------------------------------------------
+    static renderItems() {
+        const container = document.getElementById('shop-items');
+        if (!container) return;
+        container.innerHTML = '';
+
+        Object.values(SHOP_ITEMS).forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'shop-card';
+            card.id        = `shop-card-${item.id}`;
+
+            // Duration label
+            const durationHtml = item.duration
+                ? `<span class="shop-duration">⏱ ${item.duration}s</span>`
+                : `<span class="shop-duration" style="color:#22c55e;">⚡ ทันที</span>`;
+
+            card.innerHTML = `
+                <div class="shop-card-icon" style="color:${item.color};">${item.icon}</div>
+                <div class="shop-card-name">${item.name}</div>
+                <div class="shop-card-desc">${item.desc}</div>
+                ${durationHtml}
+                <div class="shop-card-cost">
+                    <span class="shop-cost-icon">🏆</span>
+                    <span class="shop-cost-value" id="shop-cost-${item.id}">${item.cost.toLocaleString()}</span>
+                </div>
+                <button
+                    class="shop-buy-btn"
+                    id="shop-btn-${item.id}"
+                    onclick="buyItem('${item.id}')"
+                    ontouchstart="event.preventDefault(); buyItem('${item.id}');"
+                    style="border-color:${item.color}; --shop-btn-color:${item.color};"
+                >
+                    BUY
+                </button>
+            `;
+            container.appendChild(card);
+        });
+
+        // Apply initial affordability state
+        ShopManager.updateButtons();
+    }
+
+    // ------------------------------------------------------------------
+    // updateButtons()
+    // Enables / disables each Buy button based on the current score.
+    // Also updates the active-buff visual indicator on cards.
+    // Call this after every purchase and when score changes.
+    // ------------------------------------------------------------------
+    static updateButtons() {
+        const currentScore = typeof getScore === 'function' ? getScore() : 0;
+        const player       = window.player;
+
+        // Update score display inside the modal header
+        const scoreDisplay = document.getElementById('shop-score-display');
+        if (scoreDisplay) scoreDisplay.textContent = currentScore.toLocaleString();
+
+        Object.values(SHOP_ITEMS).forEach(item => {
+            const btn  = document.getElementById(`shop-btn-${item.id}`);
+            const card = document.getElementById(`shop-card-${item.id}`);
+            if (!btn || !card) return;
+
+            const canAfford = currentScore >= item.cost;
+
+            btn.disabled = !canAfford;
+            card.classList.toggle('shop-card-disabled', !canAfford);
+
+            // Active-buff indicator (only for timed buffs)
+            if (player && item.duration) {
+                const isActive =
+                    (item.id === 'damageUp' && player.shopDamageBoostActive) ||
+                    (item.id === 'speedUp'  && player.shopSpeedBoostActive);
+
+                card.classList.toggle('shop-card-active', isActive);
+
+                // Show remaining time inside the card if buff is active
+                let timerEl = card.querySelector('.shop-buff-timer');
+                if (isActive) {
+                    const remaining =
+                        item.id === 'damageUp'
+                            ? Math.ceil(player.shopDamageBoostTimer)
+                            : Math.ceil(player.shopSpeedBoostTimer);
+
+                    if (!timerEl) {
+                        timerEl = document.createElement('div');
+                        timerEl.className = 'shop-buff-timer';
+                        card.appendChild(timerEl);
+                    }
+                    timerEl.textContent = `✅ ACTIVE — ${remaining}s`;
+                } else if (timerEl) {
+                    timerEl.remove();
+                }
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------
+    // tick()
+    // Called every frame from updateGame() while the shop is open
+    // (gameState === 'PAUSED' and shop modal is visible) to keep
+    // the buff timer displays fresh without re-rendering all cards.
+    // ------------------------------------------------------------------
+    static tick() {
+        ShopManager.updateButtons();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// UI Manager
+// ══════════════════════════════════════════════════════════════
 class UIManager {
 
     static showVoiceBubble(text, x, y) {
@@ -245,5 +401,5 @@ function showVoiceBubble(text, x, y) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AchievementSystem, UIManager, Achievements, showVoiceBubble };
+    module.exports = { AchievementSystem, ShopManager, UIManager, Achievements, showVoiceBubble };
 }

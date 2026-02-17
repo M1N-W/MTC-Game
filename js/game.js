@@ -2,24 +2,28 @@
  * 🎮 MTC: ENHANCED EDITION - Main Game Loop
  * Game state, Boss, waves, input, loop
  *
- * REFACTORED (Database Feature — v3):
+ * REFACTORED (Shop Feature — v4):
+ * - ✅ MTC_SHOP_LOCATION — fixed world position for the interactive shop kiosk
+ * - ✅ Proximity detection → shows shop-prompt + HUD icon
+ * - ✅ 'B' key / mobile btn-shop → openShop()
+ * - ✅ openShop()  → gameState = 'PAUSED', ShopManager.open()
+ * - ✅ closeShop() → gameState = 'PLAYING', ShopManager.close(), reset keys
+ * - ✅ buyItem(itemId) — deducts score, applies timed/instant effect
+ * - ✅ Shop buff timers tick in updateGame()
+ * - ✅ drawShopObject() — golden kiosk drawn on map each frame
+ * - ✅ Shopaholic achievement tracking via Achievements.stats.shopPurchases
+ *
+ * (Database Feature — v3 — unchanged):
  * - ✅ MTC_DATABASE_SERVER — fixed world position for the interactive server object
- * - ✅ Proximity detection → shows db-prompt + HUD icon
  * - ✅ 'E' key / mobile btn-database → openExternalDatabase()
- *        → window.open(MTC_DB_URL, '_blank')  [external Claude Artifact]
  * - ✅ gameState = 'PAUSED' when DB is opened or window loses focus (blur)
- * - ✅ window.blur   → auto-pause
- * - ✅ window.focus  → keep paused, ensure resume prompt is visible
  * - ✅ resumeGame()  → restores gameState = 'PLAYING', resets keys, hides prompt
- * - ✅ Any key-press while PAUSED in-game → resumeGame()
- * - ✅ drawDatabaseServer() — glowing cyan server drawn on map each frame
- * - ✅ No local file dependency — fully external URL
  */
 
 // ─── Game State ───────────────────────────────────────────
 let gameState  = 'MENU';
 let loopRunning = false;
-const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0 };
+const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0 };
 
 // ─── Game Objects (global) ────────────────────────────────
 window.player         = null;
@@ -41,21 +45,25 @@ const MTC_DATABASE_SERVER = {
     INTERACTION_RADIUS: 90   // world units — must be within this to interact
 };
 
-// ─── External Database URL ────────────────────────────────
+// ─── MTC Shop Location ────────────────────────────────────
 /**
- * The Claude Artifact that serves as the MTC Math Explorer.
- * Update this constant whenever the artifact URL changes —
- * it is the single source of truth used by openExternalDatabase().
+ * Fixed world-space position of the in-game shop kiosk.
+ * Placed at (-350, 350) — the opposite diagonal from the database server
+ * so players naturally discover both as they explore.
  */
+const MTC_SHOP_LOCATION = {
+    x: -350,
+    y:  350,
+    INTERACTION_RADIUS: 90   // world units
+};
+
+// ─── External Database URL ────────────────────────────────
 const MTC_DB_URL = 'https://claude.ai/public/artifacts/9779928b-11d1-442b-b17d-2ef5045b9660';
 
-// ─── Database / Pause Helper Functions ───────────────────
+// ══════════════════════════════════════════════════════════════
+// DATABASE / PAUSE HELPERS
+// ══════════════════════════════════════════════════════════════
 
-/**
- * showResumePrompt(visible)
- * Toggles the lightweight #resume-prompt overlay and the
- * top-center #pause-indicator strip.
- */
 function showResumePrompt(visible) {
     const el    = document.getElementById('resume-prompt');
     const strip = document.getElementById('pause-indicator');
@@ -63,21 +71,13 @@ function showResumePrompt(visible) {
     if (strip) strip.style.display = visible ? 'block' : 'none';
 }
 
-/**
- * openExternalDatabase()
- * Pauses the game and opens the MTC Math Explorer Claude Artifact
- * in a new browser tab. Zero iframe overhead — fully external.
- */
 function openExternalDatabase() {
     if (gameState !== 'PLAYING') return;
     gameState = 'PAUSED';
 
-    // Open the external Claude Artifact in a new tab
     window.open(MTC_DB_URL, '_blank');
-
     showResumePrompt(true);
 
-    // Hide proximity prompt while DB is open
     const promptEl = document.getElementById('db-prompt');
     if (promptEl) promptEl.style.display = 'none';
 
@@ -85,76 +85,56 @@ function openExternalDatabase() {
     if (player) spawnFloatingText('📚 MTC DATABASE', player.x, player.y - 60, '#06b6d4', 22);
 }
 
-/**
- * resumeGame()
- * Resumes the game from a paused state (DB opened or window blur).
- * Resets all key states to prevent stuck input on resume.
- */
 function resumeGame() {
     if (gameState !== 'PAUSED') return;
     gameState = 'PLAYING';
 
     showResumePrompt(false);
 
-    // Reset all held keys so nothing is "stuck" on resume
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
-    keys.space = 0; keys.q = 0; keys.e = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0;
 
-    // Recapture keyboard focus from the new tab back to the game window
     window.focus();
 
     if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
 }
 
-// ── Backward-compatible aliases ────────────────────────────
-// Kept so any external code referencing the old names still works.
+// Backward-compatible aliases
 function openDatabase()   { openExternalDatabase(); }
 function showMathModal()  { openExternalDatabase(); }
 function closeMathModal() { resumeGame(); }
 
-// Expose all to global scope
 window.openExternalDatabase = openExternalDatabase;
 window.openDatabase         = openDatabase;
 window.resumeGame           = resumeGame;
 window.showMathModal        = showMathModal;
 window.closeMathModal       = closeMathModal;
 
-// ─── Window Focus / Blur Listeners ───────────────────────
-/**
- * Auto-pause when the player switches away from the game tab
- * (e.g. to look at the math archive they just opened, or
- *  any other reason the window loses focus).
- */
+// ── Window Focus / Blur Listeners ────────────────────────
 window.addEventListener('blur', () => {
     if (gameState === 'PLAYING') {
         gameState = 'PAUSED';
-        showResumePrompt(true);
+        // Only show the generic resume prompt if shop is NOT open
+        const shopModal = document.getElementById('shop-modal');
+        const shopOpen  = shopModal && shopModal.style.display === 'flex';
+        if (!shopOpen) showResumePrompt(true);
     }
 });
 
-/**
- * When focus returns, keep the game paused and ensure the
- * resume prompt is visible so the player isn't caught off guard.
- * The player must consciously click "Resume" or press a key.
- */
 window.addEventListener('focus', () => {
     if (gameState === 'PAUSED') {
-        showResumePrompt(true);  // already showing, but force-visible in case it was hidden
+        const shopModal = document.getElementById('shop-modal');
+        const shopOpen  = shopModal && shopModal.style.display === 'flex';
+        if (!shopOpen) showResumePrompt(true);
     }
 });
 
 // ─── Draw the Database Server on the map ─────────────────
-/**
- * drawDatabaseServer()
- * Draws a glowing cyan server rack at MTC_DATABASE_SERVER world position.
- * Called inside drawGame() every frame.
- */
 function drawDatabaseServer() {
     const screen = worldToScreen(MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     const t    = performance.now() / 600;
     const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
 
-    // Interaction radius ring (subtle, only visible when nearby)
     if (player) {
         const d = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
         if (d < MTC_DATABASE_SERVER.INTERACTION_RADIUS * 2) {
@@ -172,13 +152,11 @@ function drawDatabaseServer() {
         }
     }
 
-    // Shadow
     CTX.fillStyle = 'rgba(0,0,0,0.35)';
     CTX.beginPath();
     CTX.ellipse(screen.x, screen.y + 28, 18, 7, 0, 0, Math.PI * 2);
     CTX.fill();
 
-    // Server rack body
     CTX.save();
     CTX.translate(screen.x, screen.y);
     CTX.shadowBlur  = 14 * glow;
@@ -192,17 +170,13 @@ function drawDatabaseServer() {
     CTX.fill();
     CTX.stroke();
 
-    // Rack unit slots
     for (let i = 0; i < 3; i++) {
-        // Slot bg
         CTX.fillStyle = '#0f2744';
         CTX.fillRect(-14, -20 + i * 14, 28, 10);
 
-        // Status bar
         CTX.fillStyle = i === 0 ? '#22c55e' : '#0e7490';
         CTX.fillRect(-12, -18 + i * 14, 10, 6);
 
-        // LED
         CTX.fillStyle   = i === 1 ? `rgba(6,182,212,${glow})` : '#22c55e';
         CTX.shadowBlur  = 6;
         CTX.shadowColor = i === 1 ? '#06b6d4' : '#22c55e';
@@ -211,7 +185,6 @@ function drawDatabaseServer() {
         CTX.fill();
     }
 
-    // Label
     CTX.shadowBlur = 0;
     CTX.fillStyle  = '#67e8f9';
     CTX.font       = 'bold 7px Arial';
@@ -222,12 +195,7 @@ function drawDatabaseServer() {
     CTX.restore();
 }
 
-// ─── Proximity UI updater ─────────────────────────────────
-/**
- * updateDatabaseServerUI()
- * Called each frame while PLAYING.
- * Shows / hides the "Press E" prompt and HUD/mobile shortcuts.
- */
+// ─── Proximity UI updater (DB) ────────────────────────────
 function updateDatabaseServerUI() {
     if (!player) return;
     const d    = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
@@ -241,6 +209,269 @@ function updateDatabaseServerUI() {
     if (hudIcon)  hudIcon.style.display  = near ? 'flex'  : 'none';
     if (btnDb)    btnDb.style.display    = near ? 'flex'  : 'none';
 }
+
+// ══════════════════════════════════════════════════════════════
+// 🛒 SHOP — DRAW, PROXIMITY, OPEN, CLOSE, BUY
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * drawShopObject()
+ * Draws a glowing golden market kiosk at MTC_SHOP_LOCATION.
+ * Deliberately distinct from the cyan database server.
+ * Called inside drawGame() every frame.
+ */
+function drawShopObject() {
+    const screen = worldToScreen(MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
+    const t      = performance.now() / 700;
+    const glow   = Math.abs(Math.sin(t)) * 0.5 + 0.5;
+    const bounce = Math.sin(performance.now() / 500) * 3; // gentle float
+
+    // Interaction radius ring (visible when nearby)
+    if (player) {
+        const d = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
+        if (d < MTC_SHOP_LOCATION.INTERACTION_RADIUS * 2) {
+            const alpha = Math.max(0, 1 - d / (MTC_SHOP_LOCATION.INTERACTION_RADIUS * 2));
+            CTX.save();
+            CTX.globalAlpha = alpha * 0.3 * glow;
+            CTX.strokeStyle = '#facc15';
+            CTX.lineWidth   = 2;
+            CTX.setLineDash([6, 4]);
+            CTX.beginPath();
+            CTX.arc(screen.x, screen.y, MTC_SHOP_LOCATION.INTERACTION_RADIUS, 0, Math.PI * 2);
+            CTX.stroke();
+            CTX.setLineDash([]);
+            CTX.restore();
+        }
+    }
+
+    // Shadow
+    CTX.fillStyle = 'rgba(0,0,0,0.4)';
+    CTX.beginPath();
+    CTX.ellipse(screen.x, screen.y + 32, 22, 8, 0, 0, Math.PI * 2);
+    CTX.fill();
+
+    CTX.save();
+    CTX.translate(screen.x, screen.y + bounce);
+    CTX.shadowBlur  = 18 * glow;
+    CTX.shadowColor = '#facc15';
+
+    // ── Kiosk body ──────────────────────────────────────
+    // Base counter
+    CTX.fillStyle   = '#78350f';  // dark amber wood
+    CTX.strokeStyle = '#facc15';
+    CTX.lineWidth   = 2;
+    CTX.beginPath();
+    CTX.roundRect(-22, 0, 44, 28, 4);
+    CTX.fill();
+    CTX.stroke();
+
+    // Counter top surface
+    CTX.fillStyle = '#92400e';
+    CTX.beginPath();
+    CTX.roundRect(-22, -6, 44, 10, 3);
+    CTX.fill();
+    CTX.strokeStyle = '#fbbf24';
+    CTX.lineWidth = 1.5;
+    CTX.stroke();
+
+    // Awning poles (left & right)
+    CTX.strokeStyle = '#d97706';
+    CTX.lineWidth   = 3;
+    CTX.beginPath(); CTX.moveTo(-18, -6); CTX.lineTo(-18, -34); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo( 18, -6); CTX.lineTo( 18, -34); CTX.stroke();
+
+    // Awning fabric
+    CTX.fillStyle = `rgba(250,204,21,${0.85 + glow * 0.15})`;
+    CTX.beginPath();
+    CTX.moveTo(-26, -34);
+    CTX.lineTo( 26, -34);
+    CTX.lineTo( 22, -24);
+    CTX.lineTo(-22, -24);
+    CTX.closePath();
+    CTX.fill();
+    CTX.strokeStyle = '#b45309';
+    CTX.lineWidth   = 1.5;
+    CTX.stroke();
+
+    // Awning scallop trim
+    CTX.fillStyle = '#f59e0b';
+    for (let i = 0; i < 5; i++) {
+        CTX.beginPath();
+        CTX.arc(-20 + i * 10, -24, 5, 0, Math.PI);
+        CTX.fill();
+    }
+
+    // Shop icon on counter
+    CTX.font          = '16px Arial';
+    CTX.textAlign     = 'center';
+    CTX.textBaseline  = 'middle';
+    CTX.shadowBlur    = 0;
+    CTX.fillText('🛒', 0, 10);
+
+    // Floating coin above awning (animated)
+    const coinBounce = Math.sin(performance.now() / 350) * 4;
+    CTX.font     = '14px Arial';
+    CTX.fillText('🪙', 0, -46 + coinBounce);
+
+    // Label below kiosk
+    CTX.shadowBlur   = 0;
+    CTX.fillStyle    = '#fbbf24';
+    CTX.font         = 'bold 7px Arial';
+    CTX.textAlign    = 'center';
+    CTX.textBaseline = 'middle';
+    CTX.fillText('MTC CO-OP STORE', 0, 38);
+
+    CTX.restore();
+}
+
+/**
+ * updateShopProximityUI()
+ * Shows/hides the "Press B" prompt and HUD/mobile shortcuts.
+ * Called each frame while PLAYING.
+ */
+function updateShopProximityUI() {
+    if (!player) return;
+    const d    = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
+    const near = d < MTC_SHOP_LOCATION.INTERACTION_RADIUS;
+
+    const promptEl = document.getElementById('shop-prompt');
+    const hudIcon  = document.getElementById('shop-hud-icon');
+    const btnShop  = document.getElementById('btn-shop');
+
+    if (promptEl) promptEl.style.display = near ? 'block' : 'none';
+    if (hudIcon)  hudIcon.style.display  = near ? 'flex'  : 'none';
+    if (btnShop)  btnShop.style.display  = near ? 'flex'  : 'none';
+}
+
+/**
+ * openShop()
+ * Pauses the game, renders shop items, and opens the shop modal.
+ * Called when the player presses 'B' (or taps btn-shop) while near the kiosk.
+ */
+function openShop() {
+    if (gameState !== 'PLAYING') return;
+    gameState = 'PAUSED';
+
+    // Hide proximity prompt so it doesn't show behind the modal
+    const promptEl = document.getElementById('shop-prompt');
+    if (promptEl) promptEl.style.display = 'none';
+
+    ShopManager.open();
+
+    if (player) spawnFloatingText('🛒 MTC CO-OP STORE', player.x, player.y - 70, '#facc15', 22);
+    if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+}
+
+/**
+ * closeShop()
+ * Closes the shop modal and resumes the game.
+ * Called by the modal's close button.
+ */
+function closeShop() {
+    if (gameState !== 'PAUSED') return;
+    gameState = 'PLAYING';
+
+    ShopManager.close();
+    showResumePrompt(false);
+
+    // Reset all held keys to prevent stuck movement on resume
+    keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0;
+
+    window.focus();
+
+    if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
+}
+
+/**
+ * buyItem(itemId)
+ * Deducts score and applies the purchased item's effect to the player.
+ * Called by each shop card's Buy button (onclick in ui.js renderItems).
+ *
+ * Effects:
+ *   potion   — instant HP heal (capped at maxHp)
+ *   damageUp — multiplies player.damageBoost for 30 s, restores on expiry
+ *   speedUp  — multiplies player.moveSpeed for 30 s, restores on expiry
+ */
+function buyItem(itemId) {
+    const item = SHOP_ITEMS[itemId];
+    if (!item) { console.warn('buyItem: unknown itemId', itemId); return; }
+
+    if (!player) return;
+
+    const currentScore = getScore();
+    if (currentScore < item.cost) {
+        spawnFloatingText('คะแนนไม่พอ! 💸', player.x, player.y - 60, '#ef4444', 18);
+        if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
+        ShopManager.updateButtons();
+        return;
+    }
+
+    // ── Deduct the cost ──────────────────────────────────────────
+    addScore(-item.cost);
+
+    // ── Apply item effect ────────────────────────────────────────
+    if (itemId === 'potion') {
+        // Instant heal — capped at maxHp
+        const maxHp   = player.maxHp || BALANCE.characters[player.charType]?.maxHp || 110;
+        const lacking = maxHp - player.hp;
+        const healAmt = Math.min(item.heal, lacking);
+        if (healAmt > 0) {
+            player.hp += healAmt;
+            spawnFloatingText(`+${healAmt} HP 🧃`, player.x, player.y - 70, '#22c55e', 22);
+            spawnParticles(player.x, player.y, 10, '#22c55e');
+            if (typeof Audio !== 'undefined' && Audio.playHeal) Audio.playHeal();
+        } else {
+            spawnFloatingText('HP เต็มแล้ว!', player.x, player.y - 60, '#94a3b8', 16);
+        }
+
+    } else if (itemId === 'damageUp') {
+        if (player.shopDamageBoostActive) {
+            // Stack timer rather than multiplying damage twice
+            player.shopDamageBoostTimer += item.duration;
+            spawnFloatingText('🔧 DMG เวลา +30s!', player.x, player.y - 70, '#f59e0b', 22);
+        } else {
+            // Store original so we can restore it precisely on expiry
+            player._baseDamageBoost   = player.damageBoost || 1.0;
+            player.damageBoost        = (player.damageBoost || 1.0) * item.mult;
+            player.shopDamageBoostActive = true;
+            player.shopDamageBoostTimer  = item.duration;
+            spawnFloatingText('🔧 DMG ×1.1!', player.x, player.y - 70, '#f59e0b', 22);
+            spawnParticles(player.x, player.y, 8, '#f59e0b');
+        }
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+    } else if (itemId === 'speedUp') {
+        if (player.shopSpeedBoostActive) {
+            player.shopSpeedBoostTimer += item.duration;
+            spawnFloatingText('👟 SPD เวลา +30s!', player.x, player.y - 70, '#06b6d4', 22);
+        } else {
+            player._baseMoveSpeed     = player.moveSpeed;
+            player.moveSpeed          = player.moveSpeed * item.mult;
+            player.shopSpeedBoostActive = true;
+            player.shopSpeedBoostTimer  = item.duration;
+            spawnFloatingText('👟 SPD ×1.1!', player.x, player.y - 70, '#06b6d4', 22);
+            spawnParticles(player.x, player.y, 8, '#06b6d4');
+        }
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+    }
+
+    // ── Update HUD score ─────────────────────────────────────────
+    const scoreEl = document.getElementById('score');
+    if (scoreEl) scoreEl.textContent = getScore().toLocaleString();
+
+    // ── Achievement tracking ─────────────────────────────────────
+    Achievements.stats.shopPurchases = (Achievements.stats.shopPurchases || 0) + 1;
+    Achievements.check('shopaholic');
+
+    // ── Refresh button affordability ─────────────────────────────
+    ShopManager.updateButtons();
+}
+
+// Expose shop functions globally for onclick handlers and mobile buttons
+window.openShop   = openShop;
+window.closeShop  = closeShop;
+window.buyItem    = buyItem;
 
 // ==================== BOSS ====================
 class Boss extends Entity {
@@ -522,8 +753,13 @@ function gameLoop(now) {
         updateGame(dt);
         drawGame();
     } else if (gameState === 'PAUSED') {
-        // Render frozen scene behind the resume-prompt overlay
+        // Render frozen scene behind whichever overlay is active
         drawGame();
+        // Tick shop button states while shop is open
+        const shopModal = document.getElementById('shop-modal');
+        if (shopModal && shopModal.style.display === 'flex') {
+            ShopManager.tick();
+        }
     }
 
     requestAnimationFrame(gameLoop);
@@ -533,12 +769,47 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
+    // ── Shop buff timers ─────────────────────────────────────────
+    // Damage boost expiry
+    if (player.shopDamageBoostActive) {
+        player.shopDamageBoostTimer -= dt;
+        if (player.shopDamageBoostTimer <= 0) {
+            player.shopDamageBoostActive = false;
+            // Restore exact original value
+            if (player._baseDamageBoost !== undefined) {
+                player.damageBoost = player._baseDamageBoost;
+            } else {
+                player.damageBoost = 1.0;
+            }
+            spawnFloatingText('DMG Boost หมดแล้ว', player.x, player.y - 50, '#94a3b8', 14);
+        }
+    }
+
+    // Speed boost expiry
+    if (player.shopSpeedBoostActive) {
+        player.shopSpeedBoostTimer -= dt;
+        if (player.shopSpeedBoostTimer <= 0) {
+            player.shopSpeedBoostActive = false;
+            if (player._baseMoveSpeed !== undefined) {
+                player.moveSpeed = player._baseMoveSpeed;
+            }
+            spawnFloatingText('SPD Boost หมดแล้ว', player.x, player.y - 50, '#94a3b8', 14);
+        }
+    }
+
     // ── Database server: check E key BEFORE player.update()
-    //    so PoomPlayer doesn't steal keys.e for eatRice when near server
     const dToServer = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
         keys.e = 0;
         openExternalDatabase();
+        return;
+    }
+
+    // ── Shop: check B key ─────────────────────────────────────────
+    const dToShop = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
+    if (dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
+        keys.b = 0;
+        openShop();
         return;
     }
 
@@ -612,8 +883,9 @@ function updateGame(dt) {
     updateScreenShake();
     Achievements.checkAll();
 
-    // ── Database proximity UI ──
+    // ── Proximity UI ──
     updateDatabaseServerUI();
+    updateShopProximityUI();
 }
 
 function drawGame() {
@@ -638,6 +910,7 @@ function drawGame() {
 
     mapSystem.draw();
     drawDatabaseServer();      // ← MTC Database server object
+    drawShopObject();          // ← MTC Co-op Store kiosk
     powerups.forEach(p => p.draw());
     specialEffects.forEach(e => e.draw());
     player.draw();
@@ -700,6 +973,14 @@ function startGame(charType = 'kao') {
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss = null;
 
+    // ── Reset shop buff state on every fresh start ──
+    player.shopDamageBoostActive = false;
+    player.shopDamageBoostTimer  = 0;
+    player._baseDamageBoost      = undefined;
+    player.shopSpeedBoostActive  = false;
+    player.shopSpeedBoostTimer   = 0;
+    player._baseMoveSpeed        = undefined;
+
     UIManager.updateBossHUD(null);
     resetScore();
     setWave(1);
@@ -708,34 +989,31 @@ function startGame(charType = 'kao') {
     floatingTextSystem.clear();
     mapSystem.init();
 
-    // ── Tell WeaponSystem which char is active BEFORE updateWeaponUI().
-    //    Wrapped in try-catch so a UI failure never aborts game start. ──
     weaponSystem.setActiveChar(charType);
     try {
-        weaponSystem.updateWeaponUI();   // safe for Kao AND Poom (Poom shim in WeaponSystem)
+        weaponSystem.updateWeaponUI();
     } catch (err) {
         console.error('[startGame] updateWeaponUI threw — continuing anyway:', err);
     }
     UIManager.setupCharacterHUD(player);
 
-    Achievements.stats.damageTaken = 0;
+    Achievements.stats.damageTaken    = 0;
+    Achievements.stats.shopPurchases  = 0;
     waveStartDamage = 0;
 
     hideElement('overlay');
     hideElement('report-card');
 
-    // ── FIX: Reset report-card stat boxes so replays don't show stale data ──
     UIManager.resetGameOverUI();
 
-    // Ensure resume prompt is hidden on fresh game start
+    // Ensure overlays are hidden on fresh game start
     showResumePrompt(false);
+    ShopManager.close();
 
     startNextWave();
     gameState = 'PLAYING';
     resetTime();
 
-    // ── Show mobile controls now that we're in-game, and focus the window
-    //    so keyboard events are captured correctly after button tap. ──
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'block';
     window.focus();
@@ -750,29 +1028,24 @@ function startGame(charType = 'kao') {
 async function endGame(result) {
     gameState = 'GAMEOVER';
 
-    // ── Hide mobile joystick zones so they don't block overlay touches ──
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
 
-    // Force-hide resume prompt if game ended while paused
+    // Force-hide all overlays
     showResumePrompt(false);
+    ShopManager.close();
 
     if (result === 'victory') {
         showElement('victory-screen');
         setElementText('final-score', `SCORE ${getScore()}`);
         setElementText('final-wave',  `WAVES CLEARED ${getWave() - 1}`);
     } else {
-        // ── FIX: Snapshot score/wave NOW — async awaits below must not read
-        //    stale values if resetScore() is ever called before the promise resolves ──
         const finalScore = getScore();
         const finalWave  = getWave();
 
         showElement('overlay');
-
-        // ── Delegate all DOM writes to UIManager (single source of truth) ──
         UIManager.showGameOver(finalScore, finalWave);
 
-        // ── AI commentary (async — uses snapshotted values, not live getScore()) ──
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';
         const reportText = document.getElementById('report-text');
@@ -790,10 +1063,16 @@ async function endGame(result) {
 
 // ==================== INPUT ====================
 window.addEventListener('keydown', e => {
-    // ── While the game is PAUSED in-game, any key resumes play ──
-    // (Excludes MENU and GAMEOVER states where gameState !== 'PAUSED')
+    // While PAUSED: any key closes the shop (if open) or resumes
     if (gameState === 'PAUSED') {
-        resumeGame();
+        const shopModal = document.getElementById('shop-modal');
+        const shopOpen  = shopModal && shopModal.style.display === 'flex';
+
+        // Escape always closes the shop if it's open
+        if (shopOpen && e.code === 'Escape') { closeShop(); return; }
+        // For the resume-only overlay (DB pause), any key resumes
+        if (!shopOpen) { resumeGame(); return; }
+        // While shop is open, all other keys are captured (no movement)
         return;
     }
 
@@ -805,7 +1084,8 @@ window.addEventListener('keydown', e => {
     if (e.code === 'KeyD')   keys.d     = 1;
     if (e.code === 'Space') { keys.space = 1; e.preventDefault(); }
     if (e.code === 'KeyQ')   keys.q     = 1;
-    if (e.code === 'KeyE')   keys.e     = 1;   // Database open / Poom eat-rice fallback
+    if (e.code === 'KeyE')   keys.e     = 1;
+    if (e.code === 'KeyB')   keys.b     = 1;   // ← Open shop
 });
 
 window.addEventListener('keyup', e => {
@@ -815,6 +1095,7 @@ window.addEventListener('keyup', e => {
     if (e.code === 'KeyD')  keys.d     = 0;
     if (e.code === 'Space') keys.space = 0;
     if (e.code === 'KeyE')  keys.e     = 0;
+    if (e.code === 'KeyB')  keys.b     = 0;
     if (e.code === 'KeyQ') {
         if (gameState === 'PLAYING') {
             if (player instanceof PoomPlayer) keys.q = 0;
@@ -874,7 +1155,7 @@ function initMobileControls() {
     const stickR = document.getElementById('joystick-right-stick');
 
     function startJoystick(e, joystick, baseElem, stickElem, zoneElem, isRight = false) {
-        if (gameState !== 'PLAYING') return;  // ← FIX: never intercept menu/gameover touches
+        if (gameState !== 'PLAYING') return;
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
@@ -936,6 +1217,7 @@ function initMobileControls() {
     const btnSwitch   = document.getElementById('btn-switch');
     const btnNaga     = document.getElementById('btn-naga');
     const btnDatabase = document.getElementById('btn-database');
+    const btnShop     = document.getElementById('btn-shop');
 
     if (btnDash) {
         btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
@@ -961,12 +1243,24 @@ function initMobileControls() {
     }
 
     // ── Database button (mobile) ──
-    // Opens external DB in new tab when PLAYING; resumes game when PAUSED.
     if (btnDatabase) {
         btnDatabase.addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING') openExternalDatabase();
             else if (gameState === 'PAUSED') resumeGame();
+        }, { passive: false });
+    }
+
+    // ── Shop button (mobile) ──
+    if (btnShop) {
+        btnShop.addEventListener('touchstart', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (gameState === 'PLAYING') openShop();
+            else if (gameState === 'PAUSED') {
+                // If shop is open, close it; otherwise ignore
+                const shopModal = document.getElementById('shop-modal');
+                if (shopModal && shopModal.style.display === 'flex') closeShop();
+            }
         }, { passive: false });
     }
 

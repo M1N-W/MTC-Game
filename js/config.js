@@ -372,6 +372,45 @@ const BALANCE = {
 };
 
 // ──────────────────────────────────────────────────────────────
+// 🛒 SHOP ITEMS
+// Single source of truth for all purchasable items.
+// To add new items: extend this object and handle the id
+// inside buyItem() in game.js and ShopManager.renderItems() in ui.js.
+// ──────────────────────────────────────────────────────────────
+const SHOP_ITEMS = {
+    potion: {
+        id:       'potion',
+        name:     'Energy Drink',
+        icon:     '🧃',
+        cost:     500,
+        heal:     50,
+        duration: null,       // instant — no timer
+        desc:     'ฟื้นฟู HP +50 ทันที',
+        color:    '#22c55e'
+    },
+    damageUp: {
+        id:       'damageUp',
+        name:     'Weapon Tuner',
+        icon:     '🔧',
+        cost:     1000,
+        mult:     1.1,
+        duration: 30,          // seconds
+        desc:     'ดาเมจ ×1.1 เป็นเวลา 30 วิ',
+        color:    '#f59e0b'
+    },
+    speedUp: {
+        id:       'speedUp',
+        name:     'Lightweight Boots',
+        icon:     '👟',
+        cost:     800,
+        mult:     1.1,
+        duration: 30,          // seconds
+        desc:     'ความเร็ว ×1.1 เป็นเวลา 30 วิ',
+        color:    '#06b6d4'
+    }
+};
+
+// ──────────────────────────────────────────────────────────────
 // Game Constants
 // ──────────────────────────────────────────────────────────────
 const GAME_CONFIG = {
@@ -429,10 +468,11 @@ const ACHIEVEMENT_DEFS = [
     { id: 'ghost',          name: 'The Ghost of MTC',    desc: 'ซุ่มอ่าน 10 ครั้ง',                 icon: '👻' },
     { id: 'collector',      name: 'MTC Collector',       desc: 'เก็บ Power-up 10 ชิ้น',             icon: '💎' },
     { id: 'weapon_master',  name: 'Weapon Master',       desc: 'ใช้ปืนครบทั้ง 3 แบบ',              icon: '🔫' },
-    { id: 'naga_summoner',  name: 'Naga Summoner',       desc: 'อัญเชิญพญานาค 3 ครั้ง',             icon: '🐍' }
+    { id: 'naga_summoner',  name: 'Naga Summoner',       desc: 'อัญเชิญพญานาค 3 ครั้ง',             icon: '🐍' },
+    { id: 'shopaholic',     name: 'MTC Shopaholic',      desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง',       icon: '🛒' }
 ];
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BALANCE, GAME_CONFIG, ACHIEVEMENT_DEFS, API_KEY };
+    module.exports = { BALANCE, SHOP_ITEMS, GAME_CONFIG, ACHIEVEMENT_DEFS, API_KEY };
 }

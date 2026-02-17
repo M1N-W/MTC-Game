@@ -172,10 +172,33 @@
             50%       { box-shadow: 0 0 28px rgba(6,182,212,0.7); }
         }
 
-        /* ── Resume Prompt Overlay ──
-           Shown when game is paused (window blur or DB opened in new tab).
-           Replaces the old heavy iframe modal entirely.
-        ── */
+        /* ── Shop Interaction Prompt ── */
+        #shop-prompt {
+            position: absolute;
+            bottom: 200px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(250, 204, 21, 0.12);
+            border: 2px solid #facc15;
+            border-radius: 16px;
+            padding: 10px 22px;
+            font-size: 14px; font-weight: bold;
+            color: #fef08a;
+            text-align: center;
+            pointer-events: none;
+            z-index: 20;
+            display: none;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.25);
+            animation: shopPulse 1.5s ease-in-out infinite;
+            white-space: nowrap;
+        }
+
+        @keyframes shopPulse {
+            0%, 100% { box-shadow: 0 0 12px rgba(250,204,21,0.25); }
+            50%       { box-shadow: 0 0 30px rgba(250,204,21,0.6); }
+        }
+
+        /* ── Resume Prompt Overlay ── */
         #resume-prompt {
             display: none;
             position: fixed;
@@ -253,7 +276,7 @@
             letter-spacing: 1px;
         }
 
-        /* ── Pause Indicator (top-center strip) ── */
+        /* ── Pause Indicator ── */
         #pause-indicator {
             display: none;
             position: fixed;
@@ -268,6 +291,278 @@
             letter-spacing: 2px;
             z-index: 9001;
             pointer-events: none;
+        }
+
+        /* ══════════════════════════════════════════
+           🛒 SHOP MODAL
+           Themed as a golden market overlay.
+           Appears over the paused game canvas.
+        ══════════════════════════════════════════ */
+        #shop-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            z-index: 9500;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            pointer-events: auto;
+        }
+
+        .shop-inner {
+            background: linear-gradient(160deg, #1c1404 0%, #0f172a 50%, #1c1404 100%);
+            border: 2px solid #facc15;
+            border-radius: 24px;
+            padding: 36px 40px;
+            width: min(680px, 94vw);
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow:
+                0 0 60px rgba(250, 204, 21, 0.30),
+                0 30px 60px rgba(0, 0, 0, 0.9);
+            position: relative;
+
+            /* Entrance animation */
+            opacity: 0;
+            transform: translateY(30px) scale(0.96);
+            transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+        }
+
+        .shop-inner.shop-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Corner ornaments (CSS-only) */
+        .shop-inner::before,
+        .shop-inner::after {
+            content: '✦';
+            position: absolute;
+            font-size: 20px;
+            color: #facc15;
+            opacity: 0.5;
+        }
+        .shop-inner::before { top: 16px; left: 20px; }
+        .shop-inner::after  { bottom: 16px; right: 20px; }
+
+        .shop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(250, 204, 21, 0.25);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .shop-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            color: #facc15;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .shop-title-icon { font-size: 28px; }
+
+        .shop-score-info {
+            font-size: 14px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shop-score-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            color: #60a5fa;
+            background: rgba(96, 165, 250, 0.1);
+            padding: 4px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+        }
+
+        .shop-close-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1.5px solid rgba(239, 68, 68, 0.4);
+            color: #f87171;
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .shop-close-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .shop-subtitle {
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        /* Item grid */
+        #shop-items {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 560px) {
+            #shop-items { grid-template-columns: 1fr; }
+            .shop-inner { padding: 24px 20px; }
+            .shop-title { font-size: 18px; }
+        }
+
+        /* Individual shop card */
+        .shop-card {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1.5px solid #334155;
+            border-radius: 16px;
+            padding: 22px 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+            position: relative;
+        }
+
+        .shop-card:hover {
+            border-color: #facc15;
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
+            transform: translateY(-3px);
+        }
+
+        /* Greyed out when player can't afford */
+        .shop-card-disabled {
+            opacity: 0.45;
+            pointer-events: none;
+        }
+
+        /* Glowing border when buff is currently active */
+        .shop-card-active {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 18px rgba(34, 197, 94, 0.35) !important;
+        }
+
+        .shop-card-icon {
+            font-size: 42px;
+            line-height: 1;
+            filter: drop-shadow(0 0 8px currentColor);
+        }
+
+        .shop-card-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            color: #e2e8f0;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .shop-card-desc {
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.5;
+            min-height: 36px;
+        }
+
+        .shop-duration {
+            font-size: 11px;
+            color: #a78bfa;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            padding: 2px 8px;
+        }
+
+        .shop-card-cost {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            color: #fbbf24;
+        }
+
+        .shop-cost-icon { font-size: 16px; }
+
+        .shop-buy-btn {
+            --shop-btn-color: #facc15;
+            background: transparent;
+            border: 2px solid var(--shop-btn-color);
+            color: var(--shop-btn-color);
+            padding: 8px 24px;
+            border-radius: 10px;
+            font-family: 'Kanit', sans-serif;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .shop-buy-btn:not(:disabled):hover {
+            background: var(--shop-btn-color);
+            color: #0f172a;
+            box-shadow: 0 0 20px var(--shop-btn-color);
+            transform: scale(1.04);
+        }
+
+        .shop-buy-btn:not(:disabled):active {
+            transform: scale(0.97);
+        }
+
+        .shop-buy-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            border-color: #475569;
+            color: #475569;
+        }
+
+        /* Active buff timer badge inside the card */
+        .shop-buff-timer {
+            position: absolute;
+            top: -10px; left: 50%;
+            transform: translateX(-50%);
+            background: #22c55e;
+            color: #052e16;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 10px;
+            border-radius: 10px;
+            white-space: nowrap;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+
+        .shop-footer {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 12px;
+            color: #475569;
+            letter-spacing: 1px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(250, 204, 21, 0.1);
         }
 
         /* Achievements */
@@ -635,11 +930,19 @@
         #btn-skill  { right: 86px;  bottom: 150px; }
         #btn-switch { right: 142px; bottom: 92px; }
 
-        /* ── Database button: bottom-left, shown when near server ── */
+        /* ── Database button: bottom-left ── */
         #btn-database {
             left: 18px; bottom: 200px;
             border-color: #06b6d4;
             background: rgba(6,182,212,0.2);
+            display: none;
+        }
+
+        /* ── Shop button: bottom-left, above database ── */
+        #btn-shop {
+            left: 18px; bottom: 270px;
+            border-color: #facc15;
+            background: rgba(250,204,21,0.15);
             display: none;
         }
     </style>
@@ -654,14 +957,14 @@
     <!-- Database proximity prompt -->
     <div id="db-prompt">🗄️ กด <kbd style="background:#06b6d4;color:#000;padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:bold;">E</kbd> เพื่อเปิด MTC DATABASE</div>
 
+    <!-- Shop proximity prompt -->
+    <div id="shop-prompt">🛒 กด <kbd style="background:#facc15;color:#000;padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:bold;">B</kbd> เพื่อเปิด MTC CO-OP STORE</div>
+
     <!-- Pause indicator strip (top-center) -->
     <div id="pause-indicator">⏸ PAUSED — DATABASE</div>
 
     <!-- ══════════════════════════════════════════
-         RESUME PROMPT
-         Lightweight overlay shown when window loses focus
-         or when the player opens the MTC Database in a new tab.
-         Replaces the old heavy <iframe> modal.
+         RESUME PROMPT (DB / window blur pause)
     ══════════════════════════════════════════ -->
     <div id="resume-prompt" onclick="resumeGame()">
         <div class="resume-prompt-inner">
@@ -673,6 +976,46 @@
             </div>
             <button class="resume-btn" onclick="event.stopPropagation(); resumeGame()">▶ RESUME GAME</button>
             <div class="resume-hint">หรือกดปุ่มใดก็ได้เพื่อเล่นต่อ</div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         🛒 SHOP MODAL
+         Shown when player presses B near the kiosk.
+         Game is paused (gameState = 'PAUSED') while open.
+         Closed via the × button or pressing Escape.
+    ══════════════════════════════════════════ -->
+    <div id="shop-modal">
+        <div class="shop-inner">
+
+            <!-- Header: title + current score + close button -->
+            <div class="shop-header">
+                <div class="shop-title">
+                    <span class="shop-title-icon">🛒</span>
+                    MTC CO-OP STORE
+                </div>
+                <div class="shop-score-info">
+                    <span>💰 คะแนน:</span>
+                    <span class="shop-score-value" id="shop-score-display">0</span>
+                </div>
+                <button
+                    class="shop-close-btn"
+                    onclick="closeShop()"
+                    ontouchstart="event.preventDefault(); closeShop();"
+                    title="ปิดร้าน (Escape)"
+                >✕</button>
+            </div>
+
+            <div class="shop-subtitle">✦ ใช้คะแนนซื้อไอเทม — กด Escape เพื่อออก ✦</div>
+
+            <!-- Item cards injected by ShopManager.renderItems() -->
+            <div id="shop-items">
+                <!-- Populated dynamically by ShopManager.renderItems() in ui.js -->
+            </div>
+
+            <div class="shop-footer">
+                ⚠️ ไอเทมชั่วคราวจะหมดเมื่อครบเวลา &nbsp;|&nbsp; ซื้อซ้ำเพื่อต่อเวลา
+            </div>
         </div>
     </div>
 
@@ -700,8 +1043,10 @@
         <button id="btn-dash"     class="action-btn">💨</button>
         <!-- Naga skill — hidden by default, setupCharacterHUD toggles -->
         <button id="btn-naga"     class="action-btn" style="display:none; right:18px; bottom:270px; border-color:#10b981; background:rgba(16,185,129,0.2);">🐉</button>
-        <!-- MTC Database — hidden by default, shown when near server -->
+        <!-- MTC Database — shown when near server -->
         <button id="btn-database" class="action-btn">📚</button>
+        <!-- MTC Shop — shown when near kiosk -->
+        <button id="btn-shop"     class="action-btn">🛒</button>
     </div>
 
     <!-- HUD Layer -->
@@ -770,6 +1115,11 @@
                 <div class="key-hint" style="background:#06b6d4;color:#0c1a2e;">E</div>🗄️
                 <div class="skill-name" style="color:#67e8f9;">DATABASE</div>
             </div>
+            <!-- Shop shortcut icon in HUD (desktop hint) -->
+            <div class="skill-icon" id="shop-hud-icon" style="display:none; border-color:#facc15; box-shadow:0 0 15px rgba(250,204,21,0.35);">
+                <div class="key-hint" style="background:#facc15;color:#0f172a;">B</div>🛒
+                <div class="skill-name" style="color:#fef08a;">SHOP</div>
+            </div>
         </div>
     </div>
 
@@ -836,6 +1186,7 @@
                         <div class="feature-item">🌾 ตัวละครใหม่ "ภูมิ" คนอีสาน</div>
                         <div class="feature-item">🐉 สกิลรูปแบบใหม่ — อัญเชิญพญานาค</div>
                         <div class="feature-item">🗄️ MTC Database — Math Explorer (Education Website)</div>
+                        <div class="feature-item">🛒 MTC Co-op Store — ซื้อไอเทมด้วย Score!</div>
                     </div>
                 </div>
                 <div class="instructions">
@@ -846,9 +1197,10 @@
                         <div>📖 <strong>R-Click</strong> สกิลซุ่ม</div>
                         <div>💨 <strong>SPACE</strong> พุ่งตัว</div>
                         <div>🔄 <strong>Q</strong> สลับปืน</div>
-                        <div>🗄️ <strong>E</strong> เข้าเว็บ Math Explorer</div>
+                        <div>🗄️ <strong>E</strong> เปิด Math Explorer</div>
+                        <div>🛒 <strong>B</strong> เปิดร้านค้า</div>
                     </div>
-                    <p style="font-size:13px; color:#facc15;">💡 Tips: เข้า MTC Room เพื่อฟื้นฟูเลือด และ Server เพื่อเปิด Math DB!</p>
+                    <p style="font-size:13px; color:#facc15;">💡 Tips: เข้า MTC Room ฟื้นฟูเลือด | Server เปิด Math DB | ร้านค้าอยู่ตรงข้ามมุม!</p>
                 </div>
             </div>
 
