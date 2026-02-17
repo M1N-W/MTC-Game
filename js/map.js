@@ -104,14 +104,14 @@ class MapObject {
         CTX.fillStyle = '#1e293b';
         CTX.fillRect(0, 0, this.w, this.h);
         CTX.strokeStyle = '#94a3b8';
-        CTX.lineWidth = 4;
+        CTX.lineWidth = 3;
         CTX.strokeRect(4, 4, this.w - 8, this.h - 8);
         CTX.fillStyle = '#fff';
         CTX.font = 'bold 18px monospace';
         CTX.textAlign = 'center';
         CTX.textBaseline = 'middle';
         CTX.fillText('ax² + bx + c = 0', this.w / 2, this.h / 2);
-        CTX.font = 'bold 12px monospace';
+        CTX.font = 'bold 10px monospace';
         CTX.fillText('∫f(x)dx', this.w / 4, this.h - 15);
         CTX.fillText('lim x→∞', 3 * this.w / 4, this.h - 15);
     }

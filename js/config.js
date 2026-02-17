@@ -236,7 +236,7 @@ const BALANCE = {
     map: {
         size: 3000,            // Map size (3000x3000)
         objectDensity: 0.12,   // ความหนาแน่นของวัตถุ (0.12 = 12% ของพื้นที่)
-        objectTypes: ['desk', 'chair', 'cabinet', 'blackboard'],
+        objectTypes: ['wall', 'chair', 'cabinet', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
             { x: 1450, y: -50, w: 50, h: 100 },
