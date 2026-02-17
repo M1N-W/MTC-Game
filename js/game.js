@@ -86,6 +86,13 @@ function closeMathModal() {
     const pause = document.getElementById('pause-indicator');
     if (pause) pause.style.display = 'none';
 
+    // ── FIX: Reset all key states to prevent stuck movement after modal close ──
+    keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0;
+
+    // ── FIX: Recapture keyboard focus from the iframe back to the game window ──
+    window.focus();
+
     if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
 }
 

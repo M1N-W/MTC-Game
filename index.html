@@ -658,7 +658,7 @@
          MATH DATABASE MODAL
          Uses <iframe> for full CSS isolation
     ══════════════════════════════════════════ -->
-    <div id="math-modal">
+    <div id="math-modal" onclick="if(event.target===this) closeMathModal()">
         <div class="math-modal-inner">
             <div class="math-modal-header">
                 <div class="math-modal-title">
@@ -672,7 +672,7 @@
             <iframe id="math-iframe"
                     title="MTC Math Archive"
                     allow="same-origin"
-                    sandbox="allow-scripts allow-same-origin allow-forms">
+                    sandbox="allow-scripts allow-same-origin">
             </iframe>
         </div>
     </div>
