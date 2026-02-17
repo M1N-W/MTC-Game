@@ -18,6 +18,15 @@
  * - ✅ 'E' key / mobile btn-database → openExternalDatabase()
  * - ✅ gameState = 'PAUSED' when DB is opened or window loses focus (blur)
  * - ✅ resumeGame()  → restores gameState = 'PLAYING', resets keys, hides prompt
+ *
+ * (Drone Feature — v5 — NEW):
+ * - ✅ window.drone global — holds the active Drone instance
+ * - ✅ startGame() creates a fresh Drone at player spawn
+ * - ✅ updateGame() calls drone.update(dt, player)
+ * - ✅ drawGame() calls drone.draw() between map objects and player
+ * - ✅ endGame() nullifies window.drone to prevent stale references
+ * - ✅ Drone is paused automatically because updateGame() is skipped
+ *       while gameState === 'PAUSED' — no extra logic needed
  */
 
 // ─── Game State ───────────────────────────────────────────
@@ -32,6 +41,7 @@ window.boss           = null;
 window.powerups       = [];
 window.specialEffects = [];
 window.meteorZones    = [];
+window.drone          = null;   // ← Engineering Drone companion
 let waveStartDamage   = 0;
 
 // ─── MTC Database Server ──────────────────────────────────
@@ -753,7 +763,8 @@ function gameLoop(now) {
         updateGame(dt);
         drawGame();
     } else if (gameState === 'PAUSED') {
-        // Render frozen scene behind whichever overlay is active
+        // Render frozen scene behind whichever overlay is active.
+        // The drone is naturally frozen here because updateGame() is not called.
         drawGame();
         // Tick shop button states while shop is open
         const shopModal = document.getElementById('shop-modal');
@@ -842,6 +853,12 @@ function updateGame(dt) {
         UIManager.updateSkillIcons(player);
     }
 
+    // ── 🤖 Drone update ────────────────────────────────────────────
+    // Safe guard: only update if the drone exists and the player is alive.
+    if (window.drone && player && !player.dead) {
+        window.drone.update(dt, player);
+    }
+
     if (boss) boss.update(dt, player);
 
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -913,6 +930,12 @@ function drawGame() {
     drawShopObject();          // ← MTC Co-op Store kiosk
     powerups.forEach(p => p.draw());
     specialEffects.forEach(e => e.draw());
+
+    // ── 🤖 Draw drone BEFORE the player so it appears to hover
+    //    behind the player's sprite — feels more natural as a
+    //    companion that follows rather than leads.
+    if (window.drone) window.drone.draw();
+
     player.draw();
     enemies.forEach(e => e.draw());
     if (boss && !boss.dead) boss.draw();
@@ -981,6 +1004,16 @@ function startGame(charType = 'kao') {
     player.shopSpeedBoostTimer   = 0;
     player._baseMoveSpeed        = undefined;
 
+    // ── 🤖 Create the Engineering Drone ─────────────────────────
+    // Spawned at the player's starting position so it doesn't lerp
+    // in from (0, 0) on the first frame.
+    window.drone = new Drone();
+    window.drone.x = player.x;
+    window.drone.y = player.y;
+    // Announce the companion
+    spawnFloatingText('🤖 DRONE ONLINE', player.x, player.y - 90, '#00e5ff', 20);
+    console.log('🤖 Engineering Drone initialised');
+
     UIManager.updateBossHUD(null);
     resetScore();
     setWave(1);
@@ -1034,6 +1067,11 @@ async function endGame(result) {
     // Force-hide all overlays
     showResumePrompt(false);
     ShopManager.close();
+
+    // ── 🤖 Deactivate drone on game over ────────────────────────
+    // Setting to null prevents update/draw calls on a stale entity
+    // and lets the GC collect it cleanly.
+    window.drone = null;
 
     if (result === 'victory') {
         showElement('victory-screen');

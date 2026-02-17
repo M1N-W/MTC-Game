@@ -1,6 +1,6 @@
 /**
  * 👾 MTC: ENHANCED EDITION - Game Entities (REFACTORED)
- * Player, PoomPlayer, NagaEntity, Enemies, Boss, PowerUps
+ * Player, PoomPlayer, NagaEntity, Enemies, Boss, PowerUps, Drone
  *
  * REFACTORED:
  * - ✅ Player constructor accepts charId ('kao' | future chars)
@@ -8,6 +8,13 @@
  * - ✅ Shared physics pulled from BALANCE.physics
  * - ✅ PoomPlayer uses BALANCE.characters.poom throughout
  * - ✅ Confused status timer properly counts down and expires
+ *
+ * NEW (Drone Feature):
+ * - ✅ class Drone extends Entity
+ * - ✅ Smooth lerp-based follow with configurable orbital path
+ * - ✅ Nearest-enemy scan (O(n) — simple, no lag)
+ * - ✅ Auto-fires via projectileManager when target in range
+ * - ✅ Metallic canvas draw with bobbing, rotor-spin, and targeting glow
  */
 
 // ────────────────────────────────────────────────────────────
@@ -1024,11 +1031,318 @@ class PowerUp {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Entity, Player, PoomPlayer, NagaEntity, Enemy, TankEnemy, MageEnemy, PowerUp };
+// ────────────────────────────────────────────────────────────
+// 🤖 DRONE — Engineering Companion
+//
+// Follows the player via an exponential-lerp orbit, then scans
+// for the nearest enemy each frame (O(n) linear scan — no lag).
+// Fires a single projectile via projectileManager when a target
+// is within BALANCE.drone.range.
+//
+// Animation layers (all drawn in world→screen space):
+//   1. Ground shadow (scales with bob height)
+//   2. Body hexagonal plate (metallic dark slate)
+//   3. Two rotor arms with spinning blades
+//   4. Central sensor eye (pulsing cyan glow)
+//   5. Barrel cannon (rotates toward active target)
+//   6. "LOCK-ON" arc drawn when a target is acquired
+// ────────────────────────────────────────────────────────────
+class Drone extends Entity {
+    constructor() {
+        const S = BALANCE.drone;
+        super(0, 0, S.radius);
+
+        // ── Combat state ──────────────────────────────────────
+        this.shootCooldown  = 0;           // seconds remaining until next shot
+        this.targetAngle    = 0;           // angle toward last known target (radians)
+        this.hasTarget      = false;       // whether a target was found this frame
+
+        // ── Animation timers ──────────────────────────────────
+        this.bobTimer       = Math.random() * Math.PI * 2; // phase-offset so it doesn't sync with player
+        this.orbitAngle     = 0;           // current angle on the orbital circle
+
+        // ── Lock-on ring animation ────────────────────────────
+        this.lockTimer      = 0;           // drives the sweeping lock-on arc
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // update(dt, player)
+    //   Called every frame from updateGame() while PLAYING.
+    //   1. Advance timers
+    //   2. Lerp position toward orbit target around player
+    //   3. Scan for nearest enemy; fire if cooldown ready
+    // ─────────────────────────────────────────────────────────
+    update(dt, player) {
+        const S = BALANCE.drone;
+
+        // ── Advance animation timers ──────────────────────────
+        this.bobTimer    += dt * S.bobSpeed;
+        this.orbitAngle  += dt * S.orbitSpeed;
+        this.lockTimer   += dt;
+        if (this.shootCooldown > 0) this.shootCooldown -= dt;
+
+        // ── Compute orbit target in world space ───────────────
+        // The drone circles the player at orbitRadius, with a
+        // small vertical bob mixed in so it feels alive.
+        const targetX = player.x + Math.cos(this.orbitAngle) * S.orbitRadius;
+        const targetY = player.y + Math.sin(this.orbitAngle) * S.orbitRadius
+                        + Math.sin(this.bobTimer) * S.bobAmplitude;
+
+        // ── Exponential lerp — frame-rate independent ─────────
+        // lerpFactor approaches 1 as dt grows, giving consistent
+        // smoothing regardless of frame rate.
+        const lerpFactor = 1 - Math.pow(S.lerpBase, dt);
+        this.x += (targetX - this.x) * lerpFactor;
+        this.y += (targetY - this.y) * lerpFactor;
+
+        // ── Combat: find nearest enemy (O(n) scan) ────────────
+        this.hasTarget = false;
+        if (this.shootCooldown <= 0) {
+            const target = this._findNearestEnemy();
+            if (target) {
+                this.targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
+                this.hasTarget   = true;
+                this.lockTimer   = 0;
+
+                // Fire a small cyan projectile
+                projectileManager.add(new Projectile(
+                    this.x, this.y,
+                    this.targetAngle,
+                    S.projectileSpeed,
+                    S.damage,
+                    S.projectileColor,
+                    false,   // not homing (keeps it simple / performant)
+                    'player' // same team as player — won't hurt the player
+                ));
+
+                this.shootCooldown = 1.0 / S.fireRate;
+
+                // Small visual feedback on the drone itself
+                spawnParticles(this.x, this.y, 2, S.projectileColor);
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // _findNearestEnemy()
+    //   Pure O(n) linear scan.  Checks window.enemies first,
+    //   then window.boss.  Returns the closest Entity within
+    //   BALANCE.drone.range, or null if none found.
+    //   Deliberately simple — no spatial partitioning needed
+    //   for the typical enemy counts in this game.
+    // ─────────────────────────────────────────────────────────
+    _findNearestEnemy() {
+        const S = BALANCE.drone;
+        let nearest     = null;
+        let nearestDist = S.range;  // acts as initial threshold
+
+        // ── Scan regular enemies ──────────────────────────────
+        const enemyList = window.enemies || [];
+        for (let i = 0; i < enemyList.length; i++) {
+            const e = enemyList[i];
+            if (e.dead) continue;
+            const d = dist(this.x, this.y, e.x, e.y);
+            if (d < nearestDist) { nearestDist = d; nearest = e; }
+        }
+
+        // ── Check boss too ────────────────────────────────────
+        if (window.boss && !window.boss.dead) {
+            const d = dist(this.x, this.y, window.boss.x, window.boss.y);
+            if (d < nearestDist) { nearest = window.boss; }
+        }
+
+        return nearest;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // draw()
+    //   Draws the drone at its world position, converted to
+    //   screen space via worldToScreen().
+    //   The bob is baked into the y offset so the shadow stays
+    //   on the ground while the body floats.
+    // ─────────────────────────────────────────────────────────
+    draw() {
+        const S         = BALANCE.drone;
+        const bobOffset = Math.sin(this.bobTimer) * S.bobAmplitude;
+
+        // worldToScreen on the "ground" position (no bob) for shadow
+        const groundScreen = worldToScreen(this.x, this.y);
+        // worldToScreen for the actual drone body (with bob)
+        const bodyScreen   = worldToScreen(this.x, this.y + bobOffset);
+
+        // ── 1. Ground shadow — fades as drone bobs up ────────
+        const shadowAlpha = 0.15 + (1 - (bobOffset + S.bobAmplitude) / (S.bobAmplitude * 2)) * 0.2;
+        const shadowScale = 0.8 + (1 - (bobOffset + S.bobAmplitude) / (S.bobAmplitude * 2)) * 0.2;
+        CTX.save();
+        CTX.globalAlpha = Math.max(0.05, shadowAlpha);
+        CTX.fillStyle   = 'rgba(0,0,0,0.6)';
+        CTX.beginPath();
+        CTX.ellipse(groundScreen.x, groundScreen.y + 22, 16 * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.restore();
+
+        // ── Lock-on arc when targeting ────────────────────────
+        if (this.hasTarget) {
+            const arcAlpha = 0.5 + Math.sin(this.lockTimer * 12) * 0.3;
+            CTX.save();
+            CTX.globalAlpha   = arcAlpha;
+            CTX.strokeStyle   = '#00e5ff';
+            CTX.lineWidth     = 1.5;
+            CTX.shadowBlur    = 8;
+            CTX.shadowColor   = '#00e5ff';
+            CTX.beginPath();
+            CTX.arc(
+                bodyScreen.x, bodyScreen.y,
+                S.radius + 8,
+                this.targetAngle - 0.6,
+                this.targetAngle + 0.6
+            );
+            CTX.stroke();
+            CTX.restore();
+        }
+
+        // ── Main body group ───────────────────────────────────
+        CTX.save();
+        CTX.translate(bodyScreen.x, bodyScreen.y);
+
+        // ── 2. Rotor arms (drawn before body so body occludes them) ──
+        const armAngle = this.orbitAngle * 2.5; // arms slowly rotate independently
+        CTX.save();
+        CTX.rotate(armAngle);
+
+        for (let side = -1; side <= 1; side += 2) {
+            // Arm strut
+            CTX.strokeStyle = '#475569';
+            CTX.lineWidth   = 2.5;
+            CTX.beginPath();
+            CTX.moveTo(0, 0);
+            CTX.lineTo(side * 19, -3);
+            CTX.stroke();
+
+            // Rotor hub
+            CTX.fillStyle = '#64748b';
+            CTX.beginPath();
+            CTX.arc(side * 19, -3, 3.5, 0, Math.PI * 2);
+            CTX.fill();
+
+            // Spinning blades (four-blade cross)
+            const spin = this.bobTimer * 8; // fast spin
+            CTX.save();
+            CTX.translate(side * 19, -3);
+            CTX.rotate(spin * side); // opposite directions for each rotor
+            CTX.strokeStyle = 'rgba(148,163,184,0.75)';
+            CTX.lineWidth   = 2;
+            for (let blade = 0; blade < 4; blade++) {
+                const a = (blade / 4) * Math.PI * 2;
+                CTX.beginPath();
+                CTX.moveTo(0, 0);
+                CTX.lineTo(Math.cos(a) * 8, Math.sin(a) * 8);
+                CTX.stroke();
+            }
+            CTX.restore();
+        }
+
+        CTX.restore(); // un-rotate arm group
+
+        // ── 3. Hexagonal body plate (metallic dark slate) ─────
+        const glowPulse = 0.6 + Math.sin(this.bobTimer * 2) * 0.4;
+        CTX.shadowBlur  = 10 * glowPulse;
+        CTX.shadowColor = '#00e5ff';
+
+        // Outer hex
+        CTX.fillStyle   = '#1e293b';
+        CTX.strokeStyle = '#334155';
+        CTX.lineWidth   = 1.5;
+        CTX.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+            const r = S.radius;
+            if (i === 0) CTX.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+            else         CTX.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        CTX.closePath();
+        CTX.fill();
+        CTX.stroke();
+
+        // Inner hex highlight (top-left bevel effect)
+        CTX.fillStyle   = '#273548';
+        CTX.strokeStyle = '#3d5068';
+        CTX.lineWidth   = 1;
+        CTX.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+            const r = S.radius * 0.6;
+            if (i === 0) CTX.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+            else         CTX.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        CTX.closePath();
+        CTX.fill();
+        CTX.stroke();
+
+        // ── 4. Central sensor eye ─────────────────────────────
+        // Outer iris ring
+        CTX.strokeStyle   = `rgba(0,229,255,${0.5 + glowPulse * 0.5})`;
+        CTX.lineWidth     = 1.5;
+        CTX.shadowBlur    = 14 * glowPulse;
+        CTX.shadowColor   = '#00e5ff';
+        CTX.beginPath();
+        CTX.arc(0, 0, 5, 0, Math.PI * 2);
+        CTX.stroke();
+
+        // Pupil fill
+        CTX.fillStyle = `rgba(0,229,255,${0.7 * glowPulse})`;
+        CTX.beginPath();
+        CTX.arc(0, 0, 3, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Specular highlight
+        CTX.fillStyle = 'rgba(255,255,255,0.8)';
+        CTX.beginPath();
+        CTX.arc(-1, -1, 1, 0, Math.PI * 2);
+        CTX.fill();
+
+        CTX.shadowBlur = 0;
+
+        // ── 5. Barrel cannon (points toward target) ───────────
+        CTX.save();
+        CTX.rotate(this.targetAngle);
+        CTX.fillStyle   = '#475569';
+        CTX.strokeStyle = '#64748b';
+        CTX.lineWidth   = 1;
+        // Barrel mount
+        CTX.beginPath();
+        CTX.roundRect(4, -2.5, 11, 5, 2);
+        CTX.fill();
+        CTX.stroke();
+        // Muzzle tip accent
+        CTX.fillStyle = this.hasTarget ? '#00e5ff' : '#334155';
+        CTX.fillRect(13, -1.5, 3, 3);
+        CTX.restore();
+
+        CTX.restore(); // un-translate body group
+
+        // ── 6. Small "DRONE" label (very faint, tiny) ─────────
+        CTX.save();
+        CTX.globalAlpha    = 0.45;
+        CTX.fillStyle      = '#94a3b8';
+        CTX.font           = 'bold 6px Arial';
+        CTX.textAlign      = 'center';
+        CTX.textBaseline   = 'middle';
+        CTX.fillText('DRONE', bodyScreen.x, bodyScreen.y + S.radius + 9);
+        CTX.restore();
+    }
 }
 
-// ===== SAFE MOBILE PATCH =====
+// ─────────────────────────────────────────────────────────────
+// Module exports (Node / bundler environments)
+// ─────────────────────────────────────────────────────────────
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Entity, Player, PoomPlayer, NagaEntity, Enemy, TankEnemy, MageEnemy, PowerUp, Drone };
+}
+
+// ==========================================================
+// 📱 SAFE MOBILE PATCH — preserves original update signature
+// ==========================================================
 if (typeof Player !== "undefined") {
     const __origUpdate = Player.prototype.update;
     Player.prototype.update = function(dt, keys, mouse) {

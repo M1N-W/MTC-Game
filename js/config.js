@@ -165,6 +165,26 @@ const BALANCE = {
     },
 
     // ──────────────────────────────────────────────────────────────
+    // 🤖 ENGINEERING DRONE (companion that follows & auto-attacks)
+    // Single source of truth for all drone tuning.
+    // ──────────────────────────────────────────────────────────────
+    drone: {
+        radius: 12,            // collision / draw size
+        damage: 10,            // damage per projectile
+        range: 300,            // world-unit detection radius for enemies
+        fireRate: 1.0,         // shots per second  →  cooldown = 1 / fireRate
+        projectileSpeed: 700,  // world units / s for drone bullets
+        projectileColor: '#00e5ff',
+
+        speed: 250,            // unused for direct movement (lerp-based), reserved
+        orbitRadius: 75,       // how far the drone hovers from the player
+        orbitSpeed: 1.1,       // radians / s for the orbital path
+        lerpBase: 0.02,        // exponential-lerp base  — Math.pow(lerpBase, dt)
+        bobAmplitude: 8,       // pixels of vertical bob on-screen
+        bobSpeed: 3.5          // radians / s for the bob cycle
+    },
+
+    // ──────────────────────────────────────────────────────────────
     // 👾 BASIC ENEMY (REBALANCED)
     // ──────────────────────────────────────────────────────────────
     enemy: {
