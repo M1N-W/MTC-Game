@@ -8,6 +8,15 @@
  * - ✅ Smart Objects: Tech Trees, Data Pillars, Outdoor Bookshelves
  * - ✅ Zone-based generation: Garden (NW), Tech Building (NE), Library (SW), East Campus (SE)
  * - ✅ Collision / physics logic left 100% intact
+ *
+ * LIGHTING ENGINE (v7 — NEW):
+ * - ✅ MapSystem holds a single persistent offscreen <canvas> — never recreated per frame
+ * - ✅ drawLighting(player, projectiles, extraLights) paints a darkness overlay with
+ *       cut-out light circles using globalCompositeOperation = 'destination-out'
+ * - ✅ Light types: 'warm' (amber torch), 'cool' (cyan tech), 'neutral' (white)
+ * - ✅ Coloured tint pass (source-over) adds atmospheric hue inside each lit area
+ * - ✅ DataPillar + Server map objects automatically emit cool ambient light
+ * - ✅ Called AFTER CTX.restore() in drawGame() → HUD always stays fully bright
  */
 
 // ═══════════════════════════════════════════════════════════
@@ -627,7 +636,7 @@ class MTCRoom {
         CTX.fillText('y = mx + c    |    ∑n²    |    P(A∩B)', s.x + W / 2, wbY + 28);
         CTX.font = 'bold 9px monospace';
         CTX.fillStyle = '#86efac';
-        CTX.fillText('>>> print("Hello, MTC!")   →   O(log n)', s.x + W / 2, wbY + 42);
+        CTX.fillText('>>> print(\"Hello, MTC!\")   →   O(log n)', s.x + W / 2, wbY + 42);
 
         // Chalk tray
         CTX.fillStyle = '#4a2000';
@@ -747,6 +756,13 @@ class MapSystem {
         this.objects = [];
         this.mtcRoom = null;
         this.initialized = false;
+
+        // ── Lighting engine ──────────────────────────────────
+        // Offscreen canvas created ONCE here so it is never
+        // re-allocated during gameplay.  Resized lazily if the
+        // main CANVAS dimensions change (e.g. window resize).
+        this._lightCanvas = document.createElement('canvas');
+        this._lightCtx    = this._lightCanvas.getContext('2d');
     }
 
     init() {
@@ -884,10 +900,180 @@ class MapSystem {
         }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // 💡 drawLighting(player, projectiles, extraLights)
+    //
+    // Paints a full-screen darkness overlay with radial
+    // "cut-out" light circles at every light source.
+    //
+    // Technique (single persistent offscreen canvas):
+    //   1. Resize offscreen canvas to match main canvas if needed
+    //   2. Fill with dark night colour at (1 - ambientLight) opacity
+    //   3. Set composite = 'destination-out'
+    //      → drawing erases the darkness, revealing the world beneath
+    //   4. Draw radial gradients (opaque centre → transparent edge)
+    //      at each light-source position (in shaken screen coords)
+    //   5. Set composite = 'source-over'
+    //      → draw warm/cool tint disc to add atmospheric colour
+    //   6. Blit offscreen canvas onto main CTX at (0,0) in screen space
+    //
+    // Called AFTER CTX.restore() in drawGame() so it covers the
+    // entire canvas and the HUD (which lives in HTML) remains bright.
+    //
+    // @param {Entity|null}   player       — the player entity
+    // @param {Projectile[]}  projectiles  — array of live projectiles
+    // @param {LightDef[]}    extraLights  — [{x,y,radius,type}] from game.js
+    // ═══════════════════════════════════════════════════════
+    drawLighting(player, projectiles = [], extraLights = []) {
+        const L        = BALANCE.LIGHTING;
+        const darkness = 1.0 - L.ambientLight;
+
+        // Skip the whole pass during bright daytime — no cost at all
+        if (darkness < 0.02) return;
+
+        const lc   = this._lightCanvas;
+        const lctx = this._lightCtx;
+
+        // ── Lazy resize (handles window resize events) ───────
+        if (lc.width !== CANVAS.width || lc.height !== CANVAS.height) {
+            lc.width  = CANVAS.width;
+            lc.height = CANVAS.height;
+        }
+
+        // Shake offset — needed so light positions stay anchored
+        // to world objects even during screen-shake events.
+        const shake = getScreenShakeOffset();
+
+        // ── Helper: world → shaken screen coords ─────────────
+        const toSS = (wx, wy) => {
+            const s = worldToScreen(wx, wy);
+            return { x: s.x + shake.x, y: s.y + shake.y };
+        };
+
+        // ── ① Fill darkness overlay ───────────────────────────
+        lctx.globalCompositeOperation = 'source-over';
+        lctx.clearRect(0, 0, lc.width, lc.height);
+        lctx.fillStyle = `rgba(${L.nightR},${L.nightG},${L.nightB},${darkness.toFixed(3)})`;
+        lctx.fillRect(0, 0, lc.width, lc.height);
+
+        // ── Core light-punch helper ───────────────────────────
+        // type: 'warm' | 'cool' | 'neutral'
+        // intensity: radius scale multiplier (default 1.0)
+        const punchLight = (wx, wy, radius, type = 'neutral', intensity = 1.0) => {
+            const { x, y } = toSS(wx, wy);
+            const r         = radius * intensity;
+
+            // — Step A: destination-out erase ——————————————
+            lctx.globalCompositeOperation = 'destination-out';
+            const erase = lctx.createRadialGradient(x, y, 0, x, y, r);
+            erase.addColorStop(0,    'rgba(0,0,0,1)');
+            erase.addColorStop(0.38, 'rgba(0,0,0,0.92)');
+            erase.addColorStop(0.65, 'rgba(0,0,0,0.55)');
+            erase.addColorStop(0.88, 'rgba(0,0,0,0.18)');
+            erase.addColorStop(1,    'rgba(0,0,0,0)');
+            lctx.fillStyle = erase;
+            lctx.beginPath();
+            lctx.arc(x, y, r, 0, Math.PI * 2);
+            lctx.fill();
+
+            // — Step B: coloured atmospheric tint ——————————
+            // Drawn source-over so it only affects the revealed (non-dark) area
+            lctx.globalCompositeOperation = 'source-over';
+            const tintR  = r * 0.55;
+            const tAlpha = 0.11 * darkness; // tint fades proportionally to darkness
+            let   tInner, tOuter;
+
+            if (type === 'warm') {
+                // Amber / torch — player, shop kiosk
+                tInner = `rgba(255,190,70,${tAlpha})`;
+                tOuter = 'rgba(255,140,30,0)';
+            } else if (type === 'cool') {
+                // Cyan / tech — database server, data pillars, drone projectiles
+                tInner = `rgba(60,220,255,${tAlpha})`;
+                tOuter = 'rgba(0,180,255,0)';
+            } else {
+                // Neutral white — generic fallback
+                tInner = `rgba(210,225,255,${tAlpha * 0.7})`;
+                tOuter = 'rgba(180,205,255,0)';
+            }
+
+            const tint = lctx.createRadialGradient(x, y, 0, x, y, tintR);
+            tint.addColorStop(0, tInner);
+            tint.addColorStop(1, tOuter);
+            lctx.fillStyle = tint;
+            lctx.beginPath();
+            lctx.arc(x, y, tintR, 0, Math.PI * 2);
+            lctx.fill();
+        };
+
+        // ── ② Player light — warm torch glow ─────────────────
+        if (player && !player.dead) {
+            // Slightly larger radius when the player dashes (dramatic)
+            const dashMult = player.isDashing ? 1.25 : 1.0;
+            punchLight(player.x, player.y, L.playerLightRadius, 'warm', dashMult);
+        }
+
+        // ── ③ Projectile lights ───────────────────────────────
+        // Player bullets (cyan drone shots, white bullets) → cool
+        // Enemy / boss bullets                              → warm
+        for (const proj of projectiles) {
+            if (!proj || proj.dead) continue;
+            const lightType = (proj.team === 'player') ? 'cool' : 'warm';
+            punchLight(proj.x, proj.y, L.projectileLightRadius, lightType);
+        }
+
+        // ── ④ Map-object ambient lights ───────────────────────
+        // Only emitters with actual visual glow get a light radius.
+        for (const obj of this.objects) {
+            if (obj.type === 'datapillar') {
+                // Glowing circuit top of pillar
+                punchLight(
+                    obj.x + obj.w * 0.5,
+                    obj.y - 5,            // capital top position
+                    L.dataPillarLightRadius,
+                    'cool'
+                );
+            } else if (obj.type === 'server') {
+                // Cold server-room glow from blinking status lights
+                punchLight(
+                    obj.x + obj.w * 0.5,
+                    obj.y + obj.h * 0.4,
+                    L.serverRackLightRadius,
+                    'cool'
+                );
+            }
+        }
+
+        // ── ⑤ Extra lights passed from game.js ───────────────
+        // (MTC Database Server, Shop Kiosk, etc.)
+        for (const light of extraLights) {
+            punchLight(
+                light.x,
+                light.y,
+                light.radius  || 100,
+                light.type    || 'neutral',
+                light.intensity || 1.0
+            );
+        }
+
+        // ── ⑥ MTC Room interior — warm safe-zone lamp ─────────
+        if (this.mtcRoom) {
+            // Centre of classroom
+            const rx = this.mtcRoom.x + this.mtcRoom.w * 0.5;
+            const ry = this.mtcRoom.y + this.mtcRoom.h * 0.5;
+            punchLight(rx, ry, 180, 'warm', 1.1);
+        }
+
+        // ── ⑦ Reset composite and blit to main canvas ─────────
+        lctx.globalCompositeOperation = 'source-over';
+        CTX.drawImage(lc, 0, 0);
+    }
+
     clear() {
         this.objects = [];
         this.mtcRoom = null;
         this.initialized = false;
+        // Keep _lightCanvas alive — it will be resized on next init()
     }
 
     getObjects() {

@@ -365,6 +365,31 @@ const BALANCE = {
     },
 
     // ──────────────────────────────────────────────────────────────
+    // 💡 LIGHTING ENGINE
+    // ambientLight is mutated at runtime by the day/night cycle.
+    // All radius values are in screen pixels (post worldToScreen).
+    // ──────────────────────────────────────────────────────────────
+    LIGHTING: {
+        // ── Day/Night cycle ──────────────────────────────────────
+        ambientLight:   0.9,    // 0.0 = pitch black  1.0 = full daylight (runtime-mutated)
+        cycleDuration:  60,     // seconds for a complete day → night → day oscillation
+        nightMinLight:  0.12,   // darkest point at midnight
+        dayMaxLight:    0.95,   // brightest point at noon
+
+        // ── Light source radii (screen pixels) ───────────────────
+        playerLightRadius:      160,   // warm torch around the player
+        projectileLightRadius:   50,   // small flare on each bullet
+        mtcServerLightRadius:   120,   // cyan glow from the database server
+        shopLightRadius:         85,   // warm glow from the shop kiosk
+        dataPillarLightRadius:   70,   // circuit glow from data pillars
+        serverRackLightRadius:   55,   // cold server-room glow
+
+        // ── Night sky fill colour ────────────────────────────────
+        // This fills the offscreen darkness canvas before lights are cut out.
+        nightR: 5, nightG: 8, nightB: 22  // deep navy/indigo
+    },
+
+    // ──────────────────────────────────────────────────────────────
     // 🗺️ MAP SETTINGS
     // ──────────────────────────────────────────────────────────────
     map: {

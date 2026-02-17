@@ -41,6 +41,12 @@ let gameState  = 'MENU';
 let loopRunning = false;
 const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0 };
 
+// ─── Day / Night cycle ────────────────────────────────────
+// Monotonically increasing timer (seconds). Drives the
+// BALANCE.LIGHTING.ambientLight sine-wave oscillation each frame.
+// Reset to 0 on startGame() so every run begins at the same phase.
+let dayNightTimer = 0;
+
 // ─── Game Objects (global) ────────────────────────────────
 window.player         = null;
 window.enemies        = [];
@@ -1153,6 +1159,19 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
+    // ── 🌅 Day / Night cycle ──────────────────────────────────────
+    // Sine wave drives ambientLight between nightMinLight (0.12) and
+    // dayMaxLight (0.95) over cycleDuration seconds.
+    dayNightTimer += dt;
+    {
+        const L   = BALANCE.LIGHTING;
+        // Normalised phase: 0 at dawn, 0.5 at dusk (one full sine period = one day)
+        const phi = (dayNightTimer / L.cycleDuration) * Math.PI * 2;
+        // Math.sin: -1 = midnight, +1 = noon
+        const dayPhase = Math.sin(phi) * 0.5 + 0.5;   // 0 → 1
+        L.ambientLight = L.nightMinLight + dayPhase * (L.dayMaxLight - L.nightMinLight);
+    }
+
     // ── Shop buff timers ──
     if (player.shopDamageBoostActive) {
         player.shopDamageBoostTimer -= dt;
@@ -1310,9 +1329,94 @@ function drawGame() {
     floatingTextSystem.draw();
 
     CTX.restore();
+
+    // ── 🌑 LIGHTING OVERLAY ──────────────────────────────────────
+    // Called OUTSIDE the shake-translated save/restore block so the
+    // full-screen darkness quad always covers the entire canvas.
+    // Light positions are adjusted by shake manually inside drawLighting().
+    {
+        // Gather projectile list safely — projectileManager lives in another module
+        const allProj = (typeof projectileManager !== 'undefined' && projectileManager.projectiles)
+            ? projectileManager.projectiles
+            : [];
+
+        mapSystem.drawLighting(player, allProj, [
+            // MTC Database Server — cool cyan lamp
+            {
+                x: MTC_DATABASE_SERVER.x,
+                y: MTC_DATABASE_SERVER.y,
+                radius: BALANCE.LIGHTING.mtcServerLightRadius,
+                type: 'cool'
+            },
+            // MTC Co-op Shop — warm amber kiosk glow
+            {
+                x: MTC_SHOP_LOCATION.x,
+                y: MTC_SHOP_LOCATION.y,
+                radius: BALANCE.LIGHTING.shopLightRadius,
+                type: 'warm'
+            }
+        ]);
+    }
+
+    // ── 🌙 DAY / NIGHT HUD INDICATOR ─────────────────────────────
+    // Drawn in raw screen-space (no camera or shake transforms).
+    // Positioned top-right, away from the main HUD panel.
+    drawDayNightHUD();
 }
 
-function drawGrid() {
+// ══════════════════════════════════════════════════════════════
+// 🌞 DAY / NIGHT HUD — small orbital clock top-right corner
+// Shows sun/moon icon, a circular phase arc, and the current
+// period label. Stays bright even when the world is dark
+// because it is drawn directly to CTX with no darkness overlay.
+// ══════════════════════════════════════════════════════════════
+function drawDayNightHUD() {
+    const L       = BALANCE.LIGHTING;
+    const phase   = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight); // 0→1
+    const isDawn  = phase > 0.5;
+
+    const cx = CANVAS.width  - 52;
+    const cy = 52;
+    const r  = 24;
+
+    CTX.save();
+
+    // Background disc
+    CTX.fillStyle   = isDawn ? 'rgba(255, 210, 80, 0.18)' : 'rgba(80, 110, 255, 0.18)';
+    CTX.strokeStyle = isDawn ? 'rgba(255, 210, 80, 0.55)' : 'rgba(130, 160, 255, 0.55)';
+    CTX.lineWidth   = 2;
+    CTX.beginPath();
+    CTX.arc(cx, cy, r + 8, 0, Math.PI * 2);
+    CTX.fill();
+    CTX.stroke();
+
+    // Phase fill arc (sweeps from top, clockwise with the day phase)
+    CTX.strokeStyle = isDawn ? '#fbbf24' : '#818cf8';
+    CTX.lineWidth   = 3.5;
+    CTX.lineCap     = 'round';
+    CTX.shadowBlur  = 8;
+    CTX.shadowColor = isDawn ? '#fbbf24' : '#818cf8';
+    CTX.beginPath();
+    CTX.arc(cx, cy, r + 4, -Math.PI / 2, -Math.PI / 2 + phase * Math.PI * 2);
+    CTX.stroke();
+    CTX.shadowBlur  = 0;
+
+    // Icon — sun during day, moon at night
+    CTX.font          = `${r}px Arial`;
+    CTX.textAlign     = 'center';
+    CTX.textBaseline  = 'middle';
+    CTX.fillText(isDawn ? '☀️' : '🌙', cx, cy);
+
+    // Period label
+    CTX.fillStyle     = isDawn ? '#fde68a' : '#c7d2fe';
+    CTX.font          = 'bold 8px Arial';
+    CTX.textAlign     = 'center';
+    CTX.textBaseline  = 'middle';
+    const pct         = Math.round(phase * 100);
+    CTX.fillText(isDawn ? `DAY ${pct}%` : `NIGHT ${100 - pct}%`, cx, cy + r + 14);
+
+    CTX.restore();
+}
     const sz = GAME_CONFIG.physics.gridSize;
     const ox = -getCamera().x % sz;
     const oy = -getCamera().y % sz;
@@ -1322,7 +1426,6 @@ function drawGrid() {
     for (let x = ox; x < CANVAS.width; x += sz) { CTX.moveTo(x, 0); CTX.lineTo(x, CANVAS.height); }
     for (let y = oy; y < CANVAS.height; y += sz) { CTX.moveTo(0, y); CTX.lineTo(CANVAS.width, y); }
     CTX.stroke();
-}
 
 // ==================== POOM ATTACK SYSTEM ====================
 function shootPoom(player) {
@@ -1366,6 +1469,10 @@ function startGame(charType = 'kao') {
 
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss = null;
+
+    // ── Reset day/night to dawn (bright start) ──────────────────
+    dayNightTimer  = 0;
+    BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
     // ── Reset shop buff state on every fresh start ──
     player.shopDamageBoostActive = false;
