@@ -877,9 +877,16 @@
             .resume-title { font-size: 20px; }
         }
 
-        /* ================== MOBILE UI ================== */
+        /* ═══════════════════════════════════════════════════════════
+           MOBILE UI — joysticks + action buttons
+           ───────────────────────────────────────────────────────────
+           IMPORTANT: display:none is the authoritative CSS default.
+           game.js / startGame() will set display:block only when
+           'ontouchstart' in window || navigator.maxTouchPoints > 0
+           evaluates to true, keeping it invisible on all desktops.
+        ═══════════════════════════════════════════════════════════ */
         #mobile-ui {
-            display: none;
+            display: none;               /* ← hidden by default; JS reveals on touch devices only */
             position: absolute; top: 0; left: 0;
             width: 100vw; height: 100vh;
             z-index: 9999; pointer-events: none;
@@ -1024,7 +1031,7 @@
         <div class="weapon-hint">กด Q เพื่อสลับอาวุธ</div>
     </div>
 
-    <!-- Mobile UI -->
+    <!-- Mobile UI — hidden by CSS default; revealed by game.js on touch devices only -->
     <div id="mobile-ui">
         <div id="joystick-left-zone" class="joystick-zone left">
             <div id="joystick-left-base" class="joystick-base">

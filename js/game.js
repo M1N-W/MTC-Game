@@ -1047,8 +1047,15 @@ function startGame(charType = 'kao') {
     gameState = 'PLAYING';
     resetTime();
 
+    // ── Mobile UI visibility — show only on genuine touch devices ──────────
+    // The #mobile-ui container is display:none in CSS by default.
+    // We reveal it here only when the browser reports touch support,
+    // so desktop players never see the joysticks or action buttons.
     const mobileUI = document.getElementById('mobile-ui');
-    if (mobileUI) mobileUI.style.display = 'block';
+    if (mobileUI) {
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        mobileUI.style.display = isTouchDevice ? 'block' : 'none';
+    }
     window.focus();
 
     console.log('✅ Game started!');
@@ -1181,8 +1188,11 @@ window.touchJoystickLeft  = { active: false, id: null, originX: 0, originY: 0, n
 window.touchJoystickRight = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
 
 function initMobileControls() {
+    // Only attach touch listeners and show mobile controls on genuine touch devices.
+    // Relying solely on screen width is unreliable (e.g. DevTools responsive mode,
+    // tablet-laptop hybrids). Touch API presence is the authoritative signal.
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    if (!isTouchDevice && window.innerWidth > 1024) return;
+    if (!isTouchDevice) return;
 
     const maxRadius = 60;
     const zoneL  = document.getElementById('joystick-left-zone');
