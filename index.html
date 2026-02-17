@@ -11,11 +11,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;600;800&family=Orbitron:wght@700;900&display=swap');
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             overflow: hidden;
@@ -36,10 +32,8 @@
 
         #ui-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             pointer-events: none;
             display: flex;
             flex-direction: column;
@@ -82,31 +76,12 @@
             overflow: hidden;
         }
 
-        .bar-fill {
-            height: 100%;
-            transition: width 0.1s linear;
-        }
+        .bar-fill { height: 100%; transition: width 0.1s linear; }
+        .hp-fill { background: linear-gradient(90deg, #ef4444, #dc2626); box-shadow: 0 0 10px #ef4444; }
+        .en-fill { background: linear-gradient(90deg, #fbbf24, #f59e0b); box-shadow: 0 0 10px #fbbf24; }
 
-        .hp-fill {
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-            box-shadow: 0 0 10px #ef4444;
-        }
-
-        .en-fill {
-            background: linear-gradient(90deg, #fbbf24, #f59e0b);
-            box-shadow: 0 0 10px #fbbf24;
-        }
-
-        .level-info {
-            margin-top: 8px;
-        }
-
-        .level-display {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
+        .level-info { margin-top: 8px; }
+        .level-display { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 
         #player-level {
             font-weight: bold;
@@ -119,8 +94,7 @@
         }
 
         .exp-bar-bg {
-            flex: 1;
-            height: 6px;
+            flex: 1; height: 6px;
             background: #1e293b;
             border-radius: 3px;
             overflow: hidden;
@@ -128,8 +102,7 @@
         }
 
         #exp-bar {
-            width: 0%;
-            height: 100%;
+            width: 0%; height: 100%;
             background: linear-gradient(90deg, #8b5cf6, #a855f7);
             box-shadow: 0 0 10px #8b5cf6;
             transition: width 0.3s ease-out;
@@ -146,59 +119,164 @@
 
         .score-num {
             font-family: 'Orbitron', sans-serif;
-            font-size: 28px;
-            color: #60a5fa;
+            font-size: 28px; color: #60a5fa;
             text-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
         }
 
         .wave-badge {
             background: linear-gradient(135deg, #8b5cf6, #6366f1);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 5px;
-            display: inline-block;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 14px; font-weight: bold;
+            margin-top: 5px; display: inline-block;
         }
 
         .weapon-indicator {
             position: absolute;
-            top: 20px;
-            left: 50%;
+            top: 20px; left: 50%;
             transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.95);
             padding: 12px 24px;
             border-radius: 15px;
             border: 2px solid #3b82f6;
             box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
-            font-size: 18px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 15;
+            font-size: 18px; font-weight: bold;
+            pointer-events: none; z-index: 15;
         }
 
-        .weapon-name {
-            color: #60a5fa;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
+        .weapon-name { color: #60a5fa; text-transform: uppercase; letter-spacing: 2px; }
+        .weapon-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; text-align: center; }
 
-        .weapon-hint {
-            font-size: 11px;
-            color: #94a3b8;
-            margin-top: 4px;
-            text-align: center;
-        }
-
-        #achievements {
+        /* ── Database Interaction Prompt ── */
+        #db-prompt {
             position: absolute;
-            top: 80px;
-            right: 20px;
+            bottom: 160px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(6, 182, 212, 0.15);
+            border: 2px solid #06b6d4;
+            border-radius: 16px;
+            padding: 10px 22px;
+            font-size: 14px; font-weight: bold;
+            color: #67e8f9;
+            text-align: center;
+            pointer-events: none;
+            z-index: 20;
+            display: none;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+            animation: dbPulse 1.5s ease-in-out infinite;
+            white-space: nowrap;
+        }
+
+        @keyframes dbPulse {
+            0%, 100% { box-shadow: 0 0 12px rgba(6,182,212,0.3); }
+            50%       { box-shadow: 0 0 28px rgba(6,182,212,0.7); }
+        }
+
+        /* ── Math Modal Overlay ── */
+        #math-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.82);
+            z-index: 9000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+
+        #math-modal.open { display: flex; }
+
+        .math-modal-inner {
+            position: relative;
+            width: 94vw;
+            height: 92vh;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid #06b6d4;
+            box-shadow: 0 0 60px rgba(6,182,212,0.4), 0 25px 50px rgba(0,0,0,0.8);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+        }
+
+        .math-modal-header {
+            background: linear-gradient(135deg, #0c1a2e, #0f2744);
+            border-bottom: 2px solid #06b6d4;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .math-modal-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: #67e8f9;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .math-modal-badge {
+            font-size: 10px;
+            background: rgba(6,182,212,0.2);
+            border: 1px solid #06b6d4;
+            color: #67e8f9;
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+
+        #math-modal-close {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: rgba(239,68,68,0.15);
+            border: 2px solid #ef4444;
+            color: #ef4444;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        #math-modal-close:hover {
+            background: rgba(239,68,68,0.4);
+            transform: scale(1.1);
+        }
+
+        #math-iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: #fcfbf9;
+        }
+
+        /* ── Pause Indicator ── */
+        #pause-indicator {
+            display: none;
+            position: fixed;
+            top: 18px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(6,182,212,0.15);
+            border: 1.5px solid #06b6d4;
+            border-radius: 12px;
+            padding: 5px 16px;
+            font-size: 12px; font-weight: bold;
+            color: #67e8f9;
+            letter-spacing: 2px;
+            z-index: 9001;
             pointer-events: none;
-            z-index: 100;
+        }
+
+        /* Achievements */
+        #achievements {
+            position: absolute;
+            top: 80px; right: 20px;
+            display: flex; flex-direction: column;
+            gap: 10px; pointer-events: none; z-index: 100;
         }
 
         .achievement {
@@ -213,130 +291,88 @@
 
         @keyframes slideIn {
             from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            to   { transform: translateX(0); opacity: 1; }
         }
 
-        .achievement-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #000;
-        }
+        .achievement-title { font-size: 16px; font-weight: bold; color: #000; }
+        .achievement-desc  { font-size: 12px; color: #422006; }
 
-        .achievement-desc {
-            font-size: 12px;
-            color: #422006;
-        }
-
+        /* Boss HUD */
         #boss-hud {
             position: absolute;
-            top: 70px;
-            left: 50%;
+            top: 70px; left: 50%;
             transform: translateX(-50%);
-            width: 60%;
-            max-width: 600px;
-            display: none;
-            flex-direction: column;
+            width: 60%; max-width: 600px;
+            display: none; flex-direction: column;
             align-items: center;
-            opacity: 0;
-            transition: opacity 0.5s;
+            opacity: 0; transition: opacity 0.5s;
         }
 
-        #boss-hud.active {
-            display: flex;
-            opacity: 1;
-        }
+        #boss-hud.active { display: flex; opacity: 1; }
 
         .boss-name {
-            font-size: 22px;
-            font-weight: bold;
-            color: #ef4444;
-            text-transform: uppercase;
+            font-size: 22px; font-weight: bold;
+            color: #ef4444; text-transform: uppercase;
             text-shadow: 0 0 10px black, 0 2px 4px rgba(0,0,0,0.8);
-            margin-bottom: 8px;
-            letter-spacing: 2px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin-bottom: 8px; letter-spacing: 2px;
+            display: flex; align-items: center; gap: 10px;
         }
 
-        .ai-badge {
-            font-size: 11px;
-            background: #facc15;
-            color: black;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
+        .ai-badge { font-size: 11px; background: #facc15; color: black; padding: 2px 6px; border-radius: 4px; }
 
         .boss-hp-bg {
-            width: 100%;
-            height: 18px;
-            background: #330000;
-            border: 2px solid #7f1d1d;
-            border-radius: 4px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            width: 100%; height: 18px;
+            background: #330000; border: 2px solid #7f1d1d;
+            border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
 
         .boss-hp-fill {
-            height: 100%;
-            width: 100%;
+            height: 100%; width: 100%;
             background: linear-gradient(90deg, #dc2626, #991b1b);
             transition: width 0.2s ease-out;
             box-shadow: 0 0 10px #dc2626;
         }
 
+        /* Voice & Speech bubbles */
         #boss-speech {
             position: absolute;
-            background: white;
-            color: #1e293b;
-            padding: 12px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 15px;
-            max-width: 300px;
-            text-align: center;
-            opacity: 0;
-            transition: all 0.3s;
+            background: white; color: #1e293b;
+            padding: 12px 20px; border-radius: 20px;
+            font-weight: bold; font-size: 15px;
+            max-width: 300px; text-align: center;
+            opacity: 0; transition: all 0.3s;
             pointer-events: none;
             box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            border: 3px solid #cbd5e1;
-            z-index: 50;
+            border: 3px solid #cbd5e1; z-index: 50;
         }
 
         #boss-speech::after {
             content: '';
             position: absolute;
-            bottom: -10px;
-            left: 50%;
+            bottom: -10px; left: 50%;
             transform: translateX(-50%);
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
             border-top: 10px solid white;
         }
 
-        #boss-speech.visible {
-            opacity: 1;
-        }
+        #boss-speech.visible { opacity: 1; }
 
         #voice-bubble {
             position: absolute;
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: white;
-            padding: 8px 15px;
-            border-radius: 15px;
-            font-weight: bold;
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 60;
+            padding: 8px 15px; border-radius: 15px;
+            font-weight: bold; font-size: 14px;
+            opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; z-index: 60;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             border: 2px solid rgba(255,255,255,0.3);
         }
 
-        #voice-bubble.visible {
-            opacity: 1;
-        }
+        #voice-bubble.visible { opacity: 1; }
 
+        /* HUD Bottom */
         .hud-bottom {
             display: flex;
             justify-content: center;
@@ -346,14 +382,11 @@
         }
 
         .skill-icon {
-            width: 58px;
-            height: 58px;
+            width: 58px; height: 58px;
             background: rgba(30, 41, 59, 0.95);
             border: 2px solid #475569;
             border-radius: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             font-size: 24px;
             position: relative;
             box-shadow: 0 4px 8px rgba(0,0,0,0.4);
@@ -373,401 +406,167 @@
             display: none;
         }
 
-        #passive-skill.unlocked {
-            display: flex;
-            animation: pulseGold 2s infinite;
-        }
+        #passive-skill.unlocked { display: flex; animation: pulseGold 2s infinite; }
 
         @keyframes pulseGold {
             0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); }
-            50% { box-shadow: 0 0 30px rgba(251, 191, 36, 1); }
+            50%       { box-shadow: 0 0 30px rgba(251, 191, 36, 1); }
         }
 
         .skill-name {
-            position: absolute;
-            bottom: -20px;
-            font-size: 9px;
-            color: #fbbf24;
-            font-weight: bold;
-            white-space: nowrap;
-            text-align: center;
+            position: absolute; bottom: -20px;
+            font-size: 9px; color: #fbbf24;
+            font-weight: bold; white-space: nowrap; text-align: center;
         }
 
         .cooldown-mask {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.8);
-            height: 0%;
-            border-radius: 10px;
-            transition: height 0.1s linear;
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.8); height: 0%;
+            border-radius: 10px; transition: height 0.1s linear;
         }
 
         .key-hint {
-            position: absolute;
-            top: -8px;
-            left: -8px;
-            background: #3b82f6;
-            color: white;
-            font-size: 9px;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-weight: bold;
+            position: absolute; top: -8px; left: -8px;
+            background: #3b82f6; color: white;
+            font-size: 9px; padding: 2px 5px;
+            border-radius: 3px; font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
-        /* --- ส่วนจัดการ UI หน้าต่างก่อนเริ่มเกม --- */
+        /* Overlay / Menu */
         #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.95); 
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            pointer-events: auto;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 100; pointer-events: auto;
             backdrop-filter: blur(10px);
         }
-            
+
         .menu-container {
             background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 800px;
-            width: 90%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            border-radius: 24px; padding: 40px;
+            max-width: 800px; width: 90%;
+            display: flex; flex-direction: column; align-items: center;
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
         }
 
         .title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 56px;
+            font-family: 'Orbitron', sans-serif; font-size: 56px;
             background: linear-gradient(45deg, #3b82f6, #8b5cf6, #facc15);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            text-align: center;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; margin-bottom: 15px; text-align: center;
             animation: glow 2s ease-in-out infinite;
         }
 
         @keyframes glow {
             0%, 100% { filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5)); }
-            50% { filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.8)); }
+            50%       { filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.8)); }
         }
 
-        .subtitle {
-            font-size: 24px;
-            color: #94a3b8;
-            margin-bottom: 30px;
-        }
+        .subtitle { font-size: 24px; color: #94a3b8; margin-bottom: 30px; }
+        .version-badge { background: #8b5cf6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-left: 10px; }
 
-        .version-badge {
-            background: #8b5cf6;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-left: 10px;
-        }
+        #mission-brief { margin-bottom: 20px; color: #60a5fa; font-style: italic; font-size: 18px; text-align: center; }
 
-        #mission-brief {
-            margin-bottom: 20px;
-            color: #60a5fa;
-            font-style: italic;
-            font-size: 18px;
-            text-align: center;
-        }
-
-        /* จัดกริด 2 คอลัมน์สำหรับกล่องอธิบายวิธีเล่น */
-        .info-section {
-            display: flex;
-            gap: 20px;
-            width: 100%;
-            margin-bottom: 30px;
-        }
+        .info-section { display: flex; gap: 20px; width: 100%; margin-bottom: 30px; }
 
         .new-features {
             flex: 1;
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
             border: 1px solid rgba(139, 92, 246, 0.3);
-            padding: 20px;
-            border-radius: 16px;
+            padding: 20px; border-radius: 16px;
         }
 
-        .new-features h3 {
-            color: #a855f7;
-            margin-bottom: 15px;
-        }
-
-        .feature-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            font-size: 14px;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .new-features h3 { color: #a855f7; margin-bottom: 15px; }
+        .feature-list { display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+        .feature-item { display: flex; align-items: center; gap: 8px; }
 
         .instructions {
             flex: 1;
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.6));
             border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 16px;
-            color: #cbd5e1;
-            text-align: left;
-            font-size: 15px;
-            line-height: 1.6;
+            padding: 20px; border-radius: 16px;
+            color: #cbd5e1; text-align: left; font-size: 15px; line-height: 1.6;
         }
 
-        /* ✨ IMPROVED: Report Card - ไพ่รายงานของครู */
         #report-card {
             background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
             border: 2px solid rgba(239, 68, 68, 0.3);
-            padding: 25px;
-            border-radius: 16px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            margin-bottom: 25px;
+            padding: 25px; border-radius: 16px;
+            max-width: 500px; width: 100%;
+            text-align: center; margin-bottom: 25px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            display: none;
-            backdrop-filter: blur(8px);
+            display: none; backdrop-filter: blur(8px);
         }
 
-        #report-card.show {
-            display: block;
-            animation: reportSlideIn 0.5s ease-out;
-        }
-
-        @keyframes reportSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .report-header {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ef4444;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .report-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-item {
-            background: rgba(15, 23, 42, 0.5);
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-family: 'Orbitron', sans-serif;
-            color: #60a5fa;
-            font-weight: bold;
-        }
+        .report-header { font-size: 24px; font-weight: bold; color: #ef4444; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .report-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-item { background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .stat-label { font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
+        .stat-value { font-size: 24px; font-family: 'Orbitron', sans-serif; color: #60a5fa; font-weight: bold; }
 
         #report-text {
             background: rgba(251, 191, 36, 0.1);
             border: 1px solid rgba(251, 191, 36, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-style: italic;
-            color: #fbbf24;
-            line-height: 1.6;
+            padding: 15px; border-radius: 10px;
+            font-size: 16px; font-style: italic;
+            color: #fbbf24; line-height: 1.6;
         }
 
-        #report-text::before {
-            content: '💬 ';
-            font-size: 20px;
-        }
+        #report-text::before { content: '💬 '; font-size: 20px; }
 
         .btn {
             background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            border: none;
-            padding: 15px 45px;
-            font-size: 22px;
-            font-family: 'Kanit', sans-serif;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
+            color: white; border: none; padding: 15px 45px;
+            font-size: 22px; font-family: 'Kanit', sans-serif;
+            font-weight: bold; border-radius: 12px;
+            cursor: pointer; transition: all 0.3s;
             box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
-            pointer-events: auto;
-            margin: 5px;
-            letter-spacing: 1px;
+            pointer-events: auto; margin: 5px; letter-spacing: 1px;
         }
 
-        .btn:hover {
-            transform: scale(1.05) translateY(-2px);
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
-        }
+        .btn:hover { transform: scale(1.05) translateY(-2px); background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
 
-        #ai-loading {
-            font-size: 14px;
-            color: #60a5fa;
-            margin-top: 15px;
-            display: none;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
+        #ai-loading { font-size: 14px; color: #60a5fa; margin-top: 15px; display: none; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
         #victory-screen {
             display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.95);
-            z-index: 101;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            backdrop-filter: blur(10px);
+            z-index: 101; justify-content: center; align-items: center;
+            flex-direction: column; backdrop-filter: blur(10px);
         }
 
-        /* ──────────── CHARACTER SELECTION ──────────── */
-        .char-select-section {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .char-select-section h3 {
-            color: #60a5fa;
-            font-size: 16px;
-            text-align: center;
-            margin-bottom: 12px;
-            letter-spacing: 1px;
-        }
-
-        .char-cards {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+        /* Character Selection */
+        .char-select-section { width: 100%; margin-bottom: 20px; }
+        .char-select-section h3 { color: #60a5fa; font-size: 16px; text-align: center; margin-bottom: 12px; letter-spacing: 1px; }
+        .char-cards { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
 
         .char-card {
             background: rgba(15, 23, 42, 0.8);
-            border: 2px solid #334155;
-            border-radius: 16px;
-            padding: 18px 22px;
-            min-width: 180px;
-            max-width: 220px;
-            flex: 1;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.25s;
-            position: relative;
-            pointer-events: auto;
+            border: 2px solid #334155; border-radius: 16px;
+            padding: 18px 22px; min-width: 180px; max-width: 220px;
+            flex: 1; text-align: center; cursor: pointer;
+            transition: all 0.25s; position: relative; pointer-events: auto;
         }
 
-        .char-card:hover {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
-        }
+        .char-card:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3); }
+        .char-card.selected { border-color: #facc15; background: rgba(250, 204, 21, 0.08); box-shadow: 0 0 25px rgba(250, 204, 21, 0.4); }
+        .char-card .char-avatar { font-size: 48px; margin-bottom: 8px; }
+        .char-card .char-name { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: bold; color: #e2e8f0; margin-bottom: 6px; }
+        .char-card .char-desc { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+        .char-card .char-tag { margin-top: 10px; display: inline-block; font-size: 10px; background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #a78bfa; padding: 2px 8px; border-radius: 10px; }
+        .char-card[data-char="poom"] .char-tag { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
 
-        .char-card.selected {
-            border-color: #facc15;
-            background: rgba(250, 204, 21, 0.08);
-            box-shadow: 0 0 25px rgba(250, 204, 21, 0.4);
-        }
-
-        .char-card .char-avatar {
-            font-size: 48px;
-            margin-bottom: 8px;
-        }
-
-        .char-card .char-name {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
-            font-weight: bold;
-            color: #e2e8f0;
-            margin-bottom: 6px;
-        }
-
-        .char-card .char-desc {
-            font-size: 11px;
-            color: #94a3b8;
-            line-height: 1.5;
-        }
-
-        .char-card .char-tag {
-            margin-top: 10px;
-            display: inline-block;
-            font-size: 10px;
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid #8b5cf6;
-            color: #a78bfa;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        .char-card[data-char="poom"] .char-tag {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: #10b981;
-            color: #34d399;
-        }
-
-        /* ── Naga cooldown timer text ── */
-        #naga-timer {
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 9px;
-            font-weight: bold;
-            color: #10b981;
-            pointer-events: none;
-            display: none;
-        }
+        /* Naga timer */
+        #naga-timer { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: bold; color: #10b981; pointer-events: none; display: none; }
 
         @media (max-width: 768px) {
             .title { font-size: 40px; }
@@ -777,148 +576,70 @@
             .report-stats { grid-template-columns: 1fr; }
             .char-cards { flex-direction: column; align-items: center; }
         }
-        /* ================= MOBILE UI CSS ================= */
+
+        /* ================== MOBILE UI ================== */
         #mobile-ui {
-            display: none; /* ซ่อนบน PC */
-            position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 9999;
-            pointer-events: none; /* ปล่อยให้คลิกทะลุได้ในส่วนที่ไม่มีปุ่ม */
+            display: none;
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 9999; pointer-events: none;
         }
 
-        /* ตรวจจับอุปกรณ์มือถือ หรือหน้าจอเล็กกว่า 1024px ให้แสดง UI */
-        @media (max-width: 1024px), (pointer: coarse) {
-            #mobile-ui { display: block; }
-        }
+        @media (max-width: 1024px), (pointer: coarse) { #mobile-ui { display: block; } }
 
-        /* โซนทัชสกรีนซ้ายและขวา กว้างฝั่งละ 45% (เว้นตรงกลางไว้ 10%) */
         .joystick-zone {
             position: absolute;
             width: 45vw; height: 65vh;
-            bottom: 0;
-            pointer-events: auto;
-            touch-action: none;
+            bottom: 0; pointer-events: auto; touch-action: none;
         }
-        .joystick-zone.left { left: 0; }
+
+        .joystick-zone.left  { left: 0; }
         .joystick-zone.right { right: 0; }
 
         .joystick-base {
             position: absolute;
             width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            display: none; /* จะแสดงเมื่อนิ้วสัมผัสจอเท่านั้น (Floating) */
+            background: rgba(255,255,255,0.08);
+            border: 2px solid rgba(255,255,255,0.14);
+            border-radius: 50%; display: none;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
         }
 
         .joystick-stick {
-            position: absolute;
-            top: 50%; left: 50%;
+            position: absolute; left: 50%; top: 50%;
             transform: translate(-50%, -50%);
-            width: 50px; height: 50px;
+            width: 52px; height: 52px;
             border-radius: 50%;
-            background: rgba(59, 130, 246, 0.6);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+            background: rgba(59,130,246,0.5);
+            pointer-events: none;
         }
-        /* เปลี่ยนสีจอยขวา (ยิง) เป็นสีแดง */
-        .joystick-zone.right .joystick-stick {
-            background: rgba(239, 68, 68, 0.6);
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
-        }
+
+        .joystick-zone.right .joystick-stick { background: rgba(239,68,68,0.5); }
 
         .action-btn {
             position: absolute;
-            width: 55px; height: 55px;
+            width: 56px; height: 56px;
             border-radius: 50%;
-            background: rgba(15, 23, 42, 0.7);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            color: white; font-size: 24px;
+            background: rgba(15,23,42,0.75);
+            border: 2px solid rgba(255,255,255,0.12);
+            color: white; font-size: 22px;
             display: flex; align-items: center; justify-content: center;
-            touch-action: none; pointer-events: auto;
-            backdrop-filter: blur(4px);
-            z-index: 10000;
+            pointer-events: auto; touch-action: none; z-index: 10000;
         }
-        .action-btn:active {
-            background: rgba(59, 130, 246, 0.8);
-            transform: scale(0.9);
+
+        #btn-dash   { right: 18px;  bottom: 200px; }
+        #btn-skill  { right: 86px;  bottom: 150px; }
+        #btn-switch { right: 142px; bottom: 92px; }
+
+        /* ── Database button: bottom-left area, only shown when near server ── */
+        #btn-database {
+            left: 18px; bottom: 200px;
+            border-color: #06b6d4;
+            background: rgba(6,182,212,0.2);
+            display: none; /* shown by JS when near server */
         }
-        
-        /* วางปุ่ม Action เรียงเป็นแนวโค้งหลบจอยสติ๊กทางขวา */
-        #btn-dash { right: 20px; bottom: 220px; }
-        #btn-skill { right: 85px; bottom: 170px; }
-        #btn-switch { right: 135px; bottom: 100px; }
     </style>
-
-<style>
-body, html {
-  touch-action: none;
-  -ms-touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-#mobile-ui {
-  display: none;
-  position: absolute;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  z-index: 9999;
-  pointer-events: none;
-}
-@media (max-width: 1024px), (pointer: coarse) {
-  #mobile-ui { display: block; }
-}
-.joystick-zone {
-  position: absolute;
-  width: 45vw;
-  height: 65vh;
-  bottom: 0;
-  pointer-events: auto;
-  touch-action: none;
-}
-.joystick-zone.left { left: 0; }
-.joystick-zone.right { right: 0; }
-.joystick-base {
-  position: absolute;
-  width: 120px; height: 120px;
-  background: rgba(255,255,255,0.08);
-  border: 2px solid rgba(255,255,255,0.14);
-  border-radius: 50%;
-  display: none;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-.joystick-stick {
-  position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: rgba(59,130,246,0.5);
-  pointer-events: none;
-}
-.joystick-zone.right .joystick-stick {
-  background: rgba(239,68,68,0.5);
-}
-.action-btn {
-  position: absolute;
-  width: 56px; height: 56px;
-  border-radius: 50%;
-  background: rgba(15,23,42,0.75);
-  border: 2px solid rgba(255,255,255,0.12);
-  color: white;
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  touch-action: none;
-  z-index: 10000;
-}
-#btn-dash  { right: 18px; bottom: 200px; }
-#btn-skill { right: 86px; bottom: 150px; }
-#btn-switch { right: 142px; bottom: 92px; }
-</style>
-
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
@@ -927,11 +648,42 @@ body, html {
     <div id="voice-bubble"></div>
     <div id="achievements"></div>
 
+    <!-- Database proximity prompt -->
+    <div id="db-prompt">🗄️ กด <kbd style="background:#06b6d4;color:#000;padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:bold;">E</kbd> เพื่อเปิด MTC DATABASE</div>
+
+    <!-- Pause Indicator (shown while modal is open) -->
+    <div id="pause-indicator">⏸ PAUSED — DATABASE</div>
+
+    <!-- ══════════════════════════════════════════
+         MATH DATABASE MODAL
+         Uses <iframe> for full CSS isolation
+    ══════════════════════════════════════════ -->
+    <div id="math-modal">
+        <div class="math-modal-inner">
+            <div class="math-modal-header">
+                <div class="math-modal-title">
+                    🗄️ MTC DATABASE
+                    <span class="math-modal-badge">MATH EXPLORER PRO</span>
+                    <span class="math-modal-badge" style="background:rgba(16,185,129,0.15);border-color:#10b981;color:#34d399;">● ONLINE</span>
+                </div>
+                <button id="math-modal-close" onclick="closeMathModal()" title="ปิด (ESC)">✕</button>
+            </div>
+            <!-- iframe isolates math_archive.html CSS fully from game CSS -->
+            <iframe id="math-iframe"
+                    title="MTC Math Archive"
+                    allow="same-origin"
+                    sandbox="allow-scripts allow-same-origin allow-forms">
+            </iframe>
+        </div>
+    </div>
+
     <div class="weapon-indicator">
         <div class="weapon-name" id="weapon-name">AUTO RIFLE</div>
         <div class="weapon-hint">กด Q เพื่อสลับอาวุธ</div>
     </div>
-<div id="mobile-ui">
+
+    <!-- Mobile UI -->
+    <div id="mobile-ui">
         <div id="joystick-left-zone" class="joystick-zone left">
             <div id="joystick-left-base" class="joystick-base">
                 <div id="joystick-left-stick" class="joystick-stick"></div>
@@ -944,25 +696,28 @@ body, html {
             </div>
         </div>
 
-        <button id="btn-switch" class="action-btn">🔄</button>
-        <button id="btn-skill" class="action-btn">📖</button>
-        <button id="btn-dash" class="action-btn">💨</button>
-        <!-- ปุ่ม Skill 2 ภูมิ: 🐉 อัญเชิญพญานาค — ซ่อนโดย default, setupCharacterHUD จะ toggle -->
-        <button id="btn-naga" class="action-btn" style="display:none; right:18px; bottom:270px; border-color:#10b981; background:rgba(16,185,129,0.2);">🐉</button>
+        <button id="btn-switch"   class="action-btn">🔄</button>
+        <button id="btn-skill"    class="action-btn">📖</button>
+        <button id="btn-dash"     class="action-btn">💨</button>
+        <!-- Naga skill — hidden by default, setupCharacterHUD toggles -->
+        <button id="btn-naga"     class="action-btn" style="display:none; right:18px; bottom:270px; border-color:#10b981; background:rgba(16,185,129,0.2);">🐉</button>
+        <!-- MTC Database — hidden by default, shown when near server -->
+        <button id="btn-database" class="action-btn">📚</button>
     </div>
+
+    <!-- HUD Layer -->
     <div id="ui-layer">
         <div class="hud-top">
             <div class="player-card">
                 <div style="font-size:20px" id="player-avatar">👨‍🎓</div>
                 <div class="status-bars">
                     <div class="bar-wrap">
-                        <div id="hp-bar" class="bar-fill hp-fill" style="width: 100%;"></div>
+                        <div id="hp-bar" class="bar-fill hp-fill" style="width:100%;"></div>
                     </div>
                     <div class="bar-wrap">
-                        <div id="en-bar" class="bar-fill en-fill" style="width: 100%;"></div>
+                        <div id="en-bar" class="bar-fill en-fill" style="width:100%;"></div>
                     </div>
-                    <div style="font-size: 11px; color:#94a3b8;">HP & FOCUS</div>
-                    
+                    <div style="font-size:11px; color:#94a3b8;">HP & FOCUS</div>
                     <div class="level-info">
                         <div class="level-display">
                             <span id="player-level">Lv.1</span>
@@ -991,34 +746,35 @@ body, html {
 
         <div class="hud-bottom">
             <div class="skill-icon">
-                <div class="key-hint">L-Click</div>
-                ⚔️
+                <div class="key-hint">L-Click</div>⚔️
             </div>
             <div class="skill-icon" id="dash-icon">
-                <div class="key-hint">SPACE</div>
-                💨
+                <div class="key-hint">SPACE</div>💨
                 <div class="cooldown-mask" id="dash-cd"></div>
             </div>
-            <!-- Skill 1: 📖 สำหรับเก้า / 🍙 สำหรับภูมิ — setupCharacterHUD จะสลับ id และ icon -->
             <div class="skill-icon" id="stealth-icon">
                 <div class="key-hint" id="skill1-hint">R-Click</div>
                 <span id="skill1-emoji">📖</span>
                 <div class="cooldown-mask" id="stealth-cd"></div>
             </div>
-            <!-- Skill 2 (Ultimate): 🐉 พญานาค — แสดงเฉพาะภูมิ -->
             <div class="skill-icon" id="naga-icon" style="display:none; border-color:#10b981; box-shadow:0 0 15px rgba(16,185,129,0.4);">
-                <div class="key-hint" style="background:#10b981;">Q</div>
-                🐉
+                <div class="key-hint" style="background:#10b981;">Q</div>🐉
                 <div class="cooldown-mask" id="naga-cd"></div>
                 <span id="naga-timer"></span>
             </div>
             <div class="skill-icon" id="passive-skill">
-                <div style="font-size: 20px;">✨</div>
+                <div style="font-size:20px;">✨</div>
                 <div class="skill-name">ซุ่มเสรี</div>
+            </div>
+            <!-- Database shortcut icon in HUD (desktop hint) -->
+            <div class="skill-icon" id="db-hud-icon" style="display:none; border-color:#06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.35);">
+                <div class="key-hint" style="background:#06b6d4;color:#0c1a2e;">E</div>🗄️
+                <div class="skill-name" style="color:#67e8f9;">DATABASE</div>
             </div>
         </div>
     </div>
 
+    <!-- Menu Overlay -->
     <div id="overlay">
         <div class="menu-container">
             <div class="title">
@@ -1028,18 +784,16 @@ body, html {
 
             <div id="mission-brief">กำลังโหลดภารกิจ...</div>
 
-            <!-- ✨ CHARACTER SELECTION -->
+            <!-- Character Selection -->
             <div class="char-select-section">
                 <h3>🎮 เลือกตัวละคร</h3>
                 <div class="char-cards">
-                    <!-- การ์ด: เก้า (นักเรียน MTC ดั้งเดิม) -->
                     <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
                         <div class="char-avatar">👨‍🎓</div>
                         <div class="char-name">เก้า (KAO)</div>
                         <div class="char-desc">MTC สายซุ่ม<br>🔫 สลับโหมดการยิง 3 แบบ | Skill 📖 ซุ่มอ่านหนังสือ+ซุ่มเสรี</div>
                         <div class="char-tag">🔵สายซุ่ม</div>
                     </div>
-                    <!-- การ์ด: ภูมิ (คนอีสาน) -->
                     <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
                         <div class="char-avatar">🌾</div>
                         <div class="char-name">ภูมิ (POOM)</div>
@@ -1056,17 +810,13 @@ body, html {
                     document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
                     const card = document.getElementById('card-' + charType);
                     if (card) card.classList.add('selected');
-                    // อัปเดตคำอธิบายปุ่ม
                     const startBtn = document.getElementById('start-btn');
                     if (startBtn) startBtn.textContent = charType === 'poom' ? '🌾 START MISSION' : '🎓 START MISSION';
                 }
             </script>
-            
-            <!-- ✨ IMPROVED: Report Card with proper structure -->
+
             <div id="report-card">
-                <div class="report-header">
-                    📋รายงานผลเกรด "F(uck)"
-                </div>
+                <div class="report-header">📋 รายงานผลเกรด "F(uck)"</div>
                 <div class="report-stats">
                     <div class="stat-item">
                         <div class="stat-label">Score</div>
@@ -1084,22 +834,22 @@ body, html {
                 <div class="new-features">
                     <h3>✨ ฟีเจอร์ใหม่</h3>
                     <div class="feature-list">
-                        <div class="feature-item">🌾ตัวละครใหม่ "ภูมิ"คนอีสาน</div>
-                        <div class="feature-item">🐉สกิลรูปแบบใหม่-อัญเชิญพญานาค</div>
+                        <div class="feature-item">🌾 ตัวละครใหม่ "ภูมิ" คนอีสาน</div>
+                        <div class="feature-item">🐉 สกิลรูปแบบใหม่ — อัญเชิญพญานาค</div>
+                        <div class="feature-item">🗄️ MTC Database — Math Explorer ในเกม</div>
                     </div>
                 </div>
-
                 <div class="instructions">
-                    <p style="color: #fff; margin-bottom: 15px;"><strong>🎯</strong>เลือกตัว⮕สังหารศัตรู⮕เลเวลอัพ⮕สู้กับบอส!</p>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+                    <p style="color:#fff; margin-bottom:15px;"><strong>🎯</strong> เลือกตัว ⮕ สังหารศัตรู ⮕ เลเวลอัพ ⮕ สู้บอส!</p>
+                    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:15px;">
                         <div>🎮 <strong>WASD</strong> เคลื่อนที่</div>
-                        <div>🔫 <strong>L-Click</strong> กดยิง</div>
-                        <div>📖 <strong>R-Click</strong> สกิลซุ่มอ่าน</div>
+                        <div>🔫 <strong>L-Click</strong> ยิง</div>
+                        <div>📖 <strong>R-Click</strong> สกิลซุ่ม</div>
                         <div>💨 <strong>SPACE</strong> พุ่งตัว</div>
                         <div>🔄 <strong>Q</strong> สลับปืน</div>
-                        <div>🏫 <strong>MTC Room</strong> Safe Zone</div>
+                        <div>🗄️ <strong>E</strong> MTC Database</div>
                     </div>
-                    <p style="font-size:13px; color:#facc15;">💡 Tips : เข้า MTC Room เพื่อฟื้นฟูเลือดอย่างต่อเนื่อง</p>
+                    <p style="font-size:13px; color:#facc15;">💡 Tips: เข้า MTC Room เพื่อฟื้นฟูเลือด และ Server เพื่อเปิด Math DB!</p>
                 </div>
             </div>
 
@@ -1126,6 +876,5 @@ body, html {
     <script src="js/ai.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/game.js"></script>
-
 </body>
 </html>

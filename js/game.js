@@ -2,56 +2,227 @@
  * 🎮 MTC: ENHANCED EDITION - Main Game Loop
  * Game state, Boss, waves, input, loop
  *
- * REFACTORED:
- * - ✅ All BALANCE.poom.* → BALANCE.characters.poom.*
- * - ✅ Player instantiated via charId ('kao' | 'poom')
- * - ✅ Auto-fire works continuously when holding mouse
+ * ADDED (Database Feature):
+ * - ✅ MTC_DATABASE_SERVER — fixed world position for the interactive server object
+ * - ✅ Proximity detection → shows db-prompt + HUD icon
+ * - ✅ 'E' key / mobile btn-database → showMathModal() + gameState = 'PAUSED'
+ * - ✅ closeMathModal() → gameState = 'PLAYING', hides overlay
+ * - ✅ ESC key closes modal when open
+ * - ✅ drawDatabaseServer() — glowing cyan server drawn on map each frame
  */
 
-// Game State
-let gameState = 'MENU';
+// ─── Game State ───────────────────────────────────────────
+let gameState  = 'MENU';
 let loopRunning = false;
-const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0 };
+const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0 };
 
-// Game objects (global for easy access)
-window.player = null;
-window.enemies = [];
-window.boss = null;
-window.powerups = [];
+// ─── Game Objects (global) ────────────────────────────────
+window.player         = null;
+window.enemies        = [];
+window.boss           = null;
+window.powerups       = [];
 window.specialEffects = [];
-window.meteorZones = [];
-let waveStartDamage = 0;
+window.meteorZones    = [];
+let waveStartDamage   = 0;
+
+// ─── MTC Database Server ──────────────────────────────────
+/**
+ * Fixed world-space position of the interactive "MTC Database" server.
+ * Placed at (350, -350) — away from spawn so players must explore to find it.
+ */
+const MTC_DATABASE_SERVER = {
+    x: 350,
+    y: -350,
+    INTERACTION_RADIUS: 90   // world units — must be within this to interact
+};
+
+/** True while the Math modal is open (game is paused). */
+let isMathOpen = false;
+
+// ─── Math Modal Functions ─────────────────────────────────
+
+/**
+ * showMathModal()
+ * Pauses the game and opens the Math Archive iframe overlay.
+ */
+function showMathModal() {
+    if (isMathOpen) return;
+    isMathOpen = true;
+    gameState  = 'PAUSED';
+
+    // Load iframe src on first open; subsequent opens reuse the loaded page
+    const iframe = document.getElementById('math-iframe');
+    if (iframe && !iframe.src.includes('math_archive.html')) {
+        iframe.src = 'math_archive.html';
+    }
+
+    const modal = document.getElementById('math-modal');
+    if (modal) modal.classList.add('open');
+
+    const pause = document.getElementById('pause-indicator');
+    if (pause) pause.style.display = 'block';
+
+    // Hide proximity prompt while inside
+    const prompt = document.getElementById('db-prompt');
+    if (prompt) prompt.style.display = 'none';
+
+    if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+    if (player) spawnFloatingText('📚 MTC DATABASE', player.x, player.y - 60, '#06b6d4', 22);
+}
+
+/**
+ * closeMathModal()
+ * Resumes the game and hides the Math Archive overlay.
+ * Keeps iframe loaded in memory for fast re-open.
+ */
+function closeMathModal() {
+    if (!isMathOpen) return;
+    isMathOpen = false;
+    gameState  = 'PLAYING';
+
+    const modal = document.getElementById('math-modal');
+    if (modal) modal.classList.remove('open');
+
+    const pause = document.getElementById('pause-indicator');
+    if (pause) pause.style.display = 'none';
+
+    if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
+}
+
+// Expose to global (called by HTML onclick)
+window.showMathModal  = showMathModal;
+window.closeMathModal = closeMathModal;
+
+// ─── Draw the Database Server on the map ─────────────────
+/**
+ * drawDatabaseServer()
+ * Draws a glowing cyan server rack at MTC_DATABASE_SERVER world position.
+ * Called inside drawGame() every frame.
+ */
+function drawDatabaseServer() {
+    const screen = worldToScreen(MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
+    const t    = performance.now() / 600;
+    const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
+
+    // Interaction radius ring (subtle, only visible when nearby)
+    if (player) {
+        const d = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
+        if (d < MTC_DATABASE_SERVER.INTERACTION_RADIUS * 2) {
+            const alpha = Math.max(0, 1 - d / (MTC_DATABASE_SERVER.INTERACTION_RADIUS * 2));
+            CTX.save();
+            CTX.globalAlpha = alpha * 0.25 * glow;
+            CTX.strokeStyle = '#06b6d4';
+            CTX.lineWidth   = 2;
+            CTX.setLineDash([6, 4]);
+            CTX.beginPath();
+            CTX.arc(screen.x, screen.y, MTC_DATABASE_SERVER.INTERACTION_RADIUS, 0, Math.PI * 2);
+            CTX.stroke();
+            CTX.setLineDash([]);
+            CTX.restore();
+        }
+    }
+
+    // Shadow
+    CTX.fillStyle = 'rgba(0,0,0,0.35)';
+    CTX.beginPath();
+    CTX.ellipse(screen.x, screen.y + 28, 18, 7, 0, 0, Math.PI * 2);
+    CTX.fill();
+
+    // Server rack body
+    CTX.save();
+    CTX.translate(screen.x, screen.y);
+    CTX.shadowBlur  = 14 * glow;
+    CTX.shadowColor = '#06b6d4';
+
+    CTX.fillStyle   = '#0c1a2e';
+    CTX.strokeStyle = '#06b6d4';
+    CTX.lineWidth   = 2;
+    CTX.beginPath();
+    CTX.roundRect(-18, -26, 36, 50, 5);
+    CTX.fill();
+    CTX.stroke();
+
+    // Rack unit slots
+    for (let i = 0; i < 3; i++) {
+        // Slot bg
+        CTX.fillStyle = '#0f2744';
+        CTX.fillRect(-14, -20 + i * 14, 28, 10);
+
+        // Status bar
+        CTX.fillStyle = i === 0 ? '#22c55e' : '#0e7490';
+        CTX.fillRect(-12, -18 + i * 14, 10, 6);
+
+        // LED
+        CTX.fillStyle   = i === 1 ? `rgba(6,182,212,${glow})` : '#22c55e';
+        CTX.shadowBlur  = 6;
+        CTX.shadowColor = i === 1 ? '#06b6d4' : '#22c55e';
+        CTX.beginPath();
+        CTX.arc(10, -15 + i * 14, 3.5, 0, Math.PI * 2);
+        CTX.fill();
+    }
+
+    // Label
+    CTX.shadowBlur = 0;
+    CTX.fillStyle  = '#67e8f9';
+    CTX.font       = 'bold 7px Arial';
+    CTX.textAlign  = 'center';
+    CTX.textBaseline = 'middle';
+    CTX.fillText('MTC DATABASE', 0, 33);
+
+    CTX.restore();
+}
+
+// ─── Proximity UI updater ─────────────────────────────────
+/**
+ * updateDatabaseServerUI()
+ * Called each frame while PLAYING.
+ * Shows / hides the "Press E" prompt and HUD/mobile shortcuts.
+ */
+function updateDatabaseServerUI() {
+    if (!player) return;
+    const d    = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
+    const near = d < MTC_DATABASE_SERVER.INTERACTION_RADIUS;
+
+    const promptEl  = document.getElementById('db-prompt');
+    const hudIcon   = document.getElementById('db-hud-icon');
+    const btnDb     = document.getElementById('btn-database');
+
+    if (promptEl) promptEl.style.display = near ? 'block' : 'none';
+    if (hudIcon)  hudIcon.style.display  = near ? 'flex'  : 'none';
+    if (btnDb)    btnDb.style.display    = near ? 'flex'  : 'none';
+}
 
 // ==================== BOSS ====================
 class Boss extends Entity {
     constructor(difficulty = 1) {
         super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
-        this.maxHp = BALANCE.boss.baseHp * difficulty;
-        this.hp = this.maxHp;
-        this.name = "KRU MANOP";
-        this.state = 'CHASE';
-        this.timer = 0;
+        this.maxHp     = BALANCE.boss.baseHp * difficulty;
+        this.hp        = this.maxHp;
+        this.name      = "KRU MANOP";
+        this.state     = 'CHASE';
+        this.timer     = 0;
         this.moveSpeed = BALANCE.boss.moveSpeed;
         this.difficulty = difficulty;
-        this.phase = 1;
-        this.sayTimer = 0;
+        this.phase     = 1;
+        this.sayTimer  = 0;
         this.skills = {
-            slam: { cd: 0, max: BALANCE.boss.slamCooldown },
+            slam:  { cd: 0, max: BALANCE.boss.slamCooldown },
             graph: { cd: 0, max: BALANCE.boss.graphCooldown },
-            log: { cd: 0, max: BALANCE.boss.log457Cooldown }
+            log:   { cd: 0, max: BALANCE.boss.log457Cooldown }
         };
-        this.log457State = null;
-        this.log457Timer = 0;
+        this.log457State       = null;
+        this.log457Timer       = 0;
         this.log457AttackBonus = 0;
-        this.isInvulnerable = false;
+        this.isInvulnerable    = false;
     }
 
     update(dt, player) {
         if (this.dead) return;
 
-        const dx = player.x - this.x, dy = player.y - this.y, d = dist(this.x, this.y, player.x, player.y);
-        this.angle = Math.atan2(dy, dx);
-        this.timer += dt;
+        const dx = player.x - this.x, dy = player.y - this.y;
+        const d  = dist(this.x, this.y, player.x, player.y);
+        this.angle    = Math.atan2(dy, dx);
+        this.timer   += dt;
         this.sayTimer += dt;
 
         for (let s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
@@ -62,7 +233,7 @@ class Boss extends Entity {
         }
 
         if (this.hp < this.maxHp * BALANCE.boss.phase2Threshold && this.phase === 1) {
-            this.phase = 2;
+            this.phase     = 2;
             this.moveSpeed = BALANCE.boss.phase2Speed;
             spawnFloatingText("ENRAGED!", this.x, this.y - 80, '#ef4444', 40);
             addScreenShake(20);
@@ -75,10 +246,10 @@ class Boss extends Entity {
             this.isInvulnerable = true;
             this.hp = Math.min(this.maxHp, this.hp + this.maxHp * BALANCE.boss.log457HealRate * dt);
             if (this.log457Timer >= BALANCE.boss.log457ChargeDuration) {
-                this.log457State = 'active';
-                this.log457Timer = 0;
+                this.log457State       = 'active';
+                this.log457Timer       = 0;
                 this.log457AttackBonus = BALANCE.boss.log457AttackBonus;
-                this.isInvulnerable = false;
+                this.isInvulnerable    = false;
                 addScreenShake(20);
                 spawnFloatingText("67! 67! 67!", this.x, this.y - 80, '#facc15', 35);
                 this.speak("0.6767!");
@@ -96,7 +267,7 @@ class Boss extends Entity {
             this.log457Timer += dt;
             this.vx = 0; this.vy = 0;
             if (this.log457Timer >= BALANCE.boss.log457StunDuration) {
-                this.log457State = null;
+                this.log457State       = null;
                 this.log457AttackBonus = 0;
             }
             return;
@@ -111,9 +282,9 @@ class Boss extends Entity {
 
             if (this.timer > 2) {
                 this.timer = 0;
-                if (this.skills.log.cd <= 0 && Math.random() < 0.2) this.useLog457();
+                if      (this.skills.log.cd   <= 0 && Math.random() < 0.20) this.useLog457();
                 else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) this.useDeadlyGraph(player);
-                else if (this.skills.slam.cd <= 0 && Math.random() < 0.3) this.useEquationSlam();
+                else if (this.skills.slam.cd  <= 0 && Math.random() < 0.30) this.useEquationSlam();
                 else this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
             }
         } else if (this.state === 'ATTACK') {
@@ -145,7 +316,9 @@ class Boss extends Entity {
             }
         }
 
-        if (d < this.radius + player.radius) player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
+        if (d < this.radius + player.radius) {
+            player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
+        }
         UIManager.updateBossHUD(this);
         UIManager.updateBossSpeech(this);
     }
@@ -171,9 +344,9 @@ class Boss extends Entity {
 
     useLog457() {
         this.skills.log.cd = this.skills.log.max;
-        this.log457State = 'charging';
-        this.log457Timer = 0;
-        this.state = 'CHASE';
+        this.log457State   = 'charging';
+        this.log457Timer   = 0;
+        this.state         = 'CHASE';
         spawnFloatingText("log 4.57 = ?", this.x, this.y - 80, '#ef4444', 30);
         Audio.playBossSpecial();
     }
@@ -198,7 +371,9 @@ class Boss extends Entity {
             addScore(BALANCE.score.boss * this.difficulty);
             UIManager.updateBossHUD(null);
             Audio.playAchievement();
-            for (let i = 0; i < 3; i++) setTimeout(() => window.powerups.push(new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))), i * 200);
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => window.powerups.push(new PowerUp(this.x + rand(-50,50), this.y + rand(-50,50))), i * 200);
+            }
             window.boss = null;
             Achievements.check('boss_down');
             setTimeout(() => {
@@ -219,12 +394,12 @@ class Boss extends Entity {
             CTX.scale(sc, sc);
             const pu = Math.sin(this.log457Timer * 10) * 0.5 + 0.5;
             CTX.beginPath(); CTX.arc(0, 0, 70, 0, Math.PI * 2);
-            CTX.fillStyle = `rgba(239, 68, 68, ${pu * 0.3})`;
-            CTX.fill();
+            CTX.fillStyle = `rgba(239, 68, 68, ${pu * 0.3})`; CTX.fill();
         }
 
         if (this.log457State === 'active')  { CTX.shadowBlur = 20; CTX.shadowColor = '#facc15'; }
         if (this.log457State === 'stunned') { CTX.font = 'bold 30px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', 0, -70); }
+
         if (this.state === 'ULTIMATE') {
             CTX.beginPath(); CTX.arc(0, 0, 70, 0, Math.PI * 2);
             CTX.strokeStyle = `rgba(239, 68, 68, ${Math.random()})`;
@@ -234,20 +409,17 @@ class Boss extends Entity {
 
         CTX.rotate(this.angle);
         CTX.fillStyle = '#f8fafc'; CTX.fillRect(-30, -30, 60, 60);
-        CTX.fillStyle = '#e2e8f0'; CTX.beginPath(); CTX.moveTo(-30, -30); CTX.lineTo(-20, -20);
-        CTX.lineTo(20, -20); CTX.lineTo(30, -30); CTX.closePath(); CTX.fill();
-        CTX.fillStyle = '#ef4444'; CTX.beginPath(); CTX.moveTo(0, -20); CTX.lineTo(6, 0);
-        CTX.lineTo(0, 25); CTX.lineTo(-6, 0); CTX.closePath(); CTX.fill();
+        CTX.fillStyle = '#e2e8f0';
+        CTX.beginPath(); CTX.moveTo(-30,-30); CTX.lineTo(-20,-20); CTX.lineTo(20,-20); CTX.lineTo(30,-30); CTX.closePath(); CTX.fill();
+        CTX.fillStyle = '#ef4444';
+        CTX.beginPath(); CTX.moveTo(0,-20); CTX.lineTo(6,0); CTX.lineTo(0,25); CTX.lineTo(-6,0); CTX.closePath(); CTX.fill();
         CTX.fillStyle = this.log457State === 'charging' ? '#ff0000' : '#e2e8f0';
         CTX.beginPath(); CTX.arc(0, 0, 24, 0, Math.PI * 2); CTX.fill();
         CTX.fillStyle = '#94a3b8'; CTX.beginPath(); CTX.arc(0, 0, 26, Math.PI, 0); CTX.fill();
-
         if (this.phase === 2 || this.log457State === 'active') {
             CTX.fillStyle = '#ef4444';
-            CTX.fillRect(-12, -5, 10, 3);
-            CTX.fillRect(2, -5, 10, 3);
+            CTX.fillRect(-12,-5,10,3); CTX.fillRect(2,-5,10,3);
         }
-
         CTX.fillStyle = '#facc15'; CTX.fillRect(25, 12, 60, 10);
         CTX.fillStyle = '#000'; CTX.font = 'bold 8px Arial'; CTX.fillText('30cm', 50, 17);
         CTX.restore();
@@ -268,7 +440,8 @@ function startNextWave() {
         setTimeout(() => {
             window.boss = new Boss(Math.floor(getWave() / BALANCE.waves.bossEveryNWaves));
             UIManager.updateBossHUD(window.boss);
-            document.getElementById('boss-name').innerHTML = `KRU MANOP - LEVEL ${Math.floor(getWave() / BALANCE.waves.bossEveryNWaves)} <span class="ai-badge">AI</span>`;
+            document.getElementById('boss-name').innerHTML =
+                `KRU MANOP - LEVEL ${Math.floor(getWave() / BALANCE.waves.bossEveryNWaves)} <span class="ai-badge">AI</span>`;
             spawnFloatingText('BOSS INCOMING!', player.x, player.y - 100, '#ef4444', 35);
             addScreenShake(15);
             Audio.playBossSpecial();
@@ -278,18 +451,16 @@ function startNextWave() {
 
 function spawnEnemies(count) {
     for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
+        const angle    = Math.random() * Math.PI * 2;
         const distance = BALANCE.waves.spawnDistance;
         let x = player.x + Math.cos(angle) * distance;
         let y = player.y + Math.sin(angle) * distance;
-
         const safe = mapSystem.findSafeSpawn(x, y, BALANCE.enemy.radius);
         x = safe.x; y = safe.y;
-
         const r = Math.random();
-        if (r < BALANCE.waves.mageSpawnChance) window.enemies.push(new MageEnemy(x, y));
+        if      (r < BALANCE.waves.mageSpawnChance) window.enemies.push(new MageEnemy(x, y));
         else if (r < BALANCE.waves.mageSpawnChance + BALANCE.waves.tankSpawnChance) window.enemies.push(new TankEnemy(x, y));
-        else window.enemies.push(new Enemy(x, y));
+        else    window.enemies.push(new Enemy(x, y));
     }
 }
 
@@ -300,6 +471,9 @@ function gameLoop(now) {
     if (gameState === 'PLAYING') {
         updateGame(dt);
         drawGame();
+    } else if (gameState === 'PAUSED') {
+        // Render frozen scene behind the modal overlay
+        drawGame();
     }
 
     requestAnimationFrame(gameLoop);
@@ -309,42 +483,39 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
+    // ── Database server: check E key BEFORE player.update()
+    //    so PoomPlayer doesn't steal keys.e for eatRice when near server
+    const dToServer = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
+    if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
+        keys.e = 0;
+        showMathModal();
+        return;
+    }
+
     player.update(dt, keys, mouse);
 
-    // ── Weapon system for non-Poom characters ──
+    // ── Weapon system (non-Poom) ──
     if (!(player instanceof PoomPlayer)) {
         weaponSystem.update(dt);
-
         const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
-        if (burstProjectiles && burstProjectiles.length > 0) {
-            projectileManager.add(burstProjectiles);
-        }
-
+        if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
         if (mouse.left === 1 && gameState === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(player, player.damageBoost);
-                if (projectiles && projectiles.length > 0) {
-                    projectileManager.add(projectiles);
-                }
+                if (projectiles && projectiles.length > 0) projectileManager.add(projectiles);
             }
         }
     }
 
-    // ── Poom attack & skill input ──
+    // ── Poom input ──
     if (player instanceof PoomPlayer) {
-        if (mouse.left === 1 && gameState === 'PLAYING') {
-            shootPoom(player);
-        }
+        if (mouse.left === 1 && gameState === 'PLAYING') shootPoom(player);
         if (mouse.right === 1) {
-            if (player.cooldowns.eat <= 0 && !player.isEatingRice) {
-                player.eatRice();
-            }
+            if (player.cooldowns.eat <= 0 && !player.isEatingRice) player.eatRice();
             mouse.right = 0;
         }
         if (keys.q === 1) {
-            if (player.cooldowns.naga <= 0) {
-                player.summonNaga();
-            }
+            if (player.cooldowns.naga <= 0) player.summonNaga();
             keys.q = 0;
         }
         UIManager.updateSkillIcons(player);
@@ -358,7 +529,9 @@ function updateGame(dt) {
     }
 
     if (getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss) {
-        if (Achievements.stats.damageTaken === waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) Achievements.check('no_damage');
+        if (Achievements.stats.damageTaken === waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
+            Achievements.check('no_damage');
+        }
         setWave(getWave() + 1);
         Achievements.check('wave_1');
         startNextWave();
@@ -377,12 +550,9 @@ function updateGame(dt) {
 
     for (let i = meteorZones.length - 1; i >= 0; i--) {
         meteorZones[i].life -= dt;
-
-        const d = dist(meteorZones[i].x, meteorZones[i].y, player.x, player.y);
-        if (d < meteorZones[i].radius) {
+        if (dist(meteorZones[i].x, meteorZones[i].y, player.x, player.y) < meteorZones[i].radius) {
             player.takeDamage(meteorZones[i].damage * dt);
         }
-
         if (meteorZones[i].life <= 0) meteorZones.splice(i, 1);
     }
 
@@ -391,6 +561,9 @@ function updateGame(dt) {
     floatingTextSystem.update(dt);
     updateScreenShake();
     Achievements.checkAll();
+
+    // ── Database proximity UI ──
+    updateDatabaseServerUI();
 }
 
 function drawGame() {
@@ -410,12 +583,11 @@ function drawGame() {
         const screen = worldToScreen(z.x, z.y);
         const a = Math.sin(performance.now() / 200) * 0.3 + 0.7;
         CTX.fillStyle = `rgba(239, 68, 68, ${a * 0.4})`;
-        CTX.beginPath();
-        CTX.arc(screen.x, screen.y, z.radius, 0, Math.PI * 2);
-        CTX.fill();
+        CTX.beginPath(); CTX.arc(screen.x, screen.y, z.radius, 0, Math.PI * 2); CTX.fill();
     }
 
     mapSystem.draw();
+    drawDatabaseServer();      // ← MTC Database server object
     powerups.forEach(p => p.draw());
     specialEffects.forEach(e => e.draw());
     player.draw();
@@ -432,62 +604,34 @@ function drawGrid() {
     const sz = GAME_CONFIG.physics.gridSize;
     const ox = -getCamera().x % sz;
     const oy = -getCamera().y % sz;
-
     CTX.strokeStyle = GAME_CONFIG.visual.gridColor;
     CTX.lineWidth = 1;
     CTX.beginPath();
-    for (let x = ox; x < CANVAS.width; x += sz) {
-        CTX.moveTo(x, 0);
-        CTX.lineTo(x, CANVAS.height);
-    }
-    for (let y = oy; y < CANVAS.height; y += sz) {
-        CTX.moveTo(0, y);
-        CTX.lineTo(CANVAS.width, y);
-    }
+    for (let x = ox; x < CANVAS.width; x += sz) { CTX.moveTo(x, 0); CTX.lineTo(x, CANVAS.height); }
+    for (let y = oy; y < CANVAS.height; y += sz) { CTX.moveTo(0, y); CTX.lineTo(CANVAS.width, y); }
     CTX.stroke();
 }
 
 // ==================== POOM ATTACK SYSTEM ====================
-/**
- * 🍙 shootPoom — จัดการการปาข้าวเหนียวของภูมิ
- * ดึงค่าทั้งหมดจาก BALANCE.characters.poom
- */
 function shootPoom(player) {
     const S = BALANCE.characters.poom;
-
     if (player.cooldowns.shoot > 0) return;
-
-    // Skill 1 active → ยิงเร็วขึ้น 30%
-    const attackSpeedMult = player.isEatingRice ? 0.7 : 1.0;
+    const attackSpeedMult  = player.isEatingRice ? 0.7 : 1.0;
     player.cooldowns.shoot = S.riceCooldown * attackSpeedMult;
-
     const { damage, isCrit } = player.dealDamage(S.riceDamage * player.damageBoost);
-
-    projectileManager.add(new Projectile(
-        player.x, player.y, player.angle,
-        S.riceSpeed, damage,
-        S.riceColor, false, 'player'
-    ));
-
+    projectileManager.add(new Projectile(player.x, player.y, player.angle, S.riceSpeed, damage, S.riceColor, false, 'player'));
     if (isCrit) {
         spawnFloatingText('สาดข้าว! CRIT!', player.x, player.y - 45, '#fbbf24', 20);
         spawnParticles(player.x, player.y, 5, '#ffffff');
     }
-
     player.speedBoostTimer = S.speedOnHitDuration;
 }
 
 // ==================== INIT & START ====================
 async function initAI() {
     const brief = document.getElementById('mission-brief');
-
-    if (!brief) {
-        console.warn('⚠️ mission-brief element not found');
-        return;
-    }
-
+    if (!brief) { console.warn('⚠️ mission-brief not found'); return; }
     brief.textContent = "กำลังโหลดภารกิจ...";
-
     try {
         const name = await Gemini.getMissionName();
         brief.textContent = `ภารกิจ "${name}"`;
@@ -497,26 +641,16 @@ async function initAI() {
     }
 }
 
-/**
- * startGame — รับ charId ('kao' | 'poom') แล้วสร้างตัวละครให้ถูกต้อง
- */
 function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
     Audio.init();
 
-    // ── สร้าง Player ตาม charId ──
-    if (charType === 'poom') {
-        player = new PoomPlayer();
-    } else {
-        // 'kao' หรือตัวละครอื่นในอนาคต — ส่ง charId เข้าไป
-        player = new Player(charType);
-    }
+    player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
 
-    enemies = [];
-    powerups = [];
-    specialEffects = [];
-    meteorZones = [];
-    boss = null;
+    enemies = []; powerups = []; specialEffects = []; meteorZones = [];
+    boss       = null;
+    isMathOpen = false;
+
     UIManager.updateBossHUD(null);
     resetScore();
     setWave(1);
@@ -525,11 +659,7 @@ function startGame(charType = 'kao') {
     floatingTextSystem.clear();
     mapSystem.init();
 
-    // Weapon UI เฉพาะตัวละครที่ไม่ใช่ภูมิ
-    if (!(player instanceof PoomPlayer)) {
-        weaponSystem.updateWeaponUI();
-    }
-
+    if (!(player instanceof PoomPlayer)) weaponSystem.updateWeaponUI();
     UIManager.setupCharacterHUD(player);
 
     Achievements.stats.damageTaken = 0;
@@ -537,6 +667,12 @@ function startGame(charType = 'kao') {
 
     hideElement('overlay');
     hideElement('report-card');
+
+    // Clean up modal state if restarting
+    const modal = document.getElementById('math-modal');
+    if (modal) modal.classList.remove('open');
+    const pause = document.getElementById('pause-indicator');
+    if (pause) pause.style.display = 'none';
 
     startNextWave();
     gameState = 'PLAYING';
@@ -552,33 +688,35 @@ function startGame(charType = 'kao') {
 async function endGame(result) {
     gameState = 'GAMEOVER';
 
+    // Force-close DB modal if open
+    if (isMathOpen) {
+        isMathOpen = false;
+        const modal = document.getElementById('math-modal');
+        if (modal) modal.classList.remove('open');
+        const pause = document.getElementById('pause-indicator');
+        if (pause) pause.style.display = 'none';
+    }
+
     if (result === 'victory') {
         showElement('victory-screen');
         setElementText('final-score', `SCORE ${getScore()}`);
-        setElementText('final-wave', `WAVES CLEARED ${getWave() - 1}`);
+        setElementText('final-wave',  `WAVES CLEARED ${getWave() - 1}`);
     } else {
         showElement('overlay');
         const titleEl = document.querySelector('.title');
-        if (titleEl) {
-            titleEl.innerHTML = `GAME OVER<br><span class="subtitle">SCORE ${getScore()} | WAVE ${getWave()}</span>`;
-        }
-
+        if (titleEl) titleEl.innerHTML = `GAME OVER<br><span class="subtitle">SCORE ${getScore()} | WAVE ${getWave()}</span>`;
         const rc = document.getElementById('report-card');
         if (rc) rc.style.display = 'block';
-
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';
-
         try {
             const comment = await Gemini.getReportCard(getScore(), getWave());
             if (ld) ld.style.display = 'none';
-
             const reportText = document.getElementById('report-text');
             if (reportText) reportText.textContent = comment;
         } catch (e) {
             console.warn('Failed to get AI report card:', e);
             if (ld) ld.style.display = 'none';
-
             const reportText = document.getElementById('report-text');
             if (reportText) reportText.textContent = "ตั้งใจเรียนให้มากกว่านี้นะ...";
         }
@@ -587,32 +725,32 @@ async function endGame(result) {
 
 // ==================== INPUT ====================
 window.addEventListener('keydown', e => {
+    // ESC always closes the math modal, regardless of gameState
+    if (e.code === 'Escape' && isMathOpen) { closeMathModal(); return; }
+
     if (gameState !== 'PLAYING') return;
-    if (e.code === 'KeyW') keys.w = 1;
-    if (e.code === 'KeyS') keys.s = 1;
-    if (e.code === 'KeyA') keys.a = 1;
-    if (e.code === 'KeyD') keys.d = 1;
+
+    if (e.code === 'KeyW')   keys.w     = 1;
+    if (e.code === 'KeyS')   keys.s     = 1;
+    if (e.code === 'KeyA')   keys.a     = 1;
+    if (e.code === 'KeyD')   keys.d     = 1;
     if (e.code === 'Space') { keys.space = 1; e.preventDefault(); }
-    if (e.code === 'KeyQ') keys.q = 1;
+    if (e.code === 'KeyQ')   keys.q     = 1;
+    if (e.code === 'KeyE')   keys.e     = 1;   // Database open / Poom eat-rice fallback
 });
 
 window.addEventListener('keyup', e => {
-    if (e.code === 'KeyW') keys.w = 0;
-    if (e.code === 'KeyS') keys.s = 0;
-    if (e.code === 'KeyA') keys.a = 0;
-    if (e.code === 'KeyD') keys.d = 0;
+    if (e.code === 'KeyW')  keys.w     = 0;
+    if (e.code === 'KeyS')  keys.s     = 0;
+    if (e.code === 'KeyA')  keys.a     = 0;
+    if (e.code === 'KeyD')  keys.d     = 0;
     if (e.code === 'Space') keys.space = 0;
+    if (e.code === 'KeyE')  keys.e     = 0;
     if (e.code === 'KeyQ') {
         if (gameState === 'PLAYING') {
-            if (player instanceof PoomPlayer) {
-                keys.q = 0; // Q for Poom = summonNaga, handled in updateGame
-            } else {
-                weaponSystem.switchWeapon();
-                keys.q = 0;
-            }
-        } else {
-            keys.q = 0;
-        }
+            if (player instanceof PoomPlayer) keys.q = 0;
+            else { weaponSystem.switchWeapon(); keys.q = 0; }
+        } else { keys.q = 0; }
     }
 });
 
@@ -626,13 +764,13 @@ window.addEventListener('mousemove', e => {
 
 window.addEventListener('mousedown', e => {
     if (!CANVAS) return;
-    if (e.button === 0) { mouse.left = 1; }
+    if (e.button === 0) mouse.left  = 1;
     if (e.button === 2) mouse.right = 1;
     e.preventDefault();
 });
 
 window.addEventListener('mouseup', e => {
-    if (e.button === 0) mouse.left = 0;
+    if (e.button === 0) mouse.left  = 0;
     if (e.button === 2) mouse.right = 0;
 });
 
@@ -640,7 +778,7 @@ window.addEventListener('contextmenu', e => e.preventDefault());
 
 // ==================== EXPOSE TO GLOBAL ====================
 window.startGame = startGame;
-window.endGame = endGame;
+window.endGame   = endGame;
 
 window.onload = () => {
     console.log('🚀 Initializing game...');
@@ -671,14 +809,12 @@ function initMobileControls() {
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
             if (joystick.id === null) {
-                joystick.id = touch.identifier;
-                joystick.active = true;
-                joystick.originX = touch.clientX;
-                joystick.originY = touch.clientY;
-                const zoneRect = zoneElem.getBoundingClientRect();
+                joystick.id = touch.identifier; joystick.active = true;
+                joystick.originX = touch.clientX; joystick.originY = touch.clientY;
+                const zr = zoneElem.getBoundingClientRect();
                 baseElem.style.display = 'block';
-                baseElem.style.left = (touch.clientX - zoneRect.left) + 'px';
-                baseElem.style.top  = (touch.clientY - zoneRect.top)  + 'px';
+                baseElem.style.left = (touch.clientX - zr.left) + 'px';
+                baseElem.style.top  = (touch.clientY - zr.top)  + 'px';
                 stickElem.style.transform = 'translate(-50%, -50%)';
                 if (isRight) mouse.left = 1;
                 break;
@@ -695,8 +831,7 @@ function initMobileControls() {
                 let dy = touch.clientY - joystick.originY;
                 const d = Math.hypot(dx, dy);
                 if (d > maxRadius) { dx = (dx / d) * maxRadius; dy = (dy / d) * maxRadius; }
-                joystick.nx = dx / maxRadius;
-                joystick.ny = dy / maxRadius;
+                joystick.nx = dx / maxRadius; joystick.ny = dy / maxRadius;
                 stickElem.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
             }
         }
@@ -726,10 +861,11 @@ function initMobileControls() {
     zoneR.addEventListener('touchend',    (e) => endJoystick(e,   window.touchJoystickRight, baseR,  stickR, true),          { passive: false });
     zoneR.addEventListener('touchcancel', (e) => endJoystick(e,   window.touchJoystickRight, baseR,  stickR, true),          { passive: false });
 
-    const btnDash   = document.getElementById('btn-dash');
-    const btnSkill  = document.getElementById('btn-skill');
-    const btnSwitch = document.getElementById('btn-switch');
-    const btnNaga   = document.getElementById('btn-naga');
+    const btnDash     = document.getElementById('btn-dash');
+    const btnSkill    = document.getElementById('btn-skill');
+    const btnSwitch   = document.getElementById('btn-switch');
+    const btnNaga     = document.getElementById('btn-naga');
+    const btnDatabase = document.getElementById('btn-database');
 
     if (btnDash) {
         btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
@@ -751,6 +887,14 @@ function initMobileControls() {
             if (gameState === 'PLAYING' && player instanceof PoomPlayer) {
                 if (player.cooldowns.naga <= 0) player.summonNaga();
             }
+        }, { passive: false });
+    }
+    // ── Database button (mobile) ──
+    if (btnDatabase) {
+        btnDatabase.addEventListener('touchstart', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (gameState === 'PLAYING') showMathModal();
+            else if (isMathOpen)         closeMathModal();
         }, { passive: false });
     }
 
