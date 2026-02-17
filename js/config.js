@@ -508,9 +508,9 @@ const GAME_CONFIG = {
         enemyDeath:    0.3,
         powerUp:       0.2,
         heal:          0.4,
-        levelUp:       0.5,
+        levelUp:       0.4,
         victory:       0.6,
-        achievement:   0.5,
+        achievement:   0.4,
         weaponSwitch:  0.3,
         bossSpecial:   0.5,
         meteorWarning: 0.3
