@@ -27,7 +27,7 @@ const BALANCE = {
         weapons: {
             auto: {
                 name: 'AUTO RIFLE',
-                damage: 23,
+                damage: 21.5,
                 cooldown: 0.195,
                 range: 900,
                 speed: 900,
@@ -38,7 +38,7 @@ const BALANCE = {
             },
             sniper: {
                 name: 'SNIPER',
-                damage: 115,        
+                damage: 100.5,      // High damage for single shots
                 cooldown: 0.85,     // Slow fire rate
                 range: 1200,       // Longest range
                 speed: 1200,
@@ -49,7 +49,7 @@ const BALANCE = {
             },
             shotgun: {
                 name: 'SHOTGUN',
-                damage: 100,        // 3x damage total
+                damage: 80.5,        
                 cooldown: 0.6,
                 range: 400,        // Shortest range
                 speed: 700,
@@ -90,7 +90,7 @@ const BALANCE = {
         dashCooldown: 1.65,
 
         // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
-        riceDamage: 38,
+        riceDamage: 42.5,
         riceCooldown: 0.46,
         riceSpeed: 600,
         riceRange: 750,
