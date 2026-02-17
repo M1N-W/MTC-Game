@@ -170,7 +170,7 @@ const BALANCE = {
     // ──────────────────────────────────────────────────────────────
     drone: {
         radius: 12,            // collision / draw size
-        damage: 10,            // damage per projectile
+        damage: 15,            // damage per projectile
         range: 300,            // world-unit detection radius for enemies
         fireRate: 1.0,         // shots per second  →  cooldown = 1 / fireRate
         projectileSpeed: 700,  // world units / s for drone bullets
