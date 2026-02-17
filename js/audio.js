@@ -12,7 +12,7 @@
 class AudioSystem {
     constructor() {
         this.ctx = null;
-        this.masterVolume = 0.4; // REDUCED from 0.7
+        this.masterVolume = GAME_CONFIG.audio.master; // ค่า Default อ่านจาก GAME_CONFIG (แก้ที่ config.js)
         this.enabled = true;
     }
     
@@ -39,7 +39,7 @@ class AudioSystem {
         // Sine wave for smooth sound
         osc.type = 'sine';
         osc.frequency.value = 400; // Pleasant frequency
-        gain.gain.value = 0.03 * this.masterVolume; // Very soft
+        gain.gain.value = GAME_CONFIG.audio.shoot * this.masterVolume; // → config.js: audio.shoot
         
         osc.start();
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
@@ -59,7 +59,7 @@ class AudioSystem {
         // Sine wave for smoothness
         osc.type = 'sine';
         osc.frequency.value = 250;
-        gain.gain.value = 0.06 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.shoot * this.masterVolume; // → config.js: audio.shoot
         
         osc.start();
         osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.2);
@@ -80,7 +80,7 @@ class AudioSystem {
         // Triangle for softer punch
         osc.type = 'triangle';
         osc.frequency.value = 150;
-        gain.gain.value = 0.08 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.shoot * this.masterVolume; // → config.js: audio.shoot
         
         osc.start();
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
@@ -108,7 +108,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 250;
-        gain.gain.value = 0.08 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.dash * this.masterVolume; // → config.js: audio.dash
         
         osc.start();
         osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
@@ -128,7 +128,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 180;
-        gain.gain.value = 0.04 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.hit * this.masterVolume; // → config.js: audio.hit
         
         osc.start();
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
@@ -147,7 +147,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 500;
-        gain.gain.value = 0.06 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.powerUp * this.masterVolume; // → config.js: audio.powerUp
         
         osc.start();
         osc.frequency.exponentialRampToValueAtTime(1000, this.ctx.currentTime + 0.25);
@@ -169,7 +169,7 @@ class AudioSystem {
                 
                 osc.type = 'sine';
                 osc.frequency.value = 600 + i * 150; // Closer intervals
-                gain.gain.value = 0.05 * this.masterVolume; // Reduced
+                gain.gain.value = GAME_CONFIG.audio.achievement * this.masterVolume; // → config.js: audio.achievement
                 
                 osc.start();
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
@@ -190,7 +190,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 600;
-        gain.gain.value = 0.04 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.weaponSwitch * this.masterVolume; // → config.js: audio.weaponSwitch
         
         osc.start();
         osc.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 0.08);
@@ -210,7 +210,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 300;
-        gain.gain.value = 0.05 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.enemyDeath * this.masterVolume; // → config.js: audio.enemyDeath
         
         osc.start();
         osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.25);
@@ -230,7 +230,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 150;
-        gain.gain.value = 0.08 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.bossSpecial * this.masterVolume; // → config.js: audio.bossSpecial
         
         osc.start();
         osc.frequency.linearRampToValueAtTime(400, this.ctx.currentTime + 0.2);
@@ -250,7 +250,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 700;
-        gain.gain.value = 0.04 * this.masterVolume; // Reduced
+        gain.gain.value = GAME_CONFIG.audio.meteorWarning * this.masterVolume; // → config.js: audio.meteorWarning
         
         osc.start();
         
@@ -281,7 +281,7 @@ class AudioSystem {
                 
                 osc.type = 'sine';
                 osc.frequency.value = freq;
-                gain.gain.value = 0.04 * this.masterVolume;
+                gain.gain.value = GAME_CONFIG.audio.levelUp * this.masterVolume; // → config.js: audio.levelUp
                 
                 osc.start();
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
@@ -302,7 +302,7 @@ class AudioSystem {
         
         osc.type = 'sine';
         osc.frequency.value = 800;
-        gain.gain.value = 0.03 * this.masterVolume;
+        gain.gain.value = GAME_CONFIG.audio.heal * this.masterVolume; // → config.js: audio.heal
         
         osc.start();
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
