@@ -172,89 +172,88 @@
             50%       { box-shadow: 0 0 28px rgba(6,182,212,0.7); }
         }
 
-        /* ── Math Modal Overlay ── */
-        #math-modal {
+        /* ── Resume Prompt Overlay ──
+           Shown when game is paused (window blur or DB opened in new tab).
+           Replaces the old heavy iframe modal entirely.
+        ── */
+        #resume-prompt {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.82);
+            background: rgba(0, 0, 0, 0.65);
             z-index: 9000;
             justify-content: center;
             align-items: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(6px);
+            pointer-events: auto;
+            cursor: pointer;
         }
 
-        #math-modal.open { display: flex; }
-
-        .math-modal-inner {
-            position: relative;
-            width: 94vw;
-            height: 92vh;
-            border-radius: 20px;
-            overflow: hidden;
+        .resume-prompt-inner {
+            background: rgba(15, 23, 42, 0.98);
             border: 2px solid #06b6d4;
-            box-shadow: 0 0 60px rgba(6,182,212,0.4), 0 25px 50px rgba(0,0,0,0.8);
+            border-radius: 20px;
+            padding: 44px 56px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(6, 182, 212, 0.45), 0 25px 50px rgba(0,0,0,0.8);
             display: flex;
             flex-direction: column;
-        }
-
-        .math-modal-header {
-            background: linear-gradient(135deg, #0c1a2e, #0f2744);
-            border-bottom: 2px solid #06b6d4;
-            padding: 10px 20px;
-            display: flex;
             align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .math-modal-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
-            color: #67e8f9;
-            letter-spacing: 2px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .math-modal-badge {
-            font-size: 10px;
-            background: rgba(6,182,212,0.2);
-            border: 1px solid #06b6d4;
-            color: #67e8f9;
-            padding: 2px 8px;
-            border-radius: 8px;
-        }
-
-        #math-modal-close {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            background: rgba(239,68,68,0.15);
-            border: 2px solid #ef4444;
-            color: #ef4444;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
+            gap: 18px;
             pointer-events: auto;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-            line-height: 1;
+            animation: resumePulse 2s ease-in-out infinite;
         }
 
-        #math-modal-close:hover {
-            background: rgba(239,68,68,0.4);
-            transform: scale(1.1);
+        @keyframes resumePulse {
+            0%, 100% { box-shadow: 0 0 40px rgba(6,182,212,0.35), 0 25px 50px rgba(0,0,0,0.8); }
+            50%       { box-shadow: 0 0 70px rgba(6,182,212,0.65), 0 25px 50px rgba(0,0,0,0.8); }
         }
 
-        #math-iframe {
-            flex: 1;
-            width: 100%;
+        .resume-icon { font-size: 52px; line-height: 1; }
+
+        .resume-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 26px;
+            color: #67e8f9;
+            letter-spacing: 3px;
+        }
+
+        .resume-sub {
+            font-size: 14px;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .resume-btn {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            color: #001a20;
             border: none;
-            background: #fcfbf9;
+            padding: 14px 44px;
+            font-size: 19px;
+            font-family: 'Kanit', sans-serif;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 24px rgba(6, 182, 212, 0.55);
+            margin-top: 6px;
+            letter-spacing: 1px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* ── Pause Indicator ── */
+        .resume-btn:hover {
+            transform: scale(1.06) translateY(-2px);
+            box-shadow: 0 0 40px rgba(6, 182, 212, 0.85);
+        }
+
+        .resume-hint {
+            font-size: 12px;
+            color: #475569;
+            letter-spacing: 1px;
+        }
+
+        /* ── Pause Indicator (top-center strip) ── */
         #pause-indicator {
             display: none;
             position: fixed;
@@ -528,8 +527,8 @@
             cursor: pointer; transition: all 0.3s;
             box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
             pointer-events: auto; margin: 5px; letter-spacing: 1px;
-            touch-action: manipulation;              /* ← removes iOS 300ms tap delay */
-            -webkit-tap-highlight-color: transparent; /* ← removes blue flash on iOS */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .btn:hover { transform: scale(1.05) translateY(-2px); background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
@@ -579,11 +578,13 @@
             .weapon-indicator { font-size: 14px; padding: 8px 16px; }
             .report-stats { grid-template-columns: 1fr; }
             .char-cards { flex-direction: column; align-items: center; }
+            .resume-prompt-inner { padding: 32px 28px; }
+            .resume-title { font-size: 20px; }
         }
 
         /* ================== MOBILE UI ================== */
         #mobile-ui {
-            display: none;   /* JS shows this in startGame() — keeps joystick zones off the menu */
+            display: none;
             position: absolute; top: 0; left: 0;
             width: 100vw; height: 100vh;
             z-index: 9999; pointer-events: none;
@@ -634,12 +635,12 @@
         #btn-skill  { right: 86px;  bottom: 150px; }
         #btn-switch { right: 142px; bottom: 92px; }
 
-        /* ── Database button: bottom-left area, only shown when near server ── */
+        /* ── Database button: bottom-left, shown when near server ── */
         #btn-database {
             left: 18px; bottom: 200px;
             border-color: #06b6d4;
             background: rgba(6,182,212,0.2);
-            display: none; /* shown by JS when near server */
+            display: none;
         }
     </style>
 </head>
@@ -653,27 +654,25 @@
     <!-- Database proximity prompt -->
     <div id="db-prompt">🗄️ กด <kbd style="background:#06b6d4;color:#000;padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:bold;">E</kbd> เพื่อเปิด MTC DATABASE</div>
 
-    <!-- Pause Indicator (shown while modal is open) -->
+    <!-- Pause indicator strip (top-center) -->
     <div id="pause-indicator">⏸ PAUSED — DATABASE</div>
 
     <!-- ══════════════════════════════════════════
-         MATH DATABASE MODAL
-         Uses <iframe> for full CSS isolation
+         RESUME PROMPT
+         Lightweight overlay shown when window loses focus
+         or when the player opens the MTC Database in a new tab.
+         Replaces the old heavy <iframe> modal.
     ══════════════════════════════════════════ -->
-    <div id="math-modal" onclick="if(event.target===this) closeMathModal()">
-        <div class="math-modal-inner">
-            <div class="math-modal-header">
-                <div class="math-modal-title">
-                    🗄️ MTC DATABASE
-                    <span class="math-modal-badge">MATH EXPLORER PRO</span>
-                    <span class="math-modal-badge" style="background:rgba(16,185,129,0.15);border-color:#10b981;color:#34d399;">● ONLINE</span>
-                </div>
-                <button id="math-modal-close" onclick="closeMathModal()" title="ปิด (ESC)">✕</button>
+    <div id="resume-prompt" onclick="resumeGame()">
+        <div class="resume-prompt-inner">
+            <div class="resume-icon">⏸</div>
+            <div class="resume-title">GAME PAUSED</div>
+            <div class="resume-sub">
+                MTC Database เปิดในแท็บใหม่แล้ว<br>
+                กลับมาเมื่อพร้อม แล้วกด Resume
             </div>
-            <!-- iframe isolates math_archive.html CSS fully from game CSS -->
-            <iframe id="math-iframe"
-                    title="MTC Math Archive">
-            </iframe>
+            <button class="resume-btn" onclick="event.stopPropagation(); resumeGame()">▶ RESUME GAME</button>
+            <div class="resume-hint">หรือกดปุ่มใดก็ได้เพื่อเล่นต่อ</div>
         </div>
     </div>
 

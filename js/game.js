@@ -2,13 +2,18 @@
  * 🎮 MTC: ENHANCED EDITION - Main Game Loop
  * Game state, Boss, waves, input, loop
  *
- * ADDED (Database Feature):
+ * REFACTORED (Database Feature — v3):
  * - ✅ MTC_DATABASE_SERVER — fixed world position for the interactive server object
  * - ✅ Proximity detection → shows db-prompt + HUD icon
- * - ✅ 'E' key / mobile btn-database → showMathModal() + gameState = 'PAUSED'
- * - ✅ closeMathModal() → gameState = 'PLAYING', hides overlay
- * - ✅ ESC key closes modal when open
+ * - ✅ 'E' key / mobile btn-database → openExternalDatabase()
+ *        → window.open(MTC_DB_URL, '_blank')  [external Claude Artifact]
+ * - ✅ gameState = 'PAUSED' when DB is opened or window loses focus (blur)
+ * - ✅ window.blur   → auto-pause
+ * - ✅ window.focus  → keep paused, ensure resume prompt is visible
+ * - ✅ resumeGame()  → restores gameState = 'PLAYING', resets keys, hides prompt
+ * - ✅ Any key-press while PAUSED in-game → resumeGame()
  * - ✅ drawDatabaseServer() — glowing cyan server drawn on map each frame
+ * - ✅ No local file dependency — fully external URL
  */
 
 // ─── Game State ───────────────────────────────────────────
@@ -36,69 +41,107 @@ const MTC_DATABASE_SERVER = {
     INTERACTION_RADIUS: 90   // world units — must be within this to interact
 };
 
-/** True while the Math modal is open (game is paused). */
-let isMathOpen = false;
+// ─── External Database URL ────────────────────────────────
+/**
+ * The Claude Artifact that serves as the MTC Math Explorer.
+ * Update this constant whenever the artifact URL changes —
+ * it is the single source of truth used by openExternalDatabase().
+ */
+const MTC_DB_URL = 'https://claude.ai/public/artifacts/9779928b-11d1-442b-b17d-2ef5045b9660';
 
-// ─── Math Modal Functions ─────────────────────────────────
+// ─── Database / Pause Helper Functions ───────────────────
 
 /**
- * showMathModal()
- * Pauses the game and opens the Math Archive iframe overlay.
+ * showResumePrompt(visible)
+ * Toggles the lightweight #resume-prompt overlay and the
+ * top-center #pause-indicator strip.
  */
-function showMathModal() {
-    if (isMathOpen) return;
-    isMathOpen = true;
-    gameState  = 'PAUSED';
+function showResumePrompt(visible) {
+    const el    = document.getElementById('resume-prompt');
+    const strip = document.getElementById('pause-indicator');
+    if (el)    el.style.display    = visible ? 'flex'  : 'none';
+    if (strip) strip.style.display = visible ? 'block' : 'none';
+}
 
-    // Load iframe src on first open; subsequent opens reuse the loaded page
-    const iframe = document.getElementById('math-iframe');
-    if (iframe && !iframe.src.includes('math_archive.html')) {
-        iframe.src = 'math_archive.html';
-    }
+/**
+ * openExternalDatabase()
+ * Pauses the game and opens the MTC Math Explorer Claude Artifact
+ * in a new browser tab. Zero iframe overhead — fully external.
+ */
+function openExternalDatabase() {
+    if (gameState !== 'PLAYING') return;
+    gameState = 'PAUSED';
 
-    const modal = document.getElementById('math-modal');
-    if (modal) modal.classList.add('open');
+    // Open the external Claude Artifact in a new tab
+    window.open(MTC_DB_URL, '_blank');
 
-    const pause = document.getElementById('pause-indicator');
-    if (pause) pause.style.display = 'block';
+    showResumePrompt(true);
 
-    // Hide proximity prompt while inside
-    const prompt = document.getElementById('db-prompt');
-    if (prompt) prompt.style.display = 'none';
+    // Hide proximity prompt while DB is open
+    const promptEl = document.getElementById('db-prompt');
+    if (promptEl) promptEl.style.display = 'none';
 
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
     if (player) spawnFloatingText('📚 MTC DATABASE', player.x, player.y - 60, '#06b6d4', 22);
 }
 
 /**
- * closeMathModal()
- * Resumes the game and hides the Math Archive overlay.
- * Keeps iframe loaded in memory for fast re-open.
+ * resumeGame()
+ * Resumes the game from a paused state (DB opened or window blur).
+ * Resets all key states to prevent stuck input on resume.
  */
-function closeMathModal() {
-    if (!isMathOpen) return;
-    isMathOpen = false;
-    gameState  = 'PLAYING';
+function resumeGame() {
+    if (gameState !== 'PAUSED') return;
+    gameState = 'PLAYING';
 
-    const modal = document.getElementById('math-modal');
-    if (modal) modal.classList.remove('open');
+    showResumePrompt(false);
 
-    const pause = document.getElementById('pause-indicator');
-    if (pause) pause.style.display = 'none';
-
-    // ── FIX: Reset all key states to prevent stuck movement after modal close ──
+    // Reset all held keys so nothing is "stuck" on resume
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
     keys.space = 0; keys.q = 0; keys.e = 0;
 
-    // ── FIX: Recapture keyboard focus from the iframe back to the game window ──
+    // Recapture keyboard focus from the new tab back to the game window
     window.focus();
 
     if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
 }
 
-// Expose to global (called by HTML onclick)
-window.showMathModal  = showMathModal;
-window.closeMathModal = closeMathModal;
+// ── Backward-compatible aliases ────────────────────────────
+// Kept so any external code referencing the old names still works.
+function openDatabase()   { openExternalDatabase(); }
+function showMathModal()  { openExternalDatabase(); }
+function closeMathModal() { resumeGame(); }
+
+// Expose all to global scope
+window.openExternalDatabase = openExternalDatabase;
+window.openDatabase         = openDatabase;
+window.resumeGame           = resumeGame;
+window.showMathModal        = showMathModal;
+window.closeMathModal       = closeMathModal;
+
+// ─── Window Focus / Blur Listeners ───────────────────────
+/**
+ * Auto-pause when the player switches away from the game tab
+ * (e.g. to look at the math archive they just opened, or
+ *  any other reason the window loses focus).
+ */
+window.addEventListener('blur', () => {
+    if (gameState === 'PLAYING') {
+        gameState = 'PAUSED';
+        showResumePrompt(true);
+    }
+});
+
+/**
+ * When focus returns, keep the game paused and ensure the
+ * resume prompt is visible so the player isn't caught off guard.
+ * The player must consciously click "Resume" or press a key.
+ */
+window.addEventListener('focus', () => {
+    if (gameState === 'PAUSED') {
+        showResumePrompt(true);  // already showing, but force-visible in case it was hidden
+    }
+});
 
 // ─── Draw the Database Server on the map ─────────────────
 /**
@@ -479,7 +522,7 @@ function gameLoop(now) {
         updateGame(dt);
         drawGame();
     } else if (gameState === 'PAUSED') {
-        // Render frozen scene behind the modal overlay
+        // Render frozen scene behind the resume-prompt overlay
         drawGame();
     }
 
@@ -495,7 +538,7 @@ function updateGame(dt) {
     const dToServer = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
         keys.e = 0;
-        showMathModal();
+        openExternalDatabase();
         return;
     }
 
@@ -655,8 +698,7 @@ function startGame(charType = 'kao') {
     player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
 
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
-    boss       = null;
-    isMathOpen = false;
+    boss = null;
 
     UIManager.updateBossHUD(null);
     resetScore();
@@ -685,11 +727,8 @@ function startGame(charType = 'kao') {
     // ── FIX: Reset report-card stat boxes so replays don't show stale data ──
     UIManager.resetGameOverUI();
 
-    // Clean up modal state if restarting
-    const modal = document.getElementById('math-modal');
-    if (modal) modal.classList.remove('open');
-    const pause = document.getElementById('pause-indicator');
-    if (pause) pause.style.display = 'none';
+    // Ensure resume prompt is hidden on fresh game start
+    showResumePrompt(false);
 
     startNextWave();
     gameState = 'PLAYING';
@@ -715,14 +754,8 @@ async function endGame(result) {
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
 
-    // Force-close DB modal if open
-    if (isMathOpen) {
-        isMathOpen = false;
-        const modal = document.getElementById('math-modal');
-        if (modal) modal.classList.remove('open');
-        const pause = document.getElementById('pause-indicator');
-        if (pause) pause.style.display = 'none';
-    }
+    // Force-hide resume prompt if game ended while paused
+    showResumePrompt(false);
 
     if (result === 'victory') {
         showElement('victory-screen');
@@ -757,8 +790,12 @@ async function endGame(result) {
 
 // ==================== INPUT ====================
 window.addEventListener('keydown', e => {
-    // ESC always closes the math modal, regardless of gameState
-    if (e.code === 'Escape' && isMathOpen) { closeMathModal(); return; }
+    // ── While the game is PAUSED in-game, any key resumes play ──
+    // (Excludes MENU and GAMEOVER states where gameState !== 'PAUSED')
+    if (gameState === 'PAUSED') {
+        resumeGame();
+        return;
+    }
 
     if (gameState !== 'PLAYING') return;
 
@@ -922,12 +959,14 @@ function initMobileControls() {
             }
         }, { passive: false });
     }
+
     // ── Database button (mobile) ──
+    // Opens external DB in new tab when PLAYING; resumes game when PAUSED.
     if (btnDatabase) {
         btnDatabase.addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation();
-            if (gameState === 'PLAYING') showMathModal();
-            else if (isMathOpen)         closeMathModal();
+            if (gameState === 'PLAYING') openExternalDatabase();
+            else if (gameState === 'PAUSED') resumeGame();
         }, { passive: false });
     }
 
