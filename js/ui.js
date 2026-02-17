@@ -116,6 +116,117 @@ class UIManager {
             speech.classList.remove('visible');
         }, 3000);
     }
+
+    /**
+     * 🎮 setupCharacterHUD — เรียกครั้งเดียวตอนเริ่มเกม
+     * ตั้งค่า HUD ให้ตรงกับตัวละครที่เลือก
+     */
+    static setupCharacterHUD(player) {
+        const isPoom = player instanceof PoomPlayer;
+        
+        // Weapon indicator: ซ่อนสำหรับภูมิ (ไม่ใช้ระบบปืน)
+        const weaponIndicator = document.querySelector('.weapon-indicator');
+        if (weaponIndicator) {
+            weaponIndicator.style.display = isPoom ? 'none' : '';
+        }
+
+        // ไอคอน Player (👨‍🎓 สำหรับเก้า, 🌾 สำหรับภูมิ)
+        const playerAvatar = document.getElementById('player-avatar');
+        if (playerAvatar) {
+            playerAvatar.textContent = isPoom ? '🌾' : '👨‍🎓';
+        }
+
+        // Skill 1 icon & label — always reset to original ID first, then remap for Poom
+        const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
+        if (skill1El) {
+            if (isPoom) {
+                // ภูมิ: Skill 1 = กินข้าวเหนียว (Right Click)
+                skill1El.id = 'eat-icon';
+                const skill1EmojiEl = document.getElementById('skill1-emoji');
+                if (skill1EmojiEl) skill1EmojiEl.textContent = '🍙';
+                const skill1HintEl = document.getElementById('skill1-hint');
+                if (skill1HintEl) skill1HintEl.textContent = 'R-Click';
+                const cdEl = skill1El.querySelector('.cooldown-mask');
+                if (cdEl) cdEl.id = 'eat-cd';
+            } else {
+                // เก้า: Skill 1 = ซุ่มอ่าน (Right Click) — reset IDs กลับ
+                skill1El.id = 'stealth-icon';
+                const skill1EmojiEl = document.getElementById('skill1-emoji');
+                if (skill1EmojiEl) skill1EmojiEl.textContent = '📖';
+                const skill1HintEl = document.getElementById('skill1-hint');
+                if (skill1HintEl) skill1HintEl.textContent = 'R-Click';
+                const cdEl = skill1El.querySelector('.cooldown-mask');
+                if (cdEl) cdEl.id = 'stealth-cd';
+            }
+        }
+
+        // Ultimate slot (Skill 2): แสดงสำหรับภูมิ, ซ่อนสำหรับเก้า
+        const nagaSlot = document.getElementById('naga-icon');
+        if (nagaSlot) {
+            nagaSlot.style.display = isPoom ? 'flex' : 'none';
+        }
+
+        // Mobile: btn-naga — แสดงสำหรับภูมิ, ซ่อนสำหรับเก้า
+        const btnNaga = document.getElementById('btn-naga');
+        if (btnNaga) {
+            btnNaga.style.display = isPoom ? 'flex' : 'none';
+        }
+        // Mobile: btn-skill เปลี่ยนไอคอน
+        const btnSkill = document.getElementById('btn-skill');
+        if (btnSkill) {
+            btnSkill.textContent = isPoom ? '🍙' : '📖';
+        }
+    }
+
+    /**
+     * 🔁 updateSkillIcons — เรียกทุก Frame ขณะเล่นเป็นภูมิ
+     * อัปเดต Cooldown bar ของสกิล 1 (eat-cd) และสกิล 2 (naga-cd)
+     */
+    static updateSkillIcons(player) {
+        if (!(player instanceof PoomPlayer)) return;
+
+        // ── Skill 1 (กินข้าวเหนียว) cooldown ──
+        const eatIcon = document.getElementById('eat-icon');
+        const eatCd   = document.getElementById('eat-cd');
+        if (eatCd) {
+            if (player.isEatingRice) {
+                eatCd.style.height = '0%';
+                if (eatIcon) eatIcon.classList.add('active');
+            } else {
+                if (eatIcon) eatIcon.classList.remove('active');
+                const ep = player.cooldowns.eat <= 0
+                    ? 100
+                    : Math.min(100, (1 - player.cooldowns.eat / BALANCE.poom.eatRiceCooldown) * 100);
+                eatCd.style.height = `${100 - ep}%`;
+            }
+        }
+
+        // ── Skill 2 (อัญเชิญพญานาค) cooldown ──
+        const nagaIcon = document.getElementById('naga-icon');
+        const nagaCd   = document.getElementById('naga-cd');
+        if (nagaCd) {
+            const np = player.cooldowns.naga <= 0
+                ? 100
+                : Math.min(100, (1 - player.cooldowns.naga / BALANCE.poom.nagaCooldown) * 100);
+            nagaCd.style.height = `${100 - np}%`;
+            // กระพริบเมื่อพร้อมใช้
+            if (nagaIcon) {
+                if (player.cooldowns.naga <= 0) nagaIcon.classList.add('active');
+                else nagaIcon.classList.remove('active');
+            }
+        }
+
+        // ── Timer text บน naga-icon ──
+        const nagaTimer = document.getElementById('naga-timer');
+        if (nagaTimer) {
+            if (player.cooldowns.naga > 0) {
+                nagaTimer.textContent = Math.ceil(player.cooldowns.naga) + 's';
+                nagaTimer.style.display = 'block';
+            } else {
+                nagaTimer.style.display = 'none';
+            }
+        }
+    }
 }
 
 const Achievements = new AchievementSystem();

@@ -671,13 +671,111 @@
             backdrop-filter: blur(10px);
         }
 
+        /* ──────────── CHARACTER SELECTION ──────────── */
+        .char-select-section {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .char-select-section h3 {
+            color: #60a5fa;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .char-cards {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .char-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid #334155;
+            border-radius: 16px;
+            padding: 18px 22px;
+            min-width: 180px;
+            max-width: 220px;
+            flex: 1;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            position: relative;
+            pointer-events: auto;
+        }
+
+        .char-card:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+        }
+
+        .char-card.selected {
+            border-color: #facc15;
+            background: rgba(250, 204, 21, 0.08);
+            box-shadow: 0 0 25px rgba(250, 204, 21, 0.4);
+        }
+
+        .char-card .char-avatar {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .char-card .char-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            color: #e2e8f0;
+            margin-bottom: 6px;
+        }
+
+        .char-card .char-desc {
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .char-card .char-tag {
+            margin-top: 10px;
+            display: inline-block;
+            font-size: 10px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid #8b5cf6;
+            color: #a78bfa;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .char-card[data-char="poom"] .char-tag {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            color: #34d399;
+        }
+
+        /* ── Naga cooldown timer text ── */
+        #naga-timer {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            font-weight: bold;
+            color: #10b981;
+            pointer-events: none;
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .title { font-size: 40px; }
             .subtitle { font-size: 18px; }
             .info-section { flex-direction: column; }
             .weapon-indicator { font-size: 14px; padding: 8px 16px; }
             .report-stats { grid-template-columns: 1fr; }
-
+            .char-cards { flex-direction: column; align-items: center; }
         }
         /* ================= MOBILE UI CSS ================= */
         #mobile-ui {
@@ -849,11 +947,13 @@ body, html {
         <button id="btn-switch" class="action-btn">🔄</button>
         <button id="btn-skill" class="action-btn">📖</button>
         <button id="btn-dash" class="action-btn">💨</button>
+        <!-- ปุ่ม Skill 2 ภูมิ: 🐉 อัญเชิญพญานาค — ซ่อนโดย default, setupCharacterHUD จะ toggle -->
+        <button id="btn-naga" class="action-btn" style="display:none; right:18px; bottom:270px; border-color:#10b981; background:rgba(16,185,129,0.2);">🐉</button>
     </div>
     <div id="ui-layer">
         <div class="hud-top">
             <div class="player-card">
-                <div style="font-size:20px">👨‍🎓</div>
+                <div style="font-size:20px" id="player-avatar">👨‍🎓</div>
                 <div class="status-bars">
                     <div class="bar-wrap">
                         <div id="hp-bar" class="bar-fill hp-fill" style="width: 100%;"></div>
@@ -899,10 +999,18 @@ body, html {
                 💨
                 <div class="cooldown-mask" id="dash-cd"></div>
             </div>
+            <!-- Skill 1: 📖 สำหรับเก้า / 🍙 สำหรับภูมิ — setupCharacterHUD จะสลับ id และ icon -->
             <div class="skill-icon" id="stealth-icon">
-                <div class="key-hint">R-Click</div>
-                📖
+                <div class="key-hint" id="skill1-hint">R-Click</div>
+                <span id="skill1-emoji">📖</span>
                 <div class="cooldown-mask" id="stealth-cd"></div>
+            </div>
+            <!-- Skill 2 (Ultimate): 🐉 พญานาค — แสดงเฉพาะภูมิ -->
+            <div class="skill-icon" id="naga-icon" style="display:none; border-color:#10b981; box-shadow:0 0 15px rgba(16,185,129,0.4);">
+                <div class="key-hint" style="background:#10b981;">Q</div>
+                🐉
+                <div class="cooldown-mask" id="naga-cd"></div>
+                <span id="naga-timer"></span>
             </div>
             <div class="skill-icon" id="passive-skill">
                 <div style="font-size: 20px;">✨</div>
@@ -919,6 +1027,40 @@ body, html {
             </div>
 
             <div id="mission-brief">กำลังโหลดภารกิจ...</div>
+
+            <!-- ✨ CHARACTER SELECTION -->
+            <div class="char-select-section">
+                <h3>🎮 เลือกตัวละคร</h3>
+                <div class="char-cards">
+                    <!-- การ์ด: เก้า (นักเรียน MTC ดั้งเดิม) -->
+                    <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
+                        <div class="char-avatar">👨‍🎓</div>
+                        <div class="char-name">เก้า (KAO)</div>
+                        <div class="char-desc">นักเรียน MTC ผู้คล่องแคล่ว<br>ปืน 3 แบบ + ซุ่มอ่านหนังสือ</div>
+                        <div class="char-tag">🔵 สายปืน</div>
+                    </div>
+                    <!-- การ์ด: ภูมิ (คนอีสาน) -->
+                    <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
+                        <div class="char-avatar">🌾</div>
+                        <div class="char-name">ภูมิ (POOM)</div>
+                        <div class="char-desc">สายอีสาน: ปาข้าวเหนียว &amp; อัญเชิญพญานาค<br>Skill 1: 🍙 กินข้าว | Skill 2: 🐉 นาค</div>
+                        <div class="char-tag">🟢 สายอีสาน</div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                let _selectedChar = 'kao';
+                function selectCharacter(charType) {
+                    _selectedChar = charType;
+                    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+                    const card = document.getElementById('card-' + charType);
+                    if (card) card.classList.add('selected');
+                    // อัปเดตคำอธิบายปุ่ม
+                    const startBtn = document.getElementById('start-btn');
+                    if (startBtn) startBtn.textContent = charType === 'poom' ? '🌾 START — สายอีสาน' : '🎓 START MISSION';
+                }
+            </script>
             
             <!-- ✨ IMPROVED: Report Card with proper structure -->
             <div id="report-card">
@@ -962,7 +1104,7 @@ body, html {
                 </div>
             </div>
 
-            <button class="btn" onclick="startGame()">START MISSION</button>
+            <button class="btn" id="start-btn" onclick="startGame(_selectedChar)">🎓 START MISSION</button>
             <div id="ai-loading">🤖 Connecting to AI...</div>
         </div>
     </div>
@@ -985,22 +1127,6 @@ body, html {
     <script src="js/ai.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/game.js"></script>
-
-<div id="mobile-ui">
-  <div id="joystick-left-zone" class="joystick-zone left">
-    <div id="joystick-left-base" class="joystick-base">
-      <div id="joystick-left-stick" class="joystick-stick"></div>
-    </div>
-  </div>
-  <div id="joystick-right-zone" class="joystick-zone right">
-    <div id="joystick-right-base" class="joystick-base">
-      <div id="joystick-right-stick" class="joystick-stick"></div>
-    </div>
-  </div>
-  <button id="btn-switch" class="action-btn">🔄</button>
-  <button id="btn-skill" class="action-btn">📖</button>
-  <button id="btn-dash" class="action-btn">💨</button>
-</div>
 
 </body>
 </html>

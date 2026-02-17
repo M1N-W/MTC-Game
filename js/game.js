@@ -311,20 +311,50 @@ function updateGame(dt) {
     
     player.update(dt, keys, mouse);
     
-    weaponSystem.update(dt);
-    
-    const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
-    if (burstProjectiles && burstProjectiles.length > 0) {
-        projectileManager.add(burstProjectiles);
-    }
-    
-    if (mouse.left === 1 && gameState === 'PLAYING') {
-        if (weaponSystem.canShoot()) {
-            const projectiles = weaponSystem.shoot(player, player.damageBoost);
-            if (projectiles && projectiles.length > 0) {
-                projectileManager.add(projectiles);
+    // ── ระบบอาวุธสำหรับตัวละครที่ไม่ใช่ภูมิ ──
+    if (!(player instanceof PoomPlayer)) {
+        weaponSystem.update(dt);
+        
+        const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
+        if (burstProjectiles && burstProjectiles.length > 0) {
+            projectileManager.add(burstProjectiles);
+        }
+        
+        if (mouse.left === 1 && gameState === 'PLAYING') {
+            if (weaponSystem.canShoot()) {
+                const projectiles = weaponSystem.shoot(player, player.damageBoost);
+                if (projectiles && projectiles.length > 0) {
+                    projectileManager.add(projectiles);
+                }
             }
         }
+    }
+    
+    // ── การยิงและสกิลของภูมิ ──
+    if (player instanceof PoomPlayer) {
+        // Basic Attack: Left Click → ปาข้าวเหนียว
+        if (mouse.left === 1 && gameState === 'PLAYING') {
+            shootPoom(player);
+        }
+        
+        // Skill 1: Right Click → กินข้าวเหนียว
+        if (mouse.right === 1) {
+            if (player.cooldowns.eat <= 0 && !player.isEatingRice) {
+                player.eatRice();
+            }
+            mouse.right = 0; // consume input
+        }
+        
+        // Skill 2: Q → อัญเชิญพญานาค
+        if (keys.q === 1) {
+            if (player.cooldowns.naga <= 0) {
+                player.summonNaga();
+            }
+            keys.q = 0; // consume input
+        }
+        
+        // อัปเดต HUD ไอคอน Cooldown ภูมิ
+        UIManager.updateSkillIcons(player);
     }
     
     if (boss) boss.update(dt, player);
@@ -424,6 +454,38 @@ function drawGrid() {
     CTX.stroke();
 }
 
+// ==================== POOM ATTACK SYSTEM ====================
+/**
+ * 🍙 shootPoom — จัดการการปาข้าวเหนียวของภูมิ
+ * ดึงค่าจาก BALANCE.poom.stickyRice และรองรับความเร็วโจมตีที่เพิ่มขึ้นจาก Buff สกิล 1
+ */
+function shootPoom(player) {
+    if (player.cooldowns.shoot > 0) return;
+
+    // คำนวณ cooldown — ถ้า isEatingRice (Skill 1 active) ให้ยิงเร็วขึ้น 30%
+    const attackSpeedMult = player.isEatingRice ? 0.7 : 1.0;
+    player.cooldowns.shoot = BALANCE.poom.riceCooldown * attackSpeedMult;
+
+    // คำนวณ Damage + Crit (เรียกผ่าน dealDamage ของ PoomPlayer)
+    const { damage, isCrit } = player.dealDamage(BALANCE.poom.riceDamage * player.damageBoost);
+
+    // สร้างกระสุน (ข้าวเหนียว)
+    projectileManager.add(new Projectile(
+        player.x, player.y, player.angle,
+        BALANCE.poom.riceSpeed, damage,
+        BALANCE.poom.riceColor, false, 'player'
+    ));
+
+    // Visual feedback เมื่อ Crit
+    if (isCrit) {
+        spawnFloatingText('สาดข้าว! CRIT!', player.x, player.y - 45, '#fbbf24', 20);
+        spawnParticles(player.x, player.y, 5, '#ffffff');
+    }
+
+    // Speed boost เล็กน้อยหลังยิง
+    player.speedBoostTimer = BALANCE.poom.speedOnHitDuration;
+}
+
 // ==================== INIT & START ====================
 async function initAI() {
     const brief = document.getElementById('mission-brief');
@@ -444,34 +506,48 @@ async function initAI() {
     }
 }
 
-function startGame() {
-    console.log('🎮 Starting game...');
+function startGame(charType = 'kao') {
+    console.log('🎮 Starting game... charType:', charType);
     Audio.init();
-    player = new Player();
+
+    // ── สร้าง Player ตามที่เลือก ──
+    if (charType === 'poom') {
+        player = new PoomPlayer();
+    } else {
+        player = new Player();
+    }
+
     enemies = [];
     powerups = [];
     specialEffects = [];
     meteorZones = [];
     boss = null;
-    UIManager.updateBossHUD(null);// ซ่อนหลอดเลือดบอสตอนเริ่มเกมใหม่
+    UIManager.updateBossHUD(null); // ซ่อนหลอดเลือดบอสตอนเริ่มเกมใหม่
     resetScore();
     setWave(1);
     projectileManager.clear();
     particleSystem.clear();
     floatingTextSystem.clear();
     mapSystem.init();
-    weaponSystem.updateWeaponUI();
-    
+
+    // ── อัปเดต Weapon UI เฉพาะตัวละครที่ใช้ระบบอาวุธ ──
+    if (!(player instanceof PoomPlayer)) {
+        weaponSystem.updateWeaponUI();
+    }
+
+    // ── ตั้งค่า HUD ให้ตรงกับตัวละครที่เลือก ──
+    UIManager.setupCharacterHUD(player);
+
     Achievements.stats.damageTaken = 0;
     waveStartDamage = 0;
-    
+
     hideElement('overlay');
     hideElement('report-card');
-    
+
     startNextWave();
     gameState = 'PLAYING';
     resetTime();
-    
+
     console.log('✅ Game started!');
     if (!loopRunning) {
         loopRunning = true;
@@ -538,9 +614,17 @@ window.addEventListener('keyup', e => {
     if (e.code === 'Space') keys.space = 0;
     if (e.code === 'KeyQ') { 
         if (gameState === 'PLAYING') {
-            weaponSystem.switchWeapon(); 
+            if (player instanceof PoomPlayer) {
+                // Q = อัญเชิญพญานาค (Skill 2) สำหรับภูมิ — จัดการใน updateGame
+                keys.q = 0;
+            } else {
+                // Q = สลับอาวุธ สำหรับตัวละครอื่น
+                weaponSystem.switchWeapon(); 
+                keys.q = 0;
+            }
+        } else {
+            keys.q = 0;
         }
-        keys.q = 0; 
     }
 });
 
@@ -688,6 +772,17 @@ function initMobileControls() {
         e.preventDefault(); e.stopPropagation();
         if (gameState === 'PLAYING' && typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon(); 
     }, {passive: false});
+
+    // ── ปุ่มสกิล 2 ภูมิ (🐉 อัญเชิญพญานาค) ──
+    const btnNaga = document.getElementById('btn-naga');
+    if (btnNaga) {
+        btnNaga.addEventListener('touchstart', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (gameState === 'PLAYING' && player instanceof PoomPlayer) {
+                if (player.cooldowns.naga <= 0) player.summonNaga();
+            }
+        }, {passive: false});
+    }
     
     // บล็อคการ Swipe/Scroll ของบราวเซอร์ทั้งหมด ยกเว้นจุดที่เราตั้งค่าไว้
     document.addEventListener('touchmove', function(e) {
@@ -796,6 +891,17 @@ function initMobileControls() {
   }
   if (btnSwitch) {
     btnSwitch.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (gameState === 'PLAYING' && weaponSystem) weaponSystem.switchWeapon(); }, { passive: false });
+  }
+  
+  // ── ปุ่มสกิล 2 ภูมิ (🐉 อัญเชิญพญานาค) ──
+  const btnNaga2 = document.getElementById('btn-naga');
+  if (btnNaga2) {
+    btnNaga2.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (gameState === 'PLAYING' && player instanceof PoomPlayer) {
+        if (player.cooldowns.naga <= 0) player.summonNaga();
+      }
+    }, { passive: false });
   }
 }
 

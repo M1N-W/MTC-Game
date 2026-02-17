@@ -72,6 +72,51 @@ const BALANCE = {
         speedOnHit: 20,        // Reduced from 25
         speedOnHitDuration: 0.4
     },
+
+    // 🌾 POOM CHARACTER STATS
+    poom: {
+        // Health & Energy
+        hp: 120,
+        maxHp: 120,
+        energy: 100,
+        maxEnergy: 100,
+
+        // Movement (ช้ากว่าเก้าเล็กน้อย — เน้น Skill มากกว่า Speed)
+        moveSpeed: 300,
+        dashSpeed: 520,
+        dashDistance: 170,
+        friction: 0.88,
+        acceleration: 1800,
+        dashCooldown: 1.65,
+
+        // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
+        riceDamage: 35,
+        riceCooldown: 0.4,
+        riceSpeed: 600,
+        riceRange: 700,
+        riceColor: '#ffffff',        // สีข้าวเหนียวขาวสะอาด
+        critChance: 0.05,            // Base 5% crit chance (เท่ากับเก้า)
+        critMultiplier: 3,           // Crit multiplier
+
+        // 🥢 Skill 1: กินข้าวเหนียว — Buff ตัวเอง
+        eatRiceCooldown: 12,         // cooldown 12s
+        eatRiceDuration: 6,          // buff ยาว 6s
+        eatRiceSpeedMult: 1.3,       // +30% move speed (ตาม Spec)
+        eatRiceCritBonus: 0.25,      // +25% crit chance ขณะ Buff (ตาม Spec)
+
+        // 🐍 Skill 2: อัญเชิญพญานาค
+        nagaCooldown: 25,            // cooldown 25s (ตาม Spec)
+        nagaDuration: 8,             // นาคคงอยู่ 8s (ตาม Spec)
+        nagaDamage: 50,              // damage ต่อการสัมผัส (ตาม Spec)
+        nagaSpeed: 450,              // ความเร็วนาค (ตาม Spec)
+        nagaSegments: 12,            // 12 ปล้อง (ตาม Spec)
+        nagaSegmentDistance: 28,     // ระยะห่างระหว่างปล้อง
+        nagaRadius: 20,              // ขนาด hitbox ต่อปล้อง
+
+        // Speed on Hit
+        speedOnHit: 18,
+        speedOnHitDuration: 0.35
+    },
     
     // 👾 BASIC ENEMY (REBALANCED)
     enemy: {
@@ -138,7 +183,7 @@ const BALANCE = {
         
         graphDamage: 45,       
         graphLength: 1500,
-        graphDuration: 18,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที) - แก้เลขตรงนี้เพื่อปรับระยะเวลา
+        graphDuration: 18,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที)
         graphCooldown: 15,
         
         log457ChargeDuration: 2,
@@ -235,7 +280,8 @@ const ACHIEVEMENT_DEFS = [
     { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡' },
     { id: 'ghost', name: 'The Ghost MTC', desc: 'ใช้ Stealth 10 ครั้ง', icon: '👻' },
     { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎' },
-    { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' }
+    { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' },
+    { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍' }
 ];
 
 // Export for use in other modules
