@@ -2,18 +2,18 @@
  * 💥 MTC: ENHANCED EDITION - Effects System
  * Particles, floating text, and special effects
  *
- * GLITCH WAVE (v8 — NEW):
+ * GLITCH WAVE (v8 — unchanged):
  * - ✅ drawGlitchEffect(intensity, controlsInverted) — top-level export
- *       called from game.js drawGame() when isGlitchWave is true
- * - ✅ RGB Split:  canvas snapshot drawn 3× with R/G/B composite modes
- *       and jittered offsets proportional to intensity
- * - ✅ Scanlines:  horizontal dark bars at 3-px intervals
- * - ✅ Chromatic noise: random pixel-sized colour sparks
- * - ✅ Vignette:  radial darkening at screen edges
- * - ✅ "GLITCH" banner: animated text with random character substitution
- * - ✅ Inverted-controls overlay: pink strip warning at screen bottom
- * - ✅ PERFORMANCE: uses a single ImageData snapshot per call;
- *       no extra <canvas> elements created at runtime
+ *
+ * PERFORMANCE (v8 — NEW):
+ * - ✅ ParticleSystem.MAX_PARTICLES = 150  — hard cap; oldest particle evicted
+ *       when spawn() would exceed the limit.  Prevents runaway memory growth
+ *       during Glitch Wave (2× enemies × heavy particle deaths).
+ * - ✅ Particle.draw(): shadowBlur is SKIPPED for particles whose rendered
+ *       radius is < 3 screen pixels.  shadowBlur triggers a full offscreen
+ *       compositing pass in every browser engine — it is the #1 per-particle
+ *       cost even though most tiny particles are invisible at that size.
+ *       Particles with size ≥ 3 still get the blur for visual quality.
  */
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -47,16 +47,44 @@ class Particle {
         const screen = worldToScreen(this.x, this.y);
         const alpha = this.life / this.maxLife;
 
+        // Rendered radius — if the particle is essentially invisible, skip
+        const renderedRadius = this.size * alpha;
+        if (renderedRadius < 0.4) return;
+
         CTX.globalAlpha = alpha;
         CTX.fillStyle = this.color;
+
+        // ── PERF: skip shadowBlur for small particles ─────────
+        // shadowBlur forces an offscreen composite pass in all browsers.
+        // Particles with a rendered radius < 3 px are too small for
+        // soft-glow to be perceptible, so we save the GPU round-trip.
+        const useShadow = renderedRadius >= 3;
+        if (useShadow) {
+            CTX.shadowBlur  = 4;
+            CTX.shadowColor = this.color;
+        }
+
         CTX.beginPath();
-        CTX.arc(screen.x, screen.y, this.size * alpha, 0, Math.PI * 2);
+        CTX.arc(screen.x, screen.y, renderedRadius, 0, Math.PI * 2);
         CTX.fill();
+
+        if (useShadow) {
+            CTX.shadowBlur = 0;
+        }
+
         CTX.globalAlpha = 1;
     }
 }
 
 class ParticleSystem {
+    // ── Hard cap ──────────────────────────────────────────────
+    // Keeping ≤ 150 particles at all times bounds the per-frame
+    // draw cost regardless of how many spawnParticles() calls happen
+    // in a single frame (boss death, glitch wave explosion, etc.).
+    // The oldest particle (index 0 after FIFO shift) is removed first
+    // so the most recently spawned, visually prominent particles survive.
+    static MAX_PARTICLES = 150;
+
     constructor() {
         this.particles = [];
     }
@@ -71,6 +99,13 @@ class ParticleSystem {
             const lifetime = rand(0.3, 0.8);
 
             this.particles.push(new Particle(x, y, vx, vy, color, size, lifetime));
+
+            // Evict oldest particle if we exceed the cap
+            // Uses a while-loop so a single large burst (e.g. count=60 on boss
+            // death) drains correctly even if we were already near the limit.
+            while (this.particles.length > ParticleSystem.MAX_PARTICLES) {
+                this.particles.shift();   // remove oldest (front of array)
+            }
         }
     }
 
@@ -471,16 +506,8 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     const now = performance.now();
 
     // ── 1. RGB SPLIT ─────────────────────────────────────────────
-    // Snapshot the current frame into an ImageData buffer once, then
-    // draw it three times with isolated R/G/B channels and jitter.
-    // We DON'T create a new canvas — we use the existing CTX snapshot
-    // by taking a drawImage of CANVAS itself (safe within the same frame
-    // because we draw on top of what was already composited).
-    //
-    // Maximum offset in pixels — scales with intensity
     const maxOff = Math.floor(intensity * 18);
     if (maxOff >= 1) {
-        // Per-frame deterministic jitter (changes every ~3 frames for stutter feel)
         const seed    = Math.floor(now / 50);
         const jitterX = ((seed * 1372) % (maxOff * 2 + 1)) - maxOff;
         const jitterY = ((seed * 853)  % (maxOff + 1)) - Math.floor(maxOff / 2);
@@ -489,10 +516,6 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         CTX.save();
         CTX.globalCompositeOperation = 'screen';
         CTX.globalAlpha = intensity * 0.55;
-        // Clip to only the red channel using a CSS filter trick:
-        // draw with red tint by using 'multiply' + a red fill below.
-        // Simpler & more performant: just draw with a red tinted copy
-        // at offset, which is the standard RGB-split technique.
         CTX.filter = 'saturate(500%) hue-rotate(0deg)';
         CTX.drawImage(CANVAS, jitterX, jitterY * 0.5);
         CTX.filter = 'none';
@@ -518,10 +541,8 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     }
 
     // ── 2. SCANLINES ─────────────────────────────────────────────
-    // Thin horizontal bars every 3 pixels, opacity scales with intensity.
-    // A subtle vertical scroll offset creates a moving interference pattern.
     const scanAlpha  = intensity * 0.22;
-    const scanScroll = Math.floor(now / 80) % 3; // 0,1,2 rolling offset
+    const scanScroll = Math.floor(now / 80) % 3;
     CTX.save();
     CTX.globalAlpha = scanAlpha;
     CTX.fillStyle   = '#000';
@@ -531,8 +552,6 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     CTX.restore();
 
     // ── 3. CHROMATIC NOISE ───────────────────────────────────────
-    // Randomly scattered vivid sparks — count proportional to intensity.
-    // Intentionally NOT seeded per frame so they flicker independently.
     const sparkCount = Math.floor(intensity * 80);
     const sparkColors = ['#ff00ff', '#00ffff', '#ff3399', '#39ff14', '#ffffff', '#ff6600'];
     CTX.save();
@@ -548,8 +567,6 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     CTX.restore();
 
     // ── 4. HORIZONTAL GLITCH SLICES ──────────────────────────────
-    // Occasional full-width strips shifted horizontally — the iconic
-    // "VHS tracking" look.  Only fire on peak intensity frames.
     if (intensity > 0.55) {
         const sliceSeed = Math.floor(now / 120);
         const numSlices = Math.floor(intensity * 4);
@@ -561,15 +578,12 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
             CTX.save();
             CTX.globalCompositeOperation = 'source-over';
             CTX.globalAlpha = 0.6;
-            // Grab the strip and redraw it shifted
             CTX.drawImage(CANVAS, 0, sliceY, W, sliceH, sliceOff, sliceY, W, sliceH);
             CTX.restore();
         }
     }
 
     // ── 5. VIGNETTE ──────────────────────────────────────────────
-    // Radial gradient darkening at screen edges.
-    // Pulsates slightly to reinforce the "unstable" feel.
     const vigAlpha   = intensity * (0.35 + Math.sin(now / 180) * 0.1);
     const vigGrad    = CTX.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
     vigGrad.addColorStop(0, 'rgba(100,0,120,0)');
@@ -580,13 +594,10 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     CTX.restore();
 
     // ── 6. GLITCH BANNER ─────────────────────────────────────────
-    // "⚡ GLITCH WAVE" rendered with randomised character corruption
-    // and a chromatic double-shadow so it reads as a system error.
     {
         const bannerY   = H * 0.12;
         const baseText  = '⚡ GLITCH WAVE ⚡';
         const glitchChars = '!@#$%^&*<>?/\\|';
-        // Corrupt ~20% of non-space, non-emoji characters
         let displayText = '';
         for (let i = 0; i < baseText.length; i++) {
             const ch = baseText[i];
@@ -631,8 +642,6 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     }
 
     // ── 7. INVERTED CONTROLS STRIP ───────────────────────────────
-    // Pink translucent bar at the bottom of the screen with a
-    // flashing ↕ ↔ icon. Only shown when controlsInverted is true.
     if (controlsInverted) {
         const stripH    = 38;
         const stripY    = H - stripH;

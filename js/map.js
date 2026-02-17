@@ -890,12 +890,24 @@ class MapSystem {
             this.mtcRoom.draw();
         }
 
+        // ── View-cull constants ───────────────────────────────
+        // Objects whose bounding box is entirely outside this
+        // margin around the canvas are skipped.  120 px gives
+        // a comfortable safety margin for large objects (bookshelves
+        // are 80 px wide; trees can extend ~50 px above their anchor).
+        // The sort is still done on the full list so draw order is
+        // correct the moment objects scroll into view.
+        const CULL = 120;
+
         // Y-sort for rough depth order, frustum cull
         const sorted = [...this.objects].sort((a, b) => a.y - b.y);
         for (const obj of sorted) {
             const screen = worldToScreen(obj.x, obj.y);
-            if (screen.x + obj.w < -120 || screen.x > CANVAS.width  + 120) continue;
-            if (screen.y + obj.h < -120 || screen.y > CANVAS.height + 120) continue;
+            // X-axis: skip if right edge is left of canvas-margin
+            //         OR left edge is right of canvas+margin
+            if (screen.x + obj.w < -CULL || screen.x > CANVAS.width  + CULL) continue;
+            // Y-axis: same test for vertical axis
+            if (screen.y + obj.h < -CULL || screen.y > CANVAS.height + CULL) continue;
             obj.draw();
         }
     }
@@ -1024,7 +1036,23 @@ class MapSystem {
 
         // ── ④ Map-object ambient lights ───────────────────────
         // Only emitters with actual visual glow get a light radius.
+        // VIEW CULL: skip objects whose screen position is more than
+        // MAX_LIGHT_RADIUS pixels outside the canvas — their gradient
+        // can never reach visible pixels so the draw is pure waste.
+        const MAX_LIGHT_RADIUS = Math.max(
+            L.dataPillarLightRadius, L.serverRackLightRadius
+        ) + 40; // 40 px safety margin
+
         for (const obj of this.objects) {
+            if (obj.type === 'datapillar' || obj.type === 'server') {
+                // Quick screen-space cull before touching the gradient API
+                const cx = obj.x + obj.w * 0.5;
+                const cy = obj.type === 'datapillar' ? obj.y - 5 : obj.y + obj.h * 0.4;
+                const sp = toSS(cx, cy);
+                if (sp.x + MAX_LIGHT_RADIUS < 0 || sp.x - MAX_LIGHT_RADIUS > lc.width)  continue;
+                if (sp.y + MAX_LIGHT_RADIUS < 0 || sp.y - MAX_LIGHT_RADIUS > lc.height) continue;
+            }
+
             if (obj.type === 'datapillar') {
                 // Glowing circuit top of pillar
                 punchLight(

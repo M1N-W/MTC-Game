@@ -30,6 +30,27 @@ class Entity {
         this.dead = false;
     }
     applyPhysics(dt) { this.x += this.vx * dt; this.y += this.vy * dt; }
+
+    // ─────────────────────────────────────────────────────────
+    // isOnScreen(buffer)
+    //   Returns true when this entity's bounding circle overlaps
+    //   the visible canvas area (expanded by `buffer` pixels).
+    //   Called by game.js before every .draw() to skip off-screen
+    //   render work while still running .update() every frame.
+    //
+    //   buffer: extra margin in screen-pixels (default 120).
+    //           Generous enough that pop-in is never visible even
+    //           at the camera-smooth lag distance.
+    // ─────────────────────────────────────────────────────────
+    isOnScreen(buffer = 120) {
+        if (typeof worldToScreen !== 'function' || typeof CANVAS === 'undefined') return true;
+        const s = worldToScreen(this.x, this.y);
+        const r = (this.radius || 20) + buffer;
+        return s.x + r > 0 &&
+               s.x - r < CANVAS.width  &&
+               s.y + r > 0 &&
+               s.y - r < CANVAS.height;
+    }
 }
 
 // ────────────────────────────────────────────────────────────
