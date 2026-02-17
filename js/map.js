@@ -110,7 +110,7 @@ class MapObject {
         CTX.font = 'bold 18px monospace';
         CTX.textAlign = 'center';
         CTX.textBaseline = 'middle';
-        CTX.fillText('ax² + bx + c = 0', this.w / 2, this.h / 2);
+        CTX.fillText('ax²+bx+c = 0', this.w / 1.5, this.h / 1.5);
         CTX.font = 'bold 10px monospace';
         CTX.fillText('∫f(x)dx', this.w / 4, this.h - 15);
         CTX.fillText('lim x→∞', 3 * this.w / 4, this.h - 15);
