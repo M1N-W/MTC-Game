@@ -4,247 +4,268 @@
  */
 
 // API Configuration
-const API_KEY = CONFIG_SECRETS.GEMINI_API_KEY; 
+const API_KEY = CONFIG_SECRETS.GEMINI_API_KEY;
 
 // Enhanced Balance Configuration
 const BALANCE = {
-    // 👨‍🎓 PLAYER STATS
-    player: {
-        // Entity
-        radius: 20,            // Collision radius (pixels)
 
-        // Health & Energy
-        hp: 110,
-        maxHp: 110,
-        energy: 100,
-        maxEnergy: 100,
-        energyRegen: 15,       // Energy restored per second (passive)
-        
-        // Movement (REBALANCED)
-        moveSpeed: 350,        // Reduced from 380
-        dashSpeed: 550,        // Reduced from 1000
-        dashDistance: 180,     // Reduced from 200
-        friction: 0.88,        
-        acceleration: 1800,
-        
-        // Weapon System (NEW)
-        weapons: {
-            auto: {
-                name: 'AUTO RIFLE',
-                damage: 21.5,
-                cooldown: 0.195,
-                range: 900,
-                speed: 900,
-                spread: 0,
-                pellets: 1,
-                color: '#3b82f6',
-                icon: '🔵'
+    // ──────────────────────────────────────────────────────────────
+    // 🌐 SHARED PHYSICS (ค่าฟิสิกส์ที่ทุกตัวละครใช้ร่วมกัน)
+    // ──────────────────────────────────────────────────────────────
+    physics: {
+        friction:     0.88,
+        acceleration: 1800
+    },
+
+    // ──────────────────────────────────────────────────────────────
+    // 🧑‍🤝‍🧑 CHARACTER SPECIFIC STATS (แยกรายตัวละคร — เพิ่มได้ไม่จำกัด)
+    // ──────────────────────────────────────────────────────────────
+    characters: {
+
+        // ────────────────────────────────
+        // 👨‍🎓 KAO — นักเรียน MTC (ตัวละครดั้งเดิม)
+        // ────────────────────────────────
+        kao: {
+            name: 'Kao',
+
+            // Entity
+            radius: 20,
+
+            // Health & Energy
+            hp: 110,
+            maxHp: 110,
+            energy: 100,
+            maxEnergy: 100,
+            energyRegen: 15,       // Energy restored per second (passive)
+
+            // Movement
+            moveSpeed: 350,
+            dashSpeed: 550,
+            dashDistance: 180,
+
+            // Weapon System
+            weapons: {
+                auto: {
+                    name: 'AUTO RIFLE',
+                    damage: 21.5,
+                    cooldown: 0.195,
+                    range: 900,
+                    speed: 900,
+                    spread: 0,
+                    pellets: 1,
+                    color: '#3b82f6',
+                    icon: '🔵'
+                },
+                sniper: {
+                    name: 'SNIPER',
+                    damage: 100.5,
+                    cooldown: 0.85,
+                    range: 1200,
+                    speed: 1200,
+                    spread: 0,
+                    pellets: 1,
+                    color: '#ef4444',
+                    icon: '🔴'
+                },
+                shotgun: {
+                    name: 'SHOTGUN',
+                    damage: 80.5,
+                    cooldown: 0.6,
+                    range: 400,
+                    speed: 700,
+                    spread: 0.4,
+                    pellets: 5,
+                    color: '#f59e0b',
+                    icon: '🟠'
+                }
             },
-            sniper: {
-                name: 'SNIPER',
-                damage: 100.5,      // High damage for single shots
-                cooldown: 0.85,     // Slow fire rate
-                range: 1200,       // Longest range
-                speed: 1200,
-                spread: 0,
-                pellets: 1,
-                color: '#ef4444',
-                icon: '🔴'
-            },
-            shotgun: {
-                name: 'SHOTGUN',
-                damage: 80.5,        
-                cooldown: 0.6,
-                range: 400,        // Shortest range
-                speed: 700,
-                spread: 0.4,       // High spread
-                pellets: 5,        // Multiple pellets
-                color: '#f59e0b',
-                icon: '🟠'
-            }
+
+            // Skills
+            baseCritChance: 0.05,
+            critMultiplier: 3,
+            dashCooldown: 1.65,
+            stealthCooldown: 5.5,
+            stealthCost: 25,
+            stealthDrain: 35,
+            stealthSpeedBonus: 1.5,
+
+            // Level & EXP
+            expToNextLevel: 100,
+            expLevelMult: 1.5,
+
+            // Passive Unlock ("ซุ่มเสรี")
+            passiveUnlockLevel: 3,
+            passiveUnlockStealthCount: 5,
+            passiveHpBonusPct: 0.5,
+            passiveCritBonus: 0.035,
+            passiveLifesteal: 0.02,
+
+            // Speed on Hit
+            speedOnHit: 20,
+            speedOnHitDuration: 0.4
         },
-        
-        // Skills
-        baseCritChance: 0.05,       // Base critical hit chance
-        critMultiplier: 3,
-        dashCooldown: 1.65,     // Increased from 1.2
-        stealthCooldown: 5.5,  // Increased from 5.0
-        stealthCost: 25,
-        stealthDrain: 35,
-        stealthSpeedBonus: 1.5,
 
-        // Level & EXP
-        expToNextLevel: 100,       // Starting EXP threshold for level 2
-        expLevelMult: 1.5,         // EXP threshold multiplier per level-up
+        // ────────────────────────────────
+        // 🌾 POOM — คนอีสาน ปาข้าวเหนียว
+        // ────────────────────────────────
+        poom: {
+            name: 'Poom',
 
-        // Passive Unlock ("ซุ่มเสรี")
-        passiveUnlockLevel: 3,         // Min player level required
-        passiveUnlockStealthCount: 5,  // Stealth uses required
-        passiveHpBonusPct: 0.5,        // +50% maxHp on passive unlock
-        passiveCritBonus: 0.035,       // Extra crit chance when passive active
-        passiveLifesteal: 0.02,        // Lifesteal fraction of damage dealt
-        
-        // Speed on Hit (REBALANCED)
-        speedOnHit: 20,        // Reduced from 25
-        speedOnHitDuration: 0.4
+            // Entity
+            radius: 20,
+
+            // Health & Energy
+            hp: 135,
+            maxHp: 135,
+            energy: 100,
+            maxEnergy: 100,
+            energyRegen: 12,
+
+            // Movement (ช้ากว่าเก้าเล็กน้อย — เน้น Skill มากกว่า Speed)
+            moveSpeed: 300,
+            dashSpeed: 520,
+            dashDistance: 170,
+            dashCooldown: 1.65,
+
+            // Level & EXP
+            expToNextLevel: 100,
+            expLevelMult: 1.5,
+
+            // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
+            riceDamage: 42.5,
+            riceCooldown: 0.46,
+            riceSpeed: 600,
+            riceRange: 750,
+            riceColor: '#ffffff',
+            critChance: 0.07,
+            critMultiplier: 3,
+
+            // 🥢 Skill 1: กินข้าวเหนียว — Buff ตัวเอง
+            eatRiceCooldown: 12,
+            eatRiceDuration: 5,
+            eatRiceSpeedMult: 1.3,
+            eatRiceCritBonus: 0.25,
+
+            // 🐍 Skill 2: อัญเชิญพญานาค
+            nagaCooldown: 25,
+            nagaDuration: 8,
+            nagaDamage: 50,
+            nagaSpeed: 500,
+            nagaSegments: 12,
+            nagaSegmentDistance: 28,
+            nagaRadius: 20,
+
+            // Speed on Hit
+            speedOnHit: 18,
+            speedOnHitDuration: 0.35
+        }
+
+        // ── เพิ่มตัวละครใหม่ตรงนี้ได้เลย เช่น: ──
+        // mint: { name: 'Mint', hp: 90, moveSpeed: 400, ... }
     },
 
-    // 🌾 POOM CHARACTER STATS
-    poom: {
-        // Entity
-        radius: 20,            // Collision radius (pixels)
-
-        // Health & Energy
-        hp: 135,
-        maxHp: 135,
-        energy: 100,
-        maxEnergy: 100,
-        energyRegen: 12,       // Energy restored per second (passive)
-
-        // Level & EXP
-        expToNextLevel: 100,   // Starting EXP threshold for level 2
-        expLevelMult: 1.5,     // EXP threshold multiplier per level-up
-
-        // Movement (ช้ากว่าเก้าเล็กน้อย — เน้น Skill มากกว่า Speed)
-        moveSpeed: 300,
-        dashSpeed: 520,
-        dashDistance: 170,
-        friction: 0.88,
-        acceleration: 1800,
-        dashCooldown: 1.65,
-
-        // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
-        riceDamage: 42.5,
-        riceCooldown: 0.46,
-        riceSpeed: 600,
-        riceRange: 750,
-        riceColor: '#ffffff',        // สีข้าวเหนียวขาวสะอาด
-        critChance: 0.07,            // Base 7% crit chance
-        critMultiplier: 3,           // Crit multiplier
-
-        // 🥢 Skill 1: กินข้าวเหนียว — Buff ตัวเอง
-        eatRiceCooldown: 12,         // cooldown 12s
-        eatRiceDuration: 5,          // buff ยาว 5s
-        eatRiceSpeedMult: 1.3,       // +30% move speed (ตาม Spec)
-        eatRiceCritBonus: 0.25,      // +25% crit chance ขณะ Buff (ตาม Spec)
-
-        // 🐍 Skill 2: อัญเชิญพญานาค
-        nagaCooldown: 25,            // cooldown 25s (ตาม Spec)
-        nagaDuration: 8,             // นาคคงอยู่ 8s (ตาม Spec)
-        nagaDamage: 50,              // damage ต่อการสัมผัส (ตาม Spec)
-        nagaSpeed: 500,              // ความเร็วนาค
-        nagaSegments: 12,            // 12 ปล้อง (ตาม Spec)
-        nagaSegmentDistance: 28,     // ระยะห่างระหว่างปล้อง
-        nagaRadius: 20,              // ขนาด hitbox ต่อปล้อง
-
-        // Speed on Hit
-        speedOnHit: 18,
-        speedOnHitDuration: 0.35
-    },
-    
+    // ──────────────────────────────────────────────────────────────
     // 👾 BASIC ENEMY (REBALANCED)
+    // ──────────────────────────────────────────────────────────────
     enemy: {
-        // Entity
-        radius: 18,                                    // Collision radius
-        colors: ['#ef4444', '#f59e0b', '#8b5cf6'],    // Random colour pool
-        expValue: 10,                                  // EXP awarded on kill
-        chaseRange: 150,                               // Distance at which enemy stops closing in
-        projectileSpeed: 500,                          // Enemy bullet speed
+        radius: 18,
+        colors: ['#ef4444', '#f59e0b', '#8b5cf6'],
+        expValue: 10,
+        chaseRange: 150,
+        projectileSpeed: 500,
 
-        baseHp: 45,            // Reduced from 50
-        hpPerWave: 8,          // Reduced from 10
-        baseSpeed: 95,         // Reduced from 100
-        speedPerWave: 8,       // Reduced from 10
-        baseDamage: 9,         // Reduced from 10
+        baseHp: 45,
+        hpPerWave: 8,
+        baseSpeed: 95,
+        speedPerWave: 8,
+        baseDamage: 9,
         damagePerWave: 2,
         shootCooldown: [2.5, 4.5],
         shootRange: 550
     },
-    
-    // 🛡️ TANK ENEMY (REBALANCED)
-    tank: {
-        // Entity
-        radius: 25,              // Collision radius
-        color: '#78716c',       // Tank body colour
-        expValue: 25,           // EXP awarded on kill
-        powerupDropMult: 1.5,   // Multiplier on BALANCE.powerups.dropRate
 
-        baseHp: 115,           // Reduced from 120
-        hpPerWave: 18,         // Reduced from 20
-        baseSpeed: 65,         // Reduced from 70
-        speedPerWave: 4,       // Reduced from 5
-        baseDamage: 20,        // Reduced from 25
-        damagePerWave: 4,      // Reduced from 5
+    // ──────────────────────────────────────────────────────────────
+    // 🛡️ TANK ENEMY
+    // ──────────────────────────────────────────────────────────────
+    tank: {
+        radius: 25,
+        color: '#78716c',
+        expValue: 25,
+        powerupDropMult: 1.5,
+
+        baseHp: 115,
+        hpPerWave: 18,
+        baseSpeed: 65,
+        speedPerWave: 4,
+        baseDamage: 20,
+        damagePerWave: 4,
         meleeRange: 55
     },
-    
-    // 🧙 MAGE ENEMY (REBALANCED)
-    mage: {
-        // Entity
-        radius: 16,              // Collision radius
-        color: '#a855f7',       // Mage body colour
-        expValue: 30,           // EXP awarded on kill
-        powerupDropMult: 1.3,   // Multiplier on BALANCE.powerups.dropRate
-        orbitDistance: 300,     // Preferred orbit distance (pulls back if closer)
-        orbitDistanceBuffer: 100, // Approaches if > orbitDistance + buffer
 
-        baseHp: 30,            // Reduced from 35
-        hpPerWave: 7,          // Reduced from 8
-        baseSpeed: 75,         // Reduced from 80
-        speedPerWave: 7,       // Reduced from 8
-        baseDamage: 13,        // Reduced from 15
-        damagePerWave: 2,      // Reduced from 3
-        
-        // Sound Wave
+    // ──────────────────────────────────────────────────────────────
+    // 🧙 MAGE ENEMY
+    // ──────────────────────────────────────────────────────────────
+    mage: {
+        radius: 16,
+        color: '#a855f7',
+        expValue: 30,
+        powerupDropMult: 1.3,
+        orbitDistance: 300,
+        orbitDistanceBuffer: 100,
+
+        baseHp: 30,
+        hpPerWave: 7,
+        baseSpeed: 75,
+        speedPerWave: 7,
+        baseDamage: 13,
+        damagePerWave: 2,
+
         soundWaveCooldown: 10,
         soundWaveRange: 300,
         soundWaveConfuseDuration: 0.8,
-        
-        // Meteor
+
         meteorCooldown: 13,
-        meteorDamage: 28,      // Reduced from 30
+        meteorDamage: 28,
         meteorBurnDuration: 3,
-        meteorBurnDPS: 4.5       // Reduced from 5
+        meteorBurnDPS: 4.5
     },
-    
-    // 👑 BOSS (REBALANCED)
+
+    // ──────────────────────────────────────────────────────────────
+    // 👑 BOSS
+    // ──────────────────────────────────────────────────────────────
     boss: {
-        // Entity
-        radius: 50,                   // Collision radius
-        spawnY: -600,                 // World Y spawn position
-        contactDamage: 25,            // Damage per second when touching player
-        speechInterval: 10,           // Seconds between taunts
-        nextWaveDelay: 2000,          // ms before next wave starts after boss dies
-        log457HealRate: 0.1,          // Fraction of maxHp healed per second during charge
+        radius: 50,
+        spawnY: -600,
+        contactDamage: 25,
+        speechInterval: 10,
+        nextWaveDelay: 2000,
+        log457HealRate: 0.1,
 
-        // Attack fire rates
-        chalkProjectileSpeed: 600,    // Speed of chalk projectiles
-        attackFireRate: 0.1,          // Seconds between shots (phase 1)
-        phase2AttackFireRate: 0.05,   // Seconds between shots (phase 2)
-        ultimateProjectileSpeed: 400, // Speed of ultimate ring bullets
+        chalkProjectileSpeed: 600,
+        attackFireRate: 0.1,
+        phase2AttackFireRate: 0.05,
+        ultimateProjectileSpeed: 400,
 
-        baseHp: 2350,          // Reduced from 2500
+        baseHp: 2350,
         hpMultiplier: 1,
-        moveSpeed: 130,        // Reduced from 150
-        phase2Speed: 175,      // Reduced from 200
+        moveSpeed: 130,
+        phase2Speed: 175,
         phase2Threshold: 0.5,
-        
-        // Basic Attacks
-        chalkDamage: 13,       
-        ultimateDamage: 26,    // Reduced from 30
-        ultimateBullets: 18,   // Reduced from 24
-        phase2UltimateBullets: 26, // Reduced from 32
-        
-        // Special Skills
-        slamDamage: 35,        // Reduced from 40
-        slamRadius: 280,       // Reduced from 300
+
+        chalkDamage: 13,
+        ultimateDamage: 26,
+        ultimateBullets: 18,
+        phase2UltimateBullets: 26,
+
+        slamDamage: 35,
+        slamRadius: 280,
         slamCooldown: 16,
-        
-        graphDamage: 45,       
+
+        graphDamage: 45,
         graphLength: 1500,
-        graphDuration: 18,     // ⭐ ระยะเวลาแสดงผลของสกิล Deadly Graph (วินาที)
+        graphDuration: 18,
         graphCooldown: 18,
-        
+
         log457ChargeDuration: 2,
         log457ActiveDuration: 5,
         log457StunDuration: 1.2,
@@ -252,35 +273,41 @@ const BALANCE = {
         log457AttackBonus: 0.09,
         log457AttackGrowth: 0.04
     },
-    
-    // 💎 POWER-UPS (REBALANCED)
+
+    // ──────────────────────────────────────────────────────────────
+    // 💎 POWER-UPS
+    // ──────────────────────────────────────────────────────────────
     powerups: {
-        radius: 20,            // Pickup collision radius
+        radius: 20,
 
         dropRate: 0.35,
         lifetime: 13,
-        healAmount: 45,        // Reduced from 50
-        damageBoost: 1.75,      // Reduced from 2.0
+        healAmount: 45,
+        damageBoost: 1.75,
         damageBoostDuration: 12,
-        speedBoost: 1.35,       // Reduced from 1.5
+        speedBoost: 1.35,
         speedBoostDuration: 12
     },
-    
-    // 🌊 WAVE SYSTEM (REBALANCED)
-    waves: {
-        spawnDistance: 800,          // World units from player where enemies spawn
-        bossSpawnDelay: 3000,        // ms after wave start before boss appears
-        maxWaves: 5,                 // Wave count that triggers victory
-        minKillsForNoDamage: 5,      // Min kills required for "no damage" achievement
 
-        enemiesBase: 4,        // Reduced from 5
+    // ──────────────────────────────────────────────────────────────
+    // 🌊 WAVE SYSTEM
+    // ──────────────────────────────────────────────────────────────
+    waves: {
+        spawnDistance: 800,
+        bossSpawnDelay: 3000,
+        maxWaves: 5,
+        minKillsForNoDamage: 5,
+
+        enemiesBase: 4,
         enemiesPerWave: 3,
-        tankSpawnChance: 0.18, // Reduced from 0.20
-        mageSpawnChance: 0.15, 
+        tankSpawnChance: 0.18,
+        mageSpawnChance: 0.15,
         bossEveryNWaves: 3
     },
-    
+
+    // ──────────────────────────────────────────────────────────────
     // 🏆 SCORING
+    // ──────────────────────────────────────────────────────────────
     score: {
         basicEnemy: 50,
         tank: 100,
@@ -289,125 +316,120 @@ const BALANCE = {
         powerup: 100,
         achievement: 500
     },
-    
+
+    // ──────────────────────────────────────────────────────────────
     // 🏫 MTC ROOM SETTINGS
+    // ──────────────────────────────────────────────────────────────
     mtcRoom: {
-        healRate: 40,      // เลือดที่ฟื้นฟูต่อวินาที
-        maxStayTime: 4,    // ระยะเวลาที่อยู่ได้นานที่สุด (วินาที)
-        cooldownTime: 10,  // ระยะเวลารอคอยก่อนเข้าได้ใหม่ (วินาที)
-        size: 300          // ขนาดของห้อง
+        healRate: 40,
+        maxStayTime: 4,
+        cooldownTime: 10,
+        size: 300
     },
 
-    // 🏫 MAP SETTINGS
-    // 🏫 MAP SETTINGS
+    // ──────────────────────────────────────────────────────────────
+    // 🗺️ MAP SETTINGS
+    // ──────────────────────────────────────────────────────────────
     map: {
-        size: 3000,            // Map size (3000x3000)
-        objectDensity: 0.12,   // ความหนาแน่นของวัตถุ (12% ของพื้นที่)
+        size: 3000,
+        objectDensity: 0.12,
         objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
         wallPositions: [
             { x: -1500, y: -50, w: 50, h: 100 },
-            { x: 1450, y: -50, w: 50, h: 100 },
+            { x: 1450,  y: -50, w: 50, h: 100 },
             { x: -50, y: -1500, w: 100, h: 50 },
-            { x: -50, y: 1450, w: 100, h: 50 }
+            { x: -50, y:  1450, w: 100, h: 50 }
         ],
 
-        // 🎨 MAP COLOR PALETTE — used by all procedural draw helpers in map.js
         mapColors: {
-            // Floor (MTC Room parquet tiles)
-            floor:            '#d4c5a0',
-            floorAlt:         '#c9b892',
+            floor:           '#d4c5a0',
+            floorAlt:        '#c9b892',
 
-            // Tech Trees
-            treeLight:        '#86efac',
-            treeMid:          '#4ade80',
-            treeDark:         '#16a34a',
-            treeTrunk:        '#92400e',
+            treeLight:       '#86efac',
+            treeMid:         '#4ade80',
+            treeDark:        '#16a34a',
+            treeTrunk:       '#92400e',
 
-            // Desks
-            deskTop:          '#854d0e',
-            deskLegs:         '#713f12',
+            deskTop:         '#854d0e',
+            deskLegs:        '#713f12',
 
-            // Server rack
-            serverBody:       '#1e293b',
-            serverLightOn:    '#22c55e',
-            serverLightOff:   '#166534',
+            serverBody:      '#1e293b',
+            serverLightOn:   '#22c55e',
+            serverLightOff:  '#166534',
 
-            // Data Pillar (circuit-pattern)
-            pillarBase:       '#475569',
-            pillarCircuit:    '#06b6d4',
+            pillarBase:      '#475569',
+            pillarCircuit:   '#06b6d4',
 
-            // Books (cycled per book spine)
-            bookColors: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#f97316'],
+            bookColors: ['#ef4444','#3b82f6','#f59e0b','#10b981','#8b5cf6','#ec4899','#f97316'],
 
-            // Walls
-            wallColor:        '#e2d5c0',
-            wallBrick:        '#c9b18a',
+            wallColor:       '#e2d5c0',
+            wallBrick:       '#c9b18a',
 
-            // Blackboard / Whiteboard
-            whiteboardGreen:  '#1a4731',
-            chalkWhite:       '#f0ebe0'
+            whiteboardGreen: '#1a4731',
+            chalkWhite:      '#f0ebe0'
         }
     }
 };
 
+// ──────────────────────────────────────────────────────────────
 // Game Constants
+// ──────────────────────────────────────────────────────────────
 const GAME_CONFIG = {
     canvas: {
         targetFPS: 60,
         cameraSmooth: 0.1
     },
-    
+
     physics: {
         worldBounds: 1500,
         gridSize: 100
     },
-    
+
     visual: {
         particleLifetime: [0.3, 0.8],
         textFloatSpeed: -80,
         screenShakeDecay: 0.9,
-        bgColorTop: '#0f172a',                 // Background gradient top
-        bgColorBottom: '#1e293b',             // Background gradient bottom
-        gridColor: 'rgba(30, 41, 59, 0.5)'    // Grid line colour
+        bgColorTop:    '#0f172a',
+        bgColorBottom: '#1e293b',
+        gridColor:     'rgba(30, 41, 59, 0.5)'
     },
-    
+
     input: {
         joystickDeadzone: 0.1,
         joystickMaxDistance: 40
     },
 
-    // 🔊 AUDIO VOLUME SETTINGS
-    // ปรับค่าที่นี่เพื่อเปลี่ยนความดังแต่ละเสียง (0.0 = เงียบ, 1.0 = เต็มที่)
-    // ค่าจริงที่ได้ยิน = gain * master
     audio: {
-        master:       1.0,   // ตัวคูณหลัก — คูณกับทุกเสียง
-        shoot:        0.3,   // เสียงยิง (Auto Rifle / Sniper / Shotgun / ข้าวเหนียว)
-        dash:         0.4,   // เสียง Dash พุ่งตัว
-        hit:          0.4,   // เสียงโดนโจมตี
-        enemyDeath:   0.3,   // เสียงศัตรูตาย
-        powerUp:      0.2,   // เสียงเก็บ Power-up (เบาลง ตามที่ต้องการ)
-        heal:         0.4,   // เสียงรักษา HP
-        levelUp:      0.5,   // เสียงเลเวลอัพ
-        victory:      0.6,   // เสียงชนะ (reserved)
-        achievement:  0.5,   // เสียง Achievement ปลดล็อค
-        weaponSwitch: 0.3,   // เสียงสลับอาวุธ
-        bossSpecial:  0.5,   // เสียง Boss ใช้สกิล
-        meteorWarning:0.3    // เสียงเตือน Meteor
+        master:        1.0,
+        shoot:         0.3,
+        dash:          0.4,
+        hit:           0.4,
+        enemyDeath:    0.3,
+        powerUp:       0.2,
+        heal:          0.4,
+        levelUp:       0.5,
+        victory:       0.6,
+        achievement:   0.5,
+        weaponSwitch:  0.3,
+        bossSpecial:   0.5,
+        meteorWarning: 0.3
     }
 };
 
+// ──────────────────────────────────────────────────────────────
 // Achievement Definitions
+// ──────────────────────────────────────────────────────────────
 const ACHIEVEMENT_DEFS = [
-    { id: 'first_blood', name: 'First Blood', desc: 'ฆ่าศัตรูตัวแรก', icon: '⚔️' },
-    { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave 1', icon: '🌊' },
-    { id: 'boss_down', name: 'Manop Slayer', desc: 'เอาชนะครูมานพครั้งแรก', icon: '👑' },
-    { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️' },
-    { id: 'crit_master', name: 'Critical Master', desc: 'ตีติดคริติคอล 5 ครั้ง', icon: '💥' },
-    { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡' },
-    { id: 'ghost', name: 'The Ghost of MTC', desc: 'ซุ่มอ่าน 10 ครั้ง', icon: '👻' },
-    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎' },
-    { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' },
-    { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍' }
+    { id: 'first_blood',    name: 'First Blood',        desc: 'ฆ่าศัตรูตัวแรก',                    icon: '⚔️' },
+    { id: 'wave_1',         name: 'Wave Survivor',       desc: 'ผ่าน Wave 1',                       icon: '🌊' },
+    { id: 'boss_down',      name: 'Manop Slayer',        desc: 'เอาชนะครูมานพครั้งแรก',             icon: '👑' },
+    { id: 'no_damage',      name: 'Untouchable',         desc: 'ผ่าน Wave โดยไม่โดนดาเมจ',          icon: '🛡️' },
+    { id: 'crit_master',    name: 'Critical Master',     desc: 'ตีติดคริติคอล 5 ครั้ง',             icon: '💥' },
+    { id: 'speedster',      name: 'Speedster',           desc: 'ใช้ Dash 20 ครั้ง',                 icon: '⚡' },
+    { id: 'ghost',          name: 'The Ghost of MTC',    desc: 'ซุ่มอ่าน 10 ครั้ง',                 icon: '👻' },
+    { id: 'collector',      name: 'MTC Collector',       desc: 'เก็บ Power-up 10 ชิ้น',             icon: '💎' },
+    { id: 'weapon_master',  name: 'Weapon Master',       desc: 'ใช้ปืนครบทั้ง 3 แบบ',              icon: '🔫' },
+    { id: 'naga_summoner',  name: 'Naga Summoner',       desc: 'อัญเชิญพญานาค 3 ครั้ง',             icon: '🐍' }
 ];
 
 // Export for use in other modules

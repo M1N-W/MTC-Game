@@ -1,12 +1,13 @@
 /**
- * 👾 MTC: ENHANCED EDITION - Game Entities (FIXED + POOM)
+ * 👾 MTC: ENHANCED EDITION - Game Entities (REFACTORED)
  * Player, PoomPlayer, NagaEntity, Enemies, Boss, PowerUps
  *
- * FIXED BUGS:
- * - ✅ Confused status timer now properly counts down and expires
- * NEW:
- * - ✅ PoomPlayer: คนอีสาน ปาข้าวเหนียว + กินข้าวเหนียว + อัญเชิญพญานาค
- * - ✅ NagaEntity: พญานาคเลื้อยตามเมาส์ ทำ Damage ศัตรู
+ * REFACTORED:
+ * - ✅ Player constructor accepts charId ('kao' | future chars)
+ * - ✅ All stat lookups are dynamic via BALANCE.characters[charId]
+ * - ✅ Shared physics pulled from BALANCE.physics
+ * - ✅ PoomPlayer uses BALANCE.characters.poom throughout
+ * - ✅ Confused status timer properly counts down and expires
  */
 
 // ────────────────────────────────────────────────────────────
@@ -25,35 +26,62 @@ class Entity {
 }
 
 // ────────────────────────────────────────────────────────────
-// PLAYER (นักเรียน MTC — ตัวละครดั้งเดิม)
+// PLAYER (Generic — รองรับตัวละครในอนาคตผ่าน charId)
 // ────────────────────────────────────────────────────────────
 class Player extends Entity {
-    constructor() {
-        super(0, 0, BALANCE.player.radius);
-        this.hp = BALANCE.player.hp;
-        this.maxHp = BALANCE.player.maxHp;
-        this.energy = BALANCE.player.energy;
-        this.maxEnergy = BALANCE.player.maxEnergy;
+    constructor(charId = 'kao') {
+        const stats = BALANCE.characters[charId];
+        super(0, 0, stats.radius);
+
+        // ── Identity ──
+        this.charId = charId;
+        this.stats = stats; // shortcut reference — ใช้แทน BALANCE.characters[charId]
+
+        // ── Health & Energy ──
+        this.hp        = stats.hp;
+        this.maxHp     = stats.maxHp;
+        this.energy    = stats.energy;
+        this.maxEnergy = stats.maxEnergy;
+
+        // ── Cooldowns ──
         this.cooldowns = { dash: 0, stealth: 0, shoot: 0 };
-        this.isDashing = false;
-        this.isInvisible = false;
-        this.ambushReady = false;
-        this.walkCycle = 0;
-        this.damageBoost = 1;
-        this.speedBoost = 1;
-        this.speedBoostTimer = 0;
-        this.afterImages = [];
-        this.onGraph = false;
-        this.isConfused = false; this.confusedTimer = 0;
-        this.isBurning = false; this.burnTimer = 0; this.burnDamage = 0;
-        this.level = 1; this.exp = 0; this.expToNextLevel = BALANCE.player.expToNextLevel;
-        this.baseCritChance = BALANCE.player.baseCritChance;
+
+        // ── State flags ──
+        this.isDashing     = false;
+        this.isInvisible   = false;
+        this.ambushReady   = false;
+        this.walkCycle     = 0;
+
+        // ── Boosts ──
+        this.damageBoost      = 1;
+        this.speedBoost       = 1;
+        this.speedBoostTimer  = 0;
+        this.afterImages      = [];
+
+        // ── Status effects ──
+        this.onGraph       = false;
+        this.isConfused    = false; this.confusedTimer = 0;
+        this.isBurning     = false; this.burnTimer = 0; this.burnDamage = 0;
+
+        // ── Level & EXP ──
+        this.level          = 1;
+        this.exp            = 0;
+        this.expToNextLevel = stats.expToNextLevel;
+
+        // ── Passive / Crit ──
+        this.baseCritChance  = stats.baseCritChance;
         this.passiveUnlocked = false;
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
     }
 
+    // ── Convenience getter so call-sites can do this.S.xxx ──
+    get S() { return this.stats; }
+
     update(dt, keys, mouse) {
+        const S   = this.stats;
+        const PHY = BALANCE.physics;
+
         // ── Status effects ──
         if (this.isBurning) {
             this.burnTimer -= dt;
@@ -61,7 +89,6 @@ class Player extends Entity {
             if (this.burnTimer <= 0) this.isBurning = false;
             if (Math.random() < 0.3) spawnParticles(this.x + rand(-15,15), this.y + rand(-15,15), 1, '#f59e0b');
         }
-        // ✅ FIXED: นับถอยหลังสถานะมึนงง
         if (this.isConfused) {
             this.confusedTimer -= dt;
             if (this.confusedTimer <= 0) { this.isConfused = false; this.confusedTimer = 0; }
@@ -72,7 +99,7 @@ class Player extends Entity {
             if (Math.random() < 0.5) spawnParticles(this.x + rand(-25,25), this.y + rand(-25,25), 1, '#fbbf24');
         }
 
-        // ── Movement ──
+        // ── Movement input ──
         let ax = 0, ay = 0, isTouchMove = false;
         if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
             ax = window.touchJoystickLeft.nx; ay = window.touchJoystickLeft.ny; isTouchMove = true;
@@ -86,15 +113,17 @@ class Player extends Entity {
             this.walkCycle += dt * 15;
         } else { this.walkCycle = 0; }
 
-        let speedMult = (this.isInvisible ? BALANCE.player.stealthSpeedBonus : 1) * this.speedBoost;
-        if (this.speedBoostTimer > 0) speedMult += BALANCE.player.speedOnHit / BALANCE.player.moveSpeed;
+        let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost;
+        if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
+
         if (!this.isDashing) {
-            this.vx += ax * BALANCE.player.acceleration * dt;
-            this.vy += ay * BALANCE.player.acceleration * dt;
-            this.vx *= BALANCE.player.friction; this.vy *= BALANCE.player.friction;
+            this.vx += ax * PHY.acceleration * dt;
+            this.vy += ay * PHY.acceleration * dt;
+            this.vx *= PHY.friction;
+            this.vy *= PHY.friction;
             const cs = Math.hypot(this.vx, this.vy);
-            if (cs > BALANCE.player.moveSpeed * speedMult) {
-                const scale = BALANCE.player.moveSpeed * speedMult / cs;
+            if (cs > S.moveSpeed * speedMult) {
+                const scale = S.moveSpeed * speedMult / cs;
                 this.vx *= scale; this.vy *= scale;
             }
         }
@@ -102,22 +131,30 @@ class Player extends Entity {
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
 
-        // ── Skills ──
-        if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
-        if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
+        // ── Skill cooldowns ──
+        if (this.cooldowns.dash    > 0) this.cooldowns.dash    -= dt;
         if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
-        if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= BALANCE.player.stealthCost) {
+
+        // ── Dash ──
+        if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
+
+        // ── Stealth ──
+        if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= S.stealthCost) {
             this.activateStealth(); mouse.right = 0;
         }
         if (this.isInvisible) {
-            this.energy -= BALANCE.player.stealthDrain * dt;
+            this.energy -= S.stealthDrain * dt;
             if (this.energy <= 0) { this.energy = 0; this.breakStealth(); }
-        } else { this.energy = Math.min(this.maxEnergy, this.energy + BALANCE.player.energyRegen * dt); }
+        } else {
+            this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
+        }
 
         // ── Aiming ──
         if (window.touchJoystickRight && window.touchJoystickRight.active) {
             this.angle = Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
-        } else { this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x); }
+        } else {
+            this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
+        }
 
         for (let i = this.afterImages.length - 1; i >= 0; i--) {
             this.afterImages[i].life -= dt * 5;
@@ -127,11 +164,12 @@ class Player extends Entity {
     }
 
     dash(ax, ay) {
+        const S = this.stats;
         this.isDashing = true;
-        this.cooldowns.dash = BALANCE.player.dashCooldown;
+        this.cooldowns.dash = S.dashCooldown;
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
-        this.vx = Math.cos(angle) * (BALANCE.player.dashDistance / 0.2);
-        this.vy = Math.sin(angle) * (BALANCE.player.dashDistance / 0.2);
+        this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
+        this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
         for (let i = 0; i < 5; i++) setTimeout(() => {
             this.afterImages.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
         }, i * 30);
@@ -142,8 +180,9 @@ class Player extends Entity {
     }
 
     activateStealth() {
+        const S = this.stats;
         this.isInvisible = true; this.ambushReady = true;
-        this.energy -= BALANCE.player.stealthCost;
+        this.energy -= S.stealthCost;
         this.stealthUseCount++;
         spawnParticles(this.x, this.y, 25, '#facc15');
         showVoiceBubble("เข้าโหมดซุ่ม!", this.x, this.y - 40);
@@ -151,12 +190,16 @@ class Player extends Entity {
         Achievements.stats.stealths++; Achievements.check('ghost');
     }
 
-    breakStealth() { this.isInvisible = false; this.cooldowns.stealth = BALANCE.player.stealthCooldown; }
+    breakStealth() {
+        this.isInvisible = false;
+        this.cooldowns.stealth = this.stats.stealthCooldown;
+    }
 
     checkPassiveUnlock() {
-        if (!this.passiveUnlocked && this.level >= BALANCE.player.passiveUnlockLevel && this.stealthUseCount >= BALANCE.player.passiveUnlockStealthCount) {
+        const S = this.stats;
+        if (!this.passiveUnlocked && this.level >= S.passiveUnlockLevel && this.stealthUseCount >= S.passiveUnlockStealthCount) {
             this.passiveUnlocked = true;
-            const hpBonus = Math.floor(this.maxHp * BALANCE.player.passiveHpBonusPct);
+            const hpBonus = Math.floor(this.maxHp * S.passiveHpBonusPct);
             this.maxHp += hpBonus; this.hp += hpBonus;
             spawnFloatingText('ปลดล็อค: ซุ่มเสรี!', this.x, this.y - 60, '#fbbf24', 30);
             spawnParticles(this.x, this.y, 50, '#fbbf24');
@@ -174,9 +217,10 @@ class Player extends Entity {
     }
 
     levelUp() {
+        const S = this.stats;
         this.exp -= this.expToNextLevel;
         this.level++;
-        this.expToNextLevel = Math.floor(this.expToNextLevel * BALANCE.player.expLevelMult);
+        this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -185,6 +229,7 @@ class Player extends Entity {
     }
 
     takeDamage(amt) {
+        const S = this.stats;
         if (this.isDashing) return;
         if (this.onGraph) { amt *= 2; spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16); }
         this.hp -= amt; this.hp = Math.max(0, this.hp);
@@ -196,16 +241,17 @@ class Player extends Entity {
     }
 
     dealDamage(baseDamage) {
+        const S = this.stats;
         let damage = baseDamage, isCrit = false;
         let critChance = this.baseCritChance;
-        if (this.passiveUnlocked) critChance += BALANCE.player.passiveCritBonus;
+        if (this.passiveUnlocked) critChance += S.passiveCritBonus;
         if (Math.random() < critChance) {
-            damage *= BALANCE.player.critMultiplier; isCrit = true;
+            damage *= S.critMultiplier; isCrit = true;
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
             Achievements.stats.crits++; Achievements.check('crit_master');
         }
         if (this.passiveUnlocked) {
-            const healAmount = damage * BALANCE.player.passiveLifesteal;
+            const healAmount = damage * S.passiveLifesteal;
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3) spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
         }
@@ -218,9 +264,10 @@ class Player extends Entity {
         spawnParticles(this.x, this.y, 10, '#10b981'); Audio.playHeal();
     }
 
-    addSpeedBoost() { this.speedBoostTimer = BALANCE.player.speedOnHitDuration; }
+    addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
 
     draw() {
+        const S = this.stats;
         for (const img of this.afterImages) {
             const screen = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(img.angle);
@@ -240,7 +287,7 @@ class Player extends Entity {
         }
 
         if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.fillText('😵', screen.x, screen.y - 40); }
-        if (this.isBurning) { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
+        if (this.isBurning)  { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
 
         CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(this.angle);
         CTX.globalAlpha = this.isInvisible ? 0.3 : 1;
@@ -282,16 +329,17 @@ class Player extends Entity {
     }
 
     updateUI() {
+        const S = this.stats;
         document.getElementById('hp-bar').style.width = `${this.hp / this.maxHp * 100}%`;
         document.getElementById('en-bar').style.width = `${this.energy / this.maxEnergy * 100}%`;
-        const dp = Math.min(100, (1 - this.cooldowns.dash / BALANCE.player.dashCooldown) * 100);
+        const dp = Math.min(100, (1 - this.cooldowns.dash / S.dashCooldown) * 100);
         document.getElementById('dash-cd').style.height = `${100 - dp}%`;
         if (this.isInvisible) {
             document.getElementById('stealth-icon').classList.add('active');
             document.getElementById('stealth-cd').style.height = '0%';
         } else {
             document.getElementById('stealth-icon').classList.remove('active');
-            const sp = Math.min(100, (1 - this.cooldowns.stealth / BALANCE.player.stealthCooldown) * 100);
+            const sp = Math.min(100, (1 - this.cooldowns.stealth / S.stealthCooldown) * 100);
             document.getElementById('stealth-cd').style.height = `${100 - sp}%`;
         }
         const levelEl = document.getElementById('player-level');
@@ -315,39 +363,59 @@ class Player extends Entity {
 // ────────────────────────────────────────────────────────────
 class PoomPlayer extends Entity {
     constructor() {
-        super(0, 0, BALANCE.poom.radius);
-        this.hp = BALANCE.poom.hp;
-        this.maxHp = BALANCE.poom.maxHp;
-        this.energy = BALANCE.poom.energy;
-        this.maxEnergy = BALANCE.poom.maxEnergy;
+        const stats = BALANCE.characters.poom;
+        super(0, 0, stats.radius);
+
+        // ── Identity ──
+        this.charId = 'poom';
+        this.stats  = stats;
+
+        // ── Health & Energy ──
+        this.hp        = stats.hp;
+        this.maxHp     = stats.maxHp;
+        this.energy    = stats.energy;
+        this.maxEnergy = stats.maxEnergy;
+
+        // ── Cooldowns ──
         this.cooldowns = { dash: 0, eat: 0, naga: 0, shoot: 0 };
-        this.isDashing = false;
-        // compat fields ที่ boss/enemy ต้องการ
-        this.isInvisible = false; this.ambushReady = false;
+
+        // ── Compat fields required by boss/enemy systems ──
+        this.isDashing       = false;
+        this.isInvisible     = false; this.ambushReady = false;
         this.passiveUnlocked = false; this.stealthUseCount = 0; this.goldenAuraTimer = 0;
-        this.walkCycle = 0;
-        this.damageBoost = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
-        this.afterImages = [];
-        this.onGraph = false;
-        this.isConfused = false; this.confusedTimer = 0;
-        this.isBurning = false; this.burnTimer = 0; this.burnDamage = 0;
-        // Skill state
-        this.isEatingRice = false; this.eatRiceTimer = 0;
-        this.currentSpeedMult = 1;   // Skill 1 ปรับ speed (ลบ currentAttackMult — ใช้ critBonus แทน)
-        this.nagaCount = 0;
-        // Level
-        this.level = 1; this.exp = 0; this.expToNextLevel = BALANCE.poom.expToNextLevel;
-        this.baseCritChance = BALANCE.poom.critChance;
+
+        // ── Movement & visuals ──
+        this.walkCycle       = 0;
+        this.damageBoost     = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
+        this.afterImages     = [];
+
+        // ── Status effects ──
+        this.onGraph     = false;
+        this.isConfused  = false; this.confusedTimer = 0;
+        this.isBurning   = false; this.burnTimer = 0; this.burnDamage = 0;
+
+        // ── Skill states ──
+        this.isEatingRice   = false; this.eatRiceTimer = 0;
+        this.currentSpeedMult = 1;
+        this.nagaCount      = 0;
+
+        // ── Level & EXP ──
+        this.level          = 1;
+        this.exp            = 0;
+        this.expToNextLevel = stats.expToNextLevel;
+        this.baseCritChance = stats.critChance;
     }
 
     update(dt, keys, mouse) {
+        const S   = this.stats;
+        const PHY = BALANCE.physics;
+
         // ── Status effects ──
         if (this.isBurning) {
             this.burnTimer -= dt; this.hp -= this.burnDamage * dt;
             if (this.burnTimer <= 0) this.isBurning = false;
             if (Math.random() < 0.3) spawnParticles(this.x + rand(-15,15), this.y + rand(-15,15), 1, '#f59e0b');
         }
-        // ✅ FIXED: นับถอยหลังสถานะมึนงง
         if (this.isConfused) {
             this.confusedTimer -= dt;
             if (this.confusedTimer <= 0) { this.isConfused = false; this.confusedTimer = 0; }
@@ -357,8 +425,7 @@ class PoomPlayer extends Entity {
         // ── Skill 1: กินข้าวเหนียว timer ──
         if (this.isEatingRice) {
             this.eatRiceTimer -= dt;
-            // Buff: +30% speed (Spec) + +25% crit chance handled in dealDamage()
-            this.currentSpeedMult = BALANCE.poom.eatRiceSpeedMult;
+            this.currentSpeedMult = S.eatRiceSpeedMult;
             if (Math.random() < 0.2) spawnParticles(this.x + rand(-20,20), this.y + rand(-20,20), 1, '#fbbf24');
             if (this.eatRiceTimer <= 0) {
                 this.isEatingRice = false;
@@ -367,7 +434,7 @@ class PoomPlayer extends Entity {
             }
         }
 
-        // ── Movement ──
+        // ── Movement input ──
         let ax = 0, ay = 0, isTouchMove = false;
         if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
             ax = window.touchJoystickLeft.nx; ay = window.touchJoystickLeft.ny; isTouchMove = true;
@@ -382,14 +449,16 @@ class PoomPlayer extends Entity {
         } else { this.walkCycle = 0; }
 
         let speedMult = this.currentSpeedMult * this.speedBoost;
-        if (this.speedBoostTimer > 0) speedMult += BALANCE.poom.speedOnHit / BALANCE.poom.moveSpeed;
+        if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
+
         if (!this.isDashing) {
-            this.vx += ax * BALANCE.poom.acceleration * dt;
-            this.vy += ay * BALANCE.poom.acceleration * dt;
-            this.vx *= BALANCE.poom.friction; this.vy *= BALANCE.poom.friction;
+            this.vx += ax * PHY.acceleration * dt;
+            this.vy += ay * PHY.acceleration * dt;
+            this.vx *= PHY.friction;
+            this.vy *= PHY.friction;
             const cs = Math.hypot(this.vx, this.vy);
-            if (cs > BALANCE.poom.moveSpeed * speedMult) {
-                const scale = BALANCE.poom.moveSpeed * speedMult / cs;
+            if (cs > S.moveSpeed * speedMult) {
+                const scale = S.moveSpeed * speedMult / cs;
                 this.vx *= scale; this.vy *= scale;
             }
         }
@@ -397,13 +466,13 @@ class PoomPlayer extends Entity {
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
 
-        // ── Cooldowns ──
-        if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
-        if (this.cooldowns.eat > 0)  this.cooldowns.eat  -= dt;
-        if (this.cooldowns.naga > 0) this.cooldowns.naga -= dt;
+        // ── Skill cooldowns ──
+        if (this.cooldowns.dash  > 0) this.cooldowns.dash  -= dt;
+        if (this.cooldowns.eat   > 0) this.cooldowns.eat   -= dt;
+        if (this.cooldowns.naga  > 0) this.cooldowns.naga  -= dt;
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
 
-        // ── Dash (Space) ──
+        // ── Dash ──
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
 
         // ── Skill 1: กินข้าวเหนียว (E) ──
@@ -412,13 +481,15 @@ class PoomPlayer extends Entity {
         // ── Skill 2: อัญเชิญพญานาค (R) ──
         if (keys.r && this.cooldowns.naga <= 0) { this.summonNaga(); keys.r = 0; }
 
-        // Energy regen
-        this.energy = Math.min(this.maxEnergy, this.energy + BALANCE.poom.energyRegen * dt);
+        // ── Energy regen ──
+        this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
 
         // ── Aiming ──
         if (window.touchJoystickRight && window.touchJoystickRight.active) {
             this.angle = Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
-        } else { this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x); }
+        } else {
+            this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
+        }
 
         for (let i = this.afterImages.length - 1; i >= 0; i--) {
             this.afterImages[i].life -= dt * 5;
@@ -429,23 +500,25 @@ class PoomPlayer extends Entity {
 
     // 🍚 ปาข้าวเหนียว — เรียกจาก game.js เมื่อ mouse.left
     shoot() {
+        const S = this.stats;
         if (this.cooldowns.shoot > 0) return;
-        this.cooldowns.shoot = BALANCE.poom.riceCooldown;   // ไม่มี attackMult แล้ว — Spec ใช้ critBonus แทน
-        const { damage, isCrit } = this.dealDamage(BALANCE.poom.riceDamage * this.damageBoost);
+        this.cooldowns.shoot = S.riceCooldown;
+        const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost);
         projectileManager.add(new Projectile(
             this.x, this.y, this.angle,
-            BALANCE.poom.riceSpeed, damage,
-            BALANCE.poom.riceColor, false, 'player'
+            S.riceSpeed, damage,
+            S.riceColor, false, 'player'
         ));
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
-        this.speedBoostTimer = BALANCE.poom.speedOnHitDuration;
+        this.speedBoostTimer = S.speedOnHitDuration;
     }
 
     // 🥢 Skill 1
     eatRice() {
+        const S = this.stats;
         this.isEatingRice = true;
-        this.eatRiceTimer = BALANCE.poom.eatRiceDuration;
-        this.cooldowns.eat = BALANCE.poom.eatRiceCooldown;
+        this.eatRiceTimer = S.eatRiceDuration;
+        this.cooldowns.eat = S.eatRiceCooldown;
         spawnParticles(this.x, this.y, 30, '#fbbf24');
         spawnFloatingText('กินข้าวเหนียว!', this.x, this.y - 50, '#fbbf24', 22);
         showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
@@ -454,7 +527,8 @@ class PoomPlayer extends Entity {
 
     // 🐍 Skill 2
     summonNaga() {
-        this.cooldowns.naga = BALANCE.poom.nagaCooldown;
+        const S = this.stats;
+        this.cooldowns.naga = S.nagaCooldown;
         window.specialEffects.push(new NagaEntity(this.x, this.y, this));
         spawnParticles(this.x, this.y, 40, '#10b981');
         spawnFloatingText('อัญเชิญพญานาค!', this.x, this.y - 60, '#10b981', 24);
@@ -465,11 +539,12 @@ class PoomPlayer extends Entity {
     }
 
     dash(ax, ay) {
+        const S = this.stats;
         this.isDashing = true;
-        this.cooldowns.dash = BALANCE.poom.dashCooldown;
+        this.cooldowns.dash = S.dashCooldown;
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
-        this.vx = Math.cos(angle) * (BALANCE.poom.dashDistance / 0.2);
-        this.vy = Math.sin(angle) * (BALANCE.poom.dashDistance / 0.2);
+        this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
+        this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
         for (let i = 0; i < 5; i++) setTimeout(() => {
             this.afterImages.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
         }, i * 30);
@@ -490,12 +565,12 @@ class PoomPlayer extends Entity {
     }
 
     dealDamage(baseDamage) {
+        const S = this.stats;
         let damage = baseDamage, isCrit = false;
-        // Base crit + Skill 1 bonus (+25% crit ตาม Spec)
         let critChance = this.baseCritChance;
-        if (this.isEatingRice) critChance += BALANCE.poom.eatRiceCritBonus;
+        if (this.isEatingRice) critChance += S.eatRiceCritBonus;
         if (Math.random() < critChance) {
-            damage *= BALANCE.poom.critMultiplier; isCrit = true;
+            damage *= S.critMultiplier; isCrit = true;
             Achievements.stats.crits++; Achievements.check('crit_master');
         }
         return { damage, isCrit };
@@ -507,9 +582,10 @@ class PoomPlayer extends Entity {
         spawnParticles(this.x, this.y, 10, '#10b981'); Audio.playHeal();
     }
 
-    addSpeedBoost() { this.speedBoostTimer = BALANCE.poom.speedOnHitDuration; }
+    addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
 
     gainExp(amount) {
+        const S = this.stats;
         this.exp += amount;
         spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, '#8b5cf6', 14);
         while (this.exp >= this.expToNextLevel) this.levelUp();
@@ -517,8 +593,9 @@ class PoomPlayer extends Entity {
     }
 
     levelUp() {
+        const S = this.stats;
         this.exp -= this.expToNextLevel; this.level++;
-        this.expToNextLevel = Math.floor(this.expToNextLevel * BALANCE.poom.expLevelMult);
+        this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -526,7 +603,7 @@ class PoomPlayer extends Entity {
     }
 
     draw() {
-        // After images (สีทอง)
+        const S = this.stats;
         for (const img of this.afterImages) {
             const s = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(s.x, s.y); CTX.rotate(img.angle);
@@ -538,10 +615,9 @@ class PoomPlayer extends Entity {
         CTX.fillStyle = 'rgba(0,0,0,0.3)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 25, 18, 8, 0, 0, Math.PI * 2); CTX.fill();
 
-        // 🌟 ออร่าสีเหลืองตอนกินข้าวเหนียว
         if (this.isEatingRice) {
             const t = performance.now() / 200;
-            const auraSize = 38 + Math.sin(t) * 6;
+            const auraSize  = 38 + Math.sin(t) * 6;
             const auraAlpha = 0.4 + Math.sin(t * 1.5) * 0.15;
             CTX.save();
             CTX.globalAlpha = auraAlpha;
@@ -553,27 +629,22 @@ class PoomPlayer extends Entity {
             CTX.restore();
         }
 
-        // Status icons
-        if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.textAlign='center'; CTX.fillText('😵', screen.x, screen.y - 44); }
-        if (this.isBurning) { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
+        if (this.isConfused)   { CTX.font = 'bold 24px Arial'; CTX.textAlign='center'; CTX.fillText('😵', screen.x, screen.y - 44); }
+        if (this.isBurning)    { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
         if (this.isEatingRice) { CTX.font = 'bold 18px Arial'; CTX.textAlign='center'; CTX.fillText('🍚', screen.x, screen.y - 44); }
 
-        // ── Poom Sprite ──
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
         const w = Math.sin(this.walkCycle) * 8;
 
-        // Legs (กางเกงขาสั้นสีน้ำเงิน)
         CTX.fillStyle = '#1e3a8a';
         CTX.beginPath(); CTX.ellipse(5 + w, 12, 7, 5, 0, 0, Math.PI*2); CTX.fill();
         CTX.beginPath(); CTX.ellipse(5 - w, -12, 7, 5, 0, 0, Math.PI*2); CTX.fill();
 
-        // Body: ผ้าขาวม้าลายตาราง (พื้นแดง)
         CTX.fillStyle = '#dc2626';
         CTX.beginPath(); CTX.roundRect(-16, -13, 32, 26, 5); CTX.fill();
 
-        // ลายตาราง — clip เพื่อไม่ให้เส้นล้นตัว
         CTX.save();
         CTX.beginPath(); CTX.roundRect(-16, -13, 32, 26, 5); CTX.clip();
         CTX.strokeStyle = 'rgba(255,255,255,0.5)'; CTX.lineWidth = 3;
@@ -583,35 +654,29 @@ class PoomPlayer extends Entity {
         for (let d = -30; d < 40; d += 10) { CTX.beginPath(); CTX.moveTo(d-13,-13); CTX.lineTo(d+13,13); CTX.stroke(); }
         CTX.restore();
 
-        // Hands
         CTX.fillStyle = '#d4a574';
         CTX.beginPath(); CTX.arc(10, 14, 5, 0, Math.PI*2); CTX.fill();
         CTX.beginPath(); CTX.arc(8, -14, 5, 0, Math.PI*2); CTX.fill();
 
-        // Head (ผิวแดดอีสาน)
         CTX.fillStyle = '#d4a574';
         CTX.beginPath(); CTX.arc(0, 0, 13, 0, Math.PI*2); CTX.fill();
 
-        // Hair (ดำสั้น)
         CTX.fillStyle = '#0f172a';
         CTX.beginPath(); CTX.arc(0, 0, 14, Math.PI*1.15, Math.PI*2.85); CTX.fill();
         CTX.beginPath(); CTX.arc(-7, -4, 5, 0, Math.PI*2); CTX.fill();
         CTX.beginPath(); CTX.arc(7, -4, 5, 0, Math.PI*2); CTX.fill();
 
-        // Eyes
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
         CTX.beginPath(); CTX.arc(-5, 1, 4.5, 0, Math.PI*2); CTX.moveTo(6,1); CTX.arc(5, 1, 4.5, 0, Math.PI*2); CTX.stroke();
         const tg = performance.now() / 500;
         CTX.fillStyle = `rgba(255,255,255,${Math.abs(Math.sin(tg))*0.7+0.3})`;
         CTX.fillRect(-7,-1,3,2); CTX.fillRect(3,-1,3,2);
 
-        // Smile (ยิ้มแฮะ)
         CTX.strokeStyle = '#7c3c2a'; CTX.lineWidth = 2;
         CTX.beginPath(); CTX.arc(0, 2, 5, 0.1, Math.PI-0.1); CTX.stroke();
 
         CTX.restore();
 
-        // Level badge (สีส้มอีสาน)
         if (this.level > 1) {
             CTX.fillStyle = 'rgba(234, 88, 12, 0.9)';
             CTX.beginPath(); CTX.arc(screen.x+22, screen.y-22, 10, 0, Math.PI*2); CTX.fill();
@@ -622,6 +687,7 @@ class PoomPlayer extends Entity {
     }
 
     updateUI() {
+        const S = this.stats;
         const hpBar = document.getElementById('hp-bar');
         const enBar = document.getElementById('en-bar');
         if (hpBar) hpBar.style.width = `${this.hp / this.maxHp * 100}%`;
@@ -629,23 +695,21 @@ class PoomPlayer extends Entity {
 
         const dpEl = document.getElementById('dash-cd');
         if (dpEl) {
-            const dp = Math.min(100, (1 - this.cooldowns.dash / BALANCE.poom.dashCooldown) * 100);
+            const dp = Math.min(100, (1 - this.cooldowns.dash / S.dashCooldown) * 100);
             dpEl.style.height = `${100 - dp}%`;
         }
-        // Skill 1 cooldown
         const eatCd = document.getElementById('eat-cd');
         if (eatCd) {
             if (this.isEatingRice) { eatCd.style.height = '0%'; document.getElementById('eat-icon')?.classList.add('active'); }
             else {
                 document.getElementById('eat-icon')?.classList.remove('active');
-                const ep = Math.min(100, (1 - this.cooldowns.eat / BALANCE.poom.eatRiceCooldown) * 100);
+                const ep = Math.min(100, (1 - this.cooldowns.eat / S.eatRiceCooldown) * 100);
                 eatCd.style.height = `${100 - ep}%`;
             }
         }
-        // Skill 2 cooldown
         const nagaCd = document.getElementById('naga-cd');
         if (nagaCd) {
-            const np = Math.min(100, (1 - this.cooldowns.naga / BALANCE.poom.nagaCooldown) * 100);
+            const np = Math.min(100, (1 - this.cooldowns.naga / S.nagaCooldown) * 100);
             nagaCd.style.height = `${100 - np}%`;
         }
         const levelEl = document.getElementById('player-level');
@@ -660,23 +724,22 @@ class PoomPlayer extends Entity {
 // ────────────────────────────────────────────────────────────
 class NagaEntity {
     constructor(startX, startY, owner) {
+        const S = BALANCE.characters.poom;
         this.owner = owner;
-        const n = BALANCE.poom.nagaSegments;
+        const n = S.nagaSegments;
         this.segments = Array.from({ length: n }, () => ({ x: startX, y: startY }));
-        this.life = BALANCE.poom.nagaDuration;
-        this.maxLife = BALANCE.poom.nagaDuration;
-        // ✅ ใช้ key ใหม่ตาม Spec: nagaSpeed (จาก nagaFollowSpeed), nagaDamage (จาก nagaDPS)
-        this.speed = BALANCE.poom.nagaSpeed;
-        this.damage = BALANCE.poom.nagaDamage;   // damage per-hit (สัมผัส)
-        this.radius = BALANCE.poom.nagaRadius;
+        this.life    = S.nagaDuration;
+        this.maxLife = S.nagaDuration;
+        this.speed   = S.nagaSpeed;
+        this.damage  = S.nagaDamage;
+        this.radius  = S.nagaRadius;
     }
 
-    // interface: update(dt, player, _meteorZones) → true = remove
     update(dt, player, _meteorZones) {
+        const S = BALANCE.characters.poom;
         this.life -= dt;
         if (this.life <= 0) return true;
 
-        // หัวตามเมาส์
         const head = this.segments[0];
         const dx = mouse.wx - head.x, dy = mouse.wy - head.y;
         const d = Math.hypot(dx, dy);
@@ -685,8 +748,7 @@ class NagaEntity {
             head.x += (dx / d) * step; head.y += (dy / d) * step;
         }
 
-        // แต่ละ segment ตาม segment ก่อนหน้า
-        const segDist = BALANCE.poom.nagaSegmentDistance;
+        const segDist = S.nagaSegmentDistance;
         for (let i = 1; i < this.segments.length; i++) {
             const prev = this.segments[i - 1], curr = this.segments[i];
             const sdx = curr.x - prev.x, sdy = curr.y - prev.y;
@@ -694,7 +756,6 @@ class NagaEntity {
             if (sd > segDist) { curr.x = prev.x + (sdx/sd)*segDist; curr.y = prev.y + (sdy/sd)*segDist; }
         }
 
-        // Damage ศัตรู (damage per-second = nagaDamage × dt → smooth per-frame)
         for (const enemy of (window.enemies || [])) {
             if (enemy.dead) continue;
             for (const seg of this.segments) {
@@ -705,7 +766,6 @@ class NagaEntity {
                 }
             }
         }
-        // Damage บอส (ลดลง 40% — ป้องกัน OP)
         if (window.boss && !window.boss.dead) {
             for (const seg of this.segments) {
                 if (dist(seg.x, seg.y, window.boss.x, window.boss.y) < this.radius + window.boss.radius) {
@@ -719,7 +779,6 @@ class NagaEntity {
 
     draw() {
         const lifeRatio = this.life / this.maxLife;
-        // วาดจาก tail → head เพื่อให้หัวอยู่บนสุด
         for (let i = this.segments.length - 1; i >= 0; i--) {
             const seg = this.segments[i];
             const screen = worldToScreen(seg.x, seg.y);
@@ -730,15 +789,12 @@ class NagaEntity {
             CTX.save(); CTX.globalAlpha = Math.max(0.1, alpha);
 
             if (i === 0) {
-                // หัว (ทอง)
                 CTX.fillStyle = '#fbbf24'; CTX.shadowBlur = 20; CTX.shadowColor = '#fbbf24';
                 CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI*2); CTX.fill();
                 CTX.shadowBlur = 0;
-                // ตา
                 CTX.fillStyle = '#ef4444';
                 CTX.beginPath(); CTX.arc(screen.x - r*0.35, screen.y - r*0.2, r*0.25, 0, Math.PI*2); CTX.fill();
                 CTX.beginPath(); CTX.arc(screen.x + r*0.35, screen.y - r*0.2, r*0.25, 0, Math.PI*2); CTX.fill();
-                // เขี้ยว
                 CTX.fillStyle = '#fff';
                 CTX.beginPath();
                 CTX.moveTo(screen.x - r*0.3, screen.y + r*0.4);
@@ -746,11 +802,9 @@ class NagaEntity {
                 CTX.lineTo(screen.x, screen.y + r*0.4);
                 CTX.fill();
             } else if (i === this.segments.length - 1) {
-                // หาง
                 CTX.fillStyle = '#065f46'; CTX.shadowBlur = 6; CTX.shadowColor = '#10b981';
                 CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI*2); CTX.fill();
             } else {
-                // ลำตัว
                 CTX.fillStyle = i % 2 === 0 ? '#10b981' : '#059669';
                 CTX.shadowBlur = 10; CTX.shadowColor = '#10b981';
                 CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI*2); CTX.fill();
@@ -761,7 +815,6 @@ class NagaEntity {
             }
             CTX.restore();
         }
-        // แสดงเวลาที่เหลือเหนือหัว
         if (this.segments.length > 0) {
             const hs = worldToScreen(this.segments[0].x, this.segments[0].y);
             CTX.fillStyle = `rgba(251,191,36,${lifeRatio})`;
@@ -981,18 +1034,22 @@ if (typeof Player !== "undefined") {
     Player.prototype.update = function(dt, keys, mouse) {
         if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
             keys.w=keys.a=keys.s=keys.d=0;
-            this.__mobile_ax=window.touchJoystickLeft.nx; this.__mobile_ay=window.touchJoystickLeft.ny;
-        } else { this.__mobile_ax=null; this.__mobile_ay=null; }
-        __origUpdate.call(this,dt,keys,mouse);
+            this.__mobile_ax=window.touchJoystickLeft.nx;
+            this.__mobile_ay=window.touchJoystickLeft.ny;
+        } else {
+            this.__mobile_ax=null; this.__mobile_ay=null;
+        }
+        __origUpdate.call(this, dt, keys, mouse);
         if (this.__mobile_ax !== null) {
             const ax=this.__mobile_ax, ay=this.__mobile_ay;
             const len=Math.hypot(ax,ay)||1;
-            this.vx+=ax/len*BALANCE.player.acceleration*dt;
-            this.vy+=ay/len*BALANCE.player.acceleration*dt;
+            // Use shared BALANCE.physics.acceleration for the mobile patch
+            this.vx += ax/len * BALANCE.physics.acceleration * dt;
+            this.vy += ay/len * BALANCE.physics.acceleration * dt;
         }
         if (window.touchJoystickRight && window.touchJoystickRight.active &&
             (window.touchJoystickRight.nx!==0||window.touchJoystickRight.ny!==0)) {
-            this.angle=Math.atan2(window.touchJoystickRight.ny,window.touchJoystickRight.nx);
+            this.angle=Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
         }
     };
 }
