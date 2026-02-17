@@ -39,7 +39,7 @@ const BALANCE = {
             sniper: {
                 name: 'SNIPER',
                 damage: 115,        
-                cooldown: 0.9,     // Slow fire rate
+                cooldown: 0.85,     // Slow fire rate
                 range: 1200,       // Longest range
                 speed: 1200,
                 spread: 0,
@@ -49,7 +49,7 @@ const BALANCE = {
             },
             shotgun: {
                 name: 'SHOTGUN',
-                damage: 66,        // 3x damage total
+                damage: 100,        // 3x damage total
                 cooldown: 0.6,
                 range: 400,        // Shortest range
                 speed: 700,
@@ -91,7 +91,7 @@ const BALANCE = {
 
         // 🍚 Weapon: Sticky Rice Throw (Basic Attack)
         riceDamage: 38,
-        riceCooldown: 0.6,
+        riceCooldown: 0.46,
         riceSpeed: 600,
         riceRange: 750,
         riceColor: '#ffffff',        // สีข้าวเหนียวขาวสะอาด
@@ -210,7 +210,7 @@ const BALANCE = {
         enemiesBase: 4,        // Reduced from 5
         enemiesPerWave: 3,
         tankSpawnChance: 0.18, // Reduced from 0.20
-        mageSpawnChance: 0.15, // Reduced from 0.15
+        mageSpawnChance: 0.15, 
         bossEveryNWaves: 3
     },
     
