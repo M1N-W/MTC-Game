@@ -80,6 +80,25 @@ class Player extends Entity {
         this.passiveUnlocked = false;
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
+
+        // ── 💾 Restore persistent passive from save data ─────────────────
+        // If the player already earned the passive in a previous run it is
+        // immediately restored so progression is never lost on page refresh.
+        try {
+            const saved = getSaveData();
+            const myId  = this.charId || 'kao';
+            if (Array.isArray(saved.unlockedPassives) && saved.unlockedPassives.includes(myId)) {
+                this.passiveUnlocked = true;
+                // Apply the HP bonus so stats match what a live unlock gives
+                const hpBonus = Math.floor(this.maxHp * stats.passiveHpBonusPct);
+                this.maxHp += hpBonus;
+                this.hp    += hpBonus;
+                console.log(`[MTC Save] Passive restored for char '${myId}'.`);
+            }
+        } catch (e) {
+            console.warn('[MTC Save] Could not restore passive:', e);
+        }
+        // ─────────────────────────────────────────────────────────────────
     }
 
     // ── Convenience getter so call-sites can do this.S.xxx ──
@@ -213,6 +232,19 @@ class Player extends Entity {
             addScreenShake(15); this.goldenAuraTimer = 3;
             Audio.playAchievement();
             showVoiceBubble("ทักษะ 'ซุ่มเสรี' ปลดล็อคแล้ว!", this.x, this.y - 40);
+
+            // ── 💾 Persist this unlock so it survives a page refresh ─────
+            try {
+                const saved  = getSaveData();
+                const myId   = this.charId || 'kao';
+                const set    = new Set(saved.unlockedPassives || []);
+                set.add(myId);
+                updateSaveData({ unlockedPassives: [...set] });
+                console.log(`[MTC Save] Passive '${myId}' saved to disk.`);
+            } catch (e) {
+                console.warn('[MTC Save] Could not persist passive unlock:', e);
+            }
+            // ─────────────────────────────────────────────────────────────
         }
     }
 

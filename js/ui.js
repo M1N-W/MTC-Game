@@ -2,9 +2,11 @@
  * MTC: ENHANCED EDITION - UI System
  * Achievements, HUD, Shop, and UI management
  *
- * REFACTORED:
+ * REFACTORED (Save/Load System — v5):
  * - All BALANCE.poom.* -> BALANCE.characters.poom.*
  * - Added ShopManager for the in-game shop system
+ * - UIManager.updateHighScoreDisplay() — shows all-time best on the main menu
+ *   and injects a live "HIGH SCORE" row above the Play button
  */
 
 class AchievementSystem {
@@ -269,6 +271,73 @@ class UIManager {
         setTimeout(() => speech.classList.remove('visible'), 3000);
     }
 
+    // ------------------------------------------------------------------
+    // updateHighScoreDisplay(highScore)
+    // ─────────────────────────────────────────────────────────────────
+    // Inserts (or updates) a persistent HIGH SCORE row in the main menu.
+    // The row lives just above the #start-btn so it's visible at game
+    // start AND after a run ends.
+    //
+    // DOM target: the element with id="high-score-display".
+    // If it doesn't exist yet it is created and injected into
+    // .menu-container, directly before #start-btn.
+    //
+    // Calling with highScore === 0 shows "— —" instead of 0 so first-
+    // time players don't see a meaningless zero.
+    // ------------------------------------------------------------------
+    static updateHighScoreDisplay(highScore) {
+        const formatted = highScore > 0
+            ? Number(highScore).toLocaleString()
+            : '— —';
+
+        // Update any existing element first (fastest path after a run)
+        let el = document.getElementById('high-score-display');
+        if (el) {
+            const valEl = el.querySelector('#hs-value');
+            if (valEl) valEl.textContent = formatted;
+            return;
+        }
+
+        // First call — build the element and inject it
+        el = document.createElement('div');
+        el.id = 'high-score-display';
+        el.style.cssText = [
+            'display:flex',
+            'align-items:center',
+            'gap:12px',
+            'background:rgba(250,204,21,0.07)',
+            'border:1.5px solid rgba(250,204,21,0.35)',
+            'border-radius:14px',
+            'padding:10px 24px',
+            'margin-bottom:14px',
+            'font-family:"Orbitron",sans-serif',
+            'font-size:15px',
+            'color:#fef08a',
+            'letter-spacing:2px',
+            'box-shadow:0 0 18px rgba(250,204,21,0.18)',
+            'pointer-events:none'
+        ].join(';');
+
+        el.innerHTML = `
+            <span style="font-size:22px;line-height:1;">🏆</span>
+            <span style="color:#94a3b8;font-size:12px;letter-spacing:1px;">ALL-TIME HIGH SCORE</span>
+            <span id="hs-value"
+                  style="font-size:22px;color:#facc15;text-shadow:0 0 12px rgba(250,204,21,0.6);">
+                ${formatted}
+            </span>
+        `;
+
+        // Inject just before the Start button
+        const startBtn = document.getElementById('start-btn');
+        if (startBtn && startBtn.parentNode) {
+            startBtn.parentNode.insertBefore(el, startBtn);
+        } else {
+            // Fallback: append to menu container
+            const menuContainer = document.querySelector('.menu-container');
+            if (menuContainer) menuContainer.appendChild(el);
+        }
+    }
+
     static setupCharacterHUD(player) {
         const isPoom = player instanceof PoomPlayer;
 
@@ -399,6 +468,21 @@ const Achievements = new AchievementSystem();
 function showVoiceBubble(text, x, y) {
     UIManager.showVoiceBubble(text, x, y);
 }
+
+// ── Initialize persistent High Score display on page load ─────────────
+// Runs once as soon as ui.js is parsed so players see their record
+// on the menu before pressing Start for the first time.
+(function initHighScoreOnLoad() {
+    try {
+        const saved = getSaveData();
+        UIManager.updateHighScoreDisplay(saved.highScore || 0);
+    } catch (e) {
+        // getSaveData() may not be callable if utils.js loads out of order
+        // in some edge-case dev setups.  Fail silently — the display will
+        // be populated by startGame() on the first run instead.
+        console.warn('[MTC Save] Could not init high score display:', e);
+    }
+})();
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { AchievementSystem, ShopManager, UIManager, Achievements, showVoiceBubble };

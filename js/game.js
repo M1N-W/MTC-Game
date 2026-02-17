@@ -991,6 +991,17 @@ function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
     Audio.init();
 
+    // ── 💾 Load persistent save data ────────────────────────────────────
+    // Reads high score + unlocked passives from localStorage before the
+    // player entity is constructed so the Player constructor can restore
+    // the passive state immediately (see entities.js checkPassiveUnlock).
+    const saveData = getSaveData();
+    console.log('[MTC Save] Loaded save data:', saveData);
+
+    // Display the all-time high score on the main menu title section
+    UIManager.updateHighScoreDisplay(saveData.highScore);
+    // ─────────────────────────────────────────────────────────────────────
+
     player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
 
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
@@ -1079,6 +1090,25 @@ async function endGame(result) {
     // Setting to null prevents update/draw calls on a stale entity
     // and lets the GC collect it cleanly.
     window.drone = null;
+
+    // ── 💾 Auto-save High Score ──────────────────────────────────
+    // Runs for both 'victory' and 'gameover' so a perfect clear also
+    // updates the record.  updateSaveData() is a safe try-catch wrapper
+    // so a failed write never interrupts the game-over flow.
+    {
+        const runScore  = getScore();
+        const existing  = getSaveData();
+        if (runScore > existing.highScore) {
+            updateSaveData({ highScore: runScore });
+            console.log(`[MTC Save] 🏆 New high score: ${runScore}`);
+            // Reflect the new record in the menu immediately
+            UIManager.updateHighScoreDisplay(runScore);
+        } else {
+            // Still refresh the display in case it wasn't set yet this session
+            UIManager.updateHighScoreDisplay(existing.highScore);
+        }
+    }
+    // ─────────────────────────────────────────────────────────────
 
     if (result === 'victory') {
         showElement('victory-screen');
