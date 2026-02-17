@@ -258,7 +258,7 @@ const BALANCE = {
         phase2UltimateBullets: 26,
 
         slamDamage: 35,
-        slamRadius: 280,
+        slamRadius: 320,
         slamCooldown: 16,
 
         graphDamage: 45,
