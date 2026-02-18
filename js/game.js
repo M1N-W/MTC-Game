@@ -1669,9 +1669,6 @@ function _roundRectPath(ctx, x, y, w, h, r) {
     ctx.closePath();
 }
 
-/** Simple linear interpolation helper (used by energy bar colour) */
-function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
-
 window.toggleSlowMotion = toggleSlowMotion;
 
 // ==================== GAME LOOP ====================

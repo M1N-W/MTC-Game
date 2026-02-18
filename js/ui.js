@@ -760,16 +760,6 @@ function lerpColorHex(a, b, t) {
     return `rgb(${rc.r},${rc.g},${rc.b})`;
 }
 
-function hexToRgb(hex) {
-    const h = hex.replace('#', '');
-    const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
-    return {
-        r: (bigint >> 16) & 255,
-        g: (bigint >> 8) & 255,
-        b: bigint & 255
-    };
-}
-
 function lerpColor(a, b, t) {
     return lerpColorHex(a, b, t);
 }
