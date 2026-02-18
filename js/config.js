@@ -312,10 +312,10 @@ const BALANCE = {
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
 
-        baseHp: 2350,
+        baseHp: 2200,
         hpMultiplier: 1,
         moveSpeed: 130,
-        phase2Speed: 175,
+        phase2Speed: 160,
         phase2Threshold: 0.5,
 
         chalkDamage: 13,
