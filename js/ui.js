@@ -457,18 +457,22 @@ class UIManager {
         UIManager.updateCombo(dt);
         UIManager.drawCombo(ctx);
         if (!ctx || !ctx.canvas) return;
+        // ✅ Minimap is drawn LAST so no other HUD element overlaps it.
+        UIManager.drawMinimap(ctx);
+    }
 
+    // ════════════════════════════════════════════════════════════
+    // 🎯 TACTICAL MINIMAP / RADAR  (drawn last — always on top)
+    // ════════════════════════════════════════════════════════════
+    static drawMinimap(ctx) {
         const canvas = ctx.canvas;
 
-        // ════════════════════════════════════════════════════
-        // 🎯 TACTICAL MINIMAP / RADAR
-        // Config: radius 60 px · top-right · world scale 0.1
-        // ════════════════════════════════════════════════════
+        // Config: radius 60 px · safe-zone top-right · world scale 0.1
         const radarRadius = 60;
-        const margin      = 20;
         const scale       = 0.1;
-        const cx = canvas.width  - margin - radarRadius;
-        const cy = margin + radarRadius;
+        // ✅ Safe-Zone: keeps radar clear of device notches / browser chrome.
+        const cx = canvas.width  - 90;   // 90 px from right edge
+        const cy = 90;                    // 90 px from top edge
         const now = Date.now();
 
         const player = (typeof window !== 'undefined' && window.player)
@@ -489,15 +493,24 @@ class UIManager {
         // ── 1. Outer shell ───────────────────────────────────
         // Subtle outer glow ring
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius + 4, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(72,187,120,0.06)'; ctx.fill();
+        ctx.fillStyle = 'rgba(57,255,20,0.07)'; ctx.fill();
 
-        // Main dark fill
+        // Main deep-navy fill — ✅ high-contrast background
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(5,12,22,0.82)'; ctx.fill();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'; ctx.fill();
 
-        // Green tech border — double stroke for depth
-        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(72,187,120,0.95)'; ctx.stroke();
-        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(134,239,172,0.35)';
+        // ✅ Pulsating neon-green border — width oscillates 1 px → 3 px
+        const borderSin   = Math.sin(now / 500);          // -1 … +1
+        const borderWidth = 2 + borderSin;                // 1 … 3 px
+        ctx.lineWidth   = borderWidth;
+        ctx.strokeStyle = `rgba(57,255,20,${0.75 + borderSin * 0.15})`;
+        ctx.shadowBlur  = 10 + borderSin * 6;
+        ctx.shadowColor = '#39ff14';
+        ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner accent ring
+        ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(134,239,172,0.30)';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 3, 0, Math.PI * 2); ctx.stroke();
 
         // ── CLIP — nothing escapes the radar circle from here on ──
@@ -509,14 +522,15 @@ class UIManager {
         // Concentric range rings
         [radarRadius * 0.33, radarRadius * 0.66].forEach(r => {
             ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(72,187,120,0.12)'; ctx.stroke();
+            ctx.strokeStyle = 'rgba(57,255,20,0.14)'; ctx.stroke();
         });
 
-        // Cross-hair axes
-        ctx.strokeStyle = 'rgba(72,187,120,0.10)';
+        // ✅ Tactical cross-hair axes — more visible for military look
+        ctx.strokeStyle = 'rgba(57,255,20,0.20)';
+        ctx.lineWidth   = 0.8;
         ctx.beginPath();
-        ctx.moveTo(cx - radarRadius, cy); ctx.lineTo(cx + radarRadius, cy);
-        ctx.moveTo(cx, cy - radarRadius); ctx.lineTo(cx, cy + radarRadius);
+        ctx.moveTo(cx - radarRadius + 2, cy); ctx.lineTo(cx + radarRadius - 2, cy);
+        ctx.moveTo(cx, cy - radarRadius + 2); ctx.lineTo(cx, cy + radarRadius - 2);
         ctx.stroke();
 
         // ── 3. Sweep line animation ───────────────────────────
@@ -558,32 +572,31 @@ class UIManager {
         ctx.stroke();
         ctx.restore();
 
-        // ── 4. Objectives — blue square: MTC Database Server ──
+        // ── 4. Objectives — bright blue square (5 px): MTC Database Server ──
         // Access via window.MTC_DATABASE_SERVER (defined in game.js)
         if (window.MTC_DATABASE_SERVER) {
             const S = window.MTC_DATABASE_SERVER;
             const { x: sx, y: sy, clamped: sc } = toRadar(S.x, S.y, radarRadius - 8);
             const dbPulse = 0.65 + Math.sin(now / 550) * 0.35;
-            const SZ = sc ? 3.5 : 5;   // smaller arrow when on edge
+            const SZ = sc ? 3.5 : 5;   // ✅ 5 px blue square when in range
 
             ctx.save();
             ctx.translate(sx, sy);
-            ctx.shadowBlur  = 8 * dbPulse;
-            ctx.shadowColor = '#3b82f6';
+            ctx.shadowBlur  = 10 * dbPulse;
+            ctx.shadowColor = '#60a5fa';
 
             if (sc) {
                 // Arrow chevron pointing inward when clamped to edge
                 const ax = cx - sx, ay = cy - sy;
-                const al = Math.sqrt(ax * ax + ay * ay);
                 ctx.rotate(Math.atan2(ay, ax));
-                ctx.fillStyle = `rgba(59,130,246,${0.7 + dbPulse * 0.3})`;
+                ctx.fillStyle = `rgba(59,130,246,${0.8 + dbPulse * 0.2})`;
                 ctx.beginPath();
                 ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
                 ctx.fill();
             } else {
-                // Solid blue square
-                ctx.fillStyle = `rgba(59,130,246,${0.75 + dbPulse * 0.25})`;
-                ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.9})`;
+                // ✅ Bright blue 5 px square
+                ctx.fillStyle = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
+                ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.95})`;
                 ctx.lineWidth = 1.2;
                 ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
                 ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
@@ -620,30 +633,30 @@ class UIManager {
             ctx.restore();
         }
 
-        // ── 6. Enemies — red dots ────────────────────────────
+        // ── 6. Enemies — bright red dots (3 px) ─────────────
         if (Array.isArray(window.enemies)) {
             for (const e of window.enemies) {
                 if (!e || e.dead) continue;
                 const { x: ex, y: ey, clamped: ec } = toRadar(e.x, e.y);
 
                 ctx.save();
-                ctx.shadowBlur  = ec ? 0 : 4;
-                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur  = ec ? 0 : 5;
+                ctx.shadowColor = '#ff2222';
 
                 if (ec) {
                     // Edge chevron pointing inward
                     ctx.translate(ex, ey);
                     ctx.rotate(Math.atan2(cy - ey, cx - ex));
-                    ctx.fillStyle = 'rgba(220,40,40,0.75)';
+                    ctx.fillStyle = 'rgba(255,50,50,0.85)';
                     ctx.beginPath();
                     ctx.moveTo(5, 0); ctx.lineTo(0, -3); ctx.lineTo(0, 3); ctx.closePath();
                     ctx.fill();
                 } else {
-                    // Filled dot — mage enemies slightly larger/brighter
-                    const r   = e.type === 'mage' ? 4 : (e.type === 'tank' ? 4.5 : 3.2);
+                    // ✅ Bright red dots — 3 px radius (mage/tank slightly larger)
+                    const r   = e.type === 'mage' ? 4 : (e.type === 'tank' ? 4.5 : 3);
                     const col = e.type === 'mage'
-                        ? 'rgba(192,85,250,0.95)'
-                        : (e.type === 'tank' ? 'rgba(240,100,40,0.95)' : 'rgba(220,40,40,0.95)');
+                        ? 'rgba(200,85,255,1.0)'
+                        : (e.type === 'tank' ? 'rgba(255,110,40,1.0)' : 'rgba(255,40,40,1.0)');
                     ctx.fillStyle = col;
                     ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
                 }
@@ -651,7 +664,7 @@ class UIManager {
             }
         }
 
-        // ── 7. Boss — large pulsating purple ring ────────────
+        // ── 7. Boss — 6 px pulsating purple dot ──────────────
         if (window.boss && !window.boss.dead) {
             const t     = (now % 1000) / 1000;
             const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
@@ -660,7 +673,7 @@ class UIManager {
             );
 
             ctx.save();
-            ctx.shadowBlur  = 12 * pulse;
+            ctx.shadowBlur  = 14 * pulse;
             ctx.shadowColor = '#a855f7';
 
             if (bc) {
@@ -672,35 +685,36 @@ class UIManager {
                 ctx.moveTo(8, 0); ctx.lineTo(0, -5); ctx.lineTo(0, 5); ctx.closePath();
                 ctx.fill();
             } else {
-                // Inner fill
-                ctx.fillStyle = `rgba(170,110,255,${0.6 + 0.25 * pulse})`;
-                ctx.beginPath(); ctx.arc(bx, by, 5 + 2.5 * pulse, 0, Math.PI * 2); ctx.fill();
+                // ✅ 6 px purple pulsating dot (inner fill)
+                ctx.fillStyle = `rgba(170,110,255,${0.75 + 0.25 * pulse})`;
+                ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI * 2); ctx.fill();
                 // Outer glow ring
-                ctx.strokeStyle = `rgba(216,180,254,${0.25 + 0.15 * pulse})`;
+                ctx.strokeStyle = `rgba(216,180,254,${0.30 + 0.15 * pulse})`;
                 ctx.lineWidth   = 1.5;
-                ctx.beginPath(); ctx.arc(bx, by, 9 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
                 // Boss label
-                ctx.fillStyle    = `rgba(255,220,255,${0.7 + 0.3 * pulse})`;
+                ctx.fillStyle    = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
                 ctx.font         = 'bold 6px monospace';
                 ctx.textAlign    = 'center';
                 ctx.textBaseline = 'bottom';
-                ctx.fillText('BOSS', bx, by - 10 - 2 * pulse);
+                ctx.fillText('BOSS', bx, by - 12 - 2 * pulse);
             }
             ctx.restore();
         }
 
-        // ── 8. Player — green triangle at radar center ────────
+        // ── 8. Player — green triangle at radar center (6 px) ────
         // Rotated to match facing angle
         ctx.save();
         ctx.translate(cx, cy);
         if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
-        ctx.shadowBlur  = 6; ctx.shadowColor = '#34d399';
+        ctx.shadowBlur  = 8; ctx.shadowColor = '#34d399';
         ctx.fillStyle   = 'rgba(52,214,88,0.98)';
-        ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
+        // ✅ Player triangle size: 6 px (tip-to-base)
+        ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
         ctx.fill();
         // White nose dot
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.beginPath(); ctx.arc(0, -6, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -5, 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
         // ── 9. Label & legend strip (outside clip, so restore first) ─
