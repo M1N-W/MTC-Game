@@ -766,13 +766,15 @@ function lerpColor(a, b, t) {
 
 // ─── Global Singletons ────────────────────────────────────────
 // game.js expects ShopManager, UIManager, Achievements as singleton instances.
-// Instantiate each class first, then overwrite the class binding with the instance
-// so all files referencing e.g. ShopManager.close() find an object, not a constructor.
-const Achievements  = new AchievementSystem();
-const _smInstance   = new ShopManager();   // capture instance before overwrite
-const _uiInstance   = new UIManager();     // capture instance before overwrite
-ShopManager = _smInstance;                 // class binding → singleton instance
-UIManager   = _uiInstance;                 // class binding → singleton instance
+// 'class' declarations are block-scoped and NOT added to window, so we must
+// use 'var' (for Achievements) and explicit window assignments (for the others)
+// to make them visible across separate <script> tags.
+var Achievements    = new AchievementSystem();  // var → auto-added to window
+
+var _smInstance     = new ShopManager();        // capture before class name is overwritten
+var _uiInstance     = new UIManager();
+window.ShopManager  = _smInstance;              // explicitly expose on window
+window.UIManager    = _uiInstance;
 
 // ── Initialize persistent High Score display on page load ─────────────
 // Runs once as soon as ui.js is parsed so players see their record
