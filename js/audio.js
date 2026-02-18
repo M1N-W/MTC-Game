@@ -331,7 +331,7 @@ class AudioSystem {
     }
 }
 
-const Audio = new AudioSystem();
+var Audio = new AudioSystem();
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Audio, AudioSystem };

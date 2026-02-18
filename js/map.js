@@ -1131,7 +1131,7 @@ class MapSystem {
     }
 }
 
-const mapSystem = new MapSystem();
+var mapSystem = new MapSystem();
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { MapObject, MTCRoom, MapSystem, mapSystem };

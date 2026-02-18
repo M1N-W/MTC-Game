@@ -106,7 +106,7 @@ var updateScoreUI = () => {
 };
 
 // ─── Canvas utilities ─────────────────────────────────────────
-let CANVAS, CTX;
+var CANVAS, CTX;
 
 var initCanvas = () => {
     CANVAS = document.getElementById('gameCanvas');

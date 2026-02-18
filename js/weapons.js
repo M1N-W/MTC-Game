@@ -359,8 +359,8 @@ class ProjectileManager {
     getAll() { return this.projectiles; }
 }
 
-const weaponSystem      = new WeaponSystem();
-const projectileManager = new ProjectileManager();
+var weaponSystem      = new WeaponSystem();
+var projectileManager = new ProjectileManager();
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Projectile, WeaponSystem, ProjectileManager, weaponSystem, projectileManager };

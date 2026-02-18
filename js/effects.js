@@ -221,7 +221,7 @@ class Raindrop {
         this.x += this.wind * dt;
 
         // Remove if below visible screen (camera-relative)
-        const screenBottom = camera.y + CANVAS.height / 2 + 100;
+        const screenBottom = camera.y + CANVAS.height + 100;
         return this.y > screenBottom;
     }
 
@@ -262,7 +262,7 @@ class Snowflake {
         this.x += Math.sin(this.time) * this.swayAmount * dt;
 
         // Remove if below visible screen
-        const screenBottom = camera.y + CANVAS.height / 2 + 100;
+        const screenBottom = camera.y + CANVAS.height + 100;
         return this.y > screenBottom;
     }
 
@@ -354,9 +354,9 @@ class WeatherSystem {
 
     _spawnParticle(camera) {
         // Spawn at top of visible screen with some padding
-        const screenTop = camera.y - CANVAS.height / 2 - 10;
-        const screenLeft = camera.x - CANVAS.width / 2 - 50;
-        const screenRight = camera.x + CANVAS.width / 2 + 50;
+        const screenTop   = camera.y - 10;
+        const screenLeft  = camera.x - 50;
+        const screenRight = camera.x + CANVAS.width + 50;
         
         const x = screenLeft + Math.random() * (screenRight - screenLeft);
         const y = screenTop;
@@ -378,7 +378,7 @@ class WeatherSystem {
 }
 
 // Global instance
-const weatherSystem = new WeatherSystem();
+var weatherSystem = new WeatherSystem();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Special Effects for Boss
@@ -653,8 +653,8 @@ class MeteorStrike {
 // ──────────────────────────────────────────────────────────────────────────────
 // Create singleton instances
 // ──────────────────────────────────────────────────────────────────────────────
-const particleSystem    = new ParticleSystem();
-const floatingTextSystem = new FloatingTextSystem();
+var particleSystem    = new ParticleSystem();
+var floatingTextSystem = new FloatingTextSystem();
 
 // Helper functions for global use
 function spawnParticles(x, y, count, color) {
