@@ -82,6 +82,16 @@ class Player extends Entity {
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
 
+        // ── Collision Awareness state ─────────────────────────
+        // obstacleBuffTimer:   seconds remaining on the consolation speed buff.
+        //                      Set by the obstacle proximity check each frame;
+        //                      decays at 1:1 with dt.
+        // lastObstacleWarning: Date.now() timestamp of the last warning bubble.
+        //                      Compared against BALANCE.player.obstacleWarningCooldown
+        //                      to rate-limit voice bubble spam.
+        this.obstacleBuffTimer     = 0;
+        this.lastObstacleWarning   = 0;
+
         // ── Restore persistent passive ─────────────────────────
         try {
             const saved = getSaveData();
@@ -135,6 +145,9 @@ class Player extends Entity {
 
         let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost;
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
+        // [OBSTACLE BUFF] Consolation speed multiplier — active when player is scraping
+        // a map object. Applied here so the cap in the block below respects the boost.
+        if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
 
         if (!this.isDashing) {
             this.vx += ax * PHY.acceleration * dt;
@@ -150,6 +163,87 @@ class Player extends Entity {
         this.applyPhysics(dt);
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
+
+        // ── [OBSTACLE AWARENESS] Proximity detection & consolation buff ──────
+        // Runs every frame (except while dashing — the iframe makes it irrelevant).
+        // Uses AABB closest-point distance so rectangular desks/walls are tested
+        // precisely rather than via their centre-to-centre distance.
+        //
+        // Map object source priority:
+        //   1. mapSystem.getObjects()  — preferred (dynamic, includes desks/trees/etc.)
+        //   2. mapSystem.objects       — fallback if map module exposes the array directly
+        //   3. BALANCE.map.wallPositions — static world-boundary walls (always appended)
+        if (!this.isDashing) {
+            const OB = BALANCE.player;
+
+            // Collect collidable rectangles from all available sources
+            let mapObjs = [];
+            if (window.mapSystem) {
+                if      (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
+                else if (Array.isArray(mapSystem.objects))           mapObjs = mapSystem.objects;
+                else if (Array.isArray(mapSystem.solidObjects))      mapObjs = mapSystem.solidObjects;
+            }
+            if (Array.isArray(BALANCE.map.wallPositions)) {
+                mapObjs = mapObjs.concat(BALANCE.map.wallPositions);
+            }
+
+            // Player is "moving" when pressing at least one directional input this frame
+            const isMoving = (ax !== 0 || ay !== 0);
+
+            let scraping = false;  // true if player surface is touching an object this frame
+
+            for (const obj of mapObjs) {
+                if (!obj || obj.x === undefined || obj.y === undefined) continue;
+                const oL = obj.x;
+                const oT = obj.y;
+                const oR = oL + (obj.w || 0);
+                const oB = oT + (obj.h || 0);
+
+                // Closest point on the AABB rectangle to the player centre
+                const closestX = Math.max(oL, Math.min(this.x, oR));
+                const closestY = Math.max(oT, Math.min(this.y, oB));
+                const d        = Math.hypot(this.x - closestX, this.y - closestY);
+
+                // Scraping threshold: player radius + 4 px "skin" tolerance
+                const scrapeThreshold   = this.radius + 4;
+                // Warning threshold: larger range — fires before contact
+                const warningThreshold  = this.radius + OB.obstacleWarningRange;
+
+                if (d < scrapeThreshold && isMoving) {
+                    // Player surface is in contact with object while pushing into it
+                    scraping = true;
+                }
+
+                if (d < warningThreshold && isMoving) {
+                    // Trigger warning bubble (rate-limited)
+                    const now = Date.now();
+                    if (now - this.lastObstacleWarning > OB.obstacleWarningCooldown) {
+                        this.lastObstacleWarning = now;
+                        showVoiceBubble('Careful!', this.x, this.y - 50);
+                    }
+                    break; // one nearby object is enough to decide — stop iterating
+                }
+            }
+
+            // Grant / maintain consolation buff while actively scraping
+            if (scraping) {
+                this.obstacleBuffTimer = OB.obstacleBuffDuration;
+            }
+
+            // Decay buff and emit speed-line particles while active
+            if (this.obstacleBuffTimer > 0) {
+                this.obstacleBuffTimer -= dt;
+                // Faint blue speed-line particles — 1 particle at ~30 % chance per frame
+                // so the effect is subtle rather than a full burst every frame.
+                if (Math.random() < 0.3) {
+                    spawnParticles(
+                        this.x + rand(-this.radius, this.radius),
+                        this.y + rand(-this.radius, this.radius),
+                        1, '#93c5fd'   // Tailwind blue-300 — soft, distinct from combat FX
+                    );
+                }
+            }
+        }
 
         if (this.cooldowns.dash    > 0) this.cooldowns.dash    -= dt;
         if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
@@ -426,6 +520,10 @@ class PoomPlayer extends Entity {
         this.currentSpeedMult = 1;
         this.nagaCount = 0;
 
+        // ── Collision Awareness state (mirrors Player) ────────
+        this.obstacleBuffTimer     = 0;
+        this.lastObstacleWarning   = 0;
+
         this.level = 1; this.exp = 0;
         this.expToNextLevel = stats.expToNextLevel;
         this.baseCritChance = stats.critChance;
@@ -472,6 +570,8 @@ class PoomPlayer extends Entity {
 
         let speedMult = this.currentSpeedMult * this.speedBoost;
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
+        // [OBSTACLE BUFF] Consolation speed multiplier — mirrors Player logic
+        if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
 
         if (!this.isDashing) {
             this.vx += ax * PHY.acceleration * dt;
@@ -487,6 +587,66 @@ class PoomPlayer extends Entity {
         this.applyPhysics(dt);
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
+
+        // ── [OBSTACLE AWARENESS] Proximity detection & consolation buff ──────
+        // Identical logic to Player — extracted here rather than into a shared
+        // helper because PoomPlayer does not extend Player (separate class tree).
+        if (!this.isDashing) {
+            const OB = BALANCE.player;
+
+            let mapObjs = [];
+            if (window.mapSystem) {
+                if      (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
+                else if (Array.isArray(mapSystem.objects))           mapObjs = mapSystem.objects;
+                else if (Array.isArray(mapSystem.solidObjects))      mapObjs = mapSystem.solidObjects;
+            }
+            if (Array.isArray(BALANCE.map.wallPositions)) {
+                mapObjs = mapObjs.concat(BALANCE.map.wallPositions);
+            }
+
+            const isMoving = (ax !== 0 || ay !== 0);
+            let scraping   = false;
+
+            for (const obj of mapObjs) {
+                if (!obj || obj.x === undefined || obj.y === undefined) continue;
+                const oL = obj.x;
+                const oT = obj.y;
+                const oR = oL + (obj.w || 0);
+                const oB = oT + (obj.h || 0);
+                const closestX = Math.max(oL, Math.min(this.x, oR));
+                const closestY = Math.max(oT, Math.min(this.y, oB));
+                const d        = Math.hypot(this.x - closestX, this.y - closestY);
+                const scrapeThreshold  = this.radius + 4;
+                const warningThreshold = this.radius + OB.obstacleWarningRange;
+
+                if (d < scrapeThreshold && isMoving) {
+                    scraping = true;
+                }
+                if (d < warningThreshold && isMoving) {
+                    const now = Date.now();
+                    if (now - this.lastObstacleWarning > OB.obstacleWarningCooldown) {
+                        this.lastObstacleWarning = now;
+                        showVoiceBubble('Careful!', this.x, this.y - 50);
+                    }
+                    break;
+                }
+            }
+
+            if (scraping) {
+                this.obstacleBuffTimer = OB.obstacleBuffDuration;
+            }
+
+            if (this.obstacleBuffTimer > 0) {
+                this.obstacleBuffTimer -= dt;
+                if (Math.random() < 0.3) {
+                    spawnParticles(
+                        this.x + rand(-this.radius, this.radius),
+                        this.y + rand(-this.radius, this.radius),
+                        1, '#fcd34d'   // Tailwind amber-300 — matches Poom's colour palette
+                    );
+                }
+            }
+        }
 
         if (this.cooldowns.dash  > 0) this.cooldowns.dash  -= dt;
         if (this.cooldowns.eat   > 0) this.cooldowns.eat   -= dt;

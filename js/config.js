@@ -23,6 +23,14 @@
  * Boss | phase2.enrageSpeedMult   1.8  → 1.65   | Enraged Phase2 speed 315→289; dodgeable with dash
  * PwrUp| dropRate                 0.10 → 0.13   | Slightly more sustain in late waves
  * Wave | tankSpawnChance          0.18 → 0.15   | Tanks feel special, not routine
+ *
+ * ──────────────────────────────────────────────────────────────────────
+ * 🧭 COLLISION AWARENESS SYSTEM  (Gameplay Logic Pass)
+ * ──────────────────────────────────────────────────────────────────────
+ * Player| obstacleWarningRange    —  →  35 px   | Proximity bubble trigger radius
+ * Player| obstacleBuffPower       —  → ×1.25    | Consolation speed boost when scraping
+ * Player| obstacleBuffDuration    —  →  1.0 s   | How long the buff lingers after contact
+ * Player| obstacleWarningCooldown —  → 3000 ms  | Min gap between successive warning bubbles
  */
 
 // ─── API Configuration ────────────────────────────────────────
@@ -43,6 +51,27 @@ const BALANCE = {
     physics: {
         friction:     0.88,
         acceleration: 1800
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // 🧭 SHARED PLAYER SYSTEMS (applies to ALL characters)
+    // ──────────────────────────────────────────────────────────
+    // These constants govern the Collision Awareness & Speed Buff system.
+    // When a player scrapes a map object while moving, two things happen:
+    //   1. A warning voice bubble fires (rate-limited by obstacleWarningCooldown).
+    //   2. A consolation speed buff (×obstacleBuffPower) is applied for
+    //      obstacleBuffDuration seconds so the player can slide away faster.
+    //
+    // Tuning guide:
+    //   obstacleWarningRange   — bigger = warns sooner (annoyance ↑ if > 50px)
+    //   obstacleBuffPower      — keep < 1.5 to avoid feeling like a free speed hack
+    //   obstacleBuffDuration   — < 0.5s feels unnoticeable; > 2s feels overpowered
+    //   obstacleWarningCooldown— 3000ms = max one bubble per 3s per proximity cluster
+    player: {
+        obstacleWarningRange:    35,    // px from object surface → triggers warning bubble
+        obstacleBuffPower:       1.25,  // speed multiplier applied when scraping object
+        obstacleBuffDuration:    1.0,   // seconds the consolation buff lasts after contact
+        obstacleWarningCooldown: 3000   // ms minimum between successive warning bubbles
     },
 
     // ──────────────────────────────────────────────────────────
