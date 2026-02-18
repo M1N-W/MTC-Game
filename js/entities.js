@@ -9,7 +9,7 @@
  * - ✅ Boss.takeDamage() uses window.startNextWave() so it can live outside game.js
  * - ✅ No functions are redefined that exist in utils.js (dist, rand, clamp, lerp, etc.)
  *
- * Load order: config.js → utils.js → effects.js → entities.js → map.js → ui.js → game.js
+ * Load order: config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → game.js
  */
 
 // ════════════════════════════════════════════════════════════

@@ -11,7 +11,7 @@
  *       other scripts can reference them before class parsing is complete.
  * - ✅ initHighScoreOnLoad() wrapped in DOMContentLoaded for safer timing.
  *
- * Load order: config.js → utils.js → effects.js → entities.js → map.js → ui.js → game.js
+ * Load order: config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → game.js
  */
 
 // ════════════════════════════════════════════════════════════

@@ -10,7 +10,7 @@
  * - ✅ lerpColorHex / hexToRgb calls removed — those live in utils.js.
  * - ✅ View-culling and lighting engine logic unchanged.
  *
- * Load order requirement: config.js → utils.js → effects.js → entities.js → map.js
+ * Load order requirement: config.js → utils.js → audio.js → effects.js → weapons.js → map.js
  */
 
 // ════════════════════════════════════════════════════════════

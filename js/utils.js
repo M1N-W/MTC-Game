@@ -2,7 +2,8 @@
  * 🛠️ MTC: ENHANCED EDITION - Utilities (REFACTORED)
  * SINGLE SOURCE OF TRUTH for every shared helper function.
  *
- * LOAD ORDER: This file MUST be the first script loaded (after config.js).
+ * LOAD ORDER: config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → game.js
+ * This file MUST be the second script loaded (immediately after config.js).
  * All other files depend on globals defined here.
  *
  * CHANGES (Stability Overhaul):

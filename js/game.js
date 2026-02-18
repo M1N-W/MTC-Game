@@ -15,7 +15,7 @@
  * ✅ _roundRectPath() kept here — small canvas helper used only by drawSlowMoOverlay
  *
  * LOAD ORDER (index.html must follow this):
- *   config.js → utils.js → effects.js → entities.js → map.js → ui.js → game.js
+ *   config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → game.js
  *
  * ────────────────────────────────────────────────────────────────
  * FEATURE LOG
