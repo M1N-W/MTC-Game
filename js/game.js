@@ -1040,9 +1040,14 @@ function drawSlowMoOverlay() {
     }
 
     // ── 4. BULLET TIME badge + energy bar (bottom-centre) ────
+    // [UI-FIX] Raised from H-44 → H-140 to prevent overlap with the
+    // skill-slot row (stealth / eat-rice / naga icons) and mobile
+    // joystick / action-button strip at the very bottom of the screen.
+    // Badge footprint: from ~(H-174) down to ~(H-132) — a clear gap
+    // of ≥88px above the first HTML skill-bar row on a 1080p display.
     {
         const bx    = W / 2;
-        const by    = H - 44;
+        const by    = H - 140;
         const pulse = Math.abs(Math.sin(now / 320));
 
         CTX.save();

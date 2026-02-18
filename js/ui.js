@@ -262,12 +262,42 @@ class UIManager {
     }
 
     static setupCharacterHUD(player) {
-        const isPoom = player instanceof PoomPlayer;
+        const isPoom  = player instanceof PoomPlayer;
+        // Derive charId safely from both Player and PoomPlayer instances
+        const charId  = player.charId || (isPoom ? 'poom' : 'kao');
+        const isKao   = charId === 'kao';
+
         const weaponIndicator = document.querySelector('.weapon-indicator');
         if (weaponIndicator) weaponIndicator.style.display = isPoom ? 'none' : '';
 
         const playerAvatar = document.getElementById('player-avatar');
         if (playerAvatar) playerAvatar.textContent = isPoom ? '🌾' : '👨‍🎓';
+
+        // ── [UI-FIX] Passive Icon — Kao-only ───────────────────
+        // The #passive-skill slot (Ghost/Stealth crit passive) is
+        // mechanically tied to Kao's stealth ability and should NEVER
+        // be visible when Poom is selected. We gate it here at setup
+        // time so that even if PoomPlayer.updateUI() runs every frame
+        // it cannot accidentally reveal the element.
+        //
+        // Kao   → show (dimmed at 0.35 opacity until unlocked; entities.js
+        //         updateUI() will promote it to opacity:1 + class 'unlocked'
+        //         once the unlock condition is met)
+        // Poom  → hide completely (display:none wins over any opacity)
+        const passiveSkillEl = document.getElementById('passive-skill');
+        if (passiveSkillEl) {
+            if (isKao) {
+                passiveSkillEl.style.display  = '';          // restore default layout display
+                passiveSkillEl.style.opacity  = '0.35';      // dim until earned
+                passiveSkillEl.classList.remove('unlocked'); // clear any stale unlock from prev run
+                const skillName = passiveSkillEl.querySelector('.skill-name');
+                if (skillName) skillName.textContent = '0/5'; // reset stealth counter text
+            } else {
+                // Any non-Kao character: suppress entirely
+                passiveSkillEl.style.display = 'none';
+                passiveSkillEl.classList.remove('unlocked');
+            }
+        }
 
         const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
         if (skill1El) {
