@@ -232,7 +232,7 @@ class Player extends Entity {
         this.energy -= S.stealthCost;
         this.stealthUseCount++;
         spawnParticles(this.x, this.y, 25, '#facc15');
-        showVoiceBubble("เข้าโหมดซุ่ม!", this.x, this.y - 40);
+        UIManager.showVoiceBubble("เข้าโหมดซุ่ม!", this.x, this.y - 40);
         this.checkPassiveUnlock();
         Achievements.stats.stealths++; Achievements.check('ghost');
     }
@@ -252,7 +252,7 @@ class Player extends Entity {
             spawnParticles(this.x, this.y, 50, '#fbbf24');
             addScreenShake(15); this.goldenAuraTimer = 3;
             Audio.playAchievement();
-            showVoiceBubble("ทักษะ 'ซุ่มเสรี' ปลดล็อคแล้ว!", this.x, this.y - 40);
+            UIManager.showVoiceBubble("ทักษะ 'ซุ่มเสรี' ปลดล็อคแล้ว!", this.x, this.y - 40);
 
             // ── 💾 Persist this unlock so it survives a page refresh ─────
             try {
@@ -581,7 +581,7 @@ class PoomPlayer extends Entity {
         this.cooldowns.eat = S.eatRiceCooldown;
         spawnParticles(this.x, this.y, 30, '#fbbf24');
         spawnFloatingText('กินข้าวเหนียว!', this.x, this.y - 50, '#fbbf24', 22);
-        showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
+        UIManager.showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
         addScreenShake(5); Audio.playPowerUp();
     }
 
@@ -592,7 +592,7 @@ class PoomPlayer extends Entity {
         window.specialEffects.push(new NagaEntity(this.x, this.y, this));
         spawnParticles(this.x, this.y, 40, '#10b981');
         spawnFloatingText('อัญเชิญพญานาค!', this.x, this.y - 60, '#10b981', 24);
-        showVoiceBubble('ขอพรพญานาค!', this.x, this.y - 40);
+        UIManager.showVoiceBubble('ขอพรพญานาค!', this.x, this.y - 40);
         addScreenShake(10); Audio.playAchievement();
         this.nagaCount++;
         if (this.nagaCount >= 3) Achievements.check('naga_summoner');
