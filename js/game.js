@@ -97,6 +97,17 @@ let glitchIntensity  = 0;
 let controlsInverted = false;
 const GLITCH_EVERY_N_WAVES = 5;
 
+// ─── ⚡ Glitch Wave — Spawn Grace Period ──────────────────────
+// waveSpawnLocked    — true while the pre-spawn countdown is running
+// waveSpawnTimer     — seconds remaining until enemy spawn is released
+// pendingSpawnCount  — total enemies queued, released when timer expires
+// lastGlitchCountdown— last whole-second milestone already announced
+//                      (prevents duplicate floating-text on same second)
+let waveSpawnLocked     = false;
+let waveSpawnTimer      = 0;
+let pendingSpawnCount   = 0;
+let lastGlitchCountdown = -1;
+
 // ─── Game Objects (global) ────────────────────────────────────
 window.player         = null;
 window.enemies        = [];
@@ -832,26 +843,55 @@ function startNextWave() {
     controlsInverted = false;
     // glitchIntensity fades to 0 organically via the ramp in updateGame
 
+    // ── Reset any leftover grace-period lock ─────────────────
+    waveSpawnLocked     = false;
+    waveSpawnTimer      = 0;
+    pendingSpawnCount   = 0;
+    lastGlitchCountdown = -1;
+
     resetEnemiesKilled();
     waveStartDamage = Achievements.stats.damageTaken;
     setElementText('wave-badge', `WAVE ${getWave()}`);
     spawnFloatingText(`WAVE ${getWave()}`, player.x, player.y - 100, '#8b5cf6', 40);
 
     const count = BALANCE.waves.enemiesBase + (getWave() - 1) * BALANCE.waves.enemiesPerWave;
-    spawnEnemies(count);
 
     // ── ⚡ Glitch Wave — every 5th wave ──────────────────────
     if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
         isGlitchWave     = true;
         controlsInverted = true;
-        glitchIntensity  = 0;     // ramp starts immediately in updateGame
-        spawnEnemies(count);      // spawn a second full wave batch (2× enemies)
+        glitchIntensity  = 0;   // ramp starts immediately in updateGame
+
+        // ── Grace Period: queue the double spawn, lock it ────
+        // Both the normal batch AND the bonus Glitch Wave batch
+        // are stored here and released only after the countdown.
+        pendingSpawnCount   = count * 2;
+        waveSpawnLocked     = true;
+        waveSpawnTimer      = BALANCE.waves.glitchGracePeriod / 1000; // convert ms → s
+        lastGlitchCountdown = -1;
+
+        // Immediate atmosphere — visuals and sound fire NOW
         spawnFloatingText('⚡ GLITCH WAVE ⚡', player.x, player.y - 140, '#d946ef', 44);
         addScreenShake(20);
         Audio.playBossSpecial();
+
+        // Staggered warning messages during the grace window
         setTimeout(() => {
-            spawnFloatingText('CONTROLS INVERTED!', player.x, player.y - 90, '#f472b6', 22);
-        }, 800);
+            if (player)
+                spawnFloatingText('⚠️ SYSTEM ANOMALY DETECTED... ⚠️', player.x, player.y - 100, '#f472b6', 26);
+        }, 400);
+        setTimeout(() => {
+            if (player && waveSpawnLocked)
+                spawnFloatingText('CONTROLS INVERTED!', player.x, player.y - 80, '#f472b6', 22);
+        }, 1200);
+        setTimeout(() => {
+            if (player && waveSpawnLocked)
+                spawnFloatingText('BRACE FOR IMPACT...', player.x, player.y - 90, '#ef4444', 24);
+        }, 2400);
+
+    } else {
+        // ── Normal Wave: spawn enemies immediately ────────────
+        spawnEnemies(count);
     }
 
     if (getWave() % BALANCE.waves.bossEveryNWaves === 0) {
@@ -1167,6 +1207,37 @@ function updateGame(dt) {
         glitchIntensity = Math.max(0.0, glitchIntensity - GLITCH_RAMP * 2 * dt);
     }
 
+    // ── ⚡ Glitch Wave — Spawn Grace Period countdown ─────────
+    // While waveSpawnLocked is true, enemies have not yet spawned.
+    // We count down using scaled dt (Bullet Time slows it too — intentional:
+    // the player can use Bullet Time to buy even more breathing room).
+    // When the timer hits zero: release the full double horde.
+    if (waveSpawnLocked) {
+        waveSpawnTimer -= dt;
+
+        // Whole-second countdown announcements (3 … 2 … 1)
+        const secsLeft = Math.ceil(waveSpawnTimer);
+        if (secsLeft !== lastGlitchCountdown && secsLeft > 0 && secsLeft <= 3) {
+            lastGlitchCountdown = secsLeft;
+            spawnFloatingText(
+                `⚡ SPAWNING IN ${secsLeft}...`,
+                player.x, player.y - 115,
+                '#d946ef', 34
+            );
+            addScreenShake(6);
+        }
+
+        // Grace period expired — release the horde
+        if (waveSpawnTimer <= 0) {
+            waveSpawnLocked     = false;
+            lastGlitchCountdown = -1;
+            spawnEnemies(pendingSpawnCount);
+            spawnFloatingText('💀 CHAOS BEGINS!', player.x, player.y - 130, '#ef4444', 44);
+            addScreenShake(28);
+            Audio.playBossSpecial();
+        }
+    }
+
     // ── Day / Night cycle (driven by BALANCE.LIGHTING in config.js) ──
     dayNightTimer += dt;
     {
@@ -1266,7 +1337,10 @@ function updateGame(dt) {
     }
 
     // ── Wave progression ──────────────────────────────────────
-    if (getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss) {
+    // Guard: skip advancement if spawn is still locked (grace period active).
+    // Without this guard, 0 enemies during the countdown would instantly
+    // trigger the next wave before the glitch horde ever appears.
+    if (getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss && !waveSpawnLocked) {
         if (Achievements.stats.damageTaken === waveStartDamage &&
             getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
@@ -1529,6 +1603,13 @@ function startGame(charType = 'kao') {
     timeScale    = 1.0;
     slowMoEnergy = 1.0;
     console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
+
+    // Reset Glitch Wave grace period
+    waveSpawnLocked     = false;
+    waveSpawnTimer      = 0;
+    pendingSpawnCount   = 0;
+    lastGlitchCountdown = -1;
+    console.log('⚡ Glitch Wave grace period reset');
 
     // Reset shop buff state
     player.shopDamageBoostActive = false;

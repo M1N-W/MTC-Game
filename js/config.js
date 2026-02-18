@@ -362,7 +362,15 @@ const BALANCE = {
         // making them routine grind rather than a "watch out!" encounter.
         tankSpawnChance: 0.15,
         mageSpawnChance: 0.15,
-        bossEveryNWaves: 3
+        bossEveryNWaves: 3,
+
+        // ── ⚡ Glitch Wave Grace Period ──────────────────────────
+        // How long (ms) to delay enemy spawning after a Glitch Wave begins.
+        // During this window: glitch visuals play, controls invert, and countdown
+        // text builds tension — but zero enemies exist yet so the player can
+        // breathe, re-orient, and panic in an informed way.
+        // Recommended range: 3000–6000 ms.
+        glitchGracePeriod: 4000
     },
 
     // ──────────────────────────────────────────────────────────
