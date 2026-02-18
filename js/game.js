@@ -84,6 +84,13 @@ const SLOW_MO_RECHARGE_RATE = 0.07;   // refills in ~14 real seconds
 // Energy bar dimensions (used in drawSlowMoOverlay HUD badge)
 const SM_BAR_W = 180, SM_BAR_H = 8;
 
+// ─── HUD Draw Bridge ──────────────────────────────────────────
+// drawGame() is a pure render function with no dt parameter.
+// We cache each frame's scaledDt here so UIManager.draw() can
+// receive it for combo-timer animation without changing the call
+// signature of drawGame() anywhere else in the codebase.
+let _lastDrawDt = 0;
+
 // ─── Day / Night cycle ────────────────────────────────────────
 let dayNightTimer = 0;
 
@@ -1184,6 +1191,7 @@ function gameLoop(now) {
 
     // All game-world simulation uses the scaled dt
     const scaledDt = dt * timeScale;
+    _lastDrawDt    = scaledDt;   // cache for UIManager.draw(CTX, _lastDrawDt) in drawGame()
 
     if (gameState === 'PLAYING') {
         updateGame(scaledDt);
@@ -1464,6 +1472,15 @@ function drawGame() {
     }
 
     drawDayNightHUD();
+
+    // ── HUD overlay pass ─────────────────────────────────────
+    // UIManager.draw() renders the tactical minimap (radar) and
+    // the combo counter. Both are screen-space and must run AFTER
+    // CTX.restore() so they are not affected by the world-space
+    // camera transform. _lastDrawDt was cached in gameLoop() this
+    // frame so UIManager.draw() can animate the combo timer.
+    UIManager.draw(CTX, _lastDrawDt);
+
     drawSlowMoOverlay(); // 🕐 no-op when normal speed + full energy
 
     // ⚡ Glitch Wave overlay — drawn absolutely last, on top of everything
@@ -1482,7 +1499,12 @@ function drawDayNightHUD() {
     const phase  = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight);
     const isDawn = phase > 0.5;
 
-    const cx = CANVAS.width  - 52;
+    // [UI-FIX] Moved from top-RIGHT (cx = CANVAS.width - 52, cy = 52) to
+    // top-LEFT so it no longer overlaps the tactical minimap/radar which
+    // occupies top-right (cx = canvas.width - 80, cy = 80, r = 60).
+    // The left-side score / wave HUD elements are HTML overlays on a
+    // different layer, so pure canvas drawing here has no z-index conflict.
+    const cx = 52;
     const cy = 52;
     const r  = 24;
 
