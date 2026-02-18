@@ -553,6 +553,171 @@ class UIManager {
 
         ctx.restore();
     }
+
+    // ------------------------------------------------------------------
+    // draw()
+    // Single entry point for drawing UI elements that use canvas.
+    // The radar draws without altering game logic.
+    // It uses ctx.clip to keep dots inside the circle.
+    // ------------------------------------------------------------------
+    static draw(ctx, dt) {
+        // keep combo logic and visuals consistent
+        UIManager.updateCombo(dt);
+        UIManager.drawCombo(ctx);
+
+        if (!ctx || !ctx.canvas) return;
+
+        const canvas = ctx.canvas;
+
+        // Radar config
+        const radarRadius = 60; // px
+        const margin = 20; // px
+        const scale = 0.1; // world to radar scale
+
+        const cx = canvas.width - margin - radarRadius;
+        const cy = margin + radarRadius;
+
+        ctx.save();
+
+        // background circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.48)';
+        ctx.fill();
+
+        // green tech outline
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = 'rgba(72,187,120,0.95)';
+        ctx.stroke();
+
+        // inner glow ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, radarRadius - 10, 0, Math.PI * 2);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(72,187,120,0.18)';
+        ctx.stroke();
+
+        // clip area so nothing draws outside circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2);
+        ctx.clip();
+
+        // draw faint grid lines (optional)
+        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radarRadius * 0.33, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radarRadius * 0.66, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - radarRadius, cy);
+        ctx.lineTo(cx + radarRadius, cy);
+        ctx.moveTo(cx, cy - radarRadius);
+        ctx.lineTo(cx, cy + radarRadius);
+        ctx.stroke();
+
+        // center marker: player as green triangle
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.fillStyle = 'rgba(52,214,88,0.98)';
+        ctx.beginPath();
+        const pSize = 7;
+        ctx.moveTo(0, -pSize);
+        ctx.lineTo(pSize, pSize);
+        ctx.lineTo(-pSize, pSize);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // helper to clamp point inside radar radius
+        function clampToRadius(px, py, maxR) {
+            const dx = px - cx;
+            const dy = py - cy;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d <= maxR) return { x: px, y: py };
+            const r = maxR / d;
+            return { x: cx + dx * r, y: cy + dy * r };
+        }
+
+        // world player position
+        const player = (typeof window !== 'undefined' && window.player) ? window.player : { x: 0, y: 0 };
+
+        // enemies
+        if (Array.isArray(window.enemies)) {
+            for (let i = 0; i < window.enemies.length; i++) {
+                const e = window.enemies[i];
+                if (!e || e.dead) continue;
+                const dx = (e.x - player.x) * scale;
+                const dy = (e.y - player.y) * scale;
+                let ex = cx + dx;
+                let ey = cy + dy;
+                const clamped = clampToRadius(ex, ey, radarRadius - 6);
+                ex = clamped.x;
+                ey = clamped.y;
+
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(220,40,40,0.98)';
+                ctx.arc(ex, ey, 3.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // boss as larger pulsating purple dot
+        if (window.boss && !window.boss.dead) {
+            const bx = (window.boss.x - player.x) * scale;
+            const by = (window.boss.y - player.y) * scale;
+            let bxScreen = cx + bx;
+            let byScreen = cy + by;
+            const clampedBoss = clampToRadius(bxScreen, byScreen, radarRadius - 10);
+            bxScreen = clampedBoss.x;
+            byScreen = clampedBoss.y;
+
+            const t = (Date.now() % 1000) / 1000;
+            const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(170,110,255,${0.6 + 0.25 * pulse})`;
+            ctx.arc(bxScreen, byScreen, 6 + 3 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // subtle outer ring
+            ctx.beginPath();
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = `rgba(170,110,255,${0.22 + 0.12 * pulse})`;
+            ctx.arc(bxScreen, byScreen, 10 + 3 * pulse, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // draw MTC Server / Database as blue square
+        // try common global names for server position
+        let serverPos = null;
+        if (typeof window !== 'undefined') {
+            if (window.MTC_SERVER_POS && window.MTC_SERVER_POS.x !== undefined) serverPos = window.MTC_SERVER_POS;
+            else if (window.mtcServer && window.mtcServer.x !== undefined) serverPos = window.mtcServer;
+            else if (window.server && window.server.x !== undefined) serverPos = window.server;
+            else if (window.mtc_server && window.mtc_server.x !== undefined) serverPos = window.mtc_server;
+        }
+        if (serverPos && serverPos.x !== undefined) {
+            const sx = (serverPos.x - player.x) * scale;
+            const sy = (serverPos.y - player.y) * scale;
+            let sxScreen = cx + sx;
+            let syScreen = cy + sy;
+            const clampedSrv = clampToRadius(sxScreen, syScreen, radarRadius - 8);
+            sxScreen = clampedSrv.x;
+            syScreen = clampedSrv.y;
+
+            ctx.fillStyle = 'rgba(66,133,244,0.98)';
+            const sSize = 7;
+            ctx.fillRect(sxScreen - sSize / 2, syScreen - sSize / 2, sSize, sSize);
+            // small outline
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.strokeRect(sxScreen - sSize / 2, syScreen - sSize / 2, sSize, sSize);
+        }
+
+        ctx.restore();
+    }
 }
 
 // Helper utilities for combo visuals
@@ -625,5 +790,5 @@ function lerpColor(a, b, t) {
 })();
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AchievementSystem, ShopManager, UIManager, Achievements, showVoiceBubble, addCombo, comboCount, comboTimer };
+    module.exports = { AchievementSystem, ShopManager, UIManager, addCombo, comboCount, comboTimer };
 }
