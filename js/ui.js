@@ -488,7 +488,7 @@ class UIManager {
         const radarRadius = 60;
         const scale       = 0.1;
         // Safe-Zone: keeps radar clear of device notches / browser chrome.
-        const cx  = canvas.width  - 90;   // 90 px from right edge
+        const cx  = canvas.width  - 150;   // 150 px from right edge
         const cy  = 90;                    // 90 px from top edge
         const now = Date.now();
 
