@@ -1,20 +1,23 @@
 /**
- * 🛠️ MTC: ENHANCED EDITION - Utilities
- * Helper functions and common utilities
+ * 🛠️ MTC: ENHANCED EDITION - Utilities (REFACTORED)
+ * SINGLE SOURCE OF TRUTH for every shared helper function.
  *
- * UPDATED (Save/Load System — v5):
- * - ✅ MTC_SAVE_KEY & DEFAULT_SAVE_DATA — single source of truth for the save schema
- * - ✅ saveData(key, value)     — try-catch localStorage.setItem wrapper
- * - ✅ loadData(key, default)   — try-catch localStorage.getItem wrapper
- * - ✅ getSaveData()            — merges saved data with defaults (forward-compatible)
- * - ✅ updateSaveData(partial)  — shallow-merge patch helper; safe to call anytime
+ * LOAD ORDER: This file MUST be the first script loaded (after config.js).
+ * All other files depend on globals defined here.
+ *
+ * CHANGES (Stability Overhaul):
+ * - ✅ lerpColorHex / lerpColor moved HERE from ui.js (removes duplicate)
+ * - ✅ showVoiceBubble() global wrapper added — safe even before UIManager loads
+ * - ✅ All save/load helpers kept here (getSaveData, updateSaveData, …)
+ * - ✅ All functions declared with `var` so they are available on window globally
+ *       in every other script regardless of load order.
  */
 
 // ─── Math utilities ───────────────────────────────────────────
-var dist   = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
-var rand   = (min, max) => Math.random() * (max - min) + min;
-var clamp  = (val, min, max) => Math.max(min, Math.min(max, val));
-var lerp   = (a, b, t) => a + (b - a) * t;
+var dist  = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+var rand  = (min, max) => Math.random() * (max - min) + min;
+var clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+var lerp  = (a, b, t) => a + (b - a) * t;
 
 // ─── Angle utilities ──────────────────────────────────────────
 var normalizeAngle = (angle) => {
@@ -40,7 +43,6 @@ var pointInRect = (px, py, rx, ry, rw, rh) =>
 var rectCollision = (x1, y1, w1, h1, x2, y2, w2, h2) =>
     x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 
-// Circle-Rectangle collision
 var circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
     const closestX = clamp(cx, rx, rx + rw);
     const closestY = clamp(cy, ry, ry + rh);
@@ -49,7 +51,6 @@ var circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
     return (dx * dx + dy * dy) < (radius * radius);
 };
 
-// Point-to-line distance (for graph collision)
 var pointToLineDistance = (px, py, x1, y1, x2, y2) => {
     const A = px - x1, B = py - y1;
     const C = x2 - x1, D = y2 - y1;
@@ -61,6 +62,67 @@ var pointToLineDistance = (px, py, x1, y1, x2, y2) => {
     else if (param > 1) { xx = x2; yy = y2; }
     else                { xx = x1 + param * C; yy = y1 + param * D; }
     return Math.sqrt((px - xx) ** 2 + (py - yy) ** 2);
+};
+
+// ─── Color utilities ──────────────────────────────────────────
+// NOTE: These are defined here to avoid the duplicate that previously
+// lived in ui.js. ui.js references these globals — no redefinition needed.
+
+var hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+};
+
+var rgbaString = (hex, alpha) => {
+    const rgb = hexToRgb(hex);
+    return rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})` : hex;
+};
+
+/**
+ * lerpColorHex(a, b, t)
+ * Interpolates between two hex colour strings.
+ * Returns an `rgb(r,g,b)` string.
+ *
+ * MOVED HERE from ui.js to eliminate the duplicate-identifier crash.
+ * ui.js now calls this global directly.
+ */
+var lerpColorHex = (a, b, t) => {
+    t = Math.max(0, Math.min(1, t));
+    const ac = hexToRgb(a);
+    const bc = hexToRgb(b);
+    if (!ac || !bc) return a; // graceful fallback
+    return `rgb(${
+        Math.round(ac.r + (bc.r - ac.r) * t)},${
+        Math.round(ac.g + (bc.g - ac.g) * t)},${
+        Math.round(ac.b + (bc.b - ac.b) * t)})`;
+};
+
+/** Alias kept for any existing call-sites that use lerpColor(). */
+var lerpColor = lerpColorHex;
+
+// ─── UI helper — voice bubble ─────────────────────────────────
+/**
+ * showVoiceBubble(text, worldX, worldY)
+ * Global wrapper so map.js and entities.js can call this without
+ * knowing whether UIManager has already been constructed.
+ *
+ * If UIManager exists → delegates to UIManager.showVoiceBubble().
+ * Otherwise → silently skips (never throws).
+ *
+ * FIXES: map.js MTCRoom crash when calling UIManager before ui.js loads.
+ */
+var showVoiceBubble = (text, worldX, worldY) => {
+    try {
+        if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
+            window.UIManager.showVoiceBubble(text, worldX, worldY);
+        }
+    } catch (e) {
+        // Swallow — never let a missing UI crash the game loop
+    }
 };
 
 // ─── Screen shake ─────────────────────────────────────────────
@@ -110,12 +172,14 @@ var CANVAS, CTX;
 
 var initCanvas = () => {
     CANVAS = document.getElementById('gameCanvas');
+    if (!CANVAS) { console.error('[MTC] #gameCanvas not found!'); return; }
     CTX = CANVAS.getContext('2d', { alpha: false });
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 };
 
 var resizeCanvas = () => {
+    if (!CANVAS) return;
     CANVAS.width  = window.innerWidth;
     CANVAS.height = window.innerHeight;
 };
@@ -173,21 +237,6 @@ var randomChoice = (array) => array[Math.floor(Math.random() * array.length)];
 var randomInt    = (min, max) => Math.floor(rand(min, max + 1));
 var randomBool   = (probability = 0.5) => Math.random() < probability;
 
-// ─── Color utilities ──────────────────────────────────────────
-var hexToRgb = (hex) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-    } : null;
-};
-
-var rgbaString = (hex, alpha) => {
-    const rgb = hexToRgb(hex);
-    return rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})` : hex;
-};
-
 // ─── Wave management ──────────────────────────────────────────
 let wave = 1;
 
@@ -241,44 +290,15 @@ var debounce = (func, wait) => {
 
 // ══════════════════════════════════════════════════════════════
 // 💾 PERSISTENCE — localStorage Save / Load System
-//
-// All disk I/O is wrapped in try-catch so the game never crashes
-// in environments where localStorage is unavailable (private
-// browsing, sandboxed iframes, or storage-quota exceeded).
-//
-// Save schema (MTC_SAVE_KEY):
-//   {
-//     highScore:        number,   — all-time best score across runs
-//     unlockedPassives: string[]  — charIds whose passive is permanently earned
-//   }
-//
-// Adding new fields in future versions: just extend DEFAULT_SAVE_DATA.
-// getSaveData() merges stored data with defaults, so old saves remain
-// forward-compatible without a migration step.
 // ══════════════════════════════════════════════════════════════
 
-/** localStorage key for the single save record. */
 const MTC_SAVE_KEY = 'mtc_save_v1';
 
-/**
- * Default save structure.
- * Every field here acts as a fallback when the key doesn't exist in
- * the stored JSON — guaranteeing callers always get a complete object.
- */
 const DEFAULT_SAVE_DATA = {
-    highScore:        0,       // all-time high score (number)
-    unlockedPassives: []       // array of charId strings ('kao', 'poom', …)
+    highScore:        0,
+    unlockedPassives: []
 };
 
-/**
- * saveData(key, value)
- * Serialises `value` as JSON and writes it to localStorage under `key`.
- * Returns true on success, false if the write fails (quota, private mode, etc.).
- *
- * @param  {string} key
- * @param  {*}      value  — must be JSON-serialisable
- * @returns {boolean}
- */
 var saveData = (key, value) => {
     try {
         localStorage.setItem(key, JSON.stringify(value));
@@ -289,15 +309,6 @@ var saveData = (key, value) => {
     }
 };
 
-/**
- * loadData(key, defaultValue)
- * Reads and parses a JSON value from localStorage.
- * Returns `defaultValue` if the key is absent or parsing fails.
- *
- * @param  {string} key
- * @param  {*}      defaultValue
- * @returns {*}
- */
 var loadData = (key, defaultValue = null) => {
     try {
         const raw = localStorage.getItem(key);
@@ -309,32 +320,11 @@ var loadData = (key, defaultValue = null) => {
     }
 };
 
-/**
- * getSaveData()
- * Returns the full save object, merging stored data with DEFAULT_SAVE_DATA
- * so callers always receive every expected field even if the saved JSON is
- * from an older version that lacked new fields.
- *
- * @returns {{ highScore: number, unlockedPassives: string[] }}
- */
 var getSaveData = () => {
     const stored = loadData(MTC_SAVE_KEY, {});
-    // Shallow merge: stored values win; missing fields fall back to defaults.
     return { ...DEFAULT_SAVE_DATA, ...stored };
 };
 
-/**
- * updateSaveData(partial)
- * Shallow-patches the current save with the fields in `partial` and
- * persists the result.  Safe to call at any point in the game loop.
- *
- * Example:
- *   updateSaveData({ highScore: 12500 });
- *   updateSaveData({ unlockedPassives: ['kao'] });
- *
- * @param  {{ [key: string]: * }} partial
- * @returns {boolean} — true if the write succeeded
- */
 var updateSaveData = (partial) => {
     const current = getSaveData();
     const merged  = { ...current, ...partial };
@@ -350,6 +340,8 @@ if (typeof module !== 'undefined' && module.exports) {
         normalizeAngle, angleDiff,
         circleCollision, pointInRect, rectCollision, circleRectCollision,
         pointToLineDistance,
+        hexToRgb, rgbaString, lerpColorHex, lerpColor,
+        showVoiceBubble,
         addScreenShake, updateScreenShake, getScreenShakeOffset,
         addScore, getScore, resetScore,
         initCanvas, resizeCanvas, getCanvas, getContext,
@@ -357,13 +349,11 @@ if (typeof module !== 'undefined' && module.exports) {
         updateMouseWorld, getMouse,
         getDeltaTime, resetTime,
         randomChoice, randomInt, randomBool,
-        hexToRgb, rgbaString,
         getWave, setWave, nextWave,
         addEnemyKill, getEnemiesKilled, resetEnemiesKilled,
         formatNumber,
         showElement, hideElement, setElementText,
         debounce,
-        // ── Persistence ──
         MTC_SAVE_KEY, DEFAULT_SAVE_DATA,
         saveData, loadData, getSaveData, updateSaveData
     };
