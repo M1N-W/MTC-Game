@@ -42,6 +42,180 @@ class Entity {
 }
 
 // ════════════════════════════════════════════════════════════
+// ✨ STAND-AURA & AFTERIMAGE SYSTEM
+//    Shared helpers used by both Player and PoomPlayer.
+//    Everything lives in this file — no external dependencies.
+// ════════════════════════════════════════════════════════════
+
+/** Floating math symbols that orbit the player aura. */
+const STAND_SYMBOLS = ['∑', 'π', '∫', 'Δ', '0', '1', '∞', 'λ'];
+const STAND_SYMBOL_COUNT = STAND_SYMBOLS.length;
+
+/**
+ * Call inside Player/PoomPlayer update() — manages aura rotation,
+ * afterimage ghost-frame spawning, and alpha decay.
+ * @param {Object} entity  — the player instance
+ * @param {number} dt      — delta time in seconds
+ */
+function _standAura_update(entity, dt) {
+    const ts = (typeof window !== 'undefined' && window.timeScale !== undefined)
+        ? window.timeScale : 1;
+
+    // Aura rotates faster in slow-mo for extra drama
+    entity.auraRotation += 0.05 * ts;
+    entity._auraFrame    = ((entity._auraFrame || 0) + 1);
+
+    const speed    = Math.hypot(entity.vx, entity.vy);
+    const inSlowmo = ts < 1.0;
+    const active   = speed > 5 || inSlowmo;
+
+    // Spawn a ghost frame every 3-5 ticks when active
+    const interval = 3 + Math.floor(Math.random() * 3);
+    if (active && entity._auraFrame % interval === 0) {
+        // Hard cap at 20 to prevent unbounded growth (PERF guardrail)
+        if (entity.afterimages.length < 20) {
+            entity.afterimages.push({
+                x:     entity.x,
+                y:     entity.y,
+                angle: entity.angle,
+                alpha: 0.75,
+                time:  Date.now()
+            });
+        }
+    }
+
+    // Decay — remove dead frames
+    for (let i = entity.afterimages.length - 1; i >= 0; i--) {
+        entity.afterimages[i].alpha -= dt * 2.5;
+        if (entity.afterimages[i].alpha <= 0) entity.afterimages.splice(i, 1);
+    }
+}
+
+/**
+ * Call at the START of Player/PoomPlayer draw(), before the body is drawn.
+ * Renders: ghost silhouettes → rotating symbol ring → optional slow-mo FX.
+ * @param {Object} entity  — the player instance
+ * @param {string} charId  — 'kao' | 'poom'
+ */
+function _standAura_draw(entity, charId) {
+    const ts       = (typeof window !== 'undefined' && window.timeScale !== undefined)
+        ? window.timeScale : 1;
+    const inSlowmo = ts < 1.0;
+    const isKao    = (charId !== 'poom');
+
+    // ── Character colour identity ──────────────────────────────
+    //   Kao  → Neon Green  #00ff41
+    //   Poom → Deep Purple #a855f7
+    const auraCol  = isKao ? '#00ff41' : '#a855f7';
+    const ghostCol = isKao ? 'rgba(0,255,65,0.55)' : 'rgba(168,85,247,0.55)';
+
+    // Base orbit radius — 1.5× during slow-mo
+    const BASE_R   = 46;
+    const auraR    = inSlowmo ? BASE_R * 1.5 : BASE_R;
+
+    const screen   = worldToScreen(entity.x, entity.y);
+
+    // ══ 1. Afterimage ghost silhouettes ═══════════════════════
+    for (const img of entity.afterimages) {
+        const gs = worldToScreen(img.x, img.y);
+        CTX.save();
+        CTX.translate(gs.x, gs.y);
+        CTX.rotate(img.angle);
+        CTX.globalAlpha = Math.max(0, img.alpha) * 0.6;
+
+        if (inSlowmo) {
+            // Cyan / electric-blue tint in time-distortion
+            CTX.fillStyle   = '#00e5ff';
+            CTX.shadowBlur  = 14;
+            CTX.shadowColor = '#00e5ff';
+        } else {
+            CTX.fillStyle   = ghostCol;
+            CTX.shadowBlur  = 8;
+            CTX.shadowColor = auraCol;
+        }
+
+        // Ghost body — simplified rounded silhouette matching player body rect
+        CTX.beginPath();
+        CTX.roundRect(-15, -12, 30, 24, 8);
+        CTX.fill();
+
+        // Inner glow core
+        CTX.globalAlpha  *= 0.4;
+        CTX.fillStyle     = inSlowmo ? '#ffffff' : auraCol;
+        CTX.beginPath();
+        CTX.roundRect(-9, -7, 18, 14, 5);
+        CTX.fill();
+
+        CTX.restore();
+    }
+
+    // ══ 2. Soft inner glow ring (always visible) ══════════════
+    const ringPulse = 0.10 + Math.sin(entity.auraRotation * 2) * 0.05;
+    CTX.save();
+    CTX.globalAlpha = ringPulse * (inSlowmo ? 1.8 : 1.0);
+    CTX.beginPath();
+    CTX.arc(screen.x, screen.y, auraR * 0.52, 0, Math.PI * 2);
+    CTX.strokeStyle = auraCol;
+    CTX.lineWidth   = inSlowmo ? 3.5 : 1.8;
+    CTX.shadowBlur  = inSlowmo ? 30 : 14;
+    CTX.shadowColor = auraCol;
+    CTX.stroke();
+    CTX.restore();
+
+    // ══ 3. Rotating math-symbol ring ══════════════════════════
+    /**
+     * Inner draw routine — called once normally, 3× with RGB offsets in slow-mo.
+     * @param {number} ox  — screen-space X offset (for chromatic aberration)
+     * @param {number} oy  — screen-space Y offset
+     * @param {string|null} colOverride — colour to use instead of auraCol
+     */
+    const drawSymbolRing = (ox, oy, colOverride) => {
+        const col = colOverride || auraCol;
+        for (let i = 0; i < STAND_SYMBOL_COUNT; i++) {
+            const baseAngle = (i / STAND_SYMBOL_COUNT) * Math.PI * 2;
+            const orbit     = baseAngle + entity.auraRotation;
+
+            // Each symbol bobs up-down on its own sine wave → "floating" feel
+            const bob = Math.sin(entity.auraRotation * 2.5 + i * 0.85) * 6;
+            const r   = auraR + bob;
+
+            const sx    = screen.x + ox + Math.cos(orbit) * r;
+            const sy    = screen.y + oy + Math.sin(orbit) * r;
+
+            // Alpha pulsation per-symbol, offset in phase
+            const pulse = 0.50 + Math.sin(entity.auraRotation * 3.2 + i * 1.1) * 0.38;
+
+            CTX.save();
+            CTX.globalAlpha  = pulse * (inSlowmo ? 0.95 : 0.72);
+            CTX.translate(sx, sy);
+            // Symbols face outward (tangential rotation = orbit + 90°)
+            CTX.rotate(orbit + Math.PI / 2);
+            CTX.fillStyle    = col;
+            CTX.shadowBlur   = inSlowmo ? 22 : 11;
+            CTX.shadowColor  = col;
+            CTX.font         = `bold ${10 + Math.round(pulse * 5)}px monospace`;
+            CTX.textAlign    = 'center';
+            CTX.textBaseline = 'middle';
+            CTX.fillText(STAND_SYMBOLS[i % STAND_SYMBOL_COUNT], 0, 0);
+            CTX.restore();
+        }
+    };
+
+    if (inSlowmo) {
+        // ── Chromatic Aberration: 3 offset passes (R / G / B channels) ──
+        CTX.save();
+        CTX.globalAlpha = 0.40;
+        drawSymbolRing(-2.5,  0,    '#ff0055');  // Red channel  (left)
+        drawSymbolRing( 2.5,  0,    '#00ffff');  // Cyan channel (right)
+        drawSymbolRing( 0,   -2.5,  '#aaff00');  // Green channel (up)
+        CTX.restore();
+    }
+
+    // Main symbol pass (always on top)
+    drawSymbolRing(0, 0, null);
+}
+
+// ════════════════════════════════════════════════════════════
 // PLAYER (generic — supports any charId from BALANCE.characters)
 // ════════════════════════════════════════════════════════════
 class Player extends Entity {
@@ -67,7 +241,12 @@ class Player extends Entity {
         this.damageBoost     = 1;
         this.speedBoost      = 1;
         this.speedBoostTimer = 0;
-        this.afterImages     = [];
+        this.afterImages     = [];   // legacy dash ghost (kept for compat)
+
+        // ── Stand-Aura & Afterimage system ────────────────────
+        this.afterimages   = [];     // JoJo-esque ghost frames
+        this.auraRotation  = 0;      // radians — driven by _standAura_update()
+        this._auraFrame    = 0;      // frame counter for spawn-interval logic
 
         this.onGraph       = false;
         this.isConfused    = false; this.confusedTimer = 0;
@@ -270,6 +449,10 @@ class Player extends Entity {
             this.afterImages[i].life -= dt * 5;
             if (this.afterImages[i].life <= 0) this.afterImages.splice(i, 1);
         }
+
+        // ── Stand-Aura & Afterimage system update ─────────────
+        _standAura_update(this, dt);
+
         this.updateUI();
     }
 
@@ -386,6 +569,11 @@ class Player extends Entity {
 
     draw() {
         const S = this.stats;
+
+        // ── Stand-Aura & Afterimage (drawn first — behind everything) ──
+        _standAura_draw(this, this.charId || 'kao');
+
+        // Legacy dash afterImages (blue flash — kept for compat)
         for (const img of this.afterImages) {
             const screen = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(img.angle);
@@ -510,7 +698,12 @@ class PoomPlayer extends Entity {
 
         this.walkCycle = 0;
         this.damageBoost = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
-        this.afterImages = [];
+        this.afterImages = [];   // legacy dash ghost (kept for compat)
+
+        // ── Stand-Aura & Afterimage system ────────────────────
+        this.afterimages   = [];     // JoJo-esque ghost frames
+        this.auraRotation  = 0;      // radians
+        this._auraFrame    = 0;      // frame counter
 
         this.onGraph = false;
         this.isConfused = false; this.confusedTimer = 0;
@@ -669,6 +862,10 @@ class PoomPlayer extends Entity {
             this.afterImages[i].life -= dt * 5;
             if (this.afterImages[i].life <= 0) this.afterImages.splice(i, 1);
         }
+
+        // ── Stand-Aura & Afterimage system update ─────────────
+        _standAura_update(this, dt);
+
         this.updateUI();
     }
 
@@ -770,6 +967,11 @@ class PoomPlayer extends Entity {
 
     draw() {
         const S = this.stats;
+
+        // ── Stand-Aura & Afterimage (drawn first — behind everything) ──
+        _standAura_draw(this, 'poom');
+
+        // Legacy dash afterImages (amber flash — kept for compat)
         for (const img of this.afterImages) {
             const s = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(s.x, s.y); CTX.rotate(img.angle);
