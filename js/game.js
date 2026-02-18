@@ -2,7 +2,27 @@
  * 🎮 MTC: ENHANCED EDITION - Main Game Loop
  * Game state, Boss, waves, input, loop
  *
- * REFACTORED (Admin Console — v9 — NEW):
+ * REFACTORED (Bullet Time — v10 — NEW):
+ * - ✅ let timeScale = 1.0 / let isSlowMotion = false — global time scalars
+ * - ✅ let slowMoEnergy = 1.0 — drain while active; recharge when off
+ * - ✅ SLOW_MO_TIMESCALE   = 0.30 — world runs at 30% speed while active
+ * - ✅ SLOW_MO_DRAIN_RATE  = 0.14 — energy empties in ~7 real-world seconds of use
+ * - ✅ SLOW_MO_RECHARGE_RATE = 0.07 — recharges to full in ~14 real-world seconds
+ * - ✅ 'T' key toggles slow motion (global — no proximity requirement)
+ *       Auto-deactivates when energy reaches 0; cannot activate on empty tank
+ * - ✅ gameLoop: _tickSlowMoEnergy(dt) on real dt BEFORE applying scale
+ *       const scaledDt = dt * timeScale; → passed to updateGame()
+ *       Keeps shop buff timers & day/night on real time; entities feel the slow
+ * - ✅ drawSlowMoOverlay() — layered post-process drawn AFTER world restore:
+ *       • Full-screen radial cyan vignette (darkened + tinted edges)
+ *       • Chromatic aberration: R/B channel ghost rectangles at ±2px offset
+ *       • Top-bar letterbox scanline bands (cinematic crop effect)
+ *       • Animated "BULLET TIME" badge with energy drain bar (bottom-centre)
+ *       • Pulsing timestamp particles (slow clock ticks) around the player
+ * - ✅ Admin Console key reassigned T → F to free 'T' for Bullet Time
+ *       (Update index.html: console-prompt kbd, console-hud-icon key-hint, instructions)
+ *
+ * REFACTORED (Admin Console — v9):
  * - ✅ #admin-console overlay — CRT/hacker terminal aesthetic
  * - ✅ 'T' key opens terminal when player is near MTC_DATABASE_SERVER
  * - ✅ AdminConsole.open() / .close() — manages gameState = 'PAUSED'
@@ -16,7 +36,7 @@
  *       (anything else) → "ACCESS DENIED"
  * - ✅ Input field steals keyboard focus while open — game hotkeys suppressed
  * - ✅ updateDatabaseServerUI() now also drives console-prompt + console-hud-icon
- * - ✅ keys.t added to key map; 'T' keydown triggers openAdminConsole()
+ * - ✅ keys.f added to key map; 'F' keydown triggers openAdminConsole() (near server)
  * - ✅ Mobile btn-terminal shown when near server, fires openAdminConsole()
  * - ✅ closeAdminConsole() is globally exposed via window.*
  * - ✅ AdminConsole.addLine() typed-print effect for immersive feel
@@ -69,7 +89,20 @@
 // ─── Game State ───────────────────────────────────────────
 let gameState  = 'MENU';
 let loopRunning = false;
-const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0, t: 0 };
+// keys.t  → Bullet Time toggle  (global, any location)
+// keys.f  → Admin Terminal open (proximity to server only)
+const keys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0, t: 0, f: 0 };
+
+// ─── 🕐 BULLET TIME — global time-scale system ────────────
+let   timeScale    = 1.0;   // multiplier applied to dt each frame
+let   isSlowMotion = false; // current toggle state
+let   slowMoEnergy = 1.0;   // 0.0 → empty, 1.0 → full
+
+const SLOW_MO_TIMESCALE    = 0.30;  // world runs at 30 % speed when active
+const SLOW_MO_DRAIN_RATE   = 0.14;  // drains full bar in ~7 real seconds
+const SLOW_MO_RECHARGE_RATE = 0.07; // recharges full bar in ~14 real seconds
+// Energy-bar position / size (drawn as part of the slowmo HUD badge)
+const SM_BAR_W = 180, SM_BAR_H = 8;
 
 // ─── Day / Night cycle ────────────────────────────────────
 let dayNightTimer = 0;
@@ -410,7 +443,7 @@ function closeAdminConsole() {
 
     // Reset all keys so movement doesn't 'stick'
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
-    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.t = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.f = 0;
 
     window.focus();
 
@@ -455,7 +488,7 @@ function resumeGame() {
     showResumePrompt(false);
 
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
-    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.t = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.f = 0;
 
     window.focus();
 
@@ -721,7 +754,7 @@ function closeShop() {
     showResumePrompt(false);
 
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
-    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.t = 0;
+    keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.f = 0;
 
     window.focus();
 
@@ -1418,12 +1451,243 @@ function spawnEnemies(count) {
     }
 }
 
+// ══════════════════════════════════════════════════════════════
+// 🕐 BULLET TIME — toggle, energy, visual overlay
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * toggleSlowMotion()
+ * Called on 'T' keydown. Activates/deactivates Bullet Time.
+ * Blocked if energy is below 5 % (nearly empty).
+ */
+function toggleSlowMotion() {
+    if (!isSlowMotion) {
+        // Block activation on empty / near-empty tank
+        if (slowMoEnergy < 0.05) {
+            if (player) spawnFloatingText('NO ENERGY! ⚡', player.x, player.y - 60, '#ef4444', 20);
+            return;
+        }
+        isSlowMotion = true;
+        timeScale    = SLOW_MO_TIMESCALE;
+        addScreenShake(6);
+        if (player) spawnFloatingText('🕐 BULLET TIME', player.x, player.y - 70, '#00e5ff', 26);
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+    } else {
+        isSlowMotion = false;
+        timeScale    = 1.0;
+        if (player) spawnFloatingText('▶▶ NORMAL', player.x, player.y - 55, '#34d399', 20);
+    }
+}
+
+/**
+ * _tickSlowMoEnergy(realDt)
+ * Must be called with REAL (unscaled) dt so the drain/recharge
+ * always happens at wall-clock speed, not slowed-down game speed.
+ */
+function _tickSlowMoEnergy(realDt) {
+    if (isSlowMotion) {
+        slowMoEnergy = Math.max(0, slowMoEnergy - SLOW_MO_DRAIN_RATE * realDt);
+        // Auto-deactivate when tank hits zero
+        if (slowMoEnergy <= 0) {
+            isSlowMotion = false;
+            timeScale    = 1.0;
+            if (player) spawnFloatingText('ENERGY DEPLETED ⚡', player.x, player.y - 60, '#ef4444', 20);
+        }
+    } else {
+        slowMoEnergy = Math.min(1.0, slowMoEnergy + SLOW_MO_RECHARGE_RATE * realDt);
+    }
+}
+
+/**
+ * drawSlowMoOverlay()
+ * Post-process pass drawn AFTER world-space CTX.restore().
+ * Layers:
+ *   1. Radial vignette — cyan-tinted dark edges
+ *   2. Chromatic aberration — red/blue channel ghost at ±2 px
+ *   3. Letterbox bars — top & bottom scanline cinema crop
+ *   4. BULLET TIME badge — bottom-centre with animated energy bar
+ *   5. Clock-tick particles around the player position
+ */
+function drawSlowMoOverlay() {
+    if (!isSlowMotion && slowMoEnergy >= 1.0) return; // nothing to draw at full energy normal speed
+
+    const W = CANVAS.width, H = CANVAS.height;
+    const now = performance.now();
+
+    // ── 1. Radial vignette (cyan edge glow) ──────────────────
+    if (isSlowMotion) {
+        const vig = CTX.createRadialGradient(W / 2, H / 2, H * 0.22, W / 2, H / 2, H * 0.78);
+        vig.addColorStop(0, 'rgba(0, 229, 255, 0.00)');
+        vig.addColorStop(0.65, 'rgba(0, 200, 255, 0.06)');
+        vig.addColorStop(1,    'rgba(0, 100, 200, 0.38)');
+        CTX.fillStyle = vig;
+        CTX.fillRect(0, 0, W, H);
+
+        // ── 2. Chromatic aberration (R / B ghost rects) ──────
+        const offset = 2 + Math.sin(now / 80) * 0.8;
+        CTX.save();
+        // Red channel ghost — shifted left
+        CTX.globalCompositeOperation = 'screen';
+        CTX.globalAlpha = 0.04;
+        CTX.fillStyle = '#ff0000';
+        CTX.fillRect(-offset, 0, W, H);
+        // Blue channel ghost — shifted right
+        CTX.fillStyle = '#0000ff';
+        CTX.fillRect(offset, 0, W, H);
+        CTX.globalAlpha = 1;
+        CTX.globalCompositeOperation = 'source-over';
+        CTX.restore();
+
+        // ── 3. Letterbox bars (top + bottom) ─────────────────
+        const barH = 28;
+        const scanAlpha = 0.55 + Math.sin(now / 200) * 0.1;
+        CTX.save();
+        CTX.fillStyle = `rgba(0, 0, 0, ${scanAlpha})`;
+        CTX.fillRect(0, 0, W, barH);
+        CTX.fillRect(0, H - barH, W, barH);
+        // Thin cyan line border of bars
+        CTX.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+        CTX.lineWidth   = 1;
+        CTX.beginPath();
+        CTX.moveTo(0, barH); CTX.lineTo(W, barH); CTX.stroke();
+        CTX.beginPath();
+        CTX.moveTo(0, H - barH); CTX.lineTo(W, H - barH); CTX.stroke();
+        CTX.restore();
+    }
+
+    // ── 4. BULLET TIME badge + energy bar (bottom-centre) ────
+    {
+        const bx = W / 2;
+        const by = H - 44;
+        const pulse = Math.abs(Math.sin(now / 320));
+
+        CTX.save();
+
+        // Badge background
+        const badgePad = { x: SM_BAR_W / 2 + 20, y: 30 };
+        CTX.fillStyle = isSlowMotion
+            ? `rgba(0, 20, 30, ${0.78 + pulse * 0.12})`
+            : 'rgba(0, 10, 20, 0.55)';
+        _roundRectPath(CTX, bx - badgePad.x, by - badgePad.y - 4, badgePad.x * 2, badgePad.y + 18, 8);
+        CTX.fill();
+
+        // Badge border
+        CTX.strokeStyle = isSlowMotion
+            ? `rgba(0, 229, 255, ${0.55 + pulse * 0.35})`
+            : 'rgba(0, 229, 255, 0.22)';
+        CTX.lineWidth = 1.5;
+        CTX.stroke();
+
+        // ⏱ icon + label
+        if (isSlowMotion) {
+            CTX.shadowBlur  = 12 + pulse * 8;
+            CTX.shadowColor = '#00e5ff';
+        }
+        CTX.font          = 'bold 12px Arial';
+        CTX.textAlign     = 'center';
+        CTX.textBaseline  = 'middle';
+        CTX.fillStyle     = isSlowMotion ? `rgba(0, 229, 255, ${0.8 + pulse * 0.2})` : 'rgba(0, 180, 220, 0.55)';
+        CTX.fillText(isSlowMotion ? '🕐 BULLET TIME' : '⚡ RECHARGING', bx, by - badgePad.y + 8);
+        CTX.shadowBlur = 0;
+
+        // Energy bar track
+        const barX = bx - SM_BAR_W / 2;
+        const barY = by - 6;
+        CTX.fillStyle = 'rgba(0, 30, 40, 0.8)';
+        _roundRectPath(CTX, barX, barY, SM_BAR_W, SM_BAR_H, 4);
+        CTX.fill();
+
+        // Energy bar fill (colour shifts red when low)
+        const fillW = SM_BAR_W * slowMoEnergy;
+        const r = Math.round(lerp(0,   220, 1 - slowMoEnergy));
+        const g = Math.round(lerp(229, 60,  1 - slowMoEnergy));
+        const b = Math.round(lerp(255, 30,  1 - slowMoEnergy));
+        CTX.fillStyle = `rgba(${r}, ${g}, ${b}, 0.9)`;
+        if (fillW > 0) {
+            _roundRectPath(CTX, barX, barY, fillW, SM_BAR_H, 4);
+            CTX.fill();
+            if (isSlowMotion) {
+                CTX.shadowBlur  = 8;
+                CTX.shadowColor = `rgb(${r}, ${g}, ${b})`;
+                CTX.fill(); // second fill for glow
+                CTX.shadowBlur = 0;
+            }
+        }
+
+        // Tick marks on energy bar
+        CTX.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+        CTX.lineWidth   = 1;
+        for (let i = 1; i < 5; i++) {
+            const tx = barX + (SM_BAR_W / 5) * i;
+            CTX.beginPath(); CTX.moveTo(tx, barY); CTX.lineTo(tx, barY + SM_BAR_H); CTX.stroke();
+        }
+
+        // Percentage text
+        CTX.fillStyle = 'rgba(200, 240, 255, 0.7)';
+        CTX.font      = 'bold 9px Arial';
+        CTX.fillText(`${Math.round(slowMoEnergy * 100)}%`, bx + SM_BAR_W / 2 + 16, barY + SM_BAR_H / 2);
+
+        CTX.restore();
+    }
+
+    // ── 5. Clock-tick particles around player (slow-mo only) ─
+    if (isSlowMotion && player && Math.random() < 0.18) {
+        const screen = typeof worldToScreen === 'function'
+            ? worldToScreen(player.x, player.y)
+            : { x: CANVAS.width / 2, y: CANVAS.height / 2 };
+        const angle  = Math.random() * Math.PI * 2;
+        const radius = 32 + Math.random() * 28;
+        const px     = screen.x + Math.cos(angle) * radius;
+        const py     = screen.y + Math.sin(angle) * radius;
+        const symbols = ['⏱', '⌛', '◈', '⧖'];
+        CTX.save();
+        CTX.globalAlpha = 0.45 + Math.random() * 0.35;
+        CTX.font        = `${10 + Math.random() * 6}px Arial`;
+        CTX.textAlign   = 'center';
+        CTX.textBaseline = 'middle';
+        CTX.fillStyle   = '#00e5ff';
+        CTX.shadowBlur  = 6;
+        CTX.shadowColor = '#00e5ff';
+        CTX.fillText(symbols[Math.floor(Math.random() * symbols.length)], px, py);
+        CTX.restore();
+    }
+}
+
+/** Tiny helper: draw a rounded-rect path (needed since some older envs lack roundRect on ctx) */
+function _roundRectPath(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+/** Simple linear interpolation helper (used by energy bar colour) */
+function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+
+window.toggleSlowMotion = toggleSlowMotion;
+
 // ==================== GAME LOOP ====================
 function gameLoop(now) {
-    const dt = getDeltaTime(now);
+    const dt = getDeltaTime(now); // real-world frame delta (unscaled)
+
+    // ── Bullet Time energy ticks at real speed regardless of timeScale ──
+    if (gameState === 'PLAYING') {
+        _tickSlowMoEnergy(dt);
+    }
+
+    // Scale dt for all game-world simulation
+    const scaledDt = dt * timeScale;
 
     if (gameState === 'PLAYING') {
-        updateGame(dt);
+        updateGame(scaledDt);
         drawGame();
     } else if (gameState === 'PAUSED') {
         drawGame();
@@ -1481,9 +1745,9 @@ function updateGame(dt) {
         return;
     }
 
-    // Admin Console: check T key (same server proximity zone)
-    if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.t === 1) {
-        keys.t = 0;
+    // Admin Console: check F key (same server proximity zone)
+    if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.f === 1) {
+        keys.f = 0;
         openAdminConsole();
         return;
     }
@@ -1639,6 +1903,7 @@ function drawGame() {
     }
 
     drawDayNightHUD();
+    drawSlowMoOverlay();   // 🕐 bullet-time post-process (no-op when inactive + full energy)
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1749,6 +2014,12 @@ function startGame(charType = 'kao') {
     bossEncounterCount = 0;
     console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
 
+    // ── Reset Bullet Time ─────────────────────────────────────
+    isSlowMotion = false;
+    timeScale    = 1.0;
+    slowMoEnergy = 1.0;
+    console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
+
     // Reset shop buff state
     player.shopDamageBoostActive = false;
     player.shopDamageBoostTimer  = 0;
@@ -1829,6 +2100,10 @@ async function endGame(result) {
 
     window.drone = null;
 
+    // ── Ensure Bullet Time is off on game over ────────────────
+    isSlowMotion = false;
+    timeScale    = 1.0;
+
     {
         const runScore  = getScore();
         const existing  = getSaveData();
@@ -1894,7 +2169,10 @@ window.addEventListener('keydown', e => {
     if (e.code === 'KeyQ')   keys.q     = 1;
     if (e.code === 'KeyE')   keys.e     = 1;
     if (e.code === 'KeyB')   keys.b     = 1;
-    if (e.code === 'KeyT')   keys.t     = 1;
+    if (e.code === 'KeyF')   keys.f     = 1;
+
+    // 'T' — Bullet Time toggle (global, no proximity needed)
+    if (e.code === 'KeyT') { toggleSlowMotion(); }
 });
 
 window.addEventListener('keyup', e => {
@@ -1905,7 +2183,8 @@ window.addEventListener('keyup', e => {
     if (e.code === 'Space') keys.space = 0;
     if (e.code === 'KeyE')  keys.e     = 0;
     if (e.code === 'KeyB')  keys.b     = 0;
-    if (e.code === 'KeyT')  keys.t     = 0;
+    if (e.code === 'KeyF')  keys.f     = 0;
+    // Note: 'T' (KeyT) fires toggleSlowMotion() on keydown only — no keyup state needed
     if (e.code === 'KeyQ') {
         if (gameState === 'PLAYING') {
             if (player instanceof PoomPlayer) keys.q = 0;
