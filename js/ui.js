@@ -429,59 +429,278 @@ class UIManager {
         if (!ctx || !ctx.canvas) return;
 
         const canvas = ctx.canvas;
-        const radarRadius = 60, margin = 20, scale = 0.1;
-        const cx = canvas.width - margin - radarRadius;
+
+        // ════════════════════════════════════════════════════
+        // 🎯 TACTICAL MINIMAP / RADAR
+        // Config: radius 60 px · top-right · world scale 0.1
+        // ════════════════════════════════════════════════════
+        const radarRadius = 60;
+        const margin      = 20;
+        const scale       = 0.1;
+        const cx = canvas.width  - margin - radarRadius;
         const cy = margin + radarRadius;
+        const now = Date.now();
 
-        ctx.save();
-        ctx.beginPath(); ctx.arc(cx,cy,radarRadius,0,Math.PI*2);
-        ctx.fillStyle='rgba(0,0,0,0.48)'; ctx.fill();
-        ctx.lineWidth=2.2; ctx.strokeStyle='rgba(72,187,120,0.95)'; ctx.stroke();
+        const player = (typeof window !== 'undefined' && window.player)
+            ? window.player : { x: 0, y: 0 };
 
-        ctx.beginPath(); ctx.arc(cx,cy,radarRadius-10,0,Math.PI*2);
-        ctx.lineWidth=1; ctx.strokeStyle='rgba(72,187,120,0.18)'; ctx.stroke();
-
-        ctx.beginPath(); ctx.arc(cx,cy,radarRadius-1,0,Math.PI*2); ctx.clip();
-
-        ctx.lineWidth=0.8; ctx.strokeStyle='rgba(255,255,255,0.03)';
-        [radarRadius*.33,radarRadius*.66].forEach(r=>{
-            ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
-        });
-        ctx.beginPath();
-        ctx.moveTo(cx-radarRadius,cy); ctx.lineTo(cx+radarRadius,cy);
-        ctx.moveTo(cx,cy-radarRadius); ctx.lineTo(cx,cy+radarRadius);
-        ctx.stroke();
-
-        const player=(typeof window!=='undefined'&&window.player)?window.player:{x:0,y:0};
-
-        ctx.save(); ctx.translate(cx,cy); ctx.fillStyle='rgba(52,214,88,0.98)';
-        ctx.beginPath(); ctx.moveTo(0,-7); ctx.lineTo(7,7); ctx.lineTo(-7,7); ctx.closePath(); ctx.fill();
-        ctx.restore();
-
-        const clampToRadius=(px,py,maxR)=>{
-            const dx=px-cx, dy=py-cy, d=Math.sqrt(dx*dx+dy*dy);
-            if(d<=maxR) return{x:px,y:py};
-            return{x:cx+dx*(maxR/d),y:cy+dy*(maxR/d)};
+        // Helper: world→radar-screen, clamped to maxR from radar center
+        const toRadar = (wx, wy, maxR = radarRadius - 6) => {
+            const rx = cx + (wx - player.x) * scale;
+            const ry = cy + (wy - player.y) * scale;
+            const dx = rx - cx, dy = ry - cy;
+            const d  = Math.sqrt(dx * dx + dy * dy);
+            if (d <= maxR) return { x: rx, y: ry, clamped: false };
+            return { x: cx + dx * (maxR / d), y: cy + dy * (maxR / d), clamped: true };
         };
 
+        ctx.save();
+
+        // ── 1. Outer shell ───────────────────────────────────
+        // Subtle outer glow ring
+        ctx.beginPath(); ctx.arc(cx, cy, radarRadius + 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(72,187,120,0.06)'; ctx.fill();
+
+        // Main dark fill
+        ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(5,12,22,0.82)'; ctx.fill();
+
+        // Green tech border — double stroke for depth
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(72,187,120,0.95)'; ctx.stroke();
+        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(134,239,172,0.35)';
+        ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 3, 0, Math.PI * 2); ctx.stroke();
+
+        // ── CLIP — nothing escapes the radar circle from here on ──
+        ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
+
+        // ── 2. Interior grid ─────────────────────────────────
+        ctx.lineWidth = 0.7;
+
+        // Concentric range rings
+        [radarRadius * 0.33, radarRadius * 0.66].forEach(r => {
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(72,187,120,0.12)'; ctx.stroke();
+        });
+
+        // Cross-hair axes
+        ctx.strokeStyle = 'rgba(72,187,120,0.10)';
+        ctx.beginPath();
+        ctx.moveTo(cx - radarRadius, cy); ctx.lineTo(cx + radarRadius, cy);
+        ctx.moveTo(cx, cy - radarRadius); ctx.lineTo(cx, cy + radarRadius);
+        ctx.stroke();
+
+        // ── 3. Sweep line animation ───────────────────────────
+        // One full revolution every 3 seconds; leaves a fading trail
+        const SWEEP_RPM = 1 / 3;   // rotations per second
+        const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
+
+        // Trail: 120° arc behind the sweep head
+        const trailArc = Math.PI * 2 / 3;
+        const trailGrad = ctx.createConicalGradient
+            ? null  // conical not standard; use manual approach below
+            : null;
+        // Draw trail as many thin pie slices blended together
+        const TRAIL_STEPS = 24;
+        for (let i = 0; i < TRAIL_STEPS; i++) {
+            const frac  = i / TRAIL_STEPS;
+            const aStart = sweepAngle - trailArc * (1 - frac);
+            const aEnd   = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
+            const alpha  = frac * frac * 0.22;   // quadratic fade-in toward head
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(72,187,120,${alpha.toFixed(3)})`;
+            ctx.fill();
+        }
+
+        // Sweep head line
+        ctx.save();
+        ctx.strokeStyle = 'rgba(134,239,172,0.85)';
+        ctx.lineWidth   = 1.5;
+        ctx.shadowBlur  = 5; ctx.shadowColor = '#48bb78';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(
+            cx + Math.cos(sweepAngle) * (radarRadius - 1),
+            cy + Math.sin(sweepAngle) * (radarRadius - 1)
+        );
+        ctx.stroke();
+        ctx.restore();
+
+        // ── 4. Objectives — blue square: MTC Database Server ──
+        // Access via window.MTC_DATABASE_SERVER (defined in game.js)
+        if (window.MTC_DATABASE_SERVER) {
+            const S = window.MTC_DATABASE_SERVER;
+            const { x: sx, y: sy, clamped: sc } = toRadar(S.x, S.y, radarRadius - 8);
+            const dbPulse = 0.65 + Math.sin(now / 550) * 0.35;
+            const SZ = sc ? 3.5 : 5;   // smaller arrow when on edge
+
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.shadowBlur  = 8 * dbPulse;
+            ctx.shadowColor = '#3b82f6';
+
+            if (sc) {
+                // Arrow chevron pointing inward when clamped to edge
+                const ax = cx - sx, ay = cy - sy;
+                const al = Math.sqrt(ax * ax + ay * ay);
+                ctx.rotate(Math.atan2(ay, ax));
+                ctx.fillStyle = `rgba(59,130,246,${0.7 + dbPulse * 0.3})`;
+                ctx.beginPath();
+                ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
+                ctx.fill();
+            } else {
+                // Solid blue square
+                ctx.fillStyle = `rgba(59,130,246,${0.75 + dbPulse * 0.25})`;
+                ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.9})`;
+                ctx.lineWidth = 1.2;
+                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
+                ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
+            }
+            ctx.restore();
+        }
+
+        // ── 5. Objectives — gold square: MTC Shop ────────────
+        if (window.MTC_SHOP_LOCATION) {
+            const SH = window.MTC_SHOP_LOCATION;
+            const { x: shx, y: shy, clamped: shc } = toRadar(SH.x, SH.y, radarRadius - 8);
+            const shPulse = 0.65 + Math.sin(now / 700 + 1.2) * 0.35;
+            const SZ = shc ? 3.5 : 4.5;
+
+            ctx.save();
+            ctx.translate(shx, shy);
+            ctx.shadowBlur  = 7 * shPulse;
+            ctx.shadowColor = '#f59e0b';
+
+            if (shc) {
+                const ax = cx - shx, ay = cy - shy;
+                ctx.rotate(Math.atan2(ay, ax));
+                ctx.fillStyle = `rgba(245,158,11,${0.7 + shPulse * 0.3})`;
+                ctx.beginPath();
+                ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
+                ctx.fill();
+            } else {
+                ctx.fillStyle = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
+                ctx.strokeStyle = `rgba(253,230,138,${shPulse * 0.85})`;
+                ctx.lineWidth = 1.2;
+                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
+                ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
+            }
+            ctx.restore();
+        }
+
+        // ── 6. Enemies — red dots ────────────────────────────
         if (Array.isArray(window.enemies)) {
-            for(const e of window.enemies){
-                if(!e||e.dead) continue;
-                const{x:ex,y:ey}=clampToRadius(cx+(e.x-player.x)*scale,cy+(e.y-player.y)*scale,radarRadius-6);
-                ctx.beginPath(); ctx.fillStyle='rgba(220,40,40,0.98)'; ctx.arc(ex,ey,3.2,0,Math.PI*2); ctx.fill();
+            for (const e of window.enemies) {
+                if (!e || e.dead) continue;
+                const { x: ex, y: ey, clamped: ec } = toRadar(e.x, e.y);
+
+                ctx.save();
+                ctx.shadowBlur  = ec ? 0 : 4;
+                ctx.shadowColor = '#ef4444';
+
+                if (ec) {
+                    // Edge chevron pointing inward
+                    ctx.translate(ex, ey);
+                    ctx.rotate(Math.atan2(cy - ey, cx - ex));
+                    ctx.fillStyle = 'rgba(220,40,40,0.75)';
+                    ctx.beginPath();
+                    ctx.moveTo(5, 0); ctx.lineTo(0, -3); ctx.lineTo(0, 3); ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Filled dot — mage enemies slightly larger/brighter
+                    const r   = e.type === 'mage' ? 4 : (e.type === 'tank' ? 4.5 : 3.2);
+                    const col = e.type === 'mage'
+                        ? 'rgba(192,85,250,0.95)'
+                        : (e.type === 'tank' ? 'rgba(240,100,40,0.95)' : 'rgba(220,40,40,0.95)');
+                    ctx.fillStyle = col;
+                    ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
             }
         }
 
-        if(window.boss&&!window.boss.dead){
-            const t=(Date.now()%1000)/1000;
-            const pulse=0.5+Math.abs(Math.sin(t*Math.PI*2))*0.8;
-            const{x:bx,y:by}=clampToRadius(cx+(window.boss.x-player.x)*scale,cy+(window.boss.y-player.y)*scale,radarRadius-10);
-            ctx.beginPath(); ctx.fillStyle=`rgba(170,110,255,${0.6+0.25*pulse})`;
-            ctx.arc(bx,by,6+3*pulse,0,Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.lineWidth=1.2; ctx.strokeStyle=`rgba(170,110,255,${0.22+0.12*pulse})`;
-            ctx.arc(bx,by,10+3*pulse,0,Math.PI*2); ctx.stroke();
+        // ── 7. Boss — large pulsating purple ring ────────────
+        if (window.boss && !window.boss.dead) {
+            const t     = (now % 1000) / 1000;
+            const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
+            const { x: bx, y: by, clamped: bc } = toRadar(
+                window.boss.x, window.boss.y, radarRadius - 10
+            );
+
+            ctx.save();
+            ctx.shadowBlur  = 12 * pulse;
+            ctx.shadowColor = '#a855f7';
+
+            if (bc) {
+                // Edge warning — larger arrow when boss is off-screen
+                ctx.translate(bx, by);
+                ctx.rotate(Math.atan2(cy - by, cx - bx));
+                ctx.fillStyle = `rgba(168,85,247,${0.7 + pulse * 0.3})`;
+                ctx.beginPath();
+                ctx.moveTo(8, 0); ctx.lineTo(0, -5); ctx.lineTo(0, 5); ctx.closePath();
+                ctx.fill();
+            } else {
+                // Inner fill
+                ctx.fillStyle = `rgba(170,110,255,${0.6 + 0.25 * pulse})`;
+                ctx.beginPath(); ctx.arc(bx, by, 5 + 2.5 * pulse, 0, Math.PI * 2); ctx.fill();
+                // Outer glow ring
+                ctx.strokeStyle = `rgba(216,180,254,${0.25 + 0.15 * pulse})`;
+                ctx.lineWidth   = 1.5;
+                ctx.beginPath(); ctx.arc(bx, by, 9 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
+                // Boss label
+                ctx.fillStyle    = `rgba(255,220,255,${0.7 + 0.3 * pulse})`;
+                ctx.font         = 'bold 6px monospace';
+                ctx.textAlign    = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText('BOSS', bx, by - 10 - 2 * pulse);
+            }
+            ctx.restore();
         }
 
+        // ── 8. Player — green triangle at radar center ────────
+        // Rotated to match facing angle
+        ctx.save();
+        ctx.translate(cx, cy);
+        if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
+        ctx.shadowBlur  = 6; ctx.shadowColor = '#34d399';
+        ctx.fillStyle   = 'rgba(52,214,88,0.98)';
+        ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
+        ctx.fill();
+        // White nose dot
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.arc(0, -6, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // ── 9. Label & legend strip (outside clip, so restore first) ─
+        ctx.restore();   // ← ends clip + save from step 1
+
+        // "RADAR" label below the circle
+        ctx.save();
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'top';
+        ctx.font         = 'bold 8px Orbitron, monospace';
+        ctx.fillStyle    = 'rgba(72,187,120,0.70)';
+        ctx.fillText('TACTICAL RADAR', cx, cy + radarRadius + 5);
+
+        // Tiny legend row: red=enemy  purple=boss  blue=db  gold=shop
+        const legend = [
+            { col: '#ef4444', label: 'ENM' },
+            { col: '#a855f7', label: 'BSS' },
+            { col: '#3b82f6', label: 'DB'  },
+            { col: '#f59e0b', label: 'SHP' },
+        ];
+        const lx0 = cx - (legend.length - 1) * 14;
+        legend.forEach(({ col, label }, i) => {
+            const lx = lx0 + i * 28;
+            const ly = cy + radarRadius + 17;
+            ctx.fillStyle = col;
+            ctx.fillRect(lx - 3, ly, 6, 6);
+            ctx.font      = '6px monospace';
+            ctx.fillStyle = 'rgba(203,213,225,0.6)';
+            ctx.fillText(label, lx, ly + 8);
+        });
         ctx.restore();
     }
 }
