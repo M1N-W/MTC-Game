@@ -142,6 +142,12 @@ const MTC_SHOP_LOCATION = {
     INTERACTION_RADIUS: 90
 };
 
+// ── 🔴 MINIMAP FIX: expose both locations to window so UIManager.drawMinimap()
+//    can read them via window.MTC_DATABASE_SERVER / window.MTC_SHOP_LOCATION.
+//    `const` declarations do NOT auto-attach to window in strict-mode modules.
+window.MTC_DATABASE_SERVER = MTC_DATABASE_SERVER;
+window.MTC_SHOP_LOCATION   = MTC_SHOP_LOCATION;
+
 // ─── External Database URL ────────────────────────────────────
 const MTC_DB_URL = 'https://claude.ai/public/artifacts/9779928b-11d1-442b-b17d-2ef5045b9660';
 
@@ -1396,6 +1402,22 @@ function updateGame(dt) {
 }
 
 function drawGame() {
+    // ── 🔴 DIAGNOSTIC: logs once per ~5 seconds so devs can verify the draw
+    //    pipeline is executing and the minimap call is being reached.
+    //    Remove or gate behind a debug flag once minimap is confirmed working.
+    if (!drawGame._diagFrame) drawGame._diagFrame = 0;
+    drawGame._diagFrame++;
+    if (drawGame._diagFrame % 300 === 1) {
+        console.log(
+            '[MTC drawGame] frame', drawGame._diagFrame,
+            '| gameState:', gameState,
+            '| player:', !!window.player,
+            '| UIManager:', typeof UIManager,
+            '| MTC_DB_SERVER on window:', !!window.MTC_DATABASE_SERVER,
+            '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION
+        );
+    }
+
     // Background gradient
     const grad = CTX.createLinearGradient(0, 0, 0, CANVAS.height);
     grad.addColorStop(0, GAME_CONFIG.visual.bgColorTop);
@@ -1450,11 +1472,16 @@ function drawGame() {
     CTX.restore(); // ← end of world-space transform
 
     // ── Lighting pass (screen-space, after world restore) ────
+    // ✅ MINIMAP FIX: Wrapped in CTX.save()/restore() to FULLY CONTAIN any
+    //    globalCompositeOperation / globalAlpha changes made by drawLighting().
+    //    Without this wrapper, blend modes leak into UIManager.draw() and make
+    //    the entire minimap invisible (draws in "destination-out" or similar).
     {
         const allProj = (typeof projectileManager !== 'undefined' && projectileManager.projectiles)
             ? projectileManager.projectiles
             : [];
 
+        CTX.save();   // ← isolate lighting blend modes
         mapSystem.drawLighting(player, allProj, [
             {
                 x:      MTC_DATABASE_SERVER.x,
@@ -1469,24 +1496,30 @@ function drawGame() {
                 type:   'warm'
             }
         ]);
+        CTX.restore(); // ← restore composite/alpha state before HUD draws
     }
 
     drawDayNightHUD();
 
-    // ── HUD overlay pass ─────────────────────────────────────
-    // UIManager.draw() renders the tactical minimap (radar) and
-    // the combo counter. Both are screen-space and must run AFTER
-    // CTX.restore() so they are not affected by the world-space
-    // camera transform. _lastDrawDt was cached in gameLoop() this
-    // frame so UIManager.draw() can animate the combo timer.
-    UIManager.draw(CTX, _lastDrawDt);
-
+    // ── Full-screen overlays ─────────────────────────────────
+    // These paint over the ENTIRE canvas, so they must run BEFORE the HUD.
     drawSlowMoOverlay(); // 🕐 no-op when normal speed + full energy
 
-    // ⚡ Glitch Wave overlay — drawn absolutely last, on top of everything
-    // glitchIntensity > 0 even briefly after the wave ends (fade-out ramp)
+    // ⚡ Glitch Wave overlay — glitchIntensity > 0 even briefly after wave ends
     if (glitchIntensity > 0) {
         drawGlitchEffect(glitchIntensity, controlsInverted);
+    }
+
+    // ── HUD overlay pass — DRAWN ABSOLUTELY LAST ─────────────
+    // ✅ MINIMAP FIX: UIManager.draw() moved to after ALL full-screen overlays
+    //    (lighting, slow-mo vignette, glitch effect). Previously it was called
+    //    before drawSlowMoOverlay() — the letterbox + vignette painted over it
+    //    every frame. Now the radar is guaranteed to be on top of everything.
+    //
+    //    _lastDrawDt was cached in gameLoop() this frame so UIManager.draw()
+    //    can animate the combo timer without changing drawGame()'s signature.
+    if (typeof UIManager !== 'undefined' && UIManager.draw) {
+        UIManager.draw(CTX, _lastDrawDt);
     }
 }
 

@@ -463,20 +463,53 @@ class UIManager {
 
     // ════════════════════════════════════════════════════════════
     // 🎯 TACTICAL MINIMAP / RADAR  (drawn last — always on top)
+    //
+    // CLIP ARCHITECTURE (two nested save/restore pairs):
+    //
+    //   ctx.save()  ← OUTER: resets composite/alpha; draws the shell ring
+    //     ctx.save()  ← INNER: establishes the circular clip region
+    //       ctx.clip()
+    //       // ... interior content (grid, sweep, blips, player) ...
+    //     ctx.restore()  ← INNER restore: releases clip — CRITICAL
+    //     // ... label & legend drawn outside the clip ...
+    //   ctx.restore()  ← OUTER restore: final cleanup
+    //
+    // The outer save() MUST explicitly override globalCompositeOperation and
+    // globalAlpha because ctx.save() captures whatever state the canvas is
+    // currently in — if mapSystem.drawLighting() leaked a blend mode, that
+    // leak would be captured and every minimap draw call would be invisible.
     // ════════════════════════════════════════════════════════════
     static drawMinimap(ctx) {
+        if (!ctx || !ctx.canvas) return;
+
         const canvas = ctx.canvas;
 
         // Config: radius 60 px · safe-zone top-right · world scale 0.1
         const radarRadius = 60;
         const scale       = 0.1;
-        // ✅ Safe-Zone: keeps radar clear of device notches / browser chrome.
-        const cx = canvas.width  - 90;   // 90 px from right edge
-        const cy = 90;                    // 90 px from top edge
+        // Safe-Zone: keeps radar clear of device notches / browser chrome.
+        const cx  = canvas.width  - 90;   // 90 px from right edge
+        const cy  = 90;                    // 90 px from top edge
         const now = Date.now();
 
         const player = (typeof window !== 'undefined' && window.player)
             ? window.player : { x: 0, y: 0 };
+
+        // ── 🔴 DIAGNOSTIC — logs once every ~10 s to confirm this runs ──────
+        if (!UIManager._minimapFrame) UIManager._minimapFrame = 0;
+        UIManager._minimapFrame++;
+        if (UIManager._minimapFrame % 600 === 1) {
+            console.log(
+                '[MTC Minimap] frame', UIManager._minimapFrame,
+                '| canvas:', canvas.width, 'x', canvas.height,
+                '| cx:', cx, 'cy:', cy, 'r:', radarRadius,
+                '| compositeOp:', ctx.globalCompositeOperation,
+                '| globalAlpha:', ctx.globalAlpha,
+                '| MTC_DB:', !!window.MTC_DATABASE_SERVER,
+                '| MTC_SHOP:', !!window.MTC_SHOP_LOCATION,
+                '| enemies:', (window.enemies || []).length
+            );
+        }
 
         // Helper: world→radar-screen, clamped to maxR from radar center
         const toRadar = (wx, wy, maxR = radarRadius - 6) => {
@@ -488,35 +521,53 @@ class UIManager {
             return { x: cx + dx * (maxR / d), y: cy + dy * (maxR / d), clamped: true };
         };
 
+        // ══════════════════════════════════════════════════════
+        // OUTER SAVE — resets to a known-good canvas state.
+        // This is the key fix: explicitly override any blend-mode
+        // leakage left by mapSystem.drawLighting() so that every
+        // minimap draw call is guaranteed to be visible.
+        // ══════════════════════════════════════════════════════
         ctx.save();
+        ctx.globalCompositeOperation = 'source-over';  // ← FIX: undo any lighting blend
+        ctx.globalAlpha              = 1;               // ← FIX: undo any alpha leakage
+        ctx.shadowBlur               = 0;               // ← FIX: clear any glow leakage
 
-        // ── 1. Outer shell ───────────────────────────────────
-        // Subtle outer glow ring
+        // ── 1. Outer shell (drawn BEFORE clip so they sit outside it) ──
+
+        // Subtle outer glow halo
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius + 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(57,255,20,0.07)'; ctx.fill();
 
-        // Main deep-navy fill — ✅ high-contrast background
+        // Main deep-navy fill — high-contrast background
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'; ctx.fill();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'; ctx.fill();
 
-        // ✅ Pulsating neon-green border — width oscillates 1 px → 3 px
-        const borderSin   = Math.sin(now / 500);          // -1 … +1
-        const borderWidth = 2 + borderSin;                // 1 … 3 px
+        // Pulsating neon-green border — width oscillates 1 px → 3 px
+        const borderSin   = Math.sin(now / 500);   // −1 … +1
+        const borderWidth = 2 + borderSin;          // 1 … 3 px
         ctx.lineWidth   = borderWidth;
-        ctx.strokeStyle = `rgba(57,255,20,${0.75 + borderSin * 0.15})`;
-        ctx.shadowBlur  = 10 + borderSin * 6;
+        ctx.strokeStyle = `rgba(57,255,20,${0.80 + borderSin * 0.15})`;
+        ctx.shadowBlur  = 12 + borderSin * 6;
         ctx.shadowColor = '#39ff14';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur  = 0;
 
         // Inner accent ring
-        ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(134,239,172,0.30)';
+        ctx.lineWidth   = 0.8;
+        ctx.strokeStyle = 'rgba(134,239,172,0.28)';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 3, 0, Math.PI * 2); ctx.stroke();
 
-        // ── CLIP — nothing escapes the radar circle from here on ──
+        // ══════════════════════════════════════════════════════
+        // INNER SAVE — establishes the circular clip region.
+        // ctx.restore() on this save RELEASES the clip, allowing
+        // the label and legend to render outside the circle.
+        // ══════════════════════════════════════════════════════
+        ctx.save();
+
+        // ── CLIP — nothing escapes the radar circle from here ──
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
 
-        // ── 2. Interior grid ─────────────────────────────────
+        // ── 2. Interior grid ──────────────────────────────────
         ctx.lineWidth = 0.7;
 
         // Concentric range rings
@@ -525,7 +576,7 @@ class UIManager {
             ctx.strokeStyle = 'rgba(57,255,20,0.14)'; ctx.stroke();
         });
 
-        // ✅ Tactical cross-hair axes — more visible for military look
+        // Tactical crosshair axes
         ctx.strokeStyle = 'rgba(57,255,20,0.20)';
         ctx.lineWidth   = 0.8;
         ctx.beginPath();
@@ -534,22 +585,17 @@ class UIManager {
         ctx.stroke();
 
         // ── 3. Sweep line animation ───────────────────────────
-        // One full revolution every 3 seconds; leaves a fading trail
-        const SWEEP_RPM = 1 / 3;   // rotations per second
+        const SWEEP_RPM  = 1 / 3;   // one full revolution every 3 seconds
         const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
 
-        // Trail: 120° arc behind the sweep head
-        const trailArc = Math.PI * 2 / 3;
-        const trailGrad = ctx.createConicalGradient
-            ? null  // conical not standard; use manual approach below
-            : null;
-        // Draw trail as many thin pie slices blended together
+        // Trail: 120° fading arc behind the sweep head
+        const trailArc   = Math.PI * 2 / 3;
         const TRAIL_STEPS = 24;
         for (let i = 0; i < TRAIL_STEPS; i++) {
-            const frac  = i / TRAIL_STEPS;
+            const frac   = i / TRAIL_STEPS;
             const aStart = sweepAngle - trailArc * (1 - frac);
             const aEnd   = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
-            const alpha  = frac * frac * 0.22;   // quadratic fade-in toward head
+            const alpha  = frac * frac * 0.22;   // quadratic fade toward head
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
@@ -562,7 +608,7 @@ class UIManager {
         ctx.save();
         ctx.strokeStyle = 'rgba(134,239,172,0.85)';
         ctx.lineWidth   = 1.5;
-        ctx.shadowBlur  = 5; ctx.shadowColor = '#48bb78';
+        ctx.shadowBlur  = 6; ctx.shadowColor = '#48bb78';
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(
@@ -572,13 +618,12 @@ class UIManager {
         ctx.stroke();
         ctx.restore();
 
-        // ── 4. Objectives — bright blue square (5 px): MTC Database Server ──
-        // Access via window.MTC_DATABASE_SERVER (defined in game.js)
+        // ── 4. MTC Database Server — bright blue square (5 px) ──
         if (window.MTC_DATABASE_SERVER) {
             const S = window.MTC_DATABASE_SERVER;
             const { x: sx, y: sy, clamped: sc } = toRadar(S.x, S.y, radarRadius - 8);
             const dbPulse = 0.65 + Math.sin(now / 550) * 0.35;
-            const SZ = sc ? 3.5 : 5;   // ✅ 5 px blue square when in range
+            const SZ = sc ? 3.5 : 5;
 
             ctx.save();
             ctx.translate(sx, sy);
@@ -586,7 +631,6 @@ class UIManager {
             ctx.shadowColor = '#60a5fa';
 
             if (sc) {
-                // Arrow chevron pointing inward when clamped to edge
                 const ax = cx - sx, ay = cy - sy;
                 ctx.rotate(Math.atan2(ay, ax));
                 ctx.fillStyle = `rgba(59,130,246,${0.8 + dbPulse * 0.2})`;
@@ -594,17 +638,16 @@ class UIManager {
                 ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
                 ctx.fill();
             } else {
-                // ✅ Bright blue 5 px square
-                ctx.fillStyle = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
+                ctx.fillStyle   = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
                 ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.95})`;
-                ctx.lineWidth = 1.2;
+                ctx.lineWidth   = 1.2;
                 ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
                 ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
             }
             ctx.restore();
         }
 
-        // ── 5. Objectives — gold square: MTC Shop ────────────
+        // ── 5. MTC Shop — gold square ─────────────────────────
         if (window.MTC_SHOP_LOCATION) {
             const SH = window.MTC_SHOP_LOCATION;
             const { x: shx, y: shy, clamped: shc } = toRadar(SH.x, SH.y, radarRadius - 8);
@@ -624,16 +667,16 @@ class UIManager {
                 ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
                 ctx.fill();
             } else {
-                ctx.fillStyle = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
+                ctx.fillStyle   = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
                 ctx.strokeStyle = `rgba(253,230,138,${shPulse * 0.85})`;
-                ctx.lineWidth = 1.2;
+                ctx.lineWidth   = 1.2;
                 ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
                 ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
             }
             ctx.restore();
         }
 
-        // ── 6. Enemies — bright red dots (3 px) ─────────────
+        // ── 6. Enemies — bright red dots (3 px radius) ────────
         if (Array.isArray(window.enemies)) {
             for (const e of window.enemies) {
                 if (!e || e.dead) continue;
@@ -644,7 +687,6 @@ class UIManager {
                 ctx.shadowColor = '#ff2222';
 
                 if (ec) {
-                    // Edge chevron pointing inward
                     ctx.translate(ex, ey);
                     ctx.rotate(Math.atan2(cy - ey, cx - ex));
                     ctx.fillStyle = 'rgba(255,50,50,0.85)';
@@ -652,7 +694,6 @@ class UIManager {
                     ctx.moveTo(5, 0); ctx.lineTo(0, -3); ctx.lineTo(0, 3); ctx.closePath();
                     ctx.fill();
                 } else {
-                    // ✅ Bright red dots — 3 px radius (mage/tank slightly larger)
                     const r   = e.type === 'mage' ? 4 : (e.type === 'tank' ? 4.5 : 3);
                     const col = e.type === 'mage'
                         ? 'rgba(200,85,255,1.0)'
@@ -664,7 +705,7 @@ class UIManager {
             }
         }
 
-        // ── 7. Boss — 6 px pulsating purple dot ──────────────
+        // ── 7. Boss — 6 px pulsating purple dot ───────────────
         if (window.boss && !window.boss.dead) {
             const t     = (now % 1000) / 1000;
             const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
@@ -677,7 +718,6 @@ class UIManager {
             ctx.shadowColor = '#a855f7';
 
             if (bc) {
-                // Edge warning — larger arrow when boss is off-screen
                 ctx.translate(bx, by);
                 ctx.rotate(Math.atan2(cy - by, cx - bx));
                 ctx.fillStyle = `rgba(168,85,247,${0.7 + pulse * 0.3})`;
@@ -685,14 +725,11 @@ class UIManager {
                 ctx.moveTo(8, 0); ctx.lineTo(0, -5); ctx.lineTo(0, 5); ctx.closePath();
                 ctx.fill();
             } else {
-                // ✅ 6 px purple pulsating dot (inner fill)
                 ctx.fillStyle = `rgba(170,110,255,${0.75 + 0.25 * pulse})`;
                 ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI * 2); ctx.fill();
-                // Outer glow ring
                 ctx.strokeStyle = `rgba(216,180,254,${0.30 + 0.15 * pulse})`;
                 ctx.lineWidth   = 1.5;
                 ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
-                // Boss label
                 ctx.fillStyle    = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
                 ctx.font         = 'bold 6px monospace';
                 ctx.textAlign    = 'center';
@@ -702,26 +739,30 @@ class UIManager {
             ctx.restore();
         }
 
-        // ── 8. Player — green triangle at radar center (6 px) ────
-        // Rotated to match facing angle
+        // ── 8. Player — green triangle at radar center (6 px) ──
         ctx.save();
         ctx.translate(cx, cy);
         if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
         ctx.shadowBlur  = 8; ctx.shadowColor = '#34d399';
         ctx.fillStyle   = 'rgba(52,214,88,0.98)';
-        // ✅ Player triangle size: 6 px (tip-to-base)
         ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
         ctx.fill();
-        // White nose dot
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.beginPath(); ctx.arc(0, -5, 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
-        // ── 9. Label & legend strip (outside clip, so restore first) ─
-        ctx.restore();   // ← ends clip + save from step 1
+        // ══════════════════════════════════════════════════════
+        // INNER RESTORE — releases the circular clip region.
+        // Everything drawn after this point renders outside the
+        // circle without being cut off. THIS IS THE CRITICAL FIX
+        // for the clip architecture — the separate save/restore
+        // pair means the clip is self-contained and cannot bleed
+        // into any other canvas operations.
+        // ══════════════════════════════════════════════════════
+        ctx.restore();  // ← ends INNER save — clip released
 
-        // "RADAR" label below the circle
-        ctx.save();
+        // ── 9. Label & legend strip (outside clip) ────────────
+        ctx.shadowBlur = 0;
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'top';
         ctx.font         = 'bold 8px Orbitron, monospace';
@@ -745,7 +786,13 @@ class UIManager {
             ctx.fillStyle = 'rgba(203,213,225,0.6)';
             ctx.fillText(label, lx, ly + 8);
         });
-        ctx.restore();
+
+        // ══════════════════════════════════════════════════════
+        // OUTER RESTORE — final cleanup.
+        // Restores composite operation, globalAlpha, shadowBlur
+        // to whatever state they were in before drawMinimap().
+        // ══════════════════════════════════════════════════════
+        ctx.restore();  // ← ends OUTER save
     }
 }
 
