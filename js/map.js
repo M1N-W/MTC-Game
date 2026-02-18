@@ -536,7 +536,7 @@ class MTCRoom {
                 this.isPlayerInside = true;
                 this.playerStayTime = 0;
                 spawnFloatingText('SAFE ZONE!', player.x, player.y - 60, '#10b981', 25);
-                showVoiceBubble('เข้าสู่ MTC Room - กำลังรักษา...', player.x, player.y - 40);
+                UIManager.showVoiceBubble('เข้าสู่ MTC Room - กำลังรักษา...', player.x, player.y - 40);
             }
 
             this.playerStayTime += dt;
@@ -572,7 +572,7 @@ class MTCRoom {
         this.isPlayerInside = false;
         this.cooldown = this.cooldownTime;
         spawnFloatingText('เวลาหมด!', player.x, player.y - 60, '#f59e0b', 20);
-        showVoiceBubble('ออกจาก MTC Room แล้ว', player.x, player.y - 40);
+        UIManager.showVoiceBubble('ออกจาก MTC Room แล้ว', player.x, player.y - 40);
 
         const centerX = this.x + this.w / 2;
         const centerY = this.y + this.h / 2;
@@ -1131,7 +1131,7 @@ class MapSystem {
     }
 }
 
-var mapSystem = new MapSystem();
+const mapSystem = new MapSystem();
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { MapObject, MTCRoom, MapSystem, mapSystem };
