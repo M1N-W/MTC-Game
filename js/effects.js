@@ -2,10 +2,17 @@
  * 💥 MTC: ENHANCED EDITION - Effects System
  * Particles, floating text, and special effects
  *
+ * WEATHER SYSTEM (v9 — NEW):
+ * - ✅ WeatherSystem class — atmospheric rain & snow effects
+ * - ✅ Rain: spawns at screen top, falls with speed + wind drift, drawn as thin blue lines
+ * - ✅ Snow: spawns at screen top, falls slowly with sin() horizontal sway, drawn as white circles
+ * - ✅ Optimized: MAX_PARTICLES cap (200), off-screen culling, efficient array reuse
+ * - ✅ API: weatherSystem.setWeather('rain'|'snow'|'none'), update(dt, camera), draw()
+ *
  * GLITCH WAVE (v8 — unchanged):
  * - ✅ drawGlitchEffect(intensity, controlsInverted) — top-level export
  *
- * PERFORMANCE (v8 — NEW):
+ * PERFORMANCE (v8):
  * - ✅ ParticleSystem.MAX_PARTICLES = 150  — hard cap; oldest particle evicted
  *       when spawn() would exceed the limit.  Prevents runaway memory growth
  *       during Glitch Wave (2× enemies × heavy particle deaths).
@@ -191,6 +198,187 @@ class FloatingTextSystem {
         this.texts = [];
     }
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🌧️ Weather System — Rain & Snow
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Raindrop class
+ * Spawns at top of screen, falls down with wind drift, drawn as thin blue line
+ */
+class Raindrop {
+    constructor(x, y, speed, wind) {
+        this.x = x;
+        this.y = y;
+        this.speed = speed;      // vertical fall speed (pixels/sec)
+        this.wind = wind;        // horizontal drift (pixels/sec)
+        this.length = 8 + Math.random() * 8;  // visual streak length
+    }
+
+    update(dt, camera) {
+        this.y += this.speed * dt;
+        this.x += this.wind * dt;
+
+        // Remove if below visible screen (camera-relative)
+        const screenBottom = camera.y + CANVAS.height / 2 + 100;
+        return this.y > screenBottom;
+    }
+
+    draw() {
+        const screen = worldToScreen(this.x, this.y);
+        const endY = screen.y + this.length;
+
+        CTX.save();
+        CTX.globalAlpha = 0.4 + Math.random() * 0.2;
+        CTX.strokeStyle = '#60a5fa';  // light blue
+        CTX.lineWidth = 1;
+        CTX.beginPath();
+        CTX.moveTo(screen.x, screen.y);
+        CTX.lineTo(screen.x, endY);
+        CTX.stroke();
+        CTX.restore();
+    }
+}
+
+/**
+ * Snowflake class
+ * Spawns at top, falls slowly with horizontal sin() sway, drawn as white circle
+ */
+class Snowflake {
+    constructor(x, y, speed) {
+        this.x = x;
+        this.y = y;
+        this.speed = speed;           // slower than rain
+        this.size = 2 + Math.random() * 3;
+        this.swaySpeed = 0.5 + Math.random() * 1.5;  // sway frequency
+        this.swayAmount = 10 + Math.random() * 20;   // sway amplitude
+        this.time = Math.random() * Math.PI * 2;     // offset for varied sway
+    }
+
+    update(dt, camera) {
+        this.time += dt * this.swaySpeed;
+        this.y += this.speed * dt;
+        this.x += Math.sin(this.time) * this.swayAmount * dt;
+
+        // Remove if below visible screen
+        const screenBottom = camera.y + CANVAS.height / 2 + 100;
+        return this.y > screenBottom;
+    }
+
+    draw() {
+        const screen = worldToScreen(this.x, this.y);
+
+        CTX.save();
+        CTX.globalAlpha = 0.6 + Math.random() * 0.3;
+        CTX.fillStyle = '#ffffff';
+        CTX.beginPath();
+        CTX.arc(screen.x, screen.y, this.size, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.restore();
+    }
+}
+
+/**
+ * WeatherSystem
+ * Manages atmospheric rain/snow effects
+ * 
+ * Usage:
+ *   weatherSystem.setWeather('rain');  // or 'snow', or 'none'
+ *   weatherSystem.update(dt, camera);
+ *   weatherSystem.draw();
+ */
+class WeatherSystem {
+    static MAX_PARTICLES = 200;  // Cap to prevent performance issues
+
+    constructor() {
+        this.mode = 'none';       // 'none', 'rain', 'snow'
+        this.particles = [];
+        this.spawnTimer = 0;
+        
+        // Rain config
+        this.rainSpawnRate = 30;   // particles per second
+        this.rainSpeed = 600;      // fall speed
+        this.rainWind = 80;        // horizontal drift
+
+        // Snow config
+        this.snowSpawnRate = 20;   // particles per second
+        this.snowSpeed = 100;      // fall speed (slower than rain)
+    }
+
+    setWeather(mode) {
+        if (mode !== this.mode) {
+            this.mode = mode;
+            this.particles = [];  // clear old particles when switching
+            this.spawnTimer = 0;
+        }
+    }
+
+    update(dt, camera) {
+        if (this.mode === 'none') {
+            this.particles = [];
+            return;
+        }
+
+        // Spawn new particles
+        this.spawnTimer += dt;
+        const spawnRate = this.mode === 'rain' ? this.rainSpawnRate : this.snowSpawnRate;
+        const spawnInterval = 1.0 / spawnRate;
+
+        while (this.spawnTimer >= spawnInterval) {
+            this.spawnTimer -= spawnInterval;
+            this._spawnParticle(camera);
+        }
+
+        // Update existing particles (remove if off-screen)
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const shouldRemove = this.particles[i].update(dt, camera);
+            if (shouldRemove) {
+                this.particles.splice(i, 1);
+            }
+        }
+
+        // Hard cap enforcement (evict oldest if needed)
+        while (this.particles.length > WeatherSystem.MAX_PARTICLES) {
+            this.particles.shift();
+        }
+    }
+
+    draw() {
+        if (this.mode === 'none') return;
+
+        for (let particle of this.particles) {
+            particle.draw();
+        }
+    }
+
+    _spawnParticle(camera) {
+        // Spawn at top of visible screen with some padding
+        const screenTop = camera.y - CANVAS.height / 2 - 10;
+        const screenLeft = camera.x - CANVAS.width / 2 - 50;
+        const screenRight = camera.x + CANVAS.width / 2 + 50;
+        
+        const x = screenLeft + Math.random() * (screenRight - screenLeft);
+        const y = screenTop;
+
+        if (this.mode === 'rain') {
+            const speed = this.rainSpeed + (Math.random() - 0.5) * 100;
+            const wind = this.rainWind + (Math.random() - 0.5) * 40;
+            this.particles.push(new Raindrop(x, y, speed, wind));
+        } else if (this.mode === 'snow') {
+            const speed = this.snowSpeed + (Math.random() - 0.5) * 30;
+            this.particles.push(new Snowflake(x, y, speed));
+        }
+    }
+
+    clear() {
+        this.particles = [];
+        this.spawnTimer = 0;
+    }
+}
+
+// Global instance
+const weatherSystem = new WeatherSystem();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Special Effects for Boss
@@ -689,6 +877,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         Particle, ParticleSystem, particleSystem,
         FloatingText, FloatingTextSystem, floatingTextSystem,
+        Raindrop, Snowflake, WeatherSystem, weatherSystem,
         EquationSlam, DeadlyGraph, MeteorStrike,
         spawnParticles, spawnFloatingText,
         drawGlitchEffect

@@ -461,12 +461,152 @@ class UIManager {
         if (reportText) reportText.textContent = 'Loading...';
     }
 
+    // ------------------------------------------------------------------
+    // Combo UI
+    // - comboCount: increments on kill
+    // - comboTimer: resets to 2.0 seconds on each addCombo()
+    // - UIManager.updateCombo(dt) must be called every frame with dt in seconds
+    // - UIManager.drawCombo(ctx) draws the combo text on the canvas
+    // ------------------------------------------------------------------
+
+    // Note: The following methods are designed to be called by the main
+    // game loop. Example:
+    //   UIManager.updateCombo(deltaTime);
+    //   UIManager.drawCombo(ctx);
+    static updateCombo(dt) {
+        // dt in seconds
+        // Decrease timer
+        if (typeof comboTimer !== 'undefined') {
+            if (comboTimer > 0) {
+                comboTimer -= dt;
+                if (comboTimer <= 0) {
+                    comboTimer = 0;
+                    comboCount = 0;
+                    // reset visual state
+                    comboScale = 1;
+                    comboShake = 0;
+                }
+            }
+        }
+
+        // decay visual animation values
+        comboScale += (1 - comboScale) * Math.min(1, dt * comboScaleDecay);
+        comboShake = Math.max(0, comboShake - dt * comboShakeDecay);
+    }
+
+    static drawCombo(ctx) {
+        if (!ctx || comboCount <= 0) return;
+
+        const canvas = ctx.canvas;
+        const x = canvas.width / 2;
+        const y = Math.max(60, canvas.height * 0.14);
+
+        // base size
+        const baseFont = 72;
+        const scale = comboScale;
+        const size = Math.round(baseFont * scale + Math.min(40, comboCount * 1.2));
+
+        ctx.save();
+        ctx.font = `bold ${size}px "Orbitron", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // gradient from yellow to red based on combo count
+        const gWidth = Math.max(240, size * 4);
+        const grad = ctx.createLinearGradient(x - gWidth / 2, y - 30, x + gWidth / 2, y + 30);
+        const t = Math.min(comboCount / 30, 1);
+        grad.addColorStop(0, lerpColorHex('#FFD54A', '#FF3B3B', t));
+        grad.addColorStop(1, lerpColorHex('#FFE08A', '#FF6B6B', Math.min(1, t + 0.18)));
+        ctx.fillStyle = grad;
+
+        // drop shadow
+        ctx.shadowColor = 'rgba(0,0,0,0.44)';
+        ctx.shadowBlur = 18;
+
+        // shaking
+        const maxShake = Math.min(12, comboCount * 0.6);
+        const shakeAmp = maxShake * comboShake;
+        const shakeX = (Math.random() - 0.5) * shakeAmp;
+        const shakeY = (Math.random() - 0.5) * shakeAmp;
+
+        ctx.translate(x + shakeX, y + shakeY);
+
+        // main text
+        const mainText = `${comboCount} HITS!`;
+        ctx.fillText(mainText, 0, -size * 0.14);
+        ctx.lineWidth = Math.max(3, size * 0.06);
+        ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+        ctx.strokeText(mainText, 0, -size * 0.14);
+
+        // special text for milestones
+        let special = '';
+        if (comboCount > 20) special = 'GODLIKE!';
+        else if (comboCount > 10) special = 'UNSTOPPABLE!';
+
+        if (special) {
+            const smallSize = Math.max(18, Math.round(size * 0.44));
+            ctx.font = `bold ${smallSize}px "Orbitron", sans-serif`;
+            ctx.fillText(special, 0, Math.round(size * 0.62));
+            ctx.lineWidth = Math.max(2, smallSize * 0.06);
+            ctx.strokeText(special, 0, Math.round(size * 0.62));
+        }
+
+        ctx.restore();
+    }
 }
 
-const Achievements = new AchievementSystem();
+// Helper utilities for combo visuals
+// combo variables (global within this module)
+let comboCount = 0;
+let comboTimer = 0;
 
-function showVoiceBubble(text, x, y) {
-    UIManager.showVoiceBubble(text, x, y);
+// visual anim state
+let comboScale = 1.0;
+let comboShake = 0.0;
+// decay rates (per second)
+const comboShakeDecay = 4.5;
+const comboScaleDecay = 6.0;
+
+// PUBLIC: addCombo()
+// Call when an enemy dies.
+function addCombo() {
+    comboCount++;
+    comboTimer = 2.0;
+    // trigger "scale up" animation
+    comboScale = 1.6;
+    // trigger shake intensity based on combo
+    comboShake = Math.min(1.0, 0.15 + comboCount / 30);
+    // optional sound cue
+    if (typeof Audio !== 'undefined' && Audio.playCombo) {
+        try { Audio.playCombo(); } catch (e) { /* ignore */ }
+    }
+}
+
+// Simple hex color interpolation
+function lerpColorHex(a, b, t) {
+    t = Math.max(0, Math.min(1, t));
+    const ac = hexToRgb(a);
+    const bc = hexToRgb(b);
+    const rc = {
+        r: Math.round(ac.r + (bc.r - ac.r) * t),
+        g: Math.round(ac.g + (bc.g - ac.g) * t),
+        b: Math.round(ac.b + (bc.b - ac.b) * t)
+    };
+    return `rgb(${rc.r},${rc.g},${rc.b})`;
+}
+
+function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return {
+        r: (bigint >> 16) & 255,
+        g: (bigint >> 8) & 255,
+        b: bigint & 255
+    };
+}
+
+function lerpColor(a, b, t) {
+    return lerpColorHex(a, b, t);
 }
 
 // ── Initialize persistent High Score display on page load ─────────────
@@ -485,5 +625,5 @@ function showVoiceBubble(text, x, y) {
 })();
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AchievementSystem, ShopManager, UIManager, Achievements, showVoiceBubble };
+    module.exports = { AchievementSystem, ShopManager, UIManager, Achievements, showVoiceBubble, addCombo, comboCount, comboTimer };
 }
