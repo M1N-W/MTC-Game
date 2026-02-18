@@ -87,6 +87,16 @@ const SM_BAR_W = 180, SM_BAR_H = 8;
 // ─── Day / Night cycle ────────────────────────────────────────
 let dayNightTimer = 0;
 
+// ─── ⚡ Glitch Wave ───────────────────────────────────────────
+// Activates on every 5th wave (wave 5, 10, 15 …).
+// isGlitchWave  — set true by startNextWave, cleared on next wave start
+// glitchIntensity — animated 0→1 ramp; drawGlitchEffect uses this
+// controlsInverted — W↔S and A↔D are swapped while true
+let isGlitchWave     = false;
+let glitchIntensity  = 0;
+let controlsInverted = false;
+const GLITCH_EVERY_N_WAVES = 5;
+
 // ─── Game Objects (global) ────────────────────────────────────
 window.player         = null;
 window.enemies        = [];
@@ -817,6 +827,11 @@ window.buyItem   = buyItem;
 // ══════════════════════════════════════════════════════════════
 
 function startNextWave() {
+    // ── Reset glitch state from the wave that just ended ─────
+    isGlitchWave     = false;
+    controlsInverted = false;
+    // glitchIntensity fades to 0 organically via the ramp in updateGame
+
     resetEnemiesKilled();
     waveStartDamage = Achievements.stats.damageTaken;
     setElementText('wave-badge', `WAVE ${getWave()}`);
@@ -824,6 +839,20 @@ function startNextWave() {
 
     const count = BALANCE.waves.enemiesBase + (getWave() - 1) * BALANCE.waves.enemiesPerWave;
     spawnEnemies(count);
+
+    // ── ⚡ Glitch Wave — every 5th wave ──────────────────────
+    if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
+        isGlitchWave     = true;
+        controlsInverted = true;
+        glitchIntensity  = 0;     // ramp starts immediately in updateGame
+        spawnEnemies(count);      // spawn a second full wave batch (2× enemies)
+        spawnFloatingText('⚡ GLITCH WAVE ⚡', player.x, player.y - 140, '#d946ef', 44);
+        addScreenShake(20);
+        Audio.playBossSpecial();
+        setTimeout(() => {
+            spawnFloatingText('CONTROLS INVERTED!', player.x, player.y - 90, '#f472b6', 22);
+        }, 800);
+    }
 
     if (getWave() % BALANCE.waves.bossEveryNWaves === 0) {
         setTimeout(() => {
@@ -1129,6 +1158,15 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
+    // ── ⚡ Glitch intensity ramp ──────────────────────────────
+    // Ramps up to 1.0 over ~1.25 s when active; fades out 2× faster when off
+    const GLITCH_RAMP = 0.8;
+    if (isGlitchWave) {
+        glitchIntensity = Math.min(1.0, glitchIntensity + GLITCH_RAMP * dt);
+    } else {
+        glitchIntensity = Math.max(0.0, glitchIntensity - GLITCH_RAMP * 2 * dt);
+    }
+
     // ── Day / Night cycle (driven by BALANCE.LIGHTING in config.js) ──
     dayNightTimer += dt;
     {
@@ -1182,7 +1220,11 @@ function updateGame(dt) {
     }
 
     // ── Player ────────────────────────────────────────────────
-    player.update(dt, keys, mouse);
+    // During Glitch Wave, W↔S and A↔D are swapped
+    const effectiveKeys = controlsInverted
+        ? { ...keys, w: keys.s, s: keys.w, a: keys.d, d: keys.a }
+        : keys;
+    player.update(dt, effectiveKeys, mouse);
 
     if (!(player instanceof PoomPlayer)) {
         weaponSystem.update(dt);
@@ -1344,6 +1386,12 @@ function drawGame() {
 
     drawDayNightHUD();
     drawSlowMoOverlay(); // 🕐 no-op when normal speed + full energy
+
+    // ⚡ Glitch Wave overlay — drawn absolutely last, on top of everything
+    // glitchIntensity > 0 even briefly after the wave ends (fade-out ramp)
+    if (glitchIntensity > 0) {
+        drawGlitchEffect(glitchIntensity, controlsInverted);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════
