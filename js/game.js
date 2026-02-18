@@ -1809,4 +1809,3 @@ window.onload = () => {
     InputSystem.init(); // ← wires keyboard, mouse, and mobile touch controls
     initAI();
 };
-
