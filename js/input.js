@@ -4,10 +4,11 @@
  * Owns ALL raw input state and event wiring for MTC: Enhanced Edition.
  *
  * GLOBALS DEFINED HERE (accessible to every subsequent script tag):
- *   keys               — keyboard digital state  { w, a, s, d, space, q, e, b, t, f }
- *   mouse              — pointer state  { x, y, worldX, worldY, left, right }
- *   window.touchJoystickLeft  — left  twin-stick state object
- *   window.touchJoystickRight — right twin-stick state object
+ *   var keys               — keyboard digital state  { w, a, s, d, space, q, e, b, t, f }
+ *   var mouse              — pointer state  { x, y, wx, wy, left, right }
+ *   var joysticks          — unified twin-stick state { left, right }
+ *   window.touchJoystickLeft  — left  twin-stick raw state object (alias of joysticks.left)
+ *   window.touchJoystickRight — right twin-stick raw state object (alias of joysticks.right)
  *
  * LOAD ORDER:
  *   config.js → utils.js → audio.js → effects.js → weapons.js →
@@ -17,13 +18,14 @@
  *   InputSystem.init() is called once from window.onload (in game.js).
  *   keyboard/mouse listeners are registered then, and initMobileControls()
  *   is called to wire up touch joysticks and action buttons.
+ *
+ * NOTE: 'use strict' is intentionally omitted so that `var` declarations
+ *   below become true window-level globals accessible across all script tags.
  * ─────────────────────────────────────────────────────────────────
  */
 
-'use strict';
-
 // ══════════════════════════════════════════════════════════════
-// GLOBAL INPUT STATE
+// GLOBAL INPUT STATE  (var → window-scoped, cross-file safe)
 // ══════════════════════════════════════════════════════════════
 
 /**
@@ -31,25 +33,39 @@
  * keys.t  → Bullet Time toggle  (fires on keydown; no keyup needed)
  * keys.f  → Admin Terminal open (proximity-gated in game.js)
  */
-const keys = {
+var keys = {
     w: 0, a: 0, s: 0, d: 0,
     space: 0,
     q: 0, e: 0, b: 0, t: 0, f: 0
 };
 
 /**
- * Mouse / pointer state.
- * worldX / worldY are updated by updateMouseWorld() (utils.js) each frame.
+ * Mouse / pointer state — SINGLE SOURCE OF TRUTH.
+ * (Removed from utils.js to fix "Identifier 'mouse' has already been declared".)
+ *
+ * wx / wy are updated by updateMouseWorld() (utils.js) each frame.
  */
-const mouse = {
+var mouse = {
     x: 0, y: 0,        // canvas-space pixel position
-    worldX: 0, worldY: 0, // world-space position (set by updateMouseWorld)
+    wx: 0, wy: 0,      // world-space position (updated by updateMouseWorld)
     left: 0, right: 0  // button state  1 = held, 0 = released
 };
 
-// ── Twin-Stick Touch Joysticks ─────────────────────────────────
-window.touchJoystickLeft  = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
-window.touchJoystickRight = { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 };
+/**
+ * Unified twin-stick joystick state.
+ * Each side: { active, id, originX, originY, nx, ny }
+ *
+ * window.touchJoystickLeft / Right are set as aliases below so any
+ * existing code referencing those names continues to work.
+ */
+var joysticks = {
+    left:  { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 },
+    right: { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 }
+};
+
+// Legacy aliases — keep backward-compat with existing code that reads these.
+window.touchJoystickLeft  = joysticks.left;
+window.touchJoystickRight = joysticks.right;
 
 
 // ══════════════════════════════════════════════════════════════
@@ -57,28 +73,28 @@ window.touchJoystickRight = { active: false, id: null, originX: 0, originY: 0, n
 // ══════════════════════════════════════════════════════════════
 
 function initMobileControls() {
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (!isTouchDevice) return;
 
-    const maxRadius = 60;
-    const zoneL  = document.getElementById('joystick-left-zone');
-    const baseL  = document.getElementById('joystick-left-base');
-    const stickL = document.getElementById('joystick-left-stick');
-    const zoneR  = document.getElementById('joystick-right-zone');
-    const baseR  = document.getElementById('joystick-right-base');
-    const stickR = document.getElementById('joystick-right-stick');
+    var maxRadius = 60;
+    var zoneL  = document.getElementById('joystick-left-zone');
+    var baseL  = document.getElementById('joystick-left-base');
+    var stickL = document.getElementById('joystick-left-stick');
+    var zoneR  = document.getElementById('joystick-right-zone');
+    var baseR  = document.getElementById('joystick-right-base');
+    var stickR = document.getElementById('joystick-right-stick');
 
-    function startJoystick(e, joystick, baseElem, stickElem, zoneElem, isRight = false) {
+    function startJoystick(e, joystick, baseElem, stickElem, zoneElem, isRight) {
         if (gameState !== 'PLAYING') return;
         e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touch = e.changedTouches[i];
+        for (var i = 0; i < e.changedTouches.length; i++) {
+            var touch = e.changedTouches[i];
             if (joystick.id === null) {
                 joystick.id      = touch.identifier;
                 joystick.active  = true;
                 joystick.originX = touch.clientX;
                 joystick.originY = touch.clientY;
-                const zr = zoneElem.getBoundingClientRect();
+                var zr = zoneElem.getBoundingClientRect();
                 baseElem.style.display = 'block';
                 baseElem.style.left    = (touch.clientX - zr.left) + 'px';
                 baseElem.style.top     = (touch.clientY - zr.top)  + 'px';
@@ -91,24 +107,24 @@ function initMobileControls() {
 
     function moveJoystick(e, joystick, stickElem) {
         e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touch = e.changedTouches[i];
+        for (var i = 0; i < e.changedTouches.length; i++) {
+            var touch = e.changedTouches[i];
             if (touch.identifier === joystick.id) {
-                let dx = touch.clientX - joystick.originX;
-                let dy = touch.clientY - joystick.originY;
-                const d = Math.hypot(dx, dy);
+                var dx = touch.clientX - joystick.originX;
+                var dy = touch.clientY - joystick.originY;
+                var d  = Math.hypot(dx, dy);
                 if (d > maxRadius) { dx = (dx / d) * maxRadius; dy = (dy / d) * maxRadius; }
                 joystick.nx = dx / maxRadius;
                 joystick.ny = dy / maxRadius;
-                stickElem.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                stickElem.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
             }
         }
     }
 
-    function endJoystick(e, joystick, baseElem, stickElem, isRight = false) {
+    function endJoystick(e, joystick, baseElem, stickElem, isRight) {
         e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touch = e.changedTouches[i];
+        for (var i = 0; i < e.changedTouches.length; i++) {
+            var touch = e.changedTouches[i];
             if (touch.identifier === joystick.id) {
                 joystick.active = false;
                 joystick.id     = null;
@@ -121,41 +137,41 @@ function initMobileControls() {
         }
     }
 
-    zoneL.addEventListener('touchstart',  (e) => startJoystick(e, window.touchJoystickLeft,  baseL,  stickL, zoneL),        { passive: false });
-    zoneL.addEventListener('touchmove',   (e) => moveJoystick(e,  window.touchJoystickLeft,  stickL),                        { passive: false });
-    zoneL.addEventListener('touchend',    (e) => endJoystick(e,   window.touchJoystickLeft,  baseL,  stickL),                { passive: false });
-    zoneL.addEventListener('touchcancel', (e) => endJoystick(e,   window.touchJoystickLeft,  baseL,  stickL),                { passive: false });
+    zoneL.addEventListener('touchstart',  function(e) { startJoystick(e, joysticks.left,  baseL,  stickL, zoneL, false); }, { passive: false });
+    zoneL.addEventListener('touchmove',   function(e) { moveJoystick(e,  joysticks.left,  stickL);                        }, { passive: false });
+    zoneL.addEventListener('touchend',    function(e) { endJoystick(e,   joysticks.left,  baseL,  stickL, false);         }, { passive: false });
+    zoneL.addEventListener('touchcancel', function(e) { endJoystick(e,   joysticks.left,  baseL,  stickL, false);         }, { passive: false });
 
-    zoneR.addEventListener('touchstart',  (e) => startJoystick(e, window.touchJoystickRight, baseR,  stickR, zoneR, true),  { passive: false });
-    zoneR.addEventListener('touchmove',   (e) => moveJoystick(e,  window.touchJoystickRight, stickR),                        { passive: false });
-    zoneR.addEventListener('touchend',    (e) => endJoystick(e,   window.touchJoystickRight, baseR,  stickR, true),          { passive: false });
-    zoneR.addEventListener('touchcancel', (e) => endJoystick(e,   window.touchJoystickRight, baseR,  stickR, true),          { passive: false });
+    zoneR.addEventListener('touchstart',  function(e) { startJoystick(e, joysticks.right, baseR,  stickR, zoneR, true);  }, { passive: false });
+    zoneR.addEventListener('touchmove',   function(e) { moveJoystick(e,  joysticks.right, stickR);                        }, { passive: false });
+    zoneR.addEventListener('touchend',    function(e) { endJoystick(e,   joysticks.right, baseR,  stickR, true);          }, { passive: false });
+    zoneR.addEventListener('touchcancel', function(e) { endJoystick(e,   joysticks.right, baseR,  stickR, true);          }, { passive: false });
 
     // ── Action buttons ─────────────────────────────────────────
-    const btnDash     = document.getElementById('btn-dash');
-    const btnSkill    = document.getElementById('btn-skill');
-    const btnSwitch   = document.getElementById('btn-switch');
-    const btnNaga     = document.getElementById('btn-naga');
-    const btnDatabase = document.getElementById('btn-database');
-    const btnTerminal = document.getElementById('btn-terminal');
-    const btnShop     = document.getElementById('btn-shop');
+    var btnDash     = document.getElementById('btn-dash');
+    var btnSkill    = document.getElementById('btn-skill');
+    var btnSwitch   = document.getElementById('btn-switch');
+    var btnNaga     = document.getElementById('btn-naga');
+    var btnDatabase = document.getElementById('btn-database');
+    var btnTerminal = document.getElementById('btn-terminal');
+    var btnShop     = document.getElementById('btn-shop');
 
     if (btnDash) {
-        btnDash.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
-        btnDash.addEventListener('touchend',   (e) => { e.preventDefault(); e.stopPropagation(); keys.space = 0; }, { passive: false });
+        btnDash.addEventListener('touchstart', function(e) { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
+        btnDash.addEventListener('touchend',   function(e) { e.preventDefault(); e.stopPropagation(); keys.space = 0; }, { passive: false });
     }
     if (btnSkill) {
-        btnSkill.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); mouse.right = 1; }, { passive: false });
-        btnSkill.addEventListener('touchend',   (e) => { e.preventDefault(); e.stopPropagation(); mouse.right = 0; }, { passive: false });
+        btnSkill.addEventListener('touchstart', function(e) { e.preventDefault(); e.stopPropagation(); mouse.right = 1; }, { passive: false });
+        btnSkill.addEventListener('touchend',   function(e) { e.preventDefault(); e.stopPropagation(); mouse.right = 0; }, { passive: false });
     }
     if (btnSwitch) {
-        btnSwitch.addEventListener('touchstart', (e) => {
+        btnSwitch.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING' && weaponSystem) weaponSystem.switchWeapon();
         }, { passive: false });
     }
     if (btnNaga) {
-        btnNaga.addEventListener('touchstart', (e) => {
+        btnNaga.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING' && player instanceof PoomPlayer) {
                 if (player.cooldowns.naga <= 0) player.summonNaga();
@@ -163,26 +179,26 @@ function initMobileControls() {
         }, { passive: false });
     }
     if (btnDatabase) {
-        btnDatabase.addEventListener('touchstart', (e) => {
+        btnDatabase.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING')      openExternalDatabase();
             else if (gameState === 'PAUSED')  resumeGame();
         }, { passive: false });
     }
     if (btnTerminal) {
-        btnTerminal.addEventListener('touchstart', (e) => {
+        btnTerminal.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING')                        openAdminConsole();
             else if (gameState === 'PAUSED' && AdminConsole.isOpen) closeAdminConsole();
         }, { passive: false });
     }
     if (btnShop) {
-        btnShop.addEventListener('touchstart', (e) => {
+        btnShop.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
             if (gameState === 'PLAYING') {
                 openShop();
             } else if (gameState === 'PAUSED') {
-                const shopModal = document.getElementById('shop-modal');
+                var shopModal = document.getElementById('shop-modal');
                 if (shopModal && shopModal.style.display === 'flex') closeShop();
             }
         }, { passive: false });
@@ -202,15 +218,15 @@ function initMobileControls() {
 // ══════════════════════════════════════════════════════════════
 
 function _setupKeyboardListeners() {
-    window.addEventListener('keydown', e => {
+    window.addEventListener('keydown', function(e) {
         // While admin console input has focus, ignore all game hotkeys
-        const consoleInput = document.getElementById('console-input');
+        var consoleInput = document.getElementById('console-input');
         if (consoleInput && document.activeElement === consoleInput) return;
 
         if (gameState === 'PAUSED') {
-            const shopModal   = document.getElementById('shop-modal');
-            const shopOpen    = shopModal && shopModal.style.display === 'flex';
-            const consoleOpen = AdminConsole.isOpen;
+            var shopModal   = document.getElementById('shop-modal');
+            var shopOpen    = shopModal && shopModal.style.display === 'flex';
+            var consoleOpen = AdminConsole.isOpen;
 
             if (consoleOpen && e.code === 'Escape') { closeAdminConsole(); return; }
             if (shopOpen   && e.code === 'Escape') { closeShop();         return; }
@@ -234,7 +250,7 @@ function _setupKeyboardListeners() {
         if (e.code === 'KeyT') toggleSlowMotion();
     });
 
-    window.addEventListener('keyup', e => {
+    window.addEventListener('keyup', function(e) {
         if (e.code === 'KeyW')  keys.w     = 0;
         if (e.code === 'KeyS')  keys.s     = 0;
         if (e.code === 'KeyA')  keys.a     = 0;
@@ -255,27 +271,28 @@ function _setupKeyboardListeners() {
 }
 
 function _setupMouseListeners() {
-    window.addEventListener('mousemove', e => {
+    window.addEventListener('mousemove', function(e) {
         if (!CANVAS) return;
-        const r = CANVAS.getBoundingClientRect();
+        var r = CANVAS.getBoundingClientRect();
         mouse.x = e.clientX - r.left;
         mouse.y = e.clientY - r.top;
+        // updateMouseWorld is defined in utils.js (loaded before input.js)
         updateMouseWorld();
     });
 
-    window.addEventListener('mousedown', e => {
+    window.addEventListener('mousedown', function(e) {
         if (!CANVAS) return;
         if (e.button === 0) mouse.left  = 1;
         if (e.button === 2) mouse.right = 1;
         e.preventDefault();
     });
 
-    window.addEventListener('mouseup', e => {
+    window.addEventListener('mouseup', function(e) {
         if (e.button === 0) mouse.left  = 0;
         if (e.button === 2) mouse.right = 0;
     });
 
-    window.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 }
 
 
@@ -283,12 +300,12 @@ function _setupMouseListeners() {
 // PUBLIC API
 // ══════════════════════════════════════════════════════════════
 
-const InputSystem = {
+var InputSystem = {
     /**
      * Call once from window.onload (before startGame).
      * Wires up all keyboard, mouse, and touch input handlers.
      */
-    init() {
+    init: function() {
         _setupKeyboardListeners();
         _setupMouseListeners();
         initMobileControls();

@@ -2,7 +2,7 @@
  * 🛠️ MTC: ENHANCED EDITION - Utilities (REFACTORED)
  * SINGLE SOURCE OF TRUTH for every shared helper function.
  *
- * LOAD ORDER: config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → game.js
+ * LOAD ORDER: config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → input.js → game.js
  * This file MUST be the second script loaded (immediately after config.js).
  * All other files depend on globals defined here.
  *
@@ -12,6 +12,8 @@
  * - ✅ All save/load helpers kept here (getSaveData, updateSaveData, …)
  * - ✅ All functions declared with `var` so they are available on window globally
  *       in every other script regardless of load order.
+ * - ✅ `mouse`, `updateMouseWorld`, and `getMouse` REMOVED — now owned by input.js
+ *       (fixes "Identifier 'mouse' has already been declared" SyntaxError).
  */
 
 // ─── Math utilities ───────────────────────────────────────────
@@ -209,15 +211,19 @@ var worldToScreen = (worldX, worldY) => ({
     y: worldY - camera.y
 });
 
-// ─── Mouse / Touch utilities ──────────────────────────────────
-var mouse = { x: 0, y: 0, left: 0, right: 0, wx: 0, wy: 0 };
-
+// ─── Mouse world-position update ──────────────────────────────
+// NOTE: `mouse` is declared in input.js (loaded after utils.js).
+// This function is defined here because utils.js owns screenToWorld,
+// and input.js's mousemove listener calls it. Safe to define here
+// because by the time any listener fires, input.js has already run
+// and `mouse` exists on window.
 var updateMouseWorld = () => {
     const world = screenToWorld(mouse.x, mouse.y);
     mouse.wx = world.x;
     mouse.wy = world.y;
 };
 
+/** Convenience accessor — returns the shared mouse state object. */
 var getMouse = () => mouse;
 
 // ─── Time utilities ───────────────────────────────────────────
