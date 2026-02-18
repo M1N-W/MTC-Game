@@ -11,19 +11,19 @@
  */
 
 // ─── Math utilities ───────────────────────────────────────────
-const dist   = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
-const rand   = (min, max) => Math.random() * (max - min) + min;
-const clamp  = (val, min, max) => Math.max(min, Math.min(max, val));
-const lerp   = (a, b, t) => a + (b - a) * t;
+var dist   = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+var rand   = (min, max) => Math.random() * (max - min) + min;
+var clamp  = (val, min, max) => Math.max(min, Math.min(max, val));
+var lerp   = (a, b, t) => a + (b - a) * t;
 
 // ─── Angle utilities ──────────────────────────────────────────
-const normalizeAngle = (angle) => {
+var normalizeAngle = (angle) => {
     while (angle >  Math.PI) angle -= Math.PI * 2;
     while (angle < -Math.PI) angle += Math.PI * 2;
     return angle;
 };
 
-const angleDiff = (a1, a2) => {
+var angleDiff = (a1, a2) => {
     let diff = a2 - a1;
     while (diff >  Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
@@ -31,17 +31,17 @@ const angleDiff = (a1, a2) => {
 };
 
 // ─── Collision detection ──────────────────────────────────────
-const circleCollision = (x1, y1, r1, x2, y2, r2) =>
+var circleCollision = (x1, y1, r1, x2, y2, r2) =>
     dist(x1, y1, x2, y2) < r1 + r2;
 
-const pointInRect = (px, py, rx, ry, rw, rh) =>
+var pointInRect = (px, py, rx, ry, rw, rh) =>
     px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
 
-const rectCollision = (x1, y1, w1, h1, x2, y2, w2, h2) =>
+var rectCollision = (x1, y1, w1, h1, x2, y2, w2, h2) =>
     x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 
 // Circle-Rectangle collision
-const circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
+var circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
     const closestX = clamp(cx, rx, rx + rw);
     const closestY = clamp(cy, ry, ry + rh);
     const dx = cx - closestX;
@@ -50,7 +50,7 @@ const circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
 };
 
 // Point-to-line distance (for graph collision)
-const pointToLineDistance = (px, py, x1, y1, x2, y2) => {
+var pointToLineDistance = (px, py, x1, y1, x2, y2) => {
     const A = px - x1, B = py - y1;
     const C = x2 - x1, D = y2 - y1;
     const dot   = A * C + B * D;
@@ -66,18 +66,18 @@ const pointToLineDistance = (px, py, x1, y1, x2, y2) => {
 // ─── Screen shake ─────────────────────────────────────────────
 let screenShake = 0;
 
-const addScreenShake = (amount) => {
+var addScreenShake = (amount) => {
     screenShake = Math.max(screenShake, amount);
 };
 
-const updateScreenShake = () => {
+var updateScreenShake = () => {
     if (screenShake > 0) {
         screenShake *= GAME_CONFIG.visual.screenShakeDecay;
         if (screenShake < 0.1) screenShake = 0;
     }
 };
 
-const getScreenShakeOffset = () => {
+var getScreenShakeOffset = () => {
     if (screenShake <= 1) return { x: 0, y: 0 };
     return {
         x: (Math.random() - 0.5) * screenShake,
@@ -88,19 +88,19 @@ const getScreenShakeOffset = () => {
 // ─── Score management ─────────────────────────────────────────
 let score = 0;
 
-const addScore = (points) => {
+var addScore = (points) => {
     score += points;
     updateScoreUI();
 };
 
-const getScore = () => score;
+var getScore = () => score;
 
-const resetScore = () => {
+var resetScore = () => {
     score = 0;
     updateScoreUI();
 };
 
-const updateScoreUI = () => {
+var updateScoreUI = () => {
     const scoreEl = document.getElementById('score');
     if (scoreEl) scoreEl.textContent = score.toLocaleString();
 };
@@ -108,73 +108,73 @@ const updateScoreUI = () => {
 // ─── Canvas utilities ─────────────────────────────────────────
 let CANVAS, CTX;
 
-const initCanvas = () => {
+var initCanvas = () => {
     CANVAS = document.getElementById('gameCanvas');
     CTX = CANVAS.getContext('2d', { alpha: false });
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 };
 
-const resizeCanvas = () => {
+var resizeCanvas = () => {
     CANVAS.width  = window.innerWidth;
     CANVAS.height = window.innerHeight;
 };
 
-const getCanvas  = () => CANVAS;
-const getContext = () => CTX;
+var getCanvas  = () => CANVAS;
+var getContext = () => CTX;
 
 // ─── Camera system ────────────────────────────────────────────
-const camera = { x: 0, y: 0 };
+var camera = { x: 0, y: 0 };
 
-const updateCamera = (targetX, targetY) => {
+var updateCamera = (targetX, targetY) => {
     const smoothing = GAME_CONFIG.canvas.cameraSmooth;
     camera.x += (targetX - CANVAS.width  / 2 - camera.x) * smoothing;
     camera.y += (targetY - CANVAS.height / 2 - camera.y) * smoothing;
 };
 
-const getCamera = () => camera;
+var getCamera = () => camera;
 
-const screenToWorld = (screenX, screenY) => ({
+var screenToWorld = (screenX, screenY) => ({
     x: screenX + camera.x,
     y: screenY + camera.y
 });
 
-const worldToScreen = (worldX, worldY) => ({
+var worldToScreen = (worldX, worldY) => ({
     x: worldX - camera.x,
     y: worldY - camera.y
 });
 
 // ─── Mouse / Touch utilities ──────────────────────────────────
-const mouse = { x: 0, y: 0, left: 0, right: 0, wx: 0, wy: 0 };
+var mouse = { x: 0, y: 0, left: 0, right: 0, wx: 0, wy: 0 };
 
-const updateMouseWorld = () => {
+var updateMouseWorld = () => {
     const world = screenToWorld(mouse.x, mouse.y);
     mouse.wx = world.x;
     mouse.wy = world.y;
 };
 
-const getMouse = () => mouse;
+var getMouse = () => mouse;
 
 // ─── Time utilities ───────────────────────────────────────────
 let lastTime = 0;
 
-const getDeltaTime = (now) => {
+var getDeltaTime = (now) => {
     const dt = Math.min((now - lastTime) / 1000, 0.1); // cap at 100 ms
     lastTime = now;
     return dt;
 };
 
-const resetTime = () => {
+var resetTime = () => {
     lastTime = performance.now();
 };
 
 // ─── Random utilities ─────────────────────────────────────────
-const randomChoice = (array) => array[Math.floor(Math.random() * array.length)];
-const randomInt    = (min, max) => Math.floor(rand(min, max + 1));
-const randomBool   = (probability = 0.5) => Math.random() < probability;
+var randomChoice = (array) => array[Math.floor(Math.random() * array.length)];
+var randomInt    = (min, max) => Math.floor(rand(min, max + 1));
+var randomBool   = (probability = 0.5) => Math.random() < probability;
 
 // ─── Color utilities ──────────────────────────────────────────
-const hexToRgb = (hex) => {
+var hexToRgb = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
         r: parseInt(result[1], 16),
@@ -183,7 +183,7 @@ const hexToRgb = (hex) => {
     } : null;
 };
 
-const rgbaString = (hex, alpha) => {
+var rgbaString = (hex, alpha) => {
     const rgb = hexToRgb(hex);
     return rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})` : hex;
 };
@@ -191,11 +191,11 @@ const rgbaString = (hex, alpha) => {
 // ─── Wave management ──────────────────────────────────────────
 let wave = 1;
 
-const getWave  = () => wave;
-const setWave  = (w) => { wave = w; updateWaveUI(); };
-const nextWave = () => { wave++; updateWaveUI(); };
+var getWave  = () => wave;
+var setWave  = (w) => { wave = w; updateWaveUI(); };
+var nextWave = () => { wave++; updateWaveUI(); };
 
-const updateWaveUI = () => {
+var updateWaveUI = () => {
     const waveEl = document.getElementById('wave-badge');
     if (waveEl) waveEl.textContent = `WAVE ${wave}`;
 };
@@ -203,35 +203,35 @@ const updateWaveUI = () => {
 // ─── Enemy kill tracking ──────────────────────────────────────
 let enemiesKilled = 0;
 
-const addEnemyKill       = () => { enemiesKilled++; };
-const getEnemiesKilled   = () => enemiesKilled;
-const resetEnemiesKilled = () => { enemiesKilled = 0; };
+var addEnemyKill       = () => { enemiesKilled++; };
+var getEnemiesKilled   = () => enemiesKilled;
+var resetEnemiesKilled = () => { enemiesKilled = 0; };
 
 // ─── Text formatting ──────────────────────────────────────────
-const formatNumber = (num) => {
+var formatNumber = (num) => {
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
     if (num >= 1_000)     return (num / 1_000).toFixed(1)     + 'K';
     return Math.round(num).toString();
 };
 
 // ─── DOM utilities ────────────────────────────────────────────
-const showElement = (id) => {
+var showElement = (id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'flex';
 };
 
-const hideElement = (id) => {
+var hideElement = (id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
 };
 
-const setElementText = (id, text) => {
+var setElementText = (id, text) => {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
 };
 
 // ─── Debounce ─────────────────────────────────────────────────
-const debounce = (func, wait) => {
+var debounce = (func, wait) => {
     let timeout;
     return function executedFunction(...args) {
         clearTimeout(timeout);
@@ -279,7 +279,7 @@ const DEFAULT_SAVE_DATA = {
  * @param  {*}      value  — must be JSON-serialisable
  * @returns {boolean}
  */
-const saveData = (key, value) => {
+var saveData = (key, value) => {
     try {
         localStorage.setItem(key, JSON.stringify(value));
         return true;
@@ -298,7 +298,7 @@ const saveData = (key, value) => {
  * @param  {*}      defaultValue
  * @returns {*}
  */
-const loadData = (key, defaultValue = null) => {
+var loadData = (key, defaultValue = null) => {
     try {
         const raw = localStorage.getItem(key);
         if (raw === null) return defaultValue;
@@ -317,7 +317,7 @@ const loadData = (key, defaultValue = null) => {
  *
  * @returns {{ highScore: number, unlockedPassives: string[] }}
  */
-const getSaveData = () => {
+var getSaveData = () => {
     const stored = loadData(MTC_SAVE_KEY, {});
     // Shallow merge: stored values win; missing fields fall back to defaults.
     return { ...DEFAULT_SAVE_DATA, ...stored };
@@ -335,7 +335,7 @@ const getSaveData = () => {
  * @param  {{ [key: string]: * }} partial
  * @returns {boolean} — true if the write succeeded
  */
-const updateSaveData = (partial) => {
+var updateSaveData = (partial) => {
     const current = getSaveData();
     const merged  = { ...current, ...partial };
     const ok      = saveData(MTC_SAVE_KEY, merged);
