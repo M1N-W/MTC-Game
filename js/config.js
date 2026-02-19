@@ -589,6 +589,10 @@ const GAME_CONFIG = {
         weaponSwitch:  0.3,
         bossSpecial:   0.5,
         meteorWarning: 0.3
+    },
+    visual: {
+        bgColorTop: '#1a1a2e',
+        bgColorBottom: '#16213e'
     }
 };
 
