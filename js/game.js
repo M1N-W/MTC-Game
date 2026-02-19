@@ -1062,20 +1062,22 @@ function startNextWave() {
         setTimeout(() => {
             bossEncounterCount++;
             const isRider   = bossEncounterCount >= 2;
+            const isGoldfishLover = bossEncounterCount >= 3;  // Phase 3 on encounter 3+
             const bossLevel = Math.floor(getWave() / BALANCE.waves.bossEveryNWaves);
 
             // Boss class now lives in entities.js
-            window.boss = new Boss(bossLevel, isRider);
+            window.boss = new Boss(bossLevel, isRider, isGoldfishLover);
             UIManager.updateBossHUD(window.boss);
 
             const riderTag = isRider ? ' 🐕 DOG RIDER' : '';
+            const goldfishTag = isGoldfishLover ? ' 🐟 GOLDFISH LOVER' : '';
             document.getElementById('boss-name').innerHTML =
-                `KRU MANOP - LEVEL ${bossLevel}${riderTag} <span class="ai-badge">AI</span>`;
+                `KRU MANOP - LEVEL ${bossLevel}${riderTag}${goldfishTag} <span class="ai-badge">AI</span>`;
 
             spawnFloatingText(
-                isRider ? 'BOSS INCOMING! 🐕' : 'BOSS INCOMING!',
+                isGoldfishLover ? '🐟 GOLDFISH LOVER INCOMING!' : (isRider ? 'BOSS INCOMING! 🐕' : 'BOSS INCOMING!'),
                 player.x, player.y - 100,
-                isRider ? '#d97706' : '#ef4444',
+                isGoldfishLover ? '#38bdf8' : (isRider ? '#d97706' : '#ef4444'),
                 35
             );
             addScreenShake(15);
