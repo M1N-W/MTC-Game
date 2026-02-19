@@ -1908,6 +1908,7 @@ function startGame(charType = 'kao') {
     UIManager.setupCharacterHUD(player);
 
     Achievements.stats.damageTaken   = 0;
+    Achievements.stats.kills         = 0;
     Achievements.stats.shopPurchases = 0;
     waveStartDamage = 0;
 
@@ -1987,12 +1988,14 @@ async function endGame(result) {
         showElement('victory-screen');
         setElementText('final-score', `SCORE ${getScore()}`);
         setElementText('final-wave',  `WAVES CLEARED ${getWave() - 1}`);
+        setElementText('final-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
     } else {
         const finalScore = getScore();
         const finalWave  = getWave();
 
         showElement('overlay');
         UIManager.showGameOver(finalScore, finalWave);
+        setElementText('final-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
 
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';
