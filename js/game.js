@@ -1476,7 +1476,7 @@ function updateGame(dt) {
         : keys;
     player.update(dt, effectiveKeys, mouse);
 
-    if (!(player instanceof PoomPlayer)) {
+    if (!(player instanceof PoomPlayer) && !(typeof AutoPlayer === 'function' && player instanceof AutoPlayer)) {
         weaponSystem.update(dt);
         const burstProjectiles = weaponSystem.updateBurst(player, player.damageBoost);
         if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
@@ -1842,7 +1842,11 @@ function startGame(charType = 'kao') {
 
     UIManager.updateHighScoreDisplay(savedData.highScore);
 
-    player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
+    if (charType === 'auto' && typeof AutoPlayer === 'function') {
+        player = new AutoPlayer();
+    } else {
+        player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
+    }
 
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss    = null;

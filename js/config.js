@@ -72,7 +72,16 @@ const BALANCE = {
         obstacleWarningRange:    35,    // px from object surface → triggers warning bubble
         obstacleBuffPower:       1.25,  // speed multiplier applied when scraping object
         obstacleBuffDuration:    1.0,   // seconds the consolation buff lasts after contact
-        obstacleWarningCooldown: 3000   // ms minimum between successive warning bubbles
+        obstacleWarningCooldown: 3000,  // ms minimum between successive warning bubbles
+
+        auto: {
+            hp: 120,
+            speed: 160,
+            energyRegen: 15,
+            heatWaveRange: 150,
+            wanchaiDuration: 3.0,
+            wanchaiCooldown: 12
+        }
     },
 
     // ──────────────────────────────────────────────────────────
@@ -213,6 +222,48 @@ const BALANCE = {
             nagaSegments: 12,
             nagaSegmentDistance: 28,
             nagaRadius: 20,
+
+            speedOnHit: 18,
+            speedOnHitDuration: 0.35
+        },
+
+        auto: {
+            name: 'Auto',
+            radius: 20,
+
+            hp: 120, maxHp: 120,
+            energy: 100, maxEnergy: 100,
+            energyRegen: 15,
+
+            moveSpeed: 160,
+            dashSpeed: 520,
+            dashDistance: 175,
+            dashCooldown: 1.65,
+
+            // Stand / skill tuning (consumed by AutoPlayer)
+            heatWaveRange: 150,
+            wanchaiDuration: 3.0,
+            wanchaiCooldown: 12,
+
+            // Provide a basic weapons object so WeaponSystem UI never throws
+            // even if a code path accidentally queries weapon data.
+            weapons: {
+                auto:    { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                sniper:  { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                shotgun: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
+            },
+
+            baseCritChance: 0.05,
+            critMultiplier: 2.5,
+
+            expToNextLevel: 100,
+            expLevelMult: 1.5,
+
+            passiveUnlockLevel: 3,
+            passiveUnlockStealthCount: 5,
+            passiveHpBonusPct: 0.5,
+            passiveCritBonus: 0.03,
+            passiveLifesteal: 0.015,
 
             speedOnHit: 18,
             speedOnHitDuration: 0.35

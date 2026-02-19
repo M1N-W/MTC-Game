@@ -608,6 +608,192 @@ class Player extends Entity {
 }
 
 // ════════════════════════════════════════════════════════════
+// 🔥 AUTO PLAYER — Thermodynamic Brawler + Stand "Wanchai"
+// ════════════════════════════════════════════════════════════
+class AutoPlayer extends Player {
+    constructor(x = 0, y = 0) {
+        super('auto');
+        this.x = x;
+        this.y = y;
+
+        this.wanchaiActive = false;
+        this.wanchaiTimer  = 0;
+
+        // Local timers
+        this._punchTimer = 0;
+        this._heatTimer  = 0;
+
+        // Ensure expected cooldown slots exist for base update()
+        this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0 };
+    }
+
+    takeDamage(amt) {
+        const scaled = this.wanchaiActive ? (amt * 0.5) : amt;
+        super.takeDamage(scaled);
+    }
+
+    _activateWanchai() {
+        const dur = this.stats?.wanchaiDuration ?? BALANCE.player?.auto?.wanchaiDuration ?? 3.0;
+        const cd  = this.stats?.wanchaiCooldown ?? BALANCE.player?.auto?.wanchaiCooldown ?? 12;
+
+        this.wanchaiActive = true;
+        this.wanchaiTimer  = dur;
+        this.cooldowns.wanchai = cd;
+        this._punchTimer = 0;
+
+        if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText('STAND: WANCHAI!', this.x, this.y - 90, '#dc2626', 34);
+        }
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(this.x, this.y, 18, '#dc2626', 'steam');
+        }
+    }
+
+    update(dt, keys, mouse) {
+        // Cooldowns
+        if (this.cooldowns?.wanchai > 0) this.cooldowns.wanchai -= dt;
+        if (this.cooldowns?.shoot  > 0) this.cooldowns.shoot  -= dt;
+
+        // Wanchai timer
+        if (this.wanchaiActive) {
+            this.wanchaiTimer -= dt;
+            if (this.wanchaiTimer <= 0) {
+                this.wanchaiActive = false;
+                this.wanchaiTimer  = 0;
+            }
+        }
+
+        // Skill (Right Click) — consume input so Player.update can't interpret it
+        if (mouse?.right === 1) {
+            const energyCost = this.stats?.wanchaiEnergyCost ?? 35;
+            if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
+                this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
+                this._activateWanchai();
+            }
+            mouse.right = 0;
+        }
+
+        // Slight speed penalty while Wanchai is active
+        const oldSpeedBoost = this.speedBoost;
+        if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * 0.85;
+
+        super.update(dt, keys, mouse);
+
+        // Restore speed boost so other systems remain consistent
+        this.speedBoost = oldSpeedBoost;
+
+        // Attacks (handled here so game.js doesn't need to special-case fire loops)
+        const isPlaying = (typeof window !== 'undefined' && window.gameState) ? window.gameState === 'PLAYING' : true;
+        if (!isPlaying) return;
+
+        if (!mouse || mouse.left !== 1) return;
+        if (typeof projectileManager === 'undefined' || !projectileManager) return;
+
+        // Wanchai rapid punches while holding L-click
+        if (this.wanchaiActive) {
+            const punchRate = this.stats?.wanchaiPunchRate ?? 0.06; // seconds between punches
+            this._punchTimer -= dt;
+            if (this._punchTimer <= 0) {
+                this._punchTimer = punchRate;
+                if (typeof projectileManager.spawnWanchaiPunch === 'function') {
+                    projectileManager.spawnWanchaiPunch(this.x, this.y, this.angle);
+                }
+            }
+            return;
+        }
+
+        // Heat Wave (short-range, wide, limited pierce)
+        const heatCd = this.stats?.heatWaveCooldown ?? 0.28;
+        if ((this.cooldowns?.shoot ?? 0) > 0) return;
+        this.cooldowns.shoot = heatCd;
+
+        if (typeof projectileManager.spawnHeatWave === 'function') {
+            projectileManager.spawnHeatWave(this, this.angle);
+        } else {
+            // Fallback: fire a standard projectile so the character is never "silent"
+            try {
+                projectileManager.add(new Projectile(this.x, this.y, this.angle, 900, 22, '#dc2626', false, 'player'));
+            } catch (e) {}
+        }
+    }
+
+    draw() {
+        const screen = worldToScreen(this.x, this.y);
+
+        // Shadow
+        if (typeof CTX !== 'undefined' && CTX) {
+            CTX.fillStyle = 'rgba(0,0,0,0.3)';
+            CTX.beginPath();
+            CTX.ellipse(screen.x, screen.y + 25, 18, 8, 0, 0, Math.PI * 2);
+            CTX.fill();
+        }
+
+        // Stand (behind)
+        if (this.wanchaiActive && typeof CTX !== 'undefined' && CTX) {
+            const bob = Math.sin(performance.now() / 140) * 6;
+            const sx  = screen.x - Math.cos(this.angle) * 22;
+            const sy  = screen.y - Math.sin(this.angle) * 22 - 28 + bob;
+            CTX.save();
+            CTX.translate(sx, sy);
+            CTX.globalAlpha = 0.55;
+            CTX.shadowBlur  = 22;
+            CTX.shadowColor = '#fb7185';
+
+            // Aura ring
+            CTX.strokeStyle = 'rgba(220,38,38,0.55)';
+            CTX.lineWidth   = 4;
+            CTX.beginPath();
+            CTX.arc(0, 0, 34 + Math.sin(performance.now() / 120) * 3, 0, Math.PI * 2);
+            CTX.stroke();
+
+            // Muscular humanoid silhouette (simple shapes)
+            CTX.fillStyle = 'rgba(254,202,202,0.65)';
+            CTX.beginPath(); CTX.roundRect(-18, -22, 36, 44, 10); CTX.fill();
+            CTX.fillStyle = 'rgba(220,38,38,0.55)';
+            CTX.beginPath(); CTX.roundRect(-28, -14, 16, 28, 10); CTX.fill();
+            CTX.beginPath(); CTX.roundRect(12, -14, 16, 28, 10); CTX.fill();
+            CTX.restore();
+        }
+
+        // Auto body
+        if (typeof CTX === 'undefined' || !CTX) return;
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+
+        // Crimson outer glow
+        CTX.shadowBlur  = 16;
+        CTX.shadowColor = '#dc2626';
+        CTX.strokeStyle = 'rgba(220,38,38,0.72)';
+        CTX.lineWidth   = 2.8;
+        CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.stroke();
+        CTX.shadowBlur  = 0;
+
+        // Body
+        CTX.fillStyle = '#fee2e2';
+        CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.fill();
+
+        // Core emblem
+        CTX.fillStyle = '#dc2626';
+        CTX.beginPath(); CTX.arc(4, 0, 6, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#fff1f2';
+        CTX.beginPath(); CTX.arc(4, 0, 2.5, 0, Math.PI * 2); CTX.fill();
+
+        // Head
+        CTX.fillStyle = '#ffdfc4';
+        CTX.beginPath(); CTX.arc(0, 0, 13, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#7f1d1d';
+        CTX.beginPath(); CTX.arc(0, -4, 14, Math.PI * 1.05, Math.PI * 1.95); CTX.fill();
+        CTX.restore();
+
+        // Small heat shimmer when moving
+        if (typeof spawnParticles === 'function' && (Math.abs(this.vx) + Math.abs(this.vy)) > 60 && Math.random() < 0.08) {
+            spawnParticles(this.x + rand(-10, 10), this.y + rand(-10, 10), 1, '#fb7185', 'steam');
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
 // ✅ WARN 5 FIX — Shared obstacle-awareness prototype method
 // ════════════════════════════════════════════════════════════
 Player.prototype.checkObstacleProximity = function(ax, ay, dt, particleColor) {

@@ -21,14 +21,22 @@
  */
 
 class Projectile {
-    constructor(x, y, angle, speed, damage, color, isCrit, team) {
+    constructor(x, y, angle, speed, damage, color, isCrit, team, options = {}) {
         this.x = x; this.y = y;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.damage = damage; this.color = color; this.team = team;
-        this.life = 3; this.angle = angle; this.isCrit = isCrit;
-        this.size = isCrit ? 24 : 14;
-        this.symbol = this.getSymbol(isCrit, team);
+
+        this.life = (options && options.life !== undefined) ? options.life : 3;
+        this.angle = angle; this.isCrit = isCrit;
+
+        this.kind = options?.kind || 'bullet';
+        this.size = (options && options.size !== undefined) ? options.size : (isCrit ? 24 : 14);
+        this.radius = (options && options.radius !== undefined) ? options.radius : 10;
+        this.pierce = (options && options.pierce !== undefined) ? options.pierce : 0;
+        this.hitSet = null;
+
+        this.symbol = options?.symbol || this.getSymbol(isCrit, team);
     }
 
     getSymbol(isCrit, team) {
@@ -40,7 +48,7 @@ class Projectile {
     update(dt) {
         this.x += this.vx * dt; this.y += this.vy * dt;
         this.life -= dt; this.angle += dt * 2;
-        if (Math.random() < 0.3) spawnParticles(this.x, this.y, 1, this.color);
+        if (this.kind !== 'punch' && Math.random() < 0.3) spawnParticles(this.x, this.y, 1, this.color);
         return this.life <= 0;
     }
 
@@ -48,6 +56,61 @@ class Projectile {
         const screen = worldToScreen(this.x, this.y);
         CTX.save();
         CTX.translate(screen.x, screen.y);
+
+        if (this.kind === 'heatwave') {
+            CTX.rotate(this.angle);
+            CTX.globalAlpha = 0.85;
+            CTX.shadowBlur = 18;
+            CTX.shadowColor = this.color;
+
+            const g = CTX.createLinearGradient(-24, 0, 24, 0);
+            g.addColorStop(0, 'rgba(255,255,255,0)');
+            g.addColorStop(0.35, 'rgba(251,113,133,0.65)');
+            g.addColorStop(1, 'rgba(220,38,38,0.95)');
+
+            CTX.fillStyle = g;
+            CTX.beginPath();
+            CTX.ellipse(0, 0, 26, 12, 0, 0, Math.PI * 2);
+            CTX.fill();
+
+            CTX.globalAlpha = 0.55;
+            CTX.strokeStyle = 'rgba(255,241,242,0.8)';
+            CTX.lineWidth = 2;
+            CTX.beginPath();
+            CTX.ellipse(-6, 0, 16, 6, 0, 0, Math.PI * 2);
+            CTX.stroke();
+
+            CTX.restore();
+            return;
+        }
+
+        if (this.kind === 'punch') {
+            CTX.rotate(this.angle);
+            CTX.shadowBlur = 24;
+            CTX.shadowColor = this.color;
+
+            // Impact wave
+            CTX.globalAlpha = 0.55;
+            CTX.strokeStyle = this.color;
+            CTX.lineWidth = 4;
+            CTX.beginPath();
+            CTX.arc(10, 0, 14, -Math.PI / 3, Math.PI / 3);
+            CTX.stroke();
+
+            // Fist block
+            CTX.globalAlpha = 0.9;
+            const fg = CTX.createLinearGradient(-6, -10, 16, 10);
+            fg.addColorStop(0, '#fff1f2');
+            fg.addColorStop(0.5, '#fb7185');
+            fg.addColorStop(1, '#dc2626');
+            CTX.fillStyle = fg;
+            CTX.beginPath();
+            CTX.roundRect(-6, -8, 18, 16, 6);
+            CTX.fill();
+
+            CTX.restore();
+            return;
+        }
 
         if (this.team === 'player' && this.symbol === 'x') {
             // ── Kao: bullet tracer ────────────────────────────────
@@ -130,7 +193,8 @@ class Projectile {
     }
 
     checkCollision(entity) {
-        return circleCollision(this.x, this.y, 10, entity.x, entity.y, entity.radius);
+        const r = (this.radius !== undefined) ? this.radius : 10;
+        return circleCollision(this.x, this.y, r, entity.x, entity.y, entity.radius);
     }
 }
 
@@ -415,19 +479,44 @@ class ProjectileManager {
             const expired = proj.update(dt);
             let hit = false;
 
+            // Ensure hit memory exists for piercing projectiles
+            if (proj && proj.pierce > 0 && !proj.hitSet) proj.hitSet = new Set();
+
             if (proj.team === 'player') {
                 if (boss && !boss.dead && proj.checkCollision(boss)) {
-                    boss.takeDamage(proj.damage);
-                    spawnFloatingText(Math.round(proj.damage), proj.x, proj.y - 20, 'white', 18);
-                    if (typeof spawnHitMarker === 'function') spawnHitMarker(proj.x, proj.y);
-                    hit = true; player.addSpeedBoost();
+                    if (!proj.hitSet || !proj.hitSet.has(boss)) {
+                        boss.takeDamage(proj.damage);
+                        spawnFloatingText(Math.round(proj.damage), proj.x, proj.y - 20, 'white', 18);
+                        if (typeof spawnHitMarker === 'function') spawnHitMarker(proj.x, proj.y);
+                        if (proj.kind === 'punch' && typeof spawnWanchaiPunchText === 'function') {
+                            spawnWanchaiPunchText(proj.x, proj.y);
+                        }
+                        player.addSpeedBoost();
+                        if (proj.pierce > 0) {
+                            proj.hitSet?.add(boss);
+                            proj.pierce -= 1;
+                        } else {
+                            hit = true;
+                        }
+                    }
                 }
                 for (let enemy of enemies) {
                     if (!enemy.dead && proj.checkCollision(enemy)) {
+                        if (proj.hitSet && proj.hitSet.has(enemy)) continue;
                         enemy.takeDamage(proj.damage, player);
                         spawnFloatingText(Math.round(proj.damage), proj.x, proj.y - 20, 'white', 16);
                         if (typeof spawnHitMarker === 'function') spawnHitMarker(proj.x, proj.y);
-                        hit = true; player.addSpeedBoost(); break;
+                        if (proj.kind === 'punch' && typeof spawnWanchaiPunchText === 'function') {
+                            spawnWanchaiPunchText(proj.x, proj.y);
+                        }
+                        player.addSpeedBoost();
+                        if (proj.pierce > 0) {
+                            proj.hitSet?.add(enemy);
+                            proj.pierce -= 1;
+                        } else {
+                            hit = true;
+                            break;
+                        }
                     }
                 }
             } else if (proj.team === 'enemy') {
@@ -446,6 +535,47 @@ class ProjectileManager {
     draw()  { for (let p of this.projectiles) p.draw(); }
     clear() { this.projectiles = []; }
     getAll() { return this.projectiles; }
+
+    spawnWanchaiPunch(x, y, angle) {
+        const a = angle ?? 0;
+        const sx = x + Math.cos(a) * 28;
+        const sy = y + Math.sin(a) * 28;
+        const p = new Projectile(sx, sy, a, 1500, 70, '#fb7185', false, 'player', {
+            kind: 'punch',
+            life: 0.15,
+            size: 18,
+            radius: 16,
+            pierce: 0
+        });
+        this.add(p);
+    }
+
+    spawnHeatWave(player, angle) {
+        const a = angle ?? player?.angle ?? 0;
+        const range = player?.stats?.heatWaveRange ?? BALANCE.player?.auto?.heatWaveRange ?? 150;
+        const damageBase = 34;
+        const dmgMult = (player?.damageBoost || 1) * (player?.damageMultiplier || 1);
+
+        let damage = damageBase * dmgMult;
+        try {
+            if (player && typeof player.dealDamage === 'function') {
+                const res = player.dealDamage(damage);
+                damage = res?.damage ?? damage;
+            }
+        } catch (e) {}
+
+        const speed = Math.max(600, range * 9);
+        const sx = player.x + Math.cos(a) * 22;
+        const sy = player.y + Math.sin(a) * 22;
+        const p = new Projectile(sx, sy, a, speed, damage, '#dc2626', false, 'player', {
+            kind: 'heatwave',
+            life: Math.max(0.12, range / speed),
+            size: 18,
+            radius: 18,
+            pierce: 2
+        });
+        this.add(p);
+    }
 }
 
 var weaponSystem      = new WeaponSystem();

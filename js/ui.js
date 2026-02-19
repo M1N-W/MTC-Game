@@ -385,12 +385,13 @@ class UIManager {
         // Derive charId safely from both Player and PoomPlayer instances
         const charId  = player.charId || (isPoom ? 'poom' : 'kao');
         const isKao   = charId === 'kao';
+        const isAuto  = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
 
         const weaponIndicator = document.querySelector('.weapon-indicator');
-        if (weaponIndicator) weaponIndicator.style.display = isPoom ? 'none' : '';
+        if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
 
         const playerAvatar = document.getElementById('player-avatar');
-        if (playerAvatar) playerAvatar.textContent = isPoom ? '🌾' : '👨‍🎓';
+        if (playerAvatar) playerAvatar.textContent = isPoom ? '🌾' : (isAuto ? '�' : '�👨‍🎓');
 
         // ── [UI-FIX] Passive Icon — Kao-only ───────────────────
         // The #passive-skill slot (Ghost/Stealth crit passive) is
@@ -428,6 +429,14 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'eat-cd';
+            } else if (isAuto) {
+                skill1El.id = 'stealth-icon';
+                const emojiEl = document.getElementById('skill1-emoji');
+                if (emojiEl) emojiEl.textContent = '🟥';
+                const hintEl = document.getElementById('skill1-hint');
+                if (hintEl) hintEl.textContent = 'R-Click';
+                const cdEl = skill1El.querySelector('.cooldown-mask');
+                if (cdEl) cdEl.id = 'stealth-cd';
             } else {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
@@ -443,7 +452,7 @@ class UIManager {
         const btnNaga = document.getElementById('btn-naga');
         if (btnNaga) btnNaga.style.display = isPoom ? 'flex' : 'none';
         const btnSkill = document.getElementById('btn-skill');
-        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : '📖';
+        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🟥' : '📖');
     }
 
     static updateSkillIcons(player) {

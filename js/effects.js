@@ -1092,6 +1092,16 @@ function spawnFloatingText(text, x, y, color, size = 20) {
     floatingTextSystem.spawn(text, x, y, color, size);
 }
 
+function spawnWanchaiPunchText(x, y) {
+    if (typeof spawnFloatingText !== 'function') return;
+    if (Math.random() > 0.35) return;
+
+    const t = Math.random() < 0.7 ? 'โอร่า!' : '💥';
+    const ox = (typeof rand === 'function') ? rand(-26, 26) : (Math.random() * 52 - 26);
+    const oy = (typeof rand === 'function') ? rand(-26, 26) : (Math.random() * 52 - 26);
+    spawnFloatingText(t, x + ox, y + oy, '#fb7185', t === '💥' ? 22 : 18);
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // ⚡ GLITCH EFFECT ENGINE
 // ──────────────────────────────────────────────────────────────────────────────

@@ -1757,6 +1757,33 @@
                         <div class="char-desc">Mystical warrior with ancient naga summoning powers</div>
                         <div class="char-tag">Mystic Force</div>
                     </div>
+                    <div class="char-card" id="btn-auto" data-char="auto" onclick="selectCharacter('auto')" style="border-color:#dc2626;">
+                        <div class="char-avatar">🔥</div>
+                        <div class="char-name" style="color:#fecaca;">AUTO</div>
+                        <div class="char-title" style="color:#fca5a5;">Thermodynamic Brawler</div>
+                        <div class="char-stats">
+                            <div class="stat-bar">
+                                <div class="stat-label">Damage</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 90%; background:#dc2626;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="stat-label">Speed</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 80%; background:#dc2626;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="stat-label">Range</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 25%; background:#dc2626;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="char-desc">Close-range powerhouse — Heat Waves + Stand "Wanchai"</div>
+                        <div class="char-tag" style="background:#dc2626;">Horsepower</div>
+                    </div>
                 </div>
             </div>
 
@@ -1765,10 +1792,14 @@
                 function selectCharacter(charType) {
                     _selectedChar = charType;
                     document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
-                    const card = document.getElementById('card-' + charType);
+                    const card = document.getElementById('card-' + charType) || document.getElementById('btn-' + charType) || document.getElementById(charType);
                     if (card) card.classList.add('selected');
                     const startBtn = document.getElementById('start-btn');
-                    if (startBtn) startBtn.textContent = charType === 'poom' ? '🌾 START MISSION' : '🎓 START MISSION';
+                    if (startBtn) {
+                        startBtn.textContent = charType === 'poom'
+                            ? '🌾 START MISSION'
+                            : (charType === 'auto' ? '🔥 START MISSION' : '🎓 START MISSION');
+                    }
                 }
             </script>
 
