@@ -262,8 +262,7 @@ class WeaponSystem {
             color:   S.riceColor    ?? '#ffffff',
             icon:    '🍙'
         };
-        return { auto: riceWeapon, sniper: riceWeapon, shotgun: riceWeapon };
-    }
+        return { auto: riceWeapon, sniper: riceWeapon, shotgun: riceWeapon };    }
 
     switchWeapon() {
         const weapons = ['auto', 'sniper', 'shotgun'];
@@ -283,6 +282,13 @@ class WeaponSystem {
             if (this.activeChar === 'poom') {
                 const nameEl = document.getElementById('weapon-name');
                 if (nameEl) { nameEl.textContent = '🍙 ข้าวเหนียว'; nameEl.style.color = '#ffffff'; }
+                return;
+            }
+
+            // Auto (AutoPlayer) uses Heat Wave + Wanchai Stand — show dedicated label
+            if (this.activeChar === 'auto') {
+                const nameEl = document.getElementById('weapon-name');
+                if (nameEl) { nameEl.textContent = '🔥 HEAT WAVE'; nameEl.style.color = '#dc2626'; }
                 return;
             }
 
@@ -791,3 +797,63 @@ window.weaponSystem        = weaponSystem;
 window.projectileManager   = projectileManager;
 window.drawPoomWeapon      = drawPoomWeapon;
 window.drawKaoGunEnhanced  = drawKaoGunEnhanced;
+
+/**
+ * drawAutoWeapon(ctx)
+ * Auto's weapon art: a thermodynamic gauntlet / knuckle-duster
+ * drawn in Crimson Red.  Called from AutoPlayer.draw() after
+ * CTX.save() + CTX.translate(player screen pos) + CTX.rotate(angle).
+ */
+function drawAutoWeapon(ctx) {
+    const now = performance.now();
+    ctx.save();
+    // Offset: weapon at player's forward "fist" position
+    ctx.translate(10, 4);
+
+    const glow = 0.5 + Math.sin(now / 220) * 0.5;
+
+    // ── Knuckle base ──────────────────────────────────────────────
+    const bg = ctx.createLinearGradient(0, -7, 0, 7);
+    bg.addColorStop(0, '#fca5a5');
+    bg.addColorStop(0.4, '#dc2626');
+    bg.addColorStop(1, '#7f1d1d');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.roundRect(-10, -6, 22, 12, 4); ctx.fill();
+
+    // ── Heat vent slits ───────────────────────────────────────────
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.7;
+    for (let i = -5; i <= 5; i += 3) {
+        ctx.beginPath(); ctx.moveTo(i, -5); ctx.lineTo(i, 5); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // ── Knuckle spikes ────────────────────────────────────────────
+    ctx.fillStyle = '#7f1d1d';
+    for (let k = -6; k <= 6; k += 4) {
+        ctx.beginPath();
+        ctx.moveTo(k - 2, -6);
+        ctx.lineTo(k + 2, -6);
+        ctx.lineTo(k, -11);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // ── Glow core dot ─────────────────────────────────────────────
+    ctx.fillStyle = `rgba(251,113,133,${glow})`;
+    ctx.shadowBlur = 10 * glow;
+    ctx.shadowColor = '#dc2626';
+    ctx.beginPath(); ctx.arc(4, 0, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // ── Label ─────────────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = 'bold 4px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('AUTO', 1, 1.5);
+
+    ctx.restore();
+}
+
+window.drawAutoWeapon = drawAutoWeapon;

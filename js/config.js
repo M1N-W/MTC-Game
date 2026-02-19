@@ -75,12 +75,12 @@ const BALANCE = {
         obstacleWarningCooldown: 3000,  // ms minimum between successive warning bubbles
 
         auto: {
-            hp: 120,
+            hp: 150,            // [SPEC] Tanky brawler — higher base HP
             speed: 160,
-            energyRegen: 15,
-            heatWaveRange: 150,
-            wanchaiDuration: 3.0,
-            wanchaiCooldown: 12
+            energyRegen: 20,    // [SPEC] Faster energy regen for aggressive play
+            heatWaveRange: 180, // [SPEC] Short-range wide projectile reach
+            wanchaiDuration: 4.0, // [SPEC] Stand active duration (seconds)
+            wanchaiCooldown: 12   // [SPEC] Stand cooldown (seconds)
         }
     },
 
@@ -164,7 +164,60 @@ const BALANCE = {
             speedOnHitDuration: 0.4
         },
 
-        // ── POOM — นักเรียน MTC คนอีสาน ──────────────────────
+        // ── AUTO — เทวดาอาวุธ ยืน "วันชัย" ────────────────────
+        // Identity: Thermodynamic Brawler / Stand User
+        //   • HEAT WAVE = short-range wide projectile; pierces 1-2 enemies
+        //   • WANCHAI   = JoJo-style Stand barrage; 50% DR + rapid punches
+        //   • Tanky but slow; rewards getting into melee range
+        auto: {
+            name: 'Auto',
+            radius: 20,
+
+            hp: 150, maxHp: 150,
+            energy: 100, maxEnergy: 100,
+            energyRegen: 20,
+
+            moveSpeed: 160,
+            dashSpeed: 480,
+            dashDistance: 160,
+            dashCooldown: 2.0,
+
+            // ── Wanchai / Stand primary special ──────────────────
+            // heatWaveRange / heatWaveCooldown govern normal attack.
+            // wanchai* govern the Stand summoning skill.
+            heatWaveRange: 180,
+            heatWaveCooldown: 0.28,
+            wanchaiDuration: 4.0,
+            wanchaiCooldown: 12,
+            wanchaiEnergyCost: 35,
+            wanchaiPunchRate: 0.06,   // seconds between Stand punches
+
+            // ── Crit system ───────────────────────────────────────
+            baseCritChance: 0.06,
+            critMultiplier: 2.0,
+
+            // ── Stealth slot — REPURPOSED for Wanchai activation ──
+            // stealthCost is intentionally impossibly high so the base
+            // Player.update() stealth branch never fires; AutoPlayer.update()
+            // intercepts right-click and calls _activateWanchai() instead.
+            stealthCooldown: 12,
+            stealthCost: 9999,
+            stealthDrain: 0,
+            stealthSpeedBonus: 1.0,
+
+            // ── Progression ───────────────────────────────────────
+            expToNextLevel: 100,
+            expLevelMult: 1.5,
+
+            passiveUnlockLevel: 5,
+            passiveUnlockStealthCount: 99, // unlock via level, not stealth count
+            passiveHpBonusPct: 0.25,
+            passiveCritBonus: 0.04,
+            passiveLifesteal: 0.01,
+
+            speedOnHit: 15,
+            speedOnHitDuration: 0.35
+        },
         // Identity: Consistent DPS / Brawler
         //   • RICE = higher sustained DPS than Kao's auto when in crit rhythm
         //   • EAT RICE = turns on 25% crit bonus → berserk mode
@@ -662,6 +715,12 @@ const VISUALS = {
             primary: '#22c55e',
             secondary: '#94a3b8',
             accent: '#4ade80'
+        },
+        // ── AUTO: Thermodynamic Brawler — Crimson Red theme ──
+        AUTO: {
+            primary:   '#dc2626', // Crimson Red
+            secondary: '#fb7185', // Rose accent
+            accent:    '#f97316'  // Orange heat shimmer
         }
     },
     WEAPON_OFFSETS: {

@@ -790,8 +790,109 @@ class AutoPlayer extends Player {
         if (typeof spawnParticles === 'function' && (Math.abs(this.vx) + Math.abs(this.vy)) > 60 && Math.random() < 0.08) {
             spawnParticles(this.x + rand(-10, 10), this.y + rand(-10, 10), 1, '#fb7185', 'steam');
         }
+
+        // ── Thermodynamic gauntlet weapon ─────────────────────────
+        // Drawn in world space at player's forward position so it
+        // rotates correctly with the player body.
+        if (typeof drawAutoWeapon === 'function') {
+            CTX.save();
+            CTX.translate(screen.x, screen.y);
+            CTX.rotate(this.angle);
+            drawAutoWeapon(CTX);
+            CTX.restore();
+        }
+
+        // ── Level badge (matches Kao/Poom style) ──────────────────
+        if (this.level > 1) {
+            CTX.fillStyle = 'rgba(220,38,38,0.9)';
+            CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 10, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fff'; CTX.font = 'bold 10px Arial';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText(this.level, screen.x + 22, screen.y - 22);
+        }
     }
 }
+
+// ════════════════════════════════════════════════════════════
+// 🔥 AUTO PLAYER — Prototype Overrides
+// ════════════════════════════════════════════════════════════
+
+/**
+ * AutoPlayer.prototype.updateUI
+ * Overrides Player.updateUI to repurpose the "stealth" HUD slot
+ * as the Wanchai Stand cooldown display, matching Auto's identity.
+ *
+ * • HP bar, EN bar, dash cooldown, level, EXP are inherited from Player.
+ * • The stand slot shows:
+ *     – Flashing crimson when Wanchai is active.
+ *     – Filling bar as the cooldown counts down.
+ *     – Circular arc + countdown via UIManager._setCooldownVisual.
+ */
+AutoPlayer.prototype.updateUI = function() {
+    const S = this.stats;
+
+    // ── HP & Energy bars (identical to base Player) ──────────────
+    const hpEl = document.getElementById('hp-bar');
+    const enEl = document.getElementById('en-bar');
+    if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
+    if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
+
+    // ── Dash cooldown ─────────────────────────────────────────────
+    const dp      = Math.min(100, (1 - this.cooldowns.dash / (S.dashCooldown || 2.0)) * 100);
+    const dashEl  = document.getElementById('dash-cd');
+    if (dashEl) dashEl.style.height = `${100 - dp}%`;
+    if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+        UIManager._setCooldownVisual('dash-icon',
+            Math.max(0, this.cooldowns.dash), S.dashCooldown || 2.0);
+    }
+
+    // ── Wanchai / Stand cooldown (repurposed stealth slot) ───────
+    const wanchaiCd   = S.wanchaiCooldown || BALANCE.player.auto.wanchaiCooldown || 12;
+    const standEl     = document.getElementById('stealth-icon');
+    const standCdEl   = document.getElementById('stealth-cd');
+
+    if (this.wanchaiActive) {
+        // Stand is active — flash the icon in crimson
+        standEl?.classList.add('active');
+        if (standCdEl) standCdEl.style.height = '0%';
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('stealth-icon', 0, wanchaiCd);
+        }
+        // Update icon label to show remaining stand time
+        const iconLabelEl = standEl?.querySelector('.skill-name');
+        if (iconLabelEl) {
+            iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
+        }
+    } else {
+        standEl?.classList.remove('active');
+        if (standCdEl) {
+            const sp = Math.min(100, (1 - (this.cooldowns.wanchai ?? 0) / wanchaiCd) * 100);
+            standCdEl.style.height = `${100 - sp}%`;
+        }
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('stealth-icon',
+                Math.max(0, this.cooldowns.wanchai ?? 0), wanchaiCd);
+        }
+    }
+
+    // ── Level & EXP ───────────────────────────────────────────────
+    const levelEl = document.getElementById('player-level');
+    if (levelEl) levelEl.textContent = `Lv.${this.level}`;
+    const expBar = document.getElementById('exp-bar');
+    if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
+
+    // ── Passive skill indicator ───────────────────────────────────
+    const passiveEl = document.getElementById('passive-skill');
+    if (passiveEl) {
+        if (this.passiveUnlocked) {
+            passiveEl.classList.add('unlocked');
+            passiveEl.style.opacity = '1';
+        } else if (this.level >= (S.passiveUnlockLevel ?? 5)) {
+            passiveEl.style.display = 'flex';
+            passiveEl.style.opacity = '0.5';
+        }
+    }
+};
 
 // ════════════════════════════════════════════════════════════
 // ✅ WARN 5 FIX — Shared obstacle-awareness prototype method

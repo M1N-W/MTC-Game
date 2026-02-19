@@ -1204,10 +1204,10 @@
         }
         .char-cards { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 20px; 
             justify-content: center;
-            max-width: 600px;
+            max-width: 900px;   /* widened: 3 cards at ~280px each fit cleanly */
             margin: 0 auto;
         }
 
@@ -1356,6 +1356,55 @@
             background: rgba(245, 158, 11, 0.2); 
             border: 1px solid #f59e0b; 
             color: #fbbf24;
+        }
+
+        /* ── AUTO — Thermodynamic Brawler ─────────────────────── */
+        .char-card[data-char="auto"]:hover {
+            border-color: #dc2626;
+            background: rgba(220, 38, 38, 0.10);
+            box-shadow: 0 12px 32px rgba(220, 38, 38, 0.35);
+        }
+
+        .char-card[data-char="auto"].selected {
+            border-color: #fb7185;
+            background: rgba(220, 38, 38, 0.12);
+            box-shadow: 0 0 28px rgba(220, 38, 38, 0.55);
+        }
+
+        .char-card[data-char="auto"] .char-name {
+            color: #fecaca;
+        }
+
+        .char-card[data-char="auto"] .char-title {
+            color: #fb7185;
+        }
+
+        .char-card[data-char="auto"] .char-desc {
+            color: #fca5a5;
+        }
+
+        .char-card[data-char="auto"] .stat-bar-fill {
+            background: linear-gradient(90deg, #dc2626, #f97316);
+            box-shadow: 0 0 8px rgba(220, 38, 38, 0.55);
+        }
+
+        .char-card[data-char="auto"] .char-tag {
+            background: rgba(220, 38, 38, 0.20);
+            border: 1px solid #dc2626;
+            color: #fca5a5;
+        }
+
+        .char-card[data-char="auto"] .char-avatar {
+            filter: drop-shadow(0 0 12px rgba(220,38,38,0.7));
+        }
+
+        @keyframes wanchaiGlow {
+            0%, 100% { box-shadow: 0 0 8px rgba(220,38,38,0.45); }
+            50%       { box-shadow: 0 0 20px rgba(220,38,38,0.90), 0 0 40px rgba(249,115,22,0.4); }
+        }
+
+        .char-card[data-char="auto"].selected {
+            animation: wanchaiGlow 1.6s ease-in-out infinite;
         }
 
         #naga-timer { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: bold; color: #10b981; pointer-events: none; display: none; }
@@ -1757,32 +1806,32 @@
                         <div class="char-desc">Mystical warrior with ancient naga summoning powers</div>
                         <div class="char-tag">Mystic Force</div>
                     </div>
-                    <div class="char-card" id="btn-auto" data-char="auto" onclick="selectCharacter('auto')" style="border-color:#dc2626;">
+                    <div class="char-card" id="btn-auto" data-char="auto" onclick="selectCharacter('auto')">
                         <div class="char-avatar">🔥</div>
-                        <div class="char-name" style="color:#fecaca;">AUTO</div>
-                        <div class="char-title" style="color:#fca5a5;">Thermodynamic Brawler</div>
+                        <div class="char-name">AUTO</div>
+                        <div class="char-title">Thermodynamic Brawler</div>
                         <div class="char-stats">
                             <div class="stat-bar">
                                 <div class="stat-label">Damage</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 90%; background:#dc2626;"></div>
+                                    <div class="stat-bar-fill" style="width: 90%;"></div>
                                 </div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label">Speed</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 80%; background:#dc2626;"></div>
+                                    <div class="stat-bar-fill" style="width: 80%;"></div>
                                 </div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label">Range</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 25%; background:#dc2626;"></div>
+                                    <div class="stat-bar-fill" style="width: 25%;"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="char-desc">Close-range powerhouse — Heat Waves + Stand "Wanchai"</div>
-                        <div class="char-tag" style="background:#dc2626;">Horsepower</div>
+                        <div class="char-tag">Horsepower</div>
                     </div>
                 </div>
             </div>
@@ -1794,11 +1843,39 @@
                     document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
                     const card = document.getElementById('card-' + charType) || document.getElementById('btn-' + charType) || document.getElementById(charType);
                     if (card) card.classList.add('selected');
+
+                    // ── Start button label ──────────────────────────────
                     const startBtn = document.getElementById('start-btn');
                     if (startBtn) {
                         startBtn.textContent = charType === 'poom'
                             ? '🌾 START MISSION'
                             : (charType === 'auto' ? '🔥 START MISSION' : '🎓 START MISSION');
+                    }
+
+                    // ── HUD avatar preview ──────────────────────────────
+                    // Updates the tiny avatar icon at top-left to preview
+                    // the selected character before the game starts.
+                    const avatarEl = document.getElementById('player-avatar');
+                    if (avatarEl) {
+                        avatarEl.textContent = charType === 'poom' ? '🌾'
+                            : charType === 'auto' ? '🔥'
+                            : '👨🏻‍🎓';
+                    }
+
+                    // ── Skill slot hint preview ─────────────────────────
+                    // Swaps the R-Click label so the user knows what the
+                    // secondary skill does before they start.
+                    const hintEl = document.getElementById('skill1-hint');
+                    if (hintEl) {
+                        hintEl.textContent = charType === 'auto'  ? 'STAND'
+                            : charType === 'poom' ? 'EAT'
+                            : 'R-Click';
+                    }
+                    const emojiEl = document.getElementById('skill1-emoji');
+                    if (emojiEl) {
+                        emojiEl.textContent = charType === 'auto'  ? '🔥'
+                            : charType === 'poom' ? '🍚'
+                            : '📖';
                     }
                 }
             </script>
@@ -1827,6 +1904,7 @@
                     <h3>ENHANCED FEATURES</h3>
                     <div class="feature-list">
                         <div class="feature-item">• New Operator "Poom" - Naga Summoner</div>
+                        <div class="feature-item">• New Operator "Auto" - Stand: Wanchai 🔥</div>
                         <div class="feature-item">• Advanced Skill System - Mystic Abilities</div>
                         <div class="feature-item">• MTC Co-op Store - Strategic Upgrades</div>
                         <div class="feature-item">• Admin Terminal - Advanced Commands</div>

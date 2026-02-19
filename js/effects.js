@@ -1092,16 +1092,6 @@ function spawnFloatingText(text, x, y, color, size = 20) {
     floatingTextSystem.spawn(text, x, y, color, size);
 }
 
-function spawnWanchaiPunchText(x, y) {
-    if (typeof spawnFloatingText !== 'function') return;
-    if (Math.random() > 0.35) return;
-
-    const t = Math.random() < 0.7 ? 'โอร่า!' : '💥';
-    const ox = (typeof rand === 'function') ? rand(-26, 26) : (Math.random() * 52 - 26);
-    const oy = (typeof rand === 'function') ? rand(-26, 26) : (Math.random() * 52 - 26);
-    spawnFloatingText(t, x + ox, y + oy, '#fb7185', t === '💥' ? 22 : 18);
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 // ⚡ GLITCH EFFECT ENGINE
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1305,6 +1295,54 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 🥊 WANCHAI PUNCH TEXT — JoJo-style barrage floating labels
+// Called by ProjectileManager.update() whenever a 'punch' kind projectile hits.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * WANCHAI_PUNCH_LABELS
+ * Pool of text labels that randomly appear on each Wanchai punch hit.
+ * Alternates between the Stand name in Thai (วันชัย!) and impact emoji.
+ * Keeping them short maximises legibility during a rapid-fire barrage.
+ */
+const WANCHAI_PUNCH_LABELS = [
+    'วันชัย!',   // Stand name: "Wanchai!" in Thai
+    'วันชัย!!',
+    '💥',
+    '💥💥',
+    'ORA!',      // JoJo reference — Stand battle cry
+    'WANCHAI!',
+    '🔥',
+    'STAND!',
+    'ร้อน!!'     // "Hot!!" in Thai — thermodynamic flavour
+];
+
+/**
+ * spawnWanchaiPunchText(x, y)
+ * Spawns a single randomly-chosen punch label at world position (x, y).
+ * The text is offset slightly so consecutive hits stack readably.
+ *
+ * @param {number} x  World X coordinate of the impact
+ * @param {number} y  World Y coordinate of the impact
+ */
+function spawnWanchaiPunchText(x, y) {
+    if (typeof floatingTextSystem === 'undefined') return;
+
+    const label  = WANCHAI_PUNCH_LABELS[Math.floor(Math.random() * WANCHAI_PUNCH_LABELS.length)];
+    const offX   = (Math.random() - 0.5) * 40;   // random horizontal scatter
+    const offY   = -10 + (Math.random() - 0.5) * 20; // random vertical scatter
+
+    // Alternate colours: hot crimson, fiery orange, and bright white for contrast
+    const colours = ['#dc2626', '#fb7185', '#f97316', '#ffffff', '#fca5a5'];
+    const colour  = colours[Math.floor(Math.random() * colours.length)];
+
+    // Size varies 16-24px: bigger on emoji and double-exclamation labels
+    const size = label.includes('!!') || label === '💥💥' ? 24 : 18;
+
+    floatingTextSystem.spawn(label, x + offX, y + offY, colour, size);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Export
 // ──────────────────────────────────────────────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
@@ -1316,6 +1354,7 @@ if (typeof module !== 'undefined' && module.exports) {
         Raindrop, Snowflake, WeatherSystem, weatherSystem,
         EquationSlam, DeadlyGraph, MeteorStrike,
         spawnParticles, spawnFloatingText,
+        spawnWanchaiPunchText,
         drawGlitchEffect
     };
 }
