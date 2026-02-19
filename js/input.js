@@ -20,15 +20,46 @@
  *   keyboard/mouse listeners are registered then, and initMobileControls()
  *   is called to wire up touch joysticks and action buttons.
  *
- * NOTE: 'use strict' is intentionally omitted so that `var` declarations
- *   below become true window-level globals accessible across all script tags.
+    *   After that, the global `keys`, `mouse`, and `joysticks` objects are *   continuously updated by event listeners and can be read from any script     tag to query input state.
+ *
+ * FUTURE IMPROVEMENTS:
+ *   - Add gamepad support (navigator.getGamepads)
+ *   - Add customizable keybindings
+ *   - Add input recording/replay for testing and demos
+ *   - Refactor into a more modular class-based system if needed
+ *   - Optimize mobile touch handling (e.g. support multi-touch combos)
+ *   - Add visual feedback for touch inputs (e.g. joystick zones, button highlights)
+ *   - Implement input buffering for more responsive controls
+ *   - Add vibration feedback for supported devices
+ *   - Add support for remapping controls in an options menu
+ *   - Implement a more robust state machine for input handling (e.g. separate input contexts for gameplay, UI, cutscenes)
+ *   - Add support for international keyboards and input methods
+ *   Optimize performance by throttling input events if necessary
+ *   Add unit tests for input handling logic
+ *   Document the API and usage examples more thoroughly
+ *   Consider using a library like Hammer.js for touch gesture recognition if needed
+ *   Consider using a library like Mousetrap for keyboard shortcuts if needed
+ *   Consider using a library like Gamepad.js for gamepad support if needed
+ *   Ensure accessibility features are considered (e.g. support for screen readers, alternative input methods)
+ *   Continuously test on a variety of devices and browsers to ensure compatibility and responsiveness
+ *   Gather player feedback on controls and make adjustments as needed
+ *   Keep the codebase clean and maintainable as new features are added
+ *   Regularly refactor and optimize the code as the project evolves
+ *   Stay up to date with best practices for input handling in web games
+ *   Continuously monitor performance and make improvements as needed
+ *   Ensure that input handling is robust and does not cause bugs or crashes
+ *   Consider security implications of input handling (e.g. prevent malicious input)
+ *   Keep an eye on emerging technologies and trends in game input (e.g. VR/AR controllers, haptic feedback) and consider how they might be integrated in the future
+ *   Overall, aim to create a responsive, intuitive, and enjoyable control scheme for players across all platforms!
+ *   Remember to have fun and be creative with the input system design! The controls are a crucial part of the player experience, so it's worth investing time and effort into making them great.
+ *   Good luck, and happy coding! 🎮✨
  * ─────────────────────────────────────────────────────────────────
  */
 
 // ══════════════════════════════════════════════════════════════
 // GLOBAL INPUT STATE  (var → window-scoped, cross-file safe)
 // ══════════════════════════════════════════════════════════════
-
+// Top-level 'var' declarations are window-globals in browser script tags.
 /**
  * Digital keyboard state.
  * keys.t  → Bullet Time toggle  (fires on keydown; no keyup needed)

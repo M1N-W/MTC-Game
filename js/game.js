@@ -79,6 +79,9 @@ const DEBUG_MODE = false;
 let gameState   = 'MENU';
 let loopRunning = false;
 
+// ✅ เพิ่มบรรทัดนี้เพื่อให้ Debug ง่ายขึ้น
+window.gameState = gameState;
+
 // keys, mouse, touchJoystickLeft/Right — defined in input.js (loaded before game.js)
 // InputSystem.init() is called from window.onload below.
 

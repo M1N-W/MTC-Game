@@ -453,14 +453,34 @@ class MapSystem {
         this.mtcRoom     = null;
         this.initialized = false;
 
-        // Persistent offscreen canvas for lighting — allocated ONCE
-        this._lightCanvas = document.createElement('canvas');
-        this._lightCtx    = this._lightCanvas.getContext('2d');
+        // ── STABILITY FIX (Zone 3 / Risk B): _lightCanvas and _lightCtx are
+        // intentionally NOT created here. The constructor runs at script-parse
+        // time when map.js is evaluated; if the file is loaded before the DOM
+        // is fully ready (e.g. via a <script> tag without defer/async), then
+        // document.createElement('canvas') may fail or produce an element that
+        // cannot acquire a 2-D context. Allocation is deferred to init() which
+        // is always called from within a user-gesture handler or after
+        // DOMContentLoaded, guaranteeing the DOM is ready.
+        this._lightCanvas = null;
+        this._lightCtx    = null;
     }
 
     init() {
         if (this.initialized) return;
         this.objects = [];
+
+        // ── STABILITY FIX (Zone 3 / Risk B): Allocate the persistent offscreen
+        // lighting canvas here — inside init() — rather than in the constructor.
+        // init() is always invoked from game.js after the DOM is confirmed ready
+        // (either from a DOMContentLoaded callback or a start-button handler),
+        // so document.createElement() and getContext('2d') are guaranteed to
+        // succeed. We also skip re-allocation on subsequent calls because the
+        // initialized guard above returns early.
+        if (!this._lightCanvas) {
+            this._lightCanvas = document.createElement('canvas');
+            this._lightCtx    = this._lightCanvas.getContext('2d');
+        }
+
         this.generateCampusMap();
         this.mtcRoom = new MTCRoom(-400, -100);
         this.initialized = true;

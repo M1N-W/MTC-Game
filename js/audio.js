@@ -162,6 +162,12 @@ class AudioSystem {
         
         [0, 0.08, 0.16].forEach((delay, i) => {
             setTimeout(() => {
+                // ── STABILITY FIX (Zone 3 / Bug A): Re-check enabled and ctx
+                // inside the callback. If mute() is called during the 0–160ms
+                // scheduling window the outer guard has already passed, so
+                // without this re-check the oscillators would still fire.
+                if (!this.enabled || !this.ctx) return;
+
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 
@@ -274,6 +280,12 @@ class AudioSystem {
         
         frequencies.forEach((freq, i) => {
             setTimeout(() => {
+                // ── STABILITY FIX (Zone 3 / Bug A): Re-check enabled and ctx
+                // inside the callback. The three notes are staggered 0–160ms;
+                // a mute() call in that window must silence all pending notes,
+                // not just those not yet scheduled.
+                if (!this.enabled || !this.ctx) return;
+
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 

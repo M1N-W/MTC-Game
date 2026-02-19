@@ -227,6 +227,11 @@ class ParticleSystem {
     }
 
     draw() {
+        // ── STABILITY FIX (Zone 3): Guard against uninitialised canvas context.
+        // If game.js hasn't set up CTX yet (e.g. canvas init failure or script
+        // race), every particle.draw() call would throw a TypeError. We bail
+        // out silently so the rest of the game loop is unaffected.
+        if (typeof CTX === 'undefined' || !CTX) return;
         for (let particle of this.particles) {
             particle.draw();
         }
@@ -291,6 +296,10 @@ class FloatingTextSystem {
     }
 
     draw() {
+        // ── STABILITY FIX (Zone 3): Same CTX guard as ParticleSystem.
+        // FloatingText objects call CTX directly inside their own draw()
+        // methods; a missing context would throw on every active label.
+        if (typeof CTX === 'undefined' || !CTX) return;
         for (let text of this.texts) {
             text.draw();
         }
@@ -448,6 +457,11 @@ class WeatherSystem {
 
     draw() {
         if (this.mode === 'none') return;
+
+        // ── STABILITY FIX (Zone 3): Guard against uninitialised CTX.
+        // Raindrop.draw() and Snowflake.draw() both write directly to CTX;
+        // if the canvas isn't ready yet this would crash the entire frame.
+        if (typeof CTX === 'undefined' || !CTX) return;
 
         for (let particle of this.particles) {
             particle.draw();

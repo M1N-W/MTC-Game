@@ -9,6 +9,15 @@
  *
  * Depends on: base.js  (Entity)
  *             player.js (BarkWave)
+ *
+ * ────────────────────────────────────────────────────────────────
+ * FIXES (Logic & Inheritance Audit — Zone 2)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ MOD EXPORTS — module.exports now only lists { Boss }.
+ *                  The previous export listed every class from
+ *                  base.js / player.js / enemy.js, which would throw
+ *                  ReferenceError when boss.js is imported in isolation
+ *                  in a Node/bundler environment.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -374,7 +383,10 @@ class Boss extends Entity {
     }
 }
 
-// ─── Node/bundler export (all classes) ───────────────────────
+// ─── Node/bundler export ──────────────────────────────────────
+// Only Boss is defined in this file.  Each other file (base.js,
+// player.js, enemy.js) exports its own classes.  Listing foreign
+// symbols here would throw ReferenceError in any non-browser env.
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Entity, Player, PoomPlayer, NagaEntity, Drone, BarkWave, Enemy, TankEnemy, MageEnemy, PowerUp, Boss };
+    module.exports = { Boss };
 }

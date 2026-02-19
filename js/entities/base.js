@@ -12,6 +12,14 @@
  *             → entities/enemy.js
  *             → entities/boss.js
  *             → game.js
+ *
+ * ────────────────────────────────────────────────────────────────
+ * FIXES (Logic & Inheritance Audit — Zone 2)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ WARN 2 — Naming Consistency: Renamed `entity.afterimages` to
+ *             `entity.standGhosts` throughout _standAura_update and
+ *             _standAura_draw, matching the rename in player.js where
+ *             the property is declared on Player and PoomPlayer.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -75,8 +83,8 @@ function _standAura_update(entity, dt) {
     const interval = 3 + Math.floor(Math.random() * 3);
     if (active && entity._auraFrame % interval === 0) {
         // Hard cap at 20 to prevent unbounded growth (PERF guardrail)
-        if (entity.afterimages.length < 20) {
-            entity.afterimages.push({
+        if (entity.standGhosts.length < 20) {
+            entity.standGhosts.push({
                 x:     entity.x,
                 y:     entity.y,
                 angle: entity.angle,
@@ -87,9 +95,9 @@ function _standAura_update(entity, dt) {
     }
 
     // Decay — remove dead frames
-    for (let i = entity.afterimages.length - 1; i >= 0; i--) {
-        entity.afterimages[i].alpha -= dt * 2.5;
-        if (entity.afterimages[i].alpha <= 0) entity.afterimages.splice(i, 1);
+    for (let i = entity.standGhosts.length - 1; i >= 0; i--) {
+        entity.standGhosts[i].alpha -= dt * 2.5;
+        if (entity.standGhosts[i].alpha <= 0) entity.standGhosts.splice(i, 1);
     }
 }
 
@@ -118,7 +126,7 @@ function _standAura_draw(entity, charId) {
     const screen   = worldToScreen(entity.x, entity.y);
 
     // ══ 1. Afterimage ghost silhouettes ═══════════════════════
-    for (const img of entity.afterimages) {
+    for (const img of entity.standGhosts) {
         const gs = worldToScreen(img.x, img.y);
         CTX.save();
         CTX.translate(gs.x, gs.y);

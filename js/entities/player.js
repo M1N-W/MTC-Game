@@ -11,7 +11,7 @@
  * Depends on: base.js  (Entity, _standAura_update, _standAura_draw)
  *
  * ────────────────────────────────────────────────────────────────
- * FIXES (QA Integrity Report)
+ * FIXES (QA Integrity Report — Zone 1)
  * ────────────────────────────────────────────────────────────────
  * ✅ BUG 2  — Mobile Patch: Removed redundant velocity calculation that
  *             double-applied joystick acceleration (2× speed on touch).
@@ -25,6 +25,32 @@
  *             PoomPlayer.prototype gets the same reference so both character
  *             classes call identical logic; only the particle tint differs
  *             (#93c5fd for Kao, #fcd34d for Poom).
+ *
+ * ────────────────────────────────────────────────────────────────
+ * FIXES (Logic & Inheritance Audit — Zone 2)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ CRIT 1 — PoomPlayer Redundancy (Option B): Five methods that were
+ *             copy-pasted verbatim between Player and PoomPlayer
+ *             (takeDamage, heal, gainExp, levelUp, addSpeedBoost) are now
+ *             shared via prototype assignment at the bottom of this file.
+ *             PoomPlayer keeps its own implementations only where behaviour
+ *             genuinely differs (dealDamage, draw, updateUI, etc.).
+ *
+ * ✅ CRIT 2 — NagaEntity now extends Entity: super(startX, startY, S.nagaRadius)
+ *             is called in the constructor, providing applyPhysics, isOnScreen,
+ *             and a canonical dead/hp/radius interface.  The redundant manual
+ *             this.radius assignment has been removed.
+ *             Movement target changed from global `mouse` to `player.x/y` —
+ *             more design-consistent and removes the hidden global dependency.
+ *
+ * ✅ WARN 1 — Dash Safety: Both Player.dash() and PoomPlayer.dash() now guard
+ *             their setTimeout callbacks with `if (!this.dead)` so ghost frames
+ *             are not pushed after the entity has been destroyed.
+ *
+ * ✅ WARN 2 — Naming Consistency: Renamed arrays to eliminate the casing trap:
+ *               afterImages  (capital I) → dashGhosts
+ *               afterimages  (lowercase) → standGhosts
+ *             All references in this file and in base.js updated accordingly.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -53,10 +79,10 @@ class Player extends Entity {
         this.damageBoost     = 1;
         this.speedBoost      = 1;
         this.speedBoostTimer = 0;
-        this.afterImages     = [];   // legacy dash ghost (kept for compat)
+        this.dashGhosts      = [];   // legacy dash ghost (kept for compat)
 
         // ── Stand-Aura & Afterimage system ────────────────────
-        this.afterimages   = [];     // JoJo-esque ghost frames
+        this.standGhosts   = [];     // JoJo-esque ghost frames
         this.auraRotation  = 0;      // radians — driven by _standAura_update()
         this._auraFrame    = 0;      // frame counter for spawn-interval logic
 
@@ -183,9 +209,9 @@ class Player extends Entity {
             this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
         }
 
-        for (let i = this.afterImages.length - 1; i >= 0; i--) {
-            this.afterImages[i].life -= dt * 5;
-            if (this.afterImages[i].life <= 0) this.afterImages.splice(i, 1);
+        for (let i = this.dashGhosts.length - 1; i >= 0; i--) {
+            this.dashGhosts[i].life -= dt * 5;
+            if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
         }
 
         // ── Stand-Aura & Afterimage system update ─────────────
@@ -202,7 +228,7 @@ class Player extends Entity {
         this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
         this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
         for (let i = 0; i < 5; i++) setTimeout(() => {
-            this.afterImages.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
+            if (!this.dead) this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
         }, i * 30);
         spawnParticles(this.x, this.y, 15, '#60a5fa');
         Audio.playDash();
@@ -311,8 +337,8 @@ class Player extends Entity {
         // ── Stand-Aura & Afterimage (drawn first — behind everything) ──
         _standAura_draw(this, this.charId || 'kao');
 
-        // Legacy dash afterImages (blue flash — kept for compat)
-        for (const img of this.afterImages) {
+        // Legacy dash ghosts (blue flash — kept for compat)
+        for (const img of this.dashGhosts) {
             const screen = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(img.angle);
             CTX.globalAlpha = img.life * 0.3; CTX.fillStyle = '#60a5fa';
@@ -546,10 +572,10 @@ class PoomPlayer extends Entity {
 
         this.walkCycle = 0;
         this.damageBoost = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
-        this.afterImages = [];   // legacy dash ghost (kept for compat)
+        this.dashGhosts = [];   // legacy dash ghost (kept for compat)
 
         // ── Stand-Aura & Afterimage system ────────────────────
-        this.afterimages   = [];     // JoJo-esque ghost frames
+        this.standGhosts   = [];     // JoJo-esque ghost frames
         this.auraRotation  = 0;      // radians
         this._auraFrame    = 0;      // frame counter
 
@@ -653,9 +679,9 @@ class PoomPlayer extends Entity {
             this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
         }
 
-        for (let i = this.afterImages.length - 1; i >= 0; i--) {
-            this.afterImages[i].life -= dt * 5;
-            if (this.afterImages[i].life <= 0) this.afterImages.splice(i, 1);
+        for (let i = this.dashGhosts.length - 1; i >= 0; i--) {
+            this.dashGhosts[i].life -= dt * 5;
+            if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
         }
 
         // ── Stand-Aura & Afterimage system update ─────────────
@@ -705,7 +731,7 @@ class PoomPlayer extends Entity {
         this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
         this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
         for (let i = 0; i < 5; i++) setTimeout(() => {
-            this.afterImages.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
+            if (!this.dead) this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
         }, i * 30);
         spawnParticles(this.x, this.y, 15, '#fbbf24');
         Audio.playDash(); Achievements.stats.dashes++; Achievements.check('speedster');
@@ -766,8 +792,8 @@ class PoomPlayer extends Entity {
         // ── Stand-Aura & Afterimage (drawn first — behind everything) ──
         _standAura_draw(this, 'poom');
 
-        // Legacy dash afterImages (amber flash — kept for compat)
-        for (const img of this.afterImages) {
+        // Legacy dash ghosts (amber flash — kept for compat)
+        for (const img of this.dashGhosts) {
             const s = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(s.x, s.y); CTX.rotate(img.angle);
             CTX.globalAlpha = img.life * 0.3; CTX.fillStyle = '#fbbf24';
@@ -893,9 +919,11 @@ PoomPlayer.prototype.checkObstacleProximity = Player.prototype.checkObstacleProx
 // ════════════════════════════════════════════════════════════
 // 🐍 NAGA ENTITY
 // ════════════════════════════════════════════════════════════
-class NagaEntity {
+class NagaEntity extends Entity {
     constructor(startX, startY, owner) {
         const S = BALANCE.characters.poom;
+        // Entity sets this.x, this.y, this.radius, this.vx/vy, this.angle, this.hp, this.dead
+        super(startX, startY, S.nagaRadius);
         this.owner   = owner;
         const n      = S.nagaSegments;
         this.segments = Array.from({ length: n }, () => ({ x: startX, y: startY }));
@@ -903,7 +931,7 @@ class NagaEntity {
         this.maxLife = S.nagaDuration;
         this.speed   = S.nagaSpeed;
         this.damage  = S.nagaDamage;
-        this.radius  = S.nagaRadius;
+        // this.radius is already set by Entity via super() — no manual assignment needed
     }
 
     update(dt, player, _meteorZones) {
@@ -912,7 +940,9 @@ class NagaEntity {
         if (this.life <= 0) return true;
 
         const head = this.segments[0];
-        const dx = mouse.wx - head.x, dy = mouse.wy - head.y;
+        // Follow the player position rather than the global mouse cursor —
+        // more game-design-consistent and removes the global-scope dependency.
+        const dx = player.x - head.x, dy = player.y - head.y;
         const d = Math.hypot(dx, dy);
         if (d > 8) {
             const step = Math.min(this.speed * dt, d);
@@ -1181,6 +1211,30 @@ class BarkWave {
         CTX.restore();
     }
 }
+
+// ════════════════════════════════════════════════════════════
+// ✅ Option B — Share identical Player methods with PoomPlayer
+// ════════════════════════════════════════════════════════════
+// PoomPlayer extends Entity directly (not Player), so these five
+// methods — which are byte-for-byte identical between the two
+// classes — would otherwise need to be maintained in duplicate.
+// Assigning the references here means any future bug fix or
+// balance change only needs to be made in one place (Player).
+//
+// Methods shared:
+//   • takeDamage  — damage application, EXPOSED penalty, death check
+//   • heal        — HP clamp + particles + audio
+//   • gainExp     — EXP accumulation + level-up chain trigger
+//   • levelUp     — level increment, EXP threshold scaling, full heal
+//   • addSpeedBoost — sets speedBoostTimer from stats
+//
+// NOTE: PoomPlayer.prototype.checkObstacleProximity is handled
+// separately above (line ~891) as part of the WARN 5 fix.
+PoomPlayer.prototype.takeDamage    = Player.prototype.takeDamage;
+PoomPlayer.prototype.heal          = Player.prototype.heal;
+PoomPlayer.prototype.gainExp       = Player.prototype.gainExp;
+PoomPlayer.prototype.levelUp       = Player.prototype.levelUp;
+PoomPlayer.prototype.addSpeedBoost = Player.prototype.addSpeedBoost;
 
 // ─── Mobile patch ─────────────────────────────────────────────
 // ✅ BUG 2 FIX: Removed the redundant velocity block that was
