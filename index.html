@@ -9,14 +9,14 @@
     <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e293b'/><text x='50' y='70' font-family='Arial' font-size='60' font-weight='bold' fill='%233b82f6' text-anchor='middle'>M</text></svg>">
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;600;800&family=Orbitron:wght@700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@700;900&display=swap');
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             overflow: hidden;
-            background-color: #0f172a;
-            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            font-family: 'Inter', sans-serif;
             color: white;
             user-select: none;
             -webkit-user-select: none;
@@ -146,7 +146,7 @@
         .weapon-name { color: #60a5fa; text-transform: uppercase; letter-spacing: 2px; }
         .weapon-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; text-align: center; }
 
-        /* ── Database Interaction Prompt ── */
+        /* Database Interaction Prompt */
         #db-prompt {
             position: absolute;
             bottom: 160px; left: 50%;
@@ -172,7 +172,7 @@
             50%       { box-shadow: 0 0 28px rgba(6,182,212,0.7); }
         }
 
-        /* ── Admin Console Interaction Prompt ── */
+        /* Admin Console Interaction Prompt */
         #console-prompt {
             position: absolute;
             bottom: 120px; left: 50%;
@@ -199,7 +199,7 @@
             50%       { box-shadow: 0 0 28px rgba(0,255,65,0.6); }
         }
 
-        /* ── Shop Interaction Prompt ── */
+        /* Shop Interaction Prompt */
         #shop-prompt {
             position: absolute;
             bottom: 200px; left: 50%;
@@ -225,7 +225,7 @@
             50%       { box-shadow: 0 0 30px rgba(250,204,21,0.6); }
         }
 
-        /* ── Resume Prompt Overlay ── */
+        /* Resume Prompt Overlay */
         #resume-prompt {
             display: none;
             position: fixed;
@@ -303,7 +303,7 @@
             letter-spacing: 1px;
         }
 
-        /* ── Pause Indicator ── */
+        /* Pause Indicator */
         #pause-indicator {
             display: none;
             position: fixed;
@@ -320,15 +320,7 @@
             pointer-events: none;
         }
 
-        /* ══════════════════════════════════════════
-           💻 ADMIN CONSOLE OVERLAY
-           Hacker-terminal aesthetic:
-           - Phosphor-green on black
-           - Courier New monospace
-           - Scanline overlay effect
-           - Blinking cursor
-           - CRT border glow
-        ══════════════════════════════════════════ */
+        /* Admin Console Overlay */
         #admin-console {
             display: none;
             position: fixed;
@@ -394,7 +386,7 @@
 
         .console-inner { animation: phosphorFlicker 6s infinite; }
 
-        /* ── Console title bar ── */
+        /* Console title bar */
         .console-titlebar {
             background: #001a08;
             border-bottom: 1px solid #00ff41;
@@ -445,7 +437,7 @@
             color: #000;
         }
 
-        /* ── Boot text ── */
+        /* Boot text */
         .console-boot {
             padding: 14px 20px 0;
             flex-shrink: 0;
@@ -467,7 +459,7 @@
             margin: 10px 20px;
         }
 
-        /* ── Output log area ── */
+        /* Output log area */
         #console-output {
             flex: 1;
             overflow-y: auto;
@@ -499,7 +491,7 @@
         .cline-cmd     { color: #67e8f9; }
         .cline-sys     { color: #004d14; }
 
-        /* ── Input row ── */
+        /* Input row */
         .console-input-row {
             display: flex;
             align-items: center;
@@ -553,7 +545,7 @@
             flex-shrink: 0;
         }
 
-        /* ── Help footer ── */
+        /* Help footer */
         .console-help {
             padding: 6px 20px 12px;
             display: flex;
@@ -574,9 +566,7 @@
             color: #00aa2a;
         }
 
-        /* ═══════════════════════════════════════════════════════════
-           🛒 SHOP MODAL
-        ═══════════════════════════════════════════════════════════ */
+        /* Shop Modal */
         #shop-modal {
             display: none;
             position: fixed;
@@ -998,30 +988,32 @@
         #overlay {
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(15, 23, 42, 0.85);
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
             z-index: 100; pointer-events: auto;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px);
         }
 
         .menu-container {
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.2);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             border-radius: 24px; padding: 40px;
             max-width: 800px; width: 90%;
             display: flex; flex-direction: column; align-items: center;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
 
         .title {
-            font-family: 'Orbitron', sans-serif; font-size: 56px;
+            font-family: 'Orbitron', sans-serif; font-size: 64px;
+            font-weight: 900;
             background: linear-gradient(45deg, #3b82f6, #8b5cf6, #facc15);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            background-clip: text; margin-bottom: 15px; text-align: center;
-            animation: glow 2s ease-in-out infinite;
+            background-clip: text; margin-bottom: 8px; text-align: center;
+            text-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+            letter-spacing: 3px;
         }
 
         @keyframes glow {
@@ -1029,8 +1021,23 @@
             50%       { filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.8)); }
         }
 
-        .subtitle { font-size: 24px; color: #94a3b8; margin-bottom: 30px; }
-        .version-badge { background: #8b5cf6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-left: 10px; }
+        .subtitle { 
+            font-size: 18px; 
+            color: #94a3b8; 
+            margin-bottom: 30px; 
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .version-badge { 
+            background: #8b5cf6; 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 12px; 
+            margin-left: 10px; 
+            font-weight: 600;
+        }
 
         #mission-brief { margin-bottom: 20px; color: #60a5fa; font-style: italic; font-size: 18px; text-align: center; }
 
@@ -1056,20 +1063,53 @@
         }
 
         #report-card {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            background: rgba(15, 23, 42, 0.85);
             border: 2px solid rgba(239, 68, 68, 0.3);
             padding: 25px; border-radius: 16px;
             max-width: 500px; width: 100%;
             text-align: center; margin-bottom: 25px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            display: none; backdrop-filter: blur(8px);
+            display: none; 
+            backdrop-filter: blur(8px);
         }
 
-        .report-header { font-size: 24px; font-weight: bold; color: #ef4444; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .report-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-        .stat-item { background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
-        .stat-label { font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
-        .stat-value { font-size: 24px; font-family: 'Orbitron', sans-serif; color: #60a5fa; font-weight: bold; }
+        .report-header { 
+            font-size: 28px; 
+            font-weight: 900; 
+            color: #ef4444; 
+            margin-bottom: 20px; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+        .report-stats { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 15px; 
+            margin-bottom: 20px;
+        }
+        .stat-item { 
+            background: rgba(15, 23, 42, 0.5); 
+            padding: 16px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(4px);
+        }
+        .stat-label { 
+            font-size: 11px; 
+            color: #94a3b8; 
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        .stat-value { 
+            font-size: 24px; 
+            font-family: 'Orbitron', sans-serif; 
+            color: #60a5fa; 
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+        }
 
         #report-text {
             background: rgba(251, 191, 36, 0.1);
@@ -1079,21 +1119,24 @@
             color: #fbbf24; line-height: 1.6;
         }
 
-        #report-text::before { content: '💬 '; font-size: 20px; }
-
         .btn {
             background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white; border: none; padding: 15px 45px;
-            font-size: 22px; font-family: 'Kanit', sans-serif;
-            font-weight: bold; border-radius: 12px;
+            color: white; border: none; padding: 18px 48px;
+            font-size: 18px; font-family: 'Inter', sans-serif;
+            font-weight: 700; border-radius: 12px;
             cursor: pointer; transition: all 0.3s;
             box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
             pointer-events: auto; margin: 5px; letter-spacing: 1px;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            text-transform: uppercase;
         }
 
-        .btn:hover { transform: scale(1.05) translateY(-2px); background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        .btn:hover { 
+            transform: scale(1.05) translateY(-2px); 
+            background: linear-gradient(135deg, #2563eb, #1d4ed8); 
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+        }
 
         #ai-loading { font-size: 14px; color: #60a5fa; margin-top: 15px; display: none; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
@@ -1102,33 +1145,218 @@
             display: none;
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(15, 23, 42, 0.85);
             z-index: 101; justify-content: center; align-items: center;
-            flex-direction: column; backdrop-filter: blur(10px);
+            flex-direction: column; 
+            backdrop-filter: blur(8px);
+        }
+        
+        #victory-screen .title {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+        }
+        
+        .victory-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+            max-width: 400px;
+        }
+        
+        .victory-stat-item {
+            text-align: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
+        }
+        
+        .victory-stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .victory-stat-value {
+            font-size: 28px;
+            font-family: 'Orbitron', sans-serif;
+            color: #60a5fa;
+            font-weight: 700;
+            text-shadow: 0 0 15px rgba(96, 165, 250, 0.3);
         }
 
         /* Character Selection */
-        .char-select-section { width: 100%; margin-bottom: 20px; }
-        .char-select-section h3 { color: #60a5fa; font-size: 16px; text-align: center; margin-bottom: 12px; letter-spacing: 1px; }
-        .char-cards { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .char-select-section { width: 100%; margin-bottom: 30px; }
+        .char-select-section h3 { 
+            color: #60a5fa; 
+            font-size: 20px; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            letter-spacing: 2px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .char-cards { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px; 
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
 
         .char-card {
-            background: rgba(15, 23, 42, 0.8);
-            border: 2px solid #334155; border-radius: 16px;
-            padding: 18px 22px; min-width: 180px; max-width: 220px;
-            flex: 1; text-align: center; cursor: pointer;
-            transition: all 0.25s; position: relative; pointer-events: auto;
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid #334155; 
+            border-radius: 16px;
+            padding: 24px; 
+            text-align: center; 
+            cursor: pointer;
+            transition: all 0.3s ease; 
+            position: relative; 
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
 
-        .char-card:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3); }
-        .char-card.selected { border-color: #facc15; background: rgba(250, 204, 21, 0.08); box-shadow: 0 0 25px rgba(250, 204, 21, 0.4); }
-        .char-card .char-avatar { font-size: 48px; margin-bottom: 8px; }
-        .char-card .char-name { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: bold; color: #e2e8f0; margin-bottom: 6px; }
-        .char-card .char-desc { font-size: 11px; color: #94a3b8; line-height: 1.5; }
-        .char-card .char-tag { margin-top: 10px; display: inline-block; font-size: 10px; background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #a78bfa; padding: 2px 8px; border-radius: 10px; }
-        .char-card[data-char="poom"] .char-tag { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
+        .char-card:hover { 
+            transform: scale(1.05) translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        }
+        
+        .char-card[data-char="kao"]:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 12px 32px rgba(59, 130, 246, 0.3);
+        }
+        
+        .char-card[data-char="poom"]:hover {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+            box-shadow: 0 12px 32px rgba(245, 158, 11, 0.3);
+        }
+        
+        .char-card.selected { 
+            border-color: #facc15; 
+            background: rgba(250, 204, 21, 0.08); 
+            box-shadow: 0 0 25px rgba(250, 204, 21, 0.4); 
+        }
+        
+        .char-card .char-avatar { 
+            font-size: 48px; 
+            margin-bottom: 12px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+        
+        .char-card .char-name { 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 18px; 
+            font-weight: 700; 
+            color: #e2e8f0; 
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .char-card .char-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .char-card[data-char="kao"] .char-title {
+            color: #3b82f6;
+        }
+        
+        .char-card[data-char="poom"] .char-title {
+            color: #f59e0b;
+        }
+        
+        .char-card .char-desc { 
+            font-size: 12px; 
+            color: #94a3b8; 
+            line-height: 1.5;
+            margin-bottom: 16px;
+            min-height: 36px;
+        }
+        
+        /* Stat Bars */
+        .char-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .stat-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 60px;
+            text-align: left;
+            color: #64748b;
+        }
+        
+        .stat-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .stat-bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .char-card[data-char="kao"] .stat-bar-fill {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+        }
+        
+        .char-card[data-char="poom"] .stat-bar-fill {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+        }
+        
+        .char-card .char-tag { 
+            display: inline-block;
+            font-size: 10px; 
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .char-card[data-char="kao"] .char-tag { 
+            background: rgba(59, 130, 246, 0.2); 
+            border: 1px solid #3b82f6; 
+            color: #60a5fa;
+        }
+        
+        .char-card[data-char="poom"] .char-tag { 
+            background: rgba(245, 158, 11, 0.2); 
+            border: 1px solid #f59e0b; 
+            color: #fbbf24;
+        }
 
         #naga-timer { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: bold; color: #10b981; pointer-events: none; display: none; }
 
@@ -1465,27 +1693,69 @@
     <div id="overlay">
         <div class="menu-container">
             <div class="title">
-                MTC
-                <span class="subtitle">BETA EDITION <span class="version-badge">v.1.0</span></span>
+                MTC: ENHANCED EDITION
             </div>
+            <div class="subtitle">BETA EDITION <span class="version-badge">v.1.0</span></div>
 
             <div id="mission-brief">กำลังโหลดภารกิจ...</div>
 
             <!-- Character Selection -->
             <div class="char-select-section">
-                <h3>🎮 เลือกตัวละคร</h3>
+                <h3>SELECT YOUR OPERATOR</h3>
                 <div class="char-cards">
                     <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
                         <div class="char-avatar">👨🏻‍🎓</div>
-                        <div class="char-name">เก้า (KAO)</div>
-                        <div class="char-desc">MTC สายซุ่ม<br>👽 สลับโหมดการยิง 3 แบบ | Skill 📖 ซุ่มอ่านหนังสือ+ซุ่มเสรี</div>
-                        <div class="char-tag">🔵สายซุ่ม</div>
+                        <div class="char-name">KAO</div>
+                        <div class="char-title">Tactical Ranged</div>
+                        <div class="char-stats">
+                            <div class="stat-bar">
+                                <div class="stat-label">Damage</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 75%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="stat-label">Speed</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 50%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="stat-label">Utility</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 90%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="char-desc">Stealth specialist with advanced tactical abilities</div>
+                        <div class="char-tag">Stealth Ops</div>
                     </div>
                     <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
                         <div class="char-avatar">🌾</div>
-                        <div class="char-name">ภูมิ (POOM)</div>
-                        <div class="char-desc">MTC คนอีสาน<br>Skill 1 🍙 ข้าวเหนียว | Skill 2 🐉 พญานาค</div>
-                        <div class="char-tag">🟢สายอีสาน</div>
+                        <div class="char-name">POOM</div>
+                        <div class="char-title">Naga Summoner</div>
+                        <div class="char-stats">
+                            <div class="stat-bar">
+                                <div class="stat-label">Damage</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 95%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="stat-label">Speed</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 25%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="stat-label">Utility</div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" style="width: 85%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="char-desc">Mystical warrior with ancient naga summoning powers</div>
+                        <div class="char-tag">Mystic Force</div>
                     </div>
                 </div>
             </div>
@@ -1503,7 +1773,7 @@
             </script>
 
             <div id="report-card">
-                <div class="report-header">📋 รายงานผลเกรด "F(uck)"</div>
+                <div class="report-header">MISSION FAILED</div>
                 <div class="report-stats">
                     <div class="stat-item">
                         <div class="stat-label">Score</div>
@@ -1513,49 +1783,66 @@
                         <div class="stat-label">Wave</div>
                         <div class="stat-value" id="report-wave">0</div>
                     </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Kills</div>
+                        <div class="stat-value" id="report-kills">0</div>
+                    </div>
                 </div>
-                <div id="report-text">กำลังรอความเห็นจากครู...</div>
+                <div id="report-text">Awaiting performance evaluation...</div>
             </div>
 
             <div class="info-section">
                 <div class="new-features">
-                    <h3>✨ ฟีเจอร์ใหม่</h3>
+                    <h3>ENHANCED FEATURES</h3>
                     <div class="feature-list">
-                        <div class="feature-item">🌾 ตัวละครใหม่ "ภูมิ" คนอีสาน</div>
-                        <div class="feature-item">🐉 สกิลรูปแบบใหม่ — อัญเชิญพญานาค</div>
-                        <div class="feature-item">🛒 MTC Co-op Store — ซื้อไอเทมด้วย Score</div>
-                        <div class="feature-item">💻 Admin Terminal — Secret Cheat Console</div>
-                        <div class="feature-item">🕐 Bullet Time — Slow Motion Combat</div>
+                        <div class="feature-item">• New Operator "Poom" - Naga Summoner</div>
+                        <div class="feature-item">• Advanced Skill System - Mystic Abilities</div>
+                        <div class="feature-item">• MTC Co-op Store - Strategic Upgrades</div>
+                        <div class="feature-item">• Admin Terminal - Advanced Commands</div>
+                        <div class="feature-item">• Bullet Time - Tactical Combat Mode</div>
                     </div>
                 </div>
                 <div class="instructions">
-                    <p style="color:#fff; margin-bottom:15px;"><strong>🎯</strong> เลือกตัว ⮕ สังหารศัตรู ⮕ เลเวลอัพ ⮕ สู้บอส!</p>
-                    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:15px;">
-                        <div>🎮 <strong>WASD</strong> เคลื่อนที่</div>
-                        <div>🔫 <strong>L-Click</strong> ยิง</div>
-                        <div>📖 <strong>R-Click</strong> สกิลซุ่ม</div>
-                        <div>💨 <strong>SPACE</strong> พุ่งตัว</div>
-                        <div>🔄 <strong>Q</strong> สลับปืน</div>
-                        <div>🛒 <strong>B</strong> เปิดร้านค้า</div>
-                        <div>🕐 <strong>T</strong> Bullet Time</div>
+                    <p style="color:#fff; margin-bottom:15px; font-weight:600;"><strong>MISSION BRIEFING</strong></p>
+                    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:15px;">
+                        <div>[ W A S D ] Movement</div>
+                        <div>[ L-Click ] Fire Weapon</div>
+                        <div>[ R-Click ] Tactical Skill</div>
+                        <div>[ SPACE ] Dash Evade</div>
+                        <div>[ Q ] Switch Weapon</div>
+                        <div>[ B ] Open Shop</div>
+                        <div>[ T ] Bullet Time</div>
+                        <div>[ E ] Database Access</div>
                     </div>
-                    <p style="font-size:13px; color:#facc15;">💡 Tips: เข้า MTC Room ฟื้นฟูเลือด | Server เปิด Math DB + Admin Console!</p>
+                    <p style="font-size:13px; color:#facc15; font-weight:500;">💡 Tactical Tip: Enter MTC Room for health recovery | Access Server for Database & Admin Console!</p>
                 </div>
             </div>
 
             <button class="btn" id="start-btn"
                     onclick="startGame(_selectedChar)"
                     ontouchstart="event.preventDefault(); startGame(_selectedChar);"
-                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer;">🎓 START MISSION</button>
-            <div id="ai-loading">🤖 Connecting to AI...</div>
+                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer;">START MISSION</button>
+            <div id="ai-loading">Initializing systems...</div>
         </div>
     </div>
 
     <div id="victory-screen">
-        <div class="title">🎉 VICTORY! 🎉</div>
-        <div style="font-size:36px; color:#facc15; margin:20px 0;" id="final-score">SCORE: 0</div>
-        <div style="font-size:24px; color:#cbd5e1; margin-bottom:30px;" id="final-wave">WAVES CLEARED: 0</div>
-        <button class="btn" onclick="location.reload()">🔄 PLAY AGAIN</button>
+        <div class="title">MISSION COMPLETE</div>
+        <div class="victory-stats">
+            <div class="victory-stat-item">
+                <div class="victory-stat-label">Final Score</div>
+                <div class="victory-stat-value" id="final-score">0</div>
+            </div>
+            <div class="victory-stat-item">
+                <div class="victory-stat-label">Waves Cleared</div>
+                <div class="victory-stat-value" id="final-wave">0</div>
+            </div>
+            <div class="victory-stat-item">
+                <div class="victory-stat-label">Total Kills</div>
+                <div class="victory-stat-value" id="final-kills">0</div>
+            </div>
+        </div>
+        <button class="btn" onclick="location.reload()">PLAY AGAIN</button>
     </div>
     
     <script src="js/secrets.js"></script>
