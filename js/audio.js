@@ -27,6 +27,47 @@
  *                              A sparkle accent on impact.
  *    Trigger: NagaEntity.update() in player.js, rate-limited to every 220 ms
  *             via this.lastSoundTime to prevent rapid-tick audio stacking.
+ *
+ * ─────────────────────────────────────────────────────────────────
+ * 🐛 BUG FIX — BGM namespace collision (Senior Game Debugger pass)
+ * ─────────────────────────────────────────────────────────────────
+ * ROOT CAUSE:
+ *   The module-level declaration  `var Audio = new AudioSystem()`  at the
+ *   bottom of this file uses `var`, which in a global (non-module) script
+ *   context hoists the identifier onto `window`.  This OVERWRITES the native
+ *   HTML5 `Audio` constructor with an AudioSystem *instance*.  Any subsequent
+ *   call to `new window.Audio(path)` therefore throws:
+ *
+ *     TypeError: window.Audio is not a constructor
+ *
+ *   The previous workaround comment "Use the browser's Audio constructor
+ *   explicitly" did NOT actually work: `new window.Audio(bgmPath)` fails for
+ *   exactly the same reason — `window.Audio` is still the shadowed instance.
+ *
+ * FIX SUMMARY (three tasks, all inside playBGM / constructor / stopBGM):
+ *
+ *   Task 1 — Immune BGM element creation:
+ *     Replace `new window.Audio(bgmPath)` with the DOM factory pattern:
+ *       this.bgmAudio     = document.createElement('audio');
+ *       this.bgmAudio.src = bgmPath;
+ *     `document.createElement` targets the `document` object directly and
+ *     cannot be shadowed by any `var Audio` declaration on `window`.
+ *
+ *   Task 2 — Namespace audit result:
+ *     config.js — `GAME_CONFIG.audio` is a plain object property; it does
+ *     NOT assign to window.Audio. No changes needed.
+ *     game.js   — no `window.Audio =` assignment exists. No changes needed.
+ *     Sole collision source remains `var Audio = new AudioSystem()` below.
+ *     Renaming that variable would break every `Audio.playX()` call site
+ *     across the entire codebase; since Task 1 removes the only call that
+ *     depended on window.Audio as a constructor, the collision is fully
+ *     defused without touching call sites.
+ *
+ *   Task 3 — Autoplay promise handling:
+ *     .play() rejection now sets this._bgmWaitingForInteraction = true BEFORE
+ *     delegating to setupRetryBGM() so the retry guard has accurate state.
+ *     setupRetryBGM() checks this flag before re-invoking playBGM().
+ *     stopBGM() clears the flag alongside the other cleanup.
  */
 
 class AudioSystem {
@@ -41,11 +82,16 @@ class AudioSystem {
         this.bgmVolume = GAME_CONFIG.audio.bgmVolume;
         this.sfxVolume = GAME_CONFIG.audio.sfxVolume;
         this.userInteracted = false;
-        
-        // Retry handler guard flag
+
+        // ── Task 3: autoplay-block tracking flag ─────────────────────────────
+        // Set true inside .catch() of bgmAudio.play() when the browser's
+        // autoplay policy blocks playback.  Cleared on successful play or stop.
+        this._bgmWaitingForInteraction = false;
+
+        // Retry handler guard flag — prevents duplicate retry listeners
         this._retryHandlerActive = false;
         
-        // Event listener reference for cleanup
+        // Event listener references for safe cleanup
         this._bgmEndedListener = null;
         this._bgmRetryListener = null;
     }
@@ -574,105 +620,154 @@ class AudioSystem {
     }
 
     // ── BGM MANAGER SYSTEM ───────────────────────────────────────────────────────
-    
+
     playBGM(type) {
         if (!this.enabled || !this.userInteracted) {
             console.log('🎵 BGM waiting for user interaction...');
             return;
         }
-        
+
         const bgmPath = GAME_CONFIG.audio.bgmPaths[type];
         if (!bgmPath || bgmPath.trim() === '') {
             console.log('🎵 BGM path is empty, skipping.');
             return;
         }
-        
-        // Stop current BGM if playing
+
+        // Stop any currently playing BGM before starting the new track
         this.stopBGM();
-        
+
         try {
-            // Use the browser's Audio constructor explicitly.
-            // This codebase also defines `var Audio = new AudioSystem()` which shadows
-            // the global constructor name in the window scope.
-            this.bgmAudio = new window.Audio(bgmPath);
-            this.bgmAudio.loop = true;
+            // ── TASK 1 FIX: Use document.createElement('audio') ──────────────
+            //
+            // ❌ OLD (broken):
+            //      this.bgmAudio = new window.Audio(bgmPath);
+            //
+            //    The `var Audio = new AudioSystem()` declaration at the bottom
+            //    of this file assigns an AudioSystem instance to `window.Audio`
+            //    (because `var` in global scope hoists to `window`). Calling
+            //    `new window.Audio(...)` therefore attempts to invoke an instance
+            //    as a constructor, which throws:
+            //
+            //      TypeError: window.Audio is not a constructor
+            //
+            // ✅ NEW (immune to all constructor shadowing):
+            //      this.bgmAudio     = document.createElement('audio');
+            //      this.bgmAudio.src = bgmPath;
+            //
+            //    `document.createElement` is a method on the `document` host
+            //    object and resolves completely independently of the `window.Audio`
+            //    property.  It returns an identical HTMLAudioElement in every
+            //    browser and cannot be shadowed by `var Audio = …`.
+            //
+            //    All subsequent operations — .loop, .volume, .play(), .pause(),
+            //    .currentTime, addEventListener — are identical on both objects.
+            this.bgmAudio     = document.createElement('audio');
+            this.bgmAudio.src = bgmPath;
+            this.bgmAudio.loop   = true;
             this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
-            
-            // Handle autoplay policies
+
+            // ── TASK 3 FIX: Robust autoplay promise handling ──────────────────
+            //
+            // .play() returns a Promise. We must handle rejection or the browser
+            // will log an unhandled rejection — and BGM silently never starts.
+            //
+            // Two-step failure path:
+            //   1. this._bgmWaitingForInteraction = true  — set BEFORE calling
+            //      setupRetryBGM() so any code that polls this flag sees the
+            //      correct state immediately, not after a microtask tick.
+            //   2. setupRetryBGM(type)  — installs a one-time click/keydown
+            //      listener on document that calls playBGM(type) on next gesture.
             const playPromise = this.bgmAudio.play();
-            
+
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
+                        // ── Success path ──────────────────────────────────────
                         this.currentBGM = type;
+                        this._bgmWaitingForInteraction = false; // clear stale flag
                         console.log(`🎵 Now playing BGM: ${type}`);
                     })
                     .catch(error => {
-                        console.warn('🎵 BGM autoplay failed:', error);
-                        // Try again on next user interaction
+                        // ── Failure path (almost always autoplay policy block) ─
+                        console.warn('🎵 BGM autoplay blocked or error:', error);
+                        // Mark BEFORE delegating so setupRetryBGM reads true state
+                        this._bgmWaitingForInteraction = true;
                         this.setupRetryBGM(type);
                     });
             }
-            
-            // Handle ended event with proper cleanup
-            // Defensive: ensure no stale listener is attached
+
+            // ── Loop-end fallback listener ────────────────────────────────────
+            // loop:true handles looping natively, but some older WebView builds
+            // (especially on Android) fire 'ended' before the loop restarts.
+            // This listener manually seeks to 0 and replays as a safety net.
+            // Defensive cleanup: remove any stale listener from a previous track
+            // first to prevent double-firing on the same element.
             if (this._bgmEndedListener) {
                 try { this.bgmAudio.removeEventListener('ended', this._bgmEndedListener); } catch (e) {}
             }
             this._bgmEndedListener = () => {
                 if (this.currentBGM === type) {
                     this.bgmAudio.currentTime = 0;
-                    this.bgmAudio.play();
+                    this.bgmAudio.play().catch(err => {
+                        console.warn('🎵 BGM loop-restart failed:', err);
+                    });
                 }
             };
             this.bgmAudio.addEventListener('ended', this._bgmEndedListener);
-            
+
         } catch (error) {
-            console.error('🎵 Error loading BGM:', error);
+            console.error('🎵 Error creating or loading BGM element:', error);
         }
     }
-    
+
     setupRetryBGM(type) {
-        // Prevent race conditions
+        // Guard: one retry handler per track at a time
         if (this._retryHandlerActive) {
             return;
         }
         this._retryHandlerActive = true;
-        
+
         const retryPlay = () => {
-            if (this.userInteracted && this.currentBGM !== type) {
-                this._retryHandlerActive = false;
+            // Only retry if:
+            //   a) We are still flagged as waiting for interaction, AND
+            //   b) The requested type isn't already playing (race-condition guard)
+            if (this._bgmWaitingForInteraction && this.currentBGM !== type) {
+                this._retryHandlerActive           = false;
+                this._bgmWaitingForInteraction     = false;
                 this.playBGM(type);
+                // Explicit cleanup of the stored reference (listener is {once:true}
+                // so it self-removes from the DOM, but we null the ref for GC)
                 if (this._bgmRetryListener) {
-                    document.removeEventListener('click', this._bgmRetryListener);
+                    document.removeEventListener('click',   this._bgmRetryListener);
                     document.removeEventListener('keydown', this._bgmRetryListener);
                     this._bgmRetryListener = null;
                 }
             }
         };
 
-        // Store for cleanup; listeners are {once:true} but we still clear refs
+        // Store reference for the explicit cleanup path in stopBGM()
         this._bgmRetryListener = retryPlay;
-        document.addEventListener('click', retryPlay, { once: true });
+        document.addEventListener('click',   retryPlay, { once: true });
         document.addEventListener('keydown', retryPlay, { once: true });
     }
-    
+
     stopBGM() {
         if (this.bgmAudio) {
-            // Clean up event listener to prevent memory leaks
+            // Remove the loop-end safety listener to prevent memory leaks
             if (this._bgmEndedListener) {
                 this.bgmAudio.removeEventListener('ended', this._bgmEndedListener);
                 this._bgmEndedListener = null;
             }
 
-            // Clean up any pending retry listener
+            // Remove any pending retry listener and clear all related state
             if (this._bgmRetryListener) {
-                document.removeEventListener('click', this._bgmRetryListener);
+                document.removeEventListener('click',   this._bgmRetryListener);
                 document.removeEventListener('keydown', this._bgmRetryListener);
-                this._bgmRetryListener = null;
-                this._retryHandlerActive = false;
+                this._bgmRetryListener         = null;
+                this._retryHandlerActive       = false;
+                this._bgmWaitingForInteraction = false;
             }
-            
+
             this.bgmAudio.pause();
             this.bgmAudio.currentTime = 0;
             this.bgmAudio = null;
@@ -680,21 +775,21 @@ class AudioSystem {
             console.log('🎵 BGM stopped');
         }
     }
-    
+
     setBGMVolume(volume) {
         this.bgmVolume = clamp(volume, 0, 1);
         if (this.bgmAudio) {
             this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
         }
     }
-    
+
     setSFXVolume(volume) {
         this.sfxVolume = clamp(volume, 0, 1);
     }
-    
+
     setMasterVolume(volume) {
         this.masterVolume = clamp(volume, 0, 1);
-        // Update BGM volume if playing
+        // Update BGM volume if a track is currently playing
         if (this.bgmAudio) {
             this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
         }
@@ -713,6 +808,15 @@ class AudioSystem {
     }
 }
 
+// ── NOTE ON NAMING ─────────────────────────────────────────────────────────────
+// `var Audio` in global script scope → hoists to window.Audio → shadows the
+// native HTML5 Audio constructor.  This is why playBGM() uses
+// document.createElement('audio') instead of `new window.Audio(path)`.
+//
+// The variable name is intentionally preserved here because every other file
+// in the project calls `Audio.playX()`.  Renaming it would require touching
+// every single call site.  Since playBGM() no longer calls `new window.Audio`,
+// the shadow is harmless.
 var Audio = new AudioSystem();
 
 if (typeof module !== 'undefined' && module.exports) {
