@@ -88,6 +88,14 @@ class AudioSystem {
         // autoplay policy blocks playback.  Cleared on successful play or stop.
         this._bgmWaitingForInteraction = false;
 
+        // ── In-flight play() guard ────────────────────────────────────────────
+        // Set true the instant bgmAudio.play() is called; cleared in .then()
+        // and .catch().  retryPlay checks this before retrying so it does NOT
+        // interrupt a battle BGM whose .then() hasn't resolved yet — the
+        // Promise microtask is still pending when the document 'click' event
+        // bubbles up and would otherwise fire retryPlay on the same gesture.
+        this._bgmPlayInProgress = false;
+
         // ── BGM queue for pre-interaction calls ───────────────────────────────
         // When playBGM() is called before the user has interacted with the page
         // (e.g. menu BGM requested from window.onload before any click/key),
@@ -133,9 +141,11 @@ class AudioSystem {
         //   overwrites any _pendingBGM that hasn't fired yet.
         const enableAudio = () => {
             this.userInteracted = true;
-
-            // Resume WebAudio context if it was suspended by autoplay policy
-            this._ensureAudioContextRunning();
+            // NOTE: _ensureAudioContextRunning() is intentionally NOT called here.
+            // Calling ctx.resume() before audio.play() can interfere with Chrome's
+            // gesture activation token for HTML5 audio in some versions.
+            // AudioContext resumption for SFX is handled lazily inside each
+            // playX() method — BGM uses an <audio> element which is independent.
 
             // Play any BGM that was requested before the first interaction
             if (this._pendingBGM) {
@@ -743,20 +753,25 @@ class AudioSystem {
             //      correct state immediately, not after a microtask tick.
             //   2. setupRetryBGM(type)  — installs a one-time click/keydown
             //      listener on document that calls playBGM(type) on next gesture.
+            // Mark in-flight BEFORE calling play() so that retryPlay
+            // (which may fire synchronously in the same click-event bubble)
+            // sees the flag and does not interrupt this pending play().
+            this._bgmPlayInProgress = true;
             const playPromise = this.bgmAudio.play();
 
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
                         // ── Success path ──────────────────────────────────────
+                        this._bgmPlayInProgress = false;
                         this.currentBGM = type;
-                        this._bgmWaitingForInteraction = false; // clear stale flag
+                        this._bgmWaitingForInteraction = false;
                         console.log(`🎵 Now playing BGM: ${type}`);
                     })
                     .catch(error => {
                         // ── Failure path (almost always autoplay policy block) ─
+                        this._bgmPlayInProgress = false;
                         console.warn('🎵 BGM autoplay blocked or error:', error);
-                        // Mark BEFORE delegating so setupRetryBGM reads true state
                         this._bgmWaitingForInteraction = true;
                         this.setupRetryBGM(type);
                     });
@@ -794,20 +809,32 @@ class AudioSystem {
         this._retryHandlerActive = true;
 
         const retryPlay = () => {
-            // Only retry if:
-            //   a) We are still flagged as waiting for interaction, AND
-            //   b) The requested type isn't already playing (race-condition guard)
-            if (this._bgmWaitingForInteraction && this.currentBGM !== type) {
-                this._retryHandlerActive           = false;
-                this._bgmWaitingForInteraction     = false;
-                this.playBGM(type);
-                // Explicit cleanup of the stored reference (listener is {once:true}
-                // so it self-removes from the DOM, but we null the ref for GC)
-                if (this._bgmRetryListener) {
-                    document.removeEventListener('click',   this._bgmRetryListener);
-                    document.removeEventListener('keydown', this._bgmRetryListener);
-                    this._bgmRetryListener = null;
-                }
+            // Abort conditions — do NOT retry if any of these are true:
+            //   a) We are no longer waiting (another BGM started successfully).
+            //   b) A play() Promise is already in-flight (_bgmPlayInProgress).
+            //      This is the KEY guard: when the user clicks "Start Game",
+            //      the button onclick fires startGame() → playBGM('battle') →
+            //      _bgmPlayInProgress = true, BEFORE the click event bubbles
+            //      up to document and triggers retryPlay.  Without this check,
+            //      retryPlay would call stopBGM() + playBGM('menu'), killing
+            //      the battle BGM before its .then() has a chance to confirm it.
+            //   c) Another BGM track is already confirmed playing (currentBGM set).
+            if (!this._bgmWaitingForInteraction || this._bgmPlayInProgress || this.currentBGM !== null) {
+                // Nothing to do — abort silently
+                this._retryHandlerActive = false;
+                return;
+            }
+
+            this._retryHandlerActive       = false;
+            this._bgmWaitingForInteraction = false;
+            this.playBGM(type);
+
+            // Explicit cleanup of the stored reference (listener is {once:true}
+            // so it self-removes from the DOM, but we null the ref for GC)
+            if (this._bgmRetryListener) {
+                document.removeEventListener('click',   this._bgmRetryListener);
+                document.removeEventListener('keydown', this._bgmRetryListener);
+                this._bgmRetryListener = null;
             }
         };
 
@@ -821,6 +848,10 @@ class AudioSystem {
         // Clear any queued-but-not-yet-played BGM so it doesn't
         // accidentally fire after the game state has changed.
         this._pendingBGM = null;
+        // Clear in-flight flag — if stopBGM is called while a play() Promise
+        // is pending, the .then()/.catch() will still fire but currentBGM/flags
+        // will already be clean, so they become no-ops.
+        this._bgmPlayInProgress = false;
 
         if (this.bgmAudio) {
             // Remove the loop-end safety listener to prevent memory leaks

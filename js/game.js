@@ -820,6 +820,14 @@ function startNextWave() {
 
     const count = BALANCE.waves.enemiesBase + (getWave() - 1) * BALANCE.waves.enemiesPerWave;
 
+    // ── BGM: switch to battle music for normal + glitch waves ──────────────
+    // Boss music is handled later, inside the bossEveryNWaves setTimeout block
+    // when the boss actually spawns.  All other waves (including glitch waves)
+    // use battle BGM.  This also restores battle music after a boss wave ends.
+    if (getWave() % BALANCE.waves.bossEveryNWaves !== 0) {
+        Audio.playBGM('battle');
+    }
+
     if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
         isGlitchWave     = true;
         window.isGlitchWave = true;
