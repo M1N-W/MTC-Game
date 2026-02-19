@@ -58,7 +58,9 @@ const GLITCH_DAMAGE_MULT = 0.6;
 class Enemy extends Entity {
     constructor(x, y) {
         super(x, y, BALANCE.enemy.radius);
-        this.maxHp = BALANCE.enemy.baseHp + getWave()*BALANCE.enemy.hpPerWave;
+        // Exponential HP scaling: baseHp * (1.25^(wave/2))
+        // Creates curved difficulty that prevents bullet sponge enemies
+        this.maxHp = Math.floor(BALANCE.enemy.baseHp * Math.pow(1.25, getWave() / 2));
         this.hp = this.maxHp;
         this.speed  = BALANCE.enemy.baseSpeed + getWave()*BALANCE.enemy.speedPerWave;
         this.damage = BALANCE.enemy.baseDamage + getWave()*BALANCE.enemy.damagePerWave;
@@ -156,7 +158,9 @@ class Enemy extends Entity {
 class TankEnemy extends Entity {
     constructor(x,y) {
         super(x,y,BALANCE.tank.radius);
-        this.maxHp = BALANCE.tank.baseHp+getWave()*BALANCE.tank.hpPerWave;
+        // Heavy exponential HP scaling: baseHp * (1.25^(wave/1.8))
+        // Tanks remain threatening but become manageable with focused fire
+        this.maxHp = Math.floor(BALANCE.tank.baseHp * Math.pow(1.25, getWave() / 1.8));
         this.hp=this.maxHp;
         this.speed=BALANCE.tank.baseSpeed+getWave()*BALANCE.tank.speedPerWave;
         this.damage=BALANCE.tank.baseDamage+getWave()*BALANCE.tank.damagePerWave;
@@ -244,7 +248,9 @@ class TankEnemy extends Entity {
 class MageEnemy extends Entity {
     constructor(x,y) {
         super(x,y,BALANCE.mage.radius);
-        this.maxHp=BALANCE.mage.baseHp+getWave()*BALANCE.mage.hpPerWave;
+        // Moderate exponential HP scaling: baseHp * (1.28^(wave/2))
+        // Mages remain glass cannons but scale reasonably
+        this.maxHp=Math.floor(BALANCE.mage.baseHp * Math.pow(1.28, getWave() / 2));
         this.hp=this.maxHp;
         this.speed=BALANCE.mage.baseSpeed+getWave()*BALANCE.mage.speedPerWave;
         this.damage=BALANCE.mage.baseDamage+getWave()*BALANCE.mage.damagePerWave;

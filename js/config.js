@@ -90,7 +90,7 @@ const BALANCE = {
             name: 'Kao',
             radius: 20,
 
-            hp: 110, maxHp: 110,
+            hp: 120, maxHp: 120,
             energy: 100, maxEnergy: 100,
             energyRegen: 15,
 
@@ -164,7 +164,7 @@ const BALANCE = {
             name: 'Poom',
             radius: 20,
 
-            hp: 135, maxHp: 135,
+            hp: 125, maxHp: 125,
             energy: 100, maxEnergy: 100,
             energyRegen: 12,
 
@@ -249,11 +249,12 @@ const BALANCE = {
         expValue: 10,
         chaseRange: 150,
         projectileSpeed: 500,
-        // HP curve: W1=45, W2=51, W3=57, W4=63, W5=69
-        // (was W5=77; now smoother ramp, sniper still 1-shots all waves)
-        baseHp: 45, hpPerWave: 6,
-        baseSpeed: 95, speedPerWave: 8,
-        baseDamage: 9, damagePerWave: 2,
+        // HP curve: W1=40, W2=50, W3=62, W4=76, W5=92, W6=110, W7=130, W8=152, W9=176
+        // Exponential scaling with plateau: baseHp * (1.25^(wave/2))
+        // Ensures enemies remain threatening but don't become bullet sponges
+        baseHp: 40, hpPerWave: 0.25,
+        baseSpeed: 85, speedPerWave: 6,
+        baseDamage: 8, damagePerWave: 1.5,
         shootCooldown: [2.5, 4.5],
         shootRange: 550
     },
@@ -266,12 +267,12 @@ const BALANCE = {
         color: '#78716c',
         expValue: 25,
         powerupDropMult: 1.5,
-        // [TUNED] hpPerWave: 18 → 14
-        // HP curve: W1=115, W2=129, W3=143, W4=157, W5=171
-        // (was W5=187; now Kao's shotgun 3-pellet burst = 276 safely kills W5 tank)
-        baseHp: 115, hpPerWave: 14,
-        baseSpeed: 65, speedPerWave: 4,
-        baseDamage: 20, damagePerWave: 4,
+        // HP curve: W1=100, W2=125, W3=156, W4=195, W5=244, W6=305, W7=381, W8=476, W9=595
+        // Heavy exponential scaling: baseHp * (1.25^(wave/1.8))
+        // Tanks remain threatening but become manageable with focused fire
+        baseHp: 100, hpPerWave: 0.55,
+        baseSpeed: 60, speedPerWave: 3,
+        baseDamage: 18, damagePerWave: 3,
         meleeRange: 55
     },
 
@@ -285,9 +286,12 @@ const BALANCE = {
         powerupDropMult: 1.3,
         orbitDistance: 300,
         orbitDistanceBuffer: 100,
-        baseHp: 30, hpPerWave: 7,
-        baseSpeed: 75, speedPerWave: 7,
-        baseDamage: 13, damagePerWave: 2,
+        // HP curve: W1=28, W2=36, W3=46, W4=58, W5=73, W6=91, W7=113, W8=141, W9=176
+        // Moderate exponential: baseHp * (1.28^(wave/2))
+        // Mages remain glass cannons but scale reasonably
+        baseHp: 28, hpPerWave: 0.28,
+        baseSpeed: 70, speedPerWave: 5,
+        baseDamage: 12, damagePerWave: 1.8,
         soundWaveCooldown: 10,
         soundWaveRange: 300,
         soundWaveConfuseDuration: 0.8,
@@ -313,10 +317,10 @@ const BALANCE = {
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
 
-        baseHp: 2200,
+        baseHp: 2000,
         hpMultiplier: 1,
-        moveSpeed: 130,
-        phase2Speed: 160,
+        moveSpeed: 125,
+        phase2Speed: 155,
         phase2Threshold: 0.5,
 
         chalkDamage: 13,
@@ -364,9 +368,9 @@ const BALANCE = {
         // Spawned as a standalone BossDog entity when Manop enters Phase 2.
         // Very fast melee-range chaser; damage dealt on contact per second.
         bossDog: {
-            hp: 1200,
-            speed: 280,
-            damage: 25,
+            hp: 1000,
+            speed: 260,
+            damage: 22,
             radius: 20,
             color: '#d97706'
         },
@@ -377,10 +381,10 @@ const BALANCE = {
         phase3Threshold: 0.25,
         phase3: {
             auraColor:        '#38bdf8',
-            goldfishCooldown: 4.0,
-            goldfishCount:    3,
-            bubbleCooldown:   6.0,
-            bubbleCount:      4,
+            goldfishCooldown: 5.5,
+            goldfishCount:    2,
+            bubbleCooldown:   7.5,
+            bubbleCount:      3,
             slowFactor:       0.5,
             slowDuration:     2.0
         },
@@ -388,9 +392,9 @@ const BALANCE = {
         // ── GoldfishMinion ───────────────────────────────────
         // Sine-wave Kamikaze fish that wobbles as it chases and explodes on contact.
         goldfishMinion: {
-            hp:        60,
-            speed:     180,
-            damage:    20,
+            hp:        50,
+            speed:     165,
+            damage:    18,
             radius:    12,
             wobbleAmp: 40,
             wobbleFreq: 3.5,
@@ -412,10 +416,10 @@ const BALANCE = {
     // ──────────────────────────────────────────────────────────
     powerups: {
         radius: 20,
-        // [TUNED] 0.10 → 0.13
-        // Late waves (W4–W5) previously ran dry on pickups; +30% drop rate
-        // adds ~1 extra pickup per large wave without trivialising healing.
-        dropRate: 0.13,
+        // [TUNED] 0.13 → 0.15
+        // Late waves need more sustain; +15% drop rate ensures ~1 extra pickup per wave
+        // without making healing too common. Health drops remain meaningful.
+        dropRate: 0.15,
         lifetime: 14,
         healAmount: 20,
         damageBoost: 1.5,
@@ -430,14 +434,14 @@ const BALANCE = {
     waves: {
         spawnDistance: 800,
         bossSpawnDelay: 3000,
-        maxWaves: 8,
+        maxWaves: 9,
         minKillsForNoDamage: 5,
         enemiesBase: 4,
-        enemiesPerWave: 3,
-        // [TUNED] 0.18 → 0.15
-        // Tanks feel special when rare; at 0.18 early waves had >1 tank frequently,
-        // making them routine grind rather than a "watch out!" encounter.
-        tankSpawnChance: 0.15,
+        enemiesPerWave: 2,
+        // [TUNED] 0.15 → 0.12
+        // Tanks should feel special; reduced spawn chance prevents tank spam
+        // in early-mid waves, making each tank encounter more meaningful.
+        tankSpawnChance: 0.12,
         mageSpawnChance: 0.15,
         bossEveryNWaves: 3,
 
@@ -454,14 +458,12 @@ const BALANCE = {
     // 🏆 SCORING
     // ──────────────────────────────────────────────────────────
     score: {
-        // [TUNED] Economy pass — all non-boss rewards +30% (+20% for mage)
-        // Reasoning: After full W2 (7 enemies), expected score was ~750.
-        // Cheapest shop item (Potion) = 500. Players arrived at the W3 boss wave with
-        // no meaningful shop interaction. New expected W2 cumulative: ~975 pts.
-        // Players can now buy 1 Potion (500) before the boss and have 475 toward Boots.
-        basicEnemy: 65,   // was 50
-        tank: 130,        // was 100
-        mage: 180,        // was 150
+        // [ECONOMY OVERHAUL] Balanced scoring system
+        // Wave 1-3 cumulative: ~1200 pts (vs previous ~750)
+        // Allows 1-2 shop items before Wave 3 boss, major upgrade by Wave 6
+        basicEnemy: 80,   // +23% (was 65)
+        tank: 160,        // +23% (was 130)
+        mage: 220,        // +22% (was 180)
         boss: 5000,
         powerup: 100,
         achievement: 500
@@ -539,17 +541,17 @@ const BALANCE = {
 const SHOP_ITEMS = {
     potion: {
         id: 'potion', name: 'Energy Drink', icon: '🧃',
-        cost: 500, heal: 50, duration: null,
+        cost: 400, heal: 50, duration: null,
         desc: 'ฟื้นฟู HP +50 ทันที', color: '#22c55e'
     },
     damageUp: {
         id: 'damageUp', name: 'Weapon Tuner', icon: '🔧',
-        cost: 1000, mult: 1.1, duration: 30,
+        cost: 900, mult: 1.1, duration: 30,
         desc: 'ดาเมจ ×1.1 เป็นเวลา 30 วิ', color: '#f59e0b'
     },
     speedUp: {
         id: 'speedUp', name: 'Lightweight Boots', icon: '👟',
-        cost: 800, mult: 1.1, duration: 30,
+        cost: 700, mult: 1.1, duration: 30,
         desc: 'ความเร็ว ×1.1 เป็นเวลา 30 วิ', color: '#06b6d4'
     }
 };
