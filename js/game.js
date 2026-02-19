@@ -1071,8 +1071,11 @@ function startNextWave() {
 
             const riderTag = isRider ? ' 🐕 DOG RIDER' : '';
             const goldfishTag = isGoldfishLover ? ' 🐟 GOLDFISH LOVER' : '';
-            document.getElementById('boss-name').innerHTML =
-                `KRU MANOP - LEVEL ${bossLevel}${riderTag}${goldfishTag} <span class="ai-badge">AI</span>`;
+            const bossNameEl = document.getElementById('boss-name');
+            if (bossNameEl) {
+                bossNameEl.innerHTML =
+                    `KRU MANOP - LEVEL ${bossLevel}${riderTag}${goldfishTag} <span class="ai-badge">AI</span>`;
+            }
 
             spawnFloatingText(
                 isGoldfishLover ? '🐟 GOLDFISH LOVER INCOMING!' : (isRider ? 'BOSS INCOMING! 🐕' : 'BOSS INCOMING!'),
@@ -1843,6 +1846,8 @@ function startGame(charType = 'kao') {
 
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss    = null;
+    // Ensure strict global cleanup (other files read window.boss)
+    window.boss = null;
 
     dayNightTimer  = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;

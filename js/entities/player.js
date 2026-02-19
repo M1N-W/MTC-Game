@@ -255,12 +255,15 @@ class Player extends Entity {
 
         _standAura_update(this, dt);
         
-        // ── Cleanup dead timeouts ───────────────────────────────
-        if (this.dead) {
-            for (const timeoutId of this.dashTimeouts) {
-                clearTimeout(timeoutId);
+        // ── Cleanup dash timeouts (foolproof) ───────────────────
+        // If the player dies mid-dash, ensure ALL scheduled dash callbacks are
+        // cancelled immediately so they cannot retain references or mutate state.
+        if (this.dead && this.dashTimeouts && this.dashTimeouts.length) {
+            const ids = this.dashTimeouts.slice();
+            this.dashTimeouts.length = 0;
+            for (const timeoutId of ids) {
+                try { clearTimeout(timeoutId); } catch (e) {}
             }
-            this.dashTimeouts = [];
         }
         
         this.updateUI();
@@ -310,9 +313,13 @@ class Player extends Entity {
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;
-        // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly
-        // Validate timeScale and clamp to prevent infinite/NaN speeds
-        const currentScale = (typeof window.timeScale === 'number' && window.timeScale > 0.1 && window.timeScale < 10.0) ? window.timeScale : 1.0;
+        // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly.
+        // Clamp timeScale to prevent division by 0 / Infinity / NaN.
+        let currentScale = 1.0;
+        if (typeof window.timeScale === 'number' && Number.isFinite(window.timeScale)) {
+            currentScale = window.timeScale;
+        }
+        currentScale = Math.min(10.0, Math.max(0.1, currentScale));
         if (currentScale < 1.0) {
             const matrixMult = (1 / currentScale) * 1.5;
             dashSpeed *= matrixMult;
@@ -800,6 +807,17 @@ class PoomPlayer extends Entity {
         }
 
         _standAura_update(this, dt);
+
+        // ── Cleanup dash timeouts (foolproof) ───────────────────
+        // Mirrors Player's cleanup: if Poom dies mid-dash, cancel ALL pending
+        // dash callbacks so they can't keep references alive or mutate state.
+        if (this.dead && this.dashTimeouts && this.dashTimeouts.length) {
+            const ids = this.dashTimeouts.slice();
+            this.dashTimeouts.length = 0;
+            for (const timeoutId of ids) {
+                try { clearTimeout(timeoutId); } catch (e) {}
+            }
+        }
         this.updateUI();
     }
 
@@ -849,7 +867,11 @@ class PoomPlayer extends Entity {
         let dashSpeed = S.dashDistance / 0.2;
         // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly
         // Validate timeScale and clamp to prevent infinite/NaN speeds
-        const currentScale = (typeof window.timeScale === 'number' && window.timeScale > 0.1 && window.timeScale < 10.0) ? window.timeScale : 1.0;
+        let currentScale = 1.0;
+        if (typeof window.timeScale === 'number' && Number.isFinite(window.timeScale)) {
+            currentScale = window.timeScale;
+        }
+        currentScale = Math.min(10.0, Math.max(0.1, currentScale));
         if (currentScale < 1.0) {
             const matrixMult = (1 / currentScale) * 1.5;
             dashSpeed *= matrixMult;

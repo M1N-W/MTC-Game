@@ -263,7 +263,7 @@ class Boss extends Entity {
             // Summon Dog as a standalone enemy
             if (!this.dogSummoned) {
                 this.dogSummoned = true;
-                if (typeof window.enemies !== 'undefined' && Array.isArray(window.enemies)) {
+                if (Array.isArray(window.enemies)) {
                     window.enemies.push(new BossDog(this.x, this.y));
                 }
                 spawnFloatingText('🐕 GO GET \'EM!', this.x, this.y - 120, '#d97706', 32);
@@ -298,7 +298,7 @@ class Boss extends Entity {
                     const spawnAngle = this.angle + (i - 1) * 0.5;
                     const sx = this.x + Math.cos(spawnAngle) * 60;
                     const sy = this.y + Math.sin(spawnAngle) * 60;
-                    if (typeof window.enemies !== 'undefined' && Array.isArray(window.enemies)) {
+                    if (Array.isArray(window.enemies)) {
                         window.enemies.push(new GoldfishMinion(sx, sy));
                     }
                 }

@@ -41,6 +41,13 @@ class AudioSystem {
         this.bgmVolume = GAME_CONFIG.audio.bgmVolume;
         this.sfxVolume = GAME_CONFIG.audio.sfxVolume;
         this.userInteracted = false;
+        
+        // Retry handler guard flag
+        this._retryHandlerActive = false;
+        
+        // Event listener reference for cleanup
+        this._bgmEndedListener = null;
+        this._bgmRetryListener = null;
     }
 
     init() {
@@ -70,9 +77,16 @@ class AudioSystem {
         document.addEventListener('touchstart', enableAudio, { once: true });
     }
 
-    // IMPROVED: Auto Rifle - Smooth and pleasant
+    // Helper: Check and resume AudioContext if suspended
+    _ensureAudioContextRunning() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+    
     playShootAuto() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -92,6 +106,7 @@ class AudioSystem {
     // IMPROVED: Sniper - Deep but smooth
     playShootSniper() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -112,6 +127,7 @@ class AudioSystem {
     // IMPROVED: Shotgun - Punchy but not harsh
     playShootShotgun() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -150,6 +166,7 @@ class AudioSystem {
     //   metallic rifle sounds.
     playPoomShoot() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         // ── Layer 1: Sine body — the bamboo-tube "thump" ──
         const body     = this.ctx.createOscillator();
@@ -207,6 +224,7 @@ class AudioSystem {
     //   additional guarantee (one sound per 220 ms maximum).
     playNagaAttack() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         // ── Layer 1: White noise burst through bandpass filter ──
         const bufferSize  = Math.floor(this.ctx.sampleRate * 0.12); // 120 ms of noise
@@ -260,9 +278,9 @@ class AudioSystem {
         shimmer.stop(this.ctx.currentTime + 0.09);
     }
 
-    // ── NEW: Enhanced Dash SFX - Quick whoosh with white noise ─────────────────────
     playDash() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         // Layer 1: White noise burst with high-pass filter
         const bufferSize = Math.floor(this.ctx.sampleRate * 0.15); // 150 ms of noise
@@ -317,6 +335,7 @@ class AudioSystem {
     // ── ENHANCED: Enemy Hit SFX ────────────────────────────────────────────────
     playHit() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -340,6 +359,7 @@ class AudioSystem {
     // ── NEW: Player Damage SFX - Jarring harsh synth chord ───────────────────────────
     playPlayerDamage() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         // Create a dissonant chord for player damage
         const frequencies = [150, 180, 220]; // Dissonant minor second interval
@@ -367,6 +387,7 @@ class AudioSystem {
     // IMPROVED: Power-up - Pleasant chime
     playPowerUp() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -387,6 +408,7 @@ class AudioSystem {
     // IMPROVED: Achievement - Gentle triple chime
     playAchievement() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         [0, 0.08, 0.16].forEach((delay, i) => {
             setTimeout(() => {
@@ -415,6 +437,7 @@ class AudioSystem {
     // IMPROVED: Weapon switch - Soft click
     playWeaponSwitch() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -435,6 +458,7 @@ class AudioSystem {
     // IMPROVED: Enemy death - Smooth fade
     playEnemyDeath() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -455,6 +479,7 @@ class AudioSystem {
     // IMPROVED: Boss special - Smooth powerful sound
     playBossSpecial() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -475,6 +500,7 @@ class AudioSystem {
     // IMPROVED: Meteor warning - Gentle pulsing
     playMeteorWarning() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -501,6 +527,7 @@ class AudioSystem {
     // NEW: Level up sound - Triumphant but pleasant
     playLevelUp() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const frequencies = [523, 659, 784]; // C, E, G chord
 
@@ -529,6 +556,7 @@ class AudioSystem {
     // NEW: Heal sound - Gentle restore
     playHeal() {
         if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -554,8 +582,8 @@ class AudioSystem {
         }
         
         const bgmPath = GAME_CONFIG.audio.bgmPaths[type];
-        if (!bgmPath) {
-            console.log(`🎵 No BGM path configured for type: ${type}`);
+        if (!bgmPath || bgmPath.trim() === '') {
+            console.log('🎵 BGM path is empty, skipping.');
             return;
         }
         
@@ -583,13 +611,18 @@ class AudioSystem {
                     });
             }
             
-            // Handle ended event (shouldn't happen with loop, but just in case)
-            this.bgmAudio.addEventListener('ended', () => {
+            // Handle ended event with proper cleanup
+            // Defensive: ensure no stale listener is attached
+            if (this._bgmEndedListener) {
+                try { this.bgmAudio.removeEventListener('ended', this._bgmEndedListener); } catch (e) {}
+            }
+            this._bgmEndedListener = () => {
                 if (this.currentBGM === type) {
                     this.bgmAudio.currentTime = 0;
                     this.bgmAudio.play();
                 }
-            });
+            };
+            this.bgmAudio.addEventListener('ended', this._bgmEndedListener);
             
         } catch (error) {
             console.error('🎵 Error loading BGM:', error);
@@ -597,20 +630,46 @@ class AudioSystem {
     }
     
     setupRetryBGM(type) {
+        // Prevent race conditions
+        if (this._retryHandlerActive) {
+            return;
+        }
+        this._retryHandlerActive = true;
+        
         const retryPlay = () => {
             if (this.userInteracted && this.currentBGM !== type) {
+                this._retryHandlerActive = false;
                 this.playBGM(type);
-                document.removeEventListener('click', retryPlay);
-                document.removeEventListener('keydown', retryPlay);
+                if (this._bgmRetryListener) {
+                    document.removeEventListener('click', this._bgmRetryListener);
+                    document.removeEventListener('keydown', this._bgmRetryListener);
+                    this._bgmRetryListener = null;
+                }
             }
         };
-        
+
+        // Store for cleanup; listeners are {once:true} but we still clear refs
+        this._bgmRetryListener = retryPlay;
         document.addEventListener('click', retryPlay, { once: true });
         document.addEventListener('keydown', retryPlay, { once: true });
     }
     
     stopBGM() {
         if (this.bgmAudio) {
+            // Clean up event listener to prevent memory leaks
+            if (this._bgmEndedListener) {
+                this.bgmAudio.removeEventListener('ended', this._bgmEndedListener);
+                this._bgmEndedListener = null;
+            }
+
+            // Clean up any pending retry listener
+            if (this._bgmRetryListener) {
+                document.removeEventListener('click', this._bgmRetryListener);
+                document.removeEventListener('keydown', this._bgmRetryListener);
+                this._bgmRetryListener = null;
+                this._retryHandlerActive = false;
+            }
+            
             this.bgmAudio.pause();
             this.bgmAudio.currentTime = 0;
             this.bgmAudio = null;
@@ -620,14 +679,14 @@ class AudioSystem {
     }
     
     setBGMVolume(volume) {
-        this.bgmVolume = Math.max(0, Math.min(1, volume));
+        this.bgmVolume = clamp(volume, 0, 1);
         if (this.bgmAudio) {
             this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
         }
     }
     
     setSFXVolume(volume) {
-        this.sfxVolume = Math.max(0, Math.min(1, volume));
+        this.sfxVolume = clamp(volume, 0, 1);
     }
     
     setMasterVolume(volume) {

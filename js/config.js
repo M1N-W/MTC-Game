@@ -592,7 +592,8 @@ const GAME_CONFIG = {
     },
     visual: {
         bgColorTop: '#1a1a2e',
-        bgColorBottom: '#16213e'
+        bgColorBottom: '#16213e',
+        screenShakeDecay: 0.92
     }
 };
 
