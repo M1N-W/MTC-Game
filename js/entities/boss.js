@@ -9,6 +9,7 @@
  *
  * Depends on: base.js  (Entity)
  *             player.js (BarkWave)
+ *             game.js   (Gemini global mock — must be loaded before this file)
  *
  * ────────────────────────────────────────────────────────────────
  * FIXES (Logic & Inheritance Audit — Zone 2)
@@ -18,6 +19,19 @@
  *                  base.js / player.js / enemy.js, which would throw
  *                  ReferenceError when boss.js is imported in isolation
  *                  in a Node/bundler environment.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * FIXES (AI Safety — Zone 4)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ Boss.speak() — No longer needs its own Gemini guard.  The global
+ *                   mock installed in game.js ensures window.Gemini is
+ *                   always defined before any game code runs.
+ *                   getBossTaunt() on the mock returns '' so the
+ *                   UIManager branch is a no-op — boss stays silent
+ *                   when ai.js is offline, without any errors.
+ *                   console.warn demoted to console.debug to prevent
+ *                   routine offline runs from spamming the DevTools
+ *                   console with "Speech failed" noise.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -206,10 +220,17 @@ class Boss extends Entity {
     }
 
     async speak(context) {
+        // Gemini is always defined — the global mock in game.js guarantees it.
+        // getBossTaunt() on the mock returns '' so the UIManager branch is a
+        // no-op and the boss simply stays silent when ai.js is offline.
+        // try/catch is kept to handle real API/network errors gracefully;
+        // demoted to console.debug so routine offline runs don't spam the console.
         try {
-            const text=await Gemini.getBossTaunt(context);
+            const text = await Gemini.getBossTaunt(context);
             if (text && window.UIManager) window.UIManager.showBossSpeech(text);
-        } catch(e) { console.warn('Speech failed:',e); }
+        } catch (e) {
+            console.debug('[Boss] Speech unavailable:', e);
+        }
     }
 
     takeDamage(amt) {

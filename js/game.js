@@ -1,5 +1,48 @@
 'use strict';
 
+// ════════════════════════════════════════════════════════════════
+// 🤖 AI SAFETY FALLBACK
+// ════════════════════════════════════════════════════════════════
+// Runs BEFORE any other code.  If ai.js was not loaded (e.g. the
+// <script> tag is commented out in index.html, or a network error
+// prevented the file from loading), every Gemini.* call in this
+// file and in boss.js would throw a ReferenceError and crash the
+// game loop.
+//
+// This block installs a silent mock object on window.Gemini so that
+// all call sites degrade gracefully:
+//   • initAI()         → getMissionName()  returns a default string
+//   • endGame()        → getReportCard()   returns a default string
+//   • Boss.speak()     → getBossTaunt()    returns a default string
+//
+// The mock also exposes the method names from the original Gemini
+// API surface (generateText, generateMission, generateReportCard,
+// speak) so that any call sites in third-party code or future files
+// that use those names are also safe.
+//
+// NOTE: Because this guard uses window.Gemini (not a bare `Gemini`
+// identifier), it is safe inside a 'use strict' module — the bare
+// name would throw a ReferenceError on the typeof check itself if
+// the variable was never declared in any scope.
+// ════════════════════════════════════════════════════════════════
+if (typeof window.Gemini === 'undefined') {
+    window.Gemini = {
+        // ── Original API surface (spec) ──────────────────────
+        init:                 ()          => console.log('🤖 AI System: Offline (Safe Fallback)'),
+        generateText:         async ()    => '...',
+        generateMission:      async ()    => 'Defeat the enemies!',
+        generateReportCard:   async ()    => 'Great job!',
+        speak:                ()          => {},   // Boss speech fallback
+
+        // ── Live call-site methods ────────────────────────────
+        // These are the names actually called in game.js / boss.js.
+        // They must be present on the mock or the fallback is incomplete.
+        getMissionName:  async ()         => 'พิชิตครูมานพ',
+        getReportCard:   async ()         => 'ตั้งใจเรียนให้มากกว่านี้นะ...',
+        getBossTaunt:    async ()         => '',   // empty → Boss stays silent; no UI update
+    };
+}
+
 // ─── Debug Flag (WARN 2 FIX) ──────────────────────────────────
 // Set to true locally to enable verbose frame diagnostics.
 // Never commit as true — the console.log in drawGame fires every 5s
@@ -74,14 +117,17 @@ const DEBUG_MODE = false;
  * ✅ WARN 1: weatherSystem.update() and weatherSystem.draw() wired into the loop.
  * ✅ WARN 2: Diagnostic console.log gated behind DEBUG_MODE flag.
  *
- * FIXES (Build Debugger — Zone 3):
- * ✅ BUG C — Gemini Guard (initAI): Wrapped Gemini.getMissionName() with
- *             `if (typeof Gemini !== 'undefined')` so the menu mission text
- *             falls back gracefully instead of throwing a ReferenceError when
- *             ai.js is commented out in index.html.
- * ✅ BUG D — Gemini Guard (endGame): Wrapped Gemini.getReportCard() with the
- *             same guard. When Gemini is absent the report card immediately shows
- *             the fallback Thai string rather than crashing the game-over screen.
+ * FIXES (Build Debugger — Zone 3 → superseded by Zone 4):
+ * ✅ BUG C/D — Per-call `typeof Gemini` guards added to initAI() and endGame().
+ *              These are now REMOVED — the global mock at the top of this file
+ *              is a single, cleaner solution that covers all call sites at once.
+ *
+ * ARCHITECTURE (AI Safety — Zone 4):
+ * ✅ Global Gemini mock installed at file top (window.Gemini safety fallback).
+ *    When ai.js is absent, every Gemini.* call in game.js and boss.js silently
+ *    returns a safe default instead of throwing a ReferenceError.
+ *    initAI() and endGame() restored to clean single-path form (no typeof guards).
+ *    Boss.speak() try/catch demoted from console.warn → console.debug (less spam).
  */
 
 // ─── Game State ───────────────────────────────────────────────
@@ -1666,13 +1712,8 @@ async function initAI() {
     const brief = document.getElementById('mission-brief');
     if (!brief) { console.warn('⚠️ mission-brief not found'); return; }
 
-    // Guard: Gemini may be absent when ai.js is commented out in index.html.
-    // Fall back to the default Thai mission name so the menu is never blank.
-    if (typeof Gemini === 'undefined') {
-        brief.textContent = 'ภารกิจ "พิชิตครูมานพ"';
-        return;
-    }
-
+    // Gemini is always defined here — the global mock at the top of this file
+    // guarantees it, even when ai.js is not loaded.
     brief.textContent = "กำลังโหลดภารกิจ...";
     try {
         const name = await Gemini.getMissionName();
@@ -1833,21 +1874,16 @@ async function endGame(result) {
         if (ld) ld.style.display = 'block';
         const reportText = document.getElementById('report-text');
 
-        // Guard: Gemini may be absent when ai.js is commented out in index.html.
-        // Show the default fallback comment immediately instead of throwing.
-        if (typeof Gemini === 'undefined') {
+        // Gemini is always defined here — the global mock at the top of this file
+        // guarantees a safe fallback string when ai.js is not loaded.
+        try {
+            const comment = await Gemini.getReportCard(finalScore, finalWave);
+            if (ld) ld.style.display = 'none';
+            if (reportText) reportText.textContent = comment;
+        } catch (e) {
+            console.warn('Failed to get AI report card:', e);
             if (ld) ld.style.display = 'none';
             if (reportText) reportText.textContent = 'ตั้งใจเรียนให้มากกว่านี้นะ...';
-        } else {
-            try {
-                const comment = await Gemini.getReportCard(finalScore, finalWave);
-                if (ld) ld.style.display = 'none';
-                if (reportText) reportText.textContent = comment;
-            } catch (e) {
-                console.warn('Failed to get AI report card:', e);
-                if (ld) ld.style.display = 'none';
-                if (reportText) reportText.textContent = 'ตั้งใจเรียนให้มากกว่านี้นะ...';
-            }
         }
     }
 }
