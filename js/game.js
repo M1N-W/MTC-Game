@@ -396,13 +396,13 @@ const AdminConsole = (() => {
 
 function openAdminConsole() {
     if (gameState !== 'PLAYING') return;
-    gameState = 'PAUSED';
+    gameState = 'PAUSED'; window.gameState = gameState;
     AdminConsole.open();
 }
 
 function closeAdminConsole() {
     AdminConsole.close();
-    if (gameState === 'PAUSED') gameState = 'PLAYING';
+    if (gameState === 'PAUSED') gameState = 'PLAYING'; window.gameState = gameState;
     showResumePrompt(false);
 
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
@@ -430,7 +430,7 @@ function showResumePrompt(visible) {
 
 function openExternalDatabase() {
     if (gameState !== 'PLAYING') return;
-    gameState = 'PAUSED';
+    gameState = 'PAUSED'; window.gameState = gameState;
 
     window.open(MTC_DB_URL, '_blank');
     showResumePrompt(true);
@@ -445,7 +445,7 @@ function openExternalDatabase() {
 function resumeGame() {
     if (gameState !== 'PAUSED') return;
     if (AdminConsole.isOpen) { closeAdminConsole(); return; }
-    gameState = 'PLAYING';
+    gameState = 'PLAYING'; window.gameState = gameState;
 
     showResumePrompt(false);
 
@@ -469,7 +469,7 @@ window.closeMathModal       = closeMathModal;
 
 window.addEventListener('blur', () => {
     if (gameState === 'PLAYING') {
-        gameState = 'PAUSED';
+        gameState = 'PAUSED'; window.gameState = gameState;
         const shopModal   = document.getElementById('shop-modal');
         const shopOpen    = shopModal && shopModal.style.display === 'flex';
         const consoleOpen = AdminConsole.isOpen;
@@ -696,7 +696,7 @@ function updateShopProximityUI() {
 
 function openShop() {
     if (gameState !== 'PLAYING') return;
-    gameState = 'PAUSED';
+    gameState = 'PAUSED'; window.gameState = gameState;
 
     const promptEl = document.getElementById('shop-prompt');
     if (promptEl) promptEl.style.display = 'none';
@@ -709,7 +709,7 @@ function openShop() {
 
 function closeShop() {
     if (gameState !== 'PAUSED') return;
-    gameState = 'PLAYING';
+    gameState = 'PLAYING'; window.gameState = gameState;
 
     ShopManager.close();
     showResumePrompt(false);
@@ -1622,7 +1622,7 @@ function startGame(charType = 'kao') {
     if (consoleOutput) consoleOutput.innerHTML = '';
 
     startNextWave();
-    gameState = 'PLAYING';
+    gameState = 'PLAYING'; window.gameState = gameState;
     resetTime();
 
     const mobileUI = document.getElementById('mobile-ui');
@@ -1640,7 +1640,7 @@ function startGame(charType = 'kao') {
 }
 
 async function endGame(result) {
-    gameState = 'GAMEOVER';
+    gameState = 'GAMEOVER'; window.gameState = gameState;
 
     Audio.stopBGM();
 
@@ -1740,16 +1740,4 @@ window.onload = () => {
     // The instant the user clicks or presses any key on the menu screen,
     // enableAudio fires and the menu track starts playing.
     Audio.playBGM('menu');
-
-    // ── Character selection button bindings ──────────────────────
-    // btn-kao and btn-poom may be handled via inline onclick= in the HTML.
-    // btn-auto is wired here to keep all JS event logic in one place and
-    // guarantee the binding fires after all scripts have loaded.
-    const btnAuto = document.getElementById('btn-auto');
-    if (btnAuto) {
-        btnAuto.addEventListener('click', () => {
-            startGame('auto');
-        });
-        console.log('🔥 btn-auto bound → startGame("auto")');
-    }
 };
