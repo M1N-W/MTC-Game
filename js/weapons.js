@@ -320,6 +320,9 @@ class WeaponSystem {
             spawnFloatingText('HIGH GROUND!', player.x, player.y - 40, '#f59e0b', 16);
         }
 
+        // Apply RPG damage multiplier from player level progression
+        damage *= player.damageMultiplier || 1.0;
+
         const offset = 28;
         for (let i = 0; i < weapon.pellets; i++) {
             const spread = (Math.random() - 0.5) * weapon.spread;

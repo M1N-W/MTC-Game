@@ -131,6 +131,11 @@ class Player extends Entity {
         this.exp            = 0;
         this.expToNextLevel = stats.expToNextLevel;
 
+        // ── RPG Scaling Multipliers ─────────────────────────────
+        // Permanent progression: damage increases, cooldowns decrease per level
+        this.damageMultiplier = 1.0;
+        this.cooldownMultiplier = 1.0;
+
         this.baseCritChance  = stats.baseCritChance;
         this.passiveUnlocked = false;
         this.stealthUseCount = 0;
@@ -284,7 +289,7 @@ class Player extends Entity {
 
     breakStealth() {
         this.isInvisible = false;
-        this.cooldowns.stealth = this.stats.stealthCooldown;
+        this.cooldowns.stealth = this.stats.stealthCooldown * this.cooldownMultiplier;
     }
 
     /**
@@ -371,6 +376,19 @@ class Player extends Entity {
         this.exp -= this.expToNextLevel;
         this.level++;
         this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
+        
+        // ── RPG Scaling Progression ─────────────────────────────
+        // +5% damage per level (permanent)
+        this.damageMultiplier += 0.05;
+        
+        // -3% cooldown per level (capped at 50% reduction)
+        this.cooldownMultiplier = Math.max(0.5, this.cooldownMultiplier - 0.03);
+        
+        // Visual feedback for progression
+        const damageBonus = Math.round((this.damageMultiplier - 1) * 100);
+        const cooldownBonus = Math.round((1 - this.cooldownMultiplier) * 100);
+        spawnFloatingText(`LEVEL ${this.level}! +${damageBonus}% DMG, -${cooldownBonus}% CD`, this.x, this.y - 90, '#fbbf24', 32);
+        
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -685,6 +703,11 @@ class PoomPlayer extends Entity {
         this.level = 1; this.exp = 0;
         this.expToNextLevel = stats.expToNextLevel;
         this.baseCritChance = stats.critChance;
+
+        // ── RPG Scaling Multipliers ─────────────────────────────
+        // Permanent progression: damage increases, cooldowns decrease per level
+        this.damageMultiplier = 1.0;
+        this.cooldownMultiplier = 1.0;
     }
 
     update(dt, keys, mouse) {
@@ -783,8 +806,8 @@ class PoomPlayer extends Entity {
     shoot() {
         const S = this.stats;
         if (this.cooldowns.shoot > 0) return;
-        this.cooldowns.shoot = S.riceCooldown;
-        const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost);
+        this.cooldowns.shoot = S.riceCooldown * this.cooldownMultiplier;
+        const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0));
         projectileManager.add(new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player'));
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
@@ -797,7 +820,7 @@ class PoomPlayer extends Entity {
         const S = this.stats;
         this.isEatingRice = true;
         this.eatRiceTimer = S.eatRiceDuration;
-        this.cooldowns.eat = S.eatRiceCooldown;
+        this.cooldowns.eat = S.eatRiceCooldown * this.cooldownMultiplier;
         spawnParticles(this.x, this.y, 30, '#fbbf24');
         spawnFloatingText('กินข้าวเหนียว!', this.x, this.y - 50, '#fbbf24', 22);
         showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
@@ -806,7 +829,7 @@ class PoomPlayer extends Entity {
 
     summonNaga() {
         const S = this.stats;
-        this.cooldowns.naga = S.nagaCooldown;
+        this.cooldowns.naga = S.nagaCooldown * this.cooldownMultiplier;
         this.naga = new NagaEntity(this.x, this.y, this);
         window.specialEffects.push(this.naga);
         spawnParticles(this.x, this.y, 40, '#10b981');
@@ -821,7 +844,7 @@ class PoomPlayer extends Entity {
         const S = this.stats;
         if (this.isDashing) return;
         this.isDashing = true;
-        this.cooldowns.dash = S.dashCooldown;
+        this.cooldowns.dash = S.dashCooldown * this.cooldownMultiplier;
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;
         // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly
@@ -891,6 +914,19 @@ class PoomPlayer extends Entity {
         const S = this.stats;
         this.exp -= this.expToNextLevel; this.level++;
         this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
+        
+        // ── RPG Scaling Progression ─────────────────────────────
+        // +5% damage per level (permanent)
+        this.damageMultiplier += 0.05;
+        
+        // -3% cooldown per level (capped at 50% reduction)
+        this.cooldownMultiplier = Math.max(0.5, this.cooldownMultiplier - 0.03);
+        
+        // Visual feedback for progression
+        const damageBonus = Math.round((this.damageMultiplier - 1) * 100);
+        const cooldownBonus = Math.round((1 - this.cooldownMultiplier) * 100);
+        spawnFloatingText(`LEVEL ${this.level}! +${damageBonus}% DMG, -${cooldownBonus}% CD`, this.x, this.y - 90, '#fbbf24', 32);
+        
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -1186,7 +1222,7 @@ class NagaEntity extends Entity {
         this.life     = S.nagaDuration;
         this.maxLife  = S.nagaDuration;
         this.speed    = S.nagaSpeed;
-        this.damage   = S.nagaDamage;
+        this.damage   = S.nagaDamage * (owner.damageMultiplier || 1.0);
         this.active  = true;  // false when life <= 0 (Poom invincibility check)
         // this.radius set by Entity via super()
 
