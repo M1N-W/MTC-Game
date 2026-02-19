@@ -442,111 +442,239 @@ class Player extends Entity {
     addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
 
     draw() {
-        const S = this.stats;
+        const S   = this.stats;
+        const now = performance.now();
 
         _standAura_draw(this, this.charId || 'kao');
 
+        // ── Dash ghost trail ─────────────────────────────────────────
         for (const img of this.dashGhosts) {
-            const screen = worldToScreen(img.x, img.y);
-            CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(img.angle);
-            CTX.globalAlpha = img.life * 0.3; CTX.fillStyle = '#60a5fa';
-            CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 8); CTX.fill(); CTX.restore();
-        }
-        const screen = worldToScreen(this.x, this.y);
-        CTX.fillStyle = 'rgba(0,0,0,0.3)';
-        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 25, 18, 8, 0, 0, Math.PI * 2); CTX.fill();
-
-        if (this.passiveUnlocked) {
-            const auraSize  = 35 + Math.sin(performance.now() / 200) * 5;
-            const auraAlpha = 0.3 + Math.sin(performance.now() / 300) * 0.1;
-            CTX.save(); CTX.globalAlpha = auraAlpha; CTX.strokeStyle = '#fbbf24';
-            CTX.lineWidth = 3; CTX.shadowBlur = 20; CTX.shadowColor = '#fbbf24';
-            CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize, 0, Math.PI * 2); CTX.stroke(); CTX.restore();
-        }
-
-        if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.fillText('😵', screen.x, screen.y - 40); }
-        if (this.isBurning)  { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
-
-        CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(this.angle);
-        CTX.globalAlpha = this.isInvisible ? 0.3 : 1;
-
-        // ── v11 Recoil body-lean ──────────────────────────────────
-        // Push the body slightly backward (–x in local/rotated space) when
-        // weaponRecoil > 0. Max shift is 4 px at recoil=1; fades to 0.
-        const recoilShift = this.weaponRecoil * 4;
-        if (recoilShift > 0.05) CTX.translate(-recoilShift, 0);
-
-        const w = Math.sin(this.walkCycle) * 8;
-        CTX.fillStyle = '#1e293b';
-        CTX.beginPath(); CTX.ellipse(5 + w, 10, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.beginPath(); CTX.ellipse(5 - w, -10, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
-
-        // ── v11 Outer glow silhouette (Task 4) ──────────────────────
-        // Draws a neon green stroke around the body rect before filling it so
-        // Kao stands out clearly against dark backgrounds and busy particle fields.
-        CTX.shadowBlur  = 16;
-        CTX.shadowColor = '#00ff41';
-        CTX.strokeStyle = 'rgba(0,255,65,0.70)';
-        CTX.lineWidth   = 2.8;
-        CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.stroke();
-        CTX.shadowBlur  = 0;
-
-        CTX.fillStyle = '#f8fafc'; CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.fill();
-        CTX.fillStyle = '#1e40af';
-        CTX.beginPath(); CTX.moveTo(0,-12); CTX.lineTo(-3,0); CTX.lineTo(-5,12);
-        CTX.lineTo(0,15); CTX.lineTo(5,12); CTX.lineTo(3,0); CTX.closePath(); CTX.fill();
-        CTX.fillStyle = '#2563eb'; CTX.font = 'bold 8px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-        CTX.fillText('MTC', 0, -5);
-        CTX.fillStyle = '#ffdfc4'; CTX.beginPath(); CTX.arc(0, 0, 13, 0, Math.PI * 2); CTX.fill();
-        CTX.fillStyle = '#0f172a';
-        CTX.beginPath(); CTX.arc(0,0,14,Math.PI*1.1,Math.PI*2.9); CTX.fill();
-        CTX.beginPath(); CTX.arc(-8,-5,6,0,Math.PI*2); CTX.fill();
-        CTX.beginPath(); CTX.arc( 8,-5,6,0,Math.PI*2); CTX.fill();
-        CTX.strokeStyle = '#333'; CTX.lineWidth = 2.5;
-        CTX.beginPath(); CTX.arc(-6,0,5,0,Math.PI*2);
-        CTX.moveTo(7,0); CTX.arc(6,0,5,0,Math.PI*2);
-        CTX.moveTo(-1,0); CTX.lineTo(1,0); CTX.stroke();
-        const t = performance.now() / 500;
-        const gl = Math.abs(Math.sin(t)) * 0.8 + 0.2;
-        CTX.fillStyle = `rgba(255,255,255,${gl})`;
-        CTX.fillRect(-8,-2,3,2); CTX.fillRect(4,-2,3,2);
-        CTX.fillStyle = '#ffdfc4'; CTX.beginPath(); CTX.arc(10,15,5,0,Math.PI*2); CTX.fill();
-        if (typeof weaponSystem !== 'undefined') weaponSystem.drawWeaponOnPlayer(this);
-        CTX.fillStyle = '#ffdfc4'; CTX.beginPath(); CTX.arc(8,-15,5,0,Math.PI*2); CTX.fill();
-        CTX.restore();
-
-        // ── v11 Muzzle-flash ring (recoil peak only) ─────────────────
-        // Drawn OUTSIDE the body transform (screen-space) so the ring always
-        // appears at the muzzle direction, unaffected by the body lean offset.
-        if (this.weaponRecoil > 0.45) {
-            const flashT    = (this.weaponRecoil - 0.45) / 0.55; // 0→1 as recoil rises from 0.45→1
-            const muzzleDist = 22 + (1 - flashT) * 8;
-            const mx = screen.x + Math.cos(this.angle) * muzzleDist;
-            const my = screen.y + Math.sin(this.angle) * muzzleDist;
+            const gs = worldToScreen(img.x, img.y);
             CTX.save();
-            CTX.globalAlpha = flashT * 0.85;
-            CTX.strokeStyle = '#fffde7';
-            CTX.lineWidth   = 2;
-            CTX.shadowBlur  = 14;
-            CTX.shadowColor = '#facc15';
-            CTX.beginPath();
-            CTX.arc(mx, my, 5 + (1 - flashT) * 6, 0, Math.PI * 2);
-            CTX.stroke();
-            // Inner bright core
-            CTX.fillStyle   = `rgba(255,255,200,${flashT * 0.7})`;
-            CTX.shadowBlur  = 8;
-            CTX.beginPath();
-            CTX.arc(mx, my, 2 + (1 - flashT) * 3, 0, Math.PI * 2);
-            CTX.fill();
+            CTX.translate(gs.x, gs.y); CTX.rotate(img.angle);
+            CTX.globalAlpha = img.life * 0.45;
+            // Ghost uses the same silhouette so it reads as Kao even faded
+            CTX.fillStyle = '#3b82f6';
+            CTX.shadowBlur = 10 * img.life; CTX.shadowColor = '#60a5fa';
+            // Slim tactical torso ghost
+            CTX.beginPath(); CTX.roundRect(-10, -14, 20, 28, 4); CTX.fill();
+            CTX.globalAlpha = img.life * 0.6;
+            CTX.fillStyle = '#93c5fd';
+            CTX.beginPath(); CTX.arc(0, -8, 8, 0, Math.PI * 2); CTX.fill();
             CTX.restore();
         }
 
+        const screen = worldToScreen(this.x, this.y);
+
+        // ── Ground shadow (ground-plane ellipse) ─────────────────────
+        CTX.save();
+        CTX.globalAlpha = 0.25;
+        CTX.fillStyle = 'rgba(0,0,0,0.7)';
+        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 26, 16, 6, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.restore();
+
+        // ── Passive golden aura ───────────────────────────────────────
+        if (this.passiveUnlocked) {
+            const auraSize  = 35 + Math.sin(now / 200) * 5;
+            const auraAlpha = 0.3 + Math.sin(now / 300) * 0.1;
+            CTX.save(); CTX.globalAlpha = auraAlpha;
+            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3;
+            CTX.shadowBlur = 20; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize, 0, Math.PI * 2); CTX.stroke();
+            CTX.restore();
+        }
+
+        if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.textAlign='center'; CTX.fillText('😵', screen.x, screen.y - 44); }
+        if (this.isBurning)  { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
+
+        // ── Main body transform ───────────────────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+
+        // Recoil body-lean
+        const recoilShift = this.weaponRecoil * 4;
+        if (recoilShift > 0.05) CTX.translate(-recoilShift, 0);
+
+        // ══ STEALTH MODE: Glitch / Scanline effect instead of flat transparency ══
+        if (this.isInvisible) {
+            const glitchT  = now / 60;
+            const glitchAmt = Math.sin(glitchT * 7.3) * 3;
+
+            CTX.save();
+            // Clip to body bounding box so scanlines stay within silhouette
+            CTX.beginPath(); CTX.roundRect(-14, -18, 28, 36, 5); CTX.clip();
+
+            // Scanline passes — alternating transparent bands
+            for (let sy2 = -18; sy2 < 18; sy2 += 3) {
+                const lpha = (Math.sin(glitchT * 4 + sy2 * 0.6) * 0.5 + 0.5) * 0.35;
+                CTX.globalAlpha = lpha;
+                CTX.fillStyle   = '#60a5fa';
+                CTX.fillRect(-14 + glitchAmt * (sy2 % 5 === 0 ? 1 : 0), sy2, 28, 1.5);
+            }
+
+            // Ghost outline — barely visible body shape
+            CTX.globalAlpha = 0.18 + Math.sin(glitchT * 2.1) * 0.08;
+            CTX.strokeStyle = '#93c5fd';
+            CTX.lineWidth   = 1.5;
+            CTX.shadowBlur  = 8; CTX.shadowColor = '#60a5fa';
+            // Torso
+            CTX.beginPath(); CTX.roundRect(-10, -4, 20, 20, 4); CTX.stroke();
+            // Shoulder pads
+            CTX.beginPath(); CTX.roundRect(-14, -6, 8, 10, 3); CTX.stroke();
+            CTX.beginPath(); CTX.roundRect(6, -6, 8, 10, 3); CTX.stroke();
+            // Head
+            CTX.beginPath(); CTX.arc(0, -11, 8, 0, Math.PI * 2); CTX.stroke();
+            // Visor line — bright cyan even when glitching
+            CTX.globalAlpha = 0.55 + Math.sin(glitchT * 5) * 0.3;
+            CTX.fillStyle   = '#00e5ff';
+            CTX.shadowBlur  = 12; CTX.shadowColor = '#00e5ff';
+            CTX.fillRect(-5, -14, 10, 2);
+
+            CTX.restore();
+            CTX.restore(); // end main body transform
+
+        } else {
+            // ══ VISIBLE MODE: Full detailed silhouette ══
+
+            const walkW = Math.sin(this.walkCycle) * 7;
+
+            // ── Legs ────────────────────────────────────────────────
+            CTX.fillStyle = '#1e293b';
+            CTX.beginPath(); CTX.ellipse(4 + walkW, 13, 5, 3.5, 0, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.ellipse(4 - walkW, -13, 5, 3.5, 0, 0, Math.PI * 2); CTX.fill();
+
+            // ── Neon silhouette glow (outer ring) ───────────────────
+            CTX.shadowBlur  = 18;
+            CTX.shadowColor = '#00ff41';
+            CTX.strokeStyle = 'rgba(0,255,65,0.70)';
+            CTX.lineWidth   = 2.8;
+            // Torso silhouette
+            CTX.beginPath(); CTX.roundRect(-11, -3, 22, 20, 5); CTX.stroke();
+            // Head silhouette
+            CTX.beginPath(); CTX.arc(0, -10, 9, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+
+            // ── Shoulder pad geometry (left/right) ──────────────────
+            const shoulderGlow = 0.4 + Math.sin(now / 400) * 0.2;
+            // Left shoulder
+            CTX.fillStyle = '#1e3a5f';
+            CTX.beginPath(); CTX.roundRect(-15, -7, 9, 12, 3); CTX.fill();
+            CTX.strokeStyle = `rgba(96,165,250,${shoulderGlow})`; CTX.lineWidth = 1.2;
+            CTX.shadowBlur = 6; CTX.shadowColor = '#60a5fa';
+            CTX.beginPath(); CTX.roundRect(-15, -7, 9, 12, 3); CTX.stroke();
+            // Right shoulder
+            CTX.fillStyle = '#1e3a5f';
+            CTX.beginPath(); CTX.roundRect(6, -7, 9, 12, 3); CTX.fill();
+            CTX.beginPath(); CTX.roundRect(6, -7, 9, 12, 3); CTX.stroke();
+            CTX.shadowBlur = 0;
+
+            // ── Torso: tactical vest ─────────────────────────────────
+            const torsoGrad = CTX.createLinearGradient(-11, -3, 11, 17);
+            torsoGrad.addColorStop(0, '#1e40af');
+            torsoGrad.addColorStop(0.4, '#1d4ed8');
+            torsoGrad.addColorStop(1, '#1e3a8a');
+            CTX.fillStyle = torsoGrad;
+            CTX.beginPath(); CTX.roundRect(-11, -3, 22, 20, 4); CTX.fill();
+
+            // Chest plate highlight
+            CTX.fillStyle = '#2563eb';
+            CTX.beginPath(); CTX.roundRect(-7, -1, 14, 8, 2); CTX.fill();
+
+            // MTC emblem
+            CTX.fillStyle = '#93c5fd'; CTX.font = 'bold 6px Arial';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText('MTC', 0, 3);
+
+            // Vest detail lines
+            CTX.strokeStyle = 'rgba(147,197,253,0.4)'; CTX.lineWidth = 0.8;
+            CTX.beginPath(); CTX.moveTo(-8, 10); CTX.lineTo(-8, 16); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo( 8, 10); CTX.lineTo( 8, 16); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(-4, 10); CTX.lineTo(-4, 15); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo( 4, 10); CTX.lineTo( 4, 15); CTX.stroke();
+
+            // ── Head ─────────────────────────────────────────────────
+            // Skin
+            CTX.fillStyle = '#fde8cc';
+            CTX.beginPath(); CTX.arc(0, -10, 9, 0, Math.PI * 2); CTX.fill();
+            // Tactical helmet (top arc)
+            CTX.fillStyle = '#0f172a';
+            CTX.beginPath(); CTX.arc(0, -10, 10, Math.PI * 1.05, Math.PI * 1.95); CTX.fill();
+            // Helmet detail stripe
+            CTX.strokeStyle = '#1d4ed8'; CTX.lineWidth = 1.5;
+            CTX.beginPath(); CTX.arc(0, -10, 10, Math.PI * 1.15, Math.PI * 1.85); CTX.stroke();
+
+            // ── VISOR / EYEPIECE (signature Kao visual) ──────────────
+            const visorPulse = 0.6 + Math.sin(now / 350) * 0.4;
+            // Visor lens shape
+            CTX.fillStyle = `rgba(0,229,255,${visorPulse * 0.85})`;
+            CTX.shadowBlur  = 12 * visorPulse;
+            CTX.shadowColor = '#00e5ff';
+            CTX.beginPath();
+            CTX.moveTo(-6, -12); CTX.lineTo(6, -12);
+            CTX.lineTo(7, -10); CTX.lineTo(-7, -10);
+            CTX.closePath(); CTX.fill();
+            // Inner bright slit
+            CTX.fillStyle = `rgba(255,255,255,${visorPulse * 0.9})`;
+            CTX.fillRect(-4, -11.5, 8, 1);
+            // Earpiece / comms device on right side
+            CTX.fillStyle = '#334155';
+            CTX.beginPath(); CTX.roundRect(8, -13, 4, 6, 1); CTX.fill();
+            CTX.fillStyle = `rgba(0,229,255,${0.5 + Math.sin(now/200)*0.5})`;
+            CTX.beginPath(); CTX.arc(11, -11, 1.5, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+
+            // ── Weapon drawn on player ────────────────────────────────
+            if (typeof weaponSystem !== 'undefined') weaponSystem.drawWeaponOnPlayer(this);
+
+            // ── Off-hand visible at side ──────────────────────────────
+            CTX.fillStyle = '#fde8cc';
+            CTX.beginPath(); CTX.arc(-14, 8, 4, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fde8cc';
+            CTX.beginPath(); CTX.arc(9, 17, 4, 0, Math.PI * 2); CTX.fill();
+
+            CTX.restore(); // end main body transform
+
+            // ── Muzzle-flash (blue sparks — Kao identity) ────────────
+            if (this.weaponRecoil > 0.45) {
+                const flashT     = (this.weaponRecoil - 0.45) / 0.55;
+                const muzzleDist = 38 + (1 - flashT) * 10;
+                const mx = screen.x + Math.cos(this.angle) * muzzleDist;
+                const my = screen.y + Math.sin(this.angle) * muzzleDist;
+                CTX.save();
+                // Core ring
+                CTX.globalAlpha = flashT * 0.9;
+                CTX.strokeStyle = '#e0f2fe';
+                CTX.lineWidth   = 2;
+                CTX.shadowBlur  = 18; CTX.shadowColor = '#00e5ff';
+                CTX.beginPath(); CTX.arc(mx, my, 4 + (1 - flashT) * 7, 0, Math.PI * 2); CTX.stroke();
+                // Blue spark rays — 6 short lines around the muzzle
+                CTX.strokeStyle = '#7dd3fc';
+                CTX.lineWidth   = 1.2;
+                for (let ri = 0; ri < 6; ri++) {
+                    const ra  = this.angle + (ri / 6) * Math.PI * 2;
+                    const r0  = 2, r1 = 5 + flashT * 6;
+                    CTX.beginPath();
+                    CTX.moveTo(mx + Math.cos(ra) * r0, my + Math.sin(ra) * r0);
+                    CTX.lineTo(mx + Math.cos(ra) * r1, my + Math.sin(ra) * r1);
+                    CTX.stroke();
+                }
+                // Bright core dot
+                CTX.globalAlpha = flashT;
+                CTX.fillStyle   = '#ffffff';
+                CTX.shadowBlur  = 10; CTX.shadowColor = '#00e5ff';
+                CTX.beginPath(); CTX.arc(mx, my, 2.5, 0, Math.PI * 2); CTX.fill();
+                CTX.restore();
+            }
+        }
+
+        // ── Level badge ───────────────────────────────────────────────
         if (this.level > 1) {
-            CTX.fillStyle = 'rgba(139,92,246,0.9)';
-            CTX.beginPath(); CTX.arc(screen.x+22, screen.y-22, 10, 0, Math.PI*2); CTX.fill();
+            CTX.fillStyle = 'rgba(59,130,246,0.92)';
+            CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 10, 0, Math.PI * 2); CTX.fill();
             CTX.fillStyle = '#fff'; CTX.font = 'bold 10px Arial';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText(this.level, screen.x+22, screen.y-22);
+            CTX.fillText(this.level, screen.x + 22, screen.y - 22);
         }
     }
 
@@ -718,90 +846,179 @@ class AutoPlayer extends Player {
 
     draw() {
         const screen = worldToScreen(this.x, this.y);
+        const now    = performance.now();
+        if (typeof CTX === 'undefined' || !CTX) return;
 
-        // Shadow
-        if (typeof CTX !== 'undefined' && CTX) {
-            CTX.fillStyle = 'rgba(0,0,0,0.3)';
-            CTX.beginPath();
-            CTX.ellipse(screen.x, screen.y + 25, 18, 8, 0, 0, Math.PI * 2);
-            CTX.fill();
-        }
+        // ── Ground shadow ────────────────────────────────────────────
+        CTX.save();
+        CTX.globalAlpha = 0.28;
+        CTX.fillStyle = 'rgba(0,0,0,0.7)';
+        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 26, 20, 7, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.restore();
 
-        // Stand (behind)
-        if (this.wanchaiActive && typeof CTX !== 'undefined' && CTX) {
-            const bob = Math.sin(performance.now() / 140) * 6;
-            const sx  = screen.x - Math.cos(this.angle) * 22;
-            const sy  = screen.y - Math.sin(this.angle) * 22 - 28 + bob;
+        // ══ WANCHAI — Ghostly Humanoid Stand (drawn BEHIND the body) ══
+        if (this.wanchaiActive) {
+            const bob  = Math.sin(now / 130) * 7;
+            const sx   = screen.x - Math.cos(this.angle) * 30;
+            const sy   = screen.y - Math.sin(this.angle) * 30 - 30 + bob;
+
             CTX.save();
             CTX.translate(sx, sy);
-            CTX.globalAlpha = 0.55;
-            CTX.shadowBlur  = 22;
-            CTX.shadowColor = '#fb7185';
 
-            // Aura ring
-            CTX.strokeStyle = 'rgba(220,38,38,0.55)';
-            CTX.lineWidth   = 4;
-            CTX.beginPath();
-            CTX.arc(0, 0, 34 + Math.sin(performance.now() / 120) * 3, 0, Math.PI * 2);
-            CTX.stroke();
+            const wAlpha = 0.55 + Math.sin(now / 160) * 0.15;
 
-            // Muscular humanoid silhouette (simple shapes)
-            CTX.fillStyle = 'rgba(254,202,202,0.65)';
-            CTX.beginPath(); CTX.roundRect(-18, -22, 36, 44, 10); CTX.fill();
-            CTX.fillStyle = 'rgba(220,38,38,0.55)';
-            CTX.beginPath(); CTX.roundRect(-28, -14, 16, 28, 10); CTX.fill();
-            CTX.beginPath(); CTX.roundRect(12, -14, 16, 28, 10); CTX.fill();
+            // ── Outer aura ring ──────────────────────────────────────
+            CTX.globalAlpha = 0.35 + Math.sin(now / 200) * 0.15;
+            CTX.strokeStyle = '#ef4444';
+            CTX.lineWidth   = 3.5;
+            CTX.shadowBlur  = 30; CTX.shadowColor = '#dc2626';
+            CTX.beginPath(); CTX.arc(0, 0, 38 + Math.sin(now / 140) * 4, 0, Math.PI * 2); CTX.stroke();
+
+            // ── Ghostly torso (shimmering red light lines) ───────────
+            CTX.globalAlpha = wAlpha * 0.65;
+            const torsoW = 28, torsoH = 38, torsoTop = -19, torsoLeft = -14;
+            CTX.save();
+            CTX.beginPath(); CTX.roundRect(torsoLeft, torsoTop, torsoW, torsoH, 6); CTX.clip();
+            const lineSpacing = 4;
+            for (let ly = torsoTop; ly <= torsoTop + torsoH; ly += lineSpacing) {
+                const lineAlpha = 0.4 + 0.5 * Math.abs(Math.sin(now / 80 + ly * 0.15));
+                CTX.strokeStyle = `rgba(248,113,113,${lineAlpha})`;
+                CTX.lineWidth   = 1.2;
+                CTX.shadowBlur  = 4; CTX.shadowColor = '#ef4444';
+                CTX.beginPath(); CTX.moveTo(torsoLeft, ly); CTX.lineTo(torsoLeft + torsoW, ly); CTX.stroke();
+            }
+            CTX.restore();
+            CTX.globalAlpha = wAlpha;
+            CTX.strokeStyle = 'rgba(220,38,38,0.80)';
+            CTX.lineWidth   = 2;
+            CTX.shadowBlur  = 16; CTX.shadowColor = '#dc2626';
+            CTX.beginPath(); CTX.roundRect(torsoLeft, torsoTop, torsoW, torsoH, 6); CTX.stroke();
+
+            // ── Muscular arms ────────────────────────────────────────
+            for (let side = -1; side <= 1; side += 2) {
+                const armX = side * 22, armY = -8;
+                CTX.globalAlpha = wAlpha * 0.7;
+                CTX.strokeStyle = 'rgba(220,38,38,0.70)';
+                CTX.lineWidth   = 1.5;
+                CTX.shadowBlur  = 10;
+                CTX.beginPath(); CTX.roundRect(armX - 5, armY, 10, 22, 5); CTX.stroke();
+                CTX.globalAlpha = wAlpha * 0.45;
+                CTX.strokeStyle = '#fb7185';
+                CTX.lineWidth   = 1;
+                CTX.beginPath(); CTX.roundRect(armX - 3, armY + 2, 6, 10, 3); CTX.stroke();
+            }
+
+            // ── Ghostly head (semi-transparent) ─────────────────────
+            CTX.globalAlpha = wAlpha * 0.75;
+            CTX.shadowBlur  = 18; CTX.shadowColor = '#dc2626';
+            CTX.strokeStyle = 'rgba(254,202,202,0.60)';
+            CTX.lineWidth   = 2;
+            CTX.beginPath(); CTX.arc(0, -28, 12, 0, Math.PI * 2); CTX.stroke();
+            // Spiked hair
+            CTX.fillStyle = 'rgba(220,38,38,0.70)';
+            for (let si = -2; si <= 2; si++) {
+                CTX.beginPath();
+                CTX.moveTo(si * 5 - 3, -37);
+                CTX.lineTo(si * 5 + 3, -37);
+                CTX.lineTo(si * 5, -42 + Math.abs(si) * 2);
+                CTX.closePath(); CTX.fill();
+            }
+            // Eyes glow
+            const eyeGlow = 0.7 + Math.sin(now / 110) * 0.3;
+            CTX.globalAlpha = eyeGlow;
+            CTX.fillStyle   = '#f87171';
+            CTX.shadowBlur  = 12; CTX.shadowColor = '#ef4444';
+            CTX.beginPath(); CTX.arc(-4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc( 4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
+
             CTX.restore();
         }
 
-        // Auto body
-        if (typeof CTX === 'undefined' || !CTX) return;
+        // ══ AUTO BODY — Heavy Crimson Brawler ══
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
-        // Crimson outer glow
-        CTX.shadowBlur  = 16;
-        CTX.shadowColor = '#dc2626';
-        CTX.strokeStyle = 'rgba(220,38,38,0.72)';
-        CTX.lineWidth   = 2.8;
-        CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        const walkW = Math.sin(this.walkCycle) * 7;
 
-        // Body
-        CTX.fillStyle = '#fee2e2';
-        CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.fill();
-
-        // Core emblem
-        CTX.fillStyle = '#dc2626';
-        CTX.beginPath(); CTX.arc(4, 0, 6, 0, Math.PI * 2); CTX.fill();
-        CTX.fillStyle = '#fff1f2';
-        CTX.beginPath(); CTX.arc(4, 0, 2.5, 0, Math.PI * 2); CTX.fill();
-
-        // Head
-        CTX.fillStyle = '#ffdfc4';
-        CTX.beginPath(); CTX.arc(0, 0, 13, 0, Math.PI * 2); CTX.fill();
+        // ── Legs ─────────────────────────────────────────────────────
         CTX.fillStyle = '#7f1d1d';
-        CTX.beginPath(); CTX.arc(0, -4, 14, Math.PI * 1.05, Math.PI * 1.95); CTX.fill();
-        CTX.restore();
+        CTX.beginPath(); CTX.ellipse(5 + walkW, 14, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse(5 - walkW, -14, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
 
-        // Small heat shimmer when moving
-        if (typeof spawnParticles === 'function' && (Math.abs(this.vx) + Math.abs(this.vy)) > 60 && Math.random() < 0.08) {
-            spawnParticles(this.x + rand(-10, 10), this.y + rand(-10, 10), 1, '#fb7185', 'steam');
+        // ── Neon outer glow silhouette ────────────────────────────────
+        CTX.shadowBlur  = 18; CTX.shadowColor = '#dc2626';
+        CTX.strokeStyle = 'rgba(220,38,38,0.72)';
+        CTX.lineWidth   = 3;
+        CTX.beginPath(); CTX.roundRect(-13, -6, 26, 22, 5); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Torso ─────────────────────────────────────────────────────
+        const torsoG = CTX.createLinearGradient(-13, -6, 13, 16);
+        torsoG.addColorStop(0, '#fca5a5');
+        torsoG.addColorStop(0.4, '#ef4444');
+        torsoG.addColorStop(1, '#7f1d1d');
+        CTX.fillStyle = torsoG;
+        CTX.beginPath(); CTX.roundRect(-13, -6, 26, 22, 5); CTX.fill();
+
+        CTX.fillStyle = '#991b1b';
+        CTX.beginPath(); CTX.roundRect(-8, -3, 16, 10, 2); CTX.fill();
+        const corePulse = 0.5 + Math.sin(now / 220) * 0.5;
+        CTX.fillStyle = `rgba(251,113,133,${corePulse})`;
+        CTX.shadowBlur = 10 * corePulse; CTX.shadowColor = '#dc2626';
+        CTX.beginPath(); CTX.arc(0, 2, 4, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // ── SHOULDER PADS with heat vents ────────────────────────────
+        const attackIntensity = this.wanchaiActive ? 1.0
+            : (Math.abs(this.vx) + Math.abs(this.vy) > 80 ? 0.5 : 0.2);
+        const ventGlow = attackIntensity * (0.6 + Math.sin(now / 180) * 0.4);
+
+        for (const side of [-1, 1]) {
+            const sx = side * 17, sy = -4;
+            CTX.fillStyle = '#991b1b';
+            CTX.beginPath(); CTX.roundRect(sx - 6, sy, 12, 14, 4); CTX.fill();
+            CTX.strokeStyle = '#7f1d1d'; CTX.lineWidth = 1;
+            CTX.beginPath(); CTX.roundRect(sx - 6, sy, 12, 14, 4); CTX.stroke();
+            CTX.shadowBlur  = 8 * ventGlow; CTX.shadowColor = '#fb923c';
+            for (let vi = 0; vi < 3; vi++) {
+                CTX.fillStyle = `rgba(251,146,60,${ventGlow * (0.5 + vi * 0.17)})`;
+                CTX.fillRect(sx - 3, sy + 3 + vi * 4, 6, 2);
+            }
+            CTX.shadowBlur = 0;
         }
 
-        // ── Thermodynamic gauntlet weapon ─────────────────────────
-        // Drawn in world space at player's forward position so it
-        // rotates correctly with the player body.
+        // ── Head ─────────────────────────────────────────────────────
+        CTX.fillStyle = '#fde8cc';
+        CTX.beginPath(); CTX.arc(0, -12, 9, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#7f1d1d';
+        CTX.beginPath(); CTX.arc(0, -12, 10, Math.PI * 1.05, Math.PI * 1.95); CTX.fill();
+        CTX.fillStyle = '#0f172a';
+        CTX.beginPath(); CTX.arc(-4, -14, 3, Math.PI * 0.9, Math.PI * 2.1); CTX.fill();
+        CTX.beginPath(); CTX.arc( 4, -14, 3, Math.PI * 0.9, Math.PI * 2.1); CTX.fill();
+        CTX.fillStyle = '#ef4444';
+        CTX.shadowBlur = 4; CTX.shadowColor = '#dc2626';
+        CTX.fillRect(-6, -13, 4, 2);
+        CTX.fillRect( 2, -13, 4, 2);
+        CTX.shadowBlur = 0;
+
+        CTX.restore(); // end body transform
+
+        // ── Heat shimmer particles while moving ──────────────────────
+        if (typeof spawnParticles === 'function' && (Math.abs(this.vx) + Math.abs(this.vy)) > 60 && Math.random() < 0.1) {
+            spawnParticles(this.x + rand(-12, 12), this.y + rand(-12, 12), 1, '#fb7185', 'steam');
+        }
+
+        // ── Thermodynamic gauntlet weapon ─────────────────────────────
         if (typeof drawAutoWeapon === 'function') {
             CTX.save();
             CTX.translate(screen.x, screen.y);
             CTX.rotate(this.angle);
-            drawAutoWeapon(CTX);
+            drawAutoWeapon(CTX, this.wanchaiActive, ventGlow);
             CTX.restore();
         }
 
-        // ── Level badge (matches Kao/Poom style) ──────────────────
+        // ── Level badge ───────────────────────────────────────────────
         if (this.level > 1) {
             CTX.fillStyle = 'rgba(220,38,38,0.9)';
             CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 10, 0, Math.PI * 2); CTX.fill();
@@ -1417,48 +1634,122 @@ class PoomPlayer extends Entity {
         CTX.rotate(this.angle);
         const w = Math.sin(this.walkCycle) * 8;
 
+        // ── Legs ─────────────────────────────────────────────────────
         CTX.fillStyle = '#1e3a8a';
-        CTX.beginPath(); CTX.ellipse(5+w,12,7,5,0,0,Math.PI*2); CTX.fill();
-        CTX.beginPath(); CTX.ellipse(5-w,-12,7,5,0,0,Math.PI*2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse(5+w,  14, 6, 4, 0, 0, Math.PI*2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse(5-w, -14, 6, 4, 0, 0, Math.PI*2); CTX.fill();
 
-        // ── v11 Outer glow silhouette (Task 4) ─────────────────────────────
-        // Poom uses a deep-purple neon stroke matching his stand-aura colour.
+        // ── v11 Outer glow silhouette (deep purple) ────────────────
         CTX.shadowBlur  = 16;
         CTX.shadowColor = '#a855f7';
         CTX.strokeStyle = 'rgba(168,85,247,0.72)';
         CTX.lineWidth   = 2.8;
-        CTX.beginPath(); CTX.roundRect(-16,-13,32,26,5); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        CTX.beginPath(); CTX.roundRect(-14, -4, 28, 22, 5); CTX.stroke();
+        // Shoulder outline glow
+        CTX.beginPath(); CTX.roundRect(-18, -6, 10, 14, 4); CTX.stroke();
+        CTX.beginPath(); CTX.roundRect( 8,  -6, 10, 14, 4); CTX.stroke();
+        CTX.shadowBlur = 0;
 
-        CTX.fillStyle = '#dc2626';
-        CTX.beginPath(); CTX.roundRect(-16,-13,32,26,5); CTX.fill();
+        // ── Shoulder pads (relaxed casual style) ───────────────────
+        CTX.fillStyle = '#ea580c';
+        CTX.beginPath(); CTX.roundRect(-18, -6, 10, 14, 4); CTX.fill();
+        CTX.beginPath(); CTX.roundRect( 8,  -6, 10, 14, 4); CTX.fill();
 
+        // ── Torso: modern student vest ──────────────────────────────
+        const vestGrad = CTX.createLinearGradient(-14, -4, 14, 18);
+        vestGrad.addColorStop(0, '#f97316');
+        vestGrad.addColorStop(0.5, '#ea580c');
+        vestGrad.addColorStop(1, '#c2410c');
+        CTX.fillStyle = vestGrad;
+        CTX.beginPath(); CTX.roundRect(-14, -4, 28, 22, 5); CTX.fill();
+
+        // ── Glowing Thai Kranok (lotus scroll) patterns on vest ────
+        // Ornamental curling leaf motifs inspired by traditional Thai Kranok
+        const kranokT   = performance.now() / 500;
+        const kranokAlpha = 0.45 + Math.sin(kranokT * 1.3) * 0.25;
         CTX.save();
-        CTX.beginPath(); CTX.roundRect(-16,-13,32,26,5); CTX.clip();
-        CTX.strokeStyle='rgba(255,255,255,0.5)'; CTX.lineWidth=3;
-        for(let xi=-16;xi<=16;xi+=8){CTX.beginPath();CTX.moveTo(xi,-13);CTX.lineTo(xi,13);CTX.stroke();}
-        for(let yi=-13;yi<=13;yi+=7){CTX.beginPath();CTX.moveTo(-16,yi);CTX.lineTo(16,yi);CTX.stroke();}
+        CTX.beginPath(); CTX.roundRect(-14, -4, 28, 22, 5); CTX.clip();
+
+        // Left scroll tendril
+        CTX.globalAlpha = kranokAlpha;
+        CTX.strokeStyle = '#fde68a';
+        CTX.lineWidth   = 1.2;
+        CTX.shadowBlur  = 6 + Math.sin(kranokT * 2) * 3;
+        CTX.shadowColor = '#fbbf24';
+        CTX.beginPath();
+        CTX.moveTo(-10, 14); CTX.quadraticCurveTo(-12, 5, -6, 3);
+        CTX.quadraticCurveTo(-2, 1, -4, 6);
+        CTX.stroke();
+        // Petal flourish top
+        CTX.beginPath();
+        CTX.moveTo(-6, 3); CTX.quadraticCurveTo(-8, 0, -5, -1);
+        CTX.quadraticCurveTo(-3, -2, -4, 1);
+        CTX.stroke();
+
+        // Right scroll tendril (mirrored)
+        CTX.beginPath();
+        CTX.moveTo(10, 14); CTX.quadraticCurveTo(12, 5, 6, 3);
+        CTX.quadraticCurveTo(2, 1, 4, 6);
+        CTX.stroke();
+        CTX.beginPath();
+        CTX.moveTo(6, 3); CTX.quadraticCurveTo(8, 0, 5, -1);
+        CTX.quadraticCurveTo(3, -2, 4, 1);
+        CTX.stroke();
+
+        // Centre lotus diamond
+        CTX.globalAlpha = kranokAlpha * 0.9;
+        CTX.fillStyle = '#fef08a';
+        CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
+        CTX.beginPath();
+        CTX.moveTo(0, -2); CTX.lineTo(3, 2); CTX.lineTo(0, 6); CTX.lineTo(-3, 2);
+        CTX.closePath(); CTX.fill();
+
+        // Dot accents
+        CTX.fillStyle = '#fde68a';
+        CTX.shadowBlur = 4;
+        for (const [dx2, dy2] of [[-9, 10], [9, 10], [0, 11]]) {
+            CTX.beginPath(); CTX.arc(dx2, dy2, 1.5, 0, Math.PI * 2); CTX.fill();
+        }
         CTX.restore();
 
+        // ── Off-hand visible ──────────────────────────────────────
         CTX.fillStyle = '#d4a574';
-        CTX.beginPath(); CTX.arc(10,14,5,0,Math.PI*2); CTX.fill();
-        CTX.beginPath(); CTX.arc(8,-14,5,0,Math.PI*2); CTX.fill();
+        CTX.beginPath(); CTX.arc(10, 18, 4, 0, Math.PI*2); CTX.fill();
+        CTX.beginPath(); CTX.arc(8, -16, 4, 0, Math.PI*2); CTX.fill();
 
+        // ── Head ─────────────────────────────────────────────────
         CTX.fillStyle = '#d4a574';
-        CTX.beginPath(); CTX.arc(0,0,13,0,Math.PI*2); CTX.fill();
+        CTX.beginPath(); CTX.arc(0, -12, 9, 0, Math.PI*2); CTX.fill();
+        // Hair / cap
         CTX.fillStyle = '#0f172a';
-        CTX.beginPath(); CTX.arc(0,0,14,Math.PI*1.15,Math.PI*2.85); CTX.fill();
-        CTX.beginPath(); CTX.arc(-7,-4,5,0,Math.PI*2); CTX.fill();
-        CTX.beginPath(); CTX.arc(7,-4,5,0,Math.PI*2); CTX.fill();
+        CTX.beginPath(); CTX.arc(0, -12, 10, Math.PI*1.1, Math.PI*2.9); CTX.fill();
+        // Cap brim — slightly tilted for casual student look
+        CTX.fillStyle = '#f97316';
+        CTX.beginPath();
+        CTX.moveTo(-10, -16); CTX.lineTo(10, -16);
+        CTX.lineTo(11, -14); CTX.lineTo(-11, -14);
+        CTX.closePath(); CTX.fill();
+        // Cap glow edge
+        CTX.strokeStyle = 'rgba(253,230,138,0.5)'; CTX.lineWidth = 0.8;
+        CTX.beginPath(); CTX.moveTo(-10, -14); CTX.lineTo(10, -14); CTX.stroke();
 
-        CTX.strokeStyle='#1e293b'; CTX.lineWidth=2.5;
-        CTX.beginPath(); CTX.arc(-5,1,4.5,0,Math.PI*2); CTX.moveTo(6,1); CTX.arc(5,1,4.5,0,Math.PI*2); CTX.stroke();
+        // Eyes
+        CTX.fillStyle = '#0f172a';
+        CTX.beginPath(); CTX.arc(-4, -12, 2.5, 0, Math.PI*2); CTX.fill();
+        CTX.beginPath(); CTX.arc( 4, -12, 2.5, 0, Math.PI*2); CTX.fill();
+        CTX.strokeStyle='#1e293b'; CTX.lineWidth=1.8;
+        CTX.beginPath(); CTX.arc(-3.5, -12, 2, 0, Math.PI*2); CTX.stroke();
+        CTX.beginPath(); CTX.arc(3.5, -12,  2, 0, Math.PI*2); CTX.stroke();
+        // Eye shine
         const tg = performance.now()/500;
         CTX.fillStyle=`rgba(255,255,255,${Math.abs(Math.sin(tg))*0.7+0.3})`;
-        CTX.fillRect(-7,-1,3,2); CTX.fillRect(3,-1,3,2);
+        CTX.fillRect(-5, -13, 2, 1.5); CTX.fillRect(3, -13, 2, 1.5);
+        // Smile
+        CTX.strokeStyle='#7c3c2a'; CTX.lineWidth=1.8;
+        CTX.beginPath(); CTX.arc(0, -10, 3.5, 0.1, Math.PI-0.1); CTX.stroke();
 
-        CTX.strokeStyle='#7c3c2a'; CTX.lineWidth=2;
-        CTX.beginPath(); CTX.arc(0,2,5,0.1,Math.PI-0.1); CTX.stroke();
+        // ── Draw Poom weapon ──────────────────────────────────────
+        if (typeof drawPoomWeapon === 'function') drawPoomWeapon(CTX);
 
         CTX.restore();
 
@@ -1619,44 +1910,185 @@ class NagaEntity extends Entity {
 
     draw() {
         const lifeRatio = this.life / this.maxLife;
-        for (let i = this.segments.length-1; i >= 0; i--) {
-            const seg = this.segments[i];
+        const now = performance.now();
+
+        // ── Body segments (tail → neck) ──────────────────────────────
+        for (let i = this.segments.length - 1; i >= 1; i--) {
+            const seg    = this.segments[i];
             const screen = worldToScreen(seg.x, seg.y);
-            const t = i / (this.segments.length-1);
-            const r = this.radius * (1-t*0.55);
-            const alpha = lifeRatio * (1-t*0.3);
-            CTX.save(); CTX.globalAlpha = Math.max(0.1, alpha);
-            if (i === 0) {
-                CTX.fillStyle='#fbbf24'; CTX.shadowBlur=20; CTX.shadowColor='#fbbf24';
-                CTX.beginPath(); CTX.arc(screen.x,screen.y,r,0,Math.PI*2); CTX.fill();
-                CTX.shadowBlur=0;
-                CTX.fillStyle='#ef4444';
-                CTX.beginPath(); CTX.arc(screen.x-r*.35,screen.y-r*.2,r*.25,0,Math.PI*2); CTX.fill();
-                CTX.beginPath(); CTX.arc(screen.x+r*.35,screen.y-r*.2,r*.25,0,Math.PI*2); CTX.fill();
-            } else if (i === this.segments.length-1) {
-                CTX.fillStyle='#065f46'; CTX.shadowBlur=6; CTX.shadowColor='#10b981';
-                CTX.beginPath(); CTX.arc(screen.x,screen.y,r,0,Math.PI*2); CTX.fill();
+            const t      = i / (this.segments.length - 1);
+            const r      = this.radius * (1 - t * 0.55);
+            const alpha  = lifeRatio * (1 - t * 0.3);
+
+            CTX.save();
+            CTX.globalAlpha = Math.max(0.1, alpha);
+
+            if (i === this.segments.length - 1) {
+                // Tail tip — tapered spike
+                const prevSeg = this.segments[i - 1];
+                const tailAngle = Math.atan2(seg.y - prevSeg.y, seg.x - prevSeg.x);
+                CTX.translate(screen.x, screen.y);
+                CTX.rotate(tailAngle);
+                CTX.fillStyle = '#065f46';
+                CTX.shadowBlur = 4; CTX.shadowColor = '#10b981';
+                CTX.beginPath();
+                CTX.moveTo(-r, -r * 0.4);
+                CTX.lineTo( r, -r * 0.4);
+                CTX.lineTo( r * 2.5, 0);
+                CTX.lineTo( r, r * 0.4);
+                CTX.lineTo(-r, r * 0.4);
+                CTX.closePath(); CTX.fill();
             } else {
-                CTX.fillStyle = i%2===0 ? '#10b981' : '#059669';
-                CTX.shadowBlur=10; CTX.shadowColor='#10b981';
-                CTX.beginPath(); CTX.arc(screen.x,screen.y,r,0,Math.PI*2); CTX.fill();
-                if (i%2===0 && r>8) {
-                    CTX.strokeStyle='rgba(6,95,70,0.6)'; CTX.lineWidth=1.5;
-                    CTX.beginPath(); CTX.arc(screen.x,screen.y,r*.7,0,Math.PI*2); CTX.stroke();
+                // Body scale — alternating emerald tones with subtle scale marks
+                const isEven = i % 2 === 0;
+                const scaleGrad = CTX.createRadialGradient(
+                    screen.x - r * 0.25, screen.y - r * 0.25, 0,
+                    screen.x, screen.y, r
+                );
+                scaleGrad.addColorStop(0, isEven ? '#34d399' : '#10b981');
+                scaleGrad.addColorStop(0.6, isEven ? '#10b981' : '#059669');
+                scaleGrad.addColorStop(1, '#064e3b');
+                CTX.fillStyle = scaleGrad;
+                CTX.shadowBlur  = 8 + Math.sin(now / 300 + i) * 3;
+                CTX.shadowColor = '#10b981';
+                CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.fill();
+                // Scale ridge line
+                if (r > 7) {
+                    CTX.strokeStyle = 'rgba(6,78,59,0.55)';
+                    CTX.lineWidth   = 1.2;
+                    CTX.beginPath();
+                    CTX.arc(screen.x, screen.y, r * 0.65, 0, Math.PI * 2);
+                    CTX.stroke();
                 }
             }
             CTX.restore();
         }
-        if (this.segments.length > 0) {
-            const hs = worldToScreen(this.segments[0].x, this.segments[0].y);
-            CTX.fillStyle=`rgba(251,191,36,${lifeRatio})`;
-            CTX.font='bold 10px Arial'; CTX.textAlign='center'; CTX.textBaseline='middle';
-            CTX.fillText(`${this.life.toFixed(1)}s`, hs.x, hs.y-32);
 
-            // ── Task 4: Connection Line anchor on Naga head ─────────────────
-            // A pulsing emerald ring around the head signals where the tether
-            // terminates, reinforcing the visual link drawn from Poom's side.
-            const pulse = 0.6 + Math.sin(performance.now() / 130) * 0.4;
+        // ══ HEAD — Majestic Naga ══
+        if (this.segments.length > 0) {
+            const head    = this.segments[0];
+            const hs      = worldToScreen(head.x, head.y);
+            const r       = this.radius;
+            const headAlpha = lifeRatio;
+
+            // Compute head facing angle from first two segments
+            let headAngle = 0;
+            if (this.segments.length > 1) {
+                const neck = this.segments[1];
+                headAngle  = Math.atan2(head.y - neck.y, head.x - neck.x);
+            }
+
+            CTX.save();
+            CTX.translate(hs.x, hs.y);
+            CTX.rotate(headAngle);
+            CTX.globalAlpha = Math.max(0.15, headAlpha);
+
+            // ── Aura pulsing ring ─────────────────────────────────
+            const auraR = r * 1.8 + Math.sin(now / 120) * 3;
+            CTX.globalAlpha = headAlpha * (0.4 + Math.sin(now / 160) * 0.2);
+            CTX.strokeStyle = '#34d399';
+            CTX.lineWidth   = 2;
+            CTX.shadowBlur  = 16 + Math.sin(now / 130) * 8;
+            CTX.shadowColor = '#10b981';
+            CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.stroke();
+
+            CTX.globalAlpha = Math.max(0.15, headAlpha);
+
+            // ── Main head shape (pointed snout, wide jaw) ─────────
+            const headGrad = CTX.createRadialGradient(-r * 0.2, -r * 0.2, 0, 0, 0, r * 1.1);
+            headGrad.addColorStop(0, '#34d399');
+            headGrad.addColorStop(0.5, '#059669');
+            headGrad.addColorStop(1, '#064e3b');
+            CTX.fillStyle = headGrad;
+            CTX.shadowBlur  = 20; CTX.shadowColor = '#10b981';
+            CTX.beginPath();
+            CTX.moveTo(r * 1.3, 0);                                    // snout tip
+            CTX.quadraticCurveTo(r * 1.0, -r * 0.8, 0, -r * 0.85);    // upper jaw
+            CTX.quadraticCurveTo(-r * 0.7, -r * 0.9, -r, -r * 0.55);  // crown back
+            CTX.quadraticCurveTo(-r * 1.1, 0, -r, r * 0.55);           // neck left
+            CTX.quadraticCurveTo(-r * 0.7, r * 0.9, 0, r * 0.85);      // lower jaw
+            CTX.quadraticCurveTo(r * 1.0, r * 0.8, r * 1.3, 0);        // snout tip again
+            CTX.closePath(); CTX.fill();
+            CTX.shadowBlur = 0;
+
+            // ── HORNS — two curved swept-back horns ───────────────
+            CTX.strokeStyle = '#fbbf24';
+            CTX.lineWidth   = 3;
+            CTX.lineCap     = 'round';
+            CTX.shadowBlur  = 10; CTX.shadowColor = '#f59e0b';
+            // Left horn
+            CTX.beginPath();
+            CTX.moveTo(-r * 0.3, -r * 0.65);
+            CTX.quadraticCurveTo(-r * 0.6, -r * 1.4, -r * 0.1, -r * 1.8);
+            CTX.stroke();
+            // Right horn
+            CTX.beginPath();
+            CTX.moveTo( r * 0.3, -r * 0.65);
+            CTX.quadraticCurveTo( r * 0.6, -r * 1.4, r * 0.1, -r * 1.8);
+            CTX.stroke();
+            // Horn tips glow dot
+            CTX.fillStyle = '#fef08a';
+            CTX.shadowBlur = 14; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(-r * 0.1, -r * 1.8, 2.5, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc( r * 0.1, -r * 1.8, 2.5, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+
+            // ── FLOWING MANE — layered quadratic curves ───────────
+            const manePhase = now / 200;
+            CTX.lineWidth   = 2.5;
+            CTX.lineCap     = 'round';
+            // Three mane strands per side for a "majestic" multi-layer look
+            const maneStrands = [
+                { side: -1, baseY: -r * 0.4, cp1x: -r * 1.6, cp1y: -r * 0.2, endX: -r * 1.4, endY: r * 0.5, phase: 0 },
+                { side: -1, baseY: -r * 0.1, cp1x: -r * 1.8, cp1y:  r * 0.4, endX: -r * 1.2, endY: r * 1.0, phase: 0.7 },
+                { side: -1, baseY:  r * 0.3, cp1x: -r * 1.4, cp1y:  r * 1.0, endX: -r * 0.8, endY: r * 1.5, phase: 1.4 },
+                { side:  1, baseY: -r * 0.4, cp1x:  r * 1.6, cp1y: -r * 0.2, endX:  r * 1.4, endY: r * 0.5, phase: 0.3 },
+                { side:  1, baseY: -r * 0.1, cp1x:  r * 1.8, cp1y:  r * 0.4, endX:  r * 1.2, endY: r * 1.0, phase: 1.0 },
+                { side:  1, baseY:  r * 0.3, cp1x:  r * 1.4, cp1y:  r * 1.0, endX:  r * 0.8, endY: r * 1.5, phase: 1.7 },
+            ];
+            for (const ms of maneStrands) {
+                const flutter = Math.sin(manePhase + ms.phase) * r * 0.35;
+                const mAlpha  = headAlpha * (0.5 + Math.sin(manePhase + ms.phase) * 0.3);
+                CTX.globalAlpha = Math.max(0, mAlpha);
+                CTX.strokeStyle = '#6ee7b7';
+                CTX.shadowBlur  = 8; CTX.shadowColor = '#10b981';
+                CTX.beginPath();
+                CTX.moveTo(0, ms.baseY);
+                CTX.quadraticCurveTo(ms.cp1x + flutter * ms.side, ms.cp1y, ms.endX + flutter * ms.side * 0.5, ms.endY);
+                CTX.stroke();
+            }
+            CTX.globalAlpha = Math.max(0.15, headAlpha);
+            CTX.shadowBlur  = 0;
+
+            // ── GLOWING EYES ──────────────────────────────────────
+            const eyeGlow  = 0.6 + Math.sin(now / 180) * 0.4;
+            const eyeColor = `rgba(245,158,11,${eyeGlow})`;
+            // Eye whites (actually golden)
+            CTX.fillStyle = eyeColor;
+            CTX.shadowBlur  = 16 * eyeGlow; CTX.shadowColor = '#f59e0b';
+            CTX.beginPath(); CTX.ellipse(r * 0.35, -r * 0.3, r * 0.28, r * 0.2, 0, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.ellipse(r * 0.35,  r * 0.3, r * 0.28, r * 0.2, 0, 0, Math.PI * 2); CTX.fill();
+            // Vertical slit pupils
+            CTX.fillStyle = '#0f172a';
+            CTX.shadowBlur = 0;
+            CTX.beginPath(); CTX.ellipse(r * 0.38, -r * 0.3, r * 0.08, r * 0.16, 0, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.ellipse(r * 0.38,  r * 0.3, r * 0.08, r * 0.16, 0, 0, Math.PI * 2); CTX.fill();
+            // Inner eye shine
+            CTX.fillStyle = `rgba(255,251,235,${eyeGlow * 0.7})`;
+            CTX.beginPath(); CTX.arc(r * 0.32, -r * 0.34, r * 0.07, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(r * 0.32,  r * 0.26, r * 0.07, 0, Math.PI * 2); CTX.fill();
+
+            // ── Life timer ───────────────────────────────────────
+            CTX.restore();
+            CTX.save();
+            CTX.globalAlpha = headAlpha * 0.85;
+            CTX.fillStyle   = '#34d399';
+            CTX.font = 'bold 10px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText(`${this.life.toFixed(1)}s`, hs.x, hs.y - r * 2.4);
+            CTX.restore();
+
+            // ── Connection tether anchor ring ─────────────────────
+            const pulse = 0.6 + Math.sin(now / 130) * 0.4;
             CTX.save();
             CTX.globalAlpha  = lifeRatio * (0.5 + pulse * 0.4);
             CTX.strokeStyle  = '#34d399';
