@@ -591,7 +591,10 @@ class AudioSystem {
         this.stopBGM();
         
         try {
-            this.bgmAudio = new Audio(bgmPath);
+            // Use the browser's Audio constructor explicitly.
+            // This codebase also defines `var Audio = new AudioSystem()` which shadows
+            // the global constructor name in the window scope.
+            this.bgmAudio = new window.Audio(bgmPath);
             this.bgmAudio.loop = true;
             this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
             
