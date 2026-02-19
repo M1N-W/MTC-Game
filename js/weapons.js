@@ -1030,7 +1030,8 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
     ctx.translate(12, 4);
 
     const heat = wanchaiActive ? 1.0 : ventGlow;
-    const firePulse = 0.4 + Math.sin(now / 160) * 0.6;
+    // Clamp to [0,1] — Math.sin can push this negative (-0.2) which breaks arc() radii
+    const firePulse = Math.max(0, 0.4 + Math.sin(now / 160) * 0.6);
 
     // ── ENGINE BLOCK BODY ─────────────────────────────────────────
     const bg = ctx.createLinearGradient(0, -9, 0, 9);
@@ -1081,11 +1082,11 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
             ctx.fillStyle = '#fb923c';
             const fx = epx + (Math.sin(now / 80 + ep) * 1.5);
             const fy = -14 - heat * firePulse * 4;
-            ctx.beginPath(); ctx.arc(fx, fy, 2.5 * heat * firePulse, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(fx, fy, Math.max(0, 2.5 * heat * firePulse), 0, Math.PI * 2); ctx.fill();
             // Outer flame
             ctx.fillStyle = '#fde68a';
             ctx.globalAlpha = fireAlpha * 0.5;
-            ctx.beginPath(); ctx.arc(fx, fy - 3, 2 * heat, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(fx, fy - 3, Math.max(0, 2 * heat), 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
             ctx.globalAlpha = 1;
         }
