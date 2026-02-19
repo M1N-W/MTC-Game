@@ -568,19 +568,14 @@ const GAME_CONFIG = {
         worldBounds: 1500,
         gridSize: 100
     },
-    visual: {
-        particleLifetime: [0.3, 0.8],
-        textFloatSpeed: -80,
-        screenShakeDecay: 0.9,
-        bgColorTop:    '#0f172a',
-        bgColorBottom: '#1e293b',
-        gridColor:     'rgba(30, 41, 59, 0.5)'
-    },
-    input: {
-        joystickDeadzone: 0.1,
-        joystickMaxDistance: 40
-    },
     audio: {
+        bgmVolume: 0.3,
+        sfxVolume: 0.6,
+        bgmPaths: {
+            menu: 'assets/audio/menu.mp3', // Example: 'assets/audio/menu.mp3'
+            battle: 'assets/audio/battle.mp3', 
+            boss: 'assets/audio/boss.mp3'
+        },
         master:        1.0,
         shoot:         0.3,
         dash:          0.4,

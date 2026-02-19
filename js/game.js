@@ -1083,6 +1083,9 @@ function startNextWave() {
             addScreenShake(15);
             Audio.playBossSpecial();
         }, BALANCE.waves.bossSpawnDelay);
+        
+        // Switch to boss BGM when boss spawns
+        Audio.playBGM('boss');
     }
 }
 
@@ -1827,6 +1830,9 @@ async function initAI() {
 function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
     Audio.init();
+    
+    // Start BGM for battle
+    Audio.playBGM('battle');
 
     const savedData = getSaveData();
     console.log('[MTC Save] Loaded save data:', savedData);
@@ -1933,6 +1939,9 @@ function startGame(charType = 'kao') {
 
 async function endGame(result) {
     gameState = 'GAMEOVER';
+    
+    // Stop BGM on game over
+    Audio.stopBGM();
 
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
@@ -2010,4 +2019,7 @@ window.onload = () => {
     initCanvas();
     InputSystem.init(); // ← wires keyboard, mouse, and mobile touch controls
     initAI();
+    
+    // Start menu BGM
+    Audio.playBGM('menu');
 };
