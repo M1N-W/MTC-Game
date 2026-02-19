@@ -8,7 +8,30 @@
  * ► PowerUp    — Loot drop (collected by player)
  *
  * Depends on: base.js (Entity)
+ *
+ * ────────────────────────────────────────────────────────────────
+ * COMBAT FEEDBACK ADDITIONS (Lead Gameplay Developer pass)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ HIT FLASH — All three enemy classes (Enemy, TankEnemy, MageEnemy)
+ *    now implement a white-silhouette flash whenever takeDamage() is called:
+ *
+ *    Construction:  this.hitFlashTimer = 0;
+ *    On damage:     this.hitFlashTimer = HIT_FLASH_DURATION;   // 0.10 s
+ *    In update():   if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+ *    In draw():     a full-coverage white shape (matching the enemy's silhouette)
+ *                   is painted on top of the normal sprite at up to 75 % alpha,
+ *                   linearly fading to 0 over the flash duration.
+ *
+ *    The flash duration constant HIT_FLASH_DURATION = 0.10 s (≈ 6 frames at
+ *    60 fps) sits at the top of this file so it can be tuned centrally.
+ *
+ *    Draw implementation uses `CTX.save()/restore()` so no canvas state
+ *    leaks into the health-bar drawing that immediately follows.
  */
+
+// ─── Tunable: seconds a hit-flash stays at full opacity before fading out ───
+// At 0.10 s (≈ 6 frames @ 60 fps) the flash is snappy but legible.
+const HIT_FLASH_DURATION = 0.10;
 
 // ════════════════════════════════════════════════════════════
 // ENEMIES
@@ -23,9 +46,20 @@ class Enemy extends Entity {
         this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
         this.color = randomChoice(BALANCE.enemy.colors);
         this.type = 'basic'; this.expValue = BALANCE.enemy.expValue;
+
+        // ── Hit flash state ──────────────────────────────────
+        // Seconds remaining on the white-silhouette flash.
+        // Set to HIT_FLASH_DURATION on every takeDamage() call.
+        // Decays in update(); drawn in draw() if > 0.
+        this.hitFlashTimer = 0;
     }
+
     update(dt, player) {
         if (this.dead) return;
+
+        // ── Tick hit-flash timer ─────────────────────────────
+        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+
         const dx=player.x-this.x, dy=player.y-this.y;
         const d=dist(this.x,this.y,player.x,player.y);
         this.angle=Math.atan2(dy,dx);
@@ -40,8 +74,14 @@ class Enemy extends Entity {
         }
         if (d<this.radius+player.radius) player.takeDamage(this.damage*dt*3);
     }
+
     takeDamage(amt, player) {
         this.hp-=amt;
+
+        // ── Trigger hit flash ────────────────────────────────
+        // Reset to full duration on every hit so rapid hits keep the flash active.
+        this.hitFlashTimer = HIT_FLASH_DURATION;
+
         if (this.hp<=0) {
             this.dead=true; this.hp=0;
             spawnParticles(this.x,this.y,20,this.color);
@@ -51,13 +91,35 @@ class Enemy extends Entity {
             if (Math.random()<BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x,this.y));
         }
     }
+
     draw() {
         const screen=worldToScreen(this.x,this.y);
+
+        // Shadow / ground ellipse
         CTX.fillStyle='rgba(0,0,0,0.3)'; CTX.beginPath();
         CTX.ellipse(screen.x,screen.y+20,15,7,0,0,Math.PI*2); CTX.fill();
+
+        // ── Normal sprite ────────────────────────────────────
         CTX.save(); CTX.translate(screen.x,screen.y); CTX.rotate(this.angle);
         CTX.fillStyle=this.color; CTX.beginPath(); CTX.arc(0,0,this.radius,0,Math.PI*2); CTX.fill();
-        CTX.fillStyle='#000'; CTX.beginPath(); CTX.arc(8,0,4,0,Math.PI*2); CTX.fill(); CTX.restore();
+        CTX.fillStyle='#000'; CTX.beginPath(); CTX.arc(8,0,4,0,Math.PI*2); CTX.fill();
+        CTX.restore();
+
+        // ── Hit flash — white silhouette ─────────────────────
+        // Painted AFTER the sprite restore so it composites cleanly on top.
+        // Alpha ramps from 0.75 at full flash → 0 as timer expires.
+        if (this.hitFlashTimer > 0) {
+            const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
+            CTX.save();
+            CTX.globalAlpha = flashAlpha;
+            CTX.fillStyle   = '#ffffff';
+            CTX.beginPath();
+            CTX.arc(screen.x, screen.y, this.radius, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.restore();
+        }
+
+        // ── HP bar ───────────────────────────────────────────
         const hp=this.hp/this.maxHp, bw=30;
         CTX.fillStyle='#1e293b'; CTX.fillRect(screen.x-bw/2,screen.y-30,bw,4);
         CTX.fillStyle='#ef4444'; CTX.fillRect(screen.x-bw/2,screen.y-30,bw*hp,4);
@@ -72,9 +134,17 @@ class TankEnemy extends Entity {
         this.speed=BALANCE.tank.baseSpeed+getWave()*BALANCE.tank.speedPerWave;
         this.damage=BALANCE.tank.baseDamage+getWave()*BALANCE.tank.damagePerWave;
         this.color=BALANCE.tank.color; this.type='tank'; this.expValue=BALANCE.tank.expValue;
+
+        // ── Hit flash state ──────────────────────────────────
+        this.hitFlashTimer = 0;
     }
+
     update(dt,player) {
         if(this.dead) return;
+
+        // ── Tick hit-flash timer ─────────────────────────────
+        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+
         const dx=player.x-this.x, dy=player.y-this.y;
         const d=dist(this.x,this.y,player.x,player.y);
         this.angle=Math.atan2(dy,dx);
@@ -83,8 +153,13 @@ class TankEnemy extends Entity {
         this.applyPhysics(dt);
         if(d<BALANCE.tank.meleeRange+player.radius) player.takeDamage(this.damage*dt*2);
     }
+
     takeDamage(amt,player) {
         this.hp-=amt;
+
+        // ── Trigger hit flash ────────────────────────────────
+        this.hitFlashTimer = HIT_FLASH_DURATION;
+
         if(this.hp<=0){
             this.dead=true;
             spawnParticles(this.x,this.y,30,this.color);
@@ -94,14 +169,37 @@ class TankEnemy extends Entity {
             if(Math.random()<BALANCE.powerups.dropRate*BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x,this.y));
         }
     }
+
     draw() {
         const screen=worldToScreen(this.x,this.y);
+
+        // Shadow
         CTX.fillStyle='rgba(0,0,0,0.4)'; CTX.beginPath();
         CTX.ellipse(screen.x,screen.y+25,20,10,0,0,Math.PI*2); CTX.fill();
+
+        // ── Normal sprite ────────────────────────────────────
         CTX.save(); CTX.translate(screen.x,screen.y); CTX.rotate(this.angle);
         CTX.fillStyle=this.color; CTX.fillRect(-20,-20,40,40);
         CTX.fillStyle='#57534e'; CTX.fillRect(-18,-18,12,36); CTX.fillRect(6,-18,12,36);
-        CTX.fillStyle='#dc2626'; CTX.beginPath(); CTX.arc(10,0,6,0,Math.PI*2); CTX.fill(); CTX.restore();
+        CTX.fillStyle='#dc2626'; CTX.beginPath(); CTX.arc(10,0,6,0,Math.PI*2); CTX.fill();
+        CTX.restore();
+
+        // ── Hit flash — white silhouette (matches square body) ──
+        // TankEnemy body is a 40×40 rect centred on the entity.
+        // We draw a matching rect in white to create the flash silhouette.
+        if (this.hitFlashTimer > 0) {
+            const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
+            CTX.save();
+            CTX.globalAlpha   = flashAlpha;
+            CTX.fillStyle     = '#ffffff';
+            // Replicate the translate + rotate that the sprite uses
+            CTX.translate(screen.x, screen.y);
+            CTX.rotate(this.angle);
+            CTX.fillRect(-20, -20, 40, 40);
+            CTX.restore();
+        }
+
+        // ── HP bar ───────────────────────────────────────────
         const hp=this.hp/this.maxHp;
         CTX.fillStyle='#1e293b'; CTX.fillRect(screen.x-20,screen.y-35,40,5);
         CTX.fillStyle='#78716c'; CTX.fillRect(screen.x-20,screen.y-35,40*hp,5);
@@ -117,9 +215,17 @@ class MageEnemy extends Entity {
         this.damage=BALANCE.mage.baseDamage+getWave()*BALANCE.mage.damagePerWave;
         this.color=BALANCE.mage.color; this.type='mage';
         this.soundWaveCD=0; this.meteorCD=0; this.expValue=BALANCE.mage.expValue;
+
+        // ── Hit flash state ──────────────────────────────────
+        this.hitFlashTimer = 0;
     }
+
     update(dt,player) {
         if(this.dead) return;
+
+        // ── Tick hit-flash timer ─────────────────────────────
+        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+
         const d=dist(this.x,this.y,player.x,player.y), od=BALANCE.mage.orbitDistance;
         this.angle=Math.atan2(player.y-this.y,player.x-this.x);
         if(d<od && !player.isInvisible){this.vx=-Math.cos(this.angle)*this.speed;this.vy=-Math.sin(this.angle)*this.speed;}
@@ -143,8 +249,13 @@ class MageEnemy extends Entity {
             Audio.playMeteorWarning();
         }
     }
+
     takeDamage(amt,player) {
         this.hp-=amt;
+
+        // ── Trigger hit flash ────────────────────────────────
+        this.hitFlashTimer = HIT_FLASH_DURATION;
+
         if(this.hp<=0){
             this.dead=true;
             spawnParticles(this.x,this.y,25,this.color);
@@ -154,17 +265,45 @@ class MageEnemy extends Entity {
             if(Math.random()<BALANCE.powerups.dropRate*BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x,this.y));
         }
     }
+
     draw() {
         const screen=worldToScreen(this.x,this.y);
+
+        // Shadow
         CTX.fillStyle='rgba(0,0,0,0.3)'; CTX.beginPath();
         CTX.ellipse(screen.x,screen.y+18,13,6,0,0,Math.PI*2); CTX.fill();
-        CTX.save(); CTX.translate(screen.x,screen.y+Math.sin(performance.now()/300)*3); CTX.rotate(this.angle);
+
+        // ── Normal sprite (with floating bob animation) ──────
+        // Capture the current bob offset so the flash can match it.
+        const bobOffset = Math.sin(performance.now()/300) * 3;
+
+        CTX.save(); CTX.translate(screen.x, screen.y + bobOffset); CTX.rotate(this.angle);
         CTX.fillStyle=this.color; CTX.beginPath(); CTX.arc(0,5,15,0,Math.PI*2); CTX.fill();
         CTX.strokeStyle='#6b21a8'; CTX.lineWidth=3; CTX.beginPath();
         CTX.moveTo(-10,0); CTX.lineTo(-10,-25); CTX.stroke();
         CTX.fillStyle='#fbbf24'; CTX.shadowBlur=10; CTX.shadowColor='#fbbf24';
         CTX.beginPath(); CTX.arc(-10,-25,5,0,Math.PI*2); CTX.fill(); CTX.shadowBlur=0;
-        CTX.fillStyle='#7c3aed'; CTX.beginPath(); CTX.arc(0,-5,12,0,Math.PI); CTX.fill(); CTX.restore();
+        CTX.fillStyle='#7c3aed'; CTX.beginPath(); CTX.arc(0,-5,12,0,Math.PI); CTX.fill();
+        CTX.restore();
+
+        // ── Hit flash — white silhouette ─────────────────────
+        // The MageEnemy body is approximately a circle of radius 15 at (0, +5)
+        // relative to the bobbing position. We draw that same circle in white.
+        if (this.hitFlashTimer > 0) {
+            const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
+            CTX.save();
+            CTX.globalAlpha = flashAlpha;
+            CTX.fillStyle   = '#ffffff';
+            // Match the bob + rotation transform so the flash sits on the body
+            CTX.translate(screen.x, screen.y + bobOffset);
+            CTX.rotate(this.angle);
+            CTX.beginPath();
+            CTX.arc(0, 5, 15, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.restore();
+        }
+
+        // ── HP bar ───────────────────────────────────────────
         const hp=this.hp/this.maxHp;
         CTX.fillStyle='#1e293b'; CTX.fillRect(screen.x-15,screen.y-30,30,4);
         CTX.fillStyle='#a855f7'; CTX.fillRect(screen.x-15,screen.y-30,30*hp,4);

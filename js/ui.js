@@ -186,6 +186,105 @@ class ShopManager {
 // ════════════════════════════════════════════════════════════
 class UIManager {
 
+    // ════════════════════════════════════════════════════════════
+    // 💉 COOLDOWN VISUAL SYSTEM
+    // Injects CSS once, then draws circular arc + countdown text
+    // on any skill icon element via _setCooldownVisual().
+    // ════════════════════════════════════════════════════════════
+
+    /**
+     * Inject the shared CSS rules for circular cooldown overlays.
+     * Safe to call every frame — exits immediately after first run.
+     */
+    static injectCooldownStyles() {
+        if (document.getElementById('mtc-cd-styles')) return;
+        const s = document.createElement('style');
+        s.id = 'mtc-cd-styles';
+        s.textContent = `
+            .skill-icon { position: relative !important; }
+            .cd-arc-overlay {
+                position: absolute; inset: 0;
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 5;
+                transition: background 0.05s linear;
+            }
+            .cd-timer-text {
+                position: absolute; inset: 0;
+                display: flex; align-items: center; justify-content: center;
+                font: bold 11px 'Orbitron', monospace;
+                color: #fff;
+                text-shadow:
+                    0 0 6px #000,
+                    0  1px 4px rgba(0,0,0,0.95),
+                    0 -1px 4px rgba(0,0,0,0.95),
+                    1px 0   4px rgba(0,0,0,0.95),
+                   -1px 0   4px rgba(0,0,0,0.95);
+                pointer-events: none;
+                z-index: 6;
+                letter-spacing: -0.5px;
+            }
+            /* Text contrast: strong drop-shadow on all HUD bar labels */
+            #player-level, .hud-label, .skill-name {
+                text-shadow:
+                    0 1px 3px rgba(0,0,0,0.95),
+                    0 0 6px rgba(0,0,0,0.7) !important;
+            }
+        `;
+        document.head.appendChild(s);
+    }
+
+    /**
+     * _setCooldownVisual(iconId, cooldownCurrent, cooldownMax)
+     *
+     * Renders a circular clock-wipe overlay + numeric countdown on top
+     * of any .skill-icon element. Call this every frame from updateUI().
+     *
+     * @param {string} iconId           — id of the skill icon element
+     * @param {number} cooldownCurrent  — seconds remaining on cooldown
+     * @param {number} cooldownMax      — full cooldown duration in seconds
+     */
+    static _setCooldownVisual(iconId, cooldownCurrent, cooldownMax) {
+        const icon = document.getElementById(iconId);
+        if (!icon) return;
+
+        // ── Circular arc overlay (conic-gradient clock-wipe) ──────
+        let arc = icon.querySelector('.cd-arc-overlay');
+        if (!arc) {
+            arc = document.createElement('div');
+            arc.className = 'cd-arc-overlay';
+            icon.appendChild(arc);
+        }
+
+        const elapsed = cooldownMax > 0
+            ? Math.min(1, 1 - cooldownCurrent / cooldownMax)
+            : 1;
+        const pct = (elapsed * 100).toFixed(1);
+
+        if (cooldownCurrent > 0.05) {
+            // Transparent slice = elapsed (done); dark slice = remaining
+            arc.style.background =
+                `conic-gradient(transparent 0% ${pct}%, rgba(0,0,0,0.62) ${pct}% 100%)`;
+        } else {
+            arc.style.background = 'transparent';
+        }
+
+        // ── Countdown text ─────────────────────────────────────────
+        let timer = icon.querySelector('.cd-timer-text');
+        if (!timer) {
+            timer = document.createElement('div');
+            timer.className = 'cd-timer-text';
+            icon.appendChild(timer);
+        }
+
+        if (cooldownCurrent > 0.09) {
+            timer.textContent = cooldownCurrent.toFixed(1) + 's';
+            timer.style.display = 'flex';
+        } else {
+            timer.style.display = 'none';
+        }
+    }
+
     static showVoiceBubble(text, x, y) {
         const bubble = document.getElementById('voice-bubble');
         if (!bubble) return;
@@ -332,6 +431,7 @@ class UIManager {
         if (!(player instanceof PoomPlayer)) return;
         const S = BALANCE.characters.poom;
 
+        // ── Eat Rice ─────────────────────────────────────────────
         const eatIcon = document.getElementById('eat-icon');
         const eatCd   = document.getElementById('eat-cd');
         if (eatCd) {
@@ -342,21 +442,27 @@ class UIManager {
                 eatIcon?.classList.remove('active');
                 const ep = player.cooldowns.eat <= 0
                     ? 100
-                    : Math.min(100,(1-player.cooldowns.eat/S.eatRiceCooldown)*100);
-                eatCd.style.height = `${100-ep}%`;
+                    : Math.min(100, (1 - player.cooldowns.eat / S.eatRiceCooldown) * 100);
+                eatCd.style.height = `${100 - ep}%`;
             }
         }
+        // Circular arc + countdown for eat skill
+        UIManager._setCooldownVisual('eat-icon',
+            player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
+            S.eatRiceCooldown);
 
+        // ── Naga ──────────────────────────────────────────────────
         const nagaIcon  = document.getElementById('naga-icon');
         const nagaCd    = document.getElementById('naga-cd');
         const nagaTimer = document.getElementById('naga-timer');
         if (nagaCd) {
             const np = player.cooldowns.naga <= 0
                 ? 100
-                : Math.min(100,(1-player.cooldowns.naga/S.nagaCooldown)*100);
-            nagaCd.style.height = `${100-np}%`;
+                : Math.min(100, (1 - player.cooldowns.naga / S.nagaCooldown) * 100);
+            nagaCd.style.height = `${100 - np}%`;
             nagaIcon?.classList.toggle('active', player.cooldowns.naga <= 0);
         }
+        // Legacy naga-timer kept for backward compat; arc overlay handles display now
         if (nagaTimer) {
             if (player.cooldowns.naga > 0) {
                 nagaTimer.textContent = Math.ceil(player.cooldowns.naga) + 's';
@@ -365,6 +471,10 @@ class UIManager {
                 nagaTimer.style.display = 'none';
             }
         }
+        // Circular arc + countdown for naga skill
+        UIManager._setCooldownVisual('naga-icon',
+            Math.max(0, player.cooldowns.naga),
+            S.nagaCooldown);
     }
 
     static showGameOver(score, wave) {
@@ -426,7 +536,7 @@ class UIManager {
         grad.addColorStop(0, lerpColorHex('#FFD54A','#FF3B3B',t));
         grad.addColorStop(1, lerpColorHex('#FFE08A','#FF6B6B',Math.min(1,t+0.18)));
         ctx.fillStyle = grad;
-        ctx.shadowColor = 'rgba(0,0,0,0.44)'; ctx.shadowBlur = 18;
+        ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 22;
 
         const maxShake = Math.min(12, comboCount * 0.6);
         const shakeAmp = maxShake * comboShake;
@@ -436,8 +546,8 @@ class UIManager {
 
         const mainText = `${comboCount} HITS!`;
         ctx.fillText(mainText, 0, -size * 0.14);
-        ctx.lineWidth = Math.max(3, size * 0.06);
-        ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+        ctx.lineWidth = Math.max(4, size * 0.07);
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
         ctx.strokeText(mainText, 0, -size * 0.14);
 
         let special = '';
@@ -447,7 +557,7 @@ class UIManager {
             const smallSize = Math.max(18, Math.round(size * 0.44));
             ctx.font = `bold ${smallSize}px "Orbitron", sans-serif`;
             ctx.fillText(special, 0, Math.round(size * 0.62));
-            ctx.lineWidth = Math.max(2, smallSize * 0.06);
+            ctx.lineWidth = Math.max(3, smallSize * 0.08);
             ctx.strokeText(special, 0, Math.round(size * 0.62));
         }
         ctx.restore();
@@ -455,6 +565,7 @@ class UIManager {
 
     // ── Radar + Combo draw entry ──────────────────────────────
     static draw(ctx, dt) {
+        UIManager.injectCooldownStyles(); // no-op after first call
         UIManager.updateCombo(dt);
         UIManager.drawCombo(ctx);
         if (!ctx || !ctx.canvas) return;
@@ -496,21 +607,13 @@ class UIManager {
         const player = (typeof window !== 'undefined' && window.player)
             ? window.player : { x: 0, y: 0 };
 
-        // ── 🔴 DIAGNOSTIC — logs once every ~10 s to confirm this runs ──────
+        // ── 🔴 DIAGNOSTIC — silenced in production; uncomment to debug ──────
         if (!UIManager._minimapFrame) UIManager._minimapFrame = 0;
         UIManager._minimapFrame++;
-        if (UIManager._minimapFrame % 600 === 1) {
-            console.log(
-                '[MTC Minimap] frame', UIManager._minimapFrame,
-                '| canvas:', canvas.width, 'x', canvas.height,
-                '| cx:', cx, 'cy:', cy, 'r:', radarRadius,
-                '| compositeOp:', ctx.globalCompositeOperation,
-                '| globalAlpha:', ctx.globalAlpha,
-                '| MTC_DB:', !!window.MTC_DATABASE_SERVER,
-                '| MTC_SHOP:', !!window.MTC_SHOP_LOCATION,
-                '| enemies:', (window.enemies || []).length
-            );
-        }
+        // Uncomment below for periodic canvas-state diagnostics:
+        // if (UIManager._minimapFrame % 600 === 1) {
+        //     console.log('[MTC Minimap] frame', UIManager._minimapFrame, ...);
+        // }
 
         // Helper: world→radar-screen, clamped to maxR from radar center
         const toRadar = (wx, wy, maxR = radarRadius - 6) => {
@@ -677,30 +780,80 @@ class UIManager {
             ctx.restore();
         }
 
-        // ── 6. Enemies — bright red dots (3 px radius) ────────
+        // ── 6. Enemies — distinct shapes & colors per type ────
         if (Array.isArray(window.enemies)) {
             for (const e of window.enemies) {
                 if (!e || e.dead) continue;
                 const { x: ex, y: ey, clamped: ec } = toRadar(e.x, e.y);
 
                 ctx.save();
-                ctx.shadowBlur  = ec ? 0 : 5;
-                ctx.shadowColor = '#ff2222';
 
                 if (ec) {
+                    // Clamped: arrow pointing toward enemy (all types same)
                     ctx.translate(ex, ey);
                     ctx.rotate(Math.atan2(cy - ey, cx - ex));
-                    ctx.fillStyle = 'rgba(255,50,50,0.85)';
+                    const arrowColor = e.type === 'mage'
+                        ? 'rgba(180,80,255,0.9)'
+                        : (e.type === 'tank' ? 'rgba(255,120,40,0.9)' : 'rgba(255,50,50,0.9)');
+                    ctx.fillStyle   = arrowColor;
+                    ctx.shadowBlur  = 5;
+                    ctx.shadowColor = arrowColor;
                     ctx.beginPath();
-                    ctx.moveTo(5, 0); ctx.lineTo(0, -3); ctx.lineTo(0, 3); ctx.closePath();
-                    ctx.fill();
+                    ctx.moveTo(6, 0); ctx.lineTo(0, -3.5); ctx.lineTo(0, 3.5);
+                    ctx.closePath(); ctx.fill();
+                } else if (e.type === 'mage') {
+                    // ── Mage: purple rotating diamond ─────────────
+                    ctx.translate(ex, ey);
+                    ctx.rotate(now / 800);     // slow spin
+                    const r = 6;
+                    ctx.fillStyle   = 'rgba(190,75,255,1.0)';
+                    ctx.strokeStyle = 'rgba(220,160,255,0.9)';
+                    ctx.lineWidth   = 1.2;
+                    ctx.shadowBlur  = 8;
+                    ctx.shadowColor = '#b44dff';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -r); ctx.lineTo(r * 0.6, 0);
+                    ctx.lineTo(0,  r); ctx.lineTo(-r * 0.6, 0);
+                    ctx.closePath(); ctx.fill(); ctx.stroke();
+                    // Inner sparkle dot
+                    ctx.fillStyle  = 'rgba(240,200,255,0.85)';
+                    ctx.shadowBlur = 4;
+                    ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
+
+                } else if (e.type === 'tank') {
+                    // ── Tank: orange bold square ───────────────────
+                    const r = 5.5;
+                    ctx.fillStyle   = 'rgba(255,115,35,1.0)';
+                    ctx.strokeStyle = 'rgba(255,185,90,0.9)';
+                    ctx.lineWidth   = 1.4;
+                    ctx.shadowBlur  = 7;
+                    ctx.shadowColor = '#ff7320';
+                    ctx.beginPath();
+                    ctx.rect(ex - r, ey - r, r * 2, r * 2);
+                    ctx.fill(); ctx.stroke();
+                    // Corner ticks for "armour" feel
+                    ctx.strokeStyle = 'rgba(255,220,120,0.75)';
+                    ctx.lineWidth   = 1;
+                    ctx.shadowBlur  = 0;
+                    const tk = 2.5;
+                    [[ex - r, ey - r], [ex + r, ey - r],
+                     [ex - r, ey + r], [ex + r, ey + r]].forEach(([px, py]) => {
+                        ctx.beginPath();
+                        ctx.arc(px, py, tk, 0, Math.PI * 2); ctx.stroke();
+                    });
+
                 } else {
-                    const r   = e.type === 'mage' ? 4 : (e.type === 'tank' ? 4.5 : 3);
-                    const col = e.type === 'mage'
-                        ? 'rgba(200,85,255,1.0)'
-                        : (e.type === 'tank' ? 'rgba(255,110,40,1.0)' : 'rgba(255,40,40,1.0)');
-                    ctx.fillStyle = col;
+                    // ── Basic: bright red circle ───────────────────
+                    const r    = 5;
+                    const glow = 0.6 + Math.sin(now / 400 + e.x) * 0.4;
+                    ctx.fillStyle   = 'rgba(255,38,38,1.0)';
+                    ctx.shadowBlur  = 8 * glow;
+                    ctx.shadowColor = '#ff2222';
                     ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
+                    // Bright highlight dot
+                    ctx.fillStyle  = 'rgba(255,180,180,0.75)';
+                    ctx.shadowBlur = 0;
+                    ctx.beginPath(); ctx.arc(ex - 1.5, ey - 1.5, 1.5, 0, Math.PI * 2); ctx.fill();
                 }
                 ctx.restore();
             }
@@ -770,22 +923,36 @@ class UIManager {
         ctx.fillStyle    = 'rgba(72,187,120,0.70)';
         ctx.fillText('TACTICAL RADAR', cx, cy + radarRadius + 5);
 
-        // Tiny legend row: red=enemy  purple=boss  blue=db  gold=shop
+        // Tiny legend row: colored symbols matching blip types
+        // ● red=basic  ◆ purple=mage  ■ orange=tank  ★ boss  □ shop
         const legend = [
-            { col: '#ef4444', label: 'ENM' },
-            { col: '#a855f7', label: 'BSS' },
-            { col: '#3b82f6', label: 'DB'  },
-            { col: '#f59e0b', label: 'SHP' },
+            { col: '#ef4444', label: 'ENM', shape: 'circle'  },
+            { col: '#b44dff', label: 'MGE', shape: 'diamond' },
+            { col: '#ff7320', label: 'TNK', shape: 'square'  },
+            { col: '#a855f7', label: 'BSS', shape: 'circle'  },
+            { col: '#f59e0b', label: 'SHP', shape: 'square'  },
         ];
-        const lx0 = cx - (legend.length - 1) * 14;
-        legend.forEach(({ col, label }, i) => {
-            const lx = lx0 + i * 28;
+        const lx0 = cx - (legend.length - 1) * 12;
+        legend.forEach(({ col, label, shape }, i) => {
+            const lx = lx0 + i * 24;
             const ly = cy + radarRadius + 17;
             ctx.fillStyle = col;
-            ctx.fillRect(lx - 3, ly, 6, 6);
+            ctx.shadowBlur  = 3;
+            ctx.shadowColor = col;
+            if (shape === 'diamond') {
+                ctx.beginPath();
+                ctx.moveTo(lx, ly - 3.5); ctx.lineTo(lx + 3, ly);
+                ctx.lineTo(lx, ly + 3.5); ctx.lineTo(lx - 3, ly);
+                ctx.closePath(); ctx.fill();
+            } else if (shape === 'square') {
+                ctx.fillRect(lx - 3, ly - 3, 6, 6);
+            } else {
+                ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.shadowBlur = 0;
             ctx.font      = '6px monospace';
-            ctx.fillStyle = 'rgba(203,213,225,0.6)';
-            ctx.fillText(label, lx, ly + 8);
+            ctx.fillStyle = 'rgba(203,213,225,0.65)';
+            ctx.fillText(label, lx, ly + 9);
         });
 
         // ══════════════════════════════════════════════════════

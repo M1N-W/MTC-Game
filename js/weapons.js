@@ -8,6 +8,16 @@
  * - All BALANCE.player.critMultiplier → BALANCE.characters[this.activeChar].critMultiplier
  * - WeaponSystem stores this.activeChar, set via setActiveChar(charType) in startGame
  * - Guard clauses in updateWeaponUI / getWeaponData prevent crash when char unset
+ *
+ * AUDIO NOTE (Poom character sounds):
+ * - Poom's shooting sound (Audio.playPoomShoot) is called inside
+ *   PoomPlayer.shoot() in js/entities/player.js, NOT here.
+ *   Reason: Poom bypasses WeaponSystem entirely — his projectile is fired
+ *   directly via PoomPlayer.shoot() which reads his rice* stats from BALANCE.
+ *   WeaponSystem only governs Kao's auto/sniper/shotgun weapon modes.
+ * - Naga hit sound (Audio.playNagaAttack) is called inside
+ *   NagaEntity.update() in js/entities/player.js with a 220 ms cooldown
+ *   to prevent rapid-tick audio stacking.
  */
 
 class Projectile {
@@ -321,6 +331,9 @@ class WeaponSystem {
 
         player.vx -= Math.cos(player.angle) * 50;
         player.vy -= Math.sin(player.angle) * 50;
+        // Kao's weapon sound — routed through playShoot(weaponType).
+        // Poom's shoot sound (Audio.playPoomShoot) is fired in PoomPlayer.shoot()
+        // inside js/entities/player.js since Poom never calls shootSingle() here.
         Audio.playShoot(this.currentWeapon);
         return projectiles;
     }
@@ -403,12 +416,14 @@ class ProjectileManager {
                 if (boss && !boss.dead && proj.checkCollision(boss)) {
                     boss.takeDamage(proj.damage);
                     spawnFloatingText(Math.round(proj.damage), proj.x, proj.y - 20, 'white', 18);
+                    if (typeof spawnHitMarker === 'function') spawnHitMarker(proj.x, proj.y);
                     hit = true; player.addSpeedBoost();
                 }
                 for (let enemy of enemies) {
                     if (!enemy.dead && proj.checkCollision(enemy)) {
                         enemy.takeDamage(proj.damage, player);
                         spawnFloatingText(Math.round(proj.damage), proj.x, proj.y - 20, 'white', 16);
+                        if (typeof spawnHitMarker === 'function') spawnHitMarker(proj.x, proj.y);
                         hit = true; player.addSpeedBoost(); break;
                     }
                 }

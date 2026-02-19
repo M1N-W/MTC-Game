@@ -15,55 +15,70 @@
  * ────────────────────────────────────────────────────────────────
  * ✅ BUG 2  — Mobile Patch: Removed redundant velocity calculation that
  *             double-applied joystick acceleration (2× speed on touch).
- *             The patch now only zeroes WASD keys before calling __origUpdate,
- *             letting the original update handle the joystick read once.
  *
- * ✅ WARN 5 — DRY Principle: Extracted the ~60-line obstacle-awareness block
- *             (was copy-pasted verbatim into both Player.update and
- *             PoomPlayer.update) into a single shared implementation at
- *             Player.prototype.checkObstacleProximity(ax, ay, dt, particleColor).
- *             PoomPlayer.prototype gets the same reference so both character
- *             classes call identical logic; only the particle tint differs
- *             (#93c5fd for Kao, #fcd34d for Poom).
+ * ✅ WARN 5 — DRY Principle: Obstacle-awareness block extracted to
+ *             Player.prototype.checkObstacleProximity(ax, ay, dt, color).
+ *             PoomPlayer.prototype gets the same reference.
  *
  * ────────────────────────────────────────────────────────────────
  * FIXES (Logic & Inheritance Audit — Zone 2)
  * ────────────────────────────────────────────────────────────────
- * ✅ CRIT 1 — PoomPlayer Redundancy (Option B): Five methods that were
- *             copy-pasted verbatim between Player and PoomPlayer
- *             (takeDamage, heal, gainExp, levelUp, addSpeedBoost) are now
- *             shared via prototype assignment at the bottom of this file.
- *             PoomPlayer keeps its own implementations only where behaviour
- *             genuinely differs (dealDamage, draw, updateUI, etc.).
+ * ✅ CRIT 1 — PoomPlayer Redundancy (Option B): Five identical methods
+ *             shared via prototype assignment.
  *
- * ✅ CRIT 2 — NagaEntity now extends Entity: super(startX, startY, S.nagaRadius)
- *             is called in the constructor, providing applyPhysics, isOnScreen,
- *             and a canonical dead/hp/radius interface. The redundant manual
- *             this.radius assignment has been removed.
+ * ✅ CRIT 2 — NagaEntity now extends Entity properly via super().
  *
- * ✅ WARN 1 — Dash Safety: Both Player.dash() and PoomPlayer.dash() now guard
- *             their setTimeout callbacks with `if (!this.dead)` so ghost frames
- *             are not pushed after the entity has been destroyed.
+ * ✅ WARN 1 — Dash Safety: setTimeout callbacks guarded with `if (!this.dead)`.
  *
- * ✅ WARN 2 — Naming Consistency: Renamed arrays to eliminate the casing trap:
- *               afterImages  (capital I) → dashGhosts
- *               afterimages  (lowercase) → standGhosts
- *             All references in this file and in base.js updated accordingly.
+ * ✅ WARN 2 — Naming Consistency: afterImages/afterimages → dashGhosts/standGhosts.
  *
  * ────────────────────────────────────────────────────────────────
  * FIXES (Build Debugger — Zone 3)
  * ────────────────────────────────────────────────────────────────
- * ✅ BUG A — Incomplete Prototype Sharing: Added
- *             PoomPlayer.prototype.checkPassiveUnlock = Player.prototype.checkPassiveUnlock
- *             to the Option B block. checkPassiveUnlock() is called from inside
- *             the shared levelUp() — without this assignment, levelling up as
- *             Poom threw "this.checkPassiveUnlock is not a function".
+ * ✅ BUG A — PoomPlayer.prototype.checkPassiveUnlock added to Option B block.
  *
- * ✅ BUG B — Naga Behaviour Reverted: NagaEntity.update() movement target
- *             changed back to mouse.wx / mouse.wy (from player.x / player.y).
- *             The mouse-tracking design is intentional — it allows the player
- *             to actively aim and steer the Naga during its lifetime.
+ * ✅ BUG B — NagaEntity.update() target reverted to mouse.wx / mouse.wy.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * AUDIO ADDITIONS (Lead Gameplay Developer pass)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ AUDIO 1 — PoomPlayer.shoot() now calls Audio.playPoomShoot() on every
+ *              projectile fire (bamboo-tube thump; defined in audio.js).
+ *
+ * ✅ AUDIO 2 — NagaEntity now tracks this.lastSoundTime (Date.now() ms).
+ *              Audio.playNagaAttack() fires on enemy/boss hit, but no more
+ *              than once per NAGA_SOUND_INTERVAL ms (220 ms) to prevent
+ *              rapid-tick audio stacking from the continuous collision loop.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * ANIMATION CLARITY + SILHOUETTE (Game Engine Architect — v11)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ RECOIL (Kao / Player):
+ *     • Player.weaponRecoil — float 0→1; set to 1.0 by triggerRecoil()
+ *       (called from game.js after weaponSystem.shoot() returns projectiles).
+ *     • Decays at weaponRecoilDecay (8.5 /sec) in Player.update() → ~0.12 s fade.
+ *     • Player.draw(): body lean — CTX.translate(-recoilShift, 0) pushes the
+ *       sprite 4 px backward along its own axis at peak recoil.
+ *     • Muzzle-flash ring: when weaponRecoil > 0.45, an expanding white/gold
+ *       ring + bright core is drawn at the muzzle tip in screen space.
+ *
+ * ✅ CHANNELING EFFECT (Poom / PoomPlayer):
+ *     • PoomPlayer.draw() checks window.specialEffects for any live NagaEntity.
+ *     • When channeling: animated double emerald ring with pulsing shadowBlur,
+ *       offset-phase inner ring, and random spark dots on the ring edge.
+ *     • Zero performance cost when no Naga is active (check is O(n) on
+ *       specialEffects which is always tiny).
+ *
+ * ✅ SILHOUETTE OUTER GLOW (both characters):
+ *     • Drawn BEFORE the body fill so the neon stroke sits behind sprite layers.
+ *     • Kao : rgba(0,255,65,0.70) — neon green, shadowBlur 16, lineWidth 2.8
+ *     • Poom: rgba(168,85,247,0.72) — deep purple, shadowBlur 16, lineWidth 2.8
+ *     • Colours match each character's stand-aura identity from base.js.
  */
+
+// Minimum gap (ms) between successive Naga hit sounds.
+// 220 ms ≈ ~13 frames @ 60 fps — responsive but audibly separated.
+const NAGA_SOUND_INTERVAL = 220;
 
 // ════════════════════════════════════════════════════════════
 // PLAYER (generic — supports any charId from BALANCE.characters)
@@ -91,12 +106,18 @@ class Player extends Entity {
         this.damageBoost     = 1;
         this.speedBoost      = 1;
         this.speedBoostTimer = 0;
-        this.dashGhosts      = [];   // legacy dash ghost (kept for compat)
+        this.dashGhosts      = [];
+
+        // ── Weapon Recoil (v11) ───────────────────────────────────
+        // Set to 1.0 by triggerRecoil() on each shot; decays to 0 over ~0.12 s.
+        // Drives a backward body-lean and muzzle-flash ring in draw().
+        this.weaponRecoil      = 0;
+        this.weaponRecoilDecay = 8.5; // units/sec; 1/8.5 ≈ 0.12 s full decay
 
         // ── Stand-Aura & Afterimage system ────────────────────
-        this.standGhosts   = [];     // JoJo-esque ghost frames
-        this.auraRotation  = 0;      // radians — driven by _standAura_update()
-        this._auraFrame    = 0;      // frame counter for spawn-interval logic
+        this.standGhosts   = [];
+        this.auraRotation  = 0;
+        this._auraFrame    = 0;
 
         this.onGraph       = false;
         this.isConfused    = false; this.confusedTimer = 0;
@@ -111,13 +132,7 @@ class Player extends Entity {
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
 
-        // ── Collision Awareness state ─────────────────────────
-        // obstacleBuffTimer:   seconds remaining on the consolation speed buff.
-        //                      Set by the obstacle proximity check each frame;
-        //                      decays at 1:1 with dt.
-        // lastObstacleWarning: Date.now() timestamp of the last warning bubble.
-        //                      Compared against BALANCE.player.obstacleWarningCooldown
-        //                      to rate-limit voice bubble spam.
+        // ── Collision Awareness state ──────────────────────────
         this.obstacleBuffTimer     = 0;
         this.lastObstacleWarning   = 0;
 
@@ -174,8 +189,6 @@ class Player extends Entity {
 
         let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost;
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
-        // [OBSTACLE BUFF] Consolation speed multiplier — active when player is scraping
-        // a map object. Applied here so the cap in the block below respects the boost.
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
 
         if (!this.isDashing) {
@@ -193,9 +206,6 @@ class Player extends Entity {
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
 
-        // ── [OBSTACLE AWARENESS] ──────────────────────────────
-        // ✅ WARN 5 FIX: logic extracted to checkObstacleProximity() below.
-        // Particle colour '#93c5fd' = Tailwind blue-300 (Kao's palette).
         if (!this.isDashing) {
             this.checkObstacleProximity(ax, ay, dt, '#93c5fd');
         }
@@ -226,26 +236,26 @@ class Player extends Entity {
             if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
         }
 
-        // ── Stand-Aura & Afterimage system update ─────────────
-        _standAura_update(this, dt);
+        // ── Recoil decay (v11) ───────────────────────────────────
+        // weaponRecoil is set to 1.0 by triggerRecoil() in game.js after
+        // each successful shot. It decays to 0 over ~0.12 s, driving the
+        // backward body-lean + muzzle-flash ring rendered in draw().
+        if (this.weaponRecoil > 0) {
+            this.weaponRecoil = Math.max(0, this.weaponRecoil - this.weaponRecoilDecay * dt);
+        }
 
+        _standAura_update(this, dt);
         this.updateUI();
     }
 
-    dash(ax, ay) {
-        const S = this.stats;
-        this.isDashing = true;
-        this.cooldowns.dash = S.dashCooldown;
-        const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
-        this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
-        this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
-        for (let i = 0; i < 5; i++) setTimeout(() => {
-            if (!this.dead) this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
-        }, i * 30);
-        spawnParticles(this.x, this.y, 15, '#60a5fa');
-        Audio.playDash();
-        Achievements.stats.dashes++; Achievements.check('speedster');
-        setTimeout(() => { this.isDashing = false; }, 200);
+    /**
+     * triggerRecoil()
+     * Called by game.js after weaponSystem.shoot() fires projectiles.
+     * Kicks the recoil animation — draw() will show a body lean + muzzle flash
+     * that self-clears in ~0.12 s via the per-frame weaponRecoil decay.
+     */
+    triggerRecoil() {
+        this.weaponRecoil = 1.0;
     }
 
     activateStealth() {
@@ -346,10 +356,8 @@ class Player extends Entity {
     draw() {
         const S = this.stats;
 
-        // ── Stand-Aura & Afterimage (drawn first — behind everything) ──
         _standAura_draw(this, this.charId || 'kao');
 
-        // Legacy dash ghosts (blue flash — kept for compat)
         for (const img of this.dashGhosts) {
             const screen = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(img.angle);
@@ -373,10 +381,28 @@ class Player extends Entity {
 
         CTX.save(); CTX.translate(screen.x, screen.y); CTX.rotate(this.angle);
         CTX.globalAlpha = this.isInvisible ? 0.3 : 1;
+
+        // ── v11 Recoil body-lean ──────────────────────────────────
+        // Push the body slightly backward (–x in local/rotated space) when
+        // weaponRecoil > 0. Max shift is 4 px at recoil=1; fades to 0.
+        const recoilShift = this.weaponRecoil * 4;
+        if (recoilShift > 0.05) CTX.translate(-recoilShift, 0);
+
         const w = Math.sin(this.walkCycle) * 8;
         CTX.fillStyle = '#1e293b';
         CTX.beginPath(); CTX.ellipse(5 + w, 10, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
         CTX.beginPath(); CTX.ellipse(5 - w, -10, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
+
+        // ── v11 Outer glow silhouette (Task 4) ──────────────────────
+        // Draws a neon green stroke around the body rect before filling it so
+        // Kao stands out clearly against dark backgrounds and busy particle fields.
+        CTX.shadowBlur  = 16;
+        CTX.shadowColor = '#00ff41';
+        CTX.strokeStyle = 'rgba(0,255,65,0.70)';
+        CTX.lineWidth   = 2.8;
+        CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.stroke();
+        CTX.shadowBlur  = 0;
+
         CTX.fillStyle = '#f8fafc'; CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 6); CTX.fill();
         CTX.fillStyle = '#1e40af';
         CTX.beginPath(); CTX.moveTo(0,-12); CTX.lineTo(-3,0); CTX.lineTo(-5,12);
@@ -401,6 +427,32 @@ class Player extends Entity {
         CTX.fillStyle = '#ffdfc4'; CTX.beginPath(); CTX.arc(8,-15,5,0,Math.PI*2); CTX.fill();
         CTX.restore();
 
+        // ── v11 Muzzle-flash ring (recoil peak only) ─────────────────
+        // Drawn OUTSIDE the body transform (screen-space) so the ring always
+        // appears at the muzzle direction, unaffected by the body lean offset.
+        if (this.weaponRecoil > 0.45) {
+            const flashT    = (this.weaponRecoil - 0.45) / 0.55; // 0→1 as recoil rises from 0.45→1
+            const muzzleDist = 22 + (1 - flashT) * 8;
+            const mx = screen.x + Math.cos(this.angle) * muzzleDist;
+            const my = screen.y + Math.sin(this.angle) * muzzleDist;
+            CTX.save();
+            CTX.globalAlpha = flashT * 0.85;
+            CTX.strokeStyle = '#fffde7';
+            CTX.lineWidth   = 2;
+            CTX.shadowBlur  = 14;
+            CTX.shadowColor = '#facc15';
+            CTX.beginPath();
+            CTX.arc(mx, my, 5 + (1 - flashT) * 6, 0, Math.PI * 2);
+            CTX.stroke();
+            // Inner bright core
+            CTX.fillStyle   = `rgba(255,255,200,${flashT * 0.7})`;
+            CTX.shadowBlur  = 8;
+            CTX.beginPath();
+            CTX.arc(mx, my, 2 + (1 - flashT) * 3, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.restore();
+        }
+
         if (this.level > 1) {
             CTX.fillStyle = 'rgba(139,92,246,0.9)';
             CTX.beginPath(); CTX.arc(screen.x+22, screen.y-22, 10, 0, Math.PI*2); CTX.fill();
@@ -417,22 +469,36 @@ class Player extends Entity {
         if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
         if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
+        // ── Dash cooldown (bar fill + circular arc + countdown) ──
         const dp = Math.min(100, (1 - this.cooldowns.dash / S.dashCooldown) * 100);
         const dashEl = document.getElementById('dash-cd');
         if (dashEl) dashEl.style.height = `${100 - dp}%`;
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('dash-icon',
+                Math.max(0, this.cooldowns.dash), S.dashCooldown);
+        }
 
+        // ── Stealth cooldown (bar fill + circular arc + countdown) ──
         const sEl = document.getElementById('stealth-icon');
         const sCd = document.getElementById('stealth-cd');
         if (this.isInvisible) {
             sEl?.classList.add('active');
             if (sCd) sCd.style.height = '0%';
+            if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+                UIManager._setCooldownVisual('stealth-icon', 0, S.stealthCooldown);
+            }
         } else {
             sEl?.classList.remove('active');
             if (sCd) {
                 const sp = Math.min(100, (1 - this.cooldowns.stealth / S.stealthCooldown) * 100);
                 sCd.style.height = `${100 - sp}%`;
             }
+            if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+                UIManager._setCooldownVisual('stealth-icon',
+                    Math.max(0, this.cooldowns.stealth), S.stealthCooldown);
+            }
         }
+
         const levelEl = document.getElementById('player-level');
         if (levelEl) levelEl.textContent = `Lv.${this.level}`;
         const expBar = document.getElementById('exp-bar');
@@ -456,45 +522,9 @@ class Player extends Entity {
 // ════════════════════════════════════════════════════════════
 // ✅ WARN 5 FIX — Shared obstacle-awareness prototype method
 // ════════════════════════════════════════════════════════════
-/**
- * Player.prototype.checkObstacleProximity(ax, ay, dt, particleColor)
- *
- * Encapsulates the full obstacle-awareness subsystem that was previously
- * copy-pasted verbatim into both Player.update() and PoomPlayer.update().
- *
- * @param {number} ax            - Normalised horizontal move input this frame
- *                                 (used to determine whether the entity is
- *                                 "actively moving" before firing warnings).
- * @param {number} ay            - Normalised vertical move input this frame.
- * @param {number} dt            - Scaled frame delta (seconds) — used to decay
- *                                 obstacleBuffTimer at wall-clock speed.
- * @param {string} particleColor - CSS colour for speed-line particles while the
- *                                 consolation buff is active.  Callers supply
- *                                 their character-specific tint:
- *                                   • '#93c5fd'  (blue-300)  for Kao / Player
- *                                   • '#fcd34d'  (amber-300) for Poom
- *
- * Called on `this` — works for both Player and PoomPlayer because
- * PoomPlayer.prototype.checkObstacleProximity is aliased to this function
- * immediately after the PoomPlayer class definition.
- *
- * Reads / writes these instance properties (must be initialised in the
- * constructor of each character class):
- *   • this.obstacleBuffTimer    {number}
- *   • this.lastObstacleWarning  {number}   (Date.now() ms)
- *   • this.radius               {number}   (from Entity)
- *   • this.x / this.y           {number}
- *
- * Map object source priority (same as the original implementations):
- *   1. mapSystem.getObjects()       — preferred dynamic list
- *   2. mapSystem.objects            — direct array fallback
- *   3. mapSystem.solidObjects       — alternate property name fallback
- *   4. BALANCE.map.wallPositions    — static boundary walls (always appended)
- */
 Player.prototype.checkObstacleProximity = function(ax, ay, dt, particleColor) {
     const OB = BALANCE.player;
 
-    // ── Collect collidable rectangles from all available sources ──
     let mapObjs = [];
     if (window.mapSystem) {
         if      (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
@@ -505,52 +535,33 @@ Player.prototype.checkObstacleProximity = function(ax, ay, dt, particleColor) {
         mapObjs = mapObjs.concat(BALANCE.map.wallPositions);
     }
 
-    // Player is "moving" when pressing at least one directional input this frame
     const isMoving = (ax !== 0 || ay !== 0);
-
-    let scraping = false;  // true if player surface is touching an object this frame
+    let scraping = false;
 
     for (const obj of mapObjs) {
         if (!obj || obj.x === undefined || obj.y === undefined) continue;
-        const oL = obj.x;
-        const oT = obj.y;
-        const oR = oL + (obj.w || 0);
-        const oB = oT + (obj.h || 0);
-
-        // Closest point on the AABB rectangle to the player centre
+        const oL = obj.x, oT = obj.y, oR = oL + (obj.w || 0), oB = oT + (obj.h || 0);
         const closestX = Math.max(oL, Math.min(this.x, oR));
         const closestY = Math.max(oT, Math.min(this.y, oB));
         const d        = Math.hypot(this.x - closestX, this.y - closestY);
 
-        // Scraping threshold: player radius + 4 px "skin" tolerance
-        const scrapeThreshold   = this.radius + 4;
-        // Warning threshold: larger range — fires before contact
-        const warningThreshold  = this.radius + OB.obstacleWarningRange;
+        const scrapeThreshold  = this.radius + 4;
+        const warningThreshold = this.radius + OB.obstacleWarningRange;
 
-        if (d < scrapeThreshold && isMoving) {
-            // Player surface is in contact with object while pushing into it
-            scraping = true;
-        }
+        if (d < scrapeThreshold && isMoving) scraping = true;
 
         if (d < warningThreshold && isMoving) {
-            // Trigger warning bubble (rate-limited)
             const now = Date.now();
             if (now - this.lastObstacleWarning > OB.obstacleWarningCooldown) {
                 this.lastObstacleWarning = now;
                 showVoiceBubble('Careful!', this.x, this.y - 50);
             }
-            break; // one nearby object is enough to decide — stop iterating
+            break;
         }
     }
 
-    // Grant / maintain consolation buff while actively scraping
-    if (scraping) {
-        this.obstacleBuffTimer = OB.obstacleBuffDuration;
-    }
+    if (scraping) this.obstacleBuffTimer = OB.obstacleBuffDuration;
 
-    // Decay buff and emit speed-line particles while active.
-    // Faint particles at ~30 % chance per frame — subtle rather than a full
-    // burst every frame so the effect doesn't overpower combat visuals.
     if (this.obstacleBuffTimer > 0) {
         this.obstacleBuffTimer -= dt;
         if (Math.random() < 0.3) {
@@ -584,12 +595,12 @@ class PoomPlayer extends Entity {
 
         this.walkCycle = 0;
         this.damageBoost = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
-        this.dashGhosts = [];   // legacy dash ghost (kept for compat)
+        this.dashGhosts = [];
 
         // ── Stand-Aura & Afterimage system ────────────────────
-        this.standGhosts   = [];     // JoJo-esque ghost frames
-        this.auraRotation  = 0;      // radians
-        this._auraFrame    = 0;      // frame counter
+        this.standGhosts   = [];
+        this.auraRotation  = 0;
+        this._auraFrame    = 0;
 
         this.onGraph = false;
         this.isConfused = false; this.confusedTimer = 0;
@@ -599,7 +610,7 @@ class PoomPlayer extends Entity {
         this.currentSpeedMult = 1;
         this.nagaCount = 0;
 
-        // ── Collision Awareness state (mirrors Player) ────────
+        // ── Collision Awareness state (mirrors Player) ─────────
         this.obstacleBuffTimer     = 0;
         this.lastObstacleWarning   = 0;
 
@@ -649,7 +660,6 @@ class PoomPlayer extends Entity {
 
         let speedMult = this.currentSpeedMult * this.speedBoost;
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
-        // [OBSTACLE BUFF] Consolation speed multiplier — mirrors Player logic
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
 
         if (!this.isDashing) {
@@ -667,9 +677,6 @@ class PoomPlayer extends Entity {
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
 
-        // ── [OBSTACLE AWARENESS] ──────────────────────────────
-        // ✅ WARN 5 FIX: logic extracted to checkObstacleProximity() above.
-        // Particle colour '#fcd34d' = Tailwind amber-300 (Poom's palette).
         if (!this.isDashing) {
             this.checkObstacleProximity(ax, ay, dt, '#fcd34d');
         }
@@ -696,9 +703,7 @@ class PoomPlayer extends Entity {
             if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
         }
 
-        // ── Stand-Aura & Afterimage system update ─────────────
         _standAura_update(this, dt);
-
         this.updateUI();
     }
 
@@ -710,6 +715,9 @@ class PoomPlayer extends Entity {
         projectileManager.add(new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player'));
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
+        // ✅ AUDIO 1 — Bamboo-tube "Tuk" thump for Poom's rice launcher.
+        // Defined in audio.js as a two-layer sine+triangle design.
+        Audio.playPoomShoot();
     }
 
     eatRice() {
@@ -801,10 +809,8 @@ class PoomPlayer extends Entity {
     draw() {
         const S = this.stats;
 
-        // ── Stand-Aura & Afterimage (drawn first — behind everything) ──
         _standAura_draw(this, 'poom');
 
-        // Legacy dash ghosts (amber flash — kept for compat)
         for (const img of this.dashGhosts) {
             const s = worldToScreen(img.x, img.y);
             CTX.save(); CTX.translate(s.x, s.y); CTX.rotate(img.angle);
@@ -833,6 +839,113 @@ class PoomPlayer extends Entity {
         if (this.isBurning)    { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
         if (this.isEatingRice) { CTX.font = 'bold 18px Arial'; CTX.textAlign='center'; CTX.fillText('🍚', screen.x, screen.y - 44); }
 
+        // ── v11 Poom Channeling Effect ──────────────────────────────────────
+        // When a NagaEntity is alive in specialEffects, Poom is "channeling" the
+        // snake. Show a pulsing emerald aura ring to communicate the mental link.
+        const nagaEntity = window.specialEffects &&
+            window.specialEffects.find(e => e instanceof NagaEntity);
+        const isChanneling = !!nagaEntity;
+        if (isChanneling) {
+            const ct  = performance.now() / 220;
+            const cr  = 42 + Math.sin(ct) * 7;
+            const ca  = 0.55 + Math.sin(ct * 1.6) * 0.25;
+            CTX.save();
+            // Outer ring — pulsing width emerald glow
+            CTX.globalAlpha  = ca;
+            CTX.strokeStyle  = '#10b981';
+            CTX.lineWidth    = 3.5 + Math.sin(ct * 2.1) * 1.5;
+            CTX.shadowBlur   = 24 + Math.sin(ct) * 10;
+            CTX.shadowColor  = '#10b981';
+            CTX.beginPath();
+            CTX.arc(screen.x, screen.y, cr, 0, Math.PI * 2);
+            CTX.stroke();
+            // Inner secondary ring (faster pulse, offset phase)
+            CTX.globalAlpha  = ca * 0.55;
+            CTX.lineWidth    = 1.5;
+            CTX.shadowBlur   = 10;
+            CTX.beginPath();
+            CTX.arc(screen.x, screen.y, cr - 12, 0, Math.PI * 2);
+            CTX.stroke();
+            // Energy particle sparks along ring edge
+            if (Math.random() < 0.35) {
+                const sa = Math.random() * Math.PI * 2;
+                const sx = screen.x + Math.cos(sa) * cr;
+                const sy = screen.y + Math.sin(sa) * cr;
+                CTX.globalAlpha  = 0.9;
+                CTX.fillStyle    = '#34d399';
+                CTX.shadowBlur   = 8;
+                CTX.shadowColor  = '#10b981';
+                CTX.beginPath();
+                CTX.arc(sx, sy, 2, 0, Math.PI * 2);
+                CTX.fill();
+            }
+            CTX.restore();
+
+            // ── Task 4: Naga Summoning Connection Line ─────────────────────
+            // A jittered, segmented energy thread drawn from Poom's chest to
+            // the Naga head in screen space. Flickers every frame for a live
+            // "lightning" feel without a separate particle system.
+            // • Segments: 10 points interpolated along the straight path, each
+            //   nudged by a small random perpendicular offset per frame.
+            // • Two passes: wide soft glow pass + narrow bright core pass.
+            // • Alpha tied to nagaEntity.life / nagaEntity.maxLife so the link
+            //   fades gracefully as the Naga's timer winds down.
+            if (nagaEntity.segments && nagaEntity.segments.length > 0) {
+                const nagaHead   = nagaEntity.segments[0];
+                const nagaScreen = worldToScreen(nagaHead.x, nagaHead.y);
+                const lifeAlpha  = Math.min(1, nagaEntity.life / nagaEntity.maxLife);
+                const SEGS       = 10; // number of interpolated line vertices
+
+                // Build jittered polyline points
+                const pts = [];
+                for (let i = 0; i <= SEGS; i++) {
+                    const t   = i / SEGS;
+                    const bx  = screen.x   + (nagaScreen.x - screen.x)   * t;
+                    const by  = screen.y   + (nagaScreen.y - screen.y)   * t;
+                    // Perpendicular jitter — strongest at midpoint (t≈0.5)
+                    const jitterAmp = Math.sin(t * Math.PI) * (8 + Math.sin(performance.now() / 80 + i) * 4);
+                    const perp      = Math.atan2(nagaScreen.y - screen.y, nagaScreen.x - screen.x) + Math.PI / 2;
+                    const jitter    = (Math.random() - 0.5) * 2 * jitterAmp;
+                    pts.push({ x: bx + Math.cos(perp) * jitter, y: by + Math.sin(perp) * jitter });
+                }
+                // Anchor start/end exactly on Poom and the Naga head (no jitter)
+                pts[0]    = { x: screen.x,     y: screen.y     };
+                pts[SEGS] = { x: nagaScreen.x, y: nagaScreen.y };
+
+                const drawThread = (lineW, alpha, color, blur) => {
+                    CTX.save();
+                    CTX.globalAlpha = lifeAlpha * alpha;
+                    CTX.strokeStyle = color;
+                    CTX.lineWidth   = lineW;
+                    CTX.lineCap     = 'round';
+                    CTX.lineJoin    = 'round';
+                    CTX.shadowBlur  = blur;
+                    CTX.shadowColor = '#10b981';
+                    CTX.beginPath();
+                    CTX.moveTo(pts[0].x, pts[0].y);
+                    for (let i = 1; i <= SEGS; i++) CTX.lineTo(pts[i].x, pts[i].y);
+                    CTX.stroke();
+                    CTX.restore();
+                };
+
+                // Pass 1 — soft outer glow
+                drawThread(5, 0.25, '#10b981', 18);
+                // Pass 2 — bright core thread
+                drawThread(1.5, 0.85, '#6ee7b7', 8);
+
+                // Small orb at the connection anchor on Poom's body
+                CTX.save();
+                CTX.globalAlpha  = lifeAlpha * (0.7 + Math.sin(performance.now() / 120) * 0.3);
+                CTX.fillStyle    = '#34d399';
+                CTX.shadowBlur   = 14;
+                CTX.shadowColor  = '#10b981';
+                CTX.beginPath();
+                CTX.arc(screen.x, screen.y, 4, 0, Math.PI * 2);
+                CTX.fill();
+                CTX.restore();
+            }
+        }
+
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
@@ -841,6 +954,15 @@ class PoomPlayer extends Entity {
         CTX.fillStyle = '#1e3a8a';
         CTX.beginPath(); CTX.ellipse(5+w,12,7,5,0,0,Math.PI*2); CTX.fill();
         CTX.beginPath(); CTX.ellipse(5-w,-12,7,5,0,0,Math.PI*2); CTX.fill();
+
+        // ── v11 Outer glow silhouette (Task 4) ─────────────────────────────
+        // Poom uses a deep-purple neon stroke matching his stand-aura colour.
+        CTX.shadowBlur  = 16;
+        CTX.shadowColor = '#a855f7';
+        CTX.strokeStyle = 'rgba(168,85,247,0.72)';
+        CTX.lineWidth   = 2.8;
+        CTX.beginPath(); CTX.roundRect(-16,-13,32,26,5); CTX.stroke();
+        CTX.shadowBlur  = 0;
 
         CTX.fillStyle = '#dc2626';
         CTX.beginPath(); CTX.roundRect(-16,-13,32,26,5); CTX.fill();
@@ -890,42 +1012,55 @@ class PoomPlayer extends Entity {
         if (hpBar) hpBar.style.width = `${this.hp / this.maxHp * 100}%`;
         if (enBar) enBar.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
+        // ── Dash cooldown ──────────────────────────────────────────
         const dpEl = document.getElementById('dash-cd');
         if (dpEl) {
-            const dp = Math.min(100,(1 - this.cooldowns.dash / S.dashCooldown)*100);
-            dpEl.style.height = `${100-dp}%`;
+            const dp = Math.min(100, (1 - this.cooldowns.dash / S.dashCooldown) * 100);
+            dpEl.style.height = `${100 - dp}%`;
         }
-        const eatCd  = document.getElementById('eat-cd');
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('dash-icon',
+                Math.max(0, this.cooldowns.dash), S.dashCooldown);
+        }
+
+        // ── Eat Rice cooldown ──────────────────────────────────────
+        const eatCd   = document.getElementById('eat-cd');
         const eatIcon = document.getElementById('eat-icon');
         if (eatCd) {
             if (this.isEatingRice) { eatCd.style.height = '0%'; eatIcon?.classList.add('active'); }
             else {
                 eatIcon?.classList.remove('active');
-                const ep = Math.min(100,(1-this.cooldowns.eat/S.eatRiceCooldown)*100);
-                eatCd.style.height = `${100-ep}%`;
+                const ep = Math.min(100, (1 - this.cooldowns.eat / S.eatRiceCooldown) * 100);
+                eatCd.style.height = `${100 - ep}%`;
             }
         }
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('eat-icon',
+                this.isEatingRice ? 0 : Math.max(0, this.cooldowns.eat),
+                S.eatRiceCooldown);
+        }
+
+        // ── Naga cooldown ──────────────────────────────────────────
         const nagaCd = document.getElementById('naga-cd');
         if (nagaCd) {
-            const np = Math.min(100,(1-this.cooldowns.naga/S.nagaCooldown)*100);
-            nagaCd.style.height = `${100-np}%`;
+            const np = Math.min(100, (1 - this.cooldowns.naga / S.nagaCooldown) * 100);
+            nagaCd.style.height = `${100 - np}%`;
         }
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('naga-icon',
+                Math.max(0, this.cooldowns.naga), S.nagaCooldown);
+        }
+
         const levelEl = document.getElementById('player-level');
         if (levelEl) levelEl.textContent = `Lv.${this.level}`;
         const expBar = document.getElementById('exp-bar');
-        if (expBar) expBar.style.width = `${(this.exp/this.expToNextLevel)*100}%`;
+        if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
     }
 }
 
 // ════════════════════════════════════════════════════════════
 // ✅ WARN 5 FIX — Share checkObstacleProximity with PoomPlayer
 // ════════════════════════════════════════════════════════════
-// PoomPlayer extends Entity, NOT Player, so it does not inherit
-// Player.prototype methods automatically. We assign the reference
-// explicitly here so both classes call the same function object.
-// Any future balance change to the obstacle system only needs to
-// be made in the single Player.prototype.checkObstacleProximity
-// definition above.
 PoomPlayer.prototype.checkObstacleProximity = Player.prototype.checkObstacleProximity;
 
 // ════════════════════════════════════════════════════════════
@@ -934,16 +1069,20 @@ PoomPlayer.prototype.checkObstacleProximity = Player.prototype.checkObstacleProx
 class NagaEntity extends Entity {
     constructor(startX, startY, owner) {
         const S = BALANCE.characters.poom;
-        // Entity sets this.x, this.y, this.radius, this.vx/vy, this.angle, this.hp, this.dead
         super(startX, startY, S.nagaRadius);
-        this.owner   = owner;
-        const n      = S.nagaSegments;
+        this.owner    = owner;
+        const n       = S.nagaSegments;
         this.segments = Array.from({ length: n }, () => ({ x: startX, y: startY }));
-        this.life    = S.nagaDuration;
-        this.maxLife = S.nagaDuration;
-        this.speed   = S.nagaSpeed;
-        this.damage  = S.nagaDamage;
-        // this.radius is already set by Entity via super() — no manual assignment needed
+        this.life     = S.nagaDuration;
+        this.maxLife  = S.nagaDuration;
+        this.speed    = S.nagaSpeed;
+        this.damage   = S.nagaDamage;
+        // this.radius set by Entity via super()
+
+        // ✅ AUDIO 2 — Rate-limit Naga hit sound.
+        // Stores Date.now() of the last Audio.playNagaAttack() call.
+        // Sound fires at most once per NAGA_SOUND_INTERVAL ms (220 ms).
+        this.lastSoundTime = 0;
     }
 
     update(dt, player, _meteorZones) {
@@ -952,8 +1091,8 @@ class NagaEntity extends Entity {
         if (this.life <= 0) return true;
 
         const head = this.segments[0];
-        // Follows the mouse cursor so the player can actively aim and direct the
-        // Naga — reverted from player.x/y back to the original mouse-tracking design.
+        // Follows the mouse cursor — intentional design so the player can
+        // actively aim and steer the Naga during its lifetime.
         const dx = mouse.wx - head.x, dy = mouse.wy - head.y;
         const d = Math.hypot(dx, dy);
         if (d > 8) {
@@ -967,24 +1106,43 @@ class NagaEntity extends Entity {
             const sd = Math.hypot(sdx, sdy);
             if (sd > segDist) { curr.x = prev.x+(sdx/sd)*segDist; curr.y = prev.y+(sdy/sd)*segDist; }
         }
+
+        // ── Enemy collision ───────────────────────────────────
         for (const enemy of (window.enemies || [])) {
             if (enemy.dead) continue;
             for (const seg of this.segments) {
-                if (dist(seg.x,seg.y,enemy.x,enemy.y) < this.radius + enemy.radius) {
-                    enemy.takeDamage(this.damage*dt, player);
-                    if (Math.random()<0.1) spawnParticles(seg.x,seg.y,2,'#10b981');
+                if (dist(seg.x, seg.y, enemy.x, enemy.y) < this.radius + enemy.radius) {
+                    enemy.takeDamage(this.damage * dt, player);
+                    if (Math.random() < 0.1) spawnParticles(seg.x, seg.y, 2, '#10b981');
+
+                    // ✅ AUDIO 2 — Rate-limited energy-hiss on enemy hit
+                    const now = Date.now();
+                    if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
+                        this.lastSoundTime = now;
+                        Audio.playNagaAttack();
+                    }
                     break;
                 }
             }
         }
+
+        // ── Boss collision ────────────────────────────────────
         if (window.boss && !window.boss.dead) {
             for (const seg of this.segments) {
-                if (dist(seg.x,seg.y,window.boss.x,window.boss.y) < this.radius + window.boss.radius) {
-                    window.boss.takeDamage(this.damage*dt*0.4);
+                if (dist(seg.x, seg.y, window.boss.x, window.boss.y) < this.radius + window.boss.radius) {
+                    window.boss.takeDamage(this.damage * dt * 0.4);
+
+                    // ✅ AUDIO 2 — Same rate-limit applies for boss hits
+                    const now = Date.now();
+                    if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
+                        this.lastSoundTime = now;
+                        Audio.playNagaAttack();
+                    }
                     break;
                 }
             }
         }
+
         return false;
     }
 
@@ -1023,6 +1181,21 @@ class NagaEntity extends Entity {
             CTX.fillStyle=`rgba(251,191,36,${lifeRatio})`;
             CTX.font='bold 10px Arial'; CTX.textAlign='center'; CTX.textBaseline='middle';
             CTX.fillText(`${this.life.toFixed(1)}s`, hs.x, hs.y-32);
+
+            // ── Task 4: Connection Line anchor on Naga head ─────────────────
+            // A pulsing emerald ring around the head signals where the tether
+            // terminates, reinforcing the visual link drawn from Poom's side.
+            const pulse = 0.6 + Math.sin(performance.now() / 130) * 0.4;
+            CTX.save();
+            CTX.globalAlpha  = lifeRatio * (0.5 + pulse * 0.4);
+            CTX.strokeStyle  = '#34d399';
+            CTX.lineWidth    = 1.5;
+            CTX.shadowBlur   = 12 * pulse;
+            CTX.shadowColor  = '#10b981';
+            CTX.beginPath();
+            CTX.arc(hs.x, hs.y, this.radius * 1.6, 0, Math.PI * 2);
+            CTX.stroke();
+            CTX.restore();
         }
     }
 }
@@ -1171,7 +1344,6 @@ class Drone extends Entity {
 
 // ════════════════════════════════════════════════════════════
 // 🐕 BARK WAVE — Sonic cone emitted by Boss's bark attack
-// (Lives here per refactor plan — instantiated by Boss)
 // ════════════════════════════════════════════════════════════
 class BarkWave {
     constructor(x, y, angle, coneHalf, range) {
@@ -1227,49 +1399,16 @@ class BarkWave {
 // ════════════════════════════════════════════════════════════
 // ✅ Option B — Share identical Player methods with PoomPlayer
 // ════════════════════════════════════════════════════════════
-// PoomPlayer extends Entity directly (not Player), so these five
-// methods — which are byte-for-byte identical between the two
-// classes — would otherwise need to be maintained in duplicate.
-// Assigning the references here means any future bug fix or
-// balance change only needs to be made in one place (Player).
-//
-// Methods shared:
-//   • takeDamage  — damage application, EXPOSED penalty, death check
-//   • heal        — HP clamp + particles + audio
-//   • gainExp     — EXP accumulation + level-up chain trigger
-//   • levelUp     — level increment, EXP threshold scaling, full heal
-//   • addSpeedBoost — sets speedBoostTimer from stats
-//
-// NOTE: PoomPlayer.prototype.checkObstacleProximity is handled
-// separately above (line ~891) as part of the WARN 5 fix.
 PoomPlayer.prototype.takeDamage         = Player.prototype.takeDamage;
 PoomPlayer.prototype.heal               = Player.prototype.heal;
 PoomPlayer.prototype.gainExp            = Player.prototype.gainExp;
 PoomPlayer.prototype.levelUp            = Player.prototype.levelUp;
 PoomPlayer.prototype.addSpeedBoost      = Player.prototype.addSpeedBoost;
-// checkPassiveUnlock is called inside the shared levelUp — PoomPlayer must
-// also have it, otherwise levelUp throws "this.checkPassiveUnlock is not a function".
 PoomPlayer.prototype.checkPassiveUnlock = Player.prototype.checkPassiveUnlock;
 
 // ─── Mobile patch ─────────────────────────────────────────────
-// ✅ BUG 2 FIX: Removed the redundant velocity block that was
-// double-applying joystick acceleration on touch devices.
-//
-// ROOT CAUSE (original bug):
-//   The original patch read touchJoystickLeft.nx/ny into __mobile_ax/ay,
-//   then called __origUpdate (which ALSO reads touchJoystickLeft and applies
-//   acceleration internally), then applied the same acceleration a second time
-//   after the call — resulting in 2× intended speed on all touch devices.
-//
-// FIX:
-//   The patch now only zeroes WASD keys when the left joystick is active,
-//   then calls __origUpdate.  __origUpdate already contains:
-//     if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
-//         ax = touchJoystickLeft.nx; ay = touchJoystickLeft.ny; isTouchMove = true;
-//     }
-//   so joystick movement, normalisation, walkCycle, speed caps, and angle
-//   are all handled there exactly once.  The right-joystick angle override
-//   in the old patch was also redundant for the same reason.
+// ✅ BUG 2 FIX: zeroes WASD when joystick active, then delegates to
+// __origUpdate which handles the joystick read exactly once.
 if (typeof Player !== 'undefined') {
     const __origUpdate = Player.prototype.update;
     Player.prototype.update = function(dt, keys, mouse) {

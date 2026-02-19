@@ -112,6 +112,21 @@ const DEBUG_MODE = false;
  *   • Enemy/boss/powerup draw guarded by entity.isOnScreen(buffer)
  *   • ParticleSystem hard cap 150 (managed in effects.js)
  *
+ * v11 — Performance + Animation Clarity pass (Game Engine Architect)
+ *   • effects.js: Object pool for Particle (300 cap) and FloatingText (80 cap)
+ *       spawn() → Particle.acquire() / FloatingText.acquire()  (zero GC after warm-up)
+ *       update() → .release() returns dead instances to pool
+ *       clear() → all particles/texts returned to pool before array reset
+ *   • effects.js: Particle.draw() viewport cull — skips fillArc + shadowBlur for
+ *       off-screen particles (saves GPU cost during boss explosions)
+ *   • game.js: hitMarkerSystem.update(dt) + .draw() integrated into game loop
+ *       (update in updateGame, draw in drawGame between particles and weather)
+ *   • game.js: player.triggerRecoil() called after every successful Kao shot
+ *   • player.js: Kao weapon recoil — body leans backward + muzzle-flash ring
+ *       on fire; weaponRecoil decays at 8 units/sec; controlled via triggerRecoil()
+ *   • player.js: Poom channeling glow — animated green ring when NagaEntity active
+ *   • player.js: Player + PoomPlayer silhouette outer glow (neon stroke on body rect)
+ *
  * FIXES (QA Integrity Report):
  * ✅ BUG 1:  mapSystem.update() now receives scaled dt so MTCRoom heals correctly.
  * ✅ WARN 1: weatherSystem.update() and weatherSystem.draw() wired into the loop.
@@ -1392,7 +1407,11 @@ function updateGame(dt) {
         if (mouse.left === 1 && gameState === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(player, player.damageBoost);
-                if (projectiles && projectiles.length > 0) projectileManager.add(projectiles);
+                if (projectiles && projectiles.length > 0) {
+                    projectileManager.add(projectiles);
+                    // ✅ v11: trigger weapon recoil animation on Kao (see player.js)
+                    if (typeof player.triggerRecoil === 'function') player.triggerRecoil();
+                }
             }
         }
     }
@@ -1465,6 +1484,11 @@ function updateGame(dt) {
     mapSystem.update([player, ...enemies, boss].filter(e => e && !e.dead), dt);
     particleSystem.update(dt);
     floatingTextSystem.update(dt);
+
+    // ✅ v11: hitMarkerSystem wired into the update loop.
+    // Manages the brief X-crosshair markers spawned by projectile impacts.
+    // Kept after floatingTextSystem so draw order mirrors update order.
+    if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.update(dt);
 
     // ✅ WARN 1 FIX: wire the weather system into the update loop.
     // getCamera() returns the utils.js camera object (x/y world offset).
@@ -1545,6 +1569,11 @@ function drawGame() {
     projectileManager.draw();
     particleSystem.draw();
     floatingTextSystem.draw();
+
+    // ✅ v11: Draw hit-marker crosshairs (X-shaped impact indicators from weapons.js).
+    // Drawn AFTER projectiles + particles so markers appear on top of debris.
+    // Drawn BEFORE weather so rain/snow composites on top of combat effects.
+    if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.draw();
 
     // ✅ WARN 1 FIX: draw weather particles in world-space (before CTX.restore)
     // so they are correctly offset by the camera and screen-shake translation.

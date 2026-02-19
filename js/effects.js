@@ -1,41 +1,116 @@
 'use strict';
 /**
  * 💥 MTC: ENHANCED EDITION - Effects System
- * Particles, floating text, and special effects
- * WEATHER SYSTEM (v9 — NEW):
+ * Particles, floating text, hit markers, and special effects
+ *
+ * WEATHER SYSTEM (v9 — unchanged):
  *   ✅ WeatherSystem class — atmospheric rain & snow effects
  *   ✅ Rain: spawns at screen top, falls with speed + wind drift, drawn as thin blue lines
  *   ✅ Snow: spawns at screen top, falls slowly with sin() horizontal sway, drawn as white circles
  *   ✅ Optimized: MAX_PARTICLES cap (200), off-screen culling, efficient array reuse
  *   ✅ API: weatherSystem.setWeather('rain'|'snow'|'none'), update(dt, camera), draw()
+ *
+ * HIT MARKER SYSTEM (v10 — Combat Feedback pass):
+ *   ✅ HitMarker class — short-lived X-crosshair at projectile impact point
+ *   ✅ HitMarkerSystem — manages pool, update loop, draw loop
+ *   ✅ Normal hits: white crosshair, 0.30 s lifetime, slight expand-on-fade
+ *   ✅ Crit hits:   golden crosshair, 0.40 s lifetime, larger arms, glow
+ *   ✅ spawnHitMarker(x, y, isCrit) — global convenience wrapper
+ *   ✅ var hitMarkerSystem — global singleton
+ *   ✅ INTEGRATED: hitMarkerSystem.update(dt) + .draw() wired into game.js loop
+ *
  * GLITCH WAVE (v8 — unchanged):
  *   ✅ drawGlitchEffect(intensity, controlsInverted) — top-level export
- * PERFORMANCE (v8):
+ *
+ * PERFORMANCE (v11 — Object Pool + Viewport Cull pass):
  *   ✅ ParticleSystem.MAX_PARTICLES = 150  — hard cap; oldest particle evicted
- *      when spawn() would exceed the limit.  Prevents runaway memory growth
- *      during Glitch Wave (2× enemies × heavy particle deaths).
- *   ✅ Particle.draw(): shadowBlur is SKIPPED for particles whose rendered
- *      radius is < 3 screen pixels.  shadowBlur triggers a full offscreen
- *      compositing pass in every browser engine — it is the #1 per-particle
- *      cost even though most tiny particles are invisible at that size.
- *      Particles with size ≥ 3 still get the blur for visual quality.
+ *   ✅ Particle.draw(): shadowBlur skipped for particles with rendered radius < 3 px
+ *
+ *   ✅ OBJECT POOL — Particle (up to 300 instances recycled, zero `new` after warm-up):
+ *        Particle._pool[]         static array of waiting instances
+ *        Particle.acquire(...)    pulls from pool or allocates; always calls reset()
+ *        Particle.reset(...)      re-initialises a live instance in-place
+ *        Particle.release()       returns the instance to the pool for reuse
+ *        ParticleSystem.spawn()   → Particle.acquire() instead of `new Particle()`
+ *        ParticleSystem.update()  → dead particles returned via p.release()
+ *        ParticleSystem.clear()   → all particles released before array is emptied
+ *
+ *   ✅ OBJECT POOL — FloatingText (up to 80 instances recycled):
+ *        Same pattern: FloatingText._pool[], acquire(), reset(), release()
+ *        FloatingTextSystem methods updated to use the pool
+ *
+ *   ✅ VIEWPORT CULL — Particle.draw():
+ *        Canvas-bounds check before any ctx calls.
+ *        Off-screen explosion debris: fillArc + shadowBlur GPU calls fully skipped.
+ *        Padding = particle.size + 4 px to avoid hard pop-in at edges.
  */
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Particle System
 // ──────────────────────────────────────────────────────────────────────────────
 class Particle {
+    // ── Static Object Pool ─────────────────────────────────────────────────────
+    // At 150 cap + 60 FPS, without pooling the engine allocates and immediately
+    // discards ~9 000 Particle objects per second, causing GC pauses every few
+    // seconds. The pool keeps up to MAX_POOL dead instances warm so spawn() never
+    // calls `new` after the first warm-up period.
+    static _pool    = [];
+    static MAX_POOL = 300;
+
     constructor(x, y, vx, vy, color, size, lifetime, type = 'circle', data = {}) {
-        this.x = x;
-        this.y = y;
-        this.vx = vx;
-        this.vy = vy;
-        this.color = color;
-        this.size = size;
-        this.life = lifetime;
+        // Delegate to reset() so the pool path and the constructor path share
+        // exactly one code path for initialisation.
+        this.reset(x, y, vx, vy, color, size, lifetime, type, data);
+    }
+
+    /**
+     * Re-initialise a pooled (or brand-new) instance with fresh state.
+     * Called by acquire() on recycled objects and implicitly by the constructor.
+     * @returns {Particle} this, for fluent chaining from acquire()
+     */
+    reset(x, y, vx, vy, color, size, lifetime, type = 'circle', data = {}) {
+        this.x       = x;
+        this.y       = y;
+        this.vx      = vx;
+        this.vy      = vy;
+        this.color   = color;
+        this.size    = size;
+        this.life    = lifetime;
         this.maxLife = lifetime;
-        this.type = type; // 'circle', 'steam', 'binary', 'afterimage'
-        this.data = data; // Custom data (rotation for afterimage, char for binary)
+        this.type    = type; // 'circle', 'steam', 'binary', 'afterimage'
+        this.data    = data; // Custom data (rotation for afterimage, char for binary)
+        return this;
+    }
+
+    /**
+     * Pull a ready-to-use instance from the pool (or allocate a fresh one),
+     * then reset it with the supplied parameters.
+     *
+     * ─── Usage ───────────────────────────────────────────────────────────────
+     *   // Instead of: this.particles.push(new Particle(x, y, …));
+     *   this.particles.push(Particle.acquire(x, y, …));
+     */
+    static acquire(x, y, vx, vy, color, size, lifetime, type = 'circle', data = {}) {
+        if (Particle._pool.length > 0) {
+            return Particle._pool.pop().reset(x, y, vx, vy, color, size, lifetime, type, data);
+        }
+        return new Particle(x, y, vx, vy, color, size, lifetime, type, data);
+    }
+
+    /**
+     * Return this dead instance to the pool so it can be reused.
+     * Called by ParticleSystem.update() when life ≤ 0 and by clear().
+     *
+     * The data reference is nulled to prevent the pool from accidentally
+     * retaining large object graphs through stale data references.
+     */
+    release() {
+        this.data = {}; // release any object-graph ref held in data
+        if (Particle._pool.length < Particle.MAX_POOL) {
+            Particle._pool.push(this);
+        }
+        // If pool is full the instance is simply abandoned to GC — which is
+        // fine: the pool is already saturated and no steady-state churn occurs.
     }
 
     update(dt) {
@@ -62,6 +137,18 @@ class Particle {
 
     draw() {
         const screen = worldToScreen(this.x, this.y);
+
+        // ── PERF: Viewport cull ──────────────────────────────────────────────
+        // Skip every canvas API call for particles that lie outside the visible
+        // area. This matters most during boss-death or glitch-wave explosions
+        // where 80+ debris particles fly off-screen simultaneously.
+        // Padding = size + 4 px prevents visible pop-in at the canvas edges.
+        if (typeof CANVAS !== 'undefined') {
+            const pad = this.size + 4;
+            if (screen.x < -pad           || screen.x > CANVAS.width  + pad ||
+                screen.y < -pad           || screen.y > CANVAS.height + pad) return;
+        }
+
         const alpha = this.life / this.maxLife;
 
         // Rendered radius — if the particle is essentially invisible, skip
@@ -209,11 +296,12 @@ class ParticleSystem {
                 lifetime = rand(0.3, 0.8);
             }
 
-            this.particles.push(new Particle(x, y, vx, vy, color, size, lifetime, type, data));
+            this.particles.push(Particle.acquire(x, y, vx, vy, color, size, lifetime, type, data));
 
             // Evict oldest particle if we exceed the cap
             while (this.particles.length > ParticleSystem.MAX_PARTICLES) {
-                this.particles.shift();   // remove oldest (front of array)
+                // Release evicted instance back to pool before discarding the reference.
+                this.particles.shift().release();
             }
         }
     }
@@ -221,16 +309,14 @@ class ParticleSystem {
     update(dt) {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             if (this.particles[i].update(dt)) {
-                this.particles.splice(i, 1);
+                // ── POOL: return dead particle instead of letting GC collect it ──
+                this.particles.splice(i, 1)[0].release();
             }
         }
     }
 
     draw() {
         // ── STABILITY FIX (Zone 3): Guard against uninitialised canvas context.
-        // If game.js hasn't set up CTX yet (e.g. canvas init failure or script
-        // race), every particle.draw() call would throw a TypeError. We bail
-        // out silently so the rest of the game loop is unaffected.
         if (typeof CTX === 'undefined' || !CTX) return;
         for (let particle of this.particles) {
             particle.draw();
@@ -238,6 +324,10 @@ class ParticleSystem {
     }
 
     clear() {
+        // Return every live particle to the pool before discarding the array.
+        // This ensures clear() (called on startGame / endGame) doesn't throw
+        // away a full warm pool of 150 pre-constructed instances.
+        for (const p of this.particles) p.release();
         this.particles = [];
     }
 }
@@ -246,14 +336,52 @@ class ParticleSystem {
 // Floating Text System
 // ──────────────────────────────────────────────────────────────────────────────
 class FloatingText {
+    // ── Static Object Pool ─────────────────────────────────────────────────────
+    // Floating texts are smaller in count (< 40 alive at once) but they each
+    // hold a string reference — recycling them avoids repeated string-object
+    // allocation during heavy combat (boss fight + drone + weapons = many texts/sec).
+    static _pool    = [];
+    static MAX_POOL = 80;
+
     constructor(text, x, y, color, size = 20) {
-        this.text = text;
-        this.x = x;
-        this.y = y;
+        this.reset(text, x, y, color, size);
+    }
+
+    /**
+     * Re-initialise a pooled instance.  Resets vy and life to their defaults.
+     * @returns {FloatingText} this, for chaining from acquire()
+     */
+    reset(text, x, y, color, size = 20) {
+        this.text  = text;
+        this.x     = x;
+        this.y     = y;
         this.color = color;
-        this.size = size;
-        this.life = 1.5;
-        this.vy = -80;
+        this.size  = size;
+        this.life  = 1.5;
+        this.vy    = -80;
+        return this;
+    }
+
+    /**
+     * Pull from pool (or allocate) and reset with the given parameters.
+     * Use this instead of `new FloatingText(...)`.
+     */
+    static acquire(text, x, y, color, size = 20) {
+        if (FloatingText._pool.length > 0) {
+            return FloatingText._pool.pop().reset(text, x, y, color, size);
+        }
+        return new FloatingText(text, x, y, color, size);
+    }
+
+    /**
+     * Return this dead instance to the pool.
+     * The text string ref is cleared to allow GC of any large strings.
+     */
+    release() {
+        this.text = '';
+        if (FloatingText._pool.length < FloatingText.MAX_POOL) {
+            FloatingText._pool.push(this);
+        }
     }
 
     update(dt) {
@@ -284,21 +412,21 @@ class FloatingTextSystem {
     }
 
     spawn(text, x, y, color, size = 20) {
-        this.texts.push(new FloatingText(text, x, y, color, size));
+        // ── POOL: reuse a dead instance instead of allocating ──
+        this.texts.push(FloatingText.acquire(text, x, y, color, size));
     }
 
     update(dt) {
         for (let i = this.texts.length - 1; i >= 0; i--) {
             if (this.texts[i].update(dt)) {
-                this.texts.splice(i, 1);
+                // ── POOL: return dead text to pool ──
+                this.texts.splice(i, 1)[0].release();
             }
         }
     }
 
     draw() {
         // ── STABILITY FIX (Zone 3): Same CTX guard as ParticleSystem.
-        // FloatingText objects call CTX directly inside their own draw()
-        // methods; a missing context would throw on every active label.
         if (typeof CTX === 'undefined' || !CTX) return;
         for (let text of this.texts) {
             text.draw();
@@ -306,8 +434,193 @@ class FloatingTextSystem {
     }
 
     clear() {
+        // Return every live text to pool before clearing.
+        for (const t of this.texts) t.release();
         this.texts = [];
     }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🎯 HIT MARKER SYSTEM — Combat feedback crosshairs
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * HitMarker
+ *
+ * A brief X-shaped crosshair that appears at the world position of a
+ * successful projectile hit.  Two visual tiers:
+ *
+ *   Normal hit: white arms, 0.30 s lifetime, 9 px arm length
+ *   Crit hit:   gold arms, 0.40 s lifetime, 14 px arm length + glow
+ *
+ * Visual behaviour:
+ *   • Arms expand by ~30 % as the marker fades (gives a "pop" feel).
+ *   • Alpha falls linearly from 1 → 0 over the lifetime.
+ *   • CTX state is fully sandboxed inside save/restore.
+ *
+ * Spawned by: ProjectileManager.update() via spawnHitMarker(x, y, isCrit)
+ * Managed by: HitMarkerSystem (singleton: hitMarkerSystem)
+ */
+class HitMarker {
+    /**
+     * @param {number}  x      World X coordinate of the impact
+     * @param {number}  y      World Y coordinate of the impact
+     * @param {boolean} isCrit Whether the hit was a critical strike
+     */
+    constructor(x, y, isCrit = false) {
+        this.x       = x;
+        this.y       = y;
+        this.isCrit  = isCrit;
+
+        // Lifetime: crits linger slightly longer so they register better
+        this.maxLife = isCrit ? 0.40 : 0.30;
+        this.life    = this.maxLife;
+
+        // Base arm half-length (screen pixels, before expand animation)
+        this.baseSize = isCrit ? 14 : 9;
+    }
+
+    /**
+     * @param {number} dt Scaled frame delta (seconds)
+     * @returns {boolean} true when the marker should be removed
+     */
+    update(dt) {
+        this.life -= dt;
+        return this.life <= 0;
+    }
+
+    draw() {
+        const screen = worldToScreen(this.x, this.y);
+        const t      = this.life / this.maxLife;   // 1 → 0 as marker ages
+
+        // Expand arms as the marker fades: starts at baseSize, grows by 35 %
+        const armLen = this.baseSize * (1 + (1 - t) * 0.35);
+
+        // Alpha decays with a slight ease-out (square root) so early frames
+        // are very opaque and the marker doesn't vanish abruptly at the end
+        const alpha = Math.sqrt(t);
+
+        CTX.save();
+
+        CTX.globalAlpha  = alpha;
+        CTX.strokeStyle  = this.isCrit ? '#facc15' : '#ffffff';
+        CTX.lineWidth    = this.isCrit ? 2.5 : 2;
+        CTX.lineCap      = 'round';
+
+        if (this.isCrit) {
+            // Golden glow for crits
+            CTX.shadowBlur  = 10;
+            CTX.shadowColor = '#facc15';
+        } else {
+            CTX.shadowBlur  = 5;
+            CTX.shadowColor = 'rgba(255,255,255,0.7)';
+        }
+
+        // ── Draw X arms ──────────────────────────────────────
+        const cx = screen.x;
+        const cy = screen.y;
+        const s  = armLen;
+
+        CTX.beginPath();
+        // Diagonal NW → SE
+        CTX.moveTo(cx - s, cy - s);
+        CTX.lineTo(cx + s, cy + s);
+        // Diagonal NE → SW
+        CTX.moveTo(cx + s, cy - s);
+        CTX.lineTo(cx - s, cy + s);
+        CTX.stroke();
+
+        // ── Inner dot for crits (extra punch) ────────────────
+        if (this.isCrit) {
+            CTX.shadowBlur  = 14;
+            CTX.shadowColor = '#facc15';
+            CTX.fillStyle   = `rgba(255, 255, 255, ${alpha * 0.9})`;
+            CTX.beginPath();
+            CTX.arc(cx, cy, 2.5 * t, 0, Math.PI * 2);
+            CTX.fill();
+        }
+
+        CTX.restore();
+    }
+}
+
+/**
+ * HitMarkerSystem
+ *
+ * Singleton that manages a pool of active HitMarker objects.
+ *
+ * ─── Integration (add to game.js) ───────────────────────────────────────────
+ *
+ *   In your UPDATE section (same place as particleSystem.update):
+ *     hitMarkerSystem.update(dt);
+ *
+ *   In your DRAW section (after enemies + projectiles, before HUD):
+ *     hitMarkerSystem.draw();
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Hard-capped at MAX_MARKERS to prevent accumulation during heavy fights.
+ * The oldest marker is evicted first (FIFO, same as ParticleSystem).
+ */
+class HitMarkerSystem {
+    static MAX_MARKERS = 40;   // generous cap; each marker is tiny
+
+    constructor() {
+        this.markers = [];
+    }
+
+    /**
+     * Spawn a new hit marker at world position (x, y).
+     * @param {number}  x      World X
+     * @param {number}  y      World Y
+     * @param {boolean} isCrit Whether the registering hit was a crit
+     */
+    spawn(x, y, isCrit = false) {
+        this.markers.push(new HitMarker(x, y, isCrit));
+
+        // Evict oldest if over cap
+        while (this.markers.length > HitMarkerSystem.MAX_MARKERS) {
+            this.markers.shift();
+        }
+    }
+
+    /**
+     * @param {number} dt Scaled frame delta (seconds)
+     */
+    update(dt) {
+        for (let i = this.markers.length - 1; i >= 0; i--) {
+            if (this.markers[i].update(dt)) {
+                this.markers.splice(i, 1);
+            }
+        }
+    }
+
+    draw() {
+        if (typeof CTX === 'undefined' || !CTX) return;
+        for (let marker of this.markers) {
+            marker.draw();
+        }
+    }
+
+    clear() {
+        this.markers = [];
+    }
+}
+
+// Global singleton — hook update() + draw() into game.js (see class comment)
+var hitMarkerSystem = new HitMarkerSystem();
+
+/**
+ * spawnHitMarker(x, y, isCrit)
+ * Convenience wrapper so call sites don't need to reference the
+ * singleton directly — mirrors the pattern of spawnParticles().
+ *
+ * @param {number}  x      World X of the impact
+ * @param {number}  y      World Y of the impact
+ * @param {boolean} [isCrit=false] Was it a critical hit?
+ */
+function spawnHitMarker(x, y, isCrit = false) {
+    hitMarkerSystem.spawn(x, y, isCrit);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -459,8 +772,6 @@ class WeatherSystem {
         if (this.mode === 'none') return;
 
         // ── STABILITY FIX (Zone 3): Guard against uninitialised CTX.
-        // Raindrop.draw() and Snowflake.draw() both write directly to CTX;
-        // if the canvas isn't ready yet this would crash the entire frame.
         if (typeof CTX === 'undefined' || !CTX) return;
 
         for (let particle of this.particles) {
@@ -990,6 +1301,8 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         Particle, ParticleSystem, particleSystem,
         FloatingText, FloatingTextSystem, floatingTextSystem,
+        HitMarker, HitMarkerSystem, hitMarkerSystem,
+        spawnHitMarker,
         Raindrop, Snowflake, WeatherSystem, weatherSystem,
         EquationSlam, DeadlyGraph, MeteorStrike,
         spawnParticles, spawnFloatingText,
