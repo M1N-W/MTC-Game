@@ -1,3 +1,4 @@
+'use strict';
 /**
  * js/entities/player.js
  *
@@ -8,6 +9,22 @@
  * ► BarkWave    — Boss bark projectile (lives here per refactor plan)
  *
  * Depends on: base.js  (Entity, _standAura_update, _standAura_draw)
+ *
+ * ────────────────────────────────────────────────────────────────
+ * FIXES (QA Integrity Report)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ BUG 2  — Mobile Patch: Removed redundant velocity calculation that
+ *             double-applied joystick acceleration (2× speed on touch).
+ *             The patch now only zeroes WASD keys before calling __origUpdate,
+ *             letting the original update handle the joystick read once.
+ *
+ * ✅ WARN 5 — DRY Principle: Extracted the ~60-line obstacle-awareness block
+ *             (was copy-pasted verbatim into both Player.update and
+ *             PoomPlayer.update) into a single shared implementation at
+ *             Player.prototype.checkObstacleProximity(ax, ay, dt, particleColor).
+ *             PoomPlayer.prototype gets the same reference so both character
+ *             classes call identical logic; only the particle tint differs
+ *             (#93c5fd for Kao, #fcd34d for Poom).
  */
 
 // ════════════════════════════════════════════════════════════
@@ -138,85 +155,11 @@ class Player extends Entity {
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
 
-        // ── [OBSTACLE AWARENESS] Proximity detection & consolation buff ──────
-        // Runs every frame (except while dashing — the iframe makes it irrelevant).
-        // Uses AABB closest-point distance so rectangular desks/walls are tested
-        // precisely rather than via their centre-to-centre distance.
-        //
-        // Map object source priority:
-        //   1. mapSystem.getObjects()  — preferred (dynamic, includes desks/trees/etc.)
-        //   2. mapSystem.objects       — fallback if map module exposes the array directly
-        //   3. BALANCE.map.wallPositions — static world-boundary walls (always appended)
+        // ── [OBSTACLE AWARENESS] ──────────────────────────────
+        // ✅ WARN 5 FIX: logic extracted to checkObstacleProximity() below.
+        // Particle colour '#93c5fd' = Tailwind blue-300 (Kao's palette).
         if (!this.isDashing) {
-            const OB = BALANCE.player;
-
-            // Collect collidable rectangles from all available sources
-            let mapObjs = [];
-            if (window.mapSystem) {
-                if      (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
-                else if (Array.isArray(mapSystem.objects))           mapObjs = mapSystem.objects;
-                else if (Array.isArray(mapSystem.solidObjects))      mapObjs = mapSystem.solidObjects;
-            }
-            if (Array.isArray(BALANCE.map.wallPositions)) {
-                mapObjs = mapObjs.concat(BALANCE.map.wallPositions);
-            }
-
-            // Player is "moving" when pressing at least one directional input this frame
-            const isMoving = (ax !== 0 || ay !== 0);
-
-            let scraping = false;  // true if player surface is touching an object this frame
-
-            for (const obj of mapObjs) {
-                if (!obj || obj.x === undefined || obj.y === undefined) continue;
-                const oL = obj.x;
-                const oT = obj.y;
-                const oR = oL + (obj.w || 0);
-                const oB = oT + (obj.h || 0);
-
-                // Closest point on the AABB rectangle to the player centre
-                const closestX = Math.max(oL, Math.min(this.x, oR));
-                const closestY = Math.max(oT, Math.min(this.y, oB));
-                const d        = Math.hypot(this.x - closestX, this.y - closestY);
-
-                // Scraping threshold: player radius + 4 px "skin" tolerance
-                const scrapeThreshold   = this.radius + 4;
-                // Warning threshold: larger range — fires before contact
-                const warningThreshold  = this.radius + OB.obstacleWarningRange;
-
-                if (d < scrapeThreshold && isMoving) {
-                    // Player surface is in contact with object while pushing into it
-                    scraping = true;
-                }
-
-                if (d < warningThreshold && isMoving) {
-                    // Trigger warning bubble (rate-limited)
-                    const now = Date.now();
-                    if (now - this.lastObstacleWarning > OB.obstacleWarningCooldown) {
-                        this.lastObstacleWarning = now;
-                        showVoiceBubble('Careful!', this.x, this.y - 50);
-                    }
-                    break; // one nearby object is enough to decide — stop iterating
-                }
-            }
-
-            // Grant / maintain consolation buff while actively scraping
-            if (scraping) {
-                this.obstacleBuffTimer = OB.obstacleBuffDuration;
-            }
-
-            // Decay buff and emit speed-line particles while active
-            if (this.obstacleBuffTimer > 0) {
-                this.obstacleBuffTimer -= dt;
-                // Faint blue speed-line particles — 1 particle at ~30 % chance per frame
-                // so the effect is subtle rather than a full burst every frame.
-                if (Math.random() < 0.3) {
-                    spawnParticles(
-                        this.x + rand(-this.radius, this.radius),
-                        this.y + rand(-this.radius, this.radius),
-                        1, '#93c5fd'   // Tailwind blue-300 — soft, distinct from combat FX
-                    );
-                }
-            }
+            this.checkObstacleProximity(ax, ay, dt, '#93c5fd');
         }
 
         if (this.cooldowns.dash    > 0) this.cooldowns.dash    -= dt;
@@ -473,6 +416,116 @@ class Player extends Entity {
 }
 
 // ════════════════════════════════════════════════════════════
+// ✅ WARN 5 FIX — Shared obstacle-awareness prototype method
+// ════════════════════════════════════════════════════════════
+/**
+ * Player.prototype.checkObstacleProximity(ax, ay, dt, particleColor)
+ *
+ * Encapsulates the full obstacle-awareness subsystem that was previously
+ * copy-pasted verbatim into both Player.update() and PoomPlayer.update().
+ *
+ * @param {number} ax            - Normalised horizontal move input this frame
+ *                                 (used to determine whether the entity is
+ *                                 "actively moving" before firing warnings).
+ * @param {number} ay            - Normalised vertical move input this frame.
+ * @param {number} dt            - Scaled frame delta (seconds) — used to decay
+ *                                 obstacleBuffTimer at wall-clock speed.
+ * @param {string} particleColor - CSS colour for speed-line particles while the
+ *                                 consolation buff is active.  Callers supply
+ *                                 their character-specific tint:
+ *                                   • '#93c5fd'  (blue-300)  for Kao / Player
+ *                                   • '#fcd34d'  (amber-300) for Poom
+ *
+ * Called on `this` — works for both Player and PoomPlayer because
+ * PoomPlayer.prototype.checkObstacleProximity is aliased to this function
+ * immediately after the PoomPlayer class definition.
+ *
+ * Reads / writes these instance properties (must be initialised in the
+ * constructor of each character class):
+ *   • this.obstacleBuffTimer    {number}
+ *   • this.lastObstacleWarning  {number}   (Date.now() ms)
+ *   • this.radius               {number}   (from Entity)
+ *   • this.x / this.y           {number}
+ *
+ * Map object source priority (same as the original implementations):
+ *   1. mapSystem.getObjects()       — preferred dynamic list
+ *   2. mapSystem.objects            — direct array fallback
+ *   3. mapSystem.solidObjects       — alternate property name fallback
+ *   4. BALANCE.map.wallPositions    — static boundary walls (always appended)
+ */
+Player.prototype.checkObstacleProximity = function(ax, ay, dt, particleColor) {
+    const OB = BALANCE.player;
+
+    // ── Collect collidable rectangles from all available sources ──
+    let mapObjs = [];
+    if (window.mapSystem) {
+        if      (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
+        else if (Array.isArray(mapSystem.objects))           mapObjs = mapSystem.objects;
+        else if (Array.isArray(mapSystem.solidObjects))      mapObjs = mapSystem.solidObjects;
+    }
+    if (Array.isArray(BALANCE.map.wallPositions)) {
+        mapObjs = mapObjs.concat(BALANCE.map.wallPositions);
+    }
+
+    // Player is "moving" when pressing at least one directional input this frame
+    const isMoving = (ax !== 0 || ay !== 0);
+
+    let scraping = false;  // true if player surface is touching an object this frame
+
+    for (const obj of mapObjs) {
+        if (!obj || obj.x === undefined || obj.y === undefined) continue;
+        const oL = obj.x;
+        const oT = obj.y;
+        const oR = oL + (obj.w || 0);
+        const oB = oT + (obj.h || 0);
+
+        // Closest point on the AABB rectangle to the player centre
+        const closestX = Math.max(oL, Math.min(this.x, oR));
+        const closestY = Math.max(oT, Math.min(this.y, oB));
+        const d        = Math.hypot(this.x - closestX, this.y - closestY);
+
+        // Scraping threshold: player radius + 4 px "skin" tolerance
+        const scrapeThreshold   = this.radius + 4;
+        // Warning threshold: larger range — fires before contact
+        const warningThreshold  = this.radius + OB.obstacleWarningRange;
+
+        if (d < scrapeThreshold && isMoving) {
+            // Player surface is in contact with object while pushing into it
+            scraping = true;
+        }
+
+        if (d < warningThreshold && isMoving) {
+            // Trigger warning bubble (rate-limited)
+            const now = Date.now();
+            if (now - this.lastObstacleWarning > OB.obstacleWarningCooldown) {
+                this.lastObstacleWarning = now;
+                showVoiceBubble('Careful!', this.x, this.y - 50);
+            }
+            break; // one nearby object is enough to decide — stop iterating
+        }
+    }
+
+    // Grant / maintain consolation buff while actively scraping
+    if (scraping) {
+        this.obstacleBuffTimer = OB.obstacleBuffDuration;
+    }
+
+    // Decay buff and emit speed-line particles while active.
+    // Faint particles at ~30 % chance per frame — subtle rather than a full
+    // burst every frame so the effect doesn't overpower combat visuals.
+    if (this.obstacleBuffTimer > 0) {
+        this.obstacleBuffTimer -= dt;
+        if (Math.random() < 0.3) {
+            spawnParticles(
+                this.x + rand(-this.radius, this.radius),
+                this.y + rand(-this.radius, this.radius),
+                1, particleColor
+            );
+        }
+    }
+};
+
+// ════════════════════════════════════════════════════════════
 // 🌾 POOM PLAYER
 // ════════════════════════════════════════════════════════════
 class PoomPlayer extends Entity {
@@ -576,64 +629,11 @@ class PoomPlayer extends Entity {
         this.x = clamp(this.x, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
         this.y = clamp(this.y, -GAME_CONFIG.physics.worldBounds, GAME_CONFIG.physics.worldBounds);
 
-        // ── [OBSTACLE AWARENESS] Proximity detection & consolation buff ──────
-        // Identical logic to Player — extracted here rather than into a shared
-        // helper because PoomPlayer does not extend Player (separate class tree).
+        // ── [OBSTACLE AWARENESS] ──────────────────────────────
+        // ✅ WARN 5 FIX: logic extracted to checkObstacleProximity() above.
+        // Particle colour '#fcd34d' = Tailwind amber-300 (Poom's palette).
         if (!this.isDashing) {
-            const OB = BALANCE.player;
-
-            let mapObjs = [];
-            if (window.mapSystem) {
-                if      (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
-                else if (Array.isArray(mapSystem.objects))           mapObjs = mapSystem.objects;
-                else if (Array.isArray(mapSystem.solidObjects))      mapObjs = mapSystem.solidObjects;
-            }
-            if (Array.isArray(BALANCE.map.wallPositions)) {
-                mapObjs = mapObjs.concat(BALANCE.map.wallPositions);
-            }
-
-            const isMoving = (ax !== 0 || ay !== 0);
-            let scraping   = false;
-
-            for (const obj of mapObjs) {
-                if (!obj || obj.x === undefined || obj.y === undefined) continue;
-                const oL = obj.x;
-                const oT = obj.y;
-                const oR = oL + (obj.w || 0);
-                const oB = oT + (obj.h || 0);
-                const closestX = Math.max(oL, Math.min(this.x, oR));
-                const closestY = Math.max(oT, Math.min(this.y, oB));
-                const d        = Math.hypot(this.x - closestX, this.y - closestY);
-                const scrapeThreshold  = this.radius + 4;
-                const warningThreshold = this.radius + OB.obstacleWarningRange;
-
-                if (d < scrapeThreshold && isMoving) {
-                    scraping = true;
-                }
-                if (d < warningThreshold && isMoving) {
-                    const now = Date.now();
-                    if (now - this.lastObstacleWarning > OB.obstacleWarningCooldown) {
-                        this.lastObstacleWarning = now;
-                        showVoiceBubble('Careful!', this.x, this.y - 50);
-                    }
-                    break;
-                }
-            }
-
-            if (scraping) {
-                this.obstacleBuffTimer = OB.obstacleBuffDuration;
-            }
-
-            if (this.obstacleBuffTimer > 0) {
-                this.obstacleBuffTimer -= dt;
-                if (Math.random() < 0.3) {
-                    spawnParticles(
-                        this.x + rand(-this.radius, this.radius),
-                        this.y + rand(-this.radius, this.radius),
-                        1, '#fcd34d'   // Tailwind amber-300 — matches Poom's colour palette
-                    );
-                }
-            }
+            this.checkObstacleProximity(ax, ay, dt, '#fcd34d');
         }
 
         if (this.cooldowns.dash  > 0) this.cooldowns.dash  -= dt;
@@ -878,6 +878,17 @@ class PoomPlayer extends Entity {
         if (expBar) expBar.style.width = `${(this.exp/this.expToNextLevel)*100}%`;
     }
 }
+
+// ════════════════════════════════════════════════════════════
+// ✅ WARN 5 FIX — Share checkObstacleProximity with PoomPlayer
+// ════════════════════════════════════════════════════════════
+// PoomPlayer extends Entity, NOT Player, so it does not inherit
+// Player.prototype methods automatically. We assign the reference
+// explicitly here so both classes call the same function object.
+// Any future balance change to the obstacle system only needs to
+// be made in the single Player.prototype.checkObstacleProximity
+// definition above.
+PoomPlayer.prototype.checkObstacleProximity = Player.prototype.checkObstacleProximity;
 
 // ════════════════════════════════════════════════════════════
 // 🐍 NAGA ENTITY
@@ -1171,28 +1182,31 @@ class BarkWave {
     }
 }
 
-// ─── Mobile patch (keep original signature) ──────────────────
+// ─── Mobile patch ─────────────────────────────────────────────
+// ✅ BUG 2 FIX: Removed the redundant velocity block that was
+// double-applying joystick acceleration on touch devices.
+//
+// ROOT CAUSE (original bug):
+//   The original patch read touchJoystickLeft.nx/ny into __mobile_ax/ay,
+//   then called __origUpdate (which ALSO reads touchJoystickLeft and applies
+//   acceleration internally), then applied the same acceleration a second time
+//   after the call — resulting in 2× intended speed on all touch devices.
+//
+// FIX:
+//   The patch now only zeroes WASD keys when the left joystick is active,
+//   then calls __origUpdate.  __origUpdate already contains:
+//     if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
+//         ax = touchJoystickLeft.nx; ay = touchJoystickLeft.ny; isTouchMove = true;
+//     }
+//   so joystick movement, normalisation, walkCycle, speed caps, and angle
+//   are all handled there exactly once.  The right-joystick angle override
+//   in the old patch was also redundant for the same reason.
 if (typeof Player !== 'undefined') {
     const __origUpdate = Player.prototype.update;
     Player.prototype.update = function(dt, keys, mouse) {
         if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
             keys.w = keys.a = keys.s = keys.d = 0;
-            this.__mobile_ax = window.touchJoystickLeft.nx;
-            this.__mobile_ay = window.touchJoystickLeft.ny;
-        } else {
-            this.__mobile_ax = null;
-            this.__mobile_ay = null;
         }
         __origUpdate.call(this, dt, keys, mouse);
-        if (this.__mobile_ax !== null) {
-            const ax=this.__mobile_ax, ay=this.__mobile_ay;
-            const len=Math.hypot(ax,ay)||1;
-            this.vx += ax/len * BALANCE.physics.acceleration * dt;
-            this.vy += ay/len * BALANCE.physics.acceleration * dt;
-        }
-        if (window.touchJoystickRight && window.touchJoystickRight.active &&
-            (window.touchJoystickRight.nx!==0||window.touchJoystickRight.ny!==0)) {
-            this.angle=Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
-        }
     };
 }

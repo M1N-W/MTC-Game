@@ -1,3 +1,4 @@
+'use strict';
 const CONFIG_SECRETS = {
     GEMINI_API_KEY: "AIzaSyArdYl1Kn4vUSLvUn-21DHfWXNeLIngv_A"
 };

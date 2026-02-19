@@ -1,3 +1,4 @@
+'use strict';
 /**
  * ⚙️ MTC: ENHANCED EDITION - Configuration
  * Single source of truth for ALL game constants and balance values.
@@ -548,6 +549,33 @@ const GAME_CONFIG = {
 };
 
 // ══════════════════════════════════════════════════════════════
+// 🎨 VISUALS — Graphics 2.0 settings (ADDED)
+// ══════════════════════════════════════════════════════════════
+const VISUALS = {
+    PALETTE: {
+        POOM: {
+            primary: '#a855f7',
+            secondary: '#facc15',
+            accent: '#d97706'
+        },
+        KAO: {
+            primary: '#22c55e',
+            secondary: '#94a3b8',
+            accent: '#4ade80'
+        }
+    },
+    WEAPON_OFFSETS: {
+        x: 15,
+        y: 5,
+        recoil: 8
+    },
+    AURA: {
+        rotationSpeed: 0.05,
+        opacity: 0.6
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
 // 🏆 ACHIEVEMENT DEFINITIONS
 // ══════════════════════════════════════════════════════════════
 const ACHIEVEMENT_DEFS = [
@@ -566,5 +594,5 @@ const ACHIEVEMENT_DEFS = [
 
 // ── Node/bundler export ───────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BALANCE, SHOP_ITEMS, GAME_CONFIG, ACHIEVEMENT_DEFS, API_KEY };
+    module.exports = { BALANCE, SHOP_ITEMS, GAME_CONFIG, VISUALS, ACHIEVEMENT_DEFS, API_KEY };
 }

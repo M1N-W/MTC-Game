@@ -1,3 +1,11 @@
+'use strict';
+
+// ─── Debug Flag (WARN 2 FIX) ──────────────────────────────────
+// Set to true locally to enable verbose frame diagnostics.
+// Never commit as true — the console.log in drawGame fires every 5s
+// at 60fps and creates unnecessary GC pressure in production.
+const DEBUG_MODE = false;
+
 /**
  * 🎮 MTC: ENHANCED EDITION - Main Game Loop (REFACTORED)
  * Handles: Game state, wave management, input, camera, shop, admin
@@ -60,9 +68,12 @@
  * v8  — View Culling & Particle Cap
  *   • Enemy/boss/powerup draw guarded by entity.isOnScreen(buffer)
  *   • ParticleSystem hard cap 150 (managed in effects.js)
+ *
+ * FIXES (QA Integrity Report):
+ * ✅ BUG 1:  mapSystem.update() now receives scaled dt so MTCRoom heals correctly.
+ * ✅ WARN 1: weatherSystem.update() and weatherSystem.draw() wired into the loop.
+ * ✅ WARN 2: Diagnostic console.log gated behind DEBUG_MODE flag.
  */
-
-'use strict';
 
 // ─── Game State ───────────────────────────────────────────────
 let gameState   = 'MENU';
@@ -1390,9 +1401,18 @@ function updateGame(dt) {
     }
 
     // ── Systems ───────────────────────────────────────────────
-    mapSystem.update([player, ...enemies, boss].filter(e => e && !e.dead));
+    // ✅ BUG 1 FIX: pass dt into mapSystem.update() so MTCRoom receives the
+    // correct scaled delta time instead of calling getDeltaTime() internally,
+    // which was corrupting lastTime and making the safe zone heal 16× too slowly.
+    mapSystem.update([player, ...enemies, boss].filter(e => e && !e.dead), dt);
     particleSystem.update(dt);
     floatingTextSystem.update(dt);
+
+    // ✅ WARN 1 FIX: wire the weather system into the update loop.
+    // getCamera() returns the utils.js camera object (x/y world offset).
+    // weatherSystem is a global singleton from effects.js.
+    weatherSystem.update(dt, getCamera());
+
     updateScreenShake();
     Achievements.checkAll();
 
@@ -1401,12 +1421,12 @@ function updateGame(dt) {
 }
 
 function drawGame() {
-    // ── 🔴 DIAGNOSTIC: logs once per ~5 seconds so devs can verify the draw
-    //    pipeline is executing and the minimap call is being reached.
-    //    Remove or gate behind a debug flag once minimap is confirmed working.
+    // ── 🔴 DIAGNOSTIC — gated behind DEBUG_MODE (WARN 2 FIX) ─────────────────
+    // Set DEBUG_MODE = true at the top of this file to re-enable.
+    // NEVER commit as true: fires every 5s at 60fps with string concatenation GC cost.
     if (!drawGame._diagFrame) drawGame._diagFrame = 0;
     drawGame._diagFrame++;
-    if (drawGame._diagFrame % 300 === 1) {
+    if (DEBUG_MODE && drawGame._diagFrame % 300 === 1) {
         console.log(
             '[MTC drawGame] frame', drawGame._diagFrame,
             '| gameState:', gameState,
@@ -1467,6 +1487,12 @@ function drawGame() {
     projectileManager.draw();
     particleSystem.draw();
     floatingTextSystem.draw();
+
+    // ✅ WARN 1 FIX: draw weather particles in world-space (before CTX.restore)
+    // so they are correctly offset by the camera and screen-shake translation.
+    // weatherSystem.draw() is a no-op when mode === 'none', so this is zero-cost
+    // when weather is disabled.
+    weatherSystem.draw();
 
     CTX.restore(); // ← end of world-space transform
 
@@ -1685,6 +1711,9 @@ function startGame(charType = 'kao') {
     spawnFloatingText('🤖 DRONE ONLINE', player.x, player.y - 90, '#00e5ff', 20);
     console.log('🤖 Engineering Drone initialised');
 
+    // Reset weather system to ensure no stale particles from a previous run
+    weatherSystem.clear();
+
     UIManager.updateBossHUD(null);
     resetScore();
     setWave(1);
@@ -1753,6 +1782,9 @@ async function endGame(result) {
     isSlowMotion = false;
     timeScale    = 1.0;
 
+    // Clear weather on game over so particles don't linger on the game-over screen
+    weatherSystem.clear();
+
     // Persist high score
     {
         const runScore = getScore();
@@ -1791,10 +1823,6 @@ async function endGame(result) {
         }
     }
 }
-
-
-
-
 
 // ══════════════════════════════════════════════════════════════
 // GLOBAL EXPORTS

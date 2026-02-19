@@ -1,33 +1,31 @@
+'use strict';
 /**
  * 💥 MTC: ENHANCED EDITION - Effects System
  * Particles, floating text, and special effects
- *
  * WEATHER SYSTEM (v9 — NEW):
- * - ✅ WeatherSystem class — atmospheric rain & snow effects
- * - ✅ Rain: spawns at screen top, falls with speed + wind drift, drawn as thin blue lines
- * - ✅ Snow: spawns at screen top, falls slowly with sin() horizontal sway, drawn as white circles
- * - ✅ Optimized: MAX_PARTICLES cap (200), off-screen culling, efficient array reuse
- * - ✅ API: weatherSystem.setWeather('rain'|'snow'|'none'), update(dt, camera), draw()
- *
+ *   ✅ WeatherSystem class — atmospheric rain & snow effects
+ *   ✅ Rain: spawns at screen top, falls with speed + wind drift, drawn as thin blue lines
+ *   ✅ Snow: spawns at screen top, falls slowly with sin() horizontal sway, drawn as white circles
+ *   ✅ Optimized: MAX_PARTICLES cap (200), off-screen culling, efficient array reuse
+ *   ✅ API: weatherSystem.setWeather('rain'|'snow'|'none'), update(dt, camera), draw()
  * GLITCH WAVE (v8 — unchanged):
- * - ✅ drawGlitchEffect(intensity, controlsInverted) — top-level export
- *
+ *   ✅ drawGlitchEffect(intensity, controlsInverted) — top-level export
  * PERFORMANCE (v8):
- * - ✅ ParticleSystem.MAX_PARTICLES = 150  — hard cap; oldest particle evicted
- *       when spawn() would exceed the limit.  Prevents runaway memory growth
- *       during Glitch Wave (2× enemies × heavy particle deaths).
- * - ✅ Particle.draw(): shadowBlur is SKIPPED for particles whose rendered
- *       radius is < 3 screen pixels.  shadowBlur triggers a full offscreen
- *       compositing pass in every browser engine — it is the #1 per-particle
- *       cost even though most tiny particles are invisible at that size.
- *       Particles with size ≥ 3 still get the blur for visual quality.
+ *   ✅ ParticleSystem.MAX_PARTICLES = 150  — hard cap; oldest particle evicted
+ *      when spawn() would exceed the limit.  Prevents runaway memory growth
+ *      during Glitch Wave (2× enemies × heavy particle deaths).
+ *   ✅ Particle.draw(): shadowBlur is SKIPPED for particles whose rendered
+ *      radius is < 3 screen pixels.  shadowBlur triggers a full offscreen
+ *      compositing pass in every browser engine — it is the #1 per-particle
+ *      cost even though most tiny particles are invisible at that size.
+ *      Particles with size ≥ 3 still get the blur for visual quality.
  */
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Particle System
 // ──────────────────────────────────────────────────────────────────────────────
 class Particle {
-    constructor(x, y, vx, vy, color, size, lifetime) {
+    constructor(x, y, vx, vy, color, size, lifetime, type = 'circle', data = {}) {
         this.x = x;
         this.y = y;
         this.vx = vx;
@@ -36,15 +34,27 @@ class Particle {
         this.size = size;
         this.life = lifetime;
         this.maxLife = lifetime;
+        this.type = type; // 'circle', 'steam', 'binary', 'afterimage'
+        this.data = data; // Custom data (rotation for afterimage, char for binary)
     }
 
     update(dt) {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
-        // Apply friction
-        this.vx *= 0.95;
-        this.vy *= 0.95;
+        // Apply friction based on type
+        if (this.type === 'steam') {
+            this.vx *= 0.90; // Higher drag for steam
+            this.vy *= 0.90;
+        } else if (this.type === 'afterimage') {
+            // Afterimages are stationary or barely drift
+            this.vx *= 0.8;
+            this.vy *= 0.8;
+        } else {
+            // Standard friction
+            this.vx *= 0.95;
+            this.vy *= 0.95;
+        }
 
         this.life -= dt;
         return this.life <= 0;
@@ -56,15 +66,68 @@ class Particle {
 
         // Rendered radius — if the particle is essentially invisible, skip
         const renderedRadius = this.size * alpha;
-        if (renderedRadius < 0.4) return;
+
+        // Skip check for very tiny particles, unless it's binary/text which works differently
+        if (this.type !== 'binary' && renderedRadius < 0.4) return;
 
         CTX.globalAlpha = alpha;
         CTX.fillStyle = this.color;
 
-        // ── PERF: skip shadowBlur for small particles ─────────
-        // shadowBlur forces an offscreen composite pass in all browsers.
-        // Particles with a rendered radius < 3 px are too small for
-        // soft-glow to be perceptible, so we save the GPU round-trip.
+        // ── TYPE: BINARY (0/1 Strings) ────────────────────────
+        if (this.type === 'binary') {
+            CTX.font = `bold ${Math.max(10, this.size)}px monospace`;
+            CTX.textAlign = 'center';
+            CTX.textBaseline = 'middle';
+            // Pulsing effect for binary
+            CTX.shadowBlur = 4;
+            CTX.shadowColor = this.color;
+            CTX.fillText(this.data.char || (Math.random() > 0.5 ? '1' : '0'), screen.x, screen.y);
+            CTX.shadowBlur = 0;
+            CTX.globalAlpha = 1;
+            return;
+        }
+
+        // ── TYPE: AFTERIMAGE (Player Clone) ───────────────────
+        if (this.type === 'afterimage') {
+            CTX.save();
+            CTX.translate(screen.x, screen.y);
+            if (this.data.rotation) CTX.rotate(this.data.rotation);
+
+            // Draw a ghost silhouette (rectangle approximation if sprite not available)
+            CTX.strokeStyle = this.color;
+            CTX.lineWidth = 2;
+            CTX.shadowBlur = 10;
+            CTX.shadowColor = this.color;
+
+            // Draw hollow box representing the afterimage
+            const w = this.size;
+            const h = this.size;
+            CTX.strokeRect(-w/2, -h/2, w, h);
+
+            // Fill slightly
+            CTX.globalAlpha = alpha * 0.3;
+            CTX.fillRect(-w/2, -h/2, w, h);
+
+            CTX.restore();
+            CTX.globalAlpha = 1;
+            return;
+        }
+
+        // ── TYPE: STEAM (Rising Smoke) ────────────────────────
+        if (this.type === 'steam') {
+            // Steam grows slightly as it fades
+            const growth = 1 + (1 - alpha);
+            const r = renderedRadius * growth;
+
+            CTX.beginPath();
+            CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.globalAlpha = 1;
+            return;
+        }
+
+        // ── TYPE: STANDARD CIRCLE ─────────────────────────────
+        // PERF: skip shadowBlur for small particles
         const useShadow = renderedRadius >= 3;
         if (useShadow) {
             CTX.shadowBlur  = 4;
@@ -96,20 +159,59 @@ class ParticleSystem {
         this.particles = [];
     }
 
-    spawn(x, y, count, color) {
+    /**
+     * Spawns particles.
+     * @param {number} x World X
+     * @param {number} y World Y
+     * @param {number} count Number of particles
+     * @param {string} color CSS color string
+     * @param {string} type 'circle' | 'steam' | 'binary' | 'afterimage'
+     * @param {object} options { rotation, speedScale, spread }
+     */
+    spawn(x, y, count, color, type = 'circle', options = {}) {
         for (let i = 0; i < count; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = rand(100, 400);
-            const vx = Math.cos(angle) * speed;
-            const vy = Math.sin(angle) * speed;
-            const size = rand(2, 5);
-            const lifetime = rand(0.3, 0.8);
+            let vx, vy, size, lifetime, data = {};
 
-            this.particles.push(new Particle(x, y, vx, vy, color, size, lifetime));
+            if (type === 'steam') {
+                // Rise upward with random drift
+                const angle = -Math.PI / 2 + (Math.random() - 0.5); // Upward cone
+                const speed = rand(20, 80);
+                vx = Math.cos(angle) * speed;
+                vy = Math.sin(angle) * speed;
+                size = rand(4, 8);
+                lifetime = rand(0.5, 1.2);
+            }
+            else if (type === 'binary') {
+                // Explode outward
+                const angle = Math.random() * Math.PI * 2;
+                const speed = rand(50, 250);
+                vx = Math.cos(angle) * speed;
+                vy = Math.sin(angle) * speed;
+                size = rand(12, 16); // Font size
+                lifetime = rand(0.4, 0.9);
+                data = { char: Math.random() > 0.5 ? '1' : '0' };
+            }
+            else if (type === 'afterimage') {
+                // Stationary or very slow drift
+                vx = 0;
+                vy = 0;
+                size = options.size || 30; // Player size
+                lifetime = 0.25; // Very short life
+                data = { rotation: options.rotation || 0 };
+            }
+            else {
+                // Standard 'circle' explosion
+                const angle = Math.random() * Math.PI * 2;
+                const speed = rand(100, 400);
+                vx = Math.cos(angle) * speed;
+                vy = Math.sin(angle) * speed;
+                size = rand(2, 5);
+                lifetime = rand(0.3, 0.8);
+            }
+
+            this.particles.push(new Particle(x, y, vx, vy, color, size, lifetime, type, data));
 
             // Evict oldest particle if we exceed the cap
-            // Uses a while-loop so a single large burst (e.g. count=60 on boss
-            // death) drains correctly even if we were already near the limit.
             while (this.particles.length > ParticleSystem.MAX_PARTICLES) {
                 this.particles.shift();   // remove oldest (front of array)
             }
@@ -282,7 +384,7 @@ class Snowflake {
 /**
  * WeatherSystem
  * Manages atmospheric rain/snow effects
- * 
+ *
  * Usage:
  *   weatherSystem.setWeather('rain');  // or 'snow', or 'none'
  *   weatherSystem.update(dt, camera);
@@ -295,7 +397,7 @@ class WeatherSystem {
         this.mode = 'none';       // 'none', 'rain', 'snow'
         this.particles = [];
         this.spawnTimer = 0;
-        
+
         // Rain config
         this.rainSpawnRate = 30;   // particles per second
         this.rainSpeed = 600;      // fall speed
@@ -357,7 +459,7 @@ class WeatherSystem {
         const screenTop   = camera.y - 10;
         const screenLeft  = camera.x - 50;
         const screenRight = camera.x + CANVAS.width + 50;
-        
+
         const x = screenLeft + Math.random() * (screenRight - screenLeft);
         const y = screenTop;
 
@@ -653,12 +755,12 @@ class MeteorStrike {
 // ──────────────────────────────────────────────────────────────────────────────
 // Create singleton instances
 // ──────────────────────────────────────────────────────────────────────────────
-var particleSystem    = new ParticleSystem();
+var particleSystem     = new ParticleSystem();
 var floatingTextSystem = new FloatingTextSystem();
 
 // Helper functions for global use
-function spawnParticles(x, y, count, color) {
-    particleSystem.spawn(x, y, count, color);
+function spawnParticles(x, y, count, color, type = 'circle', options = {}) {
+    particleSystem.spawn(x, y, count, color, type, options);
 }
 
 function spawnFloatingText(text, x, y, color, size = 20) {
@@ -670,13 +772,11 @@ function spawnFloatingText(text, x, y, color, size = 20) {
 // ──────────────────────────────────────────────────────────────────────────────
 /**
  * drawGlitchEffect(intensity, controlsInverted)
- *
  * Called from game.js drawGame() every frame while isGlitchWave is true.
  * Draws purely on top of the finished frame — no game state is touched.
- *
  * Layers (painted in order):
  *   1. RGB SPLIT  — snapshot the canvas, re-draw 3× with R/G/B channel
- *                   composite modes at random offsets.
+ *      composite modes at random offsets.
  *   2. SCANLINES  — thin horizontal dark bands across the whole screen.
  *   3. CHROMA NOISE — random pixel sparks in vivid magenta/cyan.
  *   4. VIGNETTE   — radial darkening at edges.
@@ -688,7 +788,6 @@ function spawnFloatingText(text, x, y, color, size = 20) {
  */
 function drawGlitchEffect(intensity, controlsInverted = false) {
     if (intensity <= 0) return;
-
     const W   = CANVAS.width;
     const H   = CANVAS.height;
     const now = performance.now();
@@ -740,7 +839,7 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     CTX.restore();
 
     // ── 3. CHROMATIC NOISE ───────────────────────────────────────
-    const sparkCount = Math.floor(intensity * 80);
+    const sparkCount  = Math.floor(intensity * 80);
     const sparkColors = ['#ff00ff', '#00ffff', '#ff3399', '#39ff14', '#ffffff', '#ff6600'];
     CTX.save();
     for (let i = 0; i < sparkCount; i++) {
@@ -748,8 +847,8 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         const sy = Math.random() * H;
         const sw = 1 + Math.floor(Math.random() * 3);
         const sh = sw;
-        CTX.globalAlpha  = 0.35 + Math.random() * 0.65;
-        CTX.fillStyle    = sparkColors[Math.floor(Math.random() * sparkColors.length)];
+        CTX.globalAlpha = 0.35 + Math.random() * 0.65;
+        CTX.fillStyle   = sparkColors[Math.floor(Math.random() * sparkColors.length)];
         CTX.fillRect(sx, sy, sw, sh);
     }
     CTX.restore();
@@ -772,8 +871,8 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     }
 
     // ── 5. VIGNETTE ──────────────────────────────────────────────
-    const vigAlpha   = intensity * (0.35 + Math.sin(now / 180) * 0.1);
-    const vigGrad    = CTX.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
+    const vigAlpha = intensity * (0.35 + Math.sin(now / 180) * 0.1);
+    const vigGrad  = CTX.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
     vigGrad.addColorStop(0, 'rgba(100,0,120,0)');
     vigGrad.addColorStop(1, `rgba(60,0,80,${vigAlpha.toFixed(3)})`);
     CTX.save();
@@ -783,10 +882,10 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
 
     // ── 6. GLITCH BANNER ─────────────────────────────────────────
     {
-        const bannerY   = H * 0.12;
-        const baseText  = '⚡ GLITCH WAVE ⚡';
+        const bannerY     = H * 0.12;
+        const baseText    = '⚡ GLITCH WAVE ⚡';
         const glitchChars = '!@#$%^&*<>?/\\|';
-        let displayText = '';
+        let displayText   = '';
         for (let i = 0; i < baseText.length; i++) {
             const ch = baseText[i];
             if (ch !== ' ' && ch !== '⚡' && Math.random() < 0.18 * intensity) {
@@ -796,8 +895,8 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
             }
         }
 
-        const fontSize  = Math.floor(28 + intensity * 8);
-        const pulse     = 0.7 + Math.sin(now / 90) * 0.3;
+        const fontSize = Math.floor(28 + intensity * 8);
+        const pulse    = 0.7 + Math.sin(now / 90) * 0.3;
 
         CTX.save();
         CTX.textAlign    = 'center';
@@ -805,19 +904,19 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         CTX.font         = `bold ${fontSize}px Orbitron, monospace`;
 
         // Cyan shadow offset
-        CTX.fillStyle    = `rgba(0,255,255,${(intensity * pulse * 0.7).toFixed(3)})`;
+        CTX.fillStyle = `rgba(0,255,255,${(intensity * pulse * 0.7).toFixed(3)})`;
         CTX.fillText(displayText, W / 2 + 3, bannerY + 2);
 
         // Red shadow offset
-        CTX.fillStyle    = `rgba(255,0,100,${(intensity * pulse * 0.7).toFixed(3)})`;
+        CTX.fillStyle = `rgba(255,0,100,${(intensity * pulse * 0.7).toFixed(3)})`;
         CTX.fillText(displayText, W / 2 - 3, bannerY - 2);
 
         // Main text — white with slight magenta tint
-        CTX.shadowBlur   = 14 * intensity;
-        CTX.shadowColor  = '#d946ef';
-        CTX.fillStyle    = `rgba(255,220,255,${(pulse * 0.92).toFixed(3)})`;
+        CTX.shadowBlur  = 14 * intensity;
+        CTX.shadowColor = '#d946ef';
+        CTX.fillStyle   = `rgba(255,220,255,${(pulse * 0.92).toFixed(3)})`;
         CTX.fillText(displayText, W / 2, bannerY);
-        CTX.shadowBlur   = 0;
+        CTX.shadowBlur  = 0;
 
         // Sub-label — small corrupted status line
         const statusChars = ['REALITY.EXE', 'PHYSICS.DLL', 'CONTROLS.SYS', 'MEMORY.ERR', 'WAVE_DATA.BIN'];
@@ -831,8 +930,8 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
 
     // ── 7. INVERTED CONTROLS STRIP ───────────────────────────────
     if (controlsInverted) {
-        const stripH    = 38;
-        const stripY    = H - stripH;
+        const stripH     = 38;
+        const stripY     = H - stripH;
         const flashAlpha = 0.7 + Math.sin(now / 80) * 0.3;
 
         CTX.save();

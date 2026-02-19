@@ -1,3 +1,4 @@
+'use strict';
 /**
  * 🏫 MTC: ENHANCED EDITION - Campus Map System (REFACTORED)
  *
@@ -9,6 +10,12 @@
  *       They are globals from utils.js.
  * - ✅ lerpColorHex / hexToRgb calls removed — those live in utils.js.
  * - ✅ View-culling and lighting engine logic unchanged.
+ *
+ * FIXES (QA Integrity Report):
+ * - ✅ BUG 1: MapSystem.update() now accepts dt as a second parameter and passes
+ *       it to MTCRoom.update() directly. Removed the getDeltaTime(performance.now())
+ *       call that was corrupting the main loop's timing clock every frame.
+ * - ✅ Added 'use strict'; at file scope.
  *
  * Load order requirement: config.js → utils.js → audio.js → effects.js → weapons.js → map.js
  */
@@ -516,13 +523,21 @@ class MapSystem {
         }
     }
 
-    update(entities) {
+    // ─── BUG 1 FIX ────────────────────────────────────────────────
+    // BEFORE: update(entities) — called getDeltaTime(performance.now()) internally,
+    //         corrupting the main loop's lastTime and breaking MTCRoom heal rate.
+    // AFTER:  update(entities, dt = 0) — receives the already-computed scaled dt
+    //         from updateGame(), which is the correct value to pass to MTCRoom.
+    update(entities, dt = 0) {
         for(const entity of entities){
             if(entity.dead) continue;
             for(const obj of this.objects) obj.resolveCollision(entity);
         }
         if(this.mtcRoom && window.player){
-            this.mtcRoom.update(getDeltaTime(performance.now()), window.player);
+            // ✅ FIX: use the dt passed in from updateGame() — do NOT call getDeltaTime()
+            // here as that would overwrite lastTime and cause the next frame's dt to be ~1ms
+            // instead of ~16ms, making the safe zone heal 16× too slowly.
+            this.mtcRoom.update(dt, window.player);
         }
     }
 

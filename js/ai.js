@@ -1,3 +1,4 @@
+'use strict';
 /**
  * 🤖 MTC: ENHANCED EDITION - AI System (REFACTORED V2)
  * Gemini API integration with improved error handling and configuration

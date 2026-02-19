@@ -1,3 +1,4 @@
+'use strict';
 /**
  * 🛠️ MTC: ENHANCED EDITION - Utilities (REFACTORED)
  * SINGLE SOURCE OF TRUTH for every shared helper function.
@@ -14,6 +15,8 @@
  *       in every other script regardless of load order.
  * - ✅ `mouse`, `updateMouseWorld`, and `getMouse` REMOVED — now owned by input.js
  *       (fixes "Identifier 'mouse' has already been declared" SyntaxError).
+ * - ✅ drawBambooPattern, drawHologramRect, drawNeonLine added — procedural
+ *       drawing helpers for new graphics (Poom's weapon, desks, neon FX).
  */
 
 // ─── Math utilities ───────────────────────────────────────────
@@ -296,6 +299,217 @@ var debounce = (func, wait) => {
 };
 
 // ══════════════════════════════════════════════════════════════
+// 🎨 PROCEDURAL DRAWING HELPERS
+// Pure functions — no side-effects beyond canvas 2D state,
+// which is always fully saved/restored via ctx.save()/ctx.restore().
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * drawBambooPattern(ctx, x, y, width, height)
+ *
+ * Renders a cross-hatch woven texture reminiscent of woven bamboo.
+ * Used for Poom's weapon surface.
+ *
+ * Technique:
+ *   1. Fill the bounding rect with a dark base colour.
+ *   2. Draw diagonal lines in two opposing directions (±45°) at a fixed
+ *      `spacing` interval, clipped to the rect, to form the weave grid.
+ *   3. Add a subtle highlight on every other diagonal to give depth.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x       Top-left X of the bounding rectangle.
+ * @param {number} y       Top-left Y of the bounding rectangle.
+ * @param {number} width   Width of the bounding rectangle.
+ * @param {number} height  Height of the bounding rectangle.
+ */
+var drawBambooPattern = (ctx, x, y, width, height) => {
+    ctx.save();
+
+    // Clip all drawing to the target rect so lines never bleed outside.
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+    ctx.clip();
+
+    // ── Base fill ──────────────────────────────────────────────
+    ctx.fillStyle = '#4a3728';
+    ctx.fillRect(x, y, width, height);
+
+    const spacing   = 8;   // pixels between weave lines
+    const lineWidth = 1.5;
+    const maxDim    = Math.max(width, height) + spacing * 2;
+
+    // ── Diagonal strands: top-left → bottom-right (↘) ─────────
+    ctx.lineWidth   = lineWidth;
+    ctx.strokeStyle = 'rgba(180, 140, 80, 0.55)';
+    ctx.beginPath();
+    for (let i = -maxDim; i <= maxDim; i += spacing) {
+        ctx.moveTo(x + i,            y);
+        ctx.lineTo(x + i + maxDim,   y + maxDim);
+    }
+    ctx.stroke();
+
+    // ── Diagonal strands: top-right → bottom-left (↙) ─────────
+    ctx.strokeStyle = 'rgba(120, 80, 30, 0.55)';
+    ctx.beginPath();
+    for (let i = -maxDim; i <= maxDim; i += spacing) {
+        ctx.moveTo(x + width + i,        y);
+        ctx.lineTo(x + width + i - maxDim, y + maxDim);
+    }
+    ctx.stroke();
+
+    // ── Highlight: every-other ↘ strand, slightly brighter ────
+    ctx.lineWidth   = lineWidth * 0.6;
+    ctx.strokeStyle = 'rgba(220, 190, 120, 0.25)';
+    ctx.beginPath();
+    for (let i = -maxDim; i <= maxDim; i += spacing * 2) {
+        ctx.moveTo(x + i,            y);
+        ctx.lineTo(x + i + maxDim,   y + maxDim);
+    }
+    ctx.stroke();
+
+    // ── Thin border to define the weapon edge ──────────────────
+    ctx.strokeStyle = 'rgba(90, 60, 20, 0.9)';
+    ctx.lineWidth   = 1;
+    ctx.strokeRect(x, y, width, height);
+
+    ctx.restore();
+};
+
+/**
+ * drawHologramRect(ctx, x, y, width, height, color)
+ *
+ * Draws a translucent, scanline-overlaid rectangle to simulate a
+ * holographic desk surface or terminal panel.
+ *
+ * Technique:
+ *   1. Fill with a very low-opacity version of `color` (ghost base).
+ *   2. Stroke a crisp border in `color` at moderate opacity.
+ *   3. Overlay horizontal scanlines (every 4 px) in a slightly lighter
+ *      tint to add the classic CRT / hologram effect.
+ *   4. All state changes are scoped with save/restore.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x       Top-left X.
+ * @param {number} y       Top-left Y.
+ * @param {number} width   Rectangle width.
+ * @param {number} height  Rectangle height.
+ * @param {string} color   CSS hex or rgb color string (e.g. '#00ffcc').
+ */
+var drawHologramRect = (ctx, x, y, width, height, color) => {
+    ctx.save();
+
+    // Clip scanlines to rect bounds.
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+    ctx.clip();
+
+    // ── Ghost base fill ────────────────────────────────────────
+    ctx.fillStyle   = rgbaString(color, 0.08);
+    ctx.fillRect(x, y, width, height);
+
+    // ── Scanlines ──────────────────────────────────────────────
+    const scanlineGap    = 4;   // px between each line
+    const scanlineOpacity = 0.12;
+    ctx.fillStyle = rgbaString(color, scanlineOpacity);
+    for (let sy = y; sy < y + height; sy += scanlineGap) {
+        ctx.fillRect(x, sy, width, 1);
+    }
+
+    // ── Soft inner glow gradient ───────────────────────────────
+    const grad = ctx.createLinearGradient(x, y, x, y + height);
+    grad.addColorStop(0,   rgbaString(color, 0.18));
+    grad.addColorStop(0.5, rgbaString(color, 0.04));
+    grad.addColorStop(1,   rgbaString(color, 0.18));
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, width, height);
+
+    // ── Border ─────────────────────────────────────────────────
+    ctx.strokeStyle = rgbaString(color, 0.75);
+    ctx.lineWidth   = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, width - 1, height - 1);
+
+    // ── Corner accent marks (hologram UI detail) ───────────────
+    const cornerLen = Math.min(8, width / 4, height / 4);
+    ctx.strokeStyle = rgbaString(color, 1.0);
+    ctx.lineWidth   = 1.5;
+    const corners = [
+        [x,             y,              1,  1 ],
+        [x + width,     y,             -1,  1 ],
+        [x,             y + height,     1, -1 ],
+        [x + width,     y + height,    -1, -1 ]
+    ];
+    corners.forEach(([cx, cy, dx, dy]) => {
+        ctx.beginPath();
+        ctx.moveTo(cx + dx * cornerLen, cy);
+        ctx.lineTo(cx, cy);
+        ctx.lineTo(cx, cy + dy * cornerLen);
+        ctx.stroke();
+    });
+
+    ctx.restore();
+};
+
+/**
+ * drawNeonLine(ctx, x1, y1, x2, y2, color, width)
+ *
+ * Draws a glowing neon line using layered strokes and canvas shadowBlur.
+ *
+ * Technique:
+ *   1. Save context state and set shadowColor + shadowBlur to create
+ *      the outer glow corona.
+ *   2. Draw a wide, low-opacity stroke for the diffuse bloom layer.
+ *   3. Remove shadow and draw a full-opacity thin core stroke on top
+ *      to give the bright centre characteristic of neon tubing.
+ *   4. Restore context state.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x1     Start X.
+ * @param {number} y1     Start Y.
+ * @param {number} x2     End X.
+ * @param {number} y2     End Y.
+ * @param {string} color  CSS hex or rgb color string (e.g. '#ff00ff').
+ * @param {number} width  Core line width in pixels (glow scales with it).
+ */
+var drawNeonLine = (ctx, x1, y1, x2, y2, color, width) => {
+    ctx.save();
+
+    const glowRadius = width * 6;   // outer bloom radius
+    const bloomWidth = width * 3;   // width of the diffuse bloom stroke
+
+    // ── Outer glow (shadowBlur) ────────────────────────────────
+    ctx.shadowColor  = color;
+    ctx.shadowBlur   = glowRadius;
+    ctx.strokeStyle  = rgbaString(color, 0.35);
+    ctx.lineWidth    = bloomWidth;
+    ctx.lineCap      = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // ── Mid glow (second pass, tighter) ───────────────────────
+    ctx.shadowBlur   = glowRadius * 0.4;
+    ctx.strokeStyle  = rgbaString(color, 0.65);
+    ctx.lineWidth    = width * 1.8;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // ── Bright core (no shadow so it stays crisp) ──────────────
+    ctx.shadowBlur   = 0;
+    ctx.shadowColor  = 'transparent';
+    ctx.strokeStyle  = color;
+    ctx.lineWidth    = Math.max(1, width * 0.6);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.restore();
+};
+
+// ══════════════════════════════════════════════════════════════
 // 💾 PERSISTENCE — localStorage Save / Load System
 // ══════════════════════════════════════════════════════════════
 
@@ -362,6 +576,10 @@ if (typeof module !== 'undefined' && module.exports) {
         showElement, hideElement, setElementText,
         debounce,
         MTC_SAVE_KEY, DEFAULT_SAVE_DATA,
-        saveData, loadData, getSaveData, updateSaveData
+        saveData, loadData, getSaveData, updateSaveData,
+        // ── New drawing helpers ──
+        drawBambooPattern,
+        drawHologramRect,
+        drawNeonLine
     };
 }

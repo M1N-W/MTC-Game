@@ -1,3 +1,4 @@
+'use strict';
 /**
  * 🔊 MTC: ENHANCED EDITION - Audio System (IMPROVED)
  * Smoother, more pleasant sound effects
