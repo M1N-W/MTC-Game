@@ -27,11 +27,30 @@
  *
  *    Draw implementation uses `CTX.save()/restore()` so no canvas state
  *    leaks into the health-bar drawing that immediately follows.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * BALANCE — GLITCH WAVE DAMAGE REDUCTION (Balance Designer pass)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ GLITCH WAVE MITIGATION — When window.isGlitchWave is true (set by
+ *    game.js whenever a Glitch Wave is in progress), all melee contact
+ *    damage dealt to the player by Enemy and TankEnemy is multiplied by
+ *    GLITCH_DAMAGE_MULT (0.6), giving a 40 % reduction.
+ *
+ *    Rationale: Glitch Waves already invert player controls and spawn a
+ *    double horde; reducing contact damage prevents unavoidable death
+ *    from disorientation without removing the tension of the mechanic.
+ *
+ *    window.isGlitchWave is a boolean synced by game.js on every state
+ *    change; reading it here via window avoids any import/scope coupling.
  */
 
 // ─── Tunable: seconds a hit-flash stays at full opacity before fading out ───
 // At 0.10 s (≈ 6 frames @ 60 fps) the flash is snappy but legible.
 const HIT_FLASH_DURATION = 0.10;
+
+// ─── Tunable: enemy contact damage multiplier during a Glitch Wave ──────────
+// 0.6 = 40 % reduction. Applies only to melee contact (not projectiles).
+const GLITCH_DAMAGE_MULT = 0.6;
 
 // ════════════════════════════════════════════════════════════
 // ENEMIES
@@ -72,7 +91,15 @@ class Enemy extends Entity {
             projectileManager.add(new Projectile(this.x,this.y,this.angle,BALANCE.enemy.projectileSpeed,this.damage,'#fff',false,'enemy'));
             this.shootTimer=rand(...BALANCE.enemy.shootCooldown);
         }
-        if (d<this.radius+player.radius) player.takeDamage(this.damage*dt*3);
+
+        // ── Melee contact damage ─────────────────────────────
+        // During a Glitch Wave, reduce contact damage by 40 % to keep the
+        // inverted-controls chaos survivable without removing the threat.
+        if (d<this.radius+player.radius) {
+            const contactDamage = this.damage * dt * 3;
+            const glitchMult    = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
+            player.takeDamage(contactDamage * glitchMult);
+        }
     }
 
     takeDamage(amt, player) {
@@ -151,7 +178,15 @@ class TankEnemy extends Entity {
         if(!player.isInvisible){this.vx=Math.cos(this.angle)*this.speed;this.vy=Math.sin(this.angle)*this.speed;}
         else{this.vx*=0.95;this.vy*=0.95;}
         this.applyPhysics(dt);
-        if(d<BALANCE.tank.meleeRange+player.radius) player.takeDamage(this.damage*dt*2);
+
+        // ── Melee contact damage ─────────────────────────────
+        // Glitch Wave reduces Tank melee damage by 40 % — tanks hit
+        // very hard and the player can't dodge reliably with inverted controls.
+        if(d<BALANCE.tank.meleeRange+player.radius) {
+            const contactDamage = this.damage * dt * 2;
+            const glitchMult    = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
+            player.takeDamage(contactDamage * glitchMult);
+        }
     }
 
     takeDamage(amt,player) {

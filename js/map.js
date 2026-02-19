@@ -629,9 +629,12 @@ class MapSystem {
             punchLight(player.x,player.y,L.playerLightRadius,'warm',dashMult);
         }
 
-        for(const proj of projectiles){
-            if(!proj||proj.dead) continue;
-            punchLight(proj.x,proj.y,L.projectileLightRadius,proj.team==='player'?'cool':'warm');
+        // ── Safe projectiles loop with null guard ─────────────────────
+        if (typeof window.projectiles !== 'undefined' && Array.isArray(window.projectiles)) {
+            for(const proj of window.projectiles){
+                if(!proj||proj.dead) continue;
+                punchLight(proj.x,proj.y,L.projectileLightRadius,proj.team==='player'?'cool':'warm');
+            }
         }
 
         const MAX_LIGHT_RADIUS=Math.max(L.dataPillarLightRadius,L.serverRackLightRadius)+40;
@@ -659,6 +662,94 @@ class MapSystem {
 
         lctx.globalCompositeOperation='source-over';
         CTX.drawImage(lc,0,0);
+    }
+
+    // ════════════════════════════════════════════════════════
+    // 💥 damageArea — Line-AABB intersection for DeadlyGraph
+    // Destroys any MapObject the line passes through, and
+    // shrinks the MTCRoom by 10% (towards its centre) if hit.
+    // ════════════════════════════════════════════════════════
+    damageArea(startX, startY, endX, endY) {
+        // ── Slab-method line-segment vs AABB test ────────────
+        // Returns true when the segment (x1,y1)→(x2,y2) intersects
+        // the axis-aligned box [rx, rx+rw] × [ry, ry+rh].
+        const lineHitsAABB = (x1, y1, x2, y2, rx, ry, rw, rh) => {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+
+            let tMin = 0;
+            let tMax = 1;
+
+            // Test X slab
+            if (Math.abs(dx) < 1e-9) {
+                // Segment is vertical — must be inside the x-slab
+                if (x1 < rx || x1 > rx + rw) return false;
+            } else {
+                const invDx = 1 / dx;
+                let t1 = (rx        - x1) * invDx;
+                let t2 = (rx + rw   - x1) * invDx;
+                if (t1 > t2) { const tmp = t1; t1 = t2; t2 = tmp; }
+                tMin = Math.max(tMin, t1);
+                tMax = Math.min(tMax, t2);
+                if (tMin > tMax) return false;
+            }
+
+            // Test Y slab
+            if (Math.abs(dy) < 1e-9) {
+                // Segment is horizontal — must be inside the y-slab
+                if (y1 < ry || y1 > ry + rh) return false;
+            } else {
+                const invDy = 1 / dy;
+                let t1 = (ry        - y1) * invDy;
+                let t2 = (ry + rh   - y1) * invDy;
+                if (t1 > t2) { const tmp = t1; t1 = t2; t2 = tmp; }
+                tMin = Math.max(tMin, t1);
+                tMax = Math.min(tMax, t2);
+                if (tMin > tMax) return false;
+            }
+
+            return true; // overlapping [tMin, tMax] ⊆ [0,1] — intersection confirmed
+        };
+
+        // ── Destroy intersected MapObjects ───────────────────
+        const surviving = [];
+        for (const obj of this.objects) {
+            if (lineHitsAABB(startX, startY, endX, endY, obj.x, obj.y, obj.w, obj.h)) {
+                // Visual feedback: burst particles at object centre
+                if (typeof spawnParticles === 'function') {
+                    spawnParticles(obj.x + obj.w * 0.5, obj.y + obj.h * 0.5, 12, '#3b82f6');
+                }
+                if (typeof spawnFloatingText === 'function') {
+                    spawnFloatingText('💥', obj.x + obj.w * 0.5, obj.y - 20, '#60a5fa', 20);
+                }
+                // Object is destroyed — do NOT push it to surviving
+            } else {
+                surviving.push(obj);
+            }
+        }
+        this.objects = surviving;
+
+        // ── Shrink MTCRoom if the line passes through it ─────
+        if (this.mtcRoom) {
+            const r = this.mtcRoom;
+            if (lineHitsAABB(startX, startY, endX, endY, r.x, r.y, r.w, r.h)) {
+                // Shrink width and height by 10%, keeping the same centre
+                const shrink   = 0.10;
+                const oldW     = r.w;
+                const oldH     = r.h;
+                const newW     = oldW * (1 - shrink);
+                const newH     = oldH * (1 - shrink);
+                // Re-anchor so the centre stays fixed
+                r.x += (oldW - newW) * 0.5;
+                r.y += (oldH - newH) * 0.5;
+                r.w  = newW;
+                r.h  = newH;
+
+                if (typeof spawnFloatingText === 'function') {
+                    spawnFloatingText('MTC ROOM DAMAGED!', r.x + r.w * 0.5, r.y - 30, '#f59e0b', 22);
+                }
+            }
+        }
     }
 
     clear() {

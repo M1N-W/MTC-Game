@@ -340,8 +340,9 @@ const BALANCE = {
         log457AttackBonus: 0.09,
         log457AttackGrowth: 0.04,
 
-        // ── Phase 2: "Manop the Dog Rider" ─────────────────
-        // Phase 2 activates at 50% HP (2350 × 0.5 = 1175 HP).
+        // ── Phase 2: "Dog Summoner" ─────────────────────────
+        // Phase 2 activates at 50% HP. Instead of riding the dog,
+        // Manop SUMMONS the dog as a separate aggressive melee unit.
         phase2: {
             barkDamage: 25,
             barkRange: 600,
@@ -357,6 +358,52 @@ const BALANCE = {
             // un-escapable for Poom without dash. This was the "impossible to dodge" problem.
             enrageSpeedMult: 1.65,
             dogColor: '#d97706'
+        },
+
+        // ── Summoned Dog ─────────────────────────────────────
+        // Spawned as a standalone BossDog entity when Manop enters Phase 2.
+        // Very fast melee-range chaser; damage dealt on contact per second.
+        bossDog: {
+            hp: 1200,
+            speed: 280,
+            damage: 25,
+            radius: 20,
+            color: '#d97706'
+        },
+
+        // ── Phase 3: "Manop the Goldfish Lover" ──────────────
+        // Activates at 25% HP on Encounter 3 (Wave 9) only.
+        // Adds Goldfish Kamikaze swarm + Bubble Prison on top of all Phase 2 attacks.
+        phase3Threshold: 0.25,
+        phase3: {
+            auraColor:        '#38bdf8',
+            goldfishCooldown: 4.0,
+            goldfishCount:    3,
+            bubbleCooldown:   6.0,
+            bubbleCount:      4,
+            slowFactor:       0.5,
+            slowDuration:     2.0
+        },
+
+        // ── GoldfishMinion ───────────────────────────────────
+        // Sine-wave Kamikaze fish that wobbles as it chases and explodes on contact.
+        goldfishMinion: {
+            hp:        60,
+            speed:     180,
+            damage:    20,
+            radius:    12,
+            wobbleAmp: 40,
+            wobbleFreq: 3.5,
+            color:     '#fb923c'
+        },
+
+        // ── BubbleProjectile ─────────────────────────────────
+        // Slow, semi-transparent; deals damage AND slows the player on hit.
+        bubbleProjectile: {
+            speed:  100,
+            damage: 30,
+            radius: 18,
+            color:  'rgba(186, 230, 253, 0.6)'
         }
     },
 
@@ -383,7 +430,7 @@ const BALANCE = {
     waves: {
         spawnDistance: 800,
         bossSpawnDelay: 3000,
-        maxWaves: 5,
+        maxWaves: 8,
         minKillsForNoDamage: 5,
         enemiesBase: 4,
         enemiesPerWave: 3,

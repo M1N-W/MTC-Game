@@ -107,6 +107,10 @@ class Player extends Entity {
         this.speedBoost      = 1;
         this.speedBoostTimer = 0;
         this.dashGhosts      = [];
+        
+        // ── Timeout Management ───────────────────────────────────
+        // Store setTimeout IDs to prevent memory leaks when player dies
+        this.dashTimeouts     = [];
 
         // ── Weapon Recoil (v11) ───────────────────────────────────
         // Set to 1.0 by triggerRecoil() on each shot; decays to 0 over ~0.12 s.
@@ -245,6 +249,15 @@ class Player extends Entity {
         }
 
         _standAura_update(this, dt);
+        
+        // ── Cleanup dead timeouts ───────────────────────────────
+        if (this.dead) {
+            for (const timeoutId of this.dashTimeouts) {
+                clearTimeout(timeoutId);
+            }
+            this.dashTimeouts = [];
+        }
+        
         this.updateUI();
     }
 
@@ -291,16 +304,28 @@ class Player extends Entity {
         this.cooldowns.dash = S.dashCooldown;
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
-        this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
-        this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
+        let dashSpeed = S.dashDistance / 0.2;
+        // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly
+        // Validate timeScale and clamp to prevent infinite/NaN speeds
+        const currentScale = (typeof window.timeScale === 'number' && window.timeScale > 0.1 && window.timeScale < 10.0) ? window.timeScale : 1.0;
+        if (currentScale < 1.0) {
+            const matrixMult = (1 / currentScale) * 1.5;
+            dashSpeed *= matrixMult;
+        }
+        this.vx = Math.cos(angle) * dashSpeed;
+        this.vy = Math.sin(angle) * dashSpeed;
 
         // Ghost trail — staggered snapshots captured during the dash window
         for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 if (!this.dead) {
                     this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
                 }
+                // Remove timeout ID from array after execution
+                const idx = this.dashTimeouts.indexOf(timeoutId);
+                if (idx > -1) this.dashTimeouts.splice(idx, 1);
             }, i * 30);
+            this.dashTimeouts.push(timeoutId);
         }
 
         spawnParticles(this.x, this.y, 15, '#60a5fa');   // Kao blue
@@ -308,7 +333,8 @@ class Player extends Entity {
         Achievements.stats.dashes++;
         Achievements.check('speedster');
 
-        setTimeout(() => { if (!this.dead) this.isDashing = false; }, 200);
+        const dashEndTimeoutId = setTimeout(() => { if (!this.dead) this.isDashing = false; }, 200);
+        this.dashTimeouts.push(dashEndTimeoutId);
     }
 
     checkPassiveUnlock() {
@@ -633,6 +659,10 @@ class PoomPlayer extends Entity {
         this.walkCycle = 0;
         this.damageBoost = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
         this.dashGhosts = [];
+        
+        // ── Timeout Management ───────────────────────────────────
+        // Store setTimeout IDs to prevent memory leaks when player dies
+        this.dashTimeouts     = [];
 
         // ── Stand-Aura & Afterimage system ────────────────────
         this.standGhosts   = [];
@@ -646,6 +676,7 @@ class PoomPlayer extends Entity {
         this.isEatingRice   = false; this.eatRiceTimer = 0;
         this.currentSpeedMult = 1;
         this.nagaCount = 0;
+        this.naga      = null;  // reference to current NagaEntity while summoned (for invincibility)
 
         // ── Collision Awareness state (mirrors Player) ─────────
         this.obstacleBuffTimer     = 0;
@@ -729,6 +760,11 @@ class PoomPlayer extends Entity {
 
         this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
 
+        // ── Naga cleanup: clear reference if naga dies ─────────────
+        if (this.naga && this.naga.dead) {
+            this.naga = null;
+        }
+
         if (window.touchJoystickRight && window.touchJoystickRight.active) {
             this.angle = Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
         } else {
@@ -771,7 +807,8 @@ class PoomPlayer extends Entity {
     summonNaga() {
         const S = this.stats;
         this.cooldowns.naga = S.nagaCooldown;
-        window.specialEffects.push(new NagaEntity(this.x, this.y, this));
+        this.naga = new NagaEntity(this.x, this.y, this);
+        window.specialEffects.push(this.naga);
         spawnParticles(this.x, this.y, 40, '#10b981');
         spawnFloatingText('อัญเชิญพญานาค!', this.x, this.y - 60, '#10b981', 24);
         showVoiceBubble('ขอพรพญานาค!', this.x, this.y - 40);
@@ -782,20 +819,37 @@ class PoomPlayer extends Entity {
 
     dash(ax, ay) {
         const S = this.stats;
+        if (this.isDashing) return;
         this.isDashing = true;
         this.cooldowns.dash = S.dashCooldown;
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
-        this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
-        this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
-        for (let i = 0; i < 5; i++) setTimeout(() => {
-            if (!this.dead) this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
-        }, i * 30);
+        let dashSpeed = S.dashDistance / 0.2;
+        // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly
+        // Validate timeScale and clamp to prevent infinite/NaN speeds
+        const currentScale = (typeof window.timeScale === 'number' && window.timeScale > 0.1 && window.timeScale < 10.0) ? window.timeScale : 1.0;
+        if (currentScale < 1.0) {
+            const matrixMult = (1 / currentScale) * 1.5;
+            dashSpeed *= matrixMult;
+        }
+        this.vx = Math.cos(angle) * dashSpeed;
+        this.vy = Math.sin(angle) * dashSpeed;
+        for (let i = 0; i < 5; i++) {
+            const timeoutId = setTimeout(() => {
+                if (!this.dead) this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
+                // Remove timeout ID from array after execution
+                const idx = this.dashTimeouts.indexOf(timeoutId);
+                if (idx > -1) this.dashTimeouts.splice(idx, 1);
+            }, i * 30);
+            this.dashTimeouts.push(timeoutId);
+        }
         spawnParticles(this.x, this.y, 15, '#fbbf24');
         Audio.playDash(); Achievements.stats.dashes++; Achievements.check('speedster');
-        setTimeout(() => { this.isDashing = false; }, 200);
+        const dashEndTimeoutId = setTimeout(() => { if (!this.dead) this.isDashing = false; }, 200);
+        this.dashTimeouts.push(dashEndTimeoutId);
     }
 
     takeDamage(amt) {
+        if (this.naga && !this.naga.dead && this.naga.active) return;  // invincible while Naga is out and alive
         if (this.isDashing) return;
         if (this.onGraph) { amt *= 2; spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16); }
         this.hp -= amt; this.hp = Math.max(0, this.hp);
@@ -869,6 +923,25 @@ class PoomPlayer extends Entity {
             CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize, 0, Math.PI * 2); CTX.stroke();
             CTX.globalAlpha = auraAlpha * 0.35;
             CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize + 12, 0, Math.PI * 2); CTX.stroke();
+            CTX.restore();
+        }
+
+        // Naga invincibility: subtle glowing golden shield while Naga is active
+        if (this.naga && this.naga.active) {
+            const gt = performance.now() / 350;
+            const shieldR = 36 + Math.sin(gt) * 4;
+            const shieldA = 0.25 + Math.sin(gt * 1.3) * 0.12;
+            CTX.save();
+            CTX.globalAlpha = shieldA;
+            CTX.strokeStyle = '#fbbf24';
+            CTX.lineWidth   = 2.5;
+            CTX.shadowBlur   = 18;
+            CTX.shadowColor  = '#f59e0b';
+            CTX.setLineDash([4, 4]);
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, shieldR, 0, Math.PI * 2); CTX.stroke();
+            CTX.setLineDash([]);
+            CTX.globalAlpha = shieldA * 0.4;
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, shieldR + 8, 0, Math.PI * 2); CTX.stroke();
             CTX.restore();
         }
 
@@ -1114,6 +1187,7 @@ class NagaEntity extends Entity {
         this.maxLife  = S.nagaDuration;
         this.speed    = S.nagaSpeed;
         this.damage   = S.nagaDamage;
+        this.active  = true;  // false when life <= 0 (Poom invincibility check)
         // this.radius set by Entity via super()
 
         // ✅ AUDIO 2 — Rate-limit Naga hit sound.
@@ -1125,7 +1199,11 @@ class NagaEntity extends Entity {
     update(dt, player, _meteorZones) {
         const S = BALANCE.characters.poom;
         this.life -= dt;
-        if (this.life <= 0) return true;
+        if (this.life <= 0) {
+            this.active = false;
+            if (this.owner) this.owner.naga = null;
+            return true;
+        }
 
         const head = this.segments[0];
         // Follows the mouse cursor — intentional design so the player can
@@ -1435,8 +1513,8 @@ class BarkWave {
 
 // ════════════════════════════════════════════════════════════
 // ✅ Option B — Share identical Player methods with PoomPlayer
+// (PoomPlayer keeps its own takeDamage for Naga invincibility guard.)
 // ════════════════════════════════════════════════════════════
-PoomPlayer.prototype.takeDamage         = Player.prototype.takeDamage;
 PoomPlayer.prototype.heal               = Player.prototype.heal;
 PoomPlayer.prototype.gainExp            = Player.prototype.gainExp;
 PoomPlayer.prototype.levelUp            = Player.prototype.levelUp;

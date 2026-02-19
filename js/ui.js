@@ -13,6 +13,25 @@
  * - ✅ initHighScoreOnLoad() wrapped in DOMContentLoaded for safer timing.
  *
  * Load order: config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → game.js
+ *
+ * ────────────────────────────────────────────────────────────────
+ * UX — CONFUSED-STATE WARNING BANNER (UX Designer pass)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ drawConfusedWarning(ctx) — Static method on UIManager.
+ *    Called every frame from UIManager.draw() when
+ *    window.player.isConfused is true.
+ *
+ *    Appearance:
+ *      • Bold pill-shaped banner, purple background with neon glow.
+ *      • Text: "⚠️ CONFUSED: INVERT YOUR MOVEMENT! ⚠️"
+ *      • Flashes at ~4 Hz (Math.sin period 125 ms) so it grabs
+ *        attention without becoming permanently distracting.
+ *      • Positioned at H - 270 px so it sits clearly above the
+ *        Bullet Time energy badge (H - 140) and the skill-slot row.
+ *
+ *    The Glitch Wave floating-text announcements in game.js have been
+ *    raised to Y offsets ≥ −200 px (world space) so they do not
+ *    overlap this banner in screen space.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -563,12 +582,105 @@ class UIManager {
         ctx.restore();
     }
 
-    // ── Radar + Combo draw entry ──────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    // 😵 CONFUSED STATE WARNING BANNER
+    //
+    // Drawn every frame when window.player.isConfused is true.
+    // Flashes at ~4 Hz to grab attention; fades cleanly when the
+    // confusion debuff expires (isConfused becomes false).
+    //
+    // Vertical position: H - 270 px (above the Bullet Time energy
+    // badge at H - 140 and the skill-icon row beneath it).
+    // ════════════════════════════════════════════════════════════
+
+    /**
+     * drawConfusedWarning(ctx)
+     *
+     * Renders a flashing purple pill banner:
+     *   "⚠️ CONFUSED: INVERT YOUR MOVEMENT! ⚠️"
+     *
+     * Only visible while window.player.isConfused === true.
+     * Uses ctx.save/restore so no canvas state leaks outward.
+     *
+     * @param {CanvasRenderingContext2D} ctx
+     */
+    static drawConfusedWarning(ctx) {
+        if (!ctx || !ctx.canvas) return;
+        if (!window.player || !window.player.isConfused) return;
+
+        const canvas = ctx.canvas;
+        const now    = performance.now();
+
+        // ── Flash gate: visible for ~125 ms, hidden for ~125 ms (~4 Hz) ──
+        // Math.sin returns values in [−1, 1]; we gate on > 0 for a 50 % duty cycle.
+        const flashVisible = Math.sin(now / 125) > 0;
+        if (!flashVisible) return;
+
+        // ── Layout ────────────────────────────────────────────────
+        // Centred horizontally; sits at H − 270 px so it clears the
+        // Bullet Time badge (H − 140) and the skill-slot row below it.
+        const W       = canvas.width;
+        const H       = canvas.height;
+        const cx      = W / 2;
+        const cy      = H - 270;
+        const text    = '⚠️ CONFUSED: INVERT YOUR MOVEMENT! ⚠️';
+        const fontSize = 17;
+        const padX    = 22;
+        const padY    = 11;
+        const radius  = 10;
+
+        ctx.save();
+
+        // ── Measure text to size the pill precisely ───────────────
+        ctx.font = `bold ${fontSize}px "Orbitron", Arial, sans-serif`;
+        const textW  = ctx.measureText(text).width;
+        const pillW  = textW + padX * 2;
+        const pillH  = fontSize + padY * 2;
+        const pillX  = cx - pillW / 2;
+        const pillY  = cy - pillH / 2;
+
+        // ── Outer glow halo (drawn before clip/fill for correct layering) ──
+        ctx.shadowBlur  = 28;
+        ctx.shadowColor = '#d946ef';
+
+        // ── Pill background ───────────────────────────────────────
+        // Deep purple, semi-transparent so world content shows through
+        // at the edges and the banner doesn't feel too opaque.
+        ctx.fillStyle = 'rgba(88, 28, 135, 0.88)';
+        _confusedRoundRect(ctx, pillX, pillY, pillW, pillH, radius);
+        ctx.fill();
+
+        // ── Pill border ───────────────────────────────────────────
+        ctx.shadowBlur  = 10;
+        ctx.shadowColor = '#e879f9';
+        ctx.strokeStyle = 'rgba(233, 121, 249, 0.90)';
+        ctx.lineWidth   = 2;
+        _confusedRoundRect(ctx, pillX, pillY, pillW, pillH, radius);
+        ctx.stroke();
+
+        // ── Warning text ──────────────────────────────────────────
+        ctx.shadowBlur  = 12;
+        ctx.shadowColor = '#ffffff';
+        ctx.fillStyle   = '#ffffff';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, cx, cy);
+
+        ctx.restore();
+    }
+
+    // ── Radar + Combo + Confused Warning draw entry ───────────
     static draw(ctx, dt) {
         UIManager.injectCooldownStyles(); // no-op after first call
         UIManager.updateCombo(dt);
         UIManager.drawCombo(ctx);
         if (!ctx || !ctx.canvas) return;
+
+        // ── Confused-state warning banner ─────────────────────
+        // Drawn before the minimap so it appears above world content
+        // but below the radar (radar is always the topmost HUD element).
+        UIManager.drawConfusedWarning(ctx);
+
         // ✅ Minimap is drawn LAST so no other HUD element overlaps it.
         UIManager.drawMinimap(ctx);
     }
@@ -961,6 +1073,36 @@ class UIManager {
         // to whatever state they were in before drawMinimap().
         // ══════════════════════════════════════════════════════
         ctx.restore();  // ← ends OUTER save
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// 😵 CONFUSED WARNING — local rounded-rect helper
+//
+// Isolated from game.js's _roundRectPath so ui.js has no
+// hard dependency on a function defined in another file.
+// Uses the native ctx.roundRect() when available (Chrome 99+,
+// Firefox 112+) and falls back to a manual quad-bezier path.
+// ════════════════════════════════════════════════════════════
+function _confusedRoundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    if (typeof ctx.roundRect === 'function') {
+        // Native path — available in all modern browsers
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+    } else {
+        // Manual fallback via quadratic bezier curves
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
     }
 }
 

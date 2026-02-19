@@ -143,6 +143,28 @@ const DEBUG_MODE = false;
  *    returns a safe default instead of throwing a ReferenceError.
  *    initAI() and endGame() restored to clean single-path form (no typeof guards).
  *    Boss.speak() try/catch demoted from console.warn → console.debug (less spam).
+ *
+ * ────────────────────────────────────────────────────────────────
+ * BALANCE / UX — GLITCH WAVE IMPROVEMENTS (Balance Designer pass)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ PLAYER HP BONUS  — At the start of every Glitch Wave the player
+ *    gains +100 to both maxHp and hp ("crisis buffer HP"). This bonus is
+ *    tracked in _glitchWaveHpBonus and cleanly removed (with hp clamping)
+ *    in the startNextWave() reset block so it does not snowball across waves.
+ *
+ * ✅ SPAWN COUNT REDUCTION — Glitch Wave horde size is now
+ *    Math.floor(count * 2 / 1.5) ≈ ×1.33 instead of ×2 so the inverted-
+ *    controls window remains punishing but not outright impossible.
+ *
+ * ✅ GLITCH WAVE TEXT POSITIONS — All spawnFloatingText() calls for the
+ *    Glitch Wave announcement chain now use higher Y offsets (−200 / −180 /
+ *    −160 / −155 / −145) so they do not overlap the new Confused-state
+ *    warning banner that ui.js draws at the bottom of the screen.
+ *
+ * ✅ window.isGlitchWave — The module-level isGlitchWave flag is now
+ *    mirrored to window.isGlitchWave on every state change so that
+ *    enemy.js (and any other cross-script code) can read it without
+ *    import coupling.
  */
 
 // ─── Game State ───────────────────────────────────────────────
@@ -186,6 +208,17 @@ let isGlitchWave     = false;
 let glitchIntensity  = 0;
 let controlsInverted = false;
 const GLITCH_EVERY_N_WAVES = 5;
+
+// ── window.isGlitchWave — cross-script visibility ─────────────
+// enemy.js reads this to apply the 40 % melee damage reduction.
+// Synced on every state change; initial value matches the let above.
+window.isGlitchWave = false;
+
+// ─── ⚡ Glitch Wave — Player HP Bonus ────────────────────────
+// +100 maxHp / hp injected at wave start; removed cleanly at wave end.
+// Stored here so startNextWave()'s reset block knows exactly how much
+// to subtract without relying on assumptions about the player's state.
+let _glitchWaveHpBonus = 0;
 
 // ─── ⚡ Glitch Wave — Spawn Grace Period ──────────────────────
 // waveSpawnLocked    — true while the pre-spawn countdown is running
@@ -934,8 +967,21 @@ window.buyItem   = buyItem;
 // ══════════════════════════════════════════════════════════════
 
 function startNextWave() {
+    // ── Remove Glitch Wave HP bonus from the previous wave ────
+    // If _glitchWaveHpBonus > 0 the last wave was a Glitch Wave.
+    // We restore maxHp and clamp hp so the player doesn't retain
+    // the crisis buffer permanently. This must run BEFORE the new
+    // isGlitchWave flag is evaluated for the incoming wave.
+    if (_glitchWaveHpBonus > 0 && player) {
+        player.maxHp -= _glitchWaveHpBonus;
+        player.hp     = Math.min(player.hp, player.maxHp);   // clamp to new ceiling
+        _glitchWaveHpBonus = 0;
+        console.log('[GlitchWave] HP bonus removed — player.maxHp:', player.maxHp);
+    }
+
     // ── Reset glitch state from the wave that just ended ─────
     isGlitchWave     = false;
+    window.isGlitchWave = false;   // ← sync cross-script mirror
     controlsInverted = false;
     // glitchIntensity fades to 0 organically via the ramp in updateGame
 
@@ -955,34 +1001,56 @@ function startNextWave() {
     // ── ⚡ Glitch Wave — every 5th wave ──────────────────────
     if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
         isGlitchWave     = true;
+        window.isGlitchWave = true;   // ← sync cross-script mirror (enemy.js reads this)
         controlsInverted = true;
         glitchIntensity  = 0;   // ramp starts immediately in updateGame
 
-        // ── Grace Period: queue the double spawn, lock it ────
-        // Both the normal batch AND the bonus Glitch Wave batch
-        // are stored here and released only after the countdown.
-        pendingSpawnCount   = count * 2;
+        // ── Player survivability bonus ────────────────────────
+        // Grant +100 maxHp AND +100 current hp as a "crisis buffer".
+        // The bonus is tracked in _glitchWaveHpBonus and removed
+        // cleanly at the start of the next wave.
+        if (player) {
+            const bonus       = 100;
+            player.maxHp     += bonus;
+            player.hp        += bonus;
+            _glitchWaveHpBonus = bonus;
+            spawnFloatingText(
+                `🛡️ +${bonus} CRISIS HP`,
+                player.x, player.y - 60,
+                '#22c55e', 22
+            );
+            spawnParticles(player.x, player.y, 10, '#22c55e');
+            console.log(`[GlitchWave] HP bonus applied — player.maxHp: ${player.maxHp}, player.hp: ${player.hp}`);
+        }
+
+        // ── Grace Period: queue the spawn horde, lock it ─────
+        // Spawn count divided by 1.5 vs the original ×2 so the double
+        // horde becomes ~×1.33 — still a significant threat but not
+        // outright punishing while controls are inverted.
+        pendingSpawnCount   = Math.floor((count * 2) / 1.5);
         waveSpawnLocked     = true;
         waveSpawnTimer      = BALANCE.waves.glitchGracePeriod / 1000; // convert ms → s
         lastGlitchCountdown = -1;
 
-        // Immediate atmosphere — visuals and sound fire NOW
-        spawnFloatingText('⚡ GLITCH WAVE ⚡', player.x, player.y - 140, '#d946ef', 44);
+        // Immediate atmosphere — visuals and sound fire NOW.
+        // Y offsets raised by ~60 px vs original to clear the new
+        // Confused-state warning banner drawn at the bottom of the screen.
+        spawnFloatingText('⚡ GLITCH WAVE ⚡', player.x, player.y - 200, '#d946ef', 44);
         addScreenShake(20);
         Audio.playBossSpecial();
 
         // Staggered warning messages during the grace window
         setTimeout(() => {
             if (player)
-                spawnFloatingText('⚠️ SYSTEM ANOMALY DETECTED... ⚠️', player.x, player.y - 100, '#f472b6', 26);
+                spawnFloatingText('⚠️ SYSTEM ANOMALY DETECTED... ⚠️', player.x, player.y - 180, '#f472b6', 26);
         }, 400);
         setTimeout(() => {
             if (player && waveSpawnLocked)
-                spawnFloatingText('CONTROLS INVERTED!', player.x, player.y - 80, '#f472b6', 22);
+                spawnFloatingText('CONTROLS INVERTED!', player.x, player.y - 160, '#f472b6', 22);
         }, 1200);
         setTimeout(() => {
             if (player && waveSpawnLocked)
-                spawnFloatingText('BRACE FOR IMPACT...', player.x, player.y - 90, '#ef4444', 24);
+                spawnFloatingText('BRACE FOR IMPACT...', player.x, player.y - 155, '#ef4444', 24);
         }, 2400);
 
     } else {
@@ -1280,6 +1348,7 @@ function gameLoop(now) {
 
     // All game-world simulation uses the scaled dt
     const scaledDt = dt * timeScale;
+    window.timeScale = timeScale; // expose for Matrix Dash (player.js) and base.js
     _lastDrawDt    = scaledDt;   // cache for UIManager.draw(CTX, _lastDrawDt) in drawGame()
 
     if (gameState === 'PLAYING') {
@@ -1313,7 +1382,7 @@ function updateGame(dt) {
     // While waveSpawnLocked is true, enemies have not yet spawned.
     // We count down using scaled dt (Bullet Time slows it too — intentional:
     // the player can use Bullet Time to buy even more breathing room).
-    // When the timer hits zero: release the full double horde.
+    // When the timer hits zero: release the full horde.
     if (waveSpawnLocked) {
         waveSpawnTimer -= dt;
 
@@ -1323,7 +1392,7 @@ function updateGame(dt) {
             lastGlitchCountdown = secsLeft;
             spawnFloatingText(
                 `⚡ SPAWNING IN ${secsLeft}...`,
-                player.x, player.y - 115,
+                player.x, player.y - 145,
                 '#d946ef', 34
             );
             addScreenShake(6);
@@ -1334,7 +1403,7 @@ function updateGame(dt) {
             waveSpawnLocked     = false;
             lastGlitchCountdown = -1;
             spawnEnemies(pendingSpawnCount);
-            spawnFloatingText('💀 CHAOS BEGINS!', player.x, player.y - 130, '#ef4444', 44);
+            spawnFloatingText('💀 CHAOS BEGINS!', player.x, player.y - 160, '#ef4444', 44);
             addScreenShake(28);
             Audio.playBossSpecial();
         }
@@ -1779,7 +1848,12 @@ function startGame(charType = 'kao') {
     slowMoEnergy = 1.0;
     console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
 
-    // Reset Glitch Wave grace period
+    // Reset Glitch Wave state (including HP bonus and cross-script mirror)
+    isGlitchWave        = false;
+    window.isGlitchWave = false;
+    glitchIntensity     = 0;
+    controlsInverted    = false;
+    _glitchWaveHpBonus  = 0;
     waveSpawnLocked     = false;
     waveSpawnTimer      = 0;
     pendingSpawnCount   = 0;
@@ -1871,6 +1945,11 @@ async function endGame(result) {
     // Ensure Bullet Time is fully off on game over
     isSlowMotion = false;
     timeScale    = 1.0;
+
+    // Clear Glitch Wave state (including window mirror) so the next run starts clean
+    isGlitchWave        = false;
+    window.isGlitchWave = false;
+    _glitchWaveHpBonus  = 0;
 
     // Clear weather on game over so particles don't linger on the game-over screen
     weatherSystem.clear();
