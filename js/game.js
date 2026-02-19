@@ -3,229 +3,92 @@
 // ════════════════════════════════════════════════════════════════
 // 🤖 AI SAFETY FALLBACK
 // ════════════════════════════════════════════════════════════════
-// Runs BEFORE any other code.  If ai.js was not loaded (e.g. the
-// <script> tag is commented out in index.html, or a network error
-// prevented the file from loading), every Gemini.* call in this
-// file and in boss.js would throw a ReferenceError and crash the
-// game loop.
-//
-// This block installs a silent mock object on window.Gemini so that
-// all call sites degrade gracefully:
-//   • initAI()         → getMissionName()  returns a default string
-//   • endGame()        → getReportCard()   returns a default string
-//   • Boss.speak()     → getBossTaunt()    returns a default string
-//
-// The mock also exposes the method names from the original Gemini
-// API surface (generateText, generateMission, generateReportCard,
-// speak) so that any call sites in third-party code or future files
-// that use those names are also safe.
-//
-// NOTE: Because this guard uses window.Gemini (not a bare `Gemini`
-// identifier), it is safe inside a 'use strict' module — the bare
-// name would throw a ReferenceError on the typeof check itself if
-// the variable was never declared in any scope.
-// ════════════════════════════════════════════════════════════════
 if (typeof window.Gemini === 'undefined') {
     window.Gemini = {
-        // ── Original API surface (spec) ──────────────────────
         init:                 ()          => console.log('🤖 AI System: Offline (Safe Fallback)'),
         generateText:         async ()    => '...',
         generateMission:      async ()    => 'Defeat the enemies!',
         generateReportCard:   async ()    => 'Great job!',
-        speak:                ()          => {},   // Boss speech fallback
+        speak:                ()          => {},
 
-        // ── Live call-site methods ────────────────────────────
-        // These are the names actually called in game.js / boss.js.
-        // They must be present on the mock or the fallback is incomplete.
         getMissionName:  async ()         => 'พิชิตครูมานพ',
         getReportCard:   async ()         => 'ตั้งใจเรียนให้มากกว่านี้นะ...',
-        getBossTaunt:    async ()         => '',   // empty → Boss stays silent; no UI update
+        getBossTaunt:    async ()         => '',
     };
 }
 
 // ─── Debug Flag (WARN 2 FIX) ──────────────────────────────────
-// Set to true locally to enable verbose frame diagnostics.
-// Never commit as true — the console.log in drawGame fires every 5s
-// at 60fps and creates unnecessary GC pressure in production.
 const DEBUG_MODE = false;
 
 /**
  * 🎮 MTC: ENHANCED EDITION - Main Game Loop (REFACTORED)
- * Handles: Game state, wave management, input, camera, shop, admin
- *          console, bullet time, database server, and the core loop.
  *
  * ────────────────────────────────────────────────────────────────
- * ARCHITECTURE NOTES (Stability Overhaul)
+ * 🐛 BGM FIX (Audio Timing Pass)
  * ────────────────────────────────────────────────────────────────
- * ✅ Boss   class → MOVED to entities.js (eliminates split-brain)
- * ✅ BarkWave class → MOVED to entities.js
- * ✅ lerp / dist / rand / clamp / etc. → LIVE in utils.js (no redefinitions here)
- * ✅ SHOP_ITEMS / BALANCE / LIGHTING → LIVE in config.js (read-only here)
- * ✅ showVoiceBubble() → globalised in utils.js (map.js crash fixed)
- * ✅ lerpColorHex / hexToRgb → LIVE in utils.js (duplicate in ui.js removed)
- * ✅ _roundRectPath() kept here — small canvas helper used only by drawSlowMoOverlay
+ * ROOT CAUSE — Menu and Battle BGM were silently discarded:
  *
- * LOAD ORDER (index.html must follow this):
- *   config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → input.js → game.js
+ *   Menu BGM:
+ *     window.onload called Audio.playBGM('menu') before Audio.init()
+ *     was ever called, so userInteracted was false and the request
+ *     was returned and thrown away.
  *
- * ────────────────────────────────────────────────────────────────
- * FEATURE LOG
- * ────────────────────────────────────────────────────────────────
- * v10 — Bullet Time
- *   • 'T' key toggles slow-motion (timeScale = 0.30) globally
- *   • slowMoEnergy drains while active; recharges when off
- *   • Auto-deactivates on empty tank; blocked below 5 %
- *   • drawSlowMoOverlay(): radial vignette, chromatic aberration,
- *     letterbox bars, animated BULLET TIME badge + energy bar,
- *     clock-tick particle burst around player
- *   • _tickSlowMoEnergy(realDt) uses unscaled dt so drain/recharge
- *     is always wall-clock speed regardless of timeScale
+ *   Battle BGM:
+ *     startGame() called Audio.init() then Audio.playBGM('battle')
+ *     in the same synchronous stack as the "Start" button click.
+ *     Audio.init() registers the interaction listener — but the click
+ *     that triggered startGame() had ALREADY fired before the listener
+ *     was attached, so userInteracted never became true.
+ *     Battle BGM was therefore also silently discarded.
  *
- * v9  — Admin Console ('F' near server)
- *   • CRT/hacker terminal aesthetic  (#admin-console overlay)
- *   • Commands: sudo heal / sudo score / sudo next / help / clear / exit
- *   • Typed-print effect; up-arrow command history
- *   • Input field steals keyboard focus — game hotkeys suppressed
- *   • Easter eggs: ls, whoami, sudo rm -rf /, cat kru_manop_passwords.txt
+ *   Boss BGM worked because by Wave 3 the user had pressed keys/clicked
+ *   many times AFTER Audio.init(), so userInteracted had become true.
  *
- * v4  — Shop ('B' near kiosk)
- *   • MTC_SHOP_LOCATION fixed world position
- *   • openShop() → gameState = 'PAUSED', ShopManager.open()
- *   • buyItem(itemId) — deducts score, applies timed/instant effect
- *   • Shopaholic achievement via Achievements.stats.shopPurchases
- *
- * v3  — Database ('E' near server)
- *   • MTC_DATABASE_SERVER fixed world position
- *   • gameState = 'PAUSED' when DB or admin console is open
- *   • resumeGame() restores 'PLAYING', resets keys
- *
- * v5  — Engineering Drone
- *   • window.drone created in startGame(); nullified in endGame()
- *   • updateGame() → drone.update(dt, player)
- *   • drawGame()   → drone.draw() between map objects and player
- *
- * v6/v7 — Boss Dog Rider (Boss class now in entities.js)
- *   • bossEncounterCount drives isRider flag
- *   • Encounter 1 → plain Boss; Encounter 2+ → Dog Rider
- *
- * v8  — View Culling & Particle Cap
- *   • Enemy/boss/powerup draw guarded by entity.isOnScreen(buffer)
- *   • ParticleSystem hard cap 150 (managed in effects.js)
- *
- * v11 — Performance + Animation Clarity pass (Game Engine Architect)
- *   • effects.js: Object pool for Particle (300 cap) and FloatingText (80 cap)
- *       spawn() → Particle.acquire() / FloatingText.acquire()  (zero GC after warm-up)
- *       update() → .release() returns dead instances to pool
- *       clear() → all particles/texts returned to pool before array reset
- *   • effects.js: Particle.draw() viewport cull — skips fillArc + shadowBlur for
- *       off-screen particles (saves GPU cost during boss explosions)
- *   • game.js: hitMarkerSystem.update(dt) + .draw() integrated into game loop
- *       (update in updateGame, draw in drawGame between particles and weather)
- *   • game.js: player.triggerRecoil() called after every successful Kao shot
- *   • player.js: Kao weapon recoil — body leans backward + muzzle-flash ring
- *       on fire; weaponRecoil decays at 8 units/sec; controlled via triggerRecoil()
- *   • player.js: Poom channeling glow — animated green ring when NagaEntity active
- *   • player.js: Player + PoomPlayer silhouette outer glow (neon stroke on body rect)
- *
- * FIXES (QA Integrity Report):
- * ✅ BUG 1:  mapSystem.update() now receives scaled dt so MTCRoom heals correctly.
- * ✅ WARN 1: weatherSystem.update() and weatherSystem.draw() wired into the loop.
- * ✅ WARN 2: Diagnostic console.log gated behind DEBUG_MODE flag.
- *
- * FIXES (Build Debugger — Zone 3 → superseded by Zone 4):
- * ✅ BUG C/D — Per-call `typeof Gemini` guards added to initAI() and endGame().
- *              These are now REMOVED — the global mock at the top of this file
- *              is a single, cleaner solution that covers all call sites at once.
- *
- * ARCHITECTURE (AI Safety — Zone 4):
- * ✅ Global Gemini mock installed at file top (window.Gemini safety fallback).
- *    When ai.js is absent, every Gemini.* call in game.js and boss.js silently
- *    returns a safe default instead of throwing a ReferenceError.
- *    initAI() and endGame() restored to clean single-path form (no typeof guards).
- *    Boss.speak() try/catch demoted from console.warn → console.debug (less spam).
- *
- * ────────────────────────────────────────────────────────────────
- * BALANCE / UX — GLITCH WAVE IMPROVEMENTS (Balance Designer pass)
- * ────────────────────────────────────────────────────────────────
- * ✅ PLAYER HP BONUS  — At the start of every Glitch Wave the player
- *    gains +100 to both maxHp and hp ("crisis buffer HP"). This bonus is
- *    tracked in _glitchWaveHpBonus and cleanly removed (with hp clamping)
- *    in the startNextWave() reset block so it does not snowball across waves.
- *
- * ✅ SPAWN COUNT REDUCTION — Glitch Wave horde size is now
- *    Math.floor(count * 2 / 1.5) ≈ ×1.33 instead of ×2 so the inverted-
- *    controls window remains punishing but not outright impossible.
- *
- * ✅ GLITCH WAVE TEXT POSITIONS — All spawnFloatingText() calls for the
- *    Glitch Wave announcement chain now use higher Y offsets (−200 / −180 /
- *    −160 / −155 / −145) so they do not overlap the new Confused-state
- *    warning banner that ui.js draws at the bottom of the screen.
- *
- * ✅ window.isGlitchWave — The module-level isGlitchWave flag is now
- *    mirrored to window.isGlitchWave on every state change so that
- *    enemy.js (and any other cross-script code) can read it without
- *    import coupling.
+ * FIX (two changes in this file):
+ *   1. window.onload  — Audio.init() moved HERE, before playBGM('menu').
+ *                       The interaction listener is now registered at page
+ *                       load, not inside startGame().
+ *   2. startGame()    — Audio.init() call REMOVED. Calling it again would
+ *                       re-create the AudioContext and re-register the
+ *                       listener, resetting userInteracted to false and
+ *                       causing battle BGM to miss the triggering click.
  */
 
 // ─── Game State ───────────────────────────────────────────────
 let gameState   = 'MENU';
 let loopRunning = false;
 
-// ✅ เพิ่มบรรทัดนี้เพื่อให้ Debug ง่ายขึ้น
 window.gameState = gameState;
 
-// keys, mouse, touchJoystickLeft/Right — defined in input.js (loaded before game.js)
-// InputSystem.init() is called from window.onload below.
+// ─── 🕐 Bullet Time ───────────────────────────────────────────
+let timeScale    = 1.0;
+let isSlowMotion = false;
+let slowMoEnergy = 1.0;
 
-// ─── 🕐 Bullet Time — global time-scale system ───────────────
-let timeScale    = 1.0;   // multiplier applied to dt each frame
-let isSlowMotion = false; // current toggle state
-let slowMoEnergy = 1.0;   // 0.0 = empty · 1.0 = full
+const SLOW_MO_TIMESCALE     = 0.30;
+const SLOW_MO_DRAIN_RATE    = 0.14;
+const SLOW_MO_RECHARGE_RATE = 0.07;
 
-const SLOW_MO_TIMESCALE     = 0.30;   // world at 30 % speed when active
-const SLOW_MO_DRAIN_RATE    = 0.14;   // empties in ~7 real seconds
-const SLOW_MO_RECHARGE_RATE = 0.07;   // refills in ~14 real seconds
-
-// Energy bar dimensions (used in drawSlowMoOverlay HUD badge)
 const SM_BAR_W = 180, SM_BAR_H = 8;
 
 // ─── HUD Draw Bridge ──────────────────────────────────────────
-// drawGame() is a pure render function with no dt parameter.
-// We cache each frame's scaledDt here so UIManager.draw() can
-// receive it for combo-timer animation without changing the call
-// signature of drawGame() anywhere else in the codebase.
 let _lastDrawDt = 0;
 
 // ─── Day / Night cycle ────────────────────────────────────────
 let dayNightTimer = 0;
 
 // ─── ⚡ Glitch Wave ───────────────────────────────────────────
-// Activates on every 5th wave (wave 5, 10, 15 …).
-// isGlitchWave  — set true by startNextWave, cleared on next wave start
-// glitchIntensity — animated 0→1 ramp; drawGlitchEffect uses this
-// controlsInverted — W↔S and A↔D are swapped while true
 let isGlitchWave     = false;
 let glitchIntensity  = 0;
 let controlsInverted = false;
 const GLITCH_EVERY_N_WAVES = 5;
 
-// ── window.isGlitchWave — cross-script visibility ─────────────
-// enemy.js reads this to apply the 40 % melee damage reduction.
-// Synced on every state change; initial value matches the let above.
 window.isGlitchWave = false;
 
 // ─── ⚡ Glitch Wave — Player HP Bonus ────────────────────────
-// +100 maxHp / hp injected at wave start; removed cleanly at wave end.
-// Stored here so startNextWave()'s reset block knows exactly how much
-// to subtract without relying on assumptions about the player's state.
 let _glitchWaveHpBonus = 0;
 
 // ─── ⚡ Glitch Wave — Spawn Grace Period ──────────────────────
-// waveSpawnLocked    — true while the pre-spawn countdown is running
-// waveSpawnTimer     — seconds remaining until enemy spawn is released
-// pendingSpawnCount  — total enemies queued, released when timer expires
-// lastGlitchCountdown— last whole-second milestone already announced
-//                      (prevents duplicate floating-text on same second)
 let waveSpawnLocked     = false;
 let waveSpawnTimer      = 0;
 let pendingSpawnCount   = 0;
@@ -258,9 +121,6 @@ const MTC_SHOP_LOCATION = {
     INTERACTION_RADIUS: 90
 };
 
-// ── 🔴 MINIMAP FIX: expose both locations to window so UIManager.drawMinimap()
-//    can read them via window.MTC_DATABASE_SERVER / window.MTC_SHOP_LOCATION.
-//    `const` declarations do NOT auto-attach to window in strict-mode modules.
 window.MTC_DATABASE_SERVER = MTC_DATABASE_SERVER;
 window.MTC_SHOP_LOCATION   = MTC_SHOP_LOCATION;
 
@@ -275,10 +135,8 @@ const AdminConsole = (() => {
     let histIdx   = -1;
     let isOpen    = false;
 
-    // Typed-print timing (ms per char)
     const CHAR_DELAY = 18;
 
-    // ── Private: add a styled line to the output ─────────────
     function _appendLine(text, cssClass = 'cline-info', instant = false) {
         const output = document.getElementById('console-output');
         if (!output) return;
@@ -293,7 +151,6 @@ const AdminConsole = (() => {
             return;
         }
 
-        // Typed-print effect
         div.textContent = '';
         output.appendChild(div);
         let i = 0;
@@ -307,7 +164,6 @@ const AdminConsole = (() => {
         tick();
     }
 
-    // ── Private: parse & execute a command ───────────────────
     function _parse(raw) {
         const cmd = raw.trim().toLowerCase();
         if (!cmd) return;
@@ -324,7 +180,6 @@ const AdminConsole = (() => {
 
         switch (cmd) {
 
-            // ─ SUDO HEAL ──────────────────────────────────────
             case 'sudo heal': {
                 const maxHp  = window.player.maxHp || 110;
                 const before = window.player.hp;
@@ -341,7 +196,6 @@ const AdminConsole = (() => {
                 break;
             }
 
-            // ─ SUDO SCORE ─────────────────────────────────────
             case 'sudo score': {
                 _appendLine('Authenticating root privilege... OK', 'cline-info');
                 _appendLine('Patching score register... +5000', 'cline-info');
@@ -357,7 +211,6 @@ const AdminConsole = (() => {
                 break;
             }
 
-            // ─ SUDO NEXT ──────────────────────────────────────
             case 'sudo next': {
                 _appendLine('Authenticating root privilege... OK', 'cline-info');
                 _appendLine('Sending SIGKILL to all enemy processes...', 'cline-info');
@@ -379,12 +232,10 @@ const AdminConsole = (() => {
                     spawnFloatingText('💀 WAVE SKIP [ADMIN]', window.player.x, window.player.y - 80, '#ef4444', 26);
                 if (typeof addScreenShake === 'function') addScreenShake(18);
                 if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
-                // Auto-close after brief delay so user sees the output
                 setTimeout(() => closeAdminConsole(), 1800);
                 break;
             }
 
-            // ─ HELP ───────────────────────────────────────────
             case 'help': {
                 const helpLines = [
                     '┌─────────────────────────────────────────────┐',
@@ -404,14 +255,12 @@ const AdminConsole = (() => {
                 break;
             }
 
-            // ─ CLEAR ──────────────────────────────────────────
             case 'clear': {
                 const out = document.getElementById('console-output');
                 if (out) out.innerHTML = '';
                 break;
             }
 
-            // ─ EXIT ───────────────────────────────────────────
             case 'exit':
             case 'quit':
             case 'q': {
@@ -420,7 +269,6 @@ const AdminConsole = (() => {
                 break;
             }
 
-            // ─ EASTER EGGS ────────────────────────────────────
             case 'sudo rm -rf /':
             case 'sudo rm -rf *': {
                 _appendLine('nice try lol', 'cline-warn');
@@ -449,7 +297,6 @@ const AdminConsole = (() => {
                 break;
             }
 
-            // ─ DEFAULT / ACCESS DENIED ────────────────────────
             default: {
                 if (cmd.startsWith('sudo ')) {
                     _appendLine(`sudo: ${raw.slice(5)}: command not found`, 'cline-error');
@@ -463,7 +310,6 @@ const AdminConsole = (() => {
         }
     }
 
-    // ── Public API ────────────────────────────────────────────
     return {
         open() {
             if (isOpen) return;
@@ -489,7 +335,7 @@ const AdminConsole = (() => {
                 setTimeout(() => input.focus(), 120);
 
                 input._onKeydown = (e) => {
-                    e.stopPropagation(); // block game key listeners
+                    e.stopPropagation();
 
                     if (e.key === 'Enter') {
                         const val = input.value;
@@ -559,7 +405,6 @@ function closeAdminConsole() {
     if (gameState === 'PAUSED') gameState = 'PLAYING';
     showResumePrompt(false);
 
-    // Reset movement keys so nothing sticks
     keys.w = 0; keys.a = 0; keys.s = 0; keys.d = 0;
     keys.space = 0; keys.q = 0; keys.e = 0; keys.b = 0; keys.f = 0;
 
@@ -599,7 +444,6 @@ function openExternalDatabase() {
 
 function resumeGame() {
     if (gameState !== 'PAUSED') return;
-    // If admin console is open, close it instead of blanket-resuming
     if (AdminConsole.isOpen) { closeAdminConsole(); return; }
     gameState = 'PLAYING';
 
@@ -613,7 +457,6 @@ function resumeGame() {
     if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
 }
 
-// Legacy aliases
 function openDatabase()   { openExternalDatabase(); }
 function showMathModal()  { openExternalDatabase(); }
 function closeMathModal() { resumeGame(); }
@@ -624,7 +467,6 @@ window.resumeGame           = resumeGame;
 window.showMathModal        = showMathModal;
 window.closeMathModal       = closeMathModal;
 
-// Pause on window blur; show resume prompt when focus returns
 window.addEventListener('blur', () => {
     if (gameState === 'PLAYING') {
         gameState = 'PAUSED';
@@ -670,7 +512,6 @@ function drawDatabaseServer() {
         }
     }
 
-    // Drop shadow
     CTX.fillStyle = 'rgba(0,0,0,0.35)';
     CTX.beginPath();
     CTX.ellipse(screen.x, screen.y + 28, 18, 7, 0, 0, Math.PI * 2);
@@ -681,7 +522,6 @@ function drawDatabaseServer() {
     CTX.shadowBlur  = 14 * glow;
     CTX.shadowColor = '#06b6d4';
 
-    // Server chassis
     CTX.fillStyle   = '#0c1a2e';
     CTX.strokeStyle = '#06b6d4';
     CTX.lineWidth   = 2;
@@ -690,7 +530,6 @@ function drawDatabaseServer() {
     CTX.fill();
     CTX.stroke();
 
-    // Drive bays
     for (let i = 0; i < 3; i++) {
         CTX.fillStyle = '#0f2744';
         CTX.fillRect(-14, -20 + i * 14, 28, 10);
@@ -706,7 +545,6 @@ function drawDatabaseServer() {
         CTX.fill();
     }
 
-    // Terminal ready indicator (green blink)
     const tGlow = Math.abs(Math.sin(performance.now() / 400)) * 0.6 + 0.4;
     CTX.fillStyle   = `rgba(0,255,65,${tGlow})`;
     CTX.shadowBlur  = 8;
@@ -772,7 +610,6 @@ function drawShopObject() {
         }
     }
 
-    // Drop shadow
     CTX.fillStyle = 'rgba(0,0,0,0.4)';
     CTX.beginPath();
     CTX.ellipse(screen.x, screen.y + 32, 22, 8, 0, 0, Math.PI * 2);
@@ -783,7 +620,6 @@ function drawShopObject() {
     CTX.shadowBlur  = 18 * glow;
     CTX.shadowColor = '#facc15';
 
-    // Counter body
     CTX.fillStyle   = '#78350f';
     CTX.strokeStyle = '#facc15';
     CTX.lineWidth   = 2;
@@ -792,7 +628,6 @@ function drawShopObject() {
     CTX.fill();
     CTX.stroke();
 
-    // Counter top
     CTX.fillStyle = '#92400e';
     CTX.beginPath();
     CTX.roundRect(-22, -6, 44, 10, 3);
@@ -801,13 +636,11 @@ function drawShopObject() {
     CTX.lineWidth   = 1.5;
     CTX.stroke();
 
-    // Awning poles
     CTX.strokeStyle = '#d97706';
     CTX.lineWidth   = 3;
     CTX.beginPath(); CTX.moveTo(-18, -6); CTX.lineTo(-18, -34); CTX.stroke();
     CTX.beginPath(); CTX.moveTo( 18, -6); CTX.lineTo( 18, -34); CTX.stroke();
 
-    // Awning canopy
     CTX.fillStyle = `rgba(250,204,21,${0.85 + glow * 0.15})`;
     CTX.beginPath();
     CTX.moveTo(-26, -34);
@@ -820,7 +653,6 @@ function drawShopObject() {
     CTX.lineWidth   = 1.5;
     CTX.stroke();
 
-    // Canopy scallops
     CTX.fillStyle = '#f59e0b';
     for (let i = 0; i < 5; i++) {
         CTX.beginPath();
@@ -828,7 +660,6 @@ function drawShopObject() {
         CTX.fill();
     }
 
-    // Emoji icons
     CTX.font         = '16px Arial';
     CTX.textAlign    = 'center';
     CTX.textBaseline = 'middle';
@@ -839,7 +670,6 @@ function drawShopObject() {
     CTX.font = '14px Arial';
     CTX.fillText('🪙', 0, -46 + coinBounce);
 
-    // Label
     CTX.shadowBlur   = 0;
     CTX.fillStyle    = '#fbbf24';
     CTX.font         = 'bold 7px Arial';
@@ -967,25 +797,17 @@ window.buyItem   = buyItem;
 // ══════════════════════════════════════════════════════════════
 
 function startNextWave() {
-    // ── Remove Glitch Wave HP bonus from the previous wave ────
-    // If _glitchWaveHpBonus > 0 the last wave was a Glitch Wave.
-    // We restore maxHp and clamp hp so the player doesn't retain
-    // the crisis buffer permanently. This must run BEFORE the new
-    // isGlitchWave flag is evaluated for the incoming wave.
     if (_glitchWaveHpBonus > 0 && player) {
         player.maxHp -= _glitchWaveHpBonus;
-        player.hp     = Math.min(player.hp, player.maxHp);   // clamp to new ceiling
+        player.hp     = Math.min(player.hp, player.maxHp);
         _glitchWaveHpBonus = 0;
         console.log('[GlitchWave] HP bonus removed — player.maxHp:', player.maxHp);
     }
 
-    // ── Reset glitch state from the wave that just ended ─────
     isGlitchWave     = false;
-    window.isGlitchWave = false;   // ← sync cross-script mirror
+    window.isGlitchWave = false;
     controlsInverted = false;
-    // glitchIntensity fades to 0 organically via the ramp in updateGame
 
-    // ── Reset any leftover grace-period lock ─────────────────
     waveSpawnLocked     = false;
     waveSpawnTimer      = 0;
     pendingSpawnCount   = 0;
@@ -998,17 +820,12 @@ function startNextWave() {
 
     const count = BALANCE.waves.enemiesBase + (getWave() - 1) * BALANCE.waves.enemiesPerWave;
 
-    // ── ⚡ Glitch Wave — every 5th wave ──────────────────────
     if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
         isGlitchWave     = true;
-        window.isGlitchWave = true;   // ← sync cross-script mirror (enemy.js reads this)
+        window.isGlitchWave = true;
         controlsInverted = true;
-        glitchIntensity  = 0;   // ramp starts immediately in updateGame
+        glitchIntensity  = 0;
 
-        // ── Player survivability bonus ────────────────────────
-        // Grant +100 maxHp AND +100 current hp as a "crisis buffer".
-        // The bonus is tracked in _glitchWaveHpBonus and removed
-        // cleanly at the start of the next wave.
         if (player) {
             const bonus       = 100;
             player.maxHp     += bonus;
@@ -1023,23 +840,15 @@ function startNextWave() {
             console.log(`[GlitchWave] HP bonus applied — player.maxHp: ${player.maxHp}, player.hp: ${player.hp}`);
         }
 
-        // ── Grace Period: queue the spawn horde, lock it ─────
-        // Spawn count divided by 1.5 vs the original ×2 so the double
-        // horde becomes ~×1.33 — still a significant threat but not
-        // outright punishing while controls are inverted.
         pendingSpawnCount   = Math.floor((count * 2) / 1.5);
         waveSpawnLocked     = true;
-        waveSpawnTimer      = BALANCE.waves.glitchGracePeriod / 1000; // convert ms → s
+        waveSpawnTimer      = BALANCE.waves.glitchGracePeriod / 1000;
         lastGlitchCountdown = -1;
 
-        // Immediate atmosphere — visuals and sound fire NOW.
-        // Y offsets raised by ~60 px vs original to clear the new
-        // Confused-state warning banner drawn at the bottom of the screen.
         spawnFloatingText('⚡ GLITCH WAVE ⚡', player.x, player.y - 200, '#d946ef', 44);
         addScreenShake(20);
         Audio.playBossSpecial();
 
-        // Staggered warning messages during the grace window
         setTimeout(() => {
             if (player)
                 spawnFloatingText('⚠️ SYSTEM ANOMALY DETECTED... ⚠️', player.x, player.y - 180, '#f472b6', 26);
@@ -1054,24 +863,22 @@ function startNextWave() {
         }, 2400);
 
     } else {
-        // ── Normal Wave: spawn enemies immediately ────────────
         spawnEnemies(count);
     }
 
     if (getWave() % BALANCE.waves.bossEveryNWaves === 0) {
         setTimeout(() => {
             bossEncounterCount++;
-            const isRider   = bossEncounterCount >= 2;
-            const isGoldfishLover = bossEncounterCount >= 3;  // Phase 3 on encounter 3+
-            const bossLevel = Math.floor(getWave() / BALANCE.waves.bossEveryNWaves);
+            const isRider         = bossEncounterCount >= 2;
+            const isGoldfishLover = bossEncounterCount >= 3;
+            const bossLevel       = Math.floor(getWave() / BALANCE.waves.bossEveryNWaves);
 
-            // Boss class now lives in entities.js
             window.boss = new Boss(bossLevel, isRider, isGoldfishLover);
             UIManager.updateBossHUD(window.boss);
 
-            const riderTag = isRider ? ' 🐕 DOG RIDER' : '';
-            const goldfishTag = isGoldfishLover ? ' 🐟 GOLDFISH LOVER' : '';
-            const bossNameEl = document.getElementById('boss-name');
+            const riderTag     = isRider ? ' 🐕 DOG RIDER' : '';
+            const goldfishTag  = isGoldfishLover ? ' 🐟 GOLDFISH LOVER' : '';
+            const bossNameEl   = document.getElementById('boss-name');
             if (bossNameEl) {
                 bossNameEl.innerHTML =
                     `KRU MANOP - LEVEL ${bossLevel}${riderTag}${goldfishTag} <span class="ai-badge">AI</span>`;
@@ -1086,13 +893,12 @@ function startNextWave() {
             addScreenShake(15);
             Audio.playBossSpecial();
         }, BALANCE.waves.bossSpawnDelay);
-        
+
         // Switch to boss BGM when boss spawns
         Audio.playBGM('boss');
     }
 }
 
-// Expose so Boss.takeDamage() (in entities.js) can call it via window.*
 window.startNextWave = startNextWave;
 
 function spawnEnemies(count) {
@@ -1115,14 +921,9 @@ function spawnEnemies(count) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 🕐 BULLET TIME — toggle, energy drain, visual overlay
+// 🕐 BULLET TIME
 // ══════════════════════════════════════════════════════════════
 
-/**
- * toggleSlowMotion()
- * Fired on 'T' keydown. Activates or deactivates Bullet Time.
- * Blocked when energy is below 5 % (nearly empty).
- */
 function toggleSlowMotion() {
     if (!isSlowMotion) {
         if (slowMoEnergy < 0.05) {
@@ -1141,10 +942,6 @@ function toggleSlowMotion() {
     }
 }
 
-/**
- * _tickSlowMoEnergy(realDt)
- * Called with REAL (unscaled) dt so drain/recharge tracks wall-clock time.
- */
 function _tickSlowMoEnergy(realDt) {
     if (isSlowMotion) {
         slowMoEnergy = Math.max(0, slowMoEnergy - SLOW_MO_DRAIN_RATE * realDt);
@@ -1158,23 +955,12 @@ function _tickSlowMoEnergy(realDt) {
     }
 }
 
-/**
- * drawSlowMoOverlay()
- * Post-process pass drawn AFTER the world CTX.restore().
- *   1. Radial vignette — cyan-tinted dark edges
- *   2. Chromatic aberration — red/blue ghost at ±2 px
- *   3. Letterbox bars — top & bottom cinema crop
- *   4. BULLET TIME badge — bottom-centre with animated energy bar
- *   5. Clock-tick particles around the player
- */
 function drawSlowMoOverlay() {
-    // Nothing to draw when at normal speed with a full energy tank
     if (!isSlowMotion && slowMoEnergy >= 1.0) return;
 
     const W   = CANVAS.width, H = CANVAS.height;
     const now = performance.now();
 
-    // ── 1. Radial vignette (cyan edge glow) ──────────────────
     if (isSlowMotion) {
         const vig = CTX.createRadialGradient(W / 2, H / 2, H * 0.22, W / 2, H / 2, H * 0.78);
         vig.addColorStop(0,    'rgba(0, 229, 255, 0.00)');
@@ -1183,27 +969,24 @@ function drawSlowMoOverlay() {
         CTX.fillStyle = vig;
         CTX.fillRect(0, 0, W, H);
 
-        // ── 2. Chromatic aberration (R / B channel ghosts) ───
         const offset = 2 + Math.sin(now / 80) * 0.8;
         CTX.save();
         CTX.globalCompositeOperation = 'screen';
         CTX.globalAlpha = 0.04;
         CTX.fillStyle   = '#ff0000';
-        CTX.fillRect(-offset, 0, W, H);   // red channel shifted left
+        CTX.fillRect(-offset, 0, W, H);
         CTX.fillStyle   = '#0000ff';
-        CTX.fillRect( offset, 0, W, H);   // blue channel shifted right
+        CTX.fillRect( offset, 0, W, H);
         CTX.globalAlpha = 1;
         CTX.globalCompositeOperation = 'source-over';
         CTX.restore();
 
-        // ── 3. Letterbox bars (top + bottom) ─────────────────
         const barH      = 28;
         const scanAlpha = 0.55 + Math.sin(now / 200) * 0.1;
         CTX.save();
         CTX.fillStyle = `rgba(0, 0, 0, ${scanAlpha})`;
         CTX.fillRect(0, 0,          W, barH);
         CTX.fillRect(0, H - barH,   W, barH);
-        // Cyan border line
         CTX.strokeStyle = 'rgba(0, 229, 255, 0.35)';
         CTX.lineWidth   = 1;
         CTX.beginPath(); CTX.moveTo(0, barH);     CTX.lineTo(W, barH);     CTX.stroke();
@@ -1211,12 +994,6 @@ function drawSlowMoOverlay() {
         CTX.restore();
     }
 
-    // ── 4. BULLET TIME badge + energy bar (bottom-centre) ────
-    // [UI-FIX] Raised from H-44 → H-140 to prevent overlap with the
-    // skill-slot row (stealth / eat-rice / naga icons) and mobile
-    // joystick / action-button strip at the very bottom of the screen.
-    // Badge footprint: from ~(H-174) down to ~(H-132) — a clear gap
-    // of ≥88px above the first HTML skill-bar row on a 1080p display.
     {
         const bx    = W / 2;
         const by    = H - 140;
@@ -1224,7 +1001,6 @@ function drawSlowMoOverlay() {
 
         CTX.save();
 
-        // Badge background
         const badgeW = SM_BAR_W / 2 + 20;
         const badgeH = 30;
         CTX.fillStyle = isSlowMotion
@@ -1233,14 +1009,12 @@ function drawSlowMoOverlay() {
         _roundRectPath(CTX, bx - badgeW, by - badgeH - 4, badgeW * 2, badgeH + 18, 8);
         CTX.fill();
 
-        // Badge border
         CTX.strokeStyle = isSlowMotion
             ? `rgba(0, 229, 255, ${0.55 + pulse * 0.35})`
             : 'rgba(0, 229, 255, 0.22)';
         CTX.lineWidth = 1.5;
         CTX.stroke();
 
-        // Label text
         if (isSlowMotion) {
             CTX.shadowBlur  = 12 + pulse * 8;
             CTX.shadowColor = '#00e5ff';
@@ -1254,14 +1028,12 @@ function drawSlowMoOverlay() {
         CTX.fillText(isSlowMotion ? '🕐 BULLET TIME' : '⚡ RECHARGING', bx, by - badgeH + 8);
         CTX.shadowBlur = 0;
 
-        // Energy bar track
         const barX = bx - SM_BAR_W / 2;
         const barY = by - 6;
         CTX.fillStyle = 'rgba(0, 30, 40, 0.8)';
         _roundRectPath(CTX, barX, barY, SM_BAR_W, SM_BAR_H, 4);
         CTX.fill();
 
-        // Energy bar fill (shifts from cyan → red as energy drains)
         const fillW = SM_BAR_W * slowMoEnergy;
         const r     = Math.round(lerp(0,   220, 1 - slowMoEnergy));
         const g     = Math.round(lerp(229, 60,  1 - slowMoEnergy));
@@ -1273,12 +1045,11 @@ function drawSlowMoOverlay() {
             if (isSlowMotion) {
                 CTX.shadowBlur  = 8;
                 CTX.shadowColor = `rgb(${r}, ${g}, ${b})`;
-                CTX.fill(); // second fill for glow bloom
+                CTX.fill();
                 CTX.shadowBlur  = 0;
             }
         }
 
-        // Tick marks dividing bar into fifths
         CTX.strokeStyle = 'rgba(0, 0, 0, 0.35)';
         CTX.lineWidth   = 1;
         for (let i = 1; i < 5; i++) {
@@ -1286,7 +1057,6 @@ function drawSlowMoOverlay() {
             CTX.beginPath(); CTX.moveTo(tx, barY); CTX.lineTo(tx, barY + SM_BAR_H); CTX.stroke();
         }
 
-        // Percentage label
         CTX.fillStyle = 'rgba(200, 240, 255, 0.7)';
         CTX.font      = 'bold 9px Arial';
         CTX.fillText(`${Math.round(slowMoEnergy * 100)}%`, bx + SM_BAR_W / 2 + 16, barY + SM_BAR_H / 2);
@@ -1294,7 +1064,6 @@ function drawSlowMoOverlay() {
         CTX.restore();
     }
 
-    // ── 5. Clock-tick particles around player (slow-mo only) ─
     if (isSlowMotion && player && Math.random() < 0.18) {
         const screen = typeof worldToScreen === 'function'
             ? worldToScreen(player.x, player.y)
@@ -1319,12 +1088,6 @@ function drawSlowMoOverlay() {
     }
 }
 
-/**
- * _roundRectPath(ctx, x, y, w, h, r)
- * Draws a rounded-rect path on ctx.
- * Kept here because it is only used by drawSlowMoOverlay.
- * Provides a fallback for environments that lack ctx.roundRect().
- */
 function _roundRectPath(ctx, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -1347,23 +1110,21 @@ window.toggleSlowMotion = toggleSlowMotion;
 // ══════════════════════════════════════════════════════════════
 
 function gameLoop(now) {
-    const dt = getDeltaTime(now); // real-world (unscaled) frame delta
+    const dt = getDeltaTime(now);
 
-    // Bullet Time energy always ticks at real speed
     if (gameState === 'PLAYING') {
         _tickSlowMoEnergy(dt);
     }
 
-    // All game-world simulation uses the scaled dt
     const scaledDt = dt * timeScale;
-    window.timeScale = timeScale; // expose for Matrix Dash (player.js) and base.js
-    _lastDrawDt    = scaledDt;   // cache for UIManager.draw(CTX, _lastDrawDt) in drawGame()
+    window.timeScale = timeScale;
+    _lastDrawDt    = scaledDt;
 
     if (gameState === 'PLAYING') {
         updateGame(scaledDt);
         drawGame();
     } else if (gameState === 'PAUSED') {
-        drawGame(); // keep world visible behind modals
+        drawGame();
         const shopModal = document.getElementById('shop-modal');
         if (shopModal && shopModal.style.display === 'flex') {
             ShopManager.tick();
@@ -1377,8 +1138,6 @@ function updateGame(dt) {
     updateCamera(player.x, player.y);
     updateMouseWorld();
 
-    // ── ⚡ Glitch intensity ramp ──────────────────────────────
-    // Ramps up to 1.0 over ~1.25 s when active; fades out 2× faster when off
     const GLITCH_RAMP = 0.8;
     if (isGlitchWave) {
         glitchIntensity = Math.min(1.0, glitchIntensity + GLITCH_RAMP * dt);
@@ -1386,15 +1145,9 @@ function updateGame(dt) {
         glitchIntensity = Math.max(0.0, glitchIntensity - GLITCH_RAMP * 2 * dt);
     }
 
-    // ── ⚡ Glitch Wave — Spawn Grace Period countdown ─────────
-    // While waveSpawnLocked is true, enemies have not yet spawned.
-    // We count down using scaled dt (Bullet Time slows it too — intentional:
-    // the player can use Bullet Time to buy even more breathing room).
-    // When the timer hits zero: release the full horde.
     if (waveSpawnLocked) {
         waveSpawnTimer -= dt;
 
-        // Whole-second countdown announcements (3 … 2 … 1)
         const secsLeft = Math.ceil(waveSpawnTimer);
         if (secsLeft !== lastGlitchCountdown && secsLeft > 0 && secsLeft <= 3) {
             lastGlitchCountdown = secsLeft;
@@ -1406,7 +1159,6 @@ function updateGame(dt) {
             addScreenShake(6);
         }
 
-        // Grace period expired — release the horde
         if (waveSpawnTimer <= 0) {
             waveSpawnLocked     = false;
             lastGlitchCountdown = -1;
@@ -1417,7 +1169,6 @@ function updateGame(dt) {
         }
     }
 
-    // ── Day / Night cycle (driven by BALANCE.LIGHTING in config.js) ──
     dayNightTimer += dt;
     {
         const L        = BALANCE.LIGHTING;
@@ -1426,7 +1177,6 @@ function updateGame(dt) {
         L.ambientLight = L.nightMinLight + dayPhase * (L.dayMaxLight - L.nightMinLight);
     }
 
-    // ── Shop buff timers ──────────────────────────────────────
     if (player.shopDamageBoostActive) {
         player.shopDamageBoostTimer -= dt;
         if (player.shopDamageBoostTimer <= 0) {
@@ -1447,7 +1197,6 @@ function updateGame(dt) {
         }
     }
 
-    // ── Interaction key checks ────────────────────────────────
     const dToServer = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
 
     if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
@@ -1469,8 +1218,6 @@ function updateGame(dt) {
         return;
     }
 
-    // ── Player ────────────────────────────────────────────────
-    // During Glitch Wave, W↔S and A↔D are swapped
     const effectiveKeys = controlsInverted
         ? { ...keys, w: keys.s, s: keys.w, a: keys.d, d: keys.a }
         : keys;
@@ -1486,7 +1233,6 @@ function updateGame(dt) {
                 const projectiles = weaponSystem.shoot(player, player.damageBoost);
                 if (projectiles && projectiles.length > 0) {
                     projectileManager.add(projectiles);
-                    // ✅ v11: trigger weapon recoil animation on Kao (see player.js)
                     if (typeof player.triggerRecoil === 'function') player.triggerRecoil();
                 }
             }
@@ -1506,12 +1252,10 @@ function updateGame(dt) {
         UIManager.updateSkillIcons(player);
     }
 
-    // ── Drone ─────────────────────────────────────────────────
     if (window.drone && player && !player.dead) {
         window.drone.update(dt, player);
     }
 
-    // ── Boss & Enemies ────────────────────────────────────────
     if (boss) boss.update(dt, player);
 
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -1519,10 +1263,6 @@ function updateGame(dt) {
         if (enemies[i].dead) enemies.splice(i, 1);
     }
 
-    // ── Wave progression ──────────────────────────────────────
-    // Guard: skip advancement if spawn is still locked (grace period active).
-    // Without this guard, 0 enemies during the countdown would instantly
-    // trigger the next wave before the glitch horde ever appears.
     if (getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss && !waveSpawnLocked) {
         if (Achievements.stats.damageTaken === waveStartDamage &&
             getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
@@ -1533,13 +1273,11 @@ function updateGame(dt) {
         startNextWave();
     }
 
-    // ── Special effects ───────────────────────────────────────
     for (let i = specialEffects.length - 1; i >= 0; i--) {
         const remove = specialEffects[i].update(dt, player, meteorZones);
         if (remove) specialEffects.splice(i, 1);
     }
 
-    // ── Projectiles / Power-ups / Meteor zones ────────────────
     projectileManager.update(dt, player, enemies, boss);
 
     for (let i = powerups.length - 1; i >= 0; i--) {
@@ -1554,22 +1292,12 @@ function updateGame(dt) {
         if (meteorZones[i].life <= 0) meteorZones.splice(i, 1);
     }
 
-    // ── Systems ───────────────────────────────────────────────
-    // ✅ BUG 1 FIX: pass dt into mapSystem.update() so MTCRoom receives the
-    // correct scaled delta time instead of calling getDeltaTime() internally,
-    // which was corrupting lastTime and making the safe zone heal 16× too slowly.
     mapSystem.update([player, ...enemies, boss].filter(e => e && !e.dead), dt);
     particleSystem.update(dt);
     floatingTextSystem.update(dt);
 
-    // ✅ v11: hitMarkerSystem wired into the update loop.
-    // Manages the brief X-crosshair markers spawned by projectile impacts.
-    // Kept after floatingTextSystem so draw order mirrors update order.
     if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.update(dt);
 
-    // ✅ WARN 1 FIX: wire the weather system into the update loop.
-    // getCamera() returns the utils.js camera object (x/y world offset).
-    // weatherSystem is a global singleton from effects.js.
     weatherSystem.update(dt, getCamera());
 
     updateScreenShake();
@@ -1580,9 +1308,6 @@ function updateGame(dt) {
 }
 
 function drawGame() {
-    // ── 🔴 DIAGNOSTIC — gated behind DEBUG_MODE (WARN 2 FIX) ─────────────────
-    // Set DEBUG_MODE = true at the top of this file to re-enable.
-    // NEVER commit as true: fires every 5s at 60fps with string concatenation GC cost.
     if (!drawGame._diagFrame) drawGame._diagFrame = 0;
     drawGame._diagFrame++;
     if (DEBUG_MODE && drawGame._diagFrame % 300 === 1) {
@@ -1596,7 +1321,6 @@ function drawGame() {
         );
     }
 
-    // Background gradient
     const grad = CTX.createLinearGradient(0, 0, 0, CANVAS.height);
     grad.addColorStop(0, GAME_CONFIG.visual.bgColorTop);
     grad.addColorStop(1, GAME_CONFIG.visual.bgColorBottom);
@@ -1609,7 +1333,6 @@ function drawGame() {
 
     drawGrid();
 
-    // Meteor zones
     for (const z of meteorZones) {
         const screen = worldToScreen(z.x, z.y);
         const a = Math.sin(performance.now() / 200) * 0.3 + 0.7;
@@ -1619,12 +1342,10 @@ function drawGame() {
         CTX.fill();
     }
 
-    // World objects
     mapSystem.draw();
     drawDatabaseServer();
     drawShopObject();
 
-    // Power-ups (cull off-screen)
     for (const p of powerups) {
         if (p.isOnScreen ? p.isOnScreen(60) : true) p.draw();
     }
@@ -1635,42 +1356,28 @@ function drawGame() {
 
     player.draw();
 
-    // Enemies (cull off-screen)
     for (const e of enemies) {
         if (e.isOnScreen(80)) e.draw();
     }
 
-    // Boss (cull off-screen with generous buffer for large sprite)
     if (boss && !boss.dead && boss.isOnScreen(200)) boss.draw();
 
     projectileManager.draw();
     particleSystem.draw();
     floatingTextSystem.draw();
 
-    // ✅ v11: Draw hit-marker crosshairs (X-shaped impact indicators from weapons.js).
-    // Drawn AFTER projectiles + particles so markers appear on top of debris.
-    // Drawn BEFORE weather so rain/snow composites on top of combat effects.
     if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.draw();
 
-    // ✅ WARN 1 FIX: draw weather particles in world-space (before CTX.restore)
-    // so they are correctly offset by the camera and screen-shake translation.
-    // weatherSystem.draw() is a no-op when mode === 'none', so this is zero-cost
-    // when weather is disabled.
     weatherSystem.draw();
 
-    CTX.restore(); // ← end of world-space transform
+    CTX.restore();
 
-    // ── Lighting pass (screen-space, after world restore) ────
-    // ✅ MINIMAP FIX: Wrapped in CTX.save()/restore() to FULLY CONTAIN any
-    //    globalCompositeOperation / globalAlpha changes made by drawLighting().
-    //    Without this wrapper, blend modes leak into UIManager.draw() and make
-    //    the entire minimap invisible (draws in "destination-out" or similar).
     {
         const allProj = (typeof projectileManager !== 'undefined' && projectileManager.projectiles)
             ? projectileManager.projectiles
             : [];
 
-        CTX.save();   // ← isolate lighting blend modes
+        CTX.save();
         mapSystem.drawLighting(player, allProj, [
             {
                 x:      MTC_DATABASE_SERVER.x,
@@ -1685,28 +1392,17 @@ function drawGame() {
                 type:   'warm'
             }
         ]);
-        CTX.restore(); // ← restore composite/alpha state before HUD draws
+        CTX.restore();
     }
 
     drawDayNightHUD();
 
-    // ── Full-screen overlays ─────────────────────────────────
-    // These paint over the ENTIRE canvas, so they must run BEFORE the HUD.
-    drawSlowMoOverlay(); // 🕐 no-op when normal speed + full energy
+    drawSlowMoOverlay();
 
-    // ⚡ Glitch Wave overlay — glitchIntensity > 0 even briefly after wave ends
     if (glitchIntensity > 0) {
         drawGlitchEffect(glitchIntensity, controlsInverted);
     }
 
-    // ── HUD overlay pass — DRAWN ABSOLUTELY LAST ─────────────
-    // ✅ MINIMAP FIX: UIManager.draw() moved to after ALL full-screen overlays
-    //    (lighting, slow-mo vignette, glitch effect). Previously it was called
-    //    before drawSlowMoOverlay() — the letterbox + vignette painted over it
-    //    every frame. Now the radar is guaranteed to be on top of everything.
-    //
-    //    _lastDrawDt was cached in gameLoop() this frame so UIManager.draw()
-    //    can animate the combo timer without changing drawGame()'s signature.
     if (typeof UIManager !== 'undefined' && UIManager.draw) {
         UIManager.draw(CTX, _lastDrawDt);
     }
@@ -1721,18 +1417,12 @@ function drawDayNightHUD() {
     const phase  = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight);
     const isDawn = phase > 0.5;
 
-    // [UI-FIX] Moved from top-RIGHT (cx = CANVAS.width - 52, cy = 52) to
-    // top-LEFT so it no longer overlaps the tactical minimap/radar which
-    // occupies top-right (cx = canvas.width - 80, cy = 80, r = 60).
-    // The left-side score / wave HUD elements are HTML overlays on a
-    // different layer, so pure canvas drawing here has no z-index conflict.
     const cx = 52;
     const cy = 52;
     const r  = 24;
 
     CTX.save();
 
-    // Halo ring
     CTX.fillStyle   = isDawn ? 'rgba(255, 210, 80, 0.18)' : 'rgba(80, 110, 255, 0.18)';
     CTX.strokeStyle = isDawn ? 'rgba(255, 210, 80, 0.55)' : 'rgba(130, 160, 255, 0.55)';
     CTX.lineWidth   = 2;
@@ -1741,7 +1431,6 @@ function drawDayNightHUD() {
     CTX.fill();
     CTX.stroke();
 
-    // Arc progress
     CTX.strokeStyle = isDawn ? '#fbbf24' : '#818cf8';
     CTX.lineWidth   = 3.5;
     CTX.lineCap     = 'round';
@@ -1752,13 +1441,11 @@ function drawDayNightHUD() {
     CTX.stroke();
     CTX.shadowBlur = 0;
 
-    // Emoji icon
     CTX.font         = `${r}px Arial`;
     CTX.textAlign    = 'center';
     CTX.textBaseline = 'middle';
     CTX.fillText(isDawn ? '☀️' : '🌙', cx, cy);
 
-    // Percentage label
     CTX.fillStyle    = isDawn ? '#fde68a' : '#c7d2fe';
     CTX.font         = 'bold 8px Arial';
     CTX.textAlign    = 'center';
@@ -1818,8 +1505,6 @@ async function initAI() {
     const brief = document.getElementById('mission-brief');
     if (!brief) { console.warn('⚠️ mission-brief not found'); return; }
 
-    // Gemini is always defined here — the global mock at the top of this file
-    // guarantees it, even when ai.js is not loaded.
     brief.textContent = "กำลังโหลดภารกิจ...";
     try {
         const name = await Gemini.getMissionName();
@@ -1832,9 +1517,15 @@ async function initAI() {
 
 function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
-    Audio.init();
-    
-    // Start BGM for battle
+    // ── BGM FIX: Audio.init() is called ONCE in window.onload (below).
+    // Do NOT call it here. Calling Audio.init() inside startGame() would:
+    //   1. Re-create the AudioContext (wasteful, may cause a browser warning).
+    //   2. Re-register the interaction listener — but the click that triggered
+    //      startGame() already fired, so userInteracted would reset to false
+    //      and Audio.playBGM('battle') would be silently discarded again.
+    //
+    // By the time startGame() runs, the user has already clicked "Start Game",
+    // so userInteracted is already true and playBGM plays immediately.
     Audio.playBGM('battle');
 
     const savedData = getSaveData();
@@ -1850,7 +1541,6 @@ function startGame(charType = 'kao') {
 
     enemies = []; powerups = []; specialEffects = []; meteorZones = [];
     boss    = null;
-    // Ensure strict global cleanup (other files read window.boss)
     window.boss = null;
 
     dayNightTimer  = 0;
@@ -1859,13 +1549,11 @@ function startGame(charType = 'kao') {
     bossEncounterCount = 0;
     console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
 
-    // Reset Bullet Time
     isSlowMotion = false;
     timeScale    = 1.0;
     slowMoEnergy = 1.0;
     console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
 
-    // Reset Glitch Wave state (including HP bonus and cross-script mirror)
     isGlitchWave        = false;
     window.isGlitchWave = false;
     glitchIntensity     = 0;
@@ -1877,7 +1565,6 @@ function startGame(charType = 'kao') {
     lastGlitchCountdown = -1;
     console.log('⚡ Glitch Wave grace period reset');
 
-    // Reset shop buff state
     player.shopDamageBoostActive = false;
     player.shopDamageBoostTimer  = 0;
     player._baseDamageBoost      = undefined;
@@ -1885,14 +1572,12 @@ function startGame(charType = 'kao') {
     player.shopSpeedBoostTimer   = 0;
     player._baseMoveSpeed        = undefined;
 
-    // Engineering Drone
     window.drone   = new Drone();
     window.drone.x = player.x;
     window.drone.y = player.y;
     spawnFloatingText('🤖 DRONE ONLINE', player.x, player.y - 90, '#00e5ff', 20);
     console.log('🤖 Engineering Drone initialised');
 
-    // Reset weather system to ensure no stale particles from a previous run
     weatherSystem.clear();
 
     UIManager.updateBossHUD(null);
@@ -1924,7 +1609,6 @@ function startGame(charType = 'kao') {
     showResumePrompt(false);
     ShopManager.close();
 
-    // Ensure admin console is clean
     if (AdminConsole.isOpen) AdminConsole.close();
     const consoleOutput = document.getElementById('console-output');
     if (consoleOutput) consoleOutput.innerHTML = '';
@@ -1949,8 +1633,7 @@ function startGame(charType = 'kao') {
 
 async function endGame(result) {
     gameState = 'GAMEOVER';
-    
-    // Stop BGM on game over
+
     Audio.stopBGM();
 
     const mobileUI = document.getElementById('mobile-ui');
@@ -1963,19 +1646,15 @@ async function endGame(result) {
 
     window.drone = null;
 
-    // Ensure Bullet Time is fully off on game over
     isSlowMotion = false;
     timeScale    = 1.0;
 
-    // Clear Glitch Wave state (including window mirror) so the next run starts clean
     isGlitchWave        = false;
     window.isGlitchWave = false;
     _glitchWaveHpBonus  = 0;
 
-    // Clear weather on game over so particles don't linger on the game-over screen
     weatherSystem.clear();
 
-    // Persist high score
     {
         const runScore = getScore();
         const existing = getSaveData();
@@ -2005,8 +1684,6 @@ async function endGame(result) {
         if (ld) ld.style.display = 'block';
         const reportText = document.getElementById('report-text');
 
-        // Gemini is always defined here — the global mock at the top of this file
-        // guarantees a safe fallback string when ai.js is not loaded.
         try {
             const comment = await Gemini.getReportCard(finalScore, finalWave);
             if (ld) ld.style.display = 'none';
@@ -2029,9 +1706,30 @@ window.endGame   = endGame;
 window.onload = () => {
     console.log('🚀 Initializing game...');
     initCanvas();
-    InputSystem.init(); // ← wires keyboard, mouse, and mobile touch controls
+    InputSystem.init();
     initAI();
-    
-    // Start menu BGM
+
+    // ── BGM FIX: Audio.init() moved here from startGame() ────────────────
+    // Initialise the AudioContext and register the one-time interaction
+    // listeners (click / keydown / touchstart) ONCE at page load.
+    //
+    // This must happen BEFORE Audio.playBGM('menu') so that:
+    //   a) The interaction listeners are in place when the menu BGM is queued.
+    //   b) When the user eventually clicks anything on the menu, enableAudio()
+    //      fires, userInteracted becomes true, and _pendingBGM ('menu') plays.
+    //
+    // Previously Audio.init() lived inside startGame(), which caused two bugs:
+    //   • Menu BGM: Audio.init() was never called before playBGM('menu'), so
+    //     userInteracted was always false and menu BGM was always discarded.
+    //   • Battle BGM: Audio.init() was called inside the same click handler
+    //     that triggered startGame() — the click fired BEFORE the new listener
+    //     was attached, so userInteracted never flipped to true, and battle
+    //     BGM was discarded too.
+    Audio.init();
+
+    // Queue menu BGM. userInteracted is false right now (page just loaded,
+    // no gesture yet), so playBGM stores 'menu' in _pendingBGM and returns.
+    // The instant the user clicks or presses any key on the menu screen,
+    // enableAudio fires and the menu track starts playing.
     Audio.playBGM('menu');
 };

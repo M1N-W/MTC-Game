@@ -88,6 +88,16 @@ class AudioSystem {
         // autoplay policy blocks playback.  Cleared on successful play or stop.
         this._bgmWaitingForInteraction = false;
 
+        // ── BGM queue for pre-interaction calls ───────────────────────────────
+        // When playBGM() is called before the user has interacted with the page
+        // (e.g. menu BGM requested from window.onload before any click/key),
+        // the requested type is stored here.  setupUserInteractionListener()'s
+        // enableAudio callback reads this field and plays it the moment the
+        // browser allows audio output.
+        // Rule: always holds the MOST RECENT requested type so a later call
+        // (e.g. 'battle' requested while 'menu' is still pending) wins.
+        this._pendingBGM = null;
+
         // Retry handler guard flag — prevents duplicate retry listeners
         this._retryHandlerActive = false;
         
@@ -110,16 +120,36 @@ class AudioSystem {
     }
     
     setupUserInteractionListener() {
-        // Enable BGM after first user interaction (click, keypress, etc.)
+        // Enable BGM after first user interaction (click, keypress, touchstart).
+        //
+        // WHY THIS MATTERS FOR MENU / BATTLE BGM:
+        //   Browsers block audio autoplay until the user makes a gesture.
+        //   window.onload fires before any gesture, so Audio.playBGM('menu')
+        //   is called while userInteracted is still false — it stores the type
+        //   in _pendingBGM and returns.  The moment enableAudio fires below,
+        //   we play that pending track.  By the time startGame() calls
+        //   Audio.playBGM('battle'), userInteracted is already true (the user
+        //   clicked the Start button), so 'battle' plays immediately and also
+        //   overwrites any _pendingBGM that hasn't fired yet.
         const enableAudio = () => {
             this.userInteracted = true;
-            document.removeEventListener('click', enableAudio);
-            document.removeEventListener('keydown', enableAudio);
-            document.removeEventListener('touchstart', enableAudio);
+
+            // Resume WebAudio context if it was suspended by autoplay policy
+            this._ensureAudioContextRunning();
+
+            // Play any BGM that was requested before the first interaction
+            if (this._pendingBGM) {
+                const type        = this._pendingBGM;
+                this._pendingBGM  = null;
+                console.log(`🎵 User interacted — playing queued BGM: ${type}`);
+                this.playBGM(type);
+            }
         };
-        
-        document.addEventListener('click', enableAudio, { once: true });
-        document.addEventListener('keydown', enableAudio, { once: true });
+
+        // {once: true} means each listener auto-removes after firing once,
+        // so we don't need manual removeEventListener calls inside the callback.
+        document.addEventListener('click',      enableAudio, { once: true });
+        document.addEventListener('keydown',    enableAudio, { once: true });
         document.addEventListener('touchstart', enableAudio, { once: true });
     }
 
@@ -622,16 +652,52 @@ class AudioSystem {
     // ── BGM MANAGER SYSTEM ───────────────────────────────────────────────────────
 
     playBGM(type) {
-        if (!this.enabled || !this.userInteracted) {
-            console.log('🎵 BGM waiting for user interaction...');
-            return;
-        }
+        if (!this.enabled) return;
 
         const bgmPath = GAME_CONFIG.audio.bgmPaths[type];
         if (!bgmPath || bgmPath.trim() === '') {
             console.log('🎵 BGM path is empty, skipping.');
             return;
         }
+
+        // ── PRE-INTERACTION QUEUE ─────────────────────────────────────────────
+        // Browsers block audio autoplay until a user gesture has occurred.
+        //
+        // Root problem (menu + battle BGM never playing):
+        //   • window.onload calls Audio.playBGM('menu') before ANY interaction
+        //     → userInteracted is false → old code returned immediately,
+        //     silently discarding the request.
+        //   • startGame() calls Audio.init() then Audio.playBGM('battle')
+        //     in the same synchronous stack as the "Start" button click.
+        //     Audio.init() calls setupUserInteractionListener() — but the click
+        //     that triggered startGame() already fired BEFORE the listener was
+        //     attached, so userInteracted never became true.
+        //     Battle BGM was therefore also silently discarded.
+        //   • Boss BGM worked only because by Wave 3 the user had pressed keys
+        //     and clicked many times AFTER Audio.init(), so userInteracted had
+        //     eventually been set to true by those later events.
+        //
+        // Fix: instead of returning and discarding, store the type in
+        //   _pendingBGM (most-recent requested type wins), then return.
+        //   setupUserInteractionListener()'s enableAudio callback detects this
+        //   field and calls playBGM(type) the instant the user first interacts.
+        //
+        // Timeline after fix:
+        //   window.onload  → Audio.init() → playBGM('menu')
+        //                    userInteracted=false → _pendingBGM='menu', return
+        //   user clicks "Start Game"
+        //     → enableAudio fires → userInteracted=true
+        //     → _pendingBGM='menu' → playBGM('menu') → menu BGM starts
+        //     → startGame() → playBGM('battle') → stopBGM() + battle BGM starts
+        //   Wave 3 boss → playBGM('boss') → stopBGM() + boss BGM starts
+        if (!this.userInteracted) {
+            console.log(`🎵 BGM queued until user interaction: ${type}`);
+            this._pendingBGM = type;   // most-recent requested type always wins
+            return;
+        }
+
+        // Clear any pending BGM since we're now playing a real track
+        this._pendingBGM = null;
 
         // Stop any currently playing BGM before starting the new track
         this.stopBGM();
@@ -752,6 +818,10 @@ class AudioSystem {
     }
 
     stopBGM() {
+        // Clear any queued-but-not-yet-played BGM so it doesn't
+        // accidentally fire after the game state has changed.
+        this._pendingBGM = null;
+
         if (this.bgmAudio) {
             // Remove the loop-end safety listener to prevent memory leaks
             if (this._bgmEndedListener) {
