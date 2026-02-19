@@ -274,6 +274,43 @@ class Player extends Entity {
         this.cooldowns.stealth = this.stats.stealthCooldown;
     }
 
+    /**
+     * dash(ax, ay)
+     * Launches a short directional burst, spawns blue ghost trail images,
+     * and grants i-frames for the 200 ms dash window.
+     *
+     * BUG FIX: This method was previously missing from Player entirely —
+     * it only existed on PoomPlayer. Player.update() called this.dash()
+     * unconditionally on [Space], causing "this.dash is not a function"
+     * the moment Kao was selected.
+     */
+    dash(ax, ay) {
+        const S = this.stats;
+        if (this.isDashing) return;                      // guard re-entry
+        this.isDashing      = true;
+        this.cooldowns.dash = S.dashCooldown;
+
+        const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
+        this.vx = Math.cos(angle) * (S.dashDistance / 0.2);
+        this.vy = Math.sin(angle) * (S.dashDistance / 0.2);
+
+        // Ghost trail — staggered snapshots captured during the dash window
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                if (!this.dead) {
+                    this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
+                }
+            }, i * 30);
+        }
+
+        spawnParticles(this.x, this.y, 15, '#60a5fa');   // Kao blue
+        Audio.playDash();
+        Achievements.stats.dashes++;
+        Achievements.check('speedster');
+
+        setTimeout(() => { if (!this.dead) this.isDashing = false; }, 200);
+    }
+
     checkPassiveUnlock() {
         const S = this.stats;
         if (!this.passiveUnlocked && this.level >= S.passiveUnlockLevel && this.stealthUseCount >= S.passiveUnlockStealthCount) {
