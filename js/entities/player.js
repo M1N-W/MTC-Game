@@ -38,10 +38,8 @@
  *
  * ✅ CRIT 2 — NagaEntity now extends Entity: super(startX, startY, S.nagaRadius)
  *             is called in the constructor, providing applyPhysics, isOnScreen,
- *             and a canonical dead/hp/radius interface.  The redundant manual
+ *             and a canonical dead/hp/radius interface. The redundant manual
  *             this.radius assignment has been removed.
- *             Movement target changed from global `mouse` to `player.x/y` —
- *             more design-consistent and removes the hidden global dependency.
  *
  * ✅ WARN 1 — Dash Safety: Both Player.dash() and PoomPlayer.dash() now guard
  *             their setTimeout callbacks with `if (!this.dead)` so ghost frames
@@ -51,6 +49,20 @@
  *               afterImages  (capital I) → dashGhosts
  *               afterimages  (lowercase) → standGhosts
  *             All references in this file and in base.js updated accordingly.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * FIXES (Build Debugger — Zone 3)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ BUG A — Incomplete Prototype Sharing: Added
+ *             PoomPlayer.prototype.checkPassiveUnlock = Player.prototype.checkPassiveUnlock
+ *             to the Option B block. checkPassiveUnlock() is called from inside
+ *             the shared levelUp() — without this assignment, levelling up as
+ *             Poom threw "this.checkPassiveUnlock is not a function".
+ *
+ * ✅ BUG B — Naga Behaviour Reverted: NagaEntity.update() movement target
+ *             changed back to mouse.wx / mouse.wy (from player.x / player.y).
+ *             The mouse-tracking design is intentional — it allows the player
+ *             to actively aim and steer the Naga during its lifetime.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -940,9 +952,9 @@ class NagaEntity extends Entity {
         if (this.life <= 0) return true;
 
         const head = this.segments[0];
-        // Follow the player position rather than the global mouse cursor —
-        // more game-design-consistent and removes the global-scope dependency.
-        const dx = player.x - head.x, dy = player.y - head.y;
+        // Follows the mouse cursor so the player can actively aim and direct the
+        // Naga — reverted from player.x/y back to the original mouse-tracking design.
+        const dx = mouse.wx - head.x, dy = mouse.wy - head.y;
         const d = Math.hypot(dx, dy);
         if (d > 8) {
             const step = Math.min(this.speed * dt, d);
@@ -1230,11 +1242,14 @@ class BarkWave {
 //
 // NOTE: PoomPlayer.prototype.checkObstacleProximity is handled
 // separately above (line ~891) as part of the WARN 5 fix.
-PoomPlayer.prototype.takeDamage    = Player.prototype.takeDamage;
-PoomPlayer.prototype.heal          = Player.prototype.heal;
-PoomPlayer.prototype.gainExp       = Player.prototype.gainExp;
-PoomPlayer.prototype.levelUp       = Player.prototype.levelUp;
-PoomPlayer.prototype.addSpeedBoost = Player.prototype.addSpeedBoost;
+PoomPlayer.prototype.takeDamage         = Player.prototype.takeDamage;
+PoomPlayer.prototype.heal               = Player.prototype.heal;
+PoomPlayer.prototype.gainExp            = Player.prototype.gainExp;
+PoomPlayer.prototype.levelUp            = Player.prototype.levelUp;
+PoomPlayer.prototype.addSpeedBoost      = Player.prototype.addSpeedBoost;
+// checkPassiveUnlock is called inside the shared levelUp — PoomPlayer must
+// also have it, otherwise levelUp throws "this.checkPassiveUnlock is not a function".
+PoomPlayer.prototype.checkPassiveUnlock = Player.prototype.checkPassiveUnlock;
 
 // ─── Mobile patch ─────────────────────────────────────────────
 // ✅ BUG 2 FIX: Removed the redundant velocity block that was

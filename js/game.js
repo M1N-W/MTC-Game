@@ -73,6 +73,15 @@ const DEBUG_MODE = false;
  * ✅ BUG 1:  mapSystem.update() now receives scaled dt so MTCRoom heals correctly.
  * ✅ WARN 1: weatherSystem.update() and weatherSystem.draw() wired into the loop.
  * ✅ WARN 2: Diagnostic console.log gated behind DEBUG_MODE flag.
+ *
+ * FIXES (Build Debugger — Zone 3):
+ * ✅ BUG C — Gemini Guard (initAI): Wrapped Gemini.getMissionName() with
+ *             `if (typeof Gemini !== 'undefined')` so the menu mission text
+ *             falls back gracefully instead of throwing a ReferenceError when
+ *             ai.js is commented out in index.html.
+ * ✅ BUG D — Gemini Guard (endGame): Wrapped Gemini.getReportCard() with the
+ *             same guard. When Gemini is absent the report card immediately shows
+ *             the fallback Thai string rather than crashing the game-over screen.
  */
 
 // ─── Game State ───────────────────────────────────────────────
@@ -1656,6 +1665,14 @@ function shootPoom(player) {
 async function initAI() {
     const brief = document.getElementById('mission-brief');
     if (!brief) { console.warn('⚠️ mission-brief not found'); return; }
+
+    // Guard: Gemini may be absent when ai.js is commented out in index.html.
+    // Fall back to the default Thai mission name so the menu is never blank.
+    if (typeof Gemini === 'undefined') {
+        brief.textContent = 'ภารกิจ "พิชิตครูมานพ"';
+        return;
+    }
+
     brief.textContent = "กำลังโหลดภารกิจ...";
     try {
         const name = await Gemini.getMissionName();
@@ -1815,14 +1832,22 @@ async function endGame(result) {
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';
         const reportText = document.getElementById('report-text');
-        try {
-            const comment = await Gemini.getReportCard(finalScore, finalWave);
-            if (ld) ld.style.display = 'none';
-            if (reportText) reportText.textContent = comment;
-        } catch (e) {
-            console.warn('Failed to get AI report card:', e);
+
+        // Guard: Gemini may be absent when ai.js is commented out in index.html.
+        // Show the default fallback comment immediately instead of throwing.
+        if (typeof Gemini === 'undefined') {
             if (ld) ld.style.display = 'none';
             if (reportText) reportText.textContent = 'ตั้งใจเรียนให้มากกว่านี้นะ...';
+        } else {
+            try {
+                const comment = await Gemini.getReportCard(finalScore, finalWave);
+                if (ld) ld.style.display = 'none';
+                if (reportText) reportText.textContent = comment;
+            } catch (e) {
+                console.warn('Failed to get AI report card:', e);
+                if (ld) ld.style.display = 'none';
+                if (reportText) reportText.textContent = 'ตั้งใจเรียนให้มากกว่านี้นะ...';
+            }
         }
     }
 }
