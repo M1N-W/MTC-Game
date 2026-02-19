@@ -682,10 +682,9 @@ class AutoPlayer extends Player {
         // Restore speed boost so other systems remain consistent
         this.speedBoost = oldSpeedBoost;
 
-        // Attacks (handled here so game.js doesn't need to special-case fire loops)
-        const isPlaying = (typeof window !== 'undefined' && window.gameState) ? window.gameState === 'PLAYING' : true;
-        if (!isPlaying) return;
-
+        // Attacks
+        // Note: game.js already gates updateGame() behind gameState === 'PLAYING',
+        // so no need to re-check here. window.gameState was unreliable (set once on load).
         if (!mouse || mouse.left !== 1) return;
         if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
@@ -850,6 +849,18 @@ AutoPlayer.prototype.updateUI = function() {
     const wanchaiCd   = S.wanchaiCooldown || BALANCE.player.auto.wanchaiCooldown || 12;
     const standEl     = document.getElementById('stealth-icon');
     const standCdEl   = document.getElementById('stealth-cd');
+
+    // ── Always keep the HUD slot labelled for the Stand, not stealth ──
+    // The base Player constructor sets the emoji to 📖 and hint to 'R-Click'.
+    // Override here every frame so it's consistent regardless of init order.
+    const skill1Emoji = document.getElementById('skill1-emoji');
+    const skill1Hint  = document.getElementById('skill1-hint');
+    if (skill1Emoji) skill1Emoji.textContent = this.wanchaiActive ? '🥊' : '🔥';
+    if (skill1Hint)  skill1Hint.textContent  = 'STAND';
+    if (standEl)     standEl.style.borderColor = '#dc2626';
+    if (standEl)     standEl.style.boxShadow   = this.wanchaiActive
+        ? '0 0 20px rgba(220,38,38,0.80)'
+        : '0 0 10px rgba(220,38,38,0.35)';
 
     if (this.wanchaiActive) {
         // Stand is active — flash the icon in crimson
