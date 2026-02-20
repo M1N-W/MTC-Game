@@ -1,4 +1,3 @@
-<<<<<<< C:/Mawin's Game/MTC-Game's Code/js/game.js
 'use strict';
 
 // ════════════════════════════════════════════════════════════════
@@ -805,9 +804,9 @@ function startNextWave() {
         console.log('[GlitchWave] HP bonus removed — player.maxHp:', player.maxHp);
     }
 
-    isGlitchWave     = false;
+    isGlitchWave        = false;
     window.isGlitchWave = false;
-    controlsInverted = false;
+    controlsInverted    = false;
 
     waveSpawnLocked     = false;
     waveSpawnTimer      = 0;
@@ -830,10 +829,10 @@ function startNextWave() {
     }
 
     if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
-        isGlitchWave     = true;
+        isGlitchWave        = true;
         window.isGlitchWave = true;
-        controlsInverted = true;
-        glitchIntensity  = 0;
+        controlsInverted    = true;
+        glitchIntensity     = 0;
 
         if (player) {
             const bonus       = 100;
@@ -1068,6 +1067,9 @@ function drawSlowMoOverlay() {
 
         CTX.fillStyle = 'rgba(200, 240, 255, 0.7)';
         CTX.font      = 'bold 9px Arial';
+        CTX.textAlign    = 'center';
+        CTX.textBaseline = 'middle';
+        const pct        = Math.round(slowMoEnergy * 100);
         CTX.fillText(`${Math.round(slowMoEnergy * 100)}%`, bx + SM_BAR_W / 2 + 16, barY + SM_BAR_H / 2);
 
         CTX.restore();
@@ -1738,144 +1740,9 @@ window.onload = () => {
 
     // Queue menu BGM. userInteracted is false right now (page just loaded,
     // no gesture yet), so playBGM stores 'menu' in _pendingBGM and returns.
-    // The instant the user clicks or presses any key on the menu screen,
+    // The instant user clicks or presses any key on the menu screen,
     // enableAudio fires and the menu track starts playing.
     Audio.playBGM('menu');
-=======
-'use strict';
-
-// ════════════════════════════════════════════════════════════════
-// 🤖 AI SAFETY FALLBACK
-// ════════════════════════════════════════════════════════════════
-if (typeof window.Gemini === 'undefined') {
-    window.Gemini = {
-        init:                 ()          => console.log('🤖 AI System: Offline (Safe Fallback)'),
-        generateText:         async ()    => '...',
-        generateMission:      async ()    => 'Defeat the enemies!',
-        generateReportCard:   async ()    => 'Great job!',
-        speak:                ()          => {},
-
-        getMissionName:  async ()         => 'พิชิตครูมานพ',
-        getReportCard:   async ()         => 'ตั้งใจเรียนให้มากกว่านี้นะ...',
-        getBossTaunt:    async ()         => '',
-    };
-}
-
-// ─── Debug Flag (WARN 2 FIX) ──────────────────────────────────
-const DEBUG_MODE = false;
-
-/**
- * 🎮 MTC: ENHANCED EDITION - Main Game Loop (REFACTORED)
- *
- * ────────────────────────────────────────────────────────────────
- * 🐛 BGM FIX (Audio Timing Pass)
- * ────────────────────────────────────────────────────────────────
- * ROOT CAUSE — Menu and Battle BGM were silently discarded:
- *
- *   Menu BGM:
- *     window.onload called Audio.playBGM('menu') before Audio.init()
- *     was ever called, so userInteracted was false and the request
- *     was returned and thrown away.
- *
- *   Battle BGM:
- *     startGame() called Audio.init() then Audio.playBGM('battle')
- *     in the same synchronous stack as the "Start" button click.
- *     Audio.init() registers the interaction listener — but the click
- *     that triggered startGame() had ALREADY fired before the listener
- *     was attached, so userInteracted never became true.
- *     Battle BGM was therefore also silently discarded.
- *
- *   Boss BGM worked because by Wave 3 the user had pressed keys/clicked
- *   many times AFTER Audio.init(), so userInteracted had become true.
- *
- * FIX (two changes in this file):
- *   1. window.onload  — Audio.init() moved HERE, before playBGM('menu').
- *                       The interaction listener is now registered at page
- *                       load, not inside startGame().
- *   2. startGame()    — Audio.init() call REMOVED. Calling it again would
- *                       re-create the AudioContext and re-register the
- *                       listener, resetting userInteracted to false and
- *                       causing battle BGM to miss the triggering click.
- */
-
-// ─── Game State ───────────────────────────────────────────────
-let gameState   = 'MENU';
-let loopRunning = false;
-
-window.gameState = gameState;
-
-// ─── 🕐 Bullet Time ───────────────────────────────────────────
-let timeScale    = 1.0;
-let isSlowMotion = false;
-let slowMoEnergy = 1.0;
-
-const SLOW_MO_TIMESCALE     = 0.30;
-const SLOW_MO_DRAIN_RATE    = 0.14;
-const SLOW_MO_RECHARGE_RATE = 0.07;
-
-const SM_BAR_W = 180, SM_BAR_H = 8;
-
-// ─── HUD Draw Bridge ──────────────────────────────────────────
-let _lastDrawDt = 0;
-
-// ─── Day / Night cycle ────────────────────────────────────────
-let dayNightTimer = 0;
-
-// ─── ⚡ Glitch Wave ───────────────────────────────────────────
-let isGlitchWave     = false;
-let glitchIntensity  = 0;
-let controlsInverted = false;
-const GLITCH_EVERY_N_WAVES = 5;
-
-window.isGlitchWave = false;
-
-// ─── ⚡ Glitch Wave — Player HP Bonus ────────────────────────
-let _glitchWaveHpBonus = 0;
-
-// ─── ⚡ Glitch Wave — Spawn Grace Period ──────────────────────
-let waveSpawnLocked     = false;
-let waveSpawnTimer      = 0;
-let pendingSpawnCount   = 0;
-let lastGlitchCountdown = -1;
-
-// ─── Game Objects (global) ────────────────────────────────────
-window.player         = null;
-window.enemies        = [];
-window.boss           = null;
-window.powerups       = [];
-window.specialEffects = [];
-window.meteorZones    = [];
-window.drone          = null;
-let waveStartDamage   = 0;
-
-// ─── Boss Progression Counter ─────────────────────────────────
-let bossEncounterCount = 0;
-
-// ─── MTC Database Server ──────────────────────────────────────
-const MTC_DATABASE_SERVER = {
-    x: 350,
-    y: -350,
-    INTERACTION_RADIUS: 90
-};
-
-// ─── MTC Shop Location ────────────────────────────────────────
-const MTC_SHOP_LOCATION = {
-    x: -350,
-    y:  350,
-    INTERACTION_RADIUS: 90
-};
-
-window.MTC_DATABASE_SERVER = MTC_DATABASE_SERVER;
-window.MTC_SHOP_LOCATION   = MTC_SHOP_LOCATION;
-
-// ─── External Database URL ────────────────────────────────────
-const MTC_DB_URL = 'https://claude.ai/public/artifacts/9779928b-11d1-442b-b17d-2ef5045b9660';
-
-// ══════════════════════════════════════════════════════════════
-// 💻 ADMIN CONSOLE MANAGER
-// ══════════════════════════════════════════════════════════════
-const AdminConsole = (() => {
-    const history = [];
     let histIdx   = -1;
     let isOpen    = false;
 
@@ -3488,5 +3355,4 @@ window.onload = () => {
     // The instant the user clicks or presses any key on the menu screen,
     // enableAudio fires and the menu track starts playing.
     Audio.playBGM('menu');
->>>>>>> C:/Users/User/.windsurf/worktrees/MTC-Game's Code/MTC-Game's Code-5e3e5a28/js/game.js
 };

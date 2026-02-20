@@ -442,9 +442,11 @@ class Player extends Entity {
     addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
 
     draw() {
-        const S   = this.stats;
+        // ╔══════════════════════════════════════════════════════════╗
+        // ║  KAO — Minimalist Chibi · Blue Rounded Square           ║
+        // ║  Top-down sprite · No face · Hair covers top of body    ║
+        // ╚══════════════════════════════════════════════════════════╝
         const now = performance.now();
-
         _standAura_draw(this, this.charId || 'kao');
 
         // ── Dash ghost trail ─────────────────────────────────────────
@@ -452,229 +454,221 @@ class Player extends Entity {
             const gs = worldToScreen(img.x, img.y);
             CTX.save();
             CTX.translate(gs.x, gs.y); CTX.rotate(img.angle);
-            CTX.globalAlpha = img.life * 0.45;
-            // Ghost uses the same silhouette so it reads as Kao even faded
-            CTX.fillStyle = '#3b82f6';
-            CTX.shadowBlur = 10 * img.life; CTX.shadowColor = '#60a5fa';
-            // Slim tactical torso ghost
-            CTX.beginPath(); CTX.roundRect(-10, -14, 20, 28, 4); CTX.fill();
-            CTX.globalAlpha = img.life * 0.6;
-            CTX.fillStyle = '#93c5fd';
-            CTX.beginPath(); CTX.arc(0, -8, 8, 0, Math.PI * 2); CTX.fill();
+            CTX.globalAlpha = img.life * 0.35;
+            CTX.fillStyle = '#60a5fa';
+            CTX.shadowBlur = 8 * img.life; CTX.shadowColor = '#3b82f6';
+            CTX.beginPath(); CTX.roundRect(-11, -11, 22, 22, 6); CTX.fill();
             CTX.restore();
         }
 
         const screen = worldToScreen(this.x, this.y);
 
-        // ── Ground shadow (ground-plane ellipse) ─────────────────────
+        // ── Ground shadow ────────────────────────────────────────────
         CTX.save();
-        CTX.globalAlpha = 0.25;
-        CTX.fillStyle = 'rgba(0,0,0,0.7)';
-        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 26, 16, 6, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = 0.22;
+        CTX.fillStyle   = 'rgba(0,0,0,0.8)';
+        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 14, 14, 5, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ── Passive golden aura ───────────────────────────────────────
+        // ── Passive aura ─────────────────────────────────────────────
         if (this.passiveUnlocked) {
-            const auraSize  = 35 + Math.sin(now / 200) * 5;
-            const auraAlpha = 0.3 + Math.sin(now / 300) * 0.1;
-            CTX.save(); CTX.globalAlpha = auraAlpha;
+            const aS = 30 + Math.sin(now / 200) * 4, aA = 0.3 + Math.sin(now / 300) * 0.1;
+            CTX.save(); CTX.globalAlpha = aA;
             CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3;
-            CTX.shadowBlur = 20; CTX.shadowColor = '#fbbf24';
-            CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 18; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, aS, 0, Math.PI * 2); CTX.stroke();
             CTX.restore();
         }
 
-        if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.textAlign='center'; CTX.fillText('😵', screen.x, screen.y - 44); }
-        if (this.isBurning)  { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
+        if (this.isConfused) { CTX.font='bold 22px Arial'; CTX.textAlign='center'; CTX.fillText('😵', screen.x, screen.y - 32); }
+        if (this.isBurning)  { CTX.font='bold 18px Arial'; CTX.fillText('🔥', screen.x + 18, screen.y - 26); }
 
-        // ── Main body transform ───────────────────────────────────────
+        // ── Body transform: rotates to face mouse ────────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
-        // Recoil body-lean
-        const recoilShift = this.weaponRecoil * 4;
-        if (recoilShift > 0.05) CTX.translate(-recoilShift, 0);
+        // Recoil nudge
+        if (this.weaponRecoil > 0.05) CTX.translate(-this.weaponRecoil * 3.5, 0);
 
-        // ══ STEALTH MODE: Glitch / Scanline effect instead of flat transparency ══
+        // ── Breathing idle + movement squash/stretch ─────────────────
+        const breatheKao = Math.sin(Date.now() / 200);
+        const speed      = Math.hypot(this.vx, this.vy);
+        const moveT      = Math.min(1, speed / 200);
+        const bobT       = Math.sin(this.walkCycle);
+        const stretchX   = 1 + breatheKao * 0.030 + moveT * bobT * 0.10;
+        const stretchY   = 1 - breatheKao * 0.030 - moveT * Math.abs(bobT) * 0.07;
+        CTX.scale(stretchX, stretchY);
+
         if (this.isInvisible) {
-            const glitchT  = now / 60;
-            const glitchAmt = Math.sin(glitchT * 7.3) * 3;
-
+            // ── STEALTH: glitch scanlines over ghost bean ─────────────
+            const gT = now / 60;
+            const R  = 13;
             CTX.save();
-            // Clip to body bounding box so scanlines stay within silhouette
-            CTX.beginPath(); CTX.roundRect(-14, -18, 28, 36, 5); CTX.clip();
-
-            // Scanline passes — alternating transparent bands
-            for (let sy2 = -18; sy2 < 18; sy2 += 3) {
-                const lpha = (Math.sin(glitchT * 4 + sy2 * 0.6) * 0.5 + 0.5) * 0.35;
-                CTX.globalAlpha = lpha;
+            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.clip();
+            for (let sy2 = -R; sy2 < R; sy2 += 3) {
+                const la = (Math.sin(gT * 4 + sy2 * 0.7) * 0.5 + 0.5) * 0.3;
+                CTX.globalAlpha = la;
                 CTX.fillStyle   = '#60a5fa';
-                CTX.fillRect(-14 + glitchAmt * (sy2 % 5 === 0 ? 1 : 0), sy2, 28, 1.5);
+                CTX.fillRect(-R + Math.sin(gT * 7.3 + sy2) * 2.5, sy2, R * 2, 1.5);
             }
-
-            // Ghost outline — barely visible body shape
-            CTX.globalAlpha = 0.18 + Math.sin(glitchT * 2.1) * 0.08;
-            CTX.strokeStyle = '#93c5fd';
-            CTX.lineWidth   = 1.5;
-            CTX.shadowBlur  = 8; CTX.shadowColor = '#60a5fa';
-            // Torso
-            CTX.beginPath(); CTX.roundRect(-10, -4, 20, 20, 4); CTX.stroke();
-            // Shoulder pads
-            CTX.beginPath(); CTX.roundRect(-14, -6, 8, 10, 3); CTX.stroke();
-            CTX.beginPath(); CTX.roundRect(6, -6, 8, 10, 3); CTX.stroke();
-            // Head
-            CTX.beginPath(); CTX.arc(0, -11, 8, 0, Math.PI * 2); CTX.stroke();
-            // Visor line — bright cyan even when glitching
-            CTX.globalAlpha = 0.55 + Math.sin(glitchT * 5) * 0.3;
-            CTX.fillStyle   = '#00e5ff';
-            CTX.shadowBlur  = 12; CTX.shadowColor = '#00e5ff';
-            CTX.fillRect(-5, -14, 10, 2);
-
             CTX.restore();
-            CTX.restore(); // end main body transform
+            // Ghost bean outline
+            CTX.globalAlpha = 0.18 + Math.sin(gT * 2.1) * 0.07;
+            CTX.strokeStyle = '#93c5fd'; CTX.lineWidth = 1.5;
+            CTX.shadowBlur  = 8; CTX.shadowColor = '#60a5fa';
+            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+            // Cyan visor still glows through stealth
+            CTX.globalAlpha = 0.5 + Math.sin(gT * 5) * 0.3;
+            CTX.fillStyle   = '#06b6d4';
+            CTX.shadowBlur  = 12; CTX.shadowColor = '#06b6d4';
+            CTX.beginPath(); CTX.roundRect(-5, -3.5, 10, 2.5, 1); CTX.fill();
+            CTX.shadowBlur  = 0;
+            CTX.restore();
 
         } else {
-            // ══ VISIBLE MODE: Full detailed silhouette ══
+            // ════════════════════════════════════════════════════════
+            // KAO — Bean & Floating Hands · Dark Navy · Tactical Hood
+            // ════════════════════════════════════════════════════════
+            const R = 13; // visual bean radius
 
-            const walkW = Math.sin(this.walkCycle) * 7;
-
-            // ── Legs ────────────────────────────────────────────────
-            CTX.fillStyle = '#1e293b';
-            CTX.beginPath(); CTX.ellipse(4 + walkW, 13, 5, 3.5, 0, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.ellipse(4 - walkW, -13, 5, 3.5, 0, 0, Math.PI * 2); CTX.fill();
-
-            // ── Neon silhouette glow (outer ring) ───────────────────
-            CTX.shadowBlur  = 18;
-            CTX.shadowColor = '#00ff41';
-            CTX.strokeStyle = 'rgba(0,255,65,0.70)';
+            // ── Silhouette glow ring (drawn BEFORE body so it sits behind) ──
+            CTX.shadowBlur  = 16; CTX.shadowColor = 'rgba(0,255,65,0.70)';
+            CTX.strokeStyle = 'rgba(0,255,65,0.45)';
             CTX.lineWidth   = 2.8;
-            // Torso silhouette
-            CTX.beginPath(); CTX.roundRect(-11, -3, 22, 20, 5); CTX.stroke();
-            // Head silhouette
-            CTX.beginPath(); CTX.arc(0, -10, 9, 0, Math.PI * 2); CTX.stroke();
-            CTX.shadowBlur = 0;
+            CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur  = 0;
 
-            // ── Shoulder pad geometry (left/right) ──────────────────
-            const shoulderGlow = 0.4 + Math.sin(now / 400) * 0.2;
-            // Left shoulder
-            CTX.fillStyle = '#1e3a5f';
-            CTX.beginPath(); CTX.roundRect(-15, -7, 9, 12, 3); CTX.fill();
-            CTX.strokeStyle = `rgba(96,165,250,${shoulderGlow})`; CTX.lineWidth = 1.2;
-            CTX.shadowBlur = 6; CTX.shadowColor = '#60a5fa';
-            CTX.beginPath(); CTX.roundRect(-15, -7, 9, 12, 3); CTX.stroke();
-            // Right shoulder
-            CTX.fillStyle = '#1e3a5f';
-            CTX.beginPath(); CTX.roundRect(6, -7, 9, 12, 3); CTX.fill();
-            CTX.beginPath(); CTX.roundRect(6, -7, 9, 12, 3); CTX.stroke();
-            CTX.shadowBlur = 0;
+            // ── Bean body — dark navy radial gradient ─────────────────
+            const bodyG = CTX.createRadialGradient(-3, -3, 1, 0, 0, R);
+            bodyG.addColorStop(0,    '#1d3461');
+            bodyG.addColorStop(0.55, '#0f2140');
+            bodyG.addColorStop(1,    '#07111e');
+            CTX.fillStyle = bodyG;
+            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
-            // ── Torso: tactical vest ─────────────────────────────────
-            const torsoGrad = CTX.createLinearGradient(-11, -3, 11, 17);
-            torsoGrad.addColorStop(0, '#1e40af');
-            torsoGrad.addColorStop(0.4, '#1d4ed8');
-            torsoGrad.addColorStop(1, '#1e3a8a');
-            CTX.fillStyle = torsoGrad;
-            CTX.beginPath(); CTX.roundRect(-11, -3, 22, 20, 4); CTX.fill();
+            // Thick sticker outline — pops from background like a decal
+            CTX.strokeStyle = '#1e293b';
+            CTX.lineWidth   = 3;
+            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
 
-            // Chest plate highlight
-            CTX.fillStyle = '#2563eb';
-            CTX.beginPath(); CTX.roundRect(-7, -1, 14, 8, 2); CTX.fill();
+            // Top-left specular (glossy sticker highlight)
+            CTX.fillStyle = 'rgba(255,255,255,0.10)';
+            CTX.beginPath(); CTX.arc(-4, -5, 5.5, 0, Math.PI * 2); CTX.fill();
 
-            // MTC emblem
-            CTX.fillStyle = '#93c5fd'; CTX.font = 'bold 6px Arial';
-            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText('MTC', 0, 3);
-
-            // Vest detail lines
-            CTX.strokeStyle = 'rgba(147,197,253,0.4)'; CTX.lineWidth = 0.8;
-            CTX.beginPath(); CTX.moveTo(-8, 10); CTX.lineTo(-8, 16); CTX.stroke();
-            CTX.beginPath(); CTX.moveTo( 8, 10); CTX.lineTo( 8, 16); CTX.stroke();
-            CTX.beginPath(); CTX.moveTo(-4, 10); CTX.lineTo(-4, 15); CTX.stroke();
-            CTX.beginPath(); CTX.moveTo( 4, 10); CTX.lineTo( 4, 15); CTX.stroke();
-
-            // ── Head ─────────────────────────────────────────────────
-            // Skin
-            CTX.fillStyle = '#fde8cc';
-            CTX.beginPath(); CTX.arc(0, -10, 9, 0, Math.PI * 2); CTX.fill();
-            // Tactical helmet (top arc)
-            CTX.fillStyle = '#0f172a';
-            CTX.beginPath(); CTX.arc(0, -10, 10, Math.PI * 1.05, Math.PI * 1.95); CTX.fill();
-            // Helmet detail stripe
-            CTX.strokeStyle = '#1d4ed8'; CTX.lineWidth = 1.5;
-            CTX.beginPath(); CTX.arc(0, -10, 10, Math.PI * 1.15, Math.PI * 1.85); CTX.stroke();
-
-            // ── VISOR / EYEPIECE (signature Kao visual) ──────────────
-            const visorPulse = 0.6 + Math.sin(now / 350) * 0.4;
-            // Visor lens shape
-            CTX.fillStyle = `rgba(0,229,255,${visorPulse * 0.85})`;
-            CTX.shadowBlur  = 12 * visorPulse;
-            CTX.shadowColor = '#00e5ff';
+            // ── Tactical Hood (sleek, angular, covers upper ~55%) ──────
+            // Hood base — near-black with slight blue tint
+            CTX.fillStyle = '#0b1623';
             CTX.beginPath();
-            CTX.moveTo(-6, -12); CTX.lineTo(6, -12);
-            CTX.lineTo(7, -10); CTX.lineTo(-7, -10);
+            // Bottom edge follows body silhouette, top flares into angular visor
+            CTX.moveTo(-(R - 1), -1);
+            CTX.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);   // left flare
+            CTX.quadraticCurveTo(0, -R - 8, R * 0.35, -R - 5);               // top peak
+            CTX.quadraticCurveTo(R + 2, -R * 0.45, R - 1, -1);               // right flare
+            CTX.quadraticCurveTo(R * 0.55, 1, 0, 2);                         // chin curve
+            CTX.quadraticCurveTo(-R * 0.55, 1, -(R - 1), -1);
             CTX.closePath(); CTX.fill();
-            // Inner bright slit
-            CTX.fillStyle = `rgba(255,255,255,${visorPulse * 0.9})`;
-            CTX.fillRect(-4, -11.5, 8, 1);
-            // Earpiece / comms device on right side
-            CTX.fillStyle = '#334155';
-            CTX.beginPath(); CTX.roundRect(8, -13, 4, 6, 1); CTX.fill();
-            CTX.fillStyle = `rgba(0,229,255,${0.5 + Math.sin(now/200)*0.5})`;
-            CTX.beginPath(); CTX.arc(11, -11, 1.5, 0, Math.PI * 2); CTX.fill();
+
+            // Hood dark sticker outline
+            CTX.strokeStyle = '#1e293b';
+            CTX.lineWidth   = 2.5;
+            CTX.beginPath();
+            CTX.moveTo(-(R - 1), -1);
+            CTX.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);
+            CTX.quadraticCurveTo(0, -R - 8, R * 0.35, -R - 5);
+            CTX.quadraticCurveTo(R + 2, -R * 0.45, R - 1, -1);
+            CTX.quadraticCurveTo(R * 0.55, 1, 0, 2);
+            CTX.quadraticCurveTo(-R * 0.55, 1, -(R - 1), -1);
+            CTX.closePath(); CTX.stroke();
+
+            // Hood angular highlight — swept-left tactical sheen
+            CTX.fillStyle = '#16304f';
+            CTX.beginPath();
+            CTX.moveTo(-7, -R - 3);
+            CTX.quadraticCurveTo(-2, -R - 6, 3, -R - 5);
+            CTX.quadraticCurveTo(1, -R - 1, -3, -R);
+            CTX.quadraticCurveTo(-6, -R, -7, -R - 3);
+            CTX.closePath(); CTX.fill();
+
+            // Sharp angular edge-lines (tactical panel detail)
+            CTX.strokeStyle = '#1e40af'; CTX.lineWidth = 1;
+            CTX.shadowBlur  = 4; CTX.shadowColor = '#3b82f6';
+            CTX.beginPath(); CTX.moveTo(R * 0.35, -3); CTX.lineTo(R + 1, -2); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(-R * 0.35, -3); CTX.lineTo(-R - 1, -2); CTX.stroke();
             CTX.shadowBlur = 0;
 
-            // ── Weapon drawn on player ────────────────────────────────
+            // ── Glowing cyan visor slit peeking under hood ────────────
+            const vp = 0.65 + Math.sin(Date.now() / 350) * 0.35;
+            CTX.fillStyle   = `rgba(6,182,212,${vp})`;
+            CTX.shadowBlur  = 12 * vp; CTX.shadowColor = '#06b6d4';
+            CTX.beginPath(); CTX.roundRect(-6.5, -3.5, 13, 2.5, 1.5); CTX.fill();
+            // Secondary glow bleed — makes visor "radiate" from the slit
+            CTX.fillStyle   = `rgba(6,182,212,${vp * 0.20})`;
+            CTX.beginPath(); CTX.roundRect(-5, -5.5, 10, 7, 3); CTX.fill();
+            CTX.shadowBlur  = 0;
+
+            // ── Weapon ───────────────────────────────────────────────
             if (typeof weaponSystem !== 'undefined') weaponSystem.drawWeaponOnPlayer(this);
 
-            // ── Off-hand visible at side ──────────────────────────────
-            CTX.fillStyle = '#fde8cc';
-            CTX.beginPath(); CTX.arc(-14, 8, 4, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fde8cc';
-            CTX.beginPath(); CTX.arc(9, 17, 4, 0, Math.PI * 2); CTX.fill();
+            // ── Floating Dark-Blue Gloves (weapon-side + off-hand) ───
+            const gR = 5;
 
-            CTX.restore(); // end main body transform
+            // Front glove — forward on the weapon side, detached from body
+            CTX.fillStyle   = '#1e3a5f';
+            CTX.strokeStyle = '#1e293b';
+            CTX.lineWidth   = 2.5;
+            CTX.shadowBlur  = 6; CTX.shadowColor = '#06b6d4';
+            CTX.beginPath(); CTX.arc(R + 6, 2, gR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+            // Knuckle panel lines — tactical armour detail
+            CTX.strokeStyle = '#2d5a8e'; CTX.lineWidth = 1.2;
+            CTX.beginPath(); CTX.moveTo(R + 3, 0);   CTX.lineTo(R + 9, 0);   CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(R + 3, 2.5); CTX.lineTo(R + 9, 2.5); CTX.stroke();
+            CTX.shadowBlur = 0;
 
-            // ── Muzzle-flash (blue sparks — Kao identity) ────────────
+            // Back glove — off-hand, slightly smaller and darker
+            CTX.fillStyle   = '#0e2340';
+            CTX.strokeStyle = '#1e293b';
+            CTX.lineWidth   = 2.5;
+            CTX.shadowBlur  = 3; CTX.shadowColor = '#06b6d4';
+            CTX.beginPath(); CTX.arc(-(R + 5), 1, gR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+            CTX.shadowBlur = 0;
+
+            CTX.restore(); // end body transform
+
+            // ── Muzzle flash: cyan ring + radiating sparks ────────────
             if (this.weaponRecoil > 0.45) {
-                const flashT     = (this.weaponRecoil - 0.45) / 0.55;
-                const muzzleDist = 38 + (1 - flashT) * 10;
-                const mx = screen.x + Math.cos(this.angle) * muzzleDist;
-                const my = screen.y + Math.sin(this.angle) * muzzleDist;
+                const fT    = (this.weaponRecoil - 0.45) / 0.55;
+                const mDist = 36 + (1 - fT) * 10;
+                const mx    = screen.x + Math.cos(this.angle) * mDist;
+                const my    = screen.y + Math.sin(this.angle) * mDist;
                 CTX.save();
-                // Core ring
-                CTX.globalAlpha = flashT * 0.9;
-                CTX.strokeStyle = '#e0f2fe';
-                CTX.lineWidth   = 2;
-                CTX.shadowBlur  = 18; CTX.shadowColor = '#00e5ff';
-                CTX.beginPath(); CTX.arc(mx, my, 4 + (1 - flashT) * 7, 0, Math.PI * 2); CTX.stroke();
-                // Blue spark rays — 6 short lines around the muzzle
-                CTX.strokeStyle = '#7dd3fc';
-                CTX.lineWidth   = 1.2;
+                CTX.globalAlpha = fT * 0.9;
+                CTX.strokeStyle = '#e0f2fe'; CTX.lineWidth = 2;
+                CTX.shadowBlur  = 16; CTX.shadowColor = '#06b6d4';
+                CTX.beginPath(); CTX.arc(mx, my, 3 + (1 - fT) * 6, 0, Math.PI * 2); CTX.stroke();
+                CTX.strokeStyle = '#7dd3fc'; CTX.lineWidth = 1.2;
                 for (let ri = 0; ri < 6; ri++) {
-                    const ra  = this.angle + (ri / 6) * Math.PI * 2;
-                    const r0  = 2, r1 = 5 + flashT * 6;
+                    const ra = this.angle + (ri / 6) * Math.PI * 2;
                     CTX.beginPath();
-                    CTX.moveTo(mx + Math.cos(ra) * r0, my + Math.sin(ra) * r0);
-                    CTX.lineTo(mx + Math.cos(ra) * r1, my + Math.sin(ra) * r1);
+                    CTX.moveTo(mx + Math.cos(ra) * 2, my + Math.sin(ra) * 2);
+                    CTX.lineTo(mx + Math.cos(ra) * (5 + fT * 5), my + Math.sin(ra) * (5 + fT * 5));
                     CTX.stroke();
                 }
-                // Bright core dot
-                CTX.globalAlpha = flashT;
+                CTX.globalAlpha = fT;
                 CTX.fillStyle   = '#ffffff';
-                CTX.shadowBlur  = 10; CTX.shadowColor = '#00e5ff';
-                CTX.beginPath(); CTX.arc(mx, my, 2.5, 0, Math.PI * 2); CTX.fill();
+                CTX.shadowBlur  = 8; CTX.shadowColor = '#06b6d4';
+                CTX.beginPath(); CTX.arc(mx, my, 2, 0, Math.PI * 2); CTX.fill();
                 CTX.restore();
             }
         }
 
         // ── Level badge ───────────────────────────────────────────────
         if (this.level > 1) {
-            CTX.fillStyle = 'rgba(59,130,246,0.92)';
-            CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 10, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fff'; CTX.font = 'bold 10px Arial';
+            CTX.fillStyle = 'rgba(37,99,235,0.92)';
+            CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText(this.level, screen.x + 22, screen.y - 22);
+            CTX.fillText(this.level, screen.x + 20, screen.y - 20);
         }
     }
 
@@ -845,184 +839,261 @@ class AutoPlayer extends Player {
     }
 
     draw() {
+        // ╔══════════════════════════════════════════════════════════╗
+        // ║  AUTO — Minimalist Chibi · Heavy Crimson Square         ║
+        // ║  Top-down sprite · No face · Spiky red hair on top      ║
+        // ╚══════════════════════════════════════════════════════════╝
         const screen = worldToScreen(this.x, this.y);
         const now    = performance.now();
         if (typeof CTX === 'undefined' || !CTX) return;
 
         // ── Ground shadow ────────────────────────────────────────────
         CTX.save();
-        CTX.globalAlpha = 0.28;
-        CTX.fillStyle = 'rgba(0,0,0,0.7)';
-        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 26, 20, 7, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = 0.25;
+        CTX.fillStyle   = 'rgba(0,0,0,0.8)';
+        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 16, 17, 6, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ══ WANCHAI — Ghostly Humanoid Stand (drawn BEHIND the body) ══
+        // ══ WANCHAI STAND — preserved from previous version ══════════
         if (this.wanchaiActive) {
             const bob  = Math.sin(now / 130) * 7;
             const sx   = screen.x - Math.cos(this.angle) * 30;
             const sy   = screen.y - Math.sin(this.angle) * 30 - 30 + bob;
-
-            CTX.save();
-            CTX.translate(sx, sy);
-
-            const wAlpha = 0.55 + Math.sin(now / 160) * 0.15;
-
-            // ── Outer aura ring ──────────────────────────────────────
+            CTX.save(); CTX.translate(sx, sy);
+            const wA = 0.55 + Math.sin(now / 160) * 0.15;
             CTX.globalAlpha = 0.35 + Math.sin(now / 200) * 0.15;
-            CTX.strokeStyle = '#ef4444';
-            CTX.lineWidth   = 3.5;
+            CTX.strokeStyle = '#ef4444'; CTX.lineWidth = 3.5;
             CTX.shadowBlur  = 30; CTX.shadowColor = '#dc2626';
             CTX.beginPath(); CTX.arc(0, 0, 38 + Math.sin(now / 140) * 4, 0, Math.PI * 2); CTX.stroke();
-
-            // ── Ghostly torso (shimmering red light lines) ───────────
-            CTX.globalAlpha = wAlpha * 0.65;
-            const torsoW = 28, torsoH = 38, torsoTop = -19, torsoLeft = -14;
+            CTX.globalAlpha = wA * 0.65;
+            const tL = -14, tT = -19, tW = 28, tH = 38;
             CTX.save();
-            CTX.beginPath(); CTX.roundRect(torsoLeft, torsoTop, torsoW, torsoH, 6); CTX.clip();
-            const lineSpacing = 4;
-            for (let ly = torsoTop; ly <= torsoTop + torsoH; ly += lineSpacing) {
-                const lineAlpha = 0.4 + 0.5 * Math.abs(Math.sin(now / 80 + ly * 0.15));
-                CTX.strokeStyle = `rgba(248,113,113,${lineAlpha})`;
-                CTX.lineWidth   = 1.2;
-                CTX.shadowBlur  = 4; CTX.shadowColor = '#ef4444';
-                CTX.beginPath(); CTX.moveTo(torsoLeft, ly); CTX.lineTo(torsoLeft + torsoW, ly); CTX.stroke();
+            CTX.beginPath(); CTX.roundRect(tL, tT, tW, tH, 6); CTX.clip();
+            for (let ly = tT; ly <= tT + tH; ly += 4) {
+                const la = 0.4 + 0.5 * Math.abs(Math.sin(now / 80 + ly * 0.15));
+                CTX.strokeStyle = `rgba(248,113,113,${la})`; CTX.lineWidth = 1.2;
+                CTX.shadowBlur = 4; CTX.shadowColor = '#ef4444';
+                CTX.beginPath(); CTX.moveTo(tL, ly); CTX.lineTo(tL + tW, ly); CTX.stroke();
             }
             CTX.restore();
-            CTX.globalAlpha = wAlpha;
-            CTX.strokeStyle = 'rgba(220,38,38,0.80)';
-            CTX.lineWidth   = 2;
+            CTX.globalAlpha = wA;
+            CTX.strokeStyle = 'rgba(220,38,38,0.80)'; CTX.lineWidth = 2;
             CTX.shadowBlur  = 16; CTX.shadowColor = '#dc2626';
-            CTX.beginPath(); CTX.roundRect(torsoLeft, torsoTop, torsoW, torsoH, 6); CTX.stroke();
-
-            // ── Muscular arms ────────────────────────────────────────
+            CTX.beginPath(); CTX.roundRect(tL, tT, tW, tH, 6); CTX.stroke();
             for (let side = -1; side <= 1; side += 2) {
-                const armX = side * 22, armY = -8;
-                CTX.globalAlpha = wAlpha * 0.7;
-                CTX.strokeStyle = 'rgba(220,38,38,0.70)';
-                CTX.lineWidth   = 1.5;
-                CTX.shadowBlur  = 10;
-                CTX.beginPath(); CTX.roundRect(armX - 5, armY, 10, 22, 5); CTX.stroke();
-                CTX.globalAlpha = wAlpha * 0.45;
-                CTX.strokeStyle = '#fb7185';
-                CTX.lineWidth   = 1;
-                CTX.beginPath(); CTX.roundRect(armX - 3, armY + 2, 6, 10, 3); CTX.stroke();
+                CTX.globalAlpha = wA * 0.7; CTX.strokeStyle = 'rgba(220,38,38,0.70)'; CTX.lineWidth = 1.5; CTX.shadowBlur = 10;
+                CTX.beginPath(); CTX.roundRect(side * 22 - 5, -8, 10, 22, 5); CTX.stroke();
             }
-
-            // ── Ghostly head (semi-transparent) ─────────────────────
-            CTX.globalAlpha = wAlpha * 0.75;
-            CTX.shadowBlur  = 18; CTX.shadowColor = '#dc2626';
-            CTX.strokeStyle = 'rgba(254,202,202,0.60)';
-            CTX.lineWidth   = 2;
+            CTX.globalAlpha = wA * 0.75; CTX.shadowBlur = 18; CTX.shadowColor = '#dc2626';
+            CTX.strokeStyle = 'rgba(254,202,202,0.60)'; CTX.lineWidth = 2;
             CTX.beginPath(); CTX.arc(0, -28, 12, 0, Math.PI * 2); CTX.stroke();
-            // Spiked hair
             CTX.fillStyle = 'rgba(220,38,38,0.70)';
             for (let si = -2; si <= 2; si++) {
-                CTX.beginPath();
-                CTX.moveTo(si * 5 - 3, -37);
-                CTX.lineTo(si * 5 + 3, -37);
-                CTX.lineTo(si * 5, -42 + Math.abs(si) * 2);
-                CTX.closePath(); CTX.fill();
+                CTX.beginPath(); CTX.moveTo(si * 5 - 3, -37); CTX.lineTo(si * 5 + 3, -37); CTX.lineTo(si * 5, -42 + Math.abs(si) * 2); CTX.closePath(); CTX.fill();
             }
-            // Eyes glow
-            const eyeGlow = 0.7 + Math.sin(now / 110) * 0.3;
-            CTX.globalAlpha = eyeGlow;
-            CTX.fillStyle   = '#f87171';
-            CTX.shadowBlur  = 12; CTX.shadowColor = '#ef4444';
+            const eg = 0.7 + Math.sin(now / 110) * 0.3;
+            CTX.globalAlpha = eg; CTX.fillStyle = '#f87171'; CTX.shadowBlur = 12; CTX.shadowColor = '#ef4444';
             CTX.beginPath(); CTX.arc(-4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.arc( 4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
-
             CTX.restore();
         }
 
-        // ══ AUTO BODY — Heavy Crimson Brawler ══
+        // ── Body transform ────────────────────────────────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
-        const walkW = Math.sin(this.walkCycle) * 7;
+        // ── Breathing idle + movement squash/stretch (heavy body) ────
+        const breatheAuto = Math.sin(Date.now() / 200);
+        const speed    = Math.hypot(this.vx, this.vy);
+        const moveT    = Math.min(1, speed / 180);
+        const bobT     = Math.sin(this.walkCycle * 0.9);
+        // Auto is sturdier — wider X, shorter Y than Kao
+        const stretchX = 1 + breatheAuto * 0.025 + moveT * bobT * 0.09;
+        const stretchY = 1 - breatheAuto * 0.025 - moveT * Math.abs(bobT) * 0.065;
+        CTX.scale(stretchX, stretchY);
 
-        // ── Legs ─────────────────────────────────────────────────────
-        CTX.fillStyle = '#7f1d1d';
-        CTX.beginPath(); CTX.ellipse(5 + walkW, 14, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.beginPath(); CTX.ellipse(5 - walkW, -14, 6, 4, 0, 0, Math.PI * 2); CTX.fill();
+        // ════════════════════════════════════════════════════════
+        // AUTO — Bean & Floating Hands · Crimson · Anime Ember Hair
+        // ════════════════════════════════════════════════════════
 
-        // ── Neon outer glow silhouette ────────────────────────────────
-        CTX.shadowBlur  = 18; CTX.shadowColor = '#dc2626';
-        CTX.strokeStyle = 'rgba(220,38,38,0.72)';
-        CTX.lineWidth   = 3;
-        CTX.beginPath(); CTX.roundRect(-13, -6, 26, 22, 5); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Torso ─────────────────────────────────────────────────────
-        const torsoG = CTX.createLinearGradient(-13, -6, 13, 16);
-        torsoG.addColorStop(0, '#fca5a5');
-        torsoG.addColorStop(0.4, '#ef4444');
-        torsoG.addColorStop(1, '#7f1d1d');
-        CTX.fillStyle = torsoG;
-        CTX.beginPath(); CTX.roundRect(-13, -6, 26, 22, 5); CTX.fill();
-
-        CTX.fillStyle = '#991b1b';
-        CTX.beginPath(); CTX.roundRect(-8, -3, 16, 10, 2); CTX.fill();
-        const corePulse = 0.5 + Math.sin(now / 220) * 0.5;
-        CTX.fillStyle = `rgba(251,113,133,${corePulse})`;
-        CTX.shadowBlur = 10 * corePulse; CTX.shadowColor = '#dc2626';
-        CTX.beginPath(); CTX.arc(0, 2, 4, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // ── SHOULDER PADS with heat vents ────────────────────────────
+        // Attack / movement heat intensity drives vent glow + fist aura
         const attackIntensity = this.wanchaiActive ? 1.0
-            : (Math.abs(this.vx) + Math.abs(this.vy) > 80 ? 0.5 : 0.2);
-        const ventGlow = attackIntensity * (0.6 + Math.sin(now / 180) * 0.4);
+            : Math.min(1, (Math.abs(this.vx) + Math.abs(this.vy)) / 150 + 0.2);
+        const ventGlow = Math.max(0, attackIntensity * (0.5 + Math.sin(now / 180) * 0.5));
 
-        for (const side of [-1, 1]) {
-            const sx = side * 17, sy = -4;
-            CTX.fillStyle = '#991b1b';
-            CTX.beginPath(); CTX.roundRect(sx - 6, sy, 12, 14, 4); CTX.fill();
-            CTX.strokeStyle = '#7f1d1d'; CTX.lineWidth = 1;
-            CTX.beginPath(); CTX.roundRect(sx - 6, sy, 12, 14, 4); CTX.stroke();
-            CTX.shadowBlur  = 8 * ventGlow; CTX.shadowColor = '#fb923c';
-            for (let vi = 0; vi < 3; vi++) {
-                CTX.fillStyle = `rgba(251,146,60,${ventGlow * (0.5 + vi * 0.17)})`;
-                CTX.fillRect(sx - 3, sy + 3 + vi * 4, 6, 2);
-            }
-            CTX.shadowBlur = 0;
+        // Slightly wider bean for "sturdier brawler" feel (R=15 vs Kao's 13)
+        const R = 15;
+
+        // ── Silhouette glow ring — drawn BEFORE body ─────────────────
+        CTX.shadowBlur  = 18; CTX.shadowColor = 'rgba(220,38,38,0.75)';
+        CTX.strokeStyle = 'rgba(220,38,38,0.55)';
+        CTX.lineWidth   = 2.8;
+        CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur  = 0;
+
+        // ── Bean body — dark crimson radial gradient ──────────────────
+        const bG = CTX.createRadialGradient(-4, -4, 1, 0, 0, R);
+        bG.addColorStop(0,   '#7f1d1d');
+        bG.addColorStop(0.5, '#5a0e0e');
+        bG.addColorStop(1,   '#2d0606');
+        CTX.fillStyle = bG;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+
+        // Thick sticker outline — same rules as Kao, pops like a sticker
+        CTX.strokeStyle = '#1e293b';
+        CTX.lineWidth   = 3;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+
+        // Specular (glossy highlight top-left)
+        CTX.fillStyle = 'rgba(255,255,255,0.09)';
+        CTX.beginPath(); CTX.arc(-5, -6, 6, 0, Math.PI * 2); CTX.fill();
+
+        // ── Heat vents — three horizontal slits on body sides ─────────
+        CTX.shadowBlur = 10 * ventGlow; CTX.shadowColor = '#fb923c';
+        for (let vi = 0; vi < 3; vi++) {
+            const va = ventGlow * (0.45 + vi * 0.18);
+            // Left vents
+            CTX.fillStyle = `rgba(251,146,60,${va})`;
+            CTX.beginPath(); CTX.roundRect(-R, -4 + vi * 5, 4, 2.5, 1); CTX.fill();
+            // Right vents
+            CTX.beginPath(); CTX.roundRect(R - 4, -4 + vi * 5, 4, 2.5, 1); CTX.fill();
+        }
+        CTX.shadowBlur = 0;
+
+        // Core power core — pulsing ember dot in chest
+        const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (this.wanchaiActive ? 1.5 : 1);
+        CTX.fillStyle  = `rgba(239,68,68,${Math.min(1, cP)})`;
+        CTX.shadowBlur = 10 * cP; CTX.shadowColor = '#dc2626';
+        CTX.beginPath(); CTX.arc(0, 3, 3.5, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // ── Aggressive Anime-Spiky Hair (upward ember sweep) ──────────
+        // Base mass — dark crimson/near-black blob over upper half
+        CTX.fillStyle = '#1a0505';
+        CTX.beginPath();
+        CTX.moveTo(-(R - 1), -1);
+        CTX.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);   // left sweep
+        CTX.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);             // top
+        CTX.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);             // right sweep
+        CTX.quadraticCurveTo(R * 0.5, 2, 0, 2.5);                     // chin
+        CTX.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
+        CTX.closePath(); CTX.fill();
+
+        // Hair sticker outline
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.beginPath();
+        CTX.moveTo(-(R - 1), -1);
+        CTX.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);
+        CTX.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);
+        CTX.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);
+        CTX.quadraticCurveTo(R * 0.5, 2, 0, 2.5);
+        CTX.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
+        CTX.closePath(); CTX.stroke();
+
+        // Hair highlight streak — dark red centre parting
+        CTX.fillStyle = '#5c1010';
+        CTX.beginPath();
+        CTX.moveTo(-5, -R - 2);
+        CTX.quadraticCurveTo(-1, -R - 5, 4, -R - 2);
+        CTX.quadraticCurveTo(2, -R + 2, -2, -R + 1);
+        CTX.quadraticCurveTo(-4, -R, -5, -R - 2);
+        CTX.closePath(); CTX.fill();
+
+        // Upward-swept anime spiky tips — variable heights, ember orange highlights
+        // Spike data: [baseX, tipX offset, height, color]
+        const spikeData = [
+            [-11,  -2, 12, '#3d0909'],  // far-left, leans right
+            [ -5,  -1,  9, '#450a0a'],
+            [  1,   0, 11, '#450a0a'],  // tallest central spike
+            [  7,   1,  8, '#3d0909'],
+            [ 12,   2,  6, '#2d0606'],  // far-right, shorter
+        ];
+        for (const [bx, tipOff, h, col] of spikeData) {
+            const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
+            CTX.fillStyle = col;
+            CTX.beginPath();
+            CTX.moveTo(bx - 3.5, -R - 1);
+            CTX.lineTo(bx + 3.5, -R - 1);
+            CTX.lineTo(bx + tipOff + wobble, -R - 1 - h - wobble * 0.4);
+            CTX.closePath(); CTX.fill();
+            // Spike outline
+            CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
+            CTX.beginPath();
+            CTX.moveTo(bx - 3.5, -R - 1);
+            CTX.lineTo(bx + 3.5, -R - 1);
+            CTX.lineTo(bx + tipOff + wobble, -R - 1 - h - wobble * 0.4);
+            CTX.closePath(); CTX.stroke();
         }
 
-        // ── Head ─────────────────────────────────────────────────────
-        CTX.fillStyle = '#fde8cc';
-        CTX.beginPath(); CTX.arc(0, -12, 9, 0, Math.PI * 2); CTX.fill();
+        // Bright orange ember tips — overlay on each spike apex
+        CTX.shadowBlur = this.wanchaiActive ? 16 : 6;
+        CTX.shadowColor = '#f97316';
+        const emberColors = ['#f97316', '#ef4444', '#fb923c', '#f87171', '#fca5a5'];
+        spikeData.forEach(([bx, tipOff, h], idx) => {
+            const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
+            const tx = bx + tipOff + wobble;
+            const ty = -R - 1 - h - wobble * 0.4;
+            const eA = (this.wanchaiActive ? 0.9 : 0.6) + Math.sin(now / 200 + idx) * 0.25;
+            CTX.fillStyle = emberColors[idx % emberColors.length];
+            CTX.globalAlpha = Math.max(0, Math.min(1, eA));
+            CTX.beginPath(); CTX.arc(tx, ty, 2, 0, Math.PI * 2); CTX.fill();
+        });
+        CTX.globalAlpha = 1; CTX.shadowBlur = 0;
+
+        // ── Gauntlet weapon ───────────────────────────────────────────
+        if (typeof drawAutoWeapon === 'function') {
+            drawAutoWeapon(CTX, this.wanchaiActive, ventGlow);
+        }
+
+        // ── Oversized Armored Metallic Floating Fists ─────────────────
+        // Front fist — dominant weapon-side, large and menacing
+        const fistGlow = ventGlow * 0.8 + (this.wanchaiActive ? 0.6 : 0);
+        CTX.shadowBlur  = 10 * fistGlow; CTX.shadowColor = '#dc2626';
+
+        // Front fist base (metal casing)
+        CTX.fillStyle   = '#4a0e0e';
+        CTX.strokeStyle = '#1e293b';
+        CTX.lineWidth   = 2.5;
+        CTX.beginPath(); CTX.arc(R + 8, 3, 7, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        // Metal plating highlight
         CTX.fillStyle = '#7f1d1d';
-        CTX.beginPath(); CTX.arc(0, -12, 10, Math.PI * 1.05, Math.PI * 1.95); CTX.fill();
-        CTX.fillStyle = '#0f172a';
-        CTX.beginPath(); CTX.arc(-4, -14, 3, Math.PI * 0.9, Math.PI * 2.1); CTX.fill();
-        CTX.beginPath(); CTX.arc( 4, -14, 3, Math.PI * 0.9, Math.PI * 2.1); CTX.fill();
-        CTX.fillStyle = '#ef4444';
-        CTX.shadowBlur = 4; CTX.shadowColor = '#dc2626';
-        CTX.fillRect(-6, -13, 4, 2);
-        CTX.fillRect( 2, -13, 4, 2);
+        CTX.beginPath(); CTX.arc(R + 6, 1, 3.5, 0, Math.PI * 2); CTX.fill();
+        // Knuckle groove lines
+        CTX.strokeStyle = '#2d0606'; CTX.lineWidth = 1.2;
+        CTX.beginPath(); CTX.moveTo(R + 3, 1);   CTX.lineTo(R + 13, 1);   CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(R + 3, 4);   CTX.lineTo(R + 13, 4);   CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(R + 3, 6.5); CTX.lineTo(R + 13, 6.5); CTX.stroke();
+        // Fist ember glow slit
+        const fistEmber = Math.max(0, 0.5 + Math.sin(now / 160) * 0.4) * (this.wanchaiActive ? 1 : 0.6);
+        CTX.fillStyle   = `rgba(251,146,60,${fistEmber})`;
+        CTX.shadowBlur  = 8 * fistEmber; CTX.shadowColor = '#fb923c';
+        CTX.beginPath(); CTX.roundRect(R + 4, 2.5, 8, 1.5, 1); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Back fist — off-hand, also oversized but slightly smaller
+        CTX.fillStyle   = '#3d0808';
+        CTX.strokeStyle = '#1e293b';
+        CTX.lineWidth   = 2.5;
+        CTX.shadowBlur  = 6 * fistGlow; CTX.shadowColor = '#dc2626';
+        CTX.beginPath(); CTX.arc(-(R + 7), -1, 6, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        // Back knuckle ridge
+        CTX.fillStyle = '#5c1010';
+        CTX.beginPath(); CTX.arc(-(R + 9), -2, 2.5, 0, Math.PI * 2); CTX.fill();
         CTX.shadowBlur = 0;
 
         CTX.restore(); // end body transform
 
-        // ── Heat shimmer particles while moving ──────────────────────
+        // ── Heat shimmer particles ────────────────────────────────────
         if (typeof spawnParticles === 'function' && (Math.abs(this.vx) + Math.abs(this.vy)) > 60 && Math.random() < 0.1) {
-            spawnParticles(this.x + rand(-12, 12), this.y + rand(-12, 12), 1, '#fb7185', 'steam');
-        }
-
-        // ── Thermodynamic gauntlet weapon ─────────────────────────────
-        if (typeof drawAutoWeapon === 'function') {
-            CTX.save();
-            CTX.translate(screen.x, screen.y);
-            CTX.rotate(this.angle);
-            drawAutoWeapon(CTX, this.wanchaiActive, ventGlow);
-            CTX.restore();
+            spawnParticles(this.x + rand(-10, 10), this.y + rand(-10, 10), 1, '#fb7185', 'steam');
         }
 
         // ── Level badge ───────────────────────────────────────────────
         if (this.level > 1) {
-            CTX.fillStyle = 'rgba(220,38,38,0.9)';
-            CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 10, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fff'; CTX.font = 'bold 10px Arial';
+            CTX.fillStyle = 'rgba(185,28,28,0.92)';
+            CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 9, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
             CTX.fillText(this.level, screen.x + 22, screen.y - 22);
         }
@@ -1629,136 +1700,204 @@ class PoomPlayer extends Entity {
             }
         }
 
+        // ════════════════════════════════════════════════════════
+        // POOM — Bean & Floating Hands · Deep Amber · Naga Summoner
+        // ════════════════════════════════════════════════════════
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
-        const w = Math.sin(this.walkCycle) * 8;
 
-        // ── Legs ─────────────────────────────────────────────────────
-        CTX.fillStyle = '#1e3a8a';
-        CTX.beginPath(); CTX.ellipse(5+w,  14, 6, 4, 0, 0, Math.PI*2); CTX.fill();
-        CTX.beginPath(); CTX.ellipse(5-w, -14, 6, 4, 0, 0, Math.PI*2); CTX.fill();
+        // ── Breathing idle + movement squash (springy circles) ───────
+        const now2       = performance.now();
+        const breathePoom = Math.sin(Date.now() / 200);
+        const speed2     = Math.hypot(this.vx, this.vy);
+        const moveT2     = Math.min(1, speed2 / 190);
+        const bobT2      = Math.sin(this.walkCycle);
+        const stretchX2  = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
+        const stretchY2  = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
+        CTX.scale(stretchX2, stretchY2);
 
-        // ── v11 Outer glow silhouette (deep purple) ────────────────
-        CTX.shadowBlur  = 16;
-        CTX.shadowColor = '#a855f7';
-        CTX.strokeStyle = 'rgba(168,85,247,0.72)';
+        // Bean radius — Poom stays a circle (approx. same as Kao)
+        const R2 = 13;
+
+        // ── Silhouette glow ring — deep purple (Poom's stand aura) ───
+        CTX.shadowBlur  = 16; CTX.shadowColor = 'rgba(168,85,247,0.72)';
+        CTX.strokeStyle = 'rgba(168,85,247,0.50)';
         CTX.lineWidth   = 2.8;
-        CTX.beginPath(); CTX.roundRect(-14, -4, 28, 22, 5); CTX.stroke();
-        // Shoulder outline glow
-        CTX.beginPath(); CTX.roundRect(-18, -6, 10, 14, 4); CTX.stroke();
-        CTX.beginPath(); CTX.roundRect( 8,  -6, 10, 14, 4); CTX.stroke();
-        CTX.shadowBlur = 0;
+        CTX.beginPath(); CTX.arc(0, 0, R2 + 3, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur  = 0;
 
-        // ── Shoulder pads (relaxed casual style) ───────────────────
-        CTX.fillStyle = '#ea580c';
-        CTX.beginPath(); CTX.roundRect(-18, -6, 10, 14, 4); CTX.fill();
-        CTX.beginPath(); CTX.roundRect( 8,  -6, 10, 14, 4); CTX.fill();
+        // ── Bean body — deep amber/orange radial gradient ─────────────
+        const bodyG2 = CTX.createRadialGradient(-3, -3, 1, 0, 0, R2);
+        bodyG2.addColorStop(0,    '#d97706');
+        bodyG2.addColorStop(0.5,  '#b45309');
+        bodyG2.addColorStop(1,    '#78350f');
+        CTX.fillStyle = bodyG2;
+        CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.fill();
 
-        // ── Torso: modern student vest ──────────────────────────────
-        const vestGrad = CTX.createLinearGradient(-14, -4, 14, 18);
-        vestGrad.addColorStop(0, '#f97316');
-        vestGrad.addColorStop(0.5, '#ea580c');
-        vestGrad.addColorStop(1, '#c2410c');
-        CTX.fillStyle = vestGrad;
-        CTX.beginPath(); CTX.roundRect(-14, -4, 28, 22, 5); CTX.fill();
+        // Thick sticker outline
+        CTX.strokeStyle = '#1e293b';
+        CTX.lineWidth   = 3;
+        CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.stroke();
 
-        // ── Glowing Thai Kranok (lotus scroll) patterns on vest ────
-        // Ornamental curling leaf motifs inspired by traditional Thai Kranok
-        const kranokT   = performance.now() / 500;
-        const kranokAlpha = 0.45 + Math.sin(kranokT * 1.3) * 0.25;
+        // Specular highlight
+        CTX.fillStyle = 'rgba(255,255,255,0.18)';
+        CTX.beginPath(); CTX.arc(-4, -5, 5, 0, Math.PI * 2); CTX.fill();
+
+        // ── Glowing Golden Thai Kranok pattern accent on body ─────────
+        // A single vertical golden accent line on the right side (Prajioud vibe)
+        const kranokT2    = now2 / 500;
+        const kranokAlpha = 0.55 + Math.sin(kranokT2 * 1.3) * 0.25;
         CTX.save();
-        CTX.beginPath(); CTX.roundRect(-14, -4, 28, 22, 5); CTX.clip();
+        CTX.beginPath(); CTX.arc(0, 0, R2 - 1, 0, Math.PI * 2); CTX.clip();
 
-        // Left scroll tendril
         CTX.globalAlpha = kranokAlpha;
-        CTX.strokeStyle = '#fde68a';
-        CTX.lineWidth   = 1.2;
-        CTX.shadowBlur  = 6 + Math.sin(kranokT * 2) * 3;
+        CTX.strokeStyle = '#fef3c7'; CTX.lineWidth = 1.1;
+        CTX.shadowBlur  = 6 + Math.sin(kranokT2 * 2) * 3;
         CTX.shadowColor = '#fbbf24';
+
+        // Left tendril scroll
         CTX.beginPath();
-        CTX.moveTo(-10, 14); CTX.quadraticCurveTo(-12, 5, -6, 3);
-        CTX.quadraticCurveTo(-2, 1, -4, 6);
+        CTX.moveTo(-8, 7); CTX.quadraticCurveTo(-9, 1, -4, -1);
+        CTX.quadraticCurveTo(-1, -2, -3, 3);
         CTX.stroke();
-        // Petal flourish top
         CTX.beginPath();
-        CTX.moveTo(-6, 3); CTX.quadraticCurveTo(-8, 0, -5, -1);
-        CTX.quadraticCurveTo(-3, -2, -4, 1);
+        CTX.moveTo(-4, -1); CTX.quadraticCurveTo(-6, -4, -3, -5);
+        CTX.quadraticCurveTo(-1, -6, -2, -3);
         CTX.stroke();
 
-        // Right scroll tendril (mirrored)
+        // Right tendril scroll (mirrored)
         CTX.beginPath();
-        CTX.moveTo(10, 14); CTX.quadraticCurveTo(12, 5, 6, 3);
-        CTX.quadraticCurveTo(2, 1, 4, 6);
+        CTX.moveTo(8, 7); CTX.quadraticCurveTo(9, 1, 4, -1);
+        CTX.quadraticCurveTo(1, -2, 3, 3);
         CTX.stroke();
         CTX.beginPath();
-        CTX.moveTo(6, 3); CTX.quadraticCurveTo(8, 0, 5, -1);
-        CTX.quadraticCurveTo(3, -2, 4, 1);
+        CTX.moveTo(4, -1); CTX.quadraticCurveTo(6, -4, 3, -5);
+        CTX.quadraticCurveTo(1, -6, 2, -3);
         CTX.stroke();
 
-        // Centre lotus diamond
-        CTX.globalAlpha = kranokAlpha * 0.9;
-        CTX.fillStyle = '#fef08a';
-        CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
+        // Central lotus diamond (pulsing)
+        CTX.globalAlpha = kranokAlpha * 0.95;
+        CTX.fillStyle   = 'rgba(255,251,235,0.90)';
+        CTX.shadowBlur  = 8; CTX.shadowColor = '#fbbf24';
         CTX.beginPath();
-        CTX.moveTo(0, -2); CTX.lineTo(3, 2); CTX.lineTo(0, 6); CTX.lineTo(-3, 2);
+        CTX.moveTo(0, -5); CTX.lineTo(2.5, -1); CTX.lineTo(0, 3); CTX.lineTo(-2.5, -1);
         CTX.closePath(); CTX.fill();
 
         // Dot accents
-        CTX.fillStyle = '#fde68a';
-        CTX.shadowBlur = 4;
-        for (const [dx2, dy2] of [[-9, 10], [9, 10], [0, 11]]) {
-            CTX.beginPath(); CTX.arc(dx2, dy2, 1.5, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = 'rgba(254,243,199,0.85)'; CTX.shadowBlur = 3;
+        for (const [dx2, dy2] of [[-5, 8], [0, 9], [5, 8]]) {
+            CTX.beginPath(); CTX.arc(dx2, dy2, 1.2, 0, Math.PI * 2); CTX.fill();
         }
-        CTX.restore();
+        CTX.restore(); // end kranok clip
+        CTX.globalAlpha = 1;
 
-        // ── Off-hand visible ──────────────────────────────────────
-        CTX.fillStyle = '#d4a574';
-        CTX.beginPath(); CTX.arc(10, 18, 4, 0, Math.PI*2); CTX.fill();
-        CTX.beginPath(); CTX.arc(8, -16, 4, 0, Math.PI*2); CTX.fill();
-
-        // ── Head ─────────────────────────────────────────────────
-        CTX.fillStyle = '#d4a574';
-        CTX.beginPath(); CTX.arc(0, -12, 9, 0, Math.PI*2); CTX.fill();
-        // Hair / cap
-        CTX.fillStyle = '#0f172a';
-        CTX.beginPath(); CTX.arc(0, -12, 10, Math.PI*1.1, Math.PI*2.9); CTX.fill();
-        // Cap brim — slightly tilted for casual student look
-        CTX.fillStyle = '#f97316';
+        // ── Messy Spiky Hair — dark brown blob over upper half ────────
+        // Base hair mass
+        CTX.fillStyle = '#1c0f05';
         CTX.beginPath();
-        CTX.moveTo(-10, -16); CTX.lineTo(10, -16);
-        CTX.lineTo(11, -14); CTX.lineTo(-11, -14);
+        CTX.moveTo(-R2, -2);
+        CTX.quadraticCurveTo(-R2 - 1, -R2 * 1.1, 0, -R2 - 7);     // left arc sweeps over top
+        CTX.quadraticCurveTo(R2 + 1, -R2 * 1.1, R2, -2);            // right arc
+        CTX.quadraticCurveTo(R2 * 0.6, -1, 0, 0);                   // hair bottom edge
+        CTX.quadraticCurveTo(-R2 * 0.6, -1, -R2, -2);
         CTX.closePath(); CTX.fill();
-        // Cap glow edge
-        CTX.strokeStyle = 'rgba(253,230,138,0.5)'; CTX.lineWidth = 0.8;
-        CTX.beginPath(); CTX.moveTo(-10, -14); CTX.lineTo(10, -14); CTX.stroke();
 
-        // Eyes
-        CTX.fillStyle = '#0f172a';
-        CTX.beginPath(); CTX.arc(-4, -12, 2.5, 0, Math.PI*2); CTX.fill();
-        CTX.beginPath(); CTX.arc( 4, -12, 2.5, 0, Math.PI*2); CTX.fill();
-        CTX.strokeStyle='#1e293b'; CTX.lineWidth=1.8;
-        CTX.beginPath(); CTX.arc(-3.5, -12, 2, 0, Math.PI*2); CTX.stroke();
-        CTX.beginPath(); CTX.arc(3.5, -12,  2, 0, Math.PI*2); CTX.stroke();
-        // Eye shine
-        const tg = performance.now()/500;
-        CTX.fillStyle=`rgba(255,255,255,${Math.abs(Math.sin(tg))*0.7+0.3})`;
-        CTX.fillRect(-5, -13, 2, 1.5); CTX.fillRect(3, -13, 2, 1.5);
-        // Smile
-        CTX.strokeStyle='#7c3c2a'; CTX.lineWidth=1.8;
-        CTX.beginPath(); CTX.arc(0, -10, 3.5, 0.1, Math.PI-0.1); CTX.stroke();
+        // Hair sticker outline
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.beginPath();
+        CTX.moveTo(-R2, -2);
+        CTX.quadraticCurveTo(-R2 - 1, -R2 * 1.1, 0, -R2 - 7);
+        CTX.quadraticCurveTo(R2 + 1, -R2 * 1.1, R2, -2);
+        CTX.quadraticCurveTo(R2 * 0.6, -1, 0, 0);
+        CTX.quadraticCurveTo(-R2 * 0.6, -1, -R2, -2);
+        CTX.closePath(); CTX.stroke();
 
-        // ── Draw Poom weapon ──────────────────────────────────────
+        // Brown highlight streak
+        CTX.fillStyle = '#3b1a07';
+        CTX.beginPath();
+        CTX.moveTo(-6, -R2 - 4);
+        CTX.quadraticCurveTo(-1, -R2 - 8, 4, -R2 - 5);
+        CTX.quadraticCurveTo(2, -R2 - 1, -2, -R2);
+        CTX.quadraticCurveTo(-5, -R2, -6, -R2 - 4);
+        CTX.closePath(); CTX.fill();
+
+        // Messy spiky tips — 5 irregular spikes, slight per-frame wobble
+        CTX.fillStyle = '#15080a';
+        const hairSpikes = [
+            { bx: -9, angle: -2.4, len: 7 },
+            { bx: -4, angle: -2.0, len: 9 },
+            { bx:  1, angle: -1.57, len: 10 },
+            { bx:  6, angle: -1.1, len: 8 },
+            { bx: 10, angle: -0.8, len: 6 },
+        ];
+        for (const sp of hairSpikes) {
+            const tipX = sp.bx + Math.cos(sp.angle) * sp.len;
+            const tipY = -R2 - 5 + Math.sin(sp.angle) * sp.len;
+            const wob  = Math.sin(now2 / 500 + sp.bx) * 1.2;
+            CTX.fillStyle = '#15080a';
+            CTX.beginPath();
+            CTX.moveTo(sp.bx - 3, -R2 - 3);
+            CTX.lineTo(sp.bx + 3, -R2 - 3);
+            CTX.lineTo(tipX + wob, tipY - wob * 0.5);
+            CTX.closePath(); CTX.fill();
+            // Spike sticker outline
+            CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
+            CTX.beginPath();
+            CTX.moveTo(sp.bx - 3, -R2 - 3);
+            CTX.lineTo(sp.bx + 3, -R2 - 3);
+            CTX.lineTo(tipX + wob, tipY - wob * 0.5);
+            CTX.closePath(); CTX.stroke();
+        }
+
+        // ── Kratib weapon ─────────────────────────────────────────────
         if (typeof drawPoomWeapon === 'function') drawPoomWeapon(CTX);
 
+        // ── Floating Hands — Prajioud White Rope/Armband Detail ──────
+        // Poom's hands have white fabric armbands (Thai fighter's Prajioud)
+
+        // Front hand — weapon/launcher side
+        const pR = 5;
+        CTX.fillStyle   = '#d97706';   // amber skin tone
+        CTX.strokeStyle = '#1e293b';
+        CTX.lineWidth   = 2.5;
+        CTX.shadowBlur  = 6; CTX.shadowColor = '#f59e0b';
+        CTX.beginPath(); CTX.arc(R2 + 6, 1, pR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.shadowBlur = 0;
+        // Prajioud white rope band — two thin horizontal stripes
+        CTX.save();
+        CTX.beginPath(); CTX.arc(R2 + 6, 1, pR, 0, Math.PI * 2); CTX.clip();
+        CTX.fillStyle   = 'rgba(255,255,255,0.80)';
+        CTX.fillRect(R2 + 1, -1.5, 10, 1.5);    // upper band
+        CTX.fillRect(R2 + 1,  1.5, 10, 1.2);    // lower band
+        CTX.fillStyle = 'rgba(220,38,38,0.60)';  // red centre thread (Kao-style flag)
+        CTX.fillRect(R2 + 1, 0.1, 10, 0.8);
         CTX.restore();
 
+        // Back hand — off-hand
+        CTX.fillStyle   = '#b45309';
+        CTX.strokeStyle = '#1e293b';
+        CTX.lineWidth   = 2.5;
+        CTX.shadowBlur  = 4; CTX.shadowColor = '#f59e0b';
+        CTX.beginPath(); CTX.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.shadowBlur = 0;
+        // Back hand Prajioud band
+        CTX.save();
+        CTX.beginPath(); CTX.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2); CTX.clip();
+        CTX.fillStyle = 'rgba(255,255,255,0.75)';
+        CTX.fillRect(-(R2 + 10), -1, 10, 1.3);
+        CTX.fillRect(-(R2 + 10),  1.5, 10, 1.1);
+        CTX.restore();
+
+        CTX.restore(); // end body transform
+
+        // ── Level badge ───────────────────────────────────────────────
         if (this.level > 1) {
-            CTX.fillStyle = 'rgba(234,88,12,0.9)';
-            CTX.beginPath(); CTX.arc(screen.x+22, screen.y-22, 10, 0, Math.PI*2); CTX.fill();
-            CTX.fillStyle='#fff'; CTX.font='bold 10px Arial';
-            CTX.textAlign='center'; CTX.textBaseline='middle';
-            CTX.fillText(this.level, screen.x+22, screen.y-22);
+            CTX.fillStyle = 'rgba(217,119,6,0.92)';
+            CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText(this.level, screen.x + 20, screen.y - 20);
         }
     }
 
