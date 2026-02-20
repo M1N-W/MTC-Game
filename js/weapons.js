@@ -11,13 +11,13 @@
  *
  * AUDIO NOTE (Poom character sounds):
  * - Poom's shooting sound (Audio.playPoomShoot) is called inside
- *   PoomPlayer.shoot() in js/entities/player.js, NOT here.
- *   Reason: Poom bypasses WeaponSystem entirely — his projectile is fired
- *   directly via PoomPlayer.shoot() which reads his rice* stats from BALANCE.
- *   WeaponSystem only governs Kao's auto/sniper/shotgun weapon modes.
+ * PoomPlayer.shoot() in js/entities/player.js, NOT here.
+ * Reason: Poom bypasses WeaponSystem entirely — his projectile is fired
+ * directly via PoomPlayer.shoot() which reads his rice* stats from BALANCE.
+ * WeaponSystem only governs Kao's auto/sniper/shotgun weapon modes.
  * - Naga hit sound (Audio.playNagaAttack) is called inside
- *   NagaEntity.update() in js/entities/player.js with a 220 ms cooldown
- *   to prevent rapid-tick audio stacking.
+ * NagaEntity.update() in js/entities/player.js with a 220 ms cooldown
+ * to prevent rapid-tick audio stacking.
  */
 
 class Projectile {
@@ -34,6 +34,10 @@ class Projectile {
         this.size = (options && options.size !== undefined) ? options.size : (isCrit ? 24 : 14);
         this.radius = (options && options.radius !== undefined) ? options.radius : 10;
         this.pierce = (options && options.pierce !== undefined) ? options.pierce : 0;
+        
+        // --- NEW RICOCHET MECHANIC PROPERTY ---
+        this.bounces = (options && options.bounces !== undefined) ? options.bounces : 0; 
+        
         this.hitSet = null;
 
         this.symbol = options?.symbol || this.getSymbol(isCrit, team);
@@ -46,9 +50,61 @@ class Projectile {
     }
 
     update(dt) {
-        this.x += this.vx * dt; this.y += this.vy * dt;
-        this.life -= dt; this.angle += dt * 2;
+        this.x += this.vx * dt; 
+        this.y += this.vy * dt;
+        this.life -= dt; 
+        this.angle += dt * 2; // Keep original spinning visual effect
+
+        // --- NEW: RICOCHET & BOUNDARY COLLISION LOGIC ---
+        // Fallback to standard 2000px bounds if global map boundaries aren't explicitly defined
+        const boundsX = typeof WORLD_WIDTH !== 'undefined' ? WORLD_WIDTH : (typeof canvas !== 'undefined' ? canvas.width : 2000);
+        const boundsY = typeof WORLD_HEIGHT !== 'undefined' ? WORLD_HEIGHT : (typeof canvas !== 'undefined' ? canvas.height : 2000);
+
+        // X-Axis Boundary Checking (Left / Right Walls)
+        if (this.x - this.radius < 0) {
+            if (this.bounces > 0) {
+                this.x = this.radius; // Snap to prevent getting stuck
+                this.vx *= -1; // Reflect velocity
+                this.bounces--;
+                this.angle = Math.atan2(this.vy, this.vx); // Reorient base visual angle
+            } else {
+                this.life = 0; // Destroy bullet if no bounces left and hits wall
+            }
+        } else if (this.x + this.radius > boundsX) {
+            if (this.bounces > 0) {
+                this.x = boundsX - this.radius;
+                this.vx *= -1;
+                this.bounces--;
+                this.angle = Math.atan2(this.vy, this.vx);
+            } else {
+                this.life = 0;
+            }
+        }
+
+        // Y-Axis Boundary Checking (Top / Bottom Walls)
+        if (this.y - this.radius < 0) {
+            if (this.bounces > 0) {
+                this.y = this.radius;
+                this.vy *= -1;
+                this.bounces--;
+                this.angle = Math.atan2(this.vy, this.vx);
+            } else {
+                this.life = 0;
+            }
+        } else if (this.y + this.radius > boundsY) {
+            if (this.bounces > 0) {
+                this.y = boundsY - this.radius;
+                this.vy *= -1;
+                this.bounces--;
+                this.angle = Math.atan2(this.vy, this.vx);
+            } else {
+                this.life = 0;
+            }
+        }
+        // ------------------------------------------------
+
         if (this.kind !== 'punch' && Math.random() < 0.3) spawnParticles(this.x, this.y, 1, this.color);
+        
         return this.life <= 0;
     }
 
@@ -336,9 +392,9 @@ class WeaponSystem {
      *
      * • Kao  → BALANCE.characters.kao.weapons  (standard weapons object)
      * • Poom → synthetic shim built from poom's flat rice* stats so that any
-     *           accidental call to getWeaponData() / getCharWeapons() on a Poom
-     *           session never throws.  The shim is NOT used for Poom's actual
-     *           shooting (shootPoom() in game.js handles that separately).
+     * accidental call to getWeaponData() / getCharWeapons() on a Poom
+     * session never throws.  The shim is NOT used for Poom's actual
+     * shooting (shootPoom() in game.js handles that separately).
      * • Unknown char → falls back to kao weapons with a console warning.
      */
     getCharWeapons() {
@@ -354,8 +410,7 @@ class WeaponSystem {
         if (charData.weapons) return charData.weapons;
 
         // ── Poom: no weapons object → build a minimal shim ──
-        // This prevents any crash if getWeaponData() is ever called during a
-        // Poom session (e.g., a code path that doesn't check instanceof PoomPlayer).
+        // This prevents any crash if getWeaponData() is ever called during a Poom session.
         const S = charData;
         const riceWeapon = {
             name:    '🍙 ข้าวเหนียว',
@@ -368,7 +423,8 @@ class WeaponSystem {
             color:   S.riceColor    ?? '#ffffff',
             icon:    '🍙'
         };
-        return { auto: riceWeapon, sniper: riceWeapon, shotgun: riceWeapon };    }
+        return { auto: riceWeapon, sniper: riceWeapon, shotgun: riceWeapon };    
+    }
 
     switchWeapon() {
         const weapons = ['auto', 'sniper', 'shotgun'];
@@ -381,7 +437,6 @@ class WeaponSystem {
         if (this.weaponsUsed.size >= 3) Achievements.check('weapon_master');
     }
 
-    /** FIXED: was BALANCE.player.weapons[...]. Poom shows rice icon instead. */
     updateWeaponUI() {
         try {
             // Poom uses a completely different attack system — show a dedicated label
@@ -413,7 +468,6 @@ class WeaponSystem {
 
     getCurrentWeapon() { return this.currentWeapon; }
 
-    /** FIXED: was BALANCE.player.weapons[this.currentWeapon] */
     getWeaponData() {
         return this.getCharWeapons()[this.currentWeapon];
     }
@@ -429,7 +483,6 @@ class WeaponSystem {
                     this.burstTimer = this.burstDelay;
                 } else {
                     this.isBursting = false;
-                    // FIXED: was BALANCE.player.weapons.auto.cooldown
                     this.weaponCooldown = this.getCharWeapons().auto.cooldown;
                 }
             }
@@ -461,7 +514,6 @@ class WeaponSystem {
         this.pendingBurstShots--;
         if (this.pendingBurstShots <= 0) {
             this.isBursting = false;
-            // FIXED: was BALANCE.player.weapons.auto.cooldown
             this.weaponCooldown = this.getCharWeapons().auto.cooldown;
         }
         return shot;
@@ -478,7 +530,6 @@ class WeaponSystem {
         let color = weapon.color;
 
         if (player.ambushReady) {
-            // FIXED: was BALANCE.player.critMultiplier
             const critMult = BALANCE.characters[this.activeChar]?.critMultiplier ?? 2.5;
             damage *= critMult;
             isCrit = true; color = '#facc15';
@@ -505,14 +556,23 @@ class WeaponSystem {
             const angle = player.angle + spread;
             const sx = player.x + Math.cos(angle) * offset;
             const sy = player.y + Math.sin(angle) * offset;
-            projectiles.push(new Projectile(sx, sy, angle, weapon.speed, damage / weapon.pellets, color, isCrit, 'player'));
+            
+            // --- RICOCHET TEST IMPLEMENTATION ---
+            // Let's add some bounce properties to sniper and shotgun for fun/testing!
+            let projOptions = {};
+            if (this.currentWeapon === 'sniper') {
+                projOptions.bounces = 2; // Sniper bounces twice!
+                projOptions.life = 5;    // Increased life to allow for bounce travel time
+            } else if (this.currentWeapon === 'shotgun') {
+                projOptions.bounces = 1; // Shotgun buckshot bounces once!
+                projOptions.life = 2.5;
+            }
+
+            projectiles.push(new Projectile(sx, sy, angle, weapon.speed, damage / weapon.pellets, color, isCrit, 'player', projOptions));
         }
 
         player.vx -= Math.cos(player.angle) * 50;
         player.vy -= Math.sin(player.angle) * 50;
-        // Kao's weapon sound — routed through playShoot(weaponType).
-        // Poom's shoot sound (Audio.playPoomShoot) is fired in PoomPlayer.shoot()
-        // inside js/entities/player.js since Poom never calls shootSingle() here.
         Audio.playShoot(this.currentWeapon);
         return projectiles;
     }
@@ -667,7 +727,6 @@ class ProjectileManager {
         const range = player?.stats?.heatWaveRange ?? BALANCE.player?.auto?.heatWaveRange ?? 150;
 
         // ── BUG-3 FIX: Read base damage from config instead of hardcoding 34.
-        // Priority: live player stats → canonical config fallback → sentinel 34.
         const damageBase = player?.stats?.weapons?.auto?.damage
             ?? BALANCE.characters?.auto?.weapons?.auto?.damage
             ?? 34;
@@ -685,12 +744,14 @@ class ProjectileManager {
         const speed = Math.max(600, range * 9);
         const sx = player.x + Math.cos(a) * 22;
         const sy = player.y + Math.sin(a) * 22;
+        
         const p = new Projectile(sx, sy, a, speed, damage, '#dc2626', false, 'player', {
             kind: 'heatwave',
-            life: Math.max(0.12, range / speed),
+            life: Math.max(0.12, range / speed) * 3, // Multiplied by 3 so it has enough time to bounce
             size: 18,
             radius: 18,
-            pierce: 2
+            pierce: 2,
+            bounces: 3 // --- RICOCHET: Auto's Heat Wave can bounce 3 times! ---
         });
         this.add(p);
     }
@@ -709,9 +770,9 @@ var projectileManager = new ProjectileManager();
  * "The Tactical Kratib" — a futuristic Sticky Rice Container Launcher.
  *
  * Design:
- *  • Body  : Bamboo-textured cylinder with neon metal rings
- *  • Barrel: High-tech emitter cone at the muzzle
- *  • Strap : Visible shoulder sling
+ * • Body  : Bamboo-textured cylinder with neon metal rings
+ * • Barrel: High-tech emitter cone at the muzzle
+ * • Strap : Visible shoulder sling
  *
  * Call this inside a CTX.save/restore that is already translated
  * to the player's screen position and rotated to the player's angle.
