@@ -74,6 +74,29 @@
  *     • Kao : rgba(0,255,65,0.70) — neon green, shadowBlur 16, lineWidth 2.8
  *     • Poom: rgba(168,85,247,0.72) — deep purple, shadowBlur 16, lineWidth 2.8
  *     • Colours match each character's stand-aura identity from base.js.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * ANTI-FLIP ORIENTATION SYSTEM (Game Engine Architect — v12)
+ * ────────────────────────────────────────────────────────────────
+ * ✅ ORIENTATION FIX (All characters):
+ *     PROBLEM: Single CTX.rotate(this.angle) block caused the entire sprite
+ *     (body, hair, weapon) to flip upside-down when aiming left (|angle|>90°).
+ *
+ *     SOLUTION: Two independent draw layers per character:
+ *
+ *     LAYER 1 — BODY (no rotation, horizontal mirror only)
+ *       • isFacingLeft = Math.abs(this.angle) > Math.PI / 2
+ *       • facingSign = isFacingLeft ? -1 : 1
+ *       • CTX.scale(stretchX * facingSign, stretchY)
+ *       • Body, hair, hood/visor stay perfectly upright at all times.
+ *
+ *     LAYER 2 — WEAPON + HANDS (full 360° rotation)
+ *       • CTX.rotate(this.angle)           — tracks mouse 360°
+ *       • if (isFacingLeft) CTX.scale(1,-1) — cancels implicit Y-flip
+ *       • Hands drawn here so they stay locked to weapon barrel/handle.
+ *
+ *     DASH GHOSTS: each ghost reads its own saved angle for facingSign,
+ *     matching the orientation at capture time.
  */
 
 // Minimum gap (ms) between successive Naga hit sounds.
@@ -107,16 +130,13 @@ class Player extends Entity {
         this.speedBoost      = 1;
         this.speedBoostTimer = 0;
         this.dashGhosts      = [];
-        
+
         // ── Timeout Management ───────────────────────────────────
-        // Store setTimeout IDs to prevent memory leaks when player dies
-        this.dashTimeouts     = [];
+        this.dashTimeouts = [];
 
         // ── Weapon Recoil (v11) ───────────────────────────────────
-        // Set to 1.0 by triggerRecoil() on each shot; decays to 0 over ~0.12 s.
-        // Drives a backward body-lean and muzzle-flash ring in draw().
         this.weaponRecoil      = 0;
-        this.weaponRecoilDecay = 8.5; // units/sec; 1/8.5 ≈ 0.12 s full decay
+        this.weaponRecoilDecay = 8.5;
 
         // ── Stand-Aura & Afterimage system ────────────────────
         this.standGhosts   = [];
@@ -132,8 +152,7 @@ class Player extends Entity {
         this.expToNextLevel = stats.expToNextLevel;
 
         // ── RPG Scaling Multipliers ─────────────────────────────
-        // Permanent progression: damage increases, cooldowns decrease per level
-        this.damageMultiplier = 1.0;
+        this.damageMultiplier   = 1.0;
         this.cooldownMultiplier = 1.0;
 
         this.baseCritChance  = stats.baseCritChance;
@@ -245,19 +264,12 @@ class Player extends Entity {
             if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
         }
 
-        // ── Recoil decay (v11) ───────────────────────────────────
-        // weaponRecoil is set to 1.0 by triggerRecoil() in game.js after
-        // each successful shot. It decays to 0 over ~0.12 s, driving the
-        // backward body-lean + muzzle-flash ring rendered in draw().
         if (this.weaponRecoil > 0) {
             this.weaponRecoil = Math.max(0, this.weaponRecoil - this.weaponRecoilDecay * dt);
         }
 
         _standAura_update(this, dt);
-        
-        // ── Cleanup dash timeouts (foolproof) ───────────────────
-        // If the player dies mid-dash, ensure ALL scheduled dash callbacks are
-        // cancelled immediately so they cannot retain references or mutate state.
+
         if (this.dead && this.dashTimeouts && this.dashTimeouts.length) {
             const ids = this.dashTimeouts.slice();
             this.dashTimeouts.length = 0;
@@ -265,16 +277,10 @@ class Player extends Entity {
                 try { clearTimeout(timeoutId); } catch (e) {}
             }
         }
-        
+
         this.updateUI();
     }
 
-    /**
-     * triggerRecoil()
-     * Called by game.js after weaponSystem.shoot() fires projectiles.
-     * Kicks the recoil animation — draw() will show a body lean + muzzle flash
-     * that self-clears in ~0.12 s via the per-frame weaponRecoil decay.
-     */
     triggerRecoil() {
         this.weaponRecoil = 1.0;
     }
@@ -295,26 +301,14 @@ class Player extends Entity {
         this.cooldowns.stealth = this.stats.stealthCooldown * this.cooldownMultiplier;
     }
 
-    /**
-     * dash(ax, ay)
-     * Launches a short directional burst, spawns blue ghost trail images,
-     * and grants i-frames for the 200 ms dash window.
-     *
-     * BUG FIX: This method was previously missing from Player entirely —
-     * it only existed on PoomPlayer. Player.update() called this.dash()
-     * unconditionally on [Space], causing "this.dash is not a function"
-     * the moment Kao was selected.
-     */
     dash(ax, ay) {
         const S = this.stats;
-        if (this.isDashing) return;                      // guard re-entry
+        if (this.isDashing) return;
         this.isDashing      = true;
         this.cooldowns.dash = S.dashCooldown;
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;
-        // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly.
-        // Clamp timeScale to prevent division by 0 / Infinity / NaN.
         let currentScale = 1.0;
         if (typeof window.timeScale === 'number' && Number.isFinite(window.timeScale)) {
             currentScale = window.timeScale;
@@ -327,20 +321,18 @@ class Player extends Entity {
         this.vx = Math.cos(angle) * dashSpeed;
         this.vy = Math.sin(angle) * dashSpeed;
 
-        // Ghost trail — staggered snapshots captured during the dash window
         for (let i = 0; i < 5; i++) {
             const timeoutId = setTimeout(() => {
                 if (!this.dead) {
                     this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
                 }
-                // Remove timeout ID from array after execution
                 const idx = this.dashTimeouts.indexOf(timeoutId);
                 if (idx > -1) this.dashTimeouts.splice(idx, 1);
             }, i * 30);
             this.dashTimeouts.push(timeoutId);
         }
 
-        spawnParticles(this.x, this.y, 15, '#60a5fa');   // Kao blue
+        spawnParticles(this.x, this.y, 15, '#60a5fa');
         Audio.playDash();
         Achievements.stats.dashes++;
         Achievements.check('speedster');
@@ -383,19 +375,14 @@ class Player extends Entity {
         this.exp -= this.expToNextLevel;
         this.level++;
         this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
-        
-        // ── RPG Scaling Progression ─────────────────────────────
-        // +5% damage per level (permanent)
+
         this.damageMultiplier += 0.05;
-        
-        // -3% cooldown per level (capped at 50% reduction)
         this.cooldownMultiplier = Math.max(0.5, this.cooldownMultiplier - 0.03);
-        
-        // Visual feedback for progression
-        const damageBonus = Math.round((this.damageMultiplier - 1) * 100);
+
+        const damageBonus  = Math.round((this.damageMultiplier - 1) * 100);
         const cooldownBonus = Math.round((1 - this.cooldownMultiplier) * 100);
         spawnFloatingText(`LEVEL ${this.level}! +${damageBonus}% DMG, -${cooldownBonus}% CD`, this.x, this.y - 90, '#fbbf24', 32);
-        
+
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -442,68 +429,83 @@ class Player extends Entity {
     addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
 
     draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  KAO — Minimalist Chibi · Blue Rounded Square           ║
-        // ║  Top-down sprite · No face · Hair covers top of body    ║
-        // ╚══════════════════════════════════════════════════════════╝
+        // ════════════════════════════════════════════════════════════
+        // KAO — Anti-Flip v12
+        // LAYER 1: Body (mirror via scale, no rotation) keeps sprite upright.
+        // LAYER 2: Weapon + Hands (full rotate + conditional Y-flip).
+        // ════════════════════════════════════════════════════════════
         const now = performance.now();
         _standAura_draw(this, this.charId || 'kao');
 
-        // ── Dash ghost trail ─────────────────────────────────────────
+        // ── Orientation helper ────────────────────────────────────
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
+        const facingSign   = isFacingLeft ? -1 : 1;
+
+        // Recoil nudge — pushed backward along aim axis in world space
+        const recoilAmt = this.weaponRecoil > 0.05 ? this.weaponRecoil * 3.5 : 0;
+        const recoilX   = -Math.cos(this.angle) * recoilAmt;
+        const recoilY   = -Math.sin(this.angle) * recoilAmt;
+
+        // ── Dash ghost trail ──────────────────────────────────────
         for (const img of this.dashGhosts) {
-            const gs = worldToScreen(img.x, img.y);
+            const gs          = worldToScreen(img.x, img.y);
+            const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
             CTX.save();
-            CTX.translate(gs.x, gs.y); CTX.rotate(img.angle);
+            CTX.translate(gs.x, gs.y);
+            CTX.scale(ghostFacing, 1);
             CTX.globalAlpha = img.life * 0.35;
-            CTX.fillStyle = '#60a5fa';
-            CTX.shadowBlur = 8 * img.life; CTX.shadowColor = '#3b82f6';
+            CTX.fillStyle   = '#60a5fa';
+            CTX.shadowBlur  = 8 * img.life; CTX.shadowColor = '#3b82f6';
             CTX.beginPath(); CTX.roundRect(-11, -11, 22, 22, 6); CTX.fill();
             CTX.restore();
         }
 
         const screen = worldToScreen(this.x, this.y);
 
-        // ── Ground shadow ────────────────────────────────────────────
+        // ── Ground shadow ─────────────────────────────────────────
         CTX.save();
         CTX.globalAlpha = 0.22;
         CTX.fillStyle   = 'rgba(0,0,0,0.8)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 14, 14, 5, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ── Passive aura ─────────────────────────────────────────────
+        // ── Passive aura ──────────────────────────────────────────
         if (this.passiveUnlocked) {
-            const aS = 30 + Math.sin(now / 200) * 4, aA = 0.3 + Math.sin(now / 300) * 0.1;
+            const aS = 30 + Math.sin(now / 200) * 4;
+            const aA = 0.3  + Math.sin(now / 300) * 0.1;
             CTX.save(); CTX.globalAlpha = aA;
             CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3;
-            CTX.shadowBlur = 18; CTX.shadowColor = '#fbbf24';
+            CTX.shadowBlur  = 18; CTX.shadowColor = '#fbbf24';
             CTX.beginPath(); CTX.arc(screen.x, screen.y, aS, 0, Math.PI * 2); CTX.stroke();
             CTX.restore();
         }
 
-        if (this.isConfused) { CTX.font='bold 22px Arial'; CTX.textAlign='center'; CTX.fillText('😵', screen.x, screen.y - 32); }
-        if (this.isBurning)  { CTX.font='bold 18px Arial'; CTX.fillText('🔥', screen.x + 18, screen.y - 26); }
+        if (this.isConfused) {
+            CTX.font = 'bold 22px Arial'; CTX.textAlign = 'center';
+            CTX.fillText('😵', screen.x, screen.y - 32);
+        }
+        if (this.isBurning) {
+            CTX.font = 'bold 18px Arial';
+            CTX.fillText('🔥', screen.x + 18, screen.y - 26);
+        }
 
-        // ── Body transform: rotates to face mouse ────────────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
-
-        // Recoil nudge
-        if (this.weaponRecoil > 0.05) CTX.translate(-this.weaponRecoil * 3.5, 0);
-
-        // ── Breathing idle + movement squash/stretch ─────────────────
+        // ── Breathing squash/stretch ──────────────────────────────
         const breatheKao = Math.sin(Date.now() / 200);
         const speed      = Math.hypot(this.vx, this.vy);
         const moveT      = Math.min(1, speed / 200);
         const bobT       = Math.sin(this.walkCycle);
         const stretchX   = 1 + breatheKao * 0.030 + moveT * bobT * 0.10;
         const stretchY   = 1 - breatheKao * 0.030 - moveT * Math.abs(bobT) * 0.07;
-        CTX.scale(stretchX, stretchY);
+
+        const R = 13;
 
         if (this.isInvisible) {
-            // ── STEALTH: glitch scanlines over ghost bean ─────────────
+            // ── STEALTH: glitch scanlines + ghost bean ────────────
             const gT = now / 60;
-            const R  = 13;
+            CTX.save();
+            CTX.translate(screen.x, screen.y);
+            CTX.scale(stretchX * facingSign, stretchY);
+
             CTX.save();
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.clip();
             for (let sy2 = -R; sy2 < R; sy2 += 3) {
@@ -513,12 +515,12 @@ class Player extends Entity {
                 CTX.fillRect(-R + Math.sin(gT * 7.3 + sy2) * 2.5, sy2, R * 2, 1.5);
             }
             CTX.restore();
-            // Ghost bean outline
+
             CTX.globalAlpha = 0.18 + Math.sin(gT * 2.1) * 0.07;
             CTX.strokeStyle = '#93c5fd'; CTX.lineWidth = 1.5;
             CTX.shadowBlur  = 8; CTX.shadowColor = '#60a5fa';
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
-            // Cyan visor still glows through stealth
+
             CTX.globalAlpha = 0.5 + Math.sin(gT * 5) * 0.3;
             CTX.fillStyle   = '#06b6d4';
             CTX.shadowBlur  = 12; CTX.shadowColor = '#06b6d4';
@@ -528,18 +530,20 @@ class Player extends Entity {
 
         } else {
             // ════════════════════════════════════════════════════════
-            // KAO — Bean & Floating Hands · Dark Navy · Tactical Hood
+            // LAYER 1 — BODY (horizontal mirror only, no rotation)
             // ════════════════════════════════════════════════════════
-            const R = 13; // visual bean radius
+            CTX.save();
+            CTX.translate(screen.x + recoilX, screen.y + recoilY);
+            CTX.scale(stretchX * facingSign, stretchY);
 
-            // ── Silhouette glow ring (drawn BEFORE body so it sits behind) ──
+            // Silhouette neon glow ring — drawn BEFORE fill
             CTX.shadowBlur  = 16; CTX.shadowColor = 'rgba(0,255,65,0.70)';
             CTX.strokeStyle = 'rgba(0,255,65,0.45)';
             CTX.lineWidth   = 2.8;
             CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
             CTX.shadowBlur  = 0;
 
-            // ── Bean body — dark navy radial gradient ─────────────────
+            // Bean body — dark navy radial gradient
             const bodyG = CTX.createRadialGradient(-3, -3, 1, 0, 0, R);
             bodyG.addColorStop(0,    '#1d3461');
             bodyG.addColorStop(0.55, '#0f2140');
@@ -547,31 +551,24 @@ class Player extends Entity {
             CTX.fillStyle = bodyG;
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
-            // Thick sticker outline — pops from background like a decal
-            CTX.strokeStyle = '#1e293b';
-            CTX.lineWidth   = 3;
+            CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
 
-            // Top-left specular (glossy sticker highlight)
             CTX.fillStyle = 'rgba(255,255,255,0.10)';
             CTX.beginPath(); CTX.arc(-4, -5, 5.5, 0, Math.PI * 2); CTX.fill();
 
-            // ── Tactical Hood (sleek, angular, covers upper ~55%) ──────
-            // Hood base — near-black with slight blue tint
+            // Tactical Hood
             CTX.fillStyle = '#0b1623';
             CTX.beginPath();
-            // Bottom edge follows body silhouette, top flares into angular visor
             CTX.moveTo(-(R - 1), -1);
-            CTX.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);   // left flare
-            CTX.quadraticCurveTo(0, -R - 8, R * 0.35, -R - 5);               // top peak
-            CTX.quadraticCurveTo(R + 2, -R * 0.45, R - 1, -1);               // right flare
-            CTX.quadraticCurveTo(R * 0.55, 1, 0, 2);                         // chin curve
+            CTX.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);
+            CTX.quadraticCurveTo(0, -R - 8, R * 0.35, -R - 5);
+            CTX.quadraticCurveTo(R + 2, -R * 0.45, R - 1, -1);
+            CTX.quadraticCurveTo(R * 0.55, 1, 0, 2);
             CTX.quadraticCurveTo(-R * 0.55, 1, -(R - 1), -1);
             CTX.closePath(); CTX.fill();
 
-            // Hood dark sticker outline
-            CTX.strokeStyle = '#1e293b';
-            CTX.lineWidth   = 2.5;
+            CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
             CTX.beginPath();
             CTX.moveTo(-(R - 1), -1);
             CTX.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);
@@ -581,7 +578,6 @@ class Player extends Entity {
             CTX.quadraticCurveTo(-R * 0.55, 1, -(R - 1), -1);
             CTX.closePath(); CTX.stroke();
 
-            // Hood angular highlight — swept-left tactical sheen
             CTX.fillStyle = '#16304f';
             CTX.beginPath();
             CTX.moveTo(-7, -R - 3);
@@ -590,42 +586,46 @@ class Player extends Entity {
             CTX.quadraticCurveTo(-6, -R, -7, -R - 3);
             CTX.closePath(); CTX.fill();
 
-            // Sharp angular edge-lines (tactical panel detail)
             CTX.strokeStyle = '#1e40af'; CTX.lineWidth = 1;
             CTX.shadowBlur  = 4; CTX.shadowColor = '#3b82f6';
             CTX.beginPath(); CTX.moveTo(R * 0.35, -3); CTX.lineTo(R + 1, -2); CTX.stroke();
             CTX.beginPath(); CTX.moveTo(-R * 0.35, -3); CTX.lineTo(-R - 1, -2); CTX.stroke();
             CTX.shadowBlur = 0;
 
-            // ── Glowing cyan visor slit peeking under hood ────────────
+            // Glowing cyan visor slit
             const vp = 0.65 + Math.sin(Date.now() / 350) * 0.35;
             CTX.fillStyle   = `rgba(6,182,212,${vp})`;
             CTX.shadowBlur  = 12 * vp; CTX.shadowColor = '#06b6d4';
             CTX.beginPath(); CTX.roundRect(-6.5, -3.5, 13, 2.5, 1.5); CTX.fill();
-            // Secondary glow bleed — makes visor "radiate" from the slit
             CTX.fillStyle   = `rgba(6,182,212,${vp * 0.20})`;
             CTX.beginPath(); CTX.roundRect(-5, -5.5, 10, 7, 3); CTX.fill();
             CTX.shadowBlur  = 0;
 
-            // ── Weapon ───────────────────────────────────────────────
+            CTX.restore(); // ── end LAYER 1 ──
+
+            // ════════════════════════════════════════════════════════
+            // LAYER 2 — WEAPON + HANDS (full 360° rotation)
+            // scale(1,-1) when facing left cancels the implicit Y-flip.
+            // ════════════════════════════════════════════════════════
+            CTX.save();
+            CTX.translate(screen.x + recoilX, screen.y + recoilY);
+            CTX.rotate(this.angle);
+            if (isFacingLeft) CTX.scale(1, -1); // ← Anti-flip critical fix
+
             if (typeof weaponSystem !== 'undefined') weaponSystem.drawWeaponOnPlayer(this);
 
-            // ── Floating Dark-Blue Gloves (weapon-side + off-hand) ───
+            // Floating Dark-Blue Gloves
             const gR = 5;
-
-            // Front glove — forward on the weapon side, detached from body
             CTX.fillStyle   = '#1e3a5f';
             CTX.strokeStyle = '#1e293b';
             CTX.lineWidth   = 2.5;
             CTX.shadowBlur  = 6; CTX.shadowColor = '#06b6d4';
             CTX.beginPath(); CTX.arc(R + 6, 2, gR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-            // Knuckle panel lines — tactical armour detail
             CTX.strokeStyle = '#2d5a8e'; CTX.lineWidth = 1.2;
             CTX.beginPath(); CTX.moveTo(R + 3, 0);   CTX.lineTo(R + 9, 0);   CTX.stroke();
             CTX.beginPath(); CTX.moveTo(R + 3, 2.5); CTX.lineTo(R + 9, 2.5); CTX.stroke();
             CTX.shadowBlur = 0;
 
-            // Back glove — off-hand, slightly smaller and darker
             CTX.fillStyle   = '#0e2340';
             CTX.strokeStyle = '#1e293b';
             CTX.lineWidth   = 2.5;
@@ -633,9 +633,9 @@ class Player extends Entity {
             CTX.beginPath(); CTX.arc(-(R + 5), 1, gR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
             CTX.shadowBlur = 0;
 
-            CTX.restore(); // end body transform
+            CTX.restore(); // ── end LAYER 2 ──
 
-            // ── Muzzle flash: cyan ring + radiating sparks ────────────
+            // Muzzle flash (screen space)
             if (this.weaponRecoil > 0.45) {
                 const fT    = (this.weaponRecoil - 0.45) / 0.55;
                 const mDist = 36 + (1 - fT) * 10;
@@ -650,7 +650,7 @@ class Player extends Entity {
                 for (let ri = 0; ri < 6; ri++) {
                     const ra = this.angle + (ri / 6) * Math.PI * 2;
                     CTX.beginPath();
-                    CTX.moveTo(mx + Math.cos(ra) * 2, my + Math.sin(ra) * 2);
+                    CTX.moveTo(mx + Math.cos(ra) * 2,            my + Math.sin(ra) * 2);
                     CTX.lineTo(mx + Math.cos(ra) * (5 + fT * 5), my + Math.sin(ra) * (5 + fT * 5));
                     CTX.stroke();
                 }
@@ -662,12 +662,14 @@ class Player extends Entity {
             }
         }
 
-        // ── Level badge ───────────────────────────────────────────────
+        // ── Level badge (screen space) ────────────────────────────
         if (this.level > 1) {
-            CTX.fillStyle = 'rgba(37,99,235,0.92)';
+            CTX.fillStyle    = 'rgba(37,99,235,0.92)';
             CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial';
-            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillStyle    = '#fff';
+            CTX.font         = 'bold 9px Arial';
+            CTX.textAlign    = 'center';
+            CTX.textBaseline = 'middle';
             CTX.fillText(this.level, screen.x + 20, screen.y - 20);
         }
     }
@@ -679,7 +681,6 @@ class Player extends Entity {
         if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
         if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
-        // ── Dash cooldown (bar fill + circular arc + countdown) ──
         const dp = Math.min(100, (1 - this.cooldowns.dash / S.dashCooldown) * 100);
         const dashEl = document.getElementById('dash-cd');
         if (dashEl) dashEl.style.height = `${100 - dp}%`;
@@ -688,7 +689,6 @@ class Player extends Entity {
                 Math.max(0, this.cooldowns.dash), S.dashCooldown);
         }
 
-        // ── Stealth cooldown (bar fill + circular arc + countdown) ──
         const sEl = document.getElementById('stealth-icon');
         const sCd = document.getElementById('stealth-cd');
         if (this.isInvisible) {
@@ -741,11 +741,9 @@ class AutoPlayer extends Player {
         this.wanchaiActive = false;
         this.wanchaiTimer  = 0;
 
-        // Local timers
         this._punchTimer = 0;
         this._heatTimer  = 0;
 
-        // Ensure expected cooldown slots exist for base update()
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0 };
     }
 
@@ -772,11 +770,9 @@ class AutoPlayer extends Player {
     }
 
     update(dt, keys, mouse) {
-        // Cooldowns
         if (this.cooldowns?.wanchai > 0) this.cooldowns.wanchai -= dt;
         if (this.cooldowns?.shoot  > 0) this.cooldowns.shoot  -= dt;
 
-        // Wanchai timer
         if (this.wanchaiActive) {
             this.wanchaiTimer -= dt;
             if (this.wanchaiTimer <= 0) {
@@ -785,7 +781,6 @@ class AutoPlayer extends Player {
             }
         }
 
-        // Skill (Right Click) — consume input so Player.update can't interpret it
         if (mouse?.right === 1) {
             const energyCost = this.stats?.wanchaiEnergyCost ?? 35;
             if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
@@ -795,24 +790,18 @@ class AutoPlayer extends Player {
             mouse.right = 0;
         }
 
-        // Slight speed penalty while Wanchai is active
         const oldSpeedBoost = this.speedBoost;
         if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * 0.85;
 
         super.update(dt, keys, mouse);
 
-        // Restore speed boost so other systems remain consistent
         this.speedBoost = oldSpeedBoost;
 
-        // Attacks
-        // Note: game.js already gates updateGame() behind gameState === 'PLAYING',
-        // so no need to re-check here. window.gameState was unreliable (set once on load).
         if (!mouse || mouse.left !== 1) return;
         if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
-        // Wanchai rapid punches while holding L-click
         if (this.wanchaiActive) {
-            const punchRate = this.stats?.wanchaiPunchRate ?? 0.06; // seconds between punches
+            const punchRate = this.stats?.wanchaiPunchRate ?? 0.06;
             this._punchTimer -= dt;
             if (this._punchTimer <= 0) {
                 this._punchTimer = punchRate;
@@ -823,7 +812,6 @@ class AutoPlayer extends Player {
             return;
         }
 
-        // Heat Wave (short-range, wide, limited pierce)
         const heatCd = this.stats?.heatWaveCooldown ?? 0.28;
         if ((this.cooldowns?.shoot ?? 0) > 0) return;
         this.cooldowns.shoot = heatCd;
@@ -831,7 +819,6 @@ class AutoPlayer extends Player {
         if (typeof projectileManager.spawnHeatWave === 'function') {
             projectileManager.spawnHeatWave(this, this.angle);
         } else {
-            // Fallback: fire a standard projectile so the character is never "silent"
             try {
                 projectileManager.add(new Projectile(this.x, this.y, this.angle, 900, 22, '#dc2626', false, 'player'));
             } catch (e) {}
@@ -839,22 +826,27 @@ class AutoPlayer extends Player {
     }
 
     draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  AUTO — Minimalist Chibi · Heavy Crimson Square         ║
-        // ║  Top-down sprite · No face · Spiky red hair on top      ║
-        // ╚══════════════════════════════════════════════════════════╝
+        // ════════════════════════════════════════════════════════════
+        // AUTO — Anti-Flip v12
+        // LAYER 1: Body (mirror via scale, no rotation).
+        // LAYER 2: Weapon + Fists (full rotate + conditional Y-flip).
+        // ════════════════════════════════════════════════════════════
         const screen = worldToScreen(this.x, this.y);
         const now    = performance.now();
         if (typeof CTX === 'undefined' || !CTX) return;
 
-        // ── Ground shadow ────────────────────────────────────────────
+        // ── Orientation helper ────────────────────────────────────
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
+        const facingSign   = isFacingLeft ? -1 : 1;
+
+        // ── Ground shadow ─────────────────────────────────────────
         CTX.save();
         CTX.globalAlpha = 0.25;
         CTX.fillStyle   = 'rgba(0,0,0,0.8)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 16, 17, 6, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ══ WANCHAI STAND — preserved from previous version ══════════
+        // ── Wanchai Stand (world-space, independent of body) ──────
         if (this.wanchaiActive) {
             const bob  = Math.sin(now / 130) * 7;
             const sx   = screen.x - Math.cos(this.angle) * 30;
@@ -889,7 +881,8 @@ class AutoPlayer extends Player {
             CTX.beginPath(); CTX.arc(0, -28, 12, 0, Math.PI * 2); CTX.stroke();
             CTX.fillStyle = 'rgba(220,38,38,0.70)';
             for (let si = -2; si <= 2; si++) {
-                CTX.beginPath(); CTX.moveTo(si * 5 - 3, -37); CTX.lineTo(si * 5 + 3, -37); CTX.lineTo(si * 5, -42 + Math.abs(si) * 2); CTX.closePath(); CTX.fill();
+                CTX.beginPath(); CTX.moveTo(si * 5 - 3, -37); CTX.lineTo(si * 5 + 3, -37);
+                CTX.lineTo(si * 5, -42 + Math.abs(si) * 2); CTX.closePath(); CTX.fill();
             }
             const eg = 0.7 + Math.sin(now / 110) * 0.3;
             CTX.globalAlpha = eg; CTX.fillStyle = '#f87171'; CTX.shadowBlur = 12; CTX.shadowColor = '#ef4444';
@@ -898,41 +891,35 @@ class AutoPlayer extends Player {
             CTX.restore();
         }
 
-        // ── Body transform ────────────────────────────────────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
-
-        // ── Breathing idle + movement squash/stretch (heavy body) ────
+        // Breathing squash/stretch
         const breatheAuto = Math.sin(Date.now() / 200);
         const speed    = Math.hypot(this.vx, this.vy);
         const moveT    = Math.min(1, speed / 180);
         const bobT     = Math.sin(this.walkCycle * 0.9);
-        // Auto is sturdier — wider X, shorter Y than Kao
         const stretchX = 1 + breatheAuto * 0.025 + moveT * bobT * 0.09;
         const stretchY = 1 - breatheAuto * 0.025 - moveT * Math.abs(bobT) * 0.065;
-        CTX.scale(stretchX, stretchY);
 
-        // ════════════════════════════════════════════════════════
-        // AUTO — Bean & Floating Hands · Crimson · Anime Ember Hair
-        // ════════════════════════════════════════════════════════
-
-        // Attack / movement heat intensity drives vent glow + fist aura
         const attackIntensity = this.wanchaiActive ? 1.0
             : Math.min(1, (Math.abs(this.vx) + Math.abs(this.vy)) / 150 + 0.2);
         const ventGlow = Math.max(0, attackIntensity * (0.5 + Math.sin(now / 180) * 0.5));
 
-        // Slightly wider bean for "sturdier brawler" feel (R=15 vs Kao's 13)
         const R = 15;
 
-        // ── Silhouette glow ring — drawn BEFORE body ─────────────────
+        // ════════════════════════════════════════════════════════════
+        // LAYER 1 — BODY (horizontal mirror only, no rotation)
+        // ════════════════════════════════════════════════════════════
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.scale(stretchX * facingSign, stretchY);
+
+        // Silhouette glow ring — crimson
         CTX.shadowBlur  = 18; CTX.shadowColor = 'rgba(220,38,38,0.75)';
         CTX.strokeStyle = 'rgba(220,38,38,0.55)';
         CTX.lineWidth   = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur  = 0;
 
-        // ── Bean body — dark crimson radial gradient ──────────────────
+        // Bean body — dark crimson
         const bG = CTX.createRadialGradient(-4, -4, 1, 0, 0, R);
         bG.addColorStop(0,   '#7f1d1d');
         bG.addColorStop(0.5, '#5a0e0e');
@@ -940,47 +927,40 @@ class AutoPlayer extends Player {
         CTX.fillStyle = bG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
-        // Thick sticker outline — same rules as Kao, pops like a sticker
-        CTX.strokeStyle = '#1e293b';
-        CTX.lineWidth   = 3;
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
 
-        // Specular (glossy highlight top-left)
         CTX.fillStyle = 'rgba(255,255,255,0.09)';
         CTX.beginPath(); CTX.arc(-5, -6, 6, 0, Math.PI * 2); CTX.fill();
 
-        // ── Heat vents — three horizontal slits on body sides ─────────
+        // Heat vents
         CTX.shadowBlur = 10 * ventGlow; CTX.shadowColor = '#fb923c';
         for (let vi = 0; vi < 3; vi++) {
             const va = ventGlow * (0.45 + vi * 0.18);
-            // Left vents
             CTX.fillStyle = `rgba(251,146,60,${va})`;
             CTX.beginPath(); CTX.roundRect(-R, -4 + vi * 5, 4, 2.5, 1); CTX.fill();
-            // Right vents
             CTX.beginPath(); CTX.roundRect(R - 4, -4 + vi * 5, 4, 2.5, 1); CTX.fill();
         }
         CTX.shadowBlur = 0;
 
-        // Core power core — pulsing ember dot in chest
+        // Power core
         const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (this.wanchaiActive ? 1.5 : 1);
         CTX.fillStyle  = `rgba(239,68,68,${Math.min(1, cP)})`;
         CTX.shadowBlur = 10 * cP; CTX.shadowColor = '#dc2626';
         CTX.beginPath(); CTX.arc(0, 3, 3.5, 0, Math.PI * 2); CTX.fill();
         CTX.shadowBlur = 0;
 
-        // ── Aggressive Anime-Spiky Hair (upward ember sweep) ──────────
-        // Base mass — dark crimson/near-black blob over upper half
+        // Anime-Spiky Hair
         CTX.fillStyle = '#1a0505';
         CTX.beginPath();
         CTX.moveTo(-(R - 1), -1);
-        CTX.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);   // left sweep
-        CTX.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);             // top
-        CTX.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);             // right sweep
-        CTX.quadraticCurveTo(R * 0.5, 2, 0, 2.5);                     // chin
+        CTX.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);
+        CTX.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);
+        CTX.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);
+        CTX.quadraticCurveTo(R * 0.5, 2, 0, 2.5);
         CTX.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
         CTX.closePath(); CTX.fill();
 
-        // Hair sticker outline
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
         CTX.beginPath();
         CTX.moveTo(-(R - 1), -1);
@@ -991,7 +971,6 @@ class AutoPlayer extends Player {
         CTX.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
         CTX.closePath(); CTX.stroke();
 
-        // Hair highlight streak — dark red centre parting
         CTX.fillStyle = '#5c1010';
         CTX.beginPath();
         CTX.moveTo(-5, -R - 2);
@@ -1000,14 +979,12 @@ class AutoPlayer extends Player {
         CTX.quadraticCurveTo(-4, -R, -5, -R - 2);
         CTX.closePath(); CTX.fill();
 
-        // Upward-swept anime spiky tips — variable heights, ember orange highlights
-        // Spike data: [baseX, tipX offset, height, color]
         const spikeData = [
-            [-11,  -2, 12, '#3d0909'],  // far-left, leans right
-            [ -5,  -1,  9, '#450a0a'],
-            [  1,   0, 11, '#450a0a'],  // tallest central spike
-            [  7,   1,  8, '#3d0909'],
-            [ 12,   2,  6, '#2d0606'],  // far-right, shorter
+            [-11, -2, 12, '#3d0909'],
+            [ -5, -1,  9, '#450a0a'],
+            [  1,  0, 11, '#450a0a'],
+            [  7,  1,  8, '#3d0909'],
+            [ 12,  2,  6, '#2d0606'],
         ];
         for (const [bx, tipOff, h, col] of spikeData) {
             const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
@@ -1017,7 +994,6 @@ class AutoPlayer extends Player {
             CTX.lineTo(bx + 3.5, -R - 1);
             CTX.lineTo(bx + tipOff + wobble, -R - 1 - h - wobble * 0.4);
             CTX.closePath(); CTX.fill();
-            // Spike outline
             CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
             CTX.beginPath();
             CTX.moveTo(bx - 3.5, -R - 1);
@@ -1026,8 +1002,7 @@ class AutoPlayer extends Player {
             CTX.closePath(); CTX.stroke();
         }
 
-        // Bright orange ember tips — overlay on each spike apex
-        CTX.shadowBlur = this.wanchaiActive ? 16 : 6;
+        CTX.shadowBlur  = this.wanchaiActive ? 16 : 6;
         CTX.shadowColor = '#f97316';
         const emberColors = ['#f97316', '#ef4444', '#fb923c', '#f87171', '#fca5a5'];
         spikeData.forEach(([bx, tipOff, h], idx) => {
@@ -1035,66 +1010,72 @@ class AutoPlayer extends Player {
             const tx = bx + tipOff + wobble;
             const ty = -R - 1 - h - wobble * 0.4;
             const eA = (this.wanchaiActive ? 0.9 : 0.6) + Math.sin(now / 200 + idx) * 0.25;
-            CTX.fillStyle = emberColors[idx % emberColors.length];
+            CTX.fillStyle   = emberColors[idx % emberColors.length];
             CTX.globalAlpha = Math.max(0, Math.min(1, eA));
             CTX.beginPath(); CTX.arc(tx, ty, 2, 0, Math.PI * 2); CTX.fill();
         });
         CTX.globalAlpha = 1; CTX.shadowBlur = 0;
 
-        // ── Gauntlet weapon ───────────────────────────────────────────
+        CTX.restore(); // ── end LAYER 1 ──
+
+        // ════════════════════════════════════════════════════════════
+        // LAYER 2 — WEAPON + FISTS (full 360° rotation)
+        // scale(1,-1) when isFacingLeft keeps gun right-side up.
+        // ════════════════════════════════════════════════════════════
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(1, -1); // ← Anti-flip critical fix
+
         if (typeof drawAutoWeapon === 'function') {
             drawAutoWeapon(CTX, this.wanchaiActive, ventGlow);
         }
 
-        // ── Oversized Armored Metallic Floating Fists ─────────────────
-        // Front fist — dominant weapon-side, large and menacing
         const fistGlow = ventGlow * 0.8 + (this.wanchaiActive ? 0.6 : 0);
         CTX.shadowBlur  = 10 * fistGlow; CTX.shadowColor = '#dc2626';
 
-        // Front fist base (metal casing)
         CTX.fillStyle   = '#4a0e0e';
         CTX.strokeStyle = '#1e293b';
         CTX.lineWidth   = 2.5;
         CTX.beginPath(); CTX.arc(R + 8, 3, 7, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        // Metal plating highlight
         CTX.fillStyle = '#7f1d1d';
         CTX.beginPath(); CTX.arc(R + 6, 1, 3.5, 0, Math.PI * 2); CTX.fill();
-        // Knuckle groove lines
         CTX.strokeStyle = '#2d0606'; CTX.lineWidth = 1.2;
         CTX.beginPath(); CTX.moveTo(R + 3, 1);   CTX.lineTo(R + 13, 1);   CTX.stroke();
         CTX.beginPath(); CTX.moveTo(R + 3, 4);   CTX.lineTo(R + 13, 4);   CTX.stroke();
         CTX.beginPath(); CTX.moveTo(R + 3, 6.5); CTX.lineTo(R + 13, 6.5); CTX.stroke();
-        // Fist ember glow slit
         const fistEmber = Math.max(0, 0.5 + Math.sin(now / 160) * 0.4) * (this.wanchaiActive ? 1 : 0.6);
         CTX.fillStyle   = `rgba(251,146,60,${fistEmber})`;
         CTX.shadowBlur  = 8 * fistEmber; CTX.shadowColor = '#fb923c';
         CTX.beginPath(); CTX.roundRect(R + 4, 2.5, 8, 1.5, 1); CTX.fill();
         CTX.shadowBlur = 0;
 
-        // Back fist — off-hand, also oversized but slightly smaller
         CTX.fillStyle   = '#3d0808';
         CTX.strokeStyle = '#1e293b';
         CTX.lineWidth   = 2.5;
         CTX.shadowBlur  = 6 * fistGlow; CTX.shadowColor = '#dc2626';
         CTX.beginPath(); CTX.arc(-(R + 7), -1, 6, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        // Back knuckle ridge
         CTX.fillStyle = '#5c1010';
         CTX.beginPath(); CTX.arc(-(R + 9), -2, 2.5, 0, Math.PI * 2); CTX.fill();
         CTX.shadowBlur = 0;
 
-        CTX.restore(); // end body transform
+        CTX.restore(); // ── end LAYER 2 ──
 
-        // ── Heat shimmer particles ────────────────────────────────────
-        if (typeof spawnParticles === 'function' && (Math.abs(this.vx) + Math.abs(this.vy)) > 60 && Math.random() < 0.1) {
+        // Heat shimmer particles
+        if (typeof spawnParticles === 'function' &&
+            (Math.abs(this.vx) + Math.abs(this.vy)) > 60 &&
+            Math.random() < 0.1) {
             spawnParticles(this.x + rand(-10, 10), this.y + rand(-10, 10), 1, '#fb7185', 'steam');
         }
 
-        // ── Level badge ───────────────────────────────────────────────
+        // Level badge
         if (this.level > 1) {
-            CTX.fillStyle = 'rgba(185,28,28,0.92)';
+            CTX.fillStyle    = 'rgba(185,28,28,0.92)';
             CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 9, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial';
-            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillStyle    = '#fff';
+            CTX.font         = 'bold 9px Arial';
+            CTX.textAlign    = 'center';
+            CTX.textBaseline = 'middle';
             CTX.fillText(this.level, screen.x + 22, screen.y - 22);
         }
     }
@@ -1103,28 +1084,14 @@ class AutoPlayer extends Player {
 // ════════════════════════════════════════════════════════════
 // 🔥 AUTO PLAYER — Prototype Overrides
 // ════════════════════════════════════════════════════════════
-
-/**
- * AutoPlayer.prototype.updateUI
- * Overrides Player.updateUI to repurpose the "stealth" HUD slot
- * as the Wanchai Stand cooldown display, matching Auto's identity.
- *
- * • HP bar, EN bar, dash cooldown, level, EXP are inherited from Player.
- * • The stand slot shows:
- *     – Flashing crimson when Wanchai is active.
- *     – Filling bar as the cooldown counts down.
- *     – Circular arc + countdown via UIManager._setCooldownVisual.
- */
 AutoPlayer.prototype.updateUI = function() {
     const S = this.stats;
 
-    // ── HP & Energy bars (identical to base Player) ──────────────
     const hpEl = document.getElementById('hp-bar');
     const enEl = document.getElementById('en-bar');
     if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
     if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
-    // ── Dash cooldown ─────────────────────────────────────────────
     const dp      = Math.min(100, (1 - this.cooldowns.dash / (S.dashCooldown || 2.0)) * 100);
     const dashEl  = document.getElementById('dash-cd');
     if (dashEl) dashEl.style.height = `${100 - dp}%`;
@@ -1133,14 +1100,10 @@ AutoPlayer.prototype.updateUI = function() {
             Math.max(0, this.cooldowns.dash), S.dashCooldown || 2.0);
     }
 
-    // ── Wanchai / Stand cooldown (repurposed stealth slot) ───────
     const wanchaiCd   = S.wanchaiCooldown || BALANCE.player.auto.wanchaiCooldown || 12;
     const standEl     = document.getElementById('stealth-icon');
     const standCdEl   = document.getElementById('stealth-cd');
 
-    // ── Always keep the HUD slot labelled for the Stand, not stealth ──
-    // The base Player constructor sets the emoji to 📖 and hint to 'R-Click'.
-    // Override here every frame so it's consistent regardless of init order.
     const skill1Emoji = document.getElementById('skill1-emoji');
     const skill1Hint  = document.getElementById('skill1-hint');
     if (skill1Emoji) skill1Emoji.textContent = this.wanchaiActive ? '🥊' : '🔥';
@@ -1151,17 +1114,13 @@ AutoPlayer.prototype.updateUI = function() {
         : '0 0 10px rgba(220,38,38,0.35)';
 
     if (this.wanchaiActive) {
-        // Stand is active — flash the icon in crimson
         standEl?.classList.add('active');
         if (standCdEl) standCdEl.style.height = '0%';
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('stealth-icon', 0, wanchaiCd);
         }
-        // Update icon label to show remaining stand time
         const iconLabelEl = standEl?.querySelector('.skill-name');
-        if (iconLabelEl) {
-            iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
-        }
+        if (iconLabelEl) iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
     } else {
         standEl?.classList.remove('active');
         if (standCdEl) {
@@ -1174,13 +1133,11 @@ AutoPlayer.prototype.updateUI = function() {
         }
     }
 
-    // ── Level & EXP ───────────────────────────────────────────────
     const levelEl = document.getElementById('player-level');
     if (levelEl) levelEl.textContent = `Lv.${this.level}`;
     const expBar = document.getElementById('exp-bar');
     if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
 
-    // ── Passive skill indicator ───────────────────────────────────
     const passiveEl = document.getElementById('passive-skill');
     if (passiveEl) {
         if (this.passiveUnlocked) {
@@ -1270,10 +1227,9 @@ class PoomPlayer extends Entity {
         this.walkCycle = 0;
         this.damageBoost = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
         this.dashGhosts = [];
-        
+
         // ── Timeout Management ───────────────────────────────────
-        // Store setTimeout IDs to prevent memory leaks when player dies
-        this.dashTimeouts     = [];
+        this.dashTimeouts = [];
 
         // ── Stand-Aura & Afterimage system ────────────────────
         this.standGhosts   = [];
@@ -1287,9 +1243,9 @@ class PoomPlayer extends Entity {
         this.isEatingRice   = false; this.eatRiceTimer = 0;
         this.currentSpeedMult = 1;
         this.nagaCount = 0;
-        this.naga      = null;  // reference to current NagaEntity while summoned (for invincibility)
+        this.naga      = null;
 
-        // ── Collision Awareness state (mirrors Player) ─────────
+        // ── Collision Awareness state ──────────────────────────
         this.obstacleBuffTimer     = 0;
         this.lastObstacleWarning   = 0;
 
@@ -1298,8 +1254,7 @@ class PoomPlayer extends Entity {
         this.baseCritChance = stats.critChance;
 
         // ── RPG Scaling Multipliers ─────────────────────────────
-        // Permanent progression: damage increases, cooldowns decrease per level
-        this.damageMultiplier = 1.0;
+        this.damageMultiplier   = 1.0;
         this.cooldownMultiplier = 1.0;
     }
 
@@ -1376,7 +1331,6 @@ class PoomPlayer extends Entity {
 
         this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
 
-        // ── Naga cleanup: clear reference if naga dies ─────────────
         if (this.naga && this.naga.dead) {
             this.naga = null;
         }
@@ -1394,9 +1348,6 @@ class PoomPlayer extends Entity {
 
         _standAura_update(this, dt);
 
-        // ── Cleanup dash timeouts (foolproof) ───────────────────
-        // Mirrors Player's cleanup: if Poom dies mid-dash, cancel ALL pending
-        // dash callbacks so they can't keep references alive or mutate state.
         if (this.dead && this.dashTimeouts && this.dashTimeouts.length) {
             const ids = this.dashTimeouts.slice();
             this.dashTimeouts.length = 0;
@@ -1415,8 +1366,6 @@ class PoomPlayer extends Entity {
         projectileManager.add(new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player'));
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
-        // ✅ AUDIO 1 — Bamboo-tube "Tuk" thump for Poom's rice launcher.
-        // Defined in audio.js as a two-layer sine+triangle design.
         Audio.playPoomShoot();
     }
 
@@ -1451,8 +1400,6 @@ class PoomPlayer extends Entity {
         this.cooldowns.dash = S.dashCooldown * this.cooldownMultiplier;
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;
-        // Matrix Dash: during Bullet Time, dash covers massive distance almost instantly
-        // Validate timeScale and clamp to prevent infinite/NaN speeds
         let currentScale = 1.0;
         if (typeof window.timeScale === 'number' && Number.isFinite(window.timeScale)) {
             currentScale = window.timeScale;
@@ -1467,7 +1414,6 @@ class PoomPlayer extends Entity {
         for (let i = 0; i < 5; i++) {
             const timeoutId = setTimeout(() => {
                 if (!this.dead) this.dashGhosts.push({ x: this.x, y: this.y, angle: this.angle, life: 1 });
-                // Remove timeout ID from array after execution
                 const idx = this.dashTimeouts.indexOf(timeoutId);
                 if (idx > -1) this.dashTimeouts.splice(idx, 1);
             }, i * 30);
@@ -1480,7 +1426,7 @@ class PoomPlayer extends Entity {
     }
 
     takeDamage(amt) {
-        if (this.naga && !this.naga.dead && this.naga.active) return;  // invincible while Naga is out and alive
+        if (this.naga && !this.naga.dead && this.naga.active) return;
         if (this.isDashing) return;
         if (this.onGraph) { amt *= 2; spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16); }
         this.hp -= amt; this.hp = Math.max(0, this.hp);
@@ -1522,19 +1468,14 @@ class PoomPlayer extends Entity {
         const S = this.stats;
         this.exp -= this.expToNextLevel; this.level++;
         this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
-        
-        // ── RPG Scaling Progression ─────────────────────────────
-        // +5% damage per level (permanent)
+
         this.damageMultiplier += 0.05;
-        
-        // -3% cooldown per level (capped at 50% reduction)
         this.cooldownMultiplier = Math.max(0.5, this.cooldownMultiplier - 0.03);
-        
-        // Visual feedback for progression
-        const damageBonus = Math.round((this.damageMultiplier - 1) * 100);
+
+        const damageBonus  = Math.round((this.damageMultiplier - 1) * 100);
         const cooldownBonus = Math.round((1 - this.cooldownMultiplier) * 100);
         spawnFloatingText(`LEVEL ${this.level}! +${damageBonus}% DMG, -${cooldownBonus}% CD`, this.x, this.y - 90, '#fbbf24', 32);
-        
+
         this.hp = this.maxHp; this.energy = this.maxEnergy;
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
@@ -1542,45 +1483,61 @@ class PoomPlayer extends Entity {
     }
 
     draw() {
+        // ════════════════════════════════════════════════════════════
+        // POOM — Anti-Flip v12
+        // LAYER 1: Body (mirror via scale, no rotation).
+        // LAYER 2: Kratib weapon + Hands (full rotate + conditional Y-flip).
+        // ════════════════════════════════════════════════════════════
         const S = this.stats;
+
+        // ── Orientation helper ────────────────────────────────────
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
+        const facingSign   = isFacingLeft ? -1 : 1;
 
         _standAura_draw(this, 'poom');
 
+        // ── Dash ghost trail ──────────────────────────────────────
         for (const img of this.dashGhosts) {
-            const s = worldToScreen(img.x, img.y);
-            CTX.save(); CTX.translate(s.x, s.y); CTX.rotate(img.angle);
-            CTX.globalAlpha = img.life * 0.3; CTX.fillStyle = '#fbbf24';
-            CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 8); CTX.fill(); CTX.restore();
+            const s           = worldToScreen(img.x, img.y);
+            const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
+            CTX.save();
+            CTX.translate(s.x, s.y);
+            CTX.scale(ghostFacing, 1);
+            CTX.globalAlpha = img.life * 0.3;
+            CTX.fillStyle   = '#fbbf24';
+            CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 8); CTX.fill();
+            CTX.restore();
         }
+
         const screen = worldToScreen(this.x, this.y);
+
         CTX.fillStyle = 'rgba(0,0,0,0.3)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 25, 18, 8, 0, 0, Math.PI * 2); CTX.fill();
 
+        // Eating-rice power aura
         if (this.isEatingRice) {
-            const t = performance.now() / 200;
+            const t         = performance.now() / 200;
             const auraSize  = 38 + Math.sin(t) * 6;
             const auraAlpha = 0.4 + Math.sin(t * 1.5) * 0.15;
             CTX.save();
             CTX.globalAlpha = auraAlpha;
             CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 4;
-            CTX.shadowBlur = 25; CTX.shadowColor = '#fbbf24';
+            CTX.shadowBlur  = 25; CTX.shadowColor = '#fbbf24';
             CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize, 0, Math.PI * 2); CTX.stroke();
             CTX.globalAlpha = auraAlpha * 0.35;
             CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize + 12, 0, Math.PI * 2); CTX.stroke();
             CTX.restore();
         }
 
-        // Naga invincibility: subtle glowing golden shield while Naga is active
+        // Naga invincibility shield
         if (this.naga && this.naga.active) {
-            const gt = performance.now() / 350;
+            const gt      = performance.now() / 350;
             const shieldR = 36 + Math.sin(gt) * 4;
             const shieldA = 0.25 + Math.sin(gt * 1.3) * 0.12;
             CTX.save();
             CTX.globalAlpha = shieldA;
-            CTX.strokeStyle = '#fbbf24';
-            CTX.lineWidth   = 2.5;
-            CTX.shadowBlur   = 18;
-            CTX.shadowColor  = '#f59e0b';
+            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 2.5;
+            CTX.shadowBlur  = 18; CTX.shadowColor = '#f59e0b';
             CTX.setLineDash([4, 4]);
             CTX.beginPath(); CTX.arc(screen.x, screen.y, shieldR, 0, Math.PI * 2); CTX.stroke();
             CTX.setLineDash([]);
@@ -1589,202 +1546,149 @@ class PoomPlayer extends Entity {
             CTX.restore();
         }
 
-        if (this.isConfused)   { CTX.font = 'bold 24px Arial'; CTX.textAlign='center'; CTX.fillText('😵', screen.x, screen.y - 44); }
+        if (this.isConfused)   { CTX.font = 'bold 24px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', screen.x, screen.y - 44); }
         if (this.isBurning)    { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
-        if (this.isEatingRice) { CTX.font = 'bold 18px Arial'; CTX.textAlign='center'; CTX.fillText('🍚', screen.x, screen.y - 44); }
+        if (this.isEatingRice) { CTX.font = 'bold 18px Arial'; CTX.textAlign = 'center'; CTX.fillText('🍚', screen.x, screen.y - 44); }
 
-        // ── v11 Poom Channeling Effect ──────────────────────────────────────
-        // When a NagaEntity is alive in specialEffects, Poom is "channeling" the
-        // snake. Show a pulsing emerald aura ring to communicate the mental link.
-        const nagaEntity = window.specialEffects &&
-            window.specialEffects.find(e => e instanceof NagaEntity);
+        // Naga channeling aura + connection tether
+        const nagaEntity   = window.specialEffects &&
+                             window.specialEffects.find(e => e instanceof NagaEntity);
         const isChanneling = !!nagaEntity;
         if (isChanneling) {
-            const ct  = performance.now() / 220;
-            const cr  = 42 + Math.sin(ct) * 7;
-            const ca  = 0.55 + Math.sin(ct * 1.6) * 0.25;
+            const ct = performance.now() / 220;
+            const cr = 42 + Math.sin(ct) * 7;
+            const ca = 0.55 + Math.sin(ct * 1.6) * 0.25;
             CTX.save();
-            // Outer ring — pulsing width emerald glow
             CTX.globalAlpha  = ca;
             CTX.strokeStyle  = '#10b981';
             CTX.lineWidth    = 3.5 + Math.sin(ct * 2.1) * 1.5;
             CTX.shadowBlur   = 24 + Math.sin(ct) * 10;
             CTX.shadowColor  = '#10b981';
-            CTX.beginPath();
-            CTX.arc(screen.x, screen.y, cr, 0, Math.PI * 2);
-            CTX.stroke();
-            // Inner secondary ring (faster pulse, offset phase)
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, cr, 0, Math.PI * 2); CTX.stroke();
             CTX.globalAlpha  = ca * 0.55;
             CTX.lineWidth    = 1.5;
             CTX.shadowBlur   = 10;
-            CTX.beginPath();
-            CTX.arc(screen.x, screen.y, cr - 12, 0, Math.PI * 2);
-            CTX.stroke();
-            // Energy particle sparks along ring edge
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, cr - 12, 0, Math.PI * 2); CTX.stroke();
             if (Math.random() < 0.35) {
                 const sa = Math.random() * Math.PI * 2;
-                const sx = screen.x + Math.cos(sa) * cr;
-                const sy = screen.y + Math.sin(sa) * cr;
                 CTX.globalAlpha  = 0.9;
                 CTX.fillStyle    = '#34d399';
-                CTX.shadowBlur   = 8;
-                CTX.shadowColor  = '#10b981';
-                CTX.beginPath();
-                CTX.arc(sx, sy, 2, 0, Math.PI * 2);
-                CTX.fill();
+                CTX.shadowBlur   = 8; CTX.shadowColor = '#10b981';
+                CTX.beginPath(); CTX.arc(screen.x + Math.cos(sa) * cr, screen.y + Math.sin(sa) * cr, 2, 0, Math.PI * 2); CTX.fill();
             }
             CTX.restore();
 
-            // ── Task 4: Naga Summoning Connection Line ─────────────────────
-            // A jittered, segmented energy thread drawn from Poom's chest to
-            // the Naga head in screen space. Flickers every frame for a live
-            // "lightning" feel without a separate particle system.
-            // • Segments: 10 points interpolated along the straight path, each
-            //   nudged by a small random perpendicular offset per frame.
-            // • Two passes: wide soft glow pass + narrow bright core pass.
-            // • Alpha tied to nagaEntity.life / nagaEntity.maxLife so the link
-            //   fades gracefully as the Naga's timer winds down.
             if (nagaEntity.segments && nagaEntity.segments.length > 0) {
                 const nagaHead   = nagaEntity.segments[0];
                 const nagaScreen = worldToScreen(nagaHead.x, nagaHead.y);
                 const lifeAlpha  = Math.min(1, nagaEntity.life / nagaEntity.maxLife);
-                const SEGS       = 10; // number of interpolated line vertices
-
-                // Build jittered polyline points
+                const SEGS       = 10;
                 const pts = [];
                 for (let i = 0; i <= SEGS; i++) {
-                    const t   = i / SEGS;
-                    const bx  = screen.x   + (nagaScreen.x - screen.x)   * t;
-                    const by  = screen.y   + (nagaScreen.y - screen.y)   * t;
-                    // Perpendicular jitter — strongest at midpoint (t≈0.5)
-                    const jitterAmp = Math.sin(t * Math.PI) * (8 + Math.sin(performance.now() / 80 + i) * 4);
-                    const perp      = Math.atan2(nagaScreen.y - screen.y, nagaScreen.x - screen.x) + Math.PI / 2;
-                    const jitter    = (Math.random() - 0.5) * 2 * jitterAmp;
-                    pts.push({ x: bx + Math.cos(perp) * jitter, y: by + Math.sin(perp) * jitter });
+                    const t    = i / SEGS;
+                    const bx   = screen.x   + (nagaScreen.x - screen.x)   * t;
+                    const by   = screen.y   + (nagaScreen.y - screen.y)   * t;
+                    const jAmp = Math.sin(t * Math.PI) * (8 + Math.sin(performance.now() / 80 + i) * 4);
+                    const perp = Math.atan2(nagaScreen.y - screen.y, nagaScreen.x - screen.x) + Math.PI / 2;
+                    const jit  = (Math.random() - 0.5) * 2 * jAmp;
+                    pts.push({ x: bx + Math.cos(perp) * jit, y: by + Math.sin(perp) * jit });
                 }
-                // Anchor start/end exactly on Poom and the Naga head (no jitter)
                 pts[0]    = { x: screen.x,     y: screen.y     };
                 pts[SEGS] = { x: nagaScreen.x, y: nagaScreen.y };
 
-                const drawThread = (lineW, alpha, color, blur) => {
+                const drawThread = (lw, alpha, color, blur) => {
                     CTX.save();
-                    CTX.globalAlpha = lifeAlpha * alpha;
-                    CTX.strokeStyle = color;
-                    CTX.lineWidth   = lineW;
-                    CTX.lineCap     = 'round';
-                    CTX.lineJoin    = 'round';
-                    CTX.shadowBlur  = blur;
-                    CTX.shadowColor = '#10b981';
+                    CTX.globalAlpha  = lifeAlpha * alpha;
+                    CTX.strokeStyle  = color;
+                    CTX.lineWidth    = lw;
+                    CTX.lineCap      = 'round';
+                    CTX.lineJoin     = 'round';
+                    CTX.shadowBlur   = blur;
+                    CTX.shadowColor  = '#10b981';
                     CTX.beginPath();
                     CTX.moveTo(pts[0].x, pts[0].y);
                     for (let i = 1; i <= SEGS; i++) CTX.lineTo(pts[i].x, pts[i].y);
                     CTX.stroke();
                     CTX.restore();
                 };
-
-                // Pass 1 — soft outer glow
-                drawThread(5, 0.25, '#10b981', 18);
-                // Pass 2 — bright core thread
+                drawThread(5,   0.25, '#10b981', 18);
                 drawThread(1.5, 0.85, '#6ee7b7', 8);
 
-                // Small orb at the connection anchor on Poom's body
                 CTX.save();
                 CTX.globalAlpha  = lifeAlpha * (0.7 + Math.sin(performance.now() / 120) * 0.3);
                 CTX.fillStyle    = '#34d399';
-                CTX.shadowBlur   = 14;
-                CTX.shadowColor  = '#10b981';
-                CTX.beginPath();
-                CTX.arc(screen.x, screen.y, 4, 0, Math.PI * 2);
-                CTX.fill();
+                CTX.shadowBlur   = 14; CTX.shadowColor = '#10b981';
+                CTX.beginPath(); CTX.arc(screen.x, screen.y, 4, 0, Math.PI * 2); CTX.fill();
                 CTX.restore();
             }
         }
 
-        // ════════════════════════════════════════════════════════
-        // POOM — Bean & Floating Hands · Deep Amber · Naga Summoner
-        // ════════════════════════════════════════════════════════
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
-
-        // ── Breathing idle + movement squash (springy circles) ───────
-        const now2       = performance.now();
+        // Breathing squash/stretch
+        const now2        = performance.now();
         const breathePoom = Math.sin(Date.now() / 200);
-        const speed2     = Math.hypot(this.vx, this.vy);
-        const moveT2     = Math.min(1, speed2 / 190);
-        const bobT2      = Math.sin(this.walkCycle);
-        const stretchX2  = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
-        const stretchY2  = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
-        CTX.scale(stretchX2, stretchY2);
+        const speed2      = Math.hypot(this.vx, this.vy);
+        const moveT2      = Math.min(1, speed2 / 190);
+        const bobT2       = Math.sin(this.walkCycle);
+        const stretchX2   = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
+        const stretchY2   = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
 
-        // Bean radius — Poom stays a circle (approx. same as Kao)
         const R2 = 13;
 
-        // ── Silhouette glow ring — deep purple (Poom's stand aura) ───
+        // ════════════════════════════════════════════════════════════
+        // LAYER 1 — BODY (horizontal mirror only, no rotation)
+        // ════════════════════════════════════════════════════════════
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.scale(stretchX2 * facingSign, stretchY2);
+
+        // Silhouette glow ring — deep purple
         CTX.shadowBlur  = 16; CTX.shadowColor = 'rgba(168,85,247,0.72)';
         CTX.strokeStyle = 'rgba(168,85,247,0.50)';
         CTX.lineWidth   = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R2 + 3, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur  = 0;
 
-        // ── Bean body — deep amber/orange radial gradient ─────────────
+        // Bean body — deep amber/orange
         const bodyG2 = CTX.createRadialGradient(-3, -3, 1, 0, 0, R2);
-        bodyG2.addColorStop(0,    '#d97706');
-        bodyG2.addColorStop(0.5,  '#b45309');
-        bodyG2.addColorStop(1,    '#78350f');
+        bodyG2.addColorStop(0,   '#d97706');
+        bodyG2.addColorStop(0.5, '#b45309');
+        bodyG2.addColorStop(1,   '#78350f');
         CTX.fillStyle = bodyG2;
         CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.fill();
 
-        // Thick sticker outline
-        CTX.strokeStyle = '#1e293b';
-        CTX.lineWidth   = 3;
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.stroke();
 
-        // Specular highlight
         CTX.fillStyle = 'rgba(255,255,255,0.18)';
         CTX.beginPath(); CTX.arc(-4, -5, 5, 0, Math.PI * 2); CTX.fill();
 
-        // ── Glowing Golden Thai Kranok pattern accent on body ─────────
-        // A single vertical golden accent line on the right side (Prajioud vibe)
+        // Thai Kranok pattern accent
         const kranokT2    = now2 / 500;
         const kranokAlpha = 0.55 + Math.sin(kranokT2 * 1.3) * 0.25;
         CTX.save();
         CTX.beginPath(); CTX.arc(0, 0, R2 - 1, 0, Math.PI * 2); CTX.clip();
-
         CTX.globalAlpha = kranokAlpha;
         CTX.strokeStyle = '#fef3c7'; CTX.lineWidth = 1.1;
         CTX.shadowBlur  = 6 + Math.sin(kranokT2 * 2) * 3;
         CTX.shadowColor = '#fbbf24';
-
-        // Left tendril scroll
         CTX.beginPath();
         CTX.moveTo(-8, 7); CTX.quadraticCurveTo(-9, 1, -4, -1);
-        CTX.quadraticCurveTo(-1, -2, -3, 3);
-        CTX.stroke();
+        CTX.quadraticCurveTo(-1, -2, -3, 3); CTX.stroke();
         CTX.beginPath();
         CTX.moveTo(-4, -1); CTX.quadraticCurveTo(-6, -4, -3, -5);
-        CTX.quadraticCurveTo(-1, -6, -2, -3);
-        CTX.stroke();
-
-        // Right tendril scroll (mirrored)
+        CTX.quadraticCurveTo(-1, -6, -2, -3); CTX.stroke();
         CTX.beginPath();
         CTX.moveTo(8, 7); CTX.quadraticCurveTo(9, 1, 4, -1);
-        CTX.quadraticCurveTo(1, -2, 3, 3);
-        CTX.stroke();
+        CTX.quadraticCurveTo(1, -2, 3, 3); CTX.stroke();
         CTX.beginPath();
         CTX.moveTo(4, -1); CTX.quadraticCurveTo(6, -4, 3, -5);
-        CTX.quadraticCurveTo(1, -6, 2, -3);
-        CTX.stroke();
-
-        // Central lotus diamond (pulsing)
+        CTX.quadraticCurveTo(1, -6, 2, -3); CTX.stroke();
         CTX.globalAlpha = kranokAlpha * 0.95;
         CTX.fillStyle   = 'rgba(255,251,235,0.90)';
         CTX.shadowBlur  = 8; CTX.shadowColor = '#fbbf24';
         CTX.beginPath();
         CTX.moveTo(0, -5); CTX.lineTo(2.5, -1); CTX.lineTo(0, 3); CTX.lineTo(-2.5, -1);
         CTX.closePath(); CTX.fill();
-
-        // Dot accents
         CTX.fillStyle = 'rgba(254,243,199,0.85)'; CTX.shadowBlur = 3;
         for (const [dx2, dy2] of [[-5, 8], [0, 9], [5, 8]]) {
             CTX.beginPath(); CTX.arc(dx2, dy2, 1.2, 0, Math.PI * 2); CTX.fill();
@@ -1792,18 +1696,16 @@ class PoomPlayer extends Entity {
         CTX.restore(); // end kranok clip
         CTX.globalAlpha = 1;
 
-        // ── Messy Spiky Hair — dark brown blob over upper half ────────
-        // Base hair mass
+        // Messy Spiky Hair
         CTX.fillStyle = '#1c0f05';
         CTX.beginPath();
         CTX.moveTo(-R2, -2);
-        CTX.quadraticCurveTo(-R2 - 1, -R2 * 1.1, 0, -R2 - 7);     // left arc sweeps over top
-        CTX.quadraticCurveTo(R2 + 1, -R2 * 1.1, R2, -2);            // right arc
-        CTX.quadraticCurveTo(R2 * 0.6, -1, 0, 0);                   // hair bottom edge
+        CTX.quadraticCurveTo(-R2 - 1, -R2 * 1.1, 0, -R2 - 7);
+        CTX.quadraticCurveTo(R2 + 1, -R2 * 1.1, R2, -2);
+        CTX.quadraticCurveTo(R2 * 0.6, -1, 0, 0);
         CTX.quadraticCurveTo(-R2 * 0.6, -1, -R2, -2);
         CTX.closePath(); CTX.fill();
 
-        // Hair sticker outline
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
         CTX.beginPath();
         CTX.moveTo(-R2, -2);
@@ -1813,7 +1715,6 @@ class PoomPlayer extends Entity {
         CTX.quadraticCurveTo(-R2 * 0.6, -1, -R2, -2);
         CTX.closePath(); CTX.stroke();
 
-        // Brown highlight streak
         CTX.fillStyle = '#3b1a07';
         CTX.beginPath();
         CTX.moveTo(-6, -R2 - 4);
@@ -1822,14 +1723,13 @@ class PoomPlayer extends Entity {
         CTX.quadraticCurveTo(-5, -R2, -6, -R2 - 4);
         CTX.closePath(); CTX.fill();
 
-        // Messy spiky tips — 5 irregular spikes, slight per-frame wobble
         CTX.fillStyle = '#15080a';
         const hairSpikes = [
-            { bx: -9, angle: -2.4, len: 7 },
-            { bx: -4, angle: -2.0, len: 9 },
+            { bx: -9, angle: -2.4,  len: 7 },
+            { bx: -4, angle: -2.0,  len: 9 },
             { bx:  1, angle: -1.57, len: 10 },
-            { bx:  6, angle: -1.1, len: 8 },
-            { bx: 10, angle: -0.8, len: 6 },
+            { bx:  6, angle: -1.1,  len: 8 },
+            { bx: 10, angle: -0.8,  len: 6 },
         ];
         for (const sp of hairSpikes) {
             const tipX = sp.bx + Math.cos(sp.angle) * sp.len;
@@ -1841,7 +1741,6 @@ class PoomPlayer extends Entity {
             CTX.lineTo(sp.bx + 3, -R2 - 3);
             CTX.lineTo(tipX + wob, tipY - wob * 0.5);
             CTX.closePath(); CTX.fill();
-            // Spike sticker outline
             CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
             CTX.beginPath();
             CTX.moveTo(sp.bx - 3, -R2 - 3);
@@ -1850,53 +1749,59 @@ class PoomPlayer extends Entity {
             CTX.closePath(); CTX.stroke();
         }
 
-        // ── Kratib weapon ─────────────────────────────────────────────
+        CTX.restore(); // ── end LAYER 1 ──
+
+        // ════════════════════════════════════════════════════════════
+        // LAYER 2 — WEAPON + HANDS (full 360° rotation)
+        // scale(1,-1) when isFacingLeft keeps kratib right-side up.
+        // ════════════════════════════════════════════════════════════
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(1, -1); // ← Anti-flip critical fix
+
         if (typeof drawPoomWeapon === 'function') drawPoomWeapon(CTX);
 
-        // ── Floating Hands — Prajioud White Rope/Armband Detail ──────
-        // Poom's hands have white fabric armbands (Thai fighter's Prajioud)
-
-        // Front hand — weapon/launcher side
+        // Floating Hands — Prajioud white rope/armband detail
         const pR = 5;
-        CTX.fillStyle   = '#d97706';   // amber skin tone
+        CTX.fillStyle   = '#d97706';
         CTX.strokeStyle = '#1e293b';
         CTX.lineWidth   = 2.5;
         CTX.shadowBlur  = 6; CTX.shadowColor = '#f59e0b';
         CTX.beginPath(); CTX.arc(R2 + 6, 1, pR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
-        // Prajioud white rope band — two thin horizontal stripes
         CTX.save();
         CTX.beginPath(); CTX.arc(R2 + 6, 1, pR, 0, Math.PI * 2); CTX.clip();
-        CTX.fillStyle   = 'rgba(255,255,255,0.80)';
-        CTX.fillRect(R2 + 1, -1.5, 10, 1.5);    // upper band
-        CTX.fillRect(R2 + 1,  1.5, 10, 1.2);    // lower band
-        CTX.fillStyle = 'rgba(220,38,38,0.60)';  // red centre thread (Kao-style flag)
+        CTX.fillStyle = 'rgba(255,255,255,0.80)';
+        CTX.fillRect(R2 + 1, -1.5, 10, 1.5);
+        CTX.fillRect(R2 + 1,  1.5, 10, 1.2);
+        CTX.fillStyle = 'rgba(220,38,38,0.60)';
         CTX.fillRect(R2 + 1, 0.1, 10, 0.8);
         CTX.restore();
 
-        // Back hand — off-hand
         CTX.fillStyle   = '#b45309';
         CTX.strokeStyle = '#1e293b';
         CTX.lineWidth   = 2.5;
         CTX.shadowBlur  = 4; CTX.shadowColor = '#f59e0b';
         CTX.beginPath(); CTX.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
-        // Back hand Prajioud band
         CTX.save();
         CTX.beginPath(); CTX.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2); CTX.clip();
         CTX.fillStyle = 'rgba(255,255,255,0.75)';
-        CTX.fillRect(-(R2 + 10), -1, 10, 1.3);
+        CTX.fillRect(-(R2 + 10), -1,   10, 1.3);
         CTX.fillRect(-(R2 + 10),  1.5, 10, 1.1);
         CTX.restore();
 
-        CTX.restore(); // end body transform
+        CTX.restore(); // ── end LAYER 2 ──
 
-        // ── Level badge ───────────────────────────────────────────────
+        // Level badge
         if (this.level > 1) {
-            CTX.fillStyle = 'rgba(217,119,6,0.92)';
+            CTX.fillStyle    = 'rgba(217,119,6,0.92)';
             CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial';
-            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillStyle    = '#fff';
+            CTX.font         = 'bold 9px Arial';
+            CTX.textAlign    = 'center';
+            CTX.textBaseline = 'middle';
             CTX.fillText(this.level, screen.x + 20, screen.y - 20);
         }
     }
@@ -1908,7 +1813,6 @@ class PoomPlayer extends Entity {
         if (hpBar) hpBar.style.width = `${this.hp / this.maxHp * 100}%`;
         if (enBar) enBar.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
-        // ── Dash cooldown ──────────────────────────────────────────
         const dpEl = document.getElementById('dash-cd');
         if (dpEl) {
             const dp = Math.min(100, (1 - this.cooldowns.dash / S.dashCooldown) * 100);
@@ -1919,7 +1823,6 @@ class PoomPlayer extends Entity {
                 Math.max(0, this.cooldowns.dash), S.dashCooldown);
         }
 
-        // ── Eat Rice cooldown ──────────────────────────────────────
         const eatCd   = document.getElementById('eat-cd');
         const eatIcon = document.getElementById('eat-icon');
         if (eatCd) {
@@ -1936,7 +1839,6 @@ class PoomPlayer extends Entity {
                 S.eatRiceCooldown);
         }
 
-        // ── Naga cooldown ──────────────────────────────────────────
         const nagaCd = document.getElementById('naga-cd');
         if (nagaCd) {
             const np = Math.min(100, (1 - this.cooldowns.naga / S.nagaCooldown) * 100);
@@ -1973,12 +1875,8 @@ class NagaEntity extends Entity {
         this.maxLife  = S.nagaDuration;
         this.speed    = S.nagaSpeed;
         this.damage   = S.nagaDamage * (owner.damageMultiplier || 1.0);
-        this.active  = true;  // false when life <= 0 (Poom invincibility check)
-        // this.radius set by Entity via super()
+        this.active   = true;
 
-        // ✅ AUDIO 2 — Rate-limit Naga hit sound.
-        // Stores Date.now() of the last Audio.playNagaAttack() call.
-        // Sound fires at most once per NAGA_SOUND_INTERVAL ms (220 ms).
         this.lastSoundTime = 0;
     }
 
@@ -1992,8 +1890,6 @@ class NagaEntity extends Entity {
         }
 
         const head = this.segments[0];
-        // Follows the mouse cursor — intentional design so the player can
-        // actively aim and steer the Naga during its lifetime.
         const dx = mouse.wx - head.x, dy = mouse.wy - head.y;
         const d = Math.hypot(dx, dy);
         if (d > 8) {
@@ -2008,15 +1904,12 @@ class NagaEntity extends Entity {
             if (sd > segDist) { curr.x = prev.x+(sdx/sd)*segDist; curr.y = prev.y+(sdy/sd)*segDist; }
         }
 
-        // ── Enemy collision ───────────────────────────────────
         for (const enemy of (window.enemies || [])) {
             if (enemy.dead) continue;
             for (const seg of this.segments) {
                 if (dist(seg.x, seg.y, enemy.x, enemy.y) < this.radius + enemy.radius) {
                     enemy.takeDamage(this.damage * dt, player);
                     if (Math.random() < 0.1) spawnParticles(seg.x, seg.y, 2, '#10b981');
-
-                    // ✅ AUDIO 2 — Rate-limited energy-hiss on enemy hit
                     const now = Date.now();
                     if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
                         this.lastSoundTime = now;
@@ -2027,13 +1920,10 @@ class NagaEntity extends Entity {
             }
         }
 
-        // ── Boss collision ────────────────────────────────────
         if (window.boss && !window.boss.dead) {
             for (const seg of this.segments) {
                 if (dist(seg.x, seg.y, window.boss.x, window.boss.y) < this.radius + window.boss.radius) {
                     window.boss.takeDamage(this.damage * dt * 0.4);
-
-                    // ✅ AUDIO 2 — Same rate-limit applies for boss hits
                     const now = Date.now();
                     if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
                         this.lastSoundTime = now;
@@ -2051,7 +1941,6 @@ class NagaEntity extends Entity {
         const lifeRatio = this.life / this.maxLife;
         const now = performance.now();
 
-        // ── Body segments (tail → neck) ──────────────────────────────
         for (let i = this.segments.length - 1; i >= 1; i--) {
             const seg    = this.segments[i];
             const screen = worldToScreen(seg.x, seg.y);
@@ -2063,8 +1952,7 @@ class NagaEntity extends Entity {
             CTX.globalAlpha = Math.max(0.1, alpha);
 
             if (i === this.segments.length - 1) {
-                // Tail tip — tapered spike
-                const prevSeg = this.segments[i - 1];
+                const prevSeg   = this.segments[i - 1];
                 const tailAngle = Math.atan2(seg.y - prevSeg.y, seg.x - prevSeg.x);
                 CTX.translate(screen.x, screen.y);
                 CTX.rotate(tailAngle);
@@ -2078,7 +1966,6 @@ class NagaEntity extends Entity {
                 CTX.lineTo(-r, r * 0.4);
                 CTX.closePath(); CTX.fill();
             } else {
-                // Body scale — alternating emerald tones with subtle scale marks
                 const isEven = i % 2 === 0;
                 const scaleGrad = CTX.createRadialGradient(
                     screen.x - r * 0.25, screen.y - r * 0.25, 0,
@@ -2091,26 +1978,21 @@ class NagaEntity extends Entity {
                 CTX.shadowBlur  = 8 + Math.sin(now / 300 + i) * 3;
                 CTX.shadowColor = '#10b981';
                 CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.fill();
-                // Scale ridge line
                 if (r > 7) {
                     CTX.strokeStyle = 'rgba(6,78,59,0.55)';
                     CTX.lineWidth   = 1.2;
-                    CTX.beginPath();
-                    CTX.arc(screen.x, screen.y, r * 0.65, 0, Math.PI * 2);
-                    CTX.stroke();
+                    CTX.beginPath(); CTX.arc(screen.x, screen.y, r * 0.65, 0, Math.PI * 2); CTX.stroke();
                 }
             }
             CTX.restore();
         }
 
-        // ══ HEAD — Majestic Naga ══
         if (this.segments.length > 0) {
             const head    = this.segments[0];
             const hs      = worldToScreen(head.x, head.y);
             const r       = this.radius;
             const headAlpha = lifeRatio;
 
-            // Compute head facing angle from first two segments
             let headAngle = 0;
             if (this.segments.length > 1) {
                 const neck = this.segments[1];
@@ -2122,18 +2004,14 @@ class NagaEntity extends Entity {
             CTX.rotate(headAngle);
             CTX.globalAlpha = Math.max(0.15, headAlpha);
 
-            // ── Aura pulsing ring ─────────────────────────────────
             const auraR = r * 1.8 + Math.sin(now / 120) * 3;
             CTX.globalAlpha = headAlpha * (0.4 + Math.sin(now / 160) * 0.2);
-            CTX.strokeStyle = '#34d399';
-            CTX.lineWidth   = 2;
-            CTX.shadowBlur  = 16 + Math.sin(now / 130) * 8;
-            CTX.shadowColor = '#10b981';
+            CTX.strokeStyle = '#34d399'; CTX.lineWidth = 2;
+            CTX.shadowBlur  = 16 + Math.sin(now / 130) * 8; CTX.shadowColor = '#10b981';
             CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.stroke();
 
             CTX.globalAlpha = Math.max(0.15, headAlpha);
 
-            // ── Main head shape (pointed snout, wide jaw) ─────────
             const headGrad = CTX.createRadialGradient(-r * 0.2, -r * 0.2, 0, 0, 0, r * 1.1);
             headGrad.addColorStop(0, '#34d399');
             headGrad.addColorStop(0.5, '#059669');
@@ -2141,42 +2019,32 @@ class NagaEntity extends Entity {
             CTX.fillStyle = headGrad;
             CTX.shadowBlur  = 20; CTX.shadowColor = '#10b981';
             CTX.beginPath();
-            CTX.moveTo(r * 1.3, 0);                                    // snout tip
-            CTX.quadraticCurveTo(r * 1.0, -r * 0.8, 0, -r * 0.85);    // upper jaw
-            CTX.quadraticCurveTo(-r * 0.7, -r * 0.9, -r, -r * 0.55);  // crown back
-            CTX.quadraticCurveTo(-r * 1.1, 0, -r, r * 0.55);           // neck left
-            CTX.quadraticCurveTo(-r * 0.7, r * 0.9, 0, r * 0.85);      // lower jaw
-            CTX.quadraticCurveTo(r * 1.0, r * 0.8, r * 1.3, 0);        // snout tip again
+            CTX.moveTo(r * 1.3, 0);
+            CTX.quadraticCurveTo(r * 1.0, -r * 0.8, 0, -r * 0.85);
+            CTX.quadraticCurveTo(-r * 0.7, -r * 0.9, -r, -r * 0.55);
+            CTX.quadraticCurveTo(-r * 1.1, 0, -r, r * 0.55);
+            CTX.quadraticCurveTo(-r * 0.7, r * 0.9, 0, r * 0.85);
+            CTX.quadraticCurveTo(r * 1.0, r * 0.8, r * 1.3, 0);
             CTX.closePath(); CTX.fill();
             CTX.shadowBlur = 0;
 
-            // ── HORNS — two curved swept-back horns ───────────────
-            CTX.strokeStyle = '#fbbf24';
-            CTX.lineWidth   = 3;
-            CTX.lineCap     = 'round';
+            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3; CTX.lineCap = 'round';
             CTX.shadowBlur  = 10; CTX.shadowColor = '#f59e0b';
-            // Left horn
             CTX.beginPath();
             CTX.moveTo(-r * 0.3, -r * 0.65);
             CTX.quadraticCurveTo(-r * 0.6, -r * 1.4, -r * 0.1, -r * 1.8);
             CTX.stroke();
-            // Right horn
             CTX.beginPath();
             CTX.moveTo( r * 0.3, -r * 0.65);
             CTX.quadraticCurveTo( r * 0.6, -r * 1.4, r * 0.1, -r * 1.8);
             CTX.stroke();
-            // Horn tips glow dot
-            CTX.fillStyle = '#fef08a';
-            CTX.shadowBlur = 14; CTX.shadowColor = '#fbbf24';
+            CTX.fillStyle = '#fef08a'; CTX.shadowBlur = 14; CTX.shadowColor = '#fbbf24';
             CTX.beginPath(); CTX.arc(-r * 0.1, -r * 1.8, 2.5, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.arc( r * 0.1, -r * 1.8, 2.5, 0, Math.PI * 2); CTX.fill();
             CTX.shadowBlur = 0;
 
-            // ── FLOWING MANE — layered quadratic curves ───────────
             const manePhase = now / 200;
-            CTX.lineWidth   = 2.5;
-            CTX.lineCap     = 'round';
-            // Three mane strands per side for a "majestic" multi-layer look
+            CTX.lineWidth = 2.5; CTX.lineCap = 'round';
             const maneStrands = [
                 { side: -1, baseY: -r * 0.4, cp1x: -r * 1.6, cp1y: -r * 0.2, endX: -r * 1.4, endY: r * 0.5, phase: 0 },
                 { side: -1, baseY: -r * 0.1, cp1x: -r * 1.8, cp1y:  r * 0.4, endX: -r * 1.2, endY: r * 1.0, phase: 0.7 },
@@ -2189,8 +2057,7 @@ class NagaEntity extends Entity {
                 const flutter = Math.sin(manePhase + ms.phase) * r * 0.35;
                 const mAlpha  = headAlpha * (0.5 + Math.sin(manePhase + ms.phase) * 0.3);
                 CTX.globalAlpha = Math.max(0, mAlpha);
-                CTX.strokeStyle = '#6ee7b7';
-                CTX.shadowBlur  = 8; CTX.shadowColor = '#10b981';
+                CTX.strokeStyle = '#6ee7b7'; CTX.shadowBlur = 8; CTX.shadowColor = '#10b981';
                 CTX.beginPath();
                 CTX.moveTo(0, ms.baseY);
                 CTX.quadraticCurveTo(ms.cp1x + flutter * ms.side, ms.cp1y, ms.endX + flutter * ms.side * 0.5, ms.endY);
@@ -2199,25 +2066,19 @@ class NagaEntity extends Entity {
             CTX.globalAlpha = Math.max(0.15, headAlpha);
             CTX.shadowBlur  = 0;
 
-            // ── GLOWING EYES ──────────────────────────────────────
             const eyeGlow  = 0.6 + Math.sin(now / 180) * 0.4;
             const eyeColor = `rgba(245,158,11,${eyeGlow})`;
-            // Eye whites (actually golden)
             CTX.fillStyle = eyeColor;
             CTX.shadowBlur  = 16 * eyeGlow; CTX.shadowColor = '#f59e0b';
             CTX.beginPath(); CTX.ellipse(r * 0.35, -r * 0.3, r * 0.28, r * 0.2, 0, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.ellipse(r * 0.35,  r * 0.3, r * 0.28, r * 0.2, 0, 0, Math.PI * 2); CTX.fill();
-            // Vertical slit pupils
-            CTX.fillStyle = '#0f172a';
-            CTX.shadowBlur = 0;
+            CTX.fillStyle = '#0f172a'; CTX.shadowBlur = 0;
             CTX.beginPath(); CTX.ellipse(r * 0.38, -r * 0.3, r * 0.08, r * 0.16, 0, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.ellipse(r * 0.38,  r * 0.3, r * 0.08, r * 0.16, 0, 0, Math.PI * 2); CTX.fill();
-            // Inner eye shine
             CTX.fillStyle = `rgba(255,251,235,${eyeGlow * 0.7})`;
             CTX.beginPath(); CTX.arc(r * 0.32, -r * 0.34, r * 0.07, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.arc(r * 0.32,  r * 0.26, r * 0.07, 0, Math.PI * 2); CTX.fill();
 
-            // ── Life timer ───────────────────────────────────────
             CTX.restore();
             CTX.save();
             CTX.globalAlpha = headAlpha * 0.85;
@@ -2226,17 +2087,12 @@ class NagaEntity extends Entity {
             CTX.fillText(`${this.life.toFixed(1)}s`, hs.x, hs.y - r * 2.4);
             CTX.restore();
 
-            // ── Connection tether anchor ring ─────────────────────
             const pulse = 0.6 + Math.sin(now / 130) * 0.4;
             CTX.save();
             CTX.globalAlpha  = lifeRatio * (0.5 + pulse * 0.4);
-            CTX.strokeStyle  = '#34d399';
-            CTX.lineWidth    = 1.5;
-            CTX.shadowBlur   = 12 * pulse;
-            CTX.shadowColor  = '#10b981';
-            CTX.beginPath();
-            CTX.arc(hs.x, hs.y, this.radius * 1.6, 0, Math.PI * 2);
-            CTX.stroke();
+            CTX.strokeStyle  = '#34d399'; CTX.lineWidth = 1.5;
+            CTX.shadowBlur   = 12 * pulse; CTX.shadowColor = '#10b981';
+            CTX.beginPath(); CTX.arc(hs.x, hs.y, this.radius * 1.6, 0, Math.PI * 2); CTX.stroke();
             CTX.restore();
         }
     }
@@ -2440,7 +2296,6 @@ class BarkWave {
 
 // ════════════════════════════════════════════════════════════
 // ✅ Option B — Share identical Player methods with PoomPlayer
-// (PoomPlayer keeps its own takeDamage for Naga invincibility guard.)
 // ════════════════════════════════════════════════════════════
 PoomPlayer.prototype.heal               = Player.prototype.heal;
 PoomPlayer.prototype.gainExp            = Player.prototype.gainExp;
