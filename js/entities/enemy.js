@@ -13,35 +13,35 @@
  * COMBAT FEEDBACK ADDITIONS (Lead Gameplay Developer pass)
  * ────────────────────────────────────────────────────────────────
  * ✅ HIT FLASH — All three enemy classes (Enemy, TankEnemy, MageEnemy)
- *    now implement a white-silhouette flash whenever takeDamage() is called:
+ * now implement a white-silhouette flash whenever takeDamage() is called:
  *
- *    Construction:  this.hitFlashTimer = 0;
- *    On damage:     this.hitFlashTimer = HIT_FLASH_DURATION;   // 0.10 s
- *    In update():   if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
- *    In draw():     a full-coverage white shape (matching the enemy's silhouette)
- *                   is painted on top of the normal sprite at up to 75 % alpha,
- *                   linearly fading to 0 over the flash duration.
+ * Construction:  this.hitFlashTimer = 0;
+ * On damage:     this.hitFlashTimer = HIT_FLASH_DURATION;   // 0.10 s
+ * In update():   if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+ * In draw():     a full-coverage white shape (matching the enemy's silhouette)
+ * is painted on top of the normal sprite at up to 75 % alpha,
+ * linearly fading to 0 over the flash duration.
  *
- *    The flash duration constant HIT_FLASH_DURATION = 0.10 s (≈ 6 frames at
- *    60 fps) sits at the top of this file so it can be tuned centrally.
+ * The flash duration constant HIT_FLASH_DURATION = 0.10 s (≈ 6 frames at
+ * 60 fps) sits at the top of this file so it can be tuned centrally.
  *
- *    Draw implementation uses `CTX.save()/restore()` so no canvas state
- *    leaks into the health-bar drawing that immediately follows.
+ * Draw implementation uses `CTX.save()/restore()` so no canvas state
+ * leaks into the health-bar drawing that immediately follows.
  *
  * ────────────────────────────────────────────────────────────────
  * BALANCE — GLITCH WAVE DAMAGE REDUCTION (Balance Designer pass)
  * ────────────────────────────────────────────────────────────────
  * ✅ GLITCH WAVE MITIGATION — When window.isGlitchWave is true (set by
- *    game.js whenever a Glitch Wave is in progress), all melee contact
- *    damage dealt to the player by Enemy and TankEnemy is multiplied by
- *    GLITCH_DAMAGE_MULT (0.6), giving a 40 % reduction.
+ * game.js whenever a Glitch Wave is in progress), all melee contact
+ * damage dealt to the player by Enemy and TankEnemy is multiplied by
+ * GLITCH_DAMAGE_MULT (0.6), giving a 40 % reduction.
  *
- *    Rationale: Glitch Waves already invert player controls and spawn a
- *    double horde; reducing contact damage prevents unavoidable death
- *    from disorientation without removing the tension of the mechanic.
+ * Rationale: Glitch Waves already invert player controls and spawn a
+ * double horde; reducing contact damage prevents unavoidable death
+ * from disorientation without removing the tension of the mechanic.
  *
- *    window.isGlitchWave is a boolean synced by game.js on every state
- *    change; reading it here via window avoids any import/scope coupling.
+ * window.isGlitchWave is a boolean synced by game.js on every state
+ * change; reading it here via window avoids any import/scope coupling.
  */
 
 // ─── Tunable: seconds a hit-flash stays at full opacity before fading out ───
@@ -129,6 +129,7 @@ class Enemy extends Entity {
         const screen = worldToScreen(this.x, this.y);
         const now    = Date.now();
         const R      = this.radius; // keep collision radius untouched
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── Ground shadow ────────────────────────────────────────────
         CTX.save();
@@ -137,10 +138,10 @@ class Enemy extends Entity {
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 4, R * 0.9, 4, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ── Body transform — rotates to face player ──────────────────
+        // ── Body Block (Body Anti-Flip) ───────────────────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(-1, 1);
 
         // Breathing: subtle Y-axis squash/stretch
         const breathe  = Math.sin(now / 200);
@@ -181,6 +182,14 @@ class Enemy extends Entity {
         CTX.beginPath(); CTX.roundRect(-R * 0.1, -R * 0.32, R * 0.9, R * 0.60, R * 0.18); CTX.fill();
         CTX.shadowBlur = 0;
 
+        CTX.restore(); // end body transform
+
+        // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+
         // ── Floating spiked hands (orbiting body, weapon-side + off-side) ──
         // Front hand — weapon-pointing side
         const handR = R * 0.38;
@@ -208,7 +217,7 @@ class Enemy extends Entity {
         CTX.closePath(); CTX.fill();
         CTX.shadowBlur = 0;
 
-        CTX.restore(); // end body transform
+        CTX.restore(); // end weapon block
 
         // ── Hit flash — white silhouette ─────────────────────────────
         if (this.hitFlashTimer > 0) {
@@ -289,6 +298,7 @@ class TankEnemy extends Entity {
         const screen = worldToScreen(this.x, this.y);
         const now    = Date.now();
         const R      = this.radius; // collision radius untouched
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── Ground shadow (wider for big body) ───────────────────────
         CTX.save();
@@ -297,10 +307,10 @@ class TankEnemy extends Entity {
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 6, R * 1.1, 5, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ── Body transform ────────────────────────────────────────────
+        // ── Body Block (Body Anti-Flip) ───────────────────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(-1, 1);
 
         // Tank breathes slower and more heavily
         const breathe = Math.sin(now / 320);
@@ -364,6 +374,14 @@ class TankEnemy extends Entity {
         CTX.fillStyle = 'rgba(255,255,255,0.07)';
         CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.3, R * 0.28, 0, Math.PI * 2); CTX.fill();
 
+        CTX.restore(); // end body transform
+
+        // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+
         // ── Oversized Shield-Hands ────────────────────────────────────
         // Front shield-hand (forward side, large kite-shield shape)
         const shieldGlow = 0.4 + Math.sin(now / 180) * 0.25;
@@ -392,7 +410,7 @@ class TankEnemy extends Entity {
         CTX.beginPath(); CTX.moveTo(-(R + 4),  1); CTX.lineTo(-(R + 10),  1); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        CTX.restore(); // end body transform
+        CTX.restore(); // end weapon transform
 
         // ── Hit flash — white silhouette (wide bean shape) ───────────
         if (this.hitFlashTimer > 0) {
@@ -400,7 +418,8 @@ class TankEnemy extends Entity {
             CTX.save();
             CTX.globalAlpha = flashAlpha;
             CTX.fillStyle   = '#ffffff';
-            CTX.translate(screen.x, screen.y); CTX.rotate(this.angle);
+            CTX.translate(screen.x, screen.y);
+            if (isFacingLeft) CTX.scale(-1, 1);
             CTX.scale(1.15, 1.0);
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
             CTX.restore();
@@ -484,6 +503,7 @@ class MageEnemy extends Entity {
         const now       = Date.now();
         const R         = this.radius;
         const bobOffset = Math.sin(now / 300) * 3; // Mages float/hover
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── Ground shadow (offset because mage floats) ───────────────
         CTX.save();
@@ -492,10 +512,10 @@ class MageEnemy extends Entity {
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 10, R * 0.8, 4, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ── Body transform (floating bob + rotation) ──────────────────
+        // ── Body Block (Body Anti-Flip + floating bob) ────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y + bobOffset);
-        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(-1, 1);
 
         // Mage breathing — slightly faster oscillation
         const breathe = Math.sin(now / 170);
@@ -535,6 +555,14 @@ class MageEnemy extends Entity {
         CTX.beginPath(); CTX.arc(0, R * 0.15, R * 0.12, 0, Math.PI * 2); CTX.fill();
         CTX.shadowBlur = 0;
 
+        CTX.restore(); // end body transform
+
+        // ── Weapon Block (Weapon Anti-Flip + floating bob) ────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y + bobOffset);
+        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+
         // ── Glowing blaster barrel (pointing forward / +X) ───────────
         // Barrel base — dark rectangle
         CTX.fillStyle   = '#1a2a1a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
@@ -568,7 +596,7 @@ class MageEnemy extends Entity {
         CTX.beginPath(); CTX.arc(-(R + 4), R * 0.30, R * 0.14, 0, Math.PI * 2); CTX.fill();
         CTX.shadowBlur = 0;
 
-        CTX.restore(); // end body transform
+        CTX.restore(); // end weapon transform
 
         // ── Hit flash — white silhouette ─────────────────────────────
         if (this.hitFlashTimer > 0) {
@@ -577,7 +605,7 @@ class MageEnemy extends Entity {
             CTX.globalAlpha = flashAlpha;
             CTX.fillStyle   = '#ffffff';
             CTX.translate(screen.x, screen.y + bobOffset);
-            CTX.rotate(this.angle);
+            if (isFacingLeft) CTX.scale(-1, 1);
             CTX.save(); CTX.scale(0.88, 1.1);
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
             CTX.restore();

@@ -3,27 +3,27 @@
  * js/entities/boss.js
  *
  * ► BossDog — "DOG" — Summoned by Kru Manop in Phase 2.
- *             Standalone aggressive melee chaser.
+ * Standalone aggressive melee chaser.
  *
  * ► Boss — "KRU MANOP THE DOG SUMMONER"
- *           Phase 1 (normal ranged attacks)
- *           Phase 2 (enraged + summons BossDog; fights continue ranged)
- *           States: CHASE | ATTACK | ULTIMATE
- *           Skills: equationSlam | deadlyGraph | log457 | bark (phase 2 only)
+ * Phase 1 (normal ranged attacks)
+ * Phase 2 (enraged + summons BossDog; fights continue ranged)
+ * States: CHASE | ATTACK | ULTIMATE
+ * Skills: equationSlam | deadlyGraph | log457 | bark (phase 2 only)
  *
  * Depends on: base.js  (Entity)
- *             player.js (BarkWave)
- *             game.js   (Gemini global mock — must be loaded before this file)
+ * player.js (BarkWave)
+ * game.js   (Gemini global mock — must be loaded before this file)
  *
  * ────────────────────────────────────────────────────────────────
  * REFACTOR NOTES (Phase 2 Dog Summon)
  * ────────────────────────────────────────────────────────────────
  * ✅ BossDog class — standalone melee entity; migrated dog drawing from Boss._drawDog().
- *    Coordinates shifted by (-6, -28) so dog body is centred on entity origin.
+ * Coordinates shifted by (-6, -28) so dog body is centred on entity origin.
  * ✅ Boss no longer uses isRider / dogLegTimer / _drawDog.
- *    enablePhase2 flag (set by game.js based on encounter) controls Phase 2 activation.
- *    Encounter 1 (Wave 3): enablePhase2=false → Phase 1 only.
- *    Encounter 2+ (Wave 6, 9): enablePhase2=true → summons BossDog on HP threshold.
+ * enablePhase2 flag (set by game.js based on encounter) controls Phase 2 activation.
+ * Encounter 1 (Wave 3): enablePhase2=false → Phase 1 only.
+ * Encounter 2+ (Wave 6, 9): enablePhase2=true → summons BossDog on HP threshold.
  * ✅ MOD EXPORTS — module.exports now lists { Boss, BossDog }.
  */
 
@@ -85,6 +85,7 @@ class BossDog extends Entity {
         if (this.dead) return;
         const screen = worldToScreen(this.x, this.y);
         const now    = Date.now();
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── HP bar (level) ────────────────────────────────────────────
         {
@@ -104,10 +105,10 @@ class BossDog extends Entity {
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 20, 32, 7, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
-        // ── Body transform — rotates to face player ───────────────────
+        // ── Body Block (Body Anti-Flip logic) ─────────────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(-1, 1);
 
         // Heavy breathing — power unit
         const breathe = Math.sin(now / 230);
@@ -647,6 +648,7 @@ class Boss extends Entity {
         // ╚══════════════════════════════════════════════════════════╝
         const screen = worldToScreen(this.x, this.y);
         const now    = Date.now();
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         CTX.save();
         CTX.translate(screen.x, screen.y);
@@ -724,8 +726,9 @@ class Boss extends Entity {
         CTX.globalAlpha = 1; CTX.shadowBlur = 0;
         CTX.restore();
 
-        // ── Body rotation — faces player ──────────────────────────────
-        CTX.rotate(this.angle);
+        // ── Body Block (Body Anti-Flip) ───────────────────────────────
+        CTX.save();
+        if (isFacingLeft) CTX.scale(-1, 1);
 
         // Boss breathing
         const breathe = Math.sin(now / 260);
@@ -909,6 +912,13 @@ class Boss extends Entity {
             CTX.globalAlpha = 1; CTX.shadowBlur = 0;
         }
 
+        CTX.restore(); // end body block
+
+        // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
+        CTX.save();
+        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+
         // ── Floating Hands — holding a glowing ruler / chalk ─────────
         // Front hand — holding ruler, forward weapon side
         CTX.fillStyle   = '#2d3748'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
@@ -936,6 +946,8 @@ class Boss extends Entity {
         CTX.shadowBlur  = 4; CTX.shadowColor = 'rgba(148,163,184,0.5)';
         CTX.beginPath(); CTX.arc(-(R + 7), 2, R * 0.28, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
+
+        CTX.restore(); // end weapon block
 
         CTX.restore(); // end main translate
     }
@@ -1011,10 +1023,12 @@ class GoldfishMinion extends Entity {
         if (this.dead) return;
         const screen = worldToScreen(this.x, this.y);
         const now    = Date.now();
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
+        // ── Body Block (Body Anti-Flip logic) ─────────────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(-1, 1);
 
         // Fast breathe — fish are always in motion
         const breathe = Math.sin(now / 140);
@@ -1159,7 +1173,7 @@ class GoldfishMinion extends Entity {
         CTX.lineTo(r * 0.85, -r * 0.35);
         CTX.stroke();
 
-        CTX.restore();
+        CTX.restore(); // end body transform
     }
 }
 
