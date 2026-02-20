@@ -20,26 +20,31 @@
  * to prevent rapid-tick audio stacking.
  */
 
+// ============================================================================
+// 🚀 PROJECTILE CLASS (FULLY RESTORED & RICOCHET BUG FIXED)
+// ============================================================================
 class Projectile {
     constructor(x, y, angle, speed, damage, color, isCrit, team, options = {}) {
         this.x = x; this.y = y;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
-        this.damage = damage; this.color = color; this.team = team;
+        this.damage = damage; 
+        this.color = color; 
+        this.team = team;
 
         this.life = (options && options.life !== undefined) ? options.life : 3;
-        this.angle = angle; this.isCrit = isCrit;
+        this.angle = angle; 
+        this.isCrit = isCrit;
 
         this.kind = options?.kind || 'bullet';
         this.size = (options && options.size !== undefined) ? options.size : (isCrit ? 24 : 14);
         this.radius = (options && options.radius !== undefined) ? options.radius : 10;
         this.pierce = (options && options.pierce !== undefined) ? options.pierce : 0;
         
-        // --- NEW RICOCHET MECHANIC PROPERTY ---
+        // --- RICOCHET PROPERTY ---
         this.bounces = (options && options.bounces !== undefined) ? options.bounces : 0; 
         
         this.hitSet = null;
-
         this.symbol = options?.symbol || this.getSymbol(isCrit, team);
     }
 
@@ -53,57 +58,63 @@ class Projectile {
         this.x += this.vx * dt; 
         this.y += this.vy * dt;
         this.life -= dt; 
-        this.angle += dt * 2; // Keep original spinning visual effect
+        this.angle += dt * 2; // Preserves visual spinning effect
 
-        // --- NEW: RICOCHET & BOUNDARY COLLISION LOGIC ---
-        // Fallback to standard 2000px bounds if global map boundaries aren't explicitly defined
-        const boundsX = typeof WORLD_WIDTH !== 'undefined' ? WORLD_WIDTH : (typeof canvas !== 'undefined' ? canvas.width : 2000);
-        const boundsY = typeof WORLD_HEIGHT !== 'undefined' ? WORLD_HEIGHT : (typeof canvas !== 'undefined' ? canvas.height : 2000);
+        // --- BULLET-PROOF RICOCHET & BOUNDARY PHYSICS ---
+        // Crucial fix: Using WORLD bounds instead of Canvas Screen bounds.
+        // Fallback to a large number (e.g., 3000) if WORLD_WIDTH isn't explicitly defined globally.
+        const mapW = typeof WORLD_WIDTH !== 'undefined' ? WORLD_WIDTH : 3000;
+        const mapH = typeof WORLD_HEIGHT !== 'undefined' ? WORLD_HEIGHT : 3000;
 
-        // X-Axis Boundary Checking (Left / Right Walls)
+        let hitWall = false;
+
+        // X-Axis Boundary Collision (Left / Right Walls)
         if (this.x - this.radius < 0) {
+            this.x = this.radius; // Snap to edge to prevent wall-sticking
+            hitWall = true;
             if (this.bounces > 0) {
-                this.x = this.radius; // Snap to prevent getting stuck
-                this.vx *= -1; // Reflect velocity
+                this.vx *= -1;
                 this.bounces--;
-                this.angle = Math.atan2(this.vy, this.vx); // Reorient base visual angle
-            } else {
-                this.life = 0; // Destroy bullet if no bounces left and hits wall
+                this.angle = Math.atan2(this.vy, this.vx); // Face new trajectory
             }
-        } else if (this.x + this.radius > boundsX) {
+        } else if (this.x + this.radius > mapW) {
+            this.x = mapW - this.radius; // Snap to edge
+            hitWall = true;
             if (this.bounces > 0) {
-                this.x = boundsX - this.radius;
                 this.vx *= -1;
                 this.bounces--;
                 this.angle = Math.atan2(this.vy, this.vx);
-            } else {
-                this.life = 0;
             }
         }
 
-        // Y-Axis Boundary Checking (Top / Bottom Walls)
+        // Y-Axis Boundary Collision (Top / Bottom Walls)
         if (this.y - this.radius < 0) {
+            this.y = this.radius; // Snap to edge
+            hitWall = true;
             if (this.bounces > 0) {
-                this.y = this.radius;
                 this.vy *= -1;
                 this.bounces--;
                 this.angle = Math.atan2(this.vy, this.vx);
-            } else {
-                this.life = 0;
             }
-        } else if (this.y + this.radius > boundsY) {
+        } else if (this.y + this.radius > mapH) {
+            this.y = mapH - this.radius; // Snap to edge
+            hitWall = true;
             if (this.bounces > 0) {
-                this.y = boundsY - this.radius;
                 this.vy *= -1;
                 this.bounces--;
                 this.angle = Math.atan2(this.vy, this.vx);
-            } else {
-                this.life = 0;
             }
+        }
+
+        // If it hit a wall and has no bounces left, destroy it normally
+        if (hitWall && this.bounces <= 0) {
+            this.life = 0; 
         }
         // ------------------------------------------------
 
-        if (this.kind !== 'punch' && Math.random() < 0.3) spawnParticles(this.x, this.y, 1, this.color);
+        if (this.kind !== 'punch' && Math.random() < 0.3) {
+            spawnParticles(this.x, this.y, 1, this.color);
+        }
         
         return this.life <= 0;
     }
@@ -359,6 +370,10 @@ class Projectile {
         return circleCollision(this.x, this.y, r, entity.x, entity.y, entity.radius);
     }
 }
+// ============================================================================
+// 🚀 END PROJECTILE CLASS
+// ============================================================================
+
 
 class WeaponSystem {
     constructor() {
@@ -558,7 +573,6 @@ class WeaponSystem {
             const sy = player.y + Math.sin(angle) * offset;
             
             // --- RICOCHET TEST IMPLEMENTATION ---
-            // Let's add some bounce properties to sniper and shotgun for fun/testing!
             let projOptions = {};
             if (this.currentWeapon === 'sniper') {
                 projOptions.bounces = 2; // Sniper bounces twice!
