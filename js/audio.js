@@ -877,10 +877,19 @@ class AudioSystem {
         }
     }
 
-    setBGMVolume(volume) {
-        this.bgmVolume = clamp(volume, 0, 1);
-        if (this.bgmAudio) {
-            this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
+    pauseBGM() {
+        if (this.bgmAudio && !this.bgmAudio.paused) {
+            this.bgmAudio.pause();
+            console.log('🎵 BGM paused');
+        }
+    }
+
+    resumeBGM() {
+        if (this.bgmAudio && this.bgmAudio.paused) {
+            this.bgmAudio.play().catch(error => {
+                console.warn('🎵 BGM resume failed:', error);
+            });
+            console.log('🎵 BGM resumed');
         }
     }
 
