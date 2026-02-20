@@ -665,7 +665,13 @@ class ProjectileManager {
     spawnHeatWave(player, angle) {
         const a = angle ?? player?.angle ?? 0;
         const range = player?.stats?.heatWaveRange ?? BALANCE.player?.auto?.heatWaveRange ?? 150;
-        const damageBase = 34;
+
+        // ── BUG-3 FIX: Read base damage from config instead of hardcoding 34.
+        // Priority: live player stats → canonical config fallback → sentinel 34.
+        const damageBase = player?.stats?.weapons?.auto?.damage
+            ?? BALANCE.characters?.auto?.weapons?.auto?.damage
+            ?? 34;
+
         const dmgMult = (player?.damageBoost || 1) * (player?.damageMultiplier || 1);
 
         let damage = damageBase * dmgMult;

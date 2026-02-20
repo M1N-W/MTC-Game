@@ -372,21 +372,57 @@ class Player extends Entity {
 
     levelUp() {
         const S = this.stats;
+
+        // ── 1. Consume EXP and advance level ───────────────────────────────────
         this.exp -= this.expToNextLevel;
         this.level++;
         this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
 
-        this.damageMultiplier += 0.05;
-        this.cooldownMultiplier = Math.max(0.5, this.cooldownMultiplier - 0.03);
+        // ── 2. Damage multiplier ────────────────────────────────────────────────
+        // Reads per-character scalar from config; falls back to universal +5%
+        // so old saves / characters without the key still work correctly.
+        const dmgGainPerLevel = S.damageMultiplierPerLevel ?? 0.05;
+        this.damageMultiplier += dmgGainPerLevel;
 
-        const damageBonus  = Math.round((this.damageMultiplier - 1) * 100);
-        const cooldownBonus = Math.round((1 - this.cooldownMultiplier) * 100);
-        spawnFloatingText(`LEVEL ${this.level}! +${damageBonus}% DMG, -${cooldownBonus}% CD`, this.x, this.y - 90, '#fbbf24', 32);
+        // ── 3. Cooldown reduction (floor: never below 50% of base cooldown) ─────
+        const cdReductionPerLevel = S.cooldownReductionPerLevel ?? 0.03;
+        this.cooldownMultiplier = Math.max(0.5, this.cooldownMultiplier - cdReductionPerLevel);
 
-        this.hp = this.maxHp; this.energy = this.maxEnergy;
+        // ── 4. Max HP scaling ───────────────────────────────────────────────────
+        // If the character config defines maxHpPerLevel > 0 the tank/brawler
+        // identity is expressed here. Kao has maxHpPerLevel: 0 so nothing happens.
+        const hpGainPerLevel = S.maxHpPerLevel ?? 0;
+        if (hpGainPerLevel > 0) {
+            this.maxHp += hpGainPerLevel;
+            // Grant the newly added HP immediately as a tactile level-up reward
+            this.hp = Math.min(this.maxHp, this.hp + hpGainPerLevel);
+        }
+
+        // ── 5. Full restore ─────────────────────────────────────────────────────
+        // Energy always refills fully.
+        // HP only does a full heal when no incremental HP gain was applied —
+        // this preserves the "you earned more HP" feel for tank characters.
+        if (hpGainPerLevel === 0) {
+            this.hp = this.maxHp;
+        }
+        this.energy = this.maxEnergy;
+
+        // ── 6. Feedback ─────────────────────────────────────────────────────────
+        const dmgPct = Math.round((this.damageMultiplier - 1) * 100);
+        const cdPct  = Math.round((1 - this.cooldownMultiplier) * 100);
+        const hpLine = hpGainPerLevel > 0 ? `, +${hpGainPerLevel} MaxHP` : '';
+        spawnFloatingText(
+            `LEVEL ${this.level}! +${dmgPct}% DMG, -${cdPct}% CD${hpLine}`,
+            this.x, this.y - 90, '#fbbf24', 32
+        );
         spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
         spawnParticles(this.x, this.y, 40, '#facc15');
-        addScreenShake(12); Audio.playLevelUp();
+        addScreenShake(12);
+        Audio.playLevelUp();
+
+        // ── 7. Passive check ────────────────────────────────────────────────────
+        // Delegates to the per-character implementation via prototype chain.
+        // Runs for every character; PoomPlayer's version is assigned below.
         this.checkPassiveUnlock();
     }
 
@@ -1621,31 +1657,6 @@ class PoomPlayer extends Entity {
 
     addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
 
-    gainExp(amount) {
-        this.exp += amount;
-        spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, '#8b5cf6', 14);
-        while (this.exp >= this.expToNextLevel) this.levelUp();
-        this.updateUI();
-    }
-
-    levelUp() {
-        const S = this.stats;
-        this.exp -= this.expToNextLevel; this.level++;
-        this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
-
-        this.damageMultiplier += 0.05;
-        this.cooldownMultiplier = Math.max(0.5, this.cooldownMultiplier - 0.03);
-
-        const damageBonus  = Math.round((this.damageMultiplier - 1) * 100);
-        const cooldownBonus = Math.round((1 - this.cooldownMultiplier) * 100);
-        spawnFloatingText(`LEVEL ${this.level}! +${damageBonus}% DMG, -${cooldownBonus}% CD`, this.x, this.y - 90, '#fbbf24', 32);
-
-        this.hp = this.maxHp; this.energy = this.maxEnergy;
-        spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
-        spawnParticles(this.x, this.y, 40, '#facc15');
-        addScreenShake(12); Audio.playLevelUp();
-    }
-
     draw() {
         // ════════════════════════════════════════════════════════════
         // POOM — Anti-Flip v12
@@ -2046,6 +2057,13 @@ class NagaEntity extends Entity {
 
     update(dt, player, _meteorZones) {
         const S = BALANCE.characters.poom;
+
+        // ── BUG-4 FIX: Compute damage live every tick from the owner's current
+        //    damageMultiplier instead of reading the frozen constructor snapshot.
+        //    A level-up that fires mid-summon (Naga lasts 8 s) is now reflected
+        //    immediately on the very next damage tick.
+        const liveDamage = S.nagaDamage * (this.owner?.damageMultiplier || 1.0);
+
         this.life -= dt;
         if (this.life <= 0) {
             this.active = false;
@@ -2053,6 +2071,7 @@ class NagaEntity extends Entity {
             return true;
         }
 
+        // ── Head steering — follows the mouse cursor ───────────────────────────
         const head = this.segments[0];
         const dx = mouse.wx - head.x, dy = mouse.wy - head.y;
         const d = Math.hypot(dx, dy);
@@ -2060,6 +2079,8 @@ class NagaEntity extends Entity {
             const step = Math.min(this.speed * dt, d);
             head.x += (dx/d)*step; head.y += (dy/d)*step;
         }
+
+        // ── Segment chain following ────────────────────────────────────────────
         const segDist = S.nagaSegmentDistance;
         for (let i = 1; i < this.segments.length; i++) {
             const prev = this.segments[i-1], curr = this.segments[i];
@@ -2068,11 +2089,12 @@ class NagaEntity extends Entity {
             if (sd > segDist) { curr.x = prev.x+(sdx/sd)*segDist; curr.y = prev.y+(sdy/sd)*segDist; }
         }
 
+        // ── Enemy collision damage ─────────────────────────────────────────────
         for (const enemy of (window.enemies || [])) {
             if (enemy.dead) continue;
             for (const seg of this.segments) {
                 if (dist(seg.x, seg.y, enemy.x, enemy.y) < this.radius + enemy.radius) {
-                    enemy.takeDamage(this.damage * dt, player);
+                    enemy.takeDamage(liveDamage * dt, player);
                     if (Math.random() < 0.1) spawnParticles(seg.x, seg.y, 2, '#10b981');
                     const now = Date.now();
                     if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
@@ -2084,10 +2106,11 @@ class NagaEntity extends Entity {
             }
         }
 
+        // ── Boss collision damage ──────────────────────────────────────────────
         if (window.boss && !window.boss.dead) {
             for (const seg of this.segments) {
                 if (dist(seg.x, seg.y, window.boss.x, window.boss.y) < this.radius + window.boss.radius) {
-                    window.boss.takeDamage(this.damage * dt * 0.4);
+                    window.boss.takeDamage(liveDamage * dt * 0.4);
                     const now = Date.now();
                     if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
                         this.lastSoundTime = now;

@@ -161,7 +161,15 @@ const BALANCE = {
             passiveLifesteal: 0.02,
 
             speedOnHit: 20,
-            speedOnHitDuration: 0.4
+            speedOnHitDuration: 0.4,
+
+            // ── Per-level progression scalars ─────────────────────
+            // Drives the unified Player.prototype.levelUp() — no character-
+            // specific branching needed in the function itself.
+            // Kao is glass-cannon: high damage growth, no HP gain per level.
+            damageMultiplierPerLevel:  0.06,   // +6% base damage per level
+            cooldownReductionPerLevel: 0.03,   // -3% cooldowns per level (floor 50%)
+            maxHpPerLevel:             0        // no HP gain — skill ceiling identity
         },
 
         // ── AUTO — เทวดาอาวุธ ยืน "วันชัย" ────────────────────
@@ -169,10 +177,17 @@ const BALANCE = {
         //   • HEAT WAVE = short-range wide projectile; pierces 1-2 enemies
         //   • WANCHAI   = JoJo-style Stand barrage; 50% DR + rapid punches
         //   • Tanky but slow; rewards getting into melee range
+        //
+        // ⚠ BUG-1 FIX: The previous codebase had TWO `auto:` keys inside
+        //   BALANCE.characters. JS silently uses the last definition, so the
+        //   first block (hp:150, heatWaveCooldown, stealthCost:9999, etc.) was
+        //   completely erased at parse time. This single merged entry is now
+        //   the canonical source of truth.
         auto: {
             name: 'Auto',
             radius: 20,
 
+            // ── Tanky brawler baseline ────────────────────────────
             hp: 150, maxHp: 150,
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
@@ -192,7 +207,13 @@ const BALANCE = {
             wanchaiEnergyCost: 35,
             wanchaiPunchRate: 0.06,   // seconds between Stand punches
 
-            // ── NEW: Awakening Aura/Buffs (Active during Wanchai) ──
+            // ── BUG-2 FIX: Stand punch base damage ───────────────
+            // Was missing from both previous auto blocks, causing the
+            // `?? 12` fallback to fire on every punch regardless of level.
+            // Level 5 example: 30 * (1 + 5*0.05) = 30 * 1.25 = 37.5 dmg/punch
+            wanchaiDamage: 30,
+
+            // ── Awakening Aura/Buffs (Active during Wanchai) ──────
             standSpeedMod: 1.5,          // 50% increased movement speed
             standDamageReduction: 0.50,  // 50% damage reduction
             standCritBonus: 0.50,        // +50% flat critical hit chance
@@ -221,8 +242,26 @@ const BALANCE = {
             passiveLifesteal: 0.01,
 
             speedOnHit: 15,
-            speedOnHitDuration: 0.35
+            speedOnHitDuration: 0.35,
+
+            // ── Weapons shim ──────────────────────────────────────
+            // Prevents WeaponSystem UI crash if getWeaponData() is ever called
+            // during an Auto session. spawnHeatWave() reads damage from here
+            // (BUG-3 FIX) instead of the old hardcoded 34.
+            weapons: {
+                auto:    { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                sniper:  { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                shotgun: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
+            },
+
+            // ── Per-level progression scalars ─────────────────────
+            // Auto is a tank: moderate damage growth, meaningful HP gain per level.
+            damageMultiplierPerLevel:  0.05,   // +5% base damage per level
+            cooldownReductionPerLevel: 0.03,   // -3% cooldowns per level (floor 50%)
+            maxHpPerLevel:             8        // +8 MaxHP per level — tank identity
         },
+
+        // ── POOM — สายต่อยตี / นักรบข้าวเหนียว ──────────────
         // Identity: Consistent DPS / Brawler
         //   • RICE = higher sustained DPS than Kao's auto when in crit rhythm
         //   • EAT RICE = turns on 25% crit bonus → berserk mode
@@ -282,56 +321,14 @@ const BALANCE = {
             nagaRadius: 20,
 
             speedOnHit: 18,
-            speedOnHitDuration: 0.35
-        },
+            speedOnHitDuration: 0.35,
 
-        auto: {
-            name: 'Auto',
-            radius: 20,
-
-            hp: 120, maxHp: 120,
-            energy: 100, maxEnergy: 100,
-            energyRegen: 15,
-
-            moveSpeed: 160,
-            dashSpeed: 520,
-            dashDistance: 175,
-            dashCooldown: 1.65,
-
-            // Stand / skill tuning (consumed by AutoPlayer)
-            heatWaveRange: 150,
-            wanchaiDuration: 3.0,
-            wanchaiCooldown: 12,
-
-            // ── NEW: Awakening Aura/Buffs (Active during Wanchai) ──
-            wanchaiEnergyCost: 35,
-            wanchaiPunchRate: 0.06,
-            standSpeedMod: 1.5,          // 50% increased movement speed
-            standDamageReduction: 0.50,  // 50% damage reduction
-            standCritBonus: 0.50,        // +50% flat critical hit chance
-
-            // Provide a basic weapons object so WeaponSystem UI never throws
-            // even if a code path accidentally queries weapon data.
-            weapons: {
-                auto:    { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
-                sniper:  { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
-                shotgun: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
-            },
-
-            baseCritChance: 0.05,
-            critMultiplier: 2.5,
-
-            expToNextLevel: 100,
-            expLevelMult: 1.5,
-
-            passiveUnlockLevel: 3,
-            passiveUnlockStealthCount: 5,
-            passiveHpBonusPct: 0.5,
-            passiveCritBonus: 0.03,
-            passiveLifesteal: 0.015,
-
-            speedOnHit: 18,
-            speedOnHitDuration: 0.35
+            // ── Per-level progression scalars ─────────────────────
+            // Poom is a brawler: standard damage growth + incremental HP gain
+            // (representing the energy from eating more sticky rice over time).
+            damageMultiplierPerLevel:  0.05,   // +5% base damage per level
+            cooldownReductionPerLevel: 0.04,   // -4% cooldowns per level (reward rhythm play)
+            maxHpPerLevel:             5        // +5 MaxHP per level — brawler sustain identity
         }
 
         // ── Add future characters here ─────────────────────────
