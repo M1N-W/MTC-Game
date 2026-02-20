@@ -14,17 +14,17 @@
  * FIXES (QA Integrity Report — Zone 1)
  * ────────────────────────────────────────────────────────────────
  * ✅ BUG 2  — Mobile Patch: Removed redundant velocity calculation that
- *             double-applied joystick acceleration (2× speed on touch).
+ * double-applied joystick acceleration (2× speed on touch).
  *
  * ✅ WARN 5 — DRY Principle: Obstacle-awareness block extracted to
- *             Player.prototype.checkObstacleProximity(ax, ay, dt, color).
- *             PoomPlayer.prototype gets the same reference.
+ * Player.prototype.checkObstacleProximity(ax, ay, dt, color).
+ * PoomPlayer.prototype gets the same reference.
  *
  * ────────────────────────────────────────────────────────────────
  * FIXES (Logic & Inheritance Audit — Zone 2)
  * ────────────────────────────────────────────────────────────────
  * ✅ CRIT 1 — PoomPlayer Redundancy (Option B): Five identical methods
- *             shared via prototype assignment.
+ * shared via prototype assignment.
  *
  * ✅ CRIT 2 — NagaEntity now extends Entity properly via super().
  *
@@ -43,60 +43,60 @@
  * AUDIO ADDITIONS (Lead Gameplay Developer pass)
  * ────────────────────────────────────────────────────────────────
  * ✅ AUDIO 1 — PoomPlayer.shoot() now calls Audio.playPoomShoot() on every
- *              projectile fire (bamboo-tube thump; defined in audio.js).
+ * projectile fire (bamboo-tube thump; defined in audio.js).
  *
  * ✅ AUDIO 2 — NagaEntity now tracks this.lastSoundTime (Date.now() ms).
- *              Audio.playNagaAttack() fires on enemy/boss hit, but no more
- *              than once per NAGA_SOUND_INTERVAL ms (220 ms) to prevent
- *              rapid-tick audio stacking from the continuous collision loop.
+ * Audio.playNagaAttack() fires on enemy/boss hit, but no more
+ * than once per NAGA_SOUND_INTERVAL ms (220 ms) to prevent
+ * rapid-tick audio stacking from the continuous collision loop.
  *
  * ────────────────────────────────────────────────────────────────
  * ANIMATION CLARITY + SILHOUETTE (Game Engine Architect — v11)
  * ────────────────────────────────────────────────────────────────
  * ✅ RECOIL (Kao / Player):
- *     • Player.weaponRecoil — float 0→1; set to 1.0 by triggerRecoil()
- *       (called from game.js after weaponSystem.shoot() returns projectiles).
- *     • Decays at weaponRecoilDecay (8.5 /sec) in Player.update() → ~0.12 s fade.
- *     • Player.draw(): body lean — CTX.translate(-recoilShift, 0) pushes the
- *       sprite 4 px backward along its own axis at peak recoil.
- *     • Muzzle-flash ring: when weaponRecoil > 0.45, an expanding white/gold
- *       ring + bright core is drawn at the muzzle tip in screen space.
+ * • Player.weaponRecoil — float 0→1; set to 1.0 by triggerRecoil()
+ * (called from game.js after weaponSystem.shoot() returns projectiles).
+ * • Decays at weaponRecoilDecay (8.5 /sec) in Player.update() → ~0.12 s fade.
+ * • Player.draw(): body lean — CTX.translate(-recoilShift, 0) pushes the
+ * sprite 4 px backward along its own axis at peak recoil.
+ * • Muzzle-flash ring: when weaponRecoil > 0.45, an expanding white/gold
+ * ring + bright core is drawn at the muzzle tip in screen space.
  *
  * ✅ CHANNELING EFFECT (Poom / PoomPlayer):
- *     • PoomPlayer.draw() checks window.specialEffects for any live NagaEntity.
- *     • When channeling: animated double emerald ring with pulsing shadowBlur,
- *       offset-phase inner ring, and random spark dots on the ring edge.
- *     • Zero performance cost when no Naga is active (check is O(n) on
- *       specialEffects which is always tiny).
+ * • PoomPlayer.draw() checks window.specialEffects for any live NagaEntity.
+ * • When channeling: animated double emerald ring with pulsing shadowBlur,
+ * offset-phase inner ring, and random spark dots on the ring edge.
+ * • Zero performance cost when no Naga is active (check is O(n) on
+ * specialEffects which is always tiny).
  *
  * ✅ SILHOUETTE OUTER GLOW (both characters):
- *     • Drawn BEFORE the body fill so the neon stroke sits behind sprite layers.
- *     • Kao : rgba(0,255,65,0.70) — neon green, shadowBlur 16, lineWidth 2.8
- *     • Poom: rgba(168,85,247,0.72) — deep purple, shadowBlur 16, lineWidth 2.8
- *     • Colours match each character's stand-aura identity from base.js.
+ * • Drawn BEFORE the body fill so the neon stroke sits behind sprite layers.
+ * • Kao : rgba(0,255,65,0.70) — neon green, shadowBlur 16, lineWidth 2.8
+ * • Poom: rgba(168,85,247,0.72) — deep purple, shadowBlur 16, lineWidth 2.8
+ * • Colours match each character's stand-aura identity from base.js.
  *
  * ────────────────────────────────────────────────────────────────
  * ANTI-FLIP ORIENTATION SYSTEM (Game Engine Architect — v12)
  * ────────────────────────────────────────────────────────────────
  * ✅ ORIENTATION FIX (All characters):
- *     PROBLEM: Single CTX.rotate(this.angle) block caused the entire sprite
- *     (body, hair, weapon) to flip upside-down when aiming left (|angle|>90°).
+ * PROBLEM: Single CTX.rotate(this.angle) block caused the entire sprite
+ * (body, hair, weapon) to flip upside-down when aiming left (|angle|>90°).
  *
- *     SOLUTION: Two independent draw layers per character:
+ * SOLUTION: Two independent draw layers per character:
  *
- *     LAYER 1 — BODY (no rotation, horizontal mirror only)
- *       • isFacingLeft = Math.abs(this.angle) > Math.PI / 2
- *       • facingSign = isFacingLeft ? -1 : 1
- *       • CTX.scale(stretchX * facingSign, stretchY)
- *       • Body, hair, hood/visor stay perfectly upright at all times.
+ * LAYER 1 — BODY (no rotation, horizontal mirror only)
+ * • isFacingLeft = Math.abs(this.angle) > Math.PI / 2
+ * • facingSign = isFacingLeft ? -1 : 1
+ * • CTX.scale(stretchX * facingSign, stretchY)
+ * • Body, hair, hood/visor stay perfectly upright at all times.
  *
- *     LAYER 2 — WEAPON + HANDS (full 360° rotation)
- *       • CTX.rotate(this.angle)           — tracks mouse 360°
- *       • if (isFacingLeft) CTX.scale(1,-1) — cancels implicit Y-flip
- *       • Hands drawn here so they stay locked to weapon barrel/handle.
+ * LAYER 2 — WEAPON + HANDS (full 360° rotation)
+ * • CTX.rotate(this.angle)           — tracks mouse 360°
+ * • if (isFacingLeft) CTX.scale(1,-1) — cancels implicit Y-flip
+ * • Hands drawn here so they stay locked to weapon barrel/handle.
  *
- *     DASH GHOSTS: each ghost reads its own saved angle for facingSign,
- *     matching the orientation at capture time.
+ * DASH GHOSTS: each ghost reads its own saved angle for facingSign,
+ * matching the orientation at capture time.
  */
 
 // Minimum gap (ms) between successive Naga hit sounds.
@@ -744,6 +744,11 @@ class AutoPlayer extends Player {
         this._punchTimer = 0;
         this._heatTimer  = 0;
 
+        // ── NEW: Stand Rush State ────────────────────────────────
+        this.isStandAttacking   = false;
+        this.standAttackTimer   = 0;
+        this.lastPunchSoundTime = 0;
+
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0 };
     }
 
@@ -797,16 +802,77 @@ class AutoPlayer extends Player {
 
         this.speedBoost = oldSpeedBoost;
 
+        // Reset attack state every frame; proven true below if mouse is held
+        this.isStandAttacking = false;
+
         if (!mouse || mouse.left !== 1) return;
         if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
+        // ── NEW: Stand Rush Hitbox Logic ─────────────────────────
         if (this.wanchaiActive) {
+            this.isStandAttacking = true;
+            this.standAttackTimer += dt;
+            
             const punchRate = this.stats?.wanchaiPunchRate ?? 0.06;
             this._punchTimer -= dt;
+            
             if (this._punchTimer <= 0) {
                 this._punchTimer = punchRate;
-                if (typeof projectileManager.spawnWanchaiPunch === 'function') {
-                    projectileManager.spawnWanchaiPunch(this.x, this.y, this.angle);
+                
+                const rushRange = 130;
+                const coneHalfAngle = 0.6; // Roughly 34 degrees either side
+                const dmg = (this.stats?.wanchaiDamage ?? 12) * (this.damageMultiplier || 1.0);
+
+                // Damage standard enemies in cone
+                for (const enemy of (window.enemies || [])) {
+                    if (enemy.dead) continue;
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+                    
+                    if (dist < rushRange) {
+                        let angleToEnemy = Math.atan2(dy, dx);
+                        let angleDiff = Math.abs(angleToEnemy - this.angle);
+                        if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+                        
+                        if (angleDiff < coneHalfAngle) {
+                            enemy.takeDamage(dmg);
+                            if (typeof spawnParticles === 'function') {
+                                spawnParticles(enemy.x, enemy.y, 2, '#ef4444');
+                            }
+                        }
+                    }
+                }
+
+                // Damage boss in cone
+                if (window.boss && !window.boss.dead) {
+                    const dx = window.boss.x - this.x;
+                    const dy = window.boss.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+                    
+                    if (dist < rushRange + window.boss.radius) {
+                        let angleToEnemy = Math.atan2(dy, dx);
+                        let angleDiff = Math.abs(angleToEnemy - this.angle);
+                        if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+                        
+                        if (angleDiff < coneHalfAngle) {
+                            window.boss.takeDamage(dmg);
+                            if (typeof spawnParticles === 'function') {
+                                spawnParticles(window.boss.x, window.boss.y, 2, '#ef4444');
+                            }
+                        }
+                    }
+                }
+
+                if (typeof addScreenShake === 'function') addScreenShake(3);
+
+                // ── PLAY RAPID PUNCH SOUND ──
+                const nowTime = Date.now();
+                if (nowTime - this.lastPunchSoundTime > 60) {
+                    if (typeof Audio !== 'undefined' && Audio.playStandRush) {
+                        Audio.playStandRush();
+                    }
+                    this.lastPunchSoundTime = nowTime;
                 }
             }
             return;
@@ -889,6 +955,56 @@ class AutoPlayer extends Player {
             CTX.beginPath(); CTX.arc(-4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.arc( 4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
             CTX.restore();
+
+            // ── NEW: Stand Rush Animation ─────────────────────────────
+            if (this.isStandAttacking) {
+                CTX.save();
+                CTX.translate(screen.x, screen.y);
+                CTX.rotate(this.angle);
+
+                // Draw rapid chaotic fists
+                CTX.shadowBlur = 12;
+                CTX.shadowColor = '#dc2626';
+                for (let i = 0; i < 8; i++) {
+                    const fistX = 40 + Math.random() * 80;    // Forward distance
+                    const fistY = (Math.random() - 0.5) * 70; // Cone spread
+                    const scale = 0.5 + Math.random() * 0.7;
+
+                    CTX.fillStyle = 'rgba(239, 68, 68, 0.85)';
+                    CTX.beginPath();
+                    CTX.ellipse(fistX, fistY, 14 * scale, 9 * scale, 0, 0, Math.PI * 2);
+                    CTX.fill();
+
+                    // Trailing motion lines
+                    CTX.strokeStyle = 'rgba(248, 113, 113, 0.5)';
+                    CTX.lineWidth = 4 * scale;
+                    CTX.beginPath();
+                    CTX.moveTo(fistX - 25 * scale, fistY);
+                    CTX.lineTo(fistX, fistY);
+                    CTX.stroke();
+                }
+
+                // Dynamic Jittering Manga Text
+                CTX.rotate(-this.angle); // Un-rotate so text stays readable
+                
+                const textScale = 1 + Math.sin(now / 30) * 0.15; // Rapid pulsing
+                const jitterX = (Math.random() - 0.5) * 6;
+                const jitterY = (Math.random() - 0.5) * 6;
+
+                CTX.translate(0, -75); // Float above the fray
+                CTX.scale(textScale, textScale);
+
+                CTX.font = '900 28px "Arial Black", Arial, sans-serif';
+                CTX.textAlign = 'center';
+                CTX.lineWidth = 5;
+                CTX.strokeStyle = '#000000'; // Hard black outline
+                CTX.strokeText('วันชัย วันชัย วันชัย!', jitterX, jitterY);
+                
+                CTX.fillStyle = '#facc15'; // Bright yellow fill
+                CTX.fillText('วันชัย วันชัย วันชัย!', jitterX, jitterY);
+
+                CTX.restore();
+            }
         }
 
         // Breathing squash/stretch

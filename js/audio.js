@@ -12,62 +12,65 @@
  * ADDITIONS (Poom character sounds — Lead Gameplay Developer pass):
  * ─────────────────────────────────────────────────────────────────
  * ✅ playPoomShoot()  — Low-mid bamboo-tube "Tuk" thump.
- *    Two-layer design:
- *      Layer 1 (Sine body): 130 Hz sweeps down to 55 Hz over 180 ms.
- *                           Models air pressure releasing from a bamboo tube.
- *      Layer 2 (Triangle click): 280→100 Hz fast transient decaying in 60 ms.
- *                                The wooden "pop" of the launch mechanism.
- *    Trigger: PoomPlayer.shoot() in player.js after projectile is created.
+ * Two-layer design:
+ * Layer 1 (Sine body): 130 Hz sweeps down to 55 Hz over 180 ms.
+ * Models air pressure releasing from a bamboo tube.
+ * Layer 2 (Triangle click): 280→100 Hz fast transient decaying in 60 ms.
+ * The wooden "pop" of the launch mechanism.
+ * Trigger: PoomPlayer.shoot() in player.js after projectile is created.
  *
  * ✅ playNagaAttack() — Sharp energy burst / hiss on Naga contact.
- *    Two-layer design:
- *      Layer 1 (White noise + bandpass): 120 ms burst centred at 1200 Hz.
- *                                       The mystical "sizzle" of magical energy.
- *      Layer 2 (Sine shimmer): 900→1300 Hz rising sine decaying in 90 ms.
- *                              A sparkle accent on impact.
- *    Trigger: NagaEntity.update() in player.js, rate-limited to every 220 ms
- *             via this.lastSoundTime to prevent rapid-tick audio stacking.
+ * Two-layer design:
+ * Layer 1 (White noise + bandpass): 120 ms burst centred at 1200 Hz.
+ * The mystical "sizzle" of magical energy.
+ * Layer 2 (Sine shimmer): 900→1300 Hz rising sine decaying in 90 ms.
+ * A sparkle accent on impact.
+ * Trigger: NagaEntity.update() in player.js, rate-limited to every 220 ms
+ * via this.lastSoundTime to prevent rapid-tick audio stacking.
+ *
+ * ✅ playStandRush()  — Fast, heavy multi-punch audio for Auto's "Wanchai" Stand.
+ * Designed for rapid firing (every ~60ms). Short punchy thud with noise impact.
  *
  * ─────────────────────────────────────────────────────────────────
  * 🐛 BUG FIX — BGM namespace collision (Senior Game Debugger pass)
  * ─────────────────────────────────────────────────────────────────
  * ROOT CAUSE:
- *   The module-level declaration  `var Audio = new AudioSystem()`  at the
- *   bottom of this file uses `var`, which in a global (non-module) script
- *   context hoists the identifier onto `window`.  This OVERWRITES the native
- *   HTML5 `Audio` constructor with an AudioSystem *instance*.  Any subsequent
- *   call to `new window.Audio(path)` therefore throws:
+ * The module-level declaration  `var Audio = new AudioSystem()`  at the
+ * bottom of this file uses `var`, which in a global (non-module) script
+ * context hoists the identifier onto `window`.  This OVERWRITES the native
+ * HTML5 `Audio` constructor with an AudioSystem *instance*.  Any subsequent
+ * call to `new window.Audio(path)` therefore throws:
  *
- *     TypeError: window.Audio is not a constructor
+ * TypeError: window.Audio is not a constructor
  *
- *   The previous workaround comment "Use the browser's Audio constructor
- *   explicitly" did NOT actually work: `new window.Audio(bgmPath)` fails for
- *   exactly the same reason — `window.Audio` is still the shadowed instance.
+ * The previous workaround comment "Use the browser's Audio constructor
+ * explicitly" did NOT actually work: `new window.Audio(bgmPath)` fails for
+ * exactly the same reason — `window.Audio` is still the shadowed instance.
  *
  * FIX SUMMARY (three tasks, all inside playBGM / constructor / stopBGM):
  *
- *   Task 1 — Immune BGM element creation:
- *     Replace `new window.Audio(bgmPath)` with the DOM factory pattern:
- *       this.bgmAudio     = document.createElement('audio');
- *       this.bgmAudio.src = bgmPath;
- *     `document.createElement` targets the `document` object directly and
- *     cannot be shadowed by any `var Audio` declaration on `window`.
+ * Task 1 — Immune BGM element creation:
+ * Replace `new window.Audio(bgmPath)` with the DOM factory pattern:
+ * this.bgmAudio     = document.createElement('audio');
+ * this.bgmAudio.src = bgmPath;
+ * `document.createElement` targets the `document` object directly and
+ * cannot be shadowed by any `var Audio` declaration on `window`.
  *
- *   Task 2 — Namespace audit result:
- *     config.js — `GAME_CONFIG.audio` is a plain object property; it does
- *     NOT assign to window.Audio. No changes needed.
- *     game.js   — no `window.Audio =` assignment exists. No changes needed.
- *     Sole collision source remains `var Audio = new AudioSystem()` below.
- *     Renaming that variable would break every `Audio.playX()` call site
- *     across the entire codebase; since Task 1 removes the only call that
- *     depended on window.Audio as a constructor, the collision is fully
- *     defused without touching call sites.
+ * Task 2 — Namespace audit result:
+ * config.js — `GAME_CONFIG.audio` is a plain object property; it does
+ * NOT assign to window.Audio. No changes needed.
+ * game.js   — no `window.Audio =` assignment exists. No changes needed.
+ * Sole collision source remains `var Audio = new AudioSystem()` below.
+ * Renaming that variable would break every `Audio.playX()` call site
+ * across the entire codebase; since Task 1 removes the only call that
+ * depended on window.Audio as a constructor, the collision is fully
+ * defused without touching call sites.
  *
- *   Task 3 — Autoplay promise handling:
- *     .play() rejection now sets this._bgmWaitingForInteraction = true BEFORE
- *     delegating to setupRetryBGM() so the retry guard has accurate state.
- *     setupRetryBGM() checks this flag before re-invoking playBGM().
- *     stopBGM() clears the flag alongside the other cleanup.
+ * Task 3 — Autoplay promise handling:
+ * .play() rejection now sets this._bgmWaitingForInteraction = true BEFORE
+ * delegating to setupRetryBGM() so the retry guard has accurate state.
+ * setupRetryBGM() checks this flag before re-invoking playBGM().
+ * stopBGM() clears the flag alongside the other cleanup.
  */
 
 class AudioSystem {
@@ -362,6 +365,63 @@ class AudioSystem {
 
         shimmer.start(this.ctx.currentTime);
         shimmer.stop(this.ctx.currentTime + 0.09);
+    }
+
+    // ── NEW: Stand Rush Punch SFX ───────────────────────────────────────────
+    // Design rationale:
+    //   Rapid-fire heavy punches (JoJo style "Ora Ora / Muda Muda").
+    //   Must be very short so it doesn't clip or overwhelm when fired every 60ms.
+    //   - Layer 1: Pitch-sweeping sine (200Hz -> 50Hz) for the physical 'thud'.
+    //   - Layer 2: Short noise burst for the impact snap.
+    playStandRush() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+
+        const t = this.ctx.currentTime;
+        const dur = 0.08; // Very short duration
+
+        // ── Layer 1: Thud (Low Sine Sweep) ──
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(220, t);
+        osc.frequency.exponentialRampToValueAtTime(50, t + dur);
+        
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.8, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        
+        osc.start(t);
+        osc.stop(t + dur);
+
+        // ── Layer 2: Impact Snap (Filtered Noise) ──
+        const noiseSize = Math.floor(this.ctx.sampleRate * dur);
+        const noiseBuf = this.ctx.createBuffer(1, noiseSize, this.ctx.sampleRate);
+        const noiseData = noiseBuf.getChannelData(0);
+        for (let i = 0; i < noiseSize; i++) {
+            noiseData[i] = Math.random() * 2 - 1;
+        }
+        
+        const noiseSrc = this.ctx.createBufferSource();
+        noiseSrc.buffer = noiseBuf;
+        
+        const noiseFilter = this.ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.value = 1000;
+        noiseFilter.Q.value = 1.0;
+        
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.5, t);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        
+        noiseSrc.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        
+        noiseSrc.start(t);
+        noiseSrc.stop(t + dur);
     }
 
     playDash() {
