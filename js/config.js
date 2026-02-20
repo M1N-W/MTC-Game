@@ -192,6 +192,11 @@ const BALANCE = {
             wanchaiEnergyCost: 35,
             wanchaiPunchRate: 0.06,   // seconds between Stand punches
 
+            // ── NEW: Awakening Aura/Buffs (Active during Wanchai) ──
+            standSpeedMod: 1.5,          // 50% increased movement speed
+            standDamageReduction: 0.50,  // 50% damage reduction
+            standCritBonus: 0.50,        // +50% flat critical hit chance
+
             // ── Crit system ───────────────────────────────────────
             baseCritChance: 0.06,
             critMultiplier: 2.0,
@@ -297,6 +302,13 @@ const BALANCE = {
             heatWaveRange: 150,
             wanchaiDuration: 3.0,
             wanchaiCooldown: 12,
+
+            // ── NEW: Awakening Aura/Buffs (Active during Wanchai) ──
+            wanchaiEnergyCost: 35,
+            wanchaiPunchRate: 0.06,
+            standSpeedMod: 1.5,          // 50% increased movement speed
+            standDamageReduction: 0.50,  // 50% damage reduction
+            standCritBonus: 0.50,        // +50% flat critical hit chance
 
             // Provide a basic weapons object so WeaponSystem UI never throws
             // even if a code path accidentally queries weapon data.

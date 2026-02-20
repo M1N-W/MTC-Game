@@ -753,8 +753,24 @@ class AutoPlayer extends Player {
     }
 
     takeDamage(amt) {
-        const scaled = this.wanchaiActive ? (amt * 0.5) : amt;
+        const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.5) : 0;
+        const scaled = amt * (1 - reduction);
         super.takeDamage(scaled);
+    }
+
+    dealDamage(baseDamage) {
+        // Temporarily boost baseCritChance during calculation if Stand is active
+        const originalCrit = this.baseCritChance;
+        if (this.wanchaiActive) {
+            this.baseCritChance += (this.stats?.standCritBonus ?? 0.50);
+        }
+        
+        const result = super.dealDamage(baseDamage);
+        
+        // Restore original crit for state safety
+        this.baseCritChance = originalCrit;
+        
+        return result;
     }
 
     _activateWanchai() {
@@ -796,10 +812,12 @@ class AutoPlayer extends Player {
         }
 
         const oldSpeedBoost = this.speedBoost;
-        if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * 0.85;
+        // Apply Awakening speed buff instead of slowing down
+        if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * (this.stats?.standSpeedMod ?? 1.5);
 
         super.update(dt, keys, mouse);
 
+        // Stateless restore
         this.speedBoost = oldSpeedBoost;
 
         // Reset attack state every frame; proven true below if mouse is held
@@ -821,7 +839,28 @@ class AutoPlayer extends Player {
                 
                 const rushRange = 130;
                 const coneHalfAngle = 0.6; // Roughly 34 degrees either side
-                const dmg = (this.stats?.wanchaiDamage ?? 12) * (this.damageMultiplier || 1.0);
+                
+                // Calculate base damage
+                let baseDmg = (this.stats?.wanchaiDamage ?? 12) * (this.damageMultiplier || 1.0);
+                
+                // Apply Awakening Crit Buff directly to flurry punches
+                let critChance = this.baseCritChance;
+                if (this.passiveUnlocked) critChance += (this.stats?.passiveCritBonus ?? 0);
+                critChance += (this.stats?.standCritBonus ?? 0.50); // Add the Stand Crit Buff
+                
+                let isCrit = false;
+                let finalDmg = baseDmg;
+                if (Math.random() < critChance) {
+                    finalDmg *= (this.stats?.critMultiplier ?? 2.0);
+                    isCrit = true;
+                    if (this.passiveUnlocked) this.goldenAuraTimer = 1;
+                    if (typeof Achievements !== 'undefined' && Achievements.stats) {
+                        Achievements.stats.crits++; 
+                        if (Achievements.check) Achievements.check('crit_master');
+                    }
+                }
+
+                let totalDamageDealt = 0;
 
                 // Damage standard enemies in cone
                 for (const enemy of (window.enemies || [])) {
@@ -836,9 +875,11 @@ class AutoPlayer extends Player {
                         if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
                         
                         if (angleDiff < coneHalfAngle) {
-                            enemy.takeDamage(dmg);
+                            enemy.takeDamage(finalDmg);
+                            totalDamageDealt += finalDmg;
                             if (typeof spawnParticles === 'function') {
-                                spawnParticles(enemy.x, enemy.y, 2, '#ef4444');
+                                // Flurry turns golden on critical hits
+                                spawnParticles(enemy.x, enemy.y, 2, isCrit ? '#facc15' : '#ef4444');
                             }
                         }
                     }
@@ -856,12 +897,19 @@ class AutoPlayer extends Player {
                         if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
                         
                         if (angleDiff < coneHalfAngle) {
-                            window.boss.takeDamage(dmg);
+                            window.boss.takeDamage(finalDmg);
+                            totalDamageDealt += finalDmg;
                             if (typeof spawnParticles === 'function') {
-                                spawnParticles(window.boss.x, window.boss.y, 2, '#ef4444');
+                                spawnParticles(window.boss.x, window.boss.y, 2, isCrit ? '#facc15' : '#ef4444');
                             }
                         }
                     }
+                }
+
+                // Apply Lifesteal if passive is unlocked and damage was dealt
+                if (this.passiveUnlocked && totalDamageDealt > 0) {
+                    const healAmount = totalDamageDealt * (this.stats?.passiveLifesteal ?? 0.02);
+                    this.hp = Math.min(this.maxHp, this.hp + healAmount);
                 }
 
                 if (typeof addScreenShake === 'function') addScreenShake(3);
