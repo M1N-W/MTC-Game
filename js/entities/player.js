@@ -911,11 +911,13 @@ class AutoPlayer extends Player {
                         if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
                         
                         if (angleDiff < coneHalfAngle) {
+                            const enemyHitX = enemy.x;
+                            const enemyHitY = enemy.y;
                             enemy.takeDamage(finalDmg);
                             totalDamageDealt += finalDmg;
                             if (typeof spawnParticles === 'function') {
                                 // Flurry turns golden on critical hits
-                                spawnParticles(enemy.x, enemy.y, 2, isCrit ? '#facc15' : '#ef4444');
+                                spawnParticles(enemyHitX, enemyHitY, 2, isCrit ? '#facc15' : '#ef4444');
                             }
                         }
                     }
@@ -933,10 +935,12 @@ class AutoPlayer extends Player {
                         if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
                         
                         if (angleDiff < coneHalfAngle) {
+                            const bossHitX = window.boss.x;
+                            const bossHitY = window.boss.y;
                             window.boss.takeDamage(finalDmg);
                             totalDamageDealt += finalDmg;
                             if (typeof spawnParticles === 'function') {
-                                spawnParticles(window.boss.x, window.boss.y, 2, isCrit ? '#facc15' : '#ef4444');
+                                spawnParticles(bossHitX, bossHitY, 2, isCrit ? '#facc15' : '#ef4444');
                             }
                         }
                     }
