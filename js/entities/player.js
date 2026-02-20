@@ -147,12 +147,30 @@ class Player extends Entity {
         this.isConfused    = false; this.confusedTimer = 0;
         this.isBurning     = false; this.burnTimer = 0; this.burnDamage = 0;
 
+        // ── Combo System Initialization ─────────────────────────
+        this.comboCount = 0;
+        this.comboTimer = 0;
+        this.COMBO_MAX_TIME = 3.0;
+        this.COMBO_MAX_STACKS = 50;
+
         this.level          = 1;
         this.exp            = 0;
         this.expToNextLevel = stats.expToNextLevel;
 
         // ── RPG Scaling Multipliers ─────────────────────────────
-        this.damageMultiplier   = 1.0;
+        this._damageMultiplier = 1.0;
+        Object.defineProperty(this, 'damageMultiplier', {
+            get: function() {
+                const combo = this.comboCount || 0;
+                return this._damageMultiplier * (1 + (combo * 0.01));
+            },
+            set: function(val) {
+                // Preserves level-up logic by extracting the base value difference
+                const comboMult = 1 + ((this.comboCount || 0) * 0.01);
+                const diff = val - (this._damageMultiplier * comboMult);
+                this._damageMultiplier += diff;
+            }
+        });
         this.cooldownMultiplier = 1.0;
 
         this.baseCritChance  = stats.baseCritChance;
@@ -186,6 +204,15 @@ class Player extends Entity {
         const S   = this.stats;
         const PHY = BALANCE.physics;
 
+        // ── Combo System Update ────────────────────────────────
+        if (this.comboCount > 0) {
+            this.comboTimer -= dt;
+            if (this.comboTimer <= 0) {
+                this.comboCount = 0;
+                this.comboTimer = 0;
+            }
+        }
+
         if (this.isBurning) {
             this.burnTimer -= dt;
             this.hp -= this.burnDamage * dt;
@@ -218,6 +245,9 @@ class Player extends Entity {
         let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost;
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
+        
+        // ── Apply Combo Speed Buff ──
+        speedMult *= (1 + ((this.comboCount || 0) * 0.01));
 
         if (!this.isDashing) {
             this.vx += ax * PHY.acceleration * dt;
@@ -365,6 +395,17 @@ class Player extends Entity {
 
     gainExp(amount) {
         this.exp += amount;
+
+        // ── Combo System Trigger ─────────────────────────────
+        this.comboCount = Math.min(this.COMBO_MAX_STACKS || 50, (this.comboCount || 0) + 1);
+        this.comboTimer = this.COMBO_MAX_TIME || 3.0;
+
+        if (typeof spawnFloatingText !== 'undefined') {
+            const fontSize = Math.min(26, 14 + (this.comboCount * 0.5));
+            spawnFloatingText(`Combo x${this.comboCount}!`, this.x, this.y - 65, '#f43f5e', fontSize);
+        }
+        // ─────────────────────────────────────────────────────
+
         spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, '#8b5cf6', 14);
         while (this.exp >= this.expToNextLevel) this.levelUp();
         this.updateUI();
@@ -1453,18 +1494,44 @@ class PoomPlayer extends Entity {
         this.obstacleBuffTimer     = 0;
         this.lastObstacleWarning   = 0;
 
+        // ── Combo System Initialization ─────────────────────────
+        this.comboCount = 0;
+        this.comboTimer = 0;
+        this.COMBO_MAX_TIME = 3.0;
+        this.COMBO_MAX_STACKS = 50;
+
         this.level = 1; this.exp = 0;
         this.expToNextLevel = stats.expToNextLevel;
         this.baseCritChance = stats.critChance;
 
         // ── RPG Scaling Multipliers ─────────────────────────────
-        this.damageMultiplier   = 1.0;
+        this._damageMultiplier = 1.0;
+        Object.defineProperty(this, 'damageMultiplier', {
+            get: function() {
+                const combo = this.comboCount || 0;
+                return this._damageMultiplier * (1 + (combo * 0.01));
+            },
+            set: function(val) {
+                const comboMult = 1 + ((this.comboCount || 0) * 0.01);
+                const diff = val - (this._damageMultiplier * comboMult);
+                this._damageMultiplier += diff;
+            }
+        });
         this.cooldownMultiplier = 1.0;
     }
 
     update(dt, keys, mouse) {
         const S   = this.stats;
         const PHY = BALANCE.physics;
+
+        // ── Combo System Update ────────────────────────────────
+        if (this.comboCount > 0) {
+            this.comboTimer -= dt;
+            if (this.comboTimer <= 0) {
+                this.comboCount = 0;
+                this.comboTimer = 0;
+            }
+        }
 
         if (this.isBurning) {
             this.burnTimer -= dt; this.hp -= this.burnDamage * dt;
@@ -1504,6 +1571,9 @@ class PoomPlayer extends Entity {
         let speedMult = this.currentSpeedMult * this.speedBoost;
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
+
+        // ── Apply Combo Speed Buff ──
+        speedMult *= (1 + ((this.comboCount || 0) * 0.01));
 
         if (!this.isDashing) {
             this.vx += ax * PHY.acceleration * dt;
