@@ -78,158 +78,30 @@ class BossDog extends Entity {
     }
 
     draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  BOSS DOG — Robotic Combat Hound                        ║
-        // ║  Wide metallic bean · Spiked collar · 4 floating paws   ║
-        // ╚══════════════════════════════════════════════════════════╝
         if (this.dead) return;
         const screen = worldToScreen(this.x, this.y);
-        const now    = Date.now();
-
-        // ── HP bar (level) ────────────────────────────────────────────
-        {
-            const barW = 60, barH = 6, pct = Math.max(0, this.hp / this.maxHp);
-            CTX.save();
-            CTX.fillStyle = 'rgba(0,0,0,0.55)';
-            CTX.fillRect(screen.x - barW / 2, screen.y - 46, barW, barH);
-            CTX.fillStyle = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
-            CTX.fillRect(screen.x - barW / 2, screen.y - 46, barW * pct, barH);
-            CTX.restore();
-        }
-
-        // ── Ground shadow ─────────────────────────────────────────────
-        CTX.save();
-        CTX.globalAlpha = 0.28;
-        CTX.fillStyle   = 'rgba(0,0,0,0.9)';
-        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 20, 32, 7, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.restore();
-
-        // ── Body transform — rotates to face player ───────────────────
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
-        // Heavy breathing — power unit
-        const breathe = Math.sin(now / 230);
-        CTX.scale(1 + breathe * 0.022, 1 - breathe * 0.022);
-
-        const R = this.radius;
-
-        // ── Four floating robotic paws (cycling with legTimer) ────────
-        // Paws bob up/down in alternating pairs like a trotting dog
-        const legCycle   = this.legTimer;
-        const pawR       = R * 0.32;
-        const pawOffsets = [
-            { ox: R * 0.55,  oy:  R * 0.75, phase: 0     },  // front-right
-            { ox: -R * 0.55, oy:  R * 0.75, phase: Math.PI }, // back-right
-            { ox: R * 0.55,  oy: -R * 0.75, phase: Math.PI }, // front-left
-            { ox: -R * 0.55, oy: -R * 0.75, phase: 0     },  // back-left
-        ];
-        for (const pw of pawOffsets) {
-            const bob = Math.sin(legCycle * 9 + pw.phase) * 5;
-            const px  = pw.ox;
-            const py  = pw.oy + bob;
-
-            // Robotic paw — small rounded rectangle + claws
-            CTX.fillStyle   = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-            CTX.shadowBlur  = 4; CTX.shadowColor = 'rgba(220,38,38,0.4)';
-            CTX.beginPath(); CTX.roundRect(px - pawR, py - pawR * 0.7, pawR * 2, pawR * 1.4, pawR * 0.4); CTX.fill(); CTX.stroke();
-            // Two tiny claw spikes
-            CTX.fillStyle = '#1e293b';
-            for (let ci = -1; ci <= 1; ci += 2) {
-                CTX.beginPath();
-                CTX.moveTo(px + ci * pawR * 0.4, py + pawR * 0.7);
-                CTX.lineTo(px + ci * pawR * 0.6, py + pawR * 1.3);
-                CTX.lineTo(px + ci * pawR * 0.2, py + pawR * 0.7);
-                CTX.closePath(); CTX.fill();
-            }
-            CTX.shadowBlur = 0;
+        // HP bar above dog
+        {
+            const barW = 60, barH = 6;
+            const pct  = Math.max(0, this.hp / this.maxHp);
+            CTX.save();
+            CTX.rotate(-this.angle); // keep bar level
+            CTX.fillStyle = 'rgba(0,0,0,0.55)';
+            CTX.fillRect(-barW / 2, -42, barW, barH);
+            CTX.fillStyle = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
+            CTX.fillRect(-barW / 2, -42, barW * pct, barH);
+            CTX.restore();
         }
 
-        // ── Main bean body — wide horizontal metallic dark ────────────
-        // Horizontal bean: wider X than Y
-        CTX.save(); CTX.scale(1.5, 0.90);
-        const bodyG = CTX.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
-        bodyG.addColorStop(0,   '#374151');
-        bodyG.addColorStop(0.55, '#1f2937');
-        bodyG.addColorStop(1,   '#111827');
-        CTX.fillStyle = bodyG;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
-        CTX.restore(); // end wide scale
+        // Draw the dog (coordinates shifted by -6, -28 to centre on entity origin)
+        CTX.translate(-6, -28);
+        this._drawDogBody();
 
-        // Metallic specular stripe
-        CTX.fillStyle = 'rgba(255,255,255,0.08)';
-        CTX.beginPath(); CTX.ellipse(-R * 0.1, -R * 0.25, R * 0.55, R * 0.20, 0, 0, Math.PI * 2); CTX.fill();
-
-        // ── Spiked collar — ring of sharp triangles around neck area ──
-        const collarR = R * 0.68;
-        const spikeCount = 8;
-        CTX.fillStyle   = '#4b5563'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
-        // Collar band
-        CTX.beginPath(); CTX.arc(0, 0, collarR + 2, -Math.PI * 0.5 - 0.7, Math.PI * 0.5 + 0.7);
-        CTX.lineWidth = 6; CTX.strokeStyle = '#374151'; CTX.stroke();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
-        // Collar spikes
-        for (let i = 0; i < spikeCount; i++) {
-            const sa = -Math.PI * 0.55 + (i / (spikeCount - 1)) * Math.PI * 1.1;
-            const sInner = collarR - 2;
-            const sOuter = collarR + 6;
-            const sx = Math.cos(sa);
-            const sy = Math.sin(sa);
-            CTX.fillStyle = i % 2 === 0 ? '#6b7280' : '#4b5563';
-            CTX.beginPath();
-            CTX.moveTo(sx * sInner + Math.cos(sa - 0.15) * 0, sy * sInner + Math.sin(sa - 0.15) * 0);
-            CTX.lineTo(Math.cos(sa - 0.18) * sInner, Math.sin(sa - 0.18) * sInner);
-            CTX.lineTo(sx * sOuter, sy * sOuter);
-            CTX.lineTo(Math.cos(sa + 0.18) * sInner, Math.sin(sa + 0.18) * sInner);
-            CTX.closePath(); CTX.fill(); CTX.stroke();
-        }
-
-        // ── Red angular visor eyes (two connected horizontal slits) ───
-        const visorA = 0.8 + Math.sin(now / 180) * 0.20;
-        CTX.fillStyle  = `rgba(220,38,38,${visorA})`;
-        CTX.shadowBlur = 14 * visorA; CTX.shadowColor = '#ef4444';
-        // Angular visor left slit
-        CTX.beginPath();
-        CTX.moveTo(R * 0.28, -R * 0.25);
-        CTX.lineTo(R * 0.72, -R * 0.15);
-        CTX.lineTo(R * 0.68,  R * 0.05);
-        CTX.lineTo(R * 0.24,  R * 0.10);
-        CTX.closePath(); CTX.fill();
-        // Angular visor right slit (mirrored slightly)
-        CTX.beginPath();
-        CTX.moveTo(R * 0.28,  R * 0.22);
-        CTX.lineTo(R * 0.72,  R * 0.14);
-        CTX.lineTo(R * 0.70,  R * 0.38);
-        CTX.lineTo(R * 0.26,  R * 0.42);
-        CTX.closePath(); CTX.fill();
-        // Visor glow bleed
-        CTX.fillStyle = `rgba(220,38,38,${visorA * 0.15})`;
-        CTX.beginPath(); CTX.arc(R * 0.52, R * 0.1, R * 0.35, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // ── Back tail (angular robotic fin) ───────────────────────────
-        CTX.fillStyle   = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        const tailWag = Math.sin(now / 90) * 8;
-        CTX.beginPath();
-        CTX.moveTo(-R * 1.4, -R * 0.2);
-        CTX.lineTo(-R * 2.0, -R * 0.6 + tailWag * 0.05);
-        CTX.lineTo(-R * 2.1,  R * 0.2 + tailWag * 0.08);
-        CTX.lineTo(-R * 1.4,  R * 0.2);
-        CTX.closePath(); CTX.fill(); CTX.stroke();
-
-        // ── Heat vent dots on body ────────────────────────────────────
-        const ventA = 0.4 + Math.sin(now / 190) * 0.35;
-        CTX.fillStyle = `rgba(251,146,60,${ventA})`;
-        CTX.shadowBlur = 6; CTX.shadowColor = '#fb923c';
-        for (let vi = 0; vi < 3; vi++) {
-            CTX.beginPath(); CTX.arc(-R * 0.15 + vi * R * 0.18, R * 0.55, 2.5, 0, Math.PI * 2); CTX.fill();
-        }
-        CTX.shadowBlur = 0;
-
-        CTX.restore(); // end body transform
+        CTX.restore();
     }
 
     _drawDogBody() {
@@ -641,260 +513,82 @@ class Boss extends Entity {
     }
 
     draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  KRU MANOP — The Math Boss · Chibi Strict Teacher       ║
-        // ║  Dark-grey bean · Suit+tie · Glowing glasses · Ruler    ║
-        // ╚══════════════════════════════════════════════════════════╝
         const screen = worldToScreen(this.x, this.y);
-        const now    = Date.now();
+        CTX.save(); CTX.translate(screen.x, screen.y);
 
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-
-        // ── Charging scale pulse (log457) ─────────────────────────────
         if (this.log457State === 'charging') {
-            const sc  = 1 + (this.log457Timer / 2) * 0.3;
+            const sc = 1 + (this.log457Timer / 2) * 0.3;
             CTX.scale(sc, sc);
             const pu = Math.sin(this.log457Timer * 10) * 0.5 + 0.5;
-            CTX.shadowBlur = 30 * pu; CTX.shadowColor = '#ef4444';
-            CTX.beginPath(); CTX.arc(0, 0, 72, 0, Math.PI * 2);
-            CTX.fillStyle = `rgba(239,68,68,${pu * 0.25})`; CTX.fill();
-            CTX.shadowBlur = 0;
+            CTX.beginPath(); CTX.arc(0, 0, 70, 0, Math.PI * 2);
+            CTX.fillStyle = `rgba(239,68,68,${pu * 0.3})`; CTX.fill();
         }
-        if (this.log457State === 'active') {
-            CTX.shadowBlur = 22; CTX.shadowColor = '#facc15';
-        }
+        if (this.log457State === 'active')  { CTX.shadowBlur = 20; CTX.shadowColor = '#facc15'; }
         if (this.log457State === 'stunned') {
-            CTX.font = 'bold 30px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', 0, -78);
+            CTX.font = 'bold 30px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', 0, -70);
         }
         if (this.state === 'ULTIMATE') {
-            const ult = Math.abs(Math.sin(now / 80));
-            CTX.strokeStyle = `rgba(239,68,68,${ult})`; CTX.lineWidth = 5;
-            CTX.beginPath(); CTX.arc(0, 0, 72, 0, Math.PI * 2); CTX.stroke();
+            CTX.beginPath(); CTX.arc(0, 0, 70, 0, Math.PI * 2);
+            CTX.strokeStyle = `rgba(239,68,68,${Math.random()})`;
+            CTX.lineWidth = 5; CTX.stroke();
+        }
+        if (this.phase === 2 && this.log457State !== 'charging') {
+            CTX.shadowBlur = 20; CTX.shadowColor = '#ef4444';
         }
 
-        // ── Phase 3 water aura (preserved) ───────────────────────────
+        // ── Phase 3 water aura ───────────────────────────────
         if (this.phase === 3) {
-            const t3    = now / 600;
+            const t3 = performance.now() / 600;
             const auraR = 80 + Math.sin(t3 * 2.5) * 10;
             CTX.shadowBlur = 0;
+
+            // Outer pulsating water ring
             const grad3 = CTX.createRadialGradient(0, 0, auraR * 0.4, 0, 0, auraR);
-            grad3.addColorStop(0,   'rgba(56,189,248,0.0)');
-            grad3.addColorStop(0.7, 'rgba(56,189,248,0.18)');
-            grad3.addColorStop(1,   'rgba(56,189,248,0.45)');
+            grad3.addColorStop(0,   'rgba(56, 189, 248, 0.0)');
+            grad3.addColorStop(0.7, 'rgba(56, 189, 248, 0.18)');
+            grad3.addColorStop(1,   'rgba(56, 189, 248, 0.45)');
             CTX.fillStyle = grad3;
             CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.fill();
-            CTX.strokeStyle = `rgba(125,211,252,${0.5 + Math.sin(t3 * 3) * 0.3})`;
-            CTX.lineWidth = 3; CTX.shadowBlur = 20; CTX.shadowColor = '#38bdf8';
+
+            // Rim stroke
+            CTX.strokeStyle = `rgba(125, 211, 252, ${0.5 + Math.sin(t3 * 3) * 0.3})`;
+            CTX.lineWidth = 3;
+            CTX.shadowBlur = 20; CTX.shadowColor = '#38bdf8';
             CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.stroke();
             CTX.shadowBlur = 0;
+
+            // Orbiting bubble accents
             for (let i = 0; i < 5; i++) {
-                const bA = t3 * 1.8 + i * (Math.PI * 2 / 5);
-                CTX.fillStyle = `rgba(186,230,253,${0.4 + Math.sin(t3 + i) * 0.3})`;
-                CTX.beginPath(); CTX.arc(Math.cos(bA) * (auraR - 10), Math.sin(bA) * (auraR - 10), 5 + Math.sin(t3 * 2 + i) * 2, 0, Math.PI * 2); CTX.fill();
+                const bAngle = t3 * 1.8 + i * (Math.PI * 2 / 5);
+                const bx = Math.cos(bAngle) * (auraR - 10);
+                const by = Math.sin(bAngle) * (auraR - 10);
+                CTX.fillStyle = `rgba(186, 230, 253, ${0.4 + Math.sin(t3 + i) * 0.3})`;
+                CTX.beginPath(); CTX.arc(bx, by, 5 + Math.sin(t3 * 2 + i) * 2, 0, Math.PI * 2); CTX.fill();
             }
         }
 
-        // ── Orbiting Math Symbols ─────────────────────────────────────
-        // π, Σ, ∞, ∂, ≈ orbit at varying radii and speeds, glowing white/gold
-        const symbols   = ['π', 'Σ', '∞', '∂', '≈', '∫'];
-        const orbitR    = 62;
-        const baseSpeed = this.isEnraged ? 1.8 : 1.0;
-        CTX.save();
-        for (let i = 0; i < symbols.length; i++) {
-            const angle  = (now / 1000) * baseSpeed + (i / symbols.length) * Math.PI * 2;
-            const ox     = Math.cos(angle) * orbitR;
-            const oy     = Math.sin(angle) * (orbitR * 0.55); // elliptical orbit
-            const alpha  = 0.55 + Math.sin(now / 300 + i * 1.2) * 0.35;
-            const gCol   = this.phase === 3 ? '#38bdf8'
-                         : this.isEnraged   ? '#ef4444'
-                         :                    '#facc15';
-            CTX.save();
-            CTX.translate(ox, oy);
-            CTX.rotate(-this.angle); // keep text readable
-            CTX.globalAlpha  = alpha;
-            CTX.font         = `bold ${14 + Math.sin(now / 400 + i) * 2}px Arial`;
-            CTX.textAlign    = 'center'; CTX.textBaseline = 'middle';
-            CTX.shadowBlur   = 12 + Math.sin(now / 250 + i) * 5;
-            CTX.shadowColor  = gCol;
-            CTX.fillStyle    = gCol;
-            CTX.fillText(symbols[i], 0, 0);
-            CTX.restore();
-        }
-        CTX.globalAlpha = 1; CTX.shadowBlur = 0;
-        CTX.restore();
-
-        // ── Body rotation — faces player ──────────────────────────────
         CTX.rotate(this.angle);
 
-        // Boss breathing
-        const breathe = Math.sin(now / 260);
-        const scaleX  = 1 + breathe * 0.018;
-        const scaleY  = 1 - breathe * 0.022;
-        CTX.scale(scaleX, scaleY);
-
-        const R = BALANCE.boss.radius;
-
-        // ── Phase 2 enrage glow ring ──────────────────────────────────
-        if (this.phase === 2 && this.log457State !== 'charging') {
-            CTX.shadowBlur  = 22; CTX.shadowColor = '#ef4444';
-            CTX.strokeStyle = 'rgba(220,38,38,0.55)'; CTX.lineWidth = 3;
-            CTX.beginPath(); CTX.arc(0, 0, R + 5, 0, Math.PI * 2); CTX.stroke();
-            CTX.shadowBlur = 0;
+        // ── Kru Manop body ───────────────────────────────────
+        CTX.save(); CTX.translate(0, 0);
+        CTX.fillStyle = '#f8fafc'; CTX.fillRect(-30, -30, 60, 60);
+        CTX.fillStyle = '#e2e8f0';
+        CTX.beginPath(); CTX.moveTo(-30, -30); CTX.lineTo(-20, -20); CTX.lineTo(20, -20); CTX.lineTo(30, -30); CTX.closePath(); CTX.fill();
+        CTX.fillStyle = '#ef4444';
+        CTX.beginPath(); CTX.moveTo(0, -20); CTX.lineTo(6, 0); CTX.lineTo(0, 25); CTX.lineTo(-6, 0); CTX.closePath(); CTX.fill();
+        CTX.fillStyle = this.log457State === 'charging' ? '#ff0000' : '#e2e8f0';
+        CTX.beginPath(); CTX.arc(0, 0, 24, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#94a3b8'; CTX.beginPath(); CTX.arc(0, 0, 26, Math.PI, 0); CTX.fill();
+        if (this.phase === 2 || this.log457State === 'active') {
+            CTX.fillStyle = '#ef4444';
+            CTX.fillRect(-12, -5, 10, 3); CTX.fillRect(2, -5, 10, 3);
         }
+        CTX.fillStyle = '#facc15'; CTX.fillRect(25, 12, 60, 10);
+        CTX.fillStyle = '#000'; CTX.font = 'bold 8px Arial'; CTX.fillText('30cm', 50, 17);
 
-        // ── Silhouette glow ring ──────────────────────────────────────
-        const glowCol   = this.phase === 3 ? 'rgba(56,189,248,0.50)'
-                        : this.isEnraged   ? 'rgba(220,38,38,0.55)'
-                        :                    'rgba(148,163,184,0.40)';
-        const shadowC   = this.phase === 3 ? '#38bdf8'
-                        : this.isEnraged   ? '#ef4444' : '#94a3b8';
-        CTX.shadowBlur  = 16; CTX.shadowColor = shadowC;
-        CTX.strokeStyle = glowCol; CTX.lineWidth = 2.8;
-        CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
-
-        // ── Bean body — tall dark-grey gradient (slightly taller) ─────
-        CTX.save(); CTX.scale(0.92, 1.12); // tall bean
-        const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-        bodyG.addColorStop(0,   '#374151');
-        bodyG.addColorStop(0.55, '#1f2937');
-        bodyG.addColorStop(1,   '#111827');
-        CTX.fillStyle = bodyG;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
-        CTX.restore(); // end tall scale
-
-        // Specular highlight
-        CTX.fillStyle = 'rgba(255,255,255,0.09)';
-        CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.32, R * 0.28, 0, Math.PI * 2); CTX.fill();
-
-        // ── Suit jacket (dark navy vest panels) ──────────────────────
-        // Left lapel
-        CTX.fillStyle = '#1e2d40';
-        CTX.beginPath();
-        CTX.moveTo(-R * 0.08, -R * 0.48);
-        CTX.lineTo(-R * 0.55, -R * 0.15);
-        CTX.lineTo(-R * 0.52,  R * 0.50);
-        CTX.lineTo(-R * 0.05,  R * 0.52);
-        CTX.closePath(); CTX.fill();
-        // Right lapel
-        CTX.beginPath();
-        CTX.moveTo(R * 0.08, -R * 0.48);
-        CTX.lineTo(R * 0.55, -R * 0.15);
-        CTX.lineTo(R * 0.52,  R * 0.50);
-        CTX.lineTo(R * 0.05,  R * 0.52);
-        CTX.closePath(); CTX.fill();
-
-        // Jacket sticker outlines
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
-        CTX.beginPath();
-        CTX.moveTo(-R * 0.08, -R * 0.48); CTX.lineTo(-R * 0.55, -R * 0.15); CTX.lineTo(-R * 0.52, R * 0.50);
-        CTX.stroke();
-        CTX.beginPath();
-        CTX.moveTo(R * 0.08, -R * 0.48); CTX.lineTo(R * 0.55, -R * 0.15); CTX.lineTo(R * 0.52, R * 0.50);
-        CTX.stroke();
-
-        // Suit buttons — 3 small dark dots down centre seam
-        CTX.fillStyle = '#111827';
-        for (let bi = 0; bi < 3; bi++) {
-            CTX.beginPath(); CTX.arc(0, -R * 0.1 + bi * R * 0.25, 2, 0, Math.PI * 2); CTX.fill();
-        }
-
-        // ── Red necktie — diamond/wedge down the centre chest ────────
-        const tieCol  = this.isEnraged ? '#ef4444' : '#dc2626';
-        const tieGlow = this.isEnraged ? 0.55 : 0;
-        CTX.fillStyle  = tieCol;
-        CTX.shadowBlur = 8 * (tieGlow + 0.2); CTX.shadowColor = '#ef4444';
-        CTX.beginPath();
-        CTX.moveTo(0, -R * 0.48);       // knot top
-        CTX.lineTo(R * 0.10, -R * 0.30);
-        CTX.lineTo(R * 0.07,  R * 0.48); // tip
-        CTX.lineTo(0,          R * 0.55);
-        CTX.lineTo(-R * 0.07,  R * 0.48);
-        CTX.lineTo(-R * 0.10, -R * 0.30);
-        CTX.closePath(); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
-        CTX.beginPath();
-        CTX.moveTo(0, -R * 0.48); CTX.lineTo(R * 0.10, -R * 0.30);
-        CTX.lineTo(R * 0.07, R * 0.48); CTX.lineTo(0, R * 0.55);
-        CTX.lineTo(-R * 0.07, R * 0.48); CTX.lineTo(-R * 0.10, -R * 0.30);
-        CTX.closePath(); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // Tie knot
-        CTX.fillStyle = this.isEnraged ? '#b91c1c' : '#991b1b';
-        CTX.beginPath(); CTX.ellipse(0, -R * 0.42, R * 0.09, R * 0.06, 0, 0, Math.PI * 2); CTX.fill();
-
-        // ── Neat Combed Hair (covers upper ~50% of bean) ──────────────
-        CTX.fillStyle = '#111827';
-        CTX.beginPath();
-        CTX.moveTo(-R * 0.88, -R * 0.04);
-        CTX.quadraticCurveTo(-R * 1.05, -R * 0.65, -R * 0.42, -R - 6);
-        CTX.quadraticCurveTo(0, -R - 9, R * 0.42, -R - 6);
-        CTX.quadraticCurveTo(R * 1.05, -R * 0.65, R * 0.88, -R * 0.04);
-        CTX.quadraticCurveTo(R * 0.50, R * 0.04, 0, R * 0.05);
-        CTX.quadraticCurveTo(-R * 0.50, R * 0.04, -R * 0.88, -R * 0.04);
-        CTX.closePath(); CTX.fill();
-
-        // Hair sticker outline
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.beginPath();
-        CTX.moveTo(-R * 0.88, -R * 0.04);
-        CTX.quadraticCurveTo(-R * 1.05, -R * 0.65, -R * 0.42, -R - 6);
-        CTX.quadraticCurveTo(0, -R - 9, R * 0.42, -R - 6);
-        CTX.quadraticCurveTo(R * 1.05, -R * 0.65, R * 0.88, -R * 0.04);
-        CTX.closePath(); CTX.stroke();
-
-        // Strict centre parting
-        CTX.strokeStyle = '#1f2937'; CTX.lineWidth = 1.8;
-        CTX.beginPath();
-        CTX.moveTo(0, -R * 0.05);
-        CTX.quadraticCurveTo(R * 0.04, -R * 0.50, 0, -R - 8);
-        CTX.stroke();
-
-        // Hair highlight (glossy strand)
-        CTX.fillStyle = '#1f2937';
-        CTX.beginPath();
-        CTX.moveTo(-R * 0.32, -R * 0.55);
-        CTX.quadraticCurveTo(-R * 0.48, -R, -R * 0.22, -R - 6);
-        CTX.quadraticCurveTo(-R * 0.10, -R - 2, -R * 0.18, -R * 0.48);
-        CTX.quadraticCurveTo(-R * 0.22, -R * 0.28, -R * 0.32, -R * 0.55);
-        CTX.closePath(); CTX.fill();
-
-        // ── Glowing Square-Framed Glasses ────────────────────────────
-        // Two square lens frames side-by-side across the "face zone"
-        const glassGlow = this.isEnraged ? '#ef4444' : '#e0f2fe';
-        const glassRefl = this.log457State === 'active' ? '#facc15' : '#e0f2fe';
-        const lensW     = R * 0.38, lensH = R * 0.28;
-        const lensY     = -R * 0.28;
-
-        // Left lens
-        CTX.shadowBlur  = 14; CTX.shadowColor = glassGlow;
-        CTX.fillStyle   = `rgba(224,242,254,0.20)`;
-        CTX.strokeStyle = glassGlow; CTX.lineWidth = 2.2;
-        CTX.beginPath(); CTX.roundRect(-R * 0.72, lensY - lensH / 2, lensW, lensH, 3); CTX.fill(); CTX.stroke();
-        // Right lens
-        CTX.beginPath(); CTX.roundRect(R * 0.34, lensY - lensH / 2, lensW, lensH, 3); CTX.fill(); CTX.stroke();
-        // Bridge connecting lenses
-        CTX.strokeStyle = glassGlow; CTX.lineWidth = 1.8;
-        CTX.beginPath(); CTX.moveTo(-R * 0.34, lensY); CTX.lineTo(R * 0.34, lensY); CTX.stroke();
-        // Temple arms (go to sides)
-        CTX.beginPath(); CTX.moveTo(-R * 0.72, lensY); CTX.lineTo(-R * 1.0, lensY + 2); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(R * 0.72, lensY); CTX.lineTo(R * 1.0, lensY + 2); CTX.stroke();
-
-        // Lens reflections — bright diagonal highlight inside each lens
-        CTX.shadowBlur = 0;
-        CTX.fillStyle  = `rgba(255,255,255,${0.55 + Math.sin(now / 280) * 0.30})`;
-        // Left lens reflection
-        CTX.beginPath(); CTX.ellipse(-R * 0.56, lensY - R * 0.06, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
-        // Right lens reflection
-        CTX.beginPath(); CTX.ellipse(R * 0.50, lensY - R * 0.06, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
-
-        // ── Enraged phase fire particles (preserved) ──────────────────
         if (this.isEnraged) {
-            const t = now / 80;
+            const t = performance.now() / 80;
+            // Phase 3: orange+blue fish-water particles; Phase 2: red+orange fire
             const colA = this.phase === 3 ? '#fb923c' : '#ef4444';
             const colB = this.phase === 3 ? '#38bdf8' : '#f97316';
             for (let i = 0; i < 4; i++) {
@@ -908,36 +602,9 @@ class Boss extends Entity {
             }
             CTX.globalAlpha = 1; CTX.shadowBlur = 0;
         }
+        CTX.restore();
 
-        // ── Floating Hands — holding a glowing ruler / chalk ─────────
-        // Front hand — holding ruler, forward weapon side
-        CTX.fillStyle   = '#2d3748'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur  = 6; CTX.shadowColor = 'rgba(148,163,184,0.6)';
-        CTX.beginPath(); CTX.arc(R + 7, 4, R * 0.32, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-
-        // Ruler extending from front hand
-        const rulerGlow = this.state === 'ATTACK' || this.state === 'ULTIMATE' ? 1.0 : 0.55;
-        CTX.fillStyle   = '#f59e0b';
-        CTX.shadowBlur  = 12 * rulerGlow; CTX.shadowColor = '#fbbf24';
-        CTX.beginPath(); CTX.roundRect(R + 9, 1, R * 1.6, R * 0.22, 2); CTX.fill();
-        // Ruler tick marks
-        CTX.strokeStyle = 'rgba(0,0,0,0.5)'; CTX.lineWidth = 1;
-        for (let ti = 0; ti < 5; ti++) {
-            const tx = R + 11 + ti * (R * 1.5 / 5);
-            CTX.beginPath(); CTX.moveTo(tx, 1); CTX.lineTo(tx, 5); CTX.stroke();
-        }
-        CTX.fillStyle = '#000'; CTX.font = `bold ${R * 0.16}px Arial`;
-        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-        CTX.fillText('30cm', R + 9 + R * 0.8, R * 0.11 + 2);
-        CTX.shadowBlur = 0;
-
-        // Back hand — off-side, open palm
-        CTX.fillStyle   = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur  = 4; CTX.shadowColor = 'rgba(148,163,184,0.5)';
-        CTX.beginPath(); CTX.arc(-(R + 7), 2, R * 0.28, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        CTX.restore(); // end main translate
+        CTX.restore();
     }
 }
 
@@ -1004,160 +671,59 @@ class GoldfishMinion extends Entity {
     }
 
     draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  GOLDFISH MINION — Angry Kamikaze Fish                  ║
-        // ║  Orange teardrop bean · Glowing fins · Sharp teeth      ║
-        // ╚══════════════════════════════════════════════════════════╝
         if (this.dead) return;
         const screen = worldToScreen(this.x, this.y);
-        const now    = Date.now();
-
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
-        // Fast breathe — fish are always in motion
-        const breathe = Math.sin(now / 140);
-        CTX.scale(1 + breathe * 0.040, 1 - breathe * 0.025);
-
         const cfg = BALANCE.boss.goldfishMinion;
         const r   = cfg.radius;
 
-        // ── Outer orange glow ─────────────────────────────────────────
-        CTX.shadowBlur  = 12; CTX.shadowColor = '#fb923c';
-        CTX.strokeStyle = 'rgba(251,146,60,0.60)'; CTX.lineWidth = 2;
-        CTX.beginPath(); CTX.arc(0, 0, r + 2, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        // Glow
+        CTX.shadowBlur  = 12;
+        CTX.shadowColor = '#fb923c';
 
-        // ── Glowing tail fin (wide fan — behind body = negative X) ───
-        const tailWag = Math.sin(now / 100) * 0.35;
-        // Upper tail lobe
-        CTX.fillStyle = '#ea580c';
-        CTX.shadowBlur = 8; CTX.shadowColor = '#f97316';
+        // Body (orange oval)
+        CTX.fillStyle = '#fb923c';
         CTX.beginPath();
-        CTX.moveTo(-r * 0.85, 0);
-        CTX.quadraticCurveTo(-r * 1.70 + Math.cos(tailWag) * 6, -r * 1.00, -r * 2.20 + Math.sin(tailWag) * 4, -r * 0.80);
-        CTX.quadraticCurveTo(-r * 1.60, -r * 0.25, -r * 0.85, 0);
-        CTX.closePath(); CTX.fill();
-        // Lower tail lobe
-        CTX.beginPath();
-        CTX.moveTo(-r * 0.85, 0);
-        CTX.quadraticCurveTo(-r * 1.70 - Math.cos(tailWag) * 6,  r * 1.00,  -r * 2.20 - Math.sin(tailWag) * 4, r * 0.80);
-        CTX.quadraticCurveTo(-r * 1.60,  r * 0.25, -r * 0.85, 0);
-        CTX.closePath(); CTX.fill();
-        // Tail sticker outlines
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.beginPath();
-        CTX.moveTo(-r * 0.85, 0);
-        CTX.quadraticCurveTo(-r * 1.70 + Math.cos(tailWag) * 6, -r * 1.00, -r * 2.20 + Math.sin(tailWag) * 4, -r * 0.80);
-        CTX.stroke();
-        CTX.beginPath();
-        CTX.moveTo(-r * 0.85, 0);
-        CTX.quadraticCurveTo(-r * 1.70 - Math.cos(tailWag) * 6,  r * 1.00, -r * 2.20 - Math.sin(tailWag) * 4, r * 0.80);
-        CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Dorsal fin (glowing, top) ─────────────────────────────────
-        const dorsalWave = Math.sin(now / 130) * 0.3;
-        CTX.fillStyle  = '#f97316';
-        CTX.shadowBlur = 6; CTX.shadowColor = '#fb923c';
-        CTX.beginPath();
-        CTX.moveTo(-r * 0.25, -r * 0.85);
-        CTX.quadraticCurveTo(r * 0.1 + dorsalWave * 5, -r * 1.80, r * 0.55, -r * 0.85);
-        CTX.lineTo(-r * 0.25, -r * 0.85);
-        CTX.closePath(); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.8;
-        CTX.beginPath();
-        CTX.moveTo(-r * 0.25, -r * 0.85);
-        CTX.quadraticCurveTo(r * 0.1 + dorsalWave * 5, -r * 1.80, r * 0.55, -r * 0.85);
-        CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Side pectoral fins (small, glowing) ───────────────────────
-        CTX.fillStyle = '#ea580c'; CTX.shadowBlur = 4; CTX.shadowColor = '#fb923c';
-        // Upper pectoral
-        CTX.beginPath();
-        CTX.moveTo(r * 0.05, -r * 0.45);
-        CTX.quadraticCurveTo(r * 0.55, -r * 0.90, r * 0.60, -r * 0.45);
-        CTX.quadraticCurveTo(r * 0.30, -r * 0.25, r * 0.05, -r * 0.45);
-        CTX.closePath(); CTX.fill();
-        // Lower pectoral
-        CTX.beginPath();
-        CTX.moveTo(r * 0.05,  r * 0.45);
-        CTX.quadraticCurveTo(r * 0.55,  r * 0.90, r * 0.60,  r * 0.45);
-        CTX.quadraticCurveTo(r * 0.30,  r * 0.25, r * 0.05,  r * 0.45);
-        CTX.closePath(); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // ── Main teardrop/bean body — orange/gold ─────────────────────
-        // Slightly teardrop: wider toward the tail, pointed toward snout
-        const bodyG = CTX.createRadialGradient(-r * 0.1, -r * 0.2, 1, 0, 0, r);
-        bodyG.addColorStop(0,   '#fb923c');
-        bodyG.addColorStop(0.55, '#f97316');
-        bodyG.addColorStop(1,   '#c2410c');
-        CTX.fillStyle = bodyG;
-        CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.fill();
-
-        // Thick sticker outline
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.stroke();
+        CTX.ellipse(0, 0, r * 1.6, r * 0.9, 0, 0, Math.PI * 2);
+        CTX.fill();
 
         // Belly highlight
-        CTX.fillStyle = 'rgba(254,215,170,0.55)';
-        CTX.beginPath(); CTX.ellipse(r * 0.15, r * 0.20, r * 0.42, r * 0.28, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#fed7aa';
+        CTX.beginPath();
+        CTX.ellipse(0, 2, r * 0.9, r * 0.45, 0, 0, Math.PI * 2);
+        CTX.fill();
 
-        // Specular highlight
-        CTX.fillStyle = 'rgba(255,255,255,0.20)';
-        CTX.beginPath(); CTX.arc(-r * 0.28, -r * 0.28, r * 0.22, 0, Math.PI * 2); CTX.fill();
+        // Tail (triangle pointing backwards = negative x)
+        CTX.fillStyle = '#ea580c';
+        CTX.beginPath();
+        CTX.moveTo(-r * 1.6, 0);
+        CTX.lineTo(-r * 2.6,  r * 0.9);
+        CTX.lineTo(-r * 2.6, -r * 0.9);
+        CTX.closePath();
+        CTX.fill();
 
-        // Scales pattern — two arcs of overlapping circles
-        CTX.strokeStyle = 'rgba(234,88,12,0.45)'; CTX.lineWidth = 1.2;
-        for (let si = 0; si < 3; si++) {
-            const sx = -r * 0.2 + si * r * 0.28;
-            CTX.beginPath(); CTX.arc(sx, r * 0.15, r * 0.30, Math.PI, Math.PI * 2); CTX.stroke();
-            CTX.beginPath(); CTX.arc(sx + r * 0.14, -r * 0.15, r * 0.30, Math.PI, Math.PI * 2); CTX.stroke();
-        }
+        // Dorsal fin
+        CTX.fillStyle = '#ea580c';
+        CTX.beginPath();
+        CTX.moveTo(-r * 0.2, -r * 0.9);
+        CTX.lineTo( r * 0.6, -r * 1.6);
+        CTX.lineTo( r * 1.0, -r * 0.9);
+        CTX.closePath();
+        CTX.fill();
 
-        // ── Sharp white teeth (visible on mouth outline) ──────────────
-        // Draw a snout area at the front (+X side)
-        const snoutX = r * 0.78;
-        // Mouth opening (black gap)
+        // Eye
+        CTX.shadowBlur = 0;
         CTX.fillStyle = '#1e293b';
         CTX.beginPath();
-        CTX.moveTo(snoutX, -r * 0.18);
-        CTX.lineTo(r * 1.15, 0);
-        CTX.lineTo(snoutX,  r * 0.18);
-        CTX.closePath(); CTX.fill();
-
-        // Upper teeth — 3 sharp triangular spikes
-        CTX.fillStyle = '#f8fafc';
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.2;
-        const teethCount = 3;
-        const toothSpan  = r * 0.30;
-        for (let ti = 0; ti < teethCount; ti++) {
-            const ty = -r * 0.14 + ti * (toothSpan / (teethCount - 1));
-            CTX.beginPath();
-            CTX.moveTo(snoutX, ty - r * 0.04);
-            CTX.lineTo(r * 1.08, ty + r * 0.01);
-            CTX.lineTo(snoutX, ty + r * 0.04);
-            CTX.closePath(); CTX.fill(); CTX.stroke();
-        }
-        // Lower teeth
-        for (let ti = 0; ti < 2; ti++) {
-            const ty = r * 0.06 + ti * (toothSpan * 0.5 / 1);
-            CTX.beginPath();
-            CTX.moveTo(snoutX,   ty - r * 0.03);
-            CTX.lineTo(r * 1.06, ty + r * 0.01);
-            CTX.lineTo(snoutX,   ty + r * 0.03);
-            CTX.closePath(); CTX.fill(); CTX.stroke();
-        }
-
-        // Angry brow slash above snout
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5; CTX.lineCap = 'round';
+        CTX.arc(r * 0.9, -r * 0.2, r * 0.28, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.fillStyle = '#ffffff';
         CTX.beginPath();
-        CTX.moveTo(r * 0.48, -r * 0.55);
-        CTX.lineTo(r * 0.85, -r * 0.35);
-        CTX.stroke();
+        CTX.arc(r * 0.96, -r * 0.26, r * 0.1, 0, Math.PI * 2);
+        CTX.fill();
 
         CTX.restore();
     }
