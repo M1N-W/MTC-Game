@@ -829,7 +829,11 @@ function startNextWave() {
     // when the boss actually spawns.  All other waves (including glitch waves)
     // use battle BGM.  This also restores battle music after a boss wave ends.
     if (getWave() % BALANCE.waves.bossEveryNWaves !== 0) {
-        Audio.playBGM('battle');
+        if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
+            Audio.playBGM('glitch');
+        }  else {
+            Audio.playBGM('battle');
+        }
     }
 
     if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
@@ -1650,7 +1654,8 @@ async function endGame(result) {
     gameState = 'GAMEOVER'; window.gameState = gameState;
 
     Audio.stopBGM();
-
+    Audio.playBGM('menu');
+    
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
 
