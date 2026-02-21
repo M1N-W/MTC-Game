@@ -172,7 +172,7 @@ const BALANCE = {
             maxHpPerLevel:             0        // no HP gain — skill ceiling identity
         },
 
-        // ── AUTO — เทวดาอาวุธ ยืน "วันชัย" ────────────────────
+        // ── AUTO — Stand "Wanchai" ────────────────────
         // Identity: Thermodynamic Brawler / Stand User
         //   • HEAT WAVE = short-range wide projectile; pierces 1-2 enemies
         //   • WANCHAI   = JoJo-style Stand barrage; 50% DR + rapid punches
@@ -200,7 +200,7 @@ const BALANCE = {
             // ── Wanchai / Stand primary special ──────────────────
             // heatWaveRange / heatWaveCooldown govern normal attack.
             // wanchai* govern the Stand summoning skill.
-            heatWaveRange: 180,
+            heatWaveRange: 150,
             heatWaveCooldown: 0.28,
             wanchaiDuration: 4.0,
             wanchaiCooldown: 12,
@@ -415,7 +415,7 @@ const BALANCE = {
     },
 
     // ──────────────────────────────────────────────────────────
-    // 👑 BOSS — "KRU MANOP THE DOG RIDER"
+    // 👑 BOSS — "KRU MANOP"
     // ──────────────────────────────────────────────────────────
     boss: {
         radius: 50,
@@ -481,8 +481,8 @@ const BALANCE = {
         // Spawned as a standalone BossDog entity when Manop enters Phase 2.
         // Very fast melee-range chaser; damage dealt on contact per second.
         bossDog: {
-            hp: 1000,
-            speed: 260,
+            hp: 1500,
+            speed: 250,
             damage: 22,
             radius: 20,
             color: '#d97706'
@@ -505,7 +505,7 @@ const BALANCE = {
         // ── GoldfishMinion ───────────────────────────────────
         // Sine-wave Kamikaze fish that wobbles as it chases and explodes on contact.
         goldfishMinion: {
-            hp:        50,
+            hp:        100,
             speed:     165,
             damage:    18,
             radius:    12,
@@ -775,10 +775,10 @@ const GAME_TEXTS = {
         bossIncomingRider:  'BOSS INCOMING!🐕',
         bossIncomingFish:   'BOSS INCOMING!🐟',
         glitchWave:         '⚡ GLITCH WAVE ⚡',
-        glitchAnomaly:      '⚠️ SYSTEM ANOMALY DETECTED... ⚠️',
+        glitchAnomaly:      'SYSTEM ANOMALY DETECTED...⚠️',
         glitchControls:     'CONTROLS INVERTED!',
         glitchBrace:        'BRACE FOR IMPACT...',
-        glitchCrisisHp:     (bonus) => `🛡️ +${bonus} CRISIS HP`,
+        glitchCrisisHp:     (bonus) => `🛡️ +${bonus} BONUS HP`,
         spawnCountdown:     (secs) => `⚡ SPAWNING IN ${secs}...`,
         chaosBegins:        '💀 CHAOS BEGINS!',
     },
@@ -790,17 +790,17 @@ const GAME_TEXTS = {
         notEnoughScore:     'คะแนนไม่พอ! 💸',
         hpFull:             'HP เต็มแล้ว!',
         healPickup:         (amt) => `+${amt} HP 🧃`,
-        dmgBoostActive:     '🔧 DMG ×1.1!',
-        dmgBoostExtended:   '🔧 DMG เวลา +30s!',
-        dmgBoostExpired:    'DMG Boost หมดแล้ว',
-        spdBoostActive:     '👟 SPD ×1.1!',
-        spdBoostExtended:   '👟 SPD เวลา +30s!',
-        spdBoostExpired:    'SPD Boost หมดแล้ว',
+        dmgBoostActive:     '🔧 DMG. ×1.1!',
+        dmgBoostExtended:   '🔧 DMG +30s.',
+        dmgBoostExpired:    'DMG+ Expired',
+        spdBoostActive:     '👟 SPD. ×1.1!',
+        spdBoostExtended:   '👟 SPD +30s.',
+        spdBoostExpired:    'SPD+ Expired',
     },
 
     // ── ⚔️ COMBAT ──────────────────────────────────────────────
     combat: {
-        poomCrit:           'สาดข้าว! CRIT!',
+        poomCrit:           'ข้าวเหนียวคริติคอล! 💥',
         highGround:         'HIGH GROUND!',
         droneOnline:        '🤖 DRONE ONLINE',
     },
@@ -811,7 +811,7 @@ const GAME_TEXTS = {
         normalSpeed:        '▶▶ NORMAL',
         noEnergy:           'NO ENERGY! ⚡',
         energyDepleted:     'ENERGY DEPLETED ⚡',
-        recharging:         '⚡ RECHARGING',
+        recharging:         'RECHARGING ⚡',
     },
 
     // ── 💻 ADMIN CONSOLE ───────────────────────────────────────
@@ -821,7 +821,7 @@ const GAME_TEXTS = {
         database:           '📚 MTC DATABASE',
         sessionWelcome:     'Session started. Welcome, root.',
         sessionHelp:        'Run "help" to list available commands.',
-        noPlayer:           'ERROR: No active player session.',
+        noPlayer:           'ERROR : No active player session.',
         authOk:             'Authenticating root privilege... OK',
         healInject:         (gained) => `Injecting ${gained} HP units into player entity...`,
         healResult:         (hp, max) => `COMMAND EXECUTED — HP: ${hp} / ${max}`,
@@ -833,7 +833,7 @@ const GAME_TEXTS = {
         nextResult:         (killed) => `COMMAND EXECUTED — ${killed} process(es) terminated. Wave advancing...`,
         nextFloat:          '💀 WAVE SKIP [ADMIN]',
         closingSession:     'Closing session...',
-        niceTry:            'nice try lol',
+        niceTry:            'nice try LOL',
         accessDenied:       'ACCESS DENIED — MTC Policy §4.2 violation logged.',
         whoami:             'root (player infiltrated server)',
         cmdNotFound:        (raw) => `bash: ${raw}: command not found`,
