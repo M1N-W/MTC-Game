@@ -644,7 +644,9 @@ class Boss extends Entity {
             setTimeout(() => {
                 setWave(getWave() + 1);
                 if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
-                else if (typeof window.startNextWave === 'function') window.startNextWave();
+                else {
+                    if (typeof window.startNextWave === 'function') window.startNextWave();
+                }
             }, BALANCE.boss.nextWaveDelay);
         }
     }
@@ -1292,8 +1294,8 @@ class BubbleProjectile {
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Boss, BossDog, GoldfishMinion, BubbleProjectile, BarkWave };
-}
-// ══════════════════════════════════════════════════════════════
+    
+}// ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
 window.Boss              = Boss;

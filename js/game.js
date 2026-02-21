@@ -159,6 +159,9 @@ function updateGame(dt) {
         window.glitchIntensity = Math.max(0.0, window.glitchIntensity - GLITCH_RAMP * 2 * dt);
     }
 
+    // ── Wave Events (Fog / Speed) ──────────────────────────────
+    if (typeof updateWaveEvent === 'function') updateWaveEvent(dt);
+
     if (window.waveSpawnLocked) {
         window.waveSpawnTimer -= dt;
         const secsLeft = Math.ceil(window.waveSpawnTimer);
@@ -268,6 +271,8 @@ function updateGame(dt) {
         }
         setWave(getWave() + 1);
         Achievements.check('wave_1');
+        // ── Wave Events: end old event, start new ──────────────
+        // wave event handled inside startNextWave()
         // WARN-2 FIX: guard against WaveManager not yet loaded
         if (typeof startNextWave === 'function') startNextWave();
     }
@@ -395,6 +400,9 @@ function drawGame() {
     if (window.glitchIntensity > 0) {
         drawGlitchEffect(window.glitchIntensity, window.controlsInverted);
     }
+
+    // ── Wave Event overlays (Fog / Speed vignettes + banner) ──
+    if (typeof drawWaveEvent === 'function') drawWaveEvent(CTX);
 
     if (typeof UIManager !== 'undefined' && UIManager.draw) {
         UIManager.draw(CTX, _lastDrawDt);
@@ -540,6 +548,7 @@ function startGame(charType = 'kao') {
     window._glitchWaveHpBonus  = 0;
     window.waveSpawnLocked     = false;
     window.waveSpawnTimer      = 0;
+    // wave event reset handled by startNextWave()
     window.pendingSpawnCount   = 0;
     window.lastGlitchCountdown = -1;
     console.log('⚡ Glitch Wave grace period reset');
@@ -636,6 +645,7 @@ async function endGame(result) {
     window.timeScale          = 1.0;
     window.isGlitchWave       = false;
     window._glitchWaveHpBonus = 0;
+    // wave event cleared by WaveManager._deactivateWaveEvent() on next startNextWave()
 
     weatherSystem.clear();
 
