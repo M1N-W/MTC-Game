@@ -35,18 +35,18 @@ window.triggerHitStop = (ms) => {
 function toggleSlowMotion() {
     if (!window.isSlowMotion) {
         if (window.slowMoEnergy < 0.05) {
-            if (window.player) spawnFloatingText('NO ENERGY! ⚡', window.player.x, window.player.y - 60, '#ef4444', 20);
+            if (window.player) spawnFloatingText(GAME_TEXTS.time.noEnergy, window.player.x, window.player.y - 60, '#ef4444', 20);
             return;
         }
         window.isSlowMotion = true;
         window.timeScale    = SLOW_MO_TIMESCALE;
         addScreenShake(6);
-        if (window.player) spawnFloatingText('🕐 BULLET TIME', window.player.x, window.player.y - 70, '#00e5ff', 26);
+        if (window.player) spawnFloatingText(GAME_TEXTS.time.bulletTime, window.player.x, window.player.y - 70, '#00e5ff', 26);
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
     } else {
         window.isSlowMotion = false;
         window.timeScale    = 1.0;
-        if (window.player) spawnFloatingText('▶▶ NORMAL', window.player.x, window.player.y - 55, '#34d399', 20);
+        if (window.player) spawnFloatingText(GAME_TEXTS.time.normalSpeed, window.player.x, window.player.y - 55, '#34d399', 20);
     }
 }
 
@@ -56,7 +56,7 @@ function _tickSlowMoEnergy(realDt) {
         if (window.slowMoEnergy <= 0) {
             window.isSlowMotion = false;
             window.timeScale    = 1.0;
-            if (window.player) spawnFloatingText('ENERGY DEPLETED ⚡', window.player.x, window.player.y - 60, '#ef4444', 20);
+            if (window.player) spawnFloatingText(GAME_TEXTS.time.energyDepleted, window.player.x, window.player.y - 60, '#ef4444', 20);
         }
     } else {
         window.slowMoEnergy = Math.min(1.0, window.slowMoEnergy + SLOW_MO_RECHARGE_RATE * realDt);
@@ -133,7 +133,7 @@ function drawSlowMoOverlay() {
         CTX.fillStyle    = window.isSlowMotion
             ? `rgba(0, 229, 255, ${0.8 + pulse * 0.2})`
             : 'rgba(0, 180, 220, 0.55)';
-        CTX.fillText(window.isSlowMotion ? '🕐 BULLET TIME' : '⚡ RECHARGING', bx, by - badgeH + 8);
+        CTX.fillText(window.isSlowMotion ? GAME_TEXTS.time.bulletTime : GAME_TEXTS.time.recharging, bx, by - badgeH + 8);
         CTX.shadowBlur = 0;
 
         const barX = bx - SM_BAR_W / 2;

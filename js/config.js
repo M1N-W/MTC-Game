@@ -761,7 +761,120 @@ const ACHIEVEMENT_DEFS = [
     { id: 'shopaholic',    name: 'MTC Shopaholic',     desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง',       icon: '🛒'  }
 ];
 
+// ══════════════════════════════════════════════════════════════
+// 📝 GAME TEXTS — Single source of truth for ALL player-facing strings
+// Arrow functions are used for strings with dynamic variables.
+// ══════════════════════════════════════════════════════════════
+const GAME_TEXTS = {
+
+    // ── 🌊 WAVE ────────────────────────────────────────────────
+    wave: {
+        badge:              (wave) => `WAVE ${wave}`,
+        floatingTitle:      (wave) => `WAVE ${wave}`,
+        bossIncoming:       'BOSS INCOMING!',
+        bossIncomingRider:  'BOSS INCOMING!🐕',
+        bossIncomingFish:   'BOSS INCOMING!🐟',
+        glitchWave:         '⚡ GLITCH WAVE ⚡',
+        glitchAnomaly:      '⚠️ SYSTEM ANOMALY DETECTED... ⚠️',
+        glitchControls:     'CONTROLS INVERTED!',
+        glitchBrace:        'BRACE FOR IMPACT...',
+        glitchCrisisHp:     (bonus) => `🛡️ +${bonus} CRISIS HP`,
+        spawnCountdown:     (secs) => `⚡ SPAWNING IN ${secs}...`,
+        chaosBegins:        '💀 CHAOS BEGINS!',
+    },
+
+    // ── 🛒 SHOP ────────────────────────────────────────────────
+    shop: {
+        open:               '🛒 MTC CO-OP STORE',
+        resumed:            '▶ RESUMED',
+        notEnoughScore:     'คะแนนไม่พอ! 💸',
+        hpFull:             'HP เต็มแล้ว!',
+        healPickup:         (amt) => `+${amt} HP 🧃`,
+        dmgBoostActive:     '🔧 DMG ×1.1!',
+        dmgBoostExtended:   '🔧 DMG เวลา +30s!',
+        dmgBoostExpired:    'DMG Boost หมดแล้ว',
+        spdBoostActive:     '👟 SPD ×1.1!',
+        spdBoostExtended:   '👟 SPD เวลา +30s!',
+        spdBoostExpired:    'SPD Boost หมดแล้ว',
+    },
+
+    // ── ⚔️ COMBAT ──────────────────────────────────────────────
+    combat: {
+        poomCrit:           'สาดข้าว! CRIT!',
+        highGround:         'HIGH GROUND!',
+        droneOnline:        '🤖 DRONE ONLINE',
+    },
+
+    // ── 🕐 TIME / BULLET TIME ──────────────────────────────────
+    time: {
+        bulletTime:         '🕐 BULLET TIME',
+        normalSpeed:        '▶▶ NORMAL',
+        noEnergy:           'NO ENERGY! ⚡',
+        energyDepleted:     'ENERGY DEPLETED ⚡',
+        recharging:         '⚡ RECHARGING',
+    },
+
+    // ── 💻 ADMIN CONSOLE ───────────────────────────────────────
+    admin: {
+        terminal:           '💻 ADMIN TERMINAL',
+        resumed:            '▶ RESUMED',
+        database:           '📚 MTC DATABASE',
+        sessionWelcome:     'Session started. Welcome, root.',
+        sessionHelp:        'Run "help" to list available commands.',
+        noPlayer:           'ERROR: No active player session.',
+        authOk:             'Authenticating root privilege... OK',
+        healInject:         (gained) => `Injecting ${gained} HP units into player entity...`,
+        healResult:         (hp, max) => `COMMAND EXECUTED — HP: ${hp} / ${max}`,
+        healFloat:          (gained) => `+${gained} HP 💉 [ADMIN]`,
+        scorePatching:      'Patching score register... +5000',
+        scoreResult:        (score) => `COMMAND EXECUTED — Score: ${score}`,
+        scoreFloat:         '+5000 🪙 [ADMIN]',
+        nextSigkill:        'Sending SIGKILL to all enemy processes...',
+        nextResult:         (killed) => `COMMAND EXECUTED — ${killed} process(es) terminated. Wave advancing...`,
+        nextFloat:          '💀 WAVE SKIP [ADMIN]',
+        closingSession:     'Closing session...',
+        niceTry:            'nice try lol',
+        accessDenied:       'ACCESS DENIED — MTC Policy §4.2 violation logged.',
+        whoami:             'root (player infiltrated server)',
+        cmdNotFound:        (raw) => `bash: ${raw}: command not found`,
+        sudoNotFound:       (cmd) => `sudo: ${cmd}: command not found`,
+        sudoAccessDenied:   'ACCESS DENIED — Unknown sudo command.',
+        typeHelp:           'Type "help" for available commands.',
+        catPassword:        'hunter2',
+        catPasswordWarn:    "...wait, you weren't supposed to see that.",
+        sandwich:           'What? Make it yourself.',
+        helpTable: [
+            '┌─────────────────────────────────────────────┐',
+            '│  MTC ADMIN TERMINAL — AVAILABLE COMMANDS     │',
+            '├─────────────────────────────────────────────┤',
+            '│  sudo heal   Restore 100 HP to player        │',
+            '│  sudo score  Add 5000 to current score       │',
+            '│  sudo next   Kill all enemies, skip wave      │',
+            '│  help        Show this command list           │',
+            '│  clear       Clear terminal output            │',
+            '│  exit        Close admin terminal             │',
+            '└─────────────────────────────────────────────┘',
+        ],
+        lsEntries: [
+            { text: 'drwxr-xr-x  secrets/',               cls: 'cline-info' },
+            { text: 'drwxr-xr-x  grades/',                cls: 'cline-info' },
+            { text: '-rw-------  kru_manop_passwords.txt', cls: 'cline-warn' },
+            { text: '-rw-r--r--  exam_answers_2024.pdf',   cls: 'cline-ok'   },
+        ],
+    },
+
+    // ── 🤖 AI / MISSION ───────────────────────────────────────
+    ai: {
+        loading:            'กำลังโหลดภารกิจ...',
+        missionPrefix:      (name) => `ภารกิจ "${name}"`,
+        missionFallback:    'ภารกิจ "พิชิตครูมานพ"',
+        reportFallback:     'ตั้งใจเรียนให้มากกว่านี้นะ...',
+    },
+};
+
+window.GAME_TEXTS = GAME_TEXTS;
+
 // ── Node/bundler export ───────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BALANCE, SHOP_ITEMS, GAME_CONFIG, VISUALS, ACHIEVEMENT_DEFS, API_KEY };
+    module.exports = { BALANCE, SHOP_ITEMS, GAME_CONFIG, VISUALS, ACHIEVEMENT_DEFS, API_KEY, GAME_TEXTS };
 }

@@ -133,7 +133,7 @@ function openShop() {
 
     ShopManager.open();
 
-    if (player) spawnFloatingText('🛒 MTC CO-OP STORE', player.x, player.y - 70, '#facc15', 22);
+    if (player) spawnFloatingText(GAME_TEXTS.shop.open, player.x, player.y - 70, '#facc15', 22);
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
 }
 
@@ -149,7 +149,7 @@ function closeShop() {
 
     window.focus();
 
-    if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
+    if (player) spawnFloatingText(GAME_TEXTS.shop.resumed, player.x, player.y - 50, '#34d399', 18);
 }
 
 function buyItem(itemId) {
@@ -159,7 +159,7 @@ function buyItem(itemId) {
 
     const currentScore = getScore();
     if (currentScore < item.cost) {
-        spawnFloatingText('คะแนนไม่พอ! 💸', player.x, player.y - 60, '#ef4444', 18);
+        spawnFloatingText(GAME_TEXTS.shop.notEnoughScore, player.x, player.y - 60, '#ef4444', 18);
         if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
         ShopManager.updateButtons();
         return;
@@ -173,23 +173,23 @@ function buyItem(itemId) {
         const healAmt = Math.min(item.heal, lacking);
         if (healAmt > 0) {
             player.hp += healAmt;
-            spawnFloatingText(`+${healAmt} HP 🧃`, player.x, player.y - 70, '#22c55e', 22);
+            spawnFloatingText(GAME_TEXTS.shop.healPickup(healAmt), player.x, player.y - 70, '#22c55e', 22);
             spawnParticles(player.x, player.y, 10, '#22c55e');
             if (typeof Audio !== 'undefined' && Audio.playHeal) Audio.playHeal();
         } else {
-            spawnFloatingText('HP เต็มแล้ว!', player.x, player.y - 60, '#94a3b8', 16);
+            spawnFloatingText(GAME_TEXTS.shop.hpFull, player.x, player.y - 60, '#94a3b8', 16);
         }
 
     } else if (itemId === 'damageUp') {
         if (player.shopDamageBoostActive) {
             player.shopDamageBoostTimer += item.duration;
-            spawnFloatingText('🔧 DMG เวลา +30s!', player.x, player.y - 70, '#f59e0b', 22);
+            spawnFloatingText(GAME_TEXTS.shop.dmgBoostExtended, player.x, player.y - 70, '#f59e0b', 22);
         } else {
             player._baseDamageBoost      = player.damageBoost || 1.0;
             player.damageBoost           = (player.damageBoost || 1.0) * item.mult;
             player.shopDamageBoostActive = true;
             player.shopDamageBoostTimer  = item.duration;
-            spawnFloatingText('🔧 DMG ×1.1!', player.x, player.y - 70, '#f59e0b', 22);
+            spawnFloatingText(GAME_TEXTS.shop.dmgBoostActive, player.x, player.y - 70, '#f59e0b', 22);
             spawnParticles(player.x, player.y, 8, '#f59e0b');
         }
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -197,13 +197,13 @@ function buyItem(itemId) {
     } else if (itemId === 'speedUp') {
         if (player.shopSpeedBoostActive) {
             player.shopSpeedBoostTimer += item.duration;
-            spawnFloatingText('👟 SPD เวลา +30s!', player.x, player.y - 70, '#06b6d4', 22);
+            spawnFloatingText(GAME_TEXTS.shop.spdBoostExtended, player.x, player.y - 70, '#06b6d4', 22);
         } else {
             player._baseMoveSpeed        = player.moveSpeed;
             player.moveSpeed             = player.moveSpeed * item.mult;
             player.shopSpeedBoostActive  = true;
             player.shopSpeedBoostTimer   = item.duration;
-            spawnFloatingText('👟 SPD ×1.1!', player.x, player.y - 70, '#06b6d4', 22);
+            spawnFloatingText(GAME_TEXTS.shop.spdBoostActive, player.x, player.y - 70, '#06b6d4', 22);
             spawnParticles(player.x, player.y, 8, '#06b6d4');
         }
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();

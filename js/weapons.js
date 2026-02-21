@@ -510,7 +510,7 @@ class WeaponSystem {
         if (player.onGraph) {
             damage *= 1.67;
             if (!isCrit) color = '#f59e0b';
-            spawnFloatingText('HIGH GROUND!', player.x, player.y - 40, '#f59e0b', 16);
+            spawnFloatingText(GAME_TEXTS.combat.highGround, player.x, player.y - 40, '#f59e0b', 16);
         }
 
         damage *= player.damageMultiplier || 1.0;

@@ -136,14 +136,14 @@ function updateGame(dt) {
         const secsLeft = Math.ceil(window.waveSpawnTimer);
         if (secsLeft !== window.lastGlitchCountdown && secsLeft > 0 && secsLeft <= 3) {
             window.lastGlitchCountdown = secsLeft;
-            spawnFloatingText(`⚡ SPAWNING IN ${secsLeft}...`, window.player.x, window.player.y - 145, '#d946ef', 34);
+            spawnFloatingText(GAME_TEXTS.wave.spawnCountdown(secsLeft), window.player.x, window.player.y - 145, '#d946ef', 34);
             addScreenShake(6);
         }
         if (window.waveSpawnTimer <= 0) {
             window.waveSpawnLocked     = false;
             window.lastGlitchCountdown = -1;
             spawnEnemies(window.pendingSpawnCount);
-            spawnFloatingText('💀 CHAOS BEGINS!', window.player.x, window.player.y - 160, '#ef4444', 44);
+            spawnFloatingText(GAME_TEXTS.wave.chaosBegins, window.player.x, window.player.y - 160, '#ef4444', 44);
             addScreenShake(28);
             Audio.playBossSpecial();
         }
@@ -162,7 +162,7 @@ function updateGame(dt) {
         if (window.player.shopDamageBoostTimer <= 0) {
             window.player.shopDamageBoostActive = false;
             window.player.damageBoost = window.player._baseDamageBoost !== undefined ? window.player._baseDamageBoost : 1.0;
-            spawnFloatingText('DMG Boost หมดแล้ว', window.player.x, window.player.y - 50, '#94a3b8', 14);
+            spawnFloatingText(GAME_TEXTS.shop.dmgBoostExpired, window.player.x, window.player.y - 50, '#94a3b8', 14);
         }
     }
 
@@ -171,7 +171,7 @@ function updateGame(dt) {
         if (window.player.shopSpeedBoostTimer <= 0) {
             window.player.shopSpeedBoostActive = false;
             if (window.player._baseMoveSpeed !== undefined) window.player.moveSpeed = window.player._baseMoveSpeed;
-            spawnFloatingText('SPD Boost หมดแล้ว', window.player.x, window.player.y - 50, '#94a3b8', 14);
+            spawnFloatingText(GAME_TEXTS.shop.spdBoostExpired, window.player.x, window.player.y - 50, '#94a3b8', 14);
         }
     }
 
@@ -452,7 +452,7 @@ function shootPoom(player) {
         new Projectile(player.x, player.y, player.angle, S.riceSpeed, damage, S.riceColor, false, 'player')
     );
     if (isCrit) {
-        spawnFloatingText('สาดข้าว! CRIT!', player.x, player.y - 45, '#fbbf24', 20);
+        spawnFloatingText(GAME_TEXTS.combat.poomCrit, player.x, player.y - 45, '#fbbf24', 20);
         spawnParticles(player.x, player.y, 5, '#ffffff');
     }
     player.speedBoostTimer = S.speedOnHitDuration;
@@ -465,13 +465,13 @@ function shootPoom(player) {
 async function initAI() {
     const brief = document.getElementById('mission-brief');
     if (!brief) { console.warn('⚠️ mission-brief not found'); return; }
-    brief.textContent = "กำลังโหลดภารกิจ...";
+    brief.textContent = GAME_TEXTS.ai.loading;
     try {
         const name = await Gemini.getMissionName();
-        brief.textContent = `ภารกิจ "${name}"`;
+        brief.textContent = GAME_TEXTS.ai.missionPrefix(name);
     } catch (e) {
         console.warn('Failed to get mission name:', e);
-        brief.textContent = 'ภารกิจ "พิชิตครูมานพ"';
+        brief.textContent = GAME_TEXTS.ai.missionFallback;
     }
 }
 
@@ -525,7 +525,7 @@ function startGame(charType = 'kao') {
     window.drone   = new Drone();
     window.drone.x = window.player.x;
     window.drone.y = window.player.y;
-    spawnFloatingText('🤖 DRONE ONLINE', window.player.x, window.player.y - 90, '#00e5ff', 20);
+    spawnFloatingText(GAME_TEXTS.combat.droneOnline, window.player.x, window.player.y - 90, '#00e5ff', 20);
     console.log('🤖 Engineering Drone initialised');
 
     weatherSystem.clear();
@@ -643,7 +643,7 @@ async function endGame(result) {
         } catch (e) {
             console.warn('Failed to get AI report card:', e);
             if (ld) ld.style.display = 'none';
-            if (reportText) reportText.textContent = 'ตั้งใจเรียนให้มากกว่านี้นะ...';
+            if (reportText) reportText.textContent = GAME_TEXTS.ai.reportFallback;
         }
     }
 }

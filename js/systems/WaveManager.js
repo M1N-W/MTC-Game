@@ -43,8 +43,8 @@ function startNextWave() {
 
     resetEnemiesKilled();
     window.waveStartDamage = Achievements.stats.damageTaken;
-    setElementText('wave-badge', `WAVE ${getWave()}`);
-    spawnFloatingText(`WAVE ${getWave()}`, window.player.x, window.player.y - 100, '#8b5cf6', 40);
+    setElementText('wave-badge', GAME_TEXTS.wave.badge(getWave()));
+    spawnFloatingText(GAME_TEXTS.wave.floatingTitle(getWave()), window.player.x, window.player.y - 100, '#8b5cf6', 40);
 
     const count = BALANCE.waves.enemiesBase + (getWave() - 1) * BALANCE.waves.enemiesPerWave;
 
@@ -68,7 +68,7 @@ function startNextWave() {
             window.player.hp        += bonus;
             window._glitchWaveHpBonus = bonus;
             spawnFloatingText(
-                `🛡️ +${bonus} CRISIS HP`,
+                GAME_TEXTS.wave.glitchCrisisHp(bonus),
                 window.player.x, window.player.y - 60,
                 '#22c55e', 22
             );
@@ -81,21 +81,21 @@ function startNextWave() {
         window.waveSpawnTimer      = BALANCE.waves.glitchGracePeriod / 1000;
         window.lastGlitchCountdown = -1;
 
-        spawnFloatingText('⚡ GLITCH WAVE ⚡', window.player.x, window.player.y - 200, '#d946ef', 44);
+        spawnFloatingText(GAME_TEXTS.wave.glitchWave, window.player.x, window.player.y - 200, '#d946ef', 44);
         addScreenShake(20);
         Audio.playBossSpecial();
 
         setTimeout(() => {
             if (window.player)
-                spawnFloatingText('⚠️ SYSTEM ANOMALY DETECTED... ⚠️', window.player.x, window.player.y - 180, '#f472b6', 26);
+                spawnFloatingText(GAME_TEXTS.wave.glitchAnomaly, window.player.x, window.player.y - 180, '#f472b6', 26);
         }, 400);
         setTimeout(() => {
             if (window.player && window.waveSpawnLocked)
-                spawnFloatingText('CONTROLS INVERTED!', window.player.x, window.player.y - 160, '#f472b6', 22);
+                spawnFloatingText(GAME_TEXTS.wave.glitchControls, window.player.x, window.player.y - 160, '#f472b6', 22);
         }, 1200);
         setTimeout(() => {
             if (window.player && window.waveSpawnLocked)
-                spawnFloatingText('BRACE FOR IMPACT...', window.player.x, window.player.y - 155, '#ef4444', 24);
+                spawnFloatingText(GAME_TEXTS.wave.glitchBrace, window.player.x, window.player.y - 155, '#ef4444', 24);
         }, 2400);
 
     } else {
@@ -121,7 +121,7 @@ function startNextWave() {
             }
 
             spawnFloatingText(
-                isGoldfishLover ? 'BOSS INCOMING!🐟' : (isRider ? 'BOSS INCOMING!🐕' : 'BOSS INCOMING!'),
+                isGoldfishLover ? GAME_TEXTS.wave.bossIncomingFish : (isRider ? GAME_TEXTS.wave.bossIncomingRider : GAME_TEXTS.wave.bossIncoming),
                 window.player.x, window.player.y - 100,
                 isGoldfishLover ? '#38bdf8' : (isRider ? '#d97706' : '#ef4444'),
                 35

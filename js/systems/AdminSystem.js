@@ -63,7 +63,7 @@ const AdminConsole = (() => {
         histIdx = -1;
 
         if (!window.player) {
-            _appendLine('ERROR: No active player session.', 'cline-error');
+            _appendLine(GAME_TEXTS.admin.noPlayer, 'cline-error');
             return;
         }
 
@@ -74,11 +74,11 @@ const AdminConsole = (() => {
                 const before = window.player.hp;
                 window.player.hp = Math.min(maxHp, window.player.hp + 100);
                 const gained = Math.round(window.player.hp - before);
-                _appendLine('Authenticating root privilege... OK', 'cline-info');
-                _appendLine(`Injecting ${gained} HP units into player entity...`, 'cline-info');
-                _appendLine(`COMMAND EXECUTED — HP: ${Math.round(window.player.hp)} / ${maxHp}`, 'cline-ok');
+                _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+                _appendLine(GAME_TEXTS.admin.healInject(gained), 'cline-info');
+                _appendLine(GAME_TEXTS.admin.healResult(Math.round(window.player.hp), maxHp), 'cline-ok');
                 if (typeof spawnFloatingText === 'function')
-                    spawnFloatingText(`+${gained} HP 💉 [ADMIN]`, window.player.x, window.player.y - 70, '#00ff41', 22);
+                    spawnFloatingText(GAME_TEXTS.admin.healFloat(gained), window.player.x, window.player.y - 70, '#00ff41', 22);
                 if (typeof spawnParticles === 'function')
                     spawnParticles(window.player.x, window.player.y, 14, '#00ff41');
                 if (typeof Audio !== 'undefined' && Audio.playHeal) Audio.playHeal();
@@ -86,14 +86,14 @@ const AdminConsole = (() => {
             }
 
             case 'sudo score': {
-                _appendLine('Authenticating root privilege... OK', 'cline-info');
-                _appendLine('Patching score register... +5000', 'cline-info');
+                _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+                _appendLine(GAME_TEXTS.admin.scorePatching, 'cline-info');
                 if (typeof addScore === 'function') addScore(5000);
-                _appendLine(`COMMAND EXECUTED — Score: ${typeof getScore === 'function' ? getScore().toLocaleString() : '?'}`, 'cline-ok');
+                _appendLine(GAME_TEXTS.admin.scoreResult(typeof getScore === 'function' ? getScore().toLocaleString() : '?'), 'cline-ok');
                 const scoreEl = document.getElementById('score');
                 if (scoreEl && typeof getScore === 'function') scoreEl.textContent = getScore().toLocaleString();
                 if (typeof spawnFloatingText === 'function')
-                    spawnFloatingText('+5000 🪙 [ADMIN]', window.player.x, window.player.y - 70, '#fbbf24', 22);
+                    spawnFloatingText(GAME_TEXTS.admin.scoreFloat, window.player.x, window.player.y - 70, '#fbbf24', 22);
                 if (typeof spawnParticles === 'function')
                     spawnParticles(window.player.x, window.player.y, 14, '#fbbf24');
                 if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -101,8 +101,8 @@ const AdminConsole = (() => {
             }
 
             case 'sudo next': {
-                _appendLine('Authenticating root privilege... OK', 'cline-info');
-                _appendLine('Sending SIGKILL to all enemy processes...', 'cline-info');
+                _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+                _appendLine(GAME_TEXTS.admin.nextSigkill, 'cline-info');
                 let killed = 0;
                 if (window.enemies && window.enemies.length > 0) {
                     for (const e of window.enemies) {
@@ -116,9 +116,9 @@ const AdminConsole = (() => {
                     window.boss.takeDamage(99999);
                     killed++;
                 }
-                _appendLine(`COMMAND EXECUTED — ${killed} process(es) terminated. Wave advancing...`, 'cline-ok');
+                _appendLine(GAME_TEXTS.admin.nextResult(killed), 'cline-ok');
                 if (typeof spawnFloatingText === 'function')
-                    spawnFloatingText('💀 WAVE SKIP [ADMIN]', window.player.x, window.player.y - 80, '#ef4444', 26);
+                    spawnFloatingText(GAME_TEXTS.admin.nextFloat, window.player.x, window.player.y - 80, '#ef4444', 26);
                 if (typeof addScreenShake === 'function') addScreenShake(18);
                 if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
                 setTimeout(() => closeAdminConsole(), 1800);
@@ -126,19 +126,7 @@ const AdminConsole = (() => {
             }
 
             case 'help': {
-                const helpLines = [
-                    '┌─────────────────────────────────────────────┐',
-                    '│  MTC ADMIN TERMINAL — AVAILABLE COMMANDS     │',
-                    '├─────────────────────────────────────────────┤',
-                    '│  sudo heal   Restore 100 HP to player        │',
-                    '│  sudo score  Add 5000 to current score       │',
-                    '│  sudo next   Kill all enemies, skip wave      │',
-                    '│  help        Show this command list           │',
-                    '│  clear       Clear terminal output            │',
-                    '│  exit        Close admin terminal             │',
-                    '└─────────────────────────────────────────────┘',
-                ];
-                helpLines.forEach((l, i) => {
+                GAME_TEXTS.admin.helpTable.forEach((l, i) => {
                     setTimeout(() => _appendLine(l, 'cline-info', true), i * 40);
                 });
                 break;
@@ -153,46 +141,43 @@ const AdminConsole = (() => {
             case 'exit':
             case 'quit':
             case 'q': {
-                _appendLine('Closing session...', 'cline-info');
+                _appendLine(GAME_TEXTS.admin.closingSession, 'cline-info');
                 setTimeout(() => closeAdminConsole(), 500);
                 break;
             }
 
             case 'sudo rm -rf /':
             case 'sudo rm -rf *': {
-                _appendLine('nice try lol', 'cline-warn');
-                _appendLine('ACCESS DENIED — MTC Policy §4.2 violation logged.', 'cline-error');
+                _appendLine(GAME_TEXTS.admin.niceTry, 'cline-warn');
+                _appendLine(GAME_TEXTS.admin.accessDenied, 'cline-error');
                 break;
             }
             case 'whoami': {
-                _appendLine('root (player infiltrated server)', 'cline-ok');
+                _appendLine(GAME_TEXTS.admin.whoami, 'cline-ok');
                 break;
             }
             case 'ls':
             case 'ls -la': {
-                _appendLine('drwxr-xr-x  secrets/',               'cline-info', true);
-                _appendLine('drwxr-xr-x  grades/',                'cline-info', true);
-                _appendLine('-rw-------  kru_manop_passwords.txt', 'cline-warn', true);
-                _appendLine('-rw-r--r--  exam_answers_2024.pdf',   'cline-ok',   true);
+                GAME_TEXTS.admin.lsEntries.forEach(e => _appendLine(e.text, e.cls, true));
                 break;
             }
             case 'cat kru_manop_passwords.txt': {
-                _appendLine('hunter2', 'cline-ok');
-                _appendLine("...wait, you weren't supposed to see that.", 'cline-warn');
+                _appendLine(GAME_TEXTS.admin.catPassword, 'cline-ok');
+                _appendLine(GAME_TEXTS.admin.catPasswordWarn, 'cline-warn');
                 break;
             }
             case 'sudo make me a sandwich': {
-                _appendLine('What? Make it yourself.', 'cline-warn');
+                _appendLine(GAME_TEXTS.admin.sandwich, 'cline-warn');
                 break;
             }
 
             default: {
                 if (cmd.startsWith('sudo ')) {
-                    _appendLine(`sudo: ${raw.slice(5)}: command not found`, 'cline-error');
-                    _appendLine('ACCESS DENIED — Unknown sudo command.', 'cline-error');
+                    _appendLine(GAME_TEXTS.admin.sudoNotFound(raw.slice(5)), 'cline-error');
+                    _appendLine(GAME_TEXTS.admin.sudoAccessDenied, 'cline-error');
                 } else {
-                    _appendLine(`bash: ${raw}: command not found`, 'cline-error');
-                    _appendLine('Type "help" for available commands.', 'cline-info');
+                    _appendLine(GAME_TEXTS.admin.cmdNotFound(raw), 'cline-error');
+                    _appendLine(GAME_TEXTS.admin.typeHelp, 'cline-info');
                 }
                 break;
             }
@@ -216,8 +201,8 @@ const AdminConsole = (() => {
                 if (inner) inner.classList.add('console-visible');
             });
 
-            _appendLine('Session started. Welcome, root.', 'cline-ok');
-            _appendLine('Run "help" to list available commands.', 'cline-info');
+            _appendLine(GAME_TEXTS.admin.sessionWelcome, 'cline-ok');
+            _appendLine(GAME_TEXTS.admin.sessionHelp, 'cline-info');
 
             if (input) {
                 input.value = '';
@@ -254,7 +239,7 @@ const AdminConsole = (() => {
             }
 
             if (typeof spawnFloatingText === 'function' && window.player)
-                spawnFloatingText('💻 ADMIN TERMINAL', window.player.x, window.player.y - 70, '#00ff41', 20);
+                spawnFloatingText(GAME_TEXTS.admin.terminal, window.player.x, window.player.y - 70, '#00ff41', 20);
             if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
         },
 
@@ -306,7 +291,7 @@ function closeAdminConsole() {
     window.focus();
 
     if (typeof spawnFloatingText === 'function' && window.player)
-        spawnFloatingText('▶ RESUMED', window.player.x, window.player.y - 50, '#34d399', 18);
+        spawnFloatingText(GAME_TEXTS.admin.resumed, window.player.x, window.player.y - 50, '#34d399', 18);
 }
 
 window.openAdminConsole  = openAdminConsole;
@@ -334,7 +319,7 @@ function openExternalDatabase() {
     if (promptEl) promptEl.style.display = 'none';
 
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
-    if (player) spawnFloatingText('📚 MTC DATABASE', player.x, player.y - 60, '#06b6d4', 22);
+    if (player) spawnFloatingText(GAME_TEXTS.admin.database, player.x, player.y - 60, '#06b6d4', 22);
 }
 
 
@@ -350,7 +335,7 @@ function resumeGame() {
 
     window.focus();
 
-    if (player) spawnFloatingText('▶ RESUMED', player.x, player.y - 50, '#34d399', 18);
+    if (player) spawnFloatingText(GAME_TEXTS.admin.resumed, player.x, player.y - 50, '#34d399', 18);
 }
 
 function openDatabase()   { openExternalDatabase(); }
