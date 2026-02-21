@@ -668,3 +668,7 @@ PoomPlayer.prototype.gainExp            = Player.prototype.gainExp;
 PoomPlayer.prototype.levelUp            = Player.prototype.levelUp;
 PoomPlayer.prototype.addSpeedBoost      = Player.prototype.addSpeedBoost;
 PoomPlayer.prototype.checkPassiveUnlock = Player.prototype.checkPassiveUnlock;
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.PoomPlayer = PoomPlayer;

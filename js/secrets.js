@@ -13,3 +13,7 @@
 const CONFIG_SECRETS = {
     GEMINI_API_KEY: ""   // populated at runtime by backend proxy
 };
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.CONFIG_SECRETS = CONFIG_SECRETS;

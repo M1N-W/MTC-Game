@@ -224,3 +224,11 @@ function _standAura_draw(entity, charId) {
     // Main symbol pass (always on top)
     drawSymbolRing(0, 0, null);
 }
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.Entity            = Entity;
+window.EntityBase        = Entity;   // alias for Debug.html check
+window._standAura_update = _standAura_update;
+window._standAura_draw   = _standAura_draw;
+window.STAND_SYMBOLS     = STAND_SYMBOLS;

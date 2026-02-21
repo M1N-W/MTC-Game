@@ -1293,3 +1293,11 @@ class BubbleProjectile {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Boss, BossDog, GoldfishMinion, BubbleProjectile, BarkWave };
 }
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.Boss              = Boss;
+window.BossDog           = BossDog;
+window.GoldfishMinion    = GoldfishMinion;
+window.BubbleProjectile  = BubbleProjectile;
+window.BarkWave          = BarkWave;

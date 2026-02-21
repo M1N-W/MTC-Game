@@ -390,3 +390,9 @@ class Drone extends Entity {
         CTX.restore();
     }
 }
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.NagaEntity   = NagaEntity;
+window.Drone        = Drone;
+window.DroneEntity  = Drone;   // alias — Debug.html checks 'DroneEntity'

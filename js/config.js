@@ -683,7 +683,13 @@ const MAP_CONFIG = {
     },
 };
 
-window.MAP_CONFIG = MAP_CONFIG;
+window.MAP_CONFIG       = MAP_CONFIG;
+window.BALANCE          = BALANCE;
+window.SHOP_ITEMS       = SHOP_ITEMS;
+window.GAME_CONFIG      = GAME_CONFIG;
+window.VISUALS          = VISUALS;
+window.ACHIEVEMENT_DEFS = ACHIEVEMENT_DEFS;
+window.API_KEY          = API_KEY;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { BALANCE, SHOP_ITEMS, GAME_CONFIG, VISUALS, ACHIEVEMENT_DEFS, API_KEY, GAME_TEXTS, MAP_CONFIG };

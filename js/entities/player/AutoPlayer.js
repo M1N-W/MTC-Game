@@ -591,3 +591,7 @@ AutoPlayer.prototype.updateUI = function() {
         }
     }
 };
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.AutoPlayer = AutoPlayer;

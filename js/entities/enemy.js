@@ -660,3 +660,11 @@ class PowerUp {
         CTX.fillText(this.icons[this.type],0,0); CTX.restore();
     }
 }
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.Enemy      = Enemy;
+window.EnemyBase  = Enemy;    // alias for Debug.html check
+window.TankEnemy  = TankEnemy;
+window.MageEnemy  = MageEnemy;
+window.PowerUp    = PowerUp;

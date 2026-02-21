@@ -997,6 +997,11 @@ class MapSystem {
 
 const mapSystem = new MapSystem();
 
+window.mapSystem  = mapSystem;
+window.MapSystem  = MapSystem;
+window.MapObject  = MapObject;
+window.MTCRoom    = MTCRoom;
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { MapObject, MTCRoom, MapSystem, mapSystem };
 }

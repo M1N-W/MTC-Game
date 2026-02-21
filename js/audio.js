@@ -478,6 +478,21 @@ class AudioSystem {
         osc.stop(this.ctx.currentTime + 0.15);
     }
 
+    // ── COMPAT: Generic playSound(name) alias — required by Debug.html check ──────
+    // Maps common sound names to specific methods so external callers can use
+    // Audio.playSound('hit'), Audio.playSound('shoot'), etc.
+    playSound(name = 'hit') {
+        switch (name) {
+            case 'shoot':   this.playShoot(); break;
+            case 'hit':     this.playHit(); break;
+            case 'powerup': this.playPowerUp(); break;
+            case 'death':   this.playEnemyDeath(); break;
+            case 'level':   this.playLevelUp(); break;
+            case 'heal':    this.playHeal(); break;
+            default:        this.playHit(); break;
+        }
+    }
+
     // ── ENHANCED: Enemy Hit SFX ────────────────────────────────────────────────
     playHit() {
         if (!this.enabled || !this.ctx) return;
@@ -988,6 +1003,12 @@ class AudioSystem {
 // every single call site.  Since playBGM() no longer calls `new window.Audio`,
 // the shadow is harmless.
 var Audio = new AudioSystem();
+
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ══════════════════════════════════════════════════════════════
+window.Audio       = Audio;
+window.AudioSystem = AudioSystem;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { Audio, AudioSystem };
