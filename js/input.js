@@ -272,7 +272,13 @@ function _setupKeyboardListeners() {
         if (e.code === 'KeyS')  keys.s     = 1;
         if (e.code === 'KeyA')  keys.a     = 1;
         if (e.code === 'KeyD')  keys.d     = 1;
-        if (e.code === 'Space') { keys.space = 1; e.preventDefault(); }
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
+                TutorialSystem.next();
+            }
+            keys.space = 1;
+        }
         if (e.code === 'KeyQ')  keys.q     = 1;
         if (e.code === 'KeyE')  keys.e     = 1;
         if (e.code === 'KeyB')  keys.b     = 1;

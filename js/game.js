@@ -1125,6 +1125,45 @@ function _roundRectPath(ctx, x, y, w, h, r) {
 window.toggleSlowMotion = toggleSlowMotion;
 
 // ══════════════════════════════════════════════════════════════
+// 🎓 TUTORIAL INPUT BRIDGE
+// Reads raw input state each frame and forwards detected actions
+// to TutorialSystem so steps can track player progress.
+// ══════════════════════════════════════════════════════════════
+
+const _tut = {
+    _prevMove:       false,
+    _prevShoot:      false,
+    _prevDash:       false,
+    _prevSkill:      false,
+    _prevBulletTime: false,
+};
+
+function _tutorialForwardInput() {
+    if (typeof TutorialSystem === 'undefined' || !TutorialSystem.isActive()) return;
+
+    // Move — any WASD held
+    const moving = keys.w || keys.a || keys.s || keys.d;
+    if (moving && !_tut._prevMove) TutorialSystem.handleAction('move');
+    _tut._prevMove = !!moving;
+
+    // Shoot — left mouse held
+    if (mouse.left && !_tut._prevShoot) TutorialSystem.handleAction('shoot');
+    _tut._prevShoot = !!mouse.left;
+
+    // Dash — space held
+    if (keys.space && !_tut._prevDash) TutorialSystem.handleAction('dash');
+    _tut._prevDash = !!keys.space;
+
+    // Skill — right mouse held
+    if (mouse.right && !_tut._prevSkill) TutorialSystem.handleAction('skill');
+    _tut._prevSkill = !!mouse.right;
+
+    // Bullet Time — isSlowMotion toggled on
+    if (isSlowMotion && !_tut._prevBulletTime) TutorialSystem.handleAction('bullettime');
+    _tut._prevBulletTime = !!isSlowMotion;
+}
+
+// ══════════════════════════════════════════════════════════════
 // 🔁 GAME LOOP
 // ══════════════════════════════════════════════════════════════
 
@@ -1140,8 +1179,14 @@ function gameLoop(now) {
     _lastDrawDt    = scaledDt;
 
     if (gameState === 'PLAYING') {
-        updateGame(scaledDt);
-        drawGame();
+        if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
+            _tutorialForwardInput();
+            TutorialSystem.update();
+            drawGame();
+        } else {
+            updateGame(scaledDt);
+            drawGame();
+        }
     } else if (gameState === 'PAUSED') {
         drawGame();
         const shopModal = document.getElementById('shop-modal');
@@ -1635,6 +1680,11 @@ function startGame(charType = 'kao') {
     startNextWave();
     gameState = 'PLAYING'; window.gameState = gameState;
     resetTime();
+
+    // ── 🎓 Tutorial: show on first play only ─────────────────
+    if (typeof TutorialSystem !== 'undefined' && !TutorialSystem.isDone()) {
+        TutorialSystem.start(charType);
+    }
 
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) {

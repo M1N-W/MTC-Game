@@ -1409,6 +1409,210 @@
 
         #naga-timer { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: bold; color: #10b981; pointer-events: none; display: none; }
 
+        /* ═══════════════════════════════════════════════════════════
+           🎓 TUTORIAL OVERLAY
+        ═══════════════════════════════════════════════════════════ */
+        #tutorial-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 19000;
+            pointer-events: none;
+            /* semi-dark vignette around edges only */
+            background: radial-gradient(ellipse at center,
+                rgba(0,0,0,0.0) 30%,
+                rgba(0,0,0,0.55) 100%);
+        }
+
+        /* Card positions */
+        .tutorial-card {
+            position: absolute;
+            pointer-events: auto;
+            width: min(520px, 92vw);
+            background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+            border: 2px solid #8b5cf6;
+            border-radius: 20px;
+            padding: 28px 32px 24px;
+            box-shadow:
+                0 0 0 1px rgba(139,92,246,0.25),
+                0 0 40px rgba(139,92,246,0.35),
+                0 24px 60px rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+        }
+
+        .tutorial-card--center {
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .tutorial-card--bottom {
+            bottom: 130px; left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .tutorial-card--top {
+            top: 100px; left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Inner layout */
+        .tut-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        #tut-icon {
+            font-size: 40px;
+            line-height: 1;
+            filter: drop-shadow(0 0 10px rgba(139,92,246,0.7));
+            flex-shrink: 0;
+        }
+
+        #tut-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            color: #c4b5fd;
+            letter-spacing: 1px;
+            line-height: 1.3;
+        }
+
+        #tut-body {
+            font-size: 14px;
+            color: #cbd5e1;
+            line-height: 1.75;
+            margin-bottom: 20px;
+        }
+
+        /* Action progress bar */
+        #tut-action-hint {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            font-size: 12px;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        #tut-action-hint::before {
+            content: '▶';
+            color: #8b5cf6;
+        }
+
+        #tut-action-bar {
+            display: none;
+            height: 8px;
+            background: rgba(30,41,59,0.9);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 18px;
+            border: 1px solid rgba(139,92,246,0.3);
+        }
+
+        #tut-action-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            box-shadow: 0 0 8px #8b5cf6;
+            transition: width 0.2s ease-out;
+            border-radius: 4px;
+        }
+
+        #tut-action-label {
+            font-size: 11px;
+            color: #a78bfa;
+            text-align: right;
+            margin-top: -14px;
+            margin-bottom: 14px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Buttons row */
+        .tut-btn-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #tut-next-btn {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            border: none;
+            padding: 11px 32px;
+            font-size: 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(139,92,246,0.5);
+            transition: all 0.18s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #tut-next-btn:hover {
+            transform: scale(1.05) translateY(-1px);
+            box-shadow: 0 0 32px rgba(139,92,246,0.8);
+        }
+
+        #tut-skip-btn {
+            background: transparent;
+            color: #475569;
+            border: 1px solid #334155;
+            padding: 9px 18px;
+            font-size: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.15s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #tut-skip-btn:hover {
+            color: #94a3b8;
+            border-color: #475569;
+        }
+
+        /* Progress dots */
+        #tutorial-progress {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .tut-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #1e293b;
+            border: 1.5px solid #334155;
+            transition: all 0.2s;
+        }
+
+        .tut-dot--active {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 6px #8b5cf6;
+            transform: scale(1.3);
+        }
+
+        .tut-dot--done {
+            background: #4c1d95;
+            border-color: #6d28d9;
+        }
+
+        /* Spotlight pulse ring — drawn around highlighted elements */
+        @keyframes tutSpotlight {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(139,92,246,0.5), 0 0 20px rgba(139,92,246,0.3); }
+            50%       { box-shadow: 0 0 0 8px rgba(139,92,246,0.8), 0 0 40px rgba(139,92,246,0.6); }
+        }
+
         @media (max-width: 768px) {
             .title { font-size: 40px; }
             .subtitle { font-size: 18px; }
@@ -1954,6 +2158,50 @@
         <button class="btn" onclick="location.reload()">PLAY AGAIN</button>
     </div>
     
+    <!-- ══════════════════════════════════════════
+         🎓 TUTORIAL OVERLAY
+    ══════════════════════════════════════════ -->
+    <div id="tutorial-overlay">
+        <div class="tutorial-card tutorial-card--center" id="tutorial-card">
+
+            <!-- Header: icon + title -->
+            <div class="tut-header">
+                <div id="tut-icon">🎓</div>
+                <div id="tut-title">ยินดีต้อนรับ!</div>
+            </div>
+
+            <!-- Body text -->
+            <div id="tut-body">กำลังโหลด...</div>
+
+            <!-- Action hint label -->
+            <div id="tut-action-hint">ทำตามคำสั่งเพื่อดำเนินต่อ</div>
+
+            <!-- Action progress bar -->
+            <div id="tut-action-bar">
+                <div id="tut-action-fill"></div>
+            </div>
+            <div id="tut-action-label"></div>
+
+            <!-- Buttons row -->
+            <div class="tut-btn-row">
+                <div id="tutorial-progress"></div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button id="tut-skip-btn"
+                            onclick="TutorialSystem.skip()"
+                            ontouchstart="event.preventDefault(); TutorialSystem.skip();">
+                        SKIP
+                    </button>
+                    <button id="tut-next-btn"
+                            onclick="TutorialSystem.next()"
+                            ontouchstart="event.preventDefault(); TutorialSystem.next();">
+                        NEXT ▶
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <script src="js/secrets.js"></script>
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
@@ -1962,6 +2210,7 @@
     <script src="js/weapons.js"></script>
     <script src="js/map.js"></script>
     <script src="js/ui.js"></script>
+    <script src="js/tutorial.js"></script>
 
     <!-- <script src="js/ai.js"></script> -->
 
