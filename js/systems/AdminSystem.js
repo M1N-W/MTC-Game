@@ -272,7 +272,7 @@ window.AdminConsole = AdminConsole;
 
 function openAdminConsole() {
     if (window.gameState !== 'PLAYING') return;
-    window.gameState = 'PAUSED';
+    setGameState('PAUSED');
     AdminConsole.open();
     Audio.pauseBGM();
     console.log('Admin Console opened');
@@ -281,7 +281,7 @@ function openAdminConsole() {
 
 function closeAdminConsole() {
     AdminConsole.close();
-    if (window.gameState === 'PAUSED') window.gameState = 'PLAYING';
+    if (window.gameState === 'PAUSED') setGameState('PLAYING');
     showResumePrompt(false);
     Audio.resumeBGM();
 
@@ -310,7 +310,7 @@ function showResumePrompt(visible) {
 
 function openExternalDatabase() {
     if (window.gameState !== 'PLAYING') return;
-    window.gameState = 'PAUSED';
+    setGameState('PAUSED');
 
     window.open(MTC_DB_URL, '_blank');
     showResumePrompt(true);
@@ -326,7 +326,7 @@ function openExternalDatabase() {
 function resumeGame() {
     if (window.gameState !== 'PAUSED') return;
     if (AdminConsole.isOpen) { closeAdminConsole(); return; }
-    window.gameState = 'PLAYING';
+    setGameState('PLAYING');
 
     showResumePrompt(false);
 
@@ -351,7 +351,7 @@ window.closeMathModal       = closeMathModal;
 
 window.addEventListener('blur', () => {
     if (window.gameState === 'PLAYING') {
-        window.gameState = 'PAUSED';
+        setGameState('PAUSED');
         const shopModal   = document.getElementById('shop-modal');
         const shopOpen    = shopModal && shopModal.style.display === 'flex';
         const consoleOpen = AdminConsole.isOpen;
@@ -360,6 +360,8 @@ window.addEventListener('blur', () => {
 });
 
 window.addEventListener('focus', () => {
+    // ❌ ไม่ auto-resume เมื่อ window focus กลับมา
+    // ผู้เล่นต้องกด Resume เองเสมอ เพื่อป้องกันเกมรันขณะที่ shop/database ยังเปิดอยู่
     if (window.gameState === 'PAUSED') {
         const shopModal   = document.getElementById('shop-modal');
         const shopOpen    = shopModal && shopModal.style.display === 'flex';

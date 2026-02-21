@@ -126,7 +126,7 @@ function updateShopProximityUI() {
 
 function openShop() {
     if (window.gameState !== 'PLAYING') return;
-    window.gameState = 'PAUSED';
+    setGameState('PAUSED');
 
     const promptEl = document.getElementById('shop-prompt');
     if (promptEl) promptEl.style.display = 'none';
@@ -139,7 +139,7 @@ function openShop() {
 
 function closeShop() {
     if (window.gameState !== 'PAUSED') return;
-    window.gameState = 'PLAYING';
+    setGameState('PLAYING');
 
     ShopManager.close();
     showResumePrompt(false);
