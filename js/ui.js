@@ -396,7 +396,7 @@ class UIManager {
         if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
 
         const playerAvatar = document.getElementById('player-avatar');
-        if (playerAvatar) playerAvatar.textContent = isPoom ? '🌾' : (isAuto ? '�' : '�👨‍🎓');
+        if (playerAvatar) playerAvatar.textContent = isPoom ? '🌾' : (isAuto ? '🔥' : '👨🏻‍🎓');
 
         // ── [UI-FIX] Passive Icon — Kao-only ───────────────────
         // The #passive-skill slot (Ghost/Stealth crit passive) is
