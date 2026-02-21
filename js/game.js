@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 // ════════════════════════════════════════════════════════════════
 // 🤖 AI SAFETY FALLBACK
@@ -31,6 +31,14 @@ window.gameState = gameState;
 
 // ─── HUD Draw Bridge ──────────────────────────────────────────
 let _lastDrawDt = 0;
+
+// ─── Cached background gradient ──────────────────────────────
+let _bgGrad = null;
+let _bgGradW = 0, _bgGradH = 0;
+let _bgGradTop = '', _bgGradBot = '';
+
+// ─── Achievement throttle ─────────────────────────────────────
+let _achFrame = 0;
 
 // ─── Day / Night cycle ────────────────────────────────────────
 let dayNightTimer = 0;
@@ -262,7 +270,8 @@ function updateGame(dt) {
 
     weatherSystem.update(dt, getCamera());
     updateScreenShake();
-    Achievements.checkAll();
+    _achFrame++;
+    if (_achFrame % 10 === 0) Achievements.checkAll();
     updateDatabaseServerUI();
     updateShopProximityUI();
 }
@@ -277,10 +286,17 @@ function drawGame() {
             '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION);
     }
 
-    const grad = CTX.createLinearGradient(0, 0, 0, CANVAS.height);
-    grad.addColorStop(0, GAME_CONFIG.visual.bgColorTop);
-    grad.addColorStop(1, GAME_CONFIG.visual.bgColorBottom);
-    CTX.fillStyle = grad;
+    const _bgTop = GAME_CONFIG.visual.bgColorTop;
+    const _bgBot = GAME_CONFIG.visual.bgColorBottom;
+    if (!_bgGrad || _bgGradW !== CANVAS.width || _bgGradH !== CANVAS.height ||
+        _bgGradTop !== _bgTop || _bgGradBot !== _bgBot) {
+        _bgGrad = CTX.createLinearGradient(0, 0, 0, CANVAS.height);
+        _bgGrad.addColorStop(0, _bgTop);
+        _bgGrad.addColorStop(1, _bgBot);
+        _bgGradW = CANVAS.width; _bgGradH = CANVAS.height;
+        _bgGradTop = _bgTop; _bgGradBot = _bgBot;
+    }
+    CTX.fillStyle = _bgGrad;
     CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
     CTX.save();
@@ -289,9 +305,10 @@ function drawGame() {
 
     drawGrid();
 
+    const _drawNow = performance.now();
     for (const z of window.meteorZones) {
         const screen = worldToScreen(z.x, z.y);
-        const a = Math.sin(performance.now() / 200) * 0.3 + 0.7;
+        const a = Math.sin(_drawNow / 200) * 0.3 + 0.7;
         CTX.fillStyle = `rgba(239, 68, 68, ${a * 0.4})`;
         CTX.beginPath();
         CTX.arc(screen.x, screen.y, z.radius, 0, Math.PI * 2);
@@ -398,16 +415,27 @@ function drawDayNightHUD() {
 // 🔲 GRID
 // ══════════════════════════════════════════════════════════════
 
+// ── Grid cache — rebuilt only when camera offset bucket or canvas size changes
+let _gridPath = null, _gridOx = -999, _gridOy = -999, _gridW = 0, _gridH = 0;
+
 function drawGrid() {
-    const sz = GAME_CONFIG.physics.gridSize;
-    const ox = -getCamera().x % sz;
-    const oy = -getCamera().y % sz;
+    const sz  = GAME_CONFIG.physics.gridSize;
+    const cam = getCamera();
+    // Snap offset to integer pixel so the grid doesn't shimmer sub-pixel
+    const ox  = Math.round((-cam.x % sz + sz) % sz);
+    const oy  = Math.round((-cam.y % sz + sz) % sz);
+
+    if (!_gridPath || ox !== _gridOx || oy !== _gridOy ||
+        CANVAS.width !== _gridW || CANVAS.height !== _gridH) {
+        _gridPath = new Path2D();
+        for (let x = ox; x < CANVAS.width;  x += sz) { _gridPath.moveTo(x, 0); _gridPath.lineTo(x, CANVAS.height); }
+        for (let y = oy; y < CANVAS.height; y += sz) { _gridPath.moveTo(0, y); _gridPath.lineTo(CANVAS.width, y); }
+        _gridOx = ox; _gridOy = oy; _gridW = CANVAS.width; _gridH = CANVAS.height;
+    }
+
     CTX.strokeStyle = GAME_CONFIG.visual.gridColor;
     CTX.lineWidth   = 1;
-    CTX.beginPath();
-    for (let x = ox; x < CANVAS.width;  x += sz) { CTX.moveTo(x, 0); CTX.lineTo(x, CANVAS.height); }
-    for (let y = oy; y < CANVAS.height; y += sz) { CTX.moveTo(0, y); CTX.lineTo(CANVAS.width, y); }
-    CTX.stroke();
+    CTX.stroke(_gridPath);
 }
 
 // ══════════════════════════════════════════════════════════════

@@ -108,7 +108,7 @@ class Projectile {
             this.life = 0; 
         }
 
-        if (this.kind !== 'punch' && Math.random() < 0.3) {
+        if (this.kind !== 'punch' && Math.random() < 0.15) {
             spawnParticles(this.x, this.y, 1, this.color);
         }
         

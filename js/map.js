@@ -24,6 +24,11 @@
 // 🎨 STANDALONE DRAW HELPERS
 // ════════════════════════════════════════════════════════════
 
+// Shared timestamp updated once per draw pass — avoids calling performance.now()
+// inside every drawTree / drawServer / drawDataPillar / MTCRoom.draw() call.
+let _mapNow = 0;
+function _updateMapNow() { _mapNow = performance.now(); }
+
 function drawDesk(w, h) {
     const pal = BALANCE.map.mapColors;
     CTX.fillStyle = pal.deskTop;
@@ -53,7 +58,7 @@ function drawDesk(w, h) {
 
 function drawTree(size) {
     const pal = BALANCE.map.mapColors;
-    const t = performance.now() / 2000;
+    const t = _mapNow / 2000;
 
     CTX.fillStyle = 'rgba(0,0,0,0.25)';
     CTX.beginPath(); CTX.ellipse(0,size*.3,size*.7,size*.2,0,0,Math.PI*2); CTX.fill();
@@ -86,7 +91,7 @@ function drawTree(size) {
 
 function drawServer(w, h) {
     const pal = BALANCE.map.mapColors;
-    const now = performance.now();
+    const now = _mapNow;
 
     CTX.fillStyle = pal.serverBody;
     CTX.beginPath(); CTX.roundRect(0,0,w,h,5); CTX.fill();
@@ -125,7 +130,7 @@ function drawServer(w, h) {
 
 function drawDataPillar(w, h) {
     const pal = BALANCE.map.mapColors;
-    const now = performance.now();
+    const now = _mapNow;
     const glow = Math.sin(now/800)*0.4+0.6;
 
     CTX.fillStyle='rgba(0,0,0,0.3)';
@@ -343,7 +348,7 @@ class MTCRoom {
         const s=worldToScreen(this.x,this.y);
         const W=this.w, H=this.h;
         const pal=BALANCE.map.mapColors;
-        const now=performance.now();
+        const now=_mapNow;
         CTX.save();
 
         // ── Floor tiles ──
@@ -483,6 +488,7 @@ class MapSystem {
 
         this.generateCampusMap();
         this.mtcRoom = new MTCRoom(-400, -100);
+        this._sortedObjects = null;
         this.initialized = true;
         console.log(`✅ Campus Map: ${this.objects.length} objects + MTC Room`);
     }
@@ -562,10 +568,11 @@ class MapSystem {
     }
 
     draw() {
+        _updateMapNow();
         if(this.mtcRoom) this.mtcRoom.draw();
         const CULL=120;
-        const sorted=[...this.objects].sort((a,b)=>a.y-b.y);
-        for(const obj of sorted){
+        if(!this._sortedObjects) this._sortedObjects=[...this.objects].sort((a,b)=>a.y-b.y);
+        for(const obj of this._sortedObjects){
             const screen=worldToScreen(obj.x,obj.y);
             if(screen.x+obj.w<-CULL||screen.x>CANVAS.width+CULL) continue;
             if(screen.y+obj.h<-CULL||screen.y>CANVAS.height+CULL) continue;
@@ -728,6 +735,7 @@ class MapSystem {
             }
         }
         this.objects = surviving;
+        this._sortedObjects = null;
 
         // ── Shrink MTCRoom if the line passes through it ─────
         if (this.mtcRoom) {
@@ -753,7 +761,7 @@ class MapSystem {
     }
 
     clear() {
-        this.objects=[]; this.mtcRoom=null; this.initialized=false;
+        this.objects=[]; this.mtcRoom=null; this.initialized=false; this._sortedObjects=null;
     }
 
     getObjects() { return this.objects; }

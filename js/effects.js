@@ -359,6 +359,7 @@ class FloatingText {
         this.size  = size;
         this.life  = 1.5;
         this.vy    = -80;
+        this._font = null;
         return this;
     }
 
@@ -392,11 +393,19 @@ class FloatingText {
 
     draw() {
         const screen = worldToScreen(this.x, this.y);
+
+        // Viewport cull — skip off-screen texts entirely
+        if (typeof CANVAS !== 'undefined') {
+            const pad = this.size * 2;
+            if (screen.x < -pad || screen.x > CANVAS.width  + pad ||
+                screen.y < -pad || screen.y > CANVAS.height + pad) return;
+        }
+
         const alpha = Math.min(1, this.life);
 
         CTX.globalAlpha = alpha;
         CTX.fillStyle = this.color;
-        CTX.font = `bold ${this.size}px Orbitron, monospace`;
+        CTX.font = this._font || (this._font = `bold ${this.size}px Orbitron, monospace`);
         CTX.strokeStyle = 'black';
         CTX.lineWidth = 3;
         CTX.textAlign = 'center';
@@ -638,6 +647,7 @@ class Raindrop {
         this.speed = speed;      // vertical fall speed (pixels/sec)
         this.wind = wind;        // horizontal drift (pixels/sec)
         this.length = 8 + Math.random() * 8;  // visual streak length
+        this.alpha = 0.4 + Math.random() * 0.2; // fixed per-drop alpha
     }
 
     update(dt, camera) {
@@ -654,7 +664,7 @@ class Raindrop {
         const endY = screen.y + this.length;
 
         CTX.save();
-        CTX.globalAlpha = 0.4 + Math.random() * 0.2;
+        CTX.globalAlpha = this.alpha;
         CTX.strokeStyle = '#60a5fa';  // light blue
         CTX.lineWidth = 1;
         CTX.beginPath();
@@ -678,6 +688,7 @@ class Snowflake {
         this.swaySpeed = 0.5 + Math.random() * 1.5;  // sway frequency
         this.swayAmount = 10 + Math.random() * 20;   // sway amplitude
         this.time = Math.random() * Math.PI * 2;     // offset for varied sway
+        this.alpha = 0.6 + Math.random() * 0.3;      // fixed per-flake alpha
     }
 
     update(dt, camera) {
@@ -694,7 +705,7 @@ class Snowflake {
         const screen = worldToScreen(this.x, this.y);
 
         CTX.save();
-        CTX.globalAlpha = 0.6 + Math.random() * 0.3;
+        CTX.globalAlpha = this.alpha;
         CTX.fillStyle = '#ffffff';
         CTX.beginPath();
         CTX.arc(screen.x, screen.y, this.size, 0, Math.PI * 2);
