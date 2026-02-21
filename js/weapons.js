@@ -61,7 +61,6 @@ class Projectile {
         this.angle += dt * 2; // Preserves visual spinning effect
 
         // --- BULLET-PROOF RICOCHET & BOUNDARY PHYSICS ---
-        // World uses a centered coordinate system: -worldBounds to +worldBounds.
         const _wb = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.physics?.worldBounds)
             ? GAME_CONFIG.physics.worldBounds : 1500;
         const minX = -_wb, maxX = _wb;
@@ -69,7 +68,6 @@ class Projectile {
 
         let hitWall = false;
 
-        // X-Axis Boundary Collision (Left / Right Walls)
         if (this.x - this.radius < minX) {
             this.x = minX + this.radius;
             hitWall = true;
@@ -88,7 +86,6 @@ class Projectile {
             }
         }
 
-        // Y-Axis Boundary Collision (Top / Bottom Walls)
         if (this.y - this.radius < minY) {
             this.y = minY + this.radius;
             hitWall = true;
@@ -107,11 +104,9 @@ class Projectile {
             }
         }
 
-        // If it hit a wall and has no bounces left, destroy it normally
         if (hitWall && this.bounces <= 0) {
             this.life = 0; 
         }
-        // ------------------------------------------------
 
         if (this.kind !== 'punch' && Math.random() < 0.3) {
             spawnParticles(this.x, this.y, 1, this.color);
@@ -134,7 +129,6 @@ class Projectile {
             CTX.shadowBlur  = 22;
             CTX.shadowColor = this.color;
 
-            // Outer heat shimmer
             const hg = CTX.createLinearGradient(-30, 0, 10, 0);
             hg.addColorStop(0, 'rgba(255,255,255,0)');
             hg.addColorStop(0.25, 'rgba(251,113,133,0.4)');
@@ -143,7 +137,6 @@ class Projectile {
             CTX.fillStyle = hg;
             CTX.beginPath(); CTX.ellipse(0, 0, 28, 13, 0, 0, Math.PI * 2); CTX.fill();
 
-            // ── RED SHOCKWAVE rings (Auto muzzle identity) ───────
             const sw = performance.now() / 60;
             for (let ri = 0; ri < 2; ri++) {
                 const rPhase = (sw + ri * 1.5) % 6;
@@ -156,7 +149,6 @@ class Projectile {
                 CTX.beginPath(); CTX.arc(6, 0, rSize, -Math.PI / 3, Math.PI / 3); CTX.stroke();
             }
 
-            // Hot core shape
             CTX.globalAlpha = 0.6;
             CTX.strokeStyle = 'rgba(255,241,242,0.85)';
             CTX.lineWidth   = 2;
@@ -174,17 +166,14 @@ class Projectile {
             CTX.rotate(this.angle);
             CTX.shadowBlur  = 28; CTX.shadowColor = this.color;
 
-            // Impact shockwave arc
             CTX.globalAlpha = 0.6;
             CTX.strokeStyle = this.color;
             CTX.lineWidth   = 4;
             CTX.beginPath(); CTX.arc(12, 0, 16, -Math.PI / 2.5, Math.PI / 2.5); CTX.stroke();
-            // Secondary thin arc
             CTX.globalAlpha = 0.3;
             CTX.lineWidth   = 2;
             CTX.beginPath(); CTX.arc(12, 0, 22, -Math.PI / 3, Math.PI / 3); CTX.stroke();
 
-            // Mechanical engine-fist block
             CTX.globalAlpha = 0.92;
             const fg = CTX.createLinearGradient(-6, -10, 16, 10);
             fg.addColorStop(0, '#fff1f2');
@@ -193,12 +182,10 @@ class Projectile {
             CTX.fillStyle = fg;
             CTX.beginPath(); CTX.roundRect(-6, -8, 18, 16, 5); CTX.fill();
 
-            // Piston marks on fist
             CTX.strokeStyle = 'rgba(0,0,0,0.35)'; CTX.lineWidth = 1;
             for (let pi = -4; pi <= 4; pi += 4) {
                 CTX.beginPath(); CTX.moveTo(-4, pi); CTX.lineTo(10, pi); CTX.stroke();
             }
-            // Knuckle highlight
             CTX.fillStyle = '#fff1f2'; CTX.globalAlpha = 0.55;
             for (let ki = -4; ki <= 4; ki += 4) {
                 CTX.beginPath(); CTX.roundRect(8, ki - 1.5, 4, 3, 1); CTX.fill();
@@ -216,7 +203,6 @@ class Projectile {
             const trailLen = this.isCrit ? 32 : 22;
             const coreW    = this.isCrit ? 4.5 : 3;
 
-            // Wide glow trail
             const trailGrad = CTX.createLinearGradient(-trailLen, 0, 0, 0);
             trailGrad.addColorStop(0, 'rgba(0,0,0,0)');
             trailGrad.addColorStop(0.7, `${this.color}55`);
@@ -225,13 +211,11 @@ class Projectile {
             CTX.strokeStyle = trailGrad; CTX.lineWidth = coreW + 4; CTX.lineCap = 'butt';
             CTX.beginPath(); CTX.moveTo(-trailLen, 0); CTX.lineTo(0, 0); CTX.stroke();
 
-            // Core tracer line
             CTX.globalAlpha = 1;
             CTX.strokeStyle = this.color; CTX.lineWidth = coreW;
             CTX.shadowBlur  = this.isCrit ? 20 : 12; CTX.shadowColor = this.color;
             CTX.beginPath(); CTX.moveTo(-trailLen * 0.6, 0); CTX.lineTo(4, 0); CTX.stroke();
 
-            // Arrowhead tip — directional pellet shape
             CTX.fillStyle   = this.isCrit ? '#facc15' : '#ffffff';
             CTX.shadowBlur  = 18; CTX.shadowColor = this.isCrit ? '#facc15' : this.color;
             CTX.beginPath();
@@ -240,8 +224,6 @@ class Projectile {
             CTX.lineTo(3,  coreW * 0.9);
             CTX.closePath(); CTX.fill();
 
-            // ── BLUE SPARKS muzzle flash (Kao identity) ───────────
-            // Small lingering sparks near the tip on fresh shots
             if (this.life > 2.85) {
                 CTX.globalAlpha = (this.life - 2.85) / 0.15 * 0.7;
                 CTX.strokeStyle = '#7dd3fc'; CTX.lineWidth = 1;
@@ -260,12 +242,10 @@ class Projectile {
         // ════════════════════════════════════════════════
         } else if (this.team === 'player' && this.symbol === '∑') {
             CTX.rotate(this.angle);
-            // Wide energy wake aura
             CTX.globalAlpha = 0.25;
             CTX.fillStyle   = '#facc15';
             CTX.beginPath(); CTX.ellipse(-16, 0, 22, 8, 0, 0, Math.PI * 2); CTX.fill();
 
-            // Main crit lance
             CTX.globalAlpha = 1;
             const cg = CTX.createLinearGradient(-28, 0, 6, 0);
             cg.addColorStop(0, 'rgba(251,191,36,0)');
@@ -275,7 +255,6 @@ class Projectile {
             CTX.shadowBlur  = 28; CTX.shadowColor = '#facc15';
             CTX.beginPath(); CTX.moveTo(-28, 0); CTX.lineTo(6, 0); CTX.stroke();
 
-            // Spearhead tip
             CTX.fillStyle = '#fff';
             CTX.beginPath();
             CTX.moveTo(10, 0);
@@ -283,7 +262,6 @@ class Projectile {
             CTX.lineTo(5,  4);
             CTX.closePath(); CTX.fill();
 
-            // Energy ripple rings along length
             CTX.strokeStyle = '#fde68a'; CTX.lineWidth = 1.2;
             CTX.shadowBlur  = 8;
             for (let ri = -20; ri < 4; ri += 8) {
@@ -299,13 +277,11 @@ class Projectile {
             CTX.rotate(this.angle);
             const r = this.isCrit ? 10 : 7;
 
-            // Steam/energy cloud behind (Kratib launcher identity)
             CTX.globalAlpha = 0.22;
             CTX.fillStyle   = '#fde68a';
             CTX.shadowBlur  = 16; CTX.shadowColor = '#fbbf24';
             CTX.beginPath(); CTX.ellipse(-r * 1.5, 0, r * 2.2, r * 0.9, 0, 0, Math.PI * 2); CTX.fill();
 
-            // ── ORANGE STEAM wisps (Poom launcher identity) ───────
             if (this.life > 2.7) {
                 const steamT = (this.life - 2.7) / 0.3;
                 CTX.globalAlpha = steamT * 0.5;
@@ -319,7 +295,6 @@ class Projectile {
                 }
             }
 
-            // Rice grains (organic cluster)
             const grainPositions = [
                 [0, 0, r], [-r * 0.7, -r * 0.4, r * 0.75],
                 [r * 0.6, -r * 0.5, r * 0.7], [-r * 0.5, r * 0.6, r * 0.65],
@@ -334,13 +309,11 @@ class Projectile {
                 CTX.fillStyle = gGrad;
                 CTX.beginPath(); CTX.arc(gx, gy, gr, 0, Math.PI * 2); CTX.fill();
             }
-            // Crit golden ring + inner sparkles
             if (this.isCrit) {
                 CTX.globalAlpha = 0.8;
                 CTX.strokeStyle = '#facc15'; CTX.lineWidth = 1.5;
                 CTX.shadowBlur  = 20; CTX.shadowColor = '#facc15';
                 CTX.beginPath(); CTX.arc(0, 0, r + 7, 0, Math.PI * 2); CTX.stroke();
-                // Star burst
                 CTX.strokeStyle = '#fef08a'; CTX.lineWidth = 1;
                 for (let si = 0; si < 6; si++) {
                     const sa = (si / 6) * Math.PI * 2;
@@ -382,8 +355,6 @@ class WeaponSystem {
         this.weaponCooldown = 0;
         this.weaponsUsed = new Set(['auto']);
 
-        // ── FIX: activeChar must be set via setActiveChar(charType)
-        //    in startGame() BEFORE any call to updateWeaponUI() or getWeaponData(). ──
         this.activeChar = 'kao';
 
         // Burst fire state
@@ -394,39 +365,20 @@ class WeaponSystem {
         this.pendingBurstShots = 0;
     }
 
-    /**
-     * setActiveChar(charType)
-     * Call this BEFORE updateWeaponUI() in startGame().
-     * Tells the WeaponSystem which BALANCE.characters entry to read.
-     */
     setActiveChar(charType) {
         this.activeChar = charType || 'kao';
     }
 
-    /**
-     * Safe helper — returns the weapons map for the active character.
-     *
-     * • Kao  → BALANCE.characters.kao.weapons  (standard weapons object)
-     * • Poom → synthetic shim built from poom's flat rice* stats so that any
-     * accidental call to getWeaponData() / getCharWeapons() on a Poom
-     * session never throws.  The shim is NOT used for Poom's actual
-     * shooting (shootPoom() in game.js handles that separately).
-     * • Unknown char → falls back to kao weapons with a console warning.
-     */
     getCharWeapons() {
         const charData = BALANCE.characters[this.activeChar];
 
-        // ── Char not found at all ──
         if (!charData) {
             console.warn(`[WeaponSystem] Unknown char "${this.activeChar}". Falling back to kao.`);
             return BALANCE.characters.kao.weapons;
         }
 
-        // ── Char has a standard weapons object (Kao and future chars) ──
         if (charData.weapons) return charData.weapons;
 
-        // ── Poom: no weapons object → build a minimal shim ──
-        // This prevents any crash if getWeaponData() is ever called during a Poom session.
         const S = charData;
         const riceWeapon = {
             name:    '🍙 ข้าวเหนียว',
@@ -455,14 +407,12 @@ class WeaponSystem {
 
     updateWeaponUI() {
         try {
-            // Poom uses a completely different attack system — show a dedicated label
             if (this.activeChar === 'poom') {
                 const nameEl = document.getElementById('weapon-name');
                 if (nameEl) { nameEl.textContent = '🍙 ข้าวเหนียว'; nameEl.style.color = '#ffffff'; }
                 return;
             }
 
-            // Auto (AutoPlayer) uses Heat Wave + Wanchai Stand — show dedicated label
             if (this.activeChar === 'auto') {
                 const nameEl = document.getElementById('weapon-name');
                 if (nameEl) { nameEl.textContent = '🔥 HEAT WAVE'; nameEl.style.color = '#dc2626'; }
@@ -563,7 +513,6 @@ class WeaponSystem {
             spawnFloatingText('HIGH GROUND!', player.x, player.y - 40, '#f59e0b', 16);
         }
 
-        // Apply RPG damage multiplier from player level progression
         damage *= player.damageMultiplier || 1.0;
 
         const offset = 28;
@@ -573,13 +522,12 @@ class WeaponSystem {
             const sx = player.x + Math.cos(angle) * offset;
             const sy = player.y + Math.sin(angle) * offset;
             
-            // --- RICOCHET TEST IMPLEMENTATION ---
             let projOptions = {};
             if (this.currentWeapon === 'sniper') {
-                projOptions.bounces = 2; // Sniper bounces twice!
-                projOptions.life = 5;    // Increased life to allow for bounce travel time
+                projOptions.bounces = 2;
+                projOptions.life = 5;
             } else if (this.currentWeapon === 'shotgun') {
-                projOptions.bounces = 1; // Shotgun buckshot bounces once!
+                projOptions.bounces = 1;
                 projOptions.life = 2.5;
             }
 
@@ -597,7 +545,6 @@ class WeaponSystem {
         CTX.translate(15, 10);
         CTX.fillStyle = 'rgba(0, 0, 0, 0.3)';
         CTX.fillRect(2, 2, 26, 10);
-        // Use the enhanced gun art function
         drawKaoGunEnhanced(CTX, this.currentWeapon);
         CTX.restore();
     }
@@ -652,6 +599,9 @@ class WeaponSystem {
     }
 }
 
+// ============================================================================
+// 🚀 PROJECTILE MANAGER — with Hit-Stop + Screen Shake on impact
+// ============================================================================
 class ProjectileManager {
     constructor() { this.projectiles = []; }
 
@@ -670,9 +620,16 @@ class ProjectileManager {
             if (proj && proj.pierce > 0 && !proj.hitSet) proj.hitSet = new Set();
 
             if (proj.team === 'player') {
+
+                // ── PLAYER → BOSS collision ───────────────────────────────
                 if (boss && !boss.dead && proj.checkCollision(boss)) {
                     if (!proj.hitSet || !proj.hitSet.has(boss)) {
                         boss.takeDamage(proj.damage);
+
+                        // 🥊 HIT-STOP + SHAKE — Boss hit (crits freeze longer)
+                        if (typeof addScreenShake  === 'function') addScreenShake(proj.isCrit ? 5 : 2);
+                        if (typeof triggerHitStop  === 'function') triggerHitStop(proj.isCrit ? 60 : 20);
+
                         spawnFloatingText(Math.round(proj.damage), proj.x, proj.y - 20, 'white', 18);
                         if (typeof spawnHitMarker === 'function') spawnHitMarker(proj.x, proj.y);
                         if (proj.kind === 'punch' && typeof spawnWanchaiPunchText === 'function') {
@@ -687,10 +644,24 @@ class ProjectileManager {
                         }
                     }
                 }
+
+                // ── PLAYER → ENEMY collision ─────────────────────────────
                 for (let enemy of enemies) {
                     if (!enemy.dead && proj.checkCollision(enemy)) {
                         if (proj.hitSet && proj.hitSet.has(enemy)) continue;
+
                         enemy.takeDamage(proj.damage, player);
+
+                        // 🥊 HIT-STOP + SHAKE — Kill > Crit > Normal (priority order)
+                        // Kill check first: a kill is always more impactful than a crit.
+                        if (enemy.dead) {
+                            if (typeof triggerHitStop === 'function') triggerHitStop(40);
+                            if (typeof addScreenShake === 'function') addScreenShake(4);
+                        } else if (proj.isCrit) {
+                            if (typeof triggerHitStop === 'function') triggerHitStop(30);
+                            if (typeof addScreenShake === 'function') addScreenShake(3);
+                        }
+
                         spawnFloatingText(Math.round(proj.damage), proj.x, proj.y - 20, 'white', 16);
                         if (typeof spawnHitMarker === 'function') spawnHitMarker(proj.x, proj.y);
                         if (proj.kind === 'punch' && typeof spawnWanchaiPunchText === 'function') {
@@ -706,6 +677,7 @@ class ProjectileManager {
                         }
                     }
                 }
+
             } else if (proj.team === 'enemy') {
                 if (proj.checkCollision(player) && !player.isInvisible) {
                     player.takeDamage(proj.damage); hit = true;
@@ -762,11 +734,11 @@ class ProjectileManager {
         
         const p = new Projectile(sx, sy, a, speed, damage, '#dc2626', false, 'player', {
             kind: 'heatwave',
-            life: Math.max(0.12, range / speed) * 3, // Multiplied by 3 so it has enough time to bounce
+            life: Math.max(0.12, range / speed) * 3,
             size: 18,
             radius: 18,
             pierce: 2,
-            bounces: 3 // --- RICOCHET: Auto's Heat Wave can bounce 3 times! ---
+            bounces: 3
         });
         this.add(p);
     }
@@ -777,29 +749,13 @@ var projectileManager = new ProjectileManager();
 
 // ════════════════════════════════════════════════════════════
 // 🎨 STANDALONE WEAPON ART FUNCTIONS
-// Called from player.js draw() methods
 // ════════════════════════════════════════════════════════════
 
-/**
- * drawPoomWeapon(ctx, x, y, angle)
- * "The Tactical Kratib" — a futuristic Sticky Rice Container Launcher.
- *
- * Design:
- * • Body  : Bamboo-textured cylinder with neon metal rings
- * • Barrel: High-tech emitter cone at the muzzle
- * • Strap : Visible shoulder sling
- *
- * Call this inside a CTX.save/restore that is already translated
- * to the player's screen position and rotated to the player's angle.
- * The weapon is drawn at an offset from that origin.
- */
 function drawPoomWeapon(ctx) {
     const now = performance.now();
     ctx.save();
-    // Offset: weapon sits at player's "right hand" (forward direction)
     ctx.translate(12, 6);
 
-    // ── Shoulder strap ───────────────────────────────────────────
     ctx.strokeStyle = '#92400e'; ctx.lineWidth = 2; ctx.lineCap = 'round';
     ctx.globalAlpha = 0.75;
     ctx.beginPath();
@@ -808,7 +764,6 @@ function drawPoomWeapon(ctx) {
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // ── Body: bamboo cylinder with woven Kratib texture ─────────
     const bodyGrad = ctx.createLinearGradient(0, -8, 0, 8);
     bodyGrad.addColorStop(0,    '#4ade80');
     bodyGrad.addColorStop(0.35, '#16a34a');
@@ -817,30 +772,24 @@ function drawPoomWeapon(ctx) {
     ctx.fillStyle = bodyGrad;
     ctx.beginPath(); ctx.roundRect(-14, -7, 28, 14, 3); ctx.fill();
 
-    // ── KRATIB WEAVE PATTERN (diagonal crosshatch) ───────────────
     ctx.save();
     ctx.beginPath(); ctx.roundRect(-14, -7, 28, 14, 3); ctx.clip();
 
-    // Diagonal NE-SW strands
     ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;
     for (let wx = -28; wx <= 28; wx += 6) {
         ctx.beginPath(); ctx.moveTo(wx, -7); ctx.lineTo(wx + 14, 7); ctx.stroke();
     }
-    // Diagonal NW-SE strands (opposite direction)
     ctx.strokeStyle = 'rgba(0,0,0,0.18)';
     for (let wx = -28; wx <= 28; wx += 6) {
         ctx.beginPath(); ctx.moveTo(wx + 14, -7); ctx.lineTo(wx, 7); ctx.stroke();
     }
-    // Horizontal bamboo ring shadows
     ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.8;
     for (let gy = -5; gy <= 5; gy += 5) {
         ctx.beginPath(); ctx.moveTo(-14, gy); ctx.lineTo(14, gy); ctx.stroke();
     }
-    // Top highlight sheen
     ctx.fillStyle = 'rgba(255,255,255,0.10)';
     ctx.fillRect(-14, -7, 28, 5);
 
-    // ── WEAVE intersection dots (hand-woven accent) ──────────────
     ctx.fillStyle = 'rgba(20,83,45,0.40)';
     for (let dxi = -12; dxi <= 12; dxi += 6) {
         for (let dyi = -5; dyi <= 5; dyi += 5) {
@@ -849,7 +798,6 @@ function drawPoomWeapon(ctx) {
     }
     ctx.restore();
 
-    // ── Neon metal rings ─────────────────────────────────────────
     const ringPulse = 0.6 + Math.sin(now / 300) * 0.4;
     const ringPositions = [-8, 0, 8];
     for (const rx of ringPositions) {
@@ -862,25 +810,21 @@ function drawPoomWeapon(ctx) {
         ctx.shadowBlur = 0;
     }
 
-    // ── Barrel / high-tech bio-emitter ───────────────────────────
     ctx.fillStyle = '#1e293b';
     ctx.beginPath(); ctx.roundRect(14, -4.5, 10, 9, 2); ctx.fill();
     ctx.fillStyle = '#475569';
     ctx.fillRect(14, -2.5, 10, 5);
 
-    // Emitter cone tip
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.moveTo(24, -6); ctx.lineTo(24, 6); ctx.lineTo(31, 3); ctx.lineTo(31, -3);
     ctx.closePath(); ctx.fill();
 
-    // Emitter glow ring
     const emitGlow = 0.5 + Math.sin(now / 200) * 0.5;
     ctx.strokeStyle = `rgba(74,222,128,${emitGlow})`;
     ctx.lineWidth = 1.8; ctx.shadowBlur = 14; ctx.shadowColor = '#4ade80';
     ctx.beginPath(); ctx.arc(31, 0, 4, -Math.PI / 2, Math.PI / 2); ctx.stroke();
 
-    // ── STEAM / ENERGY PARTICLES from emitter ────────────────────
     const steamPhase = now / 350;
     for (let si = 0; si < 3; si++) {
         const st    = (steamPhase + si * 0.55) % 1;
@@ -892,7 +836,6 @@ function drawPoomWeapon(ctx) {
         ctx.shadowBlur  = 6; ctx.shadowColor = '#4ade80';
         ctx.beginPath(); ctx.arc(sx, sy, 2 + st * 2.5, 0, Math.PI * 2); ctx.fill();
     }
-    // Secondary bio-energy orbs
     for (let bi = 0; bi < 2; bi++) {
         const bt    = (steamPhase * 1.3 + bi * 0.7) % 1;
         const bAlph = Math.max(0, (1 - bt) * emitGlow * 0.5);
@@ -903,18 +846,15 @@ function drawPoomWeapon(ctx) {
     }
     ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 
-    // Hot core dot
     ctx.fillStyle = `rgba(187,247,208,${emitGlow})`;
     ctx.shadowBlur = 10; ctx.shadowColor = '#4ade80';
     ctx.beginPath(); ctx.arc(31, 0, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
 
-    // ── Grip / butt stock ─────────────────────────────────────────
     ctx.fillStyle = '#78350f';
     ctx.beginPath(); ctx.roundRect(-22, -5, 9, 10, 2); ctx.fill();
     ctx.fillStyle = '#92400e';
     ctx.fillRect(-22, -3, 9, 3);
-    // Grip texture
     ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
     for (let gly = -4; gly <= 4; gly += 2) {
         ctx.beginPath(); ctx.moveTo(-22, gly); ctx.lineTo(-13, gly); ctx.stroke();
@@ -923,33 +863,21 @@ function drawPoomWeapon(ctx) {
     ctx.restore();
 }
 
-/**
- * drawKaoGunEnhanced(ctx, weapon)
- * Enhanced version of the weapon draw — richer detail with Kao's
- * tactical cyberpunk aesthetic. Replaces the inline weapon draw.
- * Called after CTX.translate(15, 10).
- */
 function drawKaoGunEnhanced(ctx, weaponType) {
     const now = performance.now();
     ctx.save();
 
     if (weaponType === 'sniper') {
-        // ── CYBER-ACADEMIC SNIPER: Long precision rifle ──────────────
         const now2 = now;
-
-        // Pulsing blue power line (signature element) along barrel top
         const powerPulse = 0.5 + Math.sin(now2 / 200) * 0.5;
 
-        // Stock (butt)
         ctx.fillStyle = '#1e3a5f';
         ctx.beginPath(); ctx.roundRect(-14, -4, 12, 8, 2); ctx.fill();
-        // Wood/grip texture on stock
         ctx.strokeStyle = 'rgba(147,197,253,0.3)'; ctx.lineWidth = 0.8;
         for (let gls = -13; gls < -4; gls += 2.5) {
             ctx.beginPath(); ctx.moveTo(gls, -4); ctx.lineTo(gls, 4); ctx.stroke();
         }
 
-        // Main receiver body
         const recvG = ctx.createLinearGradient(0, -5, 0, 5);
         recvG.addColorStop(0, '#334155');
         recvG.addColorStop(0.5, '#1e293b');
@@ -957,27 +885,22 @@ function drawKaoGunEnhanced(ctx, weaponType) {
         ctx.fillStyle = recvG;
         ctx.beginPath(); ctx.roundRect(-2, -5, 20, 10, 2); ctx.fill();
 
-        // ── LONG THIN BARREL (signature sniper shape) ────────────
         ctx.fillStyle = '#0f172a';
         ctx.beginPath(); ctx.roundRect(18, -2.5, 26, 5, 1.5); ctx.fill();
-        // Barrel shroud highlights
         ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.8;
         ctx.beginPath(); ctx.moveTo(18, -1.5); ctx.lineTo(44, -1.5); ctx.stroke();
-        // Suppressor / muzzle device at tip
         ctx.fillStyle = '#1e293b';
         ctx.beginPath(); ctx.roundRect(42, -3.5, 6, 7, 2); ctx.fill();
         ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.8;
         for (let si = 43; si < 48; si += 1.5) {
             ctx.beginPath(); ctx.moveTo(si, -3.5); ctx.lineTo(si, 3.5); ctx.stroke();
         }
-        // Muzzle energy ring
         const muzzle = 0.4 + Math.sin(now2 / 300) * 0.3;
         ctx.fillStyle = `rgba(0,229,255,${muzzle})`;
         ctx.shadowBlur = 6; ctx.shadowColor = '#00e5ff';
         ctx.beginPath(); ctx.arc(49, 0, 2, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
 
-        // ── GLOWING BLUE POWER LINE along barrel top ─────────────
         const lineGrad = ctx.createLinearGradient(-2, 0, 44, 0);
         lineGrad.addColorStop(0, `rgba(0,229,255,0)`);
         lineGrad.addColorStop(0.15, `rgba(0,229,255,${powerPulse * 0.7})`);
@@ -987,7 +910,6 @@ function drawKaoGunEnhanced(ctx, weaponType) {
         ctx.lineWidth   = 1.8;
         ctx.shadowBlur  = 10 * powerPulse; ctx.shadowColor = '#00e5ff';
         ctx.beginPath(); ctx.moveTo(-2, -5.5); ctx.lineTo(44, -5.5); ctx.stroke();
-        // Secondary subtle line below
         ctx.globalAlpha = 0.4;
         ctx.strokeStyle = `rgba(96,165,250,${powerPulse * 0.6})`;
         ctx.lineWidth   = 0.8; ctx.shadowBlur = 4;
@@ -995,95 +917,71 @@ function drawKaoGunEnhanced(ctx, weaponType) {
         ctx.globalAlpha = 1;
         ctx.shadowBlur  = 0;
 
-        // ── DIGITAL SCOPE ────────────────────────────────────────
-        // Scope body
         ctx.fillStyle = '#1e293b';
         ctx.beginPath(); ctx.roundRect(6, -13, 16, 9, 2); ctx.fill();
-        // Scope rail
         ctx.fillStyle = '#334155';
         ctx.beginPath(); ctx.roundRect(5, -5, 18, 2, 1); ctx.fill();
-        // Scope lens (large glowing eye)
         ctx.fillStyle = '#0ea5e9';
         ctx.shadowBlur = 14; ctx.shadowColor = '#0284c7';
         ctx.beginPath(); ctx.arc(14, -9, 3.5, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-        // Digital crosshair inside lens
         ctx.strokeStyle = '#e0f2fe'; ctx.lineWidth = 0.7;
         ctx.beginPath();
         ctx.moveTo(11, -9); ctx.lineTo(17, -9);
         ctx.moveTo(14, -12); ctx.lineTo(14, -6);
         ctx.stroke();
-        // Crosshair dot pulse
         ctx.fillStyle = `rgba(224,242,254,${0.6 + Math.sin(now2 / 180) * 0.4})`;
         ctx.shadowBlur = 6; ctx.shadowColor = '#00e5ff';
         ctx.beginPath(); ctx.arc(14, -9, 1, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-        // Scope dials / adjustment knobs
         ctx.fillStyle = '#475569';
         ctx.beginPath(); ctx.arc(8, -9, 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(20, -9, 1.5, 0, Math.PI * 2); ctx.fill();
 
-        // Foregrip
         ctx.fillStyle = '#1e3a5f';
         ctx.beginPath(); ctx.roundRect(8, 5, 4, 9, 1); ctx.fill();
         ctx.beginPath(); ctx.roundRect(22, 5, 4, 7, 1); ctx.fill();
 
-        // Label
         ctx.fillStyle = 'rgba(147,197,253,0.8)'; ctx.font = 'bold 4px Arial'; ctx.textAlign = 'center';
         ctx.fillText('KAO-SR', 8, 2);
 
     } else if (weaponType === 'shotgun') {
-        // ── SHOTGUN: Wide-bore tactical scatter ───────────────────
         const g = ctx.createLinearGradient(0, -7, 0, 7);
         g.addColorStop(0, '#f59e0b'); g.addColorStop(0.5, '#ea580c'); g.addColorStop(1, '#c2410c');
         ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(0, -6, 22, 12, 3); ctx.fill();
-        // Double barrel
         ctx.fillStyle = '#0f172a';
         ctx.beginPath(); ctx.roundRect(18, -5.5, 12, 5, 1); ctx.fill();
         ctx.beginPath(); ctx.roundRect(18, 0.5, 12, 5, 1); ctx.fill();
-        // Muzzle flash
         const sFlash = 0.45 + Math.sin(now / 200) * 0.35;
         ctx.fillStyle = `rgba(251,146,60,${sFlash})`; ctx.shadowBlur = 10; ctx.shadowColor = '#f59e0b';
         ctx.beginPath(); ctx.arc(30, -3, 2, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(30,  3, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-        // Pump / wood grip
         ctx.fillStyle = '#78350f'; ctx.beginPath(); ctx.roundRect(-10, -4, 12, 8, 2); ctx.fill();
         ctx.fillStyle = '#92400e'; ctx.fillRect(-10, -2, 12, 3);
         ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
         for (let i = -9; i < 0; i += 2) { ctx.beginPath(); ctx.moveTo(i, -4); ctx.lineTo(i, 4); ctx.stroke(); }
-        // Shell indicator strips
         ctx.fillStyle = '#dc2626';
         ctx.fillRect(2, -8, 3, 2); ctx.fillRect(9, -8, 3, 2); ctx.fillRect(16, -8, 3, 2);
-        // Trigger guard
         ctx.strokeStyle = '#475569'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(8, 6, 5, 0, Math.PI); ctx.stroke();
-        // Label
         ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = 'bold 4px Arial'; ctx.textAlign = 'center';
         ctx.fillText('12G', 11, 1);
 
     } else {
-        // ── AUTO RIFLE (default): Burst-fire tactical ─────────────
         const g = ctx.createLinearGradient(0, -6, 0, 6);
         g.addColorStop(0, '#3b82f6'); g.addColorStop(0.5, '#2563eb'); g.addColorStop(1, '#1e40af');
         ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(0, -5, 26, 10, 2); ctx.fill();
-        // Rail / top
         ctx.fillStyle = '#1e293b'; ctx.fillRect(2, -7, 18, 2);
         ctx.fillStyle = '#334155'; ctx.fillRect(4, -8.5, 4, 1.5); ctx.fillRect(12, -8.5, 4, 1.5);
-        // Barrel
         ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.roundRect(22, -2.5, 10, 5, 1); ctx.fill();
-        // Muzzle glow
         const aFlash = 0.45 + Math.sin(now / 180) * 0.35;
         ctx.fillStyle = `rgba(96,165,250,${aFlash})`; ctx.shadowBlur = 10; ctx.shadowColor = '#60a5fa';
         ctx.beginPath(); ctx.arc(32, 0, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-        // Mag
         ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.roundRect(8, 5, 8, 9, 1); ctx.fill();
         ctx.fillStyle = '#334155'; ctx.fillRect(9, 6, 6, 4);
-        // Grip
         ctx.fillStyle = '#1e40af'; ctx.beginPath(); ctx.roundRect(-8, -3.5, 10, 7, 2); ctx.fill();
-        // Charging handle / detail lines
         ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 1;
         ctx.strokeRect(2, -4, 5, 8); ctx.strokeRect(14, -4, 5, 8);
-        // Label
         ctx.fillStyle = '#fff'; ctx.font = 'bold 5px Arial'; ctx.textAlign = 'center';
         ctx.fillText('MTC', 12, 1);
     }
@@ -1099,23 +997,14 @@ window.projectileManager   = projectileManager;
 window.drawPoomWeapon      = drawPoomWeapon;
 window.drawKaoGunEnhanced  = drawKaoGunEnhanced;
 
-/**
- * drawAutoWeapon(ctx)
- * Auto's weapon art: a thermodynamic gauntlet / knuckle-duster
- * drawn in Crimson Red.  Called from AutoPlayer.draw() after
- * CTX.save() + CTX.translate(player screen pos) + CTX.rotate(angle).
- */
 function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
     const now = performance.now();
     ctx.save();
-    // Offset: gauntlet at player's forward fist position
     ctx.translate(12, 4);
 
     const heat = wanchaiActive ? 1.0 : ventGlow;
-    // Clamp to [0,1] — Math.sin can push this negative (-0.2) which breaks arc() radii
     const firePulse = Math.max(0, 0.4 + Math.sin(now / 160) * 0.6);
 
-    // ── ENGINE BLOCK BODY ─────────────────────────────────────────
     const bg = ctx.createLinearGradient(0, -9, 0, 9);
     bg.addColorStop(0, '#fca5a5');
     bg.addColorStop(0.35, '#dc2626');
@@ -1123,49 +1012,38 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
     bg.addColorStop(1, '#7f1d1d');
     ctx.fillStyle = bg;
     ctx.beginPath(); ctx.roundRect(-11, -8, 26, 16, 4); ctx.fill();
-    // Engine block outline
     ctx.strokeStyle = '#450a0a'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.roundRect(-11, -8, 26, 16, 4); ctx.stroke();
 
-    // ── PISTON COLUMNS (3 vertical cylinders) ────────────────────
     const pistonPositions = [-6, 0, 6];
     for (let pi = 0; pi < pistonPositions.length; pi++) {
         const px = pistonPositions[pi];
         const pistonPhase = Math.sin(now / 100 + pi * 1.2);
         const pistonOffset = pistonPhase * 2 * heat;
 
-        // Piston sleeve
         ctx.fillStyle = '#450a0a';
         ctx.beginPath(); ctx.roundRect(px - 2, -7, 4, 14, 1); ctx.fill();
-        // Piston rod
         ctx.fillStyle = '#9f1239';
         ctx.beginPath(); ctx.roundRect(px - 1, -6 + pistonOffset, 2, 7 - pistonOffset, 0); ctx.fill();
-        // Piston crown
         ctx.fillStyle = '#fca5a5';
         ctx.beginPath(); ctx.roundRect(px - 2.5, -6 + pistonOffset, 5, 3, 1); ctx.fill();
     }
 
-    // ── EXHAUST PIPES (two on top) ────────────────────────────────
     for (let ep = -1; ep <= 1; ep += 2) {
         const epx = ep * 7;
-        // Pipe barrel
         ctx.fillStyle = '#1e293b';
         ctx.beginPath(); ctx.roundRect(epx - 1.5, -13, 3, 7, 1); ctx.fill();
-        // Pipe flange
         ctx.fillStyle = '#334155';
         ctx.beginPath(); ctx.roundRect(epx - 2.5, -9, 5, 2, 0); ctx.fill();
 
-        // Fire particles from exhaust
         if (heat > 0.2) {
             const fireAlpha = heat * firePulse * 0.8;
             ctx.globalAlpha = fireAlpha;
             ctx.shadowBlur  = 12 * heat; ctx.shadowColor = '#fb923c';
-            // Inner orange core
             ctx.fillStyle = '#fb923c';
             const fx = epx + (Math.sin(now / 80 + ep) * 1.5);
             const fy = -14 - heat * firePulse * 4;
             ctx.beginPath(); ctx.arc(fx, fy, Math.max(0, 2.5 * heat * firePulse), 0, Math.PI * 2); ctx.fill();
-            // Outer flame
             ctx.fillStyle = '#fde68a';
             ctx.globalAlpha = fireAlpha * 0.5;
             ctx.beginPath(); ctx.arc(fx, fy - 3, Math.max(0, 2 * heat), 0, Math.PI * 2); ctx.fill();
@@ -1174,7 +1052,6 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
         }
     }
 
-    // ── HEAT VENT SLITS on sides ─────────────────────────────────
     ctx.shadowBlur  = 6 * heat; ctx.shadowColor = '#fb923c';
     for (let vi = 0; vi < 4; vi++) {
         const ventAlpha = heat * (0.4 + vi * 0.1) * (0.6 + Math.sin(now / 130 + vi) * 0.4);
@@ -1184,7 +1061,6 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
     }
     ctx.shadowBlur = 0;
 
-    // ── KNUCKLE GUARD SPIKES ──────────────────────────────────────
     ctx.fillStyle = '#7f1d1d';
     for (let k = -7; k <= 7; k += 4) {
         ctx.beginPath();
@@ -1194,14 +1070,12 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
         ctx.closePath(); ctx.fill();
     }
 
-    // ── GLOW CORE (energy accumulation dot) ──────────────────────
     const coreGlow = heat * firePulse;
     ctx.fillStyle   = `rgba(251,113,133,${coreGlow})`;
     ctx.shadowBlur  = 12 * coreGlow; ctx.shadowColor = '#dc2626';
     ctx.beginPath(); ctx.arc(3, 0, 3.5, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur  = 0;
 
-    // ── Label ─────────────────────────────────────────────────────
     ctx.fillStyle   = 'rgba(255,255,255,0.75)';
     ctx.font        = 'bold 4px Arial';
     ctx.textAlign   = 'center';

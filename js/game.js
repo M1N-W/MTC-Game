@@ -74,6 +74,10 @@ const SM_BAR_W = 180, SM_BAR_H = 8;
 // ─── HUD Draw Bridge ──────────────────────────────────────────
 let _lastDrawDt = 0;
 
+// ─── 🥊 Hit-Stop (Freeze Frame) ───────────────────────────────
+let hitStopTimer = 0;
+window.triggerHitStop = (ms) => { hitStopTimer = Math.max(hitStopTimer, ms / 1000); };
+
 // ─── Day / Night cycle ────────────────────────────────────────
 let dayNightTimer = 0;
 
@@ -825,9 +829,6 @@ function startNextWave() {
     const count = BALANCE.waves.enemiesBase + (getWave() - 1) * BALANCE.waves.enemiesPerWave;
 
     // ── BGM: switch to battle music for normal + glitch waves ──────────────
-    // Boss music is handled later, inside the bossEveryNWaves setTimeout block
-    // when the boss actually spawns.  All other waves (including glitch waves)
-    // use battle BGM.  This also restores battle music after a boss wave ends.
     if (getWave() % BALANCE.waves.bossEveryNWaves !== 0) {
         if (getWave() % GLITCH_EVERY_N_WAVES === 0) {
             Audio.playBGM('glitch');
@@ -1126,8 +1127,6 @@ window.toggleSlowMotion = toggleSlowMotion;
 
 // ══════════════════════════════════════════════════════════════
 // 🎓 TUTORIAL INPUT BRIDGE
-// Reads raw input state each frame and forwards detected actions
-// to TutorialSystem so steps can track player progress.
 // ══════════════════════════════════════════════════════════════
 
 const _tut = {
@@ -1141,24 +1140,19 @@ const _tut = {
 function _tutorialForwardInput() {
     if (typeof TutorialSystem === 'undefined' || !TutorialSystem.isActive()) return;
 
-    // Move — any WASD held
     const moving = keys.w || keys.a || keys.s || keys.d;
     if (moving && !_tut._prevMove) TutorialSystem.handleAction('move');
     _tut._prevMove = !!moving;
 
-    // Shoot — left mouse held
     if (mouse.left && !_tut._prevShoot) TutorialSystem.handleAction('shoot');
     _tut._prevShoot = !!mouse.left;
 
-    // Dash — space held
     if (keys.space && !_tut._prevDash) TutorialSystem.handleAction('dash');
     _tut._prevDash = !!keys.space;
 
-    // Skill — right mouse held
     if (mouse.right && !_tut._prevSkill) TutorialSystem.handleAction('skill');
     _tut._prevSkill = !!mouse.right;
 
-    // Bullet Time — isSlowMotion toggled on
     if (isSlowMotion && !_tut._prevBulletTime) TutorialSystem.handleAction('bullettime');
     _tut._prevBulletTime = !!isSlowMotion;
 }
@@ -1169,6 +1163,17 @@ function _tutorialForwardInput() {
 
 function gameLoop(now) {
     const dt = getDeltaTime(now);
+
+    // ── 🥊 HIT-STOP: decrement timer, draw frozen frame, skip all update logic ──
+    // The screen keeps rendering so particles/floating text remain visible,
+    // but nothing moves. This is the "freeze frame" effect.
+    if (hitStopTimer > 0) {
+        hitStopTimer -= dt;
+        if (hitStopTimer < 0) hitStopTimer = 0;
+        drawGame();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
 
     if (gameState === 'PLAYING') {
         _tickSlowMoEnergy(dt);
@@ -1588,15 +1593,6 @@ async function initAI() {
 
 function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
-    // ── BGM FIX: Audio.init() is called ONCE in window.onload (below).
-    // Do NOT call it here. Calling Audio.init() inside startGame() would:
-    //   1. Re-create the AudioContext (wasteful, may cause a browser warning).
-    //   2. Re-register the interaction listener — but the click that triggered
-    //      startGame() already fired, so userInteracted would reset to false
-    //      and Audio.playBGM('battle') would be silently discarded again.
-    //
-    // By the time startGame() runs, the user has already clicked "Start Game",
-    // so userInteracted is already true and playBGM plays immediately.
     Audio.playBGM('battle');
 
     const savedData = getSaveData();
@@ -1635,6 +1631,9 @@ function startGame(charType = 'kao') {
     pendingSpawnCount   = 0;
     lastGlitchCountdown = -1;
     console.log('⚡ Glitch Wave grace period reset');
+
+    // Reset hit-stop state on new game
+    hitStopTimer = 0;
 
     player.shopDamageBoostActive = false;
     player.shopDamageBoostTimer  = 0;
@@ -1712,7 +1711,10 @@ async function endGame(result) {
 
     Audio.stopBGM();
     Audio.playBGM('menu');
-    
+
+    // Clear any lingering hit-stop so the game-over screen is not frozen
+    hitStopTimer = 0;
+
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
 
@@ -1787,25 +1789,6 @@ window.onload = () => {
     initAI();
 
     // ── BGM FIX: Audio.init() moved here from startGame() ────────────────
-    // Initialise the AudioContext and register the one-time interaction
-    // listeners (click / keydown / touchstart) ONCE at page load.
-    //
-    // This must happen BEFORE Audio.playBGM('menu') so that:
-    //   a) The interaction listeners are in place when the menu BGM is queued.
-    //   b) When the user eventually clicks anything on the menu, enableAudio()
-    //      fires, userInteracted becomes true, and _pendingBGM ('menu') plays.
-    //
-    // Previously Audio.init() lived inside startGame(), which caused two bugs:
-    //   • Menu BGM: Audio.init() was never called before playBGM('menu'), so
-    //     userInteracted was always false and menu BGM was always discarded.
-    //   • Battle BGM: Audio.init() was called inside the same click handler
-    //     that triggered startGame() — the click fired BEFORE the new listener
-    //     was attached, so userInteracted never flipped to true, and battle
-    //     BGM was discarded too.
     Audio.init();
-    // Queue menu BGM. userInteracted is false right now (page just loaded,
-    // no gesture yet), so playBGM stores 'menu' in _pendingBGM and returns.
-    // The instant user clicks or presses any key on the menu screen,
-    // enableAudio fires and the menu track starts playing.
     Audio.playBGM('menu');
 };
