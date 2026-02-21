@@ -3,92 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTC Game - Debug Test</title>
+    <title>MTC: Enhanced Edition - System Diagnostics</title>
     <style>
+        :root {
+            --bg-dark: #020617;
+            --panel-bg: #0f172a;
+            --border: #1e293b;
+            --text: #cbd5e1;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --accent: #06b6d4;
+        }
+
         body {
             margin: 0;
             padding: 20px;
-            font-family: 'Courier New', monospace;
-            background: #0f172a;
-            color: #fff;
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
         }
-        h1 {
-            color: #3b82f6;
+
+        .dashboard-header h1 {
+            color: var(--primary);
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .test-section {
-            background: #1e293b;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-            border: 1px solid #334155;
-        }
-        .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-        }
-        .pass {
-            background: #10b981;
-            color: white;
-        }
-        .fail {
-            background: #ef4444;
-            color: white;
-        }
-        .warning {
-            background: #f59e0b;
-            color: white;
-        }
-        pre {
-            background: #000;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-        button {
-            background: #3b82f6;
+
+        .btn {
+            background: var(--primary);
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
+            font-family: inherit;
+            font-weight: bold;
+            transition: all 0.2s;
         }
-        button:hover {
-            background: #2563eb;
+
+        .btn:hover { background: #2563eb; }
+        .btn-run { background: var(--success); }
+        .btn-run:hover { background: #059669; }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
         }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .test-item:last-child { border-bottom: none; }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            background: #334155;
+            color: white;
+        }
+
+        .status-badge.pass { background: var(--success); }
+        .status-badge.fail { background: var(--danger); }
+        .status-badge.warn { background: var(--warning); }
+
+        #console-output {
+            background: #000;
+            border: 1px solid var(--border);
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+
+        .log-info { color: #60a5fa; }
+        .log-error { color: #f87171; }
+        .log-success { color: #34d399; }
+
+        /* Hidden canvas to prevent errors from scripts that expect it */
+        #gameCanvas { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔍 MTC Game Debug Test</h1>
-        
-        <div class="test-section">
-            <h2>📋 Test Results</h2>
-            <div id="results"></div>
-        </div>
 
-        <div class="test-section">
-            <h2>🎮 Quick Actions</h2>
-            <button onclick="runAllTests()">Run All Tests</button>
-            <button onclick="testAI()">Test AI</button>
-            <button onclick="clearConsole()">Clear Console</button>
-            <button onclick="window.location.href='index.html'">Go to Game</button>
-        </div>
-
-        <div class="test-section">
-            <h2>📝 Console Output</h2>
-            <pre id="console-output">Waiting for tests...</pre>
+    <div class="dashboard-header">
+        <h1>⚙️ MTC DIAGNOSTIC DASHBOARD</h1>
+        <div>
+            <button class="btn" onclick="clearLogs()">Clear Logs</button>
+            <button class="btn btn-run" onclick="runDiagnostics()">▶ RUN ALL TESTS</button>
         </div>
     </div>
 
-    <!-- Load all game scripts in order -->
-    <script src="js/secrets.js"></script>
+    <div class="grid-layout">
+        <!-- Panel 1: Core Configuration -->
+        <div class="panel" id="panel-config">
+            <h2>1. Configuration & Core</h2>
+            <div id="tests-config"></div>
+        </div>
+
+        <!-- Panel 2: Modular Systems -->
+        <div class="panel" id="panel-systems">
+            <h2>2. Modular Systems (Phase 1-3)</h2>
+            <div id="tests-systems"></div>
+        </div>
+
+        <!-- Panel 3: Entities & Graphics -->
+        <div class="panel" id="panel-entities">
+            <h2>3. Entities & Rendering</h2>
+            <div id="tests-entities"></div>
+        </div>
+
+        <!-- Panel 4: External Integrations -->
+        <div class="panel" id="panel-external">
+            <h2>4. AI & External</h2>
+            <div id="tests-external"></div>
+        </div>
+    </div>
+
+    <div id="console-output"></div>
+
+    <!-- Hidden Canvas to prevent init errors -->
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <!-- LOAD GAME SCRIPTS IN CORRECT ORDER FOR TESTING -->
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/audio.js"></script>
@@ -96,166 +174,116 @@
     <script src="js/weapons.js"></script>
     <script src="js/map.js"></script>
     <script src="js/ui.js"></script>
+    <script src="js/tutorial.js"></script>
+    <!-- New Systems -->
+    <script src="js/systems/AdminSystem.js"></script>
+    <script src="js/systems/ShopSystem.js"></script>
+    <script src="js/systems/TimeManager.js"></script>
+    <script src="js/systems/WaveManager.js"></script>
+    <!-- AI & Entities -->
     <script src="js/ai.js"></script>
-    <script src="js/entities.js"></script>
+    <script src="js/entities/base.js"></script>
+    <script src="js/entities/player/PlayerBase.js"></script>
+    <script src="js/entities/player/AutoPlayer.js"></script>
+    <script src="js/entities/player/PoomPlayer.js"></script>
+    <script src="js/entities/enemy.js"></script>
+    <script src="js/entities/boss.js"></script>
+    <script src="js/entities/summons.js"></script>
+    <!-- Game Core (Must be last) -->
+    <script src="js/game.js"></script>
 
     <script>
-        // Capture console logs
-        const logs = [];
-        const originalLog = console.log;
-        const originalWarn = console.warn;
-        const originalError = console.error;
+        // Override start game to prevent actual game loop starting on debug page
+        window.startGame = () => log('[Intercepted] startGame() called.', 'info');
+        if (typeof loopRunning !== 'undefined') loopRunning = true; // Block internal loops
 
-        console.log = function(...args) {
-            logs.push({ type: 'log', message: args.join(' ') });
-            originalLog.apply(console, args);
-            updateConsoleOutput();
-        };
-
-        console.warn = function(...args) {
-            logs.push({ type: 'warn', message: args.join(' ') });
-            originalWarn.apply(console, args);
-            updateConsoleOutput();
-        };
-
-        console.error = function(...args) {
-            logs.push({ type: 'error', message: args.join(' ') });
-            originalError.apply(console, args);
-            updateConsoleOutput();
-        };
-
-        function updateConsoleOutput() {
-            const output = document.getElementById('console-output');
-            if (logs.length === 0) {
-                output.textContent = 'No logs yet...';
-                return;
-            }
-            output.textContent = logs.map(log => {
-                const prefix = log.type === 'error' ? '❌' : log.type === 'warn' ? '⚠️' : '✅';
-                return `${prefix} ${log.message}`;
-            }).join('\n');
-            output.scrollTop = output.scrollHeight;
+        // --- Logger Utility ---
+        function log(message, type = 'info') {
+            const out = document.getElementById('console-output');
+            const d = new Date();
+            const time = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+            out.innerHTML += `<div class="log-${type}">[${time}] ${message}</div>`;
+            out.scrollTop = out.scrollHeight;
         }
 
-        function clearConsole() {
-            logs.length = 0;
-            updateConsoleOutput();
+        function clearLogs() {
+            document.getElementById('console-output').innerHTML = '';
+            document.querySelectorAll('.test-item').forEach(el => el.remove());
         }
 
-        function addResult(name, status, message) {
-            const results = document.getElementById('results');
-            const statusClass = status === 'pass' ? 'pass' : status === 'fail' ? 'fail' : 'warning';
-            const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⚠️';
-            
+        // --- Test Runner ---
+        function addTestResult(containerId, name, status, details = '') {
+            const container = document.getElementById(containerId);
             const div = document.createElement('div');
-            div.className = 'status ' + statusClass;
-            div.innerHTML = `<strong>${icon} ${name}</strong>: ${message}`;
-            results.appendChild(div);
+            div.className = 'test-item';
+            
+            let statusClass = 'warn';
+            let statusText = 'PENDING';
+            if (status === true) { statusClass = 'pass'; statusText = 'PASS'; }
+            else if (status === false) { statusClass = 'fail'; statusText = 'FAIL'; }
+
+            div.innerHTML = `
+                <span title="${details}">${name}</span>
+                <span class="status-badge ${statusClass}">${statusText}</span>
+            `;
+            container.appendChild(div);
         }
 
-        async function runAllTests() {
-            document.getElementById('results').innerHTML = '';
-            console.log('🔍 Starting debug tests...');
-
-            // Test 1: Check if all required variables exist
-            try {
-                if (typeof BALANCE !== 'undefined') {
-                    addResult('BALANCE Config', 'pass', 'Configuration loaded successfully');
-                } else {
-                    addResult('BALANCE Config', 'fail', 'BALANCE is undefined');
-                }
-            } catch (e) {
-                addResult('BALANCE Config', 'fail', e.message);
-            }
-
-            // Test 2: Check AI
-            try {
-                if (typeof Gemini !== 'undefined') {
-                    addResult('AI System', 'pass', 'Gemini AI instance created');
-                    console.log('AI Model:', AI_CONFIG.model);
-                    console.log('AI Enabled:', Gemini.enabled);
-                } else {
-                    addResult('AI System', 'fail', 'Gemini is undefined');
-                }
-            } catch (e) {
-                addResult('AI System', 'fail', e.message);
-            }
-
-            // Test 3: Check API Key
-            try {
-                if (typeof API_KEY !== 'undefined' && API_KEY) {
-                    const masked = API_KEY.substring(0, 10) + '...';
-                    addResult('API Key', 'pass', `Key found: ${masked}`);
-                } else {
-                    addResult('API Key', 'warning', 'API Key not found - AI features disabled');
-                }
-            } catch (e) {
-                addResult('API Key', 'fail', e.message);
-            }
-
-            // Test 4: Check Weapons
-            try {
-                if (typeof weaponSystem !== 'undefined') {
-                    addResult('Weapon System', 'pass', `Current weapon: ${weaponSystem.getCurrentWeapon()}`);
-                } else {
-                    addResult('Weapon System', 'fail', 'weaponSystem is undefined');
-                }
-            } catch (e) {
-                addResult('Weapon System', 'fail', e.message);
-            }
-
-            // Test 5: Check Map
-            try {
-                if (typeof mapSystem !== 'undefined') {
-                    addResult('Map System', 'pass', 'Map system loaded');
-                } else {
-                    addResult('Map System', 'fail', 'mapSystem is undefined');
-                }
-            } catch (e) {
-                addResult('Map System', 'fail', e.message);
-            }
-
-            // Test 6: Check Effects
-            try {
-                if (typeof particleSystem !== 'undefined' && typeof floatingTextSystem !== 'undefined') {
-                    addResult('Effects System', 'pass', 'Particle and text systems loaded');
-                } else {
-                    addResult('Effects System', 'fail', 'Effects systems missing');
-                }
-            } catch (e) {
-                addResult('Effects System', 'fail', e.message);
-            }
-
-            // Test 7: Check Audio
-            try {
-                if (typeof Audio !== 'undefined') {
-                    addResult('Audio System', 'pass', 'Audio system loaded');
-                } else {
-                    addResult('Audio System', 'fail', 'Audio is undefined');
-                }
-            } catch (e) {
-                addResult('Audio System', 'fail', e.message);
-            }
-
-            console.log('✅ All tests completed!');
+        function assertDefined(name, obj) {
+            const passed = typeof obj !== 'undefined' && obj !== null;
+            if (passed) log(`Verified: ${name} is defined.`, 'success');
+            else log(`Missing Dependency: ${name}`, 'error');
+            return passed;
         }
 
-        async function testAI() {
-            console.log('🤖 Testing AI...');
+        // --- Diagnostic Routines ---
+        async function runDiagnostics() {
+            clearLogs();
+            log('Initializing Diagnostic Sequence...', 'info');
+
+            // 1. Configuration & Core
+            addTestResult('tests-config', 'MAP_CONFIG', assertDefined('MAP_CONFIG', window.MAP_CONFIG));
+            addTestResult('tests-config', 'GAME_TEXTS', assertDefined('GAME_TEXTS', window.GAME_TEXTS));
+            addTestResult('tests-config', 'BALANCE Stats', assertDefined('BALANCE', window.BALANCE));
+            addTestResult('tests-config', 'Audio System', assertDefined('Audio.init', window.Audio?.init));
+            addTestResult('tests-config', 'Utility Functions', assertDefined('getDeltaTime', window.getDeltaTime));
+
+            // 2. Modular Systems
+            addTestResult('tests-systems', 'Admin Console System', assertDefined('AdminConsole', window.AdminConsole));
+            addTestResult('tests-systems', 'Shop System (ShopManager)', assertDefined('ShopManager', window.ShopManager));
+            addTestResult('tests-systems', 'Wave Manager', assertDefined('startNextWave', window.startNextWave));
+            addTestResult('tests-systems', 'Time Manager (HitStop/BulletTime)', assertDefined('triggerHitStop', window.triggerHitStop));
+            addTestResult('tests-systems', 'Tutorial System', assertDefined('TutorialSystem', window.TutorialSystem));
+
+            // 3. Entities & Rendering
+            addTestResult('tests-entities', 'Player Classes (Base, Auto, Poom)', 
+                assertDefined('Player', window.Player) && assertDefined('PoomPlayer', window.PoomPlayer));
+            addTestResult('tests-entities', 'Enemy Classes (Tank, Mage)', assertDefined('TankEnemy', window.TankEnemy));
+            addTestResult('tests-entities', 'Boss Logic', assertDefined('Boss', window.Boss));
+            addTestResult('tests-entities', 'Map Rendering (drawTerrain)', assertDefined('mapSystem.drawTerrain', window.mapSystem?.drawTerrain));
+            addTestResult('tests-entities', 'Weapon System', assertDefined('weaponSystem', window.weaponSystem));
+
+            // 4. External Integrations
+            let aiPassed = false;
             try {
-                const result = await Gemini.getMissionName();
-                console.log('AI Response:', result);
-                addResult('AI Test', 'pass', `Got response: "${result}"`);
+                if (assertDefined('Gemini.init', window.Gemini?.init)) {
+                    log('Testing Gemini API fallback connection...', 'info');
+                    const testResponse = await window.Gemini.getMissionName();
+                    aiPassed = testResponse !== undefined;
+                    if (aiPassed) log(`AI Test Success: Received "${testResponse}"`, 'success');
+                }
             } catch (e) {
-                console.error('AI Test failed:', e);
-                addResult('AI Test', 'fail', e.message);
+                log(`AI Connection Failed: ${e.message}`, 'error');
             }
+            addTestResult('tests-external', 'Gemini AI Connection', aiPassed);
+            addTestResult('tests-external', 'Save System (localStorage)', assertDefined('getSaveData', window.getSaveData));
+
+            log('Diagnostic Sequence Complete.', 'info');
         }
 
-        // Run tests on load
+        // Auto-run on load
         window.addEventListener('load', () => {
-            console.log('🚀 Page loaded, running initial tests...');
-            setTimeout(runAllTests, 500);
+            setTimeout(runDiagnostics, 800);
         });
     </script>
 </body>
