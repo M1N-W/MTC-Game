@@ -769,6 +769,7 @@
 <script src="js/entities/player/PoomPlayer.js"></script>
 <script src="js/entities/summons.js"></script>
 <script src="js/entities/enemy.js"></script>
+<script src="js/entities/boss_attacks.js"></script>
 <script src="js/entities/boss.js"></script>
 
 <!-- Input (depends on canvas/DOM being ready) -->
@@ -1271,9 +1272,9 @@
             'Failed: window.mapSystem.drawTerrain is not a function. Check map.js for the drawTerrain export.');
 
         await T('sec-core', 'sec-core-body',
-            'UI System (uiSystem or drawHUD)',
-            () => isObject('window.uiSystem') || isFunction('window.drawHUD'),
-            'Failed: No UI system found. Check ui.js — expected window.uiSystem or window.drawHUD.');
+            'UIManager defined',
+            () => isDefined('window.UIManager'),
+            'Failed: window.UIManager is undefined. Check ui.js.');
 
         await T('sec-core', 'sec-core-body',
             'Input System (inputSystem or keys)',
@@ -1291,9 +1292,9 @@
         diag.sep('GAME SYSTEMS — TimeManager · WaveManager · ShopSystem · AdminSystem');
 
         await T('sec-systems', 'sec-systems-body',
-            'TimeManager class or object',
-            () => isClass('window.TimeManager') || isObject('window.TimeManager'),
-            'Failed: window.TimeManager is undefined. Check if systems/TimeManager.js is loaded correctly.');
+            'TimeManager functions loaded (_tickSlowMoEnergy)',
+            () => isFunction('window._tickSlowMoEnergy') && isFunction('window.toggleSlowMotion'),
+            'Failed: TimeManager functions not found. Check systems/TimeManager.js — expected _tickSlowMoEnergy and toggleSlowMotion on window.');
 
         await T('sec-systems', 'sec-systems-body',
             'triggerHitStop() function',
@@ -1301,9 +1302,9 @@
             'Failed: window.triggerHitStop is not a function. Check systems/TimeManager.js.');
 
         await T('sec-systems', 'sec-systems-body',
-            'triggerBulletTime() function',
-            () => isFunction('window.triggerBulletTime'),
-            'Failed: window.triggerBulletTime not found. Check systems/TimeManager.js for BulletTime export.');
+            'toggleSlowMotion() function (Bullet Time)',
+            () => isFunction('window.toggleSlowMotion'),
+            'Failed: window.toggleSlowMotion is not a function. Check systems/TimeManager.js.');
 
         await T('sec-systems', 'sec-systems-body',
             'WaveManager or startNextWave()',
@@ -1373,10 +1374,9 @@
             'Failed: window.Boss is not a class/function. Check entities/boss.js.');
 
         await T('sec-entities', 'sec-entities-body',
-            'Summons system',
-            () => isClass('window.Summon')    || isClass('window.SummonBase') ||
-                  isObject('window.summons')   || isFunction('window.createSummon'),
-            'Failed: No summon system found. Check entities/summons.js.');
+            'Summons system (NagaEntity / DroneEntity)',
+            () => isClass('window.NagaEntity') || isClass('window.DroneEntity'),
+            'Failed: No summon class found. Check entities/summons.js — expected NagaEntity or DroneEntity.');
 
         await T('sec-entities', 'sec-entities-body',
             'weaponSystem object',
@@ -1400,27 +1400,25 @@
             'Failed: No playSound function found in audio system. Check audio.js.');
 
         await T('sec-content', 'sec-content-body',
-            'Effects system (effectsSystem or spawnParticle)',
-            () => isObject('window.effectsSystem') || isFunction('window.spawnParticle') ||
-                  isFunction('window.createEffect'),
-            'Failed: No effects system found. Check effects.js — expected effectsSystem or spawnParticle.');
+            'Effects system (particleSystem / floatingTextSystem)',
+            () => isObject('window.particleSystem') || isObject('window.floatingTextSystem') ||
+                  isFunction('window.spawnParticles'),
+            'Failed: No effects system found. Check effects.js — expected particleSystem, floatingTextSystem, or spawnParticles.');
 
         await T('sec-content', 'sec-content-body',
-            'Particle / Effect update loop',
-            () => isFunction('window.effectsSystem?.update') || isFunction('window.updateParticles') ||
-                  isFunction('window.effectsSystem.update'),
-            'Failed: No particle update function found. Check effects.js.');
+            'Particle update loop (particleSystem.update)',
+            () => isDefined('window.particleSystem.update', v => typeof v === 'function'),
+            'Failed: window.particleSystem.update is not a function. Check effects.js.');
 
         await T('sec-content', 'sec-content-body',
-            'Weapon definitions loaded',
-            () => isDefined('window.WEAPONS') || isDefined('window.weaponList') || isDefined('window.weapons'),
-            'Failed: No weapon data object found. Check weapons.js — expected WEAPONS, weaponList, or weapons global.');
+            'Weapon definitions loaded (weaponSystem)',
+            () => isObject('window.weaponSystem'),
+            'Failed: window.weaponSystem is undefined. Check weapons.js.');
 
         await T('sec-content', 'sec-content-body',
-            'weaponSystem.fire() or shoot()',
-            () => isFunction('window.weaponSystem.fire') || isFunction('window.weaponSystem.shoot') ||
-                  isFunction('window.fireWeapon'),
-            'Failed: No weapon firing function found. Check weapons.js for fire() or shoot() method.');
+            'weaponSystem.shoot() method',
+            () => isDefined('window.weaponSystem.shoot', v => typeof v === 'function'),
+            'Failed: window.weaponSystem.shoot is not a function. Check weapons.js.');
 
         await T('sec-content', 'sec-content-body',
             'Tutorial system (TutorialSystem)',
@@ -1428,16 +1426,14 @@
             'Failed: window.TutorialSystem is undefined. Check tutorial.js.');
 
         await T('sec-content', 'sec-content-body',
-            'Tutorial.showTip() or trigger method',
-            () => isFunction('window.TutorialSystem.showTip') || isFunction('window.TutorialSystem.trigger') ||
-                  isFunction('window.showTutorialTip'),
-            'Failed: No tutorial trigger method found. Check tutorial.js for showTip() or trigger().');
+            'TutorialSystem.handleAction() method',
+            () => isDefined('window.TutorialSystem.handleAction', v => typeof v === 'function'),
+            'Failed: window.TutorialSystem.handleAction is not a function. Check tutorial.js.');
 
         await T('sec-content', 'sec-content-body',
-            'Secrets system (secrets.js)',
-            () => isObject('window.SecretsSystem') || isDefined('window.SECRETS') ||
-                  isFunction('window.checkSecrets') || isObject('window.secretsData'),
-            'Failed: No secrets system found. Check secrets.js — expected SecretsSystem, SECRETS, or checkSecrets.');
+            'CONFIG_SECRETS defined (secrets.js)',
+            () => isObject('window.CONFIG_SECRETS'),
+            'Failed: window.CONFIG_SECRETS is undefined. Check secrets.js — must export CONFIG_SECRETS object.');
 
         await delay(60);
 
@@ -1512,10 +1508,9 @@
             'Failed: window.getSaveData is not a function. Check game.js or utils.js.');
 
         await T('sec-api', 'sec-api-body',
-            'loadSaveData() / applySave()',
-            () => isFunction('window.loadSaveData') || isFunction('window.applySave') ||
-                  isFunction('window.loadGame'),
-            'Failed: No save-load function found. Check game.js — expected loadSaveData, applySave, or loadGame.');
+            'updateSaveData() function',
+            () => isFunction('window.updateSaveData'),
+            'Failed: window.updateSaveData is not a function. Check utils.js.');
 
         await delay(60);
 
@@ -1557,10 +1552,9 @@
             'Failed: No game loop function found. Check game.js for gameLoop(), tick(), or update().');
 
         await T('sec-game', 'sec-game-body',
-            'resetGame() or restartGame()',
-            () => isFunction('window.resetGame') || isFunction('window.restartGame') ||
-                  isFunction('window.initGame'),
-            'Failed: No reset function found. Check game.js — expected resetGame, restartGame, or initGame.');
+            'endGame() function',
+            () => isFunction('window.endGame'),
+            'Failed: window.endGame is not a function. Check game.js.');
 
         await T('sec-game', 'sec-game-body',
             'Player instance in gameState',
