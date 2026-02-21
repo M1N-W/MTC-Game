@@ -570,39 +570,49 @@
 
 <!--
 ╔══════════════════════════════════════════════════════════════════╗
-║                 ▼▼  INJECT YOUR GAME SCRIPTS HERE  ▼▼           ║
-║  Add your <script> tags below in dependency order.              ║
-║  Example order (adjust to match your actual filenames):         ║
+║              GAME SCRIPTS — mirrored from index.html            ║
+║  Loaded in the same dependency order as the main game.          ║
+║  ai.js is commented out here (matching index.html).             ║
+║  The diagnostic will mark it WARN rather than crashing.         ║
 ╚══════════════════════════════════════════════════════════════════╝
+-->
 
+<!-- Content & Config (no dependencies) -->
+<script src="js/secrets.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
+
+<!-- Standalone systems -->
 <script src="js/audio.js"></script>
 <script src="js/effects.js"></script>
 <script src="js/weapons.js"></script>
 <script src="js/map.js"></script>
 <script src="js/ui.js"></script>
-<script src="js/input.js"></script>
 <script src="js/tutorial.js"></script>
-<script src="js/secrets.js"></script>
-<script src="js/systems/AdminSystem.js"></script>
-<script src="js/systems/ShopSystem.js"></script>
-<script src="js/systems/TimeManager.js"></script>
-<script src="js/systems/WaveManager.js"></script>
-<script src="js/ai.js"></script>
+
+<!-- AI integration (commented out — matches index.html) -->
+<!-- <script src="js/ai.js"></script> -->
+
+<!-- Entities: base first, then subclasses -->
 <script src="js/entities/base.js"></script>
 <script src="js/entities/player/PlayerBase.js"></script>
 <script src="js/entities/player/AutoPlayer.js"></script>
 <script src="js/entities/player/PoomPlayer.js"></script>
+<script src="js/entities/summons.js"></script>
 <script src="js/entities/enemy.js"></script>
 <script src="js/entities/boss.js"></script>
-<script src="js/entities/boss_attacks.js"></script>
-<script src="js/entities/summons.js"></script>
-<script src="js/game.js"></script>
 
-NOTE: Comment out or remove any auto-start calls in game.js, or the
-diagnostic page will try to run the game loop on load.
--->
+<!-- Input (depends on canvas/DOM being ready) -->
+<script src="js/input.js"></script>
+
+<!-- Extracted systems (depend on config + entities) -->
+<script src="js/systems/AdminSystem.js"></script>
+<script src="js/systems/ShopSystem.js"></script>
+<script src="js/systems/TimeManager.js"></script>
+<script src="js/systems/WaveManager.js"></script>
+
+<!-- Game core — MUST be last -->
+<script src="js/game.js"></script>
 
 
 <div id="app">
@@ -1189,12 +1199,6 @@ diagnostic page will try to run the game loop on load.
             'Failed: window.Boss is not a class/function. Check entities/boss.js.');
 
         await T('sec-entities', 'sec-entities-body',
-            'Boss attack patterns (boss_attacks.js)',
-            () => isDefined('window.BossAttacks')  || isDefined('window.bossAttacks') ||
-                  isFunction('window.doBossAttack') || isFunction('window.bossPhaseAttack'),
-            'Failed: No boss attack system found. Check entities/boss_attacks.js — expected BossAttacks or doBossAttack.');
-
-        await T('sec-entities', 'sec-entities-body',
             'Summons system',
             () => isClass('window.Summon')    || isClass('window.SummonBase') ||
                   isObject('window.summons')   || isFunction('window.createSummon'),
@@ -1264,44 +1268,58 @@ diagnostic page will try to run the game loop on load.
         await delay(60);
 
         // ── 5. EXTERNAL & AI ────────────────────────────────────────────────────
-        diag.sep('EXTERNAL & AI — ai.js · Gemini API · Save/Load');
+        // NOTE: ai.js is commented out in index.html — all AI checks return WARN (expected, not a bug).
+        diag.sep('EXTERNAL & AI — ai.js commented out in index.html');
+        diag.log('  i ai.js is commented out in index.html — AI tests will show WARN (this is expected).', 'warn');
 
         await T('sec-api', 'sec-api-body',
-            'Gemini object defined',
-            () => isDefined('window.Gemini'),
-            'Failed: window.Gemini is undefined. Check ai.js — Gemini must be a global object.');
+            'Gemini object defined (ai.js)',
+            () => {
+                if (!isDefined('window.Gemini')) {
+                    diag.log('  ! window.Gemini not found — ai.js is commented out. Expected.', 'warn');
+                    return 'warn';
+                }
+                return true;
+            },
+            'WARN: window.Gemini undefined — ai.js is commented out in index.html. Uncomment to enable AI features.');
 
         await T('sec-api', 'sec-api-body',
             'Gemini.init() method',
-            () => isFunction('window.Gemini.init'),
-            'Failed: window.Gemini.init is not a function. Check ai.js for the init() method.');
+            () => {
+                if (!isDefined('window.Gemini')) return 'warn';
+                return isFunction('window.Gemini.init') || 'warn';
+            },
+            'WARN: window.Gemini.init not available. Expected while ai.js is commented out.');
 
         await T('sec-api', 'sec-api-body',
             'Gemini.getMissionName() method',
-            () => isFunction('window.Gemini.getMissionName'),
-            'Failed: window.Gemini.getMissionName is not a function. Check ai.js.');
+            () => {
+                if (!isDefined('window.Gemini')) return 'warn';
+                return isFunction('window.Gemini.getMissionName') || 'warn';
+            },
+            'WARN: window.Gemini.getMissionName not available. Expected while ai.js is commented out.');
 
-        // Async AI ping test
+        // Async AI ping — gracefully skips when ai.js is not loaded
         await T('sec-api', 'sec-api-body',
-            'Gemini API response (live ping)',
+            'Gemini API live ping',
             async () => {
                 if (!isDefined('window.Gemini.getMissionName')) {
-                    diag.log('  ⚠ Skipping live Gemini ping — getMissionName not available.', 'warn');
+                    diag.log('  ! Skipping live Gemini ping — ai.js not loaded (expected).', 'warn');
                     return 'warn';
                 }
-                diag.log('  → Attempting Gemini.getMissionName() call...', 'info');
+                diag.log('  > Attempting Gemini.getMissionName()...', 'info');
                 const result = await Promise.race([
                     window.Gemini.getMissionName().catch(e => { throw e; }),
                     new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout after 8s')), 8000))
                 ]);
                 if (result !== undefined && result !== null && result !== '') {
-                    diag.log(`  ✔ AI Response received: "${result}"`, 'success');
+                    diag.log('  ok AI Response received: "' + result + '"', 'success');
                     return true;
                 }
-                diag.log('  ⚠ AI returned empty response.', 'warn');
+                diag.log('  ! AI returned empty response.', 'warn');
                 return 'warn';
             },
-            'Failed: Gemini API did not return a valid response. Check API key and network.');
+            'WARN: Gemini API not reachable — ai.js is commented out. Uncomment js/ai.js in index.html to enable.');
 
         await T('sec-api', 'sec-api-body',
             'localStorage available',
