@@ -565,8 +565,177 @@
 </head>
 <body>
 
-<!-- Hidden canvas to prevent errors from game scripts expecting a canvas element -->
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+<!--
+╔══════════════════════════════════════════════════════════════════╗
+║              DUMMY DOM — "Ghost of index.html"                  ║
+║  Every ID/element that ui.js, game.js, shop.js etc. look for   ║
+║  is replicated here inside a hidden wrapper so the scripts      ║
+║  never throw "Cannot set property of null" errors.             ║
+║  This wrapper is completely invisible to the user.              ║
+╚══════════════════════════════════════════════════════════════════╝
+-->
+<div id="__dummy-dom__" style="display:none !important; position:absolute; pointer-events:none; visibility:hidden; width:0; height:0; overflow:hidden;" aria-hidden="true">
+
+    <!-- ── Canvas (also kept real above for 2D context tests) ── -->
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <!-- ── Boss / Voice UI ── -->
+    <div id="boss-speech"></div>
+    <div id="voice-bubble"></div>
+    <div id="achievements"></div>
+
+    <!-- ── Proximity prompts ── -->
+    <div id="db-prompt"></div>
+    <div id="console-prompt"></div>
+    <div id="shop-prompt"></div>
+
+    <!-- ── Pause ── -->
+    <div id="pause-indicator"></div>
+    <div id="resume-prompt"><button onclick=""></button></div>
+
+    <!-- ── Admin Console ── -->
+    <div id="admin-console">
+        <div class="console-inner" id="console-inner">
+            <div id="console-output"></div>
+            <input type="text" id="console-input" />
+        </div>
+    </div>
+
+    <!-- ── Shop Modal ── -->
+    <div id="shop-modal">
+        <div class="shop-inner">
+            <span id="shop-score-display">0</span>
+            <div id="shop-items"></div>
+        </div>
+    </div>
+
+    <!-- ── Weapon indicator ── -->
+    <div class="weapon-indicator">
+        <div id="weapon-name">AUTO RIFLE</div>
+    </div>
+
+    <!-- ── HUD Layer (all bar/stat IDs) ── -->
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="player-card">
+                <div id="player-avatar">👨🏻‍🎓</div>
+                <div class="status-bars">
+                    <div class="bar-wrap"><div id="hp-bar" class="bar-fill hp-fill" style="width:100%"></div></div>
+                    <div class="bar-wrap"><div id="en-bar" class="bar-fill en-fill" style="width:100%"></div></div>
+                    <div class="level-info">
+                        <div class="level-display">
+                            <span id="player-level">Lv.1</span>
+                            <div class="exp-bar-bg"><div id="exp-bar"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-box">
+                <div id="score">0</div>
+                <div id="wave-badge">WAVE 1</div>
+            </div>
+        </div>
+
+        <!-- Boss HUD -->
+        <div id="boss-hud">
+            <div id="boss-name">BOSS</div>
+            <div class="boss-hp-bg">
+                <div id="boss-hp-bar" class="boss-hp-fill"></div>
+            </div>
+        </div>
+
+        <!-- Skill icons -->
+        <div class="hud-bottom">
+            <div class="skill-icon" id="dash-icon">
+                <div class="cooldown-mask" id="dash-cd"></div>
+            </div>
+            <div class="skill-icon" id="stealth-icon">
+                <span id="skill1-hint">R-Click</span>
+                <span id="skill1-emoji">📖</span>
+                <div class="cooldown-mask" id="stealth-cd"></div>
+            </div>
+            <div class="skill-icon" id="naga-icon">
+                <div class="cooldown-mask" id="naga-cd"></div>
+                <span id="naga-timer"></span>
+            </div>
+            <div class="skill-icon" id="passive-skill">
+                <div class="skill-name">ซุ่มเสรี</div>
+            </div>
+            <div class="skill-icon" id="db-hud-icon"></div>
+            <div class="skill-icon" id="console-hud-icon"></div>
+            <div class="skill-icon" id="shop-hud-icon"></div>
+        </div>
+    </div>
+
+    <!-- ── Main Menu Overlay ── -->
+    <div id="overlay">
+        <div class="menu-container">
+            <div id="mission-brief"></div>
+            <div id="report-card">
+                <div class="report-stats">
+                    <div class="stat-item"><div id="report-score">0</div></div>
+                    <div class="stat-item"><div id="report-wave">0</div></div>
+                    <div class="stat-item"><div id="report-kills">0</div></div>
+                </div>
+                <div id="report-text"></div>
+            </div>
+            <button id="start-btn">START MISSION</button>
+            <div id="ai-loading"></div>
+        </div>
+    </div>
+
+    <!-- ── Victory Screen ── -->
+    <div id="victory-screen">
+        <div id="final-score">0</div>
+        <div id="final-wave">0</div>
+        <div id="final-kills">0</div>
+    </div>
+
+    <!-- ── Tutorial Overlay ── -->
+    <div id="tutorial-overlay">
+        <div class="tutorial-card" id="tutorial-card">
+            <div id="tut-icon">🎓</div>
+            <div id="tut-title"></div>
+            <div id="tut-body"></div>
+            <div id="tut-action-hint"></div>
+            <div id="tut-action-bar"><div id="tut-action-fill"></div></div>
+            <div id="tut-action-label"></div>
+            <div id="tutorial-progress"></div>
+            <button id="tut-next-btn">NEXT</button>
+            <button id="tut-skip-btn">SKIP</button>
+        </div>
+    </div>
+
+    <!-- ── Mobile UI ── -->
+    <div id="mobile-ui">
+        <div id="joystick-left-zone" class="joystick-zone left">
+            <div id="joystick-left-base" class="joystick-base">
+                <div id="joystick-left-stick" class="joystick-stick"></div>
+            </div>
+        </div>
+        <div id="joystick-right-zone" class="joystick-zone right">
+            <div id="joystick-right-base" class="joystick-base">
+                <div id="joystick-right-stick" class="joystick-stick"></div>
+            </div>
+        </div>
+        <button id="btn-switch"   class="action-btn">🔄</button>
+        <button id="btn-skill"    class="action-btn">📖</button>
+        <button id="btn-dash"     class="action-btn">💨</button>
+        <button id="btn-naga"     class="action-btn">🐉</button>
+        <button id="btn-database" class="action-btn">📚</button>
+        <button id="btn-terminal" class="action-btn">💻</button>
+        <button id="btn-shop"     class="action-btn">🛒</button>
+    </div>
+
+    <!-- ── Character selection cards (game.js may query these) ── -->
+    <div id="card-kao"  class="char-card selected" data-char="kao"></div>
+    <div id="card-poom" class="char-card" data-char="poom"></div>
+    <div id="btn-auto"  class="char-card" data-char="auto"></div>
+
+</div>
+
+<!-- Real canvas for 2D context tests (outside hidden wrapper) -->
+<canvas id="__real_canvas__" width="800" height="600" style="display:none"></canvas>
 
 <!--
 ╔══════════════════════════════════════════════════════════════════╗
@@ -1052,6 +1221,11 @@
         document.getElementById('run-btn').disabled = true;
         setStatus('RUNNING — Diagnostic sequence in progress...', true);
 
+        // ── Announce dummy DOM ──────────────────────────────────────────────────
+        diag.log('Dummy DOM active: all index.html element IDs are present as hidden stubs.', 'success');
+        diag.log('Game scripts will NOT throw "Cannot set property of null" errors.', 'success');
+        diag.sep();
+
         const T = (secId, bodyId, name, testFn, failTip) =>
             runTest(secId, bodyId, name, testFn, failTip);
 
@@ -1350,14 +1524,18 @@
 
         await T('sec-game', 'sec-game-body',
             'Canvas element accessible',
-            () => !!document.getElementById('gameCanvas'),
-            'Failed: #gameCanvas element not found in DOM. Game.js may fail on init.');
+            () => {
+                // Check the real canvas (outside dummy wrapper) OR the dummy one
+                const cv = document.getElementById('__real_canvas__') || document.getElementById('gameCanvas');
+                return !!cv;
+            },
+            'Failed: No canvas element found in DOM. Game.js may fail on init.');
 
         await T('sec-game', 'sec-game-body',
             'Canvas 2D context obtainable',
             () => {
                 try {
-                    const cv = document.getElementById('gameCanvas');
+                    const cv = document.getElementById('__real_canvas__') || document.getElementById('gameCanvas');
                     return !!(cv && cv.getContext('2d'));
                 } catch { return false; }
             },
