@@ -61,24 +61,25 @@ class Projectile {
         this.angle += dt * 2; // Preserves visual spinning effect
 
         // --- BULLET-PROOF RICOCHET & BOUNDARY PHYSICS ---
-        // Crucial fix: Using WORLD bounds instead of Canvas Screen bounds.
-        // Fallback to a large number (e.g., 3000) if WORLD_WIDTH isn't explicitly defined globally.
-        const mapW = typeof WORLD_WIDTH !== 'undefined' ? WORLD_WIDTH : 3000;
-        const mapH = typeof WORLD_HEIGHT !== 'undefined' ? WORLD_HEIGHT : 3000;
+        // World uses a centered coordinate system: -worldBounds to +worldBounds.
+        const _wb = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.physics?.worldBounds)
+            ? GAME_CONFIG.physics.worldBounds : 1500;
+        const minX = -_wb, maxX = _wb;
+        const minY = -_wb, maxY = _wb;
 
         let hitWall = false;
 
         // X-Axis Boundary Collision (Left / Right Walls)
-        if (this.x - this.radius < 0) {
-            this.x = this.radius; // Snap to edge to prevent wall-sticking
+        if (this.x - this.radius < minX) {
+            this.x = minX + this.radius;
             hitWall = true;
             if (this.bounces > 0) {
                 this.vx *= -1;
                 this.bounces--;
-                this.angle = Math.atan2(this.vy, this.vx); // Face new trajectory
+                this.angle = Math.atan2(this.vy, this.vx);
             }
-        } else if (this.x + this.radius > mapW) {
-            this.x = mapW - this.radius; // Snap to edge
+        } else if (this.x + this.radius > maxX) {
+            this.x = maxX - this.radius;
             hitWall = true;
             if (this.bounces > 0) {
                 this.vx *= -1;
@@ -88,16 +89,16 @@ class Projectile {
         }
 
         // Y-Axis Boundary Collision (Top / Bottom Walls)
-        if (this.y - this.radius < 0) {
-            this.y = this.radius; // Snap to edge
+        if (this.y - this.radius < minY) {
+            this.y = minY + this.radius;
             hitWall = true;
             if (this.bounces > 0) {
                 this.vy *= -1;
                 this.bounces--;
                 this.angle = Math.atan2(this.vy, this.vx);
             }
-        } else if (this.y + this.radius > mapH) {
-            this.y = mapH - this.radius; // Snap to edge
+        } else if (this.y + this.radius > maxY) {
+            this.y = maxY - this.radius;
             hitWall = true;
             if (this.bounces > 0) {
                 this.vy *= -1;
