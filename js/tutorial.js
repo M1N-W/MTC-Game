@@ -277,8 +277,20 @@ const TutorialSystem = (() => {
         isActive() { return _active; },
 
         /**
+         * True when the current step requires the player to perform a real
+         * in-game action (move / shoot / dash / skill / bullettime).
+         * gameLoop() uses this to decide whether to run updateGame() so the
+         * player actually sees their character respond to input.
+         */
+        isActionStep() {
+            if (!_active) return false;
+            const step = STEPS[_stepIndex];
+            return !!(step && step.action && step.action !== 'none');
+        },
+
+        /**
          * Called every frame from gameLoop() while tutorial is active.
-         * Keeps the world frozen (no updateGame call) but still draws.
+         * No-op — tutorial is fully event-driven.
          */
         update() {
             // Nothing to tick — tutorial is event-driven.

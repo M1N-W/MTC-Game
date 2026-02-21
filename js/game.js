@@ -1182,6 +1182,9 @@ function gameLoop(now) {
         if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
             _tutorialForwardInput();
             TutorialSystem.update();
+            if (TutorialSystem.isActionStep()) {
+                updateGame(scaledDt);
+            }
             drawGame();
         } else {
             updateGame(scaledDt);
@@ -1263,20 +1266,22 @@ function updateGame(dt) {
 
     const dToServer = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
 
-    if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
+    const _inTutorial = typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive();
+
+    if (!_inTutorial && dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
         keys.e = 0;
         openExternalDatabase();
         return;
     }
 
-    if (dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.f === 1) {
+    if (!_inTutorial && dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.f === 1) {
         keys.f = 0;
         openAdminConsole();
         return;
     }
 
     const dToShop = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
-    if (dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
+    if (!_inTutorial && dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
         keys.b = 0;
         openShop();
         return;
@@ -1320,14 +1325,16 @@ function updateGame(dt) {
         window.drone.update(dt, player);
     }
 
-    if (boss) boss.update(dt, player);
+    if (!_inTutorial && boss) boss.update(dt, player);
 
-    for (let i = enemies.length - 1; i >= 0; i--) {
-        enemies[i].update(dt, player);
-        if (enemies[i].dead) enemies.splice(i, 1);
+    if (!_inTutorial) {
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            enemies[i].update(dt, player);
+            if (enemies[i].dead) enemies.splice(i, 1);
+        }
     }
 
-    if (getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss && !waveSpawnLocked) {
+    if (!_inTutorial && getWave() % BALANCE.waves.bossEveryNWaves !== 0 && enemies.length === 0 && !boss && !waveSpawnLocked) {
         if (Achievements.stats.damageTaken === waveStartDamage &&
             getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
@@ -1350,7 +1357,7 @@ function updateGame(dt) {
 
     for (let i = meteorZones.length - 1; i >= 0; i--) {
         meteorZones[i].life -= dt;
-        if (dist(meteorZones[i].x, meteorZones[i].y, player.x, player.y) < meteorZones[i].radius) {
+        if (!_inTutorial && dist(meteorZones[i].x, meteorZones[i].y, player.x, player.y) < meteorZones[i].radius) {
             player.takeDamage(meteorZones[i].damage * dt);
         }
         if (meteorZones[i].life <= 0) meteorZones.splice(i, 1);
