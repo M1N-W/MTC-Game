@@ -303,6 +303,9 @@ function drawGame() {
     const shake = getScreenShakeOffset();
     CTX.translate(shake.x, shake.y);
 
+    // ✅ TERRAIN: draws arena boundary, hex grid, circuit paths & zone auras
+    mapSystem.drawTerrain(CTX, getCamera());
+
     drawGrid();
 
     const _drawNow = performance.now();
@@ -415,13 +418,11 @@ function drawDayNightHUD() {
 // 🔲 GRID
 // ══════════════════════════════════════════════════════════════
 
-// ── Grid cache — rebuilt only when camera offset bucket or canvas size changes
 let _gridPath = null, _gridOx = -999, _gridOy = -999, _gridW = 0, _gridH = 0;
 
 function drawGrid() {
     const sz  = GAME_CONFIG.physics.gridSize;
     const cam = getCamera();
-    // Snap offset to integer pixel so the grid doesn't shimmer sub-pixel
     const ox  = Math.round((-cam.x % sz + sz) % sz);
     const oy  = Math.round((-cam.y % sz + sz) % sz);
 
