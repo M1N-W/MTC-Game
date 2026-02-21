@@ -45,8 +45,10 @@ class AutoPlayer extends Player {
     }
 
     _activateWanchai() {
-        const dur = this.stats?.wanchaiDuration ?? BALANCE.player?.auto?.wanchaiDuration ?? 3.0;
-        const cd  = this.stats?.wanchaiCooldown ?? BALANCE.player?.auto?.wanchaiCooldown ?? 12;
+        // WARN-1 FIX: BALANCE was refactored — correct path is
+        // BALANCE.characters.auto, not the stale BALANCE.player.auto
+        const dur = this.stats?.wanchaiDuration ?? BALANCE.characters?.auto?.wanchaiDuration ?? 3.0;
+        const cd  = this.stats?.wanchaiCooldown ?? BALANCE.characters?.auto?.wanchaiCooldown ?? 12;
 
         this.wanchaiActive = true;
         this.wanchaiTimer  = dur;
@@ -539,7 +541,8 @@ AutoPlayer.prototype.updateUI = function() {
             Math.max(0, this.cooldowns.dash), S.dashCooldown || 2.0);
     }
 
-    const wanchaiCd   = S.wanchaiCooldown || BALANCE.player.auto.wanchaiCooldown || 12;
+    // WARN-1 FIX: use BALANCE.characters.auto (correct path after refactor)
+    const wanchaiCd   = S.wanchaiCooldown || BALANCE.characters?.auto?.wanchaiCooldown || 12;
     const standEl     = document.getElementById('stealth-icon');
     const standCdEl   = document.getElementById('stealth-cd');
 

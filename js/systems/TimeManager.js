@@ -24,8 +24,13 @@ window.isSlowMotion = false;
 window.slowMoEnergy = 1.0;
 window.hitStopTimer = 0;
 
+// IMP-3: hard cap at 0.5 s — prevents absurd freeze durations if a caller
+// accidentally passes a very large value.
+const HIT_STOP_MAX_S = 0.5;
+
 window.triggerHitStop = (ms) => {
-    window.hitStopTimer = Math.max(window.hitStopTimer, ms / 1000);
+    const requested = ms / 1000;
+    window.hitStopTimer = Math.min(HIT_STOP_MAX_S, Math.max(window.hitStopTimer, requested));
 };
 
 // ══════════════════════════════════════════════════════════════

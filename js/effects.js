@@ -471,12 +471,25 @@ class FloatingTextSystem {
  * Managed by: HitMarkerSystem (singleton: hitMarkerSystem)
  */
 class HitMarker {
+    // IMP-6: Object pool — reuse dead instances instead of allocating new ones.
+    // During heavy fights (~40 markers/sec) this eliminates short-lived GC pressure.
+    static _pool    = [];
+    static MAX_POOL = 80;   // matches FloatingText pool size; plenty for max 40 active
+
     /**
      * @param {number}  x      World X coordinate of the impact
      * @param {number}  y      World Y coordinate of the impact
      * @param {boolean} isCrit Whether the hit was a critical strike
      */
     constructor(x, y, isCrit = false) {
+        this.reset(x, y, isCrit);
+    }
+
+    /**
+     * Re-initialise a pooled (or brand-new) instance with fresh state.
+     * @returns {HitMarker} this, for fluent chaining from acquire()
+     */
+    reset(x, y, isCrit = false) {
         this.x       = x;
         this.y       = y;
         this.isCrit  = isCrit;
@@ -487,6 +500,26 @@ class HitMarker {
 
         // Base arm half-length (screen pixels, before expand animation)
         this.baseSize = isCrit ? 14 : 9;
+        return this;
+    }
+
+    /**
+     * Pull a ready-to-use instance from the pool (or allocate a fresh one).
+     */
+    static acquire(x, y, isCrit = false) {
+        if (HitMarker._pool.length > 0) {
+            return HitMarker._pool.pop().reset(x, y, isCrit);
+        }
+        return new HitMarker(x, y, isCrit);
+    }
+
+    /**
+     * Return this dead instance to the pool for reuse.
+     */
+    release() {
+        if (HitMarker._pool.length < HitMarker.MAX_POOL) {
+            HitMarker._pool.push(this);
+        }
     }
 
     /**
@@ -585,11 +618,12 @@ class HitMarkerSystem {
      * @param {boolean} isCrit Whether the registering hit was a crit
      */
     spawn(x, y, isCrit = false) {
-        this.markers.push(new HitMarker(x, y, isCrit));
+        // IMP-6: use pool instead of `new HitMarker()`
+        this.markers.push(HitMarker.acquire(x, y, isCrit));
 
-        // Evict oldest if over cap
+        // Evict oldest if over cap — release it back to pool
         while (this.markers.length > HitMarkerSystem.MAX_MARKERS) {
-            this.markers.shift();
+            this.markers.shift().release();
         }
     }
 
@@ -599,7 +633,8 @@ class HitMarkerSystem {
     update(dt) {
         for (let i = this.markers.length - 1; i >= 0; i--) {
             if (this.markers[i].update(dt)) {
-                this.markers.splice(i, 1);
+                // IMP-6: return dead marker to pool before removing from array
+                this.markers.splice(i, 1)[0].release();
             }
         }
     }
@@ -612,6 +647,8 @@ class HitMarkerSystem {
     }
 
     clear() {
+        // IMP-6: release all live markers back to pool
+        for (const m of this.markers) m.release();
         this.markers = [];
     }
 }
@@ -751,7 +788,10 @@ class WeatherSystem {
 
     update(dt, camera) {
         if (this.mode === 'none') {
-            this.particles = [];
+            // WARN-14 FIX: only reallocate when there are actually particles to
+            // discard.  The old code did `this.particles = []` unconditionally
+            // every frame, creating a new Array object at ~60 Hz for no reason.
+            if (this.particles.length > 0) this.particles = [];
             return;
         }
 

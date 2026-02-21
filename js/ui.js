@@ -58,14 +58,19 @@ class AchievementSystem {
         switch(id) {
             case 'first_blood':   unlock = this.stats.kills >= 1; break;
             case 'wave_1':        unlock = getWave() >= 2; break;
-            case 'boss_down':     unlock = window.boss && window.boss.dead; break;
+            // WARN-9 FIX: window.boss is null at death, old check always falsy.
+            // boss.js now sets window.lastBossKilled = true before nulling window.boss.
+            case 'boss_down':     unlock = !!window.lastBossKilled; break;
             case 'no_damage':     unlock = this.stats.damageTaken === 0 && getEnemiesKilled() >= 5; break;
             case 'crit_master':   unlock = this.stats.crits >= 5; break;
             case 'speedster':     unlock = this.stats.dashes >= 20; break;
             case 'ghost':         unlock = this.stats.stealths >= 10; break;
             case 'collector':     unlock = this.stats.powerups >= 10; break;
             case 'weapon_master': unlock = this.stats.weaponsUsed.size >= 3; break;
-            case 'naga_summoner': unlock = window.player instanceof PoomPlayer && window.player.nagaCount >= 3; break;
+            // WARN-15 FIX: PoomPlayer.js loads after ui.js — guard with typeof
+            case 'naga_summoner': unlock = typeof PoomPlayer !== 'undefined'
+                && window.player instanceof PoomPlayer
+                && window.player.nagaCount >= 3; break;
             case 'shopaholic':    unlock = this.stats.shopPurchases >= 5; break;
         }
         if (unlock) this.unlock(ach);
@@ -456,53 +461,61 @@ class UIManager {
     }
 
     static updateSkillIcons(player) {
-        if (!(player instanceof PoomPlayer)) return;
-        const S = BALANCE.characters.poom;
+        if (player instanceof PoomPlayer) {
+            const S = BALANCE.characters.poom;
 
-        // ── Eat Rice ─────────────────────────────────────────────
-        const eatIcon = document.getElementById('eat-icon');
-        const eatCd   = document.getElementById('eat-cd');
-        if (eatCd) {
-            if (player.isEatingRice) {
-                eatCd.style.height = '0%';
-                eatIcon?.classList.add('active');
-            } else {
-                eatIcon?.classList.remove('active');
-                const ep = player.cooldowns.eat <= 0
+            // ── Eat Rice ─────────────────────────────────────────────
+            const eatIcon = document.getElementById('eat-icon');
+            const eatCd   = document.getElementById('eat-cd');
+            if (eatCd) {
+                if (player.isEatingRice) {
+                    eatCd.style.height = '0%';
+                    eatIcon?.classList.add('active');
+                } else {
+                    eatIcon?.classList.remove('active');
+                    const ep = player.cooldowns.eat <= 0
+                        ? 100
+                        : Math.min(100, (1 - player.cooldowns.eat / S.eatRiceCooldown) * 100);
+                    eatCd.style.height = `${100 - ep}%`;
+                }
+            }
+            UIManager._setCooldownVisual('eat-icon',
+                player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
+                S.eatRiceCooldown);
+
+            // ── Naga ──────────────────────────────────────────────────
+            const nagaIcon  = document.getElementById('naga-icon');
+            const nagaCd    = document.getElementById('naga-cd');
+            const nagaTimer = document.getElementById('naga-timer');
+            if (nagaCd) {
+                const np = player.cooldowns.naga <= 0
                     ? 100
-                    : Math.min(100, (1 - player.cooldowns.eat / S.eatRiceCooldown) * 100);
-                eatCd.style.height = `${100 - ep}%`;
+                    : Math.min(100, (1 - player.cooldowns.naga / S.nagaCooldown) * 100);
+                nagaCd.style.height = `${100 - np}%`;
+                nagaIcon?.classList.toggle('active', player.cooldowns.naga <= 0);
             }
-        }
-        // Circular arc + countdown for eat skill
-        UIManager._setCooldownVisual('eat-icon',
-            player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
-            S.eatRiceCooldown);
+            if (nagaTimer) {
+                if (player.cooldowns.naga > 0) {
+                    nagaTimer.textContent = Math.ceil(player.cooldowns.naga) + 's';
+                    nagaTimer.style.display = 'block';
+                } else {
+                    nagaTimer.style.display = 'none';
+                }
+            }
+            UIManager._setCooldownVisual('naga-icon',
+                Math.max(0, player.cooldowns.naga),
+                S.nagaCooldown);
 
-        // ── Naga ──────────────────────────────────────────────────
-        const nagaIcon  = document.getElementById('naga-icon');
-        const nagaCd    = document.getElementById('naga-cd');
-        const nagaTimer = document.getElementById('naga-timer');
-        if (nagaCd) {
-            const np = player.cooldowns.naga <= 0
-                ? 100
-                : Math.min(100, (1 - player.cooldowns.naga / S.nagaCooldown) * 100);
-            nagaCd.style.height = `${100 - np}%`;
-            nagaIcon?.classList.toggle('active', player.cooldowns.naga <= 0);
+        // WARN-10 FIX: AutoPlayer's Wanchai Stand cooldown had no arc overlay
+        // or countdown. Add a parallel branch so the player sees feedback.
+        } else if (typeof AutoPlayer !== 'undefined' && player instanceof AutoPlayer) {
+            const S = BALANCE.characters.auto;
+            UIManager._setCooldownVisual(
+                'stealth-icon',
+                player.isWanchaiActive ? 0 : Math.max(0, player.cooldowns.stealth),
+                S.wanchaiCooldown
+            );
         }
-        // Legacy naga-timer kept for backward compat; arc overlay handles display now
-        if (nagaTimer) {
-            if (player.cooldowns.naga > 0) {
-                nagaTimer.textContent = Math.ceil(player.cooldowns.naga) + 's';
-                nagaTimer.style.display = 'block';
-            } else {
-                nagaTimer.style.display = 'none';
-            }
-        }
-        // Circular arc + countdown for naga skill
-        UIManager._setCooldownVisual('naga-icon',
-            Math.max(0, player.cooldowns.naga),
-            S.nagaCooldown);
     }
 
     static showGameOver(score, wave) {
@@ -532,13 +545,14 @@ class UIManager {
 
     // ── Combo UI ──────────────────────────────────────────────
     static updateCombo(dt) {
-        if (typeof comboTimer !== 'undefined') {
-            if (comboTimer > 0) {
-                comboTimer -= dt;
-                if (comboTimer <= 0) {
-                    comboTimer = 0; comboCount = 0;
-                    comboScale = 1; comboShake = 0;
-                }
+        // WARN-12 FIX: removed partial typeof guard on comboTimer only.
+        // comboTimer/comboCount/comboScale/comboShake are all module-scope
+        // lets declared below — they're initialised long before this runs.
+        if (comboTimer > 0) {
+            comboTimer -= dt;
+            if (comboTimer <= 0) {
+                comboTimer = 0; comboCount = 0;
+                comboScale = 1; comboShake = 0;
             }
         }
         comboScale += (1 - comboScale) * Math.min(1, dt * comboScaleDecay);

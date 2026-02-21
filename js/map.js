@@ -490,14 +490,15 @@ class MapSystem {
             }
         };
 
-        placeZone(-1400,-500,-1400,-450,['tree','tree','tree','bookshelf'],10,200);
-        placeZone(-1400,-500,-1400,-450,['tree'],6,180);
-        placeZone(500,1400,-1400,-450,['datapillar','datapillar','server'],8,210);
-        placeZone(500,1400,-1400,-450,['datapillar'],5,180);
-        placeZone(-1400,-500,450,1400,['bookshelf','bookshelf','desk'],8,200);
-        placeZone(-1400,-500,450,1400,['tree'],4,220);
-        placeZone(500,1400,450,1400,['desk','desk','tree'],9,190);
-        placeZone(500,1400,450,1400,['bookshelf'],3,250);
+        // IMP-7 FIX: each zone previously had two placeZone() calls with the
+        // same bounds but different minSep values (e.g. 200 then 180).  The
+        // second pass could place objects within 180 px of objects already
+        // placed at 200 px separation, producing occasional overlaps.
+        // Consolidated to one call per zone using the larger minSep throughout.
+        placeZone(-1400,-500,-1400,-450,['tree','tree','tree','bookshelf'],16,200);
+        placeZone(500,1400,-1400,-450, ['datapillar','datapillar','server'],13,200);
+        placeZone(-1400,-500,450,1400, ['bookshelf','bookshelf','desk','tree'],12,200);
+        placeZone(500,1400,450,1400,   ['desk','desk','tree','bookshelf'],12,200);
         placeZone(-450,450,-1400,-600,['datapillar','tree'],4,350);
         placeZone(-450,450,600,1400,['tree','bookshelf'],4,350);
         placeZone(-1400,-600,-300,300,['datapillar','tree'],4,350);

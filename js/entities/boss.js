@@ -362,6 +362,8 @@ class Boss extends Entity {
         this.log457AttackBonus = 0;
         this.isInvulnerable    = false;
         this.isEnraged         = false;
+        // BUG-4: lock flag prevents double startNextWave() from rapid damage hits
+        this._waveSpawnLocked  = false;
     }
 
     update(dt, player) {
@@ -621,7 +623,10 @@ class Boss extends Entity {
             return;
         }
         this.hp -= amt;
-        if (this.hp <= 0) {
+        if (this.hp <= 0 && !this._waveSpawnLocked) {
+            // BUG-4 FIX: lock immediately so simultaneous damage calls can't
+            // trigger startNextWave() twice (race condition guard)
+            this._waveSpawnLocked = true;
             this.dead = true; this.hp = 0;
             spawnParticles(this.x, this.y, 60, '#dc2626');
             spawnFloatingText('CLASS DISMISSED!', this.x, this.y, '#facc15', 35);
@@ -631,6 +636,9 @@ class Boss extends Entity {
             for (let i = 0; i < 3; i++) {
                 setTimeout(() => window.powerups.push(new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))), i * 200);
             }
+            // WARN-9 FIX: set lastBossKilled BEFORE nulling window.boss so
+            // the achievement check can still evaluate to true
+            window.lastBossKilled = true;
             window.boss = null;
             Achievements.check('boss_down');
             setTimeout(() => {
@@ -1277,60 +1285,6 @@ class BubbleProjectile {
         CTX.arc(-r * 0.1, r * 0.35, r * 0.07, 0, Math.PI * 2);
         CTX.fill();
 
-        CTX.restore();
-    }
-}
-
-// ════════════════════════════════════════════════════════════
-// 🐕 BARK WAVE — Sonic cone emitted by Boss's bark attack
-// ════════════════════════════════════════════════════════════
-class BarkWave {
-    constructor(x, y, angle, coneHalf, range) {
-        this.x=x; this.y=y; this.angle=angle;
-        this.coneHalf=coneHalf; this.range=range;
-        this.timer=0; this.duration=0.55; this.rings=5;
-    }
-
-    update(dt) {
-        this.timer += dt;
-        return this.timer >= this.duration;
-    }
-
-    draw() {
-        const screen   = worldToScreen(this.x, this.y);
-        const progress = this.timer / this.duration;
-        const alpha    = 1 - progress;
-
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
-
-        for (let i=0; i<this.rings; i++) {
-            const frac = (progress + i/this.rings) % 1;
-            const r    = frac * this.range;
-            if (r < 4) continue;
-            const ringAlpha = alpha*(1-i/this.rings)*0.75;
-            if (ringAlpha <= 0) continue;
-            CTX.save();
-            CTX.globalAlpha = ringAlpha;
-            CTX.strokeStyle = i%2===0 ? '#f59e0b' : '#fbbf24';
-            CTX.lineWidth   = Math.max(1, 3.5-i*0.5);
-            CTX.shadowBlur  = 12; CTX.shadowColor='#d97706'; CTX.lineCap='round';
-            CTX.beginPath(); CTX.arc(0,0,r,-this.coneHalf,this.coneHalf); CTX.stroke();
-            CTX.beginPath();
-            CTX.moveTo(Math.cos(-this.coneHalf)*Math.max(0,r-25),Math.sin(-this.coneHalf)*Math.max(0,r-25));
-            CTX.lineTo(Math.cos(-this.coneHalf)*r,Math.sin(-this.coneHalf)*r); CTX.stroke();
-            CTX.beginPath();
-            CTX.moveTo(Math.cos(this.coneHalf)*Math.max(0,r-25),Math.sin(this.coneHalf)*Math.max(0,r-25));
-            CTX.lineTo(Math.cos(this.coneHalf)*r,Math.sin(this.coneHalf)*r); CTX.stroke();
-            CTX.restore();
-        }
-        if (progress < 0.25) {
-            const flashAlpha=(1-progress/0.25)*0.8;
-            CTX.globalAlpha=flashAlpha; CTX.fillStyle='#fbbf24';
-            CTX.shadowBlur=20; CTX.shadowColor='#f59e0b';
-            CTX.beginPath(); CTX.arc(0,0,14*(1-progress/0.25),0,Math.PI*2); CTX.fill();
-        }
         CTX.restore();
     }
 }

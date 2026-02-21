@@ -29,6 +29,15 @@ let gameState   = 'MENU';
 let loopRunning = false;
 window.gameState = gameState;
 
+// WARN-6 FIX: always use this helper to change gameState so that
+// window.gameState (read by external systems like input.js) is kept
+// in sync automatically. Direct assignment is now only at init above.
+function setGameState(s) {
+    gameState = s;
+    window.gameState = s;
+}
+window.setGameState = setGameState;
+
 // ─── HUD Draw Bridge ──────────────────────────────────────────
 let _lastDrawDt = 0;
 
@@ -95,7 +104,8 @@ function gameLoop(now) {
     }
 
     if (gameState === 'PLAYING') {
-        _tickSlowMoEnergy(dt);
+        // BUG-3 FIX: guard in case TimeManager.js hasn't loaded yet
+        if (typeof _tickSlowMoEnergy === 'function') _tickSlowMoEnergy(dt);
     }
 
     const scaledDt = dt * window.timeScale;
@@ -117,10 +127,28 @@ function gameLoop(now) {
         if (shopModal && shopModal.style.display === 'flex') ShopManager.tick();
     }
 
+    // IMP-1 FIX: stop the RAF loop when the game is over so we don't keep
+    // churning the GPU for a static screen.  loopRunning is reset to false
+    // so startGame() can safely restart the loop next round.
+    if (gameState === 'GAMEOVER') {
+        loopRunning = false;
+        return;
+    }
+
     requestAnimationFrame(gameLoop);
 }
 
 function updateGame(dt) {
+    // IMP-4 FIX: guard against null player (can happen on first frame or
+    // if player object is destroyed before the loop detects GAMEOVER)
+    if (!window.player) return;
+
+    // Player death check — call endGame once then bail out of the update
+    if (window.player.dead) {
+        window.endGame('defeat');
+        return;
+    }
+
     updateCamera(window.player.x, window.player.y);
     updateMouseWorld();
 
@@ -240,7 +268,8 @@ function updateGame(dt) {
         }
         setWave(getWave() + 1);
         Achievements.check('wave_1');
-        startNextWave();
+        // WARN-2 FIX: guard against WaveManager not yet loaded
+        if (typeof startNextWave === 'function') startNextWave();
     }
 
     for (let i = window.specialEffects.length - 1; i >= 0; i--) {
@@ -360,7 +389,8 @@ function drawGame() {
     }
 
     drawDayNightHUD();
-    drawSlowMoOverlay();
+    // WARN-3 FIX: guard in case TimeManager.js loads after drawGame fires
+    if (typeof drawSlowMoOverlay === 'function') drawSlowMoOverlay();
 
     if (window.glitchIntensity > 0) {
         drawGlitchEffect(window.glitchIntensity, window.controlsInverted);
@@ -562,8 +592,9 @@ function startGame(charType = 'kao') {
     const consoleOutput = document.getElementById('console-output');
     if (consoleOutput) consoleOutput.innerHTML = '';
 
-    startNextWave();
-    gameState = 'PLAYING'; window.gameState = gameState;
+    // WARN-2 FIX: guard against WaveManager not yet loaded
+    if (typeof startNextWave === 'function') startNextWave();
+    setGameState('PLAYING');
     resetTime();
 
     if (typeof TutorialSystem !== 'undefined' && !TutorialSystem.isDone()) {
@@ -585,7 +616,7 @@ function startGame(charType = 'kao') {
 }
 
 async function endGame(result) {
-    gameState = 'GAMEOVER'; window.gameState = gameState;
+    setGameState('GAMEOVER');
 
     Audio.stopBGM();
     Audio.playBGM('menu');

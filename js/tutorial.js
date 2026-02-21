@@ -220,6 +220,12 @@ const TutorialSystem = (() => {
         _active = false;
         localStorage.setItem(SAVE_KEY, '1');
 
+        // WARN-11 FIX: restore enemies that were hidden during the tutorial
+        if (window._tutorialEnemyCache) {
+            window.enemies = window._tutorialEnemyCache;
+            window._tutorialEnemyCache = null;
+        }
+
         const overlay = _getOverlay();
         if (overlay) {
             overlay.style.transition = 'opacity 0.4s ease-out';
@@ -269,6 +275,14 @@ const TutorialSystem = (() => {
             _actionCount = 0;
             _stepDone    = false;
             _skipRequested = false;
+
+            // WARN-11 FIX: hide any enemies that spawned before the tutorial
+            // starts so they can't damage the player while they're reading
+            // instructions. Restore them in _finish().
+            if (typeof window.enemies !== 'undefined' && window.enemies.length > 0) {
+                window._tutorialEnemyCache = window.enemies;
+                window.enemies = [];
+            }
 
             _render();
         },

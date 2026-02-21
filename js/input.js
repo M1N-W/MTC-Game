@@ -22,37 +22,11 @@
  *
     *   After that, the global `keys`, `mouse`, and `joysticks` objects are *   continuously updated by event listeners and can be read from any script     tag to query input state.
  *
- * FUTURE IMPROVEMENTS:
+ * TODO:
  *   - Add gamepad support (navigator.getGamepads)
- *   - Add customizable keybindings
- *   - Add input recording/replay for testing and demos
- *   - Refactor into a more modular class-based system if needed
- *   - Optimize mobile touch handling (e.g. support multi-touch combos)
- *   - Add visual feedback for touch inputs (e.g. joystick zones, button highlights)
- *   - Implement input buffering for more responsive controls
- *   - Add vibration feedback for supported devices
- *   - Add support for remapping controls in an options menu
- *   - Implement a more robust state machine for input handling (e.g. separate input contexts for gameplay, UI, cutscenes)
- *   - Add support for international keyboards and input methods
- *   Optimize performance by throttling input events if necessary
- *   Add unit tests for input handling logic
- *   Document the API and usage examples more thoroughly
- *   Consider using a library like Hammer.js for touch gesture recognition if needed
- *   Consider using a library like Mousetrap for keyboard shortcuts if needed
- *   Consider using a library like Gamepad.js for gamepad support if needed
- *   Ensure accessibility features are considered (e.g. support for screen readers, alternative input methods)
- *   Continuously test on a variety of devices and browsers to ensure compatibility and responsiveness
- *   Gather player feedback on controls and make adjustments as needed
- *   Keep the codebase clean and maintainable as new features are added
- *   Regularly refactor and optimize the code as the project evolves
- *   Stay up to date with best practices for input handling in web games
- *   Continuously monitor performance and make improvements as needed
- *   Ensure that input handling is robust and does not cause bugs or crashes
- *   Consider security implications of input handling (e.g. prevent malicious input)
- *   Keep an eye on emerging technologies and trends in game input (e.g. VR/AR controllers, haptic feedback) and consider how they might be integrated in the future
- *   Overall, aim to create a responsive, intuitive, and enjoyable control scheme for players across all platforms!
- *   Remember to have fun and be creative with the input system design! The controls are a crucial part of the player experience, so it's worth investing time and effort into making them great.
- *   Good luck, and happy coding! 🎮✨
+ *   - Add customizable / remappable keybindings
+ *   - Add input buffering for more responsive dash/skill cancels
+ *   - Vibration feedback (navigator.vibrate) for mobile hits
  * ─────────────────────────────────────────────────────────────────
  */
 
@@ -117,7 +91,9 @@ function initMobileControls() {
     var stickR = document.getElementById('joystick-right-stick');
 
     function startJoystick(e, joystick, baseElem, stickElem, zoneElem, isRight) {
-        if (gameState !== 'PLAYING') return;
+        // WARN-8 FIX: use window.gameState — bare gameState is not yet
+        // defined if an OS-level touch fires before game.js loads
+        if (window.gameState !== 'PLAYING') return;
         e.preventDefault();
         for (var i = 0; i < e.changedTouches.length; i++) {
             var touch = e.changedTouches[i];
@@ -199,13 +175,17 @@ function initMobileControls() {
     if (btnSwitch) {
         btnSwitch.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
-            if (gameState === 'PLAYING' && weaponSystem) weaponSystem.switchWeapon();
+            // WARN-8 FIX: use window.gameState (not bare gameState) and
+            // guard weaponSystem — both may be undefined before game.js loads
+            if (window.gameState === 'PLAYING' && typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon();
         }, { passive: false });
     }
     if (btnNaga) {
         btnNaga.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
-            if (gameState === 'PLAYING' && player instanceof PoomPlayer) {
+            // WARN-8 FIX: guard all game.js-defined symbols
+            if (window.gameState !== 'PLAYING') return;
+            if (typeof PoomPlayer !== 'undefined' && typeof player !== 'undefined' && player instanceof PoomPlayer) {
                 if (player.cooldowns.naga <= 0) player.summonNaga();
             }
         }, { passive: false });
@@ -213,25 +193,30 @@ function initMobileControls() {
     if (btnDatabase) {
         btnDatabase.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
-            if (gameState === 'PLAYING')      openExternalDatabase();
-            else if (gameState === 'PAUSED')  resumeGame();
+            // WARN-8 FIX: guard game.js globals
+            if (window.gameState === 'PLAYING')      { if (typeof openExternalDatabase !== 'undefined') openExternalDatabase(); }
+            else if (window.gameState === 'PAUSED')  { if (typeof resumeGame !== 'undefined') resumeGame(); }
         }, { passive: false });
     }
     if (btnTerminal) {
         btnTerminal.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
-            if (gameState === 'PLAYING')                        openAdminConsole();
-            else if (gameState === 'PAUSED' && AdminConsole.isOpen) closeAdminConsole();
+            // WARN-8 FIX: guard game.js globals
+            if (window.gameState === 'PLAYING')      { if (typeof openAdminConsole !== 'undefined') openAdminConsole(); }
+            else if (window.gameState === 'PAUSED' && typeof AdminConsole !== 'undefined' && AdminConsole.isOpen) {
+                if (typeof closeAdminConsole !== 'undefined') closeAdminConsole();
+            }
         }, { passive: false });
     }
     if (btnShop) {
         btnShop.addEventListener('touchstart', function(e) {
             e.preventDefault(); e.stopPropagation();
-            if (gameState === 'PLAYING') {
-                openShop();
-            } else if (gameState === 'PAUSED') {
+            // WARN-8 FIX: guard game.js globals
+            if (window.gameState === 'PLAYING') {
+                if (typeof openShop !== 'undefined') openShop();
+            } else if (window.gameState === 'PAUSED') {
                 var shopModal = document.getElementById('shop-modal');
-                if (shopModal && shopModal.style.display === 'flex') closeShop();
+                if (shopModal && shopModal.style.display === 'flex' && typeof closeShop !== 'undefined') closeShop();
             }
         }, { passive: false });
     }
@@ -285,7 +270,16 @@ function _setupKeyboardListeners() {
         if (e.code === 'KeyF')  keys.f     = 1;
 
         // 'T' — Bullet Time toggle (global, no proximity gate)
-        if (e.code === 'KeyT') toggleSlowMotion();
+        if (e.code === 'KeyT') {
+            toggleSlowMotion();
+            // BUG-5 FIX: forward 'bullettime' to TutorialSystem so step 6
+            // can detect the action and advance. toggleSlowMotion() is the
+            // only path that fires KeyT — game.js never calls handleAction
+            // for this key, so it must be done here.
+            if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
+                TutorialSystem.handleAction('bullettime');
+            }
+        }
     });
 
     window.addEventListener('keyup', function(e) {
