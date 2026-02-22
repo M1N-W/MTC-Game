@@ -1405,6 +1405,268 @@ function spawnWanchaiPunchText(x, y) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 🥪 PORK SANDWICH — KRU FIRST Boss Mechanic
+// Thrown by BossFirst during SANDWICH_TOSS state.
+//
+// Normal (incoming):
+//   • Player catches it  → +30 HP heal + speed boost + boss enters BERSERK
+//   • Player projectile parries it → sandwich reverses toward boss
+//
+// Parried (outgoing):
+//   • Hits boss → boss enters STUNNED + massive particle burst + screen shake
+// ──────────────────────────────────────────────────────────────────────────────
+class PorkSandwich {
+    /**
+     * @param {number} x       - Spawn world X
+     * @param {number} y       - Spawn world Y
+     * @param {number} targetX - Target world X (typically player.x)
+     * @param {number} targetY - Target world Y (typically player.y)
+     */
+    constructor(x, y, targetX, targetY) {
+        this.x      = x;
+        this.y      = y;
+
+        // Angle from spawn point toward target
+        const angle  = Math.atan2(targetY - y, targetX - x);
+        const speed  = 400;
+        this.vx      = Math.cos(angle) * speed;
+        this.vy      = Math.sin(angle) * speed;
+
+        this.radius    = 15;
+        this.isParried = false;
+        this.dead      = false;
+
+        // Internal timers / animation
+        this._lifeTimer = 0;
+        this._spinT     = 0;
+    }
+
+    // ── update ────────────────────────────────────────────────────────────────
+    update(dt, player) {
+        if (this.dead) return true;
+
+        this._lifeTimer += dt;
+        this._spinT     += dt * (this.isParried ? 12 : 4);   // spin faster when parried
+
+        // Expire after 5 seconds to prevent runaway projectiles
+        if (this._lifeTimer > 5.0) { this.dead = true; return true; }
+
+        // Movement
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        // ── INCOMING: normal state ─────────────────────────────────────────
+        if (!this.isParried) {
+
+            // ── CHECK: player-fired projectile parry ──────────────────────
+            if (window.projectileManager && Array.isArray(window.projectileManager.projectiles)) {
+                for (const p of window.projectileManager.projectiles) {
+                    if (p.dead) continue;
+                    if (p.type !== 'player') continue;
+                    const dx = p.x - this.x;
+                    const dy = p.y - this.y;
+                    const pRadius = p.radius || 6;
+                    if (Math.hypot(dx, dy) < this.radius + pRadius) {
+                        // Destroy the incoming projectile
+                        p.dead = true;
+
+                        // Reverse + accelerate toward boss (or just reverse if no boss)
+                        if (window.boss && !window.boss.dead) {
+                            const ba = Math.atan2(window.boss.y - this.y, window.boss.x - this.x);
+                            this.vx = Math.cos(ba) * 560;
+                            this.vy = Math.sin(ba) * 560;
+                        } else {
+                            this.vx = -this.vx * 1.5;
+                            this.vy = -this.vy * 1.5;
+                        }
+
+                        this.isParried = true;
+
+                        // Feedback
+                        spawnParticles(this.x, this.y, 12, '#39ff14');
+                        spawnFloatingText('PARRY! 🥪', this.x, this.y - 40, '#39ff14', 26);
+                        if (typeof addScreenShake !== 'undefined') addScreenShake(5);
+
+                        return false;   // still alive — now heading back
+                    }
+                }
+            }
+
+            // ── CHECK: player catches sandwich ────────────────────────────
+            const dp = Math.hypot(player.x - this.x, player.y - this.y);
+            if (dp < this.radius + (player.radius || 16)) {
+                // Heal
+                player.hp = Math.min(player.maxHp, player.hp + 30);
+
+                // Speed boost (4 seconds, ×1.45) — guard against double-boost
+                if (!player._sandwichBoostActive) {
+                    player._sandwichOrigSpeed   = player.moveSpeed;
+                    player._sandwichBoostActive  = true;
+                    player.moveSpeed            *= 1.45;
+                    setTimeout(() => {
+                        if (player._sandwichBoostActive) {
+                            player.moveSpeed        = player._sandwichOrigSpeed;
+                            player._sandwichBoostActive = false;
+                        }
+                    }, 4000);
+                }
+
+                spawnParticles(player.x, player.y, 16, '#fbbf24');
+                spawnFloatingText('+30 HP 🥪  DELICIOUS!', player.x, player.y - 55, '#fbbf24', 24);
+                spawnFloatingText('⚡ SPEED BOOST!',        player.x, player.y - 85, '#facc15', 20);
+
+                // Boss BERSERK
+                if (window.boss && !window.boss.dead) {
+                    if (typeof window.boss.enterBerserk === 'function') {
+                        window.boss.enterBerserk();
+                    } else if (typeof window.boss._enterState === 'function') {
+                        window.boss._enterState('BERSERK');
+                    }
+                    spawnFloatingText('😡 BOSS ENRAGED!', window.boss.x, window.boss.y - 80, '#ef4444', 30);
+                    if (typeof addScreenShake !== 'undefined') addScreenShake(12);
+                }
+
+                spawnFloatingText('DELICIOUS! (BOSS ENRAGED)', this.x, this.y - 30, '#f97316', 22);
+
+                this.dead = true;
+                return true;
+            }
+        }
+
+        // ── PARRIED: heading back toward boss ─────────────────────────────
+        if (this.isParried && window.boss && !window.boss.dead) {
+            const db = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+            if (db < this.radius + (window.boss.radius || 30)) {
+                // Boss STUNNED
+                if (typeof window.boss.enterStunned === 'function') {
+                    window.boss.enterStunned();
+                } else if (typeof window.boss._enterState === 'function') {
+                    window.boss._enterState('STUNNED');
+                }
+
+                // Massive explosion
+                spawnParticles(window.boss.x, window.boss.y, 40, '#39ff14');
+                spawnParticles(window.boss.x, window.boss.y, 20, '#ffffff');
+                spawnFloatingText('🥪 SANDWICH COUNTER!', window.boss.x, window.boss.y - 90, '#39ff14', 34);
+                spawnFloatingText('STUNNED!',             window.boss.x, window.boss.y - 55, '#94a3b8', 28);
+
+                if (typeof addScreenShake !== 'undefined') addScreenShake(18);
+
+                this.dead = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ── draw ──────────────────────────────────────────────────────────────────
+    draw() {
+        if (this.dead) return;
+
+        const screen = worldToScreen(this.x, this.y);
+        const r      = this.radius;
+
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+
+        // Rapid spin when parried
+        CTX.rotate(this.isParried ? performance.now() / 50 : this._spinT);
+
+        // ── Glow aura (parried only) ────────────────────────────────────────
+        if (this.isParried) {
+            const pulse     = 0.6 + Math.sin(performance.now() / 80) * 0.4;
+            CTX.shadowBlur  = 24 * pulse;
+            CTX.shadowColor = '#39ff14';
+            CTX.strokeStyle = `rgba(57,255,20,${0.55 * pulse})`;
+            CTX.lineWidth   = 3;
+            CTX.beginPath();
+            CTX.arc(0, 0, r + 7, 0, Math.PI * 2);
+            CTX.stroke();
+            CTX.shadowBlur = 0;
+        } else {
+            // Subtle golden shimmer on normal flight
+            const pulse     = 0.4 + Math.sin(performance.now() / 140) * 0.3;
+            CTX.shadowBlur  = 10 * pulse;
+            CTX.shadowColor = '#fbbf24';
+        }
+
+        // ── Bun top (sesame) ───────────────────────────────────────────────
+        CTX.fillStyle = '#d97706';
+        CTX.beginPath();
+        CTX.ellipse(0, -r * 0.22, r, r * 0.52, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        CTX.strokeStyle = '#92400e';
+        CTX.lineWidth   = 1.5;
+        CTX.beginPath();
+        CTX.ellipse(0, -r * 0.22, r, r * 0.52, 0, 0, Math.PI * 2);
+        CTX.stroke();
+
+        // Sesame seeds on top bun
+        CTX.fillStyle  = '#fef3c7';
+        CTX.shadowBlur = 0;
+        for (let i = 0; i < 5; i++) {
+            const sa = (i / 5) * Math.PI * 2;
+            CTX.beginPath();
+            CTX.ellipse(
+                Math.cos(sa) * r * 0.50, -r * 0.22 + Math.sin(sa) * r * 0.26,
+                2.2, 1.2, sa, 0, Math.PI * 2
+            );
+            CTX.fill();
+        }
+
+        // ── Lettuce layer ──────────────────────────────────────────────────
+        CTX.fillStyle = '#22c55e';
+        CTX.beginPath();
+        CTX.ellipse(0, r * 0.02, r * 0.94, r * 0.18, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        // ── Pork filling ───────────────────────────────────────────────────
+        CTX.fillStyle = '#c2410c';
+        CTX.beginPath();
+        CTX.ellipse(0, r * 0.13, r * 0.86, r * 0.24, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Sauce drip
+        CTX.fillStyle = '#dc2626';
+        CTX.beginPath();
+        CTX.ellipse(r * 0.18, r * 0.22, r * 0.11, r * 0.18, 0.4, 0, Math.PI * 2);
+        CTX.fill();
+
+        // ── Bun bottom ─────────────────────────────────────────────────────
+        CTX.fillStyle = '#b45309';
+        CTX.beginPath();
+        CTX.ellipse(0, r * 0.40, r * 0.90, r * 0.34, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        CTX.strokeStyle = '#92400e';
+        CTX.lineWidth   = 1.5;
+        CTX.beginPath();
+        CTX.ellipse(0, r * 0.40, r * 0.90, r * 0.34, 0, 0, Math.PI * 2);
+        CTX.stroke();
+
+        // ── Danger indicator text when parried ─────────────────────────────
+        if (this.isParried) {
+            CTX.rotate(-this._spinT);          // counter-rotate text so it stays readable
+            CTX.font          = 'bold 11px Arial';
+            CTX.textAlign     = 'center';
+            CTX.textBaseline  = 'middle';
+            CTX.shadowBlur    = 8;
+            CTX.shadowColor   = '#39ff14';
+            CTX.fillStyle     = '#ffffff';
+            CTX.fillText('⚡', 0, -r - 10);
+            CTX.shadowBlur    = 0;
+        }
+
+        CTX.restore();
+    }
+}
+
+// ── Global export so boss.js (and any other module) can instantiate it ────────
+window.PorkSandwich = PorkSandwich;
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Export
 // ──────────────────────────────────────────────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
@@ -1417,6 +1679,7 @@ if (typeof module !== 'undefined' && module.exports) {
         EquationSlam, DeadlyGraph, MeteorStrike,
         spawnParticles, spawnFloatingText,
         spawnWanchaiPunchText,
-        drawGlitchEffect
+        drawGlitchEffect,
+        PorkSandwich
     };
 }

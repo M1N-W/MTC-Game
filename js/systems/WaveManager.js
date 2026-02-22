@@ -9,6 +9,13 @@
 //   • Fog Wave    — radar blackout, cyan fog vignette
 //   • Speed Wave  — enemies ×2 speed, red speed-lines vignette
 //
+// Boss encounter queue (deterministic, 5 encounters across 15 waves):
+//   Enc 1  Wave  3 → Kru Manop  (Basic)
+//   Enc 2  Wave  6 → Kru First  (Basic)
+//   Enc 3  Wave  9 → Kru Manop  (Dog Rider)
+//   Enc 4  Wave 12 → Kru First  (Advanced — extra difficulty)
+//   Enc 5  Wave 15 → Kru Manop  (Goldfish Lover)
+//
 // All mutable state lives on window.* so any script can read/write it.
 // ══════════════════════════════════════════════════════════════
 
@@ -16,8 +23,15 @@
 const GLITCH_EVERY_N_WAVES = 5;
 window.GLITCH_EVERY_N_WAVES = GLITCH_EVERY_N_WAVES;
 
-// Which waves trigger special events (skip boss/glitch waves automatically)
-const FOG_WAVES   = new Set([2, 6, 8, 11, 14]);
+// Which waves trigger special events.
+// Rules:  must NOT overlap with multiples of 3 (boss waves: 3,6,9,12,15)
+//         must NOT overlap with multiples of 5 (glitch waves: 5,10)  [handled by isGlitch guard]
+//
+// FOG_WAVES:   was [2,6,8,11,14] — removed 6 (boss wave), replaced with 5
+//              Final: 2, 5, 8, 11, 14  — none clash with boss waves (3,6,9,12,15)
+// SPEED_WAVES: [4,7,10,13,16]          — 10 is a glitch wave but the guard skips it safely;
+//              16 is beyond maxWaves=15 so it is never reached (harmless)
+const FOG_WAVES   = new Set([2, 5, 8, 11, 14]);
 const SPEED_WAVES = new Set([4, 7, 10, 13, 16]);
 const SPEED_MULT  = 1.5;
 
@@ -53,20 +67,20 @@ const _patchedEnemies = new WeakSet();
 
 function _activateWaveEvent(type, wave) {
     _deactivateWaveEvent();
-    _evt.active       = type;
-    _evt.fogAlpha     = 0;
+    _evt.active        = type;
+    _evt.fogAlpha      = 0;
     _evt.announceTimer = ANNOUNCE_DUR;
 
     if (type === 'fog') {
-        window.isFogWave        = true;
-        _evt.bannerTitle        = '🌫️ FOG WAVE';
-        _evt.bannerSubtitle     = '— RADAR OFFLINE —';
-        _evt.bannerColor        = '#06b6d4';
+        window.isFogWave    = true;
+        _evt.bannerTitle    = '🌫️ FOG WAVE';
+        _evt.bannerSubtitle = '— RADAR OFFLINE —';
+        _evt.bannerColor    = '#06b6d4';
     } else {
-        window.isSpeedWave      = true;
-        _evt.bannerTitle        = '⚡ SPEED WAVE';
-        _evt.bannerSubtitle     = '— ENEMIES ACCELERATED —';
-        _evt.bannerColor        = '#ef4444';
+        window.isSpeedWave  = true;
+        _evt.bannerTitle    = '⚡ SPEED WAVE';
+        _evt.bannerSubtitle = '— ENEMIES ACCELERATED —';
+        _evt.bannerColor    = '#ef4444';
         _patchEnemySpeeds();
     }
     if (typeof spawnFloatingText === 'function' && window.player)
@@ -134,9 +148,9 @@ function _drawFog(ctx) {
     ctx.globalCompositeOperation = 'source-over';
 
     const vg = ctx.createRadialGradient(W/2,H/2,H*0.25, W/2,H/2,H*0.85);
-    vg.addColorStop(0, `rgba(6,30,50,0)`);
+    vg.addColorStop(0,   `rgba(6,30,50,0)`);
     vg.addColorStop(0.5, `rgba(6,30,50,${a*0.5})`);
-    vg.addColorStop(1, `rgba(2,10,20,${a})`);
+    vg.addColorStop(1,   `rgba(2,10,20,${a})`);
     ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
 
     ctx.globalAlpha = a * 0.35;
@@ -145,9 +159,9 @@ function _drawFog(ctx) {
         const oy = (H*0.15*i + Math.sin(now*0.3+i)*30 + H) % H;
         const r  = 160 + i*40;
         const fg = ctx.createRadialGradient(ox,oy,0,ox,oy,r);
-        fg.addColorStop(0, 'rgba(100,200,220,0.22)');
+        fg.addColorStop(0,   'rgba(100,200,220,0.22)');
         fg.addColorStop(0.5, 'rgba(50,150,180,0.10)');
-        fg.addColorStop(1, 'rgba(0,100,140,0)');
+        fg.addColorStop(1,   'rgba(0,100,140,0)');
         ctx.fillStyle = fg;
         ctx.beginPath();
         ctx.ellipse(ox,oy,r,r*0.45,Math.sin(now*0.1+i)*0.4,0,Math.PI*2);
@@ -181,9 +195,9 @@ function _drawSpeed(ctx) {
     ctx.globalCompositeOperation = 'source-over';
     const p  = 0.5 + Math.sin(now*6)*0.5;
     const vg = ctx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.80);
-    vg.addColorStop(0, 'rgba(239,68,68,0)');
+    vg.addColorStop(0,   'rgba(239,68,68,0)');
     vg.addColorStop(0.7, `rgba(239,68,68,${a*0.4})`);
-    vg.addColorStop(1, `rgba(180,20,20,${a*p})`);
+    vg.addColorStop(1,   `rgba(180,20,20,${a*p})`);
     ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
     ctx.globalAlpha = a*0.5; ctx.strokeStyle = 'rgba(239,68,68,0.55)'; ctx.lineWidth = 1.2;
     for (let i = 0; i < 14; i++) {
@@ -277,25 +291,96 @@ function startNextWave() {
         spawnEnemies(count);
     }
 
-    // ── Boss Wave ────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    // ── Boss Wave — Deterministic encounter queue ─────────────
+    //
+    //  encounter │ wave │ boss
+    //  ──────────┼──────┼──────────────────────────────────────
+    //      1     │   3  │ Kru Manop  — Basic
+    //      2     │   6  │ Kru First  — Basic
+    //      3     │   9  │ Kru Manop  — Dog Rider (enablePhase2)
+    //      4     │  12  │ Kru First  — Advanced  (isAdvanced flag)
+    //      5     │  15  │ Kru Manop  — Goldfish Lover (phase2+3)
+    //
+    //  bossLevel = wave / bossEveryNWaves  (scales HP / score)
+    // ════════════════════════════════════════════════════════════
     if (isBossWave) {
         setTimeout(() => {
             window.bossEncounterCount++;
-            const isRider         = window.bossEncounterCount >= 2;
-            const isGoldfishLover = window.bossEncounterCount >= 3;
-            const bossLevel       = Math.floor(wave / BALANCE.waves.bossEveryNWaves);
-            window.boss = new Boss(bossLevel, isRider, isGoldfishLover);
-            UIManager.updateBossHUD(window.boss);
+            const encounter  = window.bossEncounterCount;
+            const bossLevel  = Math.floor(wave / BALANCE.waves.bossEveryNWaves);
             const bossNameEl = document.getElementById('boss-name');
-            if (bossNameEl) bossNameEl.innerHTML =
-                `KRU MANOP - LEVEL ${bossLevel}${isRider?' 🐕 DOG RIDER':''}${isGoldfishLover?' 🐟 GOLDFISH LOVER':''} <span class="ai-badge">AI</span>`;
-            spawnFloatingText(
-                isGoldfishLover ? GAME_TEXTS.wave.bossIncomingFish : isRider ? GAME_TEXTS.wave.bossIncomingRider : GAME_TEXTS.wave.bossIncoming,
-                window.player.x, window.player.y-100,
-                isGoldfishLover ? '#38bdf8' : isRider ? '#d97706' : '#ef4444', 35
-            );
-            addScreenShake(15); Audio.playBossSpecial();
+
+            if (encounter === 2 || encounter === 4) {
+                // ── KRU FIRST ────────────────────────────────────────
+                //    Encounter 2: standard difficulty
+                //    Encounter 4: isAdvanced = true → constructor applies
+                //                 an extra stat multiplier inside BossFirst
+                const isAdvanced = (encounter === 4);
+                window.boss = new BossFirst(bossLevel, isAdvanced);
+                UIManager.updateBossHUD(window.boss);
+
+                if (bossNameEl) {
+                    bossNameEl.innerHTML =
+                        `<span style="color:#39ff14;text-shadow:0 0 10px #16a34a">` +
+                        `⚛️ KRU FIRST — PHYSICS MASTER` +
+                        `${isAdvanced ? ' ⚡ ADVANCED' : ''}` +
+                        `</span>` +
+                        ` <span style="font-size:0.78em;color:#86efac">LV ${bossLevel}</span>` +
+                        ` <span class="ai-badge">AI</span>`;
+                }
+
+                spawnFloatingText(
+                    isAdvanced
+                        ? '⚡ KRU FIRST — ADVANCED MODE!'
+                        : '⚛️ KRU FIRST — PHYSICS BOSS INCOMING!',
+                    window.player.x, window.player.y - 100,
+                    '#39ff14', 35
+                );
+
+                // Secondary physics tagline (staggered)
+                setTimeout(() => {
+                    if (window.player) spawnFloatingText(
+                        isAdvanced ? 'F=ma · E=mc² · MAXIMUM POWER!' : 'F=ma · v=u+at · DODGE THIS!',
+                        window.player.x, window.player.y - 148,
+                        '#86efac', 22
+                    );
+                }, 650);
+
+            } else {
+                // ── KRU MANOP ────────────────────────────────────────
+                //    Encounter 1: basic (no phases)
+                //    Encounter 3: enablePhase2 = true  (Dog Rider)
+                //    Encounter 5: enablePhase2 + enablePhase3 = true (Goldfish Lover)
+                const enablePhase2 = (encounter >= 3);
+                const enablePhase3 = (encounter >= 5);
+
+                window.boss = new Boss(bossLevel, enablePhase2, enablePhase3);
+                UIManager.updateBossHUD(window.boss);
+
+                if (bossNameEl) {
+                    bossNameEl.innerHTML =
+                        `KRU MANOP — LV ${bossLevel}` +
+                        `${enablePhase2 ? ' 🐕 DOG RIDER' : ''}` +
+                        `${enablePhase3 ? ' 🐟 GOLDFISH LOVER' : ''}` +
+                        ` <span class="ai-badge">AI</span>`;
+                }
+
+                spawnFloatingText(
+                    enablePhase3 ? GAME_TEXTS.wave.bossIncomingFish
+                                 : enablePhase2 ? GAME_TEXTS.wave.bossIncomingRider
+                                 : GAME_TEXTS.wave.bossIncoming,
+                    window.player.x, window.player.y - 100,
+                    enablePhase3 ? '#38bdf8' : enablePhase2 ? '#d97706' : '#ef4444',
+                    35
+                );
+            }
+
+            addScreenShake(15);
+            Audio.playBossSpecial();
+
         }, BALANCE.waves.bossSpawnDelay);
+
         Audio.playBGM('boss');
     }
 }

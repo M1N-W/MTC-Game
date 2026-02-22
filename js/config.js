@@ -301,7 +301,7 @@ const BALANCE = {
     waves: {
         spawnDistance: 800,
         bossSpawnDelay: 3000,
-        maxWaves: 9,
+        maxWaves:            15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
         minKillsForNoDamage: 5,
         enemiesBase: 4,
         enemiesPerWave: 2,

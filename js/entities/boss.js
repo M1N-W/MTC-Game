@@ -1280,15 +1280,1123 @@ class BubbleProjectile {
     }
 }
 
+// ════════════════════════════════════════════════════════════
+// ⚛️  BOSS FIRST — "KRU FIRST · PHYSICS MASTER"
+//
+// Encounter 2 (Wave 6):  BossFirst(bossLevel, false)
+// Encounter 4 (Wave 12): BossFirst(bossLevel, true)  ← isAdvanced
+//
+// States: IDLE | CHASE | SUVAT_CHARGE | ORBIT_ATTACK |
+//         FREE_FALL | ROCKET | SANDWICH_TOSS | STUNNED | BERSERK
+// ════════════════════════════════════════════════════════════
+class BossFirst extends Entity {
+    /**
+     * @param {number}  difficulty  - HP/score multiplier
+     * @param {boolean} isAdvanced  - true on encounter 4; extra stat boost
+     */
+    constructor(difficulty = 1, isAdvanced = false) {
+        const BASE_R = BALANCE.boss.radius * 0.88;
+        super(0, BALANCE.boss.spawnY, BASE_R);
+
+        const advMult   = isAdvanced ? 1.35 : 1.0;
+        this.maxHp      = BALANCE.boss.baseHp * difficulty * 0.62 * advMult;
+        this.hp         = this.maxHp;
+        this.name       = 'KRU FIRST';
+        this.moveSpeed  = BALANCE.boss.moveSpeed * 1.55 * advMult;
+        this.difficulty = difficulty;
+        this.isAdvanced = isAdvanced;
+        this.isEnraged  = false;         // becomes true permanently when BERSERK triggered
+        this.state      = 'CHASE';
+        this.stateTimer = 0;
+        this.timer      = 0;
+        this.sayTimer   = 0;
+        this._waveSpawnLocked = false;
+
+        // ── Skill cooldowns ──────────────────────────────────
+        this.skills = {
+            suvat:    { cd: 0, max: 8.0  },
+            orbit:    { cd: 0, max: 12.0 },
+            freeFall: { cd: 0, max: 15.0 },
+            rocket:   { cd: 0, max: 9.0  },
+            sandwich: { cd: 0, max: 18.0 }
+        };
+
+        // ── SUVAT charge constants ────────────────────────────
+        this.SUVAT_WIND_UP = 0.9;          // seconds of wind-up before dash
+        this.SUVAT_ACCEL   = 1900;         // px/s²
+        this.SUVAT_MAX_DUR = 1.2;          // max dash duration
+        this._suvatVel     = 0;            // current dash scalar
+
+        // ── ORBIT state ──────────────────────────────────────
+        this.ORBIT_R   = 115;              // px from centre of orbit
+        this.ORBIT_W   = 2.8;             // rad/s
+        this.ORBIT_DUR = 3.5;
+        this._orbitCX  = 0;
+        this._orbitCY  = 0;
+        this._orbitT   = 0;
+        this._orbitFireCd = 0;
+
+        // ── FREE_FALL state ───────────────────────────────────
+        this.FREE_FALL_WARN = 1.5;         // warning ring duration
+        this._fallTargetX   = 0;
+        this._fallTargetY   = 0;
+
+        // ── BERSERK fire timer ────────────────────────────────
+        this._berserkFireCd = 0;
+
+        // ── Dodge system ──────────────────────────────────────
+        this._dodgeCd = 0;
+
+        // ── Active sandwich reference (drawn separately) ──────
+        this._activeSandwich = null;
+
+        // ── hitFlashTimer (for damage visual) ────────────────
+        this.hitFlashTimer = 0;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // UPDATE
+    // ─────────────────────────────────────────────────────────
+    update(dt, player) {
+        if (this.dead) return;
+
+        this.timer     += dt;
+        this.sayTimer  += dt;
+        this.stateTimer += dt;
+        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+
+        // Cooldown ticks
+        for (const s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
+        if (this._dodgeCd > 0)       this._dodgeCd  -= dt;
+        if (this._orbitFireCd > 0)   this._orbitFireCd -= dt;
+        if (this._berserkFireCd > 0) this._berserkFireCd -= dt;
+
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const d  = Math.hypot(dx, dy);
+        this.angle = Math.atan2(dy, dx);
+
+        // ── Dodge incoming projectiles ────────────────────────
+        if (this._dodgeCd <= 0 && typeof projectileManager !== 'undefined') {
+            for (const p of projectileManager.getAll ? projectileManager.getAll() : (projectileManager.list || [])) {
+                if (!p || p.dead || p.team === 'enemy') continue;
+                const pdx = p.x - this.x, pdy = p.y - this.y;
+                if (Math.hypot(pdx, pdy) < 130) {
+                    // Perpendicular impulse
+                    this.vx += -pdy / (Math.hypot(pdx, pdy) + 1) * 420;
+                    this.vy +=  pdx / (Math.hypot(pdx, pdy) + 1) * 420;
+                    this._dodgeCd = 1.2;
+                    break;
+                }
+            }
+        }
+
+        // ── State machine ─────────────────────────────────────
+        switch (this.state) {
+
+            case 'CHASE': {
+                if (d > 0) {
+                    this.vx = (dx / d) * this.moveSpeed;
+                    this.vy = (dy / d) * this.moveSpeed;
+                }
+                this.applyPhysics(dt);
+
+                if (this.stateTimer > 2.0) {
+                    this.stateTimer = 0;
+                    this._pickSkill(player, d);
+                }
+                break;
+            }
+
+            case 'SUVAT_CHARGE': {
+                // Phase 1 — wind-up
+                if (this.stateTimer <= this.SUVAT_WIND_UP) {
+                    this.vx *= 0.85; this.vy *= 0.85;
+                } else {
+                    // Phase 2 — v = u + at dash
+                    this._suvatVel += this.SUVAT_ACCEL * dt;
+                    const dashAngle = Math.atan2(
+                        player.y - this._suvatAimY,
+                        player.x - this._suvatAimX
+                    );
+                    this.vx = Math.cos(dashAngle) * this._suvatVel;
+                    this.vy = Math.sin(dashAngle) * this._suvatVel;
+                    this.applyPhysics(dt);
+
+                    // Hit player
+                    if (d < this.radius + player.radius + 12) {
+                        player.takeDamage(55);
+                        addScreenShake(14);
+                        spawnFloatingText('v=u+at IMPACT!', player.x, player.y - 55, '#fbbf24', 28);
+                        this._enterOrbit(player);
+                        break;
+                    }
+
+                    if (this.stateTimer - this.SUVAT_WIND_UP > this.SUVAT_MAX_DUR) {
+                        this._enterState('CHASE');
+                    }
+                }
+                break;
+            }
+
+            case 'ORBIT_ATTACK': {
+                this._orbitT += this.ORBIT_W * dt;
+                this.x = this._orbitCX + Math.cos(this._orbitT) * this.ORBIT_R;
+                this.y = this._orbitCY + Math.sin(this._orbitT) * this.ORBIT_R;
+                this.vx = 0; this.vy = 0;
+
+                if (this._orbitFireCd <= 0) {
+                    this._orbitFireCd = 0.55;
+                    const aimA = Math.atan2(player.y - this.y, player.x - this.x);
+                    projectileManager.add(new Projectile(
+                        this.x, this.y, aimA,
+                        520, 18 * (this.isAdvanced ? 1.3 : 1.0),
+                        '#818cf8', false, 'enemy'
+                    ));
+                }
+
+                // Track player centre slowly
+                this._orbitCX += (player.x - this._orbitCX) * dt * 1.2;
+                this._orbitCY += (player.y - this._orbitCY) * dt * 1.2;
+
+                if (this.stateTimer > this.ORBIT_DUR) this._enterState('CHASE');
+                break;
+            }
+
+            case 'FREE_FALL': {
+                // Invisible + invulnerable warning phase
+                if (this.stateTimer < this.FREE_FALL_WARN) {
+                    this.vx = 0; this.vy = 0;
+                } else {
+                    // Teleport + AoE
+                    this.x = this._fallTargetX;
+                    this.y = this._fallTargetY;
+                    // AoE damage
+                    const aoeR = 140;
+                    const fdx = player.x - this.x, fdy = player.y - this.y;
+                    if (Math.hypot(fdx, fdy) < aoeR + player.radius) {
+                        player.takeDamage(72 * (this.isAdvanced ? 1.25 : 1.0));
+                        spawnFloatingText('h=½gt² CRASH!', player.x, player.y - 60, '#ef4444', 30);
+                        addScreenShake(20);
+                    }
+                    spawnParticles(this.x, this.y, 35, '#ef4444');
+                    spawnParticles(this.x, this.y, 20, '#fbbf24');
+                    this._enterState('CHASE');
+                }
+                break;
+            }
+
+            case 'ROCKET': {
+                // Jump backward for first 0.3s then idle
+                if (this.stateTimer < 0.3) {
+                    const awayA = this.angle + Math.PI;
+                    this.vx = Math.cos(awayA) * 230;
+                    this.vy = Math.sin(awayA) * 230;
+                    this.applyPhysics(dt);
+                }
+                if (this.stateTimer > 0.35 && this.stateTimer < 0.45) {
+                    // Fire scaled rocket projectile — p = mv
+                    const dist_  = Math.max(100, Math.min(700, d));
+                    const scale  = 0.5 + ((dist_ - 100) / 600) * 2.0;  // 0.5 – 2.5
+                    const rDmg   = 28 * scale * (this.isAdvanced ? 1.3 : 1.0);
+                    const rSpeed = 480 + scale * 180;
+                    const rRad   = 14 + scale * 8;
+                    projectileManager.add(new Projectile(
+                        this.x, this.y, this.angle, rSpeed, rDmg,
+                        '#f97316', false, 'enemy', rRad
+                    ));
+                    spawnFloatingText('p=mv ROCKET!', this.x, this.y - 65, '#f97316', 26);
+                    Audio.playBossSpecial();
+                }
+                if (this.stateTimer > 1.0) this._enterState('CHASE');
+                break;
+            }
+
+            case 'SANDWICH_TOSS': {
+                // Sandwich is managed as its own entity in specialEffects
+                if (this.stateTimer > 0.5 && !this._sandwichFired) {
+                    this._sandwichFired = true;
+                    const sw = new PorkSandwich(this.x, this.y, this.angle, this);
+                    window.specialEffects.push(sw);
+                    this._activeSandwich = sw;
+                }
+                if (this.stateTimer > 1.2) this._enterState('CHASE');
+                break;
+            }
+
+            case 'STUNNED': {
+                this.vx *= 0.88; this.vy *= 0.88;
+                const stunDur = this.isEnraged ? 2.5 : 3.8;
+                if (this.stateTimer > stunDur) this._enterState('CHASE');
+                break;
+            }
+
+            case 'BERSERK': {
+                // Permanent enrage: fast aggressive chase + burst fire
+                this.isEnraged = true;
+                if (d > 0) {
+                    this.vx = (dx / d) * this.moveSpeed * 1.25;
+                    this.vy = (dy / d) * this.moveSpeed * 1.25;
+                }
+                this.applyPhysics(dt);
+
+                if (this._berserkFireCd <= 0) {
+                    this._berserkFireCd = 2.2;
+                    for (let i = -1; i <= 1; i++) {
+                        projectileManager.add(new Projectile(
+                            this.x, this.y, this.angle + i * 0.22,
+                            540, 22 * (this.isAdvanced ? 1.3 : 1.0),
+                            '#ef4444', false, 'enemy'
+                        ));
+                    }
+                }
+
+                if (this.stateTimer > 3.5) this._enterState('CHASE');
+                break;
+            }
+        }
+
+        // Contact damage
+        if (d < this.radius + player.radius) {
+            player.takeDamage(BALANCE.boss.contactDamage * dt * 1.2);
+        }
+
+        if (this.sayTimer > BALANCE.boss.speechInterval && Math.random() < 0.1) {
+            this._speak('Player at ' + Math.round(player.hp) + ' HP');
+            this.sayTimer = 0;
+        }
+
+        if (window.UIManager) {
+            window.UIManager.updateBossHUD(this);
+            window.UIManager.updateBossSpeech(this);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────────────────
+    _enterState(s) {
+        this.state = s; this.stateTimer = 0;
+    }
+
+    _pickSkill(player, d) {
+        // Sandwich toss is highest priority
+        if (this.skills.sandwich.cd <= 0) {
+            this.skills.sandwich.cd = this.skills.sandwich.max;
+            this._sandwichFired = false;
+            this._enterState('SANDWICH_TOSS');
+            spawnFloatingText('🥪 PORK SANDWICH!', this.x, this.y - 80, '#fbbf24', 28);
+            Audio.playBossSpecial();
+            return;
+        }
+        if (this.skills.freeFall.cd <= 0) {
+            this.skills.freeFall.cd = this.skills.freeFall.max;
+            this._fallTargetX = player.x + (Math.random() - 0.5) * 30;
+            this._fallTargetY = player.y + (Math.random() - 0.5) * 30;
+            // Spawn warning ring
+            window.specialEffects.push(new FreeFallWarningRing(
+                this._fallTargetX, this._fallTargetY, this.FREE_FALL_WARN
+            ));
+            spawnFloatingText('h=½gt² …', this.x, this.y - 80, '#ef4444', 26);
+            this._enterState('FREE_FALL');
+            return;
+        }
+        if (this.skills.suvat.cd <= 0 && d > 120) {
+            this.skills.suvat.cd = this.skills.suvat.max;
+            this._suvatVel  = 0;
+            this._suvatAimX = player.x;
+            this._suvatAimY = player.y;
+            spawnFloatingText('v=u+at CHARGE!', this.x, this.y - 80, '#fbbf24', 28);
+            this._enterState('SUVAT_CHARGE');
+            Audio.playBossSpecial();
+            return;
+        }
+        if (this.skills.orbit.cd <= 0) {
+            this.skills.orbit.cd = this.skills.orbit.max;
+            this._enterOrbit(player);
+            return;
+        }
+        if (this.skills.rocket.cd <= 0) {
+            this.skills.rocket.cd = this.skills.rocket.max;
+            this._enterState('ROCKET');
+            return;
+        }
+    }
+
+    _enterOrbit(player) {
+        this.skills.orbit.cd = this.skills.orbit.max;
+        this._orbitCX = player.x;
+        this._orbitCY = player.y;
+        this._orbitT  = Math.atan2(this.y - player.y, this.x - player.x);
+        this._orbitFireCd = 0;
+        spawnFloatingText('ω=v/r ORBIT!', this.x, this.y - 80, '#818cf8', 26);
+        this._enterState('ORBIT_ATTACK');
+        Audio.playBossSpecial();
+    }
+
+    takeDamage(amt) {
+        if (this.state === 'FREE_FALL' && this.stateTimer < this.FREE_FALL_WARN) return; // invulnerable
+        this.hp -= amt;
+        this.hitFlashTimer = 0.12;
+        spawnParticles(this.x, this.y, 3, '#39ff14');
+        if (this.hp <= 0 && !this._waveSpawnLocked) {
+            this._waveSpawnLocked = true;
+            this.dead = true; this.hp = 0;
+            spawnParticles(this.x, this.y, 60, '#39ff14');
+            spawnParticles(this.x, this.y, 30, '#00ffff');
+            spawnFloatingText('⚛️ PHYSICS DISMISSED!', this.x, this.y, '#39ff14', 35);
+            addScore(BALANCE.score.boss * this.difficulty);
+            if (window.UIManager) window.UIManager.updateBossHUD(null);
+            Audio.playAchievement();
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => window.powerups.push(
+                    new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))
+                ), i * 200);
+            }
+            window.lastBossKilled = true;
+            window.boss = null;
+            Achievements.check('boss_down');
+            setTimeout(() => {
+                setWave(getWave() + 1);
+                if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
+                else if (typeof window.startNextWave === 'function') window.startNextWave();
+            }, BALANCE.boss.nextWaveDelay);
+        }
+    }
+
+    async _speak(context) {
+        try {
+            const text = await Gemini.getBossTaunt(context);
+            if (text && window.UIManager) window.UIManager.showBossSpeech(text);
+        } catch (e) {
+            console.debug('[BossFirst] Speech unavailable:', e);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // DRAW
+    // ─────────────────────────────────────────────────────────
+    draw() {
+        // ╔══════════════════════════════════════════════════════════════╗
+        // ║  KRU FIRST — Physics Master                                 ║
+        // ║  Agile chibi teacher · Jetpack · Holographic equation ring  ║
+        // ║  Cyan science goggles · Neon-green tech vest · Hit-flash    ║
+        // ╚══════════════════════════════════════════════════════════════╝
+
+        // ── Draw active sandwich BEFORE the boss body (world space) ────
+        if (this._activeSandwich && !this._activeSandwich.dead) {
+            this._activeSandwich.draw();
+        }
+
+        // ── FREE_FALL invisible phase ───────────────────────────────────
+        if (this.state === 'FREE_FALL' && this.stateTimer > 0.12) return;
+
+        // ── Core setup ─────────────────────────────────────────────────
+        const screen = worldToScreen(this.x, this.y);
+        const now    = performance.now();
+        const t      = now / 1000;
+
+        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
+        const R            = this.radius;
+
+        // ── Hover animation ────────────────────────────────────────────
+        const hoverY = Math.sin(now / 150) * 4;
+        const hoverX = Math.sin(now / 230) * 1.2;
+
+        CTX.save();
+        CTX.translate(screen.x + hoverX, screen.y + hoverY);
+
+        // ── LAYER 0 — Ground shadow ─────────────────────────────────────
+        CTX.save();
+        CTX.globalAlpha = 0.22 - Math.abs(hoverY) * 0.012;
+        CTX.fillStyle   = 'rgba(0,0,0,0.9)';
+        CTX.beginPath();
+        CTX.ellipse(0, R * 1.25 - hoverY * 0.4, R * 1.05, R * 0.22, 0, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.restore();
+
+        // ── LAYER 1 — Berserk aura ──────────────────────────────────────
+        if (this.isEnraged) {
+            CTX.save();
+            const berserkT  = t * 3.5;
+            const berserkR  = R * 1.85 + Math.sin(berserkT) * R * 0.18;
+            const bAlpha    = 0.22 + Math.sin(berserkT * 1.3) * 0.12;
+            const bGrad = CTX.createRadialGradient(0, 0, R * 0.5, 0, 0, berserkR);
+            bGrad.addColorStop(0,    'rgba(239,68,68,0)');
+            bGrad.addColorStop(0.65, `rgba(239,68,68,${bAlpha})`);
+            bGrad.addColorStop(1,    `rgba(220,38,38,${bAlpha * 1.6})`);
+            CTX.fillStyle = bGrad;
+            CTX.beginPath(); CTX.arc(0, 0, berserkR, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 24; CTX.shadowColor = '#ef4444';
+            CTX.strokeStyle = `rgba(239,68,68,${0.55 + Math.sin(berserkT * 2.1) * 0.35})`;
+            CTX.lineWidth = 2.8;
+            CTX.beginPath(); CTX.arc(0, 0, berserkR * 0.96, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+            for (let fi = 0; fi < 6; fi++) {
+                const fa   = (fi / 6) * Math.PI * 2 + t * 1.8;
+                const fBob = Math.sin(t * 4.2 + fi * 1.1) * R * 0.25;
+                const fx1  = Math.cos(fa) * berserkR * 0.82;
+                const fy1  = Math.sin(fa) * berserkR * 0.82;
+                const fx2  = Math.cos(fa) * (berserkR + R * 0.38 + fBob);
+                const fy2  = Math.sin(fa) * (berserkR + R * 0.38 + fBob);
+                CTX.globalAlpha = 0.35 + Math.sin(t * 3.5 + fi) * 0.25;
+                CTX.strokeStyle = fi % 2 === 0 ? '#ef4444' : '#fb923c';
+                CTX.lineWidth   = 2 + Math.sin(t * 5 + fi) * 1.0;
+                CTX.lineCap     = 'round';
+                CTX.shadowBlur  = 10; CTX.shadowColor = '#ef4444';
+                CTX.beginPath(); CTX.moveTo(fx1, fy1); CTX.lineTo(fx2, fy2); CTX.stroke();
+            }
+            CTX.globalAlpha = 1; CTX.shadowBlur = 0; CTX.lineCap = 'butt';
+            CTX.restore();
+        }
+
+        // ── LAYER 2 — Holographic equation ring ────────────────────────
+        CTX.save();
+        const ringR       = R * 2.0;
+        const ringCol     = this.isEnraged ? '#ff4444' : '#39ff14';
+        const ringGlow    = this.isEnraged ? '#dc2626' : '#16a34a';
+
+        // Outer ring
+        CTX.save();
+        CTX.rotate(t * 0.9);
+        CTX.shadowBlur  = 12; CTX.shadowColor = ringGlow;
+        CTX.strokeStyle = `${ringCol}99`; CTX.lineWidth = 1.8;
+        CTX.setLineDash([8, 5]);
+        CTX.beginPath(); CTX.arc(0, 0, ringR, 0, Math.PI * 2); CTX.stroke();
+        CTX.setLineDash([]);
+        for (let ti = 0; ti < 12; ti++) {
+            const ta   = (ti / 12) * Math.PI * 2;
+            const tLen = ti % 3 === 0 ? R * 0.18 : R * 0.09;
+            CTX.strokeStyle = ti % 3 === 0 ? ringCol : `${ringCol}77`;
+            CTX.lineWidth   = ti % 3 === 0 ? 2.2 : 1.2;
+            CTX.beginPath();
+            CTX.moveTo(Math.cos(ta) * (ringR - tLen), Math.sin(ta) * (ringR - tLen));
+            CTX.lineTo(Math.cos(ta) * ringR,          Math.sin(ta) * ringR);
+            CTX.stroke();
+        }
+        CTX.shadowBlur = 0;
+        CTX.restore();
+
+        // Inner counter-rotating ring
+        CTX.save();
+        CTX.rotate(-(t * 0.55));
+        CTX.shadowBlur  = 8; CTX.shadowColor = ringGlow;
+        CTX.strokeStyle = `${ringCol}55`; CTX.lineWidth = 1.2;
+        CTX.setLineDash([4, 6]);
+        CTX.beginPath(); CTX.arc(0, 0, ringR * 0.72, 0, Math.PI * 2); CTX.stroke();
+        CTX.setLineDash([]);
+        CTX.shadowBlur = 0;
+        CTX.restore();
+
+        // Orbiting formula labels
+        const formulas = ['F=ma', 'v=u+at', 'E=mc²', 'p=mv', 'ω=v/r', 'h=½gt²'];
+        const fOrbitR  = ringR * 0.88;
+        const fSpeed   = this.isEnraged ? 1.35 : 0.72;
+        for (let fi = 0; fi < formulas.length; fi++) {
+            const fAngle = t * fSpeed + (fi / formulas.length) * Math.PI * 2;
+            const fAlpha = 0.45 + Math.sin(t * 1.8 + fi * 0.9) * 0.30;
+            CTX.save();
+            CTX.translate(
+                Math.cos(fAngle) * fOrbitR,
+                Math.sin(fAngle) * fOrbitR * 0.55
+            );
+            CTX.rotate(-fAngle * 0.18);
+            CTX.globalAlpha  = fAlpha;
+            CTX.font         = `bold ${10 + Math.sin(t * 1.5 + fi) * 1.5}px "Orbitron",monospace,Arial`;
+            CTX.textAlign    = 'center'; CTX.textBaseline = 'middle';
+            CTX.shadowBlur   = 10 + Math.sin(t * 2.2 + fi) * 5;
+            CTX.shadowColor  = ringGlow;
+            CTX.fillStyle    = ringCol;
+            CTX.fillText(formulas[fi], 0, 0);
+            CTX.restore();
+        }
+        CTX.globalAlpha = 1; CTX.shadowBlur = 0;
+        CTX.restore();
+
+        // ── LAYER 3 — SUVAT charge ring ─────────────────────────────────
+        if (this.state === 'SUVAT_CHARGE' && this.stateTimer <= this.SUVAT_WIND_UP) {
+            CTX.save();
+            const prog   = Math.min(this.stateTimer / this.SUVAT_WIND_UP, 1);
+            const cRingR = R * (1.15 + prog * 0.65);
+            const pulse  = Math.abs(Math.sin(now / 55));
+            const cGrad  = CTX.createRadialGradient(0, 0, 0, 0, 0, cRingR);
+            cGrad.addColorStop(0,   `rgba(251,191,36,${prog * 0.18})`);
+            cGrad.addColorStop(0.7, `rgba(251,191,36,${prog * 0.08})`);
+            cGrad.addColorStop(1,    'rgba(251,191,36,0)');
+            CTX.shadowBlur = 28 * prog; CTX.shadowColor = '#fbbf24';
+            CTX.fillStyle = cGrad;
+            CTX.beginPath(); CTX.arc(0, 0, cRingR, 0, Math.PI * 2); CTX.fill();
+            CTX.rotate(t * 5.5);
+            CTX.strokeStyle = `rgba(251,191,36,${0.5 + pulse * 0.45})`;
+            CTX.lineWidth   = 3.5 * prog;
+            CTX.setLineDash([10, 6]);
+            CTX.beginPath(); CTX.arc(0, 0, cRingR, 0, Math.PI * 2); CTX.stroke();
+            CTX.setLineDash([]);
+            CTX.shadowBlur = 0;
+            CTX.restore();
+        }
+
+        // ── BODY BLOCK (facing flip + breathe) ─────────────────────────
+        CTX.save();
+        if (isFacingLeft) CTX.scale(-1, 1);
+        const breathe = Math.sin(now / 195);
+        CTX.scale(1 + breathe * 0.022, 1 - breathe * 0.016);
+
+        // ── LAYER 4 — Jetpack ───────────────────────────────────────────
+        CTX.save();
+        const jpX = -R * 0.72, jpY = -R * 0.12;
+        const jpW = R * 0.55,  jpH = R * 1.10;
+        CTX.shadowBlur  = 8; CTX.shadowColor = '#0e7490';
+        const jpGrad = CTX.createLinearGradient(jpX - jpW / 2, 0, jpX + jpW / 2, 0);
+        jpGrad.addColorStop(0,   '#0f172a');
+        jpGrad.addColorStop(0.4, '#1e293b');
+        jpGrad.addColorStop(1,   '#0f172a');
+        CTX.fillStyle = jpGrad;
+        CTX.beginPath(); CTX.roundRect(jpX - jpW / 2, jpY - jpH / 2, jpW, jpH, R * 0.14); CTX.fill();
+        CTX.strokeStyle = '#0ea5e9'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.roundRect(jpX - jpW / 2, jpY - jpH / 2, jpW, jpH, R * 0.14); CTX.stroke();
+        CTX.shadowBlur = 0;
+        // Panel rivets
+        CTX.fillStyle = '#334155';
+        for (let ri = 0; ri < 2; ri++) for (let rj = 0; rj < 2; rj++) {
+            CTX.beginPath();
+            CTX.arc(jpX - jpW * 0.28 + ri * jpW * 0.56, jpY - jpH * 0.35 + rj * jpH * 0.70, 2.2, 0, Math.PI * 2);
+            CTX.fill();
+        }
+        // Energy cell
+        const cellAlpha = 0.7 + Math.sin(t * 2.8) * 0.25;
+        CTX.shadowBlur  = 14; CTX.shadowColor = '#00ffff';
+        CTX.fillStyle   = `rgba(0,255,255,${cellAlpha * 0.55})`;
+        CTX.beginPath(); CTX.roundRect(jpX - jpW * 0.22, jpY - jpH * 0.18, jpW * 0.44, jpH * 0.36, 3); CTX.fill();
+        CTX.strokeStyle = `rgba(0,255,255,${cellAlpha})`; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.roundRect(jpX - jpW * 0.22, jpY - jpH * 0.18, jpW * 0.44, jpH * 0.36, 3); CTX.stroke();
+        CTX.shadowBlur = 0;
+        // Nozzle flames
+        const nozzleOffsets = [-jpW * 0.22, jpW * 0.22];
+        for (let ni = 0; ni < 2; ni++) {
+            const nx = jpX + nozzleOffsets[ni], ny = jpY + jpH / 2;
+            const nW = jpW * 0.22, nH = R * 0.20;
+            CTX.fillStyle   = '#1e293b'; CTX.strokeStyle = '#475569'; CTX.lineWidth = 1.5;
+            CTX.beginPath();
+            CTX.moveTo(nx - nW * 0.6, ny); CTX.lineTo(nx - nW * 0.85, ny + nH);
+            CTX.lineTo(nx + nW * 0.85, ny + nH); CTX.lineTo(nx + nW * 0.6, ny);
+            CTX.closePath(); CTX.fill(); CTX.stroke();
+            CTX.shadowBlur = 10; CTX.shadowColor = '#00ffff';
+            CTX.strokeStyle = 'rgba(0,255,255,0.7)'; CTX.lineWidth = 2;
+            CTX.beginPath(); CTX.ellipse(nx, ny + 2, nW * 0.55, nW * 0.22, 0, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+            // Outer flame
+            const flameLen = R * (0.55 + Math.sin(t * 8.5 + ni * 2.1) * 0.22 + Math.random() * 0.10);
+            const flameW   = nW * (0.55 + Math.sin(t * 11.2 + ni * 1.7) * 0.18);
+            const fJitter  = (Math.random() - 0.5) * 4;
+            CTX.save();
+            CTX.shadowBlur = 22; CTX.shadowColor = '#3b82f6';
+            CTX.globalAlpha = 0.55 + Math.sin(t * 7.1 + ni) * 0.28;
+            CTX.fillStyle = '#3b82f6';
+            CTX.beginPath();
+            CTX.moveTo(nx - flameW * 1.1, ny + nH);
+            CTX.quadraticCurveTo(nx + fJitter * 0.5, ny + nH + flameLen * 0.55, nx, ny + nH + flameLen * 1.5);
+            CTX.quadraticCurveTo(nx + fJitter * 0.3, ny + nH + flameLen * 0.55, nx + flameW * 1.1, ny + nH);
+            CTX.closePath(); CTX.fill();
+            CTX.restore();
+            // Cyan mid flame
+            CTX.save();
+            const cLen = flameLen * 0.82, cW = flameW * 0.72;
+            CTX.shadowBlur = 18; CTX.shadowColor = '#00ffff';
+            CTX.globalAlpha = 0.7 + Math.sin(t * 9.3 + ni * 1.3) * 0.22;
+            CTX.fillStyle = '#00e5ff';
+            CTX.beginPath();
+            CTX.moveTo(nx - cW, ny + nH);
+            CTX.quadraticCurveTo(nx, ny + nH + cLen * 0.5, nx, ny + nH + cLen * 1.25);
+            CTX.quadraticCurveTo(nx, ny + nH + cLen * 0.5, nx + cW, ny + nH);
+            CTX.closePath(); CTX.fill();
+            CTX.restore();
+            // White-hot core
+            CTX.save();
+            const wLen = flameLen * 0.45, wW = flameW * 0.28;
+            CTX.shadowBlur = 14; CTX.shadowColor = '#ffffff';
+            CTX.globalAlpha = 0.85 + Math.sin(t * 13 + ni) * 0.12;
+            CTX.fillStyle = '#ffffff';
+            CTX.beginPath();
+            CTX.moveTo(nx - wW, ny + nH);
+            CTX.quadraticCurveTo(nx, ny + nH + wLen * 0.4, nx, ny + nH + wLen);
+            CTX.quadraticCurveTo(nx, ny + nH + wLen * 0.4, nx + wW, ny + nH);
+            CTX.closePath(); CTX.fill();
+            CTX.restore();
+        }
+        CTX.restore(); // end jetpack
+
+        // ── LAYER 5 — Silhouette glow ring ─────────────────────────────
+        const mainCol    = this.isEnraged ? '#ef4444' : '#39ff14';
+        const glowShadow = this.isEnraged ? '#dc2626' : '#16a34a';
+        CTX.shadowBlur   = 18; CTX.shadowColor = glowShadow;
+        CTX.strokeStyle  = `${mainCol}66`; CTX.lineWidth = 2.8;
+        CTX.beginPath(); CTX.arc(0, 0, R + 4, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur   = 0;
+
+        // ── LAYER 6 — Bean body ─────────────────────────────────────────
+        CTX.save(); CTX.scale(0.90, 1.10);
+        const bodyDark = this.isEnraged ? '#2d0a0a' : '#0a1a08';
+        const bodyMid  = this.isEnraged ? '#3f0e0e' : '#0f2d0c';
+        const bodyG    = CTX.createRadialGradient(-R * 0.22, -R * 0.25, 1, 0, 0, R);
+        bodyG.addColorStop(0,   bodyDark);
+        bodyG.addColorStop(0.5, bodyMid);
+        bodyG.addColorStop(1,   '#050c04');
+        CTX.fillStyle = bodyG;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+        CTX.strokeStyle = '#0a1a08'; CTX.lineWidth = 3.2;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+        CTX.restore();
+
+        // ── LAYER 7 — Khaki uniform + dark-grey tech vest ──────────────
+        CTX.fillStyle = '#d4b886';
+        CTX.beginPath();
+        CTX.moveTo(-R * 0.85, -R * 0.42);
+        CTX.quadraticCurveTo(-R * 1.0, -R * 0.12, -R * 0.88, R * 0.18);
+        CTX.lineTo(-R * 0.62, R * 0.22); CTX.lineTo(-R * 0.58, -R * 0.46);
+        CTX.closePath(); CTX.fill();
+        CTX.beginPath();
+        CTX.moveTo(R * 0.85, -R * 0.42);
+        CTX.quadraticCurveTo(R * 1.0, -R * 0.12, R * 0.88, R * 0.18);
+        CTX.lineTo(R * 0.62, R * 0.22); CTX.lineTo(R * 0.58, -R * 0.46);
+        CTX.closePath(); CTX.fill();
+        // Tech vest panels
+        CTX.fillStyle = '#1c2533';
+        CTX.beginPath();
+        CTX.moveTo(-R * 0.08, -R * 0.52); CTX.lineTo(-R * 0.58, -R * 0.18);
+        CTX.lineTo(-R * 0.55,  R * 0.52); CTX.lineTo(-R * 0.06,  R * 0.54);
+        CTX.closePath(); CTX.fill();
+        CTX.beginPath();
+        CTX.moveTo(R * 0.08, -R * 0.52); CTX.lineTo(R * 0.58, -R * 0.18);
+        CTX.lineTo(R * 0.55,  R * 0.52); CTX.lineTo(R * 0.06,  R * 0.54);
+        CTX.closePath(); CTX.fill();
+        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.6;
+        CTX.beginPath();
+        CTX.moveTo(-R * 0.08, -R * 0.52); CTX.lineTo(-R * 0.58, -R * 0.18); CTX.lineTo(-R * 0.55, R * 0.52);
+        CTX.stroke();
+        CTX.beginPath();
+        CTX.moveTo(R * 0.08, -R * 0.52); CTX.lineTo(R * 0.58, -R * 0.18); CTX.lineTo(R * 0.55, R * 0.52);
+        CTX.stroke();
+        // Chest stripe
+        const stripeCol = this.isEnraged ? '#ef4444' : '#39ff14';
+        CTX.shadowBlur = 7; CTX.shadowColor = stripeCol; CTX.fillStyle = stripeCol;
+        CTX.beginPath();
+        CTX.moveTo(-R * 0.44, -R * 0.56); CTX.lineTo(-R * 0.10, -R * 0.56);
+        CTX.lineTo( R * 0.44,  R * 0.56); CTX.lineTo( R * 0.10,  R * 0.56);
+        CTX.closePath(); CTX.fill();
+        CTX.shadowBlur = 0;
+        // Pocket
+        CTX.fillStyle = '#263348';
+        CTX.beginPath(); CTX.roundRect(-R * 0.50, R * 0.06, R * 0.30, R * 0.26, 3); CTX.fill();
+        CTX.strokeStyle = '#39ff1444'; CTX.lineWidth = 1.2;
+        CTX.beginPath(); CTX.roundRect(-R * 0.50, R * 0.06, R * 0.30, R * 0.26, 3); CTX.stroke();
+        CTX.strokeStyle = '#334155'; CTX.lineWidth = 1.2;
+        CTX.beginPath(); CTX.moveTo(-R * 0.50, R * 0.14); CTX.lineTo(-R * 0.20, R * 0.14); CTX.stroke();
+        // Belt
+        CTX.fillStyle = '#111827'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.ellipse(0, R * 0.52, R * 0.72, R * 0.12, 0, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.fillStyle = '#39ff1488'; CTX.shadowBlur = 5; CTX.shadowColor = '#39ff14';
+        CTX.beginPath(); CTX.roundRect(-R * 0.10, R * 0.44, R * 0.20, R * 0.16, 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // ── LAYER 8 — Head ──────────────────────────────────────────────
+        CTX.fillStyle = '#c8956c';
+        CTX.beginPath();
+        CTX.arc(0, -R * 0.32, R * 0.50, Math.PI * 0.08, Math.PI * 0.92, false);
+        CTX.quadraticCurveTo(0, R * 0.05, -R * 0.46, -R * 0.06);
+        CTX.closePath(); CTX.fill();
+        CTX.fillStyle = 'rgba(230,150,100,0.35)';
+        CTX.beginPath(); CTX.ellipse(-R * 0.24, -R * 0.22, R * 0.15, R * 0.10,  0.3, 0, Math.PI * 2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse( R * 0.24, -R * 0.22, R * 0.15, R * 0.10, -0.3, 0, Math.PI * 2); CTX.fill();
+        // Wild spiky hair
+        CTX.fillStyle = '#1c1008'; CTX.strokeStyle = '#0f0905'; CTX.lineWidth = 1.5;
+        CTX.beginPath();
+        CTX.moveTo(-R * 0.88, -R * 0.15);
+        CTX.quadraticCurveTo(-R * 1.05, -R * 0.62, -R * 0.50, -R * 0.98);
+        CTX.quadraticCurveTo(-R * 0.18, -R * 1.18, R * 0.18, -R * 1.18);
+        CTX.quadraticCurveTo(R * 0.50, -R * 0.98, R * 1.05, -R * 0.62);
+        CTX.quadraticCurveTo(R * 0.88, -R * 0.15, R * 0.65, -R * 0.08);
+        CTX.quadraticCurveTo(0, R * 0.02, -R * 0.65, -R * 0.08);
+        CTX.closePath(); CTX.fill(); CTX.stroke();
+        const spikeData = [
+            { bx: -R * 0.62, by: -R * 0.85, tx: -R * 0.88, ty: -R * 1.28 },
+            { bx: -R * 0.22, by: -R * 1.05, tx: -R * 0.32, ty: -R * 1.45 },
+            { bx:  R * 0.05, by: -R * 1.10, tx:  R * 0.10, ty: -R * 1.52 },
+            { bx:  R * 0.32, by: -R * 1.02, tx:  R * 0.50, ty: -R * 1.40 },
+            { bx:  R * 0.68, by: -R * 0.80, tx:  R * 0.90, ty: -R * 1.18 },
+        ];
+        for (const sp of spikeData) {
+            const halfW = R * 0.12;
+            const perpA = Math.atan2(sp.ty - sp.by, sp.tx - sp.bx) + Math.PI / 2;
+            CTX.beginPath();
+            CTX.moveTo(sp.bx + Math.cos(perpA) * halfW, sp.by + Math.sin(perpA) * halfW);
+            CTX.lineTo(sp.tx, sp.ty);
+            CTX.lineTo(sp.bx - Math.cos(perpA) * halfW, sp.by - Math.sin(perpA) * halfW);
+            CTX.closePath(); CTX.fill(); CTX.stroke();
+        }
+        CTX.strokeStyle = '#2d1f0f'; CTX.lineWidth = 1.8; CTX.lineCap = 'round';
+        CTX.beginPath();
+        CTX.moveTo(-R * 0.38, -R * 0.60);
+        CTX.quadraticCurveTo(-R * 0.50, -R * 0.95, -R * 0.22, -R * 1.10);
+        CTX.stroke();
+        CTX.lineCap = 'butt';
+        // Ears
+        CTX.fillStyle = '#c8956c'; CTX.strokeStyle = '#a0714a'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.ellipse(-R * 0.85, -R * 0.38, R * 0.14, R * 0.18, -0.2, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.beginPath(); CTX.ellipse( R * 0.85, -R * 0.38, R * 0.14, R * 0.18,  0.2, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        // Mouth
+        CTX.strokeStyle = '#7a4830'; CTX.lineWidth = 2.2; CTX.lineCap = 'round';
+        if (this.isEnraged) {
+            CTX.beginPath();
+            CTX.moveTo(-R * 0.22, -R * 0.05);
+            CTX.quadraticCurveTo(0, R * 0.10, R * 0.22, -R * 0.05);
+            CTX.stroke();
+            CTX.fillStyle = '#f8fafc';
+            CTX.beginPath(); CTX.roundRect(-R * 0.16, -R * 0.07, R * 0.32, R * 0.10, 2); CTX.fill();
+        } else {
+            CTX.beginPath();
+            CTX.moveTo(-R * 0.18, -R * 0.05); CTX.lineTo(R * 0.18, -R * 0.05); CTX.stroke();
+        }
+        CTX.lineCap = 'butt';
+
+        // ── LAYER 9 — Science goggles ───────────────────────────────────
+        const goggleY    = -R * 0.38;
+        const goggleGlow = this.isEnraged ? '#ff4444' : '#00ffff';
+        const gogglePulse = 0.6 + Math.sin(t * 2.5) * 0.35;
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = R * 0.14; CTX.lineCap = 'round';
+        CTX.beginPath(); CTX.moveTo(-R * 1.02, goggleY); CTX.lineTo(R * 1.02, goggleY); CTX.stroke();
+        CTX.lineCap = 'butt';
+        CTX.strokeStyle = '#334155'; CTX.lineWidth = R * 0.08;
+        CTX.beginPath(); CTX.moveTo(-R * 1.02, goggleY); CTX.lineTo(R * 1.02, goggleY); CTX.stroke();
+        CTX.shadowBlur  = 14 * gogglePulse; CTX.shadowColor = goggleGlow;
+        CTX.fillStyle   = '#0f172a'; CTX.strokeStyle = goggleGlow; CTX.lineWidth = 2.4;
+        CTX.beginPath(); CTX.roundRect(-R * 0.75, goggleY - R * 0.20, R * 0.40, R * 0.36, 4); CTX.fill(); CTX.stroke();
+        CTX.beginPath(); CTX.roundRect( R * 0.35, goggleY - R * 0.20, R * 0.40, R * 0.36, 4); CTX.fill(); CTX.stroke();
+        CTX.strokeStyle = goggleGlow; CTX.lineWidth = 2.0;
+        CTX.beginPath(); CTX.moveTo(-R * 0.35, goggleY); CTX.lineTo(R * 0.35, goggleY); CTX.stroke();
+        CTX.shadowBlur = 0;
+        const lensAlpha = 0.45 + Math.sin(t * 3.2) * 0.28;
+        CTX.fillStyle   = this.isEnraged ? `rgba(239,68,68,${lensAlpha})` : `rgba(0,255,255,${lensAlpha})`;
+        CTX.shadowBlur  = 10 * gogglePulse; CTX.shadowColor = goggleGlow;
+        CTX.beginPath(); CTX.roundRect(-R * 0.72, goggleY - R * 0.17, R * 0.34, R * 0.30, 3); CTX.fill();
+        CTX.beginPath(); CTX.roundRect( R * 0.38, goggleY - R * 0.17, R * 0.34, R * 0.30, 3); CTX.fill();
+        CTX.shadowBlur = 0;
+        CTX.fillStyle = `rgba(255,255,255,${0.55 + Math.sin(t * 2.8) * 0.25})`;
+        CTX.beginPath(); CTX.ellipse(-R * 0.60, goggleY - R * 0.10, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse( R * 0.52, goggleY - R * 0.10, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
+
+        // ── LAYER 10 — Back hand ────────────────────────────────────────
+        const handBob = Math.sin(t * 2.1) * 3;
+        CTX.fillStyle   = '#c8956c'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2.2;
+        CTX.shadowBlur  = 5; CTX.shadowColor = 'rgba(0,255,255,0.3)';
+        CTX.beginPath(); CTX.arc(-(R + 8), 4 + handBob, R * 0.28, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── LAYER 11 — State indicators ─────────────────────────────────
+        if (this.state === 'STUNNED') {
+            for (let si = 0; si < 3; si++) {
+                const sa  = t * 3.5 + (si / 3) * Math.PI * 2;
+                const sx  = Math.cos(sa) * R * 0.60;
+                const sy  = -R * 1.12 + Math.sin(sa) * R * 0.35;
+                CTX.font = `bold ${13 + Math.sin(t * 4 + si) * 2}px Arial`;
+                CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+                CTX.fillStyle = '#fbbf24'; CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
+                CTX.fillText('★', sx, sy);
+            }
+            CTX.font = 'bold 28px Arial'; CTX.textAlign = 'center';
+            CTX.fillText('😵', 0, -R * 1.35);
+            CTX.shadowBlur = 0;
+        }
+        if (this.state === 'ORBIT_ATTACK') {
+            CTX.save();
+            CTX.globalAlpha  = 0.55 + Math.sin(t * 4) * 0.35;
+            CTX.shadowBlur   = 12; CTX.shadowColor = '#818cf8';
+            CTX.strokeStyle  = '#818cf8'; CTX.lineWidth = 2;
+            CTX.setLineDash([5, 4]);
+            CTX.beginPath(); CTX.arc(0, 0, R * 1.55, 0, Math.PI * 2); CTX.stroke();
+            CTX.setLineDash([]);
+            CTX.shadowBlur = 0;
+            CTX.restore();
+        }
+
+        // ── LAYER 12 — Berserk fire particles ───────────────────────────
+        if (this.isEnraged) {
+            for (let pi = 0; pi < 5; pi++) {
+                const pa  = t * 0.85 + pi * 1.26;
+                const pr  = R * 0.60 + Math.sin(t * 1.3 + pi) * R * 0.18;
+                const px  = Math.sin(pa * 1.1) * pr;
+                const py  = -Math.abs(Math.cos(pa * 0.9 + pi)) * R * 0.70 - R * 0.45;
+                const ps  = 3.5 + Math.sin(t * 2.2 + pi) * 1.8;
+                CTX.globalAlpha = 0.50 + Math.sin(t * 3 + pi) * 0.28;
+                CTX.fillStyle   = pi % 2 === 0 ? '#ef4444' : '#fb923c';
+                CTX.shadowBlur  = 10; CTX.shadowColor = '#ef4444';
+                CTX.beginPath(); CTX.arc(px, py, ps, 0, Math.PI * 2); CTX.fill();
+            }
+            CTX.globalAlpha = 1; CTX.shadowBlur = 0;
+        }
+
+        // ── LAYER 13 — HP bar ────────────────────────────────────────────
+        {
+            const barW  = R * 2.0, barH = 6;
+            const barX  = -barW / 2, barYp = -R * 1.72;
+            const hpPct = Math.max(0, this.hp / this.maxHp);
+            CTX.fillStyle = 'rgba(0,0,0,0.60)';
+            CTX.beginPath(); CTX.roundRect(barX - 1, barYp - 1, barW + 2, barH + 2, 3); CTX.fill();
+            const hpCol = hpPct > 0.55 ? '#39ff14' : hpPct > 0.28 ? '#fbbf24' : '#ef4444';
+            CTX.shadowBlur  = 6; CTX.shadowColor = hpCol; CTX.fillStyle = hpCol;
+            CTX.beginPath(); CTX.roundRect(barX, barYp, barW * hpPct, barH, 3); CTX.fill();
+            CTX.shadowBlur  = 0;
+            CTX.globalAlpha = 0.80;
+            CTX.font = `bold 9px "Orbitron",Arial,sans-serif`;
+            CTX.textAlign = 'center';
+            CTX.fillStyle   = this.isEnraged ? '#ef4444' : '#39ff14';
+            CTX.shadowBlur  = 6; CTX.shadowColor = this.isEnraged ? '#ef4444' : '#39ff14';
+            CTX.fillText('KRU FIRST', 0, barYp - 5);
+            CTX.shadowBlur  = 0; CTX.globalAlpha = 1;
+        }
+
+        CTX.restore(); // end body block
+
+        // ── WEAPON BLOCK — Energy pointer ──────────────────────────────
+        CTX.save();
+        CTX.rotate(this.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+        CTX.fillStyle   = '#c8956c'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2.2;
+        CTX.shadowBlur  = 6; CTX.shadowColor = 'rgba(0,255,255,0.4)';
+        CTX.beginPath(); CTX.arc(R + 8, 4, R * 0.30, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.shadowBlur = 0;
+        const ptrGlow = (this.state === 'SUVAT_CHARGE' || this.state === 'ORBIT_ATTACK') ? 1.0 : 0.55;
+        const ptrCol  = this.isEnraged ? '#ff4444' : '#00ffff';
+        CTX.shadowBlur  = 14 * ptrGlow; CTX.shadowColor = ptrCol;
+        CTX.fillStyle   = '#1e293b';
+        CTX.beginPath(); CTX.roundRect(R + 12, -R * 0.08, R * 1.45, R * 0.17, 2); CTX.fill();
+        CTX.fillStyle   = ptrCol; CTX.globalAlpha = ptrGlow;
+        CTX.beginPath(); CTX.roundRect(R + 14, -R * 0.04, R * 1.38, R * 0.08, 2); CTX.fill();
+        CTX.globalAlpha = 1;
+        CTX.beginPath(); CTX.arc(R + 12 + R * 1.45, 0, R * 0.16, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = 0.45 * ptrGlow;
+        CTX.beginPath(); CTX.arc(R + 12 + R * 1.45, 0, R * 0.30, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = 1; CTX.shadowBlur = 0;
+        CTX.restore();
+
+        // ── HIT FLASH OVERLAY ────────────────────────────────────────────
+        if (this.hitFlashTimer && this.hitFlashTimer > 0) {
+            CTX.save();
+            CTX.beginPath(); CTX.arc(0, 0, R + 8, 0, Math.PI * 2); CTX.clip();
+            CTX.globalCompositeOperation = 'source-atop';
+            CTX.fillStyle = `rgba(255,255,255,${Math.min(this.hitFlashTimer * 2.0, 0.88)})`;
+            CTX.fillRect(-R - 12, -R * 1.60, (R + 12) * 2, R * 2.8);
+            CTX.restore();
+        }
+
+        CTX.restore(); // outermost
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// 🥪 PORK SANDWICH — Interactive parry projectile
+// Normal: player heals +35 HP + speed boost; boss → BERSERK
+// Parried: reverses toward boss; if hits → boss STUNNED
+// ════════════════════════════════════════════════════════════
+class PorkSandwich {
+    constructor(x, y, angle, boss) {
+        this.x      = x;
+        this.y      = y;
+        this.vx     = Math.cos(angle) * 340;
+        this.vy     = Math.sin(angle) * 340;
+        this.radius = 16;
+        this.angle  = angle;
+        this.dead   = false;
+        this.parried = false;
+        this.lifeTimer = 0;
+        this._boss  = boss;
+        this._spinT = 0;
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.lifeTimer += dt;
+        this._spinT    += dt * 5;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.lifeTimer > 4.0) { this.dead = true; return true; }
+
+        // Check parry from player dash
+        if (!this.parried && player._parryActive) {
+            const d = Math.hypot(player.x - this.x, player.y - this.y);
+            if (d < this.radius + player.radius + 20) {
+                this.tryParry();
+                return false;
+            }
+        }
+
+        // Hit player
+        if (!this.parried) {
+            const dp = Math.hypot(player.x - this.x, player.y - this.y);
+            if (dp < this.radius + player.radius) {
+                // Player catches/eats the sandwich — heal + speed boost
+                const healAmt = 35;
+                player.hp = Math.min(player.maxHp, player.hp + healAmt);
+                spawnFloatingText(`+${healAmt} HP 🥪 yummy!`, player.x, player.y - 55, '#fbbf24', 24);
+                // Speed boost 4s ×1.45
+                const origSpeed = player._sandwichOrigSpeed || player.moveSpeed;
+                if (!player._sandwichBoostActive) {
+                    player._sandwichOrigSpeed   = player.moveSpeed;
+                    player._sandwichBoostActive  = true;
+                    player.moveSpeed *= 1.45;
+                    setTimeout(() => {
+                        if (player._sandwichBoostActive) {
+                            player.moveSpeed = player._sandwichOrigSpeed;
+                            player._sandwichBoostActive = false;
+                        }
+                    }, 4000);
+                }
+                spawnFloatingText('⚡ SPEED BOOST!', player.x, player.y - 80, '#fbbf24', 20);
+                spawnParticles(player.x, player.y, 14, '#fbbf24');
+                // Boss goes BERSERK
+                if (this._boss && !this._boss.dead) {
+                    this._boss.isEnraged = true;
+                    this._boss._enterState('BERSERK');
+                    spawnFloatingText('😡 BERSERK!', this._boss.x, this._boss.y - 80, '#ef4444', 30);
+                    addScreenShake(12);
+                }
+                this.dead = true;
+                return true;
+            }
+        }
+
+        // Parried sandwich — hits boss
+        if (this.parried && this._boss && !this._boss.dead) {
+            const db = Math.hypot(this._boss.x - this.x, this._boss.y - this.y);
+            if (db < this.radius + this._boss.radius) {
+                this._boss._enterState('STUNNED');
+                spawnFloatingText('🥪 PARRY! STUNNED!', this._boss.x, this._boss.y - 80, '#39ff14', 30);
+                spawnParticles(this._boss.x, this._boss.y, 20, '#39ff14');
+                addScreenShake(10);
+                this.dead = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    tryParry() {
+        this.parried = true;
+        // Reverse toward boss
+        if (this._boss && !this._boss.dead) {
+            const ba = Math.atan2(this._boss.y - this.y, this._boss.x - this.x);
+            this.vx = Math.cos(ba) * 480;
+            this.vy = Math.sin(ba) * 480;
+        } else {
+            this.vx = -this.vx * 1.4;
+            this.vy = -this.vy * 1.4;
+        }
+        spawnFloatingText('🥪 PARRIED!', this.x, this.y - 40, '#39ff14', 26);
+        spawnParticles(this.x, this.y, 10, '#39ff14');
+        addScreenShake(6);
+    }
+
+    draw() {
+        if (this.dead) return;
+        const screen = worldToScreen(this.x, this.y);
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this._spinT);
+
+        const r = this.radius;
+        const glowCol = this.parried ? '#39ff14' : '#fbbf24';
+
+        if (this.parried) {
+            CTX.shadowBlur = 18; CTX.shadowColor = '#39ff14';
+            CTX.strokeStyle = 'rgba(57,255,20,0.6)'; CTX.lineWidth = 2.5;
+            CTX.beginPath(); CTX.arc(0, 0, r + 5, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+        }
+
+        // Sesame bun top
+        CTX.fillStyle = '#d97706';
+        CTX.beginPath(); CTX.ellipse(0, -r * 0.25, r, r * 0.55, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.strokeStyle = '#92400e'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.ellipse(0, -r * 0.25, r, r * 0.55, 0, 0, Math.PI * 2); CTX.stroke();
+        // Sesame seeds
+        CTX.fillStyle = '#fef3c7';
+        for (let si = 0; si < 5; si++) {
+            const sa = (si / 5) * Math.PI * 2;
+            CTX.beginPath(); CTX.ellipse(Math.cos(sa) * r * 0.52, -r * 0.25 + Math.sin(sa) * r * 0.28, 2.2, 1.2, sa, 0, Math.PI * 2); CTX.fill();
+        }
+        // Pork filling
+        CTX.fillStyle = '#c2410c';
+        CTX.beginPath(); CTX.ellipse(0, r * 0.05, r * 0.88, r * 0.28, 0, 0, Math.PI * 2); CTX.fill();
+        // Sauce drip
+        CTX.fillStyle = '#dc2626';
+        CTX.beginPath(); CTX.ellipse(r * 0.2, r * 0.15, r * 0.12, r * 0.20, 0.3, 0, Math.PI * 2); CTX.fill();
+        // Bun bottom
+        CTX.fillStyle = '#b45309';
+        CTX.beginPath(); CTX.ellipse(0, r * 0.38, r * 0.92, r * 0.38, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.strokeStyle = '#92400e'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.ellipse(0, r * 0.38, r * 0.92, r * 0.38, 0, 0, Math.PI * 2); CTX.stroke();
+
+        CTX.restore();
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// ⚠️  FREE FALL WARNING RING — visual AoE indicator
+// ════════════════════════════════════════════════════════════
+class FreeFallWarningRing {
+    constructor(x, y, duration) {
+        this.x        = x;
+        this.y        = y;
+        this.duration = duration;
+        this.timer    = 0;
+        this.dead     = false;
+        this.radius   = 140;
+    }
+
+    update(dt) {
+        this.timer += dt;
+        if (this.timer >= this.duration) { this.dead = true; return true; }
+        return false;
+    }
+
+    draw() {
+        if (this.dead) return;
+        const screen  = worldToScreen(this.x, this.y);
+        const prog    = this.timer / this.duration;
+        const pulse   = 0.5 + Math.sin(this.timer * 12) * 0.45;
+        const alpha   = (1 - prog * 0.4) * pulse;
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.shadowBlur  = 20 * pulse; CTX.shadowColor = '#ef4444';
+        CTX.strokeStyle = `rgba(239,68,68,${alpha})`;
+        CTX.lineWidth   = 3;
+        CTX.setLineDash([12, 8]);
+        CTX.beginPath(); CTX.arc(0, 0, this.radius * (0.85 + prog * 0.15), 0, Math.PI * 2); CTX.stroke();
+        CTX.setLineDash([]);
+        CTX.shadowBlur  = 0;
+        CTX.font        = 'bold 22px Arial';
+        CTX.textAlign   = 'center'; CTX.textBaseline = 'middle';
+        CTX.globalAlpha = alpha;
+        CTX.fillText('⚠️', 0, 0);
+        CTX.globalAlpha = 1;
+        CTX.restore();
+    }
+}
+
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Boss, BossDog, GoldfishMinion, BubbleProjectile, BarkWave };
-    
-}// ══════════════════════════════════════════════════════════════
+    module.exports = { Boss, BossDog, BossFirst, GoldfishMinion, BubbleProjectile, BarkWave, PorkSandwich, FreeFallWarningRing };
+}
+// ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.Boss              = Boss;
-window.BossDog           = BossDog;
-window.GoldfishMinion    = GoldfishMinion;
-window.BubbleProjectile  = BubbleProjectile;
-window.BarkWave          = BarkWave;
+window.Boss                 = Boss;
+window.BossDog              = BossDog;
+window.BossFirst            = BossFirst;
+window.GoldfishMinion       = GoldfishMinion;
+window.BubbleProjectile     = BubbleProjectile;
+window.BarkWave             = BarkWave;
+window.PorkSandwich         = PorkSandwich;
+window.FreeFallWarningRing  = FreeFallWarningRing;
