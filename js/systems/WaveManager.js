@@ -19,7 +19,7 @@ window.GLITCH_EVERY_N_WAVES = GLITCH_EVERY_N_WAVES;
 // Which waves trigger special events (skip boss/glitch waves automatically)
 const FOG_WAVES   = new Set([2, 6, 8, 11, 14]);
 const SPEED_WAVES = new Set([4, 7, 10, 13, 16]);
-const SPEED_MULT  = 2.0;
+const SPEED_MULT  = 1.5;
 
 // ─── Mutable state ─────────────────────────────────────────────
 window.isGlitchWave        = false;
