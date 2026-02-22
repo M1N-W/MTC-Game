@@ -14,40 +14,40 @@ class Player extends Entity {
         super(0, 0, stats.radius);
 
         this.charId = charId;
-        this.stats  = stats;
+        this.stats = stats;
 
-        this.hp        = stats.hp;
-        this.maxHp     = stats.maxHp;
-        this.energy    = stats.energy;
+        this.hp = stats.hp;
+        this.maxHp = stats.maxHp;
+        this.energy = stats.energy;
         this.maxEnergy = stats.maxEnergy;
 
         this.cooldowns = { dash: 0, stealth: 0, shoot: 0 };
 
-        this.isDashing     = false;
-        this.isInvisible   = false;
-        this.ambushReady   = false;
-        this.walkCycle     = 0;
+        this.isDashing = false;
+        this.isInvisible = false;
+        this.ambushReady = false;
+        this.walkCycle = 0;
 
-        this.damageBoost     = 1;
-        this.speedBoost      = 1;
+        this.damageBoost = 1;
+        this.speedBoost = 1;
         this.speedBoostTimer = 0;
-        this.dashGhosts      = [];
+        this.dashGhosts = [];
 
         // ── Timeout Management ───────────────────────────────────
         this.dashTimeouts = [];
 
         // ── Weapon Recoil (v11) ───────────────────────────────────
-        this.weaponRecoil      = 0;
+        this.weaponRecoil = 0;
         this.weaponRecoilDecay = 8.5;
 
         // ── Stand-Aura & Afterimage system ────────────────────
-        this.standGhosts   = [];
-        this.auraRotation  = 0;
-        this._auraFrame    = 0;
+        this.standGhosts = [];
+        this.auraRotation = 0;
+        this._auraFrame = 0;
 
-        this.onGraph       = false;
-        this.isConfused    = false; this.confusedTimer = 0;
-        this.isBurning     = false; this.burnTimer = 0; this.burnDamage = 0;
+        this.onGraph = false;
+        this.isConfused = false; this.confusedTimer = 0;
+        this.isBurning = false; this.burnTimer = 0; this.burnDamage = 0;
 
         // ── Combo System Initialization ─────────────────────────
         this.comboCount = 0;
@@ -55,18 +55,18 @@ class Player extends Entity {
         this.COMBO_MAX_TIME = 3.0;
         this.COMBO_MAX_STACKS = 50;
 
-        this.level          = 1;
-        this.exp            = 0;
+        this.level = 1;
+        this.exp = 0;
         this.expToNextLevel = stats.expToNextLevel;
 
         // ── RPG Scaling Multipliers ─────────────────────────────
         this._damageMultiplier = 1.0;
         Object.defineProperty(this, 'damageMultiplier', {
-            get: function() {
+            get: function () {
                 const combo = this.comboCount || 0;
                 return this._damageMultiplier * (1 + (combo * 0.01));
             },
-            set: function(val) {
+            set: function (val) {
                 // Preserves level-up logic by extracting the base value difference
                 const comboMult = 1 + ((this.comboCount || 0) * 0.01);
                 const diff = val - (this._damageMultiplier * comboMult);
@@ -75,24 +75,24 @@ class Player extends Entity {
         });
         this.cooldownMultiplier = 1.0;
 
-        this.baseCritChance  = stats.baseCritChance;
+        this.baseCritChance = stats.baseCritChance;
         this.passiveUnlocked = false;
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
 
         // ── Collision Awareness state ──────────────────────────
-        this.obstacleBuffTimer     = 0;
-        this.lastObstacleWarning   = 0;
+        this.obstacleBuffTimer = 0;
+        this.lastObstacleWarning = 0;
 
         // ── Restore persistent passive ─────────────────────────
         try {
             const saved = getSaveData();
-            const myId  = this.charId;
+            const myId = this.charId;
             if (Array.isArray(saved.unlockedPassives) && saved.unlockedPassives.includes(myId)) {
                 this.passiveUnlocked = true;
                 const hpBonus = Math.floor(this.maxHp * stats.passiveHpBonusPct);
                 this.maxHp += hpBonus;
-                this.hp    += hpBonus;
+                this.hp += hpBonus;
                 console.log(`[MTC Save] Passive restored for '${myId}'.`);
             }
         } catch (e) {
@@ -103,7 +103,7 @@ class Player extends Entity {
     get S() { return this.stats; }
 
     update(dt, keys, mouse) {
-        const S   = this.stats;
+        const S = this.stats;
         const PHY = BALANCE.physics;
 
         // ── Combo System Update ────────────────────────────────
@@ -119,7 +119,7 @@ class Player extends Entity {
             this.burnTimer -= dt;
             this.hp -= this.burnDamage * dt;
             if (this.burnTimer <= 0) this.isBurning = false;
-            if (Math.random() < 0.3) spawnParticles(this.x + rand(-15,15), this.y + rand(-15,15), 1, '#f59e0b');
+            if (Math.random() < 0.3) spawnParticles(this.x + rand(-15, 15), this.y + rand(-15, 15), 1, '#f59e0b');
         }
         if (this.isConfused) {
             this.confusedTimer -= dt;
@@ -128,7 +128,7 @@ class Player extends Entity {
         if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
         if (this.goldenAuraTimer > 0) {
             this.goldenAuraTimer -= dt;
-            if (Math.random() < 0.5) spawnParticles(this.x + rand(-25,25), this.y + rand(-25,25), 1, '#fbbf24');
+            if (Math.random() < 0.5) spawnParticles(this.x + rand(-25, 25), this.y + rand(-25, 25), 1, '#fbbf24');
         }
 
         let ax = 0, ay = 0, isTouchMove = false;
@@ -147,7 +147,7 @@ class Player extends Entity {
         let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost;
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
-        
+
         // ── Apply Combo Speed Buff ──
         speedMult *= (1 + ((this.comboCount || 0) * 0.01));
 
@@ -170,7 +170,7 @@ class Player extends Entity {
             this.checkObstacleProximity(ax, ay, dt, '#93c5fd');
         }
 
-        if (this.cooldowns.dash    > 0) this.cooldowns.dash    -= dt;
+        if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
         if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
 
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
@@ -206,7 +206,7 @@ class Player extends Entity {
             const ids = this.dashTimeouts.slice();
             this.dashTimeouts.length = 0;
             for (const timeoutId of ids) {
-                try { clearTimeout(timeoutId); } catch (e) {}
+                try { clearTimeout(timeoutId); } catch (e) { }
             }
         }
 
@@ -236,7 +236,7 @@ class Player extends Entity {
     dash(ax, ay) {
         const S = this.stats;
         if (this.isDashing) return;
-        this.isDashing      = true;
+        this.isDashing = true;
         this.cooldowns.dash = S.dashCooldown;
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
@@ -286,7 +286,7 @@ class Player extends Entity {
             showVoiceBubble("ทักษะ 'ซุ่มเสรี' ปลดล็อคแล้ว!", this.x, this.y - 40);
             try {
                 const saved = getSaveData();
-                const set   = new Set(saved.unlockedPassives || []);
+                const set = new Set(saved.unlockedPassives || []);
                 set.add(this.charId);
                 updateSaveData({ unlockedPassives: [...set] });
             } catch (e) {
@@ -352,7 +352,7 @@ class Player extends Entity {
 
         // ── 6. Feedback ─────────────────────────────────────────────────────────
         const dmgPct = Math.round((this.damageMultiplier - 1) * 100);
-        const cdPct  = Math.round((1 - this.cooldownMultiplier) * 100);
+        const cdPct = Math.round((1 - this.cooldownMultiplier) * 100);
         const hpLine = hpGainPerLevel > 0 ? `, +${hpGainPerLevel} MaxHP` : '';
         spawnFloatingText(
             `LEVEL ${this.level}! +${dmgPct}% DMG, -${cdPct}% CD${hpLine}`,
@@ -418,23 +418,23 @@ class Player extends Entity {
 
         // ── Orientation helper ────────────────────────────────────
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
-        const facingSign   = isFacingLeft ? -1 : 1;
+        const facingSign = isFacingLeft ? -1 : 1;
 
         // Recoil nudge — pushed backward along aim axis in world space
         const recoilAmt = this.weaponRecoil > 0.05 ? this.weaponRecoil * 3.5 : 0;
-        const recoilX   = -Math.cos(this.angle) * recoilAmt;
-        const recoilY   = -Math.sin(this.angle) * recoilAmt;
+        const recoilX = -Math.cos(this.angle) * recoilAmt;
+        const recoilY = -Math.sin(this.angle) * recoilAmt;
 
         // ── Dash ghost trail ──────────────────────────────────────
         for (const img of this.dashGhosts) {
-            const gs          = worldToScreen(img.x, img.y);
+            const gs = worldToScreen(img.x, img.y);
             const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
             CTX.save();
             CTX.translate(gs.x, gs.y);
             CTX.scale(ghostFacing, 1);
             CTX.globalAlpha = img.life * 0.35;
-            CTX.fillStyle   = '#60a5fa';
-            CTX.shadowBlur  = 8 * img.life; CTX.shadowColor = '#3b82f6';
+            CTX.fillStyle = '#60a5fa';
+            CTX.shadowBlur = 8 * img.life; CTX.shadowColor = '#3b82f6';
             CTX.beginPath(); CTX.roundRect(-11, -11, 22, 22, 6); CTX.fill();
             CTX.restore();
         }
@@ -444,17 +444,17 @@ class Player extends Entity {
         // ── Ground shadow ─────────────────────────────────────────
         CTX.save();
         CTX.globalAlpha = 0.22;
-        CTX.fillStyle   = 'rgba(0,0,0,0.8)';
+        CTX.fillStyle = 'rgba(0,0,0,0.8)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 14, 14, 5, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
         // ── Passive aura ──────────────────────────────────────────
         if (this.passiveUnlocked) {
             const aS = 30 + Math.sin(now / 200) * 4;
-            const aA = 0.3  + Math.sin(now / 300) * 0.1;
+            const aA = 0.3 + Math.sin(now / 300) * 0.1;
             CTX.save(); CTX.globalAlpha = aA;
             CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3;
-            CTX.shadowBlur  = 18; CTX.shadowColor = '#fbbf24';
+            CTX.shadowBlur = 18; CTX.shadowColor = '#fbbf24';
             CTX.beginPath(); CTX.arc(screen.x, screen.y, aS, 0, Math.PI * 2); CTX.stroke();
             CTX.restore();
         }
@@ -470,11 +470,11 @@ class Player extends Entity {
 
         // ── Breathing squash/stretch ──────────────────────────────
         const breatheKao = Math.sin(Date.now() / 200);
-        const speed      = Math.hypot(this.vx, this.vy);
-        const moveT      = Math.min(1, speed / 200);
-        const bobT       = Math.sin(this.walkCycle);
-        const stretchX   = 1 + breatheKao * 0.030 + moveT * bobT * 0.10;
-        const stretchY   = 1 - breatheKao * 0.030 - moveT * Math.abs(bobT) * 0.07;
+        const speed = Math.hypot(this.vx, this.vy);
+        const moveT = Math.min(1, speed / 200);
+        const bobT = Math.sin(this.walkCycle);
+        const stretchX = 1 + breatheKao * 0.030 + moveT * bobT * 0.10;
+        const stretchY = 1 - breatheKao * 0.030 - moveT * Math.abs(bobT) * 0.07;
 
         const R = 13;
 
@@ -490,21 +490,21 @@ class Player extends Entity {
             for (let sy2 = -R; sy2 < R; sy2 += 3) {
                 const la = (Math.sin(gT * 4 + sy2 * 0.7) * 0.5 + 0.5) * 0.3;
                 CTX.globalAlpha = la;
-                CTX.fillStyle   = '#60a5fa';
+                CTX.fillStyle = '#60a5fa';
                 CTX.fillRect(-R + Math.sin(gT * 7.3 + sy2) * 2.5, sy2, R * 2, 1.5);
             }
             CTX.restore();
 
             CTX.globalAlpha = 0.18 + Math.sin(gT * 2.1) * 0.07;
             CTX.strokeStyle = '#93c5fd'; CTX.lineWidth = 1.5;
-            CTX.shadowBlur  = 8; CTX.shadowColor = '#60a5fa';
+            CTX.shadowBlur = 8; CTX.shadowColor = '#60a5fa';
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
 
             CTX.globalAlpha = 0.5 + Math.sin(gT * 5) * 0.3;
-            CTX.fillStyle   = '#06b6d4';
-            CTX.shadowBlur  = 12; CTX.shadowColor = '#06b6d4';
+            CTX.fillStyle = '#06b6d4';
+            CTX.shadowBlur = 12; CTX.shadowColor = '#06b6d4';
             CTX.beginPath(); CTX.roundRect(-5, -3.5, 10, 2.5, 1); CTX.fill();
-            CTX.shadowBlur  = 0;
+            CTX.shadowBlur = 0;
             CTX.restore();
 
         } else {
@@ -516,17 +516,17 @@ class Player extends Entity {
             CTX.scale(stretchX * facingSign, stretchY);
 
             // Silhouette neon glow ring — drawn BEFORE fill
-            CTX.shadowBlur  = 16; CTX.shadowColor = 'rgba(0,255,65,0.70)';
+            CTX.shadowBlur = 16; CTX.shadowColor = 'rgba(0,255,65,0.70)';
             CTX.strokeStyle = 'rgba(0,255,65,0.45)';
-            CTX.lineWidth   = 2.8;
+            CTX.lineWidth = 2.8;
             CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-            CTX.shadowBlur  = 0;
+            CTX.shadowBlur = 0;
 
             // Bean body — dark navy radial gradient
             const bodyG = CTX.createRadialGradient(-3, -3, 1, 0, 0, R);
-            bodyG.addColorStop(0,    '#1d3461');
+            bodyG.addColorStop(0, '#1d3461');
             bodyG.addColorStop(0.55, '#0f2140');
-            bodyG.addColorStop(1,    '#07111e');
+            bodyG.addColorStop(1, '#07111e');
             CTX.fillStyle = bodyG;
             CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
@@ -566,19 +566,19 @@ class Player extends Entity {
             CTX.closePath(); CTX.fill();
 
             CTX.strokeStyle = '#1e40af'; CTX.lineWidth = 1;
-            CTX.shadowBlur  = 4; CTX.shadowColor = '#3b82f6';
+            CTX.shadowBlur = 4; CTX.shadowColor = '#3b82f6';
             CTX.beginPath(); CTX.moveTo(R * 0.35, -3); CTX.lineTo(R + 1, -2); CTX.stroke();
             CTX.beginPath(); CTX.moveTo(-R * 0.35, -3); CTX.lineTo(-R - 1, -2); CTX.stroke();
             CTX.shadowBlur = 0;
 
             // Glowing cyan visor slit
             const vp = 0.65 + Math.sin(Date.now() / 350) * 0.35;
-            CTX.fillStyle   = `rgba(6,182,212,${vp})`;
-            CTX.shadowBlur  = 12 * vp; CTX.shadowColor = '#06b6d4';
+            CTX.fillStyle = `rgba(6,182,212,${vp})`;
+            CTX.shadowBlur = 12 * vp; CTX.shadowColor = '#06b6d4';
             CTX.beginPath(); CTX.roundRect(-6.5, -3.5, 13, 2.5, 1.5); CTX.fill();
-            CTX.fillStyle   = `rgba(6,182,212,${vp * 0.20})`;
+            CTX.fillStyle = `rgba(6,182,212,${vp * 0.20})`;
             CTX.beginPath(); CTX.roundRect(-5, -5.5, 10, 7, 3); CTX.fill();
-            CTX.shadowBlur  = 0;
+            CTX.shadowBlur = 0;
 
             CTX.restore(); // ── end LAYER 1 ──
 
@@ -595,20 +595,20 @@ class Player extends Entity {
 
             // Floating Dark-Blue Gloves
             const gR = 5;
-            CTX.fillStyle   = '#1e3a5f';
+            CTX.fillStyle = '#1e3a5f';
             CTX.strokeStyle = '#1e293b';
-            CTX.lineWidth   = 2.5;
-            CTX.shadowBlur  = 6; CTX.shadowColor = '#06b6d4';
+            CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 6; CTX.shadowColor = '#06b6d4';
             CTX.beginPath(); CTX.arc(R + 6, 2, gR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
             CTX.strokeStyle = '#2d5a8e'; CTX.lineWidth = 1.2;
-            CTX.beginPath(); CTX.moveTo(R + 3, 0);   CTX.lineTo(R + 9, 0);   CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(R + 3, 0); CTX.lineTo(R + 9, 0); CTX.stroke();
             CTX.beginPath(); CTX.moveTo(R + 3, 2.5); CTX.lineTo(R + 9, 2.5); CTX.stroke();
             CTX.shadowBlur = 0;
 
-            CTX.fillStyle   = '#0e2340';
+            CTX.fillStyle = '#0e2340';
             CTX.strokeStyle = '#1e293b';
-            CTX.lineWidth   = 2.5;
-            CTX.shadowBlur  = 3; CTX.shadowColor = '#06b6d4';
+            CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 3; CTX.shadowColor = '#06b6d4';
             CTX.beginPath(); CTX.arc(-(R + 5), 1, gR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
             CTX.shadowBlur = 0;
 
@@ -616,26 +616,26 @@ class Player extends Entity {
 
             // Muzzle flash (screen space)
             if (this.weaponRecoil > 0.45) {
-                const fT    = (this.weaponRecoil - 0.45) / 0.55;
+                const fT = (this.weaponRecoil - 0.45) / 0.55;
                 const mDist = 36 + (1 - fT) * 10;
-                const mx    = screen.x + Math.cos(this.angle) * mDist;
-                const my    = screen.y + Math.sin(this.angle) * mDist;
+                const mx = screen.x + Math.cos(this.angle) * mDist;
+                const my = screen.y + Math.sin(this.angle) * mDist;
                 CTX.save();
                 CTX.globalAlpha = fT * 0.9;
                 CTX.strokeStyle = '#e0f2fe'; CTX.lineWidth = 2;
-                CTX.shadowBlur  = 16; CTX.shadowColor = '#06b6d4';
+                CTX.shadowBlur = 16; CTX.shadowColor = '#06b6d4';
                 CTX.beginPath(); CTX.arc(mx, my, 3 + (1 - fT) * 6, 0, Math.PI * 2); CTX.stroke();
                 CTX.strokeStyle = '#7dd3fc'; CTX.lineWidth = 1.2;
                 for (let ri = 0; ri < 6; ri++) {
                     const ra = this.angle + (ri / 6) * Math.PI * 2;
                     CTX.beginPath();
-                    CTX.moveTo(mx + Math.cos(ra) * 2,            my + Math.sin(ra) * 2);
+                    CTX.moveTo(mx + Math.cos(ra) * 2, my + Math.sin(ra) * 2);
                     CTX.lineTo(mx + Math.cos(ra) * (5 + fT * 5), my + Math.sin(ra) * (5 + fT * 5));
                     CTX.stroke();
                 }
                 CTX.globalAlpha = fT;
-                CTX.fillStyle   = '#ffffff';
-                CTX.shadowBlur  = 8; CTX.shadowColor = '#06b6d4';
+                CTX.fillStyle = '#ffffff';
+                CTX.shadowBlur = 8; CTX.shadowColor = '#06b6d4';
                 CTX.beginPath(); CTX.arc(mx, my, 2, 0, Math.PI * 2); CTX.fill();
                 CTX.restore();
             }
@@ -643,11 +643,11 @@ class Player extends Entity {
 
         // ── Level badge (screen space) ────────────────────────────
         if (this.level > 1) {
-            CTX.fillStyle    = 'rgba(37,99,235,0.92)';
+            CTX.fillStyle = 'rgba(37,99,235,0.92)';
             CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle    = '#fff';
-            CTX.font         = 'bold 9px Arial';
-            CTX.textAlign    = 'center';
+            CTX.fillStyle = '#fff';
+            CTX.font = 'bold 9px Arial';
+            CTX.textAlign = 'center';
             CTX.textBaseline = 'middle';
             CTX.fillText(this.level, screen.x + 20, screen.y - 20);
         }
@@ -711,14 +711,14 @@ class Player extends Entity {
 // ════════════════════════════════════════════════════════════
 // ✅ WARN 5 FIX — Shared obstacle-awareness prototype method
 // ════════════════════════════════════════════════════════════
-Player.prototype.checkObstacleProximity = function(ax, ay, dt, particleColor) {
+Player.prototype.checkObstacleProximity = function (ax, ay, dt, particleColor) {
     const OB = BALANCE.player;
 
     let mapObjs = [];
     if (window.mapSystem) {
-        if      (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
-        else if (Array.isArray(mapSystem.objects))           mapObjs = mapSystem.objects;
-        else if (Array.isArray(mapSystem.solidObjects))      mapObjs = mapSystem.solidObjects;
+        if (typeof mapSystem.getObjects === 'function') mapObjs = mapSystem.getObjects();
+        else if (Array.isArray(mapSystem.objects)) mapObjs = mapSystem.objects;
+        else if (Array.isArray(mapSystem.solidObjects)) mapObjs = mapSystem.solidObjects;
     }
     if (Array.isArray(BALANCE.map.wallPositions)) {
         mapObjs = mapObjs.concat(BALANCE.map.wallPositions);
@@ -732,9 +732,9 @@ Player.prototype.checkObstacleProximity = function(ax, ay, dt, particleColor) {
         const oL = obj.x, oT = obj.y, oR = oL + (obj.w || 0), oB = oT + (obj.h || 0);
         const closestX = Math.max(oL, Math.min(this.x, oR));
         const closestY = Math.max(oT, Math.min(this.y, oB));
-        const d        = Math.hypot(this.x - closestX, this.y - closestY);
+        const d = Math.hypot(this.x - closestX, this.y - closestY);
 
-        const scrapeThreshold  = this.radius + 4;
+        const scrapeThreshold = this.radius + 4;
         const warningThreshold = this.radius + OB.obstacleWarningRange;
 
         if (d < scrapeThreshold && isMoving) scraping = true;
@@ -768,7 +768,7 @@ Player.prototype.checkObstacleProximity = function(ax, ay, dt, particleColor) {
 // __origUpdate which handles the joystick read exactly once.
 if (typeof Player !== 'undefined') {
     const __origUpdate = Player.prototype.update;
-    Player.prototype.update = function(dt, keys, mouse) {
+    Player.prototype.update = function (dt, keys, mouse) {
         if (window.touchJoystickLeft && window.touchJoystickLeft.active) {
             keys.w = keys.a = keys.s = keys.d = 0;
         }

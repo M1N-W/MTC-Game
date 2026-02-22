@@ -9,7 +9,7 @@ class PoomPlayer extends Entity {
         super(0, 0, stats.radius);
 
         this.charId = 'poom';
-        this.stats  = stats;
+        this.stats = stats;
 
         this.hp = stats.hp; this.maxHp = stats.maxHp;
         this.energy = stats.energy; this.maxEnergy = stats.maxEnergy;
@@ -27,22 +27,22 @@ class PoomPlayer extends Entity {
         this.dashTimeouts = [];
 
         // ── Stand-Aura & Afterimage system ────────────────────
-        this.standGhosts   = [];
-        this.auraRotation  = 0;
-        this._auraFrame    = 0;
+        this.standGhosts = [];
+        this.auraRotation = 0;
+        this._auraFrame = 0;
 
         this.onGraph = false;
         this.isConfused = false; this.confusedTimer = 0;
-        this.isBurning  = false; this.burnTimer = 0; this.burnDamage = 0;
+        this.isBurning = false; this.burnTimer = 0; this.burnDamage = 0;
 
-        this.isEatingRice   = false; this.eatRiceTimer = 0;
+        this.isEatingRice = false; this.eatRiceTimer = 0;
         this.currentSpeedMult = 1;
         this.nagaCount = 0;
-        this.naga      = null;
+        this.naga = null;
 
         // ── Collision Awareness state ──────────────────────────
-        this.obstacleBuffTimer     = 0;
-        this.lastObstacleWarning   = 0;
+        this.obstacleBuffTimer = 0;
+        this.lastObstacleWarning = 0;
 
         // ── Combo System Initialization ─────────────────────────
         this.comboCount = 0;
@@ -57,11 +57,11 @@ class PoomPlayer extends Entity {
         // ── RPG Scaling Multipliers ─────────────────────────────
         this._damageMultiplier = 1.0;
         Object.defineProperty(this, 'damageMultiplier', {
-            get: function() {
+            get: function () {
                 const combo = this.comboCount || 0;
                 return this._damageMultiplier * (1 + (combo * 0.01));
             },
-            set: function(val) {
+            set: function (val) {
                 const comboMult = 1 + ((this.comboCount || 0) * 0.01);
                 const diff = val - (this._damageMultiplier * comboMult);
                 this._damageMultiplier += diff;
@@ -71,7 +71,7 @@ class PoomPlayer extends Entity {
     }
 
     update(dt, keys, mouse) {
-        const S   = this.stats;
+        const S = this.stats;
         const PHY = BALANCE.physics;
 
         // ── Combo System Update ────────────────────────────────
@@ -86,7 +86,7 @@ class PoomPlayer extends Entity {
         if (this.isBurning) {
             this.burnTimer -= dt; this.hp -= this.burnDamage * dt;
             if (this.burnTimer <= 0) this.isBurning = false;
-            if (Math.random() < 0.3) spawnParticles(this.x + rand(-15,15), this.y + rand(-15,15), 1, '#f59e0b');
+            if (Math.random() < 0.3) spawnParticles(this.x + rand(-15, 15), this.y + rand(-15, 15), 1, '#f59e0b');
         }
         if (this.isConfused) {
             this.confusedTimer -= dt;
@@ -97,7 +97,7 @@ class PoomPlayer extends Entity {
         if (this.isEatingRice) {
             this.eatRiceTimer -= dt;
             this.currentSpeedMult = S.eatRiceSpeedMult;
-            if (Math.random() < 0.2) spawnParticles(this.x + rand(-20,20), this.y + rand(-20,20), 1, '#fbbf24');
+            if (Math.random() < 0.2) spawnParticles(this.x + rand(-20, 20), this.y + rand(-20, 20), 1, '#fbbf24');
             if (this.eatRiceTimer <= 0) {
                 this.isEatingRice = false;
                 this.currentSpeedMult = 1;
@@ -144,9 +144,9 @@ class PoomPlayer extends Entity {
             this.checkObstacleProximity(ax, ay, dt, '#fcd34d');
         }
 
-        if (this.cooldowns.dash  > 0) this.cooldowns.dash  -= dt;
-        if (this.cooldowns.eat   > 0) this.cooldowns.eat   -= dt;
-        if (this.cooldowns.naga  > 0) this.cooldowns.naga  -= dt;
+        if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
+        if (this.cooldowns.eat > 0) this.cooldowns.eat -= dt;
+        if (this.cooldowns.naga > 0) this.cooldowns.naga -= dt;
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
 
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
@@ -176,7 +176,7 @@ class PoomPlayer extends Entity {
             const ids = this.dashTimeouts.slice();
             this.dashTimeouts.length = 0;
             for (const timeoutId of ids) {
-                try { clearTimeout(timeoutId); } catch (e) {}
+                try { clearTimeout(timeoutId); } catch (e) { }
             }
         }
         this.updateUI();
@@ -291,19 +291,19 @@ class PoomPlayer extends Entity {
 
         // ── Orientation helper ────────────────────────────────────
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
-        const facingSign   = isFacingLeft ? -1 : 1;
+        const facingSign = isFacingLeft ? -1 : 1;
 
         _standAura_draw(this, 'poom');
 
         // ── Dash ghost trail ──────────────────────────────────────
         for (const img of this.dashGhosts) {
-            const s           = worldToScreen(img.x, img.y);
+            const s = worldToScreen(img.x, img.y);
             const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
             CTX.save();
             CTX.translate(s.x, s.y);
             CTX.scale(ghostFacing, 1);
             CTX.globalAlpha = img.life * 0.3;
-            CTX.fillStyle   = '#fbbf24';
+            CTX.fillStyle = '#fbbf24';
             CTX.beginPath(); CTX.roundRect(-15, -12, 30, 24, 8); CTX.fill();
             CTX.restore();
         }
@@ -315,13 +315,13 @@ class PoomPlayer extends Entity {
 
         // Eating-rice power aura
         if (this.isEatingRice) {
-            const t         = performance.now() / 200;
-            const auraSize  = 38 + Math.sin(t) * 6;
+            const t = performance.now() / 200;
+            const auraSize = 38 + Math.sin(t) * 6;
             const auraAlpha = 0.4 + Math.sin(t * 1.5) * 0.15;
             CTX.save();
             CTX.globalAlpha = auraAlpha;
             CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 4;
-            CTX.shadowBlur  = 25; CTX.shadowColor = '#fbbf24';
+            CTX.shadowBlur = 25; CTX.shadowColor = '#fbbf24';
             CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize, 0, Math.PI * 2); CTX.stroke();
             CTX.globalAlpha = auraAlpha * 0.35;
             CTX.beginPath(); CTX.arc(screen.x, screen.y, auraSize + 12, 0, Math.PI * 2); CTX.stroke();
@@ -330,13 +330,13 @@ class PoomPlayer extends Entity {
 
         // Naga invincibility shield
         if (this.naga && this.naga.active) {
-            const gt      = performance.now() / 350;
+            const gt = performance.now() / 350;
             const shieldR = 36 + Math.sin(gt) * 4;
             const shieldA = 0.25 + Math.sin(gt * 1.3) * 0.12;
             CTX.save();
             CTX.globalAlpha = shieldA;
             CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 2.5;
-            CTX.shadowBlur  = 18; CTX.shadowColor = '#f59e0b';
+            CTX.shadowBlur = 18; CTX.shadowColor = '#f59e0b';
             CTX.setLineDash([4, 4]);
             CTX.beginPath(); CTX.arc(screen.x, screen.y, shieldR, 0, Math.PI * 2); CTX.stroke();
             CTX.setLineDash([]);
@@ -345,91 +345,91 @@ class PoomPlayer extends Entity {
             CTX.restore();
         }
 
-        if (this.isConfused)   { CTX.font = 'bold 24px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', screen.x, screen.y - 44); }
-        if (this.isBurning)    { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
+        if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', screen.x, screen.y - 44); }
+        if (this.isBurning) { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
         if (this.isEatingRice) { CTX.font = 'bold 18px Arial'; CTX.textAlign = 'center'; CTX.fillText('🍚', screen.x, screen.y - 44); }
 
         // Naga channeling aura + connection tether
-        const nagaEntity   = window.specialEffects &&
-                             window.specialEffects.find(e => e instanceof NagaEntity);
+        const nagaEntity = window.specialEffects &&
+            window.specialEffects.find(e => e instanceof NagaEntity);
         const isChanneling = !!nagaEntity;
         if (isChanneling) {
             const ct = performance.now() / 220;
             const cr = 42 + Math.sin(ct) * 7;
             const ca = 0.55 + Math.sin(ct * 1.6) * 0.25;
             CTX.save();
-            CTX.globalAlpha  = ca;
-            CTX.strokeStyle  = '#10b981';
-            CTX.lineWidth    = 3.5 + Math.sin(ct * 2.1) * 1.5;
-            CTX.shadowBlur   = 24 + Math.sin(ct) * 10;
-            CTX.shadowColor  = '#10b981';
+            CTX.globalAlpha = ca;
+            CTX.strokeStyle = '#10b981';
+            CTX.lineWidth = 3.5 + Math.sin(ct * 2.1) * 1.5;
+            CTX.shadowBlur = 24 + Math.sin(ct) * 10;
+            CTX.shadowColor = '#10b981';
             CTX.beginPath(); CTX.arc(screen.x, screen.y, cr, 0, Math.PI * 2); CTX.stroke();
-            CTX.globalAlpha  = ca * 0.55;
-            CTX.lineWidth    = 1.5;
-            CTX.shadowBlur   = 10;
+            CTX.globalAlpha = ca * 0.55;
+            CTX.lineWidth = 1.5;
+            CTX.shadowBlur = 10;
             CTX.beginPath(); CTX.arc(screen.x, screen.y, cr - 12, 0, Math.PI * 2); CTX.stroke();
             if (Math.random() < 0.35) {
                 const sa = Math.random() * Math.PI * 2;
-                CTX.globalAlpha  = 0.9;
-                CTX.fillStyle    = '#34d399';
-                CTX.shadowBlur   = 8; CTX.shadowColor = '#10b981';
+                CTX.globalAlpha = 0.9;
+                CTX.fillStyle = '#34d399';
+                CTX.shadowBlur = 8; CTX.shadowColor = '#10b981';
                 CTX.beginPath(); CTX.arc(screen.x + Math.cos(sa) * cr, screen.y + Math.sin(sa) * cr, 2, 0, Math.PI * 2); CTX.fill();
             }
             CTX.restore();
 
             if (nagaEntity.segments && nagaEntity.segments.length > 0) {
-                const nagaHead   = nagaEntity.segments[0];
+                const nagaHead = nagaEntity.segments[0];
                 const nagaScreen = worldToScreen(nagaHead.x, nagaHead.y);
-                const lifeAlpha  = Math.min(1, nagaEntity.life / nagaEntity.maxLife);
-                const SEGS       = 10;
+                const lifeAlpha = Math.min(1, nagaEntity.life / nagaEntity.maxLife);
+                const SEGS = 10;
                 const pts = [];
                 for (let i = 0; i <= SEGS; i++) {
-                    const t    = i / SEGS;
-                    const bx   = screen.x   + (nagaScreen.x - screen.x)   * t;
-                    const by   = screen.y   + (nagaScreen.y - screen.y)   * t;
+                    const t = i / SEGS;
+                    const bx = screen.x + (nagaScreen.x - screen.x) * t;
+                    const by = screen.y + (nagaScreen.y - screen.y) * t;
                     const jAmp = Math.sin(t * Math.PI) * (8 + Math.sin(performance.now() / 80 + i) * 4);
                     const perp = Math.atan2(nagaScreen.y - screen.y, nagaScreen.x - screen.x) + Math.PI / 2;
-                    const jit  = (Math.random() - 0.5) * 2 * jAmp;
+                    const jit = (Math.random() - 0.5) * 2 * jAmp;
                     pts.push({ x: bx + Math.cos(perp) * jit, y: by + Math.sin(perp) * jit });
                 }
-                pts[0]    = { x: screen.x,     y: screen.y     };
+                pts[0] = { x: screen.x, y: screen.y };
                 pts[SEGS] = { x: nagaScreen.x, y: nagaScreen.y };
 
                 const drawThread = (lw, alpha, color, blur) => {
                     CTX.save();
-                    CTX.globalAlpha  = lifeAlpha * alpha;
-                    CTX.strokeStyle  = color;
-                    CTX.lineWidth    = lw;
-                    CTX.lineCap      = 'round';
-                    CTX.lineJoin     = 'round';
-                    CTX.shadowBlur   = blur;
-                    CTX.shadowColor  = '#10b981';
+                    CTX.globalAlpha = lifeAlpha * alpha;
+                    CTX.strokeStyle = color;
+                    CTX.lineWidth = lw;
+                    CTX.lineCap = 'round';
+                    CTX.lineJoin = 'round';
+                    CTX.shadowBlur = blur;
+                    CTX.shadowColor = '#10b981';
                     CTX.beginPath();
                     CTX.moveTo(pts[0].x, pts[0].y);
                     for (let i = 1; i <= SEGS; i++) CTX.lineTo(pts[i].x, pts[i].y);
                     CTX.stroke();
                     CTX.restore();
                 };
-                drawThread(5,   0.25, '#10b981', 18);
+                drawThread(5, 0.25, '#10b981', 18);
                 drawThread(1.5, 0.85, '#6ee7b7', 8);
 
                 CTX.save();
-                CTX.globalAlpha  = lifeAlpha * (0.7 + Math.sin(performance.now() / 120) * 0.3);
-                CTX.fillStyle    = '#34d399';
-                CTX.shadowBlur   = 14; CTX.shadowColor = '#10b981';
+                CTX.globalAlpha = lifeAlpha * (0.7 + Math.sin(performance.now() / 120) * 0.3);
+                CTX.fillStyle = '#34d399';
+                CTX.shadowBlur = 14; CTX.shadowColor = '#10b981';
                 CTX.beginPath(); CTX.arc(screen.x, screen.y, 4, 0, Math.PI * 2); CTX.fill();
                 CTX.restore();
             }
         }
 
         // Breathing squash/stretch
-        const now2        = performance.now();
+        const now2 = performance.now();
         const breathePoom = Math.sin(Date.now() / 200);
-        const speed2      = Math.hypot(this.vx, this.vy);
-        const moveT2      = Math.min(1, speed2 / 190);
-        const bobT2       = Math.sin(this.walkCycle);
-        const stretchX2   = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
-        const stretchY2   = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
+        const speed2 = Math.hypot(this.vx, this.vy);
+        const moveT2 = Math.min(1, speed2 / 190);
+        const bobT2 = Math.sin(this.walkCycle);
+        const stretchX2 = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
+        const stretchY2 = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
 
         const R2 = 13;
 
@@ -441,17 +441,17 @@ class PoomPlayer extends Entity {
         CTX.scale(stretchX2 * facingSign, stretchY2);
 
         // Silhouette glow ring — deep purple
-        CTX.shadowBlur  = 16; CTX.shadowColor = 'rgba(168,85,247,0.72)';
+        CTX.shadowBlur = 16; CTX.shadowColor = 'rgba(168,85,247,0.72)';
         CTX.strokeStyle = 'rgba(168,85,247,0.50)';
-        CTX.lineWidth   = 2.8;
+        CTX.lineWidth = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R2 + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        CTX.shadowBlur = 0;
 
         // Bean body — deep amber/orange
         const bodyG2 = CTX.createRadialGradient(-3, -3, 1, 0, 0, R2);
-        bodyG2.addColorStop(0,   '#d97706');
+        bodyG2.addColorStop(0, '#d97706');
         bodyG2.addColorStop(0.5, '#b45309');
-        bodyG2.addColorStop(1,   '#78350f');
+        bodyG2.addColorStop(1, '#78350f');
         CTX.fillStyle = bodyG2;
         CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.fill();
 
@@ -462,13 +462,13 @@ class PoomPlayer extends Entity {
         CTX.beginPath(); CTX.arc(-4, -5, 5, 0, Math.PI * 2); CTX.fill();
 
         // Thai Kranok pattern accent
-        const kranokT2    = now2 / 500;
+        const kranokT2 = now2 / 500;
         const kranokAlpha = 0.55 + Math.sin(kranokT2 * 1.3) * 0.25;
         CTX.save();
         CTX.beginPath(); CTX.arc(0, 0, R2 - 1, 0, Math.PI * 2); CTX.clip();
         CTX.globalAlpha = kranokAlpha;
         CTX.strokeStyle = '#fef3c7'; CTX.lineWidth = 1.1;
-        CTX.shadowBlur  = 6 + Math.sin(kranokT2 * 2) * 3;
+        CTX.shadowBlur = 6 + Math.sin(kranokT2 * 2) * 3;
         CTX.shadowColor = '#fbbf24';
         CTX.beginPath();
         CTX.moveTo(-8, 7); CTX.quadraticCurveTo(-9, 1, -4, -1);
@@ -483,8 +483,8 @@ class PoomPlayer extends Entity {
         CTX.moveTo(4, -1); CTX.quadraticCurveTo(6, -4, 3, -5);
         CTX.quadraticCurveTo(1, -6, 2, -3); CTX.stroke();
         CTX.globalAlpha = kranokAlpha * 0.95;
-        CTX.fillStyle   = 'rgba(255,251,235,0.90)';
-        CTX.shadowBlur  = 8; CTX.shadowColor = '#fbbf24';
+        CTX.fillStyle = 'rgba(255,251,235,0.90)';
+        CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
         CTX.beginPath();
         CTX.moveTo(0, -5); CTX.lineTo(2.5, -1); CTX.lineTo(0, 3); CTX.lineTo(-2.5, -1);
         CTX.closePath(); CTX.fill();
@@ -524,16 +524,16 @@ class PoomPlayer extends Entity {
 
         CTX.fillStyle = '#15080a';
         const hairSpikes = [
-            { bx: -9, angle: -2.4,  len: 7 },
-            { bx: -4, angle: -2.0,  len: 9 },
-            { bx:  1, angle: -1.57, len: 10 },
-            { bx:  6, angle: -1.1,  len: 8 },
-            { bx: 10, angle: -0.8,  len: 6 },
+            { bx: -9, angle: -2.4, len: 7 },
+            { bx: -4, angle: -2.0, len: 9 },
+            { bx: 1, angle: -1.57, len: 10 },
+            { bx: 6, angle: -1.1, len: 8 },
+            { bx: 10, angle: -0.8, len: 6 },
         ];
         for (const sp of hairSpikes) {
             const tipX = sp.bx + Math.cos(sp.angle) * sp.len;
             const tipY = -R2 - 5 + Math.sin(sp.angle) * sp.len;
-            const wob  = Math.sin(now2 / 500 + sp.bx) * 1.2;
+            const wob = Math.sin(now2 / 500 + sp.bx) * 1.2;
             CTX.fillStyle = '#15080a';
             CTX.beginPath();
             CTX.moveTo(sp.bx - 3, -R2 - 3);
@@ -563,43 +563,43 @@ class PoomPlayer extends Entity {
 
         // Floating Hands — Prajioud white rope/armband detail
         const pR = 5;
-        CTX.fillStyle   = '#d97706';
+        CTX.fillStyle = '#d97706';
         CTX.strokeStyle = '#1e293b';
-        CTX.lineWidth   = 2.5;
-        CTX.shadowBlur  = 6; CTX.shadowColor = '#f59e0b';
+        CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 6; CTX.shadowColor = '#f59e0b';
         CTX.beginPath(); CTX.arc(R2 + 6, 1, pR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
         CTX.save();
         CTX.beginPath(); CTX.arc(R2 + 6, 1, pR, 0, Math.PI * 2); CTX.clip();
         CTX.fillStyle = 'rgba(255,255,255,0.80)';
         CTX.fillRect(R2 + 1, -1.5, 10, 1.5);
-        CTX.fillRect(R2 + 1,  1.5, 10, 1.2);
+        CTX.fillRect(R2 + 1, 1.5, 10, 1.2);
         CTX.fillStyle = 'rgba(220,38,38,0.60)';
         CTX.fillRect(R2 + 1, 0.1, 10, 0.8);
         CTX.restore();
 
-        CTX.fillStyle   = '#b45309';
+        CTX.fillStyle = '#b45309';
         CTX.strokeStyle = '#1e293b';
-        CTX.lineWidth   = 2.5;
-        CTX.shadowBlur  = 4; CTX.shadowColor = '#f59e0b';
+        CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 4; CTX.shadowColor = '#f59e0b';
         CTX.beginPath(); CTX.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
         CTX.save();
         CTX.beginPath(); CTX.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2); CTX.clip();
         CTX.fillStyle = 'rgba(255,255,255,0.75)';
-        CTX.fillRect(-(R2 + 10), -1,   10, 1.3);
-        CTX.fillRect(-(R2 + 10),  1.5, 10, 1.1);
+        CTX.fillRect(-(R2 + 10), -1, 10, 1.3);
+        CTX.fillRect(-(R2 + 10), 1.5, 10, 1.1);
         CTX.restore();
 
         CTX.restore(); // ── end LAYER 2 ──
 
         // Level badge
         if (this.level > 1) {
-            CTX.fillStyle    = 'rgba(217,119,6,0.92)';
+            CTX.fillStyle = 'rgba(217,119,6,0.92)';
             CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle    = '#fff';
-            CTX.font         = 'bold 9px Arial';
-            CTX.textAlign    = 'center';
+            CTX.fillStyle = '#fff';
+            CTX.font = 'bold 9px Arial';
+            CTX.textAlign = 'center';
             CTX.textBaseline = 'middle';
             CTX.fillText(this.level, screen.x + 20, screen.y - 20);
         }
@@ -622,7 +622,7 @@ class PoomPlayer extends Entity {
                 Math.max(0, this.cooldowns.dash), S.dashCooldown);
         }
 
-        const eatCd   = document.getElementById('eat-cd');
+        const eatCd = document.getElementById('eat-cd');
         const eatIcon = document.getElementById('eat-icon');
         if (eatCd) {
             if (this.isEatingRice) { eatCd.style.height = '0%'; eatIcon?.classList.add('active'); }
@@ -663,10 +663,10 @@ PoomPlayer.prototype.checkObstacleProximity = Player.prototype.checkObstacleProx
 // ════════════════════════════════════════════════════════════
 // ✅ Option B — Share identical Player methods with PoomPlayer
 // ════════════════════════════════════════════════════════════
-PoomPlayer.prototype.heal               = Player.prototype.heal;
-PoomPlayer.prototype.gainExp            = Player.prototype.gainExp;
-PoomPlayer.prototype.levelUp            = Player.prototype.levelUp;
-PoomPlayer.prototype.addSpeedBoost      = Player.prototype.addSpeedBoost;
+PoomPlayer.prototype.heal = Player.prototype.heal;
+PoomPlayer.prototype.gainExp = Player.prototype.gainExp;
+PoomPlayer.prototype.levelUp = Player.prototype.levelUp;
+PoomPlayer.prototype.addSpeedBoost = Player.prototype.addSpeedBoost;
 PoomPlayer.prototype.checkPassiveUnlock = Player.prototype.checkPassiveUnlock;
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS

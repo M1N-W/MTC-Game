@@ -10,14 +10,14 @@ class AutoPlayer extends Player {
         this.y = y;
 
         this.wanchaiActive = false;
-        this.wanchaiTimer  = 0;
+        this.wanchaiTimer = 0;
 
         this._punchTimer = 0;
-        this._heatTimer  = 0;
+        this._heatTimer = 0;
 
         // ── NEW: Stand Rush State ────────────────────────────────
-        this.isStandAttacking   = false;
-        this.standAttackTimer   = 0;
+        this.isStandAttacking = false;
+        this.standAttackTimer = 0;
         this.lastPunchSoundTime = 0;
 
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0 };
@@ -35,12 +35,12 @@ class AutoPlayer extends Player {
         if (this.wanchaiActive) {
             this.baseCritChance += (this.stats?.standCritBonus ?? 0.50);
         }
-        
+
         const result = super.dealDamage(baseDamage);
-        
+
         // Restore original crit for state safety
         this.baseCritChance = originalCrit;
-        
+
         return result;
     }
 
@@ -48,10 +48,10 @@ class AutoPlayer extends Player {
         // WARN-1 FIX: BALANCE was refactored — correct path is
         // BALANCE.characters.auto, not the stale BALANCE.player.auto
         const dur = this.stats?.wanchaiDuration ?? BALANCE.characters?.auto?.wanchaiDuration ?? 3.0;
-        const cd  = this.stats?.wanchaiCooldown ?? BALANCE.characters?.auto?.wanchaiCooldown ?? 12;
+        const cd = this.stats?.wanchaiCooldown ?? BALANCE.characters?.auto?.wanchaiCooldown ?? 12;
 
         this.wanchaiActive = true;
-        this.wanchaiTimer  = dur;
+        this.wanchaiTimer = dur;
         this.cooldowns.wanchai = cd;
         this._punchTimer = 0;
 
@@ -65,13 +65,13 @@ class AutoPlayer extends Player {
 
     update(dt, keys, mouse) {
         if (this.cooldowns?.wanchai > 0) this.cooldowns.wanchai -= dt;
-        if (this.cooldowns?.shoot  > 0) this.cooldowns.shoot  -= dt;
+        if (this.cooldowns?.shoot > 0) this.cooldowns.shoot -= dt;
 
         if (this.wanchaiActive) {
             this.wanchaiTimer -= dt;
             if (this.wanchaiTimer <= 0) {
                 this.wanchaiActive = false;
-                this.wanchaiTimer  = 0;
+                this.wanchaiTimer = 0;
             }
         }
 
@@ -103,24 +103,24 @@ class AutoPlayer extends Player {
         if (this.wanchaiActive) {
             this.isStandAttacking = true;
             this.standAttackTimer += dt;
-            
+
             const punchRate = this.stats?.wanchaiPunchRate ?? 0.06;
             this._punchTimer -= dt;
-            
+
             if (this._punchTimer <= 0) {
                 this._punchTimer = punchRate;
-                
+
                 const rushRange = 130;
                 const coneHalfAngle = 0.6; // Roughly 34 degrees either side
-                
+
                 // Calculate base damage
                 let baseDmg = (this.stats?.wanchaiDamage ?? 12) * (this.damageMultiplier || 1.0);
-                
+
                 // Apply Awakening Crit Buff directly to flurry punches
                 let critChance = this.baseCritChance;
                 if (this.passiveUnlocked) critChance += (this.stats?.passiveCritBonus ?? 0);
                 critChance += (this.stats?.standCritBonus ?? 0.50); // Add the Stand Crit Buff
-                
+
                 let isCrit = false;
                 let finalDmg = baseDmg;
                 if (Math.random() < critChance) {
@@ -128,7 +128,7 @@ class AutoPlayer extends Player {
                     isCrit = true;
                     if (this.passiveUnlocked) this.goldenAuraTimer = 1;
                     if (typeof Achievements !== 'undefined' && Achievements.stats) {
-                        Achievements.stats.crits++; 
+                        Achievements.stats.crits++;
                         if (Achievements.check) Achievements.check('crit_master');
                     }
                 }
@@ -141,12 +141,12 @@ class AutoPlayer extends Player {
                     const dx = enemy.x - this.x;
                     const dy = enemy.y - this.y;
                     const dist = Math.hypot(dx, dy);
-                    
+
                     if (dist < rushRange) {
                         let angleToEnemy = Math.atan2(dy, dx);
                         let angleDiff = Math.abs(angleToEnemy - this.angle);
                         if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
-                        
+
                         if (angleDiff < coneHalfAngle) {
                             const enemyHitX = enemy.x;
                             const enemyHitY = enemy.y;
@@ -165,12 +165,12 @@ class AutoPlayer extends Player {
                     const dx = window.boss.x - this.x;
                     const dy = window.boss.y - this.y;
                     const dist = Math.hypot(dx, dy);
-                    
+
                     if (dist < rushRange + window.boss.radius) {
                         let angleToEnemy = Math.atan2(dy, dx);
                         let angleDiff = Math.abs(angleToEnemy - this.angle);
                         if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
-                        
+
                         if (angleDiff < coneHalfAngle) {
                             const bossHitX = window.boss.x;
                             const bossHitY = window.boss.y;
@@ -212,7 +212,7 @@ class AutoPlayer extends Player {
         } else {
             try {
                 projectileManager.add(new Projectile(this.x, this.y, this.angle, 900, 22, '#dc2626', false, 'player'));
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 
@@ -223,30 +223,30 @@ class AutoPlayer extends Player {
         // LAYER 2: Weapon + Fists (full rotate + conditional Y-flip).
         // ════════════════════════════════════════════════════════════
         const screen = worldToScreen(this.x, this.y);
-        const now    = performance.now();
+        const now = performance.now();
         if (typeof CTX === 'undefined' || !CTX) return;
 
         // ── Orientation helper ────────────────────────────────────
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
-        const facingSign   = isFacingLeft ? -1 : 1;
+        const facingSign = isFacingLeft ? -1 : 1;
 
         // ── Ground shadow ─────────────────────────────────────────
         CTX.save();
         CTX.globalAlpha = 0.25;
-        CTX.fillStyle   = 'rgba(0,0,0,0.8)';
+        CTX.fillStyle = 'rgba(0,0,0,0.8)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 16, 17, 6, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
         // ── Wanchai Stand (world-space, independent of body) ──────
         if (this.wanchaiActive) {
-            const bob  = Math.sin(now / 130) * 7;
-            const sx   = screen.x - Math.cos(this.angle) * 30;
-            const sy   = screen.y - Math.sin(this.angle) * 30 - 30 + bob;
+            const bob = Math.sin(now / 130) * 7;
+            const sx = screen.x - Math.cos(this.angle) * 30;
+            const sy = screen.y - Math.sin(this.angle) * 30 - 30 + bob;
             CTX.save(); CTX.translate(sx, sy);
             const wA = 0.55 + Math.sin(now / 160) * 0.15;
             CTX.globalAlpha = 0.35 + Math.sin(now / 200) * 0.15;
             CTX.strokeStyle = '#ef4444'; CTX.lineWidth = 3.5;
-            CTX.shadowBlur  = 30; CTX.shadowColor = '#dc2626';
+            CTX.shadowBlur = 30; CTX.shadowColor = '#dc2626';
             CTX.beginPath(); CTX.arc(0, 0, 38 + Math.sin(now / 140) * 4, 0, Math.PI * 2); CTX.stroke();
             CTX.globalAlpha = wA * 0.65;
             const tL = -14, tT = -19, tW = 28, tH = 38;
@@ -261,7 +261,7 @@ class AutoPlayer extends Player {
             CTX.restore();
             CTX.globalAlpha = wA;
             CTX.strokeStyle = 'rgba(220,38,38,0.80)'; CTX.lineWidth = 2;
-            CTX.shadowBlur  = 16; CTX.shadowColor = '#dc2626';
+            CTX.shadowBlur = 16; CTX.shadowColor = '#dc2626';
             CTX.beginPath(); CTX.roundRect(tL, tT, tW, tH, 6); CTX.stroke();
             for (let side = -1; side <= 1; side += 2) {
                 CTX.globalAlpha = wA * 0.7; CTX.strokeStyle = 'rgba(220,38,38,0.70)'; CTX.lineWidth = 1.5; CTX.shadowBlur = 10;
@@ -278,7 +278,7 @@ class AutoPlayer extends Player {
             const eg = 0.7 + Math.sin(now / 110) * 0.3;
             CTX.globalAlpha = eg; CTX.fillStyle = '#f87171'; CTX.shadowBlur = 12; CTX.shadowColor = '#ef4444';
             CTX.beginPath(); CTX.arc(-4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.arc( 4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(4, -28, 2.5, 0, Math.PI * 2); CTX.fill();
             CTX.restore();
 
             // ── NEW: Stand Rush Animation ─────────────────────────────
@@ -311,7 +311,7 @@ class AutoPlayer extends Player {
 
                 // Dynamic Jittering Manga Text
                 CTX.rotate(-this.angle); // Un-rotate so text stays readable
-                
+
                 const textScale = 1 + Math.sin(now / 30) * 0.15; // Rapid pulsing
                 const jitterX = (Math.random() - 0.5) * 6;
                 const jitterY = (Math.random() - 0.5) * 6;
@@ -324,7 +324,7 @@ class AutoPlayer extends Player {
                 CTX.lineWidth = 5;
                 CTX.strokeStyle = '#000000'; // Hard black outline
                 CTX.strokeText('วันชัย วันชัย วันชัย!', jitterX, jitterY);
-                
+
                 CTX.fillStyle = '#facc15'; // Bright yellow fill
                 CTX.fillText('วันชัย วันชัย วันชัย!', jitterX, jitterY);
 
@@ -334,9 +334,9 @@ class AutoPlayer extends Player {
 
         // Breathing squash/stretch
         const breatheAuto = Math.sin(Date.now() / 200);
-        const speed    = Math.hypot(this.vx, this.vy);
-        const moveT    = Math.min(1, speed / 180);
-        const bobT     = Math.sin(this.walkCycle * 0.9);
+        const speed = Math.hypot(this.vx, this.vy);
+        const moveT = Math.min(1, speed / 180);
+        const bobT = Math.sin(this.walkCycle * 0.9);
         const stretchX = 1 + breatheAuto * 0.025 + moveT * bobT * 0.09;
         const stretchY = 1 - breatheAuto * 0.025 - moveT * Math.abs(bobT) * 0.065;
 
@@ -354,17 +354,17 @@ class AutoPlayer extends Player {
         CTX.scale(stretchX * facingSign, stretchY);
 
         // Silhouette glow ring — crimson
-        CTX.shadowBlur  = 18; CTX.shadowColor = 'rgba(220,38,38,0.75)';
+        CTX.shadowBlur = 18; CTX.shadowColor = 'rgba(220,38,38,0.75)';
         CTX.strokeStyle = 'rgba(220,38,38,0.55)';
-        CTX.lineWidth   = 2.8;
+        CTX.lineWidth = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        CTX.shadowBlur = 0;
 
         // Bean body — dark crimson
         const bG = CTX.createRadialGradient(-4, -4, 1, 0, 0, R);
-        bG.addColorStop(0,   '#7f1d1d');
+        bG.addColorStop(0, '#7f1d1d');
         bG.addColorStop(0.5, '#5a0e0e');
-        bG.addColorStop(1,   '#2d0606');
+        bG.addColorStop(1, '#2d0606');
         CTX.fillStyle = bG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
@@ -386,7 +386,7 @@ class AutoPlayer extends Player {
 
         // Power core
         const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (this.wanchaiActive ? 1.5 : 1);
-        CTX.fillStyle  = `rgba(239,68,68,${Math.min(1, cP)})`;
+        CTX.fillStyle = `rgba(239,68,68,${Math.min(1, cP)})`;
         CTX.shadowBlur = 10 * cP; CTX.shadowColor = '#dc2626';
         CTX.beginPath(); CTX.arc(0, 3, 3.5, 0, Math.PI * 2); CTX.fill();
         CTX.shadowBlur = 0;
@@ -422,10 +422,10 @@ class AutoPlayer extends Player {
 
         const spikeData = [
             [-11, -2, 12, '#3d0909'],
-            [ -5, -1,  9, '#450a0a'],
-            [  1,  0, 11, '#450a0a'],
-            [  7,  1,  8, '#3d0909'],
-            [ 12,  2,  6, '#2d0606'],
+            [-5, -1, 9, '#450a0a'],
+            [1, 0, 11, '#450a0a'],
+            [7, 1, 8, '#3d0909'],
+            [12, 2, 6, '#2d0606'],
         ];
         for (const [bx, tipOff, h, col] of spikeData) {
             const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
@@ -443,7 +443,7 @@ class AutoPlayer extends Player {
             CTX.closePath(); CTX.stroke();
         }
 
-        CTX.shadowBlur  = this.wanchaiActive ? 16 : 6;
+        CTX.shadowBlur = this.wanchaiActive ? 16 : 6;
         CTX.shadowColor = '#f97316';
         const emberColors = ['#f97316', '#ef4444', '#fb923c', '#f87171', '#fca5a5'];
         spikeData.forEach(([bx, tipOff, h], idx) => {
@@ -451,7 +451,7 @@ class AutoPlayer extends Player {
             const tx = bx + tipOff + wobble;
             const ty = -R - 1 - h - wobble * 0.4;
             const eA = (this.wanchaiActive ? 0.9 : 0.6) + Math.sin(now / 200 + idx) * 0.25;
-            CTX.fillStyle   = emberColors[idx % emberColors.length];
+            CTX.fillStyle = emberColors[idx % emberColors.length];
             CTX.globalAlpha = Math.max(0, Math.min(1, eA));
             CTX.beginPath(); CTX.arc(tx, ty, 2, 0, Math.PI * 2); CTX.fill();
         });
@@ -473,28 +473,28 @@ class AutoPlayer extends Player {
         }
 
         const fistGlow = ventGlow * 0.8 + (this.wanchaiActive ? 0.6 : 0);
-        CTX.shadowBlur  = 10 * fistGlow; CTX.shadowColor = '#dc2626';
+        CTX.shadowBlur = 10 * fistGlow; CTX.shadowColor = '#dc2626';
 
-        CTX.fillStyle   = '#4a0e0e';
+        CTX.fillStyle = '#4a0e0e';
         CTX.strokeStyle = '#1e293b';
-        CTX.lineWidth   = 2.5;
+        CTX.lineWidth = 2.5;
         CTX.beginPath(); CTX.arc(R + 8, 3, 7, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.fillStyle = '#7f1d1d';
         CTX.beginPath(); CTX.arc(R + 6, 1, 3.5, 0, Math.PI * 2); CTX.fill();
         CTX.strokeStyle = '#2d0606'; CTX.lineWidth = 1.2;
-        CTX.beginPath(); CTX.moveTo(R + 3, 1);   CTX.lineTo(R + 13, 1);   CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(R + 3, 4);   CTX.lineTo(R + 13, 4);   CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(R + 3, 1); CTX.lineTo(R + 13, 1); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(R + 3, 4); CTX.lineTo(R + 13, 4); CTX.stroke();
         CTX.beginPath(); CTX.moveTo(R + 3, 6.5); CTX.lineTo(R + 13, 6.5); CTX.stroke();
         const fistEmber = Math.max(0, 0.5 + Math.sin(now / 160) * 0.4) * (this.wanchaiActive ? 1 : 0.6);
-        CTX.fillStyle   = `rgba(251,146,60,${fistEmber})`;
-        CTX.shadowBlur  = 8 * fistEmber; CTX.shadowColor = '#fb923c';
+        CTX.fillStyle = `rgba(251,146,60,${fistEmber})`;
+        CTX.shadowBlur = 8 * fistEmber; CTX.shadowColor = '#fb923c';
         CTX.beginPath(); CTX.roundRect(R + 4, 2.5, 8, 1.5, 1); CTX.fill();
         CTX.shadowBlur = 0;
 
-        CTX.fillStyle   = '#3d0808';
+        CTX.fillStyle = '#3d0808';
         CTX.strokeStyle = '#1e293b';
-        CTX.lineWidth   = 2.5;
-        CTX.shadowBlur  = 6 * fistGlow; CTX.shadowColor = '#dc2626';
+        CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 6 * fistGlow; CTX.shadowColor = '#dc2626';
         CTX.beginPath(); CTX.arc(-(R + 7), -1, 6, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.fillStyle = '#5c1010';
         CTX.beginPath(); CTX.arc(-(R + 9), -2, 2.5, 0, Math.PI * 2); CTX.fill();
@@ -511,11 +511,11 @@ class AutoPlayer extends Player {
 
         // Level badge
         if (this.level > 1) {
-            CTX.fillStyle    = 'rgba(185,28,28,0.92)';
+            CTX.fillStyle = 'rgba(185,28,28,0.92)';
             CTX.beginPath(); CTX.arc(screen.x + 22, screen.y - 22, 9, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle    = '#fff';
-            CTX.font         = 'bold 9px Arial';
-            CTX.textAlign    = 'center';
+            CTX.fillStyle = '#fff';
+            CTX.font = 'bold 9px Arial';
+            CTX.textAlign = 'center';
             CTX.textBaseline = 'middle';
             CTX.fillText(this.level, screen.x + 22, screen.y - 22);
         }
@@ -525,7 +525,7 @@ class AutoPlayer extends Player {
 // ════════════════════════════════════════════════════════════
 // 🔥 AUTO PLAYER — Prototype Overrides
 // ════════════════════════════════════════════════════════════
-AutoPlayer.prototype.updateUI = function() {
+AutoPlayer.prototype.updateUI = function () {
     const S = this.stats;
 
     const hpEl = document.getElementById('hp-bar');
@@ -533,8 +533,8 @@ AutoPlayer.prototype.updateUI = function() {
     if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
     if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
-    const dp      = Math.min(100, (1 - this.cooldowns.dash / (S.dashCooldown || 2.0)) * 100);
-    const dashEl  = document.getElementById('dash-cd');
+    const dp = Math.min(100, (1 - this.cooldowns.dash / (S.dashCooldown || 2.0)) * 100);
+    const dashEl = document.getElementById('dash-cd');
     if (dashEl) dashEl.style.height = `${100 - dp}%`;
     if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
         UIManager._setCooldownVisual('dash-icon',
@@ -542,16 +542,16 @@ AutoPlayer.prototype.updateUI = function() {
     }
 
     // WARN-1 FIX: use BALANCE.characters.auto (correct path after refactor)
-    const wanchaiCd   = S.wanchaiCooldown || BALANCE.characters?.auto?.wanchaiCooldown || 12;
-    const standEl     = document.getElementById('stealth-icon');
-    const standCdEl   = document.getElementById('stealth-cd');
+    const wanchaiCd = S.wanchaiCooldown || BALANCE.characters?.auto?.wanchaiCooldown || 12;
+    const standEl = document.getElementById('stealth-icon');
+    const standCdEl = document.getElementById('stealth-cd');
 
     const skill1Emoji = document.getElementById('skill1-emoji');
-    const skill1Hint  = document.getElementById('skill1-hint');
+    const skill1Hint = document.getElementById('skill1-hint');
     if (skill1Emoji) skill1Emoji.textContent = this.wanchaiActive ? '🥊' : '🔥';
-    if (skill1Hint)  skill1Hint.textContent  = 'STAND';
-    if (standEl)     standEl.style.borderColor = '#dc2626';
-    if (standEl)     standEl.style.boxShadow   = this.wanchaiActive
+    if (skill1Hint) skill1Hint.textContent = 'STAND';
+    if (standEl) standEl.style.borderColor = '#dc2626';
+    if (standEl) standEl.style.boxShadow = this.wanchaiActive
         ? '0 0 20px rgba(220,38,38,0.80)'
         : '0 0 10px rgba(220,38,38,0.35)';
 

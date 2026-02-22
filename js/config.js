@@ -471,7 +471,10 @@ const VISUALS = {
 const ACHIEVEMENT_DEFS = [
     { id: 'first_blood',   name: 'First Blood',       desc: 'ฆ่าศัตรูตัวแรก',                    icon: '⚔️'  },
     { id: 'wave_1',        name: 'Wave Survivor',      desc: 'ผ่าน Wave 1',                       icon: '🌊'  },
-    { id: 'boss_down',     name: 'Manop Slayer',       desc: 'เอาชนะครูมานพครั้งแรก',             icon: '👑'  },
+    { id: 'manop_down',    name: 'Manop Slayer',       desc: 'เอาชนะครูมานพครั้งแรก',             icon: '👑'  },
+    { id: 'first_down',    name: 'Physics Breaker',    desc: 'เอาชนะครูเฟิร์สผู้ปราดเปรียว',      icon: '⚛️'  },
+    { id: 'parry_master',  name: 'Return to Sender',   desc: 'Parry แซนด์วิชหมูกลับไปหาครูเฟิร์ส', icon: '🥪'  },
+    { id: 'shop_max',      name: 'Capitalism',         desc: 'ซื้อบัฟร้านค้าจนเต็มสแต็ก 1.5x',    icon: '📈'  },
     { id: 'no_damage',     name: 'Untouchable',        desc: 'ผ่าน Wave โดยไม่โดนดาเมจ',          icon: '🛡️' },
     { id: 'crit_master',   name: 'Critical Master',    desc: 'ตีติดคริติคอล 5 ครั้ง',             icon: '💥'  },
     { id: 'speedster',     name: 'Speedster',          desc: 'ใช้ Dash 20 ครั้ง',                 icon: '⚡'  },
