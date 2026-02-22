@@ -243,7 +243,7 @@ function startNextWave() {
     const wave       = getWave();
     const count      = BALANCE.waves.enemiesBase + (wave-1) * BALANCE.waves.enemiesPerWave;
     const isBossWave = wave % BALANCE.waves.bossEveryNWaves === 0;
-    const isGlitch   = wave % GLITCH_EVERY_N_WAVES === 0;
+    const isGlitch   = (!isBossWave) && (wave % GLITCH_EVERY_N_WAVES === 0);
 
     // ── BGM ──────────────────────────────────────────────────
     if (!isBossWave) Audio.playBGM(isGlitch ? 'glitch' : 'battle');
