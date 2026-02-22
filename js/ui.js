@@ -39,7 +39,7 @@
 // ════════════════════════════════════════════════════════════
 class AchievementSystem {
     constructor() {
-        this.list     = ACHIEVEMENT_DEFS;
+        this.list = ACHIEVEMENT_DEFS;
         this.unlocked = new Set();
         this.stats = {
             kills: 0, damageTaken: 0, crits: 0,
@@ -55,23 +55,23 @@ class AchievementSystem {
         if (!ach) return;
 
         let unlock = false;
-        switch(id) {
-            case 'first_blood':   unlock = this.stats.kills >= 1; break;
-            case 'wave_1':        unlock = getWave() >= 2; break;
+        switch (id) {
+            case 'first_blood': unlock = this.stats.kills >= 1; break;
+            case 'wave_1': unlock = getWave() >= 2; break;
             // WARN-9 FIX: window.boss is null at death, old check always falsy.
             // boss.js now sets window.lastBossKilled = true before nulling window.boss.
-            case 'boss_down':     unlock = !!window.lastBossKilled; break;
-            case 'no_damage':     unlock = this.stats.damageTaken === 0 && getEnemiesKilled() >= 5; break;
-            case 'crit_master':   unlock = this.stats.crits >= 5; break;
-            case 'speedster':     unlock = this.stats.dashes >= 20; break;
-            case 'ghost':         unlock = this.stats.stealths >= 10; break;
-            case 'collector':     unlock = this.stats.powerups >= 10; break;
+            case 'boss_down': unlock = !!window.lastBossKilled; break;
+            case 'no_damage': unlock = this.stats.damageTaken === 0 && getEnemiesKilled() >= 5; break;
+            case 'crit_master': unlock = this.stats.crits >= 5; break;
+            case 'speedster': unlock = this.stats.dashes >= 20; break;
+            case 'ghost': unlock = this.stats.stealths >= 10; break;
+            case 'collector': unlock = this.stats.powerups >= 10; break;
             case 'weapon_master': unlock = this.stats.weaponsUsed.size >= 3; break;
             // WARN-15 FIX: PoomPlayer.js loads after ui.js — guard with typeof
             case 'naga_summoner': unlock = typeof PoomPlayer !== 'undefined'
                 && window.player instanceof PoomPlayer
                 && window.player.nagaCount >= 3; break;
-            case 'shopaholic':    unlock = this.stats.shopPurchases >= 5; break;
+            case 'shopaholic': unlock = this.stats.shopPurchases >= 5; break;
         }
         if (unlock) this.unlock(ach);
     }
@@ -164,13 +164,13 @@ class ShopManager {
 
     static updateButtons() {
         const currentScore = typeof getScore === 'function' ? getScore() : 0;
-        const player       = window.player;
+        const player = window.player;
 
         const scoreDisplay = document.getElementById('shop-score-display');
         if (scoreDisplay) scoreDisplay.textContent = currentScore.toLocaleString();
 
         Object.values(SHOP_ITEMS).forEach(item => {
-            const btn  = document.getElementById(`shop-btn-${item.id}`);
+            const btn = document.getElementById(`shop-btn-${item.id}`);
             const card = document.getElementById(`shop-card-${item.id}`);
             if (!btn || !card) return;
 
@@ -181,7 +181,7 @@ class ShopManager {
             if (player && item.duration) {
                 const isActive =
                     (item.id === 'damageUp' && player.shopDamageBoostActive) ||
-                    (item.id === 'speedUp'  && player.shopSpeedBoostActive);
+                    (item.id === 'speedUp' && player.shopSpeedBoostActive);
                 card.classList.toggle('shop-card-active', isActive);
 
                 let timerEl = card.querySelector('.shop-buff-timer');
@@ -314,14 +314,14 @@ class UIManager {
         if (!bubble) return;
         const screen = worldToScreen(x, y - 40);
         bubble.textContent = text;
-        bubble.style.left  = screen.x + 'px';
-        bubble.style.top   = screen.y + 'px';
+        bubble.style.left = screen.x + 'px';
+        bubble.style.top = screen.y + 'px';
         bubble.classList.add('visible');
         setTimeout(() => bubble.classList.remove('visible'), 1500);
     }
 
     static updateBossHUD(boss) {
-        const hud   = document.getElementById('boss-hud');
+        const hud = document.getElementById('boss-hud');
         const hpBar = document.getElementById('boss-hp-bar');
         if (!hud) return;
         if (boss && !boss.dead) {
@@ -338,7 +338,7 @@ class UIManager {
         if (speech.classList.contains('visible')) {
             const screen = worldToScreen(boss.x, boss.y - 80);
             speech.style.left = screen.x + 'px';
-            speech.style.top  = screen.y + 'px';
+            speech.style.top = screen.y + 'px';
         }
     }
 
@@ -361,12 +361,12 @@ class UIManager {
         el = document.createElement('div');
         el.id = 'high-score-display';
         el.style.cssText = [
-            'display:flex','align-items:center','gap:12px',
+            'display:flex', 'align-items:center', 'gap:12px',
             'background:rgba(250,204,21,0.07)',
             'border:1.5px solid rgba(250,204,21,0.35)',
-            'border-radius:14px','padding:10px 24px','margin-bottom:14px',
-            'font-family:"Orbitron",sans-serif','font-size:15px','color:#fef08a',
-            'letter-spacing:2px','box-shadow:0 0 18px rgba(250,204,21,0.18)',
+            'border-radius:14px', 'padding:10px 24px', 'margin-bottom:14px',
+            'font-family:"Orbitron",sans-serif', 'font-size:15px', 'color:#fef08a',
+            'letter-spacing:2px', 'box-shadow:0 0 18px rgba(250,204,21,0.18)',
             'pointer-events:none'
         ].join(';');
         el.innerHTML = `
@@ -386,11 +386,11 @@ class UIManager {
     }
 
     static setupCharacterHUD(player) {
-        const isPoom  = player instanceof PoomPlayer;
+        const isPoom = player instanceof PoomPlayer;
         // Derive charId safely from both Player and PoomPlayer instances
-        const charId  = player.charId || (isPoom ? 'poom' : 'kao');
-        const isKao   = charId === 'kao';
-        const isAuto  = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
+        const charId = player.charId || (isPoom ? 'poom' : 'kao');
+        const isKao = charId === 'kao';
+        const isAuto = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
 
         const weaponIndicator = document.querySelector('.weapon-indicator');
         if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
@@ -412,8 +412,8 @@ class UIManager {
         const passiveSkillEl = document.getElementById('passive-skill');
         if (passiveSkillEl) {
             if (isKao) {
-                passiveSkillEl.style.display  = '';          // restore default layout display
-                passiveSkillEl.style.opacity  = '0.35';      // dim until earned
+                passiveSkillEl.style.display = '';          // restore default layout display
+                passiveSkillEl.style.opacity = '0.35';      // dim until earned
                 passiveSkillEl.classList.remove('unlocked'); // clear any stale unlock from prev run
                 const skillName = passiveSkillEl.querySelector('.skill-name');
                 if (skillName) skillName.textContent = '0/5'; // reset stealth counter text
@@ -466,7 +466,7 @@ class UIManager {
 
             // ── Eat Rice ─────────────────────────────────────────────
             const eatIcon = document.getElementById('eat-icon');
-            const eatCd   = document.getElementById('eat-cd');
+            const eatCd = document.getElementById('eat-cd');
             if (eatCd) {
                 if (player.isEatingRice) {
                     eatCd.style.height = '0%';
@@ -484,8 +484,8 @@ class UIManager {
                 S.eatRiceCooldown);
 
             // ── Naga ──────────────────────────────────────────────────
-            const nagaIcon  = document.getElementById('naga-icon');
-            const nagaCd    = document.getElementById('naga-cd');
+            const nagaIcon = document.getElementById('naga-icon');
+            const nagaCd = document.getElementById('naga-cd');
             const nagaTimer = document.getElementById('naga-timer');
             if (nagaCd) {
                 const np = player.cooldowns.naga <= 0
@@ -506,8 +506,8 @@ class UIManager {
                 Math.max(0, player.cooldowns.naga),
                 S.nagaCooldown);
 
-        // WARN-10 FIX: AutoPlayer's Wanchai Stand cooldown had no arc overlay
-        // or countdown. Add a parallel branch so the player sees feedback.
+            // WARN-10 FIX: AutoPlayer's Wanchai Stand cooldown had no arc overlay
+            // or countdown. Add a parallel branch so the player sees feedback.
         } else if (typeof AutoPlayer !== 'undefined' && player instanceof AutoPlayer) {
             const S = BALANCE.characters.auto;
             UIManager._setCooldownVisual(
@@ -537,8 +537,8 @@ class UIManager {
     static resetGameOverUI() {
         const els = {
             'report-score': '0',
-            'report-wave':  '0',
-            'report-text':  'Loading...'
+            'report-wave': '0',
+            'report-text': 'Loading...'
         };
         for (const [id, val] of Object.entries(els)) setElementText(id, val);
     }
@@ -556,7 +556,7 @@ class UIManager {
             }
         }
         comboScale += (1 - comboScale) * Math.min(1, dt * comboScaleDecay);
-        comboShake  = Math.max(0, comboShake - dt * comboShakeDecay);
+        comboShake = Math.max(0, comboShake - dt * comboShakeDecay);
     }
 
     static drawCombo(ctx) {
@@ -572,29 +572,29 @@ class UIManager {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
         const gWidth = Math.max(240, size * 4);
-        const grad = ctx.createLinearGradient(x-gWidth/2,y-30,x+gWidth/2,y+30);
-        const t = Math.min(comboCount/30, 1);
+        const grad = ctx.createLinearGradient(x - gWidth / 2, y - 30, x + gWidth / 2, y + 30);
+        const t = Math.min(comboCount / 30, 1);
         // lerpColorHex is now in utils.js — no redefinition needed here
-        grad.addColorStop(0, lerpColorHex('#FFD54A','#FF3B3B',t));
-        grad.addColorStop(1, lerpColorHex('#FFE08A','#FF6B6B',Math.min(1,t+0.18)));
+        grad.addColorStop(0, lerpColorHex('#FFD54A', '#FF3B3B', t));
+        grad.addColorStop(1, lerpColorHex('#FFE08A', '#FF6B6B', Math.min(1, t + 0.18)));
         ctx.fillStyle = grad;
         ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 22;
 
         const maxShake = Math.min(12, comboCount * 0.6);
         const shakeAmp = maxShake * comboShake;
-        const shakeX   = (Math.random() - 0.5) * shakeAmp;
-        const shakeY   = (Math.random() - 0.5) * shakeAmp;
+        const shakeX = (Math.random() - 0.5) * shakeAmp;
+        const shakeY = (Math.random() - 0.5) * shakeAmp;
         ctx.translate(x + shakeX, y + shakeY);
 
-        const mainText = `${comboCount} HITS!`;
+        const mainText = `${comboCount} ${GAME_TEXTS.ui.hits}`;
         ctx.fillText(mainText, 0, -size * 0.14);
         ctx.lineWidth = Math.max(4, size * 0.07);
         ctx.strokeStyle = 'rgba(0,0,0,0.45)';
         ctx.strokeText(mainText, 0, -size * 0.14);
 
         let special = '';
-        if (comboCount > 20) special = 'GODLIKE!';
-        else if (comboCount > 10) special = 'UNSTOPPABLE!';
+        if (comboCount > 20) special = GAME_TEXTS.ui.godlike;
+        else if (comboCount > 10) special = GAME_TEXTS.ui.unstoppable;
         if (special) {
             const smallSize = Math.max(18, Math.round(size * 0.44));
             ctx.font = `bold ${smallSize}px "Orbitron", sans-serif`;
@@ -632,7 +632,7 @@ class UIManager {
         if (!window.player || !window.player.isConfused) return;
 
         const canvas = ctx.canvas;
-        const now    = performance.now();
+        const now = performance.now();
 
         // ── Flash gate: visible for ~125 ms, hidden for ~125 ms (~4 Hz) ──
         // Math.sin returns values in [−1, 1]; we gate on > 0 for a 50 % duty cycle.
@@ -642,28 +642,28 @@ class UIManager {
         // ── Layout ────────────────────────────────────────────────
         // Centred horizontally; sits at H − 270 px so it clears the
         // Bullet Time badge (H − 140) and the skill-slot row below it.
-        const W       = canvas.width;
-        const H       = canvas.height;
-        const cx      = W / 2;
-        const cy      = H - 270;
-        const text    = '⚠️ CONFUSED : INVERT YOUR MOVEMENT! ⚠️';
+        const W = canvas.width;
+        const H = canvas.height;
+        const cx = W / 2;
+        const cy = H - 270;
+        const text = GAME_TEXTS.ui.confusedWarning;
         const fontSize = 17;
-        const padX    = 22;
-        const padY    = 11;
-        const radius  = 10;
+        const padX = 22;
+        const padY = 11;
+        const radius = 10;
 
         ctx.save();
 
         // ── Measure text to size the pill precisely ───────────────
         ctx.font = `bold ${fontSize}px "Orbitron", Arial, sans-serif`;
-        const textW  = ctx.measureText(text).width;
-        const pillW  = textW + padX * 2;
-        const pillH  = fontSize + padY * 2;
-        const pillX  = cx - pillW / 2;
-        const pillY  = cy - pillH / 2;
+        const textW = ctx.measureText(text).width;
+        const pillW = textW + padX * 2;
+        const pillH = fontSize + padY * 2;
+        const pillX = cx - pillW / 2;
+        const pillY = cy - pillH / 2;
 
         // ── Outer glow halo (drawn before clip/fill for correct layering) ──
-        ctx.shadowBlur  = 28;
+        ctx.shadowBlur = 28;
         ctx.shadowColor = '#d946ef';
 
         // ── Pill background ───────────────────────────────────────
@@ -674,18 +674,18 @@ class UIManager {
         ctx.fill();
 
         // ── Pill border ───────────────────────────────────────────
-        ctx.shadowBlur  = 10;
+        ctx.shadowBlur = 10;
         ctx.shadowColor = '#e879f9';
         ctx.strokeStyle = 'rgba(233, 121, 249, 0.90)';
-        ctx.lineWidth   = 2;
+        ctx.lineWidth = 2;
         _confusedRoundRect(ctx, pillX, pillY, pillW, pillH, radius);
         ctx.stroke();
 
         // ── Warning text ──────────────────────────────────────────
-        ctx.shadowBlur  = 12;
+        ctx.shadowBlur = 12;
         ctx.shadowColor = '#ffffff';
-        ctx.fillStyle   = '#ffffff';
-        ctx.textAlign    = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, cx, cy);
 
@@ -733,10 +733,10 @@ class UIManager {
 
         // Config: radius 60 px · safe-zone top-right · world scale 0.1
         const radarRadius = 60;
-        const scale       = 0.1;
+        const scale = 0.1;
         // Safe-Zone: keeps radar clear of device notches / browser chrome.
-        const cx  = canvas.width  - 200;   // 200 px from right edge
-        const cy  = 90;                    // 90 px from top edge
+        const cx = canvas.width - 200;   // 200 px from right edge
+        const cy = 90;                    // 90 px from top edge
         const now = Date.now();
 
         const player = (typeof window !== 'undefined' && window.player)
@@ -755,7 +755,7 @@ class UIManager {
             const rx = cx + (wx - player.x) * scale;
             const ry = cy + (wy - player.y) * scale;
             const dx = rx - cx, dy = ry - cy;
-            const d  = Math.sqrt(dx * dx + dy * dy);
+            const d = Math.sqrt(dx * dx + dy * dy);
             if (d <= maxR) return { x: rx, y: ry, clamped: false };
             return { x: cx + dx * (maxR / d), y: cy + dy * (maxR / d), clamped: true };
         };
@@ -768,8 +768,8 @@ class UIManager {
         // ══════════════════════════════════════════════════════
         ctx.save();
         ctx.globalCompositeOperation = 'source-over';  // ← FIX: undo any lighting blend
-        ctx.globalAlpha              = 1;               // ← FIX: undo any alpha leakage
-        ctx.shadowBlur               = 0;               // ← FIX: clear any glow leakage
+        ctx.globalAlpha = 1;               // ← FIX: undo any alpha leakage
+        ctx.shadowBlur = 0;               // ← FIX: clear any glow leakage
 
         // ── 1. Outer shell (drawn BEFORE clip so they sit outside it) ──
 
@@ -782,17 +782,17 @@ class UIManager {
         ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'; ctx.fill();
 
         // Pulsating neon-green border — width oscillates 1 px → 3 px
-        const borderSin   = Math.sin(now / 500);   // −1 … +1
+        const borderSin = Math.sin(now / 500);   // −1 … +1
         const borderWidth = 2 + borderSin;          // 1 … 3 px
-        ctx.lineWidth   = borderWidth;
+        ctx.lineWidth = borderWidth;
         ctx.strokeStyle = `rgba(57,255,20,${0.80 + borderSin * 0.15})`;
-        ctx.shadowBlur  = 12 + borderSin * 6;
+        ctx.shadowBlur = 12 + borderSin * 6;
         ctx.shadowColor = '#39ff14';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur  = 0;
+        ctx.shadowBlur = 0;
 
         // Inner accent ring
-        ctx.lineWidth   = 0.8;
+        ctx.lineWidth = 0.8;
         ctx.strokeStyle = 'rgba(134,239,172,0.28)';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 3, 0, Math.PI * 2); ctx.stroke();
 
@@ -814,18 +814,18 @@ class UIManager {
 
             // Random horizontal noise lines across the circle
             const noiseCount = 6;
-            const noiseNow   = Date.now();
+            const noiseNow = Date.now();
             for (let n = 0; n < noiseCount; n++) {
                 // Pseudo-random but stable per-frame band using time bucketed to 80 ms
-                const seed   = Math.floor(noiseNow / 80) + n * 7919;
-                const nyOff  = ((seed * 1664525 + 1013904223) & 0x7fffffff) % (radarRadius * 2);
-                const ny     = cy - radarRadius + nyOff;
+                const seed = Math.floor(noiseNow / 80) + n * 7919;
+                const nyOff = ((seed * 1664525 + 1013904223) & 0x7fffffff) % (radarRadius * 2);
+                const ny = cy - radarRadius + nyOff;
                 const nalpha = 0.12 + (((seed * 6364136) & 0xff) / 255) * 0.25;
-                const nw     = 0.6 + (((seed * 22695477) & 0xff) / 255) * 1.4;
+                const nw = 0.6 + (((seed * 22695477) & 0xff) / 255) * 1.4;
                 ctx.save();
                 ctx.globalAlpha = nalpha;
                 ctx.strokeStyle = '#06b6d4';
-                ctx.lineWidth   = nw;
+                ctx.lineWidth = nw;
                 ctx.beginPath();
                 ctx.moveTo(cx - radarRadius, ny);
                 ctx.lineTo(cx + radarRadius, ny);
@@ -836,15 +836,15 @@ class UIManager {
             // "SIGNAL LOST" text — centered in the radar circle
             const slPulse = 0.65 + Math.sin(noiseNow / 350) * 0.35;
             ctx.save();
-            ctx.globalAlpha  = slPulse;
-            ctx.shadowBlur   = 14;
-            ctx.shadowColor  = '#06b6d4';
-            ctx.fillStyle    = '#06b6d4';
-            ctx.font         = 'bold 10px "Orbitron", Arial, sans-serif';
-            ctx.textAlign    = 'center';
+            ctx.globalAlpha = slPulse;
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = '#06b6d4';
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = 'bold 10px "Orbitron", Arial, sans-serif';
+            ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('SIGNAL', cx, cy - 7);
-            ctx.fillText('LOST',   cx, cy + 7);
+            ctx.fillText('LOST', cx, cy + 7);
             ctx.restore();
         } else {
             // ── 2. Interior grid ──────────────────────────────────
@@ -858,24 +858,24 @@ class UIManager {
 
             // Tactical crosshair axes
             ctx.strokeStyle = 'rgba(57,255,20,0.20)';
-            ctx.lineWidth   = 0.8;
+            ctx.lineWidth = 0.8;
             ctx.beginPath();
             ctx.moveTo(cx - radarRadius + 2, cy); ctx.lineTo(cx + radarRadius - 2, cy);
             ctx.moveTo(cx, cy - radarRadius + 2); ctx.lineTo(cx, cy + radarRadius - 2);
             ctx.stroke();
 
             // ── 3. Sweep line animation ───────────────────────────
-            const SWEEP_RPM  = 1 / 3;   // one full revolution every 3 seconds
+            const SWEEP_RPM = 1 / 3;   // one full revolution every 3 seconds
             const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
 
             // Trail: 120° fading arc behind the sweep head
-            const trailArc   = Math.PI * 2 / 3;
+            const trailArc = Math.PI * 2 / 3;
             const TRAIL_STEPS = 24;
             for (let i = 0; i < TRAIL_STEPS; i++) {
-                const frac   = i / TRAIL_STEPS;
+                const frac = i / TRAIL_STEPS;
                 const aStart = sweepAngle - trailArc * (1 - frac);
-                const aEnd   = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
-                const alpha  = frac * frac * 0.22;   // quadratic fade toward head
+                const aEnd = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
+                const alpha = frac * frac * 0.22;   // quadratic fade toward head
                 ctx.beginPath();
                 ctx.moveTo(cx, cy);
                 ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
@@ -887,8 +887,8 @@ class UIManager {
             // Sweep head line
             ctx.save();
             ctx.strokeStyle = 'rgba(134,239,172,0.85)';
-            ctx.lineWidth   = 1.5;
-            ctx.shadowBlur  = 6; ctx.shadowColor = '#48bb78';
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 6; ctx.shadowColor = '#48bb78';
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(
@@ -907,7 +907,7 @@ class UIManager {
 
                 ctx.save();
                 ctx.translate(sx, sy);
-                ctx.shadowBlur  = 10 * dbPulse;
+                ctx.shadowBlur = 10 * dbPulse;
                 ctx.shadowColor = '#60a5fa';
 
                 if (sc) {
@@ -918,9 +918,9 @@ class UIManager {
                     ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
                     ctx.fill();
                 } else {
-                    ctx.fillStyle   = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
+                    ctx.fillStyle = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
                     ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.95})`;
-                    ctx.lineWidth   = 1.2;
+                    ctx.lineWidth = 1.2;
                     ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
                     ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
                 }
@@ -936,7 +936,7 @@ class UIManager {
 
                 ctx.save();
                 ctx.translate(shx, shy);
-                ctx.shadowBlur  = 7 * shPulse;
+                ctx.shadowBlur = 7 * shPulse;
                 ctx.shadowColor = '#f59e0b';
 
                 if (shc) {
@@ -947,9 +947,9 @@ class UIManager {
                     ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
                     ctx.fill();
                 } else {
-                    ctx.fillStyle   = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
+                    ctx.fillStyle = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
                     ctx.strokeStyle = `rgba(253,230,138,${shPulse * 0.85})`;
-                    ctx.lineWidth   = 1.2;
+                    ctx.lineWidth = 1.2;
                     ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
                     ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
                 }
@@ -971,8 +971,8 @@ class UIManager {
                         const arrowColor = e.type === 'mage'
                             ? 'rgba(180,80,255,0.9)'
                             : (e.type === 'tank' ? 'rgba(255,120,40,0.9)' : 'rgba(255,50,50,0.9)');
-                        ctx.fillStyle   = arrowColor;
-                        ctx.shadowBlur  = 5;
+                        ctx.fillStyle = arrowColor;
+                        ctx.shadowBlur = 5;
                         ctx.shadowColor = arrowColor;
                         ctx.beginPath();
                         ctx.moveTo(6, 0); ctx.lineTo(0, -3.5); ctx.lineTo(0, 3.5);
@@ -982,52 +982,52 @@ class UIManager {
                         ctx.translate(ex, ey);
                         ctx.rotate(now / 800);     // slow spin
                         const r = 6;
-                        ctx.fillStyle   = 'rgba(190,75,255,1.0)';
+                        ctx.fillStyle = 'rgba(190,75,255,1.0)';
                         ctx.strokeStyle = 'rgba(220,160,255,0.9)';
-                        ctx.lineWidth   = 1.2;
-                        ctx.shadowBlur  = 8;
+                        ctx.lineWidth = 1.2;
+                        ctx.shadowBlur = 8;
                         ctx.shadowColor = '#b44dff';
                         ctx.beginPath();
                         ctx.moveTo(0, -r); ctx.lineTo(r * 0.6, 0);
-                        ctx.lineTo(0,  r); ctx.lineTo(-r * 0.6, 0);
+                        ctx.lineTo(0, r); ctx.lineTo(-r * 0.6, 0);
                         ctx.closePath(); ctx.fill(); ctx.stroke();
                         // Inner sparkle dot
-                        ctx.fillStyle  = 'rgba(240,200,255,0.85)';
+                        ctx.fillStyle = 'rgba(240,200,255,0.85)';
                         ctx.shadowBlur = 4;
                         ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
 
                     } else if (e.type === 'tank') {
                         // ── Tank: orange bold square ───────────────────
                         const r = 5.5;
-                        ctx.fillStyle   = 'rgba(255,115,35,1.0)';
+                        ctx.fillStyle = 'rgba(255,115,35,1.0)';
                         ctx.strokeStyle = 'rgba(255,185,90,0.9)';
-                        ctx.lineWidth   = 1.4;
-                        ctx.shadowBlur  = 7;
+                        ctx.lineWidth = 1.4;
+                        ctx.shadowBlur = 7;
                         ctx.shadowColor = '#ff7320';
                         ctx.beginPath();
                         ctx.rect(ex - r, ey - r, r * 2, r * 2);
                         ctx.fill(); ctx.stroke();
                         // Corner ticks for "armour" feel
                         ctx.strokeStyle = 'rgba(255,220,120,0.75)';
-                        ctx.lineWidth   = 1;
-                        ctx.shadowBlur  = 0;
+                        ctx.lineWidth = 1;
+                        ctx.shadowBlur = 0;
                         const tk = 2.5;
                         [[ex - r, ey - r], [ex + r, ey - r],
-                         [ex - r, ey + r], [ex + r, ey + r]].forEach(([px, py]) => {
+                        [ex - r, ey + r], [ex + r, ey + r]].forEach(([px, py]) => {
                             ctx.beginPath();
                             ctx.arc(px, py, tk, 0, Math.PI * 2); ctx.stroke();
                         });
 
                     } else {
                         // ── Basic: bright red circle ───────────────────
-                        const r    = 5;
+                        const r = 5;
                         const glow = 0.6 + Math.sin(now / 400 + e.x) * 0.4;
-                        ctx.fillStyle   = 'rgba(255,38,38,1.0)';
-                        ctx.shadowBlur  = 8 * glow;
+                        ctx.fillStyle = 'rgba(255,38,38,1.0)';
+                        ctx.shadowBlur = 8 * glow;
                         ctx.shadowColor = '#ff2222';
                         ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
                         // Bright highlight dot
-                        ctx.fillStyle  = 'rgba(255,180,180,0.75)';
+                        ctx.fillStyle = 'rgba(255,180,180,0.75)';
                         ctx.shadowBlur = 0;
                         ctx.beginPath(); ctx.arc(ex - 1.5, ey - 1.5, 1.5, 0, Math.PI * 2); ctx.fill();
                     }
@@ -1037,14 +1037,14 @@ class UIManager {
 
             // ── 7. Boss — 6 px pulsating purple dot ───────────────
             if (window.boss && !window.boss.dead) {
-                const t     = (now % 1000) / 1000;
+                const t = (now % 1000) / 1000;
                 const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
                 const { x: bx, y: by, clamped: bc } = toRadar(
                     window.boss.x, window.boss.y, radarRadius - 10
                 );
 
                 ctx.save();
-                ctx.shadowBlur  = 14 * pulse;
+                ctx.shadowBlur = 14 * pulse;
                 ctx.shadowColor = '#a855f7';
 
                 if (bc) {
@@ -1058,11 +1058,11 @@ class UIManager {
                     ctx.fillStyle = `rgba(170,110,255,${0.75 + 0.25 * pulse})`;
                     ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = `rgba(216,180,254,${0.30 + 0.15 * pulse})`;
-                    ctx.lineWidth   = 1.5;
+                    ctx.lineWidth = 1.5;
                     ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
-                    ctx.fillStyle    = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
-                    ctx.font         = 'bold 6px monospace';
-                    ctx.textAlign    = 'center';
+                    ctx.fillStyle = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
+                    ctx.font = 'bold 6px monospace';
+                    ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
                     ctx.fillText('BOSS', bx, by - 12 - 2 * pulse);
                 }
@@ -1073,8 +1073,8 @@ class UIManager {
             ctx.save();
             ctx.translate(cx, cy);
             if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
-            ctx.shadowBlur  = 8; ctx.shadowColor = '#34d399';
-            ctx.fillStyle   = 'rgba(52,214,88,0.98)';
+            ctx.shadowBlur = 8; ctx.shadowColor = '#34d399';
+            ctx.fillStyle = 'rgba(52,214,88,0.98)';
             ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
             ctx.fill();
             ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -1094,27 +1094,27 @@ class UIManager {
 
         // ── 9. Label & legend strip (outside clip) ────────────
         ctx.shadowBlur = 0;
-        ctx.textAlign    = 'center';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.font         = 'bold 8px Orbitron, monospace';
-        ctx.fillStyle    = 'rgba(72,187,120,0.70)';
-        ctx.fillText('TACTICAL RADAR', cx, cy + radarRadius + 5);
+        ctx.font = 'bold 8px Orbitron, monospace';
+        ctx.fillStyle = 'rgba(72,187,120,0.70)';
+        ctx.fillText(GAME_TEXTS.ui.minimapTitle, cx, cy + radarRadius + 5);
 
         // Tiny legend row: colored symbols matching blip types
         // ● red=basic  ◆ purple=mage  ■ orange=tank  ★ boss  □ shop
         const legend = [
-            { col: '#ef4444', label: 'ENM', shape: 'circle'  },
-            { col: '#b44dff', label: 'MGE', shape: 'diamond' },
-            { col: '#ff7320', label: 'TNK', shape: 'square'  },
-            { col: '#a855f7', label: 'BSS', shape: 'circle'  },
-            { col: '#f59e0b', label: 'SHP', shape: 'square'  },
+            { col: '#ef4444', label: GAME_TEXTS.ui.legendEnm, shape: 'circle' },
+            { col: '#b44dff', label: GAME_TEXTS.ui.legendMge, shape: 'diamond' },
+            { col: '#ff7320', label: GAME_TEXTS.ui.legendTnk, shape: 'square' },
+            { col: '#a855f7', label: GAME_TEXTS.ui.legendBss, shape: 'circle' },
+            { col: '#f59e0b', label: GAME_TEXTS.ui.legendShp, shape: 'square' },
         ];
         const lx0 = cx - (legend.length - 1) * 12;
         legend.forEach(({ col, label, shape }, i) => {
             const lx = lx0 + i * 24;
             const ly = cy + radarRadius + 17;
             ctx.fillStyle = col;
-            ctx.shadowBlur  = 3;
+            ctx.shadowBlur = 3;
             ctx.shadowColor = col;
             if (shape === 'diamond') {
                 ctx.beginPath();
@@ -1127,7 +1127,7 @@ class UIManager {
                 ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
             }
             ctx.shadowBlur = 0;
-            ctx.font      = '6px monospace';
+            ctx.font = '6px monospace';
             ctx.fillStyle = 'rgba(203,213,225,0.65)';
             ctx.fillText(label, lx, ly + 9);
         });
@@ -1160,7 +1160,7 @@ function _confusedRoundRect(ctx, x, y, w, h, r) {
         ctx.beginPath();
         ctx.moveTo(x + r, y);
         ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
         ctx.lineTo(x + w, y + h - r);
         ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
         ctx.lineTo(x + r, y + h);
@@ -1186,7 +1186,7 @@ function addCombo() {
     comboTimer = 2.0;
     comboScale = 1.6;
     comboShake = Math.min(1.0, 0.15 + comboCount / 30);
-    try { if(typeof Audio!=='undefined'&&Audio.playCombo) Audio.playCombo(); } catch(e){}
+    try { if (typeof Audio !== 'undefined' && Audio.playCombo) Audio.playCombo(); } catch (e) { }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1198,7 +1198,7 @@ var Achievements = new AchievementSystem();
 // Expose ShopManager and UIManager on window so game.js and map.js
 // can access them regardless of which script tag loads first.
 window.ShopManager = ShopManager;
-window.UIManager   = UIManager;
+window.UIManager = UIManager;
 window.Achievements = Achievements;
 
 // ── High-score display on initial page load ───────────────────
@@ -1207,7 +1207,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try {
         const saved = getSaveData();
         UIManager.updateHighScoreDisplay(saved.highScore || 0);
-    } catch(e) {
+    } catch (e) {
         console.warn('[MTC Save] Could not init high score display:', e);
     }
 });

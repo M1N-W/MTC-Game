@@ -5,14 +5,14 @@
 // ════════════════════════════════════════════════════════════════
 if (typeof window.Gemini === 'undefined') {
     window.Gemini = {
-        init:                 ()          => console.log('🤖 AI System: Offline (Safe Fallback)'),
-        generateText:         async ()    => '...',
-        generateMission:      async ()    => 'Defeat the enemies!',
-        generateReportCard:   async ()    => 'Great job!',
-        speak:                ()          => {},
-        getMissionName:  async ()         => 'MTC Adventure',
-        getReportCard:   async ()         => 'ตั้งใจเรียนให้มากกว่านี้นะ...',
-        getBossTaunt:    async ()         => '',
+        init: () => console.log('🤖 AI System: Offline (Safe Fallback)'),
+        generateText: async () => '...',
+        generateMission: async () => 'Defeat the enemies!',
+        generateReportCard: async () => 'Great job!',
+        speak: () => { },
+        getMissionName: async () => 'MTC Adventure',
+        getReportCard: async () => 'ตั้งใจเรียนให้มากกว่านี้นะ...',
+        getBossTaunt: async () => '',
     };
 }
 
@@ -25,7 +25,7 @@ const DEBUG_MODE = false;
  */
 
 // ─── Game State ───────────────────────────────────────────────
-let gameState   = 'MENU';
+let gameState = 'MENU';
 let loopRunning = false;
 window.gameState = gameState;
 
@@ -53,13 +53,13 @@ let _achFrame = 0;
 let dayNightTimer = 0;
 
 // ─── Game Objects (global) ────────────────────────────────────
-window.player         = null;
-window.enemies        = [];
-window.boss           = null;
-window.powerups       = [];
+window.player = null;
+window.enemies = [];
+window.boss = null;
+window.powerups = [];
 window.specialEffects = [];
-window.meteorZones    = [];
-window.drone          = null;
+window.meteorZones = [];
+window.drone = null;
 
 // ── Extracted systems loaded from js/systems/:
 //    AdminSystem.js, ShopSystem.js, TimeManager.js, WaveManager.js
@@ -109,7 +109,7 @@ function gameLoop(now) {
     }
 
     const scaledDt = dt * window.timeScale;
-    _lastDrawDt    = scaledDt;
+    _lastDrawDt = scaledDt;
 
     if (gameState === 'PLAYING') {
         if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
@@ -171,7 +171,7 @@ function updateGame(dt) {
             addScreenShake(6);
         }
         if (window.waveSpawnTimer <= 0) {
-            window.waveSpawnLocked     = false;
+            window.waveSpawnLocked = false;
             window.lastGlitchCountdown = -1;
             spawnEnemies(window.pendingSpawnCount);
             spawnFloatingText(GAME_TEXTS.wave.chaosBegins, window.player.x, window.player.y - 160, '#ef4444', 44);
@@ -182,8 +182,8 @@ function updateGame(dt) {
 
     dayNightTimer += dt;
     {
-        const L        = BALANCE.LIGHTING;
-        const phi      = (dayNightTimer / L.cycleDuration) * Math.PI * 2;
+        const L = BALANCE.LIGHTING;
+        const phi = (dayNightTimer / L.cycleDuration) * Math.PI * 2;
         const dayPhase = Math.sin(phi) * 0.5 + 0.5;
         L.ambientLight = L.nightMinLight + dayPhase * (L.dayMaxLight - L.nightMinLight);
     }
@@ -206,7 +206,7 @@ function updateGame(dt) {
         }
     }
 
-    const dToServer   = dist(window.player.x, window.player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
+    const dToServer = dist(window.player.x, window.player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     const _inTutorial = typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive();
 
     if (!_inTutorial && dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
@@ -313,7 +313,7 @@ function updateGame(dt) {
                 // Circle–rectangle collision: treat barrel as its AABB
                 const closestX = Math.max(obj.x, Math.min(proj.x, obj.x + obj.w));
                 const closestY = Math.max(obj.y, Math.min(proj.y, obj.y + obj.h));
-                const hitDist  = Math.hypot(proj.x - closestX, proj.y - closestY);
+                const hitDist = Math.hypot(proj.x - closestX, proj.y - closestY);
 
                 if (hitDist < (proj.radius || 6)) {
                     // ── Register hit on barrel ──────────────────────────
@@ -362,7 +362,7 @@ function updateGame(dt) {
                 spawnParticles(barrelCX, barrelCY, 10, '#fef3c7');
 
                 // ── BOOM floating text ──────────────────────────────────
-                spawnFloatingText('💥 BOOM!', barrelCX, barrelCY - 55, '#f97316', 38);
+                spawnFloatingText(GAME_TEXTS.environment.barrelBoom, barrelCX, barrelCY - 55, '#f97316', 38);
 
                 // ── AoE Damage — 180 px radius, 150 damage ─────────────
                 const EXPLOSION_RADIUS = 180;
@@ -512,22 +512,22 @@ function drawGame() {
 
         // MTC Room center (null-safe: mapSystem.mtcRoom may be undefined
         // during early initialisation before the map has been built)
-        const room     = window.mapSystem && window.mapSystem.mtcRoom;
-        const roomCX   = room ? room.x + room.w / 2 : Infinity;
-        const roomCY   = room ? room.y + room.h / 2 : Infinity;
+        const room = window.mapSystem && window.mapSystem.mtcRoom;
+        const roomCX = room ? room.x + room.w / 2 : Infinity;
+        const roomCY = room ? room.y + room.h / 2 : Infinity;
         const roomDist = room
             ? dist(window.player.x, window.player.y, roomCX, roomCY)
             : Infinity;
 
         if (roomDist <= shopDist) {
             // MTC Room is closer — use green
-            targetX    = roomCX;
-            targetY    = roomCY;
+            targetX = roomCX;
+            targetY = roomCY;
             guideColor = '#10b981';
         } else {
             // Shop is closer — use gold
-            targetX    = MTC_SHOP_LOCATION.x;
-            targetY    = MTC_SHOP_LOCATION.y;
+            targetX = MTC_SHOP_LOCATION.x;
+            targetY = MTC_SHOP_LOCATION.y;
             guideColor = '#f59e0b';
         }
 
@@ -536,10 +536,10 @@ function drawGame() {
         const tScreen = worldToScreen(targetX, targetY);
 
         CTX.save();
-        CTX.globalAlpha    = 0.35;
-        CTX.strokeStyle    = guideColor;
-        CTX.lineWidth      = 4;
-        CTX.lineCap        = 'round';
+        CTX.globalAlpha = 0.35;
+        CTX.strokeStyle = guideColor;
+        CTX.lineWidth = 4;
+        CTX.lineCap = 'round';
         // Dash pattern: 15 px on, 20 px off — offset animated to "march"
         // toward the target so the line reads as directional.
         CTX.setLineDash([15, 20]);
@@ -584,7 +584,7 @@ function drawGame() {
         CTX.save();
         mapSystem.drawLighting(window.player, allProj, [
             { x: MTC_DATABASE_SERVER.x, y: MTC_DATABASE_SERVER.y, radius: BALANCE.LIGHTING.mtcServerLightRadius, type: 'cool' },
-            { x: MTC_SHOP_LOCATION.x,   y: MTC_SHOP_LOCATION.y,   radius: BALANCE.LIGHTING.shopLightRadius,      type: 'warm' }
+            { x: MTC_SHOP_LOCATION.x, y: MTC_SHOP_LOCATION.y, radius: BALANCE.LIGHTING.shopLightRadius, type: 'warm' }
         ]);
         CTX.restore();
     }
@@ -610,24 +610,24 @@ function drawGame() {
 // ══════════════════════════════════════════════════════════════
 
 function drawDayNightHUD() {
-    const L      = BALANCE.LIGHTING;
-    const phase  = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight);
+    const L = BALANCE.LIGHTING;
+    const phase = (L.ambientLight - L.nightMinLight) / (L.dayMaxLight - L.nightMinLight);
     const isDawn = phase > 0.5;
     const cx = 52, cy = 52, r = 24;
 
     CTX.save();
-    CTX.fillStyle   = isDawn ? 'rgba(255, 210, 80, 0.18)' : 'rgba(80, 110, 255, 0.18)';
+    CTX.fillStyle = isDawn ? 'rgba(255, 210, 80, 0.18)' : 'rgba(80, 110, 255, 0.18)';
     CTX.strokeStyle = isDawn ? 'rgba(255, 210, 80, 0.55)' : 'rgba(130, 160, 255, 0.55)';
-    CTX.lineWidth   = 2;
+    CTX.lineWidth = 2;
     CTX.beginPath();
     CTX.arc(cx, cy, r + 8, 0, Math.PI * 2);
     CTX.fill();
     CTX.stroke();
 
     CTX.strokeStyle = isDawn ? '#fbbf24' : '#818cf8';
-    CTX.lineWidth   = 3.5;
-    CTX.lineCap     = 'round';
-    CTX.shadowBlur  = 8;
+    CTX.lineWidth = 3.5;
+    CTX.lineCap = 'round';
+    CTX.shadowBlur = 8;
     CTX.shadowColor = isDawn ? '#fbbf24' : '#818cf8';
     CTX.beginPath();
     CTX.arc(cx, cy, r + 4, -Math.PI / 2, -Math.PI / 2 + phase * Math.PI * 2);
@@ -639,12 +639,12 @@ function drawDayNightHUD() {
     CTX.textBaseline = 'middle';
     CTX.fillText(isDawn ? '☀️' : '🌙', cx, cy);
 
-    CTX.fillStyle    = isDawn ? '#fde68a' : '#c7d2fe';
-    CTX.font         = 'bold 8px Arial';
-    CTX.textAlign    = 'center';
+    CTX.fillStyle = isDawn ? '#fde68a' : '#c7d2fe';
+    CTX.font = 'bold 8px Arial';
+    CTX.textAlign = 'center';
     CTX.textBaseline = 'middle';
-    const pct        = Math.round(phase * 100);
-    CTX.fillText(isDawn ? `DAY ${pct}%` : `NIGHT ${100 - pct}%`, cx, cy + r + 14);
+    const pct = Math.round(phase * 100);
+    CTX.fillText(isDawn ? GAME_TEXTS.ui.dayPhase(pct) : GAME_TEXTS.ui.nightPhase(100 - pct), cx, cy + r + 14);
     CTX.restore();
 }
 
@@ -655,21 +655,21 @@ function drawDayNightHUD() {
 let _gridPath = null, _gridOx = -999, _gridOy = -999, _gridW = 0, _gridH = 0;
 
 function drawGrid() {
-    const sz  = GAME_CONFIG.physics.gridSize;
+    const sz = GAME_CONFIG.physics.gridSize;
     const cam = getCamera();
-    const ox  = Math.round((-cam.x % sz + sz) % sz);
-    const oy  = Math.round((-cam.y % sz + sz) % sz);
+    const ox = Math.round((-cam.x % sz + sz) % sz);
+    const oy = Math.round((-cam.y % sz + sz) % sz);
 
     if (!_gridPath || ox !== _gridOx || oy !== _gridOy ||
         CANVAS.width !== _gridW || CANVAS.height !== _gridH) {
         _gridPath = new Path2D();
-        for (let x = ox; x < CANVAS.width;  x += sz) { _gridPath.moveTo(x, 0); _gridPath.lineTo(x, CANVAS.height); }
+        for (let x = ox; x < CANVAS.width; x += sz) { _gridPath.moveTo(x, 0); _gridPath.lineTo(x, CANVAS.height); }
         for (let y = oy; y < CANVAS.height; y += sz) { _gridPath.moveTo(0, y); _gridPath.lineTo(CANVAS.width, y); }
         _gridOx = ox; _gridOy = oy; _gridW = CANVAS.width; _gridH = CANVAS.height;
     }
 
     CTX.strokeStyle = GAME_CONFIG.visual.gridColor;
-    CTX.lineWidth   = 1;
+    CTX.lineWidth = 1;
     CTX.stroke(_gridPath);
 }
 
@@ -680,7 +680,7 @@ function drawGrid() {
 function shootPoom(player) {
     const S = BALANCE.characters.poom;
     if (player.cooldowns.shoot > 0) return;
-    const attackSpeedMult  = player.isEatingRice ? 0.7 : 1.0;
+    const attackSpeedMult = player.isEatingRice ? 0.7 : 1.0;
     player.cooldowns.shoot = S.riceCooldown * attackSpeedMult;
     const { damage, isCrit } = player.dealDamage(S.riceDamage * player.damageBoost);
     projectileManager.add(
@@ -725,7 +725,7 @@ function startGame(charType = 'kao') {
     }
 
     window.enemies = []; window.powerups = []; window.specialEffects = []; window.meteorZones = [];
-    window.boss    = null;
+    window.boss = null;
 
     dayNightTimer = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
@@ -734,31 +734,31 @@ function startGame(charType = 'kao') {
     console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
 
     window.isSlowMotion = false;
-    window.timeScale    = 1.0;
+    window.timeScale = 1.0;
     window.slowMoEnergy = 1.0;
     console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
 
-    window.isGlitchWave        = false;
-    window.glitchIntensity     = 0;
-    window.controlsInverted    = false;
-    window._glitchWaveHpBonus  = 0;
-    window.waveSpawnLocked     = false;
-    window.waveSpawnTimer      = 0;
+    window.isGlitchWave = false;
+    window.glitchIntensity = 0;
+    window.controlsInverted = false;
+    window._glitchWaveHpBonus = 0;
+    window.waveSpawnLocked = false;
+    window.waveSpawnTimer = 0;
     // wave event reset handled by startNextWave()
-    window.pendingSpawnCount   = 0;
+    window.pendingSpawnCount = 0;
     window.lastGlitchCountdown = -1;
     console.log('⚡ Glitch Wave grace period reset');
 
     window.hitStopTimer = 0;
 
     window.player.shopDamageBoostActive = false;
-    window.player.shopDamageBoostTimer  = 0;
-    window.player._baseDamageBoost      = undefined;
-    window.player.shopSpeedBoostActive  = false;
-    window.player.shopSpeedBoostTimer   = 0;
-    window.player._baseMoveSpeed        = undefined;
+    window.player.shopDamageBoostTimer = 0;
+    window.player._baseDamageBoost = undefined;
+    window.player.shopSpeedBoostActive = false;
+    window.player.shopSpeedBoostTimer = 0;
+    window.player._baseMoveSpeed = undefined;
 
-    window.drone   = new Drone();
+    window.drone = new Drone();
     window.drone.x = window.player.x;
     window.drone.y = window.player.y;
     spawnFloatingText(GAME_TEXTS.combat.droneOnline, window.player.x, window.player.y - 90, '#00e5ff', 20);
@@ -781,8 +781,8 @@ function startGame(charType = 'kao') {
     }
     UIManager.setupCharacterHUD(window.player);
 
-    Achievements.stats.damageTaken   = 0;
-    Achievements.stats.kills         = 0;
+    Achievements.stats.damageTaken = 0;
+    Achievements.stats.kills = 0;
     Achievements.stats.shopPurchases = 0;
     window.waveStartDamage = 0;
 
@@ -837,9 +837,9 @@ async function endGame(result) {
 
     window.drone = null;
 
-    window.isSlowMotion       = false;
-    window.timeScale          = 1.0;
-    window.isGlitchWave       = false;
+    window.isSlowMotion = false;
+    window.timeScale = 1.0;
+    window.isGlitchWave = false;
     window._glitchWaveHpBonus = 0;
     // wave event cleared by WaveManager._deactivateWaveEvent() on next startNextWave()
 
@@ -860,11 +860,11 @@ async function endGame(result) {
     if (result === 'victory') {
         showElement('victory-screen');
         setElementText('final-score', `SCORE ${getScore()}`);
-        setElementText('final-wave',  `WAVES CLEARED ${getWave() - 1}`);
+        setElementText('final-wave', `WAVES CLEARED ${getWave() - 1}`);
         setElementText('final-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
     } else {
         const finalScore = getScore();
-        const finalWave  = getWave();
+        const finalWave = getWave();
 
         showElement('overlay');
         UIManager.showGameOver(finalScore, finalWave);
@@ -891,7 +891,7 @@ async function endGame(result) {
 // ══════════════════════════════════════════════════════════════
 
 window.startGame = startGame;
-window.endGame   = endGame;
+window.endGame = endGame;
 
 window.onload = () => {
     console.log('🚀 Initializing game...');

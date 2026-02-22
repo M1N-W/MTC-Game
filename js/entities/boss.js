@@ -34,13 +34,13 @@ class BossDog extends Entity {
     constructor(x, y) {
         const cfg = BALANCE.boss.bossDog;
         super(x, y, cfg.radius);
-        this.maxHp     = cfg.hp;
-        this.hp        = cfg.hp;
+        this.maxHp = cfg.hp;
+        this.hp = cfg.hp;
         this.moveSpeed = cfg.speed;
-        this.damage    = cfg.damage;
-        this.legTimer  = 0;
+        this.damage = cfg.damage;
+        this.legTimer = 0;
         this.isEnraged = false; // visually enraged from birth
-        this.name      = 'DOG';
+        this.name = 'DOG';
     }
 
     update(dt, player) {
@@ -51,7 +51,7 @@ class BossDog extends Entity {
         // Strict aggressive chase
         const dx = player.x - this.x;
         const dy = player.y - this.y;
-        const d  = Math.hypot(dx, dy);
+        const d = Math.hypot(dx, dy);
         if (d > 0) {
             this.angle = Math.atan2(dy, dx);
             this.vx = (dx / d) * this.moveSpeed;
@@ -84,7 +84,7 @@ class BossDog extends Entity {
         // ╚══════════════════════════════════════════════════════════╝
         if (this.dead) return;
         const screen = worldToScreen(this.x, this.y);
-        const now    = Date.now();
+        const now = Date.now();
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── HP bar (level) ────────────────────────────────────────────
@@ -101,7 +101,7 @@ class BossDog extends Entity {
         // ── Ground shadow ─────────────────────────────────────────────
         CTX.save();
         CTX.globalAlpha = 0.28;
-        CTX.fillStyle   = 'rgba(0,0,0,0.9)';
+        CTX.fillStyle = 'rgba(0,0,0,0.9)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + 20, 32, 7, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
@@ -118,22 +118,22 @@ class BossDog extends Entity {
 
         // ── Four floating robotic paws (cycling with legTimer) ────────
         // Paws bob up/down in alternating pairs like a trotting dog
-        const legCycle   = this.legTimer;
-        const pawR       = R * 0.32;
+        const legCycle = this.legTimer;
+        const pawR = R * 0.32;
         const pawOffsets = [
-            { ox: R * 0.55,  oy:  R * 0.75, phase: 0     },  // front-right
-            { ox: -R * 0.55, oy:  R * 0.75, phase: Math.PI }, // back-right
-            { ox: R * 0.55,  oy: -R * 0.75, phase: Math.PI }, // front-left
-            { ox: -R * 0.55, oy: -R * 0.75, phase: 0     },  // back-left
+            { ox: R * 0.55, oy: R * 0.75, phase: 0 },  // front-right
+            { ox: -R * 0.55, oy: R * 0.75, phase: Math.PI }, // back-right
+            { ox: R * 0.55, oy: -R * 0.75, phase: Math.PI }, // front-left
+            { ox: -R * 0.55, oy: -R * 0.75, phase: 0 },  // back-left
         ];
         for (const pw of pawOffsets) {
             const bob = Math.sin(legCycle * 9 + pw.phase) * 5;
-            const px  = pw.ox;
-            const py  = pw.oy + bob;
+            const px = pw.ox;
+            const py = pw.oy + bob;
 
             // Robotic paw — small rounded rectangle + claws
-            CTX.fillStyle   = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-            CTX.shadowBlur  = 4; CTX.shadowColor = 'rgba(220,38,38,0.4)';
+            CTX.fillStyle = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+            CTX.shadowBlur = 4; CTX.shadowColor = 'rgba(220,38,38,0.4)';
             CTX.beginPath(); CTX.roundRect(px - pawR, py - pawR * 0.7, pawR * 2, pawR * 1.4, pawR * 0.4); CTX.fill(); CTX.stroke();
             // Two tiny claw spikes
             CTX.fillStyle = '#1e293b';
@@ -151,9 +151,9 @@ class BossDog extends Entity {
         // Horizontal bean: wider X than Y
         CTX.save(); CTX.scale(1.5, 0.90);
         const bodyG = CTX.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
-        bodyG.addColorStop(0,   '#374151');
+        bodyG.addColorStop(0, '#374151');
         bodyG.addColorStop(0.55, '#1f2937');
-        bodyG.addColorStop(1,   '#111827');
+        bodyG.addColorStop(1, '#111827');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
@@ -167,7 +167,7 @@ class BossDog extends Entity {
         // ── Spiked collar — ring of sharp triangles around neck area ──
         const collarR = R * 0.68;
         const spikeCount = 8;
-        CTX.fillStyle   = '#4b5563'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
+        CTX.fillStyle = '#4b5563'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
         // Collar band
         CTX.beginPath(); CTX.arc(0, 0, collarR + 2, -Math.PI * 0.5 - 0.7, Math.PI * 0.5 + 0.7);
         CTX.lineWidth = 6; CTX.strokeStyle = '#374151'; CTX.stroke();
@@ -190,21 +190,21 @@ class BossDog extends Entity {
 
         // ── Red angular visor eyes (two connected horizontal slits) ───
         const visorA = 0.8 + Math.sin(now / 180) * 0.20;
-        CTX.fillStyle  = `rgba(220,38,38,${visorA})`;
+        CTX.fillStyle = `rgba(220,38,38,${visorA})`;
         CTX.shadowBlur = 14 * visorA; CTX.shadowColor = '#ef4444';
         // Angular visor left slit
         CTX.beginPath();
         CTX.moveTo(R * 0.28, -R * 0.25);
         CTX.lineTo(R * 0.72, -R * 0.15);
-        CTX.lineTo(R * 0.68,  R * 0.05);
-        CTX.lineTo(R * 0.24,  R * 0.10);
+        CTX.lineTo(R * 0.68, R * 0.05);
+        CTX.lineTo(R * 0.24, R * 0.10);
         CTX.closePath(); CTX.fill();
         // Angular visor right slit (mirrored slightly)
         CTX.beginPath();
-        CTX.moveTo(R * 0.28,  R * 0.22);
-        CTX.lineTo(R * 0.72,  R * 0.14);
-        CTX.lineTo(R * 0.70,  R * 0.38);
-        CTX.lineTo(R * 0.26,  R * 0.42);
+        CTX.moveTo(R * 0.28, R * 0.22);
+        CTX.lineTo(R * 0.72, R * 0.14);
+        CTX.lineTo(R * 0.70, R * 0.38);
+        CTX.lineTo(R * 0.26, R * 0.42);
         CTX.closePath(); CTX.fill();
         // Visor glow bleed
         CTX.fillStyle = `rgba(220,38,38,${visorA * 0.15})`;
@@ -212,13 +212,13 @@ class BossDog extends Entity {
         CTX.shadowBlur = 0;
 
         // ── Back tail (angular robotic fin) ───────────────────────────
-        CTX.fillStyle   = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.fillStyle = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
         const tailWag = Math.sin(now / 90) * 8;
         CTX.beginPath();
         CTX.moveTo(-R * 1.4, -R * 0.2);
         CTX.lineTo(-R * 2.0, -R * 0.6 + tailWag * 0.05);
-        CTX.lineTo(-R * 2.1,  R * 0.2 + tailWag * 0.08);
-        CTX.lineTo(-R * 1.4,  R * 0.2);
+        CTX.lineTo(-R * 2.1, R * 0.2 + tailWag * 0.08);
+        CTX.lineTo(-R * 1.4, R * 0.2);
         CTX.closePath(); CTX.fill(); CTX.stroke();
 
         // ── Heat vent dots on body ────────────────────────────────────
@@ -235,16 +235,16 @@ class BossDog extends Entity {
 
     _drawDogBody() {
         // Colours — always enraged-looking since it's a combat summon
-        const bodyCol  = '#dc2626';
-        const darkCol  = '#991b1b';
+        const bodyCol = '#dc2626';
+        const darkCol = '#991b1b';
         const lightCol = '#ef4444';
-        const eyeCol   = '#facc15';
+        const eyeCol = '#facc15';
 
         const legSpeed = 9;
         const swingAmt = 0.45;
-        const swingA   =  Math.sin(this.legTimer * legSpeed) * swingAmt;
-        const swingB   = -swingA;
-        const LEG_LEN  = 20, PAW_RY = 4;
+        const swingA = Math.sin(this.legTimer * legSpeed) * swingAmt;
+        const swingB = -swingA;
+        const LEG_LEN = 20, PAW_RY = 4;
 
         // Shadow
         CTX.save(); CTX.globalAlpha = 0.22; CTX.fillStyle = 'rgba(0,0,0,0.9)';
@@ -261,8 +261,8 @@ class BossDog extends Entity {
             CTX.beginPath(); CTX.ellipse(pawTiltSign * 3, LEG_LEN + 13, 6, PAW_RY, pawTiltSign * 0.25, 0, Math.PI * 2); CTX.fill();
             CTX.restore();
         };
-        drawLeg( 14, 36,  swingA, -1); drawLeg( 26, 36,  swingB, 1);
-        drawLeg(-14, 36,  swingB, -1); drawLeg( -2, 36,  swingA, 1);
+        drawLeg(14, 36, swingA, -1); drawLeg(26, 36, swingB, 1);
+        drawLeg(-14, 36, swingB, -1); drawLeg(-2, 36, swingA, 1);
 
         // Body
         CTX.fillStyle = bodyCol; CTX.strokeStyle = darkCol; CTX.lineWidth = 2.5;
@@ -316,8 +316,8 @@ class BossDog extends Entity {
             const ey = Math.cos(t * 0.9 + i * 1.26) * 16 + 28;
             const er = 3 + Math.sin(t * 1.5 + i) * 1.5;
             CTX.globalAlpha = 0.5 + Math.sin(t + i) * 0.3;
-            CTX.fillStyle   = i % 2 === 0 ? '#ef4444' : '#f97316';
-            CTX.shadowBlur  = 10; CTX.shadowColor = '#ef4444';
+            CTX.fillStyle = i % 2 === 0 ? '#ef4444' : '#f97316';
+            CTX.shadowBlur = 10; CTX.shadowColor = '#ef4444';
             CTX.beginPath(); CTX.arc(ex, ey, er, 0, Math.PI * 2); CTX.fill();
         }
         CTX.restore();
@@ -335,43 +335,43 @@ class Boss extends Entity {
      */
     constructor(difficulty = 1, enablePhase2 = false, enablePhase3 = false) {
         super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
-        this.maxHp        = BALANCE.boss.baseHp * difficulty;
-        this.hp           = this.maxHp;
-        this.name         = 'KRU MANOP';
-        this.state        = 'CHASE';
-        this.timer        = 0;
-        this.moveSpeed    = BALANCE.boss.moveSpeed;
-        this.difficulty   = difficulty;
-        this.phase        = 1;
-        this.sayTimer     = 0;
+        this.maxHp = BALANCE.boss.baseHp * difficulty;
+        this.hp = this.maxHp;
+        this.name = 'KRU MANOP';
+        this.state = 'CHASE';
+        this.timer = 0;
+        this.moveSpeed = BALANCE.boss.moveSpeed;
+        this.difficulty = difficulty;
+        this.phase = 1;
+        this.sayTimer = 0;
         this.enablePhase2 = enablePhase2;
         this.enablePhase3 = enablePhase3;
-        this.dogSummoned  = false;
+        this.dogSummoned = false;
 
         this.skills = {
-            slam:     { cd: 0, max: BALANCE.boss.slamCooldown  },
-            graph:    { cd: 0, max: BALANCE.boss.graphCooldown  },
-            log:      { cd: 0, max: BALANCE.boss.log457Cooldown },
-            bark:     { cd: 0, max: BALANCE.boss.phase2.barkCooldown },
+            slam: { cd: 0, max: BALANCE.boss.slamCooldown },
+            graph: { cd: 0, max: BALANCE.boss.graphCooldown },
+            log: { cd: 0, max: BALANCE.boss.log457Cooldown },
+            bark: { cd: 0, max: BALANCE.boss.phase2.barkCooldown },
             goldfish: { cd: 0, max: BALANCE.boss.phase3.goldfishCooldown },
-            bubble:   { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown  }
+            bubble: { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown }
         };
 
-        this.log457State       = null;
-        this.log457Timer       = 0;
+        this.log457State = null;
+        this.log457Timer = 0;
         this.log457AttackBonus = 0;
-        this.isInvulnerable    = false;
-        this.isEnraged         = false;
+        this.isInvulnerable = false;
+        this.isEnraged = false;
         // BUG-4: lock flag prevents double startNextWave() from rapid damage hits
-        this._waveSpawnLocked  = false;
+        this._waveSpawnLocked = false;
     }
 
     update(dt, player) {
         if (this.dead) return;
         const dx = player.x - this.x, dy = player.y - this.y;
-        const d  = dist(this.x, this.y, player.x, player.y);
-        this.angle    = Math.atan2(dy, dx);
-        this.timer   += dt;
+        const d = dist(this.x, this.y, player.x, player.y);
+        this.angle = Math.atan2(dy, dx);
+        this.timer += dt;
         this.sayTimer += dt;
 
         for (let s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
@@ -383,7 +383,7 @@ class Boss extends Entity {
 
         // ── Phase 2 transition ───────────────────────────────
         if (this.hp < this.maxHp * BALANCE.boss.phase2Threshold && this.phase === 1 && this.enablePhase2) {
-            this.phase     = 2;
+            this.phase = 2;
             this.isEnraged = true;
             this.moveSpeed = BALANCE.boss.moveSpeed * BALANCE.boss.phase2.enrageSpeedMult;
             spawnFloatingText('ENRAGED!', this.x, this.y - 80, '#ef4444', 40);
@@ -408,9 +408,9 @@ class Boss extends Entity {
         if (this.hp < this.maxHp * BALANCE.boss.phase3Threshold && this.phase === 2 && this.enablePhase3) {
             this.phase = 3;
             this.skills.goldfish.cd = 0;
-            this.skills.bubble.cd   = 0;
+            this.skills.bubble.cd = 0;
             spawnFloatingText('🐟 THE GOLDFISH LOVER!', this.x, this.y - 100, '#38bdf8', 42);
-            spawnFloatingText('🫧 BUBBLE PRISON!',      this.x, this.y - 145, '#7dd3fc', 30);
+            spawnFloatingText('🫧 BUBBLE PRISON!', this.x, this.y - 145, '#7dd3fc', 30);
             addScreenShake(30);
             spawnParticles(this.x, this.y, 50, '#38bdf8');
             spawnParticles(this.x, this.y, 30, '#fb923c');
@@ -420,7 +420,7 @@ class Boss extends Entity {
 
         // ── Phase 3 attacks ──────────────────────────────────
         if (this.phase === 3) {
-            const P3  = BALANCE.boss.phase3;
+            const P3 = BALANCE.boss.phase3;
 
             // Summon goldfish swarm
             if (this.skills.goldfish.cd <= 0) {
@@ -443,7 +443,7 @@ class Boss extends Entity {
             if (this.skills.bubble.cd <= 0) {
                 this.skills.bubble.cd = P3.bubbleCooldown;
                 const spread = 0.35;
-                const half   = Math.floor(P3.bubbleCount / 2);
+                const half = Math.floor(P3.bubbleCount / 2);
                 for (let i = -half; i <= half; i++) {
                     const a = this.angle + i * spread;
                     window.specialEffects.push(new BubbleProjectile(this.x, this.y, a));
@@ -490,10 +490,10 @@ class Boss extends Entity {
             if (this.timer > 2) {
                 this.timer = 0;
                 const barkChance = this.phase === 2 ? 0.40 : 0;
-                if      (this.skills.log.cd <= 0  && Math.random() < 0.20) this.useLog457();
+                if (this.skills.log.cd <= 0 && Math.random() < 0.20) this.useLog457();
                 else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) this.useDeadlyGraph(player);
                 else if (this.phase === 2 && this.skills.bark.cd <= 0 && Math.random() < barkChance) this.bark(player);
-                else if (this.skills.slam.cd <= 0  && Math.random() < 0.30) this.useEquationSlam();
+                else if (this.skills.slam.cd <= 0 && Math.random() < 0.30) this.useEquationSlam();
                 else this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
             }
         } else if (this.state === 'ATTACK') {
@@ -538,13 +538,13 @@ class Boss extends Entity {
         this.skills.bark.cd = this.skills.bark.max;
         this.state = 'CHASE';
         const barkAngle = Math.atan2(player.y - this.y, player.x - this.x);
-        const coneHalf  = Math.PI / 3.5;
+        const coneHalf = Math.PI / 3.5;
         window.specialEffects.push(new BarkWave(this.x, this.y, barkAngle, coneHalf, P2.barkRange));
         const dx = player.x - this.x, dy = player.y - this.y, d = Math.hypot(dx, dy);
         if (d > 0 && d < P2.barkRange) {
             const playerAngle = Math.atan2(dy, dx);
             let diff = playerAngle - barkAngle;
-            while (diff >  Math.PI) diff -= Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
             while (diff < -Math.PI) diff += Math.PI * 2;
             if (Math.abs(diff) < coneHalf) {
                 player.takeDamage(P2.barkDamage);
@@ -575,12 +575,12 @@ class Boss extends Entity {
 
         // Record the line endpoints before pushing the visual effect so we have
         // stable coordinates even if the player reference changes later.
-        const graphStart = { x: this.x,   y: this.y   };
-        const graphEnd   = { x: player.x, y: player.y };
+        const graphStart = { x: this.x, y: this.y };
+        const graphEnd = { x: player.x, y: player.y };
 
         window.specialEffects.push(new DeadlyGraph(
             graphStart.x, graphStart.y,
-            graphEnd.x,   graphEnd.y,
+            graphEnd.x, graphEnd.y,
             BALANCE.boss.graphDuration
         ));
     }
@@ -646,7 +646,7 @@ class Boss extends Entity {
         // ║  Dark-grey bean · Suit+tie · Glowing glasses · Ruler    ║
         // ╚══════════════════════════════════════════════════════════╝
         const screen = worldToScreen(this.x, this.y);
-        const now    = Date.now();
+        const now = Date.now();
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         CTX.save();
@@ -654,7 +654,7 @@ class Boss extends Entity {
 
         // ── Charging scale pulse (log457) ─────────────────────────────
         if (this.log457State === 'charging') {
-            const sc  = 1 + (this.log457Timer / 2) * 0.3;
+            const sc = 1 + (this.log457Timer / 2) * 0.3;
             CTX.scale(sc, sc);
             const pu = Math.sin(this.log457Timer * 10) * 0.5 + 0.5;
             CTX.shadowBlur = 30 * pu; CTX.shadowColor = '#ef4444';
@@ -676,13 +676,13 @@ class Boss extends Entity {
 
         // ── Phase 3 water aura (preserved) ───────────────────────────
         if (this.phase === 3) {
-            const t3    = now / 600;
+            const t3 = now / 600;
             const auraR = 80 + Math.sin(t3 * 2.5) * 10;
             CTX.shadowBlur = 0;
             const grad3 = CTX.createRadialGradient(0, 0, auraR * 0.4, 0, 0, auraR);
-            grad3.addColorStop(0,   'rgba(56,189,248,0.0)');
+            grad3.addColorStop(0, 'rgba(56,189,248,0.0)');
             grad3.addColorStop(0.7, 'rgba(56,189,248,0.18)');
-            grad3.addColorStop(1,   'rgba(56,189,248,0.45)');
+            grad3.addColorStop(1, 'rgba(56,189,248,0.45)');
             CTX.fillStyle = grad3;
             CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.fill();
             CTX.strokeStyle = `rgba(125,211,252,${0.5 + Math.sin(t3 * 3) * 0.3})`;
@@ -698,27 +698,27 @@ class Boss extends Entity {
 
         // ── Orbiting Math Symbols ─────────────────────────────────────
         // π, Σ, ∞, ∂, ≈ orbit at varying radii and speeds, glowing white/gold
-        const symbols   = ['π', 'Σ', '∞', '∂', '≈', '∫'];
-        const orbitR    = 62;
+        const symbols = ['π', 'Σ', '∞', '∂', '≈', '∫'];
+        const orbitR = 62;
         const baseSpeed = this.isEnraged ? 1.8 : 1.0;
         CTX.save();
         for (let i = 0; i < symbols.length; i++) {
-            const angle  = (now / 1000) * baseSpeed + (i / symbols.length) * Math.PI * 2;
-            const ox     = Math.cos(angle) * orbitR;
-            const oy     = Math.sin(angle) * (orbitR * 0.55); // elliptical orbit
-            const alpha  = 0.55 + Math.sin(now / 300 + i * 1.2) * 0.35;
-            const gCol   = this.phase === 3 ? '#38bdf8'
-                         : this.isEnraged   ? '#ef4444'
-                         :                    '#facc15';
+            const angle = (now / 1000) * baseSpeed + (i / symbols.length) * Math.PI * 2;
+            const ox = Math.cos(angle) * orbitR;
+            const oy = Math.sin(angle) * (orbitR * 0.55); // elliptical orbit
+            const alpha = 0.55 + Math.sin(now / 300 + i * 1.2) * 0.35;
+            const gCol = this.phase === 3 ? '#38bdf8'
+                : this.isEnraged ? '#ef4444'
+                    : '#facc15';
             CTX.save();
             CTX.translate(ox, oy);
             CTX.rotate(-this.angle); // keep text readable
-            CTX.globalAlpha  = alpha;
-            CTX.font         = `bold ${14 + Math.sin(now / 400 + i) * 2}px Arial`;
-            CTX.textAlign    = 'center'; CTX.textBaseline = 'middle';
-            CTX.shadowBlur   = 12 + Math.sin(now / 250 + i) * 5;
-            CTX.shadowColor  = gCol;
-            CTX.fillStyle    = gCol;
+            CTX.globalAlpha = alpha;
+            CTX.font = `bold ${14 + Math.sin(now / 400 + i) * 2}px Arial`;
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.shadowBlur = 12 + Math.sin(now / 250 + i) * 5;
+            CTX.shadowColor = gCol;
+            CTX.fillStyle = gCol;
             CTX.fillText(symbols[i], 0, 0);
             CTX.restore();
         }
@@ -731,37 +731,37 @@ class Boss extends Entity {
 
         // Boss breathing
         const breathe = Math.sin(now / 260);
-        const scaleX  = 1 + breathe * 0.018;
-        const scaleY  = 1 - breathe * 0.022;
+        const scaleX = 1 + breathe * 0.018;
+        const scaleY = 1 - breathe * 0.022;
         CTX.scale(scaleX, scaleY);
 
         const R = BALANCE.boss.radius;
 
         // ── Phase 2 enrage glow ring ──────────────────────────────────
         if (this.phase === 2 && this.log457State !== 'charging') {
-            CTX.shadowBlur  = 22; CTX.shadowColor = '#ef4444';
+            CTX.shadowBlur = 22; CTX.shadowColor = '#ef4444';
             CTX.strokeStyle = 'rgba(220,38,38,0.55)'; CTX.lineWidth = 3;
             CTX.beginPath(); CTX.arc(0, 0, R + 5, 0, Math.PI * 2); CTX.stroke();
             CTX.shadowBlur = 0;
         }
 
         // ── Silhouette glow ring ──────────────────────────────────────
-        const glowCol   = this.phase === 3 ? 'rgba(56,189,248,0.50)'
-                        : this.isEnraged   ? 'rgba(220,38,38,0.55)'
-                        :                    'rgba(148,163,184,0.40)';
-        const shadowC   = this.phase === 3 ? '#38bdf8'
-                        : this.isEnraged   ? '#ef4444' : '#94a3b8';
-        CTX.shadowBlur  = 16; CTX.shadowColor = shadowC;
+        const glowCol = this.phase === 3 ? 'rgba(56,189,248,0.50)'
+            : this.isEnraged ? 'rgba(220,38,38,0.55)'
+                : 'rgba(148,163,184,0.40)';
+        const shadowC = this.phase === 3 ? '#38bdf8'
+            : this.isEnraged ? '#ef4444' : '#94a3b8';
+        CTX.shadowBlur = 16; CTX.shadowColor = shadowC;
         CTX.strokeStyle = glowCol; CTX.lineWidth = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        CTX.shadowBlur = 0;
 
         // ── Bean body — tall dark-grey gradient (slightly taller) ─────
         CTX.save(); CTX.scale(0.92, 1.12); // tall bean
         const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-        bodyG.addColorStop(0,   '#374151');
+        bodyG.addColorStop(0, '#374151');
         bodyG.addColorStop(0.55, '#1f2937');
-        bodyG.addColorStop(1,   '#111827');
+        bodyG.addColorStop(1, '#111827');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
@@ -778,15 +778,15 @@ class Boss extends Entity {
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.48);
         CTX.lineTo(-R * 0.55, -R * 0.15);
-        CTX.lineTo(-R * 0.52,  R * 0.50);
-        CTX.lineTo(-R * 0.05,  R * 0.52);
+        CTX.lineTo(-R * 0.52, R * 0.50);
+        CTX.lineTo(-R * 0.05, R * 0.52);
         CTX.closePath(); CTX.fill();
         // Right lapel
         CTX.beginPath();
         CTX.moveTo(R * 0.08, -R * 0.48);
         CTX.lineTo(R * 0.55, -R * 0.15);
-        CTX.lineTo(R * 0.52,  R * 0.50);
-        CTX.lineTo(R * 0.05,  R * 0.52);
+        CTX.lineTo(R * 0.52, R * 0.50);
+        CTX.lineTo(R * 0.05, R * 0.52);
         CTX.closePath(); CTX.fill();
 
         // Jacket sticker outlines
@@ -805,16 +805,16 @@ class Boss extends Entity {
         }
 
         // ── Red necktie — diamond/wedge down the centre chest ────────
-        const tieCol  = this.isEnraged ? '#ef4444' : '#dc2626';
+        const tieCol = this.isEnraged ? '#ef4444' : '#dc2626';
         const tieGlow = this.isEnraged ? 0.55 : 0;
-        CTX.fillStyle  = tieCol;
+        CTX.fillStyle = tieCol;
         CTX.shadowBlur = 8 * (tieGlow + 0.2); CTX.shadowColor = '#ef4444';
         CTX.beginPath();
         CTX.moveTo(0, -R * 0.48);       // knot top
         CTX.lineTo(R * 0.10, -R * 0.30);
-        CTX.lineTo(R * 0.07,  R * 0.48); // tip
-        CTX.lineTo(0,          R * 0.55);
-        CTX.lineTo(-R * 0.07,  R * 0.48);
+        CTX.lineTo(R * 0.07, R * 0.48); // tip
+        CTX.lineTo(0, R * 0.55);
+        CTX.lineTo(-R * 0.07, R * 0.48);
         CTX.lineTo(-R * 0.10, -R * 0.30);
         CTX.closePath(); CTX.fill();
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
@@ -869,12 +869,12 @@ class Boss extends Entity {
         // Two square lens frames side-by-side across the "face zone"
         const glassGlow = this.isEnraged ? '#ef4444' : '#e0f2fe';
         const glassRefl = this.log457State === 'active' ? '#facc15' : '#e0f2fe';
-        const lensW     = R * 0.38, lensH = R * 0.28;
-        const lensY     = -R * 0.28;
+        const lensW = R * 0.38, lensH = R * 0.28;
+        const lensY = -R * 0.28;
 
         // Left lens
-        CTX.shadowBlur  = 14; CTX.shadowColor = glassGlow;
-        CTX.fillStyle   = `rgba(224,242,254,0.20)`;
+        CTX.shadowBlur = 14; CTX.shadowColor = glassGlow;
+        CTX.fillStyle = `rgba(224,242,254,0.20)`;
         CTX.strokeStyle = glassGlow; CTX.lineWidth = 2.2;
         CTX.beginPath(); CTX.roundRect(-R * 0.72, lensY - lensH / 2, lensW, lensH, 3); CTX.fill(); CTX.stroke();
         // Right lens
@@ -888,7 +888,7 @@ class Boss extends Entity {
 
         // Lens reflections — bright diagonal highlight inside each lens
         CTX.shadowBlur = 0;
-        CTX.fillStyle  = `rgba(255,255,255,${0.55 + Math.sin(now / 280) * 0.30})`;
+        CTX.fillStyle = `rgba(255,255,255,${0.55 + Math.sin(now / 280) * 0.30})`;
         // Left lens reflection
         CTX.beginPath(); CTX.ellipse(-R * 0.56, lensY - R * 0.06, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
         // Right lens reflection
@@ -904,8 +904,8 @@ class Boss extends Entity {
                 const py = -Math.abs(Math.cos(t * 1.1 + i * 1.57)) * 22 - 30;
                 const ps = 3 + Math.sin(t + i) * 1.5;
                 CTX.globalAlpha = 0.55 + Math.sin(t + i) * 0.3;
-                CTX.fillStyle   = i % 2 === 0 ? colA : colB;
-                CTX.shadowBlur  = 8; CTX.shadowColor = colA;
+                CTX.fillStyle = i % 2 === 0 ? colA : colB;
+                CTX.shadowBlur = 8; CTX.shadowColor = colA;
                 CTX.beginPath(); CTX.arc(px, py, ps, 0, Math.PI * 2); CTX.fill();
             }
             CTX.globalAlpha = 1; CTX.shadowBlur = 0;
@@ -920,14 +920,14 @@ class Boss extends Entity {
 
         // ── Floating Hands — holding a glowing ruler / chalk ─────────
         // Front hand — holding ruler, forward weapon side
-        CTX.fillStyle   = '#2d3748'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur  = 6; CTX.shadowColor = 'rgba(148,163,184,0.6)';
+        CTX.fillStyle = '#2d3748'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 6; CTX.shadowColor = 'rgba(148,163,184,0.6)';
         CTX.beginPath(); CTX.arc(R + 7, 4, R * 0.32, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
 
         // Ruler extending from front hand
         const rulerGlow = this.state === 'ATTACK' || this.state === 'ULTIMATE' ? 1.0 : 0.55;
-        CTX.fillStyle   = '#f59e0b';
-        CTX.shadowBlur  = 12 * rulerGlow; CTX.shadowColor = '#fbbf24';
+        CTX.fillStyle = '#f59e0b';
+        CTX.shadowBlur = 12 * rulerGlow; CTX.shadowColor = '#fbbf24';
         CTX.beginPath(); CTX.roundRect(R + 9, 1, R * 1.6, R * 0.22, 2); CTX.fill();
         // Ruler tick marks
         CTX.strokeStyle = 'rgba(0,0,0,0.5)'; CTX.lineWidth = 1;
@@ -941,8 +941,8 @@ class Boss extends Entity {
         CTX.shadowBlur = 0;
 
         // Back hand — off-side, open palm
-        CTX.fillStyle   = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur  = 4; CTX.shadowColor = 'rgba(148,163,184,0.5)';
+        CTX.fillStyle = '#374151'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 4; CTX.shadowColor = 'rgba(148,163,184,0.5)';
         CTX.beginPath(); CTX.arc(-(R + 7), 2, R * 0.28, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
 
@@ -970,48 +970,48 @@ class BossFirst extends Entity {
         const BASE_R = BALANCE.boss.radius * 0.88;
         super(0, BALANCE.boss.spawnY, BASE_R);
 
-        const advMult   = isAdvanced ? 1.35 : 1.0;
-        this.maxHp      = BALANCE.boss.baseHp * difficulty * 0.62 * advMult;
-        this.hp         = this.maxHp;
-        this.name       = 'KRU FIRST';
-        this.moveSpeed  = BALANCE.boss.moveSpeed * 1.55 * advMult;
+        const advMult = isAdvanced ? 1.35 : 1.0;
+        this.maxHp = BALANCE.boss.baseHp * difficulty * 0.62 * advMult;
+        this.hp = this.maxHp;
+        this.name = 'KRU FIRST';
+        this.moveSpeed = BALANCE.boss.moveSpeed * 1.55 * advMult;
         this.difficulty = difficulty;
         this.isAdvanced = isAdvanced;
-        this.isEnraged  = false;         // becomes true permanently when BERSERK triggered
-        this.state      = 'CHASE';
+        this.isEnraged = false;         // becomes true permanently when BERSERK triggered
+        this.state = 'CHASE';
         this.stateTimer = 0;
-        this.timer      = 0;
-        this.sayTimer   = 0;
+        this.timer = 0;
+        this.sayTimer = 0;
         this._waveSpawnLocked = false;
 
         // ── Skill cooldowns ──────────────────────────────────
         this.skills = {
-            suvat:    { cd: 0, max: 8.0  },
-            orbit:    { cd: 0, max: 12.0 },
+            suvat: { cd: 0, max: 8.0 },
+            orbit: { cd: 0, max: 12.0 },
             freeFall: { cd: 0, max: 15.0 },
-            rocket:   { cd: 0, max: 9.0  },
+            rocket: { cd: 0, max: 9.0 },
             sandwich: { cd: 0, max: 18.0 }
         };
 
         // ── SUVAT charge constants ────────────────────────────
         this.SUVAT_WIND_UP = 0.9;          // seconds of wind-up before dash
-        this.SUVAT_ACCEL   = 1900;         // px/s²
+        this.SUVAT_ACCEL = 1900;         // px/s²
         this.SUVAT_MAX_DUR = 1.2;          // max dash duration
-        this._suvatVel     = 0;            // current dash scalar
+        this._suvatVel = 0;            // current dash scalar
 
         // ── ORBIT state ──────────────────────────────────────
-        this.ORBIT_R   = 115;              // px from centre of orbit
-        this.ORBIT_W   = 2.8;             // rad/s
+        this.ORBIT_R = 115;              // px from centre of orbit
+        this.ORBIT_W = 2.8;             // rad/s
         this.ORBIT_DUR = 3.5;
-        this._orbitCX  = 0;
-        this._orbitCY  = 0;
-        this._orbitT   = 0;
+        this._orbitCX = 0;
+        this._orbitCY = 0;
+        this._orbitT = 0;
         this._orbitFireCd = 0;
 
         // ── FREE_FALL state ───────────────────────────────────
         this.FREE_FALL_WARN = 1.5;         // warning ring duration
-        this._fallTargetX   = 0;
-        this._fallTargetY   = 0;
+        this._fallTargetX = 0;
+        this._fallTargetY = 0;
 
         // ── BERSERK fire timer ────────────────────────────────
         this._berserkFireCd = 0;
@@ -1032,20 +1032,20 @@ class BossFirst extends Entity {
     update(dt, player) {
         if (this.dead) return;
 
-        this.timer     += dt;
-        this.sayTimer  += dt;
+        this.timer += dt;
+        this.sayTimer += dt;
         this.stateTimer += dt;
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
 
         // Cooldown ticks
         for (const s in this.skills) if (this.skills[s].cd > 0) this.skills[s].cd -= dt;
-        if (this._dodgeCd > 0)       this._dodgeCd  -= dt;
-        if (this._orbitFireCd > 0)   this._orbitFireCd -= dt;
+        if (this._dodgeCd > 0) this._dodgeCd -= dt;
+        if (this._orbitFireCd > 0) this._orbitFireCd -= dt;
         if (this._berserkFireCd > 0) this._berserkFireCd -= dt;
 
         const dx = player.x - this.x;
         const dy = player.y - this.y;
-        const d  = Math.hypot(dx, dy);
+        const d = Math.hypot(dx, dy);
         this.angle = Math.atan2(dy, dx);
 
         // ── Dodge incoming projectiles ────────────────────────
@@ -1056,7 +1056,7 @@ class BossFirst extends Entity {
                 if (Math.hypot(pdx, pdy) < 130) {
                     // Perpendicular impulse
                     this.vx += -pdy / (Math.hypot(pdx, pdy) + 1) * 420;
-                    this.vy +=  pdx / (Math.hypot(pdx, pdy) + 1) * 420;
+                    this.vy += pdx / (Math.hypot(pdx, pdy) + 1) * 420;
                     this._dodgeCd = 1.2;
                     break;
                 }
@@ -1168,11 +1168,11 @@ class BossFirst extends Entity {
                 }
                 if (this.stateTimer > 0.35 && this.stateTimer < 0.45) {
                     // Fire scaled rocket projectile — p = mv
-                    const dist_  = Math.max(100, Math.min(700, d));
-                    const scale  = 0.5 + ((dist_ - 100) / 600) * 2.0;  // 0.5 – 2.5
-                    const rDmg   = 28 * scale * (this.isAdvanced ? 1.3 : 1.0);
+                    const dist_ = Math.max(100, Math.min(700, d));
+                    const scale = 0.5 + ((dist_ - 100) / 600) * 2.0;  // 0.5 – 2.5
+                    const rDmg = 28 * scale * (this.isAdvanced ? 1.3 : 1.0);
                     const rSpeed = 480 + scale * 180;
-                    const rRad   = 14 + scale * 8;
+                    const rRad = 14 + scale * 8;
                     projectileManager.add(new Projectile(
                         this.x, this.y, this.angle, rSpeed, rDmg,
                         '#f97316', false, 'enemy', rRad
@@ -1275,7 +1275,7 @@ class BossFirst extends Entity {
         }
         if (this.skills.suvat.cd <= 0 && d > 120) {
             this.skills.suvat.cd = this.skills.suvat.max;
-            this._suvatVel  = 0;
+            this._suvatVel = 0;
             this._suvatAimX = player.x;
             this._suvatAimY = player.y;
             spawnFloatingText('v=u+at CHARGE!', this.x, this.y - 80, '#fbbf24', 28);
@@ -1299,7 +1299,7 @@ class BossFirst extends Entity {
         this.skills.orbit.cd = this.skills.orbit.max;
         this._orbitCX = player.x;
         this._orbitCY = player.y;
-        this._orbitT  = Math.atan2(this.y - player.y, this.x - player.x);
+        this._orbitT = Math.atan2(this.y - player.y, this.x - player.x);
         this._orbitFireCd = 0;
         spawnFloatingText('ω=v/r ORBIT!', this.x, this.y - 80, '#818cf8', 26);
         this._enterState('ORBIT_ATTACK');
@@ -1311,6 +1311,18 @@ class BossFirst extends Entity {
         this.hp -= amt;
         this.hitFlashTimer = 0.12;
         spawnParticles(this.x, this.y, 3, '#39ff14');
+
+        // ── Phase transition at 50 % HP — trigger BERSERK with physics taunt ──
+        if (!this._halfHpTaunted && this.hp <= this.maxHp * 0.5 && this.hp > 0) {
+            this._halfHpTaunted = true;
+            const taunts = GAME_TEXTS.boss.firstTaunts;
+            const taunt = taunts[Math.floor(Math.random() * taunts.length)];
+            spawnFloatingText(`⚛️ ${taunt}`, this.x, this.y - 90, '#39ff14', 28);
+            addScreenShake(8);
+            this._enterState('BERSERK');
+            spawnFloatingText('⚠️ BERSERK MODE!', this.x, this.y - 130, '#ef4444', 32);
+        }
+
         if (this.hp <= 0 && !this._waveSpawnLocked) {
             this._waveSpawnLocked = true;
             this.dead = true; this.hp = 0;
@@ -1365,11 +1377,11 @@ class BossFirst extends Entity {
 
         // ── Core setup ─────────────────────────────────────────────────
         const screen = worldToScreen(this.x, this.y);
-        const now    = performance.now();
-        const t      = now / 1000;
+        const now = performance.now();
+        const t = now / 1000;
 
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
-        const R            = this.radius;
+        const R = this.radius;
 
         // ── Hover animation ────────────────────────────────────────────
         const hoverY = Math.sin(now / 150) * 4;
@@ -1381,7 +1393,7 @@ class BossFirst extends Entity {
         // ── LAYER 0 — Ground shadow ─────────────────────────────────────
         CTX.save();
         CTX.globalAlpha = 0.22 - Math.abs(hoverY) * 0.012;
-        CTX.fillStyle   = 'rgba(0,0,0,0.9)';
+        CTX.fillStyle = 'rgba(0,0,0,0.9)';
         CTX.beginPath();
         CTX.ellipse(0, R * 1.25 - hoverY * 0.4, R * 1.05, R * 0.22, 0, 0, Math.PI * 2);
         CTX.fill();
@@ -1390,13 +1402,13 @@ class BossFirst extends Entity {
         // ── LAYER 1 — Berserk aura ──────────────────────────────────────
         if (this.isEnraged) {
             CTX.save();
-            const berserkT  = t * 3.5;
-            const berserkR  = R * 1.85 + Math.sin(berserkT) * R * 0.18;
-            const bAlpha    = 0.22 + Math.sin(berserkT * 1.3) * 0.12;
+            const berserkT = t * 3.5;
+            const berserkR = R * 1.85 + Math.sin(berserkT) * R * 0.18;
+            const bAlpha = 0.22 + Math.sin(berserkT * 1.3) * 0.12;
             const bGrad = CTX.createRadialGradient(0, 0, R * 0.5, 0, 0, berserkR);
-            bGrad.addColorStop(0,    'rgba(239,68,68,0)');
+            bGrad.addColorStop(0, 'rgba(239,68,68,0)');
             bGrad.addColorStop(0.65, `rgba(239,68,68,${bAlpha})`);
-            bGrad.addColorStop(1,    `rgba(220,38,38,${bAlpha * 1.6})`);
+            bGrad.addColorStop(1, `rgba(220,38,38,${bAlpha * 1.6})`);
             CTX.fillStyle = bGrad;
             CTX.beginPath(); CTX.arc(0, 0, berserkR, 0, Math.PI * 2); CTX.fill();
             CTX.shadowBlur = 24; CTX.shadowColor = '#ef4444';
@@ -1405,17 +1417,17 @@ class BossFirst extends Entity {
             CTX.beginPath(); CTX.arc(0, 0, berserkR * 0.96, 0, Math.PI * 2); CTX.stroke();
             CTX.shadowBlur = 0;
             for (let fi = 0; fi < 6; fi++) {
-                const fa   = (fi / 6) * Math.PI * 2 + t * 1.8;
+                const fa = (fi / 6) * Math.PI * 2 + t * 1.8;
                 const fBob = Math.sin(t * 4.2 + fi * 1.1) * R * 0.25;
-                const fx1  = Math.cos(fa) * berserkR * 0.82;
-                const fy1  = Math.sin(fa) * berserkR * 0.82;
-                const fx2  = Math.cos(fa) * (berserkR + R * 0.38 + fBob);
-                const fy2  = Math.sin(fa) * (berserkR + R * 0.38 + fBob);
+                const fx1 = Math.cos(fa) * berserkR * 0.82;
+                const fy1 = Math.sin(fa) * berserkR * 0.82;
+                const fx2 = Math.cos(fa) * (berserkR + R * 0.38 + fBob);
+                const fy2 = Math.sin(fa) * (berserkR + R * 0.38 + fBob);
                 CTX.globalAlpha = 0.35 + Math.sin(t * 3.5 + fi) * 0.25;
                 CTX.strokeStyle = fi % 2 === 0 ? '#ef4444' : '#fb923c';
-                CTX.lineWidth   = 2 + Math.sin(t * 5 + fi) * 1.0;
-                CTX.lineCap     = 'round';
-                CTX.shadowBlur  = 10; CTX.shadowColor = '#ef4444';
+                CTX.lineWidth = 2 + Math.sin(t * 5 + fi) * 1.0;
+                CTX.lineCap = 'round';
+                CTX.shadowBlur = 10; CTX.shadowColor = '#ef4444';
                 CTX.beginPath(); CTX.moveTo(fx1, fy1); CTX.lineTo(fx2, fy2); CTX.stroke();
             }
             CTX.globalAlpha = 1; CTX.shadowBlur = 0; CTX.lineCap = 'butt';
@@ -1424,26 +1436,26 @@ class BossFirst extends Entity {
 
         // ── LAYER 2 — Holographic equation ring ────────────────────────
         CTX.save();
-        const ringR       = R * 2.0;
-        const ringCol     = this.isEnraged ? '#ff4444' : '#39ff14';
-        const ringGlow    = this.isEnraged ? '#dc2626' : '#16a34a';
+        const ringR = R * 2.0;
+        const ringCol = this.isEnraged ? '#ff4444' : '#39ff14';
+        const ringGlow = this.isEnraged ? '#dc2626' : '#16a34a';
 
         // Outer ring
         CTX.save();
         CTX.rotate(t * 0.9);
-        CTX.shadowBlur  = 12; CTX.shadowColor = ringGlow;
+        CTX.shadowBlur = 12; CTX.shadowColor = ringGlow;
         CTX.strokeStyle = `${ringCol}99`; CTX.lineWidth = 1.8;
         CTX.setLineDash([8, 5]);
         CTX.beginPath(); CTX.arc(0, 0, ringR, 0, Math.PI * 2); CTX.stroke();
         CTX.setLineDash([]);
         for (let ti = 0; ti < 12; ti++) {
-            const ta   = (ti / 12) * Math.PI * 2;
+            const ta = (ti / 12) * Math.PI * 2;
             const tLen = ti % 3 === 0 ? R * 0.18 : R * 0.09;
             CTX.strokeStyle = ti % 3 === 0 ? ringCol : `${ringCol}77`;
-            CTX.lineWidth   = ti % 3 === 0 ? 2.2 : 1.2;
+            CTX.lineWidth = ti % 3 === 0 ? 2.2 : 1.2;
             CTX.beginPath();
             CTX.moveTo(Math.cos(ta) * (ringR - tLen), Math.sin(ta) * (ringR - tLen));
-            CTX.lineTo(Math.cos(ta) * ringR,          Math.sin(ta) * ringR);
+            CTX.lineTo(Math.cos(ta) * ringR, Math.sin(ta) * ringR);
             CTX.stroke();
         }
         CTX.shadowBlur = 0;
@@ -1452,7 +1464,7 @@ class BossFirst extends Entity {
         // Inner counter-rotating ring
         CTX.save();
         CTX.rotate(-(t * 0.55));
-        CTX.shadowBlur  = 8; CTX.shadowColor = ringGlow;
+        CTX.shadowBlur = 8; CTX.shadowColor = ringGlow;
         CTX.strokeStyle = `${ringCol}55`; CTX.lineWidth = 1.2;
         CTX.setLineDash([4, 6]);
         CTX.beginPath(); CTX.arc(0, 0, ringR * 0.72, 0, Math.PI * 2); CTX.stroke();
@@ -1462,8 +1474,8 @@ class BossFirst extends Entity {
 
         // Orbiting formula labels
         const formulas = ['F=ma', 'v=u+at', 'E=mc²', 'p=mv', 'ω=v/r', 'h=½gt²'];
-        const fOrbitR  = ringR * 0.88;
-        const fSpeed   = this.isEnraged ? 1.35 : 0.72;
+        const fOrbitR = ringR * 0.88;
+        const fSpeed = this.isEnraged ? 1.35 : 0.72;
         for (let fi = 0; fi < formulas.length; fi++) {
             const fAngle = t * fSpeed + (fi / formulas.length) * Math.PI * 2;
             const fAlpha = 0.45 + Math.sin(t * 1.8 + fi * 0.9) * 0.30;
@@ -1473,12 +1485,12 @@ class BossFirst extends Entity {
                 Math.sin(fAngle) * fOrbitR * 0.55
             );
             CTX.rotate(-fAngle * 0.18);
-            CTX.globalAlpha  = fAlpha;
-            CTX.font         = `bold ${10 + Math.sin(t * 1.5 + fi) * 1.5}px "Orbitron",monospace,Arial`;
-            CTX.textAlign    = 'center'; CTX.textBaseline = 'middle';
-            CTX.shadowBlur   = 10 + Math.sin(t * 2.2 + fi) * 5;
-            CTX.shadowColor  = ringGlow;
-            CTX.fillStyle    = ringCol;
+            CTX.globalAlpha = fAlpha;
+            CTX.font = `bold ${10 + Math.sin(t * 1.5 + fi) * 1.5}px "Orbitron",monospace,Arial`;
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.shadowBlur = 10 + Math.sin(t * 2.2 + fi) * 5;
+            CTX.shadowColor = ringGlow;
+            CTX.fillStyle = ringCol;
             CTX.fillText(formulas[fi], 0, 0);
             CTX.restore();
         }
@@ -1488,19 +1500,19 @@ class BossFirst extends Entity {
         // ── LAYER 3 — SUVAT charge ring ─────────────────────────────────
         if (this.state === 'SUVAT_CHARGE' && this.stateTimer <= this.SUVAT_WIND_UP) {
             CTX.save();
-            const prog   = Math.min(this.stateTimer / this.SUVAT_WIND_UP, 1);
+            const prog = Math.min(this.stateTimer / this.SUVAT_WIND_UP, 1);
             const cRingR = R * (1.15 + prog * 0.65);
-            const pulse  = Math.abs(Math.sin(now / 55));
-            const cGrad  = CTX.createRadialGradient(0, 0, 0, 0, 0, cRingR);
-            cGrad.addColorStop(0,   `rgba(251,191,36,${prog * 0.18})`);
+            const pulse = Math.abs(Math.sin(now / 55));
+            const cGrad = CTX.createRadialGradient(0, 0, 0, 0, 0, cRingR);
+            cGrad.addColorStop(0, `rgba(251,191,36,${prog * 0.18})`);
             cGrad.addColorStop(0.7, `rgba(251,191,36,${prog * 0.08})`);
-            cGrad.addColorStop(1,    'rgba(251,191,36,0)');
+            cGrad.addColorStop(1, 'rgba(251,191,36,0)');
             CTX.shadowBlur = 28 * prog; CTX.shadowColor = '#fbbf24';
             CTX.fillStyle = cGrad;
             CTX.beginPath(); CTX.arc(0, 0, cRingR, 0, Math.PI * 2); CTX.fill();
             CTX.rotate(t * 5.5);
             CTX.strokeStyle = `rgba(251,191,36,${0.5 + pulse * 0.45})`;
-            CTX.lineWidth   = 3.5 * prog;
+            CTX.lineWidth = 3.5 * prog;
             CTX.setLineDash([10, 6]);
             CTX.beginPath(); CTX.arc(0, 0, cRingR, 0, Math.PI * 2); CTX.stroke();
             CTX.setLineDash([]);
@@ -1517,12 +1529,12 @@ class BossFirst extends Entity {
         // ── LAYER 4 — Jetpack ───────────────────────────────────────────
         CTX.save();
         const jpX = -R * 0.72, jpY = -R * 0.12;
-        const jpW = R * 0.55,  jpH = R * 1.10;
-        CTX.shadowBlur  = 8; CTX.shadowColor = '#0e7490';
+        const jpW = R * 0.55, jpH = R * 1.10;
+        CTX.shadowBlur = 8; CTX.shadowColor = '#0e7490';
         const jpGrad = CTX.createLinearGradient(jpX - jpW / 2, 0, jpX + jpW / 2, 0);
-        jpGrad.addColorStop(0,   '#0f172a');
+        jpGrad.addColorStop(0, '#0f172a');
         jpGrad.addColorStop(0.4, '#1e293b');
-        jpGrad.addColorStop(1,   '#0f172a');
+        jpGrad.addColorStop(1, '#0f172a');
         CTX.fillStyle = jpGrad;
         CTX.beginPath(); CTX.roundRect(jpX - jpW / 2, jpY - jpH / 2, jpW, jpH, R * 0.14); CTX.fill();
         CTX.strokeStyle = '#0ea5e9'; CTX.lineWidth = 1.5;
@@ -1537,8 +1549,8 @@ class BossFirst extends Entity {
         }
         // Energy cell
         const cellAlpha = 0.7 + Math.sin(t * 2.8) * 0.25;
-        CTX.shadowBlur  = 14; CTX.shadowColor = '#00ffff';
-        CTX.fillStyle   = `rgba(0,255,255,${cellAlpha * 0.55})`;
+        CTX.shadowBlur = 14; CTX.shadowColor = '#00ffff';
+        CTX.fillStyle = `rgba(0,255,255,${cellAlpha * 0.55})`;
         CTX.beginPath(); CTX.roundRect(jpX - jpW * 0.22, jpY - jpH * 0.18, jpW * 0.44, jpH * 0.36, 3); CTX.fill();
         CTX.strokeStyle = `rgba(0,255,255,${cellAlpha})`; CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.roundRect(jpX - jpW * 0.22, jpY - jpH * 0.18, jpW * 0.44, jpH * 0.36, 3); CTX.stroke();
@@ -1548,7 +1560,7 @@ class BossFirst extends Entity {
         for (let ni = 0; ni < 2; ni++) {
             const nx = jpX + nozzleOffsets[ni], ny = jpY + jpH / 2;
             const nW = jpW * 0.22, nH = R * 0.20;
-            CTX.fillStyle   = '#1e293b'; CTX.strokeStyle = '#475569'; CTX.lineWidth = 1.5;
+            CTX.fillStyle = '#1e293b'; CTX.strokeStyle = '#475569'; CTX.lineWidth = 1.5;
             CTX.beginPath();
             CTX.moveTo(nx - nW * 0.6, ny); CTX.lineTo(nx - nW * 0.85, ny + nH);
             CTX.lineTo(nx + nW * 0.85, ny + nH); CTX.lineTo(nx + nW * 0.6, ny);
@@ -1559,8 +1571,8 @@ class BossFirst extends Entity {
             CTX.shadowBlur = 0;
             // Outer flame
             const flameLen = R * (0.55 + Math.sin(t * 8.5 + ni * 2.1) * 0.22 + Math.random() * 0.10);
-            const flameW   = nW * (0.55 + Math.sin(t * 11.2 + ni * 1.7) * 0.18);
-            const fJitter  = (Math.random() - 0.5) * 4;
+            const flameW = nW * (0.55 + Math.sin(t * 11.2 + ni * 1.7) * 0.18);
+            const fJitter = (Math.random() - 0.5) * 4;
             CTX.save();
             CTX.shadowBlur = 22; CTX.shadowColor = '#3b82f6';
             CTX.globalAlpha = 0.55 + Math.sin(t * 7.1 + ni) * 0.28;
@@ -1599,21 +1611,21 @@ class BossFirst extends Entity {
         CTX.restore(); // end jetpack
 
         // ── LAYER 5 — Silhouette glow ring ─────────────────────────────
-        const mainCol    = this.isEnraged ? '#ef4444' : '#39ff14';
+        const mainCol = this.isEnraged ? '#ef4444' : '#39ff14';
         const glowShadow = this.isEnraged ? '#dc2626' : '#16a34a';
-        CTX.shadowBlur   = 18; CTX.shadowColor = glowShadow;
-        CTX.strokeStyle  = `${mainCol}66`; CTX.lineWidth = 2.8;
+        CTX.shadowBlur = 18; CTX.shadowColor = glowShadow;
+        CTX.strokeStyle = `${mainCol}66`; CTX.lineWidth = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R + 4, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur   = 0;
+        CTX.shadowBlur = 0;
 
         // ── LAYER 6 — Bean body ─────────────────────────────────────────
         CTX.save(); CTX.scale(0.90, 1.10);
         const bodyDark = this.isEnraged ? '#2d0a0a' : '#0a1a08';
-        const bodyMid  = this.isEnraged ? '#3f0e0e' : '#0f2d0c';
-        const bodyG    = CTX.createRadialGradient(-R * 0.22, -R * 0.25, 1, 0, 0, R);
-        bodyG.addColorStop(0,   bodyDark);
+        const bodyMid = this.isEnraged ? '#3f0e0e' : '#0f2d0c';
+        const bodyG = CTX.createRadialGradient(-R * 0.22, -R * 0.25, 1, 0, 0, R);
+        bodyG.addColorStop(0, bodyDark);
         bodyG.addColorStop(0.5, bodyMid);
-        bodyG.addColorStop(1,   '#050c04');
+        bodyG.addColorStop(1, '#050c04');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
         CTX.strokeStyle = '#0a1a08'; CTX.lineWidth = 3.2;
@@ -1636,11 +1648,11 @@ class BossFirst extends Entity {
         CTX.fillStyle = '#1c2533';
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.52); CTX.lineTo(-R * 0.58, -R * 0.18);
-        CTX.lineTo(-R * 0.55,  R * 0.52); CTX.lineTo(-R * 0.06,  R * 0.54);
+        CTX.lineTo(-R * 0.55, R * 0.52); CTX.lineTo(-R * 0.06, R * 0.54);
         CTX.closePath(); CTX.fill();
         CTX.beginPath();
         CTX.moveTo(R * 0.08, -R * 0.52); CTX.lineTo(R * 0.58, -R * 0.18);
-        CTX.lineTo(R * 0.55,  R * 0.52); CTX.lineTo(R * 0.06,  R * 0.54);
+        CTX.lineTo(R * 0.55, R * 0.52); CTX.lineTo(R * 0.06, R * 0.54);
         CTX.closePath(); CTX.fill();
         CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.6;
         CTX.beginPath();
@@ -1654,7 +1666,7 @@ class BossFirst extends Entity {
         CTX.shadowBlur = 7; CTX.shadowColor = stripeCol; CTX.fillStyle = stripeCol;
         CTX.beginPath();
         CTX.moveTo(-R * 0.44, -R * 0.56); CTX.lineTo(-R * 0.10, -R * 0.56);
-        CTX.lineTo( R * 0.44,  R * 0.56); CTX.lineTo( R * 0.10,  R * 0.56);
+        CTX.lineTo(R * 0.44, R * 0.56); CTX.lineTo(R * 0.10, R * 0.56);
         CTX.closePath(); CTX.fill();
         CTX.shadowBlur = 0;
         // Pocket
@@ -1678,8 +1690,8 @@ class BossFirst extends Entity {
         CTX.quadraticCurveTo(0, R * 0.05, -R * 0.46, -R * 0.06);
         CTX.closePath(); CTX.fill();
         CTX.fillStyle = 'rgba(230,150,100,0.35)';
-        CTX.beginPath(); CTX.ellipse(-R * 0.24, -R * 0.22, R * 0.15, R * 0.10,  0.3, 0, Math.PI * 2); CTX.fill();
-        CTX.beginPath(); CTX.ellipse( R * 0.24, -R * 0.22, R * 0.15, R * 0.10, -0.3, 0, Math.PI * 2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse(-R * 0.24, -R * 0.22, R * 0.15, R * 0.10, 0.3, 0, Math.PI * 2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse(R * 0.24, -R * 0.22, R * 0.15, R * 0.10, -0.3, 0, Math.PI * 2); CTX.fill();
         // Wild spiky hair
         CTX.fillStyle = '#1c1008'; CTX.strokeStyle = '#0f0905'; CTX.lineWidth = 1.5;
         CTX.beginPath();
@@ -1693,9 +1705,9 @@ class BossFirst extends Entity {
         const spikeData = [
             { bx: -R * 0.62, by: -R * 0.85, tx: -R * 0.88, ty: -R * 1.28 },
             { bx: -R * 0.22, by: -R * 1.05, tx: -R * 0.32, ty: -R * 1.45 },
-            { bx:  R * 0.05, by: -R * 1.10, tx:  R * 0.10, ty: -R * 1.52 },
-            { bx:  R * 0.32, by: -R * 1.02, tx:  R * 0.50, ty: -R * 1.40 },
-            { bx:  R * 0.68, by: -R * 0.80, tx:  R * 0.90, ty: -R * 1.18 },
+            { bx: R * 0.05, by: -R * 1.10, tx: R * 0.10, ty: -R * 1.52 },
+            { bx: R * 0.32, by: -R * 1.02, tx: R * 0.50, ty: -R * 1.40 },
+            { bx: R * 0.68, by: -R * 0.80, tx: R * 0.90, ty: -R * 1.18 },
         ];
         for (const sp of spikeData) {
             const halfW = R * 0.12;
@@ -1715,7 +1727,7 @@ class BossFirst extends Entity {
         // Ears
         CTX.fillStyle = '#c8956c'; CTX.strokeStyle = '#a0714a'; CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.ellipse(-R * 0.85, -R * 0.38, R * 0.14, R * 0.18, -0.2, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        CTX.beginPath(); CTX.ellipse( R * 0.85, -R * 0.38, R * 0.14, R * 0.18,  0.2, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.beginPath(); CTX.ellipse(R * 0.85, -R * 0.38, R * 0.14, R * 0.18, 0.2, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         // Mouth
         CTX.strokeStyle = '#7a4830'; CTX.lineWidth = 2.2; CTX.lineCap = 'round';
         if (this.isEnraged) {
@@ -1732,7 +1744,7 @@ class BossFirst extends Entity {
         CTX.lineCap = 'butt';
 
         // ── LAYER 9 — Science goggles ───────────────────────────────────
-        const goggleY    = -R * 0.38;
+        const goggleY = -R * 0.38;
         const goggleGlow = this.isEnraged ? '#ff4444' : '#00ffff';
         const gogglePulse = 0.6 + Math.sin(t * 2.5) * 0.35;
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = R * 0.14; CTX.lineCap = 'round';
@@ -1740,36 +1752,36 @@ class BossFirst extends Entity {
         CTX.lineCap = 'butt';
         CTX.strokeStyle = '#334155'; CTX.lineWidth = R * 0.08;
         CTX.beginPath(); CTX.moveTo(-R * 1.02, goggleY); CTX.lineTo(R * 1.02, goggleY); CTX.stroke();
-        CTX.shadowBlur  = 14 * gogglePulse; CTX.shadowColor = goggleGlow;
-        CTX.fillStyle   = '#0f172a'; CTX.strokeStyle = goggleGlow; CTX.lineWidth = 2.4;
+        CTX.shadowBlur = 14 * gogglePulse; CTX.shadowColor = goggleGlow;
+        CTX.fillStyle = '#0f172a'; CTX.strokeStyle = goggleGlow; CTX.lineWidth = 2.4;
         CTX.beginPath(); CTX.roundRect(-R * 0.75, goggleY - R * 0.20, R * 0.40, R * 0.36, 4); CTX.fill(); CTX.stroke();
-        CTX.beginPath(); CTX.roundRect( R * 0.35, goggleY - R * 0.20, R * 0.40, R * 0.36, 4); CTX.fill(); CTX.stroke();
+        CTX.beginPath(); CTX.roundRect(R * 0.35, goggleY - R * 0.20, R * 0.40, R * 0.36, 4); CTX.fill(); CTX.stroke();
         CTX.strokeStyle = goggleGlow; CTX.lineWidth = 2.0;
         CTX.beginPath(); CTX.moveTo(-R * 0.35, goggleY); CTX.lineTo(R * 0.35, goggleY); CTX.stroke();
         CTX.shadowBlur = 0;
         const lensAlpha = 0.45 + Math.sin(t * 3.2) * 0.28;
-        CTX.fillStyle   = this.isEnraged ? `rgba(239,68,68,${lensAlpha})` : `rgba(0,255,255,${lensAlpha})`;
-        CTX.shadowBlur  = 10 * gogglePulse; CTX.shadowColor = goggleGlow;
+        CTX.fillStyle = this.isEnraged ? `rgba(239,68,68,${lensAlpha})` : `rgba(0,255,255,${lensAlpha})`;
+        CTX.shadowBlur = 10 * gogglePulse; CTX.shadowColor = goggleGlow;
         CTX.beginPath(); CTX.roundRect(-R * 0.72, goggleY - R * 0.17, R * 0.34, R * 0.30, 3); CTX.fill();
-        CTX.beginPath(); CTX.roundRect( R * 0.38, goggleY - R * 0.17, R * 0.34, R * 0.30, 3); CTX.fill();
+        CTX.beginPath(); CTX.roundRect(R * 0.38, goggleY - R * 0.17, R * 0.34, R * 0.30, 3); CTX.fill();
         CTX.shadowBlur = 0;
         CTX.fillStyle = `rgba(255,255,255,${0.55 + Math.sin(t * 2.8) * 0.25})`;
         CTX.beginPath(); CTX.ellipse(-R * 0.60, goggleY - R * 0.10, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
-        CTX.beginPath(); CTX.ellipse( R * 0.52, goggleY - R * 0.10, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
+        CTX.beginPath(); CTX.ellipse(R * 0.52, goggleY - R * 0.10, R * 0.08, R * 0.05, -0.4, 0, Math.PI * 2); CTX.fill();
 
         // ── LAYER 10 — Back hand ────────────────────────────────────────
         const handBob = Math.sin(t * 2.1) * 3;
-        CTX.fillStyle   = '#c8956c'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2.2;
-        CTX.shadowBlur  = 5; CTX.shadowColor = 'rgba(0,255,255,0.3)';
+        CTX.fillStyle = '#c8956c'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2.2;
+        CTX.shadowBlur = 5; CTX.shadowColor = 'rgba(0,255,255,0.3)';
         CTX.beginPath(); CTX.arc(-(R + 8), 4 + handBob, R * 0.28, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
 
         // ── LAYER 11 — State indicators ─────────────────────────────────
         if (this.state === 'STUNNED') {
             for (let si = 0; si < 3; si++) {
-                const sa  = t * 3.5 + (si / 3) * Math.PI * 2;
-                const sx  = Math.cos(sa) * R * 0.60;
-                const sy  = -R * 1.12 + Math.sin(sa) * R * 0.35;
+                const sa = t * 3.5 + (si / 3) * Math.PI * 2;
+                const sx = Math.cos(sa) * R * 0.60;
+                const sy = -R * 1.12 + Math.sin(sa) * R * 0.35;
                 CTX.font = `bold ${13 + Math.sin(t * 4 + si) * 2}px Arial`;
                 CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
                 CTX.fillStyle = '#fbbf24'; CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
@@ -1781,9 +1793,9 @@ class BossFirst extends Entity {
         }
         if (this.state === 'ORBIT_ATTACK') {
             CTX.save();
-            CTX.globalAlpha  = 0.55 + Math.sin(t * 4) * 0.35;
-            CTX.shadowBlur   = 12; CTX.shadowColor = '#818cf8';
-            CTX.strokeStyle  = '#818cf8'; CTX.lineWidth = 2;
+            CTX.globalAlpha = 0.55 + Math.sin(t * 4) * 0.35;
+            CTX.shadowBlur = 12; CTX.shadowColor = '#818cf8';
+            CTX.strokeStyle = '#818cf8'; CTX.lineWidth = 2;
             CTX.setLineDash([5, 4]);
             CTX.beginPath(); CTX.arc(0, 0, R * 1.55, 0, Math.PI * 2); CTX.stroke();
             CTX.setLineDash([]);
@@ -1794,14 +1806,14 @@ class BossFirst extends Entity {
         // ── LAYER 12 — Berserk fire particles ───────────────────────────
         if (this.isEnraged) {
             for (let pi = 0; pi < 5; pi++) {
-                const pa  = t * 0.85 + pi * 1.26;
-                const pr  = R * 0.60 + Math.sin(t * 1.3 + pi) * R * 0.18;
-                const px  = Math.sin(pa * 1.1) * pr;
-                const py  = -Math.abs(Math.cos(pa * 0.9 + pi)) * R * 0.70 - R * 0.45;
-                const ps  = 3.5 + Math.sin(t * 2.2 + pi) * 1.8;
+                const pa = t * 0.85 + pi * 1.26;
+                const pr = R * 0.60 + Math.sin(t * 1.3 + pi) * R * 0.18;
+                const px = Math.sin(pa * 1.1) * pr;
+                const py = -Math.abs(Math.cos(pa * 0.9 + pi)) * R * 0.70 - R * 0.45;
+                const ps = 3.5 + Math.sin(t * 2.2 + pi) * 1.8;
                 CTX.globalAlpha = 0.50 + Math.sin(t * 3 + pi) * 0.28;
-                CTX.fillStyle   = pi % 2 === 0 ? '#ef4444' : '#fb923c';
-                CTX.shadowBlur  = 10; CTX.shadowColor = '#ef4444';
+                CTX.fillStyle = pi % 2 === 0 ? '#ef4444' : '#fb923c';
+                CTX.shadowBlur = 10; CTX.shadowColor = '#ef4444';
                 CTX.beginPath(); CTX.arc(px, py, ps, 0, Math.PI * 2); CTX.fill();
             }
             CTX.globalAlpha = 1; CTX.shadowBlur = 0;
@@ -1809,22 +1821,22 @@ class BossFirst extends Entity {
 
         // ── LAYER 13 — HP bar ────────────────────────────────────────────
         {
-            const barW  = R * 2.0, barH = 6;
-            const barX  = -barW / 2, barYp = -R * 1.72;
+            const barW = R * 2.0, barH = 6;
+            const barX = -barW / 2, barYp = -R * 1.72;
             const hpPct = Math.max(0, this.hp / this.maxHp);
             CTX.fillStyle = 'rgba(0,0,0,0.60)';
             CTX.beginPath(); CTX.roundRect(barX - 1, barYp - 1, barW + 2, barH + 2, 3); CTX.fill();
             const hpCol = hpPct > 0.55 ? '#39ff14' : hpPct > 0.28 ? '#fbbf24' : '#ef4444';
-            CTX.shadowBlur  = 6; CTX.shadowColor = hpCol; CTX.fillStyle = hpCol;
+            CTX.shadowBlur = 6; CTX.shadowColor = hpCol; CTX.fillStyle = hpCol;
             CTX.beginPath(); CTX.roundRect(barX, barYp, barW * hpPct, barH, 3); CTX.fill();
-            CTX.shadowBlur  = 0;
+            CTX.shadowBlur = 0;
             CTX.globalAlpha = 0.80;
             CTX.font = `bold 9px "Orbitron",Arial,sans-serif`;
             CTX.textAlign = 'center';
-            CTX.fillStyle   = this.isEnraged ? '#ef4444' : '#39ff14';
-            CTX.shadowBlur  = 6; CTX.shadowColor = this.isEnraged ? '#ef4444' : '#39ff14';
+            CTX.fillStyle = this.isEnraged ? '#ef4444' : '#39ff14';
+            CTX.shadowBlur = 6; CTX.shadowColor = this.isEnraged ? '#ef4444' : '#39ff14';
             CTX.fillText('KRU FIRST', 0, barYp - 5);
-            CTX.shadowBlur  = 0; CTX.globalAlpha = 1;
+            CTX.shadowBlur = 0; CTX.globalAlpha = 1;
         }
 
         CTX.restore(); // end body block
@@ -1833,16 +1845,16 @@ class BossFirst extends Entity {
         CTX.save();
         CTX.rotate(this.angle);
         if (isFacingLeft) CTX.scale(1, -1);
-        CTX.fillStyle   = '#c8956c'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2.2;
-        CTX.shadowBlur  = 6; CTX.shadowColor = 'rgba(0,255,255,0.4)';
+        CTX.fillStyle = '#c8956c'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2.2;
+        CTX.shadowBlur = 6; CTX.shadowColor = 'rgba(0,255,255,0.4)';
         CTX.beginPath(); CTX.arc(R + 8, 4, R * 0.30, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.shadowBlur = 0;
         const ptrGlow = (this.state === 'SUVAT_CHARGE' || this.state === 'ORBIT_ATTACK') ? 1.0 : 0.55;
-        const ptrCol  = this.isEnraged ? '#ff4444' : '#00ffff';
-        CTX.shadowBlur  = 14 * ptrGlow; CTX.shadowColor = ptrCol;
-        CTX.fillStyle   = '#1e293b';
+        const ptrCol = this.isEnraged ? '#ff4444' : '#00ffff';
+        CTX.shadowBlur = 14 * ptrGlow; CTX.shadowColor = ptrCol;
+        CTX.fillStyle = '#1e293b';
         CTX.beginPath(); CTX.roundRect(R + 12, -R * 0.08, R * 1.45, R * 0.17, 2); CTX.fill();
-        CTX.fillStyle   = ptrCol; CTX.globalAlpha = ptrGlow;
+        CTX.fillStyle = ptrCol; CTX.globalAlpha = ptrGlow;
         CTX.beginPath(); CTX.roundRect(R + 14, -R * 0.04, R * 1.38, R * 0.08, 2); CTX.fill();
         CTX.globalAlpha = 1;
         CTX.beginPath(); CTX.arc(R + 12 + R * 1.45, 0, R * 0.16, 0, Math.PI * 2); CTX.fill();
@@ -1873,6 +1885,6 @@ if (typeof module !== 'undefined' && module.exports) {
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.Boss     = Boss;
-window.BossDog  = BossDog;
+window.Boss = Boss;
+window.BossDog = BossDog;
 window.BossFirst = BossFirst;

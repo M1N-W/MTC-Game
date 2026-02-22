@@ -10,13 +10,13 @@ const API_KEY = (typeof CONFIG_SECRETS !== 'undefined' && CONFIG_SECRETS.GEMINI_
 
 const BALANCE = {
     physics: {
-        friction:     0.88,
+        friction: 0.88,
         acceleration: 1800
     },
     player: {
-        obstacleWarningRange:    35,
-        obstacleBuffPower:       1.25,
-        obstacleBuffDuration:    1.0,
+        obstacleWarningRange: 35,
+        obstacleBuffPower: 1.25,
+        obstacleBuffDuration: 1.0,
         obstacleWarningCooldown: 3000,
         auto: {
             hp: 150,
@@ -76,9 +76,9 @@ const BALANCE = {
             passiveLifesteal: 0.02,
             speedOnHit: 20,
             speedOnHitDuration: 0.4,
-            damageMultiplierPerLevel:  0.06,
+            damageMultiplierPerLevel: 0.06,
             cooldownReductionPerLevel: 0.03,
-            maxHpPerLevel:             0
+            maxHpPerLevel: 0
         },
         auto: {
             name: 'Auto',
@@ -116,13 +116,13 @@ const BALANCE = {
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
             weapons: {
-                auto:    { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
-                sniper:  { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                auto: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                sniper: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
                 shotgun: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
             },
-            damageMultiplierPerLevel:  0.05,
+            damageMultiplierPerLevel: 0.05,
             cooldownReductionPerLevel: 0.03,
-            maxHpPerLevel:             8
+            maxHpPerLevel: 8
         },
         poom: {
             name: 'Poom',
@@ -156,9 +156,9 @@ const BALANCE = {
             nagaRadius: 20,
             speedOnHit: 18,
             speedOnHitDuration: 0.35,
-            damageMultiplierPerLevel:  0.05,
+            damageMultiplierPerLevel: 0.05,
             cooldownReductionPerLevel: 0.04,
-            maxHpPerLevel:             5
+            maxHpPerLevel: 5
         }
     },
     drone: {
@@ -264,28 +264,28 @@ const BALANCE = {
         },
         phase3Threshold: 0.25,
         phase3: {
-            auraColor:        '#38bdf8',
+            auraColor: '#38bdf8',
             goldfishCooldown: 5.5,
-            goldfishCount:    2,
-            bubbleCooldown:   7.5,
-            bubbleCount:      3,
-            slowFactor:       0.5,
-            slowDuration:     2.0
+            goldfishCount: 2,
+            bubbleCooldown: 7.5,
+            bubbleCount: 3,
+            slowFactor: 0.5,
+            slowDuration: 2.0
         },
         goldfishMinion: {
-            hp:        100,
-            speed:     165,
-            damage:    18,
-            radius:    12,
+            hp: 100,
+            speed: 165,
+            damage: 18,
+            radius: 12,
             wobbleAmp: 40,
             wobbleFreq: 3.5,
-            color:     '#fb923c'
+            color: '#fb923c'
         },
         bubbleProjectile: {
-            speed:  100,
+            speed: 100,
             damage: 30,
             radius: 18,
-            color:  'rgba(186, 230, 253, 0.6)'
+            color: 'rgba(186, 230, 253, 0.6)'
         }
     },
     powerups: {
@@ -301,7 +301,7 @@ const BALANCE = {
     waves: {
         spawnDistance: 800,
         bossSpawnDelay: 3000,
-        maxWaves:            15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
+        maxWaves: 15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
         minKillsForNoDamage: 5,
         enemiesBase: 4,
         enemiesPerWave: 2,
@@ -325,16 +325,16 @@ const BALANCE = {
         size: 300
     },
     LIGHTING: {
-        ambientLight:   0.9,
-        cycleDuration:  60,
-        nightMinLight:  0.12,
-        dayMaxLight:    0.95,
-        playerLightRadius:      160,
-        projectileLightRadius:   50,
-        mtcServerLightRadius:   120,
-        shopLightRadius:         85,
-        dataPillarLightRadius:   70,
-        serverRackLightRadius:   55,
+        ambientLight: 0.9,
+        cycleDuration: 60,
+        nightMinLight: 0.12,
+        dayMaxLight: 0.95,
+        playerLightRadius: 160,
+        projectileLightRadius: 50,
+        mtcServerLightRadius: 120,
+        shopLightRadius: 85,
+        dataPillarLightRadius: 70,
+        serverRackLightRadius: 55,
         nightR: 5, nightG: 8, nightB: 22
     },
     map: {
@@ -342,30 +342,30 @@ const BALANCE = {
         objectDensity: 0.12,
         objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
         wallPositions: [
-            { x: -1500, y: -50,  w: 50,  h: 100 },
-            { x:  1450, y: -50,  w: 50,  h: 100 },
-            { x:  -50,  y: -1500, w: 100, h: 50  },
-            { x:  -50,  y:  1450, w: 100, h: 50  }
+            { x: -1500, y: -50, w: 50, h: 100 },
+            { x: 1450, y: -50, w: 50, h: 100 },
+            { x: -50, y: -1500, w: 100, h: 50 },
+            { x: -50, y: 1450, w: 100, h: 50 }
         ],
         mapColors: {
-            floor:           '#d4c5a0',
-            floorAlt:        '#c9b892',
-            treeLight:       '#86efac',
-            treeMid:         '#4ade80',
-            treeDark:        '#16a34a',
-            treeTrunk:       '#92400e',
-            deskTop:         '#854d0e',
-            deskLegs:        '#713f12',
-            serverBody:      '#1e293b',
-            serverLightOn:   '#22c55e',
-            serverLightOff:  '#166534',
-            pillarBase:      '#475569',
-            pillarCircuit:   '#06b6d4',
-            bookColors: ['#ef4444','#3b82f6','#f59e0b','#10b981','#8b5cf6','#ec4899','#f97316'],
-            wallColor:       '#e2d5c0',
-            wallBrick:       '#c9b18a',
+            floor: '#d4c5a0',
+            floorAlt: '#c9b892',
+            treeLight: '#86efac',
+            treeMid: '#4ade80',
+            treeDark: '#16a34a',
+            treeTrunk: '#92400e',
+            deskTop: '#854d0e',
+            deskLegs: '#713f12',
+            serverBody: '#1e293b',
+            serverLightOn: '#22c55e',
+            serverLightOff: '#166534',
+            pillarBase: '#475569',
+            pillarCircuit: '#06b6d4',
+            bookColors: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#f97316'],
+            wallColor: '#e2d5c0',
+            wallBrick: '#c9b18a',
             whiteboardGreen: '#1a4731',
-            chalkWhite:      '#f0ebe0'
+            chalkWhite: '#f0ebe0'
         }
     }
 };
@@ -412,18 +412,18 @@ const GAME_CONFIG = {
             boss: 'assets/audio/boss.mp3',
             glitch: 'assets/audio/glitch.mp3'
         },
-        master:        1.0,
-        shoot:         0.3,
-        dash:          0.4,
-        hit:           0.4,
-        enemyDeath:    0.3,
-        powerUp:       0.2,
-        heal:          0.4,
-        levelUp:       0.4,
-        victory:       0.6,
-        achievement:   0.4,
-        weaponSwitch:  0.3,
-        bossSpecial:   0.5,
+        master: 1.0,
+        shoot: 0.3,
+        dash: 0.4,
+        hit: 0.4,
+        enemyDeath: 0.3,
+        powerUp: 0.2,
+        heal: 0.4,
+        levelUp: 0.4,
+        victory: 0.6,
+        achievement: 0.4,
+        weaponSwitch: 0.3,
+        bossSpecial: 0.5,
         meteorWarning: 0.3
     },
     visual: {
@@ -449,9 +449,9 @@ const VISUALS = {
             accent: '#4ade80'
         },
         AUTO: {
-            primary:   '#dc2626',
+            primary: '#dc2626',
             secondary: '#fb7185',
-            accent:    '#f97316'
+            accent: '#f97316'
         }
     },
     WEAPON_OFFSETS: {
@@ -469,20 +469,20 @@ const VISUALS = {
 // 🏆 ACHIEVEMENT DEFINITIONS
 // ══════════════════════════════════════════════════════════════
 const ACHIEVEMENT_DEFS = [
-    { id: 'first_blood',   name: 'First Blood',       desc: 'ฆ่าศัตรูตัวแรก',                    icon: '⚔️'  },
-    { id: 'wave_1',        name: 'Wave Survivor',      desc: 'ผ่าน Wave 1',                       icon: '🌊'  },
-    { id: 'manop_down',    name: 'Manop Slayer',       desc: 'เอาชนะครูมานพครั้งแรก',             icon: '👑'  },
-    { id: 'first_down',    name: 'Physics Breaker',    desc: 'เอาชนะครูเฟิร์สผู้ปราดเปรียว',      icon: '⚛️'  },
-    { id: 'parry_master',  name: 'Return to Sender',   desc: 'Parry แซนด์วิชหมูกลับไปหาครูเฟิร์ส', icon: '🥪'  },
-    { id: 'shop_max',      name: 'Capitalism',         desc: 'ซื้อบัฟร้านค้าจนเต็มสแต็ก 1.5x',    icon: '📈'  },
-    { id: 'no_damage',     name: 'Untouchable',        desc: 'ผ่าน Wave โดยไม่โดนดาเมจ',          icon: '🛡️' },
-    { id: 'crit_master',   name: 'Critical Master',    desc: 'ตีติดคริติคอล 5 ครั้ง',             icon: '💥'  },
-    { id: 'speedster',     name: 'Speedster',          desc: 'ใช้ Dash 20 ครั้ง',                 icon: '⚡'  },
-    { id: 'ghost',         name: 'The Ghost of MTC',   desc: 'ซุ่มอ่าน 10 ครั้ง',                 icon: '👻'  },
-    { id: 'collector',     name: 'MTC Collector',      desc: 'เก็บ Power-up 10 ชิ้น',             icon: '💎'  },
-    { id: 'weapon_master', name: 'Weapon Master',      desc: 'ใช้ปืนครบทั้ง 3 แบบ',              icon: '🔫'  },
-    { id: 'naga_summoner', name: 'Naga Summoner',      desc: 'อัญเชิญพญานาค 3 ครั้ง',             icon: '🐍'  },
-    { id: 'shopaholic',    name: 'MTC Shopaholic',     desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง',       icon: '🛒'  }
+    { id: 'first_blood', name: 'First Blood', desc: 'ฆ่าศัตรูตัวแรก', icon: '⚔️' },
+    { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave 1', icon: '🌊' },
+    { id: 'manop_down', name: 'Manop Slayer', desc: 'เอาชนะครูมานพครั้งแรก', icon: '👑' },
+    { id: 'first_down', name: 'Physics Breaker', desc: 'เอาชนะครูเฟิร์สผู้ปราดเปรียว', icon: '⚛️' },
+    { id: 'parry_master', name: 'Return to Sender', desc: 'Parry แซนด์วิชหมูกลับไปหาครูเฟิร์ส', icon: '🥪' },
+    { id: 'shop_max', name: 'Capitalism', desc: 'ซื้อบัฟร้านค้าจนเต็มสแต็ก 1.5x', icon: '📈' },
+    { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️' },
+    { id: 'crit_master', name: 'Critical Master', desc: 'ตีติดคริติคอล 5 ครั้ง', icon: '💥' },
+    { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡' },
+    { id: 'ghost', name: 'The Ghost of MTC', desc: 'ซุ่มอ่าน 10 ครั้ง', icon: '👻' },
+    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎' },
+    { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' },
+    { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍' },
+    { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง', icon: '🛒' }
 ];
 
 // ══════════════════════════════════════════════════════════════
@@ -490,72 +490,77 @@ const ACHIEVEMENT_DEFS = [
 // ══════════════════════════════════════════════════════════════
 const GAME_TEXTS = {
     wave: {
-        badge:              (wave) => `WAVE ${wave}`,
-        floatingTitle:      (wave) => `WAVE ${wave}`,
-        bossIncoming:       'BOSS INCOMING!',
-        bossIncomingRider:  'BOSS INCOMING!🐕',
-        bossIncomingFish:   'BOSS INCOMING!🐟',
-        glitchWave:         '⚡ GLITCH WAVE ⚡',
-        glitchAnomaly:      'SYSTEM ANOMALY DETECTED...⚠️',
-        glitchControls:     'CONTROLS INVERTED!',
-        glitchBrace:        'BRACE FOR IMPACT...',
-        glitchCrisisHp:     (bonus) => `🛡️ +${bonus} BONUS HP`,
-        spawnCountdown:     (secs) => `⚡ SPAWNING IN ${secs}...`,
-        chaosBegins:        '💀 CHAOS BEGINS!',
+        badge: (wave) => `WAVE ${wave}`,
+        floatingTitle: (wave) => `WAVE ${wave}`,
+        bossIncoming: 'BOSS INCOMING!',
+        bossIncomingRider: 'BOSS INCOMING!🐕',
+        bossIncomingFish: 'BOSS INCOMING!🐟',
+        glitchWave: '⚡ GLITCH WAVE ⚡',
+        glitchAnomaly: 'SYSTEM ANOMALY DETECTED...⚠️',
+        glitchControls: 'CONTROLS INVERTED!',
+        glitchBrace: 'BRACE FOR IMPACT...',
+        glitchCrisisHp: (bonus) => `🛡️ +${bonus} BONUS HP`,
+        spawnCountdown: (secs) => `⚡ SPAWNING IN ${secs}...`,
+        chaosBegins: '💀 CHAOS BEGINS!',
+        // ── Special wave event banners ────────────────────────
+        fogBannerTitle: '🌫️ FOG WAVE',
+        fogBannerSubtitle: '— RADAR OFFLINE —',
+        speedBannerTitle: '⚡ SPEED WAVE',
+        speedBannerSubtitle: '— ENEMIES ACCELERATED —',
     },
     shop: {
-        open:               '🛒 MTC CO-OP STORE',
-        resumed:            '▶ RESUMED',
-        notEnoughScore:     'คะแนนไม่พอ! 💸',
-        hpFull:             'HP เต็มแล้ว!',
-        healPickup:         (amt) => `+${amt} HP 🧃`,
-        dmgBoostActive:     '🔧 DMG. ×1.1!',
-        dmgBoostExtended:   '🔧 DMG +30s.',
-        dmgBoostExpired:    'DMG+ Expired',
-        spdBoostActive:     '👟 SPD. ×1.1!',
-        spdBoostExtended:   '👟 SPD +30s.',
-        spdBoostExpired:    'SPD+ Expired',
+        open: '🛒 MTC CO-OP STORE',
+        resumed: '▶ RESUMED',
+        notEnoughScore: 'คะแนนไม่พอ! 💸',
+        hpFull: 'HP เต็มแล้ว!',
+        healPickup: (amt) => `+${amt} HP 🧃`,
+        dmgBoostActive: '🔧 DMG. ×1.1!',
+        dmgBoostExtended: '🔧 DMG +30s.',
+        dmgBoostExpired: 'DMG+ Expired',
+        spdBoostActive: '👟 SPD. ×1.1!',
+        spdBoostExtended: '👟 SPD +30s.',
+        spdBoostExpired: 'SPD+ Expired',
     },
     combat: {
-        poomCrit:           'ข้าวเหนียวคริติคอล! 💥',
-        highGround:         'HIGH GROUND!',
-        droneOnline:        '🤖 DRONE ONLINE',
+        poomCrit: 'ข้าวเหนียวคริติคอล! 💥',
+        highGround: 'HIGH GROUND!',
+        droneOnline: '🤖 DRONE ONLINE',
     },
     time: {
-        bulletTime:         '🕐 BULLET TIME',
-        normalSpeed:        '▶▶ NORMAL',
-        noEnergy:           'NO ENERGY! ⚡',
-        energyDepleted:     'ENERGY DEPLETED ⚡',
-        recharging:         'RECHARGING ⚡',
+        bulletTime: '🕐 BULLET TIME',
+        normalSpeed: '▶▶ NORMAL',
+        noEnergy: 'NO ENERGY! ⚡',
+        energyDepleted: 'ENERGY DEPLETED ⚡',
+        recharging: 'RECHARGING ⚡',
     },
     admin: {
-        terminal:           '💻 ADMIN TERMINAL',
-        resumed:            '▶ RESUMED',
-        database:           '📚 MTC DATABASE',
-        sessionWelcome:     'Session started. Welcome, root.',
-        sessionHelp:        'Run "help" to list available commands.',
-        noPlayer:           'ERROR : No active player session.',
-        authOk:             'Authenticating root privilege... OK',
-        healInject:         (gained) => `Injecting ${gained} HP units into player entity...`,
-        healResult:         (hp, max) => `COMMAND EXECUTED — HP : ${hp} / ${max}`,
-        healFloat:          (gained) => `+${gained} HP 💉 [ADMIN]`,
-        scorePatching:      'Patching score register... +5000',
-        scoreResult:        (score) => `COMMAND EXECUTED — Score : ${score}`,
-        scoreFloat:         '+5000 🪙 [ADMIN]',
-        nextSigkill:        'Sending SIGKILL to all enemy processes...',
-        nextResult:         (killed) => `COMMAND EXECUTED — ${killed} process(es) terminated. Wave advancing...`,
-        nextFloat:          '💀 WAVE SKIP [ADMIN]',
-        closingSession:     'Closing session...',
-        niceTry:            'nice try LOL',
-        accessDenied:       'ACCESS DENIED — MTC Policy §4.2 violation logged.',
-        whoami:             'root (player infiltrated server)',
-        cmdNotFound:        (raw) => `bash: ${raw}: command not found`,
-        sudoNotFound:       (cmd) => `sudo: ${cmd}: command not found`,
-        sudoAccessDenied:   'ACCESS DENIED — Unknown sudo command.',
-        typeHelp:           'Type "help" for available commands.',
-        catPassword:        'hunter2',
-        catPasswordWarn:    "...wait, you weren't supposed to see that.",
-        sandwich:           'What? Make it yourself.',
+        terminal: '💻 ADMIN TERMINAL',
+        resumed: '▶ RESUMED',
+        database: '📚 MTC DATABASE',
+        sessionWelcome: 'Session started. Welcome, root.',
+        sessionHelp: 'Run "help" to list available commands.',
+        noPlayer: 'ERROR : No active player session.',
+        authOk: 'Authenticating root privilege... OK',
+        healInject: (gained) => `Injecting ${gained} HP units into player entity...`,
+        healResult: (hp, max) => `COMMAND EXECUTED — HP : ${hp} / ${max}`,
+        healFloat: (gained) => `+${gained} HP 💉 [ADMIN]`,
+        scorePatching: 'Patching score register... +5000',
+        scoreResult: (score) => `COMMAND EXECUTED — Score : ${score}`,
+        scoreFloat: '+5000 🪙 [ADMIN]',
+        nextSigkill: 'Sending SIGKILL to all enemy processes...',
+        nextResult: (killed) => `COMMAND EXECUTED — ${killed} process(es) terminated. Wave advancing...`,
+        nextFloat: '💀 WAVE SKIP [ADMIN]',
+        closingSession: 'Closing session...',
+        niceTry: 'nice try LOL',
+        accessDenied: 'ACCESS DENIED — MTC Policy §4.2 violation logged.',
+        whoami: 'root (player infiltrated server)',
+        cmdNotFound: (raw) => `bash: ${raw}: command not found`,
+        sudoNotFound: (cmd) => `sudo: ${cmd}: command not found`,
+        sudoAccessDenied: 'ACCESS DENIED — Unknown sudo command.',
+        typeHelp: 'Type "help" for available commands.',
+        catPassword: 'hunter2',
+        catPasswordWarn: "...wait, you weren't supposed to see that.",
+        sandwich: 'What? Make it yourself.',
         helpTable: [
             '┌─────────────────────────────────────────────┐',
             '│  MTC ADMIN TERMINAL — AVAILABLE COMMANDS     │',
@@ -569,17 +574,62 @@ const GAME_TEXTS = {
             '└─────────────────────────────────────────────┘',
         ],
         lsEntries: [
-            { text: 'drwxr-xr-x  secrets/',               cls: 'cline-info' },
-            { text: 'drwxr-xr-x  grades/',                cls: 'cline-info' },
+            { text: 'drwxr-xr-x  secrets/', cls: 'cline-info' },
+            { text: 'drwxr-xr-x  grades/', cls: 'cline-info' },
             { text: '-rw-------  kru_manop_passwords.txt', cls: 'cline-warn' },
-            { text: '-rw-r--r--  exam_answers_2024.pdf',   cls: 'cline-ok'   },
+            { text: '-rw-r--r--  exam_answers_2024.pdf', cls: 'cline-ok' },
         ],
     },
     ai: {
-        loading:            'กำลังโหลดภารกิจ...',
-        missionPrefix:      (name) => `Mission "${name}"`,
-        missionFallback:    'MTC Adventure',
-        reportFallback:     'ตั้งใจเรียนให้มากกว่านี้นะ...',
+        loading: 'กำลังโหลดภารกิจ...',
+        missionPrefix: (name) => `Mission "${name}"`,
+        missionFallback: 'MTC Adventure',
+        reportFallback: 'ตั้งใจเรียนให้มากกว่านี้นะ...',
+        // ── Boss taunt fallbacks (used when Gemini is offline) ─
+        bossTaunts: [
+            'ทำการบ้านมาหรือเปล่า!',
+            'เกรดแย่แบบนี้จะสอบติดมั้ยเนี่ย?',
+            'สมการนี้ง่ายนิดเดียว!',
+            'อ่อนเลขขนาดนี้ มาเรียนพิเศษไหม?',
+            'log 4.57 เท่าไหร่เนี่ย?',
+            'คิดเลขไม่ออก สอบตกแน่!',
+            'นักเรียนยุคนี้ อ่อนแอจริงๆ',
+            'แค่นี้ก็ทำไม่ได้แล้วเหรอ?',
+        ],
+        // ── Mission name fallbacks ─────────────────────────────
+        missionNames: [
+            'พิชิตครูมานพ',
+            'Equation War',
+            'Math Operation',
+            'MTC Adventure',
+        ],
+        // ── Report card fallbacks (keyed by performance tier) ─
+        reportCards: {
+            excellent: [
+                'เก่งมาก! แบบนี้ต้องได้เกรด A แน่นอน',
+                'ยอดเยี่ยม! ครูภูมิใจมาก',
+                'คะแนนเต็ม! นักเรียนดีเด่น',
+            ],
+            good: [
+                'ดีมาก ค่อนข้างพอใช้',
+                'ผ่านได้ แต่ยังต้องฝึกต่อ',
+                'ไม่เลว แต่ต้องพยายามให้มากกว่านี้',
+            ],
+            poor: [
+                'คะแนนต่ำไป ต้องตั้งใจเรียนให้มากกว่านี้',
+                'ยังไม่ดีพอ กลับไปทบทวนอีกครั้ง',
+                'ได้คะแนนน้อยเกินไป จะสอบผ่านได้มั้ย?',
+            ],
+        },
+    },
+    boss: {
+        // ── BossFirst (Kru First) phase-transition physics taunts
+        firstTaunts: [
+            'E = mc² !',
+            'Action = Reaction!',
+            'Calculate this!',
+            'Physics is everything!',
+        ],
     },
 };
 
@@ -595,104 +645,104 @@ const MAP_CONFIG = {
 
     // ── Arena boundary ─────────────────────────────────────────
     arena: {
-        radius:         1500,
-        haloColor:      'rgba(120, 60, 255, {a})',
-        midColor:       'rgba(80, 30, 200, {a})',
-        rimColor:       'rgba(180, 100, 255, {a})',
-        dashColor:      'rgba(200, 120, 255, {a})',
-        haloAlphaBase:  0.08,
-        midAlphaBase:   0.15,
-        rimAlphaBase:   0.55,
-        dashAlphaBase:  0.30,
-        rimGlowBlur:    20,
-        rimGlowColor:   'rgba(150, 80, 255, 0.9)',
+        radius: 1500,
+        haloColor: 'rgba(120, 60, 255, {a})',
+        midColor: 'rgba(80, 30, 200, {a})',
+        rimColor: 'rgba(180, 100, 255, {a})',
+        dashColor: 'rgba(200, 120, 255, {a})',
+        haloAlphaBase: 0.08,
+        midAlphaBase: 0.15,
+        rimAlphaBase: 0.55,
+        dashAlphaBase: 0.30,
+        rimGlowBlur: 20,
+        rimGlowColor: 'rgba(150, 80, 255, 0.9)',
     },
 
     // ── Tech-hex grid ──────────────────────────────────────────
     hex: {
-        size:           64,
-        fillColor:      'rgba(20, 50, 110, {a})',
-        strokeColor:    'rgba(40, 110, 220, {a})',
-        fillAlpha:      0.06,
-        strokeAlpha:    0.20,
-        falloffRadius:  1400,
+        size: 64,
+        fillColor: 'rgba(20, 50, 110, {a})',
+        strokeColor: 'rgba(40, 110, 220, {a})',
+        fillAlpha: 0.06,
+        strokeAlpha: 0.20,
+        falloffRadius: 1400,
     },
 
     // ── Circuit paths ──────────────────────────────────────────
     // Update `to` coords here when landmark positions change in game.js
     paths: {
         database: {
-            from:       { x: 0,    y: 0    },
-            to:         { x: 350,  y: -350 },
-            coreColor:  '#00e5ff',
-            glowColor:  'rgba(0, 210, 255, 0.85)',
-            phase:      0.0,
+            from: { x: 0, y: 0 },
+            to: { x: 350, y: -350 },
+            coreColor: '#00e5ff',
+            glowColor: 'rgba(0, 210, 255, 0.85)',
+            phase: 0.0,
         },
         shop: {
-            from:       { x: 0,    y: 0    },
-            to:         { x: -350, y:  350 },
-            coreColor:  '#ffb300',
-            glowColor:  'rgba(255, 165, 0, 0.85)',
-            phase:      2.094,
+            from: { x: 0, y: 0 },
+            to: { x: -350, y: 350 },
+            coreColor: '#ffb300',
+            glowColor: 'rgba(255, 165, 0, 0.85)',
+            phase: 2.094,
         },
         // Shared path style
-        glowWidth:          12,
-        coreWidth:          2.2,
-        glowAlphaBase:      0.10,
-        coreAlphaBase:      0.65,
-        coreGlowBlur:       14,
-        packetCount:        2,
-        packetSpeed:        0.38,
-        packetRadius:       3.5,
-        packetAuraRadius:   8,
-        elbowRadius:        5,
+        glowWidth: 12,
+        coreWidth: 2.2,
+        glowAlphaBase: 0.10,
+        coreAlphaBase: 0.65,
+        coreGlowBlur: 14,
+        packetCount: 2,
+        packetSpeed: 0.38,
+        packetRadius: 3.5,
+        packetAuraRadius: 8,
+        elbowRadius: 5,
     },
 
     // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
-            worldX:     350,
-            worldY:     -350,
-            innerRgb:   '0, 220, 255',
-            outerRgb:   '0, 90, 200',
-            radius:     130,
-            phase:      0.0,
+            worldX: 350,
+            worldY: -350,
+            innerRgb: '0, 220, 255',
+            outerRgb: '0, 90, 200',
+            radius: 130,
+            phase: 0.0,
         },
         shop: {
-            worldX:     -350,
-            worldY:      350,
-            innerRgb:   '255, 190, 30',
-            outerRgb:   '200, 80, 0',
-            radius:     130,
-            phase:      1.6,
+            worldX: -350,
+            worldY: 350,
+            innerRgb: '255, 190, 30',
+            outerRgb: '200, 80, 0',
+            radius: 130,
+            phase: 1.6,
         },
         origin: {
-            worldX:     0,
-            worldY:     0,
-            innerRgb:   '130, 60, 255',
-            outerRgb:   '60, 20, 160',
-            radius:     80,
-            phase:      3.2,
+            worldX: 0,
+            worldY: 0,
+            innerRgb: '130, 60, 255',
+            outerRgb: '60, 20, 160',
+            radius: 80,
+            phase: 3.2,
         },
         // Shared aura style
-        innerAlphaBase:     0.22,
-        midAlphaBase:       0.10,
-        outerAlphaBase:     0.04,
-        rimAlphaBase:       0.28,
-        rimWidth:           2,
-        rimGlowBlur:        16,
-        dashAlphaBase:      0.12,
-        dashOuterMult:      1.3,
+        innerAlphaBase: 0.22,
+        midAlphaBase: 0.10,
+        outerAlphaBase: 0.04,
+        rimAlphaBase: 0.28,
+        rimWidth: 2,
+        rimGlowBlur: 16,
+        dashAlphaBase: 0.12,
+        dashOuterMult: 1.3,
     },
 };
 
-window.MAP_CONFIG       = MAP_CONFIG;
-window.BALANCE          = BALANCE;
-window.SHOP_ITEMS       = SHOP_ITEMS;
-window.GAME_CONFIG      = GAME_CONFIG;
-window.VISUALS          = VISUALS;
+window.MAP_CONFIG = MAP_CONFIG;
+window.BALANCE = BALANCE;
+window.SHOP_ITEMS = SHOP_ITEMS;
+window.GAME_CONFIG = GAME_CONFIG;
+window.VISUALS = VISUALS;
 window.ACHIEVEMENT_DEFS = ACHIEVEMENT_DEFS;
-window.API_KEY          = API_KEY;
+window.API_KEY = API_KEY;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { BALANCE, SHOP_ITEMS, GAME_CONFIG, VISUALS, ACHIEVEMENT_DEFS, API_KEY, GAME_TEXTS, MAP_CONFIG };
