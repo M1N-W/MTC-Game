@@ -10,7 +10,7 @@ if (typeof window.Gemini === 'undefined') {
         generateMission:      async ()    => 'Defeat the enemies!',
         generateReportCard:   async ()    => 'Great job!',
         speak:                ()          => {},
-        getMissionName:  async ()         => 'พิชิตครูมานพ',
+        getMissionName:  async ()         => 'MTC Adventure',
         getReportCard:   async ()         => 'ตั้งใจเรียนให้มากกว่านี้นะ...',
         getBossTaunt:    async ()         => '',
     };

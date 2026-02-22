@@ -229,7 +229,6 @@ class GeminiAI {
      */
     async getMissionName() {
         const fallbacks = [
-            "พิชิตครูมานพ",
             "Equation War",
             "Math Operation",
             "MTC Adventure",
