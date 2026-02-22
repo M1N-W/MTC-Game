@@ -411,12 +411,158 @@ class FreeFallWarningRing {
     }
 }
 
+// ════════════════════════════════════════════════════════════
+// 🥪  PORK SANDWICH — BossFirst SANDWICH_TOSS projectile
+// ════════════════════════════════════════════════════════════
+class PorkSandwich {
+    constructor(x, y, angle, boss) {
+        this.x      = x;
+        this.y      = y;
+        this.boss   = boss;
+        this.dead   = false;
+        this.radius = 22;
+
+        const speed = 500;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+
+        // Visual spin
+        this.rotation  = 0;
+        this.spinSpeed = 9; // rad/s
+
+        // Weak homing — steers toward player for first 0.5 s
+        this.homingTimer    = 0;
+        this.homingDuration = 0.5;
+        this.homingStrength = 4.0; // rad/s max angular correction
+
+        // Lifetime & damage
+        this.lifeTimer = 0;
+        this.maxLife   = 3.5;
+        this.damage    = BALANCE.boss.contactDamage * 5;
+        this.hitCd     = 0; // i-frame cooldown after hit
+
+        // Motion trail: [{x, y, age}]
+        this._trail = [];
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+
+        this.lifeTimer += dt;
+        this.rotation  += this.spinSpeed * dt;
+        if (this.hitCd > 0) this.hitCd -= dt;
+
+        // ── Weak homing ───────────────────────────────────────
+        if (this.homingTimer < this.homingDuration) {
+            this.homingTimer += dt;
+            const desired  = Math.atan2(player.y - this.y, player.x - this.x);
+            const current  = Math.atan2(this.vy, this.vx);
+            let   diff     = desired - current;
+            while (diff >  Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            const correction = Math.sign(diff) * Math.min(Math.abs(diff), this.homingStrength * dt);
+            const newAngle   = current + correction;
+            const spd        = Math.hypot(this.vx, this.vy);
+            this.vx = Math.cos(newAngle) * spd;
+            this.vy = Math.sin(newAngle) * spd;
+        }
+
+        // ── Move ──────────────────────────────────────────────
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        // ── Trail ─────────────────────────────────────────────
+        this._trail.push({ x: this.x, y: this.y, age: 0 });
+        for (const p of this._trail) p.age += dt;
+        while (this._trail.length && this._trail[0].age > 0.2) this._trail.shift();
+
+        // ── Player collision ───────────────────────────────────
+        if (this.hitCd <= 0) {
+            const d = Math.hypot(player.x - this.x, player.y - this.y);
+            if (d < this.radius + player.radius) {
+                player.takeDamage(this.damage);
+                this.hitCd = 0.8;
+                addScreenShake(7);
+                spawnParticles(this.x, this.y, 12, '#f59e0b');
+                spawnFloatingText('🥪 BONK!', this.x, this.y - 45, '#f97316', 22);
+                this.dead = true;
+                return true;
+            }
+        }
+
+        // ── Out-of-bounds / expired ────────────────────────────
+        const wb = GAME_CONFIG.physics.worldBounds;
+        if (this.lifeTimer >= this.maxLife ||
+            Math.abs(this.x) > wb * 1.5 || Math.abs(this.y) > wb * 1.5) {
+            this.dead = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    draw() {
+        if (this.dead) return;
+        const screen = worldToScreen(this.x, this.y);
+
+        // ── Motion trail ──────────────────────────────────────
+        for (const p of this._trail) {
+            const s   = worldToScreen(p.x, p.y);
+            const fac = 1 - p.age / 0.2;
+            CTX.beginPath();
+            CTX.arc(s.x, s.y, this.radius * 0.4 * fac, 0, Math.PI * 2);
+            CTX.fillStyle = `rgba(249,115,22,${0.3 * fac})`;
+            CTX.fill();
+        }
+
+        // ── Sandwich body ─────────────────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.rotation);
+
+        const r = this.radius;
+
+        // Bottom bun
+        CTX.fillStyle = '#d97706';
+        CTX.beginPath(); CTX.ellipse(0,  r * 0.32, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); CTX.fill();
+
+        // Lettuce
+        CTX.fillStyle = '#4ade80';
+        CTX.beginPath(); CTX.ellipse(0,  r * 0.06, r * 0.82, r * 0.20, 0, 0, Math.PI * 2); CTX.fill();
+
+        // Pork
+        CTX.fillStyle = '#fb923c';
+        CTX.beginPath(); CTX.ellipse(0, -r * 0.06, r * 0.78, r * 0.17, 0, 0, Math.PI * 2); CTX.fill();
+
+        // Top bun (dome)
+        CTX.fillStyle = '#f59e0b';
+        CTX.beginPath(); CTX.ellipse(0, -r * 0.28, r * 0.85, r * 0.40, 0, 0, Math.PI); CTX.fill();
+
+        // Sesame seeds
+        CTX.fillStyle = '#fef3c7';
+        for (let i = -1; i <= 1; i++) {
+            CTX.beginPath(); CTX.ellipse(i * r * 0.28, -r * 0.50, 3, 2, i * 0.4, 0, Math.PI * 2); CTX.fill();
+        }
+
+        // Glow
+        CTX.shadowBlur  = 14;
+        CTX.shadowColor = '#f59e0b';
+        CTX.strokeStyle = 'rgba(251,191,36,0.7)';
+        CTX.lineWidth   = 2.5;
+        CTX.beginPath(); CTX.ellipse(0, -r * 0.28, r * 0.85, r * 0.40, 0, 0, Math.PI); CTX.stroke();
+        CTX.shadowBlur  = 0;
+
+        CTX.restore();
+    }
+}
+
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing };
+    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich };
 }
 // ── Global exports ────────────────────────────────────────────
 window.BarkWave            = BarkWave;
 window.GoldfishMinion      = GoldfishMinion;
 window.BubbleProjectile    = BubbleProjectile;
 window.FreeFallWarningRing = FreeFallWarningRing;
+window.PorkSandwich        = PorkSandwich;
