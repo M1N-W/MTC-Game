@@ -362,7 +362,7 @@ function updateGame(dt) {
                 spawnParticles(barrelCX, barrelCY, 10, '#fef3c7');
 
                 // ── BOOM floating text ──────────────────────────────────
-                spawnFloatingText(GAME_TEXTS.environment.barrelBoom, barrelCX, barrelCY - 55, '#f97316', 38);
+                spawnFloatingText('💥 BOOM!', barrelCX, barrelCY - 55, '#f97316', 38);
 
                 // ── AoE Damage — 180 px radius, 150 damage ─────────────
                 const EXPLOSION_RADIUS = 180;
@@ -644,7 +644,7 @@ function drawDayNightHUD() {
     CTX.textAlign = 'center';
     CTX.textBaseline = 'middle';
     const pct = Math.round(phase * 100);
-    CTX.fillText(isDawn ? GAME_TEXTS.ui.dayPhase(pct) : GAME_TEXTS.ui.nightPhase(100 - pct), cx, cy + r + 14);
+    CTX.fillText(isDawn ? `DAY ${pct}%` : `NIGHT ${100 - pct}%`, cx, cy + r + 14);
     CTX.restore();
 }
 
