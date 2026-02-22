@@ -19,7 +19,7 @@ if (typeof window.Gemini === 'undefined') {
 const DEBUG_MODE = false;
 
 /**
- * 🎮 MTC: ENHANCED EDITION - Main Game Loop (REFACTORED)
+ * 🎮 MTC the Game Beta Edition - Main Game Loop (REFACTORED)
  * BGM FIX: Audio.init() moved to window.onload so menu BGM fires correctly.
  * startGame() no longer calls Audio.init() to avoid resetting userInteracted.
  */

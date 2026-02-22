@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 🏫 MTC: ENHANCED EDITION - Campus Map System (REFACTORED)
+ * 🏫 MTC the Game Beta Edition - Campus Map System (REFACTORED)
  *
  * CHANGES (Stability Overhaul):
  * - ✅ ALL calls to UIManager.showVoiceBubble() replaced with global showVoiceBubble()
