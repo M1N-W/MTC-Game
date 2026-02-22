@@ -181,30 +181,72 @@ function buyItem(itemId) {
         }
 
     } else if (itemId === 'damageUp') {
-        if (player.shopDamageBoostActive) {
-            player.shopDamageBoostTimer += item.duration;
-            spawnFloatingText(GAME_TEXTS.shop.dmgBoostExtended, player.x, player.y - 70, '#f59e0b', 22);
-        } else {
+        // ── Progressive Damage Buff — stacks up to +50 % then penalises ──
+        // Tier ladder:  base → ×1.1 → ×1.2 → ×1.3 → ×1.4 → ×1.5 (cap)
+        // Buying at cap: subtracts 5 s from the remaining timer (min 5 s).
+        if (!player.shopDamageBoostActive) {
+            // ── First purchase — initialise buff at 1.1× ──────────────
             player._baseDamageBoost      = player.damageBoost || 1.0;
-            player.damageBoost           = (player.damageBoost || 1.0) * item.mult;
+            player.damageBoost           = player._baseDamageBoost * 1.1;
             player.shopDamageBoostActive = true;
             player.shopDamageBoostTimer  = item.duration;
-            spawnFloatingText(GAME_TEXTS.shop.dmgBoostActive, player.x, player.y - 70, '#f59e0b', 22);
+            const tierPct = Math.round((player.damageBoost / player._baseDamageBoost) * 100);
+            spawnFloatingText(`⚔️ Damage ${tierPct}%!`, player.x, player.y - 70, '#f59e0b', 22);
             spawnParticles(player.x, player.y, 8, '#f59e0b');
+        } else {
+            const cap = player._baseDamageBoost * 1.5;
+            // Round to 2 dp to avoid floating-point drift at the cap check
+            const current = Math.round(player.damageBoost * 100) / 100;
+            const capRnd  = Math.round(cap * 100) / 100;
+
+            if (current < capRnd) {
+                // ── Under cap — add one tier (+0.1× of base) and reset timer ──
+                player.damageBoost += player._baseDamageBoost * 0.1;
+                player.damageBoost  = Math.min(player.damageBoost, cap); // clamp
+                player.shopDamageBoostTimer = item.duration;
+                const tierPct = Math.round((player.damageBoost / player._baseDamageBoost) * 100);
+                spawnFloatingText(`⚔️ Damage ${tierPct}%!`, player.x, player.y - 70, '#f59e0b', 22);
+                spawnParticles(player.x, player.y, 8, '#f59e0b');
+            } else {
+                // ── At cap — impose a 5 s duration penalty ────────────────
+                player.shopDamageBoostTimer = Math.max(5, player.shopDamageBoostTimer - 5);
+                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', player.x, player.y - 70, '#ef4444', 20);
+            }
         }
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
 
     } else if (itemId === 'speedUp') {
-        if (player.shopSpeedBoostActive) {
-            player.shopSpeedBoostTimer += item.duration;
-            spawnFloatingText(GAME_TEXTS.shop.spdBoostExtended, player.x, player.y - 70, '#06b6d4', 22);
-        } else {
+        // ── Progressive Speed Buff — stacks up to +50 % then penalises ──
+        // Tier ladder:  base → ×1.1 → ×1.2 → ×1.3 → ×1.4 → ×1.5 (cap)
+        // Buying at cap: subtracts 5 s from the remaining timer (min 5 s).
+        if (!player.shopSpeedBoostActive) {
+            // ── First purchase — initialise buff at 1.1× ──────────────
             player._baseMoveSpeed        = player.moveSpeed;
-            player.moveSpeed             = player.moveSpeed * item.mult;
+            player.moveSpeed             = player._baseMoveSpeed * 1.1;
             player.shopSpeedBoostActive  = true;
             player.shopSpeedBoostTimer   = item.duration;
-            spawnFloatingText(GAME_TEXTS.shop.spdBoostActive, player.x, player.y - 70, '#06b6d4', 22);
+            const tierPct = Math.round((player.moveSpeed / player._baseMoveSpeed) * 100);
+            spawnFloatingText(`💨 Speed ${tierPct}%!`, player.x, player.y - 70, '#06b6d4', 22);
             spawnParticles(player.x, player.y, 8, '#06b6d4');
+        } else {
+            const cap = player._baseMoveSpeed * 1.5;
+            // Round to 2 dp to avoid floating-point drift at the cap check
+            const current = Math.round(player.moveSpeed * 100) / 100;
+            const capRnd  = Math.round(cap * 100) / 100;
+
+            if (current < capRnd) {
+                // ── Under cap — add one tier (+0.1× of base) and reset timer ──
+                player.moveSpeed += player._baseMoveSpeed * 0.1;
+                player.moveSpeed  = Math.min(player.moveSpeed, cap); // clamp
+                player.shopSpeedBoostTimer = item.duration;
+                const tierPct = Math.round((player.moveSpeed / player._baseMoveSpeed) * 100);
+                spawnFloatingText(`💨 Speed ${tierPct}%!`, player.x, player.y - 70, '#06b6d4', 22);
+                spawnParticles(player.x, player.y, 8, '#06b6d4');
+            } else {
+                // ── At cap — impose a 5 s duration penalty ────────────────
+                player.shopSpeedBoostTimer = Math.max(5, player.shopSpeedBoostTimer - 5);
+                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', player.x, player.y - 70, '#ef4444', 20);
+            }
         }
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
     }

@@ -356,6 +356,63 @@ function drawGame() {
     drawDatabaseServer();
     drawShopObject();
 
+    // ── Low-HP Navigation Guide ───────────────────────────────
+    // Draws a subtle, animated dashed floor-line toward the nearest
+    // healing source (MTC Room or Shop) when the player is below 35% HP.
+    // Rendered between world objects and entities so it reads as a
+    // floor-level cue without cluttering the combat layer.
+    if (window.player && !window.player.dead &&
+        window.player.maxHp > 0 &&
+        window.player.hp / window.player.maxHp <= 0.35) {
+
+        // ── Determine nearest healing target ─────────────────
+        let targetX, targetY, guideColor;
+
+        const shopDist = dist(window.player.x, window.player.y,
+            MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
+
+        // MTC Room center (null-safe: mapSystem.mtcRoom may be undefined
+        // during early initialisation before the map has been built)
+        const room     = window.mapSystem && window.mapSystem.mtcRoom;
+        const roomCX   = room ? room.x + room.w / 2 : Infinity;
+        const roomCY   = room ? room.y + room.h / 2 : Infinity;
+        const roomDist = room
+            ? dist(window.player.x, window.player.y, roomCX, roomCY)
+            : Infinity;
+
+        if (roomDist <= shopDist) {
+            // MTC Room is closer — use green
+            targetX    = roomCX;
+            targetY    = roomCY;
+            guideColor = '#10b981';
+        } else {
+            // Shop is closer — use gold
+            targetX    = MTC_SHOP_LOCATION.x;
+            targetY    = MTC_SHOP_LOCATION.y;
+            guideColor = '#f59e0b';
+        }
+
+        // ── Draw animated dashed line on the floor ────────────
+        const pScreen = worldToScreen(window.player.x, window.player.y);
+        const tScreen = worldToScreen(targetX, targetY);
+
+        CTX.save();
+        CTX.globalAlpha    = 0.35;
+        CTX.strokeStyle    = guideColor;
+        CTX.lineWidth      = 4;
+        CTX.lineCap        = 'round';
+        // Dash pattern: 15 px on, 20 px off — offset animated to "march"
+        // toward the target so the line reads as directional.
+        CTX.setLineDash([15, 20]);
+        CTX.lineDashOffset = -(performance.now() / 20) % 35;
+        CTX.beginPath();
+        CTX.moveTo(pScreen.x, pScreen.y);
+        CTX.lineTo(tScreen.x, tScreen.y);
+        CTX.stroke();
+        CTX.restore();   // clears setLineDash, globalAlpha, and all stroke state
+    }
+    // ── End Low-HP Navigation Guide ───────────────────────────
+
     for (const p of window.powerups) {
         if (p.isOnScreen ? p.isOnScreen(60) : true) p.draw();
     }
