@@ -50,6 +50,9 @@ class AchievementSystem {
     }
 
     check(id) {
+        // ── Clean up stale `undefined` entry left by old unlock(string) bug ──
+        this.unlocked.delete(undefined);
+
         if (this.unlocked.has(id)) return;
         const ach = this.list.find(a => a.id === id);
         if (!ach) return;
@@ -78,9 +81,15 @@ class AchievementSystem {
     }
 
     unlock(ach) {
+        // ── Mark as unlocked first ───────────────────────────────
         this.unlocked.add(ach.id);
-        Audio.playAchievement();
 
+        // ── Audio (guarded — Audio may not be ready yet) ─────────
+        try {
+            if (typeof Audio !== 'undefined' && Audio.playAchievement) Audio.playAchievement();
+        } catch (e) { /* audio failure must not block the popup */ }
+
+        // ── DOM popup ────────────────────────────────────────────
         const container = document.getElementById('achievements');
         if (!container) return;
         const el = document.createElement('div');
