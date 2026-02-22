@@ -644,7 +644,7 @@ function drawDayNightHUD() {
     CTX.textAlign = 'center';
     CTX.textBaseline = 'middle';
     const pct = Math.round(phase * 100);
-    CTX.fillText(isDawn ? `DAY ${pct}%` : `NIGHT ${100 - pct}%`, cx, cy + r + 14);
+    CTX.fillText(isDawn ? GAME_TEXTS.ui.dayPhase(pct) : GAME_TEXTS.ui.nightPhase(100 - pct), cx, cy + r + 14);
     CTX.restore();
 }
 
