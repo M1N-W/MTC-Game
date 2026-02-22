@@ -18,6 +18,9 @@ const BALANCE = {
         obstacleBuffPower: 1.25,
         obstacleBuffDuration: 1.0,
         obstacleWarningCooldown: 3000,
+        secondWindHpPct: 0.20,
+        secondWindSpeedMult: 1.3,
+        secondWindDamageMult: 1.5,
         auto: {
             hp: 150,
             speed: 160,

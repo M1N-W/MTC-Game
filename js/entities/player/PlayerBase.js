@@ -102,6 +102,10 @@ class Player extends Entity {
 
     get S() { return this.stats; }
 
+    get isSecondWind() {
+        return this.hp > 0 && (this.hp / this.maxHp) <= (BALANCE.player.secondWindHpPct || 0.2);
+    }
+
     update(dt, keys, mouse) {
         const S = this.stats;
         const PHY = BALANCE.physics;
@@ -150,6 +154,11 @@ class Player extends Entity {
 
         // ── Apply Combo Speed Buff ──
         speedMult *= (1 + ((this.comboCount || 0) * 0.01));
+        // ── Second Wind Buff ──
+        if (this.isSecondWind) {
+            speedMult *= (BALANCE.player.secondWindSpeedMult || 1.3);
+            if (Math.random() < 0.1) spawnParticles(this.x + rand(-15, 15), this.y + rand(-15, 15), 1, '#ef4444');
+        }
 
         if (!this.isDashing) {
             this.vx += ax * PHY.acceleration * dt;
@@ -390,6 +399,10 @@ class Player extends Entity {
             damage *= S.critMultiplier; isCrit = true;
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
             Achievements.stats.crits++; Achievements.check('crit_master');
+        }
+        // ── Apply Second Wind Damage Multiplier ──
+        if (this.isSecondWind) {
+            damage *= (BALANCE.player.secondWindDamageMult || 1.5);
         }
         if (this.passiveUnlocked) {
             const healAmount = damage * S.passiveLifesteal;

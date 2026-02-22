@@ -627,6 +627,26 @@ class UIManager {
      *
      * @param {CanvasRenderingContext2D} ctx
      */
+    static drawSecondWindVignette(ctx) {
+        if (!ctx || !ctx.canvas) return;
+        if (!window.player || !window.player.isSecondWind) return;
+        const now = performance.now();
+        // Pulse between 0.1 and 0.4 opacity
+        const pulse = 0.1 + Math.abs(Math.sin(now / 200)) * 0.3;
+        const canvas = ctx.canvas;
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        const grad = ctx.createRadialGradient(
+            canvas.width / 2, canvas.height / 2, canvas.height * 0.35,
+            canvas.width / 2, canvas.height / 2, canvas.height * 0.9
+        );
+        grad.addColorStop(0, 'rgba(220, 38, 38, 0)'); // Transparent center
+        grad.addColorStop(1, `rgba(220, 38, 38, ${pulse})`); // Red bleeding edges
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
+
     static drawConfusedWarning(ctx) {
         if (!ctx || !ctx.canvas) return;
         if (!window.player || !window.player.isConfused) return;
@@ -699,6 +719,8 @@ class UIManager {
         UIManager.drawCombo(ctx);
         if (!ctx || !ctx.canvas) return;
 
+        // ── Second Wind Vignette ──────────────────────────────────
+        UIManager.drawSecondWindVignette(ctx);
         // ── Confused-state warning banner ─────────────────────
         // Drawn before the minimap so it appears above world content
         // but below the radar (radar is always the topmost HUD element).
