@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTC: Enhanced Edition — System Diagnostics v2.0</title>
+    <title>MTC the Game Beta Edition — System Diagnostics v2.1</title>
 
     <!--
     ╔══════════════════════════════════════════════════════════════╗
-    ║          MTC: ENHANCED EDITION — DEBUG.HTML v2.0            ║
+    ║          MTC the Game Beta Edition — DEBUG.HTML v2.1         ║
     ║──────────────────────────────────────────────────────────────║
     ║  INSTRUCTIONS: Place this file in your project ROOT.        ║
     ║  Then add your game <script> tags in the section below      ║
@@ -791,8 +791,8 @@
     <header class="header">
         <div class="header-top">
             <div class="title-block">
-                <div class="title-eyebrow">⬡ System Diagnostics v2.0</div>
-                <div class="title-main">MTC: <span>Enhanced</span> Edition</div>
+                <div class="title-eyebrow">⬡ System Diagnostics v2.1</div>
+                <div class="title-main">MTC: <span>Beta</span> Edition</div>
                 <div class="title-sub">Diagnostic Console · All Systems Check · Runtime Analysis</div>
             </div>
             <div class="btn-group">
@@ -960,14 +960,14 @@
             <span style="font-size:10px;color:#334155;">stdout</span>
         </div>
         <div id="console-output">
-            <span class="log-system"><span class="log-prompt">$</span> MTC Diagnostic System v2.0 ready.</span><br>
+            <span class="log-system"><span class="log-prompt">$</span> MTC Diagnostic System v2.1 ready.</span><br>
             <span class="log-system"><span class="log-prompt">$</span> Press "▶ Run Diagnostics" to begin system analysis...</span><br>
         </div>
     </div>
 
     <!-- ── Footer ── -->
     <div class="footer">
-        MTC: Enhanced Edition · Diagnostic Tool v2.0 · Anthropic-Powered Interface
+        MTC the Game Beta Edition · Diagnostic Tool v2.1 · Anthropic-Powered Interface
     </div>
 
 </div>
@@ -1374,6 +1374,11 @@
             'Failed: window.Boss is not a class/function. Check entities/boss.js.');
 
         await T('sec-entities', 'sec-entities-body',
+            'BossFirst class (Kru First)',
+            () => isClass('window.BossFirst'),
+            'Failed: window.BossFirst is not a class/function. Check entities/boss.js.');
+
+        await T('sec-entities', 'sec-entities-body',
             'Summons system (NagaEntity / DroneEntity)',
             () => isClass('window.NagaEntity') || isClass('window.DroneEntity'),
             'Failed: No summon class found. Check entities/summons.js — expected NagaEntity or DroneEntity.');
@@ -1404,6 +1409,11 @@
             () => isObject('window.particleSystem') || isObject('window.floatingTextSystem') ||
                   isFunction('window.spawnParticles'),
             'Failed: No effects system found. Check effects.js — expected particleSystem, floatingTextSystem, or spawnParticles.');
+
+        await T('sec-content', 'sec-content-body',
+            'PorkSandwich interactive entity',
+            () => isClass('window.PorkSandwich'),
+            'Failed: window.PorkSandwich is not a class/function. Check effects.js to ensure it is exported to window.');
 
         await T('sec-content', 'sec-content-body',
             'Particle update loop (particleSystem.update)',
@@ -1573,7 +1583,7 @@
             failed > 0 ? 'error' : warned > 0 ? 'warn' : 'success');
 
         if (failed === 0 && warned === 0) {
-            diag.log('✔ All systems operational. MTC: Enhanced Edition is ready to run.', 'success');
+            diag.log('✔ All systems operational. MTC the Game Beta Edition is ready to run.', 'success');
             setStatus(`ALL SYSTEMS GO — ${passed}/${total} checks passed.`, true);
         } else if (failed > 0) {
             diag.log(`✖ ${failed} system(s) failed. Review the panels above for details.`, 'error');
