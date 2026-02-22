@@ -577,7 +577,7 @@ const GAME_TEXTS = {
     },
     ai: {
         loading:            'กำลังโหลดภารกิจ...',
-        missionPrefix:      (name) => `ภารกิจ "${name}"`,
+        missionPrefix:      (name) => `Mission "${name}"`,
         missionFallback:    'MTC Adventure',
         reportFallback:     'ตั้งใจเรียนให้มากกว่านี้นะ...',
     },
