@@ -224,6 +224,7 @@ class MapObject {
             case 'wall':       this.drawWall();                break;
             case 'chair':      this.drawChair();               break;
             case 'cabinet':    this.drawCabinet();             break;
+            // 'barrel' falls through: ExplosiveBarrel overrides draw() entirely
         }
         CTX.restore();
     }
@@ -280,6 +281,152 @@ class MapObject {
                 const offset=(Math.floor(y/brickH)%2)*(brickW/2);
                 CTX.strokeRect(x+offset,y,brickW,brickH);
             }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// 🛢️ EXPLOSIVE BARREL — Destructible environment trap
+//
+// Hit by any projectile → loses HP.
+// Reaches 0 HP → triggers a high-damage AoE explosion
+// handled in game.js (updateGame loop).
+// Extends MapObject so it participates in collision resolution
+// and the existing mapSystem.objects array automatically.
+// ════════════════════════════════════════════════════════════
+class ExplosiveBarrel extends MapObject {
+    constructor(x, y) {
+        // Barrels are 30×38 world units; solid so entities collide with them
+        super(x, y, 30, 38, 'barrel');
+        this.hp         = 50;
+        this.maxHp      = 50;
+        this.isExploded = false;
+        this.radius     = 35;   // visual/interaction radius — used by explosion AoE
+    }
+
+    draw() {
+        const screen = worldToScreen(this.x, this.y);
+        const cx     = screen.x + this.w / 2;
+        const cy     = screen.y + this.h / 2;
+        const now    = _mapNow;
+
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+
+        const W = this.w;   // 30
+        const H = this.h;   // 38
+
+        // ── Ground shadow ─────────────────────────────────────
+        CTX.save();
+        CTX.globalAlpha = 0.30;
+        CTX.fillStyle   = '#000000';
+        CTX.beginPath();
+        CTX.ellipse(W / 2, H + 5, W * 0.55, 6, 0, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.restore();
+
+        // ── Barrel body — dark red cylinder ───────────────────
+        // Base colour shifts to bright orange as HP drops
+        const hpFrac   = this.hp / this.maxHp;
+        const bodyR    = Math.round(140 + (1 - hpFrac) * 80);   // 140 → 220
+        const bodyG    = Math.round(20  + (1 - hpFrac) * 40);   // 20  → 60
+        CTX.fillStyle  = `rgb(${bodyR},${bodyG},20)`;
+        CTX.strokeStyle = '#1c0a00';
+        CTX.lineWidth   = 2;
+        CTX.beginPath();
+        CTX.roundRect(0, 4, W, H - 8, 5);
+        CTX.fill();
+        CTX.stroke();
+
+        // Top cap
+        CTX.fillStyle = `rgb(${Math.round(bodyR * 0.7)},${Math.round(bodyG * 0.7)},15)`;
+        CTX.beginPath();
+        CTX.roundRect(2, 0, W - 4, 8, 3);
+        CTX.fill();
+        CTX.stroke();
+
+        // Bottom cap
+        CTX.fillStyle = `rgb(${Math.round(bodyR * 0.7)},${Math.round(bodyG * 0.7)},15)`;
+        CTX.beginPath();
+        CTX.roundRect(2, H - 8, W - 4, 8, 3);
+        CTX.fill();
+        CTX.stroke();
+
+        // ── Hazard stripes — three yellow/black diagonal bands ─
+        // Clipped inside the barrel body so they don't overflow
+        CTX.save();
+        CTX.beginPath();
+        CTX.roundRect(1, 5, W - 2, H - 10, 4);
+        CTX.clip();
+        const stripeW = 9;
+        CTX.fillStyle = 'rgba(250,204,21,0.75)';
+        for (let i = -2; i < 6; i++) {
+            // Diagonal slash: offset every other one for classic chevron look
+            const sx = i * stripeW * 2;
+            CTX.beginPath();
+            CTX.moveTo(sx,         5);
+            CTX.lineTo(sx + stripeW, 5);
+            CTX.lineTo(sx + stripeW - (H - 10) * 0.5, H - 5);
+            CTX.lineTo(sx           - (H - 10) * 0.5, H - 5);
+            CTX.closePath();
+            CTX.fill();
+        }
+        CTX.restore();
+
+        // ── Metal bands (rims) ────────────────────────────────
+        CTX.strokeStyle = 'rgba(80,30,10,0.85)';
+        CTX.lineWidth   = 3;
+        CTX.beginPath();
+        CTX.roundRect(1, Math.round(H * 0.30), W - 2, 4, 1);
+        CTX.stroke();
+        CTX.beginPath();
+        CTX.roundRect(1, Math.round(H * 0.62), W - 2, 4, 1);
+        CTX.stroke();
+
+        // ── ⚠ Hazard symbol centred on body ──────────────────
+        CTX.font         = '12px Arial';
+        CTX.textAlign    = 'center';
+        CTX.textBaseline = 'middle';
+        CTX.shadowBlur   = 0;
+        CTX.fillText('⚠️', W / 2, H / 2);
+
+        // ── Low-HP flicker glow — barrel glows hotter near death ─
+        if (hpFrac < 0.5) {
+            const glow  = (1 - hpFrac * 2) * (0.5 + Math.sin(now / 80) * 0.5);
+            CTX.globalAlpha = glow * 0.55;
+            CTX.shadowBlur  = 0;
+            CTX.fillStyle   = 'rgba(249,115,22,0.9)';
+            CTX.beginPath();
+            CTX.roundRect(0, 4, W, H - 8, 5);
+            CTX.fill();
+            CTX.globalAlpha = 1;
+        }
+
+        CTX.restore();
+
+        // ── HP bar — only drawn if barrel has taken damage ────
+        // Drawn after the main CTX.restore() so it sits in world
+        // space above the barrel, not clipped by any inner state.
+        if (this.hp < this.maxHp) {
+            const BAR_W  = 34;
+            const BAR_H  = 5;
+            const barX   = cx - BAR_W / 2;
+            const barY   = screen.y - 10;
+            const pct    = Math.max(0, this.hp / this.maxHp);
+            const barCol = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
+
+            CTX.save();
+            // Background track
+            CTX.fillStyle = 'rgba(0,0,0,0.60)';
+            CTX.fillRect(barX, barY, BAR_W, BAR_H);
+            // Filled portion
+            CTX.fillStyle = barCol;
+            CTX.fillRect(barX, barY, BAR_W * pct, BAR_H);
+            // Border
+            CTX.strokeStyle = 'rgba(0,0,0,0.80)';
+            CTX.lineWidth   = 1;
+            CTX.strokeRect(barX, barY, BAR_W, BAR_H);
+            CTX.restore();
         }
     }
 }
@@ -515,6 +662,39 @@ class MapSystem {
         for(const wall of BALANCE.map.wallPositions){
             this.objects.push(new MapObject(wall.x,wall.y,wall.w,wall.h,'wall'));
         }
+
+        // ── Explosive Barrels (5–8 placed in mid-range zones) ──────
+        // Placed 200–900 units from origin to keep them in playable
+        // territory without blocking the spawn point or MTC Room.
+        // Each barrel is separated from every other object by at least
+        // 280 world units so clusters don't create impassable walls.
+        const barrelCount = 5 + Math.floor(Math.random() * 4); // 5–8
+        let barrelsPlaced = 0;
+        let barrelTries   = 0;
+        while (barrelsPlaced < barrelCount && barrelTries < barrelCount * 25) {
+            barrelTries++;
+            const angle = Math.random() * Math.PI * 2;
+            // Spawn between 200 and 900 units from origin
+            const distance = 200 + Math.random() * 700;
+            const bx = Math.cos(angle) * distance;
+            const by = Math.sin(angle) * distance;
+
+            // Skip the MTC Room footprint (guard rectangle -520 to -80, -220 to 220)
+            if (bx > -560 && bx < -50 && by > -250 && by < 250) continue;
+            // Skip the player spawn zone
+            if (Math.abs(bx) < 200 && Math.abs(by) < 200) continue;
+
+            // Ensure minimum separation from every existing object
+            let tooClose = false;
+            for (const obj of this.objects) {
+                if (Math.hypot(obj.x - bx, obj.y - by) < 280) { tooClose = true; break; }
+            }
+            if (tooClose) continue;
+
+            this.objects.push(new ExplosiveBarrel(bx, by));
+            barrelsPlaced++;
+        }
+        console.log(`🛢️ Campus Map: placed ${barrelsPlaced} explosive barrel(s)`);
     }
 
     update(entities, dt = 0) {
@@ -997,11 +1177,12 @@ class MapSystem {
 
 const mapSystem = new MapSystem();
 
-window.mapSystem  = mapSystem;
-window.MapSystem  = MapSystem;
-window.MapObject  = MapObject;
-window.MTCRoom    = MTCRoom;
+window.mapSystem        = mapSystem;
+window.MapSystem        = MapSystem;
+window.MapObject        = MapObject;
+window.MTCRoom          = MTCRoom;
+window.ExplosiveBarrel  = ExplosiveBarrel;
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { MapObject, MTCRoom, MapSystem, mapSystem };
+    module.exports = { MapObject, MTCRoom, MapSystem, mapSystem, ExplosiveBarrel };
 }

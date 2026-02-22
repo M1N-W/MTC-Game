@@ -284,6 +284,145 @@ function updateGame(dt) {
 
     projectileManager.update(dt, window.player, window.enemies, window.boss);
 
+    // ── Explosive Barrel — Projectile Collision & Explosion ───────────
+    // Runs every frame after projectile positions are finalised.
+    // Two passes:
+    //   Pass A — check every live projectile against every barrel.
+    //            Damage the barrel; mark the projectile dead.
+    //   Pass B — for any barrel that just died, trigger the AoE explosion
+    //            and queue it for removal from mapSystem.objects.
+    //
+    // Both passes are guarded so that a barrel which exploded *this frame*
+    // cannot be hit again before it is removed, and a single projectile
+    // cannot damage two barrels in one frame (proj.dead breaks the inner loop).
+    if (typeof projectileManager !== 'undefined' &&
+        window.mapSystem && Array.isArray(window.mapSystem.objects)) {
+
+        const allProj = projectileManager.projectiles;
+
+        // ── Pass A: projectile → barrel hit detection ─────────────────
+        for (let pi = allProj.length - 1; pi >= 0; pi--) {
+            const proj = allProj[pi];
+            if (!proj || proj.dead) continue;
+
+            for (let bi = window.mapSystem.objects.length - 1; bi >= 0; bi--) {
+                const obj = window.mapSystem.objects[bi];
+                // Only target live ExplosiveBarrel instances
+                if (!(obj instanceof ExplosiveBarrel) || obj.isExploded) continue;
+
+                // Circle–rectangle collision: treat barrel as its AABB
+                const closestX = Math.max(obj.x, Math.min(proj.x, obj.x + obj.w));
+                const closestY = Math.max(obj.y, Math.min(proj.y, obj.y + obj.h));
+                const hitDist  = Math.hypot(proj.x - closestX, proj.y - closestY);
+
+                if (hitDist < (proj.radius || 6)) {
+                    // ── Register hit on barrel ──────────────────────────
+                    const dmg = proj.damage || 10;
+                    obj.hp -= dmg;
+
+                    // Hit spark feedback
+                    spawnParticles(proj.x, proj.y, 5, '#f59e0b');
+
+                    // Destroy projectile so it doesn't travel further
+                    proj.dead = true;
+
+                    // Invalidate sorted draw cache (visual state changed)
+                    window.mapSystem._sortedObjects = null;
+
+                    break; // one projectile hits at most one barrel per frame
+                }
+            }
+        }
+
+        // ── Pass B: barrel death → AoE explosion ──────────────────────
+        const survivingObjects = [];
+        for (const obj of window.mapSystem.objects) {
+
+            // Non-barrel objects always survive this loop
+            if (!(obj instanceof ExplosiveBarrel)) {
+                survivingObjects.push(obj);
+                continue;
+            }
+
+            if (obj.hp <= 0 && !obj.isExploded) {
+                // ── Mark exploded first — prevents double-trigger ───────
+                obj.isExploded = true;
+
+                const barrelCX = obj.x + obj.w / 2;
+                const barrelCY = obj.y + obj.h / 2;
+
+                // ── Screen-shake & particle burst ──────────────────────
+                addScreenShake(20);
+
+                // Fire burst — large bright orange spray
+                spawnParticles(barrelCX, barrelCY, 35, '#f97316');
+                // Smoke cloud — grey particles that linger
+                spawnParticles(barrelCX, barrelCY, 20, '#71717a');
+                // Inner white-hot flash
+                spawnParticles(barrelCX, barrelCY, 10, '#fef3c7');
+
+                // ── BOOM floating text ──────────────────────────────────
+                spawnFloatingText('💥 BOOM!', barrelCX, barrelCY - 55, '#f97316', 38);
+
+                // ── AoE Damage — 180 px radius, 150 damage ─────────────
+                const EXPLOSION_RADIUS = 180;
+                const EXPLOSION_DAMAGE = 150;
+
+                // Player
+                if (window.player && !window.player.dead) {
+                    const pd = Math.hypot(window.player.x - barrelCX, window.player.y - barrelCY);
+                    if (pd < EXPLOSION_RADIUS) {
+                        // Scale damage by proximity: full at 0, half at edge
+                        const falloff = 1 - (pd / EXPLOSION_RADIUS) * 0.5;
+                        window.player.takeDamage(EXPLOSION_DAMAGE * falloff);
+                        spawnFloatingText(
+                            `🔥 ${Math.round(EXPLOSION_DAMAGE * falloff)}`,
+                            window.player.x, window.player.y - 60, '#ef4444', 22
+                        );
+                    }
+                }
+
+                // Enemies
+                for (let ei = window.enemies.length - 1; ei >= 0; ei--) {
+                    const enemy = window.enemies[ei];
+                    if (!enemy || enemy.dead) continue;
+                    const ed = Math.hypot(enemy.x - barrelCX, enemy.y - barrelCY);
+                    if (ed < EXPLOSION_RADIUS) {
+                        const falloff = 1 - (ed / EXPLOSION_RADIUS) * 0.5;
+                        enemy.takeDamage(EXPLOSION_DAMAGE * falloff);
+                    }
+                }
+
+                // Boss
+                if (window.boss && !window.boss.dead) {
+                    const bd = Math.hypot(window.boss.x - barrelCX, window.boss.y - barrelCY);
+                    if (bd < EXPLOSION_RADIUS) {
+                        const falloff = 1 - (bd / EXPLOSION_RADIUS) * 0.5;
+                        window.boss.takeDamage(EXPLOSION_DAMAGE * falloff);
+                        spawnFloatingText('BARREL HIT!', window.boss.x, window.boss.y - 80, '#f97316', 26);
+                    }
+                }
+
+                // ── Remove barrel from objects (do not push to surviving) ──
+                window.mapSystem._sortedObjects = null;
+                // intentional: no survivingObjects.push(obj)
+
+            } else if (!obj.isExploded) {
+                // Barrel still alive — keep it
+                survivingObjects.push(obj);
+            }
+            // isExploded but hp > 0 can't happen; if isExploded already,
+            // skip (it was cleaned up in a previous frame's pass).
+        }
+
+        // Replace the objects array with the survivors
+        if (survivingObjects.length !== window.mapSystem.objects.length) {
+            window.mapSystem.objects = survivingObjects;
+            window.mapSystem._sortedObjects = null;
+        }
+    }
+    // ── End Explosive Barrel Logic ─────────────────────────────────────
+
     for (let i = window.powerups.length - 1; i >= 0; i--) {
         if (window.powerups[i].update(dt, window.player)) window.powerups.splice(i, 1);
     }
