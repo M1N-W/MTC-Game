@@ -477,10 +477,10 @@ const VISUALS = {
 // 🏆 ACHIEVEMENT DEFINITIONS
 // ══════════════════════════════════════════════════════════════
 const ACHIEVEMENT_DEFS = [
-    { id: 'first_blood', name: 'First Blood', desc: 'ฆ่าศัตรูตัวแรก', icon: '⚔️' },
-    { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave 1', icon: '🌊' },
-    { id: 'manop_down', name: 'Manop Slayer', desc: 'เอาชนะครูมานพครั้งแรก', icon: '👑' },
-    { id: 'first_down', name: 'Physics Breaker', desc: 'เอาชนะครูเฟิร์สผู้ปราดเปรียว', icon: '⚛️' },
+    { id: 'first_blood', name: 'First Blood', desc: 'เคลียร์ศัตรูตัวแรก', icon: '⚔️' },
+    { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave แรก', icon: '🌊' },
+    { id: 'manop_down', name: '1st Manop Slayer', desc: 'เอาชนะครูมานพครั้งแรก', icon: '👑' },
+    { id: 'first_down', name: 'Physics Breaker', desc: 'เอาชนะครูเฟิร์สแซนด์วิชหมู', icon: '⚛️' },
     { id: 'parry_master', name: 'Return to Sender', desc: 'Parry แซนด์วิชหมูกลับไปหาครูเฟิร์ส', icon: '🥪' },
     { id: 'shop_max', name: 'Capitalism', desc: 'ซื้อบัฟร้านค้าจนเต็มสแต็ก 1.5x', icon: '📈' },
     { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️' },

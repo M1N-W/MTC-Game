@@ -519,7 +519,7 @@ class PorkSandwich {
                     addScreenShake(8);
 
                     // ── Achievement ───────────────────────────
-                    Achievements.unlock('parry_master');
+                    Achievements.check('parry_master');
                     break;
                 }
             }

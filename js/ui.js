@@ -72,6 +72,7 @@ class AchievementSystem {
                 && window.player instanceof PoomPlayer
                 && window.player.nagaCount >= 3; break;
             case 'shopaholic': unlock = this.stats.shopPurchases >= 5; break;
+            case 'parry_master': unlock = true; break;
         }
         if (unlock) this.unlock(ach);
     }
