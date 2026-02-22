@@ -967,6 +967,17 @@ class DeadlyGraph {
             if (this.timer >= this.blockingDuration) {
                 this.phase = 'active';
                 this.timer = 0;
+
+                // ── Destructible environment: line-AABB sweep ────────
+                // Fired at the exact moment the laser becomes fully active,
+                // using the true full-length endpoint derived from trigonometry.
+                // Destroys any MapObject the damage line passes through
+                // and shrinks the MTCRoom by 10% if it is intersected.
+                if (window.mapSystem && typeof window.mapSystem.damageArea === 'function') {
+                    const actualEndX = this.startX + Math.cos(this.angle) * this.maxLength;
+                    const actualEndY = this.startY + Math.sin(this.angle) * this.maxLength;
+                    window.mapSystem.damageArea(this.startX, this.startY, actualEndX, actualEndY);
+                }
             }
         } else if (this.phase === 'active') {
             // High ground mechanic

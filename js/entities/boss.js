@@ -583,17 +583,6 @@ class Boss extends Entity {
             graphEnd.x,   graphEnd.y,
             BALANCE.boss.graphDuration
         ));
-
-        // ── Destructible environment: line-AABB sweep ────────
-        // Called at the moment the graph becomes fully active.
-        // Destroys any MapObject the damage line passes through
-        // and shrinks the MTCRoom by 10% if it is intersected.
-        if (window.mapSystem && typeof window.mapSystem.damageArea === 'function') {
-            window.mapSystem.damageArea(
-                graphStart.x, graphStart.y,
-                graphEnd.x,   graphEnd.y
-            );
-        }
     }
 
     useLog457() {
