@@ -1405,6 +1405,180 @@ function spawnWanchaiPunchText(x, y) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// PorkSandwich — BossFirst SANDWICH_TOSS projectile
+// Thrown by KRU FIRST; arcs toward the player's position at launch, spins
+// in the air, deals contact damage on hit, then expires.
+// ──────────────────────────────────────────────────────────────────────────────
+class PorkSandwich {
+    /**
+     * @param {number} x      - World-space spawn X (boss position)
+     * @param {number} y      - World-space spawn Y (boss position)
+     * @param {number} angle  - Launch angle in radians (toward player)
+     * @param {object} boss   - Reference to the BossFirst that threw it
+     */
+    constructor(x, y, angle, boss) {
+        this.x     = x;
+        this.y     = y;
+        this.angle = angle;
+        this.boss  = boss;
+        this.dead  = false;
+
+        // Travel speed (px/s) — fast enough to be threatening, slow enough to dodge
+        this.speed  = 520;
+        this.vx     = Math.cos(angle) * this.speed;
+        this.vy     = Math.sin(angle) * this.speed;
+
+        // Visual spin
+        this.rotation  = 0;
+        this.spinSpeed = 8; // rad/s
+
+        // Slight homing: tracks player weakly for the first 0.5 s
+        this.homingDuration = 0.5;
+        this.homingStrength = 3.5; // angular correction rad/s²
+
+        // Lifetime before auto-removal
+        this.maxLife = 3.5;
+        this.life    = 0;
+
+        // Damage on contact (once per hit, then brief iFrames)
+        this.damage   = BALANCE.boss.contactDamage * 4.5;
+        this.hitTimer = 0;  // seconds of i-frames after hitting player
+        this.HIT_CD   = 0.8;
+
+        // Size used for collision and drawing
+        this.radius = 22;
+
+        // Trail for visual flair
+        this._trail = []; // [{x, y, age}]
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+
+        this.life    += dt;
+        this.rotation += this.spinSpeed * dt;
+        if (this.hitTimer > 0) this.hitTimer -= dt;
+
+        // ── Weak homing during the first homingDuration seconds ──────────
+        if (this.life < this.homingDuration) {
+            const tdx    = player.x - this.x;
+            const tdy    = player.y - this.y;
+            const tAngle = Math.atan2(tdy, tdx);
+            const curAngle = Math.atan2(this.vy, this.vx);
+
+            // Shortest-path angular diff
+            let diff = tAngle - curAngle;
+            while (diff >  Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+
+            const correction = Math.sign(diff) * Math.min(Math.abs(diff), this.homingStrength * dt);
+            const newAngle   = curAngle + correction;
+            const spd        = Math.hypot(this.vx, this.vy);
+            this.vx = Math.cos(newAngle) * spd;
+            this.vy = Math.sin(newAngle) * spd;
+        }
+
+        // ── Move ──────────────────────────────────────────────────────────
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        // ── Trail ─────────────────────────────────────────────────────────
+        this._trail.push({ x: this.x, y: this.y, age: 0 });
+        for (const p of this._trail) p.age += dt;
+        while (this._trail.length > 0 && this._trail[0].age > 0.25) this._trail.shift();
+
+        // ── Player collision ──────────────────────────────────────────────
+        if (this.hitTimer <= 0) {
+            const d = Math.hypot(player.x - this.x, player.y - this.y);
+            if (d < this.radius + player.radius) {
+                player.takeDamage(this.damage);
+                this.hitTimer = this.HIT_CD;
+                addScreenShake(6);
+                spawnParticles(this.x, this.y, 10, '#f59e0b');
+                spawnFloatingText('🥪 BONK!', this.x, this.y - 40, '#f97316', 22);
+                this.dead = true;
+                return true;
+            }
+        }
+
+        // ── Expire after maxLife ──────────────────────────────────────────
+        if (this.life >= this.maxLife) {
+            this.dead = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    draw() {
+        if (this.dead) return;
+
+        const screen = worldToScreen(this.x, this.y);
+
+        // ── Trail ─────────────────────────────────────────────────────────
+        for (const p of this._trail) {
+            const s   = worldToScreen(p.x, p.y);
+            const fac = 1 - p.age / 0.25;
+            CTX.beginPath();
+            CTX.arc(s.x, s.y, this.radius * 0.45 * fac, 0, Math.PI * 2);
+            CTX.fillStyle = `rgba(249, 115, 22, ${0.35 * fac})`;
+            CTX.fill();
+        }
+
+        // ── Sandwich sprite (drawn with canvas 2D primitives) ─────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.rotation);
+
+        const r = this.radius;
+
+        // Bottom bun
+        CTX.fillStyle = '#d97706';  // amber-600
+        CTX.beginPath();
+        CTX.ellipse(0, r * 0.35, r * 0.9, r * 0.38, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Filling (lettuce-ish green stripe)
+        CTX.fillStyle = '#4ade80';
+        CTX.beginPath();
+        CTX.ellipse(0, r * 0.08, r * 0.82, r * 0.22, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Pork layer
+        CTX.fillStyle = '#fb923c'; // orange-400
+        CTX.beginPath();
+        CTX.ellipse(0, -r * 0.05, r * 0.78, r * 0.18, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        // Top bun
+        CTX.fillStyle = '#f59e0b';  // amber-400
+        CTX.beginPath();
+        CTX.ellipse(0, -r * 0.3, r * 0.85, r * 0.42, 0, 0, Math.PI);
+        CTX.fill();
+
+        // Sesame seeds (top bun detail)
+        CTX.fillStyle = '#fef3c7';
+        for (let i = -1; i <= 1; i++) {
+            CTX.beginPath();
+            CTX.ellipse(i * r * 0.28, -r * 0.52, 3, 2, i * 0.4, 0, Math.PI * 2);
+            CTX.fill();
+        }
+
+        // Glow outline
+        CTX.strokeStyle = 'rgba(251,191,36,0.7)';
+        CTX.lineWidth   = 2.5;
+        CTX.shadowBlur  = 14;
+        CTX.shadowColor = '#f59e0b';
+        CTX.beginPath();
+        CTX.ellipse(0, -r * 0.3, r * 0.85, r * 0.42, 0, 0, Math.PI);
+        CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        CTX.restore();
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Export
 // ──────────────────────────────────────────────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
@@ -1414,7 +1588,7 @@ if (typeof module !== 'undefined' && module.exports) {
         HitMarker, HitMarkerSystem, hitMarkerSystem,
         spawnHitMarker,
         Raindrop, Snowflake, WeatherSystem, weatherSystem,
-        EquationSlam, DeadlyGraph, MeteorStrike,
+        EquationSlam, DeadlyGraph, MeteorStrike, PorkSandwich,
         spawnParticles, spawnFloatingText,
         spawnWanchaiPunchText,
         drawGlitchEffect,
