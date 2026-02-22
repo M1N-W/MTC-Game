@@ -11,7 +11,6 @@
  *   BarkWave           — Sonic cone from Boss bark (Phase 2)
  *   GoldfishMinion     — Kamikaze sine-wave chaser (Phase 3)
  *   BubbleProjectile   — Slow AoE projectile (Phase 3)
- *   PorkSandwich       — Interactive parry projectile (BossFirst)
  *   FreeFallWarningRing — Visual AoE warning indicator (BossFirst)
  */
 
@@ -365,154 +364,6 @@ class BubbleProjectile {
     }
 }
 
-// ════════════════════════════════════════════════════════════
-// 🥪 PORK SANDWICH — Interactive parry projectile (BossFirst)
-// Normal:  player catches → +35 HP + speed boost → boss BERSERK
-// Parried: dash-parry reverses it → hits boss → boss STUNNED
-// ════════════════════════════════════════════════════════════
-class PorkSandwich {
-    constructor(x, y, angle, boss) {
-        this.x         = x;
-        this.y         = y;
-        this.vx        = Math.cos(angle) * 340;
-        this.vy        = Math.sin(angle) * 340;
-        this.radius    = 16;
-        this.angle     = angle;
-        this.dead      = false;
-        this.parried   = false;
-        this.lifeTimer = 0;
-        this._boss     = boss;
-        this._spinT    = 0;
-    }
-
-    update(dt, player) {
-        if (this.dead) return true;
-        this.lifeTimer += dt;
-        this._spinT    += dt * 5;
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-
-        if (this.lifeTimer > 4.0) { this.dead = true; return true; }
-
-        // Dash-parry check
-        if (!this.parried && player._parryActive) {
-            const d = Math.hypot(player.x - this.x, player.y - this.y);
-            if (d < this.radius + player.radius + 20) {
-                this.tryParry();
-                return false;
-            }
-        }
-
-        // Hit player (unparried)
-        if (!this.parried) {
-            const dp = Math.hypot(player.x - this.x, player.y - this.y);
-            if (dp < this.radius + player.radius) {
-                const healAmt = 35;
-                player.hp = Math.min(player.maxHp, player.hp + healAmt);
-                spawnFloatingText(`+${healAmt} HP 🥪 yummy!`, player.x, player.y - 55, '#fbbf24', 24);
-                if (!player._sandwichBoostActive) {
-                    player._sandwichOrigSpeed   = player.moveSpeed;
-                    player._sandwichBoostActive = true;
-                    player.moveSpeed           *= 1.45;
-                    setTimeout(() => {
-                        if (player._sandwichBoostActive) {
-                            player.moveSpeed        = player._sandwichOrigSpeed;
-                            player._sandwichBoostActive = false;
-                        }
-                    }, 4000);
-                }
-                spawnFloatingText('⚡ SPEED BOOST!', player.x, player.y - 80, '#fbbf24', 20);
-                spawnParticles(player.x, player.y, 14, '#fbbf24');
-                if (this._boss && !this._boss.dead) {
-                    this._boss.isEnraged = true;
-                    this._boss._enterState('BERSERK');
-                    spawnFloatingText('😡 BERSERK!', this._boss.x, this._boss.y - 80, '#ef4444', 30);
-                    addScreenShake(12);
-                }
-                this.dead = true;
-                return true;
-            }
-        }
-
-        // Parried — hits boss
-        if (this.parried && this._boss && !this._boss.dead) {
-            const db = Math.hypot(this._boss.x - this.x, this._boss.y - this.y);
-            if (db < this.radius + this._boss.radius) {
-                this._boss._enterState('STUNNED');
-                spawnFloatingText('🥪 PARRY! STUNNED!', this._boss.x, this._boss.y - 80, '#39ff14', 30);
-                spawnParticles(this._boss.x, this._boss.y, 20, '#39ff14');
-                addScreenShake(10);
-                this.dead = true;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    tryParry() {
-        this.parried = true;
-        if (this._boss && !this._boss.dead) {
-            const ba = Math.atan2(this._boss.y - this.y, this._boss.x - this.x);
-            this.vx  = Math.cos(ba) * 480;
-            this.vy  = Math.sin(ba) * 480;
-        } else {
-            this.vx = -this.vx * 1.4;
-            this.vy = -this.vy * 1.4;
-        }
-        spawnFloatingText('🥪 PARRIED!', this.x, this.y - 40, '#39ff14', 26);
-        spawnParticles(this.x, this.y, 10, '#39ff14');
-        addScreenShake(6);
-    }
-
-    draw() {
-        if (this.dead) return;
-        const screen = worldToScreen(this.x, this.y);
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this._spinT);
-
-        const r = this.radius;
-
-        if (this.parried) {
-            CTX.shadowBlur  = 18;
-            CTX.shadowColor = '#39ff14';
-            CTX.strokeStyle = 'rgba(57,255,20,0.6)';
-            CTX.lineWidth   = 2.5;
-            CTX.beginPath(); CTX.arc(0, 0, r + 5, 0, Math.PI * 2); CTX.stroke();
-            CTX.shadowBlur  = 0;
-        }
-
-        // Bun top
-        CTX.fillStyle = '#d97706';
-        CTX.beginPath(); CTX.ellipse(0, -r * 0.25, r, r * 0.55, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#92400e'; CTX.lineWidth = 1.5;
-        CTX.beginPath(); CTX.ellipse(0, -r * 0.25, r, r * 0.55, 0, 0, Math.PI * 2); CTX.stroke();
-
-        // Sesame seeds
-        CTX.fillStyle = '#fef3c7';
-        for (let si = 0; si < 5; si++) {
-            const sa = (si / 5) * Math.PI * 2;
-            CTX.beginPath();
-            CTX.ellipse(Math.cos(sa) * r * 0.52, -r * 0.25 + Math.sin(sa) * r * 0.28, 2.2, 1.2, sa, 0, Math.PI * 2);
-            CTX.fill();
-        }
-
-        // Pork + sauce
-        CTX.fillStyle = '#c2410c';
-        CTX.beginPath(); CTX.ellipse(0, r * 0.05, r * 0.88, r * 0.28, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.fillStyle = '#dc2626';
-        CTX.beginPath(); CTX.ellipse(r * 0.2, r * 0.15, r * 0.12, r * 0.20, 0.3, 0, Math.PI * 2); CTX.fill();
-
-        // Bun bottom
-        CTX.fillStyle = '#b45309';
-        CTX.beginPath(); CTX.ellipse(0, r * 0.38, r * 0.92, r * 0.38, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#92400e'; CTX.lineWidth = 1.5;
-        CTX.beginPath(); CTX.ellipse(0, r * 0.38, r * 0.92, r * 0.38, 0, 0, Math.PI * 2); CTX.stroke();
-
-        CTX.restore();
-    }
-}
 
 // ════════════════════════════════════════════════════════════
 // ⚠️  FREE FALL WARNING RING — AoE visual indicator (BossFirst)
@@ -562,11 +413,10 @@ class FreeFallWarningRing {
 
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, PorkSandwich, FreeFallWarningRing };
+    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing };
 }
 // ── Global exports ────────────────────────────────────────────
 window.BarkWave            = BarkWave;
 window.GoldfishMinion      = GoldfishMinion;
 window.BubbleProjectile    = BubbleProjectile;
-window.PorkSandwich        = PorkSandwich;
 window.FreeFallWarningRing = FreeFallWarningRing;
