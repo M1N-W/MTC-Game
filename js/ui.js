@@ -23,7 +23,7 @@
  *
  *    Appearance:
  *      • Bold pill-shaped banner, purple background with neon glow.
- *      • Text: "⚠️ CONFUSED: INVERT YOUR MOVEMENT! ⚠️"
+ *      • Text: "⚠️ CONFUSED : INVERT YOUR MOVEMENT! ⚠️"
  *      • Flashes at ~4 Hz (Math.sin period 125 ms) so it grabs
  *        attention without becoming permanently distracting.
  *      • Positioned at H - 270 px so it sits clearly above the
@@ -620,7 +620,7 @@ class UIManager {
      * drawConfusedWarning(ctx)
      *
      * Renders a flashing purple pill banner:
-     *   "⚠️ CONFUSED: INVERT YOUR MOVEMENT! ⚠️"
+     *   "⚠️ CONFUSED : INVERT YOUR MOVEMENT! ⚠️"
      *
      * Only visible while window.player.isConfused === true.
      * Uses ctx.save/restore so no canvas state leaks outward.
@@ -646,7 +646,7 @@ class UIManager {
         const H       = canvas.height;
         const cx      = W / 2;
         const cy      = H - 270;
-        const text    = '⚠️ CONFUSED: INVERT YOUR MOVEMENT! ⚠️';
+        const text    = '⚠️ CONFUSED : INVERT YOUR MOVEMENT! ⚠️';
         const fontSize = 17;
         const padX    = 22;
         const padY    = 11;
