@@ -844,8 +844,15 @@ class AudioSystem {
                         console.log(`🎵 Now playing BGM: ${type}`);
                     })
                     .catch(error => {
-                        // ── Failure path (almost always autoplay policy block) ─
+                        // ปลดล็อคสถานะการเล่นก่อนเสมอ
                         this._bgmPlayInProgress = false;
+
+                        // 👇 เพิ่มเงื่อนไขนี้: ถ้าเป็นการสั่งหยุดเล่นกะทันหัน (ข้ามฉาก) ให้จบการทำงานเงียบๆ
+                        if (error.name === 'AbortError') {
+                            return;
+                        }
+
+                        // ── Failure path (เบราว์เซอร์บล็อก Autoplay จริงๆ) ─
                         console.warn('🎵 BGM autoplay blocked or error:', error);
                         this._bgmWaitingForInteraction = true;
                         this.setupRetryBGM(type);
