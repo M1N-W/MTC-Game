@@ -70,6 +70,11 @@ class PoomPlayer extends Entity {
         this.cooldownMultiplier = 1.0;
     }
 
+    // ── Second Wind: computed live, no timer needed ──────────
+    get isSecondWind() {
+        return this.hp > 0 && (this.hp / this.maxHp) <= (BALANCE.player.secondWindHpPct || 0.2);
+    }
+
     update(dt, keys, mouse) {
         const S = this.stats;
         const PHY = BALANCE.physics;
@@ -93,6 +98,11 @@ class PoomPlayer extends Entity {
             if (this.confusedTimer <= 0) { this.isConfused = false; this.confusedTimer = 0; }
         }
         if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
+        // ── goldenAuraTimer tick (was missing from PoomPlayer) ──
+        if (this.goldenAuraTimer > 0) {
+            this.goldenAuraTimer -= dt;
+            if (Math.random() < 0.5) spawnParticles(this.x + rand(-25, 25), this.y + rand(-25, 25), 1, '#fbbf24');
+        }
 
         if (this.isEatingRice) {
             this.eatRiceTimer -= dt;
@@ -124,6 +134,11 @@ class PoomPlayer extends Entity {
 
         // ── Apply Combo Speed Buff ──
         speedMult *= (1 + ((this.comboCount || 0) * 0.01));
+        // ── Second Wind Speed Buff ──
+        if (this.isSecondWind) {
+            speedMult *= (BALANCE.player.secondWindSpeedMult || 1.3);
+            if (Math.random() < 0.1) spawnParticles(this.x + rand(-15, 15), this.y + rand(-15, 15), 1, '#ef4444');
+        }
 
         if (!this.isDashing) {
             this.vx += ax * PHY.acceleration * dt;
@@ -268,7 +283,18 @@ class PoomPlayer extends Entity {
         if (this.isEatingRice) critChance += S.eatRiceCritBonus;
         if (Math.random() < critChance) {
             damage *= S.critMultiplier; isCrit = true;
+            if (this.passiveUnlocked) this.goldenAuraTimer = 1;
             Achievements.stats.crits++; Achievements.check('crit_master');
+        }
+        // ── Second Wind Damage Multiplier ──
+        if (this.isSecondWind) {
+            damage *= (BALANCE.player.secondWindDamageMult || 1.5);
+        }
+        // ── Passive Lifesteal ──
+        if (this.passiveUnlocked) {
+            const healAmount = damage * S.passiveLifesteal;
+            this.hp = Math.min(this.maxHp, this.hp + healAmount);
+            if (Math.random() < 0.3) spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
         }
         return { damage, isCrit };
     }

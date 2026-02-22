@@ -116,6 +116,11 @@ class AutoPlayer extends Player {
                 // Calculate base damage
                 let baseDmg = (this.stats?.wanchaiDamage ?? 12) * (this.damageMultiplier || 1.0);
 
+                // ── Second Wind Damage Multiplier (Stand Rush bypasses dealDamage) ──
+                if (this.isSecondWind) {
+                    baseDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
+                }
+
                 // Apply Awakening Crit Buff directly to flurry punches
                 let critChance = this.baseCritChance;
                 if (this.passiveUnlocked) critChance += (this.stats?.passiveCritBonus ?? 0);
