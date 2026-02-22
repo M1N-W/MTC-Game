@@ -24,6 +24,15 @@ class AutoPlayer extends Player {
     }
 
     takeDamage(amt) {
+        // ── Energy Shield block (checked before Wanchai reduction) ──
+        if (this.isDashing) return;
+        if (this.hasShield) {
+            this.hasShield = false;
+            spawnFloatingText('🛡️ BLOCKED!', this.x, this.y - 40, '#8b5cf6', 22);
+            spawnParticles(this.x, this.y, 20, '#c4b5fd');
+            if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
+            return;
+        }
         const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.5) : 0;
         const scaled = amt * (1 - reduction);
         super.takeDamage(scaled);
@@ -461,6 +470,23 @@ class AutoPlayer extends Player {
             CTX.beginPath(); CTX.arc(tx, ty, 2, 0, Math.PI * 2); CTX.fill();
         });
         CTX.globalAlpha = 1; CTX.shadowBlur = 0;
+
+        // ── Energy Shield visual ring ────────────────────────────
+        if (this.hasShield) {
+            const shieldT = performance.now() / 200;
+            CTX.save();
+            CTX.globalAlpha = 0.6 + Math.sin(shieldT) * 0.2;
+            CTX.strokeStyle = '#8b5cf6';
+            CTX.lineWidth = 3;
+            CTX.shadowBlur = 15;
+            CTX.shadowColor = '#8b5cf6';
+            CTX.beginPath();
+            CTX.arc(0, 0, 25, 0, Math.PI * 2);
+            CTX.stroke();
+            CTX.fillStyle = 'rgba(139, 92, 246, 0.15)';
+            CTX.fill();
+            CTX.restore();
+        }
 
         CTX.restore(); // ── end LAYER 1 ──
 

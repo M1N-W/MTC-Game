@@ -391,6 +391,11 @@ const SHOP_ITEMS = {
         id: 'speedUp', name: 'Lightweight Boots', icon: '👟',
         cost: 700, mult: 1.1, duration: 30,
         desc: 'ความเร็ว ×1.1 เป็นเวลา 30 วิ', color: '#06b6d4'
+    },
+    shield: {
+        id: 'shield', name: 'Energy Shield', icon: '🛡️',
+        cost: 1200, duration: null,
+        desc: 'บล็อกดาเมจจากการโจมตีครั้งต่อไป 100% (1 ครั้ง)', color: '#8b5cf6'
     }
 };
 

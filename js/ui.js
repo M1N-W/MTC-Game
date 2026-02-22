@@ -178,6 +178,9 @@ class ShopManager {
             btn.disabled = !canAfford;
             card.classList.toggle('shop-card-disabled', !canAfford);
 
+            // ── Dynamic description element (created once, reused) ──
+            let descEl = card.querySelector('.shop-card-desc');
+
             if (player && item.duration) {
                 const isActive =
                     (item.id === 'damageUp' && player.shopDamageBoostActive) ||
@@ -197,6 +200,68 @@ class ShopManager {
                     timerEl.textContent = `✅ ACTIVE — ${remaining}s`;
                 } else if (timerEl) {
                     timerEl.remove();
+                }
+
+                // ── Max-stack warning on description ─────────────────
+                // Check if the relevant buff is active and at the 1.5× cap.
+                let atCap = false;
+                if (isActive) {
+                    if (item.id === 'damageUp' && player._baseDamageBoost) {
+                        const cap = Math.round(player._baseDamageBoost * 1.5 * 100) / 100;
+                        const current = Math.round((player.damageBoost || 1) * 100) / 100;
+                        atCap = current >= cap;
+                    } else if (item.id === 'speedUp' && player._baseMoveSpeed) {
+                        const cap = Math.round(player._baseMoveSpeed * 1.5 * 100) / 100;
+                        const current = Math.round((player.moveSpeed || 0) * 100) / 100;
+                        atCap = current >= cap;
+                    }
+                }
+
+                // Inject or remove the warning span inside the desc element.
+                if (descEl) {
+                    let warnSpan = descEl.querySelector('.shop-max-warn');
+                    if (atCap) {
+                        if (!warnSpan) {
+                            warnSpan = document.createElement('span');
+                            warnSpan.className = 'shop-max-warn';
+                            warnSpan.style.cssText = 'display:block; color:#ef4444; font-size:0.8em; margin-top:3px;';
+                            descEl.appendChild(warnSpan);
+                        }
+                        warnSpan.textContent = '⚠️ MAX STACKS! Buying reduces duration!';
+                    } else if (warnSpan) {
+                        warnSpan.remove();
+                    }
+                }
+            }
+
+            // ── Shield: show "ACTIVE" state when player has one ──────
+            if (item.id === 'shield' && player) {
+                card.classList.toggle('shop-card-active', !!player.hasShield);
+                let shieldTimerEl = card.querySelector('.shop-buff-timer');
+                if (player.hasShield) {
+                    if (!shieldTimerEl) {
+                        shieldTimerEl = document.createElement('div');
+                        shieldTimerEl.className = 'shop-buff-timer';
+                        card.appendChild(shieldTimerEl);
+                    }
+                    shieldTimerEl.textContent = '🛡️ SHIELD READY';
+                } else if (shieldTimerEl) {
+                    shieldTimerEl.remove();
+                }
+                // Warn if they already have a shield (buying again wastes score)
+                if (descEl) {
+                    let warnSpan = descEl.querySelector('.shop-max-warn');
+                    if (player.hasShield) {
+                        if (!warnSpan) {
+                            warnSpan = document.createElement('span');
+                            warnSpan.className = 'shop-max-warn';
+                            warnSpan.style.cssText = 'display:block; color:#ef4444; font-size:0.8em; margin-top:3px;';
+                            descEl.appendChild(warnSpan);
+                        }
+                        warnSpan.textContent = '⚠️ โล่ยังใช้งานอยู่! ซื้อซ้ำจะคืนเงิน';
+                    } else if (warnSpan) {
+                        warnSpan.remove();
+                    }
                 }
             }
         });
@@ -627,26 +692,6 @@ class UIManager {
      *
      * @param {CanvasRenderingContext2D} ctx
      */
-    static drawSecondWindVignette(ctx) {
-        if (!ctx || !ctx.canvas) return;
-        if (!window.player || !window.player.isSecondWind) return;
-        const now = performance.now();
-        // Pulse between 0.1 and 0.4 opacity
-        const pulse = 0.1 + Math.abs(Math.sin(now / 200)) * 0.3;
-        const canvas = ctx.canvas;
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        const grad = ctx.createRadialGradient(
-            canvas.width / 2, canvas.height / 2, canvas.height * 0.35,
-            canvas.width / 2, canvas.height / 2, canvas.height * 0.9
-        );
-        grad.addColorStop(0, 'rgba(220, 38, 38, 0)'); // Transparent center
-        grad.addColorStop(1, `rgba(220, 38, 38, ${pulse})`); // Red bleeding edges
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();
-    }
-
     static drawConfusedWarning(ctx) {
         if (!ctx || !ctx.canvas) return;
         if (!window.player || !window.player.isConfused) return;
@@ -719,8 +764,6 @@ class UIManager {
         UIManager.drawCombo(ctx);
         if (!ctx || !ctx.canvas) return;
 
-        // ── Second Wind Vignette ──────────────────────────────────
-        UIManager.drawSecondWindVignette(ctx);
         // ── Confused-state warning banner ─────────────────────
         // Drawn before the minimap so it appears above world content
         // but below the radar (radar is always the topmost HUD element).
