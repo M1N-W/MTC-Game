@@ -176,7 +176,12 @@ const BALANCE = {
         orbitSpeed: 1.1,
         lerpBase: 0.02,
         bobAmplitude: 8,
-        bobSpeed: 3.5
+        bobSpeed: 3.5,
+        // ── NEW: Overdrive Stats ──
+        overdriveCombo: 20,
+        overdriveFireRate: 2.5,
+        overdriveColor: '#facc15',
+        overdriveGlow: '#f59e0b'
     },
     enemy: {
         radius: 18,
@@ -533,6 +538,7 @@ const GAME_TEXTS = {
         poomCrit: 'ข้าวเหนียวคริติคอล! 💥',
         highGround: 'HIGH GROUND!',
         droneOnline: '🤖 DRONE ONLINE',
+        droneOverdrive: '🔥 DRONE OVERDRIVE!' // <-- ADDED
     },
     time: {
         bulletTime: '🕐 BULLET TIME',
