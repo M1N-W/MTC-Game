@@ -268,16 +268,17 @@ class KaoPlayer extends Player {
     // ──────────────────────────────────────────────────────────────────────────
     shoot(dt) {
         if (typeof weaponSystem === 'undefined') return;
-        const wepIndex = weaponSystem.currentWeaponIndex || 0;
-        const weps = Object.values(BALANCE.characters.kao.weapons);
-        const wep = weps[wepIndex];
+
+        // Use the real WeaponSystem API:
+        //   weaponSystem.currentWeapon  — 'auto' | 'sniper' | 'shotgun'
+        //   weaponSystem.weaponCooldown — single number, counts down to 0
+        //   weaponSystem.canShoot()     — true when cooldown <= 0 and not bursting
+        const wep = weaponSystem.getWeaponData();
+        if (!wep) return;
         const isClick = window.mouse.left === 1;
 
-        // Check weapon cooldown to sync with UI
-        if (weaponSystem.cooldowns[wepIndex] > 0 && this.sniperChargeTime <= 0) return;
-
         // ── Weapon Master Sniper: hold-to-charge mode ──────────────────────────
-        if (this.isWeaponMaster && wep.name === 'SNIPER') {
+        if (this.isWeaponMaster && weaponSystem.currentWeapon === 'sniper') {
             if (isClick) {
                 // Accumulate charge time; emit charge particles
                 this.sniperChargeTime += dt;
@@ -286,19 +287,19 @@ class KaoPlayer extends Player {
             } else if (this.sniperChargeTime > 0) {
                 // Mouse released — fire the charged shot
                 this.fireWeapon(wep, true);
-                weaponSystem.cooldowns[wepIndex] = wep.cooldown * this.cooldownMultiplier;
+                weaponSystem.weaponCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
                 this.sniperChargeTime = 0;
                 return;
             }
         } else {
-            // Reset charge if weapon switched away
+            // Reset charge if weapon switched away from sniper
             this.sniperChargeTime = 0;
         }
 
         // ── Normal fire ────────────────────────────────────────────────────────
-        if (isClick && weaponSystem.cooldowns[wepIndex] <= 0) {
+        if (isClick && weaponSystem.canShoot()) {
             this.fireWeapon(wep, false);
-            weaponSystem.cooldowns[wepIndex] = wep.cooldown * this.cooldownMultiplier;
+            weaponSystem.weaponCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
         }
     }
 
