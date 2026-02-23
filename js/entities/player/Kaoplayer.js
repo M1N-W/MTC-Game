@@ -73,7 +73,9 @@ class KaoClone {
 // ── KaoPlayer ─────────────────────────────────────────────────────────────────
 class KaoPlayer extends Player {
     constructor(x = 0, y = 0) {
-        super(x, y, 'kao');
+        super('kao');
+        this.x = x;
+        this.y = y;
         const S = BALANCE.characters.kao;
 
         // ── Teleport ───────────────────────────────────────────────────────────
