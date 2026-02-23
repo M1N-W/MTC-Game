@@ -519,7 +519,12 @@ class PorkSandwich {
                     addScreenShake(8);
 
                     // ── Achievement ───────────────────────────
-                    Achievements.check('parry_master');
+                    // FIX: Was calling check() directly without incrementing the stat,
+                    //      so parry_master could never satisfy `parries >= 1`.
+                    if (typeof Achievements !== 'undefined') {
+                        Achievements.stats.parries++;
+                        Achievements.check('parry_master');
+                    }
                     break;
                 }
             }

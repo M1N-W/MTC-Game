@@ -288,9 +288,14 @@ class Drone extends Entity {
             spawnFloatingText(GAME_TEXTS.combat.droneOverdrive || '🔥 OVERDRIVE!', this.x, this.y - 30, '#facc15', 22);
             spawnParticles(this.x, this.y, 20, '#facc15');
 
-            // Unlock Achievement
+            // FIX: Was calling Achievements.unlock('drone_master') — passing a raw
+            //      string instead of an achievement object caused unlock() to store
+            //      `undefined` in the Set (ach.id on a string is undefined) and
+            //      rendered a popup with undefined title/desc on every overdrive.
+            //      Now we increment the stat and call check() like every other achievement.
             if (typeof Achievements !== 'undefined') {
-                Achievements.unlock('drone_master');
+                Achievements.stats.droneOverdrives++;
+                Achievements.check('drone_master');
             }
         }
         this.wasOverdrive = isOverdrive;

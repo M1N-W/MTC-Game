@@ -11,11 +11,12 @@ class KaoClone {
     constructor(owner, angleOffset) {
         this.owner = owner;
         this.angleOffset = angleOffset;
-        this.radius = owner.radius;
-        this.x = owner.x;
-        this.y = owner.y;
+        // FIX (TASK 1): Fallback radius and position to prevent Canvas .arc() crash
+        this.radius = owner.radius || 20;
+        this.x = owner.x || 0;
+        this.y = owner.y || 0;
         this.color = '#3b82f6';
-        this.alpha = 0.5;
+        this.alpha = 0.6;   // FIX (TASK 1): Slightly more visible (was 0.5)
     }
 
     update(dt) {
@@ -82,7 +83,7 @@ class KaoClone {
 // ── KaoPlayer ─────────────────────────────────────────────────────────────────
 class KaoPlayer extends Player {
     constructor(x = 0, y = 0) {
-        super('kao'); // FIX 1: Correct super signature
+        super('kao');
         this.x = x;
         this.y = y;
         const S = BALANCE.characters.kao;
@@ -90,10 +91,10 @@ class KaoPlayer extends Player {
         // ── Teleport ───────────────────────────────────────────────────────────
         this.teleportTimer = 0;
         this.teleportCooldown = S.teleportCooldown || 20;
-        this.teleportCharges = 0;          // max 1 charge at a time
+        this.teleportCharges = 0;   // max 1 charge at a time
 
         // ── Auto-stealth (Passive: ซุ่มเสรี) ──────────────────────────────────
-        this.autoStealthCooldown = 0;       // internal cooldown for free stealth
+        this.autoStealthCooldown = 0;   // internal cooldown for free stealth
 
         // ── Weapon Master Awakening ────────────────────────────────────────────
         this.weaponKills = { auto: 0, sniper: 0, shotgun: 0 };
@@ -110,6 +111,10 @@ class KaoPlayer extends Player {
         this.cloneSkillCooldown = 0;
         this.maxCloneCooldown = S.cloneCooldown || 45;
         this.clonesActiveTimer = 0;
+
+        // FIX (TASK 2): Own shoot cooldown — decoupled from weaponSystem to
+        //               prevent the machine-gun NaN glitch.
+        this.shootCooldown = 0;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -143,13 +148,23 @@ class KaoPlayer extends Player {
     // ──────────────────────────────────────────────────────────────────────────
     // UPDATE
     // ──────────────────────────────────────────────────────────────────────────
-    // FIX 2: Added keys and mouse to parameters
     update(dt, keys, mouse) {
         const S = BALANCE.characters.kao;
 
+        // FIX (TASK 2): Tick down our own shoot cooldown every frame so it
+        //               actually reaches 0 and fire-rate matches config.js.
+        if (this.shootCooldown > 0) this.shootCooldown -= dt;
+
+        // FIX (AUDIT #4): Back up the real speedBoost (from shop/powerups) before
+        //                 the passive overwrites it, then restore it after
+        //                 super.update() has read the physics value.  This way
+        //                 the passive's x1.4 buff only lives for this one frame
+        //                 and never permanently clobbers external speed items.
+        const _speedBoostSnapshot = this.speedBoost;
+
         // ── Passive Skill: ซุ่มเสรี ──────────────────────────────────────────
         if (this.passiveUnlocked) {
-            // Large speed bonus while passive is active (applied before super.update reads it)
+            // Temporarily raise speedBoost for this frame only
             this.speedBoost = Math.max(this.speedBoost, 1.4);
 
             // Randomly trigger free Stealth while moving
@@ -192,11 +207,11 @@ class KaoPlayer extends Player {
             spawnParticles(this.x, this.y, 25, '#3b82f6');
             this.x = window.mouse.wx;
             this.y = window.mouse.wy;
-            spawnParticles(this.x, this.y, 25, '#00e5ff');
-            keys.q = 0;   // consume key press
+            keys.q = 0;
+            spawnParticles(this.x, this.y, 25, '#3b82f6');
         }
 
-        // ── Clone of Stealth — cooldown tick ──────────────────────────────────
+        // ── Clone Skill cooldown tick ──────────────────────────────────────────
         if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
 
         // ── Clone of Stealth — activation (E key) ─────────────────────────────
@@ -230,8 +245,11 @@ class KaoPlayer extends Player {
             if (this.clonesActiveTimer <= 0) this.clones = [];
         }
 
-        // FIX 2: Pass keys and mouse back to parent
         super.update(dt, keys, mouse);
+
+        // FIX (AUDIT #4): Restore original speedBoost so the passive 1.4× buff
+        //                 doesn't permanently overwrite shop/powerup speed items.
+        this.speedBoost = _speedBoostSnapshot;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -279,20 +297,24 @@ class KaoPlayer extends Player {
     // ──────────────────────────────────────────────────────────────────────────
     // SHOOT — entry point called every frame by the base class tick
     // ──────────────────────────────────────────────────────────────────────────
+    // FIX (TASK 3): Rewritten to pull weapon stats directly from
+    //               BALANCE.characters.kao.weapons (never trusts weaponSystem
+    //               getWeaponData() which can return undefined/NaN fields).
+    //               Uses internal this.shootCooldown for honest fire-rate gating.
     shoot(dt) {
         if (typeof weaponSystem === 'undefined') return;
 
-        // Use the real WeaponSystem API:
-        //   weaponSystem.currentWeapon  — 'auto' | 'sniper' | 'shotgun'
-        //   weaponSystem.weaponCooldown — single number, counts down to 0
-        //   weaponSystem.canShoot()     — true when cooldown <= 0 and not bursting
-        const wep = weaponSystem.getWeaponData();
+        // Pull config data straight from BALANCE to prevent NaN bleed-in
+        const wepKey = weaponSystem.currentWeapon || 'auto';
+        const weps = BALANCE.characters.kao.weapons;
+        const wep = weps[wepKey];
         if (!wep) return;
+
         const isClick = window.mouse.left === 1;
 
         // ── Weapon Master Sniper: hold-to-charge mode ──────────────────────────
-        if (this.isWeaponMaster && weaponSystem.currentWeapon === 'sniper') {
-            if (isClick && weaponSystem.canShoot()) {
+        if (this.isWeaponMaster && wepKey === 'sniper') {
+            if (isClick && this.shootCooldown <= 0) {
                 // Accumulate charge time; emit charge particles
                 this.sniperChargeTime += dt;
                 if (Math.random() < 0.3) spawnParticles(this.x, this.y, 1, '#ef4444');
@@ -300,7 +322,8 @@ class KaoPlayer extends Player {
             } else if (!isClick && this.sniperChargeTime > 0) {
                 // Mouse released — fire the charged shot
                 this.fireWeapon(wep, true);
-                weaponSystem.weaponCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
+                this.shootCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
+                weaponSystem.weaponCooldown = this.shootCooldown; // Sync UI
                 this.sniperChargeTime = 0;
                 return;
             }
@@ -309,30 +332,40 @@ class KaoPlayer extends Player {
             this.sniperChargeTime = 0;
         }
 
-        // ── Normal fire ────────────────────────────────────────────────────────
-        if (isClick && weaponSystem.canShoot()) {
+        // ── Normal fire — guarded by internal cooldown ─────────────────────────
+        if (isClick && this.shootCooldown <= 0) {
             this.fireWeapon(wep, false);
-            weaponSystem.weaponCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
+            this.shootCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
+            weaponSystem.weaponCooldown = this.shootCooldown; // Sync UI
         }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
     // FIRE WEAPON — handles all Weapon Master buffs, crits, and clone mirrors
     // ──────────────────────────────────────────────────────────────────────────
+    // FIX (TASK 4): Explicit fallbacks on every stat that can arrive as
+    //               undefined/NaN, plus a post-multiply isFinite guard.
     fireWeapon(wep, isChargedSniper) {
-        let pellets = wep.pellets;
-        let spread = wep.spread;
-        let baseDmg = wep.damage;
-        let color = wep.color;
+        let pellets = wep.pellets || 1;
+        let spread = wep.spread || 0;
+        let baseDmg = wep.damage || 10;   // FIX: hard fallback prevents NaN
+        let color = wep.color || '#ffffff';
 
         // Global damage multipliers
-        let dmgMult = this.damageMultiplier || 1.0;
-        if (this.isSecondWind) dmgMult *= BALANCE.player.secondWindDamageMult;
+        // FIX (AUDIT #1): Include damageBoost (shop upgrades / lightning powerup)
+        //                 so bought damage items actually take effect.
+        let dmgMult = (this.damageMultiplier || 1.0) * (this.damageBoost || 1.0);
+        if (this.isSecondWind) dmgMult *= (BALANCE.player.secondWindDamageMult || 1.5);
 
+        // FIX (AUDIT #3): bonusCritChanceFromPassive was always undefined.
+        //                 Read the real value from config, gated on passive unlock.
+        const passiveCrit = this.passiveUnlocked
+            ? (BALANCE.characters.kao.passiveCritBonus || 0)
+            : 0;
         // Base crit chance + passive bonus + stacking auto bonus
-        let critChance = this.baseCritChance +
-            (this.bonusCritChanceFromPassive || 0) +
-            this.bonusCritFromAuto;
+        let critChance = (this.baseCritChance || 0) +
+            passiveCrit +
+            (this.bonusCritFromAuto || 0);
 
         // ── Weapon Master buffs ────────────────────────────────────────────────
         if (this.isWeaponMaster) {
@@ -345,7 +378,7 @@ class KaoPlayer extends Player {
                 this.bonusCritFromAuto = Math.min(0.5, this.bonusCritFromAuto + 0.005);
 
             } else if (wep.name === 'SNIPER') {
-                critChance += 0.25;  // flat +25% crit
+                critChance += 0.25;   // flat +25% crit
                 if (isChargedSniper) {
                     // Damage scales with hold duration (capped at 4×)
                     const chargeMult = 1 + Math.min(3, this.sniperChargeTime * 2);
@@ -355,15 +388,41 @@ class KaoPlayer extends Player {
                 }
 
             } else if (wep.name === 'SHOTGUN') {
-                pellets = wep.pellets * 2;  // double pellet count
+                pellets = (wep.pellets || 1) * 2;   // double pellet count
             }
         }
 
-        // Crit roll
+        // FIX (TASK 4): NaN guard — if any multiplier path produced a bad value,
+        //               fall back to the raw base damage before crit scaling.
         let finalDamage = baseDmg * dmgMult;
         if (!isFinite(finalDamage) || isNaN(finalDamage)) finalDamage = baseDmg;
+
         let isCrit = Math.random() < critChance;
-        if (isCrit) finalDamage *= (this.stats.critMultiplier || 3);
+        // FIX (AUDIT #2): Run crit multiplier, then track Achievement + trigger
+        //                 golden aura — previously these were skipped entirely.
+        if (isCrit) {
+            finalDamage *= (this.stats.critMultiplier || 3);
+            if (this.passiveUnlocked) this.goldenAuraTimer = 1;
+            if (typeof Achievements !== 'undefined' && Achievements.stats) {
+                Achievements.stats.crits++;
+                Achievements.check('crit_master');
+            }
+        }
+
+        // FIX (AUDIT #2): Lifesteal — passive ability restores HP on every shot.
+        //                 Previously bypassed because fireWeapon skipped dealDamage().
+        if (this.passiveUnlocked) {
+            const lifestealRate = BALANCE.characters.kao.passiveLifesteal || 0.02;
+            const healAmount = finalDamage * lifestealRate;
+            this.hp = Math.min(this.maxHp, this.hp + healAmount);
+            if (Math.random() < 0.3 && typeof spawnFloatingText !== 'undefined') {
+                spawnFloatingText(
+                    `+${Math.round(healAmount)}`,
+                    this.x, this.y - 35,
+                    '#10b981', 12
+                );
+            }
+        }
 
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
 

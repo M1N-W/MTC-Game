@@ -45,6 +45,8 @@ class AchievementSystem {
             kills: 0, damageTaken: 0, crits: 0,
             dashes: 0, stealths: 0, powerups: 0,
             shopPurchases: 0,
+            parries: 0,              // FIX: tracks successful PorkSandwich parries
+            droneOverdrives: 0,      // FIX: tracks first drone overdrive activation
             weaponsUsed: new Set()
         };
     }
@@ -75,7 +77,10 @@ class AchievementSystem {
                 && window.player instanceof PoomPlayer
                 && window.player.nagaCount >= 3; break;
             case 'shopaholic': unlock = this.stats.shopPurchases >= 5; break;
-            case 'parry_master': unlock = true; break;
+            // FIX: was `unlock = true` — caused instant unlock on every checkAll() call
+            case 'parry_master': unlock = this.stats.parries >= 1; break;
+            // FIX: was missing entirely — unlock(string) bug caused undefined popup + multi-fire
+            case 'drone_master': unlock = this.stats.droneOverdrives >= 1; break;
         }
         if (unlock) this.unlock(ach);
     }
