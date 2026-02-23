@@ -510,6 +510,11 @@ const GAME_TEXTS = {
         bossIncoming: 'BOSS INCOMING!',
         bossIncomingRider: 'BOSS INCOMING!🐕',
         bossIncomingFish: 'BOSS INCOMING!🐟',
+        // ── BossFirst (Kru First) announce texts ──────────────
+        firstIncoming: '⚛️ KRU FIRST — PHYSICS BOSS INCOMING!',
+        firstAdvanced: '⚡ KRU FIRST — ADVANCED MODE!',
+        firstTagline: 'F=ma · v=u+at · DODGE THIS!',
+        firstTaglineAdvanced: 'F=ma · E=mc² · MAXIMUM POWER!',
         glitchWave: '⚡ GLITCH WAVE ⚡',
         glitchAnomaly: 'SYSTEM ANOMALY DETECTED...⚠️',
         glitchControls: 'CONTROLS INVERTED!',
@@ -540,7 +545,7 @@ const GAME_TEXTS = {
         poomCrit: 'ข้าวเหนียวคริติคอล! 💥',
         highGround: 'HIGH GROUND!',
         droneOnline: '🤖 DRONE ONLINE',
-        droneOverdrive: '🔥 DRONE OVERDRIVE!' // <-- ADDED
+        droneOverdrive: '🔥 DRONE OVERDRIVE!'
     },
     time: {
         bulletTime: '🕐 BULLET TIME',

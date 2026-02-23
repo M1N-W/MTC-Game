@@ -618,9 +618,38 @@ class PorkSandwich {
     }
 }
 
+// ════════════════════════════════════════════════════════════
+// 💥 EXPANDING RING — Shockwave visual (BossFirst FREE_FALL)
+// ════════════════════════════════════════════════════════════
+class ExpandingRing {
+    constructor(x, y, color, maxRadius = 140, duration = 0.5) {
+        this.x = x; this.y = y; this.color = color;
+        this.maxRadius = maxRadius; this.duration = duration;
+        this.timer = 0; this.dead = false;
+    }
+    update(dt) {
+        this.timer += dt;
+        if (this.timer >= this.duration) this.dead = true;
+        return this.dead;
+    }
+    draw() {
+        if (this.dead) return;
+        const screen = worldToScreen(this.x, this.y);
+        const prog = this.timer / this.duration;
+        const r = this.maxRadius * Math.sqrt(prog); // ease out
+        const alpha = 1 - prog;
+        CTX.save();
+        CTX.globalAlpha = alpha;
+        CTX.strokeStyle = this.color;
+        CTX.lineWidth = 6 * (1 - prog);
+        CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.stroke();
+        CTX.restore();
+    }
+}
+
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich };
+    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing };
 }
 // ── Global exports ────────────────────────────────────────────
 window.BarkWave = BarkWave;
@@ -628,3 +657,4 @@ window.GoldfishMinion = GoldfishMinion;
 window.BubbleProjectile = BubbleProjectile;
 window.FreeFallWarningRing = FreeFallWarningRing;
 window.PorkSandwich = PorkSandwich;
+window.ExpandingRing = ExpandingRing;

@@ -207,6 +207,9 @@ function buyItem(itemId) {
                 const tierPct = Math.round((player.damageBoost / player._baseDamageBoost) * 100);
                 spawnFloatingText(`⚔️ Damage ${tierPct}%!`, player.x, player.y - 70, '#f59e0b', 22);
                 spawnParticles(player.x, player.y, 8, '#f59e0b');
+                // ── Achievement: first time hitting the 1.5× cap ──────────
+                const newRnd = Math.round(player.damageBoost * 100) / 100;
+                if (newRnd >= capRnd) Achievements.check('shop_max');
             } else {
                 // ── At cap — impose a 5 s duration penalty ────────────────
                 player.shopDamageBoostTimer = Math.max(5, player.shopDamageBoostTimer - 5);
@@ -242,6 +245,9 @@ function buyItem(itemId) {
                 const tierPct = Math.round((player.moveSpeed / player._baseMoveSpeed) * 100);
                 spawnFloatingText(`💨 Speed ${tierPct}%!`, player.x, player.y - 70, '#06b6d4', 22);
                 spawnParticles(player.x, player.y, 8, '#06b6d4');
+                // ── Achievement: first time hitting the 1.5× cap ──────────
+                const newRnd = Math.round(player.moveSpeed * 100) / 100;
+                if (newRnd >= capRnd) Achievements.check('shop_max');
             } else {
                 // ── At cap — impose a 5 s duration penalty ────────────────
                 player.shopSpeedBoostTimer = Math.max(5, player.shopSpeedBoostTimer - 5);

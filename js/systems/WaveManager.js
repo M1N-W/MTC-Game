@@ -332,8 +332,8 @@ function startNextWave() {
 
                 spawnFloatingText(
                     isAdvanced
-                        ? '⚡ KRU FIRST — ADVANCED MODE!'
-                        : '⚛️ KRU FIRST — PHYSICS BOSS INCOMING!',
+                        ? GAME_TEXTS.wave.firstAdvanced
+                        : GAME_TEXTS.wave.firstIncoming,
                     window.player.x, window.player.y - 100,
                     '#39ff14', 35
                 );
@@ -341,7 +341,7 @@ function startNextWave() {
                 // Secondary physics tagline (staggered)
                 setTimeout(() => {
                     if (window.player) spawnFloatingText(
-                        isAdvanced ? 'F=ma · E=mc² · MAXIMUM POWER!' : 'F=ma · v=u+at · DODGE THIS!',
+                        isAdvanced ? GAME_TEXTS.wave.firstTaglineAdvanced : GAME_TEXTS.wave.firstTagline,
                         window.player.x, window.player.y - 148,
                         '#86efac', 22
                     );

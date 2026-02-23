@@ -629,7 +629,7 @@ class Boss extends Entity {
             // the achievement check can still evaluate to true
             window.lastBossKilled = true;
             window.boss = null;
-            Achievements.check('boss_down');
+            Achievements.check('manop_down');
             setTimeout(() => {
                 setWave(getWave() + 1);
                 if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
@@ -1151,6 +1151,8 @@ class BossFirst extends Entity {
                         spawnFloatingText('h=½gt² CRASH!', player.x, player.y - 60, '#ef4444', 30);
                         addScreenShake(20);
                     }
+                    // ── Shockwave ring ──
+                    window.specialEffects.push(new ExpandingRing(this.x, this.y, '#ef4444', 180, 0.6));
                     spawnParticles(this.x, this.y, 35, '#ef4444');
                     spawnParticles(this.x, this.y, 20, '#fbbf24');
                     this._enterState('CHASE');
@@ -1339,7 +1341,7 @@ class BossFirst extends Entity {
             }
             window.lastBossKilled = true;
             window.boss = null;
-            Achievements.check('boss_down');
+            Achievements.check('first_down');
             setTimeout(() => {
                 setWave(getWave() + 1);
                 if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
@@ -1517,6 +1519,18 @@ class BossFirst extends Entity {
             CTX.beginPath(); CTX.arc(0, 0, cRingR, 0, Math.PI * 2); CTX.stroke();
             CTX.setLineDash([]);
             CTX.shadowBlur = 0;
+
+            // ── Laser telegraph ──
+            const aimScreen = worldToScreen(this._suvatAimX, this._suvatAimY);
+            CTX.strokeStyle = `rgba(239, 68, 68, ${prog})`;
+            CTX.lineWidth = 2;
+            CTX.setLineDash([15, 10]);
+            CTX.beginPath();
+            CTX.moveTo(0, 0); // Boss local center
+            CTX.lineTo(aimScreen.x - (screen.x + hoverX), aimScreen.y - (screen.y + hoverY));
+            CTX.stroke();
+            CTX.setLineDash([]);
+
             CTX.restore();
         }
 
