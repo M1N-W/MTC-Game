@@ -14,7 +14,7 @@ const MTC_DATABASE_SERVER = {
 window.MTC_DATABASE_SERVER = MTC_DATABASE_SERVER;
 
 // ─── External Database URL ────────────────────────────────────
-const MTC_DB_URL = 'https://claude.ai/public/artifacts/181c2ea3-035e-4d48-9ded-695f54f27873';
+const MTC_DB_URL = 'https://claude.ai/public/artifacts/649de47e-b97f-41ad-ae66-c944d35eb24f';
 
 // ══════════════════════════════════════════════════════════════
 // 💻 ADMIN CONSOLE MANAGER
