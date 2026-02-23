@@ -29,7 +29,7 @@ class KaoClone {
 
     draw() {
         // Clones are faint when stealth is active
-        CTX.globalAlpha = this.owner.isStealth ? 0.15 : this.alpha;
+        CTX.globalAlpha = this.owner.isInvisible ? 0.15 : this.alpha;
         CTX.fillStyle = this.owner.isWeaponMaster ? '#facc15' : this.color;
         CTX.beginPath();
         CTX.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -139,9 +139,9 @@ class KaoPlayer extends Player {
         const S = BALANCE.characters.kao;
 
         // ── Passive Skill: ซุ่มเสรี ──────────────────────────────────────────
-        if (this.passiveActive) {
-            // Large speed bonus while passive is active
-            this.speedMultiplier *= 1.4;
+        if (this.passiveUnlocked) {
+            // Large speed bonus while passive is active (applied before super.update reads it)
+            this.speedBoost = Math.max(this.speedBoost, 1.4);
 
             // Randomly trigger free Stealth while moving
             const isMoving = keys.w || keys.a || keys.s || keys.d;
@@ -150,8 +150,9 @@ class KaoPlayer extends Player {
                 this.autoStealthCooldown <= 0 &&
                 Math.random() < 0.2 * dt
             ) {
-                this.isStealth = true;
-                this.stealthEnergy = 100;
+                this.isInvisible = true;
+                this.ambushReady = true;
+                this.energy = this.maxEnergy;
                 this.autoStealthCooldown = S.autoStealthCooldown || 8;
                 spawnFloatingText(
                     GAME_TEXTS.combat.kaoFreeStealth,
@@ -193,8 +194,8 @@ class KaoPlayer extends Player {
         if (keys.e && this.cloneSkillCooldown <= 0) {
             // Spawn two clones in a triangle formation around Kao
             this.clones = [
-                new KaoClone(this, 0),
-                new KaoClone(this, 0)
+                new KaoClone(this, (2 * Math.PI) / 3),
+                new KaoClone(this, (4 * Math.PI) / 3)
             ];
             this.clonesActiveTimer = S.cloneDuration || 15;
             this.cloneSkillCooldown = this.maxCloneCooldown;
@@ -279,12 +280,12 @@ class KaoPlayer extends Player {
 
         // ── Weapon Master Sniper: hold-to-charge mode ──────────────────────────
         if (this.isWeaponMaster && weaponSystem.currentWeapon === 'sniper') {
-            if (isClick) {
+            if (isClick && weaponSystem.canShoot()) {
                 // Accumulate charge time; emit charge particles
                 this.sniperChargeTime += dt;
                 if (Math.random() < 0.3) spawnParticles(this.x, this.y, 1, '#ef4444');
                 return;   // don't fire yet
-            } else if (this.sniperChargeTime > 0) {
+            } else if (!isClick && this.sniperChargeTime > 0) {
                 // Mouse released — fire the charged shot
                 this.fireWeapon(wep, true);
                 weaponSystem.weaponCooldown = wep.cooldown * (this.cooldownMultiplier || 1);

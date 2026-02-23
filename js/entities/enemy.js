@@ -116,10 +116,10 @@ class Enemy extends Entity {
             spawnParticles(this.x, this.y, 20, this.color);
             addScore(BALANCE.score.basicEnemy * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
-            if (player && player.type === 'kao' && player.addKill) {
-                const weps = Object.values(BALANCE.characters.kao.weapons);
-                const currentWep = weps[player.currentWeaponIndex];
-                if (currentWep) player.addKill(currentWep.name);
+            if (player && typeof KaoPlayer !== 'undefined' && player instanceof KaoPlayer) {
+                const wepName = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : null;
+                const wepData = wepName && BALANCE.characters.kao.weapons[wepName];
+                if (wepData) player.addKill(wepData.name);
             }
             Achievements.stats.kills++; Achievements.check('first_blood');
             if (Math.random() < BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x, this.y));
@@ -290,10 +290,10 @@ class TankEnemy extends Entity {
             spawnParticles(this.x, this.y, 30, this.color);
             addScore(BALANCE.score.tank * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
-            if (player && player.type === 'kao' && player.addKill) {
-                const weps = Object.values(BALANCE.characters.kao.weapons);
-                const currentWep = weps[player.currentWeaponIndex];
-                if (currentWep) player.addKill(currentWep.name);
+            if (player && typeof KaoPlayer !== 'undefined' && player instanceof KaoPlayer) {
+                const wepName = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : null;
+                const wepData = wepName && BALANCE.characters.kao.weapons[wepName];
+                if (wepData) player.addKill(wepData.name);
             }
             Achievements.stats.kills++;
             if (Math.random() < BALANCE.powerups.dropRate * BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
@@ -499,10 +499,10 @@ class MageEnemy extends Entity {
             spawnParticles(this.x, this.y, 25, this.color);
             addScore(BALANCE.score.mage * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
-            if (player && player.type === 'kao' && player.addKill) {
-                const weps = Object.values(BALANCE.characters.kao.weapons);
-                const currentWep = weps[player.currentWeaponIndex];
-                if (currentWep) player.addKill(currentWep.name);
+            if (player && typeof KaoPlayer !== 'undefined' && player instanceof KaoPlayer) {
+                const wepName = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : null;
+                const wepData = wepName && BALANCE.characters.kao.weapons[wepName];
+                if (wepData) player.addKill(wepData.name);
             }
             Achievements.stats.kills++;
             if (Math.random() < BALANCE.powerups.dropRate * BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
