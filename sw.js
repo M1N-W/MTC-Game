@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v2.3'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.3 เพิ่ม KaoPlayer.js — Advanced Assassin skill set (Teleport, Weapon Master Awakening, Clone of Stealth)
+const CACHE_NAME = 'mtc-cache-v2.5'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.5 harden fetch/runtime caching guards
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
@@ -20,7 +20,7 @@ const urlsToCache = [
   // Entities
   './js/entities/base.js',
   './js/entities/player/PlayerBase.js',
-  './js/entities/player/KaoPlayer.js',
+  './js/entities/player/Kaoplayer.js',
   './js/entities/player/AutoPlayer.js',
   './js/entities/player/PoomPlayer.js',
   './js/entities/enemy.js',
@@ -43,9 +43,21 @@ const urlsToCache = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
+      .then(async cache => {
         console.log('📦 [Service Worker] Caching all assets');
-        return cache.addAll(urlsToCache);
+        const failedUrls = [];
+
+        await Promise.all(
+          urlsToCache.map(url =>
+            cache.add(url).catch(() => {
+              failedUrls.push(url);
+            })
+          )
+        );
+
+        if (failedUrls.length > 0) {
+          console.warn('⚠️ [Service Worker] Some assets failed to precache:', failedUrls);
+        }
       })
   );
   self.skipWaiting();
@@ -70,8 +82,17 @@ self.addEventListener('activate', event => {
 
 // 3. ดึงจาก Cache ก่อน ถ้าไม่มีให้ดึงจากเน็ต แล้วแอบเก็บลง Cache ไว้ใช้คราวหน้า (Runtime Caching)
 self.addEventListener('fetch', event => {
+  const { request } = event;
+
+  // Skip requests that are not safe/valid for Cache API.
+  if (request.method !== 'GET') return;
+  if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
+
+  const requestUrl = new URL(request.url);
+  if (requestUrl.protocol !== 'http:' && requestUrl.protocol !== 'https:') return;
+
   event.respondWith(
-    caches.match(event.request)
+    caches.match(request)
       .then(response => {
         // เจอในแคช -> ส่งคืนทันที (Offline First)
         if (response) {
@@ -79,19 +100,22 @@ self.addEventListener('fetch', event => {
         }
 
         // ไม่เจอในแคช -> วิ่งไปดึงจากเน็ต
-        return fetch(event.request).then(networkResponse => {
+        return fetch(request).then(networkResponse => {
           // ตรวจสอบว่าไฟล์โหลดสมบูรณ์ไหม ถ้าสมบูรณ์ให้ก็อปปี้เก็บลงแคชด้วย
           if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME)
               .then(cache => {
                 // แอบแคช Google Fonts หรือไฟล์ที่หลงลืมไว้แบบอัตโนมัติ
-                cache.put(event.request, responseToCache);
+                return cache.put(request, responseToCache);
+              })
+              .catch(cacheError => {
+                console.warn('⚠️ [Service Worker] Runtime cache put failed for:', request.url, cacheError);
               });
           }
           return networkResponse;
-        }).catch(error => {
-          console.warn('⚡ [Service Worker] Network & Cache failed for:', event.request.url);
+        }).catch(() => {
+          console.warn('⚡ [Service Worker] Network & Cache failed for:', request.url);
           // (ถ้ามีหน้าจอแจ้งเตือนว่าออฟไลน์ สามารถใส่ลอจิกตรงนี้ได้ครับ)
         });
       })
