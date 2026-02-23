@@ -62,8 +62,8 @@ class Enemy extends Entity {
         // Creates curved difficulty that prevents bullet sponge enemies
         this.maxHp = Math.floor(BALANCE.enemy.baseHp * Math.pow(1.25, getWave() / 2));
         this.hp = this.maxHp;
-        this.speed  = BALANCE.enemy.baseSpeed + getWave()*BALANCE.enemy.speedPerWave;
-        this.damage = BALANCE.enemy.baseDamage + getWave()*BALANCE.enemy.damagePerWave;
+        this.speed = BALANCE.enemy.baseSpeed + getWave() * BALANCE.enemy.speedPerWave;
+        this.damage = BALANCE.enemy.baseDamage + getWave() * BALANCE.enemy.damagePerWave;
         this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
         this.color = randomChoice(BALANCE.enemy.colors);
         this.type = 'basic'; this.expValue = BALANCE.enemy.expValue;
@@ -81,43 +81,48 @@ class Enemy extends Entity {
         // ── Tick hit-flash timer ─────────────────────────────
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
 
-        const dx=player.x-this.x, dy=player.y-this.y;
-        const d=dist(this.x,this.y,player.x,player.y);
-        this.angle=Math.atan2(dy,dx);
-        if (d>BALANCE.enemy.chaseRange && !player.isInvisible) {
-            this.vx=Math.cos(this.angle)*this.speed; this.vy=Math.sin(this.angle)*this.speed;
-        } else { this.vx*=0.9; this.vy*=0.9; }
+        const dx = player.x - this.x, dy = player.y - this.y;
+        const d = dist(this.x, this.y, player.x, player.y);
+        this.angle = Math.atan2(dy, dx);
+        if (d > BALANCE.enemy.chaseRange && !player.isInvisible) {
+            this.vx = Math.cos(this.angle) * this.speed; this.vy = Math.sin(this.angle) * this.speed;
+        } else { this.vx *= 0.9; this.vy *= 0.9; }
         this.applyPhysics(dt);
-        this.shootTimer-=dt;
-        if (this.shootTimer<=0 && d<BALANCE.enemy.shootRange && !player.isInvisible) {
-            projectileManager.add(new Projectile(this.x,this.y,this.angle,BALANCE.enemy.projectileSpeed,this.damage,'#fff',false,'enemy'));
-            this.shootTimer=rand(...BALANCE.enemy.shootCooldown);
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && d < BALANCE.enemy.shootRange && !player.isInvisible) {
+            projectileManager.add(new Projectile(this.x, this.y, this.angle, BALANCE.enemy.projectileSpeed, this.damage, '#fff', false, 'enemy'));
+            this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
         }
 
         // ── Melee contact damage ─────────────────────────────
         // During a Glitch Wave, reduce contact damage by 40 % to keep the
         // inverted-controls chaos survivable without removing the threat.
-        if (d<this.radius+player.radius) {
+        if (d < this.radius + player.radius) {
             const contactDamage = this.damage * dt * 3;
-            const glitchMult    = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
+            const glitchMult = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
             player.takeDamage(contactDamage * glitchMult);
         }
     }
 
     takeDamage(amt, player) {
-        this.hp-=amt;
+        this.hp -= amt;
 
         // ── Trigger hit flash ────────────────────────────────
         // Reset to full duration on every hit so rapid hits keep the flash active.
         this.hitFlashTimer = HIT_FLASH_DURATION;
 
-        if (this.hp<=0) {
-            this.dead=true; this.hp=0;
-            spawnParticles(this.x,this.y,20,this.color);
-            addScore(BALANCE.score.basicEnemy*getWave()); addEnemyKill(); Audio.playEnemyDeath();
+        if (this.hp <= 0) {
+            this.dead = true; this.hp = 0;
+            spawnParticles(this.x, this.y, 20, this.color);
+            addScore(BALANCE.score.basicEnemy * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
+            if (player && player.type === 'kao' && player.addKill) {
+                const weps = Object.values(BALANCE.characters.kao.weapons);
+                const currentWep = weps[player.currentWeaponIndex];
+                if (currentWep) player.addKill(currentWep.name);
+            }
             Achievements.stats.kills++; Achievements.check('first_blood');
-            if (Math.random()<BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x,this.y));
+            if (Math.random() < BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x, this.y));
         }
     }
 
@@ -127,14 +132,14 @@ class Enemy extends Entity {
         // ║  Slim gray/purple bean · Red visor slit · Spiked hands  ║
         // ╚══════════════════════════════════════════════════════════╝
         const screen = worldToScreen(this.x, this.y);
-        const now    = Date.now();
-        const R      = this.radius; // keep collision radius untouched
+        const now = Date.now();
+        const R = this.radius; // keep collision radius untouched
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── Ground shadow ────────────────────────────────────────────
         CTX.save();
         CTX.globalAlpha = 0.22;
-        CTX.fillStyle   = 'rgba(0,0,0,0.8)';
+        CTX.fillStyle = 'rgba(0,0,0,0.8)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 4, R * 0.9, 4, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
@@ -144,23 +149,23 @@ class Enemy extends Entity {
         if (isFacingLeft) CTX.scale(-1, 1);
 
         // Breathing: subtle Y-axis squash/stretch
-        const breathe  = Math.sin(now / 200);
-        const scaleX   = 1 + breathe * 0.028;
-        const scaleY   = 1 - breathe * 0.028;
+        const breathe = Math.sin(now / 200);
+        const scaleX = 1 + breathe * 0.028;
+        const scaleY = 1 - breathe * 0.028;
         CTX.scale(scaleX, scaleY);
 
         // ── Outer glow ring (corrupted purple) ───────────────────────
-        CTX.shadowBlur  = 10; CTX.shadowColor = 'rgba(168,85,247,0.65)';
+        CTX.shadowBlur = 10; CTX.shadowColor = 'rgba(168,85,247,0.65)';
         CTX.strokeStyle = 'rgba(168,85,247,0.45)';
-        CTX.lineWidth   = 2;
+        CTX.lineWidth = 2;
         CTX.beginPath(); CTX.arc(0, 0, R + 2, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        CTX.shadowBlur = 0;
 
         // ── Bean body — charcoal/gray-purple gradient ─────────────────
         const bodyG = CTX.createRadialGradient(-2, -2, 1, 0, 0, R);
-        bodyG.addColorStop(0,   '#4a4a6a');
+        bodyG.addColorStop(0, '#4a4a6a');
         bodyG.addColorStop(0.6, '#2d2d44');
-        bodyG.addColorStop(1,   '#1a1a2e');
+        bodyG.addColorStop(1, '#1a1a2e');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
@@ -174,7 +179,7 @@ class Enemy extends Entity {
 
         // ── Red visor slit ────────────────────────────────────────────
         const visorPulse = 0.7 + Math.sin(now / 280) * 0.30;
-        CTX.fillStyle  = `rgba(239,68,68,${visorPulse})`;
+        CTX.fillStyle = `rgba(239,68,68,${visorPulse})`;
         CTX.shadowBlur = 10 * visorPulse; CTX.shadowColor = '#ef4444';
         CTX.beginPath(); CTX.roundRect(R * 0.05, -R * 0.18, R * 0.65, R * 0.22, R * 0.06); CTX.fill();
         // Secondary dim glow bleed
@@ -193,8 +198,8 @@ class Enemy extends Entity {
         // ── Floating spiked hands (orbiting body, weapon-side + off-side) ──
         // Front hand — weapon-pointing side
         const handR = R * 0.38;
-        CTX.fillStyle   = '#3b3b55'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur  = 5; CTX.shadowColor = 'rgba(168,85,247,0.5)';
+        CTX.fillStyle = '#3b3b55'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 5; CTX.shadowColor = 'rgba(168,85,247,0.5)';
         CTX.beginPath(); CTX.arc(R + 6, 2, handR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         // Spike on front hand
         CTX.fillStyle = '#ef4444';
@@ -205,8 +210,8 @@ class Enemy extends Entity {
         CTX.closePath(); CTX.fill();
 
         // Back hand — off-side
-        CTX.fillStyle   = '#2d2d44'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur  = 3;
+        CTX.fillStyle = '#2d2d44'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 3;
         CTX.beginPath(); CTX.arc(-(R + 5), 0, handR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         // Spike on back hand
         CTX.fillStyle = '#ef4444';
@@ -224,7 +229,7 @@ class Enemy extends Entity {
             const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
             CTX.save();
             CTX.globalAlpha = flashAlpha;
-            CTX.fillStyle   = '#ffffff';
+            CTX.fillStyle = '#ffffff';
             CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
             CTX.restore();
         }
@@ -237,56 +242,61 @@ class Enemy extends Entity {
 }
 
 class TankEnemy extends Entity {
-    constructor(x,y) {
-        super(x,y,BALANCE.tank.radius);
+    constructor(x, y) {
+        super(x, y, BALANCE.tank.radius);
         // Heavy exponential HP scaling: baseHp * (1.25^(wave/1.8))
         // Tanks remain threatening but become manageable with focused fire
         this.maxHp = Math.floor(BALANCE.tank.baseHp * Math.pow(1.25, getWave() / 1.8));
-        this.hp=this.maxHp;
-        this.speed=BALANCE.tank.baseSpeed+getWave()*BALANCE.tank.speedPerWave;
-        this.damage=BALANCE.tank.baseDamage+getWave()*BALANCE.tank.damagePerWave;
-        this.color=BALANCE.tank.color; this.type='tank'; this.expValue=BALANCE.tank.expValue;
+        this.hp = this.maxHp;
+        this.speed = BALANCE.tank.baseSpeed + getWave() * BALANCE.tank.speedPerWave;
+        this.damage = BALANCE.tank.baseDamage + getWave() * BALANCE.tank.damagePerWave;
+        this.color = BALANCE.tank.color; this.type = 'tank'; this.expValue = BALANCE.tank.expValue;
 
         // ── Hit flash state ──────────────────────────────────
         this.hitFlashTimer = 0;
     }
 
-    update(dt,player) {
-        if(this.dead) return;
+    update(dt, player) {
+        if (this.dead) return;
 
         // ── Tick hit-flash timer ─────────────────────────────
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
 
-        const dx=player.x-this.x, dy=player.y-this.y;
-        const d=dist(this.x,this.y,player.x,player.y);
-        this.angle=Math.atan2(dy,dx);
-        if(!player.isInvisible){this.vx=Math.cos(this.angle)*this.speed;this.vy=Math.sin(this.angle)*this.speed;}
-        else{this.vx*=0.95;this.vy*=0.95;}
+        const dx = player.x - this.x, dy = player.y - this.y;
+        const d = dist(this.x, this.y, player.x, player.y);
+        this.angle = Math.atan2(dy, dx);
+        if (!player.isInvisible) { this.vx = Math.cos(this.angle) * this.speed; this.vy = Math.sin(this.angle) * this.speed; }
+        else { this.vx *= 0.95; this.vy *= 0.95; }
         this.applyPhysics(dt);
 
         // ── Melee contact damage ─────────────────────────────
         // Glitch Wave reduces Tank melee damage by 40 % — tanks hit
         // very hard and the player can't dodge reliably with inverted controls.
-        if(d<BALANCE.tank.meleeRange+player.radius) {
+        if (d < BALANCE.tank.meleeRange + player.radius) {
             const contactDamage = this.damage * dt * 2;
-            const glitchMult    = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
+            const glitchMult = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
             player.takeDamage(contactDamage * glitchMult);
         }
     }
 
-    takeDamage(amt,player) {
-        this.hp-=amt;
+    takeDamage(amt, player) {
+        this.hp -= amt;
 
         // ── Trigger hit flash ────────────────────────────────
         this.hitFlashTimer = HIT_FLASH_DURATION;
 
-        if(this.hp<=0){
-            this.dead=true;
-            spawnParticles(this.x,this.y,30,this.color);
-            addScore(BALANCE.score.tank*getWave()); addEnemyKill(); Audio.playEnemyDeath();
-            if(player) player.gainExp(this.expValue);
+        if (this.hp <= 0) {
+            this.dead = true;
+            spawnParticles(this.x, this.y, 30, this.color);
+            addScore(BALANCE.score.tank * getWave()); addEnemyKill(); Audio.playEnemyDeath();
+            if (player) player.gainExp(this.expValue);
+            if (player && player.type === 'kao' && player.addKill) {
+                const weps = Object.values(BALANCE.characters.kao.weapons);
+                const currentWep = weps[player.currentWeaponIndex];
+                if (currentWep) player.addKill(currentWep.name);
+            }
             Achievements.stats.kills++;
-            if(Math.random()<BALANCE.powerups.dropRate*BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x,this.y));
+            if (Math.random() < BALANCE.powerups.dropRate * BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
         }
     }
 
@@ -296,14 +306,14 @@ class TankEnemy extends Entity {
         // ║  Wide dark-red bean · Layered armor plates · Shield fists║
         // ╚══════════════════════════════════════════════════════════╝
         const screen = worldToScreen(this.x, this.y);
-        const now    = Date.now();
-        const R      = this.radius; // collision radius untouched
+        const now = Date.now();
+        const R = this.radius; // collision radius untouched
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── Ground shadow (wider for big body) ───────────────────────
         CTX.save();
         CTX.globalAlpha = 0.30;
-        CTX.fillStyle   = 'rgba(0,0,0,0.9)';
+        CTX.fillStyle = 'rgba(0,0,0,0.9)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 6, R * 1.1, 5, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
@@ -317,18 +327,18 @@ class TankEnemy extends Entity {
         CTX.scale(1 + breathe * 0.022, 1 - breathe * 0.022);
 
         // ── Outer threat glow ─────────────────────────────────────────
-        CTX.shadowBlur  = 14; CTX.shadowColor = 'rgba(185,28,28,0.80)';
+        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(185,28,28,0.80)';
         CTX.strokeStyle = 'rgba(185,28,28,0.55)'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        CTX.shadowBlur = 0;
 
         // ── Main bean body — wide dark-red ────────────────────────────
         // Draw as a slightly wider ellipse (1.15×) for the "sturdier" silhouette
         CTX.save(); CTX.scale(1.15, 1.0);
         const bodyG = CTX.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
-        bodyG.addColorStop(0,   '#7f1d1d');
+        bodyG.addColorStop(0, '#7f1d1d');
         bodyG.addColorStop(0.55, '#4a0d0d');
-        bodyG.addColorStop(1,   '#2d0606');
+        bodyG.addColorStop(1, '#2d0606');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
@@ -337,13 +347,13 @@ class TankEnemy extends Entity {
 
         // ── Layered metallic armor plates ─────────────────────────────
         // Front chest plate (forward-facing)
-        CTX.fillStyle   = '#57121a';
+        CTX.fillStyle = '#57121a';
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.8;
         CTX.beginPath();
         CTX.moveTo(R * 0.05, -R * 0.62);
         CTX.lineTo(R * 0.68, -R * 0.32);
-        CTX.lineTo(R * 0.72,  R * 0.28);
-        CTX.lineTo(R * 0.05,  R * 0.62);
+        CTX.lineTo(R * 0.72, R * 0.28);
+        CTX.lineTo(R * 0.05, R * 0.62);
         CTX.quadraticCurveTo(R * 0.3, R * 0.45, R * 0.05, R * 0.30);
         CTX.closePath(); CTX.fill(); CTX.stroke();
 
@@ -358,14 +368,14 @@ class TankEnemy extends Entity {
         // Rivets on the chest plate
         CTX.fillStyle = '#2d0606';
         CTX.shadowBlur = 3; CTX.shadowColor = '#ef4444';
-        for (const [rx, ry] of [[R*0.45,-R*0.35],[R*0.50,R*0.05],[R*0.42,R*0.35]]) {
+        for (const [rx, ry] of [[R * 0.45, -R * 0.35], [R * 0.50, R * 0.05], [R * 0.42, R * 0.35]]) {
             CTX.beginPath(); CTX.arc(rx, ry, 2, 0, Math.PI * 2); CTX.fill();
         }
         CTX.shadowBlur = 0;
 
         // Damage-glow slit on chest (like an overheating engine)
         const heatPulse = 0.5 + Math.sin(now / 220) * 0.45;
-        CTX.fillStyle  = `rgba(251,146,60,${heatPulse * 0.85})`;
+        CTX.fillStyle = `rgba(251,146,60,${heatPulse * 0.85})`;
         CTX.shadowBlur = 8 * heatPulse; CTX.shadowColor = '#fb923c';
         CTX.beginPath(); CTX.roundRect(R * 0.18, -R * 0.08, R * 0.42, R * 0.18, R * 0.05); CTX.fill();
         CTX.shadowBlur = 0;
@@ -385,15 +395,15 @@ class TankEnemy extends Entity {
         // ── Oversized Shield-Hands ────────────────────────────────────
         // Front shield-hand (forward side, large kite-shield shape)
         const shieldGlow = 0.4 + Math.sin(now / 180) * 0.25;
-        CTX.fillStyle   = '#57121a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur  = 8 * shieldGlow; CTX.shadowColor = '#dc2626';
+        CTX.fillStyle = '#57121a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 8 * shieldGlow; CTX.shadowColor = '#dc2626';
         CTX.beginPath();
         CTX.moveTo(R + 5, -R * 0.55);           // top
         CTX.lineTo(R + 12, -R * 0.15);          // upper right
-        CTX.lineTo(R + 13,  R * 0.30);          // lower right
-        CTX.lineTo(R + 5,   R * 0.65);           // bottom point
-        CTX.lineTo(R - 2,   R * 0.30);          // lower left
-        CTX.lineTo(R - 1,  -R * 0.15);          // upper left
+        CTX.lineTo(R + 13, R * 0.30);          // lower right
+        CTX.lineTo(R + 5, R * 0.65);           // bottom point
+        CTX.lineTo(R - 2, R * 0.30);          // lower left
+        CTX.lineTo(R - 1, -R * 0.15);          // upper left
         CTX.closePath(); CTX.fill(); CTX.stroke();
         // Shield boss (central rivet)
         CTX.fillStyle = '#dc2626'; CTX.shadowBlur = 6; CTX.shadowColor = '#ef4444';
@@ -401,13 +411,13 @@ class TankEnemy extends Entity {
         CTX.shadowBlur = 0;
 
         // Back fist (off-side, smaller round gauntlet)
-        CTX.fillStyle   = '#3d0808'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur  = 4; CTX.shadowColor = '#dc2626';
+        CTX.fillStyle = '#3d0808'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 4; CTX.shadowColor = '#dc2626';
         CTX.beginPath(); CTX.arc(-(R + 7), 0, R * 0.42, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         // Knuckle ridge
         CTX.strokeStyle = '#5c1010'; CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.moveTo(-(R + 4), -3); CTX.lineTo(-(R + 10), -3); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(-(R + 4),  1); CTX.lineTo(-(R + 10),  1); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(-(R + 4), 1); CTX.lineTo(-(R + 10), 1); CTX.stroke();
         CTX.shadowBlur = 0;
 
         CTX.restore(); // end weapon transform
@@ -417,7 +427,7 @@ class TankEnemy extends Entity {
             const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
             CTX.save();
             CTX.globalAlpha = flashAlpha;
-            CTX.fillStyle   = '#ffffff';
+            CTX.fillStyle = '#ffffff';
             CTX.translate(screen.x, screen.y);
             if (isFacingLeft) CTX.scale(-1, 1);
             CTX.scale(1.15, 1.0);
@@ -433,64 +443,69 @@ class TankEnemy extends Entity {
 }
 
 class MageEnemy extends Entity {
-    constructor(x,y) {
-        super(x,y,BALANCE.mage.radius);
+    constructor(x, y) {
+        super(x, y, BALANCE.mage.radius);
         // Moderate exponential HP scaling: baseHp * (1.28^(wave/2))
         // Mages remain glass cannons but scale reasonably
-        this.maxHp=Math.floor(BALANCE.mage.baseHp * Math.pow(1.28, getWave() / 2));
-        this.hp=this.maxHp;
-        this.speed=BALANCE.mage.baseSpeed+getWave()*BALANCE.mage.speedPerWave;
-        this.damage=BALANCE.mage.baseDamage+getWave()*BALANCE.mage.damagePerWave;
-        this.color=BALANCE.mage.color; this.type='mage';
-        this.soundWaveCD=0; this.meteorCD=0; this.expValue=BALANCE.mage.expValue;
+        this.maxHp = Math.floor(BALANCE.mage.baseHp * Math.pow(1.28, getWave() / 2));
+        this.hp = this.maxHp;
+        this.speed = BALANCE.mage.baseSpeed + getWave() * BALANCE.mage.speedPerWave;
+        this.damage = BALANCE.mage.baseDamage + getWave() * BALANCE.mage.damagePerWave;
+        this.color = BALANCE.mage.color; this.type = 'mage';
+        this.soundWaveCD = 0; this.meteorCD = 0; this.expValue = BALANCE.mage.expValue;
 
         // ── Hit flash state ──────────────────────────────────
         this.hitFlashTimer = 0;
     }
 
-    update(dt,player) {
-        if(this.dead) return;
+    update(dt, player) {
+        if (this.dead) return;
 
         // ── Tick hit-flash timer ─────────────────────────────
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
 
-        const d=dist(this.x,this.y,player.x,player.y), od=BALANCE.mage.orbitDistance;
-        this.angle=Math.atan2(player.y-this.y,player.x-this.x);
-        if(d<od && !player.isInvisible){this.vx=-Math.cos(this.angle)*this.speed;this.vy=-Math.sin(this.angle)*this.speed;}
-        else if(d>od+BALANCE.mage.orbitDistanceBuffer){this.vx=Math.cos(this.angle)*this.speed;this.vy=Math.sin(this.angle)*this.speed;}
-        else{this.vx*=0.95;this.vy*=0.95;}
+        const d = dist(this.x, this.y, player.x, player.y), od = BALANCE.mage.orbitDistance;
+        this.angle = Math.atan2(player.y - this.y, player.x - this.x);
+        if (d < od && !player.isInvisible) { this.vx = -Math.cos(this.angle) * this.speed; this.vy = -Math.sin(this.angle) * this.speed; }
+        else if (d > od + BALANCE.mage.orbitDistanceBuffer) { this.vx = Math.cos(this.angle) * this.speed; this.vy = Math.sin(this.angle) * this.speed; }
+        else { this.vx *= 0.95; this.vy *= 0.95; }
         this.applyPhysics(dt);
-        if(this.soundWaveCD>0) this.soundWaveCD-=dt;
-        if(this.meteorCD>0) this.meteorCD-=dt;
-        if(this.soundWaveCD<=0 && d<BALANCE.mage.soundWaveRange && !player.isInvisible){
-            player.isConfused=true; player.confusedTimer=BALANCE.mage.soundWaveConfuseDuration;
-            spawnFloatingText('CONFUSED!',player.x,player.y-40,'#a855f7',20);
-            for(let i=0;i<360;i+=30){
-                const a=(i*Math.PI)/180;
-                spawnParticles(this.x+Math.cos(a)*50,this.y+Math.sin(a)*50,3,'#a855f7');
+        if (this.soundWaveCD > 0) this.soundWaveCD -= dt;
+        if (this.meteorCD > 0) this.meteorCD -= dt;
+        if (this.soundWaveCD <= 0 && d < BALANCE.mage.soundWaveRange && !player.isInvisible) {
+            player.isConfused = true; player.confusedTimer = BALANCE.mage.soundWaveConfuseDuration;
+            spawnFloatingText('CONFUSED!', player.x, player.y - 40, '#a855f7', 20);
+            for (let i = 0; i < 360; i += 30) {
+                const a = (i * Math.PI) / 180;
+                spawnParticles(this.x + Math.cos(a) * 50, this.y + Math.sin(a) * 50, 3, '#a855f7');
             }
-            this.soundWaveCD=BALANCE.mage.soundWaveCooldown;
+            this.soundWaveCD = BALANCE.mage.soundWaveCooldown;
         }
-        if(this.meteorCD<=0 && Math.random()<0.005){
-            window.specialEffects.push(new MeteorStrike(player.x+rand(-300,300),player.y+rand(-300,300)));
-            this.meteorCD=BALANCE.mage.meteorCooldown;
+        if (this.meteorCD <= 0 && Math.random() < 0.005) {
+            window.specialEffects.push(new MeteorStrike(player.x + rand(-300, 300), player.y + rand(-300, 300)));
+            this.meteorCD = BALANCE.mage.meteorCooldown;
             Audio.playMeteorWarning();
         }
     }
 
-    takeDamage(amt,player) {
-        this.hp-=amt;
+    takeDamage(amt, player) {
+        this.hp -= amt;
 
         // ── Trigger hit flash ────────────────────────────────
         this.hitFlashTimer = HIT_FLASH_DURATION;
 
-        if(this.hp<=0){
-            this.dead=true;
-            spawnParticles(this.x,this.y,25,this.color);
-            addScore(BALANCE.score.mage*getWave()); addEnemyKill(); Audio.playEnemyDeath();
-            if(player) player.gainExp(this.expValue);
+        if (this.hp <= 0) {
+            this.dead = true;
+            spawnParticles(this.x, this.y, 25, this.color);
+            addScore(BALANCE.score.mage * getWave()); addEnemyKill(); Audio.playEnemyDeath();
+            if (player) player.gainExp(this.expValue);
+            if (player && player.type === 'kao' && player.addKill) {
+                const weps = Object.values(BALANCE.characters.kao.weapons);
+                const currentWep = weps[player.currentWeaponIndex];
+                if (currentWep) player.addKill(currentWep.name);
+            }
             Achievements.stats.kills++;
-            if(Math.random()<BALANCE.powerups.dropRate*BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x,this.y));
+            if (Math.random() < BALANCE.powerups.dropRate * BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
         }
     }
 
@@ -499,16 +514,16 @@ class MageEnemy extends Entity {
         // ║  MAGE ENEMY — Arcane Shooter Drone                      ║
         // ║  Sleek green diamond-bean · Glowing blaster · Orb hands  ║
         // ╚══════════════════════════════════════════════════════════╝
-        const screen    = worldToScreen(this.x, this.y);
-        const now       = Date.now();
-        const R         = this.radius;
+        const screen = worldToScreen(this.x, this.y);
+        const now = Date.now();
+        const R = this.radius;
         const bobOffset = Math.sin(now / 300) * 3; // Mages float/hover
         const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
 
         // ── Ground shadow (offset because mage floats) ───────────────
         CTX.save();
         CTX.globalAlpha = 0.15;
-        CTX.fillStyle   = 'rgba(0,0,0,0.8)';
+        CTX.fillStyle = 'rgba(0,0,0,0.8)';
         CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 10, R * 0.8, 4, 0, 0, Math.PI * 2); CTX.fill();
         CTX.restore();
 
@@ -523,18 +538,18 @@ class MageEnemy extends Entity {
 
         // ── Outer arcane glow ring ────────────────────────────────────
         const auraA = 0.45 + Math.sin(now / 240) * 0.25;
-        CTX.shadowBlur  = 14; CTX.shadowColor = 'rgba(126,34,206,0.80)';
+        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(126,34,206,0.80)';
         CTX.strokeStyle = `rgba(167,139,250,${auraA})`; CTX.lineWidth = 2.5;
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur  = 0;
+        CTX.shadowBlur = 0;
 
         // ── Bean body — deep emerald/violet gradient ──────────────────
         // Diamond/sleek feel: taller than wide (scale Y slightly up)
         CTX.save(); CTX.scale(0.88, 1.1);
         const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-        bodyG.addColorStop(0,   '#166534');
+        bodyG.addColorStop(0, '#166534');
         bodyG.addColorStop(0.55, '#14532d');
-        bodyG.addColorStop(1,   '#052e16');
+        bodyG.addColorStop(1, '#052e16');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
@@ -547,11 +562,11 @@ class MageEnemy extends Entity {
 
         // ── Arcane energy core (glowing belly rune) ───────────────────
         const coreP = 0.4 + Math.sin(now / 190) * 0.5;
-        CTX.fillStyle  = `rgba(74,222,128,${Math.max(0, coreP)})`;
+        CTX.fillStyle = `rgba(74,222,128,${Math.max(0, coreP)})`;
         CTX.shadowBlur = 12 * coreP; CTX.shadowColor = '#22c55e';
         CTX.beginPath(); CTX.arc(0, R * 0.15, R * 0.28, 0, Math.PI * 2); CTX.fill();
         // Inner white hot core
-        CTX.fillStyle  = `rgba(255,255,255,${coreP * 0.6})`;
+        CTX.fillStyle = `rgba(255,255,255,${coreP * 0.6})`;
         CTX.beginPath(); CTX.arc(0, R * 0.15, R * 0.12, 0, Math.PI * 2); CTX.fill();
         CTX.shadowBlur = 0;
 
@@ -565,11 +580,11 @@ class MageEnemy extends Entity {
 
         // ── Glowing blaster barrel (pointing forward / +X) ───────────
         // Barrel base — dark rectangle
-        CTX.fillStyle   = '#1a2a1a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
+        CTX.fillStyle = '#1a2a1a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.roundRect(R * 0.5, -R * 0.13, R * 0.80, R * 0.28, R * 0.06); CTX.fill(); CTX.stroke();
         // Barrel energy channel — glowing green slit
         const blasterA = 0.7 + Math.sin(now / 200) * 0.3;
-        CTX.fillStyle  = `rgba(74,222,128,${blasterA})`;
+        CTX.fillStyle = `rgba(74,222,128,${blasterA})`;
         CTX.shadowBlur = 8 * blasterA; CTX.shadowColor = '#22c55e';
         CTX.beginPath(); CTX.roundRect(R * 0.55, -R * 0.06, R * 0.72, R * 0.14, R * 0.04); CTX.fill();
         // Muzzle energy ring
@@ -580,8 +595,8 @@ class MageEnemy extends Entity {
         // ── Floating Arcane Orb Hands ─────────────────────────────────
         // Front orb — near the blaster, glowing green
         const orbPulse = 0.6 + Math.sin(now / 210 + 1) * 0.35;
-        CTX.fillStyle   = '#14532d'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur  = 8 * orbPulse; CTX.shadowColor = '#22c55e';
+        CTX.fillStyle = '#14532d'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 8 * orbPulse; CTX.shadowColor = '#22c55e';
         CTX.beginPath(); CTX.arc(R + 4, R * 0.55, R * 0.35, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         // Orb inner glow
         CTX.fillStyle = `rgba(74,222,128,${orbPulse * 0.75})`;
@@ -589,8 +604,8 @@ class MageEnemy extends Entity {
         CTX.shadowBlur = 0;
 
         // Back orb — off-side, dimmer violet tint
-        CTX.fillStyle   = '#1a0a2e'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur  = 5; CTX.shadowColor = 'rgba(126,34,206,0.5)';
+        CTX.fillStyle = '#1a0a2e'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 5; CTX.shadowColor = 'rgba(126,34,206,0.5)';
         CTX.beginPath(); CTX.arc(-(R + 4), R * 0.30, R * 0.30, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
         CTX.fillStyle = `rgba(167,139,250,${orbPulse * 0.55})`;
         CTX.beginPath(); CTX.arc(-(R + 4), R * 0.30, R * 0.14, 0, Math.PI * 2); CTX.fill();
@@ -603,7 +618,7 @@ class MageEnemy extends Entity {
             const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
             CTX.save();
             CTX.globalAlpha = flashAlpha;
-            CTX.fillStyle   = '#ffffff';
+            CTX.fillStyle = '#ffffff';
             CTX.translate(screen.x, screen.y + bobOffset);
             if (isFacingLeft) CTX.scale(-1, 1);
             CTX.save(); CTX.scale(0.88, 1.1);
@@ -623,48 +638,48 @@ class MageEnemy extends Entity {
 // POWER-UPS
 // ════════════════════════════════════════════════════════════
 class PowerUp {
-    constructor(x,y) {
-        this.x=x; this.y=y; this.radius=BALANCE.powerups.radius; this.life=BALANCE.powerups.lifetime;
-        this.bobTimer=Math.random()*Math.PI*2;
-        this.type=randomChoice(['heal','damage','speed']);
-        this.icons={heal:'❤️',damage:'⚡',speed:'🚀'};
-        this.colors={heal:'#10b981',damage:'#f59e0b',speed:'#3b82f6'};
+    constructor(x, y) {
+        this.x = x; this.y = y; this.radius = BALANCE.powerups.radius; this.life = BALANCE.powerups.lifetime;
+        this.bobTimer = Math.random() * Math.PI * 2;
+        this.type = randomChoice(['heal', 'damage', 'speed']);
+        this.icons = { heal: '❤️', damage: '⚡', speed: '🚀' };
+        this.colors = { heal: '#10b981', damage: '#f59e0b', speed: '#3b82f6' };
     }
-    update(dt,player) {
-        this.life-=dt; this.bobTimer+=dt*3;
-        const d=dist(this.x,this.y,player.x,player.y);
-        if(d<this.radius+player.radius){this.collect(player);return true;}
-        return this.life<=0;
+    update(dt, player) {
+        this.life -= dt; this.bobTimer += dt * 3;
+        const d = dist(this.x, this.y, player.x, player.y);
+        if (d < this.radius + player.radius) { this.collect(player); return true; }
+        return this.life <= 0;
     }
     collect(player) {
-        switch(this.type){
+        switch (this.type) {
             case 'heal': player.heal(BALANCE.powerups.healAmount); break;
             case 'damage':
-                player.damageBoost=BALANCE.powerups.damageBoost;
-                setTimeout(()=>{player.damageBoost=1;},BALANCE.powerups.damageBoostDuration*1000);
-                spawnFloatingText('DAMAGE UP!',player.x,player.y-40,'#f59e0b',20); break;
+                player.damageBoost = BALANCE.powerups.damageBoost;
+                setTimeout(() => { player.damageBoost = 1; }, BALANCE.powerups.damageBoostDuration * 1000);
+                spawnFloatingText('DAMAGE UP!', player.x, player.y - 40, '#f59e0b', 20); break;
             case 'speed':
-                player.speedBoost=BALANCE.powerups.speedBoost;
-                setTimeout(()=>{player.speedBoost=1;},BALANCE.powerups.speedBoostDuration*1000);
-                spawnFloatingText('SPEED UP!',player.x,player.y-40,'#3b82f6',20);
+                player.speedBoost = BALANCE.powerups.speedBoost;
+                setTimeout(() => { player.speedBoost = 1; }, BALANCE.powerups.speedBoostDuration * 1000);
+                spawnFloatingText('SPEED UP!', player.x, player.y - 40, '#3b82f6', 20);
         }
-        spawnParticles(this.x,this.y,20,this.colors[this.type]);
+        spawnParticles(this.x, this.y, 20, this.colors[this.type]);
         addScore(BALANCE.score.powerup); Audio.playPowerUp();
         Achievements.stats.powerups++; Achievements.check('collector');
     }
     draw() {
-        const screen=worldToScreen(this.x,this.y+Math.sin(this.bobTimer)*5);
-        CTX.save(); CTX.translate(screen.x,screen.y);
-        CTX.shadowBlur=20; CTX.shadowColor=this.colors[this.type];
-        CTX.font='32px Arial'; CTX.textAlign='center'; CTX.textBaseline='middle';
-        CTX.fillText(this.icons[this.type],0,0); CTX.restore();
+        const screen = worldToScreen(this.x, this.y + Math.sin(this.bobTimer) * 5);
+        CTX.save(); CTX.translate(screen.x, screen.y);
+        CTX.shadowBlur = 20; CTX.shadowColor = this.colors[this.type];
+        CTX.font = '32px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.fillText(this.icons[this.type], 0, 0); CTX.restore();
     }
 }
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.Enemy      = Enemy;
-window.EnemyBase  = Enemy;    // alias for Debug.html check
-window.TankEnemy  = TankEnemy;
-window.MageEnemy  = MageEnemy;
-window.PowerUp    = PowerUp;
+window.Enemy = Enemy;
+window.EnemyBase = Enemy;    // alias for Debug.html check
+window.TankEnemy = TankEnemy;
+window.MageEnemy = MageEnemy;
+window.PowerUp = PowerUp;

@@ -81,7 +81,13 @@ const BALANCE = {
             speedOnHitDuration: 0.4,
             damageMultiplierPerLevel: 0.06,
             cooldownReductionPerLevel: 0.03,
-            maxHpPerLevel: 0
+            maxHpPerLevel: 0,
+            // ── Advanced Kao Skills ──
+            teleportCooldown: 20,
+            cloneCooldown: 45,
+            cloneDuration: 15,
+            autoStealthCooldown: 8,
+            weaponMasterReq: 10
         },
         auto: {
             name: 'Auto',
@@ -545,7 +551,12 @@ const GAME_TEXTS = {
         poomCrit: 'ข้าวเหนียวคริติคอล! 💥',
         highGround: 'HIGH GROUND!',
         droneOnline: '🤖 DRONE ONLINE',
-        droneOverdrive: '🔥 DRONE OVERDRIVE!'
+        droneOverdrive: '🔥 DRONE OVERDRIVE!',
+        // ── Kao skill texts ──
+        kaoWeaponAwaken: '⚡ WEAPON MASTER AWAKENED!',
+        kaoTeleport: '⚡ TELEPORT READY',
+        kaoClones: '👥 CLONE OF STEALTH!',
+        kaoFreeStealth: '👻 FREE STEALTH'
     },
     time: {
         bulletTime: '🕐 BULLET TIME',

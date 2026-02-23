@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v2.2'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.2 (เวอร์ชันปัจจุบัน) ถือเป็นการอัปเดต Minor Change ที่สำคัญมาก เพราะมีการเพิ่มไฟล์ใหม่ (manifest.json, sw.js) และปรับปรุงระบบการเล่นข้ามแพลตฟอร์ม (Mobile UI) ใน index.html
+const CACHE_NAME = 'mtc-cache-v2.3'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.3 เพิ่ม KaoPlayer.js — Advanced Assassin skill set (Teleport, Weapon Master Awakening, Clone of Stealth)
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
@@ -20,6 +20,7 @@ const urlsToCache = [
   // Entities
   './js/entities/base.js',
   './js/entities/player/PlayerBase.js',
+  './js/entities/player/KaoPlayer.js',
   './js/entities/player/AutoPlayer.js',
   './js/entities/player/PoomPlayer.js',
   './js/entities/enemy.js',
@@ -74,7 +75,7 @@ self.addEventListener('fetch', event => {
       .then(response => {
         // เจอในแคช -> ส่งคืนทันที (Offline First)
         if (response) {
-          return response; 
+          return response;
         }
 
         // ไม่เจอในแคช -> วิ่งไปดึงจากเน็ต
@@ -85,7 +86,7 @@ self.addEventListener('fetch', event => {
             caches.open(CACHE_NAME)
               .then(cache => {
                 // แอบแคช Google Fonts หรือไฟล์ที่หลงลืมไว้แบบอัตโนมัติ
-                cache.put(event.request, responseToCache); 
+                cache.put(event.request, responseToCache);
               });
           }
           return networkResponse;

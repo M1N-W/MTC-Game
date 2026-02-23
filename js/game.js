@@ -720,6 +720,8 @@ function startGame(charType = 'kao') {
 
     if (charType === 'auto' && typeof AutoPlayer === 'function') {
         window.player = new AutoPlayer();
+    } else if (charType === 'kao' && typeof KaoPlayer === 'function') {
+        window.player = new KaoPlayer();
     } else {
         window.player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
     }

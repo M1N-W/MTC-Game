@@ -517,6 +517,15 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
+            } else if (isKao) {
+                // Kao: Skill-1 slot stays as Stealth (R-Click) — update emoji to ghost
+                skill1El.id = 'stealth-icon';
+                const emojiEl = document.getElementById('skill1-emoji');
+                if (emojiEl) emojiEl.textContent = '👻';
+                const hintEl = document.getElementById('skill1-hint');
+                if (hintEl) hintEl.textContent = 'R-Click';
+                const cdEl = skill1El.querySelector('.cooldown-mask');
+                if (cdEl) cdEl.id = 'stealth-cd';
             } else {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
@@ -527,12 +536,83 @@ class UIManager {
                 if (cdEl) cdEl.id = 'stealth-cd';
             }
         }
+
+        // ── Naga/Teleport slot — repurposed per character ─────────────────────
+        // Poom: Naga 🐉 (Q).  Kao: Teleport ⚡ (Q).  Others: hidden.
         const nagaSlot = document.getElementById('naga-icon');
-        if (nagaSlot) nagaSlot.style.display = isPoom ? 'flex' : 'none';
+        if (nagaSlot) {
+            if (isPoom) {
+                nagaSlot.style.display = 'flex';
+                // Restore Poom defaults in case Kao was previously selected
+                nagaSlot.style.borderColor = '#10b981';
+                nagaSlot.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
+                const nagaHint = nagaSlot.querySelector('.key-hint');
+                if (nagaHint) { nagaHint.textContent = 'Q'; nagaHint.style.background = '#10b981'; }
+                const nagaEmoji = nagaSlot.querySelector(':not(.key-hint):not(.cooldown-mask):not(#naga-timer):not(#naga-cd)');
+                // Leave dragon emoji intact — it is hard-coded in HTML
+            } else if (isKao) {
+                // Repurpose naga-icon as Teleport slot for Kao
+                nagaSlot.style.display = 'flex';
+                nagaSlot.style.borderColor = '#00e5ff';
+                nagaSlot.style.boxShadow = '0 0 15px rgba(0,229,255,0.45)';
+                // Overwrite inner content for Teleport
+                nagaSlot.innerHTML = `
+                    <div class="key-hint" id="teleport-hint" style="background:#00e5ff;color:#0c1a2e;">Q</div>
+                    <span id="teleport-emoji">⚡</span>
+                    <div class="skill-name" style="color:#67e8f9;">TELEPORT</div>
+                    <div class="cooldown-mask" id="teleport-cd"></div>`;
+                nagaSlot.id = 'teleport-icon';
+            } else {
+                nagaSlot.style.display = 'none';
+            }
+        }
+
+        // ── Clone of Stealth slot (E) — Kao-exclusive, dynamically injected ──
+        // We look for an existing #kao-clone-icon first; if not present we create
+        // it and insert it after the teleport slot (or after passive-skill).
+        const hudBottom = document.querySelector('.hud-bottom');
+        let cloneSlot = document.getElementById('kao-clone-icon');
+
+        if (isKao) {
+            if (!cloneSlot && hudBottom) {
+                cloneSlot = document.createElement('div');
+                cloneSlot.className = 'skill-icon';
+                cloneSlot.id = 'kao-clone-icon';
+                cloneSlot.style.cssText = 'border-color:#3b82f6; box-shadow:0 0 15px rgba(59,130,246,0.45);';
+                cloneSlot.innerHTML = `
+                    <div class="key-hint" style="background:#3b82f6;">E</div>
+                    <span>👥</span>
+                    <div class="skill-name" style="color:#93c5fd;">CLONES</div>
+                    <div class="cooldown-mask" id="clone-cd"></div>`;
+                // Insert after the passive-skill element (or at end of hud-bottom)
+                const passiveRef = document.getElementById('passive-skill');
+                if (passiveRef && passiveRef.parentNode === hudBottom) {
+                    hudBottom.insertBefore(cloneSlot, passiveRef.nextSibling);
+                } else {
+                    hudBottom.appendChild(cloneSlot);
+                }
+            }
+            if (cloneSlot) cloneSlot.style.display = 'flex';
+        } else {
+            // Non-Kao: hide and remove Teleport id re-assignment if it happened
+            if (cloneSlot) cloneSlot.style.display = 'none';
+            // Restore naga-icon id if it was repurposed
+            const maybeTeleport = document.getElementById('teleport-icon');
+            if (maybeTeleport) {
+                maybeTeleport.id = 'naga-icon';
+                maybeTeleport.style.borderColor = '#10b981';
+                maybeTeleport.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
+                maybeTeleport.innerHTML = `
+                    <div class="key-hint" style="background:#10b981;">Q</div>🐉
+                    <div class="cooldown-mask" id="naga-cd"></div>
+                    <span id="naga-timer"></span>`;
+            }
+        }
+
         const btnNaga = document.getElementById('btn-naga');
-        if (btnNaga) btnNaga.style.display = isPoom ? 'flex' : 'none';
+        if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
         const btnSkill = document.getElementById('btn-skill');
-        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🟥' : '📖');
+        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🟥' : isKao ? '👻' : '📖');
     }
 
     static updateSkillIcons(player) {
@@ -589,6 +669,68 @@ class UIManager {
                 'stealth-icon',
                 player.isWanchaiActive ? 0 : Math.max(0, player.cooldowns.stealth),
                 S.wanchaiCooldown
+            );
+
+            // ── Kao — Teleport (Q) + Clone of Stealth (E) ─────────────────────────
+        } else if (typeof KaoPlayer !== 'undefined' && player instanceof KaoPlayer) {
+            const S = BALANCE.characters.kao;
+
+            // ── Skill 1 (R-Click) — Stealth: handled by PlayerBase.updateUI() ──
+            // PlayerBase.updateUI() already drives stealth-icon / stealth-cd every
+            // frame via the base class tick, so we don't duplicate it here.
+
+            // ── Skill 2 (Q) — Teleport ────────────────────────────────────────
+            // timer counts UP to teleportCooldown; a charge means it's ready.
+            const teleportIcon = document.getElementById('teleport-icon');
+            const teleportCd = document.getElementById('teleport-cd');
+            if (teleportIcon) {
+                const isReady = player.teleportCharges > 0;
+                teleportIcon.classList.toggle('active', isReady);
+                if (teleportCd) {
+                    // Fill the mask based on how far the timer has progressed
+                    const progress = player.teleportCooldown > 0
+                        ? Math.min(1, player.teleportTimer / player.teleportCooldown)
+                        : 1;
+                    teleportCd.style.height = isReady ? '0%' : `${(1 - progress) * 100}%`;
+                }
+            }
+            // Arc overlay: remaining time = teleportCooldown - teleportTimer
+            // When charges > 0 the skill is ready — pass 0 remaining so arc clears.
+            const teleportRemaining = player.teleportCharges > 0
+                ? 0
+                : Math.max(0, player.teleportCooldown - player.teleportTimer);
+            UIManager._setCooldownVisual('teleport-icon', teleportRemaining, player.teleportCooldown);
+
+            // ── Skill 3 (E) — Clone of Stealth ────────────────────────────────
+            // cloneSkillCooldown counts DOWN from maxCloneCooldown to 0.
+            const cloneIcon = document.getElementById('kao-clone-icon');
+            const cloneCd = document.getElementById('clone-cd');
+            if (cloneIcon) {
+                const cloneReady = player.cloneSkillCooldown <= 0;
+                cloneIcon.classList.toggle('active', cloneReady);
+
+                // Flash the border cyan while clones are actively deployed
+                if (player.clonesActiveTimer > 0) {
+                    cloneIcon.style.borderColor = '#00e5ff';
+                    cloneIcon.style.boxShadow = '0 0 20px rgba(0,229,255,0.7)';
+                } else {
+                    cloneIcon.style.borderColor = cloneReady ? '#60a5fa' : '#3b82f6';
+                    cloneIcon.style.boxShadow = cloneReady
+                        ? '0 0 18px rgba(96,165,250,0.65)'
+                        : '0 0 15px rgba(59,130,246,0.45)';
+                }
+
+                if (cloneCd) {
+                    const cloneProgress = player.maxCloneCooldown > 0
+                        ? Math.min(1, 1 - player.cloneSkillCooldown / player.maxCloneCooldown)
+                        : 1;
+                    cloneCd.style.height = cloneReady ? '0%' : `${(1 - cloneProgress) * 100}%`;
+                }
+            }
+            UIManager._setCooldownVisual(
+                'kao-clone-icon',
+                Math.max(0, player.cloneSkillCooldown),
+                player.maxCloneCooldown
             );
         }
     }
