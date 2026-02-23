@@ -240,7 +240,7 @@ function _setupKeyboardListeners() {
         var consoleInput = document.getElementById('console-input');
         if (consoleInput && document.activeElement === consoleInput) return;
 
-        if (gameState === 'PAUSED') {
+        if (window.gameState === 'PAUSED') {
             var shopModal   = document.getElementById('shop-modal');
             var shopOpen    = shopModal && shopModal.style.display === 'flex';
             var consoleOpen = AdminConsole.isOpen;
@@ -251,7 +251,7 @@ function _setupKeyboardListeners() {
             return;
         }
 
-        if (gameState !== 'PLAYING') return;
+        if (window.gameState !== 'PLAYING') return;
 
         if (e.code === 'KeyW')  keys.w     = 1;
         if (e.code === 'KeyS')  keys.s     = 1;
@@ -294,7 +294,7 @@ function _setupKeyboardListeners() {
         // 'T' fires only on keydown; no keyup state needed.
 
         if (e.code === 'KeyQ') {
-            if (gameState === 'PLAYING') {
+            if (window.gameState === 'PLAYING') {
                 if (player instanceof PoomPlayer) keys.q = 0;
                 else { weaponSystem.switchWeapon(); keys.q = 0; }
             } else { keys.q = 0; }

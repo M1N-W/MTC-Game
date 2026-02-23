@@ -935,6 +935,11 @@ class MapSystem {
             const rSS    = Math.abs(edgePt.x - sc.x);
             const pulse  = 0.50 + Math.sin(t * 1.5 + ac.phase) * 0.18;
 
+            // Guard against NaN/Infinity that would crash createRadialGradient
+            if (!isFinite(sc.x) || !isFinite(sc.y) || !isFinite(rSS) || rSS <= 0) {
+                return; // Skip drawing this aura if coordinates are invalid
+            }
+
             ctx.save();
 
             const grad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, rSS);
