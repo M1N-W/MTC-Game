@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v2.51'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.5 harden fetch/runtime caching guards
+const CACHE_NAME = 'mtc-cache-v2.52'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.5 harden fetch/runtime caching guards
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
