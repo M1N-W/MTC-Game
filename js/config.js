@@ -177,11 +177,12 @@ const BALANCE = {
         lerpBase: 0.02,
         bobAmplitude: 8,
         bobSpeed: 3.5,
-        // ── NEW: Overdrive Stats ──
-        overdriveCombo: 20,
+        // ── Overdrive Stats ──
+        overdriveCombo: 15,
         overdriveFireRate: 2.5,
         overdriveColor: '#facc15',
-        overdriveGlow: '#f59e0b'
+        overdriveGlow: '#f59e0b',
+        overdriveLinger: 4.0 // Keeps overdrive active for 4s after combo drops
     },
     enemy: {
         radius: 18,
@@ -495,7 +496,8 @@ const ACHIEVEMENT_DEFS = [
     { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎' },
     { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' },
     { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍' },
-    { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง', icon: '🛒' }
+    { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง', icon: '🛒' },
+    { id: 'drone_master', name: 'Drone Master', desc: 'ปลดล็อค Drone Overdrive ครั้งแรก', icon: '🤖' }
 ];
 
 // ══════════════════════════════════════════════════════════════

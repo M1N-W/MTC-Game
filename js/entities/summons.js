@@ -271,11 +271,27 @@ class Drone extends Entity {
         this.lockTimer += dt;
         if (this.shootCooldown > 0) this.shootCooldown -= dt;
 
-        // ── Overdrive State Tracking ──
-        const isOverdrive = player && (player.comboCount || 0) >= (S.overdriveCombo || 20);
+        // ── Overdrive State Tracking (with Linger Timer) ──
+        // Initialize timer if not exists
+        if (typeof this.overdriveTimer === 'undefined') this.overdriveTimer = 0;
+
+        // Check if player has reached the required combo
+        if (player && (player.comboCount || 0) >= (S.overdriveCombo || 15)) {
+            this.overdriveTimer = S.overdriveLinger || 4.0; // Refresh timer while combo is maintained
+        } else if (this.overdriveTimer > 0) {
+            this.overdriveTimer -= dt; // Linger countdown when combo drops
+        }
+
+        const isOverdrive = this.overdriveTimer > 0;
+
         if (isOverdrive && !this.wasOverdrive) {
             spawnFloatingText(GAME_TEXTS.combat.droneOverdrive || '🔥 OVERDRIVE!', this.x, this.y - 30, '#facc15', 22);
             spawnParticles(this.x, this.y, 20, '#facc15');
+
+            // Unlock Achievement
+            if (typeof Achievements !== 'undefined') {
+                Achievements.unlock('drone_master');
+            }
         }
         this.wasOverdrive = isOverdrive;
 
