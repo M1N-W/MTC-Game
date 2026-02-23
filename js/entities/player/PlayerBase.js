@@ -76,28 +76,13 @@ class Player extends Entity {
         this.cooldownMultiplier = 1.0;
 
         this.baseCritChance = stats.baseCritChance;
-        this.passiveUnlocked = false;
+        this.passiveUnlocked = false;  // Admin Dev Mode จัดการใน startGame() แทนแล้ว
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
 
         // ── Collision Awareness state ──────────────────────────
         this.obstacleBuffTimer = 0;
         this.lastObstacleWarning = 0;
-
-        // ── Restore persistent passive ─────────────────────────
-        try {
-            const saved = getSaveData();
-            const myId = this.charId;
-            if (Array.isArray(saved.unlockedPassives) && saved.unlockedPassives.includes(myId)) {
-                this.passiveUnlocked = true;
-                const hpBonus = Math.floor(this.maxHp * stats.passiveHpBonusPct);
-                this.maxHp += hpBonus;
-                this.hp += hpBonus;
-                console.log(`[MTC Save] Passive restored for '${myId}'.`);
-            }
-        } catch (e) {
-            console.warn('[MTC Save] Could not restore passive:', e);
-        }
     }
 
     get S() { return this.stats; }

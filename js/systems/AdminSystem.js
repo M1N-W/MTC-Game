@@ -21,8 +21,8 @@ const MTC_DB_URL = 'https://claude.ai/public/artifacts/649de47e-b97f-41ad-ae66-c
 // ══════════════════════════════════════════════════════════════
 const AdminConsole = (() => {
     const history = [];
-    let histIdx   = -1;
-    let isOpen    = false;
+    let histIdx = -1;
+    let isOpen = false;
 
     const CHAR_DELAY = 18;
 
@@ -98,14 +98,14 @@ const AdminConsole = (() => {
         histIdx = -1;
 
         // Split into tokens for arg parsing
-        const args    = trimmed.toLowerCase().split(/\s+/);
-        const base    = args[0];          // first token
-        const sub     = args[1] || '';    // second token
-        const rest    = args.slice(2);    // remainder
+        const args = trimmed.toLowerCase().split(/\s+/);
+        const base = args[0];          // first token
+        const sub = args[1] || '';    // second token
+        const rest = args.slice(2);    // remainder
 
         // ── Player guard (most commands need an active player) ─
         const needsPlayer = !['help', 'clear', 'exit', 'quit', 'q',
-                              'whoami', 'ls', 'cat', 'sudo'].includes(base);
+            'whoami', 'ls', 'cat', 'sudo'].includes(base);
         if (needsPlayer && !window.player) {
             _appendLine(GAME_TEXTS.admin.noPlayer, 'cline-error');
             return;
@@ -115,11 +115,11 @@ const AdminConsole = (() => {
         // heal [amount]
         // ══════════════════════════════════════════════════════
         if (base === 'heal') {
-            const amount  = parseInt(args[1]) || 100;
-            const maxHp   = window.player.maxHp || 110;
-            const before  = window.player.hp;
+            const amount = parseInt(args[1]) || 100;
+            const maxHp = window.player.maxHp || 110;
+            const before = window.player.hp;
             window.player.hp = Math.min(maxHp, window.player.hp + amount);
-            const gained  = Math.round(window.player.hp - before);
+            const gained = Math.round(window.player.hp - before);
             _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
             _appendLine(GAME_TEXTS.admin.healInject(gained), 'cline-info');
             _appendLine(GAME_TEXTS.admin.healResult(Math.round(window.player.hp), maxHp), 'cline-ok');
@@ -373,12 +373,12 @@ const AdminConsole = (() => {
             if (isOpen) return;
             isOpen = true;
 
-            const modal  = document.getElementById('admin-console');
-            const inner  = document.getElementById('console-inner');
-            const input  = document.getElementById('console-input');
+            const modal = document.getElementById('admin-console');
+            const inner = document.getElementById('console-inner');
+            const input = document.getElementById('console-input');
             const prompt = document.getElementById('console-prompt');
 
-            if (modal)  modal.style.display  = 'flex';
+            if (modal) modal.style.display = 'flex';
             if (prompt) prompt.style.display = 'none';
 
             requestAnimationFrame(() => {
@@ -398,7 +398,7 @@ const AdminConsole = (() => {
                     // ── Tab auto-complete ──────────────────────
                     if (e.key === 'Tab') {
                         e.preventDefault();
-                        const val     = input.value.toLowerCase();
+                        const val = input.value.toLowerCase();
                         const matches = COMMANDS.filter(c => c.startsWith(val));
 
                         if (matches.length === 0) {
@@ -427,11 +427,11 @@ const AdminConsole = (() => {
                         _parse(val);
                         histIdx = -1;
 
-                    // ── Escape — close ─────────────────────────
+                        // ── Escape — close ─────────────────────────
                     } else if (e.key === 'Escape') {
                         closeAdminConsole();
 
-                    // ── Arrow Up — history back ────────────────
+                        // ── Arrow Up — history back ────────────────
                     } else if (e.key === 'ArrowUp') {
                         e.preventDefault();
                         if (histIdx < history.length - 1) {
@@ -439,7 +439,7 @@ const AdminConsole = (() => {
                             input.value = history[histIdx] || '';
                         }
 
-                    // ── Arrow Down — history forward ───────────
+                        // ── Arrow Down — history forward ───────────
                     } else if (e.key === 'ArrowDown') {
                         e.preventDefault();
                         if (histIdx > 0) {
@@ -488,10 +488,23 @@ window.AdminConsole = AdminConsole;
 
 function openAdminConsole() {
     if (window.gameState !== 'PLAYING') return;
+
+    // ── Admin Authentication Gate ──────────────────────────────────────────
+    // เฉพาะผู้สร้างที่ผ่าน Secret Keylogger มาแล้วเท่านั้นถึงจะเข้าได้
+    if (!window.isAdmin) {
+        if (typeof spawnFloatingText === 'function' && window.player) {
+            spawnFloatingText('⛔ ACCESS DENIED', window.player.x, window.player.y - 70, '#ef4444', 22);
+            spawnFloatingText('AUTHORIZATION REQUIRED', window.player.x, window.player.y - 100, '#fca5a5', 14);
+        }
+        if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
+        console.log('%c[MTC Admin] ⛔ Access denied — Developer Mode not active.', 'color:#ef4444;');
+        return;
+    }
+
     setGameState('PAUSED');
     AdminConsole.open();
     Audio.pauseBGM();
-    console.log('Admin Console opened');
+    console.log('%c[MTC Admin] ✅ Admin Console opened.', 'color:#22c55e; font-weight:bold;');
     window.focus();
 }
 
@@ -510,7 +523,7 @@ function closeAdminConsole() {
         spawnFloatingText(GAME_TEXTS.admin.resumed, window.player.x, window.player.y - 50, '#34d399', 18);
 }
 
-window.openAdminConsole  = openAdminConsole;
+window.openAdminConsole = openAdminConsole;
 window.closeAdminConsole = closeAdminConsole;
 
 // ══════════════════════════════════════════════════════════════
@@ -518,9 +531,9 @@ window.closeAdminConsole = closeAdminConsole;
 // ══════════════════════════════════════════════════════════════
 
 function showResumePrompt(visible) {
-    const el    = document.getElementById('resume-prompt');
+    const el = document.getElementById('resume-prompt');
     const strip = document.getElementById('pause-indicator');
-    if (el)    el.style.display    = visible ? 'flex'  : 'none';
+    if (el) el.style.display = visible ? 'flex' : 'none';
     if (strip) strip.style.display = visible ? 'block' : 'none';
 }
 
@@ -553,22 +566,22 @@ function resumeGame() {
     if (player) spawnFloatingText(GAME_TEXTS.admin.resumed, player.x, player.y - 50, '#34d399', 18);
 }
 
-function openDatabase()   { openExternalDatabase(); }
-function showMathModal()  { openExternalDatabase(); }
+function openDatabase() { openExternalDatabase(); }
+function showMathModal() { openExternalDatabase(); }
 function closeMathModal() { resumeGame(); }
 
 window.openExternalDatabase = openExternalDatabase;
-window.openDatabase         = openDatabase;
-window.resumeGame           = resumeGame;
-window.showResumePrompt     = showResumePrompt;
-window.showMathModal        = showMathModal;
-window.closeMathModal       = closeMathModal;
+window.openDatabase = openDatabase;
+window.resumeGame = resumeGame;
+window.showResumePrompt = showResumePrompt;
+window.showMathModal = showMathModal;
+window.closeMathModal = closeMathModal;
 
 window.addEventListener('blur', () => {
     if (window.gameState === 'PLAYING') {
         setGameState('PAUSED');
-        const shopModal   = document.getElementById('shop-modal');
-        const shopOpen    = shopModal && shopModal.style.display === 'flex';
+        const shopModal = document.getElementById('shop-modal');
+        const shopOpen = shopModal && shopModal.style.display === 'flex';
         const consoleOpen = AdminConsole.isOpen;
         if (!shopOpen && !consoleOpen) showResumePrompt(true);
     }
@@ -578,8 +591,8 @@ window.addEventListener('focus', () => {
     // ❌ ไม่ auto-resume เมื่อ window focus กลับมา
     // ผู้เล่นต้องกด Resume เองเสมอ เพื่อป้องกันเกมรันขณะที่ shop/database ยังเปิดอยู่
     if (window.gameState === 'PAUSED') {
-        const shopModal   = document.getElementById('shop-modal');
-        const shopOpen    = shopModal && shopModal.style.display === 'flex';
+        const shopModal = document.getElementById('shop-modal');
+        const shopOpen = shopModal && shopModal.style.display === 'flex';
         const consoleOpen = AdminConsole.isOpen;
         if (!shopOpen && !consoleOpen) showResumePrompt(true);
     }
@@ -591,7 +604,7 @@ window.addEventListener('focus', () => {
 
 function drawDatabaseServer() {
     const screen = worldToScreen(MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
-    const t    = performance.now() / 600;
+    const t = performance.now() / 600;
     const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
 
     if (player) {
@@ -601,7 +614,7 @@ function drawDatabaseServer() {
             CTX.save();
             CTX.globalAlpha = alpha * 0.25 * glow;
             CTX.strokeStyle = '#06b6d4';
-            CTX.lineWidth   = 2;
+            CTX.lineWidth = 2;
             CTX.setLineDash([6, 4]);
             CTX.beginPath();
             CTX.arc(screen.x, screen.y, MTC_DATABASE_SERVER.INTERACTION_RADIUS, 0, Math.PI * 2);
@@ -618,12 +631,12 @@ function drawDatabaseServer() {
 
     CTX.save();
     CTX.translate(screen.x, screen.y);
-    CTX.shadowBlur  = 14 * glow;
+    CTX.shadowBlur = 14 * glow;
     CTX.shadowColor = '#06b6d4';
 
-    CTX.fillStyle   = '#0c1a2e';
+    CTX.fillStyle = '#0c1a2e';
     CTX.strokeStyle = '#06b6d4';
-    CTX.lineWidth   = 2;
+    CTX.lineWidth = 2;
     CTX.beginPath();
     CTX.roundRect(-18, -26, 36, 50, 5);
     CTX.fill();
@@ -636,8 +649,8 @@ function drawDatabaseServer() {
         CTX.fillStyle = i === 0 ? '#22c55e' : '#0e7490';
         CTX.fillRect(-12, -18 + i * 14, 10, 6);
 
-        CTX.fillStyle   = i === 1 ? `rgba(6,182,212,${glow})` : '#22c55e';
-        CTX.shadowBlur  = 6;
+        CTX.fillStyle = i === 1 ? `rgba(6,182,212,${glow})` : '#22c55e';
+        CTX.shadowBlur = 6;
         CTX.shadowColor = i === 1 ? '#06b6d4' : '#22c55e';
         CTX.beginPath();
         CTX.arc(10, -15 + i * 14, 3.5, 0, Math.PI * 2);
@@ -645,17 +658,17 @@ function drawDatabaseServer() {
     }
 
     const tGlow = Math.abs(Math.sin(performance.now() / 400)) * 0.6 + 0.4;
-    CTX.fillStyle   = `rgba(0,255,65,${tGlow})`;
-    CTX.shadowBlur  = 8;
+    CTX.fillStyle = `rgba(0,255,65,${tGlow})`;
+    CTX.shadowBlur = 8;
     CTX.shadowColor = '#00ff41';
     CTX.beginPath();
     CTX.arc(-10, 15, 3, 0, Math.PI * 2);
     CTX.fill();
 
-    CTX.shadowBlur   = 0;
-    CTX.fillStyle    = '#67e8f9';
-    CTX.font         = 'bold 7px Arial';
-    CTX.textAlign    = 'center';
+    CTX.shadowBlur = 0;
+    CTX.fillStyle = '#67e8f9';
+    CTX.font = 'bold 7px Arial';
+    CTX.textAlign = 'center';
     CTX.textBaseline = 'middle';
     CTX.fillText('MTC DATABASE', 0, 33);
 
@@ -664,24 +677,24 @@ function drawDatabaseServer() {
 
 function updateDatabaseServerUI() {
     if (!player) return;
-    const d    = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
+    const d = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     const near = d < MTC_DATABASE_SERVER.INTERACTION_RADIUS;
 
-    const promptEl      = document.getElementById('db-prompt');
-    const hudIcon       = document.getElementById('db-hud-icon');
-    const btnDb         = document.getElementById('btn-database');
+    const promptEl = document.getElementById('db-prompt');
+    const hudIcon = document.getElementById('db-hud-icon');
+    const btnDb = document.getElementById('btn-database');
     const consolePrompt = document.getElementById('console-prompt');
-    const consoleHud    = document.getElementById('console-hud-icon');
-    const btnTerminal   = document.getElementById('btn-terminal');
+    const consoleHud = document.getElementById('console-hud-icon');
+    const btnTerminal = document.getElementById('btn-terminal');
 
-    if (promptEl)      promptEl.style.display     = near ? 'block' : 'none';
-    if (hudIcon)       hudIcon.style.display       = near ? 'flex'  : 'none';
-    if (btnDb)         btnDb.style.display         = near ? 'flex'  : 'none';
+    if (promptEl) promptEl.style.display = near ? 'block' : 'none';
+    if (hudIcon) hudIcon.style.display = near ? 'flex' : 'none';
+    if (btnDb) btnDb.style.display = near ? 'flex' : 'none';
     if (consolePrompt) consolePrompt.style.display = near ? 'block' : 'none';
-    if (consoleHud)    consoleHud.style.display    = near ? 'flex'  : 'none';
-    if (btnTerminal)   btnTerminal.style.display   = near ? 'flex'  : 'none';
+    if (consoleHud) consoleHud.style.display = near ? 'flex' : 'none';
+    if (btnTerminal) btnTerminal.style.display = near ? 'flex' : 'none';
 }
 
-window.drawDatabaseServer     = drawDatabaseServer;
+window.drawDatabaseServer = drawDatabaseServer;
 window.updateDatabaseServerUI = updateDatabaseServerUI;
-window.MTC_DB_URL             = MTC_DB_URL;
+window.MTC_DB_URL = MTC_DB_URL;

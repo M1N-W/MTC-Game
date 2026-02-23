@@ -729,6 +729,19 @@ function startGame(charType = 'kao') {
         window.player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
     }
 
+    // ── Admin Dev Mode: Force Kao Passive ─────────────────────────────────
+    // ทำงานเฉพาะเมื่อ window.isAdmin === true และ Toggle เปิดอยู่เท่านั้น
+    const devToggle = document.getElementById('dev-kao-passive-toggle');
+    if (window.isAdmin && charType === 'kao' && devToggle && devToggle.checked) {
+        const S = window.player.stats;
+        window.player.passiveUnlocked = true;
+        const hpBonus = Math.floor(window.player.maxHp * (S.passiveHpBonusPct || 0));
+        window.player.maxHp += hpBonus;
+        window.player.hp += hpBonus;
+        window.player.goldenAuraTimer = 9999; // visual marker ถาวรสำหรับ Dev Mode
+        console.log('%c[MTC Admin] 🔧 DEV MODE: ซุ่มเสรี unlocked from game start.', 'color:#ef4444; font-weight:bold;');
+    }
+
     window.enemies = []; window.powerups = []; window.specialEffects = []; window.meteorZones = [];
     window.boss = null;
 

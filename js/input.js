@@ -65,13 +65,19 @@ var mouse = {
  * existing code referencing those names continues to work.
  */
 var joysticks = {
-    left:  { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 },
+    left: { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 },
     right: { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 }
 };
 
 // Legacy aliases — keep backward-compat with existing code that reads these.
-window.touchJoystickLeft  = joysticks.left;
+window.touchJoystickLeft = joysticks.left;
 window.touchJoystickRight = joysticks.right;
+
+// ── Admin Authentication State ─────────────────────────────────────────────
+// window.isAdmin  : true เมื่อผู้สร้างพิมพ์รหัสถูกต้องที่หน้า Menu
+// secretBuffer    : เก็บตัวอักษรที่พิมพ์ล่าสุด (ไม่เกิน 10 ตัว)
+window.isAdmin = false;
+let secretBuffer = "";
 
 
 // ══════════════════════════════════════════════════════════════
@@ -83,11 +89,11 @@ function initMobileControls() {
     if (!isTouchDevice) return;
 
     var maxRadius = 60;
-    var zoneL  = document.getElementById('joystick-left-zone');
-    var baseL  = document.getElementById('joystick-left-base');
+    var zoneL = document.getElementById('joystick-left-zone');
+    var baseL = document.getElementById('joystick-left-base');
     var stickL = document.getElementById('joystick-left-stick');
-    var zoneR  = document.getElementById('joystick-right-zone');
-    var baseR  = document.getElementById('joystick-right-base');
+    var zoneR = document.getElementById('joystick-right-zone');
+    var baseR = document.getElementById('joystick-right-base');
     var stickR = document.getElementById('joystick-right-stick');
 
     function startJoystick(e, joystick, baseElem, stickElem, zoneElem, isRight) {
@@ -98,14 +104,14 @@ function initMobileControls() {
         for (var i = 0; i < e.changedTouches.length; i++) {
             var touch = e.changedTouches[i];
             if (joystick.id === null) {
-                joystick.id      = touch.identifier;
-                joystick.active  = true;
+                joystick.id = touch.identifier;
+                joystick.active = true;
                 joystick.originX = touch.clientX;
                 joystick.originY = touch.clientY;
                 var zr = zoneElem.getBoundingClientRect();
                 baseElem.style.display = 'block';
-                baseElem.style.left    = (touch.clientX - zr.left) + 'px';
-                baseElem.style.top     = (touch.clientY - zr.top)  + 'px';
+                baseElem.style.left = (touch.clientX - zr.left) + 'px';
+                baseElem.style.top = (touch.clientY - zr.top) + 'px';
                 stickElem.style.transform = 'translate(-50%, -50%)';
                 if (isRight) mouse.left = 1;
                 break;
@@ -120,7 +126,7 @@ function initMobileControls() {
             if (touch.identifier === joystick.id) {
                 var dx = touch.clientX - joystick.originX;
                 var dy = touch.clientY - joystick.originY;
-                var d  = Math.hypot(dx, dy);
+                var d = Math.hypot(dx, dy);
                 if (d > maxRadius) { dx = (dx / d) * maxRadius; dy = (dy / d) * maxRadius; }
                 joystick.nx = dx / maxRadius;
                 joystick.ny = dy / maxRadius;
@@ -135,45 +141,45 @@ function initMobileControls() {
             var touch = e.changedTouches[i];
             if (touch.identifier === joystick.id) {
                 joystick.active = false;
-                joystick.id     = null;
-                joystick.nx     = 0;
-                joystick.ny     = 0;
-                baseElem.style.display    = 'none';
+                joystick.id = null;
+                joystick.nx = 0;
+                joystick.ny = 0;
+                baseElem.style.display = 'none';
                 stickElem.style.transform = 'translate(-50%, -50%)';
                 if (isRight) mouse.left = 0;
             }
         }
     }
 
-    zoneL.addEventListener('touchstart',  function(e) { startJoystick(e, joysticks.left,  baseL,  stickL, zoneL, false); }, { passive: false });
-    zoneL.addEventListener('touchmove',   function(e) { moveJoystick(e,  joysticks.left,  stickL);                        }, { passive: false });
-    zoneL.addEventListener('touchend',    function(e) { endJoystick(e,   joysticks.left,  baseL,  stickL, false);         }, { passive: false });
-    zoneL.addEventListener('touchcancel', function(e) { endJoystick(e,   joysticks.left,  baseL,  stickL, false);         }, { passive: false });
+    zoneL.addEventListener('touchstart', function (e) { startJoystick(e, joysticks.left, baseL, stickL, zoneL, false); }, { passive: false });
+    zoneL.addEventListener('touchmove', function (e) { moveJoystick(e, joysticks.left, stickL); }, { passive: false });
+    zoneL.addEventListener('touchend', function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); }, { passive: false });
+    zoneL.addEventListener('touchcancel', function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); }, { passive: false });
 
-    zoneR.addEventListener('touchstart',  function(e) { startJoystick(e, joysticks.right, baseR,  stickR, zoneR, true);  }, { passive: false });
-    zoneR.addEventListener('touchmove',   function(e) { moveJoystick(e,  joysticks.right, stickR);                        }, { passive: false });
-    zoneR.addEventListener('touchend',    function(e) { endJoystick(e,   joysticks.right, baseR,  stickR, true);          }, { passive: false });
-    zoneR.addEventListener('touchcancel', function(e) { endJoystick(e,   joysticks.right, baseR,  stickR, true);          }, { passive: false });
+    zoneR.addEventListener('touchstart', function (e) { startJoystick(e, joysticks.right, baseR, stickR, zoneR, true); }, { passive: false });
+    zoneR.addEventListener('touchmove', function (e) { moveJoystick(e, joysticks.right, stickR); }, { passive: false });
+    zoneR.addEventListener('touchend', function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); }, { passive: false });
+    zoneR.addEventListener('touchcancel', function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); }, { passive: false });
 
     // ── Action buttons ─────────────────────────────────────────
-    var btnDash     = document.getElementById('btn-dash');
-    var btnSkill    = document.getElementById('btn-skill');
-    var btnSwitch   = document.getElementById('btn-switch');
-    var btnNaga     = document.getElementById('btn-naga');
+    var btnDash = document.getElementById('btn-dash');
+    var btnSkill = document.getElementById('btn-skill');
+    var btnSwitch = document.getElementById('btn-switch');
+    var btnNaga = document.getElementById('btn-naga');
     var btnDatabase = document.getElementById('btn-database');
     var btnTerminal = document.getElementById('btn-terminal');
-    var btnShop     = document.getElementById('btn-shop');
+    var btnShop = document.getElementById('btn-shop');
 
     if (btnDash) {
-        btnDash.addEventListener('touchstart', function(e) { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
-        btnDash.addEventListener('touchend',   function(e) { e.preventDefault(); e.stopPropagation(); keys.space = 0; }, { passive: false });
+        btnDash.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
+        btnDash.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 0; }, { passive: false });
     }
     if (btnSkill) {
-        btnSkill.addEventListener('touchstart', function(e) { e.preventDefault(); e.stopPropagation(); mouse.right = 1; }, { passive: false });
-        btnSkill.addEventListener('touchend',   function(e) { e.preventDefault(); e.stopPropagation(); mouse.right = 0; }, { passive: false });
+        btnSkill.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 1; }, { passive: false });
+        btnSkill.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 0; }, { passive: false });
     }
     if (btnSwitch) {
-        btnSwitch.addEventListener('touchstart', function(e) {
+        btnSwitch.addEventListener('touchstart', function (e) {
             e.preventDefault(); e.stopPropagation();
             // WARN-8 FIX: use window.gameState (not bare gameState) and
             // guard weaponSystem — both may be undefined before game.js loads
@@ -181,7 +187,7 @@ function initMobileControls() {
         }, { passive: false });
     }
     if (btnNaga) {
-        btnNaga.addEventListener('touchstart', function(e) {
+        btnNaga.addEventListener('touchstart', function (e) {
             e.preventDefault(); e.stopPropagation();
             // WARN-8 FIX: guard all game.js-defined symbols
             if (window.gameState !== 'PLAYING') return;
@@ -191,25 +197,25 @@ function initMobileControls() {
         }, { passive: false });
     }
     if (btnDatabase) {
-        btnDatabase.addEventListener('touchstart', function(e) {
+        btnDatabase.addEventListener('touchstart', function (e) {
             e.preventDefault(); e.stopPropagation();
             // WARN-8 FIX: guard game.js globals
-            if (window.gameState === 'PLAYING')      { if (typeof openExternalDatabase !== 'undefined') openExternalDatabase(); }
-            else if (window.gameState === 'PAUSED')  { if (typeof resumeGame !== 'undefined') resumeGame(); }
+            if (window.gameState === 'PLAYING') { if (typeof openExternalDatabase !== 'undefined') openExternalDatabase(); }
+            else if (window.gameState === 'PAUSED') { if (typeof resumeGame !== 'undefined') resumeGame(); }
         }, { passive: false });
     }
     if (btnTerminal) {
-        btnTerminal.addEventListener('touchstart', function(e) {
+        btnTerminal.addEventListener('touchstart', function (e) {
             e.preventDefault(); e.stopPropagation();
             // WARN-8 FIX: guard game.js globals
-            if (window.gameState === 'PLAYING')      { if (typeof openAdminConsole !== 'undefined') openAdminConsole(); }
+            if (window.gameState === 'PLAYING') { if (typeof openAdminConsole !== 'undefined') openAdminConsole(); }
             else if (window.gameState === 'PAUSED' && typeof AdminConsole !== 'undefined' && AdminConsole.isOpen) {
                 if (typeof closeAdminConsole !== 'undefined') closeAdminConsole();
             }
         }, { passive: false });
     }
     if (btnShop) {
-        btnShop.addEventListener('touchstart', function(e) {
+        btnShop.addEventListener('touchstart', function (e) {
             e.preventDefault(); e.stopPropagation();
             // WARN-8 FIX: guard game.js globals
             if (window.gameState === 'PLAYING') {
@@ -221,7 +227,7 @@ function initMobileControls() {
         }, { passive: false });
     }
 
-    document.addEventListener('touchmove', function(e) {
+    document.addEventListener('touchmove', function (e) {
         if (!e.target.closest('.joystick-zone') && !e.target.closest('.action-btn')) {
             e.preventDefault();
         }
@@ -235,28 +241,61 @@ function initMobileControls() {
 // ══════════════════════════════════════════════════════════════
 
 function _setupKeyboardListeners() {
-    window.addEventListener('keydown', function(e) {
+    window.addEventListener('keydown', function (e) {
         // While admin console input has focus, ignore all game hotkeys
         var consoleInput = document.getElementById('console-input');
         if (consoleInput && document.activeElement === consoleInput) return;
 
         if (window.gameState === 'PAUSED') {
-            var shopModal   = document.getElementById('shop-modal');
-            var shopOpen    = shopModal && shopModal.style.display === 'flex';
+            var shopModal = document.getElementById('shop-modal');
+            var shopOpen = shopModal && shopModal.style.display === 'flex';
             var consoleOpen = AdminConsole.isOpen;
 
             if (consoleOpen && e.code === 'Escape') { closeAdminConsole(); return; }
-            if (shopOpen   && e.code === 'Escape') { closeShop();         return; }
-            if (!shopOpen && !consoleOpen)          { resumeGame();        return; }
+            if (shopOpen && e.code === 'Escape') { closeShop(); return; }
+            if (!shopOpen && !consoleOpen) { resumeGame(); return; }
             return;
+        }
+
+        // ── Secret Keylogger (Menu Only) ──────────────────────────────────
+        // พิมพ์ "mawin" หรือ "admin" ที่หน้า Menu เพื่อเปิด Dev Mode
+        if (window.gameState === 'MENU' && !window.isAdmin) {
+            if (e.key && e.key.length === 1) {
+                secretBuffer += e.key.toLowerCase();
+                if (secretBuffer.length > 10) secretBuffer = secretBuffer.slice(-10);
+
+                if (secretBuffer.includes('mawin') || secretBuffer.includes('admin')) {
+                    window.isAdmin = true;
+                    secretBuffer = '';
+
+                    // แสดง Dev Mode Panel
+                    var panel = document.getElementById('dev-mode-panel');
+                    if (panel) panel.style.display = 'block';
+
+                    // เปลี่ยนปุ่ม Start เป็นสีแดง Dev Mode
+                    var startBtn = document.getElementById('start-btn');
+                    if (startBtn) {
+                        startBtn.style.background = 'linear-gradient(135deg, #ef4444, #991b1b)';
+                        startBtn.style.boxShadow = '0 0 30px rgba(239,68,68,0.5)';
+                        startBtn.textContent = '🚀 START DEV MODE';
+                    }
+
+                    // เสียงแจ้งเตือน Auth สำเร็จ
+                    try {
+                        if (typeof Audio !== 'undefined' && Audio.playLevelUp) Audio.playLevelUp();
+                    } catch (err) { }
+
+                    console.log('%c[MTC Admin] 🔐 Authentication successful. Developer Mode UNLOCKED.', 'color:#ef4444; font-weight:bold;');
+                }
+            }
         }
 
         if (window.gameState !== 'PLAYING') return;
 
-        if (e.code === 'KeyW')  keys.w     = 1;
-        if (e.code === 'KeyS')  keys.s     = 1;
-        if (e.code === 'KeyA')  keys.a     = 1;
-        if (e.code === 'KeyD')  keys.d     = 1;
+        if (e.code === 'KeyW') keys.w = 1;
+        if (e.code === 'KeyS') keys.s = 1;
+        if (e.code === 'KeyA') keys.a = 1;
+        if (e.code === 'KeyD') keys.d = 1;
         if (e.code === 'Space') {
             e.preventDefault();
             if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
@@ -264,10 +303,10 @@ function _setupKeyboardListeners() {
             }
             keys.space = 1;
         }
-        if (e.code === 'KeyQ')  keys.q     = 1;
-        if (e.code === 'KeyE')  keys.e     = 1;
-        if (e.code === 'KeyB')  keys.b     = 1;
-        if (e.code === 'KeyF')  keys.f     = 1;
+        if (e.code === 'KeyQ') keys.q = 1;
+        if (e.code === 'KeyE') keys.e = 1;
+        if (e.code === 'KeyB') keys.b = 1;
+        if (e.code === 'KeyF') keys.f = 1;
 
         // 'T' — Bullet Time toggle (global, no proximity gate)
         if (e.code === 'KeyT') {
@@ -282,15 +321,15 @@ function _setupKeyboardListeners() {
         }
     });
 
-    window.addEventListener('keyup', function(e) {
-        if (e.code === 'KeyW')  keys.w     = 0;
-        if (e.code === 'KeyS')  keys.s     = 0;
-        if (e.code === 'KeyA')  keys.a     = 0;
-        if (e.code === 'KeyD')  keys.d     = 0;
+    window.addEventListener('keyup', function (e) {
+        if (e.code === 'KeyW') keys.w = 0;
+        if (e.code === 'KeyS') keys.s = 0;
+        if (e.code === 'KeyA') keys.a = 0;
+        if (e.code === 'KeyD') keys.d = 0;
         if (e.code === 'Space') keys.space = 0;
-        if (e.code === 'KeyE')  keys.e     = 0;
-        if (e.code === 'KeyB')  keys.b     = 0;
-        if (e.code === 'KeyF')  keys.f     = 0;
+        if (e.code === 'KeyE') keys.e = 0;
+        if (e.code === 'KeyB') keys.b = 0;
+        if (e.code === 'KeyF') keys.f = 0;
         // 'T' fires only on keydown; no keyup state needed.
 
         if (e.code === 'KeyQ') {
@@ -303,7 +342,7 @@ function _setupKeyboardListeners() {
 }
 
 function _setupMouseListeners() {
-    window.addEventListener('mousemove', function(e) {
+    window.addEventListener('mousemove', function (e) {
         if (!CANVAS) return;
         var r = CANVAS.getBoundingClientRect();
         mouse.x = e.clientX - r.left;
@@ -312,19 +351,19 @@ function _setupMouseListeners() {
         updateMouseWorld();
     });
 
-    window.addEventListener('mousedown', function(e) {
+    window.addEventListener('mousedown', function (e) {
         if (!CANVAS) return;
-        if (e.button === 0) mouse.left  = 1;
+        if (e.button === 0) mouse.left = 1;
         if (e.button === 2) mouse.right = 1;
         e.preventDefault();
     });
 
-    window.addEventListener('mouseup', function(e) {
-        if (e.button === 0) mouse.left  = 0;
+    window.addEventListener('mouseup', function (e) {
+        if (e.button === 0) mouse.left = 0;
         if (e.button === 2) mouse.right = 0;
     });
 
-    window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    window.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 }
 
 
@@ -337,7 +376,7 @@ var InputSystem = {
      * Call once from window.onload (before startGame).
      * Wires up all keyboard, mouse, and touch input handlers.
      */
-    init: function() {
+    init: function () {
         _setupKeyboardListeners();
         _setupMouseListeners();
         initMobileControls();

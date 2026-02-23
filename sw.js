@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v2.55'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.5 harden fetch/runtime caching guards
+const CACHE_NAME = 'mtc-cache-v2.56'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.56 Admin Authentication System — secret keylogger, Dev Mode panel, AdminConsole access gate, remove persistent passive from save
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
