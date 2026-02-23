@@ -230,7 +230,10 @@ function updateGame(dt) {
         weaponSystem.update(dt);
         const burstProjectiles = weaponSystem.updateBurst(window.player, window.player.damageBoost);
         if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
-        if (mouse.left === 1 && gameState === 'PLAYING') {
+        // FIX 3: Route shooting to Kao's custom shoot() when playing as KaoPlayer
+        if (typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer) {
+            window.player.shoot(dt);
+        } else if (mouse.left === 1 && gameState === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
                 if (projectiles && projectiles.length > 0) {

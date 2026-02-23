@@ -9,17 +9,17 @@
 // Phantom duplicate that mirrors Kao's attacks but is invisible to enemies.
 class KaoClone {
     constructor(owner, angleOffset) {
-        this.owner       = owner;
+        this.owner = owner;
         this.angleOffset = angleOffset;
-        this.radius      = owner.radius;
-        this.x           = owner.x;
-        this.y           = owner.y;
-        this.color       = '#3b82f6';
-        this.alpha       = 0.5;
+        this.radius = owner.radius;
+        this.x = owner.x;
+        this.y = owner.y;
+        this.color = '#3b82f6';
+        this.alpha = 0.5;
     }
 
     update(dt) {
-        const dist    = 60;
+        const dist = 60;
         const targetX = this.owner.x + Math.cos(this.angleOffset) * dist;
         const targetY = this.owner.y + Math.sin(this.angleOffset) * dist;
         // Smooth-follow the orbit position
@@ -30,14 +30,14 @@ class KaoClone {
     draw() {
         // Clones are faint when stealth is active
         CTX.globalAlpha = this.owner.isStealth ? 0.15 : this.alpha;
-        CTX.fillStyle   = this.owner.isWeaponMaster ? '#facc15' : this.color;
+        CTX.fillStyle = this.owner.isWeaponMaster ? '#facc15' : this.color;
         CTX.beginPath();
         CTX.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         CTX.fill();
 
         // Barrel indicator
         CTX.strokeStyle = '#94a3b8';
-        CTX.lineWidth   = 6;
+        CTX.lineWidth = 6;
         CTX.beginPath();
         CTX.moveTo(this.x, this.y);
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
@@ -72,35 +72,35 @@ class KaoClone {
 
 // ── KaoPlayer ─────────────────────────────────────────────────────────────────
 class KaoPlayer extends Player {
-    constructor(x = 0, y = 0) {
-        super('kao');
+    constructor(x, y) {
+        super('kao'); // FIX 1: Correct super signature
         this.x = x;
         this.y = y;
         const S = BALANCE.characters.kao;
 
         // ── Teleport ───────────────────────────────────────────────────────────
-        this.teleportTimer    = 0;
+        this.teleportTimer = 0;
         this.teleportCooldown = S.teleportCooldown || 20;
-        this.teleportCharges  = 0;          // max 1 charge at a time
+        this.teleportCharges = 0;          // max 1 charge at a time
 
         // ── Auto-stealth (Passive: ซุ่มเสรี) ──────────────────────────────────
         this.autoStealthCooldown = 0;       // internal cooldown for free stealth
 
         // ── Weapon Master Awakening ────────────────────────────────────────────
-        this.weaponKills    = { auto: 0, sniper: 0, shotgun: 0 };
+        this.weaponKills = { auto: 0, sniper: 0, shotgun: 0 };
         this.isWeaponMaster = false;
 
         // Sniper charge (hold-to-charge when Weapon Master)
-        this.sniperChargeTime  = 0;
+        this.sniperChargeTime = 0;
 
         // Stacking crit bonus from Auto Rifle (Weapon Master)
         this.bonusCritFromAuto = 0;
 
         // ── Clone of Stealth (E skill) ─────────────────────────────────────────
-        this.clones            = [];
+        this.clones = [];
         this.cloneSkillCooldown = 0;
-        this.maxCloneCooldown   = S.cloneCooldown   || 45;
-        this.clonesActiveTimer  = 0;
+        this.maxCloneCooldown = S.cloneCooldown || 45;
+        this.clonesActiveTimer = 0;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -112,12 +112,12 @@ class KaoPlayer extends Player {
         const req = BALANCE.characters.kao.weaponMasterReq || 10;
 
         if (weaponName === 'AUTO RIFLE') this.weaponKills.auto++;
-        if (weaponName === 'SNIPER')     this.weaponKills.sniper++;
-        if (weaponName === 'SHOTGUN')    this.weaponKills.shotgun++;
+        if (weaponName === 'SNIPER') this.weaponKills.sniper++;
+        if (weaponName === 'SHOTGUN') this.weaponKills.shotgun++;
 
         // Unlock only when ALL three weapons have reached the required kills
         if (
-            this.weaponKills.auto   >= req &&
+            this.weaponKills.auto >= req &&
             this.weaponKills.sniper >= req &&
             this.weaponKills.shotgun >= req
         ) {
@@ -134,7 +134,8 @@ class KaoPlayer extends Player {
     // ──────────────────────────────────────────────────────────────────────────
     // UPDATE
     // ──────────────────────────────────────────────────────────────────────────
-    update(dt) {
+    // FIX 2: Added keys and mouse to parameters
+    update(dt, keys, mouse) {
         const S = BALANCE.characters.kao;
 
         // ── Passive Skill: ซุ่มเสรี ──────────────────────────────────────────
@@ -143,14 +144,14 @@ class KaoPlayer extends Player {
             this.speedMultiplier *= 1.4;
 
             // Randomly trigger free Stealth while moving
-            const isMoving = window.keys.w || window.keys.a || window.keys.s || window.keys.d;
+            const isMoving = keys.w || keys.a || keys.s || keys.d;
             if (
                 isMoving &&
                 this.autoStealthCooldown <= 0 &&
                 Math.random() < 0.2 * dt
             ) {
-                this.isStealth      = true;
-                this.stealthEnergy  = 100;
+                this.isStealth = true;
+                this.stealthEnergy = 100;
                 this.autoStealthCooldown = S.autoStealthCooldown || 8;
                 spawnFloatingText(
                     GAME_TEXTS.combat.kaoFreeStealth,
@@ -162,11 +163,11 @@ class KaoPlayer extends Player {
         }
 
         // ── Teleport — charge regeneration ────────────────────────────────────
-        if (this.teleportCharges < 1) {
+        if (this.teleportTimer < this.teleportCooldown && this.teleportCharges < 1) {
             this.teleportTimer += dt;
             if (this.teleportTimer >= this.teleportCooldown) {
                 this.teleportCharges = 1;
-                this.teleportTimer   = 0;
+                this.teleportTimer = 0;
                 spawnFloatingText(
                     GAME_TEXTS.combat.kaoTeleport,
                     this.x, this.y - 60,
@@ -176,33 +177,33 @@ class KaoPlayer extends Player {
         }
 
         // ── Teleport — activation (Q key) ─────────────────────────────────────
-        if (window.keys.q && this.teleportCharges > 0) {
+        if (keys.q && this.teleportCharges > 0) {
             this.teleportCharges--;
             spawnParticles(this.x, this.y, 25, '#3b82f6');
             this.x = window.mouse.wx;
             this.y = window.mouse.wy;
             spawnParticles(this.x, this.y, 25, '#00e5ff');
-            window.keys.q = false;   // consume key press
+            keys.q = 0;   // consume key press
         }
 
         // ── Clone of Stealth — cooldown tick ──────────────────────────────────
         if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
 
         // ── Clone of Stealth — activation (E key) ─────────────────────────────
-        if (window.keys.e && this.cloneSkillCooldown <= 0) {
+        if (keys.e && this.cloneSkillCooldown <= 0) {
             // Spawn two clones in a triangle formation around Kao
             this.clones = [
                 new KaoClone(this, 0),
                 new KaoClone(this, 0)
             ];
-            this.clonesActiveTimer  = S.cloneDuration  || 15;
+            this.clonesActiveTimer = S.cloneDuration || 15;
             this.cloneSkillCooldown = this.maxCloneCooldown;
             spawnFloatingText(
                 GAME_TEXTS.combat.kaoClones,
                 this.x, this.y - 40,
                 '#3b82f6', 25
             );
-            window.keys.e = false;
+            keys.e = 0;
         }
 
         // ── Clone update — orbit facing aim direction ──────────────────────────
@@ -219,7 +220,8 @@ class KaoPlayer extends Player {
             if (this.clonesActiveTimer <= 0) this.clones = [];
         }
 
-        super.update(dt);
+        // FIX 2: Pass keys and mouse back to parent
+        super.update(dt, keys, mouse);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -234,7 +236,7 @@ class KaoPlayer extends Player {
             const now = performance.now();
             CTX.save();
             CTX.globalAlpha = 0.3 + Math.sin(now / 150) * 0.2;
-            CTX.fillStyle   = '#facc15';
+            CTX.fillStyle = '#facc15';
             CTX.beginPath();
             CTX.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2);
             CTX.fill();
@@ -243,11 +245,11 @@ class KaoPlayer extends Player {
 
         // Sniper charge laser-sight line
         if (this.sniperChargeTime > 0) {
-            const screen   = worldToScreen(this.x, this.y);
+            const screen = worldToScreen(this.x, this.y);
             const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
             CTX.save();
             CTX.strokeStyle = `rgba(239, 68, 68, ${Math.min(1, this.sniperChargeTime)})`;
-            CTX.lineWidth   = 1 + this.sniperChargeTime * 2;
+            CTX.lineWidth = 1 + this.sniperChargeTime * 2;
             CTX.beginPath();
             CTX.moveTo(screen.x, screen.y);
             CTX.lineTo(
@@ -265,11 +267,14 @@ class KaoPlayer extends Player {
     // SHOOT — entry point called every frame by the base class tick
     // ──────────────────────────────────────────────────────────────────────────
     shoot(dt) {
-        if (this.shootCooldown > 0) return;
+        if (typeof weaponSystem === 'undefined') return;
+        const wepIndex = weaponSystem.currentWeaponIndex || 0;
+        const weps = Object.values(BALANCE.characters.kao.weapons);
+        const wep = weps[wepIndex];
+        const isClick = window.mouse.left === 1;
 
-        const weps    = Object.values(BALANCE.characters[this.type].weapons);
-        const wep     = weps[this.currentWeaponIndex];
-        const isClick = window.mouse.down;
+        // Check weapon cooldown to sync with UI
+        if (weaponSystem.cooldowns[wepIndex] > 0 && this.sniperChargeTime <= 0) return;
 
         // ── Weapon Master Sniper: hold-to-charge mode ──────────────────────────
         if (this.isWeaponMaster && wep.name === 'SNIPER') {
@@ -281,7 +286,7 @@ class KaoPlayer extends Player {
             } else if (this.sniperChargeTime > 0) {
                 // Mouse released — fire the charged shot
                 this.fireWeapon(wep, true);
-                this.shootCooldown    = wep.cooldown;
+                weaponSystem.cooldowns[wepIndex] = wep.cooldown * this.cooldownMultiplier;
                 this.sniperChargeTime = 0;
                 return;
             }
@@ -291,9 +296,9 @@ class KaoPlayer extends Player {
         }
 
         // ── Normal fire ────────────────────────────────────────────────────────
-        if (isClick) {
+        if (isClick && weaponSystem.cooldowns[wepIndex] <= 0) {
             this.fireWeapon(wep, false);
-            this.shootCooldown = wep.cooldown;
+            weaponSystem.cooldowns[wepIndex] = wep.cooldown * this.cooldownMultiplier;
         }
     }
 
@@ -301,10 +306,10 @@ class KaoPlayer extends Player {
     // FIRE WEAPON — handles all Weapon Master buffs, crits, and clone mirrors
     // ──────────────────────────────────────────────────────────────────────────
     fireWeapon(wep, isChargedSniper) {
-        let pellets  = wep.pellets;
-        let spread   = wep.spread;
-        let baseDmg  = wep.damage;
-        let color    = wep.color;
+        let pellets = wep.pellets;
+        let spread = wep.spread;
+        let baseDmg = wep.damage;
+        let color = wep.color;
 
         // Global damage multipliers
         let dmgMult = this.damageMultiplier || 1.0;
@@ -331,7 +336,7 @@ class KaoPlayer extends Player {
                     // Damage scales with hold duration (capped at 4×)
                     const chargeMult = 1 + Math.min(3, this.sniperChargeTime * 2);
                     baseDmg *= chargeMult;
-                    color   = '#ef4444';
+                    color = '#ef4444';
                     pellets = 1;
                 }
 
@@ -342,7 +347,7 @@ class KaoPlayer extends Player {
 
         // Crit roll
         let finalDamage = baseDmg * dmgMult;
-        let isCrit      = Math.random() < critChance;
+        let isCrit = Math.random() < critChance;
         if (isCrit) finalDamage *= this.critMultiplier;
 
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
@@ -350,7 +355,7 @@ class KaoPlayer extends Player {
         // ── Fire from player ───────────────────────────────────────────────────
         for (let i = 0; i < pellets; i++) {
             const offset = (pellets > 1) ? (Math.random() - 0.5) * spread : 0;
-            const p      = new Projectile(
+            const p = new Projectile(
                 this.x, this.y,
                 aimAngle + offset,
                 wep.speed, finalDamage, color,
