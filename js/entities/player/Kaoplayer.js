@@ -72,7 +72,7 @@ class KaoClone {
 
 // ── KaoPlayer ─────────────────────────────────────────────────────────────────
 class KaoPlayer extends Player {
-    constructor(x, y) {
+    constructor(x = 0, y = 0) {
         super('kao'); // FIX 1: Correct super signature
         this.x = x;
         this.y = y;
