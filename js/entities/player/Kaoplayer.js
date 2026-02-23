@@ -28,25 +28,34 @@ class KaoClone {
     }
 
     draw() {
+        const sc = worldToScreen(this.x, this.y);
+        const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
+
+        CTX.save();
         // Clones are faint when stealth is active
         CTX.globalAlpha = this.owner.isInvisible ? 0.15 : this.alpha;
+
+        // Body circle
         CTX.fillStyle = this.owner.isWeaponMaster ? '#facc15' : this.color;
+        CTX.shadowBlur = 14;
+        CTX.shadowColor = this.owner.isWeaponMaster ? '#facc15' : '#3b82f6';
         CTX.beginPath();
-        CTX.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        CTX.arc(sc.x, sc.y, this.radius, 0, Math.PI * 2);
         CTX.fill();
+        CTX.shadowBlur = 0;
 
         // Barrel indicator
         CTX.strokeStyle = '#94a3b8';
-        CTX.lineWidth = 6;
+        CTX.lineWidth = 3;
         CTX.beginPath();
-        CTX.moveTo(this.x, this.y);
-        const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
+        CTX.moveTo(sc.x, sc.y);
         CTX.lineTo(
-            this.x + Math.cos(aimAngle) * 25,
-            this.y + Math.sin(aimAngle) * 25
+            sc.x + Math.cos(aimAngle) * 28,
+            sc.y + Math.sin(aimAngle) * 28
         );
         CTX.stroke();
-        CTX.globalAlpha = 1.0;
+
+        CTX.restore();
     }
 
     /** Fire projectiles from the clone's position, mirroring the owner's shot. */
@@ -235,11 +244,14 @@ class KaoPlayer extends Player {
         // Weapon Master golden aura pulse
         if (this.isWeaponMaster) {
             const now = performance.now();
+            const wmScreen = worldToScreen(this.x, this.y);
             CTX.save();
             CTX.globalAlpha = 0.3 + Math.sin(now / 150) * 0.2;
             CTX.fillStyle = '#facc15';
+            CTX.shadowBlur = 20;
+            CTX.shadowColor = '#facc15';
             CTX.beginPath();
-            CTX.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2);
+            CTX.arc(wmScreen.x, wmScreen.y, this.radius + 8, 0, Math.PI * 2);
             CTX.fill();
             CTX.restore();
         }
@@ -349,8 +361,9 @@ class KaoPlayer extends Player {
 
         // Crit roll
         let finalDamage = baseDmg * dmgMult;
+        if (!isFinite(finalDamage) || isNaN(finalDamage)) finalDamage = baseDmg;
         let isCrit = Math.random() < critChance;
-        if (isCrit) finalDamage *= this.critMultiplier;
+        if (isCrit) finalDamage *= (this.stats.critMultiplier || 3);
 
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
 
