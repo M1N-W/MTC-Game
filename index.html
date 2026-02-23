@@ -1675,6 +1675,19 @@
             z-index: 9999; pointer-events: none;
         }
 
+        /* ── Show controls on touch devices (Mobile / iPad) ── */
+        @media (hover: none) and (pointer: coarse) {
+            #mobile-ui {
+                display: block;
+            }
+            #gameCanvas {
+                width: 100vw !important;
+                height: 100vh !important;
+                border: none;
+                border-radius: 0;
+            }
+        }
+
         .joystick-zone {
             position: absolute;
             width: 45vw; height: 65vh;
