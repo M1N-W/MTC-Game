@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.0.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.0.0 Students Update — Thai High School Anime aesthetic for Auto, Poom, Kao + fixed R declaration in AutoPlayer
+const CACHE_NAME = 'mtc-cache-v3.0.1'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.0.1 Restore & Enhance Auto+Kao + Add Orbital Effects
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
