@@ -275,36 +275,17 @@ class KaoPlayer extends Player {
     // ──────────────────────────────────────────────────────────────────────────
     // SHOOT — entry point called every frame by the base class tick
     // ──────────────────────────────────────────────────────────────────────────
-    // FIX (TASK 3): Rewritten to pull weapon stats directly from
-    //               BALANCE.characters.kao.weapons (never trusts weaponSystem
-    //               getWeaponData() which can return undefined/NaN fields).
-    //               Uses internal this.shootCooldown for honest fire-rate gating.
     shoot(dt) {
         if (typeof weaponSystem === 'undefined') return;
-
-        // ✅ CORRECT: weaponSystem.currentWeapon is ALWAYS a string key
-        //            ('auto' | 'sniper' | 'shotgun') — never a numeric index.
-        //            Using Object.values()[index] was wrong and locked Kao onto
-        //            Auto Rifle stats permanently (index 0 every time because
-        //            currentWeaponIndex is undefined → 0 || 0 = 0).
+        // 🛡️ THE REAL FIX: currentWeapon is a STRING ('auto', 'sniper', 'shotgun')
+        // We strictly look up the stats using this string key.
         const wepKey = weaponSystem.currentWeapon || 'auto';
         const wep = BALANCE.characters.kao.weapons[wepKey];
         if (!wep) return;
-
-        // 🛡️ BURST GUARD: game.js calls weaponSystem.updateBurst() every frame BEFORE
-        //    calling player.shoot(dt). If WeaponSystem is mid-burst it fires its own
-        //    projectiles via shootSingle() — those bypass this.shootCooldown completely
-        //    and cause the OP machine-gun effect. Skip Kao's own shot during burst.
-        if (weaponSystem.isBursting) return;
-
         const isClick = window.mouse.left === 1;
-
-        // 🛡️ FIX: Fallback now only activates if the config entry is genuinely missing,
-        //         not on every shot because of the bad key lookup above.
         const baseCd = wep.cooldown || 0.25;
-
-        // ── Weapon Master Sniper: hold-to-charge mode (Gated) ─────────────────
-        if (this.passiveUnlocked && this.isWeaponMaster && wep.name === 'SNIPER') {
+        // ── Weapon Master Sniper: hold-to-charge mode (Gated) ──
+        if (this.passiveUnlocked && this.isWeaponMaster && wepKey === 'sniper') {
             if (isClick && this.shootCooldown <= 0) {
                 // Accumulate charge time; emit charge particles
                 this.sniperChargeTime += dt;
@@ -322,8 +303,7 @@ class KaoPlayer extends Player {
             // Reset charge if passive/mastery not met, or weapon switched away
             this.sniperChargeTime = 0;
         }
-
-        // ── Normal fire — guarded by internal cooldown ─────────────────────────
+        // ── Normal fire — guarded by internal cooldown ──
         if (isClick && this.shootCooldown <= 0) {
             this.fireWeapon(wep, false);
             this.shootCooldown = baseCd * (this.cooldownMultiplier || 1);
