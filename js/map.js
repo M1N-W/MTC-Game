@@ -25,6 +25,7 @@ function _updateMapNow() { _mapNow = performance.now(); }
 
 function drawDesk(w, h) {
     const pal = BALANCE.map.mapColors;
+    const dp  = MAP_CONFIG.objects.desk;
     CTX.fillStyle = pal.deskTop;
     CTX.beginPath(); CTX.roundRect(0,0,w,h,4); CTX.fill();
 
@@ -34,27 +35,28 @@ function drawDesk(w, h) {
     }
     CTX.globalAlpha = 1;
 
-    CTX.fillStyle = 'rgba(255,255,220,0.18)';
+    CTX.fillStyle = dp.screenGlow;
     CTX.beginPath(); CTX.roundRect(3,2,w-6,6,2); CTX.fill();
 
     CTX.fillStyle = pal.deskLegs;
     CTX.fillRect(4,h,6,6); CTX.fillRect(w-10,h,6,6);
 
-    CTX.fillStyle = '#1e40af';
+    CTX.fillStyle = dp.monitorBody;
     CTX.beginPath(); CTX.roundRect(Math.floor(w*.1),Math.floor(h*.2),Math.floor(w*.45),Math.floor(h*.55),2); CTX.fill();
-    CTX.fillStyle = '#93c5fd';
+    CTX.fillStyle = dp.monitorText;
     CTX.fillRect(Math.floor(w*.12),Math.floor(h*.22),Math.floor(w*.2),2);
     CTX.fillRect(Math.floor(w*.12),Math.floor(h*.28),Math.floor(w*.35),2);
 
-    CTX.fillStyle = '#fbbf24'; CTX.fillRect(Math.floor(w*.65),Math.floor(h*.25),Math.floor(w*.25),4);
-    CTX.fillStyle = '#f87171'; CTX.fillRect(Math.floor(w*.65)-4,Math.floor(h*.25),4,4);
+    CTX.fillStyle = dp.notePaper; CTX.fillRect(Math.floor(w*.65),Math.floor(h*.25),Math.floor(w*.25),4);
+    CTX.fillStyle = dp.notePen;   CTX.fillRect(Math.floor(w*.65)-4,Math.floor(h*.25),4,4);
 }
 
 function drawTree(size) {
     const pal = BALANCE.map.mapColors;
+    const dt  = MAP_CONFIG.objects.tree;
     const t = _mapNow / 2000;
 
-    CTX.fillStyle = 'rgba(0,0,0,0.25)';
+    CTX.fillStyle = dt.shadowFill;
     CTX.beginPath(); CTX.ellipse(0,size*.3,size*.7,size*.2,0,0,Math.PI*2); CTX.fill();
 
     CTX.fillStyle = pal.treeTrunk;
@@ -67,13 +69,13 @@ function drawTree(size) {
     CTX.fillStyle = pal.treeLight;
     CTX.beginPath(); CTX.arc(0,-size*.78,size*.40,0,Math.PI*2); CTX.fill();
 
-    CTX.fillStyle = 'rgba(255,255,255,0.55)';
+    CTX.fillStyle = dt.leafSparkle;
     for (let i=0; i<3; i++) {
         const a=t+(Math.PI*2/3)*i, r=size*.3;
         CTX.beginPath(); CTX.arc(Math.cos(a)*r,-size*.45+Math.sin(a)*r*.5,3,0,Math.PI*2); CTX.fill();
     }
 
-    CTX.strokeStyle = 'rgba(134,239,172,0.6)'; CTX.lineWidth = 1.5;
+    CTX.strokeStyle = dt.leafHex; CTX.lineWidth = 1.5;
     CTX.beginPath();
     for (let i=0; i<6; i++) {
         const a=(Math.PI/3)*i-Math.PI/6, r=size*.42;
@@ -85,16 +87,17 @@ function drawTree(size) {
 
 function drawServer(w, h) {
     const pal = BALANCE.map.mapColors;
+    const ds  = MAP_CONFIG.objects.server;
     const now = _mapNow;
 
     CTX.fillStyle = pal.serverBody;
     CTX.beginPath(); CTX.roundRect(0,0,w,h,5); CTX.fill();
-    CTX.fillStyle = '#263451'; CTX.fillRect(4,4,w-8,h-8);
+    CTX.fillStyle = ds.inner; CTX.fillRect(4,4,w-8,h-8);
 
     const unitH = Math.floor((h-16)/4);
     for (let u=0; u<4; u++) {
         const uy = 8+u*unitH;
-        CTX.fillStyle = '#1c2a3e';
+        CTX.fillStyle = ds.unitSlot;
         CTX.beginPath(); CTX.roundRect(6,uy,w-12,unitH-3,2); CTX.fill();
 
         const blinkOffset = u*317;
@@ -105,41 +108,42 @@ function drawServer(w, h) {
 
         for (let d=0; d<3; d++) {
             const dOn=Math.sin((now+blinkOffset+d*150)/200)>0.6;
-            CTX.fillStyle=dOn?'#3b82f6':'#1d3155';
+            CTX.fillStyle=dOn?ds.dataLedOn:ds.dataLedOff;
             CTX.fillRect(18+d*6,uy+unitH*.3,4,4);
         }
-        CTX.strokeStyle='#1a2738'; CTX.lineWidth=0.8;
+        CTX.strokeStyle=ds.ventStroke; CTX.lineWidth=0.8;
         for (let vx=w-20; vx<w-8; vx+=3) {
             CTX.beginPath(); CTX.moveTo(vx,uy+3); CTX.lineTo(vx,uy+unitH-4); CTX.stroke();
         }
     }
-    CTX.fillStyle='#334155'; CTX.fillRect(4,0,w-8,4);
-    CTX.strokeStyle='#475569'; CTX.lineWidth=0.8;
+    CTX.fillStyle=ds.headerFill; CTX.fillRect(4,0,w-8,4);
+    CTX.strokeStyle=ds.headerVent; CTX.lineWidth=0.8;
     for (let vx=8; vx<w-8; vx+=4) {
         CTX.beginPath(); CTX.moveTo(vx,0); CTX.lineTo(vx,4); CTX.stroke();
     }
-    CTX.fillStyle='#0ea5e9';
+    CTX.fillStyle=ds.portFill;
     for (let p=0; p<3; p++) CTX.fillRect(6+p*10,h-7,7,4);
 }
 
 function drawDataPillar(w, h) {
     const pal = BALANCE.map.mapColors;
+    const ddp = MAP_CONFIG.objects.datapillar;
     const now = _mapNow;
     const glow = Math.sin(now/800)*0.4+0.6;
 
-    CTX.fillStyle='rgba(0,0,0,0.3)';
+    CTX.fillStyle=ddp.shadowFill;
     CTX.beginPath(); CTX.ellipse(w/2,h+4,w*.55,7,0,0,Math.PI*2); CTX.fill();
 
-    CTX.fillStyle='#334155';
+    CTX.fillStyle=ddp.baseDark;
     CTX.beginPath(); CTX.roundRect(-4,h-8,w+8,10,2); CTX.fill();
-    CTX.fillStyle='#475569';
+    CTX.fillStyle=ddp.baseLight;
     CTX.beginPath(); CTX.roundRect(-4,-6,w+8,9,2); CTX.fill();
 
     const grad=CTX.createLinearGradient(0,0,w,0);
-    grad.addColorStop(0,'#334155'); grad.addColorStop(0.4,'#64748b'); grad.addColorStop(1,'#475569');
+    grad.addColorStop(0,ddp.bodyGrad[0]); grad.addColorStop(0.4,ddp.bodyGrad[1]); grad.addColorStop(1,ddp.bodyGrad[2]);
     CTX.fillStyle=grad; CTX.fillRect(0,0,w,h-6);
 
-    CTX.strokeStyle=`rgba(6,182,212,${glow*.8})`; CTX.lineWidth=1.2;
+    CTX.strokeStyle=`${ddp.circuit}${glow*.8})`; CTX.lineWidth=1.2;
     CTX.shadowBlur=6; CTX.shadowColor=pal.pillarCircuit;
     CTX.beginPath();
     CTX.moveTo(w*.35,4); CTX.lineTo(w*.35,h*.25); CTX.lineTo(w*.6,h*.35);
@@ -153,31 +157,32 @@ function drawDataPillar(w, h) {
     for(const[nx,ny]of nodes){CTX.beginPath();CTX.arc(nx,ny,2.5,0,Math.PI*2);CTX.fill();}
     CTX.shadowBlur=0;
 
-    CTX.fillStyle=`rgba(6,182,212,${glow})`; CTX.shadowBlur=10; CTX.shadowColor=pal.pillarCircuit;
+    CTX.fillStyle=`${ddp.circuit}${glow})`; CTX.shadowBlur=10; CTX.shadowColor=pal.pillarCircuit;
     CTX.beginPath(); CTX.arc(w/2,-2,3,0,Math.PI*2); CTX.fill(); CTX.shadowBlur=0;
 }
 
 function drawBookshelf(w, h) {
     const pal = BALANCE.map.mapColors;
+    const db  = MAP_CONFIG.objects.bookshelf;
     const bookColors = pal.bookColors;
 
-    CTX.fillStyle='#78350f';
+    CTX.fillStyle=db.frameBody;
     CTX.beginPath(); CTX.roundRect(0,0,w,h,3); CTX.fill();
-    CTX.fillStyle='#92400e';
+    CTX.fillStyle=db.frameSide;
     CTX.fillRect(0,0,5,h); CTX.fillRect(w-5,0,5,h);
 
     const shelfCount=3, shelfH=(h-6)/shelfCount;
     for(let s=0;s<shelfCount;s++){
         const sy=3+s*shelfH;
-        CTX.fillStyle='#a16207'; CTX.fillRect(5,sy+shelfH-4,w-10,5);
+        CTX.fillStyle=db.shelfBoard; CTX.fillRect(5,sy+shelfH-4,w-10,5);
         let bx=7, bookIdx=(s*7)%bookColors.length;
         while(bx<w-12){
             const bw=8+Math.floor(Math.abs(Math.sin(bx*.3+s))*8);
             const bh=shelfH*(0.55+Math.abs(Math.sin(bx*.7))*.3);
             CTX.fillStyle=bookColors[bookIdx%bookColors.length];
             CTX.beginPath(); CTX.roundRect(bx,sy+shelfH-4-bh,bw,bh,1); CTX.fill();
-            CTX.fillStyle='rgba(255,255,255,0.2)'; CTX.fillRect(bx+1,sy+shelfH-4-bh+2,2,bh-4);
-            CTX.fillStyle='rgba(0,0,0,0.3)'; CTX.fillRect(bx+bw*.25,sy+shelfH-4-bh+bh*.3,bw*.5,1.5);
+            CTX.fillStyle=db.bookGloss; CTX.fillRect(bx+1,sy+shelfH-4-bh+2,2,bh-4);
+            CTX.fillStyle=db.bookShadow; CTX.fillRect(bx+bw*.25,sy+shelfH-4-bh+bh*.3,bw*.5,1.5);
             bx+=bw+1; bookIdx++;
         }
     }

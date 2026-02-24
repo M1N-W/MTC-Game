@@ -744,6 +744,48 @@ const MAP_CONFIG = {
         elbowRadius: 5,
     },
 
+    // ── Object palettes (draw helpers) ────────────────────────
+    // All hardcoded colors from drawDesk/drawTree/drawServer/drawDataPillar/drawBookshelf live here.
+    // In Godot: becomes a Resource (.tres) for each object type.
+    objects: {
+        desk: {
+            screenGlow:  'rgba(255,255,220,0.18)',   // monitor top-edge highlight
+            monitorBody: '#1e40af',
+            monitorText: '#93c5fd',
+            notePaper:   '#fbbf24',
+            notePen:     '#f87171',
+        },
+        tree: {
+            shadowFill:  'rgba(0,0,0,0.25)',
+            leafSparkle: 'rgba(255,255,255,0.55)',
+            leafHex:     'rgba(134,239,172,0.6)',
+        },
+        server: {
+            inner:       '#263451',
+            unitSlot:    '#1c2a3e',
+            dataLedOn:   '#3b82f6',
+            dataLedOff:  '#1d3155',
+            ventStroke:  '#1a2738',
+            headerFill:  '#334155',
+            headerVent:  '#475569',
+            portFill:    '#0ea5e9',
+        },
+        datapillar: {
+            shadowFill:  'rgba(0,0,0,0.3)',
+            baseDark:    '#334155',
+            baseLight:   '#475569',
+            bodyGrad:    ['#334155', '#64748b', '#475569'],
+            circuit:     'rgba(6,182,212,',           // alpha appended at runtime
+        },
+        bookshelf: {
+            frameBody:   '#78350f',
+            frameSide:   '#92400e',
+            shelfBoard:  '#a16207',
+            bookGloss:   'rgba(255,255,255,0.2)',
+            bookShadow:  'rgba(0,0,0,0.3)',
+        },
+    },
+
     // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
