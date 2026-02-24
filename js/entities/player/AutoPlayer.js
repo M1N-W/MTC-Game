@@ -365,55 +365,29 @@ class AutoPlayer extends Player {
 
         const R = 15;
 
-        // Outer threat glow ring — crimson (matches TankEnemy's style)
-        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(185,28,28,0.80)';
-        CTX.strokeStyle = 'rgba(185,28,28,0.55)'; CTX.lineWidth = 3;
+        // Silhouette glow ring — crimson
+        CTX.shadowBlur = 18; CTX.shadowColor = 'rgba(220,38,38,0.75)';
+        CTX.strokeStyle = 'rgba(220,38,38,0.55)';
+        CTX.lineWidth = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        // Base body — dark crimson radial gradient (same style as enemies)
-        const autoBodyG = CTX.createRadialGradient(-4, -4, 1, 0, 0, R);
-        autoBodyG.addColorStop(0, '#4a0e0e');
-        autoBodyG.addColorStop(0.55, '#2d0808');
-        autoBodyG.addColorStop(1, '#1a0404');
-        CTX.fillStyle = autoBodyG;
+        // Bean body — dark crimson radial gradient
+        const bG = CTX.createRadialGradient(-4, -4, 1, 0, 0, R);
+        bG.addColorStop(0, '#7f1d1d');
+        bG.addColorStop(0.5, '#5a0e0e');
+        bG.addColorStop(1, '#2d0606');
+        CTX.fillStyle = bG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
-        // Thick sticker outline — matches enemy style
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
 
-        // School uniform overlay — open white shirt (clipped to body)
-        CTX.save();
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.clip();
-        // Shirt panels (left + right, unbuttoned gap in center)
-        CTX.fillStyle = 'rgba(226,232,240,0.88)';
-        CTX.fillRect(-R, -R, R - 4, R * 2);    // left panel
-        CTX.fillRect(4, -R, R - 4, R * 2);     // right panel
-        // Dark shorts (bottom half tint)
-        CTX.fillStyle = 'rgba(15,23,42,0.72)';
-        CTX.fillRect(-R, 1, R * 2, R);
-        // Shirt collar shadow lines
-        CTX.strokeStyle = '#94a3b8'; CTX.lineWidth = 1;
-        CTX.beginPath(); CTX.moveTo(-4, -R); CTX.lineTo(-6, 2); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(4, -R); CTX.lineTo(6, 2); CTX.stroke();
-        CTX.restore();
+        CTX.fillStyle = 'rgba(255,255,255,0.09)';
+        CTX.beginPath(); CTX.arc(-5, -6, 6, 0, Math.PI * 2); CTX.fill();
 
-        // Specular highlight (top-left, same as enemy bean)
-        CTX.fillStyle = 'rgba(255,255,255,0.07)';
-        CTX.beginPath(); CTX.arc(-R * 0.35, -R * 0.35, R * 0.32, 0, Math.PI * 2); CTX.fill();
-
-        // Chest reactor — pulsing red core (same pattern as enemy heat slit)
-        const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (this.wanchaiActive ? 1.5 : 1);
-        CTX.fillStyle = `rgba(239,68,68,${Math.min(1, cP)})`;
-        CTX.shadowBlur = 12 * cP; CTX.shadowColor = '#dc2626';
-        CTX.beginPath(); CTX.roundRect(-4, -4, 8, 7, 2); CTX.fill();
-        CTX.fillStyle = `rgba(255,255,255,${cP * 0.55})`;
-        CTX.beginPath(); CTX.arc(0, -2, 2, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // Heat vents on sides — orange glow (kept from original)
-        CTX.shadowBlur = 8 * ventGlow; CTX.shadowColor = '#fb923c';
+        // Heat vents
+        CTX.shadowBlur = 10 * ventGlow; CTX.shadowColor = '#fb923c';
         for (let vi = 0; vi < 3; vi++) {
             const va = ventGlow * (0.45 + vi * 0.18);
             CTX.fillStyle = `rgba(251,146,60,${va})`;
@@ -422,7 +396,29 @@ class AutoPlayer extends Player {
         }
         CTX.shadowBlur = 0;
 
-        // Spiky dark hair — dense fill + thick outline
+        // Power core — enhanced glow slit shape
+        const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (this.wanchaiActive ? 1.5 : 1);
+        CTX.fillStyle = `rgba(239,68,68,${Math.min(1, cP)})`;
+        CTX.shadowBlur = 12 * cP; CTX.shadowColor = '#dc2626';
+        CTX.beginPath(); CTX.roundRect(-4.5, 0, 9, 6, 2); CTX.fill();
+        // bright center dot
+        CTX.fillStyle = `rgba(255,180,180,${cP * 0.80})`;
+        CTX.beginPath(); CTX.arc(0, 3, 2, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Wanchai-active: extra inner heat shimmer ring
+        if (this.wanchaiActive) {
+            const hA = 0.35 + Math.sin(now / 90) * 0.20;
+            CTX.save();
+            CTX.globalAlpha = hA;
+            CTX.strokeStyle = '#f97316';
+            CTX.lineWidth = 1.5;
+            CTX.shadowBlur = 12; CTX.shadowColor = '#f97316';
+            CTX.beginPath(); CTX.arc(0, 0, R + 6, 0, Math.PI * 2); CTX.stroke();
+            CTX.restore();
+        }
+
+        // Anime-Spiky Hair
         CTX.fillStyle = '#1a0505';
         CTX.beginPath();
         CTX.moveTo(-(R - 1), -1);
@@ -432,7 +428,8 @@ class AutoPlayer extends Player {
         CTX.quadraticCurveTo(R * 0.5, 2, 0, 2.5);
         CTX.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
         CTX.closePath(); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
+
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
         CTX.beginPath();
         CTX.moveTo(-(R - 1), -1);
         CTX.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);
@@ -442,37 +439,44 @@ class AutoPlayer extends Player {
         CTX.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
         CTX.closePath(); CTX.stroke();
 
-        // Individual hair spikes with ember tips
+        CTX.fillStyle = '#5c1010';
+        CTX.beginPath();
+        CTX.moveTo(-5, -R - 2);
+        CTX.quadraticCurveTo(-1, -R - 5, 4, -R - 2);
+        CTX.quadraticCurveTo(2, -R + 2, -2, -R + 1);
+        CTX.quadraticCurveTo(-4, -R, -5, -R - 2);
+        CTX.closePath(); CTX.fill();
+
         const spikeData = [
-            [-10, -2, 11, '#3d0909'],
-            [-4, -1, 9,  '#450a0a'],
-            [1,   0,  11, '#450a0a'],
-            [6,   1,  8,  '#3d0909'],
-            [11,  2,  6,  '#2d0606'],
+            [-11, -2, 12, '#3d0909'],
+            [-5, -1, 9, '#450a0a'],
+            [1, 0, 11, '#450a0a'],
+            [7, 1, 8, '#3d0909'],
+            [12, 2, 6, '#2d0606'],
         ];
         for (const [bx, tipOff, h, col] of spikeData) {
             const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
             CTX.fillStyle = col;
             CTX.beginPath();
-            CTX.moveTo(bx - 3, -R - 1);
-            CTX.lineTo(bx + 3, -R - 1);
+            CTX.moveTo(bx - 3.5, -R - 1);
+            CTX.lineTo(bx + 3.5, -R - 1);
             CTX.lineTo(bx + tipOff + wobble, -R - 1 - h - wobble * 0.4);
             CTX.closePath(); CTX.fill();
             CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
             CTX.beginPath();
-            CTX.moveTo(bx - 3, -R - 1);
-            CTX.lineTo(bx + 3, -R - 1);
+            CTX.moveTo(bx - 3.5, -R - 1);
+            CTX.lineTo(bx + 3.5, -R - 1);
             CTX.lineTo(bx + tipOff + wobble, -R - 1 - h - wobble * 0.4);
             CTX.closePath(); CTX.stroke();
         }
 
-        // Ember dots at spike tips
         CTX.shadowBlur = this.wanchaiActive ? 16 : 6;
         CTX.shadowColor = '#f97316';
         const emberColors = ['#f97316', '#ef4444', '#fb923c', '#f87171', '#fca5a5'];
         spikeData.forEach(([bx, tipOff, h], idx) => {
             const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
-            const tx = bx + tipOff + wobble, ty = -R - 1 - h - wobble * 0.4;
+            const tx = bx + tipOff + wobble;
+            const ty = -R - 1 - h - wobble * 0.4;
             const eA = (this.wanchaiActive ? 0.9 : 0.6) + Math.sin(now / 200 + idx) * 0.25;
             CTX.fillStyle = emberColors[idx % emberColors.length];
             CTX.globalAlpha = Math.max(0, Math.min(1, eA));
@@ -480,7 +484,19 @@ class AutoPlayer extends Player {
         });
         CTX.globalAlpha = 1; CTX.shadowBlur = 0;
 
-        // ── Energy Shield visual ring ────────────────────────────
+        // Second-wind danger ring
+        if (this.isSecondWind) {
+            const swA = 0.30 + Math.sin(now / 110) * 0.20;
+            CTX.save();
+            CTX.globalAlpha = swA;
+            CTX.strokeStyle = '#ef4444';
+            CTX.lineWidth = 2;
+            CTX.shadowBlur = 14; CTX.shadowColor = '#dc2626';
+            CTX.beginPath(); CTX.arc(0, 0, R + 9 + Math.sin(now / 100) * 2, 0, Math.PI * 2); CTX.stroke();
+            CTX.restore();
+        }
+
+        // Energy Shield visual ring
         if (this.hasShield) {
             const shieldT = performance.now() / 200;
             CTX.save();

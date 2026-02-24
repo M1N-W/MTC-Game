@@ -238,151 +238,81 @@ class KaoPlayer extends Player {
         // Draw clones first (behind player)
         this.clones.forEach(c => c.draw());
 
-        // Weapon Master golden aura pulse
+        // Weapon Master golden aura pulse (enhanced: double ring)
         if (this.isWeaponMaster) {
             const now = performance.now();
             const wmScreen = worldToScreen(this.x, this.y);
             CTX.save();
-            CTX.globalAlpha = 0.3 + Math.sin(now / 150) * 0.2;
+            CTX.globalAlpha = 0.28 + Math.sin(now / 150) * 0.18;
             CTX.fillStyle = '#facc15';
-            CTX.shadowBlur = 20;
-            CTX.shadowColor = '#facc15';
+            CTX.shadowBlur = 24; CTX.shadowColor = '#facc15';
             CTX.beginPath();
             CTX.arc(wmScreen.x, wmScreen.y, this.radius + 8, 0, Math.PI * 2);
             CTX.fill();
-            CTX.restore();
-        }
-
-        // Sniper charge laser-sight line
-        if (this.sniperChargeTime > 0) {
-            const screen = worldToScreen(this.x, this.y);
-            const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
-            CTX.save();
-            CTX.strokeStyle = `rgba(239, 68, 68, ${Math.min(1, this.sniperChargeTime)})`;
-            CTX.lineWidth = 1 + this.sniperChargeTime * 2;
+            CTX.globalAlpha = 0.12 + Math.sin(now / 200) * 0.08;
+            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 2;
+            CTX.shadowBlur = 14;
             CTX.beginPath();
-            CTX.moveTo(screen.x, screen.y);
-            CTX.lineTo(
-                screen.x + Math.cos(aimAngle) * 2000,
-                screen.y + Math.sin(aimAngle) * 2000
-            );
+            CTX.arc(wmScreen.x, wmScreen.y, this.radius + 18, 0, Math.PI * 2);
             CTX.stroke();
             CTX.restore();
         }
 
-        // KAO BODY (Nerd Student / Glasses / Tucked Shirt)
-        const screen = worldToScreen(this.x, this.y);
-        const isFacingLeft2 = Math.abs(this.angle) > Math.PI / 2;
-        const facingSign2 = isFacingLeft2 ? -1 : 1;
-        const R = this.radius;
-
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.scale(facingSign2, 1);
-
-        // Outer glow ring — cyan (matches PlayerBase stealth visor + distinct from enemies)
-        const kaoNow = performance.now();
-        CTX.shadowBlur = 10; CTX.shadowColor = 'rgba(6,182,212,0.65)';
-        CTX.strokeStyle = 'rgba(6,182,212,0.40)';
-        CTX.lineWidth = 2;
-        CTX.beginPath(); CTX.arc(0, 0, R + 2, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // Base body — dark navy radial gradient (same family as PlayerBase)
-        const kaoBodyG = CTX.createRadialGradient(-3, -3, 1, 0, 0, R);
-        kaoBodyG.addColorStop(0, '#1d3461');
-        kaoBodyG.addColorStop(0.55, '#0f2140');
-        kaoBodyG.addColorStop(1, '#07111e');
-        CTX.fillStyle = kaoBodyG;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-
-        // Thick sticker outline — matches enemy style
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
-
-        // School uniform — clipped to body circle
-        CTX.save();
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.clip();
-        // White shirt top half
-        CTX.fillStyle = 'rgba(241,245,249,0.88)';
-        CTX.fillRect(-R, -R, R * 2, R);
-        // Dark navy shorts bottom half
-        CTX.fillStyle = 'rgba(15,23,42,0.88)';
-        CTX.fillRect(-R, 0, R * 2, R);
-        // Necktie — dark stripe down center
-        CTX.fillStyle = 'rgba(15,23,42,0.95)';
-        CTX.fillRect(-2, -R, 4, R - 2);
-        CTX.fillStyle = 'rgba(6,182,212,0.55)';  // cyan accent on tie
-        CTX.fillRect(-1, -R, 2, R - 2);
-        // Shirt seam lines
-        CTX.strokeStyle = 'rgba(148,163,184,0.55)'; CTX.lineWidth = 0.8;
-        CTX.beginPath(); CTX.moveTo(-2, -R); CTX.lineTo(-4, 0); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(2, -R); CTX.lineTo(4, 0); CTX.stroke();
-        CTX.restore();
-
-        // Specular highlight — top-left
-        CTX.fillStyle = 'rgba(255,255,255,0.10)';
-        CTX.beginPath(); CTX.arc(-R * 0.35, -R * 0.35, R * 0.30, 0, Math.PI * 2); CTX.fill();
-
-        // Nerd Glasses — thick dark frames with cyan tint lenses
-        const gY = -R * 0.38;
-        const vp = 0.55 + Math.sin(kaoNow / 350) * 0.30;
-        // Lens fill — slightly tinted
-        CTX.fillStyle = `rgba(6,182,212,${vp * 0.20})`;
-        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2;
-        CTX.beginPath(); CTX.roundRect(-R * 0.68, gY - 3.5, R * 0.48, 7, 2); CTX.fill(); CTX.stroke();
-        CTX.beginPath(); CTX.roundRect(R * 0.20, gY - 3.5, R * 0.48, 7, 2); CTX.fill(); CTX.stroke();
-        // Bridge
-        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.5;
-        CTX.beginPath(); CTX.moveTo(-R * 0.20, gY); CTX.lineTo(R * 0.20, gY); CTX.stroke();
-        // Anime glare lines — cyan glow
-        CTX.strokeStyle = `rgba(6,182,212,${vp * 0.85})`; CTX.lineWidth = 1.2;
-        CTX.shadowBlur = 6 * vp; CTX.shadowColor = '#06b6d4';
-        CTX.beginPath(); CTX.moveTo(-R * 0.52, gY - 2); CTX.lineTo(-R * 0.62, gY + 1.5); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(R * 0.38, gY - 2); CTX.lineTo(R * 0.28, gY + 1.5); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // Neat side-part hair — dark navy, thick outline
-        CTX.fillStyle = '#0b1623';
-        CTX.beginPath();
-        CTX.arc(0, -R * 0.2, R * 1.05, Math.PI * 1.08, Math.PI * 1.92, false);
-        CTX.quadraticCurveTo(R * 0.5, -R * 0.8, 0, -R * 0.6);
-        CTX.quadraticCurveTo(-R * 0.5, -R * 0.8, -R, -R * 0.2);
-        CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.beginPath();
-        CTX.arc(0, -R * 0.2, R * 1.05, Math.PI * 1.08, Math.PI * 1.92, false);
-        CTX.quadraticCurveTo(R * 0.5, -R * 0.8, 0, -R * 0.6);
-        CTX.quadraticCurveTo(-R * 0.5, -R * 0.8, -R, -R * 0.2);
-        CTX.stroke();
-        // Side-part line — subtle highlight
-        CTX.strokeStyle = 'rgba(30,41,59,0.80)'; CTX.lineWidth = 1;
-        CTX.beginPath(); CTX.moveTo(-2, -R * 1.05); CTX.lineTo(-4, -R * 0.6); CTX.stroke();
-
-        CTX.restore();
-
-        // Draw Weapon
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
-        if (isFacingLeft2) CTX.scale(1, -1);
-        if (typeof weaponSystem !== 'undefined' && typeof drawKaoGunEnhanced === 'function') {
-            CTX.translate(15, 10);
-            drawKaoGunEnhanced(CTX, weaponSystem.currentWeapon || 'auto');
+        // Sniper charge laser-sight line (enhanced: dual-beam with glow)
+        if (this.sniperChargeTime > 0) {
+            const screen = worldToScreen(this.x, this.y);
+            const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
+            const chargeT = Math.min(1, this.sniperChargeTime);
+            CTX.save();
+            CTX.strokeStyle = `rgba(239,68,68,${chargeT * 0.22})`;
+            CTX.lineWidth = 6 + chargeT * 10;
+            CTX.shadowBlur = 18 * chargeT; CTX.shadowColor = '#ef4444';
+            CTX.beginPath();
+            CTX.moveTo(screen.x, screen.y);
+            CTX.lineTo(screen.x + Math.cos(aimAngle) * 2000, screen.y + Math.sin(aimAngle) * 2000);
+            CTX.stroke();
+            CTX.strokeStyle = `rgba(252,165,165,${chargeT * 0.90})`;
+            CTX.lineWidth = 1 + chargeT * 1.5;
+            CTX.shadowBlur = 6 * chargeT;
+            CTX.beginPath();
+            CTX.moveTo(screen.x, screen.y);
+            CTX.lineTo(screen.x + Math.cos(aimAngle) * 2000, screen.y + Math.sin(aimAngle) * 2000);
+            CTX.stroke();
+            CTX.restore();
         }
-        CTX.restore();
 
-        // Status effects
-        if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', screen.x, screen.y - 40); }
-        if (this.isBurning) { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
-
-        // Level Badge
-        if (this.level > 1) {
-            CTX.fillStyle = 'rgba(59,130,246,0.92)';
-            CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText(this.level, screen.x + 20, screen.y - 20);
+        // Pre-draw skill-state indicators
+        if (!this.isInvisible) {
+            const kaoNow = performance.now();
+            const kaoScr = worldToScreen(this.x, this.y);
+            // Teleport-ready: slow-spin dashed ring
+            if (this.passiveUnlocked && this.teleportCharges > 0) {
+                CTX.save();
+                CTX.translate(kaoScr.x, kaoScr.y);
+                CTX.rotate(kaoNow / 600);
+                CTX.strokeStyle = 'rgba(56,189,248,0.70)';
+                CTX.lineWidth = 1.5;
+                CTX.shadowBlur = 8; CTX.shadowColor = '#38bdf8';
+                CTX.setLineDash([4, 5]);
+                CTX.beginPath(); CTX.arc(0, 0, this.radius + 8, 0, Math.PI * 2); CTX.stroke();
+                CTX.setLineDash([]);
+                CTX.restore();
+            }
+            // Second-wind danger ring
+            if (this.isSecondWind) {
+                const swA = 0.30 + Math.sin(kaoNow / 110) * 0.20;
+                CTX.save();
+                CTX.globalAlpha = swA;
+                CTX.strokeStyle = '#ef4444';
+                CTX.lineWidth = 2;
+                CTX.shadowBlur = 16; CTX.shadowColor = '#ef4444';
+                CTX.beginPath(); CTX.arc(kaoScr.x, kaoScr.y, this.radius + 10 + Math.sin(kaoNow / 100) * 3, 0, Math.PI * 2); CTX.stroke();
+                CTX.restore();
+            }
         }
+
+        // Body, stealth, weapon, dash ghosts via PlayerBase
+        super.draw();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
