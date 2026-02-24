@@ -25,15 +25,12 @@ const DEBUG_MODE = false;
  */
 
 // ─── Game State ───────────────────────────────────────────────
-let gameState = 'MENU';
+// FIX (WARN-1): Use only window.gameState to prevent desync between local and global state
 let loopRunning = false;
-window.gameState = gameState;
+window.gameState = 'MENU';
 
-// WARN-6 FIX: always use this helper to change gameState so that
-// window.gameState (read by external systems like input.js) is kept
-// in sync automatically. Direct assignment is now only at init above.
+// Simplified setter - only updates window.gameState (single source of truth)
 function setGameState(s) {
-    gameState = s;
     window.gameState = s;
 }
 window.setGameState = setGameState;
@@ -103,7 +100,7 @@ function gameLoop(now) {
         return;
     }
 
-    if (gameState === 'PLAYING') {
+    if (window.gameState === 'PLAYING') {
         // BUG-3 FIX: guard in case TimeManager.js hasn't loaded yet
         if (typeof _tickSlowMoEnergy === 'function') _tickSlowMoEnergy(dt);
     }
@@ -111,7 +108,7 @@ function gameLoop(now) {
     const scaledDt = dt * window.timeScale;
     _lastDrawDt = scaledDt;
 
-    if (gameState === 'PLAYING') {
+    if (window.gameState === 'PLAYING') {
         if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
             _tutorialForwardInput();
             TutorialSystem.update();
@@ -121,7 +118,7 @@ function gameLoop(now) {
             updateGame(scaledDt);
             drawGame();
         }
-    } else if (gameState === 'PAUSED') {
+    } else if (window.gameState === 'PAUSED') {
         drawGame();
         const shopModal = document.getElementById('shop-modal');
         if (shopModal && shopModal.style.display === 'flex') ShopManager.tick();
@@ -130,7 +127,7 @@ function gameLoop(now) {
     // IMP-1 FIX: stop the RAF loop when the game is over so we don't keep
     // churning the GPU for a static screen.  loopRunning is reset to false
     // so startGame() can safely restart the loop next round.
-    if (gameState === 'GAMEOVER') {
+    if (window.gameState === 'GAMEOVER') {
         loopRunning = false;
         return;
     }
@@ -243,7 +240,7 @@ function updateGame(dt) {
         // Route shooting: Kao uses its own shoot(); everyone else uses WeaponSystem
         if (isKao) {
             window.player.shoot(dt);
-        } else if (mouse.left === 1 && gameState === 'PLAYING') {
+        } else if (mouse.left === 1 && window.gameState === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
                 if (projectiles && projectiles.length > 0) {
@@ -255,7 +252,7 @@ function updateGame(dt) {
     }
 
     if (window.player instanceof PoomPlayer) {
-        if (mouse.left === 1 && gameState === 'PLAYING') shootPoom(window.player);
+        if (mouse.left === 1 && window.gameState === 'PLAYING') shootPoom(window.player);
         if (mouse.right === 1) {
             if (window.player.cooldowns.eat <= 0 && !window.player.isEatingRice) window.player.eatRice();
             mouse.right = 0;

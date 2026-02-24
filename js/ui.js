@@ -85,9 +85,13 @@ class AchievementSystem {
         if (unlock) this.unlock(ach);
     }
 
-    unlock(ach) {
-        // ── Mark as unlocked first ───────────────────────────────
-        this.unlocked.add(ach.id);
+    unlock(ach, retryCount = 0) {
+        const MAX_RETRIES = 3;
+        
+        // ── Mark as unlocked only on first attempt ───────────────
+        if (retryCount === 0) {
+            this.unlocked.add(ach.id);
+        }
 
         // ── Audio (guarded — Audio may not be ready yet) ─────────
         try {
@@ -96,7 +100,16 @@ class AchievementSystem {
 
         // ── DOM popup ────────────────────────────────────────────
         const container = document.getElementById('achievements');
-        if (!container) return;
+        if (!container) {
+            if (retryCount < MAX_RETRIES) {
+                console.warn(`[Achievement] Container not found, retry ${retryCount + 1}/${MAX_RETRIES}`);
+                setTimeout(() => this.unlock(ach, retryCount + 1), 100);
+            } else {
+                console.error('[Achievement] Failed to display after max retries - DOM element missing');
+            }
+            return;
+        }
+        
         const el = document.createElement('div');
         el.className = 'achievement';
         el.innerHTML = `

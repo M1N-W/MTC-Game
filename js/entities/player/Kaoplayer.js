@@ -60,7 +60,7 @@ class KaoClone {
     }
 
     /** Fire projectiles from the clone's position, mirroring the owner's shot. */
-    shoot(wep, damage, color, pellets, spread, wepKey) {
+    shoot(wep, damage, color, pellets, spread, wepKey, isCrit) {
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
         const barrelOffset = 28;
 
@@ -77,11 +77,13 @@ class KaoClone {
                 projOptions.bounces = 1; projOptions.life = 2.5;
             }
 
-            projectileManager.add(new Projectile(
+            const p = new Projectile(
                 sx, sy, finalAngle,
                 wep.speed, damage, color,
-                false, 'player', projOptions
-            ));
+                isCrit, 'player', projOptions
+            );
+            p.isCrit = isCrit;
+            projectileManager.add(p);
         }
         spawnParticles(
             this.x + Math.cos(aimAngle) * 25,
@@ -354,10 +356,9 @@ class KaoPlayer extends Player {
         const passiveCrit = this.passiveUnlocked ? (BALANCE.characters.kao.passiveCritBonus || 0) : 0;
         let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0);
 
-        // Ambush: massive damage multiplier + guaranteed crit
+        // Ambush: guaranteed crit (let the standard crit block handle the multiplier)
         if (isAmbush) {
-            baseDmg *= (this.stats.critMultiplier || 3);
-            critChance = 1.0;
+            critChance = 2.0;  // FIX (BUG-1): Set >1 to guarantee crit, don't multiply baseDmg here to prevent 9x double-dip
             color = '#facc15';
         }
 
@@ -428,7 +429,7 @@ class KaoPlayer extends Player {
         }
 
         // Pass wepKey so clones also get barrel offset + ricochet
-        this.clones.forEach(c => c.shoot(wep, finalDamage, color, pellets, spread, wepKey));
+        this.clones.forEach(c => c.shoot(wep, finalDamage, color, pellets, spread, wepKey, isCrit));
 
         // FIX: pass wepKey so Audio plays the correct weapon sound
         if (typeof Audio !== 'undefined' && Audio.playShoot) Audio.playShoot(wepKey);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v2.5.10'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.56 Admin Authentication System — secret keylogger, Dev Mode panel, AdminConsole access gate, remove persistent passive from save
+const CACHE_NAME = 'mtc-cache-v2.6.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.6.0 Critical Bug Fixes — Kao ecosystem (double crit, clone visuals, Q key conflict, awakening tracker), memory leak prevention, achievement retry mechanism, gameState sync
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

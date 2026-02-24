@@ -84,6 +84,14 @@ let secretBuffer = "";
 // 📱 MOBILE TWIN-STICK CONTROLS
 // ══════════════════════════════════════════════════════════════
 
+// FIX (BUG-3): Store handler references to enable cleanup and prevent memory leaks
+var _mobileHandlers = {
+    leftStart: null, leftMove: null, leftEnd: null, leftCancel: null,
+    rightStart: null, rightMove: null, rightEnd: null, rightCancel: null,
+    btnDash: null, btnSkill: null, btnSwitch: null, btnNaga: null,
+    btnDatabase: null, btnTerminal: null, btnShop: null, touchMove: null
+};
+
 function initMobileControls() {
     var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (!isTouchDevice) return;
@@ -151,15 +159,26 @@ function initMobileControls() {
         }
     }
 
-    zoneL.addEventListener('touchstart', function (e) { startJoystick(e, joysticks.left, baseL, stickL, zoneL, false); }, { passive: false });
-    zoneL.addEventListener('touchmove', function (e) { moveJoystick(e, joysticks.left, stickL); }, { passive: false });
-    zoneL.addEventListener('touchend', function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); }, { passive: false });
-    zoneL.addEventListener('touchcancel', function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); }, { passive: false });
+    // Store handler references for cleanup
+    _mobileHandlers.leftStart = function (e) { startJoystick(e, joysticks.left, baseL, stickL, zoneL, false); };
+    _mobileHandlers.leftMove = function (e) { moveJoystick(e, joysticks.left, stickL); };
+    _mobileHandlers.leftEnd = function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); };
+    _mobileHandlers.leftCancel = function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); };
+    
+    zoneL.addEventListener('touchstart', _mobileHandlers.leftStart, { passive: false });
+    zoneL.addEventListener('touchmove', _mobileHandlers.leftMove, { passive: false });
+    zoneL.addEventListener('touchend', _mobileHandlers.leftEnd, { passive: false });
+    zoneL.addEventListener('touchcancel', _mobileHandlers.leftCancel, { passive: false });
 
-    zoneR.addEventListener('touchstart', function (e) { startJoystick(e, joysticks.right, baseR, stickR, zoneR, true); }, { passive: false });
-    zoneR.addEventListener('touchmove', function (e) { moveJoystick(e, joysticks.right, stickR); }, { passive: false });
-    zoneR.addEventListener('touchend', function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); }, { passive: false });
-    zoneR.addEventListener('touchcancel', function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); }, { passive: false });
+    _mobileHandlers.rightStart = function (e) { startJoystick(e, joysticks.right, baseR, stickR, zoneR, true); };
+    _mobileHandlers.rightMove = function (e) { moveJoystick(e, joysticks.right, stickR); };
+    _mobileHandlers.rightEnd = function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); };
+    _mobileHandlers.rightCancel = function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); };
+    
+    zoneR.addEventListener('touchstart', _mobileHandlers.rightStart, { passive: false });
+    zoneR.addEventListener('touchmove', _mobileHandlers.rightMove, { passive: false });
+    zoneR.addEventListener('touchend', _mobileHandlers.rightEnd, { passive: false });
+    zoneR.addEventListener('touchcancel', _mobileHandlers.rightCancel, { passive: false });
 
     // ── Action buttons ─────────────────────────────────────────
     var btnDash = document.getElementById('btn-dash');
@@ -227,11 +246,44 @@ function initMobileControls() {
         }, { passive: false });
     }
 
-    document.addEventListener('touchmove', function (e) {
+    _mobileHandlers.touchMove = function (e) {
         if (!e.target.closest('.joystick-zone') && !e.target.closest('.action-btn')) {
             e.preventDefault();
         }
-    }, { passive: false });
+    };
+    document.addEventListener('touchmove', _mobileHandlers.touchMove, { passive: false });
+}
+
+// FIX (BUG-3): Cleanup function to remove all mobile event listeners
+function cleanupMobileControls() {
+    var zoneL = document.getElementById('joystick-left-zone');
+    var zoneR = document.getElementById('joystick-right-zone');
+    
+    if (zoneL && _mobileHandlers.leftStart) {
+        zoneL.removeEventListener('touchstart', _mobileHandlers.leftStart);
+        zoneL.removeEventListener('touchmove', _mobileHandlers.leftMove);
+        zoneL.removeEventListener('touchend', _mobileHandlers.leftEnd);
+        zoneL.removeEventListener('touchcancel', _mobileHandlers.leftCancel);
+    }
+    
+    if (zoneR && _mobileHandlers.rightStart) {
+        zoneR.removeEventListener('touchstart', _mobileHandlers.rightStart);
+        zoneR.removeEventListener('touchmove', _mobileHandlers.rightMove);
+        zoneR.removeEventListener('touchend', _mobileHandlers.rightEnd);
+        zoneR.removeEventListener('touchcancel', _mobileHandlers.rightCancel);
+    }
+    
+    if (_mobileHandlers.touchMove) {
+        document.removeEventListener('touchmove', _mobileHandlers.touchMove);
+    }
+    
+    // Clear handler references
+    _mobileHandlers = {
+        leftStart: null, leftMove: null, leftEnd: null, leftCancel: null,
+        rightStart: null, rightMove: null, rightEnd: null, rightCancel: null,
+        btnDash: null, btnSkill: null, btnSwitch: null, btnNaga: null,
+        btnDatabase: null, btnTerminal: null, btnShop: null, touchMove: null
+    };
 }
 
 
@@ -334,8 +386,15 @@ function _setupKeyboardListeners() {
 
         if (e.code === 'KeyQ') {
             if (window.gameState === 'PLAYING') {
-                if (player instanceof PoomPlayer) keys.q = 0;
-                else { weaponSystem.switchWeapon(); keys.q = 0; }
+                // FIX (BUG-3): Kao uses Q for Teleport. Do NOT switch weapons on Q release for Kao!
+                if (typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer) {
+                    keys.q = 0;
+                } else if (typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer) {
+                    keys.q = 0;  // Kao: Q is Teleport, not weapon switch
+                } else {
+                    if (typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon();
+                    keys.q = 0;
+                }
             } else { keys.q = 0; }
         }
     });
@@ -364,6 +423,15 @@ function _setupMouseListeners() {
     });
 
     window.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+    // FIX (BUG-3): Add Mouse Wheel support for universal weapon switching
+    window.addEventListener('wheel', function (e) {
+        if (window.gameState === 'PLAYING' && typeof weaponSystem !== 'undefined') {
+            if (e.deltaY > 0 || e.deltaY < 0) {
+                weaponSystem.switchWeapon();
+            }
+        }
+    }, { passive: true });
 }
 
 
