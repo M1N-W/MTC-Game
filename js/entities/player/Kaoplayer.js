@@ -60,15 +60,27 @@ class KaoClone {
     }
 
     /** Fire projectiles from the clone's position, mirroring the owner's shot. */
-    shoot(wep, damage, color, pellets, spread) {
+    shoot(wep, damage, color, pellets, spread, wepKey) {
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
+        const barrelOffset = 28;
+
         for (let i = 0; i < pellets; i++) {
-            const offset = (pellets > 1) ? (Math.random() - 0.5) * spread : 0;
+            const spreadAngle = (pellets > 1) ? (Math.random() - 0.5) * spread : 0;
+            const finalAngle = aimAngle + spreadAngle;
+            const sx = this.x + Math.cos(finalAngle) * barrelOffset;
+            const sy = this.y + Math.sin(finalAngle) * barrelOffset;
+
+            let projOptions = {};
+            if (wepKey === 'sniper') {
+                projOptions.bounces = 2; projOptions.life = 5;
+            } else if (wepKey === 'shotgun') {
+                projOptions.bounces = 1; projOptions.life = 2.5;
+            }
+
             projectileManager.add(new Projectile(
-                this.x, this.y,
-                aimAngle + offset,
+                sx, sy, finalAngle,
                 wep.speed, damage, color,
-                false, 'player'
+                false, 'player', projOptions
             ));
         }
         spawnParticles(
@@ -320,9 +332,11 @@ class KaoPlayer extends Player {
         let baseDmg = wep.damage || 10;
         let color = wep.color || '#ffffff';
 
-        // ── 🛡️ FIX: Stealth Break & Ambush Logic ──
-        // Kao bypasses WeaponSystem.shootSingle() entirely, so ambush/stealth
-        // logic that used to live there must be replicated here.
+        // Read wepKey here so ricochet options, audio, and clone shots all share it
+        const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
+
+        // ── 🛡️ Stealth Break & Ambush Logic ──
+        // Kao bypasses WeaponSystem.shootSingle() entirely, so this must live here.
         let isAmbush = false;
         if (this.ambushReady) {
             isAmbush = true;
@@ -330,7 +344,7 @@ class KaoPlayer extends Player {
             this.breakStealth();
             spawnParticles(this.x, this.y, 15, '#facc15');
         } else if (this.isInvisible) {
-            // Firing while invisible (e.g. late frame) still breaks stealth
+            // Firing while invisible (late frame) still breaks stealth
             this.breakStealth();
         }
 
@@ -340,7 +354,7 @@ class KaoPlayer extends Player {
         const passiveCrit = this.passiveUnlocked ? (BALANCE.characters.kao.passiveCritBonus || 0) : 0;
         let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0);
 
-        // Apply Ambush: massive damage multiplier + guaranteed crit
+        // Ambush: massive damage multiplier + guaranteed crit
         if (isAmbush) {
             baseDmg *= (this.stats.critMultiplier || 3);
             critChance = 1.0;
@@ -349,7 +363,7 @@ class KaoPlayer extends Player {
 
         // ── Weapon Master buffs ──
         if (this.passiveUnlocked && this.isWeaponMaster) {
-            if (!isAmbush) color = '#facc15'; // Base weapon master color
+            if (!isAmbush) color = '#facc15';
             if (wep.name === 'AUTO RIFLE') {
                 if (Math.random() < 0.5) pellets = 2;
                 this.bonusCritFromAuto = Math.min(0.5, this.bonusCritFromAuto + 0.005);
@@ -391,20 +405,40 @@ class KaoPlayer extends Player {
         }
 
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
+        const barrelOffset = 28;
 
         for (let i = 0; i < pellets; i++) {
-            const offset = (pellets > 1) ? (Math.random() - 0.5) * spread : 0;
-            const p = new Projectile(this.x, this.y, aimAngle + offset, wep.speed, finalDamage, color, false, 'player');
+            const spreadAngle = (pellets > 1) ? (Math.random() - 0.5) * spread : 0;
+            const finalAngle = aimAngle + spreadAngle;
+            // FIX: spawn bullet at barrel tip, not player centre
+            const sx = this.x + Math.cos(finalAngle) * barrelOffset;
+            const sy = this.y + Math.sin(finalAngle) * barrelOffset;
+
+            // FIX: pass ricochet options matching WeaponSystem.shootSingle()
+            let projOptions = {};
+            if (wepKey === 'sniper') {
+                projOptions.bounces = 2; projOptions.life = 5;
+            } else if (wepKey === 'shotgun') {
+                projOptions.bounces = 1; projOptions.life = 2.5;
+            }
+
+            const p = new Projectile(sx, sy, finalAngle, wep.speed, finalDamage, color, false, 'player', projOptions);
             p.isCrit = isCrit;
             projectileManager.add(p);
         }
 
-        this.clones.forEach(c => c.shoot(wep, finalDamage, color, pellets, spread));
+        // Pass wepKey so clones also get barrel offset + ricochet
+        this.clones.forEach(c => c.shoot(wep, finalDamage, color, pellets, spread, wepKey));
 
-        if (typeof Audio !== 'undefined' && Audio.playShoot) Audio.playShoot();
-        const recoil = (BALANCE.VISUALS && BALANCE.VISUALS.WEAPON_OFFSETS) ? (BALANCE.VISUALS.WEAPON_OFFSETS.recoil || 8) : 8;
-        this.x -= Math.cos(aimAngle) * recoil;
-        this.y -= Math.sin(aimAngle) * recoil;
-        spawnParticles(this.x, this.y, 3, color);
+        // FIX: pass wepKey so Audio plays the correct weapon sound
+        if (typeof Audio !== 'undefined' && Audio.playShoot) Audio.playShoot(wepKey);
+
+        // FIX: velocity-based knockback (was position warp → physics stutter)
+        this.vx -= Math.cos(aimAngle) * 50;
+        this.vy -= Math.sin(aimAngle) * 50;
+        // FIX: trigger animated gun recoil sprite
+        if (typeof this.triggerRecoil === 'function') this.triggerRecoil();
+
+        spawnParticles(this.x + Math.cos(aimAngle) * barrelOffset, this.y + Math.sin(aimAngle) * barrelOffset, 3, color);
     }
 }
