@@ -284,9 +284,10 @@ function startNextWave() {
         window.lastGlitchCountdown = -1;
         spawnFloatingText(GAME_TEXTS.wave.glitchWave, window.player.x, window.player.y - 200, '#d946ef', 44);
         addScreenShake(20); Audio.playBossSpecial();
-        setTimeout(() => { if (window.player) spawnFloatingText(GAME_TEXTS.wave.glitchAnomaly, window.player.x, window.player.y - 180, '#f472b6', 26); }, 400);
-        setTimeout(() => { if (window.player && window.waveSpawnLocked) spawnFloatingText(GAME_TEXTS.wave.glitchControls, window.player.x, window.player.y - 160, '#f472b6', 22); }, 1200);
-        setTimeout(() => { if (window.player && window.waveSpawnLocked) spawnFloatingText(GAME_TEXTS.wave.glitchBrace, window.player.x, window.player.y - 155, '#ef4444', 24); }, 2400);
+        // FIX (BUG-8): Check player is alive before spawning text
+        setTimeout(() => { if (window.player && !window.player.dead) spawnFloatingText(GAME_TEXTS.wave.glitchAnomaly, window.player.x, window.player.y - 180, '#f472b6', 26); }, 400);
+        setTimeout(() => { if (window.player && !window.player.dead && window.waveSpawnLocked) spawnFloatingText(GAME_TEXTS.wave.glitchControls, window.player.x, window.player.y - 160, '#f472b6', 22); }, 1200);
+        setTimeout(() => { if (window.player && !window.player.dead && window.waveSpawnLocked) spawnFloatingText(GAME_TEXTS.wave.glitchBrace, window.player.x, window.player.y - 155, '#ef4444', 24); }, 2400);
     } else {
         spawnEnemies(count);
     }

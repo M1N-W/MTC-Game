@@ -50,21 +50,21 @@ const BALANCE = {
                 },
                 sniper: {
                     name: 'SNIPER',
-                    damage: 120, cooldown: 0.85,
+                    damage: 105, cooldown: 0.85,
                     range: 1200, speed: 1200,
                     spread: 0, pellets: 1,
                     color: '#ef4444', icon: '🔴'
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 92, cooldown: 0.6,
+                    damage: 85, cooldown: 0.6,
                     range: 400, speed: 700,
-                    spread: 0.4, pellets: 5,
+                    spread: 0.4, pellets: 4,
                     color: '#f59e0b', icon: '🟠'
                 }
             },
             baseCritChance: 0.05,
-            critMultiplier: 3,
+            critMultiplier: 2.5,
             dashCooldown: 1.65,
             stealthCooldown: 5.5,
             stealthCost: 25,
@@ -75,11 +75,11 @@ const BALANCE = {
             passiveUnlockLevel: 3,
             passiveUnlockStealthCount: 5,
             passiveHpBonusPct: 0.5,
-            passiveCritBonus: 0.035,
-            passiveLifesteal: 0.02,
+            passiveCritBonus: 0.05,
+            passiveLifesteal: 0.03,
             speedOnHit: 20,
             speedOnHitDuration: 0.4,
-            damageMultiplierPerLevel: 0.06,
+            damageMultiplierPerLevel: 0.08,
             cooldownReductionPerLevel: 0.03,
             maxHpPerLevel: 0,
             // ── Advanced Kao Skills ──
@@ -92,7 +92,7 @@ const BALANCE = {
         auto: {
             name: 'Auto',
             radius: 20,
-            hp: 150, maxHp: 150,
+            hp: 160, maxHp: 160,
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
             moveSpeed: 160,
@@ -101,14 +101,14 @@ const BALANCE = {
             dashCooldown: 2.0,
             heatWaveRange: 150,
             heatWaveCooldown: 0.28,
-            wanchaiDuration: 4.0,
-            wanchaiCooldown: 12,
+            wanchaiDuration: 5.0,
+            wanchaiCooldown: 10,
             wanchaiEnergyCost: 35,
             wanchaiPunchRate: 0.06,
-            wanchaiDamage: 30,
+            wanchaiDamage: 28,
             standSpeedMod: 1.5,
-            standDamageReduction: 0.50,
-            standCritBonus: 0.50,
+            standDamageReduction: 0.35,
+            standCritBonus: 0.40,
             baseCritChance: 0.06,
             critMultiplier: 2.0,
             stealthCooldown: 12,
@@ -125,18 +125,18 @@ const BALANCE = {
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
             weapons: {
-                auto: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
-                sniper: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
-                shotgun: { name: 'HEAT WAVE', damage: 34, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
+                auto: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                sniper: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                shotgun: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
             },
-            damageMultiplierPerLevel: 0.05,
+            damageMultiplierPerLevel: 0.07,
             cooldownReductionPerLevel: 0.03,
-            maxHpPerLevel: 8
+            maxHpPerLevel: 10
         },
         poom: {
             name: 'Poom',
             radius: 20,
-            hp: 125, maxHp: 125,
+            hp: 135, maxHp: 135,
             energy: 100, maxEnergy: 100,
             energyRegen: 12,
             moveSpeed: 300,
@@ -145,29 +145,29 @@ const BALANCE = {
             dashCooldown: 1.65,
             expToNextLevel: 100,
             expLevelMult: 1.5,
-            riceDamage: 50,
-            riceCooldown: 0.46,
+            riceDamage: 58,
+            riceCooldown: 0.42,
             riceSpeed: 600,
             riceRange: 750,
             riceColor: '#ffffff',
-            critChance: 0.09,
+            critChance: 0.12,
             critMultiplier: 3,
-            eatRiceCooldown: 12,
-            eatRiceDuration: 5,
+            eatRiceCooldown: 10,
+            eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.25,
-            nagaCooldown: 25,
-            nagaDuration: 8,
-            nagaDamage: 72,
+            nagaCooldown: 18,
+            nagaDuration: 10,
+            nagaDamage: 85,
             nagaSpeed: 525,
             nagaSegments: 12,
             nagaSegmentDistance: 28,
             nagaRadius: 20,
             speedOnHit: 18,
             speedOnHitDuration: 0.35,
-            damageMultiplierPerLevel: 0.05,
+            damageMultiplierPerLevel: 0.07,
             cooldownReductionPerLevel: 0.04,
-            maxHpPerLevel: 5
+            maxHpPerLevel: 7
         }
     },
     drone: {
@@ -196,9 +196,9 @@ const BALANCE = {
         expValue: 10,
         chaseRange: 150,
         projectileSpeed: 500,
-        baseHp: 40, hpPerWave: 0.25,
+        baseHp: 40, hpPerWave: 0.18,  // NERF: 0.25 → 0.18 (exponential growth was too fast)
         baseSpeed: 85, speedPerWave: 6,
-        baseDamage: 8, damagePerWave: 1.5,
+        baseDamage: 8, damagePerWave: 1.2,  // NERF: 1.5 → 1.2 (damage spike was too harsh)
         shootCooldown: [2.5, 4.5],
         shootRange: 550
     },
@@ -207,9 +207,9 @@ const BALANCE = {
         color: '#78716c',
         expValue: 25,
         powerupDropMult: 1.5,
-        baseHp: 100, hpPerWave: 0.55,
+        baseHp: 100, hpPerWave: 0.42,  // NERF: 0.55 → 0.42 (tanks were bullet sponges)
         baseSpeed: 60, speedPerWave: 3,
-        baseDamage: 18, damagePerWave: 3,
+        baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
         meleeRange: 55
     },
     mage: {
@@ -219,16 +219,16 @@ const BALANCE = {
         powerupDropMult: 1.3,
         orbitDistance: 300,
         orbitDistanceBuffer: 100,
-        baseHp: 28, hpPerWave: 0.28,
+        baseHp: 28, hpPerWave: 0.22,  // NERF: 0.28 → 0.22 (glass cannon should stay fragile)
         baseSpeed: 70, speedPerWave: 5,
         baseDamage: 12, damagePerWave: 1.8,
         soundWaveCooldown: 10,
         soundWaveRange: 300,
-        soundWaveConfuseDuration: 0.8,
+        soundWaveConfuseDuration: 0.6,  // NERF: 0.8 → 0.6 (confusion was too long)
         meteorCooldown: 13,
-        meteorDamage: 28,
+        meteorDamage: 24,  // NERF: 28 → 24 (meteor spam was too strong)
         meteorBurnDuration: 3,
-        meteorBurnDPS: 4.5
+        meteorBurnDPS: 4.0  // NERF: 4.5 → 4.0
     },
     boss: {
         radius: 50,
@@ -242,18 +242,18 @@ const BALANCE = {
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
         baseHp: 2000,
-        hpMultiplier: 1,
+        hpMultiplier: 1.25,  // NEW: Bosses now scale 1.25× per encounter (was 1.0)
         moveSpeed: 125,
         phase2Speed: 155,
         phase2Threshold: 0.5,
-        chalkDamage: 13,
-        ultimateDamage: 26,
-        ultimateBullets: 18,
-        phase2UltimateBullets: 26,
-        slamDamage: 35,
+        chalkDamage: 11,  // NERF: 13 → 11 (spam attack was too strong)
+        ultimateDamage: 22,  // NERF: 26 → 22 (ultimate was one-shotting)
+        ultimateBullets: 16,  // NERF: 18 → 16
+        phase2UltimateBullets: 22,  // NERF: 26 → 22
+        slamDamage: 30,  // NERF: 35 → 30
         slamRadius: 320,
         slamCooldown: 16,
-        graphDamage: 45,
+        graphDamage: 38,  // NERF: 45 → 38 (graph was instant death)
         graphLength: 1400,
         graphDuration: 18,
         graphCooldown: 18,
@@ -264,16 +264,16 @@ const BALANCE = {
         log457AttackBonus: 0.09,
         log457AttackGrowth: 0.04,
         phase2: {
-            barkDamage: 25,
+            barkDamage: 20,  // NERF: 25 → 20
             barkRange: 600,
-            barkCooldown: 3.5,
+            barkCooldown: 4.0,  // NERF: 3.5 → 4.0 (spam was too frequent)
             enrageSpeedMult: 1.65,
             dogColor: '#d97706'
         },
         bossDog: {
-            hp: 1500,
+            hp: 1200,  // NERF: 1500 → 1200 (dog was tankier than boss)
             speed: 250,
-            damage: 22,
+            damage: 18,  // NERF: 22 → 18
             radius: 20,
             color: '#d97706'
         },
@@ -305,32 +305,32 @@ const BALANCE = {
     },
     powerups: {
         radius: 20,
-        dropRate: 0.15,
+        dropRate: 0.18,  // BUFF: 0.15 → 0.18 (more healing opportunities)
         lifetime: 14,
         healAmount: 20,
-        damageBoost: 1.5,
-        damageBoostDuration: 5,
-        speedBoost: 1.35,
-        speedBoostDuration: 5
+        damageBoost: 1.4,  // NERF: 1.5 → 1.4 (stacking with shop was too strong)
+        damageBoostDuration: 8,  // BUFF: 5 → 8 (lasts longer)
+        speedBoost: 1.3,  // NERF: 1.35 → 1.3
+        speedBoostDuration: 8  // BUFF: 5 → 8
     },
     waves: {
         spawnDistance: 800,
         bossSpawnDelay: 3000,
         maxWaves: 15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
         minKillsForNoDamage: 5,
-        enemiesBase: 4,
-        enemiesPerWave: 2,
-        tankSpawnChance: 0.12,
-        mageSpawnChance: 0.15,
+        enemiesBase: 5,  // BUFF: 4 → 5 (more action early game)
+        enemiesPerWave: 1.8,  // NERF: 2 → 1.8 (less enemy spam late game)
+        tankSpawnChance: 0.10,  // NERF: 0.12 → 0.10 (fewer tanks)
+        mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
         bossEveryNWaves: 3,
         glitchGracePeriod: 4000
     },
     score: {
-        basicEnemy: 80,
-        tank: 160,
-        mage: 220,
-        boss: 5000,
-        powerup: 100,
+        basicEnemy: 100,  // BUFF: 80 → 100 (more income)
+        tank: 200,  // BUFF: 160 → 200
+        mage: 280,  // BUFF: 220 → 280
+        boss: 6000,  // BUFF: 5000 → 6000 (boss fights are hard)
+        powerup: 120,  // BUFF: 100 → 120
         achievement: 500
     },
     mtcRoom: {
@@ -391,29 +391,26 @@ const BALANCE = {
 const SHOP_ITEMS = {
     potion: {
         id: 'potion', name: 'Energy Drink', icon: '🧃',
-        cost: 400, heal: 50, duration: null,
-        desc: 'ฟื้นฟู HP +50 ทันที', color: '#22c55e'
+        cost: 350, heal: 60, duration: null,  // BUFF: 400→350 cost, 50→60 heal (more accessible)
+        desc: 'ฟื้นฟู HP +60 ทันที', color: '#22c55e'
     },
     damageUp: {
         id: 'damageUp', name: 'Weapon Tuner', icon: '🔧',
-        cost: 900, mult: 1.1, duration: 30,
-        desc: 'ดาเมจ ×1.1 เป็นเวลา 30 วิ', color: '#f59e0b'
+        cost: 600, mult: 1.1, duration: 45,  // BUFF: 900→600 cost, 30→45s duration (affordable before boss)
+        desc: 'ดาเมจ ×1.1 เป็นเวลา 45 วิ', color: '#f59e0b'
     },
     speedUp: {
         id: 'speedUp', name: 'Lightweight Boots', icon: '👟',
-        cost: 700, mult: 1.1, duration: 30,
-        desc: 'ความเร็ว ×1.1 เป็นเวลา 30 วิ', color: '#06b6d4'
+        cost: 500, mult: 1.1, duration: 45,  // BUFF: 700→500 cost, 30→45s duration (affordable)
+        desc: 'ความเร็ว ×1.1 เป็นเวลา 45 วิ', color: '#06b6d4'
     },
     shield: {
         id: 'shield', name: 'Energy Shield', icon: '🛡️',
-        cost: 1200, duration: null,
+        cost: 800, duration: null,  // BUFF: 1200→800 (reasonable for 1-hit protection)
         desc: 'บล็อกดาเมจจากการโจมตีครั้งต่อไป 100% (1 ครั้ง)', color: '#8b5cf6'
     }
 };
 
-// ══════════════════════════════════════════════════════════════
-// 🎮 GAME CONFIG
-// ══════════════════════════════════════════════════════════════
 const GAME_CONFIG = {
     canvas: {
         targetFPS: 60,

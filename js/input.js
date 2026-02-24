@@ -189,61 +189,65 @@ function initMobileControls() {
     var btnTerminal = document.getElementById('btn-terminal');
     var btnShop = document.getElementById('btn-shop');
 
+    // FIX (BUG-7): Store button handler references for cleanup
     if (btnDash) {
-        btnDash.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 1; }, { passive: false });
-        btnDash.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 0; }, { passive: false });
+        _mobileHandlers.btnDashStart = function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 1; };
+        _mobileHandlers.btnDashEnd = function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 0; };
+        btnDash.addEventListener('touchstart', _mobileHandlers.btnDashStart, { passive: false });
+        btnDash.addEventListener('touchend', _mobileHandlers.btnDashEnd, { passive: false });
     }
     if (btnSkill) {
-        btnSkill.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 1; }, { passive: false });
-        btnSkill.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 0; }, { passive: false });
+        _mobileHandlers.btnSkillStart = function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 1; };
+        _mobileHandlers.btnSkillEnd = function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 0; };
+        btnSkill.addEventListener('touchstart', _mobileHandlers.btnSkillStart, { passive: false });
+        btnSkill.addEventListener('touchend', _mobileHandlers.btnSkillEnd, { passive: false });
     }
     if (btnSwitch) {
-        btnSwitch.addEventListener('touchstart', function (e) {
+        _mobileHandlers.btnSwitchStart = function (e) {
             e.preventDefault(); e.stopPropagation();
-            // WARN-8 FIX: use window.gameState (not bare gameState) and
-            // guard weaponSystem — both may be undefined before game.js loads
             if (window.gameState === 'PLAYING' && typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon();
-        }, { passive: false });
+        };
+        btnSwitch.addEventListener('touchstart', _mobileHandlers.btnSwitchStart, { passive: false });
     }
     if (btnNaga) {
-        btnNaga.addEventListener('touchstart', function (e) {
+        _mobileHandlers.btnNagaStart = function (e) {
             e.preventDefault(); e.stopPropagation();
-            // WARN-8 FIX: guard all game.js-defined symbols
             if (window.gameState !== 'PLAYING') return;
             if (typeof PoomPlayer !== 'undefined' && typeof player !== 'undefined' && player instanceof PoomPlayer) {
                 if (player.cooldowns.naga <= 0) player.summonNaga();
             }
-        }, { passive: false });
+        };
+        btnNaga.addEventListener('touchstart', _mobileHandlers.btnNagaStart, { passive: false });
     }
     if (btnDatabase) {
-        btnDatabase.addEventListener('touchstart', function (e) {
+        _mobileHandlers.btnDatabaseStart = function (e) {
             e.preventDefault(); e.stopPropagation();
-            // WARN-8 FIX: guard game.js globals
             if (window.gameState === 'PLAYING') { if (typeof openExternalDatabase !== 'undefined') openExternalDatabase(); }
             else if (window.gameState === 'PAUSED') { if (typeof resumeGame !== 'undefined') resumeGame(); }
-        }, { passive: false });
+        };
+        btnDatabase.addEventListener('touchstart', _mobileHandlers.btnDatabaseStart, { passive: false });
     }
     if (btnTerminal) {
-        btnTerminal.addEventListener('touchstart', function (e) {
+        _mobileHandlers.btnTerminalStart = function (e) {
             e.preventDefault(); e.stopPropagation();
-            // WARN-8 FIX: guard game.js globals
             if (window.gameState === 'PLAYING') { if (typeof openAdminConsole !== 'undefined') openAdminConsole(); }
             else if (window.gameState === 'PAUSED' && typeof AdminConsole !== 'undefined' && AdminConsole.isOpen) {
                 if (typeof closeAdminConsole !== 'undefined') closeAdminConsole();
             }
-        }, { passive: false });
+        };
+        btnTerminal.addEventListener('touchstart', _mobileHandlers.btnTerminalStart, { passive: false });
     }
     if (btnShop) {
-        btnShop.addEventListener('touchstart', function (e) {
+        _mobileHandlers.btnShopStart = function (e) {
             e.preventDefault(); e.stopPropagation();
-            // WARN-8 FIX: guard game.js globals
             if (window.gameState === 'PLAYING') {
                 if (typeof openShop !== 'undefined') openShop();
             } else if (window.gameState === 'PAUSED') {
                 var shopModal = document.getElementById('shop-modal');
                 if (shopModal && shopModal.style.display === 'flex' && typeof closeShop !== 'undefined') closeShop();
             }
-        }, { passive: false });
+        };
+        btnShop.addEventListener('touchstart', _mobileHandlers.btnShopStart, { passive: false });
     }
 
     _mobileHandlers.touchMove = function (e) {
@@ -254,7 +258,7 @@ function initMobileControls() {
     document.addEventListener('touchmove', _mobileHandlers.touchMove, { passive: false });
 }
 
-// FIX (BUG-3): Cleanup function to remove all mobile event listeners
+// FIX (BUG-3 & BUG-7): Cleanup function to remove all mobile event listeners
 function cleanupMobileControls() {
     var zoneL = document.getElementById('joystick-left-zone');
     var zoneR = document.getElementById('joystick-right-zone');
@@ -273,6 +277,39 @@ function cleanupMobileControls() {
         zoneR.removeEventListener('touchcancel', _mobileHandlers.rightCancel);
     }
     
+    // FIX (BUG-7): Remove button event listeners
+    var btnDash = document.getElementById('btn-dash');
+    var btnSkill = document.getElementById('btn-skill');
+    var btnSwitch = document.getElementById('btn-switch');
+    var btnNaga = document.getElementById('btn-naga');
+    var btnDatabase = document.getElementById('btn-database');
+    var btnTerminal = document.getElementById('btn-terminal');
+    var btnShop = document.getElementById('btn-shop');
+    
+    if (btnDash && _mobileHandlers.btnDashStart) {
+        btnDash.removeEventListener('touchstart', _mobileHandlers.btnDashStart);
+        btnDash.removeEventListener('touchend', _mobileHandlers.btnDashEnd);
+    }
+    if (btnSkill && _mobileHandlers.btnSkillStart) {
+        btnSkill.removeEventListener('touchstart', _mobileHandlers.btnSkillStart);
+        btnSkill.removeEventListener('touchend', _mobileHandlers.btnSkillEnd);
+    }
+    if (btnSwitch && _mobileHandlers.btnSwitchStart) {
+        btnSwitch.removeEventListener('touchstart', _mobileHandlers.btnSwitchStart);
+    }
+    if (btnNaga && _mobileHandlers.btnNagaStart) {
+        btnNaga.removeEventListener('touchstart', _mobileHandlers.btnNagaStart);
+    }
+    if (btnDatabase && _mobileHandlers.btnDatabaseStart) {
+        btnDatabase.removeEventListener('touchstart', _mobileHandlers.btnDatabaseStart);
+    }
+    if (btnTerminal && _mobileHandlers.btnTerminalStart) {
+        btnTerminal.removeEventListener('touchstart', _mobileHandlers.btnTerminalStart);
+    }
+    if (btnShop && _mobileHandlers.btnShopStart) {
+        btnShop.removeEventListener('touchstart', _mobileHandlers.btnShopStart);
+    }
+    
     if (_mobileHandlers.touchMove) {
         document.removeEventListener('touchmove', _mobileHandlers.touchMove);
     }
@@ -281,8 +318,9 @@ function cleanupMobileControls() {
     _mobileHandlers = {
         leftStart: null, leftMove: null, leftEnd: null, leftCancel: null,
         rightStart: null, rightMove: null, rightEnd: null, rightCancel: null,
-        btnDash: null, btnSkill: null, btnSwitch: null, btnNaga: null,
-        btnDatabase: null, btnTerminal: null, btnShop: null, touchMove: null
+        btnDashStart: null, btnDashEnd: null, btnSkillStart: null, btnSkillEnd: null,
+        btnSwitchStart: null, btnNagaStart: null, btnDatabaseStart: null,
+        btnTerminalStart: null, btnShopStart: null, touchMove: null
     };
 }
 

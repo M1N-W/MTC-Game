@@ -865,7 +865,10 @@ async function endGame(result) {
     window.isSlowMotion = false;
     window.timeScale = 1.0;
     window.isGlitchWave = false;
-    window._glitchWaveHpBonus = 0;
+    // FIX (WARN-5): Reset glitch wave HP bonus to prevent negative HP on restart
+    if (window._glitchWaveHpBonus > 0) {
+        window._glitchWaveHpBonus = 0;
+    }
     // wave event cleared by WaveManager._deactivateWaveEvent() on next startNextWave()
 
     weatherSystem.clear();

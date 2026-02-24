@@ -660,12 +660,39 @@ class PowerUp {
         switch (this.type) {
             case 'heal': player.heal(BALANCE.powerups.healAmount); break;
             case 'damage':
-                player.damageBoost = BALANCE.powerups.damageBoost;
-                setTimeout(() => { player.damageBoost = 1; }, BALANCE.powerups.damageBoostDuration * 1000);
+                // FIX (BUG-6): Stack with shop boost instead of overwriting
+                if (!player._powerupDamageActive) {
+                    const shopMult = player.shopDamageBoostActive 
+                        ? (player.damageBoost / (player._baseDamageBoost || 1.0))
+                        : 1.0;
+                    player._powerupDamageActive = true;
+                    player.damageBoost = (player._baseDamageBoost || 1.0) * shopMult * BALANCE.powerups.damageBoost;
+                    
+                    setTimeout(() => { 
+                        player._powerupDamageActive = false;
+                        // Restore shop boost if still active
+                        const currentShopMult = player.shopDamageBoostActive 
+                            ? (player.damageBoost / ((player._baseDamageBoost || 1.0) * BALANCE.powerups.damageBoost))
+                            : 1.0;
+                        player.damageBoost = (player._baseDamageBoost || 1.0) * currentShopMult;
+                    }, BALANCE.powerups.damageBoostDuration * 1000);
+                }
                 spawnFloatingText('DAMAGE UP!', player.x, player.y - 40, '#f59e0b', 20); break;
             case 'speed':
-                player.speedBoost = BALANCE.powerups.speedBoost;
-                setTimeout(() => { player.speedBoost = 1; }, BALANCE.powerups.speedBoostDuration * 1000);
+                // FIX (BUG-6): Stack with shop boost instead of overwriting
+                if (!player._powerupSpeedActive) {
+                    const shopMult = player.shopSpeedBoostActive 
+                        ? (player.speedBoost / 1.0)
+                        : 1.0;
+                    player._powerupSpeedActive = true;
+                    player.speedBoost = shopMult * BALANCE.powerups.speedBoost;
+                    
+                    setTimeout(() => { 
+                        player._powerupSpeedActive = false;
+                        // Restore shop boost if still active
+                        player.speedBoost = player.shopSpeedBoostActive ? (player.speedBoost / BALANCE.powerups.speedBoost) : 1.0;
+                    }, BALANCE.powerups.speedBoostDuration * 1000);
+                }
                 spawnFloatingText('SPEED UP!', player.x, player.y - 40, '#3b82f6', 20);
         }
         spawnParticles(this.x, this.y, 20, this.colors[this.type]);

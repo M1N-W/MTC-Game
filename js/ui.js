@@ -193,6 +193,9 @@ class ShopManager {
     static updateButtons() {
         const currentScore = typeof getScore === 'function' ? getScore() : 0;
         const player = window.player;
+        
+        // FIX (WARN-4): Add null check for player
+        if (!player) return;
 
         const scoreDisplay = document.getElementById('shop-score-display');
         if (scoreDisplay) scoreDisplay.textContent = currentScore.toLocaleString();
