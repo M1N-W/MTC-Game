@@ -363,6 +363,8 @@ class AutoPlayer extends Player {
         CTX.translate(screen.x, screen.y);
         CTX.scale(stretchX * facingSign, stretchY);
 
+        const R = 15;
+
         // Silhouette glow
         CTX.shadowBlur = 18; CTX.shadowColor = 'rgba(220,38,38,0.75)';
         CTX.strokeStyle = 'rgba(220,38,38,0.55)'; CTX.lineWidth = 2.8;
