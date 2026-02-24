@@ -270,7 +270,78 @@ class KaoPlayer extends Player {
             CTX.restore();
         }
 
-        super.draw();
+        // KAO BODY (Nerd Student / Glasses / Tucked Shirt)
+        const screen = worldToScreen(this.x, this.y);
+        const isFacingLeft2 = Math.abs(this.angle) > Math.PI / 2;
+        const facingSign2 = isFacingLeft2 ? -1 : 1;
+        const R = this.radius;
+
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.scale(facingSign2, 1);
+
+        // Dark Blue Student Shorts (Bottom)
+        CTX.fillStyle = '#1e293b';
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI, false); CTX.fill();
+
+        // Clean White Shirt (Top)
+        CTX.fillStyle = '#ffffff';
+        CTX.beginPath(); CTX.arc(0, 0, R, Math.PI, Math.PI * 2, false); CTX.fill();
+        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+
+        // Neat Necktie
+        CTX.fillStyle = '#0f172a';
+        CTX.beginPath();
+        CTX.moveTo(-2, -R * 0.8); CTX.lineTo(2, -R * 0.8);
+        CTX.lineTo(1, -R * 0.2); CTX.lineTo(-1, -R * 0.2);
+        CTX.fill();
+
+        // Nerd Glasses (Thick frames + Anime Glare)
+        const gY = -R * 0.4;
+        CTX.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        CTX.strokeStyle = '#000000'; CTX.lineWidth = 2.5;
+        CTX.beginPath(); CTX.roundRect(-R * 0.7, gY - 4, R * 0.5, 8, 2); CTX.fill(); CTX.stroke();
+        CTX.beginPath(); CTX.roundRect(R * 0.2, gY - 4, R * 0.5, 8, 2); CTX.fill(); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(-R * 0.2, gY); CTX.lineTo(R * 0.2, gY); CTX.stroke();
+
+        // Anime Glasses Glare detail
+        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.moveTo(-R * 0.5, gY - 2); CTX.lineTo(-R * 0.6, gY + 2); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(R * 0.4, gY - 2); CTX.lineTo(R * 0.3, gY + 2); CTX.stroke();
+
+        // Neat but Cool Hair (Dark blue/black)
+        CTX.fillStyle = '#0f172a';
+        CTX.beginPath();
+        CTX.arc(0, -R * 0.2, R * 1.05, Math.PI * 1.1, Math.PI * 1.9, false);
+        CTX.quadraticCurveTo(R * 0.5, -R * 0.8, 0, -R * 0.6);
+        CTX.quadraticCurveTo(-R * 0.5, -R * 0.8, -R, -R * 0.2);
+        CTX.fill();
+
+        CTX.restore();
+
+        // Draw Weapon
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.angle);
+        if (isFacingLeft2) CTX.scale(1, -1);
+        if (typeof weaponSystem !== 'undefined' && typeof drawKaoGunEnhanced === 'function') {
+            CTX.translate(15, 10);
+            drawKaoGunEnhanced(CTX, weaponSystem.currentWeapon || 'auto');
+        }
+        CTX.restore();
+
+        // Status effects
+        if (this.isConfused) { CTX.font = 'bold 24px Arial'; CTX.textAlign = 'center'; CTX.fillText('😵', screen.x, screen.y - 40); }
+        if (this.isBurning) { CTX.font = 'bold 20px Arial'; CTX.fillText('🔥', screen.x + 20, screen.y - 35); }
+
+        // Level Badge
+        if (this.level > 1) {
+            CTX.fillStyle = 'rgba(59,130,246,0.92)';
+            CTX.beginPath(); CTX.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fff'; CTX.font = 'bold 9px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText(this.level, screen.x + 20, screen.y - 20);
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -279,7 +350,6 @@ class KaoPlayer extends Player {
     shoot(dt) {
         if (typeof weaponSystem === 'undefined') return;
         // 🛡️ THE REAL FIX: currentWeapon is a STRING ('auto', 'sniper', 'shotgun')
-        // We strictly look up the stats using this string key.
         const wepKey = weaponSystem.currentWeapon || 'auto';
         const wep = BALANCE.characters.kao.weapons[wepKey];
         if (!wep) return;

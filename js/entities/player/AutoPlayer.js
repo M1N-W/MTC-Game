@@ -358,52 +358,52 @@ class AutoPlayer extends Player {
             : Math.min(1, (Math.abs(this.vx) + Math.abs(this.vy)) / 150 + 0.2);
         const ventGlow = Math.max(0, attackIntensity * (0.5 + Math.sin(now / 180) * 0.5));
 
-        const R = 15;
-
-        // ════════════════════════════════════════════════════════════
-        // LAYER 1 — BODY (horizontal mirror only, no rotation)
         // ════════════════════════════════════════════════════════════
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.scale(stretchX * facingSign, stretchY);
 
-        // Silhouette glow ring — crimson
+        // Silhouette glow
         CTX.shadowBlur = 18; CTX.shadowColor = 'rgba(220,38,38,0.75)';
-        CTX.strokeStyle = 'rgba(220,38,38,0.55)';
-        CTX.lineWidth = 2.8;
+        CTX.strokeStyle = 'rgba(220,38,38,0.55)'; CTX.lineWidth = 2.8;
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        // Bean body — dark crimson
-        const bG = CTX.createRadialGradient(-4, -4, 1, 0, 0, R);
-        bG.addColorStop(0, '#7f1d1d');
-        bG.addColorStop(0.5, '#5a0e0e');
-        bG.addColorStop(1, '#2d0606');
-        CTX.fillStyle = bG;
+        // Base Core Body (Dark Crimson)
+        CTX.fillStyle = '#450a0a';
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
 
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+        // Student Shorts (Dark Blue/Black) bottom half
+        CTX.fillStyle = '#0f172a';
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI, false); CTX.fill();
 
-        CTX.fillStyle = 'rgba(255,255,255,0.09)';
-        CTX.beginPath(); CTX.arc(-5, -6, 6, 0, Math.PI * 2); CTX.fill();
+        // White School Shirt (Unbuttoned in the middle)
+        CTX.fillStyle = '#f8fafc';
+        CTX.beginPath();
+        CTX.arc(0, 0, R, Math.PI * 0.8, Math.PI * 2.2, false);
+        CTX.lineTo(6, -R); CTX.lineTo(8, R * 0.2);
+        CTX.lineTo(-8, R * 0.2); CTX.lineTo(-6, -R);
+        CTX.closePath(); CTX.fill();
 
-        // Heat vents
-        CTX.shadowBlur = 10 * ventGlow; CTX.shadowColor = '#fb923c';
+        // Shirt Outline & Details
+        CTX.strokeStyle = '#cbd5e1'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.moveTo(-6, -R); CTX.lineTo(-8, R * 0.2); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(6, -R); CTX.lineTo(8, R * 0.2); CTX.stroke();
+
+        // Exposed Core Reactor (Chest)
+        const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (this.wanchaiActive ? 1.5 : 1);
+        CTX.fillStyle = `rgba(239,68,68,${Math.min(1, cP)})`;
+        CTX.shadowBlur = 15 * cP; CTX.shadowColor = '#dc2626';
+        CTX.beginPath(); CTX.arc(0, -2, 5, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Heat vents on the sides
         for (let vi = 0; vi < 3; vi++) {
             const va = ventGlow * (0.45 + vi * 0.18);
             CTX.fillStyle = `rgba(251,146,60,${va})`;
             CTX.beginPath(); CTX.roundRect(-R, -4 + vi * 5, 4, 2.5, 1); CTX.fill();
             CTX.beginPath(); CTX.roundRect(R - 4, -4 + vi * 5, 4, 2.5, 1); CTX.fill();
         }
-        CTX.shadowBlur = 0;
-
-        // Power core
-        const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (this.wanchaiActive ? 1.5 : 1);
-        CTX.fillStyle = `rgba(239,68,68,${Math.min(1, cP)})`;
-        CTX.shadowBlur = 10 * cP; CTX.shadowColor = '#dc2626';
-        CTX.beginPath(); CTX.arc(0, 3, 3.5, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
 
         // Anime-Spiky Hair
         CTX.fillStyle = '#1a0505';

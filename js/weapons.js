@@ -160,37 +160,45 @@ class Projectile {
         }
 
         // ════════════════════════════════════════════════
-        // WANCHAI PUNCH (crimson engine fist)
+        // WANCHAI PUNCH (Actual Fist Model)
         // ════════════════════════════════════════════════
         if (this.kind === 'punch') {
             CTX.rotate(this.angle);
-            CTX.shadowBlur  = 28; CTX.shadowColor = this.color;
-
-            CTX.globalAlpha = 0.6;
-            CTX.strokeStyle = this.color;
-            CTX.lineWidth   = 4;
-            CTX.beginPath(); CTX.arc(12, 0, 16, -Math.PI / 2.5, Math.PI / 2.5); CTX.stroke();
-            CTX.globalAlpha = 0.3;
-            CTX.lineWidth   = 2;
-            CTX.beginPath(); CTX.arc(12, 0, 22, -Math.PI / 3, Math.PI / 3); CTX.stroke();
-
-            CTX.globalAlpha = 0.92;
-            const fg = CTX.createLinearGradient(-6, -10, 16, 10);
+            CTX.shadowBlur = 20; CTX.shadowColor = this.color;
+            
+            // Motion trails / Steam
+            CTX.globalAlpha = 0.5;
+            CTX.strokeStyle = this.color; CTX.lineWidth = 3;
+            CTX.beginPath(); CTX.moveTo(-20, -10); CTX.lineTo(5, -10); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(-25, 10); CTX.lineTo(5, 10); CTX.stroke();
+            
+            // Core Fist Base (Palm)
+            CTX.globalAlpha = 0.95;
+            const fg = CTX.createLinearGradient(-10, -12, 12, 12);
             fg.addColorStop(0, '#fff1f2');
-            fg.addColorStop(0.35, '#fb7185');
-            fg.addColorStop(1, '#dc2626');
+            fg.addColorStop(0.4, '#fb7185');
+            fg.addColorStop(1, '#be123c');
             CTX.fillStyle = fg;
-            CTX.beginPath(); CTX.roundRect(-6, -8, 18, 16, 5); CTX.fill();
-
-            CTX.strokeStyle = 'rgba(0,0,0,0.35)'; CTX.lineWidth = 1;
-            for (let pi = -4; pi <= 4; pi += 4) {
-                CTX.beginPath(); CTX.moveTo(-4, pi); CTX.lineTo(10, pi); CTX.stroke();
+            CTX.beginPath(); CTX.roundRect(-8, -12, 16, 24, 4); CTX.fill();
+            
+            // The 4 Knuckles (Front)
+            CTX.fillStyle = '#fff1f2';
+            CTX.strokeStyle = '#9f1239'; CTX.lineWidth = 1.5;
+            for(let k = 0; k < 4; k++) {
+                CTX.beginPath();
+                CTX.roundRect(6, -11 + (k * 6), 8, 4.5, 2);
+                CTX.fill(); CTX.stroke();
             }
-            CTX.fillStyle = '#fff1f2'; CTX.globalAlpha = 0.55;
-            for (let ki = -4; ki <= 4; ki += 4) {
-                CTX.beginPath(); CTX.roundRect(8, ki - 1.5, 4, 3, 1); CTX.fill();
-            }
+            
+            // The Thumb (Bottom side)
+            CTX.fillStyle = '#fb7185';
+            CTX.beginPath(); CTX.roundRect(-2, 10, 12, 6, 3); CTX.fill(); CTX.stroke();
 
+            // Tech/Glow accents on the glove
+            CTX.shadowBlur = 10; CTX.shadowColor = '#facc15';
+            CTX.fillStyle = '#facc15';
+            CTX.beginPath(); CTX.arc(-2, 0, 3.5, 0, Math.PI * 2); CTX.fill();
+            
             CTX.restore();
             return;
         }
