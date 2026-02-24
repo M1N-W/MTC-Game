@@ -314,63 +314,63 @@ class KaoPlayer extends Player {
     // ──────────────────────────────────────────────────────────────────────────
     // FIRE WEAPON — handles all Weapon Master buffs, crits, and clone mirrors
     // ──────────────────────────────────────────────────────────────────────────
-    // FIX (TASK 4): Explicit fallbacks on every stat that can arrive as
-    //               undefined/NaN, plus a post-multiply isFinite guard.
     fireWeapon(wep, isChargedSniper) {
         let pellets = wep.pellets || 1;
         let spread = wep.spread || 0;
-        let baseDmg = wep.damage || 10;   // FIX: hard fallback prevents NaN
+        let baseDmg = wep.damage || 10;
         let color = wep.color || '#ffffff';
 
-        // Global damage multipliers
-        // FIX (AUDIT #1): Include damageBoost (shop upgrades / lightning powerup)
-        //                 so bought damage items actually take effect.
+        // ── 🛡️ FIX: Stealth Break & Ambush Logic ──
+        // Kao bypasses WeaponSystem.shootSingle() entirely, so ambush/stealth
+        // logic that used to live there must be replicated here.
+        let isAmbush = false;
+        if (this.ambushReady) {
+            isAmbush = true;
+            this.ambushReady = false;
+            this.breakStealth();
+            spawnParticles(this.x, this.y, 15, '#facc15');
+        } else if (this.isInvisible) {
+            // Firing while invisible (e.g. late frame) still breaks stealth
+            this.breakStealth();
+        }
+
         let dmgMult = (this.damageMultiplier || 1.0) * (this.damageBoost || 1.0);
         if (this.isSecondWind) dmgMult *= (BALANCE.player.secondWindDamageMult || 1.5);
 
-        // FIX (AUDIT #3): bonusCritChanceFromPassive was always undefined.
-        //                 Read the real value from config, gated on passive unlock.
-        const passiveCrit = this.passiveUnlocked
-            ? (BALANCE.characters.kao.passiveCritBonus || 0)
-            : 0;
-        // Base crit chance + passive bonus + stacking auto bonus
-        let critChance = (this.baseCritChance || 0) +
-            passiveCrit +
-            (this.bonusCritFromAuto || 0);
+        const passiveCrit = this.passiveUnlocked ? (BALANCE.characters.kao.passiveCritBonus || 0) : 0;
+        let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0);
 
-        // ── Weapon Master buffs ────────────────────────────────────────────────
+        // Apply Ambush: massive damage multiplier + guaranteed crit
+        if (isAmbush) {
+            baseDmg *= (this.stats.critMultiplier || 3);
+            critChance = 1.0;
+            color = '#facc15';
+        }
+
+        // ── Weapon Master buffs ──
         if (this.passiveUnlocked && this.isWeaponMaster) {
-            color = '#facc15';   // golden projectiles
-
+            if (!isAmbush) color = '#facc15'; // Base weapon master color
             if (wep.name === 'AUTO RIFLE') {
-                // 50% chance to fire 2 pellets at once
                 if (Math.random() < 0.5) pellets = 2;
-                // Incrementally stack crit chance (cap 50%)
                 this.bonusCritFromAuto = Math.min(0.5, this.bonusCritFromAuto + 0.005);
-
             } else if (wep.name === 'SNIPER') {
-                critChance += 0.25;   // flat +25% crit
+                critChance += 0.25;
                 if (isChargedSniper) {
-                    // Damage scales with hold duration (capped at 4×)
                     const chargeMult = 1 + Math.min(3, this.sniperChargeTime * 2);
                     baseDmg *= chargeMult;
-                    color = '#ef4444';
+                    if (!isAmbush) color = '#ef4444';
                     pellets = 1;
                 }
-
             } else if (wep.name === 'SHOTGUN') {
-                pellets = (wep.pellets || 1) * 2;   // double pellet count
+                pellets = (wep.pellets || 1) * 2;
             }
         }
 
-        // FIX (TASK 4): NaN guard — if any multiplier path produced a bad value,
-        //               fall back to the raw base damage before crit scaling.
+        // NaN guard
         let finalDamage = baseDmg * dmgMult;
         if (!isFinite(finalDamage) || isNaN(finalDamage)) finalDamage = baseDmg;
 
         let isCrit = Math.random() < critChance;
-        // FIX (AUDIT #2): Run crit multiplier, then track Achievement + trigger
-        //                 golden aura — previously these were skipped entirely.
         if (isCrit) {
             finalDamage *= (this.stats.critMultiplier || 3);
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
@@ -380,44 +380,29 @@ class KaoPlayer extends Player {
             }
         }
 
-        // FIX (AUDIT #2): Lifesteal — passive ability restores HP on every shot.
-        //                 Previously bypassed because fireWeapon skipped dealDamage().
+        // Lifesteal
         if (this.passiveUnlocked) {
             const lifestealRate = BALANCE.characters.kao.passiveLifesteal || 0.02;
             const healAmount = finalDamage * lifestealRate;
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3 && typeof spawnFloatingText !== 'undefined') {
-                spawnFloatingText(
-                    `+${Math.round(healAmount)}`,
-                    this.x, this.y - 35,
-                    '#10b981', 12
-                );
+                spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
             }
         }
 
         const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
 
-        // ── Fire from player ───────────────────────────────────────────────────
         for (let i = 0; i < pellets; i++) {
             const offset = (pellets > 1) ? (Math.random() - 0.5) * spread : 0;
-            const p = new Projectile(
-                this.x, this.y,
-                aimAngle + offset,
-                wep.speed, finalDamage, color,
-                false, 'player'
-            );
+            const p = new Projectile(this.x, this.y, aimAngle + offset, wep.speed, finalDamage, color, false, 'player');
             p.isCrit = isCrit;
             projectileManager.add(p);
         }
 
-        // ── Mirror shot from each active clone ────────────────────────────────
         this.clones.forEach(c => c.shoot(wep, finalDamage, color, pellets, spread));
 
-        // ── SFX + visual recoil ────────────────────────────────────────────────
         if (typeof Audio !== 'undefined' && Audio.playShoot) Audio.playShoot();
-        const recoil = (BALANCE.VISUALS && BALANCE.VISUALS.WEAPON_OFFSETS)
-            ? (BALANCE.VISUALS.WEAPON_OFFSETS.recoil || 8)
-            : 8;
+        const recoil = (BALANCE.VISUALS && BALANCE.VISUALS.WEAPON_OFFSETS) ? (BALANCE.VISUALS.WEAPON_OFFSETS.recoil || 8) : 8;
         this.x -= Math.cos(aimAngle) * recoil;
         this.y -= Math.sin(aimAngle) * recoil;
         spawnParticles(this.x, this.y, 3, color);
