@@ -474,45 +474,59 @@ class PoomPlayer extends Entity {
         CTX.translate(screen.x, screen.y);
         CTX.scale(stretchX2 * facingSign, stretchY2);
 
-        // Silhouette glow ring — deep purple
-        CTX.shadowBlur = 16; CTX.shadowColor = 'rgba(168,85,247,0.72)';
-        CTX.strokeStyle = 'rgba(168,85,247,0.50)';
-        CTX.lineWidth = 2.8;
-        CTX.beginPath(); CTX.arc(0, 0, R2 + 3, 0, Math.PI * 2); CTX.stroke();
+        // Outer glow ring — purple (matches basic Enemy's corrupted-purple style)
+        CTX.shadowBlur = 10; CTX.shadowColor = 'rgba(168,85,247,0.65)';
+        CTX.strokeStyle = 'rgba(168,85,247,0.45)';
+        CTX.lineWidth = 2;
+        CTX.beginPath(); CTX.arc(0, 0, R2 + 2, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        // Base Body (Khaki student shorts bottom)
-        CTX.fillStyle = '#928c70';
-        CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI, false); CTX.fill();
+        // Base body — dark warm-brown radial gradient
+        const poomBodyG = CTX.createRadialGradient(-3, -3, 1, 0, 0, R2);
+        poomBodyG.addColorStop(0, '#3d2a14');
+        poomBodyG.addColorStop(0.55, '#241808');
+        poomBodyG.addColorStop(1, '#120d04');
+        CTX.fillStyle = poomBodyG;
+        CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.fill();
 
-        // White Student Shirt (Top)
-        CTX.fillStyle = '#f8fafc';
-        CTX.beginPath(); CTX.arc(0, 0, R2, Math.PI, Math.PI * 2, false); CTX.fill();
+        // Thick sticker outline — matches enemy style
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.stroke();
-        CTX.strokeStyle = '#cbd5e1'; CTX.lineWidth = 1;
-        CTX.beginPath(); CTX.moveTo(0, -R2); CTX.lineTo(0, 2); CTX.stroke();
 
-        // Pha Khao Ma Belt (Red & White Plaid pattern across waist)
+        // School uniform — clipped to body circle
         CTX.save();
         CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.clip();
-        CTX.fillStyle = '#dc2626';
-        CTX.fillRect(-R2, -2, R2 * 2, 7);
-        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 1; CTX.globalAlpha = 0.7;
+        // White shirt top half
+        CTX.fillStyle = 'rgba(241,245,249,0.90)';
+        CTX.fillRect(-R2, -R2, R2 * 2, R2);
+        // Khaki shorts bottom half
+        CTX.fillStyle = 'rgba(120,113,85,0.85)';
+        CTX.fillRect(-R2, 0, R2 * 2, R2);
+        // Pha Khao Ma belt band — red with plaid lines
+        CTX.fillStyle = 'rgba(185,28,28,0.92)';
+        CTX.fillRect(-R2, -2, R2 * 2, 6);
+        CTX.strokeStyle = 'rgba(255,255,255,0.55)'; CTX.lineWidth = 1;
         for (let px = -R2; px < R2; px += 3) {
-            CTX.beginPath(); CTX.moveTo(px, -2); CTX.lineTo(px, 5); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(px, -2); CTX.lineTo(px, 4); CTX.stroke();
         }
-        for (let py = -1; py < 5; py += 3) {
-            CTX.beginPath(); CTX.moveTo(-R2, py); CTX.lineTo(R2, py); CTX.stroke();
-        }
+        CTX.beginPath(); CTX.moveTo(-R2, 1); CTX.lineTo(R2, 1); CTX.stroke();
+        // Shirt center seam
+        CTX.strokeStyle = 'rgba(148,163,184,0.70)'; CTX.lineWidth = 1;
+        CTX.beginPath(); CTX.moveTo(0, -R2); CTX.lineTo(0, -2); CTX.stroke();
         CTX.restore();
-        CTX.globalAlpha = 1;
 
-        // Shirt pocket & Student ID embroidery
-        CTX.fillStyle = '#e2e8f0';
-        CTX.fillRect(-6, -8, 4, 5);
-        CTX.fillStyle = '#3b82f6';
-        CTX.fillRect(3, -7, 4, 1.5);
+        // Specular highlight — top-left
+        CTX.fillStyle = 'rgba(255,255,255,0.08)';
+        CTX.beginPath(); CTX.arc(-R2 * 0.35, -R2 * 0.35, R2 * 0.30, 0, Math.PI * 2); CTX.fill();
+
+        // Shirt pocket (small blue-tinted rect)
+        CTX.save();
+        CTX.beginPath(); CTX.arc(0, 0, R2, 0, Math.PI * 2); CTX.clip();
+        CTX.fillStyle = 'rgba(203,213,225,0.80)';
+        CTX.fillRect(-6, -9, 4, 5);
+        CTX.fillStyle = 'rgba(59,130,246,0.75)';
+        CTX.fillRect(3, -8, 4, 1.5);
+        CTX.restore();
 
         // Thai Kranok pattern accent
         const kranokT2 = now2 / 500;

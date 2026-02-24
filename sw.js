@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v2.7.2'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.7.2 Bug Fix — Kao Auto Rifle no longer fires 2 bullets in base form (Weapon Master buff now properly gated)
+const CACHE_NAME = 'mtc-cache-v3.0.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.0.0 Students Update — Thai High School Anime aesthetic for Auto, Poom, Kao + fixed R declaration in AutoPlayer
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

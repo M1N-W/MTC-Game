@@ -280,43 +280,84 @@ class KaoPlayer extends Player {
         CTX.translate(screen.x, screen.y);
         CTX.scale(facingSign2, 1);
 
-        // Dark Blue Student Shorts (Bottom)
-        CTX.fillStyle = '#1e293b';
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI, false); CTX.fill();
+        // Outer glow ring — cyan (matches PlayerBase stealth visor + distinct from enemies)
+        const kaoNow = performance.now();
+        CTX.shadowBlur = 10; CTX.shadowColor = 'rgba(6,182,212,0.65)';
+        CTX.strokeStyle = 'rgba(6,182,212,0.40)';
+        CTX.lineWidth = 2;
+        CTX.beginPath(); CTX.arc(0, 0, R + 2, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
 
-        // Clean White Shirt (Top)
-        CTX.fillStyle = '#ffffff';
-        CTX.beginPath(); CTX.arc(0, 0, R, Math.PI, Math.PI * 2, false); CTX.fill();
-        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2;
+        // Base body — dark navy radial gradient (same family as PlayerBase)
+        const kaoBodyG = CTX.createRadialGradient(-3, -3, 1, 0, 0, R);
+        kaoBodyG.addColorStop(0, '#1d3461');
+        kaoBodyG.addColorStop(0.55, '#0f2140');
+        kaoBodyG.addColorStop(1, '#07111e');
+        CTX.fillStyle = kaoBodyG;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+
+        // Thick sticker outline — matches enemy style
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
 
-        // Neat Necktie
-        CTX.fillStyle = '#0f172a';
+        // School uniform — clipped to body circle
+        CTX.save();
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.clip();
+        // White shirt top half
+        CTX.fillStyle = 'rgba(241,245,249,0.88)';
+        CTX.fillRect(-R, -R, R * 2, R);
+        // Dark navy shorts bottom half
+        CTX.fillStyle = 'rgba(15,23,42,0.88)';
+        CTX.fillRect(-R, 0, R * 2, R);
+        // Necktie — dark stripe down center
+        CTX.fillStyle = 'rgba(15,23,42,0.95)';
+        CTX.fillRect(-2, -R, 4, R - 2);
+        CTX.fillStyle = 'rgba(6,182,212,0.55)';  // cyan accent on tie
+        CTX.fillRect(-1, -R, 2, R - 2);
+        // Shirt seam lines
+        CTX.strokeStyle = 'rgba(148,163,184,0.55)'; CTX.lineWidth = 0.8;
+        CTX.beginPath(); CTX.moveTo(-2, -R); CTX.lineTo(-4, 0); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(2, -R); CTX.lineTo(4, 0); CTX.stroke();
+        CTX.restore();
+
+        // Specular highlight — top-left
+        CTX.fillStyle = 'rgba(255,255,255,0.10)';
+        CTX.beginPath(); CTX.arc(-R * 0.35, -R * 0.35, R * 0.30, 0, Math.PI * 2); CTX.fill();
+
+        // Nerd Glasses — thick dark frames with cyan tint lenses
+        const gY = -R * 0.38;
+        const vp = 0.55 + Math.sin(kaoNow / 350) * 0.30;
+        // Lens fill — slightly tinted
+        CTX.fillStyle = `rgba(6,182,212,${vp * 0.20})`;
+        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 2;
+        CTX.beginPath(); CTX.roundRect(-R * 0.68, gY - 3.5, R * 0.48, 7, 2); CTX.fill(); CTX.stroke();
+        CTX.beginPath(); CTX.roundRect(R * 0.20, gY - 3.5, R * 0.48, 7, 2); CTX.fill(); CTX.stroke();
+        // Bridge
+        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.moveTo(-R * 0.20, gY); CTX.lineTo(R * 0.20, gY); CTX.stroke();
+        // Anime glare lines — cyan glow
+        CTX.strokeStyle = `rgba(6,182,212,${vp * 0.85})`; CTX.lineWidth = 1.2;
+        CTX.shadowBlur = 6 * vp; CTX.shadowColor = '#06b6d4';
+        CTX.beginPath(); CTX.moveTo(-R * 0.52, gY - 2); CTX.lineTo(-R * 0.62, gY + 1.5); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(R * 0.38, gY - 2); CTX.lineTo(R * 0.28, gY + 1.5); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // Neat side-part hair — dark navy, thick outline
+        CTX.fillStyle = '#0b1623';
         CTX.beginPath();
-        CTX.moveTo(-2, -R * 0.8); CTX.lineTo(2, -R * 0.8);
-        CTX.lineTo(1, -R * 0.2); CTX.lineTo(-1, -R * 0.2);
-        CTX.fill();
-
-        // Nerd Glasses (Thick frames + Anime Glare)
-        const gY = -R * 0.4;
-        CTX.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        CTX.strokeStyle = '#000000'; CTX.lineWidth = 2.5;
-        CTX.beginPath(); CTX.roundRect(-R * 0.7, gY - 4, R * 0.5, 8, 2); CTX.fill(); CTX.stroke();
-        CTX.beginPath(); CTX.roundRect(R * 0.2, gY - 4, R * 0.5, 8, 2); CTX.fill(); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(-R * 0.2, gY); CTX.lineTo(R * 0.2, gY); CTX.stroke();
-
-        // Anime Glasses Glare detail
-        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 1.5;
-        CTX.beginPath(); CTX.moveTo(-R * 0.5, gY - 2); CTX.lineTo(-R * 0.6, gY + 2); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(R * 0.4, gY - 2); CTX.lineTo(R * 0.3, gY + 2); CTX.stroke();
-
-        // Neat but Cool Hair (Dark blue/black)
-        CTX.fillStyle = '#0f172a';
-        CTX.beginPath();
-        CTX.arc(0, -R * 0.2, R * 1.05, Math.PI * 1.1, Math.PI * 1.9, false);
+        CTX.arc(0, -R * 0.2, R * 1.05, Math.PI * 1.08, Math.PI * 1.92, false);
         CTX.quadraticCurveTo(R * 0.5, -R * 0.8, 0, -R * 0.6);
         CTX.quadraticCurveTo(-R * 0.5, -R * 0.8, -R, -R * 0.2);
         CTX.fill();
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.beginPath();
+        CTX.arc(0, -R * 0.2, R * 1.05, Math.PI * 1.08, Math.PI * 1.92, false);
+        CTX.quadraticCurveTo(R * 0.5, -R * 0.8, 0, -R * 0.6);
+        CTX.quadraticCurveTo(-R * 0.5, -R * 0.8, -R, -R * 0.2);
+        CTX.stroke();
+        // Side-part line — subtle highlight
+        CTX.strokeStyle = 'rgba(30,41,59,0.80)'; CTX.lineWidth = 1;
+        CTX.beginPath(); CTX.moveTo(-2, -R * 1.05); CTX.lineTo(-4, -R * 0.6); CTX.stroke();
 
         CTX.restore();
 
