@@ -23,8 +23,8 @@ function drawShopObject() {
     const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
     const bounce = Math.sin(performance.now() / 500) * 3;
 
-    if (player) {
-        const d = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
+    if (window.player) {
+        const d = dist(window.player.x, window.player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
         if (d < MTC_SHOP_LOCATION.INTERACTION_RADIUS * 2) {
             const alpha = Math.max(0, 1 - d / (MTC_SHOP_LOCATION.INTERACTION_RADIUS * 2));
             CTX.save();
@@ -111,8 +111,8 @@ function drawShopObject() {
 }
 
 function updateShopProximityUI() {
-    if (!player) return;
-    const d = dist(player.x, player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
+    if (!window.player) return;
+    const d = dist(window.player.x, window.player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
     const near = d < MTC_SHOP_LOCATION.INTERACTION_RADIUS;
 
     const promptEl = document.getElementById('shop-prompt');
@@ -133,7 +133,7 @@ function openShop() {
 
     ShopManager.open();
 
-    if (player) spawnFloatingText(GAME_TEXTS.shop.open, player.x, player.y - 70, '#facc15', 22);
+    if (window.player) spawnFloatingText(GAME_TEXTS.shop.open, window.player.x, window.player.y - 70, '#facc15', 22);
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
 }
 
@@ -149,17 +149,17 @@ function closeShop() {
 
     window.focus();
 
-    if (player) spawnFloatingText(GAME_TEXTS.shop.resumed, player.x, player.y - 50, '#34d399', 18);
+    if (window.player) spawnFloatingText(GAME_TEXTS.shop.resumed, window.player.x, window.player.y - 50, '#34d399', 18);
 }
 
 function buyItem(itemId) {
     const item = SHOP_ITEMS[itemId];
     if (!item) { console.warn('buyItem: unknown itemId', itemId); return; }
-    if (!player) return;
+    if (!window.player) return;
 
     const currentScore = getScore();
     if (currentScore < item.cost) {
-        spawnFloatingText(GAME_TEXTS.shop.notEnoughScore, player.x, player.y - 60, '#ef4444', 18);
+        spawnFloatingText(GAME_TEXTS.shop.notEnoughScore, window.player.x, window.player.y - 60, '#ef4444', 18);
         if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
         ShopManager.updateButtons();
         return;
@@ -168,52 +168,52 @@ function buyItem(itemId) {
     addScore(-item.cost);
 
     if (itemId === 'potion') {
-        const maxHp = player.maxHp || BALANCE.characters[player.charType]?.maxHp || 110;
-        const lacking = maxHp - player.hp;
+        const maxHp = window.player.maxHp;
+        const lacking = maxHp - window.player.hp;
         const healAmt = Math.min(item.heal, lacking);
         if (healAmt > 0) {
-            player.hp += healAmt;
-            spawnFloatingText(GAME_TEXTS.shop.healPickup(healAmt), player.x, player.y - 70, '#22c55e', 22);
-            spawnParticles(player.x, player.y, 10, '#22c55e');
+            window.player.hp += healAmt;
+            spawnFloatingText(GAME_TEXTS.shop.healPickup(healAmt), window.player.x, window.player.y - 70, '#22c55e', 22);
+            spawnParticles(window.player.x, window.player.y, 10, '#22c55e');
             if (typeof Audio !== 'undefined' && Audio.playHeal) Audio.playHeal();
         } else {
-            spawnFloatingText(GAME_TEXTS.shop.hpFull, player.x, player.y - 60, '#94a3b8', 16);
+            spawnFloatingText(GAME_TEXTS.shop.hpFull, window.player.x, window.player.y - 60, '#94a3b8', 16);
         }
 
     } else if (itemId === 'damageUp') {
         // ── Progressive Damage Buff — stacks up to +50 % then penalises ──
         // Tier ladder:  base → ×1.1 → ×1.2 → ×1.3 → ×1.4 → ×1.5 (cap)
         // Buying at cap: subtracts 5 s from the remaining timer (min 5 s).
-        if (!player.shopDamageBoostActive) {
+        if (!window.player.shopDamageBoostActive) {
             // ── First purchase — initialise buff at 1.1× ──────────────
-            player._baseDamageBoost = player.damageBoost || 1.0;
-            player.damageBoost = player._baseDamageBoost * 1.1;
-            player.shopDamageBoostActive = true;
-            player.shopDamageBoostTimer = item.duration;
-            const tierPct = Math.round((player.damageBoost / player._baseDamageBoost) * 100);
-            spawnFloatingText(`⚔️ Damage ${tierPct}%!`, player.x, player.y - 70, '#f59e0b', 22);
-            spawnParticles(player.x, player.y, 8, '#f59e0b');
+            window.player._baseDamageBoost = window.player.damageBoost || 1.0;
+            window.player.damageBoost = window.player._baseDamageBoost * 1.1;
+            window.player.shopDamageBoostActive = true;
+            window.player.shopDamageBoostTimer = item.duration;
+            const tierPct = Math.round((window.player.damageBoost / window.player._baseDamageBoost) * 100);
+            spawnFloatingText(`⚔️ Damage ${tierPct}%!`, window.player.x, window.player.y - 70, '#f59e0b', 22);
+            spawnParticles(window.player.x, window.player.y, 8, '#f59e0b');
         } else {
-            const cap = player._baseDamageBoost * 1.5;
+            const cap = window.player._baseDamageBoost * 1.5;
             // Round to 2 dp to avoid floating-point drift at the cap check
-            const current = Math.round(player.damageBoost * 100) / 100;
+            const current = Math.round(window.player.damageBoost * 100) / 100;
             const capRnd = Math.round(cap * 100) / 100;
 
             if (current < capRnd) {
                 // ── Under cap — add one tier (+0.1× of base) and reset timer ──
-                player.damageBoost += player._baseDamageBoost * 0.1;
-                player.damageBoost = Math.min(player.damageBoost, cap); // clamp
-                player.shopDamageBoostTimer = item.duration;
-                const tierPct = Math.round((player.damageBoost / player._baseDamageBoost) * 100);
-                spawnFloatingText(`⚔️ Damage ${tierPct}%!`, player.x, player.y - 70, '#f59e0b', 22);
-                spawnParticles(player.x, player.y, 8, '#f59e0b');
+                window.player.damageBoost += window.player._baseDamageBoost * 0.1;
+                window.player.damageBoost = Math.min(window.player.damageBoost, cap); // clamp
+                window.player.shopDamageBoostTimer = item.duration;
+                const tierPct = Math.round((window.player.damageBoost / window.player._baseDamageBoost) * 100);
+                spawnFloatingText(`⚔️ Damage ${tierPct}%!`, window.player.x, window.player.y - 70, '#f59e0b', 22);
+                spawnParticles(window.player.x, window.player.y, 8, '#f59e0b');
                 // ── Achievement: first time hitting the 1.5× cap ──────────
-                const newRnd = Math.round(player.damageBoost * 100) / 100;
+                const newRnd = Math.round(window.player.damageBoost * 100) / 100;
                 if (newRnd >= capRnd) Achievements.check('shop_max');
             } else {
                 // ── At cap — impose a 5 s duration penalty ────────────────
-                player.shopDamageBoostTimer = Math.max(5, player.shopDamageBoostTimer - 5);
-                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', player.x, player.y - 70, '#ef4444', 20);
+                window.player.shopDamageBoostTimer = Math.max(5, window.player.shopDamageBoostTimer - 5);
+                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', window.player.x, window.player.y - 70, '#ef4444', 20);
             }
         }
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -222,36 +222,36 @@ function buyItem(itemId) {
         // ── Progressive Speed Buff — stacks up to +50 % then penalises ──
         // Tier ladder:  base → ×1.1 → ×1.2 → ×1.3 → ×1.4 → ×1.5 (cap)
         // Buying at cap: subtracts 5 s from the remaining timer (min 5 s).
-        if (!player.shopSpeedBoostActive) {
+        if (!window.player.shopSpeedBoostActive) {
             // ── First purchase — initialise buff at 1.1× ──────────────
-            player._baseMoveSpeed = player.moveSpeed;
-            player.moveSpeed = player._baseMoveSpeed * 1.1;
-            player.shopSpeedBoostActive = true;
-            player.shopSpeedBoostTimer = item.duration;
-            const tierPct = Math.round((player.moveSpeed / player._baseMoveSpeed) * 100);
-            spawnFloatingText(`💨 Speed ${tierPct}%!`, player.x, player.y - 70, '#06b6d4', 22);
-            spawnParticles(player.x, player.y, 8, '#06b6d4');
+            window.player._baseMoveSpeed = window.player.moveSpeed;
+            window.player.moveSpeed = window.player._baseMoveSpeed * 1.1;
+            window.player.shopSpeedBoostActive = true;
+            window.player.shopSpeedBoostTimer = item.duration;
+            const tierPct = Math.round((window.player.moveSpeed / window.player._baseMoveSpeed) * 100);
+            spawnFloatingText(`💨 Speed ${tierPct}%!`, window.player.x, window.player.y - 70, '#06b6d4', 22);
+            spawnParticles(window.player.x, window.player.y, 8, '#06b6d4');
         } else {
-            const cap = player._baseMoveSpeed * 1.5;
+            const cap = window.player._baseMoveSpeed * 1.5;
             // Round to 2 dp to avoid floating-point drift at the cap check
-            const current = Math.round(player.moveSpeed * 100) / 100;
+            const current = Math.round(window.player.moveSpeed * 100) / 100;
             const capRnd = Math.round(cap * 100) / 100;
 
             if (current < capRnd) {
                 // ── Under cap — add one tier (+0.1× of base) and reset timer ──
-                player.moveSpeed += player._baseMoveSpeed * 0.1;
-                player.moveSpeed = Math.min(player.moveSpeed, cap); // clamp
-                player.shopSpeedBoostTimer = item.duration;
-                const tierPct = Math.round((player.moveSpeed / player._baseMoveSpeed) * 100);
-                spawnFloatingText(`💨 Speed ${tierPct}%!`, player.x, player.y - 70, '#06b6d4', 22);
-                spawnParticles(player.x, player.y, 8, '#06b6d4');
+                window.player.moveSpeed += window.player._baseMoveSpeed * 0.1;
+                window.player.moveSpeed = Math.min(window.player.moveSpeed, cap); // clamp
+                window.player.shopSpeedBoostTimer = item.duration;
+                const tierPct = Math.round((window.player.moveSpeed / window.player._baseMoveSpeed) * 100);
+                spawnFloatingText(`💨 Speed ${tierPct}%!`, window.player.x, window.player.y - 70, '#06b6d4', 22);
+                spawnParticles(window.player.x, window.player.y, 8, '#06b6d4');
                 // ── Achievement: first time hitting the 1.5× cap ──────────
-                const newRnd = Math.round(player.moveSpeed * 100) / 100;
+                const newRnd = Math.round(window.player.moveSpeed * 100) / 100;
                 if (newRnd >= capRnd) Achievements.check('shop_max');
             } else {
                 // ── At cap — impose a 5 s duration penalty ────────────────
-                player.shopSpeedBoostTimer = Math.max(5, player.shopSpeedBoostTimer - 5);
-                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', player.x, player.y - 70, '#ef4444', 20);
+                window.player.shopSpeedBoostTimer = Math.max(5, window.player.shopSpeedBoostTimer - 5);
+                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', window.player.x, window.player.y - 70, '#ef4444', 20);
             }
         }
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -259,15 +259,15 @@ function buyItem(itemId) {
     } else if (itemId === 'shield') {
         // ── Energy Shield — one-shot damage block ─────────────────
         // If the player already has a shield, refund and bail out.
-        if (player.hasShield) {
+        if (window.player.hasShield) {
             addScore(item.cost); // refund — score was already deducted above
-            spawnFloatingText('มีโล่อยู่แล้ว!', player.x, player.y - 60, '#94a3b8', 16);
+            spawnFloatingText('มีโล่อยู่แล้ว!', window.player.x, window.player.y - 60, '#94a3b8', 16);
             ShopManager.updateButtons();
             return;
         }
-        player.hasShield = true;
-        spawnFloatingText('🛡️ SHIELD ACTIVE!', player.x, player.y - 70, '#8b5cf6', 22);
-        spawnParticles(player.x, player.y, 15, '#8b5cf6');
+        window.player.hasShield = true;
+        spawnFloatingText('🛡️ SHIELD ACTIVE!', window.player.x, window.player.y - 70, '#8b5cf6', 22);
+        spawnParticles(window.player.x, window.player.y, 15, '#8b5cf6');
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
     }
 

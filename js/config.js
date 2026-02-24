@@ -446,7 +446,8 @@ const GAME_CONFIG = {
     visual: {
         bgColorTop: '#1a1a2e',
         bgColorBottom: '#16213e',
-        screenShakeDecay: 0.92
+        screenShakeDecay: 0.92,
+        gridColor: 'rgba(255, 255, 255, 0.03)'
     }
 };
 

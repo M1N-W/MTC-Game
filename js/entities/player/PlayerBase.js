@@ -134,6 +134,7 @@ class Player extends Entity {
         } else { this.walkCycle = 0; }
 
         let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost;
+        if (typeof KaoPlayer !== 'undefined' && this instanceof KaoPlayer && this.passiveUnlocked) speedMult = Math.max(speedMult, 1.4);
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
 
@@ -296,13 +297,13 @@ class Player extends Entity {
         this.comboCount = Math.min(this.COMBO_MAX_STACKS || 50, (this.comboCount || 0) + 1);
         this.comboTimer = this.COMBO_MAX_TIME || 3.0;
 
-        if (typeof spawnFloatingText !== 'undefined') {
+        if (typeof spawnFloatingText !== 'undefined' && this.comboCount >= 3) {
             const fontSize = Math.min(26, 14 + (this.comboCount * 0.5));
             spawnFloatingText(`Combo x${this.comboCount}!`, this.x, this.y - 65, '#f43f5e', fontSize);
         }
         // ─────────────────────────────────────────────────────
 
-        spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, '#8b5cf6', 14);
+        if (this.comboCount % 3 === 0) spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, '#8b5cf6', 14);
         while (this.exp >= this.expToNextLevel) this.levelUp();
         this.updateUI();
     }
@@ -345,7 +346,7 @@ class Player extends Entity {
         this.energy = this.maxEnergy;
 
         // ── 6. Feedback ─────────────────────────────────────────────────────────
-        const dmgPct = Math.round((this.damageMultiplier - 1) * 100);
+        const dmgPct = Math.round((this._damageMultiplier - 1) * 100);
         const cdPct = Math.round((1 - this.cooldownMultiplier) * 100);
         const hpLine = hpGainPerLevel > 0 ? `, +${hpGainPerLevel} MaxHP` : '';
         spawnFloatingText(
@@ -380,7 +381,13 @@ class Player extends Entity {
         spawnParticles(this.x, this.y, 8, '#ef4444');
         addScreenShake(8); Audio.playHit();
         Achievements.stats.damageTaken += amt;
-        if (this.hp <= 0) window.endGame('defeat');
+        if (this.hp <= 0) {
+            this.dead = true;
+            if (this.dashTimeouts && this.dashTimeouts.length) {
+                this.dashTimeouts.forEach(id => clearTimeout(id));
+                this.dashTimeouts.length = 0;
+            }
+        }
     }
 
     dealDamage(baseDamage) {
@@ -397,7 +404,7 @@ class Player extends Entity {
         if (this.isSecondWind) {
             damage *= (BALANCE.player.secondWindDamageMult || 1.5);
         }
-        if (this.passiveUnlocked) {
+        if (this.passiveUnlocked && !(typeof KaoPlayer !== 'undefined' && this instanceof KaoPlayer)) {
             const healAmount = damage * S.passiveLifesteal;
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3) spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
@@ -750,15 +757,19 @@ Player.prototype.checkObstacleProximity = function (ax, ay, dt, particleColor) {
     const isMoving = (ax !== 0 || ay !== 0);
     let scraping = false;
 
+    const warningThreshold = this.radius + OB.obstacleWarningRange;
+
     for (const obj of mapObjs) {
         if (!obj || obj.x === undefined || obj.y === undefined) continue;
         const oL = obj.x, oT = obj.y, oR = oL + (obj.w || 0), oB = oT + (obj.h || 0);
+        const halfW = (obj.w || 0) / 2, halfH = (obj.h || 0) / 2;
+        if (Math.abs(this.x - (oL + halfW)) > warningThreshold + halfW + 10) continue;
+        if (Math.abs(this.y - (oT + halfH)) > warningThreshold + halfH + 10) continue;
         const closestX = Math.max(oL, Math.min(this.x, oR));
         const closestY = Math.max(oT, Math.min(this.y, oB));
         const d = Math.hypot(this.x - closestX, this.y - closestY);
 
         const scrapeThreshold = this.radius + 4;
-        const warningThreshold = this.radius + OB.obstacleWarningRange;
 
         if (d < scrapeThreshold && isMoving) scraping = true;
 

@@ -279,6 +279,7 @@ function updateGame(dt) {
         if (Achievements.stats.damageTaken === window.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
         }
+        window.waveStartDamage = Achievements.stats.damageTaken;
         setWave(getWave() + 1);
         Achievements.check('wave_1');
         // ── Wave Events: end old event, start new ──────────────
@@ -570,7 +571,7 @@ function drawGame() {
 
     if (window.drone) window.drone.draw();
 
-    window.player.draw();
+    if (window.player) window.player.draw();
 
     for (const e of window.enemies) {
         if (e.isOnScreen(80)) e.draw();
@@ -846,6 +847,7 @@ function startGame(charType = 'kao') {
 }
 
 async function endGame(result) {
+    if (window.gameState === 'GAMEOVER') return;
     setGameState('GAMEOVER');
 
     Audio.stopBGM();

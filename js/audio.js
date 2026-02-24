@@ -674,13 +674,9 @@ class AudioSystem {
         gain.gain.value = GAME_CONFIG.audio.meteorWarning * this.masterVolume * this.sfxVolume;
 
         osc.start();
-
-        for (let i = 0; i < 3; i++) {
-            setTimeout(() => {
-                osc.frequency.value = 700 + Math.sin(i) * 100;
-            }, i * 100);
-        }
-
+        osc.frequency.setValueAtTime(700, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime + 0.13);
+        osc.frequency.setValueAtTime(700, this.ctx.currentTime + 0.26);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
         osc.stop(this.ctx.currentTime + 0.4);
     }
@@ -991,8 +987,8 @@ class AudioSystem {
         return this.masterVolume;
     }
 
-    mute()   { this.enabled = false; }
-    unmute() { this.enabled = true;  }
+    mute()   { this.enabled = false; if (this.bgmAudio) this.bgmAudio.pause(); }
+    unmute() { this.enabled = true;  if (this.bgmAudio?.paused) this.bgmAudio.play().catch(() => {}); }
 
     toggle() {
         this.enabled = !this.enabled;

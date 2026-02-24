@@ -169,17 +169,8 @@ class KaoPlayer extends Player {
 
         if (this.shootCooldown > 0) this.shootCooldown -= dt;
 
-        // FIX (AUDIT #4): Back up the real speedBoost (from shop/powerups) before
-        //                 the passive overwrites it, then restore it after
-        //                 super.update() has read the physics value.  This way
-        //                 the passive's x1.4 buff only lives for this one frame
-        //                 and never permanently clobbers external speed items.
-        const _speedBoostSnapshot = this.speedBoost;
-
-        // ── 🛡️ STRICT GATE: Advanced Skills ──────────────────────────────────
+        // ── STRICT GATE: Advanced Skills ──────────────────────────────────
         if (this.passiveUnlocked) {
-            this.speedBoost = Math.max(this.speedBoost, 1.4);
-
             // 1. Auto-stealth (Free Stealth)
             const isMoving = keys.w || keys.a || keys.s || keys.d;
             if (isMoving && this.autoStealthCooldown <= 0 && Math.random() < 0.2 * dt) {
@@ -238,10 +229,6 @@ class KaoPlayer extends Player {
         }
 
         super.update(dt, keys, mouse);
-
-        // FIX (AUDIT #4): Restore original speedBoost so the passive 1.4× buff
-        //                 doesn't permanently overwrite shop/powerup speed items.
-        this.speedBoost = _speedBoostSnapshot;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -366,7 +353,9 @@ class KaoPlayer extends Player {
         if (this.passiveUnlocked && this.isWeaponMaster) {
             if (!isAmbush) color = '#facc15';
             if (wep.name === 'AUTO RIFLE') {
+                // 50% chance to fire 2 bullets instead of 1
                 if (Math.random() < 0.5) pellets = 2;
+                // Stacking crit bonus (max 50%)
                 this.bonusCritFromAuto = Math.min(0.5, this.bonusCritFromAuto + 0.005);
             } else if (wep.name === 'SNIPER') {
                 critChance += 0.25;
