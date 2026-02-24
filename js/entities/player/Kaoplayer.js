@@ -121,6 +121,8 @@ class KaoPlayer extends Player {
     // KILL TRACKING — called from enemy.js after each enemy death
     // ──────────────────────────────────────────────────────────────────────────
     addKill(weaponName) {
+        // 🛡️ STRICT GATE: Cannot build weapon mastery if passive is not unlocked
+        if (!this.passiveUnlocked) return;
         if (this.isWeaponMaster) return;   // already awakened, no need to track
 
         const req = BALANCE.characters.kao.weaponMasterReq || 10;
@@ -151,8 +153,6 @@ class KaoPlayer extends Player {
     update(dt, keys, mouse) {
         const S = BALANCE.characters.kao;
 
-        // FIX (TASK 2): Tick down our own shoot cooldown every frame so it
-        //               actually reaches 0 and fire-rate matches config.js.
         if (this.shootCooldown > 0) this.shootCooldown -= dt;
 
         // FIX (AUDIT #4): Back up the real speedBoost (from shop/powerups) before
@@ -162,83 +162,61 @@ class KaoPlayer extends Player {
         //                 and never permanently clobbers external speed items.
         const _speedBoostSnapshot = this.speedBoost;
 
-        // ── Passive Skill: ซุ่มเสรี ──────────────────────────────────────────
+        // ── 🛡️ STRICT GATE: Advanced Skills ──────────────────────────────────
         if (this.passiveUnlocked) {
-            // Temporarily raise speedBoost for this frame only
             this.speedBoost = Math.max(this.speedBoost, 1.4);
 
-            // Randomly trigger free Stealth while moving
+            // 1. Auto-stealth (Free Stealth)
             const isMoving = keys.w || keys.a || keys.s || keys.d;
-            if (
-                isMoving &&
-                this.autoStealthCooldown <= 0 &&
-                Math.random() < 0.2 * dt
-            ) {
+            if (isMoving && this.autoStealthCooldown <= 0 && Math.random() < 0.2 * dt) {
                 this.isInvisible = true;
                 this.ambushReady = true;
                 this.energy = this.maxEnergy;
                 this.autoStealthCooldown = S.autoStealthCooldown || 8;
-                spawnFloatingText(
-                    GAME_TEXTS.combat.kaoFreeStealth,
-                    this.x, this.y - 40,
-                    '#a855f7', 20
-                );
+                spawnFloatingText(GAME_TEXTS.combat.kaoFreeStealth, this.x, this.y - 40, '#a855f7', 20);
             }
             if (this.autoStealthCooldown > 0) this.autoStealthCooldown -= dt;
-        }
 
-        // ── Teleport — charge regeneration ────────────────────────────────────
-        if (this.teleportTimer < this.teleportCooldown && this.teleportCharges < 1) {
-            this.teleportTimer += dt;
-            if (this.teleportTimer >= this.teleportCooldown) {
-                this.teleportCharges = 1;
-                this.teleportTimer = 0;
-                spawnFloatingText(
-                    GAME_TEXTS.combat.kaoTeleport,
-                    this.x, this.y - 60,
-                    '#00e5ff', 20
-                );
+            // 2. Teleport (Charge & Q Key)
+            if (this.teleportTimer < this.teleportCooldown && this.teleportCharges < 1) {
+                this.teleportTimer += dt;
+                if (this.teleportTimer >= this.teleportCooldown) {
+                    this.teleportCharges = 1;
+                    this.teleportTimer = 0;
+                    spawnFloatingText(GAME_TEXTS.combat.kaoTeleport, this.x, this.y - 60, '#00e5ff', 20);
+                }
             }
-        }
+            if (keys.q && this.teleportCharges > 0) {
+                this.teleportCharges--;
+                spawnParticles(this.x, this.y, 25, '#3b82f6');
+                this.x = window.mouse.wx;
+                this.y = window.mouse.wy;
+                keys.q = 0;
+                spawnParticles(this.x, this.y, 25, '#3b82f6');
+            }
 
-        // ── Teleport — activation (Q key) ─────────────────────────────────────
-        if (keys.q && this.teleportCharges > 0) {
-            this.teleportCharges--;
-            spawnParticles(this.x, this.y, 25, '#3b82f6');
-            this.x = window.mouse.wx;
-            this.y = window.mouse.wy;
+            // 3. Clone of Stealth (Cooldown & E Key)
+            if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
+            if (keys.e && this.cloneSkillCooldown <= 0) {
+                this.clones = [
+                    new KaoClone(this, (2 * Math.PI) / 3),
+                    new KaoClone(this, (4 * Math.PI) / 3)
+                ];
+                this.clonesActiveTimer = S.cloneDuration || 15;
+                this.cloneSkillCooldown = this.maxCloneCooldown;
+                spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
+                keys.e = 0;
+            }
+        } else {
+            // Force reset keys if user tries to press them before unlocking
             keys.q = 0;
-            spawnParticles(this.x, this.y, 25, '#3b82f6');
-        }
-
-        // ── Clone Skill cooldown tick ──────────────────────────────────────────
-        if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
-
-        // ── Clone of Stealth — activation (E key) ─────────────────────────────
-        if (keys.e && this.cloneSkillCooldown <= 0) {
-            // Spawn two clones in a triangle formation around Kao
-            this.clones = [
-                new KaoClone(this, (2 * Math.PI) / 3),
-                new KaoClone(this, (4 * Math.PI) / 3)
-            ];
-            this.clonesActiveTimer = S.cloneDuration || 15;
-            this.cloneSkillCooldown = this.maxCloneCooldown;
-            spawnFloatingText(
-                GAME_TEXTS.combat.kaoClones,
-                this.x, this.y - 40,
-                '#3b82f6', 25
-            );
             keys.e = 0;
         }
 
-        // ── Clone update — orbit facing aim direction ──────────────────────────
+        // ── Unrestricted Update Logic — existing clones keep moving ───────────
         if (this.clonesActiveTimer > 0) {
             this.clonesActiveTimer -= dt;
-            const aimAngle = Math.atan2(
-                window.mouse.wy - this.y,
-                window.mouse.wx - this.x
-            );
-            // Position clones ±120° from aim direction (triangle formation)
+            const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
             if (this.clones[0]) this.clones[0].angleOffset = aimAngle + Math.PI / 1.5;
             if (this.clones[1]) this.clones[1].angleOffset = aimAngle - Math.PI / 1.5;
             this.clones.forEach(c => c.update(dt));
@@ -304,7 +282,6 @@ class KaoPlayer extends Player {
     shoot(dt) {
         if (typeof weaponSystem === 'undefined') return;
 
-        // Pull config data straight from BALANCE to prevent NaN bleed-in
         const wepKey = weaponSystem.currentWeapon || 'auto';
         const weps = BALANCE.characters.kao.weapons;
         const wep = weps[wepKey];
@@ -312,8 +289,11 @@ class KaoPlayer extends Player {
 
         const isClick = window.mouse.left === 1;
 
-        // ── Weapon Master Sniper: hold-to-charge mode ──────────────────────────
-        if (this.isWeaponMaster && wepKey === 'sniper') {
+        // 🛡️ FIX: Hard fallback to prevent NaN machine-gun glitch
+        const baseCd = wep.cooldown || 0.25;
+
+        // ── Weapon Master Sniper: hold-to-charge mode (Gated) ─────────────────
+        if (this.passiveUnlocked && this.isWeaponMaster && (wep.name === 'SNIPER' || wepKey === 'sniper')) {
             if (isClick && this.shootCooldown <= 0) {
                 // Accumulate charge time; emit charge particles
                 this.sniperChargeTime += dt;
@@ -322,20 +302,20 @@ class KaoPlayer extends Player {
             } else if (!isClick && this.sniperChargeTime > 0) {
                 // Mouse released — fire the charged shot
                 this.fireWeapon(wep, true);
-                this.shootCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
+                this.shootCooldown = baseCd * (this.cooldownMultiplier || 1);
                 weaponSystem.weaponCooldown = this.shootCooldown; // Sync UI
                 this.sniperChargeTime = 0;
                 return;
             }
         } else {
-            // Reset charge if weapon switched away from sniper
+            // Reset charge if passive/mastery not met, or weapon switched away
             this.sniperChargeTime = 0;
         }
 
         // ── Normal fire — guarded by internal cooldown ─────────────────────────
         if (isClick && this.shootCooldown <= 0) {
             this.fireWeapon(wep, false);
-            this.shootCooldown = wep.cooldown * (this.cooldownMultiplier || 1);
+            this.shootCooldown = baseCd * (this.cooldownMultiplier || 1);
             weaponSystem.weaponCooldown = this.shootCooldown; // Sync UI
         }
     }
@@ -368,7 +348,7 @@ class KaoPlayer extends Player {
             (this.bonusCritFromAuto || 0);
 
         // ── Weapon Master buffs ────────────────────────────────────────────────
-        if (this.isWeaponMaster) {
+        if (this.passiveUnlocked && this.isWeaponMaster) {
             color = '#facc15';   // golden projectiles
 
             if (wep.name === 'AUTO RIFLE') {
