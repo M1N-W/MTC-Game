@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.1.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.1.0 Phase 2: Faculty Update — white theme for Boss, BossFirst, BossDog, GoldfishMinion
+const CACHE_NAME = 'mtc-cache-v3.2.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.2.0 Godot Migration Ready — Visual constants centralized + GODOT_EXPORT.md
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
@@ -17,6 +17,7 @@ const urlsToCache = [
   './js/game.js',
   './js/tutorial.js',
   './js/secrets.js',
+  './GODOT_EXPORT.md',
   // Entities
   './js/entities/base.js',
   './js/entities/player/PlayerBase.js',
