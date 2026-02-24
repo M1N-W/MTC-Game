@@ -228,10 +228,20 @@ function updateGame(dt) {
 
     if (!(window.player instanceof PoomPlayer) && !(typeof AutoPlayer === 'function' && window.player instanceof AutoPlayer)) {
         weaponSystem.update(dt);
-        const burstProjectiles = weaponSystem.updateBurst(window.player, window.player.damageBoost);
-        if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
-        // FIX 3: Route shooting to Kao's custom shoot() when playing as KaoPlayer
-        if (typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer) {
+
+        // 🛡️ KAO FIX: Do NOT run WeaponSystem's burst loop for KaoPlayer.
+        //    WeaponSystem.updateBurst() calls shootSingle() which fires projectiles
+        //    that bypass KaoPlayer's own this.shootCooldown entirely, producing the
+        //    OP machine-gun effect.  KaoPlayer.shoot() handles all fire-rate gating
+        //    internally — WeaponSystem burst is for other characters only.
+        const isKao = typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer;
+        if (!isKao) {
+            const burstProjectiles = weaponSystem.updateBurst(window.player, window.player.damageBoost);
+            if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
+        }
+
+        // Route shooting: Kao uses its own shoot(); everyone else uses WeaponSystem
+        if (isKao) {
             window.player.shoot(dt);
         } else if (mouse.left === 1 && gameState === 'PLAYING') {
             if (weaponSystem.canShoot()) {

@@ -282,14 +282,20 @@ class KaoPlayer extends Player {
     shoot(dt) {
         if (typeof weaponSystem === 'undefined') return;
 
-        // 🛡️ FIX: Use currentWeaponIndex to pull the correct weapon from the object values.
-        //         weaponSystem.currentWeapon stores a numeric index, NOT a string key,
-        //         so weps[stringKey] was always undefined → baseCd fell back to 0.25 for
-        //         every weapon → machine-gun fire rate on Sniper and Shotgun.
-        const wepIndex = weaponSystem.currentWeaponIndex || 0;
-        const weps = Object.values(BALANCE.characters.kao.weapons);
-        const wep = weps[wepIndex];
+        // ✅ CORRECT: weaponSystem.currentWeapon is ALWAYS a string key
+        //            ('auto' | 'sniper' | 'shotgun') — never a numeric index.
+        //            Using Object.values()[index] was wrong and locked Kao onto
+        //            Auto Rifle stats permanently (index 0 every time because
+        //            currentWeaponIndex is undefined → 0 || 0 = 0).
+        const wepKey = weaponSystem.currentWeapon || 'auto';
+        const wep = BALANCE.characters.kao.weapons[wepKey];
         if (!wep) return;
+
+        // 🛡️ BURST GUARD: game.js calls weaponSystem.updateBurst() every frame BEFORE
+        //    calling player.shoot(dt). If WeaponSystem is mid-burst it fires its own
+        //    projectiles via shootSingle() — those bypass this.shootCooldown completely
+        //    and cause the OP machine-gun effect. Skip Kao's own shot during burst.
+        if (weaponSystem.isBursting) return;
 
         const isClick = window.mouse.left === 1;
 
