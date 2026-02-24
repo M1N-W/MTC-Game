@@ -215,57 +215,43 @@ class GoldfishMinion extends Entity {
         CTX.closePath(); CTX.fill();
         CTX.shadowBlur = 0;
 
-        // Main body gradient
+        // Main body gradient — Cyber-Mutant silver/white
         const bodyG = CTX.createRadialGradient(-r * 0.1, -r * 0.2, 1, 0, 0, r);
-        bodyG.addColorStop(0, '#fb923c');
-        bodyG.addColorStop(0.55, '#f97316');
-        bodyG.addColorStop(1, '#c2410c');
+        bodyG.addColorStop(0, '#ffffff');
+        bodyG.addColorStop(0.55, '#e2e8f0');
+        bodyG.addColorStop(1, '#94a3b8');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
+        CTX.strokeStyle = '#475569'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.stroke();
 
         // Belly + specular
-        CTX.fillStyle = 'rgba(254,215,170,0.55)';
+        CTX.fillStyle = 'rgba(186,230,253,0.45)';
         CTX.beginPath(); CTX.ellipse(r * 0.15, r * 0.20, r * 0.42, r * 0.28, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.fillStyle = 'rgba(255,255,255,0.20)';
+        CTX.fillStyle = 'rgba(255,255,255,0.40)';
         CTX.beginPath(); CTX.arc(-r * 0.28, -r * 0.28, r * 0.22, 0, Math.PI * 2); CTX.fill();
 
         // Scales
-        CTX.strokeStyle = 'rgba(234,88,12,0.45)'; CTX.lineWidth = 1.2;
+        CTX.strokeStyle = 'rgba(100,116,139,0.45)'; CTX.lineWidth = 1.2;
         for (let si = 0; si < 3; si++) {
             const sx = -r * 0.2 + si * r * 0.28;
             CTX.beginPath(); CTX.arc(sx, r * 0.15, r * 0.30, Math.PI, Math.PI * 2); CTX.stroke();
             CTX.beginPath(); CTX.arc(sx + r * 0.14, -r * 0.15, r * 0.30, Math.PI, Math.PI * 2); CTX.stroke();
         }
 
-        // Teeth
-        const snoutX = r * 0.78;
-        CTX.fillStyle = '#1e293b';
-        CTX.beginPath();
-        CTX.moveTo(snoutX, -r * 0.18);
-        CTX.lineTo(r * 1.15, 0);
-        CTX.lineTo(snoutX, r * 0.18);
-        CTX.closePath(); CTX.fill();
-        CTX.fillStyle = '#f8fafc'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.2;
-        const teethCount = 3;
-        const toothSpan = r * 0.30;
-        for (let ti = 0; ti < teethCount; ti++) {
-            const ty = -r * 0.14 + ti * (toothSpan / (teethCount - 1));
-            CTX.beginPath();
-            CTX.moveTo(snoutX, ty - r * 0.04);
-            CTX.lineTo(r * 1.08, ty + r * 0.01);
-            CTX.lineTo(snoutX, ty + r * 0.04);
-            CTX.closePath(); CTX.fill(); CTX.stroke();
-        }
-        for (let ti = 0; ti < 2; ti++) {
-            const ty = r * 0.06 + ti * (toothSpan * 0.5);
-            CTX.beginPath();
-            CTX.moveTo(snoutX, ty - r * 0.03);
-            CTX.lineTo(r * 1.06, ty + r * 0.01);
-            CTX.lineTo(snoutX, ty + r * 0.03);
-            CTX.closePath(); CTX.fill(); CTX.stroke();
-        }
+        // Cyber vein line — glowing cyan circuit
+        CTX.strokeStyle = '#38bdf8'; CTX.lineWidth = 1.8;
+        CTX.shadowBlur = 6; CTX.shadowColor = '#38bdf8';
+        CTX.beginPath(); CTX.moveTo(-r * 0.55, 0); CTX.lineTo(r * 0.30, 0); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(-r * 0.10, 0); CTX.lineTo(-r * 0.10, -r * 0.30); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // Robotic red eye (replaces the plain eye)
+        CTX.fillStyle = '#ef4444';
+        CTX.shadowBlur = 10; CTX.shadowColor = '#dc2626';
+        CTX.beginPath(); CTX.arc(r * 0.52, -r * 0.28, 3.5, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 0;
+        CTX.beginPath(); CTX.arc(r * 0.56, -r * 0.32, 1.2, 0, Math.PI * 2); CTX.fill();
 
         // Angry brow
         CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5; CTX.lineCap = 'round';

@@ -147,21 +147,21 @@ class BossDog extends Entity {
             CTX.shadowBlur = 0;
         }
 
-        // ── Main bean body — wide horizontal metallic dark ────────────
+        // ── Main bean body — Sleek White Sci-Fi Chassis ───────────────
         // Horizontal bean: wider X than Y
         CTX.save(); CTX.scale(1.5, 0.90);
         const bodyG = CTX.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#374151');
-        bodyG.addColorStop(0.55, '#1f2937');
-        bodyG.addColorStop(1, '#111827');
+        bodyG.addColorStop(0, '#ffffff');
+        bodyG.addColorStop(0.55, '#e2e8f0');
+        bodyG.addColorStop(1, '#94a3b8');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
+        CTX.strokeStyle = '#475569'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
         CTX.restore(); // end wide scale
 
         // Metallic specular stripe
-        CTX.fillStyle = 'rgba(255,255,255,0.08)';
+        CTX.fillStyle = 'rgba(255,255,255,0.70)';
         CTX.beginPath(); CTX.ellipse(-R * 0.1, -R * 0.25, R * 0.55, R * 0.20, 0, 0, Math.PI * 2); CTX.fill();
 
         // ── Spiked collar — ring of sharp triangles around neck area ──
@@ -759,25 +759,25 @@ class Boss extends Entity {
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        // ── Bean body — tall dark-grey gradient (slightly taller) ─────
+        // ── Bean body — White Headmaster Suit base ───────────────────
         CTX.save(); CTX.scale(0.92, 1.12); // tall bean
         const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#374151');
-        bodyG.addColorStop(0.55, '#1f2937');
-        bodyG.addColorStop(1, '#111827');
+        bodyG.addColorStop(0, '#ffffff');
+        bodyG.addColorStop(0.55, '#f1f5f9');
+        bodyG.addColorStop(1, '#cbd5e1');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
+        CTX.strokeStyle = '#64748b'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
         CTX.restore(); // end tall scale
 
         // Specular highlight
-        CTX.fillStyle = 'rgba(255,255,255,0.09)';
+        CTX.fillStyle = 'rgba(255,255,255,0.60)';
         CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.32, R * 0.28, 0, Math.PI * 2); CTX.fill();
 
-        // ── Suit jacket (dark navy vest panels) ──────────────────────
+        // ── Suit jacket (white lapel panels) ──────────────────────────
         // Left lapel
-        CTX.fillStyle = '#1e2d40';
+        CTX.fillStyle = '#f8fafc';
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.48);
         CTX.lineTo(-R * 0.55, -R * 0.15);
@@ -792,8 +792,8 @@ class Boss extends Entity {
         CTX.lineTo(R * 0.05, R * 0.52);
         CTX.closePath(); CTX.fill();
 
-        // Jacket sticker outlines
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
+        // Jacket outlines (crisp grey seams)
+        CTX.strokeStyle = '#94a3b8'; CTX.lineWidth = 1.5;
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.48); CTX.lineTo(-R * 0.55, -R * 0.15); CTX.lineTo(-R * 0.52, R * 0.50);
         CTX.stroke();
@@ -801,10 +801,10 @@ class Boss extends Entity {
         CTX.moveTo(R * 0.08, -R * 0.48); CTX.lineTo(R * 0.55, -R * 0.15); CTX.lineTo(R * 0.52, R * 0.50);
         CTX.stroke();
 
-        // Suit buttons — 3 small dark dots down centre seam
-        CTX.fillStyle = '#111827';
+        // Suit buttons — gold/brass to contrast white suit
+        CTX.fillStyle = '#facc15';
         for (let bi = 0; bi < 3; bi++) {
-            CTX.beginPath(); CTX.arc(0, -R * 0.1 + bi * R * 0.25, 2, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(0, -R * 0.1 + bi * R * 0.25, 2.5, 0, Math.PI * 2); CTX.fill();
         }
 
         // ── Red necktie — diamond/wedge down the centre chest ────────
@@ -1635,22 +1635,22 @@ class BossFirst extends Entity {
         CTX.beginPath(); CTX.arc(0, 0, R + 4, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        // ── LAYER 6 — Bean body ─────────────────────────────────────────
+        // ── LAYER 6 — Bean body (Dark indigo undershirt) ─────────────
         CTX.save(); CTX.scale(0.90, 1.10);
-        const bodyDark = this.isEnraged ? '#2d0a0a' : '#0a1a08';
-        const bodyMid = this.isEnraged ? '#3f0e0e' : '#0f2d0c';
+        const bodyDark = this.isEnraged ? '#3b0764' : '#1e1b4b';
+        const bodyMid = this.isEnraged ? '#4c0519' : '#312e81';
         const bodyG = CTX.createRadialGradient(-R * 0.22, -R * 0.25, 1, 0, 0, R);
         bodyG.addColorStop(0, bodyDark);
         bodyG.addColorStop(0.5, bodyMid);
-        bodyG.addColorStop(1, '#050c04');
+        bodyG.addColorStop(1, '#0f0a1e');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#0a1a08'; CTX.lineWidth = 3.2;
+        CTX.strokeStyle = '#020617'; CTX.lineWidth = 3.2;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
         CTX.restore();
 
-        // ── LAYER 7 — Khaki uniform + dark-grey tech vest ──────────────
-        CTX.fillStyle = '#d4b886';
+        // ── LAYER 7 — White Physics Lab Coat ────────────────────────
+        CTX.fillStyle = '#ffffff';
         CTX.beginPath();
         CTX.moveTo(-R * 0.85, -R * 0.42);
         CTX.quadraticCurveTo(-R * 1.0, -R * 0.12, -R * 0.88, R * 0.18);
@@ -1661,8 +1661,8 @@ class BossFirst extends Entity {
         CTX.quadraticCurveTo(R * 1.0, -R * 0.12, R * 0.88, R * 0.18);
         CTX.lineTo(R * 0.62, R * 0.22); CTX.lineTo(R * 0.58, -R * 0.46);
         CTX.closePath(); CTX.fill();
-        // Tech vest panels
-        CTX.fillStyle = '#1c2533';
+        // Lab coat front panels
+        CTX.fillStyle = '#f8fafc';
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.52); CTX.lineTo(-R * 0.58, -R * 0.18);
         CTX.lineTo(-R * 0.55, R * 0.52); CTX.lineTo(-R * 0.06, R * 0.54);
@@ -1671,32 +1671,34 @@ class BossFirst extends Entity {
         CTX.moveTo(R * 0.08, -R * 0.52); CTX.lineTo(R * 0.58, -R * 0.18);
         CTX.lineTo(R * 0.55, R * 0.52); CTX.lineTo(R * 0.06, R * 0.54);
         CTX.closePath(); CTX.fill();
-        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.6;
+        // Lab coat seam outlines
+        CTX.strokeStyle = '#cbd5e1'; CTX.lineWidth = 1.6;
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.52); CTX.lineTo(-R * 0.58, -R * 0.18); CTX.lineTo(-R * 0.55, R * 0.52);
         CTX.stroke();
         CTX.beginPath();
         CTX.moveTo(R * 0.08, -R * 0.52); CTX.lineTo(R * 0.58, -R * 0.18); CTX.lineTo(R * 0.55, R * 0.52);
         CTX.stroke();
-        // Chest stripe
-        const stripeCol = this.isEnraged ? '#ef4444' : '#39ff14';
+        // Accent stripe (cyan = normal, red = enraged)
+        const stripeCol = this.isEnraged ? '#ef4444' : '#38bdf8';
         CTX.shadowBlur = 7; CTX.shadowColor = stripeCol; CTX.fillStyle = stripeCol;
         CTX.beginPath();
         CTX.moveTo(-R * 0.44, -R * 0.56); CTX.lineTo(-R * 0.10, -R * 0.56);
         CTX.lineTo(R * 0.44, R * 0.56); CTX.lineTo(R * 0.10, R * 0.56);
         CTX.closePath(); CTX.fill();
         CTX.shadowBlur = 0;
-        // Pocket
-        CTX.fillStyle = '#263348';
+        // ID badge pocket
+        CTX.fillStyle = '#dbeafe';
         CTX.beginPath(); CTX.roundRect(-R * 0.50, R * 0.06, R * 0.30, R * 0.26, 3); CTX.fill();
-        CTX.strokeStyle = '#39ff1444'; CTX.lineWidth = 1.2;
+        CTX.strokeStyle = '#38bdf844'; CTX.lineWidth = 1.2;
         CTX.beginPath(); CTX.roundRect(-R * 0.50, R * 0.06, R * 0.30, R * 0.26, 3); CTX.stroke();
-        CTX.strokeStyle = '#334155'; CTX.lineWidth = 1.2;
+        CTX.strokeStyle = '#94a3b8'; CTX.lineWidth = 1.2;
         CTX.beginPath(); CTX.moveTo(-R * 0.50, R * 0.14); CTX.lineTo(-R * 0.20, R * 0.14); CTX.stroke();
         // Belt
-        CTX.fillStyle = '#111827'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.5;
+        CTX.fillStyle = '#1e293b'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.ellipse(0, R * 0.52, R * 0.72, R * 0.12, 0, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        CTX.fillStyle = '#39ff1488'; CTX.shadowBlur = 5; CTX.shadowColor = '#39ff14';
+        const beltGlowCol = this.isEnraged ? '#ef4444' : '#38bdf8';
+        CTX.fillStyle = beltGlowCol + '88'; CTX.shadowBlur = 5; CTX.shadowColor = beltGlowCol;
         CTX.beginPath(); CTX.roundRect(-R * 0.10, R * 0.44, R * 0.20, R * 0.16, 2); CTX.fill();
         CTX.shadowBlur = 0;
 
