@@ -449,6 +449,11 @@ function updateGame(dt) {
     mapSystem.update([window.player, ...window.enemies, window.boss].filter(e => e && !e.dead), dt);
     particleSystem.update(dt);
     floatingTextSystem.update(dt);
+    
+    // Orbital effects for Auto & Kao
+    if (typeof updateOrbitalEffects !== 'undefined') {
+        updateOrbitalEffects(dt, [window.player]);
+    }
 
     if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.update(dt);
 
@@ -582,6 +587,11 @@ function drawGame() {
     projectileManager.draw();
     particleSystem.draw();
     floatingTextSystem.draw();
+    
+    // Orbital effects for Auto & Kao
+    if (typeof drawOrbitalEffects !== 'undefined') {
+        drawOrbitalEffects();
+    }
 
     if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.draw();
 

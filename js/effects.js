@@ -1405,6 +1405,149 @@ function spawnWanchaiPunchText(x, y) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Orbital Particle System — Auto & Kao intensity-linked effects
+// ──────────────────────────────────────────────────────────────────────────────
+class OrbitalParticle {
+    constructor(x, y, orbitRadius, angle, speed, size, color, lifetime) {
+        this.centerX = x;
+        this.centerY = y;
+        this.orbitRadius = orbitRadius;
+        this.angle = angle;
+        this.speed = speed;
+        this.size = size;
+        this.color = color;
+        this.life = lifetime;
+        this.maxLife = lifetime;
+        this.wobble = Math.random() * Math.PI * 2;
+    }
+
+    update(dt, targetX, targetY, intensity) {
+        // Follow target position
+        this.centerX = targetX;
+        this.centerY = targetY;
+        
+        // Orbit with wobble
+        this.angle += this.speed * dt * (1 + intensity * 0.5);
+        this.wobble += dt * 3;
+        
+        // Decay
+        this.life -= dt;
+        return this.life <= 0;
+    }
+
+    draw() {
+        const wobbleOffset = Math.sin(this.wobble) * 3;
+        const x = this.centerX + Math.cos(this.angle) * (this.orbitRadius + wobbleOffset);
+        const y = this.centerY + Math.sin(this.angle) * (this.orbitRadius + wobbleOffset);
+        const screen = worldToScreen(x, y);
+        
+        const alpha = this.life / this.maxLife;
+        CTX.globalAlpha = alpha;
+        CTX.fillStyle = this.color;
+        CTX.shadowBlur = 8;
+        CTX.shadowColor = this.color;
+        
+        CTX.beginPath();
+        CTX.arc(screen.x, screen.y, this.size, 0, Math.PI * 2);
+        CTX.fill();
+        
+        CTX.shadowBlur = 0;
+        CTX.globalAlpha = 1;
+    }
+}
+
+class OrbitalParticleSystem {
+    constructor(maxParticles = 12) {
+        this.particles = [];
+        this.maxParticles = maxParticles;
+        this.spawnTimer = 0;
+        this.intensity = 0;
+    }
+
+    update(dt, playerX, playerY, speed, isWanchaiActive, isWeaponMaster) {
+        // Calculate intensity based on player state
+        this.intensity = Math.min(1, speed / 200 + (isWanchaiActive ? 0.4 : 0) + (isWeaponMaster ? 0.3 : 0));
+        
+        // Update existing particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            if (this.particles[i].update(dt, playerX, playerY, this.intensity)) {
+                this.particles.splice(i, 1);
+            }
+        }
+        
+        // Spawn new particles based on intensity
+        this.spawnTimer -= dt;
+        const spawnRate = 0.15 - this.intensity * 0.12; // Faster spawn at high intensity
+        if (this.spawnTimer <= 0 && this.particles.length < this.maxParticles) {
+            this.spawnTimer = spawnRate;
+            this.spawnParticle(playerX, playerY);
+        }
+    }
+
+    spawnParticle(x, y) {
+        const angle = Math.random() * Math.PI * 2;
+        const orbitRadius = 25 + Math.random() * 15;
+        const speed = 1.5 + Math.random() * 1.5;
+        const size = 1.5 + Math.random() * 2;
+        const lifetime = 2 + Math.random() * 2;
+        
+        // Color based on intensity
+        let color;
+        if (this.intensity > 0.6) {
+            color = '#f97316'; // Orange for high intensity
+        } else if (this.intensity > 0.3) {
+            color = '#fbbf24'; // Yellow for medium
+        } else {
+            color = '#60a5fa'; // Blue for low
+        }
+        
+        this.particles.push(new OrbitalParticle(x, y, orbitRadius, angle, speed, size, color, lifetime));
+    }
+
+    draw() {
+        for (const particle of this.particles) {
+            particle.draw();
+        }
+    }
+
+    clear() {
+        this.particles = [];
+    }
+}
+
+// Global orbital particle systems for Auto and Kao
+let autoOrbitalSystem = null;
+let kaoOrbitalSystem = null;
+
+function initOrbitalSystems() {
+    autoOrbitalSystem = new OrbitalParticleSystem(10);
+    kaoOrbitalSystem = new OrbitalParticleSystem(8);
+}
+
+function updateOrbitalEffects(dt, players) {
+    if (!autoOrbitalSystem) initOrbitalSystems();
+    
+    players.forEach(player => {
+        let system = null;
+        if (player.constructor.name === 'AutoPlayer') {
+            system = autoOrbitalSystem;
+        } else if (player.constructor.name === 'KaoPlayer') {
+            system = kaoOrbitalSystem;
+        }
+        
+        if (system) {
+            const speed = Math.hypot(player.vx, player.vy);
+            system.update(dt, player.x, player.y, speed, player.wanchaiActive, player.isWeaponMaster);
+        }
+    });
+}
+
+function drawOrbitalEffects() {
+    if (autoOrbitalSystem) autoOrbitalSystem.draw();
+    if (kaoOrbitalSystem) kaoOrbitalSystem.draw();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Export
 // ──────────────────────────────────────────────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
@@ -1418,5 +1561,7 @@ if (typeof module !== 'undefined' && module.exports) {
         spawnParticles, spawnFloatingText,
         spawnWanchaiPunchText,
         drawGlitchEffect,
+        OrbitalParticle, OrbitalParticleSystem,
+        initOrbitalSystems, updateOrbitalEffects, drawOrbitalEffects,
     };
 }
