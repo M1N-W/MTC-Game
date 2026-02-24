@@ -282,18 +282,23 @@ class KaoPlayer extends Player {
     shoot(dt) {
         if (typeof weaponSystem === 'undefined') return;
 
-        const wepKey = weaponSystem.currentWeapon || 'auto';
-        const weps = BALANCE.characters.kao.weapons;
-        const wep = weps[wepKey];
+        // 🛡️ FIX: Use currentWeaponIndex to pull the correct weapon from the object values.
+        //         weaponSystem.currentWeapon stores a numeric index, NOT a string key,
+        //         so weps[stringKey] was always undefined → baseCd fell back to 0.25 for
+        //         every weapon → machine-gun fire rate on Sniper and Shotgun.
+        const wepIndex = weaponSystem.currentWeaponIndex || 0;
+        const weps = Object.values(BALANCE.characters.kao.weapons);
+        const wep = weps[wepIndex];
         if (!wep) return;
 
         const isClick = window.mouse.left === 1;
 
-        // 🛡️ FIX: Hard fallback to prevent NaN machine-gun glitch
+        // 🛡️ FIX: Fallback now only activates if the config entry is genuinely missing,
+        //         not on every shot because of the bad key lookup above.
         const baseCd = wep.cooldown || 0.25;
 
         // ── Weapon Master Sniper: hold-to-charge mode (Gated) ─────────────────
-        if (this.passiveUnlocked && this.isWeaponMaster && (wep.name === 'SNIPER' || wepKey === 'sniper')) {
+        if (this.passiveUnlocked && this.isWeaponMaster && wep.name === 'SNIPER') {
             if (isClick && this.shootCooldown <= 0) {
                 // Accumulate charge time; emit charge particles
                 this.sniperChargeTime += dt;
