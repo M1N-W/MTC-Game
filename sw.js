@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v2.7.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.7.0 Balance Patch "The Great Rebalancing" — Character rebalance (Kao/Auto/Poom), enemy scaling nerf, boss HP scaling, shop economy buff, score rates increased
+const CACHE_NAME = 'mtc-cache-v2.7.1'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v2.7.1 Critical Bug Fixes — Fixed enemy/boss HP scaling formulas to use config values, nerfed Kao Weapon Master (Shotgun 1.5x, Sniper charge 2.5x max, Clone 60% dmg)
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

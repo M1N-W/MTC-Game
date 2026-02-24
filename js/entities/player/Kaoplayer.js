@@ -371,13 +371,15 @@ class KaoPlayer extends Player {
             } else if (wep.name === 'SNIPER') {
                 critChance += 0.25;
                 if (isChargedSniper) {
-                    const chargeMult = 1 + Math.min(3, this.sniperChargeTime * 2);
+                    // NERF: Max charge 2.5× instead of 4× (was too strong)
+                    const chargeMult = 1 + Math.min(1.5, this.sniperChargeTime * 2);
                     baseDmg *= chargeMult;
                     if (!isAmbush) color = '#ef4444';
                     pellets = 1;
                 }
             } else if (wep.name === 'SHOTGUN') {
-                pellets = (wep.pellets || 1) * 2;
+                // NERF: 1.5× pellets instead of 2× (4 → 6 instead of 8)
+                pellets = Math.floor((wep.pellets || 1) * 1.5);
             }
         }
 
@@ -428,8 +430,9 @@ class KaoPlayer extends Player {
             projectileManager.add(p);
         }
 
-        // Pass wepKey so clones also get barrel offset + ricochet
-        this.clones.forEach(c => c.shoot(wep, finalDamage, color, pellets, spread, wepKey, isCrit));
+        // NERF: Clones deal 60% damage to prevent excessive DPS
+        const cloneDamage = finalDamage * 0.6;
+        this.clones.forEach(c => c.shoot(wep, cloneDamage, color, pellets, spread, wepKey, isCrit));
 
         // FIX: pass wepKey so Audio plays the correct weapon sound
         if (typeof Audio !== 'undefined' && Audio.playShoot) Audio.playShoot(wepKey);

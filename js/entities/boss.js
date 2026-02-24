@@ -335,7 +335,10 @@ class Boss extends Entity {
      */
     constructor(difficulty = 1, enablePhase2 = false, enablePhase3 = false) {
         super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
-        this.maxHp = BALANCE.boss.baseHp * difficulty;
+        // Boss HP scales per encounter using hpMultiplier from config
+        // Encounter 1: baseHp × 1, Encounter 2: baseHp × 1.25, Encounter 3: baseHp × 1.5625
+        const encounterMult = Math.pow(BALANCE.boss.hpMultiplier, difficulty - 1);
+        this.maxHp = Math.floor(BALANCE.boss.baseHp * encounterMult);
         this.hp = this.maxHp;
         this.name = 'KRU MANOP';
         this.state = 'CHASE';
