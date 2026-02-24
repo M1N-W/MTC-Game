@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.0.1'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.0.1 Restore & Enhance Auto+Kao + Add Orbital Effects
+const CACHE_NAME = 'mtc-cache-v3.1.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.1.0 Phase 2: Faculty Update — white theme for Boss, BossFirst, BossDog, GoldfishMinion
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
