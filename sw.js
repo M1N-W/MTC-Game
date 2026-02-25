@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.2.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.2.0 Godot Migration Ready — Visual constants centralized + GODOT_EXPORT.md
+const CACHE_NAME = 'mtc-cache-v3.2.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.2.0 Boss Visual Enhancement — dark theme restored + phase-based auras + enhanced jetpack flames
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
