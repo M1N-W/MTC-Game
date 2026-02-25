@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.3.2'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.2 Fixed kills display bug on game over screen
+const CACHE_NAME = 'mtc-cache-v3.3.3'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.3 Fixed kills display - added kills param to showGameOver()
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

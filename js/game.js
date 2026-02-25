@@ -905,10 +905,10 @@ async function endGame(result) {
     } else {
         const finalScore = getScore();
         const finalWave = getWave();
+        const finalKills = Achievements.stats.kills || 0;
 
         showElement('overlay');
-        UIManager.showGameOver(finalScore, finalWave);
-        setElementText('report-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
+        UIManager.showGameOver(finalScore, finalWave, finalKills);
 
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';

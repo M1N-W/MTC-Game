@@ -756,7 +756,7 @@ class UIManager {
         }
     }
 
-    static showGameOver(score, wave) {
+    static showGameOver(score, wave, kills) {
         const titleEl = document.querySelector('.title');
         if (titleEl) {
             titleEl.innerHTML =
@@ -766,6 +766,8 @@ class UIManager {
         if (reportScoreEl) reportScoreEl.textContent = score.toLocaleString();
         const reportWaveEl = document.getElementById('report-wave');
         if (reportWaveEl) reportWaveEl.textContent = wave;
+        const reportKillsEl = document.getElementById('report-kills');
+        if (reportKillsEl) reportKillsEl.textContent = (kills || 0).toLocaleString();
         const reportText = document.getElementById('report-text');
         if (reportText) reportText.textContent = 'Loading...';
         const rc = document.getElementById('report-card');
