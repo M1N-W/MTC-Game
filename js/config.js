@@ -37,27 +37,27 @@ const BALANCE = {
             hp: 120, maxHp: 120,
             energy: 100, maxEnergy: 100,
             energyRegen: 15,
-            moveSpeed: 325,
+            moveSpeed: 300,
             dashSpeed: 550,
             dashDistance: 180,
             weapons: {
                 auto: {
                     name: 'AUTO RIFLE',
-                    damage: 25, cooldown: 0.2,
+                    damage: 23, cooldown: 0.2,
                     range: 900, speed: 900,
                     spread: 0, pellets: 1,
                     color: '#3b82f6', icon: '🔵'
                 },
                 sniper: {
                     name: 'SNIPER',
-                    damage: 105, cooldown: 0.85,
+                    damage: 96, cooldown: 0.85,
                     range: 1200, speed: 1200,
                     spread: 0, pellets: 1,
                     color: '#ef4444', icon: '🔴'
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 65, cooldown: 0.6,
+                    damage: 60, cooldown: 0.6,
                     range: 400, speed: 700,
                     spread: 0.4, pellets: 3,
                     color: '#f59e0b', icon: '🟠'
@@ -95,7 +95,7 @@ const BALANCE = {
             hp: 200, maxHp: 200,
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
-            moveSpeed: 180,
+            moveSpeed: 220,
             dashSpeed: 480,
             dashDistance: 160,
             dashCooldown: 1.8,
@@ -125,7 +125,7 @@ const BALANCE = {
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
             weapons: {
-                auto: { name: 'HEAT WAVE', damage: 42, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                auto: { name: 'HEAT WAVE', damage: 39, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
                 sniper: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
                 shotgun: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
             },
@@ -136,7 +136,7 @@ const BALANCE = {
         poom: {
             name: 'Poom',
             radius: 20,
-            hp: 135, maxHp: 135,
+            hp: 145, maxHp: 145,
             energy: 100, maxEnergy: 100,
             energyRegen: 12,
             moveSpeed: 300,
@@ -145,7 +145,7 @@ const BALANCE = {
             dashCooldown: 1.65,
             expToNextLevel: 100,
             expLevelMult: 1.5,
-            riceDamage: 58,
+            riceDamage: 63,
             riceCooldown: 0.42,
             riceSpeed: 600,
             riceRange: 750,
