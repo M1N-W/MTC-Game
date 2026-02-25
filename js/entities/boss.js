@@ -677,10 +677,56 @@ class Boss extends Entity {
             CTX.beginPath(); CTX.arc(0, 0, 72, 0, Math.PI * 2); CTX.stroke();
         }
 
-        // ── Phase 3 water aura (preserved) ───────────────────────────
-        if (this.phase === 3) {
-            const t3 = now / 600;
-            const auraR = 80 + Math.sin(t3 * 2.5) * 10;
+        // ── Enhanced Power Aura (Phase-based) ────────────────────────
+        const t3 = now / 600;
+        const auraR = 80 + Math.sin(t3 * 2.5) * 10;
+        
+        if (this.phase === 1) {
+            // Phase 1: Golden mathematical aura
+            CTX.shadowBlur = 0;
+            const grad1 = CTX.createRadialGradient(0, 0, auraR * 0.4, 0, 0, auraR);
+            grad1.addColorStop(0, 'rgba(251,191,36,0.0)');
+            grad1.addColorStop(0.7, 'rgba(251,191,36,0.15)');
+            grad1.addColorStop(1, 'rgba(251,191,36,0.35)');
+            CTX.fillStyle = grad1;
+            CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.fill();
+            CTX.strokeStyle = `rgba(252,211,77,${0.45 + Math.sin(t3 * 3) * 0.25})`;
+            CTX.lineWidth = 2.5; CTX.shadowBlur = 18; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+            for (let i = 0; i < 4; i++) {
+                const bA = t3 * 1.5 + i * (Math.PI * 2 / 4);
+                CTX.fillStyle = `rgba(254,240,138,${0.35 + Math.sin(t3 + i) * 0.25})`;
+                CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
+                CTX.beginPath(); CTX.arc(Math.cos(bA) * (auraR - 8), Math.sin(bA) * (auraR - 8), 4 + Math.sin(t3 * 2 + i) * 1.5, 0, Math.PI * 2); CTX.fill();
+            }
+            CTX.shadowBlur = 0;
+        } else if (this.phase === 2) {
+            // Phase 2: Red enraged aura with energy crackling
+            CTX.shadowBlur = 0;
+            const grad2 = CTX.createRadialGradient(0, 0, auraR * 0.4, 0, 0, auraR);
+            grad2.addColorStop(0, 'rgba(239,68,68,0.0)');
+            grad2.addColorStop(0.7, 'rgba(239,68,68,0.20)');
+            grad2.addColorStop(1, 'rgba(239,68,68,0.50)');
+            CTX.fillStyle = grad2;
+            CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.fill();
+            CTX.strokeStyle = `rgba(248,113,113,${0.55 + Math.sin(t3 * 4) * 0.35})`;
+            CTX.lineWidth = 3; CTX.shadowBlur = 22; CTX.shadowColor = '#ef4444';
+            CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.stroke();
+            // Inner pulsing ring
+            CTX.strokeStyle = `rgba(220,38,38,${0.40 + Math.sin(t3 * 5) * 0.30})`;
+            CTX.lineWidth = 2;
+            CTX.beginPath(); CTX.arc(0, 0, auraR * 0.70, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+            for (let i = 0; i < 6; i++) {
+                const bA = t3 * 2.2 + i * (Math.PI * 2 / 6);
+                CTX.fillStyle = `rgba(252,165,165,${0.40 + Math.sin(t3 * 1.5 + i) * 0.30})`;
+                CTX.shadowBlur = 10; CTX.shadowColor = '#ef4444';
+                CTX.beginPath(); CTX.arc(Math.cos(bA) * (auraR - 6), Math.sin(bA) * (auraR - 6), 5 + Math.sin(t3 * 3 + i) * 2, 0, Math.PI * 2); CTX.fill();
+            }
+            CTX.shadowBlur = 0;
+        } else if (this.phase === 3) {
+            // Phase 3: Cyan water aura
             CTX.shadowBlur = 0;
             const grad3 = CTX.createRadialGradient(0, 0, auraR * 0.4, 0, 0, auraR);
             grad3.addColorStop(0, 'rgba(56,189,248,0.0)');
@@ -759,25 +805,25 @@ class Boss extends Entity {
         CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        // ── Bean body — White Headmaster Suit base ───────────────────
+        // ── Bean body — tall dark-grey gradient (slightly taller) ─────
         CTX.save(); CTX.scale(0.92, 1.12); // tall bean
         const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#ffffff');
-        bodyG.addColorStop(0.55, '#f1f5f9');
-        bodyG.addColorStop(1, '#cbd5e1');
+        bodyG.addColorStop(0, '#374151');
+        bodyG.addColorStop(0.55, '#1f2937');
+        bodyG.addColorStop(1, '#111827');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#64748b'; CTX.lineWidth = 3;
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
         CTX.restore(); // end tall scale
 
         // Specular highlight
-        CTX.fillStyle = 'rgba(255,255,255,0.60)';
+        CTX.fillStyle = 'rgba(255,255,255,0.09)';
         CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.32, R * 0.28, 0, Math.PI * 2); CTX.fill();
 
-        // ── Suit jacket (white lapel panels) ──────────────────────────
+        // ── Suit jacket (dark navy vest panels) ──────────────────────
         // Left lapel
-        CTX.fillStyle = '#f8fafc';
+        CTX.fillStyle = '#1e2d40';
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.48);
         CTX.lineTo(-R * 0.55, -R * 0.15);
@@ -792,8 +838,8 @@ class Boss extends Entity {
         CTX.lineTo(R * 0.05, R * 0.52);
         CTX.closePath(); CTX.fill();
 
-        // Jacket outlines (crisp grey seams)
-        CTX.strokeStyle = '#94a3b8'; CTX.lineWidth = 1.5;
+        // Jacket sticker outlines
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.48); CTX.lineTo(-R * 0.55, -R * 0.15); CTX.lineTo(-R * 0.52, R * 0.50);
         CTX.stroke();
@@ -801,10 +847,10 @@ class Boss extends Entity {
         CTX.moveTo(R * 0.08, -R * 0.48); CTX.lineTo(R * 0.55, -R * 0.15); CTX.lineTo(R * 0.52, R * 0.50);
         CTX.stroke();
 
-        // Suit buttons — gold/brass to contrast white suit
-        CTX.fillStyle = '#facc15';
+        // Suit buttons — 3 small dark dots down centre seam
+        CTX.fillStyle = '#111827';
         for (let bi = 0; bi < 3; bi++) {
-            CTX.beginPath(); CTX.arc(0, -R * 0.1 + bi * R * 0.25, 2.5, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(0, -R * 0.1 + bi * R * 0.25, 2, 0, Math.PI * 2); CTX.fill();
         }
 
         // ── Red necktie — diamond/wedge down the centre chest ────────
@@ -1586,26 +1632,29 @@ class BossFirst extends Entity {
             CTX.strokeStyle = 'rgba(0,255,255,0.7)'; CTX.lineWidth = 2;
             CTX.beginPath(); CTX.ellipse(nx, ny + 2, nW * 0.55, nW * 0.22, 0, 0, Math.PI * 2); CTX.stroke();
             CTX.shadowBlur = 0;
-            // Outer flame
-            const flameLen = R * (0.55 + Math.sin(t * 8.5 + ni * 2.1) * 0.22 + Math.random() * 0.10);
-            const flameW = nW * (0.55 + Math.sin(t * 11.2 + ni * 1.7) * 0.18);
-            const fJitter = (Math.random() - 0.5) * 4;
+            // Outer flame — ENHANCED intensity
+            const flameBoost = this.isEnraged ? 1.5 : 1.0;
+            const flameLen = R * (0.70 + Math.sin(t * 8.5 + ni * 2.1) * 0.30 + Math.random() * 0.18) * flameBoost;
+            const flameW = nW * (0.70 + Math.sin(t * 11.2 + ni * 1.7) * 0.25) * flameBoost;
+            const fJitter = (Math.random() - 0.5) * 7;
             CTX.save();
-            CTX.shadowBlur = 22; CTX.shadowColor = '#3b82f6';
-            CTX.globalAlpha = 0.55 + Math.sin(t * 7.1 + ni) * 0.28;
-            CTX.fillStyle = '#3b82f6';
+            CTX.shadowBlur = this.isEnraged ? 35 : 28; 
+            CTX.shadowColor = this.isEnraged ? '#ef4444' : '#3b82f6';
+            CTX.globalAlpha = 0.70 + Math.sin(t * 7.1 + ni) * 0.25;
+            CTX.fillStyle = this.isEnraged ? '#ef4444' : '#3b82f6';
             CTX.beginPath();
-            CTX.moveTo(nx - flameW * 1.1, ny + nH);
-            CTX.quadraticCurveTo(nx + fJitter * 0.5, ny + nH + flameLen * 0.55, nx, ny + nH + flameLen * 1.5);
-            CTX.quadraticCurveTo(nx + fJitter * 0.3, ny + nH + flameLen * 0.55, nx + flameW * 1.1, ny + nH);
+            CTX.moveTo(nx - flameW * 1.3, ny + nH);
+            CTX.quadraticCurveTo(nx + fJitter * 0.5, ny + nH + flameLen * 0.55, nx, ny + nH + flameLen * 1.7);
+            CTX.quadraticCurveTo(nx + fJitter * 0.3, ny + nH + flameLen * 0.55, nx + flameW * 1.3, ny + nH);
             CTX.closePath(); CTX.fill();
             CTX.restore();
-            // Cyan mid flame
+            // Cyan mid flame — ENHANCED
             CTX.save();
-            const cLen = flameLen * 0.82, cW = flameW * 0.72;
-            CTX.shadowBlur = 18; CTX.shadowColor = '#00ffff';
-            CTX.globalAlpha = 0.7 + Math.sin(t * 9.3 + ni * 1.3) * 0.22;
-            CTX.fillStyle = '#00e5ff';
+            const cLen = flameLen * 0.85, cW = flameW * 0.75;
+            CTX.shadowBlur = this.isEnraged ? 24 : 20; 
+            CTX.shadowColor = this.isEnraged ? '#fb923c' : '#00ffff';
+            CTX.globalAlpha = 0.75 + Math.sin(t * 9.3 + ni * 1.3) * 0.20;
+            CTX.fillStyle = this.isEnraged ? '#fb923c' : '#00e5ff';
             CTX.beginPath();
             CTX.moveTo(nx - cW, ny + nH);
             CTX.quadraticCurveTo(nx, ny + nH + cLen * 0.5, nx, ny + nH + cLen * 1.25);
@@ -1635,22 +1684,22 @@ class BossFirst extends Entity {
         CTX.beginPath(); CTX.arc(0, 0, R + 4, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
 
-        // ── LAYER 6 — Bean body (Dark indigo undershirt) ─────────────
+        // ── LAYER 6 — Bean body ─────────────────────────────────────────
         CTX.save(); CTX.scale(0.90, 1.10);
-        const bodyDark = this.isEnraged ? '#3b0764' : '#1e1b4b';
-        const bodyMid = this.isEnraged ? '#4c0519' : '#312e81';
+        const bodyDark = this.isEnraged ? '#2d0a0a' : '#0a1a08';
+        const bodyMid = this.isEnraged ? '#3f0e0e' : '#0f2d0c';
         const bodyG = CTX.createRadialGradient(-R * 0.22, -R * 0.25, 1, 0, 0, R);
         bodyG.addColorStop(0, bodyDark);
         bodyG.addColorStop(0.5, bodyMid);
-        bodyG.addColorStop(1, '#0f0a1e');
+        bodyG.addColorStop(1, '#050c04');
         CTX.fillStyle = bodyG;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#020617'; CTX.lineWidth = 3.2;
+        CTX.strokeStyle = '#0a1a08'; CTX.lineWidth = 3.2;
         CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
         CTX.restore();
 
-        // ── LAYER 7 — White Physics Lab Coat ────────────────────────
-        CTX.fillStyle = '#ffffff';
+        // ── LAYER 7 — Khaki uniform + dark-grey tech vest ──────────────
+        CTX.fillStyle = '#d4b886';
         CTX.beginPath();
         CTX.moveTo(-R * 0.85, -R * 0.42);
         CTX.quadraticCurveTo(-R * 1.0, -R * 0.12, -R * 0.88, R * 0.18);
@@ -1661,8 +1710,8 @@ class BossFirst extends Entity {
         CTX.quadraticCurveTo(R * 1.0, -R * 0.12, R * 0.88, R * 0.18);
         CTX.lineTo(R * 0.62, R * 0.22); CTX.lineTo(R * 0.58, -R * 0.46);
         CTX.closePath(); CTX.fill();
-        // Lab coat front panels
-        CTX.fillStyle = '#f8fafc';
+        // Tech vest panels
+        CTX.fillStyle = '#1c2533';
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.52); CTX.lineTo(-R * 0.58, -R * 0.18);
         CTX.lineTo(-R * 0.55, R * 0.52); CTX.lineTo(-R * 0.06, R * 0.54);
@@ -1671,34 +1720,32 @@ class BossFirst extends Entity {
         CTX.moveTo(R * 0.08, -R * 0.52); CTX.lineTo(R * 0.58, -R * 0.18);
         CTX.lineTo(R * 0.55, R * 0.52); CTX.lineTo(R * 0.06, R * 0.54);
         CTX.closePath(); CTX.fill();
-        // Lab coat seam outlines
-        CTX.strokeStyle = '#cbd5e1'; CTX.lineWidth = 1.6;
+        CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.6;
         CTX.beginPath();
         CTX.moveTo(-R * 0.08, -R * 0.52); CTX.lineTo(-R * 0.58, -R * 0.18); CTX.lineTo(-R * 0.55, R * 0.52);
         CTX.stroke();
         CTX.beginPath();
         CTX.moveTo(R * 0.08, -R * 0.52); CTX.lineTo(R * 0.58, -R * 0.18); CTX.lineTo(R * 0.55, R * 0.52);
         CTX.stroke();
-        // Accent stripe (cyan = normal, red = enraged)
-        const stripeCol = this.isEnraged ? '#ef4444' : '#38bdf8';
-        CTX.shadowBlur = 7; CTX.shadowColor = stripeCol; CTX.fillStyle = stripeCol;
+        // Chest stripe — enhanced glow
+        const stripeCol = this.isEnraged ? '#ef4444' : '#39ff14';
+        CTX.shadowBlur = this.isEnraged ? 12 : 10; CTX.shadowColor = stripeCol; CTX.fillStyle = stripeCol;
         CTX.beginPath();
         CTX.moveTo(-R * 0.44, -R * 0.56); CTX.lineTo(-R * 0.10, -R * 0.56);
         CTX.lineTo(R * 0.44, R * 0.56); CTX.lineTo(R * 0.10, R * 0.56);
         CTX.closePath(); CTX.fill();
         CTX.shadowBlur = 0;
-        // ID badge pocket
-        CTX.fillStyle = '#dbeafe';
+        // Pocket
+        CTX.fillStyle = '#263348';
         CTX.beginPath(); CTX.roundRect(-R * 0.50, R * 0.06, R * 0.30, R * 0.26, 3); CTX.fill();
-        CTX.strokeStyle = '#38bdf844'; CTX.lineWidth = 1.2;
+        CTX.strokeStyle = '#39ff1444'; CTX.lineWidth = 1.2;
         CTX.beginPath(); CTX.roundRect(-R * 0.50, R * 0.06, R * 0.30, R * 0.26, 3); CTX.stroke();
-        CTX.strokeStyle = '#94a3b8'; CTX.lineWidth = 1.2;
+        CTX.strokeStyle = '#334155'; CTX.lineWidth = 1.2;
         CTX.beginPath(); CTX.moveTo(-R * 0.50, R * 0.14); CTX.lineTo(-R * 0.20, R * 0.14); CTX.stroke();
         // Belt
-        CTX.fillStyle = '#1e293b'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.5;
+        CTX.fillStyle = '#111827'; CTX.strokeStyle = '#0f172a'; CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.ellipse(0, R * 0.52, R * 0.72, R * 0.12, 0, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        const beltGlowCol = this.isEnraged ? '#ef4444' : '#38bdf8';
-        CTX.fillStyle = beltGlowCol + '88'; CTX.shadowBlur = 5; CTX.shadowColor = beltGlowCol;
+        CTX.fillStyle = '#39ff1488'; CTX.shadowBlur = 8; CTX.shadowColor = '#39ff14';
         CTX.beginPath(); CTX.roundRect(-R * 0.10, R * 0.44, R * 0.20, R * 0.16, 2); CTX.fill();
         CTX.shadowBlur = 0;
 
