@@ -92,7 +92,7 @@ const BALANCE = {
         auto: {
             name: 'Auto',
             radius: 20,
-            hp: 160, maxHp: 160,
+            hp: 200, maxHp: 200,
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
             moveSpeed: 180,
