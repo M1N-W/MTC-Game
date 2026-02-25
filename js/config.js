@@ -515,8 +515,8 @@ const GAME_TEXTS = {
         bossIncomingRider: 'BOSS INCOMING!🐕',
         bossIncomingFish: 'BOSS INCOMING!🐟',
         // ── BossFirst (Kru First) announce texts ──────────────
-        firstIncoming: '⚛️ KRU FIRST — PHYSICS BOSS INCOMING!',
-        firstAdvanced: '⚡ KRU FIRST — ADVANCED MODE!',
+        firstIncoming: '⚛️ KRU FIRST — BOSS INCOMING!',
+        firstAdvanced: '⚛️ KRU FIRST — ADVANCED MODE ⚡',
         firstTagline: 'F=ma · v=u+at · DODGE THIS!',
         firstTaglineAdvanced: 'F=ma · E=mc² · MAXIMUM POWER!',
         glitchWave: '⚡ GLITCH WAVE ⚡',

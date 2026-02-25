@@ -311,6 +311,9 @@ function startNextWave() {
             const encounter = window.bossEncounterCount;
             const bossLevel = Math.floor(wave / BALANCE.waves.bossEveryNWaves);
             const bossNameEl = document.getElementById('boss-name');
+            // ── คำนวณเลเวลเฉพาะตัวละครสำหรับโชว์บนหน้าจอ ──
+            const isFirst = (encounter === 2 || encounter === 4);
+            const displayLevel = isFirst ? Math.floor(encounter / 2) : Math.ceil(encounter / 2);
 
             if (encounter === 2 || encounter === 4) {
                 // ── KRU FIRST ────────────────────────────────────────
@@ -325,9 +328,9 @@ function startNextWave() {
                     bossNameEl.innerHTML =
                         `<span style="color:#39ff14;text-shadow:0 0 10px #16a34a">` +
                         `⚛️ KRU FIRST — PHYSICS MASTER` +
-                        `${isAdvanced ? ' ⚡ ADVANCED' : ''}` +
+                        `${isAdvanced ? ' ⚛️ ADVANCED' : ''}` +
                         `</span>` +
-                        ` <span style="font-size:0.78em;color:#86efac">LV ${bossLevel}</span>` +
+                        ` <span style="font-size:0.78em;color:#86efac">LV. ${displayLevel}</span>` +
                         ` <span class="ai-badge">AI</span>`;
                 }
 
@@ -360,10 +363,16 @@ function startNextWave() {
                 UIManager.updateBossHUD(window.boss);
 
                 if (bossNameEl) {
+                    // เลือกร่างสูงสุดเพียงร่างเดียว
+                    let phaseTitle = '';
+                    if (enablePhase3) {
+                        phaseTitle = ' 🐟 GOLDFISH LOVER';
+                    } else if (enablePhase2) {
+                        phaseTitle = ' 🐕 DOG RIDER';
+                    }
+
                     bossNameEl.innerHTML =
-                        `KRU MANOP — LV ${bossLevel}` +
-                        `${enablePhase2 ? ' 🐕 DOG RIDER' : ''}` +
-                        `${enablePhase3 ? ' 🐟 GOLDFISH LOVER' : ''}` +
+                        `KRU MANOP — LV. ${displayLevel}${phaseTitle}` +
                         ` <span class="ai-badge">AI</span>`;
                 }
 
