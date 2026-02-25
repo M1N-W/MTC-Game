@@ -43,7 +43,7 @@ const BALANCE = {
             weapons: {
                 auto: {
                     name: 'AUTO RIFLE',
-                    damage: 21, cooldown: 0.2,
+                    damage: 25, cooldown: 0.2,
                     range: 900, speed: 900,
                     spread: 0, pellets: 1,
                     color: '#3b82f6', icon: '🔵'
@@ -57,7 +57,7 @@ const BALANCE = {
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 70, cooldown: 0.6,
+                    damage: 65, cooldown: 0.6,
                     range: 400, speed: 700,
                     spread: 0.4, pellets: 3,
                     color: '#f59e0b', icon: '🟠'
@@ -125,7 +125,7 @@ const BALANCE = {
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
             weapons: {
-                auto: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
+                auto: { name: 'HEAT WAVE', damage: 42, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
                 sniper: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
                 shotgun: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
             },
