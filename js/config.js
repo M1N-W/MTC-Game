@@ -43,7 +43,7 @@ const BALANCE = {
             weapons: {
                 auto: {
                     name: 'AUTO RIFLE',
-                    damage: 21.5, cooldown: 0.195,
+                    damage: 21, cooldown: 0.2,
                     range: 900, speed: 900,
                     spread: 0, pellets: 1,
                     color: '#3b82f6', icon: '🔵'
@@ -57,9 +57,9 @@ const BALANCE = {
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 85, cooldown: 0.6,
+                    damage: 70, cooldown: 0.6,
                     range: 400, speed: 700,
-                    spread: 0.4, pellets: 4,
+                    spread: 0.4, pellets: 3,
                     color: '#f59e0b', icon: '🟠'
                 }
             },
@@ -155,7 +155,7 @@ const BALANCE = {
             eatRiceCooldown: 10,
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
-            eatRiceCritBonus: 0.25,
+            eatRiceCritBonus: 0.2,
             nagaCooldown: 18,
             nagaDuration: 10,
             nagaDamage: 85,
@@ -196,7 +196,7 @@ const BALANCE = {
         expValue: 10,
         chaseRange: 150,
         projectileSpeed: 500,
-        baseHp: 40, hpPerWave: 0.18,  // NERF: 0.25 → 0.18 (exponential growth was too fast)
+        baseHp: 40, hpPerWave: 0.16,  // NERF: 0.18 → 0.16 (exponential growth was too fast)
         baseSpeed: 85, speedPerWave: 6,
         baseDamage: 8, damagePerWave: 1.2,  // NERF: 1.5 → 1.2 (damage spike was too harsh)
         shootCooldown: [2.5, 4.5],
