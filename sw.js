@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.2.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.2.0 Boss Visual Enhancement — dark theme restored + phase-based auras + enhanced jetpack flames
+const CACHE_NAME = 'mtc-cache-v3.3.0'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.0 Boss Balance Overhaul — character burst analysis + increased boss HP + burst armor mechanic + BossFirst skill buffs
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
