@@ -1058,7 +1058,7 @@ class BossFirst extends Entity {
         this._orbitFireCd = 0;
 
         // ── FREE_FALL state ───────────────────────────────────
-        this.FREE_FALL_WARN = 1.5;         // warning ring duration
+        this.FREE_FALL_WARN = 1.8;         // warning ring duration
         this._fallTargetX = 0;
         this._fallTargetY = 0;
 
@@ -1146,7 +1146,7 @@ class BossFirst extends Entity {
 
                     // Hit player
                     if (d < this.radius + player.radius + 12) {
-                        player.takeDamage(55);
+                        player.takeDamage(80);
                         addScreenShake(14);
                         spawnFloatingText('v=u+at IMPACT!', player.x, player.y - 55, '#fbbf24', 28);
                         this._enterOrbit(player);
@@ -1167,11 +1167,11 @@ class BossFirst extends Entity {
                 this.vx = 0; this.vy = 0;
 
                 if (this._orbitFireCd <= 0) {
-                    this._orbitFireCd = 0.55;
+                    this._orbitFireCd = 0.50;
                     const aimA = Math.atan2(player.y - this.y, player.x - this.x);
                     projectileManager.add(new Projectile(
                         this.x, this.y, aimA,
-                        520, 18 * (this.isAdvanced ? 1.3 : 1.0),
+                        520, 24,
                         '#818cf8', false, 'enemy'
                     ));
                 }
@@ -1196,7 +1196,7 @@ class BossFirst extends Entity {
                     const aoeR = 140;
                     const fdx = player.x - this.x, fdy = player.y - this.y;
                     if (Math.hypot(fdx, fdy) < aoeR + player.radius) {
-                        player.takeDamage(72 * (this.isAdvanced ? 1.25 : 1.0));
+                        player.takeDamage(95 * (this.isAdvanced ? 1.25 : 1.0));
                         spawnFloatingText('h=½gt² CRASH!', player.x, player.y - 60, '#ef4444', 30);
                         addScreenShake(20);
                     }

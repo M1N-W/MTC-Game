@@ -424,7 +424,7 @@ class PorkSandwich {
         // Lifetime & damage
         this.lifeTimer = 0;
         this.maxLife = 3.5;
-        this.damage = BALANCE.boss.contactDamage * 5;
+        this.damage = 160;
         this.hitCd = 0; // i-frame cooldown after hit
 
         // Motion trail: [{x, y, age}]

@@ -236,54 +236,59 @@ const BALANCE = {
         contactDamage: 25,
         speechInterval: 10,
         nextWaveDelay: 2000,
-        log457HealRate: 0.1,
+        log457HealRate: 0.06,
         chalkProjectileSpeed: 600,
         attackFireRate: 0.1,
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
-        baseHp: 2000,
-        hpMultiplier: 1.25,  // NEW: Bosses now scale 1.25× per encounter (was 1.0)
-        moveSpeed: 125,
-        phase2Speed: 155,
+        baseHp: 5200,
+        hpMultiplier: 1.333,
+        moveSpeed: 140,
+        phase2Speed: 190,
         phase2Threshold: 0.5,
-        chalkDamage: 11,  // NERF: 13 → 11 (spam attack was too strong)
-        ultimateDamage: 22,  // NERF: 26 → 22 (ultimate was one-shotting)
-        ultimateBullets: 16,  // NERF: 18 → 16
-        phase2UltimateBullets: 22,  // NERF: 26 → 22
-        slamDamage: 30,  // NERF: 35 → 30
-        slamRadius: 320,
-        slamCooldown: 16,
-        graphDamage: 38,  // NERF: 45 → 38 (graph was instant death)
-        graphLength: 1400,
-        graphDuration: 18,
-        graphCooldown: 18,
+        chalkDamage: 13,
+        ultimateDamage: 35,
+        ultimateBullets: 20,
+        phase2UltimateBullets: 28,
+        slamDamage: 60,
+        slamRadius: 360,
+        slamCooldown: 14,
+        graphDamage: 70,
+        graphLength: 1600,
+        graphDuration: 20,
+        graphCooldown: 16,
         log457ChargeDuration: 2,
-        log457ActiveDuration: 5,
+        log457ActiveDuration: 6,
         log457StunDuration: 1.2,
-        log457Cooldown: 26,
+        log457Cooldown: 30,
         log457AttackBonus: 0.09,
         log457AttackGrowth: 0.04,
+        // burst armor: เมื่อ HP ต่ำกว่าค่านี้ ลดดาเมจเข้า
+        burstArmorThresholdPct: 0.30,
+        burstArmorReduction: 0.40,
+        burstArmorDuration: 4.0,
+        burstArmorCooldown: 25,
         phase2: {
-            barkDamage: 20,  // NERF: 25 → 20
+            barkDamage: 32,
             barkRange: 600,
-            barkCooldown: 4.0,  // NERF: 3.5 → 4.0 (spam was too frequent)
-            enrageSpeedMult: 1.65,
+            barkCooldown: 3.2,
+            enrageSpeedMult: 2.0,
             dogColor: '#d97706'
         },
         bossDog: {
-            hp: 1200,  // NERF: 1500 → 1200 (dog was tankier than boss)
-            speed: 250,
-            damage: 18,  // NERF: 22 → 18
-            radius: 20,
+            hp: 2000,
+            speed: 280,
+            damage: 30,
+            radius: 24,
             color: '#d97706'
         },
         phase3Threshold: 0.25,
         phase3: {
             auraColor: '#38bdf8',
             goldfishCooldown: 5.5,
-            goldfishCount: 2,
-            bubbleCooldown: 7.5,
-            bubbleCount: 3,
+            goldfishCount: 4,
+            bubbleCooldown: 6.0,
+            bubbleCount: 5,
             slowFactor: 0.5,
             slowDuration: 2.0
         },
