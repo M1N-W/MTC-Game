@@ -79,7 +79,7 @@ class KaoClone {
 
             const p = new Projectile(
                 sx, sy, finalAngle,
-                wep.speed, damage, color,
+                wep.speed, damage * 0.5, color,  // Clone deals 50% damage
                 isCrit, 'player', projOptions
             );
             p.isCrit = isCrit;

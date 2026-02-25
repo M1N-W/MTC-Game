@@ -84,8 +84,8 @@ const BALANCE = {
             maxHpPerLevel: 0,
             // ── Advanced Kao Skills ──
             teleportCooldown: 20,
-            cloneCooldown: 45,
-            cloneDuration: 15,
+            cloneCooldown: 60,
+            cloneDuration: 10,
             autoStealthCooldown: 8,
             weaponMasterReq: 10
         },
