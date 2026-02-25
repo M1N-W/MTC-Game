@@ -95,7 +95,7 @@ const BALANCE = {
             hp: 200, maxHp: 200,
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
-            moveSpeed: 223,
+            moveSpeed: 250,
             dashSpeed: 480,
             dashDistance: 160,
             dashCooldown: 1.8,
