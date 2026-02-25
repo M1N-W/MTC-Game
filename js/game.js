@@ -908,7 +908,7 @@ async function endGame(result) {
 
         showElement('overlay');
         UIManager.showGameOver(finalScore, finalWave);
-        setElementText('final-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
+        setElementText('report-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
 
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';

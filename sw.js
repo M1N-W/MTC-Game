@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.3.1'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.1 Auto HP Buff — increased base HP to 220 + updated character stat graphs
+const CACHE_NAME = 'mtc-cache-v3.3.2'; // ⚠️ เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.2 Fixed kills display bug on game over screen
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
