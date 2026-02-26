@@ -216,10 +216,11 @@ class PoomPlayer extends Entity {
         // CONSTRAINT: keys.r always reset when Shift is held to prevent
         //             bleed into Naga trigger if Shift is released next frame.
         if (keys.r) {
+        if (keys.r) {
             if (keys.shift) {
+                console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual, 'Stacks:', this.enemyStacks.size);
                 if (this.cooldowns.ritual <= 0) this.ritualBurst();
-                keys.r = 0; // always consume — no bleed to Naga
-            } else if (this.cooldowns.naga <= 0) {
+                keys.r = 0; // always consume  no bleed to Naga
                 this.summonNaga();
                 keys.r = 0;
             }
@@ -309,8 +310,12 @@ class PoomPlayer extends Entity {
         if (this.enemyStacks.size === 0) return;
 
         // ── Phase 4 Session 1: read from config, no hardcode ──
+        if (!GAME_CONFIG || !GAME_CONFIG.abilities || !GAME_CONFIG.abilities.ritual) {
+            console.error('[Poom] GAME_CONFIG.abilities.ritual not found! Cannot execute ritual burst.');
+            return;
+        }
         const RC = GAME_CONFIG.abilities.ritual;
-        const DAMAGE_PER_STACK = RC.damagePerStack;
+        const DAMAGE_PER_STACK = RC.damagePerStack || 10;
 
         for (const [enemyId, data] of this.enemyStacks) {
             // Reset slow state on all entries regardless of alive/dead
@@ -333,7 +338,7 @@ class PoomPlayer extends Entity {
         // ── Phase 3 Session 2: set cooldown after confirmed consume ──
         // Placed here (not at call site) so empty-stack early return
         // above does NOT trigger cooldown.
-        this.cooldowns.ritual = GAME_CONFIG.abilities.ritual.cooldown;
+        this.cooldowns.ritual = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
 
         spawnParticles(this.x, this.y, 30, '#00ff88');
         spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
@@ -923,7 +928,7 @@ class PoomPlayer extends Entity {
         // ── Phase 3 Session 3: Ritual cooldown — mirrored in ui.js updateSkillIcons ──
         const ritualCd = document.getElementById('ritual-cd');
         if (ritualCd) {
-            const maxRcd = GAME_CONFIG.abilities.ritual.cooldown;
+            const maxRcd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
             const rp = Math.min(100, (1 - this.cooldowns.ritual / maxRcd) * 100);
             ritualCd.style.height = `${100 - rp}%`;
         }

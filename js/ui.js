@@ -690,7 +690,7 @@ class UIManager {
             const ritualIcon = document.getElementById('ritual-icon');
             const ritualCd = document.getElementById('ritual-cd');
             const ritualTimer = document.getElementById('ritual-timer');
-            const maxRitualCd = GAME_CONFIG.abilities.ritual.cooldown;
+            const maxRitualCd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
             if (ritualCd) {
                 const rp = player.cooldowns.ritual <= 0
                     ? 100

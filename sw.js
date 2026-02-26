@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.3.5'; // เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.5 Phase 4 Session 1 - Config Migration to GAME_CONFIG.abilities
+const CACHE_NAME = 'mtc-cache-v3.3.6'; // เปลยนเลขเวอรชนตรงนทกครงทมการอปเดตเกม, v3.3.6 Ritual Burst Debug - Safety checks and logging
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
