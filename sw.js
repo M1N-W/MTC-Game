@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.8'; // v3.4.8 Cache Busting Fix: Auto-update without hard refresh
+const CACHE_NAME = 'mtc-cache-v3.4.9'; // v3.4.9 Menu Update: Latest features and version information
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
