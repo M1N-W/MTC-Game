@@ -204,7 +204,7 @@ class PoomPlayer extends Entity {
         //             bleed into Naga trigger if Shift is released next frame.
         if (keys.r) {
             if (keys.shift) {
-                console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual, 'Stacks:', this.enemyStacks.size);
+                console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual);
                 if (this.cooldowns.ritual <= 0) this.ritualBurst();
                 keys.r = 0; // always consume — no bleed to Naga
             } else if (this.cooldowns.naga <= 0) {
