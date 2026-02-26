@@ -237,9 +237,12 @@ function updateGame(dt) {
             if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
         }
 
-        // Route shooting: Kao uses its own shoot(); everyone else uses WeaponSystem
-        if (isKao) {
-            window.player.shoot(dt);
+        // Route shooting: Kao and Poom use their own shoot(); Auto uses WeaponSystem
+        const isPoom = typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer;
+        if (isKao || isPoom) {
+            if (mouse.left === 1 && window.gameState === 'PLAYING') {
+                window.player.shoot(dt);
+            }
         } else if (mouse.left === 1 && window.gameState === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
