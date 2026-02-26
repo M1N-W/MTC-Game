@@ -104,7 +104,7 @@ const BALANCE = {
             wanchaiDuration: 6.0,
             wanchaiCooldown: 9,
             wanchaiEnergyCost: 32,
-            wanchaiPunchRate: 0.06,
+            wanchaiPunchRate: 0.08,
             wanchaiDamage: 32,
             standSpeedMod: 1.5,
             standDamageReduction: 0.40,
@@ -185,7 +185,7 @@ const BALANCE = {
         bobSpeed: 3.5,
         // ── Overdrive Stats ──
         overdriveCombo: 15,
-        overdriveFireRate: 2.5,
+        overdriveFireRate: 1.5,
         overdriveColor: '#facc15',
         overdriveGlow: '#f59e0b',
         overdriveLinger: 4.0 // Keeps overdrive active for 4s after combo drops
