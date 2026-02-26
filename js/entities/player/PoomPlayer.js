@@ -198,7 +198,7 @@ class PoomPlayer extends Entity {
             riteState.castRemaining -= dt;
             if (riteState.castRemaining <= 0) {
                 riteState.active = true;
-                riteState.windowRemaining = S.ritual.windowDuration;
+                riteState.windowRemaining = GAME_CONFIG.abilities.ritual.windowDuration;
                 spawnFloatingText('พิธีเริ่ม!', this.x, this.y - 40, '#10b981', 22);
             }
         }
@@ -309,7 +309,8 @@ class PoomPlayer extends Entity {
         if (this.enemyStacks.size === 0) return;
 
         // ── Phase 4 Session 1: read from config, no hardcode ──
-        const DAMAGE_PER_STACK = GAME_CONFIG.abilities.ritual.damagePerStack;
+        const RC = GAME_CONFIG.abilities.ritual;
+        const DAMAGE_PER_STACK = RC.damagePerStack;
 
         for (const [enemyId, data] of this.enemyStacks) {
             // Reset slow state on all entries regardless of alive/dead
