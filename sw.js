@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.5'; // v3.4.5 Documentation Fix: Update Kao weapon switching from Q to mouse wheel
+const CACHE_NAME = 'mtc-cache-v3.4.6'; // v3.4.6 Ritual Fix: Always usable with base damage when no sticky enemies
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

@@ -320,15 +320,35 @@ class PoomPlayer extends Entity {
             }
         }
 
-        // Only trigger cooldown if we actually consumed some stacks
+        // Always trigger cooldown and effects
         if (totalEnemiesAffected === 0) {
-            console.log('[Poom] No sticky enemies found - ritual not consumed');
-            return;
+            console.log('[Poom] No sticky enemies found - dealing base ritual damage');
+            // Deal base damage to nearby enemies without sticky
+            const BASE_DAMAGE = 25;
+            const RITUAL_RANGE = 200;
+            
+            if (window.enemies && window.enemies.length > 0) {
+                for (const enemy of window.enemies) {
+                    if (enemy.dead) continue;
+                    const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                    if (dist <= RITUAL_RANGE) {
+                        enemy.takeDamage(BASE_DAMAGE, this);
+                        spawnFloatingText(BASE_DAMAGE, enemy.x, enemy.y - 30, '#00ff88', 16);
+                        totalEnemiesAffected++;
+                    }
+                }
+            }
+            
+            if (totalEnemiesAffected === 0) {
+                console.log('[Poom] No enemies in range - ritual used anyway');
+            } else {
+                console.log(`[Poom] Ritual dealt base damage to ${totalEnemiesAffected} enemies`);
+            }
+        } else {
+            console.log(`[Poom] Ritual burst consumed sticky on ${totalEnemiesAffected} enemies`);
         }
 
-        console.log(`[Poom] Ritual burst consumed sticky on ${totalEnemiesAffected} enemies`);
-
-        // Set cooldown after confirmed consume
+        // Always set cooldown
         this.cooldowns.ritual = RC.cooldown || 20;
 
         spawnParticles(this.x, this.y, 30, '#00ff88');
