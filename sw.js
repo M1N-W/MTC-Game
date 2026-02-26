@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.3.8'; // เปลยนเลขเวอรชนตรงนทกครงทมการอปเดตเกม, v3.3.8 Fix: Poom shoot() method now called correctly
+const CACHE_NAME = 'mtc-cache-v3.3.9'; // เปลยนเลขเวอรชนตรงนทกครงทมการอปเดตเกม, v3.3.9 Debug: isPoom detection logging
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
