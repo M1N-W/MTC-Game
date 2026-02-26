@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.15'; // v3.4.15 Theme Consistency: Fixed Poom's selected background to match yellow theme
+const CACHE_NAME = 'mtc-cache-v3.4.16'; // v3.4.16 Bug Fix: Fixed invalid Unicode characters in feature list
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
