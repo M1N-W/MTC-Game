@@ -726,9 +726,14 @@ function shootPoom(player) {
     const attackSpeedMult = player.isEatingRice ? 0.7 : 1.0;
     player.cooldowns.shoot = S.riceCooldown * attackSpeedMult;
     const { damage, isCrit } = player.dealDamage(S.riceDamage * player.damageBoost);
-    projectileManager.add(
-        new Projectile(player.x, player.y, player.angle, S.riceSpeed, damage, S.riceColor, false, 'player')
-    );
+    
+    // ── Session C/D: Create projectile and set onHit callback ──
+    const proj = new Projectile(player.x, player.y, player.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
+    proj.onHit = function (enemy) {
+        player.applyStickyTo(enemy); // ── Apply sticky via StatusEffect framework ──
+    };
+    projectileManager.add(proj);
+    
     if (isCrit) {
         spawnFloatingText(GAME_TEXTS.combat.poomCrit, player.x, player.y - 45, '#fbbf24', 20);
         spawnParticles(player.x, player.y, 5, '#ffffff');
