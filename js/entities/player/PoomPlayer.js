@@ -216,11 +216,11 @@ class PoomPlayer extends Entity {
         // CONSTRAINT: keys.r always reset when Shift is held to prevent
         //             bleed into Naga trigger if Shift is released next frame.
         if (keys.r) {
-        if (keys.r) {
             if (keys.shift) {
                 console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual, 'Stacks:', this.enemyStacks.size);
                 if (this.cooldowns.ritual <= 0) this.ritualBurst();
-                keys.r = 0; // always consume  no bleed to Naga
+                keys.r = 0; // always consume — no bleed to Naga
+            } else if (this.cooldowns.naga <= 0) {
                 this.summonNaga();
                 keys.r = 0;
             }
@@ -309,7 +309,7 @@ class PoomPlayer extends Entity {
     ritualBurst() {
         if (this.enemyStacks.size === 0) return;
 
-        // ── Phase 4 Session 1: read from config, no hardcode ──
+        //  Phase 4 Session 1: read from config, no hardcode 
         if (!GAME_CONFIG || !GAME_CONFIG.abilities || !GAME_CONFIG.abilities.ritual) {
             console.error('[Poom] GAME_CONFIG.abilities.ritual not found! Cannot execute ritual burst.');
             return;
