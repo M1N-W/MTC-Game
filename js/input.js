@@ -42,7 +42,8 @@
 var keys = {
     w: 0, a: 0, s: 0, d: 0,
     space: 0,
-    q: 0, e: 0, b: 0, t: 0, f: 0
+    q: 0, e: 0, b: 0, t: 0, f: 0,
+    r: 0, shift: 0  // ── Phase 3 Session 1: Naga (R) + Ritual Burst (Shift+R) ──
 };
 
 /**

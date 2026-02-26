@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.3.3'; // เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.3 Phase 2 Session 2 - Poom Sticky Rice Stack System
+const CACHE_NAME = 'mtc-cache-v3.3.4'; // เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่มีการอัปเดตเกม, v3.3.4 Phase 3 Session 1 - Naga Ritual Burst (Shift+R)
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
