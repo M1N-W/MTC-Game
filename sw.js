@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.17'; // v3.4.17 Bug Fix: Fixed malformed CSS selector in index.html
+const CACHE_NAME = 'mtc-cache-v3.4.18'; // v3.4.18 Enhancement: Added impressive glow effects for Kao and Poom characters
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
