@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.18'; // v3.4.18 Enhancement: Added impressive glow effects for Kao and Poom characters
+const CACHE_NAME = 'mtc-cache-v3.4.19'; // v3.4.19 Enhancement: Unified character glow animations to match Auto's simple 2-stage style
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
