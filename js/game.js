@@ -26,8 +26,9 @@ const DEBUG_MODE = false;
 
 // ─── Game State ───────────────────────────────────────────────
 // FIX (WARN-1): Use only window.gameState to prevent desync between local and global state
-let loopRunning = false;
+window.loopRunning = false;
 window.gameState = 'MENU';
+let rafId = null;
 
 // Simplified setter - only updates window.gameState (single source of truth)
 function setGameState(s) {
@@ -90,6 +91,14 @@ function _tutorialForwardInput() {
 // ══════════════════════════════════════════════════════════════
 
 function gameLoop(now) {
+    // BUG FIX: Validate canvas context before drawing
+    if (!CTX || !CANVAS) {
+        console.warn('[gameLoop] Canvas context lost, stopping loop');
+        window.loopRunning = false;
+        rafId = null;
+        return;
+    }
+    
     const dt = getDeltaTime(now);
 
     if (window.hitStopTimer > 0) {
@@ -128,11 +137,12 @@ function gameLoop(now) {
     // churning the GPU for a static screen.  loopRunning is reset to false
     // so startGame() can safely restart the loop next round.
     if (window.gameState === 'GAMEOVER') {
-        loopRunning = false;
+        window.loopRunning = false;
+        rafId = null;
         return;
     }
 
-    requestAnimationFrame(gameLoop);
+    rafId = requestAnimationFrame(gameLoop);
 }
 
 function updateGame(dt) {
@@ -311,7 +321,8 @@ function updateGame(dt) {
     // Both passes are guarded so that a barrel which exploded *this frame*
     // cannot be hit again before it is removed, and a single projectile
     // cannot damage two barrels in one frame (proj.dead breaks the inner loop).
-    if (typeof projectileManager !== 'undefined' &&
+    if (typeof projectileManager !== 'undefined' && projectileManager &&
+        projectileManager.projectiles && Array.isArray(projectileManager.projectiles) &&
         window.mapSystem && Array.isArray(window.mapSystem.objects)) {
 
         const allProj = projectileManager.projectiles;
@@ -471,6 +482,12 @@ function updateGame(dt) {
 }
 
 function drawGame() {
+    // BUG FIX: Validate canvas context before drawing
+    if (!CTX || !CANVAS) {
+        console.warn('[drawGame] Canvas context lost, skipping draw');
+        return;
+    }
+    
     if (!drawGame._diagFrame) drawGame._diagFrame = 0;
     drawGame._diagFrame++;
     if (DEBUG_MODE && drawGame._diagFrame % 300 === 1) {
@@ -728,7 +745,10 @@ async function initAI() {
     if (!brief) { console.warn('⚠️ mission-brief not found'); return; }
     brief.textContent = GAME_TEXTS.ai.loading;
     try {
-        const name = await Gemini.getMissionName();
+        // BUG FIX: Add timeout to prevent hanging on AI calls
+        const timeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('AI timeout')), 3000));
+        const name = await Promise.race([Gemini.getMissionName(), timeout]);
         brief.textContent = GAME_TEXTS.ai.missionPrefix(name);
     } catch (e) {
         console.warn('Failed to get mission name:', e);
@@ -855,15 +875,27 @@ function startGame(charType = 'kao') {
     window.focus();
 
     console.log('✅ Game started!');
-    if (!loopRunning) {
-        loopRunning = true;
-        requestAnimationFrame(gameLoop);
+    // BUG FIX: Prevent race condition with RAF ID tracking
+    if (!window.loopRunning && rafId === null) {
+        window.loopRunning = true;
+        rafId = requestAnimationFrame(gameLoop);
     }
 }
 
 async function endGame(result) {
     if (window.gameState === 'GAMEOVER') return;
     setGameState('GAMEOVER');
+
+    // BUG FIX: Cancel RAF and cleanup mobile controls
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+    window.loopRunning = false;
+    
+    if (typeof cleanupMobileControls === 'function') {
+        cleanupMobileControls();
+    }
 
     Audio.stopBGM();
     Audio.playBGM('menu');
@@ -940,11 +972,33 @@ window.endGame = endGame;
 
 window.onload = () => {
     console.log('🚀 Initializing game...');
-    initCanvas();
-    InputSystem.init();
-    initAI();
-
-    // ── BGM FIX: Audio.init() moved here from startGame() ────────────────
-    Audio.init();
-    Audio.playBGM('menu');
+    
+    // BUG FIX: Ensure DOM is fully ready before initialization
+    const initializeGame = () => {
+        if (!document.getElementById('gameCanvas')) {
+            console.warn('Canvas element not found, retrying...');
+            setTimeout(initializeGame, 100);
+            return;
+        }
+        
+        try {
+            initCanvas();
+            if (typeof InputSystem !== 'undefined') InputSystem.init();
+            initAI();
+            
+            // ── BGM FIX: Audio.init() moved here from startGame() ────────────────
+            if (typeof Audio !== 'undefined') {
+                Audio.init();
+                Audio.playBGM('menu');
+            }
+        } catch (err) {
+            console.error('[window.onload] Initialization error:', err);
+        }
+    };
+    
+    if (document.readyState === 'complete') {
+        initializeGame();
+    } else {
+        document.addEventListener('DOMContentLoaded', initializeGame);
+    }
 };
