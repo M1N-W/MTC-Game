@@ -55,9 +55,15 @@ const GLITCH_DAMAGE_MULT = 0.6;
 // ════════════════════════════════════════════════════════════
 // ENEMIES
 // ════════════════════════════════════════════════════════════
+
+// ── Phase 2: Unique enemy ID counter for sticky stack tracking ──
+// Incremented on every enemy construction. Never reused within a session.
+let _enemyIdCounter = 0;
+
 class Enemy extends Entity {
     constructor(x, y) {
         super(x, y, BALANCE.enemy.radius);
+        this.id = ++_enemyIdCounter; // ── Phase 2: unique ID for sticky stack Map key ──
         // Exponential HP scaling: baseHp * ((1 + hpPerWave)^wave)
         // Uses config values for proper balance tuning
         const hpGrowth = 1 + BALANCE.enemy.hpPerWave;
@@ -74,6 +80,10 @@ class Enemy extends Entity {
         // Set to HIT_FLASH_DURATION on every takeDamage() call.
         // Decays in update(); drawn in draw() if > 0.
         this.hitFlashTimer = 0;
+
+        // ── Phase 2 Session 3: Sticky slow state ─────────────
+        this.stickyStacks = 0;
+        this.stickySlowMultiplier = 1;
     }
 
     update(dt, player) {
@@ -86,7 +96,9 @@ class Enemy extends Entity {
         const d = dist(this.x, this.y, player.x, player.y);
         this.angle = Math.atan2(dy, dx);
         if (d > BALANCE.enemy.chaseRange && !player.isInvisible) {
-            this.vx = Math.cos(this.angle) * this.speed; this.vy = Math.sin(this.angle) * this.speed;
+            // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
+            this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+            this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
         } else { this.vx *= 0.9; this.vy *= 0.9; }
         this.applyPhysics(dt);
         this.shootTimer -= dt;
@@ -117,14 +129,14 @@ class Enemy extends Entity {
             spawnParticles(this.x, this.y, 20, this.color);
             addScore(BALANCE.score.basicEnemy * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
-            
+
             // FIX (BUG-4): Correctly identify Kao and fetch weapon string key to allow Awakening
             if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
                 const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
                 const currentWep = BALANCE.characters.kao.weapons[wepKey];
                 if (currentWep) player.addKill(currentWep.name);
             }
-            
+
             Achievements.stats.kills++; Achievements.check('first_blood');
             if (Math.random() < BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x, this.y));
         }
@@ -238,6 +250,16 @@ class Enemy extends Entity {
             CTX.restore();
         }
 
+        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
+        if (this.stickyStacks > 0) {
+            const intensity = Math.min(1, this.stickyStacks / 10);
+            CTX.save();
+            CTX.globalAlpha = 0.4 * intensity;
+            CTX.fillStyle = '#00ff88';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
         // ── HP bar ───────────────────────────────────────────────────
         const hpRatio = this.hp / this.maxHp, bw = 30;
         CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 10, bw, 4);
@@ -248,6 +270,7 @@ class Enemy extends Entity {
 class TankEnemy extends Entity {
     constructor(x, y) {
         super(x, y, BALANCE.tank.radius);
+        this.id = ++_enemyIdCounter; // ── Phase 2: unique ID for sticky stack Map key ──
         // Heavy exponential HP scaling: baseHp * ((1 + hpPerWave)^wave)
         // Uses config values for proper balance tuning
         const hpGrowth = 1 + BALANCE.tank.hpPerWave;
@@ -259,6 +282,10 @@ class TankEnemy extends Entity {
 
         // ── Hit flash state ──────────────────────────────────
         this.hitFlashTimer = 0;
+
+        // ── Phase 2 Session 3: Sticky slow state ─────────────
+        this.stickyStacks = 0;
+        this.stickySlowMultiplier = 1;
     }
 
     update(dt, player) {
@@ -270,8 +297,11 @@ class TankEnemy extends Entity {
         const dx = player.x - this.x, dy = player.y - this.y;
         const d = dist(this.x, this.y, player.x, player.y);
         this.angle = Math.atan2(dy, dx);
-        if (!player.isInvisible) { this.vx = Math.cos(this.angle) * this.speed; this.vy = Math.sin(this.angle) * this.speed; }
-        else { this.vx *= 0.95; this.vy *= 0.95; }
+        if (!player.isInvisible) {
+            // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
+            this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+            this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+        } else { this.vx *= 0.95; this.vy *= 0.95; }
         this.applyPhysics(dt);
 
         // ── Melee contact damage ─────────────────────────────
@@ -441,6 +471,16 @@ class TankEnemy extends Entity {
             CTX.restore();
         }
 
+        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
+        if (this.stickyStacks > 0) {
+            const intensity = Math.min(1, this.stickyStacks / 10);
+            CTX.save();
+            CTX.globalAlpha = 0.4 * intensity;
+            CTX.fillStyle = '#00ff88';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
         // ── HP bar ───────────────────────────────────────────────────
         const hpRatio = this.hp / this.maxHp, bw = 40;
         CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 12, bw, 5);
@@ -451,6 +491,7 @@ class TankEnemy extends Entity {
 class MageEnemy extends Entity {
     constructor(x, y) {
         super(x, y, BALANCE.mage.radius);
+        this.id = ++_enemyIdCounter; // ── Phase 2: unique ID for sticky stack Map key ──
         // Moderate exponential HP scaling: baseHp * ((1 + hpPerWave)^wave)
         // Uses config values for proper balance tuning
         const hpGrowth = 1 + BALANCE.mage.hpPerWave;
@@ -463,6 +504,10 @@ class MageEnemy extends Entity {
 
         // ── Hit flash state ──────────────────────────────────
         this.hitFlashTimer = 0;
+
+        // ── Phase 2 Session 3: Sticky slow state ─────────────
+        this.stickyStacks = 0;
+        this.stickySlowMultiplier = 1;
     }
 
     update(dt, player) {
@@ -473,9 +518,14 @@ class MageEnemy extends Entity {
 
         const d = dist(this.x, this.y, player.x, player.y), od = BALANCE.mage.orbitDistance;
         this.angle = Math.atan2(player.y - this.y, player.x - this.x);
-        if (d < od && !player.isInvisible) { this.vx = -Math.cos(this.angle) * this.speed; this.vy = -Math.sin(this.angle) * this.speed; }
-        else if (d > od + BALANCE.mage.orbitDistanceBuffer) { this.vx = Math.cos(this.angle) * this.speed; this.vy = Math.sin(this.angle) * this.speed; }
-        else { this.vx *= 0.95; this.vy *= 0.95; }
+        // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
+        if (d < od && !player.isInvisible) {
+            this.vx = -Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+            this.vy = -Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+        } else if (d > od + BALANCE.mage.orbitDistanceBuffer) {
+            this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+            this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+        } else { this.vx *= 0.95; this.vy *= 0.95; }
         this.applyPhysics(dt);
         if (this.soundWaveCD > 0) this.soundWaveCD -= dt;
         if (this.meteorCD > 0) this.meteorCD -= dt;
@@ -635,6 +685,16 @@ class MageEnemy extends Entity {
             CTX.restore();
         }
 
+        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
+        if (this.stickyStacks > 0) {
+            const intensity = Math.min(1, this.stickyStacks / 10);
+            CTX.save();
+            CTX.globalAlpha = 0.4 * intensity;
+            CTX.fillStyle = '#00ff88';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
         // ── HP bar ───────────────────────────────────────────────────
         const hpRatio = this.hp / this.maxHp, bw = 30;
         CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 14, bw, 4);
@@ -665,16 +725,16 @@ class PowerUp {
             case 'damage':
                 // FIX (BUG-6): Stack with shop boost instead of overwriting
                 if (!player._powerupDamageActive) {
-                    const shopMult = player.shopDamageBoostActive 
+                    const shopMult = player.shopDamageBoostActive
                         ? (player.damageBoost / (player._baseDamageBoost || 1.0))
                         : 1.0;
                     player._powerupDamageActive = true;
                     player.damageBoost = (player._baseDamageBoost || 1.0) * shopMult * BALANCE.powerups.damageBoost;
-                    
-                    setTimeout(() => { 
+
+                    setTimeout(() => {
                         player._powerupDamageActive = false;
                         // Restore shop boost if still active
-                        const currentShopMult = player.shopDamageBoostActive 
+                        const currentShopMult = player.shopDamageBoostActive
                             ? (player.damageBoost / ((player._baseDamageBoost || 1.0) * BALANCE.powerups.damageBoost))
                             : 1.0;
                         player.damageBoost = (player._baseDamageBoost || 1.0) * currentShopMult;
@@ -684,13 +744,13 @@ class PowerUp {
             case 'speed':
                 // FIX (BUG-6): Stack with shop boost instead of overwriting
                 if (!player._powerupSpeedActive) {
-                    const shopMult = player.shopSpeedBoostActive 
+                    const shopMult = player.shopSpeedBoostActive
                         ? (player.speedBoost / 1.0)
                         : 1.0;
                     player._powerupSpeedActive = true;
                     player.speedBoost = shopMult * BALANCE.powerups.speedBoost;
-                    
-                    setTimeout(() => { 
+
+                    setTimeout(() => {
                         player._powerupSpeedActive = false;
                         // Restore shop boost if still active
                         player.speedBoost = player.shopSpeedBoostActive ? (player.speedBoost / BALANCE.powerups.speedBoost) : 1.0;

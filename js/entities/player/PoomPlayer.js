@@ -14,7 +14,7 @@ class PoomPlayer extends Entity {
         this.hp = stats.hp; this.maxHp = stats.maxHp;
         this.energy = stats.energy; this.maxEnergy = stats.maxEnergy;
 
-        this.cooldowns = { dash: 0, eat: 0, naga: 0, shoot: 0 };
+        this.cooldowns = { dash: 0, eat: 0, naga: 0, shoot: 0, ritual: 0 };
 
         this.isDashing = false; this.isInvisible = false; this.ambushReady = false;
         this.passiveUnlocked = false; this.stealthUseCount = 0; this.goldenAuraTimer = 0;
@@ -177,6 +177,7 @@ class PoomPlayer extends Entity {
         if (this.cooldowns.eat > 0) this.cooldowns.eat -= dt;
         if (this.cooldowns.naga > 0) this.cooldowns.naga -= dt;
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
+        if (this.cooldowns.ritual > 0) this.cooldowns.ritual -= dt; // ── Phase 3 Session 2 ──
 
         // ── Update Sticky Stack Expiration ─────────────────────
         this.updateStickyStacks();
@@ -211,7 +212,18 @@ class PoomPlayer extends Entity {
 
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
         if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { this.eatRice(); keys.e = 0; }
-        if (keys.r && this.cooldowns.naga <= 0) { this.summonNaga(); keys.r = 0; }
+        // ── Phase 3 Session 1: R = Naga, Shift+R = Ritual Burst ──
+        // CONSTRAINT: keys.r always reset when Shift is held to prevent
+        //             bleed into Naga trigger if Shift is released next frame.
+        if (keys.r) {
+            if (keys.shift) {
+                if (this.cooldowns.ritual <= 0) this.ritualBurst();
+                keys.r = 0; // always consume — no bleed to Naga
+            } else if (this.cooldowns.naga <= 0) {
+                this.summonNaga();
+                keys.r = 0;
+            }
+        }
 
         this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
 
@@ -247,7 +259,16 @@ class PoomPlayer extends Entity {
         if (this.cooldowns.shoot > 0) return;
         this.cooldowns.shoot = S.riceCooldown * this.cooldownMultiplier;
         const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0));
-        projectileManager.add(new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player'));
+        const proj = new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
+        // ── Phase 2 Session 2: Apply sticky stack on direct rice projectile hit ──
+        // CONSTRAINT: Fragment projectiles never call this (they are separate Projectile instances
+        //             with isFragment=true and do NOT go through shoot()).
+        // CONSTRAINT: Called exactly once per direct hit via the onHit callback.
+        const self = this;
+        proj.onHit = function (enemy) {
+            self.applyStackToEnemy(enemy, damage); // ── Phase 2 Session 3: pass object, not id ──
+        };
+        projectileManager.add(proj);
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
         Audio.playPoomShoot();
@@ -275,6 +296,47 @@ class PoomPlayer extends Entity {
         addScreenShake(10); Audio.playAchievement();
         this.nagaCount++;
         if (this.nagaCount >= 3) Achievements.check('naga_summoner');
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // 🌾 RITUAL BURST — Phase 3 Session 1
+    // Consumes all sticky stacks and deals bonus damage to each
+    // stacked enemy. Triggered by Shift+R.
+    // CONSTRAINT: Only runs on key press, never every frame.
+    // CONSTRAINT: Does not affect projectile or slow logic.
+    // ════════════════════════════════════════════════════════════
+    ritualBurst() {
+        if (this.enemyStacks.size === 0) return;
+
+        // ── Phase 4 Session 1: read from config, no hardcode ──
+        const DAMAGE_PER_STACK = GAME_CONFIG.abilities.ritual.damagePerStack;
+
+        for (const [enemyId, data] of this.enemyStacks) {
+            // Reset slow state on all entries regardless of alive/dead
+            if (data.enemyRef) {
+                data.enemyRef.stickyStacks = 0;
+                data.enemyRef.stickySlowMultiplier = 1;
+
+                // Only deal damage to living enemies
+                if (!data.enemyRef.dead) {
+                    const bonusDamage = data.stacks * DAMAGE_PER_STACK;
+                    data.enemyRef.takeDamage(bonusDamage, this);
+                    spawnFloatingText(Math.round(bonusDamage), data.enemyRef.x, data.enemyRef.y - 30, '#00ff88', 16);
+                }
+            }
+        }
+
+        // Clear all stack entries
+        this.enemyStacks.clear();
+
+        // ── Phase 3 Session 2: set cooldown after confirmed consume ──
+        // Placed here (not at call site) so empty-stack early return
+        // above does NOT trigger cooldown.
+        this.cooldowns.ritual = GAME_CONFIG.abilities.ritual.cooldown;
+
+        spawnParticles(this.x, this.y, 30, '#00ff88');
+        spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
+        addScreenShake(6);
     }
 
     dash(ax, ay) {
@@ -374,12 +436,26 @@ class PoomPlayer extends Entity {
         const toDelete = [];
 
         for (const [enemyId, data] of this.enemyStacks) {
+            // ── Phase 2 Session 4: immediate cleanup on enemy death ──
+            // Dead or missing enemyRef entries are removed in the same frame,
+            // no need to wait for expireAt timer.
+            if (!data.enemyRef || data.enemyRef.dead === true) {
+                toDelete.push(enemyId);
+                continue;
+            }
+            // Existing expiration logic unchanged for living enemies
             if (data.expireAt < now) {
                 toDelete.push(enemyId);
             }
         }
 
         for (const id of toDelete) {
+            // Reset slow state on enemyRef if it still exists (may be null for dead enemies)
+            const data = this.enemyStacks.get(id);
+            if (data && data.enemyRef) {
+                data.enemyRef.stickyStacks = 0;
+                data.enemyRef.stickySlowMultiplier = 1;
+            }
             this.enemyStacks.delete(id);
         }
     }
@@ -389,12 +465,13 @@ class PoomPlayer extends Entity {
      * CONSTRAINT: Fragment projectiles must never call this method
      * CONSTRAINT: Does NOT delete entries (handled by updateStickyStacks)
      * CONSTRAINT: Does NOT reset stacks automatically
-     * @param {string|number} enemyId - Unique enemy identifier
+     * @param {object} enemy - Enemy instance (id used as Map key, ref stored for slow reset)
      * @param {number} damage - Damage dealt to enemy
      */
-    applyStackToEnemy(enemyId, damage) {
+    applyStackToEnemy(enemy, damage) {
         const S = this.stats;
         const now = performance.now() / 1000;
+        const enemyId = enemy.id;
 
         // Create entry if not exists
         if (!this.enemyStacks.has(enemyId)) {
@@ -402,7 +479,8 @@ class PoomPlayer extends Entity {
                 stacks: 0,
                 expireAt: 0,
                 lastRiceDamage: 0,
-                maxTriggered: false
+                maxTriggered: false,
+                enemyRef: enemy  // ── Phase 2 Session 3: store ref for slow reset on expiry ──
             });
         }
 
@@ -412,6 +490,10 @@ class PoomPlayer extends Entity {
         data.stacks += 1;
         data.lastRiceDamage = damage;
         data.expireAt = now + S.sticky.stackDuration;
+
+        // ── Phase 2 Session 3: update slow multiplier directly on enemy instance ──
+        enemy.stickyStacks = data.stacks;
+        enemy.stickySlowMultiplier = Math.max(0.2, 1 - (0.04 * data.stacks));
 
         // Check for ritual point accumulation
         if (data.stacks >= S.sticky.maxStacks && data.maxTriggered === false) {
@@ -835,6 +917,14 @@ class PoomPlayer extends Entity {
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('naga-icon',
                 Math.max(0, this.cooldowns.naga), S.nagaCooldown);
+        }
+
+        // ── Phase 3 Session 3: Ritual cooldown — mirrored in ui.js updateSkillIcons ──
+        const ritualCd = document.getElementById('ritual-cd');
+        if (ritualCd) {
+            const maxRcd = GAME_CONFIG.abilities.ritual.cooldown;
+            const rp = Math.min(100, (1 - this.cooldowns.ritual / maxRcd) * 100);
+            ritualCd.style.height = `${100 - rp}%`;
         }
 
         const levelEl = document.getElementById('player-level');

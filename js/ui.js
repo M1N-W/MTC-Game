@@ -87,7 +87,7 @@ class AchievementSystem {
 
     unlock(ach, retryCount = 0) {
         const MAX_RETRIES = 3;
-        
+
         // ── Mark as unlocked only on first attempt ───────────────
         if (retryCount === 0) {
             this.unlocked.add(ach.id);
@@ -109,7 +109,7 @@ class AchievementSystem {
             }
             return;
         }
-        
+
         const el = document.createElement('div');
         el.className = 'achievement';
         el.innerHTML = `
@@ -193,7 +193,7 @@ class ShopManager {
     static updateButtons() {
         const currentScore = typeof getScore === 'function' ? getScore() : 0;
         const player = window.player;
-        
+
         // FIX (WARN-4): Add null check for player
         if (!player) return;
 
@@ -634,6 +634,10 @@ class UIManager {
         if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
         const btnSkill = document.getElementById('btn-skill');
         if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🟥' : isKao ? '👻' : '📖');
+
+        // ── Phase 3 Session 3: Ritual Burst slot — Poom-exclusive ────────
+        const ritualSlot = document.getElementById('ritual-icon');
+        if (ritualSlot) ritualSlot.style.display = isPoom ? 'flex' : 'none';
     }
 
     static updateSkillIcons(player) {
@@ -681,6 +685,30 @@ class UIManager {
             UIManager._setCooldownVisual('naga-icon',
                 Math.max(0, player.cooldowns.naga),
                 S.nagaCooldown);
+
+            // ── Phase 3 Session 3: Ritual Burst cooldown UI ───────────
+            const ritualIcon = document.getElementById('ritual-icon');
+            const ritualCd = document.getElementById('ritual-cd');
+            const ritualTimer = document.getElementById('ritual-timer');
+            const maxRitualCd = GAME_CONFIG.abilities.ritual.cooldown;
+            if (ritualCd) {
+                const rp = player.cooldowns.ritual <= 0
+                    ? 100
+                    : Math.min(100, (1 - player.cooldowns.ritual / maxRitualCd) * 100);
+                ritualCd.style.height = `${100 - rp}%`;
+                ritualIcon?.classList.toggle('active', player.cooldowns.ritual <= 0);
+            }
+            if (ritualTimer) {
+                if (player.cooldowns.ritual > 0) {
+                    ritualTimer.textContent = Math.ceil(player.cooldowns.ritual) + 's';
+                    ritualTimer.style.display = 'block';
+                } else {
+                    ritualTimer.style.display = 'none';
+                }
+            }
+            UIManager._setCooldownVisual('ritual-icon',
+                Math.max(0, player.cooldowns.ritual),
+                maxRitualCd);
 
             // WARN-10 FIX: AutoPlayer's Wanchai Stand cooldown had no arc overlay
             // or countdown. Add a parallel branch so the player sees feedback.

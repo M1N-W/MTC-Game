@@ -164,7 +164,7 @@ function initMobileControls() {
     _mobileHandlers.leftMove = function (e) { moveJoystick(e, joysticks.left, stickL); };
     _mobileHandlers.leftEnd = function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); };
     _mobileHandlers.leftCancel = function (e) { endJoystick(e, joysticks.left, baseL, stickL, false); };
-    
+
     zoneL.addEventListener('touchstart', _mobileHandlers.leftStart, { passive: false });
     zoneL.addEventListener('touchmove', _mobileHandlers.leftMove, { passive: false });
     zoneL.addEventListener('touchend', _mobileHandlers.leftEnd, { passive: false });
@@ -174,7 +174,7 @@ function initMobileControls() {
     _mobileHandlers.rightMove = function (e) { moveJoystick(e, joysticks.right, stickR); };
     _mobileHandlers.rightEnd = function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); };
     _mobileHandlers.rightCancel = function (e) { endJoystick(e, joysticks.right, baseR, stickR, true); };
-    
+
     zoneR.addEventListener('touchstart', _mobileHandlers.rightStart, { passive: false });
     zoneR.addEventListener('touchmove', _mobileHandlers.rightMove, { passive: false });
     zoneR.addEventListener('touchend', _mobileHandlers.rightEnd, { passive: false });
@@ -262,21 +262,21 @@ function initMobileControls() {
 function cleanupMobileControls() {
     var zoneL = document.getElementById('joystick-left-zone');
     var zoneR = document.getElementById('joystick-right-zone');
-    
+
     if (zoneL && _mobileHandlers.leftStart) {
         zoneL.removeEventListener('touchstart', _mobileHandlers.leftStart);
         zoneL.removeEventListener('touchmove', _mobileHandlers.leftMove);
         zoneL.removeEventListener('touchend', _mobileHandlers.leftEnd);
         zoneL.removeEventListener('touchcancel', _mobileHandlers.leftCancel);
     }
-    
+
     if (zoneR && _mobileHandlers.rightStart) {
         zoneR.removeEventListener('touchstart', _mobileHandlers.rightStart);
         zoneR.removeEventListener('touchmove', _mobileHandlers.rightMove);
         zoneR.removeEventListener('touchend', _mobileHandlers.rightEnd);
         zoneR.removeEventListener('touchcancel', _mobileHandlers.rightCancel);
     }
-    
+
     // FIX (BUG-7): Remove button event listeners
     var btnDash = document.getElementById('btn-dash');
     var btnSkill = document.getElementById('btn-skill');
@@ -285,7 +285,7 @@ function cleanupMobileControls() {
     var btnDatabase = document.getElementById('btn-database');
     var btnTerminal = document.getElementById('btn-terminal');
     var btnShop = document.getElementById('btn-shop');
-    
+
     if (btnDash && _mobileHandlers.btnDashStart) {
         btnDash.removeEventListener('touchstart', _mobileHandlers.btnDashStart);
         btnDash.removeEventListener('touchend', _mobileHandlers.btnDashEnd);
@@ -309,11 +309,11 @@ function cleanupMobileControls() {
     if (btnShop && _mobileHandlers.btnShopStart) {
         btnShop.removeEventListener('touchstart', _mobileHandlers.btnShopStart);
     }
-    
+
     if (_mobileHandlers.touchMove) {
         document.removeEventListener('touchmove', _mobileHandlers.touchMove);
     }
-    
+
     // Clear handler references
     _mobileHandlers = {
         leftStart: null, leftMove: null, leftEnd: null, leftCancel: null,
@@ -397,6 +397,9 @@ function _setupKeyboardListeners() {
         if (e.code === 'KeyE') keys.e = 1;
         if (e.code === 'KeyB') keys.b = 1;
         if (e.code === 'KeyF') keys.f = 1;
+        // ── Phase 3 Session 1: R = Naga, Shift+R = Ritual Burst ──
+        if (e.code === 'KeyR') keys.r = 1;
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.shift = 1;
 
         // 'T' — Bullet Time toggle (global, no proximity gate)
         if (e.code === 'KeyT') {
@@ -420,6 +423,9 @@ function _setupKeyboardListeners() {
         if (e.code === 'KeyE') keys.e = 0;
         if (e.code === 'KeyB') keys.b = 0;
         if (e.code === 'KeyF') keys.f = 0;
+        // ── Phase 3 Session 1: R = Naga, Shift+R = Ritual Burst ──
+        if (e.code === 'KeyR') keys.r = 0;
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.shift = 0;
         // 'T' fires only on keydown; no keyup state needed.
 
         if (e.code === 'KeyQ') {
