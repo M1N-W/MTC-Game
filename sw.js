@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.10'; // v3.4.10 CSS Fix: Remove empty ruleset in Debug.html
+const CACHE_NAME = 'mtc-cache-v3.4.11'; // v3.4.11 Tutorial Update: Current controls and 15 waves
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
