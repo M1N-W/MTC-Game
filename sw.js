@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.2'; // v3.4.2 Production Release: StatusEffect Framework complete, debug logs removed, documentation updated
+const CACHE_NAME = 'mtc-cache-v3.4.3'; // v3.4.3 Controls Update: Poom R=Ritual, Q=Naga, README controls updated
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

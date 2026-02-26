@@ -199,18 +199,14 @@ class PoomPlayer extends Entity {
 
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
         if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { this.eatRice(); keys.e = 0; }
-        // ── Phase 3 Session 1: R = Naga, Shift+R = Ritual Burst ──
-        // CONSTRAINT: keys.r always reset when Shift is held to prevent
-        //             bleed into Naga trigger if Shift is released next frame.
-        if (keys.r) {
-            if (keys.shift) {
-                console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual);
-                if (this.cooldowns.ritual <= 0) this.ritualBurst();
-                keys.r = 0; // always consume — no bleed to Naga
-            } else if (this.cooldowns.naga <= 0) {
-                this.summonNaga();
-                keys.r = 0;
-            }
+        // ── Updated Controls: R = Ritual Burst, Q = Naga Summon ──
+        if (keys.r && this.cooldowns.ritual <= 0) {
+            this.ritualBurst();
+            keys.r = 0;
+        }
+        if (keys.q && this.cooldowns.naga <= 0) {
+            this.summonNaga();
+            keys.q = 0;
         }
 
         this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);

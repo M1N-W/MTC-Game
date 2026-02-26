@@ -35,6 +35,7 @@ A high-octane, top-down survival action game built entirely from scratch using *
 | **E** | Access MTC Database (when near server) |
 | **F** | Open Admin Terminal |
 | **Q** | Secondary Skill (Poom's Naga) |
+| **R** | Ritual Burst (Poom's Sticky Consuming) |
 
 ## 🚀 How to Run
 
