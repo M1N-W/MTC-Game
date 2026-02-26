@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.6'; // v3.4.6 Ritual Fix: Always usable with base damage when no sticky enemies
+const CACHE_NAME = 'mtc-cache-v3.4.7'; // v3.4.7 Ritual Major Buff: 75 base damage + 15% HP scaling + 280 range + 15s cooldown
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

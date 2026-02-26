@@ -308,10 +308,13 @@ class PoomPlayer extends Entity {
 
                 const stickyStatus = enemy.getStatus('sticky');
                 if (stickyStatus && stickyStatus.stacks > 0) {
-                    // Deal damage based on stacks
-                    const bonusDamage = stickyStatus.stacks * DAMAGE_PER_STACK;
-                    enemy.takeDamage(bonusDamage, this);
-                    spawnFloatingText(Math.round(bonusDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
+                    // Deal damage based on stacks (flat + percentage)
+                    const flatDamage = stickyStatus.stacks * DAMAGE_PER_STACK;
+                    const pctDamage = enemy.maxHp * RC.stackBurstPct * stickyStatus.stacks;
+                    const totalDamage = flatDamage + pctDamage;
+                    
+                    enemy.takeDamage(totalDamage, this);
+                    spawnFloatingText(Math.round(totalDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
 
                     // Remove sticky status
                     enemy.removeStatus('sticky');
@@ -324,16 +327,22 @@ class PoomPlayer extends Entity {
         if (totalEnemiesAffected === 0) {
             console.log('[Poom] No sticky enemies found - dealing base ritual damage');
             // Deal base damage to nearby enemies without sticky
-            const BASE_DAMAGE = 25;
-            const RITUAL_RANGE = 200;
+            const BASE_DAMAGE = RC.baseDamage || 75;
+            const BASE_DAMAGE_PCT = RC.baseDamagePct || 0.15;
+            const RITUAL_RANGE = RC.range || 280;
             
             if (window.enemies && window.enemies.length > 0) {
                 for (const enemy of window.enemies) {
                     if (enemy.dead) continue;
                     const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
                     if (dist <= RITUAL_RANGE) {
-                        enemy.takeDamage(BASE_DAMAGE, this);
-                        spawnFloatingText(BASE_DAMAGE, enemy.x, enemy.y - 30, '#00ff88', 16);
+                        // Calculate damage: flat base + percentage of max HP
+                        const flatDamage = BASE_DAMAGE;
+                        const pctDamage = enemy.maxHp * BASE_DAMAGE_PCT;
+                        const totalDamage = flatDamage + pctDamage;
+                        
+                        enemy.takeDamage(totalDamage, this);
+                        spawnFloatingText(Math.round(totalDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
                         totalEnemiesAffected++;
                     }
                 }

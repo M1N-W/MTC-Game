@@ -474,12 +474,16 @@ const GAME_CONFIG = {
     abilities: {
         ritual: {
             // ── Damage model ──────────────────────────────────
-            damagePerStack: 10,              // flat dmg per stack; 5 stacks = 50 dmg
-            stackBurstPct: 0.20,             // % of enemy maxHp per stack (burst formula)
+            damagePerStack: 15,              // flat dmg per stack; 5 stacks = 75 dmg
+            stackBurstPct: 0.25,             // % of enemy maxHp per stack (burst formula)
+            baseDamage: 75,                  // base AoE damage when no sticky
+            baseDamagePct: 0.15,             // 15% of enemy maxHp as base damage
             // ── Lifecycle ─────────────────────────────────────
-            cooldown: 20,                    // seconds — single source of truth
+            cooldown: 15,                    // seconds — reduced for better uptime
             castTime: 0.6,                   // seconds before window opens
             windowDuration: 3.0,             // seconds window stays active
+            // ── Area of Effect ───────────────────────────────
+            range: 280,                      // increased from 200 to 280 pixels
             // ── Effect modifiers ──────────────────────────────
             fullCeremonySpeedPct: 0.25,      // speed bonus during full ceremony
             fullCeremonyExtraSlowPct: 0.05,  // extra slow during full ceremony
