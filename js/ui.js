@@ -787,8 +787,7 @@ class UIManager {
     static showGameOver(score, wave, kills) {
         const titleEl = document.querySelector('.title');
         if (titleEl) {
-            titleEl.innerHTML =
-                'GAME OVER<br><span class="subtitle">SCORE ' + score.toLocaleString() + ' | WAVE ' + wave + '</span>';
+            titleEl.textContent = 'MTC the Game';
         }
         const reportScoreEl = document.getElementById('report-score');
         if (reportScoreEl) reportScoreEl.textContent = score.toLocaleString();
@@ -796,10 +795,16 @@ class UIManager {
         if (reportWaveEl) reportWaveEl.textContent = wave;
         const reportKillsEl = document.getElementById('report-kills');
         if (reportKillsEl) reportKillsEl.textContent = (kills || 0).toLocaleString();
-        const reportText = document.getElementById('report-text');
-        if (reportText) reportText.textContent = 'Loading...';
         const rc = document.getElementById('report-card');
         if (rc) rc.style.display = 'block';
+        
+        // Show character selection so player can switch characters
+        const charSection = document.querySelector('.char-select-section');
+        if (charSection) charSection.style.display = 'block';
+        
+        // Update mission brief
+        const missionBrief = document.getElementById('mission-brief');
+        if (missionBrief) missionBrief.textContent = 'เลือกตัวละครใหม่หรือลองอีกครั้ง';
     }
 
     static resetGameOverUI() {

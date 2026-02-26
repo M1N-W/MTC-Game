@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.12'; // v3.4.12 Tutorial Update: Add Kru First boss information
+const CACHE_NAME = 'mtc-cache-v3.4.13'; // v3.4.13 UI Refresh: Improved menu & game over screens - cleaner design, better spacing
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
