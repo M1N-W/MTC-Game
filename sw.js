@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.9'; // v3.4.9 Menu Update: Latest features and version information
+const CACHE_NAME = 'mtc-cache-v3.4.10'; // v3.4.10 CSS Fix: Remove empty ruleset in Debug.html
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
