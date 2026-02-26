@@ -36,6 +36,7 @@ A high-octane, top-down survival action game built entirely from scratch using *
 | **F** | Open Admin Terminal |
 | **Q** | Secondary Skill (Poom's Naga) |
 | **R** | Ritual Burst (Poom's Sticky Consuming) |
+| **Mouse Wheel** | Switch Weapon (Kao) |
 
 ## 🚀 How to Run
 
