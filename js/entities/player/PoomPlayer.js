@@ -200,11 +200,13 @@ class PoomPlayer extends Entity {
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
         if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { this.eatRice(); keys.e = 0; }
         // ── Phase 3 Session 1: R = Naga, Shift+R = Ritual Burst ──
+        // CONSTRAINT: keys.r always reset when Shift is held to prevent
+        //             bleed into Naga trigger if Shift is released next frame.
         if (keys.r) {
             if (keys.shift) {
-                console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual);
+                console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual, 'Stacks:', this.enemyStacks.size);
                 if (this.cooldowns.ritual <= 0) this.ritualBurst();
-                keys.r = 0;
+                keys.r = 0; // always consume — no bleed to Naga
             } else if (this.cooldowns.naga <= 0) {
                 this.summonNaga();
                 keys.r = 0;
@@ -246,10 +248,14 @@ class PoomPlayer extends Entity {
         this.cooldowns.shoot = S.riceCooldown * this.cooldownMultiplier;
         const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0));
         const proj = new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
+        // ── Phase 2 Session 2: Apply sticky stack on direct rice projectile hit ──
+        // CONSTRAINT: Fragment projectiles never call this (they are separate Projectile instances
+        //             with isFragment=true and do NOT go through shoot()).
+        // CONSTRAINT: Called exactly once per direct hit via the onHit callback.
         const self = this;
         console.log('[Poom] Setting onHit callback for projectile');
         proj.onHit = function (enemy) {
-            self.applyStickyTo(enemy); // ── Session C: Using StatusEffect framework only ──
+            self.applyStackToEnemy(enemy, damage); // ── Phase 2 Session 3: pass object, not id ──
         };
         projectileManager.add(proj);
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
@@ -289,7 +295,9 @@ class PoomPlayer extends Entity {
     // CONSTRAINT: Does not affect projectile or slow logic.
     // ════════════════════════════════════════════════════════════
     ritualBurst() {
-        // ── Session C/D: Read sticky from StatusEffect framework ──
+        if (this.enemyStacks.size === 0) return;
+
+        //  Phase 4 Session 1: read from config, no hardcode 
         if (!GAME_CONFIG || !GAME_CONFIG.abilities || !GAME_CONFIG.abilities.ritual) {
             console.error('[Poom] GAME_CONFIG.abilities.ritual not found! Cannot execute ritual burst.');
             return;
@@ -297,37 +305,28 @@ class PoomPlayer extends Entity {
         const RC = GAME_CONFIG.abilities.ritual;
         const DAMAGE_PER_STACK = RC.damagePerStack || 10;
 
-        let totalEnemiesAffected = 0;
+        for (const [enemyId, data] of this.enemyStacks) {
+            // Reset slow state on all entries regardless of alive/dead
+            if (data.enemyRef) {
+                data.enemyRef.stickyStacks = 0;
+                data.enemyRef.stickySlowMultiplier = 1;
 
-        // Iterate all living enemies and consume their sticky status
-        if (window.enemies && window.enemies.length > 0) {
-            for (const enemy of window.enemies) {
-                if (enemy.dead) continue;
-
-                const stickyStatus = enemy.getStatus('sticky');
-                if (stickyStatus && stickyStatus.stacks > 0) {
-                    // Deal damage based on stacks
-                    const bonusDamage = stickyStatus.stacks * DAMAGE_PER_STACK;
-                    enemy.takeDamage(bonusDamage, this);
-                    spawnFloatingText(Math.round(bonusDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
-
-                    // Remove sticky status
-                    enemy.removeStatus('sticky');
-                    totalEnemiesAffected++;
+                // Only deal damage to living enemies
+                if (!data.enemyRef.dead) {
+                    const bonusDamage = data.stacks * DAMAGE_PER_STACK;
+                    data.enemyRef.takeDamage(bonusDamage, this);
+                    spawnFloatingText(Math.round(bonusDamage), data.enemyRef.x, data.enemyRef.y - 30, '#00ff88', 16);
                 }
             }
         }
 
-        // Only trigger cooldown if we actually consumed some stacks
-        if (totalEnemiesAffected === 0) {
-            console.log('[Poom] No sticky enemies found - ritual not consumed');
-            return;
-        }
+        // Clear all stack entries
+        this.enemyStacks.clear();
 
-        console.log(`[Poom] Ritual burst consumed sticky on ${totalEnemiesAffected} enemies`);
-
-        // Set cooldown after confirmed consume
-        this.cooldowns.ritual = RC.cooldown || 20;
+        // ── Phase 3 Session 2: set cooldown after confirmed consume ──
+        // Placed here (not at call site) so empty-stack early return
+        // above does NOT trigger cooldown.
+        this.cooldowns.ritual = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
 
         spawnParticles(this.x, this.y, 30, '#00ff88');
         spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
@@ -426,6 +425,79 @@ class PoomPlayer extends Entity {
      * CONSTRAINT: Must be called once per frame in update()
      * CONSTRAINT: Uses performance.now() for frame-independent behavior
      */
+    updateStickyStacks() {
+        const now = performance.now() / 1000;
+        const toDelete = [];
+
+        for (const [enemyId, data] of this.enemyStacks) {
+            // ── Phase 2 Session 4: immediate cleanup on enemy death ──
+            // Dead or missing enemyRef entries are removed in the same frame,
+            // no need to wait for expireAt timer.
+            if (!data.enemyRef || data.enemyRef.dead === true) {
+                toDelete.push(enemyId);
+                continue;
+            }
+            // Existing expiration logic unchanged for living enemies
+            if (data.expireAt < now) {
+                toDelete.push(enemyId);
+            }
+        }
+
+        for (const id of toDelete) {
+            // Reset slow state on enemyRef if it still exists (may be null for dead enemies)
+            const data = this.enemyStacks.get(id);
+            if (data && data.enemyRef) {
+                data.enemyRef.stickyStacks = 0;
+                data.enemyRef.stickySlowMultiplier = 1;
+            }
+            this.enemyStacks.delete(id);
+        }
+    }
+
+    /**
+     * Apply sticky stack to enemy on hit
+     * CONSTRAINT: Fragment projectiles must never call this method
+     * CONSTRAINT: Does NOT delete entries (handled by updateStickyStacks)
+     * CONSTRAINT: Does NOT reset stacks automatically
+     * @param {object} enemy - Enemy instance (id used as Map key, ref stored for slow reset)
+     * @param {number} damage - Damage dealt to enemy
+     */
+    applyStackToEnemy(enemy, damage) {
+        console.log('[Poom] applyStackToEnemy called. Enemy:', enemy.id, 'Damage:', damage);
+        const S = this.stats;
+        const now = performance.now() / 1000;
+        const enemyId = enemy.id;
+
+        // Create entry if not exists
+        if (!this.enemyStacks.has(enemyId)) {
+            this.enemyStacks.set(enemyId, {
+                stacks: 0,
+                expireAt: 0,
+                lastRiceDamage: 0,
+                maxTriggered: false,
+                enemyRef: enemy  // ── Phase 2 Session 3: store ref for slow reset on expiry ──
+            });
+        }
+
+        const data = this.enemyStacks.get(enemyId);
+
+        // Apply stack
+        data.stacks += 1;
+        data.lastRiceDamage = damage;
+        data.expireAt = now + S.sticky.stackDuration;
+
+        // ── Phase 2 Session 3: update slow multiplier directly on enemy instance ──
+        enemy.stickyStacks = data.stacks;
+        enemy.stickySlowMultiplier = Math.max(0.2, 1 - (0.04 * data.stacks));
+
+        // Check for ritual point accumulation
+        if (data.stacks >= S.sticky.maxStacks && data.maxTriggered === false) {
+            this.ritualPoints += 1;
+            data.maxTriggered = true;
+        }
+    }
+
+    draw() {
         // ════════════════════════════════════════════════════════════
         // POOM — Anti-Flip v12
         // LAYER 1: Body (mirror via scale, no rotation).
