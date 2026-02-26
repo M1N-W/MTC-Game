@@ -510,6 +510,37 @@ class PoomPlayer extends Entity {
         }
     }
 
+
+
+    // 
+    //  SESSION B: STICKY ADAPTER - Bridge to StatusEffect Framework
+    // 
+
+    /**
+     * Apply sticky status effect to enemy using new StatusEffect framework
+     * This is the adapter method that bridges old system to new framework
+     * @param {object} enemy - Enemy instance
+     */
+    applyStickyTo(enemy) {
+        const S = this.stats;
+        const now = performance.now() / 1000;
+        
+        // Read config values
+        const stackDuration = S.sticky.stackDuration || 5;
+        const slowPerStack = 0.04; // Same as old system
+        
+        // Apply sticky status to enemy
+        enemy.addStatus('sticky', {
+            stacks: 1,
+            expireAt: now + stackDuration,
+            meta: {
+                slowPerStack: slowPerStack
+            }
+        });
+        
+        console.log('[Poom Session B] applyStickyTo called. Enemy:', enemy.id, 'Status:', enemy.getStatus('sticky'));
+    }
+
     draw() {
         // ════════════════════════════════════════════════════════════
         // POOM — Anti-Flip v12

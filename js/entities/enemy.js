@@ -84,12 +84,24 @@ class Enemy extends Entity {
         // ── Phase 2 Session 3: Sticky slow state ─────────────
         this.stickyStacks = 0;
         this.stickySlowMultiplier = 1;
+
+        //  StatusEffect Framework Core 
+        this.statusEffects = new Map();
     }
 
     update(dt, player) {
         if (this.dead) return;
 
-        // ── Tick hit-flash timer ─────────────────────────────
+        //  StatusEffect Framework Tick 
+        this.tickStatuses(dt);        // ── Tick hit-flash timer ─────────────────────────────
+
+        // ── Session B: Read sticky status and update slow multiplier ──
+        const stickyStatus = this.getStatus("sticky");
+        if (stickyStatus && stickyStatus.meta) {
+            const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
+            this.stickySlowMultiplier = Math.max(0.2, 1 - (slowPerStack * stickyStatus.stacks));
+            this.stickyStacks = stickyStatus.stacks;
+        }
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
 
         const dx = player.x - this.x, dy = player.y - this.y;
@@ -139,6 +151,105 @@ class Enemy extends Entity {
 
             Achievements.stats.kills++; Achievements.check('first_blood');
             if (Math.random() < BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x, this.y));
+        }
+    }
+
+    // 
+    // STATUSEFFECT FRAMEWORK - Session A
+    // 
+
+    /**
+     * Add or merge a status effect on this enemy
+     * @param {string} type - Effect type identifier
+     * @param {object} data - Effect data to merge (stacks, expireAt, meta, callbacks)
+     */
+    addStatus(type, data) {
+        const existing = this.statusEffects.get(type);
+        const now = performance.now() / 1000;
+        
+        if (existing) {
+            // Merge with existing effect
+            if (data.stacks !== undefined) {
+                existing.stacks += data.stacks;
+            }
+            if (data.expireAt !== undefined) {
+                existing.expireAt = Math.max(existing.expireAt, data.expireAt);
+            }
+            if (data.meta) {
+                existing.meta = { ...existing.meta, ...data.meta };
+            }
+            // Override callbacks if provided
+            if (data.onApply) existing.onApply = data.onApply;
+            if (data.onExpire) existing.onExpire = data.onExpire;
+            if (data.onTick) existing.onTick = data.onTick;
+        } else {
+            // Create new effect
+            const effect = {
+                type,
+                stacks: data.stacks || 1,
+                expireAt: data.expireAt || (now + (data.duration || 5)),
+                meta: data.meta || {},
+                onApply: data.onApply,
+                onExpire: data.onExpire,
+                onTick: data.onTick
+            };
+            this.statusEffects.set(type, effect);
+            
+            // Call onApply callback if provided
+            if (effect.onApply) {
+                effect.onApply(this, effect);
+            }
+        }
+    }
+
+    /**
+     * Remove a status effect from this enemy
+     * @param {string} type - Effect type to remove
+     */
+    removeStatus(type) {
+        const effect = this.statusEffects.get(type);
+        if (effect) {
+            // Call onExpire callback if provided
+            if (effect.onExpire) {
+                effect.onExpire(this, effect);
+            }
+            this.statusEffects.delete(type);
+        }
+    }
+
+    /**
+     * Get status effect data
+     * @param {string} type - Effect type to retrieve
+     * @returns {object|null} Effect data or null if not found
+     */
+    getStatus(type) {
+        return this.statusEffects.get(type) || null;
+    }
+
+    /**
+     * Update all status effects, call onTick callbacks, remove expired ones
+     * @param {number} dt - Delta time in seconds
+     */
+    tickStatuses(dt) {
+        const now = performance.now() / 1000;
+        const toRemove = [];
+
+        for (const [type, effect] of this.statusEffects) {
+            // Check expiration
+            if (effect.expireAt <= now) {
+                toRemove.push(type);
+                continue;
+            }
+
+            // Call onTick callback if provided
+            if (effect.onTick) {
+                effect.onTick(this, effect, dt);
+            }
+        }
+
+        // Remove expired effects
+        for (const type of toRemove) {
+            this.removeStatus(type);
         }
     }
 
@@ -286,12 +397,24 @@ class TankEnemy extends Entity {
         // ── Phase 2 Session 3: Sticky slow state ─────────────
         this.stickyStacks = 0;
         this.stickySlowMultiplier = 1;
+
+        //  StatusEffect Framework Core 
+        this.statusEffects = new Map();
     }
 
     update(dt, player) {
         if (this.dead) return;
 
-        // ── Tick hit-flash timer ─────────────────────────────
+        //  StatusEffect Framework Tick 
+        this.tickStatuses(dt);        // ── Tick hit-flash timer ─────────────────────────────
+
+        // ── Session B: Read sticky status and update slow multiplier ──
+        const stickyStatus = this.getStatus("sticky");
+        if (stickyStatus && stickyStatus.meta) {
+            const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
+            this.stickySlowMultiplier = Math.max(0.2, 1 - (slowPerStack * stickyStatus.stacks));
+            this.stickyStacks = stickyStatus.stacks;
+        }
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
 
         const dx = player.x - this.x, dy = player.y - this.y;
@@ -333,6 +456,105 @@ class TankEnemy extends Entity {
             }
             Achievements.stats.kills++;
             if (Math.random() < BALANCE.powerups.dropRate * BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
+        }
+    }
+
+    // 
+    // STATUSEFFECT FRAMEWORK - Session A
+    // 
+
+    /**
+     * Add or merge a status effect on this enemy
+     * @param {string} type - Effect type identifier
+     * @param {object} data - Effect data to merge (stacks, expireAt, meta, callbacks)
+     */
+    addStatus(type, data) {
+        const existing = this.statusEffects.get(type);
+        const now = performance.now() / 1000;
+        
+        if (existing) {
+            // Merge with existing effect
+            if (data.stacks !== undefined) {
+                existing.stacks += data.stacks;
+            }
+            if (data.expireAt !== undefined) {
+                existing.expireAt = Math.max(existing.expireAt, data.expireAt);
+            }
+            if (data.meta) {
+                existing.meta = { ...existing.meta, ...data.meta };
+            }
+            // Override callbacks if provided
+            if (data.onApply) existing.onApply = data.onApply;
+            if (data.onExpire) existing.onExpire = data.onExpire;
+            if (data.onTick) existing.onTick = data.onTick;
+        } else {
+            // Create new effect
+            const effect = {
+                type,
+                stacks: data.stacks || 1,
+                expireAt: data.expireAt || (now + (data.duration || 5)),
+                meta: data.meta || {},
+                onApply: data.onApply,
+                onExpire: data.onExpire,
+                onTick: data.onTick
+            };
+            this.statusEffects.set(type, effect);
+            
+            // Call onApply callback if provided
+            if (effect.onApply) {
+                effect.onApply(this, effect);
+            }
+        }
+    }
+
+    /**
+     * Remove a status effect from this enemy
+     * @param {string} type - Effect type to remove
+     */
+    removeStatus(type) {
+        const effect = this.statusEffects.get(type);
+        if (effect) {
+            // Call onExpire callback if provided
+            if (effect.onExpire) {
+                effect.onExpire(this, effect);
+            }
+            this.statusEffects.delete(type);
+        }
+    }
+
+    /**
+     * Get status effect data
+     * @param {string} type - Effect type to retrieve
+     * @returns {object|null} Effect data or null if not found
+     */
+    getStatus(type) {
+        return this.statusEffects.get(type) || null;
+    }
+
+    /**
+     * Update all status effects, call onTick callbacks, remove expired ones
+     * @param {number} dt - Delta time in seconds
+     */
+    tickStatuses(dt) {
+        const now = performance.now() / 1000;
+        const toRemove = [];
+
+        for (const [type, effect] of this.statusEffects) {
+            // Check expiration
+            if (effect.expireAt <= now) {
+                toRemove.push(type);
+                continue;
+            }
+
+            // Call onTick callback if provided
+            if (effect.onTick) {
+                effect.onTick(this, effect, dt);
+            }
+        }
+
+        // Remove expired effects
+        for (const type of toRemove) {
+            this.removeStatus(type);
         }
     }
 
@@ -508,12 +730,24 @@ class MageEnemy extends Entity {
         // ── Phase 2 Session 3: Sticky slow state ─────────────
         this.stickyStacks = 0;
         this.stickySlowMultiplier = 1;
+
+        //  StatusEffect Framework Core 
+        this.statusEffects = new Map();
     }
 
     update(dt, player) {
         if (this.dead) return;
 
-        // ── Tick hit-flash timer ─────────────────────────────
+        //  StatusEffect Framework Tick 
+        this.tickStatuses(dt);        // ── Tick hit-flash timer ─────────────────────────────
+
+        // ── Session B: Read sticky status and update slow multiplier ──
+        const stickyStatus = this.getStatus("sticky");
+        if (stickyStatus && stickyStatus.meta) {
+            const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
+            this.stickySlowMultiplier = Math.max(0.2, 1 - (slowPerStack * stickyStatus.stacks));
+            this.stickyStacks = stickyStatus.stacks;
+        }
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
 
         const d = dist(this.x, this.y, player.x, player.y), od = BALANCE.mage.orbitDistance;
@@ -564,6 +798,105 @@ class MageEnemy extends Entity {
             }
             Achievements.stats.kills++;
             if (Math.random() < BALANCE.powerups.dropRate * BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
+        }
+    }
+
+    // 
+    // STATUSEFFECT FRAMEWORK - Session A
+    // 
+
+    /**
+     * Add or merge a status effect on this enemy
+     * @param {string} type - Effect type identifier
+     * @param {object} data - Effect data to merge (stacks, expireAt, meta, callbacks)
+     */
+    addStatus(type, data) {
+        const existing = this.statusEffects.get(type);
+        const now = performance.now() / 1000;
+        
+        if (existing) {
+            // Merge with existing effect
+            if (data.stacks !== undefined) {
+                existing.stacks += data.stacks;
+            }
+            if (data.expireAt !== undefined) {
+                existing.expireAt = Math.max(existing.expireAt, data.expireAt);
+            }
+            if (data.meta) {
+                existing.meta = { ...existing.meta, ...data.meta };
+            }
+            // Override callbacks if provided
+            if (data.onApply) existing.onApply = data.onApply;
+            if (data.onExpire) existing.onExpire = data.onExpire;
+            if (data.onTick) existing.onTick = data.onTick;
+        } else {
+            // Create new effect
+            const effect = {
+                type,
+                stacks: data.stacks || 1,
+                expireAt: data.expireAt || (now + (data.duration || 5)),
+                meta: data.meta || {},
+                onApply: data.onApply,
+                onExpire: data.onExpire,
+                onTick: data.onTick
+            };
+            this.statusEffects.set(type, effect);
+            
+            // Call onApply callback if provided
+            if (effect.onApply) {
+                effect.onApply(this, effect);
+            }
+        }
+    }
+
+    /**
+     * Remove a status effect from this enemy
+     * @param {string} type - Effect type to remove
+     */
+    removeStatus(type) {
+        const effect = this.statusEffects.get(type);
+        if (effect) {
+            // Call onExpire callback if provided
+            if (effect.onExpire) {
+                effect.onExpire(this, effect);
+            }
+            this.statusEffects.delete(type);
+        }
+    }
+
+    /**
+     * Get status effect data
+     * @param {string} type - Effect type to retrieve
+     * @returns {object|null} Effect data or null if not found
+     */
+    getStatus(type) {
+        return this.statusEffects.get(type) || null;
+    }
+
+    /**
+     * Update all status effects, call onTick callbacks, remove expired ones
+     * @param {number} dt - Delta time in seconds
+     */
+    tickStatuses(dt) {
+        const now = performance.now() / 1000;
+        const toRemove = [];
+
+        for (const [type, effect] of this.statusEffects) {
+            // Check expiration
+            if (effect.expireAt <= now) {
+                toRemove.push(type);
+                continue;
+            }
+
+            // Call onTick callback if provided
+            if (effect.onTick) {
+                effect.onTick(this, effect, dt);
+            }
+        }
+
+        // Remove expired effects
+        for (const type of toRemove) {
+            this.removeStatus(type);
         }
     }
 
