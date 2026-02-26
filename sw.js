@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.1'; // v3.4.1 StatusEffect Framework Migration: Session C/D complete - remove legacy sticky system, implement StatusEffect framework for enemies
+const CACHE_NAME = 'mtc-cache-v3.4.2'; // v3.4.2 Production Release: StatusEffect Framework complete, debug logs removed, documentation updated
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [

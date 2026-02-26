@@ -20,6 +20,7 @@ A high-octane, top-down survival action game built entirely from scratch using *
     * **👑 Kru Manop:** The ruthless math teacher with 3 distinct phases (Base, Dog Rider, Goldfish Lover).
     * **⚛️ Kru First:** The agile physics master. Features Vector-telegraphed SUVAT Charges, Gravitational Shockwaves, and a unique "Pork Sandwich" parry mechanic.
 * **Tactical HUD & Systems:** Features a real-time minimap (Radar), an interactive Shop system for mid-game buffs, and a robust Achievement tracking system.
+* **StatusEffect Framework:** Advanced status system for enemies. Supports sticky rice effects, ritual burst consumption, and extensible for future effects (burn, poison, freeze).
 * **Developer Admin Console:** A fully functional, Unix-style terminal (`F` key) for executing God-mode commands, manipulating waves, and debugging.
 
 ## 🕹️ Controls

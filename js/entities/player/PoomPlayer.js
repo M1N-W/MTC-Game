@@ -253,7 +253,7 @@ class PoomPlayer extends Entity {
         //             with isFragment=true and do NOT go through shoot()).
         // CONSTRAINT: Called exactly once per direct hit via the onHit callback.
         const self = this;
-        console.log('[Poom] Setting onHit callback for projectile');
+
         proj.onHit = function (enemy) {
             self.applyStickyTo(enemy); // ── Session C: Using StatusEffect framework only ──
         };
@@ -447,8 +447,6 @@ class PoomPlayer extends Entity {
             expireAt: now + stackDuration,
             meta: { slowPerStack: slowPerStack }
         });
-        
-        console.log('[Poom Session B] applyStickyTo called. Enemy:', enemy.id, 'Status:', enemy.getStatus('sticky'));
     }
 
     draw() {
