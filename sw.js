@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.3'; // v3.4.3 Controls Update: Poom R=Ritual, Q=Naga, README controls updated
+const CACHE_NAME = 'mtc-cache-v3.4.4'; // v3.4.4 UI Fix: Ritual key hint updated from Shift+R to R in index.html
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
