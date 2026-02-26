@@ -266,6 +266,7 @@ class PoomPlayer extends Entity {
         //             with isFragment=true and do NOT go through shoot()).
         // CONSTRAINT: Called exactly once per direct hit via the onHit callback.
         const self = this;
+        console.log('[Poom] Setting onHit callback for projectile');
         proj.onHit = function (enemy) {
             self.applyStackToEnemy(enemy, damage); // ── Phase 2 Session 3: pass object, not id ──
         };
@@ -475,6 +476,7 @@ class PoomPlayer extends Entity {
      * @param {number} damage - Damage dealt to enemy
      */
     applyStackToEnemy(enemy, damage) {
+        console.log('[Poom] applyStackToEnemy called. Enemy:', enemy.id, 'Damage:', damage);
         const S = this.stats;
         const now = performance.now() / 1000;
         const enemyId = enemy.id;

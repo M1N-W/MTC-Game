@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.3.6'; // เปลยนเลขเวอรชนตรงนทกครงทมการอปเดตเกม, v3.3.6 Ritual Burst Debug - Safety checks and logging
+const CACHE_NAME = 'mtc-cache-v3.3.7'; // เปลยนเลขเวอรชนตรงนทกครงทมการอปเดตเกม, v3.3.7 Debug: Stack application logging
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 const urlsToCache = [
