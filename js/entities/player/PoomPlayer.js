@@ -174,7 +174,94 @@ class PoomPlayer extends Entity {
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
         if (this.cooldowns.ritual > 0) this.cooldowns.ritual -= dt; // ── Phase 3 Session 2 ──
 
-        // ── Update Sticky Stack Expiration ─────────────────────
+        // ── Session C: updateStickyStacks removed - enemies manage their own status expiration ──
+
+        // ── Update Naga Rite State ─────────────────────────────
+        const riteState = this.nagaRiteState;
+        if (riteState.cooldownRemaining > 0) {
+            riteState.cooldownRemaining -= dt;
+        }
+        if (riteState.castRemaining > 0) {
+            riteState.castRemaining -= dt;
+            if (riteState.castRemaining <= 0) {
+                riteState.active = true;
+                riteState.windowRemaining = GAME_CONFIG.abilities.ritual.windowDuration;
+                spawnFloatingText('พิธีเริ่ม!', this.x, this.y - 40, '#10b981', 22);
+            }
+        }
+        if (riteState.active) {
+            riteState.windowRemaining -= dt;
+            if (riteState.windowRemaining <= 0) {
+                riteState.active = false;
+                spawnFloatingText('พิธีสิ้นสุด', this.x, this.y - 40, '#94a3b8', 14);
+            }
+        }
+
+        if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
+        if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { this.eatRice(); keys.e = 0; }
+        // ── Phase 3 Session 1: R = Naga, Shift+R = Ritual Burst ──
+        if (keys.r) {
+            if (keys.shift) {
+                console.log('[Poom] Shift+R pressed. Cooldown:', this.cooldowns.ritual);
+                if (this.cooldowns.ritual <= 0) this.ritualBurst();
+                keys.r = 0;
+            } else if (this.cooldowns.naga <= 0) {
+                this.summonNaga();
+                keys.r = 0;
+            }
+        }
+
+        this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
+
+        if (this.naga && this.naga.dead) {
+            this.naga = null;
+        }
+
+        if (window.touchJoystickRight && window.touchJoystickRight.active) {
+            this.angle = Math.atan2(window.touchJoystickRight.ny, window.touchJoystickRight.nx);
+        } else {
+            this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
+        }
+
+        for (let i = this.dashGhosts.length - 1; i >= 0; i--) {
+            this.dashGhosts[i].life -= dt * 5;
+            if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
+        }
+
+        _standAura_update(this, dt);
+
+        if (this.dead && this.dashTimeouts && this.dashTimeouts.length) {
+            const ids = this.dashTimeouts.slice();
+            this.dashTimeouts.length = 0;
+            for (const timeoutId of ids) {
+                try { clearTimeout(timeoutId); } catch (e) { }
+            }
+        }
+        this.updateUI();
+    }
+
+    shoot() {
+        const S = this.stats;
+        if (this.cooldowns.shoot > 0) return;
+        this.cooldowns.shoot = S.riceCooldown * this.cooldownMultiplier;
+        const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0));
+        const proj = new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
+        const self = this;
+        console.log('[Poom] Setting onHit callback for projectile');
+        proj.onHit = function (enemy) {
+            self.applyStickyTo(enemy); // ── Session C: Using StatusEffect framework only ──
+        };
+        projectileManager.add(proj);
+        if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
+        this.speedBoostTimer = S.speedOnHitDuration;
+        Audio.playPoomShoot();
+    }
+
+    eatRice() {
+        const S = this.stats;
+        this.isEatingRice = true;
+        this.eatRiceTimer = S.eatRiceDuration;
+        this.cooldowns.eat = S.eatRiceCooldown * this.cooldownMultiplier;
         spawnParticles(this.x, this.y, 30, '#fbbf24');
         spawnFloatingText('กินข้าวเหนียว!', this.x, this.y - 50, '#fbbf24', 22);
         showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
@@ -202,14 +289,45 @@ class PoomPlayer extends Entity {
     // CONSTRAINT: Does not affect projectile or slow logic.
     // ════════════════════════════════════════════════════════════
     ritualBurst() {
-        // ── Session C: Temporary stub - Session D will implement StatusEffect integration ──
-        console.log('[Poom] ritualBurst called - awaiting Session D implementation');
-        // TODO Session D: Iterate world.enemies, read enemy.getStatus('sticky'), deal damage, remove status
+        // ── Session C/D: Read sticky from StatusEffect framework ──
+        if (!GAME_CONFIG || !GAME_CONFIG.abilities || !GAME_CONFIG.abilities.ritual) {
+            console.error('[Poom] GAME_CONFIG.abilities.ritual not found! Cannot execute ritual burst.');
+            return;
+        }
+        const RC = GAME_CONFIG.abilities.ritual;
+        const DAMAGE_PER_STACK = RC.damagePerStack || 10;
 
-        // ── Phase 3 Session 2: set cooldown after confirmed consume ──
-        // Placed here (not at call site) so empty-stack early return
-        // above does NOT trigger cooldown.
-        this.cooldowns.ritual = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
+        let totalEnemiesAffected = 0;
+
+        // Iterate all living enemies and consume their sticky status
+        if (window.enemies && window.enemies.length > 0) {
+            for (const enemy of window.enemies) {
+                if (enemy.dead) continue;
+
+                const stickyStatus = enemy.getStatus('sticky');
+                if (stickyStatus && stickyStatus.stacks > 0) {
+                    // Deal damage based on stacks
+                    const bonusDamage = stickyStatus.stacks * DAMAGE_PER_STACK;
+                    enemy.takeDamage(bonusDamage, this);
+                    spawnFloatingText(Math.round(bonusDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
+
+                    // Remove sticky status
+                    enemy.removeStatus('sticky');
+                    totalEnemiesAffected++;
+                }
+            }
+        }
+
+        // Only trigger cooldown if we actually consumed some stacks
+        if (totalEnemiesAffected === 0) {
+            console.log('[Poom] No sticky enemies found - ritual not consumed');
+            return;
+        }
+
+        console.log(`[Poom] Ritual burst consumed sticky on ${totalEnemiesAffected} enemies`);
+
+        // Set cooldown after confirmed consume
+        this.cooldowns.ritual = RC.cooldown || 20;
 
         spawnParticles(this.x, this.y, 30, '#00ff88');
         spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
