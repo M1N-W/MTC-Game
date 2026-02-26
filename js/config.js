@@ -167,7 +167,31 @@ const BALANCE = {
             speedOnHitDuration: 0.35,
             damageMultiplierPerLevel: 0.07,
             cooldownReductionPerLevel: 0.04,
-            maxHpPerLevel: 7
+            maxHpPerLevel: 7,
+            // ── Sticky Rice Stack System ──
+            sticky: {
+                maxStacks: 5,
+                stackDuration: 1.0,
+                slowPerStack: 0.04,
+                maxSlowDuration: 1.5
+            },
+            // ── Fragment System (Eat Rice Enhancement) ──
+            fragment: {
+                count: 2,
+                damagePct: 0.5,
+                bounces: 1,
+                bossReflectionMultiplier: 1.35
+            },
+            // ── Ritual Point & Naga Rite System ──
+            ritual: {
+                maxPoints: 3,
+                stackBurstPct: 0.20,
+                castTime: 0.6,
+                windowDuration: 3.0,
+                fullCeremonySpeedPct: 0.25,
+                fullCeremonyExtraSlowPct: 0.05,
+                cooldown: 20
+            }
         }
     },
     drone: {

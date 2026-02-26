@@ -40,6 +40,20 @@ class PoomPlayer extends Entity {
         this.nagaCount = 0;
         this.naga = null;
 
+        // ── Sticky Rice Stack System ───────────────────────────
+        // CONSTRAINT: Fragment projectiles must never call applyStackToEnemy
+        // CONSTRAINT: enemyStacks entry must be deleted when enemy dies
+        // CONSTRAINT: Stack expiration uses timestamps only, not dt accumulation
+        // CONSTRAINT: Stack refresh does not stack, only resets expireAt
+        this.enemyStacks = new Map(); // Map<enemyId, {stacks, expireAt, lastRiceDamage}>
+        this.ritualPoints = 0;
+        this.nagaRiteState = {
+            active: false,
+            castRemaining: 0,
+            windowRemaining: 0,
+            cooldownRemaining: 0
+        };
+
         // ── Collision Awareness state ──────────────────────────
         this.obstacleBuffTimer = 0;
         this.lastObstacleWarning = 0;
@@ -163,6 +177,37 @@ class PoomPlayer extends Entity {
         if (this.cooldowns.eat > 0) this.cooldowns.eat -= dt;
         if (this.cooldowns.naga > 0) this.cooldowns.naga -= dt;
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
+
+        // ── Update Sticky Stack Expiration ─────────────────────
+        this.updateStickyStacks();
+
+        // ── Debug Logging (DEV_MODE) ───────────────────────────
+        if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
+            if (this.enemyStacks.size > 0) {
+                console.log('[Poom] Stacks:', this.enemyStacks.size, 'Ritual Points:', this.ritualPoints);
+            }
+        }
+
+        // ── Update Naga Rite State ─────────────────────────────
+        const riteState = this.nagaRiteState;
+        if (riteState.cooldownRemaining > 0) {
+            riteState.cooldownRemaining -= dt;
+        }
+        if (riteState.castRemaining > 0) {
+            riteState.castRemaining -= dt;
+            if (riteState.castRemaining <= 0) {
+                riteState.active = true;
+                riteState.windowRemaining = S.ritual.windowDuration;
+                spawnFloatingText('พิธีเริ่ม!', this.x, this.y - 40, '#10b981', 22);
+            }
+        }
+        if (riteState.active) {
+            riteState.windowRemaining -= dt;
+            if (riteState.windowRemaining <= 0) {
+                riteState.active = false;
+                spawnFloatingText('พิธีสิ้นสุด', this.x, this.y - 40, '#94a3b8', 14);
+            }
+        }
 
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
         if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { this.eatRice(); keys.e = 0; }
@@ -314,6 +359,66 @@ class PoomPlayer extends Entity {
     }
 
     addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
+
+    // ════════════════════════════════════════════════════════════
+    // 🌾 STICKY RICE STACK SYSTEM
+    // ════════════════════════════════════════════════════════════
+
+    /**
+     * Update sticky stack expiration using timestamps (not dt accumulation)
+     * CONSTRAINT: Must be called once per frame in update()
+     * CONSTRAINT: Uses performance.now() for frame-independent behavior
+     */
+    updateStickyStacks() {
+        const now = performance.now() / 1000;
+        const toDelete = [];
+
+        for (const [enemyId, data] of this.enemyStacks) {
+            if (data.expireAt < now) {
+                toDelete.push(enemyId);
+            }
+        }
+
+        for (const id of toDelete) {
+            this.enemyStacks.delete(id);
+        }
+    }
+
+    /**
+     * Apply sticky stack to enemy on hit
+     * CONSTRAINT: Fragment projectiles must never call this method
+     * CONSTRAINT: Does NOT delete entries (handled by updateStickyStacks)
+     * CONSTRAINT: Does NOT reset stacks automatically
+     * @param {string|number} enemyId - Unique enemy identifier
+     * @param {number} damage - Damage dealt to enemy
+     */
+    applyStackToEnemy(enemyId, damage) {
+        const S = this.stats;
+        const now = performance.now() / 1000;
+
+        // Create entry if not exists
+        if (!this.enemyStacks.has(enemyId)) {
+            this.enemyStacks.set(enemyId, {
+                stacks: 0,
+                expireAt: 0,
+                lastRiceDamage: 0,
+                maxTriggered: false
+            });
+        }
+
+        const data = this.enemyStacks.get(enemyId);
+
+        // Apply stack
+        data.stacks += 1;
+        data.lastRiceDamage = damage;
+        data.expireAt = now + S.sticky.stackDuration;
+
+        // Check for ritual point accumulation
+        if (data.stacks >= S.sticky.maxStacks && data.maxTriggered === false) {
+            this.ritualPoints += 1;
+            data.maxTriggered = true;
+        }
+    }
 
     draw() {
         // ════════════════════════════════════════════════════════════
