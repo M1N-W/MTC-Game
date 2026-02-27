@@ -1215,3 +1215,16 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
 }
 
 window.drawAutoWeapon = drawAutoWeapon;
+// ─────────────────────────────────────────────
+// ProjectileRenderer SHIM
+// drawAll() delegates to each Projectile's own draw() method
+// (class was removed during Collision Optimization v2 — restored as thin wrapper)
+// ─────────────────────────────────────────────
+class ProjectileRenderer {
+    static drawAll(projectiles, ctx) {
+        for (let i = 0; i < projectiles.length; i++) {
+            projectiles[i].draw();
+        }
+    }
+}
+window.ProjectileRenderer = ProjectileRenderer;
