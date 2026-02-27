@@ -236,6 +236,7 @@ class Player extends Entity {
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;
+        if (window.isSlowMotion) dashSpeed *= 1.8;
         this.vx = Math.cos(angle) * dashSpeed;
         this.vy = Math.sin(angle) * dashSpeed;
 

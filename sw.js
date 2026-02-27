@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.5.8'; // v3.5.8 Enhancement: TimeManager.js formatting + GameState integration
+const CACHE_NAME = 'mtc-cache-v3.5.9'; // v3.5.9 Enhancement: Slow motion dash compensation + realDt parameter fixes
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

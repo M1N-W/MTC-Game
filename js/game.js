@@ -120,7 +120,7 @@ function gameLoop(now) {
             if (TutorialSystem.isActionStep()) updateGame(scaledDt);
             drawGame();
         } else {
-            updateGame(scaledDt);
+            updateGame(scaledDt, dt);
             drawGame();
         }
     } else if (GameState.phase === 'PAUSED') {
@@ -141,7 +141,7 @@ function gameLoop(now) {
     rafId = requestAnimationFrame(gameLoop);
 }
 
-function updateGame(dt) {
+function updateGame(dt, realDt = dt) {
     // IMP-4 FIX: guard against null player (can happen on first frame or
     // if player object is destroyed before the loop detects GAMEOVER)
     if (!window.player) return;
@@ -227,7 +227,7 @@ function updateGame(dt) {
     const effectiveKeys = GameState.controlsInverted
         ? { ...keys, w: keys.s, s: keys.w, a: keys.d, d: keys.a }
         : keys;
-    window.player.update(dt, effectiveKeys, mouse);
+    window.player.update(realDt, effectiveKeys, mouse);
 
     if (!(window.player instanceof PoomPlayer) && !(typeof AutoPlayer === 'function' && window.player instanceof AutoPlayer)) {
         weaponSystem.update(dt);
