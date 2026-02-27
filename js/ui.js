@@ -333,6 +333,7 @@ class UIManager {
         s.id = 'mtc-cd-styles';
         s.textContent = `
             .skill-icon { position: relative !important; }
+            .cooldown-mask { display: none !important; }
             .cd-arc-overlay {
                 position: absolute; inset: 0;
                 border-radius: 50%;
@@ -408,7 +409,8 @@ class UIManager {
             icon.appendChild(timer);
         }
 
-        if (cooldownCurrent > 0.09) {
+        // Hybrid: แสดง timer เฉพาะ cooldown ยาว (> 5s) เพื่อลด Visual Noise
+        if (cooldownCurrent > 0.09 && cooldownMax > 5) {
             timer.textContent = cooldownCurrent.toFixed(1) + 's';
             timer.style.display = 'flex';
         } else {
@@ -659,16 +661,8 @@ class UIManager {
             const eatIcon = document.getElementById('eat-icon');
             const eatCd = document.getElementById('eat-cd');
             if (eatCd) {
-                if (player.isEatingRice) {
-                    eatCd.style.height = '0%';
-                    eatIcon?.classList.add('active');
-                } else {
-                    eatIcon?.classList.remove('active');
-                    const ep = player.cooldowns.eat <= 0
-                        ? 100
-                        : Math.min(100, (1 - player.cooldowns.eat / S.eatRiceCooldown) * 100);
-                    eatCd.style.height = `${100 - ep}%`;
-                }
+                if (player.isEatingRice) eatIcon?.classList.add('active');
+                else eatIcon?.classList.remove('active');
             }
             UIManager._setCooldownVisual('eat-icon',
                 player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
@@ -679,10 +673,6 @@ class UIManager {
             const nagaCd = document.getElementById('naga-cd');
             const nagaTimer = document.getElementById('naga-timer');
             if (nagaCd) {
-                const np = player.cooldowns.naga <= 0
-                    ? 100
-                    : Math.min(100, (1 - player.cooldowns.naga / S.nagaCooldown) * 100);
-                nagaCd.style.height = `${100 - np}%`;
                 nagaIcon?.classList.toggle('active', player.cooldowns.naga <= 0);
             }
             if (nagaTimer) {
@@ -703,10 +693,6 @@ class UIManager {
             const ritualTimer = document.getElementById('ritual-timer');
             const maxRitualCd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
             if (ritualCd) {
-                const rp = player.cooldowns.ritual <= 0
-                    ? 100
-                    : Math.min(100, (1 - player.cooldowns.ritual / maxRitualCd) * 100);
-                ritualCd.style.height = `${100 - rp}%`;
                 ritualIcon?.classList.toggle('active', player.cooldowns.ritual <= 0);
             }
             if (ritualTimer) {
@@ -760,37 +746,44 @@ class UIManager {
 
             // ── Skill 2 (Q) — Teleport ────────────────────────────────────────
             const teleportIcon = document.getElementById('teleport-icon');
-            const teleportCd   = document.getElementById('teleport-cd');
+            const teleportCd = document.getElementById('teleport-cd');
             setLockOverlay(teleportIcon, !passive);
 
             if (teleportIcon && passive) {
-                const charges    = player.teleportCharges || 0;
+                const charges = player.teleportCharges || 0;
                 const maxCharges = player.maxTeleportCharges || 3;
-                const isReady    = charges > 0;
-                const isFull     = charges >= maxCharges;
+                const isReady = charges > 0;
+                const isFull = charges >= maxCharges;
                 teleportIcon.classList.toggle('active', isReady);
 
-                // Mask: แสดง progress ของ timer ที่ใกล้ครบสุด
-                if (teleportCd) {
-                    let maskPct = 0;
-                    if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
-                        const best = player.teleportTimers.reduce(
-                            (b, t) => t.elapsed > b.elapsed ? t : b,
-                            player.teleportTimers[0]
-                        );
-                        maskPct = (1 - Math.min(1, best.elapsed / best.max)) * 100;
-                    }
-                    teleportCd.style.height = isFull ? '0%' : `${maskPct}%`;
-                }
+                // Mask ถูก hide แล้ว — ไม่ต้องอัปเดต height
 
-                // Arc+number เฉพาะตอน charges = 0 (ใช้ไม่ได้)
-                if (charges === 0 && player.teleportTimers && player.teleportTimers.length > 0) {
+                // Arc: แสดง timer ที่ใกล้ครบสุดเสมอ (ถ้ามี timer กำลังวิ่ง)
+                if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
                     const best = player.teleportTimers.reduce(
                         (b, t) => t.elapsed > b.elapsed ? t : b,
                         player.teleportTimers[0]
                     );
-                    UIManager._setCooldownVisual('teleport-icon',
-                        Math.max(0, best.max - best.elapsed), best.max);
+                    const remaining = Math.max(0, best.max - best.elapsed);
+                    if (charges > 0) {
+                        // มี charge เหลือ: โชว์แค่ Arc เบาๆ ไม่แสดงตัวเลข
+                        const icon = document.getElementById('teleport-icon');
+                        if (icon) {
+                            let arc = icon.querySelector('.cd-arc-overlay');
+                            if (!arc) { arc = document.createElement('div'); arc.className = 'cd-arc-overlay'; icon.appendChild(arc); }
+                            const elapsed = best.max > 0 ? Math.min(1, 1 - remaining / best.max) : 1;
+                            const p = (elapsed * 100).toFixed(1);
+                            arc.style.background = remaining > 0.05
+                                ? `conic-gradient(transparent 0% ${p}%, rgba(0,0,0,0.62) ${p}% 100%)`
+                                : 'transparent';
+                            let tmr = icon.querySelector('.cd-timer-text');
+                            if (!tmr) { tmr = document.createElement('div'); tmr.className = 'cd-timer-text'; icon.appendChild(tmr); }
+                            tmr.style.display = 'none'; // บังคับซ่อน
+                        }
+                    } else {
+                        // หมด charge: แสดง Arc + ตัวเลข (Hybrid จัดการ เพราะ max=15 > 5)
+                        UIManager._setCooldownVisual('teleport-icon', remaining, best.max);
+                    }
                 } else {
                     UIManager._setCooldownVisual('teleport-icon', 0, 1);
                 }
@@ -810,12 +803,11 @@ class UIManager {
                 UIManager._setCooldownVisual('teleport-icon', 0, 1);
                 const cl = teleportIcon.querySelector('.charge-label');
                 if (cl) cl.textContent = '';
-                if (teleportCd) teleportCd.style.height = '100%';
             }
 
             // ── Skill 3 (E) — Clone of Stealth ────────────────────────────────
             const cloneIcon = document.getElementById('kao-clone-icon');
-            const cloneCd   = document.getElementById('clone-cd');
+            const cloneCd = document.getElementById('clone-cd');
             setLockOverlay(cloneIcon, !passive);
 
             if (cloneIcon) {
@@ -833,10 +825,7 @@ class UIManager {
                 }
 
                 if (cloneCd) {
-                    const cloneProgress = player.maxCloneCooldown > 0
-                        ? Math.min(1, player.cloneSkillCooldown / player.maxCloneCooldown)
-                        : 0;
-                    cloneCd.style.height = cloneReady ? '0%' : `${cloneProgress * 100}%`;
+                    // vertical mask ถูก hide แล้ว — ไม่ต้องอัปเดต height
                 }
                 UIManager._setCooldownVisual(
                     'kao-clone-icon',

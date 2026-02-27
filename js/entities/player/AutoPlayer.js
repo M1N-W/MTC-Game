@@ -245,9 +245,6 @@ AutoPlayer.prototype.updateUI = function () {
     if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
     if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
-    const dp = Math.min(100, (1 - this.cooldowns.dash / (S.dashCooldown || 2.0)) * 100);
-    const dashEl = document.getElementById('dash-cd');
-    if (dashEl) dashEl.style.height = `${100 - dp}%`;
     if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
         UIManager._setCooldownVisual('dash-icon',
             Math.max(0, this.cooldowns.dash), S.dashCooldown || 2.0);
@@ -256,7 +253,7 @@ AutoPlayer.prototype.updateUI = function () {
     // WARN-1 FIX: use BALANCE.characters.auto (correct path after refactor)
     const wanchaiCd = S.wanchaiCooldown || BALANCE.characters?.auto?.wanchaiCooldown || 12;
     const standEl = document.getElementById('stealth-icon');
-    const standCdEl = document.getElementById('stealth-cd');
+
 
     const skill1Emoji = document.getElementById('skill1-emoji');
     const skill1Hint = document.getElementById('skill1-hint');
@@ -269,7 +266,6 @@ AutoPlayer.prototype.updateUI = function () {
 
     if (this.wanchaiActive) {
         standEl?.classList.add('active');
-        if (standCdEl) standCdEl.style.height = '0%';
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('stealth-icon', 0, wanchaiCd);
         }
@@ -277,10 +273,6 @@ AutoPlayer.prototype.updateUI = function () {
         if (iconLabelEl) iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
     } else {
         standEl?.classList.remove('active');
-        if (standCdEl) {
-            const sp = Math.min(100, (1 - (this.cooldowns.wanchai ?? 0) / wanchaiCd) * 100);
-            standCdEl.style.height = `${100 - sp}%`;
-        }
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('stealth-icon',
                 Math.max(0, this.cooldowns.wanchai ?? 0), wanchaiCd);

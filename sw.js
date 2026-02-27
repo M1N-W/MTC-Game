@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.10'; // v3.6.10 Feature: KaoPlayer advanced teleport system with independent timers
+const CACHE_NAME = 'mtc-cache-v3.6.11'; // v3.6.11 UI Polish: Streamlined cooldown display & visual noise reduction
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

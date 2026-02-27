@@ -378,7 +378,7 @@ class PoomPlayer extends Entity {
                 spawnFloatingText(`🌾 ${Math.round(baseDmg)}`, window.boss.x, window.boss.y - 60, '#00ff88', 20);
             }
         }
-        
+
         spawnParticles(this.x, this.y, 30, '#00ff88');
         spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
         addScreenShake(6);
@@ -503,48 +503,30 @@ class PoomPlayer extends Entity {
         if (hpBar) hpBar.style.width = `${this.hp / this.maxHp * 100}%`;
         if (enBar) enBar.style.width = `${this.energy / this.maxEnergy * 100}%`;
 
-        const dpEl = document.getElementById('dash-cd');
-        if (dpEl) {
-            const dp = Math.min(100, (1 - this.cooldowns.dash / S.dashCooldown) * 100);
-            dpEl.style.height = `${100 - dp}%`;
-        }
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('dash-icon',
                 Math.max(0, this.cooldowns.dash), S.dashCooldown);
         }
 
-        const eatCd = document.getElementById('eat-cd');
         const eatIcon = document.getElementById('eat-icon');
-        if (eatCd) {
-            if (this.isEatingRice) { eatCd.style.height = '0%'; eatIcon?.classList.add('active'); }
-            else {
-                eatIcon?.classList.remove('active');
-                const ep = Math.min(100, (1 - this.cooldowns.eat / S.eatRiceCooldown) * 100);
-                eatCd.style.height = `${100 - ep}%`;
-            }
-        }
+        if (this.isEatingRice) eatIcon?.classList.add('active');
+        else eatIcon?.classList.remove('active');
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('eat-icon',
                 this.isEatingRice ? 0 : Math.max(0, this.cooldowns.eat),
                 S.eatRiceCooldown);
         }
 
-        const nagaCd = document.getElementById('naga-cd');
-        if (nagaCd) {
-            const np = Math.min(100, (1 - this.cooldowns.naga / S.nagaCooldown) * 100);
-            nagaCd.style.height = `${100 - np}%`;
-        }
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('naga-icon',
                 Math.max(0, this.cooldowns.naga), S.nagaCooldown);
         }
 
         // ── Phase 3 Session 3: Ritual cooldown — mirrored in ui.js updateSkillIcons ──
-        const ritualCd = document.getElementById('ritual-cd');
-        if (ritualCd) {
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             const maxRcd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
-            const rp = Math.min(100, (1 - this.cooldowns.ritual / maxRcd) * 100);
-            ritualCd.style.height = `${100 - rp}%`;
+            UIManager._setCooldownVisual('ritual-icon',
+                Math.max(0, this.cooldowns.ritual), maxRcd);
         }
 
         const levelEl = document.getElementById('player-level');
