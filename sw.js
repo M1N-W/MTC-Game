@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.5.11'; // v3.5.11 Enhancement: Improved slow motion dash mechanics (3x cooldown tick, 4x dash speed)
+const CACHE_NAME = 'mtc-cache-v3.5.12'; // v3.5.12 Fix: Added setGameState('MENU') to game initialization
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

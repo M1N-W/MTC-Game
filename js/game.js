@@ -964,6 +964,7 @@ window.onload = () => {
 
         try {
             initCanvas();
+            setGameState('MENU');
             if (typeof InputSystem !== 'undefined') InputSystem.init();
             initAI();
 
