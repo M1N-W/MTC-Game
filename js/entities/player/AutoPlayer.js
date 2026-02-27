@@ -239,6 +239,7 @@ class AutoPlayer extends Player {
                 projectileManager.add(new Projectile(this.x, this.y, this.angle, 900, 22, '#dc2626', false, 'player'));
             } catch (e) { }
         }
+        if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
     }
 
     // draw() ย้ายไป PlayerRenderer._drawAuto() แล้ว

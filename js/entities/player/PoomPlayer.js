@@ -257,6 +257,7 @@ class PoomPlayer extends Entity {
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
         Audio.playPoomShoot();
+        if (typeof Audio !== 'undefined' && Audio.playRiceShoot) Audio.playRiceShoot();
     }
 
     eatRice() {
@@ -382,6 +383,7 @@ class PoomPlayer extends Entity {
         spawnParticles(this.x, this.y, 30, '#00ff88');
         spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
         addScreenShake(6);
+        if (typeof Audio !== 'undefined' && Audio.playRitualBurst) Audio.playRitualBurst();
     }
 
     dash(ax, ay) {

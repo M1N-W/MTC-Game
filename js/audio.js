@@ -424,6 +424,138 @@ class AudioSystem {
         noiseSrc.stop(t + dur);
     }
 
+    // ── NEW: Stealth/Warp digital swoosh (Kao isFreeStealthy) ─────────────────
+    // Sine wave sweeps 600 → 100 Hz in 0.3s — "cloak activating" warping feel.
+    playStealth() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, t);
+        osc.frequency.exponentialRampToValueAtTime(100, t + 0.3);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.sfxVolume * this.masterVolume * this.sfxVolume * 0.35, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.start(t);
+        osc.stop(t + 0.3);
+    }
+
+    // ── NEW: Clone split "ping" (Kao clone activation) ────────────────────────
+    // High Sine at 1200 Hz, very short 0.15s — crisp chime on clone spawn.
+    playClone() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 0.15);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.sfxVolume * this.masterVolume * this.sfxVolume * 0.4, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+        osc.start(t);
+        osc.stop(t + 0.15);
+    }
+
+    // ── NEW: Sticky rice "splat/thud" (Poom normal shoot) ─────────────────────
+    // Square wave 120 → 70 Hz + lowpass filter, 0.1s — thick sticky thump.
+    playRiceShoot() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const lpf = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+        osc.connect(lpf);
+        lpf.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(120, t);
+        osc.frequency.exponentialRampToValueAtTime(70, t + 0.1);
+        lpf.type = 'lowpass';
+        lpf.frequency.value = 400;
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume * 0.55, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.start(t);
+        osc.stop(t + 0.1);
+    }
+
+    // ── NEW: Ritual Burst magic explosion (Poom ritual) ───────────────────────
+    // Square wave 200 → 40 Hz sub-bass drop in 0.5s — heavy ceremonial boom.
+    playRitualBurst() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        // Layer 1: Sub-bass drop
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 1.1, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+        osc.start(t);
+        osc.stop(t + 0.5);
+        // Layer 2: Mystical shimmer accent
+        const shimmer = this.ctx.createOscillator();
+        const shimGain = this.ctx.createGain();
+        shimmer.connect(shimGain);
+        shimGain.connect(this.ctx.destination);
+        shimmer.type = 'sine';
+        shimmer.frequency.setValueAtTime(800, t);
+        shimmer.frequency.exponentialRampToValueAtTime(200, t + 0.3);
+        shimGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.4, t);
+        shimGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        shimmer.start(t);
+        shimmer.stop(t + 0.3);
+    }
+
+    // ── NEW: Punch whoosh/thwack (Auto normal heat wave) ──────────────────────
+    // Short noise burst + Triangle sweep 180 → 60 Hz, 0.1s — fast air strike.
+    playPunch() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        const dur = 0.1;
+        // Triangle sweep
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(180, t);
+        osc.frequency.exponentialRampToValueAtTime(60, t + dur);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.7, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        osc.start(t);
+        osc.stop(t + dur);
+        // Short noise snap
+        const noiseSz = Math.floor(this.ctx.sampleRate * dur * 0.5);
+        const noiseBuf = this.ctx.createBuffer(1, noiseSz, this.ctx.sampleRate);
+        const nd = noiseBuf.getChannelData(0);
+        for (let i = 0; i < noiseSz; i++) nd[i] = Math.random() * 2 - 1;
+        const src = this.ctx.createBufferSource();
+        src.buffer = noiseBuf;
+        const hpf = this.ctx.createBiquadFilter();
+        hpf.type = 'highpass';
+        hpf.frequency.value = 600;
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.35, t);
+        nGain.gain.exponentialRampToValueAtTime(0.01, t + dur * 0.5);
+        src.connect(hpf);
+        hpf.connect(nGain);
+        nGain.connect(this.ctx.destination);
+        src.start(t);
+        src.stop(t + dur * 0.5);
+    }
+
     playDash() {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();

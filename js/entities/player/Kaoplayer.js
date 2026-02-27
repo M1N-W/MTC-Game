@@ -106,6 +106,12 @@ class KaoPlayer extends Player {
         // FIX (TASK 2): Own shoot cooldown — decoupled from weaponSystem to
         //               prevent the machine-gun NaN glitch.
         this.shootCooldown = 0;
+
+        // ── Audio edge-trigger flag: play stealth sound only on first frame ──
+        // Without this, Audio.playStealth() would fire 60 times/sec while
+        // isFreeStealthy is true.  _wasFreeStealthy tracks last-frame state so
+        // the sound only triggers on the rising edge (false → true).
+        this._wasFreeStealthy = false;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -171,6 +177,15 @@ class KaoPlayer extends Player {
                 }
             }
 
+            // ── Audio hook: playStealth on RISING EDGE only ──────────────────
+            // Checked AFTER isFreeStealthy is fully updated this frame.
+            // Fires once when isFreeStealthy flips false→true; stays silent
+            // every subsequent frame while stealth is active.
+            if (this.isFreeStealthy && !this._wasFreeStealthy) {
+                if (typeof Audio !== 'undefined' && Audio.playStealth) Audio.playStealth();
+            }
+            this._wasFreeStealthy = this.isFreeStealthy;
+
             // 2. Teleport (Q Key) — Independent per-charge cooldown timers
             // ── Init: ให้ 3 charge เต็มทันทีที่ passive ถูก unlock ────────
             if (!this._teleportInited) {
@@ -219,6 +234,7 @@ class KaoPlayer extends Player {
                 this.clonesActiveTimer = S.cloneDuration || 15;
                 this.cloneSkillCooldown = this.maxCloneCooldown;
                 spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
+                if (typeof Audio !== 'undefined' && Audio.playClone) Audio.playClone();
                 keys.e = 0;
             }
         } else {
