@@ -480,6 +480,7 @@ class PoomPlayer extends Entity {
      * @param {object} enemy - Enemy instance
      */
     applyStickyTo(enemy) {
+        if (!enemy || typeof enemy.addStatus !== 'function') return; // Boss/Barrel ไม่รองรับ StatusEffect
         const S = this.stats;
         const now = performance.now() / 1000;
 

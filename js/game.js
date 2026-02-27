@@ -601,7 +601,14 @@ function drawGame() {
     if (window.player) PlayerRenderer.draw(window.player, CTX);
 
     for (const e of window.enemies) {
-        if (e.isOnScreen(80)) EnemyRenderer.draw(e, CTX);
+        if (e.isOnScreen(80)) {
+            // BossDog มี draw ใน BossRenderer ไม่ใช่ EnemyRenderer
+            if (typeof BossDog !== 'undefined' && e instanceof BossDog) {
+                BossRenderer.draw(e, CTX);
+            } else {
+                EnemyRenderer.draw(e, CTX);
+            }
+        }
     }
 
     if (window.boss && !window.boss.dead && window.boss.isOnScreen(200)) BossRenderer.draw(window.boss, CTX);

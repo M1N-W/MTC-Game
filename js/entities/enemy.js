@@ -737,6 +737,8 @@ class EnemyRenderer {
             else if (e instanceof TankEnemy) EnemyRenderer.drawTank(e);
             else if (e instanceof Enemy) EnemyRenderer.drawEnemy(e);
             else if (e instanceof PowerUp) EnemyRenderer.drawPowerUp(e);
+            // Fallback: entities with own draw() (e.g. GoldfishMinion, future minions)
+            else if (typeof e.draw === 'function') e.draw();
         } finally {
             if (typeof window !== 'undefined' && _prevCTX !== undefined) window.CTX = _prevCTX;
         }
