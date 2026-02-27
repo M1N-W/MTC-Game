@@ -748,6 +748,7 @@ function shootPoom(player) {
         spawnParticles(player.x, player.y, 5, '#ffffff');
     }
     player.speedBoostTimer = S.speedOnHitDuration;
+    if (typeof Audio !== 'undefined' && Audio.playPoomShoot) Audio.playPoomShoot();
 }
 
 // ══════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.17'; // v3.6.17 Latest changes update
+const CACHE_NAME = 'mtc-cache-v3.6.18'; // v3.6.18 Audio handling fixes in game.js & PoomPlayer.js
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
