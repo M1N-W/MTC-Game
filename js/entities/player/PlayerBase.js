@@ -236,15 +236,6 @@ class Player extends Entity {
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;
-        let currentScale = 1.0;
-        if (typeof window.timeScale === 'number' && Number.isFinite(window.timeScale)) {
-            currentScale = window.timeScale;
-        }
-        currentScale = Math.min(10.0, Math.max(0.1, currentScale));
-        if (currentScale < 1.0) {
-            const matrixMult = (1 / currentScale) * 1.5;
-            dashSpeed *= matrixMult;
-        }
         this.vx = Math.cos(angle) * dashSpeed;
         this.vy = Math.sin(angle) * dashSpeed;
 
