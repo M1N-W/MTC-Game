@@ -1777,18 +1777,24 @@
 
         /* Character glow animations */
         @keyframes kaoGlow {
-            0%, 100% {
+
+            0%,
+            100% {
                 box-shadow: 0 0 8px rgba(59, 130, 246, 0.45);
             }
+
             50% {
                 box-shadow: 0 0 20px rgba(59, 130, 246, 0.90), 0 0 40px rgba(96, 165, 250, 0.4);
             }
         }
 
         @keyframes poomGlow {
-            0%, 100% {
+
+            0%,
+            100% {
                 box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
             }
+
             50% {
                 box-shadow: 0 0 20px rgba(245, 158, 11, 0.90), 0 0 40px rgba(251, 191, 36, 0.4);
             }
@@ -1814,7 +1820,7 @@
         }
 
 
-.char-select-hint {
+        .char-select-hint {
             position: absolute;
             bottom: 4px;
             left: 50%;
@@ -2753,11 +2759,14 @@
                 <div class="new-features">
                     <h3>✦ BETA EDITION — WHAT'S NEW?</h3>
                     <div class="feature-list">
-                        <div class="feature-item">🌾 <strong>StatusEffect Framework</strong> — Advanced enemy status system
+                        <div class="feature-item">🌾 <strong>StatusEffect Framework</strong> — Advanced enemy status
+                            system
                             with sticky rice effects, ritual burst consumption, and extensible for future effects!</div>
-                        <div class="feature-item">⚡ <strong>Ritual Burst Ultimate</strong> — Poom's Ritual now deals 75 base damage + 15% HP scaling!
+                        <div class="feature-item">⚡ <strong>Ritual Burst Ultimate</strong> — Poom's Ritual now deals 75
+                            base damage + 15% HP scaling!
                             Major buff makes it a true ultimate ability!</div>
-                        <div class="feature-item">🔄 <strong>Instant Updates</strong> — No more hard refresh needed! Service Worker
+                        <div class="feature-item">🔄 <strong>Instant Updates</strong> — No more hard refresh needed!
+                            Service Worker
                             automatically delivers latest game updates.</div>
                         <div class="feature-item">💥 <strong>Interactive Environments</strong> — Shoot explosive barrels
                             for massive AoE damage!</div>
@@ -2765,7 +2774,8 @@
                             hyper-fast Speed Waves.</div>
                         <div class="feature-item">🛒 <strong>Co-op Store Progression</strong> — Stack buffs up to 1.5×
                             with smart duration management.</div>
-                        <div class="feature-item">🎮 <strong>Updated Controls</strong> — Poom: R=Ritual, Q=Naga | Kao: Mouse Wheel=Weapon Switch!</div>
+                        <div class="feature-item">🎮 <strong>Updated Controls</strong> — Poom: R=Ritual, Q=Naga | Kao:
+                            Mouse Wheel=Weapon Switch!</div>
                         <div class="feature-item">🧭 <strong>Tactical Navigation</strong> — Low-HP floor guide leads you
                             to the MTC Room or Shop.</div>
                     </div>
@@ -2897,7 +2907,11 @@
 
     <script src="js/input.js"></script>
 
+    <!-- Step 4: Rendering Decoupled -->
+    <script src="js/rendering/PlayerRenderer.js"></script>
+
     <!-- Extracted Systems -->
+    <script src="js/systems/GameState.js"></script>
     <script src="js/systems/AdminSystem.js"></script>
     <script src="js/systems/ShopSystem.js"></script>
     <script src="js/systems/TimeManager.js"></script>

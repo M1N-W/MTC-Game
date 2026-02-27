@@ -3,6 +3,19 @@
  * 🔫 MTC: ENHANCED EDITION - Weapon System
  * Beautiful 3D-style gun models + Auto Rifle Burst Fire
  *
+ * COLLISION OPTIMIZATION (v2 — Spatial Grid pass):
+ *   ✅ SpatialGrid class — O(E) build, O(P×k) query (k = avg enemies/cell ≈ 4)
+ *      Replaces O(P×E) brute-force enemy scan in ProjectileManager.update().
+ *      Cell size: 128 px (safely larger than max collision radius ~20 px).
+ *      9-cell neighbourhood query (3×3 block) prevents missed hits at cell edges.
+ *   ✅ ProjectileManager.update() — reverse loop + swap-and-pop O(1) removal
+ *      (replaces splice O(n); reverse order makes swap safe — index never skipped).
+ *   ✅ ProjectileManager — _grid instance reused every frame (no per-frame alloc).
+ *
+ * ROLLBACK (1 line): in ProjectileManager.update(), swap the spatial-grid block back to:
+ *   for (let enemy of enemies) { if (!enemy.dead && proj.checkCollision(enemy)) { … } }
+ *   and restore splice(i,1) in place of the swap-and-pop at the bottom.
+ *
  * FIXED BUGS (refactor):
  * - All BALANCE.player.weapons.* → BALANCE.characters[this.activeChar].weapons.*
  * - All BALANCE.player.critMultiplier → BALANCE.characters[this.activeChar].critMultiplier
@@ -608,10 +621,99 @@ class WeaponSystem {
 }
 
 // ============================================================================
+// 🗺️ SPATIAL GRID — O(P×k) collision broadphase (replaces O(P×E) brute force)
+// ============================================================================
+/**
+ * SpatialGrid
+ *
+ * Divides the game world into fixed-size cells (CELL = 128 px).
+ * Enemies are inserted every frame; each projectile then queries only the
+ * 3×3 neighbourhood of cells it overlaps — typically 3–8 enemies instead
+ * of the full list.
+ *
+ * Complexity:
+ *   Build  : O(E)       — one Map.set per enemy
+ *   Query  : O(1)       — up to 9 cell lookups, each O(k), k = avg enemies/cell
+ *   Total  : O(E + P×k) vs O(P×E) brute force
+ *
+ * At P=40, E=60, k≈4 → ~200 checks/frame vs ~2400 checks/frame (12× faster).
+ *
+ * Usage (ProjectileManager.update, called every frame):
+ *   const grid = new SpatialGrid();
+ *   grid.build(enemies);
+ *   const candidates = grid.query(proj.x, proj.y, proj.radius);
+ */
+class SpatialGrid {
+    // Cell size must be ≥ the largest collision radius in the game.
+    // Enemy radius ≈ 20 px, projectile radius ≤ 18 px → 128 is safely larger.
+    static CELL = 128;
+
+    constructor() {
+        // Plain object used as a hash map: key = "cx,cy" → Enemy[]
+        // Reuse the same Map instance across frames to avoid GC pressure.
+        this._cells = new Map();
+    }
+
+    /** Convert world coordinate to grid cell index (integer). */
+    _cellCoord(v) {
+        return Math.floor(v / SpatialGrid.CELL);
+    }
+
+    /**
+     * Populate the grid with the current enemy list.
+     * Must be called once per frame before any query().
+     * @param {Array} enemies  Live enemy array from GameState
+     */
+    build(enemies) {
+        this._cells.clear();
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            if (e.dead) continue;
+            const key = `${this._cellCoord(e.x)},${this._cellCoord(e.y)}`;
+            let cell = this._cells.get(key);
+            if (!cell) { cell = []; this._cells.set(key, cell); }
+            cell.push(e);
+        }
+    }
+
+    /**
+     * Return all enemies in the 3×3 block of cells surrounding (wx, wy).
+     * De-duplication is NOT needed here: an enemy can only be in one cell
+     * (centre-point insertion), so the 9-cell scan has no duplicates.
+     *
+     * Boundary safety: cellCoord clamps naturally — no extra guard needed
+     * because the Map simply returns undefined for empty cells.
+     *
+     * @param {number} wx   Projectile world X
+     * @param {number} wy   Projectile world Y
+     * @returns {Array}     Flat list of candidate enemies (may be empty)
+     */
+    query(wx, wy) {
+        const cx = this._cellCoord(wx);
+        const cy = this._cellCoord(wy);
+        const results = [];
+
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                const cell = this._cells.get(`${cx + dx},${cy + dy}`);
+                if (cell) {
+                    for (let i = 0; i < cell.length; i++) results.push(cell[i]);
+                }
+            }
+        }
+        return results;
+    }
+}
+
+// ============================================================================
 // 🚀 PROJECTILE MANAGER — with Hit-Stop + Screen Shake on impact
 // ============================================================================
 class ProjectileManager {
-    constructor() { this.projectiles = []; }
+    constructor() {
+        this.projectiles = [];
+        // Spatial grid — reused every frame to avoid allocation churn
+        this._grid = new SpatialGrid();
+    }
 
     add(projectile) {
         if (Array.isArray(projectile)) this.projectiles.push(...projectile);
@@ -619,22 +721,33 @@ class ProjectileManager {
     }
 
     update(dt, player, enemies, boss) {
-        for (let i = this.projectiles.length - 1; i >= 0; i--) {
-            const proj = this.projectiles[i];
+        // ── PERF: build spatial grid once per frame ───────────────────────────
+        // O(E) build cost is always cheaper than O(P×E) brute-force scanning.
+        // Only player projectiles need the grid; enemy→player checks are 1:1.
+        this._grid.build(enemies);
+
+        const projs = this.projectiles;
+
+        // ── PERF: reverse loop + swap-and-pop O(1) removal ───────────────────
+        // Iterating backwards means the swap never displaces an unchecked index:
+        // when projs[i] is swapped with projs[last] and popped, the new item at
+        // index i has already been visited (it came from a higher index that we
+        // already processed in a previous iteration).
+        for (let i = projs.length - 1; i >= 0; i--) {
+            const proj = projs[i];
             const expired = proj.update(dt);
             let hit = false;
 
             // Ensure hit memory exists for piercing projectiles
-            if (proj && proj.pierce > 0 && !proj.hitSet) proj.hitSet = new Set();
+            if (proj.pierce > 0 && !proj.hitSet) proj.hitSet = new Set();
 
             if (proj.team === 'player') {
 
-                // ── PLAYER → BOSS collision ───────────────────────────────
+                // ── PLAYER → BOSS collision ───────────────────────────────────
                 if (boss && !boss.dead && proj.checkCollision(boss)) {
                     if (!proj.hitSet || !proj.hitSet.has(boss)) {
                         boss.takeDamage(proj.damage);
 
-                        // 🥊 HIT-STOP + SHAKE — Boss hit (crits freeze longer)
                         if (typeof addScreenShake === 'function') addScreenShake(proj.isCrit ? 5 : 2);
                         if (typeof triggerHitStop === 'function') triggerHitStop(proj.isCrit ? 60 : 20);
 
@@ -653,17 +766,21 @@ class ProjectileManager {
                     }
                 }
 
-                // ── PLAYER → ENEMY collision ─────────────────────────────
-                for (let enemy of enemies) {
-                    if (!enemy.dead && proj.checkCollision(enemy)) {
+                // ── PLAYER → ENEMY collision — SPATIAL GRID broadphase ────────
+                // Query returns only enemies in the 3×3 cell neighbourhood of
+                // the projectile.  Boundary safety is guaranteed by the grid:
+                // cells outside the map simply have no entries in the HashMap.
+                if (!hit) {
+                    const candidates = this._grid.query(proj.x, proj.y);
+                    for (let j = 0; j < candidates.length; j++) {
+                        const enemy = candidates[j];
+                        if (enemy.dead) continue;
+                        if (!proj.checkCollision(enemy)) continue;
                         if (proj.hitSet && proj.hitSet.has(enemy)) continue;
 
                         enemy.takeDamage(proj.damage, player);
-                        // ── Phase 2: invoke onHit callback for direct hits (e.g. sticky stack) ──
                         if (typeof proj.onHit === 'function') proj.onHit(enemy);
 
-                        // 🥊 HIT-STOP + SHAKE — Kill > Crit > Normal (priority order)
-                        // Kill check first: a kill is always more impactful than a crit.
                         if (enemy.dead) {
                             if (typeof triggerHitStop === 'function') triggerHitStop(40);
                             if (typeof addScreenShake === 'function') addScreenShake(4);
@@ -690,13 +807,16 @@ class ProjectileManager {
 
             } else if (proj.team === 'enemy') {
                 if (proj.checkCollision(player) && !player.isInvisible) {
-                    player.takeDamage(proj.damage); hit = true;
+                    player.takeDamage(proj.damage);
+                    hit = true;
                 }
             }
 
             if (hit || expired) {
                 if (hit) spawnParticles(proj.x, proj.y, 5, proj.color);
-                this.projectiles.splice(i, 1);
+                // ── PERF: swap-and-pop O(1) — reverse loop makes this safe ───
+                projs[i] = projs[projs.length - 1];
+                projs.pop();
             }
         }
     }

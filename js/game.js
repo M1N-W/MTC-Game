@@ -25,14 +25,13 @@ const DEBUG_MODE = false;
  */
 
 // ─── Game State ───────────────────────────────────────────────
-// FIX (WARN-1): Use only window.gameState to prevent desync between local and global state
-window.loopRunning = false;
-window.gameState = 'MENU';
+// State now lives in GameState singleton (js/systems/GameState.js).
+// window.gameState / GameState.loopRunning kept as compat aliases during transition.
 let rafId = null;
 
-// Simplified setter - only updates window.gameState (single source of truth)
+// Thin wrapper — delegates to GameState.setPhase() which syncs window.gameState too.
 function setGameState(s) {
-    window.gameState = s;
+    GameState.setPhase(s);
 }
 window.setGameState = setGameState;
 
@@ -51,13 +50,10 @@ let _achFrame = 0;
 let dayNightTimer = 0;
 
 // ─── Game Objects (global) ────────────────────────────────────
-window.player = null;
-window.enemies = [];
-window.boss = null;
-window.powerups = [];
-window.specialEffects = [];
-window.meteorZones = [];
-window.drone = null;
+// Entity refs — now owned by GameState; window.* aliases set via GameState._syncAliases()
+// so files not yet migrated continue to read window.enemies etc. without change.
+// Direct access in this file uses GameState.xxx going forward.
+window.player = null;   // assigned individually in startGame() — stays on window for compat
 
 // ── Extracted systems loaded from js/systems/:
 //    AdminSystem.js, ShopSystem.js, TimeManager.js, WaveManager.js
@@ -82,8 +78,8 @@ function _tutorialForwardInput() {
     _tut._prevDash = !!keys.space;
     if (mouse.right && !_tut._prevSkill) TutorialSystem.handleAction('skill');
     _tut._prevSkill = !!mouse.right;
-    if (window.isSlowMotion && !_tut._prevBulletTime) TutorialSystem.handleAction('bullettime');
-    _tut._prevBulletTime = !!window.isSlowMotion;
+    if (GameState.isSlowMotion && !_tut._prevBulletTime) TutorialSystem.handleAction('bullettime');
+    _tut._prevBulletTime = !!GameState.isSlowMotion;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -94,30 +90,30 @@ function gameLoop(now) {
     // BUG FIX: Validate canvas context before drawing
     if (!CTX || !CANVAS) {
         console.warn('[gameLoop] Canvas context lost, stopping loop');
-        window.loopRunning = false;
+        GameState.loopRunning = false;
         rafId = null;
         return;
     }
-    
+
     const dt = getDeltaTime(now);
 
-    if (window.hitStopTimer > 0) {
-        window.hitStopTimer -= dt;
-        if (window.hitStopTimer < 0) window.hitStopTimer = 0;
+    if (GameState.hitStopTimer > 0) {
+        GameState.hitStopTimer -= dt;
+        if (GameState.hitStopTimer < 0) GameState.hitStopTimer = 0;
         drawGame();
         requestAnimationFrame(gameLoop);
         return;
     }
 
-    if (window.gameState === 'PLAYING') {
+    if (GameState.phase === 'PLAYING') {
         // BUG-3 FIX: guard in case TimeManager.js hasn't loaded yet
         if (typeof _tickSlowMoEnergy === 'function') _tickSlowMoEnergy(dt);
     }
 
-    const scaledDt = dt * window.timeScale;
+    const scaledDt = dt * GameState.timeScale;
     _lastDrawDt = scaledDt;
 
-    if (window.gameState === 'PLAYING') {
+    if (GameState.phase === 'PLAYING') {
         if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
             _tutorialForwardInput();
             TutorialSystem.update();
@@ -127,7 +123,7 @@ function gameLoop(now) {
             updateGame(scaledDt);
             drawGame();
         }
-    } else if (window.gameState === 'PAUSED') {
+    } else if (GameState.phase === 'PAUSED') {
         drawGame();
         const shopModal = document.getElementById('shop-modal');
         if (shopModal && shopModal.style.display === 'flex') ShopManager.tick();
@@ -136,8 +132,8 @@ function gameLoop(now) {
     // IMP-1 FIX: stop the RAF loop when the game is over so we don't keep
     // churning the GPU for a static screen.  loopRunning is reset to false
     // so startGame() can safely restart the loop next round.
-    if (window.gameState === 'GAMEOVER') {
-        window.loopRunning = false;
+    if (GameState.phase === 'GAMEOVER') {
+        GameState.loopRunning = false;
         rafId = null;
         return;
     }
@@ -160,27 +156,27 @@ function updateGame(dt) {
     updateMouseWorld();
 
     const GLITCH_RAMP = 0.8;
-    if (window.isGlitchWave) {
-        window.glitchIntensity = Math.min(1.0, window.glitchIntensity + GLITCH_RAMP * dt);
+    if (GameState.isGlitchWave) {
+        GameState.glitchIntensity = Math.min(1.0, GameState.glitchIntensity + GLITCH_RAMP * dt);
     } else {
-        window.glitchIntensity = Math.max(0.0, window.glitchIntensity - GLITCH_RAMP * 2 * dt);
+        GameState.glitchIntensity = Math.max(0.0, GameState.glitchIntensity - GLITCH_RAMP * 2 * dt);
     }
 
     // ── Wave Events (Fog / Speed) ──────────────────────────────
     if (typeof updateWaveEvent === 'function') updateWaveEvent(dt);
 
-    if (window.waveSpawnLocked) {
-        window.waveSpawnTimer -= dt;
-        const secsLeft = Math.ceil(window.waveSpawnTimer);
-        if (secsLeft !== window.lastGlitchCountdown && secsLeft > 0 && secsLeft <= 3) {
-            window.lastGlitchCountdown = secsLeft;
+    if (GameState.waveSpawnLocked) {
+        GameState.waveSpawnTimer -= dt;
+        const secsLeft = Math.ceil(GameState.waveSpawnTimer);
+        if (secsLeft !== GameState.lastGlitchCountdown && secsLeft > 0 && secsLeft <= 3) {
+            GameState.lastGlitchCountdown = secsLeft;
             spawnFloatingText(GAME_TEXTS.wave.spawnCountdown(secsLeft), window.player.x, window.player.y - 145, '#d946ef', 34);
             addScreenShake(6);
         }
-        if (window.waveSpawnTimer <= 0) {
-            window.waveSpawnLocked = false;
-            window.lastGlitchCountdown = -1;
-            spawnEnemies(window.pendingSpawnCount);
+        if (GameState.waveSpawnTimer <= 0) {
+            GameState.waveSpawnLocked = false;
+            GameState.lastGlitchCountdown = -1;
+            spawnEnemies(GameState.pendingSpawnCount);
             spawnFloatingText(GAME_TEXTS.wave.chaosBegins, window.player.x, window.player.y - 160, '#ef4444', 44);
             addScreenShake(28);
             Audio.playBossSpecial();
@@ -228,7 +224,7 @@ function updateGame(dt) {
         keys.b = 0; openShop(); return;
     }
 
-    const effectiveKeys = window.controlsInverted
+    const effectiveKeys = GameState.controlsInverted
         ? { ...keys, w: keys.s, s: keys.w, a: keys.d, d: keys.a }
         : keys;
     window.player.update(dt, effectiveKeys, mouse);
@@ -251,11 +247,11 @@ function updateGame(dt) {
         const isPoom = typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer;
         console.log('[Game] isPoom:', isPoom, 'isKao:', isKao, 'player type:', window.player?.constructor?.name);
         if (isKao || isPoom) {
-            if (mouse.left === 1 && window.gameState === 'PLAYING') {
+            if (mouse.left === 1 && GameState.phase === 'PLAYING') {
                 console.log('[Game] Calling player.shoot() for', window.player?.constructor?.name);
                 window.player.shoot(dt);
             }
-        } else if (mouse.left === 1 && window.gameState === 'PLAYING') {
+        } else if (mouse.left === 1 && GameState.phase === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
                 if (projectiles && projectiles.length > 0) {
@@ -267,7 +263,7 @@ function updateGame(dt) {
     }
 
     if (window.player instanceof PoomPlayer) {
-        if (mouse.left === 1 && window.gameState === 'PLAYING') shootPoom(window.player);
+        if (mouse.left === 1 && GameState.phase === 'PLAYING') shootPoom(window.player);
         if (mouse.right === 1) {
             if (window.player.cooldowns.eat <= 0 && !window.player.isEatingRice) window.player.eatRice();
             mouse.right = 0;
@@ -290,11 +286,11 @@ function updateGame(dt) {
         }
     }
 
-    if (!_inTutorial && getWave() % BALANCE.waves.bossEveryNWaves !== 0 && window.enemies.length === 0 && !window.boss && !window.waveSpawnLocked) {
-        if (Achievements.stats.damageTaken === window.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
+    if (!_inTutorial && getWave() % BALANCE.waves.bossEveryNWaves !== 0 && window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked) {
+        if (Achievements.stats.damageTaken === GameState.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
         }
-        window.waveStartDamage = Achievements.stats.damageTaken;
+        GameState.waveStartDamage = Achievements.stats.damageTaken;
         setWave(getWave() + 1);
         Achievements.check('wave_1');
         // ── Wave Events: end old event, start new ──────────────
@@ -465,7 +461,7 @@ function updateGame(dt) {
     mapSystem.update([window.player, ...window.enemies, window.boss].filter(e => e && !e.dead), dt);
     particleSystem.update(dt);
     floatingTextSystem.update(dt);
-    
+
     // Orbital effects for Auto & Kao
     if (typeof updateOrbitalEffects !== 'undefined') {
         updateOrbitalEffects(dt, [window.player]);
@@ -487,7 +483,7 @@ function drawGame() {
         console.warn('[drawGame] Canvas context lost, skipping draw');
         return;
     }
-    
+
     if (!drawGame._diagFrame) drawGame._diagFrame = 0;
     drawGame._diagFrame++;
     if (DEBUG_MODE && drawGame._diagFrame % 300 === 1) {
@@ -591,25 +587,25 @@ function drawGame() {
     // ── End Low-HP Navigation Guide ───────────────────────────
 
     for (const p of window.powerups) {
-        if (p.isOnScreen ? p.isOnScreen(60) : true) p.draw();
+        if (p.isOnScreen ? p.isOnScreen(60) : true) EnemyRenderer.draw(p, CTX);
     }
 
     window.specialEffects.forEach(e => e.draw());
 
     if (window.drone) window.drone.draw();
 
-    if (window.player) window.player.draw();
+    if (window.player) PlayerRenderer.draw(window.player, CTX);
 
     for (const e of window.enemies) {
-        if (e.isOnScreen(80)) e.draw();
+        if (e.isOnScreen(80)) EnemyRenderer.draw(e, CTX);
     }
 
-    if (window.boss && !window.boss.dead && window.boss.isOnScreen(200)) window.boss.draw();
+    if (window.boss && !window.boss.dead && window.boss.isOnScreen(200)) BossRenderer.draw(window.boss, CTX);
 
-    projectileManager.draw();
+    ProjectileRenderer.drawAll(projectileManager.getAll(), CTX);
     particleSystem.draw();
     floatingTextSystem.draw();
-    
+
     // Orbital effects for Auto & Kao
     if (typeof drawOrbitalEffects !== 'undefined') {
         drawOrbitalEffects();
@@ -636,15 +632,17 @@ function drawGame() {
     // WARN-3 FIX: guard in case TimeManager.js loads after drawGame fires
     if (typeof drawSlowMoOverlay === 'function') drawSlowMoOverlay();
 
-    if (window.glitchIntensity > 0) {
-        drawGlitchEffect(window.glitchIntensity, window.controlsInverted);
+    if (GameState.glitchIntensity > 0) {
+        drawGlitchEffect(GameState.glitchIntensity, GameState.controlsInverted);
     }
 
     // ── Wave Event overlays (Fog / Speed vignettes + banner) ──
     if (typeof drawWaveEvent === 'function') drawWaveEvent(CTX);
 
-    if (typeof UIManager !== 'undefined' && UIManager.draw) {
-        UIManager.draw(CTX, _lastDrawDt);
+    if (typeof CanvasHUD !== 'undefined' && CanvasHUD.draw) {
+        CanvasHUD.draw(CTX, _lastDrawDt);
+    } else if (typeof UIManager !== 'undefined' && UIManager.draw) {
+        UIManager.draw(CTX, _lastDrawDt); // compat fallback
     }
 }
 
@@ -726,14 +724,14 @@ function shootPoom(player) {
     const attackSpeedMult = player.isEatingRice ? 0.7 : 1.0;
     player.cooldowns.shoot = S.riceCooldown * attackSpeedMult;
     const { damage, isCrit } = player.dealDamage(S.riceDamage * player.damageBoost);
-    
+
     // ── Session C/D: Create projectile and set onHit callback ──
     const proj = new Projectile(player.x, player.y, player.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
     proj.onHit = function (enemy) {
         player.applyStickyTo(enemy); // ── Apply sticky via StatusEffect framework ──
     };
     projectileManager.add(proj);
-    
+
     if (isCrit) {
         spawnFloatingText(GAME_TEXTS.combat.poomCrit, player.x, player.y - 45, '#fbbf24', 20);
         spawnParticles(player.x, player.y, 5, '#ffffff');
@@ -751,7 +749,7 @@ async function initAI() {
     brief.textContent = GAME_TEXTS.ai.loading;
     try {
         // BUG FIX: Add timeout to prevent hanging on AI calls
-        const timeout = new Promise((_, reject) => 
+        const timeout = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('AI timeout')), 3000));
         const name = await Promise.race([Gemini.getMissionName(), timeout]);
         brief.textContent = GAME_TEXTS.ai.missionPrefix(name);
@@ -796,26 +794,11 @@ function startGame(charType = 'kao') {
     dayNightTimer = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
-    window.bossEncounterCount = 0;
+    // ── Reset all mutable run state via GameState ─────────────
+    GameState.resetRun();
     console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
-
-    window.isSlowMotion = false;
-    window.timeScale = 1.0;
-    window.slowMoEnergy = 1.0;
     console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
-
-    window.isGlitchWave = false;
-    window.glitchIntensity = 0;
-    window.controlsInverted = false;
-    window._glitchWaveHpBonus = 0;
-    window.waveSpawnLocked = false;
-    window.waveSpawnTimer = 0;
-    // wave event reset handled by startNextWave()
-    window.pendingSpawnCount = 0;
-    window.lastGlitchCountdown = -1;
     console.log('⚡ Glitch Wave grace period reset');
-
-    window.hitStopTimer = 0;
 
     window.player.shopDamageBoostActive = false;
     window.player.shopDamageBoostTimer = 0;
@@ -850,7 +833,7 @@ function startGame(charType = 'kao') {
     Achievements.stats.damageTaken = 0;
     Achievements.stats.kills = 0;
     Achievements.stats.shopPurchases = 0;
-    window.waveStartDamage = 0;
+    GameState.waveStartDamage = 0;
 
     hideElement('overlay');
     hideElement('report-card');
@@ -881,14 +864,14 @@ function startGame(charType = 'kao') {
 
     console.log('✅ Game started!');
     // BUG FIX: Prevent race condition with RAF ID tracking
-    if (!window.loopRunning && rafId === null) {
-        window.loopRunning = true;
+    if (!GameState.loopRunning && rafId === null) {
+        GameState.loopRunning = true;
         rafId = requestAnimationFrame(gameLoop);
     }
 }
 
 async function endGame(result) {
-    if (window.gameState === 'GAMEOVER') return;
+    if (GameState.phase === 'GAMEOVER') return;
     setGameState('GAMEOVER');
 
     // BUG FIX: Cancel RAF and cleanup mobile controls
@@ -896,8 +879,8 @@ async function endGame(result) {
         cancelAnimationFrame(rafId);
         rafId = null;
     }
-    window.loopRunning = false;
-    
+    GameState.loopRunning = false;
+
     if (typeof cleanupMobileControls === 'function') {
         cleanupMobileControls();
     }
@@ -905,7 +888,7 @@ async function endGame(result) {
     Audio.stopBGM();
     Audio.playBGM('menu');
 
-    window.hitStopTimer = 0;
+    GameState.hitStopTimer = 0;
 
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
@@ -916,13 +899,8 @@ async function endGame(result) {
 
     window.drone = null;
 
-    window.isSlowMotion = false;
-    window.timeScale = 1.0;
-    window.isGlitchWave = false;
-    // FIX (WARN-5): Reset glitch wave HP bonus to prevent negative HP on restart
-    if (window._glitchWaveHpBonus > 0) {
-        window._glitchWaveHpBonus = 0;
-    }
+    // ── Reset mutable state (mirrors startGame — prevents stale values on restart) ──
+    GameState.resetRun();
     // wave event cleared by WaveManager._deactivateWaveEvent() on next startNextWave()
 
     weatherSystem.clear();
@@ -977,7 +955,7 @@ window.endGame = endGame;
 
 window.onload = () => {
     console.log('🚀 Initializing game...');
-    
+
     // BUG FIX: Ensure DOM is fully ready before initialization
     const initializeGame = () => {
         if (!document.getElementById('gameCanvas')) {
@@ -985,12 +963,12 @@ window.onload = () => {
             setTimeout(initializeGame, 100);
             return;
         }
-        
+
         try {
             initCanvas();
             if (typeof InputSystem !== 'undefined') InputSystem.init();
             initAI();
-            
+
             // ── BGM FIX: Audio.init() moved here from startGame() ────────────────
             if (typeof Audio !== 'undefined') {
                 Audio.init();
@@ -1000,7 +978,7 @@ window.onload = () => {
             console.error('[window.onload] Initialization error:', err);
         }
     };
-    
+
     if (document.readyState === 'complete') {
         initializeGame();
     } else {

@@ -797,11 +797,11 @@ class UIManager {
         if (reportKillsEl) reportKillsEl.textContent = (kills || 0).toLocaleString();
         const rc = document.getElementById('report-card');
         if (rc) rc.style.display = 'block';
-        
+
         // Show character selection so player can switch characters
         const charSection = document.querySelector('.char-select-section');
         if (charSection) charSection.style.display = 'block';
-        
+
         // Update mission brief
         const missionBrief = document.getElementById('mission-brief');
         if (missionBrief) missionBrief.textContent = 'เลือกตัวละครใหม่หรือลองอีกครั้ง';
@@ -814,6 +814,31 @@ class UIManager {
             'report-text': 'Loading...'
         };
         for (const [id, val] of Object.entries(els)) setElementText(id, val);
+    }
+
+    // -- Canvas HUD (Combo / Confused / Minimap) ----------
+    // Moved to CanvasHUD class (defined below).
+    // UIManager.draw() is a compat shim -- see deprecation notice.
+}
+// ============================================================
+// CanvasHUD -- Canvas 2D rendering layer
+//
+// Owns every ctx.* draw call previously in UIManager.
+// Godot equivalent: CanvasLayer (Layer 10) > Control children.
+//
+// Entry:  CanvasHUD.draw(ctx, dt) -- called each frame from game.js
+// Compat: UIManager.draw(ctx, dt) -- deprecated shim, delegates here
+// ============================================================
+class CanvasHUD {
+
+    // -- Frame entry point -----------------------------------
+    static draw(ctx, dt) {
+        UIManager.injectCooldownStyles(); // no-op after first call
+        CanvasHUD.updateCombo(dt);
+        CanvasHUD.drawCombo(ctx);
+        if (!ctx || !ctx.canvas) return;
+        CanvasHUD.drawConfusedWarning(ctx); // before minimap
+        CanvasHUD.drawMinimap(ctx);         // always on top
     }
 
     // ── Combo UI ──────────────────────────────────────────────
@@ -943,7 +968,7 @@ class UIManager {
         // Deep purple, semi-transparent so world content shows through
         // at the edges and the banner doesn't feel too opaque.
         ctx.fillStyle = 'rgba(88, 28, 135, 0.88)';
-        _confusedRoundRect(ctx, pillX, pillY, pillW, pillH, radius);
+        CanvasHUD._roundRect(ctx, pillX, pillY, pillW, pillH, radius);
         ctx.fill();
 
         // ── Pill border ───────────────────────────────────────────
@@ -951,7 +976,7 @@ class UIManager {
         ctx.shadowColor = '#e879f9';
         ctx.strokeStyle = 'rgba(233, 121, 249, 0.90)';
         ctx.lineWidth = 2;
-        _confusedRoundRect(ctx, pillX, pillY, pillW, pillH, radius);
+        CanvasHUD._roundRect(ctx, pillX, pillY, pillW, pillH, radius);
         ctx.stroke();
 
         // ── Warning text ──────────────────────────────────────────
@@ -965,21 +990,6 @@ class UIManager {
         ctx.restore();
     }
 
-    // ── Radar + Combo + Confused Warning draw entry ───────────
-    static draw(ctx, dt) {
-        UIManager.injectCooldownStyles(); // no-op after first call
-        UIManager.updateCombo(dt);
-        UIManager.drawCombo(ctx);
-        if (!ctx || !ctx.canvas) return;
-
-        // ── Confused-state warning banner ─────────────────────
-        // Drawn before the minimap so it appears above world content
-        // but below the radar (radar is always the topmost HUD element).
-        UIManager.drawConfusedWarning(ctx);
-
-        // ✅ Minimap is drawn LAST so no other HUD element overlaps it.
-        UIManager.drawMinimap(ctx);
-    }
 
     // ════════════════════════════════════════════════════════════
     // 🎯 TACTICAL MINIMAP / RADAR  (drawn last — always on top)
@@ -1412,35 +1422,26 @@ class UIManager {
         // ══════════════════════════════════════════════════════
         ctx.restore();  // ← ends OUTER save
     }
-}
-
-// ════════════════════════════════════════════════════════════
-// 😵 CONFUSED WARNING — local rounded-rect helper
-//
-// Isolated from game.js's _roundRectPath so ui.js has no
-// hard dependency on a function defined in another file.
-// Uses the native ctx.roundRect() when available (Chrome 99+,
-// Firefox 112+) and falls back to a manual quad-bezier path.
-// ════════════════════════════════════════════════════════════
-function _confusedRoundRect(ctx, x, y, w, h, r) {
-    r = Math.min(r, w / 2, h / 2);
-    if (typeof ctx.roundRect === 'function') {
-        // Native path — available in all modern browsers
-        ctx.beginPath();
-        ctx.roundRect(x, y, w, h, r);
-    } else {
-        // Manual fallback via quadratic bezier curves
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
+    // -- _roundRect -- moved from module scope --
+    // Only used by drawConfusedWarning().
+    static _roundRect(ctx, x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        if (typeof ctx.roundRect === 'function') {
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, r);
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+        }
     }
 }
 
@@ -1472,6 +1473,7 @@ var Achievements = new AchievementSystem();
 // can access them regardless of which script tag loads first.
 window.ShopManager = ShopManager;
 window.UIManager = UIManager;
+window.CanvasHUD = CanvasHUD;
 window.Achievements = Achievements;
 
 // ── High-score display on initial page load ───────────────────
@@ -1487,5 +1489,5 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ── Node/bundler export ───────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AchievementSystem, ShopManager, UIManager, Achievements, addCombo, comboCount, comboTimer };
+    module.exports = { AchievementSystem, ShopManager, UIManager, CanvasHUD, Achievements, addCombo, comboCount, comboTimer };
 }

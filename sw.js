@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.4.20'; // v3.4.20 Bug Fix: Fixed Poom character selected state to use orange theme instead of blue
+const CACHE_NAME = 'mtc-cache-v3.5.0'; // v3.5.0 Major Refactor: Rendering System & Performance Optimization
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -35,6 +35,9 @@ const urlsToCache = [
   './js/systems/ShopSystem.js?v=' + CACHE_TIMESTAMP,
   './js/systems/TimeManager.js?v=' + CACHE_TIMESTAMP,
   './js/systems/AdminSystem.js?v=' + CACHE_TIMESTAMP,
+  './js/systems/GameState.js?v=' + CACHE_TIMESTAMP,
+  // Rendering
+  './js/rendering/PlayerRenderer.js?v=' + CACHE_TIMESTAMP,
   // Audio Assets (no cache busting for large files)
   './assets/audio/menu.mp3',
   './assets/audio/battle.mp3',

@@ -166,7 +166,7 @@ class Enemy extends Entity {
     addStatus(type, data) {
         const existing = this.statusEffects.get(type);
         const now = performance.now() / 1000;
-        
+
         if (existing) {
             // Merge with existing effect
             if (data.stacks !== undefined) {
@@ -194,7 +194,7 @@ class Enemy extends Entity {
                 onTick: data.onTick
             };
             this.statusEffects.set(type, effect);
-            
+
             // Call onApply callback if provided
             if (effect.onApply) {
                 effect.onApply(this, effect);
@@ -252,130 +252,7 @@ class Enemy extends Entity {
             this.removeStatus(type);
         }
     }
-
-    draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  BASIC ENEMY — Corrupted Student Drone                  ║
-        // ║  Slim gray/purple bean · Red visor slit · Spiked hands  ║
-        // ╚══════════════════════════════════════════════════════════╝
-        const screen = worldToScreen(this.x, this.y);
-        const now = Date.now();
-        const R = this.radius; // keep collision radius untouched
-        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
-
-        // ── Ground shadow ────────────────────────────────────────────
-        CTX.save();
-        CTX.globalAlpha = 0.22;
-        CTX.fillStyle = 'rgba(0,0,0,0.8)';
-        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 4, R * 0.9, 4, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.restore();
-
-        // ── Body Block (Body Anti-Flip) ───────────────────────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        if (isFacingLeft) CTX.scale(-1, 1);
-
-        // Breathing: subtle Y-axis squash/stretch
-        const breathe = Math.sin(now / 200);
-        const scaleX = 1 + breathe * 0.028;
-        const scaleY = 1 - breathe * 0.028;
-        CTX.scale(scaleX, scaleY);
-
-        // ── Outer glow ring (corrupted purple) ───────────────────────
-        CTX.shadowBlur = 10; CTX.shadowColor = 'rgba(168,85,247,0.65)';
-        CTX.strokeStyle = 'rgba(168,85,247,0.45)';
-        CTX.lineWidth = 2;
-        CTX.beginPath(); CTX.arc(0, 0, R + 2, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Bean body — charcoal/gray-purple gradient ─────────────────
-        const bodyG = CTX.createRadialGradient(-2, -2, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#4a4a6a');
-        bodyG.addColorStop(0.6, '#2d2d44');
-        bodyG.addColorStop(1, '#1a1a2e');
-        CTX.fillStyle = bodyG;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-
-        // Thick sticker outline
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
-
-        // Specular highlight (top-left)
-        CTX.fillStyle = 'rgba(255,255,255,0.10)';
-        CTX.beginPath(); CTX.arc(-R * 0.35, -R * 0.35, R * 0.35, 0, Math.PI * 2); CTX.fill();
-
-        // ── Red visor slit ────────────────────────────────────────────
-        const visorPulse = 0.7 + Math.sin(now / 280) * 0.30;
-        CTX.fillStyle = `rgba(239,68,68,${visorPulse})`;
-        CTX.shadowBlur = 10 * visorPulse; CTX.shadowColor = '#ef4444';
-        CTX.beginPath(); CTX.roundRect(R * 0.05, -R * 0.18, R * 0.65, R * 0.22, R * 0.06); CTX.fill();
-        // Secondary dim glow bleed
-        CTX.fillStyle = `rgba(239,68,68,${visorPulse * 0.18})`;
-        CTX.beginPath(); CTX.roundRect(-R * 0.1, -R * 0.32, R * 0.9, R * 0.60, R * 0.18); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        CTX.restore(); // end body transform
-
-        // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
-        if (isFacingLeft) CTX.scale(1, -1);
-
-        // ── Floating spiked hands (orbiting body, weapon-side + off-side) ──
-        // Front hand — weapon-pointing side
-        const handR = R * 0.38;
-        CTX.fillStyle = '#3b3b55'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur = 5; CTX.shadowColor = 'rgba(168,85,247,0.5)';
-        CTX.beginPath(); CTX.arc(R + 6, 2, handR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        // Spike on front hand
-        CTX.fillStyle = '#ef4444';
-        CTX.beginPath();
-        CTX.moveTo(R + 6 + handR, 2);
-        CTX.lineTo(R + 6 + handR + 5, -1);
-        CTX.lineTo(R + 6 + handR, 5);
-        CTX.closePath(); CTX.fill();
-
-        // Back hand — off-side
-        CTX.fillStyle = '#2d2d44'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur = 3;
-        CTX.beginPath(); CTX.arc(-(R + 5), 0, handR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        // Spike on back hand
-        CTX.fillStyle = '#ef4444';
-        CTX.beginPath();
-        CTX.moveTo(-(R + 5 + handR - 1), 0);
-        CTX.lineTo(-(R + 5 + handR - 1) - 5, -2);
-        CTX.lineTo(-(R + 5 + handR - 1), 3);
-        CTX.closePath(); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        CTX.restore(); // end weapon block
-
-        // ── Hit flash — white silhouette ─────────────────────────────
-        if (this.hitFlashTimer > 0) {
-            const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
-            CTX.save();
-            CTX.globalAlpha = flashAlpha;
-            CTX.fillStyle = '#ffffff';
-            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
-            CTX.restore();
-        }
-
-        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
-        if (this.stickyStacks > 0) {
-            const intensity = Math.min(1, this.stickyStacks / 10);
-            CTX.save();
-            CTX.globalAlpha = 0.4 * intensity;
-            CTX.fillStyle = '#00ff88';
-            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
-            CTX.restore();
-        }
-
-        // ── HP bar ───────────────────────────────────────────────────
-        const hpRatio = this.hp / this.maxHp, bw = 30;
-        CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 10, bw, 4);
-        CTX.fillStyle = '#ef4444'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 10, bw * hpRatio, 4);
-    }
+    // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
 }
 
 class TankEnemy extends Entity {
@@ -471,7 +348,7 @@ class TankEnemy extends Entity {
     addStatus(type, data) {
         const existing = this.statusEffects.get(type);
         const now = performance.now() / 1000;
-        
+
         if (existing) {
             // Merge with existing effect
             if (data.stacks !== undefined) {
@@ -499,7 +376,7 @@ class TankEnemy extends Entity {
                 onTick: data.onTick
             };
             this.statusEffects.set(type, effect);
-            
+
             // Call onApply callback if provided
             if (effect.onApply) {
                 effect.onApply(this, effect);
@@ -557,157 +434,7 @@ class TankEnemy extends Entity {
             this.removeStatus(type);
         }
     }
-
-    draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  TANK ENEMY — Heavy Armored Brute                       ║
-        // ║  Wide dark-red bean · Layered armor plates · Shield fists║
-        // ╚══════════════════════════════════════════════════════════╝
-        const screen = worldToScreen(this.x, this.y);
-        const now = Date.now();
-        const R = this.radius; // collision radius untouched
-        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
-
-        // ── Ground shadow (wider for big body) ───────────────────────
-        CTX.save();
-        CTX.globalAlpha = 0.30;
-        CTX.fillStyle = 'rgba(0,0,0,0.9)';
-        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 6, R * 1.1, 5, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.restore();
-
-        // ── Body Block (Body Anti-Flip) ───────────────────────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        if (isFacingLeft) CTX.scale(-1, 1);
-
-        // Tank breathes slower and more heavily
-        const breathe = Math.sin(now / 320);
-        CTX.scale(1 + breathe * 0.022, 1 - breathe * 0.022);
-
-        // ── Outer threat glow ─────────────────────────────────────────
-        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(185,28,28,0.80)';
-        CTX.strokeStyle = 'rgba(185,28,28,0.55)'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Main bean body — wide dark-red ────────────────────────────
-        // Draw as a slightly wider ellipse (1.15×) for the "sturdier" silhouette
-        CTX.save(); CTX.scale(1.15, 1.0);
-        const bodyG = CTX.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#7f1d1d');
-        bodyG.addColorStop(0.55, '#4a0d0d');
-        bodyG.addColorStop(1, '#2d0606');
-        CTX.fillStyle = bodyG;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
-        CTX.restore(); // end wide-ellipse scale
-
-        // ── Layered metallic armor plates ─────────────────────────────
-        // Front chest plate (forward-facing)
-        CTX.fillStyle = '#57121a';
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.8;
-        CTX.beginPath();
-        CTX.moveTo(R * 0.05, -R * 0.62);
-        CTX.lineTo(R * 0.68, -R * 0.32);
-        CTX.lineTo(R * 0.72, R * 0.28);
-        CTX.lineTo(R * 0.05, R * 0.62);
-        CTX.quadraticCurveTo(R * 0.3, R * 0.45, R * 0.05, R * 0.30);
-        CTX.closePath(); CTX.fill(); CTX.stroke();
-
-        // Shoulder pauldron (top)
-        CTX.fillStyle = '#6b1515';
-        CTX.beginPath();
-        CTX.arc(0, -R * 0.65, R * 0.28, Math.PI, 0);
-        CTX.lineTo(R * 0.28, -R * 0.45);
-        CTX.lineTo(-R * 0.28, -R * 0.45);
-        CTX.closePath(); CTX.fill(); CTX.stroke();
-
-        // Rivets on the chest plate
-        CTX.fillStyle = '#2d0606';
-        CTX.shadowBlur = 3; CTX.shadowColor = '#ef4444';
-        for (const [rx, ry] of [[R * 0.45, -R * 0.35], [R * 0.50, R * 0.05], [R * 0.42, R * 0.35]]) {
-            CTX.beginPath(); CTX.arc(rx, ry, 2, 0, Math.PI * 2); CTX.fill();
-        }
-        CTX.shadowBlur = 0;
-
-        // Damage-glow slit on chest (like an overheating engine)
-        const heatPulse = 0.5 + Math.sin(now / 220) * 0.45;
-        CTX.fillStyle = `rgba(251,146,60,${heatPulse * 0.85})`;
-        CTX.shadowBlur = 8 * heatPulse; CTX.shadowColor = '#fb923c';
-        CTX.beginPath(); CTX.roundRect(R * 0.18, -R * 0.08, R * 0.42, R * 0.18, R * 0.05); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // Specular highlight
-        CTX.fillStyle = 'rgba(255,255,255,0.07)';
-        CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.3, R * 0.28, 0, Math.PI * 2); CTX.fill();
-
-        CTX.restore(); // end body transform
-
-        // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-        CTX.rotate(this.angle);
-        if (isFacingLeft) CTX.scale(1, -1);
-
-        // ── Oversized Shield-Hands ────────────────────────────────────
-        // Front shield-hand (forward side, large kite-shield shape)
-        const shieldGlow = 0.4 + Math.sin(now / 180) * 0.25;
-        CTX.fillStyle = '#57121a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur = 8 * shieldGlow; CTX.shadowColor = '#dc2626';
-        CTX.beginPath();
-        CTX.moveTo(R + 5, -R * 0.55);           // top
-        CTX.lineTo(R + 12, -R * 0.15);          // upper right
-        CTX.lineTo(R + 13, R * 0.30);          // lower right
-        CTX.lineTo(R + 5, R * 0.65);           // bottom point
-        CTX.lineTo(R - 2, R * 0.30);          // lower left
-        CTX.lineTo(R - 1, -R * 0.15);          // upper left
-        CTX.closePath(); CTX.fill(); CTX.stroke();
-        // Shield boss (central rivet)
-        CTX.fillStyle = '#dc2626'; CTX.shadowBlur = 6; CTX.shadowColor = '#ef4444';
-        CTX.beginPath(); CTX.arc(R + 6, 0, 3.5, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // Back fist (off-side, smaller round gauntlet)
-        CTX.fillStyle = '#3d0808'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
-        CTX.shadowBlur = 4; CTX.shadowColor = '#dc2626';
-        CTX.beginPath(); CTX.arc(-(R + 7), 0, R * 0.42, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        // Knuckle ridge
-        CTX.strokeStyle = '#5c1010'; CTX.lineWidth = 1.5;
-        CTX.beginPath(); CTX.moveTo(-(R + 4), -3); CTX.lineTo(-(R + 10), -3); CTX.stroke();
-        CTX.beginPath(); CTX.moveTo(-(R + 4), 1); CTX.lineTo(-(R + 10), 1); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        CTX.restore(); // end weapon transform
-
-        // ── Hit flash — white silhouette (wide bean shape) ───────────
-        if (this.hitFlashTimer > 0) {
-            const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
-            CTX.save();
-            CTX.globalAlpha = flashAlpha;
-            CTX.fillStyle = '#ffffff';
-            CTX.translate(screen.x, screen.y);
-            if (isFacingLeft) CTX.scale(-1, 1);
-            CTX.scale(1.15, 1.0);
-            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-            CTX.restore();
-        }
-
-        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
-        if (this.stickyStacks > 0) {
-            const intensity = Math.min(1, this.stickyStacks / 10);
-            CTX.save();
-            CTX.globalAlpha = 0.4 * intensity;
-            CTX.fillStyle = '#00ff88';
-            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
-            CTX.restore();
-        }
-
-        // ── HP bar ───────────────────────────────────────────────────
-        const hpRatio = this.hp / this.maxHp, bw = 40;
-        CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 12, bw, 5);
-        CTX.fillStyle = '#78716c'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 12, bw * hpRatio, 5);
-    }
+    // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
 }
 
 class MageEnemy extends Entity {
@@ -813,7 +540,7 @@ class MageEnemy extends Entity {
     addStatus(type, data) {
         const existing = this.statusEffects.get(type);
         const now = performance.now() / 1000;
-        
+
         if (existing) {
             // Merge with existing effect
             if (data.stacks !== undefined) {
@@ -841,7 +568,7 @@ class MageEnemy extends Entity {
                 onTick: data.onTick
             };
             this.statusEffects.set(type, effect);
-            
+
             // Call onApply callback if provided
             if (effect.onApply) {
                 effect.onApply(this, effect);
@@ -899,140 +626,7 @@ class MageEnemy extends Entity {
             this.removeStatus(type);
         }
     }
-
-    draw() {
-        // ╔══════════════════════════════════════════════════════════╗
-        // ║  MAGE ENEMY — Arcane Shooter Drone                      ║
-        // ║  Sleek green diamond-bean · Glowing blaster · Orb hands  ║
-        // ╚══════════════════════════════════════════════════════════╝
-        const screen = worldToScreen(this.x, this.y);
-        const now = Date.now();
-        const R = this.radius;
-        const bobOffset = Math.sin(now / 300) * 3; // Mages float/hover
-        const isFacingLeft = Math.abs(this.angle) > Math.PI / 2;
-
-        // ── Ground shadow (offset because mage floats) ───────────────
-        CTX.save();
-        CTX.globalAlpha = 0.15;
-        CTX.fillStyle = 'rgba(0,0,0,0.8)';
-        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 10, R * 0.8, 4, 0, 0, Math.PI * 2); CTX.fill();
-        CTX.restore();
-
-        // ── Body Block (Body Anti-Flip + floating bob) ────────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y + bobOffset);
-        if (isFacingLeft) CTX.scale(-1, 1);
-
-        // Mage breathing — slightly faster oscillation
-        const breathe = Math.sin(now / 170);
-        CTX.scale(1 + breathe * 0.025, 1 - breathe * 0.030);
-
-        // ── Outer arcane glow ring ────────────────────────────────────
-        const auraA = 0.45 + Math.sin(now / 240) * 0.25;
-        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(126,34,206,0.80)';
-        CTX.strokeStyle = `rgba(167,139,250,${auraA})`; CTX.lineWidth = 2.5;
-        CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Bean body — deep emerald/violet gradient ──────────────────
-        // Diamond/sleek feel: taller than wide (scale Y slightly up)
-        CTX.save(); CTX.scale(0.88, 1.1);
-        const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#166534');
-        bodyG.addColorStop(0.55, '#14532d');
-        bodyG.addColorStop(1, '#052e16');
-        CTX.fillStyle = bodyG;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
-        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
-        CTX.restore(); // end diamond scale
-
-        // Specular top-left highlight
-        CTX.fillStyle = 'rgba(255,255,255,0.12)';
-        CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.35, R * 0.28, 0, Math.PI * 2); CTX.fill();
-
-        // ── Arcane energy core (glowing belly rune) ───────────────────
-        const coreP = 0.4 + Math.sin(now / 190) * 0.5;
-        CTX.fillStyle = `rgba(74,222,128,${Math.max(0, coreP)})`;
-        CTX.shadowBlur = 12 * coreP; CTX.shadowColor = '#22c55e';
-        CTX.beginPath(); CTX.arc(0, R * 0.15, R * 0.28, 0, Math.PI * 2); CTX.fill();
-        // Inner white hot core
-        CTX.fillStyle = `rgba(255,255,255,${coreP * 0.6})`;
-        CTX.beginPath(); CTX.arc(0, R * 0.15, R * 0.12, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        CTX.restore(); // end body transform
-
-        // ── Weapon Block (Weapon Anti-Flip + floating bob) ────────────
-        CTX.save();
-        CTX.translate(screen.x, screen.y + bobOffset);
-        CTX.rotate(this.angle);
-        if (isFacingLeft) CTX.scale(1, -1);
-
-        // ── Glowing blaster barrel (pointing forward / +X) ───────────
-        // Barrel base — dark rectangle
-        CTX.fillStyle = '#1a2a1a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
-        CTX.beginPath(); CTX.roundRect(R * 0.5, -R * 0.13, R * 0.80, R * 0.28, R * 0.06); CTX.fill(); CTX.stroke();
-        // Barrel energy channel — glowing green slit
-        const blasterA = 0.7 + Math.sin(now / 200) * 0.3;
-        CTX.fillStyle = `rgba(74,222,128,${blasterA})`;
-        CTX.shadowBlur = 8 * blasterA; CTX.shadowColor = '#22c55e';
-        CTX.beginPath(); CTX.roundRect(R * 0.55, -R * 0.06, R * 0.72, R * 0.14, R * 0.04); CTX.fill();
-        // Muzzle energy ring
-        CTX.strokeStyle = `rgba(134,239,172,${blasterA})`; CTX.lineWidth = 1.5;
-        CTX.beginPath(); CTX.arc(R * 1.32, 0, R * 0.15, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Floating Arcane Orb Hands ─────────────────────────────────
-        // Front orb — near the blaster, glowing green
-        const orbPulse = 0.6 + Math.sin(now / 210 + 1) * 0.35;
-        CTX.fillStyle = '#14532d'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur = 8 * orbPulse; CTX.shadowColor = '#22c55e';
-        CTX.beginPath(); CTX.arc(R + 4, R * 0.55, R * 0.35, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        // Orb inner glow
-        CTX.fillStyle = `rgba(74,222,128,${orbPulse * 0.75})`;
-        CTX.beginPath(); CTX.arc(R + 4, R * 0.55, R * 0.18, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // Back orb — off-side, dimmer violet tint
-        CTX.fillStyle = '#1a0a2e'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
-        CTX.shadowBlur = 5; CTX.shadowColor = 'rgba(126,34,206,0.5)';
-        CTX.beginPath(); CTX.arc(-(R + 4), R * 0.30, R * 0.30, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
-        CTX.fillStyle = `rgba(167,139,250,${orbPulse * 0.55})`;
-        CTX.beginPath(); CTX.arc(-(R + 4), R * 0.30, R * 0.14, 0, Math.PI * 2); CTX.fill();
-        CTX.shadowBlur = 0;
-
-        CTX.restore(); // end weapon transform
-
-        // ── Hit flash — white silhouette ─────────────────────────────
-        if (this.hitFlashTimer > 0) {
-            const flashAlpha = (this.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
-            CTX.save();
-            CTX.globalAlpha = flashAlpha;
-            CTX.fillStyle = '#ffffff';
-            CTX.translate(screen.x, screen.y + bobOffset);
-            if (isFacingLeft) CTX.scale(-1, 1);
-            CTX.save(); CTX.scale(0.88, 1.1);
-            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
-            CTX.restore();
-            CTX.restore();
-        }
-
-        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
-        if (this.stickyStacks > 0) {
-            const intensity = Math.min(1, this.stickyStacks / 10);
-            CTX.save();
-            CTX.globalAlpha = 0.4 * intensity;
-            CTX.fillStyle = '#00ff88';
-            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
-            CTX.restore();
-        }
-
-        // ── HP bar ───────────────────────────────────────────────────
-        const hpRatio = this.hp / this.maxHp, bw = 30;
-        CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 14, bw, 4);
-        CTX.fillStyle = '#a855f7'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 14, bw * hpRatio, 4);
-    }
+    // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1095,13 +689,7 @@ class PowerUp {
         addScore(BALANCE.score.powerup); Audio.playPowerUp();
         Achievements.stats.powerups++; Achievements.check('collector');
     }
-    draw() {
-        const screen = worldToScreen(this.x, this.y + Math.sin(this.bobTimer) * 5);
-        CTX.save(); CTX.translate(screen.x, screen.y);
-        CTX.shadowBlur = 20; CTX.shadowColor = this.colors[this.type];
-        CTX.font = '32px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-        CTX.fillText(this.icons[this.type], 0, 0); CTX.restore();
-    }
+    // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
 }
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
@@ -1111,3 +699,455 @@ window.EnemyBase = Enemy;    // alias for Debug.html check
 window.TankEnemy = TankEnemy;
 window.MageEnemy = MageEnemy;
 window.PowerUp = PowerUp;
+// ============================================================
+// EnemyRenderer — Canvas draw calls for all enemy types
+//
+// Separated from entity logic so game data and visuals are
+// independently testable. Godot equivalent: Sprite2D / AnimatedSprite2D
+// nodes that are children of the enemy Node2D but own no game state.
+//
+// Entry point: EnemyRenderer.draw(entity, ctx)
+//   Dispatches to the correct static method based on entity type.
+// ============================================================
+class EnemyRenderer {
+
+    // ── Dispatcher ───────────────────────────────────────────
+    // Call this from the game loop instead of entity.draw().
+    static draw(e, ctx) {
+        // Swap global CTX for the passed ctx so all sub-methods
+        // work with whichever canvas is active (future-proofing).
+        const _prevCTX = (typeof window !== 'undefined') ? window.CTX : undefined;
+        if (typeof window !== 'undefined') window.CTX = ctx;
+        try {
+            if (e instanceof MageEnemy) EnemyRenderer.drawMage(e);
+            else if (e instanceof TankEnemy) EnemyRenderer.drawTank(e);
+            else if (e instanceof Enemy) EnemyRenderer.drawEnemy(e);
+            else if (e instanceof PowerUp) EnemyRenderer.drawPowerUp(e);
+        } finally {
+            if (typeof window !== 'undefined' && _prevCTX !== undefined) window.CTX = _prevCTX;
+        }
+    }
+
+    // ── Basic Enemy (Corrupted Student Drone) ────────────────
+    static drawEnemy(e) {
+        // ╔══════════════════════════════════════════════════════════╗
+        // ║  BASIC ENEMY — Corrupted Student Drone                  ║
+        // ║  Slim gray/purple bean · Red visor slit · Spiked hands  ║
+        // ╚══════════════════════════════════════════════════════════╝
+        const screen = worldToScreen(e.x, e.y);
+        const now = Date.now();
+        const R = e.radius; // keep collision radius untouched
+        const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
+
+        // ── Ground shadow ────────────────────────────────────────────
+        CTX.save();
+        CTX.globalAlpha = 0.22;
+        CTX.fillStyle = 'rgba(0,0,0,0.8)';
+        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 4, R * 0.9, 4, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.restore();
+
+        // ── Body Block (Body Anti-Flip) ───────────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        if (isFacingLeft) CTX.scale(-1, 1);
+
+        // Breathing: subtle Y-axis squash/stretch
+        const breathe = Math.sin(now / 200);
+        const scaleX = 1 + breathe * 0.028;
+        const scaleY = 1 - breathe * 0.028;
+        CTX.scale(scaleX, scaleY);
+
+        // ── Outer glow ring (corrupted purple) ───────────────────────
+        CTX.shadowBlur = 10; CTX.shadowColor = 'rgba(168,85,247,0.65)';
+        CTX.strokeStyle = 'rgba(168,85,247,0.45)';
+        CTX.lineWidth = 2;
+        CTX.beginPath(); CTX.arc(0, 0, R + 2, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Bean body — charcoal/gray-purple gradient ─────────────────
+        const bodyG = CTX.createRadialGradient(-2, -2, 1, 0, 0, R);
+        bodyG.addColorStop(0, '#4a4a6a');
+        bodyG.addColorStop(0.6, '#2d2d44');
+        bodyG.addColorStop(1, '#1a1a2e');
+        CTX.fillStyle = bodyG;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+
+        // Thick sticker outline
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+
+        // Specular highlight (top-left)
+        CTX.fillStyle = 'rgba(255,255,255,0.10)';
+        CTX.beginPath(); CTX.arc(-R * 0.35, -R * 0.35, R * 0.35, 0, Math.PI * 2); CTX.fill();
+
+        // ── Red visor slit ────────────────────────────────────────────
+        const visorPulse = 0.7 + Math.sin(now / 280) * 0.30;
+        CTX.fillStyle = `rgba(239,68,68,${visorPulse})`;
+        CTX.shadowBlur = 10 * visorPulse; CTX.shadowColor = '#ef4444';
+        CTX.beginPath(); CTX.roundRect(R * 0.05, -R * 0.18, R * 0.65, R * 0.22, R * 0.06); CTX.fill();
+        // Secondary dim glow bleed
+        CTX.fillStyle = `rgba(239,68,68,${visorPulse * 0.18})`;
+        CTX.beginPath(); CTX.roundRect(-R * 0.1, -R * 0.32, R * 0.9, R * 0.60, R * 0.18); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        CTX.restore(); // end body transform
+
+        // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(e.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+
+        // ── Floating spiked hands (orbiting body, weapon-side + off-side) ──
+        // Front hand — weapon-pointing side
+        const handR = R * 0.38;
+        CTX.fillStyle = '#3b3b55'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 5; CTX.shadowColor = 'rgba(168,85,247,0.5)';
+        CTX.beginPath(); CTX.arc(R + 6, 2, handR, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        // Spike on front hand
+        CTX.fillStyle = '#ef4444';
+        CTX.beginPath();
+        CTX.moveTo(R + 6 + handR, 2);
+        CTX.lineTo(R + 6 + handR + 5, -1);
+        CTX.lineTo(R + 6 + handR, 5);
+        CTX.closePath(); CTX.fill();
+
+        // Back hand — off-side
+        CTX.fillStyle = '#2d2d44'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 3;
+        CTX.beginPath(); CTX.arc(-(R + 5), 0, handR - 1, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        // Spike on back hand
+        CTX.fillStyle = '#ef4444';
+        CTX.beginPath();
+        CTX.moveTo(-(R + 5 + handR - 1), 0);
+        CTX.lineTo(-(R + 5 + handR - 1) - 5, -2);
+        CTX.lineTo(-(R + 5 + handR - 1), 3);
+        CTX.closePath(); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        CTX.restore(); // end weapon block
+
+        // ── Hit flash — white silhouette ─────────────────────────────
+        if (e.hitFlashTimer > 0) {
+            const flashAlpha = (e.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
+            CTX.save();
+            CTX.globalAlpha = flashAlpha;
+            CTX.fillStyle = '#ffffff';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
+        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
+        if (e.stickyStacks > 0) {
+            const intensity = Math.min(1, e.stickyStacks / 10);
+            CTX.save();
+            CTX.globalAlpha = 0.4 * intensity;
+            CTX.fillStyle = '#00ff88';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
+        // ── HP bar ───────────────────────────────────────────────────
+        const hpRatio = e.hp / e.maxHp, bw = 30;
+        CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 10, bw, 4);
+        CTX.fillStyle = '#ef4444'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 10, bw * hpRatio, 4);
+    }
+
+    // ── Tank Enemy (Heavy Armored Brute) ─────────────────────
+    static drawTank(e) {
+        // ╔══════════════════════════════════════════════════════════╗
+        // ║  TANK ENEMY — Heavy Armored Brute                       ║
+        // ║  Wide dark-red bean · Layered armor plates · Shield fists║
+        // ╚══════════════════════════════════════════════════════════╝
+        const screen = worldToScreen(e.x, e.y);
+        const now = Date.now();
+        const R = e.radius; // collision radius untouched
+        const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
+
+        // ── Ground shadow (wider for big body) ───────────────────────
+        CTX.save();
+        CTX.globalAlpha = 0.30;
+        CTX.fillStyle = 'rgba(0,0,0,0.9)';
+        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 6, R * 1.1, 5, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.restore();
+
+        // ── Body Block (Body Anti-Flip) ───────────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        if (isFacingLeft) CTX.scale(-1, 1);
+
+        // Tank breathes slower and more heavily
+        const breathe = Math.sin(now / 320);
+        CTX.scale(1 + breathe * 0.022, 1 - breathe * 0.022);
+
+        // ── Outer threat glow ─────────────────────────────────────────
+        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(185,28,28,0.80)';
+        CTX.strokeStyle = 'rgba(185,28,28,0.55)'; CTX.lineWidth = 3;
+        CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Main bean body — wide dark-red ────────────────────────────
+        // Draw as a slightly wider ellipse (1.15×) for the "sturdier" silhouette
+        CTX.save(); CTX.scale(1.15, 1.0);
+        const bodyG = CTX.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
+        bodyG.addColorStop(0, '#7f1d1d');
+        bodyG.addColorStop(0.55, '#4a0d0d');
+        bodyG.addColorStop(1, '#2d0606');
+        CTX.fillStyle = bodyG;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+        CTX.restore(); // end wide-ellipse scale
+
+        // ── Layered metallic armor plates ─────────────────────────────
+        // Front chest plate (forward-facing)
+        CTX.fillStyle = '#57121a';
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.8;
+        CTX.beginPath();
+        CTX.moveTo(R * 0.05, -R * 0.62);
+        CTX.lineTo(R * 0.68, -R * 0.32);
+        CTX.lineTo(R * 0.72, R * 0.28);
+        CTX.lineTo(R * 0.05, R * 0.62);
+        CTX.quadraticCurveTo(R * 0.3, R * 0.45, R * 0.05, R * 0.30);
+        CTX.closePath(); CTX.fill(); CTX.stroke();
+
+        // Shoulder pauldron (top)
+        CTX.fillStyle = '#6b1515';
+        CTX.beginPath();
+        CTX.arc(0, -R * 0.65, R * 0.28, Math.PI, 0);
+        CTX.lineTo(R * 0.28, -R * 0.45);
+        CTX.lineTo(-R * 0.28, -R * 0.45);
+        CTX.closePath(); CTX.fill(); CTX.stroke();
+
+        // Rivets on the chest plate
+        CTX.fillStyle = '#2d0606';
+        CTX.shadowBlur = 3; CTX.shadowColor = '#ef4444';
+        for (const [rx, ry] of [[R * 0.45, -R * 0.35], [R * 0.50, R * 0.05], [R * 0.42, R * 0.35]]) {
+            CTX.beginPath(); CTX.arc(rx, ry, 2, 0, Math.PI * 2); CTX.fill();
+        }
+        CTX.shadowBlur = 0;
+
+        // Damage-glow slit on chest (like an overheating engine)
+        const heatPulse = 0.5 + Math.sin(now / 220) * 0.45;
+        CTX.fillStyle = `rgba(251,146,60,${heatPulse * 0.85})`;
+        CTX.shadowBlur = 8 * heatPulse; CTX.shadowColor = '#fb923c';
+        CTX.beginPath(); CTX.roundRect(R * 0.18, -R * 0.08, R * 0.42, R * 0.18, R * 0.05); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Specular highlight
+        CTX.fillStyle = 'rgba(255,255,255,0.07)';
+        CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.3, R * 0.28, 0, Math.PI * 2); CTX.fill();
+
+        CTX.restore(); // end body transform
+
+        // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(e.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+
+        // ── Oversized Shield-Hands ────────────────────────────────────
+        // Front shield-hand (forward side, large kite-shield shape)
+        const shieldGlow = 0.4 + Math.sin(now / 180) * 0.25;
+        CTX.fillStyle = '#57121a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 8 * shieldGlow; CTX.shadowColor = '#dc2626';
+        CTX.beginPath();
+        CTX.moveTo(R + 5, -R * 0.55);           // top
+        CTX.lineTo(R + 12, -R * 0.15);          // upper right
+        CTX.lineTo(R + 13, R * 0.30);          // lower right
+        CTX.lineTo(R + 5, R * 0.65);           // bottom point
+        CTX.lineTo(R - 2, R * 0.30);          // lower left
+        CTX.lineTo(R - 1, -R * 0.15);          // upper left
+        CTX.closePath(); CTX.fill(); CTX.stroke();
+        // Shield boss (central rivet)
+        CTX.fillStyle = '#dc2626'; CTX.shadowBlur = 6; CTX.shadowColor = '#ef4444';
+        CTX.beginPath(); CTX.arc(R + 6, 0, 3.5, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Back fist (off-side, smaller round gauntlet)
+        CTX.fillStyle = '#3d0808'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 4; CTX.shadowColor = '#dc2626';
+        CTX.beginPath(); CTX.arc(-(R + 7), 0, R * 0.42, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        // Knuckle ridge
+        CTX.strokeStyle = '#5c1010'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.moveTo(-(R + 4), -3); CTX.lineTo(-(R + 10), -3); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(-(R + 4), 1); CTX.lineTo(-(R + 10), 1); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        CTX.restore(); // end weapon transform
+
+        // ── Hit flash — white silhouette (wide bean shape) ───────────
+        if (e.hitFlashTimer > 0) {
+            const flashAlpha = (e.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
+            CTX.save();
+            CTX.globalAlpha = flashAlpha;
+            CTX.fillStyle = '#ffffff';
+            CTX.translate(screen.x, screen.y);
+            if (isFacingLeft) CTX.scale(-1, 1);
+            CTX.scale(1.15, 1.0);
+            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
+        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
+        if (e.stickyStacks > 0) {
+            const intensity = Math.min(1, e.stickyStacks / 10);
+            CTX.save();
+            CTX.globalAlpha = 0.4 * intensity;
+            CTX.fillStyle = '#00ff88';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
+        // ── HP bar ───────────────────────────────────────────────────
+        const hpRatio = e.hp / e.maxHp, bw = 40;
+        CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 12, bw, 5);
+        CTX.fillStyle = '#78716c'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 12, bw * hpRatio, 5);
+    }
+
+    // ── Mage Enemy (Arcane Shooter Drone) ────────────────────
+    static drawMage(e) {
+        // ╔══════════════════════════════════════════════════════════╗
+        // ║  MAGE ENEMY — Arcane Shooter Drone                      ║
+        // ║  Sleek green diamond-bean · Glowing blaster · Orb hands  ║
+        // ╚══════════════════════════════════════════════════════════╝
+        const screen = worldToScreen(e.x, e.y);
+        const now = Date.now();
+        const R = e.radius;
+        const bobOffset = Math.sin(now / 300) * 3; // Mages float/hover
+        const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
+
+        // ── Ground shadow (offset because mage floats) ───────────────
+        CTX.save();
+        CTX.globalAlpha = 0.15;
+        CTX.fillStyle = 'rgba(0,0,0,0.8)';
+        CTX.beginPath(); CTX.ellipse(screen.x, screen.y + R + 10, R * 0.8, 4, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.restore();
+
+        // ── Body Block (Body Anti-Flip + floating bob) ────────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y + bobOffset);
+        if (isFacingLeft) CTX.scale(-1, 1);
+
+        // Mage breathing — slightly faster oscillation
+        const breathe = Math.sin(now / 170);
+        CTX.scale(1 + breathe * 0.025, 1 - breathe * 0.030);
+
+        // ── Outer arcane glow ring ────────────────────────────────────
+        const auraA = 0.45 + Math.sin(now / 240) * 0.25;
+        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(126,34,206,0.80)';
+        CTX.strokeStyle = `rgba(167,139,250,${auraA})`; CTX.lineWidth = 2.5;
+        CTX.beginPath(); CTX.arc(0, 0, R + 3, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Bean body — deep emerald/violet gradient ──────────────────
+        // Diamond/sleek feel: taller than wide (scale Y slightly up)
+        CTX.save(); CTX.scale(0.88, 1.1);
+        const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
+        bodyG.addColorStop(0, '#166534');
+        bodyG.addColorStop(0.55, '#14532d');
+        bodyG.addColorStop(1, '#052e16');
+        CTX.fillStyle = bodyG;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+        CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 3;
+        CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.stroke();
+        CTX.restore(); // end diamond scale
+
+        // Specular top-left highlight
+        CTX.fillStyle = 'rgba(255,255,255,0.12)';
+        CTX.beginPath(); CTX.arc(-R * 0.3, -R * 0.35, R * 0.28, 0, Math.PI * 2); CTX.fill();
+
+        // ── Arcane energy core (glowing belly rune) ───────────────────
+        const coreP = 0.4 + Math.sin(now / 190) * 0.5;
+        CTX.fillStyle = `rgba(74,222,128,${Math.max(0, coreP)})`;
+        CTX.shadowBlur = 12 * coreP; CTX.shadowColor = '#22c55e';
+        CTX.beginPath(); CTX.arc(0, R * 0.15, R * 0.28, 0, Math.PI * 2); CTX.fill();
+        // Inner white hot core
+        CTX.fillStyle = `rgba(255,255,255,${coreP * 0.6})`;
+        CTX.beginPath(); CTX.arc(0, R * 0.15, R * 0.12, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        CTX.restore(); // end body transform
+
+        // ── Weapon Block (Weapon Anti-Flip + floating bob) ────────────
+        CTX.save();
+        CTX.translate(screen.x, screen.y + bobOffset);
+        CTX.rotate(e.angle);
+        if (isFacingLeft) CTX.scale(1, -1);
+
+        // ── Glowing blaster barrel (pointing forward / +X) ───────────
+        // Barrel base — dark rectangle
+        CTX.fillStyle = '#1a2a1a'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.roundRect(R * 0.5, -R * 0.13, R * 0.80, R * 0.28, R * 0.06); CTX.fill(); CTX.stroke();
+        // Barrel energy channel — glowing green slit
+        const blasterA = 0.7 + Math.sin(now / 200) * 0.3;
+        CTX.fillStyle = `rgba(74,222,128,${blasterA})`;
+        CTX.shadowBlur = 8 * blasterA; CTX.shadowColor = '#22c55e';
+        CTX.beginPath(); CTX.roundRect(R * 0.55, -R * 0.06, R * 0.72, R * 0.14, R * 0.04); CTX.fill();
+        // Muzzle energy ring
+        CTX.strokeStyle = `rgba(134,239,172,${blasterA})`; CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.arc(R * 1.32, 0, R * 0.15, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Floating Arcane Orb Hands ─────────────────────────────────
+        // Front orb — near the blaster, glowing green
+        const orbPulse = 0.6 + Math.sin(now / 210 + 1) * 0.35;
+        CTX.fillStyle = '#14532d'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 8 * orbPulse; CTX.shadowColor = '#22c55e';
+        CTX.beginPath(); CTX.arc(R + 4, R * 0.55, R * 0.35, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        // Orb inner glow
+        CTX.fillStyle = `rgba(74,222,128,${orbPulse * 0.75})`;
+        CTX.beginPath(); CTX.arc(R + 4, R * 0.55, R * 0.18, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Back orb — off-side, dimmer violet tint
+        CTX.fillStyle = '#1a0a2e'; CTX.strokeStyle = '#1e293b'; CTX.lineWidth = 2;
+        CTX.shadowBlur = 5; CTX.shadowColor = 'rgba(126,34,206,0.5)';
+        CTX.beginPath(); CTX.arc(-(R + 4), R * 0.30, R * 0.30, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+        CTX.fillStyle = `rgba(167,139,250,${orbPulse * 0.55})`;
+        CTX.beginPath(); CTX.arc(-(R + 4), R * 0.30, R * 0.14, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        CTX.restore(); // end weapon transform
+
+        // ── Hit flash — white silhouette ─────────────────────────────
+        if (e.hitFlashTimer > 0) {
+            const flashAlpha = (e.hitFlashTimer / HIT_FLASH_DURATION) * 0.75;
+            CTX.save();
+            CTX.globalAlpha = flashAlpha;
+            CTX.fillStyle = '#ffffff';
+            CTX.translate(screen.x, screen.y + bobOffset);
+            if (isFacingLeft) CTX.scale(-1, 1);
+            CTX.save(); CTX.scale(0.88, 1.1);
+            CTX.beginPath(); CTX.arc(0, 0, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+            CTX.restore();
+        }
+
+        // ── Phase 2 Session 5: Sticky stack green overlay tint ───────
+        if (e.stickyStacks > 0) {
+            const intensity = Math.min(1, e.stickyStacks / 10);
+            CTX.save();
+            CTX.globalAlpha = 0.4 * intensity;
+            CTX.fillStyle = '#00ff88';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
+        // ── HP bar ───────────────────────────────────────────────────
+        const hpRatio = e.hp / e.maxHp, bw = 30;
+        CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 14, bw, 4);
+        CTX.fillStyle = '#a855f7'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 14, bw * hpRatio, 4);
+    }
+
+    // ── Power-Up ─────────────────────────────────────────────
+    static drawPowerUp(e) {
+        const screen = worldToScreen(e.x, e.y + Math.sin(e.bobTimer) * 5);
+        CTX.save(); CTX.translate(screen.x, screen.y);
+        CTX.shadowBlur = 20; CTX.shadowColor = e.colors[e.type];
+        CTX.font = '32px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.fillText(e.icons[e.type], 0, 0); CTX.restore();
+    }
+}
+
+window.EnemyRenderer = EnemyRenderer;

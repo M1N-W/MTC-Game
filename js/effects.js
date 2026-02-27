@@ -22,7 +22,7 @@
  * GLITCH WAVE (v8 — unchanged):
  *   ✅ drawGlitchEffect(intensity, controlsInverted) — top-level export
  *
- * PERFORMANCE (v11 — Object Pool + Viewport Cull pass):
+ * PERFORMANCE (v12 — Swap-and-pop + OrbitalParticle Pool pass):
  *   ✅ ParticleSystem.MAX_PARTICLES = 150  — hard cap; oldest particle evicted
  *   ✅ Particle.draw(): shadowBlur skipped for particles with rendered radius < 3 px
  *
@@ -32,17 +32,28 @@
  *        Particle.reset(...)      re-initialises a live instance in-place
  *        Particle.release()       returns the instance to the pool for reuse
  *        ParticleSystem.spawn()   → Particle.acquire() instead of `new Particle()`
- *        ParticleSystem.update()  → dead particles returned via p.release()
+ *        ParticleSystem.update()  → swap-and-pop O(1) + dead particles returned via p.release()
  *        ParticleSystem.clear()   → all particles released before array is emptied
  *
  *   ✅ OBJECT POOL — FloatingText (up to 80 instances recycled):
  *        Same pattern: FloatingText._pool[], acquire(), reset(), release()
- *        FloatingTextSystem methods updated to use the pool
+ *        FloatingTextSystem.update() → swap-and-pop O(1)
  *
- *   ✅ VIEWPORT CULL — Particle.draw():
+ *   ✅ OBJECT POOL — OrbitalParticle (up to 40 instances recycled) [NEW v12]:
+ *        OrbitalParticle._pool[], acquire(), reset(), release()
+ *        OrbitalParticleSystem.update()     → swap-and-pop O(1) + pool release
+ *        OrbitalParticleSystem.spawnParticle() → OrbitalParticle.acquire()
+ *        OrbitalParticleSystem.clear()      → releases all live particles to pool
+ *        OrbitalParticle.draw()             → viewport cull + shadowBlur guard
+ *
+ *   ✅ SWAP-AND-POP O(1) everywhere [NEW v12]:
+ *        ParticleSystem.update(), FloatingTextSystem.update(),
+ *        HitMarkerSystem.update(), WeatherSystem.update(),
+ *        OrbitalParticleSystem.update() — all replaced splice(i,1) with swap-and-pop.
+ *        Z-order impact: none (particles/texts/markers are additive visuals, no depth ordering).
+ *
+ *   ✅ VIEWPORT CULL — Particle.draw() + OrbitalParticle.draw() [OrbitalParticle new v12]:
  *        Canvas-bounds check before any ctx calls.
- *        Off-screen explosion debris: fillArc + shadowBlur GPU calls fully skipped.
- *        Padding = particle.size + 4 px to avoid hard pop-in at edges.
  */
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -54,7 +65,7 @@ class Particle {
     // discards ~9 000 Particle objects per second, causing GC pauses every few
     // seconds. The pool keeps up to MAX_POOL dead instances warm so spawn() never
     // calls `new` after the first warm-up period.
-    static _pool    = [];
+    static _pool = [];
     static MAX_POOL = 300;
 
     constructor(x, y, vx, vy, color, size, lifetime, type = 'circle', data = {}) {
@@ -69,16 +80,16 @@ class Particle {
      * @returns {Particle} this, for fluent chaining from acquire()
      */
     reset(x, y, vx, vy, color, size, lifetime, type = 'circle', data = {}) {
-        this.x       = x;
-        this.y       = y;
-        this.vx      = vx;
-        this.vy      = vy;
-        this.color   = color;
-        this.size    = size;
-        this.life    = lifetime;
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.size = size;
+        this.life = lifetime;
         this.maxLife = lifetime;
-        this.type    = type; // 'circle', 'steam', 'binary', 'afterimage'
-        this.data    = data; // Custom data (rotation for afterimage, char for binary)
+        this.type = type; // 'circle', 'steam', 'binary', 'afterimage'
+        this.data = data; // Custom data (rotation for afterimage, char for binary)
         return this;
     }
 
@@ -145,8 +156,8 @@ class Particle {
         // Padding = size + 4 px prevents visible pop-in at the canvas edges.
         if (typeof CANVAS !== 'undefined') {
             const pad = this.size + 4;
-            if (screen.x < -pad           || screen.x > CANVAS.width  + pad ||
-                screen.y < -pad           || screen.y > CANVAS.height + pad) return;
+            if (screen.x < -pad || screen.x > CANVAS.width + pad ||
+                screen.y < -pad || screen.y > CANVAS.height + pad) return;
         }
 
         const alpha = this.life / this.maxLife;
@@ -189,11 +200,11 @@ class Particle {
             // Draw hollow box representing the afterimage
             const w = this.size;
             const h = this.size;
-            CTX.strokeRect(-w/2, -h/2, w, h);
+            CTX.strokeRect(-w / 2, -h / 2, w, h);
 
             // Fill slightly
             CTX.globalAlpha = alpha * 0.3;
-            CTX.fillRect(-w/2, -h/2, w, h);
+            CTX.fillRect(-w / 2, -h / 2, w, h);
 
             CTX.restore();
             CTX.globalAlpha = 1;
@@ -217,7 +228,7 @@ class Particle {
         // PERF: skip shadowBlur for small particles
         const useShadow = renderedRadius >= 3;
         if (useShadow) {
-            CTX.shadowBlur  = 4;
+            CTX.shadowBlur = 4;
             CTX.shadowColor = this.color;
         }
 
@@ -307,10 +318,19 @@ class ParticleSystem {
     }
 
     update(dt) {
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            if (this.particles[i].update(dt)) {
-                // ── POOL: return dead particle instead of letting GC collect it ──
-                this.particles.splice(i, 1)[0].release();
+        // ── PERF: swap-and-pop O(1) instead of splice O(n) ──────────────────
+        // Particle draw order is irrelevant (additive blending, no depth),
+        // so swapping the dead entry with the tail before popping is safe.
+        const arr = this.particles;
+        let i = arr.length - 1;
+        while (i >= 0) {
+            if (arr[i].update(dt)) {
+                arr[i].release();          // return to pool
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+                // don't decrement i — newly swapped item at i must be checked
+            } else {
+                i--;
             }
         }
     }
@@ -340,7 +360,7 @@ class FloatingText {
     // Floating texts are smaller in count (< 40 alive at once) but they each
     // hold a string reference — recycling them avoids repeated string-object
     // allocation during heavy combat (boss fight + drone + weapons = many texts/sec).
-    static _pool    = [];
+    static _pool = [];
     static MAX_POOL = 80;
 
     constructor(text, x, y, color, size = 20) {
@@ -352,13 +372,13 @@ class FloatingText {
      * @returns {FloatingText} this, for chaining from acquire()
      */
     reset(text, x, y, color, size = 20) {
-        this.text  = text;
-        this.x     = x;
-        this.y     = y;
+        this.text = text;
+        this.x = x;
+        this.y = y;
         this.color = color;
-        this.size  = size;
-        this.life  = 1.5;
-        this.vy    = -80;
+        this.size = size;
+        this.life = 1.5;
+        this.vy = -80;
         this._font = null;
         return this;
     }
@@ -397,7 +417,7 @@ class FloatingText {
         // Viewport cull — skip off-screen texts entirely
         if (typeof CANVAS !== 'undefined') {
             const pad = this.size * 2;
-            if (screen.x < -pad || screen.x > CANVAS.width  + pad ||
+            if (screen.x < -pad || screen.x > CANVAS.width + pad ||
                 screen.y < -pad || screen.y > CANVAS.height + pad) return;
         }
 
@@ -426,10 +446,16 @@ class FloatingTextSystem {
     }
 
     update(dt) {
-        for (let i = this.texts.length - 1; i >= 0; i--) {
-            if (this.texts[i].update(dt)) {
-                // ── POOL: return dead text to pool ──
-                this.texts.splice(i, 1)[0].release();
+        // ── PERF: swap-and-pop O(1) — order irrelevant for floating texts ──
+        const arr = this.texts;
+        let i = arr.length - 1;
+        while (i >= 0) {
+            if (arr[i].update(dt)) {
+                arr[i].release();
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+            } else {
+                i--;
             }
         }
     }
@@ -473,7 +499,7 @@ class FloatingTextSystem {
 class HitMarker {
     // IMP-6: Object pool — reuse dead instances instead of allocating new ones.
     // During heavy fights (~40 markers/sec) this eliminates short-lived GC pressure.
-    static _pool    = [];
+    static _pool = [];
     static MAX_POOL = 80;   // matches FloatingText pool size; plenty for max 40 active
 
     /**
@@ -490,13 +516,13 @@ class HitMarker {
      * @returns {HitMarker} this, for fluent chaining from acquire()
      */
     reset(x, y, isCrit = false) {
-        this.x       = x;
-        this.y       = y;
-        this.isCrit  = isCrit;
+        this.x = x;
+        this.y = y;
+        this.isCrit = isCrit;
 
         // Lifetime: crits linger slightly longer so they register better
         this.maxLife = isCrit ? 0.40 : 0.30;
-        this.life    = this.maxLife;
+        this.life = this.maxLife;
 
         // Base arm half-length (screen pixels, before expand animation)
         this.baseSize = isCrit ? 14 : 9;
@@ -533,7 +559,7 @@ class HitMarker {
 
     draw() {
         const screen = worldToScreen(this.x, this.y);
-        const t      = this.life / this.maxLife;   // 1 → 0 as marker ages
+        const t = this.life / this.maxLife;   // 1 → 0 as marker ages
 
         // Expand arms as the marker fades: starts at baseSize, grows by 35 %
         const armLen = this.baseSize * (1 + (1 - t) * 0.35);
@@ -544,24 +570,24 @@ class HitMarker {
 
         CTX.save();
 
-        CTX.globalAlpha  = alpha;
-        CTX.strokeStyle  = this.isCrit ? '#facc15' : '#ffffff';
-        CTX.lineWidth    = this.isCrit ? 2.5 : 2;
-        CTX.lineCap      = 'round';
+        CTX.globalAlpha = alpha;
+        CTX.strokeStyle = this.isCrit ? '#facc15' : '#ffffff';
+        CTX.lineWidth = this.isCrit ? 2.5 : 2;
+        CTX.lineCap = 'round';
 
         if (this.isCrit) {
             // Golden glow for crits
-            CTX.shadowBlur  = 10;
+            CTX.shadowBlur = 10;
             CTX.shadowColor = '#facc15';
         } else {
-            CTX.shadowBlur  = 5;
+            CTX.shadowBlur = 5;
             CTX.shadowColor = 'rgba(255,255,255,0.7)';
         }
 
         // ── Draw X arms ──────────────────────────────────────
         const cx = screen.x;
         const cy = screen.y;
-        const s  = armLen;
+        const s = armLen;
 
         CTX.beginPath();
         // Diagonal NW → SE
@@ -574,9 +600,9 @@ class HitMarker {
 
         // ── Inner dot for crits (extra punch) ────────────────
         if (this.isCrit) {
-            CTX.shadowBlur  = 14;
+            CTX.shadowBlur = 14;
             CTX.shadowColor = '#facc15';
-            CTX.fillStyle   = `rgba(255, 255, 255, ${alpha * 0.9})`;
+            CTX.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
             CTX.beginPath();
             CTX.arc(cx, cy, 2.5 * t, 0, Math.PI * 2);
             CTX.fill();
@@ -631,10 +657,16 @@ class HitMarkerSystem {
      * @param {number} dt Scaled frame delta (seconds)
      */
     update(dt) {
-        for (let i = this.markers.length - 1; i >= 0; i--) {
-            if (this.markers[i].update(dt)) {
-                // IMP-6: return dead marker to pool before removing from array
-                this.markers.splice(i, 1)[0].release();
+        // ── PERF: swap-and-pop O(1) ──────────────────────────────────────────
+        const arr = this.markers;
+        let i = arr.length - 1;
+        while (i >= 0) {
+            if (arr[i].update(dt)) {
+                arr[i].release();
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+            } else {
+                i--;
             }
         }
     }
@@ -805,11 +837,15 @@ class WeatherSystem {
             this._spawnParticle(camera);
         }
 
-        // Update existing particles (remove if off-screen)
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const shouldRemove = this.particles[i].update(dt, camera);
-            if (shouldRemove) {
-                this.particles.splice(i, 1);
+        // Update existing particles — swap-and-pop O(1), order irrelevant
+        const arr = this.particles;
+        let i = arr.length - 1;
+        while (i >= 0) {
+            if (arr[i].update(dt, camera)) {
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+            } else {
+                i--;
             }
         }
 
@@ -832,8 +868,8 @@ class WeatherSystem {
 
     _spawnParticle(camera) {
         // Spawn at top of visible screen with some padding
-        const screenTop   = camera.y - 10;
-        const screenLeft  = camera.x - 50;
+        const screenTop = camera.y - 10;
+        const screenLeft = camera.x - 50;
         const screenRight = camera.x + CANVAS.width + 50;
 
         const x = screenLeft + Math.random() * (screenRight - screenLeft);
@@ -937,7 +973,7 @@ class DeadlyGraph {
         this.hasHit = false;
 
         this.blockingDuration = duration !== null ? duration / 2 : 5;
-        this.activeDuration   = duration !== null ? duration / 2 : 5;
+        this.activeDuration = duration !== null ? duration / 2 : 5;
     }
 
     update(dt, player) {
@@ -1142,7 +1178,7 @@ class MeteorStrike {
 // ──────────────────────────────────────────────────────────────────────────────
 // Create singleton instances
 // ──────────────────────────────────────────────────────────────────────────────
-var particleSystem     = new ParticleSystem();
+var particleSystem = new ParticleSystem();
 var floatingTextSystem = new FloatingTextSystem();
 
 // Helper functions for global use
@@ -1175,16 +1211,16 @@ function spawnFloatingText(text, x, y, color, size = 20) {
  */
 function drawGlitchEffect(intensity, controlsInverted = false) {
     if (intensity <= 0) return;
-    const W   = CANVAS.width;
-    const H   = CANVAS.height;
+    const W = CANVAS.width;
+    const H = CANVAS.height;
     const now = performance.now();
 
     // ── 1. RGB SPLIT ─────────────────────────────────────────────
     const maxOff = Math.floor(intensity * 18);
     if (maxOff >= 1) {
-        const seed    = Math.floor(now / 50);
+        const seed = Math.floor(now / 50);
         const jitterX = ((seed * 1372) % (maxOff * 2 + 1)) - maxOff;
-        const jitterY = ((seed * 853)  % (maxOff + 1)) - Math.floor(maxOff / 2);
+        const jitterY = ((seed * 853) % (maxOff + 1)) - Math.floor(maxOff / 2);
 
         // ── Red channel ──
         CTX.save();
@@ -1215,18 +1251,18 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
     }
 
     // ── 2. SCANLINES ─────────────────────────────────────────────
-    const scanAlpha  = intensity * 0.22;
+    const scanAlpha = intensity * 0.22;
     const scanScroll = Math.floor(now / 80) % 3;
     CTX.save();
     CTX.globalAlpha = scanAlpha;
-    CTX.fillStyle   = '#000';
+    CTX.fillStyle = '#000';
     for (let y = scanScroll; y < H; y += 3) {
         CTX.fillRect(0, y, W, 1);
     }
     CTX.restore();
 
     // ── 3. CHROMATIC NOISE ───────────────────────────────────────
-    const sparkCount  = Math.floor(intensity * 80);
+    const sparkCount = Math.floor(intensity * 80);
     const sparkColors = ['#ff00ff', '#00ffff', '#ff3399', '#39ff14', '#ffffff', '#ff6600'];
     CTX.save();
     for (let i = 0; i < sparkCount; i++) {
@@ -1235,7 +1271,7 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         const sw = 1 + Math.floor(Math.random() * 3);
         const sh = sw;
         CTX.globalAlpha = 0.35 + Math.random() * 0.65;
-        CTX.fillStyle   = sparkColors[Math.floor(Math.random() * sparkColors.length)];
+        CTX.fillStyle = sparkColors[Math.floor(Math.random() * sparkColors.length)];
         CTX.fillRect(sx, sy, sw, sh);
     }
     CTX.restore();
@@ -1245,8 +1281,8 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         const sliceSeed = Math.floor(now / 120);
         const numSlices = Math.floor(intensity * 4);
         for (let s = 0; s < numSlices; s++) {
-            const sliceY   = ((sliceSeed * (s + 1) * 397) % H);
-            const sliceH   = 2 + ((sliceSeed * (s + 1) * 113) % 8);
+            const sliceY = ((sliceSeed * (s + 1) * 397) % H);
+            const sliceH = 2 + ((sliceSeed * (s + 1) * 113) % 8);
             const sliceOff = (((sliceSeed * (s + 1) * 211) % 40) - 20) * intensity;
 
             CTX.save();
@@ -1259,7 +1295,7 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
 
     // ── 5. VIGNETTE ──────────────────────────────────────────────
     const vigAlpha = intensity * (0.35 + Math.sin(now / 180) * 0.1);
-    const vigGrad  = CTX.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
+    const vigGrad = CTX.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
     vigGrad.addColorStop(0, 'rgba(100,0,120,0)');
     vigGrad.addColorStop(1, `rgba(60,0,80,${vigAlpha.toFixed(3)})`);
     CTX.save();
@@ -1269,10 +1305,10 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
 
     // ── 6. GLITCH BANNER ─────────────────────────────────────────
     {
-        const bannerY     = H * 0.12;
-        const baseText    = '⚡ GLITCH WAVE ⚡';
+        const bannerY = H * 0.12;
+        const baseText = '⚡ GLITCH WAVE ⚡';
         const glitchChars = '!@#$%^&*<>?/\\|';
-        let displayText   = '';
+        let displayText = '';
         for (let i = 0; i < baseText.length; i++) {
             const ch = baseText[i];
             if (ch !== ' ' && ch !== '⚡' && Math.random() < 0.18 * intensity) {
@@ -1283,12 +1319,12 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         }
 
         const fontSize = Math.floor(28 + intensity * 8);
-        const pulse    = 0.7 + Math.sin(now / 90) * 0.3;
+        const pulse = 0.7 + Math.sin(now / 90) * 0.3;
 
         CTX.save();
-        CTX.textAlign    = 'center';
+        CTX.textAlign = 'center';
         CTX.textBaseline = 'middle';
-        CTX.font         = `bold ${fontSize}px Orbitron, monospace`;
+        CTX.font = `bold ${fontSize}px Orbitron, monospace`;
 
         // Cyan shadow offset
         CTX.fillStyle = `rgba(0,255,255,${(intensity * pulse * 0.7).toFixed(3)})`;
@@ -1299,17 +1335,17 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         CTX.fillText(displayText, W / 2 - 3, bannerY - 2);
 
         // Main text — white with slight magenta tint
-        CTX.shadowBlur  = 14 * intensity;
+        CTX.shadowBlur = 14 * intensity;
         CTX.shadowColor = '#d946ef';
-        CTX.fillStyle   = `rgba(255,220,255,${(pulse * 0.92).toFixed(3)})`;
+        CTX.fillStyle = `rgba(255,220,255,${(pulse * 0.92).toFixed(3)})`;
         CTX.fillText(displayText, W / 2, bannerY);
-        CTX.shadowBlur  = 0;
+        CTX.shadowBlur = 0;
 
         // Sub-label — small corrupted status line
         const statusChars = ['REALITY.EXE', 'PHYSICS.DLL', 'CONTROLS.SYS', 'MEMORY.ERR', 'WAVE_DATA.BIN'];
-        const statusIdx   = Math.floor(now / 400) % statusChars.length;
-        CTX.font          = `bold 11px monospace`;
-        CTX.fillStyle     = `rgba(236,72,153,${intensity * 0.85})`;
+        const statusIdx = Math.floor(now / 400) % statusChars.length;
+        CTX.font = `bold 11px monospace`;
+        CTX.fillStyle = `rgba(236,72,153,${intensity * 0.85})`;
         CTX.fillText(`[ ${statusChars[statusIdx]} HAS STOPPED WORKING ]`, W / 2, bannerY + fontSize * 0.9);
 
         CTX.restore();
@@ -1317,15 +1353,15 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
 
     // ── 7. INVERTED CONTROLS STRIP ───────────────────────────────
     if (controlsInverted) {
-        const stripH     = 38;
-        const stripY     = H - stripH;
+        const stripH = 38;
+        const stripY = H - stripH;
         const flashAlpha = 0.7 + Math.sin(now / 80) * 0.3;
 
         CTX.save();
 
         // Background bar
         CTX.globalAlpha = 0.82;
-        CTX.fillStyle   = '#7e0040';
+        CTX.fillStyle = '#7e0040';
         CTX.fillRect(0, stripY, W, stripH);
 
         // Left + right gradient fade
@@ -1342,15 +1378,15 @@ function drawGlitchEffect(intensity, controlsInverted = false) {
         CTX.fillRect(W - 60, stripY, 60, stripH);
 
         // Warning text
-        CTX.globalAlpha  = flashAlpha;
-        CTX.fillStyle    = '#ffffff';
-        CTX.font         = 'bold 15px Orbitron, monospace';
-        CTX.textAlign    = 'center';
+        CTX.globalAlpha = flashAlpha;
+        CTX.fillStyle = '#ffffff';
+        CTX.font = 'bold 15px Orbitron, monospace';
+        CTX.textAlign = 'center';
         CTX.textBaseline = 'middle';
-        CTX.shadowBlur   = 10;
-        CTX.shadowColor  = '#ff00aa';
+        CTX.shadowBlur = 10;
+        CTX.shadowColor = '#ff00aa';
         CTX.fillText('⚡  CONTROLS INVERTED — W↔S   A↔D  ⚡', W / 2, stripY + stripH / 2);
-        CTX.shadowBlur   = 0;
+        CTX.shadowBlur = 0;
 
         CTX.restore();
     }
@@ -1390,13 +1426,13 @@ const WANCHAI_PUNCH_LABELS = [
 function spawnWanchaiPunchText(x, y) {
     if (typeof floatingTextSystem === 'undefined') return;
 
-    const label  = WANCHAI_PUNCH_LABELS[Math.floor(Math.random() * WANCHAI_PUNCH_LABELS.length)];
-    const offX   = (Math.random() - 0.5) * 40;   // random horizontal scatter
-    const offY   = -10 + (Math.random() - 0.5) * 20; // random vertical scatter
+    const label = WANCHAI_PUNCH_LABELS[Math.floor(Math.random() * WANCHAI_PUNCH_LABELS.length)];
+    const offX = (Math.random() - 0.5) * 40;   // random horizontal scatter
+    const offY = -10 + (Math.random() - 0.5) * 20; // random vertical scatter
 
     // Alternate colours: hot crimson, fiery orange, and bright white for contrast
     const colours = ['#dc2626', '#fb7185', '#f97316', '#ffffff', '#fca5a5'];
-    const colour  = colours[Math.floor(Math.random() * colours.length)];
+    const colour = colours[Math.floor(Math.random() * colours.length)];
 
     // Size varies 16-24px: bigger on emoji and double-exclamation labels
     const size = label.includes('!!') || label === '💥💥' ? 24 : 18;
@@ -1408,6 +1444,14 @@ function spawnWanchaiPunchText(x, y) {
 // Orbital Particle System — Auto & Kao intensity-linked effects
 // ──────────────────────────────────────────────────────────────────────────────
 class OrbitalParticle {
+    // ── Static Object Pool ─────────────────────────────────────────────────────
+    // Matches the pattern used by Particle, FloatingText, and HitMarker.
+    // OrbitalParticleSystem spawns ~1 particle every 0.03–0.15 s at 60 FPS,
+    // so without pooling we allocate ~7–33 short-lived objects per second per
+    // player — enough to cause GC microstutters during intense Wanchai rushes.
+    static _pool = [];
+    static MAX_POOL = 40;   // 2 systems × 12 max active + generous headroom
+
     constructor(x, y, orbitRadius, angle, speed, size, color, lifetime) {
         this.centerX = x;
         this.centerY = y;
@@ -1421,15 +1465,49 @@ class OrbitalParticle {
         this.wobble = Math.random() * Math.PI * 2;
     }
 
+    /**
+     * Re-initialise a pooled (or brand-new) instance with fresh state.
+     * @returns {OrbitalParticle} this — for fluent chaining from acquire()
+     */
+    reset(x, y, orbitRadius, angle, speed, size, color, lifetime) {
+        this.centerX = x;
+        this.centerY = y;
+        this.orbitRadius = orbitRadius;
+        this.angle = angle;
+        this.speed = speed;
+        this.size = size;
+        this.color = color;
+        this.life = lifetime;
+        this.maxLife = lifetime;
+        this.wobble = Math.random() * Math.PI * 2;
+        return this;
+    }
+
+    /** Pull from pool (or allocate) then reset. */
+    static acquire(x, y, orbitRadius, angle, speed, size, color, lifetime) {
+        if (OrbitalParticle._pool.length > 0) {
+            return OrbitalParticle._pool.pop()
+                .reset(x, y, orbitRadius, angle, speed, size, color, lifetime);
+        }
+        return new OrbitalParticle(x, y, orbitRadius, angle, speed, size, color, lifetime);
+    }
+
+    /** Return dead instance to pool. */
+    release() {
+        if (OrbitalParticle._pool.length < OrbitalParticle.MAX_POOL) {
+            OrbitalParticle._pool.push(this);
+        }
+    }
+
     update(dt, targetX, targetY, intensity) {
         // Follow target position
         this.centerX = targetX;
         this.centerY = targetY;
-        
+
         // Orbit with wobble
         this.angle += this.speed * dt * (1 + intensity * 0.5);
         this.wobble += dt * 3;
-        
+
         // Decay
         this.life -= dt;
         return this.life <= 0;
@@ -1440,18 +1518,33 @@ class OrbitalParticle {
         const x = this.centerX + Math.cos(this.angle) * (this.orbitRadius + wobbleOffset);
         const y = this.centerY + Math.sin(this.angle) * (this.orbitRadius + wobbleOffset);
         const screen = worldToScreen(x, y);
-        
+
+        // ── PERF: viewport cull ──────────────────────────────────────────────
+        if (typeof CANVAS !== 'undefined') {
+            const pad = this.size + 4;
+            if (screen.x < -pad || screen.x > CANVAS.width + pad ||
+                screen.y < -pad || screen.y > CANVAS.height + pad) return;
+        }
+
         const alpha = this.life / this.maxLife;
+        // ── PERF: skip sub-pixel particles ──────────────────────────────────
+        if (this.size * alpha < 0.4) return;
+
         CTX.globalAlpha = alpha;
         CTX.fillStyle = this.color;
-        CTX.shadowBlur = 8;
-        CTX.shadowColor = this.color;
-        
+
+        // ── PERF: shadowBlur only when particle is large enough to notice ───
+        const useShadow = this.size >= 2;
+        if (useShadow) {
+            CTX.shadowBlur = 8;
+            CTX.shadowColor = this.color;
+        }
+
         CTX.beginPath();
         CTX.arc(screen.x, screen.y, this.size, 0, Math.PI * 2);
         CTX.fill();
-        
-        CTX.shadowBlur = 0;
+
+        if (useShadow) CTX.shadowBlur = 0;
         CTX.globalAlpha = 1;
     }
 }
@@ -1467,18 +1560,24 @@ class OrbitalParticleSystem {
     update(dt, playerX, playerY, speed, isWanchaiActive, isWeaponMaster) {
         // Calculate intensity based on player state
         this.intensity = Math.min(1, speed / 200 + (isWanchaiActive ? 0.4 : 0) + (isWeaponMaster ? 0.3 : 0));
-        
-        // Update existing particles
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            if (this.particles[i].update(dt, playerX, playerY, this.intensity)) {
-                this.particles.splice(i, 1);
+
+        // ── PERF: swap-and-pop O(1) + pool release ───────────────────────────
+        const arr = this.particles;
+        let i = arr.length - 1;
+        while (i >= 0) {
+            if (arr[i].update(dt, playerX, playerY, this.intensity)) {
+                arr[i].release();              // return to pool
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+            } else {
+                i--;
             }
         }
-        
+
         // Spawn new particles based on intensity
         this.spawnTimer -= dt;
-        const spawnRate = 0.15 - this.intensity * 0.12; // Faster spawn at high intensity
-        if (this.spawnTimer <= 0 && this.particles.length < this.maxParticles) {
+        const spawnRate = 0.15 - this.intensity * 0.12;
+        if (this.spawnTimer <= 0 && arr.length < this.maxParticles) {
             this.spawnTimer = spawnRate;
             this.spawnParticle(playerX, playerY);
         }
@@ -1490,18 +1589,15 @@ class OrbitalParticleSystem {
         const speed = 1.5 + Math.random() * 1.5;
         const size = 1.5 + Math.random() * 2;
         const lifetime = 2 + Math.random() * 2;
-        
+
         // Color based on intensity
         let color;
-        if (this.intensity > 0.6) {
-            color = '#f97316'; // Orange for high intensity
-        } else if (this.intensity > 0.3) {
-            color = '#fbbf24'; // Yellow for medium
-        } else {
-            color = '#60a5fa'; // Blue for low
-        }
-        
-        this.particles.push(new OrbitalParticle(x, y, orbitRadius, angle, speed, size, color, lifetime));
+        if (this.intensity > 0.6) color = '#f97316';  // orange  — high
+        else if (this.intensity > 0.3) color = '#fbbf24';  // yellow  — medium
+        else color = '#60a5fa';  // blue    — low
+
+        // ── POOL: acquire instead of `new OrbitalParticle(…)` ───────────────
+        this.particles.push(OrbitalParticle.acquire(x, y, orbitRadius, angle, speed, size, color, lifetime));
     }
 
     draw() {
@@ -1511,6 +1607,8 @@ class OrbitalParticleSystem {
     }
 
     clear() {
+        // ── POOL: release all live particles before clearing ─────────────────
+        for (const p of this.particles) p.release();
         this.particles = [];
     }
 }
@@ -1526,7 +1624,7 @@ function initOrbitalSystems() {
 
 function updateOrbitalEffects(dt, players) {
     if (!autoOrbitalSystem) initOrbitalSystems();
-    
+
     players.forEach(player => {
         let system = null;
         if (player.constructor.name === 'AutoPlayer') {
@@ -1534,7 +1632,7 @@ function updateOrbitalEffects(dt, players) {
         } else if (player.constructor.name === 'KaoPlayer') {
             system = kaoOrbitalSystem;
         }
-        
+
         if (system) {
             const speed = Math.hypot(player.vx, player.vy);
             system.update(dt, player.x, player.y, speed, player.wanchaiActive, player.isWeaponMaster);

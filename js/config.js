@@ -320,6 +320,20 @@ const BALANCE = {
             damage: 30,
             radius: 18,
             color: 'rgba(186, 230, 253, 0.6)'
+        },
+        first: {
+            hpBaseMult: 0.62,
+            advancedHpMult: 1.35,
+            speedBaseMult: 1.55,
+            advancedSpeedMult: 1.35,
+            contactDamageMult: 1.2,
+            cooldowns: { suvat: 8.0, orbit: 12.0, freeFall: 15.0, rocket: 9.0, sandwich: 18.0 },
+            suvat: { windUp: 0.9, accel: 1900, maxDur: 1.2, damage: 80 },
+            orbit: { radius: 115, speed: 2.8, duration: 3.5, projDamage: 24, projSpeed: 520 },
+            freeFall: { warnDur: 1.8, aoeRadius: 140, damage: 95, advMult: 1.25 },
+            rocket: { baseDmg: 28, advMult: 1.3, baseSpeed: 480 },
+            berserk: { projDamage: 22, advMult: 1.3, projSpeed: 540, fireCd: 2.2 },
+            dodge: { radius: 130, impulse: 420, cd: 1.2 }
         }
     },
     powerups: {

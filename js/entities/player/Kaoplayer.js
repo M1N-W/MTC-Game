@@ -28,36 +28,8 @@ class KaoClone {
         this.y += (targetY - this.y) * 10 * dt;
     }
 
-    draw() {
-        const sc = worldToScreen(this.x, this.y);
-        const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
+    // draw() ย้ายไป PlayerRenderer._drawKaoClone() แล้ว
 
-        CTX.save();
-        // Clones are faint when stealth is active
-        CTX.globalAlpha = this.owner.isInvisible ? 0.15 : this.alpha;
-
-        // Body circle
-        CTX.fillStyle = this.owner.isWeaponMaster ? '#facc15' : this.color;
-        CTX.shadowBlur = 14;
-        CTX.shadowColor = this.owner.isWeaponMaster ? '#facc15' : '#3b82f6';
-        CTX.beginPath();
-        CTX.arc(sc.x, sc.y, this.radius, 0, Math.PI * 2);
-        CTX.fill();
-        CTX.shadowBlur = 0;
-
-        // Barrel indicator
-        CTX.strokeStyle = '#94a3b8';
-        CTX.lineWidth = 3;
-        CTX.beginPath();
-        CTX.moveTo(sc.x, sc.y);
-        CTX.lineTo(
-            sc.x + Math.cos(aimAngle) * 28,
-            sc.y + Math.sin(aimAngle) * 28
-        );
-        CTX.stroke();
-
-        CTX.restore();
-    }
 
     /** Fire projectiles from the clone's position, mirroring the owner's shot. */
     shoot(wep, damage, color, pellets, spread, wepKey, isCrit) {
@@ -234,86 +206,8 @@ class KaoPlayer extends Player {
     // ──────────────────────────────────────────────────────────────────────────
     // DRAW
     // ──────────────────────────────────────────────────────────────────────────
-    draw() {
-        // Draw clones first (behind player)
-        this.clones.forEach(c => c.draw());
+    // draw() ย้ายไป PlayerRenderer._drawKao() แล้ว
 
-        // Weapon Master golden aura pulse (enhanced: double ring)
-        if (this.isWeaponMaster) {
-            const now = performance.now();
-            const wmScreen = worldToScreen(this.x, this.y);
-            CTX.save();
-            CTX.globalAlpha = 0.28 + Math.sin(now / 150) * 0.18;
-            CTX.fillStyle = '#facc15';
-            CTX.shadowBlur = 24; CTX.shadowColor = '#facc15';
-            CTX.beginPath();
-            CTX.arc(wmScreen.x, wmScreen.y, this.radius + 8, 0, Math.PI * 2);
-            CTX.fill();
-            CTX.globalAlpha = 0.12 + Math.sin(now / 200) * 0.08;
-            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 2;
-            CTX.shadowBlur = 14;
-            CTX.beginPath();
-            CTX.arc(wmScreen.x, wmScreen.y, this.radius + 18, 0, Math.PI * 2);
-            CTX.stroke();
-            CTX.restore();
-        }
-
-        // Sniper charge laser-sight line (enhanced: dual-beam with glow)
-        if (this.sniperChargeTime > 0) {
-            const screen = worldToScreen(this.x, this.y);
-            const aimAngle = Math.atan2(window.mouse.wy - this.y, window.mouse.wx - this.x);
-            const chargeT = Math.min(1, this.sniperChargeTime);
-            CTX.save();
-            CTX.strokeStyle = `rgba(239,68,68,${chargeT * 0.22})`;
-            CTX.lineWidth = 6 + chargeT * 10;
-            CTX.shadowBlur = 18 * chargeT; CTX.shadowColor = '#ef4444';
-            CTX.beginPath();
-            CTX.moveTo(screen.x, screen.y);
-            CTX.lineTo(screen.x + Math.cos(aimAngle) * 2000, screen.y + Math.sin(aimAngle) * 2000);
-            CTX.stroke();
-            CTX.strokeStyle = `rgba(252,165,165,${chargeT * 0.90})`;
-            CTX.lineWidth = 1 + chargeT * 1.5;
-            CTX.shadowBlur = 6 * chargeT;
-            CTX.beginPath();
-            CTX.moveTo(screen.x, screen.y);
-            CTX.lineTo(screen.x + Math.cos(aimAngle) * 2000, screen.y + Math.sin(aimAngle) * 2000);
-            CTX.stroke();
-            CTX.restore();
-        }
-
-        // Pre-draw skill-state indicators
-        if (!this.isInvisible) {
-            const kaoNow = performance.now();
-            const kaoScr = worldToScreen(this.x, this.y);
-            // Teleport-ready: slow-spin dashed ring
-            if (this.passiveUnlocked && this.teleportCharges > 0) {
-                CTX.save();
-                CTX.translate(kaoScr.x, kaoScr.y);
-                CTX.rotate(kaoNow / 600);
-                CTX.strokeStyle = 'rgba(56,189,248,0.70)';
-                CTX.lineWidth = 1.5;
-                CTX.shadowBlur = 8; CTX.shadowColor = '#38bdf8';
-                CTX.setLineDash([4, 5]);
-                CTX.beginPath(); CTX.arc(0, 0, this.radius + 8, 0, Math.PI * 2); CTX.stroke();
-                CTX.setLineDash([]);
-                CTX.restore();
-            }
-            // Second-wind danger ring
-            if (this.isSecondWind) {
-                const swA = 0.30 + Math.sin(kaoNow / 110) * 0.20;
-                CTX.save();
-                CTX.globalAlpha = swA;
-                CTX.strokeStyle = '#ef4444';
-                CTX.lineWidth = 2;
-                CTX.shadowBlur = 16; CTX.shadowColor = '#ef4444';
-                CTX.beginPath(); CTX.arc(kaoScr.x, kaoScr.y, this.radius + 10 + Math.sin(kaoNow / 100) * 3, 0, Math.PI * 2); CTX.stroke();
-                CTX.restore();
-            }
-        }
-
-        // Body, stealth, weapon, dash ghosts via PlayerBase
-        super.draw();
-    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // SHOOT — entry point called every frame by the base class tick
