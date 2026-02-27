@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.1'; // v3.6.1 Enhancement: PoomPlayer Ritual Burst now damages boss
+const CACHE_NAME = 'mtc-cache-v3.6.2'; // v3.6.2 Feature: Added VersionManager.js for auto-sync version display
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -36,6 +36,7 @@ const urlsToCache = [
   './js/systems/TimeManager.js?v=' + CACHE_TIMESTAMP,
   './js/systems/AdminSystem.js?v=' + CACHE_TIMESTAMP,
   './js/systems/GameState.js?v=' + CACHE_TIMESTAMP,
+  './js/VersionManager.js?v=' + CACHE_TIMESTAMP,
   // Rendering
   './js/rendering/PlayerRenderer.js?v=' + CACHE_TIMESTAMP,
   // Audio Assets (no cache busting for large files)
