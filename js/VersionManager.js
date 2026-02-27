@@ -1,45 +1,40 @@
 'use strict';
 
 // ════════════════════════════════════════════════════════════
-// 📦 VERSION MANAGER - Auto-sync version across files
+// 📦 VERSION MANAGER
+// รับ version จาก sw.js ผ่าน postMessage อัตโนมัติ
+// ต่อไปแก้เวอร์ชันแค่ใน sw.js ที่เดียวพอครับ
 // ════════════════════════════════════════════════════════════
 
 class VersionManager {
-    static getCurrentVersion() {
-        // Extract version from service worker cache name
-        if (typeof CACHE_NAME !== 'undefined') {
-            const match = CACHE_NAME.match(/mtc-cache-v(.+)/);
-            return match ? match[1] : 'unknown';
-        }
-        return 'unknown';
-    }
+    static updateMenuVersion(version) {
+        const badge = document.querySelector('.version-badge');
+        if (badge) badge.textContent = `v${version}`;
 
-    static updateMenuVersion() {
-        const version = this.getCurrentVersion();
-        const versionBadge = document.querySelector('.version-badge');
-        if (versionBadge) {
-            versionBadge.textContent = `v${version}`;
-        }
-        
-        // Also update page title if needed
         const title = document.querySelector('title');
-        if (title && !title.textContent.includes(version)) {
-            title.textContent = `MTC the Game (Beta Edition v${version})`;
-        }
+        if (title) title.textContent = `MTC the Game (Beta Edition v${version})`;
+
+        window.GAME_VERSION = version;
     }
 
     static init() {
-        // Update version when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.updateMenuVersion());
-        } else {
-            this.updateMenuVersion();
-        }
+        if (!('serviceWorker' in navigator)) return;
+
+        // รับ version จาก Service Worker ผ่าน postMessage
+        navigator.serviceWorker.addEventListener('message', e => {
+            if (e.data?.type === 'VERSION') {
+                VersionManager.updateMenuVersion(e.data.version);
+            }
+        });
+
+        // กรณี SW active อยู่แล้วตั้งแต่ต้น → ขอ version ทันที
+        navigator.serviceWorker.ready.then(reg => {
+            if (reg.active) {
+                reg.active.postMessage({ type: 'GET_VERSION' });
+            }
+        });
     }
 }
 
-// Auto-initialize
 VersionManager.init();
-
-// Expose globally for manual updates if needed
 window.VersionManager = VersionManager;

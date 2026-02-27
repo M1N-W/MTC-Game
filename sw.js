@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.2'; // v3.6.2 Feature: Added VersionManager.js for auto-sync version display
+const CACHE_NAME = 'mtc-cache-v3.6.2'; // ← แก้ตรงนี้ที่เดียวพอ version จะ sync ไปเองอัตโนมัติ
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -46,6 +46,12 @@ const urlsToCache = [
   './assets/audio/glitch.mp3'
 ];
 
+// ── Helper: ดึงเลขเวอร์ชันจาก CACHE_NAME ─────────────────
+function getVersion() {
+  const match = CACHE_NAME.match(/mtc-cache-v(.+)/);
+  return match ? match[1] : 'unknown';
+}
+
 // 1. ติดตั้ง Service Worker และดึงไฟล์ทั้งหมดลง Cache
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -85,6 +91,12 @@ self.addEventListener('activate', event => {
     })
   );
   self.clients.claim();
+
+  // ✨ ส่ง version ไปบอกทุก tab ที่เปิดอยู่ทันทีหลัง activate
+  const version = getVersion();
+  self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
+    clients.forEach(client => client.postMessage({ type: 'VERSION', version }));
+  });
 });
 
 // 3. ดึงจาก Cache ก่อน ถ้าไม่มีให้ดึงจากเน็ต แล้วแอบเก็บลง Cache ไว้ใช้คราวหน้า (Runtime Caching)
@@ -123,8 +135,14 @@ self.addEventListener('fetch', event => {
           return networkResponse;
         }).catch(() => {
           console.warn('⚡ [Service Worker] Network & Cache failed for:', request.url);
-          // (ถ้ามีหน้าจอแจ้งเตือนว่าออฟไลน์ สามารถใส่ลอจิกตรงนี้ได้ครับ)
         });
       })
   );
+});
+
+// ✨ ตอบกลับเมื่อ VersionManager.js ถามหา version (กรณี SW active อยู่แล้วตั้งแต่ต้น)
+self.addEventListener('message', event => {
+  if (event.data?.type === 'GET_VERSION') {
+    event.source.postMessage({ type: 'VERSION', version: getVersion() });
+  }
 });
