@@ -744,19 +744,31 @@ class UIManager {
             const teleportIcon = document.getElementById('teleport-icon');
             const teleportCd = document.getElementById('teleport-cd');
             if (teleportIcon) {
+                const maxCharges = player.maxTeleportCharges || 3;
                 const isReady = player.teleportCharges > 0;
+                const isFull = player.teleportCharges >= maxCharges;
                 teleportIcon.classList.toggle('active', isReady);
                 if (teleportCd) {
-                    // Fill the mask based on how far the timer has progressed
+                    // mask แสดง progress ของชาร์จ "รอบถัดไป" — ถ้าเต็มแล้วให้ clear
                     const progress = player.teleportCooldown > 0
                         ? Math.min(1, player.teleportTimer / player.teleportCooldown)
                         : 1;
-                    teleportCd.style.height = isReady ? '0%' : `${(1 - progress) * 100}%`;
+                    teleportCd.style.height = isFull ? '0%' : `${(1 - progress) * 100}%`;
                 }
+                // ── ตัวเลขแสดงจำนวนชาร์จที่มุมล่างขวา ──
+                let chargeLabel = teleportIcon.querySelector('.charge-label');
+                if (!chargeLabel) {
+                    chargeLabel = document.createElement('span');
+                    chargeLabel.className = 'charge-label';
+                    chargeLabel.style.cssText =
+                        'position:absolute;bottom:2px;right:4px;font-size:10px;' +
+                        'font-weight:bold;color:#00e5ff;text-shadow:0 0 4px #000;pointer-events:none;';
+                    teleportIcon.appendChild(chargeLabel);
+                }
+                chargeLabel.textContent = player.teleportCharges > 0 ? `${player.teleportCharges}` : '';
             }
-            // Arc overlay: remaining time = teleportCooldown - teleportTimer
-            // When charges > 0 the skill is ready — pass 0 remaining so arc clears.
-            const teleportRemaining = player.teleportCharges > 0
+            // Arc overlay: นับจาก teleportCooldown - teleportTimer; ถ้าชาร์จเต็มให้ clear
+            const teleportRemaining = player.teleportCharges >= (player.maxTeleportCharges || 3)
                 ? 0
                 : Math.max(0, player.teleportCooldown - player.teleportTimer);
             UIManager._setCooldownVisual('teleport-icon', teleportRemaining, player.teleportCooldown);

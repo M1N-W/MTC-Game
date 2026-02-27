@@ -806,7 +806,7 @@ class ProjectileManager {
                 }
 
             } else if (proj.team === 'enemy') {
-                if (proj.checkCollision(player) && !player.isInvisible) {
+                if (proj.checkCollision(player) && !player.isInvisible && !player.isFreeStealthy) {
                     player.takeDamage(proj.damage);
                     hit = true;
                 }

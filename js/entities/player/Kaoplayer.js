@@ -77,10 +77,14 @@ class KaoPlayer extends Player {
         // ── Teleport ───────────────────────────────────────────────────────────
         this.teleportTimer = 0;
         this.teleportCooldown = S.teleportCooldown || 20;
-        this.teleportCharges = 0;   // max 1 charge at a time
+        this.teleportCharges = 0;   // max 3 charges
+        this.maxTeleportCharges = 3;
 
         // ── Auto-stealth (Passive: ซุ่มเสรี) ──────────────────────────────────
         this.autoStealthCooldown = 0;   // internal cooldown for free stealth
+        this.isFreeStealthy = false;    // FREE STEALTH: กระสุน enemy ทะลุผ่าน แต่ศัตรูยังรู้ตำแหน่ง
+        this.freeStealthTimer = 0;
+        this.maxFreeStealthDuration = 2.0;
 
         // ── Weapon Master Awakening ────────────────────────────────────────────
         this.weaponKills = { auto: 0, sniper: 0, shotgun: 0 };
@@ -148,19 +152,29 @@ class KaoPlayer extends Player {
             // 1. Auto-stealth (Free Stealth)
             const isMoving = keys.w || keys.a || keys.s || keys.d;
             if (isMoving && this.autoStealthCooldown <= 0 && Math.random() < 0.2 * dt) {
-                this.isInvisible = true;
+                // FREE STEALTH: ล่องหนแบบ "ผี" — ศัตรูรู้ตำแหน่งแต่กระสุนทะลุผ่าน
+                // ไม่ยุ่ง isInvisible/energy ของระบบ Stealth หลัก
+                this.isFreeStealthy = true;
+                this.freeStealthTimer = this.maxFreeStealthDuration;
                 this.ambushReady = true;
-                this.energy = this.maxEnergy;
                 this.autoStealthCooldown = S.autoStealthCooldown || 8;
                 spawnFloatingText(GAME_TEXTS.combat.kaoFreeStealth, this.x, this.y - 40, '#a855f7', 20);
             }
             if (this.autoStealthCooldown > 0) this.autoStealthCooldown -= dt;
+            // Free Stealth countdown
+            if (this.freeStealthTimer > 0) {
+                this.freeStealthTimer -= dt;
+                if (this.freeStealthTimer <= 0) {
+                    this.freeStealthTimer = 0;
+                    this.isFreeStealthy = false;
+                }
+            }
 
             // 2. Teleport (Charge & Q Key)
-            if (this.teleportTimer < this.teleportCooldown && this.teleportCharges < 1) {
+            if (this.teleportTimer < this.teleportCooldown && this.teleportCharges < this.maxTeleportCharges) {
                 this.teleportTimer += dt;
                 if (this.teleportTimer >= this.teleportCooldown) {
-                    this.teleportCharges = 1;
+                    this.teleportCharges++;
                     this.teleportTimer = 0;
                     spawnFloatingText(GAME_TEXTS.combat.kaoTeleport, this.x, this.y - 60, '#00e5ff', 20);
                 }
@@ -203,7 +217,7 @@ class KaoPlayer extends Player {
         }
 
         super.update(dt, keys, mouse);
-        
+
         // FIX (SNIPER-CHARGE): shoot() is only called while mouse is held.
         // When player releases, we catch the release here (runs every frame).
         if (this.sniperChargeTime > 0 && window.mouse.left === 0) {

@@ -68,7 +68,7 @@ class PlayerRenderer {
         const aimAngle = Math.atan2(window.mouse.wy - clone.y, window.mouse.wx - clone.x);
 
         ctx.save();
-        ctx.globalAlpha = clone.owner.isInvisible ? 0.15 : clone.alpha;
+        ctx.globalAlpha = (clone.owner.isInvisible || clone.owner.isFreeStealthy) ? 0.15 : clone.alpha;
 
         ctx.fillStyle = clone.owner.isWeaponMaster ? '#facc15' : clone.color;
         ctx.shadowBlur = 14;
@@ -145,7 +145,7 @@ class PlayerRenderer {
         }
 
         // ── Skill-state indicators (visible only when not stealthed) ──
-        if (!entity.isInvisible) {
+        if (!entity.isInvisible && !entity.isFreeStealthy) {
             const kaoNow = performance.now();
             const kaoScr = worldToScreen(entity.x, entity.y);
 
@@ -896,7 +896,7 @@ class PlayerRenderer {
 
         const R = 13;
 
-        if (entity.isInvisible) {
+        if (entity.isInvisible || entity.isFreeStealthy) {
             // STEALTH: glitch scanlines + ghost bean
             const gT = now / 60;
             ctx.save();
