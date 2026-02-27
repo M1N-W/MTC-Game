@@ -256,8 +256,10 @@ class PoomPlayer extends Entity {
         projectileManager.add(proj);
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
+        // playPoomShoot() covers the bamboo-tube thump for this character.
+        // playRiceShoot() (generic SFX) is intentionally NOT called here to
+        // avoid stacking 4 oscillators per shot and duplicating the sound.
         Audio.playPoomShoot();
-        if (typeof Audio !== 'undefined' && Audio.playRiceShoot) Audio.playRiceShoot();
     }
 
     eatRice() {

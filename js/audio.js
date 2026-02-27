@@ -78,7 +78,7 @@ class AudioSystem {
         this.ctx = null;
         this.masterVolume = GAME_CONFIG.audio.master; // ค่า Default อ่านจาก GAME_CONFIG (แก้ที่ config.js)
         this.enabled = true;
-        
+
         // BGM System
         this.bgmAudio = null;
         this.currentBGM = null;
@@ -111,7 +111,7 @@ class AudioSystem {
 
         // Retry handler guard flag — prevents duplicate retry listeners
         this._retryHandlerActive = false;
-        
+
         // Event listener references for safe cleanup
         this._bgmEndedListener = null;
         this._bgmRetryListener = null;
@@ -121,7 +121,7 @@ class AudioSystem {
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             console.log('✅ Audio System initialized');
-            
+
             // Set up user interaction listener for BGM autoplay compliance
             this.setupUserInteractionListener();
         } catch (e) {
@@ -129,7 +129,7 @@ class AudioSystem {
             this.enabled = false;
         }
     }
-    
+
     setupUserInteractionListener() {
         // Enable BGM after first user interaction (click, keypress, touchstart).
         //
@@ -152,8 +152,8 @@ class AudioSystem {
 
             // Play any BGM that was requested before the first interaction
             if (this._pendingBGM) {
-                const type        = this._pendingBGM;
-                this._pendingBGM  = null;
+                const type = this._pendingBGM;
+                this._pendingBGM = null;
                 console.log(`🎵 User interacted — playing queued BGM: ${type}`);
                 this.playBGM(type);
             }
@@ -161,8 +161,8 @@ class AudioSystem {
 
         // {once: true} means each listener auto-removes after firing once,
         // so we don't need manual removeEventListener calls inside the callback.
-        document.addEventListener('click',      enableAudio, { once: true });
-        document.addEventListener('keydown',    enableAudio, { once: true });
+        document.addEventListener('click', enableAudio, { once: true });
+        document.addEventListener('keydown', enableAudio, { once: true });
         document.addEventListener('touchstart', enableAudio, { once: true });
     }
 
@@ -172,7 +172,7 @@ class AudioSystem {
             this.ctx.resume();
         }
     }
-    
+
     playShootAuto() {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();
@@ -183,13 +183,14 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
 
+        const t = this.ctx.currentTime;
         osc.type = 'sine';
-        osc.frequency.value = 400;
-        gain.gain.value = GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume;
+        osc.frequency.setValueAtTime(400, t);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume * (this._weaponGainMult ?? 1.0), t);
 
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-        osc.stop(this.ctx.currentTime + 0.05);
+        osc.start(t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+        osc.stop(t + 0.05);
     }
 
     // IMPROVED: Sniper - Deep but smooth
@@ -203,14 +204,15 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
 
+        const t = this.ctx.currentTime;
         osc.type = 'sine';
-        osc.frequency.value = 250;
-        gain.gain.value = GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume;
+        osc.frequency.setValueAtTime(250, t);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume * (this._weaponGainMult ?? 1.0), t);
 
-        osc.start();
-        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.2);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-        osc.stop(this.ctx.currentTime + 0.2);
+        osc.start(t);
+        osc.frequency.exponentialRampToValueAtTime(100, t + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+        osc.stop(t + 0.2);
     }
 
     // IMPROVED: Shotgun - Punchy but not harsh
@@ -224,22 +226,26 @@ class AudioSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
 
+        const t = this.ctx.currentTime;
         osc.type = 'triangle';
-        osc.frequency.value = 150;
-        gain.gain.value = GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume;
+        osc.frequency.setValueAtTime(150, t);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume * (this._weaponGainMult ?? 1.0), t);
 
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-        osc.stop(this.ctx.currentTime + 0.12);
+        osc.start(t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+        osc.stop(t + 0.12);
     }
 
     playShoot(weaponType = 'auto') {
+        // Apply per-weapon gain multiplier from config (fallback 1.0)
+        this._weaponGainMult = (GAME_CONFIG.audio.weaponGain?.[weaponType] ?? 1.0);
         switch (weaponType) {
-            case 'auto':    this.playShootAuto();    break;
-            case 'sniper':  this.playShootSniper();  break;
+            case 'auto': this.playShootAuto(); break;
+            case 'sniper': this.playShootSniper(); break;
             case 'shotgun': this.playShootShotgun(); break;
-            default:        this.playShootAuto();
+            default: this.playShootAuto();
         }
+        this._weaponGainMult = 1.0; // reset after use
     }
 
     // ── NEW: Poom's rice launcher — bamboo-tube "Tuk" thump ──────────────────
@@ -258,7 +264,7 @@ class AudioSystem {
         this._ensureAudioContextRunning();
 
         // ── Layer 1: Sine body — the bamboo-tube "thump" ──
-        const body     = this.ctx.createOscillator();
+        const body = this.ctx.createOscillator();
         const bodyGain = this.ctx.createGain();
 
         body.connect(bodyGain);
@@ -279,7 +285,7 @@ class AudioSystem {
         body.stop(this.ctx.currentTime + 0.18);
 
         // ── Layer 2: Triangle click — bamboo "pop" transient ──
-        const click     = this.ctx.createOscillator();
+        const click = this.ctx.createOscillator();
         const clickGain = this.ctx.createGain();
 
         click.connect(clickGain);
@@ -316,9 +322,9 @@ class AudioSystem {
         this._ensureAudioContextRunning();
 
         // ── Layer 1: White noise burst through bandpass filter ──
-        const bufferSize  = Math.floor(this.ctx.sampleRate * 0.12); // 120 ms of noise
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.12); // 120 ms of noise
         const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const noiseData   = noiseBuffer.getChannelData(0);
+        const noiseData = noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
             noiseData[i] = Math.random() * 2 - 1;
         }
@@ -327,13 +333,14 @@ class AudioSystem {
         noiseSource.buffer = noiseBuffer;
 
         const bpFilter = this.ctx.createBiquadFilter();
-        bpFilter.type            = 'bandpass';
+        bpFilter.type = 'bandpass';
         bpFilter.frequency.value = 1200; // centre frequency — the "sizzle" mid-high
-        bpFilter.Q.value         = 1.8;  // moderate Q — wide enough to sound natural
+        bpFilter.Q.value = 1.8;  // moderate Q — wide enough to sound natural
 
         const noiseGain = this.ctx.createGain();
+        const nagaGainMult = GAME_CONFIG.audio.sfx?.nagaAttack ?? 0.55;
         noiseGain.gain.setValueAtTime(
-            GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.65,
+            GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * nagaGainMult,
             this.ctx.currentTime
         );
         // Fast exponential fade so sequential hits stay clean
@@ -347,7 +354,7 @@ class AudioSystem {
         noiseSource.stop(this.ctx.currentTime + 0.12);
 
         // ── Layer 2: Sine shimmer — magical sparkle on impact ──
-        const shimmer     = this.ctx.createOscillator();
+        const shimmer = this.ctx.createOscillator();
         const shimmerGain = this.ctx.createGain();
 
         shimmer.connect(shimmerGain);
@@ -358,7 +365,7 @@ class AudioSystem {
         shimmer.frequency.linearRampToValueAtTime(1300, this.ctx.currentTime + 0.07);
 
         shimmerGain.gain.setValueAtTime(
-            GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.35,
+            GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * nagaGainMult * 0.55,
             this.ctx.currentTime
         );
         shimmerGain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.09);
@@ -379,20 +386,22 @@ class AudioSystem {
 
         const t = this.ctx.currentTime;
         const dur = 0.08; // Very short duration
+        // StandRush fires every 60ms — keep gain low to avoid distortion stacking
+        const gainMult = GAME_CONFIG.audio.sfx?.standRush ?? 0.45;
 
         // ── Layer 1: Thud (Low Sine Sweep) ──
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
         gain.connect(this.ctx.destination);
-        
+
         osc.type = 'sine';
         osc.frequency.setValueAtTime(220, t);
         osc.frequency.exponentialRampToValueAtTime(50, t + dur);
-        
-        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.8, t);
+
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult, t);
         gain.gain.exponentialRampToValueAtTime(0.01, t + dur);
-        
+
         osc.start(t);
         osc.stop(t + dur);
 
@@ -403,23 +412,23 @@ class AudioSystem {
         for (let i = 0; i < noiseSize; i++) {
             noiseData[i] = Math.random() * 2 - 1;
         }
-        
+
         const noiseSrc = this.ctx.createBufferSource();
         noiseSrc.buffer = noiseBuf;
-        
+
         const noiseFilter = this.ctx.createBiquadFilter();
         noiseFilter.type = 'bandpass';
         noiseFilter.frequency.value = 1000;
         noiseFilter.Q.value = 1.0;
-        
+
         const noiseGain = this.ctx.createGain();
-        noiseGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.5, t);
+        noiseGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult * 0.6, t);
         noiseGain.gain.exponentialRampToValueAtTime(0.01, t + dur);
-        
+
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.ctx.destination);
-        
+
         noiseSrc.start(t);
         noiseSrc.stop(t + dur);
     }
@@ -430,6 +439,7 @@ class AudioSystem {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();
         const t = this.ctx.currentTime;
+        const gainMult = GAME_CONFIG.audio.sfx?.stealth ?? 0.5;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
@@ -437,7 +447,8 @@ class AudioSystem {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(600, t);
         osc.frequency.exponentialRampToValueAtTime(100, t + 0.3);
-        gain.gain.setValueAtTime(GAME_CONFIG.audio.sfxVolume * this.masterVolume * this.sfxVolume * 0.35, t);
+        // Skill sounds use sfxVolume directly (not combat 'hit') — subtler, ambient
+        gain.gain.setValueAtTime(this.masterVolume * this.sfxVolume * gainMult, t);
         gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
         osc.start(t);
         osc.stop(t + 0.3);
@@ -449,6 +460,7 @@ class AudioSystem {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();
         const t = this.ctx.currentTime;
+        const gainMult = GAME_CONFIG.audio.sfx?.clone ?? 0.4;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
@@ -456,7 +468,7 @@ class AudioSystem {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(1200, t);
         osc.frequency.exponentialRampToValueAtTime(800, t + 0.15);
-        gain.gain.setValueAtTime(GAME_CONFIG.audio.sfxVolume * this.masterVolume * this.sfxVolume * 0.4, t);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult, t);
         gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
         osc.start(t);
         osc.stop(t + 0.15);
@@ -468,6 +480,7 @@ class AudioSystem {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();
         const t = this.ctx.currentTime;
+        const gainMult = GAME_CONFIG.audio.sfx?.riceShoot ?? 0.6;
         const osc = this.ctx.createOscillator();
         const lpf = this.ctx.createBiquadFilter();
         const gain = this.ctx.createGain();
@@ -479,7 +492,7 @@ class AudioSystem {
         osc.frequency.exponentialRampToValueAtTime(70, t + 0.1);
         lpf.type = 'lowpass';
         lpf.frequency.value = 400;
-        gain.gain.setValueAtTime(GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume * 0.55, t);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.shoot * this.masterVolume * this.sfxVolume * gainMult, t);
         gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
         osc.start(t);
         osc.stop(t + 0.1);
@@ -491,6 +504,7 @@ class AudioSystem {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();
         const t = this.ctx.currentTime;
+        const gainMult = GAME_CONFIG.audio.sfx?.ritualBurst ?? 0.8;
         // Layer 1: Sub-bass drop
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -499,7 +513,7 @@ class AudioSystem {
         osc.type = 'square';
         osc.frequency.setValueAtTime(200, t);
         osc.frequency.exponentialRampToValueAtTime(40, t + 0.5);
-        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 1.1, t);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult * 1.1, t);
         gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
         osc.start(t);
         osc.stop(t + 0.5);
@@ -511,7 +525,7 @@ class AudioSystem {
         shimmer.type = 'sine';
         shimmer.frequency.setValueAtTime(800, t);
         shimmer.frequency.exponentialRampToValueAtTime(200, t + 0.3);
-        shimGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.4, t);
+        shimGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult * 0.5, t);
         shimGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
         shimmer.start(t);
         shimmer.stop(t + 0.3);
@@ -524,6 +538,7 @@ class AudioSystem {
         this._ensureAudioContextRunning();
         const t = this.ctx.currentTime;
         const dur = 0.1;
+        const gainMult = GAME_CONFIG.audio.sfx?.punch ?? 0.6;
         // Triangle sweep
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -532,7 +547,7 @@ class AudioSystem {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(180, t);
         osc.frequency.exponentialRampToValueAtTime(60, t + dur);
-        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.7, t);
+        gain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult, t);
         gain.gain.exponentialRampToValueAtTime(0.01, t + dur);
         osc.start(t);
         osc.stop(t + dur);
@@ -547,7 +562,7 @@ class AudioSystem {
         hpf.type = 'highpass';
         hpf.frequency.value = 600;
         const nGain = this.ctx.createGain();
-        nGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.35, t);
+        nGain.gain.setValueAtTime(GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult * 0.5, t);
         nGain.gain.exponentialRampToValueAtTime(0.01, t + dur * 0.5);
         src.connect(hpf);
         hpf.connect(nGain);
@@ -615,13 +630,13 @@ class AudioSystem {
     // Audio.playSound('hit'), Audio.playSound('shoot'), etc.
     playSound(name = 'hit') {
         switch (name) {
-            case 'shoot':   this.playShoot(); break;
-            case 'hit':     this.playHit(); break;
+            case 'shoot': this.playShoot(); break;
+            case 'hit': this.playHit(); break;
             case 'powerup': this.playPowerUp(); break;
-            case 'death':   this.playEnemyDeath(); break;
-            case 'level':   this.playLevelUp(); break;
-            case 'heal':    this.playHeal(); break;
-            default:        this.playHit(); break;
+            case 'death': this.playEnemyDeath(); break;
+            case 'level': this.playLevelUp(); break;
+            case 'heal': this.playHeal(); break;
+            default: this.playHit(); break;
         }
     }
 
@@ -656,21 +671,21 @@ class AudioSystem {
 
         // Create a dissonant chord for player damage
         const frequencies = [150, 180, 220]; // Dissonant minor second interval
-        
+
         frequencies.forEach((freq, i) => {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
-            
+
             osc.connect(gain);
             gain.connect(this.ctx.destination);
-            
+
             osc.type = 'sawtooth'; // Harsher waveform for player damage
             osc.frequency.value = freq;
             gain.gain.setValueAtTime(
                 GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * 0.8,
                 this.ctx.currentTime
             );
-            
+
             osc.start();
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
             osc.stop(this.ctx.currentTime + 0.2);
@@ -940,9 +955,9 @@ class AudioSystem {
             //
             //    All subsequent operations — .loop, .volume, .play(), .pause(),
             //    .currentTime, addEventListener — are identical on both objects.
-            this.bgmAudio     = document.createElement('audio');
+            this.bgmAudio = document.createElement('audio');
             this.bgmAudio.src = bgmPath;
-            this.bgmAudio.loop   = true;
+            this.bgmAudio.loop = true;
             this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
 
             // ── TASK 3 FIX: Robust autoplay promise handling ──────────────────
@@ -994,7 +1009,7 @@ class AudioSystem {
             // Defensive cleanup: remove any stale listener from a previous track
             // first to prevent double-firing on the same element.
             if (this._bgmEndedListener) {
-                try { this.bgmAudio.removeEventListener('ended', this._bgmEndedListener); } catch (e) {}
+                try { this.bgmAudio.removeEventListener('ended', this._bgmEndedListener); } catch (e) { }
             }
             this._bgmEndedListener = () => {
                 if (this.currentBGM === type) {
@@ -1035,14 +1050,14 @@ class AudioSystem {
                 return;
             }
 
-            this._retryHandlerActive       = false;
+            this._retryHandlerActive = false;
             this._bgmWaitingForInteraction = false;
             this.playBGM(type);
 
             // Explicit cleanup of the stored reference (listener is {once:true}
             // so it self-removes from the DOM, but we null the ref for GC)
             if (this._bgmRetryListener) {
-                document.removeEventListener('click',   this._bgmRetryListener);
+                document.removeEventListener('click', this._bgmRetryListener);
                 document.removeEventListener('keydown', this._bgmRetryListener);
                 this._bgmRetryListener = null;
             }
@@ -1050,7 +1065,7 @@ class AudioSystem {
 
         // Store reference for the explicit cleanup path in stopBGM()
         this._bgmRetryListener = retryPlay;
-        document.addEventListener('click',   retryPlay, { once: true });
+        document.addEventListener('click', retryPlay, { once: true });
         document.addEventListener('keydown', retryPlay, { once: true });
     }
 
@@ -1072,10 +1087,10 @@ class AudioSystem {
 
             // Remove any pending retry listener and clear all related state
             if (this._bgmRetryListener) {
-                document.removeEventListener('click',   this._bgmRetryListener);
+                document.removeEventListener('click', this._bgmRetryListener);
                 document.removeEventListener('keydown', this._bgmRetryListener);
-                this._bgmRetryListener         = null;
-                this._retryHandlerActive       = false;
+                this._bgmRetryListener = null;
+                this._retryHandlerActive = false;
                 this._bgmWaitingForInteraction = false;
             }
 
@@ -1119,8 +1134,8 @@ class AudioSystem {
         return this.masterVolume;
     }
 
-    mute()   { this.enabled = false; if (this.bgmAudio) this.bgmAudio.pause(); }
-    unmute() { this.enabled = true;  if (this.bgmAudio?.paused) this.bgmAudio.play().catch(() => {}); }
+    mute() { this.enabled = false; if (this.bgmAudio) this.bgmAudio.pause(); }
+    unmute() { this.enabled = true; if (this.bgmAudio?.paused) this.bgmAudio.play().catch(() => { }); }
 
     toggle() {
         this.enabled = !this.enabled;
@@ -1142,7 +1157,7 @@ var Audio = new AudioSystem();
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.Audio       = Audio;
+window.Audio = Audio;
 window.AudioSystem = AudioSystem;
 
 if (typeof module !== 'undefined' && module.exports) {

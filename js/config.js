@@ -474,7 +474,31 @@ const GAME_CONFIG = {
         achievement: 0.4,
         weaponSwitch: 0.3,
         bossSpecial: 0.5,
-        meteorWarning: 0.3
+        meteorWarning: 0.3,
+
+        // ── Procedural SFX gain multipliers ───────────────────────────────────
+        // Tweak these to balance character SFX loudness without touching audio.js.
+        // Values multiply the base `hit` or `shoot` level used in each playX().
+        sfx: {
+            stealth: 0.5,   // Kao warp cloaking sweep  (base: masterVol * sfxVol, not 'hit')
+            clone: 0.4,   // Kao clone split ping
+            riceShoot: 0.6,   // Poom sticky rice splat
+            ritualBurst: 1.1,   // Poom ritual explosion — raised 0.8→1.1 (ultimate needs presence)
+            punch: 0.6,   // Auto normal heat wave punch
+            standRush: 0.45,  // Auto Wanchai rapid punch — kept low (fires every 60ms, stacks fast)
+            nagaAttack: 0.55,  // Poom Naga contact hiss — rate-limited in NagaEntity (220ms)
+        },
+
+        // ── Per-weapon SFX gain multipliers ───────────────────────────────────
+        // 'auto' stays at 1.0 (reference level).
+        // 'sniper' raised to 1.5 — should feel like the loudest, most impactful shot.
+        // 'shotgun' raised to 2.0 — fixes the "quiet" issue reported during playtesting.
+        // Fallback: if key is missing, audio.js defaults to 1.0.
+        weaponGain: {
+            auto: 1.0,
+            sniper: 1.5,   // raised from 1.0 — sniper should feel heavy
+            shotgun: 2.0,
+        }
     },
     visual: {
         bgColorTop: '#1a1a2e',
