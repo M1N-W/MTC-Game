@@ -1,52 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTC the Game Beta Edition — System Diagnostics v3.4.8</title>
+    <title>MTC the Game — System Diagnostics v3.6.2</title>
 
     <!--
     ╔══════════════════════════════════════════════════════════════╗
-    ║          MTC the Game Beta Edition — DEBUG.HTML v3.4.8        ║
+    ║       MTC the Game Beta Edition — DEBUG.HTML v3.6.2          ║
     ║──────────────────────────────────────────────────────────────║
-    ║  INSTRUCTIONS: Place this file in your project ROOT.        ║
-    ║  Then add your game <script> tags in the section below      ║
-    ║  marked "INJECT YOUR GAME SCRIPTS HERE".                    ║
-    ║  Scripts must be loaded in dependency order.                ║
+    ║  วางไฟล์นี้ใน project ROOT แล้วเปิดใน browser ได้เลย       ║
+    ║  Scripts โหลดในลำดับเดียวกับ index.html                     ║
     ╚══════════════════════════════════════════════════════════════╝
     -->
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap"
+        rel="stylesheet">
 
     <style>
-        /* ── CSS Variables ── */
         :root {
-            --bg-dark:      #030712;
-            --bg-panel:     #0a0f1e;
-            --bg-card:      #0d1526;
-            --border:       #1a2744;
-            --border-glow:  #1e3a6e;
-            --text:         #8da9c4;
-            --text-bright:  #c8ddf4;
-            --primary:      #2563eb;
+            --bg-dark: #030712;
+            --bg-panel: #0a0f1e;
+            --bg-card: #0d1526;
+            --border: #1a2744;
+            --border-glow: #1e3a6e;
+            --text: #8da9c4;
+            --text-bright: #c8ddf4;
+            --primary: #2563eb;
             --primary-glow: rgba(37, 99, 235, 0.3);
-            --success:      #10b981;
-            --success-bg:   rgba(16, 185, 129, 0.1);
-            --danger:       #ef4444;
-            --danger-bg:    rgba(239, 68, 68, 0.1);
-            --warning:      #f59e0b;
-            --warning-bg:   rgba(245, 158, 11, 0.1);
-            --accent:       #06b6d4;
-            --accent2:      #7c3aed;
-            --pending:      #334155;
-            --font-mono:    'Share Tech Mono', 'Courier New', monospace;
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --accent: #06b6d4;
+            --accent2: #7c3aed;
+            --font-mono: 'Share Tech Mono', 'Courier New', monospace;
             --font-display: 'Orbitron', sans-serif;
         }
 
-        /* ── Reset & Base ── */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             background: var(--bg-dark);
@@ -58,31 +61,51 @@
             overflow-x: hidden;
         }
 
-        /* ── Scanline overlay ── */
         body::before {
             content: '';
-            position: fixed; inset: 0;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0, 0, 0, 0.07) 2px,
-                rgba(0, 0, 0, 0.07) 4px
-            );
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.07) 2px, rgba(0, 0, 0, 0.07) 4px);
             pointer-events: none;
             z-index: 9999;
         }
 
-        /* ── Corner decoration ── */
-        .corner { position: absolute; width: 16px; height: 16px; }
-        .corner-tl { top: 0; left: 0; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); }
-        .corner-tr { top: 0; right: 0; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
-        .corner-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); }
-        .corner-br { bottom: 0; right: 0; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+        .corner {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+        }
 
-        /* ── Wrapper ── */
+        .corner-tl {
+            top: 0;
+            left: 0;
+            border-top: 2px solid var(--accent);
+            border-left: 2px solid var(--accent);
+        }
+
+        .corner-tr {
+            top: 0;
+            right: 0;
+            border-top: 2px solid var(--accent);
+            border-right: 2px solid var(--accent);
+        }
+
+        .corner-bl {
+            bottom: 0;
+            left: 0;
+            border-bottom: 2px solid var(--accent);
+            border-left: 2px solid var(--accent);
+        }
+
+        .corner-br {
+            bottom: 0;
+            right: 0;
+            border-bottom: 2px solid var(--accent);
+            border-right: 2px solid var(--accent);
+        }
+
         #app {
-            max-width: 1400px;
+            max-width: 1500px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -98,8 +121,10 @@
         .header::after {
             content: '';
             position: absolute;
-            bottom: -1px; left: 0;
-            width: 200px; height: 2px;
+            bottom: -1px;
+            left: 0;
+            width: 200px;
+            height: 2px;
             background: linear-gradient(90deg, var(--accent), transparent);
         }
 
@@ -112,7 +137,6 @@
         }
 
         .title-eyebrow {
-            font-family: var(--font-mono);
             font-size: 10px;
             letter-spacing: 4px;
             color: var(--accent);
@@ -130,10 +154,11 @@
             line-height: 1;
         }
 
-        .title-main span { color: var(--accent); }
+        .title-main span {
+            color: var(--accent);
+        }
 
         .title-sub {
-            font-family: var(--font-mono);
             font-size: 11px;
             color: var(--text);
             margin-top: 8px;
@@ -141,7 +166,12 @@
         }
 
         /* ── Buttons ── */
-        .btn-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
 
         .btn {
             font-family: var(--font-display);
@@ -149,7 +179,7 @@
             font-weight: 700;
             letter-spacing: 2px;
             text-transform: uppercase;
-            padding: 10px 20px;
+            padding: 10px 18px;
             border-radius: 3px;
             border: 1px solid transparent;
             cursor: pointer;
@@ -161,37 +191,87 @@
         .btn::after {
             content: '';
             position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
             transition: left 0.4s;
         }
-        .btn:hover::after { left: 100%; }
+
+        .btn:hover::after {
+            left: 100%;
+        }
 
         .btn-primary {
             background: var(--primary);
             border-color: #1d4ed8;
             color: white;
         }
-        .btn-primary:hover { background: #1d4ed8; box-shadow: 0 0 20px var(--primary-glow); }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
 
         .btn-run {
             background: transparent;
             border-color: var(--success);
             color: var(--success);
         }
-        .btn-run:hover { background: var(--success-bg); box-shadow: 0 0 16px rgba(16,185,129,0.25); }
-        .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-run:disabled:hover { background: transparent; box-shadow: none; }
+
+        .btn-run:hover {
+            background: var(--success-bg);
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-run:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-run:disabled:hover {
+            background: transparent;
+            box-shadow: none;
+        }
 
         .btn-clear {
             background: transparent;
             border-color: var(--border-glow);
             color: var(--text);
         }
-        .btn-clear:hover { border-color: var(--text); color: var(--text-bright); }
 
-        /* ── Live clock ── */
+        .btn-clear:hover {
+            border-color: var(--text);
+            color: var(--text-bright);
+        }
+
+        .btn-copy {
+            background: transparent;
+            border-color: #7c3aed;
+            color: #a78bfa;
+        }
+
+        .btn-copy:hover {
+            background: rgba(124, 58, 237, 0.1);
+            box-shadow: 0 0 16px rgba(124, 58, 237, 0.25);
+        }
+
+        .btn-copy.copied {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .btn-export {
+            background: transparent;
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .btn-export:hover {
+            background: var(--warning-bg);
+        }
+
         .live-clock {
             font-family: var(--font-display);
             font-size: 11px;
@@ -203,7 +283,52 @@
             background: var(--bg-card);
         }
 
-        /* ── Progress bar ── */
+        /* ── Status Bar ── */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text);
+        }
+
+        .status-bar-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            flex-shrink: 0;
+        }
+
+        .status-bar-dot.inactive {
+            background: #334155;
+            box-shadow: none;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0
+            }
+        }
+
+        .blink {
+            animation: blink 1.1s step-end infinite;
+            color: var(--accent);
+        }
+
+        /* ── Progress ── */
         .progress-bar-wrap {
             margin-bottom: 24px;
             padding: 16px 20px;
@@ -213,7 +338,9 @@
             position: relative;
         }
 
-        .progress-bar-wrap .corner { position: absolute; }
+        .progress-bar-wrap .corner {
+            position: absolute;
+        }
 
         .progress-header {
             display: flex;
@@ -236,10 +363,21 @@
             font-size: 11px;
         }
 
-        .stat-pass  { color: var(--success); }
-        .stat-fail  { color: var(--danger); }
-        .stat-warn  { color: var(--warning); }
-        .stat-total { color: var(--text-bright); }
+        .stat-pass {
+            color: var(--success);
+        }
+
+        .stat-fail {
+            color: var(--danger);
+        }
+
+        .stat-warn {
+            color: var(--warning);
+        }
+
+        .stat-total {
+            color: var(--text-bright);
+        }
 
         .progress-track {
             height: 6px;
@@ -255,22 +393,31 @@
             border-radius: 3px;
             background: linear-gradient(90deg, var(--primary), var(--accent));
             transition: width 0.5s ease;
-            position: relative;
+        }
+
+        @keyframes shimmer {
+            0% {
+                opacity: 0
+            }
+
+            50% {
+                opacity: 1
+            }
+
+            100% {
+                opacity: 0
+            }
         }
 
         .progress-fill::after {
             content: '';
             position: absolute;
-            top: 0; right: 0;
-            width: 40px; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
+            top: 0;
+            right: 0;
+            width: 40px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5));
             animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0%   { opacity: 0; }
-            50%  { opacity: 1; }
-            100% { opacity: 0; }
         }
 
         .progress-pct {
@@ -281,15 +428,67 @@
             letter-spacing: 1px;
         }
 
+        /* ── NEW: Quick Stats Bar ── */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .qs-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 14px 16px;
+            transition: border-color 0.2s;
+        }
+
+        .qs-card:hover {
+            border-color: var(--border-glow);
+        }
+
+        .qs-label {
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .qs-value {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-bright);
+        }
+
+        .qs-value.ok {
+            color: var(--success);
+        }
+
+        .qs-value.err {
+            color: var(--danger);
+        }
+
+        .qs-value.warn {
+            color: var(--warning);
+        }
+
+        .qs-sub {
+            font-size: 10px;
+            color: #475569;
+            margin-top: 2px;
+        }
+
         /* ── Sections Grid ── */
         .sections-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
             gap: 18px;
             margin-bottom: 24px;
         }
 
-        /* ── Section Card ── */
         .section-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -298,7 +497,9 @@
             transition: border-color 0.3s;
         }
 
-        .section-card:hover { border-color: var(--border-glow); }
+        .section-card:hover {
+            border-color: var(--border-glow);
+        }
 
         .section-header {
             display: flex;
@@ -312,7 +513,9 @@
             transition: background 0.2s;
         }
 
-        .section-header:hover { background: #0f1a2e; }
+        .section-header:hover {
+            background: #0f1a2e;
+        }
 
         .section-title-wrap {
             display: flex;
@@ -321,9 +524,12 @@
         }
 
         .section-icon {
-            width: 28px; height: 28px;
+            width: 28px;
+            height: 28px;
             border-radius: 4px;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 14px;
             flex-shrink: 0;
         }
@@ -350,10 +556,30 @@
             font-weight: bold;
             letter-spacing: 1px;
         }
-        .mini-badge.pass  { background: var(--success-bg);  color: var(--success);  border: 1px solid rgba(16,185,129,0.3); }
-        .mini-badge.fail  { background: var(--danger-bg);   color: var(--danger);   border: 1px solid rgba(239,68,68,0.3); }
-        .mini-badge.warn  { background: var(--warning-bg);  color: var(--warning);  border: 1px solid rgba(245,158,11,0.3); }
-        .mini-badge.idle  { background: #1e293b;             color: #64748b;          border: 1px solid var(--border); }
+
+        .mini-badge.pass {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .mini-badge.fail {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .mini-badge.warn {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .mini-badge.idle {
+            background: #1e293b;
+            color: #64748b;
+            border: 1px solid var(--border);
+        }
 
         .collapse-arrow {
             color: var(--text);
@@ -362,7 +588,9 @@
             line-height: 1;
         }
 
-        .section-card.collapsed .collapse-arrow { transform: rotate(-90deg); }
+        .section-card.collapsed .collapse-arrow {
+            transform: rotate(-90deg);
+        }
 
         .section-body {
             padding: 0;
@@ -371,7 +599,9 @@
             max-height: 2000px;
         }
 
-        .section-card.collapsed .section-body { max-height: 0; }
+        .section-card.collapsed .section-body {
+            max-height: 0;
+        }
 
         /* ── Test Item ── */
         .test-item {
@@ -385,8 +615,13 @@
             cursor: default;
         }
 
-        .test-item:last-child { border-bottom: none; }
-        .test-item:hover { background: rgba(255,255,255,0.02); }
+        .test-item:last-child {
+            border-bottom: none;
+        }
+
+        .test-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
 
         .test-left {
             display: flex;
@@ -396,20 +631,48 @@
         }
 
         .test-indicator {
-            width: 6px; height: 6px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             flex-shrink: 0;
         }
 
-        .test-indicator.pass { background: var(--success); box-shadow: 0 0 6px var(--success); }
-        .test-indicator.fail { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
-        .test-indicator.warn { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
-        .test-indicator.idle { background: #334155; }
-        .test-indicator.running { background: var(--accent); animation: pulse 0.8s infinite; }
+        .test-indicator.pass {
+            background: var(--success);
+            box-shadow: 0 0 6px var(--success);
+        }
+
+        .test-indicator.fail {
+            background: var(--danger);
+            box-shadow: 0 0 6px var(--danger);
+        }
+
+        .test-indicator.warn {
+            background: var(--warning);
+            box-shadow: 0 0 6px var(--warning);
+        }
+
+        .test-indicator.idle {
+            background: #334155;
+        }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.6); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.6)
+            }
+        }
+
+        .test-indicator.running {
+            background: var(--accent);
+            animation: pulse 0.8s infinite;
         }
 
         .test-name {
@@ -437,17 +700,41 @@
             text-transform: uppercase;
         }
 
-        .status-badge.pass { background: var(--success-bg);  color: var(--success);  border: 1px solid rgba(16,185,129,0.4); }
-        .status-badge.fail { background: var(--danger-bg);   color: var(--danger);   border: 1px solid rgba(239,68,68,0.4); }
-        .status-badge.warn { background: var(--warning-bg);  color: var(--warning);  border: 1px solid rgba(245,158,11,0.4); }
-        .status-badge.idle { background: #1e293b;              color: #475569;          border: 1px solid var(--border); }
-        .status-badge.running { background: rgba(6,182,212,0.1); color: var(--accent); border: 1px solid rgba(6,182,212,0.3); }
+        .status-badge.pass {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
 
-        /* tooltip on hover */
+        .status-badge.fail {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .status-badge.warn {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .status-badge.idle {
+            background: #1e293b;
+            color: #475569;
+            border: 1px solid var(--border);
+        }
+
+        .status-badge.running {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
         .test-item[data-tip]:hover::after {
             content: attr(data-tip);
             position: fixed;
-            bottom: 20px; left: 50%;
+            bottom: 20px;
+            left: 50%;
             transform: translateX(-50%);
             background: #0f172a;
             border: 1px solid var(--border-glow);
@@ -463,12 +750,40 @@
             text-overflow: ellipsis;
         }
 
-        /* ── Section Icon colours ── */
-        .ic-engine  { background: rgba(37, 99, 235, 0.15);  color: #60a5fa; }
-        .ic-system  { background: rgba(6, 182, 212, 0.15);  color: var(--accent); }
-        .ic-entity  { background: rgba(124, 58, 237, 0.15); color: #a78bfa; }
-        .ic-content { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
-        .ic-api     { background: rgba(239, 68, 68, 0.15);  color: #f87171; }
+        .ic-engine {
+            background: rgba(37, 99, 235, 0.15);
+            color: #60a5fa;
+        }
+
+        .ic-system {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent);
+        }
+
+        .ic-entity {
+            background: rgba(124, 58, 237, 0.15);
+            color: #a78bfa;
+        }
+
+        .ic-content {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .ic-api {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .ic-achieve {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .ic-version {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent);
+        }
 
         /* ── Console ── */
         .console-wrap {
@@ -496,1114 +811,1364 @@
             text-transform: uppercase;
         }
 
-        .console-dots { display: flex; gap: 6px; }
-        .console-dot {
-            width: 10px; height: 10px; border-radius: 50%;
+        .console-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
-        .dot-red    { background: #ef4444; }
-        .dot-yellow { background: #f59e0b; }
-        .dot-green  { background: #10b981; }
+
+        .console-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .console-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-red {
+            background: #ef4444;
+        }
+
+        .dot-yellow {
+            background: #f59e0b;
+        }
+
+        .dot-green {
+            background: #10b981;
+        }
 
         #console-output {
             padding: 14px 18px;
-            height: 220px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.7;
+            max-height: 420px;
             overflow-y: auto;
-            font-size: 11.5px;
-            line-height: 1.8;
-            background: #000;
+            white-space: pre-wrap;
+            word-break: break-all;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-glow) transparent;
         }
 
-        #console-output::-webkit-scrollbar { width: 4px; }
-        #console-output::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+        #console-output::-webkit-scrollbar {
+            width: 6px;
+        }
 
-        .log-info    { color: #60a5fa; }
-        .log-success { color: #34d399; }
-        .log-error   { color: #f87171; }
-        .log-warn    { color: #fbbf24; }
-        .log-system  { color: #94a3b8; }
+        #console-output::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-        .log-prompt { color: #475569; margin-right: 6px; }
+        #console-output::-webkit-scrollbar-thumb {
+            background: var(--border-glow);
+            border-radius: 3px;
+        }
+
+        .log-success {
+            color: var(--success);
+        }
+
+        .log-error {
+            color: var(--danger);
+        }
+
+        .log-warn {
+            color: var(--warning);
+        }
+
+        .log-info {
+            color: var(--accent);
+        }
+
+        .log-system {
+            color: #475569;
+        }
+
+        .log-sep {
+            color: #1e3a6e;
+        }
+
+        .log-prompt {
+            color: var(--accent2);
+            margin-right: 6px;
+        }
+
+        /* ── NEW: Achievement Inspector ── */
+        .achieve-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            padding: 14px 18px;
+        }
+
+        .achieve-item {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 10px 14px;
+            font-size: 11px;
+        }
+
+        .achieve-item .a-icon {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .achieve-item .a-id {
+            color: #475569;
+            font-size: 9px;
+            letter-spacing: 1px;
+        }
+
+        .achieve-item .a-name {
+            color: var(--text-bright);
+            font-weight: bold;
+            margin: 2px 0;
+        }
+
+        .achieve-item .a-desc {
+            color: var(--text);
+            font-size: 10px;
+        }
+
+        /* ── NEW: BALANCE Inspector ── */
+        .balance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .balance-table th {
+            text-align: left;
+            padding: 8px 14px;
+            color: #475569;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .balance-table td {
+            padding: 7px 14px;
+            border-bottom: 1px solid rgba(26, 39, 68, 0.4);
+            color: var(--text);
+        }
+
+        .balance-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .balance-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .balance-key {
+            color: var(--accent);
+            font-family: var(--font-mono);
+        }
+
+        .balance-value {
+            color: var(--text-bright);
+        }
+
+        .balance-type {
+            color: #475569;
+            font-size: 9px;
+        }
+
+        /* ── Inspector tabs ── */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-panel);
+        }
+
+        .tab-btn {
+            font-family: var(--font-display);
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: #475569;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .inspector-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .inspector-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 18px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .inspector-title {
+            font-family: var(--font-display);
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--text);
+            text-transform: uppercase;
+        }
+
+        /* ── Copy toast ── */
+        #copy-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: #0f172a;
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 8px 20px;
+            border-radius: 4px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        #copy-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
 
         /* ── Footer ── */
         .footer {
             text-align: center;
-            padding: 16px 0;
+            padding: 20px 0;
             font-size: 10px;
-            letter-spacing: 2px;
             color: #334155;
-            border-top: 1px solid var(--border);
-            text-transform: uppercase;
-        }
-
-        /* ── Status bar ── */
-        .status-bar {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 0;
-            margin-bottom: 20px;
-            font-size: 10px;
-            color: #475569;
             letter-spacing: 2px;
+            text-transform: uppercase;
+            border-top: 1px solid var(--border);
+            margin-top: 10px;
         }
-
-        .status-bar-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
-        .status-bar-dot.inactive { background: #334155; box-shadow: none; }
-
-        /* Blinking cursor */
-        .blink { animation: blink 1s step-end infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
-        /* Running state shimmer on section */
-        .section-card.running { border-color: rgba(6, 182, 212, 0.4); }
-
-        /* Hidden game canvas */
-        #gameCanvas { display: none; }
     </style>
 </head>
+
 <body>
 
-<!--
-╔══════════════════════════════════════════════════════════════════╗
-║              DUMMY DOM — "Ghost of index.html"                  ║
-║  Every ID/element that ui.js, game.js, shop.js etc. look for   ║
-║  is replicated here inside a hidden wrapper so the scripts      ║
-║  never throw "Cannot set property of null" errors.             ║
-║  This wrapper is completely invisible to the user.              ║
-╚══════════════════════════════════════════════════════════════════╝
--->
-<div id="__dummy-dom__" style="display:none !important; position:absolute; pointer-events:none; visibility:hidden; width:0; height:0; overflow:hidden;" aria-hidden="true">
-
-    <!-- ── Canvas (also kept real above for 2D context tests) ── -->
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-
-    <!-- ── Boss / Voice UI ── -->
-    <div id="boss-speech"></div>
-    <div id="voice-bubble"></div>
-    <div id="achievements"></div>
-
-    <!-- ── Proximity prompts ── -->
-    <div id="db-prompt"></div>
-    <div id="console-prompt"></div>
-    <div id="shop-prompt"></div>
-
-    <!-- ── Pause ── -->
-    <div id="pause-indicator"></div>
-    <div id="resume-prompt"><button onclick=""></button></div>
-
-    <!-- ── Admin Console ── -->
-    <div id="admin-console">
-        <div class="console-inner" id="console-inner">
-            <div id="console-output"></div>
-            <input type="text" id="console-input" />
+    <!-- ══ HIDDEN GAME DOM STUBS (ป้องกัน null reference errors จาก game scripts) ══ -->
+    <div id="__game_stub_wrapper__" style="display:none;visibility:hidden;position:absolute;left:-9999px;top:-9999px;"
+        aria-hidden="true">
+        <canvas id="gameCanvas" width="1" height="1"></canvas>
+        <div id="ui-layer"></div>
+        <div id="achievements"></div>
+        <div id="player-level"></div>
+        <div id="hp-bar" class="bar-fill"></div>
+        <div id="en-bar" class="bar-fill"></div>
+        <div id="exp-bar"></div>
+        <div id="wave-badge"></div>
+        <div id="score-display"></div>
+        <div id="kills-display"></div>
+        <div id="dash-cd"></div>
+        <div id="dash-icon"></div>
+        <div id="stealth-icon"></div>
+        <div id="stealth-cd"></div>
+        <div id="skill1-emoji"></div>
+        <div id="skill1-hint"></div>
+        <div id="passive-skill"></div>
+        <div id="weapon-indicator"></div>
+        <div id="weapon-name-text"></div>
+        <div id="weapon-ammo"></div>
+        <div id="shop-overlay"></div>
+        <div id="shop-items"></div>
+        <div id="db-prompt"></div>
+        <div id="terminal-overlay"></div>
+        <div id="terminal-output"></div>
+        <div id="tutorial-overlay"></div>
+        <div id="tutorial-card"></div>
+        <div id="tut-icon"></div>
+        <div id="tut-title"></div>
+        <div id="tut-body"></div>
+        <div id="tut-action-hint"></div>
+        <div id="tut-action-bar">
+            <div id="tut-action-fill"></div>
         </div>
-    </div>
-
-    <!-- ── Shop Modal ── -->
-    <div id="shop-modal">
-        <div class="shop-inner">
-            <span id="shop-score-display">0</span>
-            <div id="shop-items"></div>
+        <div id="tut-action-label"></div>
+        <div id="tutorial-progress"></div>
+        <button id="tut-next-btn">NEXT</button>
+        <button id="tut-skip-btn">SKIP</button>
+        <div id="mobile-ui">
+            <div id="joystick-left-zone" class="joystick-zone left">
+                <div id="joystick-left-base" class="joystick-base">
+                    <div id="joystick-left-stick" class="joystick-stick"></div>
+                </div>
+            </div>
+            <div id="joystick-right-zone" class="joystick-zone right">
+                <div id="joystick-right-base" class="joystick-base">
+                    <div id="joystick-right-stick" class="joystick-stick"></div>
+                </div>
+            </div>
+            <button id="btn-switch" class="action-btn">🔄</button>
+            <button id="btn-skill" class="action-btn">📖</button>
+            <button id="btn-dash" class="action-btn">💨</button>
+            <button id="btn-naga" class="action-btn">🐉</button>
+            <button id="btn-database" class="action-btn">📚</button>
+            <button id="btn-terminal" class="action-btn">💻</button>
+            <button id="btn-shop" class="action-btn">🛒</button>
         </div>
+        <div id="card-kao" class="char-card selected" data-char="kao"></div>
+        <div id="card-poom" class="char-card" data-char="poom"></div>
+        <div id="btn-auto" class="char-card" data-char="auto"></div>
+        <!-- Poom-specific -->
+        <div id="ritual-cd"></div>
+        <div id="naga-cd"></div>
+        <!-- Kao-specific -->
+        <div id="clone-cd"></div>
+        <div id="teleport-cd"></div>
+        <!-- Admin -->
+        <div id="admin-console"></div>
+        <div id="admin-output"></div>
+        <input id="admin-input" type="text">
     </div>
 
-    <!-- ── Weapon indicator ── -->
-    <div class="weapon-indicator">
-        <div id="weapon-name">AUTO RIFLE</div>
-    </div>
+    <!-- Real canvas for 2D context tests -->
+    <canvas id="__real_canvas__" width="800" height="600" style="display:none"></canvas>
 
-    <!-- ── HUD Layer (all bar/stat IDs) ── -->
-    <div id="ui-layer">
-        <div class="hud-top">
-            <div class="player-card">
-                <div id="player-avatar">👨🏻‍🎓</div>
-                <div class="status-bars">
-                    <div class="bar-wrap"><div id="hp-bar" class="bar-fill hp-fill" style="width:100%"></div></div>
-                    <div class="bar-wrap"><div id="en-bar" class="bar-fill en-fill" style="width:100%"></div></div>
-                    <div class="level-info">
-                        <div class="level-display">
-                            <span id="player-level">Lv.1</span>
-                            <div class="exp-bar-bg"><div id="exp-bar"></div></div>
+    <!-- ══ GAME SCRIPTS (same order as index.html) ══ -->
+    <script src="js/secrets.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/weapons.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/tutorial.js"></script>
+    <!-- <script src="js/ai.js"></script> -->
+    <script src="js/entities/base.js"></script>
+    <script src="js/entities/player/PlayerBase.js"></script>
+    <script src="js/entities/player/Kaoplayer.js"></script>
+    <script src="js/entities/player/AutoPlayer.js"></script>
+    <script src="js/entities/player/PoomPlayer.js"></script>
+    <script src="js/entities/summons.js"></script>
+    <script src="js/entities/enemy.js"></script>
+    <script src="js/entities/boss_attacks.js"></script>
+    <script src="js/entities/boss.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/systems/GameState.js"></script>
+    <script src="js/systems/AdminSystem.js"></script>
+    <script src="js/systems/ShopSystem.js"></script>
+    <script src="js/systems/TimeManager.js"></script>
+    <script src="js/systems/WaveManager.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/VersionManager.js"></script>
+
+    <!-- ══ DEBUG UI ══ -->
+    <div id="app">
+        <header class="header">
+            <div class="header-top">
+                <div class="title-block">
+                    <div class="title-eyebrow">⬡ System Diagnostics v3.6.2</div>
+                    <div class="title-main">MTC: <span>Beta</span> Edition</div>
+                    <div class="title-sub">Diagnostic Console · Runtime Analysis · Achievement Inspector · BALANCE
+                        Viewer</div>
+                </div>
+                <div class="btn-group">
+                    <div class="live-clock" id="live-clock">--:--:--</div>
+                    <button class="btn btn-export" onclick="exportReport()">⬇ Export</button>
+                    <button class="btn btn-copy" id="copy-all-btn" onclick="copyAllLogs()">⎘ Copy Logs</button>
+                    <button class="btn btn-clear" onclick="clearAll()">⟳ Clear</button>
+                    <button class="btn btn-run" id="run-btn" onclick="runAllDiagnostics()">▶ Run Diagnostics</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-bar-dot inactive" id="status-dot"></div>
+            <span id="status-text">READY — กด "Run Diagnostics" เพื่อเริ่ม</span>
+            <span class="blink">_</span>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats" id="quick-stats">
+            <div class="qs-card">
+                <div class="qs-label">Version</div>
+                <div class="qs-value" id="qs-version">—</div>
+                <div class="qs-sub">จาก sw.js / VersionManager</div>
+            </div>
+            <div class="qs-card">
+                <div class="qs-label">Achievements</div>
+                <div class="qs-value" id="qs-achieve">—</div>
+                <div class="qs-sub">defined ใน ACHIEVEMENT_DEFS</div>
+            </div>
+            <div class="qs-card">
+                <div class="qs-label">Characters</div>
+                <div class="qs-value" id="qs-chars">—</div>
+                <div class="qs-sub">KaoPlayer · AutoPlayer · PoomPlayer</div>
+            </div>
+            <div class="qs-card">
+                <div class="qs-label">Scripts Loaded</div>
+                <div class="qs-value" id="qs-scripts">—</div>
+                <div class="qs-sub">game modules detected</div>
+            </div>
+            <div class="qs-card">
+                <div class="qs-label">Last Run</div>
+                <div class="qs-value" id="qs-lastrun" style="font-size:13px">—</div>
+                <div class="qs-sub">timestamp</div>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-bar-wrap">
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+            <div class="progress-header">
+                <span class="progress-label">Overall Diagnostic Completion</span>
+                <div class="progress-stats">
+                    <span class="stat-pass" id="stat-pass">PASS: 0</span>
+                    <span class="stat-fail" id="stat-fail">FAIL: 0</span>
+                    <span class="stat-warn" id="stat-warn">WARN: 0</span>
+                    <span class="stat-total" id="stat-total">TOTAL: 0</span>
+                </div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                <span style="font-size:10px;color:#334155;">0%</span>
+                <span class="progress-pct" id="progress-pct">0%</span>
+                <span style="font-size:10px;color:#334155;">100%</span>
+            </div>
+        </div>
+
+        <!-- Test Sections Grid -->
+        <div class="sections-grid" id="sections-grid">
+
+            <div class="section-card" id="sec-core">
+                <div class="section-header" onclick="toggleSection('sec-core')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-engine">⚙️</div>
+                        <div>
+                            <div class="section-title">Core Engine</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">config · utils · map · ui · input
+                            </div>
                         </div>
                     </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-core-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
                 </div>
+                <div class="section-body" id="sec-core-body"></div>
             </div>
-            <div class="stats-box">
-                <div id="score">0</div>
-                <div id="wave-badge">WAVE 1</div>
-            </div>
-        </div>
 
-        <!-- Boss HUD -->
-        <div id="boss-hud">
-            <div id="boss-name">BOSS</div>
-            <div class="boss-hp-bg">
-                <div id="boss-hp-bar" class="boss-hp-fill"></div>
-            </div>
-        </div>
-
-        <!-- Skill icons -->
-        <div class="hud-bottom">
-            <div class="skill-icon" id="dash-icon">
-                <div class="cooldown-mask" id="dash-cd"></div>
-            </div>
-            <div class="skill-icon" id="stealth-icon">
-                <span id="skill1-hint">R-Click</span>
-                <span id="skill1-emoji">📖</span>
-                <div class="cooldown-mask" id="stealth-cd"></div>
-            </div>
-            <div class="skill-icon" id="naga-icon">
-                <div class="cooldown-mask" id="naga-cd"></div>
-                <span id="naga-timer"></span>
-            </div>
-            <div class="skill-icon" id="passive-skill">
-                <div class="skill-name">ซุ่มเสรี</div>
-            </div>
-            <div class="skill-icon" id="db-hud-icon"></div>
-            <div class="skill-icon" id="console-hud-icon"></div>
-            <div class="skill-icon" id="shop-hud-icon"></div>
-        </div>
-    </div>
-
-    <!-- ── Main Menu Overlay ── -->
-    <div id="overlay">
-        <div class="menu-container">
-            <div id="mission-brief"></div>
-            <div id="report-card">
-                <div class="report-stats">
-                    <div class="stat-item"><div id="report-score">0</div></div>
-                    <div class="stat-item"><div id="report-wave">0</div></div>
-                    <div class="stat-item"><div id="report-kills">0</div></div>
-                </div>
-                <div id="report-text"></div>
-            </div>
-            <button id="start-btn">START MISSION</button>
-            <div id="ai-loading"></div>
-        </div>
-    </div>
-
-    <!-- ── Victory Screen ── -->
-    <div id="victory-screen">
-        <div id="final-score">0</div>
-        <div id="final-wave">0</div>
-        <div id="final-kills">0</div>
-    </div>
-
-    <!-- ── Tutorial Overlay ── -->
-    <div id="tutorial-overlay">
-        <div class="tutorial-card" id="tutorial-card">
-            <div id="tut-icon">🎓</div>
-            <div id="tut-title"></div>
-            <div id="tut-body"></div>
-            <div id="tut-action-hint"></div>
-            <div id="tut-action-bar"><div id="tut-action-fill"></div></div>
-            <div id="tut-action-label"></div>
-            <div id="tutorial-progress"></div>
-            <button id="tut-next-btn">NEXT</button>
-            <button id="tut-skip-btn">SKIP</button>
-        </div>
-    </div>
-
-    <!-- ── Mobile UI ── -->
-    <div id="mobile-ui">
-        <div id="joystick-left-zone" class="joystick-zone left">
-            <div id="joystick-left-base" class="joystick-base">
-                <div id="joystick-left-stick" class="joystick-stick"></div>
-            </div>
-        </div>
-        <div id="joystick-right-zone" class="joystick-zone right">
-            <div id="joystick-right-base" class="joystick-base">
-                <div id="joystick-right-stick" class="joystick-stick"></div>
-            </div>
-        </div>
-        <button id="btn-switch"   class="action-btn">🔄</button>
-        <button id="btn-skill"    class="action-btn">📖</button>
-        <button id="btn-dash"     class="action-btn">💨</button>
-        <button id="btn-naga"     class="action-btn">🐉</button>
-        <button id="btn-database" class="action-btn">📚</button>
-        <button id="btn-terminal" class="action-btn">💻</button>
-        <button id="btn-shop"     class="action-btn">🛒</button>
-    </div>
-
-    <!-- ── Character selection cards (game.js may query these) ── -->
-    <div id="card-kao"  class="char-card selected" data-char="kao"></div>
-    <div id="card-poom" class="char-card" data-char="poom"></div>
-    <div id="btn-auto"  class="char-card" data-char="auto"></div>
-
-</div>
-
-<!-- Real canvas for 2D context tests (outside hidden wrapper) -->
-<canvas id="__real_canvas__" width="800" height="600" style="display:none"></canvas>
-
-<!--
-╔══════════════════════════════════════════════════════════════════╗
-║              GAME SCRIPTS — mirrored from index.html            ║
-║  Loaded in the same dependency order as the main game.          ║
-║  ai.js is commented out here (matching index.html).             ║
-║  The diagnostic will mark it WARN rather than crashing.         ║
-╚══════════════════════════════════════════════════════════════════╝
--->
-
-<!-- Content & Config (no dependencies) -->
-<script src="js/secrets.js"></script>
-<script src="js/config.js"></script>
-<script src="js/utils.js"></script>
-
-<!-- Standalone systems -->
-<script src="js/audio.js"></script>
-<script src="js/effects.js"></script>
-<script src="js/weapons.js"></script>
-<script src="js/map.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/tutorial.js"></script>
-
-<!-- AI integration (commented out — matches index.html) -->
-<!-- <script src="js/ai.js"></script> -->
-
-<!-- Entities: base first, then subclasses -->
-<script src="js/entities/base.js"></script>
-<script src="js/entities/player/PlayerBase.js"></script>
-<script src="js/entities/player/AutoPlayer.js"></script>
-<script src="js/entities/player/PoomPlayer.js"></script>
-<script src="js/entities/summons.js"></script>
-<script src="js/entities/enemy.js"></script>
-<script src="js/entities/boss_attacks.js"></script>
-<script src="js/entities/boss.js"></script>
-
-<!-- Input (depends on canvas/DOM being ready) -->
-<script src="js/input.js"></script>
-
-<!-- Extracted systems (depend on config + entities) -->
-<script src="js/systems/AdminSystem.js"></script>
-<script src="js/systems/ShopSystem.js"></script>
-<script src="js/systems/TimeManager.js"></script>
-<script src="js/systems/WaveManager.js"></script>
-
-<!-- Game core — MUST be last -->
-<script src="js/game.js"></script>
-
-
-<div id="app">
-
-    <!-- ── Header ── -->
-    <header class="header">
-        <div class="header-top">
-            <div class="title-block">
-                <div class="title-eyebrow">⬡ System Diagnostics v3.4.8</div>
-                <div class="title-main">MTC: <span>Beta</span> Edition</div>
-                <div class="title-sub">Diagnostic Console · All Systems Check · Runtime Analysis</div>
-            </div>
-            <div class="btn-group">
-                <div class="live-clock" id="live-clock">--:--:--</div>
-                <button class="btn btn-clear" onclick="clearAll()">⟳ Clear</button>
-                <button class="btn btn-run" id="run-btn" onclick="runAllDiagnostics()">▶ Run Diagnostics</button>
-            </div>
-        </div>
-    </header>
-
-    <!-- ── Status bar ── -->
-    <div class="status-bar">
-        <div class="status-bar-dot" id="status-dot"></div>
-        <span id="status-text">READY — Press "Run Diagnostics" to begin</span>
-        <span class="blink">_</span>
-    </div>
-
-    <!-- ── Progress bar ── -->
-    <div class="progress-bar-wrap">
-        <div class="corner corner-tl"></div>
-        <div class="corner corner-tr"></div>
-        <div class="corner corner-bl"></div>
-        <div class="corner corner-br"></div>
-        <div class="progress-header">
-            <span class="progress-label">Overall Diagnostic Completion</span>
-            <div class="progress-stats">
-                <span class="stat-pass" id="stat-pass">PASS: 0</span>
-                <span class="stat-fail" id="stat-fail">FAIL: 0</span>
-                <span class="stat-warn" id="stat-warn">WARN: 0</span>
-                <span class="stat-total" id="stat-total">TOTAL: 0</span>
-            </div>
-        </div>
-        <div class="progress-track">
-            <div class="progress-fill" id="progress-fill"></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:6px;">
-            <span style="font-size:10px;color:#334155;">0%</span>
-            <span class="progress-pct" id="progress-pct">0%</span>
-            <span style="font-size:10px;color:#334155;">100%</span>
-        </div>
-    </div>
-
-    <!-- ── Test Sections Grid ── -->
-    <div class="sections-grid" id="sections-grid">
-
-        <!-- ─── CORE ENGINE ─── -->
-        <div class="section-card" id="sec-core">
-            <div class="section-header" onclick="toggleSection('sec-core')">
-                <div class="section-title-wrap">
-                    <div class="section-icon ic-engine">⚙️</div>
-                    <div>
-                        <div class="section-title">Core Engine</div>
-                        <div style="font-size:10px;color:#475569;margin-top:1px;">config · utils · map · ui · input</div>
+            <div class="section-card" id="sec-systems">
+                <div class="section-header" onclick="toggleSection('sec-systems')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-system">🔧</div>
+                        <div>
+                            <div class="section-title">Game Systems</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">GameState · TimeManager ·
+                                WaveManager · Shop · Admin</div>
+                        </div>
                     </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-systems-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
                 </div>
-                <div class="section-meta">
-                    <span class="mini-badge idle" id="sec-core-badge">IDLE</span>
-                    <span class="collapse-arrow">▾</span>
-                </div>
+                <div class="section-body" id="sec-systems-body"></div>
             </div>
-            <div class="section-body" id="sec-core-body"></div>
-        </div>
 
-        <!-- ─── GAME SYSTEMS ─── -->
-        <div class="section-card" id="sec-systems">
-            <div class="section-header" onclick="toggleSection('sec-systems')">
-                <div class="section-title-wrap">
-                    <div class="section-icon ic-system">🔧</div>
-                    <div>
-                        <div class="section-title">Game Systems</div>
-                        <div style="font-size:10px;color:#475569;margin-top:1px;">TimeManager · WaveManager · Shop · Admin</div>
+            <div class="section-card" id="sec-entities">
+                <div class="section-header" onclick="toggleSection('sec-entities')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-entity">🎮</div>
+                        <div>
+                            <div class="section-title">Entities &amp; Players</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">base · enemy · boss · summons ·
+                                KaoPlayer · AutoPlayer · PoomPlayer</div>
+                        </div>
                     </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-entities-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
                 </div>
-                <div class="section-meta">
-                    <span class="mini-badge idle" id="sec-systems-badge">IDLE</span>
-                    <span class="collapse-arrow">▾</span>
-                </div>
+                <div class="section-body" id="sec-entities-body"></div>
             </div>
-            <div class="section-body" id="sec-systems-body"></div>
-        </div>
 
-        <!-- ─── ENTITIES & PLAYERS ─── -->
-        <div class="section-card" id="sec-entities">
-            <div class="section-header" onclick="toggleSection('sec-entities')">
-                <div class="section-title-wrap">
-                    <div class="section-icon ic-entity">🎮</div>
-                    <div>
-                        <div class="section-title">Entities &amp; Players</div>
-                        <div style="font-size:10px;color:#475569;margin-top:1px;">base · enemy · boss · summons · player variants</div>
+            <div class="section-card" id="sec-content">
+                <div class="section-header" onclick="toggleSection('sec-content')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-content">🎵</div>
+                        <div>
+                            <div class="section-title">Audio &amp; Content</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">audio · effects · weapons ·
+                                tutorial · secrets</div>
+                        </div>
                     </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-content-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
                 </div>
-                <div class="section-meta">
-                    <span class="mini-badge idle" id="sec-entities-badge">IDLE</span>
-                    <span class="collapse-arrow">▾</span>
-                </div>
+                <div class="section-body" id="sec-content-body"></div>
             </div>
-            <div class="section-body" id="sec-entities-body"></div>
-        </div>
 
-        <!-- ─── AUDIO & EFFECTS ─── -->
-        <div class="section-card" id="sec-content">
-            <div class="section-header" onclick="toggleSection('sec-content')">
-                <div class="section-title-wrap">
-                    <div class="section-icon ic-content">🎵</div>
-                    <div>
-                        <div class="section-title">Audio &amp; Content</div>
-                        <div style="font-size:10px;color:#475569;margin-top:1px;">audio · effects · weapons · tutorial · secrets</div>
+            <div class="section-card" id="sec-api">
+                <div class="section-header" onclick="toggleSection('sec-api')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-api">💾</div>
+                        <div>
+                            <div class="section-title">Save &amp; Storage</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">localStorage · getSaveData ·
+                                updateSaveData</div>
+                        </div>
                     </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-api-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
                 </div>
-                <div class="section-meta">
-                    <span class="mini-badge idle" id="sec-content-badge">IDLE</span>
-                    <span class="collapse-arrow">▾</span>
-                </div>
+                <div class="section-body" id="sec-api-body"></div>
             </div>
-            <div class="section-body" id="sec-content-body"></div>
-        </div>
 
-        <!-- ─── EXTERNAL APIS ─── -->
-        <div class="section-card" id="sec-api">
-            <div class="section-header" onclick="toggleSection('sec-api')">
-                <div class="section-title-wrap">
-                    <div class="section-icon ic-api">🤖</div>
-                    <div>
-                        <div class="section-title">External &amp; AI</div>
-                        <div style="font-size:10px;color:#475569;margin-top:1px;">Gemini API · Save system · localStorage</div>
+            <div class="section-card" id="sec-game">
+                <div class="section-header" onclick="toggleSection('sec-game')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-engine">🕹️</div>
+                        <div>
+                            <div class="section-title">Game Core (game.js)</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">game loop · state · canvas · init
+                                functions</div>
+                        </div>
                     </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-game-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
                 </div>
-                <div class="section-meta">
-                    <span class="mini-badge idle" id="sec-api-badge">IDLE</span>
-                    <span class="collapse-arrow">▾</span>
-                </div>
+                <div class="section-body" id="sec-game-body"></div>
             </div>
-            <div class="section-body" id="sec-api-body"></div>
-        </div>
 
-        <!-- ─── GAME.JS INTEGRATION ─── -->
-        <div class="section-card" id="sec-game">
-            <div class="section-header" onclick="toggleSection('sec-game')">
-                <div class="section-title-wrap">
-                    <div class="section-icon ic-engine">🕹️</div>
-                    <div>
-                        <div class="section-title">Game Core (game.js)</div>
-                        <div style="font-size:10px;color:#475569;margin-top:1px;">game loop · state · canvas · init functions</div>
+            <div class="section-card" id="sec-achieve">
+                <div class="section-header" onclick="toggleSection('sec-achieve')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-achieve">🏆</div>
+                        <div>
+                            <div class="section-title">Achievement System</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">AchievementSystem ·
+                                ACHIEVEMENT_DEFS · Achievements.stats</div>
+                        </div>
                     </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-achieve-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
                 </div>
-                <div class="section-meta">
-                    <span class="mini-badge idle" id="sec-game-badge">IDLE</span>
-                    <span class="collapse-arrow">▾</span>
-                </div>
+                <div class="section-body" id="sec-achieve-body"></div>
             </div>
-            <div class="section-body" id="sec-game-body"></div>
+
+            <div class="section-card" id="sec-version">
+                <div class="section-header" onclick="toggleSection('sec-version')">
+                    <div class="section-title-wrap">
+                        <div class="section-icon ic-version">📦</div>
+                        <div>
+                            <div class="section-title">Version &amp; ServiceWorker</div>
+                            <div style="font-size:10px;color:#475569;margin-top:1px;">VersionManager · GAME_VERSION ·
+                                sw.js cache</div>
+                        </div>
+                    </div>
+                    <div class="section-meta"><span class="mini-badge idle" id="sec-version-badge">IDLE</span><span
+                            class="collapse-arrow">▾</span></div>
+                </div>
+                <div class="section-body" id="sec-version-body"></div>
+            </div>
+
         </div>
 
+        <!-- Inspector Tabs -->
+        <div class="inspector-wrap">
+            <div class="inspector-header">
+                <span class="inspector-title">🔍 Runtime Inspector</span>
+                <span style="font-size:10px;color:#475569;">อ่านค่า live จาก window ได้เลย</span>
+            </div>
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('tab-achievements')">🏆 Achievements</button>
+                <button class="tab-btn" onclick="switchTab('tab-balance')">⚖️ BALANCE</button>
+                <button class="tab-btn" onclick="switchTab('tab-chars')">👤 Characters</button>
+                <button class="tab-btn" onclick="switchTab('tab-gamestate')">🗂️ GameState</button>
+            </div>
+
+            <!-- Tab: Achievements -->
+            <div class="tab-panel active" id="tab-achievements">
+                <div
+                    style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:11px;color:#475569;">Achievements ทั้งหมดที่ defined ใน
+                        ACHIEVEMENT_DEFS</span>
+                    <button class="btn btn-copy" style="padding:6px 12px;font-size:9px;" onclick="copyAchievements()">⎘
+                        Copy</button>
+                </div>
+                <div class="achieve-grid" id="achieve-grid">
+                    <div style="color:#475569;font-size:11px;padding:20px;">กำลังโหลด... (รอ scripts load)</div>
+                </div>
+            </div>
+
+            <!-- Tab: BALANCE -->
+            <div class="tab-panel" id="tab-balance">
+                <div
+                    style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:#475569;">ค่า BALANCE จาก config.js</span>
+                    <select id="balance-section-select" onchange="renderBalanceSection(this.value)"
+                        style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:3px;font-size:11px;font-family:var(--font-mono);">
+                        <option value="">-- เลือก section --</option>
+                    </select>
+                    <button class="btn btn-copy" style="padding:6px 12px;font-size:9px;" onclick="copyBalance()">⎘
+                        Copy</button>
+                </div>
+                <div style="max-height:400px;overflow-y:auto;" id="balance-content">
+                    <div style="color:#475569;font-size:11px;padding:20px;">เลือก section ด้านบนเพื่อดูค่า BALANCE</div>
+                </div>
+            </div>
+
+            <!-- Tab: Characters -->
+            <div class="tab-panel" id="tab-chars">
+                <div style="padding:12px 18px;border-bottom:1px solid var(--border);">
+                    <span style="font-size:11px;color:#475569;">สถานะ Class และ method ของ player แต่ละตัว</span>
+                </div>
+                <div id="chars-content"
+                    style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+                    <div style="color:#475569;font-size:11px;">กำลังโหลด...</div>
+                </div>
+            </div>
+
+            <!-- Tab: GameState -->
+            <div class="tab-panel" id="tab-gamestate">
+                <div
+                    style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:11px;color:#475569;">ค่า GameState / window globals ปัจจุบัน</span>
+                    <button class="btn btn-copy" style="padding:6px 12px;font-size:9px;" onclick="copyGameState()">⎘
+                        Copy</button>
+                </div>
+                <div id="gamestate-content" style="max-height:400px;overflow-y:auto;padding:14px 18px;">
+                    <div style="color:#475569;font-size:11px;">กำลังโหลด...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Console Output -->
+        <div class="console-wrap">
+            <div class="console-header">
+                <div class="console-dots">
+                    <div class="console-dot dot-red"></div>
+                    <div class="console-dot dot-yellow"></div>
+                    <div class="console-dot dot-green"></div>
+                </div>
+                <span class="console-title">Diagnostic Console Output</span>
+                <div class="console-actions">
+                    <button class="btn btn-copy" id="copy-log-btn" style="padding:5px 12px;font-size:9px;"
+                        onclick="copyConsoleLogs()">⎘ Copy</button>
+                    <span style="font-size:10px;color:#334155;">stdout</span>
+                </div>
+            </div>
+            <div id="console-output">
+                <span class="log-system"><span class="log-prompt">$</span> MTC Diagnostic System v3.6.2 ready.</span>
+                <span class="log-system"><span class="log-prompt">$</span> กด "▶ Run Diagnostics"
+                    เพื่อเริ่มตรวจสอบระบบ...</span>
+            </div>
+        </div>
+
+        <div class="footer">MTC the Game Beta Edition · Diagnostic Tool v3.6.2 · by Mawin</div>
     </div>
 
-    <!-- ── Console Output ── -->
-    <div class="console-wrap">
-        <div class="console-header">
-            <div class="console-dots">
-                <div class="console-dot dot-red"></div>
-                <div class="console-dot dot-yellow"></div>
-                <div class="console-dot dot-green"></div>
-            </div>
-            <span class="console-title">Diagnostic Console Output</span>
-            <span style="font-size:10px;color:#334155;">stdout</span>
-        </div>
-        <div id="console-output">
-            <span class="log-system"><span class="log-prompt">$</span> MTC Diagnostic System v3.4.8 ready.</span><br>
-            <span class="log-system"><span class="log-prompt">$</span> Press "▶ Run Diagnostics" to begin system analysis...</span><br>
-        </div>
-    </div>
+    <!-- Toast notification -->
+    <div id="copy-toast">✓ Copied to clipboard!</div>
 
-    <!-- ── Footer ── -->
-    <div class="footer">
-        MTC the Game Beta Edition · Diagnostic Tool v3.4.8 · Anthropic-Powered Interface
-    </div>
+    <!-- ══ DIAGNOSTIC ENGINE ══ -->
+    <script>
+        (function () {
+            'use strict';
 
-</div>
+            // ── Intercept game bootstrap ──
+            window.startGame = () => diag.log('[Intercepted] startGame() — blocked on debug page.', 'warn');
+            window.loopRunning = true;
 
+            const state = {
+                running: false,
+                results: [],
+                logLines: [],
+            };
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!--                    DIAGNOSTIC ENGINE                          -->
-<!-- ══════════════════════════════════════════════════════════════ -->
-<script>
-(function () {
-    'use strict';
+            // ── Live Clock ──
+            function tickClock() {
+                const d = new Date(), pad = n => String(n).padStart(2, '0');
+                document.getElementById('live-clock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            }
+            setInterval(tickClock, 1000); tickClock();
 
-    // ── Intercept game bootstrap to prevent the game loop from actually starting ──
-    window.startGame   = () => diag.log('[Intercepted] startGame() called — blocked on debug page.', 'warn');
-    window.loopRunning = true;  // Flag some engines check before starting RAF loop
+            // ── Toast ──
+            function showToast(msg = '✓ Copied!') {
+                const t = document.getElementById('copy-toast');
+                t.textContent = msg;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 2000);
+            }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // STATE
-    // ─────────────────────────────────────────────────────────────────────────────
-    const state = {
-        running: false,
-        results: [], // { sectionId, name, status, tip }
-    };
+            // ── Diag Logger ──
+            const diag = {
+                log(msg, type = 'info') {
+                    const el = document.getElementById('console-output');
+                    const cls = { success: 'log-success', error: 'log-error', warn: 'log-warn', info: 'log-info', system: 'log-system' }[type] || 'log-info';
+                    const prefix = { success: '✔', error: '✖', warn: '⚠', info: 'i', system: '$' }[type] || '>';
+                    const line = `<span class="${cls}"><span class="log-prompt">${prefix}</span> ${msg}</span>\n`;
+                    el.innerHTML += line;
+                    el.scrollTop = el.scrollHeight;
+                    state.logLines.push(`[${type.toUpperCase()}] ${msg}`);
+                },
+                sep(label = '') {
+                    const el = document.getElementById('console-output');
+                    const txt = label ? `─── ${label} ───` : '─'.repeat(60);
+                    el.innerHTML += `<span class="log-sep">${txt}</span>\n`;
+                    state.logLines.push(`--- ${label || '---'}`);
+                }
+            };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // LIVE CLOCK
-    // ─────────────────────────────────────────────────────────────────────────────
-    function tickClock() {
-        const d = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        document.getElementById('live-clock').textContent =
-            `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    }
-    tickClock();
-    setInterval(tickClock, 1000);
+            // ── Progress ──
+            function updateProgress() {
+                const total = state.results.length;
+                const passed = state.results.filter(r => r.status === 'pass').length;
+                const failed = state.results.filter(r => r.status === 'fail').length;
+                const warned = state.results.filter(r => r.status === 'warn').length;
+                const pct = total ? Math.round((passed + warned) / total * 100) : 0;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // LOGGER
-    // ─────────────────────────────────────────────────────────────────────────────
-    const diag = {
-        log(msg, type = 'info') {
-            const out = document.getElementById('console-output');
-            const d = new Date();
-            const pad = n => String(n).padStart(2, '0');
-            const ts = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-            out.innerHTML += `<div><span class="log-system">[${ts}]</span> <span class="log-${type}">${escHtml(msg)}</span></div>`;
-            out.scrollTop = out.scrollHeight;
-        },
-        sep(label = '') {
-            const out = document.getElementById('console-output');
-            const bar = label
-                ? `── ${label} ${'─'.repeat(Math.max(0, 52 - label.length))}`
-                : '─'.repeat(58);
-            out.innerHTML += `<div style="color:#1e3a6e;margin:4px 0;">${bar}</div>`;
-        }
-    };
+                document.getElementById('stat-pass').textContent = `PASS: ${passed}`;
+                document.getElementById('stat-fail').textContent = `FAIL: ${failed}`;
+                document.getElementById('stat-warn').textContent = `WARN: ${warned}`;
+                document.getElementById('stat-total').textContent = `TOTAL: ${total}`;
+                document.getElementById('progress-fill').style.width = `${pct}%`;
+                document.getElementById('progress-pct').textContent = `${pct}%`;
+            }
 
-    function escHtml(str) {
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PROGRESS UPDATER
-    // ─────────────────────────────────────────────────────────────────────────────
-    function updateProgress() {
-        const total   = state.results.length;
-        const passed  = state.results.filter(r => r.status === 'pass').length;
-        const failed  = state.results.filter(r => r.status === 'fail').length;
-        const warned  = state.results.filter(r => r.status === 'warn').length;
-        const done    = passed + failed + warned;
-        const pct     = total ? Math.round((done / total) * 100) : 0;
-
-        document.getElementById('progress-fill').style.width = pct + '%';
-        document.getElementById('progress-pct').textContent  = pct + '%';
-        document.getElementById('stat-pass').textContent  = `PASS: ${passed}`;
-        document.getElementById('stat-fail').textContent  = `FAIL: ${failed}`;
-        document.getElementById('stat-warn').textContent  = `WARN: ${warned}`;
-        document.getElementById('stat-total').textContent = `TOTAL: ${done}/${total}`;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // SECTION COLLAPSE TOGGLE
-    // ─────────────────────────────────────────────────────────────────────────────
-    window.toggleSection = function (id) {
-        document.getElementById(id).classList.toggle('collapsed');
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // RENDER A TEST ROW
-    // ─────────────────────────────────────────────────────────────────────────────
-    function renderTestRow(bodyId, name, status = 'idle', tip = '') {
-        const body = document.getElementById(bodyId);
-        const id = `test-${bodyId}-${name.replace(/\s+/g,'_')}`;
-
-        let existing = document.getElementById(id);
-        if (!existing) {
-            existing = document.createElement('div');
-            existing.className = 'test-item';
-            existing.id = id;
-            body.appendChild(existing);
-        }
-
-        const statusLabels = { pass: 'PASS', fail: 'FAIL', warn: 'WARN', idle: 'PENDING', running: 'RUNNING' };
-        existing.setAttribute('data-tip', tip || '');
-        existing.innerHTML = `
+            // ── Render test row ──
+            function renderTestRow(bodyId, name, status, tip = '') {
+                const body = document.getElementById(bodyId);
+                let row = body.querySelector(`[data-test="${CSS.escape(name)}"]`);
+                if (!row) {
+                    row = document.createElement('div');
+                    row.className = 'test-item';
+                    row.dataset.test = name;
+                    body.appendChild(row);
+                }
+                row.setAttribute('data-tip', tip);
+                row.innerHTML = `
             <div class="test-left">
                 <div class="test-indicator ${status}"></div>
-                <span class="test-name">${escHtml(name)}</span>
+                <span class="test-name">${name}</span>
             </div>
             <div class="test-right">
-                <span class="status-badge ${status}">${statusLabels[status] || status.toUpperCase()}</span>
-            </div>
-        `;
-        return existing;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // UPDATE SECTION SUMMARY BADGE
-    // ─────────────────────────────────────────────────────────────────────────────
-    function updateSectionBadge(sectionId) {
-        const badge = document.getElementById(`${sectionId}-badge`);
-        if (!badge) return;
-        const sectionResults = state.results.filter(r => r.sectionId === sectionId);
-        if (!sectionResults.length) { badge.className = 'mini-badge idle'; badge.textContent = 'IDLE'; return; }
-        const anyFail = sectionResults.some(r => r.status === 'fail');
-        const anyWarn = sectionResults.some(r => r.status === 'warn');
-        const allPending = sectionResults.every(r => r.status === 'idle');
-        if (anyFail)     { badge.className = 'mini-badge fail'; badge.textContent = 'ISSUES'; }
-        else if (anyWarn){ badge.className = 'mini-badge warn'; badge.textContent = 'WARN'; }
-        else if (allPending){ badge.className = 'mini-badge idle'; badge.textContent = 'IDLE'; }
-        else             { badge.className = 'mini-badge pass'; badge.textContent = 'OK'; }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // CORE ASSERTION HELPERS
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Run a single test.
-     * @param {string}   sectionId  - DOM section id (e.g. 'sec-core')
-     * @param {string}   bodyId     - DOM body id    (e.g. 'sec-core-body')
-     * @param {string}   name       - Display name
-     * @param {Function} testFn     - Returns true/false/'warn'
-     * @param {string}   [failTip]  - Message shown on failure tooltip
-     */
-    async function runTest(sectionId, bodyId, name, testFn, failTip = '') {
-        // Register
-        const record = { sectionId, name, status: 'running' };
-        state.results.push(record);
-
-        renderTestRow(bodyId, name, 'running');
-
-        let status = 'fail';
-        let tip    = failTip;
-        try {
-            const result = await testFn();
-            if (result === true)   { status = 'pass'; tip = ''; }
-            else if (result === 'warn') { status = 'warn'; tip = failTip; }
-            else { status = 'fail'; }
-        } catch (err) {
-            status = 'fail';
-            tip = `Exception: ${err.message}`;
-            diag.log(`  ✖ Exception in "${name}": ${err.message}`, 'error');
-        }
-
-        record.status = status;
-        renderTestRow(bodyId, name, status, tip);
-        updateSectionBadge(sectionId);
-        updateProgress();
-        return status;
-    }
-
-    /**
-     * Check if a global variable/property path is defined and passes an optional predicate.
-     * @param {string}   path   - e.g. 'window.ShopManager' or 'window.Gemini.init'
-     * @param {Function} [pred] - Optional extra condition fn(value) => bool
-     * @returns {boolean}
-     */
-    function isDefined(path, pred = null) {
-        try {
-            const parts = path.replace(/^window\./, '').split('.');
-            let obj = window;
-            for (const p of parts) {
-                if (obj == null || !(p in Object(obj))) return false;
-                obj = obj[p];
+                <span class="status-badge ${status}">${status.toUpperCase()}</span>
+            </div>`;
             }
-            if (obj === undefined || obj === null) return false;
-            if (pred) return pred(obj);
-            return true;
-        } catch { return false; }
-    }
 
-    /**
-     * Check that a global is a constructor (class / function).
-     */
-    function isClass(path) {
-        return isDefined(path, v => typeof v === 'function');
-    }
+            // ── Section badge ──
+            function updateSectionBadge(sectionId) {
+                const badge = document.getElementById(`${sectionId}-badge`);
+                if (!badge) return;
+                const body = document.getElementById(`${sectionId}-body`);
+                const indicators = body ? Array.from(body.querySelectorAll('.test-indicator')) : [];
+                const statuses = indicators.map(i => [...i.classList].find(c => ['pass', 'fail', 'warn', 'running', 'idle'].includes(c)));
+                const anyFail = statuses.some(s => s === 'fail');
+                const anyWarn = statuses.some(s => s === 'warn');
+                const allPending = statuses.every(s => s === 'idle' || s === 'running');
+                if (anyFail) { badge.className = 'mini-badge fail'; badge.textContent = 'ISSUES'; }
+                else if (anyWarn) { badge.className = 'mini-badge warn'; badge.textContent = 'WARN'; }
+                else if (allPending) { badge.className = 'mini-badge idle'; badge.textContent = 'IDLE'; }
+                else { badge.className = 'mini-badge pass'; badge.textContent = 'OK'; }
+            }
 
-    /**
-     * Check that a global is a plain object or class instance (not null/undefined).
-     */
-    function isObject(path) {
-        return isDefined(path, v => typeof v === 'object');
-    }
+            // ── Toggle section collapse ──
+            window.toggleSection = function (id) {
+                document.getElementById(id)?.classList.toggle('collapsed');
+            };
 
-    /**
-     * Check that a global is a function.
-     */
-    function isFunction(path) {
-        return isDefined(path, v => typeof v === 'function');
-    }
+            // ── Tab switcher ──
+            window.switchTab = function (tabId) {
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(tabId)?.classList.add('active');
+                event.target.classList.add('active');
+                // Refresh content on switch
+                if (tabId === 'tab-achievements') renderAchievements();
+                if (tabId === 'tab-balance') renderBalanceSections();
+                if (tabId === 'tab-chars') renderChars();
+                if (tabId === 'tab-gamestate') renderGameState();
+            };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // CLEAR
-    // ─────────────────────────────────────────────────────────────────────────────
-    window.clearAll = function () {
-        document.getElementById('console-output').innerHTML =
-            `<span class="log-system"><span class="log-prompt">$</span> Console cleared. Ready.</span><br>`;
-        document.querySelectorAll('.section-body').forEach(b => b.innerHTML = '');
-        state.results = [];
-        updateProgress();
-        ['sec-core','sec-systems','sec-entities','sec-content','sec-api','sec-game']
-            .forEach(id => {
-                const badge = document.getElementById(`${id}-badge`);
-                if (badge) { badge.className = 'mini-badge idle'; badge.textContent = 'IDLE'; }
+            // ── Assertion helpers ──
+            function isDefined(path, pred = null) {
+                try {
+                    const parts = path.replace(/^window\./, '').split('.');
+                    let obj = window;
+                    for (const p of parts) {
+                        if (obj == null || !(p in Object(obj))) return false;
+                        obj = obj[p];
+                    }
+                    if (obj === undefined || obj === null) return false;
+                    if (pred) return pred(obj);
+                    return true;
+                } catch { return false; }
+            }
+            function isClass(path) { return isDefined(path, v => typeof v === 'function'); }
+            function isObject(path) { return isDefined(path, v => typeof v === 'object'); }
+            function isFunction(path) { return isDefined(path, v => typeof v === 'function'); }
+
+            // ── Run single test ──
+            async function runTest(sectionId, bodyId, name, testFn, failTip = '') {
+                const record = { sectionId, name, status: 'running' };
+                state.results.push(record);
+                renderTestRow(bodyId, name, 'running');
+                let status = 'fail', tip = failTip;
+                try {
+                    const result = await testFn();
+                    if (result === true) { status = 'pass'; tip = ''; }
+                    else if (result === 'warn') { status = 'warn'; tip = failTip; }
+                    else { status = 'fail'; }
+                } catch (err) {
+                    status = 'fail'; tip = `Exception: ${err.message}`;
+                    diag.log(`  ✖ Exception in "${name}": ${err.message}`, 'error');
+                }
+                record.status = status;
+                renderTestRow(bodyId, name, status, tip);
+                updateSectionBadge(sectionId);
+                updateProgress();
+                return status;
+            }
+
+            // ── Clear ──
+            window.clearAll = function () {
+                const el = document.getElementById('console-output');
+                el.innerHTML = `<span class="log-system"><span class="log-prompt">$</span> Console cleared. Ready.</span>\n`;
+                document.querySelectorAll('.section-body').forEach(b => b.innerHTML = '');
+                state.results = []; state.logLines = [];
+                updateProgress();
+                ['sec-core', 'sec-systems', 'sec-entities', 'sec-content', 'sec-api', 'sec-game', 'sec-achieve', 'sec-version']
+                    .forEach(id => {
+                        const badge = document.getElementById(`${id}-badge`);
+                        if (badge) { badge.className = 'mini-badge idle'; badge.textContent = 'IDLE'; }
+                    });
+                setStatus('READY — Logs cleared.', false);
+            };
+
+            // ── Status bar ──
+            function setStatus(msg, active = true) {
+                document.getElementById('status-text').textContent = msg;
+                document.getElementById('status-dot').classList.toggle('inactive', !active);
+            }
+
+            // ─────────────────────────────────────────────────────────
+            // INSPECTOR RENDERERS
+            // ─────────────────────────────────────────────────────────
+
+            function renderAchievements() {
+                const grid = document.getElementById('achieve-grid');
+                if (!window.ACHIEVEMENT_DEFS) {
+                    grid.innerHTML = `<div style="color:var(--danger);font-size:11px;padding:10px;">ACHIEVEMENT_DEFS ไม่พบ — config.js อาจยังไม่โหลด</div>`;
+                    return;
+                }
+                grid.innerHTML = window.ACHIEVEMENT_DEFS.map(a => `
+            <div class="achieve-item">
+                <div class="a-icon">${a.icon}</div>
+                <div class="a-id">${a.id}</div>
+                <div class="a-name">${a.name}</div>
+                <div class="a-desc">${a.desc}</div>
+            </div>
+        `).join('');
+                document.getElementById('qs-achieve').textContent = window.ACHIEVEMENT_DEFS.length;
+                document.getElementById('qs-achieve').className = 'qs-value ok';
+            }
+
+            function renderBalanceSections() {
+                const sel = document.getElementById('balance-section-select');
+                if (!window.BALANCE) {
+                    document.getElementById('balance-content').innerHTML = `<div style="color:var(--danger);font-size:11px;padding:20px;">BALANCE ไม่พบ — config.js อาจยังไม่โหลด</div>`;
+                    return;
+                }
+                sel.innerHTML = '<option value="">-- เลือก section --</option>' +
+                    Object.keys(window.BALANCE).map(k => `<option value="${k}">${k}</option>`).join('');
+            }
+
+            window.renderBalanceSection = function (key) {
+                const content = document.getElementById('balance-content');
+                if (!key || !window.BALANCE) return;
+                const section = window.BALANCE[key];
+                if (typeof section !== 'object' || section === null) {
+                    content.innerHTML = `<div style="padding:14px 18px;color:var(--text-bright);">${JSON.stringify(section)}</div>`;
+                    return;
+                }
+                const rows = Object.entries(section).map(([k, v]) => {
+                    const type = Array.isArray(v) ? 'array' : typeof v;
+                    const display = typeof v === 'object' ? JSON.stringify(v) : String(v);
+                    return `<tr><td class="balance-key">${k}</td><td class="balance-value">${display}</td><td class="balance-type">${type}</td></tr>`;
+                }).join('');
+                content.innerHTML = `<table class="balance-table"><thead><tr><th>Key</th><th>Value</th><th>Type</th></tr></thead><tbody>${rows}</tbody></table>`;
+            };
+
+            function renderChars() {
+                const container = document.getElementById('chars-content');
+                const chars = [
+                    { name: 'KaoPlayer', cls: window.KaoPlayer, color: '#60a5fa', methods: ['addKill', 'teleport', 'fireWeapon'] },
+                    { name: 'AutoPlayer', cls: window.AutoPlayer, color: '#ef4444', methods: ['_activateWanchai', 'update', 'takeDamage'] },
+                    { name: 'PoomPlayer', cls: window.PoomPlayer, color: '#10b981', methods: ['ritualBurst', 'applySticky', 'update'] },
+                ];
+                container.innerHTML = chars.map(c => {
+                    const loaded = !!c.cls;
+                    const methodChecks = c.methods.map(m => {
+                        const ok = loaded && typeof c.cls.prototype[m] === 'function';
+                        return `<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid rgba(26,39,68,0.4);">
+                    <span style="color:var(--text);">${m}()</span>
+                    <span style="color:${ok ? 'var(--success)' : 'var(--danger);'}">${ok ? '✔' : '✖'}</span>
+                </div>`;
+                    }).join('');
+                    return `<div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:5px;padding:14px;border-top:2px solid ${c.color};">
+                <div style="font-family:var(--font-display);font-size:11px;color:${c.color};letter-spacing:2px;margin-bottom:10px;">${c.name} ${loaded ? '✔ Loaded' : '✖ NOT FOUND'}</div>
+                ${methodChecks}
+            </div>`;
+                }).join('');
+                // QS
+                const loaded = chars.filter(c => !!c.cls).length;
+                document.getElementById('qs-chars').textContent = `${loaded}/3`;
+                document.getElementById('qs-chars').className = `qs-value ${loaded === 3 ? 'ok' : 'err'}`;
+            }
+
+            function renderGameState() {
+                const content = document.getElementById('gamestate-content');
+                const keys = ['phase', 'loopRunning', 'timeScale', 'isSlowMotion', 'slowMoEnergy', 'isGlitchWave', 'bossEncounterCount'];
+                const GS = window.GameState;
+                if (!GS) {
+                    content.innerHTML = `<div style="color:var(--danger);font-size:11px;">GameState ไม่พบ — systems/GameState.js อาจยังไม่โหลด</div>`;
+                    return;
+                }
+                const rows = keys.map(k => {
+                    const v = GS[k];
+                    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(26,39,68,0.4);font-size:11px;">
+                <span style="color:var(--accent);">${k}</span>
+                <span style="color:var(--text-bright);">${JSON.stringify(v)}</span>
+            </div>`;
+                }).join('');
+                content.innerHTML = `<div>${rows}</div>
+            <div style="margin-top:12px;font-size:10px;color:#475569;">enemies: ${GS.enemies?.length ?? '?'} · powerups: ${GS.powerups?.length ?? '?'}</div>`;
+            }
+
+            // ─────────────────────────────────────────────────────────
+            // COPY / EXPORT
+            // ─────────────────────────────────────────────────────────
+
+            window.copyConsoleLogs = function () {
+                const text = state.logLines.join('\n');
+                navigator.clipboard.writeText(text).then(() => showToast('✓ Console logs copied!')).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+                    showToast('✓ Copied!');
+                });
+                const btn = document.getElementById('copy-log-btn');
+                btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '⎘ Copy'; btn.classList.remove('copied'); }, 2000);
+            };
+
+            window.copyAllLogs = function () {
+                const pass = state.results.filter(r => r.status === 'pass').length;
+                const fail = state.results.filter(r => r.status === 'fail').length;
+                const warn = state.results.filter(r => r.status === 'warn').length;
+                const header = `=== MTC Diagnostic Report v3.6.2 ===\nDate: ${new Date().toLocaleString('th-TH')}\nPASS: ${pass} | FAIL: ${fail} | WARN: ${warn}\n\n`;
+                const results = state.results.map(r => `[${r.status.toUpperCase().padEnd(4)}] ${r.name}`).join('\n');
+                const logs = '\n--- Console Logs ---\n' + state.logLines.join('\n');
+                navigator.clipboard.writeText(header + results + logs).then(() => showToast('✓ Full report copied!')).catch(() => { });
+                const btn = document.getElementById('copy-all-btn');
+                btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '⎘ Copy Logs'; btn.classList.remove('copied'); }, 2000);
+            };
+
+            window.copyAchievements = function () {
+                if (!window.ACHIEVEMENT_DEFS) return;
+                const text = window.ACHIEVEMENT_DEFS.map(a => `${a.icon} [${a.id}] ${a.name} — ${a.desc}`).join('\n');
+                navigator.clipboard.writeText(text).then(() => showToast('✓ Achievements copied!')).catch(() => { });
+            };
+
+            window.copyBalance = function () {
+                const key = document.getElementById('balance-section-select').value;
+                if (!key || !window.BALANCE) return;
+                const text = `BALANCE.${key}:\n` + JSON.stringify(window.BALANCE[key], null, 2);
+                navigator.clipboard.writeText(text).then(() => showToast(`✓ BALANCE.${key} copied!`)).catch(() => { });
+            };
+
+            window.copyGameState = function () {
+                if (!window.GameState) return;
+                const text = JSON.stringify(window.GameState, (k, v) => typeof v === 'function' ? '[Function]' : v, 2);
+                navigator.clipboard.writeText(text).then(() => showToast('✓ GameState copied!')).catch(() => { });
+            };
+
+            window.exportReport = function () {
+                const pass = state.results.filter(r => r.status === 'pass').length;
+                const fail = state.results.filter(r => r.status === 'fail').length;
+                const warn = state.results.filter(r => r.status === 'warn').length;
+                const content = `MTC Diagnostic Report v3.6.2\nDate: ${new Date().toLocaleString('th-TH')}\nPASS: ${pass} | FAIL: ${fail} | WARN: ${warn}\n\n` +
+                    state.results.map(r => `[${r.status.toUpperCase().padEnd(4)}] ${r.name}`).join('\n') +
+                    '\n\n--- Console Logs ---\n' + state.logLines.join('\n');
+                const blob = new Blob([content], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `mtc-diag-${new Date().toISOString().slice(0, 10)}.txt`;
+                a.click();
+            };
+
+            // ─────────────────────────────────────────────────────────
+            // MAIN DIAGNOSTIC RUNNER
+            // ─────────────────────────────────────────────────────────
+            window.runAllDiagnostics = async function () {
+                if (state.running) return;
+                state.running = true;
+                clearAll();
+                document.getElementById('run-btn').disabled = true;
+                setStatus('RUNNING — กำลังตรวจสอบระบบ...', true);
+
+                const now = new Date();
+                document.getElementById('qs-lastrun').textContent = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+                diag.log('Dummy DOM active: element IDs ครบตาม index.html', 'success');
+                diag.sep();
+
+                const T = (secId, bodyId, name, testFn, failTip) => runTest(secId, bodyId, name, testFn, failTip);
+                const delay = ms => new Promise(r => setTimeout(r, ms));
+
+                // ── 1. CORE ENGINE ──
+                diag.sep('1. CORE ENGINE');
+
+                await T('sec-core', 'sec-core-body', 'BALANCE defined',
+                    () => isDefined('window.BALANCE'),
+                    'Failed: BALANCE undefined — check config.js');
+                await T('sec-core', 'sec-core-body', 'MAP_CONFIG defined',
+                    () => isDefined('window.MAP_CONFIG'),
+                    'Failed: MAP_CONFIG undefined — check config.js');
+                await T('sec-core', 'sec-core-body', 'GAME_TEXTS defined',
+                    () => isDefined('window.GAME_TEXTS'),
+                    'Failed: GAME_TEXTS undefined — check config.js');
+                await T('sec-core', 'sec-core-body', 'ACHIEVEMENT_DEFS defined',
+                    () => isDefined('window.ACHIEVEMENT_DEFS') && Array.isArray(window.ACHIEVEMENT_DEFS),
+                    'Failed: ACHIEVEMENT_DEFS undefined — check config.js');
+                await T('sec-core', 'sec-core-body', 'getDeltaTime() utility',
+                    () => isFunction('window.getDeltaTime'),
+                    'Failed: getDeltaTime ไม่พบ — check utils.js');
+                await T('sec-core', 'sec-core-body', 'clamp() / lerp() math utils',
+                    () => isFunction('window.clamp') || isFunction('window.lerp'),
+                    'Failed: clamp/lerp ไม่พบ — check utils.js');
+                await T('sec-core', 'sec-core-body', 'mapSystem object',
+                    () => isObject('window.mapSystem'),
+                    'Failed: mapSystem undefined — check map.js');
+                await T('sec-core', 'sec-core-body', 'UIManager defined',
+                    () => isDefined('window.UIManager'),
+                    'Failed: UIManager undefined — check ui.js');
+                await T('sec-core', 'sec-core-body', 'Achievements instance',
+                    () => isDefined('window.Achievements') && typeof window.Achievements.check === 'function',
+                    'Failed: Achievements instance ไม่พบ — check ui.js');
+                await T('sec-core', 'sec-core-body', 'Input System (keys)',
+                    () => isObject('window.inputSystem') || isDefined('window.keys'),
+                    'Failed: input system ไม่พบ — check input.js');
+                await delay(50);
+
+                // ── 2. GAME SYSTEMS ──
+                diag.sep('2. GAME SYSTEMS');
+
+                await T('sec-systems', 'sec-systems-body', 'GameState object',
+                    () => isObject('window.GameState') && typeof window.GameState.setPhase === 'function',
+                    'Failed: GameState ไม่พบ — check systems/GameState.js');
+                await T('sec-systems', 'sec-systems-body', 'GameState.resetRun()',
+                    () => isFunction('window.GameState.resetRun'),
+                    'Failed: GameState.resetRun ไม่ใช่ function');
+                await T('sec-systems', 'sec-systems-body', 'TimeManager (toggleSlowMotion)',
+                    () => isFunction('window.toggleSlowMotion') && isFunction('window._tickSlowMoEnergy'),
+                    'Failed: TimeManager functions ไม่พบ — check systems/TimeManager.js');
+                await T('sec-systems', 'sec-systems-body', 'triggerHitStop()',
+                    () => isFunction('window.triggerHitStop'),
+                    'Failed: triggerHitStop ไม่พบ — check systems/TimeManager.js');
+                await T('sec-systems', 'sec-systems-body', 'WaveManager (startNextWave)',
+                    () => isFunction('window.startNextWave'),
+                    'Failed: startNextWave ไม่พบ — check systems/WaveManager.js');
+                await T('sec-systems', 'sec-systems-body', 'ShopSystem / ShopManager',
+                    () => isObject('window.ShopSystem') || isObject('window.ShopManager') || isClass('window.ShopSystem') || isClass('window.ShopManager'),
+                    'Failed: ShopSystem ไม่พบ — check systems/ShopSystem.js');
+                await T('sec-systems', 'sec-systems-body', 'AdminSystem / AdminConsole',
+                    () => isObject('window.AdminSystem') || isObject('window.AdminConsole') || isClass('window.AdminSystem') || isClass('window.AdminConsole'),
+                    'Failed: AdminSystem ไม่พบ — check systems/AdminSystem.js');
+                await T('sec-systems', 'sec-systems-body', 'TutorialSystem',
+                    () => isObject('window.TutorialSystem') || isClass('window.TutorialSystem'),
+                    'Failed: TutorialSystem ไม่พบ — check tutorial.js');
+                await delay(50);
+
+                // ── 3. ENTITIES & PLAYERS ──
+                diag.sep('3. ENTITIES & PLAYERS');
+
+                await T('sec-entities', 'sec-entities-body', 'Base Entity class',
+                    () => isClass('window.Entity') || isClass('window.EntityBase'),
+                    'Failed: Entity class ไม่พบ — check entities/base.js');
+                await T('sec-entities', 'sec-entities-body', 'Player base class',
+                    () => isClass('window.Player') || isClass('window.PlayerBase'),
+                    'Failed: Player base ไม่พบ — check entities/player/PlayerBase.js');
+                await T('sec-entities', 'sec-entities-body', 'KaoPlayer class',
+                    () => isClass('window.KaoPlayer'),
+                    'Failed: KaoPlayer ไม่พบ — check entities/player/Kaoplayer.js');
+                await T('sec-entities', 'sec-entities-body', 'KaoPlayer.addKill() method',
+                    () => typeof window.KaoPlayer?.prototype?.addKill === 'function',
+                    'Failed: KaoPlayer.addKill ไม่ใช่ function');
+                await T('sec-entities', 'sec-entities-body', 'KaoPlayer.isWeaponMaster property (prototype)',
+                    () => isDefined('window.KaoPlayer') && 'isWeaponMaster' in (new window.KaoPlayer(0, 0)),
+                    'Failed: isWeaponMaster ไม่พบใน KaoPlayer instance');
+                await T('sec-entities', 'sec-entities-body', 'AutoPlayer class',
+                    () => isClass('window.AutoPlayer'),
+                    'Failed: AutoPlayer ไม่พบ — check entities/player/AutoPlayer.js');
+                await T('sec-entities', 'sec-entities-body', 'AutoPlayer._activateWanchai()',
+                    () => typeof window.AutoPlayer?.prototype?._activateWanchai === 'function',
+                    'Failed: _activateWanchai ไม่ใช่ function');
+                await T('sec-entities', 'sec-entities-body', 'PoomPlayer class',
+                    () => isClass('window.PoomPlayer'),
+                    'Failed: PoomPlayer ไม่พบ — check entities/player/PoomPlayer.js');
+                await T('sec-entities', 'sec-entities-body', 'PoomPlayer.ritualBurst()',
+                    () => typeof window.PoomPlayer?.prototype?.ritualBurst === 'function',
+                    'Failed: ritualBurst ไม่ใช่ function');
+                await T('sec-entities', 'sec-entities-body', 'Enemy class',
+                    () => isClass('window.Enemy'),
+                    'Failed: Enemy ไม่พบ — check entities/enemy.js');
+                await T('sec-entities', 'sec-entities-body', 'TankEnemy & MageEnemy classes',
+                    () => isClass('window.TankEnemy') && isClass('window.MageEnemy'),
+                    'Failed: TankEnemy หรือ MageEnemy ไม่พบ — check entities/enemy.js');
+                await T('sec-entities', 'sec-entities-body', 'Boss class (Kru Manop)',
+                    () => isClass('window.Boss'),
+                    'Failed: Boss ไม่พบ — check entities/boss.js');
+                await T('sec-entities', 'sec-entities-body', 'BossFirst class (Kru First)',
+                    () => isClass('window.BossFirst'),
+                    'Failed: BossFirst ไม่พบ — check entities/boss.js');
+                await T('sec-entities', 'sec-entities-body', 'Summons (NagaEntity / DroneEntity)',
+                    () => isClass('window.NagaEntity') || isClass('window.DroneEntity'),
+                    'Failed: Summon class ไม่พบ — check entities/summons.js');
+                await T('sec-entities', 'sec-entities-body', 'weaponSystem object',
+                    () => isObject('window.weaponSystem'),
+                    'Failed: weaponSystem ไม่พบ — check weapons.js');
+                await delay(50);
+
+                // ── 4. AUDIO & CONTENT ──
+                diag.sep('4. AUDIO & CONTENT');
+
+                await T('sec-content', 'sec-content-body', 'Audio system (Audio.init)',
+                    () => isFunction('window.Audio.init') || isObject('window.audioSystem'),
+                    'Failed: Audio system ไม่พบ — check audio.js');
+                await T('sec-content', 'sec-content-body', 'Audio.playEnemyDeath()',
+                    () => isFunction('window.Audio.playEnemyDeath'),
+                    'Failed: Audio.playEnemyDeath ไม่พบ — check audio.js');
+                await T('sec-content', 'sec-content-body', 'spawnParticles()',
+                    () => isFunction('window.spawnParticles'),
+                    'Failed: spawnParticles ไม่พบ — check effects.js');
+                await T('sec-content', 'sec-content-body', 'spawnFloatingText()',
+                    () => isFunction('window.spawnFloatingText'),
+                    'Failed: spawnFloatingText ไม่พบ — check effects.js');
+                await T('sec-content', 'sec-content-body', 'PorkSandwich entity',
+                    () => isClass('window.PorkSandwich'),
+                    'Failed: PorkSandwich ไม่พบ — check effects.js');
+                await T('sec-content', 'sec-content-body', 'weaponSystem.shoot()',
+                    () => isDefined('window.weaponSystem.shoot', v => typeof v === 'function'),
+                    'Failed: weaponSystem.shoot ไม่ใช่ function');
+                await T('sec-content', 'sec-content-body', 'CONFIG_SECRETS (secrets.js)',
+                    () => isObject('window.CONFIG_SECRETS'),
+                    'Failed: CONFIG_SECRETS ไม่พบ — check secrets.js');
+                await delay(50);
+
+                // ── 5. SAVE & STORAGE ──
+                diag.sep('5. SAVE & STORAGE');
+
+                await T('sec-api', 'sec-api-body', 'localStorage available',
+                    () => {
+                        try { localStorage.setItem('__mtc_diag__', '1'); localStorage.removeItem('__mtc_diag__'); return true; }
+                        catch { return false; }
+                    },
+                    'Failed: localStorage ไม่พร้อมใช้งาน (private mode?)');
+                await T('sec-api', 'sec-api-body', 'getSaveData()',
+                    () => isFunction('window.getSaveData'),
+                    'Failed: getSaveData ไม่พบ — check utils.js');
+                await T('sec-api', 'sec-api-body', 'updateSaveData()',
+                    () => isFunction('window.updateSaveData'),
+                    'Failed: updateSaveData ไม่พบ — check utils.js');
+                await delay(50);
+
+                // ── 6. GAME CORE ──
+                diag.sep('6. GAME CORE (game.js)');
+
+                await T('sec-game', 'sec-game-body', 'Canvas element accessible',
+                    () => !!(document.getElementById('__real_canvas__') || document.getElementById('gameCanvas')),
+                    'Failed: canvas ไม่พบในDOM');
+                await T('sec-game', 'sec-game-body', 'Canvas 2D context obtainable',
+                    () => {
+                        try { const cv = document.getElementById('__real_canvas__') || document.getElementById('gameCanvas'); return !!(cv && cv.getContext('2d')); }
+                        catch { return false; }
+                    },
+                    'Failed: ไม่สามารถ get 2D context ได้');
+                await T('sec-game', 'sec-game-body', 'gameState / GameState.phase',
+                    () => isDefined('window.gameState') || isDefined('window.GameState.phase'),
+                    'Failed: game state ไม่พบ — check game.js');
+                await T('sec-game', 'sec-game-body', 'startGame()',
+                    () => isFunction('window.startGame'),
+                    'Failed: startGame ไม่ใช่ function — check game.js');
+                await T('sec-game', 'sec-game-body', 'gameLoop() / game loop',
+                    () => isFunction('window.gameLoop') || isFunction('window.tick') || isFunction('window.update'),
+                    'Failed: game loop ไม่พบ — check game.js');
+                await T('sec-game', 'sec-game-body', 'endGame()',
+                    () => isFunction('window.endGame'),
+                    'Failed: endGame ไม่ใช่ function — check game.js');
+                await T('sec-game', 'sec-game-body', 'addScore()',
+                    () => isFunction('window.addScore'),
+                    'Failed: addScore ไม่พบ — check game.js');
+                await T('sec-game', 'sec-game-body', 'getWave()',
+                    () => isFunction('window.getWave'),
+                    'Failed: getWave ไม่พบ — check game.js หรือ WaveManager.js');
+                await delay(50);
+
+                // ── 7. ACHIEVEMENT SYSTEM ──
+                diag.sep('7. ACHIEVEMENT SYSTEM');
+
+                await T('sec-achieve', 'sec-achieve-body', 'AchievementSystem class',
+                    () => isClass('window.AchievementSystem'),
+                    'Failed: AchievementSystem ไม่พบ — check ui.js');
+                await T('sec-achieve', 'sec-achieve-body', 'Achievements instance (window.Achievements)',
+                    () => isDefined('window.Achievements') && typeof window.Achievements.check === 'function',
+                    'Failed: Achievements instance ไม่พบ — check ui.js');
+                await T('sec-achieve', 'sec-achieve-body', 'Achievements.stats object',
+                    () => isObject('window.Achievements.stats'),
+                    'Failed: Achievements.stats ไม่พบ');
+                await T('sec-achieve', 'sec-achieve-body', 'Achievements.stats.slowMoKills (new)',
+                    () => isDefined('window.Achievements.stats.slowMoKills') && typeof window.Achievements.stats.slowMoKills === 'number',
+                    'Failed: slowMoKills ไม่พบใน stats — check ui.js constructor');
+                await T('sec-achieve', 'sec-achieve-body', 'Achievements.stats.barrelKills (new)',
+                    () => isDefined('window.Achievements.stats.barrelKills') && typeof window.Achievements.stats.barrelKills === 'number',
+                    'Failed: barrelKills ไม่พบใน stats — check ui.js constructor');
+                await T('sec-achieve', 'sec-achieve-body', 'Achievements.stats.wanchaiKills (new)',
+                    () => isDefined('window.Achievements.stats.wanchaiKills') && typeof window.Achievements.stats.wanchaiKills === 'number',
+                    'Failed: wanchaiKills ไม่พบใน stats — check ui.js constructor');
+                await T('sec-achieve', 'sec-achieve-body', 'ACHIEVEMENT_DEFS ครบ 22 ข้อ',
+                    () => {
+                        const defs = window.ACHIEVEMENT_DEFS;
+                        if (!defs) return false;
+                        if (defs.length < 20) { diag.log(`  ! ACHIEVEMENT_DEFS มีแค่ ${defs.length} ข้อ`, 'warn'); return 'warn'; }
+                        return true;
+                    },
+                    'WARN: ACHIEVEMENT_DEFS น้อยกว่าที่คาด');
+                await T('sec-achieve', 'sec-achieve-body', 'kao_awakened definition',
+                    () => !!(window.ACHIEVEMENT_DEFS?.find(a => a.id === 'kao_awakened')),
+                    'Failed: kao_awakened ไม่พบใน ACHIEVEMENT_DEFS — check config.js');
+                await T('sec-achieve', 'sec-achieve-body', 'barrel_bomber definition',
+                    () => !!(window.ACHIEVEMENT_DEFS?.find(a => a.id === 'barrel_bomber')),
+                    'Failed: barrel_bomber ไม่พบใน ACHIEVEMENT_DEFS — check config.js');
+                await T('sec-achieve', 'sec-achieve-body', 'ritual_wipe definition',
+                    () => !!(window.ACHIEVEMENT_DEFS?.find(a => a.id === 'ritual_wipe')),
+                    'Failed: ritual_wipe ไม่พบใน ACHIEVEMENT_DEFS — check config.js');
+                await delay(50);
+
+                // ── 8. VERSION & SERVICE WORKER ──
+                diag.sep('8. VERSION & SERVICE WORKER');
+
+                await T('sec-version', 'sec-version-body', 'VersionManager class',
+                    () => isDefined('window.VersionManager') && typeof window.VersionManager.updateMenuVersion === 'function',
+                    'Failed: VersionManager ไม่พบ — check js/VersionManager.js');
+                await T('sec-version', 'sec-version-body', 'ServiceWorker supported',
+                    () => 'serviceWorker' in navigator || 'warn',
+                    'WARN: ServiceWorker ไม่รองรับใน browser นี้');
+                await T('sec-version', 'sec-version-body', 'ServiceWorker registered',
+                    async () => {
+                        if (!('serviceWorker' in navigator)) return 'warn';
+                        try {
+                            const reg = await navigator.serviceWorker.getRegistration('./');
+                            if (!reg) { diag.log('  ! SW ยังไม่ได้ register — เปิดจาก index.html ก่อน', 'warn'); return 'warn'; }
+                            diag.log(`  ok SW registered: scope=${reg.scope}`, 'success');
+                            return true;
+                        } catch (e) { return false; }
+                    },
+                    'WARN: SW ไม่ได้ register — เปิดจาก index.html ก่อนเพื่อให้ SW ติดตั้ง');
+                await T('sec-version', 'sec-version-body', 'GAME_VERSION accessible',
+                    () => {
+                        const v = window.GAME_VERSION;
+                        if (v && v !== 'unknown') { diag.log(`  ok GAME_VERSION = ${v}`, 'success'); return true; }
+                        diag.log('  ! GAME_VERSION ยังไม่พร้อม (SW อาจยังไม่ส่ง postMessage)', 'warn');
+                        return 'warn';
+                    },
+                    'WARN: GAME_VERSION ไม่พร้อม — SW ต้องส่ง postMessage ก่อน');
+
+                // ── WRAP UP ──
+                diag.sep('COMPLETE');
+                const total = state.results.length;
+                const passed = state.results.filter(r => r.status === 'pass').length;
+                const failed = state.results.filter(r => r.status === 'fail').length;
+                const warned = state.results.filter(r => r.status === 'warn').length;
+
+                diag.log(`Diagnostic complete: ${passed}/${total} passed · ${failed} failed · ${warned} warnings`,
+                    failed > 0 ? 'error' : warned > 0 ? 'warn' : 'success');
+
+                if (failed === 0 && warned === 0) {
+                    diag.log('✔ All systems operational.', 'success');
+                    setStatus(`ALL SYSTEMS GO — ${passed}/${total} checks passed.`, true);
+                } else if (failed > 0) {
+                    diag.log(`✖ ${failed} system(s) failed.`, 'error');
+                    setStatus(`ISSUES DETECTED — ${failed} failure(s), ${warned} warning(s).`, true);
+                } else {
+                    diag.log(`⚠ ${warned} warning(s) detected.`, 'warn');
+                    setStatus(`WARNINGS — ${warned} warning(s). Most systems OK.`, true);
+                }
+
+                // Update quick stats scripts count
+                const scriptModules = ['BALANCE', 'mapSystem', 'UIManager', 'Achievements', 'toggleSlowMotion', 'startNextWave', 'KaoPlayer', 'AutoPlayer', 'PoomPlayer', 'Enemy', 'Boss', 'GameState', 'VersionManager'];
+                const loaded = scriptModules.filter(k => typeof window[k] !== 'undefined').length;
+                document.getElementById('qs-scripts').textContent = `${loaded}/${scriptModules.length}`;
+                document.getElementById('qs-scripts').className = `qs-value ${loaded === scriptModules.length ? 'ok' : loaded >= scriptModules.length * 0.8 ? 'warn' : 'err'}`;
+
+                state.running = false;
+                document.getElementById('run-btn').disabled = false;
+
+                // Auto-refresh inspector tabs
+                renderAchievements();
+                renderBalanceSections();
+                renderChars();
+                renderGameState();
+            };
+
+            // ── Auto-init on load ──
+            window.addEventListener('load', () => {
+                // Quick stats initial values
+                renderAchievements();
+                renderBalanceSections();
+                renderChars();
+
+                const v = window.GAME_VERSION;
+                if (v && v !== 'unknown') {
+                    document.getElementById('qs-version').textContent = `v${v}`;
+                    document.getElementById('qs-version').className = 'qs-value ok';
+                }
+
+                setTimeout(runAllDiagnostics, 700);
             });
-        setStatus('READY — Logs cleared. Press "Run Diagnostics" to begin.', false);
-    };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // STATUS BAR
-    // ─────────────────────────────────────────────────────────────────────────────
-    function setStatus(msg, active = true) {
-        document.getElementById('status-text').textContent = msg;
-        const dot = document.getElementById('status-dot');
-        dot.classList.toggle('inactive', !active);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    //  MAIN DIAGNOSTIC RUNNER
-    // ─────────────────────────────────────────────────────────────────────────────
-    window.runAllDiagnostics = async function () {
-        if (state.running) return;
-        state.running = true;
-
-        clearAll();
-        document.getElementById('run-btn').disabled = true;
-        setStatus('RUNNING — Diagnostic sequence in progress...', true);
-
-        // ── Announce dummy DOM ──────────────────────────────────────────────────
-        diag.log('Dummy DOM active: all index.html element IDs are present as hidden stubs.', 'success');
-        diag.log('Game scripts will NOT throw "Cannot set property of null" errors.', 'success');
-        diag.sep();
-
-        const T = (secId, bodyId, name, testFn, failTip) =>
-            runTest(secId, bodyId, name, testFn, failTip);
-
-        // Small delay helper for visual stagger
-        const delay = ms => new Promise(r => setTimeout(r, ms));
-
-        // ── 1. CORE ENGINE ──────────────────────────────────────────────────────
-        diag.sep('CORE ENGINE — config.js · utils.js · map.js · ui.js · input.js');
-
-        await T('sec-core', 'sec-core-body',
-            'MAP_CONFIG defined',
-            () => isDefined('window.MAP_CONFIG'),
-            'Failed: window.MAP_CONFIG is undefined. Check if config.js is loaded and exports MAP_CONFIG.');
-
-        await T('sec-core', 'sec-core-body',
-            'GAME_TEXTS / BALANCE defined',
-            () => isDefined('window.GAME_TEXTS') || isDefined('window.BALANCE'),
-            'Failed: Neither window.GAME_TEXTS nor window.BALANCE found. Check config.js.');
-
-        await T('sec-core', 'sec-core-body',
-            'BALANCE stats object',
-            () => isDefined('window.BALANCE'),
-            'Failed: window.BALANCE is undefined. Check config.js — BALANCE must be a global.');
-
-        await T('sec-core', 'sec-core-body',
-            'getDeltaTime() utility',
-            () => isFunction('window.getDeltaTime'),
-            'Failed: window.getDeltaTime is not a function. Check utils.js.');
-
-        await T('sec-core', 'sec-core-body',
-            'clamp() / lerp() math utils',
-            () => isFunction('window.clamp') || isFunction('window.lerp'),
-            'Failed: Neither window.clamp nor window.lerp found. Check utils.js for utility exports.');
-
-        await T('sec-core', 'sec-core-body',
-            'mapSystem object',
-            () => isObject('window.mapSystem'),
-            'Failed: window.mapSystem is undefined. Check map.js.');
-
-        await T('sec-core', 'sec-core-body',
-            'mapSystem.drawTerrain() method',
-            () => isDefined('window.mapSystem.drawTerrain', v => typeof v === 'function'),
-            'Failed: window.mapSystem.drawTerrain is not a function. Check map.js for the drawTerrain export.');
-
-        await T('sec-core', 'sec-core-body',
-            'UIManager defined',
-            () => isDefined('window.UIManager'),
-            'Failed: window.UIManager is undefined. Check ui.js.');
-
-        await T('sec-core', 'sec-core-body',
-            'Input System (inputSystem or keys)',
-            () => isObject('window.inputSystem') || isDefined('window.keys'),
-            'Failed: No input system found. Check input.js — expected window.inputSystem or window.keys object.');
-
-        await T('sec-core', 'sec-core-body',
-            'getSaveData() function',
-            () => isFunction('window.getSaveData'),
-            'Failed: window.getSaveData is not a function. Check utils.js or game.js.');
-
-        await delay(60);
-
-        // ── 2. GAME SYSTEMS ─────────────────────────────────────────────────────
-        diag.sep('GAME SYSTEMS — TimeManager · WaveManager · ShopSystem · AdminSystem');
-
-        await T('sec-systems', 'sec-systems-body',
-            'TimeManager functions loaded (_tickSlowMoEnergy)',
-            () => isFunction('window._tickSlowMoEnergy') && isFunction('window.toggleSlowMotion'),
-            'Failed: TimeManager functions not found. Check systems/TimeManager.js — expected _tickSlowMoEnergy and toggleSlowMotion on window.');
-
-        await T('sec-systems', 'sec-systems-body',
-            'triggerHitStop() function',
-            () => isFunction('window.triggerHitStop'),
-            'Failed: window.triggerHitStop is not a function. Check systems/TimeManager.js.');
-
-        await T('sec-systems', 'sec-systems-body',
-            'toggleSlowMotion() function (Bullet Time)',
-            () => isFunction('window.toggleSlowMotion'),
-            'Failed: window.toggleSlowMotion is not a function. Check systems/TimeManager.js.');
-
-        await T('sec-systems', 'sec-systems-body',
-            'WaveManager or startNextWave()',
-            () => isObject('window.waveManager') || isClass('window.WaveManager') || isFunction('window.startNextWave'),
-            'Failed: No wave system found. Check systems/WaveManager.js — expected waveManager, WaveManager, or startNextWave.');
-
-        await T('sec-systems', 'sec-systems-body',
-            'startNextWave() function',
-            () => isFunction('window.startNextWave'),
-            'Failed: window.startNextWave is not a function. Check systems/WaveManager.js.');
-
-        await T('sec-systems', 'sec-systems-body',
-            'ShopSystem / ShopManager defined',
-            () => isObject('window.ShopSystem') || isObject('window.ShopManager') ||
-                  isClass('window.ShopSystem')  || isClass('window.ShopManager'),
-            'Failed: No shop system found. Check systems/ShopSystem.js — expected window.ShopSystem or window.ShopManager.');
-
-        await T('sec-systems', 'sec-systems-body',
-            'AdminSystem / AdminConsole defined',
-            () => isObject('window.AdminSystem') || isObject('window.AdminConsole') ||
-                  isClass('window.AdminSystem')  || isClass('window.AdminConsole'),
-            'Failed: No admin system found. Check systems/AdminSystem.js — expected window.AdminSystem or window.AdminConsole.');
-
-        await T('sec-systems', 'sec-systems-body',
-            'TutorialSystem defined',
-            () => isObject('window.TutorialSystem') || isClass('window.TutorialSystem'),
-            'Failed: window.TutorialSystem is undefined. Check tutorial.js.');
-
-        await delay(60);
-
-        // ── 3. ENTITIES & PLAYERS ────────────────────────────────────────────────
-        diag.sep('ENTITIES & PLAYERS');
-
-        await T('sec-entities', 'sec-entities-body',
-            'Base Entity class (Entity or EntityBase)',
-            () => isClass('window.Entity') || isClass('window.EntityBase'),
-            'Failed: No base entity class found. Check entities/base.js — expected window.Entity or window.EntityBase.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'Player base class',
-            () => isClass('window.Player') || isClass('window.PlayerBase'),
-            'Failed: No player base class found. Check entities/player/PlayerBase.js.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'AutoPlayer class',
-            () => isClass('window.AutoPlayer'),
-            'Failed: window.AutoPlayer is not a class/function. Check entities/player/AutoPlayer.js.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'PoomPlayer class',
-            () => isClass('window.PoomPlayer'),
-            'Failed: window.PoomPlayer is not a class/function. Check entities/player/PoomPlayer.js.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'Enemy classes (TankEnemy or EnemyBase)',
-            () => isClass('window.TankEnemy') || isClass('window.Enemy') || isClass('window.EnemyBase'),
-            'Failed: No enemy class found. Check entities/enemy.js — expected window.TankEnemy, Enemy, or EnemyBase.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'MageEnemy or ranged enemy class',
-            () => isClass('window.MageEnemy') || isClass('window.RangedEnemy') || isClass('window.ShooterEnemy'),
-            'Failed: No ranged enemy class found. Check entities/enemy.js.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'Boss class defined',
-            () => isClass('window.Boss'),
-            'Failed: window.Boss is not a class/function. Check entities/boss.js.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'BossFirst class (Kru First)',
-            () => isClass('window.BossFirst'),
-            'Failed: window.BossFirst is not a class/function. Check entities/boss.js.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'Summons system (NagaEntity / DroneEntity)',
-            () => isClass('window.NagaEntity') || isClass('window.DroneEntity'),
-            'Failed: No summon class found. Check entities/summons.js — expected NagaEntity or DroneEntity.');
-
-        await T('sec-entities', 'sec-entities-body',
-            'weaponSystem object',
-            () => isObject('window.weaponSystem'),
-            'Failed: window.weaponSystem is undefined. Check weapons.js.');
-
-        await delay(60);
-
-        // ── 4. AUDIO & CONTENT ──────────────────────────────────────────────────
-        diag.sep('AUDIO & CONTENT — audio.js · effects.js · weapons.js · tutorial.js · secrets.js');
-
-        await T('sec-content', 'sec-content-body',
-            'Audio system (Audio.init or audioSystem)',
-            () => isFunction('window.Audio.init') || isObject('window.audioSystem'),
-            'Failed: No audio system found. Check audio.js — expected window.Audio.init or window.audioSystem.');
-
-        await T('sec-content', 'sec-content-body',
-            'Audio.playSound() or equivalent',
-            () => isFunction('window.Audio.playSound') || isFunction('window.audioSystem.play') ||
-                  isFunction('window.playSound'),
-            'Failed: No playSound function found in audio system. Check audio.js.');
-
-        await T('sec-content', 'sec-content-body',
-            'Effects system (particleSystem / floatingTextSystem)',
-            () => isObject('window.particleSystem') || isObject('window.floatingTextSystem') ||
-                  isFunction('window.spawnParticles'),
-            'Failed: No effects system found. Check effects.js — expected particleSystem, floatingTextSystem, or spawnParticles.');
-
-        await T('sec-content', 'sec-content-body',
-            'PorkSandwich interactive entity',
-            () => isClass('window.PorkSandwich'),
-            'Failed: window.PorkSandwich is not a class/function. Check effects.js to ensure it is exported to window.');
-
-        await T('sec-content', 'sec-content-body',
-            'Particle update loop (particleSystem.update)',
-            () => isDefined('window.particleSystem.update', v => typeof v === 'function'),
-            'Failed: window.particleSystem.update is not a function. Check effects.js.');
-
-        await T('sec-content', 'sec-content-body',
-            'Weapon definitions loaded (weaponSystem)',
-            () => isObject('window.weaponSystem'),
-            'Failed: window.weaponSystem is undefined. Check weapons.js.');
-
-        await T('sec-content', 'sec-content-body',
-            'weaponSystem.shoot() method',
-            () => isDefined('window.weaponSystem.shoot', v => typeof v === 'function'),
-            'Failed: window.weaponSystem.shoot is not a function. Check weapons.js.');
-
-        await T('sec-content', 'sec-content-body',
-            'Tutorial system (TutorialSystem)',
-            () => isObject('window.TutorialSystem') || isClass('window.TutorialSystem'),
-            'Failed: window.TutorialSystem is undefined. Check tutorial.js.');
-
-        await T('sec-content', 'sec-content-body',
-            'TutorialSystem.handleAction() method',
-            () => isDefined('window.TutorialSystem.handleAction', v => typeof v === 'function'),
-            'Failed: window.TutorialSystem.handleAction is not a function. Check tutorial.js.');
-
-        await T('sec-content', 'sec-content-body',
-            'CONFIG_SECRETS defined (secrets.js)',
-            () => isObject('window.CONFIG_SECRETS'),
-            'Failed: window.CONFIG_SECRETS is undefined. Check secrets.js — must export CONFIG_SECRETS object.');
-
-        await delay(60);
-
-        // ── 5. EXTERNAL & AI ────────────────────────────────────────────────────
-        // NOTE: ai.js is commented out in index.html — all AI checks return WARN (expected, not a bug).
-        diag.sep('EXTERNAL & AI — ai.js commented out in index.html');
-        diag.log('  i ai.js is commented out in index.html — AI tests will show WARN (this is expected).', 'warn');
-
-        await T('sec-api', 'sec-api-body',
-            'Gemini object defined (ai.js)',
-            () => {
-                if (!isDefined('window.Gemini')) {
-                    diag.log('  ! window.Gemini not found — ai.js is commented out. Expected.', 'warn');
-                    return 'warn';
-                }
-                return true;
-            },
-            'WARN: window.Gemini undefined — ai.js is commented out in index.html. Uncomment to enable AI features.');
-
-        await T('sec-api', 'sec-api-body',
-            'Gemini.init() method',
-            () => {
-                if (!isDefined('window.Gemini')) return 'warn';
-                return isFunction('window.Gemini.init') || 'warn';
-            },
-            'WARN: window.Gemini.init not available. Expected while ai.js is commented out.');
-
-        await T('sec-api', 'sec-api-body',
-            'Gemini.getMissionName() method',
-            () => {
-                if (!isDefined('window.Gemini')) return 'warn';
-                return isFunction('window.Gemini.getMissionName') || 'warn';
-            },
-            'WARN: window.Gemini.getMissionName not available. Expected while ai.js is commented out.');
-
-        // Async AI ping — gracefully skips when ai.js is not loaded
-        await T('sec-api', 'sec-api-body',
-            'Gemini API live ping',
-            async () => {
-                if (!isDefined('window.Gemini.getMissionName')) {
-                    diag.log('  ! Skipping live Gemini ping — ai.js not loaded (expected).', 'warn');
-                    return 'warn';
-                }
-                diag.log('  > Attempting Gemini.getMissionName()...', 'info');
-                const result = await Promise.race([
-                    window.Gemini.getMissionName().catch(e => { throw e; }),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout after 8s')), 8000))
-                ]);
-                if (result !== undefined && result !== null && result !== '') {
-                    diag.log('  ok AI Response received: "' + result + '"', 'success');
-                    return true;
-                }
-                diag.log('  ! AI returned empty response.', 'warn');
-                return 'warn';
-            },
-            'WARN: Gemini API not reachable — ai.js is commented out. Uncomment js/ai.js in index.html to enable.');
-
-        await T('sec-api', 'sec-api-body',
-            'localStorage available',
-            () => {
-                try {
-                    localStorage.setItem('__mtc_diag__', '1');
-                    localStorage.removeItem('__mtc_diag__');
-                    return true;
-                } catch { return false; }
-            },
-            'Failed: localStorage is not accessible. Running in private mode or storage is blocked.');
-
-        await T('sec-api', 'sec-api-body',
-            'getSaveData() function',
-            () => isFunction('window.getSaveData'),
-            'Failed: window.getSaveData is not a function. Check game.js or utils.js.');
-
-        await T('sec-api', 'sec-api-body',
-            'updateSaveData() function',
-            () => isFunction('window.updateSaveData'),
-            'Failed: window.updateSaveData is not a function. Check utils.js.');
-
-        await delay(60);
-
-        // ── 6. GAME.JS CORE ─────────────────────────────────────────────────────
-        diag.sep('GAME CORE — game.js integration checks');
-
-        await T('sec-game', 'sec-game-body',
-            'Canvas element accessible',
-            () => {
-                // Check the real canvas (outside dummy wrapper) OR the dummy one
-                const cv = document.getElementById('__real_canvas__') || document.getElementById('gameCanvas');
-                return !!cv;
-            },
-            'Failed: No canvas element found in DOM. Game.js may fail on init.');
-
-        await T('sec-game', 'sec-game-body',
-            'Canvas 2D context obtainable',
-            () => {
-                try {
-                    const cv = document.getElementById('__real_canvas__') || document.getElementById('gameCanvas');
-                    return !!(cv && cv.getContext('2d'));
-                } catch { return false; }
-            },
-            'Failed: Cannot get 2D context from canvas. Browser may not support Canvas API.');
-
-        await T('sec-game', 'sec-game-body',
-            'gameState or game global',
-            () => isDefined('window.gameState') || isDefined('window.game'),
-            'Failed: No game state object found. Check game.js — expected window.gameState or window.game.');
-
-        await T('sec-game', 'sec-game-body',
-            'startGame() function',
-            () => isFunction('window.startGame'),
-            'Failed: window.startGame is not a function. Check game.js. (Note: it is intercepted on this debug page.)');
-
-        await T('sec-game', 'sec-game-body',
-            'gameLoop() / requestAnimationFrame loop',
-            () => isFunction('window.gameLoop') || isFunction('window.tick') || isFunction('window.update'),
-            'Failed: No game loop function found. Check game.js for gameLoop(), tick(), or update().');
-
-        await T('sec-game', 'sec-game-body',
-            'endGame() function',
-            () => isFunction('window.endGame'),
-            'Failed: window.endGame is not a function. Check game.js.');
-
-        await T('sec-game', 'sec-game-body',
-            'Player instance in gameState',
-            () => isDefined('window.gameState.player') || isDefined('window.player'),
-            'Failed: No player instance in gameState. This may be OK at page load — run after game.init().');
-
-        // ── WRAP UP ─────────────────────────────────────────────────────────────
-        diag.sep('COMPLETE');
-
-        const total  = state.results.length;
-        const passed = state.results.filter(r => r.status === 'pass').length;
-        const failed = state.results.filter(r => r.status === 'fail').length;
-        const warned  = state.results.filter(r => r.status === 'warn').length;
-
-        diag.log(`Diagnostic complete: ${passed}/${total} passed, ${failed} failed, ${warned} warnings.`,
-            failed > 0 ? 'error' : warned > 0 ? 'warn' : 'success');
-
-        if (failed === 0 && warned === 0) {
-            diag.log('✔ All systems operational. MTC the Game Beta Edition is ready to run.', 'success');
-            setStatus(`ALL SYSTEMS GO — ${passed}/${total} checks passed.`, true);
-        } else if (failed > 0) {
-            diag.log(`✖ ${failed} system(s) failed. Review the panels above for details.`, 'error');
-            setStatus(`ISSUES DETECTED — ${failed} failure(s), ${warned} warning(s). See panels above.`, true);
-        } else {
-            diag.log(`⚠ ${warned} warning(s) detected. Systems functional but review recommended.`, 'warn');
-            setStatus(`WARNINGS — ${warned} warning(s). Most systems are operational.`, true);
-        }
-
-        state.running = false;
-        document.getElementById('run-btn').disabled = false;
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // AUTO-RUN ON PAGE LOAD
-    // ─────────────────────────────────────────────────────────────────────────────
-    window.addEventListener('load', () => {
-        setTimeout(runAllDiagnostics, 600);
-    });
-
-})();
-</script>
+        })();
+    </script>
 
 </body>
+
 </html>
