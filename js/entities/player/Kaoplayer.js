@@ -239,6 +239,9 @@ class KaoPlayer extends Player {
 
         super.update(dt, keys, mouse);
 
+        // ── Tick graphBuffTimer ────────────────────────────────
+        if ((this.graphBuffTimer ?? 0) > 0) this.graphBuffTimer = Math.max(0, this.graphBuffTimer - dt);
+
         // FIX (SNIPER-CHARGE): shoot() is only called while mouse is held.
         // When player releases, we catch the release here (runs every frame).
         if (this.sniperChargeTime > 0 && window.mouse.left === 0) {
@@ -325,6 +328,8 @@ class KaoPlayer extends Player {
 
         let dmgMult = (this.damageMultiplier || 1.0) * (this.damageBoost || 1.0);
         if (this.isSecondWind) dmgMult *= (BALANCE.player.secondWindDamageMult || 1.5);
+        // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ─────
+        if ((this.graphBuffTimer ?? 0) > 0) dmgMult *= 1.5;
 
         const passiveCrit = this.passiveUnlocked ? (BALANCE.characters.kao.passiveCritBonus || 0) : 0;
         let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0);
@@ -419,6 +424,15 @@ class KaoPlayer extends Player {
         if (typeof this.triggerRecoil === 'function') this.triggerRecoil();
 
         spawnParticles(this.x + Math.cos(aimAngle) * barrelOffset, this.y + Math.sin(aimAngle) * barrelOffset, 3, color);
+    }
+
+    takeDamage(amt) {
+        // ── Graph Risk: ยืนบนเลเซอร์ → รับดาเมจ x1.5 ─────────
+        if (this.onGraph) {
+            amt *= 1.5;
+            spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16);
+        }
+        super.takeDamage(amt);
     }
 }
 window.KaoPlayer = KaoPlayer;

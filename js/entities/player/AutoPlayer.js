@@ -33,6 +33,11 @@ class AutoPlayer extends Player {
             if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
             return;
         }
+        // ── Graph Risk: ยืนบนเลเซอร์ → รับดาเมจ x1.5 ─────────
+        if (this.onGraph) {
+            amt *= 1.5;
+            spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16);
+        }
         const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.5) : 0;
         const scaled = amt * (1 - reduction);
         super.takeDamage(scaled);
@@ -49,6 +54,9 @@ class AutoPlayer extends Player {
 
         // Restore original crit for state safety
         this.baseCritChance = originalCrit;
+
+        // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ──────
+        if ((this.graphBuffTimer ?? 0) > 0) result.damage *= 1.5;
 
         return result;
     }
@@ -98,6 +106,9 @@ class AutoPlayer extends Player {
         if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * (this.stats?.standSpeedMod ?? 1.5);
 
         super.update(dt, keys, mouse);
+
+        // ── Tick graphBuffTimer ────────────────────────────────
+        if ((this.graphBuffTimer ?? 0) > 0) this.graphBuffTimer = Math.max(0, this.graphBuffTimer - dt);
 
         // Stateless restore
         this.speedBoost = oldSpeedBoost;

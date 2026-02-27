@@ -968,12 +968,31 @@ class DeadlyGraph {
         this.startY = startY;
         this.angle = Math.atan2(targetY - startY, targetX - startX);
         this.length = 0;
-        this.maxLength = BALANCE.boss.graphLength;
         this.speed = 600;
         this.damage = BALANCE.boss.graphDamage;
-        this.phase = 'expanding'; // expanding, blocking, active
+        this.phase = 'expanding'; // expanding → blocking → active
         this.timer = 0;
         this.hasHit = false;
+        this._waveOffset = 0; // animates sine wave along beam
+
+        // ── Dynamic max length: ray vs circular arena boundary ───
+        // Cast from (startX,startY) in direction `angle`, find where
+        // the ray exits the arena circle (radius 1500, centred at 0,0).
+        // Equation: |P + t·D|² = R²  →  quadratic in t, take positive root.
+        const R = (MAP_CONFIG?.arena?.radius ?? 1500);
+        const dx = Math.cos(this.angle);
+        const dy = Math.sin(this.angle);
+        const a = dx * dx + dy * dy;                // always 1
+        const b = 2 * (startX * dx + startY * dy);
+        const c = startX * startX + startY * startY - R * R;
+        const disc = b * b - 4 * a * c;
+        if (disc >= 0) {
+            const t1 = (-b - Math.sqrt(disc)) / (2 * a);
+            const t2 = (-b + Math.sqrt(disc)) / (2 * a);
+            this.maxLength = Math.max(t1, t2, 0);     // positive root = forward
+        } else {
+            this.maxLength = BALANCE.boss.graphLength; // fallback (boss outside arena?)
+        }
 
         this.blockingDuration = duration !== null ? duration / 2 : 5;
         this.activeDuration = duration !== null ? duration / 2 : 5;
@@ -981,56 +1000,59 @@ class DeadlyGraph {
 
     update(dt, player) {
         this.timer += dt;
+        this._waveOffset += dt;
 
         if (this.phase === 'expanding') {
             this.length += this.speed * dt;
 
-            // Check collision
-            const pd = this.pointToLineDistance(
+            const pd = this._pointToLineDistance(
                 player.x, player.y,
                 this.startX, this.startY,
                 this.startX + Math.cos(this.angle) * this.length,
                 this.startY + Math.sin(this.angle) * this.length
             );
-
             if (!this.hasHit && pd < 20) {
                 player.takeDamage(this.damage);
                 this.hasHit = true;
             }
-
             if (this.length >= this.maxLength) {
+                this.length = this.maxLength;
                 this.phase = 'blocking';
                 this.timer = 0;
             }
+
         } else if (this.phase === 'blocking') {
             if (this.timer >= this.blockingDuration) {
                 this.phase = 'active';
                 this.timer = 0;
 
-                // ── Destructible environment: line-AABB sweep ────────
-                // Fired at the exact moment the laser becomes fully active,
-                // using the true full-length endpoint derived from trigonometry.
-                // Destroys any MapObject the damage line passes through
-                // and shrinks the MTCRoom by 10% if it is intersected.
+                // ── Destruction FX when laser activates ──────────────
                 if (window.mapSystem && typeof window.mapSystem.damageArea === 'function') {
-                    const actualEndX = this.startX + Math.cos(this.angle) * this.maxLength;
-                    const actualEndY = this.startY + Math.sin(this.angle) * this.maxLength;
-                    window.mapSystem.damageArea(this.startX, this.startY, actualEndX, actualEndY);
+                    const ex = this.startX + Math.cos(this.angle) * this.maxLength;
+                    const ey = this.startY + Math.sin(this.angle) * this.maxLength;
+                    window.mapSystem.damageArea(this.startX, this.startY, ex, ey);
                 }
             }
+
         } else if (this.phase === 'active') {
-            // High ground mechanic
-            const pd = this.pointToLineDistance(
+            const endX = this.startX + Math.cos(this.angle) * this.length;
+            const endY = this.startY + Math.sin(this.angle) * this.length;
+            const pd = this._pointToLineDistance(
                 player.x, player.y,
-                this.startX, this.startY,
-                this.startX + Math.cos(this.angle) * this.length,
-                this.startY + Math.sin(this.angle) * this.length
+                this.startX, this.startY, endX, endY
             );
 
-            player.onGraph = (pd < 25);
+            const onBeam = pd < 25;
+            player.onGraph = onBeam;
+
+            // ── Universal Risk/Reward buff timer ──────────────────
+            if (onBeam) {
+                player.graphBuffTimer = 0.15; // refreshed every frame while standing on beam
+            }
 
             if (this.timer >= this.activeDuration) {
                 player.onGraph = false;
+                player.graphBuffTimer = 0;
                 return true; // Remove
             }
         }
@@ -1038,63 +1060,136 @@ class DeadlyGraph {
         return false;
     }
 
-    pointToLineDistance(px, py, x1, y1, x2, y2) {
-        const A = px - x1;
-        const B = py - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
-
-        const dot = A * C + B * D;
+    // ── Private helpers ───────────────────────────────────────
+    _pointToLineDistance(px, py, x1, y1, x2, y2) {
+        const A = px - x1, B = py - y1;
+        const C = x2 - x1, D = y2 - y1;
         const lenSq = C * C + D * D;
-
-        let param = -1;
-        if (lenSq !== 0) param = dot / lenSq;
-
+        let param = lenSq !== 0 ? (A * C + B * D) / lenSq : -1;
         let xx, yy;
-        if (param < 0) {
-            xx = x1; yy = y1;
-        } else if (param > 1) {
-            xx = x2; yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
-        }
-
+        if (param < 0) { xx = x1; yy = y1; }
+        else if (param > 1) { xx = x2; yy = y2; }
+        else { xx = x1 + param * C; yy = y1 + param * D; }
         return Math.hypot(px - xx, py - yy);
     }
 
+    // ── Draw ──────────────────────────────────────────────────
     draw() {
-        const startScreen = worldToScreen(this.startX, this.startY);
-        const endX = this.startX + Math.cos(this.angle) * this.length;
-        const endY = this.startY + Math.sin(this.angle) * this.length;
-        const endScreen = worldToScreen(endX, endY);
+        const ss = worldToScreen(this.startX, this.startY);
+        const ex = this.startX + Math.cos(this.angle) * this.length;
+        const ey = this.startY + Math.sin(this.angle) * this.length;
+        const es = worldToScreen(ex, ey);
+
+        // Beam vector in screen space
+        const bx = es.x - ss.x;
+        const by = es.y - ss.y;
+        const bLen = Math.hypot(bx, by);
+        if (bLen < 1) return;
+        // Unit perpendicular (for sine wave offset)
+        const px = -by / bLen;
+        const py = bx / bLen;
 
         CTX.save();
 
-        if (this.phase === 'expanding') {
-            CTX.strokeStyle = '#3b82f6';
-            CTX.lineWidth = 8;
-            CTX.shadowBlur = 20;
-            CTX.shadowColor = '#3b82f6';
-        } else if (this.phase === 'blocking') {
-            CTX.strokeStyle = 'rgba(59, 130, 246, 0.2)';
-            CTX.lineWidth = 4;
-            CTX.setLineDash([10, 10]);
-        } else {
-            CTX.strokeStyle = '#1d4ed8';
-            CTX.lineWidth = 12;
+        // ── Phase 2 (blocking): faint dashed standby ─────────
+        if (this.phase === 'blocking') {
+            CTX.strokeStyle = 'rgba(100, 160, 255, 0.22)';
+            CTX.lineWidth = 3;
+            CTX.setLineDash([12, 10]);
+            CTX.shadowBlur = 0;
+            CTX.beginPath();
+            CTX.moveTo(ss.x, ss.y);
+            CTX.lineTo(es.x, es.y);
+            CTX.stroke();
+            CTX.restore();
+            return;
         }
 
+        const isActive = this.phase === 'active';
+        const now = this._waveOffset;
+
+        // ── Color scheme: phase 1 = cyan/blue, phase 3 = red/orange ──
+        const coreColor = isActive ? '#ff4500' : '#00e5ff';
+        const glowColor = isActive ? '#ff6b00' : '#3b82f6';
+        const waveColor = isActive ? 'rgba(255,100,0,0.65)' : 'rgba(0,200,255,0.55)';
+        const coreWidth = isActive ? 10 : 6;
+        const glowWidth = isActive ? 22 : 16;
+        const waveAmp = isActive ? 14 : 7;           // wider = more danger
+        const waveFreq = isActive ? 0.055 : 0.040;   // waves per pixel
+        const waveSpeed = isActive ? 5.5 : 2.5;       // scroll speed
+
+        // ── 1. Outer glow ─────────────────────────────────────
+        CTX.strokeStyle = glowColor;
+        CTX.lineWidth = glowWidth;
+        CTX.globalAlpha = 0.18;
+        CTX.shadowBlur = isActive ? 40 : 28;
+        CTX.shadowColor = glowColor;
         CTX.beginPath();
-        CTX.moveTo(startScreen.x, startScreen.y);
-        CTX.lineTo(endScreen.x, endScreen.y);
+        CTX.moveTo(ss.x, ss.y);
+        CTX.lineTo(es.x, es.y);
+        CTX.stroke();
+        CTX.globalAlpha = 1;
+
+        // ── 2. Core beam ──────────────────────────────────────
+        CTX.strokeStyle = coreColor;
+        CTX.lineWidth = coreWidth;
+        CTX.shadowBlur = isActive ? 30 : 20;
+        CTX.shadowColor = coreColor;
+        CTX.beginPath();
+        CTX.moveTo(ss.x, ss.y);
+        CTX.lineTo(es.x, es.y);
         CTX.stroke();
 
-        if (this.phase === 'expanding' || this.phase === 'active') {
-            CTX.fillStyle = '#fff';
-            CTX.font = 'bold 24px monospace';
-            CTX.textAlign = 'center';
-            CTX.fillText('y = x', endScreen.x, endScreen.y - 20);
+        // ── 3. Grid tick marks (math graph axis feel) ─────────
+        CTX.shadowBlur = 0;
+        CTX.strokeStyle = isActive ? 'rgba(255,140,0,0.45)' : 'rgba(0,229,255,0.40)';
+        CTX.lineWidth = 1.2;
+        const tickSpacing = 60;
+        const tickLen = isActive ? 10 : 7;
+        const steps = Math.floor(bLen / tickSpacing);
+        for (let i = 1; i <= steps; i++) {
+            const t = (i * tickSpacing) / bLen;
+            const tx = ss.x + bx * t;
+            const ty = ss.y + by * t;
+            CTX.beginPath();
+            CTX.moveTo(tx + px * tickLen, ty + py * tickLen);
+            CTX.lineTo(tx - px * tickLen, ty - py * tickLen);
+            CTX.stroke();
+        }
+
+        // ── 4. Sine wave decoration ───────────────────────────
+        CTX.strokeStyle = waveColor;
+        CTX.lineWidth = isActive ? 2.5 : 1.8;
+        CTX.shadowBlur = isActive ? 12 : 6;
+        CTX.shadowColor = waveColor;
+        CTX.beginPath();
+        const WAVE_STEPS = Math.ceil(bLen / 3);
+        for (let i = 0; i <= WAVE_STEPS; i++) {
+            const t = i / WAVE_STEPS;
+            const bpx = ss.x + bx * t;
+            const bpy = ss.y + by * t;
+            const dist = t * bLen;
+            const amp = Math.sin(dist * waveFreq * Math.PI * 2 - now * waveSpeed) * waveAmp;
+            const wpx = bpx + px * amp;
+            const wpy = bpy + py * amp;
+            if (i === 0) CTX.moveTo(wpx, wpy); else CTX.lineTo(wpx, wpy);
+        }
+        CTX.stroke();
+
+        // ── 5. Label & endpoint indicator ─────────────────────
+        CTX.shadowBlur = 0;
+        CTX.font = isActive ? 'bold 18px "Orbitron",monospace' : 'bold 15px "Orbitron",monospace';
+        CTX.textAlign = 'center';
+        CTX.fillStyle = isActive ? '#ff6b00' : '#00e5ff';
+        const labelX = es.x + px * (isActive ? 28 : 22);
+        const labelY = es.y + py * (isActive ? 28 : 22);
+        CTX.fillText(isActive ? 'f(x) !!!' : 'y = x', labelX, labelY);
+
+        // Phase 3: "OVERCLOCK" warning + buff indicator
+        if (isActive) {
+            CTX.font = 'bold 11px monospace';
+            CTX.fillStyle = 'rgba(255,180,0,0.85)';
+            CTX.fillText('⚡ RISK/REWARD ZONE ⚡', (ss.x + es.x) / 2, (ss.y + es.y) / 2 + py * 30);
         }
 
         CTX.restore();

@@ -173,7 +173,7 @@ class PoomPlayer extends Entity {
         if (this.cooldowns.naga > 0) this.cooldowns.naga -= dt;
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
         if (this.cooldowns.ritual > 0) this.cooldowns.ritual -= dt; // ── Phase 3 Session 2 ──
-
+        if ((this.graphBuffTimer ?? 0) > 0) this.graphBuffTimer = Math.max(0, this.graphBuffTimer - dt);
         // ── Session C: updateStickyStacks removed - enemies manage their own status expiration ──
 
         // ── Update Naga Rite State ─────────────────────────────
@@ -450,6 +450,8 @@ class PoomPlayer extends Entity {
         if (this.isSecondWind) {
             damage *= (BALANCE.player.secondWindDamageMult || 1.5);
         }
+        // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ─────
+        if ((this.graphBuffTimer ?? 0) > 0) damage *= 1.5;
         // ── Passive Lifesteal ──
         if (this.passiveUnlocked) {
             const healAmount = damage * S.passiveLifesteal;
