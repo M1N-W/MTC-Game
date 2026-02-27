@@ -2093,8 +2093,12 @@
                 await T('sec-version', 'sec-version-body', 'ServiceWorker supported',
                     () => 'serviceWorker' in navigator || 'warn',
                     'WARN: ServiceWorker ไม่รองรับใน browser นี้');
+                // file:// protocol → SW ไม่ทำงานตามธรรมชาติ ถือว่า N/A = pass
+                const _fileProto = location.protocol === 'file:';
+
                 await T('sec-version', 'sec-version-body', 'ServiceWorker registered',
                     async () => {
+                        if (_fileProto) { diag.log('  - SW check ข้าม: เปิดจาก file:// (N/A — ปกติ)', 'system'); return true; }
                         if (!('serviceWorker' in navigator)) return 'warn';
                         try {
                             const reg = await navigator.serviceWorker.getRegistration('./');
@@ -2104,8 +2108,10 @@
                         } catch (e) { return false; }
                     },
                     'WARN: SW ไม่ได้ register — เปิดจาก index.html ก่อนเพื่อให้ SW ติดตั้ง');
+
                 await T('sec-version', 'sec-version-body', 'GAME_VERSION accessible',
                     () => {
+                        if (_fileProto) { diag.log('  - GAME_VERSION check ข้าม: เปิดจาก file:// (N/A — ปกติ)', 'system'); return true; }
                         const v = window.GAME_VERSION;
                         if (v && v !== 'unknown') { diag.log(`  ok GAME_VERSION = ${v}`, 'success'); return true; }
                         diag.log('  ! GAME_VERSION ยังไม่พร้อม (SW อาจยังไม่ส่ง postMessage)', 'warn');
