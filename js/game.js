@@ -245,10 +245,8 @@ function updateGame(dt) {
 
         // Route shooting: Kao and Poom use their own shoot(); Auto uses WeaponSystem
         const isPoom = typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer;
-        console.log('[Game] isPoom:', isPoom, 'isKao:', isKao, 'player type:', window.player?.constructor?.name);
         if (isKao || isPoom) {
             if (mouse.left === 1 && GameState.phase === 'PLAYING') {
-                console.log('[Game] Calling player.shoot() for', window.player?.constructor?.name);
                 window.player.shoot(dt);
             }
         } else if (mouse.left === 1 && GameState.phase === 'PLAYING') {

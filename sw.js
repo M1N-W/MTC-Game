@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.5.5'; // v3.5.5 Fix: Corrected all swap-and-pop loops in effects.js (ParticleSystem, HitMarkerSystem, WeatherSystem, OrbitalParticleSystem)
+const CACHE_NAME = 'mtc-cache-v3.5.6'; // v3.5.6 Cleanup: Removed debug console.log statements from game.js
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
