@@ -734,28 +734,68 @@ class UIManager {
             // ── Kao — Teleport (Q) + Clone of Stealth (E) ─────────────────────────
         } else if (player.charId === 'kao') {
             const S = BALANCE.characters.kao;
+            const passive = player.passiveUnlocked;
+
+            // ── Helper: แสดง/ซ่อน lock overlay บน skill icon ─────────────────
+            const setLockOverlay = (icon, locked) => {
+                if (!icon) return;
+                let lock = icon.querySelector('.skill-lock');
+                if (locked) {
+                    if (!lock) {
+                        lock = document.createElement('div');
+                        lock.className = 'skill-lock';
+                        lock.style.cssText =
+                            'position:absolute;inset:0;display:flex;align-items:center;' +
+                            'justify-content:center;font-size:20px;background:rgba(0,0,0,0.65);' +
+                            'border-radius:8px;z-index:10;pointer-events:none;';
+                        lock.textContent = '\uD83D\uDD12';
+                        icon.appendChild(lock);
+                    }
+                } else if (lock) {
+                    lock.remove();
+                }
+            };
 
             // ── Skill 1 (R-Click) — Stealth: handled by PlayerBase.updateUI() ──
-            // PlayerBase.updateUI() already drives stealth-icon / stealth-cd every
-            // frame via the base class tick, so we don't duplicate it here.
 
             // ── Skill 2 (Q) — Teleport ────────────────────────────────────────
-            // timer counts UP to teleportCooldown; a charge means it's ready.
             const teleportIcon = document.getElementById('teleport-icon');
-            const teleportCd = document.getElementById('teleport-cd');
-            if (teleportIcon) {
+            const teleportCd   = document.getElementById('teleport-cd');
+            setLockOverlay(teleportIcon, !passive);
+
+            if (teleportIcon && passive) {
+                const charges    = player.teleportCharges || 0;
                 const maxCharges = player.maxTeleportCharges || 3;
-                const isReady = player.teleportCharges > 0;
-                const isFull = player.teleportCharges >= maxCharges;
+                const isReady    = charges > 0;
+                const isFull     = charges >= maxCharges;
                 teleportIcon.classList.toggle('active', isReady);
+
+                // Mask: แสดง progress ของ timer ที่ใกล้ครบสุด
                 if (teleportCd) {
-                    // mask แสดง progress ของชาร์จ "รอบถัดไป" — ถ้าเต็มแล้วให้ clear
-                    const progress = player.teleportCooldown > 0
-                        ? Math.min(1, player.teleportTimer / player.teleportCooldown)
-                        : 1;
-                    teleportCd.style.height = isFull ? '0%' : `${(1 - progress) * 100}%`;
+                    let maskPct = 0;
+                    if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
+                        const best = player.teleportTimers.reduce(
+                            (b, t) => t.elapsed > b.elapsed ? t : b,
+                            player.teleportTimers[0]
+                        );
+                        maskPct = (1 - Math.min(1, best.elapsed / best.max)) * 100;
+                    }
+                    teleportCd.style.height = isFull ? '0%' : `${maskPct}%`;
                 }
-                // ── ตัวเลขแสดงจำนวนชาร์จที่มุมล่างขวา ──
+
+                // Arc+number เฉพาะตอน charges = 0 (ใช้ไม่ได้)
+                if (charges === 0 && player.teleportTimers && player.teleportTimers.length > 0) {
+                    const best = player.teleportTimers.reduce(
+                        (b, t) => t.elapsed > b.elapsed ? t : b,
+                        player.teleportTimers[0]
+                    );
+                    UIManager._setCooldownVisual('teleport-icon',
+                        Math.max(0, best.max - best.elapsed), best.max);
+                } else {
+                    UIManager._setCooldownVisual('teleport-icon', 0, 1);
+                }
+
+                // Badge จำนวน charge
                 let chargeLabel = teleportIcon.querySelector('.charge-label');
                 if (!chargeLabel) {
                     chargeLabel = document.createElement('span');
@@ -765,29 +805,29 @@ class UIManager {
                         'font-weight:bold;color:#00e5ff;text-shadow:0 0 4px #000;pointer-events:none;';
                     teleportIcon.appendChild(chargeLabel);
                 }
-                chargeLabel.textContent = player.teleportCharges > 0 ? `${player.teleportCharges}` : '';
+                chargeLabel.textContent = charges > 0 ? `${charges}` : '';
+            } else if (teleportIcon && !passive) {
+                UIManager._setCooldownVisual('teleport-icon', 0, 1);
+                const cl = teleportIcon.querySelector('.charge-label');
+                if (cl) cl.textContent = '';
+                if (teleportCd) teleportCd.style.height = '100%';
             }
-            // Arc overlay: นับจาก teleportCooldown - teleportTimer; ถ้าชาร์จเต็มให้ clear
-            const teleportRemaining = player.teleportCharges >= (player.maxTeleportCharges || 3)
-                ? 0
-                : Math.max(0, player.teleportCooldown - player.teleportTimer);
-            UIManager._setCooldownVisual('teleport-icon', teleportRemaining, player.teleportCooldown);
 
             // ── Skill 3 (E) — Clone of Stealth ────────────────────────────────
-            // cloneSkillCooldown counts DOWN from maxCloneCooldown to 0.
             const cloneIcon = document.getElementById('kao-clone-icon');
-            const cloneCd = document.getElementById('clone-cd');
+            const cloneCd   = document.getElementById('clone-cd');
+            setLockOverlay(cloneIcon, !passive);
+
             if (cloneIcon) {
                 const cloneReady = player.cloneSkillCooldown <= 0;
-                cloneIcon.classList.toggle('active', cloneReady);
+                cloneIcon.classList.toggle('active', passive && cloneReady);
 
-                // Flash the border cyan while clones are actively deployed
                 if (player.clonesActiveTimer > 0) {
                     cloneIcon.style.borderColor = '#00e5ff';
                     cloneIcon.style.boxShadow = '0 0 20px rgba(0,229,255,0.7)';
                 } else {
-                    cloneIcon.style.borderColor = cloneReady ? '#60a5fa' : '#3b82f6';
-                    cloneIcon.style.boxShadow = cloneReady
+                    cloneIcon.style.borderColor = (passive && cloneReady) ? '#60a5fa' : '#3b82f6';
+                    cloneIcon.style.boxShadow = (passive && cloneReady)
                         ? '0 0 18px rgba(96,165,250,0.65)'
                         : '0 0 15px rgba(59,130,246,0.45)';
                 }
@@ -798,12 +838,12 @@ class UIManager {
                         : 0;
                     cloneCd.style.height = cloneReady ? '0%' : `${cloneProgress * 100}%`;
                 }
+                UIManager._setCooldownVisual(
+                    'kao-clone-icon',
+                    passive ? Math.max(0, player.cloneSkillCooldown) : 0,
+                    player.maxCloneCooldown
+                );
             }
-            UIManager._setCooldownVisual(
-                'kao-clone-icon',
-                Math.max(0, player.cloneSkillCooldown),
-                player.maxCloneCooldown
-            );
         }
     }
 

@@ -75,11 +75,12 @@ class KaoPlayer extends Player {
         const S = BALANCE.characters.kao;
 
         // ── Teleport ───────────────────────────────────────────────────────────
-        this.teleportTimer = 0;
-        this.teleportCooldown = S.teleportCooldown || 20;
-        this.teleportCharges = 0;   // max 3 charges
+        this.teleportCharges = 0;           // 0 ก่อน passive unlock, จะเซ็ตเป็น 3 ตอน unlock
         this.maxTeleportCharges = 3;
-
+        this.teleportCooldown = 15;         // วินาทีต่อ 1 stack (ลดจาก 20 → 15)
+        this.teleportPenalty = 5;           // วินาทีบทลงโทษเมื่อหมดทุก stack
+        this.teleportTimers = [];           // [{elapsed, max}] แต่ละ slot = 1 stack ที่ถูกใช้ไป
+        this._teleportInited = false;       // flag: เซ็ต 3 charge ครั้งแรกที่ passive unlock
         // ── Auto-stealth (Passive: ซุ่มเสรี) ──────────────────────────────────
         this.autoStealthCooldown = 0;   // internal cooldown for free stealth
         this.isFreeStealthy = false;    // FREE STEALTH: กระสุน enemy ทะลุผ่าน แต่ศัตรูยังรู้ตำแหน่ง
@@ -170,17 +171,37 @@ class KaoPlayer extends Player {
                 }
             }
 
-            // 2. Teleport (Charge & Q Key)
-            if (this.teleportTimer < this.teleportCooldown && this.teleportCharges < this.maxTeleportCharges) {
-                this.teleportTimer += dt;
-                if (this.teleportTimer >= this.teleportCooldown) {
-                    this.teleportCharges++;
-                    this.teleportTimer = 0;
+            // 2. Teleport (Q Key) — Independent per-charge cooldown timers
+            // ── Init: ให้ 3 charge เต็มทันทีที่ passive ถูก unlock ────────
+            if (!this._teleportInited) {
+                this.teleportCharges = this.maxTeleportCharges;
+                this._teleportInited = true;
+            }
+            // ── Tick each timer independently ────────────────────────────
+            for (let i = this.teleportTimers.length - 1; i >= 0; i--) {
+                this.teleportTimers[i].elapsed += dt;
+                if (this.teleportTimers[i].elapsed >= this.teleportTimers[i].max) {
+                    this.teleportTimers.splice(i, 1);
+                    this.teleportCharges = Math.min(this.maxTeleportCharges, this.teleportCharges + 1);
                     spawnFloatingText(GAME_TEXTS.combat.kaoTeleport, this.x, this.y - 60, '#00e5ff', 20);
                 }
             }
+            // ── Use charge ───────────────────────────────────────────────
             if (keys.q && this.teleportCharges > 0) {
                 this.teleportCharges--;
+                const newTimer = { elapsed: 0, max: this.teleportCooldown };
+                this.teleportTimers.push(newTimer);
+
+                // Penalty: หมดทุก stack → เพิ่ม +5s ให้ timer ที่ใกล้ครบสุด (elapsed สูงสุด)
+                if (this.teleportCharges === 0 && this.teleportTimers.length > 1) {
+                    let maxElapsed = -1, penaltyIdx = 0;
+                    this.teleportTimers.forEach((t, i) => {
+                        if (t.elapsed > maxElapsed) { maxElapsed = t.elapsed; penaltyIdx = i; }
+                    });
+                    this.teleportTimers[penaltyIdx].max += this.teleportPenalty;
+                    spawnFloatingText('⏳ Penalty!', this.x, this.y - 80, '#ef4444', 20);
+                }
+
                 spawnParticles(this.x, this.y, 25, '#3b82f6');
                 this.x = window.mouse.wx;
                 this.y = window.mouse.wy;
