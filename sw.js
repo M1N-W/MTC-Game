@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.7'; // v3.6.7 Fix: KaoPlayer sniper-charge release & character detection improvements
+const CACHE_NAME = 'mtc-cache-v3.6.8'; // v3.6.8 Fix: KaoPlayer clone cooldown display & UI update improvements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

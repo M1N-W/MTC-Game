@@ -270,8 +270,8 @@ function updateGame(dt) {
             if (window.player.cooldowns.naga <= 0) window.player.summonNaga();
             keys.q = 0;
         }
-        UIManager.updateSkillIcons(window.player);
     }
+    if (window.player) UIManager.updateSkillIcons(window.player);
 
     if (window.drone && window.player && !window.player.dead) window.drone.update(dt, window.player);
 

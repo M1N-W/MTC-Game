@@ -782,9 +782,9 @@ class UIManager {
 
                 if (cloneCd) {
                     const cloneProgress = player.maxCloneCooldown > 0
-                        ? Math.min(1, 1 - player.cloneSkillCooldown / player.maxCloneCooldown)
-                        : 1;
-                    cloneCd.style.height = cloneReady ? '0%' : `${(1 - cloneProgress) * 100}%`;
+                        ? Math.min(1, player.cloneSkillCooldown / player.maxCloneCooldown)
+                        : 0;
+                    cloneCd.style.height = cloneReady ? '0%' : `${cloneProgress * 100}%`;
                 }
             }
             UIManager._setCooldownVisual(
