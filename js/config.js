@@ -556,7 +556,14 @@ const ACHIEVEMENT_DEFS = [
     { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫' },
     { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍' },
     { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง', icon: '🛒' },
-    { id: 'drone_master', name: 'Drone Master', desc: 'ปลดล็อค Drone Overdrive ครั้งแรก', icon: '🤖' }
+    { id: 'drone_master', name: 'Drone Master', desc: 'ปลดล็อค Drone Overdrive ครั้งแรก', icon: '🤖' },
+    { id: 'kao_awakened', name: 'Weapon Master Awakened', desc: 'ปลดล็อคสกิล Weapon Master ของเก้าสำเร็จ', icon: '⚡' },
+    { id: 'wave_5', name: 'MTC Veteran', desc: 'รอดชีวิตถึง Wave 5', icon: '🎖️' },
+    { id: 'wave_10', name: 'MTC Legend', desc: 'รอดชีวิตถึง Wave 10', icon: '🎖️' },
+    { id: 'bullet_time_kill', name: 'Time Bender', desc: 'ฆ่าศัตรูขณะ Bullet Time 3 ตัว', icon: '🕐' },
+    { id: 'barrel_bomber', name: 'Expert Bomber', desc: 'ฆ่าศัตรูด้วยถังระเบิด 3 ตัว', icon: '🛢️' },
+    { id: 'stand_rush_kill', name: 'WANCHAI REQUIEM', desc: 'ฆ่าศัตรูด้วย Stand Rush 10 ตัว', icon: '🥊' },
+    { id: 'ritual_wipe', name: 'Sticky Situation', desc: 'ฆ่าศัตรู 3 ตัวขึ้นไปด้วย Ritual Burst ครั้งเดียว', icon: '🌾' }
 ];
 
 // ══════════════════════════════════════════════════════════════

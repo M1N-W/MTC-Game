@@ -255,6 +255,9 @@ function startNextWave() {
     spawnFloatingText(GAME_TEXTS.wave.floatingTitle(getWave()), window.player.x, window.player.y - 100, '#8b5cf6', 40);
 
     const wave = getWave();
+    // ✨ [wave_5], [wave_10] เช็ค achievement ทุกครั้งที่ wave เริ่ม
+    Achievements.check('wave_5');
+    Achievements.check('wave_10');
     const count = BALANCE.waves.enemiesBase + (wave - 1) * BALANCE.waves.enemiesPerWave;
     const isBossWave = wave % BALANCE.waves.bossEveryNWaves === 0;
     const isGlitch = (!isBossWave) && (wave % GLITCH_EVERY_N_WAVES === 0);

@@ -140,13 +140,27 @@ class Enemy extends Entity {
             this.dead = true; this.hp = 0;
             spawnParticles(this.x, this.y, 20, this.color);
             addScore(BALANCE.score.basicEnemy * getWave()); addEnemyKill(); Audio.playEnemyDeath();
+            // ✨ [bullet_time_kill] นับคิลขณะ Slow-mo
+            if (window.isSlowMotion && typeof Achievements !== 'undefined') {
+                Achievements.stats.slowMoKills++;
+                Achievements.check('bullet_time_kill');
+            }
             if (player) player.gainExp(this.expValue);
 
             // FIX (BUG-4): Correctly identify Kao and fetch weapon string key to allow Awakening
             if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
                 const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
                 const currentWep = BALANCE.characters.kao.weapons[wepKey];
-                if (currentWep) player.addKill(currentWep.name);
+                if (currentWep) {
+                    player.addKill(currentWep.name);
+
+                    // ✨ [Weapon Master Progress] แสดง floating text บอกความคืบหน้า
+                    if (player.passiveUnlocked && !player.isWeaponMaster) {
+                        const kills = player.weaponKills[wepKey] || 0;
+                        const req = BALANCE.characters.kao.weaponMasterReq || 10;
+                        spawnFloatingText(`${currentWep.name} ${kills}/${req}`, this.x, this.y - 40, '#facc15', 14);
+                    }
+                }
             }
 
             Achievements.stats.kills++; Achievements.check('first_blood');

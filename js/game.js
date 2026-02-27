@@ -410,7 +410,13 @@ function updateGame(dt) {
                     const ed = Math.hypot(enemy.x - barrelCX, enemy.y - barrelCY);
                     if (ed < EXPLOSION_RADIUS) {
                         const falloff = 1 - (ed / EXPLOSION_RADIUS) * 0.5;
+                        const wasAlive = !enemy.dead;
                         enemy.takeDamage(EXPLOSION_DAMAGE * falloff);
+                        // ✨ [barrel_bomber] นับเฉพาะตัวที่ตายจากระเบิดนี้
+                        if (wasAlive && enemy.dead && typeof Achievements !== 'undefined') {
+                            Achievements.stats.barrelKills++;
+                            Achievements.check('barrel_bomber');
+                        }
                     }
                 }
 

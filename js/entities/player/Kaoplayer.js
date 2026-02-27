@@ -124,6 +124,8 @@ class KaoPlayer extends Player {
             this.weaponKills.shotgun >= req
         ) {
             this.isWeaponMaster = true;
+            // ✨ [kao_awakened] เช็ค achievement ทุกครั้งที่ weapon master เปลิดล็อค
+            if (typeof Achievements !== 'undefined') Achievements.check('kao_awakened');
             spawnFloatingText(
                 GAME_TEXTS.combat.kaoWeaponAwaken,
                 this.x, this.y - 60,

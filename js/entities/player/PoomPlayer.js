@@ -300,6 +300,7 @@ class PoomPlayer extends Entity {
         const DAMAGE_PER_STACK = RC.damagePerStack || 10;
 
         let totalEnemiesAffected = 0;
+        let ritualKills = 0;  // ✨ [ritual_wipe] นับเฉพาะตัวที่ตายจาก ritual นี้ 
 
         // Iterate all living enemies and consume their sticky status
         if (window.enemies && window.enemies.length > 0) {
@@ -312,8 +313,9 @@ class PoomPlayer extends Entity {
                     const flatDamage = stickyStatus.stacks * DAMAGE_PER_STACK;
                     const pctDamage = enemy.maxHp * RC.stackBurstPct * stickyStatus.stacks;
                     const totalDamage = flatDamage + pctDamage;
-
+                    const wasAlive = true; // ผ่าน if(enemy.dead) มาแล้ว
                     enemy.takeDamage(totalDamage, this);
+                    if (enemy.dead) ritualKills++;
                     spawnFloatingText(Math.round(totalDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
 
                     // Remove sticky status
@@ -342,6 +344,8 @@ class PoomPlayer extends Entity {
                         const totalDamage = flatDamage + pctDamage;
 
                         enemy.takeDamage(totalDamage, this);
+                        const alreadyDead = false; // ผ่าน if(enemy.dead) มาแล้ว
+                        if (enemy.dead) ritualKills++;
                         spawnFloatingText(Math.round(totalDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
                         totalEnemiesAffected++;
                     }
@@ -359,7 +363,12 @@ class PoomPlayer extends Entity {
 
         // Always set cooldown
         this.cooldowns.ritual = RC.cooldown || 20;
-
+        // ✨ [ritual_wipe] ปลดล็อคถ้าฆ่า 3+ ตัวในครั้งเดียว
+        if (ritualKills >= 3 && typeof Achievements !== 'undefined') {
+            Achievements._ritualWipeUnlocked = true;
+            Achievements.check('ritual_wipe');
+        }
+        
         spawnParticles(this.x, this.y, 30, '#00ff88');
         spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
         addScreenShake(6);

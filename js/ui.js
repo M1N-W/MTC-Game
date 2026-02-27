@@ -47,7 +47,11 @@ class AchievementSystem {
             shopPurchases: 0,
             parries: 0,              // FIX: tracks successful PorkSandwich parries
             droneOverdrives: 0,      // FIX: tracks first drone overdrive activation
-            weaponsUsed: new Set()
+            weaponsUsed: new Set(),
+            slowMoKills: 0,
+            barrelKills: 0,
+            wanchaiKills: 0,
+            ritualKills: 0
         };
     }
 
@@ -81,6 +85,13 @@ class AchievementSystem {
             case 'parry_master': unlock = this.stats.parries >= 1; break;
             // FIX: was missing entirely — unlock(string) bug caused undefined popup + multi-fire
             case 'drone_master': unlock = this.stats.droneOverdrives >= 1; break;
+            case 'wave_5': unlock = getWave() >= 6; break;
+            case 'wave_10': unlock = getWave() >= 11; break;
+            case 'bullet_time_kill': unlock = this.stats.slowMoKills >= 3; break;
+            case 'barrel_bomber': unlock = this.stats.barrelKills >= 3; break;
+            case 'kao_awakened': unlock = window.player?.charId === 'kao' && !!window.player?.isWeaponMaster; break;
+            case 'stand_rush_kill': unlock = this.stats.wanchaiKills >= 10; break;
+            case 'ritual_wipe': unlock = !!this._ritualWipeUnlocked; break;
         }
         if (unlock) this.unlock(ach);
     }

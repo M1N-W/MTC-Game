@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.5.12'; // v3.5.12 Fix: Added setGameState('MENU') to game initialization
+const CACHE_NAME = 'mtc-cache-v3.6.0'; // v3.6.0 Feature: Comprehensive Achievement System Expansion
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
