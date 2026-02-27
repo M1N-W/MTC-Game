@@ -328,7 +328,7 @@ class ParticleSystem {
                 arr[i].release();          // return to pool
                 arr[i] = arr[arr.length - 1];
                 arr.pop();
-                // don't decrement i — newly swapped item at i must be checked
+                i--;
             } else {
                 i--;
             }
@@ -666,6 +666,7 @@ class HitMarkerSystem {
                 arr[i].release();
                 arr[i] = arr[arr.length - 1];
                 arr.pop();
+                i--;
             } else {
                 i--;
             }
@@ -845,6 +846,7 @@ class WeatherSystem {
             if (arr[i].update(dt, camera)) {
                 arr[i] = arr[arr.length - 1];
                 arr.pop();
+                i--;
             } else {
                 i--;
             }
@@ -1570,6 +1572,7 @@ class OrbitalParticleSystem {
                 arr[i].release();              // return to pool
                 arr[i] = arr[arr.length - 1];
                 arr.pop();
+                i--;
             } else {
                 i--;
             }
