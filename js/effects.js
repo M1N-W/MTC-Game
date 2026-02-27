@@ -454,6 +454,7 @@ class FloatingTextSystem {
                 arr[i].release();
                 arr[i] = arr[arr.length - 1];
                 arr.pop();
+                i--;
             } else {
                 i--;
             }
