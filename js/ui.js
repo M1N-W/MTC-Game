@@ -732,7 +732,7 @@ class UIManager {
             );
 
             // ── Kao — Teleport (Q) + Clone of Stealth (E) ─────────────────────────
-        } else if (typeof KaoPlayer !== 'undefined' && player instanceof KaoPlayer) {
+        } else if (player.charId === 'kao') {
             const S = BALANCE.characters.kao;
 
             // ── Skill 1 (R-Click) — Stealth: handled by PlayerBase.updateUI() ──

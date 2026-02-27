@@ -203,6 +203,20 @@ class KaoPlayer extends Player {
         }
 
         super.update(dt, keys, mouse);
+        
+        // FIX (SNIPER-CHARGE): shoot() is only called while mouse is held.
+        // When player releases, we catch the release here (runs every frame).
+        if (this.sniperChargeTime > 0 && window.mouse.left === 0) {
+            const wepKey = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : 'auto';
+            const wep = BALANCE.characters.kao.weapons?.[wepKey];
+            if (wep) {
+                this.fireWeapon(wep, true);
+                const baseCd = wep.cooldown || 0.25;
+                this.shootCooldown = baseCd * (this.cooldownMultiplier || 1);
+                if (typeof weaponSystem !== 'undefined') weaponSystem.weaponCooldown = this.shootCooldown;
+            }
+            this.sniperChargeTime = 0;
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
