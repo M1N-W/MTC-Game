@@ -57,7 +57,7 @@ const BALANCE = {
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 59, cooldown: 0.6,
+                    damage: 46, cooldown: 0.6,
                     range: 400, speed: 700,
                     spread: 0.4, pellets: 3,
                     color: '#f59e0b', icon: '🟠'
@@ -81,7 +81,7 @@ const BALANCE = {
             speedOnHitDuration: 0.4,
             damageMultiplierPerLevel: 0.08,
             cooldownReductionPerLevel: 0.03,
-            maxHpPerLevel: 0,
+            maxHpPerLevel: 4,
             // ── Advanced Kao Skills ──
             teleportCooldown: 20,
             cloneCooldown: 60,
@@ -136,7 +136,7 @@ const BALANCE = {
         poom: {
             name: 'Poom',
             radius: 20,
-            hp: 144, maxHp: 144,
+            hp: 165, maxHp: 165,
             energy: 100, maxEnergy: 100,
             energyRegen: 12,
             moveSpeed: 298,
@@ -156,7 +156,7 @@ const BALANCE = {
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.2,
-            nagaCooldown: 18,
+            nagaCooldown: 13,
             nagaDuration: 10,
             nagaDamage: 85,
             nagaSpeed: 525,
