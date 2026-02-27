@@ -2048,7 +2048,7 @@
                 diag.sep('7. ACHIEVEMENT SYSTEM');
 
                 await T('sec-achieve', 'sec-achieve-body', 'AchievementSystem class',
-                    () => isClass('window.AchievementSystem'),
+                    () => isDefined('window.Achievements') && window.Achievements.constructor?.name === 'AchievementSystem',
                     'Failed: AchievementSystem ไม่พบ — check ui.js');
                 await T('sec-achieve', 'sec-achieve-body', 'Achievements instance (window.Achievements)',
                     () => isDefined('window.Achievements') && typeof window.Achievements.check === 'function',

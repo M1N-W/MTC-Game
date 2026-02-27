@@ -372,3 +372,4 @@ class KaoPlayer extends Player {
         spawnParticles(this.x + Math.cos(aimAngle) * barrelOffset, this.y + Math.sin(aimAngle) * barrelOffset, 3, color);
     }
 }
+window.KaoPlayer = KaoPlayer;
