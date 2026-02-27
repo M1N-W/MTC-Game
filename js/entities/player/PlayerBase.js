@@ -165,7 +165,11 @@ class Player extends Entity {
             this.checkObstacleProximity(ax, ay, dt, '#93c5fd');
         }
 
-        if (this.cooldowns.dash > 0) this.cooldowns.dash -= dt;
+        if (this.cooldowns.dash > 0) {
+            const dashTickRate = window.isSlowMotion ? 3.0 : 1.0;
+            this.cooldowns.dash -= dt * dashTickRate;
+            if (this.cooldowns.dash <= 0) this.cooldowns.dash = 0;
+        }
         if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
 
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
@@ -236,7 +240,7 @@ class Player extends Entity {
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;
-        if (window.isSlowMotion) dashSpeed *= 1.8;
+        if (window.isSlowMotion) dashSpeed *= 4.0;
         this.vx = Math.cos(angle) * dashSpeed;
         this.vy = Math.sin(angle) * dashSpeed;
 
