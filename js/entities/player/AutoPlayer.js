@@ -258,7 +258,7 @@ AutoPlayer.prototype.updateUI = function () {
     const skill1Emoji = document.getElementById('skill1-emoji');
     const skill1Hint = document.getElementById('skill1-hint');
     if (skill1Emoji) skill1Emoji.textContent = this.wanchaiActive ? '🥊' : '🔥';
-    if (skill1Hint) skill1Hint.textContent = 'STAND';
+    if (skill1Hint) skill1Hint.textContent = 'R-Click';
     if (standEl) standEl.style.borderColor = '#dc2626';
     if (standEl) standEl.style.boxShadow = this.wanchaiActive
         ? '0 0 20px rgba(220,38,38,0.80)'

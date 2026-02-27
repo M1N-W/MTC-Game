@@ -675,14 +675,8 @@ class UIManager {
             if (nagaCd) {
                 nagaIcon?.classList.toggle('active', player.cooldowns.naga <= 0);
             }
-            if (nagaTimer) {
-                if (player.cooldowns.naga > 0) {
-                    nagaTimer.textContent = Math.ceil(player.cooldowns.naga) + 's';
-                    nagaTimer.style.display = 'block';
-                } else {
-                    nagaTimer.style.display = 'none';
-                }
-            }
+            // nagaTimer ซ่อนถาวร — Arc จาก _setCooldownVisual จัดการตัวเลขแทน
+            if (nagaTimer) nagaTimer.style.display = 'none';
             UIManager._setCooldownVisual('naga-icon',
                 Math.max(0, player.cooldowns.naga),
                 S.nagaCooldown);
@@ -695,14 +689,8 @@ class UIManager {
             if (ritualCd) {
                 ritualIcon?.classList.toggle('active', player.cooldowns.ritual <= 0);
             }
-            if (ritualTimer) {
-                if (player.cooldowns.ritual > 0) {
-                    ritualTimer.textContent = Math.ceil(player.cooldowns.ritual) + 's';
-                    ritualTimer.style.display = 'block';
-                } else {
-                    ritualTimer.style.display = 'none';
-                }
-            }
+            // ritualTimer ซ่อนถาวร — Arc จาก _setCooldownVisual จัดการตัวเลขแทน
+            if (ritualTimer) ritualTimer.style.display = 'none';
             UIManager._setCooldownVisual('ritual-icon',
                 Math.max(0, player.cooldowns.ritual),
                 maxRitualCd);
@@ -711,10 +699,11 @@ class UIManager {
             // or countdown. Add a parallel branch so the player sees feedback.
         } else if (typeof AutoPlayer !== 'undefined' && player instanceof AutoPlayer) {
             const S = BALANCE.characters.auto;
+            const wanchaiCd = S.wanchaiCooldown ?? 12;
             UIManager._setCooldownVisual(
                 'stealth-icon',
-                player.isWanchaiActive ? 0 : Math.max(0, player.cooldowns.stealth),
-                S.wanchaiCooldown
+                player.wanchaiActive ? 0 : Math.max(0, player.cooldowns.wanchai ?? 0),
+                wanchaiCd
             );
 
             // ── Kao — Teleport (Q) + Clone of Stealth (E) ─────────────────────────
