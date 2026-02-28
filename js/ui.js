@@ -784,6 +784,24 @@ class UIManager {
                 wanchaiCd
             );
 
+            // ── Wanchai Stand timer — แทนที่ชื่อสกิลด้วยตัวนับเวลาขณะ active ──
+            const stealthIcon = document.getElementById('stealth-icon');
+            if (stealthIcon) {
+                const nameEl = stealthIcon.querySelector('.skill-name');
+                if (nameEl) {
+                    if (player.wanchaiActive && player.wanchaiTimer > 0) {
+                        // แสดงเวลาที่เหลือของ Stand แทนชื่อสกิล
+                        nameEl.textContent = player.wanchaiTimer.toFixed(1) + 's';
+                        nameEl.style.color = '#fca5a5';
+                    } else {
+                        // คืนชื่อสกิลตาม config
+                        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
+                        nameEl.textContent = SN.auto?.skill1 ?? 'WANCHAI';
+                        nameEl.style.color = '#fca5a5';
+                    }
+                }
+            }
+
             // ── Vacuum Heat (Q) cooldown arc ────────────────────────────────────
             UIManager._setCooldownVisual(
                 'vacuum-icon',

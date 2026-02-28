@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.27'; // v3.6.27 Damage display accumulation fix
+const CACHE_NAME = 'mtc-cache-v3.6.28'; // v3.6.28 Wanchai timer display enhancement
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
