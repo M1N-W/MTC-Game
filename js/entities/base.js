@@ -45,9 +45,9 @@ class Entity {
         const s = worldToScreen(this.x, this.y);
         const r = (this.radius || 20) + buffer;
         return s.x + r > 0 &&
-               s.x - r < CANVAS.width  &&
-               s.y + r > 0 &&
-               s.y - r < CANVAS.height;
+            s.x - r < CANVAS.width &&
+            s.y + r > 0 &&
+            s.y - r < CANVAS.height;
     }
 }
 
@@ -73,11 +73,11 @@ function _standAura_update(entity, dt) {
 
     // Aura rotates faster in slow-mo for extra drama
     entity.auraRotation += 0.05 * ts;
-    entity._auraFrame    = ((entity._auraFrame || 0) + 1);
+    entity._auraFrame = ((entity._auraFrame || 0) + 1);
 
-    const speed    = Math.hypot(entity.vx, entity.vy);
+    const speed = Math.hypot(entity.vx, entity.vy);
     const inSlowmo = ts < 1.0;
-    const active   = speed > 5 || inSlowmo;
+    const active = speed > 5 || inSlowmo;
 
     // Spawn a ghost frame every 3-5 ticks when active
     const interval = 3 + Math.floor(Math.random() * 3);
@@ -85,11 +85,11 @@ function _standAura_update(entity, dt) {
         // Hard cap at 20 to prevent unbounded growth (PERF guardrail)
         if (entity.standGhosts.length < 20) {
             entity.standGhosts.push({
-                x:     entity.x,
-                y:     entity.y,
+                x: entity.x,
+                y: entity.y,
                 angle: entity.angle,
                 alpha: 0.75,
-                time:  Date.now()
+                time: Date.now()
             });
         }
     }
@@ -108,22 +108,24 @@ function _standAura_update(entity, dt) {
  * @param {string} charId  — 'kao' | 'poom'
  */
 function _standAura_draw(entity, charId) {
-    const ts       = (typeof window !== 'undefined' && window.timeScale !== undefined)
+    const ts = (typeof window !== 'undefined' && window.timeScale !== undefined)
         ? window.timeScale : 1;
     const inSlowmo = ts < 1.0;
-    const isKao    = (charId !== 'poom');
+    const isKao = (charId === 'kao' || (charId !== 'poom' && charId !== 'auto'));
 
     // ── Character colour identity ──────────────────────────────
     //   Kao  → Neon Green  #00ff41
     //   Poom → Deep Purple #a855f7
-    const auraCol  = isKao ? '#00ff41' : '#a855f7';
+    //   Auto → handled by PlayerRenderer._drawAutoAura (never reaches here)
+    //   Unknown → fallback to Kao green
+    const auraCol = isKao ? '#00ff41' : '#a855f7';
     const ghostCol = isKao ? 'rgba(0,255,65,0.55)' : 'rgba(168,85,247,0.55)';
 
     // Base orbit radius — 1.5× during slow-mo
-    const BASE_R   = 46;
-    const auraR    = inSlowmo ? BASE_R * 1.5 : BASE_R;
+    const BASE_R = 46;
+    const auraR = inSlowmo ? BASE_R * 1.5 : BASE_R;
 
-    const screen   = worldToScreen(entity.x, entity.y);
+    const screen = worldToScreen(entity.x, entity.y);
 
     // ══ 1. Afterimage ghost silhouettes ═══════════════════════
     for (const img of entity.standGhosts) {
@@ -135,12 +137,12 @@ function _standAura_draw(entity, charId) {
 
         if (inSlowmo) {
             // Cyan / electric-blue tint in time-distortion
-            CTX.fillStyle   = '#00e5ff';
-            CTX.shadowBlur  = 14;
+            CTX.fillStyle = '#00e5ff';
+            CTX.shadowBlur = 14;
             CTX.shadowColor = '#00e5ff';
         } else {
-            CTX.fillStyle   = ghostCol;
-            CTX.shadowBlur  = 8;
+            CTX.fillStyle = ghostCol;
+            CTX.shadowBlur = 8;
             CTX.shadowColor = auraCol;
         }
 
@@ -150,8 +152,8 @@ function _standAura_draw(entity, charId) {
         CTX.fill();
 
         // Inner glow core
-        CTX.globalAlpha  *= 0.4;
-        CTX.fillStyle     = inSlowmo ? '#ffffff' : auraCol;
+        CTX.globalAlpha *= 0.4;
+        CTX.fillStyle = inSlowmo ? '#ffffff' : auraCol;
         CTX.beginPath();
         CTX.roundRect(-9, -7, 18, 14, 5);
         CTX.fill();
@@ -166,8 +168,8 @@ function _standAura_draw(entity, charId) {
     CTX.beginPath();
     CTX.arc(screen.x, screen.y, auraR * 0.52, 0, Math.PI * 2);
     CTX.strokeStyle = auraCol;
-    CTX.lineWidth   = inSlowmo ? 3.5 : 1.8;
-    CTX.shadowBlur  = inSlowmo ? 30 : 14;
+    CTX.lineWidth = inSlowmo ? 3.5 : 1.8;
+    CTX.shadowBlur = inSlowmo ? 30 : 14;
     CTX.shadowColor = auraCol;
     CTX.stroke();
     CTX.restore();
@@ -183,28 +185,28 @@ function _standAura_draw(entity, charId) {
         const col = colOverride || auraCol;
         for (let i = 0; i < STAND_SYMBOL_COUNT; i++) {
             const baseAngle = (i / STAND_SYMBOL_COUNT) * Math.PI * 2;
-            const orbit     = baseAngle + entity.auraRotation;
+            const orbit = baseAngle + entity.auraRotation;
 
             // Each symbol bobs up-down on its own sine wave → "floating" feel
             const bob = Math.sin(entity.auraRotation * 2.5 + i * 0.85) * 6;
-            const r   = auraR + bob;
+            const r = auraR + bob;
 
-            const sx    = screen.x + ox + Math.cos(orbit) * r;
-            const sy    = screen.y + oy + Math.sin(orbit) * r;
+            const sx = screen.x + ox + Math.cos(orbit) * r;
+            const sy = screen.y + oy + Math.sin(orbit) * r;
 
             // Alpha pulsation per-symbol, offset in phase
             const pulse = 0.50 + Math.sin(entity.auraRotation * 3.2 + i * 1.1) * 0.38;
 
             CTX.save();
-            CTX.globalAlpha  = pulse * (inSlowmo ? 0.95 : 0.72);
+            CTX.globalAlpha = pulse * (inSlowmo ? 0.95 : 0.72);
             CTX.translate(sx, sy);
             // Symbols face outward (tangential rotation = orbit + 90°)
             CTX.rotate(orbit + Math.PI / 2);
-            CTX.fillStyle    = col;
-            CTX.shadowBlur   = inSlowmo ? 22 : 11;
-            CTX.shadowColor  = col;
-            CTX.font         = `bold ${10 + Math.round(pulse * 5)}px monospace`;
-            CTX.textAlign    = 'center';
+            CTX.fillStyle = col;
+            CTX.shadowBlur = inSlowmo ? 22 : 11;
+            CTX.shadowColor = col;
+            CTX.font = `bold ${10 + Math.round(pulse * 5)}px monospace`;
+            CTX.textAlign = 'center';
             CTX.textBaseline = 'middle';
             CTX.fillText(STAND_SYMBOLS[i % STAND_SYMBOL_COUNT], 0, 0);
             CTX.restore();
@@ -215,9 +217,9 @@ function _standAura_draw(entity, charId) {
         // ── Chromatic Aberration: 3 offset passes (R / G / B channels) ──
         CTX.save();
         CTX.globalAlpha = 0.40;
-        drawSymbolRing(-2.5,  0,    '#ff0055');  // Red channel  (left)
-        drawSymbolRing( 2.5,  0,    '#00ffff');  // Cyan channel (right)
-        drawSymbolRing( 0,   -2.5,  '#aaff00');  // Green channel (up)
+        drawSymbolRing(-2.5, 0, '#ff0055');  // Red channel  (left)
+        drawSymbolRing(2.5, 0, '#00ffff');  // Cyan channel (right)
+        drawSymbolRing(0, -2.5, '#aaff00');  // Green channel (up)
         CTX.restore();
     }
 
@@ -227,8 +229,8 @@ function _standAura_draw(entity, charId) {
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.Entity            = Entity;
-window.EntityBase        = Entity;   // alias for Debug.html check
+window.Entity = Entity;
+window.EntityBase = Entity;   // alias for Debug.html check
 window._standAura_update = _standAura_update;
-window._standAura_draw   = _standAura_draw;
-window.STAND_SYMBOLS     = STAND_SYMBOLS;
+window._standAura_draw = _standAura_draw;
+window.STAND_SYMBOLS = STAND_SYMBOLS;

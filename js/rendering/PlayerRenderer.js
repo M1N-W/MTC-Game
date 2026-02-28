@@ -217,6 +217,24 @@ class PlayerRenderer {
         const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
         const facingSign = isFacingLeft ? -1 : 1;
 
+        // ── Stand Aura (Signature Auto — แดง/ส้ม) ─────────────
+        PlayerRenderer._standAuraDraw(entity, 'auto', ctx);
+
+        // ── Dash Ghost Trail ────────────────────────────────────
+        for (const img of (entity.dashGhosts || [])) {
+            const gs = worldToScreen(img.x, img.y);
+            const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
+            ctx.save();
+            ctx.translate(gs.x, gs.y);
+            ctx.scale(ghostFacing, 1);
+            ctx.globalAlpha = img.life * 0.35;
+            ctx.fillStyle = '#ef4444';
+            ctx.shadowBlur = 10 * img.life;
+            ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
         // Ground shadow
         ctx.save();
         ctx.globalAlpha = 0.25;
