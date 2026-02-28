@@ -336,7 +336,7 @@ class UIManager {
             .cooldown-mask { display: none !important; }
             .cd-arc-overlay {
                 position: absolute; inset: 0;
-                border-radius: 50%;
+                border-radius: 10px;
                 pointer-events: none;
                 z-index: 5;
                 transition: background 0.05s linear;
