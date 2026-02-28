@@ -113,13 +113,15 @@ function _standAura_draw(entity, charId) {
     const inSlowmo = ts < 1.0;
     const isKao = (charId === 'kao' || (charId !== 'poom' && charId !== 'auto'));
 
-    // ── Character colour identity ──────────────────────────────
-    //   Kao  → Neon Green  #00ff41
-    //   Poom → Deep Purple #a855f7
+    // ── Character colour identity ─────────────────────────────────────
+    //   Kao  → น้ำเงิน/ฟ้า  #3b82f6  (match body + clone theme)
+    //   Poom → เขียวมรกต   #10b981  (match rice/naga/body theme)
     //   Auto → handled by PlayerRenderer._drawAutoAura (never reaches here)
-    //   Unknown → fallback to Kao green
-    const auraCol = isKao ? '#00ff41' : '#a855f7';
-    const ghostCol = isKao ? 'rgba(0,255,65,0.55)' : 'rgba(168,85,247,0.55)';
+    //   fallback → Kao blue
+    const auraCol = isKao ? '#3b82f6' : '#10b981';
+    const ghostCol = isKao ? 'rgba(59,130,246,0.55)' : 'rgba(16,185,129,0.55)';
+    // Bullet Time tint — ฟ้าไฟฟ้า (Kao) / เขียวสว่าง (Poom)
+    const slowmoCol = isKao ? '#00e5ff' : '#6ee7b7';
 
     // Base orbit radius — 1.5× during slow-mo
     const BASE_R = 46;
@@ -136,10 +138,10 @@ function _standAura_draw(entity, charId) {
         CTX.globalAlpha = Math.max(0, img.alpha) * 0.6;
 
         if (inSlowmo) {
-            // Cyan / electric-blue tint in time-distortion
-            CTX.fillStyle = '#00e5ff';
+            // character-specific slowmo tint
+            CTX.fillStyle = slowmoCol;
             CTX.shadowBlur = 14;
-            CTX.shadowColor = '#00e5ff';
+            CTX.shadowColor = slowmoCol;
         } else {
             CTX.fillStyle = ghostCol;
             CTX.shadowBlur = 8;
@@ -153,7 +155,7 @@ function _standAura_draw(entity, charId) {
 
         // Inner glow core
         CTX.globalAlpha *= 0.4;
-        CTX.fillStyle = inSlowmo ? '#ffffff' : auraCol;
+        CTX.fillStyle = inSlowmo ? slowmoCol : auraCol;
         CTX.beginPath();
         CTX.roundRect(-9, -7, 18, 14, 5);
         CTX.fill();
@@ -214,12 +216,20 @@ function _standAura_draw(entity, charId) {
     };
 
     if (inSlowmo) {
-        // ── Chromatic Aberration: 3 offset passes (R / G / B channels) ──
+        // ── Chromatic Aberration: 3 offset passes — สีต่างกันตาม charId ──
+        // Kao  → ฟ้า / น้ำเงิน / ขาวอมฟ้า
+        // Poom → เขียว / มรกต / เหลืองสด
         CTX.save();
         CTX.globalAlpha = 0.40;
-        drawSymbolRing(-2.5, 0, '#ff0055');  // Red channel  (left)
-        drawSymbolRing(2.5, 0, '#00ffff');  // Cyan channel (right)
-        drawSymbolRing(0, -2.5, '#aaff00');  // Green channel (up)
+        if (isKao) {
+            drawSymbolRing(-2.5, 0, '#0ea5e9');  // sky blue (left)
+            drawSymbolRing(2.5, 0, '#00e5ff');  // cyan     (right)
+            drawSymbolRing(0, -2.5, '#a5f3fc');  // pale blue (up)
+        } else {
+            drawSymbolRing(-2.5, 0, '#34d399');  // emerald  (left)
+            drawSymbolRing(2.5, 0, '#6ee7b7');  // mint     (right)
+            drawSymbolRing(0, -2.5, '#bbf7d0');  // pale mint (up)
+        }
         CTX.restore();
     }
 

@@ -75,9 +75,93 @@ class PlayerRenderer {
         // ── forward to the existing global helper if it exists ──
         // _standAura_draw อาจยังอยู่ใน effects.js / standAura.js
         // wrap ไว้ที่นี่เพื่อให้ย้ายได้ทีหลังโดยไม่ break
+        if (charId === 'auto') {
+            // Auto มี theme แดง/ส้ม — วาด aura เองแทนการใช้ global helper
+            PlayerRenderer._drawAutoAura(entity, ctx);
+            return;
+        }
         if (typeof _standAura_draw === 'function') {
             _standAura_draw(entity, charId);
         }
+    }
+
+    // ── Auto-exclusive Stand Aura (แดง/ส้ม theme) ────────────
+    static _drawAutoAura(entity, ctx) {
+        if (!entity.standGhosts) return;
+        const ts = window.timeScale ?? 1;
+        const inSlowmo = ts < 1.0;
+
+        // สีหลัก: ส้มแดง — ตาม theme Thermodynamic Brawler
+        const auraCol = inSlowmo ? '#ff6b00' : '#dc2626';
+        const ghostCol = inSlowmo ? 'rgba(255,107,0,0.55)' : 'rgba(220,38,38,0.55)';
+        const BASE_R = 44;
+        const auraR = inSlowmo ? BASE_R * 1.5 : BASE_R;
+        const screen = worldToScreen(entity.x, entity.y);
+
+        // ── Ghost silhouettes ─────────────────────────────────
+        for (const img of entity.standGhosts) {
+            const gs = worldToScreen(img.x, img.y);
+            ctx.save();
+            ctx.translate(gs.x, gs.y);
+            ctx.rotate(img.angle);
+            ctx.globalAlpha = Math.max(0, img.alpha) * 0.55;
+            ctx.fillStyle = inSlowmo ? '#ff6b00' : ghostCol;
+            ctx.shadowBlur = inSlowmo ? 14 : 8;
+            ctx.shadowColor = auraCol;
+            ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha *= 0.4;
+            ctx.fillStyle = inSlowmo ? '#ffffff' : auraCol;
+            ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        // ── Inner glow ring ───────────────────────────────────
+        const ringPulse = 0.10 + Math.sin(entity.auraRotation * 2) * 0.05;
+        ctx.save();
+        ctx.globalAlpha = ringPulse * (inSlowmo ? 1.8 : 1.0);
+        ctx.beginPath(); ctx.arc(screen.x, screen.y, auraR * 0.52, 0, Math.PI * 2);
+        ctx.strokeStyle = auraCol;
+        ctx.lineWidth = inSlowmo ? 3.5 : 1.8;
+        ctx.shadowBlur = inSlowmo ? 30 : 14;
+        ctx.shadowColor = auraCol;
+        ctx.stroke();
+        ctx.restore();
+
+        // ── Rotating symbol ring ──────────────────────────────
+        const SYMBOLS = ['∑', 'π', '∫', 'Δ', '0', '1', '∞', 'λ'];
+        const COUNT = SYMBOLS.length;
+        const drawRing = (ox, oy, colOverride) => {
+            const col = colOverride || auraCol;
+            for (let i = 0; i < COUNT; i++) {
+                const baseAngle = (i / COUNT) * Math.PI * 2;
+                const orbit = baseAngle + entity.auraRotation;
+                const bob = Math.sin(entity.auraRotation * 2.5 + i * 0.85) * 6;
+                const r = auraR + bob;
+                const sx = screen.x + ox + Math.cos(orbit) * r;
+                const sy = screen.y + oy + Math.sin(orbit) * r;
+                const pulse = 0.50 + Math.sin(entity.auraRotation * 3.2 + i * 1.1) * 0.38;
+                ctx.save();
+                ctx.globalAlpha = pulse * (inSlowmo ? 0.95 : 0.72);
+                ctx.translate(sx, sy);
+                ctx.rotate(orbit + Math.PI / 2);
+                ctx.fillStyle = col;
+                ctx.shadowBlur = inSlowmo ? 22 : 11;
+                ctx.shadowColor = col;
+                ctx.font = `bold ${10 + Math.round(pulse * 5)}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(SYMBOLS[i % COUNT], 0, 0);
+                ctx.restore();
+            }
+        };
+        if (inSlowmo) {
+            ctx.save(); ctx.globalAlpha = 0.40;
+            drawRing(-2.5, 0, '#ff0055');   // red-pink (left)
+            drawRing(2.5, 0, '#ff6b00');   // orange   (right)
+            drawRing(0, -2.5, '#fbbf24');   // amber    (up)
+            ctx.restore();
+        }
+        drawRing(0, 0, null);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -577,15 +661,16 @@ class PlayerRenderer {
 
         PlayerRenderer._standAuraDraw(entity, 'poom', ctx);
 
-        // Dash ghost trail
+        // Dash ghost trail — เขียวมรกต match body Poom
         for (const img of entity.dashGhosts) {
             const s = worldToScreen(img.x, img.y);
             const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
             ctx.save();
             ctx.translate(s.x, s.y);
             ctx.scale(ghostFacing, 1);
-            ctx.globalAlpha = img.life * 0.3;
-            ctx.fillStyle = '#fbbf24';
+            ctx.globalAlpha = img.life * 0.35;
+            ctx.fillStyle = '#34d399';
+            ctx.shadowBlur = 8 * img.life; ctx.shadowColor = '#10b981';
             ctx.beginPath(); ctx.roundRect(-15, -12, 30, 24, 8); ctx.fill();
             ctx.restore();
         }
