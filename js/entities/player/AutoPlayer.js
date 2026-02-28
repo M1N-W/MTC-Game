@@ -9,6 +9,8 @@ class AutoPlayer extends Player {
         this.x = x;
         this.y = y;
 
+        this.charId = 'auto';
+
         this.wanchaiActive = false;
         this.wanchaiTimer = 0;
 

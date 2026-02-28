@@ -130,11 +130,6 @@ const BALANCE = {
             passiveLifesteal: 0.01,
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
-            weapons: {
-                auto: { name: 'HEAT WAVE', damage: 41, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
-                sniper: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' },
-                shotgun: { name: 'HEAT WAVE', damage: 38, cooldown: 0.28, range: 150, speed: 900, spread: 0.08, pellets: 1, color: '#dc2626', icon: '🔥' }
-            },
             damageMultiplierPerLevel: 0.07,
             cooldownReductionPerLevel: 0.03,
             maxHpPerLevel: 10

@@ -226,7 +226,7 @@ class PoomPlayer extends Entity {
             if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
         }
 
-        _standAura_update(this, dt);
+        if (typeof _standAura_update === 'function') _standAura_update(this, dt);
 
         if (this.dead && this.dashTimeouts && this.dashTimeouts.length) {
             const ids = this.dashTimeouts.slice();
@@ -270,17 +270,8 @@ class PoomPlayer extends Entity {
         this.cooldowns.eat = S.eatRiceCooldown * this.cooldownMultiplier;
         spawnParticles(this.x, this.y, 30, '#fbbf24');
         spawnFloatingText('กินข้าวเหนียว!', this.x, this.y - 50, '#fbbf24', 22);
-        showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
         addScreenShake(5); Audio.playPowerUp();
-
-        // ── ข้าวก้นบาตร (Overflowing Merit Shield) ──────────────
-        // เงื่อนไข: กินข้าวตอน HP ≥ 95% → ได้โล่ป้องกัน 1 ครั้ง
-        if (this.hp >= this.maxHp * 0.95) {
-            this.hasShield = true;
-            spawnParticles(this.x, this.y, 20, '#c4b5fd');
-            spawnParticles(this.x, this.y, 10, '#fbbf24');
-            spawnFloatingText('โล่ข้าวก้นบาตร!', this.x, this.y - 60, '#c4b5fd', 20);
-        }
     }
 
     summonNaga() {
@@ -290,7 +281,7 @@ class PoomPlayer extends Entity {
         window.specialEffects.push(this.naga);
         spawnParticles(this.x, this.y, 40, '#10b981');
         spawnFloatingText('อัญเชิญพญานาค!', this.x, this.y - 60, '#10b981', 24);
-        showVoiceBubble('ขอพรพญานาค!', this.x, this.y - 40);
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('ขอพรพญานาค!', this.x, this.y - 40);
         addScreenShake(10); Audio.playAchievement();
         this.nagaCount++;
         if (this.nagaCount >= 3) Achievements.check('naga_summoner');
@@ -380,15 +371,6 @@ class PoomPlayer extends Entity {
         if (ritualKills >= 3 && typeof Achievements !== 'undefined') {
             Achievements._ritualWipeUnlocked = true;
             Achievements.check('ritual_wipe');
-        }
-
-        // ── พิธีสังเวย (Ritual Sacrifice): ฆ่าศัตรูด้วย Ritual → ลด CD naga + dash ──
-        // ลด 2s ต่อ 1 kill, cap สูงสุด 6s ต่อการกด 1 ครั้ง
-        if (ritualKills > 0) {
-            const cdReduction = Math.min(ritualKills * 2, 6);
-            this.cooldowns.naga = Math.max(0, this.cooldowns.naga - cdReduction);
-            this.cooldowns.dash = Math.max(0, this.cooldowns.dash - cdReduction);
-            spawnFloatingText(`-CD สังเวย!`, this.x, this.y - 70, '#fbbf24', 18);
         }
         // ── Boss: base damage only (ไม่มี sticky framework) ──
         if (window.boss && !window.boss.dead) {

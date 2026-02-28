@@ -540,13 +540,13 @@ class UIManager {
                 const emojiEl = document.getElementById('skill1-emoji');
                 if (emojiEl) emojiEl.textContent = '🍚';
                 const hintEl = document.getElementById('skill1-hint');
-                if (hintEl) hintEl.textContent = 'R-Click';
+                if (hintEl) hintEl.textContent = 'E';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'eat-cd';
             } else if (isAuto) {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '🟥';
+                if (emojiEl) emojiEl.textContent = '🔥';
                 const hintEl = document.getElementById('skill1-hint');
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
@@ -687,7 +687,7 @@ class UIManager {
         const btnNaga = document.getElementById('btn-naga');
         if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
         const btnSkill = document.getElementById('btn-skill');
-        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🟥' : isKao ? '👻' : '📖');
+        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🔥' : isKao ? '👻' : '📖');
 
         // ── Phase 3 Session 3: Ritual Burst slot — Poom-exclusive ────────
         const ritualSlot = document.getElementById('ritual-icon');

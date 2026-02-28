@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.20'; // v3.6.20 Latest audio and config updates
+const CACHE_NAME = 'mtc-cache-v3.6.21'; // v3.6.21 Auto character Q/E abilities, UI fixes, and code cleanup
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
