@@ -1835,7 +1835,7 @@
         }
 
         .tutorial-card--bottom {
-            bottom: 130px;
+            bottom: 185px;
             left: 50%;
             transform: translateX(-50%);
         }
@@ -1844,6 +1844,15 @@
             top: 100px;
             left: 50%;
             transform: translateX(-50%);
+        }
+
+        /* Action steps: float on the right — never covers skill bar or map center */
+        .tutorial-card--right {
+            top: 50%;
+            right: 24px;
+            left: auto;
+            transform: translateY(-50%);
+            width: min(380px, 38vw);
         }
 
         /* Inner layout */

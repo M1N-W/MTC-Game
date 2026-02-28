@@ -1,215 +1,294 @@
 'use strict';
 /**
- * 🎓 TUTORIAL SYSTEM — js/tutorial.js
+ * 🎓 TUTORIAL SYSTEM — js/tutorial.js  (v2)
  *
- * Interactive step-by-step tutorial that runs at the start of the first game.
- * Each step pauses the game, shows an overlay tooltip, and waits for the
- * player to perform the required action before advancing.
- *
- * Integration points:
- *   • startGame() in game.js calls TutorialSystem.start(charType) after
- *     the first wave spawns.
- *   • gameLoop() checks TutorialSystem.isActive() — when true, updateGame()
- *     is replaced by TutorialSystem.update() so the world stays frozen.
- *   • Input events (keys / mouse) are forwarded to TutorialSystem.handleInput()
- *     so steps can detect player actions.
- *
- * Load order: ... → ui.js → tutorial.js → ... → game.js
+ * Changes vs v1:
+ *  • charOnly     — steps filtered per character; Kao never sees Poom steps etc.
+ *  • weapon step  — detected via update() polling weaponSystem.currentWeapon
+ *                   (works for both mouse-wheel AND keyboard cycling)
+ *  • positions    — action steps use 'right' to avoid blocking skill-bar HUD
+ *  • progress     — dots reflect only the steps visible for the current char
+ *  • content      — all steps updated to match current game state
  */
 
-// ══════════════════════════════════════════════════════════════
-// 🎓 TUTORIAL SYSTEM
-// ══════════════════════════════════════════════════════════════
 const TutorialSystem = (() => {
 
     // ── State ─────────────────────────────────────────────────
-    let _active       = false;
-    let _stepIndex    = 0;
-    let _stepDone     = false;
-    let _actionCount  = 0;
-    let _charType     = 'kao';
-    let _skipRequested = false;
+    let _active = false;
+    let _stepIndex = 0;
+    let _stepDone = false;
+    let _actionCount = 0;
+    let _charType = 'kao';
+    let _lastWeapon = null;   // weapon-switch polling
 
-    // ── localStorage key ──────────────────────────────────────
     const SAVE_KEY = 'mtc_tutorial_done';
 
-    // ── Step definitions ──────────────────────────────────────
-    // Each step:
+    // ══════════════════════════════════════════════════════════
+    // STEP DEFINITIONS
+    // ──────────────────────────────────────────────────────────
+    // Fields:
     //   title    — bold heading
-    //   body     — instruction text (supports \n for line breaks)
-    //   icon     — emoji shown large
-    //   action   — 'any' | 'move' | 'shoot' | 'dash' | 'skill' | 'none'
-    //   count    — how many times action must be done (default 1)
-    //   highlight — optional CSS selector to spotlight
-    //   position  — 'center' | 'bottom' | 'top'  (where the card appears)
-    //   freeze   — if true, enemies/player don't move (default true)
+    //   body     — instruction text (\n → <br>)
+    //   icon     — large emoji
+    //   action   — 'none'|'move'|'shoot'|'dash'|'skill'|'weapon'|'bullettime'
+    //   count    — times action must be done (default 1)
+    //   charOnly — 'kao'|'poom'|'auto'  (omit = all characters)
+    //   position — 'center'|'bottom'|'top'|'right'
+    // ══════════════════════════════════════════════════════════
     const STEPS = [
+
+        // ── 0. Welcome ──────────────────────────────────────
         {
-            title:    'ยินดีต้อนรับสู่ MTC the Game (Beta Edition)',
-            body:     'เกมนี้คือ Wave Survival Shooter\nภารกิจของคุณคือเอาชนะ "ครูมานพ" นักคณิตศาสตร์สุดโหด\n\nกด NEXT หรือ SPACE เพื่อเริ่มบทเรียน',
-            icon:     '🎓',
-            action:   'none',
+            title: 'ยินดีต้อนรับสู่ MTC the Game!',
+            body: 'คุณกำลังจะเข้าสู่ห้องเรียนของ "ครูมานพ" ครูคณิตศาสตร์สุดโหด\n\nภารกิจ: รอดชีวิตให้ครบ 15 เวฟ และเอาชนะบอสทุกตัว\n\nกด NEXT หรือ SPACE เพื่อเริ่มบทเรียน',
+            icon: '🎓',
+            action: 'none',
             position: 'center',
         },
+
+        // ── 1. Movement ─────────────────────────────────────
         {
-            title:    'การเคลื่อนที่',
-            body:     'กด W A S D เพื่อเดิน\n\nลองเดินไปรอบๆ สักครู่!',
-            icon:     '🕹️',
-            action:   'move',
-            count:    1,
-            position: 'bottom',
+            title: 'การเคลื่อนที่',
+            body: 'กด W A S D เพื่อเดิน\n\nเดินไปรอบๆ สักครู่เพื่อทดสอบ!',
+            icon: '🕹️',
+            action: 'move',
+            count: 1,
+            position: 'right',
         },
+
+        // ── 2. Shooting ─────────────────────────────────────
         {
-            title:    'การยิง',
-            body:     'เล็งด้วย Mouse แล้วกด Left Click เพื่อยิง\n\nลองยิงดู 3 ครั้ง!',
-            icon:     '🔫',
-            action:   'shoot',
-            count:    3,
-            position: 'bottom',
+            title: 'การยิง',
+            body: 'เล็งด้วย Mouse แล้วกด Left Click เพื่อยิง\n\nลองยิงดู 3 ครั้ง!',
+            icon: '🔫',
+            action: 'shoot',
+            count: 3,
+            position: 'right',
         },
+
+        // ── 3. Dash ─────────────────────────────────────────
         {
-            title:    'Dash — หลบหลีก',
-            body:     'กด SPACE เพื่อ Dash พุ่งหนีศัตรู\nมี Cooldown — ใช้ให้ถูกจังหวะ!\n\nลอง Dash 1 ครั้ง',
-            icon:     '💨',
-            action:   'dash',
-            count:    1,
-            position: 'bottom',
+            title: 'Dash — หลบหลีก',
+            body: 'กด SPACE เพื่อ Dash พุ่งหลบศัตรู\nมี Cooldown — ใช้ให้ถูกจังหวะ!\n\nลอง Dash 1 ครั้ง',
+            icon: '💨',
+            action: 'dash',
+            count: 1,
+            position: 'right',
         },
+
+        // ── 4. R-Click Skill (all chars) ────────────────────
         {
-            title:    'ทักษะพิเศษ',
-            body:     'กด Right Click เพื่อใช้ทักษะพิเศษ\n• Kao — Stealth ซ่อนตัว\n• Poom — Eat Rice เพิ่มพลัง\n• Auto — Wanchai Stand\n\nลองกด Right Click ดู!',
-            icon:     '✨',
-            action:   'skill',
-            count:    1,
-            position: 'bottom',
+            title: 'ทักษะพิเศษ (Right Click)',
+            body: 'กด Right Click เพื่อใช้ทักษะประจำตัว:\n• เก้า — Stealth ซ่อนตัว 3 วินาที\n• ภูมิ — Eat Rice ฟื้น HP และเพิ่มพลัง\n• Auto — Wanchai Stand เรียกผู้ช่วย\n\nลองกด Right Click ดู!',
+            icon: '✨',
+            action: 'skill',
+            count: 1,
+            position: 'right',
         },
+
+        // ── 5. Kao: Passive "ซุ่มเสรี" ──────────────────────
         {
-            title:    'Poom - ทักษะพิเศษเฉพาะ 🌾',
-            body:     'Poom มีทักษะพิเศษเฉพาะ:\n• R — Ritual Burst (Ultimate)\n• Q — Naga Summon\n\n🔥 Ritual Burst: 75 damage + 15% HP\n🐉 Naga: พญานาคคุ้มกัน 10 วินาที\n\nลองกด R และ Q ดู!',
-            icon:     '🌾',
-            action:   'skill',
-            count:    2,
-            position: 'bottom',
-        },
-        {
-            title:    'Kao - สลับอาวุธ 🔫',
-            body:     'Kao สามารถสลับอาวุธได้:\n• Mouse Wheel Up/Down — สลับอาวุธ\n• มี 3 ชนิด: Auto Rifle, SMG, Shotgun\n\nลองเลื่อน Mouse Wheel ดู!',
-            icon:     '🔫',
-            action:   'weapon',
-            count:    3,
-            position: 'bottom',
-        },
-        {
-            title:    'Bullet Time ⏱',
-            body:     'กด T เพื่อเปิด Bullet Time\nเวลาจะช้าลง 70% — ใช้หลบกระสุนหนาแน่น\nแถบพลังงาน (ล่างกลาง) จะค่อยๆ หมด\n\nกด T เพื่อทดลอง!',
-            icon:     '🕐',
-            action:   'bullettime',
-            count:    1,
-            position: 'bottom',
-        },
-        {
-            title:    'MTC Co-op Store 🛒',
-            body:     'มีร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อซื้อไอเทม\n\n💡 ใช้คะแนนซื้อ HP, DMG Boost, Speed Boost',
-            icon:     '🛒',
-            action:   'none',
+            title: 'เก้า — ซุ่มเสรี (Passive) 👻',
+            body: 'ใช้ Stealth ครบ 5 ครั้ง เพื่อปลดล็อค Passive สุดท้าย!\nดูที่ปุ่ม 0/5 ใน skill bar ด้านล่าง\n\n✦ Crit ขณะซ่อนตัวเพิ่ม 50%\n✦ ความเร็วถาวร +40%\n✦ อาวุธกลายเป็น Golden Awakened Form',
+            icon: '👻',
+            action: 'none',
+            charOnly: 'kao',
             position: 'center',
         },
+
+        // ── 6. Kao: Weapon Switch ───────────────────────────
         {
-            title:    'MTC Database Server 🗄️',
-            body:     'เซิร์ฟเวอร์อยู่มุมขวาบนของแผนที่\n• กด E — เปิด MTC Database\n• กด F — เปิด Admin Terminal\n\n💻 Admin Terminal มีคำสั่งพิเศษ เช่น "sudo heal"',
-            icon:     '🗄️',
-            action:   'none',
+            title: 'เก้า — สลับอาวุธ 🔫',
+            body: 'เก้ามีอาวุธ 3 ชนิด:\n• Auto Rifle — ยิงเร็ว (ค่าเริ่มต้น)\n• Sniper — Railgun ดาเมจสูง ยิงช้า\n• Shotgun — Molten Shrapnel ระยะใกล้\n\nเลื่อน Mouse Wheel เพื่อสลับ\nสลับให้ครบ 3 ครั้ง!',
+            icon: '🔄',
+            action: 'weapon',
+            count: 3,
+            charOnly: 'kao',
+            position: 'right',
+        },
+
+        // ── 7. Kao: Q & E Skills ────────────────────────────
+        {
+            title: 'เก้า — ทักษะการเคลื่อนที่และร่างโคลน ⚡',
+            body: 'เมื่อเลเวลอัพ เก้าจะปลดล็อค:\n\n⚡ กด Q — Teleport\n   วาร์ปไปตามทิศทางเมาส์\n\n👥 กด E — Clone of Stealth\n   สร้างร่างโคลนช่วยยิง\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
+            icon: '⚡',
+            action: 'none',
+            charOnly: 'kao',
             position: 'center',
         },
+
+        // ── 8. Poom: R + Q skills ────────────────────────────
         {
-            title:    'ศัตรูและ Boss 👾',
-            body:     'ศัตรู 3 ประเภท:\n• Basic — ธรรมดา ยิงได้\n• Tank 🛡️ — HP สูง เดินช้า\n• Mage 🧙 — ยิงสายฟ้า, อุกกาบาต\n\nBoss 2 ชนิด:\n• ครูมานพ — Boss หลัก (Wave 3,6,9,12,15)\n• ครูเฟิร์ส — Boss ที่สอง (Physics Expert)\n\nทุก 3 Wave จะมี Boss ปรากฏตัว!',
-            icon:     '👑',
-            action:   'none',
+            title: 'ภูมิ — ทักษะพิเศษเฉพาะ 🌾',
+            body: 'ภูมิมีทักษะเพิ่มเติม 2 อย่าง:\n\n🔥 กด R — Ritual Burst\n   ระเบิดพลังและฟื้น HP ในวงกว้าง\n\n🐉 กด Q — Naga Summon\n   เรียกพญานาคคุ้มกัน 10 วินาที\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
+            icon: '🌾',
+            action: 'none',
+            charOnly: 'poom',
             position: 'center',
         },
+
+        // ── 9. Auto: Vacuum Heat + Detonate ─────────────────
         {
-            title:    'พร้อมแล้ว! 🚀',
-            body:     'คุณรู้ทุกอย่างที่จำเป็นแล้ว\nจงเอาชนะครูมานพและผ่านทั้ง 15 Wave!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n\nกด START เพื่อเริ่มเกม!',
-            icon:     '🎮',
-            action:   'none',
+            title: 'Auto — ทักษะพิเศษเฉพาะ 🔥',
+            body: 'Auto มีทักษะการควบคุมพื้นที่:\n\n🌀 กด Q — Vacuum Heat\n   ดูดศัตรูเข้าหาตัว\n\n💥 กด E — Detonate\n   ระเบิดความร้อนรอบตัว\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
+            icon: '🔥',
+            action: 'none',
+            charOnly: 'auto',
+            position: 'center',
+        },
+
+        // ── 10. Bullet Time ──────────────────────────────────
+        {
+            title: 'Bullet Time ⏱',
+            body: 'กด T เพื่อเปิด Bullet Time\nเวลาจะช้าลง 70% — หลบกระสุนหนาแน่น\n\nแถบพลังงาน FOCUS (ล่างกลาง) ค่อยๆ หมด\nปล่อยให้ชาร์จก่อนใช้อีกครั้ง\n\nกด T เพื่อทดลอง!',
+            icon: '🕐',
+            action: 'bullettime',
+            count: 1,
+            position: 'right',
+        },
+
+        // ── 11. Level Up ─────────────────────────────────────
+        {
+            title: 'Level Up & EXP 📈',
+            body: 'กำจัดศัตรูเพื่อรับ EXP\nเมื่อเลเวลอัพ Stats ทั้งหมดเพิ่มขึ้น\n\nLv.2 → ปลดล็อค Skill Q\nLv.3 → ปลดล็อค Skill E (หรือ R สำหรับภูมิ)\n\n💡 แถบ EXP อยู่ใต้แถบ HP มุมซ้ายบน',
+            icon: '📈',
+            action: 'none',
+            position: 'center',
+        },
+
+        // ── 12. Shop ─────────────────────────────────────────
+        {
+            title: 'MTC Co-op Store 🛒',
+            body: 'ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\n🧪 ซื้อด้วย Score:\n• Potion — ฟื้น HP ทันที\n• Damage Up — เพิ่มดาเมจ 10%\n• Speed Up — เพิ่มความเร็ว 10%\n• Shield — โล่กัน 1 ครั้ง',
+            icon: '🛒',
+            action: 'none',
+            position: 'center',
+        },
+
+        // ── 13. Database & Terminal ──────────────────────────
+        {
+            title: 'MTC Database Server 🗄️',
+            body: 'เซิร์ฟเวอร์อยู่มุมขวาบนของแผนที่\n\n💻 กด E — เปิด MTC Database\n   ดูเนื้อหาและ Lore\n\n🔒 กด F — Admin Terminal\n   พิมพ์ "help" เพื่อดูคำสั่งทั้งหมด\n   เช่น: "sudo heal", "sudo score", "sudo next"',
+            icon: '🗄️',
+            action: 'none',
+            position: 'center',
+        },
+
+        // ── 14. Enemy Types ──────────────────────────────────
+        {
+            title: 'ประเภทศัตรู 👾',
+            body: '🔴 Basic — เดินเร็ว ยิงได้\n🟠 Tank 🛡️ — HP สูงมาก เดินช้า\n🟣 Mage 🧙 — สายฟ้า + อุกกาบาต\n🟢 Ranged — ยิงระยะไกล หนีเก่ง\n\n⚠️ Glitch Wave — HP ×3 + สีเปลี่ยน\nบางเวฟจะ Invert การควบคุม — ระวัง!',
+            icon: '👾',
+            action: 'none',
+            position: 'center',
+        },
+
+        // ── 15. Boss ─────────────────────────────────────────
+        {
+            title: 'Boss Encounters 👑',
+            body: 'ทุก 3 เวฟจะมี Boss ปรากฏตัว!\n\n👑 ครูมานพ — Boss หลัก (Wave 3,6,9,12,15)\n   Meteor Shower, Thunder, Dash\n   HP Regen ถ้าไม่ยิงนาน!\n\n👩‍🔬 ครูเฟิร์ส — Physics Expert (Wave 6+)\n   Shockwave + เรียก Minions\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
+            icon: '👑',
+            action: 'none',
+            position: 'center',
+        },
+
+        // ── 16. Ready ────────────────────────────────────────
+        {
+            title: 'พร้อมแล้ว! 🚀',
+            body: 'คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievement มากมาย\n🎯 ผ่านทั้ง 15 Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่สนามรบ!',
+            icon: '🎮',
+            action: 'none',
             position: 'center',
         },
     ];
 
     // ── DOM helpers ───────────────────────────────────────────
-    function _getCard()     { return document.getElementById('tutorial-card'); }
+    function _getCard() { return document.getElementById('tutorial-card'); }
     function _getProgress() { return document.getElementById('tutorial-progress'); }
-    function _getOverlay()  { return document.getElementById('tutorial-overlay'); }
+    function _getOverlay() { return document.getElementById('tutorial-overlay'); }
 
-    // ── Render current step ───────────────────────────────────
+    // Returns original STEPS indices visible for the current character
+    function _activeIndices() {
+        return STEPS.reduce((acc, s, i) => {
+            if (!s.charOnly || s.charOnly === _charType) acc.push(i);
+            return acc;
+        }, []);
+    }
+
+    // ── Render ────────────────────────────────────────────────
     function _render() {
-        const step    = STEPS[_stepIndex];
-        const card    = _getCard();
+        const step = STEPS[_stepIndex];
+        const card = _getCard();
         const overlay = _getOverlay();
-        const prog    = _getProgress();
-        if (!card || !overlay) return;
+        if (!card || !overlay || !step) return;
 
         overlay.style.display = 'flex';
 
-        // Position
-        card.className = 'tutorial-card tutorial-card--' + (step.position || 'center');
+        const pos = step.position || 'center';
+        card.className = 'tutorial-card tutorial-card--' + pos;
 
-        // Content
-        document.getElementById('tut-icon').textContent  = step.icon || '🎓';
+        document.getElementById('tut-icon').textContent = step.icon || '🎓';
         document.getElementById('tut-title').textContent = step.title;
-        document.getElementById('tut-body').innerHTML    =
-            step.body.replace(/\n/g, '<br>');
+        document.getElementById('tut-body').innerHTML = step.body.replace(/\n/g, '<br>');
 
-        // Action hint
         const actionHint = document.getElementById('tut-action-hint');
-        const nextBtn    = document.getElementById('tut-next-btn');
-        const actionBar  = document.getElementById('tut-action-bar');
+        const nextBtn = document.getElementById('tut-next-btn');
+        const actionBar = document.getElementById('tut-action-bar');
+        const actionLbl = document.getElementById('tut-action-label');
 
         if (step.action && step.action !== 'none') {
-            actionHint.style.display = 'flex';
-            actionBar.style.display  = 'block';
-            nextBtn.style.display    = 'none';
+            if (actionHint) actionHint.style.display = 'flex';
+            if (actionBar) actionBar.style.display = 'block';
+            if (nextBtn) nextBtn.style.display = 'none';
             _updateActionBar();
         } else {
-            actionHint.style.display = 'none';
-            actionBar.style.display  = 'none';
-            nextBtn.style.display    = 'block';
-            nextBtn.textContent      = _stepIndex === STEPS.length - 1 ? '🚀 START!' : 'NEXT ▶';
+            if (actionHint) actionHint.style.display = 'none';
+            if (actionBar) actionBar.style.display = 'none';
+            if (actionLbl) actionLbl.textContent = '';
+            if (nextBtn) {
+                nextBtn.style.display = 'block';
+                const vis = _activeIndices();
+                const pos = vis.indexOf(_stepIndex);
+                nextBtn.textContent = (pos === vis.length - 1) ? '🚀 START!' : 'NEXT ▶';
+            }
         }
 
-        // Progress dots
+        // Progress dots — only for visible steps
+        const prog = _getProgress();
         if (prog) {
             prog.innerHTML = '';
-            STEPS.forEach((_, i) => {
+            const vis = _activeIndices();
+            const cur = vis.indexOf(_stepIndex);
+            vis.forEach((_, vi) => {
                 const dot = document.createElement('div');
-                dot.className = 'tut-dot' + (i === _stepIndex ? ' tut-dot--active' : (i < _stepIndex ? ' tut-dot--done' : ''));
+                dot.className = 'tut-dot' +
+                    (vi === cur ? ' tut-dot--active' : (vi < cur ? ' tut-dot--done' : ''));
                 prog.appendChild(dot);
             });
         }
 
-        // Entrance animation
-        card.style.opacity   = '0';
-        card.style.transform = 'translateY(20px) scale(0.97)';
+        // Entrance animation — adjust base transform per position
+        const isCenter = pos === 'center';
+        const isRight = pos === 'right';
+        const baseT = isCenter ? 'translate(-50%,-50%)' : isRight ? 'translateY(-50%)' : 'translateX(-50%)';
+        card.style.opacity = '0';
+        card.style.transform = baseT + ' scale(0.97)';
         requestAnimationFrame(() => {
             card.style.transition = 'opacity 0.25s ease-out, transform 0.25s ease-out';
-            card.style.opacity    = '1';
-            card.style.transform  = 'translateY(0) scale(1)';
+            card.style.opacity = '1';
+            card.style.transform = baseT + ' scale(1)';
         });
     }
 
     function _updateActionBar() {
-        const step    = STEPS[_stepIndex];
-        const bar     = document.getElementById('tut-action-bar');
-        const fill    = document.getElementById('tut-action-fill');
-        const label   = document.getElementById('tut-action-label');
-        if (!bar || !fill || !label) return;
+        const step = STEPS[_stepIndex];
+        const fill = document.getElementById('tut-action-fill');
+        const label = document.getElementById('tut-action-label');
+        if (!fill || !label || !step) return;
 
-        const need  = step.count || 1;
-        const done  = Math.min(_actionCount, need);
-        const pct   = (done / need) * 100;
-
-        fill.style.width = pct + '%';
+        const need = step.count || 1;
+        const done = Math.min(_actionCount, need);
+        fill.style.width = `${(done / need) * 100}%`;
         label.textContent = `${done} / ${need}`;
 
         if (done >= need && !_stepDone) {
@@ -218,25 +297,28 @@ const TutorialSystem = (() => {
         }
     }
 
-    // ── Advance to next step ──────────────────────────────────
+    // ── Advance — skips steps not matching charType ───────────
     function _advance() {
-        _stepIndex++;
+        _stepDone = false;
         _actionCount = 0;
-        _stepDone    = false;
+        _lastWeapon = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : null;
+        _stepIndex++;
 
-        if (_stepIndex >= STEPS.length) {
-            _finish();
-            return;
+        while (_stepIndex < STEPS.length) {
+            const s = STEPS[_stepIndex];
+            if (!s.charOnly || s.charOnly === _charType) break;
+            _stepIndex++;
         }
+
+        if (_stepIndex >= STEPS.length) { _finish(); return; }
         _render();
     }
 
-    // ── Finish tutorial ───────────────────────────────────────
+    // ── Finish ────────────────────────────────────────────────
     function _finish() {
         _active = false;
         localStorage.setItem(SAVE_KEY, '1');
 
-        // WARN-11 FIX: restore enemies that were hidden during the tutorial
         if (window._tutorialEnemyCache) {
             window.enemies = window._tutorialEnemyCache;
             window._tutorialEnemyCache = null;
@@ -245,17 +327,13 @@ const TutorialSystem = (() => {
         const overlay = _getOverlay();
         if (overlay) {
             overlay.style.transition = 'opacity 0.4s ease-out';
-            overlay.style.opacity    = '0';
+            overlay.style.opacity = '0';
             setTimeout(() => {
-                overlay.style.display    = 'none';
-                overlay.style.opacity    = '1';
+                overlay.style.display = 'none';
+                overlay.style.opacity = '1';
                 overlay.style.transition = '';
             }, 420);
         }
-
-        // gameLoop in game.js checks TutorialSystem.isActive() each frame.
-        // Now that _active is false, updateGame() will resume automatically
-        // on the next frame — no need to touch gameState from here.
 
         if (typeof spawnFloatingText === 'function' && window.player) {
             spawnFloatingText('🎓 TUTORIAL COMPLETE!', window.player.x, window.player.y - 100, '#facc15', 30);
@@ -263,55 +341,39 @@ const TutorialSystem = (() => {
         if (typeof Audio !== 'undefined' && Audio.playAchievement) Audio.playAchievement();
     }
 
-    // ── Public API ────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════
+    // PUBLIC API
+    // ══════════════════════════════════════════════════════════
     return {
 
-        /**
-         * Returns true if tutorial has already been completed.
-         */
-        isDone() {
-            return localStorage.getItem(SAVE_KEY) === '1';
-        },
+        isDone() { return localStorage.getItem(SAVE_KEY) === '1'; },
+        reset() { localStorage.removeItem(SAVE_KEY); },
 
-        /**
-         * Reset tutorial completion flag (for testing / replay).
-         */
-        reset() {
-            localStorage.removeItem(SAVE_KEY);
-        },
-
-        /**
-         * Start the tutorial. Called from startGame() in game.js.
-         * @param {string} charType — 'kao' | 'poom' | 'auto'
-         */
         start(charType) {
-            _charType    = charType || 'kao';
-            _active      = true;
-            _stepIndex   = 0;
+            _charType = charType || 'kao';
+            _active = true;
+            _stepIndex = 0;
             _actionCount = 0;
-            _stepDone    = false;
-            _skipRequested = false;
+            _stepDone = false;
+            _lastWeapon = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : null;
 
-            // WARN-11 FIX: hide any enemies that spawned before the tutorial
-            // starts so they can't damage the player while they're reading
-            // instructions. Restore them in _finish().
             if (typeof window.enemies !== 'undefined' && window.enemies.length > 0) {
                 window._tutorialEnemyCache = window.enemies;
                 window.enemies = [];
             }
 
+            // Skip leading steps that don't match character
+            while (_stepIndex < STEPS.length) {
+                const s = STEPS[_stepIndex];
+                if (!s.charOnly || s.charOnly === _charType) break;
+                _stepIndex++;
+            }
+
             _render();
         },
 
-        /** True while tutorial is running. */
         isActive() { return _active; },
 
-        /**
-         * True when the current step requires the player to perform a real
-         * in-game action (move / shoot / dash / skill / bullettime).
-         * gameLoop() uses this to decide whether to run updateGame() so the
-         * player actually sees their character respond to input.
-         */
         isActionStep() {
             if (!_active) return false;
             const step = STEPS[_stepIndex];
@@ -319,33 +381,38 @@ const TutorialSystem = (() => {
         },
 
         /**
-         * Called every frame from gameLoop() while tutorial is active.
-         * No-op — tutorial is fully event-driven.
+         * Called every frame from gameLoop().
+         * Handles weapon-step by polling weaponSystem.currentWeapon —
+         * works for both mouse-wheel and keyboard weapon cycling.
          */
         update() {
-            // Nothing to tick — tutorial is event-driven.
+            if (!_active || _stepDone) return;
+            const step = STEPS[_stepIndex];
+            if (!step || step.action !== 'weapon') return;
+            if (typeof weaponSystem === 'undefined') return;
+
+            const w = weaponSystem.currentWeapon;
+            if (_lastWeapon === null) {
+                _lastWeapon = w;
+            } else if (w !== _lastWeapon) {
+                _lastWeapon = w;
+                _actionCount++;
+                _updateActionBar();
+            }
         },
 
-        /**
-         * Forward keyboard/mouse events here from the input handlers.
-         * @param {string} type — 'move'|'shoot'|'dash'|'skill'|'bullettime'|'weapon'|'next'
-         */
         handleAction(type) {
             if (!_active || _stepDone) return;
-
             const step = STEPS[_stepIndex];
 
-            // NEXT / SPACE advances non-action steps
             if (type === 'next') {
                 if (!step.action || step.action === 'none') _advance();
                 return;
             }
+            if (type === 'skip') { _finish(); return; }
 
-            // Skip button
-            if (type === 'skip') {
-                _finish();
-                return;
-            }
+            // 'weapon' handled via update() polling — ignore here to avoid double-count
+            if (type === 'weapon') return;
 
             if (step.action && step.action !== 'none' && type === step.action) {
                 _actionCount++;
@@ -353,15 +420,8 @@ const TutorialSystem = (() => {
             }
         },
 
-        /** Called by the Next button in HTML. */
-        next() {
-            this.handleAction('next');
-        },
-
-        /** Called by the Skip button in HTML. */
-        skip() {
-            this.handleAction('skip');
-        },
+        next() { this.handleAction('next'); },
+        skip() { this.handleAction('skip'); },
     };
 })();
 

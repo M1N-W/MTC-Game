@@ -442,6 +442,8 @@ function _setupKeyboardListeners() {
                     if (typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon();
                     keys.q = 0;
                 }
+                // Tutorial: weapon-switch step is handled via polling in TutorialSystem.update()
+                // No explicit handleAction needed here.
             } else { keys.q = 0; }
         }
     });
@@ -473,7 +475,11 @@ function _setupMouseListeners() {
 
     // FIX (BUG-3): Add Mouse Wheel support for universal weapon switching
     window.addEventListener('wheel', function (e) {
-        if (window.gameState === 'PLAYING' && typeof weaponSystem !== 'undefined') {
+        if (typeof weaponSystem === 'undefined') return;
+        // Allow wheel weapon-switch during tutorial weapon-step so polling can detect it
+        const inTutWeaponStep = typeof TutorialSystem !== 'undefined' &&
+            TutorialSystem.isActive() && TutorialSystem.isActionStep();
+        if (window.gameState === 'PLAYING' || inTutWeaponStep) {
             if (e.deltaY > 0 || e.deltaY < 0) {
                 weaponSystem.switchWeapon();
             }
