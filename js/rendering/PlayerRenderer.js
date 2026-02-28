@@ -42,6 +42,28 @@ class PlayerRenderer {
             // Generic Player fallback
             PlayerRenderer._drawBase(entity, ctx);
         }
+
+        // ── Contact Warning Ring — แสดงเมื่อโดน melee ─────────
+        if ((entity._contactWarningTimer ?? 0) > 0) {
+            const t = entity._contactWarningTimer;   // 1.2 → 0
+            const ratio = t / 1.2;                       // 1.0 → 0 (fade out)
+            const pulse = Math.sin(performance.now() / 80) * 0.3 + 0.7;
+            const screen = worldToScreen(entity.x, entity.y);
+            const R = (entity.radius || 20) + 8 + (1 - ratio) * 14; // ขยายออกตาม fade
+
+            ctx.save();
+            ctx.globalAlpha = ratio * pulse * 0.85;
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fbbf24';
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, R, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
     }
 
     // ══════════════════════════════════════════════════════════

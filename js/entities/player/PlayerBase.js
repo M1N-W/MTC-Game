@@ -95,6 +95,11 @@ class Player extends Entity {
         const S = this.stats;
         const PHY = BALANCE.physics;
 
+        // ── Contact Warning Timer ──────────────────────────────
+        if (this._contactWarningTimer > 0) {
+            this._contactWarningTimer = Math.max(0, this._contactWarningTimer - dt);
+        }
+
         // ── Combo System Update ────────────────────────────────
         if (this.comboCount > 0) {
             this.comboTimer -= dt;
@@ -374,13 +379,28 @@ class Player extends Entity {
         if (this.onGraph) { amt *= 2; spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16); }
         this.hp -= amt; this.hp = Math.max(0, this.hp);
 
-        // ── Damage number display ────────────────────────────────
-        // Contact damage arrives as tiny fractions each frame (e.g. 0.24/frame).
-        // Accumulate until ≥1 before showing a floating number to avoid spamming "0".
-        this._dmgAccum = (this._dmgAccum || 0) + amt;
-        if (this._dmgAccum >= 1) {
-            spawnFloatingText(Math.round(this._dmgAccum), this.x, this.y - 30, '#ef4444');
+        // ── Damage display — แยก contact damage (เล็กๆต่อเนื่อง) vs bullet/AoE (ก้อนใหญ่) ──
+        // CONTACT DAMAGE: amt < 5 ต่อครั้ง → ไม่แสดงตัวเลขรายเฟรม
+        //   แสดง ⚠️ แค่ครั้งเดียวต่อ cooldown window + เปิด warning ring
+        // BULLET/AOE DAMAGE: amt ≥ 5 → แสดงตัวเลขทันทีแบบเดิม
+        const CONTACT_THRESHOLD = 5;
+        const WARNING_COOLDOWN = 1.2; // วินาที — ไม่แสดงซ้ำถี่กว่านี้
+
+        if (amt < CONTACT_THRESHOLD) {
+            // สะสม damage ไว้เพื่อ HP bar (แต่ไม่สแปม floating text)
+            this._dmgAccum = (this._dmgAccum || 0) + amt;
+
+            // แสดง ⚠️ + เปิด warning ring เมื่อ cooldown หมด
+            if (!(this._contactWarningTimer > 0)) {
+                spawnFloatingText('⚠️', this.x, this.y - 38, '#fbbf24', 22);
+                this._contactWarningTimer = WARNING_COOLDOWN;
+            }
+        } else {
+            // Bullet / AoE / boss special — แสดงตัวเลขทันที
+            // รวม contact ที่สะสมไว้ก่อนหน้าถ้ามี
+            const total = (this._dmgAccum || 0) + amt;
             this._dmgAccum = 0;
+            spawnFloatingText(Math.round(total), this.x, this.y - 30, '#ef4444');
         }
         spawnParticles(this.x, this.y, 8, '#ef4444');
         addScreenShake(8); Audio.playHit();
