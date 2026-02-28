@@ -172,27 +172,69 @@ class PlayerRenderer {
     static _drawKaoClone(clone, ctx) {
         const sc = worldToScreen(clone.x, clone.y);
         const aimAngle = Math.atan2(window.mouse.wy - clone.y, window.mouse.wx - clone.x);
+        const isWM = clone.owner.isWeaponMaster;
+        const accentColor = isWM ? '#facc15' : '#60a5fa';
+        const now = performance.now();
+        const flicker = 0.85 + Math.sin(now * 0.017) * 0.08;
+        const baseAlpha = (clone.owner.isInvisible || clone.owner.isFreeStealthy) ? 0.15 : clone.alpha;
 
         ctx.save();
-        ctx.globalAlpha = (clone.owner.isInvisible || clone.owner.isFreeStealthy) ? 0.15 : clone.alpha;
+        ctx.globalAlpha = baseAlpha * flicker;
 
-        ctx.fillStyle = clone.owner.isWeaponMaster ? '#facc15' : clone.color;
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = clone.owner.isWeaponMaster ? '#facc15' : '#3b82f6';
+        // ── Shadow body (dark translucent fill) ──
         ctx.beginPath();
         ctx.arc(sc.x, sc.y, clone.radius, 0, Math.PI * 2);
+        ctx.fillStyle = isWM ? 'rgba(250,204,21,0.12)' : 'rgba(30,58,138,0.25)';
         ctx.fill();
+
+        // ── Wireframe ring ──
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = accentColor;
+        ctx.strokeStyle = accentColor;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, clone.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
         ctx.shadowBlur = 0;
 
-        ctx.strokeStyle = '#94a3b8';
-        ctx.lineWidth = 3;
+        // ── Scanlines (3 horizontal bands) ──
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, clone.radius, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.strokeStyle = isWM ? 'rgba(250,204,21,0.18)' : 'rgba(96,165,250,0.18)';
+        ctx.lineWidth = 1;
+        const step = clone.radius * 0.55;
+        for (let i = -1; i <= 1; i++) {
+            const ly = sc.y + i * step;
+            ctx.beginPath();
+            ctx.moveTo(sc.x - clone.radius, ly);
+            ctx.lineTo(sc.x + clone.radius, ly);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // ── Dashed aim laser + tip dot ──
+        const laserEnd = {
+            x: sc.x + Math.cos(aimAngle) * 28,
+            y: sc.y + Math.sin(aimAngle) * 28
+        };
+        ctx.strokeStyle = accentColor;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
         ctx.beginPath();
         ctx.moveTo(sc.x, sc.y);
-        ctx.lineTo(
-            sc.x + Math.cos(aimAngle) * 28,
-            sc.y + Math.sin(aimAngle) * 28
-        );
+        ctx.lineTo(laserEnd.x, laserEnd.y);
         ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ── Tip dot ──
+        ctx.beginPath();
+        ctx.arc(laserEnd.x, laserEnd.y, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = accentColor;
+        ctx.fill();
 
         ctx.restore();
     }

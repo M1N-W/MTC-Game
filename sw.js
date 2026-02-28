@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.39'; // v3.6.39 Passive skill UI improvements - MAX state display
+const CACHE_NAME = 'mtc-cache-v3.6.40'; // v3.6.40 Enhanced Kao clone rendering - holographic effects
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
