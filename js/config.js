@@ -642,29 +642,29 @@ const GAME_TEXTS = {
     // ══════════════════════════════════════════════════════
     skillNames: {
         // ── ทุกตัวละคร ──────────────────────────────────
-        attack: 'ATTACK',
-        dash: 'DASH',
+        attack: 'ยิงปกติ',
+        dash: 'หลบ',
 
         // ── เก้า (KaoPlayer) ────────────────────────────
         kao: {
-            skill1: 'STEALTH',    // R-Click — ซ่อนตัว
-            teleport: 'TELEPORT',   // Q — เทเลพอร์ต
-            clones: 'CLONES',     // E — โคลน
+            skill1: 'ซุ่มล่องหน',    // R-Click — ซ่อนตัว
+            teleport: 'เทเลพอร์ต',   // Q — เทเลพอร์ต
+            clones: 'โคลนร่าง',     // E — โคลนร่าง
             passive: 'ซุ่มเสรี',  // passive — ซุ่มเสรี
         },
 
         // ── ภูมิ (PoomPlayer) ───────────────────────────
         poom: {
-            skill1: 'กินข้าว',    // R-Click — กินข้าวเหนียว
-            naga: 'NAGA',        // Q — เรียกพญานาค
-            ritual: 'RITUAL',      // R — พิธีสังเวย
+            skill1: 'บัฟข้าวเหนียว',    // R-Click — กินข้าวเหนียว
+            naga: 'อัญเชิญพญานาค',        // Q — เรียกพญานาค
+            ritual: 'พิธีสังเวย',      // R — พิธีสังเวย
         },
 
         // ── ออโต้ (AutoPlayer) ──────────────────────────
         auto: {
-            skill1: 'WANCHAI',   // R-Click — Stand วันชัย
-            vacuum: 'VACUUM',    // Q — ดูดศัตรู
-            detonate: 'DETONATE',  // E — ระเบิด
+            skill1: 'แสตนด์วันชัย',   // R-Click — แสตนด์วันชัย
+            vacuum: 'ดูดศัตรู',    // Q — ดูดศัตรู
+            detonate: 'พลีชีพวันชัย',  // E — ระเบิดวันชัย
         },
 
         // ── Utility (proximity shortcuts) ───────────────
