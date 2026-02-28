@@ -249,23 +249,19 @@ class PoomPlayer extends Entity {
         this.cooldowns.shoot = S.riceCooldown * this.cooldownMultiplier;
         const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0));
         const proj = new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
-        // ── Phase 2 Session 2: Apply sticky stack on direct rice projectile hit ──
-        // CONSTRAINT: Fragment projectiles never call this (they are separate Projectile instances
-        //             with isFragment=true and do NOT go through shoot()).
-        // CONSTRAINT: Called exactly once per direct hit via the onHit callback.
+        proj.isPoom = true;
+        proj.isCrit = isCrit;
+        // Apply sticky stack on direct hit (Fragment projectiles bypass this)
         const self = this;
-
         proj.onHit = function (enemy) {
-            self.applyStickyTo(enemy); // ── Session C: Using StatusEffect framework only ──
+            self.applyStickyTo(enemy);
         };
         projectileManager.add(proj);
         if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
         // NOTE: Audio.playPoomShoot() is called in shootPoom() (game.js) — the
-        // actual execution path for PoomPlayer.  This method (PoomPlayer.shoot)
-        // is currently only reached via the isPoom branch in game.js before the
-        // duplicate shootPoom() call, but cooldown is consumed by shootPoom first,
-        // so this block returns early.  Audio lives in game.js to avoid double-fire.
+        // actual execution path.  This method returns early because shootPoom()
+        // consumes the cooldown first.  Audio lives in game.js to avoid double-fire.
     }
 
     eatRice() {

@@ -55,6 +55,7 @@ class KaoClone {
                 isCrit, 'player', projOptions
             );
             p.isCrit = isCrit;
+            p.weaponKind = wepKey;
             projectileManager.add(p);
         }
         spawnParticles(
@@ -452,6 +453,7 @@ class KaoPlayer extends Player {
 
             const p = new Projectile(sx, sy, finalAngle, wep.speed, finalDamage, color, false, 'player', projOptions);
             p.isCrit = isCrit;
+            p.weaponKind = wepKey;
             projectileManager.add(p);
         }
 

@@ -246,49 +246,118 @@ class Projectile {
         }
 
         // ════════════════════════════════════════════════
-        // KAO weapon-specific projectiles
+        // PLAYER PROJECTILES — weapon-specific art
+        // Routing priority: isPoom > weaponKind > color-derived
+        // isGolden = Ambush break / Weapon Master buff (color #facc15)
+        // isCharged = Weapon Master charged sniper release (symbol '∑')
         // ════════════════════════════════════════════════
-        if (this.team === 'player' && this.symbol === 'x') {
+        if (this.isPoom) {
+            // ── POOM — Enchanted Rice Cluster (always, regardless of isCrit/symbol) ──
+            CTX.rotate(this.angle);
+            const r = this.isCrit ? 11 : 7.5;
+            const now = performance.now();
+            // emerald magic trail
+            for (let ti = 0; ti < 5; ti++) {
+                const td = (ti + 1) * (r * 0.65);
+                const tR = r * (0.38 - ti * 0.055);
+                if (tR <= 0) continue;
+                CTX.globalAlpha = (1 - ti / 5) * 0.5;
+                const wispG = CTX.createRadialGradient(-td, 0, 0, -td, 0, tR);
+                wispG.addColorStop(0, '#34d399'); wispG.addColorStop(1, 'rgba(16,185,129,0)');
+                CTX.fillStyle = wispG;
+                CTX.shadowBlur = 8; CTX.shadowColor = '#10b981';
+                CTX.beginPath(); CTX.arc(-td, 0, tR, 0, Math.PI * 2); CTX.fill();
+            }
+            CTX.shadowBlur = 0;
+            CTX.globalAlpha = 0.18; CTX.fillStyle = '#6ee7b7';
+            CTX.shadowBlur = 18; CTX.shadowColor = '#10b981';
+            CTX.beginPath(); CTX.arc(0, 0, r * 1.65, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+            const poomGrains = [
+                [0, 0, r], [-r * 0.65, -r * 0.42, r * 0.72], [r * 0.55, -r * 0.48, r * 0.68],
+                [-r * 0.48, r * 0.55, r * 0.63], [r * 0.38, r * 0.52, r * 0.58],
+            ];
+            CTX.globalAlpha = 1; CTX.shadowBlur = 10; CTX.shadowColor = '#fbbf24';
+            for (const [gx, gy, gr] of poomGrains) {
+                const gGrad = CTX.createRadialGradient(gx - gr * 0.25, gy - gr * 0.25, 0, gx, gy, gr);
+                gGrad.addColorStop(0, '#fffbeb'); gGrad.addColorStop(0.55, '#fde68a'); gGrad.addColorStop(1, '#d97706');
+                CTX.fillStyle = gGrad;
+                CTX.beginPath(); CTX.arc(gx, gy, gr, 0, Math.PI * 2); CTX.fill();
+            }
+            CTX.shadowBlur = 0;
+            const veinPulse = 0.5 + Math.sin(now / 180) * 0.5;
+            CTX.globalAlpha = 0.3 + veinPulse * 0.3; CTX.fillStyle = '#6ee7b7';
+            CTX.shadowBlur = 5; CTX.shadowColor = '#10b981';
+            CTX.beginPath(); CTX.arc(-r * 0.18, -r * 0.2, r * 0.22, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(r * 0.25, r * 0.15, r * 0.18, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+            if (this.isCrit) {
+                CTX.globalAlpha = 0.85;
+                CTX.strokeStyle = '#facc15'; CTX.lineWidth = 1.8;
+                CTX.shadowBlur = 22; CTX.shadowColor = '#facc15';
+                CTX.beginPath(); CTX.arc(0, 0, r + 7, 0, Math.PI * 2); CTX.stroke();
+                CTX.strokeStyle = '#fef08a'; CTX.lineWidth = 1; CTX.shadowBlur = 10;
+                for (let si = 0; si < 8; si++) {
+                    const sa = (si / 8) * Math.PI * 2;
+                    CTX.globalAlpha = 0.6 + Math.sin(now / 120 + si) * 0.3;
+                    CTX.beginPath();
+                    CTX.moveTo(Math.cos(sa) * (r + 3), Math.sin(sa) * (r + 3));
+                    CTX.lineTo(Math.cos(sa) * (r + 11), Math.sin(sa) * (r + 11)); CTX.stroke();
+                }
+            }
+
+        } else if (this.team === 'player') {
             CTX.rotate(this.angle);
             const now = performance.now();
 
-            // ── AUTO RIFLE — Plasma Tracer with holo rings ────────────────
-            if (this.color === '#3b82f6') {
-                const trailLen = this.isCrit ? 28 : 18;
-                const coreW = this.isCrit ? 4 : 2.5;
+            // ── Determine effective weapon and visual state ────────────────
+            // weaponKind tagged at spawn; fall back to color-derived guess
+            const wk = this.weaponKind ||
+                (this.color === '#3b82f6' ? 'auto' :
+                    this.color === '#f59e0b' ? 'shotgun' :
+                        this.color === '#ef4444' ? 'sniper' : 'auto');
+            // isGolden: Ambush break OR Weapon Master buff (color forced to #facc15)
+            const isGolden = (this.color === '#facc15');
+            // isCharged: Weapon Master charged sniper release (symbol '∑', sniper only)
+            const isCharged = (this.symbol === '∑' && wk === 'sniper');
 
-                // soft energy bloom behind
+            // ── AUTO RIFLE — Plasma Tracer with holo rings ────────────────
+            if (wk === 'auto') {
+                // base color: blue unless golden
+                const coreColor = isGolden ? '#facc15' : (this.isCrit ? '#facc15' : '#93c5fd');
+                const glowColor = isGolden ? '#f59e0b' : (this.isCrit ? '#facc15' : '#60a5fa');
+                const trailColor = isGolden ? 'rgba(251,191,36,' : 'rgba(59,130,246,';
+                const trailLen = (this.isCrit || isGolden) ? 28 : 18;
+                const coreW = (this.isCrit || isGolden) ? 4 : 2.5;
+
                 const trailGrad = CTX.createLinearGradient(-trailLen, 0, 0, 0);
                 trailGrad.addColorStop(0, 'rgba(0,0,0,0)');
-                trailGrad.addColorStop(0.6, 'rgba(59,130,246,0.2)');
-                trailGrad.addColorStop(1, 'rgba(96,165,250,0.55)');
+                trailGrad.addColorStop(0.6, `${trailColor}0.2)`);
+                trailGrad.addColorStop(1, `${trailColor}0.55)`);
                 CTX.globalAlpha = 1;
                 CTX.strokeStyle = trailGrad; CTX.lineWidth = coreW + 6; CTX.lineCap = 'butt';
                 CTX.beginPath(); CTX.moveTo(-trailLen, 0); CTX.lineTo(0, 0); CTX.stroke();
 
-                // core capsule body
-                CTX.strokeStyle = this.isCrit ? '#facc15' : '#93c5fd';
-                CTX.lineWidth = coreW;
-                CTX.shadowBlur = this.isCrit ? 22 : 14; CTX.shadowColor = this.isCrit ? '#facc15' : '#60a5fa';
+                CTX.strokeStyle = coreColor; CTX.lineWidth = coreW;
+                CTX.shadowBlur = (this.isCrit || isGolden) ? 22 : 14; CTX.shadowColor = glowColor;
                 CTX.beginPath(); CTX.moveTo(-trailLen * 0.5, 0); CTX.lineTo(5, 0); CTX.stroke();
 
-                // tip dot
-                CTX.fillStyle = this.isCrit ? '#facc15' : '#ffffff';
-                CTX.shadowBlur = 16; CTX.shadowColor = this.isCrit ? '#facc15' : '#bfdbfe';
+                CTX.fillStyle = '#ffffff';
+                CTX.shadowBlur = 16; CTX.shadowColor = glowColor;
                 CTX.beginPath(); CTX.arc(5, 0, coreW * 0.85, 0, Math.PI * 2); CTX.fill();
                 CTX.shadowBlur = 0;
 
-                // holo rings — 2 spinning rings, alternating direction
-                if (!this.isCrit) {
-                    const ringAngle = (now / 120) % (Math.PI * 2);
-                    CTX.globalAlpha = 0.55;
-                    CTX.strokeStyle = '#7dd3fc'; CTX.lineWidth = 0.8;
-                    CTX.beginPath(); CTX.ellipse(0, 0, 7, 3.5, ringAngle, 0, Math.PI * 2); CTX.stroke();
-                    CTX.globalAlpha = 0.35;
-                    CTX.strokeStyle = '#bfdbfe'; CTX.lineWidth = 0.7;
-                    CTX.beginPath(); CTX.ellipse(0, 0, 9, 2.5, -ringAngle * 0.7, 0, Math.PI * 2); CTX.stroke();
-                } else {
-                    // crit — burst spokes at spawn
+                if (isGolden) {
+                    // golden shimmer rings — weapon master signature
+                    const ringAngle = (now / 80) % (Math.PI * 2);
+                    CTX.globalAlpha = 0.7;
+                    CTX.strokeStyle = '#facc15'; CTX.lineWidth = 1;
+                    CTX.shadowBlur = 10; CTX.shadowColor = '#facc15';
+                    CTX.beginPath(); CTX.ellipse(0, 0, 8, 4, ringAngle, 0, Math.PI * 2); CTX.stroke();
+                    CTX.globalAlpha = 0.45;
+                    CTX.strokeStyle = '#fde68a'; CTX.lineWidth = 0.7;
+                    CTX.beginPath(); CTX.ellipse(0, 0, 11, 3, -ringAngle * 0.7, 0, Math.PI * 2); CTX.stroke();
+                } else if (this.isCrit) {
                     CTX.globalAlpha = 0.7;
                     CTX.strokeStyle = '#facc15'; CTX.lineWidth = 1;
                     CTX.shadowBlur = 10; CTX.shadowColor = '#facc15';
@@ -296,112 +365,128 @@ class Projectile {
                         const sa = (sp / 6) * Math.PI * 2;
                         CTX.beginPath();
                         CTX.moveTo(Math.cos(sa) * 5, Math.sin(sa) * 5);
-                        CTX.lineTo(Math.cos(sa) * 10, Math.sin(sa) * 10);
-                        CTX.stroke();
+                        CTX.lineTo(Math.cos(sa) * 10, Math.sin(sa) * 10); CTX.stroke();
                     }
+                } else {
+                    // normal holo rings
+                    const ringAngle = (now / 120) % (Math.PI * 2);
+                    CTX.globalAlpha = 0.55;
+                    CTX.strokeStyle = '#7dd3fc'; CTX.lineWidth = 0.8;
+                    CTX.beginPath(); CTX.ellipse(0, 0, 7, 3.5, ringAngle, 0, Math.PI * 2); CTX.stroke();
+                    CTX.globalAlpha = 0.35;
+                    CTX.strokeStyle = '#bfdbfe'; CTX.lineWidth = 0.7;
+                    CTX.beginPath(); CTX.ellipse(0, 0, 9, 2.5, -ringAngle * 0.7, 0, Math.PI * 2); CTX.stroke();
                 }
 
                 // ── SHOTGUN — Molten Shrapnel ─────────────────────────────────
-            } else if (this.color === '#f59e0b') {
-                const sz = this.isCrit ? 7 : 5;
+            } else if (wk === 'shotgun') {
+                const sz = (this.isCrit || isGolden) ? 7 : 5;
+                const glowColor = isGolden ? '#facc15' : '#f97316';
 
-                // heat glow behind
                 CTX.globalAlpha = 0.3;
-                CTX.fillStyle = '#fbbf24';
-                CTX.shadowBlur = 14; CTX.shadowColor = '#f97316';
+                CTX.fillStyle = isGolden ? '#facc15' : '#fbbf24';
+                CTX.shadowBlur = 14; CTX.shadowColor = glowColor;
                 CTX.beginPath(); CTX.ellipse(-sz, 0, sz * 2, sz, 0, 0, Math.PI * 2); CTX.fill();
                 CTX.shadowBlur = 0;
 
-                // jagged shrapnel body — irregular polygon
                 CTX.globalAlpha = 1;
                 const shardG = CTX.createLinearGradient(-sz, -sz, sz, sz);
-                shardG.addColorStop(0, '#fef3c7');
-                shardG.addColorStop(0.4, '#f59e0b');
-                shardG.addColorStop(1, '#c2410c');
+                if (isGolden) {
+                    shardG.addColorStop(0, '#fef9c3'); shardG.addColorStop(0.4, '#facc15'); shardG.addColorStop(1, '#b45309');
+                } else {
+                    shardG.addColorStop(0, '#fef3c7'); shardG.addColorStop(0.4, '#f59e0b'); shardG.addColorStop(1, '#c2410c');
+                }
                 CTX.fillStyle = shardG;
-                CTX.shadowBlur = this.isCrit ? 22 : 10; CTX.shadowColor = '#f97316';
+                CTX.shadowBlur = (this.isCrit || isGolden) ? 22 : 10; CTX.shadowColor = glowColor;
                 CTX.beginPath();
-                CTX.moveTo(sz * 1.4, 0);
-                CTX.lineTo(sz * 0.4, -sz * 1.1);
-                CTX.lineTo(-sz * 0.5, -sz * 0.6);
-                CTX.lineTo(-sz * 1.2, 0.5);
-                CTX.lineTo(-sz * 0.4, sz * 0.9);
-                CTX.lineTo(sz * 0.7, sz * 0.5);
+                CTX.moveTo(sz * 1.4, 0); CTX.lineTo(sz * 0.4, -sz * 1.1);
+                CTX.lineTo(-sz * 0.5, -sz * 0.6); CTX.lineTo(-sz * 1.2, 0.5);
+                CTX.lineTo(-sz * 0.4, sz * 0.9); CTX.lineTo(sz * 0.7, sz * 0.5);
                 CTX.closePath(); CTX.fill();
 
-                // hot core bright spot
-                CTX.fillStyle = '#fffbeb';
-                CTX.shadowBlur = 8; CTX.shadowColor = '#fef3c7';
+                CTX.fillStyle = isGolden ? '#fef9c3' : '#fffbeb';
+                CTX.shadowBlur = 8; CTX.shadowColor = glowColor;
                 CTX.beginPath(); CTX.arc(0, 0, sz * 0.45, 0, Math.PI * 2); CTX.fill();
                 CTX.shadowBlur = 0;
 
-                // trailing spark flecks — 3 small dots
-                const sparkAlpha = 0.7;
-                CTX.globalAlpha = sparkAlpha;
-                CTX.fillStyle = '#fbbf24';
+                CTX.globalAlpha = 0.7;
+                CTX.fillStyle = isGolden ? '#facc15' : '#fbbf24';
                 CTX.beginPath(); CTX.arc(-sz * 1.5, 1, 1.2, 0, Math.PI * 2); CTX.fill();
-                CTX.globalAlpha = sparkAlpha * 0.6;
+                CTX.globalAlpha = 0.42;
                 CTX.beginPath(); CTX.arc(-sz * 2.1, -1.5, 0.9, 0, Math.PI * 2); CTX.fill();
-                CTX.globalAlpha = sparkAlpha * 0.35;
+                CTX.globalAlpha = 0.25;
                 CTX.beginPath(); CTX.arc(-sz * 2.8, 0.5, 0.7, 0, Math.PI * 2); CTX.fill();
 
-                if (this.isCrit) {
+                if (this.isCrit || isGolden) {
                     CTX.globalAlpha = 0.85;
                     CTX.strokeStyle = '#facc15'; CTX.lineWidth = 1.5;
                     CTX.shadowBlur = 18; CTX.shadowColor = '#facc15';
                     CTX.beginPath(); CTX.arc(0, 0, sz + 5, 0, Math.PI * 2); CTX.stroke();
                 }
 
-                // ── SNIPER — Railgun Needle with Mach Cone ────────────────────
-            } else if (this.color === '#ef4444') {
-                const needleLen = this.isCrit ? 38 : 28;
-                const needleW = this.isCrit ? 2.2 : 1.4;
+                // ── SNIPER — charged golden lance (Weapon Master release) ─────
+            } else if (wk === 'sniper' && isCharged) {
+                CTX.globalAlpha = 0.25;
+                CTX.fillStyle = '#facc15';
+                CTX.beginPath(); CTX.ellipse(-16, 0, 22, 8, 0, 0, Math.PI * 2); CTX.fill();
+                CTX.globalAlpha = 1;
+                const cg = CTX.createLinearGradient(-28, 0, 6, 0);
+                cg.addColorStop(0, 'rgba(251,191,36,0)'); cg.addColorStop(0.55, '#facc15'); cg.addColorStop(1, '#ffffff');
+                CTX.strokeStyle = cg; CTX.lineWidth = 6; CTX.lineCap = 'round';
+                CTX.shadowBlur = 28; CTX.shadowColor = '#facc15';
+                CTX.beginPath(); CTX.moveTo(-28, 0); CTX.lineTo(6, 0); CTX.stroke();
+                // energy rings
+                CTX.strokeStyle = '#fde68a'; CTX.lineWidth = 1.2; CTX.shadowBlur = 8;
+                for (let ri = -20; ri < 4; ri += 8) {
+                    const ra = Math.max(0, (28 + ri) / 34);
+                    CTX.globalAlpha = ra * 0.5;
+                    CTX.beginPath(); CTX.arc(ri, 0, 4 + ra * 3, 0, Math.PI * 2); CTX.stroke();
+                }
+                CTX.shadowBlur = 0;
 
-                // Mach cone layers — 3 translucent triangles stacked
+                // ── SNIPER — Railgun Needle (normal + golden ambush variant) ──
+            } else if (wk === 'sniper') {
+                const needleLen = (this.isCrit || isGolden) ? 38 : 28;
+                const needleW = (this.isCrit || isGolden) ? 2.2 : 1.4;
+                const needleColor = isGolden ? '#facc15' : (this.isCrit ? '#facc15' : '#ef4444');
+                const glowColor = isGolden ? '#f59e0b' : (this.isCrit ? '#facc15' : '#ef4444');
+                const coneColor = isGolden ? '#fde68a' : '#fca5a5';
+
                 const coneCount = 3;
                 for (let ci = 0; ci < coneCount; ci++) {
                     const coneLen = needleLen * (0.45 + ci * 0.2);
-                    const coneW = (3 + ci * 2.5) * (this.isCrit ? 1.4 : 1);
+                    const coneW = (3 + ci * 2.5) * ((this.isCrit || isGolden) ? 1.4 : 1);
                     CTX.globalAlpha = 0.12 - ci * 0.03;
-                    CTX.fillStyle = '#fca5a5';
+                    CTX.fillStyle = coneColor;
                     CTX.beginPath();
-                    CTX.moveTo(-coneLen * 0.15, 0);
-                    CTX.lineTo(-coneLen, -coneW);
-                    CTX.lineTo(-coneLen, coneW);
+                    CTX.moveTo(-coneLen * 0.15, 0); CTX.lineTo(-coneLen, -coneW); CTX.lineTo(-coneLen, coneW);
                     CTX.closePath(); CTX.fill();
                 }
 
-                // energy wake line
                 CTX.globalAlpha = 0.35;
                 const wakeGrad = CTX.createLinearGradient(-needleLen, 0, 0, 0);
-                wakeGrad.addColorStop(0, 'rgba(239,68,68,0)');
-                wakeGrad.addColorStop(1, 'rgba(252,165,165,0.6)');
+                wakeGrad.addColorStop(0, 'rgba(0,0,0,0)');
+                wakeGrad.addColorStop(1, isGolden ? 'rgba(251,191,36,0.6)' : 'rgba(252,165,165,0.6)');
                 CTX.strokeStyle = wakeGrad; CTX.lineWidth = needleW + 4; CTX.lineCap = 'butt';
                 CTX.beginPath(); CTX.moveTo(-needleLen, 0); CTX.lineTo(0, 0); CTX.stroke();
 
-                // needle core — sharp bright line
                 CTX.globalAlpha = 1;
                 const needleGrad = CTX.createLinearGradient(-needleLen, 0, needleLen * 0.15, 0);
-                needleGrad.addColorStop(0, 'rgba(239,68,68,0.3)');
-                needleGrad.addColorStop(0.7, '#ef4444');
+                needleGrad.addColorStop(0, isGolden ? 'rgba(251,191,36,0.3)' : 'rgba(239,68,68,0.3)');
+                needleGrad.addColorStop(0.7, needleColor);
                 needleGrad.addColorStop(1, '#ffffff');
                 CTX.strokeStyle = needleGrad; CTX.lineWidth = needleW;
-                CTX.shadowBlur = this.isCrit ? 24 : 16; CTX.shadowColor = this.isCrit ? '#facc15' : '#ef4444';
+                CTX.shadowBlur = (this.isCrit || isGolden) ? 24 : 16; CTX.shadowColor = glowColor;
                 CTX.lineCap = 'round';
                 CTX.beginPath(); CTX.moveTo(-needleLen, 0); CTX.lineTo(needleLen * 0.12, 0); CTX.stroke();
 
-                // sharp tip
-                CTX.fillStyle = this.isCrit ? '#facc15' : '#fff1f2';
-                CTX.shadowBlur = 12; CTX.shadowColor = this.isCrit ? '#facc15' : '#fca5a5';
-                CTX.beginPath();
-                CTX.moveTo(needleLen * 0.15, 0);
-                CTX.lineTo(needleLen * 0.06, -needleW * 1.2);
-                CTX.lineTo(needleLen * 0.06, needleW * 1.2);
-                CTX.closePath(); CTX.fill();
+                // sharp tip — rounded dot, NO arrow-head
+                CTX.fillStyle = '#ffffff';
+                CTX.shadowBlur = 12; CTX.shadowColor = glowColor;
+                CTX.beginPath(); CTX.arc(needleLen * 0.12, 0, needleW * 1.1, 0, Math.PI * 2); CTX.fill();
                 CTX.shadowBlur = 0;
 
-                // crit shimmer rings along barrel
-                if (this.isCrit) {
+                if (this.isCrit || isGolden) {
                     CTX.globalAlpha = 0.5;
                     CTX.strokeStyle = '#facc15'; CTX.lineWidth = 0.8;
                     for (let ri = -24; ri < 0; ri += 9) {
@@ -409,140 +494,29 @@ class Projectile {
                     }
                 }
 
-                // ── FALLBACK — generic player bullet (handles unknown colors) ─
+                // ── FALLBACK (unknown weaponKind) — glowing dot, no arrow ─────
             } else {
-                const trailLen = this.isCrit ? 32 : 22;
-                const coreW = this.isCrit ? 4.5 : 3;
-                const trailGrad = CTX.createLinearGradient(-trailLen, 0, 0, 0);
-                trailGrad.addColorStop(0, 'rgba(0,0,0,0)');
-                trailGrad.addColorStop(0.7, `${this.color}55`);
-                trailGrad.addColorStop(1, this.color);
-                CTX.globalAlpha = 0.4;
-                CTX.strokeStyle = trailGrad; CTX.lineWidth = coreW + 4; CTX.lineCap = 'butt';
-                CTX.beginPath(); CTX.moveTo(-trailLen, 0); CTX.lineTo(0, 0); CTX.stroke();
-                CTX.globalAlpha = 1;
-                CTX.strokeStyle = this.color; CTX.lineWidth = coreW;
-                CTX.shadowBlur = this.isCrit ? 20 : 12; CTX.shadowColor = this.color;
-                CTX.beginPath(); CTX.moveTo(-trailLen * 0.6, 0); CTX.lineTo(4, 0); CTX.stroke();
-                CTX.fillStyle = this.isCrit ? '#facc15' : '#ffffff';
-                CTX.beginPath(); CTX.moveTo(7, 0); CTX.lineTo(3, -coreW * 0.9); CTX.lineTo(3, coreW * 0.9); CTX.closePath(); CTX.fill();
+                const fw = (this.isCrit || isGolden) ? 5 : 3.5;
+                CTX.fillStyle = isGolden ? '#facc15' : (this.color || '#ffffff');
+                CTX.shadowBlur = (this.isCrit || isGolden) ? 20 : 10;
+                CTX.shadowColor = isGolden ? '#facc15' : this.color;
+                CTX.beginPath(); CTX.arc(0, 0, fw, 0, Math.PI * 2); CTX.fill();
+                CTX.shadowBlur = 0;
             }
 
             // ════════════════════════════════════════════════
-            // KAO crit bolt — golden supercharged energy lance
+            // NOTE: Poom branch above handles isPoom flag.
+            // Old color-only Poom check removed — routing now
+            // uses isPoom flag set at spawn (shootPoom / PoomPlayer.shoot).
             // ════════════════════════════════════════════════
-        } else if (this.team === 'player' && this.symbol === '∑') {
-            CTX.rotate(this.angle);
-            CTX.globalAlpha = 0.25;
-            CTX.fillStyle = '#facc15';
-            CTX.beginPath(); CTX.ellipse(-16, 0, 22, 8, 0, 0, Math.PI * 2); CTX.fill();
-
-            CTX.globalAlpha = 1;
-            const cg = CTX.createLinearGradient(-28, 0, 6, 0);
-            cg.addColorStop(0, 'rgba(251,191,36,0)');
-            cg.addColorStop(0.55, '#facc15');
-            cg.addColorStop(1, '#ffffff');
-            CTX.strokeStyle = cg; CTX.lineWidth = 6; CTX.lineCap = 'round';
-            CTX.shadowBlur = 28; CTX.shadowColor = '#facc15';
-            CTX.beginPath(); CTX.moveTo(-28, 0); CTX.lineTo(6, 0); CTX.stroke();
-
-            CTX.fillStyle = '#fff';
-            CTX.beginPath();
-            CTX.moveTo(10, 0);
-            CTX.lineTo(5, -4);
-            CTX.lineTo(5, 4);
-            CTX.closePath(); CTX.fill();
-
-            CTX.strokeStyle = '#fde68a'; CTX.lineWidth = 1.2;
-            CTX.shadowBlur = 8;
-            for (let ri = -20; ri < 4; ri += 8) {
-                const ra = Math.max(0, (28 + ri) / 34);
-                CTX.globalAlpha = ra * 0.5;
-                CTX.beginPath(); CTX.arc(ri, 0, 4 + ra * 3, 0, Math.PI * 2); CTX.stroke();
-            }
-
-            // ════════════════════════════════════════════════
-            // POOM sticky-rice clump — Enchanted Rice Cluster
-            // ════════════════════════════════════════════════
-        } else if (this.color === '#fbbf24' || this.color === '#fde68a' || this.color === '#ffffff') {
-            CTX.rotate(this.angle);
-            const r = this.isCrit ? 11 : 7.5;
-            const now = performance.now();
-
-            // emerald magic trail — particle wisps behind cluster
-            const trailCount = 5;
-            for (let ti = 0; ti < trailCount; ti++) {
-                const td = (ti + 1) * (r * 0.65);
-                const tR = r * (0.38 - ti * 0.055);
-                if (tR <= 0) continue;
-                CTX.globalAlpha = (1 - ti / trailCount) * 0.5;
-                const wispG = CTX.createRadialGradient(-td, 0, 0, -td, 0, tR);
-                wispG.addColorStop(0, '#34d399');
-                wispG.addColorStop(1, 'rgba(16,185,129,0)');
-                CTX.fillStyle = wispG;
-                CTX.shadowBlur = 8; CTX.shadowColor = '#10b981';
-                CTX.beginPath(); CTX.arc(-td, 0, tR, 0, Math.PI * 2); CTX.fill();
-            }
-            CTX.shadowBlur = 0;
-
-            // naga aura outer glow
-            CTX.globalAlpha = 0.18;
-            CTX.fillStyle = '#6ee7b7';
-            CTX.shadowBlur = 18; CTX.shadowColor = '#10b981';
-            CTX.beginPath(); CTX.arc(0, 0, r * 1.65, 0, Math.PI * 2); CTX.fill();
-            CTX.shadowBlur = 0;
-
-            // rice grain cluster — 5 overlapping circles
-            const grainPositions = [
-                [0, 0, r],
-                [-r * 0.65, -r * 0.42, r * 0.72],
-                [r * 0.55, -r * 0.48, r * 0.68],
-                [-r * 0.48, r * 0.55, r * 0.63],
-                [r * 0.38, r * 0.52, r * 0.58],
-            ];
-            CTX.globalAlpha = 1;
-            CTX.shadowBlur = 10; CTX.shadowColor = '#fbbf24';
-            for (const [gx, gy, gr] of grainPositions) {
-                const gGrad = CTX.createRadialGradient(gx - gr * 0.25, gy - gr * 0.25, 0, gx, gy, gr);
-                gGrad.addColorStop(0, '#fffbeb');
-                gGrad.addColorStop(0.55, '#fde68a');
-                gGrad.addColorStop(1, '#d97706');
-                CTX.fillStyle = gGrad;
-                CTX.beginPath(); CTX.arc(gx, gy, gr, 0, Math.PI * 2); CTX.fill();
-            }
-            CTX.shadowBlur = 0;
-
-            // emerald shimmer veins — pulsing specks on surface
-            const veinPulse = 0.5 + Math.sin(now / 180) * 0.5;
-            CTX.globalAlpha = 0.3 + veinPulse * 0.3;
-            CTX.fillStyle = '#6ee7b7';
-            CTX.shadowBlur = 5; CTX.shadowColor = '#10b981';
-            CTX.beginPath(); CTX.arc(-r * 0.18, -r * 0.2, r * 0.22, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.arc(r * 0.25, r * 0.15, r * 0.18, 0, Math.PI * 2); CTX.fill();
-            CTX.shadowBlur = 0;
-
-            // crit — golden halo + leaf sparks
-            if (this.isCrit) {
-                CTX.globalAlpha = 0.85;
-                CTX.strokeStyle = '#facc15'; CTX.lineWidth = 1.8;
-                CTX.shadowBlur = 22; CTX.shadowColor = '#facc15';
-                CTX.beginPath(); CTX.arc(0, 0, r + 7, 0, Math.PI * 2); CTX.stroke();
-                CTX.strokeStyle = '#fef08a'; CTX.lineWidth = 1;
-                CTX.shadowBlur = 10;
-                for (let si = 0; si < 8; si++) {
-                    const sa = (si / 8) * Math.PI * 2;
-                    CTX.globalAlpha = 0.6 + Math.sin(now / 120 + si) * 0.3;
-                    CTX.beginPath();
-                    CTX.moveTo(Math.cos(sa) * (r + 3), Math.sin(sa) * (r + 3));
-                    CTX.lineTo(Math.cos(sa) * (r + 11), Math.sin(sa) * (r + 11));
-                    CTX.stroke();
-                }
-            }
+        } else if (this.team === 'player' && false) {
+            // dead branch — kept as merge anchor, never executes
+            void 0;
 
             // ════════════════════════════════════════════════
             // ENEMY / FALLBACK — math symbol
             // ════════════════════════════════════════════════
-        } else {
+        } else if (!this.isPoom) {
             CTX.rotate(this.angle);
             CTX.shadowBlur = 10; CTX.shadowColor = this.color;
             CTX.fillStyle = this.color;
@@ -746,7 +720,9 @@ class WeaponSystem {
                 projOptions.life = 2.5;
             }
 
-            projectiles.push(new Projectile(sx, sy, angle, weapon.speed, damage / weapon.pellets, color, isCrit, 'player', projOptions));
+            const p = new Projectile(sx, sy, angle, weapon.speed, damage / weapon.pellets, color, isCrit, 'player', projOptions);
+            p.weaponKind = this.currentWeapon;
+            projectiles.push(p);
         }
 
         player.vx -= Math.cos(player.angle) * 50;

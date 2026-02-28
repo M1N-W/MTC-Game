@@ -749,6 +749,8 @@ function shootPoom(player) {
 
     // ── Session C/D: Create projectile and set onHit callback ──
     const proj = new Projectile(player.x, player.y, player.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
+    proj.isPoom = true;
+    proj.isCrit = isCrit;
     proj.onHit = function (enemy) {
         player.applyStickyTo(enemy); // ── Apply sticky via StatusEffect framework ──
     };
