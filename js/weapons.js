@@ -134,39 +134,68 @@ class Projectile {
         CTX.translate(screen.x, screen.y);
 
         // ════════════════════════════════════════════════
-        // HEAT WAVE (Auto melee blast)
+        // HEAT WAVE (Auto — หมัดพุ่งออกมาจากสแตนด์)
         // ════════════════════════════════════════════════
         if (this.kind === 'heatwave') {
             CTX.rotate(this.angle);
-            CTX.globalAlpha = 0.85;
-            CTX.shadowBlur = 22;
-            CTX.shadowColor = this.color;
 
-            const hg = CTX.createLinearGradient(-30, 0, 10, 0);
-            hg.addColorStop(0, 'rgba(255,255,255,0)');
-            hg.addColorStop(0.25, 'rgba(251,113,133,0.4)');
-            hg.addColorStop(0.7, 'rgba(239,68,68,0.75)');
-            hg.addColorStop(1, 'rgba(220,38,38,0.95)');
-            CTX.fillStyle = hg;
-            CTX.beginPath(); CTX.ellipse(0, 0, 28, 13, 0, 0, Math.PI * 2); CTX.fill();
+            const now = performance.now();
+            // ── ลำแสงพลังงานลากหลังหมัด ─────────────────
+            const trailLen = 36;
+            const trailG = CTX.createLinearGradient(-trailLen, 0, 0, 0);
+            trailG.addColorStop(0, 'rgba(220,38,38,0)');
+            trailG.addColorStop(0.5, 'rgba(239,68,68,0.25)');
+            trailG.addColorStop(1, 'rgba(251,113,133,0.55)');
+            CTX.globalAlpha = 0.9;
+            CTX.strokeStyle = trailG;
+            CTX.lineWidth = 12;
+            CTX.lineCap = 'round';
+            CTX.shadowBlur = 18; CTX.shadowColor = '#dc2626';
+            CTX.beginPath(); CTX.moveTo(-trailLen, -4); CTX.lineTo(-4, -4); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(-trailLen + 6, 4); CTX.lineTo(-4, 4); CTX.stroke();
 
-            const sw = performance.now() / 60;
-            for (let ri = 0; ri < 2; ri++) {
-                const rPhase = (sw + ri * 1.5) % 6;
-                const rSize = 8 + rPhase * 4;
-                const rAlpha = Math.max(0, (1 - rPhase / 6) * 0.65);
-                CTX.globalAlpha = rAlpha;
-                CTX.strokeStyle = '#fca5a5';
-                CTX.lineWidth = 2.5 - ri * 0.8;
-                CTX.shadowBlur = 10; CTX.shadowColor = '#dc2626';
-                CTX.beginPath(); CTX.arc(6, 0, rSize, -Math.PI / 3, Math.PI / 3); CTX.stroke();
+            // ── กำปั้น: ฝ่ามือ (Palm) ────────────────────
+            CTX.globalAlpha = 0.97;
+            const palmG = CTX.createLinearGradient(-10, -13, 14, 13);
+            palmG.addColorStop(0, '#fff1f2');
+            palmG.addColorStop(0.35, '#fb7185');
+            palmG.addColorStop(1, '#be123c');
+            CTX.fillStyle = palmG;
+            CTX.shadowBlur = 22; CTX.shadowColor = '#f97316';
+            CTX.beginPath(); CTX.roundRect(-9, -12, 17, 24, [3, 5, 5, 3]); CTX.fill();
+
+            // ── กำปั้น: แนวนิ้ว 4 นิ้ว (Knuckles) ────────
+            CTX.shadowBlur = 0;
+            CTX.fillStyle = '#fff1f2';
+            CTX.strokeStyle = '#9f1239'; CTX.lineWidth = 1.2;
+            for (let k = 0; k < 4; k++) {
+                CTX.beginPath();
+                CTX.roundRect(6, -11 + k * 6, 9, 5, [2, 3, 2, 1]);
+                CTX.fill(); CTX.stroke();
             }
 
-            CTX.globalAlpha = 0.6;
-            CTX.strokeStyle = 'rgba(255,241,242,0.85)';
+            // ── แสง crit/heat ที่ข้อนิ้ว ─────────────────
+            const kGlow = 0.6 + Math.sin(now / 60) * 0.4;
+            CTX.globalAlpha = kGlow;
+            CTX.fillStyle = '#fbbf24';
+            CTX.shadowBlur = 14; CTX.shadowColor = '#f97316';
+            CTX.beginPath(); CTX.arc(10, -8, 3.5, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(10, 4, 3.5, 0, Math.PI * 2); CTX.fill();
+
+            // ── หัวแม่มือ (Thumb) ─────────────────────────
+            CTX.globalAlpha = 0.92;
+            CTX.shadowBlur = 0;
+            CTX.fillStyle = '#fb7185';
+            CTX.strokeStyle = '#9f1239'; CTX.lineWidth = 1;
+            CTX.beginPath(); CTX.roundRect(-4, 11, 13, 6, 3); CTX.fill(); CTX.stroke();
+
+            // ── วงแหวนพลังงาน (Impact ring) ──────────────
+            const ringPhase = (now / 80) % (Math.PI * 2);
+            CTX.globalAlpha = 0.45 + Math.sin(ringPhase) * 0.25;
+            CTX.strokeStyle = '#fca5a5';
             CTX.lineWidth = 2;
-            CTX.shadowBlur = 8;
-            CTX.beginPath(); CTX.ellipse(-4, 0, 16, 6, 0, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 12; CTX.shadowColor = '#dc2626';
+            CTX.beginPath(); CTX.arc(8, 0, 16 + Math.sin(ringPhase) * 3, -Math.PI * 0.4, Math.PI * 0.4); CTX.stroke();
 
             CTX.restore();
             return;
@@ -557,6 +586,7 @@ class WeaponSystem {
 
         player.vx -= Math.cos(player.angle) * 50;
         player.vy -= Math.sin(player.angle) * 50;
+
         // 🔫 Battle Scars: ดีดปลอกกระสุน (auto / sniper / shotgun เท่านั้น)
         if (typeof shellCasingSystem !== 'undefined' &&
             (this.currentWeapon === 'auto' || this.currentWeapon === 'sniper' || this.currentWeapon === 'shotgun')) {
@@ -566,6 +596,7 @@ class WeaponSystem {
                 shellCasingSystem.spawn(player.x, player.y, player.angle, shellSpeed);
             }
         }
+
         Audio.playShoot(this.currentWeapon);
         return projectiles;
     }

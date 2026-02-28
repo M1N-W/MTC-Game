@@ -1648,23 +1648,23 @@ class OrbitalParticle {
 }
 
 class OrbitalParticleSystem {
-    constructor(maxParticles = 12) {
+    constructor(maxParticles = 12, theme = 'kao') {
         this.particles = [];
         this.maxParticles = maxParticles;
         this.spawnTimer = 0;
         this.intensity = 0;
+        this.theme = theme; // 'kao' | 'auto' | 'poom'
     }
 
-    update(dt, playerX, playerY, speed, isWanchaiActive, isWeaponMaster) {
-        // Calculate intensity based on player state
-        this.intensity = Math.min(1, speed / 200 + (isWanchaiActive ? 0.4 : 0) + (isWeaponMaster ? 0.3 : 0));
+    update(dt, playerX, playerY, speed, extraIntensity = 0) {
+        this.intensity = Math.min(1, speed / 200 + extraIntensity);
 
         // ── PERF: swap-and-pop O(1) + pool release ───────────────────────────
         const arr = this.particles;
         let i = arr.length - 1;
         while (i >= 0) {
             if (arr[i].update(dt, playerX, playerY, this.intensity)) {
-                arr[i].release();              // return to pool
+                arr[i].release();
                 arr[i] = arr[arr.length - 1];
                 arr.pop();
                 i--;
@@ -1689,11 +1689,21 @@ class OrbitalParticleSystem {
         const size = 1.5 + Math.random() * 2;
         const lifetime = 2 + Math.random() * 2;
 
-        // Color based on intensity
+        // ── สีตาม theme ตัวละคร ─────────────────────────────────────────────
         let color;
-        if (this.intensity > 0.6) color = '#f97316';  // orange  — high
-        else if (this.intensity > 0.3) color = '#fbbf24';  // yellow  — medium
-        else color = '#60a5fa';  // blue    — low
+        if (this.theme === 'auto') {
+            if (this.intensity > 0.6) color = '#f97316';       // orange  — high
+            else if (this.intensity > 0.3) color = '#fbbf24';  // yellow  — medium
+            else color = '#ef4444';                             // red     — low
+        } else if (this.theme === 'poom') {
+            if (this.intensity > 0.6) color = '#059669';        // dark emerald — high
+            else if (this.intensity > 0.3) color = '#10b981';   // emerald      — medium
+            else color = '#34d399';                              // mint         — low
+        } else { // 'kao'
+            if (this.intensity > 0.6) color = '#3b82f6';        // bright blue  — high
+            else if (this.intensity > 0.3) color = '#60a5fa';   // light blue   — medium
+            else color = '#93c5fd';                              // pale blue    — low
+        }
 
         // ── POOL: acquire instead of `new OrbitalParticle(…)` ───────────────
         this.particles.push(OrbitalParticle.acquire(x, y, orbitRadius, angle, speed, size, color, lifetime));
@@ -1712,13 +1722,15 @@ class OrbitalParticleSystem {
     }
 }
 
-// Global orbital particle systems for Auto and Kao
+// Global orbital particle systems — Auto, Kao, Poom
 let autoOrbitalSystem = null;
 let kaoOrbitalSystem = null;
+let poomOrbitalSystem = null;
 
 function initOrbitalSystems() {
-    autoOrbitalSystem = new OrbitalParticleSystem(10);
-    kaoOrbitalSystem = new OrbitalParticleSystem(8);
+    autoOrbitalSystem = new OrbitalParticleSystem(10, 'auto');
+    kaoOrbitalSystem = new OrbitalParticleSystem(8, 'kao');
+    poomOrbitalSystem = new OrbitalParticleSystem(8, 'poom');
 }
 
 function updateOrbitalEffects(dt, players) {
@@ -1726,15 +1738,22 @@ function updateOrbitalEffects(dt, players) {
 
     players.forEach(player => {
         let system = null;
+        let extraIntensity = 0;
+
         if (player.constructor.name === 'AutoPlayer') {
             system = autoOrbitalSystem;
+            extraIntensity = (player.wanchaiActive ? 0.4 : 0);
         } else if (player.constructor.name === 'KaoPlayer') {
             system = kaoOrbitalSystem;
+            extraIntensity = (player.isWeaponMaster ? 0.3 : 0);
+        } else if (player.constructor.name === 'PoomPlayer') {
+            system = poomOrbitalSystem;
+            extraIntensity = ((player.isEatingRice || player.naga) ? 0.3 : 0);
         }
 
         if (system) {
             const speed = Math.hypot(player.vx, player.vy);
-            system.update(dt, player.x, player.y, speed, player.wanchaiActive, player.isWeaponMaster);
+            system.update(dt, player.x, player.y, speed, extraIntensity);
         }
     });
 }
@@ -1742,6 +1761,7 @@ function updateOrbitalEffects(dt, players) {
 function drawOrbitalEffects() {
     if (autoOrbitalSystem) autoOrbitalSystem.draw();
     if (kaoOrbitalSystem) kaoOrbitalSystem.draw();
+    if (poomOrbitalSystem) poomOrbitalSystem.draw();
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
