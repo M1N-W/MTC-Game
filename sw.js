@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.38'; // v3.6.38 Projectile routing system - weapon kind tagging and character rendering
+const CACHE_NAME = 'mtc-cache-v3.6.39'; // v3.6.39 Passive skill UI improvements - MAX state display
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -494,6 +494,11 @@ class Player extends Entity {
             if (this.passiveUnlocked) {
                 passiveEl.classList.add('unlocked');
                 passiveEl.style.opacity = '1';
+                const skillNameEl = passiveEl.querySelector('.skill-name');
+                if (skillNameEl) {
+                    skillNameEl.textContent = 'MAX';
+                    skillNameEl.style.color = '#facc15';
+                }
             } else if (this.level >= 3) {
                 passiveEl.style.display = 'flex';
                 passiveEl.style.opacity = '0.5';

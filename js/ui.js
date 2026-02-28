@@ -538,11 +538,18 @@ class UIManager {
         const passiveSkillEl = document.getElementById('passive-skill');
         if (passiveSkillEl) {
             if (isKao) {
-                passiveSkillEl.style.display = '';          // restore default layout display
-                passiveSkillEl.style.opacity = '0.35';      // dim until earned
-                passiveSkillEl.classList.remove('unlocked'); // clear any stale unlock from prev run
-                const skillName = passiveSkillEl.querySelector('.skill-name');
-                if (skillName) skillName.textContent = '0/5'; // reset stealth counter text
+                passiveSkillEl.style.display = '';    
+                if (player.passiveUnlocked) {
+                    passiveSkillEl.style.opacity = '1';
+                    passiveSkillEl.classList.add('unlocked');
+                    const skillName = passiveSkillEl.querySelector('.skill-name');
+                    if (skillName) { skillName.textContent = 'MAX'; skillName.style.color = '#facc15'; }
+                } else {
+                    passiveSkillEl.style.opacity = '0.35';
+                    passiveSkillEl.classList.remove('unlocked');
+                    const skillName = passiveSkillEl.querySelector('.skill-name');
+                    if (skillName) { skillName.textContent = '0/5'; skillName.style.color = ''; }
+                }      // restore default layout display
             } else {
                 // Any non-Kao character: suppress entirely
                 passiveSkillEl.style.display = 'none';
