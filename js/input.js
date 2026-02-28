@@ -436,6 +436,8 @@ function _setupKeyboardListeners() {
                     keys.q = 0;
                 } else if (typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer) {
                     keys.q = 0;  // Kao: Q is Teleport, not weapon switch
+                } else if (typeof AutoPlayer !== 'undefined' && window.player instanceof AutoPlayer) {
+                    keys.q = 0;  // Auto: Q is Vacuum Heat, not weapon switch
                 } else {
                     if (typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon();
                     keys.q = 0;

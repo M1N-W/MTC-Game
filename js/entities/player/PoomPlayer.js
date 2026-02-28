@@ -198,7 +198,7 @@ class PoomPlayer extends Entity {
         }
 
         if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
-        if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { this.eatRice(); keys.e = 0; }
+        if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { keys.e = 0; } // E reserved — eat via R-Click only
         // ── Updated Controls: R = Ritual Burst, Q = Naga Summon ──
         if (keys.r && this.cooldowns.ritual <= 0) {
             this.ritualBurst();

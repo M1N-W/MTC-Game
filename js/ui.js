@@ -540,7 +540,7 @@ class UIManager {
                 const emojiEl = document.getElementById('skill1-emoji');
                 if (emojiEl) emojiEl.textContent = '🍚';
                 const hintEl = document.getElementById('skill1-hint');
-                if (hintEl) hintEl.textContent = 'E';
+                if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'eat-cd';
             } else if (isAuto) {
