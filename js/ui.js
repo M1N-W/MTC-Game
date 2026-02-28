@@ -641,7 +641,7 @@ class UIManager {
         } else {
             // Non-Kao: hide and remove Teleport id re-assignment if it happened
             if (cloneSlot) cloneSlot.style.display = 'none';
-            // Restore naga-icon id if it was repurposed for Kao or Auto
+            // Restore naga-icon id if it was repurposed for Kao
             const maybeTeleport = document.getElementById('teleport-icon');
             if (maybeTeleport) {
                 maybeTeleport.id = 'naga-icon';
@@ -652,15 +652,18 @@ class UIManager {
                     <div class="cooldown-mask" id="naga-cd"></div>
                     <span id="naga-timer"></span>`;
             }
-            const maybeVacuum = document.getElementById('vacuum-icon');
-            if (maybeVacuum) {
-                maybeVacuum.id = 'naga-icon';
-                maybeVacuum.style.borderColor = '#10b981';
-                maybeVacuum.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                maybeVacuum.innerHTML = `
+            // ⚠️ DO NOT restore vacuum-icon when isAuto — it was intentionally repurposed
+            if (!isAuto) {
+                const maybeVacuum = document.getElementById('vacuum-icon');
+                if (maybeVacuum) {
+                    maybeVacuum.id = 'naga-icon';
+                    maybeVacuum.style.borderColor = '#10b981';
+                    maybeVacuum.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
+                    maybeVacuum.innerHTML = `
                     <div class="key-hint" style="background:#10b981;">Q</div>🐉
                     <div class="cooldown-mask" id="naga-cd"></div>
                     <span id="naga-timer"></span>`;
+                }
             }
         }
 
