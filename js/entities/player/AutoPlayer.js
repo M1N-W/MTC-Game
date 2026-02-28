@@ -20,7 +20,7 @@ class AutoPlayer extends Player {
         this.standAttackTimer = 0;
         this.lastPunchSoundTime = 0;
 
-        this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0 };
+        this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0, vacuum: 0, detonation: 0 };
     }
 
     takeDamage(amt) {
@@ -83,6 +83,8 @@ class AutoPlayer extends Player {
     update(dt, keys, mouse) {
         if (this.cooldowns?.wanchai > 0) this.cooldowns.wanchai -= dt;
         if (this.cooldowns?.shoot > 0) this.cooldowns.shoot -= dt;
+        if (this.cooldowns?.vacuum > 0) this.cooldowns.vacuum -= dt;
+        if (this.cooldowns?.detonation > 0) this.cooldowns.detonation -= dt;
 
         if (this.wanchaiActive) {
             this.wanchaiTimer -= dt;
@@ -113,11 +115,106 @@ class AutoPlayer extends Player {
         // Stateless restore
         this.speedBoost = oldSpeedBoost;
 
+        // ── Q: Vacuum Heat — ดูดศัตรูเข้ามากอง ────────────────────
+        // กด Q ดึงทุกตัวในรัศมี 320px เข้าหาออโต้ทันที
+        // cooldown 8 วินาที | ออกแบบให้ combo กับ Wanchai
+        if (mouse?.middle !== undefined) { /* placeholder */ }
+        if (keys?.q === 1 && (this.cooldowns?.vacuum ?? 0) <= 0) {
+            const VACUUM_RANGE = this.stats?.vacuumRange ?? 320;
+            const VACUUM_FORCE = this.stats?.vacuumForce ?? 900;
+            let pulled = 0;
+            for (const enemy of (window.enemies || [])) {
+                if (enemy.dead) continue;
+                const dx = this.x - enemy.x;
+                const dy = this.y - enemy.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < VACUUM_RANGE && dist > 1) {
+                    // ผลักเวกเตอร์เข้าหาผู้เล่น — ใช้ vx/vy ที่ enemy มีอยู่แล้ว
+                    enemy.vx = (dx / dist) * VACUUM_FORCE;
+                    enemy.vy = (dy / dist) * VACUUM_FORCE;
+                    pulled++;
+                }
+            }
+            // Boss ก็โดนดึงด้วย (แต่แรงน้อยลง 30%)
+            if (window.boss && !window.boss.dead) {
+                const dx = this.x - window.boss.x;
+                const dy = this.y - window.boss.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < VACUUM_RANGE && dist > 1) {
+                    window.boss.vx = (dx / dist) * VACUUM_FORCE * 0.3;
+                    window.boss.vy = (dy / dist) * VACUUM_FORCE * 0.3;
+                }
+            }
+            this.cooldowns.vacuum = this.stats?.vacuumCooldown ?? 8;
+            if (pulled > 0 || (window.boss && !window.boss.dead)) {
+                spawnParticles(this.x, this.y, 30, '#f97316');
+                addScreenShake(4);
+                spawnFloatingText('🔥 VACUUM HEAT!', this.x, this.y - 60, '#f97316', 22);
+                if (typeof Audio !== 'undefined' && Audio.playVacuum) Audio.playVacuum();
+            }
+            keys.q = 0;
+        }
+
+        // ── E: Overheat Detonation — ระเบิดสแตนด์ทิ้งปิดฉาก ─────
+        // กด E ระหว่าง Wanchai active เท่านั้น
+        // AOE 220px, ดาเมจสูง, แต่ Wanchai สิ้นสุดทันที
+        if (keys?.e === 1 && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
+            const DET_RANGE = this.stats?.detonationRange ?? 220;
+            // ดาเมจ = wanchaiDamage × 6 (burst ทิ้ง 6 หมัดพร้อมกัน)
+            const detBaseDmg = (this.stats?.wanchaiDamage ?? 32) * 6 * (this.damageMultiplier || 1.0);
+            let detCrit = this.baseCritChance + (this.stats?.standCritBonus ?? 0.40);
+            let detIsCrit = Math.random() < detCrit;
+            let detFinalDmg = detBaseDmg * (detIsCrit ? (this.stats?.critMultiplier ?? 2.0) : 1.0);
+
+            // ── Second Wind bonus ──
+            if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
+
+            let totalDet = 0;
+            for (const enemy of (window.enemies || [])) {
+                if (enemy.dead) continue;
+                const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                if (dist < DET_RANGE) {
+                    enemy.takeDamage(detFinalDmg);
+                    totalDet += detFinalDmg;
+                    spawnParticles(enemy.x, enemy.y, 5, detIsCrit ? '#facc15' : '#dc2626');
+                }
+            }
+            if (window.boss && !window.boss.dead) {
+                const dist = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+                if (dist < DET_RANGE + window.boss.radius) {
+                    window.boss.takeDamage(detFinalDmg);
+                    totalDet += detFinalDmg;
+                    spawnParticles(window.boss.x, window.boss.y, 8, detIsCrit ? '#facc15' : '#dc2626');
+                }
+            }
+
+            // Lifesteal จากดาเมจที่ทำได้
+            if (this.passiveUnlocked && totalDet > 0) {
+                this.hp = Math.min(this.maxHp, this.hp + totalDet * (this.stats?.passiveLifesteal ?? 0.01));
+            }
+
+            // ── บังคับปิด Wanchai ──
+            this.wanchaiActive = false;
+            this.wanchaiTimer = 0;
+            this.cooldowns.detonation = this.stats?.detonationCooldown ?? 5; // short CD เพราะต้องเปิด Wanchai ก่อน
+
+            spawnParticles(this.x, this.y, 60, '#dc2626');
+            addScreenShake(10);
+            spawnFloatingText(
+                detIsCrit ? '💥 OVERHEAT CRIT!' : '💥 OVERHEAT!',
+                this.x, this.y - 70,
+                detIsCrit ? '#facc15' : '#dc2626', 28
+            );
+            if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
+            keys.e = 0;
+        }
+
+
+
         // Reset attack state every frame; proven true below if mouse is held
         this.isStandAttacking = false;
 
-        if (!mouse || mouse.left !== 1) return;
-        if (typeof projectileManager === 'undefined' || !projectileManager) return;
+        if (!mouse || mouse.left !== 1) return; if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
         // ── NEW: Stand Rush Hitbox Logic ─────────────────────────
         if (this.wanchaiActive) {

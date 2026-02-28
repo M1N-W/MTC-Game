@@ -571,6 +571,149 @@ class AudioSystem {
         src.stop(t + dur * 0.5);
     }
 
+    // ── NEW: Vacuum Heat "whoosh-pull" (Auto Q skill) ─────────────────────────
+    // Design: เสียงดูดอากาศเข้าหาตัว — White noise filtered downward (high→low)
+    // Layer 1: Noise sweep ดึงความถี่ลง (HPF จาก 1500→200 Hz ใน 0.4s)
+    // Layer 2: Sine ต่ำๆ 80→40 Hz เพิ่ม "ความหนัก" ของแรงดูด
+    playVacuum() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        const dur = 0.45;
+        const gainMult = GAME_CONFIG.audio.sfx?.vacuum ?? 0.65;
+
+        // Layer 1: Noise with sweeping HPF — เสียงอากาศถูกดูด
+        const bufSz = Math.floor(this.ctx.sampleRate * dur);
+        const noiseBuf = this.ctx.createBuffer(1, bufSz, this.ctx.sampleRate);
+        const nd = noiseBuf.getChannelData(0);
+        for (let i = 0; i < bufSz; i++) nd[i] = Math.random() * 2 - 1;
+        const noiseSrc = this.ctx.createBufferSource();
+        noiseSrc.buffer = noiseBuf;
+        const hpf = this.ctx.createBiquadFilter();
+        hpf.type = 'highpass';
+        hpf.frequency.setValueAtTime(1500, t);
+        hpf.frequency.exponentialRampToValueAtTime(120, t + dur); // sweep ลง
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(0.01, t);
+        nGain.gain.linearRampToValueAtTime(
+            this.masterVolume * this.sfxVolume * gainMult, t + dur * 0.3
+        );
+        nGain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        noiseSrc.connect(hpf); hpf.connect(nGain); nGain.connect(this.ctx.destination);
+        noiseSrc.start(t); noiseSrc.stop(t + dur);
+
+        // Layer 2: Sub-bass "gravity pull" tone
+        const osc = this.ctx.createOscillator();
+        const oGain = this.ctx.createGain();
+        osc.connect(oGain); oGain.connect(this.ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(80, t);
+        osc.frequency.exponentialRampToValueAtTime(35, t + dur);
+        oGain.gain.setValueAtTime(0.01, t);
+        oGain.gain.linearRampToValueAtTime(
+            this.masterVolume * this.sfxVolume * gainMult * 0.7, t + dur * 0.2
+        );
+        oGain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        osc.start(t); osc.stop(t + dur);
+    }
+
+    // ── NEW: Overheat Detonation explosion (Auto E skill) ─────────────────────
+    // Design: ระเบิดสแตนด์กัมปนาท — sub-bass หนักๆ + noise burst กว้างๆ
+    // Layer 1: Square wave 200→30 Hz — "thud" ของแรงระเบิด
+    // Layer 2: Noise broadband — shockwave ที่แผ่ออกไป
+    // Layer 3: Sine shimmer 1000→400 Hz — afterburn tone สแตนด์วันชัย
+    playDetonation() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        const gainMult = GAME_CONFIG.audio.sfx?.detonation ?? 0.85;
+
+        // Layer 1: Square sub-bass boom
+        const osc = this.ctx.createOscillator();
+        const oGain = this.ctx.createGain();
+        osc.connect(oGain); oGain.connect(this.ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(28, t + 0.4);
+        oGain.gain.setValueAtTime(
+            GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult, t
+        );
+        oGain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+        osc.start(t); osc.stop(t + 0.4);
+
+        // Layer 2: Broadband noise burst
+        const bufSz = Math.floor(this.ctx.sampleRate * 0.3);
+        const nb = this.ctx.createBuffer(1, bufSz, this.ctx.sampleRate);
+        const nd = nb.getChannelData(0);
+        for (let i = 0; i < bufSz; i++) nd[i] = Math.random() * 2 - 1;
+        const nSrc = this.ctx.createBufferSource();
+        nSrc.buffer = nb;
+        const lpf = this.ctx.createBiquadFilter();
+        lpf.type = 'lowpass'; lpf.frequency.value = 900;
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(
+            GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult * 0.9, t
+        );
+        nGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        nSrc.connect(lpf); lpf.connect(nGain); nGain.connect(this.ctx.destination);
+        nSrc.start(t); nSrc.stop(t + 0.3);
+
+        // Layer 3: High shimmer (สแตนด์วันชัยสลาย)
+        const sh = this.ctx.createOscillator();
+        const shG = this.ctx.createGain();
+        sh.connect(shG); shG.connect(this.ctx.destination);
+        sh.type = 'sine';
+        sh.frequency.setValueAtTime(1000, t + 0.05);
+        sh.frequency.exponentialRampToValueAtTime(400, t + 0.5);
+        shG.gain.setValueAtTime(
+            GAME_CONFIG.audio.hit * this.masterVolume * this.sfxVolume * gainMult * 0.4,
+            t + 0.05
+        );
+        shG.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+        sh.start(t + 0.05); sh.stop(t + 0.5);
+    }
+
+    // ── NEW: Phantom Shatter crystal-break (Kao clone expires → 8-way burst) ───
+    // Design: กระจกดิจิทัลแตก — high-pitched noise ผ่าน bandpass + sine glitch
+    // สั้นมาก (0.2s) เพราะอาจเกิด 2 ครั้งพร้อมกัน (2 clones)
+    playPhantomShatter() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const t = this.ctx.currentTime;
+        const dur = 0.22;
+        const gainMult = GAME_CONFIG.audio.sfx?.phantomShatter ?? 0.5;
+
+        // Layer 1: High noise through tight bandpass
+        const bufSz = Math.floor(this.ctx.sampleRate * dur);
+        const nb = this.ctx.createBuffer(1, bufSz, this.ctx.sampleRate);
+        const nd = nb.getChannelData(0);
+        for (let i = 0; i < bufSz; i++) nd[i] = Math.random() * 2 - 1;
+        const nSrc = this.ctx.createBufferSource();
+        nSrc.buffer = nb;
+        const bpf = this.ctx.createBiquadFilter();
+        bpf.type = 'bandpass'; bpf.frequency.value = 3200; bpf.Q.value = 2.5;
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(
+            this.masterVolume * this.sfxVolume * gainMult, t
+        );
+        nGain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        nSrc.connect(bpf); bpf.connect(nGain); nGain.connect(this.ctx.destination);
+        nSrc.start(t); nSrc.stop(t + dur);
+
+        // Layer 2: Sine glitch 2400→800 Hz — digital "ping" ตอนแตก
+        const osc = this.ctx.createOscillator();
+        const oGain = this.ctx.createGain();
+        osc.connect(oGain); oGain.connect(this.ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(2400, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + dur);
+        oGain.gain.setValueAtTime(
+            this.masterVolume * this.sfxVolume * gainMult * 0.7, t
+        );
+        oGain.gain.exponentialRampToValueAtTime(0.01, t + dur);
+        osc.start(t); osc.stop(t + dur);
+    }
+
     playDash() {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();

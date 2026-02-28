@@ -596,6 +596,17 @@ class UIManager {
                     <div class="skill-name" style="color:#67e8f9;">TELEPORT</div>
                     <div class="cooldown-mask" id="teleport-cd"></div>`;
                 nagaSlot.id = 'teleport-icon';
+            } else if (isAuto) {
+                // Repurpose naga-icon as Vacuum Heat (Q) slot for Auto
+                nagaSlot.style.display = 'flex';
+                nagaSlot.style.borderColor = '#f97316';
+                nagaSlot.style.boxShadow = '0 0 15px rgba(249,115,22,0.45)';
+                nagaSlot.innerHTML = `
+                    <div class="key-hint" id="vacuum-hint" style="background:#f97316;color:#1a0505;">Q</div>
+                    <span id="vacuum-emoji">🌀</span>
+                    <div class="skill-name" style="color:#fdba74;">VACUUM</div>
+                    <div class="cooldown-mask" id="vacuum-cd"></div>`;
+                nagaSlot.id = 'vacuum-icon';
             } else {
                 nagaSlot.style.display = 'none';
             }
@@ -630,7 +641,7 @@ class UIManager {
         } else {
             // Non-Kao: hide and remove Teleport id re-assignment if it happened
             if (cloneSlot) cloneSlot.style.display = 'none';
-            // Restore naga-icon id if it was repurposed
+            // Restore naga-icon id if it was repurposed for Kao or Auto
             const maybeTeleport = document.getElementById('teleport-icon');
             if (maybeTeleport) {
                 maybeTeleport.id = 'naga-icon';
@@ -641,6 +652,36 @@ class UIManager {
                     <div class="cooldown-mask" id="naga-cd"></div>
                     <span id="naga-timer"></span>`;
             }
+            const maybeVacuum = document.getElementById('vacuum-icon');
+            if (maybeVacuum) {
+                maybeVacuum.id = 'naga-icon';
+                maybeVacuum.style.borderColor = '#10b981';
+                maybeVacuum.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
+                maybeVacuum.innerHTML = `
+                    <div class="key-hint" style="background:#10b981;">Q</div>🐉
+                    <div class="cooldown-mask" id="naga-cd"></div>
+                    <span id="naga-timer"></span>`;
+            }
+        }
+
+        // ── Detonation slot (E) — Auto-exclusive, dynamically injected ──
+        let detSlot = document.getElementById('auto-det-icon');
+        if (isAuto) {
+            if (!detSlot && hudBottom) {
+                detSlot = document.createElement('div');
+                detSlot.className = 'skill-icon';
+                detSlot.id = 'auto-det-icon';
+                detSlot.style.cssText = 'border-color:#dc2626; box-shadow:0 0 15px rgba(220,38,38,0.45); opacity:0.4; transition:opacity 0.2s;';
+                detSlot.innerHTML = `
+                    <div class="key-hint" style="background:#dc2626;">E</div>
+                    <span>💥</span>
+                    <div class="skill-name" style="color:#fca5a5;">DETONATE</div>
+                    <div class="cooldown-mask" id="det-cd"></div>`;
+                hudBottom.appendChild(detSlot);
+            }
+            if (detSlot) detSlot.style.display = 'flex';
+        } else {
+            if (detSlot) detSlot.style.display = 'none';
         }
 
         const btnNaga = document.getElementById('btn-naga');
@@ -704,6 +745,34 @@ class UIManager {
                 'stealth-icon',
                 player.wanchaiActive ? 0 : Math.max(0, player.cooldowns.wanchai ?? 0),
                 wanchaiCd
+            );
+
+            // ── Vacuum Heat (Q) cooldown arc ────────────────────────────────────
+            UIManager._setCooldownVisual(
+                'vacuum-icon',
+                Math.max(0, player.cooldowns.vacuum ?? 0),
+                S.vacuumCooldown ?? 8
+            );
+
+            // ── Overheat Detonation (E) — lock visual + cooldown arc ────────────
+            // ไอเดีย Gemini: ปุ่ม E "โดนล็อค" เมื่อ Wanchai ไม่ active
+            // Implementation: opacity + pointer-events ผ่าน dataset flag (ไม่ต้อง add DOM element)
+            const detIcon = document.getElementById('auto-det-icon');
+            if (detIcon) {
+                if (player.wanchaiActive) {
+                    detIcon.style.opacity = '1';
+                    detIcon.style.boxShadow = '0 0 20px rgba(220,38,38,0.80)';
+                    detIcon.classList.add('active');
+                } else {
+                    detIcon.style.opacity = '0.35';
+                    detIcon.style.boxShadow = '0 0 8px rgba(220,38,38,0.25)';
+                    detIcon.classList.remove('active');
+                }
+            }
+            UIManager._setCooldownVisual(
+                'auto-det-icon',
+                Math.max(0, player.cooldowns.detonation ?? 0),
+                S.detonationCooldown ?? 5
             );
 
             // ── Kao — Teleport (Q) + Clone of Stealth (E) ─────────────────────────

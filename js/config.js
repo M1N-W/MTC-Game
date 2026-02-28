@@ -109,6 +109,12 @@ const BALANCE = {
             standSpeedMod: 1.5,
             standDamageReduction: 0.40,
             standCritBonus: 0.40,
+            // ── New Active Skills ──────────────────────────────────────────
+            vacuumRange: 320,       // รัศมีดูดศัตรู (px)
+            vacuumForce: 900,       // ความเร็วกระชาก
+            vacuumCooldown: 8,      // cooldown (วินาที)
+            detonationRange: 220,   // รัศมี AOE ระเบิด (px)
+            detonationCooldown: 5,  // CD สั้น เพราะต้องเปิด Wanchai ก่อนถึงใช้ได้
             baseCritChance: 0.06,
             critMultiplier: 2.0,
             stealthCooldown: 12,
@@ -487,6 +493,10 @@ const GAME_CONFIG = {
             punch: 0.6,   // Auto normal heat wave punch
             standRush: 0.45,  // Auto Wanchai rapid punch — kept low (fires every 60ms, stacks fast)
             nagaAttack: 0.55,  // Poom Naga contact hiss — rate-limited in NagaEntity (220ms)
+            // ── New skill SFX ──────────────────────────────────────
+            vacuum: 0.65, // Auto Q — vacuum pull whoosh
+            detonation: 0.85, // Auto E — overheat explosion
+            phantomShatter: 0.50, // Kao clone expire — 8-way crystal burst
         },
 
         // ── Per-weapon SFX gain multipliers ───────────────────────────────────

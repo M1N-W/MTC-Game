@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.19'; // v3.6.19 Character balance updates - Kao shotgun nerf, Poom HP/CD buffs
+const CACHE_NAME = 'mtc-cache-v3.6.20'; // v3.6.20 Latest audio and config updates
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

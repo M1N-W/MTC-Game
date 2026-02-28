@@ -202,7 +202,42 @@ class PlayerRenderer {
         ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 16, 17, 6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
-        // ── Wanchai Stand (world-space) ───────────────────────
+        // ── Vacuum Heat range ring (Q cooldown ready) ──────────
+        // วงแสดงระยะดูด 320px — แสดงเฉพาะตอนพร้อมใช้ (cooldown <= 0)
+        // ใช้ worldToScreen scale เพื่อให้ ring ขนาดถูกต้องใน camera zoom
+        if ((entity.cooldowns?.vacuum ?? 1) <= 0) {
+            const VACUUM_RANGE_PX = BALANCE?.characters?.auto?.vacuumRange ?? 320;
+            const camScale = typeof camera !== 'undefined' ? (camera.scale ?? 1) : 1;
+            const vacRingR = VACUUM_RANGE_PX * camScale;
+            const pulse = 0.12 + Math.sin(now / 500) * 0.07;
+            ctx.save();
+            ctx.globalAlpha = pulse;
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 8]);
+            ctx.shadowBlur = 8; ctx.shadowColor = '#f97316';
+            ctx.beginPath(); ctx.arc(screen.x, screen.y, vacRingR, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
+        // ── Detonation AOE ring (active only during Wanchai) ───
+        // วงแดงบอกพื้นที่ระเบิด 220px — แสดงเฉพาะระหว่าง Wanchai active
+        if (entity.wanchaiActive) {
+            const DET_RANGE_PX = BALANCE?.characters?.auto?.detonationRange ?? 220;
+            const camScale = typeof camera !== 'undefined' ? (camera.scale ?? 1) : 1;
+            const detRingR = DET_RANGE_PX * camScale;
+            const detPulse = 0.18 + Math.sin(now / 200) * 0.12;
+            ctx.save();
+            ctx.globalAlpha = detPulse;
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 6]);
+            ctx.shadowBlur = 12; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.arc(screen.x, screen.y, detRingR, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
         if (entity.wanchaiActive) {
             const bob = Math.sin(now / 130) * 7;
             const sx = screen.x - Math.cos(entity.angle) * 30;

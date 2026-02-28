@@ -250,7 +250,36 @@ class KaoPlayer extends Player {
             if (this.clones[0]) this.clones[0].angleOffset = aimAngle + Math.PI / 1.5;
             if (this.clones[1]) this.clones[1].angleOffset = aimAngle - Math.PI / 1.5;
             this.clones.forEach(c => c.update(dt));
-            if (this.clonesActiveTimer <= 0) this.clones = [];
+            if (this.clonesActiveTimer <= 0) {
+                // ── PHANTOM SHATTER: โคลนหมดเวลา → ระเบิด 8 ทิศ ──────────
+                // กระสุน 8 ทิศ ดาเมจเบา (20% ของ shotgun pellet) แต่ AoE ดี
+                // ออกแบบให้ reward การวางตำแหน่งโคลนใกล้ศัตรู
+                if (this.clones.length > 0) {
+                    const shatterDmg = (BALANCE.characters.kao.weapons.shotgun.damage * 0.35)
+                        * (this.damageMultiplier || 1.0);
+                    const NUM_RAYS = 8;
+                    for (const clone of this.clones) {
+                        spawnParticles(clone.x, clone.y, 20, '#3b82f6');
+                        for (let i = 0; i < NUM_RAYS; i++) {
+                            const angle = (Math.PI * 2 / NUM_RAYS) * i;
+                            const p = new Projectile(
+                                clone.x, clone.y,
+                                angle,
+                                780,        // ความเร็วกระสุน
+                                shatterDmg,
+                                '#93c5fd',  // สีฟ้าอ่อน — สีของโคลน
+                                false, 'player',
+                                { life: 0.8, bounces: 0 }
+                            );
+                            projectileManager.add(p);
+                        }
+                    }
+                    addScreenShake(3);
+                    spawnFloatingText('💠 PHANTOM SHATTER!', this.x, this.y - 50, '#93c5fd', 18);
+                    if (typeof Audio !== 'undefined' && Audio.playPhantomShatter) Audio.playPhantomShatter();
+                }
+                this.clones = [];
+            }
         }
 
         super.update(dt, keys, mouse);
