@@ -636,6 +636,42 @@ const GAME_TEXTS = {
         spdBoostExtended: '👟 SPD +30s.',
         spdBoostExpired: 'SPD+ Expired',
     },
+    // ══════════════════════════════════════════════════════
+    // 🎮 SKILL NAMES — ชื่อที่แสดงใต้ปุ่มสกิลใน HUD
+    // แก้ที่นี่เพื่อเปลี่ยนชื่อสกิลทั้งหมดในเกม
+    // ══════════════════════════════════════════════════════
+    skillNames: {
+        // ── ทุกตัวละคร ──────────────────────────────────
+        attack: 'ATTACK',
+        dash: 'DASH',
+
+        // ── เก้า (KaoPlayer) ────────────────────────────
+        kao: {
+            skill1: 'STEALTH',    // R-Click — ซ่อนตัว
+            teleport: 'TELEPORT',   // Q — เทเลพอร์ต
+            clones: 'CLONES',     // E — โคลน
+            passive: 'ซุ่มเสรี',  // passive — ซุ่มเสรี
+        },
+
+        // ── ภูมิ (PoomPlayer) ───────────────────────────
+        poom: {
+            skill1: 'กินข้าว',    // R-Click — กินข้าวเหนียว
+            naga: 'NAGA',        // Q — เรียกพญานาค
+            ritual: 'RITUAL',      // R — พิธีสังเวย
+        },
+
+        // ── ออโต้ (AutoPlayer) ──────────────────────────
+        auto: {
+            skill1: 'WANCHAI',   // R-Click — Stand วันชัย
+            vacuum: 'VACUUM',    // Q — ดูดศัตรู
+            detonate: 'DETONATE',  // E — ระเบิด
+        },
+
+        // ── Utility (proximity shortcuts) ───────────────
+        database: 'DATABASE',
+        terminal: 'TERMINAL',
+        shop: 'SHOP',
+    },
     combat: {
         poomCrit: 'ข้าวเหนียวคริติคอล! 💥',
         highGround: 'HIGH GROUND!',

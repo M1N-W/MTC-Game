@@ -494,6 +494,23 @@ class UIManager {
         }
     }
 
+    // ── initSkillNames — อ่านชื่อ static slots จาก GAME_TEXTS.skillNames ──
+    // เรียกครั้งเดียวตอนหน้า load ก่อน startGame()
+    // slot ที่เปลี่ยนตามตัวละคร (skill1-name ฯลฯ) จัดการใน setupCharacterHUD แทน
+    static initSkillNames() {
+        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
+        const set = (id, text) => { const el = document.getElementById(id); if (el && text) el.textContent = text; };
+
+        set('sn-attack', SN.attack);
+        set('sn-dash', SN.dash);
+        set('sn-naga', SN.poom?.naga);
+        set('sn-ritual', SN.poom?.ritual);
+        set('sn-passive', SN.kao?.passive);
+        set('sn-database', SN.database);
+        set('sn-terminal', SN.terminal);
+        set('sn-shop', SN.shop);
+    }
+
     static setupCharacterHUD(player) {
         const isPoom = player instanceof PoomPlayer;
         // Derive charId safely from both Player and PoomPlayer instances
@@ -533,8 +550,14 @@ class UIManager {
             }
         }
 
+        // ── Shorthand to config ────────────────────────────────────────────────
+        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
+
         const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
         if (skill1El) {
+            const nameEl = skill1El.querySelector('.skill-name') || (() => {
+                const d = document.createElement('div'); d.className = 'skill-name'; skill1El.appendChild(d); return d;
+            })();
             if (isPoom) {
                 skill1El.id = 'eat-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
@@ -543,8 +566,8 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'eat-cd';
-                const nameEl = document.getElementById('skill1-name');
-                if (nameEl) { nameEl.textContent = 'กินข้าว'; nameEl.style.color = '#fcd34d'; }
+                nameEl.textContent = SN.poom?.skill1 ?? 'กินข้าว';
+                nameEl.style.color = '#fcd34d';
             } else if (isAuto) {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
@@ -553,10 +576,9 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
-                const nameEl = document.getElementById('skill1-name');
-                if (nameEl) { nameEl.textContent = 'WANCHAI'; nameEl.style.color = '#fca5a5'; }
+                nameEl.textContent = SN.auto?.skill1 ?? 'WANCHAI';
+                nameEl.style.color = '#fca5a5';
             } else if (isKao) {
-                // Kao: Skill-1 slot stays as Stealth (R-Click) — update emoji to ghost
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
                 if (emojiEl) emojiEl.textContent = '👻';
@@ -564,8 +586,8 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
-                const nameEl = document.getElementById('skill1-name');
-                if (nameEl) { nameEl.textContent = 'STEALTH'; nameEl.style.color = '#c4b5fd'; }
+                nameEl.textContent = SN.kao?.skill1 ?? 'STEALTH';
+                nameEl.style.color = '#c4b5fd';
             } else {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
@@ -574,8 +596,8 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
-                const nameEl = document.getElementById('skill1-name');
-                if (nameEl) { nameEl.textContent = 'SKILL'; nameEl.style.color = '#fbbf24'; }
+                nameEl.textContent = 'SKILL';
+                nameEl.style.color = '#fbbf24';
             }
         }
 
@@ -585,43 +607,32 @@ class UIManager {
         if (nagaSlot) {
             if (isPoom) {
                 nagaSlot.style.display = 'flex';
-                // Restore Poom defaults in case Kao was previously selected
                 nagaSlot.style.borderColor = '#10b981';
                 nagaSlot.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
                 const nagaHint = nagaSlot.querySelector('.key-hint');
                 if (nagaHint) { nagaHint.textContent = 'Q'; nagaHint.style.background = '#10b981'; }
-                // Ensure skill-name exists for Poom naga slot
                 let nagaName = nagaSlot.querySelector('.skill-name');
-                if (!nagaName) {
-                    nagaName = document.createElement('div');
-                    nagaName.className = 'skill-name';
-                    nagaSlot.appendChild(nagaName);
-                }
-                nagaName.textContent = 'NAGA';
+                if (!nagaName) { nagaName = document.createElement('div'); nagaName.className = 'skill-name'; nagaSlot.appendChild(nagaName); }
+                nagaName.textContent = SN.poom?.naga ?? 'NAGA';
                 nagaName.style.color = '#6ee7b7';
-                const nagaEmoji = nagaSlot.querySelector(':not(.key-hint):not(.cooldown-mask):not(#naga-timer):not(#naga-cd):not(.skill-name)');
-                // Leave dragon emoji intact — it is hard-coded in HTML
             } else if (isKao) {
-                // Repurpose naga-icon as Teleport slot for Kao
                 nagaSlot.style.display = 'flex';
                 nagaSlot.style.borderColor = '#00e5ff';
                 nagaSlot.style.boxShadow = '0 0 15px rgba(0,229,255,0.45)';
-                // Overwrite inner content for Teleport
                 nagaSlot.innerHTML = `
                     <div class="key-hint" id="teleport-hint" style="background:#00e5ff;color:#0c1a2e;">Q</div>
                     <span id="teleport-emoji">⚡</span>
-                    <div class="skill-name" style="color:#67e8f9;">TELEPORT</div>
+                    <div class="skill-name" style="color:#67e8f9;">${SN.kao?.teleport ?? 'TELEPORT'}</div>
                     <div class="cooldown-mask" id="teleport-cd"></div>`;
                 nagaSlot.id = 'teleport-icon';
             } else if (isAuto) {
-                // Repurpose naga-icon as Vacuum Heat (Q) slot for Auto
                 nagaSlot.style.display = 'flex';
                 nagaSlot.style.borderColor = '#f97316';
                 nagaSlot.style.boxShadow = '0 0 15px rgba(249,115,22,0.45)';
                 nagaSlot.innerHTML = `
                     <div class="key-hint" id="vacuum-hint" style="background:#f97316;color:#1a0505;">Q</div>
                     <span id="vacuum-emoji">🌀</span>
-                    <div class="skill-name" style="color:#fdba74;">VACUUM</div>
+                    <div class="skill-name" style="color:#fdba74;">${SN.auto?.vacuum ?? 'VACUUM'}</div>
                     <div class="cooldown-mask" id="vacuum-cd"></div>`;
                 nagaSlot.id = 'vacuum-icon';
             } else {
@@ -630,8 +641,6 @@ class UIManager {
         }
 
         // ── Clone of Stealth slot (E) — Kao-exclusive, dynamically injected ──
-        // We look for an existing #kao-clone-icon first; if not present we create
-        // it and insert it after the teleport slot (or after passive-skill).
         const hudBottom = document.querySelector('.hud-bottom');
         let cloneSlot = document.getElementById('kao-clone-icon');
 
@@ -644,9 +653,8 @@ class UIManager {
                 cloneSlot.innerHTML = `
                     <div class="key-hint" style="background:#3b82f6;">E</div>
                     <span>👥</span>
-                    <div class="skill-name" style="color:#93c5fd;">CLONES</div>
+                    <div class="skill-name" style="color:#93c5fd;">${SN.kao?.clones ?? 'CLONES'}</div>
                     <div class="cooldown-mask" id="clone-cd"></div>`;
-                // Insert after the passive-skill element (or at end of hud-bottom)
                 const passiveRef = document.getElementById('passive-skill');
                 if (passiveRef && passiveRef.parentNode === hudBottom) {
                     hudBottom.insertBefore(cloneSlot, passiveRef.nextSibling);
@@ -656,7 +664,6 @@ class UIManager {
             }
             if (cloneSlot) cloneSlot.style.display = 'flex';
         } else {
-            // Non-Kao: hide and remove Teleport id re-assignment if it happened
             if (cloneSlot) cloneSlot.style.display = 'none';
             // Restore naga-icon id if it was repurposed for Kao
             const maybeTeleport = document.getElementById('teleport-icon');
@@ -668,7 +675,7 @@ class UIManager {
                     <div class="key-hint" style="background:#10b981;">Q</div>🐉
                     <div class="cooldown-mask" id="naga-cd"></div>
                     <span id="naga-timer"></span>
-                    <div class="skill-name" style="color:#6ee7b7;">NAGA</div>`;
+                    <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
             }
             // ⚠️ DO NOT restore vacuum-icon when isAuto — it was intentionally repurposed
             if (!isAuto) {
@@ -681,7 +688,7 @@ class UIManager {
                     <div class="key-hint" style="background:#10b981;">Q</div>🐉
                     <div class="cooldown-mask" id="naga-cd"></div>
                     <span id="naga-timer"></span>
-                    <div class="skill-name" style="color:#6ee7b7;">NAGA</div>`;
+                    <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
                 }
             }
         }
@@ -697,7 +704,7 @@ class UIManager {
                 detSlot.innerHTML = `
                     <div class="key-hint" style="background:#dc2626;">E</div>
                     <span>💥</span>
-                    <div class="skill-name" style="color:#fca5a5;">DETONATE</div>
+                    <div class="skill-name" style="color:#fca5a5;">${SN.auto?.detonate ?? 'DETONATE'}</div>
                     <div class="cooldown-mask" id="det-cd"></div>`;
                 hudBottom.appendChild(detSlot);
             }
@@ -713,7 +720,15 @@ class UIManager {
 
         // ── Phase 3 Session 3: Ritual Burst slot — Poom-exclusive ────────
         const ritualSlot = document.getElementById('ritual-icon');
-        if (ritualSlot) ritualSlot.style.display = isPoom ? 'flex' : 'none';
+        if (ritualSlot) {
+            ritualSlot.style.display = isPoom ? 'flex' : 'none';
+            if (isPoom) {
+                let ritualName = ritualSlot.querySelector('.skill-name');
+                if (!ritualName) { ritualName = document.createElement('div'); ritualName.className = 'skill-name'; ritualSlot.appendChild(ritualName); }
+                ritualName.textContent = SN.poom?.ritual ?? 'RITUAL';
+                ritualName.style.color = '#86efac';
+            }
+        }
     }
 
     static updateSkillIcons(player) {

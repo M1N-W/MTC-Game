@@ -840,6 +840,7 @@ function startGame(charType = 'kao') {
     } catch (err) {
         console.error('[startGame] updateWeaponUI threw — continuing anyway:', err);
     }
+    UIManager.initSkillNames();
     UIManager.setupCharacterHUD(window.player);
 
     Achievements.stats.damageTaken = 0;

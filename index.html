@@ -2483,12 +2483,12 @@
         <div class="hud-bottom">
             <div class="skill-icon">
                 <div class="key-hint">L-Click</div>⚔️
-                <div class="skill-name">ATTACK</div>
+                <div class="skill-name" id="sn-attack">ATTACK</div>
             </div>
             <div class="skill-icon" id="dash-icon">
                 <div class="key-hint">SPACE</div>💨
                 <div class="cooldown-mask" id="dash-cd"></div>
-                <div class="skill-name">DASH</div>
+                <div class="skill-name" id="sn-dash">DASH</div>
             </div>
             <div class="skill-icon" id="stealth-icon">
                 <div class="key-hint" id="skill1-hint">R-Click</div>
@@ -2501,7 +2501,7 @@
                 <div class="key-hint" style="background:#10b981;">Q</div>🐉
                 <div class="cooldown-mask" id="naga-cd"></div>
                 <span id="naga-timer"></span>
-                <div class="skill-name" style="color:#6ee7b7;">NAGA</div>
+                <div class="skill-name" id="sn-naga" style="color:#6ee7b7;">NAGA</div>
             </div>
             <!-- Ritual Burst slot — Poom-exclusive, shown by setupCharacterHUD -->
             <div class="skill-icon" id="ritual-icon"
@@ -2509,29 +2509,29 @@
                 <div class="key-hint" style="background:#00ff88;color:#0a1a0f;">R</div>🌾
                 <div class="cooldown-mask" id="ritual-cd"></div>
                 <span id="ritual-timer"></span>
-                <div class="skill-name" style="color:#86efac;">RITUAL</div>
+                <div class="skill-name" id="sn-ritual" style="color:#86efac;">RITUAL</div>
             </div>
             <div class="skill-icon" id="passive-skill">
                 <div style="font-size:20px;">✨</div>
-                <div class="skill-name">ซุ่มเสรี</div>
+                <div class="skill-name" id="sn-passive">ซุ่มเสรี</div>
             </div>
             <!-- Database shortcut icon -->
             <div class="skill-icon" id="db-hud-icon"
                 style="display:none; border-color:#06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.35);">
                 <div class="key-hint" style="background:#06b6d4;color:#0c1a2e;">E</div>🗄️
-                <div class="skill-name" style="color:#67e8f9;">DATABASE</div>
+                <div class="skill-name" id="sn-database" style="color:#67e8f9;">DATABASE</div>
             </div>
             <!-- Admin Console shortcut icon -->
             <div class="skill-icon" id="console-hud-icon"
                 style="display:none; border-color:#00ff41; box-shadow:0 0 15px rgba(0,255,65,0.35);">
                 <div class="key-hint" style="background:#00ff41;color:#001a08;">F</div>💻
-                <div class="skill-name" style="color:#00ff41;">TERMINAL</div>
+                <div class="skill-name" id="sn-terminal" style="color:#00ff41;">TERMINAL</div>
             </div>
             <!-- Shop shortcut icon -->
             <div class="skill-icon" id="shop-hud-icon"
                 style="display:none; border-color:#facc15; box-shadow:0 0 15px rgba(250,204,21,0.35);">
                 <div class="key-hint" style="background:#facc15;color:#0f172a;">B</div>🛒
-                <div class="skill-name" style="color:#fef08a;">SHOP</div>
+                <div class="skill-name" id="sn-shop" style="color:#fef08a;">SHOP</div>
             </div>
         </div>
     </div>
