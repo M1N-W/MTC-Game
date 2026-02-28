@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.23'; // v3.6.23 Fixed Auto character UI slot restoration
+const CACHE_NAME = 'mtc-cache-v3.6.24'; // v3.6.24 UI redesign - skill names, improved layout, and visual enhancements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

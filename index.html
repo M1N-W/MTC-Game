@@ -1165,18 +1165,22 @@
         }
 
         .skill-icon {
-            width: 58px;
-            height: 58px;
+            width: 62px;
+            height: 72px;
             background: rgba(30, 41, 59, 0.95);
             border: 2px solid #475569;
             border-radius: 12px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            justify-content: flex-start;
             align-items: center;
             font-size: 24px;
             position: relative;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
             transition: all 0.2s;
+            padding-top: 14px;
+            padding-bottom: 2px;
+            gap: 0;
         }
 
         .skill-icon.active {
@@ -1211,12 +1215,16 @@
 
         .skill-name {
             position: absolute;
-            bottom: -20px;
-            font-size: 9px;
+            bottom: 3px;
+            left: 0;
+            right: 0;
+            font-size: 8px;
             color: #fbbf24;
             font-weight: bold;
             white-space: nowrap;
             text-align: center;
+            line-height: 1;
+            letter-spacing: 0.3px;
         }
 
         .cooldown-mask {
@@ -2475,21 +2483,25 @@
         <div class="hud-bottom">
             <div class="skill-icon">
                 <div class="key-hint">L-Click</div>⚔️
+                <div class="skill-name">ATTACK</div>
             </div>
             <div class="skill-icon" id="dash-icon">
                 <div class="key-hint">SPACE</div>💨
                 <div class="cooldown-mask" id="dash-cd"></div>
+                <div class="skill-name">DASH</div>
             </div>
             <div class="skill-icon" id="stealth-icon">
                 <div class="key-hint" id="skill1-hint">R-Click</div>
                 <span id="skill1-emoji">📖</span>
                 <div class="cooldown-mask" id="stealth-cd"></div>
+                <div class="skill-name" id="skill1-name">STEALTH</div>
             </div>
             <div class="skill-icon" id="naga-icon"
                 style="display:none; border-color:#10b981; box-shadow:0 0 15px rgba(16,185,129,0.4);">
                 <div class="key-hint" style="background:#10b981;">Q</div>🐉
                 <div class="cooldown-mask" id="naga-cd"></div>
                 <span id="naga-timer"></span>
+                <div class="skill-name" style="color:#6ee7b7;">NAGA</div>
             </div>
             <!-- Ritual Burst slot — Poom-exclusive, shown by setupCharacterHUD -->
             <div class="skill-icon" id="ritual-icon"
@@ -2497,6 +2509,7 @@
                 <div class="key-hint" style="background:#00ff88;color:#0a1a0f;">R</div>🌾
                 <div class="cooldown-mask" id="ritual-cd"></div>
                 <span id="ritual-timer"></span>
+                <div class="skill-name" style="color:#86efac;">RITUAL</div>
             </div>
             <div class="skill-icon" id="passive-skill">
                 <div style="font-size:20px;">✨</div>

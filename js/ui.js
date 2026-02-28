@@ -543,6 +543,8 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'eat-cd';
+                const nameEl = document.getElementById('skill1-name');
+                if (nameEl) { nameEl.textContent = 'กินข้าว'; nameEl.style.color = '#fcd34d'; }
             } else if (isAuto) {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
@@ -551,6 +553,8 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
+                const nameEl = document.getElementById('skill1-name');
+                if (nameEl) { nameEl.textContent = 'WANCHAI'; nameEl.style.color = '#fca5a5'; }
             } else if (isKao) {
                 // Kao: Skill-1 slot stays as Stealth (R-Click) — update emoji to ghost
                 skill1El.id = 'stealth-icon';
@@ -560,6 +564,8 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
+                const nameEl = document.getElementById('skill1-name');
+                if (nameEl) { nameEl.textContent = 'STEALTH'; nameEl.style.color = '#c4b5fd'; }
             } else {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
@@ -568,6 +574,8 @@ class UIManager {
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
+                const nameEl = document.getElementById('skill1-name');
+                if (nameEl) { nameEl.textContent = 'SKILL'; nameEl.style.color = '#fbbf24'; }
             }
         }
 
@@ -582,7 +590,16 @@ class UIManager {
                 nagaSlot.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
                 const nagaHint = nagaSlot.querySelector('.key-hint');
                 if (nagaHint) { nagaHint.textContent = 'Q'; nagaHint.style.background = '#10b981'; }
-                const nagaEmoji = nagaSlot.querySelector(':not(.key-hint):not(.cooldown-mask):not(#naga-timer):not(#naga-cd)');
+                // Ensure skill-name exists for Poom naga slot
+                let nagaName = nagaSlot.querySelector('.skill-name');
+                if (!nagaName) {
+                    nagaName = document.createElement('div');
+                    nagaName.className = 'skill-name';
+                    nagaSlot.appendChild(nagaName);
+                }
+                nagaName.textContent = 'NAGA';
+                nagaName.style.color = '#6ee7b7';
+                const nagaEmoji = nagaSlot.querySelector(':not(.key-hint):not(.cooldown-mask):not(#naga-timer):not(#naga-cd):not(.skill-name)');
                 // Leave dragon emoji intact — it is hard-coded in HTML
             } else if (isKao) {
                 // Repurpose naga-icon as Teleport slot for Kao
@@ -650,7 +667,8 @@ class UIManager {
                 maybeTeleport.innerHTML = `
                     <div class="key-hint" style="background:#10b981;">Q</div>🐉
                     <div class="cooldown-mask" id="naga-cd"></div>
-                    <span id="naga-timer"></span>`;
+                    <span id="naga-timer"></span>
+                    <div class="skill-name" style="color:#6ee7b7;">NAGA</div>`;
             }
             // ⚠️ DO NOT restore vacuum-icon when isAuto — it was intentionally repurposed
             if (!isAuto) {
@@ -662,7 +680,8 @@ class UIManager {
                     maybeVacuum.innerHTML = `
                     <div class="key-hint" style="background:#10b981;">Q</div>🐉
                     <div class="cooldown-mask" id="naga-cd"></div>
-                    <span id="naga-timer"></span>`;
+                    <span id="naga-timer"></span>
+                    <div class="skill-name" style="color:#6ee7b7;">NAGA</div>`;
                 }
             }
         }
