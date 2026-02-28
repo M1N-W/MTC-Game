@@ -373,7 +373,15 @@ class Player extends Entity {
         }
         if (this.onGraph) { amt *= 2; spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16); }
         this.hp -= amt; this.hp = Math.max(0, this.hp);
-        spawnFloatingText(Math.round(amt), this.x, this.y - 30, '#ef4444');
+
+        // ── Damage number display ────────────────────────────────
+        // Contact damage arrives as tiny fractions each frame (e.g. 0.24/frame).
+        // Accumulate until ≥1 before showing a floating number to avoid spamming "0".
+        this._dmgAccum = (this._dmgAccum || 0) + amt;
+        if (this._dmgAccum >= 1) {
+            spawnFloatingText(Math.round(this._dmgAccum), this.x, this.y - 30, '#ef4444');
+            this._dmgAccum = 0;
+        }
         spawnParticles(this.x, this.y, 8, '#ef4444');
         addScreenShake(8); Audio.playHit();
         Achievements.stats.damageTaken += amt;

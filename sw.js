@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.26'; // v3.6.26 Thai localization for skill names
+const CACHE_NAME = 'mtc-cache-v3.6.27'; // v3.6.27 Damage display accumulation fix
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
