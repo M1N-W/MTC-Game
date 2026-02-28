@@ -468,6 +468,15 @@ class KaoPlayer extends Player {
         // FIX: trigger animated gun recoil sprite
         if (typeof this.triggerRecoil === 'function') this.triggerRecoil();
 
+        // 🔫 Battle Scars: ดีดปลอกกระสุน (Kao bypass shootSingle → ต้องเรียกที่นี่โดยตรง)
+        if (typeof shellCasingSystem !== 'undefined') {
+            const shellCount = wepKey === 'shotgun' ? 3 : 1;
+            const shellSpeed = wepKey === 'sniper' ? 160 : 120;
+            for (let _s = 0; _s < shellCount; _s++) {
+                shellCasingSystem.spawn(this.x, this.y, aimAngle, shellSpeed);
+            }
+        }
+
         spawnParticles(this.x + Math.cos(aimAngle) * barrelOffset, this.y + Math.sin(aimAngle) * barrelOffset, 3, color);
     }
 

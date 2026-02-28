@@ -88,6 +88,11 @@ class PoomPlayer extends Entity {
         const S = this.stats;
         const PHY = BALANCE.physics;
 
+        // ── Contact Warning Timer (ใช้โดย PlayerRenderer.draw contact ring) ──
+        if (this._contactWarningTimer > 0) {
+            this._contactWarningTimer = Math.max(0, this._contactWarningTimer - dt);
+        }
+
         // ── Combo System Update ────────────────────────────────
         if (this.comboCount > 0) {
             this.comboTimer -= dt;
@@ -422,23 +427,16 @@ class PoomPlayer extends Entity {
     }
 
     takeDamage(amt) {
+        // ── Naga Shield: ขณะ Naga มีชีวิตและ active → ภูมิอยู่ยงคงกระพัน ──
         if (this.naga && !this.naga.dead && this.naga.active) return;
-        if (this.isDashing) return;
-        // ── Energy Shield block ──────────────────────────────────
-        if (this.hasShield) {
-            this.hasShield = false;
-            spawnFloatingText('🛡️ BLOCKED!', this.x, this.y - 40, '#8b5cf6', 22);
-            spawnParticles(this.x, this.y, 20, '#c4b5fd');
-            if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
-            return;
+        // ── Graph Risk ────────────────────────────────────────────
+        // (ไม่ผ่าน super เพราะ PlayerBase.takeDamage ก็เช็คอยู่แล้ว — x2 แทน x1.5 ของ Kao)
+        if (this.onGraph) {
+            amt *= 2;
+            spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16);
         }
-        if (this.onGraph) { amt *= 2; spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16); }
-        this.hp -= amt; this.hp = Math.max(0, this.hp);
-        spawnFloatingText(Math.round(amt), this.x, this.y - 30, '#ef4444');
-        spawnParticles(this.x, this.y, 8, '#ef4444');
-        addScreenShake(8); Audio.playHit();
-        Achievements.stats.damageTaken += amt;
-        if (this.hp <= 0) window.endGame('defeat');
+        // ── ส่งต่อระบบ contact warning + ตัวเลขกรอง + dead flag ──
+        Player.prototype.takeDamage.call(this, amt);
     }
 
     dealDamage(baseDamage) {

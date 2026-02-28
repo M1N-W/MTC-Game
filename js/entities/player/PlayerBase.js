@@ -260,7 +260,9 @@ class Player extends Entity {
             this.dashTimeouts.push(timeoutId);
         }
 
-        spawnParticles(this.x, this.y, 15, '#60a5fa');
+        // ── Dash particle สีตามธีมตัวละคร ──
+        const dashParticleColor = this.charId === 'auto' ? '#ef4444' : '#60a5fa';
+        spawnParticles(this.x, this.y, 15, dashParticleColor);
         Audio.playDash();
         Achievements.stats.dashes++;
         Achievements.check('speedster');
