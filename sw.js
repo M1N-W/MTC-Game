@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.35'; // v3.6.35 Player death decal and shell casing audio
+const CACHE_NAME = 'mtc-cache-v3.6.36'; // v3.6.36 Audio balance improvements and shell drop configuration
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

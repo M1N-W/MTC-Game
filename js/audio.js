@@ -1293,7 +1293,10 @@ class AudioSystem {
         osc.frequency.setValueAtTime(2200, t);
         osc.frequency.exponentialRampToValueAtTime(1400, t + 0.06);
 
-        gain.gain.setValueAtTime(0.08 * this.masterVolume * this.sfxVolume, t);
+        const baseGain = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.shellDrop != null)
+            ? GAME_CONFIG.audio.shellDrop
+            : 0.025;
+        gain.gain.setValueAtTime(baseGain * this.masterVolume * this.sfxVolume, t);
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
 
         osc.start(t);

@@ -464,45 +464,53 @@ const GAME_CONFIG = {
             glitch: 'assets/audio/glitch.mp3'
         },
         master: 1.0,
-        shoot: 0.3,
-        dash: 0.4,
-        hit: 0.4,
-        enemyDeath: 0.3,
+        shoot: 0.28,        // auto reference level — อ้างอิงทุกปืน
+        dash: 0.35,         // ลดลง 0.4→0.35 — dash ไม่ควรกลบเสียงปืน
+        hit: 0.35,          // ลดลง 0.4→0.35 — hit feedback ชัดแต่ไม่ดังเกิน
+        enemyDeath: 0.28,   // เท่า shoot — death ไม่ควรดังกว่าปืน
         powerUp: 0.2,
-        heal: 0.4,
+        heal: 0.35,
         levelUp: 0.4,
         victory: 0.6,
         achievement: 0.4,
-        weaponSwitch: 0.3,
+        weaponSwitch: 0.25, // ลดลง 0.3→0.25 — UI sound ควรเบาที่สุด
         bossSpecial: 0.5,
         meteorWarning: 0.3,
+
+        // ── Shell Casing Drop SFX ─────────────────────────────────────────────
+        // ต้องเบากว่าเสียงปืนเสมอ auto ยิง 5 นัด/วินาที = 5 ปลอก/วินาที
+        // shotgun = 3 ปลอกพร้อมกัน → peak ≈ shellDrop * 3 ต้องไม่กลบ shoot
+        // สูตร: shellDrop * master * sfx * N_casings < shoot * master * sfx * weaponGain
+        // 0.025 * 3 = 0.075 < shoot(0.28) * shotgun(1.3) = 0.364 ✅
+        shellDrop: 0.025,
 
         // ── Procedural SFX gain multipliers ───────────────────────────────────
         // Tweak these to balance character SFX loudness without touching audio.js.
         // Values multiply the base `hit` or `shoot` level used in each playX().
         sfx: {
             stealth: 0.5,   // Kao warp cloaking sweep  (base: masterVol * sfxVol, not 'hit')
-            clone: 0.4,   // Kao clone split ping
-            riceShoot: 0.6,   // Poom sticky rice splat
-            ritualBurst: 1.1,   // Poom ritual explosion — raised 0.8→1.1 (ultimate needs presence)
-            punch: 0.6,   // Auto normal heat wave punch
-            standRush: 0.45,  // Auto Wanchai rapid punch — kept low (fires every 60ms, stacks fast)
-            nagaAttack: 0.55,  // Poom Naga contact hiss — rate-limited in NagaEntity (220ms)
+            clone: 0.4,     // Kao clone split ping
+            riceShoot: 0.55,    // ลดลง 0.6→0.55 — Poom sticky rice splat
+            ritualBurst: 1.1,   // Poom ritual explosion — ultimate needs presence
+            punch: 0.55,        // ลดลง 0.6→0.55 — Auto heat wave punch
+            standRush: 0.35,    // ลดลง 0.45→0.35 — fires every 60ms, stacks very fast
+            nagaAttack: 0.45,   // ลดลง 0.55→0.45 — rate-limited 220ms แต่ยังถี่อยู่
             // ── New skill SFX ──────────────────────────────────────
-            vacuum: 0.65, // Auto Q — vacuum pull whoosh
-            detonation: 0.85, // Auto E — overheat explosion
-            phantomShatter: 0.50, // Kao clone expire — 8-way crystal burst
+            vacuum: 0.6,        // ลดลง 0.65→0.6 — Auto Q vacuum pull whoosh
+            detonation: 0.85,   // Auto E — overheat explosion (ultimate, คงไว้)
+            phantomShatter: 0.45, // ลดลง 0.50→0.45 — Kao clone expire burst
         },
 
         // ── Per-weapon SFX gain multipliers ───────────────────────────────────
-        // 'auto' stays at 1.0 (reference level).
-        // 'sniper' raised to 1.5 — should feel like the loudest, most impactful shot.
-        // 'shotgun' raised to 2.0 — fixes the "quiet" issue reported during playtesting.
+        // Priority hierarchy: sniper > shotgun > auto
+        // sniper = 1.6 — ยิงช้า 0.85s cooldown ควรรู้สึกหนักที่สุด
+        // shotgun = 1.3 — ลดลง 2.0→1.3 (2.0 ดังเกินเดิม, 1.3 ยังคง punch ไว้)
+        // auto = 1.0 — reference, ยิงถี่สุดต้องเบาสุด
         // Fallback: if key is missing, audio.js defaults to 1.0.
         weaponGain: {
             auto: 1.0,
-            sniper: 1.5,   // raised from 1.0 — sniper should feel heavy
-            shotgun: 2.0,
+            sniper: 1.6,    // raised 1.5→1.6 — ยิงช้าต้องรู้สึกหนัก
+            shotgun: 1.3,   // ลดลง 2.0→1.3 — แก้ปัญหา shotgun ดังเกิน
         }
     },
     visual: {
