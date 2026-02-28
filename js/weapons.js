@@ -557,6 +557,15 @@ class WeaponSystem {
 
         player.vx -= Math.cos(player.angle) * 50;
         player.vy -= Math.sin(player.angle) * 50;
+        // 🔫 Battle Scars: ดีดปลอกกระสุน (auto / sniper / shotgun เท่านั้น)
+        if (typeof shellCasingSystem !== 'undefined' &&
+            (this.currentWeapon === 'auto' || this.currentWeapon === 'sniper' || this.currentWeapon === 'shotgun')) {
+            const shellCount = this.currentWeapon === 'shotgun' ? 3 : 1;
+            const shellSpeed = this.currentWeapon === 'sniper' ? 160 : 120;
+            for (let _s = 0; _s < shellCount; _s++) {
+                shellCasingSystem.spawn(player.x, player.y, player.angle, shellSpeed);
+            }
+        }
         Audio.playShoot(this.currentWeapon);
         return projectiles;
     }

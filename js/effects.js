@@ -1745,6 +1745,285 @@ function drawOrbitalEffects() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 🩸 DECAL SYSTEM — รอยเลือด / ซากบนพื้น (static floor marks)
+// ──────────────────────────────────────────────────────────────────────────────
+/**
+ * Decal
+ *
+ * รอยเลือดหรือซากที่ฝังอยู่กับพื้น  ไม่มีการเคลื่อนที่  ค่อยๆ เฟดจางหายใน
+ * ช่วงท้ายของ lifetime  วาดเป็นวงรีหลายวงซ้อนกันเพื่อให้ดูเป็นธรรมชาติ
+ *
+ * Spawned by: DecalSystem.spawn(x, y, color, radius)
+ * Managed by: DecalSystem (singleton: decalSystem)
+ */
+class Decal {
+    static _pool = [];
+    static MAX_POOL = 120;
+
+    constructor(x, y, color, radius, lifetime) {
+        this.reset(x, y, color, radius, lifetime);
+    }
+
+    reset(x, y, color, radius, lifetime) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.radius = radius;
+        this.life = lifetime;
+        this.maxLife = lifetime;
+        // สร้าง blobs ครั้งเดียวตอน spawn เพื่อไม่ให้ draw ใช้ Math.random ทุกเฟรม
+        this.blobs = [];
+        const count = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const d = Math.random() * radius * 0.6;
+            this.blobs.push({
+                ox: Math.cos(a) * d,
+                oy: Math.sin(a) * d,
+                rx: radius * (0.4 + Math.random() * 0.6),
+                ry: radius * (0.2 + Math.random() * 0.4),
+                rot: Math.random() * Math.PI,
+            });
+        }
+        return this;
+    }
+
+    static acquire(x, y, color, radius, lifetime) {
+        if (Decal._pool.length > 0) {
+            return Decal._pool.pop().reset(x, y, color, radius, lifetime);
+        }
+        return new Decal(x, y, color, radius, lifetime);
+    }
+
+    release() {
+        this.blobs = [];
+        if (Decal._pool.length < Decal.MAX_POOL) {
+            Decal._pool.push(this);
+        }
+    }
+
+    update(dt) {
+        this.life -= dt;
+        return this.life <= 0;
+    }
+
+    draw() {
+        // เฟดจางใน 20% สุดท้ายของ lifetime
+        const t = this.life / this.maxLife;
+        const alpha = t < 0.2 ? t / 0.2 * 0.55 : 0.55;
+        if (alpha < 0.01) return;
+
+        CTX.globalAlpha = alpha;
+        CTX.fillStyle = this.color;
+
+        for (const b of this.blobs) {
+            const screen = worldToScreen(this.x + b.ox, this.y + b.oy);
+            CTX.save();
+            CTX.translate(screen.x, screen.y);
+            CTX.rotate(b.rot);
+            CTX.beginPath();
+            CTX.ellipse(0, 0, b.rx, b.ry, 0, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.restore();
+        }
+
+        CTX.globalAlpha = 1;
+    }
+}
+
+class DecalSystem {
+    static MAX_DECALS = 80; // hard cap — เก่าสุดโดน evict
+
+    constructor() {
+        this.decals = [];
+    }
+
+    /**
+     * @param {number} x         World X
+     * @param {number} y         World Y
+     * @param {string} color     CSS color — โทนคล้ำตามประเภทศัตรู
+     * @param {number} [radius]  ขนาด (default 14)
+     * @param {number} [life]    อายุขัย (default 18 วินาที)
+     */
+    spawn(x, y, color, radius = 14, life = 18) {
+        this.decals.push(Decal.acquire(x, y, color, radius, life));
+        // evict oldest เมื่อเกิน cap
+        while (this.decals.length > DecalSystem.MAX_DECALS) {
+            this.decals.shift().release();
+        }
+    }
+
+    update(dt) {
+        const arr = this.decals;
+        let i = arr.length - 1;
+        while (i >= 0) {
+            if (arr[i].update(dt)) {
+                arr[i].release();
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+            }
+            i--;
+        }
+    }
+
+    draw() {
+        if (typeof CTX === 'undefined' || !CTX) return;
+        for (const d of this.decals) d.draw();
+    }
+
+    clear() {
+        for (const d of this.decals) d.release();
+        this.decals = [];
+    }
+}
+
+/** Global singleton */
+var decalSystem = new DecalSystem();
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🔫 SHELL CASING SYSTEM — ปลอกกระสุนกระเด็นออกด้านข้างของปืน
+// ──────────────────────────────────────────────────────────────────────────────
+/**
+ * ShellCasing
+ *
+ * สี่เหลี่ยมเล็กๆ สีทองเหลือง  กระเด็นออกไปด้านข้าง (perpendicular to aim),
+ * หมุน, มี friction สูง → หยุดนิ่งบนพื้นได้เร็ว  แล้วค่อยๆ เฟดจาง
+ */
+class ShellCasing {
+    static _pool = [];
+    static MAX_POOL = 100;
+
+    constructor(x, y, vx, vy, rotation, rotSpeed, lifetime) {
+        this.reset(x, y, vx, vy, rotation, rotSpeed, lifetime);
+    }
+
+    reset(x, y, vx, vy, rotation, rotSpeed, lifetime) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.rotation = rotation;
+        this.rotSpeed = rotSpeed;
+        this.life = lifetime;
+        this.maxLife = lifetime;
+        return this;
+    }
+
+    static acquire(x, y, vx, vy, rotation, rotSpeed, lifetime) {
+        if (ShellCasing._pool.length > 0) {
+            return ShellCasing._pool.pop().reset(x, y, vx, vy, rotation, rotSpeed, lifetime);
+        }
+        return new ShellCasing(x, y, vx, vy, rotation, rotSpeed, lifetime);
+    }
+
+    release() {
+        if (ShellCasing._pool.length < ShellCasing.MAX_POOL) {
+            ShellCasing._pool.push(this);
+        }
+    }
+
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        // friction สูง → หยุดเร็ว
+        this.vx *= 0.82;
+        this.vy *= 0.82;
+        this.rotation += this.rotSpeed * dt;
+        this.life -= dt;
+        return this.life <= 0;
+    }
+
+    draw() {
+        const screen = worldToScreen(this.x, this.y);
+
+        // viewport cull
+        if (typeof CANVAS !== 'undefined') {
+            if (screen.x < -8 || screen.x > CANVAS.width + 8 ||
+                screen.y < -8 || screen.y > CANVAS.height + 8) return;
+        }
+
+        const t = this.life / this.maxLife;
+        // เฟดจางในช่วงครึ่งหลัง
+        const alpha = t < 0.5 ? t / 0.5 * 0.9 : 0.9;
+        if (alpha < 0.01) return;
+
+        CTX.save();
+        CTX.globalAlpha = alpha;
+        CTX.translate(screen.x, screen.y);
+        CTX.rotate(this.rotation);
+
+        // ตัวปลอกกระสุน: สี่เหลี่ยมสีทองเหลือง 6×3 px
+        CTX.fillStyle = '#fbbf24';
+        CTX.fillRect(-3, -1.5, 6, 3);
+
+        // ไฮไลต์บนขอบบน
+        CTX.fillStyle = '#fde68a';
+        CTX.fillRect(-3, -1.5, 6, 1);
+
+        CTX.restore();
+        CTX.globalAlpha = 1;
+    }
+}
+
+class ShellCasingSystem {
+    static MAX_CASINGS = 120;
+
+    constructor() {
+        this.casings = [];
+    }
+
+    /**
+     * ดีดปลอกกระสุน
+     * @param {number} x         World X (ตำแหน่งผู้เล่น)
+     * @param {number} y         World Y
+     * @param {number} aimAngle  มุมที่ผู้เล่นกำลังเล็ง (radians)
+     * @param {number} [speed]   ความเร็วเริ่มต้น (default 120)
+     */
+    spawn(x, y, aimAngle, speed = 120) {
+        // ปลอกกระเด็นออกทางขวาของทิศยิง + สุ่มเบี่ยงเล็กน้อย
+        const side = aimAngle + Math.PI / 2 + (Math.random() - 0.5) * 0.6;
+        const s = speed * (0.7 + Math.random() * 0.6);
+        const vx = Math.cos(side) * s;
+        const vy = Math.sin(side) * s;
+        const rot = Math.random() * Math.PI * 2;
+        const rotSpeed = (Math.random() - 0.5) * 20;
+        const life = 5 + Math.random() * 3;
+
+        this.casings.push(ShellCasing.acquire(x, y, vx, vy, rot, rotSpeed, life));
+
+        while (this.casings.length > ShellCasingSystem.MAX_CASINGS) {
+            this.casings.shift().release();
+        }
+    }
+
+    update(dt) {
+        const arr = this.casings;
+        let i = arr.length - 1;
+        while (i >= 0) {
+            if (arr[i].update(dt)) {
+                arr[i].release();
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+            }
+            i--;
+        }
+    }
+
+    draw() {
+        if (typeof CTX === 'undefined' || !CTX) return;
+        for (const c of this.casings) c.draw();
+    }
+
+    clear() {
+        for (const c of this.casings) c.release();
+        this.casings = [];
+    }
+}
+
+/** Global singleton */
+var shellCasingSystem = new ShellCasingSystem();
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Export
 // ──────────────────────────────────────────────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
@@ -1760,5 +2039,7 @@ if (typeof module !== 'undefined' && module.exports) {
         drawGlitchEffect,
         OrbitalParticle, OrbitalParticleSystem,
         initOrbitalSystems, updateOrbitalEffects, drawOrbitalEffects,
+        Decal, DecalSystem, decalSystem,
+        ShellCasing, ShellCasingSystem, shellCasingSystem,
     };
 }

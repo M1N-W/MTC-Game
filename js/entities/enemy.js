@@ -139,6 +139,10 @@ class Enemy extends Entity {
         if (this.hp <= 0) {
             this.dead = true; this.hp = 0;
             spawnParticles(this.x, this.y, 20, this.color);
+            // 🩸 Battle Scars: รอยเลือดสีม่วงคล้ำบนพื้น
+            if (typeof decalSystem !== 'undefined') {
+                decalSystem.spawn(this.x, this.y, '#3b0764', 12 + Math.random() * 6);
+            }
             addScore(BALANCE.score.basicEnemy * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             // ✨ [bullet_time_kill] นับคิลขณะ Slow-mo
             if (window.isSlowMotion && typeof Achievements !== 'undefined') {
@@ -337,6 +341,10 @@ class TankEnemy extends Entity {
         if (this.hp <= 0) {
             this.dead = true;
             spawnParticles(this.x, this.y, 30, this.color);
+            // 🩸 Battle Scars: รอยเลือดสีแดงคล้ำขนาดใหญ่ (Tank ตัวใหญ่กว่า)
+            if (typeof decalSystem !== 'undefined') {
+                decalSystem.spawn(this.x, this.y, '#7f1d1d', 20 + Math.random() * 8, 20);
+            }
             addScore(BALANCE.score.tank * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
             // FIX (BUG-4): Correctly identify Kao and fetch weapon string key to allow Awakening
@@ -529,6 +537,10 @@ class MageEnemy extends Entity {
         if (this.hp <= 0) {
             this.dead = true;
             spawnParticles(this.x, this.y, 25, this.color);
+            // 🩸 Battle Scars: รอยม่วงเข้มของ Mage
+            if (typeof decalSystem !== 'undefined') {
+                decalSystem.spawn(this.x, this.y, '#4c1d95', 10 + Math.random() * 6, 16);
+            }
             addScore(BALANCE.score.mage * getWave()); addEnemyKill(); Audio.playEnemyDeath();
             if (player) player.gainExp(this.expValue);
             // FIX (BUG-4): Correctly identify Kao and fetch weapon string key to allow Awakening

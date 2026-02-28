@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.31'; // v3.6.31 Character color themes and aura rendering overhaul
+const CACHE_NAME = 'mtc-cache-v3.6.32'; // v3.6.32 Battle Scars system - floor decals and shell casings
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

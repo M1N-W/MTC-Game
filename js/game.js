@@ -473,6 +473,9 @@ function updateGame(dt) {
 
     if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.update(dt);
 
+    if (typeof decalSystem !== 'undefined') decalSystem.update(dt);
+    if (typeof shellCasingSystem !== 'undefined') shellCasingSystem.update(dt);
+
     weatherSystem.update(dt, getCamera());
     updateScreenShake();
     _achFrame++;
@@ -532,6 +535,10 @@ function drawGame() {
     mapSystem.draw();
     drawDatabaseServer();
     drawShopObject();
+
+    // ── Battle Scars — floor decals & shell casings (below all entities) ──
+    if (typeof decalSystem !== 'undefined') decalSystem.draw();
+    if (typeof shellCasingSystem !== 'undefined') shellCasingSystem.draw();
 
     // ── Low-HP Navigation Guide ───────────────────────────────
     // Draws a subtle, animated dashed floor-line toward the nearest
@@ -832,6 +839,8 @@ function startGame(charType = 'kao') {
     projectileManager.clear();
     particleSystem.clear();
     floatingTextSystem.clear();
+    if (typeof decalSystem !== 'undefined') decalSystem.clear();
+    if (typeof shellCasingSystem !== 'undefined') shellCasingSystem.clear();
     mapSystem.init();
 
     weaponSystem.setActiveChar(charType);
