@@ -2642,13 +2642,12 @@
                     const card = document.getElementById('card-' + charType) || document.getElementById('btn-' + charType) || document.getElementById(charType);
                     if (card) card.classList.add('selected');
 
-                    // ── Start button label ──────────────────────────────
+                    // ── Buttons label ──────────────────────────────
                     const startBtn = document.getElementById('start-btn');
-                    if (startBtn) {
-                        startBtn.textContent = charType === 'poom'
-                            ? '🌾 START MISSION'
-                            : (charType === 'auto' ? '🔥 START MISSION' : '🎓 START MISSION');
-                    }
+                    const tutBtn = document.getElementById('tutorial-btn');
+                    const iconPrefix = charType === 'poom' ? '🌾' : (charType === 'auto' ? '🔥' : '🎓');
+                    if (startBtn) startBtn.textContent = iconPrefix + ' START MISSION';
+                    if (tutBtn) tutBtn.textContent = iconPrefix + ' REPLAY TUTORIAL';
 
                     // ── HUD avatar preview ──────────────────────────────
                     // Updates the tiny avatar icon at top-left to preview
@@ -2712,10 +2711,20 @@
                     ปิดเพื่อสัมผัสประสบการณ์แบบผู้เล่นจริง</div>
             </div>
 
-            <button class="btn" id="start-btn" onclick="startGame(_selectedChar)"
-                ontouchstart="event.preventDefault(); startGame(_selectedChar);"
-                style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer;">START
-                MISSION</button>
+            <div
+                style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; width: 100%; margin-top: 10px;">
+                <button class="btn" id="start-btn" onclick="startGame(_selectedChar)"
+                    ontouchstart="event.preventDefault(); startGame(_selectedChar);"
+                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer;">
+                    🎓 START MISSION
+                </button>
+                <button class="btn" id="tutorial-btn"
+                    onclick="if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
+                    ontouchstart="event.preventDefault(); if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
+                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);">
+                    🎓 REPLAY TUTORIAL
+                </button>
+            </div>
             <div id="ai-loading">Initializing systems...</div>
         </div>
     </div>

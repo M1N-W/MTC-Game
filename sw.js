@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.41'; // v3.6.41 Cooldown visual styling fix - rounded corners
+const CACHE_NAME = 'mtc-cache-v3.6.42'; // v3.6.42 Tutorial button addition with character theming
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
