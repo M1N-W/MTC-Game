@@ -1926,6 +1926,7 @@ class ShellCasing {
         this.rotSpeed = rotSpeed;
         this.life = lifetime;
         this.maxLife = lifetime;
+        this.hasHitFloor = false;
         return this;
     }
 
@@ -1948,6 +1949,10 @@ class ShellCasing {
         // friction สูง → หยุดเร็ว
         this.vx *= 0.82;
         this.vy *= 0.82;
+        if (!this.hasHitFloor && Math.hypot(this.vx, this.vy) < 15) {
+            this.hasHitFloor = true;
+            if (typeof Audio !== 'undefined' && Audio.playShellDrop) Audio.playShellDrop();
+        }
         this.rotation += this.rotSpeed * dt;
         this.life -= dt;
         return this.life <= 0;

@@ -148,6 +148,10 @@ function updateGame(dt) {
 
     // Player death check — call endGame once then bail out of the update
     if (window.player.dead) {
+        if (typeof decalSystem !== 'undefined' && !window.player._deathDecalSpawned) {
+            window.player._deathDecalSpawned = true;
+            decalSystem.spawn(window.player.x, window.player.y, '#7f1d1d', 35 + Math.floor(Math.random() * 11), 30);
+        }
         window.endGame('defeat');
         return;
     }

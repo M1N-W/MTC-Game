@@ -1277,6 +1277,29 @@ class AudioSystem {
         return this.masterVolume;
     }
 
+    // ── Shell Casing Drop SFX — short metallic tink ──────────────────────────
+    playShellDrop() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = this.ctx.currentTime;
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(2200, t);
+        osc.frequency.exponentialRampToValueAtTime(1400, t + 0.06);
+
+        gain.gain.setValueAtTime(0.08 * this.masterVolume * this.sfxVolume, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+
+        osc.start(t);
+        osc.stop(t + 0.07);
+    }
+
     mute() { this.enabled = false; if (this.bgmAudio) this.bgmAudio.pause(); }
     unmute() { this.enabled = true; if (this.bgmAudio?.paused) this.bgmAudio.play().catch(() => { }); }
 
