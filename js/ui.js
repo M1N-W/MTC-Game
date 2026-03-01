@@ -171,6 +171,7 @@ class AchievementGallery {
     static render() {
         const container = document.getElementById('ach-items');
         const summary = document.getElementById('ach-summary');
+        const buffSummEl = document.getElementById('ach-buff-summary');
         if (!container) return;
         container.innerHTML = '';
 
@@ -184,10 +185,39 @@ class AchievementGallery {
         const total = ACHIEVEMENT_DEFS.length;
         const count = ACHIEVEMENT_DEFS.filter(a => unlockedSet.has(a.id)).length;
 
-        if (summary) summary.textContent = ` ปลดล็อคแล้ว: ${count} / ${total}`;
+        if (summary) summary.textContent = `🏆 ปลดล็อคแล้ว: ${count} / ${total}`;
 
+        // ── Part 1: Tally unlocked rewards ───────────────────────
+        const tally = { hp: 0, damage: 0, speed: 0, crit: 0, cdr: 0 };
+        ACHIEVEMENT_DEFS.forEach(ach => {
+            if (!unlockedSet.has(ach.id) || !ach.reward) return;
+            tally[ach.reward.type] = (tally[ach.reward.type] || 0) + ach.reward.value;
+        });
+
+        if (buffSummEl) {
+            const chips = [];
+            if (tally.hp > 0) chips.push(`❤️ +${tally.hp} Max HP`);
+            if (tally.damage > 0) chips.push(`⚔️ +${Math.round(tally.damage * 100)}% DMG`);
+            if (tally.speed > 0) chips.push(`💨 +${Math.round(tally.speed * 100)}% SPD`);
+            if (tally.crit > 0) chips.push(`💥 +${Math.round(tally.crit * 100)}% CRIT`);
+            if (tally.cdr > 0) chips.push(`🔮 -${Math.round(tally.cdr * 100)}% CDR`);
+
+            if (chips.length > 0) {
+                buffSummEl.innerHTML = chips
+                    .map(c => `<span class="buff-chip">${c}</span>`)
+                    .join('');
+            } else {
+                buffSummEl.innerHTML = '<span style="color:#475569; font-size:11px;">No active buffs</span>';
+            }
+        }
+
+        // ── Part 2: Render cards with reward pill ─────────────────
         ACHIEVEMENT_DEFS.forEach(ach => {
             const isUnlocked = unlockedSet.has(ach.id);
+            const rewardHtml = ach.reward
+                ? `<div class="ach-reward ${isUnlocked ? 'active' : 'locked-reward'}">🎁 ${ach.reward.text}</div>`
+                : '';
+
             const card = document.createElement('div');
             card.className = `ach-card ${isUnlocked ? 'unlocked' : 'locked'}`;
             card.innerHTML = `
@@ -195,6 +225,7 @@ class AchievementGallery {
                 <div class="ach-info">
                     <div class="ach-name">${ach.name}</div>
                     <div class="ach-desc">${isUnlocked ? ach.desc : '???'}</div>
+                    ${rewardHtml}
                 </div>
             `;
             container.appendChild(card);
