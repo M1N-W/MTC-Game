@@ -337,6 +337,11 @@ function _setupKeyboardListeners() {
         var consoleInput = document.getElementById('console-input');
         if (consoleInput && document.activeElement === consoleInput) return;
 
+        // ── Global Escape for Modals (Menu or Paused) ──
+        if (e.code === 'Escape') {
+            if (typeof AchievementGallery !== 'undefined') AchievementGallery.close();
+        }
+
         if (window.gameState === 'PAUSED') {
             var shopModal = document.getElementById('shop-modal');
             var shopOpen = shopModal && shopModal.style.display === 'flex';
