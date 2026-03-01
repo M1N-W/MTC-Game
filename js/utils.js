@@ -517,8 +517,9 @@ const MTC_SAVE_KEY = 'mtc_save_v1';
 
 const DEFAULT_SAVE_DATA = {
     highScore:        0,
-    unlockedPassives: []
-};
+    unlockedPassives: [],
+    unlockedAchievements: []
+ };
 
 var saveData = (key, value) => {
     try {

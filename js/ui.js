@@ -40,7 +40,10 @@
 class AchievementSystem {
     constructor() {
         this.list = ACHIEVEMENT_DEFS;
-        this.unlocked = new Set();
+        const saved = (typeof getSaveData === 'function')
+            ? (getSaveData().unlockedAchievements || [])
+            : [];
+        this.unlocked = new Set(saved);
         this.stats = {
             kills: 0, damageTaken: 0, crits: 0,
             dashes: 0, stealths: 0, powerups: 0,
@@ -102,6 +105,9 @@ class AchievementSystem {
         // ── Mark as unlocked only on first attempt ───────────────
         if (retryCount === 0) {
             this.unlocked.add(ach.id);
+            if (typeof updateSaveData === 'function') {
+                updateSaveData({ unlockedAchievements: Array.from(this.unlocked) });
+            }
         }
 
         // ── Audio (guarded — Audio may not be ready yet) ─────────
@@ -138,6 +144,64 @@ class AchievementSystem {
 
     checkAll() { this.list.forEach(ach => this.check(ach.id)); }
 }
+
+// ════════════════════════════════════════════════════════════
+// 🏆 ACHIEVEMENT GALLERY (หอเกียรติยศ)
+// ════════════════════════════════════════════════════════════
+    class AchievementGallery {
+    static open() {
+    AchievementGallery.render();
+        const modal = document.getElementById('achievements-modal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => {
+            const inner = modal.querySelector('.ach-inner');
+            if (inner) inner.classList.add('ach-visible');
+        });
+    }
+
+    static close() {
+        const modal = document.getElementById('achievements-modal');
+        if (!modal) return;
+        const inner = modal.querySelector('.ach-inner');
+        if (inner) inner.classList.remove('ach-visible');
+        setTimeout(() => { modal.style.display = 'none'; }, 260);
+    }
+
+    static render() {
+        const container = document.getElementById('ach-items');
+        const summary = document.getElementById('ach-summary');
+        if (!container) return;
+        container.innerHTML = '';
+
+        // Guard: Achievements global may not be ready in some edge cases
+        const unlockedSet = (window.Achievements instanceof AchievementSystem)
+            ? window.Achievements.unlocked
+            : new Set((typeof getSaveData === 'function'
+                ? (getSaveData().unlockedAchievements || [])
+                : []));
+
+        const total = ACHIEVEMENT_DEFS.length;
+        const count = ACHIEVEMENT_DEFS.filter(a => unlockedSet.has(a.id)).length;
+
+        if (summary) summary.textContent = ` ปลดล็อคแล้ว: ${count} / ${total}`;
+
+        ACHIEVEMENT_DEFS.forEach(ach => {
+            const isUnlocked = unlockedSet.has(ach.id);
+            const card = document.createElement('div');
+            card.className = `ach-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+            card.innerHTML = `
+                <div class="ach-icon">${ach.icon}</div>
+                <div class="ach-info">
+                    <div class="ach-name">${ach.name}</div>
+                    <div class="ach-desc">${isUnlocked ? ach.desc : '???'}</div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+}
+window.AchievementGallery = AchievementGallery;    
 
 // ════════════════════════════════════════════════════════════
 // 🛒 SHOP MANAGER
