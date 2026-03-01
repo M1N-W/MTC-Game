@@ -27,12 +27,19 @@ window.GLITCH_EVERY_N_WAVES = GLITCH_EVERY_N_WAVES;
 // Rules:  must NOT overlap with multiples of 3 (boss waves: 3,6,9,12,15)
 //         must NOT overlap with multiples of 5 (glitch waves: 5,10)  [handled by isGlitch guard]
 //
-// FOG_WAVES:   was [2,6,8,11,14] — removed 6 (boss wave), replaced with 5
-//              Final: 2, 5, 8, 11, 14  — none clash with boss waves (3,6,9,12,15)
-// SPEED_WAVES: [4,7,10,13,16]          — 10 is a glitch wave but the guard skips it safely;
-//              16 is beyond maxWaves=15 so it is never reached (harmless)
-const FOG_WAVES = new Set([2, 5, 8, 11, 14]);
-const SPEED_WAVES = new Set([4, 7, 10, 13, 16]);
+// FOG_WAVES:   [2,8,11,14] — wave 5 removed (it's a Glitch wave; the !isGlitch guard
+//              permanently blocked it, making it a dead slot). 4 fog waves confirmed.
+// SPEED_WAVES: [4,7,13]   — wave 10 removed (Glitch wave, guarded out),
+//              wave 16 removed (beyond maxWaves=15, unreachable). 3 speed waves confirmed.
+//
+// Effective wave schedule (maxWaves=15, bossEveryN=3, glitchEveryN=5):
+//   Boss  : 3, 6, 9, 12, 15
+//   Glitch: 5, 10
+//   Fog   : 2, 8, 11, 14
+//   Speed : 4, 7, 13
+//   Normal: 1
+const FOG_WAVES = new Set([2, 8, 11, 14]);
+const SPEED_WAVES = new Set([4, 7, 13]);
 const SPEED_MULT = 1.5;
 
 // ─── Mutable state ─────────────────────────────────────────────
@@ -245,7 +252,9 @@ function startNextWave() {
         window._glitchWaveHpBonus = 0;
     }
 
-    window.isGlitchWave = false; window.controlsInverted = false;
+    window.isGlitchWave = false;
+    if (typeof GameState !== 'undefined') GameState.isGlitchWave = false;
+    window.controlsInverted = false;
     window.waveSpawnLocked = false; window.waveSpawnTimer = 0;
     window.pendingSpawnCount = 0; window.lastGlitchCountdown = -1;
 
@@ -273,7 +282,9 @@ function startNextWave() {
 
     // ── Glitch Wave ──────────────────────────────────────────
     if (isGlitch) {
-        window.isGlitchWave = true; window.controlsInverted = true; window.glitchIntensity = 0;
+        window.isGlitchWave = true;
+        if (typeof GameState !== 'undefined') GameState.isGlitchWave = true;
+        window.controlsInverted = true; window.glitchIntensity = 0;
         if (window.player) {
             const bonus = 100;
             window.player.maxHp += bonus; window.player.hp += bonus;
