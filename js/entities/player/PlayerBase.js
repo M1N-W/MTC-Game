@@ -87,6 +87,42 @@ class Player extends Entity {
 
         // ── EMP Grounded status (BossFirst EMP_ATTACK) ─────────
         this.groundedTimer = 0;
+
+        // ── Meta Progression — apply Achievement rewards ────────
+        // Reads unlocked achievements from localStorage and stacks
+        // their permanent bonuses onto this player instance at birth.
+        this.metaSpeedMult = 1.0;
+        if (typeof getSaveData === 'function' && typeof ACHIEVEMENT_DEFS !== 'undefined') {
+            const unlocked = getSaveData().unlockedAchievements || [];
+            for (let i = 0; i < unlocked.length; i++) {
+                const achId = unlocked[i];
+                const def = ACHIEVEMENT_DEFS.find(a => a.id === achId);
+                if (!def || !def.reward) continue;
+                const r = def.reward;
+                switch (r.type) {
+                    case 'hp':
+                        this.maxHp += r.value;
+                        this.hp += r.value;
+                        break;
+                    case 'damage':
+                        this._damageMultiplier += r.value;
+                        break;
+                    case 'speed':
+                        this.metaSpeedMult += r.value;
+                        break;
+                    case 'crit':
+                        this.baseCritChance += r.value;
+                        break;
+                    case 'cdr':
+                        // Compound reduction, floor at 10% of base
+                        this.skillCooldownMult = Math.max(0.1, this.skillCooldownMult - r.value);
+                        break;
+                }
+            }
+            if (unlocked.length > 0) {
+                console.log(`[MTC Meta] Applied ${unlocked.length} achievement reward(s). Speed×${this.metaSpeedMult.toFixed(2)} CDR×${this.skillCooldownMult.toFixed(2)}`);
+            }
+        }
     }
 
     get S() { return this.stats; }
@@ -150,7 +186,7 @@ class Player extends Entity {
             this.walkCycle += dt * 15;
         } else { this.walkCycle = 0; }
 
-        let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost;
+        let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost * this.metaSpeedMult;
         if (typeof KaoPlayer !== 'undefined' && this instanceof KaoPlayer && this.passiveUnlocked) speedMult = Math.max(speedMult, 1.4);
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
