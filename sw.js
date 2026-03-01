@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.47'; // v3.6.47 Wave management system improvements - schedule cleanup and GameState integration
+const CACHE_NAME = 'mtc-cache-v3.6.48'; // v3.6.48 README documentation overhaul - enhanced project description and features
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

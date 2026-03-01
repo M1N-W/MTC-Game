@@ -1,55 +1,74 @@
+<div align="center">
+
 # 🎮 MTC the Game (Beta Edition)
 
-A high-octane, top-down survival action game built entirely from scratch using **HTML5 Canvas** and **Vanilla JavaScript**. No external game engines, just pure code, math, and passion.
+**Survive the waves. Defeat the teachers. Master the madness.**
 
-![Version](https://img.shields.io/badge/version-Beta_v2.1-blue.svg)
-![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![Tech Stack](https://img.shields.io/badge/tech-HTML5_|_Vanilla_JS-f0db4f.svg)
-![AI](https://img.shields.io/badge/AI-Gemini_Integration-8a2be2.svg)
+เกมแนว **Top-down 2D Wave Survival Shooter** สุดมันส์ที่พัฒนาด้วย HTML5 Canvas API และ Vanilla JavaScript ล้วนๆ (No Frameworks!)  
+เอาชีวิตรอดจากกองทัพศัตรู 15 เวฟ และเผชิญหน้ากับบอสสุดโหดประจำภาควิชาคณิตศาสตร์และฟิสิกส์!
 
-## ✨ Core Features
-
-* **Custom Canvas Engine:** A lightweight, highly optimized 2D rendering engine featuring dynamic lighting, procedural day/night cycles, and a custom particle/weather system.
-* **Gemini AI Integration:** Real-time dynamic game interactions. The AI generates unique mission names, sarcastic boss taunts based on the player's performance, and personalized post-game report cards. (Includes a robust 3-layer offline fallback system).
-* **3 Unique Playable Characters:**
-    * **👨🏻‍🎓 Kao:** The tactical marksman. Switches between Auto Rifle, Sniper, and Shotgun. Masters the art of stealth.
-    * **🔥 Auto:** The close-quarters brawler. Utilizes the "Heat Wave" and the devastating "Wanchai Stand" combo.
-    * **🌾 Poom:** The summoner. Throws sticky rice for critical hits and summons a protective Naga spirit.
-* **Dynamic Wave Manager:** Survive endless waves that dynamically shift the battlefield with **Fog Waves** (radar offline), **Speed Waves**, and screen-distorting **Glitch Waves**.
-* **Epic Boss Fights:**
-    * **👑 Kru Manop:** The ruthless math teacher with 3 distinct phases (Base, Dog Rider, Goldfish Lover).
-    * **⚛️ Kru First:** The agile physics master. Features Vector-telegraphed SUVAT Charges, Gravitational Shockwaves, and a unique "Pork Sandwich" parry mechanic.
-* **Tactical HUD & Systems:** Features a real-time minimap (Radar), an interactive Shop system for mid-game buffs, and a robust Achievement tracking system.
-* **StatusEffect Framework:** Advanced status system for enemies. Supports sticky rice effects, ritual burst consumption, and extensible for future effects (burn, poison, freeze).
-* **Developer Admin Console:** A fully functional, Unix-style terminal (`F` key) for executing God-mode commands, manipulating waves, and debugging.
-
-## 🕹️ Controls
-
-| Key | Action |
-| :--- | :--- |
-| **W, A, S, D** | Move |
-| **Mouse Left Click**| Shoot / Attack |
-| **Mouse Right Click**| Character Ultimate Skill |
-| **Spacebar** | Dash (i-frames) |
-| **B** | Open MTC Co-op Shop (when near shop) |
-| **E** | Access MTC Database (when near server) |
-| **F** | Open Admin Terminal |
-| **Q** | Secondary Skill (Poom's Naga) |
-| **R** | Ritual Burst (Poom's Sticky Consuming) |
-| **Mouse Wheel** | Switch Weapon (Kao) |
-
-## 🚀 How to Run
-
-1. Clone the repository to your local machine.
-2. No Node.js, Webpack, or npm install required! This is pure Vanilla JS.
-3. Simply open `index.html` in any modern web browser.
-4. *(Optional)* To enable Gemini AI features, ensure you have a valid API key configured in `js/config.js` or `js/secrets.js`.
-
-## 🏗️ Architecture Highlights
-
-* **Object-Oriented Design:** Clean inheritance structures (`PlayerBase` -> `KaoPlayer`, `Enemy` -> `BossFirst`).
-* **Centralized Localization (i18n):** All user-facing texts and AI prompts are managed strictly within `config.js` (`GAME_TEXTS`) for easy maintenance and future translations.
-* **State Management:** Decoupled UI and Game Loop architecture preventing memory leaks during scene transitions.
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![HTML5 Canvas](https://img.shields.io/badge/HTML5_Canvas-E34F26?style=flat-square&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
+[![Status](https://img.shields.io/badge/Status-Beta-success?style=flat-square)]()
+[![Engine](https://img.shields.io/badge/Engine-Custom_JS-blue?style=flat-square)]()
 
 ---
-*Developed with dedication by Mawin. Preparing for the ultimate migration to Godot.*
+
+</div>
+
+## 🌟 Key Features
+
+* **🌊 15 Waves of Chaos:** ฝ่าด่านศัตรูที่ค่อยๆ แข็งแกร่งขึ้น พร้อมระบบ Wave Events สุดป่วน (Glitch Wave, Fog Wave, Speed Wave)
+* **🛒 Roguelite Shop System:** สะสม Score เพื่อซื้อบัฟอัปเกรดตัวละคร (Damage, Speed, HP, Shield) ระหว่างเวฟ
+* **⏱️ Bullet Time:** กด `T` เพื่อหน่วงเวลา 70% ให้คุณหลบกระสุนแบบ Matrix ได้อย่างเฉียบคม
+* **🏆 Achievement System:** หอเกียรติยศบันทึกสถิติและความสำเร็จของผู้เล่น
+* **🗄️ MTC Database & Admin Console:** ระบบ Lore และ Terminal ลับสำหรับใส่สูตรโกง (ถ้าคุณรู้คำสั่ง!)
+
+---
+
+## 🦸‍♂️ Playable Characters
+
+เลือกเล่นเป็น 3 ตัวละครที่มีสกิลและสไตล์การเล่นแตกต่างกันอย่างสิ้นเชิง:
+
+| Character | Class | Key Abilities | Playstyle |
+| :--- | :--- | :--- | :--- |
+| 🎓 **เก้า (Kao)** | Advanced Assassin | 👻 Stealth<br>⚡ Teleport<br>👥 Hologram Clone | เน้นการลอบเร้น, คริติคอล, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
+| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 🔥 Ritual Burst<br>🐉 Naga Summon<br>🍚 Eat Rice (Heal) | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้าง |
+| 🔥 **ออโต้ (Auto)** | Pyromaniac | 🌀 Vacuum Heat<br>💥 Detonate<br>🔫 Wanchai Stand | เน้นการควบคุมพื้นที่ (Crowd Control) และทำดาเมจต่อเนื่อง |
+
+---
+
+## 👑 Epic Boss Fights
+
+เตรียมพบกับ Boss Encounters ทุกๆ 3 เวฟ ที่มาพร้อมกับ Mechanics ระดับโหดหิน:
+* 📐 **ครูมานพ (The Math Boss):** โจมตีด้วยสมการคณิตศาสตร์, กราฟมรณะ, ตาราง Matrix Grid และการเรียกสุนัขกับปลาทองคู่ใจ
+* ⚛️ **ครูเฟิร์ส (The Physics Master):** โจมตีด้วยกฎฟิสิกส์, การพุ่งชนความเร็วสูง (SUVAT), ตกจากฟ้า (Free Fall) และระเบิดล็อคการเคลื่อนที่ (EMP Pulse)
+
+---
+
+## 🛠️ Technical Architecture
+
+โปรเจกต์นี้เขียนด้วย **Vanilla JavaScript** โดยเน้นที่ Performance ระดับ 60FPS:
+* **Render Engine:** แยกส่วนการวาดกราฟิกทั้งหมดไว้ที่ `PlayerRenderer.js` และ `BossRenderer.js` เพื่อความคลีนของโค้ด
+* **State Management:** ใช้ `GameState.js` เป็น Single Source of Truth
+* **Object Pooling:** จัดการ Particles และ Projectiles อย่างมีประสิทธิภาพเพื่อลดปัญหา Garbage Collection (GC)
+* **Modular Design:** แบ่งคลาส Entity, ระบบ Input, และ UI ออกจากกันอย่างชัดเจน
+
+---
+
+## 🚀 How to Play
+
+1.  ไปที่หน้าเว็บไซต์ของเกม (หรือรันผ่าน Live Server)
+2.  เลือกตัวละครที่หน้าเมนูหลัก
+3.  (แนะนำ) กดปุ่ม **🎓 REPLAY TUTORIAL** หากเพิ่งเคยเล่นครั้งแรกเพื่อเรียนรู้ระบบสกิล
+4.  ใช้ปุ่ม `W A S D` ในการเดิน, `Left Click` เพื่อยิง, `Spacebar` เพื่อ Dash และกด `Q`, `E`, `R`, `T` สำหรับสกิลพิเศษ
+
+---
+
+## 🗺️ Roadmap (Next Steps)
+
+- [x] Rework Tutorial System
+- [x] End-game Boss Scaling (Wave 15)
+- [ ] UI หอเกียรติยศ (Achievement Gallery)
+- [ ] อัปเกรดระบบร้านค้า (Roguelite Perks แบบสุ่ม)
+- [ ] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
