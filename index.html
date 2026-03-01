@@ -838,6 +838,140 @@
             transform: scale(1.1);
         }
 
+        /* ══ Achievement Gallery Modal ══════════════════════════════ */
+        #achievements-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 9500;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            pointer-events: auto;
+        }
+
+        .ach-inner {
+            background: linear-gradient(160deg, #1c1100 0%, #0f172a 50%, #1c1100 100%);
+            border: 2px solid #facc15;
+            border-radius: 24px;
+            padding: 36px 40px;
+            width: min(720px, 94vw);
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow:
+                0 0 60px rgba(250, 204, 21, 0.35),
+                0 30px 60px rgba(0, 0, 0, 0.9);
+            position: relative;
+            opacity: 0;
+            transform: translateY(30px) scale(0.96);
+            transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+        }
+
+        .ach-inner.ach-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .ach-inner::before, .ach-inner::after {
+            content: '✦';
+            position: absolute;
+            font-size: 20px;
+            color: #facc15;
+            opacity: 0.4;
+        }
+
+        .ach-inner::before { top: 16px; left: 20px; }
+        .ach-inner::after  { bottom: 16px; right: 20px; }
+
+        .ach-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(250, 204, 21, 0.25);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .ach-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            color: #facc15;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
+        }
+
+        #ach-summary {
+            font-size: 13px;
+            color: #fde68a;
+            background: rgba(250, 204, 21, 0.08);
+            padding: 4px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(250, 204, 21, 0.25);
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #ach-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .ach-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            transition: transform 0.15s;
+            cursor: default;
+        }
+
+        .ach-card:hover { transform: translateY(-2px); }
+
+        .ach-card.unlocked {
+            background: linear-gradient(135deg, rgba(250, 204, 21, 0.12), rgba(250, 204, 21, 0.04));
+            border: 1.5px solid rgba(250, 204, 21, 0.45);
+            box-shadow: 0 0 18px rgba(250, 204, 21, 0.12);
+        }
+
+        .ach-card.locked {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1.5px solid rgba(100, 116, 139, 0.3);
+        }
+
+        .ach-card.locked .ach-icon {
+            filter: grayscale(100%) opacity(0.3);
+        }
+
+        .ach-icon { font-size: 28px; flex-shrink: 0; }
+
+        .ach-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fde68a;
+            margin-bottom: 2px;
+        }
+
+        .ach-card.locked .ach-name { color: #64748b; }
+
+        .ach-desc {
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+
+        .ach-card.locked .ach-desc { color: #475569; }
+
+        @media (max-width: 560px) {
+            #ach-items { grid-template-columns: 1fr; }
+            .ach-inner { padding: 24px 20px; }
+            .ach-title { font-size: 17px; }
+        }
+
         .shop-subtitle {
             text-align: center;
             font-size: 13px;
@@ -2709,6 +2843,20 @@
         </div>
     </div>
 
+    <div id="achievements-modal">
+        <div class="ach-inner">
+            <div class="ach-header">
+                <div class="ach-title">🏆 HALL OF FAME</div>
+                <span id="ach-summary">🏆 ปลดล็อคแล้ว: 0 / 22</span>
+                <button class="shop-close-btn"
+                    onclick="AchievementGallery.close()"
+                    ontouchstart="event.preventDefault(); AchievementGallery.close();"
+                    title="ปิด (Escape)">✕</button>
+            </div>
+            <div id="ach-items"></div>
+        </div>
+    </div>
+
     <div class="weapon-indicator">
         <div class="weapon-name" id="weapon-name">AUTO RIFLE</div>
         <div class="weapon-hint">หมุนลูกเลื่อนเพื่อสลับอาวุธ</div>
@@ -3022,6 +3170,12 @@
                     ontouchstart="event.preventDefault(); if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
                     style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);">
                     🎓 REPLAY TUTORIAL
+                </button>
+                <button class="btn"
+                    onclick="AchievementGallery.open()"
+                    ontouchstart="event.preventDefault(); AchievementGallery.open();"
+                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer; background: linear-gradient(135deg, #b45309, #78350f); box-shadow: 0 0 20px rgba(250, 204, 21, 0.35);">
+                    🏆 ACHIEVEMENTS
                 </button>
             </div>
             <div id="ai-loading">Initializing systems...</div>
