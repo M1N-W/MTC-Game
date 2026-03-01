@@ -203,7 +203,8 @@ class Boss extends Entity {
             log: { cd: 0, max: BALANCE.boss.log457Cooldown },
             bark: { cd: 0, max: BALANCE.boss.phase2.barkCooldown },
             goldfish: { cd: 0, max: BALANCE.boss.phase3.goldfishCooldown },
-            bubble: { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown }
+            bubble: { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown },
+            matrixGrid: { cd: 0, max: 22.0 }
         };
 
         this.log457State = null;
@@ -343,7 +344,11 @@ class Boss extends Entity {
                 else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) this.useDeadlyGraph(player);
                 else if (this.phase === 2 && this.skills.bark.cd <= 0 && Math.random() < barkChance) this.bark(player);
                 else if (this.skills.slam.cd <= 0 && Math.random() < 0.30) this.useEquationSlam();
-                else this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
+                else if (this.phase >= 2 && this.skills.matrixGrid.cd <= 0 && Math.random() < 0.35) {
+                    this.useMatrixGrid(player);
+                } else {
+                    this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
+                }
             }
         } else if (this.state === 'ATTACK') {
             this.vx *= 0.9; this.vy *= 0.9;
@@ -370,6 +375,13 @@ class Boss extends Entity {
                 spawnFloatingText('POP QUIZ!', this.x, this.y - 80, '#facc15', 40);
                 Audio.playBossSpecial();
                 this.state = 'CHASE'; this.timer = -1;
+            }
+        } else if (this.state === 'MATRIX_GRID') {
+            // Boss stands still during wind-up; MatrixGridAttack object handles detonation
+            this.vx = 0; this.vy = 0;
+            // warnDur(1.5) + linger(0.5) + wind-up buffer(0.6)
+            if (this.timer > 2.6) {
+                this.state = 'CHASE'; this.timer = 0;
             }
         }
 
@@ -434,8 +446,32 @@ class Boss extends Entity {
         ));
     }
 
+    useMatrixGrid(player) {
+        this.skills.matrixGrid.cd = this.skills.matrixGrid.max;
+        this.state = 'MATRIX_GRID';
+        this.timer = 0;
+
+        const cols = 3, rows = 2;
+        const cellSize = 130;
+        const safeIndex = Math.floor(Math.random() * cols * rows);
+
+        // Centre grid on player's current position (snapshot)
+        window.specialEffects.push(new MatrixGridAttack(
+            player.x, player.y,
+            cols, rows, cellSize,
+            1.5,                                        // warn duration seconds
+            BALANCE.boss.ultimateDamage * 1.4,          // damage
+            safeIndex
+        ));
+
+        spawnFloatingText('MATRIX GRID!', this.x, this.y - 80, '#ef4444', 32);
+        spawnFloatingText('FIND THE SAFE CELL!', player.x, player.y - 110, '#22c55e', 24);
+        addScreenShake(8);
+        Audio.playBossSpecial();
+        this.speak('There is no escape from my matrix!');
+    }
+
     useLog457() {
-        this.skills.log.cd = this.skills.log.max;
         this.log457State = 'charging'; this.log457Timer = 0; this.state = 'CHASE';
         spawnFloatingText('log 4.57 = ?', this.x, this.y - 80, '#ef4444', 30);
         Audio.playBossSpecial();
@@ -530,7 +566,8 @@ class BossFirst extends Entity {
             orbit: { cd: 0, max: 12.0 },
             freeFall: { cd: 0, max: 15.0 },
             rocket: { cd: 0, max: 9.0 },
-            sandwich: { cd: 0, max: 18.0 }
+            sandwich: { cd: 0, max: 18.0 },
+            emp: { cd: 0, max: 20.0 }
         };
 
         // ── SUVAT charge constants ────────────────────────────
@@ -745,6 +782,25 @@ class BossFirst extends Entity {
                 break;
             }
 
+            case 'EMP_ATTACK': {
+                // Wind-up: stand still 0.8s with blue glow telegraph, then detonate
+                this.vx *= 0.85; this.vy *= 0.85;
+                if (this.stateTimer > 0.8 && !this._empFired) {
+                    this._empFired = true;
+                    window.specialEffects.push(new EmpPulse(
+                        this.x, this.y,
+                        260,                                        // max radius (world units)
+                        0.7,                                        // expand duration
+                        18 * (this.isAdvanced ? 1.3 : 1.0),        // damage
+                        3.0                                         // grounded duration (seconds)
+                    ));
+                    spawnFloatingText('⚡ EMP!', this.x, this.y - 80, '#38bdf8', 32);
+                    Audio.playBossSpecial();
+                }
+                if (this.stateTimer > 1.8) this._enterState('CHASE');
+                break;
+            }
+
             case 'BERSERK': {
                 // Permanent enrage: fast aggressive chase + burst fire
                 this.isEnraged = true;
@@ -833,6 +889,14 @@ class BossFirst extends Entity {
         if (this.skills.rocket.cd <= 0) {
             this.skills.rocket.cd = this.skills.rocket.max;
             this._enterState('ROCKET');
+            return;
+        }
+        if (this.skills.emp.cd <= 0) {
+            this.skills.emp.cd = this.skills.emp.max;
+            this._empFired = false;
+            this._enterState('EMP_ATTACK');
+            spawnFloatingText('⚡ CHARGING EMP…', this.x, this.y - 80, '#38bdf8', 26);
+            this._speak('Electromagnetic pulse — dodge this!');
             return;
         }
     }
@@ -1856,7 +1920,10 @@ class BossRenderer {
 
         // ── LAYER 9 — Science goggles ───────────────────────────────────
         const goggleY = -R * 0.38;
-        const goggleGlow = e.isEnraged ? '#ff4444' : '#00ffff';
+        const goggleGlow = e.isEnraged ? '#ff4444'
+            : e.state === 'EMP_ATTACK' ? '#38bdf8'
+                : e.state === 'SUVAT_CHARGE' ? '#f97316'
+                    : '#00ffff';
         const gogglePulse = 0.6 + Math.sin(t * 2.5) * 0.35;
         ctx.strokeStyle = '#1e293b'; ctx.lineWidth = R * 0.14; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(-R * 1.02, goggleY); ctx.lineTo(R * 1.02, goggleY); ctx.stroke();
@@ -1960,8 +2027,11 @@ class BossRenderer {
         ctx.shadowBlur = 6; ctx.shadowColor = 'rgba(0,255,255,0.4)';
         ctx.beginPath(); ctx.arc(R + 8, 4, R * 0.30, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0;
-        const ptrGlow = (e.state === 'SUVAT_CHARGE' || e.state === 'ORBIT_ATTACK') ? 1.0 : 0.55;
-        const ptrCol = e.isEnraged ? '#ff4444' : '#00ffff';
+        const ptrGlow = (e.state === 'SUVAT_CHARGE' || e.state === 'ORBIT_ATTACK' || e.state === 'EMP_ATTACK') ? 1.0 : 0.55;
+        const ptrCol = e.isEnraged ? '#ff4444'
+            : e.state === 'EMP_ATTACK' ? '#38bdf8'     // blue  — EMP incoming
+                : e.state === 'SUVAT_CHARGE' ? '#f97316'     // orange — charge incoming
+                    : '#00ffff';                                    // default cyan
         ctx.shadowBlur = 14 * ptrGlow; ctx.shadowColor = ptrCol;
         ctx.fillStyle = '#1e293b';
         ctx.beginPath(); ctx.roundRect(R + 12, -R * 0.08, R * 1.45, R * 0.17, 2); ctx.fill();

@@ -638,9 +638,205 @@ class ExpandingRing {
     }
 }
 
+// ════════════════════════════════════════════════════════════
+// 🟥 MATRIX GRID — Area-denial zone attack (Boss Phase 2+)
+// ════════════════════════════════════════════════════════════
+class MatrixGridAttack {
+    /**
+     * @param {number} cx       World-space centre X (snapped to player position)
+     * @param {number} cy       World-space centre Y
+     * @param {number} cols
+     * @param {number} rows
+     * @param {number} cellSize px per cell (world units)
+     * @param {number} warnDur  seconds before detonation
+     * @param {number} damage
+     * @param {number} safeIndex index of the safe cell (0-based, row-major)
+     */
+    constructor(cx, cy, cols, rows, cellSize, warnDur, damage, safeIndex) {
+        this.cx = cx; this.cy = cy;
+        this.cols = cols; this.rows = rows;
+        this.cellSize = cellSize;
+        this.warnDur = warnDur;
+        this.damage = damage;
+        this.safeIndex = safeIndex;
+
+        this.timer = 0;
+        this.dead = false;
+        this._detonated = false;
+
+        // Pre-compute cell world-centres once — no GC churn in update()
+        this._cells = [];
+        const totalW = cols * cellSize;
+        const totalH = rows * cellSize;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                this._cells.push({
+                    wx: cx - totalW / 2 + c * cellSize + cellSize / 2,
+                    wy: cy - totalH / 2 + r * cellSize + cellSize / 2
+                });
+            }
+        }
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+
+        // Detonate once at end of warn window
+        if (!this._detonated && this.timer >= this.warnDur) {
+            this._detonated = true;
+            const half = this.cellSize / 2;
+            for (let i = 0; i < this._cells.length; i++) {
+                if (i === this.safeIndex) continue;
+                const cell = this._cells[i];
+                if (Math.abs(player.x - cell.wx) < half && Math.abs(player.y - cell.wy) < half) {
+                    player.takeDamage(this.damage);
+                    addScreenShake(16);
+                    spawnParticles(player.x, player.y, 20, '#ef4444');
+                    spawnFloatingText('WRONG CELL!', player.x, player.y - 60, '#ef4444', 28);
+                }
+                spawnParticles(cell.wx, cell.wy, 10, '#ef4444');
+                if (typeof ExpandingRing !== 'undefined') {
+                    window.specialEffects.push(new ExpandingRing(cell.wx, cell.wy, '#ef4444', this.cellSize * 0.6, 0.4));
+                }
+            }
+        }
+
+        // Linger briefly so detonation flash is visible
+        if (this._detonated && this.timer >= this.warnDur + 0.5) {
+            this.dead = true;
+        }
+        return this.dead;
+    }
+
+    draw() {
+        if (this.dead) return;
+        if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
+
+        const prog = Math.min(this.timer / this.warnDur, 1);
+        const flashRate = 0.5 + prog * 2.5; // blink faster as detonation nears
+        const blinkOn = !this._detonated && Math.sin(this.timer * Math.PI * 2 * flashRate) > 0;
+        const baseAlpha = this._detonated ? 0 : (0.55 + prog * 0.30);
+
+        for (let i = 0; i < this._cells.length; i++) {
+            const cell = this._cells[i];
+            const screen = worldToScreen(cell.wx, cell.wy);
+            const half = this.cellSize / 2;
+            const isSafe = (i === this.safeIndex);
+
+            CTX.save();
+            CTX.globalAlpha = baseAlpha;
+
+            if (isSafe) {
+                CTX.fillStyle = 'rgba(34,197,94,0.30)';
+                CTX.strokeStyle = '#22c55e';
+                CTX.shadowBlur = 12; CTX.shadowColor = '#22c55e';
+            } else if (blinkOn) {
+                CTX.fillStyle = 'rgba(239,68,68,0.35)';
+                CTX.strokeStyle = '#ef4444';
+                CTX.shadowBlur = 10; CTX.shadowColor = '#ef4444';
+            } else {
+                CTX.fillStyle = 'rgba(239,68,68,0.15)';
+                CTX.strokeStyle = 'rgba(239,68,68,0.5)';
+                CTX.shadowBlur = 0;
+            }
+
+            CTX.lineWidth = 2.5;
+            CTX.fillRect(screen.x - half, screen.y - half, this.cellSize, this.cellSize);
+            CTX.strokeRect(screen.x - half, screen.y - half, this.cellSize, this.cellSize);
+
+            if (isSafe) {
+                CTX.font = 'bold 14px "Orbitron", Arial, sans-serif';
+                CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+                CTX.fillStyle = '#22c55e';
+                CTX.shadowBlur = 8; CTX.shadowColor = '#22c55e';
+                CTX.fillText('SAFE', screen.x, screen.y);
+            }
+
+            CTX.shadowBlur = 0;
+            CTX.restore();
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// ⚡ EMP PULSE — Expanding ring; applies Grounded status on hit
+// ════════════════════════════════════════════════════════════
+class EmpPulse {
+    /**
+     * @param {number} x           World-space origin X
+     * @param {number} y           World-space origin Y
+     * @param {number} maxR        Max radius (world units)
+     * @param {number} duration    Seconds to expand fully
+     * @param {number} damage      Damage on hit
+     * @param {number} groundedDur Seconds player Dash is locked
+     */
+    constructor(x, y, maxR, duration, damage, groundedDur) {
+        this.x = x; this.y = y;
+        this.maxR = maxR;
+        this.duration = duration;
+        this.damage = damage;
+        this.groundedDur = groundedDur;
+        this.timer = 0;
+        this.dead = false;
+        this._hit = false; // hit player only once per pulse
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+
+        if (!this._hit) {
+            const r = this.maxR * (this.timer / this.duration);
+            const d = Math.hypot(player.x - this.x, player.y - this.y);
+            // Ring hits player when the expanding radius crosses their position
+            if (d <= r + player.radius && d >= r - 35) {
+                this._hit = true;
+                player.takeDamage(this.damage);
+                if (typeof player.applyGrounded === 'function') {
+                    player.applyGrounded(this.groundedDur);
+                }
+                spawnFloatingText('⚡ GROUNDED!', player.x, player.y - 60, '#38bdf8', 28);
+                addScreenShake(10);
+                spawnParticles(player.x, player.y, 18, '#38bdf8');
+            }
+        }
+
+        if (this.timer >= this.duration) this.dead = true;
+        return this.dead;
+    }
+
+    draw() {
+        if (this.dead) return;
+        if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
+
+        const prog = this.timer / this.duration;
+        const r = this.maxR * prog;
+        const screen = worldToScreen(this.x, this.y);
+        const alpha = (1 - prog) * 0.9;
+
+        CTX.save();
+
+        // Outer glow ring
+        CTX.globalAlpha = alpha;
+        CTX.strokeStyle = '#38bdf8';
+        CTX.shadowBlur = 18; CTX.shadowColor = '#38bdf8';
+        CTX.lineWidth = 7 * (1 - prog * 0.6);
+        CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.stroke();
+
+        // Inner fill dome (fades fast)
+        CTX.globalAlpha = alpha * 0.15;
+        CTX.fillStyle = '#38bdf8';
+        CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.fill();
+
+        CTX.shadowBlur = 0;
+        CTX.restore();
+    }
+}
+
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing };
+    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing, MatrixGridAttack, EmpPulse };
 }
 // ── Global exports ────────────────────────────────────────────
 window.BarkWave = BarkWave;
@@ -649,3 +845,5 @@ window.BubbleProjectile = BubbleProjectile;
 window.FreeFallWarningRing = FreeFallWarningRing;
 window.PorkSandwich = PorkSandwich;
 window.ExpandingRing = ExpandingRing;
+window.MatrixGridAttack = MatrixGridAttack;
+window.EmpPulse = EmpPulse;

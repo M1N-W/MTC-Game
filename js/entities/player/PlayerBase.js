@@ -83,6 +83,9 @@ class Player extends Entity {
         // ── Collision Awareness state ──────────────────────────
         this.obstacleBuffTimer = 0;
         this.lastObstacleWarning = 0;
+
+        // ── EMP Grounded status (BossFirst EMP_ATTACK) ─────────
+        this.groundedTimer = 0;
     }
 
     get S() { return this.stats; }
@@ -120,6 +123,14 @@ class Player extends Entity {
             if (this.confusedTimer <= 0) { this.isConfused = false; this.confusedTimer = 0; }
         }
         if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
+        if (this.groundedTimer > 0) {
+            this.groundedTimer -= dt;
+            if (this.groundedTimer < 0) this.groundedTimer = 0;
+            // Blink "DASH LOCKED" warning ~4× per second
+            if (Math.floor((this.groundedTimer + dt) * 4) !== Math.floor(this.groundedTimer * 4)) {
+                spawnFloatingText('⚡ DASH LOCKED!', this.x, this.y - 50, '#38bdf8', 18);
+            }
+        }
         if (this.goldenAuraTimer > 0) {
             this.goldenAuraTimer -= dt;
             if (Math.random() < 0.5) spawnParticles(this.x + rand(-25, 25), this.y + rand(-25, 25), 1, '#fbbf24');
@@ -177,7 +188,11 @@ class Player extends Entity {
         }
         if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
 
-        if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
+        if (keys.space && this.cooldowns.dash <= 0 && this.groundedTimer <= 0) {
+            this.dash(ax || 1, ay || 0); keys.space = 0;
+        } else if (keys.space && this.groundedTimer > 0) {
+            keys.space = 0; // consume input silently — dash blocked by Grounded
+        }
 
         if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= S.stealthCost) {
             this.activateStealth(); mouse.right = 0;
@@ -445,6 +460,11 @@ class Player extends Entity {
     }
 
     addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
+
+    applyGrounded(duration) {
+        // Takes the longer of current remaining timer vs new duration
+        this.groundedTimer = Math.max(this.groundedTimer, duration);
+    }
 
     // draw() ย้ายไป PlayerRenderer._drawBase() แล้ว
 

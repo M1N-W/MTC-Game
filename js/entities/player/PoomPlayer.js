@@ -374,13 +374,19 @@ class PoomPlayer extends Entity {
             Achievements.check('ritual_wipe');
         }
         // ── Boss: base damage only (ไม่มี sticky framework) ──
-        if (window.boss && !window.boss.dead) {
-            const bd = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+        const currentBoss = window.boss;
+        if (currentBoss && !currentBoss.dead) {
+            // เซฟค่า X, Y ของบอสไว้ก่อน เผื่อว่าทำดาเมจแล้วบอสตายตัวแปรจะได้ไม่เป็น null
+            const bx = currentBoss.x;
+            const by = currentBoss.y;   
+            
+            // ลบ radius ของบอสออกจากระยะห่าง เพื่อให้สกิลโดนบอสที่ว่องไวได้ง่ายขึ้น
+            const bd = Math.max(0, Math.hypot(bx - this.x, by - this.y) - (currentBoss.radius || 0));
             const RITUAL_RANGE = RC.range || 280;
             if (bd <= RITUAL_RANGE) {
-                const baseDmg = (RC.baseDamage || 75) + window.boss.maxHp * (RC.baseDamagePct || 0.15);
-                window.boss.takeDamage(baseDmg);
-                spawnFloatingText(`🌾 ${Math.round(baseDmg)}`, window.boss.x, window.boss.y - 60, '#00ff88', 20);
+                const baseDmg = (RC.baseDamage || 75) + currentBoss.maxHp * (RC.baseDamagePct || 0.15);
+                currentBoss.takeDamage(baseDmg);
+                spawnFloatingText(`🌾 ${Math.round(baseDmg)}`, bx, by - 60, '#00ff88', 20);
             }
         }
 
