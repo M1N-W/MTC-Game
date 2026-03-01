@@ -246,6 +246,9 @@ function _drawBanner(ctx) {
 function startNextWave() {
     _deactivateWaveEvent();
 
+    // Roguelite shop refresh — free reroll every new wave
+    if (typeof rollShopItems === 'function') rollShopItems();
+
     if (window._glitchWaveHpBonus > 0 && window.player) {
         window.player.maxHp -= window._glitchWaveHpBonus;
         window.player.hp = Math.min(window.player.hp, window.player.maxHp);

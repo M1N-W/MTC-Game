@@ -74,6 +74,7 @@ class Player extends Entity {
             }
         });
         this.cooldownMultiplier = 1.0;
+        this.skillCooldownMult = 1.0;   // CDR from shop (multiplied at assignment)
 
         this.baseCritChance = stats.baseCritChance;
         this.passiveUnlocked = false;  // Admin Dev Mode จัดการใน startGame() แทนแล้ว
@@ -249,14 +250,14 @@ class Player extends Entity {
 
     breakStealth() {
         this.isInvisible = false;
-        this.cooldowns.stealth = this.stats.stealthCooldown * this.cooldownMultiplier;
+        this.cooldowns.stealth = this.stats.stealthCooldown * this.cooldownMultiplier * this.skillCooldownMult;
     }
 
     dash(ax, ay) {
         const S = this.stats;
         if (this.isDashing) return;
         this.isDashing = true;
-        this.cooldowns.dash = S.dashCooldown;
+        this.cooldowns.dash = S.dashCooldown * this.skillCooldownMult;
 
         const angle = (ax === 0 && ay === 0) ? this.angle : Math.atan2(ay, ax);
         let dashSpeed = S.dashDistance / 0.2;

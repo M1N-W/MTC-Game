@@ -148,9 +148,9 @@ class AchievementSystem {
 // ════════════════════════════════════════════════════════════
 // 🏆 ACHIEVEMENT GALLERY (หอเกียรติยศ)
 // ════════════════════════════════════════════════════════════
-    class AchievementGallery {
+class AchievementGallery {
     static open() {
-    AchievementGallery.render();
+        AchievementGallery.render();
         const modal = document.getElementById('achievements-modal');
         if (!modal) return;
         modal.style.display = 'flex';
@@ -201,7 +201,7 @@ class AchievementSystem {
         });
     }
 }
-window.AchievementGallery = AchievementGallery;    
+window.AchievementGallery = AchievementGallery;
 
 // ════════════════════════════════════════════════════════════
 // 🛒 SHOP MANAGER
@@ -233,147 +233,47 @@ class ShopManager {
         if (!container) return;
         container.innerHTML = '';
 
-        Object.values(SHOP_ITEMS).forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'shop-card';
-            card.id = `shop-card-${item.id}`;
-            const durationHtml = item.duration
-                ? `<span class="shop-duration">⏱ ${item.duration}s</span>`
-                : `<span class="shop-duration" style="color:#22c55e;">⚡ ทันที</span>`;
-
-            card.innerHTML = `
-                <div class="shop-card-icon" style="color:${item.color};">${item.icon}</div>
-                <div class="shop-card-name">${item.name}</div>
-                <div class="shop-card-desc">${item.desc}</div>
-                ${durationHtml}
-                <div class="shop-card-cost">
-                    <span class="shop-cost-icon">🏆</span>
-                    <span class="shop-cost-value" id="shop-cost-${item.id}">${item.cost.toLocaleString()}</span>
-                </div>
-                <button
-                    class="shop-buy-btn"
-                    id="shop-btn-${item.id}"
-                    onclick="buyItem('${item.id}')"
-                    ontouchstart="event.preventDefault(); buyItem('${item.id}');"
-                    style="border-color:${item.color}; --shop-btn-color:${item.color};"
-                >
-                    BUY
-                </button>
-            `;
-            container.appendChild(card);
-        });
-        ShopManager.updateButtons();
-    }
-
-    static updateButtons() {
+        const offers = window.currentShopOffers || [];
         const currentScore = typeof getScore === 'function' ? getScore() : 0;
-        const player = window.player;
-
-        // FIX (WARN-4): Add null check for player
-        if (!player) return;
 
         const scoreDisplay = document.getElementById('shop-score-display');
         if (scoreDisplay) scoreDisplay.textContent = currentScore.toLocaleString();
 
-        Object.values(SHOP_ITEMS).forEach(item => {
-            const btn = document.getElementById(`shop-btn-${item.id}`);
-            const card = document.getElementById(`shop-card-${item.id}`);
-            if (!btn || !card) return;
+        offers.forEach((offer, idx) => {
+            const { item, soldOut } = offer;
+            const canAfford = !soldOut && currentScore >= item.cost;
+            const typeLabel = item.type === 'permanent'
+                ? `<span class="shop-duration" style="color:#a78bfa;">♾ ถาวร</span>`
+                : `<span class="shop-duration" style="color:#22c55e;">⚡ ทันที</span>`;
 
-            const canAfford = currentScore >= item.cost;
-            btn.disabled = !canAfford;
-            card.classList.toggle('shop-card-disabled', !canAfford);
-
-            // ── Dynamic description element (created once, reused) ──
-            let descEl = card.querySelector('.shop-card-desc');
-
-            if (player && item.duration) {
-                const isActive =
-                    (item.id === 'damageUp' && player.shopDamageBoostActive) ||
-                    (item.id === 'speedUp' && player.shopSpeedBoostActive);
-                card.classList.toggle('shop-card-active', isActive);
-
-                let timerEl = card.querySelector('.shop-buff-timer');
-                if (isActive) {
-                    const remaining = item.id === 'damageUp'
-                        ? Math.ceil(player.shopDamageBoostTimer)
-                        : Math.ceil(player.shopSpeedBoostTimer);
-                    if (!timerEl) {
-                        timerEl = document.createElement('div');
-                        timerEl.className = 'shop-buff-timer';
-                        card.appendChild(timerEl);
-                    }
-                    timerEl.textContent = `✅ ACTIVE — ${remaining}s`;
-                } else if (timerEl) {
-                    timerEl.remove();
-                }
-
-                // ── Max-stack warning on description ─────────────────
-                // Check if the relevant buff is active and at the 1.5× cap.
-                let atCap = false;
-                if (isActive) {
-                    if (item.id === 'damageUp' && player._baseDamageBoost) {
-                        const cap = Math.round(player._baseDamageBoost * 1.5 * 100) / 100;
-                        const current = Math.round((player.damageBoost || 1) * 100) / 100;
-                        atCap = current >= cap;
-                    } else if (item.id === 'speedUp' && player._baseMoveSpeed) {
-                        const cap = Math.round(player._baseMoveSpeed * 1.5 * 100) / 100;
-                        const current = Math.round((player.moveSpeed || 0) * 100) / 100;
-                        atCap = current >= cap;
-                    }
-                }
-
-                // Inject or remove the warning span inside the desc element.
-                if (descEl) {
-                    let warnSpan = descEl.querySelector('.shop-max-warn');
-                    if (atCap) {
-                        if (!warnSpan) {
-                            warnSpan = document.createElement('span');
-                            warnSpan.className = 'shop-max-warn';
-                            warnSpan.style.cssText = 'display:block; color:#ef4444; font-size:0.8em; margin-top:3px;';
-                            descEl.appendChild(warnSpan);
-                        }
-                        warnSpan.textContent = '⚠️ MAX STACKS! Buying reduces duration!';
-                    } else if (warnSpan) {
-                        warnSpan.remove();
-                    }
-                }
-            }
-
-            // ── Shield: show "ACTIVE" state when player has one ──────
-            if (item.id === 'shield' && player) {
-                card.classList.toggle('shop-card-active', !!player.hasShield);
-                let shieldTimerEl = card.querySelector('.shop-buff-timer');
-                if (player.hasShield) {
-                    if (!shieldTimerEl) {
-                        shieldTimerEl = document.createElement('div');
-                        shieldTimerEl.className = 'shop-buff-timer';
-                        card.appendChild(shieldTimerEl);
-                    }
-                    shieldTimerEl.textContent = '🛡️ SHIELD READY';
-                } else if (shieldTimerEl) {
-                    shieldTimerEl.remove();
-                }
-                // Warn if they already have a shield (buying again wastes score)
-                if (descEl) {
-                    let warnSpan = descEl.querySelector('.shop-max-warn');
-                    if (player.hasShield) {
-                        if (!warnSpan) {
-                            warnSpan = document.createElement('span');
-                            warnSpan.className = 'shop-max-warn';
-                            warnSpan.style.cssText = 'display:block; color:#ef4444; font-size:0.8em; margin-top:3px;';
-                            descEl.appendChild(warnSpan);
-                        }
-                        warnSpan.textContent = '⚠️ โล่ยังใช้งานอยู่! ซื้อซ้ำจะคืนเงิน';
-                    } else if (warnSpan) {
-                        warnSpan.remove();
-                    }
-                }
-            }
+            const card = document.createElement('div');
+            card.className = `shop-card${soldOut ? ' shop-card-disabled' : ''}`;
+            card.id = `shop-card-slot-${idx}`;
+            card.innerHTML = `
+                <div class="shop-card-icon" style="color:${item.color};${soldOut ? 'filter:grayscale(1) opacity(.35);' : ''}">${item.icon}</div>
+                <div class="shop-card-name">${item.name}</div>
+                <div class="shop-card-desc">${soldOut ? '<span style="color:#64748b;">— SOLD OUT —</span>' : item.desc}</div>
+                ${typeLabel}
+                <div class="shop-card-cost">
+                    <span class="shop-cost-icon">🏆</span>
+                    <span class="shop-cost-value">${item.cost.toLocaleString()}</span>
+                </div>
+                <button
+                    class="shop-buy-btn"
+                    onclick="buyItem(${idx})"
+                    ontouchstart="event.preventDefault(); buyItem(${idx});"
+                    style="border-color:${item.color}; --shop-btn-color:${item.color};"
+                    ${soldOut || !canAfford ? 'disabled' : ''}
+                >${soldOut ? 'SOLD OUT' : 'BUY'}</button>
+            `;
+            container.appendChild(card);
         });
     }
 
-    static tick() { ShopManager.updateButtons(); }
+    // Kept for backward-compat call-sites (tick, etc.)
+    static updateButtons() { ShopManager.renderItems(); }
+
+    static tick() { ShopManager.renderItems(); }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -602,7 +502,7 @@ class UIManager {
         const passiveSkillEl = document.getElementById('passive-skill');
         if (passiveSkillEl) {
             if (isKao) {
-                passiveSkillEl.style.display = '';    
+                passiveSkillEl.style.display = '';
                 if (player.passiveUnlocked) {
                     passiveSkillEl.style.opacity = '1';
                     passiveSkillEl.classList.add('unlocked');

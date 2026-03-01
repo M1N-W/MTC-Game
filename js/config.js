@@ -422,28 +422,38 @@ const BALANCE = {
 // ══════════════════════════════════════════════════════════════
 // 🛒 SHOP ITEMS
 // ══════════════════════════════════════════════════════════════
-const SHOP_ITEMS = {
-    potion: {
+const SHOP_ITEMS = [
+    {
         id: 'potion', name: 'Energy Drink', icon: '🧃',
-        cost: 350, heal: 60, duration: null,  // BUFF: 400→350 cost, 50→60 heal (more accessible)
+        cost: 300, type: 'instant', heal: 60,
         desc: 'ฟื้นฟู HP +60 ทันที', color: '#22c55e'
     },
-    damageUp: {
-        id: 'damageUp', name: 'Weapon Tuner', icon: '🔧',
-        cost: 600, mult: 1.1, duration: 45,  // BUFF: 900→600 cost, 30→45s duration (affordable before boss)
-        desc: 'ดาเมจ ×1.1 เป็นเวลา 45 วิ', color: '#f59e0b'
-    },
-    speedUp: {
-        id: 'speedUp', name: 'Lightweight Boots', icon: '👟',
-        cost: 500, mult: 1.1, duration: 45,  // BUFF: 700→500 cost, 30→45s duration (affordable)
-        desc: 'ความเร็ว ×1.1 เป็นเวลา 45 วิ', color: '#06b6d4'
-    },
-    shield: {
+    {
         id: 'shield', name: 'Energy Shield', icon: '🛡️',
-        cost: 800, duration: null,  // BUFF: 1200→800 (reasonable for 1-hit protection)
-        desc: 'บล็อกดาเมจจากการโจมตีครั้งต่อไป 100% (1 ครั้ง)', color: '#8b5cf6'
+        cost: 600, type: 'instant',
+        desc: 'บล็อกดาเมจครั้งต่อไป 100% (1 ครั้ง)', color: '#8b5cf6'
+    },
+    {
+        id: 'maxHp', name: 'Vital Supplement', icon: '❤️',
+        cost: 500, type: 'permanent', hpBonus: 15,
+        desc: 'เพิ่ม Max HP +15 ถาวร', color: '#f87171'
+    },
+    {
+        id: 'dmgUp', name: 'Weapon Tuner', icon: '🔧',
+        cost: 800, type: 'permanent', dmgPct: 0.05,
+        desc: 'เพิ่ม Base Damage +5% ถาวร', color: '#f59e0b'
+    },
+    {
+        id: 'speedUp', name: 'Lightweight Boots', icon: '👟',
+        cost: 500, type: 'permanent', speedPct: 0.05,
+        desc: 'เพิ่มความเร็ว +5% ถาวร', color: '#06b6d4'
+    },
+    {
+        id: 'cdr', name: 'Focus Crystal', icon: '🔮',
+        cost: 700, type: 'permanent', cdrPct: 0.05,
+        desc: 'ลด Cooldown สกิล -5% ถาวร', color: '#a78bfa'
     }
-};
+];
 
 const GAME_CONFIG = {
     canvas: {

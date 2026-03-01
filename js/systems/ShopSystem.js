@@ -152,136 +152,126 @@ function closeShop() {
     if (window.player) spawnFloatingText(GAME_TEXTS.shop.resumed, window.player.x, window.player.y - 50, '#34d399', 18);
 }
 
-function buyItem(itemId) {
-    const item = SHOP_ITEMS[itemId];
-    if (!item) { console.warn('buyItem: unknown itemId', itemId); return; }
+// ══════════════════════════════════════════════════════════════
+// 🎲 ROGUELITE SHOP — Roll / Reroll / Buy
+// ══════════════════════════════════════════════════════════════
+
+window.currentShopOffers = [];
+
+const SHOP_SLOT_COUNT = 3;
+const REROLL_COST = 200;
+
+function rollShopItems() {
+    const pool = [...SHOP_ITEMS];
+    window.currentShopOffers = [];
+    for (let i = 0; i < SHOP_SLOT_COUNT && pool.length > 0; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        window.currentShopOffers.push({ item: pool[idx], soldOut: false });
+        // swap-and-pop — O(1), no GC churn
+        pool[idx] = pool[pool.length - 1];
+        pool.pop();
+    }
+}
+
+function rerollShop() {
+    if (!window.player) return;
+    const score = typeof getScore === 'function' ? getScore() : 0;
+    if (score < REROLL_COST) {
+        spawnFloatingText('คะแนนไม่พอ Reroll!', window.player.x, window.player.y - 60, '#ef4444', 18);
+        return;
+    }
+    addScore(-REROLL_COST);
+    rollShopItems();
+    ShopManager.renderItems();
+    if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+}
+
+function buyItem(slotIndex) {
+    const offer = window.currentShopOffers[slotIndex];
+    if (!offer || offer.soldOut) return;
     if (!window.player) return;
 
-    const currentScore = getScore();
+    const item = offer.item;
+    const currentScore = typeof getScore === 'function' ? getScore() : 0;
     if (currentScore < item.cost) {
         spawnFloatingText(GAME_TEXTS.shop.notEnoughScore, window.player.x, window.player.y - 60, '#ef4444', 18);
         if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
-        ShopManager.updateButtons();
         return;
     }
 
     addScore(-item.cost);
+    offer.soldOut = true;
 
-    if (itemId === 'potion') {
-        const maxHp = window.player.maxHp;
-        const lacking = maxHp - window.player.hp;
+    const p = window.player;
+
+    if (item.id === 'potion') {
+        const lacking = p.maxHp - p.hp;
         const healAmt = Math.min(item.heal, lacking);
         if (healAmt > 0) {
-            window.player.hp += healAmt;
-            spawnFloatingText(GAME_TEXTS.shop.healPickup(healAmt), window.player.x, window.player.y - 70, '#22c55e', 22);
-            spawnParticles(window.player.x, window.player.y, 10, '#22c55e');
+            p.hp += healAmt;
+            spawnFloatingText(GAME_TEXTS.shop.healPickup(healAmt), p.x, p.y - 70, '#22c55e', 22);
+            spawnParticles(p.x, p.y, 10, '#22c55e');
             if (typeof Audio !== 'undefined' && Audio.playHeal) Audio.playHeal();
         } else {
-            spawnFloatingText(GAME_TEXTS.shop.hpFull, window.player.x, window.player.y - 60, '#94a3b8', 16);
+            spawnFloatingText(GAME_TEXTS.shop.hpFull, p.x, p.y - 60, '#94a3b8', 16);
         }
 
-    } else if (itemId === 'damageUp') {
-        // ── Progressive Damage Buff — stacks up to +50 % then penalises ──
-        // Tier ladder:  base → ×1.1 → ×1.2 → ×1.3 → ×1.4 → ×1.5 (cap)
-        // Buying at cap: subtracts 5 s from the remaining timer (min 5 s).
-        if (!window.player.shopDamageBoostActive) {
-            // ── First purchase — initialise buff at 1.1× ──────────────
-            window.player._baseDamageBoost = window.player.damageBoost || 1.0;
-            window.player.damageBoost = window.player._baseDamageBoost * 1.1;
-            window.player.shopDamageBoostActive = true;
-            window.player.shopDamageBoostTimer = item.duration;
-            const tierPct = Math.round((window.player.damageBoost / window.player._baseDamageBoost) * 100);
-            spawnFloatingText(`⚔️ Damage ${tierPct}%!`, window.player.x, window.player.y - 70, '#f59e0b', 22);
-            spawnParticles(window.player.x, window.player.y, 8, '#f59e0b');
-        } else {
-            const cap = window.player._baseDamageBoost * 1.5;
-            // Round to 2 dp to avoid floating-point drift at the cap check
-            const current = Math.round(window.player.damageBoost * 100) / 100;
-            const capRnd = Math.round(cap * 100) / 100;
-
-            if (current < capRnd) {
-                // ── Under cap — add one tier (+0.1× of base) and reset timer ──
-                window.player.damageBoost += window.player._baseDamageBoost * 0.1;
-                window.player.damageBoost = Math.min(window.player.damageBoost, cap); // clamp
-                window.player.shopDamageBoostTimer = item.duration;
-                const tierPct = Math.round((window.player.damageBoost / window.player._baseDamageBoost) * 100);
-                spawnFloatingText(`⚔️ Damage ${tierPct}%!`, window.player.x, window.player.y - 70, '#f59e0b', 22);
-                spawnParticles(window.player.x, window.player.y, 8, '#f59e0b');
-                // ── Achievement: first time hitting the 1.5× cap ──────────
-                const newRnd = Math.round(window.player.damageBoost * 100) / 100;
-                if (newRnd >= capRnd) Achievements.check('shop_max');
-            } else {
-                // ── At cap — impose a 5 s duration penalty ────────────────
-                window.player.shopDamageBoostTimer = Math.max(5, window.player.shopDamageBoostTimer - 5);
-                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', window.player.x, window.player.y - 70, '#ef4444', 20);
-            }
-        }
-        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
-
-    } else if (itemId === 'speedUp') {
-        // ── Progressive Speed Buff — stacks up to +50 % then penalises ──
-        // Tier ladder:  base → ×1.1 → ×1.2 → ×1.3 → ×1.4 → ×1.5 (cap)
-        // Buying at cap: subtracts 5 s from the remaining timer (min 5 s).
-        if (!window.player.shopSpeedBoostActive) {
-            // ── First purchase — initialise buff at 1.1× ──────────────
-            window.player._baseMoveSpeed = window.player.moveSpeed;
-            window.player.moveSpeed = window.player._baseMoveSpeed * 1.1;
-            window.player.shopSpeedBoostActive = true;
-            window.player.shopSpeedBoostTimer = item.duration;
-            const tierPct = Math.round((window.player.moveSpeed / window.player._baseMoveSpeed) * 100);
-            spawnFloatingText(`💨 Speed ${tierPct}%!`, window.player.x, window.player.y - 70, '#06b6d4', 22);
-            spawnParticles(window.player.x, window.player.y, 8, '#06b6d4');
-        } else {
-            const cap = window.player._baseMoveSpeed * 1.5;
-            // Round to 2 dp to avoid floating-point drift at the cap check
-            const current = Math.round(window.player.moveSpeed * 100) / 100;
-            const capRnd = Math.round(cap * 100) / 100;
-
-            if (current < capRnd) {
-                // ── Under cap — add one tier (+0.1× of base) and reset timer ──
-                window.player.moveSpeed += window.player._baseMoveSpeed * 0.1;
-                window.player.moveSpeed = Math.min(window.player.moveSpeed, cap); // clamp
-                window.player.shopSpeedBoostTimer = item.duration;
-                const tierPct = Math.round((window.player.moveSpeed / window.player._baseMoveSpeed) * 100);
-                spawnFloatingText(`💨 Speed ${tierPct}%!`, window.player.x, window.player.y - 70, '#06b6d4', 22);
-                spawnParticles(window.player.x, window.player.y, 8, '#06b6d4');
-                // ── Achievement: first time hitting the 1.5× cap ──────────
-                const newRnd = Math.round(window.player.moveSpeed * 100) / 100;
-                if (newRnd >= capRnd) Achievements.check('shop_max');
-            } else {
-                // ── At cap — impose a 5 s duration penalty ────────────────
-                window.player.shopSpeedBoostTimer = Math.max(5, window.player.shopSpeedBoostTimer - 5);
-                spawnFloatingText('⚠️ MAX STACKS! Duration Penalty!', window.player.x, window.player.y - 70, '#ef4444', 20);
-            }
-        }
-        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
-
-    } else if (itemId === 'shield') {
-        // ── Energy Shield — one-shot damage block ─────────────────
-        // If the player already has a shield, refund and bail out.
-        if (window.player.hasShield) {
-            addScore(item.cost); // refund — score was already deducted above
-            spawnFloatingText('มีโล่อยู่แล้ว!', window.player.x, window.player.y - 60, '#94a3b8', 16);
-            ShopManager.updateButtons();
+    } else if (item.id === 'shield') {
+        if (p.hasShield) {
+            addScore(item.cost); // refund
+            offer.soldOut = false;
+            spawnFloatingText('มีโล่อยู่แล้ว!', p.x, p.y - 60, '#94a3b8', 16);
+            ShopManager.renderItems();
             return;
         }
-        window.player.hasShield = true;
-        spawnFloatingText('🛡️ SHIELD ACTIVE!', window.player.x, window.player.y - 70, '#8b5cf6', 22);
-        spawnParticles(window.player.x, window.player.y, 15, '#8b5cf6');
+        p.hasShield = true;
+        spawnFloatingText('🛡️ SHIELD ACTIVE!', p.x, p.y - 70, '#8b5cf6', 22);
+        spawnParticles(p.x, p.y, 15, '#8b5cf6');
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+    } else if (item.id === 'maxHp') {
+        p.maxHp += item.hpBonus;
+        p.hp += item.hpBonus;
+        spawnFloatingText(`❤️ Max HP +${item.hpBonus}!`, p.x, p.y - 70, '#f87171', 22);
+        spawnParticles(p.x, p.y, 10, '#f87171');
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+    } else if (item.id === 'dmgUp') {
+        p._baseDamageBoost = p._baseDamageBoost || p.damageBoost || 1.0;
+        p.damageBoost = (p.damageBoost || 1.0) * (1 + item.dmgPct);
+        spawnFloatingText(`⚔️ DMG +${Math.round(item.dmgPct * 100)}%!`, p.x, p.y - 70, '#f59e0b', 22);
+        spawnParticles(p.x, p.y, 8, '#f59e0b');
+        if (p.damageBoost >= (p._baseDamageBoost * 1.5)) Achievements.check('shop_max');
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+    } else if (item.id === 'speedUp') {
+        p._baseMoveSpeed = p._baseMoveSpeed || p.moveSpeed;
+        p.moveSpeed *= (1 + item.speedPct);
+        spawnFloatingText(`💨 Speed +${Math.round(item.speedPct * 100)}%!`, p.x, p.y - 70, '#06b6d4', 22);
+        spawnParticles(p.x, p.y, 8, '#06b6d4');
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+    } else if (item.id === 'cdr') {
+        // Compound each purchase: floor at 10% of base (never zero)
+        p.skillCooldownMult = Math.max(0.1, (p.skillCooldownMult || 1.0) * (1 - item.cdrPct));
+        spawnFloatingText(`🔮 CDR -${Math.round(item.cdrPct * 100)}%!`, p.x, p.y - 70, '#a78bfa', 22);
+        spawnParticles(p.x, p.y, 8, '#a78bfa');
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
     }
-
-    const scoreEl = document.getElementById('score');
-    if (scoreEl) scoreEl.textContent = getScore().toLocaleString();
 
     Achievements.stats.shopPurchases = (Achievements.stats.shopPurchases || 0) + 1;
     Achievements.check('shopaholic');
 
-    ShopManager.updateButtons();
+    ShopManager.renderItems();
 }
+
+// Initial roll so offers are ready before first shop open
+rollShopItems();
 
 window.drawShopObject = drawShopObject;
 window.updateShopProximityUI = updateShopProximityUI;
 window.openShop = openShop;
 window.closeShop = closeShop;
 window.buyItem = buyItem;
+window.rollShopItems = rollShopItems;
+window.rerollShop = rerollShop;
