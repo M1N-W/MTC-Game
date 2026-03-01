@@ -284,7 +284,10 @@ function updateGame(dt) {
     if (!_inTutorial) {
         for (let i = window.enemies.length - 1; i >= 0; i--) {
             window.enemies[i].update(dt, window.player);
-            if (window.enemies[i].dead) window.enemies.splice(i, 1);
+            if (window.enemies[i].dead) {
+                window.enemies[i] = window.enemies[window.enemies.length - 1];
+                window.enemies.pop();
+            }
         }
     }
 
@@ -303,7 +306,10 @@ function updateGame(dt) {
 
     for (let i = window.specialEffects.length - 1; i >= 0; i--) {
         const remove = window.specialEffects[i].update(dt, window.player, window.meteorZones);
-        if (remove) window.specialEffects.splice(i, 1);
+        if (remove) {
+            window.specialEffects[i] = window.specialEffects[window.specialEffects.length - 1];
+            window.specialEffects.pop();
+        }
     }
 
     projectileManager.update(dt, window.player, window.enemies, window.boss);
@@ -455,7 +461,10 @@ function updateGame(dt) {
     // ── End Explosive Barrel Logic ─────────────────────────────────────
 
     for (let i = window.powerups.length - 1; i >= 0; i--) {
-        if (window.powerups[i].update(dt, window.player)) window.powerups.splice(i, 1);
+        if (window.powerups[i].update(dt, window.player)) {
+            window.powerups[i] = window.powerups[window.powerups.length - 1];
+            window.powerups.pop();
+        }
     }
 
     for (let i = window.meteorZones.length - 1; i >= 0; i--) {
@@ -463,7 +472,10 @@ function updateGame(dt) {
         if (!_inTutorial && dist(window.meteorZones[i].x, window.meteorZones[i].y, window.player.x, window.player.y) < window.meteorZones[i].radius) {
             window.player.takeDamage(window.meteorZones[i].damage * dt);
         }
-        if (window.meteorZones[i].life <= 0) window.meteorZones.splice(i, 1);
+        if (window.meteorZones[i].life <= 0) {
+            window.meteorZones[i] = window.meteorZones[window.meteorZones.length - 1];
+            window.meteorZones.pop();
+        }
     }
 
     mapSystem.update([window.player, ...window.enemies, window.boss].filter(e => e && !e.dead), dt);

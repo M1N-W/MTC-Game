@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.6.45'; // v3.6.45 Game balance adjustments - character progression and enemy scaling
+const CACHE_NAME = 'mtc-cache-v3.6.46'; // v3.6.46 Performance optimizations and victory screen cinematic overhaul
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
