@@ -79,9 +79,9 @@ const BALANCE = {
             passiveLifesteal: 0.03,
             speedOnHit: 20,
             speedOnHitDuration: 0.4,
-            damageMultiplierPerLevel: 0.08,
-            cooldownReductionPerLevel: 0.03,
-            maxHpPerLevel: 4,
+            damageMultiplierPerLevel: 0.12,  // BUFF: 0.08 → 0.12 (level-up felt unrewarding)
+            cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
+            maxHpPerLevel: 6,                 // BUFF: 4 → 6
             // ── Advanced Kao Skills ──
             teleportCooldown: 20,
             cloneCooldown: 60,
@@ -130,9 +130,9 @@ const BALANCE = {
             passiveLifesteal: 0.01,
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
-            damageMultiplierPerLevel: 0.07,
-            cooldownReductionPerLevel: 0.03,
-            maxHpPerLevel: 10
+            damageMultiplierPerLevel: 0.10,  // BUFF: 0.07 → 0.10
+            cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
+            maxHpPerLevel: 14                 // BUFF: 10 → 14 (tank identity)
         },
         poom: {
             name: 'Poom',
@@ -166,9 +166,9 @@ const BALANCE = {
             nagaRadius: 20,
             speedOnHit: 18,
             speedOnHitDuration: 0.35,
-            damageMultiplierPerLevel: 0.07,
-            cooldownReductionPerLevel: 0.04,
-            maxHpPerLevel: 7,
+            damageMultiplierPerLevel: 0.11,  // BUFF: 0.07 → 0.11
+            cooldownReductionPerLevel: 0.05,  // BUFF: 0.04 → 0.05
+            maxHpPerLevel: 10,                // BUFF: 7 → 10
             // ── Sticky Rice Stack System ──
             sticky: {
                 maxStacks: 5,
@@ -208,7 +208,7 @@ const BALANCE = {
     enemy: {
         radius: 18,
         colors: ['#ef4444', '#f59e0b', '#8b5cf6'],
-        expValue: 10,
+        expValue: 18,
         chaseRange: 150,
         projectileSpeed: 500,
         baseHp: 40, hpPerWave: 0.16,  // NERF: 0.18 → 0.16 (exponential growth was too fast)
@@ -220,9 +220,9 @@ const BALANCE = {
     tank: {
         radius: 25,
         color: '#78716c',
-        expValue: 25,
+        expValue: 45,
         powerupDropMult: 1.5,
-        baseHp: 100, hpPerWave: 0.42,  // NERF: 0.55 → 0.42 (tanks were bullet sponges)
+        baseHp: 100, hpPerWave: 0.24,  // REBALANCE: 0.42 → 0.24 (exponential was 91x gap at wave 15)
         baseSpeed: 60, speedPerWave: 3,
         baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
         meleeRange: 55
@@ -230,7 +230,7 @@ const BALANCE = {
     mage: {
         radius: 16,
         color: '#a855f7',
-        expValue: 30,
+        expValue: 55,
         powerupDropMult: 1.3,
         orbitDistance: 300,
         orbitDistanceBuffer: 100,
