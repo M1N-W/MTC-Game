@@ -13,7 +13,7 @@
  *
  * NEW (Terrain Update):
  * - ✅ drawTerrain(ctx, camera) added — reads all values from window.MAP_CONFIG.
- *      Load order: config.js must load before map.js.
+ * Load order: config.js must load before map.js.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -524,25 +524,32 @@ class MTCRoom {
             CTX.fillStyle = c; CTX.fillRect(wbX + 10 + i * 20, wbY + wbH + 1, 14, 3);
         });
 
-        const deskW = 44, deskH = 28, deskStartX = s.x + 18, deskStartY = s.y + 76;
-        const deskCols = 3, deskRows = 2;
-        const deskColGap = (W - 36 - deskCols * deskW) / (deskCols - 1);
-        for (let row = 0; row < deskRows; row++) {
-            for (let col = 0; col < deskCols; col++) {
-                const dx = deskStartX + col * (deskW + deskColGap);
-                const dy = deskStartY + row * (deskH + 38);
-                CTX.save(); CTX.translate(dx, dy); drawDesk(deskW, deskH); CTX.restore();
-            }
-        }
+        // ── ฐานบัญชาการ: Holo-Table กลางห้อง ──
+        const holoW = 100, holoH = 60;
+        const holoX = s.x + W / 2 - holoW / 2;
+        const holoY = s.y + H / 2 - holoH / 2;
 
-        CTX.save(); CTX.translate(s.x + W - 60, s.y + H - 80); drawServer(48, 68); CTX.restore();
+        CTX.fillStyle = '#0f172a';
+        CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.fill();
+        CTX.strokeStyle = '#3b82f6'; CTX.lineWidth = 2; CTX.stroke();
 
-        CTX.save(); CTX.translate(s.x + 16, s.y + H - 54); drawDesk(72, 36);
-        CTX.fillStyle = '#1e40af'; CTX.beginPath(); CTX.arc(62, 10, 8, 0, Math.PI * 2); CTX.fill();
-        CTX.fillStyle = '#93c5fd'; CTX.beginPath(); CTX.arc(62, 10, 5, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = '#1e40af'; CTX.lineWidth = 2;
-        CTX.beginPath(); CTX.arc(71, 12, 5, -0.5, 1.2); CTX.stroke();
-        CTX.restore();
+        // แสงโฮโลแกรม
+        CTX.fillStyle = `rgba(59, 130, 246, ${0.15 + Math.sin(now / 200) * 0.1})`;
+        CTX.beginPath(); CTX.ellipse(s.x + W / 2, s.y + H / 2, holoW * 0.45, holoH * 0.45, 0, 0, Math.PI * 2); CTX.fill();
+
+        CTX.strokeStyle = `rgba(147, 197, 253, ${0.4 + Math.sin(now / 150) * 0.2})`;
+        CTX.lineWidth = 1;
+        CTX.beginPath();
+        CTX.moveTo(s.x + W / 2 - 35, s.y + H / 2); CTX.lineTo(s.x + W / 2 + 35, s.y + H / 2);
+        CTX.moveTo(s.x + W / 2, s.y + H / 2 - 22); CTX.lineTo(s.x + W / 2, s.y + H / 2 + 22);
+        CTX.stroke();
+
+        // แผง Server เรียงแถวด้านบน
+        CTX.save(); CTX.translate(s.x + 40, s.y + 70); drawServer(50, 70); CTX.restore();
+        CTX.save(); CTX.translate(s.x + W - 90, s.y + 70); drawServer(50, 70); CTX.restore();
+
+        // โต๊ะแผงควบคุมหลักด้านล่าง
+        CTX.save(); CTX.translate(s.x + W / 2 - 40, s.y + H - 65); drawDesk(80, 35); CTX.restore();
 
         const pulse = this.cooldown > 0 ? 1 : (Math.sin(now / 350) * .3 + .7);
         CTX.strokeStyle = this.cooldown > 0 ? '#64748b' : '#10b981';
@@ -613,91 +620,85 @@ class MapSystem {
     }
 
     generateCampusMap() {
-        const sizes = {
-            desk: { w: 60, h: 40 },
-            tree: { w: 50, h: 50 },
-            server: { w: 45, h: 80 },
-            datapillar: { w: 35, h: 70 },
-            bookshelf: { w: 80, h: 40 },
-            blackboard: { w: 150, h: 80 }
-        };
-
-        const placeZone = (xMin, xMax, yMin, yMax, types, count, minSep = 220) => {
+        // ── 1. วางผังเมืองแบบโซน (Clustering) แทนการสุ่มมั่ว ──
+        const createCluster = (cx, cy, types, count, radius, spacing) => {
             let placed = 0, tries = 0;
             while (placed < count && tries < count * 15) {
                 tries++;
-                const x = xMin + Math.random() * (xMax - xMin);
-                const y = yMin + Math.random() * (yMax - yMin);
-                if (Math.abs(x) < 180 && Math.abs(y) < 180) continue;
-                if (x > -520 && x < -80 && y > -220 && y < 220) continue;
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * radius;
+                const x = cx + Math.cos(angle) * dist;
+                const y = cy + Math.sin(angle) * dist;
+
+                // เว้นที่ว่างตรงจุดเกิด (วงกลม 250px)
+                if (Math.hypot(x, y) < 250) continue;
+                // เว้นที่ว่างให้ MTC Room
+                if (x > -560 && x < -40 && y > -260 && y < 260) continue;
+
                 let tooClose = false;
                 for (const obj of this.objects) {
-                    if (Math.hypot(obj.x - x, obj.y - y) < minSep) { tooClose = true; break; }
+                    if (Math.hypot(obj.x - x, obj.y - y) < spacing) { tooClose = true; break; }
                 }
                 if (tooClose) continue;
+
                 const type = types[Math.floor(Math.random() * types.length)];
-                const sz = sizes[type];
+                const sz = {
+                    desk: { w: 60, h: 40 }, tree: { w: 50, h: 50 },
+                    server: { w: 45, h: 80 }, datapillar: { w: 35, h: 70 },
+                    bookshelf: { w: 80, h: 40 }, blackboard: { w: 150, h: 80 }
+                }[type];
                 this.objects.push(new MapObject(x, y, sz.w, sz.h, type));
                 placed++;
             }
         };
 
-        // IMP-7 FIX: each zone previously had two placeZone() calls with the
-        // same bounds but different minSep values (e.g. 200 then 180).  The
-        // second pass could place objects within 180 px of objects already
-        // placed at 200 px separation, producing occasional overlaps.
-        // Consolidated to one call per zone using the larger minSep throughout.
-        placeZone(-1400, -500, -1400, -450, ['tree', 'tree', 'tree', 'bookshelf'], 16, 200);
-        placeZone(500, 1400, -1400, -450, ['datapillar', 'datapillar', 'server'], 13, 200);
-        placeZone(-1400, -500, 450, 1400, ['bookshelf', 'bookshelf', 'desk', 'tree'], 12, 200);
-        placeZone(500, 1400, 450, 1400, ['desk', 'desk', 'tree', 'bookshelf'], 12, 200);
-        placeZone(-450, 450, -1400, -600, ['datapillar', 'tree'], 4, 350);
-        placeZone(-450, 450, 600, 1400, ['tree', 'bookshelf'], 4, 350);
-        placeZone(-1400, -600, -300, 300, ['datapillar', 'tree'], 4, 350);
-        placeZone(600, 1400, -300, 300, ['datapillar', 'server'], 4, 350);
+        // โซน 1: Server Farm (ตะวันออกเฉียงเหนือ - ใกล้ Database)
+        createCluster(450, -450, ['server', 'datapillar'], 18, 500, 160);
+        // โซน 2: ห้องสมุด (ตะวันตกเฉียงใต้)
+        createCluster(-650, 650, ['bookshelf', 'desk'], 15, 450, 180);
+        // โซน 3: สวนต้นไม้ (ตะวันตกเฉียงเหนือ)
+        createCluster(-750, -750, ['tree'], 18, 550, 150);
+        // โซน 4: โซนเลคเชอร์ (ตะวันออกเฉียงใต้)
+        createCluster(700, 700, ['desk', 'bookshelf'], 14, 500, 180);
+        // โซน 5: ศูนย์ Tech (ตะวันออกไกล)
+        createCluster(1100, 0, ['datapillar', 'server'], 12, 400, 160);
 
+        // ── 2. จุดเด่นเฉพาะจุด (Landmarks) ──
         this.objects.push(new MapObject(-75, -620, 150, 80, 'blackboard'));
         this.objects.push(new MapObject(-220, -240, 35, 70, 'datapillar'));
         this.objects.push(new MapObject(160, -240, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(650, -120, 150, 80, 'blackboard')); // กระดานดำใหม่
 
         [[-480, -430], [430, -430], [-480, 380], [430, 380]].forEach(([tx, ty]) => {
             this.objects.push(new MapObject(tx, ty, 50, 50, 'tree'));
         });
 
+        // ── 3. กำแพงล้อม ──
         for (const wall of BALANCE.map.wallPositions) {
             this.objects.push(new MapObject(wall.x, wall.y, wall.w, wall.h, 'wall'));
         }
 
-        // ── Explosive Barrels (5–8 placed in mid-range zones) ──────
-        // Placed 200–900 units from origin to keep them in playable
-        // territory without blocking the spawn point or MTC Room.
-        // Each barrel is separated from every other object by at least
-        // 280 world units so clusters don't create impassable walls.
-        const barrelCount = 5 + Math.floor(Math.random() * 4); // 5–8
+        // ── 4. วางถังระเบิดตามจุดยุทธศาสตร์ ──
+        const barrelSpots = [
+            { x: 250, y: -450 }, { x: 500, y: -200 }, { x: -350, y: 200 },
+            { x: -200, y: 600 }, { x: 650, y: 450 }, { x: -650, y: -350 },
+            { x: 850, y: -650 }, { x: -850, y: 250 }
+        ];
         let barrelsPlaced = 0;
-        let barrelTries = 0;
-        while (barrelsPlaced < barrelCount && barrelTries < barrelCount * 25) {
-            barrelTries++;
-            const angle = Math.random() * Math.PI * 2;
-            // Spawn between 200 and 900 units from origin
-            const distance = 200 + Math.random() * 700;
-            const bx = Math.cos(angle) * distance;
-            const by = Math.sin(angle) * distance;
+        for (let spot of barrelSpots) {
+            const bx = spot.x + (Math.random() - 0.5) * 120;
+            const by = spot.y + (Math.random() - 0.5) * 120;
+            if (Math.hypot(bx, by) < 200) continue;
+            if (bx > -560 && bx < -40 && by > -250 && by < 250) continue;
 
-            // Skip the MTC Room footprint (guard rectangle -520 to -80, -220 to 220)
-            if (bx > -560 && bx < -50 && by > -250 && by < 250) continue;
-            // Skip the player spawn zone
-            if (Math.abs(bx) < 200 && Math.abs(by) < 200) continue;
-
-            // Ensure minimum separation from every existing object
             let tooClose = false;
             for (const obj of this.objects) {
-                if (Math.hypot(obj.x - bx, obj.y - by) < 280) { tooClose = true; break; }
+                if (Math.hypot(obj.x - bx, obj.y - by) < 160) { tooClose = true; break; }
             }
-            if (tooClose) continue;
-
-            this.objects.push(new ExplosiveBarrel(bx, by));
-            barrelsPlaced++;
+            if (!tooClose) {
+                this.objects.push(new ExplosiveBarrel(bx, by));
+                barrelsPlaced++;
+            }
         }
         console.log(`🛢️ Campus Map: placed ${barrelsPlaced} explosive barrel(s)`);
     }
