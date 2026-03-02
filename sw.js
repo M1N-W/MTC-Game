@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.7.1'; // v3.7.1 Added achievement rewards meta-progression system
+const CACHE_NAME = 'mtc-cache-v3.7.2'; // v3.7.2 Implemented input buffering system for responsive controls
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

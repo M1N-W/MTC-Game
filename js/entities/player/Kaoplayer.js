@@ -203,7 +203,7 @@ class KaoPlayer extends Player {
                 }
             }
             // ── Use charge ───────────────────────────────────────────────
-            if (keys.q && this.teleportCharges > 0) {
+            if (checkInput('q') && this.teleportCharges > 0) {
                 this.teleportCharges--;
                 const newTimer = { elapsed: 0, max: this.teleportCooldown };
                 this.teleportTimers.push(newTimer);
@@ -221,13 +221,13 @@ class KaoPlayer extends Player {
                 spawnParticles(this.x, this.y, 25, '#3b82f6');
                 this.x = window.mouse.wx;
                 this.y = window.mouse.wy;
-                keys.q = 0;
+                consumeInput('q');
                 spawnParticles(this.x, this.y, 25, '#3b82f6');
             }
 
             // 3. Clone of Stealth (Cooldown & E Key)
             if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
-            if (keys.e && this.cloneSkillCooldown <= 0) {
+            if (checkInput('e') && this.cloneSkillCooldown <= 0) {
                 this.clones = [
                     new KaoClone(this, (2 * Math.PI) / 3),
                     new KaoClone(this, (4 * Math.PI) / 3)
@@ -236,12 +236,12 @@ class KaoPlayer extends Player {
                 this.cloneSkillCooldown = this.maxCloneCooldown;
                 spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
                 if (typeof Audio !== 'undefined' && Audio.playClone) Audio.playClone();
-                keys.e = 0;
+                consumeInput('e');
             }
         } else {
-            // Force reset keys if user tries to press them before unlocking
-            keys.q = 0;
-            keys.e = 0;
+            // Force reset keys and buffer if user tries to press before unlocking
+            consumeInput('q');
+            consumeInput('e');
         }
 
         // ── Unrestricted Update Logic — existing clones keep moving ───────────

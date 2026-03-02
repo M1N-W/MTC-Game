@@ -202,16 +202,16 @@ class PoomPlayer extends Entity {
             }
         }
 
-        if (keys.space && this.cooldowns.dash <= 0) { this.dash(ax || 1, ay || 0); keys.space = 0; }
-        if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { keys.e = 0; } // E reserved — eat via R-Click only
+        // NOTE: dash (space) and stealth (right-click) are handled by PlayerBase.update() via checkInput/consumeInput
+        if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { consumeInput('e'); } // E reserved — eat via R-Click only
         // ── Updated Controls: R = Ritual Burst, Q = Naga Summon ──
-        if (keys.r && this.cooldowns.ritual <= 0) {
+        if (checkInput('r') && this.cooldowns.ritual <= 0) {
             this.ritualBurst();
-            keys.r = 0;
+            consumeInput('r');
         }
-        if (keys.q && this.cooldowns.naga <= 0) {
+        if (checkInput('q') && this.cooldowns.naga <= 0) {
             this.summonNaga();
-            keys.q = 0;
+            consumeInput('q');
         }
 
         this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
@@ -378,8 +378,8 @@ class PoomPlayer extends Entity {
         if (currentBoss && !currentBoss.dead) {
             // เซฟค่า X, Y ของบอสไว้ก่อน เผื่อว่าทำดาเมจแล้วบอสตายตัวแปรจะได้ไม่เป็น null
             const bx = currentBoss.x;
-            const by = currentBoss.y;   
-            
+            const by = currentBoss.y;
+
             // ลบ radius ของบอสออกจากระยะห่าง เพื่อให้สกิลโดนบอสที่ว่องไวได้ง่ายขึ้น
             const bd = Math.max(0, Math.hypot(bx - this.x, by - this.y) - (currentBoss.radius || 0));
             const RITUAL_RANGE = RC.range || 280;

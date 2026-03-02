@@ -225,14 +225,20 @@ class Player extends Entity {
         }
         if (this.cooldowns.stealth > 0) this.cooldowns.stealth -= dt;
 
-        if (keys.space && this.cooldowns.dash <= 0 && this.groundedTimer <= 0) {
-            this.dash(ax || 1, ay || 0); keys.space = 0;
-        } else if (keys.space && this.groundedTimer > 0) {
-            keys.space = 0; // consume input silently — dash blocked by Grounded
+        if (checkInput('space')) {
+            if (this.cooldowns.dash <= 0 && this.groundedTimer <= 0) {
+                this.dash(ax || 1, ay || 0);
+                consumeInput('space');
+            } else if (this.groundedTimer > 0) {
+                consumeInput('space'); // consume silently — dash blocked by Grounded
+            }
         }
 
-        if (mouse.right && this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= S.stealthCost) {
-            this.activateStealth(); mouse.right = 0;
+        if (checkInput('rightClick')) {
+            if (this.cooldowns.stealth <= 0 && !this.isInvisible && this.energy >= S.stealthCost) {
+                this.activateStealth();
+                consumeInput('rightClick');
+            }
         }
         if (this.isInvisible) {
             this.energy -= S.stealthDrain * dt;

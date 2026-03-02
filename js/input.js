@@ -47,6 +47,42 @@ var keys = {
 };
 
 /**
+ * inputBuffer — timestamps (performance.now()) of the last keydown
+ * for bufferable actions. Used by checkInput() / consumeInput() to
+ * implement ~200 ms input buffering so players don't miss inputs
+ * when pressing slightly before cooldown expires.
+ */
+var inputBuffer = { space: 0, rightClick: 0, q: 0, e: 0, r: 0 };
+window.inputBuffer = inputBuffer;
+
+/**
+ * checkInput(action, bufferTimeMs)
+ * Returns true if the action key is currently held OR was pressed
+ * within the last `bufferTimeMs` milliseconds.
+ */
+window.checkInput = function (action, bufferTimeMs) {
+    bufferTimeMs = bufferTimeMs === undefined ? 200 : bufferTimeMs;
+    if (action === 'rightClick') {
+        return mouse.right === 1 || (performance.now() - inputBuffer.rightClick) < bufferTimeMs;
+    }
+    return keys[action] === 1 || (performance.now() - inputBuffer[action]) < bufferTimeMs;
+};
+
+/**
+ * consumeInput(action)
+ * Clears both the live key state and the buffer timestamp so the
+ * same press cannot trigger the action a second time.
+ */
+window.consumeInput = function (action) {
+    if (action === 'rightClick') {
+        mouse.right = 0;
+    } else {
+        keys[action] = 0;
+    }
+    if (inputBuffer[action] !== undefined) inputBuffer[action] = 0;
+};
+
+/**
  * Mouse / pointer state — SINGLE SOURCE OF TRUTH.
  * (Removed from utils.js to fix "Identifier 'mouse' has already been declared".)
  *
@@ -192,13 +228,13 @@ function initMobileControls() {
 
     // FIX (BUG-7): Store button handler references for cleanup
     if (btnDash) {
-        _mobileHandlers.btnDashStart = function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 1; };
+        _mobileHandlers.btnDashStart = function (e) { e.preventDefault(); e.stopPropagation(); inputBuffer.space = performance.now(); keys.space = 1; };
         _mobileHandlers.btnDashEnd = function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 0; };
         btnDash.addEventListener('touchstart', _mobileHandlers.btnDashStart, { passive: false });
         btnDash.addEventListener('touchend', _mobileHandlers.btnDashEnd, { passive: false });
     }
     if (btnSkill) {
-        _mobileHandlers.btnSkillStart = function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 1; };
+        _mobileHandlers.btnSkillStart = function (e) { e.preventDefault(); e.stopPropagation(); inputBuffer.rightClick = performance.now(); mouse.right = 1; };
         _mobileHandlers.btnSkillEnd = function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 0; };
         btnSkill.addEventListener('touchstart', _mobileHandlers.btnSkillStart, { passive: false });
         btnSkill.addEventListener('touchend', _mobileHandlers.btnSkillEnd, { passive: false });
@@ -397,14 +433,15 @@ function _setupKeyboardListeners() {
             if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
                 TutorialSystem.next();
             }
+            if (!keys.space) inputBuffer.space = performance.now();
             keys.space = 1;
         }
-        if (e.code === 'KeyQ') keys.q = 1;
-        if (e.code === 'KeyE') keys.e = 1;
+        if (e.code === 'KeyQ') { if (!keys.q) inputBuffer.q = performance.now(); keys.q = 1; }
+        if (e.code === 'KeyE') { if (!keys.e) inputBuffer.e = performance.now(); keys.e = 1; }
         if (e.code === 'KeyB') keys.b = 1;
         if (e.code === 'KeyF') keys.f = 1;
         // ── Phase 3 Session 1: R = Naga, Shift+R = Ritual Burst ──
-        if (e.code === 'KeyR') keys.r = 1;
+        if (e.code === 'KeyR') { if (!keys.r) inputBuffer.r = performance.now(); keys.r = 1; }
         if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.shift = 1;
 
         // 'T' — Bullet Time toggle (global, no proximity gate)
@@ -467,7 +504,7 @@ function _setupMouseListeners() {
     window.addEventListener('mousedown', function (e) {
         if (!CANVAS) return;
         if (e.button === 0) mouse.left = 1;
-        if (e.button === 2) mouse.right = 1;
+        if (e.button === 2) { inputBuffer.rightClick = performance.now(); mouse.right = 1; }
         e.preventDefault();
     });
 

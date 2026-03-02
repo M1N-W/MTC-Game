@@ -96,13 +96,13 @@ class AutoPlayer extends Player {
             }
         }
 
-        if (mouse?.right === 1) {
+        if (checkInput('rightClick')) {
             const energyCost = this.stats?.wanchaiEnergyCost ?? 35;
             if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
                 this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
                 this._activateWanchai();
+                consumeInput('rightClick');
             }
-            mouse.right = 0;
         }
 
         const oldSpeedBoost = this.speedBoost;
@@ -121,7 +121,7 @@ class AutoPlayer extends Player {
         // กด Q ดึงทุกตัวในรัศมี 320px เข้าหาออโต้ทันที
         // cooldown 8 วินาที | ออกแบบให้ combo กับ Wanchai
         if (mouse?.middle !== undefined) { /* placeholder */ }
-        if (keys?.q === 1 && (this.cooldowns?.vacuum ?? 0) <= 0) {
+        if (checkInput('q') && (this.cooldowns?.vacuum ?? 0) <= 0) {
             const VACUUM_RANGE = this.stats?.vacuumRange ?? 320;
             const VACUUM_FORCE = this.stats?.vacuumForce ?? 900;
             let pulled = 0;
@@ -155,12 +155,13 @@ class AutoPlayer extends Player {
                 if (typeof Audio !== 'undefined' && Audio.playVacuum) Audio.playVacuum();
             }
             keys.q = 0;
+            consumeInput('q');
         }
 
         // ── E: Overheat Detonation — ระเบิดสแตนด์ทิ้งปิดฉาก ─────
         // กด E ระหว่าง Wanchai active เท่านั้น
         // AOE 220px, ดาเมจสูง, แต่ Wanchai สิ้นสุดทันที
-        if (keys?.e === 1 && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
+        if (checkInput('e') && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
             const DET_RANGE = this.stats?.detonationRange ?? 220;
             // ดาเมจ = wanchaiDamage × 6 (burst ทิ้ง 6 หมัดพร้อมกัน)
             const detBaseDmg = (this.stats?.wanchaiDamage ?? 32) * 6 * (this.damageMultiplier || 1.0);
@@ -208,7 +209,7 @@ class AutoPlayer extends Player {
                 detIsCrit ? '#facc15' : '#dc2626', 28
             );
             if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
-            keys.e = 0;
+            consumeInput('e');
         }
 
 
