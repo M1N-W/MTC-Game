@@ -887,6 +887,7 @@ function startGame(charType = 'kao') {
     if (consoleOutput) consoleOutput.innerHTML = '';
 
     // WARN-2 FIX: guard against WaveManager not yet loaded
+    rollShopItems();
     if (typeof startNextWave === 'function') startNextWave();
     setGameState('PLAYING');
     resetTime();

@@ -263,6 +263,7 @@ function startNextWave() {
 
     resetEnemiesKilled();
     window.waveStartDamage = Achievements.stats.damageTaken;
+    rollShopItems();
     setElementText('wave-badge', GAME_TEXTS.wave.badge(getWave()));
     spawnFloatingText(GAME_TEXTS.wave.floatingTitle(getWave()), window.player.x, window.player.y - 100, '#8b5cf6', 40);
 
