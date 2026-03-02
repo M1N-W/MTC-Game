@@ -339,59 +339,232 @@ class MTCRoom {
         const s = worldToScreen(this.x, this.y);
         const W = this.w, H = this.h;
         const now = _mapNow;
+        const cx = s.x + W / 2, cy = s.y + H / 2;
+        const active = this.cooldown <= 0;
+        const pulse = active ? (Math.sin(now / 350) * 0.3 + 0.7) : 0.2;
+        const fastPulse = active ? (Math.sin(now / 180) * 0.5 + 0.5) : 0;
+        const scanLine = (now / 8) % H;
+
         CTX.save();
 
-        // ── 1. Sci-fi Floor Grid ──
+        // ── 1. Deep Space Floor ──
         CTX.beginPath(); CTX.rect(s.x, s.y, W, H); CTX.clip();
-        CTX.fillStyle = '#0b1120'; // Darker base for the room
+
+        const floorGrad = CTX.createLinearGradient(s.x, s.y, s.x, s.y + H);
+        floorGrad.addColorStop(0, '#060d1a');
+        floorGrad.addColorStop(0.5, '#0a1628');
+        floorGrad.addColorStop(1, '#060d1a');
+        CTX.fillStyle = floorGrad;
         CTX.fillRect(s.x, s.y, W, H);
 
-        CTX.strokeStyle = 'rgba(56, 189, 248, 0.15)'; // Neon blue grid
+        // Fine grid
+        CTX.strokeStyle = 'rgba(56,189,248,0.10)';
+        CTX.lineWidth = 0.5;
+        for (let ty = 0; ty <= H; ty += 20) { CTX.beginPath(); CTX.moveTo(s.x, s.y + ty); CTX.lineTo(s.x + W, s.y + ty); CTX.stroke(); }
+        for (let tx = 0; tx <= W; tx += 20) { CTX.beginPath(); CTX.moveTo(s.x + tx, s.y); CTX.lineTo(s.x + tx, s.y + H); CTX.stroke(); }
+
+        // Bold grid overlay
+        CTX.strokeStyle = 'rgba(56,189,248,0.22)';
         CTX.lineWidth = 1;
-        for (let ty = 0; ty <= H; ty += 40) { CTX.beginPath(); CTX.moveTo(s.x, s.y + ty); CTX.lineTo(s.x + W, s.y + ty); CTX.stroke(); }
-        for (let tx = 0; tx <= W; tx += 40) { CTX.beginPath(); CTX.moveTo(s.x + tx, s.y); CTX.lineTo(s.x + tx, s.y + H); CTX.stroke(); }
-        CTX.restore(); // end clip
+        for (let ty = 0; ty <= H; ty += 60) { CTX.beginPath(); CTX.moveTo(s.x, s.y + ty); CTX.lineTo(s.x + W, s.y + ty); CTX.stroke(); }
+        for (let tx = 0; tx <= W; tx += 60) { CTX.beginPath(); CTX.moveTo(s.x + tx, s.y); CTX.lineTo(s.x + tx, s.y + H); CTX.stroke(); }
 
-        // ── 2. The Main Console (Holo-Table) ──
-        const holoW = 120, holoH = 60;
-        const holoX = s.x + W / 2 - holoW / 2;
-        const holoY = s.y + H / 2 - holoH / 2;
+        // Scan line
+        if (active) {
+            const scanGrad = CTX.createLinearGradient(s.x, s.y + scanLine - 6, s.x, s.y + scanLine + 6);
+            scanGrad.addColorStop(0, 'rgba(56,189,248,0)');
+            scanGrad.addColorStop(0.5, `rgba(56,189,248,${0.18 * pulse})`);
+            scanGrad.addColorStop(1, 'rgba(56,189,248,0)');
+            CTX.fillStyle = scanGrad;
+            CTX.fillRect(s.x, s.y + scanLine - 6, W, 12);
+        }
 
-        CTX.fillStyle = '#1e293b';
-        CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 6); CTX.fill();
-        CTX.strokeStyle = this.cooldown > 0 ? '#475569' : '#38bdf8';
-        CTX.lineWidth = 2; CTX.stroke();
+        // Corner diamonds
+        const corners = [[s.x + 12, s.y + 12], [s.x + W - 12, s.y + 12], [s.x + 12, s.y + H - 12], [s.x + W - 12, s.y + H - 12]];
+        CTX.strokeStyle = `rgba(56,189,248,${0.5 + fastPulse * 0.4})`;
+        CTX.lineWidth = 1.5;
+        for (const [dx, dy] of corners) {
+            CTX.beginPath();
+            CTX.moveTo(dx, dy - 8); CTX.lineTo(dx + 8, dy);
+            CTX.lineTo(dx, dy + 8); CTX.lineTo(dx - 8, dy);
+            CTX.closePath(); CTX.stroke();
+        }
+        CTX.restore(); // end floor clip
 
-        if (this.cooldown <= 0) {
-            // Active Hologram
-            CTX.fillStyle = `rgba(56, 189, 248, ${0.2 + Math.sin(now / 150) * 0.1})`;
-            CTX.beginPath(); CTX.ellipse(s.x + W / 2, s.y + H / 2, holoW * 0.4, holoH * 0.4, 0, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#e0f2fe'; CTX.font = 'bold 10px monospace'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText('MTC SYSTEM ONLINE', s.x + W / 2, s.y + H / 2);
+        // ── 2. Outer Glow Aura ──
+        if (active) {
+            const auraGrad = CTX.createRadialGradient(cx, cy, 0, cx, cy, W * 0.7);
+            auraGrad.addColorStop(0, `rgba(16,185,129,${0.04 * pulse})`);
+            auraGrad.addColorStop(0.6, `rgba(56,189,248,${0.06 * pulse})`);
+            auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            CTX.fillStyle = auraGrad;
+            CTX.beginPath(); CTX.ellipse(cx, cy, W * 0.7, H * 0.7, 0, 0, Math.PI * 2); CTX.fill();
+        }
+
+        // ── 3. Central Holo-Table ──
+        const holoW = 130, holoH = 65;
+        const holoX = cx - holoW / 2, holoY = cy - holoH / 2;
+
+        // Table shadow
+        CTX.fillStyle = 'rgba(0,0,0,0.5)';
+        CTX.beginPath(); CTX.ellipse(cx, cy + holoH / 2 + 8, holoW * 0.55, 8, 0, 0, Math.PI * 2); CTX.fill();
+
+        // Table body
+        const tableGrad = CTX.createLinearGradient(holoX, holoY, holoX, holoY + holoH);
+        tableGrad.addColorStop(0, '#1a2744');
+        tableGrad.addColorStop(1, '#0f1f38');
+        CTX.fillStyle = tableGrad;
+        CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.fill();
+
+        CTX.strokeStyle = active ? `rgba(56,189,248,${0.6 + fastPulse * 0.4})` : '#334155';
+        CTX.lineWidth = 2;
+        CTX.shadowBlur = active ? 12 : 0; CTX.shadowColor = '#38bdf8';
+        CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // Hologram projection above table
+        if (active) {
+            CTX.strokeStyle = `rgba(56,189,248,${0.3 + fastPulse * 0.2})`;
+            CTX.lineWidth = 1.5;
+            CTX.beginPath(); CTX.ellipse(cx, holoY, holoW * 0.35, 6, 0, 0, Math.PI * 2); CTX.stroke();
+
+            const holoHeight = 30 + fastPulse * 8;
+            const holoTopGrad = CTX.createLinearGradient(cx, holoY - holoHeight, cx, holoY);
+            holoTopGrad.addColorStop(0, 'rgba(56,189,248,0)');
+            holoTopGrad.addColorStop(1, `rgba(56,189,248,${0.12 * pulse})`);
+            CTX.fillStyle = holoTopGrad;
+            CTX.beginPath();
+            CTX.moveTo(cx - 4, holoY - holoHeight);
+            CTX.lineTo(cx - holoW * 0.35, holoY);
+            CTX.lineTo(cx + holoW * 0.35, holoY);
+            CTX.lineTo(cx + 4, holoY - holoHeight);
+            CTX.closePath(); CTX.fill();
+
+            // Rotating hex in hologram
+            CTX.save();
+            CTX.translate(cx, holoY - 18);
+            CTX.rotate(now / 2000);
+            CTX.strokeStyle = `rgba(56,189,248,${0.7 + fastPulse * 0.3})`;
+            CTX.lineWidth = 1.5;
+            CTX.shadowBlur = 8; CTX.shadowColor = '#38bdf8';
+            CTX.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const a = (Math.PI / 3) * i;
+                i === 0 ? CTX.moveTo(Math.cos(a) * 10, Math.sin(a) * 10) : CTX.lineTo(Math.cos(a) * 10, Math.sin(a) * 10);
+            }
+            CTX.closePath(); CTX.stroke();
+            CTX.shadowBlur = 0;
+            CTX.restore();
+        }
+
+        // Table screen content
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        if (active) {
+            CTX.fillStyle = `rgba(56,189,248,${0.08 + fastPulse * 0.05})`;
+            CTX.beginPath(); CTX.roundRect(holoX + 4, holoY + 4, holoW - 8, holoH - 8, 6); CTX.fill();
+            for (let i = 0; i < 3; i++) {
+                const barW = (holoW - 30) * (0.4 + Math.sin(now / (600 + i * 200) + i) * 0.3);
+                CTX.fillStyle = ['rgba(56,189,248,0.4)', 'rgba(16,185,129,0.4)', 'rgba(167,139,250,0.4)'][i];
+                CTX.fillRect(holoX + 15, holoY + 12 + i * 14, barW, 5);
+                CTX.fillStyle = 'rgba(100,116,139,0.3)';
+                CTX.fillRect(holoX + 15 + barW, holoY + 12 + i * 14, (holoW - 30) - barW, 5);
+            }
+            CTX.fillStyle = '#e0f2fe'; CTX.font = 'bold 9px monospace';
+            CTX.fillText('MTC SYSTEM ONLINE', cx, holoY + holoH - 12);
         } else {
-            CTX.fillStyle = '#ef4444'; CTX.font = 'bold 10px monospace'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText(`REBOOTING: ${Math.ceil(this.cooldown)}s`, s.x + W / 2, s.y + H / 2);
+            CTX.fillStyle = 'rgba(239,68,68,0.15)';
+            CTX.beginPath(); CTX.roundRect(holoX + 4, holoY + 4, holoW - 8, holoH - 8, 6); CTX.fill();
+            CTX.fillStyle = '#ef4444'; CTX.font = 'bold 9px monospace';
+            CTX.fillText(`REBOOTING: ${Math.ceil(this.cooldown)}s`, cx, cy);
+            if (Math.sin(now / 200) > 0) {
+                CTX.fillStyle = 'rgba(239,68,68,0.7)'; CTX.font = 'bold 11px monospace';
+                CTX.fillText('⚠', cx, cy - 18);
+            }
         }
 
-        // ── 3. Forcefield / Visual State ──
-        const pulse = this.cooldown > 0 ? 0 : (Math.sin(now / 350) * .3 + .7);
-        if (this.cooldown <= 0) {
-            // Glowing border on the inside entrance
-            CTX.strokeStyle = `rgba(16, 185, 129, ${pulse})`;
-            CTX.lineWidth = 4;
+        // ── 4. Side Terminals ──
+        const terminals = [
+            { x: s.x + 18, y: s.y + H / 2 - 22, color: '#38bdf8', rgb: '56,189,248' },
+            { x: s.x + W - 42, y: s.y + H / 2 - 22, color: '#a78bfa', rgb: '167,139,250' }
+        ];
+        for (const term of terminals) {
+            const tGrad = CTX.createLinearGradient(term.x, term.y, term.x, term.y + 44);
+            tGrad.addColorStop(0, '#1a2540'); tGrad.addColorStop(1, '#0f1a30');
+            CTX.fillStyle = tGrad;
+            CTX.beginPath(); CTX.roundRect(term.x, term.y, 24, 44, 4); CTX.fill();
+            CTX.strokeStyle = active ? `rgba(${term.rgb},${0.5 + fastPulse * 0.3})` : '#334155';
+            CTX.lineWidth = 1.5; CTX.stroke();
+            for (let d = 0; d < 4; d++) {
+                const isOn = active && Math.sin(now / (300 + d * 120) + d * 1.5) > 0;
+                CTX.fillStyle = isOn ? term.color : '#1e3a5f';
+                CTX.shadowBlur = isOn ? 6 : 0; CTX.shadowColor = term.color;
+                CTX.beginPath(); CTX.arc(term.x + 12, term.y + 8 + d * 9, 3, 0, Math.PI * 2); CTX.fill();
+                CTX.shadowBlur = 0;
+            }
+        }
+
+        // ── 5. Floor Corner Brackets ──
+        CTX.strokeStyle = active ? `rgba(56,189,248,${0.4 + fastPulse * 0.3})` : 'rgba(56,189,248,0.15)';
+        CTX.lineWidth = 2;
+        const bSize = 18;
+        CTX.beginPath(); CTX.moveTo(s.x + 4, s.y + 4 + bSize); CTX.lineTo(s.x + 4, s.y + 4); CTX.lineTo(s.x + 4 + bSize, s.y + 4); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(s.x + W - 4 - bSize, s.y + 4); CTX.lineTo(s.x + W - 4, s.y + 4); CTX.lineTo(s.x + W - 4, s.y + 4 + bSize); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(s.x + 4, s.y + H - 4 - bSize); CTX.lineTo(s.x + 4, s.y + H - 4); CTX.lineTo(s.x + 4 + bSize, s.y + H - 4); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(s.x + W - 4 - bSize, s.y + H - 4); CTX.lineTo(s.x + W - 4, s.y + H - 4); CTX.lineTo(s.x + W - 4, s.y + H - 4 - bSize); CTX.stroke();
+
+        // ── 6. Entrance Forcefield ──
+        if (active) {
+            const ffGrad = CTX.createLinearGradient(s.x + 20, s.y + H, s.x + W - 20, s.y + H);
+            ffGrad.addColorStop(0, 'rgba(16,185,129,0)');
+            ffGrad.addColorStop(0.2, `rgba(16,185,129,${pulse})`);
+            ffGrad.addColorStop(0.5, `rgba(52,211,153,${pulse})`);
+            ffGrad.addColorStop(0.8, `rgba(16,185,129,${pulse})`);
+            ffGrad.addColorStop(1, 'rgba(16,185,129,0)');
+            CTX.strokeStyle = ffGrad;
+            CTX.lineWidth = 3;
+            CTX.shadowBlur = 10; CTX.shadowColor = '#10b981';
             CTX.beginPath(); CTX.moveTo(s.x + 20, s.y + H); CTX.lineTo(s.x + W - 20, s.y + H); CTX.stroke();
+            CTX.shadowBlur = 0;
 
-            // Text Label
-            CTX.fillStyle = 'rgba(16,185,129,0.2)';
-            CTX.beginPath(); CTX.roundRect(s.x + W / 2 - 60, s.y + H - 30, 120, 20, 6); CTX.fill();
-            CTX.fillStyle = `rgba(52,211,153,${pulse + 0.2})`; CTX.font = 'bold 10px Orbitron,monospace';
-            CTX.fillText('⚕ SAFE ZONE ACTIVE', s.x + W / 2, s.y + H - 20);
+            for (const px of [s.x + 20, s.x + W - 20]) {
+                CTX.strokeStyle = `rgba(52,211,153,${0.4 + fastPulse * 0.4})`;
+                CTX.lineWidth = 1.5;
+                CTX.beginPath(); CTX.moveTo(px, s.y + H - 20); CTX.lineTo(px, s.y + H + 5); CTX.stroke();
+                CTX.fillStyle = `rgba(52,211,153,${0.7 + fastPulse * 0.3})`;
+                CTX.shadowBlur = 8; CTX.shadowColor = '#10b981';
+                CTX.beginPath(); CTX.arc(px, s.y + H, 4, 0, Math.PI * 2); CTX.fill();
+                CTX.shadowBlur = 0;
+            }
+
+            CTX.fillStyle = `rgba(16,185,129,${0.15 + fastPulse * 0.1})`;
+            CTX.beginPath(); CTX.roundRect(cx - 70, s.y + H - 22, 140, 18, 5); CTX.fill();
+            CTX.fillStyle = `rgba(52,211,153,${0.7 + pulse * 0.3})`;
+            CTX.font = 'bold 9px Orbitron,monospace';
+            CTX.shadowBlur = 6; CTX.shadowColor = '#10b981';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText('⚕ SAFE ZONE ACTIVE', cx, s.y + H - 13);
+            CTX.shadowBlur = 0;
         }
 
+        // ── 7. Player Inside Timer ──
         if (this.isPlayerInside) {
             const timeLeft = this.maxStayTime - this.playerStayTime;
-            CTX.fillStyle = '#fbbf24'; CTX.font = 'bold 24px Arial';
-            CTX.fillText(`⏱ ${timeLeft.toFixed(1)}s`, s.x + W / 2, s.y + H / 2 + 45);
+            const timerPct = timeLeft / this.maxStayTime;
+            const timerColor = timerPct > 0.5 ? '#10b981' : timerPct > 0.25 ? '#f59e0b' : '#ef4444';
+
+            CTX.strokeStyle = 'rgba(255,255,255,0.1)';
+            CTX.lineWidth = 5;
+            CTX.beginPath(); CTX.arc(cx, s.y + H - 42, 18, 0, Math.PI * 2); CTX.stroke();
+            CTX.strokeStyle = timerColor;
+            CTX.shadowBlur = 8; CTX.shadowColor = timerColor;
+            CTX.beginPath();
+            CTX.arc(cx, s.y + H - 42, 18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerPct);
+            CTX.stroke(); CTX.shadowBlur = 0;
+
+            CTX.fillStyle = timerColor;
+            CTX.font = `bold ${timeLeft < 3 ? '13' : '11'}px monospace`;
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText(`${timeLeft.toFixed(1)}`, cx, s.y + H - 42);
         }
     }
 }
