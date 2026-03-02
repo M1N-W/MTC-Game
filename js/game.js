@@ -123,10 +123,9 @@ function gameLoop(now) {
             updateGame(scaledDt);
             drawGame();
         }
+        
     } else if (GameState.phase === 'PAUSED') {
         drawGame();
-        const shopModal = document.getElementById('shop-modal');
-        if (shopModal && shopModal.style.display === 'flex') ShopManager.tick();
     }
 
     // IMP-1 FIX: stop the RAF loop when the game is over so we don't keep
