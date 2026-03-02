@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.7.4'; // v3.7.4 MTC Citadel architectural overhaul with structured zones
+const CACHE_NAME = 'mtc-cache-v3.7.5'; // v3.7.5 Fixed UI interaction conflicts with game controls
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

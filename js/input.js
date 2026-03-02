@@ -498,14 +498,27 @@ function _setupMouseListeners() {
         mouse.x = e.clientX - r.left;
         mouse.y = e.clientY - r.top;
         // updateMouseWorld is defined in utils.js (loaded before input.js)
-        updateMouseWorld();
+        if (typeof updateMouseWorld === 'function') updateMouseWorld();
     });
 
     window.addEventListener('mousedown', function (e) {
+        // 👉 THE FIX: ถ้าคลิกเป้าหมายที่เป็น UI HTML (เช่น ปุ่ม, หน้าต่างร้านค้า, หรือหน้าต่าง Dev)
+        // ให้ Return ออกไปเลย ไม่ต้องบันทึกค่าว่าเมาส์ถูกกด และไม่บล็อก Event
+        if (e.target.closest('button') ||
+            e.target.closest('.ui-layer') ||
+            e.target.closest('#shop-modal') ||
+            e.target.closest('.action-btn')) {
+            return;
+        }
+
         if (!CANVAS) return;
         if (e.button === 0) mouse.left = 1;
         if (e.button === 2) { inputBuffer.rightClick = performance.now(); mouse.right = 1; }
-        e.preventDefault();
+
+        // บล็อก Default Behavior เฉพาะเวลาตั้งใจคลิกบนตัวเกม (Canvas) เท่านั้น
+        if (e.target === CANVAS || e.target.tagName === 'CANVAS') {
+            e.preventDefault();
+        }
     });
 
     window.addEventListener('mouseup', function (e) {
@@ -513,7 +526,11 @@ function _setupMouseListeners() {
         if (e.button === 2) mouse.right = 0;
     });
 
-    window.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    window.addEventListener('contextmenu', function (e) {
+        // ปล่อยให้คลิกขวาทำงานได้ถ้ากำลังพิมพ์ Admin Terminal อยู่
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+    });
 
     // FIX (BUG-3): Add Mouse Wheel support for universal weapon switching
     window.addEventListener('wheel', function (e) {
@@ -528,7 +545,6 @@ function _setupMouseListeners() {
         }
     }, { passive: true });
 }
-
 
 // ══════════════════════════════════════════════════════════════
 // PUBLIC API
