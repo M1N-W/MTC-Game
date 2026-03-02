@@ -465,19 +465,21 @@ class UIManager {
         el = document.createElement('div');
         el.id = 'high-score-display';
         el.style.cssText = [
-            'display:flex', 'align-items:center', 'gap:12px',
-            'background:rgba(250,204,21,0.07)',
-            'border:1.5px solid rgba(250,204,21,0.35)',
-            'border-radius:14px', 'padding:10px 24px', 'margin-bottom:14px',
-            'font-family:"Orbitron",sans-serif', 'font-size:15px', 'color:#fef08a',
-            'letter-spacing:2px', 'box-shadow:0 0 18px rgba(250,204,21,0.18)',
-            'pointer-events:none'
+            'display:flex', 'align-items:center', 'gap:14px',
+            'background:rgba(8,4,18,0.85)',
+            'border:1px solid rgba(250,204,21,0.3)',
+            'border-radius:0', 'padding:10px 24px', 'margin-bottom:14px',
+            'font-family:"Rajdhani","Orbitron",sans-serif',
+            'letter-spacing:2px',
+            'box-shadow:0 0 24px rgba(250,204,21,0.12)',
+            'pointer-events:none',
+            'clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%)'
         ].join(';');
         el.innerHTML = `
-            <span style="font-size:22px;line-height:1;">🏆</span>
-            <span style="color:#94a3b8;font-size:12px;letter-spacing:1px;">ALL-TIME HIGH SCORE</span>
+            <span style="font-size:20px;line-height:1;">🏆</span>
+            <span style="color:rgba(250,204,21,0.5);font-size:10px;letter-spacing:3px;font-weight:700;text-transform:uppercase;">ALL-TIME HIGH SCORE</span>
             <span id="hs-value"
-                  style="font-size:22px;color:#facc15;text-shadow:0 0 12px rgba(250,204,21,0.6);">
+                  style="font-family:'Bebas Neue','Orbitron',sans-serif;font-size:24px;color:#facc15;letter-spacing:3px;text-shadow:0 0 14px rgba(250,204,21,0.6);">
                 ${formatted}
             </span>
         `;

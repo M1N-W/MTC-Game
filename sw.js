@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.7.8'; // v3.7.8 Advanced MTC Citadel visual overhaul with holographic systems
+const CACHE_NAME = 'mtc-cache-v3.7.9'; // v3.7.9 Unified Gold/Amber Military HUD theme across all screens
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
