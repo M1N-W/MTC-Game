@@ -413,16 +413,63 @@ class UIManager {
         }
     }
 
+    // ── VoiceBubble — queue-based, military HUD chip ─────────────────────────
+    // Queue prevents bubbles stomping each other when rapid-fired (e.g. stealth
+    // + obstacle warning in the same frame).  Each entry holds: text, world x/y.
+    static _vbQueue   = [];
+    static _vbTimer   = null;
+    static _vbHideTimer = null;
+
     static showVoiceBubble(text, x, y) {
-        const bubble = document.getElementById('voice-bubble');
-        if (!bubble) return;
-        const screen = worldToScreen(x, y - 40);
-        bubble.textContent = text;
-        bubble.style.left = screen.x + 'px';
-        bubble.style.top = screen.y + 'px';
-        bubble.classList.add('visible');
-        setTimeout(() => bubble.classList.remove('visible'), 1500);
+        // Push to queue — drop oldest if queue is getting long (max 3 pending)
+        if (UIManager._vbQueue.length >= 3) UIManager._vbQueue.shift();
+        UIManager._vbQueue.push({ text, x, y });
+
+        // If nothing is currently showing, fire immediately
+        if (!UIManager._vbTimer) UIManager._flushVoiceBubble();
     }
+
+    static _flushVoiceBubble() {
+        if (UIManager._vbQueue.length === 0) { UIManager._vbTimer = null; return; }
+
+        const { text, x, y } = UIManager._vbQueue.shift();
+        const bubble = document.getElementById('voice-bubble');
+        if (!bubble) { UIManager._vbTimer = null; return; }
+
+        // Clear any pending hide
+        if (UIManager._vbHideTimer) {
+            clearTimeout(UIManager._vbHideTimer);
+            UIManager._vbHideTimer = null;
+        }
+
+        // Position — offset above the entity
+        const screen = worldToScreen(x, y - 40);
+        bubble.style.left = (screen.x - bubble.offsetWidth / 2) + 'px';
+        bubble.style.top  = (screen.y - bubble.offsetHeight) + 'px';
+
+        // Content
+        bubble.textContent = text;
+
+        // Reset animation: force reflow so transition fires fresh
+        bubble.classList.remove('visible', 'hiding');
+        void bubble.offsetWidth;
+        bubble.classList.add('visible');
+
+        // Hide after display time, then chain next in queue
+        const displayMs = Math.max(1200, text.length * 55);
+        UIManager._vbHideTimer = setTimeout(() => {
+            bubble.classList.remove('visible');
+            bubble.classList.add('hiding');
+            UIManager._vbHideTimer = setTimeout(() => {
+                bubble.classList.remove('hiding');
+                UIManager._vbTimer = null;
+                UIManager._flushVoiceBubble(); // chain next
+            }, 200);
+        }, displayMs);
+
+        UIManager._vbTimer = true; // mark as active
+    }
+
 
     static updateBossHUD(boss) {
         const hud = document.getElementById('boss-hud');
@@ -436,23 +483,75 @@ class UIManager {
         }
     }
 
+    // ── BossSpeech — typewriter reveal, per-frame reposition ─────────────────
+    static _bsTypeTimer   = null;
+    static _bsHideTimer   = null;
+    static _bsBossRef     = null;  // set by updateBossSpeech so we know who's speaking
+
     static updateBossSpeech(boss) {
+        // Called every frame — reposition if visible
         const speech = document.getElementById('boss-speech');
         if (!speech || !boss) return;
+        UIManager._bsBossRef = boss;
         if (speech.classList.contains('visible')) {
-            const screen = worldToScreen(boss.x, boss.y - 80);
-            speech.style.left = screen.x + 'px';
-            speech.style.top = screen.y + 'px';
+            const screen = worldToScreen(boss.x, boss.y - 100);
+            speech.style.left = (screen.x - speech.offsetWidth / 2) + 'px';
+            speech.style.top  = (screen.y - speech.offsetHeight) + 'px';
         }
     }
 
     static showBossSpeech(text) {
         const speech = document.getElementById('boss-speech');
         if (!speech) return;
-        speech.textContent = text;
+
+        // Cancel any existing timers
+        if (UIManager._bsTypeTimer) { clearTimeout(UIManager._bsTypeTimer); UIManager._bsTypeTimer = null; }
+        if (UIManager._bsHideTimer) { clearTimeout(UIManager._bsHideTimer); UIManager._bsHideTimer = null; }
+
+        // Build DOM: label + text content span
+        speech.innerHTML =
+            '<span class="speech-label">⚠ KRU MANOP</span>' +
+            '<span class="speech-text"></span>';
+
+        const textEl = speech.querySelector('.speech-text');
+
+        // Position near boss if available
+        if (UIManager._bsBossRef && !UIManager._bsBossRef.dead) {
+            const screen = worldToScreen(UIManager._bsBossRef.x, UIManager._bsBossRef.y - 100);
+            speech.style.left = (screen.x - 140) + 'px';
+            speech.style.top  = (screen.y - 60)  + 'px';
+        }
+
+        // Show chip
+        speech.classList.remove('visible', 'hiding');
+        void speech.offsetWidth;
         speech.classList.add('visible');
-        setTimeout(() => speech.classList.remove('visible'), 3000);
+
+        // Typewriter reveal — ~28 chars/sec
+        let i = 0;
+        const interval = Math.max(22, Math.min(55, 1100 / text.length));
+        const type = () => {
+            if (i <= text.length) {
+                textEl.textContent = text.slice(0, i);
+                i++;
+                UIManager._bsTypeTimer = setTimeout(type, interval);
+            } else {
+                UIManager._bsTypeTimer = null;
+                // Hold fully visible, then fade out
+                const holdMs = Math.max(2000, text.length * 45);
+                UIManager._bsHideTimer = setTimeout(() => {
+                    speech.classList.remove('visible');
+                    speech.classList.add('hiding');
+                    UIManager._bsHideTimer = setTimeout(() => {
+                        speech.classList.remove('hiding');
+                        speech.textContent = '';
+                    }, 280);
+                }, holdMs);
+            }
+        };
+        type();
     }
+
 
     static updateHighScoreDisplay(highScore) {
         const formatted = highScore > 0 ? Number(highScore).toLocaleString() : '— —';
