@@ -397,24 +397,24 @@ const BALANCE = {
             { x: -50, y: 1450, w: 100, h: 50 }
         ],
         mapColors: {
-            floor: '#d4c5a0',
-            floorAlt: '#c9b892',
-            treeLight: '#86efac',
-            treeMid: '#4ade80',
-            treeDark: '#16a34a',
-            treeTrunk: '#92400e',
-            deskTop: '#854d0e',
-            deskLegs: '#713f12',
-            serverBody: '#1e293b',
-            serverLightOn: '#22c55e',
-            serverLightOff: '#166534',
-            pillarBase: '#475569',
-            pillarCircuit: '#06b6d4',
-            bookColors: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#f97316'],
-            wallColor: '#e2d5c0',
-            wallBrick: '#c9b18a',
-            whiteboardGreen: '#1a4731',
-            chalkWhite: '#f0ebe0'
+            floor: '#0e1320',
+            floorAlt: '#0a0f1a',
+            treeLight: '#365314',
+            treeMid: '#1a2e0a',
+            treeDark: '#0f1a05',
+            treeTrunk: '#451a03',
+            deskTop: '#1c1408',
+            deskLegs: '#0f0b04',
+            serverBody: '#0d1117',
+            serverLightOn: '#f59e0b',
+            serverLightOff: '#451a03',
+            pillarBase: '#1e293b',
+            pillarCircuit: '#d97706',
+            bookColors: ['#b45309', '#92400e', '#d97706', '#78350f', '#a16207', '#854d0e', '#f59e0b'],
+            wallColor: '#1a1208',
+            wallBrick: '#2d1f0a',
+            whiteboardGreen: '#0d1f0a',
+            chalkWhite: '#fef3c7'
         }
     }
 };
@@ -837,25 +837,25 @@ const MAP_CONFIG = {
     // ── Arena boundary ─────────────────────────────────────────
     arena: {
         radius: 1500,
-        haloColor: 'rgba(120, 60, 255, {a})',
-        midColor: 'rgba(80, 30, 200, {a})',
-        rimColor: 'rgba(180, 100, 255, {a})',
-        dashColor: 'rgba(200, 120, 255, {a})',
+        haloColor: 'rgba(180, 100, 20, {a})',
+        midColor: 'rgba(120, 60, 10, {a})',
+        rimColor: 'rgba(250, 180, 30, {a})',
+        dashColor: 'rgba(245, 158, 11, {a})',
         haloAlphaBase: 0.08,
         midAlphaBase: 0.15,
         rimAlphaBase: 0.55,
         dashAlphaBase: 0.30,
         rimGlowBlur: 20,
-        rimGlowColor: 'rgba(150, 80, 255, 0.9)',
+        rimGlowColor: 'rgba(250, 180, 30, 0.9)',
     },
 
     // ── Tech-hex grid ──────────────────────────────────────────
     hex: {
         size: 64,
-        fillColor: 'rgba(20, 50, 110, {a})',
-        strokeColor: 'rgba(40, 110, 220, {a})',
-        fillAlpha: 0.06,
-        strokeAlpha: 0.20,
+        fillColor: 'rgba(120, 60, 10, {a})',
+        strokeColor: 'rgba(200, 120, 20, {a})',
+        fillAlpha: 0.05,
+        strokeAlpha: 0.15,
         falloffRadius: 1400,
     },
 
@@ -865,15 +865,15 @@ const MAP_CONFIG = {
         database: {
             from: { x: 0, y: 0 },
             to: { x: 350, y: -350 },
-            coreColor: '#00e5ff',
-            glowColor: 'rgba(0, 210, 255, 0.85)',
+            coreColor: '#fbbf24',
+            glowColor: 'rgba(251, 191, 36, 0.85)',
             phase: 0.0,
         },
         shop: {
             from: { x: 0, y: 0 },
             to: { x: -350, y: 350 },
-            coreColor: '#ffb300',
-            glowColor: 'rgba(255, 165, 0, 0.85)',
+            coreColor: '#f97316',
+            glowColor: 'rgba(249, 115, 22, 0.85)',
             phase: 2.094,
         },
         // Shared path style
@@ -894,11 +894,11 @@ const MAP_CONFIG = {
     // In Godot: becomes a Resource (.tres) for each object type.
     objects: {
         desk: {
-            screenGlow: 'rgba(255,255,220,0.18)',   // monitor top-edge highlight
-            monitorBody: '#1e40af',
-            monitorText: '#93c5fd',
+            screenGlow: 'rgba(250,200,100,0.15)',   // monitor top-edge highlight
+            monitorBody: '#1c1408',
+            monitorText: '#fcd34d',
             notePaper: '#fbbf24',
-            notePen: '#f87171',
+            notePen: '#f97316',
         },
         tree: {
             shadowFill: 'rgba(0,0,0,0.25)',
@@ -906,21 +906,21 @@ const MAP_CONFIG = {
             leafHex: 'rgba(134,239,172,0.6)',
         },
         server: {
-            inner: '#263451',
-            unitSlot: '#1c2a3e',
-            dataLedOn: '#3b82f6',
-            dataLedOff: '#1d3155',
-            ventStroke: '#1a2738',
-            headerFill: '#334155',
-            headerVent: '#475569',
-            portFill: '#0ea5e9',
+            inner: '#1a1005',
+            unitSlot: '#120c04',
+            dataLedOn: '#f59e0b',
+            dataLedOff: '#451a03',
+            ventStroke: '#0f0b04',
+            headerFill: '#1c1408',
+            headerVent: '#2d1f0a',
+            portFill: '#d97706',
         },
         datapillar: {
             shadowFill: 'rgba(0,0,0,0.3)',
-            baseDark: '#334155',
-            baseLight: '#475569',
-            bodyGrad: ['#334155', '#64748b', '#475569'],
-            circuit: 'rgba(6,182,212,',           // alpha appended at runtime
+            baseDark: '#1c1408',
+            baseLight: '#2d1f0a',
+            bodyGrad: ['#1c1408', '#3d2a0e', '#2d1f0a'],
+            circuit: 'rgba(217,119,6,',           // alpha appended at runtime
         },
         bookshelf: {
             frameBody: '#78350f',
@@ -936,24 +936,24 @@ const MAP_CONFIG = {
         database: {
             worldX: 350,
             worldY: -350,
-            innerRgb: '0, 220, 255',
-            outerRgb: '0, 90, 200',
+            innerRgb: '250, 180, 30',
+            outerRgb: '120, 60, 10',
             radius: 130,
             phase: 0.0,
         },
         shop: {
             worldX: -350,
             worldY: 350,
-            innerRgb: '255, 190, 30',
-            outerRgb: '200, 80, 0',
+            innerRgb: '249, 115, 22',
+            outerRgb: '154, 52, 18',
             radius: 130,
             phase: 1.6,
         },
         origin: {
             worldX: 0,
             worldY: 0,
-            innerRgb: '130, 60, 255',
-            outerRgb: '60, 20, 160',
+            innerRgb: '217, 119, 6',
+            outerRgb: '92, 40, 10',
             radius: 80,
             phase: 3.2,
         },

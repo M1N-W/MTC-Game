@@ -187,15 +187,15 @@ class MapObject {
 
     drawMTCWall() {
         const now = _mapNow;
-        CTX.fillStyle = '#0f172a'; // Dark slate base
+        CTX.fillStyle = '#0a0c0e'; // Dark near-black base
         CTX.beginPath(); CTX.roundRect(0, 0, this.w, this.h, 4); CTX.fill();
 
-        CTX.strokeStyle = '#3b82f6'; CTX.lineWidth = 2; // Blue neon border
+        CTX.strokeStyle = '#d97706'; CTX.lineWidth = 2; // Gold neon border
         CTX.stroke();
 
         // Pulsing neon strip in the middle
         const pulse = 0.5 + Math.sin(now / 300) * 0.5;
-        CTX.fillStyle = `rgba(56, 189, 248, ${0.3 + pulse * 0.5})`;
+        CTX.fillStyle = `rgba(217, 119, 6, ${0.3 + pulse * 0.5})`;
 
         if (this.w > this.h) { // Horizontal wall
             CTX.fillRect(10, this.h / 2 - 2, this.w - 20, 4);
@@ -205,9 +205,9 @@ class MapObject {
     }
 
     drawChair() {
-        CTX.fillStyle = '#475569'; CTX.fillRect(5, 0, this.w - 10, this.h - 15);
-        CTX.fillStyle = '#64748b'; CTX.fillRect(0, this.h - 15, this.w, 15);
-        CTX.fillStyle = '#334155'; CTX.fillRect(3, this.h - 12, 4, 12); CTX.fillRect(this.w - 7, this.h - 12, 4, 12);
+        CTX.fillStyle = '#1c1408'; CTX.fillRect(5, 0, this.w - 10, this.h - 15);
+        CTX.fillStyle = '#2d1f0a'; CTX.fillRect(0, this.h - 15, this.w, 15);
+        CTX.fillStyle = '#120c04'; CTX.fillRect(3, this.h - 12, 4, 12); CTX.fillRect(this.w - 7, this.h - 12, 4, 12);
     }
 
     drawCabinet() {
@@ -308,13 +308,13 @@ class MTCRoom {
         if (inside && this.cooldown <= 0) {
             if (!this.isPlayerInside) {
                 this.isPlayerInside = true; this.playerStayTime = 0;
-                spawnFloatingText('SAFE ZONE!', player.x, player.y - 60, '#10b981', 25);
+                spawnFloatingText('SAFE ZONE!', player.x, player.y - 60, '#fbbf24', 25);
                 showVoiceBubble('เข้าสู่ MTC Room - เริ่มกระบวนการฟื้นฟู', player.x, player.y - 40);
             }
             this.playerStayTime += dt;
             if (player.hp < player.maxHp) {
                 player.hp = Math.min(player.maxHp, player.hp + this.healRate * dt);
-                if (Math.random() < 0.3) spawnParticles(player.x + rand(-20, 20), player.y + rand(-20, 20), 1, '#10b981');
+                if (Math.random() < 0.3) spawnParticles(player.x + rand(-20, 20), player.y + rand(-20, 20), 1, '#fbbf24');
             }
             if (player.energy < player.maxEnergy) player.energy = Math.min(player.maxEnergy, player.energy + 30 * dt);
             if (this.playerStayTime >= this.maxStayTime) this.kickOut(player);
@@ -359,7 +359,7 @@ class MTCRoom {
 
         // Single combined grid path — far cheaper than many stroke() calls
         CTX.beginPath();
-        CTX.strokeStyle = 'rgba(56,189,248,0.13)';
+        CTX.strokeStyle = 'rgba(217,119,6,0.13)';
         CTX.lineWidth = 0.8;
         for (let ty = 0; ty <= H; ty += 40) { CTX.moveTo(s.x, s.y + ty); CTX.lineTo(s.x + W, s.y + ty); }
         for (let tx = 0; tx <= W; tx += 40) { CTX.moveTo(s.x + tx, s.y); CTX.lineTo(s.x + tx, s.y + H); }
@@ -367,14 +367,14 @@ class MTCRoom {
 
         // Scan line (active only, no gradient — use flat semi-transparent rect)
         if (active) {
-            CTX.fillStyle = `rgba(56,189,248,${0.07 * pulse})`;
+            CTX.fillStyle = `rgba(217,119,6,${0.07 * pulse})`;
             CTX.fillRect(s.x, s.y + scanLine - 4, W, 8);
         }
 
         // Corner brackets (all in one path)
         const bSize = 16;
         CTX.beginPath();
-        CTX.strokeStyle = `rgba(56,189,248,${0.45 + fastPulse * 0.35})`;
+        CTX.strokeStyle = `rgba(250,180,30,${0.45 + fastPulse * 0.35})`;
         CTX.lineWidth = 1.5;
         // TL
         CTX.moveTo(s.x + 4, s.y + 4 + bSize); CTX.lineTo(s.x + 4, s.y + 4); CTX.lineTo(s.x + 4 + bSize, s.y + 4);
@@ -392,23 +392,23 @@ class MTCRoom {
         const holoW = 130, holoH = 65;
         const holoX = cx - holoW / 2, holoY = cy - holoH / 2;
 
-        CTX.fillStyle = '#0f1f38';
+        CTX.fillStyle = '#0f1208';
         CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.fill();
 
         // Border glow: fake it with thick+thin double stroke (no shadowBlur needed)
         if (active) {
-            CTX.strokeStyle = `rgba(56,189,248,${0.15 + fastPulse * 0.1})`;
+            CTX.strokeStyle = `rgba(217,119,6,${0.15 + fastPulse * 0.1})`;
             CTX.lineWidth = 6;
             CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.stroke();
         }
-        CTX.strokeStyle = active ? `rgba(56,189,248,${0.6 + fastPulse * 0.4})` : '#334155';
+        CTX.strokeStyle = active ? `rgba(250,180,30,${0.6 + fastPulse * 0.4})` : '#2d1f0a';
         CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.stroke();
 
         // Hologram cone above table (no shadowBlur)
         if (active) {
             const holoHeight = 28 + fastPulse * 6;
-            CTX.fillStyle = `rgba(56,189,248,${0.06 * pulse})`;
+            CTX.fillStyle = `rgba(217,119,6,${0.06 * pulse})`;
             CTX.beginPath();
             CTX.moveTo(cx - 3, holoY - holoHeight);
             CTX.lineTo(cx - holoW * 0.35, holoY);
@@ -420,7 +420,7 @@ class MTCRoom {
             CTX.save();
             CTX.translate(cx, holoY - 16);
             CTX.rotate(now / 2000);
-            CTX.strokeStyle = `rgba(56,189,248,${0.6 + fastPulse * 0.3})`;
+            CTX.strokeStyle = `rgba(250,180,30,${0.6 + fastPulse * 0.3})`;
             CTX.lineWidth = 1.5;
             CTX.beginPath();
             for (let i = 0; i < 6; i++) {
@@ -436,9 +436,9 @@ class MTCRoom {
         if (active) {
             // Status bars (precompute sin values)
             const bars = [
-                { w: (holoW - 30) * (0.4 + Math.sin(now / 600) * 0.3), col: 'rgba(56,189,248,0.45)' },
-                { w: (holoW - 30) * (0.4 + Math.sin(now / 800 + 1) * 0.3), col: 'rgba(16,185,129,0.45)' },
-                { w: (holoW - 30) * (0.4 + Math.sin(now / 700 + 2) * 0.3), col: 'rgba(167,139,250,0.45)' },
+                { w: (holoW - 30) * (0.4 + Math.sin(now / 600) * 0.3), col: 'rgba(250,180,30,0.55)' },
+                { w: (holoW - 30) * (0.4 + Math.sin(now / 800 + 1) * 0.3), col: 'rgba(217,119,6,0.55)' },
+                { w: (holoW - 30) * (0.4 + Math.sin(now / 700 + 2) * 0.3), col: 'rgba(249,115,22,0.55)' },
             ];
             for (let i = 0; i < 3; i++) {
                 CTX.fillStyle = 'rgba(255,255,255,0.06)';
@@ -446,7 +446,7 @@ class MTCRoom {
                 CTX.fillStyle = bars[i].col;
                 CTX.fillRect(holoX + 15, holoY + 12 + i * 14, bars[i].w, 5);
             }
-            CTX.fillStyle = 'rgba(224,242,254,0.9)';
+            CTX.fillStyle = 'rgba(254,243,199,0.9)';
             CTX.font = 'bold 9px monospace';
             CTX.fillText('MTC SYSTEM ONLINE', cx, holoY + holoH - 12);
         } else {
@@ -465,19 +465,19 @@ class MTCRoom {
         // ── 3. Side Terminals (no shadowBlur — LED dot uses bright color only) ──
         const termY = s.y + H / 2 - 22;
         const termDefs = [
-            { x: s.x + 18, color: '#38bdf8', rgb: '56,189,248' },
-            { x: s.x + W - 42, color: '#a78bfa', rgb: '167,139,250' }
+            { x: s.x + 18, color: '#fbbf24', rgb: '251,191,36' },
+            { x: s.x + W - 42, color: '#f97316', rgb: '249,115,22' }
         ];
         for (const term of termDefs) {
-            CTX.fillStyle = '#0f1a30';
+            CTX.fillStyle = '#0f0c04';
             CTX.beginPath(); CTX.roundRect(term.x, termY, 24, 44, 4); CTX.fill();
-            CTX.strokeStyle = active ? `rgba(${term.rgb},${0.5 + fastPulse * 0.3})` : '#334155';
+            CTX.strokeStyle = active ? `rgba(${term.rgb},${0.5 + fastPulse * 0.3})` : '#2d1f0a';
             CTX.lineWidth = 1.5; CTX.stroke();
             // All LED dots in one pass per terminal — batch by on/off state
-            CTX.fillStyle = '#1e3a5f'; // default off
+            CTX.fillStyle = '#451a03'; // default off
             for (let d = 0; d < 4; d++) {
                 const isOn = active && Math.sin(now / (300 + d * 120) + d * 1.5) > 0;
-                CTX.fillStyle = isOn ? term.color : '#1e3a5f';
+                CTX.fillStyle = isOn ? term.color : '#451a03';
                 CTX.beginPath(); CTX.arc(term.x + 12, termY + 8 + d * 9, 3, 0, Math.PI * 2); CTX.fill();
             }
         }
@@ -486,26 +486,26 @@ class MTCRoom {
         if (active) {
             const ffAlpha = pulse * 0.8;
             // Soft outer line
-            CTX.strokeStyle = `rgba(16,185,129,${ffAlpha * 0.4})`;
+            CTX.strokeStyle = `rgba(180,100,10,${ffAlpha * 0.4})`;
             CTX.lineWidth = 6;
             CTX.beginPath(); CTX.moveTo(s.x + 20, s.y + H); CTX.lineTo(s.x + W - 20, s.y + H); CTX.stroke();
             // Bright core line
-            CTX.strokeStyle = `rgba(52,211,153,${ffAlpha})`;
+            CTX.strokeStyle = `rgba(250,180,30,${ffAlpha})`;
             CTX.lineWidth = 2;
             CTX.beginPath(); CTX.moveTo(s.x + 20, s.y + H); CTX.lineTo(s.x + W - 20, s.y + H); CTX.stroke();
 
             // Energy posts (2 dots, no shadowBlur)
             for (const px of [s.x + 20, s.x + W - 20]) {
-                CTX.fillStyle = `rgba(52,211,153,${0.25 + fastPulse * 0.2})`;
+                CTX.fillStyle = `rgba(250,180,30,${0.25 + fastPulse * 0.2})`;
                 CTX.beginPath(); CTX.arc(px, s.y + H, 7, 0, Math.PI * 2); CTX.fill();
-                CTX.fillStyle = `rgba(52,211,153,${0.8 + fastPulse * 0.2})`;
+                CTX.fillStyle = `rgba(251,191,36,${0.8 + fastPulse * 0.2})`;
                 CTX.beginPath(); CTX.arc(px, s.y + H, 3, 0, Math.PI * 2); CTX.fill();
             }
 
             // SAFE ZONE label
-            CTX.fillStyle = `rgba(16,185,129,0.15)`;
+            CTX.fillStyle = `rgba(180,100,10,0.15)`;
             CTX.beginPath(); CTX.roundRect(cx - 68, s.y + H - 21, 136, 17, 5); CTX.fill();
-            CTX.fillStyle = `rgba(52,211,153,${0.7 + pulse * 0.3})`;
+            CTX.fillStyle = `rgba(250,180,30,${0.7 + pulse * 0.3})`;
             CTX.font = 'bold 9px Orbitron,monospace';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
             CTX.fillText('⚕ SAFE ZONE ACTIVE', cx, s.y + H - 13);
@@ -515,7 +515,7 @@ class MTCRoom {
         if (this.isPlayerInside) {
             const timeLeft = this.maxStayTime - this.playerStayTime;
             const timerPct = timeLeft / this.maxStayTime;
-            const timerColor = timerPct > 0.5 ? '#10b981' : timerPct > 0.25 ? '#f59e0b' : '#ef4444';
+            const timerColor = timerPct > 0.5 ? '#fbbf24' : timerPct > 0.25 ? '#f59e0b' : '#ef4444';
             const timerCx = cx, timerCy = s.y + H - 42;
 
             // Track ring
@@ -801,7 +801,7 @@ class MapSystem {
         };
 
         // If you want an aura under the Citadel
-        drawZoneAura({ worldX: -150 + 150, worldY: -700 + 120, innerRgb: '16, 185, 129', outerRgb: '6, 78, 59', radius: 350, phase: 0.5 });
+        drawZoneAura({ worldX: -150 + 150, worldY: -700 + 120, innerRgb: '250, 180, 30', outerRgb: '100, 50, 5', radius: 350, phase: 0.5 });
         drawZoneAura(C.auras.database);
         drawZoneAura(C.auras.shop);
         drawZoneAura(C.auras.origin);

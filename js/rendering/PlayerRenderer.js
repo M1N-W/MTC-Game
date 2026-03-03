@@ -1265,7 +1265,7 @@ class PlayerRenderer {
 
         // Level badge (screen space)
         if (entity.level > 1) {
-            ctx.fillStyle = 'rgba(37,99,235,0.92)';
+            ctx.fillStyle = 'rgba(180,100,10,0.92)';
             ctx.beginPath(); ctx.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 9px Arial';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.8.1'; // v3.8.1 Enhanced Poom sticky system to support Boss entities
+const CACHE_NAME = 'mtc-cache-v3.8.2'; // v3.8.2 Implemented Gold/Amber Military HUD theme across all UI elements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
