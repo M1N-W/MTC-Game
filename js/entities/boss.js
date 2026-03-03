@@ -204,8 +204,11 @@ class Boss extends Entity {
             bark: { cd: 0, max: BALANCE.boss.phase2.barkCooldown },
             goldfish: { cd: 0, max: BALANCE.boss.phase3.goldfishCooldown },
             bubble: { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown },
-            matrixGrid: { cd: 0, max: 22.0 }
+            matrixGrid: { cd: 0, max: 22.0 },
+            domain: { cd: 0, max: _DC ? _DC.COOLDOWN : 45.0 }
         };
+        this._domainCasting = false;
+        this._domainActive = false;
 
         this.log457State = null;
         this.log457Timer = 0;
@@ -330,6 +333,23 @@ class Boss extends Entity {
             if (this.log457Timer >= BALANCE.boss.log457StunDuration) {
                 this.log457State = null; this.log457AttackBonus = 0;
             }
+            return;
+        }
+
+        // ── Domain Expansion trigger ─────────────────────────
+        if (this.enablePhase2 &&
+            this.hp / this.maxHp <= 0.40 &&
+            typeof DomainExpansion !== 'undefined' &&
+            DomainExpansion.canTrigger()) {
+            this.state = 'DOMAIN';
+            this.timer = 0;
+            DomainExpansion.trigger(this);
+        }
+
+        // Freeze all AI while domain is running — DomainExpansion.update() drives it
+        if (this._domainActive) {
+            this.vx = 0; this.vy = 0;
+            if (window.UIManager) { window.UIManager.updateBossHUD(this); window.UIManager.updateBossSpeech(this); }
             return;
         }
 
@@ -494,6 +514,10 @@ class Boss extends Entity {
     }
 
     takeDamage(amt) {
+        if (typeof DomainExpansion !== 'undefined' && DomainExpansion.isInvincible()) {
+            spawnFloatingText('DOMAIN SHIELD!', this.x, this.y - 40, '#d946ef', 20);
+            return;
+        }
         if (this.isInvulnerable) {
             spawnFloatingText('INVINCIBLE!', this.x, this.y - 40, '#facc15', 20);
             return;

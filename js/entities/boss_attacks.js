@@ -834,6 +834,357 @@ class EmpPulse {
     }
 }
 
+// ════════════════════════════════════════════════════════════
+// 💠 DOMAIN EXPANSION: METRICS-MAJOR
+//    Boss Manop Ultimate — integrated from DomainExpansion.js
+//    Singleton; driven by game.js update/draw hooks.
+// ════════════════════════════════════════════════════════════
+
+const _DC = Object.freeze({
+    COLS: 8, ROWS: 8,
+    CELL_SIZE: 125,
+    CAST_DUR: 2.8,
+    END_DUR: 1.2,
+    WARN_DUR: 2.2,
+    EXPLODE_DUR: 0.5,
+    TOTAL_CYCLES: 6,
+    DANGER_PCT: 0.62,
+    CELL_DAMAGE: 28,
+    COOLDOWN: 45.0,
+    HIT_RADIUS: 0.58,
+    RAIN_COLS: 26,
+});
+
+const _RAIN_POOL = '0123456789ABCDEFΑΒΓΔΩΣΨXYZμσπ∑∫∂∇+-×÷=≠≤≥ΦΘΛ';
+function _rainChar() { return _RAIN_POOL[Math.floor(Math.random() * _RAIN_POOL.length)]; }
+function _shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+}
+
+const DomainExpansion = {
+    phase: 'idle',   // 'idle' | 'casting' | 'active' | 'ending'
+    timer: 0, cycleTimer: 0, cyclePhase: 'warn', cycleCount: 0,
+    originX: 0, originY: 0,
+    cells: [], cooldownTimer: 0,
+    _rain: [], _indices: [],
+
+    canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
+    isInvincible() { return this.phase !== 'idle'; },
+
+    trigger(boss) {
+        if (!this.canTrigger()) return;
+        this.phase = 'casting';
+        this.timer = _DC.CAST_DUR;
+        this.originX = boss.x;
+        this.originY = boss.y;
+        this._initRain();
+
+        boss._domainCasting = true;
+        boss._domainActive = true;
+
+        if (typeof addScreenShake === 'function') addScreenShake(14);
+        if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+        if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText('領域展開', boss.x, boss.y - 130, '#d946ef', 50);
+            setTimeout(() => spawnFloatingText('Metrics-Major', boss.x, boss.y - 185, '#facc15', 34), 700);
+        }
+        if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
+            window.UIManager.showVoiceBubble('領域展開...', boss.x, boss.y - 50);
+            setTimeout(() => { if (window.UIManager) window.UIManager.showVoiceBubble('Metrics-Major!!', boss.x, boss.y - 50); }, 950);
+        }
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(boss.x, boss.y, 35, '#d946ef');
+            spawnParticles(boss.x, boss.y, 20, '#facc15');
+            spawnParticles(boss.x, boss.y, 15, '#ffffff');
+        }
+        console.log('[DomainExpansion] 💠 Metrics-Major TRIGGERED');
+    },
+
+    update(dt, boss, player) {
+        if (this.phase === 'idle') { if (this.cooldownTimer > 0) this.cooldownTimer -= dt; return; }
+        if (!boss || boss.dead) { this._abort(boss); return; }
+        this.timer -= dt;
+
+        switch (this.phase) {
+            case 'casting':
+                if (this.timer <= 0) {
+                    this.phase = 'active'; this.cycleCount = 0;
+                    this.cyclePhase = 'warn'; this.cycleTimer = _DC.WARN_DUR;
+                    this._initCells(); this._rollCells();
+                    if (typeof addScreenShake === 'function') addScreenShake(28);
+                    if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+                    if (typeof spawnFloatingText === 'function' && player)
+                        spawnFloatingText('⚠ DOMAIN ACTIVE', player.x, player.y - 100, '#ef4444', 28);
+                }
+                break;
+
+            case 'active':
+                this.cycleTimer -= dt;
+                if (this.cyclePhase === 'warn' && this.cycleTimer <= 0) {
+                    this.cyclePhase = 'explode'; this.cycleTimer = _DC.EXPLODE_DUR;
+                    this._doExplosions(player);
+                } else if (this.cyclePhase === 'explode' && this.cycleTimer <= 0) {
+                    this.cycleCount++;
+                    if (this.cycleCount >= _DC.TOTAL_CYCLES) {
+                        this.phase = 'ending'; this.timer = _DC.END_DUR;
+                        boss._domainCasting = false;
+                        if (typeof addScreenShake === 'function') addScreenShake(20);
+                        if (typeof spawnFloatingText === 'function' && player)
+                            spawnFloatingText('Domain Lifted', player.x, player.y - 90, '#d946ef', 26);
+                        if (window.UIManager)
+                            window.UIManager.showVoiceBubble('...แค่นั้นแหละ.', boss.x, boss.y - 50);
+                    } else {
+                        this.cyclePhase = 'warn'; this.cycleTimer = _DC.WARN_DUR;
+                        this._rollCells();
+                    }
+                }
+                break;
+
+            case 'ending':
+                if (this.timer <= 0) {
+                    this.phase = 'idle'; this.cooldownTimer = _DC.COOLDOWN;
+                    boss._domainCasting = false; boss._domainActive = false;
+                    this.cells = [];
+                    console.log('[DomainExpansion] Domain ended — cooldown 45 s');
+                }
+                break;
+        }
+    },
+
+    draw(ctx) {
+        if (this.phase === 'idle' || !ctx) return;
+        if (typeof worldToScreen !== 'function') return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        const now = performance.now() / 1000;
+
+        let globalA = 1.0;
+        if (this.phase === 'casting') globalA = 1.0 - this.timer / _DC.CAST_DUR;
+        else if (this.phase === 'ending') globalA = this.timer / _DC.END_DUR;
+        globalA = Math.max(0, Math.min(1, globalA));
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+
+        // 1. Dark overlay
+        ctx.globalAlpha = globalA * 0.76;
+        ctx.fillStyle = 'rgba(2,0,10,1)';
+        ctx.fillRect(0, 0, W, H);
+
+        // 2. Matrix rain
+        ctx.font = '11px "Courier New",monospace';
+        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+        for (const col of this._rain) {
+            const cx = col.xNorm * W, charH = 14;
+            for (let i = 0; i < col.chars.length; i++) {
+                const rawY = ((now * col.speed * H * 0.18 + col.offsetY + i * charH)) % (H + charH * col.chars.length) - charH * 4;
+                const fade = 1.0 - i / col.chars.length;
+                ctx.globalAlpha = globalA * col.alpha * fade;
+                ctx.fillStyle = i === 0 ? '#fff' : '#d97706';
+                ctx.fillText(col.chars[i], cx, rawY);
+            }
+        }
+
+        // 3. Domain border + cycle counter
+        if (this.phase === 'active' || this.phase === 'ending') {
+            const domHalf = (_DC.COLS * _DC.CELL_SIZE) / 2;
+            const dtl = worldToScreen(this.originX - domHalf, this.originY - domHalf);
+            const dbr = worldToScreen(this.originX + domHalf, this.originY + domHalf);
+            const pulse = 0.55 + Math.sin(now * 5) * 0.45;
+            ctx.globalAlpha = globalA * (0.55 + pulse * 0.45);
+            ctx.shadowBlur = 22; ctx.shadowColor = '#d946ef';
+            ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 3;
+            ctx.strokeRect(dtl.x, dtl.y, dbr.x - dtl.x, dbr.y - dtl.y);
+            ctx.shadowBlur = 0;
+
+            if (this.phase === 'active') {
+                ctx.globalAlpha = globalA * 0.88;
+                ctx.font = 'bold 11px "Orbitron",Arial';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                const chipX = (dtl.x + dbr.x) / 2, chipY = dtl.y - 18;
+                ctx.fillStyle = 'rgba(2,0,10,0.85)';
+                ctx.fillRect(chipX - 48, chipY - 11, 96, 22);
+                ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 1;
+                ctx.strokeRect(chipX - 48, chipY - 11, 96, 22);
+                ctx.fillStyle = '#f0abfc';
+                ctx.fillText(`CYCLE ${this.cycleCount + 1} / ${_DC.TOTAL_CYCLES}`, chipX, chipY);
+            }
+        }
+
+        // 4. Grid cells
+        if ((this.phase === 'active' || this.phase === 'ending') && this.cells.length) {
+            const warnProgress = this.cyclePhase === 'warn' ? (1.0 - this.cycleTimer / _DC.WARN_DUR) : 1.0;
+            const explodeProgress = this.cyclePhase === 'explode' ? (1.0 - this.cycleTimer / _DC.EXPLODE_DUR) : 0;
+            const fastPulse = 0.5 + Math.sin(now * (4 + warnProgress * 8)) * 0.5;
+
+            for (const cell of this.cells) {
+                const tl = worldToScreen(cell.wx, cell.wy);
+                const br = worldToScreen(cell.wx + _DC.CELL_SIZE, cell.wy + _DC.CELL_SIZE);
+                const sw = br.x - tl.x, sh = br.y - tl.y;
+                if (br.x < 0 || tl.x > W || br.y < 0 || tl.y > H || sw < 2 || sh < 2) continue;
+
+                if (cell.dangerous) {
+                    if (this.cyclePhase === 'explode') {
+                        ctx.globalAlpha = globalA * Math.max(0, 1.0 - explodeProgress) * 0.95;
+                        ctx.fillStyle = '#fef08a'; ctx.fillRect(tl.x, tl.y, sw, sh);
+                        ctx.globalAlpha = globalA * 0.85;
+                        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
+                        ctx.shadowBlur = 12; ctx.shadowColor = '#ef4444';
+                        ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
+                        ctx.shadowBlur = 0;
+                    } else {
+                        const isLate = warnProgress > 0.65;
+                        const fillColor = isLate ? '#ef4444' : '#d97706';
+                        ctx.globalAlpha = globalA * (0.20 + warnProgress * 0.40 * fastPulse);
+                        ctx.fillStyle = fillColor; ctx.fillRect(tl.x, tl.y, sw, sh);
+                        ctx.globalAlpha = globalA * (0.45 + fastPulse * 0.55);
+                        ctx.strokeStyle = fillColor; ctx.lineWidth = 1.8;
+                        ctx.shadowBlur = isLate ? 10 : 4; ctx.shadowColor = fillColor;
+                        ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
+                        ctx.shadowBlur = 0;
+                        const barW = Math.max(0, (sw - 4) * (1.0 - warnProgress));
+                        ctx.globalAlpha = globalA * 0.85;
+                        ctx.fillStyle = fillColor;
+                        ctx.fillRect(tl.x + 2, tl.y + sh - 5, barW, 4);
+                        const iconSize = Math.max(10, Math.floor(sh * 0.38));
+                        ctx.globalAlpha = globalA * (0.5 + fastPulse * 0.5);
+                        ctx.font = `${iconSize}px Arial`;
+                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#fff';
+                        ctx.fillText('⚠', tl.x + sw / 2, tl.y + sh / 2);
+                    }
+                } else {
+                    ctx.globalAlpha = globalA * 0.10;
+                    ctx.fillStyle = '#22c55e'; ctx.fillRect(tl.x, tl.y, sw, sh);
+                    ctx.globalAlpha = globalA * 0.25;
+                    ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1;
+                    ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
+                    const iconSize2 = Math.max(8, Math.floor(sh * 0.30));
+                    ctx.globalAlpha = globalA * 0.14;
+                    ctx.font = `${iconSize2}px Arial`;
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillText('✓', tl.x + sw / 2, tl.y + sh / 2);
+                }
+            }
+        }
+
+        // 5. Casting animation
+        if (this.phase === 'casting') {
+            const elapsed = _DC.CAST_DUR - this.timer;
+            const ringScreen = worldToScreen(this.originX, this.originY);
+            const ringR = (elapsed / _DC.CAST_DUR) * Math.min(W, H) * 0.6;
+            ctx.globalAlpha = globalA * (1.0 - elapsed / _DC.CAST_DUR) * 0.45;
+            ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 3;
+            ctx.shadowBlur = 28; ctx.shadowColor = '#d946ef';
+            ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, ringR, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            if (elapsed > 0.6) {
+                const r2 = ((elapsed - 0.6) / (_DC.CAST_DUR - 0.6)) * Math.min(W, H) * 0.6;
+                ctx.globalAlpha = globalA * (1.0 - (elapsed - 0.6) / (_DC.CAST_DUR - 0.6)) * 0.35;
+                ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, r2, 0, Math.PI * 2); ctx.stroke();
+            }
+
+            if (elapsed > 0.35) {
+                const ta = Math.min(1.0, (elapsed - 0.35) / 0.45);
+                ctx.globalAlpha = globalA * ta;
+                ctx.font = `bold ${Math.round(52 * (0.78 + ta * 0.22))}px serif`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 32; ctx.shadowColor = '#d946ef';
+                ctx.fillStyle = '#f0abfc';
+                ctx.fillText('領域展開', W / 2, H / 2 - 42);
+                ctx.shadowBlur = 0;
+            }
+            if (elapsed > 1.05) {
+                const tb = Math.min(1.0, (elapsed - 1.05) / 0.55);
+                ctx.globalAlpha = globalA * tb;
+                ctx.font = `900 ${Math.round(36 * (0.88 + tb * 0.12))}px "Orbitron","Bebas Neue",Arial`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 24; ctx.shadowColor = '#facc15';
+                ctx.fillStyle = '#fef08a';
+                ctx.fillText('Metrics-Major', W / 2, H / 2 + 28);
+                ctx.shadowBlur = 0;
+            }
+            if (elapsed > _DC.CAST_DUR - 0.35) {
+                const tf = (elapsed - (_DC.CAST_DUR - 0.35)) / 0.35;
+                ctx.globalAlpha = globalA * tf * 0.55;
+                ctx.fillStyle = '#d946ef';
+                ctx.fillRect(0, 0, W, H);
+            }
+        }
+        ctx.restore();
+    },
+
+    // ── Private ────────────────────────────────────────────────
+    _initCells() {
+        this.cells = []; this._indices = [];
+        const half = (_DC.COLS * _DC.CELL_SIZE) / 2;
+        for (let r = 0; r < _DC.ROWS; r++)
+            for (let c = 0; c < _DC.COLS; c++) {
+                this.cells.push({
+                    wx: this.originX - half + c * _DC.CELL_SIZE,
+                    wy: this.originY - half + r * _DC.CELL_SIZE,
+                    dangerous: false, exploded: false,
+                });
+                this._indices.push(this._indices.length);
+            }
+    },
+    _rollCells() {
+        const n = this.cells.length, dangCount = Math.floor(n * _DC.DANGER_PCT);
+        for (let i = 0; i < n; i++) this._indices[i] = i;
+        _shuffle(this._indices);
+        for (let i = 0; i < n; i++) {
+            this.cells[this._indices[i]].dangerous = i < dangCount;
+            this.cells[this._indices[i]].exploded = false;
+        }
+    },
+    _initRain() {
+        this._rain = [];
+        for (let i = 0; i < _DC.RAIN_COLS; i++) {
+            const len = 8 + Math.floor(Math.random() * 10);
+            this._rain.push({
+                xNorm: Math.random(),
+                offsetY: Math.random() * 600,
+                speed: 0.6 + Math.random() * 0.9,
+                alpha: 0.25 + Math.random() * 0.35,
+                chars: Array.from({ length: len }, _rainChar),
+            });
+        }
+    },
+    _doExplosions(player) {
+        for (const cell of this.cells) {
+            if (!cell.dangerous) continue;
+            cell.exploded = true;
+            const cx = cell.wx + _DC.CELL_SIZE / 2, cy = cell.wy + _DC.CELL_SIZE / 2;
+            if (typeof spawnParticles === 'function') {
+                spawnParticles(cx, cy, 10, '#ef4444');
+                spawnParticles(cx, cy, 5, '#facc15');
+            }
+            if (player && !player.dead) {
+                const pd = Math.hypot(player.x - cx, player.y - cy);
+                if (pd < _DC.CELL_SIZE * _DC.HIT_RADIUS) {
+                    player.takeDamage(_DC.CELL_DAMAGE);
+                    if (typeof spawnFloatingText === 'function')
+                        spawnFloatingText(`💥 ${_DC.CELL_DAMAGE}`, player.x, player.y - 55, '#ef4444', 20);
+                    if (typeof addScreenShake === 'function') addScreenShake(7);
+                    if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
+                }
+            }
+        }
+    },
+    _abort(boss) {
+        this.phase = 'idle'; this.cooldownTimer = 0; this.cells = [];
+        if (boss) { boss._domainCasting = false; boss._domainActive = false; }
+        console.log('[DomainExpansion] Aborted — boss dead');
+    },
+};
+
+window.DomainExpansion = DomainExpansion;
+
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing, MatrixGridAttack, EmpPulse };
