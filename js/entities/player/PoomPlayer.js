@@ -276,6 +276,7 @@ class PoomPlayer extends Player {
             for (const enemy of window.enemies) {
                 if (enemy.dead) continue;
 
+                if (typeof enemy.getStatus !== 'function') continue;
                 const stickyStatus = enemy.getStatus('sticky');
                 if (stickyStatus && stickyStatus.stacks > 0) {
                     // Deal damage based on stacks (flat + percentage)
@@ -337,20 +338,31 @@ class PoomPlayer extends Player {
             Achievements._ritualWipeUnlocked = true;
             Achievements.check('ritual_wipe');
         }
-        // ── Boss: base damage only (ไม่มี sticky framework) ──
+
+        // ── Boss: เช็คทุกครั้ง ไม่ขึ้นกับ totalEnemiesAffected ──
+        // Boss ไม่มี StatusEffect framework → ใช้ stickyStacks property แทน
         const currentBoss = window.boss;
         if (currentBoss && !currentBoss.dead) {
-            // เซฟค่า X, Y ของบอสไว้ก่อน เผื่อว่าทำดาเมจแล้วบอสตายตัวแปรจะได้ไม่เป็น null
             const bx = currentBoss.x;
             const by = currentBoss.y;
-
-            // ลบ radius ของบอสออกจากระยะห่าง เพื่อให้สกิลโดนบอสที่ว่องไวได้ง่ายขึ้น
             const bd = Math.max(0, Math.hypot(bx - this.x, by - this.y) - (currentBoss.radius || 0));
             const RITUAL_RANGE = RC.range || 280;
             if (bd <= RITUAL_RANGE) {
-                const baseDmg = (RC.baseDamage || 75) + currentBoss.maxHp * (RC.baseDamagePct || 0.15);
-                currentBoss.takeDamage(baseDmg);
-                spawnFloatingText(`🌾 ${Math.round(baseDmg)}`, bx, by - 60, '#00ff88', 20);
+                const bossStacks = currentBoss.stickyStacks || 0;
+                let bossDmg;
+                if (bossStacks > 0) {
+                    // มี stack → คำนวณแบบเดียวกับ enemy ทั่วไป
+                    const flatDamage = bossStacks * DAMAGE_PER_STACK;
+                    const pctDamage = currentBoss.maxHp * RC.stackBurstPct * bossStacks;
+                    bossDmg = flatDamage + pctDamage;
+                    currentBoss.stickyStacks = 0; // consume stacks
+                    spawnFloatingText(`🌾💥 ${Math.round(bossDmg)}`, bx, by - 60, '#00ff88', 24);
+                } else {
+                    // ไม่มี stack → base damage
+                    bossDmg = (RC.baseDamage || 75) + currentBoss.maxHp * (RC.baseDamagePct || 0.15);
+                    spawnFloatingText(`🌾 ${Math.round(bossDmg)}`, bx, by - 60, '#00ff88', 20);
+                }
+                currentBoss.takeDamage(bossDmg);
             }
         }
 
@@ -451,10 +463,19 @@ class PoomPlayer extends Player {
      * @param {object} enemy - Enemy instance
      */
     applyStickyTo(enemy) {
-        if (!enemy || typeof enemy.addStatus !== 'function') return; // Boss/Barrel ไม่รองรับ StatusEffect
+        if (!enemy) return;
         const S = this.stats;
-        const now = performance.now() / 1000;
 
+        // ── Boss: ไม่มี StatusEffect framework → ใช้ stickyStacks property ตรงๆ ──
+        if (typeof enemy.addStatus !== 'function') {
+            if (typeof enemy.stickyStacks === 'number') {
+                enemy.stickyStacks = Math.min((enemy.stickyStacks || 0) + 1, 10);
+            }
+            return;
+        }
+
+        // ── Enemy ปกติ: ใช้ StatusEffect framework ──
+        const now = performance.now() / 1000;
         const stackDuration = S.sticky.stackDuration || 5;
         const slowPerStack = 0.04;
 

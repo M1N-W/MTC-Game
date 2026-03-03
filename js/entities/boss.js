@@ -214,6 +214,8 @@ class Boss extends Entity {
         this.isEnraged = false;
         // BUG-4: lock flag prevents double startNextWave() from rapid damage hits
         this._waveSpawnLocked = false;
+        // ── Poom sticky stack tracker (ไม่ใช้ StatusEffect framework) ──
+        this.stickyStacks = 0;
     }
 
     update(dt, player) {
