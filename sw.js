@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.7.9'; // v3.7.9 Unified Gold/Amber Military HUD theme across all screens
+const CACHE_NAME = 'mtc-cache-v3.8.0'; // v3.8.0 Refactored PoomPlayer to extend Player base class
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

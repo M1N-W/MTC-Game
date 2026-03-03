@@ -3,39 +3,24 @@
 // ════════════════════════════════════════════════════════════
 // 🌾 POOM PLAYER
 // ════════════════════════════════════════════════════════════
-class PoomPlayer extends Entity {
+class PoomPlayer extends Player {
     constructor() {
-        const stats = BALANCE.characters.poom;
-        super(0, 0, stats.radius);
+        // ── ให้ Player constructor ตั้งค่า base properties ทั้งหมด ──
+        super('poom');
 
-        this.charId = 'poom';
-        this.stats = stats;
+        // ── Override baseCritChance ด้วยค่าจาก config ของภูมิ ──
+        // (Player ใช้ stats.baseCritChance แต่ poom config ใช้ key ว่า critChance)
+        this.baseCritChance = this.stats.critChance;
 
-        this.hp = stats.hp; this.maxHp = stats.maxHp;
-        this.energy = stats.energy; this.maxEnergy = stats.maxEnergy;
+        // ── เพิ่ม cooldown slots พิเศษของภูมิ ──
+        // (Player constructor สร้าง { dash, stealth, shoot } ไว้แล้ว)
+        this.cooldowns.eat = 0;
+        this.cooldowns.naga = 0;
+        this.cooldowns.ritual = 0;
 
-        this.cooldowns = { dash: 0, eat: 0, naga: 0, shoot: 0, ritual: 0 };
-
-        this.isDashing = false; this.isInvisible = false; this.ambushReady = false;
-        this.passiveUnlocked = false; this.stealthUseCount = 0; this.goldenAuraTimer = 0;
-
-        this.walkCycle = 0;
-        this.damageBoost = 1; this.speedBoost = 1; this.speedBoostTimer = 0;
-        this.dashGhosts = [];
-
-        // ── Timeout Management ───────────────────────────────────
-        this.dashTimeouts = [];
-
-        // ── Stand-Aura & Afterimage system ────────────────────
-        this.standGhosts = [];
-        this.auraRotation = 0;
-        this._auraFrame = 0;
-
-        this.onGraph = false;
-        this.isConfused = false; this.confusedTimer = 0;
-        this.isBurning = false; this.burnTimer = 0; this.burnDamage = 0;
-
-        this.isEatingRice = false; this.eatRiceTimer = 0;
+        // ── State เฉพาะของภูมิ ──────────────────────────────────
+        this.isEatingRice = false;
+        this.eatRiceTimer = 0;
         this.currentSpeedMult = 1;
         this.nagaCount = 0;
         this.naga = null;
@@ -48,35 +33,6 @@ class PoomPlayer extends Entity {
             windowRemaining: 0,
             cooldownRemaining: 0
         };
-
-        // ── Collision Awareness state ──────────────────────────
-        this.obstacleBuffTimer = 0;
-        this.lastObstacleWarning = 0;
-
-        // ── Combo System Initialization ─────────────────────────
-        this.comboCount = 0;
-        this.comboTimer = 0;
-        this.COMBO_MAX_TIME = 3.0;
-        this.COMBO_MAX_STACKS = 50;
-
-        this.level = 1; this.exp = 0;
-        this.expToNextLevel = stats.expToNextLevel;
-        this.baseCritChance = stats.critChance;
-
-        // ── RPG Scaling Multipliers ─────────────────────────────
-        this._damageMultiplier = 1.0;
-        Object.defineProperty(this, 'damageMultiplier', {
-            get: function () {
-                const combo = this.comboCount || 0;
-                return this._damageMultiplier * (1 + (combo * 0.01));
-            },
-            set: function (val) {
-                const comboMult = 1 + ((this.comboCount || 0) * 0.01);
-                const diff = val - (this._damageMultiplier * comboMult);
-                this._damageMultiplier += diff;
-            }
-        });
-        this.cooldownMultiplier = 1.0;
     }
 
     // ── Second Wind: computed live, no timer needed ──────────
@@ -202,7 +158,15 @@ class PoomPlayer extends Entity {
             }
         }
 
-        // NOTE: dash (space) and stealth (right-click) are handled by PlayerBase.update() via checkInput/consumeInput
+        // ── Dash Input (space) — เช็ค groundedTimer เหมือน PlayerBase ──
+        if (checkInput('space')) {
+            if (this.cooldowns.dash <= 0 && this.groundedTimer <= 0) {
+                this.dash(ax || 1, ay || 0);
+                consumeInput('space');
+            } else if (this.groundedTimer > 0) {
+                consumeInput('space'); // consume silently — dash blocked by Grounded
+            }
+        }
         if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { consumeInput('e'); } // E reserved — eat via R-Click only
         // ── Updated Controls: R = Ritual Burst, Q = Naga Summon ──
         if (checkInput('r') && this.cooldowns.ritual <= 0) {
@@ -544,19 +508,6 @@ class PoomPlayer extends Entity {
     }
 }
 
-// ════════════════════════════════════════════════════════════
-// ✅ WARN 5 FIX — Share checkObstacleProximity with PoomPlayer
-// ════════════════════════════════════════════════════════════
-PoomPlayer.prototype.checkObstacleProximity = Player.prototype.checkObstacleProximity;
-
-// ════════════════════════════════════════════════════════════
-// ✅ Option B — Share identical Player methods with PoomPlayer
-// ════════════════════════════════════════════════════════════
-PoomPlayer.prototype.heal = Player.prototype.heal;
-PoomPlayer.prototype.gainExp = Player.prototype.gainExp;
-PoomPlayer.prototype.levelUp = Player.prototype.levelUp;
-PoomPlayer.prototype.addSpeedBoost = Player.prototype.addSpeedBoost;
-PoomPlayer.prototype.checkPassiveUnlock = Player.prototype.checkPassiveUnlock;
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
