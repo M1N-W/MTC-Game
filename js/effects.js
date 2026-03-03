@@ -355,11 +355,34 @@ class ParticleSystem {
 // ──────────────────────────────────────────────────────────────────────────────
 // Floating Text System
 // ──────────────────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// Floating Text System  —  Military HUD Edition
+// ──────────────────────────────────────────────────────────────────────────────
+//
+// TEXT CATEGORIES (auto-detected from content + color):
+//
+//   CRIT     — pure numeric + gold color (#facc15/#fbbf24) OR size >= 32
+//              → Large gradient fill, sparkle ring, no chip
+//
+//   DAMAGE   — pure numeric string (any color)
+//              → Bebas Neue large, punch-scale pop, thick black stroke
+//
+//   HEAL     — starts with '+', green tones
+//              → Parallelogram chip, dark bg, green border
+//
+//   IMPACT   — size >= 28 with text (often has emoji)
+//              → Full-width chip bg, corner brackets, strong glow
+//
+//   STATUS   — ≤3 words, ALL-CAPS, short
+//              → Small parallelogram chip, colored border
+//
+//   DEFAULT  — everything else
+//              → Stroke outline + color shadow, no chip
+//
+// ──────────────────────────────────────────────────────────────────────────────
+
 class FloatingText {
     // ── Static Object Pool ─────────────────────────────────────────────────────
-    // Floating texts are smaller in count (< 40 alive at once) but they each
-    // hold a string reference — recycling them avoids repeated string-object
-    // allocation during heavy combat (boss fight + drone + weapons = many texts/sec).
     static _pool = [];
     static MAX_POOL = 80;
 
@@ -367,12 +390,8 @@ class FloatingText {
         this.reset(text, x, y, color, size);
     }
 
-    /**
-     * Re-initialise a pooled instance.  Resets vy and life to their defaults.
-     * @returns {FloatingText} this, for chaining from acquire()
-     */
     reset(text, x, y, color, size = 20) {
-        this.text = text;
+        this.text = String(text);
         this.x = x;
         this.y = y;
         this.color = color;
@@ -380,13 +399,14 @@ class FloatingText {
         this.life = 1.5;
         this.vy = -80;
         this._font = null;
+        this._cat = null;   // category cache — cleared on reset
+
+        // punch-scale: starts > 1, eases to 1 over first 0.18 s
+        this._scale = 1.35;
+        this._scaleTimer = 0.18;
         return this;
     }
 
-    /**
-     * Pull from pool (or allocate) and reset with the given parameters.
-     * Use this instead of `new FloatingText(...)`.
-     */
     static acquire(text, x, y, color, size = 20) {
         if (FloatingText._pool.length > 0) {
             return FloatingText._pool.pop().reset(text, x, y, color, size);
@@ -394,18 +414,55 @@ class FloatingText {
         return new FloatingText(text, x, y, color, size);
     }
 
-    /**
-     * Return this dead instance to the pool.
-     * The text string ref is cleared to allow GC of any large strings.
-     */
     release() {
         this.text = '';
+        this._cat = null;
         if (FloatingText._pool.length < FloatingText.MAX_POOL) {
             FloatingText._pool.push(this);
         }
     }
 
+    // ── Category detection (cached after first call) ───────────────────────────
+    _category() {
+        if (this._cat) return this._cat;
+
+        const t = this.text.trim();
+        const col = (this.color || '').toLowerCase();
+        const isNumeric = /^[\d,.\s]+$/.test(t);
+
+        // CRIT — gold color + numeric, OR very large numeric
+        if (isNumeric && (col === '#facc15' || col === '#fbbf24' || this.size >= 32)) {
+            return (this._cat = 'CRIT');
+        }
+        // DAMAGE — any pure numeric
+        if (isNumeric) {
+            return (this._cat = 'DAMAGE');
+        }
+        // HEAL — starts with '+'
+        if (t.startsWith('+')) {
+            return (this._cat = 'HEAL');
+        }
+        // IMPACT — large size with text content
+        if (this.size >= 28) {
+            return (this._cat = 'IMPACT');
+        }
+        // STATUS — short ALL-CAPS label (≤ 3 words)
+        const wordCount = t.replace(/[^\w\s]/g, '').trim().split(/\s+/).length;
+        if (wordCount <= 3 && t === t.toUpperCase() && /[A-Z]/.test(t)) {
+            return (this._cat = 'STATUS');
+        }
+        return (this._cat = 'DEFAULT');
+    }
+
     update(dt) {
+        // Punch-scale: ease out over _scaleTimer seconds
+        if (this._scaleTimer > 0) {
+            this._scaleTimer -= dt;
+            const p = Math.max(0, this._scaleTimer / 0.18);  // 1 → 0
+            this._scale = 1.0 + 0.35 * p * p;                    // ease-out quad
+        } else {
+            this._scale = 1.0;
+        }
         this.y += this.vy * dt;
         this.life -= dt;
         return this.life <= 0;
@@ -414,26 +471,256 @@ class FloatingText {
     draw() {
         const screen = worldToScreen(this.x, this.y);
 
-        // Viewport cull — skip off-screen texts entirely
+        // Viewport cull
         if (typeof CANVAS !== 'undefined') {
-            const pad = this.size * 2;
+            const pad = this.size * 3;
             if (screen.x < -pad || screen.x > CANVAS.width + pad ||
                 screen.y < -pad || screen.y > CANVAS.height + pad) return;
         }
 
-        const alpha = Math.min(1, this.life);
+        const cat = this._category();
+        // Full opacity for first second, fade over last 0.5 s
+        const alpha = this.life > 0.5 ? 1.0 : this.life / 0.5;
 
+        CTX.save();
         CTX.globalAlpha = alpha;
-        CTX.fillStyle = this.color;
-        CTX.font = this._font || (this._font = `bold ${this.size}px Orbitron, monospace`);
-        CTX.strokeStyle = 'black';
-        CTX.lineWidth = 3;
         CTX.textAlign = 'center';
-        CTX.strokeText(this.text, screen.x, screen.y);
-        CTX.fillText(this.text, screen.x, screen.y);
-        CTX.globalAlpha = 1;
+        CTX.textBaseline = 'middle';
+
+        switch (cat) {
+            case 'CRIT': this._drawCrit(screen); break;
+            case 'DAMAGE': this._drawDamage(screen); break;
+            case 'HEAL': this._drawHeal(screen); break;
+            case 'IMPACT': this._drawImpact(screen); break;
+            case 'STATUS': this._drawStatus(screen); break;
+            default: this._drawDefault(screen); break;
+        }
+
+        CTX.restore();
+    }
+
+    // ── CRIT ── gold shimmer gradient, sparkle ring ────────────────────────────
+    _drawCrit(sc) {
+        const sz = this.size * 1.15 * this._scale;
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+
+        CTX.shadowBlur = 28;
+        CTX.shadowColor = '#f59e0b';
+        CTX.font = `900 ${sz}px 'Bebas Neue', 'Orbitron', monospace`;
+
+        // Thick black stroke for readability
+        CTX.lineWidth = sz * 0.12;
+        CTX.strokeStyle = 'rgba(0,0,0,0.95)';
+        CTX.strokeText(this.text, 0, 0);
+
+        // Gold gradient fill
+        const grd = CTX.createLinearGradient(0, -sz * 0.5, 0, sz * 0.5);
+        grd.addColorStop(0, '#fff7cc');
+        grd.addColorStop(0.4, '#facc15');
+        grd.addColorStop(1, '#f59e0b');
+        CTX.fillStyle = grd;
+        CTX.fillText(this.text, 0, 0);
+
+        // Sparkle ring
+        CTX.shadowBlur = 0;
+        CTX.globalAlpha *= 0.5;
+        CTX.strokeStyle = '#facc15';
+        CTX.lineWidth = 1.2;
+        CTX.beginPath();
+        CTX.arc(0, 0, sz * 0.72, 0, Math.PI * 2);
+        CTX.stroke();
+
+        CTX.restore();
+    }
+
+    // ── DAMAGE ── large punch pop, thick stroke ────────────────────────────────
+    _drawDamage(sc) {
+        const sz = this.size * 1.1 * this._scale;
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+
+        CTX.shadowBlur = 14;
+        CTX.shadowColor = this.color;
+        CTX.font = `900 ${sz}px 'Bebas Neue', 'Orbitron', monospace`;
+
+        // Thick black outline — readable on any background
+        CTX.lineWidth = sz * 0.14;
+        CTX.strokeStyle = 'rgba(0,0,0,0.95)';
+        CTX.strokeText(this.text, 0, 0);
+
+        CTX.fillStyle = this.color;
+        CTX.fillText(this.text, 0, 0);
+
+        // Thin white highlight offset
+        CTX.shadowBlur = 0;
+        CTX.lineWidth = 1;
+        CTX.strokeStyle = 'rgba(255,255,255,0.30)';
+        CTX.strokeText(this.text, 0.5, -0.5);
+
+        CTX.restore();
+    }
+
+    // ── HEAL ── green parallelogram chip ──────────────────────────────────────
+    _drawHeal(sc) {
+        const sz = this.size * this._scale;
+        const font = `bold ${sz}px 'Rajdhani', 'Orbitron', monospace`;
+        CTX.font = font;
+        const tw = CTX.measureText(this.text).width;
+        const ph = sz * 0.42;
+        const pw = sz * 0.50;
+        const bw = tw + pw * 2;
+        const bh = sz + ph * 2;
+        const sl = 6;
+
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+
+        // Parallelogram background
+        CTX.beginPath();
+        CTX.moveTo(-bw / 2 + sl, -bh / 2);
+        CTX.lineTo(bw / 2, -bh / 2);
+        CTX.lineTo(bw / 2 - sl, bh / 2);
+        CTX.lineTo(-bw / 2, bh / 2);
+        CTX.closePath();
+        CTX.fillStyle = 'rgba(6,30,20,0.82)';
+        CTX.fill();
+        CTX.strokeStyle = 'rgba(16,185,129,0.75)';
+        CTX.lineWidth = 1.5;
+        CTX.stroke();
+
+        CTX.shadowBlur = 10;
+        CTX.shadowColor = '#10b981';
+        CTX.font = font;
+        CTX.fillStyle = '#6ee7b7';
+        CTX.fillText(this.text, 0, 0);
+
+        CTX.restore();
+    }
+
+    // ── IMPACT ── full chip, bracket corners, strong glow ─────────────────────
+    _drawImpact(sc) {
+        const sz = this.size * this._scale;
+        const font = `900 ${sz}px 'Bebas Neue', 'Orbitron', monospace`;
+        CTX.font = font;
+        const tw = CTX.measureText(this.text).width;
+        const ph = sz * 0.38;
+        const pw = sz * 0.50;
+        const bw = tw + pw * 2;
+        const bh = sz + ph * 2;
+        const sl = 10;
+        const col = this.color;
+
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+
+        // Halo behind chip
+        CTX.shadowBlur = 32;
+        CTX.shadowColor = col;
+
+        // Parallelogram chip
+        CTX.beginPath();
+        CTX.moveTo(-bw / 2 + sl, -bh / 2);
+        CTX.lineTo(bw / 2, -bh / 2);
+        CTX.lineTo(bw / 2 - sl, bh / 2);
+        CTX.lineTo(-bw / 2, bh / 2);
+        CTX.closePath();
+        CTX.fillStyle = 'rgba(8,4,18,0.88)';
+        CTX.fill();
+        CTX.strokeStyle = col;
+        CTX.lineWidth = 2;
+        CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // Military bracket accents TL + BR
+        const bkSz = 8;
+        CTX.strokeStyle = col;
+        CTX.lineWidth = 2;
+        CTX.beginPath();
+        CTX.moveTo(-bw / 2 + sl + bkSz, -bh / 2 + 2);
+        CTX.lineTo(-bw / 2 + sl + 2, -bh / 2 + 2);
+        CTX.lineTo(-bw / 2 + sl + 2, -bh / 2 + 2 + bkSz);
+        CTX.moveTo(bw / 2 - sl - bkSz, bh / 2 - 2);
+        CTX.lineTo(bw / 2 - sl - 2, bh / 2 - 2);
+        CTX.lineTo(bw / 2 - sl - 2, bh / 2 - 2 - bkSz);
+        CTX.stroke();
+
+        // Text — stroke + fill + color tint
+        CTX.shadowBlur = 16;
+        CTX.shadowColor = col;
+        CTX.lineWidth = sz * 0.10;
+        CTX.strokeStyle = 'rgba(0,0,0,0.9)';
+        CTX.strokeText(this.text, 0, 0);
+        CTX.fillStyle = '#ffffff';
+        CTX.fillText(this.text, 0, 0);
+        CTX.globalAlpha *= 0.55;
+        CTX.fillStyle = col;
+        CTX.fillText(this.text, 0, 0);
+
+        CTX.restore();
+    }
+
+    // ── STATUS ── small parallelogram chip, ALL-CAPS label ────────────────────
+    _drawStatus(sc) {
+        const sz = this.size * this._scale;
+        const font = `700 ${sz}px 'Rajdhani', 'Orbitron', monospace`;
+        CTX.font = font;
+        const tw = CTX.measureText(this.text).width;
+        const ph = sz * 0.32;
+        const pw = sz * 0.45;
+        const bw = tw + pw * 2;
+        const bh = sz + ph * 2;
+        const sl = 7;
+        const col = this.color;
+
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+
+        CTX.shadowBlur = 16;
+        CTX.shadowColor = col;
+
+        CTX.beginPath();
+        CTX.moveTo(-bw / 2 + sl, -bh / 2);
+        CTX.lineTo(bw / 2, -bh / 2);
+        CTX.lineTo(bw / 2 - sl, bh / 2);
+        CTX.lineTo(-bw / 2, bh / 2);
+        CTX.closePath();
+        CTX.fillStyle = 'rgba(8,4,18,0.80)';
+        CTX.fill();
+        CTX.strokeStyle = col;
+        CTX.lineWidth = 1.5;
+        CTX.stroke();
+
+        CTX.shadowBlur = 10;
+        CTX.fillStyle = '#ffffff';
+        CTX.fillText(this.text, 0, 0);
+        CTX.globalAlpha *= 0.50;
+        CTX.fillStyle = col;
+        CTX.fillText(this.text, 0, 0);
+
+        CTX.restore();
+    }
+
+    // ── DEFAULT ── stroke + color shadow, no chip ──────────────────────────────
+    _drawDefault(sc) {
+        const sz = this.size * this._scale;
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+
+        CTX.font = this._font || (this._font =
+            `bold ${this.size}px 'Rajdhani', 'Orbitron', monospace`);
+        CTX.shadowBlur = 12;
+        CTX.shadowColor = this.color;
+        CTX.lineWidth = sz * 0.12;
+        CTX.strokeStyle = 'rgba(0,0,0,0.9)';
+        CTX.strokeText(this.text, 0, 0);
+        CTX.fillStyle = this.color;
+        CTX.fillText(this.text, 0, 0);
+
+        CTX.restore();
     }
 }
+
 
 class FloatingTextSystem {
     constructor() {
