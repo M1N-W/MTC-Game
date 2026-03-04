@@ -835,7 +835,7 @@ class EmpPulse {
 }
 
 // ════════════════════════════════════════════════════════════
-// 💠 DOMAIN EXPANSION: METRICS-MAJOR
+// 💠 DOMAIN EXPANSION: METRICS-MANIPULATION
 //    Boss Manop Ultimate — integrated from DomainExpansion.js
 //    Singleton; driven by game.js update/draw hooks.
 // ════════════════════════════════════════════════════════════
@@ -903,18 +903,18 @@ const DomainExpansion = {
         if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
         if (typeof spawnFloatingText === 'function') {
             spawnFloatingText('領域展開', boss.x, boss.y - 130, '#d946ef', 50);
-            setTimeout(() => spawnFloatingText('Metrics-Major', boss.x, boss.y - 185, '#facc15', 34), 700);
+            setTimeout(() => spawnFloatingText('METRICS-MANIPULATION', boss.x, boss.y - 185, '#facc15', 34), 700);
         }
         if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
             window.UIManager.showVoiceBubble('領域展開...', boss.x, boss.y - 50);
-            setTimeout(() => { if (window.UIManager) window.UIManager.showVoiceBubble('Metrics-Major!!', boss.x, boss.y - 50); }, 950);
+            setTimeout(() => { if (window.UIManager) window.UIManager.showVoiceBubble('Metrics!', boss.x, boss.y - 50); }, 950);
         }
         if (typeof spawnParticles === 'function') {
             spawnParticles(boss.x, boss.y, 35, '#d946ef');
             spawnParticles(boss.x, boss.y, 20, '#facc15');
             spawnParticles(boss.x, boss.y, 15, '#ffffff');
         }
-        console.log('[DomainExpansion] 💠 Metrics-Major TRIGGERED');
+        console.log('[DomainExpansion] 💠 METRICS-MANIPULATION TRIGGERED');
     },
 
     update(dt, boss, player) {
@@ -1288,7 +1288,7 @@ const DomainExpansion = {
                 ctx.fillText('領域展開', W / 2, H / 2 - 42);
                 ctx.shadowBlur = 0;
             }
-            // Metrics-Major subtitle
+            // METRICS-MANIPULATION subtitle
             if (elapsed > 1.05) {
                 const tb = Math.min(1.0, (elapsed - 1.05) / 0.55);
                 ctx.globalAlpha = globalA * tb;
@@ -1296,7 +1296,7 @@ const DomainExpansion = {
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.shadowBlur = 28; ctx.shadowColor = '#facc15';
                 ctx.fillStyle = '#fef08a';
-                ctx.fillText('Metrics-Major', W / 2, H / 2 + 28);
+                ctx.fillText('METRICS-MANIPULATION', W / 2, H / 2 + 28);
                 ctx.shadowBlur = 0;
                 // Underline sweep
                 ctx.globalAlpha = globalA * tb * 0.8;
