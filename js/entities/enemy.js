@@ -107,11 +107,23 @@ class Enemy extends Entity {
         const dx = player.x - this.x, dy = player.y - this.y;
         const d = dist(this.x, this.y, player.x, player.y);
         this.angle = Math.atan2(dy, dx);
-        if (d > BALANCE.enemy.chaseRange && !player.isInvisible) {
-            // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
-            this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-            this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
-        } else { this.vx *= 0.9; this.vy *= 0.9; }
+        // ── VacuumHeat AI-lock: skip vx/vy override while being pulled ──
+        if ((this.vacuumStunTimer ?? 0) > 0) {
+            this.vacuumStunTimer -= dt;
+            if ((this._vacuumPullTimer ?? 0) > 0) {
+                this._vacuumPullTimer -= dt;
+                const pvx = (this._vacuumTargetX ?? this.x) - this.x;
+                const pvy = (this._vacuumTargetY ?? this.y) - this.y;
+                const pd = Math.hypot(pvx, pvy);
+                if (pd > 8) { this.vx = (pvx / pd) * 860; this.vy = (pvy / pd) * 860; }
+                else { this.vx *= 0.5; this.vy *= 0.5; }
+            } else { this.vx *= 0.85; this.vy *= 0.85; }
+        } else {
+            if (d > BALANCE.enemy.chaseRange && !player.isInvisible) {
+                this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+                this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+            } else { this.vx *= 0.9; this.vy *= 0.9; }
+        }
         this.applyPhysics(dt);
         this.shootTimer -= dt;
         if (this.shootTimer <= 0 && d < BALANCE.enemy.shootRange && !player.isInvisible) {
@@ -315,11 +327,23 @@ class TankEnemy extends Entity {
         const dx = player.x - this.x, dy = player.y - this.y;
         const d = dist(this.x, this.y, player.x, player.y);
         this.angle = Math.atan2(dy, dx);
-        if (!player.isInvisible) {
-            // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
-            this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-            this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
-        } else { this.vx *= 0.95; this.vy *= 0.95; }
+        // ── VacuumHeat AI-lock ──
+        if ((this.vacuumStunTimer ?? 0) > 0) {
+            this.vacuumStunTimer -= dt;
+            if ((this._vacuumPullTimer ?? 0) > 0) {
+                this._vacuumPullTimer -= dt;
+                const pvx = (this._vacuumTargetX ?? this.x) - this.x;
+                const pvy = (this._vacuumTargetY ?? this.y) - this.y;
+                const pd = Math.hypot(pvx, pvy);
+                if (pd > 8) { this.vx = (pvx / pd) * 560; this.vy = (pvy / pd) * 560; } // tank = slower pull
+                else { this.vx *= 0.5; this.vy *= 0.5; }
+            } else { this.vx *= 0.85; this.vy *= 0.85; }
+        } else {
+            if (!player.isInvisible) {
+                this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+                this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+            } else { this.vx *= 0.95; this.vy *= 0.95; }
+        }
         this.applyPhysics(dt);
 
         // ── Melee contact damage ─────────────────────────────
@@ -501,14 +525,27 @@ class MageEnemy extends Entity {
 
         const d = dist(this.x, this.y, player.x, player.y), od = BALANCE.mage.orbitDistance;
         this.angle = Math.atan2(player.y - this.y, player.x - this.x);
-        // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
-        if (d < od && !player.isInvisible) {
-            this.vx = -Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-            this.vy = -Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
-        } else if (d > od + BALANCE.mage.orbitDistanceBuffer) {
-            this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-            this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
-        } else { this.vx *= 0.95; this.vy *= 0.95; }
+        // ── VacuumHeat AI-lock ──
+        if ((this.vacuumStunTimer ?? 0) > 0) {
+            this.vacuumStunTimer -= dt;
+            if ((this._vacuumPullTimer ?? 0) > 0) {
+                this._vacuumPullTimer -= dt;
+                const pvx = (this._vacuumTargetX ?? this.x) - this.x;
+                const pvy = (this._vacuumTargetY ?? this.y) - this.y;
+                const pd = Math.hypot(pvx, pvy);
+                if (pd > 8) { this.vx = (pvx / pd) * 860; this.vy = (pvy / pd) * 860; }
+                else { this.vx *= 0.5; this.vy *= 0.5; }
+            } else { this.vx *= 0.85; this.vy *= 0.85; }
+        } else {
+            // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
+            if (d < od && !player.isInvisible) {
+                this.vx = -Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+                this.vy = -Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+            } else if (d > od + BALANCE.mage.orbitDistanceBuffer) {
+                this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
+                this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+            } else { this.vx *= 0.95; this.vy *= 0.95; }
+        }
         this.applyPhysics(dt);
         if (this.soundWaveCD > 0) this.soundWaveCD -= dt;
         if (this.meteorCD > 0) this.meteorCD -= dt;

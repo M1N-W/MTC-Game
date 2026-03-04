@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.8.12'; // v3.8.12 Major visual overhaul: Enhanced weapon rendering with advanced effects, upgraded summons with detailed animations
+const CACHE_NAME = 'mtc-cache-v3.9.0'; // v3.9.0 Revolutionary Wanchai Stand autonomous system + Enhanced Vacuum Heat mechanics
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

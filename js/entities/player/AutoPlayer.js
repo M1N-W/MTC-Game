@@ -1,3 +1,278 @@
+// ════════════════════════════════════════════════════════════
+// 👊 WANCHAI STAND — Autonomous Stand Entity
+//    - Spawned on _activateWanchai(), removed when wanchaiTimer <= 0
+//    - Chases nearest enemy independently from the player
+//    - Punches automatically (no L-Click required)
+//    - Drawn via PlayerRenderer._drawAuto (wanchaiStand overlay)
+// ════════════════════════════════════════════════════════════
+class WanchaiStand {
+    constructor(owner) {
+        this.owner = owner;
+        this.x = owner.x + Math.cos(owner.angle) * 40;
+        this.y = owner.y + Math.sin(owner.angle) * 40;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = 22;
+        this.active = true;
+
+        // Combat timers
+        this._atkTimer = 0;         // countdown to next punch
+        this._atkRate = 0;         // set from BALANCE each frame
+        this._punchPhase = 0;         // 0=idle 1=wind-up 2=strike (visual only)
+        this._phaseTimer = 0;
+        this.lastPunchSoundTime = 0;
+
+        // Rendering
+        this.angle = owner.angle;  // faces toward target
+        this.ghostTrail = [];          // [{x,y,alpha}] motion blur
+    }
+
+    update(dt) {
+        if (!this.active) return;
+        const owner = this.owner;
+        if (!owner || !owner.wanchaiActive) { this.active = false; return; }
+
+        const S = owner.stats ?? {};
+        this._atkRate = S.wanchaiPunchRate ?? 0.08;
+        const atkRange = S.standPunchRange ?? 110;  // hitbox reach
+        const chaseSpeed = S.standMoveSpeed ?? 340;  // px/s
+        const leashRadius = S.standLeashRadius ?? 420;  // max dist from owner
+
+        // ── Find nearest target (prefers forced cursor target) ──
+        let target = null;
+        let nearestDist = atkRange * 2.5; // chase range = 2.5× attack range
+
+        // L-Click player input: prioritise enemy nearest to cursor
+        const fx = this._forcedTargetX;
+        const fy = this._forcedTargetY;
+        if (fx !== undefined && fy !== undefined) {
+            // Find closest enemy to cursor position
+            let bestD = atkRange * 4;
+            for (const e of (window.enemies || [])) {
+                if (e.dead) continue;
+                const d = Math.hypot(e.x - fx, e.y - fy);
+                if (d < bestD) { bestD = d; target = e; }
+            }
+            if (!target && window.boss && !window.boss.dead) {
+                const d = Math.hypot(window.boss.x - fx, window.boss.y - fy);
+                if (d < bestD) target = window.boss;
+            }
+            // Clear after use (only applies this frame)
+            this._forcedTargetX = undefined;
+            this._forcedTargetY = undefined;
+        }
+        // Fallback: nearest enemy to stand
+        if (!target) {
+            for (const e of (window.enemies || [])) {
+                if (e.dead) continue;
+                const d = Math.hypot(e.x - this.x, e.y - this.y);
+                if (d < nearestDist) { nearestDist = d; target = e; }
+            }
+            if (!target && window.boss && !window.boss.dead) {
+                const d = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+                if (d < nearestDist) target = window.boss;
+            }
+        }
+
+        // ── Movement — chase target, leash to owner ─────────
+        if (target) {
+            this.angle = Math.atan2(target.y - this.y, target.x - this.x);
+            const d = Math.hypot(target.x - this.x, target.y - this.y);
+            const step = chaseSpeed * dt;
+            if (d > this.radius + (target.radius ?? 14)) {
+                this.x += (target.x - this.x) / d * step;
+                this.y += (target.y - this.y) / d * step;
+            }
+        } else {
+            // Float near owner when no target
+            const ox = owner.x + Math.cos(owner.angle) * 60;
+            const oy = owner.y + Math.sin(owner.angle) * 60;
+            const d = Math.hypot(ox - this.x, oy - this.y);
+            if (d > 12) {
+                const step = chaseSpeed * 0.5 * dt;
+                this.x += (ox - this.x) / d * step;
+                this.y += (oy - this.y) / d * step;
+            }
+        }
+
+        // Leash — don't stray too far from owner
+        const ownerDist = Math.hypot(this.x - owner.x, this.y - owner.y);
+        if (ownerDist > leashRadius) {
+            const la = Math.atan2(this.y - owner.y, this.x - owner.x);
+            this.x = owner.x + Math.cos(la) * leashRadius;
+            this.y = owner.y + Math.sin(la) * leashRadius;
+        }
+
+        // ── Ghost trail ──────────────────────────────────────
+        if (this.ghostTrail.length === 0 || Math.hypot(this.x - this.ghostTrail[0]?.x, this.y - this.ghostTrail[0]?.y) > 8) {
+            this.ghostTrail.unshift({ x: this.x, y: this.y, alpha: 0.45 });
+            if (this.ghostTrail.length > 6) this.ghostTrail.length = 6;
+        }
+        for (const g of this.ghostTrail) g.alpha = Math.max(0, g.alpha - dt * 1.8);
+
+        // ── Attack logic (auto-fires regardless of L-Click) ──
+        this._atkTimer -= dt;
+        this._phaseTimer = Math.max(0, this._phaseTimer - dt);
+
+        if (this._atkTimer <= 0 && target) {
+            const distToTarget = Math.hypot(target.x - this.x, target.y - this.y);
+            if (distToTarget < atkRange + (target.radius ?? 14)) {
+                this._atkTimer = this._atkRate;
+                this._punch(target, owner);
+            } else {
+                // Still advance timer so we punch the instant we arrive
+                this._atkTimer = Math.min(this._atkTimer, 0);
+            }
+        } else if (this._atkTimer <= 0) {
+            this._atkTimer = this._atkRate * 0.5; // idle tick
+        }
+    }
+
+    _punch(target, owner) {
+        const S = owner.stats ?? {};
+        let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0);
+
+        // Second Wind bonus
+        if (owner.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
+
+        // Crit
+        let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.40);
+        if (owner.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
+        const isCrit = Math.random() < critChance;
+        if (isCrit) {
+            dmg *= (S.critMultiplier ?? 2.0);
+            if (owner.passiveUnlocked) owner.goldenAuraTimer = 1;
+            if (typeof Achievements !== 'undefined') {
+                Achievements.stats.crits = (Achievements.stats.crits ?? 0) + 1;
+                Achievements.check?.('crit_master');
+            }
+        }
+
+        target.takeDamage(dmg, owner);
+
+        // Lifesteal
+        if (owner.passiveUnlocked) {
+            owner.hp = Math.min(owner.maxHp, owner.hp + dmg * (S.passiveLifesteal ?? 0.02));
+        }
+
+        // Knockback — push enemy away from stand
+        const ka = Math.atan2(target.y - this.y, target.x - this.x);
+        const kf = S.standKnockback ?? 180;
+        target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
+        target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
+
+        // VFX
+        if (typeof spawnParticles === 'function')
+            spawnParticles(target.x, target.y, isCrit ? 5 : 3, isCrit ? '#facc15' : '#ef4444');
+        if (typeof addScreenShake === 'function') addScreenShake(isCrit ? 5 : 2);
+        if (isCrit && typeof spawnFloatingText === 'function')
+            spawnFloatingText('วันชัย!', this.x, this.y - 30, '#facc15', 18);
+
+        // Punch animation phase
+        this._punchPhase = 2;
+        this._phaseTimer = 0.12;
+
+        // Sound
+        const now = Date.now();
+        if (now - this.lastPunchSoundTime > 60) {
+            if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
+            this.lastPunchSoundTime = now;
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active || typeof ctx === 'undefined') return;
+        const now = performance.now();
+        const screen = worldToScreen(this.x, this.y);
+
+        // Ghost trail
+        for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
+            const g = this.ghostTrail[i];
+            const gs = worldToScreen(g.x, g.y);
+            ctx.save();
+            ctx.globalAlpha = g.alpha * 0.6;
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.arc(gs.x, gs.y, 18 - i * 2, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+        }
+
+        ctx.save();
+        ctx.translate(screen.x, screen.y);
+
+        // Outer aura ring — pulses faster during punch
+        const pulseMult = (this._phaseTimer > 0) ? 2.5 : 1;
+        const auraAlpha = 0.3 + Math.sin(now / 100 * pulseMult) * 0.2;
+        ctx.globalAlpha = auraAlpha;
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3;
+        ctx.shadowBlur = 22; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.arc(0, 0, 30 + Math.sin(now / 120) * 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Body — translucent crimson ghost humanoid silhouette
+        ctx.save();
+        ctx.rotate(this.angle);
+        // Torso
+        ctx.globalAlpha = 0.70;
+        const bodyG = ctx.createRadialGradient(-4, -3, 0, 0, 0, 20);
+        bodyG.addColorStop(0, 'rgba(248,113,113,0.85)');
+        bodyG.addColorStop(0.5, 'rgba(220,38,38,0.70)');
+        bodyG.addColorStop(1, 'rgba(127,29,29,0.20)');
+        ctx.fillStyle = bodyG;
+        ctx.shadowBlur = 18; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.arc(0, 0, 19, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Fist (right — extends forward along angle)
+        const fistX = (this._phaseTimer > 0) ? 32 : 24;   // lunges forward on punch
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = this._phaseTimer > 0 ? '#facc15' : '#fb7185';
+        ctx.shadowBlur = this._phaseTimer > 0 ? 20 : 8; ctx.shadowColor = '#f97316';
+        ctx.beginPath(); ctx.ellipse(fistX, 3, 11, 8, 0, 0, Math.PI * 2); ctx.fill();
+        // Knuckle lines
+        ctx.strokeStyle = '#9f1239'; ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            ctx.moveTo(fistX + 4, -3 + k * 4);
+            ctx.lineTo(fistX + 10, -3 + k * 4);
+            ctx.stroke();
+        }
+        // Impact flash on punch
+        if (this._phaseTimer > 0) {
+            ctx.globalAlpha = this._phaseTimer / 0.12 * 0.6;
+            ctx.fillStyle = '#fef08a';
+            ctx.shadowBlur = 24; ctx.shadowColor = '#facc15';
+            ctx.beginPath(); ctx.arc(fistX + 12, 3, 9, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+
+        // Energy eyes (facing stand's angle, fixed at head position)
+        ctx.save();
+        ctx.rotate(this.angle);
+        const eyeGlow = 0.7 + Math.sin(now / 120) * 0.3;
+        ctx.globalAlpha = eyeGlow;
+        ctx.fillStyle = '#fbbf24'; ctx.shadowBlur = 12; ctx.shadowColor = '#f59e0b';
+        ctx.beginPath(); ctx.ellipse(6, -6, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(6, 4, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.ellipse(7, -6, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(7, 4, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // Name tag
+        ctx.globalAlpha = 0.55 + Math.sin(now / 200) * 0.15;
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('วันชัย', 0, -28);
+        ctx.globalAlpha = 1;
+
+        ctx.restore();
+    }
+}
+
 'use strict';
 
 // ════════════════════════════════════════════════════════════
@@ -23,6 +298,9 @@ class AutoPlayer extends Player {
         this.lastPunchSoundTime = 0;
 
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0, vacuum: 0, detonation: 0 };
+
+        // ── Wanchai Stand entity (created on activation) ──────
+        this.wanchaiStand = null;
     }
 
     takeDamage(amt) {
@@ -74,6 +352,9 @@ class AutoPlayer extends Player {
         this.cooldowns.wanchai = cd;
         this._punchTimer = 0;
 
+        // ── Spawn WanchaiStand autonomous entity ─────────────
+        this.wanchaiStand = new WanchaiStand(this);
+
         if (typeof spawnFloatingText === 'function') {
             spawnFloatingText('STAND: WANCHAI!', this.x, this.y - 90, '#dc2626', 34);
         }
@@ -93,8 +374,12 @@ class AutoPlayer extends Player {
             if (this.wanchaiTimer <= 0) {
                 this.wanchaiActive = false;
                 this.wanchaiTimer = 0;
+                if (this.wanchaiStand) { this.wanchaiStand.active = false; this.wanchaiStand = null; }
             }
         }
+
+        // ── Tick WanchaiStand each frame ──────────────────────
+        if (this.wanchaiStand?.active) this.wanchaiStand.update(dt);
 
         if (checkInput('rightClick')) {
             const energyCost = this.stats?.wanchaiEnergyCost ?? 35;
@@ -123,35 +408,46 @@ class AutoPlayer extends Player {
         if (mouse?.middle !== undefined) { /* placeholder */ }
         if (checkInput('q') && (this.cooldowns?.vacuum ?? 0) <= 0) {
             const VACUUM_RANGE = this.stats?.vacuumRange ?? 320;
-            const VACUUM_FORCE = this.stats?.vacuumForce ?? 900;
+            const VACUUM_FORCE = this.stats?.vacuumForce ?? 1400; // stronger impulse
+            const STUN_DUR = this.stats?.vacuumStunDur ?? 0.55; // AI lock duration
+            const PULL_DUR = this.stats?.vacuumPullDur ?? 0.45; // continuous pull
+            const BURST_DMG = (this.stats?.wanchaiDamage ?? 32) * 2 * (this.damageMultiplier || 1.0);
+
             let pulled = 0;
             for (const enemy of (window.enemies || [])) {
                 if (enemy.dead) continue;
                 const dx = this.x - enemy.x;
                 const dy = this.y - enemy.y;
-                const dist = Math.hypot(dx, dy);
-                if (dist < VACUUM_RANGE && dist > 1) {
-                    // ผลักเวกเตอร์เข้าหาผู้เล่น — ใช้ vx/vy ที่ enemy มีอยู่แล้ว
-                    enemy.vx = (dx / dist) * VACUUM_FORCE;
-                    enemy.vy = (dy / dist) * VACUUM_FORCE;
+                const d = Math.hypot(dx, dy);
+                if (d < VACUUM_RANGE && d > 1) {
+                    // ── Impulse + AI-stun so enemy.update() cannot override vx/vy ──
+                    enemy.vx = (dx / d) * VACUUM_FORCE;
+                    enemy.vy = (dy / d) * VACUUM_FORCE;
+                    // vacuumStunTimer: enemy.js checks this and skips vx/vy override
+                    enemy.vacuumStunTimer = STUN_DUR;
+                    // Continuous pull target — enemy.js lerps toward this position
+                    enemy._vacuumTargetX = this.x;
+                    enemy._vacuumTargetY = this.y;
+                    enemy._vacuumPullTimer = PULL_DUR;
                     pulled++;
                 }
             }
-            // Boss ก็โดนดึงด้วย (แต่แรงน้อยลง 30%)
+            // Boss — weak pull (30%)
             if (window.boss && !window.boss.dead) {
                 const dx = this.x - window.boss.x;
                 const dy = this.y - window.boss.y;
-                const dist = Math.hypot(dx, dy);
-                if (dist < VACUUM_RANGE && dist > 1) {
-                    window.boss.vx = (dx / dist) * VACUUM_FORCE * 0.3;
-                    window.boss.vy = (dy / dist) * VACUUM_FORCE * 0.3;
+                const d = Math.hypot(dx, dy);
+                if (d < VACUUM_RANGE && d > 1) {
+                    window.boss.vx = (dx / d) * VACUUM_FORCE * 0.30;
+                    window.boss.vy = (dy / d) * VACUUM_FORCE * 0.30;
+                    window.boss.vacuumStunTimer = STUN_DUR * 0.4;
                 }
             }
             this.cooldowns.vacuum = this.stats?.vacuumCooldown ?? 8;
             if (pulled > 0 || (window.boss && !window.boss.dead)) {
-                spawnParticles(this.x, this.y, 30, '#f97316');
-                addScreenShake(4);
-                spawnFloatingText('🔥 VACUUM HEAT!', this.x, this.y - 60, '#f97316', 22);
+                spawnParticles(this.x, this.y, 40, '#f97316');
+                addScreenShake(6);
+                spawnFloatingText(`🔥 VACUUM HEAT ×${pulled}`, this.x, this.y - 60, '#f97316', 24);
                 if (typeof Audio !== 'undefined' && Audio.playVacuum) Audio.playVacuum();
             }
             keys.q = 0;
@@ -196,9 +492,10 @@ class AutoPlayer extends Player {
                 this.hp = Math.min(this.maxHp, this.hp + totalDet * (this.stats?.passiveLifesteal ?? 0.01));
             }
 
-            // ── บังคับปิด Wanchai ──
+            // ── บังคับปิด Wanchai + Stand ──
             this.wanchaiActive = false;
             this.wanchaiTimer = 0;
+            if (this.wanchaiStand) { this.wanchaiStand.active = false; this.wanchaiStand = null; }
             this.cooldowns.detonation = this.stats?.detonationCooldown ?? 5; // short CD เพราะต้องเปิด Wanchai ก่อน
 
             spawnParticles(this.x, this.y, 60, '#dc2626');
@@ -219,111 +516,24 @@ class AutoPlayer extends Player {
 
         if (!mouse || mouse.left !== 1) return; if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
-        // ── NEW: Stand Rush Hitbox Logic ─────────────────────────
+        // ── Stand active: L-Click moves stand toward cursor (target assist) ──
+        // WanchaiStand.update() handles autonomous punching.
+        // Holding L-Click forces the stand to rush the cursor position.
         if (this.wanchaiActive) {
-            this.isStandAttacking = true;
-            this.standAttackTimer += dt;
-
-            const punchRate = this.stats?.wanchaiPunchRate ?? 0.06;
-            this._punchTimer -= dt;
-
-            if (this._punchTimer <= 0) {
-                this._punchTimer = punchRate;
-
-                const rushRange = 130;
-                const coneHalfAngle = 0.6; // Roughly 34 degrees either side
-
-                // Calculate base damage
-                let baseDmg = (this.stats?.wanchaiDamage ?? 12) * (this.damageMultiplier || 1.0);
-
-                // ── Second Wind Damage Multiplier (Stand Rush bypasses dealDamage) ──
-                if (this.isSecondWind) {
-                    baseDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
+            this.isStandAttacking = !!(this.wanchaiStand?.active);
+            if (this.wanchaiStand?.active && mouse) {
+                // Direct stand toward mouse cursor (override autonomous target)
+                this.wanchaiStand._forcedTargetX = mouse.wx;
+                this.wanchaiStand._forcedTargetY = mouse.wy;
+            }
+            // Still fire heatwave while Wanchai is active (bonus DPS)
+            const heatCd = this.stats?.heatWaveCooldown ?? 0.28;
+            if ((this.cooldowns?.shoot ?? 0) <= 0) {
+                this.cooldowns.shoot = heatCd;
+                if (typeof projectileManager?.spawnHeatWave === 'function') {
+                    projectileManager.spawnHeatWave(this, this.angle);
                 }
-
-                // Apply Awakening Crit Buff directly to flurry punches
-                let critChance = this.baseCritChance;
-                if (this.passiveUnlocked) critChance += (this.stats?.passiveCritBonus ?? 0);
-                critChance += (this.stats?.standCritBonus ?? 0.50); // Add the Stand Crit Buff
-
-                let isCrit = false;
-                let finalDmg = baseDmg;
-                if (Math.random() < critChance) {
-                    finalDmg *= (this.stats?.critMultiplier ?? 2.0);
-                    isCrit = true;
-                    if (this.passiveUnlocked) this.goldenAuraTimer = 1;
-                    if (typeof Achievements !== 'undefined' && Achievements.stats) {
-                        Achievements.stats.crits++;
-                        if (Achievements.check) Achievements.check('crit_master');
-                    }
-                }
-
-                let totalDamageDealt = 0;
-
-                // Damage standard enemies in cone
-                for (const enemy of (window.enemies || [])) {
-                    if (enemy.dead) continue;
-                    const dx = enemy.x - this.x;
-                    const dy = enemy.y - this.y;
-                    const dist = Math.hypot(dx, dy);
-
-                    if (dist < rushRange) {
-                        let angleToEnemy = Math.atan2(dy, dx);
-                        let angleDiff = Math.abs(angleToEnemy - this.angle);
-                        if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
-
-                        if (angleDiff < coneHalfAngle) {
-                            const enemyHitX = enemy.x;
-                            const enemyHitY = enemy.y;
-                            enemy.takeDamage(finalDmg);
-                            totalDamageDealt += finalDmg;
-                            if (typeof spawnParticles === 'function') {
-                                // Flurry turns golden on critical hits
-                                spawnParticles(enemyHitX, enemyHitY, 2, isCrit ? '#facc15' : '#ef4444');
-                            }
-                        }
-                    }
-                }
-
-                // Damage boss in cone
-                if (window.boss && !window.boss.dead) {
-                    const dx = window.boss.x - this.x;
-                    const dy = window.boss.y - this.y;
-                    const dist = Math.hypot(dx, dy);
-
-                    if (dist < rushRange + window.boss.radius) {
-                        let angleToEnemy = Math.atan2(dy, dx);
-                        let angleDiff = Math.abs(angleToEnemy - this.angle);
-                        if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
-
-                        if (angleDiff < coneHalfAngle) {
-                            const bossHitX = window.boss.x;
-                            const bossHitY = window.boss.y;
-                            window.boss.takeDamage(finalDmg);
-                            totalDamageDealt += finalDmg;
-                            if (typeof spawnParticles === 'function') {
-                                spawnParticles(bossHitX, bossHitY, 2, isCrit ? '#facc15' : '#ef4444');
-                            }
-                        }
-                    }
-                }
-
-                // Apply Lifesteal if passive is unlocked and damage was dealt
-                if (this.passiveUnlocked && totalDamageDealt > 0) {
-                    const healAmount = totalDamageDealt * (this.stats?.passiveLifesteal ?? 0.02);
-                    this.hp = Math.min(this.maxHp, this.hp + healAmount);
-                }
-
-                if (typeof addScreenShake === 'function') addScreenShake(3);
-
-                // ── PLAY RAPID PUNCH SOUND ──
-                const nowTime = Date.now();
-                if (nowTime - this.lastPunchSoundTime > 60) {
-                    if (typeof Audio !== 'undefined' && Audio.playStandRush) {
-                        Audio.playStandRush();
-                    }
-                    this.lastPunchSoundTime = nowTime;
-                }
+                if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
             }
             return;
         }

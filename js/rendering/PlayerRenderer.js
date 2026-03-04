@@ -375,15 +375,25 @@ class PlayerRenderer {
             const VACUUM_RANGE_PX = BALANCE?.characters?.auto?.vacuumRange ?? 320;
             const camScale = typeof camera !== 'undefined' ? (camera.scale ?? 1) : 1;
             const vacRingR = VACUUM_RANGE_PX * camScale;
-            const pulse = 0.12 + Math.sin(now / 500) * 0.07;
+            const pulse = 0.14 + Math.sin(now / 420) * 0.09;
             ctx.save();
             ctx.globalAlpha = pulse;
             ctx.strokeStyle = '#f97316';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([6, 8]);
-            ctx.shadowBlur = 8; ctx.shadowColor = '#f97316';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 6]);
+            ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
             ctx.beginPath(); ctx.arc(screen.x, screen.y, vacRingR, 0, Math.PI * 2); ctx.stroke();
             ctx.setLineDash([]);
+            // Inner spiral indicator (ready indicator)
+            ctx.globalAlpha = pulse * 0.6;
+            ctx.strokeStyle = '#fb923c'; ctx.lineWidth = 1;
+            ctx.shadowBlur = 6;
+            ctx.beginPath(); ctx.arc(screen.x, screen.y, vacRingR * 0.5, 0, Math.PI * 2); ctx.stroke();
+            // Q label
+            ctx.globalAlpha = 0.55 + Math.sin(now / 300) * 0.2;
+            ctx.fillStyle = '#f97316'; ctx.shadowBlur = 8; ctx.shadowColor = '#fb923c';
+            ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('[Q] VACUUM', screen.x, screen.y - vacRingR - 10);
             ctx.restore();
         }
 
@@ -483,6 +493,11 @@ class PlayerRenderer {
                 ctx.fillText('วันชัย วันชัย วันชัย!', jitterX, jitterY);
                 ctx.restore();
             }
+        }
+
+        // ── Draw WanchaiStand entity if active ─────────────────
+        if (entity.wanchaiStand?.active) {
+            entity.wanchaiStand.draw(ctx);
         }
 
         // Breathing squash/stretch

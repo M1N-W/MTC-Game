@@ -111,8 +111,14 @@ const BALANCE = {
             standCritBonus: 0.40,
             // ── New Active Skills ──────────────────────────────────────────
             vacuumRange: 320,       // รัศมีดูดศัตรู (px)
-            vacuumForce: 900,       // ความเร็วกระชาก
+            vacuumForce: 1400,      // ความเร็วกระชาก (เพิ่มจาก 900)
             vacuumCooldown: 8,      // cooldown (วินาที)
+            vacuumStunDur: 0.55,    // วินาทีที่ AI ถูกล็อค
+            vacuumPullDur: 0.45,    // วินาทีดึงต่อเนื่อง
+            standMoveSpeed: 340,    // ความเร็ว WanchaiStand
+            standPunchRange: 110,   // ระยะชก
+            standLeashRadius: 420,  // ระยะห่างสูงสุดจากผู้เล่น
+            standKnockback: 180,    // แรงดีดศัตรูหลังชก
             detonationRange: 220,   // รัศมี AOE ระเบิด (px)
             detonationCooldown: 5,  // CD สั้น เพราะต้องเปิด Wanchai ก่อนถึงใช้ได้
             baseCritChance: 0.06,
