@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.9.6'; // v3.9.6 Wanchai Stand humanoid redesign: Detailed anatomy with dual-fist combat system
+const CACHE_NAME = 'mtc-cache-v3.9.7'; // v3.9.7 Wanchai Stand ethereal wraith: Violet supernatural transformation with soul effects
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
