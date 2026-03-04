@@ -846,13 +846,21 @@ const _DC = Object.freeze({
     CAST_DUR: 2.8,
     END_DUR: 1.2,
     WARN_DUR: 2.2,
-    EXPLODE_DUR: 0.5,
+    WARN_DUR_MIN: 1.1,
+    WARN_DUR_DECAY: 0.18,
+    EXPLODE_DUR: 0.45,
     TOTAL_CYCLES: 6,
     DANGER_PCT: 0.62,
+    DANGER_PCT_MAX: 0.84,
+    DANGER_PCT_STEP: 0.04,
     CELL_DAMAGE: 28,
+    CELL_SLOW_DUR: 1.8,
+    CELL_SLOW_FACTOR: 0.45,
     COOLDOWN: 45.0,
     HIT_RADIUS: 0.58,
-    RAIN_COLS: 26,
+    RAIN_COLS: 32,
+    BOSS_VOLLEY_CYCLE: 3,
+    BOSS_VOLLEY_COUNT: 8,
 });
 
 const _RAIN_POOL = '0123456789ABCDEFΑΒΓΔΩΣΨXYZμσπ∑∫∂∇+-×÷=≠≤≥ΦΘΛ';
@@ -871,6 +879,8 @@ const DomainExpansion = {
     originX: 0, originY: 0,
     cells: [], cooldownTimer: 0,
     _rain: [], _indices: [],
+    _flashTimer: 0,     // full-screen purple flash on explosion hit
+    _crackLines: [],    // screen crack visual during casting
 
     canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
     isInvincible() { return this.phase !== 'idle'; },
@@ -906,6 +916,18 @@ const DomainExpansion = {
 
     update(dt, boss, player) {
         if (this.phase === 'idle') { if (this.cooldownTimer > 0) this.cooldownTimer -= dt; return; }
+        // Tick flash timer
+        if (this._flashTimer > 0) this._flashTimer -= dt;
+        // Tick player slow debuff
+        if (typeof window !== 'undefined' && window.player && window.player._domainSlowActive) {
+            window.player._domainSlowTimer -= dt;
+            if (window.player._domainSlowTimer <= 0) {
+                window.player._domainSlowActive = false;
+                window.player.moveSpeed = window.player._domainSlowBase || window.player.moveSpeed;
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('SPEED RESTORED', window.player.x, window.player.y - 60, '#22c55e', 16);
+            }
+        }
         if (!boss || boss.dead) { this._abort(boss); return; }
         this.timer -= dt;
 
@@ -938,8 +960,18 @@ const DomainExpansion = {
                         if (window.UIManager)
                             window.UIManager.showVoiceBubble('...แค่นั้นแหละ.', boss.x, boss.y - 50);
                     } else {
-                        this.cyclePhase = 'warn'; this.cycleTimer = _DC.WARN_DUR;
+                        this.cyclePhase = 'warn';
+                        this.cycleTimer = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
                         this._rollCells();
+                        // Boss volley on cycle 3+
+                        if (this.cycleCount >= _DC.BOSS_VOLLEY_CYCLE && boss && !boss.dead && typeof projectileManager !== 'undefined') {
+                            const n = _DC.BOSS_VOLLEY_COUNT;
+                            for (let _vi = 0; _vi < n; _vi++) {
+                                const _va = (Math.PI * 2 / n) * _vi;
+                                projectileManager.add(new Projectile(boss.x, boss.y, _va, 520, 20, '#d946ef', true, 'enemy'));
+                            }
+                            if (typeof addScreenShake === 'function') addScreenShake(12);
+                        }
                     }
                 }
                 break;
@@ -948,7 +980,8 @@ const DomainExpansion = {
                 if (this.timer <= 0) {
                     this.phase = 'idle'; this.cooldownTimer = _DC.COOLDOWN;
                     boss._domainCasting = false; boss._domainActive = false;
-                    this.cells = [];
+                    if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.timer = 0; }
+                    this.cells = []; this._crackLines = []; this._flashTimer = 0;
                     console.log('[DomainExpansion] Domain ended — cooldown 45 s');
                 }
                 break;
@@ -967,157 +1000,350 @@ const DomainExpansion = {
         globalA = Math.max(0, Math.min(1, globalA));
 
         ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
 
-        // 1. Dark overlay
-        ctx.globalAlpha = globalA * 0.76;
-        ctx.fillStyle = 'rgba(2,0,10,1)';
+        // ── 1. Dark overlay ──────────────────────────────────
+        ctx.globalAlpha = globalA * 0.80;
+        ctx.fillStyle = 'rgba(2,0,14,1)';
         ctx.fillRect(0, 0, W, H);
 
-        // 2. Matrix rain
+        // ── 2. Matrix rain — denser, dual-colour ────────────
         ctx.font = '11px "Courier New",monospace';
         ctx.textBaseline = 'top'; ctx.textAlign = 'left';
         for (const col of this._rain) {
             const cx = col.xNorm * W, charH = 14;
             for (let i = 0; i < col.chars.length; i++) {
-                const rawY = ((now * col.speed * H * 0.18 + col.offsetY + i * charH)) % (H + charH * col.chars.length) - charH * 4;
+                const rawY = ((now * col.speed * H * 0.20 + col.offsetY + i * charH)) % (H + charH * col.chars.length) - charH * 4;
                 const fade = 1.0 - i / col.chars.length;
                 ctx.globalAlpha = globalA * col.alpha * fade;
-                ctx.fillStyle = i === 0 ? '#fff' : '#d97706';
+                if (i === 0) { ctx.fillStyle = '#fff'; ctx.shadowBlur = 8; ctx.shadowColor = '#d946ef'; }
+                else if (i < 3) { ctx.fillStyle = '#d946ef'; ctx.shadowBlur = 4; ctx.shadowColor = '#d946ef'; }
+                else { ctx.fillStyle = '#d97706'; ctx.shadowBlur = 0; }
                 ctx.fillText(col.chars[i], cx, rawY);
             }
         }
+        ctx.shadowBlur = 0;
 
-        // 3. Domain border + cycle counter
+        // ── 3. Domain border — rotating rune ring ────────────
         if (this.phase === 'active' || this.phase === 'ending') {
             const domHalf = (_DC.COLS * _DC.CELL_SIZE) / 2;
             const dtl = worldToScreen(this.originX - domHalf, this.originY - domHalf);
             const dbr = worldToScreen(this.originX + domHalf, this.originY + domHalf);
+            const bW = dbr.x - dtl.x, bH = dbr.y - dtl.y;
+            const bCX = dtl.x + bW / 2, bCY = dtl.y + bH / 2;
             const pulse = 0.55 + Math.sin(now * 5) * 0.45;
+            const dangerPct = Math.min(_DC.DANGER_PCT_MAX, _DC.DANGER_PCT + this.cycleCount * _DC.DANGER_PCT_STEP);
+            // Danger tint — goes redder as danger increases
+            const tintR = Math.floor(180 + (dangerPct - _DC.DANGER_PCT) / (_DC.DANGER_PCT_MAX - _DC.DANGER_PCT) * 75);
+            const borderCol = `rgb(${tintR},0,255)`;
+
+            // Outer glow border
             ctx.globalAlpha = globalA * (0.55 + pulse * 0.45);
-            ctx.shadowBlur = 22; ctx.shadowColor = '#d946ef';
-            ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 3;
-            ctx.strokeRect(dtl.x, dtl.y, dbr.x - dtl.x, dbr.y - dtl.y);
+            ctx.shadowBlur = 28 * pulse; ctx.shadowColor = borderCol;
+            ctx.strokeStyle = borderCol; ctx.lineWidth = 3.5;
+            ctx.strokeRect(dtl.x, dtl.y, bW, bH);
+
+            // Second inner border offset
+            ctx.globalAlpha = globalA * 0.35;
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(217,70,239,0.4)'; ctx.lineWidth = 1.5;
+            ctx.setLineDash([12, 8]);
+            ctx.strokeRect(dtl.x + 6, dtl.y + 6, bW - 12, bH - 12);
+            ctx.setLineDash([]);
+
+            // Corner bracket ornaments
+            ctx.globalAlpha = globalA * 0.9;
+            ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3;
+            ctx.shadowBlur = 12; ctx.shadowColor = '#facc15';
+            const bl = 22; // bracket length
+            const corners = [[dtl.x, dtl.y, 1, 1], [dbr.x, dtl.y, -1, 1], [dtl.x, dbr.y, 1, -1], [dbr.x, dbr.y, -1, -1]];
+            for (const [cx2, cy2, sx, sy] of corners) {
+                ctx.beginPath(); ctx.moveTo(cx2 + sx * bl, cy2); ctx.lineTo(cx2, cy2); ctx.lineTo(cx2, cy2 + sy * bl); ctx.stroke();
+            }
             ctx.shadowBlur = 0;
 
+            // Rotating rune symbols on border edges
+            const runeSymbols = ['Σ', 'Ψ', 'Ω', '∇', 'Φ', '∫', 'Δ', 'Λ'];
+            ctx.font = 'bold 13px serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            for (let ri = 0; ri < runeSymbols.length; ri++) {
+                const rAngle = (ri / runeSymbols.length) * Math.PI * 2 + now * 0.6;
+                const rAlpha = 0.5 + Math.sin(now * 2 + ri) * 0.4;
+                // Place around the border perimeter
+                const rPerimT = (ri / runeSymbols.length + now * 0.05) % 1;
+                let rx, ry;
+                if (rPerimT < 0.25) { rx = dtl.x + (rPerimT / 0.25) * bW; ry = dtl.y - 14; }
+                else if (rPerimT < 0.5) { rx = dbr.x + 14; ry = dtl.y + ((rPerimT - 0.25) / 0.25) * bH; }
+                else if (rPerimT < 0.75) { rx = dbr.x - ((rPerimT - 0.5) / 0.25) * bW; ry = dbr.y + 14; }
+                else { rx = dtl.x - 14; ry = dbr.y - ((rPerimT - 0.75) / 0.25) * bH; }
+                ctx.globalAlpha = globalA * rAlpha;
+                ctx.fillStyle = '#d946ef';
+                ctx.shadowBlur = 8; ctx.shadowColor = '#d946ef';
+                ctx.fillText(runeSymbols[ri], rx, ry);
+            }
+            ctx.shadowBlur = 0;
+
+            // Cycle counter chip
             if (this.phase === 'active') {
-                ctx.globalAlpha = globalA * 0.88;
+                const warnDurCurrent = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
+                const warnProg = this.cyclePhase === 'warn' ? (1.0 - this.cycleTimer / warnDurCurrent) : 1.0;
+                ctx.globalAlpha = globalA * 0.92;
                 ctx.font = 'bold 11px "Orbitron",Arial';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                const chipX = (dtl.x + dbr.x) / 2, chipY = dtl.y - 18;
-                ctx.fillStyle = 'rgba(2,0,10,0.85)';
-                ctx.fillRect(chipX - 48, chipY - 11, 96, 22);
-                ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 1;
-                ctx.strokeRect(chipX - 48, chipY - 11, 96, 22);
+                const chipX = bCX, chipY = dtl.y - 22;
+                ctx.fillStyle = 'rgba(2,0,14,0.9)';
+                ctx.fillRect(chipX - 58, chipY - 12, 116, 24);
+                ctx.strokeStyle = borderCol; ctx.lineWidth = 1.5;
+                ctx.strokeRect(chipX - 58, chipY - 12, 116, 24);
+                // cycle progress bar inside chip
+                ctx.fillStyle = borderCol;
+                ctx.globalAlpha = globalA * 0.5;
+                ctx.fillRect(chipX - 56, chipY - 10, 112 * warnProg, 20);
+                ctx.globalAlpha = globalA * 0.92;
                 ctx.fillStyle = '#f0abfc';
+                ctx.shadowBlur = 6; ctx.shadowColor = '#d946ef';
                 ctx.fillText(`CYCLE ${this.cycleCount + 1} / ${_DC.TOTAL_CYCLES}`, chipX, chipY);
+                ctx.shadowBlur = 0;
+                // Danger % readout
+                ctx.globalAlpha = globalA * 0.70;
+                ctx.font = 'bold 9px "Orbitron",Arial';
+                ctx.fillStyle = tintR > 210 ? '#ef4444' : '#facc15';
+                ctx.fillText(`DANGER ${Math.round(dangerPct * 100)}%`, chipX, chipY + 18);
             }
         }
 
-        // 4. Grid cells
+        // ── 4. Grid cells ────────────────────────────────────
         if ((this.phase === 'active' || this.phase === 'ending') && this.cells.length) {
-            const warnProgress = this.cyclePhase === 'warn' ? (1.0 - this.cycleTimer / _DC.WARN_DUR) : 1.0;
+            const warnDurCurrent = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
+            const warnProgress = this.cyclePhase === 'warn' ? (1.0 - this.cycleTimer / warnDurCurrent) : 1.0;
             const explodeProgress = this.cyclePhase === 'explode' ? (1.0 - this.cycleTimer / _DC.EXPLODE_DUR) : 0;
-            const fastPulse = 0.5 + Math.sin(now * (4 + warnProgress * 8)) * 0.5;
+            const fastPulse = 0.5 + Math.sin(now * (4 + warnProgress * 10)) * 0.5;
+            const isLate = warnProgress > 0.60;
 
             for (const cell of this.cells) {
                 const tl = worldToScreen(cell.wx, cell.wy);
                 const br = worldToScreen(cell.wx + _DC.CELL_SIZE, cell.wy + _DC.CELL_SIZE);
                 const sw = br.x - tl.x, sh = br.y - tl.y;
                 if (br.x < 0 || tl.x > W || br.y < 0 || tl.y > H || sw < 2 || sh < 2) continue;
+                const mx = tl.x + sw / 2, my = tl.y + sh / 2;
 
                 if (cell.dangerous) {
                     if (this.cyclePhase === 'explode') {
-                        ctx.globalAlpha = globalA * Math.max(0, 1.0 - explodeProgress) * 0.95;
-                        ctx.fillStyle = '#fef08a'; ctx.fillRect(tl.x, tl.y, sw, sh);
-                        ctx.globalAlpha = globalA * 0.85;
-                        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
-                        ctx.shadowBlur = 12; ctx.shadowColor = '#ef4444';
+                        // ── Explosion flash ───────────────────
+                        const ef = 1.0 - explodeProgress;
+                        ctx.globalAlpha = globalA * ef * 0.98;
+                        // White-hot centre → orange → transparent
+                        const eg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
+                        eg.addColorStop(0, `rgba(255,255,220,${ef})`);
+                        eg.addColorStop(0.4, `rgba(239,68,68,${ef * 0.9})`);
+                        eg.addColorStop(1, `rgba(217,70,239,0)`);
+                        ctx.fillStyle = eg;
+                        ctx.fillRect(tl.x, tl.y, sw, sh);
+                        // Bright border
+                        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+                        ctx.shadowBlur = 18; ctx.shadowColor = '#ef4444';
+                        ctx.globalAlpha = globalA * ef * 0.85;
                         ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                         ctx.shadowBlur = 0;
                     } else {
-                        const isLate = warnProgress > 0.65;
-                        const fillColor = isLate ? '#ef4444' : '#d97706';
-                        ctx.globalAlpha = globalA * (0.20 + warnProgress * 0.40 * fastPulse);
-                        ctx.fillStyle = fillColor; ctx.fillRect(tl.x, tl.y, sw, sh);
-                        ctx.globalAlpha = globalA * (0.45 + fastPulse * 0.55);
-                        ctx.strokeStyle = fillColor; ctx.lineWidth = 1.8;
-                        ctx.shadowBlur = isLate ? 10 : 4; ctx.shadowColor = fillColor;
+                        // ── Warning ───────────────────────────
+                        const baseCol = isLate ? '#ef4444' : '#d97706';
+                        const glowCol = isLate ? '#ef4444' : '#facc15';
+                        // Fill gradient
+                        const wg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
+                        const fillA = 0.18 + warnProgress * 0.45 * fastPulse;
+                        wg.addColorStop(0, isLate ? `rgba(239,68,68,${fillA * 1.4})` : `rgba(251,146,60,${fillA})`);
+                        wg.addColorStop(1, `rgba(0,0,0,0)`);
+                        ctx.globalAlpha = globalA;
+                        ctx.fillStyle = wg;
+                        ctx.fillRect(tl.x, tl.y, sw, sh);
+                        // Animated border
+                        ctx.strokeStyle = baseCol; ctx.lineWidth = isLate ? 2.5 : 1.8;
+                        ctx.shadowBlur = isLate ? (8 + fastPulse * 10) : 4; ctx.shadowColor = glowCol;
+                        ctx.globalAlpha = globalA * (0.4 + fastPulse * 0.6);
                         ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                         ctx.shadowBlur = 0;
-                        const barW = Math.max(0, (sw - 4) * (1.0 - warnProgress));
+                        // Corner tick marks
+                        ctx.strokeStyle = glowCol; ctx.lineWidth = 1.5;
                         ctx.globalAlpha = globalA * 0.85;
-                        ctx.fillStyle = fillColor;
-                        ctx.fillRect(tl.x + 2, tl.y + sh - 5, barW, 4);
+                        const tl2 = 7;
+                        [[tl.x, tl.y, 1, 1], [tl.x + sw, tl.y, -1, 1], [tl.x, tl.y + sh, 1, -1], [tl.x + sw, tl.y + sh, -1, -1]].forEach(([bx, by, sx2, sy2]) => {
+                            ctx.beginPath(); ctx.moveTo(bx + sx2 * tl2, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + sy2 * tl2); ctx.stroke();
+                        });
+                        // Countdown bar (bottom of cell)
+                        const barW = Math.max(0, (sw - 4) * (1.0 - warnProgress));
+                        ctx.globalAlpha = globalA * 0.9;
+                        const barG = ctx.createLinearGradient(tl.x + 2, 0, tl.x + 2 + barW, 0);
+                        barG.addColorStop(0, isLate ? '#ef4444' : '#facc15');
+                        barG.addColorStop(1, isLate ? '#fbbf24' : '#d97706');
+                        ctx.fillStyle = barG;
+                        ctx.fillRect(tl.x + 2, tl.y + sh - 6, barW, 5);
+                        // Math formula inside cell
+                        const formulas = ['∑x²', 'dy/dx', 'log(x)', 'f\'(x)', 'det(A)', 'eigenλ', 'μ+σ', '∫f dx'];
+                        const fi = Math.abs(Math.round(cell.wx + cell.wy) % formulas.length);
+                        const formulaAlpha = isLate ? (0.30 + fastPulse * 0.35) : 0.18;
+                        ctx.globalAlpha = globalA * formulaAlpha;
+                        ctx.font = `bold ${Math.max(8, Math.floor(sw * 0.15))}px "Courier New",monospace`;
+                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillStyle = isLate ? '#fca5a5' : '#fde68a';
+                        ctx.fillText(formulas[fi], mx, my + sh * 0.15);
+                        // ⚠ icon
                         const iconSize = Math.max(10, Math.floor(sh * 0.38));
-                        ctx.globalAlpha = globalA * (0.5 + fastPulse * 0.5);
+                        ctx.globalAlpha = globalA * (0.6 + fastPulse * 0.4);
                         ctx.font = `${iconSize}px Arial`;
                         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                         ctx.fillStyle = '#fff';
-                        ctx.fillText('⚠', tl.x + sw / 2, tl.y + sh / 2);
+                        ctx.shadowBlur = isLate ? 10 : 4; ctx.shadowColor = glowCol;
+                        ctx.fillText('⚠', mx, my - sh * 0.12);
+                        ctx.shadowBlur = 0;
                     }
                 } else {
-                    ctx.globalAlpha = globalA * 0.10;
+                    // ── Safe cell ──────────────────────────────
+                    ctx.globalAlpha = globalA * 0.12;
                     ctx.fillStyle = '#22c55e'; ctx.fillRect(tl.x, tl.y, sw, sh);
-                    ctx.globalAlpha = globalA * 0.25;
-                    ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1;
+                    ctx.globalAlpha = globalA * 0.35;
+                    ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.5;
+                    ctx.shadowBlur = 6; ctx.shadowColor = '#22c55e';
                     ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
+                    ctx.shadowBlur = 0;
                     const iconSize2 = Math.max(8, Math.floor(sh * 0.30));
-                    ctx.globalAlpha = globalA * 0.14;
-                    ctx.font = `${iconSize2}px Arial`;
+                    ctx.globalAlpha = globalA * 0.55;
+                    ctx.font = `bold ${iconSize2}px Arial`;
                     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                     ctx.fillStyle = '#4ade80';
-                    ctx.fillText('✓', tl.x + sw / 2, tl.y + sh / 2);
+                    ctx.fillText('✓', mx, my);
                 }
             }
         }
 
-        // 5. Casting animation
+        // ── 5. Casting animation ─────────────────────────────
         if (this.phase === 'casting') {
             const elapsed = _DC.CAST_DUR - this.timer;
             const ringScreen = worldToScreen(this.originX, this.originY);
-            const ringR = (elapsed / _DC.CAST_DUR) * Math.min(W, H) * 0.6;
-            ctx.globalAlpha = globalA * (1.0 - elapsed / _DC.CAST_DUR) * 0.45;
-            ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 3;
-            ctx.shadowBlur = 28; ctx.shadowColor = '#d946ef';
-            ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, ringR, 0, Math.PI * 2); ctx.stroke();
-            ctx.shadowBlur = 0;
 
-            if (elapsed > 0.6) {
-                const r2 = ((elapsed - 0.6) / (_DC.CAST_DUR - 0.6)) * Math.min(W, H) * 0.6;
-                ctx.globalAlpha = globalA * (1.0 - (elapsed - 0.6) / (_DC.CAST_DUR - 0.6)) * 0.35;
-                ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, r2, 0, Math.PI * 2); ctx.stroke();
+            // Expanding shockwave rings
+            for (let ri = 0; ri < 3; ri++) {
+                const delay = ri * 0.5;
+                if (elapsed < delay) continue;
+                const rProg = Math.min(1.0, (elapsed - delay) / (_DC.CAST_DUR - delay));
+                const ringR = rProg * Math.min(W, H) * 0.7;
+                ctx.globalAlpha = globalA * (1.0 - rProg) * (0.5 - ri * 0.12);
+                ctx.strokeStyle = ri === 0 ? '#d946ef' : ri === 1 ? '#facc15' : '#ffffff';
+                ctx.lineWidth = 3 - ri * 0.8;
+                ctx.shadowBlur = 24 - ri * 6; ctx.shadowColor = '#d946ef';
+                ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, ringR, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
             }
 
+            // Chromatic aberration lines — horizontal scan lines
+            if (elapsed > 0.8) {
+                const caProg = Math.min(1.0, (elapsed - 0.8) / 1.2);
+                const lineCount = Math.floor(caProg * 12);
+                for (let li = 0; li < lineCount; li++) {
+                    const ly = (li / lineCount) * H + Math.sin(now * 8 + li) * 15;
+                    ctx.globalAlpha = globalA * 0.08 * caProg;
+                    ctx.fillStyle = li % 3 === 0 ? '#d946ef' : li % 3 === 1 ? '#facc15' : '#38bdf8';
+                    ctx.fillRect(0, ly, W, 2);
+                }
+            }
+
+            // Screen crack lines (static from _crackLines — generated once)
+            if (elapsed > 0.5 && this._crackLines.length === 0) {
+                for (let ci = 0; ci < 8; ci++) {
+                    const cx2 = W * (0.3 + Math.random() * 0.4);
+                    const cy2 = H * (0.3 + Math.random() * 0.4);
+                    const len = 40 + Math.random() * 100;
+                    const angle = Math.random() * Math.PI * 2;
+                    this._crackLines.push({ x: cx2, y: cy2, dx: Math.cos(angle) * len, dy: Math.sin(angle) * len });
+                }
+            }
+            if (elapsed > 0.5 && this._crackLines.length > 0) {
+                const crackA = Math.min(1.0, (elapsed - 0.5) / 0.8) * 0.55;
+                ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 10; ctx.shadowColor = '#d946ef';
+                for (const cl of this._crackLines) {
+                    ctx.globalAlpha = globalA * crackA;
+                    ctx.beginPath(); ctx.moveTo(cl.x, cl.y); ctx.lineTo(cl.x + cl.dx, cl.y + cl.dy); ctx.stroke();
+                    // Secondary branch
+                    ctx.globalAlpha = globalA * crackA * 0.5;
+                    ctx.beginPath(); ctx.moveTo(cl.x + cl.dx * 0.5, cl.y + cl.dy * 0.5);
+                    ctx.lineTo(cl.x + cl.dx * 0.5 + cl.dy * 0.4, cl.y + cl.dy * 0.5 - cl.dx * 0.4); ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
+
+            // 領域展開 kanji — scale + chromatic split
             if (elapsed > 0.35) {
                 const ta = Math.min(1.0, (elapsed - 0.35) / 0.45);
-                ctx.globalAlpha = globalA * ta;
-                ctx.font = `bold ${Math.round(52 * (0.78 + ta * 0.22))}px serif`;
+                const sc = 0.78 + ta * 0.22;
+                const fontSize = Math.round(52 * sc);
+                // Red/blue chromatic shadows
+                ctx.globalAlpha = globalA * ta * 0.45;
+                ctx.font = `bold ${fontSize}px serif`;
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.shadowBlur = 32; ctx.shadowColor = '#d946ef';
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillText('領域展開', W / 2 - 3, H / 2 - 42 + 2);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillText('領域展開', W / 2 + 3, H / 2 - 42 - 2);
+                // Main white text
+                ctx.globalAlpha = globalA * ta;
                 ctx.fillStyle = '#f0abfc';
+                ctx.shadowBlur = 40; ctx.shadowColor = '#d946ef';
                 ctx.fillText('領域展開', W / 2, H / 2 - 42);
                 ctx.shadowBlur = 0;
             }
+            // Metrics-Major subtitle
             if (elapsed > 1.05) {
                 const tb = Math.min(1.0, (elapsed - 1.05) / 0.55);
                 ctx.globalAlpha = globalA * tb;
                 ctx.font = `900 ${Math.round(36 * (0.88 + tb * 0.12))}px "Orbitron","Bebas Neue",Arial`;
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.shadowBlur = 24; ctx.shadowColor = '#facc15';
+                ctx.shadowBlur = 28; ctx.shadowColor = '#facc15';
                 ctx.fillStyle = '#fef08a';
                 ctx.fillText('Metrics-Major', W / 2, H / 2 + 28);
                 ctx.shadowBlur = 0;
+                // Underline sweep
+                ctx.globalAlpha = globalA * tb * 0.8;
+                ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
+                const ulW = tb * 280;
+                ctx.beginPath(); ctx.moveTo(W / 2 - ulW / 2, H / 2 + 50); ctx.lineTo(W / 2 + ulW / 2, H / 2 + 50); ctx.stroke();
             }
+            // Final white flash
             if (elapsed > _DC.CAST_DUR - 0.35) {
                 const tf = (elapsed - (_DC.CAST_DUR - 0.35)) / 0.35;
-                ctx.globalAlpha = globalA * tf * 0.55;
+                ctx.globalAlpha = globalA * tf * 0.70;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, W, H);
+                ctx.globalAlpha = globalA * tf * 0.45;
                 ctx.fillStyle = '#d946ef';
                 ctx.fillRect(0, 0, W, H);
             }
         }
+
+        // ── 6. Full-screen hit flash (purple) ────────────────
+        if (this._flashTimer > 0) {
+            ctx.globalAlpha = Math.min(this._flashTimer / 0.12, 1.0) * 0.55;
+            ctx.fillStyle = '#d946ef';
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        // ── 7. Slow debuff HUD indicator ─────────────────────
+        if (typeof window !== 'undefined' && window.player && window.player._domainSlowActive) {
+            const slowPulse = 0.5 + Math.sin(now * 6) * 0.5;
+            ctx.globalAlpha = globalA * 0.28 * slowPulse;
+            ctx.fillStyle = '#d946ef';
+            ctx.fillRect(0, 0, W, H);
+            ctx.globalAlpha = globalA * (0.6 + slowPulse * 0.35);
+            ctx.font = 'bold 14px "Orbitron",Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            ctx.fillStyle = '#f0abfc';
+            ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
+            ctx.fillText('🔮 SLOWED', W / 2, 12);
+            ctx.shadowBlur = 0;
+        }
+
         ctx.restore();
     },
+
 
     // ── Private ────────────────────────────────────────────────
     _initCells() {
@@ -1134,7 +1360,8 @@ const DomainExpansion = {
             }
     },
     _rollCells() {
-        const n = this.cells.length, dangCount = Math.floor(n * _DC.DANGER_PCT);
+        const dangerPct = Math.min(_DC.DANGER_PCT_MAX, _DC.DANGER_PCT + this.cycleCount * _DC.DANGER_PCT_STEP);
+        const n = this.cells.length, dangCount = Math.floor(n * dangerPct);
         for (let i = 0; i < n; i++) this._indices[i] = i;
         _shuffle(this._indices);
         for (let i = 0; i < n; i++) {
@@ -1168,16 +1395,30 @@ const DomainExpansion = {
                 const pd = Math.hypot(player.x - cx, player.y - cy);
                 if (pd < _DC.CELL_SIZE * _DC.HIT_RADIUS) {
                     player.takeDamage(_DC.CELL_DAMAGE);
-                    if (typeof spawnFloatingText === 'function')
+                    // Apply slow debuff
+                    if (!player._domainSlowActive) {
+                        player._domainSlowActive = true;
+                        player._domainSlowTimer = _DC.CELL_SLOW_DUR;
+                        player._domainSlowBase = player.moveSpeed;
+                        player.moveSpeed *= _DC.CELL_SLOW_FACTOR;
+                    } else {
+                        player._domainSlowTimer = _DC.CELL_SLOW_DUR; // refresh
+                    }
+                    if (typeof spawnFloatingText === 'function') {
                         spawnFloatingText(`💥 ${_DC.CELL_DAMAGE}`, player.x, player.y - 55, '#ef4444', 20);
-                    if (typeof addScreenShake === 'function') addScreenShake(7);
+                        spawnFloatingText('🔮 SLOWED!', player.x, player.y - 80, '#d946ef', 18);
+                    }
+                    if (typeof addScreenShake === 'function') addScreenShake(10);
                     if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
+                    // Screen flash
+                    DomainExpansion._flashTimer = 0.12;
                 }
             }
         }
     },
     _abort(boss) {
-        this.phase = 'idle'; this.cooldownTimer = 0; this.cells = [];
+        this.phase = 'idle'; this.cooldownTimer = 0;
+        this.cells = []; this._crackLines = []; this._flashTimer = 0;
         if (boss) { boss._domainCasting = false; boss._domainActive = false; }
         console.log('[DomainExpansion] Aborted — boss dead');
     },
