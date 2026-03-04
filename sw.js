@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.9.7'; // v3.9.7 Wanchai Stand ethereal wraith: Violet supernatural transformation with soul effects
+const CACHE_NAME = 'mtc-cache-v3.9.8'; // v3.9.8 Wanchai Stand fire demon: Fiery Oni mask with fire chains and ember core
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

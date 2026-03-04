@@ -201,9 +201,6 @@ class WanchaiStand {
         }
     }
 
-    // SEARCH: (ใน AutoPlayer.js — ลบ draw() เดิมทั้งหมด แล้วแทนด้วย)
-    // ── REPLACE lines 204–347 (draw method ของ WanchaiStand) ──
-
     draw(ctx) {
         if (!this.active || typeof ctx === 'undefined') return;
         const now = performance.now();
@@ -211,181 +208,165 @@ class WanchaiStand {
         const isPunch = this._phaseTimer > 0;
         const flashT = isPunch ? Math.min(1, this._phaseTimer / 0.12) : 0;
         const side = this._punchSide ?? 1;
-        const pulse = Math.sin(now / 180);
-        const pulse2 = Math.sin(now / 110);
+        const t = now / 1000;
 
-        // ── Ghost trail — wisps of shadow ──
+        // ── Ghost trail — fading fire blobs ──────────────────
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
-            ctx.globalAlpha = g.alpha * 0.28;
-            ctx.fillStyle = '#7c3aed';
-            ctx.shadowBlur = 14; ctx.shadowColor = '#7c3aed';
+            ctx.globalAlpha = g.alpha * 0.30;
+            ctx.fillStyle = '#ef4444';
+            ctx.shadowBlur = 18; ctx.shadowColor = '#dc2626';
             ctx.beginPath();
-            ctx.ellipse(gs.x, gs.y, 9 - i * 1.0, 13 - i * 1.4, 0, 0, Math.PI * 2);
+            ctx.arc(gs.x, gs.y, 14 - i * 1.8, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
 
         ctx.save();
         ctx.translate(sc.x, sc.y);
-
-        // ── Outer aura ring — pulsing violet ──
-        const ringR = 32 + pulse * 4;
-        ctx.globalAlpha = 0.18 + (isPunch ? flashT * 0.30 : Math.abs(pulse) * 0.06);
-        ctx.strokeStyle = '#a78bfa';
-        ctx.lineWidth = isPunch ? 2.5 : 1.5;
-        ctx.shadowBlur = isPunch ? 30 : 14;
-        ctx.shadowColor = '#7c3aed';
-        ctx.beginPath(); ctx.arc(0, 0, ringR, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // ── Rotate to face target ──
-        ctx.save();
         ctx.rotate(this.angle);
 
-        // ── Shadow body — wispy humanoid silhouette ──
-        // Body dissolves at the bottom (no legs, just smoke)
+        const rp = Math.sin(t * 3.2);        // ring pulse
+        const ep = Math.sin(t * 5.8);        // eye pulse
+        const fp = Math.sin(t * 2.1);        // flame pulse
 
-        // Smoke/mist lower body
-        const mistAlpha = 0.38 + pulse * 0.06;
-        for (let i = 0; i < 3; i++) {
-            const my = 10 + i * 9;
-            const mw = 14 - i * 3.5;
-            ctx.globalAlpha = mistAlpha * (1 - i * 0.28);
-            ctx.fillStyle = '#4c1d95';
-            ctx.shadowBlur = 10 + i * 4;
-            ctx.shadowColor = '#7c3aed';
-            ctx.beginPath();
-            ctx.ellipse(0, my, mw, 5 - i * 0.8, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // ── Outer corona ring ────────────────────────────────
+        ctx.globalAlpha = 0.15 + (isPunch ? flashT * 0.40 : Math.abs(rp) * 0.07);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = isPunch ? 3 : 1.5;
+        ctx.shadowBlur = isPunch ? 32 : 14;
+        ctx.shadowColor = '#b91c1c';
+        ctx.beginPath(); ctx.arc(0, 0, 30 + rp * 3, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Torso — dark translucent wraith body
-        ctx.globalAlpha = 0.72 + pulse * 0.06;
-        const tG = ctx.createLinearGradient(0, -14, 0, 12);
-        tG.addColorStop(0, '#6d28d9');
-        tG.addColorStop(0.55, '#3b0764');
-        tG.addColorStop(1, 'rgba(30,0,60,0)');
-        ctx.fillStyle = tG;
-        ctx.shadowBlur = isPunch ? 22 : 10;
-        ctx.shadowColor = '#7c3aed';
-        ctx.beginPath(); ctx.roundRect(-11, -14, 22, 28, 6); ctx.fill();
-        ctx.shadowBlur = 0;
+        // ── Fire chains (arms) ───────────────────────────────
+        // Two chain nodes extending toward punch side
+        const extA = isPunch && side > 0 ? 44 : 26;
+        const extB = isPunch && side < 0 ? 44 : 26;
 
-        // Soul tendrils — wisps floating off the body (precomputed via index)
-        ctx.globalAlpha = 0.30 + pulse2 * 0.10;
-        ctx.strokeStyle = '#a78bfa';
-        ctx.lineWidth = 1.2;
-        ctx.lineCap = 'round';
-        const tendrilOffsets = [[-8, -8, -14, -18], [8, -6, 15, -16], [-5, 4, -12, -4], [6, 2, 13, -5]];
-        for (const [x1, y1, x2, y2] of tendrilOffsets) {
-            const wobble = Math.sin(now / 200 + x1) * 3;
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.quadraticCurveTo(x1 + wobble, (y1 + y2) / 2, x2 + wobble, y2);
-            ctx.stroke();
-        }
-
-        // Head — shadowy orb
-        ctx.globalAlpha = 0.85 + pulse2 * 0.08;
-        const hG = ctx.createRadialGradient(-3, -24, 2, 0, -22, 11);
-        hG.addColorStop(0, '#8b5cf6');
-        hG.addColorStop(0.5, '#4c1d95');
-        hG.addColorStop(1, '#1e0040');
-        ctx.fillStyle = hG;
-        ctx.shadowBlur = 14; ctx.shadowColor = '#7c3aed';
-        ctx.beginPath(); ctx.arc(0, -22, 11, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Eyes — glowing soul fire
-        const eg = 0.80 + pulse2 * 0.20;
-        ctx.globalAlpha = eg;
-        // Left eye
-        ctx.fillStyle = '#c4b5fd';
-        ctx.shadowBlur = 12; ctx.shadowColor = '#a78bfa';
-        ctx.beginPath(); ctx.ellipse(-4, -22, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        // Right eye
-        ctx.beginPath(); ctx.ellipse(4, -22, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-        // Pupils — deep void
-        ctx.fillStyle = '#0f0020'; ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.arc(-3.8, -22, 1.4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(4.2, -22, 1.4, 0, Math.PI * 2); ctx.fill();
-
-        // ── Ethereal Arms + Ghost Fists ──
-        const extA = isPunch && side > 0 ? 40 : 24;
-        const extB = isPunch && side < 0 ? 40 : 24;
-        const yA = -4, yB = 5;
-
-        // Arm helper — draw one ethereal arm
-        const drawArm = (ext, y, active) => {
-            // Arm wisp
-            ctx.globalAlpha = active ? 0.90 : 0.55;
-            ctx.strokeStyle = active ? '#c4b5fd' : '#7c3aed';
-            ctx.lineWidth = active ? 4.5 : 3.5;
+        const drawChain = (ext, yOff, active) => {
+            const nodes = 4;
             ctx.lineCap = 'round';
-            ctx.shadowBlur = active ? 16 : 6;
-            ctx.shadowColor = '#7c3aed';
-            ctx.beginPath(); ctx.moveTo(10, y); ctx.lineTo(ext - 4, y); ctx.stroke();
-            ctx.shadowBlur = 0;
-
-            // Ghost fist — translucent orb
-            ctx.globalAlpha = active ? 1.0 : 0.65;
-            const fG = ctx.createRadialGradient(ext - 3, y, 1, ext, y, 10);
-            fG.addColorStop(0, active ? '#ede9fe' : '#a78bfa');
-            fG.addColorStop(0.5, active ? '#8b5cf6' : '#4c1d95');
-            fG.addColorStop(1, 'rgba(76,29,149,0)');
-            ctx.fillStyle = fG;
-            ctx.shadowBlur = active ? 22 : 8;
-            ctx.shadowColor = active ? '#c4b5fd' : '#7c3aed';
-            ctx.beginPath(); ctx.ellipse(ext, y, 11, 8, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Knuckle energy wisps
-            ctx.globalAlpha = active ? 0.60 : 0.25;
-            ctx.strokeStyle = '#ede9fe'; ctx.lineWidth = 0.8;
-            for (let k = 0; k < 3; k++) {
-                ctx.beginPath();
-                ctx.moveTo(ext + 4, y - 3 + k * 3.2);
-                ctx.lineTo(ext + 9, y - 3 + k * 3.2);
-                ctx.stroke();
+            for (let n = 0; n < nodes; n++) {
+                const nx = 12 + (ext - 12) * (n / (nodes - 1));
+                const ny = yOff + Math.sin(t * 4 + n * 1.2) * (active ? 1.5 : 2.5);
+                const nr = active ? 3.5 - n * 0.3 : 2.8 - n * 0.25;
+                ctx.globalAlpha = active ? 0.85 : 0.50;
+                ctx.fillStyle = n === nodes - 1
+                    ? (active ? '#fbbf24' : '#f87171')
+                    : '#dc2626';
+                ctx.shadowBlur = active ? 14 : 6;
+                ctx.shadowColor = '#ef4444';
+                ctx.beginPath(); ctx.arc(nx, ny, Math.max(nr, 1.2), 0, Math.PI * 2); ctx.fill();
             }
+            // Fireball at tip
+            const bx = ext;
+            const by = yOff + Math.sin(t * 4 + 3 * 1.2) * (active ? 1.5 : 2.5);
+            const bScale = active ? 1.0 + flashT * 0.4 : 0.75;
+            const bG = ctx.createRadialGradient(bx - 2, by - 2, 1, bx, by, 9 * bScale);
+            bG.addColorStop(0, '#fef08a');
+            bG.addColorStop(0.4, active ? '#f97316' : '#dc2626');
+            bG.addColorStop(1, 'rgba(185,28,28,0)');
+            ctx.globalAlpha = active ? 1.0 : 0.65;
+            ctx.fillStyle = bG;
+            ctx.shadowBlur = active ? 24 : 10;
+            ctx.shadowColor = active ? '#fbbf24' : '#ef4444';
+            ctx.beginPath(); ctx.arc(bx, by, 9 * bScale, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
         };
 
-        drawArm(extA, yA, isPunch && side > 0);
-        drawArm(extB, yB, isPunch && side < 0);
+        drawChain(extA, -5, isPunch && side > 0);
+        drawChain(extB, 5, isPunch && side < 0);
 
-        // ── Impact flash — soul burst ──
+        // ── Main body — glowing ember core ───────────────────
+        // Inner dark orb
+        const cG = ctx.createRadialGradient(-4, -4, 2, 0, 0, 18);
+        cG.addColorStop(0, '#fca5a5');
+        cG.addColorStop(0.35, '#dc2626');
+        cG.addColorStop(0.7, '#7f1d1d');
+        cG.addColorStop(1, 'rgba(30,0,0,0)');
+        ctx.globalAlpha = 0.90 + fp * 0.06;
+        ctx.fillStyle = cG;
+        ctx.shadowBlur = isPunch ? 28 : 16;
+        ctx.shadowColor = '#ef4444';
+        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // ── Oni mask face ────────────────────────────────────
+        // Brow ridges
+        ctx.globalAlpha = 0.70;
+        ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath(); ctx.roundRect(-9, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(2, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
+
+        // Eyes — the centrepiece
+        const eyeGlow = 0.75 + ep * 0.25;
+        // Left eye
+        ctx.globalAlpha = eyeGlow;
+        ctx.fillStyle = '#fbbf24';
+        ctx.shadowBlur = 16; ctx.shadowColor = '#f59e0b';
+        ctx.beginPath(); ctx.ellipse(-5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+        // Right eye
+        ctx.beginPath(); ctx.ellipse(5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        // Pupils
+        ctx.fillStyle = '#000'; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(-5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
+
+        // Nose dots
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = '#fca5a5';
+        ctx.beginPath(); ctx.arc(-2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
+
+        // Fang mouth
+        ctx.globalAlpha = 0.65;
+        ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(0, 4, 6, 0.1, Math.PI - 0.1); ctx.stroke();
+        // Two fangs
+        ctx.fillStyle = '#fff8'; ctx.globalAlpha = 0.50;
+        ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(-1.5, 4); ctx.lineTo(0, 8); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(1, 8); ctx.lineTo(2.5, 4); ctx.lineTo(4, 8); ctx.fill();
+
+        // Horn nubs on top
+        ctx.globalAlpha = 0.60;
+        ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(-5, -22); ctx.lineTo(-2, -14); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(2, -14); ctx.lineTo(5, -22); ctx.lineTo(8, -14); ctx.fill();
+
+        // ── Impact flash ────────────────────────────────────
         if (isPunch && flashT > 0.05) {
-            const fy = side > 0 ? yA : yB;
+            const fy = side > 0 ? -5 : 5;
             const fx = side > 0 ? extA : extB;
-            ctx.globalAlpha = flashT * 0.80;
-            ctx.fillStyle = '#ddd6fe';
-            ctx.shadowBlur = 28; ctx.shadowColor = '#a78bfa';
-            ctx.beginPath(); ctx.arc(fx + 12, fy, 10, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#ede9fe'; ctx.lineWidth = 1.2; ctx.shadowBlur = 10;
-            for (let r = 0; r < 6; r++) {
-                const ra = (r / 6) * Math.PI * 2;
-                ctx.globalAlpha = flashT * 0.45;
+            ctx.globalAlpha = flashT * 0.90;
+            ctx.fillStyle = '#fef08a';
+            ctx.shadowBlur = 30; ctx.shadowColor = '#fbbf24';
+            ctx.beginPath(); ctx.arc(fx, fy, 11, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#fff9c4'; ctx.lineWidth = 1.5; ctx.shadowBlur = 12;
+            for (let r = 0; r < 8; r++) {
+                const ra = (r / 8) * Math.PI * 2;
+                ctx.globalAlpha = flashT * 0.50;
                 ctx.beginPath();
-                ctx.moveTo(fx + 12, fy);
-                ctx.lineTo(fx + 12 + Math.cos(ra) * 17, fy + Math.sin(ra) * 17);
+                ctx.moveTo(fx, fy);
+                ctx.lineTo(fx + Math.cos(ra) * 20, fy + Math.sin(ra) * 20);
                 ctx.stroke();
             }
         }
 
-        ctx.restore(); // end rotate
+        ctx.restore(); // end rotate + translate
 
-        // ── Name tag ──
-        ctx.globalAlpha = 0.45 + Math.sin(now / 300) * 0.10;
-        ctx.fillStyle = '#c4b5fd';
+        // ── Name tag ─────────────────────────────────────────
+        ctx.save();
+        ctx.translate(sc.x, sc.y);
+        ctx.globalAlpha = 0.45 + Math.sin(t * 2.2) * 0.10;
+        ctx.fillStyle = '#fca5a5';
         ctx.font = 'bold 9px Arial';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.shadowBlur = 8; ctx.shadowColor = '#7c3aed';
-        ctx.fillText('WANCHAI', 0, -44);
+        ctx.shadowBlur = 6; ctx.shadowColor = '#dc2626';
+        ctx.fillText('WANCHAI', 0, -42);
         ctx.globalAlpha = 1; ctx.shadowBlur = 0;
         ctx.restore();
     }
