@@ -110,6 +110,13 @@ class WanchaiStand {
         }
         for (const g of this.ghostTrail) g.alpha = Math.max(0, g.alpha - dt * 1.8);
 
+        // Decay precomputed rush fists alpha
+        if ((this._rushFistTimer ?? 0) > 0) {
+            this._rushFistTimer -= dt;
+            const fade = this._rushFistTimer / 0.10;
+            if (this._rushFists) for (const f of this._rushFists) f.alpha = Math.max(0, fade);
+        }
+
         // ── Attack logic (auto-fires regardless of L-Click) ──
         this._atkTimer -= dt;
         this._phaseTimer = Math.max(0, this._phaseTimer - dt);
@@ -168,9 +175,23 @@ class WanchaiStand {
         if (isCrit && typeof spawnFloatingText === 'function')
             spawnFloatingText('วันชัย!', this.x, this.y - 30, '#facc15', 18);
 
-        // Punch animation phase
+        // Punch animation -- alternate fist side each hit
         this._punchPhase = 2;
         this._phaseTimer = 0.12;
+        this._punchSide = (this._punchSide ?? 1) * -1;
+
+        // Precompute rush fists positions for Stand Rush overlay (no Math.random in draw)
+        this._rushFists = this._rushFists ?? [];
+        this._rushFists.length = 0;
+        for (let i = 0; i < 7; i++) {
+            this._rushFists.push({
+                ox: 38 + Math.random() * 75,
+                oy: (Math.random() - 0.5) * 60,
+                sc: 0.45 + Math.random() * 0.65,
+                alpha: 1.0
+            });
+        }
+        this._rushFistTimer = 0.10; // fade out over 100ms
 
         // Sound
         const now = Date.now();
@@ -183,80 +204,95 @@ class WanchaiStand {
     draw(ctx) {
         if (!this.active || typeof ctx === 'undefined') return;
         const now = performance.now();
+        const screen = worldToScreen(this.x, this.y);
+        const isPunch = this._phaseTimer > 0;
+        const flashT = isPunch ? this._phaseTimer / 0.12 : 0;
 
-        // Ghost trail (mini body blobs)
+        // Ghost trail -- same style as standGhosts (small fading circles)
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
-            ctx.globalAlpha = g.alpha * 0.30;
-            ctx.translate(gs.x, gs.y);
-            ctx.fillStyle = this._rushMode ? '#f97316' : '#ef4444';
-            ctx.shadowBlur = 6; ctx.shadowColor = this._rushMode ? '#ea580c' : '#dc2626';
-            ctx.beginPath(); ctx.arc(0, 0, 12 - i * 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = g.alpha * 0.45;
+            ctx.fillStyle = 'rgba(220,38,38,0.55)';
+            ctx.shadowBlur = 8; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.arc(gs.x, gs.y, 13 - i * 1.5, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
-        // Rush fist afterimages (precomputed in _punch)
-        if (this._rushFists && this._rushFists.length > 0) {
-            const screen = worldToScreen(this.x, this.y);
-            ctx.save();
-            ctx.translate(screen.x, screen.y);
-            ctx.rotate(this.angle);
-            for (const f of this._rushFists) {
-                if (f.alpha <= 0) continue;
-                const fy = f.oy * f.side;
-                ctx.globalAlpha = f.alpha * 0.65;
-                ctx.fillStyle = this._rushMode ? 'rgba(251,146,60,0.85)' : 'rgba(239,68,68,0.80)';
-                ctx.shadowBlur = this._rushMode ? 14 : 7; ctx.shadowColor = this._rushMode ? '#f97316' : '#dc2626';
-                ctx.beginPath(); ctx.ellipse(f.ox, fy, 14 * f.scale, 9 * f.scale, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = this._rushMode ? 'rgba(251,146,60,0.45)' : 'rgba(248,113,113,0.40)';
-                ctx.lineWidth = 3 * f.scale; ctx.shadowBlur = 0;
-                ctx.beginPath(); ctx.moveTo(f.ox - 26 * f.scale, fy); ctx.lineTo(f.ox, fy); ctx.stroke();
-            }
-            ctx.restore();
+        ctx.save();
+        ctx.translate(screen.x, screen.y);
+
+        // Outer aura ring
+        const pulseMult = isPunch ? 3 : 1;
+        ctx.globalAlpha = 0.30 + Math.sin(now / 100 * pulseMult) * 0.18;
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 22; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.arc(0, 0, 34 + Math.sin(now / 120) * 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Rotate to face target
+        ctx.save();
+        ctx.rotate(this.angle);
+
+        // Main body -- outer ghost circle (standGhosts style, R=22)
+        ctx.globalAlpha = 0.72;
+        ctx.fillStyle = 'rgba(220,38,38,0.55)';
+        ctx.shadowBlur = isPunch ? 20 : 10; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
+
+        // Inner core (standGhosts style, R=12)
+        ctx.globalAlpha = 0.72 * 0.6;
+        ctx.fillStyle = '#dc2626';
+        ctx.shadowBlur = isPunch ? 16 : 8; ctx.shadowColor = '#ef4444';
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Eyes -- glow dots
+        const eyeGlow = 0.75 + Math.sin(now / 120) * 0.25;
+        ctx.globalAlpha = eyeGlow;
+        ctx.fillStyle = '#fbbf24'; ctx.shadowBlur = 10; ctx.shadowColor = '#f59e0b';
+        ctx.beginPath(); ctx.ellipse(7, -7, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(7, 5, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.ellipse(8.5, -7, 1.4, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(8.5, 5, 1.4, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Fist -- extends forward, alternates side each punch
+        const fistReach = isPunch ? 38 : 28;
+        const fistY = (this._punchSide ?? 1) * 5;
+        ctx.globalAlpha = 0.90;
+        ctx.fillStyle = isPunch ? '#facc15' : '#fb7185';
+        ctx.shadowBlur = isPunch ? 22 : 7; ctx.shadowColor = isPunch ? '#facc15' : '#ef4444';
+        ctx.beginPath(); ctx.ellipse(fistReach, fistY, 13, 9, 0, 0, Math.PI * 2); ctx.fill();
+        // Motion line
+        ctx.strokeStyle = 'rgba(248,113,113,0.5)'; ctx.lineWidth = 5; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.moveTo(fistReach - 28, fistY); ctx.lineTo(fistReach, fistY); ctx.stroke();
+        // Knuckle lines
+        ctx.strokeStyle = '#9f1239'; ctx.lineWidth = 1;
+        for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            ctx.moveTo(fistReach + 4, fistY - 3 + k * 4);
+            ctx.lineTo(fistReach + 11, fistY - 3 + k * 4);
+            ctx.stroke();
+        }
+        // Impact flash
+        if (isPunch && flashT > 0) {
+            ctx.globalAlpha = flashT * 0.80;
+            ctx.fillStyle = '#fef08a';
+            ctx.shadowBlur = 28; ctx.shadowColor = '#facc15';
+            ctx.beginPath(); ctx.arc(fistReach + 14, fistY, 12, 0, Math.PI * 2); ctx.fill();
         }
 
-        // Main stand humanoid body (delegated to PlayerRenderer)
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer._drawStandBody) {
-            PlayerRenderer._drawStandBody(ctx, this, now);
-        }
+        ctx.restore(); // end rotate
 
-        // ORA ORA text
-        if (this._oraAlpha > 0 && this._oraLabel) {
-            const screen = worldToScreen(this.x, this.y);
-            ctx.save();
-            ctx.translate(screen.x, screen.y);
-            const jx = Math.sin(now / 18) * (this._rushMode ? 3 : 1);
-            const jy = Math.cos(now / 15) * (this._rushMode ? 3 : 1);
-            ctx.translate(jx, -78 + jy);
-            ctx.scale(this._rushMode ? 1.3 : 1.0, this._rushMode ? 1.3 : 1.0);
-            ctx.globalAlpha = this._oraAlpha;
-            ctx.font = `900 ${this._rushMode ? 19 : 16}px "Arial Black", Arial, sans-serif`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText(this._oraLabel, 0, 0);
-            ctx.fillStyle = this._rushMode ? '#fed7aa' : '#facc15';
-            ctx.shadowBlur = this._rushMode ? 20 : 10; ctx.shadowColor = this._rushMode ? '#f97316' : '#fbbf24';
-            ctx.fillText(this._oraLabel, 0, 0);
-            ctx.restore();
-        }
-
-        // Combo badge
-        if (this._comboCount >= 3) {
-            const screen = worldToScreen(this.x, this.y);
-            const badgeAlpha = Math.min(1, (this._comboTimer ?? 0) / 0.45);
-            ctx.save();
-            ctx.translate(screen.x + 30, screen.y - 42);
-            ctx.globalAlpha = badgeAlpha * 0.9;
-            ctx.fillStyle = this._rushMode ? '#ea580c' : '#dc2626';
-            ctx.shadowBlur = 10; ctx.shadowColor = this._rushMode ? '#f97316' : '#ef4444';
-            ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
-            ctx.globalAlpha = badgeAlpha;
-            ctx.fillStyle = '#fff'; ctx.shadowBlur = 0;
-            ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(Math.min(this._comboCount, 99), 0, 0);
-            ctx.restore();
-        }
+        // Name tag
+        ctx.globalAlpha = 0.55 + Math.sin(now / 200) * 0.12;
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('วันชัย', 0, -38);
+        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 }
 
@@ -498,27 +534,25 @@ class AutoPlayer extends Player {
 
 
 
-        // Reset attack state every frame; proven true below if mouse is held
+        // Reset attack state every frame
         this.isStandAttacking = false;
 
-        if (!mouse || mouse.left !== 1) return; if (typeof projectileManager === 'undefined' || !projectileManager) return;
-
-        // ── Stand active: L-Click = Player Stand Rush (melee punch) ──
-        // ผู้เล่นต่อยรัวๆแทนการยิง, stand ก็โจมตีอิสระพร้อมกัน
-        if (this.wanchaiActive) {
+        // Wanchai active: L-Click = player melee Stand Rush (stand punches autonomously too)
+        if (this.wanchaiActive && mouse && mouse.left === 1) {
             this.isStandAttacking = true;
-            if (this.wanchaiStand?.active && mouse) {
+            if (this.wanchaiStand?.active) {
                 this.wanchaiStand._forcedTargetX = mouse.wx;
                 this.wanchaiStand._forcedTargetY = mouse.wy;
             }
-            // Player melee punch — replaces heatwave entirely
             if ((this.cooldowns?.shoot ?? 0) <= 0) {
-                const rushCd = this.stats?.playerRushCooldown ?? 0.10;
-                this.cooldowns.shoot = rushCd;
-                this._playerStandRush(mouse);
+                this.cooldowns.shoot = this.stats?.playerRushCooldown ?? 0.10;
+                this._doPlayerMelee(mouse);
             }
             return;
         }
+
+        if (!mouse || mouse.left !== 1) return;
+        if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
         const heatCd = this.stats?.heatWaveCooldown ?? 0.28;
         if ((this.cooldowns?.shoot ?? 0) > 0) return;
@@ -534,18 +568,17 @@ class AutoPlayer extends Player {
         if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
     }
 
-    // Player Stand Rush (melee) - called from update() when wanchaiActive + L-Click
-    _playerStandRush(mouse) {
+    // Player melee punch during Stand Rush
+    // Finds nearest enemy within playerRushRange of cursor, deals wanchaiDamage
+    _doPlayerMelee(mouse) {
         const S = this.stats ?? {};
-        const range = S.playerRushRange ?? 90;
-        let dmg = (S.playerRushDamage ?? 28) * (this.damageMultiplier || 1.0);
-
-        // Find target: nearest enemy to cursor
-        let target = null;
-        let bestD = range + 80;
+        const range = S.playerRushRange ?? 85;
         const cx = mouse?.wx ?? this.x;
         const cy = mouse?.wy ?? this.y;
 
+        // Find nearest enemy to cursor within range
+        let target = null;
+        let bestD = range + 60;
         for (const e of (window.enemies || [])) {
             if (e.dead) continue;
             const d = Math.hypot(e.x - cx, e.y - cy);
@@ -557,15 +590,17 @@ class AutoPlayer extends Player {
         }
 
         if (!target) {
-            if (typeof spawnParticles === 'function')
-                spawnParticles(cx, cy, 2, '#ef4444');
+            // Miss swing VFX
+            if (typeof spawnParticles === 'function') spawnParticles(cx, cy, 2, '#ef4444');
             if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
             return;
         }
 
+        // Must be within playerRushRange of the PLAYER (not just cursor)
         const distToPlayer = Math.hypot(target.x - this.x, target.y - this.y);
         if (distToPlayer > range + (target.radius ?? 14)) return;
 
+        let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0);
         let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.40);
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         const isCrit = Math.random() < critChance;
@@ -581,29 +616,28 @@ class AutoPlayer extends Player {
 
         target.takeDamage(dmg, this);
 
-        if (this.passiveUnlocked) {
+        if (this.passiveUnlocked)
             this.hp = Math.min(this.maxHp, this.hp + dmg * (S.passiveLifesteal ?? 0.02));
-        }
 
+        // Knockback
         const ka = Math.atan2(target.y - this.y, target.x - this.x);
-        target.vx = (target.vx ?? 0) + Math.cos(ka) * (S.standKnockback ?? 180) * 0.7;
-        target.vy = (target.vy ?? 0) + Math.sin(ka) * (S.standKnockback ?? 180) * 0.7;
+        const kf = (S.standKnockback ?? 180) * 0.6;
+        target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
+        target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
+        // VFX + sound
         if (typeof spawnParticles === 'function')
             spawnParticles(target.x, target.y, isCrit ? 6 : 3, isCrit ? '#facc15' : '#ef4444');
         if (typeof addScreenShake === 'function') addScreenShake(isCrit ? 4 : 2);
         if (isCrit && typeof spawnFloatingText === 'function')
-            spawnFloatingText('ORA!', this.x, this.y - 40, '#facc15', 20);
-
-        if (this.wanchaiStand) {
-            this.wanchaiStand._comboCount = (this.wanchaiStand._comboCount ?? 0) + 1;
-            this.wanchaiStand._comboTimer = 0.45;
-            this.wanchaiStand._punchSide = (this.wanchaiStand._punchSide ?? 1) * -1;
-            this.wanchaiStand._punchPhase = 2;
-            this.wanchaiStand._phaseTimer = 0.09;
-        }
-
+            spawnFloatingText('ORA!', this.x, this.y - 45, '#facc15', 20);
         if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
+
+        // Sync combo into WanchaiStand so ORA counter escalates
+        if (this.wanchaiStand) {
+            this.wanchaiStand._punchPhase = 2;
+            this.wanchaiStand._phaseTimer = 0.10;
+        }
 
         if (typeof Achievements !== 'undefined' && target.hp <= 0) {
             Achievements.stats.standRushKills = (Achievements.stats.standRushKills ?? 0) + 1;

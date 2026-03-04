@@ -119,9 +119,8 @@ const BALANCE = {
             standPunchRange: 110,   // ระยะชก
             standLeashRadius: 420,  // ระยะห่างสูงสุดจากผู้เล่น
             standKnockback: 180,    // แรงดีดศัตรูหลังชก
-            playerRushRange: 90,    // ระยะต่อยของผู้เล่นระหว่าง Stand Rush
-            playerRushDamage: 28,   // ดาเมจต่อหมัดผู้เล่น
-            playerRushCooldown: 0.10, // rate ต่อยผู้เล่น (วินาที/หมัด)
+            playerRushRange: 85,     // player melee range during Stand Rush
+            playerRushCooldown: 0.10, // player punch rate (s/hit)
             detonationRange: 220,   // รัศมี AOE ระเบิด (px)
             detonationCooldown: 5,  // CD สั้น เพราะต้องเปิด Wanchai ก่อนถึงใช้ได้
             baseCritChance: 0.06,
