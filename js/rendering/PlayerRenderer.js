@@ -509,6 +509,7 @@ class PlayerRenderer {
         ctx.beginPath(); ctx.arc(0, 0, R + 3, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
 
+        // Body — dark crimson with armor plate layering
         const bG = ctx.createRadialGradient(-4, -4, 1, 0, 0, R);
         bG.addColorStop(0, '#7f1d1d');
         bG.addColorStop(0.5, '#5a0e0e');
@@ -518,26 +519,70 @@ class PlayerRenderer {
         ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
 
+        // Specular highlight
         ctx.fillStyle = 'rgba(255,255,255,0.09)';
         ctx.beginPath(); ctx.arc(-5, -6, 6, 0, Math.PI * 2); ctx.fill();
 
-        // Heat vents
+        // ── Armor plate overlay (clipped inside body) ─────
+        ctx.save();
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.clip();
+        // Upper shoulder plates
+        ctx.fillStyle = 'rgba(120,20,20,0.65)';
+        ctx.beginPath(); ctx.roundRect(-R, -R, R * 0.7, R * 0.9, 2); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(R * 0.25, -R, R * 0.8, R * 0.9, 2); ctx.fill();
+        // Plate divider lines
+        ctx.strokeStyle = 'rgba(153,27,27,0.55)'; ctx.lineWidth = 0.9;
+        ctx.beginPath(); ctx.moveTo(-R * 0.25, -R); ctx.lineTo(-R * 0.25, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(R * 0.25, -R); ctx.lineTo(R * 0.25, 0); ctx.stroke();
+        // Rivets
+        ctx.fillStyle = 'rgba(220,38,38,0.45)';
+        for (const [rx, ry] of [[-R * 0.45, -R * 0.6], [R * 0.45, -R * 0.6], [-R * 0.45, -R * 0.2], [R * 0.45, -R * 0.2]]) {
+            ctx.beginPath(); ctx.arc(rx, ry, 1.2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+
+        // Heat vents — upgraded with gradient slots
         ctx.shadowBlur = 10 * ventGlow; ctx.shadowColor = '#fb923c';
         for (let vi = 0; vi < 3; vi++) {
             const va = ventGlow * (0.45 + vi * 0.18);
-            ctx.fillStyle = `rgba(251,146,60,${va})`;
+            const ventG = ctx.createLinearGradient(-R, 0, -R + 4, 0);
+            ventG.addColorStop(0, `rgba(251,146,60,${va * 1.2})`);
+            ventG.addColorStop(1, `rgba(239,68,68,${va * 0.6})`);
+            ctx.fillStyle = ventG;
             ctx.beginPath(); ctx.roundRect(-R, -4 + vi * 5, 4, 2.5, 1); ctx.fill();
+            const ventGR = ctx.createLinearGradient(R - 4, 0, R, 0);
+            ventGR.addColorStop(0, `rgba(239,68,68,${va * 0.6})`);
+            ventGR.addColorStop(1, `rgba(251,146,60,${va * 1.2})`);
+            ctx.fillStyle = ventGR;
             ctx.beginPath(); ctx.roundRect(R - 4, -4 + vi * 5, 4, 2.5, 1); ctx.fill();
         }
         ctx.shadowBlur = 0;
 
-        // Power core
+        // ── Hexagonal Power Core (upgrade from roundRect) ──
         const cP = Math.max(0, 0.4 + Math.sin(now / 200) * 0.5) * (entity.wanchaiActive ? 1.5 : 1);
-        ctx.fillStyle = `rgba(239,68,68,${Math.min(1, cP)})`;
-        ctx.shadowBlur = 12 * cP; ctx.shadowColor = '#dc2626';
-        ctx.beginPath(); ctx.roundRect(-4.5, 0, 9, 6, 2); ctx.fill();
-        ctx.fillStyle = `rgba(255,180,180,${cP * 0.80})`;
-        ctx.beginPath(); ctx.arc(0, 3, 2, 0, Math.PI * 2); ctx.fill();
+        const hexCR = 5.5;
+        ctx.save();
+        ctx.translate(0, 3);
+        ctx.beginPath();
+        for (let hi = 0; hi < 6; hi++) {
+            const ha = (hi / 6) * Math.PI * 2 - Math.PI / 6;
+            if (hi === 0) ctx.moveTo(Math.cos(ha) * hexCR, Math.sin(ha) * hexCR);
+            else ctx.lineTo(Math.cos(ha) * hexCR, Math.sin(ha) * hexCR);
+        }
+        ctx.closePath();
+        const hexG = ctx.createRadialGradient(0, 0, 0, 0, 0, hexCR);
+        hexG.addColorStop(0, `rgba(255,200,200,${Math.min(1, cP * 0.9)})`);
+        hexG.addColorStop(0.5, `rgba(239,68,68,${Math.min(1, cP)})`);
+        hexG.addColorStop(1, `rgba(153,27,27,${cP * 0.7})`);
+        ctx.fillStyle = hexG;
+        ctx.shadowBlur = 14 * cP; ctx.shadowColor = '#dc2626';
+        ctx.fill();
+        ctx.strokeStyle = `rgba(252,165,165,${cP * 0.7})`; ctx.lineWidth = 1;
+        ctx.stroke();
+        // Hex inner dot
+        ctx.fillStyle = `rgba(255,220,220,${cP * 0.9})`;
+        ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
         ctx.shadowBlur = 0;
 
         if (entity.wanchaiActive) {
@@ -600,17 +645,39 @@ class PlayerRenderer {
             ctx.lineTo(bx + tipOff + wobble, -R - 1 - h - wobble * 0.4);
             ctx.closePath(); ctx.stroke();
         }
-        ctx.shadowBlur = entity.wanchaiActive ? 16 : 6;
-        ctx.shadowColor = '#f97316';
-        const emberColors = ['#f97316', '#ef4444', '#fb923c', '#f87171', '#fca5a5'];
+        // Spike tips — gradient per spike + ember corona
         spikeData.forEach(([bx, tipOff, h], idx) => {
             const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
             const tx = bx + tipOff + wobble;
             const ty = -R - 1 - h - wobble * 0.4;
-            const eA = (entity.wanchaiActive ? 0.9 : 0.6) + Math.sin(now / 200 + idx) * 0.25;
-            ctx.fillStyle = emberColors[idx % emberColors.length];
+            // Spike fill gradient — dark base to bright tip
+            const sg = ctx.createLinearGradient(bx, -R - 1, tx, ty);
+            sg.addColorStop(0, '#5c1010');
+            sg.addColorStop(0.6, '#b91c1c');
+            sg.addColorStop(1, '#f97316');
+            // Re-fill spike with gradient (on top of flat fill)
+            ctx.fillStyle = sg;
+            ctx.globalAlpha = 0.75;
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(bx - 3.5, -R - 1);
+            ctx.lineTo(bx + 3.5, -R - 1);
+            ctx.lineTo(tx, ty);
+            ctx.closePath(); ctx.fill();
+            // Tip ember glow
+            const eA = (entity.wanchaiActive ? 0.95 : 0.65) + Math.sin(now / 200 + idx) * 0.25;
             ctx.globalAlpha = Math.max(0, Math.min(1, eA));
-            ctx.beginPath(); ctx.arc(tx, ty, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = idx % 2 === 0 ? '#f97316' : '#ef4444';
+            ctx.shadowBlur = entity.wanchaiActive ? 14 : 7;
+            ctx.shadowColor = '#f97316';
+            ctx.beginPath(); ctx.arc(tx, ty, 2.2, 0, Math.PI * 2); ctx.fill();
+            // Tiny spark above tip (wanchai only)
+            if (entity.wanchaiActive && Math.sin(now / 120 + idx * 1.5) > 0.5) {
+                ctx.globalAlpha = 0.8;
+                ctx.fillStyle = '#fef08a';
+                ctx.shadowBlur = 8; ctx.shadowColor = '#facc15';
+                ctx.beginPath(); ctx.arc(tx + Math.sin(now / 80 + idx) * 1.5, ty - 4, 1, 0, Math.PI * 2); ctx.fill();
+            }
         });
         ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 
@@ -840,9 +907,15 @@ class PlayerRenderer {
         ctx.translate(screen.x, screen.y);
         ctx.scale(stretchX2 * facingSign, stretchY2);
 
+        // Dual outer ring — purple base + gold shimmer
         ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(168,85,247,0.65)';
         ctx.strokeStyle = 'rgba(168,85,247,0.45)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(0, 0, R2 + 2, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+        const outerPulse = 0.18 + Math.sin(now2 / 400) * 0.12;
+        ctx.strokeStyle = `rgba(251,191,36,${outerPulse})`; ctx.lineWidth = 1.2;
+        ctx.shadowBlur = 6 * outerPulse; ctx.shadowColor = '#fbbf24';
+        ctx.beginPath(); ctx.arc(0, 0, R2 + 4.5, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
 
         const poomBodyG = ctx.createRadialGradient(-3, -3, 1, 0, 0, R2);
@@ -915,6 +988,51 @@ class PlayerRenderer {
         }
         ctx.restore();
         ctx.globalAlpha = 1;
+
+        // ── Lotus/petal accent on Kranok center ─────────────
+        ctx.save();
+        ctx.beginPath(); ctx.arc(0, 0, R2 - 1, 0, Math.PI * 2); ctx.clip();
+        const lotusA = 0.35 + Math.sin(now2 / 320) * 0.18;
+        ctx.globalAlpha = lotusA;
+        ctx.fillStyle = '#fde68a'; ctx.shadowBlur = 8; ctx.shadowColor = '#fbbf24';
+        // 4 small petals around center diamond
+        for (let pi = 0; pi < 4; pi++) {
+            const pa = pi * Math.PI / 2 + Math.PI / 4;
+            ctx.save();
+            ctx.translate(Math.cos(pa) * 4.5, Math.sin(pa) * 4.5);
+            ctx.rotate(pa);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 1.2, 2.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+
+        // ── Floating scroll orbit — signature cultural detail ──
+        ctx.save();
+        const scrollOrbitR = R2 + 10;
+        const scrollAngle = now2 / 1200;
+        const sx = Math.cos(scrollAngle) * scrollOrbitR;
+        const sy = Math.sin(scrollAngle) * scrollOrbitR - 2;
+        ctx.translate(sx, sy);
+        ctx.rotate(scrollAngle + 0.4);
+        const scrollA = 0.55 + Math.sin(now2 / 300) * 0.25;
+        ctx.globalAlpha = scrollA;
+        ctx.shadowBlur = 8; ctx.shadowColor = '#fbbf24';
+        // Scroll body
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath(); ctx.roundRect(-4, -2.5, 8, 5, 1); ctx.fill();
+        // Scroll end rolls
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath(); ctx.ellipse(-4, 0, 1.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(4, 0, 1.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        // Tiny text lines on scroll
+        ctx.strokeStyle = 'rgba(146,64,14,0.65)'; ctx.lineWidth = 0.6;
+        ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.moveTo(-2.5, -0.8); ctx.lineTo(2.5, -0.8); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-2.5, 0.5); ctx.lineTo(2.5, 0.5); ctx.stroke();
+        ctx.restore();
 
         // Messy Spiky Hair
         ctx.fillStyle = '#1c0f05';
@@ -1151,8 +1269,13 @@ class PlayerRenderer {
             ctx.fillStyle = 'rgba(255,255,255,0.10)';
             ctx.beginPath(); ctx.arc(-4, -5, 5.5, 0, Math.PI * 2); ctx.fill();
 
-            // Tactical Hood
-            ctx.fillStyle = '#0b1623';
+            // ── Tactical Hood (upgraded) ──────────────────────
+            // Main hood silhouette — two-tone with inner panel
+            const hoodG = ctx.createLinearGradient(0, -R - 8, 0, 2);
+            hoodG.addColorStop(0, '#0d1f38');
+            hoodG.addColorStop(0.6, '#0b1623');
+            hoodG.addColorStop(1, '#071020');
+            ctx.fillStyle = hoodG;
             ctx.beginPath();
             ctx.moveTo(-(R - 1), -1);
             ctx.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);
@@ -1162,7 +1285,9 @@ class PlayerRenderer {
             ctx.quadraticCurveTo(-R * 0.55, 1, -(R - 1), -1);
             ctx.closePath(); ctx.fill();
 
-            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5;
+            // Hood outline with blue edge
+            ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 5; ctx.shadowColor = '#1d4ed8';
             ctx.beginPath();
             ctx.moveTo(-(R - 1), -1);
             ctx.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);
@@ -1171,7 +1296,31 @@ class PlayerRenderer {
             ctx.quadraticCurveTo(R * 0.55, 1, 0, 2);
             ctx.quadraticCurveTo(-R * 0.55, 1, -(R - 1), -1);
             ctx.closePath(); ctx.stroke();
+            ctx.shadowBlur = 0;
 
+            // Hood inner panel (clipped)
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(-(R - 1), -1);
+            ctx.quadraticCurveTo(-(R + 2), -R * 0.45, -R * 0.35, -R - 5);
+            ctx.quadraticCurveTo(0, -R - 8, R * 0.35, -R - 5);
+            ctx.quadraticCurveTo(R + 2, -R * 0.45, R - 1, -1);
+            ctx.quadraticCurveTo(R * 0.55, 1, 0, 2);
+            ctx.quadraticCurveTo(-R * 0.55, 1, -(R - 1), -1);
+            ctx.clip();
+            // Circuit line overlay
+            ctx.strokeStyle = 'rgba(59,130,246,0.18)'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(-R, -R); ctx.lineTo(-R * 0.3, -R * 0.6); ctx.lineTo(-R * 0.3, -2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(R * 0.1, -R); ctx.lineTo(R * 0.1, -R * 0.5); ctx.lineTo(R * 0.5, -R * 0.5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(R, -R * 0.5); ctx.lineTo(R * 0.6, -R * 0.5); ctx.lineTo(R * 0.6, -2); ctx.stroke();
+            // Circuit node dots
+            ctx.fillStyle = 'rgba(6,182,212,0.45)';
+            for (const [nx, ny] of [[-R * 0.3, -R * 0.6], [-R * 0.3, -2], [R * 0.1, -R * 0.5], [R * 0.6, -R * 0.5], [R * 0.6, -2]]) {
+                ctx.beginPath(); ctx.arc(nx, ny, 1.2, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+
+            // Top of hood — dark crown panel
             ctx.fillStyle = '#16304f';
             ctx.beginPath();
             ctx.moveTo(-7, -R - 3);
@@ -1180,20 +1329,50 @@ class PlayerRenderer {
             ctx.quadraticCurveTo(-6, -R, -7, -R - 3);
             ctx.closePath(); ctx.fill();
 
+            // Side tactical stripe details
             ctx.strokeStyle = '#1e40af'; ctx.lineWidth = 1;
             ctx.shadowBlur = 4; ctx.shadowColor = '#3b82f6';
             ctx.beginPath(); ctx.moveTo(R * 0.35, -3); ctx.lineTo(R + 1, -2); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-R * 0.35, -3); ctx.lineTo(-R - 1, -2); ctx.stroke();
+            // Extra small perpendicular tick marks on stripes
+            ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(R * 0.55, -3.5); ctx.lineTo(R * 0.55, -0.5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-R * 0.55, -3.5); ctx.lineTo(-R * 0.55, -0.5); ctx.stroke();
             ctx.shadowBlur = 0;
 
-            // Glowing cyan visor slit
+            // ── Dual split visor (upgrade from single slit) ──
             const vp = 0.65 + Math.sin(Date.now() / 350) * 0.35;
+            const vp2 = 0.55 + Math.sin(Date.now() / 280 + 1.2) * 0.35;
+            // Left visor shard
             ctx.fillStyle = `rgba(6,182,212,${vp})`;
-            ctx.shadowBlur = 12 * vp; ctx.shadowColor = '#06b6d4';
-            ctx.beginPath(); ctx.roundRect(-6.5, -3.5, 13, 2.5, 1.5); ctx.fill();
-            ctx.fillStyle = `rgba(6,182,212,${vp * 0.20})`;
-            ctx.beginPath(); ctx.roundRect(-5, -5.5, 10, 7, 3); ctx.fill();
+            ctx.shadowBlur = 14 * vp; ctx.shadowColor = '#06b6d4';
+            ctx.beginPath(); ctx.roundRect(-6.5, -4, 5.5, 2.2, 1.5); ctx.fill();
+            // Right visor shard
+            ctx.fillStyle = `rgba(56,189,248,${vp2})`;
+            ctx.shadowBlur = 10 * vp2; ctx.shadowColor = '#38bdf8';
+            ctx.beginPath(); ctx.roundRect(1.5, -4, 5, 2.2, 1.5); ctx.fill();
+            // Ambient glow halo behind visor
+            ctx.fillStyle = `rgba(6,182,212,${vp * 0.15})`;
+            ctx.beginPath(); ctx.roundRect(-7, -6, 14, 6, 3); ctx.fill();
             ctx.shadowBlur = 0;
+
+            // Hex body panel detail (front armour plate)
+            ctx.save();
+            ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.clip();
+            ctx.strokeStyle = 'rgba(30,64,175,0.35)'; ctx.lineWidth = 0.9;
+            // Mini hexagon on chest area
+            const hx = 0, hy = 5, hr = 4.5;
+            ctx.beginPath();
+            for (let hi = 0; hi < 6; hi++) {
+                const ha = (hi / 6) * Math.PI * 2 - Math.PI / 6;
+                if (hi === 0) ctx.moveTo(hx + Math.cos(ha) * hr, hy + Math.sin(ha) * hr);
+                else ctx.lineTo(hx + Math.cos(ha) * hr, hy + Math.sin(ha) * hr);
+            }
+            ctx.closePath(); ctx.stroke();
+            // Hex fill glow
+            ctx.fillStyle = `rgba(6,182,212,${0.08 + Math.sin(Date.now() / 400) * 0.04})`;
+            ctx.fill();
+            ctx.restore();
 
             // Energy Shield
             if (entity.hasShield) {
@@ -1218,20 +1397,35 @@ class PlayerRenderer {
 
             if (typeof weaponSystem !== 'undefined') weaponSystem.drawWeaponOnPlayer(entity);
 
-            // Floating Dark-Blue Gloves
+            // ── Tactical Energy Gloves (upgraded) ──────────
             const gR = 5;
-            ctx.fillStyle = '#1e3a5f';
-            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5;
-            ctx.shadowBlur = 6; ctx.shadowColor = '#06b6d4';
+            // Front glove — main (right)
+            const gloveG = ctx.createRadialGradient(R + 4, 0, 0, R + 6, 2, gR);
+            gloveG.addColorStop(0, '#1e4a7f');
+            gloveG.addColorStop(1, '#0e2340');
+            ctx.fillStyle = gloveG;
+            ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 8; ctx.shadowColor = '#06b6d4';
             ctx.beginPath(); ctx.arc(R + 6, 2, gR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.strokeStyle = '#2d5a8e'; ctx.lineWidth = 1.2;
-            ctx.beginPath(); ctx.moveTo(R + 3, 0); ctx.lineTo(R + 9, 0); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(R + 3, 2.5); ctx.lineTo(R + 9, 2.5); ctx.stroke();
+            // Knuckle lines
+            ctx.strokeStyle = 'rgba(6,182,212,0.70)'; ctx.lineWidth = 1.0;
+            ctx.shadowBlur = 4; ctx.shadowColor = '#06b6d4';
+            ctx.beginPath(); ctx.moveTo(R + 3, 0.5); ctx.lineTo(R + 9, 0.5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(R + 3, 2.8); ctx.lineTo(R + 9, 2.8); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(R + 3, 4.8); ctx.lineTo(R + 9, 4.8); ctx.stroke();
+            // Knuckle energy dot
+            const kp = 0.5 + Math.sin(Date.now() / 250) * 0.4;
+            ctx.fillStyle = `rgba(6,182,212,${kp})`;
+            ctx.shadowBlur = 6 * kp; ctx.shadowColor = '#38bdf8';
+            ctx.beginPath(); ctx.arc(R + 10.5, 2, 1.5, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
 
+            // Back glove (left)
             ctx.fillStyle = '#0e2340'; ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5;
-            ctx.shadowBlur = 3; ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 4; ctx.shadowColor = '#06b6d4';
             ctx.beginPath(); ctx.arc(-(R + 5), 1, gR - 1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = 'rgba(6,182,212,0.40)'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(-(R + 2), 0); ctx.lineTo(-(R + 8), 0); ctx.stroke();
             ctx.shadowBlur = 0;
 
             ctx.restore(); // end LAYER 2

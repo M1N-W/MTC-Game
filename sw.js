@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.8.9'; // v3.8.9 Full arena Domain Expansion with circular boundary and physics lock system
+const CACHE_NAME = 'mtc-cache-v3.8.10'; // v3.8.10 Major player rendering overhaul with enhanced armor, visor, and tactical details
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
