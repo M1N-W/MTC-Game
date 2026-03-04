@@ -285,25 +285,26 @@ class WanchaiStand {
         const now = performance.now();
         const screen = worldToScreen(this.x, this.y);
 
-        // Ghost trail
+        // Ghost trail — mini silhouettes instead of rings
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
-            ctx.globalAlpha = g.alpha * 0.6;
-            ctx.strokeStyle = this._rushMode ? '#f97316' : '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10; ctx.shadowColor = this._rushMode ? '#ea580c' : '#dc2626';
-            ctx.beginPath(); ctx.arc(gs.x, gs.y, 18 - i * 2, 0, Math.PI * 2); ctx.stroke();
+            ctx.globalAlpha = g.alpha * 0.35;
+            ctx.translate(gs.x, gs.y);
+            ctx.rotate(this.angle);
+            const trailCol = this._rushMode ? '#f97316' : '#ef4444';
+            ctx.fillStyle = trailCol;
+            ctx.shadowBlur = 8; ctx.shadowColor = trailCol;
+            // Mini body blob
+            ctx.beginPath(); ctx.arc(0, 0, 10 - i, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
-        ctx.save();
-        ctx.translate(screen.x, screen.y);
-
-        // ── Rush fist afterimages (precomputed in update/_punch) ───
+        // ── Rush fist afterimages ─────────────────────────────
         if (this._rushFists.length > 0) {
             ctx.save();
+            ctx.translate(screen.x, screen.y);
             ctx.rotate(this.angle);
             for (const f of this._rushFists) {
                 if (f.alpha <= 0) continue;
@@ -315,7 +316,6 @@ class WanchaiStand {
                 ctx.beginPath();
                 ctx.ellipse(f.ox, fy, 14 * f.scale, 9 * f.scale, 0, 0, Math.PI * 2);
                 ctx.fill();
-                // Motion line
                 ctx.strokeStyle = this._rushMode ? 'rgba(251,146,60,0.5)' : 'rgba(248,113,113,0.45)';
                 ctx.lineWidth = 4 * f.scale;
                 ctx.shadowBlur = 4;
@@ -327,109 +327,19 @@ class WanchaiStand {
             ctx.restore();
         }
 
-        // ── Outer aura ring ───────────────────────────────────
-        const pulseMult = (this._phaseTimer > 0) ? 2.5 : (this._rushMode ? 4.0 : 1);
-        const auraColor = this._rushMode ? '#f97316' : '#ef4444';
-        const auraAlpha = (this._rushMode ? 0.55 : 0.3) + Math.sin(now / 100 * pulseMult) * 0.2;
-        ctx.globalAlpha = auraAlpha;
-        ctx.strokeStyle = auraColor; ctx.lineWidth = this._rushMode ? 4 : 3;
-        ctx.shadowBlur = this._rushMode ? 40 : 22;
-        ctx.shadowColor = this._rushMode ? '#ea580c' : '#dc2626';
-        ctx.beginPath();
-        ctx.arc(0, 0, (this._rushMode ? 36 : 30) + Math.sin(now / 120) * 4, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Rush mode — second ring
-        if (this._rushMode) {
-            ctx.globalAlpha = 0.35 + Math.sin(now / 60) * 0.2;
-            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
-            ctx.shadowBlur = 20; ctx.shadowColor = '#f59e0b';
-            ctx.beginPath();
-            ctx.arc(0, 0, 48 + Math.sin(now / 80) * 6, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.shadowBlur = 0;
+        // ── Mini humanoid body (delegated to PlayerRenderer) ─
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer._drawStandMiniBody) {
+            PlayerRenderer._drawStandMiniBody(ctx, this, now);
         }
 
-        // ── Body ─────────────────────────────────────────────
-        ctx.save();
-        ctx.rotate(this.angle);
-        ctx.globalAlpha = this._rushMode ? 0.85 : 0.70;
-        const bodyColor0 = this._rushMode ? 'rgba(253,186,116,0.90)' : 'rgba(248,113,113,0.85)';
-        const bodyColor1 = this._rushMode ? 'rgba(234,88,12,0.75)' : 'rgba(220,38,38,0.70)';
-        const bodyColor2 = this._rushMode ? 'rgba(154,52,18,0.25)' : 'rgba(127,29,29,0.20)';
-        const bodyG = ctx.createRadialGradient(-4, -3, 0, 0, 0, 20);
-        bodyG.addColorStop(0, bodyColor0);
-        bodyG.addColorStop(0.5, bodyColor1);
-        bodyG.addColorStop(1, bodyColor2);
-        ctx.fillStyle = bodyG;
-        ctx.shadowBlur = this._rushMode ? 28 : 18;
-        ctx.shadowColor = this._rushMode ? '#ea580c' : '#dc2626';
-        ctx.beginPath(); ctx.arc(0, 0, 19, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Fists — alternates left/right each punch
-        const fistExtend = (this._phaseTimer > 0) ? 34 : 24;
-        const fistYOff = this._punchSide * 3; // slight vertical offset per side
-        ctx.globalAlpha = 0.85;
-        ctx.fillStyle = this._phaseTimer > 0
-            ? (this._rushMode ? '#fb923c' : '#facc15')
-            : '#fb7185';
-        ctx.shadowBlur = this._phaseTimer > 0 ? (this._rushMode ? 30 : 20) : 8;
-        ctx.shadowColor = this._rushMode ? '#f97316' : '#f97316';
-        ctx.beginPath(); ctx.ellipse(fistExtend, fistYOff, 11, 8, 0, 0, Math.PI * 2); ctx.fill();
-        // Knuckle lines
-        ctx.strokeStyle = '#9f1239'; ctx.lineWidth = 1; ctx.shadowBlur = 0;
-        for (let k = 0; k < 3; k++) {
-            ctx.beginPath();
-            ctx.moveTo(fistExtend + 4, fistYOff - 3 + k * 4);
-            ctx.lineTo(fistExtend + 10, fistYOff - 3 + k * 4);
-            ctx.stroke();
-        }
-        // Impact flash
-        if (this._phaseTimer > 0) {
-            const flashT = this._phaseTimer / (this._rushMode ? 0.07 : 0.12);
-            ctx.globalAlpha = flashT * (this._rushMode ? 0.9 : 0.6);
-            ctx.fillStyle = this._rushMode ? '#fed7aa' : '#fef08a';
-            ctx.shadowBlur = this._rushMode ? 36 : 24;
-            ctx.shadowColor = this._rushMode ? '#f97316' : '#facc15';
-            ctx.beginPath(); ctx.arc(fistExtend + 14, fistYOff, this._rushMode ? 14 : 9, 0, Math.PI * 2); ctx.fill();
-            // Star burst lines (rush only)
-            if (this._rushMode) {
-                ctx.strokeStyle = '#fef9c3'; ctx.lineWidth = 2; ctx.shadowBlur = 12;
-                for (let si = 0; si < 6; si++) {
-                    const sa = (si / 6) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.moveTo(fistExtend + 14, fistYOff);
-                    ctx.lineTo(fistExtend + 14 + Math.cos(sa) * 20, fistYOff + Math.sin(sa) * 20);
-                    ctx.stroke();
-                }
-            }
-        }
-        ctx.restore();
-
-        // ── Energy eyes ──────────────────────────────────────
-        ctx.save();
-        ctx.rotate(this.angle);
-        const eyeGlow = (this._rushMode ? 0.9 : 0.7) + Math.sin(now / 120) * 0.3;
-        ctx.globalAlpha = eyeGlow;
-        ctx.fillStyle = this._rushMode ? '#fb923c' : '#fbbf24';
-        ctx.shadowBlur = this._rushMode ? 18 : 12;
-        ctx.shadowColor = this._rushMode ? '#ea580c' : '#f59e0b';
-        ctx.beginPath(); ctx.ellipse(6, -6, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(6, 4, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#000'; ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.ellipse(7, -6, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(7, 4, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-
-        // ── ORA ORA text — escalates with combo ──────────────
+        // ── ORA ORA text ─────────────────────────────────────
         if (this._oraAlpha > 0 && this._oraLabel) {
-            const oraScale = this._rushMode ? 1.3 : 1.0;
-            const jx = (this._hitStopTimer > 0 ? 0 : (Math.sin(now / 18) * (this._rushMode ? 3 : 1)));
-            const jy = (this._hitStopTimer > 0 ? 0 : (Math.cos(now / 15) * (this._rushMode ? 3 : 1)));
             ctx.save();
-            ctx.translate(jx, -42 + jy);
+            ctx.translate(screen.x, screen.y);
+            const oraScale = this._rushMode ? 1.3 : 1.0;
+            const jx = Math.sin(now / 18) * (this._rushMode ? 3 : 1);
+            const jy = Math.cos(now / 15) * (this._rushMode ? 3 : 1);
+            ctx.translate(jx, -52 + jy);
             ctx.scale(oraScale, oraScale);
             ctx.globalAlpha = this._oraAlpha;
             ctx.font = `900 ${this._rushMode ? 18 : 15}px "Arial Black", Arial, sans-serif`;
@@ -448,25 +358,17 @@ class WanchaiStand {
         if (this._comboCount >= 3) {
             const badgeAlpha = Math.min(1, this._comboTimer / 0.45);
             ctx.save();
+            ctx.translate(screen.x, screen.y);
             ctx.globalAlpha = badgeAlpha * 0.9;
             ctx.fillStyle = this._rushMode ? '#ea580c' : '#dc2626';
             ctx.shadowBlur = 10; ctx.shadowColor = this._rushMode ? '#f97316' : '#ef4444';
-            ctx.beginPath(); ctx.arc(18, -28, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(22, -32, 10, 0, Math.PI * 2); ctx.fill();
             ctx.globalAlpha = badgeAlpha;
             ctx.fillStyle = '#fff'; ctx.shadowBlur = 0;
             ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(Math.min(this._comboCount, 99), 18, -28);
+            ctx.fillText(Math.min(this._comboCount, 99), 22, -32);
             ctx.restore();
         }
-
-        // ── Name tag ─────────────────────────────────────────
-        ctx.globalAlpha = 0.55 + Math.sin(now / 200) * 0.15;
-        ctx.fillStyle = this._rushMode ? '#fed7aa' : '#fca5a5';
-        ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('วันชัย', 0, -38);
-        ctx.globalAlpha = 1;
-
-        ctx.restore();
     }
 }
 

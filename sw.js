@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.9.1'; // v3.9.1 ORA ORA Combo System: Advanced Wanchai Stand rush mechanics with hit-stop and visual overhaul
+const CACHE_NAME = 'mtc-cache-v3.9.2'; // v3.9.2 Wanchai Stand rendering refactoring: Mini humanoid body with enhanced visual architecture
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -86,6 +86,196 @@ class PlayerRenderer {
     }
 
     // ── Auto-exclusive Stand Aura (แดง/ส้ม theme) ────────────
+    // ══════════════════════════════════════════════════════════
+    // 👊 WANCHAI STAND — Mini Humanoid Body
+    //    - Scale 0.55 clone of Auto player silhouette
+    //    - Semitransparent ghost red/orange
+    //    - Animates fist punch L/R alternating from stand._punchSide
+    // ══════════════════════════════════════════════════════════
+    static _drawStandMiniBody(ctx, stand, now) {
+        if (!stand.active) return;
+        const screen = worldToScreen(stand.x, stand.y);
+        const S = 0.55;             // scale relative to player (R=15 → ~8.25)
+        const R = 15 * S;           // body radius
+        const isRush = stand._rushMode;
+        const isPunch = stand._phaseTimer > 0;
+        const punchSide = stand._punchSide ?? 1;   // +1 right, -1 left
+        const flashT = isPunch ? (stand._phaseTimer / (isRush ? 0.07 : 0.12)) : 0;
+
+        const baseAlpha = isRush ? 0.78 : 0.65;
+
+        ctx.save();
+        ctx.translate(screen.x, screen.y);
+
+        // ── Outer glow ring ────────────────────────────────────
+        const ringPulse = (isRush ? 0.55 : 0.30) + Math.sin(now / 100 * (isPunch ? 3 : 1)) * 0.15;
+        ctx.globalAlpha = ringPulse;
+        ctx.strokeStyle = isRush ? '#f97316' : '#ef4444';
+        ctx.lineWidth = isRush ? 2.5 : 1.8;
+        ctx.shadowBlur = isRush ? 28 : 14;
+        ctx.shadowColor = isRush ? '#ea580c' : '#dc2626';
+        const ringR = R * 1.7 + Math.sin(now / 120) * 2;
+        ctx.beginPath(); ctx.arc(0, 0, ringR, 0, Math.PI * 2); ctx.stroke();
+        if (isRush) {
+            ctx.globalAlpha = 0.25 + Math.sin(now / 55) * 0.12;
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.shadowBlur = 14; ctx.shadowColor = '#f59e0b';
+            ctx.beginPath(); ctx.arc(0, 0, ringR * 1.35 + Math.sin(now / 70) * 3, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        // ── Body (rotated to face target angle) ───────────────
+        ctx.save();
+        ctx.rotate(stand.angle);
+        ctx.globalAlpha = baseAlpha;
+
+        // Main body circle — crimson ghost gradient
+        const bG = ctx.createRadialGradient(-R * 0.25, -R * 0.25, 0, 0, 0, R);
+        if (isRush) {
+            bG.addColorStop(0, 'rgba(253,186,116,0.92)');
+            bG.addColorStop(0.45, 'rgba(234,88,12,0.80)');
+            bG.addColorStop(1, 'rgba(124,45,18,0.15)');
+        } else {
+            bG.addColorStop(0, 'rgba(252,165,165,0.90)');
+            bG.addColorStop(0.45, 'rgba(220,38,38,0.72)');
+            bG.addColorStop(1, 'rgba(127,29,29,0.12)');
+        }
+        ctx.fillStyle = bG;
+        ctx.shadowBlur = isRush ? 20 : 12;
+        ctx.shadowColor = isRush ? '#ea580c' : '#dc2626';
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Armor plate hint — clipped inside body
+        ctx.save();
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.clip();
+        ctx.fillStyle = isRush ? 'rgba(154,52,18,0.40)' : 'rgba(120,20,20,0.40)';
+        ctx.beginPath(); ctx.roundRect(-R, -R, R * 0.65, R * 0.85, 1); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(R * 0.22, -R, R * 0.8, R * 0.85, 1); ctx.fill();
+        // Hex core
+        const hexR = R * 0.4;
+        const cP = Math.max(0, 0.5 + Math.sin(now / 200) * 0.5);
+        ctx.beginPath();
+        for (let hi = 0; hi < 6; hi++) {
+            const ha = (hi / 6) * Math.PI * 2 - Math.PI / 6;
+            if (hi === 0) ctx.moveTo(Math.cos(ha) * hexR, R * 0.22 + Math.sin(ha) * hexR);
+            else ctx.lineTo(Math.cos(ha) * hexR, R * 0.22 + Math.sin(ha) * hexR);
+        }
+        ctx.closePath();
+        const hG = ctx.createRadialGradient(0, R * 0.22, 0, 0, R * 0.22, hexR);
+        hG.addColorStop(0, `rgba(255,200,200,${Math.min(1, cP * 0.9)})`);
+        hG.addColorStop(1, `rgba(220,38,38,${cP * 0.5})`);
+        ctx.fillStyle = hG;
+        ctx.shadowBlur = 8 * cP; ctx.shadowColor = '#dc2626';
+        ctx.fill();
+        ctx.restore(); // end clip
+
+        // ── Spiky hair (mini) ─────────────────────────────────
+        ctx.globalAlpha = baseAlpha * 0.9;
+        ctx.fillStyle = isRush ? 'rgba(154,52,18,0.90)' : 'rgba(60,5,5,0.92)';
+        ctx.beginPath();
+        ctx.moveTo(-(R - 0.5), -0.5);
+        ctx.quadraticCurveTo(-R - 0.5, -R * 0.6, -R * 0.4, -R - 1);
+        ctx.quadraticCurveTo(0, -R - 2, R * 0.4, -R - 1);
+        ctx.quadraticCurveTo(R + 0.5, -R * 0.6, R - 0.5, -0.5);
+        ctx.quadraticCurveTo(0, 1, -(R - 0.5), -0.5);
+        ctx.closePath(); ctx.fill();
+        // Mini spikes
+        const miniSpikes = [[-6, 5, '#3d0909'], [-2, 5, '#5c1010'], [2, 5, '#5c1010'], [6, 4, '#3d0909']];
+        for (const [bx, h, col] of miniSpikes) {
+            const wobble = Math.sin(now / 380 + bx * 0.4) * 0.7;
+            ctx.fillStyle = isRush ? '#ea580c' : col;
+            ctx.globalAlpha = baseAlpha * 0.85;
+            ctx.beginPath();
+            ctx.moveTo(bx - 2, -R - 0.5);
+            ctx.lineTo(bx + 2, -R - 0.5);
+            ctx.lineTo(bx + wobble, -R - 0.5 - h);
+            ctx.closePath(); ctx.fill();
+        }
+
+        // ── Glowing eyes ──────────────────────────────────────
+        const eyeGlow = (isRush ? 0.95 : 0.80) + Math.sin(now / 120) * 0.2;
+        ctx.globalAlpha = eyeGlow;
+        ctx.fillStyle = isRush ? '#fb923c' : '#fbbf24';
+        ctx.shadowBlur = isRush ? 14 : 8; ctx.shadowColor = isRush ? '#ea580c' : '#f59e0b';
+        ctx.beginPath(); ctx.ellipse(R * 0.40, -R * 0.38, 2.5, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(R * 0.40, R * 0.22, 2.5, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.ellipse(R * 0.47, -R * 0.38, 0.9, 1.2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(R * 0.47, R * 0.22, 0.9, 1.2, 0, 0, Math.PI * 2); ctx.fill();
+
+        // ── Fists — alternating L/R each punch ────────────────
+        // Right fist (primary — always shown forward)
+        const rightExtend = isPunch && punchSide > 0 ? R + 14 : R + 8;
+        const leftExtend = isPunch && punchSide < 0 ? R + 14 : R + 8;
+        const rightY = isPunch && punchSide > 0 ? 0 : 2.5;
+        const leftY = isPunch && punchSide < 0 ? 0 : -2.5;
+
+        // Right fist
+        ctx.globalAlpha = baseAlpha;
+        ctx.fillStyle = (isPunch && punchSide > 0)
+            ? (isRush ? '#fb923c' : '#facc15')
+            : (isRush ? 'rgba(234,88,12,0.7)' : '#fb7185');
+        ctx.shadowBlur = (isPunch && punchSide > 0) ? (isRush ? 22 : 14) : 5;
+        ctx.shadowColor = '#f97316';
+        ctx.beginPath(); ctx.ellipse(rightExtend, rightY, R * 0.75, R * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#2d0606'; ctx.lineWidth = 0.8; ctx.shadowBlur = 0;
+        for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            ctx.moveTo(rightExtend + 2, rightY - 2 + k * 2.5);
+            ctx.lineTo(rightExtend + R * 0.65, rightY - 2 + k * 2.5);
+            ctx.stroke();
+        }
+
+        // Left fist (offset below, goes forward on punchSide < 0)
+        ctx.globalAlpha = baseAlpha;
+        ctx.fillStyle = (isPunch && punchSide < 0)
+            ? (isRush ? '#fb923c' : '#facc15')
+            : (isRush ? 'rgba(234,88,12,0.7)' : '#fb7185');
+        ctx.shadowBlur = (isPunch && punchSide < 0) ? (isRush ? 22 : 14) : 5;
+        ctx.shadowColor = '#f97316';
+        ctx.beginPath(); ctx.ellipse(leftExtend, leftY + 6, R * 0.7, R * 0.50, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#2d0606'; ctx.lineWidth = 0.8; ctx.shadowBlur = 0;
+        for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            ctx.moveTo(leftExtend + 2, leftY + 6 - 1.5 + k * 2);
+            ctx.lineTo(leftExtend + R * 0.60, leftY + 6 - 1.5 + k * 2);
+            ctx.stroke();
+        }
+
+        // ── Impact flash ──────────────────────────────────────
+        if (isPunch && flashT > 0) {
+            const activeX = punchSide > 0 ? rightExtend : leftExtend;
+            const activeY = punchSide > 0 ? rightY : leftY + 6;
+            ctx.globalAlpha = flashT * (isRush ? 0.95 : 0.70);
+            ctx.fillStyle = isRush ? '#fed7aa' : '#fef08a';
+            ctx.shadowBlur = isRush ? 30 : 20; ctx.shadowColor = isRush ? '#f97316' : '#facc15';
+            ctx.beginPath(); ctx.arc(activeX + R * 0.85, activeY, isRush ? R * 0.95 : R * 0.65, 0, Math.PI * 2); ctx.fill();
+            if (isRush) {
+                ctx.strokeStyle = '#fef9c3'; ctx.lineWidth = 1.2; ctx.shadowBlur = 10;
+                for (let si = 0; si < 6; si++) {
+                    const sa = (si / 6) * Math.PI * 2;
+                    ctx.globalAlpha = flashT * 0.7;
+                    ctx.beginPath();
+                    ctx.moveTo(activeX + R * 0.85, activeY);
+                    ctx.lineTo(activeX + R * 0.85 + Math.cos(sa) * R * 1.3, activeY + Math.sin(sa) * R * 1.3);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        ctx.restore(); // end rotate(stand.angle)
+
+        // ── Name tag ─────────────────────────────────────────
+        ctx.globalAlpha = 0.50 + Math.sin(now / 200) * 0.12;
+        ctx.fillStyle = isRush ? '#fed7aa' : '#fca5a5';
+        ctx.font = 'bold 7px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('วันชัย', 0, -(R + 16));
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+    }
+
     static _drawAutoAura(entity, ctx) {
         if (!entity.standGhosts) return;
         const ts = window.timeScale ?? 1;
@@ -457,56 +647,32 @@ class PlayerRenderer {
             ctx.beginPath(); ctx.arc(4, -28, 2.5, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
 
-            // Stand Rush Animation — uses WanchaiStand's precomputed _rushFists (no Math.random in draw!)
+            // Stand Rush Animation — fist afterimages drawn by WanchaiStand.draw() directly
+            // Player-side: show ORA ORA text above player when stand is attacking
             if (entity.isStandAttacking) {
                 const stand = entity.wanchaiStand;
                 const isRush = stand?._rushMode ?? false;
-                const rushFists = stand?._rushFists ?? [];
-                ctx.save();
-                ctx.translate(screen.x, screen.y);
-                ctx.rotate(entity.angle);
-                ctx.shadowBlur = isRush ? 20 : 12;
-                ctx.shadowColor = isRush ? '#f97316' : '#dc2626';
-                for (const f of rushFists) {
-                    if (f.alpha <= 0) continue;
-                    ctx.fillStyle = isRush
-                        ? `rgba(251,146,60,${(f.alpha * 0.85).toFixed(2)})`
-                        : `rgba(239,68,68,${(f.alpha * 0.85).toFixed(2)})`;
-                    ctx.globalAlpha = f.alpha;
-                    ctx.beginPath();
-                    ctx.ellipse(f.ox, f.oy * f.side, 14 * f.scale, 9 * f.scale, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = isRush ? 'rgba(251,146,60,0.5)' : 'rgba(248,113,113,0.5)';
-                    ctx.lineWidth = 4 * f.scale;
-                    ctx.beginPath();
-                    ctx.moveTo(f.ox - 25 * f.scale, f.oy * f.side);
-                    ctx.lineTo(f.ox, f.oy * f.side);
-                    ctx.stroke();
-                }
-
-                ctx.rotate(-entity.angle);
                 const comboCount = stand?._comboCount ?? 0;
-                const textScale = 1 + Math.sin(now / 30) * (isRush ? 0.22 : 0.15);
-                // Jitter from stand state (deterministic based on phaseTimer, not random)
-                const jt = stand?._phaseTimer ?? 0;
-                const jitterX = Math.sin(jt * 120) * (isRush ? 5 : 3);
-                const jitterY = Math.cos(jt * 100) * (isRush ? 5 : 3);
-                ctx.translate(0, -80);
-                ctx.scale(textScale, textScale);
-                const rushLabel = isRush
-                    ? `ORA ORA ORA!!!`
-                    : (comboCount >= 3 ? `ORA×${comboCount}!` : 'วันชัย วันชัย!');
-                const fontSize = isRush ? 30 : 26;
-                ctx.font = `900 ${fontSize}px "Arial Black", Arial, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.lineWidth = 5;
-                ctx.strokeStyle = '#000000';
-                ctx.strokeText(rushLabel, jitterX, jitterY);
-                ctx.fillStyle = isRush ? '#fed7aa' : '#facc15';
-                ctx.shadowBlur = isRush ? 24 : 0;
-                ctx.shadowColor = '#f97316';
-                ctx.fillText(rushLabel, jitterX, jitterY);
-                ctx.restore();
+                if (comboCount >= 2) {
+                    const jt = stand?._phaseTimer ?? 0;
+                    const jx = Math.sin(jt * 120) * (isRush ? 4 : 2);
+                    const jy = Math.cos(jt * 100) * (isRush ? 4 : 2);
+                    const textScale = 1 + Math.sin(now / 30) * (isRush ? 0.20 : 0.12);
+                    const rushLabel = isRush
+                        ? 'ORA ORA ORA!!!'
+                        : (comboCount >= 4 ? `ORA×${comboCount}!` : 'วันชัย!');
+                    ctx.save();
+                    ctx.translate(screen.x + jx, screen.y - 75 + jy);
+                    ctx.scale(textScale, textScale);
+                    ctx.font = `900 ${isRush ? 26 : 22}px "Arial Black", Arial, sans-serif`;
+                    ctx.textAlign = 'center'; ctx.lineWidth = 5;
+                    ctx.strokeStyle = '#000000';
+                    ctx.strokeText(rushLabel, 0, 0);
+                    ctx.fillStyle = isRush ? '#fed7aa' : '#facc15';
+                    ctx.shadowBlur = isRush ? 20 : 0; ctx.shadowColor = '#f97316';
+                    ctx.fillText(rushLabel, 0, 0);
+                    ctx.restore();
+                }
             }
         }
 
