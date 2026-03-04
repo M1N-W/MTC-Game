@@ -16,28 +16,15 @@ class WanchaiStand {
         this.active = true;
 
         // Combat timers
-        this._atkTimer = 0;
-        this._atkRate = 0;
-        this._punchPhase = 0;       // 0=idle 1=wind-up 2=strike
+        this._atkTimer = 0;         // countdown to next punch
+        this._atkRate = 0;         // set from BALANCE each frame
+        this._punchPhase = 0;         // 0=idle 1=wind-up 2=strike (visual only)
         this._phaseTimer = 0;
-        this._punchSide = 1;        // 1=right, -1=left — alternates each punch
         this.lastPunchSoundTime = 0;
 
-        // ── ORA ORA Combo System ──────────────────────────────
-        this._comboCount = 0;       // hits in current combo
-        this._comboTimer = 0;       // resets combo if > 0.45s since last hit
-        this._rushMode = false;     // true during burst phase (every 6 hits)
-        this._rushTimer = 0;        // duration of rush burst
-        this._rushFists = [];       // [{x,y,alpha,side}] — precomputed each punch in update()
-        this._oraLabel = '';        // current ora text ('ORA!', 'ORA ORA!', 'ORА ORA ORA!!', etc.)
-        this._oraAlpha = 0;         // fade timer for ora text
-        this._hitStopTimer = 0;     // when > 0, stand freezes in place (hit-stop feel)
-        this._targetHitStopX = 0;   // cached target pos during hit-stop
-        this._targetHitStopY = 0;
-
         // Rendering
-        this.angle = owner.angle;
-        this.ghostTrail = [];
+        this.angle = owner.angle;  // faces toward target
+        this.ghostTrail = [];          // [{x,y,alpha}] motion blur
     }
 
     update(dt) {
@@ -47,43 +34,19 @@ class WanchaiStand {
 
         const S = owner.stats ?? {};
         this._atkRate = S.wanchaiPunchRate ?? 0.08;
-        const baseAtkRate = this._atkRate;
-        const atkRange = S.standPunchRange ?? 110;
-        const chaseSpeed = S.standMoveSpeed ?? 340;
-        const leashRadius = S.standLeashRadius ?? 420;
+        const atkRange = S.standPunchRange ?? 110;  // hitbox reach
+        const chaseSpeed = S.standMoveSpeed ?? 340;  // px/s
+        const leashRadius = S.standLeashRadius ?? 420;  // max dist from owner
 
-        // ── Combo decay ──────────────────────────────────────
-        if (this._comboCount > 0) {
-            this._comboTimer -= dt;
-            if (this._comboTimer <= 0) {
-                this._comboCount = 0;
-                this._rushMode = false;
-            }
-        }
-
-        // ── Rush burst timer ─────────────────────────────────
-        if (this._rushMode) {
-            this._rushTimer -= dt;
-            if (this._rushTimer <= 0) { this._rushMode = false; this._rushTimer = 0; }
-        }
-
-        // ── Hit-stop (stand pauses briefly after hard hit) ───
-        if (this._hitStopTimer > 0) {
-            this._hitStopTimer -= dt;
-            this._oraAlpha = Math.max(0, this._oraAlpha - dt * 2);
-            this._phaseTimer = Math.max(0, this._phaseTimer - dt);
-            // Decay rush fists alpha
-            for (const f of this._rushFists) f.alpha = Math.max(0, f.alpha - dt * 6);
-            return; // freeze movement during hit-stop
-        }
-
-        // ── Find nearest target ──────────────────────────────
+        // ── Find nearest target (prefers forced cursor target) ──
         let target = null;
-        let nearestDist = atkRange * 2.5;
+        let nearestDist = atkRange * 2.5; // chase range = 2.5× attack range
 
+        // L-Click player input: prioritise enemy nearest to cursor
         const fx = this._forcedTargetX;
         const fy = this._forcedTargetY;
         if (fx !== undefined && fy !== undefined) {
+            // Find closest enemy to cursor position
             let bestD = atkRange * 4;
             for (const e of (window.enemies || [])) {
                 if (e.dead) continue;
@@ -94,9 +57,11 @@ class WanchaiStand {
                 const d = Math.hypot(window.boss.x - fx, window.boss.y - fy);
                 if (d < bestD) target = window.boss;
             }
+            // Clear after use (only applies this frame)
             this._forcedTargetX = undefined;
             this._forcedTargetY = undefined;
         }
+        // Fallback: nearest enemy to stand
         if (!target) {
             for (const e of (window.enemies || [])) {
                 if (e.dead) continue;
@@ -109,7 +74,7 @@ class WanchaiStand {
             }
         }
 
-        // ── Movement ─────────────────────────────────────────
+        // ── Movement — chase target, leash to owner ─────────
         if (target) {
             this.angle = Math.atan2(target.y - this.y, target.x - this.x);
             const d = Math.hypot(target.x - this.x, target.y - this.y);
@@ -119,6 +84,7 @@ class WanchaiStand {
                 this.y += (target.y - this.y) / d * step;
             }
         } else {
+            // Float near owner when no target
             const ox = owner.x + Math.cos(owner.angle) * 60;
             const oy = owner.y + Math.sin(owner.angle) * 60;
             const d = Math.hypot(ox - this.x, oy - this.y);
@@ -129,7 +95,7 @@ class WanchaiStand {
             }
         }
 
-        // Leash
+        // Leash — don't stray too far from owner
         const ownerDist = Math.hypot(this.x - owner.x, this.y - owner.y);
         if (ownerDist > leashRadius) {
             const la = Math.atan2(this.y - owner.y, this.x - owner.x);
@@ -144,28 +110,21 @@ class WanchaiStand {
         }
         for (const g of this.ghostTrail) g.alpha = Math.max(0, g.alpha - dt * 1.8);
 
-        // Decay ora text
-        this._oraAlpha = Math.max(0, this._oraAlpha - dt * 2.5);
-        // Decay rush fist ghosts
-        for (const f of this._rushFists) f.alpha = Math.max(0, f.alpha - dt * 5);
-
-        // ── Attack logic ─────────────────────────────────────
-        // Rush mode fires at 2.5× base rate
-        const effectiveRate = this._rushMode ? baseAtkRate * 0.38 : baseAtkRate;
-
+        // ── Attack logic (auto-fires regardless of L-Click) ──
         this._atkTimer -= dt;
         this._phaseTimer = Math.max(0, this._phaseTimer - dt);
 
         if (this._atkTimer <= 0 && target) {
             const distToTarget = Math.hypot(target.x - this.x, target.y - this.y);
             if (distToTarget < atkRange + (target.radius ?? 14)) {
-                this._atkTimer = effectiveRate;
+                this._atkTimer = this._atkRate;
                 this._punch(target, owner);
             } else {
+                // Still advance timer so we punch the instant we arrive
                 this._atkTimer = Math.min(this._atkTimer, 0);
             }
         } else if (this._atkTimer <= 0) {
-            this._atkTimer = effectiveRate * 0.5;
+            this._atkTimer = this._atkRate * 0.5; // idle tick
         }
     }
 
@@ -176,9 +135,8 @@ class WanchaiStand {
         // Second Wind bonus
         if (owner.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
 
-        // Crit — higher chance in rush mode
+        // Crit
         let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.40);
-        if (this._rushMode) critChance += 0.15;
         if (owner.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
@@ -190,9 +148,6 @@ class WanchaiStand {
             }
         }
 
-        // Rush-mode damage bonus (the barrage hits harder)
-        if (this._rushMode) dmg *= 1.25;
-
         target.takeDamage(dmg, owner);
 
         // Lifesteal
@@ -200,81 +155,26 @@ class WanchaiStand {
             owner.hp = Math.min(owner.maxHp, owner.hp + dmg * (S.passiveLifesteal ?? 0.02));
         }
 
-        // ── Knockback — alternating side per punch ───────────
+        // Knockback — push enemy away from stand
         const ka = Math.atan2(target.y - this.y, target.x - this.x);
-        const kf = (S.standKnockback ?? 180) * (this._rushMode ? 0.5 : 1.0); // less KB in rush
+        const kf = S.standKnockback ?? 180;
         target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
         target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
-        // ── Combo counter ────────────────────────────────────
-        this._comboCount++;
-        this._comboTimer = 0.45; // window to continue combo
-        this._punchSide *= -1;   // alternate fists
-
-        // Every 6 hits → trigger rush burst
-        if (this._comboCount % 6 === 0) {
-            this._rushMode = true;
-            this._rushTimer = 0.9;
-            if (typeof addScreenShake === 'function') addScreenShake(7);
-            if (typeof spawnFloatingText === 'function')
-                spawnFloatingText('ORA ORA ORA!!!', this.x, this.y - 55, '#facc15', 22);
-        }
-
-        // ── Precompute rush fist ghosts (no Math.random in draw!) ─
-        this._rushFists.length = 0;
-        const fistCount = this._rushMode ? 9 : (this._comboCount >= 3 ? 5 : 3);
-        for (let i = 0; i < fistCount; i++) {
-            this._rushFists.push({
-                ox: 38 + Math.random() * 85,   // offset along stand angle
-                oy: (Math.random() - 0.5) * 65,
-                scale: 0.45 + Math.random() * 0.7,
-                side: Math.random() < 0.5 ? 1 : -1,
-                alpha: 0.75 + Math.random() * 0.25
-            });
-        }
-
-        // ── ORA label — escalates with combo ─────────────────
-        const oraLabels = ['ORA!', 'ORA ORA!', 'ORA ORA ORA!!', 'ORA×4!!', 'ORA×5!!!', 'ORAAAA!!!'];
-        const idx = Math.min(this._comboCount - 1, oraLabels.length - 1);
-        this._oraLabel = oraLabels[idx];
-        this._oraAlpha = 1.0;
-
-        // ── VFX ──────────────────────────────────────────────
-        const particleCount = this._rushMode ? 8 : (isCrit ? 5 : 3);
-        const particleColor = this._rushMode ? '#f97316' : (isCrit ? '#facc15' : '#ef4444');
+        // VFX
         if (typeof spawnParticles === 'function')
-            spawnParticles(target.x, target.y, particleCount, particleColor);
-
-        const shakeAmt = this._rushMode ? 6 : (isCrit ? 5 : 2);
-        if (typeof addScreenShake === 'function') addScreenShake(shakeAmt);
-
-        if (isCrit && !this._rushMode && typeof spawnFloatingText === 'function')
+            spawnParticles(target.x, target.y, isCrit ? 5 : 3, isCrit ? '#facc15' : '#ef4444');
+        if (typeof addScreenShake === 'function') addScreenShake(isCrit ? 5 : 2);
+        if (isCrit && typeof spawnFloatingText === 'function')
             spawnFloatingText('วันชัย!', this.x, this.y - 30, '#facc15', 18);
-
-        // ── Hit-stop: freeze stand briefly on heavy hits ──────
-        if (isCrit || this._comboCount % 6 === 0) {
-            this._hitStopTimer = 0.07;
-            this._targetHitStopX = target.x;
-            this._targetHitStopY = target.y;
-        }
 
         // Punch animation phase
         this._punchPhase = 2;
-        this._phaseTimer = this._rushMode ? 0.07 : 0.12;
-
-        // ── Achievements ─────────────────────────────────────
-        if (typeof Achievements !== 'undefined') {
-            Achievements.stats.standRushKills = Achievements.stats.standRushKills ?? 0;
-            if (target.hp <= 0) {
-                Achievements.stats.standRushKills++;
-                Achievements.check?.('stand_rush_kill');
-            }
-        }
+        this._phaseTimer = 0.12;
 
         // Sound
         const now = Date.now();
-        const soundCooldown = this._rushMode ? 40 : 60;
-        if (now - this.lastPunchSoundTime > soundCooldown) {
+        if (now - this.lastPunchSoundTime > 60) {
             if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
             this.lastPunchSoundTime = now;
         }
@@ -283,90 +183,78 @@ class WanchaiStand {
     draw(ctx) {
         if (!this.active || typeof ctx === 'undefined') return;
         const now = performance.now();
-        const screen = worldToScreen(this.x, this.y);
 
-        // Ghost trail — mini silhouettes instead of rings
+        // Ghost trail (mini body blobs)
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
-            ctx.globalAlpha = g.alpha * 0.35;
+            ctx.globalAlpha = g.alpha * 0.30;
             ctx.translate(gs.x, gs.y);
-            ctx.rotate(this.angle);
-            const trailCol = this._rushMode ? '#f97316' : '#ef4444';
-            ctx.fillStyle = trailCol;
-            ctx.shadowBlur = 8; ctx.shadowColor = trailCol;
-            // Mini body blob
-            ctx.beginPath(); ctx.arc(0, 0, 10 - i, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = this._rushMode ? '#f97316' : '#ef4444';
+            ctx.shadowBlur = 6; ctx.shadowColor = this._rushMode ? '#ea580c' : '#dc2626';
+            ctx.beginPath(); ctx.arc(0, 0, 12 - i * 1.5, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
-        // ── Rush fist afterimages ─────────────────────────────
-        if (this._rushFists.length > 0) {
+        // Rush fist afterimages (precomputed in _punch)
+        if (this._rushFists && this._rushFists.length > 0) {
+            const screen = worldToScreen(this.x, this.y);
             ctx.save();
             ctx.translate(screen.x, screen.y);
             ctx.rotate(this.angle);
             for (const f of this._rushFists) {
                 if (f.alpha <= 0) continue;
                 const fy = f.oy * f.side;
-                ctx.globalAlpha = f.alpha * (this._rushMode ? 0.75 : 0.55);
+                ctx.globalAlpha = f.alpha * 0.65;
                 ctx.fillStyle = this._rushMode ? 'rgba(251,146,60,0.85)' : 'rgba(239,68,68,0.80)';
-                ctx.shadowBlur = this._rushMode ? 16 : 8;
-                ctx.shadowColor = this._rushMode ? '#f97316' : '#dc2626';
-                ctx.beginPath();
-                ctx.ellipse(f.ox, fy, 14 * f.scale, 9 * f.scale, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = this._rushMode ? 'rgba(251,146,60,0.5)' : 'rgba(248,113,113,0.45)';
-                ctx.lineWidth = 4 * f.scale;
-                ctx.shadowBlur = 4;
-                ctx.beginPath();
-                ctx.moveTo(f.ox - 28 * f.scale, fy);
-                ctx.lineTo(f.ox, fy);
-                ctx.stroke();
+                ctx.shadowBlur = this._rushMode ? 14 : 7; ctx.shadowColor = this._rushMode ? '#f97316' : '#dc2626';
+                ctx.beginPath(); ctx.ellipse(f.ox, fy, 14 * f.scale, 9 * f.scale, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = this._rushMode ? 'rgba(251,146,60,0.45)' : 'rgba(248,113,113,0.40)';
+                ctx.lineWidth = 3 * f.scale; ctx.shadowBlur = 0;
+                ctx.beginPath(); ctx.moveTo(f.ox - 26 * f.scale, fy); ctx.lineTo(f.ox, fy); ctx.stroke();
             }
             ctx.restore();
         }
 
-        // ── Mini humanoid body (delegated to PlayerRenderer) ─
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer._drawStandMiniBody) {
-            PlayerRenderer._drawStandMiniBody(ctx, this, now);
+        // Main stand humanoid body (delegated to PlayerRenderer)
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer._drawStandBody) {
+            PlayerRenderer._drawStandBody(ctx, this, now);
         }
 
-        // ── ORA ORA text ─────────────────────────────────────
+        // ORA ORA text
         if (this._oraAlpha > 0 && this._oraLabel) {
+            const screen = worldToScreen(this.x, this.y);
             ctx.save();
             ctx.translate(screen.x, screen.y);
-            const oraScale = this._rushMode ? 1.3 : 1.0;
             const jx = Math.sin(now / 18) * (this._rushMode ? 3 : 1);
             const jy = Math.cos(now / 15) * (this._rushMode ? 3 : 1);
-            ctx.translate(jx, -52 + jy);
-            ctx.scale(oraScale, oraScale);
+            ctx.translate(jx, -78 + jy);
+            ctx.scale(this._rushMode ? 1.3 : 1.0, this._rushMode ? 1.3 : 1.0);
             ctx.globalAlpha = this._oraAlpha;
-            ctx.font = `900 ${this._rushMode ? 18 : 15}px "Arial Black", Arial, sans-serif`;
+            ctx.font = `900 ${this._rushMode ? 19 : 16}px "Arial Black", Arial, sans-serif`;
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#000';
-            ctx.strokeText(this._oraLabel, 0, 0);
+            ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.strokeText(this._oraLabel, 0, 0);
             ctx.fillStyle = this._rushMode ? '#fed7aa' : '#facc15';
-            ctx.shadowBlur = this._rushMode ? 20 : 10;
-            ctx.shadowColor = this._rushMode ? '#f97316' : '#fbbf24';
+            ctx.shadowBlur = this._rushMode ? 20 : 10; ctx.shadowColor = this._rushMode ? '#f97316' : '#fbbf24';
             ctx.fillText(this._oraLabel, 0, 0);
             ctx.restore();
         }
 
-        // ── Combo counter badge ────────────────────────────────
+        // Combo badge
         if (this._comboCount >= 3) {
-            const badgeAlpha = Math.min(1, this._comboTimer / 0.45);
+            const screen = worldToScreen(this.x, this.y);
+            const badgeAlpha = Math.min(1, (this._comboTimer ?? 0) / 0.45);
             ctx.save();
-            ctx.translate(screen.x, screen.y);
+            ctx.translate(screen.x + 30, screen.y - 42);
             ctx.globalAlpha = badgeAlpha * 0.9;
             ctx.fillStyle = this._rushMode ? '#ea580c' : '#dc2626';
             ctx.shadowBlur = 10; ctx.shadowColor = this._rushMode ? '#f97316' : '#ef4444';
-            ctx.beginPath(); ctx.arc(22, -32, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
             ctx.globalAlpha = badgeAlpha;
             ctx.fillStyle = '#fff'; ctx.shadowBlur = 0;
             ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(Math.min(this._comboCount, 99), 22, -32);
+            ctx.fillText(Math.min(this._comboCount, 99), 0, 0);
             ctx.restore();
         }
     }
@@ -615,24 +503,19 @@ class AutoPlayer extends Player {
 
         if (!mouse || mouse.left !== 1) return; if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
-        // ── Stand active: L-Click moves stand toward cursor (target assist) ──
-        // WanchaiStand.update() handles autonomous punching.
-        // Holding L-Click forces the stand to rush the cursor position.
+        // ── Stand active: L-Click = Player Stand Rush (melee punch) ──
+        // ผู้เล่นต่อยรัวๆแทนการยิง, stand ก็โจมตีอิสระพร้อมกัน
         if (this.wanchaiActive) {
-            this.isStandAttacking = !!(this.wanchaiStand?.active);
+            this.isStandAttacking = true;
             if (this.wanchaiStand?.active && mouse) {
-                // Direct stand toward mouse cursor (override autonomous target)
                 this.wanchaiStand._forcedTargetX = mouse.wx;
                 this.wanchaiStand._forcedTargetY = mouse.wy;
             }
-            // Still fire heatwave while Wanchai is active (bonus DPS)
-            const heatCd = this.stats?.heatWaveCooldown ?? 0.28;
+            // Player melee punch — replaces heatwave entirely
             if ((this.cooldowns?.shoot ?? 0) <= 0) {
-                this.cooldowns.shoot = heatCd;
-                if (typeof projectileManager?.spawnHeatWave === 'function') {
-                    projectileManager.spawnHeatWave(this, this.angle);
-                }
-                if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
+                const rushCd = this.stats?.playerRushCooldown ?? 0.10;
+                this.cooldowns.shoot = rushCd;
+                this._playerStandRush(mouse);
             }
             return;
         }
@@ -649,6 +532,83 @@ class AutoPlayer extends Player {
             } catch (e) { }
         }
         if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
+    }
+
+    // Player Stand Rush (melee) - called from update() when wanchaiActive + L-Click
+    _playerStandRush(mouse) {
+        const S = this.stats ?? {};
+        const range = S.playerRushRange ?? 90;
+        let dmg = (S.playerRushDamage ?? 28) * (this.damageMultiplier || 1.0);
+
+        // Find target: nearest enemy to cursor
+        let target = null;
+        let bestD = range + 80;
+        const cx = mouse?.wx ?? this.x;
+        const cy = mouse?.wy ?? this.y;
+
+        for (const e of (window.enemies || [])) {
+            if (e.dead) continue;
+            const d = Math.hypot(e.x - cx, e.y - cy);
+            if (d < bestD) { bestD = d; target = e; }
+        }
+        if (!target && window.boss && !window.boss.dead) {
+            const d = Math.hypot(window.boss.x - cx, window.boss.y - cy);
+            if (d < bestD) target = window.boss;
+        }
+
+        if (!target) {
+            if (typeof spawnParticles === 'function')
+                spawnParticles(cx, cy, 2, '#ef4444');
+            if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
+            return;
+        }
+
+        const distToPlayer = Math.hypot(target.x - this.x, target.y - this.y);
+        if (distToPlayer > range + (target.radius ?? 14)) return;
+
+        let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.40);
+        if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
+        const isCrit = Math.random() < critChance;
+        if (isCrit) {
+            dmg *= (S.critMultiplier ?? 2.0);
+            if (this.passiveUnlocked) this.goldenAuraTimer = 1;
+            if (typeof Achievements !== 'undefined') {
+                Achievements.stats.crits = (Achievements.stats.crits ?? 0) + 1;
+                Achievements.check?.('crit_master');
+            }
+        }
+        if (this.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
+
+        target.takeDamage(dmg, this);
+
+        if (this.passiveUnlocked) {
+            this.hp = Math.min(this.maxHp, this.hp + dmg * (S.passiveLifesteal ?? 0.02));
+        }
+
+        const ka = Math.atan2(target.y - this.y, target.x - this.x);
+        target.vx = (target.vx ?? 0) + Math.cos(ka) * (S.standKnockback ?? 180) * 0.7;
+        target.vy = (target.vy ?? 0) + Math.sin(ka) * (S.standKnockback ?? 180) * 0.7;
+
+        if (typeof spawnParticles === 'function')
+            spawnParticles(target.x, target.y, isCrit ? 6 : 3, isCrit ? '#facc15' : '#ef4444');
+        if (typeof addScreenShake === 'function') addScreenShake(isCrit ? 4 : 2);
+        if (isCrit && typeof spawnFloatingText === 'function')
+            spawnFloatingText('ORA!', this.x, this.y - 40, '#facc15', 20);
+
+        if (this.wanchaiStand) {
+            this.wanchaiStand._comboCount = (this.wanchaiStand._comboCount ?? 0) + 1;
+            this.wanchaiStand._comboTimer = 0.45;
+            this.wanchaiStand._punchSide = (this.wanchaiStand._punchSide ?? 1) * -1;
+            this.wanchaiStand._punchPhase = 2;
+            this.wanchaiStand._phaseTimer = 0.09;
+        }
+
+        if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
+
+        if (typeof Achievements !== 'undefined' && target.hp <= 0) {
+            Achievements.stats.standRushKills = (Achievements.stats.standRushKills ?? 0) + 1;
+            Achievements.check?.('stand_rush_kill');
+        }
     }
 
     // draw() ย้ายไป PlayerRenderer._drawAuto() แล้ว
