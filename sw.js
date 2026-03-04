@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.8.8'; // v3.8.8 Enhanced Domain Expansion with chromatic effects, slow debuff, and progressive difficulty
+const CACHE_NAME = 'mtc-cache-v3.8.9'; // v3.8.9 Full arena Domain Expansion with circular boundary and physics lock system
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

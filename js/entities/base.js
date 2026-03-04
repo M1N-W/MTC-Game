@@ -38,6 +38,24 @@ class Entity {
     applyPhysics(dt) {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
+
+        // Domain boundary lock — active only during Metrics-Major domain
+        if (typeof DomainExpansion !== 'undefined' && DomainExpansion.phase === 'active') {
+            const R = DomainExpansion._DC_RADIUS - (this.radius || 20);
+            const d = Math.hypot(this.x, this.y);
+            if (d > R) {
+                const pa = Math.atan2(this.y, this.x);
+                // Snap back to boundary
+                this.x = Math.cos(pa) * R;
+                this.y = Math.sin(pa) * R;
+                // Cancel outward velocity component
+                const dot = this.vx * Math.cos(pa) + this.vy * Math.sin(pa);
+                if (dot > 0) {
+                    this.vx -= dot * Math.cos(pa);
+                    this.vy -= dot * Math.sin(pa);
+                }
+            }
+        }
     }
 
     isOnScreen(buffer = 120) {

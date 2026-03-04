@@ -841,8 +841,9 @@ class EmpPulse {
 // ════════════════════════════════════════════════════════════
 
 const _DC = Object.freeze({
-    COLS: 8, ROWS: 8,
-    CELL_SIZE: 125,
+    COLS: 20, ROWS: 20,           // 20×150 = 3000 = full arena diameter
+    CELL_SIZE: 150,
+    ARENA_RADIUS: 1500,           // must match MAP_CONFIG.arena.radius
     CAST_DUR: 2.8,
     END_DUR: 1.2,
     WARN_DUR: 2.2,
@@ -861,6 +862,7 @@ const _DC = Object.freeze({
     RAIN_COLS: 32,
     BOSS_VOLLEY_CYCLE: 3,
     BOSS_VOLLEY_COUNT: 8,
+    LOCK_PUSH: 80,                // pixels/s push force when entity tries to leave domain
 });
 
 const _RAIN_POOL = '0123456789ABCDEFΑΒΓΔΩΣΨXYZμσπ∑∫∂∇+-×÷=≠≤≥ΦΘΛ';
@@ -889,8 +891,9 @@ const DomainExpansion = {
         if (!this.canTrigger()) return;
         this.phase = 'casting';
         this.timer = _DC.CAST_DUR;
-        this.originX = boss.x;
-        this.originY = boss.y;
+        // Domain covers entire map — anchor to world centre
+        this.originX = 0;
+        this.originY = 0;
         this._initRain();
 
         boss._domainCasting = true;
@@ -926,6 +929,17 @@ const DomainExpansion = {
                 window.player.moveSpeed = window.player._domainSlowBase || window.player.moveSpeed;
                 if (typeof spawnFloatingText === 'function')
                     spawnFloatingText('SPEED RESTORED', window.player.x, window.player.y - 60, '#22c55e', 16);
+            }
+        }
+        // Boundary wall message for player (visual only — physics handled by applyPhysics)
+        if (this.phase === 'active' && typeof window !== 'undefined' && window.player && !window.player.dead) {
+            const p = window.player;
+            const R = _DC.ARENA_RADIUS;
+            if (Math.hypot(p.x, p.y) > R - p.radius - 10 && !p._domainWallMsg) {
+                p._domainWallMsg = true;
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('⛔ ออกไม่ได้!', p.x, p.y - 50, '#d946ef', 18);
+                setTimeout(() => { if (p) p._domainWallMsg = false; }, 1200);
             }
         }
         if (!boss || boss.dead) { this._abort(boss); return; }
@@ -1023,58 +1037,40 @@ const DomainExpansion = {
         }
         ctx.shadowBlur = 0;
 
-        // ── 3. Domain border — rotating rune ring ────────────
+        // ── 3. Domain border — circular arena ring ────────────
         if (this.phase === 'active' || this.phase === 'ending') {
-            const domHalf = (_DC.COLS * _DC.CELL_SIZE) / 2;
-            const dtl = worldToScreen(this.originX - domHalf, this.originY - domHalf);
-            const dbr = worldToScreen(this.originX + domHalf, this.originY + domHalf);
-            const bW = dbr.x - dtl.x, bH = dbr.y - dtl.y;
-            const bCX = dtl.x + bW / 2, bCY = dtl.y + bH / 2;
+            const originSS = worldToScreen(this.originX, this.originY);
+            const edgeSS = worldToScreen(this.originX + _DC.ARENA_RADIUS, this.originY);
+            const radiusSS = Math.abs(edgeSS.x - originSS.x);
+            const bCX = originSS.x, bCY = originSS.y;
             const pulse = 0.55 + Math.sin(now * 5) * 0.45;
             const dangerPct = Math.min(_DC.DANGER_PCT_MAX, _DC.DANGER_PCT + this.cycleCount * _DC.DANGER_PCT_STEP);
-            // Danger tint — goes redder as danger increases
             const tintR = Math.floor(180 + (dangerPct - _DC.DANGER_PCT) / (_DC.DANGER_PCT_MAX - _DC.DANGER_PCT) * 75);
             const borderCol = `rgb(${tintR},0,255)`;
 
-            // Outer glow border
+            // Outer glow ring
             ctx.globalAlpha = globalA * (0.55 + pulse * 0.45);
-            ctx.shadowBlur = 28 * pulse; ctx.shadowColor = borderCol;
-            ctx.strokeStyle = borderCol; ctx.lineWidth = 3.5;
-            ctx.strokeRect(dtl.x, dtl.y, bW, bH);
+            ctx.shadowBlur = 32 * pulse; ctx.shadowColor = borderCol;
+            ctx.strokeStyle = borderCol; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.arc(bCX, bCY, radiusSS, 0, Math.PI * 2); ctx.stroke();
 
-            // Second inner border offset
+            // Inner dashed ring
             ctx.globalAlpha = globalA * 0.35;
             ctx.shadowBlur = 0;
             ctx.strokeStyle = 'rgba(217,70,239,0.4)'; ctx.lineWidth = 1.5;
             ctx.setLineDash([12, 8]);
-            ctx.strokeRect(dtl.x + 6, dtl.y + 6, bW - 12, bH - 12);
+            ctx.beginPath(); ctx.arc(bCX, bCY, radiusSS - 8, 0, Math.PI * 2); ctx.stroke();
             ctx.setLineDash([]);
 
-            // Corner bracket ornaments
-            ctx.globalAlpha = globalA * 0.9;
-            ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3;
-            ctx.shadowBlur = 12; ctx.shadowColor = '#facc15';
-            const bl = 22; // bracket length
-            const corners = [[dtl.x, dtl.y, 1, 1], [dbr.x, dtl.y, -1, 1], [dtl.x, dbr.y, 1, -1], [dbr.x, dbr.y, -1, -1]];
-            for (const [cx2, cy2, sx, sy] of corners) {
-                ctx.beginPath(); ctx.moveTo(cx2 + sx * bl, cy2); ctx.lineTo(cx2, cy2); ctx.lineTo(cx2, cy2 + sy * bl); ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
-
-            // Rotating rune symbols on border edges
-            const runeSymbols = ['Σ', 'Ψ', 'Ω', '∇', 'Φ', '∫', 'Δ', 'Λ'];
-            ctx.font = 'bold 13px serif';
+            // Rotating rune symbols around the circle
+            const runeSymbols = ['Σ', 'Ψ', 'Ω', '∇', 'Φ', '∫', 'Δ', 'Λ', 'θ', 'π', 'μ', '∂'];
+            ctx.font = 'bold 14px serif';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             for (let ri = 0; ri < runeSymbols.length; ri++) {
-                const rAngle = (ri / runeSymbols.length) * Math.PI * 2 + now * 0.6;
-                const rAlpha = 0.5 + Math.sin(now * 2 + ri) * 0.4;
-                // Place around the border perimeter
-                const rPerimT = (ri / runeSymbols.length + now * 0.05) % 1;
-                let rx, ry;
-                if (rPerimT < 0.25) { rx = dtl.x + (rPerimT / 0.25) * bW; ry = dtl.y - 14; }
-                else if (rPerimT < 0.5) { rx = dbr.x + 14; ry = dtl.y + ((rPerimT - 0.25) / 0.25) * bH; }
-                else if (rPerimT < 0.75) { rx = dbr.x - ((rPerimT - 0.5) / 0.25) * bW; ry = dbr.y + 14; }
-                else { rx = dtl.x - 14; ry = dbr.y - ((rPerimT - 0.75) / 0.25) * bH; }
+                const rAngle = (ri / runeSymbols.length) * Math.PI * 2 + now * 0.5;
+                const rAlpha = 0.55 + Math.sin(now * 2.5 + ri) * 0.35;
+                const rx = bCX + Math.cos(rAngle) * (radiusSS + 18);
+                const ry = bCY + Math.sin(rAngle) * (radiusSS + 18);
                 ctx.globalAlpha = globalA * rAlpha;
                 ctx.fillStyle = '#d946ef';
                 ctx.shadowBlur = 8; ctx.shadowColor = '#d946ef';
@@ -1082,19 +1078,18 @@ const DomainExpansion = {
             }
             ctx.shadowBlur = 0;
 
-            // Cycle counter chip
+            // Cycle counter chip — top of screen
             if (this.phase === 'active') {
                 const warnDurCurrent = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
                 const warnProg = this.cyclePhase === 'warn' ? (1.0 - this.cycleTimer / warnDurCurrent) : 1.0;
+                const chipX = bCX, chipY = bCY - radiusSS - 28;
                 ctx.globalAlpha = globalA * 0.92;
                 ctx.font = 'bold 11px "Orbitron",Arial';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                const chipX = bCX, chipY = dtl.y - 22;
                 ctx.fillStyle = 'rgba(2,0,14,0.9)';
                 ctx.fillRect(chipX - 58, chipY - 12, 116, 24);
                 ctx.strokeStyle = borderCol; ctx.lineWidth = 1.5;
                 ctx.strokeRect(chipX - 58, chipY - 12, 116, 24);
-                // cycle progress bar inside chip
                 ctx.fillStyle = borderCol;
                 ctx.globalAlpha = globalA * 0.5;
                 ctx.fillRect(chipX - 56, chipY - 10, 112 * warnProg, 20);
@@ -1103,7 +1098,6 @@ const DomainExpansion = {
                 ctx.shadowBlur = 6; ctx.shadowColor = '#d946ef';
                 ctx.fillText(`CYCLE ${this.cycleCount + 1} / ${_DC.TOTAL_CYCLES}`, chipX, chipY);
                 ctx.shadowBlur = 0;
-                // Danger % readout
                 ctx.globalAlpha = globalA * 0.70;
                 ctx.font = 'bold 9px "Orbitron",Arial';
                 ctx.fillStyle = tintR > 210 ? '#ef4444' : '#facc15';
@@ -1220,12 +1214,15 @@ const DomainExpansion = {
             const elapsed = _DC.CAST_DUR - this.timer;
             const ringScreen = worldToScreen(this.originX, this.originY);
 
-            // Expanding shockwave rings
+            // Expanding shockwave rings — grow to cover full arena
+            const arenaEdgeSS = worldToScreen(_DC.ARENA_RADIUS, 0);
+            const arenaOriginSS = worldToScreen(0, 0);
+            const arenaSSRadius = Math.abs(arenaEdgeSS.x - arenaOriginSS.x);
             for (let ri = 0; ri < 3; ri++) {
                 const delay = ri * 0.5;
                 if (elapsed < delay) continue;
                 const rProg = Math.min(1.0, (elapsed - delay) / (_DC.CAST_DUR - delay));
-                const ringR = rProg * Math.min(W, H) * 0.7;
+                const ringR = rProg * arenaSSRadius * 1.05;
                 ctx.globalAlpha = globalA * (1.0 - rProg) * (0.5 - ri * 0.12);
                 ctx.strokeStyle = ri === 0 ? '#d946ef' : ri === 1 ? '#facc15' : '#ffffff';
                 ctx.lineWidth = 3 - ri * 0.8;
@@ -1349,15 +1346,18 @@ const DomainExpansion = {
     _initCells() {
         this.cells = []; this._indices = [];
         const half = (_DC.COLS * _DC.CELL_SIZE) / 2;
+        const R = _DC.ARENA_RADIUS;
+        const halfCell = _DC.CELL_SIZE / 2;
         for (let r = 0; r < _DC.ROWS; r++)
-            for (let c = 0; c < _DC.COLS; c++) {
-                this.cells.push({
-                    wx: this.originX - half + c * _DC.CELL_SIZE,
-                    wy: this.originY - half + r * _DC.CELL_SIZE,
-                    dangerous: false, exploded: false,
-                });
-                this._indices.push(this._indices.length);
+            for (let col = 0; col < _DC.COLS; col++) {
+                const wx = this.originX - half + col * _DC.CELL_SIZE;
+                const wy = this.originY - half + r * _DC.CELL_SIZE;
+                // Cull cells outside arena circle
+                const ccx = wx + halfCell, ccy = wy + halfCell;
+                if (Math.hypot(ccx - this.originX, ccy - this.originY) > R) continue;
+                this.cells.push({ wx, wy, dangerous: false, exploded: false });
             }
+        this._indices = new Array(this.cells.length);
     },
     _rollCells() {
         const dangerPct = Math.min(_DC.DANGER_PCT_MAX, _DC.DANGER_PCT + this.cycleCount * _DC.DANGER_PCT_STEP);
@@ -1425,6 +1425,7 @@ const DomainExpansion = {
 };
 
 window.DomainExpansion = DomainExpansion;
+DomainExpansion._DC_RADIUS = _DC.ARENA_RADIUS; // exposed for base.js applyPhysics
 
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
