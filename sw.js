@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.9.8'; // v3.9.8 Wanchai Stand fire demon: Fiery Oni mask with fire chains and ember core
+const CACHE_NAME = 'mtc-cache-v3.9.9'; // v3.9.9 Wanchai Stand orientation fix: Proper Oni mask facing and teleportation combat system
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

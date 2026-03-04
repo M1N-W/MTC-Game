@@ -226,7 +226,12 @@ class WanchaiStand {
 
         ctx.save();
         ctx.translate(sc.x, sc.y);
-        ctx.rotate(this.angle);
+
+        // Flip X when facing left so the mask doesn't invert
+        const facingLeft = Math.abs(this.angle) > Math.PI / 2;
+        const drawAngle = facingLeft ? this.angle + Math.PI : this.angle;
+        ctx.rotate(drawAngle);
+        if (facingLeft) ctx.scale(-1, 1);
 
         const rp = Math.sin(t * 3.2);        // ring pulse
         const ep = Math.sin(t * 5.8);        // eye pulse
@@ -679,9 +684,12 @@ class AutoPlayer extends Player {
             return;
         }
 
-        // Must be within playerRushRange of the PLAYER (not just cursor)
-        const distToPlayer = Math.hypot(target.x - this.x, target.y - this.y);
-        if (distToPlayer > range + (target.radius ?? 14)) return;
+        // Stand Rush fires toward cursor — Stand teleports to target, no range gate
+        // Direct the WanchaiStand to rush that target immediately
+        if (this.wanchaiStand?.active) {
+            this.wanchaiStand.x = target.x - Math.cos(this.angle) * 20;
+            this.wanchaiStand.y = target.y - Math.sin(this.angle) * 20;
+        }
 
         let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0);
         let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.40);
