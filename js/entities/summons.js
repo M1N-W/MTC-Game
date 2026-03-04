@@ -91,120 +91,153 @@ class NagaEntity extends Entity {
     draw() {
         const lifeRatio = this.life / this.maxLife;
         const now = performance.now();
+        const n = this.segments.length;
 
-        for (let i = this.segments.length - 1; i >= 1; i--) {
+        // ── PASS 1: connector tubes between segments (drawn first, underneath) ──
+        for (let i = n - 1; i >= 1; i--) {
+            const a = this.segments[i], b = this.segments[i - 1];
+            const sa = worldToScreen(a.x, a.y), sb = worldToScreen(b.x, b.y);
+            const t = i / (n - 1);
+            const rA = this.radius * (1 - t * 0.60);
+            const rB = this.radius * (1 - (t - 1 / (n - 1)) * 0.60);
+            const alpha = lifeRatio * (0.75 - t * 0.25);
+            CTX.save();
+            CTX.globalAlpha = Math.max(0.05, alpha);
+            CTX.strokeStyle = '#059669';
+            CTX.lineWidth = (rA + rB) * 0.95;
+            CTX.lineCap = 'round';
+            CTX.shadowBlur = 6; CTX.shadowColor = '#10b981';
+            CTX.beginPath(); CTX.moveTo(sa.x, sa.y); CTX.lineTo(sb.x, sb.y); CTX.stroke();
+            CTX.shadowBlur = 0;
+            CTX.restore();
+        }
+
+        // ── PASS 2: body segments ─────────────────────────────
+        for (let i = n - 1; i >= 1; i--) {
             const seg = this.segments[i];
             const screen = worldToScreen(seg.x, seg.y);
-            const t = i / (this.segments.length - 1);
-            const r = this.radius * (1 - t * 0.55);
-            const alpha = lifeRatio * (1 - t * 0.3);
+            const t = i / (n - 1);
+            const r = this.radius * (1 - t * 0.60);
+            const alpha = lifeRatio * (0.88 - t * 0.22);
 
             CTX.save();
-            CTX.globalAlpha = Math.max(0.1, alpha);
+            CTX.globalAlpha = Math.max(0.08, alpha);
 
-            if (i === this.segments.length - 1) {
+            if (i === n - 1) {
+                // ── Tail fin ──────────────────────────────────
                 const prevSeg = this.segments[i - 1];
                 const tailAngle = Math.atan2(seg.y - prevSeg.y, seg.x - prevSeg.x);
                 CTX.translate(screen.x, screen.y);
                 CTX.rotate(tailAngle);
-                // Split tail fin — upper + lower lobe
-                const tailG = CTX.createLinearGradient(-r, 0, r * 3, 0);
+                const tailG = CTX.createLinearGradient(-r, 0, r * 3.2, 0);
                 tailG.addColorStop(0, '#064e3b');
-                tailG.addColorStop(0.4, '#059669');
-                tailG.addColorStop(1, '#065f46');
+                tailG.addColorStop(0.35, '#059669');
+                tailG.addColorStop(1, 'rgba(6,78,59,0)');
                 CTX.fillStyle = tailG;
-                CTX.shadowBlur = 6; CTX.shadowColor = '#10b981';
-                // Upper lobe
+                CTX.shadowBlur = 8; CTX.shadowColor = '#10b981';
                 CTX.beginPath();
-                CTX.moveTo(-r * 0.5, -r * 0.1);
-                CTX.quadraticCurveTo(r * 0.6, -r * 0.2, r * 2.8, -r * 0.7);
-                CTX.quadraticCurveTo(r * 1.4, -r * 0.1, r * 0.6, 0);
+                CTX.moveTo(-r * 0.4, 0);
+                CTX.quadraticCurveTo(r * 0.5, -r * 0.9, r * 3.2, -r * 0.5);
+                CTX.quadraticCurveTo(r * 1.6, 0, r * 3.2, r * 0.5);
+                CTX.quadraticCurveTo(r * 0.5, r * 0.9, -r * 0.4, 0);
                 CTX.closePath(); CTX.fill();
-                // Lower lobe
-                CTX.beginPath();
-                CTX.moveTo(-r * 0.5, r * 0.1);
-                CTX.quadraticCurveTo(r * 0.6, r * 0.2, r * 2.8, r * 0.7);
-                CTX.quadraticCurveTo(r * 1.4, r * 0.1, r * 0.6, 0);
-                CTX.closePath(); CTX.fill();
-                // Tail tip glow dots
-                const tp = 0.5 + Math.sin(now / 190) * 0.4;
-                CTX.fillStyle = `rgba(251,191,36,${tp * 0.65})`;
-                CTX.shadowBlur = 7 * tp; CTX.shadowColor = '#fbbf24';
-                CTX.beginPath(); CTX.arc(r * 2.6, -r * 0.55, 1.4, 0, Math.PI * 2); CTX.fill();
-                CTX.beginPath(); CTX.arc(r * 2.6, r * 0.55, 1.4, 0, Math.PI * 2); CTX.fill();
+                // Fin tip jewel
+                const tp = 0.55 + Math.sin(now / 180) * 0.45;
+                CTX.fillStyle = `rgba(251,191,36,${tp * 0.80})`;
+                CTX.shadowBlur = 10 * tp; CTX.shadowColor = '#fbbf24';
+                CTX.beginPath(); CTX.arc(r * 3.0, 0, 2.2, 0, Math.PI * 2); CTX.fill();
                 CTX.shadowBlur = 0;
+
             } else {
+                // ── Body segment ──────────────────────────────
                 const isEven = i % 2 === 0;
-                // ── Segment base gradient ─────────────────────
+
+                // Base scale gradient
                 const scaleGrad = CTX.createRadialGradient(
-                    screen.x - r * 0.3, screen.y - r * 0.3, 0,
+                    screen.x - r * 0.35, screen.y - r * 0.35, r * 0.05,
                     screen.x, screen.y, r
                 );
-                scaleGrad.addColorStop(0, isEven ? '#6ee7b7' : '#34d399');
-                scaleGrad.addColorStop(0.45, isEven ? '#10b981' : '#059669');
-                scaleGrad.addColorStop(1, '#064e3b');
+                scaleGrad.addColorStop(0, isEven ? '#a7f3d0' : '#6ee7b7');
+                scaleGrad.addColorStop(0.40, isEven ? '#10b981' : '#059669');
+                scaleGrad.addColorStop(0.80, '#065f46');
+                scaleGrad.addColorStop(1, '#022c22');
                 CTX.fillStyle = scaleGrad;
-                CTX.shadowBlur = 8 + Math.sin(now / 280 + i) * 3;
+                CTX.shadowBlur = 10 + Math.sin(now / 260 + i) * 4;
                 CTX.shadowColor = '#10b981';
                 CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.fill();
                 CTX.shadowBlur = 0;
 
-                // ── Belly stripe (lighter central band) ───────
-                if (r > 5) {
+                // Belly stripe (perpendicular to travel direction)
+                if (r > 6) {
                     const segA = Math.atan2(
-                        this.segments[Math.min(i + 1, this.segments.length - 1)].y - this.segments[Math.max(i - 1, 0)].y,
-                        this.segments[Math.min(i + 1, this.segments.length - 1)].x - this.segments[Math.max(i - 1, 0)].x
+                        this.segments[Math.min(i + 1, n - 1)].y - this.segments[Math.max(i - 1, 0)].y,
+                        this.segments[Math.min(i + 1, n - 1)].x - this.segments[Math.max(i - 1, 0)].x
                     );
                     CTX.save();
                     CTX.translate(screen.x, screen.y); CTX.rotate(segA);
                     CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.clip();
                     const bellyG = CTX.createLinearGradient(-r, 0, r, 0);
                     bellyG.addColorStop(0, 'rgba(0,0,0,0)');
-                    bellyG.addColorStop(0.38, 'rgba(167,243,208,0.22)');
-                    bellyG.addColorStop(0.5, 'rgba(209,250,229,0.35)');
-                    bellyG.addColorStop(0.62, 'rgba(167,243,208,0.22)');
+                    bellyG.addColorStop(0.35, 'rgba(167,243,208,0.18)');
+                    bellyG.addColorStop(0.5, 'rgba(236,253,245,0.42)');
+                    bellyG.addColorStop(0.65, 'rgba(167,243,208,0.18)');
                     bellyG.addColorStop(1, 'rgba(0,0,0,0)');
                     CTX.fillStyle = bellyG; CTX.fillRect(-r, -r, r * 2, r * 2);
                     CTX.restore();
                 }
 
-                // ── Scale arc cross-marks ──────────────────────
-                if (r > 7) {
+                // Spine ridge dot (dorsal line — top of each segment)
+                if (r > 8) {
+                    const spineA = Math.atan2(
+                        this.segments[Math.max(i - 1, 0)].y - seg.y,
+                        this.segments[Math.max(i - 1, 0)].x - seg.x
+                    );
+                    const sx = screen.x + Math.cos(spineA + Math.PI / 2) * r * 0.55;
+                    const sy = screen.y + Math.sin(spineA + Math.PI / 2) * r * 0.55;
+                    const sp = 0.4 + Math.sin(now / 220 + i * 0.8) * 0.3;
+                    CTX.fillStyle = `rgba(52,211,153,${sp * 0.70})`;
+                    CTX.shadowBlur = 5 * sp; CTX.shadowColor = '#34d399';
+                    CTX.beginPath(); CTX.arc(sx, sy, r * 0.22, 0, Math.PI * 2); CTX.fill();
+                    CTX.shadowBlur = 0;
+                }
+
+                // Thai gold ring every 3rd segment (denser than before)
+                if (i % 3 === 0 && r > 7) {
+                    const rp = 0.45 + Math.sin(now / 220 + i * 0.55) * 0.45;
+                    CTX.strokeStyle = `rgba(251,191,36,${rp * 0.85})`;
+                    CTX.lineWidth = r > 12 ? 2.0 : 1.4;
+                    CTX.shadowBlur = 8 * rp; CTX.shadowColor = '#fbbf24';
+                    CTX.beginPath(); CTX.arc(screen.x, screen.y, r * 0.84, 0, Math.PI * 2); CTX.stroke();
+                    CTX.shadowBlur = 0;
+                }
+
+                // Scale arc texture (only on thick segments)
+                if (r > 10) {
                     CTX.save();
                     CTX.translate(screen.x, screen.y);
                     CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.clip();
-                    CTX.strokeStyle = 'rgba(4,120,87,0.4)'; CTX.lineWidth = 0.9;
+                    CTX.strokeStyle = 'rgba(4,120,87,0.35)'; CTX.lineWidth = 0.8;
                     for (let arc = 0; arc < 3; arc++) {
                         CTX.beginPath();
-                        CTX.arc(0, -r * 0.2 + arc * r * 0.45, r * 0.8, Math.PI, Math.PI * 2);
+                        CTX.arc(0, -r * 0.15 + arc * r * 0.42, r * 0.82, Math.PI, Math.PI * 2);
                         CTX.stroke();
                     }
                     CTX.restore();
-                }
-
-                // ── Thai gold ring every 4th segment ──────────
-                if (i % 4 === 0 && r > 6) {
-                    const rp = 0.5 + Math.sin(now / 240 + i * 0.6) * 0.4;
-                    CTX.strokeStyle = `rgba(251,191,36,${rp * 0.75})`;
-                    CTX.lineWidth = 1.5;
-                    CTX.shadowBlur = 6 * rp; CTX.shadowColor = '#fbbf24';
-                    CTX.beginPath(); CTX.arc(screen.x, screen.y, r * 0.87, 0, Math.PI * 2); CTX.stroke();
-                    CTX.shadowBlur = 0;
                 }
             }
             CTX.restore();
         }
 
-        if (this.segments.length > 0) {
+        // ── PASS 3: head ──────────────────────────────────────
+        if (n > 0) {
             const head = this.segments[0];
             const hs = worldToScreen(head.x, head.y);
             const r = this.radius;
             const headAlpha = lifeRatio;
 
             let headAngle = 0;
-            if (this.segments.length > 1) {
-                const neck = this.segments[1];
-                headAngle = Math.atan2(head.y - neck.y, head.x - neck.x);
+            if (n > 1) {
+                headAngle = Math.atan2(head.y - this.segments[1].y, head.x - this.segments[1].x);
             }
 
             CTX.save();
@@ -212,95 +245,121 @@ class NagaEntity extends Entity {
             CTX.rotate(headAngle);
             CTX.globalAlpha = Math.max(0.15, headAlpha);
 
-            const auraR = r * 1.8 + Math.sin(now / 120) * 3;
-            CTX.globalAlpha = headAlpha * (0.4 + Math.sin(now / 160) * 0.2);
-            CTX.strokeStyle = '#34d399'; CTX.lineWidth = 2;
-            CTX.shadowBlur = 16 + Math.sin(now / 130) * 8; CTX.shadowColor = '#10b981';
+            // Outer aura ring
+            const auraR = r * 2.0 + Math.sin(now / 115) * 4;
+            CTX.globalAlpha = headAlpha * (0.30 + Math.sin(now / 155) * 0.15);
+            CTX.strokeStyle = '#34d399'; CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 20 + Math.sin(now / 125) * 10; CTX.shadowColor = '#10b981';
             CTX.beginPath(); CTX.arc(0, 0, auraR, 0, Math.PI * 2); CTX.stroke();
-
+            CTX.shadowBlur = 0;
             CTX.globalAlpha = Math.max(0.15, headAlpha);
 
-            const headGrad = CTX.createRadialGradient(-r * 0.2, -r * 0.2, 0, 0, 0, r * 1.1);
-            headGrad.addColorStop(0, '#34d399');
-            headGrad.addColorStop(0.5, '#059669');
-            headGrad.addColorStop(1, '#064e3b');
+            // Head shape — wider snout, flatter profile
+            const headGrad = CTX.createRadialGradient(-r * 0.25, -r * 0.25, r * 0.05, 0, 0, r * 1.15);
+            headGrad.addColorStop(0, '#a7f3d0');
+            headGrad.addColorStop(0.30, '#34d399');
+            headGrad.addColorStop(0.65, '#059669');
+            headGrad.addColorStop(1, '#022c22');
             CTX.fillStyle = headGrad;
-            CTX.shadowBlur = 20; CTX.shadowColor = '#10b981';
+            CTX.shadowBlur = 24; CTX.shadowColor = '#10b981';
             CTX.beginPath();
-            CTX.moveTo(r * 1.3, 0);
-            CTX.quadraticCurveTo(r * 1.0, -r * 0.8, 0, -r * 0.85);
-            CTX.quadraticCurveTo(-r * 0.7, -r * 0.9, -r, -r * 0.55);
-            CTX.quadraticCurveTo(-r * 1.1, 0, -r, r * 0.55);
-            CTX.quadraticCurveTo(-r * 0.7, r * 0.9, 0, r * 0.85);
-            CTX.quadraticCurveTo(r * 1.0, r * 0.8, r * 1.3, 0);
+            CTX.moveTo(r * 1.45, 0);
+            CTX.quadraticCurveTo(r * 1.15, -r * 0.75, r * 0.1, -r * 0.90);
+            CTX.quadraticCurveTo(-r * 0.55, -r * 0.95, -r * 1.05, -r * 0.50);
+            CTX.quadraticCurveTo(-r * 1.20, 0, -r * 1.05, r * 0.50);
+            CTX.quadraticCurveTo(-r * 0.55, r * 0.95, r * 0.1, r * 0.90);
+            CTX.quadraticCurveTo(r * 1.15, r * 0.75, r * 1.45, 0);
             CTX.closePath(); CTX.fill();
             CTX.shadowBlur = 0;
 
-            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3; CTX.lineCap = 'round';
-            CTX.shadowBlur = 10; CTX.shadowColor = '#f59e0b';
-            CTX.beginPath();
-            CTX.moveTo(-r * 0.3, -r * 0.65);
-            CTX.quadraticCurveTo(-r * 0.6, -r * 1.4, -r * 0.1, -r * 1.8);
-            CTX.stroke();
-            CTX.beginPath();
-            CTX.moveTo(r * 0.3, -r * 0.65);
-            CTX.quadraticCurveTo(r * 0.6, -r * 1.4, r * 0.1, -r * 1.8);
-            CTX.stroke();
-            CTX.fillStyle = '#fef08a'; CTX.shadowBlur = 14; CTX.shadowColor = '#fbbf24';
-            CTX.beginPath(); CTX.arc(-r * 0.1, -r * 1.8, 2.5, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.arc(r * 0.1, -r * 1.8, 2.5, 0, Math.PI * 2); CTX.fill();
+            // Crown jewel on forehead
+            const crownP = 0.6 + Math.sin(now / 140) * 0.4;
+            CTX.fillStyle = `rgba(251,191,36,${crownP})`;
+            CTX.shadowBlur = 18 * crownP; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.ellipse(0, -r * 0.68, r * 0.18, r * 0.13, 0, 0, Math.PI * 2); CTX.fill();
             CTX.shadowBlur = 0;
 
-            const manePhase = now / 200;
-            CTX.lineWidth = 2.5; CTX.lineCap = 'round';
+            // Horns — taller, more elegant
+            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3.5; CTX.lineCap = 'round';
+            CTX.shadowBlur = 12; CTX.shadowColor = '#f59e0b';
+            CTX.beginPath();
+            CTX.moveTo(-r * 0.25, -r * 0.60);
+            CTX.quadraticCurveTo(-r * 0.65, -r * 1.55, -r * 0.05, -r * 2.10);
+            CTX.stroke();
+            CTX.beginPath();
+            CTX.moveTo(r * 0.25, -r * 0.60);
+            CTX.quadraticCurveTo(r * 0.65, -r * 1.55, r * 0.05, -r * 2.10);
+            CTX.stroke();
+            // Horn tips glow
+            CTX.fillStyle = '#fef08a'; CTX.shadowBlur = 18; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(-r * 0.05, -r * 2.10, 3.0, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(r * 0.05, -r * 2.10, 3.0, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+
+            // Mane strands — more, longer, greener
+            const manePhase = now / 190;
+            CTX.lineWidth = 2.8; CTX.lineCap = 'round';
             const maneStrands = [
-                { side: -1, baseY: -r * 0.4, cp1x: -r * 1.6, cp1y: -r * 0.2, endX: -r * 1.4, endY: r * 0.5, phase: 0 },
-                { side: -1, baseY: -r * 0.1, cp1x: -r * 1.8, cp1y: r * 0.4, endX: -r * 1.2, endY: r * 1.0, phase: 0.7 },
-                { side: -1, baseY: r * 0.3, cp1x: -r * 1.4, cp1y: r * 1.0, endX: -r * 0.8, endY: r * 1.5, phase: 1.4 },
-                { side: 1, baseY: -r * 0.4, cp1x: r * 1.6, cp1y: -r * 0.2, endX: r * 1.4, endY: r * 0.5, phase: 0.3 },
-                { side: 1, baseY: -r * 0.1, cp1x: r * 1.8, cp1y: r * 0.4, endX: r * 1.2, endY: r * 1.0, phase: 1.0 },
-                { side: 1, baseY: r * 0.3, cp1x: r * 1.4, cp1y: r * 1.0, endX: r * 0.8, endY: r * 1.5, phase: 1.7 },
+                { baseY: -r * 0.45, cp1x: -r * 1.8, cp1y: -r * 0.3, endX: -r * 1.6, endY: r * 0.6, phase: 0.0 },
+                { baseY: -r * 0.10, cp1x: -r * 2.0, cp1y: r * 0.5, endX: -r * 1.4, endY: r * 1.2, phase: 0.6 },
+                { baseY: r * 0.30, cp1x: -r * 1.6, cp1y: r * 1.1, endX: -r * 0.9, endY: r * 1.8, phase: 1.2 },
+                { baseY: r * 0.65, cp1x: -r * 1.1, cp1y: r * 1.6, endX: -r * 0.5, endY: r * 2.2, phase: 1.8 },
+                { baseY: -r * 0.45, cp1x: r * 1.8, cp1y: -r * 0.3, endX: r * 1.6, endY: r * 0.6, phase: 0.3 },
+                { baseY: -r * 0.10, cp1x: r * 2.0, cp1y: r * 0.5, endX: r * 1.4, endY: r * 1.2, phase: 0.9 },
+                { baseY: r * 0.30, cp1x: r * 1.6, cp1y: r * 1.1, endX: r * 0.9, endY: r * 1.8, phase: 1.5 },
+                { baseY: r * 0.65, cp1x: r * 1.1, cp1y: r * 1.6, endX: r * 0.5, endY: r * 2.2, phase: 2.1 },
             ];
             for (const ms of maneStrands) {
-                const flutter = Math.sin(manePhase + ms.phase) * r * 0.35;
-                const mAlpha = headAlpha * (0.5 + Math.sin(manePhase + ms.phase) * 0.3);
+                const isLeft = ms.cp1x < 0;
+                const flutter = Math.sin(manePhase + ms.phase) * r * 0.40;
+                const side = isLeft ? -1 : 1;
+                const mAlpha = headAlpha * (0.55 + Math.sin(manePhase + ms.phase) * 0.30);
                 CTX.globalAlpha = Math.max(0, mAlpha);
-                CTX.strokeStyle = '#6ee7b7'; CTX.shadowBlur = 8; CTX.shadowColor = '#10b981';
+                CTX.strokeStyle = '#6ee7b7'; CTX.shadowBlur = 9; CTX.shadowColor = '#10b981';
                 CTX.beginPath();
                 CTX.moveTo(0, ms.baseY);
-                CTX.quadraticCurveTo(ms.cp1x + flutter * ms.side, ms.cp1y, ms.endX + flutter * ms.side * 0.5, ms.endY);
+                CTX.quadraticCurveTo(ms.cp1x + flutter * side, ms.cp1y, ms.endX + flutter * side * 0.5, ms.endY);
                 CTX.stroke();
             }
             CTX.globalAlpha = Math.max(0.15, headAlpha);
             CTX.shadowBlur = 0;
 
-            const eyeGlow = 0.6 + Math.sin(now / 180) * 0.4;
-            const eyeColor = `rgba(245,158,11,${eyeGlow})`;
-            CTX.fillStyle = eyeColor;
-            CTX.shadowBlur = 16 * eyeGlow; CTX.shadowColor = '#f59e0b';
-            CTX.beginPath(); CTX.ellipse(r * 0.35, -r * 0.3, r * 0.28, r * 0.2, 0, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.ellipse(r * 0.35, r * 0.3, r * 0.28, r * 0.2, 0, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#0f172a'; CTX.shadowBlur = 0;
-            CTX.beginPath(); CTX.ellipse(r * 0.38, -r * 0.3, r * 0.08, r * 0.16, 0, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.ellipse(r * 0.38, r * 0.3, r * 0.08, r * 0.16, 0, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = `rgba(255,251,235,${eyeGlow * 0.7})`;
-            CTX.beginPath(); CTX.arc(r * 0.32, -r * 0.34, r * 0.07, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.arc(r * 0.32, r * 0.26, r * 0.07, 0, Math.PI * 2); CTX.fill();
+            // Eyes — larger, more intense
+            const eyeGlow = 0.65 + Math.sin(now / 170) * 0.35;
+            CTX.fillStyle = `rgba(245,158,11,${eyeGlow})`;
+            CTX.shadowBlur = 20 * eyeGlow; CTX.shadowColor = '#f59e0b';
+            CTX.beginPath(); CTX.ellipse(r * 0.38, -r * 0.32, r * 0.32, r * 0.22, 0, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.ellipse(r * 0.38, r * 0.32, r * 0.32, r * 0.22, 0, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+            // Slit pupils
+            CTX.fillStyle = '#0f172a';
+            CTX.beginPath(); CTX.ellipse(r * 0.42, -r * 0.32, r * 0.09, r * 0.18, 0, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.ellipse(r * 0.42, r * 0.32, r * 0.09, r * 0.18, 0, 0, Math.PI * 2); CTX.fill();
+            // Eye shine
+            CTX.fillStyle = `rgba(255,251,235,${eyeGlow * 0.75})`;
+            CTX.beginPath(); CTX.arc(r * 0.34, -r * 0.37, r * 0.08, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(r * 0.34, r * 0.27, r * 0.08, 0, Math.PI * 2); CTX.fill();
 
             CTX.restore();
+
+            // Timer label above head
             CTX.save();
             CTX.globalAlpha = headAlpha * 0.85;
             CTX.fillStyle = '#34d399';
             CTX.font = 'bold 10px Arial'; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText(`${this.life.toFixed(1)}s`, hs.x, hs.y - r * 2.4);
+            CTX.shadowBlur = 6; CTX.shadowColor = '#10b981';
+            CTX.fillText(`${this.life.toFixed(1)}s`, hs.x, hs.y - r * 2.6);
+            CTX.shadowBlur = 0;
             CTX.restore();
 
-            const pulse = 0.6 + Math.sin(now / 130) * 0.4;
+            // Head pulse ring
+            const pulse = 0.55 + Math.sin(now / 125) * 0.45;
             CTX.save();
-            CTX.globalAlpha = lifeRatio * (0.5 + pulse * 0.4);
-            CTX.strokeStyle = '#34d399'; CTX.lineWidth = 1.5;
-            CTX.shadowBlur = 12 * pulse; CTX.shadowColor = '#10b981';
-            CTX.beginPath(); CTX.arc(hs.x, hs.y, this.radius * 1.6, 0, Math.PI * 2); CTX.stroke();
+            CTX.globalAlpha = lifeRatio * (0.40 + pulse * 0.45);
+            CTX.strokeStyle = '#34d399'; CTX.lineWidth = 1.8;
+            CTX.shadowBlur = 14 * pulse; CTX.shadowColor = '#10b981';
+            CTX.beginPath(); CTX.arc(hs.x, hs.y, this.radius * 1.75, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
             CTX.restore();
         }
     }

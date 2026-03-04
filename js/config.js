@@ -165,13 +165,13 @@ const BALANCE = {
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.2,
-            nagaCooldown: 16,        // NERF: 10 → 16s (uptime 44% แทน 100%)
-            nagaDuration: 7,         // NERF: 10 → 7s (สร้าง dead-time 9s)
-            nagaDamage: 100,         // BUFF: 95 → 100 (compensate uptime ที่ลดลง)
+            nagaCooldown: 20,        // BALANCE: uptime 50% (10s active / 20s CD)
+            nagaDuration: 10,        // RESTORE: 7→10s (ผู้เล่นต้องการ spawn นานขึ้น)
+            nagaDamage: 100,         // BUFF: 95 → 100
             nagaSpeed: 525,
-            nagaSegments: 12,
-            nagaSegmentDistance: 28,
-            nagaRadius: 20,
+            nagaSegments: 18,        // BUFF: 12 → 18 (งูยาวขึ้นชัดเจน)
+            nagaSegmentDistance: 32, // BUFF: 28 → 32 (ระยะห่าง segment มากขึ้น → ตัวยาวขึ้น)
+            nagaRadius: 22,          // BUFF: 20 → 22 (ตัวหนาขึ้นเล็กน้อย)
             speedOnHit: 18,
             speedOnHitDuration: 0.35,
             damageMultiplierPerLevel: 0.11,  // BUFF: 0.07 → 0.11
