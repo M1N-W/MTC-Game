@@ -457,40 +457,55 @@ class PlayerRenderer {
             ctx.beginPath(); ctx.arc(4, -28, 2.5, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
 
-            // Stand Rush Animation
+            // Stand Rush Animation — uses WanchaiStand's precomputed _rushFists (no Math.random in draw!)
             if (entity.isStandAttacking) {
+                const stand = entity.wanchaiStand;
+                const isRush = stand?._rushMode ?? false;
+                const rushFists = stand?._rushFists ?? [];
                 ctx.save();
                 ctx.translate(screen.x, screen.y);
                 ctx.rotate(entity.angle);
-                ctx.shadowBlur = 12; ctx.shadowColor = '#dc2626';
-                for (let i = 0; i < 8; i++) {
-                    const fistX = 40 + Math.random() * 80;
-                    const fistY = (Math.random() - 0.5) * 70;
-                    const scale = 0.5 + Math.random() * 0.7;
-                    ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+                ctx.shadowBlur = isRush ? 20 : 12;
+                ctx.shadowColor = isRush ? '#f97316' : '#dc2626';
+                for (const f of rushFists) {
+                    if (f.alpha <= 0) continue;
+                    ctx.fillStyle = isRush
+                        ? `rgba(251,146,60,${(f.alpha * 0.85).toFixed(2)})`
+                        : `rgba(239,68,68,${(f.alpha * 0.85).toFixed(2)})`;
+                    ctx.globalAlpha = f.alpha;
                     ctx.beginPath();
-                    ctx.ellipse(fistX, fistY, 14 * scale, 9 * scale, 0, 0, Math.PI * 2);
+                    ctx.ellipse(f.ox, f.oy * f.side, 14 * f.scale, 9 * f.scale, 0, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.strokeStyle = 'rgba(248, 113, 113, 0.5)';
-                    ctx.lineWidth = 4 * scale;
+                    ctx.strokeStyle = isRush ? 'rgba(251,146,60,0.5)' : 'rgba(248,113,113,0.5)';
+                    ctx.lineWidth = 4 * f.scale;
                     ctx.beginPath();
-                    ctx.moveTo(fistX - 25 * scale, fistY);
-                    ctx.lineTo(fistX, fistY);
+                    ctx.moveTo(f.ox - 25 * f.scale, f.oy * f.side);
+                    ctx.lineTo(f.ox, f.oy * f.side);
                     ctx.stroke();
                 }
+
                 ctx.rotate(-entity.angle);
-                const textScale = 1 + Math.sin(now / 30) * 0.15;
-                const jitterX = (Math.random() - 0.5) * 6;
-                const jitterY = (Math.random() - 0.5) * 6;
-                ctx.translate(0, -75);
+                const comboCount = stand?._comboCount ?? 0;
+                const textScale = 1 + Math.sin(now / 30) * (isRush ? 0.22 : 0.15);
+                // Jitter from stand state (deterministic based on phaseTimer, not random)
+                const jt = stand?._phaseTimer ?? 0;
+                const jitterX = Math.sin(jt * 120) * (isRush ? 5 : 3);
+                const jitterY = Math.cos(jt * 100) * (isRush ? 5 : 3);
+                ctx.translate(0, -80);
                 ctx.scale(textScale, textScale);
-                ctx.font = '900 28px "Arial Black", Arial, sans-serif';
+                const rushLabel = isRush
+                    ? `ORA ORA ORA!!!`
+                    : (comboCount >= 3 ? `ORA×${comboCount}!` : 'วันชัย วันชัย!');
+                const fontSize = isRush ? 30 : 26;
+                ctx.font = `900 ${fontSize}px "Arial Black", Arial, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.lineWidth = 5;
                 ctx.strokeStyle = '#000000';
-                ctx.strokeText('วันชัย วันชัย วันชัย!', jitterX, jitterY);
-                ctx.fillStyle = '#facc15';
-                ctx.fillText('วันชัย วันชัย วันชัย!', jitterX, jitterY);
+                ctx.strokeText(rushLabel, jitterX, jitterY);
+                ctx.fillStyle = isRush ? '#fed7aa' : '#facc15';
+                ctx.shadowBlur = isRush ? 24 : 0;
+                ctx.shadowColor = '#f97316';
+                ctx.fillText(rushLabel, jitterX, jitterY);
                 ctx.restore();
             }
         }
