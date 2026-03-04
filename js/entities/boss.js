@@ -352,6 +352,8 @@ class Boss extends Entity {
             if (window.UIManager) { window.UIManager.updateBossHUD(this); window.UIManager.updateBossSpeech(this); }
             return;
         }
+        // Safety: if domain ended but state wasn't reset (e.g. frame gap), recover
+        if (this.state === 'DOMAIN') { this.state = 'CHASE'; this.timer = 0; }
 
         // ── State machine ────────────────────────────────────
         if (this.state === 'CHASE') {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.8.6'; // v3.8.6 Added Domain Expansion: Metrics-Major ultimate boss ability
+const CACHE_NAME = 'mtc-cache-v3.8.7'; // v3.8.7 Fixed domain state recovery bug after domain ends
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
