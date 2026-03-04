@@ -57,9 +57,9 @@ const BALANCE = {
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 46, cooldown: 0.6,
+                    damage: 36, cooldown: 0.55,   // NERF: 46→36 dmg (DPS 230→196)
                     range: 400, speed: 700,
-                    spread: 0.4, pellets: 3,
+                    spread: 0.5, pellets: 3,      // NERF: spread 0.4→0.5
                     color: '#f59e0b', icon: '🟠'
                 }
             },
@@ -100,15 +100,15 @@ const BALANCE = {
             dashDistance: 160,
             dashCooldown: 1.8,
             heatWaveRange: 180,
-            heatWaveCooldown: 0.28,
+            heatWaveCooldown: 0.22,      // BUFF: 0.28 → 0.22 (compensation สำหรับ Stand nerf)
             wanchaiDuration: 6.0,
             wanchaiCooldown: 9,
             wanchaiEnergyCost: 32,
-            wanchaiPunchRate: 0.08,
-            wanchaiDamage: 32,
+            wanchaiPunchRate: 0.14,      // NERF: 0.08 → 0.14 (7 hits/s แทน 12.5)
+            wanchaiDamage: 28,           // NERF: 32 → 28
             standSpeedMod: 1.5,
-            standDamageReduction: 0.40,
-            standCritBonus: 0.40,
+            standDamageReduction: 0.30,  // NERF: 0.40 → 0.30
+            standCritBonus: 0.25,        // NERF: 0.40 → 0.25 (crit 31% รวม base)
             // ── New Active Skills ──────────────────────────────────────────
             vacuumRange: 320,       // รัศมีดูดศัตรู (px)
             vacuumForce: 1400,      // ความเร็วกระชาก (เพิ่มจาก 900)
@@ -165,9 +165,9 @@ const BALANCE = {
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.2,
-            nagaCooldown: 13,
+            nagaCooldown: 10,        // BUFF: 13 → 10
             nagaDuration: 10,
-            nagaDamage: 85,
+            nagaDamage: 95,          // BUFF: 85 → 95
             nagaSpeed: 525,
             nagaSegments: 12,
             nagaSegmentDistance: 28,
@@ -230,7 +230,7 @@ const BALANCE = {
         color: '#78716c',
         expValue: 45,
         powerupDropMult: 1.5,
-        baseHp: 100, hpPerWave: 0.24,  // REBALANCE: 0.42 → 0.24 (exponential was 91x gap at wave 15)
+        baseHp: 100, hpPerWave: 0.20,  // NERF: 0.24 → 0.20 (Wave15 Tank 2519→1800 HP)
         baseSpeed: 60, speedPerWave: 3,
         baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
         meleeRange: 55
@@ -265,7 +265,7 @@ const BALANCE = {
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
         baseHp: 5200,
-        hpMultiplier: 1.333,
+        hpMultiplier: 1.28,      // NERF: 1.333 → 1.28 (Enc5: ~14,000 HP แทน 16,400)
         moveSpeed: 140,
         phase2Speed: 190,
         phase2Threshold: 0.5,
