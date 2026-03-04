@@ -224,20 +224,17 @@ class WanchaiStand {
             ctx.restore();
         }
 
+        const rp = Math.sin(t * 3.2);
+        const ep = Math.sin(t * 5.8);
+        const fp = Math.sin(t * 2.1);
+        const facingLeft = Math.abs(this.angle) > Math.PI / 2;
+
+        // ── LAYER 1: rotated context — ring + chains + flash ──
         ctx.save();
         ctx.translate(sc.x, sc.y);
+        ctx.rotate(this.angle);
 
-        // Flip X when facing left so the mask doesn't invert
-        const facingLeft = Math.abs(this.angle) > Math.PI / 2;
-        const drawAngle = facingLeft ? this.angle + Math.PI : this.angle;
-        ctx.rotate(drawAngle);
-        if (facingLeft) ctx.scale(-1, 1);
-
-        const rp = Math.sin(t * 3.2);        // ring pulse
-        const ep = Math.sin(t * 5.8);        // eye pulse
-        const fp = Math.sin(t * 2.1);        // flame pulse
-
-        // ── Outer corona ring ────────────────────────────────
+        // Outer corona ring
         ctx.globalAlpha = 0.15 + (isPunch ? flashT * 0.40 : Math.abs(rp) * 0.07);
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = isPunch ? 3 : 1.5;
@@ -246,8 +243,7 @@ class WanchaiStand {
         ctx.beginPath(); ctx.arc(0, 0, 30 + rp * 3, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // ── Fire chains (arms) ───────────────────────────────
-        // Two chain nodes extending toward punch side
+        // Fire chains
         const extA = isPunch && side > 0 ? 44 : 26;
         const extB = isPunch && side < 0 ? 44 : 26;
 
@@ -259,14 +255,11 @@ class WanchaiStand {
                 const ny = yOff + Math.sin(t * 4 + n * 1.2) * (active ? 1.5 : 2.5);
                 const nr = active ? 3.5 - n * 0.3 : 2.8 - n * 0.25;
                 ctx.globalAlpha = active ? 0.85 : 0.50;
-                ctx.fillStyle = n === nodes - 1
-                    ? (active ? '#fbbf24' : '#f87171')
-                    : '#dc2626';
+                ctx.fillStyle = n === nodes - 1 ? (active ? '#fbbf24' : '#f87171') : '#dc2626';
                 ctx.shadowBlur = active ? 14 : 6;
                 ctx.shadowColor = '#ef4444';
                 ctx.beginPath(); ctx.arc(nx, ny, Math.max(nr, 1.2), 0, Math.PI * 2); ctx.fill();
             }
-            // Fireball at tip
             const bx = ext;
             const by = yOff + Math.sin(t * 4 + 3 * 1.2) * (active ? 1.5 : 2.5);
             const bScale = active ? 1.0 + flashT * 0.4 : 0.75;
@@ -285,64 +278,7 @@ class WanchaiStand {
         drawChain(extA, -5, isPunch && side > 0);
         drawChain(extB, 5, isPunch && side < 0);
 
-        // ── Main body — glowing ember core ───────────────────
-        // Inner dark orb
-        const cG = ctx.createRadialGradient(-4, -4, 2, 0, 0, 18);
-        cG.addColorStop(0, '#fca5a5');
-        cG.addColorStop(0.35, '#dc2626');
-        cG.addColorStop(0.7, '#7f1d1d');
-        cG.addColorStop(1, 'rgba(30,0,0,0)');
-        ctx.globalAlpha = 0.90 + fp * 0.06;
-        ctx.fillStyle = cG;
-        ctx.shadowBlur = isPunch ? 28 : 16;
-        ctx.shadowColor = '#ef4444';
-        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // ── Oni mask face ────────────────────────────────────
-        // Brow ridges
-        ctx.globalAlpha = 0.70;
-        ctx.fillStyle = '#7f1d1d';
-        ctx.beginPath(); ctx.roundRect(-9, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
-        ctx.beginPath(); ctx.roundRect(2, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
-
-        // Eyes — the centrepiece
-        const eyeGlow = 0.75 + ep * 0.25;
-        // Left eye
-        ctx.globalAlpha = eyeGlow;
-        ctx.fillStyle = '#fbbf24';
-        ctx.shadowBlur = 16; ctx.shadowColor = '#f59e0b';
-        ctx.beginPath(); ctx.ellipse(-5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
-        // Right eye
-        ctx.beginPath(); ctx.ellipse(5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-        // Pupils
-        ctx.fillStyle = '#000'; ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.arc(-5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
-
-        // Nose dots
-        ctx.globalAlpha = 0.55;
-        ctx.fillStyle = '#fca5a5';
-        ctx.beginPath(); ctx.arc(-2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
-
-        // Fang mouth
-        ctx.globalAlpha = 0.65;
-        ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.arc(0, 4, 6, 0.1, Math.PI - 0.1); ctx.stroke();
-        // Two fangs
-        ctx.fillStyle = '#fff8'; ctx.globalAlpha = 0.50;
-        ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(-1.5, 4); ctx.lineTo(0, 8); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(1, 8); ctx.lineTo(2.5, 4); ctx.lineTo(4, 8); ctx.fill();
-
-        // Horn nubs on top
-        ctx.globalAlpha = 0.60;
-        ctx.fillStyle = '#7f1d1d';
-        ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(-5, -22); ctx.lineTo(-2, -14); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(2, -14); ctx.lineTo(5, -22); ctx.lineTo(8, -14); ctx.fill();
-
-        // ── Impact flash ────────────────────────────────────
+        // Impact flash (in rotated space — follows chain direction)
         if (isPunch && flashT > 0.05) {
             const fy = side > 0 ? -5 : 5;
             const fx = side > 0 ? extA : extB;
@@ -361,7 +297,64 @@ class WanchaiStand {
             }
         }
 
-        ctx.restore(); // end rotate + translate
+        ctx.restore(); // end rotated layer
+
+        // ── LAYER 2: mask — translate only, scaleX flip for facing ──
+        // No rotation: mask stays upright, mirrors left/right only
+        ctx.save();
+        ctx.translate(sc.x, sc.y);
+        if (facingLeft) ctx.scale(-1, 1);
+
+        // Ember core
+        const cG = ctx.createRadialGradient(-4, -4, 2, 0, 0, 18);
+        cG.addColorStop(0, '#fca5a5');
+        cG.addColorStop(0.35, '#dc2626');
+        cG.addColorStop(0.7, '#7f1d1d');
+        cG.addColorStop(1, 'rgba(30,0,0,0)');
+        ctx.globalAlpha = 0.90 + fp * 0.06;
+        ctx.fillStyle = cG;
+        ctx.shadowBlur = isPunch ? 28 : 16;
+        ctx.shadowColor = '#ef4444';
+        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Brow ridges
+        ctx.globalAlpha = 0.70;
+        ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath(); ctx.roundRect(-9, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(2, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
+
+        // Eyes
+        const eyeGlow = 0.75 + ep * 0.25;
+        ctx.globalAlpha = eyeGlow;
+        ctx.fillStyle = '#fbbf24';
+        ctx.shadowBlur = 16; ctx.shadowColor = '#f59e0b';
+        ctx.beginPath(); ctx.ellipse(-5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000'; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(-5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
+
+        // Nose
+        ctx.globalAlpha = 0.55; ctx.fillStyle = '#fca5a5';
+        ctx.beginPath(); ctx.arc(-2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
+
+        // Mouth + fangs
+        ctx.globalAlpha = 0.65;
+        ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(0, 4, 6, 0.1, Math.PI - 0.1); ctx.stroke();
+        ctx.fillStyle = '#fff8'; ctx.globalAlpha = 0.50;
+        ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(-1.5, 4); ctx.lineTo(0, 8); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(1, 8); ctx.lineTo(2.5, 4); ctx.lineTo(4, 8); ctx.fill();
+
+        // Horns
+        ctx.globalAlpha = 0.60; ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(-5, -22); ctx.lineTo(-2, -14); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(2, -14); ctx.lineTo(5, -22); ctx.lineTo(8, -14); ctx.fill();
+
+        ctx.restore(); // end mask layer
 
         // ── Name tag ─────────────────────────────────────────
         ctx.save();
