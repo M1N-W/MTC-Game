@@ -189,13 +189,25 @@ class Projectile {
             CTX.strokeStyle = '#9f1239'; CTX.lineWidth = 1;
             CTX.beginPath(); CTX.roundRect(-4, 11, 13, 6, 3); CTX.fill(); CTX.stroke();
 
-            // ── วงแหวนพลังงาน (Impact ring) ──────────────
+            // ── Impact rings — dual expanding arcs ───────
             const ringPhase = (now / 80) % (Math.PI * 2);
-            CTX.globalAlpha = 0.45 + Math.sin(ringPhase) * 0.25;
-            CTX.strokeStyle = '#fca5a5';
-            CTX.lineWidth = 2;
-            CTX.shadowBlur = 12; CTX.shadowColor = '#dc2626';
-            CTX.beginPath(); CTX.arc(8, 0, 16 + Math.sin(ringPhase) * 3, -Math.PI * 0.4, Math.PI * 0.4); CTX.stroke();
+            const rInner = 14 + Math.sin(ringPhase) * 3;
+            const rOuter = 20 + Math.sin(ringPhase * 0.7 + 1) * 4;
+            CTX.globalAlpha = 0.55 + Math.sin(ringPhase) * 0.25;
+            CTX.strokeStyle = '#f97316'; CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 16; CTX.shadowColor = '#dc2626';
+            CTX.beginPath(); CTX.arc(8, 0, rInner, -Math.PI * 0.45, Math.PI * 0.45); CTX.stroke();
+            CTX.globalAlpha = 0.28 + Math.sin(ringPhase * 0.7) * 0.15;
+            CTX.strokeStyle = '#fca5a5'; CTX.lineWidth = 1.2;
+            CTX.shadowBlur = 8;
+            CTX.beginPath(); CTX.arc(8, 0, rOuter, -Math.PI * 0.55, Math.PI * 0.55); CTX.stroke();
+            // Heat shimmer dots at ring edge
+            CTX.globalAlpha = 0.7;
+            CTX.fillStyle = '#fbbf24'; CTX.shadowBlur = 6; CTX.shadowColor = '#f97316';
+            for (let ri = -1; ri <= 1; ri++) {
+                const ra = ri * 0.35;
+                CTX.beginPath(); CTX.arc(8 + Math.cos(ra) * rInner, Math.sin(ra) * rInner, 1.5, 0, Math.PI * 2); CTX.fill();
+            }
 
             CTX.restore();
             return;
@@ -206,40 +218,66 @@ class Projectile {
         // ════════════════════════════════════════════════
         if (this.kind === 'punch') {
             CTX.rotate(this.angle);
-            CTX.shadowBlur = 20; CTX.shadowColor = this.color;
+            const now = performance.now();
 
-            // Motion trails / Steam
-            CTX.globalAlpha = 0.5;
-            CTX.strokeStyle = this.color; CTX.lineWidth = 3;
-            CTX.beginPath(); CTX.moveTo(-20, -10); CTX.lineTo(5, -10); CTX.stroke();
-            CTX.beginPath(); CTX.moveTo(-25, 10); CTX.lineTo(5, 10); CTX.stroke();
+            // Outer shockwave ring
+            const swPhase = (now / 90) % (Math.PI * 2);
+            const swR = 18 + Math.sin(swPhase) * 4;
+            CTX.globalAlpha = 0.35 + Math.sin(swPhase) * 0.2;
+            CTX.strokeStyle = '#f97316'; CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 18; CTX.shadowColor = '#dc2626';
+            CTX.beginPath(); CTX.arc(4, 0, swR, -Math.PI * 0.5, Math.PI * 0.5); CTX.stroke();
+            CTX.globalAlpha = 0.18;
+            CTX.strokeStyle = '#fca5a5'; CTX.lineWidth = 1;
+            CTX.beginPath(); CTX.arc(4, 0, swR + 6, -Math.PI * 0.6, Math.PI * 0.6); CTX.stroke();
+            CTX.shadowBlur = 0;
 
-            // Core Fist Base (Palm)
-            CTX.globalAlpha = 0.95;
-            const fg = CTX.createLinearGradient(-10, -12, 12, 12);
+            // Speed lines — 3 tapered trails
+            const trailCols = ['rgba(239,68,68,', 'rgba(251,113,133,', 'rgba(253,164,175,'];
+            [[-28, -9, 3], [-33, 0, 2.5], [-28, 9, 2]].forEach(([x, y, w], ti) => {
+                const tg = CTX.createLinearGradient(x, y, 4, y);
+                tg.addColorStop(0, trailCols[ti] + '0)');
+                tg.addColorStop(0.5, trailCols[ti] + '0.3)');
+                tg.addColorStop(1, trailCols[ti] + '0.7)');
+                CTX.globalAlpha = 0.8;
+                CTX.strokeStyle = tg; CTX.lineWidth = w; CTX.lineCap = 'round';
+                CTX.beginPath(); CTX.moveTo(x, y); CTX.lineTo(4, y); CTX.stroke();
+            });
+
+            // Fist body — palm with gradient
+            CTX.globalAlpha = 0.97;
+            const fg = CTX.createLinearGradient(-10, -13, 14, 13);
             fg.addColorStop(0, '#fff1f2');
-            fg.addColorStop(0.4, '#fb7185');
+            fg.addColorStop(0.35, '#fb7185');
             fg.addColorStop(1, '#be123c');
             CTX.fillStyle = fg;
-            CTX.beginPath(); CTX.roundRect(-8, -12, 16, 24, 4); CTX.fill();
+            CTX.shadowBlur = 20; CTX.shadowColor = '#f97316';
+            CTX.beginPath(); CTX.roundRect(-9, -12, 17, 24, [3, 5, 5, 3]); CTX.fill();
+            CTX.shadowBlur = 0;
 
-            // The 4 Knuckles (Front)
-            CTX.fillStyle = '#fff1f2';
-            CTX.strokeStyle = '#9f1239'; CTX.lineWidth = 1.5;
+            // Knuckle guards — 4 raised ridges
+            CTX.fillStyle = '#ffe4e6'; CTX.strokeStyle = '#9f1239'; CTX.lineWidth = 1.2;
             for (let k = 0; k < 4; k++) {
-                CTX.beginPath();
-                CTX.roundRect(6, -11 + (k * 6), 8, 4.5, 2);
+                CTX.beginPath(); CTX.roundRect(6, -11 + k * 6, 9, 5, [2, 3, 2, 1]);
                 CTX.fill(); CTX.stroke();
+                // Knuckle impact glow
+                const kg = 0.55 + Math.sin(now / 55 + k * 0.9) * 0.45;
+                CTX.globalAlpha = kg;
+                CTX.fillStyle = k % 2 === 0 ? '#fbbf24' : '#f97316';
+                CTX.shadowBlur = 10 * kg; CTX.shadowColor = '#f97316';
+                CTX.beginPath(); CTX.arc(11, -8.5 + k * 6, 2.5, 0, Math.PI * 2); CTX.fill();
             }
+            CTX.globalAlpha = 1; CTX.shadowBlur = 0;
 
-            // The Thumb (Bottom side)
-            CTX.fillStyle = '#fb7185';
-            CTX.beginPath(); CTX.roundRect(-2, 10, 12, 6, 3); CTX.fill(); CTX.stroke();
+            // Thumb
+            CTX.fillStyle = '#fb7185'; CTX.strokeStyle = '#9f1239'; CTX.lineWidth = 1;
+            CTX.beginPath(); CTX.roundRect(-4, 11, 13, 6, 3); CTX.fill(); CTX.stroke();
 
-            // Tech/Glow accents on the glove
-            CTX.shadowBlur = 10; CTX.shadowColor = '#facc15';
-            CTX.fillStyle = '#facc15';
-            CTX.beginPath(); CTX.arc(-2, 0, 3.5, 0, Math.PI * 2); CTX.fill();
+            // Wrist band — golden stripe (Wanchai signature)
+            CTX.fillStyle = '#fbbf24';
+            CTX.shadowBlur = 8; CTX.shadowColor = '#f59e0b';
+            CTX.beginPath(); CTX.roundRect(-9, 5, 17, 3, 1); CTX.fill();
+            CTX.shadowBlur = 0;
 
             CTX.restore();
             return;
@@ -518,11 +556,50 @@ class Projectile {
             // ════════════════════════════════════════════════
         } else if (!this.isPoom) {
             CTX.rotate(this.angle);
-            CTX.shadowBlur = 10; CTX.shadowColor = this.color;
+            const now = performance.now();
+            const symSize = this.size || 14;
+            const hexR = symSize * 0.85;
+
+            // Outer glow corona
+            const coronaG = CTX.createRadialGradient(0, 0, hexR * 0.3, 0, 0, hexR * 1.8);
+            coronaG.addColorStop(0, this.color.replace(')', ',0.35)').replace('rgb', 'rgba') || `rgba(220,38,38,0.35)`);
+            coronaG.addColorStop(1, 'rgba(0,0,0,0)');
+            CTX.fillStyle = coronaG;
+            CTX.globalAlpha = 0.6 + Math.sin(now / 180) * 0.3;
+            CTX.beginPath(); CTX.arc(0, 0, hexR * 1.8, 0, Math.PI * 2); CTX.fill();
+
+            // Rotating hex frame
+            const hexRot = (now / 600) % (Math.PI * 2);
+            CTX.save(); CTX.rotate(hexRot);
+            CTX.strokeStyle = this.color; CTX.lineWidth = 1;
+            CTX.globalAlpha = 0.45 + Math.sin(now / 220) * 0.25;
+            CTX.shadowBlur = 8; CTX.shadowColor = this.color;
+            CTX.beginPath();
+            for (let hi = 0; hi < 6; hi++) {
+                const ha = (hi / 6) * Math.PI * 2;
+                if (hi === 0) CTX.moveTo(Math.cos(ha) * hexR, Math.sin(ha) * hexR);
+                else CTX.lineTo(Math.cos(ha) * hexR, Math.sin(ha) * hexR);
+            }
+            CTX.closePath(); CTX.stroke();
+            // Hex corner dots
             CTX.fillStyle = this.color;
-            CTX.font = `bold ${this.size}px monospace`;
+            CTX.shadowBlur = 6;
+            for (let hi = 0; hi < 6; hi += 2) {
+                const ha = (hi / 6) * Math.PI * 2;
+                CTX.beginPath(); CTX.arc(Math.cos(ha) * hexR, Math.sin(ha) * hexR, 1.2, 0, Math.PI * 2); CTX.fill();
+            }
+            CTX.restore();
+
+            // Symbol — bright with outline
+            CTX.globalAlpha = 1;
+            CTX.shadowBlur = 14; CTX.shadowColor = this.color;
+            CTX.fillStyle = this.color;
+            CTX.font = `bold ${symSize}px monospace`;
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.strokeStyle = 'rgba(0,0,0,0.6)'; CTX.lineWidth = 3;
+            CTX.strokeText(this.symbol, 0, 0);
             CTX.fillText(this.symbol, 0, 0);
+            CTX.shadowBlur = 0;
         }
 
         CTX.restore();
@@ -1162,14 +1239,31 @@ function drawPoomWeapon(ctx) {
     ctx.beginPath(); ctx.arc(31, 0, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
 
+    // ── Grip (bamboo-wrap upgrade) ───────────────────
+    // Base
     ctx.fillStyle = '#78350f';
     ctx.beginPath(); ctx.roundRect(-22, -5, 9, 10, 2); ctx.fill();
     ctx.fillStyle = '#92400e';
     ctx.fillRect(-22, -3, 9, 3);
+    // Bamboo grain lines
     ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1;
     for (let gly = -4; gly <= 4; gly += 2) {
         ctx.beginPath(); ctx.moveTo(-22, gly); ctx.lineTo(-13, gly); ctx.stroke();
     }
+    // Wrap tape bands (gold)
+    ctx.strokeStyle = 'rgba(251,191,36,0.55)'; ctx.lineWidth = 1.8;
+    for (let tw = -20; tw <= -15; tw += 4) {
+        ctx.beginPath(); ctx.moveTo(tw, -5); ctx.lineTo(tw, 5); ctx.stroke();
+    }
+    // Rune carving glow — Thai Pha Yant style
+    const runeA = 0.45 + Math.sin(now / 400) * 0.3;
+    ctx.globalAlpha = runeA;
+    ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 0.7;
+    ctx.shadowBlur = 5; ctx.shadowColor = '#fbbf24';
+    // Small angular rune marks
+    ctx.beginPath(); ctx.moveTo(-21, -2); ctx.lineTo(-19, -4); ctx.lineTo(-17, -2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-21, 2); ctx.lineTo(-19, 4); ctx.lineTo(-17, 2); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 
     ctx.restore();
 }
@@ -1253,6 +1347,21 @@ function drawKaoGunEnhanced(ctx, weaponType, isAwakened = false) {
         ctx.beginPath(); ctx.roundRect(8, 5, 4, 9, 1); ctx.fill();
         ctx.beginPath(); ctx.roundRect(22, 5, 4, 7, 1); ctx.fill();
 
+        // Suppressor cylinder on barrel end
+        ctx.fillStyle = '#0d1f38';
+        ctx.beginPath(); ctx.roundRect(44, -4, 10, 8, 3); ctx.fill();
+        ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.roundRect(44, -4, 10, 8, 3); ctx.stroke();
+        // Suppressor baffle lines
+        ctx.strokeStyle = 'rgba(30,58,138,0.5)'; ctx.lineWidth = 0.7;
+        for (let sl = 46; sl < 53; sl += 2) { ctx.beginPath(); ctx.moveTo(sl, -4); ctx.lineTo(sl, 4); ctx.stroke(); }
+        // Muzzle dot
+        const suppGlow = 0.3 + Math.sin(now / 300) * 0.2;
+        ctx.fillStyle = `rgba(6,182,212,${suppGlow})`;
+        ctx.shadowBlur = 5; ctx.shadowColor = '#06b6d4';
+        ctx.beginPath(); ctx.arc(54, 0, 1.8, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
         ctx.fillStyle = 'rgba(147,197,253,0.8)'; ctx.font = 'bold 4px Arial'; ctx.textAlign = 'center';
         ctx.fillText('KAO-SR', 8, 2);
 
@@ -1279,21 +1388,38 @@ function drawKaoGunEnhanced(ctx, weaponType, isAwakened = false) {
         ctx.fillText('12G', 11, 1);
 
     } else {
+        // ── Auto receiver ────────────────────────────────────
         const g = ctx.createLinearGradient(0, -6, 0, 6);
         g.addColorStop(0, '#3b82f6'); g.addColorStop(0.5, '#2563eb'); g.addColorStop(1, '#1e40af');
         ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(0, -5, 26, 10, 2); ctx.fill();
-        ctx.fillStyle = '#1e293b'; ctx.fillRect(2, -7, 18, 2);
-        ctx.fillStyle = '#334155'; ctx.fillRect(4, -8.5, 4, 1.5); ctx.fillRect(12, -8.5, 4, 1.5);
-        ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.roundRect(22, -2.5, 10, 5, 1); ctx.fill();
+        // Rail on top
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(2, -7, 20, 2.5);
+        ctx.strokeStyle = 'rgba(96,165,250,0.25)'; ctx.lineWidth = 0.7;
+        for (let rs = 3; rs < 21; rs += 3) { ctx.beginPath(); ctx.moveTo(rs, -7); ctx.lineTo(rs, -4.5); ctx.stroke(); }
+        // Scope mount stubs
+        ctx.fillStyle = '#334155'; ctx.fillRect(4, -8.5, 4, 1.5); ctx.fillRect(14, -8.5, 4, 1.5);
+        // Barrel
+        ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.roundRect(22, -2.5, 12, 5, 1); ctx.fill();
+        // Muzzle flash LED
         const aFlash = 0.45 + Math.sin(now / 180) * 0.35;
         ctx.fillStyle = `rgba(96,165,250,${aFlash})`; ctx.shadowBlur = 10; ctx.shadowColor = '#60a5fa';
-        ctx.beginPath(); ctx.arc(32, 0, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-        ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.roundRect(8, 5, 8, 9, 1); ctx.fill();
+        ctx.beginPath(); ctx.arc(34, 0, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        // Magazine
+        ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.roundRect(8, 5, 8, 10, 1); ctx.fill();
         ctx.fillStyle = '#334155'; ctx.fillRect(9, 6, 6, 4);
+        ctx.strokeStyle = 'rgba(59,130,246,0.4)'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(10, 6); ctx.lineTo(10, 12); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(14, 6); ctx.lineTo(14, 12); ctx.stroke();
+        // Foregrip (underbarrel)
+        ctx.fillStyle = '#1e3a5f'; ctx.beginPath(); ctx.roundRect(4, 5, 7, 8, 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(96,165,250,0.3)'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.roundRect(4, 5, 7, 8, 2); ctx.stroke();
+        // Magwell
         ctx.fillStyle = '#1e40af'; ctx.beginPath(); ctx.roundRect(-8, -3.5, 10, 7, 2); ctx.fill();
-        ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 1;
+        ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 0.8;
         ctx.strokeRect(2, -4, 5, 8); ctx.strokeRect(14, -4, 5, 8);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 5px Arial'; ctx.textAlign = 'center';
+        // Logo
+        ctx.fillStyle = 'rgba(147,197,253,0.9)'; ctx.font = 'bold 5px Arial'; ctx.textAlign = 'center';
         ctx.fillText('MTC', 12, 1);
     }
 
@@ -1382,6 +1508,7 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
     const heat = wanchaiActive ? 1.0 : ventGlow;
     const firePulse = Math.max(0, 0.4 + Math.sin(now / 160) * 0.6);
 
+    // ── Main receiver body ───────────────────────────────────
     const bg = ctx.createLinearGradient(0, -9, 0, 9);
     bg.addColorStop(0, '#fca5a5');
     bg.addColorStop(0.35, '#dc2626');
@@ -1392,12 +1519,46 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
     ctx.strokeStyle = '#450a0a'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.roundRect(-11, -8, 26, 16, 4); ctx.stroke();
 
+    // Receiver panel inset
+    ctx.fillStyle = 'rgba(127,29,29,0.55)';
+    ctx.beginPath(); ctx.roundRect(-8, -5, 18, 6, 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(220,38,38,0.3)'; ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.roundRect(-8, -5, 18, 6, 2); ctx.stroke();
+
+    // ── Barrel shroud (forward) ──────────────────────────────
+    ctx.fillStyle = '#3d0808';
+    ctx.beginPath(); ctx.roundRect(15, -5, 16, 10, 2); ctx.fill();
+    ctx.strokeStyle = '#5c1010'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.roundRect(15, -5, 16, 10, 2); ctx.stroke();
+    // Shroud slots
+    ctx.strokeStyle = 'rgba(239,68,68,0.25)'; ctx.lineWidth = 0.7;
+    for (let sv = 17; sv <= 28; sv += 4) {
+        ctx.beginPath(); ctx.moveTo(sv, -5); ctx.lineTo(sv, 5); ctx.stroke();
+    }
+
+    // ── Muzzle device ────────────────────────────────────────
+    ctx.fillStyle = '#1a0505';
+    ctx.beginPath(); ctx.roundRect(31, -3.5, 8, 7, [0, 3, 3, 0]); ctx.fill();
+    ctx.strokeStyle = '#3d0808'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.roundRect(31, -3.5, 8, 7, [0, 3, 3, 0]); ctx.stroke();
+    // Muzzle ports
+    for (let mp = 0; mp < 3; mp++) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath(); ctx.arc(33 + mp * 2, -3, 0.8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(33 + mp * 2, 3, 0.8, 0, Math.PI * 2); ctx.fill();
+    }
+    const muzzleGlow = 0.3 + Math.sin(now / 140) * 0.2;
+    ctx.fillStyle = `rgba(239,68,68,${muzzleGlow * heat})`;
+    ctx.shadowBlur = 8 * muzzleGlow * heat; ctx.shadowColor = '#dc2626';
+    ctx.beginPath(); ctx.arc(39, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // ── Piston assembly ──────────────────────────────────────
     const pistonPositions = [-6, 0, 6];
     for (let pi = 0; pi < pistonPositions.length; pi++) {
         const px = pistonPositions[pi];
         const pistonPhase = Math.sin(now / 100 + pi * 1.2);
         const pistonOffset = pistonPhase * 2 * heat;
-
         ctx.fillStyle = '#450a0a';
         ctx.beginPath(); ctx.roundRect(px - 2, -7, 4, 14, 1); ctx.fill();
         ctx.fillStyle = '#9f1239';
@@ -1406,57 +1567,68 @@ function drawAutoWeapon(ctx, wanchaiActive = false, ventGlow = 0.3) {
         ctx.beginPath(); ctx.roundRect(px - 2.5, -6 + pistonOffset, 5, 3, 1); ctx.fill();
     }
 
+    // ── Exhaust stacks + fire ─────────────────────────────────
     for (let ep = -1; ep <= 1; ep += 2) {
         const epx = ep * 7;
         ctx.fillStyle = '#1e293b';
         ctx.beginPath(); ctx.roundRect(epx - 1.5, -13, 3, 7, 1); ctx.fill();
-        ctx.fillStyle = '#334155';
-        ctx.beginPath(); ctx.roundRect(epx - 2.5, -9, 5, 2, 0); ctx.fill();
-
+        // Stack ring
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.roundRect(epx - 2.5, -9, 5, 2, 0); ctx.fill(); ctx.stroke();
         if (heat > 0.2) {
             const fireAlpha = heat * firePulse * 0.8;
             ctx.globalAlpha = fireAlpha;
-            ctx.shadowBlur = 12 * heat; ctx.shadowColor = '#fb923c';
+            ctx.shadowBlur = 14 * heat; ctx.shadowColor = '#fb923c';
+            const fx = epx + Math.sin(now / 80 + ep) * 1.5;
+            const fy = -14 - heat * firePulse * 5;
+            // Flame base
             ctx.fillStyle = '#fb923c';
-            const fx = epx + (Math.sin(now / 80 + ep) * 1.5);
-            const fy = -14 - heat * firePulse * 4;
-            ctx.beginPath(); ctx.arc(fx, fy, Math.max(0, 2.5 * heat * firePulse), 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(fx, fy, Math.max(0, 3 * heat * firePulse), 0, Math.PI * 2); ctx.fill();
+            // Flame tip
             ctx.fillStyle = '#fde68a';
             ctx.globalAlpha = fireAlpha * 0.5;
-            ctx.beginPath(); ctx.arc(fx, fy - 3, Math.max(0, 2 * heat), 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.globalAlpha = 1;
+            ctx.beginPath(); ctx.arc(fx, fy - 3.5, Math.max(0, 2 * heat), 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
         }
     }
 
-    ctx.shadowBlur = 6 * heat; ctx.shadowColor = '#fb923c';
+    // ── Side heat vents ──────────────────────────────────────
+    ctx.shadowBlur = 7 * heat; ctx.shadowColor = '#fb923c';
     for (let vi = 0; vi < 4; vi++) {
-        const ventAlpha = heat * (0.4 + vi * 0.1) * (0.6 + Math.sin(now / 130 + vi) * 0.4);
-        ctx.fillStyle = `rgba(251,146,60,${ventAlpha})`;
-        ctx.fillRect(-11, -5 + vi * 3.5, 3, 2);
-        ctx.fillRect(19, -5 + vi * 3.5, 3, 2);
+        const vp = heat * (0.4 + vi * 0.1) * (0.6 + Math.sin(now / 130 + vi) * 0.4);
+        const ventG = ctx.createLinearGradient(-11, 0, -8, 0);
+        ventG.addColorStop(0, `rgba(251,146,60,${vp * 1.2})`);
+        ventG.addColorStop(1, `rgba(239,68,68,${vp * 0.5})`);
+        ctx.fillStyle = ventG;
+        ctx.beginPath(); ctx.roundRect(-11, -5.5 + vi * 3.5, 4, 2, 1); ctx.fill();
+        ctx.fillStyle = `rgba(251,146,60,${vp})`;
+        ctx.beginPath(); ctx.roundRect(21, -5.5 + vi * 3.5, 4, 2, 1); ctx.fill();
     }
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = '#7f1d1d';
+    // ── Top spine spikes ─────────────────────────────────────
+    ctx.fillStyle = '#5c1010';
     for (let k = -7; k <= 7; k += 4) {
+        const spH = 5 + heat * firePulse * 2.5;
         ctx.beginPath();
-        ctx.moveTo(k - 2, -8);
-        ctx.lineTo(k + 2, -8);
-        ctx.lineTo(k, -13 - heat * firePulse * 2);
+        ctx.moveTo(k - 2, -8); ctx.lineTo(k + 2, -8); ctx.lineTo(k, -8 - spH);
         ctx.closePath(); ctx.fill();
     }
 
-    const coreGlow = heat * firePulse;
-    ctx.fillStyle = `rgba(251,113,133,${coreGlow})`;
-    ctx.shadowBlur = 12 * coreGlow; ctx.shadowColor = '#dc2626';
-    ctx.beginPath(); ctx.arc(3, 0, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.font = 'bold 4px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('AUTO', 1, 1.5);
+    // ── Core energy cell (hexagonal) ─────────────────────────
+    const cP = heat * firePulse;
+    ctx.save(); ctx.translate(3, 0);
+    ctx.beginPath();
+    for (let hi = 0; hi < 6; hi++) {
+        const ha = (hi / 6) * Math.PI * 2 - Math.PI / 6;
+        if (hi === 0) ctx.moveTo(Math.cos(ha) * 4, Math.sin(ha) * 4);
+        else ctx.lineTo(Math.cos(ha) * 4, Math.sin(ha) * 4);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(251,113,133,${cP * 0.9})`;
+    ctx.shadowBlur = 14 * cP; ctx.shadowColor = '#dc2626'; ctx.fill();
+    ctx.strokeStyle = `rgba(252,165,165,${cP * 0.7})`; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.restore(); ctx.shadowBlur = 0;
 
     ctx.restore();
 }
