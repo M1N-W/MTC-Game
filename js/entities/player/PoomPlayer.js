@@ -24,6 +24,7 @@ class PoomPlayer extends Player {
         this.currentSpeedMult = 1;
         this.nagaCount = 0;
         this.naga = null;
+        this._nagaShieldLeft = 0;   // shield pool (HP) ที่ Naga absorb แทนได้
 
         // ── Session C: Legacy sticky system removed - using StatusEffect framework ──
         this.ritualPoints = 0;
@@ -243,6 +244,8 @@ class PoomPlayer extends Player {
         const S = this.stats;
         this.cooldowns.naga = S.nagaCooldown * this.cooldownMultiplier;
         this.naga = new NagaEntity(this.x, this.y, this);
+        // ── Shield pool: Naga absorbs up to 55% of max HP per summon ──
+        this._nagaShieldLeft = Math.floor(this.maxHp * 0.55);
         window.specialEffects.push(this.naga);
         spawnParticles(this.x, this.y, 40, '#10b981');
         spawnFloatingText('อัญเชิญพญานาค!', this.x, this.y - 60, '#10b981', 24);
@@ -405,8 +408,17 @@ class PoomPlayer extends Player {
     }
 
     takeDamage(amt) {
-        // ── Naga Shield: ขณะ Naga มีชีวิตและ active → ภูมิอยู่ยงคงกระพัน ──
-        if (this.naga && !this.naga.dead && this.naga.active) return;
+        // ── Naga Shield: absorb ดาเมจจาก shield pool แทนการบล็อก 100% ──
+        // Pool = 55% maxHP ต่อครั้ง → ถ้าโดนหนักพอยังบาดเจ็บได้
+        if (this.naga && !this.naga.dead && this.naga.active && this._nagaShieldLeft > 0) {
+            const absorbed = Math.min(amt, this._nagaShieldLeft);
+            this._nagaShieldLeft -= absorbed;
+            amt -= absorbed;
+            if (absorbed > 0) {
+                spawnFloatingText(`🐍 -${Math.round(absorbed)}`, this.x, this.y - 35, '#10b981', 13);
+            }
+            if (amt <= 0) return; // shield ดูดหมด
+        }
         // ── Graph Risk ────────────────────────────────────────────
         // (ไม่ผ่าน super เพราะ PlayerBase.takeDamage ก็เช็คอยู่แล้ว — x2 แทน x1.5 ของ Kao)
         if (this.onGraph) {

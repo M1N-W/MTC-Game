@@ -165,9 +165,9 @@ const BALANCE = {
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.2,
-            nagaCooldown: 10,        // BUFF: 13 → 10
-            nagaDuration: 10,
-            nagaDamage: 95,          // BUFF: 85 → 95
+            nagaCooldown: 16,        // NERF: 10 → 16s (uptime 44% แทน 100%)
+            nagaDuration: 7,         // NERF: 10 → 7s (สร้าง dead-time 9s)
+            nagaDamage: 100,         // BUFF: 95 → 100 (compensate uptime ที่ลดลง)
             nagaSpeed: 525,
             nagaSegments: 12,
             nagaSegmentDistance: 28,

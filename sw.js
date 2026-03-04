@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.10.1'; // v3.10.1 Comprehensive balance overhaul: Wanchai Stand nerfs, weapon adjustments, and enemy scaling rebalance
+const CACHE_NAME = 'mtc-cache-v3.10.2'; // v3.10.2 Naga shield system rework: Damage absorption pool with uptime nerf and damage compensation
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
