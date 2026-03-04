@@ -459,8 +459,8 @@ class PlayerRenderer {
 
             // Stand Rush Animation -- uses precomputed fists from WanchaiStand._punch()
             if (entity.isStandAttacking) {
+                const fists = entity._rushFists;
                 const stand = entity.wanchaiStand;
-                const fists = stand?._rushFists;
                 if (fists && fists.length > 0) {
                     ctx.save();
                     ctx.translate(screen.x, screen.y);

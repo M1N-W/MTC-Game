@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.9.4'; // v3.9.4 Wanchai Stand ghost redesign: Enhanced visual effects and simplified rendering
+const CACHE_NAME = 'mtc-cache-v3.9.5'; // v3.9.5 Rush fist overlay fix: Player-owned visual effects system
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

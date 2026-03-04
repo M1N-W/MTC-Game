@@ -404,6 +404,13 @@ class AutoPlayer extends Player {
         // ── Tick WanchaiStand each frame ──────────────────────
         if (this.wanchaiStand?.active) this.wanchaiStand.update(dt);
 
+        // Decay player-owned rush fist overlay alpha
+        if ((this._rushFistTimer ?? 0) > 0) {
+            this._rushFistTimer -= dt;
+            const _fade = Math.max(0, this._rushFistTimer / 0.10);
+            if (this._rushFists) for (const f of this._rushFists) f.alpha = _fade;
+        }
+
         if (checkInput('rightClick')) {
             const energyCost = this.stats?.wanchaiEnergyCost ?? 35;
             if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
@@ -632,6 +639,19 @@ class AutoPlayer extends Player {
         if (isCrit && typeof spawnFloatingText === 'function')
             spawnFloatingText('ORA!', this.x, this.y - 45, '#facc15', 20);
         if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
+
+        // Precompute rush fist positions for overlay (drawn by PlayerRenderer)
+        this._rushFists = this._rushFists ?? [];
+        this._rushFists.length = 0;
+        for (let i = 0; i < 7; i++) {
+            this._rushFists.push({
+                ox: 38 + Math.random() * 75,
+                oy: (Math.random() - 0.5) * 60,
+                sc: 0.45 + Math.random() * 0.65,
+                alpha: 1.0
+            });
+        }
+        this._rushFistTimer = 0.10;
 
         // Sync combo into WanchaiStand so ORA counter escalates
         if (this.wanchaiStand) {
