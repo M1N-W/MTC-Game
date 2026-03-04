@@ -204,94 +204,145 @@ class WanchaiStand {
     draw(ctx) {
         if (!this.active || typeof ctx === 'undefined') return;
         const now = performance.now();
-        const screen = worldToScreen(this.x, this.y);
+        const sc = worldToScreen(this.x, this.y);
         const isPunch = this._phaseTimer > 0;
-        const flashT = isPunch ? this._phaseTimer / 0.12 : 0;
+        const flashT = isPunch ? Math.min(1, this._phaseTimer / 0.12) : 0;
+        const side = this._punchSide ?? 1;
 
-        // Ghost trail -- same style as standGhosts (small fading circles)
+        // Ghost trail
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
-            ctx.globalAlpha = g.alpha * 0.45;
-            ctx.fillStyle = 'rgba(220,38,38,0.55)';
-            ctx.shadowBlur = 8; ctx.shadowColor = '#dc2626';
-            ctx.beginPath(); ctx.arc(gs.x, gs.y, 13 - i * 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = g.alpha * 0.35;
+            ctx.fillStyle = '#dc2626';
+            ctx.shadowBlur = 6; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.arc(gs.x, gs.y, 10 - i * 1.2, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
         ctx.save();
-        ctx.translate(screen.x, screen.y);
+        ctx.translate(sc.x, sc.y);
 
-        // Outer aura ring
-        const pulseMult = isPunch ? 3 : 1;
-        ctx.globalAlpha = 0.30 + Math.sin(now / 100 * pulseMult) * 0.18;
-        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2.5;
-        ctx.shadowBlur = 22; ctx.shadowColor = '#dc2626';
-        ctx.beginPath(); ctx.arc(0, 0, 34 + Math.sin(now / 120) * 4, 0, Math.PI * 2); ctx.stroke();
+        // Outer energy ring
+        const ringR = 36 + Math.sin(now / 180) * 3;
+        ctx.globalAlpha = 0.22 + (isPunch ? flashT * 0.35 : Math.sin(now / 220) * 0.06);
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = isPunch ? 3 : 1.8;
+        ctx.shadowBlur = isPunch ? 28 : 12; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.arc(0, 0, ringR, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
 
         // Rotate to face target
         ctx.save();
         ctx.rotate(this.angle);
 
-        // Main body -- outer ghost circle (standGhosts style, R=22)
-        ctx.globalAlpha = 0.72;
-        ctx.fillStyle = 'rgba(220,38,38,0.55)';
-        ctx.shadowBlur = isPunch ? 20 : 10; ctx.shadowColor = '#dc2626';
-        ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
+        // Legs
+        ctx.globalAlpha = 0.80;
+        ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath(); ctx.roundRect(-9, 14, 7, 13, 2); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(2, 14, 7, 13, 2); ctx.fill();
 
-        // Inner core (standGhosts style, R=12)
-        ctx.globalAlpha = 0.72 * 0.6;
-        ctx.fillStyle = '#dc2626';
-        ctx.shadowBlur = isPunch ? 16 : 8; ctx.shadowColor = '#ef4444';
-        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+        // Torso
+        ctx.globalAlpha = 0.92;
+        const tG = ctx.createLinearGradient(-12, -12, 12, 14);
+        tG.addColorStop(0, '#f87171');
+        tG.addColorStop(0.5, '#dc2626');
+        tG.addColorStop(1, '#7f1d1d');
+        ctx.fillStyle = tG;
+        ctx.shadowBlur = isPunch ? 18 : 8; ctx.shadowColor = '#ef4444';
+        ctx.beginPath(); ctx.roundRect(-12, -12, 24, 26, 4); ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Eyes -- glow dots
-        const eyeGlow = 0.75 + Math.sin(now / 120) * 0.25;
-        ctx.globalAlpha = eyeGlow;
-        ctx.fillStyle = '#fbbf24'; ctx.shadowBlur = 10; ctx.shadowColor = '#f59e0b';
-        ctx.beginPath(); ctx.ellipse(7, -7, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(7, 5, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#000'; ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.ellipse(8.5, -7, 1.4, 1.8, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(8.5, 5, 1.4, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+        // Torso details
+        ctx.globalAlpha = 0.45;
+        ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
+        ctx.fillStyle = '#fca5a5';
+        ctx.beginPath(); ctx.roundRect(-7, -8, 5, 6, 2); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(2, -8, 5, 6, 2); ctx.fill();
 
-        // Fist -- extends forward, alternates side each punch
-        const fistReach = isPunch ? 38 : 28;
-        const fistY = (this._punchSide ?? 1) * 5;
-        ctx.globalAlpha = 0.90;
-        ctx.fillStyle = isPunch ? '#facc15' : '#fb7185';
-        ctx.shadowBlur = isPunch ? 22 : 7; ctx.shadowColor = isPunch ? '#facc15' : '#ef4444';
-        ctx.beginPath(); ctx.ellipse(fistReach, fistY, 13, 9, 0, 0, Math.PI * 2); ctx.fill();
-        // Motion line
-        ctx.strokeStyle = 'rgba(248,113,113,0.5)'; ctx.lineWidth = 5; ctx.shadowBlur = 0;
-        ctx.beginPath(); ctx.moveTo(fistReach - 28, fistY); ctx.lineTo(fistReach, fistY); ctx.stroke();
-        // Knuckle lines
-        ctx.strokeStyle = '#9f1239'; ctx.lineWidth = 1;
+        // Head
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = '#ef4444';
+        ctx.shadowBlur = 10; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.arc(0, -22, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 0.70;
+        ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath(); ctx.roundRect(-11, -25, 22, 6, [3, 3, 0, 0]); ctx.fill();
+
+        // Eyes
+        const eg = 0.85 + Math.sin(now / 110) * 0.15;
+        ctx.globalAlpha = eg;
+        ctx.fillStyle = '#fbbf24'; ctx.shadowBlur = 8; ctx.shadowColor = '#f59e0b';
+        ctx.beginPath(); ctx.ellipse(-4, -22, 3.2, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(4, -22, 3.2, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(-3.5, -22, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(4.5, -22, 1.2, 0, Math.PI * 2); ctx.fill();
+
+        // Arms + Fists (two rows alternating)
+        const extA = isPunch && side > 0 ? 42 : 28;
+        const extB = isPunch && side < 0 ? 42 : 28;
+        const yA = -5, yB = 6;
+
+        // Upper arm
+        ctx.lineWidth = 5; ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.80;
+        ctx.strokeStyle = '#ef4444'; ctx.shadowBlur = 4; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.moveTo(11, yA); ctx.lineTo(extA - 6, yA); ctx.stroke();
+        ctx.globalAlpha = (isPunch && side > 0) ? 1.0 : 0.75;
+        ctx.fillStyle = (isPunch && side > 0) ? '#facc15' : '#fb7185';
+        ctx.shadowBlur = (isPunch && side > 0) ? 20 : 5;
+        ctx.shadowColor = (isPunch && side > 0) ? '#fbbf24' : '#ef4444';
+        ctx.beginPath(); ctx.ellipse(extA, yA, 11, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.55; ctx.strokeStyle = '#7f1d1d'; ctx.lineWidth = 1; ctx.shadowBlur = 0;
         for (let k = 0; k < 3; k++) {
-            ctx.beginPath();
-            ctx.moveTo(fistReach + 4, fistY - 3 + k * 4);
-            ctx.lineTo(fistReach + 11, fistY - 3 + k * 4);
-            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(extA + 4, yA - 3 + k * 3.5); ctx.lineTo(extA + 9, yA - 3 + k * 3.5); ctx.stroke();
         }
+
+        // Lower arm
+        ctx.lineWidth = 5; ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.80;
+        ctx.strokeStyle = '#ef4444'; ctx.shadowBlur = 4; ctx.shadowColor = '#dc2626';
+        ctx.beginPath(); ctx.moveTo(11, yB); ctx.lineTo(extB - 6, yB); ctx.stroke();
+        ctx.globalAlpha = (isPunch && side < 0) ? 1.0 : 0.75;
+        ctx.fillStyle = (isPunch && side < 0) ? '#facc15' : '#fb7185';
+        ctx.shadowBlur = (isPunch && side < 0) ? 20 : 5;
+        ctx.shadowColor = (isPunch && side < 0) ? '#fbbf24' : '#ef4444';
+        ctx.beginPath(); ctx.ellipse(extB, yB, 11, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.55; ctx.strokeStyle = '#7f1d1d'; ctx.lineWidth = 1; ctx.shadowBlur = 0;
+        for (let k = 0; k < 3; k++) {
+            ctx.beginPath(); ctx.moveTo(extB + 4, yB - 3 + k * 3.5); ctx.lineTo(extB + 9, yB - 3 + k * 3.5); ctx.stroke();
+        }
+
         // Impact flash
-        if (isPunch && flashT > 0) {
-            ctx.globalAlpha = flashT * 0.80;
+        if (isPunch && flashT > 0.05) {
+            const fy = side > 0 ? yA : yB;
+            const fx = side > 0 ? extA : extB;
+            ctx.globalAlpha = flashT * 0.85;
             ctx.fillStyle = '#fef08a';
-            ctx.shadowBlur = 28; ctx.shadowColor = '#facc15';
-            ctx.beginPath(); ctx.arc(fistReach + 14, fistY, 12, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 24; ctx.shadowColor = '#facc15';
+            ctx.beginPath(); ctx.arc(fx + 13, fy, 11, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#fef9c3'; ctx.lineWidth = 1.5; ctx.shadowBlur = 8;
+            for (let r = 0; r < 6; r++) {
+                const ra = (r / 6) * Math.PI * 2;
+                ctx.globalAlpha = flashT * 0.50;
+                ctx.beginPath(); ctx.moveTo(fx + 13, fy);
+                ctx.lineTo(fx + 13 + Math.cos(ra) * 18, fy + Math.sin(ra) * 18); ctx.stroke();
+            }
         }
 
         ctx.restore(); // end rotate
 
         // Name tag
-        ctx.globalAlpha = 0.55 + Math.sin(now / 200) * 0.12;
+        ctx.globalAlpha = 0.50 + Math.sin(now / 280) * 0.10;
         ctx.fillStyle = '#fca5a5';
-        ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('วันชัย', 0, -38);
-        ctx.globalAlpha = 1;
+        ctx.font = 'bold 9px Arial';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 6; ctx.shadowColor = '#dc2626';
+        ctx.fillText('วันชัย', 0, -42);
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
         ctx.restore();
     }
 }
