@@ -1,7 +1,7 @@
 'use strict';
 // ════════════════════════════════════════════════════════════════
 // menu.js — Menu scripts extracted from index.html
-// Sections: selectCharacter | Victory Screen | Service Worker
+// Sections: selectCharacter | Portrait injection | Victory Screen | SW
 // ════════════════════════════════════════════════════════════════
 
 // ── Character Selection ───────────────────────────────────────────────────────
@@ -9,7 +9,9 @@ let _selectedChar = 'kao';
 function selectCharacter(charType) {
     _selectedChar = charType;
     document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
-    const card = document.getElementById('card-' + charType) || document.getElementById('btn-' + charType) || document.getElementById(charType);
+    const card = document.getElementById('card-' + charType)
+        || document.getElementById('btn-' + charType)
+        || document.getElementById(charType);
     if (card) card.classList.add('selected');
 
     // ── Buttons label ──────────────────────────────
@@ -19,19 +21,15 @@ function selectCharacter(charType) {
     if (startBtn) startBtn.textContent = iconPrefix + ' START MISSION';
     if (tutBtn) tutBtn.textContent = iconPrefix + ' REPLAY TUTORIAL';
 
-    // ── HUD avatar preview ──────────────────────────────
-    // Updates the tiny avatar icon at top-left to preview
-    // the selected character before the game starts.
-    const avatarEl = document.getElementById('player-avatar');
-    if (avatarEl) {
-        avatarEl.textContent = charType === 'poom' ? '🌾'
-            : charType === 'auto' ? '🔥'
-                : '👨🏻‍🎓';
+    // ── HUD portrait SVG swap ────────────────────────────────────────────────
+    // window.PORTRAITS defined in ui.js at module scope (loaded before user
+    // can click a card).  Guard covers edge-case of early call.
+    const hudSvg = document.getElementById('hud-portrait-svg');
+    if (hudSvg && window.PORTRAITS?.[charType]) {
+        hudSvg.innerHTML = window.PORTRAITS[charType];
     }
 
-    // ── Skill slot hint preview ─────────────────────────
-    // Swaps the R-Click label so the user knows what the
-    // secondary skill does before they start.
+    // ── Skill slot hint preview ──────────────────────────────────────────────
     const hintEl = document.getElementById('skill1-hint');
     if (hintEl) {
         hintEl.textContent = charType === 'auto' ? 'STAND'
@@ -47,13 +45,40 @@ function selectCharacter(charType) {
 }
 
 
+// ── Portrait injection — window.load fires AFTER ui.js executes ──────────────
+// This guarantees window.PORTRAITS (defined in ui.js) is ready before we try
+// to populate the char-select cards and the default HUD portrait.
+window.addEventListener('load', function _injectPortraits() {
+    if (!window.PORTRAITS) {
+        // ui.js wasn't loaded yet — shouldn't happen, but don't crash
+        console.warn('[menu] window.PORTRAITS not found — portrait injection skipped');
+        return;
+    }
+
+    // ── Char-select card portraits (96 × 112 each) ──────────────────────────
+    ['kao', 'poom', 'auto'].forEach(id => {
+        const el = document.getElementById('char-avatar-' + id);
+        if (!el) return;
+        el.innerHTML =
+            '<svg viewBox="0 0 96 112" xmlns="http://www.w3.org/2000/svg"' +
+            ' width="96" height="112" style="display:block;width:100%;height:100%;">' +
+            (window.PORTRAITS[id] || '') +
+            '</svg>';
+    });
+
+    // ── Default HUD portrait (Kao on fresh load) ─────────────────────────────
+    const hudSvg = document.getElementById('hud-portrait-svg');
+    if (hudSvg && window.PORTRAITS[_selectedChar]) {
+        hudSvg.innerHTML = window.PORTRAITS[_selectedChar];
+    }
+});
+
+
 // ── Victory Screen — Starfield + Count-up + Achievement chips ────────────────
-// ── Victory Screen — Starfield + Count-up + Achievement chips ──
 (function () {
     const vs = document.getElementById('victory-screen');
     if (!vs) return;
 
-    // Observe display change to trigger animations
     const obs = new MutationObserver(() => {
         if (vs.style.display !== 'none' && vs.style.display !== '') {
             _launchVictory();
@@ -71,7 +96,7 @@ function selectCharacter(charType) {
         _particleBurst();
     }
 
-    // ── Starfield ──────────────────────────────────────────
+    // ── Starfield ────────────────────────────────────────────────────────────
     function _startStarfield() {
         const c = document.getElementById('victory-stars');
         if (!c) return;
@@ -82,8 +107,7 @@ function selectCharacter(charType) {
             W = c.width = vs.offsetWidth;
             H = c.height = vs.offsetHeight;
             stars = Array.from({ length: 180 }, () => ({
-                x: Math.random() * W,
-                y: Math.random() * H,
+                x: Math.random() * W, y: Math.random() * H,
                 r: Math.random() * 1.4 + 0.3,
                 a: Math.random(),
                 speed: Math.random() * 0.4 + 0.1,
@@ -93,18 +117,14 @@ function selectCharacter(charType) {
         resize();
         window.addEventListener('resize', resize);
 
-        let gold = 0;
         function tick() {
             ctx.clearRect(0, 0, W, H);
-            gold = (gold + 0.005) % 1;
             stars.forEach(s => {
-                s.y += s.speed;
-                s.x += s.drift;
+                s.y += s.speed; s.x += s.drift;
                 s.a += (Math.random() - 0.5) * 0.04;
                 s.a = Math.max(0.1, Math.min(1, s.a));
                 if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
                 if (s.x < 0 || s.x > W) s.x = Math.random() * W;
-                // Alternate white / gold stars
                 const isGold = s.r > 1.2;
                 ctx.beginPath();
                 ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
@@ -118,7 +138,7 @@ function selectCharacter(charType) {
         tick();
     }
 
-    // ── Count-up animation ─────────────────────────────────
+    // ── Count-up animation ───────────────────────────────────────────────────
     function _countUp(id, delay) {
         const el = document.getElementById(id);
         if (!el) return;
@@ -139,11 +159,10 @@ function selectCharacter(charType) {
         }, delay);
     }
 
-    // ── Achievement chips ──────────────────────────────────
+    // ── Achievement chips ────────────────────────────────────────────────────
     function _buildAchievements() {
         const container = document.getElementById('victory-achs');
         if (!container) return;
-        // Read from global Achievements if available
         const ach = window.Achievements;
         if (!ach || !ach.unlocked || ach.unlocked.size === 0) return;
         const defs = window.ACHIEVEMENT_DEFS || [];
@@ -157,12 +176,9 @@ function selectCharacter(charType) {
         });
     }
 
-    // ── Gold particle burst on entry ───────────────────────
+    // ── Gold particle burst on entry ─────────────────────────────────────────
     function _particleBurst() {
-        // Uses the game's own spawnParticles if available
         if (typeof spawnParticles !== 'function') return;
-        // Use canvas center (screen space) — player.x/y are world coords
-        // and may be far from origin, putting particles off-screen
         setTimeout(() => {
             const cx = (typeof CANVAS !== 'undefined' && CANVAS) ? CANVAS.width / 2 : window.innerWidth / 2;
             const cy = (typeof CANVAS !== 'undefined' && CANVAS) ? CANVAS.height / 2 : window.innerHeight / 2;
@@ -177,11 +193,7 @@ function selectCharacter(charType) {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-            .then(registration => {
-                console.log('✅ ServiceWorker registered with scope:', registration.scope);
-            })
-            .catch(error => {
-                console.error('❌ ServiceWorker registration failed:', error);
-            });
+            .then(r => console.log('✅ ServiceWorker registered:', r.scope))
+            .catch(e => console.error('❌ ServiceWorker failed:', e));
     });
 }

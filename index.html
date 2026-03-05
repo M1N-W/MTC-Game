@@ -199,7 +199,10 @@
     <div id="ui-layer">
         <div class="hud-top">
             <div class="player-card">
-                <div style="font-size:20px" id="player-avatar">👨🏻‍🎓</div>
+                <div id="player-avatar">
+                    <svg id="hud-portrait-svg" viewBox="0 0 96 112" width="34" height="40"
+                        xmlns="http://www.w3.org/2000/svg" style="display:block;width:34px;height:40px;"></svg>
+                </div>
                 <div class="status-bars">
                     <div class="bar-wrap">
                         <div id="hp-bar" class="bar-fill hp-fill" style="width:100%;"></div>
@@ -305,7 +308,7 @@
                 <h3>SELECT YOUR OPERATOR</h3>
                 <div class="char-cards">
                     <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
-                        <div class="char-avatar">👨🏻‍🎓</div>
+                        <div class="char-avatar" id="char-avatar-kao"></div>
                         <div class="char-name">KAO</div>
                         <div class="char-title">Tactical Ranged</div>
                         <div class="char-stats">
@@ -332,7 +335,7 @@
                         <div class="char-tag">Stealth Ops</div>
                     </div>
                     <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
-                        <div class="char-avatar">🌾</div>
+                        <div class="char-avatar" id="char-avatar-poom"></div>
                         <div class="char-name">POOM</div>
                         <div class="char-title">Naga Summoner</div>
                         <div class="char-stats">
@@ -359,7 +362,7 @@
                         <div class="char-tag">Mystic Force</div>
                     </div>
                     <div class="char-card" id="btn-auto" data-char="auto" onclick="selectCharacter('auto')">
-                        <div class="char-avatar">🔥</div>
+                        <div class="char-avatar" id="char-avatar-auto"></div>
                         <div class="char-name">AUTO</div>
                         <div class="char-title">Thermodynamic Brawler</div>
                         <div class="char-stats">
