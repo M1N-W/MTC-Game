@@ -34,7 +34,7 @@
 | :--- | :--- | :--- | :--- |
 | 🎓 **เก้า (Kao)** | Advanced Assassin | 👻 Stealth<br>⚡ Teleport<br>👥 Hologram Clone | เน้นการลอบเร้น, คริติคอล, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
 | 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 🔥 Ritual Burst<br>🐉 Naga Summon<br>🍚 Eat Rice (Heal) | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้าง |
-| 🔥 **ออโต้ (Auto)** | Pyromaniac | 🌀 Vacuum Heat<br>💥 Detonate<br>🔫 Wanchai Stand | เน้นการควบคุมพื้นที่ (Crowd Control) และทำดาเมจต่อเนื่อง |
+| 🔥 **ออโต้ (Auto)** | Pyromaniac | 🌀 Vacuum Heat<br>💥 Detonate<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ (Crowd Control) ปล่อย Stand Rush ไปตำแหน่งใดก็ได้ และทำดาเมจต่อเนื่อง |
 
 ---
 
@@ -69,6 +69,4 @@
 
 - [x] Rework Tutorial System
 - [x] End-game Boss Scaling (Wave 15)
-- [ ] UI หอเกียรติยศ (Achievement Gallery)
-- [ ] อัปเกรดระบบร้านค้า (Roguelite Perks แบบสุ่ม)
 - [ ] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!

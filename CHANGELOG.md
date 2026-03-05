@@ -2,7 +2,35 @@
 
 ---
 
-## v3.6.14 — DeadlyGraph Overhaul & Universal Risk/Reward
+## v3.11.0 — Wanchai Stand Humanoid Redesign & Manual Stand Rush
+*Released: March 5, 2026*
+
+### 🎨 Visual Overhaul: WanchaiStand Entity (AutoPlayer)
+- **Complete draw() rewrite** — Stand is now a proper humanoid phantom fighter (6 layers) instead of floating orb with chains
+- **Layer 0 — Ghost trail:** Silhouette shapes (head oval + torso) replace generic fire blobs
+- **Layer 1 — Heat halo:** Radial oval with punch-reactive burst ring
+- **Layer 2 — Waist fade:** Torso dissolves into heat shimmer downward — no legs (Stand identity)
+- **Layer 3 — Torso:** Humanoid shape, armor plates, hex power core, heat vents — DNA matches Auto player body
+- **Layer 4 — Arms & Fists:** Two independent arms (`drawArm(±1, isActive)`), punch side extends with impact burst + radial sparks on active fist
+- **Layer 5 — Head:** Buzzcut 3 forward-swept spikes (Auto's signature), squint fire-orange iris, narrow vertical pupils, scar under left eye, furrowed brow tension crease, tight-set mouth, jaw tension lines
+- **Layer 6 — Name chip:** Pill-shaped HUD label replaces faded flat text
+- All oscillators (`breath`, `eyeFlick`, `sway`) precomputed once per frame — no state mutation in draw
+
+### 🔧 Ghost Figure Cleanup (PlayerRenderer.js)
+- Removed old inline ghost silhouette block from `_drawAuto()` — corona ring, scanlines, horns/eyes, arm stubs were a leftover placeholder rendering on top of `WanchaiStand.draw()`
+- Retained: Detonation AOE ring, Stand Rush fist trail overlay, ORA text (`วันชัย วันชัย!`)
+- `WanchaiStand.draw()` is now sole renderer for the Stand entity
+
+### 🎮 Gameplay: Stand Rush Manual Targeting (AutoPlayer)
+- **L-Click anywhere while Wanchai active** → Stand teleports to cursor position immediately, regardless of enemy proximity
+- `_manualPosTimer = 0.30s` grace period prevents leash from snapping Stand back after manual teleport
+- Hit range extended: `playerRushRange + 60px` tolerance for cluster hits
+- Miss whiff VFX: orange/gold sparks + mini rush-fist overlay at cursor — Stand remains at target position
+- Miss no longer silently returns; Stand repositions for next enemy to walk into
+
+### 🔧 Files Changed
+- `AutoPlayer.js` — `WanchaiStand.draw()` full rewrite, `_doPlayerMelee()` manual rush logic, `WanchaiStand.update()` leash grace period
+- `PlayerRenderer.js` — Ghost figure block removed from `_drawAuto()`
 *Released: February 27, 2026*
 
 ### ✨ Feature Rework: DeadlyGraph (Boss Kru Manop)
