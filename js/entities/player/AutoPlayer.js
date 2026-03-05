@@ -205,168 +205,403 @@ class WanchaiStand {
         if (!this.active || typeof ctx === 'undefined') return;
         const now = performance.now();
         const sc = worldToScreen(this.x, this.y);
-        const isPunch = this._phaseTimer > 0;
-        const flashT = isPunch ? Math.min(1, this._phaseTimer / 0.12) : 0;
-        const side = this._punchSide ?? 1;
         const t = now / 1000;
 
-        // ── Ghost trail — fading fire blobs ──────────────────
+        const isPunch = this._phaseTimer > 0;
+        const flashT = isPunch ? Math.min(1, this._phaseTimer / 0.12) : 0;
+        const side = this._punchSide ?? 1;       // +1 right fist active, -1 left
+        const facingL = Math.abs(this.angle) > Math.PI / 2;
+        const fs = facingL ? -1 : 1;           // facing scale — applied per-save
+
+        // Shared oscillators — computed once, never inside draw sub-calls
+        const breath = Math.sin(t * 2.6);          // slow body pulse
+        const eyeFlick = Math.sin(t * 7.1);          // fast eye flicker
+        const sway = Math.sin(t * 1.5) * 1.4;   // idle float
+
+        // ── LAYER 0 : Ghost trail — humanoid silhouettes ─────────────────────
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
+            const ga = g.alpha * 0.25;
+            if (ga < 0.02) continue;
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
-            ctx.globalAlpha = g.alpha * 0.30;
+            ctx.globalAlpha = ga;
+            ctx.shadowBlur = 8; ctx.shadowColor = '#dc2626';
+            // head ghost
             ctx.fillStyle = '#ef4444';
-            ctx.shadowBlur = 18; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.arc(gs.x, gs.y - 20, 9, 0, Math.PI * 2); ctx.fill();
+            // torso ghost
             ctx.beginPath();
-            ctx.arc(gs.x, gs.y, 14 - i * 1.8, 0, Math.PI * 2);
+            ctx.ellipse(gs.x, gs.y + 2, 10, 14, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
 
-        const rp = Math.sin(t * 3.2);
-        const ep = Math.sin(t * 5.8);
-        const fp = Math.sin(t * 2.1);
-        const facingLeft = Math.abs(this.angle) > Math.PI / 2;
-
-        // ── LAYER 1: rotated context — ring + chains + flash ──
-        ctx.save();
-        ctx.translate(sc.x, sc.y);
-        ctx.rotate(this.angle);
-
-        // Outer corona ring
-        ctx.globalAlpha = 0.15 + (isPunch ? flashT * 0.40 : Math.abs(rp) * 0.07);
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = isPunch ? 3 : 1.5;
-        ctx.shadowBlur = isPunch ? 32 : 14;
-        ctx.shadowColor = '#b91c1c';
-        ctx.beginPath(); ctx.arc(0, 0, 30 + rp * 3, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Fire chains
-        const extA = isPunch && side > 0 ? 44 : 26;
-        const extB = isPunch && side < 0 ? 44 : 26;
-
-        const drawChain = (ext, yOff, active) => {
-            const nodes = 4;
-            ctx.lineCap = 'round';
-            for (let n = 0; n < nodes; n++) {
-                const nx = 12 + (ext - 12) * (n / (nodes - 1));
-                const ny = yOff + Math.sin(t * 4 + n * 1.2) * (active ? 1.5 : 2.5);
-                const nr = active ? 3.5 - n * 0.3 : 2.8 - n * 0.25;
-                ctx.globalAlpha = active ? 0.85 : 0.50;
-                ctx.fillStyle = n === nodes - 1 ? (active ? '#fbbf24' : '#f87171') : '#dc2626';
-                ctx.shadowBlur = active ? 14 : 6;
-                ctx.shadowColor = '#ef4444';
-                ctx.beginPath(); ctx.arc(nx, ny, Math.max(nr, 1.2), 0, Math.PI * 2); ctx.fill();
-            }
-            const bx = ext;
-            const by = yOff + Math.sin(t * 4 + 3 * 1.2) * (active ? 1.5 : 2.5);
-            const bScale = active ? 1.0 + flashT * 0.4 : 0.75;
-            const bG = ctx.createRadialGradient(bx - 2, by - 2, 1, bx, by, 9 * bScale);
-            bG.addColorStop(0, '#fef08a');
-            bG.addColorStop(0.4, active ? '#f97316' : '#dc2626');
-            bG.addColorStop(1, 'rgba(185,28,28,0)');
-            ctx.globalAlpha = active ? 1.0 : 0.65;
-            ctx.fillStyle = bG;
-            ctx.shadowBlur = active ? 24 : 10;
-            ctx.shadowColor = active ? '#fbbf24' : '#ef4444';
-            ctx.beginPath(); ctx.arc(bx, by, 9 * bScale, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0;
-        };
-
-        drawChain(extA, -5, isPunch && side > 0);
-        drawChain(extB, 5, isPunch && side < 0);
-
-        // Impact flash (in rotated space — follows chain direction)
-        if (isPunch && flashT > 0.05) {
-            const fy = side > 0 ? -5 : 5;
-            const fx = side > 0 ? extA : extB;
-            ctx.globalAlpha = flashT * 0.90;
-            ctx.fillStyle = '#fef08a';
-            ctx.shadowBlur = 30; ctx.shadowColor = '#fbbf24';
-            ctx.beginPath(); ctx.arc(fx, fy, 11, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#fff9c4'; ctx.lineWidth = 1.5; ctx.shadowBlur = 12;
-            for (let r = 0; r < 8; r++) {
-                const ra = (r / 8) * Math.PI * 2;
+        // ── LAYER 1 : Heat-distortion halo ───────────────────────────────────
+        // Large oval — breathes, flares on punch
+        {
+            const hw = 22 + breath * 2;
+            const hh = 36 + breath * 1.5;
+            const ha = isPunch ? 0.22 + flashT * 0.18 : 0.10 + breath * 0.03;
+            ctx.save();
+            ctx.translate(sc.x, sc.y + sway * 0.3);
+            const hG = ctx.createRadialGradient(0, 0, 2, 0, 0, hw + 8);
+            hG.addColorStop(0, `rgba(249,115,22,${Math.min(1, ha * 1.9)})`);
+            hG.addColorStop(0.45, `rgba(220,38,38,${ha})`);
+            hG.addColorStop(1, 'rgba(30,0,0,0)');
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = hG;
+            ctx.shadowBlur = isPunch ? 28 : 14; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.ellipse(0, 2, hw, hh * 0.58, 0, 0, Math.PI * 2); ctx.fill();
+            // punch burst ring
+            if (isPunch && flashT > 0.12) {
                 ctx.globalAlpha = flashT * 0.50;
-                ctx.beginPath();
-                ctx.moveTo(fx, fy);
-                ctx.lineTo(fx + Math.cos(ra) * 20, fy + Math.sin(ra) * 20);
-                ctx.stroke();
+                ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+                ctx.shadowBlur = 18; ctx.shadowColor = '#fbbf24';
+                ctx.beginPath(); ctx.arc(0, 0, 26 + (1 - flashT) * 12, 0, Math.PI * 2); ctx.stroke();
             }
+            ctx.restore();
         }
 
-        ctx.restore(); // end rotated layer
+        // ── LAYER 2 : Lower-body / waist fade ────────────────────────────────
+        // Stand has no legs — torso dissolves into heat shimmer below waist
+        {
+            ctx.save();
+            ctx.translate(sc.x, sc.y + sway * 0.4);
+            const fadeG = ctx.createLinearGradient(0, 8, 0, 32);
+            fadeG.addColorStop(0, 'rgba(127,29,29,0.80)');
+            fadeG.addColorStop(0.55, 'rgba(90,10,10,0.38)');
+            fadeG.addColorStop(1, 'rgba(40,0,0,0)');
+            ctx.fillStyle = fadeG;
+            ctx.globalAlpha = 0.88;
+            ctx.beginPath();
+            ctx.moveTo(-13, 8);
+            ctx.quadraticCurveTo(-16, 24, 0, 32);
+            ctx.quadraticCurveTo(16, 24, 13, 8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
 
-        // ── LAYER 2: mask — translate only, scaleX flip for facing ──
-        // No rotation: mask stays upright, mirrors left/right only
-        ctx.save();
-        ctx.translate(sc.x, sc.y);
-        if (facingLeft) ctx.scale(-1, 1);
+        // ── LAYER 3 : Torso ───────────────────────────────────────────────────
+        {
+            ctx.save();
+            ctx.translate(sc.x, sc.y + sway * 0.4);
+            ctx.scale(fs, 1);
 
-        // Ember core
-        const cG = ctx.createRadialGradient(-4, -4, 2, 0, 0, 18);
-        cG.addColorStop(0, '#fca5a5');
-        cG.addColorStop(0.35, '#dc2626');
-        cG.addColorStop(0.7, '#7f1d1d');
-        cG.addColorStop(1, 'rgba(30,0,0,0)');
-        ctx.globalAlpha = 0.90 + fp * 0.06;
-        ctx.fillStyle = cG;
-        ctx.shadowBlur = isPunch ? 28 : 16;
-        ctx.shadowColor = '#ef4444';
-        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
+            // Main torso shape — wider at shoulders, tapers to waist
+            const tG = ctx.createRadialGradient(-3, -4, 1, 0, 4, 15);
+            tG.addColorStop(0, '#9b1c1c');
+            tG.addColorStop(0.55, '#7f1d1d');
+            tG.addColorStop(1, '#450a0a');
+            ctx.fillStyle = tG;
+            ctx.globalAlpha = 0.92 + breath * 0.04;
+            ctx.shadowBlur = isPunch ? 18 : 8; ctx.shadowColor = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(-13, 0);
+            ctx.quadraticCurveTo(-16, 10, -11, 20);
+            ctx.lineTo(11, 20);
+            ctx.quadraticCurveTo(16, 10, 13, 0);
+            ctx.quadraticCurveTo(0, -4, -13, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0;
 
-        // Brow ridges
-        ctx.globalAlpha = 0.70;
-        ctx.fillStyle = '#7f1d1d';
-        ctx.beginPath(); ctx.roundRect(-9, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
-        ctx.beginPath(); ctx.roundRect(2, -10, 7, 4, [2, 2, 0, 0]); ctx.fill();
+            // Armor plates clipped inside torso
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(-13, 0); ctx.quadraticCurveTo(-16, 10, -11, 20);
+            ctx.lineTo(11, 20); ctx.quadraticCurveTo(16, 10, 13, 0);
+            ctx.quadraticCurveTo(0, -4, -13, 0); ctx.closePath(); ctx.clip();
+            ctx.fillStyle = 'rgba(153,27,27,0.50)';
+            ctx.beginPath(); ctx.roundRect(-13, -2, 9, 13, 2); ctx.fill();  // L shoulder
+            ctx.beginPath(); ctx.roundRect(4, -2, 9, 13, 2); ctx.fill();   // R shoulder
+            ctx.strokeStyle = 'rgba(185,28,28,0.35)'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(0, 14); ctx.stroke(); // center seam
+            // rivets
+            ctx.fillStyle = 'rgba(251,146,60,0.45)';
+            for (const [rx, ry] of [[-7, 2], [7, 2], [-7, 9], [7, 9]]) {
+                ctx.beginPath(); ctx.arc(rx, ry, 1.1, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
 
-        // Eyes
-        const eyeGlow = 0.75 + ep * 0.25;
-        ctx.globalAlpha = eyeGlow;
-        ctx.fillStyle = '#fbbf24';
-        ctx.shadowBlur = 16; ctx.shadowColor = '#f59e0b';
-        ctx.beginPath(); ctx.ellipse(-5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(5, -4, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#000'; ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.arc(-5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
+            // Hex power core on chest
+            const cp = 0.5 + Math.sin(now / 160) * 0.45;
+            const cr = 4;
+            ctx.save(); ctx.translate(0, 12);
+            ctx.beginPath();
+            for (let hi = 0; hi < 6; hi++) {
+                const ha = (hi / 6) * Math.PI * 2 - Math.PI / 6;
+                hi === 0 ? ctx.moveTo(Math.cos(ha) * cr, Math.sin(ha) * cr)
+                    : ctx.lineTo(Math.cos(ha) * cr, Math.sin(ha) * cr);
+            }
+            ctx.closePath();
+            const cG2 = ctx.createRadialGradient(0, 0, 0, 0, 0, cr);
+            cG2.addColorStop(0, `rgba(255,210,170,${Math.min(1, cp * 1.1)})`);
+            cG2.addColorStop(0.5, `rgba(249,115,22,${Math.min(1, cp)})`);
+            cG2.addColorStop(1, `rgba(153,27,27,${cp * 0.6})`);
+            ctx.fillStyle = cG2;
+            ctx.shadowBlur = 10 * cp; ctx.shadowColor = '#f97316';
+            ctx.fill();
+            ctx.strokeStyle = `rgba(251,146,60,${cp * 0.8})`; ctx.lineWidth = 0.8; ctx.stroke();
+            ctx.fillStyle = `rgba(255,235,200,${cp * 0.9})`;
+            ctx.beginPath(); ctx.arc(0, 0, 1.2, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
 
-        // Nose
-        ctx.globalAlpha = 0.55; ctx.fillStyle = '#fca5a5';
-        ctx.beginPath(); ctx.arc(-2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(2.5, 1, 1.5, 0, Math.PI * 2); ctx.fill();
+            // Heat vents left side
+            ctx.shadowBlur = 6 + eyeFlick * 3; ctx.shadowColor = '#fb923c';
+            for (let vi = 0; vi < 3; vi++) {
+                const va = 0.32 + vi * 0.12 + eyeFlick * 0.08;
+                const vG = ctx.createLinearGradient(-13, 0, -9, 0);
+                vG.addColorStop(0, `rgba(251,146,60,${va * 1.2})`);
+                vG.addColorStop(1, `rgba(239,68,68,${va * 0.5})`);
+                ctx.fillStyle = vG; ctx.globalAlpha = 0.78;
+                ctx.beginPath(); ctx.roundRect(-13, 1 + vi * 4, 4, 2, 1); ctx.fill();
+            }
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            ctx.restore(); // end torso
+        }
 
-        // Mouth + fangs
-        ctx.globalAlpha = 0.65;
-        ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.arc(0, 4, 6, 0.1, Math.PI - 0.1); ctx.stroke();
-        ctx.fillStyle = '#fff8'; ctx.globalAlpha = 0.50;
-        ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(-1.5, 4); ctx.lineTo(0, 8); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(1, 8); ctx.lineTo(2.5, 4); ctx.lineTo(4, 8); ctx.fill();
+        // ── LAYER 4 : Arms & Fists ────────────────────────────────────────────
+        {
+            ctx.save();
+            ctx.translate(sc.x, sc.y + sway * 0.4);
+            ctx.scale(fs, 1);
 
-        // Horns
-        ctx.globalAlpha = 0.60; ctx.fillStyle = '#7f1d1d';
-        ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(-5, -22); ctx.lineTo(-2, -14); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(2, -14); ctx.lineTo(5, -22); ctx.lineTo(8, -14); ctx.fill();
+            // xDir: +1 = right arm, -1 = left arm (in facing-scaled space)
+            const drawArm = (xDir, isActive) => {
+                const sX = xDir * 12;       // shoulder attach X
+                const sY = 2;               // shoulder attach Y (chest)
+                const idleX = xDir * (14 + Math.sin(t * 2.1 + xDir) * 1.2);
+                const idleY = 4 + Math.cos(t * 1.8 + xDir) * 1.5;
+                const hitX = xDir * 30;
+                const hitY = 0;
+                const fX = isActive ? hitX : idleX;
+                const fY = isActive ? hitY : idleY;
 
-        ctx.restore(); // end mask layer
+                // Upper arm
+                ctx.strokeStyle = '#6b1010'; ctx.lineWidth = 5.5;
+                ctx.lineCap = 'round';
+                ctx.shadowBlur = isActive ? 12 : 3; ctx.shadowColor = '#dc2626';
+                ctx.globalAlpha = 0.88;
+                ctx.beginPath();
+                ctx.moveTo(sX, sY);
+                ctx.quadraticCurveTo(
+                    sX + (fX - sX) * 0.45,
+                    sY + (isActive ? -3 : 2),
+                    fX, fY
+                );
+                ctx.stroke();
 
-        // ── Name tag ─────────────────────────────────────────
-        ctx.save();
-        ctx.translate(sc.x, sc.y);
-        ctx.globalAlpha = 0.45 + Math.sin(t * 2.2) * 0.10;
-        ctx.fillStyle = '#fca5a5';
-        ctx.font = 'bold 9px Arial';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.shadowBlur = 6; ctx.shadowColor = '#dc2626';
-        ctx.fillText('WANCHAI', 0, -42);
-        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-        ctx.restore();
+                // Fist
+                const fR = isActive ? 7 : 6;
+                const fBg = ctx.createRadialGradient(fX - 1.5, fY - 1.5, 0.5, fX, fY, fR);
+                fBg.addColorStop(0, isActive ? '#fca5a5' : '#9b3a20');
+                fBg.addColorStop(0.5, isActive ? '#ef4444' : '#7f1d1d');
+                fBg.addColorStop(1, '#3a0808');
+                ctx.fillStyle = fBg;
+                ctx.strokeStyle = isActive ? 'rgba(249,115,22,0.65)' : 'rgba(50,8,8,0.7)';
+                ctx.lineWidth = 1.1;
+                ctx.shadowBlur = isActive ? 16 + flashT * 14 : 5;
+                ctx.shadowColor = isActive ? '#f97316' : '#dc2626';
+                ctx.globalAlpha = isActive ? 0.92 + flashT * 0.08 : 0.76;
+                ctx.beginPath(); ctx.arc(fX, fY, fR, 0, Math.PI * 2);
+                ctx.fill(); ctx.stroke();
+
+                // Knuckle lines
+                ctx.globalAlpha = isActive ? 0.50 : 0.25;
+                ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 0.85;
+                for (let k = 0; k < 3; k++) {
+                    ctx.beginPath();
+                    ctx.moveTo(fX - fR * 0.55, fY - fR * 0.25 + k * 1.9);
+                    ctx.lineTo(fX + fR * 0.55, fY - fR * 0.25 + k * 1.9);
+                    ctx.stroke();
+                }
+
+                // Impact burst on active fist
+                if (isActive && flashT > 0.15) {
+                    const bX = fX + xDir * 4;
+                    ctx.globalAlpha = flashT * 0.82;
+                    ctx.fillStyle = '#fef08a';
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24';
+                    ctx.beginPath(); ctx.arc(bX, fY, 5 + flashT * 5, 0, Math.PI * 2); ctx.fill();
+                    // radial sparks
+                    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 0.9;
+                    for (let r = 0; r < 6; r++) {
+                        const ra = (r / 6) * Math.PI * 2 + t * 4;
+                        ctx.globalAlpha = flashT * 0.42;
+                        ctx.beginPath();
+                        ctx.moveTo(bX, fY);
+                        ctx.lineTo(bX + Math.cos(ra) * 13, fY + Math.sin(ra) * 13);
+                        ctx.stroke();
+                    }
+                }
+                ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+            };
+
+            drawArm(1, isPunch && side > 0);  // right arm
+            drawArm(-1, isPunch && side < 0);  // left arm
+            ctx.restore();
+        }
+
+        // ── LAYER 5 : Head ────────────────────────────────────────────────────
+        {
+            ctx.save();
+            ctx.translate(sc.x, sc.y + sway);
+            ctx.scale(fs, 1);
+
+            const hy = -22 + breath * 0.7;   // head center Y, bobs with breath
+
+            // Neck stub
+            ctx.fillStyle = '#7f1d1d'; ctx.globalAlpha = 0.72;
+            ctx.beginPath(); ctx.roundRect(-3.5, hy + 9, 7, 6, 1); ctx.fill();
+
+            // Head base — skin tone matches Auto portrait
+            const hG = ctx.createRadialGradient(-2.5, hy - 3, 1, 0, hy, 11);
+            hG.addColorStop(0, '#cc7744');
+            hG.addColorStop(0.6, '#a05828');
+            hG.addColorStop(1, '#7a3810');
+            ctx.fillStyle = hG;
+            ctx.globalAlpha = 0.93;
+            ctx.shadowBlur = isPunch ? 14 : 6; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.arc(0, hy, 11, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // ── Buzzcut base cap ──
+            ctx.fillStyle = '#1a0404'; ctx.globalAlpha = 0.86;
+            ctx.beginPath(); ctx.arc(0, hy, 11, Math.PI, 0); ctx.closePath(); ctx.fill();
+
+            // ── 3 forward-swept spikes — Auto's signature ──
+            const spkBaseY = hy - 10;
+            const spkData = [
+                { bx: -3.5, lean: -3, h: 8 },   // left — shorter, leans left
+                { bx: 0.5, lean: 2, h: 10 },   // center — tallest, forward lean
+                { bx: 4.5, lean: 5, h: 7 },   // right — mid
+            ];
+            spkData.forEach(({ bx, lean, h }, idx) => {
+                const wob = Math.sin(now / 340 + idx * 1.4) * 0.7;
+                const tipX = bx + lean + wob;
+                const tipY = spkBaseY - h - wob * 0.3;
+                // flat dark base
+                ctx.fillStyle = '#220606'; ctx.globalAlpha = 0.88;
+                ctx.beginPath();
+                ctx.moveTo(bx - 2.2, spkBaseY); ctx.lineTo(bx + 2.2, spkBaseY);
+                ctx.lineTo(tipX, tipY); ctx.closePath(); ctx.fill();
+                // gradient overlay base→tip
+                const sg = ctx.createLinearGradient(bx, spkBaseY, tipX, tipY);
+                sg.addColorStop(0, '#5c1010');
+                sg.addColorStop(0.65, '#b91c1c');
+                sg.addColorStop(1, '#f97316');
+                ctx.fillStyle = sg; ctx.globalAlpha = 0.68;
+                ctx.beginPath();
+                ctx.moveTo(bx - 2.2, spkBaseY); ctx.lineTo(bx + 2.2, spkBaseY);
+                ctx.lineTo(tipX, tipY); ctx.closePath(); ctx.fill();
+                // ember tip glow
+                const eA = 0.60 + Math.sin(now / 170 + idx) * 0.28;
+                ctx.globalAlpha = Math.max(0, eA);
+                ctx.fillStyle = '#f97316';
+                ctx.shadowBlur = 9; ctx.shadowColor = '#f97316';
+                ctx.beginPath(); ctx.arc(tipX, tipY, 1.5, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+            ctx.globalAlpha = 1;
+
+            // ── Thick furrowed brows ──
+            ctx.strokeStyle = '#100202'; ctx.lineWidth = 3.0; ctx.lineCap = 'round';
+            // left brow — slopes toward nose
+            ctx.beginPath();
+            ctx.moveTo(-9, hy - 3.5); ctx.quadraticCurveTo(-4, hy - 5.5, -1.5, hy - 4);
+            ctx.stroke();
+            // right brow
+            ctx.beginPath();
+            ctx.moveTo(1.5, hy - 4); ctx.quadraticCurveTo(4, hy - 5.5, 9, hy - 3.5);
+            ctx.stroke();
+            // inner crease
+            ctx.lineWidth = 1.3; ctx.strokeStyle = '#200404';
+            ctx.beginPath();
+            ctx.moveTo(-2.5, hy - 3.8); ctx.lineTo(0, hy - 2.2); ctx.lineTo(2.5, hy - 3.8);
+            ctx.stroke();
+
+            // ── Eyes — narrow squint, fire-orange iris ──
+            const eyeY = hy + 0.3;
+            const eyeGA = 0.80 + eyeFlick * 0.20;
+
+            // whites (narrow ellipses — squint)
+            ctx.fillStyle = 'white'; ctx.globalAlpha = 0.82;
+            ctx.beginPath(); ctx.ellipse(-4.2, eyeY, 3.5, 1.8, -0.12, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(4.2, eyeY, 3.5, 1.8, 0.12, 0, Math.PI * 2); ctx.fill();
+
+            // fire iris
+            ctx.globalAlpha = eyeGA;
+            ctx.shadowBlur = 10; ctx.shadowColor = '#f97316';
+            const mkIris = (x, y) => {
+                const ig = ctx.createRadialGradient(x - 0.7, y - 0.7, 0.4, x, y, 2.6);
+                ig.addColorStop(0, '#ffe080');
+                ig.addColorStop(0.5, '#f97316');
+                ig.addColorStop(1, '#7c2d12');
+                return ig;
+            };
+            ctx.fillStyle = mkIris(-4.2, eyeY);
+            ctx.beginPath(); ctx.arc(-4.2, eyeY, 2.6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = mkIris(4.2, eyeY);
+            ctx.beginPath(); ctx.arc(4.2, eyeY, 2.6, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // narrow pupils
+            ctx.fillStyle = '#040000'; ctx.globalAlpha = 1;
+            ctx.beginPath(); ctx.ellipse(-4.2, eyeY, 0.9, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(4.2, eyeY, 0.9, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+
+            // eye shine
+            ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.globalAlpha = 0.75;
+            ctx.beginPath(); ctx.arc(-5.0, eyeY - 0.8, 0.8, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(3.4, eyeY - 0.8, 0.8, 0, Math.PI * 2); ctx.fill();
+
+            // heavy upper lid (squint)
+            ctx.strokeStyle = '#080000'; ctx.lineWidth = 2.0; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(-7.6, eyeY - 1.6); ctx.quadraticCurveTo(-4.2, eyeY - 3.2, -0.8, eyeY - 1.6); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0.8, eyeY - 1.6); ctx.quadraticCurveTo(4.2, eyeY - 3.2, 7.6, eyeY - 1.6); ctx.stroke();
+
+            // ── Scar under left eye — Auto's battle damage ──
+            ctx.strokeStyle = 'rgba(195,70,25,0.55)'; ctx.lineWidth = 0.95; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(-7, eyeY + 2.0); ctx.lineTo(-5.2, eyeY + 4.5); ctx.stroke();
+
+            // ── Tight-set mouth ──
+            ctx.strokeStyle = '#7a3010'; ctx.lineWidth = 1.7; ctx.lineCap = 'round';
+            ctx.globalAlpha = 0.72;
+            ctx.beginPath(); ctx.moveTo(-4, hy + 7); ctx.lineTo(4, hy + 7); ctx.stroke();
+            // jaw tension lines
+            ctx.strokeStyle = 'rgba(100,40,10,0.28)'; ctx.lineWidth = 0.65;
+            ctx.beginPath(); ctx.moveTo(-6.5, hy + 3.5); ctx.lineTo(-6.5, hy + 6.5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(6.5, hy + 3.5); ctx.lineTo(6.5, hy + 6.5); ctx.stroke();
+
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+            ctx.restore(); // end head
+        }
+
+        // ── LAYER 6 : Name chip ───────────────────────────────────────────────
+        {
+            ctx.save();
+            ctx.translate(sc.x, sc.y + sway * 0.2);
+            const chipY = -46;
+            const cA = 0.65 + Math.sin(t * 1.9) * 0.12;
+            // pill bg
+            ctx.globalAlpha = cA * 0.70;
+            ctx.fillStyle = 'rgba(25,2,2,0.72)';
+            ctx.strokeStyle = 'rgba(220,38,38,0.55)'; ctx.lineWidth = 0.9;
+            ctx.shadowBlur = 7; ctx.shadowColor = '#dc2626';
+            ctx.beginPath(); ctx.roundRect(-20, chipY - 5.5, 40, 11, 4);
+            ctx.fill(); ctx.stroke();
+            // label
+            ctx.globalAlpha = cA;
+            ctx.fillStyle = '#fca5a5';
+            ctx.font = 'bold 7.5px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowBlur = 4; ctx.shadowColor = '#ef4444';
+            ctx.fillText('WANCHAI', 0, chipY);
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+            ctx.restore();
+        }
     }
 }
 

@@ -415,49 +415,7 @@ class PlayerRenderer {
             ctx.restore();
         }
         if (entity.wanchaiActive) {
-            const bob = Math.sin(now / 130) * 7;
-            const sx = screen.x - Math.cos(entity.angle) * 30;
-            const sy = screen.y - Math.sin(entity.angle) * 30 - 30 + bob;
-            ctx.save(); ctx.translate(sx, sy);
-            const wA = 0.55 + Math.sin(now / 160) * 0.15;
-            ctx.globalAlpha = 0.35 + Math.sin(now / 200) * 0.15;
-            ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3.5;
-            ctx.shadowBlur = 30; ctx.shadowColor = '#dc2626';
-            ctx.beginPath(); ctx.arc(0, 0, 38 + Math.sin(now / 140) * 4, 0, Math.PI * 2); ctx.stroke();
-            ctx.globalAlpha = wA * 0.65;
-            const tL = -14, tT = -19, tW = 28, tH = 38;
-            ctx.save();
-            ctx.beginPath(); ctx.roundRect(tL, tT, tW, tH, 6); ctx.clip();
-            for (let ly = tT; ly <= tT + tH; ly += 4) {
-                const la = 0.4 + 0.5 * Math.abs(Math.sin(now / 80 + ly * 0.15));
-                ctx.strokeStyle = `rgba(248,113,113,${la})`; ctx.lineWidth = 1.2;
-                ctx.shadowBlur = 4; ctx.shadowColor = '#ef4444';
-                ctx.beginPath(); ctx.moveTo(tL, ly); ctx.lineTo(tL + tW, ly); ctx.stroke();
-            }
-            ctx.restore();
-            ctx.globalAlpha = wA;
-            ctx.strokeStyle = 'rgba(220,38,38,0.80)'; ctx.lineWidth = 2;
-            ctx.shadowBlur = 16; ctx.shadowColor = '#dc2626';
-            ctx.beginPath(); ctx.roundRect(tL, tT, tW, tH, 6); ctx.stroke();
-            for (let side = -1; side <= 1; side += 2) {
-                ctx.globalAlpha = wA * 0.7; ctx.strokeStyle = 'rgba(220,38,38,0.70)'; ctx.lineWidth = 1.5; ctx.shadowBlur = 10;
-                ctx.beginPath(); ctx.roundRect(side * 22 - 5, -8, 10, 22, 5); ctx.stroke();
-            }
-            ctx.globalAlpha = wA * 0.75; ctx.shadowBlur = 18; ctx.shadowColor = '#dc2626';
-            ctx.strokeStyle = 'rgba(254,202,202,0.60)'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(0, -28, 12, 0, Math.PI * 2); ctx.stroke();
-            ctx.fillStyle = 'rgba(220,38,38,0.70)';
-            for (let si = -2; si <= 2; si++) {
-                ctx.beginPath(); ctx.moveTo(si * 5 - 3, -37); ctx.lineTo(si * 5 + 3, -37);
-                ctx.lineTo(si * 5, -42 + Math.abs(si) * 2); ctx.closePath(); ctx.fill();
-            }
-            const eg = 0.7 + Math.sin(now / 110) * 0.3;
-            ctx.globalAlpha = eg; ctx.fillStyle = '#f87171'; ctx.shadowBlur = 12; ctx.shadowColor = '#ef4444';
-            ctx.beginPath(); ctx.arc(-4, -28, 2.5, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(4, -28, 2.5, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-
-            // Stand Rush Animation -- uses precomputed fists from WanchaiStand._punch()
+            // Stand Rush Animation — fist trail + ORA text (player-space VFX)
             if (entity.isStandAttacking) {
                 const fists = entity._rushFists;
                 const stand = entity.wanchaiStand;
