@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.10.5'; // v3.10.5 Configuration consistency fixes: Shotgun nerf, AutoPlayer adjustments, and PoomPlayer balance
+const CACHE_NAME = 'mtc-cache-v3.10.6'; // v3.10.6: Code restructure - moved victory script & SW registration to menu.js, cleaned HTML structure
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

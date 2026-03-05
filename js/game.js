@@ -123,7 +123,7 @@ function gameLoop(now) {
             updateGame(scaledDt);
             drawGame();
         }
-        
+
     } else if (GameState.phase === 'PAUSED') {
         drawGame();
     }
@@ -827,13 +827,13 @@ function startGame(charType = 'kao') {
         console.log('%c[MTC Admin] 🔧 DEV MODE: ซุ่มเสรี unlocked from game start.', 'color:#ef4444; font-weight:bold;');
     }
 
-    window.enemies = []; window.powerups = []; window.specialEffects = []; window.meteorZones = [];
-    window.boss = null;
-
     dayNightTimer = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
     // ── Reset all mutable run state via GameState ─────────────
+    // resetRun() calls _syncAliases() which re-points window.enemies /
+    // powerups / specialEffects / meteorZones / boss to fresh arrays.
+    // Do NOT manually reset window.* refs before this call.
     GameState.resetRun();
     console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
     console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
