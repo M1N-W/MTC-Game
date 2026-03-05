@@ -415,7 +415,7 @@ class AutoPlayer extends Player {
             amt *= 1.5;
             spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16);
         }
-        const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.5) : 0;
+        const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.30) : 0;  // fix: was 0.5 ≠ config 0.30
         const scaled = amt * (1 - reduction);
         super.takeDamage(scaled);
     }
@@ -486,7 +486,7 @@ class AutoPlayer extends Player {
         }
 
         if (checkInput('rightClick')) {
-            const energyCost = this.stats?.wanchaiEnergyCost ?? 35;
+            const energyCost = this.stats?.wanchaiEnergyCost ?? 32;  // fix: was 35 ≠ config 32
             if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
                 this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
                 this._activateWanchai();

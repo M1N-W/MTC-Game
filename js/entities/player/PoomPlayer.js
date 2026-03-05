@@ -245,7 +245,7 @@ class PoomPlayer extends Player {
         this.cooldowns.naga = S.nagaCooldown * this.cooldownMultiplier;
         this.naga = new NagaEntity(this.x, this.y, this);
         // ── Shield pool: Naga absorbs up to 55% of max HP per summon ──
-        this._nagaShieldLeft = Math.floor(this.maxHp * 0.55);
+        this._nagaShieldLeft = Math.floor(this.maxHp * 0.40);  // NERF: 0.55→0.40 (Poom eff_hp Lv1: 256→231, less tankier than Auto)
         window.specialEffects.push(this.naga);
         spawnParticles(this.x, this.y, 40, '#10b981');
         spawnFloatingText('อัญเชิญพญานาค!', this.x, this.y - 60, '#10b981', 24);
@@ -269,7 +269,7 @@ class PoomPlayer extends Player {
             return;
         }
         const RC = GAME_CONFIG.abilities.ritual;
-        const DAMAGE_PER_STACK = RC.damagePerStack || 10;
+        const DAMAGE_PER_STACK = RC.damagePerStack || 15;  // fix: was 10 ≠ config 15
 
         let totalEnemiesAffected = 0;
         let ritualKills = 0;  // ✨ [ritual_wipe] นับเฉพาะตัวที่ตายจาก ritual นี้ 
@@ -364,6 +364,12 @@ class PoomPlayer extends Player {
                     // ไม่มี stack → base damage
                     bossDmg = (RC.baseDamage || 75) + currentBoss.maxHp * (RC.baseDamagePct || 0.15);
                     spawnFloatingText(`🌾 ${Math.round(bossDmg)}`, bx, by - 60, '#00ff88', 20);
+                }
+                // BALANCE: cap single ritual burst at 30% boss maxHP to prevent one-shot
+                const bossDmgCap = currentBoss.maxHp * 0.30;
+                if (bossDmg > bossDmgCap) {
+                    bossDmg = bossDmgCap;
+                    spawnFloatingText('RITUAL CAPPED', bx, by - 80, '#94a3b8', 13);
                 }
                 currentBoss.takeDamage(bossDmg);
             }
@@ -489,7 +495,7 @@ class PoomPlayer extends Player {
 
         // ── Enemy ปกติ: ใช้ StatusEffect framework ──
         const now = performance.now() / 1000;
-        const stackDuration = S.sticky.stackDuration || 5;
+        const stackDuration = S.sticky.stackDuration || 1.5;  // fix: was 5 ≠ config 1.5
         const slowPerStack = 0.04;
 
         enemy.addStatus('sticky', {

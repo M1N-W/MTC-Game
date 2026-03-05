@@ -57,9 +57,9 @@ const BALANCE = {
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 36, cooldown: 0.55,   // NERF: 46→36 dmg (DPS 230→196)
+                    damage: 30, cooldown: 0.50,   // NERF: 36→30 dmg, 0.55→0.50 cd (DPS 173→162, closes gap vs Auto/Sniper)
                     range: 400, speed: 700,
-                    spread: 0.5, pellets: 3,      // NERF: spread 0.4→0.5
+                    spread: 0.45, pellets: 3,     // NERF: spread 0.5→0.45 (slight accuracy buff to compensate feel)
                     color: '#f59e0b', icon: '🟠'
                 }
             },
@@ -120,7 +120,7 @@ const BALANCE = {
             standLeashRadius: 420,  // ระยะห่างสูงสุดจากผู้เล่น
             standKnockback: 180,    // แรงดีดศัตรูหลังชก
             playerRushRange: 85,     // player melee range during Stand Rush
-            playerRushCooldown: 0.10, // player punch rate (s/hit)
+            playerRushCooldown: 0.15, // NERF: 0.10→0.15 (Lv1 combined DPS 628→506, still dominant but less spikey)
             detonationRange: 220,   // รัศมี AOE ระเบิด (px)
             detonationCooldown: 5,  // CD สั้น เพราะต้องเปิด Wanchai ก่อนถึงใช้ได้
             baseCritChance: 0.06,
