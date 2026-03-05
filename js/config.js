@@ -177,6 +177,12 @@ const BALANCE = {
             damageMultiplierPerLevel: 0.11,  // BUFF: 0.07 → 0.11
             cooldownReductionPerLevel: 0.05,  // BUFF: 0.04 → 0.05
             maxHpPerLevel: 10,                // BUFF: 7 → 10
+            // ── Passive Skill (Ritual Mastery) ────────────────
+            passiveUnlockLevel: 4,
+            passiveUnlockStealthCount: 99,    // Poom ไม่มี stealth — unlock via level เท่านั้น
+            passiveHpBonusPct: 0.30,
+            passiveCritBonus: 0.04,           // bonus crit หลัง passive unlock
+            passiveLifesteal: 0.015,          // lifesteal ต่อ damage ที่ทำได้
             // ── Sticky Rice Stack System ──
             sticky: {
                 maxStacks: 5,

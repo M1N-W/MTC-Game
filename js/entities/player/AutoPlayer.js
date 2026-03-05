@@ -143,7 +143,7 @@ class WanchaiStand {
         if (owner.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
 
         // Crit
-        let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.40);
+        let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (owner.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
@@ -159,7 +159,7 @@ class WanchaiStand {
 
         // Lifesteal
         if (owner.passiveUnlocked) {
-            owner.hp = Math.min(owner.maxHp, owner.hp + dmg * (S.passiveLifesteal ?? 0.02));
+            owner.hp = Math.min(owner.maxHp, owner.hp + dmg * (S.passiveLifesteal ?? 0.01));  // BUG-4 fix: was 0.02
         }
 
         // Knockback — push enemy away from stand
@@ -424,7 +424,7 @@ class AutoPlayer extends Player {
         // Temporarily boost baseCritChance during calculation if Stand is active
         const originalCrit = this.baseCritChance;
         if (this.wanchaiActive) {
-            this.baseCritChance += (this.stats?.standCritBonus ?? 0.50);
+            this.baseCritChance += (this.stats?.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.50
         }
 
         const result = super.dealDamage(baseDamage);
@@ -515,7 +515,6 @@ class AutoPlayer extends Player {
             const VACUUM_FORCE = this.stats?.vacuumForce ?? 1400; // stronger impulse
             const STUN_DUR = this.stats?.vacuumStunDur ?? 0.55; // AI lock duration
             const PULL_DUR = this.stats?.vacuumPullDur ?? 0.45; // continuous pull
-            const BURST_DMG = (this.stats?.wanchaiDamage ?? 32) * 2 * (this.damageMultiplier || 1.0);
 
             let pulled = 0;
             for (const enemy of (window.enemies || [])) {
@@ -565,7 +564,7 @@ class AutoPlayer extends Player {
             const DET_RANGE = this.stats?.detonationRange ?? 220;
             // ดาเมจ = wanchaiDamage × 6 (burst ทิ้ง 6 หมัดพร้อมกัน)
             const detBaseDmg = (this.stats?.wanchaiDamage ?? 32) * 6 * (this.damageMultiplier || 1.0);
-            let detCrit = this.baseCritChance + (this.stats?.standCritBonus ?? 0.40);
+            let detCrit = this.baseCritChance + (this.stats?.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
             let detIsCrit = Math.random() < detCrit;
             let detFinalDmg = detBaseDmg * (detIsCrit ? (this.stats?.critMultiplier ?? 2.0) : 1.0);
 
@@ -685,7 +684,7 @@ class AutoPlayer extends Player {
         }
 
         let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0);
-        let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.40);
+        let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
@@ -701,7 +700,7 @@ class AutoPlayer extends Player {
         target.takeDamage(dmg, this);
 
         if (this.passiveUnlocked)
-            this.hp = Math.min(this.maxHp, this.hp + dmg * (S.passiveLifesteal ?? 0.02));
+            this.hp = Math.min(this.maxHp, this.hp + dmg * (S.passiveLifesteal ?? 0.01));  // BUG-4 fix: was 0.02
 
         // Knockback
         const ka = Math.atan2(target.y - this.y, target.x - this.x);
@@ -795,6 +794,14 @@ AutoPlayer.prototype.updateUI = function () {
     if (levelEl) levelEl.textContent = `Lv.${this.level}`;
     const expBar = document.getElementById('exp-bar');
     if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
+
+    // INC-4 fix: Q / E cooldown visuals (was missing entirely)
+    if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+        UIManager._setCooldownVisual('q-icon',
+            Math.max(0, this.cooldowns.vacuum ?? 0), S.vacuumCooldown ?? 8);
+        UIManager._setCooldownVisual('e-icon',
+            Math.max(0, this.cooldowns.detonation ?? 0), S.detonationCooldown ?? 5);
+    }
 
     const passiveEl = document.getElementById('passive-skill');
     if (passiveEl) {

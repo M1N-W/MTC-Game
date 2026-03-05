@@ -434,6 +434,7 @@ class PoomPlayer extends Player {
         let damage = baseDamage, isCrit = false;
         let critChance = this.baseCritChance;
         if (this.isEatingRice) critChance += S.eatRiceCritBonus;
+        if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0.04);  // INC-3 fix
         if (Math.random() < critChance) {
             damage *= S.critMultiplier; isCrit = true;
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
@@ -447,7 +448,7 @@ class PoomPlayer extends Player {
         if ((this.graphBuffTimer ?? 0) > 0) damage *= 1.5;
         // ── Passive Lifesteal ──
         if (this.passiveUnlocked) {
-            const healAmount = damage * S.passiveLifesteal;
+            const healAmount = damage * (S.passiveLifesteal ?? 0.015);  // BUG-3 fix: was S.passiveLifesteal (undefined → NaN)
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3) spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
         }

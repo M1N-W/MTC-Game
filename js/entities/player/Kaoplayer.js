@@ -78,7 +78,7 @@ class KaoPlayer extends Player {
         // ── Teleport ───────────────────────────────────────────────────────────
         this.teleportCharges = 0;           // 0 ก่อน passive unlock, จะเซ็ตเป็น 3 ตอน unlock
         this.maxTeleportCharges = 3;
-        this.teleportCooldown = 15;         // วินาทีต่อ 1 stack (ลดจาก 20 → 15)
+        this.teleportCooldown = S.teleportCooldown ?? 20;  // BUG-1 fix: was hardcoded 15
         this.teleportPenalty = 5;           // วินาทีบทลงโทษเมื่อหมดทุก stack
         this.teleportTimers = [];           // [{elapsed, max}] แต่ละ slot = 1 stack ที่ถูกใช้ไป
         this._teleportInited = false;       // flag: เซ็ต 3 charge ครั้งแรกที่ passive unlock
@@ -101,7 +101,7 @@ class KaoPlayer extends Player {
         // ── Clone of Stealth (E skill) ─────────────────────────────────────────
         this.clones = [];
         this.cloneSkillCooldown = 0;
-        this.maxCloneCooldown = S.cloneCooldown || 45;
+        this.maxCloneCooldown = S.cloneCooldown ?? 60;  // BUG-2 fix: was || 45 (config = 60)
         this.clonesActiveTimer = 0;
 
         // FIX (TASK 2): Own shoot cooldown — decoupled from weaponSystem to
@@ -232,7 +232,7 @@ class KaoPlayer extends Player {
                     new KaoClone(this, (2 * Math.PI) / 3),
                     new KaoClone(this, (4 * Math.PI) / 3)
                 ];
-                this.clonesActiveTimer = S.cloneDuration || 15;
+                this.clonesActiveTimer = S.cloneDuration ?? 10;  // BUG-2 fix: was || 15 (config = 10)
                 this.cloneSkillCooldown = this.maxCloneCooldown;
                 spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
                 if (typeof Audio !== 'undefined' && Audio.playClone) Audio.playClone();
@@ -377,7 +377,7 @@ class KaoPlayer extends Player {
         // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ─────
         if ((this.graphBuffTimer ?? 0) > 0) dmgMult *= 1.5;
 
-        const passiveCrit = this.passiveUnlocked ? (BALANCE.characters.kao.passiveCritBonus || 0) : 0;
+        const passiveCrit = this.passiveUnlocked ? (this.stats.passiveCritBonus ?? 0) : 0;  // INC-1 fix: was BALANCE.characters.kao.passiveCritBonus
         let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0);
 
         // Ambush: guaranteed crit (let the standard crit block handle the multiplier)
@@ -425,7 +425,7 @@ class KaoPlayer extends Player {
 
         // Lifesteal
         if (this.passiveUnlocked) {
-            const lifestealRate = BALANCE.characters.kao.passiveLifesteal || 0.02;
+            const lifestealRate = this.stats.passiveLifesteal ?? 0.03;  // INC-1 fix: was BALANCE.characters.kao.passiveLifesteal
             const healAmount = finalDamage * lifestealRate;
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3 && typeof spawnFloatingText !== 'undefined') {
