@@ -61,7 +61,15 @@
 
 ---
 
-## 🚀 How to Play
+## � Additional Documentation
+
+- **[PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)** - Complete project documentation for developers and AI assistants
+- **[CHANGELOG.md](./CHANGELOG.md)** - Detailed version history and update notes
+- **[GODOT_EXPORT.md](./GODOT_EXPORT.md)** - Future migration plan to Godot Engine
+
+---
+
+## �🚀 How to Play
 
 1.  ไปที่หน้าเว็บไซต์ของเกม (หรือรันผ่าน Live Server)
 2.  เลือกตัวละครที่หน้าเมนูหลัก

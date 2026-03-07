@@ -4,6 +4,42 @@
 
 ---
 
+## v3.11.15 — Project Documentation Enhancement
+*Released: March 7, 2026*
+
+### 📚 Documentation Improvements
+- **PROJECT_OVERVIEW.md:** Created comprehensive project documentation for AI assistants
+- **AI Assistant Guide:** Complete file structure breakdown and architecture documentation
+- **Development Workflow:** Detailed commit & push workflow instructions
+- **Quick Reference:** Common tasks and debugging solutions for AI helpers
+
+### 🔧 Technical Documentation
+- **File Structure:** Complete mapping of all files and their responsibilities
+- **Architecture Overview:** Core game loop flow and design patterns
+- **Performance Guide:** Key considerations and optimization targets
+- **Development Standards:** Version update workflow and best practices
+
+### 🎯 AI Assistant Features
+- **Context Understanding:** Quick project summary for new conversations
+- **File Navigation:** Clear mapping of where to find specific functionality
+- **Common Solutions:** Pre-documented solutions for frequent issues
+- **Workflow Integration:** Step-by-step guides for common development tasks
+
+### 📊 Documentation Coverage
+- **28 JavaScript Files:** Complete breakdown of all game systems
+- **3 Playable Characters:** Detailed character system documentation
+- **Boss System:** Complete boss and attack pattern documentation
+- **Performance Systems:** Object pooling, rendering, and optimization guides
+
+### 🔧 Files Changed
+- `PROJECT_OVERVIEW.md` — New comprehensive project documentation
+- `sw.js` — Updated to v3.11.15, added PROJECT_OVERVIEW.md to cache
+- `CHANGELOG.md` — Added this entry
+
+---
+
+---
+
 ## v3.11.14 — Boss Attacks Performance Optimization
 *Released: March 7, 2026*
 

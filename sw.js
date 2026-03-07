@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.14'; // v3.11.14: Boss attacks performance optimization - improved gradient handling and distance calculations
+const CACHE_NAME = 'mtc-cache-v3.11.15'; // v3.11.15: Added PROJECT_OVERVIEW.md - comprehensive project documentation for AI assistants
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -7,6 +7,10 @@ const urlsToCache = [
   './',
   './index.html',
   './favicon.svg',
+  './PROJECT_OVERVIEW.md',
+  './README-info.md',
+  './CHANGELOG.md',
+  './GODOT_EXPORT.md?v=' + CACHE_TIMESTAMP,
   './js/config.js?v=' + CACHE_TIMESTAMP,
   './js/utils.js?v=' + CACHE_TIMESTAMP,
   './js/audio.js?v=' + CACHE_TIMESTAMP,
@@ -19,7 +23,6 @@ const urlsToCache = [
   './js/game.js?v=' + CACHE_TIMESTAMP,
   './js/tutorial.js?v=' + CACHE_TIMESTAMP,
   './js/secrets.js?v=' + CACHE_TIMESTAMP,
-  './GODOT_EXPORT.md?v=' + CACHE_TIMESTAMP,
   // Entities
   './js/entities/base.js?v=' + CACHE_TIMESTAMP,
   './js/entities/player/PlayerBase.js?v=' + CACHE_TIMESTAMP,
