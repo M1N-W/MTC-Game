@@ -85,7 +85,7 @@
 
 ---
 
-## 📈 Current Version: v3.11.7 (March 7, 2026)
+## 📈 Current Version: v3.11.8 (March 7, 2026)
 
 **Latest Major Updates:**
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
@@ -98,3 +98,4 @@
 - ⚔️ **Auto Character Combat Buffs:** Enhanced Wanchai Stand damage, speed, and visual effects
 - 🎯 **Comprehensive Frontend Design Overhaul:** Military HUD theme with scanlines, hex grid, and enhanced visual effects
 - 🔧 **UX Improvements Patch:** Overlay fade transitions, mobile button states, new record badge, and accessibility support
+- ⏱️ **Bullet Time Visual System Overhaul:** Multi-layer cinematic effects with time ripples, clock-hand streaks, and circular energy HUD
