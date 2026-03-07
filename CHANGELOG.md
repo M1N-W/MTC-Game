@@ -4,6 +4,72 @@
 
 ---
 
+## v3.11.12 — Complete Boss Attack Visual Rework
+*Released: March 7, 2026*
+
+### 🔊 Enhanced Attack Visuals
+- **BarkWave Sonic Shockwave:** Filled cone interior with gold gradient, 7 rings (2 white-hot), sonic debris spikes, origin burst, floating WOOF letters
+- **BubbleProjectile Toxic Orb:** Outer toxic halo, 6 spinning orbit segments, internal tox swirl, urgency pulse ring
+- **ExpandingRing Shockwave:** Gradient dome fill, multi-layer rings, 8-point spike burst at origin
+- **EmpPulse Lightning Ring:** Triple concentric rings, 12 arc lightning segments, 16 radial spikes, static crackle burst
+
+### 🟥 Matrix Grid Attack Overhaul
+- **Safe Cell Enhancement:** Radial glow halo, corner brackets, ✓ checkmark with pulsing glow
+- **Danger Cell Escalation:** Radial heat fill, countdown bar, corner ticks, formula text, ⚠ warning icon
+- **Progressive Warning:** Visual intensity increases based on remaining time
+
+### 📐 New Attack Classes
+- **EquationSlam:** Crater gradient fill, white blast ring, gold trailing ring, 18-point chalk spikes, 14 flying math formula shards
+- **DeadlyGraph:** Growing beam with jagged segments, continuous damage, math labels, endpoint crosshair burst
+
+### 📚 Ultimate Attack Enhancement
+- **Wind-up Phase (0→0.65s):** Implosion ring contraction, spinning dashed ring, inward-pulling glow
+- **Release Phase:** Primary radial burst + secondary diagonal burst (Phase 2), dual ExpandingRing shockwaves
+- **Visual Feedback:** Enhanced particle effects and screen shake
+
+### 🔢 Log457 Visual States
+- **Charging State:** Healing green aura, spinning rune dashes, "log 4.57 = ?" text, healing particles every 0.08s
+- **Active State:** Gold pulsing aura burst with glow ring
+- **Stunned State:** Dashed grey ring with 😵 icon
+
+### 🎨 Visual Effects Library
+- **Multi-layer Gradients:** Radial and linear gradients for depth and intensity
+- **Dynamic Animations:** Spinning segments, pulsing effects, and traveling hot dots
+- **Particle Systems:** Healing particles, debris shards, and explosive bursts
+- **Text Overlays:** Mathematical formulas, warning symbols, and floating letters
+
+### ⚡ Performance Optimizations
+- **Efficient Rendering:** Optimized particle systems and effect layers
+- **Memory Management:** Proper cleanup of visual effects and animations
+- **Timing Consistency:** Standardized animation timing across all attacks
+- **Visual Hierarchy:** Clear distinction between different attack types and phases
+
+### 🔧 Technical Improvements
+- **New Attack Classes:** EquationSlam and DeadlyGraph with complete hit detection
+- **Enhanced State Management:** Better tracking of attack phases and visual states
+- **Modular Design:** Reusable visual components across different attacks
+- **Export Updates:** Added new classes to module exports and global window objects
+
+### 📊 Configuration Changes
+- **Attack Durations:** Adjusted timing for better visual feedback
+- **Damage Values:** Balanced damage for new enhanced attacks
+- **Visual Parameters:** Fine-tuned colors, gradients, and animation speeds
+- **Particle Counts:** Optimized particle generation for performance
+
+### 🎯 User Experience Improvements
+- **Visual Clarity:** Enhanced distinction between attack types and danger levels
+- **Combat Feedback:** Better indication of incoming threats and attack phases
+- **Cinematic Quality:** Movie-quality visual effects for all boss attacks
+- **Performance Stability:** Consistent 60FPS during intense combat scenarios
+- **Immersive Design:** Mathematical theme integration with visual effects
+
+### 🔧 Files Changed
+- `js/entities/boss_attacks.js` — Complete attack visual rework + new EquationSlam & DeadlyGraph classes (486 lines modified)
+- `js/entities/boss.js` — Enhanced boss visual states and ultimate attack effects (142 lines modified)
+- `sw.js` — Updated to v3.11.12
+
+---
+
 ## v3.11.11 — Domain Expansion Enhanced Visuals & New Abilities
 *Released: March 7, 2026*
 

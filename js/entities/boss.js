@@ -376,11 +376,25 @@ class KruManop extends BossBase {
         if (this.log457State === 'charging') {
             this.log457Timer += dt; this.isInvulnerable = true;
             this.hp = Math.min(this.maxHp, this.hp + this.maxHp * BALANCE.boss.log457HealRate * dt);
+            // Visual particles during charge (green healing aura)
+            if (!this._log457PtCd || this._log457PtCd <= 0) {
+                this._log457PtCd = 0.08;
+                if (typeof spawnParticles === 'function') {
+                    spawnParticles(this.x, this.y, 3, '#4ade80');
+                }
+            } else { this._log457PtCd -= dt; }
             if (this.log457Timer >= BALANCE.boss.log457ChargeDuration) {
                 this.log457State = 'active'; this.log457Timer = 0;
                 this.log457AttackBonus = BALANCE.boss.log457AttackBonus;
                 this.isInvulnerable = false;
-                addScreenShake(20); spawnFloatingText('67! 67! 67!', this.x, this.y - 80, '#facc15', 35);
+                addScreenShake(25);
+                spawnFloatingText('log 4.57 = 0.6599...', this.x, this.y - 110, '#facc15', 22);
+                spawnFloatingText('67! 67! 67!', this.x, this.y - 75, '#ef4444', 42);
+                spawnParticles(this.x, this.y, 40, '#facc15');
+                spawnParticles(this.x, this.y, 22, '#ef4444');
+                if (typeof window.specialEffects !== 'undefined') {
+                    window.specialEffects.push(new ExpandingRing(this.x, this.y, '#facc15', 220, 0.5));
+                }
                 this.speak('0.6767!');
             }
         } else if (this.log457State === 'active') {
@@ -452,15 +466,37 @@ class KruManop extends BossBase {
             }
         } else if (this.state === 'ULTIMATE') {
             this.vx = 0; this.vy = 0;
-            if (this.timer > 1) {
+            // Wind-up: 0→0.65s — implosion visual (drawn in BossRenderer)
+            // Release:  > 0.65s — radial bullet burst + EMP-style shockwave
+            if (!this._ultWound && this.timer > 0.65) {
+                this._ultWound = true;
                 const bullets = this.phase === 2 ? BALANCE.boss.phase2UltimateBullets : BALANCE.boss.ultimateBullets;
+                // Primary radial burst
                 for (let i = 0; i < bullets; i++) {
                     const a = (Math.PI * 2 / bullets) * i;
                     projectileManager.add(new Projectile(this.x, this.y, a, BALANCE.boss.ultimateProjectileSpeed, BALANCE.boss.ultimateDamage, '#ef4444', true, 'enemy'));
                 }
-                addScreenShake(15);
-                spawnFloatingText('POP QUIZ!', this.x, this.y - 80, '#facc15', 40);
+                // Phase-2: secondary diagonal burst
+                if (this.phase === 2) {
+                    const offset = Math.PI / bullets;
+                    for (let i = 0; i < bullets; i++) {
+                        const a = (Math.PI * 2 / bullets) * i + offset;
+                        projectileManager.add(new Projectile(this.x, this.y, a, BALANCE.boss.ultimateProjectileSpeed * 0.78, BALANCE.boss.ultimateDamage * 0.75, '#f97316', true, 'enemy'));
+                    }
+                }
+                // Concussive shockwave ring (visual + force)
+                if (typeof window.specialEffects !== 'undefined') {
+                    window.specialEffects.push(new ExpandingRing(this.x, this.y, '#facc15', 280, 0.65));
+                    window.specialEffects.push(new ExpandingRing(this.x, this.y, '#ef4444', 200, 0.45));
+                }
+                addScreenShake(22);
+                spawnFloatingText('📚 POP QUIZ!', this.x, this.y - 90, '#facc15', 42);
+                spawnParticles(this.x, this.y, 30, '#facc15');
+                spawnParticles(this.x, this.y, 20, '#ef4444');
                 Audio.playBossSpecial();
+            }
+            if (this.timer > 1.25) {
+                this._ultWound = false;
                 this.state = 'CHASE'; this.timer = -1;
             }
         } else if (this.state === 'MATRIX_GRID') {
@@ -499,8 +535,11 @@ class KruManop extends BossBase {
                 addScreenShake(10);
             }
         }
-        spawnFloatingText('WOOF WOOF!', this.x, this.y - 100, '#d97706', 30);
-        spawnParticles(this.x, this.y, 12, '#d97706');
+        spawnFloatingText('🔊 WOOF WOOF!', this.x, this.y - 100, '#d97706', 34);
+        spawnFloatingText('SONIC BARK!', this.x, this.y - 140, '#fef3c7', 20);
+        spawnParticles(this.x, this.y, 20, '#d97706');
+        spawnParticles(this.x, this.y, 10, '#fbbf24');
+        addScreenShake(12);
         Audio.playBossSpecial();
         this.speak('BARK BARK BARK!');
     }
@@ -521,15 +560,21 @@ class KruManop extends BossBase {
 
     useEquationSlam() {
         this.skills.slam.cd = this.skills.slam.max; this.state = 'CHASE';
-        addScreenShake(15);
-        spawnFloatingText('EQUATION SLAM!', this.x, this.y - 80, '#facc15', 30);
+        addScreenShake(18);
+        spawnFloatingText('📐 EQUATION SLAM!', this.x, this.y - 80, '#facc15', 32);
+        spawnFloatingText('∑Δx² = 0', this.x, this.y - 120, '#fef9c3', 18);
+        spawnParticles(this.x, this.y, 25, '#facc15');
+        spawnParticles(this.x, this.y, 12, '#ffffff');
         this.speak('Equation Slam!'); Audio.playBossSpecial();
         window.specialEffects.push(new EquationSlam(this.x, this.y));
     }
 
     useDeadlyGraph(player) {
         this.skills.graph.cd = this.skills.graph.max; this.state = 'CHASE';
-        spawnFloatingText('DEADLY GRAPH!', this.x, this.y - 80, '#3b82f6', 30);
+        spawnFloatingText('📈 DEADLY GRAPH!', this.x, this.y - 80, '#3b82f6', 32);
+        spawnFloatingText('y = x', this.x, this.y - 118, '#93c5fd', 20);
+        spawnParticles(this.x, this.y, 16, '#3b82f6');
+        addScreenShake(10);
         this.speak('Feel the power of y=x!'); Audio.playBossSpecial();
 
         // Record the line endpoints before pushing the visual effect so we have
@@ -1393,22 +1438,80 @@ class BossRenderer {
         if (e.log457State === 'charging') {
             const sc = 1 + (e.log457Timer / 2) * 0.3;
             ctx.scale(sc, sc);
-            const pu = Math.sin(e.log457Timer * 10) * 0.5 + 0.5;
-            ctx.shadowBlur = 30 * pu; ctx.shadowColor = '#ef4444';
-            ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(239,68,68,${pu * 0.25})`; ctx.fill();
+            const pu = Math.sin(e.log457Timer * 12) * 0.5 + 0.5;
+            // Healing green aura
+            const healG = ctx.createRadialGradient(0, 0, 40, 0, 0, 90);
+            healG.addColorStop(0, `rgba(74,222,128,${pu * 0.30})`);
+            healG.addColorStop(0.6, `rgba(34,197,94,${pu * 0.20})`);
+            healG.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = healG;
+            ctx.beginPath(); ctx.arc(0, 0, 90, 0, Math.PI * 2); ctx.fill();
+            // Pulsing ring
+            ctx.shadowBlur = 28 * pu; ctx.shadowColor = '#4ade80';
+            ctx.strokeStyle = `rgba(74,222,128,${pu * 0.75})`; ctx.lineWidth = 3.5;
+            ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2); ctx.stroke();
+            // Spinning rune circles
+            ctx.save(); ctx.rotate(now * 0.006);
+            ctx.strokeStyle = `rgba(134,239,172,${pu * 0.55})`; ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 12]);
+            ctx.beginPath(); ctx.arc(0, 0, 82, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]); ctx.restore();
+            // Text: log 4.57 =?
+            ctx.save();
+            ctx.font = 'bold 11px "Courier New",monospace';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.globalAlpha = pu * 0.75;
+            ctx.fillStyle = '#86efac'; ctx.shadowBlur = 6; ctx.shadowColor = '#4ade80';
+            ctx.fillText('log 4.57 = ?', 0, -94);
+            ctx.shadowBlur = 0; ctx.restore();
             ctx.shadowBlur = 0;
         }
         if (e.log457State === 'active') {
-            ctx.shadowBlur = 22; ctx.shadowColor = '#facc15';
+            // Gold aura burst
+            const activePulse = 0.5 + Math.sin(now / 55) * 0.5;
+            ctx.shadowBlur = 30 * activePulse; ctx.shadowColor = '#facc15';
+            const actG = ctx.createRadialGradient(0, 0, 30, 0, 0, 80);
+            actG.addColorStop(0, `rgba(251,191,36,${activePulse * 0.25})`);
+            actG.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = actG;
+            ctx.beginPath(); ctx.arc(0, 0, 80, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = `rgba(251,191,36,${activePulse * 0.60})`; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2); ctx.stroke();
         }
         if (e.log457State === 'stunned') {
             ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center'; ctx.fillText('😵', 0, -78);
+            // Stunned visual: greyed-out dashed ring
+            ctx.strokeStyle = 'rgba(148,163,184,0.50)'; ctx.lineWidth = 2;
+            ctx.setLineDash([8, 10]);
+            ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
         }
         if (e.state === 'ULTIMATE') {
-            const ult = Math.abs(Math.sin(now / 80));
-            ctx.strokeStyle = `rgba(239,68,68,${ult})`; ctx.lineWidth = 5;
-            ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2); ctx.stroke();
+            const ultTimer = e.timer;
+            const wound = e._ultWound;
+            if (!wound) {
+                // ── Wind-up implosion (0 → 0.65s) ────────────────
+                const windProg = Math.min(1, ultTimer / 0.65);
+                const impPulse = 0.5 + Math.sin(now / 45) * 0.5;
+                // Inward-pulling glow ring
+                const impR = 72 + (1 - windProg) * 55;
+                ctx.globalAlpha = windProg * (0.55 + impPulse * 0.40);
+                ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 6 * windProg;
+                ctx.shadowBlur = 28 * windProg; ctx.shadowColor = '#ef4444';
+                ctx.beginPath(); ctx.arc(0, 0, impR, 0, Math.PI * 2); ctx.stroke();
+                // Inner contracted burst
+                ctx.globalAlpha = windProg * impPulse * 0.50;
+                ctx.fillStyle = '#fef2f2';
+                ctx.beginPath(); ctx.arc(0, 0, 18 * windProg, 0, Math.PI * 2); ctx.fill();
+                // Spinning red dashes
+                ctx.save(); ctx.rotate(now * 0.012 * windProg);
+                ctx.globalAlpha = windProg * 0.65;
+                ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2.5;
+                ctx.setLineDash([10, 18]);
+                ctx.beginPath(); ctx.arc(0, 0, 58 * windProg + 14, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]); ctx.restore();
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            }
         }
 
         // ── Enhanced Power Aura (Phase-based) ────────────────────────

@@ -24,8 +24,10 @@ class BarkWave {
         this.coneHalf = coneHalf;
         this.range = range;
         this.timer = 0;
-        this.duration = 0.55;
-        this.rings = 5;
+        this.duration = 0.72;   // slightly longer for drama
+        this.rings = 7;
+        // Shockwave distortion nodes for zigzag edge
+        this._noiseSeeds = Array.from({ length: 14 }, () => Math.random() * Math.PI * 2);
     }
 
     update(dt) {
@@ -37,44 +39,109 @@ class BarkWave {
         const screen = worldToScreen(this.x, this.y);
         const progress = this.timer / this.duration;
         const alpha = 1 - progress;
+        const now = performance.now();
 
         CTX.save();
         CTX.translate(screen.x, screen.y);
         CTX.rotate(this.angle);
 
+        // ── Filled shockwave cone interior ───────────────────
+        const frontR = progress * this.range;
+        if (frontR > 8) {
+            CTX.save();
+            CTX.globalAlpha = alpha * 0.18;
+            const coneG = CTX.createRadialGradient(0, 0, 0, 0, 0, frontR);
+            coneG.addColorStop(0, 'rgba(253,230,138,0.9)');
+            coneG.addColorStop(0.5, 'rgba(245,158,11,0.4)');
+            coneG.addColorStop(1, 'rgba(120,53,15,0)');
+            CTX.fillStyle = coneG;
+            CTX.beginPath();
+            CTX.moveTo(0, 0);
+            CTX.arc(0, 0, frontR, -this.coneHalf, this.coneHalf);
+            CTX.closePath();
+            CTX.fill();
+            CTX.restore();
+        }
+
+        // ── Sonic rings with distortion ───────────────────────
         for (let i = 0; i < this.rings; i++) {
             const frac = (progress + i / this.rings) % 1;
             const r = frac * this.range;
             if (r < 4) continue;
-            const ringAlpha = alpha * (1 - i / this.rings) * 0.75;
+            const ringAlpha = alpha * (1 - i / this.rings) * 0.88;
             if (ringAlpha <= 0) continue;
+
             CTX.save();
             CTX.globalAlpha = ringAlpha;
-            CTX.strokeStyle = i % 2 === 0 ? '#f59e0b' : '#fbbf24';
-            CTX.lineWidth = Math.max(1, 3.5 - i * 0.5);
-            CTX.shadowBlur = 12;
-            CTX.shadowColor = '#d97706';
+
+            const isHot = i < 2;
+            CTX.strokeStyle = isHot ? '#ffffff' : (i % 2 === 0 ? '#fbbf24' : '#f59e0b');
+            CTX.lineWidth = isHot ? (4.5 - i * 0.5) : Math.max(0.8, 2.8 - i * 0.4);
+            CTX.shadowBlur = isHot ? 22 : 10;
+            CTX.shadowColor = isHot ? '#fbbf24' : '#d97706';
             CTX.lineCap = 'round';
+
+            // Main arc
             CTX.beginPath(); CTX.arc(0, 0, r, -this.coneHalf, this.coneHalf); CTX.stroke();
-            CTX.beginPath();
-            CTX.moveTo(Math.cos(-this.coneHalf) * Math.max(0, r - 25), Math.sin(-this.coneHalf) * Math.max(0, r - 25));
-            CTX.lineTo(Math.cos(-this.coneHalf) * r, Math.sin(-this.coneHalf) * r);
-            CTX.stroke();
-            CTX.beginPath();
-            CTX.moveTo(Math.cos(this.coneHalf) * Math.max(0, r - 25), Math.sin(this.coneHalf) * Math.max(0, r - 25));
-            CTX.lineTo(Math.cos(this.coneHalf) * r, Math.sin(this.coneHalf) * r);
-            CTX.stroke();
+
+            // Edge boundary lines with distortion
+            for (const side of [-1, 1]) {
+                const ex = Math.cos(this.coneHalf * side) * r;
+                const ey = Math.sin(this.coneHalf * side) * r;
+                const ex0 = Math.cos(this.coneHalf * side) * Math.max(0, r - 40);
+                const ey0 = Math.sin(this.coneHalf * side) * Math.max(0, r - 40);
+                CTX.beginPath();
+                CTX.moveTo(ex0, ey0); CTX.lineTo(ex, ey); CTX.stroke();
+            }
+
+            // Scattered "sonic debris" particles on ring
+            if (i === 0 && r > 20) {
+                CTX.lineWidth = 1.5;
+                for (let sd = 0; sd < 8; sd++) {
+                    const sA = -this.coneHalf + (sd / 7) * this.coneHalf * 2;
+                    const sR = r + Math.sin(this._noiseSeeds[sd] + progress * 15) * 10;
+                    const noise = Math.sin(this._noiseSeeds[sd + 6] + now / 50) * 6;
+                    CTX.beginPath();
+                    CTX.moveTo(Math.cos(sA) * sR, Math.sin(sA) * sR);
+                    CTX.lineTo(Math.cos(sA) * (sR + 8 + noise), Math.sin(sA) * (sR + 8 + noise));
+                    CTX.stroke();
+                }
+            }
             CTX.restore();
         }
 
-        if (progress < 0.25) {
-            const flashAlpha = (1 - progress / 0.25) * 0.8;
-            CTX.globalAlpha = flashAlpha;
-            CTX.fillStyle = '#fbbf24';
-            CTX.shadowBlur = 20;
-            CTX.shadowColor = '#f59e0b';
-            CTX.beginPath(); CTX.arc(0, 0, 14 * (1 - progress / 0.25), 0, Math.PI * 2); CTX.fill();
+        // ── Origin burst flash ────────────────────────────────
+        if (progress < 0.30) {
+            const flashP = 1 - progress / 0.30;
+            // White hot burst
+            CTX.globalAlpha = flashP * 0.95;
+            CTX.fillStyle = '#ffffff';
+            CTX.shadowBlur = 35; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(0, 0, 22 * flashP, 0, Math.PI * 2); CTX.fill();
+            // Orange halo
+            CTX.globalAlpha = flashP * 0.55;
+            CTX.fillStyle = '#f59e0b';
+            CTX.beginPath(); CTX.arc(0, 0, 36 * flashP, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
         }
+
+        // ── Floating debris letters ("BARK", "!") ─────────────
+        if (progress > 0.08 && progress < 0.65) {
+            const letters = ['W', 'O', 'O', 'F', '!'];
+            CTX.font = 'bold 11px Arial';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            for (let li = 0; li < letters.length; li++) {
+                const la = -this.coneHalf * 0.6 + (li / 4) * this.coneHalf * 1.2;
+                const lr = (progress * 0.65 + li * 0.06) * this.range;
+                const lAlpha = alpha * (1 - li * 0.12) * 0.8;
+                CTX.globalAlpha = lAlpha;
+                CTX.fillStyle = '#fef3c7';
+                CTX.shadowBlur = 6; CTX.shadowColor = '#f59e0b';
+                CTX.fillText(letters[li], Math.cos(la) * lr, Math.sin(la) * lr);
+            }
+            CTX.shadowBlur = 0;
+        }
+
         CTX.restore();
     }
 }
@@ -359,22 +426,78 @@ class BubbleProjectile {
         if (this.dead) return;
         const screen = worldToScreen(this.x, this.y);
         const r = this.radius;
-        const pulse = Math.sin(this.lifeTimer * 4) * 0.08 + 1;
+        const now = performance.now();
+        const pulse = 1 + Math.sin(this.lifeTimer * 5.2) * 0.09;
+        const spinAngle = this.lifeTimer * 1.8;
+        const urgency = Math.min(1, this.lifeTimer / this.maxLife);  // 0→1 as it ages
 
         CTX.save();
         CTX.translate(screen.x, screen.y);
 
-        CTX.shadowBlur = 18;
-        CTX.shadowColor = '#38bdf8';
-        CTX.fillStyle = 'rgba(186, 230, 253, 0.35)';
-        CTX.beginPath(); CTX.arc(0, 0, r * pulse, 0, Math.PI * 2); CTX.fill();
-        CTX.strokeStyle = 'rgba(125, 211, 252, 0.8)'; CTX.lineWidth = 2; CTX.stroke();
+        // ── Outer toxic glow halo ─────────────────────────────
+        const haloG = CTX.createRadialGradient(0, 0, r * 0.7, 0, 0, r * 1.5);
+        haloG.addColorStop(0, `rgba(56,189,248,${0.12 + urgency * 0.10})`);
+        haloG.addColorStop(0.6, `rgba(34,211,238,${0.06 + urgency * 0.06})`);
+        haloG.addColorStop(1, 'rgba(0,0,0,0)');
+        CTX.fillStyle = haloG;
+        CTX.beginPath(); CTX.arc(0, 0, r * 1.5, 0, Math.PI * 2); CTX.fill();
 
+        // ── Main bubble body ──────────────────────────────────
+        CTX.shadowBlur = 20 + urgency * 12; CTX.shadowColor = urgency > 0.6 ? '#22d3ee' : '#38bdf8';
+        const bubG = CTX.createRadialGradient(-r * 0.25, -r * 0.25, 0, 0, 0, r);
+        bubG.addColorStop(0, `rgba(186,230,253,${0.55 + urgency * 0.20})`);
+        bubG.addColorStop(0.45, `rgba(56,189,248,${0.25 + urgency * 0.15})`);
+        bubG.addColorStop(1, `rgba(8,145,178,${0.40 + urgency * 0.20})`);
+        CTX.fillStyle = bubG;
+        CTX.beginPath(); CTX.arc(0, 0, r * pulse, 0, Math.PI * 2); CTX.fill();
+
+        // Outer shell ring
+        CTX.strokeStyle = `rgba(125,211,252,${0.75 + urgency * 0.20})`; CTX.lineWidth = 2.2 + urgency;
+        CTX.beginPath(); CTX.arc(0, 0, r * pulse, 0, Math.PI * 2); CTX.stroke();
         CTX.shadowBlur = 0;
-        CTX.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        CTX.beginPath(); CTX.ellipse(-r * 0.3, -r * 0.3, r * 0.22, r * 0.13, -0.5, 0, Math.PI * 2); CTX.fill();
-        CTX.fillStyle = 'rgba(255,255,255,0.5)';
-        CTX.beginPath(); CTX.arc(-r * 0.1, r * 0.35, r * 0.07, 0, Math.PI * 2); CTX.fill();
+
+        // ── Spinning orbit segments (prison bars feel) ────────
+        CTX.save();
+        CTX.rotate(spinAngle);
+        for (let seg = 0; seg < 6; seg++) {
+            const sa = (seg / 6) * Math.PI * 2;
+            const sAlpha = (0.18 + urgency * 0.20) * (0.6 + Math.sin(now / 300 + seg) * 0.4);
+            CTX.strokeStyle = `rgba(34,211,238,${sAlpha})`;
+            CTX.lineWidth = 1.2;
+            CTX.beginPath();
+            CTX.arc(0, 0, r * 0.80, sa, sa + Math.PI / 4);
+            CTX.stroke();
+        }
+        CTX.restore();
+
+        // ── Tox swirl inside ─────────────────────────────────
+        CTX.save();
+        CTX.rotate(-spinAngle * 0.55);
+        CTX.globalAlpha = 0.20 + urgency * 0.18;
+        CTX.strokeStyle = '#7dd3fc'; CTX.lineWidth = 1.0;
+        CTX.beginPath();
+        for (let sx = 0; sx < Math.PI * 2; sx += 0.25) {
+            const sr = r * 0.45 * (1 + Math.sin(sx * 3) * 0.28);
+            if (sx === 0) CTX.moveTo(Math.cos(sx) * sr, Math.sin(sx) * sr);
+            else CTX.lineTo(Math.cos(sx) * sr, Math.sin(sx) * sr);
+        }
+        CTX.closePath(); CTX.stroke();
+        CTX.restore();
+
+        // ── Highlights ────────────────────────────────────────
+        CTX.fillStyle = `rgba(255,255,255,${0.62 + Math.sin(now / 280) * 0.20})`;
+        CTX.beginPath(); CTX.ellipse(-r * 0.28, -r * 0.30, r * 0.22, r * 0.13, -0.5, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = 'rgba(255,255,255,0.45)';
+        CTX.beginPath(); CTX.arc(-r * 0.10, r * 0.35, r * 0.07, 0, Math.PI * 2); CTX.fill();
+
+        // ── Urgency warning flash when old ────────────────────
+        if (urgency > 0.72) {
+            const warnPulse = 0.5 + Math.sin(now / 90) * 0.5;
+            CTX.strokeStyle = `rgba(34,211,238,${warnPulse * 0.65})`;
+            CTX.lineWidth = 3; CTX.shadowBlur = 12; CTX.shadowColor = '#22d3ee';
+            CTX.beginPath(); CTX.arc(0, 0, r * 1.18, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+        }
 
         CTX.restore();
     }
@@ -657,13 +780,50 @@ class ExpandingRing {
         if (this.dead) return;
         const screen = worldToScreen(this.x, this.y);
         const prog = this.timer / this.duration;
-        const r = this.maxRadius * Math.sqrt(prog); // ease out
+        const r = this.maxRadius * Math.sqrt(prog);
         const alpha = 1 - prog;
+        const now = performance.now();
+
         CTX.save();
-        CTX.globalAlpha = alpha;
-        CTX.strokeStyle = this.color;
-        CTX.lineWidth = 6 * (1 - prog);
+
+        // ── Outer fill dome ───────────────────────────────────
+        const fillG = CTX.createRadialGradient(screen.x, screen.y, r * 0.55, screen.x, screen.y, r);
+        fillG.addColorStop(0, `rgba(255,255,255,0)`);
+        fillG.addColorStop(0.7, this.color.replace(')', `,${alpha * 0.08})`).replace('rgb(', 'rgba(').replace('#ef4444', 'rgba(239,68,68,').replace('#', 'rgba(').replace(/(rgba\([^)]+)$/, '$1)'));
+        fillG.addColorStop(1, 'rgba(0,0,0,0)');
+        CTX.globalAlpha = alpha * 0.6;
+        CTX.fillStyle = fillG;
+        CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.fill();
+
+        // ── Primary thick ring ────────────────────────────────
+        CTX.globalAlpha = alpha * 0.95;
+        CTX.strokeStyle = this.color; CTX.lineWidth = 7 * (1 - prog * 0.7);
+        CTX.shadowBlur = 22 * (1 - prog); CTX.shadowColor = this.color;
         CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.stroke();
+
+        // ── Trailing inner ring ───────────────────────────────
+        const r2 = this.maxRadius * Math.sqrt(prog * 0.78);
+        CTX.globalAlpha = alpha * 0.50;
+        CTX.lineWidth = 3.5 * (1 - prog);
+        CTX.shadowBlur = 10;
+        CTX.beginPath(); CTX.arc(screen.x, screen.y, r2, 0, Math.PI * 2); CTX.stroke();
+
+        // ── Spike burst at origin ─────────────────────────────
+        if (prog < 0.35) {
+            const sp = 1 - prog / 0.35;
+            CTX.globalAlpha = alpha * sp * 0.70;
+            CTX.lineWidth = 2;
+            for (let si = 0; si < 8; si++) {
+                const sa = (si / 8) * Math.PI * 2 + now * 0.002;
+                const sLen = r * 0.22 * sp;
+                CTX.beginPath();
+                CTX.moveTo(screen.x + Math.cos(sa) * r * 0.10, screen.y + Math.sin(sa) * r * 0.10);
+                CTX.lineTo(screen.x + Math.cos(sa) * sLen, screen.y + Math.sin(sa) * sLen);
+                CTX.stroke();
+            }
+        }
+
+        CTX.shadowBlur = 0;
         CTX.restore();
     }
 }
@@ -744,46 +904,119 @@ class MatrixGridAttack {
         if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
 
         const prog = Math.min(this.timer / this.warnDur, 1);
-        const flashRate = 0.5 + prog * 2.5; // blink faster as detonation nears
-        const blinkOn = !this._detonated && Math.sin(this.timer * Math.PI * 2 * flashRate) > 0;
-        const baseAlpha = this._detonated ? 0 : (0.55 + prog * 0.30);
+        const now = performance.now();
+        const fastPulse = 0.5 + Math.sin(now / (120 - prog * 80)) * 0.5;
+        const isLate = prog > 0.65;
+        const baseAlpha = this._detonated ? 0 : (0.6 + prog * 0.35);
 
         for (let i = 0; i < this._cells.length; i++) {
             const cell = this._cells[i];
             const screen = worldToScreen(cell.wx, cell.wy);
             const half = this.cellSize / 2;
             const isSafe = (i === this.safeIndex);
+            const cx = screen.x, cy = screen.y;
 
             CTX.save();
             CTX.globalAlpha = baseAlpha;
 
             if (isSafe) {
-                CTX.fillStyle = 'rgba(34,197,94,0.30)';
-                CTX.strokeStyle = '#22c55e';
+                // ── Safe Cell — pulsing green sanctuary ────────
+                // Glow fill
+                const sG = CTX.createRadialGradient(cx, cy, 0, cx, cy, half * 1.2);
+                sG.addColorStop(0, 'rgba(34,197,94,0.30)');
+                sG.addColorStop(1, 'rgba(34,197,94,0)');
+                CTX.fillStyle = sG;
+                CTX.beginPath(); CTX.arc(cx, cy, half * 1.2, 0, Math.PI * 2); CTX.fill();
+
+                CTX.fillStyle = 'rgba(34,197,94,0.22)';
+                CTX.fillRect(cx - half, cy - half, this.cellSize, this.cellSize);
+
+                CTX.strokeStyle = `rgba(74,222,128,${0.7 + fastPulse * 0.3})`;
+                CTX.lineWidth = 2.5; CTX.shadowBlur = 18 * fastPulse; CTX.shadowColor = '#22c55e';
+                CTX.strokeRect(cx - half + 1, cy - half + 1, this.cellSize - 2, this.cellSize - 2);
+
+                // Corner brackets
+                CTX.strokeStyle = '#4ade80'; CTX.lineWidth = 3; CTX.shadowBlur = 10;
+                const bk = 14;
+                [[cx - half, cy - half, 1, 1], [cx + half, cy - half, -1, 1],
+                [cx - half, cy + half, 1, -1], [cx + half, cy + half, -1, -1]].forEach(([bx, by, sx, sy]) => {
+                    CTX.beginPath(); CTX.moveTo(bx + sx * bk, by); CTX.lineTo(bx, by); CTX.lineTo(bx, by + sy * bk); CTX.stroke();
+                });
+                CTX.shadowBlur = 0;
+
+                // ✓ checkmark
+                CTX.font = `bold ${Math.max(16, half * 0.55)}px Arial`;
+                CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+                CTX.fillStyle = `rgba(74,222,128,${0.65 + fastPulse * 0.35})`;
                 CTX.shadowBlur = 12; CTX.shadowColor = '#22c55e';
-            } else if (blinkOn) {
-                CTX.fillStyle = 'rgba(239,68,68,0.35)';
-                CTX.strokeStyle = '#ef4444';
-                CTX.shadowBlur = 10; CTX.shadowColor = '#ef4444';
+                CTX.fillText('✓', cx, cy - 6);
+
+                CTX.font = 'bold 12px "Orbitron",Arial';
+                CTX.globalAlpha = baseAlpha * (0.6 + fastPulse * 0.4);
+                CTX.fillStyle = '#4ade80'; CTX.shadowBlur = 8;
+                CTX.fillText('SAFE', cx, cy + 12);
+
+            } else if (this._detonated) {
+                // Already detonated — skip (handled in update)
             } else {
-                CTX.fillStyle = 'rgba(239,68,68,0.15)';
-                CTX.strokeStyle = 'rgba(239,68,68,0.5)';
+                // ── Danger Cell — escalating threat ────────────
+                const dangerGlow = isLate ? '#ef4444' : '#f97316';
+                const dangerFill = isLate ? 'rgba(239,68,68,' : 'rgba(249,115,22,';
+
+                // Radial heat fill
+                const dG = CTX.createRadialGradient(cx, cy, 0, cx, cy, half * 1.1);
+                dG.addColorStop(0, dangerFill + (0.30 + prog * 0.30 * fastPulse) + ')');
+                dG.addColorStop(1, 'rgba(0,0,0,0)');
+                CTX.fillStyle = dG;
+                CTX.beginPath(); CTX.arc(cx, cy, half * 1.1, 0, Math.PI * 2); CTX.fill();
+
+                // Cell fill
+                CTX.fillStyle = dangerFill + (0.14 + prog * 0.22 * fastPulse) + ')';
+                CTX.fillRect(cx - half, cy - half, this.cellSize, this.cellSize);
+
+                // Animated border
+                const borderAlpha = 0.5 + fastPulse * 0.5;
+                CTX.strokeStyle = isLate ? `rgba(239,68,68,${borderAlpha})` : `rgba(249,115,22,${borderAlpha})`;
+                CTX.lineWidth = isLate ? 3 : 2.2;
+                CTX.shadowBlur = isLate ? 16 * fastPulse : 8; CTX.shadowColor = dangerGlow;
+                CTX.strokeRect(cx - half + 1, cy - half + 1, this.cellSize - 2, this.cellSize - 2);
+                CTX.shadowBlur = 0;
+
+                // Countdown fill bar (bottom of cell, shrinks to 0)
+                const barW = Math.max(0, (this.cellSize - 4) * (1 - prog));
+                const barG = CTX.createLinearGradient(cx - half + 2, 0, cx - half + 2 + barW, 0);
+                barG.addColorStop(0, isLate ? '#ef4444' : '#facc15');
+                barG.addColorStop(1, isLate ? '#dc2626' : '#f97316');
+                CTX.fillStyle = barG;
+                CTX.globalAlpha = baseAlpha * 0.85;
+                CTX.fillRect(cx - half + 2, cy + half - 7, barW, 5);
+                CTX.globalAlpha = baseAlpha;
+
+                // Corner danger ticks
+                CTX.strokeStyle = dangerGlow; CTX.lineWidth = 2;
+                const tk = 10;
+                [[cx - half, cy - half, 1, 1], [cx + half, cy - half, -1, 1],
+                [cx - half, cy + half, 1, -1], [cx + half, cy + half, -1, -1]].forEach(([bx, by, sx, sy]) => {
+                    CTX.beginPath(); CTX.moveTo(bx + sx * tk, by); CTX.lineTo(bx, by); CTX.lineTo(bx, by + sy * tk); CTX.stroke();
+                });
+
+                // Math formula text
+                const formulas = ['∑x²', 'dy/dx', 'log(x)', "f'(x)", 'det(A)', 'μ+2σ'];
+                const fi2 = Math.abs(Math.round(cell.wx / 130 + cell.wy / 130)) % formulas.length;
+                CTX.globalAlpha = baseAlpha * (isLate ? 0.50 * fastPulse : 0.22);
+                CTX.font = `bold ${Math.max(9, Math.floor(half * 0.28))}px "Courier New",monospace`;
+                CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+                CTX.fillStyle = isLate ? '#fca5a5' : '#fed7aa';
+                CTX.fillText(formulas[fi2], cx, cy + 8);
+
+                // ⚠ icon
+                CTX.globalAlpha = baseAlpha * (0.55 + fastPulse * 0.45);
+                CTX.font = `${Math.max(14, Math.floor(half * 0.42))}px Arial`;
+                CTX.fillStyle = '#fff'; CTX.shadowBlur = isLate ? 12 : 5; CTX.shadowColor = dangerGlow;
+                CTX.fillText('⚠', cx, cy - 8);
                 CTX.shadowBlur = 0;
             }
 
-            CTX.lineWidth = 2.5;
-            CTX.fillRect(screen.x - half, screen.y - half, this.cellSize, this.cellSize);
-            CTX.strokeRect(screen.x - half, screen.y - half, this.cellSize, this.cellSize);
-
-            if (isSafe) {
-                CTX.font = 'bold 14px "Orbitron", Arial, sans-serif';
-                CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-                CTX.fillStyle = '#22c55e';
-                CTX.shadowBlur = 8; CTX.shadowColor = '#22c55e';
-                CTX.fillText('SAFE', screen.x, screen.y);
-            }
-
-            CTX.shadowBlur = 0;
             CTX.restore();
         }
     }
@@ -844,20 +1077,70 @@ class EmpPulse {
         const r = this.maxR * prog;
         const screen = worldToScreen(this.x, this.y);
         const alpha = (1 - prog) * 0.9;
+        const now = performance.now();
 
         CTX.save();
 
-        // Outer glow ring
-        CTX.globalAlpha = alpha;
-        CTX.strokeStyle = '#38bdf8';
-        CTX.shadowBlur = 18; CTX.shadowColor = '#38bdf8';
-        CTX.lineWidth = 7 * (1 - prog * 0.6);
-        CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.stroke();
-
-        // Inner fill dome (fades fast)
-        CTX.globalAlpha = alpha * 0.15;
+        // ── Dome fill ─────────────────────────────────────────
+        CTX.globalAlpha = alpha * 0.12;
         CTX.fillStyle = '#38bdf8';
         CTX.beginPath(); CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2); CTX.fill();
+
+        // ── Triple concentric rings ────────────────────────────
+        const ringWidths = [9, 5, 2.5];
+        const ringRadii = [1.0, 0.93, 0.86];
+        const ringAlphas = [1.0, 0.60, 0.35];
+        for (let ri = 0; ri < 3; ri++) {
+            CTX.globalAlpha = alpha * ringAlphas[ri];
+            CTX.strokeStyle = ri === 0 ? '#ffffff' : '#38bdf8';
+            CTX.shadowBlur = ri === 0 ? 28 : 12; CTX.shadowColor = '#38bdf8';
+            CTX.lineWidth = ringWidths[ri] * (1 - prog * 0.55);
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, r * ringRadii[ri], 0, Math.PI * 2); CTX.stroke();
+        }
+        CTX.shadowBlur = 0;
+
+        // ── Lightning arcs along the ring ─────────────────────
+        CTX.globalAlpha = alpha * 0.80;
+        CTX.strokeStyle = '#bfdbfe'; CTX.lineWidth = 1.5;
+        CTX.shadowBlur = 12; CTX.shadowColor = '#38bdf8';
+        const arcCount = 12;
+        for (let ai = 0; ai < arcCount; ai++) {
+            const baseA = (ai / arcCount) * Math.PI * 2 + now * 0.006;
+            const arcSpan = 0.18 + Math.sin(now / 80 + ai * 2.1) * 0.10;
+            const jitter = Math.sin(now / 40 + ai * 3.7) * r * 0.06;
+            CTX.beginPath();
+            CTX.moveTo(
+                screen.x + Math.cos(baseA) * (r - jitter),
+                screen.y + Math.sin(baseA) * (r - jitter)
+            );
+            CTX.lineTo(
+                screen.x + Math.cos(baseA + arcSpan) * (r + jitter * 1.5),
+                screen.y + Math.sin(baseA + arcSpan) * (r + jitter * 1.5)
+            );
+            CTX.stroke();
+        }
+
+        // ── Radial spikes outward ─────────────────────────────
+        CTX.globalAlpha = alpha * 0.55;
+        CTX.strokeStyle = '#e0f2fe'; CTX.lineWidth = 1.2;
+        for (let si = 0; si < 16; si++) {
+            const sa = (si / 16) * Math.PI * 2 + now * 0.003;
+            const spikeLen = r * (0.04 + Math.abs(Math.sin(now / 60 + si * 1.9)) * 0.08);
+            CTX.beginPath();
+            CTX.moveTo(screen.x + Math.cos(sa) * r, screen.y + Math.sin(sa) * r);
+            CTX.lineTo(screen.x + Math.cos(sa) * (r + spikeLen), screen.y + Math.sin(sa) * (r + spikeLen));
+            CTX.stroke();
+        }
+
+        // ── Static crackle at origin ───────────────────────────
+        if (prog < 0.20) {
+            const cp = 1 - prog / 0.20;
+            CTX.globalAlpha = alpha * cp * 0.85;
+            CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 30; CTX.shadowColor = '#38bdf8';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, 18 * cp, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#38bdf8';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, 32 * cp, 0, Math.PI * 2); CTX.fill();
+        }
 
         CTX.shadowBlur = 0;
         CTX.restore();
@@ -865,6 +1148,301 @@ class EmpPulse {
 }
 
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// 📐 EQUATION SLAM — Radial AoE shockwave (KruManop Phase 1)
+//    Massive chalk-white blast ring with math formula debris
+// ════════════════════════════════════════════════════════════
+class EquationSlam {
+    constructor(x, y) {
+        this.x = x; this.y = y;
+        this.timer = 0;
+        this.duration = 0.85;
+        this.maxRadius = 340;    // world units
+        this.damage = BALANCE.boss ? (BALANCE.boss.chalkDamage * 2.2) : 48;
+        this._hit = false;
+        this._shards = Array.from({ length: 14 }, (_, i) => ({
+            angle: (i / 14) * Math.PI * 2,
+            speed: 180 + Math.random() * 120,
+            dist: 30,
+            formula: ['∑', 'Δ', 'π', '∞', '∂', 'Ω', '√', 'λ', 'θ', '∫', 'φ', 'σ', 'μ', 'γ'][i],
+            spin: (Math.random() - 0.5) * 8,
+            rot: Math.random() * Math.PI * 2,
+        }));
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+
+        // Update shard positions
+        for (const sh of this._shards) {
+            sh.dist += sh.speed * dt;
+            sh.rot += sh.spin * dt;
+        }
+
+        // Hit detection — ring front
+        if (!this._hit && player) {
+            const r = this.maxRadius * Math.sqrt(this.timer / this.duration);
+            const pd = Math.hypot(player.x - this.x, player.y - this.y);
+            if (pd < r + player.radius && pd > r - 80) {
+                this._hit = true;
+                player.takeDamage(this.damage);
+                if (typeof addScreenShake === 'function') addScreenShake(18);
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('📐 EQUATION SLAM!', player.x, player.y - 65, '#facc15', 26);
+                if (typeof spawnParticles === 'function') spawnParticles(player.x, player.y, 16, '#facc15');
+            }
+        }
+
+        if (this.timer >= this.duration) { this.dead = true; return true; }
+        return false;
+    }
+
+    draw() {
+        if (this.dead) return;
+        if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
+
+        const screen = worldToScreen(this.x, this.y);
+        const prog = this.timer / this.duration;
+        const r = this.maxRadius * Math.sqrt(prog);
+        const alpha = 1 - prog;
+        const now = performance.now();
+
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+
+        // ── Crater fill glow ──────────────────────────────────
+        CTX.globalAlpha = alpha * 0.22;
+        const craterG = CTX.createRadialGradient(0, 0, 0, 0, 0, r);
+        craterG.addColorStop(0, 'rgba(255,255,255,0.8)');
+        craterG.addColorStop(0.35, 'rgba(251,191,36,0.5)');
+        craterG.addColorStop(1, 'rgba(120,53,15,0)');
+        CTX.fillStyle = craterG;
+        CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.fill();
+
+        // ── Primary blast ring ────────────────────────────────
+        CTX.globalAlpha = alpha * 0.95;
+        CTX.shadowBlur = 30 * (1 - prog); CTX.shadowColor = '#fbbf24';
+        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 8 * (1 - prog * 0.7);
+        CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.stroke();
+
+        // ── Secondary gold ring ───────────────────────────────
+        CTX.globalAlpha = alpha * 0.65;
+        CTX.strokeStyle = '#f59e0b'; CTX.lineWidth = 4 * (1 - prog * 0.6);
+        CTX.shadowBlur = 14;
+        CTX.beginPath(); CTX.arc(0, 0, r * 0.88, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Radial chalk spikes ────────────────────────────────
+        CTX.globalAlpha = alpha * 0.70;
+        CTX.strokeStyle = '#fef3c7'; CTX.lineWidth = 2.5;
+        for (let si = 0; si < 18; si++) {
+            const sa = (si / 18) * Math.PI * 2 + now * 0.0015;
+            const sLen = r * (0.07 + Math.abs(Math.sin(now / 60 + si * 1.7)) * 0.12);
+            CTX.beginPath();
+            CTX.moveTo(Math.cos(sa) * r, Math.sin(sa) * r);
+            CTX.lineTo(Math.cos(sa) * (r + sLen), Math.sin(sa) * (r + sLen));
+            CTX.stroke();
+        }
+
+        // ── Origin burst ──────────────────────────────────────
+        if (prog < 0.18) {
+            const bp = 1 - prog / 0.18;
+            CTX.globalAlpha = bp * 0.90;
+            CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 50; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(0, 0, 28 * bp, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fbbf24';
+            CTX.beginPath(); CTX.arc(0, 0, 52 * bp, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+        }
+
+        // ── Flying math formula shards ────────────────────────
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        for (const sh of this._shards) {
+            const sx = Math.cos(sh.angle) * sh.dist;
+            const sy = Math.sin(sh.angle) * sh.dist;
+            const shAlpha = Math.max(0, alpha * (1 - sh.dist / (this.maxRadius * 1.1)));
+            if (shAlpha <= 0.02) continue;
+            CTX.save();
+            CTX.globalAlpha = shAlpha * 0.90;
+            CTX.translate(sx, sy);
+            CTX.rotate(sh.rot);
+            CTX.font = `bold ${12 + (1 - prog) * 8}px "Courier New",monospace`;
+            CTX.fillStyle = '#fef9c3'; CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
+            CTX.fillText(sh.formula, 0, 0);
+            CTX.shadowBlur = 0;
+            CTX.restore();
+        }
+
+        CTX.restore();
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// 📈 DEADLY GRAPH — Laser line wall + homing shard beam
+//    Drew from boss position → player position; lingers and deals
+//    continuous contact damage, then detonates in a burst
+// ════════════════════════════════════════════════════════════
+class DeadlyGraph {
+    constructor(x1, y1, x2, y2, duration) {
+        this.x1 = x1; this.y1 = y1;
+        this.x2 = x2; this.y2 = y2;
+        this.duration = duration;
+        this.timer = 0;
+        this.dead = false;
+        this.damage = BALANCE.boss ? (BALANCE.boss.chalkDamage * 1.5) : 35;
+        this._hitCd = 0;
+        // Extension points that grow over time
+        this._extFrac = 0;
+        // Trailing particle time
+        this._particleCd = 0;
+        // Generate jagged segments for the "graph line" look
+        this._segments = (() => {
+            const segs = [];
+            const n = 12;
+            for (let i = 0; i <= n; i++) {
+                const t2 = i / n;
+                const jitter = i > 0 && i < n ? (Math.random() - 0.5) * 60 : 0;
+                const jitterY = i > 0 && i < n ? (Math.random() - 0.5) * 60 : 0;
+                segs.push({ t: t2, ox: jitter, oy: jitterY });
+            }
+            return segs;
+        })();
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+        this._extFrac = Math.min(1.0, this.timer / (this.duration * 0.28));
+        if (this._hitCd > 0) this._hitCd -= dt;
+
+        // Continuous line damage — player near the beam line
+        if (player && this._hitCd <= 0 && this._extFrac > 0.5) {
+            const px = player.x, py = player.y;
+            const dx = this.x2 - this.x1, dy = this.y2 - this.y1;
+            const len = Math.hypot(dx, dy);
+            if (len > 1) {
+                const t3 = Math.max(0, Math.min(1, ((px - this.x1) * dx + (py - this.y1) * dy) / (len * len)));
+                const closestX = this.x1 + t3 * dx, closestY = this.y1 + t3 * dy;
+                if (Math.hypot(px - closestX, py - closestY) < player.radius + 28) {
+                    player.takeDamage(this.damage * dt * 5);
+                    this._hitCd = 0.18;
+                    if (typeof spawnFloatingText === 'function')
+                        spawnFloatingText('📈 GRAPH BURN!', px, py - 45, '#3b82f6', 18);
+                }
+            }
+        }
+
+        if (this.timer >= this.duration) {
+            // Detonate along line
+            if (typeof spawnParticles === 'function') {
+                for (let di = 0; di <= 5; di++) {
+                    const dt2 = di / 5;
+                    spawnParticles(this.x1 + dt2 * (this.x2 - this.x1), this.y1 + dt2 * (this.y2 - this.y1), 8, '#3b82f6');
+                }
+            }
+            if (typeof addScreenShake === 'function') addScreenShake(8);
+            this.dead = true;
+            return true;
+        }
+        return false;
+    }
+
+    draw() {
+        if (this.dead) return;
+        if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
+
+        const prog = this.timer / this.duration;
+        const alpha = prog < 0.1 ? prog / 0.1 : (prog > 0.8 ? (1 - prog) / 0.2 : 1.0);
+        const now = performance.now();
+
+        const s1 = worldToScreen(this.x1, this.y1);
+        // Endpoint grows from x1 → x2 during _extFrac
+        const ex = this.x1 + (this.x2 - this.x1) * this._extFrac;
+        const ey = this.y1 + (this.y2 - this.y1) * this._extFrac;
+        const s2 = worldToScreen(ex, ey);
+
+        CTX.save();
+
+        // ── Wide outer glow ───────────────────────────────────
+        CTX.globalAlpha = alpha * 0.35;
+        CTX.strokeStyle = '#60a5fa'; CTX.lineWidth = 24;
+        CTX.shadowBlur = 32; CTX.shadowColor = '#3b82f6';
+        CTX.lineCap = 'round';
+        CTX.beginPath(); CTX.moveTo(s1.x, s1.y); CTX.lineTo(s2.x, s2.y); CTX.stroke();
+
+        // ── Jagged "graph" segments ───────────────────────────
+        CTX.globalAlpha = alpha * 0.90;
+        CTX.strokeStyle = '#93c5fd'; CTX.lineWidth = 4; CTX.shadowBlur = 18;
+        CTX.beginPath();
+        for (const seg of this._segments) {
+            if (seg.t > this._extFrac) break;
+            const sx = s1.x + (s2.x - s1.x) * (seg.t / this._extFrac) + seg.ox * (1 - prog);
+            const sy = s1.y + (s2.y - s1.y) * (seg.t / this._extFrac) + seg.oy * (1 - prog);
+            seg.t === 0 ? CTX.moveTo(sx, sy) : CTX.lineTo(sx, sy);
+        }
+        CTX.stroke();
+
+        // ── Core bright line ──────────────────────────────────
+        CTX.globalAlpha = alpha * 0.95;
+        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 2; CTX.shadowBlur = 10;
+        CTX.beginPath(); CTX.moveTo(s1.x, s1.y); CTX.lineTo(s2.x, s2.y); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Traveling hot dot along beam ──────────────────────
+        if (this._extFrac < 1.0) {
+            CTX.globalAlpha = alpha * 0.90;
+            CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 20; CTX.shadowColor = '#60a5fa';
+            CTX.beginPath(); CTX.arc(s2.x, s2.y, 8 * (1 - prog * 0.4), 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#3b82f6';
+            CTX.beginPath(); CTX.arc(s2.x, s2.y, 5 * (1 - prog * 0.4), 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+        }
+
+        // ── Math axis labels & tick marks ─────────────────────
+        if (prog > 0.25 && prog < 0.88) {
+            const labels = ['y=x', '∞', 'f(x)', '?'];
+            CTX.font = 'bold 11px "Courier New",monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            for (let li = 0; li < labels.length; li++) {
+                const lt = (li + 1) / (labels.length + 1);
+                const lx = s1.x + (s2.x - s1.x) * lt;
+                const ly = s1.y + (s2.y - s1.y) * lt;
+                const perp = Math.atan2(s2.y - s1.y, s2.x - s1.x) + Math.PI / 2;
+                const off = 18 + Math.sin(now / 200 + li) * 6;
+                CTX.globalAlpha = alpha * (0.50 + Math.sin(now / 300 + li) * 0.30);
+                CTX.fillStyle = '#bfdbfe'; CTX.shadowBlur = 5; CTX.shadowColor = '#3b82f6';
+                CTX.fillText(labels[li], lx + Math.cos(perp) * off, ly + Math.sin(perp) * off);
+            }
+            CTX.shadowBlur = 0;
+        }
+
+        // ── Endpoint target burst ─────────────────────────────
+        if (this._extFrac >= 0.98) {
+            const ep2Pulse = 0.5 + Math.sin(now / 80) * 0.5;
+            CTX.globalAlpha = alpha * ep2Pulse * 0.75;
+            CTX.strokeStyle = '#60a5fa'; CTX.lineWidth = 3;
+            CTX.shadowBlur = 14; CTX.shadowColor = '#3b82f6';
+            CTX.beginPath(); CTX.arc(s2.x, s2.y, 18 + ep2Pulse * 8, 0, Math.PI * 2); CTX.stroke();
+            // Crosshair
+            CTX.lineWidth = 1.5; CTX.globalAlpha = alpha * 0.60;
+            for (const ang of [0, Math.PI / 2]) {
+                CTX.beginPath();
+                CTX.moveTo(s2.x + Math.cos(ang) * 8, s2.y + Math.sin(ang) * 8);
+                CTX.lineTo(s2.x + Math.cos(ang) * 26, s2.y + Math.sin(ang) * 26);
+                CTX.stroke();
+                CTX.beginPath();
+                CTX.moveTo(s2.x - Math.cos(ang) * 8, s2.y - Math.sin(ang) * 8);
+                CTX.lineTo(s2.x - Math.cos(ang) * 26, s2.y - Math.sin(ang) * 26);
+                CTX.stroke();
+            }
+            CTX.shadowBlur = 0;
+        }
+
+        CTX.restore();
+    }
+}
+
 // 💠 DOMAIN EXPANSION: METRICS-MANIPULATION
 //    Boss Manop Ultimate — integrated from DomainExpansion.js
 //    Singleton; driven by game.js update/draw hooks.
@@ -893,16 +1471,6 @@ const _DC = Object.freeze({
     BOSS_VOLLEY_CYCLE: 3,
     BOSS_VOLLEY_COUNT: 8,
     LOCK_PUSH: 80,                // pixels/s push force when entity tries to leave domain
-
-    // ── Enhanced Domain visuals / new abilities ──────────────
-    VOID_PULSE_CYCLE: 2,          // spawn void-pulse ring every N completed cycles
-    VOID_PULSE_SPEED: 400,        // world-space px/s ring expansion
-    VOID_PULSE_DAMAGE: 12,        // damage if player caught inside pulse front
-    FORMULA_BEAM_CYCLE: 4,        // start sweeping formula beam from this cycle onward
-    FORMULA_BEAM_DUR: 1.4,        // seconds beam is active per spawn
-    FORMULA_BEAM_DAMAGE: 14,      // damage per hit (0.25s cooldown)
-    FORMULA_BEAM_ARC: 0.07,       // half-arc width in radians (~4°)
-    DRIFT_COUNT: 52,              // ambient arena particles
 });
 
 const _RAIN_POOL = '0123456789ABCDEFΑΒΓΔΩΣΨXYZμσπ∑∫∂∇+-×÷=≠≤≥ΦΘΛ';
@@ -923,13 +1491,6 @@ const DomainExpansion = {
     _rain: [], _indices: [],
     _flashTimer: 0,     // full-screen purple flash on explosion hit
     _crackLines: [],    // screen crack visual during casting
-    // ── New enhanced-domain state ──
-    _driftParticles: [],  // ambient arena particles
-    _voidPulses: [],      // [ { r, maxR, alpha, wx, wy } ]
-    _formulaBeam: null,   // { bossX, bossY, angle, timer, _hitCd }
-    _cellShockwaves: [],  // [ { sx, sy, r, maxR, alpha } ]  — screen-space ripples
-    _bgAngle: 0,          // slowly-rotating background hex geometry angle
-    _portalProgress: 0,   // 0→1 during casting
 
     canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
     isInvincible() { return this.phase !== 'idle'; },
@@ -942,12 +1503,6 @@ const DomainExpansion = {
         this.originX = 0;
         this.originY = 0;
         this._initRain();
-        this._initDrift();
-        this._voidPulses = [];
-        this._formulaBeam = null;
-        this._cellShockwaves = [];
-        this._bgAngle = 0;
-        this._portalProgress = 0;
 
         boss._domainCasting = true;
         boss._domainActive = true;
@@ -1000,7 +1555,6 @@ const DomainExpansion = {
 
         switch (this.phase) {
             case 'casting':
-                this._portalProgress = Math.max(0, Math.min(1, 1.0 - this.timer / _DC.CAST_DUR));
                 if (this.timer <= 0) {
                     this.phase = 'active'; this.cycleCount = 0;
                     this.cyclePhase = 'warn'; this.cycleTimer = _DC.WARN_DUR;
@@ -1013,75 +1567,6 @@ const DomainExpansion = {
                 break;
 
             case 'active':
-                // ── Ambient drift particles ─────────────────────────
-                this._bgAngle += dt * 0.07;
-                for (const dp of this._driftParticles) {
-                    dp.x += dp.vx * dt; dp.y += dp.vy * dt;
-                    const dpD = Math.hypot(dp.x, dp.y);
-                    if (dpD > _DC.ARENA_RADIUS * 0.87) {
-                        const nx = dp.x / dpD, ny = dp.y / dpD;
-                        const dot = dp.vx * nx + dp.vy * ny;
-                        if (dot > 0) { dp.vx -= 2 * dot * nx; dp.vy -= 2 * dot * ny; }
-                    }
-                    dp.phase += dt * 1.8;
-                }
-                // ── Void pulse rings ───────────────────────────────
-                for (let _vi = this._voidPulses.length - 1; _vi >= 0; _vi--) {
-                    const _vp = this._voidPulses[_vi];
-                    _vp.r += _DC.VOID_PULSE_SPEED * dt;
-                    _vp.alpha = Math.max(0, 1.0 - _vp.r / _vp.maxR);
-                    if (_vp.alpha <= 0) this._voidPulses.splice(_vi, 1);
-                    // Damage player if pulse front crosses them
-                    if (player && !player.dead && !_vp._hit) {
-                        const pd2 = Math.hypot(player.x - _vp.wx, player.y - _vp.wy);
-                        if (pd2 < _vp.r && pd2 > _vp.r - _DC.VOID_PULSE_SPEED * dt * 2) {
-                            _vp._hit = true;
-                            player.takeDamage(_DC.VOID_PULSE_DAMAGE);
-                            if (typeof spawnFloatingText === 'function')
-                                spawnFloatingText('🌀 VOID PULSE', player.x, player.y - 65, '#a855f7', 18);
-                            if (typeof addScreenShake === 'function') addScreenShake(7);
-                        }
-                    }
-                }
-                // ── Formula beam tick ──────────────────────────────
-                if (this._formulaBeam) {
-                    this._formulaBeam.timer -= dt;
-                    if (this._formulaBeam.timer <= 0) {
-                        this._formulaBeam = null;
-                    } else if (player && !player.dead && boss && !boss.dead) {
-                        const _bx = this._formulaBeam.bossX, _by = this._formulaBeam.bossY;
-                        const _tgt = Math.atan2(player.y - _by, player.x - _bx);
-                        let _da = _tgt - this._formulaBeam.angle;
-                        while (_da > Math.PI) _da -= Math.PI * 2;
-                        while (_da < -Math.PI) _da += Math.PI * 2;
-                        this._formulaBeam.angle += Math.sign(_da) * Math.min(Math.abs(_da), 2.2 * Math.PI * dt);
-                        // Hit detection
-                        const _toPx = player.x - _bx, _toPy = player.y - _by;
-                        const _pDist = Math.hypot(_toPx, _toPy);
-                        if (_pDist > 0) {
-                            const _bdx = Math.cos(this._formulaBeam.angle), _bdy = Math.sin(this._formulaBeam.angle);
-                            const _dot = (_toPx * _bdx + _toPy * _bdy) / _pDist;
-                            const _ang = Math.acos(Math.max(-1, Math.min(1, _dot)));
-                            if (_ang < _DC.FORMULA_BEAM_ARC * 2.5 && _pDist < _DC.ARENA_RADIUS) {
-                                if (!this._formulaBeam._hitCd || this._formulaBeam._hitCd <= 0) {
-                                    player.takeDamage(_DC.FORMULA_BEAM_DAMAGE);
-                                    this._formulaBeam._hitCd = 0.22;
-                                    if (typeof spawnFloatingText === 'function')
-                                        spawnFloatingText(`⚡ ${_DC.FORMULA_BEAM_DAMAGE}`, player.x, player.y - 55, '#38bdf8', 18);
-                                    if (typeof addScreenShake === 'function') addScreenShake(6);
-                                }
-                            }
-                        }
-                        if (this._formulaBeam._hitCd > 0) this._formulaBeam._hitCd -= dt;
-                    }
-                }
-                // ── Cell shockwaves ────────────────────────────────
-                for (let _si = this._cellShockwaves.length - 1; _si >= 0; _si--) {
-                    const _sw = this._cellShockwaves[_si];
-                    _sw.r += 220 * dt;
-                    _sw.alpha = Math.max(0, 1.0 - _sw.r / _sw.maxR);
-                    if (_sw.alpha <= 0) this._cellShockwaves.splice(_si, 1);
-                }
                 this.cycleTimer -= dt;
                 if (this.cyclePhase === 'warn' && this.cycleTimer <= 0) {
                     this.cyclePhase = 'explode'; this.cycleTimer = _DC.EXPLODE_DUR;
@@ -1100,31 +1585,7 @@ const DomainExpansion = {
                         this.cyclePhase = 'warn';
                         this.cycleTimer = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
                         this._rollCells();
-
-                        // ── Void pulse ring every N cycles ──────────
-                        if (this.cycleCount % _DC.VOID_PULSE_CYCLE === 0) {
-                            this._voidPulses.push({
-                                wx: this.originX, wy: this.originY,
-                                r: 60, maxR: _DC.ARENA_RADIUS * 1.05, alpha: 1, _hit: false
-                            });
-                            if (typeof spawnFloatingText === 'function' && player)
-                                spawnFloatingText('🌀 VOID PULSE', player.x, player.y - 90, '#a855f7', 22);
-                            if (typeof addScreenShake === 'function') addScreenShake(8);
-                        }
-
-                        // ── Formula beam from cycle 4+ ───────────────
-                        if (this.cycleCount >= _DC.FORMULA_BEAM_CYCLE && boss && !boss.dead) {
-                            const _initAngle = boss ? Math.atan2(player ? player.y - boss.y : 0, player ? player.x - boss.x : 1) : 0;
-                            this._formulaBeam = {
-                                bossX: boss.x, bossY: boss.y,
-                                angle: _initAngle + Math.PI, timer: _DC.FORMULA_BEAM_DUR, _hitCd: 0
-                            };
-                            if (typeof spawnFloatingText === 'function' && boss)
-                                spawnFloatingText('⚡ FORMULA BEAM', boss.x, boss.y - 80, '#38bdf8', 22);
-                            if (typeof addScreenShake === 'function') addScreenShake(10);
-                        }
-
-                        // ── Boss volley on cycle 3+ ──────────────────
+                        // Boss volley on cycle 3+
                         if (this.cycleCount >= _DC.BOSS_VOLLEY_CYCLE && boss && !boss.dead && typeof projectileManager !== 'undefined') {
                             const n = _DC.BOSS_VOLLEY_COUNT;
                             for (let _vi = 0; _vi < n; _vi++) {
@@ -1143,9 +1604,6 @@ const DomainExpansion = {
                     boss._domainCasting = false; boss._domainActive = false;
                     if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.timer = 0; }
                     this.cells = []; this._crackLines = []; this._flashTimer = 0;
-                    this._driftParticles = []; this._voidPulses = [];
-                    this._formulaBeam = null; this._cellShockwaves = [];
-                    this._bgAngle = 0;
                     console.log('[DomainExpansion] Domain ended — cooldown 45 s');
                 }
                 break;
@@ -1169,65 +1627,6 @@ const DomainExpansion = {
         ctx.globalAlpha = globalA * 0.80;
         ctx.fillStyle = 'rgba(2,0,14,1)';
         ctx.fillRect(0, 0, W, H);
-
-        // ── 1b. Background rotating hex geometry ─────────────
-        if (this.phase !== 'casting') {
-            const originSS0 = worldToScreen(this.originX, this.originY);
-            const edgeSS0 = worldToScreen(this.originX + _DC.ARENA_RADIUS, this.originY);
-            const rSS0 = Math.abs(edgeSS0.x - originSS0.x);
-            ctx.save();
-            ctx.translate(originSS0.x, originSS0.y);
-            ctx.rotate(this._bgAngle);
-            ctx.globalAlpha = globalA * 0.07;
-            ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 0.6;
-            for (let hring = 1; hring <= 5; hring++) {
-                const hR = rSS0 * (hring / 5) * 0.98;
-                ctx.beginPath();
-                for (let hv = 0; hv < 6; hv++) {
-                    const ha = (hv / 6) * Math.PI * 2;
-                    hv === 0 ? ctx.moveTo(Math.cos(ha) * hR, Math.sin(ha) * hR)
-                        : ctx.lineTo(Math.cos(ha) * hR, Math.sin(ha) * hR);
-                }
-                ctx.closePath(); ctx.stroke();
-                // Spokes
-                for (let hsp = 0; hsp < 6; hsp++) {
-                    const hsa = (hsp / 6) * Math.PI * 2;
-                    const prevR = rSS0 * ((hring - 1) / 5) * 0.98;
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(hsa) * prevR, Math.sin(hsa) * prevR);
-                    ctx.lineTo(Math.cos(hsa) * hR, Math.sin(hsa) * hR);
-                    ctx.stroke();
-                }
-            }
-            ctx.restore();
-
-            // Counter-rotating inner diamond grid
-            ctx.save();
-            ctx.translate(originSS0.x, originSS0.y);
-            ctx.rotate(-this._bgAngle * 1.7 + Math.PI / 4);
-            ctx.globalAlpha = globalA * 0.045;
-            ctx.strokeStyle = '#facc15'; ctx.lineWidth = 0.5;
-            const gridStep = rSS0 * 0.18;
-            const gridN = 12;
-            for (let gi = -gridN; gi <= gridN; gi++) {
-                ctx.beginPath(); ctx.moveTo(gi * gridStep, -rSS0); ctx.lineTo(gi * gridStep, rSS0); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(-rSS0, gi * gridStep); ctx.lineTo(rSS0, gi * gridStep); ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        // ── 1c. Ambient drift particles ───────────────────────
-        if (this.phase === 'active' || this.phase === 'ending') {
-            for (const dp of this._driftParticles) {
-                const dps = worldToScreen(dp.x + this.originX, dp.y + this.originY);
-                const dpPulse = 0.5 + Math.sin(now * 2.4 + dp.phase) * 0.5;
-                ctx.globalAlpha = globalA * dp.alpha * dpPulse;
-                ctx.fillStyle = dp.gold ? `rgba(251,191,36,1)` : `rgba(217,70,239,1)`;
-                ctx.shadowBlur = dp.r * 3; ctx.shadowColor = dp.gold ? '#facc15' : '#d946ef';
-                ctx.beginPath(); ctx.arc(dps.x, dps.y, dp.r * (0.7 + dpPulse * 0.3), 0, Math.PI * 2); ctx.fill();
-            }
-            ctx.shadowBlur = 0;
-        }
 
         // ── 2. Matrix rain — denser, dual-colour ────────────
         ctx.font = '11px "Courier New",monospace';
@@ -1287,51 +1686,6 @@ const DomainExpansion = {
             }
             ctx.shadowBlur = 0;
 
-            // ── Inner contra-rotating orbit rings ─────────
-            for (let ir = 0; ir < 2; ir++) {
-                const irR = radiusSS * (0.92 - ir * 0.07);
-                const irAngle = (ir === 0 ? now * 0.65 : -now * 0.9);
-                ctx.save();
-                ctx.translate(bCX, bCY);
-                ctx.rotate(irAngle);
-                ctx.globalAlpha = globalA * (0.22 + pulse * 0.18);
-                ctx.strokeStyle = ir === 0 ? 'rgba(217,70,239,0.55)' : 'rgba(251,191,36,0.45)';
-                ctx.lineWidth = 1.2;
-                ctx.setLineDash(ir === 0 ? [6, 14] : [3, 20]);
-                ctx.beginPath(); ctx.arc(0, 0, irR, 0, Math.PI * 2); ctx.stroke();
-                ctx.setLineDash([]);
-                // Spinning node dots on ring
-                for (let nd = 0; nd < (ir === 0 ? 8 : 5); nd++) {
-                    const na = (nd / (ir === 0 ? 8 : 5)) * Math.PI * 2;
-                    const nodeAlpha = 0.4 + Math.sin(now * 3 + nd * 0.9) * 0.4;
-                    ctx.fillStyle = ir === 0 ? `rgba(217,70,239,${nodeAlpha})` : `rgba(251,191,36,${nodeAlpha})`;
-                    ctx.shadowBlur = 6; ctx.shadowColor = ir === 0 ? '#d946ef' : '#facc15';
-                    ctx.beginPath(); ctx.arc(Math.cos(na) * irR, Math.sin(na) * irR, 2.5, 0, Math.PI * 2); ctx.fill();
-                }
-                ctx.shadowBlur = 0; ctx.restore();
-            }
-
-            // ── Data stream lines ─────────────────────────────
-            {
-                const streamCount = 6;
-                for (let si = 0; si < streamCount; si++) {
-                    const sAngle = (si / streamCount) * Math.PI * 2 + now * 0.28;
-                    const sLen = radiusSS * (0.55 + Math.sin(now * 1.2 + si) * 0.25);
-                    const sx1 = bCX + Math.cos(sAngle) * (radiusSS * 0.05);
-                    const sy1 = bCY + Math.sin(sAngle) * (radiusSS * 0.05);
-                    const sx2 = bCX + Math.cos(sAngle) * sLen;
-                    const sy2 = bCY + Math.sin(sAngle) * sLen;
-                    const sAlpha = 0.08 + Math.sin(now * 2.8 + si * 1.1) * 0.06;
-                    const sG = ctx.createLinearGradient(sx1, sy1, sx2, sy2);
-                    sG.addColorStop(0, `rgba(56,189,248,0)`);
-                    sG.addColorStop(0.5, `rgba(56,189,248,${sAlpha})`);
-                    sG.addColorStop(1, `rgba(56,189,248,0)`);
-                    ctx.globalAlpha = globalA;
-                    ctx.strokeStyle = sG; ctx.lineWidth = 1.5;
-                    ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2); ctx.stroke();
-                }
-            }
-
             // Cycle counter chip — top of screen
             if (this.phase === 'active') {
                 const warnDurCurrent = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
@@ -1356,19 +1710,6 @@ const DomainExpansion = {
                 ctx.font = 'bold 9px "Orbitron",Arial';
                 ctx.fillStyle = tintR > 210 ? '#ef4444' : '#facc15';
                 ctx.fillText(`DANGER ${Math.round(dangerPct * 100)}%`, chipX, chipY + 18);
-
-                // Cycle dot progress row
-                ctx.globalAlpha = globalA * 0.85;
-                for (let di = 0; di < _DC.TOTAL_CYCLES; di++) {
-                    const dx2 = chipX - (_DC.TOTAL_CYCLES - 1) * 10 + di * 20;
-                    const dy2 = chipY + 36;
-                    const done = di < this.cycleCount;
-                    const cur = di === this.cycleCount;
-                    ctx.fillStyle = done ? borderCol : cur ? '#facc15' : '#334155';
-                    ctx.shadowBlur = cur ? 10 : done ? 4 : 0; ctx.shadowColor = '#facc15';
-                    ctx.beginPath(); ctx.arc(dx2, dy2, cur ? 5.5 : 4, 0, Math.PI * 2); ctx.fill();
-                }
-                ctx.shadowBlur = 0;
             }
         }
 
@@ -1391,38 +1732,18 @@ const DomainExpansion = {
                     if (this.cyclePhase === 'explode') {
                         // ── Explosion flash ───────────────────
                         const ef = 1.0 - explodeProgress;
-                        // Outer purple halo
-                        ctx.globalAlpha = globalA * ef * 0.55;
-                        const eg2 = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 1.1);
-                        eg2.addColorStop(0, `rgba(217,70,239,${ef * 0.6})`);
-                        eg2.addColorStop(1, `rgba(0,0,0,0)`);
-                        ctx.fillStyle = eg2;
-                        ctx.beginPath(); ctx.arc(mx, my, sw * 1.1, 0, Math.PI * 2); ctx.fill();
-                        // White-hot core
                         ctx.globalAlpha = globalA * ef * 0.98;
+                        // White-hot centre → orange → transparent
                         const eg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
-                        eg.addColorStop(0, `rgba(255,255,255,${ef})`);
-                        eg.addColorStop(0.25, `rgba(255,240,150,${ef})`);
-                        eg.addColorStop(0.55, `rgba(239,68,68,${ef * 0.85})`);
+                        eg.addColorStop(0, `rgba(255,255,220,${ef})`);
+                        eg.addColorStop(0.4, `rgba(239,68,68,${ef * 0.9})`);
                         eg.addColorStop(1, `rgba(217,70,239,0)`);
                         ctx.fillStyle = eg;
                         ctx.fillRect(tl.x, tl.y, sw, sh);
-                        // Digital shatter lines
-                        ctx.save();
-                        ctx.globalAlpha = globalA * ef * 0.60;
-                        ctx.strokeStyle = `rgba(255,255,255,${ef})`; ctx.lineWidth = 1;
-                        for (let shl = 0; shl < 5; shl++) {
-                            const sha = (shl / 5) * Math.PI;
-                            ctx.beginPath();
-                            ctx.moveTo(mx, my);
-                            ctx.lineTo(mx + Math.cos(sha) * sw * 0.65 * ef, my + Math.sin(sha) * sh * 0.65 * ef);
-                            ctx.stroke();
-                        }
-                        ctx.restore();
-                        // Bright border ring
+                        // Bright border
                         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
-                        ctx.shadowBlur = 22; ctx.shadowColor = '#ef4444';
-                        ctx.globalAlpha = globalA * ef * 0.90;
+                        ctx.shadowBlur = 18; ctx.shadowColor = '#ef4444';
+                        ctx.globalAlpha = globalA * ef * 0.85;
                         ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                         ctx.shadowBlur = 0;
                     } else {
@@ -1496,146 +1817,10 @@ const DomainExpansion = {
             }
         }
 
-        // ── 4b. Cell shockwave rings ─────────────────────────
-        if (this._cellShockwaves.length > 0) {
-            for (const csw of this._cellShockwaves) {
-                const cswS = worldToScreen(csw.wx, csw.wy);
-                const cswEdge = worldToScreen(csw.wx + csw.r, csw.wy);
-                const cswR = Math.abs(cswEdge.x - cswS.x);
-                ctx.globalAlpha = globalA * csw.alpha * 0.75;
-                ctx.strokeStyle = `rgba(239,68,68,${csw.alpha})`;
-                ctx.lineWidth = 2.5 * csw.alpha;
-                ctx.shadowBlur = 14 * csw.alpha; ctx.shadowColor = '#ef4444';
-                ctx.beginPath(); ctx.arc(cswS.x, cswS.y, cswR, 0, Math.PI * 2); ctx.stroke();
-                ctx.shadowBlur = 0;
-            }
-        }
-
-        // ── 4c. Void pulse rings ──────────────────────────────
-        if (this._voidPulses.length > 0) {
-            for (const vp of this._voidPulses) {
-                const vpC = worldToScreen(vp.wx, vp.wy);
-                const vpE = worldToScreen(vp.wx + vp.r, vp.wy);
-                const vpR = Math.abs(vpE.x - vpC.x);
-                // Outer glow
-                ctx.globalAlpha = globalA * vp.alpha * 0.35;
-                const vpG = ctx.createRadialGradient(vpC.x, vpC.y, vpR * 0.88, vpC.x, vpC.y, vpR * 1.08);
-                vpG.addColorStop(0, 'rgba(168,85,247,0)');
-                vpG.addColorStop(0.5, `rgba(168,85,247,${vp.alpha * 0.55})`);
-                vpG.addColorStop(1, 'rgba(168,85,247,0)');
-                ctx.fillStyle = vpG;
-                ctx.beginPath(); ctx.arc(vpC.x, vpC.y, vpR * 1.08, 0, Math.PI * 2);
-                ctx.arc(vpC.x, vpC.y, vpR * 0.88, 0, Math.PI * 2, true);
-                ctx.fill();
-                // Sharp ring
-                ctx.globalAlpha = globalA * vp.alpha;
-                ctx.strokeStyle = `rgba(168,85,247,${vp.alpha * 0.9})`; ctx.lineWidth = 3.5;
-                ctx.shadowBlur = 18 * vp.alpha; ctx.shadowColor = '#a855f7';
-                ctx.beginPath(); ctx.arc(vpC.x, vpC.y, vpR, 0, Math.PI * 2); ctx.stroke();
-                // Trailing inner ring
-                ctx.globalAlpha = globalA * vp.alpha * 0.45;
-                ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(vpC.x, vpC.y, vpR * 0.92, 0, Math.PI * 2); ctx.stroke();
-                ctx.shadowBlur = 0;
-            }
-        }
-
-        // ── 4d. Formula beam ─────────────────────────────────
-        if (this._formulaBeam) {
-            const fbS = worldToScreen(this._formulaBeam.bossX, this._formulaBeam.bossY);
-            const fbAngle = this._formulaBeam.angle;
-            const fbProg = this._formulaBeam.timer / _DC.FORMULA_BEAM_DUR;
-            const fbLen = W * 1.4; // long enough to cross screen
-            const originSS_fb = worldToScreen(this.originX, this.originY);
-            const edgeSS_fb = worldToScreen(this.originX + _DC.ARENA_RADIUS, this.originY);
-            const arenaRSS_fb = Math.abs(edgeSS_fb.x - originSS_fb.x);
-            const actualBeamLen = arenaRSS_fb * 1.1;
-            const fbAlpha = Math.min(1, fbProg * 3) * (0.65 + Math.sin(now * 18) * 0.15);
-
-            ctx.save();
-            ctx.translate(fbS.x, fbS.y);
-            ctx.rotate(fbAngle);
-            // Outer wide glow
-            const fbG1 = ctx.createLinearGradient(0, 0, actualBeamLen, 0);
-            fbG1.addColorStop(0, `rgba(56,189,248,${fbAlpha * 0.45})`);
-            fbG1.addColorStop(0.5, `rgba(56,189,248,${fbAlpha * 0.20})`);
-            fbG1.addColorStop(1, 'rgba(56,189,248,0)');
-            ctx.fillStyle = fbG1;
-            ctx.globalAlpha = globalA;
-            ctx.beginPath(); ctx.moveTo(0, 0);
-            ctx.arc(0, 0, actualBeamLen, -_DC.FORMULA_BEAM_ARC * 6, _DC.FORMULA_BEAM_ARC * 6);
-            ctx.closePath(); ctx.fill();
-            // Core bright beam
-            const fbG2 = ctx.createLinearGradient(0, 0, actualBeamLen, 0);
-            fbG2.addColorStop(0, `rgba(255,255,255,${fbAlpha * 0.95})`);
-            fbG2.addColorStop(0.2, `rgba(56,189,248,${fbAlpha * 0.80})`);
-            fbG2.addColorStop(1, 'rgba(56,189,248,0)');
-            ctx.fillStyle = fbG2;
-            ctx.beginPath(); ctx.moveTo(0, 0);
-            ctx.arc(0, 0, actualBeamLen, -_DC.FORMULA_BEAM_ARC, _DC.FORMULA_BEAM_ARC);
-            ctx.closePath(); ctx.fill();
-            // Central line
-            ctx.strokeStyle = `rgba(255,255,255,${fbAlpha})`; ctx.lineWidth = 2.5;
-            ctx.shadowBlur = 20; ctx.shadowColor = '#38bdf8';
-            ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(actualBeamLen * 0.85, 0); ctx.stroke();
-            // Scanline text overlay on beam
-            ctx.globalAlpha = globalA * fbAlpha * 0.55;
-            ctx.font = '9px "Courier New",monospace'; ctx.fillStyle = '#bfdbfe';
-            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-            const beamFormulas = ['∑x²=0', 'λ=∞', 'det≠0', '∂φ/∂t'];
-            for (let bfi = 0; bfi < 4; bfi++) {
-                ctx.fillText(beamFormulas[bfi], 20 + bfi * 55, (bfi % 2 === 0 ? -5 : 5));
-            }
-            ctx.shadowBlur = 0; ctx.restore();
-
-            // Origin burst
-            ctx.save();
-            ctx.globalAlpha = globalA * fbAlpha * 0.70;
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowBlur = 30; ctx.shadowColor = '#38bdf8';
-            ctx.beginPath(); ctx.arc(fbS.x, fbS.y, 9 * fbAlpha, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0; ctx.restore();
-        }
-
-        // ── 5. Casting animation ─────────────────────────────────────────────
+        // ── 5. Casting animation ─────────────────────────────
         if (this.phase === 'casting') {
             const elapsed = _DC.CAST_DUR - this.timer;
             const ringScreen = worldToScreen(this.originX, this.originY);
-
-            // ── Portal iris opening ───────────────────────
-            const pp = this._portalProgress;
-            if (pp > 0) {
-                const arenaEdgeSS0 = worldToScreen(_DC.ARENA_RADIUS, 0);
-                const arenaOriSS0 = worldToScreen(0, 0);
-                const aSSR0 = Math.abs(arenaEdgeSS0.x - arenaOriSS0.x);
-                // Dark void filling behind everything
-                ctx.globalAlpha = globalA * Math.pow(pp, 0.6) * 0.65;
-                ctx.fillStyle = 'rgba(0,0,8,1)';
-                ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, aSSR0 * pp * 1.1, 0, Math.PI * 2); ctx.fill();
-                // Portal rim glow
-                ctx.globalAlpha = globalA * pp * 0.80;
-                ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 5;
-                ctx.shadowBlur = 40 * pp; ctx.shadowColor = '#d946ef';
-                ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, aSSR0 * pp * 1.1, 0, Math.PI * 2); ctx.stroke();
-                // Inner swirl arms
-                for (let sw2 = 0; sw2 < 6; sw2++) {
-                    const swA = (sw2 / 6) * Math.PI * 2 + elapsed * 4;
-                    const swLen = aSSR0 * pp * (0.35 + Math.sin(elapsed * 3 + sw2) * 0.15);
-                    ctx.globalAlpha = globalA * pp * (0.25 + Math.sin(elapsed * 5 + sw2) * 0.15);
-                    ctx.strokeStyle = sw2 % 2 === 0 ? '#d946ef' : '#facc15';
-                    ctx.lineWidth = 1.5; ctx.shadowBlur = 8; ctx.shadowColor = '#d946ef';
-                    ctx.beginPath();
-                    ctx.moveTo(ringScreen.x, ringScreen.y);
-                    ctx.quadraticCurveTo(
-                        ringScreen.x + Math.cos(swA + 0.5) * swLen * 0.7,
-                        ringScreen.y + Math.sin(swA + 0.5) * swLen * 0.7,
-                        ringScreen.x + Math.cos(swA) * swLen,
-                        ringScreen.y + Math.sin(swA) * swLen
-                    );
-                    ctx.stroke();
-                }
-                ctx.shadowBlur = 0;
-            }
 
             // Expanding shockwave rings — grow to cover full arena
             const arenaEdgeSS = worldToScreen(_DC.ARENA_RADIUS, 0);
@@ -1711,52 +1896,21 @@ const DomainExpansion = {
                 ctx.fillText('領域展開', W / 2, H / 2 - 42);
                 ctx.shadowBlur = 0;
             }
-            // METRICS-MANIPULATION subtitle with glitch
+            // METRICS-MANIPULATION subtitle
             if (elapsed > 1.05) {
                 const tb = Math.min(1.0, (elapsed - 1.05) / 0.55);
-                const titleText = 'METRICS-MANIPULATION';
-                const fontSize2 = Math.round(36 * (0.88 + tb * 0.12));
-                ctx.font = `900 ${fontSize2}px "Orbitron","Bebas Neue",Arial`;
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                // Glitch offset layers
-                const glitch = tb > 0.5 ? Math.sin(elapsed * 28) * 4 * (1 - tb) : 0;
-                ctx.globalAlpha = globalA * tb * 0.50;
-                ctx.fillStyle = '#38bdf8';
-                ctx.fillText(titleText, W / 2 - glitch - 2, H / 2 + 28 + 1);
-                ctx.fillStyle = '#ef4444';
-                ctx.fillText(titleText, W / 2 + glitch + 2, H / 2 + 28 - 1);
-                // Main gold text
                 ctx.globalAlpha = globalA * tb;
-                ctx.shadowBlur = 34 + Math.sin(elapsed * 10) * 8; ctx.shadowColor = '#facc15';
+                ctx.font = `900 ${Math.round(36 * (0.88 + tb * 0.12))}px "Orbitron","Bebas Neue",Arial`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 28; ctx.shadowColor = '#facc15';
                 ctx.fillStyle = '#fef08a';
-                ctx.fillText(titleText, W / 2, H / 2 + 28);
+                ctx.fillText('METRICS-MANIPULATION', W / 2, H / 2 + 28);
                 ctx.shadowBlur = 0;
-                // Bracket decorations
-                ctx.globalAlpha = globalA * tb * 0.75;
-                ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
-                const titleHalfW = ctx.measureText(titleText).width * 0.5 + 10;
-                const brkY = H / 2 + 28, brkH = fontSize2 * 0.65;
-                [[W / 2 - titleHalfW, -1], [W / 2 + titleHalfW, 1]].forEach(([bx, bDir]) => {
-                    ctx.beginPath();
-                    ctx.moveTo(bx + bDir * 10, brkY - brkH / 2);
-                    ctx.lineTo(bx, brkY - brkH / 2);
-                    ctx.lineTo(bx, brkY + brkH / 2);
-                    ctx.lineTo(bx + bDir * 10, brkY + brkH / 2);
-                    ctx.stroke();
-                });
                 // Underline sweep
-                ctx.globalAlpha = globalA * tb * 0.85;
+                ctx.globalAlpha = globalA * tb * 0.8;
                 ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
-                const ulW2 = tb * 300;
-                ctx.beginPath(); ctx.moveTo(W / 2 - ulW2 / 2, H / 2 + 54); ctx.lineTo(W / 2 + ulW2 / 2, H / 2 + 54); ctx.stroke();
-                // Subtitle sub-label
-                if (tb > 0.7) {
-                    const tbb = (tb - 0.7) / 0.3;
-                    ctx.globalAlpha = globalA * tbb * 0.65;
-                    ctx.font = `bold 12px "Orbitron",monospace`;
-                    ctx.fillStyle = '#e879f9'; ctx.shadowBlur = 0;
-                    ctx.fillText('DOMAIN EXPANSION  •  ครูมานพ', W / 2, H / 2 + 72);
-                }
+                const ulW = tb * 280;
+                ctx.beginPath(); ctx.moveTo(W / 2 - ulW / 2, H / 2 + 50); ctx.lineTo(W / 2 + ulW / 2, H / 2 + 50); ctx.stroke();
             }
             // Final white flash
             if (elapsed > _DC.CAST_DUR - 0.35) {
@@ -1777,82 +1931,18 @@ const DomainExpansion = {
             ctx.fillRect(0, 0, W, H);
         }
 
-        // ── 6b. Boss energy aura during domain ─────────────
-        if ((this.phase === 'active') && typeof worldToScreen === 'function') {
-            const bossRef = (typeof window !== 'undefined' && window.boss) ? window.boss : null;
-            if (bossRef && !bossRef.dead) {
-                const bSS = worldToScreen(bossRef.x, bossRef.y);
-                const bAuraPulse = 0.5 + Math.sin(now * 3.5) * 0.5;
-                const bAuraSize = 42 + bAuraPulse * 14;
-                // Outer void halo
-                ctx.globalAlpha = globalA * 0.22 * bAuraPulse;
-                const bAG1 = ctx.createRadialGradient(bSS.x, bSS.y, 0, bSS.x, bSS.y, bAuraSize * 1.8);
-                bAG1.addColorStop(0, 'rgba(217,70,239,0.7)'); bAG1.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.fillStyle = bAG1;
-                ctx.beginPath(); ctx.arc(bSS.x, bSS.y, bAuraSize * 1.8, 0, Math.PI * 2); ctx.fill();
-                // Spinning rune ring around boss
-                ctx.globalAlpha = globalA * (0.45 + bAuraPulse * 0.35);
-                ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 1.8;
-                ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
-                ctx.setLineDash([5, 12]);
-                ctx.beginPath(); ctx.arc(bSS.x, bSS.y, bAuraSize, 0, Math.PI * 2); ctx.stroke();
-                ctx.setLineDash([]);
-                // Mini rune nodes
-                for (let brn = 0; brn < 4; brn++) {
-                    const brA = (brn / 4) * Math.PI * 2 + now * 1.8;
-                    const bnx = bSS.x + Math.cos(brA) * bAuraSize;
-                    const bny = bSS.y + Math.sin(brA) * bAuraSize;
-                    ctx.globalAlpha = globalA * (0.6 + Math.sin(now * 4 + brn) * 0.35);
-                    ctx.fillStyle = brn % 2 === 0 ? '#d946ef' : '#facc15';
-                    ctx.shadowBlur = 8; ctx.shadowColor = ctx.fillStyle;
-                    ctx.beginPath(); ctx.arc(bnx, bny, 3.5, 0, Math.PI * 2); ctx.fill();
-                }
-                ctx.shadowBlur = 0;
-            }
-        }
-
         // ── 7. Slow debuff HUD indicator ─────────────────────
         if (typeof window !== 'undefined' && window.player && window.player._domainSlowActive) {
             const slowPulse = 0.5 + Math.sin(now * 6) * 0.5;
-            // Edge vignette
-            const sVig = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.72);
-            sVig.addColorStop(0, 'rgba(0,0,0,0)');
-            sVig.addColorStop(1, `rgba(147,51,234,${0.32 * slowPulse})`);
-            ctx.globalAlpha = globalA;
-            ctx.fillStyle = sVig; ctx.fillRect(0, 0, W, H);
-            // Status chip
-            ctx.globalAlpha = globalA * (0.8 + slowPulse * 0.2);
-            ctx.fillStyle = 'rgba(15,3,30,0.88)';
-            ctx.strokeStyle = `rgba(217,70,239,${0.7 + slowPulse * 0.3})`;
-            ctx.lineWidth = 1.5; ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
-            ctx.beginPath(); ctx.roundRect(W / 2 - 62, 8, 124, 26, 5); ctx.fill(); ctx.stroke();
-            ctx.shadowBlur = 0;
-            ctx.font = 'bold 13px "Orbitron",Arial';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#f0abfc';
-            ctx.shadowBlur = 10; ctx.shadowColor = '#d946ef';
-            ctx.fillText('🔮 SLOWED', W / 2, 21);
-            ctx.shadowBlur = 0;
-        }
-
-        // ── 7b. Formula beam HUD warning ─────────────────────
-        if (this._formulaBeam) {
-            const fbHudP = this._formulaBeam.timer / _DC.FORMULA_BEAM_DUR;
-            const fbHudPulse = 0.5 + Math.sin(now * 14) * 0.5;
-            ctx.globalAlpha = globalA * fbHudPulse * 0.18;
-            ctx.fillStyle = '#38bdf8';
+            ctx.globalAlpha = globalA * 0.28 * slowPulse;
+            ctx.fillStyle = '#d946ef';
             ctx.fillRect(0, 0, W, H);
-            ctx.globalAlpha = globalA * (0.7 + fbHudPulse * 0.3);
-            ctx.font = 'bold 13px "Orbitron",Arial';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#7dd3fc'; ctx.shadowBlur = 10; ctx.shadowColor = '#38bdf8';
-            ctx.fillText('⚡ FORMULA BEAM', W / 2, H - 30);
-            // Countdown bar
-            ctx.globalAlpha = globalA * 0.75;
-            ctx.fillStyle = '#1e3a5f';
-            ctx.fillRect(W / 2 - 70, H - 18, 140, 6);
-            ctx.fillStyle = '#38bdf8';
-            ctx.fillRect(W / 2 - 70, H - 18, 140 * fbHudP, 6);
+            ctx.globalAlpha = globalA * (0.6 + slowPulse * 0.35);
+            ctx.font = 'bold 14px "Orbitron",Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            ctx.fillStyle = '#f0abfc';
+            ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
+            ctx.fillText('🔮 SLOWED', W / 2, 12);
             ctx.shadowBlur = 0;
         }
 
@@ -1906,13 +1996,9 @@ const DomainExpansion = {
             cell.exploded = true;
             const cx = cell.wx + _DC.CELL_SIZE / 2, cy = cell.wy + _DC.CELL_SIZE / 2;
             if (typeof spawnParticles === 'function') {
-                spawnParticles(cx, cy, 14, '#ef4444');
-                spawnParticles(cx, cy, 8, '#facc15');
-                spawnParticles(cx, cy, 5, '#d946ef');
+                spawnParticles(cx, cy, 10, '#ef4444');
+                spawnParticles(cx, cy, 5, '#facc15');
             }
-            // Spawn screen-space shockwave rings (converted to screen coords in draw)
-            this._cellShockwaves.push({ wx: cx, wy: cy, r: 5, maxR: _DC.CELL_SIZE * 0.9, alpha: 1 });
-            this._cellShockwaves.push({ wx: cx, wy: cy, r: 5, maxR: _DC.CELL_SIZE * 1.4, alpha: 0.6 });
             if (player && !player.dead) {
                 const pd = Math.hypot(player.x - cx, player.y - cy);
                 if (pd < _DC.CELL_SIZE * _DC.HIT_RADIUS) {
@@ -1938,31 +2024,9 @@ const DomainExpansion = {
             }
         }
     },
-    _initDrift() {
-        this._driftParticles = [];
-        const R = _DC.ARENA_RADIUS;
-        for (let i = 0; i < _DC.DRIFT_COUNT; i++) {
-            const a = Math.random() * Math.PI * 2;
-            const dist = Math.sqrt(Math.random()) * R * 0.82;
-            const speed = 30 + Math.random() * 55;
-            const vAngle = Math.random() * Math.PI * 2;
-            this._driftParticles.push({
-                x: Math.cos(a) * dist, y: Math.sin(a) * dist,
-                vx: Math.cos(vAngle) * speed, vy: Math.sin(vAngle) * speed,
-                r: 1.2 + Math.random() * 3.2,
-                alpha: 0.12 + Math.random() * 0.38,
-                gold: Math.random() < 0.35,
-                phase: Math.random() * Math.PI * 2,
-            });
-        }
-    },
-
     _abort(boss) {
         this.phase = 'idle'; this.cooldownTimer = 0;
         this.cells = []; this._crackLines = []; this._flashTimer = 0;
-        this._driftParticles = []; this._voidPulses = [];
-        this._formulaBeam = null; this._cellShockwaves = [];
-        this._bgAngle = 0; this._portalProgress = 0;
         if (boss) { boss._domainCasting = false; boss._domainActive = false; }
         console.log('[DomainExpansion] Aborted — boss dead');
     },
@@ -1973,7 +2037,7 @@ DomainExpansion._DC_RADIUS = _DC.ARENA_RADIUS; // exposed for base.js applyPhysi
 
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing, MatrixGridAttack, EmpPulse };
+    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing, MatrixGridAttack, EmpPulse, EquationSlam, DeadlyGraph };
 }
 // ── Global exports ────────────────────────────────────────────
 window.BarkWave = BarkWave;
@@ -1983,4 +2047,6 @@ window.FreeFallWarningRing = FreeFallWarningRing;
 window.PorkSandwich = PorkSandwich;
 window.ExpandingRing = ExpandingRing;
 window.MatrixGridAttack = MatrixGridAttack;
+window.EquationSlam = EquationSlam;
+window.DeadlyGraph = DeadlyGraph;
 window.EmpPulse = EmpPulse;
