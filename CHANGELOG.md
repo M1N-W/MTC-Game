@@ -4,6 +4,46 @@
 
 ---
 
+## v3.11.4 — Tutorial Enhancements - Wave Events & Boss Encounter Details
+*Released: March 7, 2026*
+
+### 🌊 Wave Events Documentation
+- **Complete wave system breakdown** — Added detailed explanation of all 4 wave event types
+- **Dark Wave (Wave 1)** — Visibility reduction with dark screen effect
+- **Fog Wave (Waves 2,8,11,14)** — Radar OFFLINE, minimap disabled
+- **Speed Wave (Waves 4,7,13)** — Enemy speed increased 1.5x
+- **Glitch Wave (Waves 5,10)** — Controls inverted + temporary HP boost
+
+### 👑 Boss Encounter Schedule
+- **Precise boss timing** — Detailed breakdown of all 5 boss encounters across 15 waves
+- **KruManop progression** — Basic (Wave 3) → Dog Rider (Wave 9) → Goldfish Lover (Wave 15)
+- **KruFirst difficulty scaling** — Basic (Wave 6) → Advanced (Wave 12) with warning
+- **Phase system explanation** — Clear indication of when each boss phase activates
+
+### 📚 Tutorial Content Improvements
+- **Step 14 complete rewrite** — "Enemy Types" → "Enemy Types & Wave Events"
+- **Enhanced player preparation** — Players now know exactly what to expect each wave
+- **Strategic information** — HP boost timing for Glitch Wave, minimap status for Fog Wave
+- **Visual clarity** — Better organization with wave-specific emojis and clear structure
+
+### 🎯 Educational Benefits
+- **Better game readiness** — Players understand wave mechanics before encountering them
+- **Reduced frustration** — Clear warnings about difficult waves and boss phases
+- **Strategic planning** — Players can prepare for specific wave types and boss encounters
+- **Improved learning curve** — Progressive information matching actual game difficulty
+
+### 📊 Statistics
+- **2 major tutorial sections enhanced** with comprehensive game state information
+- **4 wave event types documented** with specific effects and timing
+- **5 boss encounters detailed** with phase progression and difficulty indicators
+- **Thai localization maintained** throughout all new content
+
+### 🔧 Files Changed
+- `js/tutorial.js` — Enhanced Step 14 & Step 15 with wave and boss details
+- `sw.js` — Updated to v3.11.4
+
+---
+
 ## v3.11.3 — Tutorial System Sync - Updated for v3.11.2 Game State
 *Released: March 7, 2026*
 

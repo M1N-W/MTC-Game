@@ -80,11 +80,12 @@
 - [x] Advanced AI & Autonomous Systems
 - [x] Domain Expansion Ultimate Abilities
 - [x] Military HUD Theme Implementation
+- [x] Tutorial Enhancements
 - [ ] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
 
 ---
 
-## 📈 Current Version: v3.11.3 (March 7, 2026)
+## 📈 Current Version: v3.11.4 (March 7, 2026)
 
 **Latest Major Updates:**
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
@@ -93,3 +94,4 @@
 - 🌌 **Domain Expansion:** Ultimate boss abilities with arena-wide physics manipulation
 - ⚖️ **Balance Overhaul:** Comprehensive weapon and character balance adjustments
 - 📚 **Tutorial System Sync:** Updated all tutorial content to match current game state
+- 🌊 **Wave Events Documentation:** Added detailed breakdown of all wave types and boss encounters

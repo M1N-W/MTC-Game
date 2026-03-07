@@ -184,10 +184,10 @@ const TutorialSystem = (() => {
             position: 'center',
         },
 
-        // ── 14. Enemy Types ──────────────────────────────────
+        // ── 14. Enemy Types & Wave Events ────────────────────
         {
-            title: 'ประเภทศัตรู 👾',
-            body: '🔴 Basic — เดินเร็ว ยิงได้\n🟠 Tank 🛡️ — HP สูงมาก เดินช้า\n🟣 Mage 🧙 — สายฟ้า + อุกกาบาต\n🟢 Ranged — ยิงระยะไกล หนีเก่ง\n\n⚠️ Glitch Wave — HP ×3 + สีเปลี่ยน\nบางเวฟจะ Invert การควบคุม — ระวัง!',
+            title: 'ประเภทศัตรู & Wave Events 👾',
+            body: 'ศัตรู 3 ประเภท:\n🔴 Basic — เดินเร็ว ยิงได้\n🟠 Tank 🛡️ — HP สูงมาก เดินช้า\n🟣 Mage 🧙 — สายฟ้า + อุกกาบาต\n\nWave Events พิเศษ:\n🌑 Wave 1 — Dark Wave: เปิดตัวด้วยความมืดมิด\n🌫️ Wave 2,8,11,14 — Fog Wave: Radar OFFLINE — minimap ใช้ไม่ได้!\n⚡ Wave 4,7,13 — Speed Wave: ศัตรูเร็ว ×1.5\n⚠️ Wave 5,10 — Glitch Wave: Controls Invert + ได้ HP +100 ชั่วคราว',
             icon: '👾',
             action: 'none',
             position: 'center',
@@ -196,7 +196,7 @@ const TutorialSystem = (() => {
         // ── 15. Boss ─────────────────────────────────────────
         {
             title: 'Boss Encounters 👑',
-            body: 'ทุก 3 เวฟจะมี Boss ปรากฏตัว!\n\n👑 KruManop (ครูมานพ) — The Dog Summoner (Wave 3,6,9,12,15)\n   Meteor Shower, Thunder, Dash\n   Phase 2: เรียกหมา | Phase 3: GoldfishLover\n   HP Regen ถ้าไม่ยิงนาน!\n\n👩‍🔬 KruFirst (ครูเฟิร์ส) — The Physics Master (Wave 6+)\n   Shockwave + เรียก Minions\n\n🌌 Domain Expansion — ทักษะ Ultimate ของ Boss\n   ควบคุมพื้นที่ทั้ง Arena เมื่อ HP ต่ำ — ระวัง!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
+            body: 'ทุก 3 เวฟจะมี Boss — 5 encounters ทั้งหมด:\n\n👑 Wave  3 — KruManop (Basic)\n🐕 Wave  9 — KruManop (Dog Rider) — Phase 2 เรียกหมา\n🐟 Wave 15 — KruManop (Goldfish Lover) — Phase 2+3\n\n⚛️ Wave  6 — KruFirst (Basic)\n⚛️ Wave 12 — KruFirst (Advanced ⚠️ ยากขึ้น)\n\n🌌 Domain Expansion — ทักษะ Ultimate\n   Boss ใช้เมื่อ HP ต่ำ ควบคุมพื้นที่ทั้ง Arena!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
             icon: '👑',
             action: 'none',
             position: 'center',
