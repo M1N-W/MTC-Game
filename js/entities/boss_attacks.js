@@ -789,7 +789,17 @@ class ExpandingRing {
         // ── Outer fill dome ───────────────────────────────────
         const fillG = CTX.createRadialGradient(screen.x, screen.y, r * 0.55, screen.x, screen.y, r);
         fillG.addColorStop(0, `rgba(255,255,255,0)`);
-        fillG.addColorStop(0.7, this.color.replace(')', `,${alpha * 0.08})`).replace('rgb(', 'rgba(').replace('#ef4444', 'rgba(239,68,68,').replace('#', 'rgba(').replace(/(rgba\([^)]+)$/, '$1)'));
+        fillG.addColorStop(0.7, (() => {
+            const a = (alpha * 0.08).toFixed(3);
+            if (this.color.startsWith('rgba(')) return this.color.replace(/,\s*[\d.]+\)$/, `,${a})`);
+            if (this.color.startsWith('rgb(')) return this.color.replace('rgb(', 'rgba(').replace(')', `,${a})`);
+            const hex = this.color.replace('#', '');
+            const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+            const r = parseInt(full.slice(0, 2), 16);
+            const g = parseInt(full.slice(2, 4), 16);
+            const b = parseInt(full.slice(4, 6), 16);
+            return `rgba(${r},${g},${b},${a})`;
+        })());
         fillG.addColorStop(1, 'rgba(0,0,0,0)');
         CTX.globalAlpha = alpha * 0.6;
         CTX.fillStyle = fillG;
@@ -1775,7 +1785,7 @@ class EquationSlam {
 
         // Ring-front hit detection
         if (!this.hit) {
-            const d = dist(this.x, this.y, player.x, player.y);
+            const d = Math.hypot(player.x - this.x, player.y - this.y);
             if (d <= this.radius && d >= this.radius - 30) {
                 player.takeDamage(this.damage);
                 this.hit = true;
