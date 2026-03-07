@@ -85,6 +85,10 @@ class Player extends Entity {
         this.obstacleBuffTimer = 0;
         this.lastObstacleWarning = 0;
 
+        // ── Contact damage tracking (BUG-1 FIX: must be init'd here) ──
+        this._contactWarningTimer = 0;
+        this._dmgAccum = 0;
+
         // ── EMP Grounded status (BossFirst EMP_ATTACK) ─────────
         this.groundedTimer = 0;
 
@@ -253,9 +257,13 @@ class Player extends Entity {
             this.angle = Math.atan2(mouse.wy - this.y, mouse.wx - this.x);
         }
 
+        // BUG-11 FIX: swap-and-pop O(1) instead of splice O(n)
         for (let i = this.dashGhosts.length - 1; i >= 0; i--) {
             this.dashGhosts[i].life -= dt * 5;
-            if (this.dashGhosts[i].life <= 0) this.dashGhosts.splice(i, 1);
+            if (this.dashGhosts[i].life <= 0) {
+                this.dashGhosts[i] = this.dashGhosts[this.dashGhosts.length - 1];
+                this.dashGhosts.pop();
+            }
         }
 
         if (this.weaponRecoil > 0) {

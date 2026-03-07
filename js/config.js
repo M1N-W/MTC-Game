@@ -90,57 +90,124 @@ const BALANCE = {
             weaponMasterReq: 10
         },
         auto: {
+            // ══════════════════════════════════════════════════
+            // 🔥 AUTO — THERMODYNAMIC BRAWLER REWORK v2
+            // Identity: อุ่นเครื่องยิ่งชกนาน ยิ่งเก่ง
+            // Loop: สะสม Heat → Wanchai → Combo → Detonate → รีเซ็ตได้ง่าย
+            // ══════════════════════════════════════════════════
             name: 'Auto',
             radius: 20,
-            hp: 220, maxHp: 220,
+
+            // ── Base Stats (Tank Brawler) ──────────────────────
+            hp: 230, maxHp: 230,           // +10 เพิ่ม tank identity
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
-            moveSpeed: 250,
-            dashSpeed: 480,
-            dashDistance: 160,
-            dashCooldown: 1.8,
+            moveSpeed: 260,                 // 250 → 260 (ยังช้ากว่าคนอื่น)
+            dashSpeed: 490,
+            dashDistance: 170,              // 160 → 170
+            dashCooldown: 1.7,              // 1.8 → 1.7
+
+            // ── Heat Wave (L-Click ปกติ / โหมดยิง) ─────────────
             heatWaveRange: 180,
-            heatWaveCooldown: 0.22,      // BUFF: 0.28 → 0.22 (compensation สำหรับ Stand nerf)
-            wanchaiDuration: 6.0,
-            wanchaiCooldown: 9,
-            wanchaiEnergyCost: 32,
-            wanchaiPunchRate: 0.14,      // NERF: 0.08 → 0.14 (7 hits/s แทน 12.5)
-            wanchaiDamage: 28,           // NERF: 32 → 28
+            heatWaveCooldown: 0.22,
+
+            // ── Wanchai Stand (R-Click) ───────────────────────
+            wanchaiDuration: 8.0,           // 6.0 → 8.0 (longer payoff window)
+            wanchaiCooldown: 12,            // 9 → 12 (trade longer for less spammy)
+            wanchaiEnergyCost: 25,          // 32 → 25 (easier loop)
+            wanchaiPunchRate: 0.11,         // 0.14 → 0.11 (9.1 punches/s)
+            wanchaiDamage: 32,              // 28 → 32 (restore original)
             standSpeedMod: 1.5,
-            standDamageReduction: 0.30,  // NERF: 0.40 → 0.30
-            standCritBonus: 0.25,        // NERF: 0.40 → 0.25 (crit 31% รวม base)
-            // ── New Active Skills ──────────────────────────────────────────
-            vacuumRange: 320,       // รัศมีดูดศัตรู (px)
-            vacuumForce: 1400,      // ความเร็วกระชาก (เพิ่มจาก 900)
-            vacuumCooldown: 8,      // cooldown (วินาที)
-            vacuumStunDur: 0.55,    // วินาทีที่ AI ถูกล็อค
-            vacuumPullDur: 0.45,    // วินาทีดึงต่อเนื่อง
-            standMoveSpeed: 340,    // ความเร็ว WanchaiStand
-            standPunchRange: 110,   // ระยะชก
-            standLeashRadius: 420,  // ระยะห่างสูงสุดจากผู้เล่น
-            standKnockback: 180,    // แรงดีดศัตรูหลังชก
-            playerRushRange: 85,     // player melee range during Stand Rush
-            playerRushCooldown: 0.15, // NERF: 0.10→0.15 (Lv1 combined DPS 628→506, still dominant but less spikey)
-            detonationRange: 220,   // รัศมี AOE ระเบิด (px)
-            detonationCooldown: 5,  // CD สั้น เพราะต้องเปิด Wanchai ก่อนถึงใช้ได้
+            standDamageReduction: 0.35,     // 0.30 → 0.35 (tank identity)
+            standCritBonus: 0.25,
+            standMoveSpeed: 340,
+            standPunchRange: 110,
+            standLeashRadius: 420,
+            standKnockback: 180,
+
+            // ── Attack Mode Toggle ────────────────────────────
+            // ระหว่าง Wanchai active: กด F (หรือ Middle-Click) สลับโหมด
+            // MODE 0 = RANGE: ยิง Heat Wave ปกติ (ไม่จำกัดระยะ)
+            // MODE 1 = MELEE: รัวหมัด Stand Rush (ระยะใกล้)
+            // ทั้งสองโหมดใช้ cooldowns.shoot เดียวกัน
+            playerMeleeCooldown: 0.12,      // 0.15 → 0.12 (MELEE mode punch rate)
+            playerMeleeRange: 200,          // 85 → 200 (REWORK: เพิ่มระยะ melee ให้ใช้งานได้จริง)
+            playerMeleeRangeFar: 320,       // range เมื่อ Heat >= 67% (HOT tier)
+
+            // ── Vacuum Heat (Q) — REWORK: Pull + Ignite ──────
+            vacuumRange: 340,               // 320 → 340
+            vacuumForce: 1600,              // 1400 → 1600
+            vacuumCooldown: 6,              // 8 → 6 (bread-and-butter skill)
+            vacuumStunDur: 0.50,            // 0.55 → 0.50
+            vacuumPullDur: 0.45,
+            vacuumDamage: 18,               // NEW: damage ณ จุดดูด
+            vacuumIgniteDuration: 1.5,      // NEW: Ignite debuff duration
+            vacuumIgniteDPS: 12,            // NEW: burn DPS ขณะ Ignite
+            vacuumHeatGain: 25,             // NEW: +Heat ทุกครั้งที่ใช้สำเร็จ
+
+            // ── Overheat Detonation (E) — REWORK: Heat-scaled, ไม่ kill Wanchai ──
+            detonationRange: 240,           // 220 → 240
+            detonationCooldown: 8,          // 5 → 8 (ไม่ kill Wanchai แล้ว — trade off)
+            detonationBaseDamage: 80,       // NEW: base damage (แทน wanchaiDamage×6)
+            detonationHeatScaling: 2.5,     // NEW: bonus damage per Heat point
+            // ตัวอย่าง: Heat 80 → 80 + (80 × 2.5) = 280 damage
+            // Overheated (Heat 100) → radius ×1.5 = 360px
+            // หลัง Detonate: Heat -50 (ไม่เป็น 0, ยังคง momentum)
+
+            // ── Heat Gauge (NEW SYSTEM) ───────────────────────
+            // สะสมจากการชก → ให้ bonus tier ตาม heat level
+            heatMax: 100,
+            heatPerHit: 12,                 // +Heat ต่อ Stand punch
+            heatPerPlayerHit: 8,            // +Heat ต่อ Stand Rush / Heat Wave
+            heatPerDamageTaken: 0.5,        // +Heat ต่อ 1 damage ที่รับ
+            heatDecayRate: 8,               // -Heat/s ตอน out of Wanchai
+            heatDecayRateActive: 0,         // ไม่ decay ระหว่าง Wanchai
+            // ── Heat Tier Thresholds ──
+            // WARM (34%+): dmg ×1.15, punch rate ×0.85
+            // HOT  (67%+): dmg ×1.30, punch rate ×0.70, melee range เพิ่ม
+            // OVERHEATED (100%): dmg ×1.50, crit +20%, hp drain 3/s, det radius ×1.5
+            heatTierWarm: 34,
+            heatTierHot: 67,
+            heatTierOverheat: 100,
+            heatDmgWarm: 1.15,
+            heatDmgHot: 1.30,
+            heatDmgOverheat: 1.50,
+            heatPunchRateWarm: 0.85,        // multiplier ต่อ wanchaiPunchRate
+            heatPunchRateHot: 0.70,
+            heatCritBonusOverheat: 0.20,
+            heatHpDrainOverheat: 3,         // HP/s drain เมื่อ Overheated
+            heatOnKillWanchai: 15,          // +Heat ต่อการฆ่าขณะ Wanchai active
+            heatHealOnKillWanchai: 0.08,    // heal 8% maxHp ต่อการฆ่าขณะ Wanchai active
+
+            // ── Crit & Scaling ────────────────────────────────
             baseCritChance: 0.06,
-            critMultiplier: 2.0,
+            critMultiplier: 2.2,            // 2.0 → 2.2
+
+            // ── Stealth (disabled for Auto) ───────────────────
             stealthCooldown: 12,
             stealthCost: 9999,
             stealthDrain: 0,
             stealthSpeedBonus: 1.0,
+
+            // ── Level Scaling ─────────────────────────────────
             expToNextLevel: 100,
             expLevelMult: 1.5,
+            damageMultiplierPerLevel: 0.12, // 0.10 → 0.12 (เท่า Kao)
+            cooldownReductionPerLevel: 0.04,
+            maxHpPerLevel: 16,              // 14 → 16
+
+            // ── Passive: SCORCHED SOUL ────────────────────────
+            // Unlock: Lv 5 (ไม่ต้องการ stealth อีกต่อไป)
             passiveUnlockLevel: 5,
-            passiveUnlockStealthCount: 99,
+            passiveUnlockStealthCount: 0,   // FIX: 99 → 0 (unlock ได้จริง)
             passiveHpBonusPct: 0.35,
-            passiveCritBonus: 0.04,
-            passiveLifesteal: 0.01,
+            passiveCritBonus: 0.06,         // 0.04 → 0.06
+            passiveLifesteal: 0.025,        // 0.01 → 0.025 (brawler identity)
+            passiveHeatGainBonus: 1.25,     // NEW: Heat สะสมเร็ว +25% หลัง unlock
+
+            // ── Speed on Hit ──────────────────────────────────
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
-            damageMultiplierPerLevel: 0.10,  // BUFF: 0.07 → 0.10
-            cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
-            maxHpPerLevel: 14                 // BUFF: 10 → 14 (tank identity)
         },
         poom: {
             name: 'Poom',
@@ -694,9 +761,10 @@ const GAME_TEXTS = {
 
         // ── ออโต้ (AutoPlayer) ──────────────────────────
         auto: {
-            skill1: 'แสตนด์วันชัย',   // R-Click — แสตนด์วันชัย
-            vacuum: 'ดูดศัตรู',    // Q — ดูดศัตรู
-            detonate: 'พลีชีพวันชัย',  // E — ระเบิดวันชัย
+            skill1: 'แสตนด์วันชัย',   // R-Click — เรียก Stand
+            vacuum: 'ดูดศัตรู+เผา',   // Q — ดูดศัตรู + Ignite
+            detonate: 'ระเบิดความร้อน', // E — Heat-scaled blast (ไม่ยกเลิก Stand)
+            modeToggle: 'สลับโหมด',    // F — toggle Range ↔ Melee
         },
 
         // ── Utility (proximity shortcuts) ───────────────

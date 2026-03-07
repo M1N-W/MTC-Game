@@ -59,6 +59,13 @@ class BossDog extends Entity {
         }
         this.applyPhysics(dt);
 
+        // ── Ignite debuff (from AutoPlayer Vacuum Heat) ───────
+        if ((this.igniteTimer ?? 0) > 0) {
+            this.igniteTimer -= dt;
+            this.takeDamage((this.igniteDPS ?? 12) * dt);
+            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
+        }
+
         // Melee contact damage
         if (d < this.radius + player.radius) {
             player.takeDamage(this.damage * dt);
@@ -407,6 +414,14 @@ class Boss extends Entity {
             if (this.timer > 2.6) {
                 this.state = 'CHASE'; this.timer = 0;
             }
+        }
+
+        // ── Ignite debuff (from AutoPlayer Vacuum Heat) ───────
+        // Boss takes reduced Ignite — 40% effectiveness (tank identity)
+        if ((this.igniteTimer ?? 0) > 0) {
+            this.igniteTimer -= dt;
+            this.takeDamage((this.igniteDPS ?? 12) * dt * 0.4);
+            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
         }
 
         if (d < this.radius + player.radius)
@@ -854,6 +869,14 @@ class BossFirst extends Entity {
             }
         }
 
+        // ── Ignite debuff (from AutoPlayer Vacuum Heat) ───────
+        // BossFirst takes 40% Ignite effectiveness
+        if ((this.igniteTimer ?? 0) > 0) {
+            this.igniteTimer -= dt;
+            this.takeDamage((this.igniteDPS ?? 12) * dt * 0.4);
+            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
+        }
+
         // Contact damage
         if (d < this.radius + player.radius) {
             player.takeDamage(BALANCE.boss.contactDamage * dt * 1.2);
@@ -1051,6 +1074,20 @@ class BossRenderer {
             ctx.fillRect(screen.x - barW / 2, screen.y - 46, barW, barH);
             ctx.fillStyle = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
             ctx.fillRect(screen.x - barW / 2, screen.y - 46, barW * pct, barH);
+            ctx.restore();
+        }
+
+        // ── Ignite overlay (from AutoPlayer Vacuum Heat) ─────
+        if ((e.igniteTimer ?? 0) > 0) {
+            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
+            ctx.save();
+            ctx.globalAlpha = igPulse;
+            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3;
+            ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
+            ctx.beginPath(); ctx.arc(screen.x, screen.y, e.radius + 4, 0, Math.PI * 2); ctx.stroke();
+            ctx.globalAlpha = igPulse * 0.22;
+            ctx.fillStyle = '#fb923c';
+            ctx.beginPath(); ctx.arc(screen.x, screen.y, e.radius, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
@@ -1544,10 +1581,23 @@ class BossRenderer {
 
         ctx.restore(); // end weapon block
 
+        // ── Ignite overlay (from AutoPlayer Vacuum Heat) ─────
+        if ((e.igniteTimer ?? 0) > 0) {
+            const sc = worldToScreen(e.x, e.y);
+            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
+            ctx.save();
+            ctx.globalAlpha = igPulse;
+            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3.5;
+            ctx.shadowBlur = 14; ctx.shadowColor = '#f97316';
+            ctx.beginPath(); ctx.arc(sc.x, sc.y, e.radius + 5, 0, Math.PI * 2); ctx.stroke();
+            ctx.globalAlpha = igPulse * 0.20;
+            ctx.fillStyle = '#fb923c';
+            ctx.beginPath(); ctx.arc(sc.x, sc.y, e.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
         ctx.restore(); // end main translate
     }
-
-    // ── BossFirst (ครูเฟิร์ส) — Physics Master ───────────────
     static drawBossFirst(e, ctx) {
         // ╔══════════════════════════════════════════════════════════════╗
         // ║  KRU FIRST — Physics Master                                 ║
@@ -2079,6 +2129,20 @@ class BossRenderer {
             ctx.globalCompositeOperation = 'source-atop';
             ctx.fillStyle = `rgba(255,255,255,${Math.min(e.hitFlashTimer * 2.0, 0.88)})`;
             ctx.fillRect(-R - 12, -R * 1.60, (R + 12) * 2, R * 2.8);
+            ctx.restore();
+        }
+
+        // ── Ignite overlay (from AutoPlayer Vacuum Heat) ─────
+        if ((e.igniteTimer ?? 0) > 0) {
+            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
+            ctx.save();
+            ctx.globalAlpha = igPulse;
+            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3.5;
+            ctx.shadowBlur = 14; ctx.shadowColor = '#f97316';
+            ctx.beginPath(); ctx.arc(0, 0, e.radius + 5, 0, Math.PI * 2); ctx.stroke();
+            ctx.globalAlpha = igPulse * 0.20;
+            ctx.fillStyle = '#fb923c';
+            ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 

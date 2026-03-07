@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.0'; // v3.11.0: Wanchai Stand Humanoid Redesign - phantom fighter with buzzcut/squint-eyes/2-fist arms; Stand Rush manual targeting; ghost figure cleanup in PlayerRenderer
+const CACHE_NAME = 'mtc-cache-v3.11.1'; // v3.11.1: AutoPlayer Stand Rush System - manual targeting, dual-fist mechanics, 6-layer rendering overhaul
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

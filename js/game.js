@@ -292,7 +292,7 @@ function updateGame(dt) {
         }
     }
 
-    if (!_inTutorial && getWave() % BALANCE.waves.bossEveryNWaves !== 0 && window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {
+    if (!_inTutorial && (BALANCE.waves.bossEveryNWaves > 0 ? getWave() % BALANCE.waves.bossEveryNWaves !== 0 : true) && window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {
         if (Achievements.stats.damageTaken === GameState.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
         }

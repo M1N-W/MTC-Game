@@ -369,11 +369,13 @@ class PlayerRenderer {
         ctx.restore();
 
         // ── Vacuum Heat range ring (Q cooldown ready) ──────────
-        // วงแสดงระยะดูด 320px — แสดงเฉพาะตอนพร้อมใช้ (cooldown <= 0)
-        // ใช้ worldToScreen scale เพื่อให้ ring ขนาดถูกต้องใน camera zoom
         if ((entity.cooldowns?.vacuum ?? 1) <= 0) {
             const VACUUM_RANGE_PX = BALANCE?.characters?.auto?.vacuumRange ?? 320;
-            const camScale = typeof camera !== 'undefined' ? (camera.scale ?? 1) : 1;
+            // BUG-10 FIX: camera.scale doesn't exist. Derive pixel-per-world-unit
+            // scale from worldToScreen by comparing two world points 1px apart.
+            const _s0 = worldToScreen(entity.x, entity.y);
+            const _s1 = worldToScreen(entity.x + 1, entity.y);
+            const camScale = _s1.x - _s0.x; // px per world unit
             const vacRingR = VACUUM_RANGE_PX * camScale;
             const pulse = 0.14 + Math.sin(now / 420) * 0.09;
             ctx.save();
@@ -398,10 +400,12 @@ class PlayerRenderer {
         }
 
         // ── Detonation AOE ring (active only during Wanchai) ───
-        // วงแดงบอกพื้นที่ระเบิด 220px — แสดงเฉพาะระหว่าง Wanchai active
         if (entity.wanchaiActive) {
             const DET_RANGE_PX = BALANCE?.characters?.auto?.detonationRange ?? 220;
-            const camScale = typeof camera !== 'undefined' ? (camera.scale ?? 1) : 1;
+            // BUG-10 FIX: derive scale same as vacuum ring above
+            const _ds0 = worldToScreen(entity.x, entity.y);
+            const _ds1 = worldToScreen(entity.x + 1, entity.y);
+            const camScale = _ds1.x - _ds0.x;
             const detRingR = DET_RANGE_PX * camScale;
             const detPulse = 0.18 + Math.sin(now / 200) * 0.12;
             ctx.save();
@@ -717,12 +721,9 @@ class PlayerRenderer {
 
         ctx.restore(); // end LAYER 2
 
-        // Heat shimmer particles
-        if (typeof spawnParticles === 'function' &&
-            (Math.abs(entity.vx) + Math.abs(entity.vy)) > 60 &&
-            Math.random() < 0.1) {
-            spawnParticles(entity.x + rand(-10, 10), entity.y + rand(-10, 10), 1, '#fb7185', 'steam');
-        }
+        // BUG-8 FIX: Heat shimmer particles belong in update(), not draw().
+        // Removed Math.random() + spawnParticles() call from draw path.
+        // Particle spawning for heat shimmer is handled by AutoPlayer.update().
 
         // Level badge
         if (entity.level > 1) {
@@ -818,9 +819,10 @@ class PlayerRenderer {
             ctx.globalAlpha = ca * 0.55;
             ctx.lineWidth = 1.5; ctx.shadowBlur = 10;
             ctx.beginPath(); ctx.arc(screen.x, screen.y, cr - 12, 0, Math.PI * 2); ctx.stroke();
-            if (Math.random() < 0.35) {
-                const sa = Math.random() * Math.PI * 2;
-                ctx.globalAlpha = 0.9;
+            // BUG-7 FIX: Replaced Math.random() with deterministic sin-based orbit dot
+            {
+                const sa = ct * 2.3; // deterministic angle
+                ctx.globalAlpha = 0.55 + Math.sin(ct * 3.1) * 0.35;
                 ctx.fillStyle = '#34d399'; ctx.shadowBlur = 8; ctx.shadowColor = '#10b981';
                 ctx.beginPath(); ctx.arc(screen.x + Math.cos(sa) * cr, screen.y + Math.sin(sa) * cr, 2, 0, Math.PI * 2); ctx.fill();
             }
@@ -832,13 +834,15 @@ class PlayerRenderer {
                 const lifeAlpha = Math.min(1, nagaEntity.life / nagaEntity.maxLife);
                 const SEGS = 10;
                 const pts = [];
+                const now_t = performance.now();
                 for (let i = 0; i <= SEGS; i++) {
                     const t = i / SEGS;
                     const bx = screen.x + (nagaScreen.x - screen.x) * t;
                     const by = screen.y + (nagaScreen.y - screen.y) * t;
-                    const jAmp = Math.sin(t * Math.PI) * (8 + Math.sin(performance.now() / 80 + i) * 4);
+                    const jAmp = Math.sin(t * Math.PI) * (8 + Math.sin(now_t / 80 + i) * 4);
                     const perp = Math.atan2(nagaScreen.y - screen.y, nagaScreen.x - screen.x) + Math.PI / 2;
-                    const jit = (Math.random() - 0.5) * 2 * jAmp;
+                    // BUG-7 FIX: deterministic sin-based jitter instead of Math.random()
+                    const jit = Math.sin(now_t / 55 + i * 1.7) * jAmp;
                     pts.push({ x: bx + Math.cos(perp) * jit, y: by + Math.sin(perp) * jit });
                 }
                 pts[0] = { x: screen.x, y: screen.y };

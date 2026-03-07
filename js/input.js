@@ -473,8 +473,10 @@ function _setupKeyboardListeners() {
 
         if (e.code === 'KeyQ') {
             if (window.gameState === 'PLAYING') {
+                // BUG-5 FIX: guard null player before instanceof checks
+                if (!window.player) { keys.q = 0; }
                 // FIX (BUG-3): Kao uses Q for Teleport. Do NOT switch weapons on Q release for Kao!
-                if (typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer) {
+                else if (typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer) {
                     keys.q = 0;
                 } else if (typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer) {
                     keys.q = 0;  // Kao: Q is Teleport, not weapon switch

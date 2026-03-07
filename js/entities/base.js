@@ -112,10 +112,14 @@ function _standAura_update(entity, dt) {
         }
     }
 
-    // Decay — remove dead frames
-    for (let i = entity.standGhosts.length - 1; i >= 0; i--) {
-        entity.standGhosts[i].alpha -= dt * 2.5;
-        if (entity.standGhosts[i].alpha <= 0) entity.standGhosts.splice(i, 1);
+    // Decay — swap-and-pop O(1) instead of splice O(n)  [BUG-9 FIX]
+    const ghosts = entity.standGhosts;
+    for (let i = ghosts.length - 1; i >= 0; i--) {
+        ghosts[i].alpha -= dt * 2.5;
+        if (ghosts[i].alpha <= 0) {
+            ghosts[i] = ghosts[ghosts.length - 1];
+            ghosts.pop();
+        }
     }
 }
 

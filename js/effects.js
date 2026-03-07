@@ -179,7 +179,9 @@ class Particle {
             // Pulsing effect for binary
             CTX.shadowBlur = 4;
             CTX.shadowColor = this.color;
-            CTX.fillText(this.data.char || (Math.random() > 0.5 ? '1' : '0'), screen.x, screen.y);
+            // BUG-6 FIX: No Math.random() in draw(). data.char is always set by
+            // ParticleSystem.spawn() for 'binary' type. Fallback to '0' (not random).
+            CTX.fillText(this.data.char || '0', screen.x, screen.y);
             CTX.shadowBlur = 0;
             CTX.globalAlpha = 1;
             return;

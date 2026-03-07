@@ -103,6 +103,12 @@ class Enemy extends Entity {
             this.stickyStacks = stickyStatus.stacks;
         }
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+        // ── Ignite debuff (applied by AutoPlayer Vacuum Heat) ────────
+        if ((this.igniteTimer ?? 0) > 0) {
+            this.igniteTimer -= dt;
+            this.takeDamage((this.igniteDPS ?? 12) * dt);
+            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
+        }
 
         const dx = player.x - this.x, dy = player.y - this.y;
         const d = dist(this.x, this.y, player.x, player.y);
@@ -323,6 +329,12 @@ class TankEnemy extends Entity {
             this.stickyStacks = stickyStatus.stacks;
         }
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+        // ── Ignite debuff (applied by AutoPlayer Vacuum Heat) ────────
+        if ((this.igniteTimer ?? 0) > 0) {
+            this.igniteTimer -= dt;
+            this.takeDamage((this.igniteDPS ?? 12) * dt);
+            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
+        }
 
         const dx = player.x - this.x, dy = player.y - this.y;
         const d = dist(this.x, this.y, player.x, player.y);
@@ -522,6 +534,12 @@ class MageEnemy extends Entity {
             this.stickyStacks = stickyStatus.stacks;
         }
         if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+        // ── Ignite debuff (applied by AutoPlayer Vacuum Heat) ────────
+        if ((this.igniteTimer ?? 0) > 0) {
+            this.igniteTimer -= dt;
+            this.takeDamage((this.igniteDPS ?? 12) * dt);
+            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
+        }
 
         const d = dist(this.x, this.y, player.x, player.y), od = BALANCE.mage.orbitDistance;
         this.angle = Math.atan2(player.y - this.y, player.x - this.x);
@@ -912,6 +930,22 @@ class EnemyRenderer {
             CTX.restore();
         }
 
+
+        // ── Ignite overlay (orange pulsing ring) ─────────────────────
+        if ((e.igniteTimer ?? 0) > 0) {
+            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
+            CTX.save();
+            CTX.globalAlpha = igPulse;
+            CTX.strokeStyle = '#f97316';
+            CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 10; CTX.shadowColor = '#f97316';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R + 3, 0, Math.PI * 2); CTX.stroke();
+            // inner flame tint
+            CTX.globalAlpha = igPulse * 0.30;
+            CTX.fillStyle = '#fb923c';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
         // ── HP bar ───────────────────────────────────────────────────
         const hpRatio = e.hp / e.maxHp, bw = 30;
         CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 10, bw, 4);
@@ -1064,6 +1098,22 @@ class EnemyRenderer {
             CTX.restore();
         }
 
+
+        // ── Ignite overlay (orange pulsing ring) ─────────────────────
+        if ((e.igniteTimer ?? 0) > 0) {
+            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
+            CTX.save();
+            CTX.globalAlpha = igPulse;
+            CTX.strokeStyle = '#f97316';
+            CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 10; CTX.shadowColor = '#f97316';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R + 3, 0, Math.PI * 2); CTX.stroke();
+            // inner flame tint
+            CTX.globalAlpha = igPulse * 0.30;
+            CTX.fillStyle = '#fb923c';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
         // ── HP bar ───────────────────────────────────────────────────
         const hpRatio = e.hp / e.maxHp, bw = 40;
         CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 12, bw, 5);
@@ -1199,6 +1249,22 @@ class EnemyRenderer {
             CTX.restore();
         }
 
+
+        // ── Ignite overlay (orange pulsing ring) ─────────────────────
+        if ((e.igniteTimer ?? 0) > 0) {
+            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
+            CTX.save();
+            CTX.globalAlpha = igPulse;
+            CTX.strokeStyle = '#f97316';
+            CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 10; CTX.shadowColor = '#f97316';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R + 3, 0, Math.PI * 2); CTX.stroke();
+            // inner flame tint
+            CTX.globalAlpha = igPulse * 0.30;
+            CTX.fillStyle = '#fb923c';
+            CTX.beginPath(); CTX.arc(screen.x, screen.y, R, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
         // ── HP bar ───────────────────────────────────────────────────
         const hpRatio = e.hp / e.maxHp, bw = 30;
         CTX.fillStyle = '#1e293b'; CTX.fillRect(screen.x - bw / 2, screen.y - R - 14, bw, 4);
