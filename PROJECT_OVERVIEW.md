@@ -254,6 +254,7 @@
 - **No Manual Steps:** ไม่ต้องรอให้ผู้ใช้ทำการ apply โค้ดด้วยตนเอง
 - **Complete Solution:** ต้องแน่ใจว่าโค้ดที่แก้ไขถูกนำไปใช้จริงในไฟล์
 - **Validation:** ตรวจสอบว่าโค้ดที่ apply ถูกต้องและทำงานได้
+- **🔥 Multi-round Editing Workflow:** หากมีการแก้ไขหลายรอบในแชทเดิม (ใช้ไฟล์ที่ Claude แก้ให้มาแก้ต่อ) จะต้อง base จาก `/mnt/user-data/outputs/` เสมอ ไม่ใช่ `/mnt/user-data/uploads/` เพื่อป้องกันการสูญหายของโค้ดที่แก้ไขไปแล้ว แต่ถ้าผู้ใช้อัพโหลดไฟล์ใหม่แนบมาใน prompt อาจมีการอัปเดทไฟล์จากข้างนอก ทำให้อาจจำเป็นต้องใช้ไฟล์ใน uploads แทน outputs ล่าสุดของ Claude
 
 #### 💻 Windsurf IDE Workflow (Simple Tasks):
 ```bash
@@ -308,6 +309,7 @@ read_file file_path="/js/config.js" limit=50
 - **System Impact** - ต้องคำนึงถึงผลกระทบต่อระบบทั้งหมด
 - **Testing Required** - ต้องทดสอบอย่างละเอียด
 - **🔥 Automatic Code Application:** หลังจากเขียน patch diff ให้เสร็จ ต้อง apply โค้ดที่แก้ไขลงในไฟล์จริงโดยอัตโนมัติ ไม่ต้องรอผู้ใช้ทำเอง
+- **🔥 Multi-round Editing Workflow:** หากมีการแก้ไขหลายรอบในแชทเดิม (ใช้ไฟล์ที่ Claude แก้ให้มาแก้ต่อ) จะต้อง base จาก `/mnt/user-data/outputs/` เสมอ ไม่ใช่ `/mnt/user-data/uploads/` เพื่อป้องกันการสูญหายของโค้ดที่แก้ไขไปแล้ว แต่ถ้าผู้ใช้อัพโหลดไฟล์ใหม่แนบมาใน prompt อาจมีการอัปเดทไฟล์จากข้างนอก ทำให้อาจจำเป็นต้องใช้ไฟล์ใน uploads แทน outputs ล่าสุดของ Claude
 
 #### 💻 สำหรับ Windsurf IDE:
 - **Pattern Following** - ใช้ pattern ที่มีอยู่แล้ว
@@ -478,6 +480,24 @@ read_file file_path="/js/config.js" limit=50
 - Map มี architectural zones: Server Aisles (East), Library Maze (West), Symmetry Courtyard (South)
 - Weather system อยู่ใน effects.js (rain, snow, none)
 - Map ใช้ drawing helpers: drawDesk(), drawTree()
+
+---
+
+### 🐛 การแก้ไขปัญหา Boss Spawn ใน MTC Room
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/config.js` - ปรับ spawnY ให้พ้น MTC Room bounds (จาก -600 เป็น -330)
+- `/js/entities/boss.js` - เพิ่ม runtime guard ใน BossBase constructor ตรวจสอบ MTC Room collision
+- `/js/map.js` - อัปเกรด visual MTCRoom (เพิ่ม header, columns, hologram, ambient orbs)
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/systems/WaveManager.js` - ถ้าต้องปรับ boss spawn timing หรือ positioning
+
+**⚠️ ข้อควรรู้:**
+- **MTC Room bounds:** x: -150→150, y: -700→-460 (ขนาด 300x240)
+- **ปัญหาเดิม:** บอส spawn ที่ (0, -600) = ใจกลางห้อง MTC Room ทำให้ผู้เล่นโจมตีฟรีได้
+- **Safe spawn Y:** -330 (ใต้ห้อง + buffer 130px)
+- **Runtime guard:** ตรวจสอบ spawn position ใน BossBase constructor และ eject ออกทางทิศใต้ถ้าชน
+- **Visual upgrade:** Diamond grid floor, "MTC CITADEL" header, corner pillars, double-ring hologram, ambient orbs, hex tile forcefield
 
 ---
 

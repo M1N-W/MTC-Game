@@ -31,6 +31,14 @@
 class BossBase extends Entity {
     constructor(x, y, radius) {
         super(x, y, radius);
+        // ── Guard: push spawn clear of MTC Room (x:-150→150, y:-700→-460) ──
+        // Prevents player exploit of trapping boss against Citadel walls.
+        const MTC_X1 = -150 - 80, MTC_X2 = 150 + 80;   // wall thickness buffer
+        const MTC_Y1 = -700 - 20, MTC_Y2 = -460 + 20;   // slight Y buffer
+        if (this.x > MTC_X1 && this.x < MTC_X2 && this.y > MTC_Y1 && this.y < MTC_Y2) {
+            // Eject south below the Citadel entrance
+            this.y = MTC_Y2 + (radius || 50) + 20;
+        }
         // ── Shared state ──────────────────────────────────────
         this.name = 'BOSS';
         this.difficulty = 1;

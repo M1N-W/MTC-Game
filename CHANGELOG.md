@@ -4,10 +4,15 @@
 
 ---
 
-## v3.11.16 — Zone Floor System & Visual Enhancement
+## v3.11.17 — Boss Spawn Fix & MTC Room Visual Enhancement
 *Released: March 7, 2026*
 
-### �️ Zone Floor System Implementation
+### 🐛 Critical Bug Fixes
+- **Boss Spawn Issue:** Fixed boss entities spawning inside MTC Room which allowed player exploitation
+- **Config Restoration:** Restored accidentally deleted `MAP_CONFIG.zones` block with 5 zone definitions
+- **Multi-round Editing:** Established workflow to base edits on `/mnt/user-data/outputs/` for subsequent rounds
+
+### 🗺️ Zone Floor System Implementation
 - **Color-Coded Zone Grids:** Added 5 distinct zones with unique floor colors and grid patterns
   - **Server Farm** (East): Cyan grid with 36px spacing
   - **Library/Archives** (West): Amber grid with 48px spacing  
@@ -16,30 +21,49 @@
 - **Visual Zone Identification:** Pulsing border accents and zone labels for clear navigation
 - **Viewport Culling:** Optimized rendering with zone-based viewport culling for performance
 
-### 🎨 Enhanced Visual Details
-- **Blackboard Enhancement:** Added quadratic formula solution, blinking cursor, chalk sticks, and dust smudge effects
-- **Wall Rendering Optimization:** Single-batch brick rendering with top highlight and deterministic damage spots
-- **Floor Tint System:** Subtle color overlays for each zone with configurable transparency levels
+### 🎨 MTC Room Visual Enhancement
+- **Floor Upgrade:** Replaced square grid with 45° diamond pattern + radial ambient glow
+- **Citadel Header:** Added "◈ MTC CITADEL ◈" banner bar at top
+- **Architectural Elements:** Added corner pillars with highlight stripes and cap lights
+- **Hologram Enhancement:** Upgraded to double-ring counter-rotation with 3D projection cone lines
+- **Ambient Features:** Added 3 floating ambient orbs (left, right, top positions)
+- **Forcefield Upgrade:** Enhanced with hex tile chain pattern and structural posts
+- **Terminal Displays:** Upgraded with mini screens and 5 LED indicators
+
+### 🛡️ Boss Spawn System Fix
+- **Safe Spawn Position:** Changed `BALANCE.boss.spawnY` from -600 to -330 (130px below MTC Room)
+- **Runtime Guard:** Added collision detection in `BossBase.constructor()` to prevent MTC Room spawn
+- **Future-Proofing:** Automatic ejection system prevents regression if map layout changes
+- **MTC Room Bounds:** x: -150→150, y: -700→-460 (300x240 protected area)
 
 ### ⚡ Performance Improvements
 - **Batch Rendering:** Consolidated grid drawing operations into single stroke batches
 - **Deterministic Visual Effects:** Removed Math.random() calls from draw loops for consistent performance
 - **Optimized Zone Rendering:** Efficient ortho grid generation with proper world-to-screen coordinate conversion
+- **Multi-round Workflow:** Established proper file handling for multiple edit sessions
 
 ### 🔧 Technical Implementation
-- **MAP_CONFIG.zones:** New configuration block in config.js with zone definitions, colors, and grid settings
-- **drawZoneFloors() Method:** New rendering method in map.js with comprehensive zone visualization
-- **Enhanced Object Methods:** Improved drawBlackboard() and drawWall() methods with richer visual details
+- **MAP_CONFIG.zones:** Complete zone configuration with position, size, colors, and grid settings
+- **drawZoneFloors() Method:** New rendering method with comprehensive zone visualization
+- **BossBase Guard:** Runtime spawn position validation and automatic correction
+- **Enhanced MTCRoom:** Complete visual overhaul with 7 major component upgrades
+
+### ⚠️ Development Workflow Improvements
+- **File Handling Protocol:** Always base subsequent edits on `/mnt/user-data/outputs/` not `/mnt/user-data/uploads/`
+- **Multi-round Sessions:** Prevents accidental code loss during iterative development
+- **Configuration Integrity:** Ensures all previous changes are preserved in subsequent edits
 
 ### 📊 Configuration Changes
 - **Zone Definitions:** Complete zone configuration with position, size, colors, and grid settings
+- **Boss Spawn:** Updated spawn position with safety buffers and collision detection
 - **Visual Parameters:** Fine-tuned transparency levels, pulse rates, and label positioning
 - **Grid Optimization:** Standardized grid spacing and rendering parameters across all zones
 
 ### 🔧 Files Changed
-- `js/config.js` — Added MAP_CONFIG.zones block with 5 zone definitions (50 lines added)
-- `js/map.js` — Added drawZoneFloors() method, enhanced drawBlackboard() and drawWall() (120+ lines modified)
-- `sw.js` — Updated to v3.11.16
+- `js/config.js` — Added MAP_CONFIG.zones block, updated boss spawnY to -330 (50 lines added)
+- `js/entities/boss.js` — Added BossBase constructor guard for MTC Room collision (10 lines added)
+- `js/map.js` — Added drawZoneFloors() method, enhanced MTCRoom.draw() (150+ lines modified)
+- `sw.js` — Updated to v3.11.17
 
 ---
 

@@ -86,11 +86,13 @@
 
 ---
 
-## 📈 Current Version: v3.11.16 (March 7, 2026)
+## 📈 Current Version: v3.11.17 (March 7, 2026)
 
 **Latest Major Updates:**
-- 🗺️ **Zone Floor System:** Added color-coded zone grids with distinct visual themes (Server Farm, Library, Courtyard, Lecture Halls)
-- 🎨 **Enhanced Visual Details:** Improved blackboards with quadratic formulas, optimized wall rendering with brick patterns
+- �️ **Boss Spawn Fix:** Fixed boss entities spawning inside MTC Room preventing player exploitation
+- 🎨 **MTC Room Visual Enhancement:** Complete visual overhaul with diamond grid floor, "MTC CITADEL" header, corner pillars, double-ring hologram, ambient orbs, hex tile forcefield
+- �🗺️ **Zone Floor System:** Added color-coded zone grids with distinct visual themes (Server Farm, Library, Courtyard, Lecture Halls)
+- 🔧 **Multi-round Editing Workflow:** Established proper file handling protocol to prevent code loss during iterative development
 - ⚡ **Performance Optimizations:** Batch rendering, deterministic visual effects, viewport culling for zones
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
 - 🎨 **Visual Polish:** Complete SVG portrait system and 6-layer Wanchai Stand rendering
@@ -121,6 +123,12 @@ The game features a dynamic campus environment with distinct zones:
 - **Library/Archives** (West) - Amber grid with bookshelves  
 - **Courtyard** (South) - Green open space
 - **Lecture Halls** (Corners) - Purple grids for classroom areas
+
+### 🏰 MTC Citadel (Safe Zone)
+- **Enhanced Visuals:** Diamond grid floor with radial glow, "MTC CITADEL" banner, corner pillars
+- **Advanced Hologram:** Double-ring counter-rotation with 3D projection cone lines
+- **Ambient Features:** 3 floating orbs, upgraded terminals, hex tile forcefield
+- **Protection:** Boss spawn protection with automatic ejection system
 
 ### 🎨 Visual Features
 - **Color-coded floor grids** for easy navigation

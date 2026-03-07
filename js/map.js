@@ -395,193 +395,277 @@ class MTCRoom {
         const cx = s.x + W / 2, cy = s.y + H / 2;
         const active = this.cooldown <= 0;
 
-        // ── Pre-compute all Math.sin() ONCE ──
-        const sinSlow = Math.sin(now / 350);   // pulse ~0.7-1.0
-        const sinFast = Math.sin(now / 180);   // fastPulse ~0-1
-        const sinBlink = Math.sin(now / 200);   // blink warning
+        // ── Pre-compute sin values ONCE ──
+        const sinSlow = Math.sin(now / 350);
+        const sinFast = Math.sin(now / 180);
+        const sinBlink = Math.sin(now / 200);
+        const sinOrb = Math.sin(now / 900);
         const pulse = active ? (sinSlow * 0.3 + 0.7) : 0.2;
         const fastPulse = active ? (sinFast * 0.5 + 0.5) : 0;
         const scanLine = (now / 8) % H;
 
         CTX.save();
 
-        // ── 1. Floor (single-pass grid, no shadowBlur) ──
+        // ── 1. FLOOR ─────────────────────────────────────────────
         CTX.beginPath(); CTX.rect(s.x, s.y, W, H); CTX.clip();
-        CTX.fillStyle = '#080f1e';
+
+        // Base fill — deep navy
+        CTX.fillStyle = '#060b18';
         CTX.fillRect(s.x, s.y, W, H);
 
-        // Single combined grid path — far cheaper than many stroke() calls
-        CTX.beginPath();
-        CTX.strokeStyle = 'rgba(217,119,6,0.13)';
-        CTX.lineWidth = 0.8;
-        for (let ty = 0; ty <= H; ty += 40) { CTX.moveTo(s.x, s.y + ty); CTX.lineTo(s.x + W, s.y + ty); }
-        for (let tx = 0; tx <= W; tx += 40) { CTX.moveTo(s.x + tx, s.y); CTX.lineTo(s.x + tx, s.y + H); }
-        CTX.stroke(); // ONE stroke call for all grid lines
+        // Radial ambient glow from center (no shadowBlur — radial gradient)
+        const floorGrad = CTX.createRadialGradient(cx, cy, 0, cx, cy, W * 0.7);
+        floorGrad.addColorStop(0, `rgba(217,119,6,${0.09 * pulse})`);
+        floorGrad.addColorStop(0.5, `rgba(100,50,5,${0.05 * pulse})`);
+        floorGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        CTX.fillStyle = floorGrad;
+        CTX.fillRect(s.x, s.y, W, H);
 
-        // Scan line (active only, no gradient — use flat semi-transparent rect)
+        // Diamond grid (45° rotated squares) — single batch
+        CTX.beginPath();
+        CTX.strokeStyle = 'rgba(217,119,6,0.10)';
+        CTX.lineWidth = 0.7;
+        const dg = 32; // diamond grid spacing
+        for (let ty = -dg; ty <= H + dg; ty += dg) {
+            for (let tx = -dg; tx <= W + dg; tx += dg) {
+                CTX.moveTo(s.x + tx, s.y + ty - dg / 2);
+                CTX.lineTo(s.x + tx + dg / 2, s.y + ty);
+                CTX.lineTo(s.x + tx, s.y + ty + dg / 2);
+                CTX.lineTo(s.x + tx - dg / 2, s.y + ty);
+                CTX.closePath();
+            }
+        }
+        CTX.stroke();
+
+        // Scan line
         if (active) {
-            CTX.fillStyle = `rgba(217,119,6,${0.07 * pulse})`;
-            CTX.fillRect(s.x, s.y + scanLine - 4, W, 8);
+            CTX.fillStyle = `rgba(217,119,6,${0.09 * pulse})`;
+            CTX.fillRect(s.x, s.y + scanLine - 3, W, 6);
         }
 
-        // Corner brackets (all in one path)
-        const bSize = 16;
+        // Corner brackets — 4 corners, one path
+        const bS = 20;
         CTX.beginPath();
-        CTX.strokeStyle = `rgba(250,180,30,${0.45 + fastPulse * 0.35})`;
-        CTX.lineWidth = 1.5;
-        // TL
-        CTX.moveTo(s.x + 4, s.y + 4 + bSize); CTX.lineTo(s.x + 4, s.y + 4); CTX.lineTo(s.x + 4 + bSize, s.y + 4);
-        // TR
-        CTX.moveTo(s.x + W - 4 - bSize, s.y + 4); CTX.lineTo(s.x + W - 4, s.y + 4); CTX.lineTo(s.x + W - 4, s.y + 4 + bSize);
-        // BL
-        CTX.moveTo(s.x + 4, s.y + H - 4 - bSize); CTX.lineTo(s.x + 4, s.y + H - 4); CTX.lineTo(s.x + 4 + bSize, s.y + H - 4);
-        // BR
-        CTX.moveTo(s.x + W - 4 - bSize, s.y + H - 4); CTX.lineTo(s.x + W - 4, s.y + H - 4); CTX.lineTo(s.x + W - 4, s.y + H - 4 - bSize);
-        CTX.stroke(); // ONE stroke call for all brackets
+        CTX.strokeStyle = `rgba(250,180,30,${0.55 + fastPulse * 0.35})`;
+        CTX.lineWidth = 2;
+        CTX.moveTo(s.x + 6, s.y + 6 + bS); CTX.lineTo(s.x + 6, s.y + 6); CTX.lineTo(s.x + 6 + bS, s.y + 6);
+        CTX.moveTo(s.x + W - 6 - bS, s.y + 6); CTX.lineTo(s.x + W - 6, s.y + 6); CTX.lineTo(s.x + W - 6, s.y + 6 + bS);
+        CTX.moveTo(s.x + 6, s.y + H - 6 - bS); CTX.lineTo(s.x + 6, s.y + H - 6); CTX.lineTo(s.x + 6 + bS, s.y + H - 6);
+        CTX.moveTo(s.x + W - 6 - bS, s.y + H - 6); CTX.lineTo(s.x + W - 6, s.y + H - 6); CTX.lineTo(s.x + W - 6, s.y + H - 6 - bS);
+        CTX.stroke();
 
         CTX.restore(); // end floor clip
 
-        // ── 2. Central Holo-Table (no shadowBlur — use bright stroke instead) ──
-        const holoW = 130, holoH = 65;
+        // ── 2. CITADEL HEADER BAR (top banner) ───────────────────
+        {
+            const barH = 18;
+            CTX.fillStyle = `rgba(20,12,2,0.92)`;
+            CTX.beginPath(); CTX.roundRect(s.x, s.y, W, barH, [4, 4, 0, 0]); CTX.fill();
+            CTX.strokeStyle = `rgba(250,180,30,${0.4 + fastPulse * 0.3})`;
+            CTX.lineWidth = 1;
+            CTX.beginPath(); CTX.roundRect(s.x, s.y, W, barH, [4, 4, 0, 0]); CTX.stroke();
+            // Banner text
+            CTX.fillStyle = `rgba(254,243,199,${0.75 + pulse * 0.2})`;
+            CTX.font = 'bold 8px Orbitron,monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText('◈  MTC CITADEL  ◈', cx, s.y + barH / 2);
+        }
+
+        // ── 3. WALL COLUMNS (4 corners inside room) ──────────────
+        const colW = 14, colH = H;
+        const colPositions = [s.x, s.x + W - colW];
+        for (const cpx of colPositions) {
+            CTX.fillStyle = '#0c1220';
+            CTX.fillRect(cpx, s.y, colW, colH);
+            // Column highlight stripe
+            CTX.fillStyle = `rgba(250,180,30,${0.12 + fastPulse * 0.08})`;
+            CTX.fillRect(cpx + 2, s.y + 18, 2, colH - 36);
+            CTX.fillRect(cpx + colW - 4, s.y + 18, 2, colH - 36);
+            // Column cap lights
+            CTX.fillStyle = `rgba(250,180,30,${0.6 + fastPulse * 0.4})`;
+            CTX.beginPath(); CTX.arc(cpx + colW / 2, s.y + 26, 4, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(cpx + colW / 2, s.y + H - 26, 4, 0, Math.PI * 2); CTX.fill();
+        }
+
+        // ── 4. CENTRAL HOLO-TABLE ────────────────────────────────
+        const holoW = 140, holoH = 70;
         const holoX = cx - holoW / 2, holoY = cy - holoH / 2;
 
-        CTX.fillStyle = '#0f1208';
+        // Table body
+        CTX.fillStyle = '#0a0f1a';
         CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.fill();
-
-        // Border glow: fake it with thick+thin double stroke (no shadowBlur needed)
+        // Double border (fake glow)
         if (active) {
-            CTX.strokeStyle = `rgba(217,119,6,${0.15 + fastPulse * 0.1})`;
-            CTX.lineWidth = 6;
+            CTX.strokeStyle = `rgba(217,119,6,${0.18 + fastPulse * 0.12})`;
+            CTX.lineWidth = 7;
             CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.stroke();
         }
-        CTX.strokeStyle = active ? `rgba(250,180,30,${0.6 + fastPulse * 0.4})` : '#2d1f0a';
+        CTX.strokeStyle = active ? `rgba(250,180,30,${0.65 + fastPulse * 0.35})` : 'rgba(60,30,5,0.5)';
         CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.stroke();
 
-        // Hologram cone above table (no shadowBlur)
         if (active) {
-            const holoHeight = 28 + fastPulse * 6;
-            CTX.fillStyle = `rgba(217,119,6,${0.06 * pulse})`;
+            // Hologram projection cone
+            const holoHeight = 32 + fastPulse * 8;
+            CTX.fillStyle = `rgba(217,119,6,${0.07 * pulse})`;
             CTX.beginPath();
-            CTX.moveTo(cx - 3, holoY - holoHeight);
-            CTX.lineTo(cx - holoW * 0.35, holoY);
-            CTX.lineTo(cx + holoW * 0.35, holoY);
-            CTX.lineTo(cx + 3, holoY - holoHeight);
+            CTX.moveTo(cx - 4, holoY - holoHeight);
+            CTX.lineTo(cx - holoW * 0.38, holoY);
+            CTX.lineTo(cx + holoW * 0.38, holoY);
+            CTX.lineTo(cx + 4, holoY - holoHeight);
             CTX.closePath(); CTX.fill();
-
-            // Rotating hex (no shadowBlur — use opacity instead)
-            CTX.save();
-            CTX.translate(cx, holoY - 16);
-            CTX.rotate(now / 2000);
-            CTX.strokeStyle = `rgba(250,180,30,${0.6 + fastPulse * 0.3})`;
-            CTX.lineWidth = 1.5;
+            // Cone edge lines
+            CTX.strokeStyle = `rgba(250,180,30,${0.20 * pulse})`;
+            CTX.lineWidth = 1;
             CTX.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const a = (Math.PI / 3) * i;
-                i === 0 ? CTX.moveTo(Math.cos(a) * 10, Math.sin(a) * 10) : CTX.lineTo(Math.cos(a) * 10, Math.sin(a) * 10);
-            }
-            CTX.closePath(); CTX.stroke();
-            CTX.restore();
-        }
+            CTX.moveTo(cx - 4, holoY - holoHeight); CTX.lineTo(cx - holoW * 0.38, holoY);
+            CTX.moveTo(cx + 4, holoY - holoHeight); CTX.lineTo(cx + holoW * 0.38, holoY);
+            CTX.stroke();
 
-        // Table screen content
-        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-        if (active) {
-            // Status bars (precompute sin values)
+            // Hologram: double rotating hex rings
+            CTX.save();
+            CTX.translate(cx, holoY - 18);
+            for (let ring = 0; ring < 2; ring++) {
+                const r = 9 + ring * 6;
+                const rot = (ring % 2 === 0 ? 1 : -1) * now / (2000 + ring * 500);
+                CTX.rotate(rot);
+                CTX.strokeStyle = `rgba(250,180,30,${(0.7 - ring * 0.2) + fastPulse * 0.25})`;
+                CTX.lineWidth = 1.5 - ring * 0.4;
+                CTX.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const a = (Math.PI / 3) * i;
+                    i === 0 ? CTX.moveTo(Math.cos(a) * r, Math.sin(a) * r)
+                        : CTX.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+                }
+                CTX.closePath(); CTX.stroke();
+            }
+            // Center dot
+            CTX.fillStyle = `rgba(251,191,36,${0.8 + fastPulse * 0.2})`;
+            CTX.beginPath(); CTX.arc(0, 0, 2.5, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+
+            // Status bars
             const bars = [
-                { w: (holoW - 30) * (0.4 + Math.sin(now / 600) * 0.3), col: 'rgba(250,180,30,0.55)' },
-                { w: (holoW - 30) * (0.4 + Math.sin(now / 800 + 1) * 0.3), col: 'rgba(217,119,6,0.55)' },
-                { w: (holoW - 30) * (0.4 + Math.sin(now / 700 + 2) * 0.3), col: 'rgba(249,115,22,0.55)' },
+                { w: (holoW - 32) * (0.4 + Math.sin(now / 600) * 0.3), col: 'rgba(250,180,30,0.6)' },
+                { w: (holoW - 32) * (0.4 + Math.sin(now / 800 + 1) * 0.3), col: 'rgba(34,211,238,0.55)' },
+                { w: (holoW - 32) * (0.4 + Math.sin(now / 700 + 2) * 0.3), col: 'rgba(249,115,22,0.6)' },
             ];
             for (let i = 0; i < 3; i++) {
-                CTX.fillStyle = 'rgba(255,255,255,0.06)';
-                CTX.fillRect(holoX + 15, holoY + 12 + i * 14, holoW - 30, 5);
+                CTX.fillStyle = 'rgba(255,255,255,0.05)';
+                CTX.fillRect(holoX + 16, holoY + 12 + i * 14, holoW - 32, 5);
                 CTX.fillStyle = bars[i].col;
-                CTX.fillRect(holoX + 15, holoY + 12 + i * 14, bars[i].w, 5);
+                CTX.fillRect(holoX + 16, holoY + 12 + i * 14, bars[i].w, 5);
             }
             CTX.fillStyle = 'rgba(254,243,199,0.9)';
-            CTX.font = 'bold 9px monospace';
-            CTX.fillText('MTC SYSTEM ONLINE', cx, holoY + holoH - 12);
+            CTX.font = 'bold 8px Orbitron,monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText('MTC SYSTEM ONLINE', cx, holoY + holoH - 11);
+
+            // ── Ambient floating orbs (left & right of table) ──
+            const orbData = [
+                { ox: holoX - 28, oy: cy + Math.sin(now / 900) * 8, col: '250,180,30' },
+                { ox: holoX + holoW + 28, oy: cy + Math.sin(now / 900 + 2) * 8, col: '34,211,238' },
+                { ox: cx, oy: holoY - holoHeight - 18 + sinOrb * 5, col: '251,191,36' },
+            ];
+            for (const o of orbData) {
+                CTX.fillStyle = `rgba(${o.col},${0.12 + fastPulse * 0.06})`;
+                CTX.beginPath(); CTX.arc(o.ox, o.oy, 10, 0, Math.PI * 2); CTX.fill();
+                CTX.fillStyle = `rgba(${o.col},${0.7 + fastPulse * 0.3})`;
+                CTX.beginPath(); CTX.arc(o.ox, o.oy, 3, 0, Math.PI * 2); CTX.fill();
+            }
         } else {
-            CTX.fillStyle = 'rgba(239,68,68,0.12)';
+            // Rebooting state
+            CTX.fillStyle = 'rgba(239,68,68,0.10)';
             CTX.beginPath(); CTX.roundRect(holoX + 4, holoY + 4, holoW - 8, holoH - 8, 6); CTX.fill();
             CTX.fillStyle = '#ef4444';
             CTX.font = 'bold 9px monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
             CTX.fillText(`REBOOTING: ${Math.ceil(this.cooldown)}s`, cx, cy);
             if (sinBlink > 0) {
-                CTX.fillStyle = 'rgba(239,68,68,0.7)';
-                CTX.font = 'bold 11px monospace';
-                CTX.fillText('⚠', cx, cy - 18);
+                CTX.fillStyle = 'rgba(239,68,68,0.75)';
+                CTX.font = 'bold 12px monospace';
+                CTX.fillText('⚠', cx, cy - 20);
             }
         }
 
-        // ── 3. Side Terminals (no shadowBlur — LED dot uses bright color only) ──
-        const termY = s.y + H / 2 - 22;
+        // ── 5. SIDE TERMINALS ────────────────────────────────────
+        const termY = s.y + H / 2 - 24;
         const termDefs = [
-            { x: s.x + 18, color: '#fbbf24', rgb: '251,191,36' },
-            { x: s.x + W - 42, color: '#f97316', rgb: '249,115,22' }
+            { x: s.x + colW + 6, color: '#fbbf24', rgb: '251,191,36' },
+            { x: s.x + W - colW - 30, color: '#22d3ee', rgb: '34,211,238' }
         ];
         for (const term of termDefs) {
-            CTX.fillStyle = '#0f0c04';
-            CTX.beginPath(); CTX.roundRect(term.x, termY, 24, 44, 4); CTX.fill();
-            CTX.strokeStyle = active ? `rgba(${term.rgb},${0.5 + fastPulse * 0.3})` : '#2d1f0a';
-            CTX.lineWidth = 1.5; CTX.stroke();
-            // All LED dots in one pass per terminal — batch by on/off state
-            CTX.fillStyle = '#451a03'; // default off
-            for (let d = 0; d < 4; d++) {
-                const isOn = active && Math.sin(now / (300 + d * 120) + d * 1.5) > 0;
-                CTX.fillStyle = isOn ? term.color : '#451a03';
-                CTX.beginPath(); CTX.arc(term.x + 12, termY + 8 + d * 9, 3, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#080e1c';
+            CTX.beginPath(); CTX.roundRect(term.x, termY, 24, 48, 4); CTX.fill();
+            CTX.strokeStyle = active ? `rgba(${term.rgb},${0.5 + fastPulse * 0.3})` : 'rgba(30,20,5,0.5)';
+            CTX.lineWidth = 1.5;
+            CTX.beginPath(); CTX.roundRect(term.x, termY, 24, 48, 4); CTX.stroke();
+            // Screen mini-display
+            CTX.fillStyle = active ? `rgba(${term.rgb},0.08)` : 'rgba(0,0,0,0.3)';
+            CTX.fillRect(term.x + 3, termY + 3, 18, 10);
+            // LED dots
+            for (let d = 0; d < 5; d++) {
+                const isOn = active && Math.sin(now / (280 + d * 110) + d * 1.5) > 0;
+                CTX.fillStyle = isOn ? term.color : '#1a0e02';
+                CTX.beginPath(); CTX.arc(term.x + 12, termY + 18 + d * 7, 2.5, 0, Math.PI * 2); CTX.fill();
             }
         }
 
-        // ── 4. Entrance Forcefield (no shadowBlur — use double-line trick) ──
+        // ── 6. ENTRANCE FORCEFIELD ───────────────────────────────
         if (active) {
-            const ffAlpha = pulse * 0.8;
-            // Soft outer line
-            CTX.strokeStyle = `rgba(180,100,10,${ffAlpha * 0.4})`;
-            CTX.lineWidth = 6;
-            CTX.beginPath(); CTX.moveTo(s.x + 20, s.y + H); CTX.lineTo(s.x + W - 20, s.y + H); CTX.stroke();
-            // Bright core line
+            const ffAlpha = pulse * 0.85;
+            // Hex tile chain along the forcefield line
+            const ffY = s.y + H;
+            const hexCount = 7;
+            const hexSpacing = (W - 40) / (hexCount - 1);
+            CTX.strokeStyle = `rgba(250,180,30,${0.18 * pulse})`;
+            CTX.lineWidth = 0.8;
+            for (let hi = 0; hi < hexCount; hi++) {
+                const hx = s.x + 20 + hi * hexSpacing;
+                CTX.beginPath();
+                for (let k = 0; k < 6; k++) {
+                    const ha = (Math.PI / 3) * k - Math.PI / 6;
+                    const hpx = hx + Math.cos(ha) * 8, hpy = ffY + Math.sin(ha) * 8;
+                    k === 0 ? CTX.moveTo(hpx, hpy) : CTX.lineTo(hpx, hpy);
+                }
+                CTX.closePath(); CTX.stroke();
+            }
+            // Outer glow line
+            CTX.strokeStyle = `rgba(180,100,10,${ffAlpha * 0.45})`;
+            CTX.lineWidth = 7;
+            CTX.beginPath(); CTX.moveTo(s.x + 20, ffY); CTX.lineTo(s.x + W - 20, ffY); CTX.stroke();
+            // Bright core
             CTX.strokeStyle = `rgba(250,180,30,${ffAlpha})`;
             CTX.lineWidth = 2;
-            CTX.beginPath(); CTX.moveTo(s.x + 20, s.y + H); CTX.lineTo(s.x + W - 20, s.y + H); CTX.stroke();
-
-            // Energy posts (2 dots, no shadowBlur)
+            CTX.beginPath(); CTX.moveTo(s.x + 20, ffY); CTX.lineTo(s.x + W - 20, ffY); CTX.stroke();
+            // Energy posts
             for (const px of [s.x + 20, s.x + W - 20]) {
-                CTX.fillStyle = `rgba(250,180,30,${0.25 + fastPulse * 0.2})`;
-                CTX.beginPath(); CTX.arc(px, s.y + H, 7, 0, Math.PI * 2); CTX.fill();
-                CTX.fillStyle = `rgba(251,191,36,${0.8 + fastPulse * 0.2})`;
-                CTX.beginPath(); CTX.arc(px, s.y + H, 3, 0, Math.PI * 2); CTX.fill();
+                CTX.fillStyle = `rgba(250,180,30,${0.28 + fastPulse * 0.22})`;
+                CTX.beginPath(); CTX.arc(px, ffY, 8, 0, Math.PI * 2); CTX.fill();
+                CTX.fillStyle = `rgba(251,191,36,${0.85 + fastPulse * 0.15})`;
+                CTX.beginPath(); CTX.arc(px, ffY, 3, 0, Math.PI * 2); CTX.fill();
             }
-
             // SAFE ZONE label
-            CTX.fillStyle = `rgba(180,100,10,0.15)`;
-            CTX.beginPath(); CTX.roundRect(cx - 68, s.y + H - 21, 136, 17, 5); CTX.fill();
-            CTX.fillStyle = `rgba(250,180,30,${0.7 + pulse * 0.3})`;
-            CTX.font = 'bold 9px Orbitron,monospace';
+            CTX.fillStyle = 'rgba(180,100,10,0.18)';
+            CTX.beginPath(); CTX.roundRect(cx - 72, ffY - 22, 144, 18, 5); CTX.fill();
+            CTX.fillStyle = `rgba(250,180,30,${0.75 + pulse * 0.25})`;
+            CTX.font = 'bold 8px Orbitron,monospace';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            CTX.fillText('⚕ SAFE ZONE ACTIVE', cx, s.y + H - 13);
+            CTX.fillText('⚕  SAFE ZONE ACTIVE', cx, ffY - 13);
         }
 
-        // ── 5. Player Inside Timer (arc, no shadowBlur) ──
+        // ── 7. PLAYER INSIDE TIMER ───────────────────────────────
         if (this.isPlayerInside) {
             const timeLeft = this.maxStayTime - this.playerStayTime;
             const timerPct = timeLeft / this.maxStayTime;
             const timerColor = timerPct > 0.5 ? '#fbbf24' : timerPct > 0.25 ? '#f59e0b' : '#ef4444';
-            const timerCx = cx, timerCy = s.y + H - 42;
-
-            // Track ring
+            const timerCx = cx, timerCy = s.y + H - 44;
             CTX.strokeStyle = 'rgba(255,255,255,0.08)';
             CTX.lineWidth = 5;
             CTX.beginPath(); CTX.arc(timerCx, timerCy, 18, 0, Math.PI * 2); CTX.stroke();
-            // Progress arc
             CTX.strokeStyle = timerColor;
             CTX.lineWidth = 5;
-            CTX.beginPath();
-            CTX.arc(timerCx, timerCy, 18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerPct);
-            CTX.stroke();
-            // Timer text
+            CTX.beginPath(); CTX.arc(timerCx, timerCy, 18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerPct); CTX.stroke();
             CTX.fillStyle = timerColor;
             CTX.font = `bold ${timeLeft < 3 ? '13' : '11'}px monospace`;
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';

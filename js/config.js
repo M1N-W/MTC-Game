@@ -328,7 +328,8 @@ const BALANCE = {
     },
     boss: {
         radius: 50,
-        spawnY: -600,
+        // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
+        spawnY: -330,
         contactDamage: 25,
         speechInterval: 10,
         nextWaveDelay: 2000,
