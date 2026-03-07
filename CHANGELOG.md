@@ -4,6 +4,40 @@
 
 ---
 
+## v3.11.3 — Tutorial System Sync - Updated for v3.11.2 Game State
+*Released: March 7, 2026*
+
+### 📚 Tutorial Content Updates
+- **Boss name standardization** — Updated tutorial to use canonical names KruManop/KruFirst instead of legacy Boss/BossFirst
+- **Auto character simplification** — Removed Heat system references, simplified to current Stand Rush mechanics
+- **New feature documentation** — Added Stand Rush manual targeting and Domain Expansion ultimate abilities
+- **Accuracy improvements** — Updated cooldown values, energy costs, and skill descriptions
+
+### 🎯 Specific Changes
+- **Step 0:** Updated welcome message to reflect KruManop naming
+- **Step 4:** Clarified Auto's Wanchai Stand as autonomous companion with proper cooldowns
+- **Step 9:** Complete rewrite of Auto skills - simplified Vacuum Heat and Detonation mechanics
+- **Step 9.5:** NEW - Stand Rush manual targeting explanation with 6-layer rendering details
+- **Step 15:** Updated boss encounters with KruManop/KruFirst names and Domain Expansion information
+
+### ✨ Enhanced Player Experience
+- **Better accuracy** — Tutorial now matches actual game mechanics and values
+- **Clear progression** — Logical flow from basic movement to advanced Stand Rush targeting
+- **Thai localization maintained** — Preserved cultural references and humor
+- **Visual polish references** — Added mentions of Military HUD and visual effects
+
+### 📊 Statistics
+- **4 major sections updated** with current game state information
+- **1 new tutorial step** added for Stand Rush targeting
+- **All cooldown values verified** against config.js and AutoPlayer.js
+- **Thai language consistency** maintained throughout updates
+
+### 🔧 Files Changed
+- `js/tutorial.js` — Complete content sync with v3.11.2 game state
+- `sw.js` — Updated to v3.11.3
+
+---
+
 ## v3.11.1 — AutoPlayer Stand Rush System - Comprehensive Gameplay & Visual Overhaul
 *Released: March 7, 2026*
 

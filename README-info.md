@@ -84,7 +84,7 @@
 
 ---
 
-## 📈 Current Version: v3.11.2 (March 7, 2026)
+## 📈 Current Version: v3.11.3 (March 7, 2026)
 
 **Latest Major Updates:**
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
@@ -92,3 +92,4 @@
 - 🤖 **Advanced AI:** Autonomous Stand system with tactical intelligence
 - 🌌 **Domain Expansion:** Ultimate boss abilities with arena-wide physics manipulation
 - ⚖️ **Balance Overhaul:** Comprehensive weapon and character balance adjustments
+- 📚 **Tutorial System Sync:** Updated all tutorial content to match current game state

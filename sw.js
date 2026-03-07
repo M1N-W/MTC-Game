@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.2'; // v3.11.2: Boss class hierarchy refactor - BossBase extraction, KruManop/KruFirst renaming, ignite removal
+const CACHE_NAME = 'mtc-cache-v3.11.3'; // v3.11.3: Tutorial system sync - Updated boss names (KruManop/KruFirst), simplified Auto character mechanics, added Stand Rush targeting
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -40,7 +40,7 @@ const TutorialSystem = (() => {
         // ── 0. Welcome ──────────────────────────────────────
         {
             title: 'ยินดีต้อนรับสู่ MTC the Game!',
-            body: 'คุณกำลังจะเข้าสู่ห้องเรียนของ "ครูมานพ" ครูคณิตศาสตร์สุดโหด\n\nภารกิจ: รอดชีวิตให้ครบ 15 เวฟ และเอาชนะบอสทุกตัว\n\nกด NEXT หรือ SPACE เพื่อเริ่มบทเรียน',
+            body: 'คุณกำลังจะเข้าสู่ห้องเรียนของ KruManop (ครูมานพ) ครูคณิตศาสตร์สุดโหด\n\nภารกิจ: รอดชีวิตให้ครบ 15 เวฟ และเอาชนะบอสทุกตัว\n\nกด NEXT หรือ SPACE เพื่อเริ่มบทเรียน',
             icon: '🎓',
             action: 'none',
             position: 'center',
@@ -79,7 +79,7 @@ const TutorialSystem = (() => {
         // ── 4. R-Click Skill (all chars) ────────────────────
         {
             title: 'ทักษะพิเศษ (Right Click)',
-            body: 'กด Right Click เพื่อใช้ทักษะประจำตัว:\n• เก้า — Stealth ซ่อนตัว 3 วินาที\n• ภูมิ — Eat Rice ฟื้น HP และเพิ่มพลัง\n• Auto — Wanchai Stand เรียกผู้ช่วย\n\nลองกด Right Click ดู!',
+            body: 'กด Right Click เพื่อใช้ทักษะประจำตัว:\n• เก้า — Stealth ซ่อนตัว 3 วินาที\n• ภูมิ — Eat Rice ฟื้น HP และเพิ่มพลัง\n• Auto — Wanchai Stand เรียก autonomous companion (8s, CD 12s)\n\nลองกด Right Click ดู!',
             icon: '✨',
             action: 'skill',
             count: 1,
@@ -129,9 +129,19 @@ const TutorialSystem = (() => {
 
         // ── 9. Auto: Vacuum Heat + Detonate ─────────────────
         {
-            title: 'Auto — ทักษะพิเศษเฉพาะ 🔥',
-            body: 'Auto มีทักษะการควบคุมพื้นที่:\n\n🌀 กด Q — Vacuum Heat\n   ดูดศัตรูเข้าหาตัว\n\n💥 กด E — Detonate\n   ระเบิดความร้อนรอบตัว\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
-            icon: '🔥',
+            title: 'Auto — ทักษะพิเศษเฉพาะ 🌀',
+            body: 'Auto มีทักษะควบคุมพื้นที่:\n\n🌀 กด Q — Vacuum Heat (CD 6s)\n   ดูดศัตรูทุกตัวเข้าหาตัว + stun\n\n💥 กด E — Detonate (CD 8s, ต้องเปิด Wanchai ก่อน)\n   ระเบิด AOE สูง แต่ปิด Wanchai ทันที\n\n👊 L-Click ระหว่าง Wanchai Active\n   Stand Rush — ส่งสแตนด์พุ่งไปตามเคอร์เซอร์\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
+            icon: '🌀',
+            action: 'none',
+            charOnly: 'auto',
+            position: 'center',
+        },
+
+        // ── 9.5. Auto: Stand Rush targeting ─────────────────
+        {
+            title: 'Auto — Stand Rush Manual Targeting 👊',
+            body: 'ระหว่าง Wanchai active:\n\n🎯 ชี้เมาส์แล้ว L-Click = Stand Rush ไปตำแหน่งนั้น\n   Stand teleport หาเป้าแล้วรัวหมัดทันที\n\n✨ 6-layer rendering พร้อม visual effect\n🥊 Dual-fist — _punchSide สลับข้างทุกหมัด\n\n⚡ Wanchai ยังโจมตีอัตโนมัติด้วย\n   L-Click เพิ่ม Stand Rush ทับไปได้เลย',
+            icon: '👊',
             action: 'none',
             charOnly: 'auto',
             position: 'center',
@@ -186,7 +196,7 @@ const TutorialSystem = (() => {
         // ── 15. Boss ─────────────────────────────────────────
         {
             title: 'Boss Encounters 👑',
-            body: 'ทุก 3 เวฟจะมี Boss ปรากฏตัว!\n\n👑 ครูมานพ — Boss หลัก (Wave 3,6,9,12,15)\n   Meteor Shower, Thunder, Dash\n   HP Regen ถ้าไม่ยิงนาน!\n\n👩‍🔬 ครูเฟิร์ส — Physics Expert (Wave 6+)\n   Shockwave + เรียก Minions\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
+            body: 'ทุก 3 เวฟจะมี Boss ปรากฏตัว!\n\n👑 KruManop (ครูมานพ) — The Dog Summoner (Wave 3,6,9,12,15)\n   Meteor Shower, Thunder, Dash\n   Phase 2: เรียกหมา | Phase 3: GoldfishLover\n   HP Regen ถ้าไม่ยิงนาน!\n\n👩‍🔬 KruFirst (ครูเฟิร์ส) — The Physics Master (Wave 6+)\n   Shockwave + เรียก Minions\n\n🌌 Domain Expansion — ทักษะ Ultimate ของ Boss\n   ควบคุมพื้นที่ทั้ง Arena เมื่อ HP ต่ำ — ระวัง!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
             icon: '👑',
             action: 'none',
             position: 'center',
