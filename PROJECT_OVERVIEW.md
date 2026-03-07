@@ -875,6 +875,90 @@ mtcRoom: {
 
 ---
 
+### 🔧 การแก้ไขปัญหาข้อความซ้อนกันในเกม (🟢 STABLE - UI Fix)
+
+**วัตถุประสงค์:** แก้ไขปัญหาข้อความแจ้งเตือน (damage, healing, buff activation) ที่ซ้อนทับกันในเกม
+
+**ไฟล์ที่ต้องแก้ไข:**
+- `js/effects.js` - แก้ FloatingTextSystem.spawn() เพิ่ม stack-offset logic
+
+**⚠️ ข้อควรรู้:**
+- **ปัญหา:** ข้อความแจ้งเตือน (damage, healing, buff activation) แสดงผลซ้อนทับกัน
+- **สาเหตุ:** FloatingTextSystem.spawn() ไม่มี stack-offset logic - text หลายตัวที่ spawn จาก (x,y) เดียวกันพร้อมกันจะทับกันทันที
+- **ผลกระทบ:** ข้อความบางส่วนมองไม่เห็น หรืออ่านไม่ออก
+- **ระบบ:** Canvas-based 100% - ไม่ใช่ DOM elements, CSS z-index ใช้ไม่ได้
+
+**🔧 Technical Implementation (Canvas-based Solution):**
+
+**✅ การแก้ไขที่ถูกต้อง:**
+```javascript
+// ใน js/effects.js ที่ FloatingTextSystem.spawn()
+spawn(text, x, y, color, size = 20) {
+    // ── STACK OFFSET: prevent overlap when multiple texts spawn at same pos ──
+    // Count live texts within CLUSTER_R world-units horizontally.
+    // Each one pushes the new text up by STEP_Y world-units.
+    // Cap at MAX_STACK to avoid texts flying off screen.
+    const CLUSTER_R = 40;   // world px horizontal proximity threshold
+    const STEP_Y = 22;   // world px per stacked text
+    const MAX_STACK = 5;
+
+    let stack = 0;
+    for (let i = 0, len = this.texts.length; i < len; i++) {
+        const t = this.texts[i];
+        if (Math.abs(t.x - x) < CLUSTER_R && Math.abs(t.y - y) < CLUSTER_R * 2) {
+            stack++;
+            if (stack >= MAX_STACK) break;
+        }
+    }
+    const spawnY = y - stack * STEP_Y;
+
+    // ── POOL: reuse a dead instance instead of allocating ──
+    this.texts.push(FloatingText.acquire(text, x, spawnY, color, size));
+}
+```
+
+**❌ สิ่งที่ไม่ควรทำ (DOM-based Solutions):**
+- ไม่ต้องสร้าง NotificationManager class
+- ไม่ต้องใช้ CSS z-index (ไม่มี DOM elements)
+- ไม่ต้องใช้ DOM querySelectorAll
+- ไม่ต้องแก้ไฟล์ ui.js, main.css, PlayerBase.js
+
+**🎯 ทำไมการแก้ไขนี้ทำงานได้:**
+
+**✅ เหมาะกับระบบ Canvas:**
+- **FloatingText.y คือ world-coordinate** → offset 22px = ระยะที่มองเห็นชัดในทุก zoom level
+- **ตรวจ live texts ใน this.texts[] โดยตรง** → O(n) แต่ n ≤ 80 ไม่กระทบ FPS
+- **ไม่สร้าง object ใหม่** → ไม่ setTimeout, ไม่แตะ pool pattern เดิม
+
+**✅ Performance:**
+- **O(n) check** แต่ n มีขีดจำกัด (max 80 texts)
+- **ไม่มี garbage collection** ใช้ object pool อยู่แล้ว
+- **ไม่มี DOM manipulation** ทำงานใน Canvas เท่านั้น
+
+**✅ Simplicity:**
+- **แก้ไฟล์เดียว** - `js/effects.js` เพียงไฟล์เดียว
+- **ไม่ต้องสร้าง class ใหม่** - ใช้โครงสร้างเดิม
+- **ไม่ต้องแก้ไฟล์อื่น** - ไม่แตะ ui.js, main.css, PlayerBase.js
+
+**🔍 ไฟล์ที่ต้องตรวจสอบและแก้ไข:**
+
+**1. js/effects.js (เพียงไฟล์เดียว)**
+- แก้ `FloatingTextSystem.spawn()` method
+- เพิ่ม stack-offset logic 15 บรรทัด
+- ใช้ world coordinates และ object pool อยู่แล้ว
+
+**🎯 Expected Results:**
+- **ไม่มีการซ้อนทับ:** ข้อความจะเลื่อนขึ้นอย่างสวยงาม (22px ต่อชั้น)
+- **อ่านง่าย:** ข้อความทั้งหมดมองเห็นชัดเจน
+- **Performance:** ไม่กระทบ FPS (O(n) แต่ n ≤ 80)
+- **Maintainable:** แก้ไฟล์เดียว 15 บรรทัด ง่ายต่อการบำรุงรักษา
+- **Canvas-compatible:** ทำงานได้ดีกับระบบ Canvas-based 100%
+
+**⚡ Quick Implementation:**
+แก้เพียง `FloatingTextSystem.spawn()` ใน `js/effects.js` เพิ่ม 15 บรรทัด stack-offset logic เท่านั้น
+
+---
+
 ### 5. 🎮 การเพิ่มตัวละครใหม่ (🟢 STABLE)
 **ไฟล์ที่ต้องแก้ไข:**
 - `/js/entities/player/[NewCharacter].js` - สร้าง class ตัวละครใหม่ สืบทอบจาก `PlayerBase.js`

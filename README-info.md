@@ -64,7 +64,7 @@
 ---
 
 
-## �🚀 How to Play
+## 🚀 How to Play
 
 1.  ไปที่หน้าเว็บไซต์ของเกม (หรือรันผ่าน Live Server)
 2.  เลือกตัวละครที่หน้าเมนูหลัก
@@ -88,9 +88,12 @@
 
 ---
 
-## 📈 Current Version: v3.11.18 (March 7, 2026)
+## 📈 Current Version: v3.11.19 (March 7, 2026)
 
 **Latest Major Updates:**
+- 🔧 **Floating Text Overlap Fix:** Fixed damage, healing, and buff notification texts overlapping when spawned at same position
+- 📚 **Documentation Accuracy:** Updated PROJECT_OVERVIEW.md with correct Canvas-based solution for text overlap issue
+- 🎯 **Canvas-based Implementation:** Added 15-line stack-offset logic in FloatingTextSystem.spawn() using world coordinates
 - 📚 **Documentation Stability System:** Added classification system (🟢🟡🔴) for information stability across all documentation
 - 🏰 **MTC Room Abilities Implementation:** Complete buff system with rotating terminal (DMG +15%, SPD +10%, CDR BURST -35%)
 - 🛡️ **Boss Spawn Fix:** Fixed boss entities spawning inside MTC Room preventing player exploitation

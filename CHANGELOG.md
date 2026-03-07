@@ -6,6 +6,45 @@
 
 ---
 
+## v3.11.19 — Floating Text Overlap Fix & Documentation Updates
+*Released: March 7, 2026*
+
+### 🔧 Critical Bug Fixes
+- **Floating Text Overlap:** Fixed damage, healing, and buff notification texts overlapping when spawned at same position
+- **Canvas-based Solution:** Implemented stack-offset logic in FloatingTextSystem.spawn() using world coordinates
+- **Performance Optimization:** O(n) check with n ≤ 80, no impact on FPS using existing object pool
+
+### 📚 Documentation Improvements
+- **PROJECT_OVERVIEW.md:** Added comprehensive section for fixing floating text overlap issue
+- **Technical Accuracy:** Updated documentation to reflect Canvas-based architecture (not DOM-based)
+- **Implementation Guide:** Added correct solution with 15-line stack-offset logic
+- **Wrong Solutions:** Documented DOM-based approaches that don't work with Canvas system
+
+### 🎮 Game Mechanics
+- **Text Stacking:** Multiple texts at same position now stack vertically (22px offset per text)
+- **Visual Clarity:** All notifications are now visible and readable
+- **Maximum Stack:** Limited to 5 stacked texts to prevent flying off screen
+- **Cluster Detection:** 40px horizontal proximity threshold for stacking logic
+
+### 🔧 Technical Implementation
+- **FloatingTextSystem.spawn():** Added stack-offset calculation before text creation
+- **World Coordinates:** Uses world-space positioning for consistent visibility across zoom levels
+- **Object Pool:** Maintains existing performance with object reuse pattern
+- **No New Classes:** Simple 15-line fix without architectural changes
+
+### 📖 Documentation Updates
+- **PROJECT_OVERVIEW.md:** Added "การแก้ไขปัญหาข้อความซ้อนกันในเกม" section
+- **Canvas Architecture:** Clarified that CSS z-index and DOM queries don't work with Canvas-based system
+- **Correct Approach:** Documented the proper Canvas-based solution vs incorrect DOM-based approaches
+- **Performance Notes:** Explained why O(n) check is efficient with limited text count
+
+**Files Changed:**
+- `js/effects.js` (stack-offset logic in FloatingTextSystem.spawn())
+- `PROJECT_OVERVIEW.md` (comprehensive documentation section)
+- `sw.js` (cache version update)
+
+---
+
 ## v3.11.18 — Documentation Stability System & MTC Room Abilities
 *Released: March 7, 2026*
 

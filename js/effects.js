@@ -730,8 +730,26 @@ class FloatingTextSystem {
     }
 
     spawn(text, x, y, color, size = 20) {
+        // ── STACK OFFSET: prevent overlap when multiple texts spawn at same pos ──
+        // Count live texts within CLUSTER_R world-units horizontally.
+        // Each one pushes the new text up by STEP_Y world-units.
+        // Cap at MAX_STACK to avoid texts flying off screen.
+        const CLUSTER_R = 40;   // world px horizontal proximity threshold
+        const STEP_Y = 22;   // world px per stacked text
+        const MAX_STACK = 5;
+
+        let stack = 0;
+        for (let i = 0, len = this.texts.length; i < len; i++) {
+            const t = this.texts[i];
+            if (Math.abs(t.x - x) < CLUSTER_R && Math.abs(t.y - y) < CLUSTER_R * 2) {
+                stack++;
+                if (stack >= MAX_STACK) break;
+            }
+        }
+        const spawnY = y - stack * STEP_Y;
+
         // ── POOL: reuse a dead instance instead of allocating ──
-        this.texts.push(FloatingText.acquire(text, x, y, color, size));
+        this.texts.push(FloatingText.acquire(text, x, spawnY, color, size));
     }
 
     update(dt) {
