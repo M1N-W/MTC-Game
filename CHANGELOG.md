@@ -4,6 +4,82 @@
 
 ---
 
+## v3.11.7 — UX Improvements Patch
+*Released: March 7, 2026*
+
+### 🔧 Critical UX Fixes & Enhancements
+- **CSS Architecture Consolidation:** Merged `menu-upgrade.css` into `main.css` for better performance
+- **Overlay Fade Transitions:** Smooth fade-out instead of instant hide for better visual flow
+- **High Score Display:** Converted from inline styles to CSS classes for maintainability
+- **Mobile Button States:** Enhanced active/pressed feedback for touch devices
+- **Victory New Record Badge:** Dynamic badge display when high score is achieved
+
+### 🎯 Specific Improvements Implemented
+
+#### 🔴 Fix #1: Overlay Fade Transitions
+- **New Helper Function:** `_fadeOutOverlay()` with transitionend event handling
+- **Smooth Animation:** 0.4s ease transition instead of instant display:none
+- **Safety Fallback:** 500ms timeout ensures overlay always hides
+- **Better UX:** Eliminates jarring instant transitions between game states
+
+#### 🔴 Fix #2: High Score CSS Classes
+- **Clean Separation:** Removed inline `style.cssText` from JavaScript
+- **CSS Classes:** `.high-score-display`, `.hs-icon`, `.hs-label`, `.hs-value`
+- **Maintainability:** Easier to style and modify high score appearance
+- **Performance:** Reduced JavaScript styling overhead
+
+#### 🔴 Fix #3: Mobile Action Button States
+- **Active Feedback:** `:active` and `.pressed` states with scale(0.88)
+- **Visual Response:** Background brightness change on press
+- **Touch Optimization:** 0.08s ease transitions for responsive feel
+- **Better Interaction:** Clear feedback for mobile users
+
+#### 🟡 Fix #6: Dynamic Button Labels
+- **RETRY MISSION:** Game over button changes from "START" to character-specific retry
+- **Character Icons:** 🎓 RETRY MISSION, 🌾 RETRY MISSION, 🔥 RETRY MISSION
+- **State Management:** Proper label restoration when returning to menu
+- **Context Awareness:** Button text matches current game state
+
+#### 🟢 Fix #8: Victory New Record Badge
+- **Dynamic Display:** Badge appears only when new high score is achieved
+- **Celebratory Feel:** "🎉 NEW RECORD!" with pulsing animation
+- **Visual Impact:** Gold-to-orange gradient with glow effects
+- **Achievement Recognition:** Clear indication of record-breaking performance
+
+#### 🟢 Fix #10: Accessibility Support
+- **Reduced Motion:** `@media (prefers-reduced-motion: reduce)` support
+- **Animation Control:** Disables animations for users who prefer reduced motion
+- **Accessibility Compliance:** Respects user preferences for motion sensitivity
+- **Inclusive Design:** Better experience for motion-sensitive users
+
+### 🏗️ Architecture Improvements
+- **CSS Consolidation:** Single `main.css` file instead of split stylesheets
+- **Better Load Order:** Ensures CSS loads before JavaScript styling
+- **Code Organization:** Clear separation of concerns between JS and CSS
+- **Performance:** Reduced HTTP requests and better caching
+
+### 📱 Mobile Experience Enhancements
+- **Touch Feedback:** Improved button response for mobile devices
+- **Visual Clarity:** Better state indication for touch interactions
+- **Responsive Design:** Enhanced mobile usability
+- **Performance:** Optimized for mobile rendering
+
+### 🎨 Visual Polish Refinements
+- **Consistent Theming:** Military HUD theme maintained throughout
+- **Smooth Transitions:** All state changes now animated
+- **Visual Hierarchy:** Better information organization
+- **Professional Finish:** Production-ready UI polish
+
+### 🔧 Files Changed
+- `css/main.css` — Integrated menu-upgrade.css + UX fixes (569 lines added)
+- `css/menu-upgrade.css` — REMOVED (consolidated into main.css)
+- `js/game.js` — Added fade helper, retry labels, new record detection
+- `js/ui.js` — Converted inline styles to CSS classes
+- `index.html` — Added victory new record badge element
+- `sw.js` — Updated to v3.11.7
+
+---
+
 ## v3.11.6 — Comprehensive Frontend Design Overhaul
 *Released: March 7, 2026*
 

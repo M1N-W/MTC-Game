@@ -798,6 +798,24 @@ async function initAI() {
     }
 }
 
+// ── Overlay fade-out helper (🔴 Fix #1) ──────────────────────────────────
+function _fadeOutOverlay() {
+    const el = document.getElementById('overlay');
+    if (!el) return;
+    el.classList.add('fade-out');
+    // Safety timeout fallback in case transitionend doesn't fire
+    const fallback = setTimeout(() => {
+        el.style.display = 'none';
+        el.classList.remove('fade-out');
+    }, 500);
+    el.addEventListener('transitionend', function handler() {
+        clearTimeout(fallback);
+        el.style.display = 'none';
+        el.classList.remove('fade-out');
+        el.removeEventListener('transitionend', handler);
+    });
+}
+
 function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
     Audio.playBGM('battle');
@@ -877,9 +895,17 @@ function startGame(charType = 'kao') {
     Achievements.stats.shopPurchases = 0;
     GameState.waveStartDamage = 0;
 
-    hideElement('overlay');
+    // 🔴 Fix #1: Fade out instead of instant hide
+    _fadeOutOverlay();
     hideElement('report-card');
     UIManager.resetGameOverUI();
+
+    // 🟡 Fix #6: Reset RETRY label back to original START MISSION
+    const _startBtn = document.getElementById('start-btn');
+    if (_startBtn && _startBtn.dataset._originalLabel) {
+        _startBtn.textContent = _startBtn.dataset._originalLabel;
+        delete _startBtn.dataset._originalLabel;
+    }
 
     showResumePrompt(false);
     ShopManager.close();
@@ -948,10 +974,12 @@ async function endGame(result) {
 
     weatherSystem.clear();
 
+    let _isNewHighScore = false;
     {
         const runScore = getScore();
         const existing = getSaveData();
         if (runScore > existing.highScore) {
+            _isNewHighScore = true;
             updateSaveData({ highScore: runScore });
             console.log(`[MTC Save] 🏆 New high score: ${runScore}`);
             UIManager.updateHighScoreDisplay(runScore);
@@ -965,6 +993,11 @@ async function endGame(result) {
         setElementText('final-score', `SCORE ${getScore()}`);
         setElementText('final-wave', `WAVES CLEARED ${getWave() - 1}`);
         setElementText('final-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
+        // 🟢 Fix #8: NEW RECORD badge
+        if (_isNewHighScore) {
+            const recBadge = document.getElementById('victory-new-record');
+            if (recBadge) recBadge.classList.add('visible');
+        }
     } else {
         const finalScore = getScore();
         const finalWave = getWave();
@@ -972,6 +1005,15 @@ async function endGame(result) {
 
         showElement('overlay');
         UIManager.showGameOver(finalScore, finalWave, finalKills);
+
+        // 🟡 Fix #6: Change start button label to RETRY MISSION
+        const _retryBtn = document.getElementById('start-btn');
+        if (_retryBtn) {
+            _retryBtn.dataset._originalLabel = _retryBtn.textContent;
+            const _charId = window.player?.charId || 'kao';
+            const _icon = _charId === 'poom' ? '🌾' : _charId === 'auto' ? '🔥' : '🎓';
+            _retryBtn.textContent = _icon + ' RETRY MISSION';
+        }
 
         const ld = document.getElementById('ai-loading');
         if (ld) ld.style.display = 'block';

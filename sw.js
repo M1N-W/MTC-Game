@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.6'; // v3.11.6: Comprehensive frontend design overhaul - Military HUD theme with scanlines, hex grid, enhanced visual effects
+const CACHE_NAME = 'mtc-cache-v3.11.7'; // v3.11.7: UX improvements patch - Overlay fade transitions, high score CSS classes, mobile button states, new record badge
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

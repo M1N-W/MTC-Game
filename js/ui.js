@@ -573,24 +573,10 @@ class UIManager {
         }
         el = document.createElement('div');
         el.id = 'high-score-display';
-        el.style.cssText = [
-            'display:flex', 'align-items:center', 'gap:14px',
-            'background:rgba(8,4,18,0.85)',
-            'border:1px solid rgba(250,204,21,0.3)',
-            'border-radius:0', 'padding:10px 24px', 'margin-bottom:14px',
-            'font-family:"Rajdhani","Orbitron",sans-serif',
-            'letter-spacing:2px',
-            'box-shadow:0 0 24px rgba(250,204,21,0.12)',
-            'pointer-events:none',
-            'clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%)'
-        ].join(';');
         el.innerHTML = `
-            <span style="font-size:20px;line-height:1;">🏆</span>
-            <span style="color:rgba(250,204,21,0.5);font-size:10px;letter-spacing:3px;font-weight:700;text-transform:uppercase;">ALL-TIME HIGH SCORE</span>
-            <span id="hs-value"
-                  style="font-family:'Bebas Neue','Orbitron',sans-serif;font-size:24px;color:#facc15;letter-spacing:3px;text-shadow:0 0 14px rgba(250,204,21,0.6);">
-                ${formatted}
-            </span>
+            <span class="hs-icon">🏆</span>
+            <span class="hs-label">ALL-TIME HIGH SCORE</span>
+            <span id="hs-value" class="hs-value">${formatted}</span>
         `;
         const startBtn = document.getElementById('start-btn');
         if (startBtn && startBtn.parentNode) startBtn.parentNode.insertBefore(el, startBtn);
