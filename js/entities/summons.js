@@ -60,7 +60,7 @@ class NagaEntity extends Entity {
                 if (dist(seg.x, seg.y, enemy.x, enemy.y) < this.radius + enemy.radius) {
                     enemy.takeDamage(liveDamage * dt, player);
                     if (Math.random() < 0.1) spawnParticles(seg.x, seg.y, 2, '#10b981');
-                    const now = Date.now();
+                    const now = performance.now();
                     if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
                         this.lastSoundTime = now;
                         Audio.playNagaAttack();
@@ -75,7 +75,7 @@ class NagaEntity extends Entity {
             for (const seg of this.segments) {
                 if (dist(seg.x, seg.y, window.boss.x, window.boss.y) < this.radius + window.boss.radius) {
                     window.boss.takeDamage(liveDamage * dt * 0.4);
-                    const now = Date.now();
+                    const now = performance.now();
                     if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
                         this.lastSoundTime = now;
                         Audio.playNagaAttack();
@@ -186,18 +186,27 @@ class NagaEntity extends Entity {
                     CTX.restore();
                 }
 
-                // Spine ridge dot (dorsal line — top of each segment)
+                // Dorsal spine ridge — triangular spikes along back
                 if (r > 8) {
                     const spineA = Math.atan2(
                         this.segments[Math.max(i - 1, 0)].y - seg.y,
                         this.segments[Math.max(i - 1, 0)].x - seg.x
                     );
-                    const sx = screen.x + Math.cos(spineA + Math.PI / 2) * r * 0.55;
-                    const sy = screen.y + Math.sin(spineA + Math.PI / 2) * r * 0.55;
-                    const sp = 0.4 + Math.sin(now / 220 + i * 0.8) * 0.3;
-                    CTX.fillStyle = `rgba(52,211,153,${sp * 0.70})`;
-                    CTX.shadowBlur = 5 * sp; CTX.shadowColor = '#34d399';
-                    CTX.beginPath(); CTX.arc(sx, sy, r * 0.22, 0, Math.PI * 2); CTX.fill();
+                    const perpX = Math.cos(spineA + Math.PI / 2);
+                    const perpY = Math.sin(spineA + Math.PI / 2);
+                    const fwdX = Math.cos(spineA);
+                    const fwdY = Math.sin(spineA);
+                    const sp = 0.45 + Math.sin(now / 220 + i * 0.8) * 0.30;
+                    const spikeH = r * (0.28 + Math.sin(now / 220 + i * 0.8) * 0.07);
+                    const spikeW = r * 0.13;
+                    const baseR = r * 0.46;
+                    CTX.fillStyle = `rgba(52,211,153,${sp * 0.88})`;
+                    CTX.shadowBlur = 7 * sp; CTX.shadowColor = '#34d399';
+                    CTX.beginPath();
+                    CTX.moveTo(screen.x + perpX * baseR - fwdX * spikeW, screen.y + perpY * baseR - fwdY * spikeW);
+                    CTX.lineTo(screen.x + perpX * (baseR + spikeH), screen.y + perpY * (baseR + spikeH));
+                    CTX.lineTo(screen.x + perpX * baseR + fwdX * spikeW, screen.y + perpY * baseR + fwdY * spikeW);
+                    CTX.closePath(); CTX.fill();
                     CTX.shadowBlur = 0;
                 }
 
@@ -223,6 +232,24 @@ class NagaEntity extends Entity {
                         CTX.stroke();
                     }
                     CTX.restore();
+                }
+
+                // Venom drip — animated drop beneath every 4th segment
+                if (r > 9 && i % 4 === 2) {
+                    const dripPhase = ((now / 720) + i * 0.55) % 1.0;
+                    const dripDist = r * 0.55 + dripPhase * r * 1.9;
+                    const dripAlpha = Math.max(0, 1 - dripPhase * 1.1) * lifeRatio * 0.65;
+                    const dripR = Math.max(0.8, r * 0.13 * (1 - dripPhase * 0.55));
+                    if (dripAlpha > 0.05) {
+                        CTX.fillStyle = `rgba(16,185,129,${dripAlpha})`;
+                        CTX.shadowBlur = 5 * dripAlpha; CTX.shadowColor = '#10b981';
+                        CTX.beginPath(); CTX.arc(screen.x, screen.y + dripDist, dripR, 0, Math.PI * 2); CTX.fill();
+                        // Elongated drip trail
+                        CTX.globalAlpha *= 0.5;
+                        CTX.beginPath(); CTX.arc(screen.x, screen.y + dripDist - dripR * 1.5, dripR * 0.6, 0, Math.PI * 2); CTX.fill();
+                        CTX.globalAlpha = Math.max(0.08, alpha); // restore alpha
+                        CTX.shadowBlur = 0;
+                    }
                 }
             }
             CTX.restore();
@@ -272,12 +299,54 @@ class NagaEntity extends Entity {
             CTX.closePath(); CTX.fill();
             CTX.shadowBlur = 0;
 
+            // ── Mouth / fangs / tongue ─────────────────────────
+            const mouthOpen = Math.max(0, Math.sin(now / 380)) * r * 0.28;
+            // Dark inner mouth gap
+            CTX.fillStyle = '#001208';
+            CTX.beginPath();
+            CTX.ellipse(r * 1.28, 0, r * 0.18, mouthOpen + r * 0.04, 0, 0, Math.PI * 2);
+            CTX.fill();
+            // Fangs (visible when mouth opens)
+            if (mouthOpen > r * 0.04) {
+                const fY = mouthOpen * 0.65;
+                CTX.fillStyle = '#f0f9ff';
+                CTX.shadowBlur = 4; CTX.shadowColor = 'rgba(148,163,184,0.5)';
+                CTX.beginPath(); // upper fang
+                CTX.moveTo(r * 1.18, -fY * 0.25);
+                CTX.lineTo(r * 1.28, -fY * 0.12);
+                CTX.lineTo(r * 1.23, fY * 0.80);
+                CTX.closePath(); CTX.fill();
+                CTX.beginPath(); // lower fang
+                CTX.moveTo(r * 1.18, fY * 0.25);
+                CTX.lineTo(r * 1.28, fY * 0.12);
+                CTX.lineTo(r * 1.23, -fY * 0.80);
+                CTX.closePath(); CTX.fill();
+                CTX.shadowBlur = 0;
+            }
+            // Forked tongue (darts out phase-locked to mouth)
+            const tongueOut = Math.max(0, Math.sin(now / 380 - 0.55));
+            if (tongueOut > 0.15) {
+                CTX.save();
+                CTX.globalAlpha = headAlpha * tongueOut;
+                const tLen = r * 0.60 * tongueOut;
+                CTX.strokeStyle = '#ef4444'; CTX.lineWidth = 2.2; CTX.lineCap = 'round';
+                CTX.shadowBlur = 8; CTX.shadowColor = '#dc2626';
+                CTX.beginPath(); CTX.moveTo(r * 1.38, 0); CTX.lineTo(r * 1.38 + tLen * 0.65, 0); CTX.stroke();
+                CTX.beginPath(); CTX.moveTo(r * 1.38 + tLen * 0.65, 0); CTX.lineTo(r * 1.38 + tLen, -r * 0.17); CTX.stroke();
+                CTX.beginPath(); CTX.moveTo(r * 1.38 + tLen * 0.65, 0); CTX.lineTo(r * 1.38 + tLen, r * 0.17); CTX.stroke();
+                CTX.shadowBlur = 0;
+                CTX.restore();
+            }
+
             // Crown jewel on forehead
-            const crownP = 0.6 + Math.sin(now / 140) * 0.4;
+            const crownP = 0.65 + Math.sin(now / 140) * 0.35;
             CTX.fillStyle = `rgba(251,191,36,${crownP})`;
-            CTX.shadowBlur = 18 * crownP; CTX.shadowColor = '#fbbf24';
+            CTX.shadowBlur = 28 * crownP; CTX.shadowColor = '#fbbf24';
             CTX.beginPath(); CTX.ellipse(0, -r * 0.68, r * 0.18, r * 0.13, 0, 0, Math.PI * 2); CTX.fill();
+            // Crown inner highlight
+            CTX.fillStyle = `rgba(255,251,235,${crownP * 0.70})`;
             CTX.shadowBlur = 0;
+            CTX.beginPath(); CTX.ellipse(-r * 0.02, -r * 0.70, r * 0.07, r * 0.05, 0, 0, Math.PI * 2); CTX.fill();
 
             // Horns — taller, more elegant
             CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 3.5; CTX.lineCap = 'round';
@@ -325,9 +394,9 @@ class NagaEntity extends Entity {
             CTX.shadowBlur = 0;
 
             // Eyes — larger, more intense
-            const eyeGlow = 0.65 + Math.sin(now / 170) * 0.35;
+            const eyeGlow = 0.70 + Math.sin(now / 130) * 0.30;
             CTX.fillStyle = `rgba(245,158,11,${eyeGlow})`;
-            CTX.shadowBlur = 20 * eyeGlow; CTX.shadowColor = '#f59e0b';
+            CTX.shadowBlur = 32 * eyeGlow; CTX.shadowColor = '#f59e0b';
             CTX.beginPath(); CTX.ellipse(r * 0.38, -r * 0.32, r * 0.32, r * 0.22, 0, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.ellipse(r * 0.38, r * 0.32, r * 0.32, r * 0.22, 0, 0, Math.PI * 2); CTX.fill();
             CTX.shadowBlur = 0;
@@ -339,6 +408,18 @@ class NagaEntity extends Entity {
             CTX.fillStyle = `rgba(255,251,235,${eyeGlow * 0.75})`;
             CTX.beginPath(); CTX.arc(r * 0.34, -r * 0.37, r * 0.08, 0, Math.PI * 2); CTX.fill();
             CTX.beginPath(); CTX.arc(r * 0.34, r * 0.27, r * 0.08, 0, Math.PI * 2); CTX.fill();
+
+            // ── Low-life danger pulse ──────────────────────────
+            if (lifeRatio < 0.30) {
+                const dangerP = 0.5 + Math.sin(now / 90) * 0.5;
+                CTX.save();
+                CTX.globalAlpha = ((0.30 - lifeRatio) / 0.30) * dangerP * 0.80;
+                CTX.strokeStyle = '#ef4444'; CTX.lineWidth = 3.5;
+                CTX.shadowBlur = 24; CTX.shadowColor = '#dc2626';
+                CTX.beginPath(); CTX.arc(0, 0, r * 1.70, 0, Math.PI * 2); CTX.stroke();
+                CTX.shadowBlur = 0;
+                CTX.restore();
+            }
 
             CTX.restore();
 
@@ -509,25 +590,38 @@ class Drone extends Entity {
         const glowPulse = 0.6 + Math.sin(this.bobTimer * 2) * 0.4;
         const R = S.radius;
 
-        // ── Arms + rotors ────────────────────────────────────
+        // ── Arms + rotors (quad) ─────────────────────────────
         const armAngle = this.orbitAngle * 2.5;
+        const spin = this.wasOverdrive ? this.bobTimer * 22 : this.bobTimer * 9;
         CTX.save(); CTX.rotate(armAngle);
-        for (let side = -1; side <= 1; side += 2) {
-            // Tapered arm strut
+        for (let qi = 0; qi < 4; qi++) {
+            CTX.save(); CTX.rotate((qi / 4) * Math.PI * 2);
+            const AL = 22;
+            // Arm strut (double-line)
             CTX.strokeStyle = '#334155'; CTX.lineWidth = 3.5;
-            CTX.beginPath(); CTX.moveTo(side * 3, 0); CTX.lineTo(side * 20, -3); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(0, 0); CTX.lineTo(AL, 0); CTX.stroke();
             CTX.strokeStyle = '#475569'; CTX.lineWidth = 1.8;
-            CTX.beginPath(); CTX.moveTo(side * 3, 0); CTX.lineTo(side * 20, -3); CTX.stroke();
-            // Rotor nacelle
+            CTX.beginPath(); CTX.moveTo(0, 0); CTX.lineTo(AL, 0); CTX.stroke();
+            // Cross brace details
+            CTX.strokeStyle = 'rgba(51,65,85,0.55)'; CTX.lineWidth = 0.8;
+            CTX.beginPath(); CTX.moveTo(AL * 0.38, -2); CTX.lineTo(AL * 0.38, 2); CTX.stroke();
+            CTX.beginPath(); CTX.moveTo(AL * 0.68, -2); CTX.lineTo(AL * 0.68, 2); CTX.stroke();
+            // Nacelle
             CTX.fillStyle = '#293548'; CTX.strokeStyle = '#475569'; CTX.lineWidth = 1;
-            CTX.beginPath(); CTX.arc(side * 20, -3, 5, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
+            CTX.beginPath(); CTX.arc(AL, 0, 5, 0, Math.PI * 2); CTX.fill(); CTX.stroke();
             CTX.fillStyle = this.wasOverdrive ? `rgba(${rgbBase},0.55)` : '#3d4f63';
-            CTX.beginPath(); CTX.arc(side * 20, -3, 2.5, 0, Math.PI * 2); CTX.fill();
-            // Blades — tapered gradient
-            const spin = this.wasOverdrive ? this.bobTimer * 22 : this.bobTimer * 9;
-            CTX.save(); CTX.translate(side * 20, -3); CTX.rotate(spin * side);
-            for (let blade = 0; blade < 4; blade++) {
-                const a = (blade / 4) * Math.PI * 2;
+            CTX.beginPath(); CTX.arc(AL, 0, 2.5, 0, Math.PI * 2); CTX.fill();
+            // Engine exhaust glow beneath nacelle
+            const exhAlpha = 0.30 + Math.sin(this.bobTimer * 3.2 + qi * 1.57) * 0.15;
+            const exhG = CTX.createRadialGradient(AL, 4, 0, AL, 7, 9);
+            exhG.addColorStop(0, this.wasOverdrive ? `rgba(${rgbBase},${exhAlpha * 1.5})` : `rgba(0,229,255,${exhAlpha})`);
+            exhG.addColorStop(1, 'rgba(0,0,0,0)');
+            CTX.fillStyle = exhG;
+            CTX.beginPath(); CTX.ellipse(AL, 5, 4.5, 7, 0, 0, Math.PI * 2); CTX.fill();
+            // Blades (3 per nacelle, alternating direction)
+            CTX.save(); CTX.translate(AL, 0); CTX.rotate(spin * (qi % 2 === 0 ? 1 : -1));
+            for (let blade = 0; blade < 3; blade++) {
+                const a = (blade / 3) * Math.PI * 2;
                 const bladeG = CTX.createLinearGradient(0, 0, Math.cos(a) * 10, Math.sin(a) * 10);
                 bladeG.addColorStop(0, this.wasOverdrive ? `rgba(${rgbBase},0.95)` : 'rgba(148,163,184,0.9)');
                 bladeG.addColorStop(1, 'rgba(0,0,0,0)');
@@ -535,7 +629,21 @@ class Drone extends Entity {
                 CTX.beginPath(); CTX.moveTo(0, 0); CTX.lineTo(Math.cos(a) * 10, Math.sin(a) * 10); CTX.stroke();
             }
             CTX.restore();
+            CTX.restore();
         }
+        CTX.restore();
+
+        // ── Rotating scan beam ───────────────────────────────
+        const scanAngle = performance.now() / 920;
+        CTX.save(); CTX.rotate(scanAngle);
+        const beamLen = R + 40;
+        const beamAlpha = 0.11 + Math.sin(performance.now() / 240) * 0.05;
+        const beamG = CTX.createLinearGradient(0, 0, beamLen, 0);
+        beamG.addColorStop(0, `rgba(${rgbBase},${beamAlpha + 0.10})`);
+        beamG.addColorStop(0.65, `rgba(${rgbBase},${beamAlpha})`);
+        beamG.addColorStop(1, 'rgba(0,0,0,0)');
+        CTX.fillStyle = beamG;
+        CTX.beginPath(); CTX.moveTo(0, 0); CTX.arc(0, 0, beamLen, -0.09, 0.09); CTX.closePath(); CTX.fill();
         CTX.restore();
 
         // ── Outer octagon glow ring ──────────────────────────
@@ -562,6 +670,17 @@ class Drone extends Entity {
             else CTX.lineTo(Math.cos(a) * R, Math.sin(a) * R);
         }
         CTX.closePath(); CTX.fill(); CTX.stroke();
+
+        // Hex vertex rivets
+        CTX.fillStyle = '#475569';
+        for (let vi = 0; vi < 6; vi++) {
+            const va = (vi / 6) * Math.PI * 2 - Math.PI / 6;
+            CTX.beginPath(); CTX.arc(Math.cos(va) * R, Math.sin(va) * R, 1.5, 0, Math.PI * 2); CTX.fill();
+        }
+        // Center cross structural detail
+        CTX.strokeStyle = 'rgba(71,85,105,0.22)'; CTX.lineWidth = 0.6;
+        CTX.beginPath(); CTX.moveTo(-R * 0.75, 0); CTX.lineTo(R * 0.75, 0); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(0, -R * 0.75); CTX.lineTo(0, R * 0.75); CTX.stroke();
 
         // Armor panel insets
         CTX.fillStyle = 'rgba(15,23,42,0.6)'; CTX.strokeStyle = 'rgba(71,85,105,0.35)'; CTX.lineWidth = 0.7;
@@ -617,7 +736,7 @@ class Drone extends Entity {
 
         CTX.restore();
 
-        // Overdrive indicator arc (replaces text label)
+        // Overdrive indicator arc + shockwave ring
         if (this.wasOverdrive) {
             CTX.save();
             CTX.globalAlpha = 0.55 + Math.sin(performance.now() / 150) * 0.25;
@@ -625,6 +744,17 @@ class Drone extends Entity {
             CTX.lineWidth = 2;
             CTX.shadowBlur = 12; CTX.shadowColor = glowColor;
             CTX.beginPath(); CTX.arc(bodyScreen.x, bodyScreen.y, S.radius + 7, Math.PI * 1.1, Math.PI * 1.9); CTX.stroke();
+            CTX.restore();
+            // Expanding shockwave ring
+            const swPhase = (performance.now() % 900) / 900;
+            const swR = (S.radius + 6) + swPhase * 24;
+            CTX.save();
+            CTX.globalAlpha = (1 - swPhase) * 0.60;
+            CTX.strokeStyle = `rgba(${rgbBase},1.0)`;
+            CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 16; CTX.shadowColor = glowColor;
+            CTX.beginPath(); CTX.arc(bodyScreen.x, bodyScreen.y, swR, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
             CTX.restore();
         }
     }

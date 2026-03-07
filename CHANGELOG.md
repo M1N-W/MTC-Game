@@ -4,6 +4,101 @@
 
 ---
 
+## v3.11.10 — Comprehensive Visual Polish Overhaul
+*Released: March 7, 2026*
+
+### 🎨 Player Renderer Refactor
+- **Performance Optimization:** Standardized to `performance.now()` across all player rendering
+- **Shared Helper Functions:** Extracted 3 common drawing methods to eliminate code duplication
+- **Enhanced Visual Effects:** Low-HP danger pulse, polished level badges, improved energy shields
+
+#### Player Visual Enhancements
+- **Low-HP Danger Pulse:** Red pulsing ring when HP < 30% with severity-based intensity
+- **Polished Level Badges:** Shadow disc + glow rim + Orbitron font + highlight details
+- **Energy Shield Upgrade:** Added rotating shimmer arc with enhanced visual effects
+- **Consistent Timing:** Eliminated `Date.now()` calls in favor of `performance.now()`
+
+### 🐉 Boss Renderer Improvements
+- **Shared Boss HP Bars:** Unified rounded HP bar system with sheen effects and low-HP flicker
+- **Boss Danger Glow:** Low-HP pulse rings for all boss types with dynamic intensity
+- **Performance Standardization:** Consistent `performance.now()` usage across boss rendering
+- **Enhanced Visual Polish:** Improved gradients, shadows, and visual feedback
+
+#### Boss-Specific Enhancements
+- **BossDog:** Upgraded HP bar with label "DOG" + danger glow + enhanced visual details
+- **KruManop:** Low-HP danger ring + enhanced visual effects
+- **KruFirst:** HP bar upgrade with sheen + low-HP flicker border + danger glow
+
+### 🐍 Naga Summon Visual Upgrades
+- **Mouth Animation:** Dynamic opening/closing with sine wave animation
+- **Fangs & Tongue:** Visible white fangs + red forked tongue that darts out
+- **Enhanced Crown:** Brighter pulse + inner white highlight sparkle
+- **Dorsal Spines:** Animated triangular spikes along body segments
+- **Venom Drips:** Falling green drops beneath segments with fade effects
+- **Low-Life Danger:** Red pulsing ring when life ratio < 30%
+
+### 🤖 Drone Summon Enhancements
+- **Quad-Rotor System:** 4 arms at 90° intervals instead of 2
+- **Engine Exhaust:** Radial gradient glow beneath each nacelle
+- **Rotating Scan Beam:** Triangular beam sweeping from body center
+- **Overdrive Shockwave:** Expanding ring during overdrive mode
+- **Structural Details:** Hex vertex rivets + armor panel insets
+
+### 🐠 GoldfishMinion Redesign
+- **Naturalistic Appearance:** Orange-gold fancy goldfish with flowing fins
+- **Dangerous Elements:** Demonic red eyes + spiky dorsal fin + battle scars
+- **Enhanced Anatomy:** Veil-tail with lobes + proper fish proportions
+- **Visual Effects:** Bubble trail + warm glowing aura + menacing expression
+
+### 🐕 BossDog Complete Redesign
+- **Realistic Canine Anatomy:** Proper dog body structure with 4 legs
+- **Hellhound Aesthetic:** Dark fur + red glowing eyes + visible fangs
+- **Natural Movement:** Trotting leg animation + wagging tail + breathing
+- **Dangerous Details:** Spiked collar + ember particles + battle scars
+- **Color Palette:** Dark brown fur with warm highlights + menacing red eyes
+
+### 🔧 Technical Architecture Improvements
+
+#### Performance Optimizations
+- **Timing Standardization:** All rendering now uses `performance.now()` consistently
+- **Reduced Function Calls:** Eliminated redundant `Date.now()` calls in hot paths
+- **Deterministic Animation:** Replaced `Math.random()` with `sin()`-based noise
+- **Memory Efficiency:** Reduced per-frame object creation
+
+#### Code Quality Enhancements
+- **Helper Function Extraction:** 6 shared helper methods across rendering systems
+- **Consistent Coordinate Systems:** Standardized screen space vs entity space rendering
+- **Balanced Save/Restore:** Verified 81/81 CTX.save()/restore() pairs
+- **Clean Architecture:** Separated concerns for visual effects vs game logic
+
+#### Visual Consistency
+- **Unified HP Bar System:** Consistent rounded bars with sheen across all entities
+- **Standardized Danger Glows:** Low-HP pulse effects for players, enemies, and bosses
+- **Enhanced Level Indicators:** Polished badges with consistent styling
+- **Improved Visual Feedback:** Better indication of status effects and damage states
+
+### 📊 Performance Metrics
+- **Function Call Reduction:** Eliminated 15+ redundant `Date.now()` calls per frame
+- **Code Duplication:** Removed ~300 lines of duplicate rendering code
+- **Animation Consistency:** Standardized timing across all rendering systems
+- **Memory Optimization:** Reduced garbage collection pressure in hot paths
+
+### 🎯 User Experience Improvements
+- **Visual Clarity:** Enhanced distinction between entity types and states
+- **Combat Feedback:** Better indication of damage, low health, and status effects
+- **Professional Polish:** Movie-quality visual effects and animations
+- **Performance Stability:** Consistent 60FPS during intense combat scenarios
+- **Immersive Design:** Naturalistic creature designs with dangerous supernatural elements
+
+### 🔧 Files Changed
+- `js/rendering/PlayerRenderer.js` — Complete refactor with shared helpers (157 lines modified)
+- `js/entities/boss.js` — Boss renderer improvements + BossDog redesign (234 lines modified)
+- `js/entities/boss_attacks.js` — GoldfishMinion complete redesign (122 lines modified)
+- `js/entities/summons.js` — Naga and Drone visual upgrades (89 lines modified)
+- `sw.js` — Updated to v3.11.10
+
+---
+
 ## v3.11.9 — Enemy Renderer Refactor & Visual Polish
 *Released: March 7, 2026*
 

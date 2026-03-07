@@ -1049,159 +1049,329 @@ class BossRenderer {
         else if (e instanceof BossDog) BossRenderer.drawBossDog(e, ctx);
     }
 
-    // ── BossDog — Robotic Combat Hound ───────────────────────
+    // ── Shared: polished rounded HP bar ──────────────────────
+    // ctx must be in the coordinate space where (cx, cy) is the
+    // bar's top-left corner (typically after translate to screen pos).
+    static _drawBossHpBar(ctx, e, cx, cy, barW, barH, label, now) {
+        const hpPct = Math.max(0, e.hp / e.maxHp);
+        const hpCol = hpPct > 0.55 ? '#39ff14' : hpPct > 0.28 ? '#fbbf24' : '#ef4444';
+
+        // Shadow border
+        ctx.fillStyle = 'rgba(0,0,0,0.70)';
+        ctx.beginPath(); ctx.roundRect(cx - 1, cy - 1, barW + 2, barH + 2, 3); ctx.fill();
+
+        // HP fill
+        if (hpPct > 0) {
+            ctx.shadowBlur = 7; ctx.shadowColor = hpCol;
+            ctx.fillStyle = hpCol;
+            ctx.beginPath(); ctx.roundRect(cx, cy, barW * hpPct, barH, 3); ctx.fill();
+            // Sheen — top highlight strip
+            ctx.fillStyle = 'rgba(255,255,255,0.22)';
+            ctx.beginPath(); ctx.roundRect(cx, cy, barW * hpPct, barH * 0.38, 2); ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        // Low-HP flicker border
+        if (hpPct < 0.28) {
+            const lA = 0.50 + Math.sin(now / 85) * 0.38;
+            ctx.save();
+            ctx.globalAlpha = lA;
+            ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.6;
+            ctx.shadowBlur = 10; ctx.shadowColor = '#ef4444';
+            ctx.beginPath(); ctx.roundRect(cx - 1, cy - 1, barW + 2, barH + 2, 3); ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        // Label
+        if (label) {
+            ctx.save();
+            ctx.globalAlpha = 0.88;
+            ctx.font = `bold 9px "Orbitron",Arial,sans-serif`;
+            ctx.textAlign = 'center';
+            const labelCol = e.isEnraged ? '#ef4444' : hpCol;
+            ctx.fillStyle = labelCol;
+            ctx.shadowBlur = 7; ctx.shadowColor = labelCol;
+            ctx.fillText(label, cx + barW / 2, cy - 5);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+    }
+
+    // ── Shared: low-HP danger pulse ring ─────────────────────
+    // Must be called inside a block translated to entity centre.
+    static _drawBossLowHpGlow(ctx, e, R, now) {
+        if (!e.maxHp) return;
+        const ratio = e.hp / e.maxHp;
+        if (ratio >= 0.30) return;
+        const severity = 1 - ratio / 0.30;
+        const pulse = 0.28 + Math.sin(now / 95) * 0.22;
+        ctx.save();
+        ctx.globalAlpha = pulse * severity;
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3.5;
+        ctx.shadowBlur = 24 + Math.sin(now / 75) * 10;
+        ctx.shadowColor = '#ef4444';
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath(); ctx.arc(0, 0, R + 14 + Math.sin(now / 90) * 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
+
+
     static drawBossDog(e, ctx) {
         // ╔══════════════════════════════════════════════════════════╗
-        // ║  BOSS DOG — Robotic Combat Hound                        ║
-        // ║  Wide metallic bean · Spiked collar · 4 floating paws   ║
+        // ║  BOSS DOG — Hellhound Combat Summon (Dog Rider's Beast) ║
+        // ║  4-legged dog anatomy · Fangs · Pointed ears · Hellfire ║
         // ╚══════════════════════════════════════════════════════════╝
         if (e.dead) return;
         const screen = worldToScreen(e.x, e.y);
-        const now = Date.now();
+        const now = performance.now();
         const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
 
-        // ── HP bar (level) ────────────────────────────────────────────
+        // ── HP bar ────────────────────────────────────────────────────
         {
-            const barW = 60, barH = 6, pct = Math.max(0, e.hp / e.maxHp);
-            ctx.save();
-            ctx.fillStyle = 'rgba(0,0,0,0.55)';
-            ctx.fillRect(screen.x - barW / 2, screen.y - 46, barW, barH);
-            ctx.fillStyle = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
-            ctx.fillRect(screen.x - barW / 2, screen.y - 46, barW * pct, barH);
-            ctx.restore();
+            const barW = 66, barH = 6;
+            BossRenderer._drawBossHpBar(
+                ctx, e,
+                screen.x - barW / 2, screen.y - 62,
+                barW, barH, 'DOG', now
+            );
         }
 
         // ── Ground shadow ─────────────────────────────────────────────
         ctx.save();
-        ctx.globalAlpha = 0.28;
+        ctx.globalAlpha = 0.26;
         ctx.fillStyle = 'rgba(0,0,0,0.9)';
-        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 20, 32, 7, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(screen.x + 4, screen.y + 34, 42, 9, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
-        // ── Body Block (Body Anti-Flip logic) ─────────────────────────
+        // ── Main body transform (flip when facing left) ───────────────
         ctx.save();
         ctx.translate(screen.x, screen.y);
         if (isFacingLeft) ctx.scale(-1, 1);
 
-        // Heavy breathing — power unit
-        const breathe = Math.sin(now / 230);
-        ctx.scale(1 + breathe * 0.022, 1 - breathe * 0.022);
+        const breathe = Math.sin(now / 235);
+        ctx.scale(1 + breathe * 0.016, 1 - breathe * 0.016);
 
         const R = e.radius;
-
-        // ── Four floating robotic paws (cycling with legTimer) ────────
-        // Paws bob up/down in alternating pairs like a trotting dog
         const legCycle = e.legTimer;
-        const pawR = R * 0.32;
-        const pawOffsets = [
-            { ox: R * 0.55, oy: R * 0.75, phase: 0 },  // front-right
-            { ox: -R * 0.55, oy: R * 0.75, phase: Math.PI }, // back-right
-            { ox: R * 0.55, oy: -R * 0.75, phase: Math.PI }, // front-left
-            { ox: -R * 0.55, oy: -R * 0.75, phase: 0 },  // back-left
-        ];
-        for (const pw of pawOffsets) {
-            const bob = Math.sin(legCycle * 9 + pw.phase) * 5;
-            const px = pw.ox;
-            const py = pw.oy + bob;
+        const t = now / 1000;
 
-            // Robotic paw — small rounded rectangle + claws
-            ctx.fillStyle = '#374151'; ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2;
-            ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(220,38,38,0.4)';
-            ctx.beginPath(); ctx.roundRect(px - pawR, py - pawR * 0.7, pawR * 2, pawR * 1.4, pawR * 0.4); ctx.fill(); ctx.stroke();
-            // Two tiny claw spikes
-            ctx.fillStyle = '#1e293b';
-            for (let ci = -1; ci <= 1; ci += 2) {
-                ctx.beginPath();
-                ctx.moveTo(px + ci * pawR * 0.4, py + pawR * 0.7);
-                ctx.lineTo(px + ci * pawR * 0.6, py + pawR * 1.3);
-                ctx.lineTo(px + ci * pawR * 0.2, py + pawR * 0.7);
-                ctx.closePath(); ctx.fill();
-            }
+        // ── Color palette ─────────────────────────────────────────────
+        const furDark = '#2d1205';
+        const furMid = '#6b3010';
+        const furBase = '#a04818';
+        const furBelly = '#d88040';
+
+        // ── Leg-drawing helper (closure over ctx / legCycle / R) ──────
+        const drawDogLeg = (pivX, pivY, phase, behind) => {
+            const swing = Math.sin(legCycle * 9 + phase) * 0.28;
+            const thighL = R * 0.60;
+            const shinL = R * 0.50;
+            const kx = pivX + Math.sin(swing) * thighL;
+            const ky = pivY + Math.cos(swing) * thighL;
+            const px = kx - Math.sin(swing * 0.3) * shinL * 0.22;
+            const py = ky + shinL * 0.88;
+
+            ctx.globalAlpha = behind ? 0.65 : 1.0;
+            ctx.lineCap = 'round';
+            // Thigh
+            ctx.strokeStyle = behind ? furDark : furMid;
+            ctx.lineWidth = R * (behind ? 0.36 : 0.42);
+            ctx.beginPath(); ctx.moveTo(pivX, pivY); ctx.lineTo(kx, ky); ctx.stroke();
+            // Shin
+            ctx.strokeStyle = furDark;
+            ctx.lineWidth = R * (behind ? 0.26 : 0.30);
+            ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(px, py); ctx.stroke();
+            // Paw
+            ctx.fillStyle = furDark;
+            ctx.shadowBlur = behind ? 0 : 5; ctx.shadowColor = 'rgba(220,38,38,0.35)';
+            ctx.beginPath(); ctx.ellipse(px, py, R * 0.17, R * 0.11, swing * 0.2, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
+            // Claws
+            ctx.strokeStyle = '#150500'; ctx.lineWidth = 1.4;
+            for (let c = -1; c <= 1; c++) {
+                ctx.beginPath();
+                ctx.moveTo(px + c * R * 0.08, py + R * 0.09);
+                ctx.lineTo(px + c * R * 0.09, py + R * 0.21);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+        };
+
+        // ── Back legs (drawn behind body) ─────────────────────────────
+        drawDogLeg(-R * 0.60, R * 0.46, Math.PI, true);
+        drawDogLeg(-R * 0.40, R * 0.46, 0, true);
+
+        // ── Tail ──────────────────────────────────────────────────────
+        const tailWag = Math.sin(legCycle * 11) * R * 0.24;
+        ctx.strokeStyle = furMid; ctx.lineWidth = R * 0.22; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-R * 1.05, R * 0.06);
+        ctx.quadraticCurveTo(-R * 1.52, -R * 0.32 + tailWag * 0.38, -R * 1.72, -R * 0.76 + tailWag);
+        ctx.stroke();
+        ctx.fillStyle = furBase;
+        ctx.beginPath(); ctx.arc(-R * 1.72, -R * 0.76 + tailWag, R * 0.15, 0, Math.PI * 2); ctx.fill();
+
+        // ── Main torso ────────────────────────────────────────────────
+        const bodyG = ctx.createRadialGradient(-R * 0.18, -R * 0.08, 0, R * 0.05, R * 0.10, R * 1.10);
+        bodyG.addColorStop(0, furBelly);
+        bodyG.addColorStop(0.38, furBase);
+        bodyG.addColorStop(0.72, furMid);
+        bodyG.addColorStop(1, furDark);
+        ctx.fillStyle = bodyG; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(R * 0.05, R * 0.10, R * 1.05, R * 0.54, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = furDark; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.ellipse(R * 0.05, R * 0.10, R * 1.05, R * 0.54, 0, 0, Math.PI * 2); ctx.stroke();
+
+        // Belly lighter patch
+        ctx.fillStyle = 'rgba(210,140,70,0.32)';
+        ctx.beginPath(); ctx.ellipse(R * 0.10, R * 0.26, R * 0.52, R * 0.23, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Fur texture lines
+        ctx.strokeStyle = 'rgba(45,18,5,0.28)'; ctx.lineWidth = 1.1; ctx.lineCap = 'round';
+        for (let fi = -2; fi <= 2; fi++) {
+            const fx = fi * R * 0.26;
+            ctx.beginPath(); ctx.moveTo(fx, -R * 0.38); ctx.lineTo(fx + R * 0.07, -R * 0.52); ctx.stroke();
         }
 
-        // ── Main bean body — Sleek White Sci-Fi Chassis ───────────────
-        // Horizontal bean: wider X than Y
-        ctx.save(); ctx.scale(1.5, 0.90);
-        const bodyG = ctx.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#ffffff');
-        bodyG.addColorStop(0.55, '#e2e8f0');
-        bodyG.addColorStop(1, '#94a3b8');
-        ctx.fillStyle = bodyG;
-        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#475569'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
-        ctx.restore(); // end wide scale
-
-        // Metallic specular stripe
-        ctx.fillStyle = 'rgba(255,255,255,0.70)';
-        ctx.beginPath(); ctx.ellipse(-R * 0.1, -R * 0.25, R * 0.55, R * 0.20, 0, 0, Math.PI * 2); ctx.fill();
-
-        // ── Spiked collar — ring of sharp triangles around neck area ──
-        const collarR = R * 0.68;
-        const spikeCount = 8;
-        ctx.fillStyle = '#4b5563'; ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1.5;
-        // Collar band
-        ctx.beginPath(); ctx.arc(0, 0, collarR + 2, -Math.PI * 0.5 - 0.7, Math.PI * 0.5 + 0.7);
-        ctx.lineWidth = 6; ctx.strokeStyle = '#374151'; ctx.stroke();
-        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1.5;
-        // Collar spikes
-        for (let i = 0; i < spikeCount; i++) {
-            const sa = -Math.PI * 0.55 + (i / (spikeCount - 1)) * Math.PI * 1.1;
-            const sInner = collarR - 2;
-            const sOuter = collarR + 6;
-            const sx = Math.cos(sa);
-            const sy = Math.sin(sa);
-            ctx.fillStyle = i % 2 === 0 ? '#6b7280' : '#4b5563';
+        // ── Spiked collar ─────────────────────────────────────────────
+        const collarCX = R * 0.82, collarCY = -R * 0.04, collarR = R * 0.60;
+        ctx.lineWidth = 7; ctx.strokeStyle = '#1a0d00';
+        ctx.beginPath(); ctx.arc(collarCX, collarCY, collarR, -Math.PI * 0.60, Math.PI * 0.60); ctx.stroke();
+        ctx.lineWidth = 5; ctx.strokeStyle = '#4a2000';
+        ctx.beginPath(); ctx.arc(collarCX, collarCY, collarR, -Math.PI * 0.60, Math.PI * 0.60); ctx.stroke();
+        const spikeCount = 7;
+        for (let si = 0; si < spikeCount; si++) {
+            const sa = -Math.PI * 0.54 + (si / (spikeCount - 1)) * Math.PI * 1.08;
+            const iR = collarR - 2, oR = collarR + 7;
+            ctx.fillStyle = si % 2 === 0 ? '#6b3500' : '#7c4010';
+            ctx.strokeStyle = '#1a0d00'; ctx.lineWidth = 1.2;
             ctx.beginPath();
-            ctx.moveTo(sx * sInner + Math.cos(sa - 0.15) * 0, sy * sInner + Math.sin(sa - 0.15) * 0);
-            ctx.lineTo(Math.cos(sa - 0.18) * sInner, Math.sin(sa - 0.18) * sInner);
-            ctx.lineTo(sx * sOuter, sy * sOuter);
-            ctx.lineTo(Math.cos(sa + 0.18) * sInner, Math.sin(sa + 0.18) * sInner);
+            ctx.moveTo(collarCX + Math.cos(sa - 0.20) * iR, collarCY + Math.sin(sa - 0.20) * iR);
+            ctx.lineTo(collarCX + Math.cos(sa) * oR, collarCY + Math.sin(sa) * oR);
+            ctx.lineTo(collarCX + Math.cos(sa + 0.20) * iR, collarCY + Math.sin(sa + 0.20) * iR);
             ctx.closePath(); ctx.fill(); ctx.stroke();
         }
 
-        // ── Red angular visor eyes (two connected horizontal slits) ───
-        const visorA = 0.8 + Math.sin(now / 180) * 0.20;
-        ctx.fillStyle = `rgba(220,38,38,${visorA})`;
-        ctx.shadowBlur = 14 * visorA; ctx.shadowColor = '#ef4444';
-        // Angular visor left slit
-        ctx.beginPath();
-        ctx.moveTo(R * 0.28, -R * 0.25);
-        ctx.lineTo(R * 0.72, -R * 0.15);
-        ctx.lineTo(R * 0.68, R * 0.05);
-        ctx.lineTo(R * 0.24, R * 0.10);
-        ctx.closePath(); ctx.fill();
-        // Angular visor right slit (mirrored slightly)
-        ctx.beginPath();
-        ctx.moveTo(R * 0.28, R * 0.22);
-        ctx.lineTo(R * 0.72, R * 0.14);
-        ctx.lineTo(R * 0.70, R * 0.38);
-        ctx.lineTo(R * 0.26, R * 0.42);
-        ctx.closePath(); ctx.fill();
-        // Visor glow bleed
-        ctx.fillStyle = `rgba(220,38,38,${visorA * 0.15})`;
-        ctx.beginPath(); ctx.arc(R * 0.52, R * 0.1, R * 0.35, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
+        // ── Neck bridge ───────────────────────────────────────────────
+        ctx.fillStyle = furMid;
+        ctx.beginPath(); ctx.ellipse(R * 0.82, -R * 0.02, R * 0.27, R * 0.36, 0, 0, Math.PI * 2); ctx.fill();
 
-        // ── Back tail (angular robotic fin) ───────────────────────────
-        ctx.fillStyle = '#374151'; ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2;
-        const tailWag = Math.sin(now / 90) * 8;
+        // ── Head ──────────────────────────────────────────────────────
+        const headG = ctx.createRadialGradient(R * 1.05, -R * 0.28, 0, R * 1.18, -R * 0.16, R * 0.58);
+        headG.addColorStop(0, furBase);
+        headG.addColorStop(0.52, furMid);
+        headG.addColorStop(1, furDark);
+        ctx.fillStyle = headG; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(R * 1.18, -R * 0.16, R * 0.57, R * 0.50, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = furDark; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.ellipse(R * 1.18, -R * 0.16, R * 0.57, R * 0.50, 0, 0, Math.PI * 2); ctx.stroke();
+
+        // ── Pointed ears (Doberman/Shepherd style) ────────────────────
+        // Back ear (slightly darker, behind head)
+        ctx.fillStyle = furDark; ctx.strokeStyle = furDark; ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.moveTo(-R * 1.4, -R * 0.2);
-        ctx.lineTo(-R * 2.0, -R * 0.6 + tailWag * 0.05);
-        ctx.lineTo(-R * 2.1, R * 0.2 + tailWag * 0.08);
-        ctx.lineTo(-R * 1.4, R * 0.2);
+        ctx.moveTo(R * 0.88, -R * 0.56);
+        ctx.lineTo(R * 0.74, -R * 1.16);
+        ctx.lineTo(R * 1.08, -R * 0.66);
         ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(160,50,50,0.52)';
+        ctx.beginPath();
+        ctx.moveTo(R * 0.90, -R * 0.60);
+        ctx.lineTo(R * 0.80, -R * 1.04);
+        ctx.lineTo(R * 1.04, -R * 0.68);
+        ctx.closePath(); ctx.fill();
+        // Front ear
+        ctx.fillStyle = furMid; ctx.strokeStyle = furDark; ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(R * 1.26, -R * 0.60);
+        ctx.lineTo(R * 1.18, -R * 1.20);
+        ctx.lineTo(R * 1.56, -R * 0.68);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(180,65,65,0.58)';
+        ctx.beginPath();
+        ctx.moveTo(R * 1.28, -R * 0.62);
+        ctx.lineTo(R * 1.22, -R * 1.08);
+        ctx.lineTo(R * 1.50, -R * 0.70);
+        ctx.closePath(); ctx.fill();
 
-        // ── Heat vent dots on body ────────────────────────────────────
-        const ventA = 0.4 + Math.sin(now / 190) * 0.35;
-        ctx.fillStyle = `rgba(251,146,60,${ventA})`;
-        ctx.shadowBlur = 6; ctx.shadowColor = '#fb923c';
-        for (let vi = 0; vi < 3; vi++) {
-            ctx.beginPath(); ctx.arc(-R * 0.15 + vi * R * 0.18, R * 0.55, 2.5, 0, Math.PI * 2); ctx.fill();
-        }
+        // ── Snout ─────────────────────────────────────────────────────
+        ctx.fillStyle = furBelly; ctx.strokeStyle = furDark; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.ellipse(R * 1.68, R * 0.06, R * 0.37, R * 0.24, 0.08, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Snout centre divide
+        ctx.strokeStyle = furDark; ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.moveTo(R * 1.68, -R * 0.15); ctx.lineTo(R * 1.68, R * 0.08); ctx.stroke();
+
+        // ── Nose ──────────────────────────────────────────────────────
+        ctx.fillStyle = '#0a0300';
+        ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(0,0,0,0.9)';
+        ctx.beginPath(); ctx.ellipse(R * 1.96, -R * 0.04, R * 0.13, R * 0.09, 0, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.beginPath(); ctx.arc(R * 1.92, -R * 0.08, R * 0.04, 0, Math.PI * 2); ctx.fill();
+
+        // ── Mouth + fangs ─────────────────────────────────────────────
+        ctx.strokeStyle = furDark; ctx.lineWidth = 1.7; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(R * 1.68, R * 0.06); ctx.lineTo(R * 1.68, R * 0.22); ctx.stroke();
+        ctx.fillStyle = '#f5f0ec';
+        ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(255,200,180,0.5)';
+        // Left fang
+        ctx.beginPath();
+        ctx.moveTo(R * 1.57, R * 0.18); ctx.lineTo(R * 1.53, R * 0.35); ctx.lineTo(R * 1.65, R * 0.18);
+        ctx.closePath(); ctx.fill();
+        // Right fang
+        ctx.beginPath();
+        ctx.moveTo(R * 1.74, R * 0.18); ctx.lineTo(R * 1.70, R * 0.34); ctx.lineTo(R * 1.82, R * 0.18);
+        ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0;
+        // Tongue
+        ctx.fillStyle = '#fb7185';
+        ctx.beginPath(); ctx.ellipse(R * 1.67, R * 0.37, R * 0.12, R * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+
+        // ── Glowing red eyes with slit pupils ────────────────────────
+        const eyePulse = 0.80 + Math.sin(now / 175) * 0.20;
+        // Socket shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.38)';
+        ctx.beginPath(); ctx.ellipse(R * 1.36, -R * 0.32, R * 0.20, R * 0.16, -0.25, 0, Math.PI * 2); ctx.fill();
+        // Iris glow
+        ctx.fillStyle = `rgba(220,38,38,${eyePulse})`;
+        ctx.shadowBlur = 16 * eyePulse; ctx.shadowColor = '#ef4444';
+        ctx.beginPath(); ctx.ellipse(R * 1.36, -R * 0.32, R * 0.16, R * 0.14, -0.25, 0, Math.PI * 2); ctx.fill();
+        // Slit pupil
+        ctx.fillStyle = '#0a0000'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(R * 1.36, -R * 0.32, R * 0.05, R * 0.14, -0.25, 0, Math.PI * 2); ctx.fill();
+        // Eye shine
+        ctx.fillStyle = 'rgba(255,255,255,0.72)';
+        ctx.beginPath(); ctx.arc(R * 1.30, -R * 0.38, R * 0.04, 0, Math.PI * 2); ctx.fill();
+
+        // ── Battle scars on body ──────────────────────────────────────
+        ctx.strokeStyle = 'rgba(45,18,5,0.52)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-R * 0.22, -R * 0.26); ctx.lineTo(-R * 0.08, -R * 0.16); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(R * 0.32, -R * 0.36); ctx.lineTo(R * 0.44, -R * 0.22); ctx.stroke();
+
+        // ── Front legs (drawn in front of body) ───────────────────────
+        drawDogLeg(R * 0.62, R * 0.50, 0, false);
+        drawDogLeg(R * 0.82, R * 0.50, Math.PI, false);
+
+        // ── Hellfire ember particles ───────────────────────────────────
+        ctx.save();
+        for (let i = 0; i < 6; i++) {
+            const ea = t * 0.72 + i * 1.047;
+            const eRad = R * 0.70 + Math.abs(Math.sin(t * 2.2 + i * 1.7)) * R * 0.22;
+            const ex = Math.cos(ea) * eRad * 1.35;
+            const ey = Math.sin(ea) * eRad * 0.52;
+            const eps = 2.2 + Math.abs(Math.sin(t * 1.8 + i * 2.1)) * 1.6;
+            ctx.globalAlpha = 0.36 + Math.abs(Math.sin(t * 1.3 + i)) * 0.34;
+            ctx.fillStyle = ['#ef4444', '#f97316', '#facc15'][i % 3];
+            ctx.shadowBlur = 9; ctx.shadowColor = '#ef4444';
+            ctx.beginPath(); ctx.arc(ex, ey, eps, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+
+        // ── Low-HP danger glow ────────────────────────────────────────
+        BossRenderer._drawBossLowHpGlow(ctx, e, R, now);
 
         ctx.restore(); // end body transform
     }
@@ -1213,7 +1383,7 @@ class BossRenderer {
         // ║  Dark-grey bean · Suit+tie · Glowing glasses · Ruler    ║
         // ╚══════════════════════════════════════════════════════════╝
         const screen = worldToScreen(e.x, e.y);
-        const now = Date.now();
+        const now = performance.now();
         const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
 
         ctx.save();
@@ -1524,6 +1694,9 @@ class BossRenderer {
             ctx.globalAlpha = 1; ctx.shadowBlur = 0;
         }
 
+        // ── Low-HP danger glow ────────────────────────────────────────
+        BossRenderer._drawBossLowHpGlow(ctx, e, R, now);
+
         ctx.restore(); // end body block
 
         // ── Weapon Block (Weapon Anti-Flip) ───────────────────────────
@@ -1788,9 +1961,9 @@ class BossRenderer {
             ctx.shadowBlur = 0;
             // Outer flame — ENHANCED intensity
             const flameBoost = e.isEnraged ? 1.5 : 1.0;
-            const flameLen = R * (0.70 + Math.sin(t * 8.5 + ni * 2.1) * 0.30 + Math.random() * 0.18) * flameBoost;
+            const flameLen = R * (0.70 + Math.sin(t * 8.5 + ni * 2.1) * 0.30 + Math.abs(Math.sin(t * 17.3 + ni * 3.7)) * 0.18) * flameBoost;
             const flameW = nW * (0.70 + Math.sin(t * 11.2 + ni * 1.7) * 0.25) * flameBoost;
-            const fJitter = (Math.random() - 0.5) * 7;
+            const fJitter = Math.sin(t * 13.1 + ni * 2.9) * 3.5;
             ctx.save();
             ctx.shadowBlur = e.isEnraged ? 35 : 28;
             ctx.shadowColor = e.isEnraged ? '#ef4444' : '#3b82f6';
@@ -2046,21 +2219,11 @@ class BossRenderer {
         {
             const barW = R * 2.0, barH = 6;
             const barX = -barW / 2, barYp = -R * 1.72;
-            const hpPct = Math.max(0, e.hp / e.maxHp);
-            ctx.fillStyle = 'rgba(0,0,0,0.60)';
-            ctx.beginPath(); ctx.roundRect(barX - 1, barYp - 1, barW + 2, barH + 2, 3); ctx.fill();
-            const hpCol = hpPct > 0.55 ? '#39ff14' : hpPct > 0.28 ? '#fbbf24' : '#ef4444';
-            ctx.shadowBlur = 6; ctx.shadowColor = hpCol; ctx.fillStyle = hpCol;
-            ctx.beginPath(); ctx.roundRect(barX, barYp, barW * hpPct, barH, 3); ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.globalAlpha = 0.80;
-            ctx.font = `bold 9px "Orbitron",Arial,sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.fillStyle = e.isEnraged ? '#ef4444' : '#39ff14';
-            ctx.shadowBlur = 6; ctx.shadowColor = e.isEnraged ? '#ef4444' : '#39ff14';
-            ctx.fillText('KRU FIRST', 0, barYp - 5);
-            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            BossRenderer._drawBossHpBar(ctx, e, barX, barYp, barW, barH, 'KRU FIRST', t * 1000);
         }
+
+        // ── Low-HP danger glow ────────────────────────────────────────
+        BossRenderer._drawBossLowHpGlow(ctx, e, R, t * 1000);
 
         ctx.restore(); // end body block
 

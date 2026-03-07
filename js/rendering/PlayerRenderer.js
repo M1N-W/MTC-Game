@@ -165,6 +165,86 @@ class PlayerRenderer {
     }
 
     // ══════════════════════════════════════════════════════════
+    // SHARED HELPERS (extracted from 3 identical blocks)
+    // ══════════════════════════════════════════════════════════
+
+    /**
+     * Energy shield ring — identical block was in _drawBase / _drawAuto / _drawPoom.
+     * Call inside a ctx.save block already translated to entity centre.
+     */
+    static _drawEnergyShield(ctx, now) {
+        const shieldT = now / 200;
+        const pulse = 0.6 + Math.sin(shieldT) * 0.2;
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 3;
+        ctx.shadowBlur = 15 + Math.sin(shieldT * 1.4) * 5; ctx.shadowColor = '#8b5cf6';
+        ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(139,92,246,0.15)'; ctx.fill();
+        // Rotating shimmer arc
+        ctx.globalAlpha = pulse * 0.55;
+        ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 8; ctx.shadowColor = '#c4b5fd';
+        ctx.setLineDash([6, 10]);
+        ctx.beginPath(); ctx.arc(0, 0, 25, shieldT * 2.5, shieldT * 2.5 + Math.PI * 1.2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+
+    /**
+     * Level badge — polished hexagon-backed badge.
+     * Call in screen space (after all transforms restored).
+     * @param {string} badgeColor  — css colour matching character theme
+     * @param {number} ox / oy     — offset from screen centre
+     */
+    static _drawLevelBadge(ctx, screen, entity, badgeColor, ox = 20, oy = -20) {
+        if ((entity.level ?? 1) <= 1) return;
+        const bx = screen.x + ox, by = screen.y + oy;
+        ctx.save();
+        // Outer shadow disc
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.beginPath(); ctx.arc(bx, by, 11, 0, Math.PI * 2); ctx.fill();
+        // Coloured fill
+        ctx.fillStyle = badgeColor;
+        ctx.shadowBlur = 10; ctx.shadowColor = badgeColor;
+        ctx.beginPath(); ctx.arc(bx, by, 9.5, 0, Math.PI * 2); ctx.fill();
+        // Highlight rim
+        ctx.strokeStyle = 'rgba(255,255,255,0.40)'; ctx.lineWidth = 1.4;
+        ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(bx, by - 1.5, 7.5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+        // Level number
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px "Orbitron",Arial,sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(entity.level, bx, by + 0.5);
+        ctx.restore();
+    }
+
+    /**
+     * Low-HP danger pulse ring — drawn in screen space.
+     * Shows at < 30 % HP; intensity scales with how low HP is.
+     */
+    static _drawLowHpGlow(ctx, entity, now, screen) {
+        if (!entity.maxHp) return;
+        const ratio = entity.hp / entity.maxHp;
+        if (ratio >= 0.30) return;
+        const severity = 1 - ratio / 0.30;          // 0 → 1 as HP drops from 30 % to 0
+        const pulse = 0.22 + Math.sin(now / 100) * 0.18;
+        const R = (entity.radius || 18) + 10 + Math.sin(now / 90) * 3;
+        ctx.save();
+        ctx.globalAlpha = pulse * severity;
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 18 + Math.sin(now / 80) * 8;
+        ctx.shadowColor = '#ef4444';
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc(screen.x, screen.y, R, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
+
+    // ══════════════════════════════════════════════════════════
     // KAO CLONE
     // เดิมคือ KaoClone.draw()
     // ══════════════════════════════════════════════════════════
@@ -475,7 +555,7 @@ class PlayerRenderer {
         }
 
         // Breathing squash/stretch
-        const breatheAuto = Math.sin(Date.now() / 200);
+        const breatheAuto = Math.sin(now / 200);
         const speed = Math.hypot(entity.vx, entity.vy);
         const moveT = Math.min(1, speed / 180);
         const bobT = Math.sin(entity.walkCycle * 0.9);
@@ -700,21 +780,9 @@ class PlayerRenderer {
         }
 
         // Energy Shield
-        if (entity.hasShield) {
-            const shieldT = performance.now() / 200;
-            ctx.save();
-            ctx.globalAlpha = 0.6 + Math.sin(shieldT) * 0.2;
-            ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 3;
-            ctx.shadowBlur = 15; ctx.shadowColor = '#8b5cf6';
-            ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.stroke();
-            ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
-            ctx.fill();
-            ctx.restore();
-        }
+        if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
 
         ctx.restore(); // end LAYER 1
-
-        // ════ LAYER 2 — WEAPON + FISTS ════
         ctx.save();
         ctx.translate(screen.x, screen.y);
         ctx.rotate(entity.angle);
@@ -748,19 +816,15 @@ class PlayerRenderer {
 
         ctx.restore(); // end LAYER 2
 
+        // Low-HP danger glow (screen space)
+        PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);
+
         // BUG-8 FIX: Heat shimmer particles belong in update(), not draw().
         // Removed Math.random() + spawnParticles() call from draw path.
         // Particle spawning for heat shimmer is handled by AutoPlayer.update().
 
         // Level badge
-        if (entity.level > 1) {
-            ctx.fillStyle = 'rgba(185,28,28,0.92)';
-            ctx.beginPath(); ctx.arc(screen.x + 22, screen.y - 22, 9, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 9px Arial';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(entity.level, screen.x + 22, screen.y - 22);
-        }
+        PlayerRenderer._drawLevelBadge(ctx, screen, entity, 'rgba(185,28,28,0.92)', 22, -22);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -900,7 +964,7 @@ class PlayerRenderer {
 
         // Breathing squash/stretch
         const now2 = performance.now();
-        const breathePoom = Math.sin(Date.now() / 200);
+        const breathePoom = Math.sin(now2 / 200);
         const speed2 = Math.hypot(entity.vx, entity.vy);
         const moveT2 = Math.min(1, speed2 / 190);
         const bobT2 = Math.sin(entity.walkCycle);
@@ -1094,17 +1158,7 @@ class PlayerRenderer {
         }
 
         // Energy Shield
-        if (entity.hasShield) {
-            const shieldT = performance.now() / 200;
-            ctx.save();
-            ctx.globalAlpha = 0.6 + Math.sin(shieldT) * 0.2;
-            ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 3;
-            ctx.shadowBlur = 15; ctx.shadowColor = '#8b5cf6';
-            ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.stroke();
-            ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
-            ctx.fill();
-            ctx.restore();
-        }
+        if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now2);
 
         ctx.restore(); // end LAYER 1
 
@@ -1143,15 +1197,11 @@ class PlayerRenderer {
 
         ctx.restore(); // end LAYER 2
 
+        // Low-HP danger glow (screen space)
+        PlayerRenderer._drawLowHpGlow(ctx, entity, now2, screen);
+
         // Level badge
-        if (entity.level > 1) {
-            ctx.fillStyle = 'rgba(217,119,6,0.92)';
-            ctx.beginPath(); ctx.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 9px Arial';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(entity.level, screen.x + 20, screen.y - 20);
-        }
+        PlayerRenderer._drawLevelBadge(ctx, screen, entity, 'rgba(217,119,6,0.92)', 20, -20);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1214,7 +1264,7 @@ class PlayerRenderer {
         }
 
         // Breathing squash/stretch
-        const breatheKao = Math.sin(Date.now() / 200);
+        const breatheKao = Math.sin(now / 200);
         const speed = Math.hypot(entity.vx, entity.vy);
         const moveT = Math.min(1, speed / 200);
         const bobT = Math.sin(entity.walkCycle);
@@ -1348,8 +1398,8 @@ class PlayerRenderer {
             ctx.shadowBlur = 0;
 
             // ── Dual split visor (upgrade from single slit) ──
-            const vp = 0.65 + Math.sin(Date.now() / 350) * 0.35;
-            const vp2 = 0.55 + Math.sin(Date.now() / 280 + 1.2) * 0.35;
+            const vp = 0.65 + Math.sin(now / 350) * 0.35;
+            const vp2 = 0.55 + Math.sin(now / 280 + 1.2) * 0.35;
             // Left visor shard
             ctx.fillStyle = `rgba(6,182,212,${vp})`;
             ctx.shadowBlur = 14 * vp; ctx.shadowColor = '#06b6d4';
@@ -1377,22 +1427,12 @@ class PlayerRenderer {
             }
             ctx.closePath(); ctx.stroke();
             // Hex fill glow
-            ctx.fillStyle = `rgba(6,182,212,${0.08 + Math.sin(Date.now() / 400) * 0.04})`;
+            ctx.fillStyle = `rgba(6,182,212,${0.08 + Math.sin(now / 400) * 0.04})`;
             ctx.fill();
             ctx.restore();
 
             // Energy Shield
-            if (entity.hasShield) {
-                const shieldT = performance.now() / 200;
-                ctx.save();
-                ctx.globalAlpha = 0.6 + Math.sin(shieldT) * 0.2;
-                ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 3;
-                ctx.shadowBlur = 15; ctx.shadowColor = '#8b5cf6';
-                ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.stroke();
-                ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
-                ctx.fill();
-                ctx.restore();
-            }
+            if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
 
             ctx.restore(); // end LAYER 1
 
@@ -1421,7 +1461,7 @@ class PlayerRenderer {
             ctx.beginPath(); ctx.moveTo(R + 3, 2.8); ctx.lineTo(R + 9, 2.8); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(R + 3, 4.8); ctx.lineTo(R + 9, 4.8); ctx.stroke();
             // Knuckle energy dot
-            const kp = 0.5 + Math.sin(Date.now() / 250) * 0.4;
+            const kp = 0.5 + Math.sin(now / 250) * 0.4;
             ctx.fillStyle = `rgba(6,182,212,${kp})`;
             ctx.shadowBlur = 6 * kp; ctx.shadowColor = '#38bdf8';
             ctx.beginPath(); ctx.arc(R + 10.5, 2, 1.5, 0, Math.PI * 2); ctx.fill();
@@ -1464,15 +1504,11 @@ class PlayerRenderer {
             }
         }
 
+        // Low-HP danger glow (screen space)
+        PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);
+
         // Level badge (screen space)
-        if (entity.level > 1) {
-            ctx.fillStyle = 'rgba(180,100,10,0.92)';
-            ctx.beginPath(); ctx.arc(screen.x + 20, screen.y - 20, 9, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 9px Arial';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(entity.level, screen.x + 20, screen.y - 20);
-        }
+        PlayerRenderer._drawLevelBadge(ctx, screen, entity, 'rgba(180,100,10,0.92)', 20, -20);
     }
 }
 
