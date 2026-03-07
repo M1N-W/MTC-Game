@@ -85,7 +85,7 @@
 
 ---
 
-## 📈 Current Version: v3.11.8 (March 7, 2026)
+## 📈 Current Version: v3.11.9 (March 7, 2026)
 
 **Latest Major Updates:**
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
@@ -99,3 +99,4 @@
 - 🎯 **Comprehensive Frontend Design Overhaul:** Military HUD theme with scanlines, hex grid, and enhanced visual effects
 - 🔧 **UX Improvements Patch:** Overlay fade transitions, mobile button states, new record badge, and accessibility support
 - ⏱️ **Bullet Time Visual System Overhaul:** Multi-layer cinematic effects with time ripples, clock-hand streaks, and circular energy HUD
+- 🎯 **Enemy Renderer Refactor & Visual Polish:** Performance optimizations, shared helpers, enhanced visual details for all enemy types
