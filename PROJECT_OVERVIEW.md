@@ -395,6 +395,97 @@ read_file file_path="/js/config.js" limit=50
 
 ---
 
+### 🎨 การแก้ไข Visual & สกิลอุกกาบาต MageEnemy
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/entities/enemy.js` - แก้ไข MageEnemy class, เพิ่ม spell casting animations, projectile patterns
+- `/js/entities/boss_attacks.js` - เพิ่ม meteor spell class ถ้าต้องการ reuse boss attack patterns
+- `/js/effects.js` - เพิ่ม spell effects, meteor trails, explosion particles, magic circles
+- `/js/audio.js` - เพิ่ม spell casting sounds, meteor impact sounds, magic charge sounds
+- `/js/config.js` - เพิ่ม MageEnemy stats, spell damage, cooldowns, visual parameters
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/weapons.js` - ถ้าต้องการ collision detection สำหรับ meteor projectiles
+- `/js/map.js` - ถ้าต้องการ environmental effects จาก meteor impact (craters, scorch marks)
+
+**⚠️ ข้อควรรู้:**
+- **Meteor Pattern:** ใช้ arc trajectory พร้อม gravity simulation
+- **Spell Casting:** มี charge-up animation ก่อน cast meteor
+- **Visual Effects:** ใช้ particle systems สำหรับ trails และ explosions
+- **Sound Design:** ต้องมี charge sound, whoosh sound, และ impact sound
+
+---
+
+### 🔫 การแก้ไข Weapon System & Projectiles
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/weapons.js` - แก้ไข Projectile class, เพิ่ม weapon types, collision detection
+- `/js/config.js` - เพิ่ม weapon stats, damage, spread, speed, visual parameters
+- `/js/effects.js` - เพิ่ม muzzle flash, bullet trails, impact effects
+- `/js/audio.js` - เพิ่ม weapon sounds (shoot, reload, impact)
+- `/js/entities/player/[Character].js` - แก้ไข character-specific weapon logic
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/entities/boss.js` - ถ้าต้องการ weapon resistance หรือ special interactions
+- `/js/entities/enemy.js` - ถ้าศัตรูมี weapon weakness พิเศษ
+
+**⚠️ ข้อควรรู้:**
+- **Spatial Grid:** ใช้ spatial grid สำหรับ projectile collision optimization
+- **Poom Special:** Poom bypasses WeaponSystem ยิง rice projectiles โดยตรง
+- **Weapon Types:** Assault, Sniper, Shotgun, และ character-specific weapons
+
+---
+
+### 🎵 การอัปเดท Audio System & Music
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/audio.js` - เพิ่ม sound effects, BGM tracks, volume controls
+- `/js/config.js` - เพิ่ม audio settings, volume levels, sound toggles
+- `/js/menu.js` - เพิ่ม audio options ใน settings menu
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/ui.js` - ถ้าต้องการ audio visualizers หรือ sound indicators
+
+**⚠️ ข้อควรรู้:**
+- **BGM Namespace:** มีการแก้ไข namespace collision ใน Audio constructor
+- **Web Audio API:** ใช้ Web Audio API สำหรับ advanced sound processing
+- **Character Sounds:** แต่ละตัวละครมีเสียงพิเศษ (Poom shoot, Naga attack, Stand rush)
+
+---
+
+### 🎮 การแก้ไข Game State & Progression
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/GameState.js` - แก้ไข game states, save/load system, progression logic
+- `/js/game.js` - แก้ไข main game loop, state transitions, game flow
+- `/js/systems/WaveManager.js` - แก้ไข wave progression, difficulty scaling
+- `/js/systems/ShopSystem.js` - แก้ไข shop items, pricing, upgrade paths
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/ui.js` - ถ้าต้องการ progression UI หรือ save/load interface
+- `/js/menu.js` - ถ้าต้องการ main menu progression display
+
+**⚠️ ข้อควรรู้:**
+- **State Management:** GameState เป็น single source of truth
+- **Progression:** ใช้ wave-based progression พร้อม boss encounters
+- **Save System:** มีระบบบันทึกคะแนน และ achievements
+
+---
+
+### 🎨 การอัปเดท UI & Visual Effects
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/ui.js` - แก้ไข HUD elements, achievement popups, UI components
+- `/js/effects.js` - เพิ่ม particle effects, screen shake, visual feedback
+- `/css/main.css` - แก้ไข styles, animations, responsive design
+- `/js/rendering/PlayerRenderer.js` - แก้ไข player visual effects, rendering logic
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/menu.js` - ถ้าต้องการ menu visual enhancements
+- `/js/game.js` - ถ้าต้องการ screen effects หรือ post-processing
+
+**⚠️ ข้อควรรู้:**
+- **Military HUD Theme:** ใช้ military-style UI พร้อม scanlines และ hex grid
+- **Particle Pooling:** ใช้ object pooling สำหรับ performance optimization
+- **Achievement System:** มี popup notifications และ progress tracking
+
+---
+
 ### 4. ⚔️ การเพิ่มอาวุธใหม่ให้กับตัวละครหนึ่ง
 **ไฟล์ที่ต้องแก้ไข:**
 - `/js/weapons.js` - เพิ่ม weapon class ใหม่, Projectile class พร้อม spatial grid optimization
