@@ -585,19 +585,35 @@ class WanchaiStand {
             ctx.translate(sc.x, sc.y + sway * 0.2);
             const chipY = -46;
             const cA = 0.65 + Math.sin(t * 1.9) * 0.12;
+
+            // UPGRADE: punch-flash halo ring behind chip
+            if (isPunch && flashT > 0.1) {
+                ctx.globalAlpha = flashT * 0.70;
+                ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+                ctx.shadowBlur = 22; ctx.shadowColor = '#facc15';
+                ctx.beginPath(); ctx.arc(0, chipY, 26 + (1 - flashT) * 10, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
             // pill bg
             ctx.globalAlpha = cA * 0.70;
             ctx.fillStyle = 'rgba(25,2,2,0.72)';
-            ctx.strokeStyle = 'rgba(220,38,38,0.55)'; ctx.lineWidth = 0.9;
-            ctx.shadowBlur = 7; ctx.shadowColor = '#dc2626';
+            // UPGRADE: border flashes amber on punch
+            ctx.strokeStyle = isPunch
+                ? `rgba(251,191,36,${0.55 + flashT * 0.45})`
+                : 'rgba(220,38,38,0.55)';
+            ctx.lineWidth = isPunch ? 1.6 : 0.9;
+            ctx.shadowBlur = isPunch ? 12 : 7;
+            ctx.shadowColor = isPunch ? '#fbbf24' : '#dc2626';
             ctx.beginPath(); ctx.roundRect(-20, chipY - 5.5, 40, 11, 4);
             ctx.fill(); ctx.stroke();
             // label
             ctx.globalAlpha = cA;
-            ctx.fillStyle = '#fca5a5';
+            ctx.fillStyle = isPunch ? '#fef08a' : '#fca5a5';
             ctx.font = 'bold 7.5px Arial';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowBlur = 4; ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = isPunch ? 10 : 4;
+            ctx.shadowColor = isPunch ? '#facc15' : '#ef4444';
             ctx.fillText('WANCHAI', 0, chipY);
             ctx.globalAlpha = 1; ctx.shadowBlur = 0;
             ctx.restore();

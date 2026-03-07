@@ -427,33 +427,42 @@ class PlayerRenderer {
                     ctx.save();
                     ctx.translate(screen.x, screen.y);
                     ctx.rotate(entity.angle);
-                    ctx.shadowBlur = 10; ctx.shadowColor = '#dc2626';
+                    ctx.shadowBlur = 16; ctx.shadowColor = '#dc2626';
                     for (const f of fists) {
                         if (f.alpha <= 0) continue;
-                        ctx.globalAlpha = f.alpha * 0.85;
-                        ctx.fillStyle = 'rgba(239,68,68,0.85)';
+                        ctx.globalAlpha = f.alpha * 0.90;
+                        // UPGRADE: brighter fist ellipse + outline
+                        ctx.fillStyle = 'rgba(239,68,68,0.92)';
                         ctx.beginPath();
-                        ctx.ellipse(f.ox, f.oy, 14 * f.sc, 9 * f.sc, 0, 0, Math.PI * 2);
+                        ctx.ellipse(f.ox, f.oy, 16 * f.sc, 10 * f.sc, 0, 0, Math.PI * 2);
                         ctx.fill();
-                        ctx.strokeStyle = 'rgba(248,113,113,0.5)';
-                        ctx.lineWidth = 4 * f.sc;
+                        ctx.strokeStyle = 'rgba(251,191,36,0.55)';
+                        ctx.lineWidth = 2 * f.sc;
+                        ctx.stroke();
+                        ctx.strokeStyle = 'rgba(248,113,113,0.6)';
+                        ctx.lineWidth = 5 * f.sc;
                         ctx.beginPath();
-                        ctx.moveTo(f.ox - 25 * f.sc, f.oy);
+                        ctx.moveTo(f.ox - 28 * f.sc, f.oy);
                         ctx.lineTo(f.ox, f.oy);
                         ctx.stroke();
                     }
                     ctx.rotate(-entity.angle);
-                    const textScale = 1 + Math.sin(now / 30) * 0.15;
+                    const textScale = 1 + Math.sin(now / 30) * 0.18;
                     const jt = stand?._phaseTimer ?? 0;
-                    const jx = Math.sin(jt * 80) * 4;
-                    const jy = Math.cos(jt * 80) * 4;
-                    ctx.translate(0, -75);
+                    const jx = Math.sin(jt * 80) * 5;
+                    const jy = Math.cos(jt * 80) * 5;
+                    ctx.translate(0, -80);
                     ctx.scale(textScale, textScale);
-                    ctx.font = '900 28px "Arial Black", Arial, sans-serif';
+                    // UPGRADE: larger + drop shadow + amber outline
+                    ctx.font = '900 32px "Arial Black", Arial, sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.lineWidth = 5; ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 7; ctx.strokeStyle = '#7c2d12';
+                    ctx.strokeText('วันชัย วันชัย!', jx, jy);
+                    ctx.lineWidth = 3; ctx.strokeStyle = '#fbbf24';
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#facc15';
                     ctx.strokeText('วันชัย วันชัย!', jx, jy);
                     ctx.fillStyle = '#facc15';
+                    ctx.shadowBlur = 14;
                     ctx.fillText('วันชัย วันชัย!', jx, jy);
                     ctx.restore();
                 }
@@ -572,6 +581,24 @@ class PlayerRenderer {
             ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1.5;
             ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
             ctx.beginPath(); ctx.arc(0, 0, R + 6, 0, Math.PI * 2); ctx.stroke();
+            // UPGRADE: outer amber pulse ring
+            ctx.globalAlpha = hA * 0.55;
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3;
+            ctx.shadowBlur = 22; ctx.shadowColor = '#fbbf24';
+            ctx.beginPath(); ctx.arc(0, 0, R + 14 + Math.sin(now / 110) * 3, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+        }
+
+        // UPGRADE: Passive golden aura when unlocked
+        if (entity.passiveUnlocked) {
+            const gA = 0.12 + Math.sin(now / 300) * 0.07;
+            ctx.save();
+            ctx.globalAlpha = gA;
+            ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 18; ctx.shadowColor = '#facc15';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.arc(0, 0, R + 20 + Math.sin(now / 220) * 4, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
             ctx.restore();
         }
 

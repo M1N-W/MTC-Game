@@ -115,15 +115,15 @@ const BALANCE = {
             wanchaiDuration: 8.0,           // 6.0 → 8.0 (longer payoff window)
             wanchaiCooldown: 12,            // 9 → 12 (trade longer for less spammy)
             wanchaiEnergyCost: 25,          // 32 → 25 (easier loop)
-            wanchaiPunchRate: 0.11,         // 0.14 → 0.11 (9.1 punches/s)
-            wanchaiDamage: 32,              // 28 → 32 (restore original)
+            wanchaiPunchRate: 0.09,          // 0.11 → 0.09 (11.1 punches/s — BUFF)
+            wanchaiDamage: 38,              // 32 → 38 (BUFF)
             standSpeedMod: 1.5,
-            standDamageReduction: 0.35,     // 0.30 → 0.35 (tank identity)
+            standDamageReduction: 0.40,     // 0.35 → 0.40 (BUFF: tank identity stronger)
             standCritBonus: 0.25,
             standMoveSpeed: 340,
             standPunchRange: 110,
             standLeashRadius: 420,
-            standKnockback: 180,
+            standKnockback: 240,            // 180 → 240 (BUFF)
 
             // ── Attack Mode Toggle ────────────────────────────
             // ระหว่าง Wanchai active: กด F (หรือ Middle-Click) สลับโหมด
@@ -136,7 +136,7 @@ const BALANCE = {
 
             // ── Vacuum Heat (Q) — REWORK: Pull + Ignite ──────
             vacuumRange: 340,               // 320 → 340
-            vacuumForce: 1600,              // 1400 → 1600
+            vacuumForce: 1900,              // 1600 → 1900 (BUFF)
             vacuumCooldown: 6,              // 8 → 6 (bread-and-butter skill)
             vacuumStunDur: 0.50,            // 0.55 → 0.50
             vacuumPullDur: 0.45,

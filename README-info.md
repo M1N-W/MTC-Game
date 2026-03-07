@@ -85,7 +85,7 @@
 
 ---
 
-## 📈 Current Version: v3.11.4 (March 7, 2026)
+## 📈 Current Version: v3.11.5 (March 7, 2026)
 
 **Latest Major Updates:**
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
@@ -95,3 +95,4 @@
 - ⚖️ **Balance Overhaul:** Comprehensive weapon and character balance adjustments
 - 📚 **Tutorial System Sync:** Updated all tutorial content to match current game state
 - 🌊 **Wave Events Documentation:** Added detailed breakdown of all wave types and boss encounters
+- ⚔️ **Auto Character Combat Buffs:** Enhanced Wanchai Stand damage, speed, and visual effects

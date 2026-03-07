@@ -4,6 +4,58 @@
 
 ---
 
+## v3.11.5 — Auto Character Combat Buffs & Visual Polish
+*Released: March 7, 2026*
+
+### ⚔️ Wanchai Stand Combat Enhancements
+- **Damage Output BUFF:** Increased from 32 → 38 (+19% damage per punch)
+- **Attack Speed BUFF:** Punch rate improved from 0.11s → 0.09s (11.1 punches/s, +22% faster)
+- **Tank Identity BUFF:** Damage reduction increased from 35% → 40% (+14% tankier)
+- **Knockback Power BUFF:** Stand knockback increased from 180 → 240 (+33% crowd control)
+
+### 🌀 Vacuum Heat Improvements
+- **Pull Force BUFF:** Vacuum force increased from 1600 → 1900 (+19% stronger crowd control)
+- **Cooldown Optimization:** Maintained 6s cooldown for bread-and-butter accessibility
+- **Enhanced Control:** Better enemy grouping and positioning potential
+
+### ✨ Visual Effects Overhaul
+- **Wanchai Stand Rendering:**
+  - Larger fist ellipses (14×9 → 16×10) with increased opacity
+  - Amber outline accents for better visual impact
+  - Enhanced "วันชัย วันชัย!" text with drop shadows and larger font
+  - Increased shadow blur and punch effects intensity
+
+- **Auto Character Aura System:**
+  - New outer amber pulse ring during Wanchai activation
+  - Passive golden aura when passive ability is unlocked
+  - Dynamic border flashing on Wanchai chip during punches
+  - Punch-flash halo effects behind Wanchai chip
+
+- **Enhanced Feedback:**
+  - Color transitions during combat states
+  - Improved shadow and glow effects
+  - Better visual hierarchy for combat readability
+
+### 🎯 Gameplay Impact
+- **Higher DPS Potential:** 22% faster attack rate + 19% damage = ~45% overall DPS increase
+- **Better Survival:** 40% damage reduction makes Auto significantly more durable
+- **Improved Crowd Control:** Stronger vacuum pull and knockback for better positioning
+- **Enhanced Combat Feel:** Visual upgrades provide better feedback and satisfaction
+
+### 📊 Balance Philosophy
+- **Maintained Trade-offs:** Kept 12s cooldown and 25 energy cost for strategic balance
+- **Reward Skill Play:** Buffs reward proper Wanchai timing and positioning
+- **Visual-Gameplay Sync:** Enhanced effects match increased combat power
+- **Identity Reinforcement:** Stronger tank and crowd control roles
+
+### 🔧 Files Changed
+- `js/config.js` — Combat stat buffs for Wanchai Stand and Vacuum Heat
+- `js/rendering/PlayerRenderer.js` — Enhanced visual effects and auras
+- `js/entities/player/AutoPlayer.js` — Dynamic Wanchai chip visual feedback
+- `sw.js` — Updated to v3.11.5
+
+---
+
 ## v3.11.4 — Tutorial Enhancements - Wave Events & Boss Encounter Details
 *Released: March 7, 2026*
 
