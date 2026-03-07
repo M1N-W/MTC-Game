@@ -85,7 +85,7 @@
 
 ---
 
-## 📈 Current Version: v3.11.12 (March 7, 2026)
+## 📈 Current Version: v3.11.13 (March 7, 2026)
 
 **Latest Major Updates:**
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
@@ -103,3 +103,4 @@
 - 🎨 **Comprehensive Visual Polish Overhaul:** Player renderer refactor, boss summons redesign, naturalistic creature designs with dangerous supernatural elements
 - 🌌 **Domain Expansion Enhanced Visuals & New Abilities:** Portal iris opening, rotating hex geometry, ambient particles, Void Pulse rings, Formula Beam sweeping attacks, cinematic visual effects
 - 🔊 **Complete Boss Attack Visual Rework:** Enhanced BarkWave, BubbleProjectile, ExpandingRing, EmpPulse, MatrixGridAttack, new EquationSlam & DeadlyGraph classes, ultimate attack wind-up effects, log457 visual states
+- 🔧 **Boss Attack Class Consolidation:** Moved EquationSlam & DeadlyGraph to boss_attacks.js for better code organization and maintainability

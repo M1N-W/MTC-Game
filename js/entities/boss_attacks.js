@@ -1149,300 +1149,6 @@ class EmpPulse {
 
 // ════════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════════
-// 📐 EQUATION SLAM — Radial AoE shockwave (KruManop Phase 1)
-//    Massive chalk-white blast ring with math formula debris
-// ════════════════════════════════════════════════════════════
-class EquationSlam {
-    constructor(x, y) {
-        this.x = x; this.y = y;
-        this.timer = 0;
-        this.duration = 0.85;
-        this.maxRadius = 340;    // world units
-        this.damage = BALANCE.boss ? (BALANCE.boss.chalkDamage * 2.2) : 48;
-        this._hit = false;
-        this._shards = Array.from({ length: 14 }, (_, i) => ({
-            angle: (i / 14) * Math.PI * 2,
-            speed: 180 + Math.random() * 120,
-            dist: 30,
-            formula: ['∑', 'Δ', 'π', '∞', '∂', 'Ω', '√', 'λ', 'θ', '∫', 'φ', 'σ', 'μ', 'γ'][i],
-            spin: (Math.random() - 0.5) * 8,
-            rot: Math.random() * Math.PI * 2,
-        }));
-    }
-
-    update(dt, player) {
-        if (this.dead) return true;
-        this.timer += dt;
-
-        // Update shard positions
-        for (const sh of this._shards) {
-            sh.dist += sh.speed * dt;
-            sh.rot += sh.spin * dt;
-        }
-
-        // Hit detection — ring front
-        if (!this._hit && player) {
-            const r = this.maxRadius * Math.sqrt(this.timer / this.duration);
-            const pd = Math.hypot(player.x - this.x, player.y - this.y);
-            if (pd < r + player.radius && pd > r - 80) {
-                this._hit = true;
-                player.takeDamage(this.damage);
-                if (typeof addScreenShake === 'function') addScreenShake(18);
-                if (typeof spawnFloatingText === 'function')
-                    spawnFloatingText('📐 EQUATION SLAM!', player.x, player.y - 65, '#facc15', 26);
-                if (typeof spawnParticles === 'function') spawnParticles(player.x, player.y, 16, '#facc15');
-            }
-        }
-
-        if (this.timer >= this.duration) { this.dead = true; return true; }
-        return false;
-    }
-
-    draw() {
-        if (this.dead) return;
-        if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
-
-        const screen = worldToScreen(this.x, this.y);
-        const prog = this.timer / this.duration;
-        const r = this.maxRadius * Math.sqrt(prog);
-        const alpha = 1 - prog;
-        const now = performance.now();
-
-        CTX.save();
-        CTX.translate(screen.x, screen.y);
-
-        // ── Crater fill glow ──────────────────────────────────
-        CTX.globalAlpha = alpha * 0.22;
-        const craterG = CTX.createRadialGradient(0, 0, 0, 0, 0, r);
-        craterG.addColorStop(0, 'rgba(255,255,255,0.8)');
-        craterG.addColorStop(0.35, 'rgba(251,191,36,0.5)');
-        craterG.addColorStop(1, 'rgba(120,53,15,0)');
-        CTX.fillStyle = craterG;
-        CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.fill();
-
-        // ── Primary blast ring ────────────────────────────────
-        CTX.globalAlpha = alpha * 0.95;
-        CTX.shadowBlur = 30 * (1 - prog); CTX.shadowColor = '#fbbf24';
-        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 8 * (1 - prog * 0.7);
-        CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.stroke();
-
-        // ── Secondary gold ring ───────────────────────────────
-        CTX.globalAlpha = alpha * 0.65;
-        CTX.strokeStyle = '#f59e0b'; CTX.lineWidth = 4 * (1 - prog * 0.6);
-        CTX.shadowBlur = 14;
-        CTX.beginPath(); CTX.arc(0, 0, r * 0.88, 0, Math.PI * 2); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Radial chalk spikes ────────────────────────────────
-        CTX.globalAlpha = alpha * 0.70;
-        CTX.strokeStyle = '#fef3c7'; CTX.lineWidth = 2.5;
-        for (let si = 0; si < 18; si++) {
-            const sa = (si / 18) * Math.PI * 2 + now * 0.0015;
-            const sLen = r * (0.07 + Math.abs(Math.sin(now / 60 + si * 1.7)) * 0.12);
-            CTX.beginPath();
-            CTX.moveTo(Math.cos(sa) * r, Math.sin(sa) * r);
-            CTX.lineTo(Math.cos(sa) * (r + sLen), Math.sin(sa) * (r + sLen));
-            CTX.stroke();
-        }
-
-        // ── Origin burst ──────────────────────────────────────
-        if (prog < 0.18) {
-            const bp = 1 - prog / 0.18;
-            CTX.globalAlpha = bp * 0.90;
-            CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 50; CTX.shadowColor = '#fbbf24';
-            CTX.beginPath(); CTX.arc(0, 0, 28 * bp, 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#fbbf24';
-            CTX.beginPath(); CTX.arc(0, 0, 52 * bp, 0, Math.PI * 2); CTX.fill();
-            CTX.shadowBlur = 0;
-        }
-
-        // ── Flying math formula shards ────────────────────────
-        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-        for (const sh of this._shards) {
-            const sx = Math.cos(sh.angle) * sh.dist;
-            const sy = Math.sin(sh.angle) * sh.dist;
-            const shAlpha = Math.max(0, alpha * (1 - sh.dist / (this.maxRadius * 1.1)));
-            if (shAlpha <= 0.02) continue;
-            CTX.save();
-            CTX.globalAlpha = shAlpha * 0.90;
-            CTX.translate(sx, sy);
-            CTX.rotate(sh.rot);
-            CTX.font = `bold ${12 + (1 - prog) * 8}px "Courier New",monospace`;
-            CTX.fillStyle = '#fef9c3'; CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
-            CTX.fillText(sh.formula, 0, 0);
-            CTX.shadowBlur = 0;
-            CTX.restore();
-        }
-
-        CTX.restore();
-    }
-}
-
-// ════════════════════════════════════════════════════════════
-// 📈 DEADLY GRAPH — Laser line wall + homing shard beam
-//    Drew from boss position → player position; lingers and deals
-//    continuous contact damage, then detonates in a burst
-// ════════════════════════════════════════════════════════════
-class DeadlyGraph {
-    constructor(x1, y1, x2, y2, duration) {
-        this.x1 = x1; this.y1 = y1;
-        this.x2 = x2; this.y2 = y2;
-        this.duration = duration;
-        this.timer = 0;
-        this.dead = false;
-        this.damage = BALANCE.boss ? (BALANCE.boss.chalkDamage * 1.5) : 35;
-        this._hitCd = 0;
-        // Extension points that grow over time
-        this._extFrac = 0;
-        // Trailing particle time
-        this._particleCd = 0;
-        // Generate jagged segments for the "graph line" look
-        this._segments = (() => {
-            const segs = [];
-            const n = 12;
-            for (let i = 0; i <= n; i++) {
-                const t2 = i / n;
-                const jitter = i > 0 && i < n ? (Math.random() - 0.5) * 60 : 0;
-                const jitterY = i > 0 && i < n ? (Math.random() - 0.5) * 60 : 0;
-                segs.push({ t: t2, ox: jitter, oy: jitterY });
-            }
-            return segs;
-        })();
-    }
-
-    update(dt, player) {
-        if (this.dead) return true;
-        this.timer += dt;
-        this._extFrac = Math.min(1.0, this.timer / (this.duration * 0.28));
-        if (this._hitCd > 0) this._hitCd -= dt;
-
-        // Continuous line damage — player near the beam line
-        if (player && this._hitCd <= 0 && this._extFrac > 0.5) {
-            const px = player.x, py = player.y;
-            const dx = this.x2 - this.x1, dy = this.y2 - this.y1;
-            const len = Math.hypot(dx, dy);
-            if (len > 1) {
-                const t3 = Math.max(0, Math.min(1, ((px - this.x1) * dx + (py - this.y1) * dy) / (len * len)));
-                const closestX = this.x1 + t3 * dx, closestY = this.y1 + t3 * dy;
-                if (Math.hypot(px - closestX, py - closestY) < player.radius + 28) {
-                    player.takeDamage(this.damage * dt * 5);
-                    this._hitCd = 0.18;
-                    if (typeof spawnFloatingText === 'function')
-                        spawnFloatingText('📈 GRAPH BURN!', px, py - 45, '#3b82f6', 18);
-                }
-            }
-        }
-
-        if (this.timer >= this.duration) {
-            // Detonate along line
-            if (typeof spawnParticles === 'function') {
-                for (let di = 0; di <= 5; di++) {
-                    const dt2 = di / 5;
-                    spawnParticles(this.x1 + dt2 * (this.x2 - this.x1), this.y1 + dt2 * (this.y2 - this.y1), 8, '#3b82f6');
-                }
-            }
-            if (typeof addScreenShake === 'function') addScreenShake(8);
-            this.dead = true;
-            return true;
-        }
-        return false;
-    }
-
-    draw() {
-        if (this.dead) return;
-        if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
-
-        const prog = this.timer / this.duration;
-        const alpha = prog < 0.1 ? prog / 0.1 : (prog > 0.8 ? (1 - prog) / 0.2 : 1.0);
-        const now = performance.now();
-
-        const s1 = worldToScreen(this.x1, this.y1);
-        // Endpoint grows from x1 → x2 during _extFrac
-        const ex = this.x1 + (this.x2 - this.x1) * this._extFrac;
-        const ey = this.y1 + (this.y2 - this.y1) * this._extFrac;
-        const s2 = worldToScreen(ex, ey);
-
-        CTX.save();
-
-        // ── Wide outer glow ───────────────────────────────────
-        CTX.globalAlpha = alpha * 0.35;
-        CTX.strokeStyle = '#60a5fa'; CTX.lineWidth = 24;
-        CTX.shadowBlur = 32; CTX.shadowColor = '#3b82f6';
-        CTX.lineCap = 'round';
-        CTX.beginPath(); CTX.moveTo(s1.x, s1.y); CTX.lineTo(s2.x, s2.y); CTX.stroke();
-
-        // ── Jagged "graph" segments ───────────────────────────
-        CTX.globalAlpha = alpha * 0.90;
-        CTX.strokeStyle = '#93c5fd'; CTX.lineWidth = 4; CTX.shadowBlur = 18;
-        CTX.beginPath();
-        for (const seg of this._segments) {
-            if (seg.t > this._extFrac) break;
-            const sx = s1.x + (s2.x - s1.x) * (seg.t / this._extFrac) + seg.ox * (1 - prog);
-            const sy = s1.y + (s2.y - s1.y) * (seg.t / this._extFrac) + seg.oy * (1 - prog);
-            seg.t === 0 ? CTX.moveTo(sx, sy) : CTX.lineTo(sx, sy);
-        }
-        CTX.stroke();
-
-        // ── Core bright line ──────────────────────────────────
-        CTX.globalAlpha = alpha * 0.95;
-        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 2; CTX.shadowBlur = 10;
-        CTX.beginPath(); CTX.moveTo(s1.x, s1.y); CTX.lineTo(s2.x, s2.y); CTX.stroke();
-        CTX.shadowBlur = 0;
-
-        // ── Traveling hot dot along beam ──────────────────────
-        if (this._extFrac < 1.0) {
-            CTX.globalAlpha = alpha * 0.90;
-            CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 20; CTX.shadowColor = '#60a5fa';
-            CTX.beginPath(); CTX.arc(s2.x, s2.y, 8 * (1 - prog * 0.4), 0, Math.PI * 2); CTX.fill();
-            CTX.fillStyle = '#3b82f6';
-            CTX.beginPath(); CTX.arc(s2.x, s2.y, 5 * (1 - prog * 0.4), 0, Math.PI * 2); CTX.fill();
-            CTX.shadowBlur = 0;
-        }
-
-        // ── Math axis labels & tick marks ─────────────────────
-        if (prog > 0.25 && prog < 0.88) {
-            const labels = ['y=x', '∞', 'f(x)', '?'];
-            CTX.font = 'bold 11px "Courier New",monospace';
-            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-            for (let li = 0; li < labels.length; li++) {
-                const lt = (li + 1) / (labels.length + 1);
-                const lx = s1.x + (s2.x - s1.x) * lt;
-                const ly = s1.y + (s2.y - s1.y) * lt;
-                const perp = Math.atan2(s2.y - s1.y, s2.x - s1.x) + Math.PI / 2;
-                const off = 18 + Math.sin(now / 200 + li) * 6;
-                CTX.globalAlpha = alpha * (0.50 + Math.sin(now / 300 + li) * 0.30);
-                CTX.fillStyle = '#bfdbfe'; CTX.shadowBlur = 5; CTX.shadowColor = '#3b82f6';
-                CTX.fillText(labels[li], lx + Math.cos(perp) * off, ly + Math.sin(perp) * off);
-            }
-            CTX.shadowBlur = 0;
-        }
-
-        // ── Endpoint target burst ─────────────────────────────
-        if (this._extFrac >= 0.98) {
-            const ep2Pulse = 0.5 + Math.sin(now / 80) * 0.5;
-            CTX.globalAlpha = alpha * ep2Pulse * 0.75;
-            CTX.strokeStyle = '#60a5fa'; CTX.lineWidth = 3;
-            CTX.shadowBlur = 14; CTX.shadowColor = '#3b82f6';
-            CTX.beginPath(); CTX.arc(s2.x, s2.y, 18 + ep2Pulse * 8, 0, Math.PI * 2); CTX.stroke();
-            // Crosshair
-            CTX.lineWidth = 1.5; CTX.globalAlpha = alpha * 0.60;
-            for (const ang of [0, Math.PI / 2]) {
-                CTX.beginPath();
-                CTX.moveTo(s2.x + Math.cos(ang) * 8, s2.y + Math.sin(ang) * 8);
-                CTX.lineTo(s2.x + Math.cos(ang) * 26, s2.y + Math.sin(ang) * 26);
-                CTX.stroke();
-                CTX.beginPath();
-                CTX.moveTo(s2.x - Math.cos(ang) * 8, s2.y - Math.sin(ang) * 8);
-                CTX.lineTo(s2.x - Math.cos(ang) * 26, s2.y - Math.sin(ang) * 26);
-                CTX.stroke();
-            }
-            CTX.shadowBlur = 0;
-        }
-
-        CTX.restore();
-    }
-}
-
 // 💠 DOMAIN EXPANSION: METRICS-MANIPULATION
 //    Boss Manop Ultimate — integrated from DomainExpansion.js
 //    Singleton; driven by game.js update/draw hooks.
@@ -2035,6 +1741,404 @@ const DomainExpansion = {
 window.DomainExpansion = DomainExpansion;
 DomainExpansion._DC_RADIUS = _DC.ARENA_RADIUS; // exposed for base.js applyPhysics
 
+// ════════════════════════════════════════════════════════════
+// 💥 EQUATION SLAM — Boss shockwave ring with formula shards
+// ════════════════════════════════════════════════════════════
+class EquationSlam {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 50;
+        this.maxRadius = BALANCE.boss.slamRadius;
+        this.speed = 400;
+        this.damage = BALANCE.boss.slamDamage;
+        this.hit = false;
+        // Shard formula symbols flung outward
+        this._shards = Array.from({ length: 14 }, (_, i) => ({
+            angle: (i / 14) * Math.PI * 2,
+            speed: 180 + Math.random() * 120,
+            dist: 30,
+            formula: ['∑', 'Δ', 'π', '∞', '∂', 'Ω', '√', 'λ', 'θ', '∫', 'φ', 'σ', 'μ', 'γ'][i],
+            spin: (Math.random() - 0.5) * 8,
+            rot: Math.random() * Math.PI * 2,
+        }));
+    }
+
+    update(dt, player) {
+        this.radius += this.speed * dt;
+
+        // Update shard positions
+        for (const sh of this._shards) {
+            sh.dist += sh.speed * dt;
+            sh.rot += sh.spin * dt;
+        }
+
+        // Ring-front hit detection
+        if (!this.hit) {
+            const d = dist(this.x, this.y, player.x, player.y);
+            if (d <= this.radius && d >= this.radius - 30) {
+                player.takeDamage(this.damage);
+                this.hit = true;
+            }
+        }
+
+        return this.radius >= this.maxRadius;
+    }
+
+    draw() {
+        if (typeof CTX === 'undefined') return;
+        const screen = worldToScreen(this.x, this.y);
+        const prog = this.radius / this.maxRadius;
+        const alpha = 1 - prog;
+        const now = performance.now();
+
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+
+        // ── Crater fill glow ──────────────────────────────────
+        CTX.globalAlpha = alpha * 0.22;
+        const craterG = CTX.createRadialGradient(0, 0, 0, 0, 0, this.radius);
+        craterG.addColorStop(0, 'rgba(255,255,255,0.8)');
+        craterG.addColorStop(0.35, 'rgba(251,191,36,0.5)');
+        craterG.addColorStop(1, 'rgba(120,53,15,0)');
+        CTX.fillStyle = craterG;
+        CTX.beginPath(); CTX.arc(0, 0, this.radius, 0, Math.PI * 2); CTX.fill();
+
+        // ── Primary blast ring ────────────────────────────────
+        CTX.globalAlpha = alpha * 0.95;
+        CTX.shadowBlur = 30 * (1 - prog); CTX.shadowColor = '#fbbf24';
+        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 8 * (1 - prog * 0.7);
+        CTX.beginPath(); CTX.arc(0, 0, this.radius, 0, Math.PI * 2); CTX.stroke();
+
+        // ── Secondary gold ring ───────────────────────────────
+        CTX.globalAlpha = alpha * 0.65;
+        CTX.strokeStyle = '#f59e0b'; CTX.lineWidth = 4 * (1 - prog * 0.6);
+        CTX.shadowBlur = 14; CTX.shadowColor = '#fbbf24';
+        CTX.beginPath(); CTX.arc(0, 0, this.radius * 0.88, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Radial chalk spikes ────────────────────────────────
+        CTX.globalAlpha = alpha * 0.70;
+        CTX.strokeStyle = '#fef3c7'; CTX.lineWidth = 2.5;
+        for (let si = 0; si < 18; si++) {
+            const sa = (si / 18) * Math.PI * 2 + now * 0.0015;
+            const sLen = this.radius * (0.07 + Math.abs(Math.sin(now / 60 + si * 1.7)) * 0.12);
+            CTX.beginPath();
+            CTX.moveTo(Math.cos(sa) * this.radius, Math.sin(sa) * this.radius);
+            CTX.lineTo(Math.cos(sa) * (this.radius + sLen), Math.sin(sa) * (this.radius + sLen));
+            CTX.stroke();
+        }
+
+        // ── Origin burst (early) ──────────────────────────────
+        if (prog < 0.18) {
+            const bp = 1 - prog / 0.18;
+            CTX.globalAlpha = bp * 0.90;
+            CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 50; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.arc(0, 0, 28 * bp, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#fbbf24';
+            CTX.beginPath(); CTX.arc(0, 0, 52 * bp, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+        }
+
+        // ── Flying math formula shards ────────────────────────
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        for (const sh of this._shards) {
+            const sx = Math.cos(sh.angle) * sh.dist;
+            const sy = Math.sin(sh.angle) * sh.dist;
+            const shAlpha = Math.max(0, alpha * (1 - sh.dist / (this.maxRadius * 1.1)));
+            if (shAlpha <= 0.02) continue;
+            CTX.save();
+            CTX.globalAlpha = shAlpha * 0.90;
+            CTX.translate(sx, sy);
+            CTX.rotate(sh.rot);
+            CTX.font = `bold ${12 + (1 - prog) * 8}px "Courier New",monospace`;
+            CTX.fillStyle = '#fef9c3'; CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
+            CTX.fillText(sh.formula, 0, 0);
+            CTX.shadowBlur = 0;
+            CTX.restore();
+        }
+
+        CTX.restore();
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// 📈 DEADLY GRAPH — Expanding laser beam with risk/reward zone
+// ════════════════════════════════════════════════════════════
+class DeadlyGraph {
+    constructor(startX, startY, targetX, targetY, duration = null) {
+        this.startX = startX;
+        this.startY = startY;
+        this.angle = Math.atan2(targetY - startY, targetX - startX);
+        this.length = 0;
+        this.speed = 600;
+        this.damage = BALANCE.boss.graphDamage;
+        this.phase = 'expanding'; // expanding → blocking → active
+        this.timer = 0;
+        this.hasHit = false;
+        this._waveOffset = 0; // animates sine wave along beam
+
+        // ── Dynamic max length: ray vs circular arena boundary ───
+        const R = (MAP_CONFIG?.arena?.radius ?? 1500);
+        const dx = Math.cos(this.angle);
+        const dy = Math.sin(this.angle);
+        const a = dx * dx + dy * dy;                // always 1
+        const b = 2 * (startX * dx + startY * dy);
+        const c = startX * startX + startY * startY - R * R;
+        const disc = b * b - 4 * a * c;
+        if (disc >= 0) {
+            const t1 = (-b - Math.sqrt(disc)) / (2 * a);
+            const t2 = (-b + Math.sqrt(disc)) / (2 * a);
+            this.maxLength = Math.max(t1, t2, 0);
+        } else {
+            this.maxLength = BALANCE.boss.graphLength;
+        }
+
+        this.blockingDuration = duration !== null ? duration / 2 : 5;
+        this.activeDuration = duration !== null ? duration / 2 : 5;
+    }
+
+    update(dt, player) {
+        this.timer += dt;
+        this._waveOffset += dt;
+
+        if (this.phase === 'expanding') {
+            this.length += this.speed * dt;
+
+            const pd = this._pointToLineDistance(
+                player.x, player.y,
+                this.startX, this.startY,
+                this.startX + Math.cos(this.angle) * this.length,
+                this.startY + Math.sin(this.angle) * this.length
+            );
+            if (!this.hasHit && pd < 20) {
+                player.takeDamage(this.damage);
+                this.hasHit = true;
+            }
+            if (this.length >= this.maxLength) {
+                this.length = this.maxLength;
+                this.phase = 'blocking';
+                this.timer = 0;
+            }
+
+        } else if (this.phase === 'blocking') {
+            if (this.timer >= this.blockingDuration) {
+                this.phase = 'active';
+                this.timer = 0;
+
+                // ── Destruction FX when laser activates ──────────────
+                if (window.mapSystem && typeof window.mapSystem.damageArea === 'function') {
+                    const ex = this.startX + Math.cos(this.angle) * this.maxLength;
+                    const ey = this.startY + Math.sin(this.angle) * this.maxLength;
+                    window.mapSystem.damageArea(this.startX, this.startY, ex, ey);
+                }
+            }
+
+        } else if (this.phase === 'active') {
+            const endX = this.startX + Math.cos(this.angle) * this.length;
+            const endY = this.startY + Math.sin(this.angle) * this.length;
+            const pd = this._pointToLineDistance(
+                player.x, player.y,
+                this.startX, this.startY, endX, endY
+            );
+
+            const onBeam = pd < 25;
+            player.onGraph = onBeam;
+
+            // ── Universal Risk/Reward buff timer ──────────────────
+            if (onBeam) {
+                player.graphBuffTimer = 0.15;
+            }
+
+            if (this.timer >= this.activeDuration) {
+                player.onGraph = false;
+                player.graphBuffTimer = 0;
+                return true; // Remove
+            }
+        }
+
+        return false;
+    }
+
+    // ── Private helpers ───────────────────────────────────────
+    _pointToLineDistance(px, py, x1, y1, x2, y2) {
+        const A = px - x1, B = py - y1;
+        const C = x2 - x1, D = y2 - y1;
+        const lenSq = C * C + D * D;
+        let param = lenSq !== 0 ? (A * C + B * D) / lenSq : -1;
+        let xx, yy;
+        if (param < 0) { xx = x1; yy = y1; }
+        else if (param > 1) { xx = x2; yy = y2; }
+        else { xx = x1 + param * C; yy = y1 + param * D; }
+        return Math.hypot(px - xx, py - yy);
+    }
+
+    // ── Draw ──────────────────────────────────────────────────
+    draw() {
+        if (typeof CTX === 'undefined') return;
+        const ss = worldToScreen(this.startX, this.startY);
+        const ex = this.startX + Math.cos(this.angle) * this.length;
+        const ey = this.startY + Math.sin(this.angle) * this.length;
+        const es = worldToScreen(ex, ey);
+
+        const bx = es.x - ss.x;
+        const by = es.y - ss.y;
+        const bLen = Math.hypot(bx, by);
+        if (bLen < 1) return;
+        // Unit perpendicular
+        const perp_x = -by / bLen;
+        const perp_y = bx / bLen;
+
+        CTX.save();
+
+        // ── PHASE: expanding — bright traveling tip + building beam ──
+        if (this.phase === 'expanding') {
+            const now = performance.now();
+            // Wide outer glow
+            CTX.globalAlpha = 0.35;
+            CTX.strokeStyle = '#60a5fa'; CTX.lineWidth = 24;
+            CTX.shadowBlur = 32; CTX.shadowColor = '#3b82f6';
+            CTX.lineCap = 'round';
+            CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+            // Core beam
+            CTX.globalAlpha = 0.90;
+            CTX.strokeStyle = '#93c5fd'; CTX.lineWidth = 4; CTX.shadowBlur = 18;
+            CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+            // Bright white center line
+            CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 2; CTX.shadowBlur = 10;
+            CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+            CTX.shadowBlur = 0;
+            // Traveling hot dot at tip
+            CTX.globalAlpha = 0.90;
+            CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 22; CTX.shadowColor = '#60a5fa';
+            CTX.beginPath(); CTX.arc(es.x, es.y, 9, 0, Math.PI * 2); CTX.fill();
+            CTX.fillStyle = '#3b82f6';
+            CTX.beginPath(); CTX.arc(es.x, es.y, 5, 0, Math.PI * 2); CTX.fill();
+            CTX.shadowBlur = 0;
+            // Grid tick marks
+            CTX.globalAlpha = 0.40;
+            CTX.strokeStyle = 'rgba(0,229,255,0.60)'; CTX.lineWidth = 1.2;
+            const tickStep = 55;
+            const steps = Math.floor(bLen / tickStep);
+            for (let i = 1; i <= steps; i++) {
+                const t = (i * tickStep) / bLen;
+                const tx = ss.x + bx * t, ty = ss.y + by * t;
+                CTX.beginPath();
+                CTX.moveTo(tx + perp_x * 8, ty + perp_y * 8);
+                CTX.lineTo(tx - perp_x * 8, ty - perp_y * 8);
+                CTX.stroke();
+            }
+            CTX.restore();
+            return;
+        }
+
+        // ── PHASE: blocking — dashed standby with pulsing warning ──
+        if (this.phase === 'blocking') {
+            const now = performance.now();
+            const pulse = 0.4 + Math.sin(now / 160) * 0.35;
+            // Faint dashed standby line
+            CTX.globalAlpha = 0.22 + pulse * 0.12;
+            CTX.strokeStyle = 'rgba(100,160,255,0.85)';
+            CTX.lineWidth = 3; CTX.setLineDash([12, 10]);
+            CTX.shadowBlur = 8 * pulse; CTX.shadowColor = '#60a5fa';
+            CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+            CTX.setLineDash([]);
+            // "INCOMING" warning label at midpoint
+            const midX = (ss.x + es.x) / 2, midY = (ss.y + es.y) / 2;
+            CTX.shadowBlur = 0;
+            CTX.globalAlpha = 0.55 + pulse * 0.35;
+            CTX.font = 'bold 11px "Orbitron",monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillStyle = '#93c5fd';
+            CTX.fillText('▶ GRAPH INCOMING ◀', midX + perp_x * 26, midY + perp_y * 26);
+            CTX.restore();
+            return;
+        }
+
+        // ── PHASE: active — full danger beam ─────────────────
+        const now = performance.now();
+        const waveNow = this._waveOffset;
+        const waveAmp = 14; const waveFreq = 0.055; const waveSpeed = 5.5;
+
+        // Outer kill-zone glow (wide, red-orange)
+        CTX.globalAlpha = 0.20;
+        CTX.strokeStyle = '#ff6b00'; CTX.lineWidth = 36;
+        CTX.shadowBlur = 45; CTX.shadowColor = '#ff4500';
+        CTX.lineCap = 'round';
+        CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+
+        // Mid glow
+        CTX.globalAlpha = 0.38;
+        CTX.strokeStyle = '#ff4500'; CTX.lineWidth = 16; CTX.shadowBlur = 28;
+        CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+
+        // Core beam
+        CTX.globalAlpha = 1.0;
+        CTX.strokeStyle = '#ff4500'; CTX.lineWidth = 10; CTX.shadowBlur = 30;
+        CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+
+        // White hot center
+        CTX.strokeStyle = '#ffffff'; CTX.lineWidth = 3; CTX.shadowBlur = 12; CTX.shadowColor = '#ff4500';
+        CTX.beginPath(); CTX.moveTo(ss.x, ss.y); CTX.lineTo(es.x, es.y); CTX.stroke();
+
+        // Grid ticks (orange danger)
+        CTX.shadowBlur = 0; CTX.globalAlpha = 0.55;
+        CTX.strokeStyle = 'rgba(255,140,0,0.65)'; CTX.lineWidth = 1.5;
+        const tickSpacing = 55;
+        const tickLen = 12;
+        const numTicks = Math.floor(bLen / tickSpacing);
+        for (let i = 1; i <= numTicks; i++) {
+            const t = (i * tickSpacing) / bLen;
+            const tx = ss.x + bx * t, ty = ss.y + by * t;
+            CTX.beginPath();
+            CTX.moveTo(tx + perp_x * tickLen, ty + perp_y * tickLen);
+            CTX.lineTo(tx - perp_x * tickLen, ty - perp_y * tickLen);
+            CTX.stroke();
+        }
+
+        // Sine wave overlay
+        CTX.globalAlpha = 0.80;
+        CTX.strokeStyle = 'rgba(255,120,0,0.80)'; CTX.lineWidth = 3;
+        CTX.shadowBlur = 14; CTX.shadowColor = 'rgba(255,100,0,0.8)';
+        CTX.beginPath();
+        const WAVE_STEPS = Math.ceil(bLen / 3);
+        for (let i = 0; i <= WAVE_STEPS; i++) {
+            const t = i / WAVE_STEPS;
+            const bpx = ss.x + bx * t, bpy = ss.y + by * t;
+            const beamDist = t * bLen;
+            const amp = Math.sin(beamDist * waveFreq * Math.PI * 2 - waveNow * waveSpeed) * waveAmp;
+            const wpx = bpx + perp_x * amp, wpy = bpy + perp_y * amp;
+            i === 0 ? CTX.moveTo(wpx, wpy) : CTX.lineTo(wpx, wpy);
+        }
+        CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // Animated endpoint explosion ring
+        const epPulse = 0.5 + Math.sin(now / 75) * 0.5;
+        CTX.globalAlpha = 0.70 * epPulse;
+        CTX.strokeStyle = '#ff4500'; CTX.lineWidth = 3;
+        CTX.shadowBlur = 16; CTX.shadowColor = '#ff6b00';
+        CTX.beginPath(); CTX.arc(es.x, es.y, 16 + epPulse * 10, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // Label
+        CTX.globalAlpha = 0.88;
+        CTX.font = 'bold 18px "Orbitron",monospace';
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.fillStyle = '#ff6b00'; CTX.shadowBlur = 8; CTX.shadowColor = '#ff4500';
+        const labelX = es.x + perp_x * 30, labelY = es.y + perp_y * 30;
+        CTX.fillText('f(x) !!!', labelX, labelY);
+
+        // Risk/reward zone label (preserved)
+        CTX.shadowBlur = 0;
+        CTX.font = 'bold 12px monospace';
+        CTX.fillStyle = 'rgba(255,180,0,0.90)';
+        CTX.fillText('⚡ RISK/REWARD ZONE ⚡', (ss.x + es.x) / 2, (ss.y + es.y) / 2 + perp_y * 32);
+
+        CTX.restore();
+    }
+}
+
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing, MatrixGridAttack, EmpPulse, EquationSlam, DeadlyGraph };
@@ -2047,6 +2151,6 @@ window.FreeFallWarningRing = FreeFallWarningRing;
 window.PorkSandwich = PorkSandwich;
 window.ExpandingRing = ExpandingRing;
 window.MatrixGridAttack = MatrixGridAttack;
+window.EmpPulse = EmpPulse;
 window.EquationSlam = EquationSlam;
 window.DeadlyGraph = DeadlyGraph;
-window.EmpPulse = EmpPulse;

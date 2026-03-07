@@ -4,6 +4,56 @@
 
 ---
 
+## v3.11.13 — Boss Attack Class Consolidation
+*Released: March 7, 2026*
+
+### 🔧 Code Organization Improvements
+- **Class Consolidation:** Moved `EquationSlam` and `DeadlyGraph` classes from `js/effects.js` to `js/entities/boss_attacks.js`
+- **Modular Architecture:** Centralized all boss-specific attack logic in dedicated boss attacks file
+- **Code Cleanup:** Removed redundant class definitions and section headers from effects.js
+- **Export Updates:** Updated both module exports and global window exports for consistency
+
+### 📐 EquationSlam Class Enhancement
+- **Guard Clause:** Added `if (typeof CTX === 'undefined') return;` protection in draw method
+- **Visual Effects:** Maintained all crater gradient fill, blast rings, chalk spikes, and formula shards
+- **Performance:** Optimized rendering with proper context checks
+- **Hit Detection:** Preserved precise ring-front collision detection
+
+### 📈 DeadlyGraph Class Enhancement
+- **Guard Clause:** Added `if (typeof CTX === 'undefined') return;` protection in draw method
+- **Three-Phase System:** Expanding → Blocking → Active phases with distinct visual states
+- **Risk/Reward Mechanics:** Maintained buff system and continuous damage mechanics
+- **Visual Polish:** Preserved sine wave overlays, grid ticks, and endpoint effects
+
+### 🎯 Technical Improvements
+- **Defensive Programming:** Added context guards to prevent rendering errors
+- **Module Consistency:** Ensured proper exports for both Node.js and browser environments
+- **Code Maintainability:** Improved organization by grouping related classes logically
+- **Performance Stability:** Enhanced error handling for edge cases
+
+### 📊 File Structure Changes
+- **boss_attacks.js:** +400 lines (added EquationSlam and DeadlyGraph classes)
+- **effects.js:** -398 lines (removed duplicate class definitions)
+- **Net Change:** +2 lines overall with improved organization
+
+### 🔧 Export Updates
+- **Module Exports:** Added EquationSlam and DeadlyGraph to module.exports array
+- **Global Exports:** Added window.EquationSlam and window.DeadlyGraph for browser access
+- **Backward Compatibility:** Maintained all existing functionality and APIs
+
+### 🎯 Benefits
+- **Better Organization:** Boss attack logic now centralized in appropriate file
+- **Reduced Duplication:** Eliminated redundant class definitions
+- **Improved Maintainability:** Easier to maintain and extend boss attack system
+- **Enhanced Stability:** Added error handling for rendering context issues
+
+### 🔧 Files Changed
+- `js/entities/boss_attacks.js` — Added EquationSlam and DeadlyGraph classes (+400 lines)
+- `js/effects.js` — Removed duplicate boss attack classes (-398 lines)
+- `sw.js` — Updated to v3.11.13
+
+---
+
 ## v3.11.12 — Complete Boss Attack Visual Rework
 *Released: March 7, 2026*
 
