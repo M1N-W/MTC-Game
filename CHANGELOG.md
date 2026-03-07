@@ -2,6 +2,65 @@
 
 ---
 
+## v3.11.2 — Boss Architecture Refactor & Heat System Removal
+*Released: March 7, 2026*
+
+### 🏛️ Boss System Refactoring
+- **BossBase class creation** — Extracted shared boss lifecycle into `BossBase extends Entity` with common methods:
+  - `speak()` — Gemini AI speech handling
+  - `_updateHUD()` — Centralized HUD updates
+  - `_onDeath()` — Standardized death cleanup, particle effects, score, powerups, wave progression
+- **Class renaming for clarity:**
+  - `Boss` → `KruManop` ("Kru Manop the Dog Summoner")
+  - `BossFirst` → `KruFirst` ("Kru First the Physics Master")
+- **Backward compatibility maintained** — Window aliases: `window.Boss = KruManop`, `window.BossFirst = KruFirst`
+- **Module exports updated** — Both new canonical names and legacy aliases included
+
+### 🧹 Ignite System Removal
+- **Complete ignite removal** from all boss entities (BossDog, KruManop, KruFirst)
+  - Removed `igniteTimer`, `igniteDPS` tracking
+  - Removed ignite overlay rendering from BossRenderer
+  - Removed ignite-related damage calculations and reductions
+- **BossRenderer cleanup** — Removed ignite overlay drawing code from all boss draw methods
+- **Documentation updates** — boss_attacks.js comments updated to reflect new class names
+
+### 🔥 AutoPlayer Heat System Removal
+- **Heat gauge completely removed** — No more heat tiers, heat scaling, or overheat mechanics:
+  - Removed `heat`, `heatTier` properties
+  - Removed `_addHeat()`, `_updateHeatTier()`, `_getHeatDmgMult()`, `_getEffectivePunchRate()` methods
+  - Removed Heat bar UI elements and tier color displays
+- **Melee mode toggle removed** — Simplified to Stand Rush only during Wanchai (no F-key toggle)
+- **Vacuum Heat simplified** — No longer applies ignite debuff to enemies
+- **Damage calculations simplified** — Removed Heat tier multipliers from all damage formulas
+
+### 🔧 Configuration & Bug Fixes
+- **BALANCE path fixes** — Updated to use correct `BALANCE.characters.auto` paths
+- **Cooldown corrections** — Fixed to match config values:
+  - Vacuum: 8s (was 6s)
+  - Detonation: 5s (was 8s)
+  - Wanchai duration: 3s (was using stale config)
+- **Stat adjustments:**
+  - Energy cost: 32 (was 35)
+  - Damage reduction: 30% (was 50%)
+  - Lifesteal: 1% (was 2%)
+  - Crit chance: 0.25 bonus (was 0.40)
+  - Crit multiplier: 2.0x (was 2.2x)
+- **UI fixes** — Added missing Q/E cooldown visual displays
+- **Stand Rush miss improvement** — Added fist overlay animation even when missing
+
+### 📊 Code Statistics
+- **534 lines removed**, 304 lines added — Net reduction of 230 lines
+- **Simplified architecture** — Reduced complexity while maintaining all gameplay functionality
+- **Improved maintainability** — Cleaner inheritance hierarchy and removed complex Heat mechanics
+
+### 🔧 Files Changed
+- `boss.js` — BossBase extraction, class renaming, ignite removal
+- `boss_attacks.js` — Documentation updates for new class names
+- `AutoPlayer.js` — Heat system removal, config fixes, UI improvements
+- `sw.js` — Updated to v3.11.2
+
+---
+
 ## v3.11.0 — Wanchai Stand Humanoid Redesign & Manual Stand Rush
 *Released: March 5, 2026*
 
