@@ -85,7 +85,7 @@
 
 ---
 
-## 📈 Current Version: v3.11.10 (March 7, 2026)
+## 📈 Current Version: v3.11.11 (March 7, 2026)
 
 **Latest Major Updates:**
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
@@ -101,3 +101,4 @@
 - ⏱️ **Bullet Time Visual System Overhaul:** Multi-layer cinematic effects with time ripples, clock-hand streaks, and circular energy HUD
 - 🎯 **Enemy Renderer Refactor & Visual Polish:** Performance optimizations, shared helpers, enhanced visual details for all enemy types
 - 🎨 **Comprehensive Visual Polish Overhaul:** Player renderer refactor, boss summons redesign, naturalistic creature designs with dangerous supernatural elements
+- 🌌 **Domain Expansion Enhanced Visuals & New Abilities:** Portal iris opening, rotating hex geometry, ambient particles, Void Pulse rings, Formula Beam sweeping attacks, cinematic visual effects

@@ -4,6 +4,64 @@
 
 ---
 
+## v3.11.11 — Domain Expansion Enhanced Visuals & New Abilities
+*Released: March 7, 2026*
+
+### 🌌 Visual System Overhaul
+- **Casting Phase Enhancement:** Portal iris opening with rotating swirl arms and dramatic background overlay
+- **Background Geometry:** Rotating hex grid with counter-rotating diamond grid overlay
+- **Ambient Particles:** 52 drift particles (purple/gold) with physics-based bouncing
+- **Orbital Elements:** Contra-rotating rings with glowing node dots and data stream lines
+- **Boss Aura:** Energy field with spinning rune ring during domain activation
+- **Explosion Effects:** White-hot core with digital shatter lines and shockwave rings
+
+### ⚡ New Combat Abilities
+- **🌀 Void Pulse Ring:** Expands every 2 cycles from arena center (12 damage)
+- **⚡ Formula Beam:** Sweeping beam from cycle 4+ (14 damage, 0.22s cooldown)
+- **Enhanced Cell Explosions:** Multi-layered effects with screen-space shockwaves
+- **Dynamic Difficulty:** Progressive intensity with visual feedback scaling
+
+### 🎮 HUD Interface Upgrades
+- **Cycle Progress Indicators:** 6-dot row showing completed cycles
+- **Enhanced Status Effects:** Edge vignette + status chips for slow debuff
+- **Formula Beam Warning:** Real-time countdown bar with visual alerts
+- **Glitch Effects:** Chromatic aberration on METRICS-MANIPULATION title
+- **Portal Progress:** Visual feedback during casting phase
+
+### 🎨 Cinematic Visual Effects
+- **Portal Iris:** Black void expansion with purple rim glow and 6 rotating arms
+- **Title Animation:** Glitch chromatic shift with bracket decorations
+- **Background Layers:** Multi-depth geometry with rotation and pulsing
+- **Particle Systems:** Physics-based drift with wall bouncing
+- **Light Effects:** Dynamic shadows, glows, and gradient transitions
+
+### 🔧 Technical Enhancements
+- **Performance Optimization:** Efficient particle system with object pooling
+- **State Management:** Enhanced domain state tracking with new properties
+- **Visual Consistency:** Standardized timing and animation systems
+- **Memory Management:** Proper cleanup of new visual elements
+- **Code Architecture:** Modular helper functions for visual effects
+
+### 📊 Configuration Changes
+- **VOID_PULSE_CYCLE:** 2 (spawn every N completed cycles)
+- **VOID_PULSE_SPEED:** 400 (world-space px/s expansion)
+- **FORMULA_BEAM_CYCLE:** 4 (start from this cycle onward)
+- **FORMULA_BEAM_DUR:** 1.4 (seconds beam active)
+- **DRIFT_COUNT:** 52 (ambient arena particles)
+
+### 🎯 User Experience Improvements
+- **Visual Clarity:** Enhanced feedback for domain phases and abilities
+- **Combat Awareness:** Better indication of incoming threats
+- **Cinematic Quality:** Movie-quality visual effects and transitions
+- **Performance Stability:** Optimized rendering for smooth 60FPS
+- **Immersive Design:** Enhanced supernatural mathematics theme
+
+### 🔧 Files Changed
+- `js/entities/boss_attacks.js` — Domain Expansion complete visual overhaul (342 lines modified)
+- `sw.js` — Updated to v3.11.11
+
+---
+
 ## v3.11.10 — Comprehensive Visual Polish Overhaul
 *Released: March 7, 2026*
 

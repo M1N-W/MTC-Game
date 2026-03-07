@@ -893,6 +893,16 @@ const _DC = Object.freeze({
     BOSS_VOLLEY_CYCLE: 3,
     BOSS_VOLLEY_COUNT: 8,
     LOCK_PUSH: 80,                // pixels/s push force when entity tries to leave domain
+
+    // ── Enhanced Domain visuals / new abilities ──────────────
+    VOID_PULSE_CYCLE: 2,          // spawn void-pulse ring every N completed cycles
+    VOID_PULSE_SPEED: 400,        // world-space px/s ring expansion
+    VOID_PULSE_DAMAGE: 12,        // damage if player caught inside pulse front
+    FORMULA_BEAM_CYCLE: 4,        // start sweeping formula beam from this cycle onward
+    FORMULA_BEAM_DUR: 1.4,        // seconds beam is active per spawn
+    FORMULA_BEAM_DAMAGE: 14,      // damage per hit (0.25s cooldown)
+    FORMULA_BEAM_ARC: 0.07,       // half-arc width in radians (~4°)
+    DRIFT_COUNT: 52,              // ambient arena particles
 });
 
 const _RAIN_POOL = '0123456789ABCDEFΑΒΓΔΩΣΨXYZμσπ∑∫∂∇+-×÷=≠≤≥ΦΘΛ';
@@ -913,6 +923,13 @@ const DomainExpansion = {
     _rain: [], _indices: [],
     _flashTimer: 0,     // full-screen purple flash on explosion hit
     _crackLines: [],    // screen crack visual during casting
+    // ── New enhanced-domain state ──
+    _driftParticles: [],  // ambient arena particles
+    _voidPulses: [],      // [ { r, maxR, alpha, wx, wy } ]
+    _formulaBeam: null,   // { bossX, bossY, angle, timer, _hitCd }
+    _cellShockwaves: [],  // [ { sx, sy, r, maxR, alpha } ]  — screen-space ripples
+    _bgAngle: 0,          // slowly-rotating background hex geometry angle
+    _portalProgress: 0,   // 0→1 during casting
 
     canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
     isInvincible() { return this.phase !== 'idle'; },
@@ -925,6 +942,12 @@ const DomainExpansion = {
         this.originX = 0;
         this.originY = 0;
         this._initRain();
+        this._initDrift();
+        this._voidPulses = [];
+        this._formulaBeam = null;
+        this._cellShockwaves = [];
+        this._bgAngle = 0;
+        this._portalProgress = 0;
 
         boss._domainCasting = true;
         boss._domainActive = true;
@@ -977,6 +1000,7 @@ const DomainExpansion = {
 
         switch (this.phase) {
             case 'casting':
+                this._portalProgress = Math.max(0, Math.min(1, 1.0 - this.timer / _DC.CAST_DUR));
                 if (this.timer <= 0) {
                     this.phase = 'active'; this.cycleCount = 0;
                     this.cyclePhase = 'warn'; this.cycleTimer = _DC.WARN_DUR;
@@ -989,6 +1013,75 @@ const DomainExpansion = {
                 break;
 
             case 'active':
+                // ── Ambient drift particles ─────────────────────────
+                this._bgAngle += dt * 0.07;
+                for (const dp of this._driftParticles) {
+                    dp.x += dp.vx * dt; dp.y += dp.vy * dt;
+                    const dpD = Math.hypot(dp.x, dp.y);
+                    if (dpD > _DC.ARENA_RADIUS * 0.87) {
+                        const nx = dp.x / dpD, ny = dp.y / dpD;
+                        const dot = dp.vx * nx + dp.vy * ny;
+                        if (dot > 0) { dp.vx -= 2 * dot * nx; dp.vy -= 2 * dot * ny; }
+                    }
+                    dp.phase += dt * 1.8;
+                }
+                // ── Void pulse rings ───────────────────────────────
+                for (let _vi = this._voidPulses.length - 1; _vi >= 0; _vi--) {
+                    const _vp = this._voidPulses[_vi];
+                    _vp.r += _DC.VOID_PULSE_SPEED * dt;
+                    _vp.alpha = Math.max(0, 1.0 - _vp.r / _vp.maxR);
+                    if (_vp.alpha <= 0) this._voidPulses.splice(_vi, 1);
+                    // Damage player if pulse front crosses them
+                    if (player && !player.dead && !_vp._hit) {
+                        const pd2 = Math.hypot(player.x - _vp.wx, player.y - _vp.wy);
+                        if (pd2 < _vp.r && pd2 > _vp.r - _DC.VOID_PULSE_SPEED * dt * 2) {
+                            _vp._hit = true;
+                            player.takeDamage(_DC.VOID_PULSE_DAMAGE);
+                            if (typeof spawnFloatingText === 'function')
+                                spawnFloatingText('🌀 VOID PULSE', player.x, player.y - 65, '#a855f7', 18);
+                            if (typeof addScreenShake === 'function') addScreenShake(7);
+                        }
+                    }
+                }
+                // ── Formula beam tick ──────────────────────────────
+                if (this._formulaBeam) {
+                    this._formulaBeam.timer -= dt;
+                    if (this._formulaBeam.timer <= 0) {
+                        this._formulaBeam = null;
+                    } else if (player && !player.dead && boss && !boss.dead) {
+                        const _bx = this._formulaBeam.bossX, _by = this._formulaBeam.bossY;
+                        const _tgt = Math.atan2(player.y - _by, player.x - _bx);
+                        let _da = _tgt - this._formulaBeam.angle;
+                        while (_da > Math.PI) _da -= Math.PI * 2;
+                        while (_da < -Math.PI) _da += Math.PI * 2;
+                        this._formulaBeam.angle += Math.sign(_da) * Math.min(Math.abs(_da), 2.2 * Math.PI * dt);
+                        // Hit detection
+                        const _toPx = player.x - _bx, _toPy = player.y - _by;
+                        const _pDist = Math.hypot(_toPx, _toPy);
+                        if (_pDist > 0) {
+                            const _bdx = Math.cos(this._formulaBeam.angle), _bdy = Math.sin(this._formulaBeam.angle);
+                            const _dot = (_toPx * _bdx + _toPy * _bdy) / _pDist;
+                            const _ang = Math.acos(Math.max(-1, Math.min(1, _dot)));
+                            if (_ang < _DC.FORMULA_BEAM_ARC * 2.5 && _pDist < _DC.ARENA_RADIUS) {
+                                if (!this._formulaBeam._hitCd || this._formulaBeam._hitCd <= 0) {
+                                    player.takeDamage(_DC.FORMULA_BEAM_DAMAGE);
+                                    this._formulaBeam._hitCd = 0.22;
+                                    if (typeof spawnFloatingText === 'function')
+                                        spawnFloatingText(`⚡ ${_DC.FORMULA_BEAM_DAMAGE}`, player.x, player.y - 55, '#38bdf8', 18);
+                                    if (typeof addScreenShake === 'function') addScreenShake(6);
+                                }
+                            }
+                        }
+                        if (this._formulaBeam._hitCd > 0) this._formulaBeam._hitCd -= dt;
+                    }
+                }
+                // ── Cell shockwaves ────────────────────────────────
+                for (let _si = this._cellShockwaves.length - 1; _si >= 0; _si--) {
+                    const _sw = this._cellShockwaves[_si];
+                    _sw.r += 220 * dt;
+                    _sw.alpha = Math.max(0, 1.0 - _sw.r / _sw.maxR);
+                    if (_sw.alpha <= 0) this._cellShockwaves.splice(_si, 1);
+                }
                 this.cycleTimer -= dt;
                 if (this.cyclePhase === 'warn' && this.cycleTimer <= 0) {
                     this.cyclePhase = 'explode'; this.cycleTimer = _DC.EXPLODE_DUR;
@@ -1007,7 +1100,31 @@ const DomainExpansion = {
                         this.cyclePhase = 'warn';
                         this.cycleTimer = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
                         this._rollCells();
-                        // Boss volley on cycle 3+
+
+                        // ── Void pulse ring every N cycles ──────────
+                        if (this.cycleCount % _DC.VOID_PULSE_CYCLE === 0) {
+                            this._voidPulses.push({
+                                wx: this.originX, wy: this.originY,
+                                r: 60, maxR: _DC.ARENA_RADIUS * 1.05, alpha: 1, _hit: false
+                            });
+                            if (typeof spawnFloatingText === 'function' && player)
+                                spawnFloatingText('🌀 VOID PULSE', player.x, player.y - 90, '#a855f7', 22);
+                            if (typeof addScreenShake === 'function') addScreenShake(8);
+                        }
+
+                        // ── Formula beam from cycle 4+ ───────────────
+                        if (this.cycleCount >= _DC.FORMULA_BEAM_CYCLE && boss && !boss.dead) {
+                            const _initAngle = boss ? Math.atan2(player ? player.y - boss.y : 0, player ? player.x - boss.x : 1) : 0;
+                            this._formulaBeam = {
+                                bossX: boss.x, bossY: boss.y,
+                                angle: _initAngle + Math.PI, timer: _DC.FORMULA_BEAM_DUR, _hitCd: 0
+                            };
+                            if (typeof spawnFloatingText === 'function' && boss)
+                                spawnFloatingText('⚡ FORMULA BEAM', boss.x, boss.y - 80, '#38bdf8', 22);
+                            if (typeof addScreenShake === 'function') addScreenShake(10);
+                        }
+
+                        // ── Boss volley on cycle 3+ ──────────────────
                         if (this.cycleCount >= _DC.BOSS_VOLLEY_CYCLE && boss && !boss.dead && typeof projectileManager !== 'undefined') {
                             const n = _DC.BOSS_VOLLEY_COUNT;
                             for (let _vi = 0; _vi < n; _vi++) {
@@ -1026,6 +1143,9 @@ const DomainExpansion = {
                     boss._domainCasting = false; boss._domainActive = false;
                     if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.timer = 0; }
                     this.cells = []; this._crackLines = []; this._flashTimer = 0;
+                    this._driftParticles = []; this._voidPulses = [];
+                    this._formulaBeam = null; this._cellShockwaves = [];
+                    this._bgAngle = 0;
                     console.log('[DomainExpansion] Domain ended — cooldown 45 s');
                 }
                 break;
@@ -1049,6 +1169,65 @@ const DomainExpansion = {
         ctx.globalAlpha = globalA * 0.80;
         ctx.fillStyle = 'rgba(2,0,14,1)';
         ctx.fillRect(0, 0, W, H);
+
+        // ── 1b. Background rotating hex geometry ─────────────
+        if (this.phase !== 'casting') {
+            const originSS0 = worldToScreen(this.originX, this.originY);
+            const edgeSS0 = worldToScreen(this.originX + _DC.ARENA_RADIUS, this.originY);
+            const rSS0 = Math.abs(edgeSS0.x - originSS0.x);
+            ctx.save();
+            ctx.translate(originSS0.x, originSS0.y);
+            ctx.rotate(this._bgAngle);
+            ctx.globalAlpha = globalA * 0.07;
+            ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 0.6;
+            for (let hring = 1; hring <= 5; hring++) {
+                const hR = rSS0 * (hring / 5) * 0.98;
+                ctx.beginPath();
+                for (let hv = 0; hv < 6; hv++) {
+                    const ha = (hv / 6) * Math.PI * 2;
+                    hv === 0 ? ctx.moveTo(Math.cos(ha) * hR, Math.sin(ha) * hR)
+                        : ctx.lineTo(Math.cos(ha) * hR, Math.sin(ha) * hR);
+                }
+                ctx.closePath(); ctx.stroke();
+                // Spokes
+                for (let hsp = 0; hsp < 6; hsp++) {
+                    const hsa = (hsp / 6) * Math.PI * 2;
+                    const prevR = rSS0 * ((hring - 1) / 5) * 0.98;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(hsa) * prevR, Math.sin(hsa) * prevR);
+                    ctx.lineTo(Math.cos(hsa) * hR, Math.sin(hsa) * hR);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+
+            // Counter-rotating inner diamond grid
+            ctx.save();
+            ctx.translate(originSS0.x, originSS0.y);
+            ctx.rotate(-this._bgAngle * 1.7 + Math.PI / 4);
+            ctx.globalAlpha = globalA * 0.045;
+            ctx.strokeStyle = '#facc15'; ctx.lineWidth = 0.5;
+            const gridStep = rSS0 * 0.18;
+            const gridN = 12;
+            for (let gi = -gridN; gi <= gridN; gi++) {
+                ctx.beginPath(); ctx.moveTo(gi * gridStep, -rSS0); ctx.lineTo(gi * gridStep, rSS0); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-rSS0, gi * gridStep); ctx.lineTo(rSS0, gi * gridStep); ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // ── 1c. Ambient drift particles ───────────────────────
+        if (this.phase === 'active' || this.phase === 'ending') {
+            for (const dp of this._driftParticles) {
+                const dps = worldToScreen(dp.x + this.originX, dp.y + this.originY);
+                const dpPulse = 0.5 + Math.sin(now * 2.4 + dp.phase) * 0.5;
+                ctx.globalAlpha = globalA * dp.alpha * dpPulse;
+                ctx.fillStyle = dp.gold ? `rgba(251,191,36,1)` : `rgba(217,70,239,1)`;
+                ctx.shadowBlur = dp.r * 3; ctx.shadowColor = dp.gold ? '#facc15' : '#d946ef';
+                ctx.beginPath(); ctx.arc(dps.x, dps.y, dp.r * (0.7 + dpPulse * 0.3), 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
 
         // ── 2. Matrix rain — denser, dual-colour ────────────
         ctx.font = '11px "Courier New",monospace';
@@ -1108,6 +1287,51 @@ const DomainExpansion = {
             }
             ctx.shadowBlur = 0;
 
+            // ── Inner contra-rotating orbit rings ─────────
+            for (let ir = 0; ir < 2; ir++) {
+                const irR = radiusSS * (0.92 - ir * 0.07);
+                const irAngle = (ir === 0 ? now * 0.65 : -now * 0.9);
+                ctx.save();
+                ctx.translate(bCX, bCY);
+                ctx.rotate(irAngle);
+                ctx.globalAlpha = globalA * (0.22 + pulse * 0.18);
+                ctx.strokeStyle = ir === 0 ? 'rgba(217,70,239,0.55)' : 'rgba(251,191,36,0.45)';
+                ctx.lineWidth = 1.2;
+                ctx.setLineDash(ir === 0 ? [6, 14] : [3, 20]);
+                ctx.beginPath(); ctx.arc(0, 0, irR, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+                // Spinning node dots on ring
+                for (let nd = 0; nd < (ir === 0 ? 8 : 5); nd++) {
+                    const na = (nd / (ir === 0 ? 8 : 5)) * Math.PI * 2;
+                    const nodeAlpha = 0.4 + Math.sin(now * 3 + nd * 0.9) * 0.4;
+                    ctx.fillStyle = ir === 0 ? `rgba(217,70,239,${nodeAlpha})` : `rgba(251,191,36,${nodeAlpha})`;
+                    ctx.shadowBlur = 6; ctx.shadowColor = ir === 0 ? '#d946ef' : '#facc15';
+                    ctx.beginPath(); ctx.arc(Math.cos(na) * irR, Math.sin(na) * irR, 2.5, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.shadowBlur = 0; ctx.restore();
+            }
+
+            // ── Data stream lines ─────────────────────────────
+            {
+                const streamCount = 6;
+                for (let si = 0; si < streamCount; si++) {
+                    const sAngle = (si / streamCount) * Math.PI * 2 + now * 0.28;
+                    const sLen = radiusSS * (0.55 + Math.sin(now * 1.2 + si) * 0.25);
+                    const sx1 = bCX + Math.cos(sAngle) * (radiusSS * 0.05);
+                    const sy1 = bCY + Math.sin(sAngle) * (radiusSS * 0.05);
+                    const sx2 = bCX + Math.cos(sAngle) * sLen;
+                    const sy2 = bCY + Math.sin(sAngle) * sLen;
+                    const sAlpha = 0.08 + Math.sin(now * 2.8 + si * 1.1) * 0.06;
+                    const sG = ctx.createLinearGradient(sx1, sy1, sx2, sy2);
+                    sG.addColorStop(0, `rgba(56,189,248,0)`);
+                    sG.addColorStop(0.5, `rgba(56,189,248,${sAlpha})`);
+                    sG.addColorStop(1, `rgba(56,189,248,0)`);
+                    ctx.globalAlpha = globalA;
+                    ctx.strokeStyle = sG; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2); ctx.stroke();
+                }
+            }
+
             // Cycle counter chip — top of screen
             if (this.phase === 'active') {
                 const warnDurCurrent = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
@@ -1132,6 +1356,19 @@ const DomainExpansion = {
                 ctx.font = 'bold 9px "Orbitron",Arial';
                 ctx.fillStyle = tintR > 210 ? '#ef4444' : '#facc15';
                 ctx.fillText(`DANGER ${Math.round(dangerPct * 100)}%`, chipX, chipY + 18);
+
+                // Cycle dot progress row
+                ctx.globalAlpha = globalA * 0.85;
+                for (let di = 0; di < _DC.TOTAL_CYCLES; di++) {
+                    const dx2 = chipX - (_DC.TOTAL_CYCLES - 1) * 10 + di * 20;
+                    const dy2 = chipY + 36;
+                    const done = di < this.cycleCount;
+                    const cur = di === this.cycleCount;
+                    ctx.fillStyle = done ? borderCol : cur ? '#facc15' : '#334155';
+                    ctx.shadowBlur = cur ? 10 : done ? 4 : 0; ctx.shadowColor = '#facc15';
+                    ctx.beginPath(); ctx.arc(dx2, dy2, cur ? 5.5 : 4, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.shadowBlur = 0;
             }
         }
 
@@ -1154,18 +1391,38 @@ const DomainExpansion = {
                     if (this.cyclePhase === 'explode') {
                         // ── Explosion flash ───────────────────
                         const ef = 1.0 - explodeProgress;
+                        // Outer purple halo
+                        ctx.globalAlpha = globalA * ef * 0.55;
+                        const eg2 = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 1.1);
+                        eg2.addColorStop(0, `rgba(217,70,239,${ef * 0.6})`);
+                        eg2.addColorStop(1, `rgba(0,0,0,0)`);
+                        ctx.fillStyle = eg2;
+                        ctx.beginPath(); ctx.arc(mx, my, sw * 1.1, 0, Math.PI * 2); ctx.fill();
+                        // White-hot core
                         ctx.globalAlpha = globalA * ef * 0.98;
-                        // White-hot centre → orange → transparent
                         const eg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
-                        eg.addColorStop(0, `rgba(255,255,220,${ef})`);
-                        eg.addColorStop(0.4, `rgba(239,68,68,${ef * 0.9})`);
+                        eg.addColorStop(0, `rgba(255,255,255,${ef})`);
+                        eg.addColorStop(0.25, `rgba(255,240,150,${ef})`);
+                        eg.addColorStop(0.55, `rgba(239,68,68,${ef * 0.85})`);
                         eg.addColorStop(1, `rgba(217,70,239,0)`);
                         ctx.fillStyle = eg;
                         ctx.fillRect(tl.x, tl.y, sw, sh);
-                        // Bright border
+                        // Digital shatter lines
+                        ctx.save();
+                        ctx.globalAlpha = globalA * ef * 0.60;
+                        ctx.strokeStyle = `rgba(255,255,255,${ef})`; ctx.lineWidth = 1;
+                        for (let shl = 0; shl < 5; shl++) {
+                            const sha = (shl / 5) * Math.PI;
+                            ctx.beginPath();
+                            ctx.moveTo(mx, my);
+                            ctx.lineTo(mx + Math.cos(sha) * sw * 0.65 * ef, my + Math.sin(sha) * sh * 0.65 * ef);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                        // Bright border ring
                         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
-                        ctx.shadowBlur = 18; ctx.shadowColor = '#ef4444';
-                        ctx.globalAlpha = globalA * ef * 0.85;
+                        ctx.shadowBlur = 22; ctx.shadowColor = '#ef4444';
+                        ctx.globalAlpha = globalA * ef * 0.90;
                         ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                         ctx.shadowBlur = 0;
                     } else {
@@ -1239,10 +1496,146 @@ const DomainExpansion = {
             }
         }
 
-        // ── 5. Casting animation ─────────────────────────────
+        // ── 4b. Cell shockwave rings ─────────────────────────
+        if (this._cellShockwaves.length > 0) {
+            for (const csw of this._cellShockwaves) {
+                const cswS = worldToScreen(csw.wx, csw.wy);
+                const cswEdge = worldToScreen(csw.wx + csw.r, csw.wy);
+                const cswR = Math.abs(cswEdge.x - cswS.x);
+                ctx.globalAlpha = globalA * csw.alpha * 0.75;
+                ctx.strokeStyle = `rgba(239,68,68,${csw.alpha})`;
+                ctx.lineWidth = 2.5 * csw.alpha;
+                ctx.shadowBlur = 14 * csw.alpha; ctx.shadowColor = '#ef4444';
+                ctx.beginPath(); ctx.arc(cswS.x, cswS.y, cswR, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // ── 4c. Void pulse rings ──────────────────────────────
+        if (this._voidPulses.length > 0) {
+            for (const vp of this._voidPulses) {
+                const vpC = worldToScreen(vp.wx, vp.wy);
+                const vpE = worldToScreen(vp.wx + vp.r, vp.wy);
+                const vpR = Math.abs(vpE.x - vpC.x);
+                // Outer glow
+                ctx.globalAlpha = globalA * vp.alpha * 0.35;
+                const vpG = ctx.createRadialGradient(vpC.x, vpC.y, vpR * 0.88, vpC.x, vpC.y, vpR * 1.08);
+                vpG.addColorStop(0, 'rgba(168,85,247,0)');
+                vpG.addColorStop(0.5, `rgba(168,85,247,${vp.alpha * 0.55})`);
+                vpG.addColorStop(1, 'rgba(168,85,247,0)');
+                ctx.fillStyle = vpG;
+                ctx.beginPath(); ctx.arc(vpC.x, vpC.y, vpR * 1.08, 0, Math.PI * 2);
+                ctx.arc(vpC.x, vpC.y, vpR * 0.88, 0, Math.PI * 2, true);
+                ctx.fill();
+                // Sharp ring
+                ctx.globalAlpha = globalA * vp.alpha;
+                ctx.strokeStyle = `rgba(168,85,247,${vp.alpha * 0.9})`; ctx.lineWidth = 3.5;
+                ctx.shadowBlur = 18 * vp.alpha; ctx.shadowColor = '#a855f7';
+                ctx.beginPath(); ctx.arc(vpC.x, vpC.y, vpR, 0, Math.PI * 2); ctx.stroke();
+                // Trailing inner ring
+                ctx.globalAlpha = globalA * vp.alpha * 0.45;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(vpC.x, vpC.y, vpR * 0.92, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // ── 4d. Formula beam ─────────────────────────────────
+        if (this._formulaBeam) {
+            const fbS = worldToScreen(this._formulaBeam.bossX, this._formulaBeam.bossY);
+            const fbAngle = this._formulaBeam.angle;
+            const fbProg = this._formulaBeam.timer / _DC.FORMULA_BEAM_DUR;
+            const fbLen = W * 1.4; // long enough to cross screen
+            const originSS_fb = worldToScreen(this.originX, this.originY);
+            const edgeSS_fb = worldToScreen(this.originX + _DC.ARENA_RADIUS, this.originY);
+            const arenaRSS_fb = Math.abs(edgeSS_fb.x - originSS_fb.x);
+            const actualBeamLen = arenaRSS_fb * 1.1;
+            const fbAlpha = Math.min(1, fbProg * 3) * (0.65 + Math.sin(now * 18) * 0.15);
+
+            ctx.save();
+            ctx.translate(fbS.x, fbS.y);
+            ctx.rotate(fbAngle);
+            // Outer wide glow
+            const fbG1 = ctx.createLinearGradient(0, 0, actualBeamLen, 0);
+            fbG1.addColorStop(0, `rgba(56,189,248,${fbAlpha * 0.45})`);
+            fbG1.addColorStop(0.5, `rgba(56,189,248,${fbAlpha * 0.20})`);
+            fbG1.addColorStop(1, 'rgba(56,189,248,0)');
+            ctx.fillStyle = fbG1;
+            ctx.globalAlpha = globalA;
+            ctx.beginPath(); ctx.moveTo(0, 0);
+            ctx.arc(0, 0, actualBeamLen, -_DC.FORMULA_BEAM_ARC * 6, _DC.FORMULA_BEAM_ARC * 6);
+            ctx.closePath(); ctx.fill();
+            // Core bright beam
+            const fbG2 = ctx.createLinearGradient(0, 0, actualBeamLen, 0);
+            fbG2.addColorStop(0, `rgba(255,255,255,${fbAlpha * 0.95})`);
+            fbG2.addColorStop(0.2, `rgba(56,189,248,${fbAlpha * 0.80})`);
+            fbG2.addColorStop(1, 'rgba(56,189,248,0)');
+            ctx.fillStyle = fbG2;
+            ctx.beginPath(); ctx.moveTo(0, 0);
+            ctx.arc(0, 0, actualBeamLen, -_DC.FORMULA_BEAM_ARC, _DC.FORMULA_BEAM_ARC);
+            ctx.closePath(); ctx.fill();
+            // Central line
+            ctx.strokeStyle = `rgba(255,255,255,${fbAlpha})`; ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 20; ctx.shadowColor = '#38bdf8';
+            ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(actualBeamLen * 0.85, 0); ctx.stroke();
+            // Scanline text overlay on beam
+            ctx.globalAlpha = globalA * fbAlpha * 0.55;
+            ctx.font = '9px "Courier New",monospace'; ctx.fillStyle = '#bfdbfe';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            const beamFormulas = ['∑x²=0', 'λ=∞', 'det≠0', '∂φ/∂t'];
+            for (let bfi = 0; bfi < 4; bfi++) {
+                ctx.fillText(beamFormulas[bfi], 20 + bfi * 55, (bfi % 2 === 0 ? -5 : 5));
+            }
+            ctx.shadowBlur = 0; ctx.restore();
+
+            // Origin burst
+            ctx.save();
+            ctx.globalAlpha = globalA * fbAlpha * 0.70;
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowBlur = 30; ctx.shadowColor = '#38bdf8';
+            ctx.beginPath(); ctx.arc(fbS.x, fbS.y, 9 * fbAlpha, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0; ctx.restore();
+        }
+
+        // ── 5. Casting animation ─────────────────────────────────────────────
         if (this.phase === 'casting') {
             const elapsed = _DC.CAST_DUR - this.timer;
             const ringScreen = worldToScreen(this.originX, this.originY);
+
+            // ── Portal iris opening ───────────────────────
+            const pp = this._portalProgress;
+            if (pp > 0) {
+                const arenaEdgeSS0 = worldToScreen(_DC.ARENA_RADIUS, 0);
+                const arenaOriSS0 = worldToScreen(0, 0);
+                const aSSR0 = Math.abs(arenaEdgeSS0.x - arenaOriSS0.x);
+                // Dark void filling behind everything
+                ctx.globalAlpha = globalA * Math.pow(pp, 0.6) * 0.65;
+                ctx.fillStyle = 'rgba(0,0,8,1)';
+                ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, aSSR0 * pp * 1.1, 0, Math.PI * 2); ctx.fill();
+                // Portal rim glow
+                ctx.globalAlpha = globalA * pp * 0.80;
+                ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 5;
+                ctx.shadowBlur = 40 * pp; ctx.shadowColor = '#d946ef';
+                ctx.beginPath(); ctx.arc(ringScreen.x, ringScreen.y, aSSR0 * pp * 1.1, 0, Math.PI * 2); ctx.stroke();
+                // Inner swirl arms
+                for (let sw2 = 0; sw2 < 6; sw2++) {
+                    const swA = (sw2 / 6) * Math.PI * 2 + elapsed * 4;
+                    const swLen = aSSR0 * pp * (0.35 + Math.sin(elapsed * 3 + sw2) * 0.15);
+                    ctx.globalAlpha = globalA * pp * (0.25 + Math.sin(elapsed * 5 + sw2) * 0.15);
+                    ctx.strokeStyle = sw2 % 2 === 0 ? '#d946ef' : '#facc15';
+                    ctx.lineWidth = 1.5; ctx.shadowBlur = 8; ctx.shadowColor = '#d946ef';
+                    ctx.beginPath();
+                    ctx.moveTo(ringScreen.x, ringScreen.y);
+                    ctx.quadraticCurveTo(
+                        ringScreen.x + Math.cos(swA + 0.5) * swLen * 0.7,
+                        ringScreen.y + Math.sin(swA + 0.5) * swLen * 0.7,
+                        ringScreen.x + Math.cos(swA) * swLen,
+                        ringScreen.y + Math.sin(swA) * swLen
+                    );
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            }
 
             // Expanding shockwave rings — grow to cover full arena
             const arenaEdgeSS = worldToScreen(_DC.ARENA_RADIUS, 0);
@@ -1318,21 +1711,52 @@ const DomainExpansion = {
                 ctx.fillText('領域展開', W / 2, H / 2 - 42);
                 ctx.shadowBlur = 0;
             }
-            // METRICS-MANIPULATION subtitle
+            // METRICS-MANIPULATION subtitle with glitch
             if (elapsed > 1.05) {
                 const tb = Math.min(1.0, (elapsed - 1.05) / 0.55);
-                ctx.globalAlpha = globalA * tb;
-                ctx.font = `900 ${Math.round(36 * (0.88 + tb * 0.12))}px "Orbitron","Bebas Neue",Arial`;
+                const titleText = 'METRICS-MANIPULATION';
+                const fontSize2 = Math.round(36 * (0.88 + tb * 0.12));
+                ctx.font = `900 ${fontSize2}px "Orbitron","Bebas Neue",Arial`;
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.shadowBlur = 28; ctx.shadowColor = '#facc15';
+                // Glitch offset layers
+                const glitch = tb > 0.5 ? Math.sin(elapsed * 28) * 4 * (1 - tb) : 0;
+                ctx.globalAlpha = globalA * tb * 0.50;
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillText(titleText, W / 2 - glitch - 2, H / 2 + 28 + 1);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillText(titleText, W / 2 + glitch + 2, H / 2 + 28 - 1);
+                // Main gold text
+                ctx.globalAlpha = globalA * tb;
+                ctx.shadowBlur = 34 + Math.sin(elapsed * 10) * 8; ctx.shadowColor = '#facc15';
                 ctx.fillStyle = '#fef08a';
-                ctx.fillText('METRICS-MANIPULATION', W / 2, H / 2 + 28);
+                ctx.fillText(titleText, W / 2, H / 2 + 28);
                 ctx.shadowBlur = 0;
-                // Underline sweep
-                ctx.globalAlpha = globalA * tb * 0.8;
+                // Bracket decorations
+                ctx.globalAlpha = globalA * tb * 0.75;
                 ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
-                const ulW = tb * 280;
-                ctx.beginPath(); ctx.moveTo(W / 2 - ulW / 2, H / 2 + 50); ctx.lineTo(W / 2 + ulW / 2, H / 2 + 50); ctx.stroke();
+                const titleHalfW = ctx.measureText(titleText).width * 0.5 + 10;
+                const brkY = H / 2 + 28, brkH = fontSize2 * 0.65;
+                [[W / 2 - titleHalfW, -1], [W / 2 + titleHalfW, 1]].forEach(([bx, bDir]) => {
+                    ctx.beginPath();
+                    ctx.moveTo(bx + bDir * 10, brkY - brkH / 2);
+                    ctx.lineTo(bx, brkY - brkH / 2);
+                    ctx.lineTo(bx, brkY + brkH / 2);
+                    ctx.lineTo(bx + bDir * 10, brkY + brkH / 2);
+                    ctx.stroke();
+                });
+                // Underline sweep
+                ctx.globalAlpha = globalA * tb * 0.85;
+                ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
+                const ulW2 = tb * 300;
+                ctx.beginPath(); ctx.moveTo(W / 2 - ulW2 / 2, H / 2 + 54); ctx.lineTo(W / 2 + ulW2 / 2, H / 2 + 54); ctx.stroke();
+                // Subtitle sub-label
+                if (tb > 0.7) {
+                    const tbb = (tb - 0.7) / 0.3;
+                    ctx.globalAlpha = globalA * tbb * 0.65;
+                    ctx.font = `bold 12px "Orbitron",monospace`;
+                    ctx.fillStyle = '#e879f9'; ctx.shadowBlur = 0;
+                    ctx.fillText('DOMAIN EXPANSION  •  ครูมานพ', W / 2, H / 2 + 72);
+                }
             }
             // Final white flash
             if (elapsed > _DC.CAST_DUR - 0.35) {
@@ -1353,18 +1777,82 @@ const DomainExpansion = {
             ctx.fillRect(0, 0, W, H);
         }
 
+        // ── 6b. Boss energy aura during domain ─────────────
+        if ((this.phase === 'active') && typeof worldToScreen === 'function') {
+            const bossRef = (typeof window !== 'undefined' && window.boss) ? window.boss : null;
+            if (bossRef && !bossRef.dead) {
+                const bSS = worldToScreen(bossRef.x, bossRef.y);
+                const bAuraPulse = 0.5 + Math.sin(now * 3.5) * 0.5;
+                const bAuraSize = 42 + bAuraPulse * 14;
+                // Outer void halo
+                ctx.globalAlpha = globalA * 0.22 * bAuraPulse;
+                const bAG1 = ctx.createRadialGradient(bSS.x, bSS.y, 0, bSS.x, bSS.y, bAuraSize * 1.8);
+                bAG1.addColorStop(0, 'rgba(217,70,239,0.7)'); bAG1.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = bAG1;
+                ctx.beginPath(); ctx.arc(bSS.x, bSS.y, bAuraSize * 1.8, 0, Math.PI * 2); ctx.fill();
+                // Spinning rune ring around boss
+                ctx.globalAlpha = globalA * (0.45 + bAuraPulse * 0.35);
+                ctx.strokeStyle = '#d946ef'; ctx.lineWidth = 1.8;
+                ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
+                ctx.setLineDash([5, 12]);
+                ctx.beginPath(); ctx.arc(bSS.x, bSS.y, bAuraSize, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+                // Mini rune nodes
+                for (let brn = 0; brn < 4; brn++) {
+                    const brA = (brn / 4) * Math.PI * 2 + now * 1.8;
+                    const bnx = bSS.x + Math.cos(brA) * bAuraSize;
+                    const bny = bSS.y + Math.sin(brA) * bAuraSize;
+                    ctx.globalAlpha = globalA * (0.6 + Math.sin(now * 4 + brn) * 0.35);
+                    ctx.fillStyle = brn % 2 === 0 ? '#d946ef' : '#facc15';
+                    ctx.shadowBlur = 8; ctx.shadowColor = ctx.fillStyle;
+                    ctx.beginPath(); ctx.arc(bnx, bny, 3.5, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
         // ── 7. Slow debuff HUD indicator ─────────────────────
         if (typeof window !== 'undefined' && window.player && window.player._domainSlowActive) {
             const slowPulse = 0.5 + Math.sin(now * 6) * 0.5;
-            ctx.globalAlpha = globalA * 0.28 * slowPulse;
-            ctx.fillStyle = '#d946ef';
-            ctx.fillRect(0, 0, W, H);
-            ctx.globalAlpha = globalA * (0.6 + slowPulse * 0.35);
-            ctx.font = 'bold 14px "Orbitron",Arial';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            // Edge vignette
+            const sVig = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.72);
+            sVig.addColorStop(0, 'rgba(0,0,0,0)');
+            sVig.addColorStop(1, `rgba(147,51,234,${0.32 * slowPulse})`);
+            ctx.globalAlpha = globalA;
+            ctx.fillStyle = sVig; ctx.fillRect(0, 0, W, H);
+            // Status chip
+            ctx.globalAlpha = globalA * (0.8 + slowPulse * 0.2);
+            ctx.fillStyle = 'rgba(15,3,30,0.88)';
+            ctx.strokeStyle = `rgba(217,70,239,${0.7 + slowPulse * 0.3})`;
+            ctx.lineWidth = 1.5; ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
+            ctx.beginPath(); ctx.roundRect(W / 2 - 62, 8, 124, 26, 5); ctx.fill(); ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.font = 'bold 13px "Orbitron",Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillStyle = '#f0abfc';
-            ctx.shadowBlur = 12; ctx.shadowColor = '#d946ef';
-            ctx.fillText('🔮 SLOWED', W / 2, 12);
+            ctx.shadowBlur = 10; ctx.shadowColor = '#d946ef';
+            ctx.fillText('🔮 SLOWED', W / 2, 21);
+            ctx.shadowBlur = 0;
+        }
+
+        // ── 7b. Formula beam HUD warning ─────────────────────
+        if (this._formulaBeam) {
+            const fbHudP = this._formulaBeam.timer / _DC.FORMULA_BEAM_DUR;
+            const fbHudPulse = 0.5 + Math.sin(now * 14) * 0.5;
+            ctx.globalAlpha = globalA * fbHudPulse * 0.18;
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(0, 0, W, H);
+            ctx.globalAlpha = globalA * (0.7 + fbHudPulse * 0.3);
+            ctx.font = 'bold 13px "Orbitron",Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#7dd3fc'; ctx.shadowBlur = 10; ctx.shadowColor = '#38bdf8';
+            ctx.fillText('⚡ FORMULA BEAM', W / 2, H - 30);
+            // Countdown bar
+            ctx.globalAlpha = globalA * 0.75;
+            ctx.fillStyle = '#1e3a5f';
+            ctx.fillRect(W / 2 - 70, H - 18, 140, 6);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(W / 2 - 70, H - 18, 140 * fbHudP, 6);
             ctx.shadowBlur = 0;
         }
 
@@ -1418,9 +1906,13 @@ const DomainExpansion = {
             cell.exploded = true;
             const cx = cell.wx + _DC.CELL_SIZE / 2, cy = cell.wy + _DC.CELL_SIZE / 2;
             if (typeof spawnParticles === 'function') {
-                spawnParticles(cx, cy, 10, '#ef4444');
-                spawnParticles(cx, cy, 5, '#facc15');
+                spawnParticles(cx, cy, 14, '#ef4444');
+                spawnParticles(cx, cy, 8, '#facc15');
+                spawnParticles(cx, cy, 5, '#d946ef');
             }
+            // Spawn screen-space shockwave rings (converted to screen coords in draw)
+            this._cellShockwaves.push({ wx: cx, wy: cy, r: 5, maxR: _DC.CELL_SIZE * 0.9, alpha: 1 });
+            this._cellShockwaves.push({ wx: cx, wy: cy, r: 5, maxR: _DC.CELL_SIZE * 1.4, alpha: 0.6 });
             if (player && !player.dead) {
                 const pd = Math.hypot(player.x - cx, player.y - cy);
                 if (pd < _DC.CELL_SIZE * _DC.HIT_RADIUS) {
@@ -1446,9 +1938,31 @@ const DomainExpansion = {
             }
         }
     },
+    _initDrift() {
+        this._driftParticles = [];
+        const R = _DC.ARENA_RADIUS;
+        for (let i = 0; i < _DC.DRIFT_COUNT; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const dist = Math.sqrt(Math.random()) * R * 0.82;
+            const speed = 30 + Math.random() * 55;
+            const vAngle = Math.random() * Math.PI * 2;
+            this._driftParticles.push({
+                x: Math.cos(a) * dist, y: Math.sin(a) * dist,
+                vx: Math.cos(vAngle) * speed, vy: Math.sin(vAngle) * speed,
+                r: 1.2 + Math.random() * 3.2,
+                alpha: 0.12 + Math.random() * 0.38,
+                gold: Math.random() < 0.35,
+                phase: Math.random() * Math.PI * 2,
+            });
+        }
+    },
+
     _abort(boss) {
         this.phase = 'idle'; this.cooldownTimer = 0;
         this.cells = []; this._crackLines = []; this._flashTimer = 0;
+        this._driftParticles = []; this._voidPulses = [];
+        this._formulaBeam = null; this._cellShockwaves = [];
+        this._bgAngle = 0; this._portalProgress = 0;
         if (boss) { boss._domainCasting = false; boss._domainActive = false; }
         console.log('[DomainExpansion] Aborted — boss dead');
     },
