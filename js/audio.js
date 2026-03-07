@@ -1001,6 +1001,43 @@ class AudioSystem {
     }
 
     // NEW: Heal sound - Gentle restore
+    // ── MTC Room: Entry chime ───────────────────────────────────
+    playMtcEntry() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        // Rising 3-note arpeggio: 440 → 550 → 660 Hz
+        [0, 0.07, 0.14].forEach((delay, i) => {
+            setTimeout(() => {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 440 + i * 110;
+                gain.gain.value = 0.08 * this.masterVolume * this.sfxVolume;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+                osc.stop(this.ctx.currentTime + 0.18);
+            }, delay * 1000);
+        });
+    }
+
+    // ── MTC Room: Buff activation — bright ping ──────────────
+    playMtcBuff() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1400, this.ctx.currentTime + 0.08);
+        gain.gain.value = 0.10 * this.masterVolume * this.sfxVolume;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.20);
+        osc.stop(this.ctx.currentTime + 0.20);
+    }
+
     playHeal() {
         if (!this.enabled || !this.ctx) return;
         this._ensureAudioContextRunning();

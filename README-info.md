@@ -4,6 +4,8 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
+> **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
+
 เกมแนว **Top-down 2D Wave Survival Shooter** สุดมันส์ที่พัฒนาด้วย HTML5 Canvas API และ Vanilla JavaScript ล้วนๆ (No Frameworks!)  
 เอาชีวิตรอดจากกองทัพศัตรู 15 เวฟ และเผชิญหน้ากับบอสสุดโหดประจำภาควิชาคณิตศาสตร์และฟิสิกส์!
 
@@ -86,12 +88,14 @@
 
 ---
 
-## 📈 Current Version: v3.11.17 (March 7, 2026)
+## 📈 Current Version: v3.11.18 (March 7, 2026)
 
 **Latest Major Updates:**
-- �️ **Boss Spawn Fix:** Fixed boss entities spawning inside MTC Room preventing player exploitation
+- 📚 **Documentation Stability System:** Added classification system (🟢🟡🔴) for information stability across all documentation
+- 🏰 **MTC Room Abilities Implementation:** Complete buff system with rotating terminal (DMG +15%, SPD +10%, CDR BURST -35%)
+- 🛡️ **Boss Spawn Fix:** Fixed boss entities spawning inside MTC Room preventing player exploitation
 - 🎨 **MTC Room Visual Enhancement:** Complete visual overhaul with diamond grid floor, "MTC CITADEL" header, corner pillars, double-ring hologram, ambient orbs, hex tile forcefield
-- �🗺️ **Zone Floor System:** Added color-coded zone grids with distinct visual themes (Server Farm, Library, Courtyard, Lecture Halls)
+- 🗺️ **Zone Floor System:** Added color-coded zone grids with distinct visual themes (Server Farm, Library, Courtyard, Lecture Halls)
 - 🔧 **Multi-round Editing Workflow:** Established proper file handling protocol to prevent code loss during iterative development
 - ⚡ **Performance Optimizations:** Batch rendering, deterministic visual effects, viewport culling for zones
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management

@@ -33,6 +33,12 @@ class Player extends Entity {
         this.speedBoostTimer = 0;
         this.dashGhosts = [];
 
+        // ── MTC Room Buff State ───────────────────────────────────
+        this.mtcBuffType = -1;   // 0=DMG, 1=SPD, 2=CDR(instant) — -1 = none
+        this.mtcBuffTimer = 0;    // remaining seconds
+        this.mtcDmgBuff = 0;   // additive bonus to damageMultiplier
+        this.mtcSpeedBuff = 0;   // additive bonus to speedBoost
+
         // ── Timeout Management ───────────────────────────────────
         this.dashTimeouts = [];
 
@@ -164,6 +170,18 @@ class Player extends Entity {
             if (this.confusedTimer <= 0) { this.isConfused = false; this.confusedTimer = 0; }
         }
         if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
+
+        // ── MTC Buff Timer ────────────────────────────────────────
+        if (this.mtcBuffTimer > 0) {
+            this.mtcBuffTimer -= dt;
+            if (this.mtcBuffTimer <= 0) {
+                // Remove buff
+                if (this.mtcBuffType === 0) this._damageMultiplier -= this.mtcDmgBuff;
+                if (this.mtcBuffType === 1) this.speedBoost -= this.mtcSpeedBuff;
+                this.mtcBuffType = -1; this.mtcDmgBuff = 0; this.mtcSpeedBuff = 0;
+                spawnFloatingText('BUFF ENDED', this.x, this.y - 55, '#6b7280', 14);
+            }
+        }
         if (this.groundedTimer > 0) {
             this.groundedTimer -= dt;
             if (this.groundedTimer < 0) this.groundedTimer = 0;
@@ -511,6 +529,52 @@ class Player extends Entity {
     }
 
     addSpeedBoost() { this.speedBoostTimer = this.stats.speedOnHitDuration; }
+
+    // ── MTC Room: Apply rotating buff on entry ────────────────
+    applyMtcBuff(buffIndex) {
+        const C = BALANCE.mtcRoom;
+        // Remove any existing MTC buff first
+        if (this.mtcBuffTimer > 0) {
+            if (this.mtcBuffType === 0) this._damageMultiplier -= this.mtcDmgBuff;
+            if (this.mtcBuffType === 1) this.speedBoost -= this.mtcSpeedBuff;
+        }
+        this.mtcBuffType = buffIndex;
+        this.mtcDmgBuff = 0;
+        this.mtcSpeedBuff = 0;
+        const mag = C.buffCycleMagnitude[buffIndex];
+        const dur = C.buffCycleDuration[buffIndex];
+        const name = C.buffCycleNames[buffIndex];
+        const col = C.buffCycleColors[buffIndex];
+        const icon = C.buffCycleIcons[buffIndex];
+
+        if (buffIndex === 0) {
+            // DMG +15%
+            this.mtcDmgBuff = mag;
+            this._damageMultiplier += mag;
+            this.mtcBuffTimer = dur;
+        } else if (buffIndex === 1) {
+            // SPD +10%
+            this.mtcSpeedBuff = mag;
+            this.speedBoost += mag;
+            this.mtcBuffTimer = dur;
+        } else if (buffIndex === 2) {
+            // CDR Burst — instant reduction on all active cooldowns
+            for (const key of Object.keys(this.cooldowns)) {
+                this.cooldowns[key] = Math.max(0, this.cooldowns[key] * (1 - mag));
+            }
+            // Also reduce subclass skill cooldowns if present (KruManop-style skills obj)
+            if (this.skills) {
+                for (const key of Object.keys(this.skills)) {
+                    if (this.skills[key].cd !== undefined) {
+                        this.skills[key].cd = Math.max(0, this.skills[key].cd * (1 - mag));
+                    }
+                }
+            }
+            this.mtcBuffTimer = 0; // instant, no duration
+            this.mtcBuffType = -1;
+        }
+        spawnFloatingText(`${icon} ${name}`, this.x, this.y - 75, col, 22);
+    }
 
     applyGrounded(duration) {
         // Takes the longer of current remaining timer vs new duration

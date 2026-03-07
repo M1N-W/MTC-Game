@@ -1,5 +1,7 @@
 # MTC Game — Godot Migration Guide
 
+> **⚠️ DOCUMENTATION STABILITY:** This migration guide contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
+
 ## Overview
 
 This document maps every visual system in the current Vanilla JS Canvas implementation
@@ -9,51 +11,59 @@ to its equivalent Godot 4 node/scene structure. Use this as a reference when por
 **Key principle:** All visual constants already live in `MAP_CONFIG` and `BALANCE.map.mapColors`
 — in Godot these become exported `Resource` (.tres) files.
 
-**Last updated:** After JS Refactor Phase 1–4 (Rendering Decoupling + Performance Optimization)
-- Step 1–3: Entity logic/render separation → `*Renderer` classes in `js/rendering/`
-- Step 4a: `effects.js` v12 — Swap-and-pop O(1) + OrbitalParticle Object Pool
-- Step 4b: `weapons.js` v2 — SpatialGrid O(P×k) + Swap-and-pop in ProjectileManager
+**Last updated:** v3.11.17 (March 7, 2026) - After MTC Room Abilities Implementation
+- **Phase 1–3:** Entity logic/render separation → `*Renderer` classes in `js/rendering/`
+- **Phase 4a:** `effects.js` v12 — Swap-and-pop O(1) + OrbitalParticle Object Pool
+- **Phase 4b:** `weapons.js` v2 — SpatialGrid O(P×k) + Swap-and-pop in ProjectileManager
+- **Phase 5:** Zone Floor System - Added `MAP_CONFIG.zones` with 5 distinct zones
+- **Phase 6:** MTC Room Visual Enhancement - Complete visual overhaul with buff system
+- **Phase 7:** Boss Spawn Fix - Runtime guard + safe spawn positioning
 
 ---
 
 ## Visual Layer Architecture
 
-### Current JS Layer Order (back → front)
+### Current JS Layer Order (back → front) - v3.11.17
 ```
 1. Background gradient           (game.js: drawBackground)
 2. Terrain — Arena boundary      (map.js: drawTerrain → layer 1)
 3. Terrain — Hex grid            (map.js: drawTerrain → layer 2)
 4. Terrain — Circuit paths       (map.js: drawTerrain → layer 3)
 5. Terrain — Zone auras          (map.js: drawTerrain → layer 4)
-6. Map objects (desks, trees…)   (map.js: draw)
-7. Entities (enemies, player)    (js/rendering/*Renderer.js)  ← was entity classes
-8. Projectiles                   (js/rendering/ProjectileRenderer.js)
-9. Particles & effects           (effects.js)
-10. Lighting overlay             (map.js: drawLighting)
-11. UI / HUD                     (ui.js)
+6. Terrain — Zone Floors        (map.js: drawTerrain → layer 5) [NEW v3.11.16]
+7. Map objects (desks, trees…)   (map.js: draw)
+8. MTC Room visual elements     (map.js: MTCRoom.draw) [ENHANCED v3.11.17]
+9. Entities (enemies, player)    (js/rendering/*Renderer.js)
+10. Projectiles                   (js/rendering/ProjectileRenderer.js)
+11. Particles & effects           (effects.js)
+12. Lighting overlay             (map.js: drawLighting)
+13. UI / HUD                     (ui.js)
 ```
 
-### Godot 4 Equivalent (CanvasLayer z-index)
+### Godot 4 Equivalent (CanvasLayer z-index) - Updated v3.11.17
 ```
 Node2D (root)
 ├── CanvasLayer (z=0)  — Background
 │   └── ColorRect or Gradient2D
-├── CanvasLayer (z=1)  — Terrain
+├── CanvasLayer (z=1)  — Terrain Base
 │   ├── ArenaBoundary (Node2D + _draw())
 │   ├── HexGrid       (Node2D + _draw())
 │   ├── CircuitPaths  (Node2D + _draw() + AnimationPlayer)
-│   └── ZoneAuras     (Node2D + PointLight2D)
+│   ├── ZoneAuras     (Node2D + PointLight2D)
+│   └── ZoneFloors    (TileMap + procedural) [NEW]
 ├── CanvasLayer (z=2)  — Map Objects
 │   └── TileMap or individual PackedScene instances
-├── CanvasLayer (z=3)  — Entities
+├── CanvasLayer (z=3)  — MTC Room
+│   └── MTCRoom.tscn (Node2D + advanced visuals) [ENHANCED]
+├── CanvasLayer (z=4)  — Entities
 │   ├── Player.tscn   (CharacterBody2D — logic + visual in one scene)
 │   ├── Enemy.tscn
 │   └── Boss.tscn
-├── CanvasLayer (z=4)  — Projectiles
+├── CanvasLayer (z=5)  — Projectiles
 │   └── Projectile.tscn (Area2D — no ProjectileManager needed)
-├── CanvasLayer (z=5)  — Particles & VFX
+├── CanvasLayer (z=6)  — Particles & VFX
 │   └── GPUParticles2D (replaces all JS Object Pool systems)
-├── CanvasLayer (z=6)  — Lighting
+├── CanvasLayer (z=7)  — Lighting
 │   └── Light2D nodes (replaces offscreen canvas in drawLighting)
 └── CanvasLayer (z=10) — HUD/UI
     └── Control nodes
@@ -104,13 +114,15 @@ They have **no direct port** — Godot replaces them with built-in features.
 ### JS Source
 `js/map.js: drawTerrain(ctx, camera)` with config from `MAP_CONFIG` in `js/config.js`
 
-### Config Reference (MAP_CONFIG)
-| Key | Description | Godot Equivalent |
-|-----|-------------|------------------|
-| `MAP_CONFIG.arena` | Concentric rings + animated dashes | `Node2D._draw()` with `draw_arc()` |
-| `MAP_CONFIG.hex` | Flat-top hex grid with falloff | `TileMap` or procedural `_draw()` |
-| `MAP_CONFIG.paths` | Animated PCB circuit lines + packets | `Line2D` + `AnimationPlayer` |
-| `MAP_CONFIG.auras` | Radial gradient glow pools | `PointLight2D` or `GPUParticles2D` |
+### Config Reference (MAP_CONFIG) - Updated v3.11.17
+| Key | Description | Godot Equivalent | Status |
+|-----|-------------|------------------|--------|
+| `MAP_CONFIG.arena` | Concentric rings + animated dashes | `Node2D._draw()` with `draw_arc()` | 🟢 STABLE |
+| `MAP_CONFIG.hex` | Flat-top hex grid with falloff | `TileMap` or procedural `_draw()` | 🟢 STABLE |
+| `MAP_CONFIG.paths` | Animated PCB circuit lines + packets | `Line2D` + `AnimationPlayer` | 🟢 STABLE |
+| `MAP_CONFIG.auras` | Radial gradient glow pools | `PointLight2D` or `GPUParticles2D` | 🟢 STABLE |
+| `MAP_CONFIG.zones` | **NEW** 5 color-coded zone floors | `TileMap` + zone-specific palettes | 🔴 DYNAMIC |
+| `MAP_CONFIG.mtcRoom` | **ENHANCED** Visual + buff system | `MTCRoom.tscn` + buff components | 🔴 DYNAMIC |
 
 ### Migration Steps
 ```gdscript
@@ -125,24 +137,52 @@ func _draw():
 
 ---
 
-## 2. Map Objects → Godot PackedScenes
+## 2. Map Objects → Godot PackedScenes - Updated v3.11.17
 
 ### JS Source
 `js/map.js: drawDesk/drawTree/drawServer/drawDataPillar/drawBookshelf`
 Config: `MAP_CONFIG.objects` + `BALANCE.map.mapColors`
 
 ### Migration Map
-| JS Function | Godot Scene | Godot Draw Method |
-|-------------|-------------|-------------------|
-| `drawDesk(w,h)` | `Desk.tscn` | `Node2D._draw()` or Sprite2D |
-| `drawTree(size)` | `Tree.tscn` | `Node2D._draw()` with AnimationPlayer |
-| `drawServer(w,h)` | `ServerRack.tscn` | `Node2D._draw()` + blinking timer |
-| `drawDataPillar(w,h)` | `DataPillar.tscn` | `Node2D._draw()` + `PointLight2D` |
-| `drawBookshelf(w,h)` | `Bookshelf.tscn` | `Node2D._draw()` |
-| `drawBlackboard()` | `Blackboard.tscn` | `Node2D._draw()` or Sprite2D |
-| `drawChair()` | Part of `Desk.tscn` | Simple `ColorRect` nodes |
-| `drawCabinet()` | `Cabinet.tscn` | Simple `ColorRect` nodes |
-| `ExplosiveBarrel` | `Barrel.tscn` | `Area2D` + `AnimatedSprite2D` |
+| JS Function | Godot Scene | Godot Draw Method | Status |
+|-------------|-------------|-------------------|--------|
+| `drawDesk(w,h)` | `Desk.tscn` | `Node2D._draw()` or Sprite2D | 🟢 STABLE |
+| `drawTree(size)` | `Tree.tscn` | `Node2D._draw()` with AnimationPlayer | 🟢 STABLE |
+| `drawServer(w,h)` | `ServerRack.tscn` | `Node2D._draw()` + blinking timer | 🟢 STABLE |
+| `drawDataPillar(w,h)` | `DataPillar.tscn` | `Node2D._draw()` + `PointLight2D` | 🟢 STABLE |
+| `drawBookshelf(w,h)` | `Bookshelf.tscn` | `Node2D._draw()` | 🟢 STABLE |
+| `drawBlackboard()` | `Blackboard.tscn` | `Node2D._draw()` or Sprite2D | 🟢 STABLE |
+| `drawChair()` | Part of `Desk.tscn` | Simple `ColorRect` nodes | 🟢 STABLE |
+| `drawCabinet()` | `Cabinet.tscn` | Simple `ColorRect` nodes | 🟢 STABLE |
+| `ExplosiveBarrel` | `Barrel.tscn` | `Area2D` + `AnimatedSprite2D` | 🟢 STABLE |
+| `MTCRoom.draw()` | **ENHANCED** `MTCRoom.tscn` | Advanced visual system | 🔴 DYNAMIC |
+
+### MTC Room Enhancement (v3.11.17) - NEW SECTION
+```gdscript
+# MTCRoom.tscn - Enhanced Implementation
+extends Node2D
+@export var config: MTCRoomConfig
+
+# Visual Components
+@onready var holo_table = $HoloTable
+@onready var banner = $Banner
+@onready var pillars = $Pillars
+@onready var forcefield = $Forcefield
+@onready var buff_terminal = $BuffTerminal
+
+# Buff System Components
+@onready var buff_indicators = $BuffIndicators
+@onready var next_buff_display = $HoloTable/NextBuffDisplay
+@onready var active_buff_timer = $HoloTable/ActiveBuffTimer
+
+func _ready():
+    # Setup buff cycle (DMG +15%, SPD +10%, CDR BURST -35%)
+    config.buff_cycle = [
+        {type="damage", magnitude=0.15, duration=8.0, color="#f97316", icon="⚔"},
+        {type="speed", magnitude=0.10, duration=6.0, color="#22d3ee", icon="💨"},
+        {type="cdr", magnitude=0.35, duration=0.0, color="#a78bfa", icon="⚡"}
+    ]
+```
 
 ### Color Resource Example
 ```gdscript
@@ -436,24 +476,32 @@ Define actions in **Project → Input Map** in Godot Editor.
 
 ---
 
-## Migration Priority Order
+## Migration Priority Order - Updated v3.11.17
 
 > ⚠️ **JS refactor note:** Steps 1–5 are easier now because Logic and Visual are
 > already separated in the JS codebase (`*Renderer` classes in `js/rendering/`).
 > Each `*Renderer._draw*()` method maps 1-to-1 to a Godot scene's `_draw()` function.
 
-1. **Config Resources** — Convert `BALANCE` + `MAP_CONFIG` to `.tres` files
-2. **Autoloads** — `GameState.gd`, `AudioManager.gd`, `ObjectPool.gd`
-3. **Base Entity + Player** — `CharacterBody2D` → `Player.tscn` → `Kao.tscn` (logic first, visual second)
-4. **Projectile Scene** — `Area2D` + `area_entered` signal → test collision before adding visuals
-5. **Enemy Scene** (1 type first) — `CharacterBody2D` + simple state machine (idle/chase/attack)
-6. **Visual / `_draw()`** — Port `*Renderer` methods into each scene's `Node2D._draw()`
-7. **Terrain + Map Objects** — `ArenaBoundary.gd`, `Desk.tscn`, `Tree.tscn` etc.
-8. **Particle VFX** — Replace all JS Object Pools with `GPUParticles2D`
-9. **Lighting** — `PointLight2D` + `CanvasModulate` per scene
-10. **UI / HUD** — `CanvasLayer (z=10)` + `Control` nodes
-11. **Audio** — `AudioManager.gd` Autoload
-12. **AI Integration** — Gemini API via `HTTPRequest` node
+**NEW CONSIDERATIONS (v3.11.17):**
+- **Zone Floor System:** New `MAP_CONFIG.zones` requires TileMap with zone-specific palettes
+- **MTC Room Buff System:** Enhanced visual + buff logic needs dedicated scene structure
+- **Boss Spawn Guard:** Runtime positioning logic needs Godot collision-based implementation
+
+1. **Config Resources** — Convert `BALANCE` + `MAP_CONFIG` to `.tres` files (include new zones)
+2. **Autoloads** — `GameState.gd`, `AudioManager.gd`, `ObjectPool.gd`, `BuffSystem.gd` [NEW]
+3. **Base Entity + Player** — `CharacterBody2D` → `Player.tscn` → `Kao.tscn` (include buff state)
+4. **Zone Floor System** — `TileMap` + zone palettes + viewport culling [NEW]
+5. **Projectile Scene** — `Area2D` + `area_entered` signal → test collision before adding visuals
+6. **Enemy Scene** (1 type first) — `CharacterBody2D` + simple state machine (idle/chase/attack)
+7. **MTC Room Scene** — Enhanced visual system + buff terminal + indicators [NEW]
+8. **Visual / `_draw()`** — Port `*Renderer` methods into each scene's `Node2D._draw()`
+9. **Terrain + Map Objects** — `ArenaBoundary.gd`, `Desk.tscn`, `Tree.tscn` etc.
+10. **Particle VFX** — Replace all JS Object Pools with `GPUParticles2D`
+11. **Lighting** — `PointLight2D` + `CanvasModulate` per scene
+12. **UI / HUD** — `CanvasLayer (z=10)` + `Control` nodes
+13. **Audio** — `AudioManager.gd` Autoload (include MTC Room sounds)
+14. **AI Integration** — Gemini API via `HTTPRequest` node
+15. **Boss Spawn System** — Collision-based positioning + runtime guard [NEW]
 
 ### Why Player before Boss/Wave
 Player.tscn is the dependency root of every other system. If `move_and_slide()`,

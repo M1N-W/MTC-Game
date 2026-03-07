@@ -1,7 +1,52 @@
 # 🎮 MTC Game - Project Overview
 
+> **⚠️ IMPORTANT:** This documentation contains both **stable patterns** and **dynamic information** that changes with each update. Always verify current implementation before referencing.
+
 **สรุปโปรเจคต์สำหรับ AI Assistant (Claude/Cascade)**
 เอกสารนี้จัดทำขึ้นเพื่อให้ AI มีความเข้าใจโปรเจคต์ MTC Game อย่างครบถ้วนเมื่อเริ่มการสนทนาใหม่
+
+---
+
+## 📋 Documentation Stability Guide
+
+### 🟢 **STABLE PATTERNS** (Rarely Change)
+- **File Structure:** Core file locations and purposes
+- **Architecture Patterns:** Entity hierarchy, rendering decoupling, state management
+- **Development Workflow:** Git workflow, AI assistant roles, commit patterns
+- **Code Organization:** Module structure, naming conventions, design patterns
+- **Technical Concepts:** Object pooling, spatial optimization, deterministic rendering
+
+### 🟡 **SEMI-DYNAMIC** (Changes Occasionally)
+- **Quick Reference Tasks:** File lists for common development tasks
+- **System Integration:** How major systems connect and interact
+- **Configuration Structure:** Overall config organization (not specific values)
+- **UI/UX Patterns:** General UI approaches and design principles
+
+### 🔴 **DYNAMIC INFORMATION** (Changes Frequently)
+- **🔥 Current Implementation Details:** Specific feature implementations, version-specific behaviors
+- **🔥 Configuration Values:** Exact numbers, durations, percentages, colors
+- **🔥 File Contents:** Current code snippets, method signatures, class structures
+- **🔥 Version-Specific Features:** Features added in specific versions
+- **🔥 Balance Values:** HP amounts, damage values, cooldown times, buff magnitudes
+
+---
+
+## 📖 How to Use This Documentation
+
+### ✅ **For New Development:**
+- Use **STABLE PATTERNS** for understanding architecture and workflow
+- Reference **SEMI-DYNAMIC** sections for general task guidance
+- Always verify **DYNAMIC INFORMATION** against current codebase
+
+### ⚠️ **For Existing Features:**
+- Check current implementation in actual files before referencing
+- Use this as a guide, not as absolute truth
+- Look for version indicators (e.g., "v3.11.17") for temporal context
+
+### 🔄 **When Updating Code:**
+- Update this documentation when making architectural changes
+- Mark version-specific information clearly
+- Consider separating stable patterns from dynamic implementation details
 
 ---
 
@@ -395,7 +440,84 @@ read_file file_path="/js/config.js" limit=50
 
 ---
 
-### 🎨 การแก้ไข Visual & สกิลอุกกาบาต MageEnemy
+### 🏰 การเพิ่มความสามารถของ MTC Room (Safe Zone)
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/map.js` - แก้ไข MTCRoom class, เพิ่ม healing mechanics, shield regeneration, buff systems
+- `/js/entities/player/PlayerBase.js` - เพิ่ม safe zone detection, healing logic, buff application
+- `/js/config.js` - เพิ่ม MTC Room settings (heal rate, shield regen, buff types, duration)
+- `/js/effects.js` - เพิ่ม healing visual effects, shield regeneration particles, buff indicators
+- `/js/audio.js` - เพิ่ม healing sounds, shield regen sounds, buff activation sounds
+- `/js/ui.js` - เพิ่ม safe zone status indicators, buff timers, healing progress bars
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/game.js` - ถ้าต้องการ global safe zone state tracking
+- `/js/entities/boss.js` - ถ้าต้องการ boss behavior changes ใน safe zone
+- `/js/entities/enemy.js` - ถ้าต้องการ enemy avoidance ของ safe zone
+
+**⚠️ ข้อควรรู้:**
+- **MTC Room Bounds:** x: -150→150, y: -700→-460 (ขนาด 300x240)
+- **Current Features:** Safe zone protection, boss spawn guard, visual enhancements
+- **Potential Abilities:** HP regeneration, shield restoration, speed boost, damage buff, cooldown reduction
+- **Visual Feedback:** ต้องมี clear indicators สำหรับ healing, buff activation, safe zone status
+- **Balance Considerations:** ต้องคำนึงถึง game balance ไม่ให้ safe zone โดดเด่นเกินไป
+
+**🎯 ไอเดียสำหรับความสามารถใหม่:**
+- **Healing Station:** Regenerate HP ตามเวลา (เช่น 5 HP ต่อวินาที)
+- **Shield Recharge:** Restore shield energy อัตโนมัติ
+- **Buff Terminal:** ให้ temporary buffs (damage boost, speed increase)
+- **Cooldown Reset:** Reset skill cooldowns เมื่อเข้า safe zone
+- **Ammo Resupply:** Refill ammunition สำหรับตัวละครที่ใช้ ammo
+- **Repair Station:** Fix damaged equipment หรือ restore special abilities
+
+---
+
+### 🏰 MTC Room Abilities (🔴 DYNAMIC - Current Implementation v3.11.17)
+**⚠️ WARNING:** This section contains **version-specific implementation details** that may change with updates. Always verify against current codebase.
+
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/map.js` - MTCRoom.update() พร้อม buff cycle logic, MTCRoom.draw() พร้อม buff indicators
+- `/js/entities/player/PlayerBase.js` - applyMtcBuff() method, buff state tracking, timer management
+- `/js/config.js` - BALANCE.mtcRoom settings พร้อม buff cycle configuration
+- `/js/audio.js` - playMtcEntry(), playMtcBuff() sound effects
+- `/js/effects.js` - spawnParticles() สำหรับ buff visual feedback
+
+**⚠️ ข้อควรรู้ (Current Implementation):**
+- **Dash Reset:** รีเซ็ต dash cooldown ทันทีเมื่อเข้า MTC Room
+- **Crisis Protocol:** ถ้า HP ≤ 25% ได้รับ +35 HP ทันทีพร้อม visual effects
+- **Rotating Buff Terminal:** 3 buffs ที่สลับเปลี่ยนต่อการเข้า (DMG +15%, SPD +10%, CDR BURST -35%)
+- **Buff Cycle:** สลับเปลี่ยนอัตโนมัติ (0→1→2→0) ต่อการเข้าแต่ละครั้ง
+- **Visual Indicators:** แสดง next buff และ active buff timer บน holo-table
+- **Energy Regeneration:** Regenerate energy 30 ต่อวินาทีขณะอยู่ใน MTC Room
+- **HP Regeneration:** Regenerate HP 30 ต่อวินาที (ลดจาก 40 เพื่อ balance)
+
+**🔧 Technical Implementation:**
+- **Buff State:** player.mtcBuffType, player.mtcBuffTimer, player.mtcDmgBuff, player.mtcSpeedBuff
+- **Buff Application:** applyMtcBuff(buffIndex) ใน PlayerBase class
+- **Visual Feedback:** spawnParticles(), spawnFloatingText() สำหรับ buff activation
+- **Sound Design:** playMtcEntry() (3-note arpeggio), playMtcBuff() (bright ping)
+- **UI Integration:** Next buff indicator, active buff progress bar, buff timer display
+
+**📊 Configuration (config.js):**
+```javascript
+mtcRoom: {
+    healRate: 30,
+    maxStayTime: 4,
+    cooldownTime: 10,
+    size: 300,
+    dashResetOnEntry: true,
+    crisisHpPct: 0.25,
+    crisisHealBonus: 35,
+    buffCycleDuration: [8, 6, 0],     // DMG, SPD, CDR (วินาที)
+    buffCycleMagnitude: [0.15, 0.10, 0.35],
+    buffCycleNames: ['DMG +15%', 'SPD +10%', 'CDR BURST'],
+    buffCycleColors: ['#f97316', '#22d3ee', '#a78bfa'],
+    buffCycleIcons: ['⚔', '💨', '⚡'],
+}
+```
+
+---
+
+### �� การแก้ไข Visual & สกิลอุกกาบาต MageEnemy
 **ไฟล์ที่ต้องแก้ไข:**
 - `/js/entities/enemy.js` - แก้ไข MageEnemy class, เพิ่ม spell casting animations, projectile patterns
 - `/js/entities/boss_attacks.js` - เพิ่ม meteor spell class ถ้าต้องการ reuse boss attack patterns
@@ -574,7 +696,7 @@ read_file file_path="/js/config.js" limit=50
 
 ---
 
-### 🐛 การแก้ไขปัญหา Boss Spawn ใน MTC Room
+### 🐛 การแก้ไขปัญหา Boss Spawn ใน MTC Room (🟢 STABLE - Core Issue, 🔴 DYNAMIC - Specific Values)
 **ไฟล์ที่ต้องแก้ไข:**
 - `/js/config.js` - ปรับ spawnY ให้พ้น MTC Room bounds (จาก -600 เป็น -330)
 - `/js/entities/boss.js` - เพิ่ม runtime guard ใน BossBase constructor ตรวจสอบ MTC Room collision
@@ -583,16 +705,57 @@ read_file file_path="/js/config.js" limit=50
 **ไฟล์ที่อาจกระทบ:**
 - `/js/systems/WaveManager.js` - ถ้าต้องปรับ boss spawn timing หรือ positioning
 
-**⚠️ ข้อควรรู้:**
-- **MTC Room bounds:** x: -150→150, y: -700→-460 (ขนาด 300x240)
-- **ปัญหาเดิม:** บอส spawn ที่ (0, -600) = ใจกลางห้อง MTC Room ทำให้ผู้เล่นโจมตีฟรีได้
-- **Safe spawn Y:** -330 (ใต้ห้อง + buffer 130px)
-- **Runtime guard:** ตรวจสอบ spawn position ใน BossBase constructor และ eject ออกทางทิศใต้ถ้าชน
-- **Visual upgrade:** Diamond grid floor, "MTC CITADEL" header, corner pillars, double-ring hologram, ambient orbs, hex tile forcefield
+**⚠️ ข้อควรรู้ (🔴 DYNAMIC - May Change):**
+- **MTC Room bounds:** x: -150→150, y: -700→-460 (ขนาด 300x240) - *Unlikely to change*
+- **ปัญหาเดิม:** บอส spawn ที่ (0, -600) = ใจกลางห้อง MTC Room ทำให้ผู้เล่นโจมตีฟรีได้ - *Core issue stable*
+- **Safe spawn Y:** -330 (ใต้ห้อง + buffer 130px) - *May be adjusted*
+- **Runtime guard:** ตรวจสอบ spawn position ใน BossBase constructor และ eject ออกทางทิศใต้ถ้าชน - *Implementation stable*
+- **Visual upgrade:** Diamond grid floor, "MTC CITADEL" header, corner pillars, double-ring hologram, ambient orbs, hex tile forcefield - *May change*
 
 ---
 
-### 8. 🎮 การอัปเดท Main Menu (Start Game & Game Over)
+### 5. 🎮 การเพิ่มตัวละครใหม่ (🟢 STABLE)
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/entities/player/[NewCharacter].js` - สร้าง class ตัวละครใหม่ สืบทอบจาก `PlayerBase.js`
+- `/js/config.js` - เพิ่ม character stats ใน `BALANCE.characters.[newChar]`, abilities, weapons config
+- `/js/rendering/PlayerRenderer.js` - เพิ่ม rendering method `_draw[NewChar](entity, ctx)` และ update dispatcher
+- `/js/menu.js` - เพิ่มตัวละครใน character selection menu (selectCharacter function)
+- `/js/ui.js` - เพิ่ม UI elements สำหรับตัวละคร (HUD, skill icons, achievement system)
+- `/js/audio.js` - เพิ่ม sound effects สำหรับ abilities/weapons (character-specific sounds)
+- `/css/main.css` - เพิ่ม styles สำหรับ UI elements ใหม่
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/game.js` - ถ้าต้องการ character-specific game mechanics
+- `/js/effects.js` - ถ้าต้องการ character-specific visual effects
+
+**⚠️ ข้อควรรู้ (🟢 STABLE):**
+- **PlayerBase:** ตัวละครใหม่ต้องสืบทอดจาก PlayerBase class
+- **Rendering:** ใช้ PlayerRenderer.draw() dispatcher pattern
+- **Character Selection:** ใช้ selectCharacter() function ใน menu.js
+- **Config Structure:** ต้องเพิ่มใน BALANCE.characters.[newChar]
+
+---
+
+### 6. 👑 การเพิ่มบอสใหม่ (🟢 STABLE)
+**ไฟล์ที่ต้องแก้ไข:**
+- `/js/entities/boss.js` - สร้าง boss class ใหม่ สืบทอบจาก `BossBase.js`
+- `/js/entities/boss_attacks.js` - สร้าง attack patterns และ abilities ใหม่
+- `/js/config.js` - เพิ่ม boss stats, phases, drop rates
+- `/js/systems/WaveManager.js` - เพิ่ม boss spawn logic ใน wave ที่กำหนด (deterministic queue)
+- `/js/audio.js` - เพิ่ม boss music, attack sounds, death sounds
+
+**ไฟล์ที่อาจกระทบ:**
+- `/js/entities/summons.js` - ถ้าบอสมี summoned minions (เช่น BossDog, GoldfishMinion)
+- `/js/map.js` - ถ้าต้องการพื้นที่พิเศษสำหรับ boss fight
+
+**⚠️ ข้อควรรู้ (🟢 STABLE):**
+- **Boss ใช้ hierarchy:** BossBase → KruManop/KruFirst
+- **Boss มี Gemini speech integration** ผ่าน `speak()` method
+- **WaveManager ใช้ deterministic boss queue** (waves 3,6,9,12,15)
+
+---
+
+### 7. 🎮 การอัปเดท Main Menu (Start Game & Game Over) (🟡 SEMI-DYNAMIC)
 **ไฟล์ที่ต้องแก้ไข:**
 - `/js/menu.js` - แก้ไข menu layout, navigation, animations, character selection
 - `/js/ui.js` - เพิ่ม UI components ใหม่สำหรับ menu, achievement system

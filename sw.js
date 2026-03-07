@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.17'; // v3.11.17: Boss spawn fix & MTC Room visual enhancement with multi-round editing workflow
+const CACHE_NAME = 'mtc-cache-v3.11.18'; // v3.11.18: Documentation stability system + MTC Room abilities implementation + Godot export update
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

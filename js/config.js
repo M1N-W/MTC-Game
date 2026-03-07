@@ -450,10 +450,22 @@ const BALANCE = {
         achievement: 500
     },
     mtcRoom: {
-        healRate: 40,
+        healRate: 30,           // ลด 40→30 (offset by new abilities)
         maxStayTime: 4,
         cooldownTime: 10,
-        size: 300
+        size: 300,
+        // ── Dash Reset ──────────────────────────────────────────
+        dashResetOnEntry: true,
+        // ── Crisis Protocol ─────────────────────────────────────
+        crisisHpPct: 0.25,      // trigger ที่ HP ≤ 25%
+        crisisHealBonus: 35,    // instant bonus HP
+        // ── Rotating Buff Terminal (cycles per visit) ───────────
+        // Index 0 = DMG, 1 = SPD, 2 = CDR Burst
+        buffCycleDuration: [8, 6, 0],  // วินาที (0 = instant)
+        buffCycleMagnitude: [0.15, 0.10, 0.35],  // +15% DMG, +10% SPD, -35% CD
+        buffCycleNames: ['DMG +15%', 'SPD +10%', 'CDR BURST'],
+        buffCycleColors: ['#f97316', '#22d3ee', '#a78bfa'],
+        buffCycleIcons: ['⚔', '💨', '⚡'],
     },
     LIGHTING: {
         ambientLight: 0.9,

@@ -352,24 +352,59 @@ class MTCRoom {
         this.maxStayTime = BALANCE.mtcRoom.maxStayTime;
         this.cooldownTime = BALANCE.mtcRoom.cooldownTime;
         this.playerStayTime = 0; this.cooldown = 0; this.isPlayerInside = false;
+        // ── Buff Terminal state ────────────────────────────────
+        this.buffCycleIndex = 0;   // which buff is up next (cycles 0→1→2→0)
     }
 
     update(dt, player) {
         this.cooldown = Math.max(0, this.cooldown - dt);
         const inside = this.checkPlayerInside(player.x, player.y);
+        const C = BALANCE.mtcRoom;
 
         if (inside && this.cooldown <= 0) {
             if (!this.isPlayerInside) {
                 this.isPlayerInside = true; this.playerStayTime = 0;
+
+                // ── 1. Dash Reset (always on entry) ───────────────
+                if (C.dashResetOnEntry && player.cooldowns) {
+                    player.cooldowns.dash = 0;
+                    spawnFloatingText('⚡ DASH RESET', player.x + 40, player.y - 45, '#22d3ee', 16);
+                }
+
+                // ── 2. Crisis Protocol ─────────────────────────────
+                if (player.hp / player.maxHp <= C.crisisHpPct) {
+                    player.hp = Math.min(player.maxHp, player.hp + C.crisisHealBonus);
+                    spawnParticles(player.x, player.y, 18, '#ef4444');
+                    spawnParticles(player.x, player.y, 12, '#fbbf24');
+                    spawnFloatingText('🚨 CRISIS PROTOCOL', player.x, player.y - 90, '#ef4444', 22);
+                    if (typeof Audio !== 'undefined') Audio.playSound('heal');
+                }
+
+                // ── 3. Rotating Buff Terminal ─────────────────────
+                if (typeof player.applyMtcBuff === 'function') {
+                    player.applyMtcBuff(this.buffCycleIndex);
+                    // Emit buff particles
+                    const buffColor = C.buffCycleColors[this.buffCycleIndex];
+                    spawnParticles(player.x, player.y - 20, 20, buffColor);
+                    if (typeof Audio !== 'undefined') Audio.playMtcBuff();
+                    // Advance cycle
+                    this.buffCycleIndex = (this.buffCycleIndex + 1) % 3;
+                }
+
                 spawnFloatingText('SAFE ZONE!', player.x, player.y - 60, '#fbbf24', 25);
                 showVoiceBubble('เข้าสู่ MTC Room - เริ่มกระบวนการฟื้นฟู', player.x, player.y - 40);
+                if (typeof Audio !== 'undefined') Audio.playMtcEntry();
             }
             this.playerStayTime += dt;
+
+            // HP regen
             if (player.hp < player.maxHp) {
                 player.hp = Math.min(player.maxHp, player.hp + this.healRate * dt);
-                if (Math.random() < 0.3) spawnParticles(player.x + rand(-20, 20), player.y + rand(-20, 20), 1, '#fbbf24');
+                if (Math.random() < 0.25) spawnParticles(player.x + rand(-20, 20), player.y + rand(-20, 20), 1, '#4ade80');
             }
+            // Energy regen
             if (player.energy < player.maxEnergy) player.energy = Math.min(player.maxEnergy, player.energy + 30 * dt);
+
             if (this.playerStayTime >= this.maxStayTime) this.kickOut(player);
         } else {
             if (this.isPlayerInside) this.isPlayerInside = false;
@@ -560,6 +595,44 @@ class MTCRoom {
             CTX.font = 'bold 8px Orbitron,monospace';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
             CTX.fillText('MTC SYSTEM ONLINE', cx, holoY + holoH - 11);
+
+            // ── Next Buff Indicator ──
+            if (typeof BALANCE !== 'undefined' && BALANCE.mtcRoom && BALANCE.mtcRoom.buffCycleNames) {
+                const C = BALANCE.mtcRoom;
+                const nextName = C.buffCycleNames[this.buffCycleIndex];
+                const nextColor = C.buffCycleColors[this.buffCycleIndex];
+                const nextIcon = C.buffCycleIcons[this.buffCycleIndex];
+                // Badge background
+                CTX.fillStyle = `rgba(0,0,0,0.35)`;
+                CTX.beginPath(); CTX.roundRect(holoX + 8, holoY + 3, holoW - 16, 11, 3); CTX.fill();
+                CTX.fillStyle = nextColor;
+                CTX.globalAlpha = 0.7 + fastPulse * 0.25;
+                CTX.font = 'bold 7px monospace';
+                CTX.fillText(`NEXT: ${nextIcon} ${nextName}`, cx, holoY + 9);
+                CTX.globalAlpha = 1;
+            }
+
+            // ── Active Buff Timer (if player has one running) ──
+            const pl = window.player;
+            if (pl && pl.mtcBuffTimer > 0 && pl.mtcBuffType >= 0) {
+                const C = BALANCE.mtcRoom;
+                const buffCol = C.buffCycleColors[pl.mtcBuffType];
+                const buffName = C.buffCycleNames[pl.mtcBuffType];
+                const totalDur = C.buffCycleDuration[pl.mtcBuffType] || 1;
+                const pct = pl.mtcBuffTimer / totalDur;
+                // Progress bar under the table
+                CTX.fillStyle = 'rgba(0,0,0,0.4)';
+                CTX.fillRect(holoX + 6, holoY + holoH + 4, holoW - 12, 5);
+                CTX.fillStyle = buffCol;
+                CTX.globalAlpha = 0.85;
+                CTX.fillRect(holoX + 6, holoY + holoH + 4, (holoW - 12) * pct, 5);
+                CTX.globalAlpha = 0.7;
+                CTX.fillStyle = buffCol;
+                CTX.font = '7px monospace';
+                CTX.textAlign = 'center'; CTX.textBaseline = 'top';
+                CTX.fillText(`${buffName} ${pl.mtcBuffTimer.toFixed(1)}s`, cx, holoY + holoH + 11);
+                CTX.globalAlpha = 1;
+            }
 
             // ── Ambient floating orbs (left & right of table) ──
             const orbData = [

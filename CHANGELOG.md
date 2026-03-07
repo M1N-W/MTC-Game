@@ -1,6 +1,62 @@
 # 🎮 MTC Game — Changelog
 
+> **⚠️ DOCUMENTATION STABILITY:** This changelog contains **version-specific implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
+
 ---
+
+---
+
+## v3.11.18 — Documentation Stability System & MTC Room Abilities
+*Released: March 7, 2026*
+
+### 📚 Documentation Improvements
+- **Stability Classification System:** Added 🟢🟡🔴 indicators for information stability across all documentation files
+- **Cross-Reference System:** Implemented documentation hierarchy with PROJECT_OVERVIEW.md as stable core
+- **Dynamic Information Warnings:** Added clear warnings for version-specific implementation details
+- **Usage Guidelines:** Created comprehensive documentation usage guide for AI and developers
+
+### 🏰 MTC Room Abilities Implementation
+- **Buff Terminal System:** Implemented rotating buff cycle (DMG +15%, SPD +10%, CDR BURST -35%)
+- **Dash Reset:** Automatic dash cooldown reset on MTC Room entry
+- **Crisis Protocol:** Emergency healing bonus (+35 HP) when HP ≤ 25%
+- **Visual Indicators:** Next buff display and active buff timer on holo-table
+- **Audio Enhancement:** Added MTC Room entry chime and buff activation sounds
+- **Energy Regeneration:** 30 energy/second regeneration while in MTC Room
+- **Balance Adjustment:** Reduced HP regeneration from 40→30 to offset new abilities
+
+### 🎮 Game Mechanics
+- **Player Buff State:** Added mtcBuffType, mtcBuffTimer, mtcDmgBuff, mtcSpeedBuff tracking
+- **Buff Application:** Implemented applyMtcBuff() method with proper buff stacking
+- **Visual Feedback:** Enhanced particle effects and floating text for buff activation
+- **Sound Design:** Created three-note arpeggio entry sound and bright ping buff sound
+
+### 📖 Documentation Updates
+- **PROJECT_OVERVIEW.md:** Added stability guide, MTC Room abilities documentation, dynamic information warnings
+- **README-info.md:** Added stability warning with reference to PROJECT_OVERVIEW.md
+- **CHANGELOG.md:** Added stability warning with reference to PROJECT_OVERVIEW.md
+- **GODOT_EXPORT.md:** Updated to v3.11.17 with MTC Room buff system migration guide
+
+### 🔧 Technical Implementation
+- **MTCRoom Class:** Enhanced with buff cycle logic and visual indicators
+- **PlayerBase Class:** Added buff state management and timer system
+- **Audio System:** Added playMtcEntry() and playMtcBuff() methods
+- **Configuration:** Extended BALANCE.mtcRoom with comprehensive buff settings
+
+### 🎯 Quality of Life
+- **Multi-round Editing Workflow:** Established clear file handling protocol to prevent code loss
+- **Documentation Maintenance:** Created systematic approach for keeping documentation current
+- **Development Workflow:** Improved AI guidance with stability classification
+
+**Files Changed:**
+- `PROJECT_OVERVIEW.md` (major restructuring + stability system)
+- `README-info.md` (stability warnings)
+- `CHANGELOG.md` (stability warnings)
+- `GODOT_EXPORT.md` (updated to v3.11.17)
+- `js/map.js` (MTC Room buff system + visual indicators)
+- `js/entities/player/PlayerBase.js` (buff state management)
+- `js/config.js` (MTC Room configuration)
+- `js/audio.js` (MTC Room sounds)
+- `sw.js` (cache version update)
 
 ---
 
