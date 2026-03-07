@@ -221,22 +221,75 @@ class MapObject {
 
     drawBlackboard() {
         const pal = BALANCE.map.mapColors;
-        CTX.fillStyle = '#451a03'; CTX.beginPath(); CTX.roundRect(0, 0, this.w, this.h, 4); CTX.fill();
-        CTX.fillStyle = pal.whiteboardGreen; CTX.beginPath(); CTX.roundRect(6, 5, this.w - 12, this.h - 10, 2); CTX.fill();
-        CTX.fillStyle = pal.chalkWhite; CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-        CTX.font = `bold ${Math.floor(this.h * .22)}px monospace`; CTX.fillText('ax²+bx+c = 0', this.w / 2, this.h * .35);
-        CTX.fillStyle = '#78350f'; CTX.fillRect(6, this.h - 6, this.w - 12, 5);
+        const now = _mapNow;
+        // Frame
+        CTX.fillStyle = '#2d1505';
+        CTX.beginPath(); CTX.roundRect(0, 0, this.w, this.h, 4); CTX.fill();
+        // Board surface
+        CTX.fillStyle = pal.whiteboardGreen;
+        CTX.beginPath(); CTX.roundRect(5, 4, this.w - 10, this.h - 10, 2); CTX.fill();
+        // Board edge highlight
+        CTX.strokeStyle = 'rgba(255,255,255,0.06)'; CTX.lineWidth = 1;
+        CTX.beginPath(); CTX.roundRect(5, 4, this.w - 10, this.h - 10, 2); CTX.stroke();
+
+        // Chalk text
+        CTX.fillStyle = pal.chalkWhite;
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.font = `bold ${Math.floor(this.h * .20)}px monospace`;
+        CTX.globalAlpha = 0.92;
+        CTX.fillText('ax²+bx+c = 0', this.w / 2, this.h * .32);
+        CTX.font = `${Math.floor(this.h * .14)}px monospace`;
+        CTX.globalAlpha = 0.65;
+        CTX.fillText('x = (-b±√Δ)/2a', this.w / 2, this.h * .57);
+        CTX.globalAlpha = 1;
+
+        // Blinking cursor
+        if (Math.sin(now / 500) > 0) {
+            CTX.fillStyle = 'rgba(255,255,255,0.7)';
+            CTX.fillRect(this.w * 0.68, this.h * 0.57 - 5, 2, 10);
+        }
+
+        // Chalk tray
+        CTX.fillStyle = '#5c2a0a';
+        CTX.fillRect(5, this.h - 8, this.w - 10, 6);
+        // Chalk sticks
+        const chalkCols = ['rgba(255,255,255,0.8)', 'rgba(255,200,100,0.7)', 'rgba(150,220,255,0.7)'];
+        for (let i = 0; i < 3; i++) {
+            CTX.fillStyle = chalkCols[i];
+            CTX.beginPath(); CTX.roundRect(this.w * 0.25 + i * 16, this.h - 7, 12, 4, 1); CTX.fill();
+        }
+
+        // Chalk dust smudge
+        CTX.fillStyle = 'rgba(255,255,255,0.04)';
+        CTX.beginPath(); CTX.ellipse(this.w * 0.5, this.h - 9, 40, 4, 0, 0, Math.PI * 2); CTX.fill();
     }
 
     drawWall() {
         const pal = BALANCE.map.mapColors;
-        CTX.fillStyle = pal.wallColor; CTX.fillRect(0, 0, this.w, this.h);
-        CTX.strokeStyle = pal.wallBrick; CTX.lineWidth = 1.5;
-        for (let y = 0; y < this.h; y += 25) {
-            for (let x = 0; x < this.w; x += 50) {
-                const offset = (Math.floor(y / 25) % 2) * 25;
-                CTX.strokeRect(x + offset, y, 50, 25);
+        // Base + top highlight
+        CTX.fillStyle = pal.wallColor;
+        CTX.fillRect(0, 0, this.w, this.h);
+        CTX.fillStyle = 'rgba(255,255,255,0.06)';
+        CTX.fillRect(0, 0, this.w, 3);
+
+        // Brick pattern — single batch stroke
+        CTX.strokeStyle = pal.wallBrick; CTX.lineWidth = 1;
+        CTX.beginPath();
+        for (let y = 0; y < this.h; y += 20) {
+            const offset = (Math.floor(y / 20) % 2) * 25;
+            for (let x = -25; x < this.w + 25; x += 50) {
+                CTX.rect(x + offset, y, 50, 20);
             }
+        }
+        CTX.stroke();
+
+        // Moss/damage spots — deterministic (no Math.random in draw)
+        CTX.fillStyle = 'rgba(0,0,0,0.18)';
+        const seed = this.w * 7 + this.h * 13;
+        for (let i = 0; i < 4; i++) {
+            const px = ((seed * (i + 1) * 31) % (this.w - 8)) + 2;
+            const py = ((seed * (i + 1) * 17) % (this.h - 8)) + 2;
+            CTX.fillRect(px, py, 6 + (i % 3) * 3, 4 + (i % 2) * 3);
         }
     }
 }
@@ -728,6 +781,9 @@ class MapSystem {
             ctx.restore();
         }
 
+        // ── 2b. ZONE FLOORS ──────────────────────────────────────
+        this.drawZoneFloors(ctx);
+
         // ── 3. CIRCUIT PATHS ─────────────────────────────────────
         const drawCircuitPath = (pathCfg) => {
             const P = C.paths, pc = pathCfg;
@@ -805,6 +861,63 @@ class MapSystem {
         drawZoneAura(C.auras.database);
         drawZoneAura(C.auras.shop);
         drawZoneAura(C.auras.origin);
+    }
+
+    drawZoneFloors(ctx) {
+        if (typeof MAP_CONFIG === 'undefined' || !MAP_CONFIG.zones) return;
+        const t = _mapNow * 0.001;
+        const zoneKeys = Object.keys(MAP_CONFIG.zones);
+
+        for (let zi = 0; zi < zoneKeys.length; zi++) {
+            const z = MAP_CONFIG.zones[zoneKeys[zi]];
+            const tl = worldToScreen(z.x, z.y);
+            const br = worldToScreen(z.x + z.w, z.y + z.h);
+            const sw = br.x - tl.x, sh = br.y - tl.y;
+            if (sw <= 0 || sh <= 0) continue;
+            // Viewport cull
+            if (br.x < 0 || tl.x > CANVAS.width || br.y < 0 || tl.y > CANVAS.height) continue;
+
+            ctx.save();
+            ctx.beginPath(); ctx.rect(tl.x, tl.y, sw, sh); ctx.clip();
+
+            // Floor tint
+            ctx.fillStyle = z.floorColor;
+            ctx.fillRect(tl.x, tl.y, sw, sh);
+
+            // Ortho grid — one stroke batch
+            const worldGS = z.gridSize;
+            const startCol = Math.floor(z.x / worldGS) * worldGS;
+            const startRow = Math.floor(z.y / worldGS) * worldGS;
+            ctx.strokeStyle = z.gridColor;
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            for (let wx = startCol; wx <= z.x + z.w + worldGS; wx += worldGS) {
+                const sx = worldToScreen(wx, 0).x;
+                ctx.moveTo(sx, tl.y); ctx.lineTo(sx, br.y);
+            }
+            for (let wy = startRow; wy <= z.y + z.h + worldGS; wy += worldGS) {
+                const sy = worldToScreen(0, wy).y;
+                ctx.moveTo(tl.x, sy); ctx.lineTo(br.x, sy);
+            }
+            ctx.stroke();
+
+            // Pulsing inner border accent
+            const pulse = 0.5 + Math.sin(t * 1.2 + zi) * 0.5;
+            ctx.strokeStyle = z.accentColor;
+            ctx.globalAlpha = 0.08 + pulse * 0.12;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(tl.x + 2, tl.y + 2, sw - 4, sh - 4);
+
+            // Zone label — top-left corner
+            ctx.globalAlpha = 0.45 + pulse * 0.20;
+            ctx.fillStyle = z.accentColor;
+            ctx.font = 'bold 9px monospace';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            ctx.fillText(z.label, tl.x + 8, tl.y + 6);
+
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
     }
 
     draw() {

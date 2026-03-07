@@ -245,8 +245,15 @@
 3. ออกแบบ solution ขั้นสูง
 4. เขียน/แก้ไขโค้ดขนาดใหญ่
 5. ทดสอบและ validate
-6. Commit & push พร้อมคำอธิบายละเอียด
+6. ⚠️ **สำคัญ:** ถ้าเขียน patch diff ให้เสร็จแล้วต้อง put the fixed code in the files ให้ด้วยอัตโนมัติ
+7. Commit & push พร้อมคำอธิบายละเอียด
 ```
+
+**⚠️ ข้อควรรู้สำคัญสำหรับ Claude:**
+- **Automatic Code Application:** หลังจากเขียน patch diff ที่เสร็จสมบูรณ์ ต้อง apply โค้ดที่แก้ไขลงในไฟล์จริงโดยอัตโนมัติ
+- **No Manual Steps:** ไม่ต้องรอให้ผู้ใช้ทำการ apply โค้ดด้วยตนเอง
+- **Complete Solution:** ต้องแน่ใจว่าโค้ดที่แก้ไขถูกนำไปใช้จริงในไฟล์
+- **Validation:** ตรวจสอบว่าโค้ดที่ apply ถูกต้องและทำงานได้
 
 #### 💻 Windsurf IDE Workflow (Simple Tasks):
 ```bash
@@ -300,6 +307,7 @@ read_file file_path="/js/config.js" limit=50
 - **Complex Solutions** - ออกแบบ solution ขั้นสูง
 - **System Impact** - ต้องคำนึงถึงผลกระทบต่อระบบทั้งหมด
 - **Testing Required** - ต้องทดสอบอย่างละเอียด
+- **🔥 Automatic Code Application:** หลังจากเขียน patch diff ให้เสร็จ ต้อง apply โค้ดที่แก้ไขลงในไฟล์จริงโดยอัตโนมัติ ไม่ต้องรอผู้ใช้ทำเอง
 
 #### 💻 สำหรับ Windsurf IDE:
 - **Pattern Following** - ใช้ pattern ที่มีอยู่แล้ว

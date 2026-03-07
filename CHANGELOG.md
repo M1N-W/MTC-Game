@@ -4,37 +4,42 @@
 
 ---
 
-## v3.11.15 — Project Documentation Enhancement
+## v3.11.16 — Zone Floor System & Visual Enhancement
 *Released: March 7, 2026*
 
-### 📚 Documentation Improvements
-- **PROJECT_OVERVIEW.md:** Created comprehensive project documentation for AI assistants
-- **AI Assistant Guide:** Complete file structure breakdown and architecture documentation
-- **Development Workflow:** Detailed commit & push workflow instructions
-- **Quick Reference:** Common tasks and debugging solutions for AI helpers
+### �️ Zone Floor System Implementation
+- **Color-Coded Zone Grids:** Added 5 distinct zones with unique floor colors and grid patterns
+  - **Server Farm** (East): Cyan grid with 36px spacing
+  - **Library/Archives** (West): Amber grid with 48px spacing  
+  - **Courtyard** (South): Green grid with 60px spacing
+  - **Lecture Hall A/B** (Corners): Purple grids with 40px spacing
+- **Visual Zone Identification:** Pulsing border accents and zone labels for clear navigation
+- **Viewport Culling:** Optimized rendering with zone-based viewport culling for performance
 
-### 🔧 Technical Documentation
-- **File Structure:** Complete mapping of all files and their responsibilities
-- **Architecture Overview:** Core game loop flow and design patterns
-- **Performance Guide:** Key considerations and optimization targets
-- **Development Standards:** Version update workflow and best practices
+### 🎨 Enhanced Visual Details
+- **Blackboard Enhancement:** Added quadratic formula solution, blinking cursor, chalk sticks, and dust smudge effects
+- **Wall Rendering Optimization:** Single-batch brick rendering with top highlight and deterministic damage spots
+- **Floor Tint System:** Subtle color overlays for each zone with configurable transparency levels
 
-### 🎯 AI Assistant Features
-- **Context Understanding:** Quick project summary for new conversations
-- **File Navigation:** Clear mapping of where to find specific functionality
-- **Common Solutions:** Pre-documented solutions for frequent issues
-- **Workflow Integration:** Step-by-step guides for common development tasks
+### ⚡ Performance Improvements
+- **Batch Rendering:** Consolidated grid drawing operations into single stroke batches
+- **Deterministic Visual Effects:** Removed Math.random() calls from draw loops for consistent performance
+- **Optimized Zone Rendering:** Efficient ortho grid generation with proper world-to-screen coordinate conversion
 
-### 📊 Documentation Coverage
-- **28 JavaScript Files:** Complete breakdown of all game systems
-- **3 Playable Characters:** Detailed character system documentation
-- **Boss System:** Complete boss and attack pattern documentation
-- **Performance Systems:** Object pooling, rendering, and optimization guides
+### 🔧 Technical Implementation
+- **MAP_CONFIG.zones:** New configuration block in config.js with zone definitions, colors, and grid settings
+- **drawZoneFloors() Method:** New rendering method in map.js with comprehensive zone visualization
+- **Enhanced Object Methods:** Improved drawBlackboard() and drawWall() methods with richer visual details
+
+### 📊 Configuration Changes
+- **Zone Definitions:** Complete zone configuration with position, size, colors, and grid settings
+- **Visual Parameters:** Fine-tuned transparency levels, pulse rates, and label positioning
+- **Grid Optimization:** Standardized grid spacing and rendering parameters across all zones
 
 ### 🔧 Files Changed
-- `PROJECT_OVERVIEW.md` — New comprehensive project documentation
-- `sw.js` — Updated to v3.11.15, added PROJECT_OVERVIEW.md to cache
-- `CHANGELOG.md` — Added this entry
+- `js/config.js` — Added MAP_CONFIG.zones block with 5 zone definitions (50 lines added)
+- `js/map.js` — Added drawZoneFloors() method, enhanced drawBlackboard() and drawWall() (120+ lines modified)
+- `sw.js` — Updated to v3.11.16
 
 ---
 

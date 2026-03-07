@@ -61,13 +61,6 @@
 
 ---
 
-## � Additional Documentation
-
-- **[PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)** - Complete project documentation for developers and AI assistants
-- **[CHANGELOG.md](./CHANGELOG.md)** - Detailed version history and update notes
-- **[GODOT_EXPORT.md](./GODOT_EXPORT.md)** - Future migration plan to Godot Engine
-
----
 
 ## �🚀 How to Play
 
@@ -93,9 +86,12 @@
 
 ---
 
-## 📈 Current Version: v3.11.14 (March 7, 2026)
+## 📈 Current Version: v3.11.16 (March 7, 2026)
 
 **Latest Major Updates:**
+- 🗺️ **Zone Floor System:** Added color-coded zone grids with distinct visual themes (Server Farm, Library, Courtyard, Lecture Halls)
+- 🎨 **Enhanced Visual Details:** Improved blackboards with quadratic formulas, optimized wall rendering with brick patterns
+- ⚡ **Performance Optimizations:** Batch rendering, deterministic visual effects, viewport culling for zones
 - ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
 - 🎨 **Visual Polish:** Complete SVG portrait system and 6-layer Wanchai Stand rendering
 - 🤖 **Advanced AI:** Autonomous Stand system with tactical intelligence
@@ -113,3 +109,32 @@
 - 🔊 **Complete Boss Attack Visual Rework:** Enhanced BarkWave, BubbleProjectile, ExpandingRing, EmpPulse, MatrixGridAttack, new EquationSlam & DeadlyGraph classes, ultimate attack wind-up effects, log457 visual states
 - 🔧 **Boss Attack Class Consolidation:** Moved EquationSlam & DeadlyGraph to boss_attacks.js for better code organization and maintainability
 - ⚡ **Boss Attacks Performance Optimization:** Improved gradient handling, Math.hypot() distance calculations, enhanced color format support and precision
+
+---
+
+## 🗺️ Map Environment
+
+The game features a dynamic campus environment with distinct zones:
+
+### 🏢 Zone System
+- **Server Farm** (East) - Cyan grid with server racks
+- **Library/Archives** (West) - Amber grid with bookshelves  
+- **Courtyard** (South) - Green open space
+- **Lecture Halls** (Corners) - Purple grids for classroom areas
+
+### 🎨 Visual Features
+- **Color-coded floor grids** for easy navigation
+- **Enhanced blackboards** with mathematical formulas
+- **Detailed wall textures** with brick patterns
+- **Dynamic zone borders** with pulsing accents
+
+---
+
+## 🚀 How to Play
+
+1.  ไปที่หน้าเว็บไซต์ของเกม (หรือรันผ่าน Live Server)
+2.  เลือกตัวละครที่หน้าเมนูหลัก
+3.  (แนะนำ) กดปุ่ม **🎓 REPLAY TUTORIAL** หากเพิ่งเคยเล่นครั้งแรกเพื่อเรียนรู้ระบบสกิล
+4.  ใช้ปุ่ม `W A S D` ในการเดิน, `Left Click` เพื่อยิง, `Spacebar` เพื่อ Dash และกด `Q`, `E`, `R`, `T` สำหรับสกิลพิเศษ
+
+---

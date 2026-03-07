@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.15'; // v3.11.15: Added PROJECT_OVERVIEW.md - comprehensive project documentation for AI assistants
+const CACHE_NAME = 'mtc-cache-v3.11.16'; // v3.11.16: Added zone floor system with color-coded grids and enhanced visual details
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -1013,6 +1013,50 @@ const MAP_CONFIG = {
         },
     },
 
+    // ── Zone Floor Themes ──────────────────────────────────────
+    zones: {
+        serverFarm: {
+            x: 300, y: -450, w: 800, h: 750,
+            floorColor: 'rgba(6, 182, 212, 0.04)',
+            gridColor: 'rgba(6, 182, 212, 0.12)',
+            gridSize: 36,
+            accentColor: 'rgba(34, 211, 238, 0.18)',
+            label: 'SERVER FARM',
+        },
+        library: {
+            x: -1300, y: -450, w: 750, h: 750,
+            floorColor: 'rgba(180, 120, 20, 0.06)',
+            gridColor: 'rgba(251, 191, 36, 0.10)',
+            gridSize: 48,
+            accentColor: 'rgba(253, 224, 71, 0.15)',
+            label: 'ARCHIVES',
+        },
+        courtyard: {
+            x: -500, y: 400, w: 1000, h: 600,
+            floorColor: 'rgba(34, 197, 94, 0.05)',
+            gridColor: 'rgba(74, 222, 128, 0.08)',
+            gridSize: 60,
+            accentColor: 'rgba(134, 239, 172, 0.12)',
+            label: 'COURTYARD',
+        },
+        lectureHallL: {
+            x: -1100, y: 480, w: 400, h: 400,
+            floorColor: 'rgba(168, 85, 247, 0.04)',
+            gridColor: 'rgba(192, 132, 252, 0.10)',
+            gridSize: 40,
+            accentColor: 'rgba(216, 180, 254, 0.12)',
+            label: 'LECTURE A',
+        },
+        lectureHallR: {
+            x: 700, y: 480, w: 400, h: 400,
+            floorColor: 'rgba(168, 85, 247, 0.04)',
+            gridColor: 'rgba(192, 132, 252, 0.10)',
+            gridSize: 40,
+            accentColor: 'rgba(216, 180, 254, 0.12)',
+            label: 'LECTURE B',
+        },
+    },
+
     // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
