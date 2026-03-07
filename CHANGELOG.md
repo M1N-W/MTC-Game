@@ -4,6 +4,76 @@
 
 ---
 
+## v3.11.6 — Comprehensive Frontend Design Overhaul
+*Released: March 7, 2026*
+
+### 🎨 Military HUD Theme Implementation
+- **Complete CSS Architecture:** New `menu-upgrade.css` with 525 lines of pure CSS enhancements
+- **Zero JavaScript Changes:** All visual upgrades implemented through CSS only
+- **Military Dark + Gold/Amber:** Consistent theme with Orbitron/Bebas Neue fonts
+- **Parallelogram HUD Elements:** Enhanced clip-path design language
+
+### 🌊 Atmospheric Background System
+- **CRT Scanlines:** Authentic retro monitor effect with 3px line intervals
+- **Hex Grid Overlay:** Subtle diamond pattern with 30px spacing at 1.8% opacity
+- **Animated Gold Sweep:** Top border animation with 3.5s linear infinite cycle
+- **Radial Gradient:** Warm dark center with depth and atmosphere
+
+### 🎯 Menu Container Enhancements
+- **Inner Glow Bar:** Animated top accent line with opacity pulsing
+- **Deeper Background:** Enhanced radial gradient with military dark tones
+- **Bottom-right Bracket:** Gold corner accent element
+- **Backdrop Blur:** 22px blur for premium depth effect
+
+### 📋 Character Cards Redesign
+- **Portrait Frame System:** Inner glow borders with hover transitions
+- **Bottom Accent Lines:** Hidden-to-visible gradient lines on hover
+- **Enhanced Hover Effects:** Scale 1.04 with translateY(-7px) depth
+- **Stat Bar Shimmer:** Animated sweep effect across all stat bars
+- **Selected Card Glows:** Character-specific color highlights (Kao=gold, Poom=amber, Auto=red)
+
+### 🔘 Button System Overhaul
+- **Idle Pulse Animation:** 3s ease-in-out infinite glow cycling
+- **Sweep Shine Effect:** 4.2s skewX(-14deg) light sweep across buttons
+- **Enhanced Hover States:** Scale 1.06 with brightness 1.18 and strong glow
+- **Active Feedback:** Scale 0.97 with brightness reduction for tactile response
+
+### 📊 High Score Strip Enhancement
+- **Rich Background:** Linear gradient with gold accent integration
+- **Visual Weight:** Enhanced border colors and subtle glow effects
+- **Better Integration:** Seamless fit with military HUD theme
+
+### 🎬 Game Over Report Card Cinematic Upgrade
+- **Red-to-Dark Gradient:** Cinematic background with scanline overlay
+- **Glitch Title Animation:** 7s ease-in-out with text-shadow distortions
+- **Entrance Animation:** 0.48s cubic-bezier scale and brightness entrance
+- **Enhanced Stat Items:** Red-tinted borders and glow effects
+
+### 🏆 Victory Screen Polish
+- **Rank Badge Upgrade:** Pill chip style with border and background
+- **Play Again Button:** Integrated sweep shine and idle glow
+- **Achievement Chips:** Hover glow effects with color transitions
+- **Enhanced Title:** Stronger drop-shadow glow effects
+
+### ✨ Micro-interactions & Polish
+- **Staggered Card Entrance:** Sequential 0.45s animations for character cards
+- **Menu Container Fade-in:** 0.55s cubic-bezier entrance animation
+- **Mission Brief Underline:** Animated typing effect with 2s line growth
+- **CRT Flicker Effects:** Subtle title flicker for authentic monitor feel
+
+### 🎯 Design Philosophy
+- **Military HUD Authenticity:** Consistent with tactical interface design
+- **Visual Hierarchy:** Clear information architecture with depth
+- **Responsive Feedback:** Every interactive element has visual response
+- **Performance Optimized:** Pure CSS implementation with GPU acceleration
+
+### 🔧 Files Changed
+- `css/menu-upgrade.css` — NEW: 525 lines of comprehensive CSS enhancements
+- `index.html` — Added menu-upgrade.css stylesheet link
+- `sw.js` — Updated to v3.11.6
+
+---
+
 ## v3.11.5 — Auto Character Combat Buffs & Visual Polish
 *Released: March 7, 2026*
 

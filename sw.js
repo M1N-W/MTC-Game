@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.5'; // v3.11.5: Auto character combat buffs & visual polish - Wanchai Stand damage/speed buffs, Vacuum Heat force increase, enhanced visual effects
+const CACHE_NAME = 'mtc-cache-v3.11.6'; // v3.11.6: Comprehensive frontend design overhaul - Military HUD theme with scanlines, hex grid, enhanced visual effects
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
