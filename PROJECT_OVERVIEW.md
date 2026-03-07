@@ -714,6 +714,167 @@ mtcRoom: {
 
 ---
 
+### 🔄 การ Refactor โค้ดขนาดใหญ่ (🟢 STABLE - Architecture Pattern)
+
+**วัตถุประสงค์:** เขียน comment อธิบายรายละเอียดในไฟล์สำคัญ และทำให้โค้ดอ้างอิงถึงกันได้ง่าย โดยไม่กระทบการทำงาน
+
+**ไฟล์ที่ต้องแก้ไข:**
+- ไฟล์หลักทั้งหมดใน `js/` ที่เป็น core logic
+- ไฟล์ config และ routing
+- ไฟล์ UI และ rendering
+
+**⚠️ ข้อควรรู้:**
+- **ไม่เปลี่ยน logic:** แค่เพิ่ม comment และ documentation
+- **ไม่กระทบ performance:** เป็นเพียงการเพิ่มข้อความอธิบาย
+- **เพิ่มความเข้าใจ:** ทำให้ AI และ developer เข้าใจโค้ดได้ง่ายขึ้น
+
+**🔧 Technical Implementation:**
+
+**1. สร้าง File Header Template:**
+```javascript
+/**
+ * FILE: [filename.js]
+ * ROLE: [primary responsibility]
+ * DEPENDENCIES: [files this depends on]
+ * DEPENDENTS: [files that depend on this]
+ * 
+ * DESCRIPTION:
+ * [detailed description of what this file does]
+ * 
+ * KEY FUNCTIONS:
+ * - [functionName]: [brief description]
+ * - [functionName]: [brief description]
+ * 
+ * DATA FLOW:
+ * Input → [process] → Output
+ * 
+ * LAST UPDATED: v3.11.18
+ */
+```
+
+**2. สร้าง Function Documentation:**
+```javascript
+/**
+ * [function description]
+ * @param {[type]} [paramName] - [description]
+ * @returns {[type]} - [description]
+ * @dependencies {[functions/classes it calls]}
+ * @used-by {[functions/classes that call this]}
+ */
+```
+
+**3. สร้าง Cross-Reference System:**
+```javascript
+// CROSS-REFERENCES:
+// Uses: GameState.js (for player state), Audio.js (for sounds)
+// Used by: PlayerRenderer.js (for rendering), UI.js (for HUD updates)
+```
+
+**🎯 ไฟล์ที่ต้อง Refactor (Priority Order):**
+
+**Tier 1: Core Systems**
+- `js/game.js` - Main game loop and initialization
+- `js/systems/GameState.js` - Central state management
+- `js/config.js` - All configuration constants
+
+**Tier 2: Entity Systems**
+- `js/entities/base.js` - Base entity class
+- `js/entities/player/PlayerBase.js` - Player base class
+- `js/entities/player/[Character].js` - Specific character implementations
+- `js/entities/enemy.js` - Enemy entity system
+- `js/entities/boss.js` - Boss system
+
+**Tier 3: Rendering & Visual**
+- `js/rendering/PlayerRenderer.js` - Player rendering
+- `js/rendering/BossRenderer.js` - Boss rendering
+- `js/effects.js` - Particle and visual effects
+
+**Tier 4: Game Systems**
+- `js/weapons.js` - Weapon and projectile system
+- `js/input.js` - Input handling
+- `js/audio.js` - Audio system
+- `js/ui.js` - User interface
+
+**Tier 5: Map & Environment**
+- `js/map.js` - Map rendering and MTC Room
+- `js/systems/WaveManager.js` - Wave management
+
+**📝 Documentation Standards:**
+
+**File Header Requirements:**
+- **Purpose:** 1-2 sentences อธิบายหน้าที่หลัก
+- **Dependencies:** รายการไฟล์ที่ import หรืออ้างอิง
+- **Dependents:** รายการไฟล์ที่อ้างอิงถึงไฟล์นี้
+- **Key Functions:** รายการ function สำคัญพร้อมคำอธิบายสั้นๆ
+- **Data Flow:** อธิบายการไหลของข้อมูล
+
+**Function Documentation Requirements:**
+- **Purpose:** อธิบายว่า function ทำอะไร
+- **Parameters:** รายการ parameter พร้อม type และ description
+- **Returns:** ค่าที่ return พร้อม type และ description
+- **Dependencies:** function อื่นที่เรียกใช้
+- **Used By:** function อื่นที่เรียก function นี้
+
+**🔍 Cross-Reference Examples:**
+
+**ใน PlayerBase.js:**
+```javascript
+/**
+ * FILE: PlayerBase.js
+ * ROLE: Base class for all player characters
+ * DEPENDENCIES: GameState.js, Audio.js, effects.js
+ * DEPENDENTS: KaoPlayer.js, AutoPlayer.js, PoomPlayer.js
+ * 
+ * CROSS-REFERENCES:
+ * Uses: config.js (for BALANCE.characters), audio.js (playSound)
+ * Used by: PlayerRenderer.js (rendering), ui.js (HUD updates)
+ */
+```
+
+**ใน map.js:**
+```javascript
+/**
+ * FILE: map.js
+ * ROLE: Map rendering and environment management
+ * DEPENDENCIES: config.js, effects.js
+ * DEPENDENTS: game.js (main loop), entities (for collision)
+ * 
+ * CROSS-REFERENCES:
+ * Uses: config.js (MAP_CONFIG, BALANCE.map)
+ * Used by: PlayerBase.js (collision), Enemy.js (pathfinding)
+ */
+```
+
+**⚡ Implementation Strategy:**
+
+**Phase 1: Core Documentation (1-2 hours)**
+- Add file headers to Tier 1 files
+- Document main functions in core systems
+- Create cross-reference mapping
+
+**Phase 2: Entity Documentation (2-3 hours)**
+- Add file headers to Tier 2 files
+- Document entity lifecycle methods
+- Update cross-references
+
+**Phase 3: System Documentation (2-3 hours)**
+- Add file headers to Tier 3-4 files
+- Document system interactions
+- Verify cross-reference accuracy
+
+**Phase 4: Validation (1 hour)**
+- Test that all documentation is accurate
+- Verify cross-references are correct
+- Ensure no functional changes were made
+
+**🎯 Expected Outcomes:**
+- **AI Understanding:** AI สามารถเข้าใจความสัมพันธ์ระหว่างไฟล์ได้ทันที
+- **Developer Onboarding:** Developer ใหม่เข้าใจโครงสร้างได้เร็วขึ้น
+- **Maintenance:** การแก้ไขโค้ดทำได้ง่ายขึ้นเพราะรู้ dependency
+- **Zero Risk:** ไม่มีการเปลี่ยนแปลง logic ทำให้ปลอดภัย
+
+---
+
 ### 5. 🎮 การเพิ่มตัวละครใหม่ (🟢 STABLE)
 **ไฟล์ที่ต้องแก้ไข:**
 - `/js/entities/player/[NewCharacter].js` - สร้าง class ตัวละครใหม่ สืบทอบจาก `PlayerBase.js`
