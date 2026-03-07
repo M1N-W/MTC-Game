@@ -33,9 +33,7 @@ class WanchaiStand {
         if (!owner || !owner.wanchaiActive) { this.active = false; return; }
 
         const S = owner.stats ?? {};
-        this._atkRate = (typeof owner._getEffectivePunchRate === 'function')
-            ? owner._getEffectivePunchRate()
-            : (S.wanchaiPunchRate ?? 0.11);
+        this._atkRate = S.wanchaiPunchRate ?? 0.08;
         const atkRange = S.standPunchRange ?? 110;  // hitbox reach
         const chaseSpeed = S.standMoveSpeed ?? 340;  // px/s
         const leashRadius = S.standLeashRadius ?? 420;  // max dist from owner
@@ -139,20 +137,17 @@ class WanchaiStand {
 
     _punch(target, owner) {
         const S = owner.stats ?? {};
-        // REWORK: apply Heat tier damage multiplier
-        const heatMult = (typeof owner._getHeatDmgMult === 'function') ? owner._getHeatDmgMult() : 1.0;
-        let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0) * heatMult;
+        let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0);
 
         // Second Wind bonus
         if (owner.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
 
-        // Crit — Overheated gives bonus crit
-        let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);
-        if ((owner.heatTier ?? 0) === 3) critChance += (S.heatCritBonusOverheat ?? 0.20);
+        // Crit
+        let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (owner.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
-            dmg *= (S.critMultiplier ?? 2.2);
+            dmg *= (S.critMultiplier ?? 2.0);
             if (owner.passiveUnlocked) owner.goldenAuraTimer = 1;
             if (typeof Achievements !== 'undefined') {
                 Achievements.stats.crits = (Achievements.stats.crits ?? 0) + 1;
@@ -160,26 +155,11 @@ class WanchaiStand {
             }
         }
 
-        // BUG-12 FIX: lifesteal from actual damage dealt
-        const preHitHp = target.hp ?? 0;
         target.takeDamage(dmg, owner);
-        const actualDmg = Math.min(dmg, preHitHp);
 
         // Lifesteal
-        if (owner.passiveUnlocked)
-            owner.hp = Math.min(owner.maxHp, owner.hp + actualDmg * (S.passiveLifesteal ?? 0.025));
-
-        // REWORK: Heat gain on every Stand punch
-        if (typeof owner._addHeat === 'function') {
-            const heatGainMult = (owner.passiveUnlocked && S.passiveHeatGainBonus) || 1;
-            owner._addHeat((S.heatPerHit ?? 12) * heatGainMult);
-        }
-
-        // REWORK: Kill-on-Wanchai reward
-        if (target.hp <= 0 && typeof owner._addHeat === 'function') {
-            owner._addHeat(S.heatOnKillWanchai ?? 15);
-            const healOnKill = (S.heatHealOnKillWanchai ?? 0.08) * owner.maxHp;
-            owner.hp = Math.min(owner.maxHp, owner.hp + healOnKill);
+        if (owner.passiveUnlocked) {
+            owner.hp = Math.min(owner.maxHp, owner.hp + dmg * (S.passiveLifesteal ?? 0.01));  // BUG-4 fix: was 0.02
         }
 
         // Knockback — push enemy away from stand
@@ -644,25 +624,10 @@ class AutoPlayer extends Player {
         this._punchTimer = 0;
         this._heatTimer = 0;
 
-        // ── Stand Rush State ─────────────────────────────────
+        // ── NEW: Stand Rush State ────────────────────────────────
         this.isStandAttacking = false;
         this.standAttackTimer = 0;
         this.lastPunchSoundTime = 0;
-
-        // ── REWORK: Heat Gauge ────────────────────────────────
-        // 0–100. Drives damage tiers & Detonation scaling.
-        this.heat = 0;
-        // heatTier: 0=NORMAL 1=WARM 2=HOT 3=OVERHEATED
-        this.heatTier = 0;
-
-        // ── REWORK: Melee Mode Toggle ─────────────────────────
-        // false = RANGE (Heat Wave), true = MELEE (Stand Rush)
-        // Only relevant while wanchaiActive. Toggled by F key.
-        this.meleeMode = false;
-
-        // ── REWORK: Ignite tracking (applied by Vacuum) ───────
-        // enemies[].igniteTimer and enemies[].igniteDPS are set directly
-        // on enemy objects. No local tracking needed on player.
 
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0, vacuum: 0, detonation: 0 };
 
@@ -671,7 +636,7 @@ class AutoPlayer extends Player {
     }
 
     takeDamage(amt) {
-        // ── Energy Shield block ───────────────────────────────
+        // ── Energy Shield block (checked before Wanchai reduction) ──
         if (this.isDashing) return;
         if (this.hasShield) {
             this.hasShield = false;
@@ -680,16 +645,13 @@ class AutoPlayer extends Player {
             if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
             return;
         }
-        // BUG-2 FIX: onGraph penalty lives in PlayerBase.takeDamage only.
-        // Removed duplicate here to prevent ×3.0 stacking.
-        const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.35) : 0;
+        // ── Graph Risk: ยืนบนเลเซอร์ → รับดาเมจ x1.5 ─────────
+        if (this.onGraph) {
+            amt *= 1.5;
+            spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16);
+        }
+        const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.30) : 0;  // fix: was 0.5 ≠ config 0.30
         const scaled = amt * (1 - reduction);
-
-        // ── REWORK: Heat gain from damage taken ───────────────
-        const heatGainPer1dmg = this.stats?.heatPerDamageTaken ?? 0.5;
-        const heatMult = (this.passiveUnlocked && (this.stats?.passiveHeatGainBonus ?? 1)) || 1;
-        this._addHeat(scaled * heatGainPer1dmg * heatMult);
-
         super.takeDamage(scaled);
     }
 
@@ -711,59 +673,10 @@ class AutoPlayer extends Player {
         return result;
     }
 
-    // ════════════════════════════════════════════════════
-    // 🌡️ HEAT GAUGE HELPERS
-    // ════════════════════════════════════════════════════
-
-    _addHeat(amount) {
-        const S = this.stats ?? {};
-        const heatMax = S.heatMax ?? 100;
-        this.heat = Math.min(heatMax, (this.heat ?? 0) + amount);
-        this._updateHeatTier();
-    }
-
-    _updateHeatTier() {
-        const S = this.stats ?? {};
-        const h = this.heat ?? 0;
-        const prevTier = this.heatTier;
-        if (h >= (S.heatTierOverheat ?? 100)) this.heatTier = 3;
-        else if (h >= (S.heatTierHot ?? 67)) this.heatTier = 2;
-        else if (h >= (S.heatTierWarm ?? 34)) this.heatTier = 1;
-        else this.heatTier = 0;
-
-        // Show tier-up text (once per tier crossing going up)
-        if (this.heatTier > prevTier) {
-            const labels = ['', '🔥 WARM', '🔥🔥 HOT!', '💥 OVERHEATED!'];
-            const colors = ['', '#f97316', '#ef4444', '#facc15'];
-            if (typeof spawnFloatingText === 'function')
-                spawnFloatingText(labels[this.heatTier], this.x, this.y - 60,
-                    colors[this.heatTier], this.heatTier === 3 ? 26 : 20);
-        }
-    }
-
-    _getHeatDmgMult() {
-        const S = this.stats ?? {};
-        switch (this.heatTier) {
-            case 3: return S.heatDmgOverheat ?? 1.50;
-            case 2: return S.heatDmgHot ?? 1.30;
-            case 1: return S.heatDmgWarm ?? 1.15;
-            default: return 1.0;
-        }
-    }
-
-    _getEffectivePunchRate() {
-        const S = this.stats ?? {};
-        const base = S.wanchaiPunchRate ?? 0.11;
-        switch (this.heatTier) {
-            case 3:
-            case 2: return base * (S.heatPunchRateHot ?? 0.70);
-            case 1: return base * (S.heatPunchRateWarm ?? 0.85);
-            default: return base;
-        }
-    }
-
     _activateWanchai() {
-        const dur = this.stats?.wanchaiDuration ?? BALANCE.characters?.auto?.wanchaiDuration ?? 8.0;
+        // WARN-1 FIX: BALANCE was refactored — correct path is
+        // BALANCE.characters.auto, not the stale BALANCE.player.auto
+        const dur = this.stats?.wanchaiDuration ?? BALANCE.characters?.auto?.wanchaiDuration ?? 3.0;
         const cd = this.stats?.wanchaiCooldown ?? BALANCE.characters?.auto?.wanchaiCooldown ?? 12;
 
         this.wanchaiActive = true;
@@ -771,71 +684,48 @@ class AutoPlayer extends Player {
         this.cooldowns.wanchai = cd;
         this._punchTimer = 0;
 
-        // REWORK: melee mode off by default (player picks when to melee)
-        this.meleeMode = false;
-
+        // ── Spawn WanchaiStand autonomous entity ─────────────
         this.wanchaiStand = new WanchaiStand(this);
 
-        const heatLabel = this.heatTier >= 3 ? ' 🌡️OVERHEATED' :
-            this.heatTier >= 2 ? ' 🔥HOT' :
-                this.heatTier >= 1 ? ' WARM' : '';
-        if (typeof spawnFloatingText === 'function')
-            spawnFloatingText(`STAND: WANCHAI!${heatLabel}`, this.x, this.y - 90, '#dc2626', 34);
-        if (typeof spawnParticles === 'function')
+        if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText('STAND: WANCHAI!', this.x, this.y - 90, '#dc2626', 34);
+        }
+        if (typeof spawnParticles === 'function') {
             spawnParticles(this.x, this.y, 18, '#dc2626', 'steam');
+        }
     }
 
     update(dt, keys, mouse) {
-        const S = this.stats ?? {};
-
-        // ── Cooldown ticks ────────────────────────────────────
         if (this.cooldowns?.wanchai > 0) this.cooldowns.wanchai -= dt;
         if (this.cooldowns?.shoot > 0) this.cooldowns.shoot -= dt;
         if (this.cooldowns?.vacuum > 0) this.cooldowns.vacuum -= dt;
         if (this.cooldowns?.detonation > 0) this.cooldowns.detonation -= dt;
 
-        // ── Wanchai timer ─────────────────────────────────────
         if (this.wanchaiActive) {
             this.wanchaiTimer -= dt;
             if (this.wanchaiTimer <= 0) {
                 this.wanchaiActive = false;
                 this.wanchaiTimer = 0;
-                this.meleeMode = false;
                 if (this.wanchaiStand) { this.wanchaiStand.active = false; this.wanchaiStand = null; }
+                // BUG-FIX (OVERHEATED spam): กัน heat wave ยิงทันทีที่ Wanchai จบ
+                // mouse.left ที่ค้างอยู่จะตกลง heat wave path ใน frame เดียวกัน
+                // ใส่ gap เล็กน้อยเพื่อ break the chain
+                this.cooldowns.shoot = Math.max(this.cooldowns.shoot ?? 0, 0.18);
             }
         }
 
-        // ── Tick WanchaiStand ─────────────────────────────────
+        // ── Tick WanchaiStand each frame ──────────────────────
         if (this.wanchaiStand?.active) this.wanchaiStand.update(dt);
 
-        // ── Decay rush fist overlay ───────────────────────────
+        // Decay player-owned rush fist overlay alpha
         if ((this._rushFistTimer ?? 0) > 0) {
             this._rushFistTimer -= dt;
             const _fade = Math.max(0, this._rushFistTimer / 0.10);
             if (this._rushFists) for (const f of this._rushFists) f.alpha = _fade;
         }
 
-        // ══════════════════════════════════════════════════════
-        // 🌡️ HEAT GAUGE UPDATE
-        // ══════════════════════════════════════════════════════
-        {
-            const heatMax = S.heatMax ?? 100;
-            const decayRate = this.wanchaiActive
-                ? (S.heatDecayRateActive ?? 0)
-                : (S.heatDecayRate ?? 8);
-            this.heat = Math.max(0, (this.heat ?? 0) - decayRate * dt);
-            this._updateHeatTier();
-
-            // Overheated HP drain
-            if (this.heatTier === 3) {
-                const drain = (S.heatHpDrainOverheat ?? 3) * dt;
-                this.hp = Math.max(1, this.hp - drain);
-            }
-        }
-
-        // ── R-Click: Activate Wanchai ─────────────────────────
         if (checkInput('rightClick')) {
-            const energyCost = S.wanchaiEnergyCost ?? 25;
+            const energyCost = this.stats?.wanchaiEnergyCost ?? 32;  // fix: was 35 ≠ config 32
             if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
                 this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
                 this._activateWanchai();
@@ -843,46 +733,27 @@ class AutoPlayer extends Player {
             }
         }
 
-        // ── F key / Middle-Click: Toggle Melee Mode ───────────
-        // Only toggleable while Wanchai is active.
-        if (this.wanchaiActive) {
-            const togglePressed = checkInput('f') ||
-                (mouse?.middleJustPressed === true);
-            if (togglePressed) {
-                this.meleeMode = !this.meleeMode;
-                const modeLabel = this.meleeMode ? '👊 MELEE MODE' : '🔥 RANGE MODE';
-                const modeColor = this.meleeMode ? '#fb923c' : '#38bdf8';
-                if (typeof spawnFloatingText === 'function')
-                    spawnFloatingText(modeLabel, this.x, this.y - 50, modeColor, 18);
-                if (typeof consumeInput === 'function') consumeInput('f');
-                if (mouse) mouse.middleJustPressed = false;
-            }
-        } else {
-            // Auto-reset to Range mode when Wanchai ends
-            this.meleeMode = false;
-        }
-
-        // ── Speed buff while Wanchai active ───────────────────
         const oldSpeedBoost = this.speedBoost;
-        if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * (S.standSpeedMod ?? 1.5);
+        // Apply Awakening speed buff instead of slowing down
+        if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * (this.stats?.standSpeedMod ?? 1.5);
 
         super.update(dt, keys, mouse);
 
+        // ── Tick graphBuffTimer ────────────────────────────────
         if ((this.graphBuffTimer ?? 0) > 0) this.graphBuffTimer = Math.max(0, this.graphBuffTimer - dt);
+
+        // Stateless restore
         this.speedBoost = oldSpeedBoost;
 
-        // ══════════════════════════════════════════════════════
-        // Q: VACUUM HEAT — Pull + Ignite + Heat gain
-        // ══════════════════════════════════════════════════════
+        // ── Q: Vacuum Heat — ดูดศัตรูเข้ามากอง ────────────────────
+        // กด Q ดึงทุกตัวในรัศมี 320px เข้าหาออโต้ทันที
+        // cooldown 8 วินาที | ออกแบบให้ combo กับ Wanchai
+        if (mouse?.middle !== undefined) { /* placeholder */ }
         if (checkInput('q') && (this.cooldowns?.vacuum ?? 0) <= 0) {
-            const VACUUM_RANGE = S.vacuumRange ?? 340;
-            const VACUUM_FORCE = S.vacuumForce ?? 1600;
-            const STUN_DUR = S.vacuumStunDur ?? 0.50;
-            const PULL_DUR = S.vacuumPullDur ?? 0.45;
-            const VACUUM_DMG = S.vacuumDamage ?? 18;
-            const IGNITE_DUR = S.vacuumIgniteDuration ?? 1.5;
-            const IGNITE_DPS = S.vacuumIgniteDPS ?? 12;
-            const HEAT_GAIN = S.vacuumHeatGain ?? 25;
+            const VACUUM_RANGE = this.stats?.vacuumRange ?? 320;
+            const VACUUM_FORCE = this.stats?.vacuumForce ?? 1400; // stronger impulse
+            const STUN_DUR = this.stats?.vacuumStunDur ?? 0.55; // AI lock duration
+            const PULL_DUR = this.stats?.vacuumPullDur ?? 0.45; // continuous pull
 
             let pulled = 0;
             for (const enemy of (window.enemies || [])) {
@@ -891,20 +762,19 @@ class AutoPlayer extends Player {
                 const dy = this.y - enemy.y;
                 const d = Math.hypot(dx, dy);
                 if (d < VACUUM_RANGE && d > 1) {
+                    // ── Impulse + AI-stun so enemy.update() cannot override vx/vy ──
                     enemy.vx = (dx / d) * VACUUM_FORCE;
                     enemy.vy = (dy / d) * VACUUM_FORCE;
+                    // vacuumStunTimer: enemy.js checks this and skips vx/vy override
                     enemy.vacuumStunTimer = STUN_DUR;
+                    // Continuous pull target — enemy.js lerps toward this position
                     enemy._vacuumTargetX = this.x;
                     enemy._vacuumTargetY = this.y;
                     enemy._vacuumPullTimer = PULL_DUR;
-                    // REWORK: apply Ignite debuff + initial pull damage
-                    enemy.igniteTimer = IGNITE_DUR;
-                    enemy.igniteDPS = IGNITE_DPS * (this.damageMultiplier || 1.0);
-                    enemy.takeDamage(VACUUM_DMG * (this.damageMultiplier || 1.0));
                     pulled++;
                 }
             }
-            // Boss: weak pull, no Ignite
+            // Boss — weak pull (30%)
             if (window.boss && !window.boss.dead) {
                 const dx = this.x - window.boss.x;
                 const dy = this.y - window.boss.y;
@@ -915,13 +785,8 @@ class AutoPlayer extends Player {
                     window.boss.vacuumStunTimer = STUN_DUR * 0.4;
                 }
             }
-
-            this.cooldowns.vacuum = S.vacuumCooldown ?? 6;
-
-            if (pulled > 0) {
-                // REWORK: gain Heat on successful vacuum
-                const heatMult = (this.passiveUnlocked && S.passiveHeatGainBonus) || 1;
-                this._addHeat(HEAT_GAIN * heatMult);
+            this.cooldowns.vacuum = this.stats?.vacuumCooldown ?? 8;
+            if (pulled > 0 || (window.boss && !window.boss.dead)) {
                 spawnParticles(this.x, this.y, 40, '#f97316');
                 addScreenShake(6);
                 spawnFloatingText(`🔥 VACUUM HEAT ×${pulled}`, this.x, this.y - 60, '#f97316', 24);
@@ -931,144 +796,108 @@ class AutoPlayer extends Player {
             consumeInput('q');
         }
 
-        // ══════════════════════════════════════════════════════
-        // E: OVERHEAT DETONATION — Heat-scaled, does NOT end Wanchai
-        // ══════════════════════════════════════════════════════
+        // ── E: Overheat Detonation — ระเบิดสแตนด์ทิ้งปิดฉาก ─────
+        // กด E ระหว่าง Wanchai active เท่านั้น
+        // AOE 220px, ดาเมจสูง, แต่ Wanchai สิ้นสุดทันที
         if (checkInput('e') && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
-            const heatNow = this.heat ?? 0;
-            const isOverheated = this.heatTier === 3;
-            const DET_RANGE = (S.detonationRange ?? 240) * (isOverheated ? 1.5 : 1.0);
-            const baseDmg = S.detonationBaseDamage ?? 80;
-            const heatScale = S.detonationHeatScaling ?? 2.5;
-            let detFinalDmg = (baseDmg + heatNow * heatScale) * (this.damageMultiplier || 1.0);
+            const DET_RANGE = this.stats?.detonationRange ?? 220;
+            // ดาเมจ = wanchaiDamage × 6 (burst ทิ้ง 6 หมัดพร้อมกัน)
+            const detBaseDmg = (this.stats?.wanchaiDamage ?? 32) * 6 * (this.damageMultiplier || 1.0);
+            let detCrit = this.baseCritChance + (this.stats?.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
+            let detIsCrit = Math.random() < detCrit;
+            let detFinalDmg = detBaseDmg * (detIsCrit ? (this.stats?.critMultiplier ?? 2.0) : 1.0);
 
-            const detCrit = (this.baseCritChance ?? 0.06)
-                + (S.standCritBonus ?? 0.25)
-                + (isOverheated ? (S.heatCritBonusOverheat ?? 0.20) : 0);
-            const detIsCrit = Math.random() < detCrit;
-            if (detIsCrit) {
-                detFinalDmg *= (S.critMultiplier ?? 2.2);
-                if (this.passiveUnlocked) this.goldenAuraTimer = 1;
-            }
-            if (this.isSecondWind) detFinalDmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
+            // ── Second Wind bonus ──
+            if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
 
             let totalDet = 0;
             for (const enemy of (window.enemies || [])) {
                 if (enemy.dead) continue;
-                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) < DET_RANGE) {
-                    const _preHp = enemy.hp ?? 0;
+                const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                if (dist < DET_RANGE) {
                     enemy.takeDamage(detFinalDmg);
-                    totalDet += Math.min(detFinalDmg, _preHp);
+                    totalDet += detFinalDmg;
                     spawnParticles(enemy.x, enemy.y, 5, detIsCrit ? '#facc15' : '#dc2626');
                 }
             }
             if (window.boss && !window.boss.dead) {
-                if (Math.hypot(window.boss.x - this.x, window.boss.y - this.y) < DET_RANGE + window.boss.radius) {
-                    const _preHp = window.boss.hp ?? 0;
+                const dist = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+                if (dist < DET_RANGE + window.boss.radius) {
                     window.boss.takeDamage(detFinalDmg);
-                    totalDet += Math.min(detFinalDmg, _preHp);
+                    totalDet += detFinalDmg;
                     spawnParticles(window.boss.x, window.boss.y, 8, detIsCrit ? '#facc15' : '#dc2626');
                 }
             }
 
-            // Lifesteal from actual damage dealt
-            if (this.passiveUnlocked && totalDet > 0)
-                this.hp = Math.min(this.maxHp, this.hp + totalDet * (S.passiveLifesteal ?? 0.025));
+            // Lifesteal จากดาเมจที่ทำได้
+            if (this.passiveUnlocked && totalDet > 0) {
+                this.hp = Math.min(this.maxHp, this.hp + totalDet * (this.stats?.passiveLifesteal ?? 0.01));
+            }
 
-            // REWORK: do NOT end Wanchai. Drain 50 Heat instead.
-            this.heat = Math.max(0, (this.heat ?? 0) - 50);
-            this._updateHeatTier();
-            this.cooldowns.detonation = S.detonationCooldown ?? 8;
+            // ── บังคับปิด Wanchai + Stand ──
+            this.wanchaiActive = false;
+            this.wanchaiTimer = 0;
+            if (this.wanchaiStand) { this.wanchaiStand.active = false; this.wanchaiStand = null; }
+            this.cooldowns.detonation = this.stats?.detonationCooldown ?? 5; // short CD เพราะต้องเปิด Wanchai ก่อน
 
             spawnParticles(this.x, this.y, 60, '#dc2626');
-            addScreenShake(isOverheated ? 16 : 10);
-            const detText = isOverheated
-                ? (detIsCrit ? '💥 OVERHEAT CRIT! ×1.5' : '💥 OVERHEAT BLAST! ×1.5')
-                : (detIsCrit ? '💥 DETONATE CRIT!' : '💥 DETONATE!');
-            spawnFloatingText(detText, this.x, this.y - 70, detIsCrit ? '#facc15' : '#dc2626', 28);
+            addScreenShake(10);
+            spawnFloatingText(
+                detIsCrit ? '💥 OVERHEAT CRIT!' : '💥 OVERHEAT!',
+                this.x, this.y - 70,
+                detIsCrit ? '#facc15' : '#dc2626', 28
+            );
             if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
             consumeInput('e');
         }
 
-        // ══════════════════════════════════════════════════════
-        // L-CLICK: ATTACK — dual-mode during Wanchai
-        // ══════════════════════════════════════════════════════
+
+
+        // Reset attack state every frame
         this.isStandAttacking = false;
 
-        if (mouse && mouse.left === 1) {
-            if (this.wanchaiActive) {
-                // ── Direct Stand toward cursor regardless of mode ──
-                if (this.wanchaiStand?.active) {
-                    this.wanchaiStand._forcedTargetX = mouse.wx;
-                    this.wanchaiStand._forcedTargetY = mouse.wy;
-                }
-
-                if (this.meleeMode) {
-                    // ── MELEE MODE: Stand Rush player punch ───────
-                    this.isStandAttacking = true;
-                    if ((this.cooldowns?.shoot ?? 0) <= 0) {
-                        this.cooldowns.shoot = S.playerMeleeCooldown ?? 0.12;
-                        this._doPlayerMelee(mouse);
-                    }
-                } else {
-                    // ── RANGE MODE: Heat Wave (ยิงได้ปกติแม้ Wanchai active) ──
-                    if ((this.cooldowns?.shoot ?? 0) <= 0) {
-                        if (typeof projectileManager !== 'undefined' && projectileManager) {
-                            this.cooldowns.shoot = S.heatWaveCooldown ?? 0.22;
-                            if (typeof projectileManager.spawnHeatWave === 'function') {
-                                projectileManager.spawnHeatWave(this, this.angle);
-                            } else {
-                                try { projectileManager.add(new Projectile(this.x, this.y, this.angle, 900, 22, '#dc2626', false, 'player')); } catch (e) { }
-                            }
-                            // REWORK: Heat Wave also gains Heat
-                            const heatMult = (this.passiveUnlocked && S.passiveHeatGainBonus) || 1;
-                            this._addHeat((S.heatPerPlayerHit ?? 8) * heatMult);
-                            if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
-                        }
-                    }
-                }
-            } else {
-                // ── No Wanchai: normal Heat Wave only ─────────────
-                if ((this.cooldowns?.shoot ?? 0) <= 0) {
-                    if (typeof projectileManager !== 'undefined' && projectileManager) {
-                        this.cooldowns.shoot = S.heatWaveCooldown ?? 0.22;
-                        if (typeof projectileManager.spawnHeatWave === 'function') {
-                            projectileManager.spawnHeatWave(this, this.angle);
-                        } else {
-                            try { projectileManager.add(new Projectile(this.x, this.y, this.angle, 900, 22, '#dc2626', false, 'player')); } catch (e) { }
-                        }
-                        const heatMult = (this.passiveUnlocked && S.passiveHeatGainBonus) || 1;
-                        this._addHeat((S.heatPerPlayerHit ?? 8) * heatMult);
-                        if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
-                    }
-                }
+        // Wanchai active: L-Click = player melee Stand Rush (stand punches autonomously too)
+        if (this.wanchaiActive && mouse && mouse.left === 1) {
+            this.isStandAttacking = true;
+            if (this.wanchaiStand?.active) {
+                this.wanchaiStand._forcedTargetX = mouse.wx;
+                this.wanchaiStand._forcedTargetY = mouse.wy;
             }
+            if ((this.cooldowns?.shoot ?? 0) <= 0) {
+                this.cooldowns.shoot = this.stats?.playerRushCooldown ?? 0.10;
+                this._doPlayerMelee(mouse);
+            }
+            return;
         }
 
-        // ── Heat shimmer particles (BUG-8 FIX: in update, not draw) ──
-        if (typeof spawnParticles === 'function' &&
-            (Math.abs(this.vx) + Math.abs(this.vy)) > 60 &&
-            Math.random() < 0.1) {
-            spawnParticles(this.x + rand(-10, 10), this.y + rand(-10, 10), 1, '#fb7185', 'steam');
+        if (!mouse || mouse.left !== 1) return;
+        if (typeof projectileManager === 'undefined' || !projectileManager) return;
+
+        const heatCd = this.stats?.heatWaveCooldown ?? 0.28;
+        if ((this.cooldowns?.shoot ?? 0) > 0) return;
+        this.cooldowns.shoot = heatCd;
+
+        if (typeof projectileManager.spawnHeatWave === 'function') {
+            projectileManager.spawnHeatWave(this, this.angle);
+        } else {
+            try {
+                projectileManager.add(new Projectile(this.x, this.y, this.angle, 900, 22, '#dc2626', false, 'player'));
+            } catch (e) { }
         }
+        if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
     }
 
-    // ── REWORK: Player melee punch (MELEE MODE) ───────────────
-    // Range: playerMeleeRange (200px base), extends to playerMeleeRangeFar (320px) at HOT+
-    // Damage: scaled by Heat tier mult
-    // Heat: +heatPerPlayerHit on hit
+    // Player melee punch during Stand Rush
+    // Finds nearest enemy within playerRushRange of cursor, deals wanchaiDamage
     _doPlayerMelee(mouse) {
         const S = this.stats ?? {};
-        // REWORK: range extends at HOT+ tier
-        const baseRange = S.playerMeleeRange ?? 200;
-        const farRange = S.playerMeleeRangeFar ?? 320;
-        const range = (this.heatTier >= 2) ? farRange : baseRange;
+        const range = S.playerRushRange ?? 85;
         const cx = mouse?.wx ?? this.x;
         const cy = mouse?.wy ?? this.y;
 
         // Find nearest enemy to cursor within range
         let target = null;
-        let bestD = range;
+        let bestD = range + 60;
         for (const e of (window.enemies || [])) {
             if (e.dead) continue;
             const d = Math.hypot(e.x - cx, e.y - cy);
@@ -1080,26 +909,37 @@ class AutoPlayer extends Player {
         }
 
         if (!target) {
+            // BUG-FIX (miss no animation): spawn fist overlay ที่ cursor แม้จะ miss
+            this._rushFists = this._rushFists ?? [];
+            this._rushFists.length = 0;
+            for (let i = 0; i < 4; i++) {
+                this._rushFists.push({
+                    ox: 30 + Math.random() * 55,
+                    oy: (Math.random() - 0.5) * 50,
+                    sc: 0.35 + Math.random() * 0.45,
+                    alpha: 0.55  // ← จางกว่า hit เพื่อบ่งบอกว่า miss
+                });
+            }
+            this._rushFistTimer = 0.08;
+            // Miss VFX + sound
             if (typeof spawnParticles === 'function') spawnParticles(cx, cy, 2, '#ef4444');
             if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
             return;
         }
 
-        // Teleport Stand to near target for visual snap
+        // Stand Rush fires toward cursor — Stand teleports to target, no range gate
+        // Direct the WanchaiStand to rush that target immediately
         if (this.wanchaiStand?.active) {
             this.wanchaiStand.x = target.x - Math.cos(this.angle) * 20;
             this.wanchaiStand.y = target.y - Math.sin(this.angle) * 20;
         }
 
-        // ── Damage calc with Heat tier mult ──────────────────
-        let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0) * this._getHeatDmgMult();
-        let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);
-        // Overheated bonus crit
-        if (this.heatTier === 3) critChance += (S.heatCritBonusOverheat ?? 0.20);
+        let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0);
+        let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
-            dmg *= (S.critMultiplier ?? 2.2);
+            dmg *= (S.critMultiplier ?? 2.0);
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
             if (typeof Achievements !== 'undefined') {
                 Achievements.stats.crits = (Achievements.stats.crits ?? 0) + 1;
@@ -1108,18 +948,10 @@ class AutoPlayer extends Player {
         }
         if (this.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
 
-        // BUG-12 FIX: lifesteal from actual HP dealt, not raw dmg
-        const _preHp = target.hp ?? 0;
         target.takeDamage(dmg, this);
-        const _actualDmg = Math.min(dmg, _preHp);
 
-        // Lifesteal
         if (this.passiveUnlocked)
-            this.hp = Math.min(this.maxHp, this.hp + _actualDmg * (S.passiveLifesteal ?? 0.025));
-
-        // REWORK: Heat gain on melee hit
-        const heatMult = (this.passiveUnlocked && S.passiveHeatGainBonus) || 1;
-        this._addHeat((S.heatPerPlayerHit ?? 8) * heatMult);
+            this.hp = Math.min(this.maxHp, this.hp + dmg * (S.passiveLifesteal ?? 0.01));  // BUG-4 fix: was 0.02
 
         // Knockback
         const ka = Math.atan2(target.y - this.y, target.x - this.x);
@@ -1127,7 +959,7 @@ class AutoPlayer extends Player {
         target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
         target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
-        // VFX
+        // VFX + sound
         if (typeof spawnParticles === 'function')
             spawnParticles(target.x, target.y, isCrit ? 6 : 3, isCrit ? '#facc15' : '#ef4444');
         if (typeof addScreenShake === 'function') addScreenShake(isCrit ? 4 : 2);
@@ -1135,7 +967,7 @@ class AutoPlayer extends Player {
             spawnFloatingText('ORA!', this.x, this.y - 45, '#facc15', 20);
         if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
 
-        // Rush fist overlay (precomputed in update, drawn by PlayerRenderer)
+        // Precompute rush fist positions for overlay (drawn by PlayerRenderer)
         this._rushFists = this._rushFists ?? [];
         this._rushFists.length = 0;
         for (let i = 0; i < 7; i++) {
@@ -1148,12 +980,12 @@ class AutoPlayer extends Player {
         }
         this._rushFistTimer = 0.10;
 
+        // Sync combo into WanchaiStand so ORA counter escalates
         if (this.wanchaiStand) {
             this.wanchaiStand._punchPhase = 2;
             this.wanchaiStand._phaseTimer = 0.10;
         }
 
-        // Achievement
         if (typeof Achievements !== 'undefined' && target.hp <= 0) {
             Achievements.stats.standRushKills = (Achievements.stats.standRushKills ?? 0) + 1;
             Achievements.check?.('stand_rush_kill');
@@ -1177,34 +1009,18 @@ AutoPlayer.prototype.updateUI = function () {
 
     if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
         UIManager._setCooldownVisual('dash-icon',
-            Math.max(0, this.cooldowns.dash), S.dashCooldown || 1.7);
+            Math.max(0, this.cooldowns.dash), S.dashCooldown || 2.0);
     }
 
-    // ── REWORK: Heat Gauge bar ───────────────────────────────
-    // Looks for element id="heat-bar" or falls back to energy bar tint
-    const heatBarEl = document.getElementById('heat-bar');
-    const heatPct = ((this.heat ?? 0) / (S.heatMax ?? 100)) * 100;
-    if (heatBarEl) {
-        heatBarEl.style.width = `${heatPct}%`;
-        const tierColors = ['#f97316', '#ef4444', '#dc2626', '#facc15'];
-        heatBarEl.style.background = tierColors[this.heatTier ?? 0];
-        heatBarEl.style.boxShadow = (this.heatTier ?? 0) >= 3
-            ? '0 0 12px rgba(250,204,21,0.8)' : '';
-    }
-
-    // ── Wanchai stand icon + mode toggle indicator ──────────
+    // WARN-1 FIX: use BALANCE.characters.auto (correct path after refactor)
     const wanchaiCd = S.wanchaiCooldown || BALANCE.characters?.auto?.wanchaiCooldown || 12;
     const standEl = document.getElementById('stealth-icon');
+
 
     const skill1Emoji = document.getElementById('skill1-emoji');
     const skill1Hint = document.getElementById('skill1-hint');
     if (skill1Emoji) skill1Emoji.textContent = this.wanchaiActive ? '🥊' : '🔥';
-    if (skill1Hint) {
-        // Show mode indicator during Wanchai
-        skill1Hint.textContent = this.wanchaiActive
-            ? (this.meleeMode ? '👊 MELEE [F]' : '🔥 RANGE [F]')
-            : 'R-Click';
-    }
+    if (skill1Hint) skill1Hint.textContent = 'R-Click';
     if (standEl) standEl.style.borderColor = '#dc2626';
     if (standEl) standEl.style.boxShadow = this.wanchaiActive
         ? '0 0 20px rgba(220,38,38,0.80)'
@@ -1212,15 +1028,17 @@ AutoPlayer.prototype.updateUI = function () {
 
     if (this.wanchaiActive) {
         standEl?.classList.add('active');
-        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual)
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('stealth-icon', 0, wanchaiCd);
+        }
         const iconLabelEl = standEl?.querySelector('.skill-name');
         if (iconLabelEl) iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
     } else {
         standEl?.classList.remove('active');
-        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual)
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('stealth-icon',
                 Math.max(0, this.cooldowns.wanchai ?? 0), wanchaiCd);
+        }
     }
 
     const levelEl = document.getElementById('player-level');
@@ -1228,12 +1046,12 @@ AutoPlayer.prototype.updateUI = function () {
     const expBar = document.getElementById('exp-bar');
     if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
 
-    // Q / E cooldown visuals
+    // INC-4 fix: Q / E cooldown visuals (was missing entirely)
     if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
         UIManager._setCooldownVisual('q-icon',
-            Math.max(0, this.cooldowns.vacuum ?? 0), S.vacuumCooldown ?? 6);
+            Math.max(0, this.cooldowns.vacuum ?? 0), S.vacuumCooldown ?? 8);
         UIManager._setCooldownVisual('e-icon',
-            Math.max(0, this.cooldowns.detonation ?? 0), S.detonationCooldown ?? 8);
+            Math.max(0, this.cooldowns.detonation ?? 0), S.detonationCooldown ?? 5);
     }
 
     const passiveEl = document.getElementById('passive-skill');

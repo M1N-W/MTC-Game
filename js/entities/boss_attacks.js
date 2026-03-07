@@ -3,19 +3,18 @@
  * js/entities/boss_attacks.js
  *
  * All projectiles, effects, and minions spawned BY bosses.
- * Boss entity classes (Boss, BossDog, BossFirst) live in boss.js.
+ * Boss entity classes (KruManop, KruFirst, BossDog) live in boss.js.
  *
  * Load order: must be loaded BEFORE boss.js
  *
  * ── Contents ────────────────────────────────────────────────
- *   BarkWave           — Sonic cone from Boss bark (Phase 2)
+ *   BarkWave           — Sonic cone from KruManop bark (Phase 2)
  *   GoldfishMinion     — Kamikaze sine-wave chaser (Phase 3)
  *   BubbleProjectile   — Slow AoE projectile (Phase 3)
- *   FreeFallWarningRing — Visual AoE warning indicator (BossFirst)
+ *   FreeFallWarningRing — Visual AoE warning indicator (KruFirst)
  */
-
 // ════════════════════════════════════════════════════════════
-// 🌊 BARK WAVE — Sonic cone emitted by Boss's bark attack
+// 🌊 BARK WAVE — Sonic cone emitted by KruManop's bark attack
 // ════════════════════════════════════════════════════════════
 class BarkWave {
     constructor(x, y, angle, coneHalf, range) {

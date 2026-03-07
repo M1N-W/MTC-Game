@@ -2,30 +2,96 @@
 /**
  * js/entities/boss.js
  *
- * ► BossDog — "DOG" — Summoned by Kru Manop in Phase 2.
- * Standalone aggressive melee chaser.
+ * Class hierarchy (refactored):
  *
- * ► Boss — "KRU MANOP THE DOG SUMMONER"
- * Phase 1 (normal ranged attacks)
- * Phase 2 (enraged + summons BossDog; fights continue ranged)
- * States: CHASE | ATTACK | ULTIMATE
- * Skills: equationSlam | deadlyGraph | log457 | bark (phase 2 only)
+ *   BossBase extends Entity          ← shared lifecycle (speak, takeDamage, HUD)
+ *   ├── KruManop extends BossBase    ← "Kru Manop the Dog Summoner"
+ *   │     Phase 1: ranged + skills
+ *   │     Phase 2: enrage + summon BossDog (หมา — melee enforcer)
+ *   │     Phase 3: GoldfishLover — summon GoldfishMinion + BubbleProjectile
+ *   └── KruFirst extends BossBase    ← "Kru First the Physics Master"
+ *         Encounter 2 / 4 variants (isAdvanced)
  *
- * Depends on: base.js  (Entity)
- * player.js (BarkWave)
- * game.js   (Gemini global mock — must be loaded before this file)
+ *   BossDog extends Entity
+ *     Conceptually a sub-unit of KruManop Phase 2 (not an independent boss).
+ *     Lives in window.enemies so it shares the normal enemy update/draw loop.
+ *     KruManop holds this.dog → reference back to the BossDog instance for
+ *     ownership queries (e.g. this.dog?.dead). BossDog.owner → KruManop.
  *
- * ────────────────────────────────────────────────────────────────
- * REFACTOR NOTES (Phase 2 Dog Summon)
- * ────────────────────────────────────────────────────────────────
- * ✅ BossDog class — standalone melee entity; migrated dog drawing from Boss._drawDog().
- * Coordinates shifted by (-6, -28) so dog body is centred on entity origin.
- * ✅ Boss no longer uses isRider / dogLegTimer / _drawDog.
- * enablePhase2 flag (set by game.js based on encounter) controls Phase 2 activation.
- * Encounter 1 (Wave 3): enablePhase2=false → Phase 1 only.
- * Encounter 2+ (Wave 6, 9): enablePhase2=true → summons BossDog on HP threshold.
- * ✅ MOD EXPORTS — module.exports now lists { Boss, BossDog }.
+ * Backward-compat aliases kept on window:
+ *   window.Boss      = KruManop
+ *   window.BossFirst = KruFirst
+ *
+ * Depends on: base.js (Entity), game.js (Gemini mock)
  */
+
+// ════════════════════════════════════════════════════════════
+// 🏛️ BOSS BASE — Shared lifecycle for all boss entities
+// ════════════════════════════════════════════════════════════
+class BossBase extends Entity {
+    constructor(x, y, radius) {
+        super(x, y, radius);
+        // ── Shared state ──────────────────────────────────────
+        this.name = 'BOSS';
+        this.difficulty = 1;
+        this.sayTimer = 0;
+        this.hitFlashTimer = 0;
+        // Race-condition guard: prevents double startNextWave() on rapid hits
+        this._waveSpawnLocked = false;
+        // Poom sticky stack tracker (shared across boss types)
+        this.stickyStacks = 0;
+    }
+
+    // ── Shared: Gemini speech ─────────────────────────────────
+    async speak(context) {
+        // Gemini global mock (game.js) guarantees this is always defined.
+        // Returns '' when ai.js is offline → UIManager branch is a no-op.
+        try {
+            const text = await Gemini.getBossTaunt(context);
+            if (text && window.UIManager) window.UIManager.showBossSpeech(text);
+        } catch (e) {
+            console.debug(`[${this.name}] Speech unavailable:`, e);
+        }
+    }
+
+    // ── Shared: HUD tick (call once per update frame) ─────────
+    _updateHUD() {
+        if (window.UIManager) {
+            window.UIManager.updateBossHUD(this);
+            window.UIManager.updateBossSpeech(this);
+        }
+    }
+
+    // ── Shared: death cleanup ─────────────────────────────────
+    // Subclasses call super.takeDamage() or override _onDeath().
+    _onDeath() {
+        this.dead = true;
+        this.hp = 0;
+        spawnParticles(this.x, this.y, 60, '#dc2626');
+        spawnFloatingText('CLASS DISMISSED!', this.x, this.y, '#facc15', 35);
+        addScore(BALANCE.score.boss * this.difficulty);
+        if (window.UIManager) window.UIManager.updateBossHUD(null);
+        Audio.playAchievement();
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => window.powerups.push(
+                new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))
+            ), i * 200);
+        }
+        // WARN-9: set flag BEFORE nulling window.boss so achievement check fires
+        window.lastBossKilled = true;
+        window.boss = null;
+        setTimeout(() => {
+            setWave(getWave() + 1);
+            if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
+            else if (typeof window.startNextWave === 'function') window.startNextWave();
+        }, BALANCE.boss.nextWaveDelay);
+    }
+
+    // Subclasses must override takeDamage() and call _onDeath() on death,
+    // or call super.takeDamage() if they have no additional guards.
+}
+
+
 
 // ════════════════════════════════════════════════════════════
 // 🐕 BOSS DOG — "DOG" (Summoned Standalone Melee Unit)
@@ -58,13 +124,6 @@ class BossDog extends Entity {
             this.vy = (dy / d) * this.moveSpeed;
         }
         this.applyPhysics(dt);
-
-        // ── Ignite debuff (from AutoPlayer Vacuum Heat) ───────
-        if ((this.igniteTimer ?? 0) > 0) {
-            this.igniteTimer -= dt;
-            this.takeDamage((this.igniteDPS ?? 12) * dt);
-            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
-        }
 
         // Melee contact damage
         if (d < this.radius + player.radius) {
@@ -178,18 +237,24 @@ class BossDog extends Entity {
 }
 
 // ════════════════════════════════════════════════════════════
-// 👑 BOSS — "KRU MANOP THE DOG SUMMONER"
+// 👑 KRU MANOP — "THE DOG SUMMONER"
+//
+// Encounter 1 (Wave 3):  KruManop(diff, false, false)  → Phase 1 only
+// Encounter 2 (Wave 6):  KruManop(diff, true,  false)  → Phase 1 + 2
+// Encounter 3 (Wave 9):  KruManop(diff, true,  true)   → Phase 1 + 2 + 3
+//
+// Phase 1: ranged attacks (equationSlam, deadlyGraph, log457, matrixGrid, domain)
+// Phase 2: enrage + BossDog summon + bark skill
+// Phase 3: GoldfishLover — goldfish swarm + bubble volley
 // ════════════════════════════════════════════════════════════
-class Boss extends Entity {
+class KruManop extends BossBase {
     /**
-     * @param {number}  difficulty  - HP/score multiplier (bossLevel from game.js)
-     * @param {boolean} enablePhase2 - true from encounter 2 onward; enables dog summon
-     * @param {boolean} enablePhase3 - true on encounter 3 (Wave 9); enables Goldfish Lover
+     * @param {number}  difficulty   - HP/score multiplier (bossLevel from game.js)
+     * @param {boolean} enablePhase2 - enables dog summon on HP threshold
+     * @param {boolean} enablePhase3 - enables GoldfishLover on HP threshold
      */
     constructor(difficulty = 1, enablePhase2 = false, enablePhase3 = false) {
         super(0, BALANCE.boss.spawnY, BALANCE.boss.radius);
-        // Boss HP scales per encounter using hpMultiplier from config
-        // Encounter 1: baseHp × 1, Encounter 2: baseHp × 1.25, Encounter 3: baseHp × 1.5625
         const encounterMult = Math.pow(BALANCE.boss.hpMultiplier, difficulty - 1);
         this.maxHp = Math.floor(BALANCE.boss.baseHp * encounterMult);
         this.hp = this.maxHp;
@@ -199,10 +264,12 @@ class Boss extends Entity {
         this.moveSpeed = BALANCE.boss.moveSpeed;
         this.difficulty = difficulty;
         this.phase = 1;
-        this.sayTimer = 0;
         this.enablePhase2 = enablePhase2;
         this.enablePhase3 = enablePhase3;
-        this.dogSummoned = false;
+        // Phase 2 sub-unit: BossDog is conceptually part of KruManop.
+        // this.dog holds the live BossDog instance (null before summon / after death).
+        // Access: this.dog?.dead  ← check if dog is still alive
+        this.dog = null;
 
         this.skills = {
             slam: { cd: 0, max: BALANCE.boss.slamCooldown },
@@ -212,7 +279,7 @@ class Boss extends Entity {
             goldfish: { cd: 0, max: BALANCE.boss.phase3.goldfishCooldown },
             bubble: { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown },
             matrixGrid: { cd: 0, max: 22.0 },
-            domain: { cd: 0, max: _DC ? _DC.COOLDOWN : 45.0 }
+            domain: { cd: 0, max: _DC ? _DC.COOLDOWN : 45.0 },
         };
         this._domainCasting = false;
         this._domainActive = false;
@@ -222,10 +289,6 @@ class Boss extends Entity {
         this.log457AttackBonus = 0;
         this.isInvulnerable = false;
         this.isEnraged = false;
-        // BUG-4: lock flag prevents double startNextWave() from rapid damage hits
-        this._waveSpawnLocked = false;
-        // ── Poom sticky stack tracker (ไม่ใช้ StatusEffect framework) ──
-        this.stickyStacks = 0;
     }
 
     update(dt, player) {
@@ -253,14 +316,7 @@ class Boss extends Entity {
             spawnParticles(this.x, this.y, 35, '#ef4444');
             spawnParticles(this.x, this.y, 20, '#d97706');
 
-            // Summon Dog as a standalone enemy
-            if (!this.dogSummoned) {
-                this.dogSummoned = true;
-                if (Array.isArray(window.enemies)) {
-                    window.enemies.push(new BossDog(this.x, this.y));
-                }
-                spawnFloatingText('🐕 GO GET \'EM!', this.x, this.y - 120, '#d97706', 32);
-            }
+            this._summonDog();
 
             this.speak('You think you can stop me?!');
             Audio.playBossSpecial();
@@ -356,7 +412,7 @@ class Boss extends Entity {
         // Freeze all AI while domain is running — DomainExpansion.update() drives it
         if (this._domainActive) {
             this.vx = 0; this.vy = 0;
-            if (window.UIManager) { window.UIManager.updateBossHUD(this); window.UIManager.updateBossSpeech(this); }
+            if (window.UIManager) { this._updateHUD(); }
             return;
         }
         // Safety: if domain ended but state wasn't reset (e.g. frame gap), recover
@@ -416,21 +472,10 @@ class Boss extends Entity {
             }
         }
 
-        // ── Ignite debuff (from AutoPlayer Vacuum Heat) ───────
-        // Boss takes reduced Ignite — 40% effectiveness (tank identity)
-        if ((this.igniteTimer ?? 0) > 0) {
-            this.igniteTimer -= dt;
-            this.takeDamage((this.igniteDPS ?? 12) * dt * 0.4);
-            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
-        }
-
         if (d < this.radius + player.radius)
             player.takeDamage(BALANCE.boss.contactDamage * dt * (1 + this.log457AttackBonus));
 
-        if (window.UIManager) {
-            window.UIManager.updateBossHUD(this);
-            window.UIManager.updateBossSpeech(this);
-        }
+        this._updateHUD();
     }
 
     bark(player) {
@@ -458,6 +503,20 @@ class Boss extends Entity {
         spawnParticles(this.x, this.y, 12, '#d97706');
         Audio.playBossSpecial();
         this.speak('BARK BARK BARK!');
+    }
+
+    // ── Phase 2: Summon the Dog ─────────────────────────
+    // BossDog is a sub-unit of KruManop — spawned into window.enemies
+    // so it shares the normal enemy update/collision/draw loop.
+    // this.dog holds ownership reference; dog.owner points back here.
+    _summonDog() {
+        if (this.dog && !this.dog.dead) return; // already alive
+        if (!Array.isArray(window.enemies)) return;
+        const dog = new BossDog(this.x, this.y);
+        dog.owner = this;   // BossDog → KruManop back-reference
+        this.dog = dog;    // KruManop → BossDog ownership
+        window.enemies.push(dog);
+        spawnFloatingText('🐕 GO GET \'EM!', this.x, this.y - 120, '#d97706', 32);
     }
 
     useEquationSlam() {
@@ -516,20 +575,6 @@ class Boss extends Entity {
         Audio.playBossSpecial();
     }
 
-    async speak(context) {
-        // Gemini is always defined — the global mock in game.js guarantees it.
-        // getBossTaunt() on the mock returns '' so the UIManager branch is a
-        // no-op and the boss simply stays silent when ai.js is offline.
-        // try/catch is kept to handle real API/network errors gracefully;
-        // demoted to console.debug so routine offline runs don't spam the console.
-        try {
-            const text = await Gemini.getBossTaunt(context);
-            if (text && window.UIManager) window.UIManager.showBossSpeech(text);
-        } catch (e) {
-            console.debug('[Boss] Speech unavailable:', e);
-        }
-    }
-
     takeDamage(amt) {
         if (typeof DomainExpansion !== 'undefined' && DomainExpansion.isInvincible()) {
             spawnFloatingText('DOMAIN SHIELD!', this.x, this.y - 40, '#d946ef', 20);
@@ -541,46 +586,25 @@ class Boss extends Entity {
         }
         this.hp -= amt;
         if (this.hp <= 0 && !this._waveSpawnLocked) {
-            // BUG-4 FIX: lock immediately so simultaneous damage calls can't
-            // trigger startNextWave() twice (race condition guard)
             this._waveSpawnLocked = true;
-            this.dead = true; this.hp = 0;
-            spawnParticles(this.x, this.y, 60, '#dc2626');
-            spawnFloatingText('CLASS DISMISSED!', this.x, this.y, '#facc15', 35);
-            addScore(BALANCE.score.boss * this.difficulty);
-            if (window.UIManager) window.UIManager.updateBossHUD(null);
-            Audio.playAchievement();
-            for (let i = 0; i < 3; i++) {
-                setTimeout(() => window.powerups.push(new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))), i * 200);
-            }
-            // WARN-9 FIX: set lastBossKilled BEFORE nulling window.boss so
-            // the achievement check can still evaluate to true
-            window.lastBossKilled = true;
-            window.boss = null;
             Achievements.check('manop_down');
-            setTimeout(() => {
-                setWave(getWave() + 1);
-                if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
-                else {
-                    if (typeof window.startNextWave === 'function') window.startNextWave();
-                }
-            }, BALANCE.boss.nextWaveDelay);
+            this._onDeath();
         }
     }
-    // draw() → BossRenderer.drawXxx(e, ctx)  — see bottom of file.
+    // draw() → BossRenderer.drawBoss(e, ctx)
 
 }
 
 // ════════════════════════════════════════════════════════════
-// ⚛️  BOSS FIRST — "KRU FIRST · PHYSICS MASTER"
+// ⚛️  KRU FIRST — "PHYSICS MASTER"
 //
-// Encounter 2 (Wave 6):  BossFirst(bossLevel, false)
-// Encounter 4 (Wave 12): BossFirst(bossLevel, true)  ← isAdvanced
+// Encounter 2 (Wave 6):  KruFirst(bossLevel, false)
+// Encounter 4 (Wave 12): KruFirst(bossLevel, true)  ← isAdvanced
 //
 // States: IDLE | CHASE | SUVAT_CHARGE | ORBIT_ATTACK |
 //         FREE_FALL | ROCKET | SANDWICH_TOSS | STUNNED | BERSERK
 // ════════════════════════════════════════════════════════════
-class BossFirst extends Entity {
+class KruFirst extends BossBase {
     /**
      * @param {number}  difficulty  - HP/score multiplier
      * @param {boolean} isAdvanced  - true on encounter 4; extra stat boost
@@ -596,12 +620,10 @@ class BossFirst extends Entity {
         this.moveSpeed = BALANCE.boss.moveSpeed * 1.55 * advMult;
         this.difficulty = difficulty;
         this.isAdvanced = isAdvanced;
-        this.isEnraged = false;         // becomes true permanently when BERSERK triggered
+        this.isEnraged = false;
         this.state = 'CHASE';
         this.stateTimer = 0;
         this.timer = 0;
-        this.sayTimer = 0;
-        this._waveSpawnLocked = false;
 
         // ── Skill cooldowns ──────────────────────────────────
         this.skills = {
@@ -869,28 +891,17 @@ class BossFirst extends Entity {
             }
         }
 
-        // ── Ignite debuff (from AutoPlayer Vacuum Heat) ───────
-        // BossFirst takes 40% Ignite effectiveness
-        if ((this.igniteTimer ?? 0) > 0) {
-            this.igniteTimer -= dt;
-            this.takeDamage((this.igniteDPS ?? 12) * dt * 0.4);
-            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
-        }
-
         // Contact damage
         if (d < this.radius + player.radius) {
             player.takeDamage(BALANCE.boss.contactDamage * dt * 1.2);
         }
 
         if (this.sayTimer > BALANCE.boss.speechInterval && Math.random() < 0.1) {
-            this._speak('Player at ' + Math.round(player.hp) + ' HP');
+            this.speak('Player at ' + Math.round(player.hp) + ' HP');
             this.sayTimer = 0;
         }
 
-        if (window.UIManager) {
-            window.UIManager.updateBossHUD(this);
-            window.UIManager.updateBossSpeech(this);
-        }
+        this._updateHUD();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -947,7 +958,7 @@ class BossFirst extends Entity {
             this._empFired = false;
             this._enterState('EMP_ATTACK');
             spawnFloatingText('⚡ CHARGING EMP…', this.x, this.y - 80, '#38bdf8', 26);
-            this._speak('Electromagnetic pulse — dodge this!');
+            this.speak('Electromagnetic pulse — dodge this!');
             return;
         }
     }
@@ -982,55 +993,38 @@ class BossFirst extends Entity {
 
         if (this.hp <= 0 && !this._waveSpawnLocked) {
             this._waveSpawnLocked = true;
-            this.dead = true; this.hp = 0;
+            // KruFirst-specific death VFX before shared cleanup
             spawnParticles(this.x, this.y, 60, '#39ff14');
             spawnParticles(this.x, this.y, 30, '#00ffff');
             spawnFloatingText('⚛️ PHYSICS DISMISSED!', this.x, this.y, '#39ff14', 35);
-            addScore(BALANCE.score.boss * this.difficulty);
-            if (window.UIManager) window.UIManager.updateBossHUD(null);
-            Audio.playAchievement();
-            for (let i = 0; i < 3; i++) {
-                setTimeout(() => window.powerups.push(
-                    new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))
-                ), i * 200);
-            }
-            window.lastBossKilled = true;
-            window.boss = null;
             Achievements.check('first_down');
-            setTimeout(() => {
-                setWave(getWave() + 1);
-                if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
-                else if (typeof window.startNextWave === 'function') window.startNextWave();
-            }, BALANCE.boss.nextWaveDelay);
+            this._onDeath();
         }
     }
 
-    async _speak(context) {
-        try {
-            const text = await Gemini.getBossTaunt(context);
-            if (text && window.UIManager) window.UIManager.showBossSpeech(text);
-        } catch (e) {
-            console.debug('[BossFirst] Speech unavailable:', e);
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // DRAW
-    // draw() → BossRenderer.drawXxx(e, ctx)  — see bottom of file.
+    // draw() → BossRenderer.drawBossFirst(e, ctx)
 
 }
 
 
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Boss, BossDog, BossFirst };
+    module.exports = { Boss: KruManop, BossFirst: KruFirst, BossDog, KruManop, KruFirst };
 }
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.Boss = Boss;
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS
+// ──────────────────────────────────────────────────────────────
+// New canonical names
+window.KruManop = KruManop;
+window.KruFirst = KruFirst;
 window.BossDog = BossDog;
-window.BossFirst = BossFirst;
+window.BossBase = BossBase;
+// Backward-compat aliases (game.js, WaveManager, etc. use these)
+window.Boss = KruManop;
+window.BossFirst = KruFirst;
 // ════════════════════════════════════════════════════════════
 // BossRenderer — Canvas draw calls for all boss entities
 //
@@ -1047,11 +1041,11 @@ class BossRenderer {
 
     // ── Dispatcher ───────────────────────────────────────────
     // Call this from the game loop instead of boss.draw().
-    // BossFirst checked before Boss to avoid false instanceof match
-    // if class hierarchy ever changes.
+    // KruFirst checked before KruManop — both extend BossBase,
+    // so instanceof KruManop would also match BossBase.
     static draw(e, ctx) {
-        if (e instanceof BossFirst) BossRenderer.drawBossFirst(e, ctx);
-        else if (e instanceof Boss) BossRenderer.drawBoss(e, ctx);
+        if (e instanceof KruFirst) BossRenderer.drawBossFirst(e, ctx);
+        else if (e instanceof KruManop) BossRenderer.drawBoss(e, ctx);
         else if (e instanceof BossDog) BossRenderer.drawBossDog(e, ctx);
     }
 
@@ -1074,20 +1068,6 @@ class BossRenderer {
             ctx.fillRect(screen.x - barW / 2, screen.y - 46, barW, barH);
             ctx.fillStyle = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
             ctx.fillRect(screen.x - barW / 2, screen.y - 46, barW * pct, barH);
-            ctx.restore();
-        }
-
-        // ── Ignite overlay (from AutoPlayer Vacuum Heat) ─────
-        if ((e.igniteTimer ?? 0) > 0) {
-            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
-            ctx.save();
-            ctx.globalAlpha = igPulse;
-            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3;
-            ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
-            ctx.beginPath(); ctx.arc(screen.x, screen.y, e.radius + 4, 0, Math.PI * 2); ctx.stroke();
-            ctx.globalAlpha = igPulse * 0.22;
-            ctx.fillStyle = '#fb923c';
-            ctx.beginPath(); ctx.arc(screen.x, screen.y, e.radius, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
@@ -1581,23 +1561,10 @@ class BossRenderer {
 
         ctx.restore(); // end weapon block
 
-        // ── Ignite overlay (from AutoPlayer Vacuum Heat) ─────
-        if ((e.igniteTimer ?? 0) > 0) {
-            const sc = worldToScreen(e.x, e.y);
-            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
-            ctx.save();
-            ctx.globalAlpha = igPulse;
-            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3.5;
-            ctx.shadowBlur = 14; ctx.shadowColor = '#f97316';
-            ctx.beginPath(); ctx.arc(sc.x, sc.y, e.radius + 5, 0, Math.PI * 2); ctx.stroke();
-            ctx.globalAlpha = igPulse * 0.20;
-            ctx.fillStyle = '#fb923c';
-            ctx.beginPath(); ctx.arc(sc.x, sc.y, e.radius, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-        }
-
         ctx.restore(); // end main translate
     }
+
+    // ── BossFirst (ครูเฟิร์ส) — Physics Master ───────────────
     static drawBossFirst(e, ctx) {
         // ╔══════════════════════════════════════════════════════════════╗
         // ║  KRU FIRST — Physics Master                                 ║
@@ -2129,20 +2096,6 @@ class BossRenderer {
             ctx.globalCompositeOperation = 'source-atop';
             ctx.fillStyle = `rgba(255,255,255,${Math.min(e.hitFlashTimer * 2.0, 0.88)})`;
             ctx.fillRect(-R - 12, -R * 1.60, (R + 12) * 2, R * 2.8);
-            ctx.restore();
-        }
-
-        // ── Ignite overlay (from AutoPlayer Vacuum Heat) ─────
-        if ((e.igniteTimer ?? 0) > 0) {
-            const igPulse = 0.45 + Math.sin(Date.now() / 80) * 0.25;
-            ctx.save();
-            ctx.globalAlpha = igPulse;
-            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3.5;
-            ctx.shadowBlur = 14; ctx.shadowColor = '#f97316';
-            ctx.beginPath(); ctx.arc(0, 0, e.radius + 5, 0, Math.PI * 2); ctx.stroke();
-            ctx.globalAlpha = igPulse * 0.20;
-            ctx.fillStyle = '#fb923c';
-            ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
