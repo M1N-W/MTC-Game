@@ -23,6 +23,9 @@
 * **⏱️ Bullet Time:** กด `T` เพื่อหน่วงเวลา 70% ให้คุณหลบกระสุนแบบ Matrix ได้อย่างเฉียบคม
 * **🏆 Achievement System:** หอเกียรติยศบันทึกสถิติและความสำเร็จของผู้เล่น
 * **🗄️ MTC Database & Admin Console:** ระบบ Lore และ Terminal ลับสำหรับใส่สูตรโกง (ถ้าคุณรู้คำสั่ง!)
+* **🎨 Visual Polish:** SVG Portrait System, 6-layer Wanchai Stand rendering, Military HUD theme, and enhanced particle effects
+* **🤖 Advanced AI:** Autonomous Wanchai Stand with tactical intelligence and positioning
+* **🌌 Domain Expansion:** Ultimate boss abilities with arena-wide effects and physics manipulation
 
 ---
 
@@ -53,6 +56,8 @@
 * **State Management:** ใช้ `GameState.js` เป็น Single Source of Truth
 * **Object Pooling:** จัดการ Particles และ Projectiles อย่างมีประสิทธิภาพเพื่อลดปัญหา Garbage Collection (GC)
 * **Modular Design:** แบ่งคลาส Entity, ระบบ Input, และ UI ออกจากกันอย่างชัดเจน
+* **Boss Architecture:** Refactored with `BossBase` class hierarchy for shared lifecycle management
+* **Service Worker:** Automatic cache management and version updates for seamless deployment
 
 ---
 
@@ -69,4 +74,21 @@
 
 - [x] Rework Tutorial System
 - [x] End-game Boss Scaling (Wave 15)
+- [x] SVG Portrait System & Visual Polish
+- [x] Wanchai Stand 6-Layer Rendering System
+- [x] Boss Architecture Refactor (BossBase hierarchy)
+- [x] Advanced AI & Autonomous Systems
+- [x] Domain Expansion Ultimate Abilities
+- [x] Military HUD Theme Implementation
 - [ ] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
+
+---
+
+## 📈 Current Version: v3.11.2 (March 7, 2026)
+
+**Latest Major Updates:**
+- ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
+- 🎨 **Visual Polish:** Complete SVG portrait system and 6-layer Wanchai Stand rendering
+- 🤖 **Advanced AI:** Autonomous Stand system with tactical intelligence
+- 🌌 **Domain Expansion:** Ultimate boss abilities with arena-wide physics manipulation
+- ⚖️ **Balance Overhaul:** Comprehensive weapon and character balance adjustments
