@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.12.7'; // v3.12.7: Centralized all game configuration (stats, texts, wave events) in config.js
+const CACHE_NAME = 'mtc-cache-v3.12.8'; // v3.12.8: Updated tutorial texts with complete character skill guides and shop information
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

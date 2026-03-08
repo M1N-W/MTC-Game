@@ -993,21 +993,6 @@ const GAME_TEXTS = {
             body: 'เก้ามีอาวุธ 3 ชนิด:\n• Auto Rifle — ยิงเร็ว (ค่าเริ่มต้น)\n• Sniper — Railgun ดาเมจสูง ยิงช้า\n• Shotgun — Molten Shrapnel ระยะใกล้\n\nเลื่อน Mouse Wheel เพื่อสลับ\nสลับให้ครบ 3 ครั้ง!',
             icon: '🔄'
         },
-        kaoSkills: {
-            title: 'เก้า — ทักษะการเคลื่อนที่และร่างโคลน ⚡',
-            body: 'เมื่อเลเวลอัพ เก้าจะปลดล็อค:\n\n⚡ กด Q — Teleport\n   วาร์ปไปตามทิศทางเมาส์\n\n👥 กด E — Clone of Stealth\n   สร้างร่างโคลนช่วยยิง\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
-            icon: '⚡'
-        },
-        poomSkills: {
-            title: 'ภูมิ — ทักษะพิเศษเฉพาะ 🌾',
-            body: 'ภูมิมีทักษะเพิ่มเติม 2 อย่าง:\n\n🔥 กด R — Ritual Burst\n   ระเบิดพลังและฟื้น HP ในวงกว้าง\n\n🐉 กด Q — Naga Summon\n   เรียกพญานาคคุ้มกัน 10 วินาที\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
-            icon: '🌾'
-        },
-        autoSkills: {
-            title: 'Auto — ทักษะพิเศษเฉพาะ 🌀',
-            body: 'Auto มีทักษะควบคุมพื้นที่:\n\n🌀 กด Q — Vacuum Heat (CD 6s)\n   ดูดศัตรูทุกตัวเข้าหาตัว + stun\n\n💥 กด E — Detonate (CD 8s, ต้องเปิด Wanchai ก่อน)\n   ระเบิด AOE สูง แต่ปิด Wanchai ทันที\n\n👊 L-Click ระหว่าง Wanchai Active\n   Stand Rush — ส่งสแตนด์พุ่งไปตามเคอร์เซอร์\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
-            icon: '🌀'
-        },
         autoStandRush: {
             title: 'Auto — Stand Rush Manual Targeting 👊',
             body: 'ระหว่าง Wanchai active:\n\n🎯 ชี้เมาส์แล้ว L-Click = Stand Rush ไปตำแหน่งนั้น\n   Stand teleport หาเป้าแล้วรัวหมัดทันที\n\n✨ 6-layer rendering พร้อม visual effect\n🥊 Dual-fist — _punchSide สลับข้างทุกหมัด\n\n⚡ Wanchai ยังโจมตีอัตโนมัติด้วย\n   L-Click เพิ่ม Stand Rush ทับไปได้เลย',
@@ -1025,7 +1010,7 @@ const GAME_TEXTS = {
         },
         shop: {
             title: 'MTC Co-op Store 🛒',
-            body: 'ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\n🧪 ซื้อด้วย Score:\n• Potion — ฟื้น HP ทันที\n• Damage Up — เพิ่มดาเมจ 10%\n• Speed Up — เพิ่มความเร็ว 10%\n• Shield — โล่กัน 1 ครั้ง',
+            body: 'ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\n🧪 ซื้อด้วย Score:\n• Energy Drink — ฟื้น HP 60 หน่วย (300 คะแนน)\n• Weapon Tuner — เพิ่มดาเมจ 5% (800 คะแนน)\n• Lightweight Boots — เพิ่มความเร็ว 5% (500 คะแนน)\n• Focus Crystal — ลดคูลดาวน์ 5% (700 คะแนน)\n• Energy Shield — บล็อกการโจมตี 1 ครั้ง (600 คะแนน)\n• Vital Supplement — เพิ่ม HP สูงสุด 15 (500 คะแนน)',
             icon: '🛒'
         },
         database: {

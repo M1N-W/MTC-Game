@@ -4,6 +4,36 @@
 
 ---
 
+## v3.12.8 — Tutorial Texts Enhancement
+*Released: March 8, 2026*
+
+### 📚 Tutorial System Improvements
+- **Complete Character Guides:** Added comprehensive tutorial steps for all three characters
+- **Kao Skills:** Teleport navigation and Clone of Stealth combat assistance
+- **Poom Skills:** Ritual Burst, Naga Summon, Garuda Summon, and Cosmic Balance mechanics
+- **Auto Skills:** Vacuum Heat, Detonate, Stand Rush, and complete Heat Gauge system explanation
+- **Shop Update:** Corrected shop items with current prices and effects (6 items total)
+
+### 🔧 Technical Updates
+- **Tutorial Structure:** Fixed missing tutorial steps that were accidentally removed
+- **Shop Information:** Updated from generic 10% bonuses to specific item details
+- **Heat System:** Added comprehensive Heat Gauge tutorial with tier progression
+- **Character Balance:** Ensured all unlockable skills are properly documented
+
+### 📝 Detailed Changes
+```javascript
+// Added missing tutorial sections:
+kaoSkills: { Teleport, Clone of Stealth }
+poomSkills: { Ritual Burst, Naga, Garuda, Cosmic Balance }
+autoSkills: { Vacuum Heat, Detonate, Stand Rush, Heat Gauge }
+
+// Updated shop with correct items:
+Energy Drink (300), Weapon Tuner (800), Lightweight Boots (500)
+Focus Crystal (700), Energy Shield (600), Vital Supplement (500)
+```
+
+---
+
 ## v3.12.7 — Configuration Centralization
 *Released: March 8, 2026*
 
