@@ -266,6 +266,9 @@ class MapObject {
 
     drawWall() {
         const pal = BALANCE.map.mapColors;
+        // Drop shadow (drawn before base so it sits beneath)
+        CTX.fillStyle = 'rgba(0,0,0,0.40)';
+        CTX.fillRect(4, 5, this.w, this.h);
         // Base + top highlight
         CTX.fillStyle = pal.wallColor;
         CTX.fillRect(0, 0, this.w, this.h);
@@ -775,83 +778,95 @@ class MapSystem {
     }
 
     generateCampusMap() {
-        // ── 1. The MTC Citadel (North Base) ──
-        // Move safe zone to top center
-        const mtcX = -150, mtcY = -700, mtcW = 300, mtcH = 240;
+        // ── 1. The MTC Citadel (North Base) ──────────────────────
+        // Moved 120px closer to center (y:-700 → y:-580) so the
+        // approach corridor is shorter and players visit more often.
+        const mtcX = -150, mtcY = -580, mtcW = 300, mtcH = 240;
         this.mtcRoom = new MTCRoom(mtcX, mtcY);
 
-        // Build Physical High-Tech Walls around the MTC Room (U-Shape)
         const wallThick = 40;
-        // Top wall
         this.objects.push(new MapObject(mtcX - wallThick, mtcY - wallThick, mtcW + wallThick * 2, wallThick, 'mtcwall'));
-        // Left wall
         this.objects.push(new MapObject(mtcX - wallThick, mtcY, wallThick, mtcH, 'mtcwall'));
-        // Right wall
         this.objects.push(new MapObject(mtcX + mtcW, mtcY, wallThick, mtcH, 'mtcwall'));
 
-        // Add decorative servers inside the citadel (top corners)
+        // Decorative servers inside citadel corners
         this.objects.push(new MapObject(mtcX + 10, mtcY + 10, 45, 80, 'server'));
         this.objects.push(new MapObject(mtcX + mtcW - 55, mtcY + 10, 45, 80, 'server'));
 
+        // ── 2. Structural Zone Generation ──────────────────────────
+        // jitter is DETERMINISTIC (sin-based) — layout is identical
+        // on every restart. No Math.random() here.
+        const detJitter = (r, c, seed, mag) => ({
+            jx: Math.sin(r * 7.3 + c * 13.1 + seed) * mag,
+            jy: Math.cos(r * 11.7 + c * 5.9 + seed * 1.3) * mag,
+        });
 
-        // ── 2. Structural Zone Generation ──
-        // Helper to place rows of objects neatly
-        const createAisles = (startX, startY, rows, cols, xStep, yStep, type, jitter = 0) => {
+        const createAisles = (startX, startY, rows, cols, xStep, yStep, type, jitter = 0, seed = 0) => {
+            const sz = {
+                desk: { w: 60, h: 40 }, tree: { w: 50, h: 50 },
+                server: { w: 45, h: 80 }, datapillar: { w: 35, h: 70 },
+                bookshelf: { w: 80, h: 40 },
+            }[type];
+            if (!sz) return;
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    const sz = {
-                        desk: { w: 60, h: 40 }, tree: { w: 50, h: 50 },
-                        server: { w: 45, h: 80 }, datapillar: { w: 35, h: 70 },
-                        bookshelf: { w: 80, h: 40 }
-                    }[type];
-                    let jx = (Math.random() - 0.5) * jitter;
-                    let jy = (Math.random() - 0.5) * jitter;
-                    this.objects.push(new MapObject(startX + c * xStep + jx, startY + r * yStep + jy, sz.w, sz.h, type));
+                    const { jx, jy } = jitter > 0 ? detJitter(r, c, seed, jitter) : { jx: 0, jy: 0 };
+                    this.objects.push(new MapObject(
+                        startX + c * xStep + jx,
+                        startY + r * yStep + jy,
+                        sz.w, sz.h, type
+                    ));
                 }
             }
         };
 
-        // Zone A: Server Farm (East Sector) - Neat rows
-        createAisles(400, -300, 4, 3, 120, 150, 'server');
-        createAisles(800, -300, 4, 3, 120, 150, 'server');
-        // Add data pillars at the ends of aisles
-        createAisles(330, -260, 4, 1, 0, 150, 'datapillar');
+        // Zone A: Server Farm (East) — pulled 100px west, tighter grid
+        createAisles(330, -320, 4, 3, 115, 140, 'server');
+        createAisles(700, -320, 4, 2, 115, 140, 'server');
+        // Data pillars mark the western edge of the server aisles (visible from center)
+        createAisles(265, -290, 4, 1, 0, 140, 'datapillar');
 
-        // Zone B: Library Archives (West Sector) - Maze-like long shelves
-        createAisles(-850, -300, 5, 2, 250, 120, 'bookshelf');
-        createAisles(-1150, -300, 5, 2, 250, 120, 'bookshelf');
-        // Study desks between shelves
-        createAisles(-980, -280, 4, 1, 0, 120, 'desk');
+        // Zone B: Library Archives (West) — pulled 300px east
+        createAisles(-680, -310, 5, 2, 230, 115, 'bookshelf');
+        createAisles(-940, -310, 5, 2, 230, 115, 'bookshelf');
+        // Study desks sit in the corridor between shelf rows
+        createAisles(-800, -295, 4, 1, 0, 115, 'desk');
 
-        // Zone C: The Grand Courtyard (South Sector) - Symmetrical Trees
-        createAisles(-400, 500, 3, 5, 200, 200, 'tree', 15); // Slight jitter for organics
+        // Zone C: Courtyard (South) — 200px closer, organic jitter
+        createAisles(-380, 310, 3, 5, 185, 185, 'tree', 14, 1.0);
 
-        // Zone D: Lecture Halls (Bottom Left & Right corners)
-        createAisles(-1000, 600, 3, 3, 100, 100, 'desk');
-        this.objects.push(new MapObject(-950, 480, 150, 80, 'blackboard')); // Teacher area
+        // Zone D: Lecture Halls (corners) — pulled ~200px toward center
+        createAisles(-840, 510, 3, 3, 95, 95, 'desk');
+        this.objects.push(new MapObject(-800, 400, 150, 80, 'blackboard'));
 
-        createAisles(700, 600, 3, 3, 100, 100, 'desk');
-        this.objects.push(new MapObject(750, 480, 150, 80, 'blackboard')); // Teacher area
+        createAisles(620, 510, 3, 3, 95, 95, 'desk');
+        this.objects.push(new MapObject(640, 400, 150, 80, 'blackboard'));
 
-
-        // ── 3. Arena Boundaries ──
+        // ── 3. Arena Boundaries + Corridor Walls ───────────────────
+        // wallPositions now includes internal corridor funnels —
+        // see BALANCE.map.wallPositions in config.js.
         for (const wall of BALANCE.map.wallPositions) {
             this.objects.push(new MapObject(wall.x, wall.y, wall.w, wall.h, 'wall'));
         }
 
-        // ── 4. Strategic Explosive Barrels ──
-        // Placed in choke points and aisle intersections
+        // ── 4. Strategic Explosive Barrels ─────────────────────────
+        // Grouped in clusters at zone entrances and corridor chokepoints.
         const barrelSpots = [
-            { x: 350, y: -100 }, { x: 750, y: -100 }, // Near servers
-            { x: 350, y: 150 }, { x: 750, y: 150 },
-            { x: -600, y: -150 }, { x: -900, y: -150 }, // Near library
-            { x: -600, y: 150 }, { x: -900, y: 150 },
-            { x: -250, y: 400 }, { x: 250, y: 400 }, // Entering courtyard
-            { x: 0, y: -300 } // Defensive barrel below Citadel
+            // Server Farm entrance cluster
+            { x: 290, y: -120 }, { x: 290, y: 60 },
+            // Server Farm interior
+            { x: 620, y: -120 }, { x: 620, y: 60 },
+            // Library entrance cluster
+            { x: -500, y: -120 }, { x: -500, y: 60 },
+            // Library interior
+            { x: -770, y: -150 }, { x: -770, y: 80 },
+            // Courtyard entrance (south corridor mouths)
+            { x: -220, y: 250 }, { x: 120, y: 250 },
+            // Defensive barrel below Citadel approach
+            { x: 0, y: -340 },
         ];
 
         for (let spot of barrelSpots) {
-            // Check collision just in case
             let tooClose = false;
             for (const obj of this.objects) {
                 if (Math.hypot(obj.x - spot.x, obj.y - spot.y) < 60) { tooClose = true; break; }
@@ -877,7 +892,7 @@ class MapSystem {
 
         const C = MAP_CONFIG;
         const ws = (wx, wy) => worldToScreen(wx, wy);
-        const t = performance.now() * 0.001;
+        const t = _mapNow * 0.001; // use shared timestamp — no extra performance.now() call
 
         // ── 1. ARENA BOUNDARY ────────────────────────────────────
         {
@@ -1014,10 +1029,69 @@ class MapSystem {
         };
 
         // If you want an aura under the Citadel
-        drawZoneAura({ worldX: -150 + 150, worldY: -700 + 120, innerRgb: '250, 180, 30', outerRgb: '100, 50, 5', radius: 350, phase: 0.5 });
+        drawZoneAura({ worldX: -150 + 150, worldY: -580 + 120, innerRgb: '250, 180, 30', outerRgb: '100, 50, 5', radius: 350, phase: 0.5 });
         drawZoneAura(C.auras.database);
         drawZoneAura(C.auras.shop);
         drawZoneAura(C.auras.origin);
+
+        // ── 5. CENTER LANDMARK ────────────────────────────────────
+        // Two counter-rotating rings at (0,0) — persistent directional
+        // reference for players, marks the spawn point visually.
+        if (C.landmark) {
+            const LM = C.landmark;
+            const { x: ox, y: oy } = ws(0, 0);
+            const edgePt = ws(LM.outerRadius, 0);
+            const rOuter = Math.abs(edgePt.x - ox);
+            const rInner = rOuter * (LM.innerRadius / LM.outerRadius);
+
+            const pulse = 0.5 + Math.sin(t * LM.pulseSpeed) * 0.5;
+            const aOuter = LM.outerAlphaBase + pulse * 0.30;
+            const aInner = LM.innerAlphaBase + pulse * 0.25;
+            const rotOuter = t * LM.rotSpeedOuter;
+            const rotInner = t * LM.rotSpeedInner;
+
+            ctx.save();
+
+            // Glow backdrop
+            ctx.shadowBlur = LM.glowBlur;
+            ctx.shadowColor = LM.glowColor;
+
+            // Outer ring (gold, clockwise)
+            ctx.strokeStyle = LM.outerColor.replace('{a}', aOuter.toFixed(3));
+            ctx.lineWidth = LM.ringWidth;
+            ctx.setLineDash([18, 10]);
+            ctx.lineDashOffset = -rotOuter * rOuter;
+            ctx.beginPath(); ctx.arc(ox, oy, rOuter, 0, Math.PI * 2); ctx.stroke();
+
+            // Inner ring (cyan, counter-clockwise)
+            ctx.strokeStyle = LM.innerColor.replace('{a}', aInner.toFixed(3));
+            ctx.setLineDash([12, 14]);
+            ctx.lineDashOffset = -rotInner * rInner;
+            ctx.beginPath(); ctx.arc(ox, oy, rInner, 0, Math.PI * 2); ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.lineDashOffset = 0;
+            ctx.shadowBlur = 0;
+
+            // Spokes — faint lines from inner to outer ring
+            ctx.strokeStyle = `rgba(250,180,30,${(LM.spokeAlpha * pulse).toFixed(3)})`;
+            ctx.lineWidth = 1;
+            for (let i = 0; i < LM.spokeCount; i++) {
+                const angle = rotOuter + (Math.PI * 2 / LM.spokeCount) * i;
+                ctx.beginPath();
+                ctx.moveTo(ox + Math.cos(angle) * rInner, oy + Math.sin(angle) * rInner);
+                ctx.lineTo(ox + Math.cos(angle) * rOuter, oy + Math.sin(angle) * rOuter);
+                ctx.stroke();
+            }
+
+            // Center dot
+            ctx.fillStyle = `rgba(250,180,30,${(0.7 + pulse * 0.3).toFixed(3)})`;
+            ctx.shadowBlur = 10; ctx.shadowColor = LM.glowColor;
+            ctx.beginPath(); ctx.arc(ox, oy, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.restore();
+        }
     }
 
     drawZoneFloors(ctx) {
@@ -1065,14 +1139,65 @@ class MapSystem {
             ctx.lineWidth = 3;
             ctx.strokeRect(tl.x + 2, tl.y + 2, sw - 4, sh - 4);
 
-            // Zone label — top-left corner
-            ctx.globalAlpha = 0.45 + pulse * 0.20;
-            ctx.fillStyle = z.accentColor;
-            ctx.font = 'bold 9px monospace';
-            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-            ctx.fillText(z.label, tl.x + 8, tl.y + 6);
+            // Zone label — pill badge, top-left corner
+            {
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+                const labelAlpha = 0.70 + pulse * 0.20;
+                const metrics = ctx.measureText(z.label);
+                const lw = metrics.width;
+                const px = 6, py = 5, lh = 13;
+                const pillX = tl.x + 8, pillY = tl.y + 6;
+
+                // Pill background
+                ctx.globalAlpha = 0.30 + pulse * 0.10;
+                ctx.fillStyle = 'rgba(0,0,0,0.55)';
+                ctx.beginPath();
+                ctx.roundRect(pillX - px, pillY - py * 0.5, lw + px * 2, lh + py, 5);
+                ctx.fill();
+
+                // Pill border (zone accent)
+                ctx.globalAlpha = 0.20 + pulse * 0.12;
+                ctx.strokeStyle = z.accentColor;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Label text
+                ctx.globalAlpha = labelAlpha;
+                ctx.fillStyle = z.accentColor;
+                ctx.fillText(z.label, pillX, pillY);
+
+                ctx.globalAlpha = 1;
+            }
 
             ctx.globalAlpha = 1;
+
+            // ── Ambient micro-particles (deterministic, no Math.random) ──
+            // Each zone gets 7 small dots whose positions oscillate with sin/cos.
+            // PHI-spaced seeds prevent all dots pulsing in sync.
+            if (z.ambientColor) {
+                const PHI = 2.399; // golden-angle increment
+                const COUNT = 7;
+                ctx.save();
+                ctx.beginPath(); ctx.rect(tl.x, tl.y, sw, sh); ctx.clip();
+                for (let i = 0; i < COUNT; i++) {
+                    const seed = i * PHI;
+                    // World position oscillates slowly within zone bounds
+                    const wx = z.x + z.w * (0.15 + 0.70 * ((Math.sin(seed * 3.7) + 1) * 0.5))
+                        + Math.sin(t * 0.4 + seed) * 18;
+                    const wy = z.y + z.h * (0.15 + 0.70 * ((Math.cos(seed * 2.9) + 1) * 0.5))
+                        + Math.cos(t * 0.5 + seed * 1.3) * 14;
+                    const ss = worldToScreen(wx, wy);
+                    const alpha = 0.25 + Math.sin(t * 1.1 + seed) * 0.20;
+                    const r = 2.5 + Math.sin(t * 0.8 + seed * 2) * 1.0;
+                    ctx.globalAlpha = Math.max(0, alpha);
+                    ctx.fillStyle = z.ambientColor;
+                    ctx.beginPath(); ctx.arc(ss.x, ss.y, r, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+
             ctx.restore();
         }
     }

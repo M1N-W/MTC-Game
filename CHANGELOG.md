@@ -32,6 +32,52 @@
 
 ---
 
+## v3.17.0 — Major Map Redesign & Visual Enhancement
+*Released: March 8, 2026*
+
+### 🗺️ Complete Layout Overhaul
+- **Zone Repositioning:** All 5 zones moved 200-300px closer to spawn point (0,0) for immediate player engagement
+- **MTC Citadel:** Moved 120px south (y:-700 → y:-580) for better visibility and accessibility
+- **Optimized Zone Sizes:** Refined dimensions for better gameplay flow and reduced dead space
+- **Strategic Corridor Walls:** 8 new internal walls creating natural chokepoints and funnels between zones
+- **Barrier Funneling:** Corridor walls at all 4 cardinal directions guide player movement and create tactical positions
+
+### 🎨 Visual Enhancement Suite
+- **Center Landmark:** Rotating dual-ring system at spawn point (gold + cyan) with 8 spokes for persistent directional reference
+- **Wall Drop Shadows:** All walls now have +4px shadow offsets for depth and ground separation
+- **Ambient Micro-Particles:** Each zone features 7 deterministic floating particles (Server=blue data, Library=gold dust, Courtyard=green fireflies, Lecture=purple chalk)
+- **Enhanced Zone Labels:** Pill-style badges with background, border, and improved 11px font for better readability
+- **Zone-Specific Ambiance:** Each zone now has unique ambient colors matching their thematic identity
+
+### ⚡ Performance Optimizations
+- **Deterministic Layout:** Replaced Math.random() with sin/cos calculations for consistent map generation across restarts
+- **Optimized Timing:** Eliminated redundant performance.now() calls, using shared _mapNow timestamp
+- **Efficient Particle System:** Lightweight ambient particles using mathematical oscillation instead of expensive particle systems
+- **Reduced Object Count:** Streamlined barrel placement into strategic clusters instead of scattered distribution
+
+### 🎮 Gameplay Improvements
+- **Immediate Zone Access:** Players encounter zones within 3-5 seconds of spawn instead of wandering empty space
+- **Tactical Chokepoints:** Corridor walls create natural funnels for strategic positioning and combat scenarios
+- **Clustered Barrels:** Explosive barrels repositioned at zone entrances for tactical decision-making
+- **Improved Navigation:** Center landmark and zone labels provide constant orientation reference
+- **Better Flow:** Layout encourages exploration while maintaining clear combat corridors
+
+### 🔧 Technical Enhancements
+- **Deterministic Seeding:** Map layout identical across all game restarts using mathematical functions
+- **Shared Timestamp System:** Centralized timing reduces redundant calculations
+- **Optimized Rendering:** Improved draw order and reduced redundant operations
+- **Enhanced Configuration:** Comprehensive config options for zones, landmarks, and visual effects
+- **Better Code Organization:** Cleaner separation of concerns in map generation and rendering
+
+### 📊 Configuration Updates
+- **Zone Bounds:** All zones repositioned with optimized dimensions and spacing
+- **Landmark System:** Complete configuration for center visual reference system
+- **Ambient Colors:** Zone-specific particle colors and behaviors
+- **Wall Positions:** Strategic corridor wall placements for gameplay flow
+- **Path Adjustments:** Database and shop paths updated to match new zone positions
+
+---
+
 ## v3.16.9 — Documentation Updates & PROJECT_OVERVIEW.md Enhancement
 *Released: March 8, 2026*
 

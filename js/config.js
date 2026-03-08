@@ -542,10 +542,24 @@ const BALANCE = {
         objectDensity: 0.12,
         objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
         wallPositions: [
+            // ── Arena boundary walls (cardinal) ──
             { x: -1500, y: -50, w: 50, h: 100 },
             { x: 1450, y: -50, w: 50, h: 100 },
             { x: -50, y: -1500, w: 100, h: 50 },
-            { x: -50, y: 1450, w: 100, h: 50 }
+            { x: -50, y: 1450, w: 100, h: 50 },
+            // ── Corridor walls: Server Farm entrance (east) ──
+            // Creates a funnel from center → server zone
+            { x: 220, y: -220, w: 18, h: 130 },
+            { x: 220, y: -50, w: 18, h: 130 },
+            // ── Corridor walls: Library entrance (west) ──
+            { x: -238, y: -220, w: 18, h: 130 },
+            { x: -238, y: -50, w: 18, h: 130 },
+            // ── Corridor walls: Courtyard entrance (south) ──
+            { x: -180, y: 200, w: 130, h: 18 },
+            { x: 50, y: 200, w: 130, h: 18 },
+            // ── Corridor walls: Citadel approach (north) ──
+            { x: -180, y: -220, w: 130, h: 18 },
+            { x: 50, y: -220, w: 130, h: 18 },
         ],
         mapColors: {
             floor: '#0e1320',
@@ -1112,6 +1126,26 @@ const MAP_CONFIG = {
         rimGlowColor: 'rgba(250, 180, 30, 0.9)',
     },
 
+    // ── Center Landmark ────────────────────────────────────────
+    // Rotating tech-ring at (0,0) — gives players a persistent
+    // directional reference and marks the spawn point visually.
+    landmark: {
+        outerRadius: 90,   // outer ring radius (world px)
+        innerRadius: 62,   // inner ring radius
+        ringWidth: 2.5,
+        outerColor: 'rgba(250, 180, 30, {a})',   // gold
+        innerColor: 'rgba(34,  211, 238, {a})',   // cyan
+        spokeCount: 8,
+        spokeAlpha: 0.18,
+        glowBlur: 18,
+        glowColor: 'rgba(250, 180, 30, 0.7)',
+        rotSpeedOuter: 0.18,   // rad/s, outer ring
+        rotSpeedInner: -0.28,  // rad/s, inner ring (counter)
+        pulseSpeed: 1.4,
+        outerAlphaBase: 0.55,
+        innerAlphaBase: 0.45,
+    },
+
     // ── Tech-hex grid ──────────────────────────────────────────
     hex: {
         size: 64,
@@ -1127,14 +1161,14 @@ const MAP_CONFIG = {
     paths: {
         database: {
             from: { x: 0, y: 0 },
-            to: { x: 350, y: -350 },
+            to: { x: 320, y: -300 },
             coreColor: '#fbbf24',
             glowColor: 'rgba(251, 191, 36, 0.85)',
             phase: 0.0,
         },
         shop: {
             from: { x: 0, y: 0 },
-            to: { x: -350, y: 350 },
+            to: { x: -320, y: 300 },
             coreColor: '#f97316',
             glowColor: 'rgba(249, 115, 22, 0.85)',
             phase: 2.094,
@@ -1195,62 +1229,69 @@ const MAP_CONFIG = {
     },
 
     // ── Zone Floor Themes ──────────────────────────────────────
+    // Zone positions pulled closer to (0,0) spawn so players
+    // enter each zone within ~3-5 seconds of moving from center.
     zones: {
         serverFarm: {
-            x: 300, y: -450, w: 800, h: 750,
+            x: 280, y: -380, w: 700, h: 580,
             floorColor: 'rgba(6, 182, 212, 0.04)',
             gridColor: 'rgba(6, 182, 212, 0.12)',
             gridSize: 36,
             accentColor: 'rgba(34, 211, 238, 0.18)',
             label: 'SERVER FARM',
+            ambientColor: 'rgba(34, 211, 238, 0.85)',  // cyan data packets
         },
         library: {
-            x: -1300, y: -450, w: 750, h: 750,
+            x: -980, y: -380, w: 700, h: 580,
             floorColor: 'rgba(180, 120, 20, 0.06)',
             gridColor: 'rgba(251, 191, 36, 0.10)',
             gridSize: 48,
             accentColor: 'rgba(253, 224, 71, 0.15)',
             label: 'ARCHIVES',
+            ambientColor: 'rgba(251, 191, 36, 0.80)',   // golden dust motes
         },
         courtyard: {
-            x: -500, y: 400, w: 1000, h: 600,
+            x: -450, y: 260, w: 900, h: 520,
             floorColor: 'rgba(34, 197, 94, 0.05)',
             gridColor: 'rgba(74, 222, 128, 0.08)',
             gridSize: 60,
             accentColor: 'rgba(134, 239, 172, 0.12)',
             label: 'COURTYARD',
+            ambientColor: 'rgba(134, 239, 172, 0.75)',  // firefly orbs
         },
         lectureHallL: {
-            x: -1100, y: 480, w: 400, h: 400,
+            x: -900, y: 440, w: 380, h: 350,
             floorColor: 'rgba(168, 85, 247, 0.04)',
             gridColor: 'rgba(192, 132, 252, 0.10)',
             gridSize: 40,
             accentColor: 'rgba(216, 180, 254, 0.12)',
             label: 'LECTURE A',
+            ambientColor: 'rgba(216, 180, 254, 0.60)',  // chalk dust
         },
         lectureHallR: {
-            x: 700, y: 480, w: 400, h: 400,
+            x: 620, y: 440, w: 380, h: 350,
             floorColor: 'rgba(168, 85, 247, 0.04)',
             gridColor: 'rgba(192, 132, 252, 0.10)',
             gridSize: 40,
             accentColor: 'rgba(216, 180, 254, 0.12)',
             label: 'LECTURE B',
+            ambientColor: 'rgba(216, 180, 254, 0.60)',  // chalk dust
         },
     },
 
     // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
-            worldX: 350,
-            worldY: -350,
+            worldX: 320,
+            worldY: -300,
             innerRgb: '250, 180, 30',
             outerRgb: '120, 60, 10',
             radius: 130,
             phase: 0.0,
         },
         shop: {
-            worldX: -350,
-            worldY: 350,
+            worldX: -320,
+            worldY: 300,
             innerRgb: '249, 115, 22',
             outerRgb: '154, 52, 18',
             radius: 130,
