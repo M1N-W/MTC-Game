@@ -4,6 +4,35 @@
 
 ---
 
+## v3.15.1 — Auto Character Design Restoration: Original Skill Availability
+*Released: March 8, 2026*
+
+### 🔄 Character Design Reversion
+- **Auto Wanchai Stand:** Restored immediate availability from game start
+  - **R-Click Skill:** Now usable immediately (was locked until passive unlock)
+  - **Energy Cost:** Reverted to 25 (was temporarily changed to 32)
+  - **Passive Bonuses:** Heat gain, crit, lifesteal still require passive unlock
+- **Thematic Unlock Messages:** Restored original guidance
+  - **Q & E Skills:** Show "🔒 ทำ Heat เต็ม 100 ก่อน!" (was generic level message)
+  - **Player Guidance:** Clear indication of OVERHEAT requirement
+
+### 🎯 Gameplay Consistency
+- **Original Vision:** Auto's basic skills now match initial design intent
+- **Progression Balance:** Wanchai available early, advanced skills gated by OVERHEAT
+- **User Experience:** Immediate access to core mechanic without confusion
+
+### 🔧 Technical Adjustments
+- **Code Comments:** Updated to reflect restored design
+- **Energy Cost:** Fixed mismatch between config and implementation
+- **Error Messages:** Restored helpful thematic guidance
+
+### 📚 Design Philosophy
+- **Skill Progression:** Basic skills available early, advanced skills require mastery
+- **Character Identity:** Auto's heat-based gameplay immediately accessible
+- **Player Onboarding:** Clear path from basic usage to advanced techniques
+
+---
+
 ## v3.15.0 — Complete Achievement System Overhaul: Character Progression & Stat Tracking
 *Released: March 8, 2026*
 
