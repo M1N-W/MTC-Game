@@ -884,8 +884,9 @@ class UIManager {
             const S = BALANCE.characters.poom;
             const passive = player.passiveUnlocked;
 
-            // ── Lock overlays — ล็อคทุกสกิลจนกว่าจะ unlock passive ──────────
-            setLockOverlay(document.getElementById('eat-icon'), !passive);
+            // ── Lock overlays ──────────────────────────────────────────────────
+            // eat-icon (R-Click) ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
+            setLockOverlay(document.getElementById('eat-icon'), false);
             setLockOverlay(document.getElementById('naga-icon'), !passive);
             setLockOverlay(document.getElementById('ritual-icon'), !passive);
             setLockOverlay(document.getElementById('garuda-icon'), !passive);
@@ -943,8 +944,9 @@ class UIManager {
             const S = BALANCE.characters.auto;
             const passive = player.passiveUnlocked;
 
-            // ── Lock overlays — ล็อคทุกสกิลจนกว่าจะ unlock passive (Lv5) ──
-            setLockOverlay(document.getElementById('stealth-icon'), !passive);
+            // ── Lock overlays ──────────────────────────────────────────────────
+            // stealth-icon (R-Click Wanchai) ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
+            setLockOverlay(document.getElementById('stealth-icon'), false);
             setLockOverlay(document.getElementById('vacuum-icon'), !passive);
             setLockOverlay(document.getElementById('auto-det-icon'), !passive);
             const wanchaiCd = S.wanchaiCooldown ?? 12;

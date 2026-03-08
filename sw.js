@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.12.13'; // v3.12.13: Migrated Poom input routing and unlocked basic skills
+const CACHE_NAME = 'mtc-cache-v3.12.14'; // v3.12.14: Fixed UI lock overlays for basic skills
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -4,6 +4,22 @@
 
 ---
 
+## v3.12.14 — UI Fix: Basic Skills Lock Overlays
+*Released: March 8, 2026*
+
+### 🎨 UI/UX Fixes
+- **Fixed Lock Overlay Display:** Basic skills now correctly show as unlocked (no lock icon)
+  - **Poom eat-icon (R-Click):** Now shows as available from game start
+  - **Auto stealth-icon (R-Click Wanchai):** Now shows as available from game start
+- **Consistent Visual Feedback:** UI now matches actual skill availability
+
+### 🔧 Technical Details
+- **Poom Lock Overlays:** Only advanced skills (naga, ritual, garuda) show lock icons
+- **Auto Lock Overlays:** Only advanced skills (vacuum, detonation) show lock icons
+- **Updated Comments:** Clear documentation of which skills are available vs locked
+
+---
+
 ## v3.12.13 — Input Routing Migration & Basic Skill Unlock
 *Released: March 8, 2026*
 
