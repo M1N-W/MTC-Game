@@ -860,8 +860,35 @@ class UIManager {
     }
 
     static updateSkillIcons(player) {
+        // ── Helper: แสดง/ซ่อน lock overlay บน skill icon (shared across all characters) ──
+        const setLockOverlay = (icon, locked) => {
+            if (!icon) return;
+            let lock = icon.querySelector('.skill-lock');
+            if (locked) {
+                if (!lock) {
+                    lock = document.createElement('div');
+                    lock.className = 'skill-lock';
+                    lock.style.cssText =
+                        'position:absolute;inset:0;display:flex;align-items:center;' +
+                        'justify-content:center;font-size:20px;background:rgba(0,0,0,0.65);' +
+                        'border-radius:8px;z-index:10;pointer-events:none;';
+                    lock.textContent = '\uD83D\uDD12';
+                    icon.appendChild(lock);
+                }
+            } else if (lock) {
+                lock.remove();
+            }
+        };
+
         if (player instanceof PoomPlayer) {
             const S = BALANCE.characters.poom;
+            const passive = player.passiveUnlocked;
+
+            // ── Lock overlays — ล็อคทุกสกิลจนกว่าจะ unlock passive ──────────
+            setLockOverlay(document.getElementById('eat-icon'), !passive);
+            setLockOverlay(document.getElementById('naga-icon'), !passive);
+            setLockOverlay(document.getElementById('ritual-icon'), !passive);
+            setLockOverlay(document.getElementById('garuda-icon'), !passive);
 
             // ── Eat Rice ─────────────────────────────────────────────
             const eatIcon = document.getElementById('eat-icon');
@@ -914,6 +941,12 @@ class UIManager {
             // or countdown. Add a parallel branch so the player sees feedback.
         } else if (typeof AutoPlayer !== 'undefined' && player instanceof AutoPlayer) {
             const S = BALANCE.characters.auto;
+            const passive = player.passiveUnlocked;
+
+            // ── Lock overlays — ล็อคทุกสกิลจนกว่าจะ unlock passive (Lv5) ──
+            setLockOverlay(document.getElementById('stealth-icon'), !passive);
+            setLockOverlay(document.getElementById('vacuum-icon'), !passive);
+            setLockOverlay(document.getElementById('auto-det-icon'), !passive);
             const wanchaiCd = S.wanchaiCooldown ?? 12;
             UIManager._setCooldownVisual(
                 'stealth-icon',
@@ -971,26 +1004,6 @@ class UIManager {
         } else if (player.charId === 'kao') {
             const S = BALANCE.characters.kao;
             const passive = player.passiveUnlocked;
-
-            // ── Helper: แสดง/ซ่อน lock overlay บน skill icon ─────────────────
-            const setLockOverlay = (icon, locked) => {
-                if (!icon) return;
-                let lock = icon.querySelector('.skill-lock');
-                if (locked) {
-                    if (!lock) {
-                        lock = document.createElement('div');
-                        lock.className = 'skill-lock';
-                        lock.style.cssText =
-                            'position:absolute;inset:0;display:flex;align-items:center;' +
-                            'justify-content:center;font-size:20px;background:rgba(0,0,0,0.65);' +
-                            'border-radius:8px;z-index:10;pointer-events:none;';
-                        lock.textContent = '\uD83D\uDD12';
-                        icon.appendChild(lock);
-                    }
-                } else if (lock) {
-                    lock.remove();
-                }
-            };
 
             // ── Skill 1 (R-Click) — Stealth: handled by PlayerBase.updateUI() ──
 

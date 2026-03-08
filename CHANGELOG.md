@@ -4,6 +4,41 @@
 
 ---
 
+## v3.12.11 — Feature: Skill Locking System for Poom & Auto
+*Released: March 8, 2026*
+
+### 🔥 New Features
+- **Skill Locking System:** Implemented comprehensive skill locking for Poom and Auto characters
+  - **Poom Skills Locked Until Level 4:** eatRice (R-Click), summonNaga (Q), summonGaruda (E), ritualBurst (R)
+  - **Auto Skills Locked Until Level 5:** Wanchai Stand (R-Click), Vacuum Heat (Q), Overheat Detonation (E)
+  - **Visual Lock Indicators:** Added lock icon overlays on skill icons when locked
+  - **Unlock Feedback:** Floating text shows level requirement when locked, celebration effects when unlocked
+
+### 🐛 Critical Bug Fixes
+- **Fixed Poom Passive Unlock:** Poom couldn't unlock passive because PlayerBase required stealthUseCount ≥ 99, but Poom has no stealth
+  - **Solution:** Override `checkPassiveUnlock()` in PoomPlayer to check level only
+- **Fixed Auto Unlock Notification:** Auto showed hardcoded "ซุ่มเสรี!" text instead of appropriate message
+  - **Solution:** Override `checkPassiveUnlock()` in AutoPlayer with custom "วิญญาณแห่งเปลวไฟ!" notification
+- **Fixed eatRice Lock Location:** eatRice was routed through game.js, not PoomPlayer.update()
+  - **Solution:** Added skill lock check in game.js for eatRice (R-Click) and summonNaga (Q)
+- **Fixed Double Input Consumption:** Q key was consumed in both PoomPlayer.update() and game.js
+  - **Solution:** Centralize input consumption in PoomPlayer.update() with proper feedback
+
+### 🎨 UI Improvements
+- **Lock Icon Overlays:** Added 🔒 lock icons on all locked skill icons
+- **Consistent Lock Helper:** Moved `setLockOverlay()` helper function to top of `updateSkillIcons()` for reuse
+- **Character-Specific Locks:** 
+  - Poom: 4 skill icons locked (eat, naga, ritual, garuda)
+  - Auto: 3 skill icons locked (stealth/wanchai, vacuum, detonation)
+
+### 🔧 Technical Details
+- **Override Pattern:** Both PoomPlayer and AutoPlayer override `checkPassiveUnlock()` for character-specific unlock conditions
+- **Input Validation:** Added `passiveUnlocked` checks before all skill activations
+- **Feedback System:** Consistent floating text with level requirements when skills are locked
+- **Save System Integration:** Passive unlock status persists across game sessions
+
+---
+
 ## v3.12.10 — Critical Bug Fix: BALANCE Object Structure
 *Released: March 8, 2026*
 

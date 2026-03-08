@@ -268,11 +268,19 @@ function updateGame(dt) {
     if (window.player instanceof PoomPlayer) {
         if (mouse.left === 1 && GameState.phase === 'PLAYING') shootPoom(window.player);
         if (mouse.right === 1) {
-            if (window.player.cooldowns.eat <= 0 && !window.player.isEatingRice) window.player.eatRice();
+            if (window.player.passiveUnlocked) {
+                if (window.player.cooldowns.eat <= 0 && !window.player.isEatingRice) window.player.eatRice();
+            } else {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${window.player.stats.passiveUnlockLevel ?? 4}`, window.player.x, window.player.y - 40, '#94a3b8', 14);
+            }
             mouse.right = 0;
         }
         if (keys.q === 1) {
-            if (window.player.cooldowns.naga <= 0) window.player.summonNaga();
+            if (window.player.passiveUnlocked) {
+                if (window.player.cooldowns.naga <= 0) window.player.summonNaga();
+            } else {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${window.player.stats.passiveUnlockLevel ?? 4}`, window.player.x, window.player.y - 40, '#94a3b8', 14);
+            }
             keys.q = 0;
         }
     }

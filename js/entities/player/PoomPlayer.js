@@ -172,17 +172,29 @@ class PoomPlayer extends Player {
                 consumeInput('space'); // consume silently — dash blocked by Grounded
             }
         }
-        if (checkInput('e') && this.cooldowns.garuda <= 0) {
-            this.summonGaruda();
+        // ── Skill Lock: ทุกสกิลล็อคจนกว่าจะปลดล็อคพาสซีฟ (Lv4) ──────────
+        if (checkInput('e')) {
+            if (this.passiveUnlocked && this.cooldowns.garuda <= 0) {
+                this.summonGaruda();
+            } else if (!this.passiveUnlocked) {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats.passiveUnlockLevel ?? 4}`, this.x, this.y - 40, '#94a3b8', 14);
+            }
             consumeInput('e');
         }
         // ── Updated Controls: R = Ritual Burst, Q = Naga Summon ──
-        if (checkInput('r') && this.cooldowns.ritual <= 0) {
-            this.ritualBurst();
+        if (checkInput('r')) {
+            if (this.passiveUnlocked && this.cooldowns.ritual <= 0) {
+                this.ritualBurst();
+            } else if (!this.passiveUnlocked) {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats.passiveUnlockLevel ?? 4}`, this.x, this.y - 40, '#94a3b8', 14);
+            }
             consumeInput('r');
         }
-        if (checkInput('q') && this.cooldowns.naga <= 0) {
-            this.summonNaga();
+        if (checkInput('q')) {
+            if (this.passiveUnlocked && this.cooldowns.naga <= 0) {
+                this.summonNaga();
+            }
+            // Feedback + consume handled in game.js Q block; consume here prevents double-fire
             consumeInput('q');
         }
 
@@ -252,6 +264,26 @@ class PoomPlayer extends Player {
         spawnFloatingText('กินข้าวเหนียว!', this.x, this.y - 50, '#fbbf24', 22);
         if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('อร่อยแท้ๆ!', this.x, this.y - 40);
         addScreenShake(5); Audio.playPowerUp();
+    }
+
+    // ── Override: Poom ปลดล็อคด้วย Level เท่านั้น (ไม่มี stealth) ──────────
+    checkPassiveUnlock() {
+        const S = this.stats;
+        if (!this.passiveUnlocked && this.level >= (S.passiveUnlockLevel ?? 4)) {
+            this.passiveUnlocked = true;
+            const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.30));
+            this.maxHp += hpBonus; this.hp += hpBonus;
+            spawnFloatingText('ปลดล็อค: ราชาแห่งพิธีกรรม!', this.x, this.y - 60, '#fbbf24', 30);
+            spawnParticles(this.x, this.y, 50, '#fbbf24');
+            addScreenShake(15); this.goldenAuraTimer = 3;
+            Audio.playAchievement();
+            try {
+                const saved = getSaveData();
+                const set = new Set(saved.unlockedPassives || []);
+                set.add(this.charId);
+                updateSaveData({ unlockedPassives: [...set] });
+            } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
+        }
     }
 
     summonNaga() {

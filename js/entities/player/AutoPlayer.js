@@ -818,12 +818,16 @@ class AutoPlayer extends Player {
         }
 
         if (checkInput('rightClick')) {
-            const energyCost = this.stats?.wanchaiEnergyCost ?? 32;  // fix: was 35 ≠ config 32
-            if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
-                this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
-                this._activateWanchai();
-                consumeInput('rightClick');
+            if (!this.passiveUnlocked) {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats?.passiveUnlockLevel ?? 5}`, this.x, this.y - 40, '#94a3b8', 14);
+            } else {
+                const energyCost = this.stats?.wanchaiEnergyCost ?? 32;  // fix: was 35 ≠ config 32
+                if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
+                    this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
+                    this._activateWanchai();
+                }
             }
+            consumeInput('rightClick');
         }
 
         const oldSpeedBoost = this.speedBoost;
@@ -842,7 +846,10 @@ class AutoPlayer extends Player {
         // กด Q ดึงทุกตัวในรัศมี 320px เข้าหาออโต้ทันที
         // cooldown 8 วินาที | ออกแบบให้ combo กับ Wanchai
         if (mouse?.middle !== undefined) { /* placeholder */ }
-        if (checkInput('q') && (this.cooldowns?.vacuum ?? 0) <= 0) {
+        if (checkInput('q') && !this.passiveUnlocked) {
+            spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats?.passiveUnlockLevel ?? 5}`, this.x, this.y - 40, '#94a3b8', 14);
+            consumeInput('q');
+        } else if (checkInput('q') && this.passiveUnlocked && (this.cooldowns?.vacuum ?? 0) <= 0) {
             const VACUUM_RANGE = this.stats?.vacuumRange ?? 320;
             const VACUUM_FORCE = this.stats?.vacuumForce ?? 1400; // stronger impulse
             const STUN_DUR = this.stats?.vacuumStunDur ?? 0.55; // AI lock duration
@@ -902,7 +909,10 @@ class AutoPlayer extends Player {
         // ── E: Overheat Detonation — Heat-scaled, DOES NOT kill Wanchai ─────
         // กด E ระหว่าง Wanchai active เท่านั้น
         // AOE = detonationRange (×1.5 ถ้า OVERHEATED), damage = base + heat×scaling
-        if (checkInput('e') && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
+        if (checkInput('e') && !this.passiveUnlocked) {
+            spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats?.passiveUnlockLevel ?? 5}`, this.x, this.y - 40, '#94a3b8', 14);
+            consumeInput('e');
+        } else if (checkInput('e') && this.passiveUnlocked && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
             const S = this.stats ?? {};
             const isOverheat = (this._heatTier ?? 0) >= 3;
             const DET_RANGE = (S.detonationRange ?? 240) * (isOverheat ? 1.5 : 1.0);
@@ -1109,6 +1119,26 @@ class AutoPlayer extends Player {
     }
 
     // draw() ย้ายไป PlayerRenderer._drawAuto() แล้ว
+
+    // ── Override: Auto ปลดล็อคด้วย Level เท่านั้น (passiveUnlockStealthCount: 0 = no stealth req) ──
+    checkPassiveUnlock() {
+        const S = this.stats;
+        if (!this.passiveUnlocked && this.level >= (S.passiveUnlockLevel ?? 5) && this.stealthUseCount >= (S.passiveUnlockStealthCount ?? 0)) {
+            this.passiveUnlocked = true;
+            const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.35));
+            this.maxHp += hpBonus; this.hp += hpBonus;
+            spawnFloatingText('ปลดล็อค: วิญญาณแห่งเปลวไฟ!', this.x, this.y - 60, '#f97316', 30);
+            spawnParticles(this.x, this.y, 50, '#f97316');
+            addScreenShake(15); this.goldenAuraTimer = 3;
+            Audio.playAchievement();
+            try {
+                const saved = getSaveData();
+                const set = new Set(saved.unlockedPassives || []);
+                set.add(this.charId);
+                updateSaveData({ unlockedPassives: [...set] });
+            } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
+        }
+    }
 
 }
 
