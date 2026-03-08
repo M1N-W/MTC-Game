@@ -43,7 +43,7 @@ const BALANCE = {
             weapons: {
                 auto: {
                     name: 'AUTO RIFLE',
-                    damage: 22, cooldown: 0.2,
+                    damage: 26, cooldown: 0.22,  // BUFF: 22→26 dmg, 0.20→0.22 cd (DPS 110→118, gap vs Shotgun แคบลง)
                     range: 900, speed: 900,
                     spread: 0, pellets: 1,
                     color: '#3b82f6', icon: '🔵'
@@ -57,9 +57,9 @@ const BALANCE = {
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 30, cooldown: 0.50,   // NERF: 36→30 dmg, 0.55→0.50 cd (DPS 173→162, closes gap vs Auto/Sniper)
+                    damage: 28, cooldown: 0.55,   // NERF: 30→28 dmg, 0.50→0.55 cd (DPS 180→153, ยังเป็น top แต่ gap ลดลง)
                     range: 400, speed: 700,
-                    spread: 0.45, pellets: 3,     // NERF: spread 0.5→0.45 (slight accuracy buff to compensate feel)
+                    spread: 0.45, pellets: 3,
                     color: '#f59e0b', icon: '🟠'
                 }
             },
@@ -129,8 +129,8 @@ const BALANCE = {
             wanchaiDuration: 8.0,           // 6.0 → 8.0 (longer payoff window)
             wanchaiCooldown: 12,            // 9 → 12 (trade longer for less spammy)
             wanchaiEnergyCost: 25,          // 32 → 25 (easier loop)
-            wanchaiPunchRate: 0.09,          // 0.11 → 0.09 (11.1 punches/s — BUFF)
-            wanchaiDamage: 38,              // 32 → 38 (BUFF)
+            wanchaiPunchRate: 0.10,          // NERF: 0.09 → 0.10 (10 punches/s แทน 11.1 — ลด sustained DPS)
+            wanchaiDamage: 30,              // NERF: 38 → 30 (Wanchai TTK boss: 8.3s→~12s, ลด Wanchai dominance)
             standSpeedMod: 1.5,
             standDamageReduction: 0.40,     // 0.35 → 0.40 (BUFF: tank identity stronger)
             standCritBonus: 0.25,
@@ -448,8 +448,8 @@ const BALANCE = {
             color: 'rgba(186, 230, 253, 0.6)'
         },
         first: {
-            hpBaseMult: 0.62,
-            advancedHpMult: 1.35,
+            hpBaseMult: 0.72,       // BUFF: 0.62 → 0.72 (Wave6 HP: 6448→7488, mid-game boss ควรหนักขึ้น)
+            advancedHpMult: 0.85,   // NERF: 1.35 → 0.85 (Wave12 HP: 17410→12730, TTK 46s→40s)
             speedBaseMult: 1.55,
             advancedSpeedMult: 1.35,
             contactDamageMult: 1.2,

@@ -4,6 +4,46 @@
 
 ---
 
+## v3.16.3 — Game Balance Rework: Weapon Scaling & Boss Adjustments
+*Released: March 8, 2026*
+
+### ⚖️ Weapon Balance Changes
+- **Auto Rifle Buff:** Increased damage 22→26, cooldown 0.20→0.22 (DPS 110→118)
+  - **Purpose:** Close the gap with Shotgun while maintaining distinct identity
+  - **Impact:** Better sustained damage, more competitive weapon choice
+- **Shotgun Nerf:** Reduced damage 30→28, cooldown 0.50→0.55 (DPS 180→153)
+  - **Purpose:** Reduce dominance while keeping top-tier status
+  - **Impact:** Still highest DPS but less overwhelming, better weapon balance
+- **Sniper:** Unchanged - maintains burst damage specialist role
+
+### 🔥 Auto Character: Wanchai Stand Rework
+- **Damage Reduction:** Decreased from 38→30 damage per punch
+- **Attack Speed:** Reduced from 11.1→10.0 punches per second (0.09→0.10 rate)
+  - **Purpose:** Reduce Wanchai dominance in boss fights
+  - **Impact:** Boss TTK increased from 8.3s→~12s, more balanced encounter design
+- **Sustained DPS:** Significantly reduced to prevent over-reliance on Wanchai
+
+### 👑 Boss Scaling Adjustments
+- **KruFirst HP Rework:** 
+  - **Base HP Multiplier:** Increased 0.62→0.72 (Wave6 HP: 6448→7488)
+  - **Advanced HP Multiplier:** Decreased 1.35→0.85 (Wave12 HP: 17410→12730)
+  - **Purpose:** Stronger mid-game boss, less extreme late-game scaling
+  - **Impact:** More consistent difficulty curve, reduced TTK variance (46s→40s)
+
+### 🌊 Wave Management Improvements
+- **Spawn Logic Comments:** Added explanatory comments for wave-gated enemy spawning
+  - **Mage/Tank Scaling:** Progressive spawn chance from Wave1 (0%) to Wave15 (100%)
+  - **Trickle Spawning:** Clarified batch size calculations for pressure management
+- **Code Documentation:** Enhanced readability for future balance adjustments
+
+### 🎯 Design Philosophy
+- **Weapon Diversity:** Reduce Shotgun dominance while maintaining its top-tier status
+- **Boss Balance:** More consistent difficulty progression across game phases
+- **Auto Reliance:** Reduce Wanchai Stand as sole solution for all encounters
+- **Strategic Depth:** Encourage varied weapon and character ability usage
+
+---
+
 ## v3.16.2 — Repository Cleanup: Skill File Consolidation
 *Released: March 8, 2026*
 

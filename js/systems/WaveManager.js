@@ -429,7 +429,7 @@ function _drawBanner(ctx) {
 // ══════════════════════════════════════════════════════════════
 function _startTrickle(count, wave) {
     const isDark = DARK_WAVES.has(wave);
-    const batchSize = Math.max(1, Math.min(4, Math.ceil(count / 7)));
+    const batchSize = Math.max(1, Math.min(4, Math.ceil(count / 7)));  // B5 FIX: cap 3→4 แต่หาร 6→7 (ลด pressure wave สุดท้าย)
     const raw = TRICKLE_INTERVAL_BASE - (wave - 1) * 0.04;
     const interval = isDark
         ? TRICKLE_INTERVAL_DARK
@@ -656,6 +656,7 @@ function spawnEnemies(count) {
         const safe = mapSystem.findSafeSpawn(x, y, BALANCE.enemy.radius);
         x = safe.x; y = safe.y;
         const r = Math.random();
+        // Wave-gated spawn: Mage/Tank ค่อยๆ เพิ่มตาม wave (Wave1=0%, Wave15=100% chance)
         const waveNorm = Math.min(1, (getWave() - 1) / 14);
         const effectiveMageChance = BALANCE.waves.mageSpawnChance * waveNorm;
         const effectiveTankChance = BALANCE.waves.tankSpawnChance * (0.3 + waveNorm * 0.7);
