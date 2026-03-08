@@ -88,22 +88,19 @@
 
 ---
 
-## 📈 Current Version: v3.12.5 (March 8, 2026)
+## 📈 Current Version: v3.16.1 (March 8, 2026)
 
 **Latest Major Updates:**
-- 🐛 **Garuda NaN Fix:** Resolved Service Worker cache issue causing undefined config properties with comprehensive fallbacks
-- 🔍 **Garuda Draw Debugging:** Disabled viewport culling + added frame-by-frame draw call tracking for render pipeline analysis
-- 🔍 **Enhanced Diagnostics:** Added detailed Garuda summon logging for debugging entity deployment issues
-- 🐛 **Bug Fixes & Stability:** Fixed Kao config reference error, added Garuda owner null guards, enhanced debug logging
-- 🥊 **Kao Phantom Blink Rework:** Dash-triggered stealth, shadow clone teleport, ambush crit windows, and proximity burst system
-- 🦅 **Poom Garuda Summon:** Complete fire-themed bird entity with ORBIT→DIVE→RETURN FSM and autonomous combat behavior
-- ⚖️ **Cosmic Balance System:** Dual summon synergy with +20% damage, enhanced burn effects, and visual aura feedback
+- 🐛 **Critical Bug Fixes:** Fixed boss kill scoring double-count, meteor spawn rate 60× bug, and wave spawn balance
+- ⚖️ **Boss Balance:** KruManop phase 3 speed boost, KruFirst HP increase, GoldfishMinion death guard
+- � **Technical Improvements:** Frame-rate independence fixes, enhanced wave progression, performance optimizations
+- 🔄 **Major Character Balance Rework:** Kao two-phase passive system, Auto early vacuum access, Poom significant buffs
+- 🏆 **Complete Achievement System:** Character progression tracking, boss kill statistics, combat milestones
 - 🎮 **UI Integration:** Dynamically injected Garuda skill slot with cooldown visuals for Poom character
 - 🔧 **Clone System Balance:** Reduced cooldowns (60→25s) and tactical manual detonation via E-key
 - 🎨 **Visual Enhancements:** Fire trail effects, cosmic aura rings, and enhanced Phantom Blink visual feedback
 - 📊 **Technical Improvements:** O(1) state management, proper entity cleanup, and memory-optimized trail systems
 - 🔥 **Heat Gauge System:** Complete 4-tier heat system (COLD→WARM→HOT→OVERHEAT) with damage multipliers and OVERHEAT mechanics
-- 💥 **Detonation Rework:** Non-lethal detonation with heat scaling damage and momentum preservation
 - 🌀 **Vacuum Heat Enhancement:** Added instant damage + burning effect + heat reward on successful pulls
 - 🥊 **Wanchai Stand Spirit of Muay Thai:** Complete visual overhaul with ice-blue/white spectral design and cultural elements
 - 🎮 **Heat Gauge HUD:** Reuses energy bar slot with tier-specific colors and floating badge display

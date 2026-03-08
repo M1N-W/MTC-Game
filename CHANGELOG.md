@@ -4,6 +4,33 @@
 
 ---
 
+## v3.16.1 — Critical Bug Fixes: Boss Scoring & Game Balance
+*Released: March 8, 2026*
+
+### 🐛 Critical Bug Fixes
+- **Boss Kill Scoring:** Fixed double score bug when boss killed same frame as other entities
+  - **BossDog:** Added `_scored` flag to prevent duplicate `addScore()` calls
+  - **Root Cause:** Boss death and projectile damage could occur in same frame
+- **Meteor Spawn Rate:** Fixed per-frame vs per-second calculation causing 60× spawn rate
+  - **MageEnemy:** Fixed `Math.random() < 0.005` to `Math.random() < (0.005 * dt * 60)`
+  - **Impact:** Prevents meteor shower spam at high framerates
+- **Wave Spawn Balance:** Improved enemy distribution and batch spawning
+  - **Trickle Batching:** Increased batch size from 3→4, divisor from 6→7 for smoother spawning
+  - **Progressive Scaling:** Mage and tank spawn chances now scale with wave progression
+  - **Wave Normalization:** Added `waveNorm` for gradual difficulty increase
+
+### ⚖️ Boss Balance Adjustments
+- **KruManop Phase 3:** Added 15% speed boost during Goldfish Lover phase
+- **KruFirst Balance:** Increased HP multiplier from 0.62→0.85, capped move speed at 2.2× base
+- **GoldfishMinion:** Added death guard to prevent double-death processing
+
+### 🔧 Technical Improvements
+- **Frame-Rate Independence:** Fixed time-dependent calculations to work consistently across different framerates
+- **Spawn Logic:** Enhanced wave progression system with better enemy type distribution
+- **Performance:** Reduced unnecessary particle effects and duplicate processing
+
+---
+
 ## v3.16.0 — Major Character Balance Rework: Two-Phase Systems & Early Access
 *Released: March 8, 2026*
 

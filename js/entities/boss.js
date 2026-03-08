@@ -138,7 +138,8 @@ class BossDog extends Entity {
             player.takeDamage(this.damage * dt);
         }
 
-        if (this.hp <= 0 && !this.dead) {
+        if (this.hp <= 0 && !this.dead && !this._scored) {
+            this._scored = true;  // BUG B4 FIX: prevent double addScore if killed same frame as boss
             this.dead = true;
             spawnParticles(this.x, this.y, 25, BALANCE.boss.bossDog.color);
             spawnFloatingText('Go Get EM! 🐕', this.x, this.y - 40, '#d97706', 26);
@@ -333,6 +334,9 @@ class KruManop extends BossBase {
         // ── Phase 3 transition — "The Goldfish Lover" ────────
         if (this.hp < this.maxHp * BALANCE.boss.phase3Threshold && this.phase === 2 && this.enablePhase3) {
             this.phase = 3;
+            this.moveSpeed = BALANCE.boss.moveSpeed
+                * BALANCE.boss.phase2.enrageSpeedMult
+                * 1.15;
             this.skills.goldfish.cd = 0;
             this.skills.bubble.cd = 0;
             spawnFloatingText('🐟 THE GOLDFISH LOVER!', this.x, this.y - 100, '#38bdf8', 42);
@@ -669,10 +673,13 @@ class KruFirst extends BossBase {
         super(0, BALANCE.boss.spawnY, BASE_R);
 
         const advMult = isAdvanced ? 1.35 : 1.0;
-        this.maxHp = BALANCE.boss.baseHp * difficulty * 0.62 * advMult;
+        this.maxHp = BALANCE.boss.baseHp * difficulty * 0.85 * advMult;
         this.hp = this.maxHp;
         this.name = 'KRU FIRST';
-        this.moveSpeed = BALANCE.boss.moveSpeed * 1.55 * advMult;
+        this.moveSpeed = Math.min(
+            BALANCE.boss.moveSpeed * 2.2,
+            BALANCE.boss.moveSpeed * 1.55 * advMult
+        );
         this.difficulty = difficulty;
         this.isAdvanced = isAdvanced;
         this.isEnraged = false;

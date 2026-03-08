@@ -429,7 +429,7 @@ function _drawBanner(ctx) {
 // ══════════════════════════════════════════════════════════════
 function _startTrickle(count, wave) {
     const isDark = DARK_WAVES.has(wave);
-    const batchSize = Math.max(1, Math.min(3, Math.ceil(count / 6)));
+    const batchSize = Math.max(1, Math.min(4, Math.ceil(count / 7)));
     const raw = TRICKLE_INTERVAL_BASE - (wave - 1) * 0.04;
     const interval = isDark
         ? TRICKLE_INTERVAL_DARK
@@ -656,9 +656,12 @@ function spawnEnemies(count) {
         const safe = mapSystem.findSafeSpawn(x, y, BALANCE.enemy.radius);
         x = safe.x; y = safe.y;
         const r = Math.random();
-        if (r < BALANCE.waves.mageSpawnChance)
+        const waveNorm = Math.min(1, (getWave() - 1) / 14);
+        const effectiveMageChance = BALANCE.waves.mageSpawnChance * waveNorm;
+        const effectiveTankChance = BALANCE.waves.tankSpawnChance * (0.3 + waveNorm * 0.7);
+        if (r < effectiveMageChance)
             window.enemies.push(new MageEnemy(x, y));
-        else if (r < BALANCE.waves.mageSpawnChance + BALANCE.waves.tankSpawnChance)
+        else if (r < effectiveMageChance + effectiveTankChance)
             window.enemies.push(new TankEnemy(x, y));
         else
             window.enemies.push(new Enemy(x, y));

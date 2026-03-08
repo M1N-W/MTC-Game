@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.16.0'; // v3.16.0: Major character balance rework - Kao two-phase passive system, Auto early vacuum, Poom buffs
+const CACHE_NAME = 'mtc-cache-v3.16.1'; // v3.16.1: Critical bug fixes - boss kill scoring, meteor spawn rate, wave balance improvements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

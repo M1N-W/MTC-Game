@@ -576,7 +576,7 @@ class MageEnemy extends Entity {
             }
             this.soundWaveCD = BALANCE.mage.soundWaveCooldown;
         }
-        if (this.meteorCD <= 0 && Math.random() < 0.005) {
+        if (this.meteorCD <= 0 && Math.random() < (0.005 * dt * 60)) {  // BUG B1 FIX: was per-frame (×60 spikes at 60fps) → now per-second
             window.specialEffects.push(new MeteorStrike(player.x + rand(-300, 300), player.y + rand(-300, 300)));
             this.meteorCD = BALANCE.mage.meteorCooldown;
             Audio.playMeteorWarning();

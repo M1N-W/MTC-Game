@@ -202,8 +202,8 @@ class GoldfishMinion extends Entity {
     }
 
     takeDamage(amt) {
+        if (this.dead) return;  // BUG B3 FIX: guard against double-death (contact + projectile same frame)
         this.hp -= amt;
-        spawnParticles(this.x, this.y, 3, BALANCE.boss.goldfishMinion.color);
     }
 
     draw() {
