@@ -4,6 +4,54 @@
 
 ---
 
+## v3.13.0 — Major Gameplay Overhaul: Thematic Passive Unlocks
+*Released: March 8, 2026*
+
+### 🎮 Complete Passive Unlock Redesign
+- **Thematic Unlock Conditions:** Changed from level-based to action-based unlocks
+  - **Poom:** Unlocks passive after first Ritual Burst (teaches Sticky→Ritual loop)
+  - **Auto:** Unlocks passive upon reaching OVERHEAT for first time (body awakening)
+  - **Kao:** Unchanged (stealth-based unlock fits ninja theme)
+
+### 🌾 Poom Character Rework
+- **Progressive Skill Unlock:** Q (Naga) unlocks at Level 2, teaches mechanics before passive
+- **Ritual-First Passive:** Must perform Ritual Burst to unlock Garuda and passive bonuses
+- **Enhanced Cosmic Balance:** 
+  - Damage multiplier increased: 1.20 → 1.35
+  - NEW: HP regeneration (4/s) during Cosmic Balance
+  - Visual feedback with particle effects and voice bubbles
+- **Skill Flow:** L-Click/R-Click always available, Q unlocks at Lv2, R requires Q, E requires passive
+
+### 🔥 Auto Character Rework  
+- **OVERHEAT Awakening:** Passive unlocks when reaching 100% Heat for first time
+- **NEW Rage Mode Mechanic:** OVERHEAT + HP < 30% triggers high-risk state
+  - Damage ×1.3 bonus
+  - 20% damage reduction 
+  - Visual "RAGE MODE!" notification
+- **Thematic Unlock:** "Scorched Soul" awakening when body is pushed to limits
+- **Skill Locking:** Wanchai Stand now requires passive unlock (reverts basic skill availability)
+
+### 🎨 Visual & UX Enhancements
+- **Unlock Notifications:** Enhanced VFX with dual-color particles and detailed messages
+- **Progressive Feedback:** Clear milestone notifications (Q UNLOCKED, E UNLOCKED, etc.)
+- **Thematic Text:** Updated unlock messages with emojis and character flavor
+  - Kao: "👻 ซุ่มเสรี!"
+  - Poom: "🌾 ราชาอีสาน!"  
+  - Auto: "💥 วันชัยโอเวอร์ไดรฟ์!"
+
+### 🔧 Technical Improvements
+- **Flag-Based Unlock System:** Uses internal flags instead of level checks
+- **Better Tutorial Flow:** Poom teaches Naga→Sticky→Ritual before full unlock
+- **Config Reorganization:** Moved cosmicDamageMult to passive section for clarity
+- **Enhanced Combat Balance:** Improved damage numbers and reward feedback
+
+### 📚 Documentation Updates
+- **Tutorial Text:** Updated Auto tutorial with new unlock conditions
+- **Config Comments:** Added detailed explanations for new mechanics
+- **Clearer Progression:** Better communication of unlock requirements
+
+---
+
 ## v3.12.14 — UI Fix: Basic Skills Lock Overlays
 *Released: March 8, 2026*
 

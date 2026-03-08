@@ -41,6 +41,12 @@ class PoomPlayer extends Player {
         // ── Passive behaviour flags (overrides PlayerBase defaults) ──────────
         this.passiveSpeedBonus = 0;     // Poom ไม่มี passive speed bonus
         this.usesOwnLifesteal = false;  // ใช้ base lifesteal logic ปกติ
+
+        // ── Passive unlock flags ────────────────────────────────────────────
+        // _nagaUnlocked: Q (Naga) ปลดที่ Lv2 ก่อน passive — สอน mechanic ก่อน
+        // _hasUsedRitual: ปลด passive เมื่อทำ Ritual ครั้งแรกหลัง Naga active
+        this._nagaUnlocked = false;
+        this._hasUsedRitual = false;
     }
 
     // ── Second Wind: computed live, no timer needed ──────────
@@ -176,44 +182,42 @@ class PoomPlayer extends Player {
                 consumeInput('space'); // consume silently — dash blocked by Grounded
             }
         }
-        // ── L-Click: ยิงข้าว — routing ย้ายมาจาก game.js ──────────────────
-        if (mouse && mouse.left === 1 && GameState.phase === 'PLAYING') {
-            this.shoot();
+        // ── Milestone Unlock: Q (Naga) ปลดที่ Lv2 — ก่อน passive ─────────────
+        // ให้ผู้เล่นเรียน Naga + Sticky + Ritual loop ก่อนที่ passive จะ trigger
+        if (!this._nagaUnlocked && this.level >= 2) {
+            this._nagaUnlocked = true;
+            spawnFloatingText('🐍 Q UNLOCKED: พญานาคา!', this.x, this.y - 60, '#10b981', 22);
+            spawnParticles(this.x, this.y, 25, '#10b981');
         }
 
-        // ── R-Click: กินเข่านึ่ง — routing ย้ายมาจาก game.js ─────────────
-        // ใช้ได้ตั้งแต่ต้นเกม (ไม่บล็อคด้วย passiveUnlocked)
-        // Passive bonuses (crit, lifesteal, CosmicBalance) ยังคงต้องปลดล็อคตามปกติ
-        if (mouse && mouse.right === 1) {
-            if (this.cooldowns.eat <= 0 && !this.isEatingRice) {
-                this.eatRice();
-            }
-            mouse.right = 0;
-        }
-
-        // ── Skill Lock: ทุกสกิลล็อคจนกว่าจะปลดล็อคพาสซีฟ (Lv4) ──────────
+        // ── E: Garuda — ล็อคจนกว่า passive จะปลด ────────────────────────────
         if (checkInput('e')) {
             if (this.passiveUnlocked && this.cooldowns.garuda <= 0) {
                 this.summonGaruda();
             } else if (!this.passiveUnlocked) {
-                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats.passiveUnlockLevel ?? 4}`, this.x, this.y - 40, '#94a3b8', 14);
+                spawnFloatingText('🔒 ปลดล็อคหลัง Ritual ครั้งแรก', this.x, this.y - 40, '#94a3b8', 14);
             }
             consumeInput('e');
         }
-        // ── Updated Controls: R = Ritual Burst, Q = Naga Summon ──
+
+        // ── R: Ritual Burst — ล็อคจนกว่า Naga จะถูกเรียก ──────────────────
+        // เหตุผล: ต้องมี Sticky stack ก่อนถึง Ritual จะ meaningful
         if (checkInput('r')) {
-            if (this.passiveUnlocked && this.cooldowns.ritual <= 0) {
+            if (this._nagaUnlocked && this.cooldowns.ritual <= 0) {
                 this.ritualBurst();
-            } else if (!this.passiveUnlocked) {
-                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats.passiveUnlockLevel ?? 4}`, this.x, this.y - 40, '#94a3b8', 14);
+            } else if (!this._nagaUnlocked) {
+                spawnFloatingText('🔒 ปลดล็อค Naga ก่อน (Lv2)', this.x, this.y - 40, '#94a3b8', 14);
             }
             consumeInput('r');
         }
+
+        // ── Q: Naga Summon — ปลดที่ Lv2 ──────────────────────────────────
         if (checkInput('q')) {
-            if (this.passiveUnlocked && this.cooldowns.naga <= 0) {
+            if (this._nagaUnlocked && this.cooldowns.naga <= 0) {
                 this.summonNaga();
+            } else if (!this._nagaUnlocked) {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv2`, this.x, this.y - 40, '#94a3b8', 14);
             }
-            // Feedback + consume handled in game.js Q block; consume here prevents double-fire
             consumeInput('q');
         }
 
@@ -226,8 +230,22 @@ class PoomPlayer extends Player {
         const wasCosmicBalance = this._cosmicBalance;
         this._cosmicBalance = !!(this.naga?.active && this.garuda?.active);
         if (this._cosmicBalance && !wasCosmicBalance) {
-            spawnFloatingText(GAME_TEXTS?.combat?.cosmicActivate ?? '✨ COSMIC BALANCE!', this.x, this.y - 70, '#fbbf24', 22);
-            addScreenShake(6);
+            // Rising edge — แจ้งผู้เล่นชัดเจนขึ้น
+            spawnFloatingText(GAME_TEXTS?.combat?.cosmicActivate ?? '✨ COSMIC BALANCE!', this.x, this.y - 70, '#fbbf24', 26);
+            spawnFloatingText('⚔️ DMG ×1.35 | 💚 REGEN ON', this.x, this.y - 100, '#a3e635', 15);
+            spawnParticles(this.x, this.y, 20, '#fbbf24');
+            addScreenShake(8);
+            if (typeof UIManager !== 'undefined')
+                UIManager.showVoiceBubble(GAME_TEXTS?.combat?.cosmicVoice ?? 'พลังจักรวาลรวมกัน!', this.x, this.y - 40);
+        }
+        // ── Cosmic Balance: HP regen ตลอดเวลาที่ active ─────────────────────
+        // สร้าง visual reward ที่จับต้องได้ — ผู้เล่นรู้สึกได้ว่า combo ทำงานอยู่
+        if (this._cosmicBalance) {
+            const cosmicRegenRate = BALANCE.characters.poom.cosmicHpRegen ?? 4; // HP/s
+            this.hp = Math.min(this.maxHp, this.hp + cosmicRegenRate * dt);
+            // Particle trickle — subtle green glow (1 in 3 frames)
+            if (Math.random() < 0.33)
+                spawnParticles(this.x + (Math.random() - 0.5) * 30, this.y + (Math.random() - 0.5) * 30, 1, '#4ade80');
         }
 
         if (window.touchJoystickRight && window.touchJoystickRight.active) {
@@ -254,29 +272,24 @@ class PoomPlayer extends Player {
     }
 
     shoot() {
-        // ── ย้ายมาจาก shootPoom() ใน game.js — single source of truth ──
         const S = this.stats;
         if (this.cooldowns.shoot > 0) return;
-        const attackSpeedMult = this.isEatingRice ? 0.7 : 1.0;
-        this.cooldowns.shoot = S.riceCooldown * attackSpeedMult * this.cooldownMultiplier;
+        this.cooldowns.shoot = S.riceCooldown * this.cooldownMultiplier;
         const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0));
-
         const proj = new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
         proj.isPoom = true;
         proj.isCrit = isCrit;
         // Apply sticky stack on direct hit (Fragment projectiles bypass this)
         const self = this;
         proj.onHit = function (enemy) {
-            self.applyStickyTo(enemy); // ── Apply sticky via StatusEffect framework ──
+            self.applyStickyTo(enemy);
         };
         projectileManager.add(proj);
-
-        if (isCrit) {
-            spawnFloatingText(GAME_TEXTS?.combat?.poomCrit ?? 'สาดข้าว!', this.x, this.y - 45, '#fbbf24', 20);
-            spawnParticles(this.x, this.y, 5, '#ffffff');
-        }
+        if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
         this.speedBoostTimer = S.speedOnHitDuration;
-        if (typeof Audio !== 'undefined' && Audio.playPoomShoot) Audio.playPoomShoot();
+        // NOTE: Audio.playPoomShoot() is called in shootPoom() (game.js) — the
+        // actual execution path.  This method returns early because shootPoom()
+        // consumes the cooldown first.  Audio lives in game.js to avoid double-fire.
     }
 
     eatRice() {
@@ -290,26 +303,42 @@ class PoomPlayer extends Player {
         addScreenShake(5); Audio.playPowerUp();
     }
 
-    // ── Override: Poom ปลดล็อคด้วย Level เท่านั้น (ไม่มี stealth) ──────────
+    // ── Override: Poom ปลดล็อคเมื่อทำ Ritual ครั้งแรก ──────────────────────────
+    // เปลี่ยนจาก "รอ Level 4 เฉยๆ" → "ทำพิธีแล้ว awakens"
+    // Thematic: "ราชาแห่งพิธีกรรม" ต้องทำพิธีก่อนถึงจะเป็น "ราชา"
     checkPassiveUnlock() {
         const S = this.stats;
-        if (!this.passiveUnlocked && this.level >= (S.passiveUnlockLevel ?? 4)) {
-            this.passiveUnlocked = true;
-            const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.30));
-            this.maxHp += hpBonus; this.hp += hpBonus;
-            const unlockText = S.passiveUnlockText ?? 'ปลดล็อค: ราชาแห่งพิธีกรรม!';
-            spawnFloatingText(unlockText, this.x, this.y - 60, '#fbbf24', 30);
-            spawnParticles(this.x, this.y, 50, '#fbbf24');
-            addScreenShake(15); this.goldenAuraTimer = 3;
-            Audio.playAchievement();
-            if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
-            try {
-                const saved = getSaveData();
-                const set = new Set(saved.unlockedPassives || []);
-                set.add(this.charId);
-                updateSaveData({ unlockedPassives: [...set] });
-            } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
-        }
+        if (this.passiveUnlocked) return; // guard: ปลดแล้ว ไม่ต้องทำซ้ำ
+
+        // ── Condition: ทำ Ritual ครั้งแรก (set โดย ritualBurst()) ──────────
+        if (!this._hasUsedRitual) return;
+
+        this.passiveUnlocked = true;
+
+        // ── HP Bonus ──────────────────────────────────────────────────────
+        const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.30));
+        this.maxHp += hpBonus;
+        this.hp += hpBonus;
+
+        // ── Unlock VFX — สีเขียว/ทอง สะท้อน Ritual energy ──────────────
+        const unlockText = S.passiveUnlockText ?? '🌾 ราชาแห่งพิธีกรรม AWAKENED!';
+        spawnFloatingText(unlockText, this.x, this.y - 70, '#fbbf24', 32);
+        spawnFloatingText('✨ E (ครุฑ) UNLOCKED', this.x, this.y - 108, '#10b981', 18);
+        spawnParticles(this.x, this.y, 60, '#fbbf24');
+        spawnParticles(this.x, this.y, 30, '#10b981');
+        addScreenShake(18);
+        this.goldenAuraTimer = 4;
+        Audio.playAchievement();
+
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+
+        // ── Persist save ──────────────────────────────────────────────────
+        try {
+            const saved = getSaveData();
+            const set = new Set(saved.unlockedPassives || []);
+            set.add(this.charId);
+            updateSaveData({ unlockedPassives: [...set] });
+        } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
     }
 
     summonNaga() {
@@ -462,6 +491,13 @@ class PoomPlayer extends Player {
         spawnFloatingText('RITUAL BURST!', this.x, this.y - 50, '#00ff88', 22);
         addScreenShake(6);
         if (typeof Audio !== 'undefined' && Audio.playRitualBurst) Audio.playRitualBurst();
+
+        // ── PASSIVE UNLOCK TRIGGER: Ritual ครั้งแรก = Awakening ──────────────
+        // "ภูมิ awakens หลังจากทำพิธีครั้งแรก" — thematic และสอน Sticky→Ritual loop
+        if (!this._hasUsedRitual && !this.passiveUnlocked) {
+            this._hasUsedRitual = true;
+            this.checkPassiveUnlock();
+        }
     }
 
     dash(ax, ay) {

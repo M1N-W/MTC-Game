@@ -679,6 +679,10 @@ class AutoPlayer extends Player {
         this._heatTier = 0;        // 0=COLD 1=WARM 2=HOT 3=OVERHEAT
         this._heatTierLabel = '';  // for HUD floating text throttle
 
+        // ── Passive unlock flag: ตั้งเป็น true ครั้งแรกที่ถึง OVERHEAT ──
+        // checkPassiveUnlock() อ่าน flag นี้แทน passiveUnlockLevel
+        this._hasReachedOverheat = false;
+
         // ── Wanchai Stand entity (created on activation) ──────
         this.wanchaiStand = null;
     }
@@ -703,7 +707,10 @@ class AutoPlayer extends Player {
         // Heat gain from damage taken
         const heatGain = scaled * (this.stats?.heatPerDamageTaken ?? 0.5);
         if (heatGain > 0) this.gainHeat(heatGain);
-        super.takeDamage(scaled);
+
+        // ── RAGE MODE: ลด incoming damage 20% ขณะ rage (trade: ยังรับดาเมจ HP drain) ──
+        const rageReduction = this._rageMode ? (this.stats?.rageDamageReduction ?? 0.20) : 0;
+        super.takeDamage(scaled * (1 - rageReduction));
     }
 
     dealDamage(baseDamage) {
@@ -720,6 +727,10 @@ class AutoPlayer extends Player {
 
         // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ──────
         if ((this.graphBuffTimer ?? 0) > 0) result.damage *= 1.5;
+
+        // ── RAGE MODE: ดาเมจ x1.3 ขณะ OVERHEAT + HP ต่ำ ────────
+        // ออกแบบ: เสี่ยงตายแต่ได้ดาเมจสูงขึ้น — quintessential brawler fantasy
+        if (this._rageMode) result.damage *= (this.stats?.rageDamageMult ?? 1.30);
 
         return result;
     }
@@ -763,6 +774,14 @@ class AutoPlayer extends Player {
             if (typeof spawnFloatingText === 'function')
                 spawnFloatingText(labels[newTier], this.x, this.y - 80, colors[newTier], 22);
             if (typeof addScreenShake === 'function' && newTier === 3) addScreenShake(4);
+
+            // ── PASSIVE UNLOCK TRIGGER: ครั้งแรกที่ถึง OVERHEAT ──────────────
+            // ตั้ง flag แล้วส่งต่อให้ checkPassiveUnlock() ตัดสินใจ
+            // (guard !passiveUnlocked เพื่อไม่ยิง floating text ซ้ำ)
+            if (newTier === 3 && !this._hasReachedOverheat && !this.passiveUnlocked) {
+                this._hasReachedOverheat = true;
+                this.checkPassiveUnlock();
+            }
         }
         this._heatTier = newTier; // always sync downward too
     }
@@ -792,6 +811,17 @@ class AutoPlayer extends Player {
                 const drain = (S.heatHpDrainOverheat ?? 3) * dt;
                 this.hp = Math.max(1, this.hp - drain);
             }
+
+            // ── RAGE MODE: OVERHEAT + HP ต่ำกว่า 30% → damage buff + slow immunity ──
+            // ออกแบบเป็น high-risk-high-reward — ยิ่งเสียหายยิ่งอันตราย
+            const isLowHp = (this.hp / this.maxHp) <= (S.rageModeHpThreshold ?? 0.30);
+            const wasRage = this._rageMode ?? false;
+            this._rageMode = this.passiveUnlocked && newTier === 3 && isLowHp;
+            if (this._rageMode && !wasRage) {
+                // Rising edge — แจ้งผู้เล่นครั้งเดียว
+                spawnFloatingText('🔥 RAGE MODE!', this.x, this.y - 95, '#facc15', 26);
+                addScreenShake(6);
+            }
         }
 
         if (this.wanchaiActive) {
@@ -818,14 +848,14 @@ class AutoPlayer extends Player {
         }
 
         if (checkInput('rightClick')) {
-            // ── R-Click: Wanchai Stand — ใช้ได้ตั้งแต่ต้นเกม (ไม่บล็อคด้วย passiveUnlocked) ──
-            // Passive bonuses (Heat gain, lifesteal, crit) ยังคงต้องปลดล็อคตามปกติ
-            const energyCost = this.stats?.wanchaiEnergyCost ?? 25;
-            if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
-                this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
-                this._activateWanchai();
-            } else if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) < energyCost) {
-                spawnFloatingText('⚡ พลังงานไม่พอ!', this.x, this.y - 40, '#fbbf24', 14);
+            if (!this.passiveUnlocked) {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats?.passiveUnlockLevel ?? 5}`, this.x, this.y - 40, '#94a3b8', 14);
+            } else {
+                const energyCost = this.stats?.wanchaiEnergyCost ?? 32;  // fix: was 35 ≠ config 32
+                if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
+                    this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
+                    this._activateWanchai();
+                }
             }
             consumeInput('rightClick');
         }
@@ -1117,29 +1147,45 @@ class AutoPlayer extends Player {
         }
     }
 
-    // draw() ย้ายไป PlayerRenderer._drawAuto() แล้ว
-
-    // ── Override: Auto ปลดล็อคด้วย Level เท่านั้น (passiveUnlockStealthCount: 0 = no stealth req) ──
+    // ── Override: Auto ปลดล็อคเมื่อถึง OVERHEAT ครั้งแรก ──────────────────────
+    // เปลี่ยนจาก "รอ Level 5 เฉยๆ" → "ร่างกายถูกเผาจนสุด = Awakening"
+    // Thematic: ออโต้ค้นพบตัวเองตอนที่ร่างกาย "โอเวอร์ฮีต" ครั้งแรก
     checkPassiveUnlock() {
         const S = this.stats;
-        if (!this.passiveUnlocked && this.level >= (S.passiveUnlockLevel ?? 5) && this.stealthUseCount >= (S.passiveUnlockStealthCount ?? 0)) {
-            this.passiveUnlocked = true;
-            const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.35));
-            this.maxHp += hpBonus; this.hp += hpBonus;
-            const unlockText = S.passiveUnlockText ?? 'ปลดล็อค: วิญญาณแห่งเปลวไฟ!';
-            spawnFloatingText(unlockText, this.x, this.y - 60, '#f97316', 30);
-            spawnParticles(this.x, this.y, 50, '#f97316');
-            addScreenShake(15); this.goldenAuraTimer = 3;
-            Audio.playAchievement();
-            if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
-            try {
-                const saved = getSaveData();
-                const set = new Set(saved.unlockedPassives || []);
-                set.add(this.charId);
-                updateSaveData({ unlockedPassives: [...set] });
-            } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
-        }
+        if (this.passiveUnlocked) return; // guard: ปลดแล้ว ไม่ต้องทำซ้ำ
+
+        // ── Condition: ถึง OVERHEAT ครั้งแรก (set โดย gainHeat()) ──────────
+        if (!this._hasReachedOverheat) return;
+
+        this.passiveUnlocked = true;
+
+        // ── HP Bonus (เหมือนเดิม) ─────────────────────────────────────────
+        const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.35));
+        this.maxHp += hpBonus;
+        this.hp += hpBonus;
+
+        // ── Unlock VFX — สีส้ม/แดง สะท้อน SCORCHED SOUL ────────────────
+        const unlockText = S.passiveUnlockText ?? '💥 SCORCHED SOUL AWAKENED!';
+        spawnFloatingText(unlockText, this.x, this.y - 70, '#f97316', 32);
+        spawnFloatingText('🔥 Q & E UNLOCKED', this.x, this.y - 105, '#facc15', 18);
+        spawnParticles(this.x, this.y, 60, '#f97316');
+        spawnParticles(this.x, this.y, 30, '#facc15');
+        addScreenShake(18);
+        this.goldenAuraTimer = 4;
+        Audio.playAchievement();
+
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+
+        // ── Persist save ──────────────────────────────────────────────────
+        try {
+            const saved = getSaveData();
+            const set = new Set(saved.unlockedPassives || []);
+            set.add(this.charId);
+            updateSaveData({ unlockedPassives: [...set] });
+        } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
     }
+
+    // draw() ย้ายไป PlayerRenderer._drawAuto() แล้ว
 
     updateUI() {
         const S = this.stats;

@@ -75,7 +75,7 @@ const BALANCE = {
             passiveUnlockLevel: 3,
             passiveUnlockStealthCount: 5,
             passiveHpBonusPct: 0.5,
-            passiveUnlockText: 'ปลดล็อกซุ่มเสรี!',
+            passiveUnlockText: '👻 ซุ่มเสรี!',
             passiveCritBonus: 0.05,
             passiveLifesteal: 0.03,
             speedOnHit: 20,
@@ -204,14 +204,20 @@ const BALANCE = {
             maxHpPerLevel: 16,              // 14 → 16
 
             // ── Passive: SCORCHED SOUL ────────────────────────
-            // Unlock: Lv 5 (ไม่ต้องการ stealth อีกต่อไป)
-            passiveUnlockLevel: 5,
-            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via level เท่านั้น
+            // Unlock: ถึง OVERHEAT ครั้งแรก (เปลี่ยนจาก Lv5 เพื่อ thematic)
+            passiveUnlockLevel: 5,          // fallback เท่านั้น — ไม่ได้ใช้จริงแล้ว
+            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via OVERHEAT
             passiveHpBonusPct: 0.35,
-            passiveUnlockText: 'ปลดล็อกวันชัยโอเวอร์ไดรฟ์!',
+            passiveUnlockText: '💥 วันชัยโอเวอร์ไดรฟ์!',
             passiveCritBonus: 0.06,         // 0.04 → 0.06
             passiveLifesteal: 0.025,        // 0.01 → 0.025 (brawler identity)
-            passiveHeatGainBonus: 1.25,     // NEW: Heat สะสมเร็ว +25% หลัง unlock
+            passiveHeatGainBonus: 1.25,     // Heat สะสมเร็ว +25% หลัง unlock
+
+            // ── RAGE MODE: OVERHEAT + HP < 30% → damage buff + damage reduction ──
+            // High-risk-high-reward — ยิ่งใกล้ตายยิ่งอันตราย
+            rageModeHpThreshold: 0.30,      // HP % ที่ trigger Rage Mode
+            rageDamageMult: 1.30,           // ดาเมจ ×1.3 ขณะ Rage
+            rageDamageReduction: 0.20,      // รับดาเมจน้อยลง 20% ขณะ Rage
 
             // ── Speed on Hit ──────────────────────────────────
             speedOnHit: 15,
@@ -253,12 +259,16 @@ const BALANCE = {
             cooldownReductionPerLevel: 0.05,  // BUFF: 0.04 → 0.05
             maxHpPerLevel: 10,                // BUFF: 7 → 10
             // ── Passive Skill (Ritual Mastery) ────────────────
-            passiveUnlockLevel: 4,
-            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via level เท่านั้น
+            // Unlock: ทำ Ritual Burst ครั้งแรก (เปลี่ยนจาก Lv4 เพื่อ thematic)
+            passiveUnlockLevel: 4,          // fallback เท่านั้น — ไม่ได้ใช้จริงแล้ว
+            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via Ritual
             passiveHpBonusPct: 0.30,
-            passiveUnlockText: 'ปลดล็อกราชาอีสาน!',
+            passiveUnlockText: '🌾 ราชาอีสาน!',
             passiveCritBonus: 0.04,           // bonus crit หลัง passive unlock
             passiveLifesteal: 0.015,          // lifesteal ต่อ damage ที่ทำได้
+            // ── Cosmic Balance bonus ─────────────────────────────
+            cosmicDamageMult: 1.35,           // เพิ่มจาก 1.20 → 1.35 (reward ชัดขึ้น)
+            cosmicHpRegen: 4,                 // NEW: HP regen 4/s ขณะ Cosmic Balance active
             // ── Sticky Rice Stack System ──
             sticky: {
                 maxStacks: 5,
@@ -284,7 +294,7 @@ const BALANCE = {
             garudaReturnSpeed: 620,
             garudaEatRiceBonus: 1.5,
             // ── Cosmic Balance (Naga + Garuda active simultaneously) ──
-            cosmicDamageMult: 1.20,
+            // cosmicDamageMult ย้ายขึ้นไปอยู่ใน Passive Skill section แล้ว
             cosmicNagaBurnDPS: 22,
             cosmicGarudaRadiusMult: 1.5,
         },
@@ -1002,7 +1012,7 @@ const GAME_TEXTS = {
         },
         autoStandRush: {
             title: 'Auto — Stand Rush Manual Targeting 👊',
-            body: 'ระหว่าง Wanchai active:\n\n🎯 ชี้เมาส์แล้ว L-Click = Stand Rush ไปตำแหน่งนั้น\n   Stand teleport หาเป้าแล้วรัวหมัดทันที\n\n✨ 6-layer rendering พร้อม visual effect\n🥊 Dual-fist — _punchSide สลับข้างทุกหมัด\n\n⚡ Wanchai ยังโจมตีอัตโนมัติด้วย\n   L-Click เพิ่ม Stand Rush ทับไปได้เลย',
+            body: 'ระหว่าง Wanchai active:\n\n🎯 ชี้เมาส์แล้ว L-Click = Stand Rush ไปตำแหน่งนั้น\n   Stand teleport หาเป้าแล้วรัวหมัดทันที\n\n✨ 6-layer rendering พร้อม visual effect\n🥊 Dual-fist — _punchSide สลับข้างทุกหมัด\n\n⚡ Wanchai ยังโจมตีอัตโนมัติด้วย\n   L-Click เพิ่ม Stand Rush ทับไปได้เลย\n\n💥 PASSIVE UNLOCK: ทำ Heat ให้เต็ม 100% → SCORCHED SOUL\n🔥 RAGE MODE: OVERHEAT + HP < 30% → DMG ×1.3 + DEF +20%',
             icon: '👊'
         },
         bulletTime: {
