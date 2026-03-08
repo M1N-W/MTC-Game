@@ -335,15 +335,16 @@ class PoomPlayer extends Player {
 
         this.passiveUnlocked = true;
 
-        // ── HP Bonus ──────────────────────────────────────────────────────
-        const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.30));
+        // ── HP Bonus (BUFF: 0.30 → 0.45) ─────────────────────────────────
+        const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.45));
         this.maxHp += hpBonus;
         this.hp += hpBonus;
 
         // ── Unlock VFX — สีเขียว/ทอง สะท้อน Ritual energy ──────────────
-        const unlockText = S.passiveUnlockText ?? '🌾 ราชาแห่งพิธีกรรม AWAKENED!';
+        const unlockText = S.passiveUnlockText ?? '🌾 ราชาอีสาน!';
         spawnFloatingText(unlockText, this.x, this.y - 70, '#fbbf24', 32);
         spawnFloatingText('✨ E (ครุฑ) UNLOCKED', this.x, this.y - 108, '#10b981', 18);
+        spawnFloatingText('💚 Lifesteal +2.5% | CRIT +6%', this.x, this.y - 133, '#4ade80', 14);
         spawnParticles(this.x, this.y, 60, '#fbbf24');
         spawnParticles(this.x, this.y, 30, '#10b981');
         addScreenShake(18);
@@ -500,8 +501,9 @@ class PoomPlayer extends Player {
                     bossDmg = (RC.baseDamage || 75) + currentBoss.maxHp * (RC.baseDamagePct || 0.15);
                     spawnFloatingText(`🌾 ${Math.round(bossDmg)}`, bx, by - 60, '#00ff88', 20);
                 }
-                // BALANCE: cap single ritual burst at 30% boss maxHP to prevent one-shot
-                const bossDmgCap = currentBoss.maxHp * 0.30;
+                // BALANCE: cap single ritual burst at 35% boss maxHP (45% during Cosmic Balance)
+                const bossDmgCapPct = this._cosmicBalance ? 0.45 : 0.35;
+                const bossDmgCap = currentBoss.maxHp * bossDmgCapPct;
                 if (bossDmg > bossDmgCap) {
                     bossDmg = bossDmgCap;
                     spawnFloatingText('RITUAL CAPPED', bx, by - 80, '#94a3b8', 13);
@@ -638,7 +640,8 @@ class PoomPlayer extends Player {
 
         // ── Enemy ปกติ: ใช้ StatusEffect framework ──
         const now = performance.now() / 1000;
-        const stackDuration = S.sticky.stackDuration || 1.5;  // fix: was 5 ≠ config 1.5
+        const stackDuration = (S.sticky.stackDuration || 1.5)
+            + (this._cosmicBalance ? (S.cosmicStickyDurationBonus ?? 1.0) : 0);  // NEW: Cosmic = +1.0s
         const slowPerStack = 0.04;
 
         enemy.addStatus('sticky', {

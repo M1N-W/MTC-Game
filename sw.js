@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.15.1'; // v3.15.1: Restored Auto's original skill design - Wanchai available from start, thematic unlock messages
+const CACHE_NAME = 'mtc-cache-v3.16.0'; // v3.16.0: Major character balance rework - Kao two-phase passive system, Auto early vacuum, Poom buffs
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

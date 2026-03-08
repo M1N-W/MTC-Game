@@ -37,9 +37,9 @@
 
 | Character | Class | Key Abilities | Playstyle |
 | :--- | :--- | :--- | :--- |
-| 🎓 **เก้า (Kao)** | Advanced Assassin | 👻 Stealth<br>⚡ Teleport<br>👥 Hologram Clone | เน้นการลอบเร้น, คริติคอล, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
-| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 🔥 Ritual Burst<br>🐉 Naga Summon<br>🍚 Eat Rice (Heal) | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้าง |
-| 🔥 **ออโต้ (Auto)** | Pyromaniac | 🌀 Vacuum Heat<br>💥 Detonate<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ (Crowd Control) ปล่อย Stand Rush ไปตำแหน่งใดก็ได้ และทำดาเมจต่อเนื่อง |
+| 🎓 **เก้า (Kao)** | Advanced Assassin | 👻 Two-Phase Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
+| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 🔥 Ritual Burst<br>🐉 Naga + Garuda Summon<br>🍚 Cosmic Balance | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
+| 🔥 **ออโต้ (Auto)** | Pyromaniac | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อน และปล่อย Stand Rush ไปตำแหน่งใดก็ได้ |
 
 ---
 

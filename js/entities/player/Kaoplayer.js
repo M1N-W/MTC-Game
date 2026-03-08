@@ -122,52 +122,97 @@ class KaoPlayer extends Player {
         this._dashWasActive = false; // edge-detect dash start
 
         // ── Passive behaviour flags (overrides PlayerBase defaults) ──────────
-        this.passiveSpeedBonus = 1.4;   // speed mult หลัง passive unlock (Kao-specific)
+        this.passiveSpeedBonus = 0;     // REWORK: ไม่ใช้ Math.max แล้ว — ใช้ additive แทนใน speedMult
         this.usesOwnLifesteal = true;   // KaoPlayer จัดการ lifesteal เอง ไม่ใช้ base logic
+
+        // ── Passive Lv2 "Awakened" state ────────────────────────────────────
+        this.passiveLv2Unlocked = false;        // Phantom Blink + crit bonus ปลดที่ Lv2
+        this._freeStealthKills = 0;             // นับ kills ขณะ isFreeStealthy
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // PASSIVE UNLOCK — Override: เก้าปลดล็อคเมื่อใช้ Stealth ครั้งแรก
+    // PASSIVE UNLOCK — 2-Phase System
     // ──────────────────────────────────────────────────────────────────────────
-    // เปลี่ยนจาก "Lv3 + stealth ×5" → "Stealth ครั้งแรก = Awakening"
-    // Thematic: เก้าค้นพบพลัง "ซุ่มเสรี" ตอนที่ซ่อนตัวเป็นครั้งแรก
-    // Timing: ใกล้เคียงกับ Auto (OVERHEAT) และ Poom (Ritual ครั้งแรก) = ~20-30 วิ
+    // Lv1: Stealth ครั้งแรก → HP +30%, Lifesteal 3%, Dash-Stealth, Speed additive +0.4
+    // Lv2: ฆ่าขณะ FreeStealthy 5 ครั้ง → HP +20%, Crit +5%, Phantom Blink ปลด
     checkPassiveUnlock() {
         const S = this.stats;
-        if (this.passiveUnlocked) return;
 
-        // ── Condition: ใช้ Stealth ครั้งแรก ────────────────────────────────
-        // stealthUseCount++ เกิดขึ้นใน PlayerBase.activateStealth() ก่อน call นี้
-        if (this.stealthUseCount < 1) return;
+        // ── Phase 1: Stealth ครั้งแรก ─────────────────────────────────────
+        if (!this.passiveUnlocked) {
+            if (this.stealthUseCount < 1) return;
 
-        this.passiveUnlocked = true;
+            this.passiveUnlocked = true;
 
-        // ── HP Bonus ──────────────────────────────────────────────────────
-        const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.50));
-        this.maxHp += hpBonus;
-        this.hp += hpBonus;
+            const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.30));
+            this.maxHp += hpBonus;
+            this.hp += hpBonus;
 
-        // ── VFX — สีม่วง/ทอง สะท้อน Assassin Awakening ────────────────
-        const unlockText = S.passiveUnlockText ?? '👻 ซุ่มเสรี AWAKENED!';
-        spawnFloatingText(unlockText, this.x, this.y - 70, '#a855f7', 32);
-        spawnFloatingText('⚡ Q · E UNLOCKED', this.x, this.y - 108, '#fbbf24', 18);
-        spawnParticles(this.x, this.y, 60, '#a855f7');
-        spawnParticles(this.x, this.y, 30, '#fbbf24');
-        addScreenShake(18);
-        this.goldenAuraTimer = 4;
-        Audio.playAchievement();
-        // ── Achievement: ซุ่มเสรี ─────────────────────────────────────────
-        if (typeof Achievements !== 'undefined') Achievements.check('free_stealth');
+            const unlockText = S.passiveUnlockText ?? '👻 ซุ่มเสรี Lv1!';
+            spawnFloatingText(unlockText, this.x, this.y - 70, '#a855f7', 28);
+            spawnFloatingText('⚡ Q · E UNLOCKED', this.x, this.y - 105, '#fbbf24', 16);
+            spawnFloatingText('🎯 ฆ่าขณะ Dash-Stealth 5 ครั้งเพื่อ AWAKEN', this.x, this.y - 130, '#94a3b8', 13);
+            spawnParticles(this.x, this.y, 50, '#a855f7');
+            addScreenShake(15);
+            this.goldenAuraTimer = 3;
+            Audio.playAchievement();
+            if (typeof Achievements !== 'undefined') Achievements.check('free_stealth');
+            if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
 
-        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+            try {
+                const saved = getSaveData();
+                const set = new Set(saved.unlockedPassives || []);
+                set.add(this.charId);
+                updateSaveData({ unlockedPassives: [...set] });
+            } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
+            return;
+        }
 
-        // ── Persist save ──────────────────────────────────────────────────
-        try {
-            const saved = getSaveData();
-            const set = new Set(saved.unlockedPassives || []);
-            set.add(this.charId);
-            updateSaveData({ unlockedPassives: [...set] });
-        } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
+        // ── Phase 2: ฆ่าขณะ FreeStealthy 5 ครั้ง → Awakened ────────────
+        if (this.passiveUnlocked && !this.passiveLv2Unlocked) {
+            const req = S.passiveLv2KillReq ?? 5;
+            if (this._freeStealthKills < req) return;
+
+            this.passiveLv2Unlocked = true;
+
+            // HP bonus เพิ่มเติม
+            const hpBonus2 = Math.floor(this.maxHp * (S.passiveLv2HpBonusPct ?? 0.20));
+            this.maxHp += hpBonus2;
+            this.hp += hpBonus2;
+
+            // Crit bonus เพิ่มเข้า baseCritChance
+            this.baseCritChance += (S.passiveLv2CritBonus ?? 0.05);
+
+            const unlockText2 = S.passiveLv2UnlockText ?? '👻 ซุ่มเสรี AWAKENED!';
+            spawnFloatingText(unlockText2, this.x, this.y - 70, '#fbbf24', 32);
+            spawnFloatingText('👻 PHANTOM BLINK UNLOCKED', this.x, this.y - 108, '#c4b5fd', 18);
+            spawnParticles(this.x, this.y, 60, '#fbbf24');
+            spawnParticles(this.x, this.y, 30, '#a855f7');
+            addScreenShake(20);
+            this.goldenAuraTimer = 5;
+            Audio.playAchievement();
+            if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText2, this.x, this.y - 40);
+
+            try {
+                const saved = getSaveData();
+                const set = new Set(saved.unlockedPassives || []);
+                set.add(`${this.charId}_lv2`);
+                updateSaveData({ unlockedPassives: [...set] });
+            } catch (e) { console.warn('[MTC Save] Could not persist passive Lv2:', e); }
+        }
+    }
+
+    // ── Track FreeStealthy kills for Lv2 unlock ──────────────────────────────
+    onKillWhileFreeStealthy() {
+        if (this.passiveLv2Unlocked) return;
+        if (!this.passiveUnlocked) return;
+        this._freeStealthKills++;
+        const req = (this.stats.passiveLv2KillReq ?? 5);
+        spawnFloatingText(
+            `👻 ${this._freeStealthKills}/${req} AWAKEN`,
+            this.x, this.y - 55, '#c4b5fd', 14
+        );
+        this.checkPassiveUnlock();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -176,7 +221,13 @@ class KaoPlayer extends Player {
     addKill(weaponName) {
         // 🛡️ STRICT GATE: Cannot build weapon mastery if passive is not unlocked
         if (!this.passiveUnlocked) return;
-        if (this.isWeaponMaster) return;   // already awakened, no need to track
+
+        // ── Passive Lv2: นับ kills ขณะ isFreeStealthy ──────────────────────
+        if (!this.passiveLv2Unlocked && this.isFreeStealthy) {
+            this.onKillWhileFreeStealthy();
+        }
+
+        if (this.isWeaponMaster) return;   // already awakened, no need to track weapon kills
 
         const req = BALANCE.characters.kao.weaponMasterReq || 5;
 
@@ -291,10 +342,11 @@ class KaoPlayer extends Player {
                     spawnFloatingText('\u23F3 Penalty!', this.x, this.y - 80, '#ef4444', 20);
                 }
 
-                // ── PHANTOM BLINK: Q during stealth/freeStealthy ─────────
+                // ── PHANTOM BLINK: Q during stealth/freeStealthy — requires Lv2 ──
                 // Leave a shadow clone at origin, blink to cursor
                 // Grant ambush crit window at destination
-                const isPhantomBlink = (S.phantomBlinkEnabled ?? true)
+                const isPhantomBlink = this.passiveLv2Unlocked
+                    && (S.phantomBlinkEnabled ?? true)
                     && (this.isInvisible || this.isFreeStealthy);
 
                 const prevX = this.x, prevY = this.y;
@@ -437,7 +489,17 @@ class KaoPlayer extends Player {
             }
         }
 
+        // ── Speed Additive: +0.4 หลัง passive Lv1 (additive ไม่ทับ shop bonus) ──
+        // inject ก่อน super.update() เพื่อให้ speedBoost ถูกต้องตอนคำนวณ velocity
+        const _savedSpeedBoost = this.speedBoost;
+        if (this.passiveUnlocked) {
+            this.speedBoost = (this.speedBoost || 1) + (S.passiveSpeedAdditive ?? 0.4);
+        }
+
         super.update(dt, keys, mouse);
+
+        // Restore speedBoost (stateless per-frame)
+        this.speedBoost = _savedSpeedBoost;
 
         // ── Tick graphBuffTimer ────────────────────────────────
         if ((this.graphBuffTimer ?? 0) > 0) this.graphBuffTimer = Math.max(0, this.graphBuffTimer - dt);
@@ -541,9 +603,9 @@ class KaoPlayer extends Player {
         if (isAmbush) {
             critChance = 2.0;  // >1 guarantees crit without double-dip
             color = '#facc15';
-            // ── Phantom Blink ambush multiplier ────────────────────────────
-            if (this._blinkAmbushTimer > 0) {
-                dmgMult *= (S_fw.phantomBlinkDmgMult ?? 2.5);
+            // ── Phantom Blink ambush multiplier (requires Lv2) ─────────────────
+            if (this._blinkAmbushTimer > 0 && this.passiveLv2Unlocked) {
+                dmgMult *= (S_fw.phantomBlinkDmgMult ?? 1.8);
                 this._blinkAmbushTimer = 0;  // consume window
                 if (typeof spawnFloatingText !== 'undefined')
                     spawnFloatingText('\uD83D\uDC7B BLINK STRIKE!', this.x, this.y - 60, '#c4b5fd', 22);

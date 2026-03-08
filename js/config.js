@@ -74,10 +74,17 @@ const BALANCE = {
             expLevelMult: 1.5,
             passiveUnlockLevel: 1,          // fallback เท่านั้น — KaoPlayer.checkPassiveUnlock() override
             passiveUnlockStealthCount: 1,   // fallback: ปลดตั้งแต่ stealth ครั้งแรก
-            passiveHpBonusPct: 0.5,
-            passiveUnlockText: '👻 ซุ่มเสรี AWAKENED!',
-            passiveCritBonus: 0.05,
-            passiveLifesteal: 0.03,
+            // ── Passive Lv1 (Stealth ครั้งแรก) ──
+            passiveHpBonusPct: 0.30,        // REWORK: 0.50 → 0.30 (ส่วนที่เหลือรอ Lv2)
+            passiveUnlockText: '👻 ซุ่มเสรี Lv1!',
+            passiveCritBonus: 0.0,          // REWORK: crit ย้ายไป Lv2
+            passiveLifesteal: 0.03,         // คงเดิม — reward ทันทีที่ปลด
+            passiveSpeedAdditive: 0.4,      // NEW: additive +0.4 (แทน Math.max ×1.4 ที่ทับ shop bonus)
+            // ── Passive Lv2 "Awakened" (ฆ่าขณะ FreeStealthy 5 ครั้ง) ──
+            passiveLv2KillReq: 5,           // NEW: จำนวน FreeStealthy-kills ที่ต้องการ
+            passiveLv2HpBonusPct: 0.20,     // NEW: HP +20% เพิ่มเติมเมื่อถึง Lv2
+            passiveLv2UnlockText: '👻 ซุ่มเสรี AWAKENED!',
+            passiveLv2CritBonus: 0.05,      // NEW: crit +5% ที่ Lv2
             speedOnHit: 20,
             speedOnHitDuration: 0.4,
             damageMultiplierPerLevel: 0.12,  // BUFF: 0.08 → 0.12 (level-up felt unrewarding)
@@ -90,9 +97,9 @@ const BALANCE = {
             cloneProximityRange: 90,        // NEW: clone proximity burst trigger range
             cloneProximityDmgMult: 0.60,    // NEW: proximity burst dmg mult
             dashStealthDuration: 1.5,       // NEW: free stealth after every dash
-            phantomBlinkEnabled: true,      // NEW: Q during stealth = Phantom Blink
-            phantomBlinkAmbushWindow: 1.5,  // NEW: crit-window after blink
-            phantomBlinkDmgMult: 2.5,       // NEW: ambush damage mult
+            phantomBlinkEnabled: true,      // NEW: Q during stealth = Phantom Blink (ปลดที่ Lv2)
+            phantomBlinkAmbushWindow: 2.0,  // BUFF: 1.5 → 2.0 (window ยาวขึ้น)
+            phantomBlinkDmgMult: 1.8,       // NERF: 2.5 → 1.8 (ไม่ double-dip กับ guaranteed crit)
             stealthChainBonus: 0.25,        // NEW: +crit when Q chains from stealth
             weaponMasterReq: 5              // ลดจาก 7 → 5 (passive เร็วขึ้น → Weapon Master ก็ควรทำได้เร็วขึ้น)
         },
@@ -211,7 +218,9 @@ const BALANCE = {
             passiveUnlockText: '💥 วันชัยโอเวอร์ไดรฟ์!',
             passiveCritBonus: 0.06,         // 0.04 → 0.06
             passiveLifesteal: 0.025,        // 0.01 → 0.025 (brawler identity)
-            passiveHeatGainBonus: 1.25,     // Heat สะสมเร็ว +25% หลัง unlock
+            passiveHeatGainBonus: 1.50,     // BUFF: 1.25 → 1.50 (รู้สึกได้ชัดขึ้น)
+            passiveHeatNoDecayOnMove: true, // NEW: Heat ไม่ decay ขณะเคลื่อนที่หลัง passive unlock
+            vacuumEarlyUnlock: true,        // NEW: Vacuum ปลดพร้อม Wanchai (ต้นเกม) ไม่รอ passive
 
             // ── RAGE MODE: OVERHEAT + HP < 30% → damage buff + damage reduction ──
             // High-risk-high-reward — ยิ่งใกล้ตายยิ่งอันตราย
@@ -262,13 +271,14 @@ const BALANCE = {
             // Unlock: ทำ Ritual Burst ครั้งแรก (เปลี่ยนจาก Lv4 เพื่อ thematic)
             passiveUnlockLevel: 4,          // fallback เท่านั้น — ไม่ได้ใช้จริงแล้ว
             passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via Ritual
-            passiveHpBonusPct: 0.30,
+            passiveHpBonusPct: 0.45,        // BUFF: 0.30 → 0.45 (ปลดยากสุด ควรได้มากสุด)
             passiveUnlockText: '🌾 ราชาอีสาน!',
-            passiveCritBonus: 0.04,           // bonus crit หลัง passive unlock
-            passiveLifesteal: 0.015,          // lifesteal ต่อ damage ที่ทำได้
+            passiveCritBonus: 0.06,         // BUFF: 0.04 → 0.06 (เท่า Auto)
+            passiveLifesteal: 0.025,        // BUFF: 0.015 → 0.025 (รู้สึกได้จริง)
             // ── Cosmic Balance bonus ─────────────────────────────
-            cosmicDamageMult: 1.35,           // เพิ่มจาก 1.20 → 1.35 (reward ชัดขึ้น)
-            cosmicHpRegen: 4,                 // NEW: HP regen 4/s ขณะ Cosmic Balance active
+            cosmicDamageMult: 1.35,           // คงเดิม
+            cosmicHpRegen: 6,                 // BUFF: 4 → 6 HP/s
+            cosmicStickyDurationBonus: 1.0,   // NEW: +1.0s ต่อ sticky stack duration ขณะ Cosmic active
             // ── Sticky Rice Stack System ──
             sticky: {
                 maxStacks: 5,
@@ -284,8 +294,8 @@ const BALANCE = {
                 bossReflectionMultiplier: 1.35
             },
             // ── Garuda Summon (E) ────────────────────────────
-            garudaCooldown: 25,
-            garudaDuration: 6,
+            garudaCooldown: 22,             // BUFF: 25 → 22
+            garudaDuration: 9,              // BUFF: 6 → 9 (uptime 24% → 41%)
             garudaDamage: 150,
             garudaOrbitRadius: 120,
             garudaOrbitSpeed: 2.2,
@@ -295,7 +305,7 @@ const BALANCE = {
             garudaEatRiceBonus: 1.5,
             // ── Cosmic Balance (Naga + Garuda active simultaneously) ──
             // cosmicDamageMult ย้ายขึ้นไปอยู่ใน Passive Skill section แล้ว
-            cosmicNagaBurnDPS: 22,
+            cosmicNagaBurnDPS: 30,          // BUFF: 22 → 30
             cosmicGarudaRadiusMult: 1.5,
         },
     },

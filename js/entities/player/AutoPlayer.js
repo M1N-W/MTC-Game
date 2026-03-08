@@ -175,7 +175,7 @@ class WanchaiStand {
 
         // Lifesteal
         if (owner.passiveUnlocked) {
-            owner.hp = Math.min(owner.maxHp, owner.hp + dmg * (S.passiveLifesteal ?? 0.01));  // BUG-4 fix: was 0.02
+            owner.hp = Math.min(owner.maxHp, owner.hp + dmg * (S.passiveLifesteal ?? 0.025));  // BUG FIX: was hardcode 0.01 ≠ config 0.025
         }
 
         // Knockback — push enemy away from stand
@@ -795,7 +795,10 @@ class AutoPlayer extends Player {
         // ── Heat Gauge tick ───────────────────────────────────────
         {
             const S = this.stats ?? {};
-            const decayRate = this.wanchaiActive
+            // ── Passive: Heat ไม่ decay ขณะเคลื่อนที่หลัง passive unlock ──
+            const isMoving = Math.hypot(this.vx, this.vy) > 5;
+            const noDecayOnMove = this.passiveUnlocked && (S.passiveHeatNoDecayOnMove ?? true) && isMoving;
+            const decayRate = (this.wanchaiActive || noDecayOnMove)
                 ? (S.heatDecayRateActive ?? 0)
                 : (S.heatDecayRate ?? 8);
             this.heat = Math.max(0, this.heat - decayRate * dt);
@@ -878,61 +881,15 @@ class AutoPlayer extends Player {
         // cooldown 8 วินาที | ออกแบบให้ combo กับ Wanchai
         if (mouse?.middle !== undefined) { /* placeholder */ }
         if (checkInput('q') && !this.passiveUnlocked) {
-            spawnFloatingText('🔒 ทำ Heat เต็ม 100 ก่อน!', this.x, this.y - 40, '#94a3b8', 14);
+            // ── Vacuum ใช้ได้ตั้งแต่ต้น (basic version: ดูดอย่างเดียว) ──────
+            if ((this.cooldowns?.vacuum ?? 0) <= 0) {
+                this._doVacuum({ earlyMode: true });
+            } else {
+                spawnFloatingText(`⏳ ${Math.ceil(this.cooldowns.vacuum)}s`, this.x, this.y - 40, '#94a3b8', 14);
+            }
             consumeInput('q');
         } else if (checkInput('q') && this.passiveUnlocked && (this.cooldowns?.vacuum ?? 0) <= 0) {
-            const VACUUM_RANGE = this.stats?.vacuumRange ?? 320;
-            const VACUUM_FORCE = this.stats?.vacuumForce ?? 1400; // stronger impulse
-            const STUN_DUR = this.stats?.vacuumStunDur ?? 0.55; // AI lock duration
-            const PULL_DUR = this.stats?.vacuumPullDur ?? 0.45; // continuous pull
-
-            let pulled = 0;
-            const vacDmg = this.stats?.vacuumDamage ?? 18;
-            const ignDur = this.stats?.vacuumIgniteDuration ?? 1.5;
-            const ignDps = this.stats?.vacuumIgniteDPS ?? 12;
-            for (const enemy of (window.enemies || [])) {
-                if (enemy.dead) continue;
-                const dx = this.x - enemy.x;
-                const dy = this.y - enemy.y;
-                const d = Math.hypot(dx, dy);
-                if (d < VACUUM_RANGE && d > 1) {
-                    // ── Impulse + AI-stun so enemy.update() cannot override vx/vy ──
-                    enemy.vx = (dx / d) * VACUUM_FORCE;
-                    enemy.vy = (dy / d) * VACUUM_FORCE;
-                    // vacuumStunTimer: enemy.js checks this and skips vx/vy override
-                    enemy.vacuumStunTimer = STUN_DUR;
-                    // Continuous pull target — enemy.js lerps toward this position
-                    enemy._vacuumTargetX = this.x;
-                    enemy._vacuumTargetY = this.y;
-                    enemy._vacuumPullTimer = PULL_DUR;
-                    // ── NEW: instant damage + Ignite ──────────────────
-                    enemy.takeDamage?.(vacDmg * (this.damageMultiplier || 1.0), this);
-                    enemy.isBurning = true;
-                    enemy.burnTimer = ignDur;
-                    enemy.burnDps = ignDps;
-                    pulled++;
-                }
-            }
-            // ── Heat gain from Vacuum ──────────────────────────
-            if (pulled > 0) this.gainHeat(this.stats?.vacuumHeatGain ?? 25);
-            // Boss — weak pull (30%)
-            if (window.boss && !window.boss.dead) {
-                const dx = this.x - window.boss.x;
-                const dy = this.y - window.boss.y;
-                const d = Math.hypot(dx, dy);
-                if (d < VACUUM_RANGE && d > 1) {
-                    window.boss.vx = (dx / d) * VACUUM_FORCE * 0.30;
-                    window.boss.vy = (dy / d) * VACUUM_FORCE * 0.30;
-                    window.boss.vacuumStunTimer = STUN_DUR * 0.4;
-                }
-            }
-            this.cooldowns.vacuum = this.stats?.vacuumCooldown ?? 8;
-            if (pulled > 0 || (window.boss && !window.boss.dead)) {
-                spawnParticles(this.x, this.y, 40, '#f97316');
-                addScreenShake(6);
-                spawnFloatingText(`🔥 VACUUM HEAT ×${pulled}`, this.x, this.y - 60, '#f97316', 24);
-                if (typeof Audio !== 'undefined' && Audio.playVacuum) Audio.playVacuum();
-            }
+            this._doVacuum({ earlyMode: false });
             consumeInput('q');
         }
 
@@ -1189,6 +1146,65 @@ class AutoPlayer extends Player {
     }
 
     // draw() ย้ายไป PlayerRenderer._drawAuto() แล้ว
+
+    // ── Vacuum Heat — shared logic for early (basic) and post-passive (full) ──
+    _doVacuum({ earlyMode = false } = {}) {
+        const S = this.stats ?? {};
+        const VACUUM_RANGE = S.vacuumRange ?? 340;
+        const VACUUM_FORCE = S.vacuumForce ?? 1900;
+        const STUN_DUR = S.vacuumStunDur ?? 0.50;
+        const PULL_DUR = S.vacuumPullDur ?? 0.45;
+        // earlyMode: ดูดอย่างเดียว ไม่มี Ignite ไม่มี Heat gain มาก
+        const vacDmg = earlyMode ? 0 : (S.vacuumDamage ?? 18);
+        const ignDur = earlyMode ? 0 : (S.vacuumIgniteDuration ?? 1.5);
+        const ignDps = earlyMode ? 0 : (S.vacuumIgniteDPS ?? 12);
+        const heatGain = earlyMode ? 10 : (S.vacuumHeatGain ?? 25);
+
+        let pulled = 0;
+        for (const enemy of (window.enemies || [])) {
+            if (enemy.dead) continue;
+            const dx = this.x - enemy.x;
+            const dy = this.y - enemy.y;
+            const d = Math.hypot(dx, dy);
+            if (d < VACUUM_RANGE && d > 1) {
+                enemy.vx = (dx / d) * VACUUM_FORCE;
+                enemy.vy = (dy / d) * VACUUM_FORCE;
+                enemy.vacuumStunTimer = STUN_DUR;
+                enemy._vacuumTargetX = this.x;
+                enemy._vacuumTargetY = this.y;
+                enemy._vacuumPullTimer = PULL_DUR;
+                if (!earlyMode) {
+                    enemy.takeDamage?.(vacDmg * (this.damageMultiplier || 1.0), this);
+                    enemy.isBurning = true;
+                    enemy.burnTimer = ignDur;
+                    enemy.burnDps = ignDps;
+                }
+                pulled++;
+            }
+        }
+        if (pulled > 0) this.gainHeat(heatGain);
+        // Boss — weak pull (30%)
+        if (window.boss && !window.boss.dead) {
+            const dx = this.x - window.boss.x;
+            const dy = this.y - window.boss.y;
+            const d = Math.hypot(dx, dy);
+            if (d < VACUUM_RANGE && d > 1) {
+                window.boss.vx = (dx / d) * VACUUM_FORCE * 0.30;
+                window.boss.vy = (dy / d) * VACUUM_FORCE * 0.30;
+                window.boss.vacuumStunTimer = STUN_DUR * 0.4;
+            }
+        }
+        this.cooldowns.vacuum = S.vacuumCooldown ?? 6;
+        if (pulled > 0 || (window.boss && !window.boss.dead)) {
+            spawnParticles(this.x, this.y, 40, '#f97316');
+            addScreenShake(6);
+            const label = earlyMode
+                ? `💨 VACUUM ×${pulled}`
+                : `🔥 VACUUM HEAT ×${pulled}`;
+            spawnFloatingText(label, this.x, this.y - 60, '#f97316', 24);
+            if (typeof Audio !== 'undefined' && Audio.playVacuum) Audio.playVacuum();
+        }
+    }
 
     updateUI() {
         const S = this.stats;

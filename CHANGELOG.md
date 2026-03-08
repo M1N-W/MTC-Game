@@ -4,6 +4,48 @@
 
 ---
 
+## v3.16.0 — Major Character Balance Rework: Two-Phase Systems & Early Access
+*Released: March 8, 2026*
+
+### 🔄 Kao Character: Two-Phase Passive System
+- **Phase 1 (Stealth 1st):** Immediate unlock with reduced bonuses
+  - **HP Bonus:** Reduced to 30% (was 50%) - remainder unlocked at Phase 2
+  - **Speed Bonus:** New additive +0.4 speed (doesn't conflict with shop bonuses)
+  - **Critical Strike:** Moved to Phase 2 (was immediate)
+- **Phase 2 ("Awakened"):** Unlocked after 5 FreeStealthy kills
+  - **Additional HP:** +20% bonus (total 50% with Phase 1)
+  - **Critical Strike:** +5% crit chance
+  - **Phantom Blink:** Unlocked at Phase 2 (was immediate)
+  - **Blink Window:** Extended to 2.0s (was 1.5s)
+  - **Blink Damage:** Reduced to 1.8x (was 2.5x) to prevent double-dipping
+
+### 🔥 Auto Character: Early Vacuum Access
+- **Vacuum Skill:** Now available immediately from game start
+  - **Early Mode:** Basic pull without damage/ignite/heat gain
+  - **Full Mode:** Complete functionality after passive unlock
+  - **Visual Feedback:** Different floating text for early vs full mode
+- **Passive Buffs:** Enhanced heat gain and movement
+  - **Heat Gain Bonus:** Increased to 1.50x (was 1.25x)
+  - **Heat Decay:** No decay while moving after passive unlock
+  - **Vacuum Early Unlock:** Now available immediately (was locked until passive)
+
+### 🌾 Poom Character: Significant Buffs
+- **Passive HP:** Increased to 45% (was 30%) - highest of all characters
+- **Critical Strike:** Increased to 6% (was 4%) - matches Auto
+- **Lifesteal:** Increased to 2.5% (was 1.5%) - more noticeable impact
+- **Garuda Summon:** Major improvements
+  - **Cooldown:** Reduced to 22s (was 25s)
+  - **Duration:** Increased to 9s (was 6s) - 41% uptime (was 24%)
+- **Cosmic Balance:** Enhanced sticky rice duration
+  - **Duration Bonus:** +1.0s per stack during Cosmic Balance
+  - **Naga Burn DPS:** Increased to 30 (was 22)
+  - **Ritual Burst Cap:** Increased to 35% (was 30%) - 45% during Cosmic Balance
+
+### 🎯 General Balance Changes
+- **Weapon Master Requirement:** Reduced to 5 kills (was 7) for Kao
+- **Damage Scaling:** Increased level-up multiplier to 12% (was 8%)
+- **Clone Proximity:** New burst mechanics for all characters
+
 ## v3.15.1 — Auto Character Design Restoration: Original Skill Availability
 *Released: March 8, 2026*
 
