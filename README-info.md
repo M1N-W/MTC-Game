@@ -88,12 +88,13 @@
 
 ---
 
-## 📈 Current Version: v3.12.4 (March 8, 2026)
+## 📈 Current Version: v3.12.5 (March 8, 2026)
 
 **Latest Major Updates:**
+- 🐛 **Garuda NaN Fix:** Resolved Service Worker cache issue causing undefined config properties with comprehensive fallbacks
 - 🔍 **Garuda Draw Debugging:** Disabled viewport culling + added frame-by-frame draw call tracking for render pipeline analysis
 - 🔍 **Enhanced Diagnostics:** Added detailed Garuda summon logging for debugging entity deployment issues
-- � **Bug Fixes & Stability:** Fixed Kao config reference error, added Garuda owner null guards, enhanced debug logging
+- 🐛 **Bug Fixes & Stability:** Fixed Kao config reference error, added Garuda owner null guards, enhanced debug logging
 - 🥊 **Kao Phantom Blink Rework:** Dash-triggered stealth, shadow clone teleport, ambush crit windows, and proximity burst system
 - 🦅 **Poom Garuda Summon:** Complete fire-themed bird entity with ORBIT→DIVE→RETURN FSM and autonomous combat behavior
 - ⚖️ **Cosmic Balance System:** Dual summon synergy with +20% damage, enhanced burn effects, and visual aura feedback

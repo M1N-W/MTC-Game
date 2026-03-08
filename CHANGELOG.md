@@ -6,6 +6,41 @@
 
 ---
 
+## v3.12.5 — Garuda NaN Coordinates Fix
+*Released: March 8, 2026*
+
+### 🐛 Critical Bug Fix
+- **Root Cause:** Service Worker cache serving old config.js without new Garuda properties
+- **NaN Issue:** `S.garudaOrbitRadius = undefined` → `undefined * cos(angle) = NaN` → `worldToScreen(NaN, NaN)` → viewport cull/skip
+- **Solution:** Added `|| defaultValue` fallbacks for all Garuda config properties
+
+### 🔧 Config Fallback Implementation
+- **Duration:** `S.garudaDuration || 6` (6 seconds default)
+- **Orbit Radius:** `S.garudaOrbitRadius || 120` (120px default)
+- **Orbit Speed:** `S.garudaOrbitSpeed || 2.2` (2.2 rad/sec default)
+- **Dive Cooldown:** `S.garudaDiveCooldown || 1.8` (1.8s default)
+- **Damage:** `S.garudaDamage || 150` (150 damage default)
+- **Speeds:** `S.garudaDiveSpeed || 820`, `S.garudaReturnSpeed || 620`
+- **Multipliers:** `S.cosmicGarudaRadiusMult || 1.5`, `S.garudaEatRiceBonus || 1.5`
+
+### 🎯 Debug Cleanup
+- **Removed:** Post-push diagnostic logging (no longer needed)
+- **Removed:** Draw call console spam (issue resolved)
+- **Re-enabled:** Viewport culling (coordinates now valid)
+- **Result:** Clean, production-ready Garuda rendering
+
+### 🛡️ Cache Resilience
+- **Service Worker Compatibility:** Garuda works even with cached old config.js
+- **Graceful Degradation:** All properties have sensible defaults
+- **Forward Compatibility:** New config properties will override defaults when cache updates
+
+**Files Changed:**
+- `js/entities/summons.js` (config fallbacks + debug cleanup)
+- `js/entities/player/PoomPlayer.js` (removed post-push logging)
+- `sw.js` (cache version update)
+
+---
+
 ## v3.12.4 — Garuda Draw Call Debugging
 *Released: March 8, 2026*
 
