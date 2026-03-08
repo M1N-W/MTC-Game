@@ -72,10 +72,10 @@ const BALANCE = {
             stealthSpeedBonus: 1.5,
             expToNextLevel: 100,
             expLevelMult: 1.5,
-            passiveUnlockLevel: 3,
-            passiveUnlockStealthCount: 5,
+            passiveUnlockLevel: 1,          // fallback เท่านั้น — KaoPlayer.checkPassiveUnlock() override
+            passiveUnlockStealthCount: 1,   // fallback: ปลดตั้งแต่ stealth ครั้งแรก
             passiveHpBonusPct: 0.5,
-            passiveUnlockText: '👻 ซุ่มเสรี!',
+            passiveUnlockText: '👻 ซุ่มเสรี AWAKENED!',
             passiveCritBonus: 0.05,
             passiveLifesteal: 0.03,
             speedOnHit: 20,
@@ -94,7 +94,7 @@ const BALANCE = {
             phantomBlinkAmbushWindow: 1.5,  // NEW: crit-window after blink
             phantomBlinkDmgMult: 2.5,       // NEW: ambush damage mult
             stealthChainBonus: 0.25,        // NEW: +crit when Q chains from stealth
-            weaponMasterReq: 7
+            weaponMasterReq: 5              // ลดจาก 7 → 5 (passive เร็วขึ้น → Weapon Master ก็ควรทำได้เร็วขึ้น)
         },
         auto: {
             // ══════════════════════════════════════════════════
@@ -1002,7 +1002,7 @@ const GAME_TEXTS = {
         },
         kaoPassive: {
             title: 'เก้า — ซุ่มเสรี (Passive) 👻',
-            body: 'ใช้ Stealth ครบ 5 ครั้ง เพื่อปลดล็อค Passive สุดท้าย!\nดูที่ปุ่ม 0/5 ใน skill bar ด้านล่าง\n\n✦ Crit ขณะซ่อนตัวเพิ่ม 50%\n✦ ความเร็วถาวร +40%\n✦ อาวุธกลายเป็น Golden Awakened Form',
+            body: 'กด Right Click ใช้ Stealth ครั้งแรก → ปลดล็อค Passive ทันที!\n\n✦ Dash → Free Stealth อัตโนมัติทุกครั้ง\n✦ Crit ขณะซ่อนตัวเพิ่ม 50%\n✦ ความเร็วถาวร +40%\n✦ Q · E สกิลปลดล็อค\n\n⚔️ WEAPON MASTER: ฆ่าด้วยแต่ละอาวุธ 5 ครั้ง\n   → Golden Awakened Form',
             icon: '👻'
         },
         kaoWeapon: {

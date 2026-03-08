@@ -4,6 +4,48 @@
 
 ---
 
+## v3.14.0 — Complete Thematic Unlock Overhaul: All Characters Action-Based
+*Released: March 8, 2026*
+
+### 🎮 Major Gameplay Achievement: Unified Thematic Unlocks
+- **Kao Character Rework:** Stealth-first unlock completes the trilogy
+  - **Passive Unlock:** First Stealth use = immediate awakening (was Lv3 + 5× stealth)
+  - **Weapon Master Progress:** Reduced requirement 7→5 kills per weapon
+  - **Progress Indicators:** Shows 🔵 RIFLE 2/5 for each weapon kill
+- **All Characters Now Use Action-Based Unlocks:**
+  - **Kao:** Stealth first use (~15-20 sec)
+  - **Auto:** First OVERHEAT (~20-30 sec) 
+  - **Poom:** First Ritual Burst (~25-35 sec)
+
+### 🎨 UI/UX Completion
+- **Kao Passive Skill Hint:** Changed from "0/5" counter to "R-Click!" (purple)
+- **Poom Skill Lock Fix:** Reverted to passive-based locks (was using nagaReady flag)
+- **Consistent Timeline:** All characters unlock around the same early-game window
+
+### 🔧 Technical Implementation
+- **KaoPlayer.checkPassiveUnlock():** Complete override with stealth-first logic
+- **Enhanced VFX:** Dual-layer unlock effects (purple + gold particles)
+- **Progress Tracking:** Real-time weapon kill progress indicators
+- **Config Updates:** Fallback values and tutorial text updated
+
+### ⚔️ Weapon Master System
+- **Reduced Grind:** 5 kills per weapon (was 7) for faster progression
+- **Visual Feedback:** 🔵 RIFLE, 🔴 SNIPER, 🟠 SHOTGUN progress indicators
+- **Better Player Guidance:** Clear progress tracking reduces confusion
+
+### 🎯 Balance Timeline
+- **Kao:** Stealth first use → ~15-20 seconds
+- **Auto:** Heat to 100% → ~20-30 seconds  
+- **Poom:** Level 2 + Ritual → ~25-35 seconds
+- **Result:** All characters have passive skills unlocked by 35 seconds
+
+### 📚 Documentation Updates
+- **Tutorial Text:** Updated Kao passive tutorial for new unlock condition
+- **Config Comments:** Added detailed explanations for new mechanics
+- **UI Hints:** Better visual guidance for unlock requirements
+
+---
+
 ## v3.13.2 — UI Clarity: Better Unlock Condition Communication
 *Released: March 8, 2026*
 

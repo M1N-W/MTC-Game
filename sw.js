@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.13.2'; // v3.13.2: Improved UI clarity for unlock conditions and skill progression
+const CACHE_NAME = 'mtc-cache-v3.14.0'; // v3.14.0: Completed thematic passive unlock overhaul - All characters now use action-based unlocks
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

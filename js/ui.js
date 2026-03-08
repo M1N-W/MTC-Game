@@ -644,7 +644,8 @@ class UIManager {
                     passiveSkillEl.style.opacity = '0.35';
                     passiveSkillEl.classList.remove('unlocked');
                     const skillName = passiveSkillEl.querySelector('.skill-name');
-                    if (skillName) { skillName.textContent = '0/5'; skillName.style.color = ''; }
+                    // Condition ใหม่: ใช้ stealth ครั้งแรก = unlock ทันที → ไม่ต้อง count แล้ว
+                    if (skillName) { skillName.textContent = 'R-Click!'; skillName.style.color = '#a855f7'; }
                 }      // restore default layout display
             } else {
                 // Any non-Kao character: suppress entirely
@@ -885,14 +886,10 @@ class UIManager {
             const passive = player.passiveUnlocked;
 
             // ── Lock overlays ──────────────────────────────────────────────────
-            // eat-icon  (R-Click) : ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
-            // naga-icon (Q)       : ปลดที่ Lv2  → อ่านจาก _nagaUnlocked
-            // ritual-icon (R)     : ปลดพร้อม Naga → อ่านจาก _nagaUnlocked
-            // garuda-icon (E)     : ปลดหลัง passive (ทำ Ritual ครั้งแรก)
-            const nagaReady = !!(player._nagaUnlocked);
+            // eat-icon (R-Click) ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
             setLockOverlay(document.getElementById('eat-icon'), false);
-            setLockOverlay(document.getElementById('naga-icon'), !nagaReady);
-            setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
+            setLockOverlay(document.getElementById('naga-icon'), !passive);
+            setLockOverlay(document.getElementById('ritual-icon'), !passive);
             setLockOverlay(document.getElementById('garuda-icon'), !passive);
 
             // ── Eat Rice ─────────────────────────────────────────────

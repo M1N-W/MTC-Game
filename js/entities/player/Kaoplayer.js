@@ -127,6 +127,48 @@ class KaoPlayer extends Player {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // PASSIVE UNLOCK — Override: เก้าปลดล็อคเมื่อใช้ Stealth ครั้งแรก
+    // ──────────────────────────────────────────────────────────────────────────
+    // เปลี่ยนจาก "Lv3 + stealth ×5" → "Stealth ครั้งแรก = Awakening"
+    // Thematic: เก้าค้นพบพลัง "ซุ่มเสรี" ตอนที่ซ่อนตัวเป็นครั้งแรก
+    // Timing: ใกล้เคียงกับ Auto (OVERHEAT) และ Poom (Ritual ครั้งแรก) = ~20-30 วิ
+    checkPassiveUnlock() {
+        const S = this.stats;
+        if (this.passiveUnlocked) return;
+
+        // ── Condition: ใช้ Stealth ครั้งแรก ────────────────────────────────
+        // stealthUseCount++ เกิดขึ้นใน PlayerBase.activateStealth() ก่อน call นี้
+        if (this.stealthUseCount < 1) return;
+
+        this.passiveUnlocked = true;
+
+        // ── HP Bonus ──────────────────────────────────────────────────────
+        const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.50));
+        this.maxHp += hpBonus;
+        this.hp += hpBonus;
+
+        // ── VFX — สีม่วง/ทอง สะท้อน Assassin Awakening ────────────────
+        const unlockText = S.passiveUnlockText ?? '👻 ซุ่มเสรี AWAKENED!';
+        spawnFloatingText(unlockText, this.x, this.y - 70, '#a855f7', 32);
+        spawnFloatingText('⚡ Q · E UNLOCKED', this.x, this.y - 108, '#fbbf24', 18);
+        spawnParticles(this.x, this.y, 60, '#a855f7');
+        spawnParticles(this.x, this.y, 30, '#fbbf24');
+        addScreenShake(18);
+        this.goldenAuraTimer = 4;
+        Audio.playAchievement();
+
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+
+        // ── Persist save ──────────────────────────────────────────────────
+        try {
+            const saved = getSaveData();
+            const set = new Set(saved.unlockedPassives || []);
+            set.add(this.charId);
+            updateSaveData({ unlockedPassives: [...set] });
+        } catch (e) { console.warn('[MTC Save] Could not persist passive unlock:', e); }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // KILL TRACKING — called from enemy.js after each enemy death
     // ──────────────────────────────────────────────────────────────────────────
     addKill(weaponName) {
@@ -134,11 +176,29 @@ class KaoPlayer extends Player {
         if (!this.passiveUnlocked) return;
         if (this.isWeaponMaster) return;   // already awakened, no need to track
 
-        const req = BALANCE.characters.kao.weaponMasterReq || 10;
+        const req = BALANCE.characters.kao.weaponMasterReq || 5;
 
         if (weaponName === 'AUTO RIFLE') this.weaponKills.auto++;
         if (weaponName === 'SNIPER') this.weaponKills.sniper++;
         if (weaponName === 'SHOTGUN') this.weaponKills.shotgun++;
+
+        // ── Progress indicator: แสดง count ทุก kill ที่เกี่ยวข้อง ─────────────
+        // ผู้เล่นรู้ว่าตัวเองอยู่ที่ไหน — ลด confusion จาก silent grind
+        const progMap = {
+            'AUTO RIFLE': { key: 'auto', icon: '🔵', label: 'RIFLE' },
+            'SNIPER': { key: 'sniper', icon: '🔴', label: 'SNIPER' },
+            'SHOTGUN': { key: 'shotgun', icon: '🟠', label: 'SHOTGUN' },
+        };
+        const prog = progMap[weaponName];
+        if (prog) {
+            const current = this.weaponKills[prog.key];
+            if (current < req) {
+                spawnFloatingText(
+                    `${prog.icon} ${prog.label} ${current}/${req}`,
+                    this.x, this.y - 50, '#94a3b8', 13
+                );
+            }
+        }
 
         // Unlock only when ALL three weapons have reached the required kills
         if (
