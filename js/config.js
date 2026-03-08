@@ -285,266 +285,266 @@ const BALANCE = {
             cosmicNagaBurnDPS: 22,
             cosmicGarudaRadiusMult: 1.5,
         },
-        drone: {
+    },
+    drone: {
+        radius: 12,
+        damage: 15,
+        range: 300,
+        fireRate: 1.0,
+        projectileSpeed: 700,
+        projectileColor: '#00e5ff',
+        speed: 250,
+        orbitRadius: 75,
+        orbitSpeed: 1.1,
+        lerpBase: 0.02,
+        bobAmplitude: 8,
+        bobSpeed: 3.5,
+        // ── Overdrive Stats ──
+        overdriveCombo: 15,
+        overdriveFireRate: 1.5,
+        overdriveColor: '#facc15',
+        overdriveGlow: '#f59e0b',
+        overdriveLinger: 4.0 // Keeps overdrive active for 4s after combo drops
+    },
+    enemy: {
+        radius: 18,
+        colors: ['#ef4444', '#f59e0b', '#8b5cf6'],
+        expValue: 18,
+        chaseRange: 150,
+        projectileSpeed: 500,
+        baseHp: 40, hpPerWave: 0.16,  // NERF: 0.18 → 0.16 (exponential growth was too fast)
+        baseSpeed: 85, speedPerWave: 6,
+        baseDamage: 8, damagePerWave: 1.2,  // NERF: 1.5 → 1.2 (damage spike was too harsh)
+        shootCooldown: [2.5, 4.5],
+        shootRange: 550
+    },
+    tank: {
+        radius: 25,
+        color: '#78716c',
+        expValue: 45,
+        powerupDropMult: 1.5,
+        baseHp: 100, hpPerWave: 0.20,  // NERF: 0.24 → 0.20 (Wave15 Tank 2519→1800 HP)
+        baseSpeed: 60, speedPerWave: 3,
+        baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
+        meleeRange: 55
+    },
+    mage: {
+        radius: 16,
+        color: '#a855f7',
+        expValue: 55,
+        powerupDropMult: 1.3,
+        orbitDistance: 300,
+        orbitDistanceBuffer: 100,
+        baseHp: 28, hpPerWave: 0.22,  // NERF: 0.28 → 0.22 (glass cannon should stay fragile)
+        baseSpeed: 70, speedPerWave: 5,
+        baseDamage: 12, damagePerWave: 1.8,
+        soundWaveCooldown: 10,
+        soundWaveRange: 300,
+        soundWaveConfuseDuration: 0.6,  // NERF: 0.8 → 0.6 (confusion was too long)
+        meteorCooldown: 13,
+        meteorDamage: 24,  // NERF: 28 → 24 (meteor spam was too strong)
+        meteorBurnDuration: 3,
+        meteorBurnDPS: 4.0  // NERF: 4.5 → 4.0
+    },
+    boss: {
+        radius: 50,
+        // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
+        spawnY: -330,
+        contactDamage: 25,
+        speechInterval: 10,
+        nextWaveDelay: 2000,
+        log457HealRate: 0.06,
+        chalkProjectileSpeed: 600,
+        attackFireRate: 0.1,
+        phase2AttackFireRate: 0.05,
+        ultimateProjectileSpeed: 400,
+        baseHp: 5200,
+        hpMultiplier: 1.28,      // NERF: 1.333 → 1.28 (Enc5: ~14,000 HP แทน 16,400)
+        moveSpeed: 140,
+        phase2Speed: 190,
+        phase2Threshold: 0.5,
+        chalkDamage: 13,
+        ultimateDamage: 35,
+        ultimateBullets: 20,
+        phase2UltimateBullets: 28,
+        slamDamage: 60,
+        slamRadius: 360,
+        slamCooldown: 14,
+        graphDamage: 70,
+        graphLength: 1600,
+        graphDuration: 20,
+        graphCooldown: 16,
+        log457ChargeDuration: 2,
+        log457ActiveDuration: 6,
+        log457StunDuration: 1.2,
+        log457Cooldown: 30,
+        log457AttackBonus: 0.09,
+        log457AttackGrowth: 0.04,
+        // burst armor: เมื่อ HP ต่ำกว่าค่านี้ ลดดาเมจเข้า
+        burstArmorThresholdPct: 0.30,
+        burstArmorReduction: 0.40,
+        burstArmorDuration: 4.0,
+        burstArmorCooldown: 25,
+        phase2: {
+            barkDamage: 32,
+            barkRange: 600,
+            barkCooldown: 3.2,
+            enrageSpeedMult: 2.0,
+            dogColor: '#d97706'
+        },
+        bossDog: {
+            hp: 2000,
+            speed: 280,
+            damage: 30,
+            radius: 24,
+            color: '#d97706'
+        },
+        phase3Threshold: 0.25,
+        phase3: {
+            auraColor: '#38bdf8',
+            goldfishCooldown: 5.5,
+            goldfishCount: 4,
+            bubbleCooldown: 6.0,
+            bubbleCount: 5,
+            slowFactor: 0.5,
+            slowDuration: 2.0
+        },
+        goldfishMinion: {
+            hp: 100,
+            speed: 165,
+            damage: 18,
             radius: 12,
-            damage: 15,
-            range: 300,
-            fireRate: 1.0,
-            projectileSpeed: 700,
-            projectileColor: '#00e5ff',
-            speed: 250,
-            orbitRadius: 75,
-            orbitSpeed: 1.1,
-            lerpBase: 0.02,
-            bobAmplitude: 8,
-            bobSpeed: 3.5,
-            // ── Overdrive Stats ──
-            overdriveCombo: 15,
-            overdriveFireRate: 1.5,
-            overdriveColor: '#facc15',
-            overdriveGlow: '#f59e0b',
-            overdriveLinger: 4.0 // Keeps overdrive active for 4s after combo drops
+            wobbleAmp: 40,
+            wobbleFreq: 3.5,
+            color: '#fb923c'
         },
-        enemy: {
+        bubbleProjectile: {
+            speed: 100,
+            damage: 30,
             radius: 18,
-            colors: ['#ef4444', '#f59e0b', '#8b5cf6'],
-            expValue: 18,
-            chaseRange: 150,
-            projectileSpeed: 500,
-            baseHp: 40, hpPerWave: 0.16,  // NERF: 0.18 → 0.16 (exponential growth was too fast)
-            baseSpeed: 85, speedPerWave: 6,
-            baseDamage: 8, damagePerWave: 1.2,  // NERF: 1.5 → 1.2 (damage spike was too harsh)
-            shootCooldown: [2.5, 4.5],
-            shootRange: 550
+            color: 'rgba(186, 230, 253, 0.6)'
         },
-        tank: {
-            radius: 25,
-            color: '#78716c',
-            expValue: 45,
-            powerupDropMult: 1.5,
-            baseHp: 100, hpPerWave: 0.20,  // NERF: 0.24 → 0.20 (Wave15 Tank 2519→1800 HP)
-            baseSpeed: 60, speedPerWave: 3,
-            baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
-            meleeRange: 55
+        first: {
+            hpBaseMult: 0.62,
+            advancedHpMult: 1.35,
+            speedBaseMult: 1.55,
+            advancedSpeedMult: 1.35,
+            contactDamageMult: 1.2,
+            cooldowns: { suvat: 8.0, orbit: 12.0, freeFall: 15.0, rocket: 9.0, sandwich: 18.0 },
+            suvat: { windUp: 0.9, accel: 1900, maxDur: 1.2, damage: 80 },
+            orbit: { radius: 115, speed: 2.8, duration: 3.5, projDamage: 24, projSpeed: 520 },
+            freeFall: { warnDur: 1.8, aoeRadius: 140, damage: 95, advMult: 1.25 },
+            rocket: { baseDmg: 28, advMult: 1.3, baseSpeed: 480 },
+            berserk: { projDamage: 22, advMult: 1.3, projSpeed: 540, fireCd: 2.2 },
+            dodge: { radius: 130, impulse: 420, cd: 1.2 }
         },
-        mage: {
-            radius: 16,
-            color: '#a855f7',
-            expValue: 55,
-            powerupDropMult: 1.3,
-            orbitDistance: 300,
-            orbitDistanceBuffer: 100,
-            baseHp: 28, hpPerWave: 0.22,  // NERF: 0.28 → 0.22 (glass cannon should stay fragile)
-            baseSpeed: 70, speedPerWave: 5,
-            baseDamage: 12, damagePerWave: 1.8,
-            soundWaveCooldown: 10,
-            soundWaveRange: 300,
-            soundWaveConfuseDuration: 0.6,  // NERF: 0.8 → 0.6 (confusion was too long)
-            meteorCooldown: 13,
-            meteorDamage: 24,  // NERF: 28 → 24 (meteor spam was too strong)
-            meteorBurnDuration: 3,
-            meteorBurnDPS: 4.0  // NERF: 4.5 → 4.0
-        },
-        boss: {
-            radius: 50,
-            // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
-            spawnY: -330,
-            contactDamage: 25,
-            speechInterval: 10,
-            nextWaveDelay: 2000,
-            log457HealRate: 0.06,
-            chalkProjectileSpeed: 600,
-            attackFireRate: 0.1,
-            phase2AttackFireRate: 0.05,
-            ultimateProjectileSpeed: 400,
-            baseHp: 5200,
-            hpMultiplier: 1.28,      // NERF: 1.333 → 1.28 (Enc5: ~14,000 HP แทน 16,400)
-            moveSpeed: 140,
-            phase2Speed: 190,
-            phase2Threshold: 0.5,
-            chalkDamage: 13,
-            ultimateDamage: 35,
-            ultimateBullets: 20,
-            phase2UltimateBullets: 28,
-            slamDamage: 60,
-            slamRadius: 360,
-            slamCooldown: 14,
-            graphDamage: 70,
-            graphLength: 1600,
-            graphDuration: 20,
-            graphCooldown: 16,
-            log457ChargeDuration: 2,
-            log457ActiveDuration: 6,
-            log457StunDuration: 1.2,
-            log457Cooldown: 30,
-            log457AttackBonus: 0.09,
-            log457AttackGrowth: 0.04,
-            // burst armor: เมื่อ HP ต่ำกว่าค่านี้ ลดดาเมจเข้า
-            burstArmorThresholdPct: 0.30,
-            burstArmorReduction: 0.40,
-            burstArmorDuration: 4.0,
-            burstArmorCooldown: 25,
-            phase2: {
-                barkDamage: 32,
-                barkRange: 600,
-                barkCooldown: 3.2,
-                enrageSpeedMult: 2.0,
-                dogColor: '#d97706'
-            },
-            bossDog: {
-                hp: 2000,
-                speed: 280,
-                damage: 30,
-                radius: 24,
-                color: '#d97706'
-            },
-            phase3Threshold: 0.25,
-            phase3: {
-                auraColor: '#38bdf8',
-                goldfishCooldown: 5.5,
-                goldfishCount: 4,
-                bubbleCooldown: 6.0,
-                bubbleCount: 5,
-                slowFactor: 0.5,
-                slowDuration: 2.0
-            },
-            goldfishMinion: {
-                hp: 100,
-                speed: 165,
-                damage: 18,
-                radius: 12,
-                wobbleAmp: 40,
-                wobbleFreq: 3.5,
-                color: '#fb923c'
-            },
-            bubbleProjectile: {
-                speed: 100,
-                damage: 30,
-                radius: 18,
-                color: 'rgba(186, 230, 253, 0.6)'
-            },
-            first: {
-                hpBaseMult: 0.62,
-                advancedHpMult: 1.35,
-                speedBaseMult: 1.55,
-                advancedSpeedMult: 1.35,
-                contactDamageMult: 1.2,
-                cooldowns: { suvat: 8.0, orbit: 12.0, freeFall: 15.0, rocket: 9.0, sandwich: 18.0 },
-                suvat: { windUp: 0.9, accel: 1900, maxDur: 1.2, damage: 80 },
-                orbit: { radius: 115, speed: 2.8, duration: 3.5, projDamage: 24, projSpeed: 520 },
-                freeFall: { warnDur: 1.8, aoeRadius: 140, damage: 95, advMult: 1.25 },
-                rocket: { baseDmg: 28, advMult: 1.3, baseSpeed: 480 },
-                berserk: { projDamage: 22, advMult: 1.3, projSpeed: 540, fireCd: 2.2 },
-                dodge: { radius: 130, impulse: 420, cd: 1.2 }
-            },
-            domainExpansion: {
-                dangerPct: 0.62,
-                dangerPctMax: 0.84
-            }
-        },
-        powerups: {
-            radius: 20,
-            dropRate: 0.18,  // BUFF: 0.15 → 0.18 (more healing opportunities)
-            lifetime: 14,
-            healAmount: 20,
-            damageBoost: 1.4,  // NERF: 1.5 → 1.4 (stacking with shop was too strong)
-            damageBoostDuration: 8,  // BUFF: 5 → 8 (lasts longer)
-            speedBoost: 1.3,  // NERF: 1.35 → 1.3
-            speedBoostDuration: 8  // BUFF: 5 → 8
-        },
-        waves: {
-            spawnDistance: 800,
-            bossSpawnDelay: 3000,
-            maxWaves: 15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
-            minKillsForNoDamage: 5,
-            enemiesBase: 5,  // BUFF: 4 → 5 (more action early game)
-            enemiesPerWave: 1.8,  // NERF: 2 → 1.8 (less enemy spam late game)
-            tankSpawnChance: 0.10,  // NERF: 0.12 → 0.10 (fewer tanks)
-            mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
-            bossEveryNWaves: 3,
-            glitchGracePeriod: 4000,
-            // ── Wave Event Configurations ──────────────────────
-            // Boss  : 3, 6, 9, 12, 15
-            // Glitch: 5, 10
-            // Fog   : 2, 8, 11, 14
-            // Speed : 4, 7, 13
-            // Dark  : 1
-            fogWaves: [2, 8, 11, 14],
-            speedWaves: [4, 7, 13],
-            glitchWaves: [5, 10],
-            darkWave: 1
-        },
-        score: {
-            basicEnemy: 100,  // BUFF: 80 → 100 (more income)
-            tank: 200,  // BUFF: 160 → 200
-            mage: 280,  // BUFF: 220 → 280
-            boss: 6000,  // BUFF: 5000 → 6000 (boss fights are hard)
-            powerup: 120,  // BUFF: 100 → 120
-            achievement: 500
-        },
-        mtcRoom: {
-            healRate: 30,           // ลด 40→30 (offset by new abilities)
-            maxStayTime: 4,
-            cooldownTime: 10,
-            size: 300,
-            // ── Dash Reset ──────────────────────────────────────────
-            dashResetOnEntry: true,
-            // ── Crisis Protocol ─────────────────────────────────────
-            crisisHpPct: 0.25,      // trigger ที่ HP ≤ 25%
-            crisisHealBonus: 35,    // instant bonus HP
-            // ── Rotating Buff Terminal (cycles per visit) ───────────
-            // Index 0 = DMG, 1 = SPD, 2 = CDR Burst
-            buffCycleDuration: [8, 6, 0],  // วินาที (0 = instant)
-            buffCycleMagnitude: [0.15, 0.10, 0.35],  // +15% DMG, +10% SPD, -35% CD
-            buffCycleNames: ['DMG +15%', 'SPD +10%', 'CDR BURST'],
-            buffCycleColors: ['#f97316', '#22d3ee', '#a78bfa'],
-            buffCycleIcons: ['⚔', '💨', '⚡'],
-        },
-        LIGHTING: {
-            ambientLight: 0.9,
-            cycleDuration: 60,
-            nightMinLight: 0.12,
-            dayMaxLight: 0.95,
-            playerLightRadius: 160,
-            projectileLightRadius: 50,
-            mtcServerLightRadius: 120,
-            shopLightRadius: 85,
-            dataPillarLightRadius: 70,
-            serverRackLightRadius: 55,
-            nightR: 5, nightG: 8, nightB: 22
-        },
-        map: {
-            size: 3000,
-            objectDensity: 0.12,
-            objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
-            wallPositions: [
-                { x: -1500, y: -50, w: 50, h: 100 },
-                { x: 1450, y: -50, w: 50, h: 100 },
-                { x: -50, y: -1500, w: 100, h: 50 },
-                { x: -50, y: 1450, w: 100, h: 50 }
-            ],
-            mapColors: {
-                floor: '#0e1320',
-                floorAlt: '#0a0f1a',
-                treeLight: '#365314',
-                treeMid: '#1a2e0a',
-                treeDark: '#0f1a05',
-                treeTrunk: '#451a03',
-                deskTop: '#1c1408',
-                deskLegs: '#0f0b04',
-                serverBody: '#0d1117',
-                serverLightOn: '#f59e0b',
-                serverLightOff: '#451a03',
-                pillarBase: '#1e293b',
-                pillarCircuit: '#d97706',
-                bookColors: ['#b45309', '#92400e', '#d97706', '#78350f', '#a16207', '#854d0e', '#f59e0b'],
-                wallColor: '#1a1208',
-                wallBrick: '#2d1f0a',
-                whiteboardGreen: '#0d1f0a',
-                chalkWhite: '#fef3c7'
-            }
+        domainExpansion: {
+            dangerPct: 0.62,
+            dangerPctMax: 0.84
         }
-    }  // close characters
+    },
+    powerups: {
+        radius: 20,
+        dropRate: 0.18,  // BUFF: 0.15 → 0.18 (more healing opportunities)
+        lifetime: 14,
+        healAmount: 20,
+        damageBoost: 1.4,  // NERF: 1.5 → 1.4 (stacking with shop was too strong)
+        damageBoostDuration: 8,  // BUFF: 5 → 8 (lasts longer)
+        speedBoost: 1.3,  // NERF: 1.35 → 1.3
+        speedBoostDuration: 8  // BUFF: 5 → 8
+    },
+    waves: {
+        spawnDistance: 800,
+        bossSpawnDelay: 3000,
+        maxWaves: 15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
+        minKillsForNoDamage: 5,
+        enemiesBase: 5,  // BUFF: 4 → 5 (more action early game)
+        enemiesPerWave: 1.8,  // NERF: 2 → 1.8 (less enemy spam late game)
+        tankSpawnChance: 0.10,  // NERF: 0.12 → 0.10 (fewer tanks)
+        mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
+        bossEveryNWaves: 3,
+        glitchGracePeriod: 4000,
+        // ── Wave Event Configurations ──────────────────────
+        // Boss  : 3, 6, 9, 12, 15
+        // Glitch: 5, 10
+        // Fog   : 2, 8, 11, 14
+        // Speed : 4, 7, 13
+        // Dark  : 1
+        fogWaves: [2, 8, 11, 14],
+        speedWaves: [4, 7, 13],
+        glitchWaves: [5, 10],
+        darkWave: 1
+    },
+    score: {
+        basicEnemy: 100,  // BUFF: 80 → 100 (more income)
+        tank: 200,  // BUFF: 160 → 200
+        mage: 280,  // BUFF: 220 → 280
+        boss: 6000,  // BUFF: 5000 → 6000 (boss fights are hard)
+        powerup: 120,  // BUFF: 100 → 120
+        achievement: 500
+    },
+    mtcRoom: {
+        healRate: 30,           // ลด 40→30 (offset by new abilities)
+        maxStayTime: 4,
+        cooldownTime: 10,
+        size: 300,
+        // ── Dash Reset ──────────────────────────────────────────
+        dashResetOnEntry: true,
+        // ── Crisis Protocol ─────────────────────────────────────
+        crisisHpPct: 0.25,      // trigger ที่ HP ≤ 25%
+        crisisHealBonus: 35,    // instant bonus HP
+        // ── Rotating Buff Terminal (cycles per visit) ───────────
+        // Index 0 = DMG, 1 = SPD, 2 = CDR Burst
+        buffCycleDuration: [8, 6, 0],  // วินาที (0 = instant)
+        buffCycleMagnitude: [0.15, 0.10, 0.35],  // +15% DMG, +10% SPD, -35% CD
+        buffCycleNames: ['DMG +15%', 'SPD +10%', 'CDR BURST'],
+        buffCycleColors: ['#f97316', '#22d3ee', '#a78bfa'],
+        buffCycleIcons: ['⚔', '💨', '⚡'],
+    },
+    LIGHTING: {
+        ambientLight: 0.9,
+        cycleDuration: 60,
+        nightMinLight: 0.12,
+        dayMaxLight: 0.95,
+        playerLightRadius: 160,
+        projectileLightRadius: 50,
+        mtcServerLightRadius: 120,
+        shopLightRadius: 85,
+        dataPillarLightRadius: 70,
+        serverRackLightRadius: 55,
+        nightR: 5, nightG: 8, nightB: 22
+    },
+    map: {
+        size: 3000,
+        objectDensity: 0.12,
+        objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
+        wallPositions: [
+            { x: -1500, y: -50, w: 50, h: 100 },
+            { x: 1450, y: -50, w: 50, h: 100 },
+            { x: -50, y: -1500, w: 100, h: 50 },
+            { x: -50, y: 1450, w: 100, h: 50 }
+        ],
+        mapColors: {
+            floor: '#0e1320',
+            floorAlt: '#0a0f1a',
+            treeLight: '#365314',
+            treeMid: '#1a2e0a',
+            treeDark: '#0f1a05',
+            treeTrunk: '#451a03',
+            deskTop: '#1c1408',
+            deskLegs: '#0f0b04',
+            serverBody: '#0d1117',
+            serverLightOn: '#f59e0b',
+            serverLightOff: '#451a03',
+            pillarBase: '#1e293b',
+            pillarCircuit: '#d97706',
+            bookColors: ['#b45309', '#92400e', '#d97706', '#78350f', '#a16207', '#854d0e', '#f59e0b'],
+            wallColor: '#1a1208',
+            wallBrick: '#2d1f0a',
+            whiteboardGreen: '#0d1f0a',
+            chalkWhite: '#fef3c7'
+        }
+    }
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -935,10 +935,10 @@ const GAME_TEXTS = {
     boss: {
         // ── BossFirst (Kru First) phase-transition physics taunts
         firstTaunts: [
-            'E = mc²',
-            'Action = Reaction',
-            'Calculate this!',
-            'Physics is everything!',
+        'E = mc²',
+        'Action = Reaction',
+        'Calculate this!',
+        'Physics is everything!',
         ],
     },
     ui: {
@@ -1028,14 +1028,14 @@ const GAME_TEXTS = {
             icon: '👾'
         },
         boss: {
-            title: 'Boss Encounters 👑',
-            body: 'ทุก 3 เวฟจะมี Boss — 5 encounters ทั้งหมด:\n\n👑 Wave  3 — KruManop (Basic)\n🐕 Wave  9 — KruManop (Dog Rider) — Phase 2 เรียกหมา\n🐟 Wave 15 — KruManop (Goldfish Lover) — Phase 2+3\n\n⚛️ Wave  6 — KruFirst (Basic)\n⚛️ Wave 12 — KruFirst (Advanced ⚠️ ยากขึ้น)\n\n🌌 Domain Expansion — ทักษะ Ultimate\n   Boss ใช้เมื่อ HP ต่ำ ควบคุมพื้นที่ทั้ง Arena!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
-            icon: '👑'
+        title: 'Boss Encounters 👑',
+        body: 'ทุก 3 เวฟจะมี Boss — 5 encounters ทั้งหมด:\n\n👑 Wave  3 — KruManop (Basic)\n🐕 Wave  9 — KruManop (Dog Rider) — Phase 2 เรียกหมา\n🐟 Wave 15 — KruManop (Goldfish Lover) — Phase 2+3\n\n⚛️ Wave  6 — KruFirst (Basic)\n⚛️ Wave 12 — KruFirst (Advanced ⚠️ ยากขึ้น)\n\n🌌 Domain Expansion — ทักษะ Ultimate\n   Boss ใช้เมื่อ HP ต่ำ ควบคุมพื้นที่ทั้ง Arena!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
+        icon: '👑'
         },
         ready: {
-            title: 'พร้อมแล้ว! 🚀',
-            body: 'คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievement มากมาย\n🎯 ผ่านทั้ง 15 Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่สนามรบ!',
-            icon: '🎮'
+        title: 'พร้อมแล้ว! 🚀',
+        body: 'คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievement มากมาย\n🎯 ผ่านทั้ง 15 Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่สนามรบ!',
+        icon: '🎮'
         }
     }
 };

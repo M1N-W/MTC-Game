@@ -4,6 +4,26 @@
 
 ---
 
+## v3.12.10 — Critical Bug Fix: BALANCE Object Structure
+*Released: March 8, 2026*
+
+### 🐛 Bug Fixes
+- **Fixed BALANCE object structure in config.js:** Corrected incorrect nesting that caused multiple TypeErrors
+  - Error 1: `Cannot read properties of undefined (reading 'domainExpansion')` at boss_attacks.js:1168
+  - Error 2: `Cannot read properties of undefined (reading 'fogWaves')` at WaveManager.js:48
+  - Error 3: `Cannot read properties of undefined (reading 'dayMaxLight')` at game.js:849
+  - **Root Cause:** All properties after `player` were incorrectly nested under a non-existent `characters` wrapper
+  - **Solution:** Restructured BALANCE object to have proper hierarchy:
+    - `characters: { kao, auto, poom }` - character-specific configurations
+    - Root-level properties: `drone`, `enemy`, `tank`, `mage`, `boss`, `powerups`, `waves`, `score`, `mtcRoom`, `LIGHTING`, `map`
+
+### 🔧 Technical Details
+- Fixed indentation and object structure throughout config.js
+- All game systems now properly access BALANCE properties
+- Prevents initialization crashes in boss_attacks.js, WaveManager.js, and game.js
+
+---
+
 ## v3.12.9 — Critical Bug Fix: Missing Configuration
 *Released: March 8, 2026*
 
