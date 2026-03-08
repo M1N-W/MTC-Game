@@ -88,12 +88,13 @@
 
 ---
 
-## 📈 Current Version: v3.16.1 (March 8, 2026)
+## 📈 Current Version: v3.16.2 (March 8, 2026)
 
 **Latest Major Updates:**
+- 🧹 **Repository Cleanup:** Removed duplicate skill files and consolidated documentation in single location
 - 🐛 **Critical Bug Fixes:** Fixed boss kill scoring double-count, meteor spawn rate 60× bug, and wave spawn balance
 - ⚖️ **Boss Balance:** KruManop phase 3 speed boost, KruFirst HP increase, GoldfishMinion death guard
-- � **Technical Improvements:** Frame-rate independence fixes, enhanced wave progression, performance optimizations
+- 🔧 **Technical Improvements:** Frame-rate independence fixes, enhanced wave progression, performance optimizations
 - 🔄 **Major Character Balance Rework:** Kao two-phase passive system, Auto early vacuum access, Poom significant buffs
 - 🏆 **Complete Achievement System:** Character progression tracking, boss kill statistics, combat milestones
 - 🎮 **UI Integration:** Dynamically injected Garuda skill slot with cooldown visuals for Poom character

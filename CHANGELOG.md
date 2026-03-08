@@ -4,6 +4,32 @@
 
 ---
 
+## v3.16.2 — Repository Cleanup: Skill File Consolidation
+*Released: March 8, 2026*
+
+### 🧹 Repository Cleanup
+- **Removed Duplicate Skill Files:** Cleaned up redundant skill documentation from multiple directories
+  - **Deleted Locations:** `.claude/skills/` and `.windsurf/skills/` directories
+  - **Consolidated Location:** All skill files now centralized in `.agents/skills/`
+- **Files Removed:** 42 skill documentation files totaling 13,420 lines
+  - **javascript-testing-patterns:** Complete skill documentation and supporting files
+  - **modern-javascript-patterns:** Complete skill documentation and supporting files
+  - **next-best-practices:** Complete skill documentation with 19 supporting files
+  - **tauri-event-system:** Skill documentation
+  - **typescript-advanced-types:** Skill documentation
+
+### ✨ Benefits
+- **Reduced Repository Clutter:** Eliminated duplicate documentation across multiple directories
+- **Single Source of Truth:** All skill documentation now centralized in one location
+- **Improved Maintainability:** Easier to update and manage skill files in single directory
+- **Cleaner Project Structure:** More organized repository with clear file hierarchy
+
+### 🔄 Service Worker Update
+- **Cache Version Update:** Updated to v3.16.2 to ensure players receive latest changes
+- **Cache Invalidation:** Forces browser to fetch latest repository structure
+
+---
+
 ## v3.16.1 — Critical Bug Fixes: Boss Scoring & Game Balance
 *Released: March 8, 2026*
 
