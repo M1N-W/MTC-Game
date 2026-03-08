@@ -275,14 +275,7 @@ function updateGame(dt) {
             }
             mouse.right = 0;
         }
-        if (keys.q === 1) {
-            if (window.player.passiveUnlocked) {
-                if (window.player.cooldowns.naga <= 0) window.player.summonNaga();
-            } else {
-                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${window.player.stats.passiveUnlockLevel ?? 4}`, window.player.x, window.player.y - 40, '#94a3b8', 14);
-            }
-            keys.q = 0;
-        }
+        // Q (Naga) handled entirely inside PoomPlayer.update() — no duplicate routing here
     }
     if (window.player) UIManager.updateSkillIcons(window.player);
 

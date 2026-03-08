@@ -37,6 +37,10 @@ class PoomPlayer extends Player {
             windowRemaining: 0,
             cooldownRemaining: 0
         };
+
+        // ── Passive behaviour flags (overrides PlayerBase defaults) ──────────
+        this.passiveSpeedBonus = 0;     // Poom ไม่มี passive speed bonus
+        this.usesOwnLifesteal = false;  // ใช้ base lifesteal logic ปกติ
     }
 
     // ── Second Wind: computed live, no timer needed ──────────
@@ -273,10 +277,12 @@ class PoomPlayer extends Player {
             this.passiveUnlocked = true;
             const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.30));
             this.maxHp += hpBonus; this.hp += hpBonus;
-            spawnFloatingText('ปลดล็อค: ราชาแห่งพิธีกรรม!', this.x, this.y - 60, '#fbbf24', 30);
+            const unlockText = S.passiveUnlockText ?? 'ปลดล็อค: ราชาแห่งพิธีกรรม!';
+            spawnFloatingText(unlockText, this.x, this.y - 60, '#fbbf24', 30);
             spawnParticles(this.x, this.y, 50, '#fbbf24');
             addScreenShake(15); this.goldenAuraTimer = 3;
             Audio.playAchievement();
+            if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
             try {
                 const saved = getSaveData();
                 const set = new Set(saved.unlockedPassives || []);

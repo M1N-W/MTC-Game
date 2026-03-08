@@ -648,8 +648,6 @@ class WanchaiStand {
     }
 }
 
-'use strict';
-
 // ════════════════════════════════════════════════════════════
 // 🔥 AUTO PLAYER — Thermodynamic Brawler + Stand "Wanchai"
 // ════════════════════════════════════════════════════════════
@@ -659,7 +657,9 @@ class AutoPlayer extends Player {
         this.x = x;
         this.y = y;
 
-        this.charId = 'auto';
+        // ── Passive behaviour flags (overrides PlayerBase defaults) ──────────
+        this.passiveSpeedBonus = 0;     // Auto ไม่มี passive speed bonus
+        this.usesOwnLifesteal = false;  // ใช้ base lifesteal logic ปกติ
 
         this.wanchaiActive = false;
         this.wanchaiTimer = 0;
@@ -902,7 +902,6 @@ class AutoPlayer extends Player {
                 spawnFloatingText(`🔥 VACUUM HEAT ×${pulled}`, this.x, this.y - 60, '#f97316', 24);
                 if (typeof Audio !== 'undefined' && Audio.playVacuum) Audio.playVacuum();
             }
-            keys.q = 0;
             consumeInput('q');
         }
 
@@ -1127,10 +1126,12 @@ class AutoPlayer extends Player {
             this.passiveUnlocked = true;
             const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.35));
             this.maxHp += hpBonus; this.hp += hpBonus;
-            spawnFloatingText('ปลดล็อค: วิญญาณแห่งเปลวไฟ!', this.x, this.y - 60, '#f97316', 30);
+            const unlockText = S.passiveUnlockText ?? 'ปลดล็อค: วิญญาณแห่งเปลวไฟ!';
+            spawnFloatingText(unlockText, this.x, this.y - 60, '#f97316', 30);
             spawnParticles(this.x, this.y, 50, '#f97316');
             addScreenShake(15); this.goldenAuraTimer = 3;
             Audio.playAchievement();
+            if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
             try {
                 const saved = getSaveData();
                 const set = new Set(saved.unlockedPassives || []);
@@ -1140,99 +1141,95 @@ class AutoPlayer extends Player {
         }
     }
 
+    updateUI() {
+        const S = this.stats;
+
+        const hpEl = document.getElementById('hp-bar');
+        const enEl = document.getElementById('en-bar');
+        if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
+        if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
+
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('dash-icon',
+                Math.max(0, this.cooldowns.dash), S.dashCooldown || 2.0);
+        }
+
+        // WARN-1 FIX: use BALANCE.characters.auto (correct path after refactor)
+        const wanchaiCd = S.wanchaiCooldown || BALANCE.characters?.auto?.wanchaiCooldown || 12;
+        const standEl = document.getElementById('stealth-icon');
+
+        const skill1Emoji = document.getElementById('skill1-emoji');
+        const skill1Hint = document.getElementById('skill1-hint');
+        if (skill1Emoji) skill1Emoji.textContent = this.wanchaiActive ? '🥊' : '🔥';
+        if (skill1Hint) skill1Hint.textContent = 'R-Click';
+        if (standEl) standEl.style.borderColor = '#dc2626';
+        if (standEl) standEl.style.boxShadow = this.wanchaiActive
+            ? '0 0 20px rgba(220,38,38,0.80)'
+            : '0 0 10px rgba(220,38,38,0.35)';
+
+        if (this.wanchaiActive) {
+            standEl?.classList.add('active');
+            if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+                UIManager._setCooldownVisual('stealth-icon', 0, wanchaiCd);
+            }
+            const iconLabelEl = standEl?.querySelector('.skill-name');
+            if (iconLabelEl) iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
+        } else {
+            standEl?.classList.remove('active');
+            if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+                UIManager._setCooldownVisual('stealth-icon',
+                    Math.max(0, this.cooldowns.wanchai ?? 0), wanchaiCd);
+            }
+        }
+
+        // ── Heat Gauge HUD ──────────────────────────────────────────
+        {
+            const heatPct = (this.heat ?? 0) / ((this.stats?.heatMax) ?? 100);
+            const ht = this._heatTier ?? 0;
+            const heatBarEl = document.getElementById('heat-bar');
+            const heatLabelEl = document.getElementById('heat-label');
+            if (heatBarEl) {
+                heatBarEl.style.width = `${heatPct * 100}%`;
+                heatBarEl.style.background = ht >= 3 ? '#facc15'
+                    : ht >= 2 ? '#ef4444'
+                        : ht >= 1 ? '#f97316' : '#fb923c';
+                heatBarEl.style.boxShadow = ht >= 3 ? '0 0 12px #facc15'
+                    : ht >= 2 ? '0 0 10px #ef4444'
+                        : ht >= 1 ? '0 0 8px #f97316' : 'none';
+            }
+            if (heatLabelEl) {
+                const label = ht >= 3 ? 'OVERHEAT' : ht >= 2 ? 'HOT' : ht >= 1 ? 'WARM' : 'HEAT';
+                heatLabelEl.textContent = label;
+            }
+        }
+
+        const levelEl = document.getElementById('player-level');
+        if (levelEl) levelEl.textContent = `Lv.${this.level}`;
+        const expBar = document.getElementById('exp-bar');
+        if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
+
+        // INC-4 fix: Q / E cooldown visuals
+        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
+            UIManager._setCooldownVisual('q-icon',
+                Math.max(0, this.cooldowns.vacuum ?? 0), S.vacuumCooldown ?? 8);
+            UIManager._setCooldownVisual('e-icon',
+                Math.max(0, this.cooldowns.detonation ?? 0), S.detonationCooldown ?? 5);
+        }
+
+        const passiveEl = document.getElementById('passive-skill');
+        if (passiveEl) {
+            if (this.passiveUnlocked) {
+                passiveEl.classList.add('unlocked');
+                passiveEl.style.opacity = '1';
+            } else if (this.level >= (S.passiveUnlockLevel ?? 5)) {
+                passiveEl.style.display = 'flex';
+                passiveEl.style.opacity = '0.5';
+            }
+        }
+    }
+
 }
 
-// ════════════════════════════════════════════════════════════
-// 🔥 AUTO PLAYER — Prototype Overrides
-// ════════════════════════════════════════════════════════════
-AutoPlayer.prototype.updateUI = function () {
-    const S = this.stats;
-
-    const hpEl = document.getElementById('hp-bar');
-    const enEl = document.getElementById('en-bar');
-    if (hpEl) hpEl.style.width = `${this.hp / this.maxHp * 100}%`;
-    if (enEl) enEl.style.width = `${this.energy / this.maxEnergy * 100}%`;
-
-    if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
-        UIManager._setCooldownVisual('dash-icon',
-            Math.max(0, this.cooldowns.dash), S.dashCooldown || 2.0);
-    }
-
-    // WARN-1 FIX: use BALANCE.characters.auto (correct path after refactor)
-    const wanchaiCd = S.wanchaiCooldown || BALANCE.characters?.auto?.wanchaiCooldown || 12;
-    const standEl = document.getElementById('stealth-icon');
-
-
-    const skill1Emoji = document.getElementById('skill1-emoji');
-    const skill1Hint = document.getElementById('skill1-hint');
-    if (skill1Emoji) skill1Emoji.textContent = this.wanchaiActive ? '🥊' : '🔥';
-    if (skill1Hint) skill1Hint.textContent = 'R-Click';
-    if (standEl) standEl.style.borderColor = '#dc2626';
-    if (standEl) standEl.style.boxShadow = this.wanchaiActive
-        ? '0 0 20px rgba(220,38,38,0.80)'
-        : '0 0 10px rgba(220,38,38,0.35)';
-
-    if (this.wanchaiActive) {
-        standEl?.classList.add('active');
-        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
-            UIManager._setCooldownVisual('stealth-icon', 0, wanchaiCd);
-        }
-        const iconLabelEl = standEl?.querySelector('.skill-name');
-        if (iconLabelEl) iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
-    } else {
-        standEl?.classList.remove('active');
-        if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
-            UIManager._setCooldownVisual('stealth-icon',
-                Math.max(0, this.cooldowns.wanchai ?? 0), wanchaiCd);
-        }
-    }
-
-    // ── Heat Gauge HUD ──────────────────────────────────────────
-    // Reuses energy bar slot label area — injected as a floating badge
-    {
-        const heatPct = (this.heat ?? 0) / ((this.stats?.heatMax) ?? 100);
-        const ht = this._heatTier ?? 0;
-        const heatBarEl = document.getElementById('heat-bar');
-        const heatLabelEl = document.getElementById('heat-label');
-        if (heatBarEl) {
-            heatBarEl.style.width = `${heatPct * 100}%`;
-            heatBarEl.style.background = ht >= 3 ? '#facc15'
-                : ht >= 2 ? '#ef4444'
-                    : ht >= 1 ? '#f97316' : '#fb923c';
-            heatBarEl.style.boxShadow = ht >= 3 ? '0 0 12px #facc15'
-                : ht >= 2 ? '0 0 10px #ef4444'
-                    : ht >= 1 ? '0 0 8px #f97316' : 'none';
-        }
-        if (heatLabelEl) {
-            const label = ht >= 3 ? 'OVERHEAT' : ht >= 2 ? 'HOT' : ht >= 1 ? 'WARM' : 'HEAT';
-            heatLabelEl.textContent = label;
-        }
-    }
-
-    const levelEl = document.getElementById('player-level');
-    if (levelEl) levelEl.textContent = `Lv.${this.level}`;
-    const expBar = document.getElementById('exp-bar');
-    if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
-
-    // INC-4 fix: Q / E cooldown visuals (was missing entirely)
-    if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
-        UIManager._setCooldownVisual('q-icon',
-            Math.max(0, this.cooldowns.vacuum ?? 0), S.vacuumCooldown ?? 8);
-        UIManager._setCooldownVisual('e-icon',
-            Math.max(0, this.cooldowns.detonation ?? 0), S.detonationCooldown ?? 5);
-    }
-
-    const passiveEl = document.getElementById('passive-skill');
-    if (passiveEl) {
-        if (this.passiveUnlocked) {
-            passiveEl.classList.add('unlocked');
-            passiveEl.style.opacity = '1';
-        } else if (this.level >= (S.passiveUnlockLevel ?? 5)) {
-            passiveEl.style.display = 'flex';
-            passiveEl.style.opacity = '0.5';
-        }
-    }
-};
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════

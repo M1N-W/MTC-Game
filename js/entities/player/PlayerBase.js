@@ -87,6 +87,12 @@ class Player extends Entity {
         this.stealthUseCount = 0;
         this.goldenAuraTimer = 0;
 
+        // ── Passive behaviour flags (override in subclass, avoids instanceof checks) ──
+        // passiveSpeedBonus: speedMult ที่ได้หลัง passive unlock (0 = ไม่มี bonus)
+        // usesOwnLifesteal: true = subclass จัดการ lifesteal เอง, ไม่ใช้ base logic
+        this.passiveSpeedBonus = 0;
+        this.usesOwnLifesteal = false;
+
         // ── Collision Awareness state ──────────────────────────
         this.obstacleBuffTimer = 0;
         this.lastObstacleWarning = 0;
@@ -209,7 +215,7 @@ class Player extends Entity {
         } else { this.walkCycle = 0; }
 
         let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost * this.metaSpeedMult;
-        if (typeof KaoPlayer !== 'undefined' && this instanceof KaoPlayer && this.passiveUnlocked) speedMult = Math.max(speedMult, 1.4);
+        if (this.passiveUnlocked && this.passiveSpeedBonus > 0) speedMult = Math.max(speedMult, this.passiveSpeedBonus);
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
 
@@ -311,7 +317,7 @@ class Player extends Entity {
         this.energy -= S.stealthCost;
         this.stealthUseCount++;
         spawnParticles(this.x, this.y, 25, '#facc15');
-        showVoiceBubble('เข้าโหมดซุ่ม!', this.x, this.y - 40);
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('เข้าโหมดซุ่ม!', this.x, this.y - 40);
         this.checkPassiveUnlock();
         Achievements.stats.stealths++; Achievements.check('ghost');
     }
@@ -361,11 +367,12 @@ class Player extends Entity {
             this.passiveUnlocked = true;
             const hpBonus = Math.floor(this.maxHp * S.passiveHpBonusPct);
             this.maxHp += hpBonus; this.hp += hpBonus;
-            spawnFloatingText('ปลดล็อค: ซุ่มเสรี!', this.x, this.y - 60, '#fbbf24', 30);
+            const unlockText = S.passiveUnlockText ?? 'ปลดล็อค: ซุ่มเสรี!';
+            spawnFloatingText(unlockText, this.x, this.y - 60, '#fbbf24', 30);
             spawnParticles(this.x, this.y, 50, '#fbbf24');
             addScreenShake(15); this.goldenAuraTimer = 3;
             Audio.playAchievement();
-            showVoiceBubble("ทักษะ 'ซุ่มเสรี' ปลดล็อคแล้ว!", this.x, this.y - 40);
+            if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(`${unlockText}`, this.x, this.y - 40);
             try {
                 const saved = getSaveData();
                 const set = new Set(saved.unlockedPassives || []);
@@ -514,7 +521,7 @@ class Player extends Entity {
         if (this.isSecondWind) {
             damage *= (BALANCE.player.secondWindDamageMult || 1.5);
         }
-        if (this.passiveUnlocked && !(typeof KaoPlayer !== 'undefined' && this instanceof KaoPlayer)) {
+        if (this.passiveUnlocked && !this.usesOwnLifesteal) {
             const healAmount = damage * S.passiveLifesteal;
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3) spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
@@ -634,11 +641,11 @@ class Player extends Entity {
                     skillNameEl.textContent = 'MAX';
                     skillNameEl.style.color = '#facc15';
                 }
-            } else if (this.level >= 3) {
+            } else if (this.level >= (this.stats.passiveUnlockLevel ?? 3)) {
                 passiveEl.style.display = 'flex';
                 passiveEl.style.opacity = '0.5';
                 const skillName = passiveEl.querySelector('.skill-name');
-                if (skillName) skillName.textContent = `${this.stealthUseCount}/5`;
+                if (skillName) skillName.textContent = `${this.stealthUseCount}/${this.stats.passiveUnlockStealthCount ?? 5}`;
             }
         }
     }
@@ -683,7 +690,7 @@ Player.prototype.checkObstacleProximity = function (ax, ay, dt, particleColor) {
             const now = Date.now();
             if (now - this.lastObstacleWarning > OB.obstacleWarningCooldown) {
                 this.lastObstacleWarning = now;
-                showVoiceBubble('Careful!', this.x, this.y - 50);
+                if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('Careful!', this.x, this.y - 50);
             }
             break;
         }

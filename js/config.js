@@ -75,6 +75,7 @@ const BALANCE = {
             passiveUnlockLevel: 3,
             passiveUnlockStealthCount: 5,
             passiveHpBonusPct: 0.5,
+            passiveUnlockText: 'ปลดล็อกซุ่มเสรี!',
             passiveCritBonus: 0.05,
             passiveLifesteal: 0.03,
             speedOnHit: 20,
@@ -205,8 +206,9 @@ const BALANCE = {
             // ── Passive: SCORCHED SOUL ────────────────────────
             // Unlock: Lv 5 (ไม่ต้องการ stealth อีกต่อไป)
             passiveUnlockLevel: 5,
-            passiveUnlockStealthCount: 0,   // FIX: 99 → 0 (unlock ได้จริง)
+            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via level เท่านั้น
             passiveHpBonusPct: 0.35,
+            passiveUnlockText: 'ปลดล็อกวันชัยโอเวอร์ไดรฟ์!',
             passiveCritBonus: 0.06,         // 0.04 → 0.06
             passiveLifesteal: 0.025,        // 0.01 → 0.025 (brawler identity)
             passiveHeatGainBonus: 1.25,     // NEW: Heat สะสมเร็ว +25% หลัง unlock
@@ -252,8 +254,9 @@ const BALANCE = {
             maxHpPerLevel: 10,                // BUFF: 7 → 10
             // ── Passive Skill (Ritual Mastery) ────────────────
             passiveUnlockLevel: 4,
-            passiveUnlockStealthCount: 99,    // Poom ไม่มี stealth — unlock via level เท่านั้น
+            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via level เท่านั้น
             passiveHpBonusPct: 0.30,
+            passiveUnlockText: 'ปลดล็อกราชาอีสาน!',
             passiveCritBonus: 0.04,           // bonus crit หลัง passive unlock
             passiveLifesteal: 0.015,          // lifesteal ต่อ damage ที่ทำได้
             // ── Sticky Rice Stack System ──
@@ -935,10 +938,10 @@ const GAME_TEXTS = {
     boss: {
         // ── BossFirst (Kru First) phase-transition physics taunts
         firstTaunts: [
-        'E = mc²',
-        'Action = Reaction',
-        'Calculate this!',
-        'Physics is everything!',
+            'E = mc²',
+            'Action = Reaction',
+            'Calculate this!',
+            'Physics is everything!',
         ],
     },
     ui: {
@@ -1028,14 +1031,14 @@ const GAME_TEXTS = {
             icon: '👾'
         },
         boss: {
-        title: 'Boss Encounters 👑',
-        body: 'ทุก 3 เวฟจะมี Boss — 5 encounters ทั้งหมด:\n\n👑 Wave  3 — KruManop (Basic)\n🐕 Wave  9 — KruManop (Dog Rider) — Phase 2 เรียกหมา\n🐟 Wave 15 — KruManop (Goldfish Lover) — Phase 2+3\n\n⚛️ Wave  6 — KruFirst (Basic)\n⚛️ Wave 12 — KruFirst (Advanced ⚠️ ยากขึ้น)\n\n🌌 Domain Expansion — ทักษะ Ultimate\n   Boss ใช้เมื่อ HP ต่ำ ควบคุมพื้นที่ทั้ง Arena!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
-        icon: '👑'
+            title: 'Boss Encounters 👑',
+            body: 'ทุก 3 เวฟจะมี Boss — 5 encounters ทั้งหมด:\n\n👑 Wave  3 — KruManop (Basic)\n🐕 Wave  9 — KruManop (Dog Rider) — Phase 2 เรียกหมา\n🐟 Wave 15 — KruManop (Goldfish Lover) — Phase 2+3\n\n⚛️ Wave  6 — KruFirst (Basic)\n⚛️ Wave 12 — KruFirst (Advanced ⚠️ ยากขึ้น)\n\n🌌 Domain Expansion — ทักษะ Ultimate\n   Boss ใช้เมื่อ HP ต่ำ ควบคุมพื้นที่ทั้ง Arena!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
+            icon: '👑'
         },
         ready: {
-        title: 'พร้อมแล้ว! 🚀',
-        body: 'คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievement มากมาย\n🎯 ผ่านทั้ง 15 Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่สนามรบ!',
-        icon: '🎮'
+            title: 'พร้อมแล้ว! 🚀',
+            body: 'คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievement มากมาย\n🎯 ผ่านทั้ง 15 Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่สนามรบ!',
+            icon: '🎮'
         }
     }
 };

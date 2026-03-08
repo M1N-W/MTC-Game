@@ -1085,12 +1085,27 @@ spawn(text, x, y, color, size = 20) {
 - **Wave System**: Uses deterministic schedule + trickle spawning
 - **Enemy System**: Has hit flash (0.10s) + glitch wave damage reduction (40%)
 
+#### 🔐 Passive Unlock Architecture (CRITICAL — อ่านก่อนแตะ passive system):
+- **`PlayerBase.checkPassiveUnlock()`** คือ base implementation — ตรวจ `stealthUseCount >= passiveUnlockStealthCount` เหมาะกับ Kao เท่านั้น
+- **ตัวละครที่ไม่มี stealth (Poom, Auto) MUST override `checkPassiveUnlock()`** ไม่งั้น unlock ไม่ได้เลย
+- **`config.js` ต้องมี `passiveUnlockText`** ต่อแต่ละตัวละคร — `checkPassiveUnlock()` ทุก override ใช้ `S.passiveUnlockText ?? 'fallback'` แทน hardcode
+- **`passiveUnlockStealthCount: 0`** สำหรับ Auto/Poom (ไม่มี stealth) — ห้ามใช้ `99` อีก (จะ unlock ไม่ได้)
+- **Passive behaviour flags** ใน constructor ทุกตัวละคร — override ใน subclass แทน `instanceof` checks:
+  - `this.passiveSpeedBonus = N` — speed mult ที่ได้หลัง passive unlock (0 = ไม่มี)
+  - `this.usesOwnLifesteal = bool` — `true` = subclass จัดการ lifesteal เอง ไม่ใช้ base
+
+#### 🎮 Skill Lock Input Routing (Poom-specific):
+- **`eatRice` (R-Click)**: route จาก **`game.js`** — lock check อยู่ใน game.js Poom block
+- **E (Garuda) / R (Ritual) / Q (Naga)**: route จาก **`PoomPlayer.update()`** ทั้งหมด
+- **ไม่มี Q block ซ้ำใน game.js** — การ consume Q ทำที่เดียวใน `PoomPlayer.update()` เท่านั้น
+
 #### 🎮 Core Architecture Patterns:
 - **Entity Hierarchy**: Entity → Player/BossBase → Character classes
 - **Rendering Decoupling**: PlayerRenderer.draw() dispatcher → specific methods
 - **State Management**: GameState singleton + window.gameState compatibility
 - **Object Pooling**: Effects.js particles, FloatingText, OrbitalParticle
 - **Spatial Optimization**: Weapons.js spatial grid for collision detection
+- **No `instanceof` in PlayerBase**: ใช้ flags (`passiveSpeedBonus`, `usesOwnLifesteal`) แทน `instanceof KaoPlayer` checks ใน base class
 
 #### 🗂️ Configuration Structure:
 ```javascript

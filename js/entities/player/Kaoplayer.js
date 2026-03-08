@@ -120,6 +120,10 @@ class KaoPlayer extends Player {
 
         // ── Dash-stealth (replaces random auto-stealth) ─────────────────────
         this._dashWasActive = false; // edge-detect dash start
+
+        // ── Passive behaviour flags (overrides PlayerBase defaults) ──────────
+        this.passiveSpeedBonus = 1.4;   // speed mult หลัง passive unlock (Kao-specific)
+        this.usesOwnLifesteal = true;   // KaoPlayer จัดการ lifesteal เอง ไม่ใช้ base logic
     }
 
     // ──────────────────────────────────────────────────────────────────────────

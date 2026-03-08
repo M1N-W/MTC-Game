@@ -4,6 +4,45 @@
 
 ---
 
+## v3.12.12 — Critical Architecture Fixes & Passive Unlock Improvements
+*Released: March 8, 2026*
+
+### 🏗️ Architecture Improvements
+- **Removed `instanceof` checks from PlayerBase:** Eliminated performance-heavy type checks in favor of configuration flags
+  - **New Flag System:** `passiveSpeedBonus` and `usesOwnLifesteal` flags in constructor
+  - **Kao:** `passiveSpeedBonus = 1.4`, `usesOwnLifesteal = true` (manages own lifesteal)
+  - **Poom/Auto:** `passiveSpeedBonus = 0`, `usesOwnLifesteal = false` (use base logic)
+- **Standardized UIManager calls:** All `showVoiceBubble()` calls now use `UIManager.showVoiceBubble()`
+- **Config-driven passive unlocks:** All characters use `S.passiveUnlockText` instead of hardcoded messages
+
+### 🔧 Technical Fixes
+- **Fixed Poom passive unlock:** Changed `passiveUnlockStealthCount: 99 → 0` (Poom has no stealth)
+- **Fixed Auto passive unlock:** Changed `passiveUnlockStealthCount: 99 → 0` (Auto has no stealth)
+- **Removed duplicate code:** Cleaned up redundant `'use strict'` and `this.charId` declarations
+- **Fixed input routing:** Removed duplicate Q block in game.js (PoomPlayer.update() handles all)
+- **Fixed UI hardcoding:** Passive unlock level and stealth count now read from config
+- **Moved prototype to class method:** AutoPlayer.updateUI() converted from prototype to class method
+
+### 📚 Documentation Updates
+- **PROJECT_OVERVIEW.md:** Added comprehensive "Passive Unlock Architecture" section
+- **Critical Technical Notes:** Documented skill lock input routing patterns
+- **Architecture Guidelines:** Clear rules for passive unlock implementation
+
+### 🎨 UI/UX Improvements
+- **Consistent unlock messages:** Each character now has unique unlock text from config
+  - Kao: "ปลดล็อกซุ่มเสรี!"
+  - Poom: "ปลดล็กราชาอีสาน!"
+  - Auto: "ปลดลอกวันชัยโอเวอร์ไดรฟ์!"
+- **Fixed passive UI display:** Progress indicators now use correct values from config
+
+### 🔍 Code Quality Improvements
+- **Eliminated code duplication:** Removed redundant input consumption
+- **Improved maintainability:** Configuration-driven behavior instead of hardcoded checks
+- **Better error handling:** UIManager calls wrapped in existence checks
+- **Cleaner class structure:** Consistent method definitions across all player classes
+
+---
+
 ## v3.12.11 — Feature: Skill Locking System for Poom & Auto
 *Released: March 8, 2026*
 
