@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.12.5'; // v3.12.5: Fixed Garuda NaN coordinates issue with config fallbacks
+const CACHE_NAME = 'mtc-cache-v3.12.6'; // v3.12.6: Fixed config.js syntax error and improved text localization
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

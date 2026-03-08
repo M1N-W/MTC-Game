@@ -6,6 +6,31 @@
 
 ---
 
+## v3.12.6 — Config Syntax Fix & Text Localization
+*Released: March 8, 2026*
+
+### 🐛 Critical Bug Fix
+- **Root Cause:** Missing closing brace in BALANCE object caused JavaScript syntax errors
+- **Impact:** Prevented game from loading properly due to malformed config structure
+- **Solution:** Added proper object closure and restructured constants for better organization
+
+### 🔧 Configuration Improvements
+- **Syntax Fix:** Corrected missing `};` for BALANCE object closure
+- **Structure:** Moved SHOP_ITEMS, GAME_CONFIG, VISUALS, and ACHIEVEMENT_DEFS to top-level scope
+- **Localization:** Enhanced text system with GAME_TEXTS configuration fallbacks
+
+### 🎨 Visual Enhancements
+- **Garuda Graphics:** Improved rendering with enhanced wing animations and visual effects
+- **UI Integration:** Skill names now use configurable text from GAME_TEXTS
+- **Cosmic Balance:** Added new visual aura effects and improved animations
+
+### 📝 Text System Updates
+- **Skill Names:** All skill descriptions now use centralized GAME_TEXTS configuration
+- **Fallback Support:** Added null-safe operators for missing text configurations
+- **Thai Localization:** Updated skill descriptions with improved Thai translations
+
+---
+
 ## v3.12.5 — Garuda NaN Coordinates Fix
 *Released: March 8, 2026*
 

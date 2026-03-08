@@ -898,26 +898,27 @@ class GarudaEntity extends Entity {
         if (typeof CTX === 'undefined') return;
         const sc = worldToScreen(this.x, this.y);
         if (!sc) return;
-        // Viewport cull
-        if (sc.x < -60 || sc.x > (CTX.canvas?.width ?? 9999) + 60 ||
-            sc.y < -60 || sc.y > (CTX.canvas?.height ?? 9999) + 60) return;
+        if (sc.x < -80 || sc.x > (CTX.canvas?.width ?? 9999) + 80 ||
+            sc.y < -80 || sc.y > (CTX.canvas?.height ?? 9999) + 80) return;
 
         const now = performance.now();
         const lifeRatio = this.life / this.maxLife;
         const isDiving = this.state === _GS.DIVE;
         const pulse = 0.75 + Math.sin(now / 120) * 0.25;
+        const pulse2 = 0.60 + Math.sin(now / 80 + 1.2) * 0.40;
 
-        // ── Fire trail ─────────────────────────────────────────
+        // ── Fire trail (enlarged) ───────────────────────────────
         for (const t of this._trail) {
             const ts = worldToScreen(t.x, t.y);
             if (!ts) continue;
-            const a = (t.life / t.maxLife) * 0.75;
-            const r = 5 + (1 - t.life / t.maxLife) * 4;
+            const a = (t.life / t.maxLife) * 0.85;
+            const r = 9 + (1 - t.life / t.maxLife) * 8;
             CTX.save();
             CTX.globalAlpha = a * lifeRatio;
-            CTX.shadowBlur = 10; CTX.shadowColor = '#f97316';
+            CTX.shadowBlur = 18; CTX.shadowColor = '#f97316';
             const tg = CTX.createRadialGradient(ts.x, ts.y, 0, ts.x, ts.y, r);
-            tg.addColorStop(0, '#fbbf24');
+            tg.addColorStop(0, '#fff7ed');
+            tg.addColorStop(0.35, '#fbbf24');
             tg.addColorStop(1, 'rgba(239,68,68,0)');
             CTX.fillStyle = tg;
             CTX.beginPath(); CTX.arc(ts.x, ts.y, r, 0, Math.PI * 2); CTX.fill();
@@ -927,81 +928,121 @@ class GarudaEntity extends Entity {
         CTX.save();
         CTX.translate(sc.x, sc.y);
         CTX.rotate(this.facing);
-        CTX.globalAlpha = lifeRatio * 0.95;
+        CTX.globalAlpha = lifeRatio * 0.97;
 
-        const BL = isDiving ? 10 : 16;
-        const BW = isDiving ? 5 : 9;
-        const WL = isDiving ? 18 : 28;
+        const BL = isDiving ? 18 : 26;
+        const BW = isDiving ? 11 : 16;
+        const WL = isDiving ? 38 : 56;
 
-        CTX.shadowBlur = 20 * pulse; CTX.shadowColor = '#f97316';
+        // ── Outer divine aura halo ─────────────────────────────
+        CTX.globalAlpha = lifeRatio * (0.18 + pulse2 * 0.14);
+        const haloR = BL * 2.2;
+        const haloG = CTX.createRadialGradient(0, 0, BL * 0.3, 0, 0, haloR);
+        haloG.addColorStop(0, 'rgba(251,191,36,0.55)');
+        haloG.addColorStop(0.5, 'rgba(249,115,22,0.22)');
+        haloG.addColorStop(1, 'rgba(239,68,68,0)');
+        CTX.fillStyle = haloG;
+        CTX.beginPath(); CTX.arc(0, 0, haloR, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = lifeRatio * 0.97;
+
+        CTX.shadowBlur = 28 * pulse; CTX.shadowColor = '#f97316';
 
         // ── Wings ───────────────────────────────────────────────
-        CTX.strokeStyle = `rgba(251,191,36,${0.6 + pulse * 0.3})`;
-        CTX.lineWidth = 2.5;
+        CTX.lineWidth = 3.5;
         if (isDiving) {
-            // Swept-back wings
+            CTX.strokeStyle = `rgba(251,191,36,${0.65 + pulse * 0.30})`;
             CTX.beginPath();
-            CTX.moveTo(-BL * 0.3, 0);
-            CTX.quadraticCurveTo(-BL * 0.5, -BW * 0.5, -WL * 0.9, BW * 0.6);
+            CTX.moveTo(-BL * 0.2, -BW * 0.2);
+            CTX.bezierCurveTo(-BL * 0.6, -BW * 1.2, -WL * 0.6, -BW * 0.5, -WL, BW * 0.8);
             CTX.stroke();
             CTX.beginPath();
-            CTX.moveTo(-BL * 0.3, 0);
-            CTX.quadraticCurveTo(-BL * 0.5, BW * 0.5, -WL * 0.9, -BW * 0.6);
+            CTX.moveTo(-BL * 0.2, BW * 0.2);
+            CTX.bezierCurveTo(-BL * 0.6, BW * 1.2, -WL * 0.6, BW * 0.5, -WL, -BW * 0.8);
             CTX.stroke();
-        } else {
-            // Spread wings
-            CTX.beginPath();
-            CTX.moveTo(0, -BW * 0.4);
-            CTX.quadraticCurveTo(-BL * 0.3, -WL * 0.5, -WL, -WL * 0.3);
-            CTX.stroke();
-            CTX.beginPath();
-            CTX.moveTo(0, BW * 0.4);
-            CTX.quadraticCurveTo(-BL * 0.3, WL * 0.5, -WL, WL * 0.3);
-            CTX.stroke();
-            // Wing tip feathers
             CTX.globalAlpha = lifeRatio * 0.45;
-            CTX.lineWidth = 1.5;
-            for (let f = 0; f < 3; f++) {
-                const ft = (f + 1) / 4;
+            CTX.lineWidth = 1.8; CTX.strokeStyle = '#fde68a';
+            CTX.beginPath();
+            CTX.moveTo(-BL * 0.3, -BW * 0.1);
+            CTX.quadraticCurveTo(-WL * 0.45, 0, -WL * 0.82, BW * 0.4);
+            CTX.stroke();
+            CTX.beginPath();
+            CTX.moveTo(-BL * 0.3, BW * 0.1);
+            CTX.quadraticCurveTo(-WL * 0.45, 0, -WL * 0.82, -BW * 0.4);
+            CTX.stroke();
+            CTX.globalAlpha = lifeRatio * 0.97; CTX.lineWidth = 3.5;
+        } else {
+            CTX.strokeStyle = `rgba(251,191,36,${0.70 + pulse * 0.25})`;
+            CTX.beginPath();
+            CTX.moveTo(BL * 0.1, -BW * 0.5);
+            CTX.bezierCurveTo(-BL * 0.4, -WL * 0.45, -WL * 0.65, -WL * 0.42, -WL, -WL * 0.18);
+            CTX.stroke();
+            CTX.beginPath();
+            CTX.moveTo(BL * 0.1, BW * 0.5);
+            CTX.bezierCurveTo(-BL * 0.4, WL * 0.45, -WL * 0.65, WL * 0.42, -WL, WL * 0.18);
+            CTX.stroke();
+            CTX.globalAlpha = lifeRatio * 0.6; CTX.lineWidth = 2.2; CTX.strokeStyle = '#fde68a';
+            CTX.beginPath();
+            CTX.moveTo(0, -BW * 0.3);
+            CTX.bezierCurveTo(-BL * 0.3, -WL * 0.25, -WL * 0.55, -WL * 0.28, -WL * 0.88, -WL * 0.08);
+            CTX.stroke();
+            CTX.beginPath();
+            CTX.moveTo(0, BW * 0.3);
+            CTX.bezierCurveTo(-BL * 0.3, WL * 0.25, -WL * 0.55, WL * 0.28, -WL * 0.88, WL * 0.08);
+            CTX.stroke();
+            CTX.lineWidth = 1.8;
+            for (let f = 0; f < 4; f++) {
+                const ft = (f + 1) / 5;
+                const bx = -WL * ft * 0.9, byT = -WL * ft * 0.34, byB = WL * ft * 0.34;
+                const tl = 9 + (1 - ft) * 8;
+                CTX.beginPath(); CTX.moveTo(bx, byT); CTX.lineTo(bx - tl * 0.4, byT - tl); CTX.stroke();
+                CTX.beginPath(); CTX.moveTo(bx, byB); CTX.lineTo(bx - tl * 0.4, byB + tl); CTX.stroke();
+            }
+            CTX.globalAlpha = lifeRatio * 0.97; CTX.lineWidth = 3.5;
+            CTX.strokeStyle = `rgba(249,115,22,${0.55 + pulse2 * 0.25})`; CTX.lineWidth = 2.2;
+            for (let i = -1; i <= 1; i++) {
                 CTX.beginPath();
-                CTX.moveTo(-WL * ft * 0.85, -WL * ft * 0.25);
-                CTX.lineTo(-WL * ft * 0.85 - 5, -WL * ft * 0.55);
-                CTX.stroke();
-                CTX.beginPath();
-                CTX.moveTo(-WL * ft * 0.85, WL * ft * 0.25);
-                CTX.lineTo(-WL * ft * 0.85 - 5, WL * ft * 0.55);
+                CTX.moveTo(-BL * 0.8, i * BW * 0.45);
+                CTX.quadraticCurveTo(-BL * 1.5, i * BW * 0.85, -BL * 2.1, i * BW * 0.5);
                 CTX.stroke();
             }
-            CTX.globalAlpha = lifeRatio * 0.95;
-            CTX.lineWidth = 2.5;
         }
 
-        // ── Body (teardrop ellipse) ─────────────────────────────
-        const bodyG = CTX.createLinearGradient(-BL, 0, BL, 0);
-        bodyG.addColorStop(0, '#ef4444');
-        bodyG.addColorStop(0.5, '#f97316');
-        bodyG.addColorStop(1, '#fbbf24');
+        // ── Body ───────────────────────────────────────────────
+        CTX.globalAlpha = lifeRatio * 0.97; CTX.shadowBlur = 16;
+        const bodyG = CTX.createLinearGradient(-BL, -BW, BL, BW);
+        bodyG.addColorStop(0, '#b91c1c');
+        bodyG.addColorStop(0.3, '#ea580c');
+        bodyG.addColorStop(0.65, '#f97316');
+        bodyG.addColorStop(1, '#fde68a');
         CTX.fillStyle = bodyG;
-        CTX.shadowBlur = 0;
+        CTX.beginPath(); CTX.ellipse(0, 0, BL, BW, 0, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = lifeRatio * 0.30; CTX.fillStyle = '#ffffff'; CTX.shadowBlur = 0;
+        CTX.beginPath(); CTX.ellipse(BL * 0.1, -BW * 0.3, BL * 0.5, BW * 0.22, -0.3, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = lifeRatio * 0.97;
+
+        // ── Head & crest ───────────────────────────────────────
+        CTX.fillStyle = '#fbbf24'; CTX.shadowBlur = 10; CTX.shadowColor = '#fbbf24';
+        CTX.beginPath(); CTX.arc(BL * 0.72, 0, BW * 0.55, 0, Math.PI * 2); CTX.fill();
+        CTX.strokeStyle = '#fde68a'; CTX.lineWidth = 2.2; CTX.shadowBlur = 12;
         CTX.beginPath();
-        CTX.ellipse(0, 0, BL, BW, 0, 0, Math.PI * 2);
-        CTX.fill();
+        CTX.moveTo(BL * 0.72 + BW * 0.3, -BW * 0.55);
+        CTX.lineTo(BL * 0.72 + BW * 0.7, -BW * 1.5);
+        CTX.stroke();
 
         // ── Eye ────────────────────────────────────────────────
-        CTX.fillStyle = '#fbbf24';
-        CTX.shadowBlur = 8 * pulse; CTX.shadowColor = '#fbbf24';
-        CTX.beginPath(); CTX.arc(BL * 0.55, 0, 2.5, 0, Math.PI * 2); CTX.fill();
-        CTX.fillStyle = '#0f172a';
-        CTX.shadowBlur = 0;
-        CTX.beginPath(); CTX.arc(BL * 0.55, 0, 1.2, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#ef4444'; CTX.shadowBlur = 12 * pulse2; CTX.shadowColor = '#ef4444';
+        CTX.beginPath(); CTX.arc(BL * 0.82, 0, 4.0, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#fff'; CTX.shadowBlur = 0;
+        CTX.beginPath(); CTX.arc(BL * 0.82, 0, 1.8, 0, Math.PI * 2); CTX.fill();
 
-        // ── Cosmic Balance aura ring ────────────────────────────
+        // ── Cosmic aura rings ──────────────────────────────────
         if (this.owner?._cosmicBalance) {
-            CTX.globalAlpha = lifeRatio * (0.3 + pulse * 0.2);
-            CTX.strokeStyle = '#fbbf24';
-            CTX.lineWidth = 1.5;
-            CTX.shadowBlur = 12; CTX.shadowColor = '#fbbf24';
-            CTX.beginPath(); CTX.ellipse(0, 0, BL + 7, BW + 7, 0, 0, Math.PI * 2); CTX.stroke();
+            CTX.globalAlpha = lifeRatio * (0.35 + pulse * 0.25);
+            CTX.strokeStyle = '#fbbf24'; CTX.lineWidth = 2.5;
+            CTX.shadowBlur = 20; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.ellipse(0, 0, BL + 12, BW + 12, 0, 0, Math.PI * 2); CTX.stroke();
+            CTX.globalAlpha = lifeRatio * (0.15 + pulse2 * 0.15); CTX.lineWidth = 1.2;
+            CTX.beginPath(); CTX.ellipse(0, 0, BL + 22, BW + 22, 0, 0, Math.PI * 2); CTX.stroke();
         }
 
         CTX.restore();

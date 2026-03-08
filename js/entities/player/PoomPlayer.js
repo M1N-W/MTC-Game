@@ -195,7 +195,7 @@ class PoomPlayer extends Player {
         const wasCosmicBalance = this._cosmicBalance;
         this._cosmicBalance = !!(this.naga?.active && this.garuda?.active);
         if (this._cosmicBalance && !wasCosmicBalance) {
-            spawnFloatingText('⚖️ COSMIC BALANCE!', this.x, this.y - 70, '#fbbf24', 22);
+            spawnFloatingText(GAME_TEXTS?.combat?.cosmicActivate ?? '✨ COSMIC BALANCE!', this.x, this.y - 70, '#fbbf24', 22);
             addScreenShake(6);
         }
 
@@ -275,8 +275,8 @@ class PoomPlayer extends Player {
         this.garuda = new GarudaEntity(this.x, this.y, this);
         window.specialEffects.push(this.garuda);
         spawnParticles(this.x, this.y, 35, '#f97316');
-        spawnFloatingText('อัญเชิญครุฑ!', this.x, this.y - 60, '#f97316', 24);
-        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('ครุฑจงปกป้อง!', this.x, this.y - 40);
+        spawnFloatingText(GAME_TEXTS?.combat?.garudaSummon ?? 'อัญเชิญครุฑ!', this.x, this.y - 60, '#f97316', 24);
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(GAME_TEXTS?.combat?.garudaVoice ?? 'ครุฑจงปกป้อง!', this.x, this.y - 40);
         addScreenShake(8); Audio.playAchievement();
     }
 

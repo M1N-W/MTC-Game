@@ -827,7 +827,7 @@ class UIManager {
                 garudaSlot.innerHTML = `
                     <div class="key-hint" style="background:#f97316;color:#1a0505;">E</div>
                     <span>🦅</span>
-                    <div class="skill-name" style="color:#fdba74;">GARUDA</div>
+                    <div class="skill-name" style="color:#fdba74;font-size:9px;letter-spacing:0.02em;">${(GAME_TEXTS.skillNames?.poom?.garuda) || 'อัญเชิญครุฑ'}</div>
                     <div class="cooldown-mask" id="garuda-cd"></div>`;
                 const passiveRef = document.getElementById('passive-skill');
                 if (passiveRef && passiveRef.parentNode === hudBottom) {
