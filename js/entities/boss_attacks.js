@@ -1164,30 +1164,30 @@ class EmpPulse {
 //    Singleton; driven by game.js update/draw hooks.
 // ════════════════════════════════════════════════════════════
 
-const _DC = Object.freeze({
-    COLS: 20, ROWS: 20,           // 20×150 = 3000 = full arena diameter
-    CELL_SIZE: 150,
-    ARENA_RADIUS: 1500,           // must match MAP_CONFIG.arena.radius
-    CAST_DUR: 2.8,
-    END_DUR: 1.2,
-    WARN_DUR: 2.2,
-    WARN_DUR_MIN: 1.1,
+// Domain Expansion configuration — now centralized in BALANCE.boss.domainExpansion
+const _DE = BALANCE.boss.domainExpansion || {};
+const _DC = {
+    ARENA_RADIUS: 1500,
+    GRID_SIZE: 120,
+    CELL_SIZE: 60,
+    CAST_DUR: 2.2,
+    WARN_DUR: 1.5,
     WARN_DUR_DECAY: 0.18,
     EXPLODE_DUR: 0.45,
     TOTAL_CYCLES: 6,
-    DANGER_PCT: 0.62,
-    DANGER_PCT_MAX: 0.84,
-    DANGER_PCT_STEP: 0.04,
-    CELL_DAMAGE: 28,
-    CELL_SLOW_DUR: 1.8,
-    CELL_SLOW_FACTOR: 0.45,
-    COOLDOWN: 45.0,
-    HIT_RADIUS: 0.58,
-    RAIN_COLS: 32,
-    BOSS_VOLLEY_CYCLE: 3,
+    DANGER_PCT: _DE.dangerPct || 0.62,
+    DANGER_PCT_MAX: _DE.dangerPctMax || 0.84,
+    DANGER_PCT_STEP: _DE.dangerPctStep || 0.04,
+    CELL_DAMAGE: _DE.cellDamage || 28,
+    CELL_SLOW_DUR: _DE.cellSlowDur || 1.8,
+    CELL_SLOW_FACTOR: _DE.cellSlowFactor || 0.45,
+    COOLDOWN: _DE.cooldown || 45.0,
+    HIT_RADIUS: _DE.hitRadius || 0.58,
+    RAIN_COLS: _DE.rainCols || 32,
+    BOSS_VOLLEY_CYCLE: _DE.bossVolleyCycle || 3,
     BOSS_VOLLEY_COUNT: 8,
     LOCK_PUSH: 80,                // pixels/s push force when entity tries to leave domain
-});
+};
 
 const _RAIN_POOL = '0123456789ABCDEFΑΒΓΔΩΣΨXYZμσπ∑∫∂∇+-×÷=≠≤≥ΦΘΛ';
 function _rainChar() { return _RAIN_POOL[Math.floor(Math.random() * _RAIN_POOL.length)]; }

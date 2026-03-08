@@ -458,7 +458,17 @@ const BALANCE = {
             tankSpawnChance: 0.10,  // NERF: 0.12 → 0.10 (fewer tanks)
             mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
             bossEveryNWaves: 3,
-            glitchGracePeriod: 4000
+            glitchGracePeriod: 4000,
+            // ── Wave Event Configurations ──────────────────────
+            // Boss  : 3, 6, 9, 12, 15
+            // Glitch: 5, 10
+            // Fog   : 2, 8, 11, 14
+            // Speed : 4, 7, 13
+            // Dark  : 1
+            fogWaves: [2, 8, 11, 14],
+            speedWaves: [4, 7, 13],
+            glitchWaves: [5, 10],
+            darkWave: 1
         },
         score: {
             basicEnemy: 100,  // BUFF: 80 → 100 (more income)
@@ -943,6 +953,101 @@ const GAME_TEXTS = {
     },
     environment: {
         barrelBoom: "💥BOOM!"
+    },
+    // ══════════════════════════════════════════════════════
+    // 🎓 TUTORIAL TEXTS — ข้อความสอนการเล่นทั้งหมด
+    // ══════════════════════════════════════════════════════
+    tutorial: {
+        welcome: {
+            title: 'ยินดีต้อนรับสู่ MTC the Game!',
+            body: 'คุณกำลังจะเข้าสู่ห้องเรียนของ KruManop (ครูมานพ) ครูคณิตศาสตร์สุดโหด\n\nภารกิจ: รอดชีวิตให้ครบ 15 เวฟ และเอาชนะบอสทุกตัว\n\nกด NEXT หรือ SPACE เพื่อเริ่มบทเรียน',
+            icon: '🎓'
+        },
+        movement: {
+            title: 'การเคลื่อนที่',
+            body: 'กด W A S D เพื่อเดิน\n\nเดินไปรอบๆ สักครู่เพื่อทดสอบ!',
+            icon: '🕹️'
+        },
+        shooting: {
+            title: 'การยิง',
+            body: 'เล็งด้วย Mouse แล้วกด Left Click เพื่อยิง\n\nลองยิงดู 3 ครั้ง!',
+            icon: '🔫'
+        },
+        dash: {
+            title: 'Dash — หลบหลีก',
+            body: 'กด SPACE เพื่อ Dash พุ่งหลบศัตรู\nมี Cooldown — ใช้ให้ถูกจังหวะ!\n\nลอง Dash 1 ครั้ง',
+            icon: '💨'
+        },
+        rclick: {
+            title: 'ทักษะพิเศษ (Right Click)',
+            body: 'กด Right Click เพื่อใช้ทักษะประจำตัว:\n• เก้า — Stealth ซ่อนตัว 3 วินาที\n• ภูมิ — Eat Rice ฟื้น HP และเพิ่มพลัง\n• Auto — Wanchai Stand เรียก autonomous companion (8s, CD 12s)\n\nลองกด Right Click ดู!',
+            icon: '✨'
+        },
+        kaoPassive: {
+            title: 'เก้า — ซุ่มเสรี (Passive) 👻',
+            body: 'ใช้ Stealth ครบ 5 ครั้ง เพื่อปลดล็อค Passive สุดท้าย!\nดูที่ปุ่ม 0/5 ใน skill bar ด้านล่าง\n\n✦ Crit ขณะซ่อนตัวเพิ่ม 50%\n✦ ความเร็วถาวร +40%\n✦ อาวุธกลายเป็น Golden Awakened Form',
+            icon: '👻'
+        },
+        kaoWeapon: {
+            title: 'เก้า — สลับอาวุธ 🔫',
+            body: 'เก้ามีอาวุธ 3 ชนิด:\n• Auto Rifle — ยิงเร็ว (ค่าเริ่มต้น)\n• Sniper — Railgun ดาเมจสูง ยิงช้า\n• Shotgun — Molten Shrapnel ระยะใกล้\n\nเลื่อน Mouse Wheel เพื่อสลับ\nสลับให้ครบ 3 ครั้ง!',
+            icon: '🔄'
+        },
+        kaoSkills: {
+            title: 'เก้า — ทักษะการเคลื่อนที่และร่างโคลน ⚡',
+            body: 'เมื่อเลเวลอัพ เก้าจะปลดล็อค:\n\n⚡ กด Q — Teleport\n   วาร์ปไปตามทิศทางเมาส์\n\n👥 กด E — Clone of Stealth\n   สร้างร่างโคลนช่วยยิง\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
+            icon: '⚡'
+        },
+        poomSkills: {
+            title: 'ภูมิ — ทักษะพิเศษเฉพาะ 🌾',
+            body: 'ภูมิมีทักษะเพิ่มเติม 2 อย่าง:\n\n🔥 กด R — Ritual Burst\n   ระเบิดพลังและฟื้น HP ในวงกว้าง\n\n🐉 กด Q — Naga Summon\n   เรียกพญานาคคุ้มกัน 10 วินาที\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
+            icon: '🌾'
+        },
+        autoSkills: {
+            title: 'Auto — ทักษะพิเศษเฉพาะ 🌀',
+            body: 'Auto มีทักษะควบคุมพื้นที่:\n\n🌀 กด Q — Vacuum Heat (CD 6s)\n   ดูดศัตรูทุกตัวเข้าหาตัว + stun\n\n💥 กด E — Detonate (CD 8s, ต้องเปิด Wanchai ก่อน)\n   ระเบิด AOE สูง แต่ปิด Wanchai ทันที\n\n👊 L-Click ระหว่าง Wanchai Active\n   Stand Rush — ส่งสแตนด์พุ่งไปตามเคอร์เซอร์\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
+            icon: '🌀'
+        },
+        autoStandRush: {
+            title: 'Auto — Stand Rush Manual Targeting 👊',
+            body: 'ระหว่าง Wanchai active:\n\n🎯 ชี้เมาส์แล้ว L-Click = Stand Rush ไปตำแหน่งนั้น\n   Stand teleport หาเป้าแล้วรัวหมัดทันที\n\n✨ 6-layer rendering พร้อม visual effect\n🥊 Dual-fist — _punchSide สลับข้างทุกหมัด\n\n⚡ Wanchai ยังโจมตีอัตโนมัติด้วย\n   L-Click เพิ่ม Stand Rush ทับไปได้เลย',
+            icon: '👊'
+        },
+        bulletTime: {
+            title: 'Bullet Time ⏱',
+            body: 'กด T เพื่อเปิด Bullet Time\nเวลาจะช้าลง 70% — หลบกระสุนหนาแน่น\n\nแถบพลังงาน FOCUS (ล่างกลาง) ค่อยๆ หมด\nปล่อยให้ชาร์จก่อนใช้อีกครั้ง\n\nกด T เพื่อทดลอง!',
+            icon: '🕐'
+        },
+        levelUp: {
+            title: 'Level Up & EXP 📈',
+            body: 'กำจัดศัตรูเพื่อรับ EXP\nเมื่อเลเวลอัพ Stats ทั้งหมดเพิ่มขึ้น\n\nLv.2 → ปลดล็อค Skill Q\nLv.3 → ปลดล็อค Skill E (หรือ R สำหรับภูมิ)\n\n💡 แถบ EXP อยู่ใต้แถบ HP มุมซ้ายบน',
+            icon: '📈'
+        },
+        shop: {
+            title: 'MTC Co-op Store 🛒',
+            body: 'ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\n🧪 ซื้อด้วย Score:\n• Potion — ฟื้น HP ทันที\n• Damage Up — เพิ่มดาเมจ 10%\n• Speed Up — เพิ่มความเร็ว 10%\n• Shield — โล่กัน 1 ครั้ง',
+            icon: '🛒'
+        },
+        database: {
+            title: 'MTC Database Server 🗄️',
+            body: 'เซิร์ฟเวอร์อยู่มุมขวาบนของแผนที่\n\n💻 กด E — เปิด MTC Database\n   ดูเนื้อหาและ Lore\n\n🔒 กด F — Admin Terminal\n   พิมพ์ "help" เพื่อดูคำสั่งทั้งหมด\n   เช่น: "sudo heal", "sudo score", "sudo next"',
+            icon: '🗄️'
+        },
+        enemyTypes: {
+            title: 'ประเภทศัตรู & Wave Events 👾',
+            body: 'ศัตรู 3 ประเภท:\n🔴 Basic — เดินเร็ว ยิงได้\n🟠 Tank 🛡️ — HP สูงมาก เดินช้า\n🟣 Mage 🧙 — สายฟ้า + อุกกาบาต\n\nWave Events พิเศษ:\n🌑 Wave 1 — Dark Wave: เปิดตัวด้วยความมืดมิด\n🌫️ Wave 2,8,11,14 — Fog Wave: Radar OFFLINE — minimap ใช้ไม่ได้!\n⚡ Wave 4,7,13 — Speed Wave: ศัตรูเร็ว ×1.5\n⚠️ Wave 5,10 — Glitch Wave: Controls Invert + ได้ HP +100 ชั่วคราว',
+            icon: '👾'
+        },
+        boss: {
+            title: 'Boss Encounters 👑',
+            body: 'ทุก 3 เวฟจะมี Boss — 5 encounters ทั้งหมด:\n\n👑 Wave  3 — KruManop (Basic)\n🐕 Wave  9 — KruManop (Dog Rider) — Phase 2 เรียกหมา\n🐟 Wave 15 — KruManop (Goldfish Lover) — Phase 2+3\n\n⚛️ Wave  6 — KruFirst (Basic)\n⚛️ Wave 12 — KruFirst (Advanced ⚠️ ยากขึ้น)\n\n🌌 Domain Expansion — ทักษะ Ultimate\n   Boss ใช้เมื่อ HP ต่ำ ควบคุมพื้นที่ทั้ง Arena!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
+            icon: '👑'
+        },
+        ready: {
+            title: 'พร้อมแล้ว! 🚀',
+            body: 'คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievement มากมาย\n🎯 ผ่านทั้ง 15 Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่สนามรบ!',
+            icon: '🎮'
+        }
     }
 };
 

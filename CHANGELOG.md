@@ -4,6 +4,36 @@
 
 ---
 
+## v3.12.7 — Configuration Centralization
+*Released: March 8, 2026*
+
+### 🎯 Major Refactor: Single Source of Truth
+- **Centralized Configuration:** All game settings now unified in `config.js`
+- **Tutorial Texts:** Added complete tutorial system texts to `GAME_TEXTS.tutorial`
+- **Wave Events:** Moved wave event configurations to `BALANCE.waves` (fogWaves, speedWaves, glitchWaves, darkWave)
+- **Domain Expansion:** Centralized boss ultimate skill config in `BALANCE.boss.domainExpansion`
+
+### 📝 Configuration Structure
+```javascript
+BALANCE.waves.fogWaves = [2, 8, 11, 14]
+BALANCE.waves.speedWaves = [4, 7, 13]
+BALANCE.waves.glitchWaves = [5, 10]
+BALANCE.waves.darkWave = 1
+BALANCE.boss.domainExpansion = { cellDamage, cooldown, dangerPct, ... }
+GAME_TEXTS.tutorial = { welcome, movement, shooting, ... }
+```
+
+### 🔧 File Updates
+- **WaveManager.js:** Now uses `BALANCE.waves` for event configurations
+- **boss_attacks.js:** Domain Expansion reads from `BALANCE.boss.domainExpansion`
+- **config.js:** Added 300+ lines of centralized configuration data
+
+### ✨ Benefits
+- **Easier Balancing:** All stats and text in one place
+- **Better Maintainability:** No more scattered hardcoded values
+- **Godot Migration Ready:** Clear separation of data from logic
+- **Localization Support:** Text centralization enables future i18n
+
 ---
 
 ## v3.12.6 — Config Syntax Fix & Text Localization

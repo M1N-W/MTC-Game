@@ -38,19 +38,16 @@ window.GLITCH_EVERY_N_WAVES = GLITCH_EVERY_N_WAVES;
 // Rules:  must NOT overlap with multiples of 3 (boss waves: 3,6,9,12,15)
 //         must NOT overlap with multiples of 5 (glitch waves: 5,10)  [handled by isGlitch guard]
 //
-// FOG_WAVES:   [2,8,11,14]
-// SPEED_WAVES: [4,7,13]
-// DARK_WAVES:  [1]  — ominous wave 1 intro
-//
+// Wave event configurations now centralized in BALANCE.waves
 // Effective wave schedule (maxWaves=15, bossEveryN=3, glitchEveryN=5):
 //   Boss  : 3, 6, 9, 12, 15
 //   Glitch: 5, 10
 //   Fog   : 2, 8, 11, 14
 //   Speed : 4, 7, 13
 //   Dark  : 1
-const FOG_WAVES = new Set([2, 8, 11, 14]);
-const SPEED_WAVES = new Set([4, 7, 13]);
-const DARK_WAVES = new Set([1]);
+const FOG_WAVES = new Set(BALANCE.waves.fogWaves);
+const SPEED_WAVES = new Set(BALANCE.waves.speedWaves);
+const DARK_WAVES = new Set([BALANCE.waves.darkWave]);
 const SPEED_MULT = 1.5;
 
 // Trickle spawn — enemies arrive in small batches over time (normal/fog/speed waves)
