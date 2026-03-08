@@ -898,9 +898,10 @@ class GarudaEntity extends Entity {
         if (typeof CTX === 'undefined') return;
         const sc = worldToScreen(this.x, this.y);
         if (!sc) return;
-        // Viewport cull
-        if (sc.x < -60 || sc.x > (CTX.canvas?.width ?? 9999) + 60 ||
-            sc.y < -60 || sc.y > (CTX.canvas?.height ?? 9999) + 60) return;
+        // Viewport cull — DISABLED for debug
+        // if (sc.x < -60 || sc.x > (CTX.canvas?.width ?? 9999) + 60 ||
+        //     sc.y < -60 || sc.y > (CTX.canvas?.height ?? 9999) + 60) return;
+        console.log('[Garuda.draw] sc:', sc.x.toFixed(0), sc.y.toFixed(0), 'canvas:', CTX.canvas?.width, CTX.canvas?.height, 'state:', this.state);
 
         const now = performance.now();
         const lifeRatio = this.life / this.maxLife;

@@ -6,6 +6,32 @@
 
 ---
 
+## v3.12.4 — Garuda Draw Call Debugging
+*Released: March 8, 2026*
+
+### 🔍 Draw System Debugging
+- **Viewport Cull Disabled:** Temporarily disabled viewport culling to eliminate culling as potential issue
+- **Draw Call Tracking:** Added console.log in Garuda.draw() to track every frame draw execution
+- **Coordinate Logging:** Monitor screen coordinates (sc.x, sc.y) vs canvas dimensions
+- **State Tracking:** Include entity state in draw logging for complete debugging visibility
+
+### 🛠️ Diagnostic Enhancement
+- **Frame-by-Frame Tracking:** Console will spam [Garuda.draw] every frame if draw() is called
+- **Viewport Analysis:** Compare sc.x/sc.y against canvas.width/canvas.height to identify culling issues
+- **Entity Lifecycle Debugging:** Detect if entity is removed from specialEffects array between update() and draw()
+- **Render Pipeline Verification:** Confirm GarudaEntity is being processed by window.specialEffects.forEach()
+
+### 🎯 Debug Strategy
+- **If Draw Logs Appear:** Analyze coordinates vs canvas bounds to determine if culling was the issue
+- **If No Draw Logs:** Entity is being removed from array before draw() - indicates update() lifecycle issue
+- **State Monitoring:** Track entity state transitions during draw calls
+
+**Files Changed:**
+- `js/entities/summons.js` (disabled viewport cull + draw call logging)
+- `sw.js` (cache version update)
+
+---
+
 ## v3.12.3 — Enhanced Garuda Diagnostic Logging
 *Released: March 8, 2026*
 
