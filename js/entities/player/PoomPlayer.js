@@ -274,6 +274,7 @@ class PoomPlayer extends Player {
         this.cooldowns.garuda = S.garudaCooldown * this.cooldownMultiplier;
         this.garuda = new GarudaEntity(this.x, this.y, this);
         window.specialEffects.push(this.garuda);
+        console.log('[Garuda] post-push len:', window.specialEffects.length, '| garuda.active:', this.garuda.active, '| pos:', this.garuda.x.toFixed(1), this.garuda.y.toFixed(1));
         spawnParticles(this.x, this.y, 35, '#f97316');
         spawnFloatingText('อัญเชิญครุฑ!', this.x, this.y - 60, '#f97316', 24);
         if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('ครุฑจงปกป้อง!', this.x, this.y - 40);

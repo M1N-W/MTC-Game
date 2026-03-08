@@ -88,10 +88,11 @@
 
 ---
 
-## 📈 Current Version: v3.12.2 (March 8, 2026)
+## 📈 Current Version: v3.12.3 (March 8, 2026)
 
 **Latest Major Updates:**
-- 🐛 **Bug Fixes & Stability:** Fixed Kao config reference error, added Garuda owner null guards, enhanced debug logging
+- � **Enhanced Diagnostics:** Added detailed Garuda summon logging for debugging entity deployment issues
+- �🐛 **Bug Fixes & Stability:** Fixed Kao config reference error, added Garuda owner null guards, enhanced debug logging
 - 🥊 **Kao Phantom Blink Rework:** Dash-triggered stealth, shadow clone teleport, ambush crit windows, and proximity burst system
 - 🦅 **Poom Garuda Summon:** Complete fire-themed bird entity with ORBIT→DIVE→RETURN FSM and autonomous combat behavior
 - ⚖️ **Cosmic Balance System:** Dual summon synergy with +20% damage, enhanced burn effects, and visual aura feedback
@@ -99,7 +100,7 @@
 - 🔧 **Clone System Balance:** Reduced cooldowns (60→25s) and tactical manual detonation via E-key
 - 🎨 **Visual Enhancements:** Fire trail effects, cosmic aura rings, and enhanced Phantom Blink visual feedback
 - 📊 **Technical Improvements:** O(1) state management, proper entity cleanup, and memory-optimized trail systems
-- � **Heat Gauge System:** Complete 4-tier heat system (COLD→WARM→HOT→OVERHEAT) with damage multipliers and OVERHEAT mechanics
+- 🔥 **Heat Gauge System:** Complete 4-tier heat system (COLD→WARM→HOT→OVERHEAT) with damage multipliers and OVERHEAT mechanics
 - 💥 **Detonation Rework:** Non-lethal detonation with heat scaling damage and momentum preservation
 - 🌀 **Vacuum Heat Enhancement:** Added instant damage + burning effect + heat reward on successful pulls
 - 🥊 **Wanchai Stand Spirit of Muay Thai:** Complete visual overhaul with ice-blue/white spectral design and cultural elements

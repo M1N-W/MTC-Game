@@ -785,7 +785,6 @@ class GarudaEntity extends Entity {
         this.diveCooldown = 0.5;
         this.diveTarget = null;
         this._trail = [];   // [{x,y,life,maxLife}]
-        console.log('[Garuda] spawned at', px.toFixed(0), py.toFixed(0), '— specialEffects len:', window.specialEffects?.length);
     }
 
     _findNearest() {

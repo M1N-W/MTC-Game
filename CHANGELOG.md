@@ -6,6 +6,28 @@
 
 ---
 
+## v3.12.3 — Enhanced Garuda Diagnostic Logging
+*Released: March 8, 2026*
+
+### 🔍 Debug Improvements
+- **Enhanced Logging:** Added detailed post-push diagnostic logging for Garuda summon system
+- **Constructor Cleanup:** Removed redundant constructor log to focus on critical post-push state
+- **State Tracking:** Added console.log for specialEffects array length, entity active state, and position after push
+- **Cache Invalidation:** Updated service worker version to ensure fresh deployment of diagnostic changes
+
+### 🛠️ Technical Debugging
+- **Summon Flow Tracking:** Monitor Garuda entity creation and specialEffects array integration
+- **State Verification:** Track entity.active flag and position coordinates after deployment
+- **Array Length Monitoring:** Verify specialEffects array properly receives new Garuda entity
+- **Silent Error Detection:** Enhanced logging to catch potential silent failures in entity instantiation
+
+**Files Changed:**
+- `js/entities/player/PoomPlayer.js` (enhanced post-push logging)
+- `js/entities/summons.js` (constructor log cleanup)
+- `sw.js` (cache version update)
+
+---
+
 ## v3.12.2 — Bug Fixes & Stability Improvements
 *Released: March 8, 2026*
 
