@@ -4,6 +4,29 @@
 
 ---
 
+## v3.13.1 — Gameplay Fix: Restored Basic Skills Availability
+*Released: March 8, 2026*
+
+### 🎮 Gameplay Regression Fix
+- **Restored Basic Skills:** Reverted unintended skill locking from v3.13.0
+  - **Poom:** L-Click (shoot) and R-Click (eatRice) available from game start
+  - **Auto:** R-Click (Wanchai Stand) available from game start
+- **Fixed Input Routing:** Restored proper input handling in PoomPlayer.update()
+- **Maintained Thematic Unlocks:** Advanced skills still use new unlock conditions
+
+### 🔧 Technical Corrections
+- **PoomPlayer.shoot():** Restored attack speed multiplier for eating rice (0.7x)
+- **Crit Effects:** Added back particle effects and proper text positioning
+- **Audio Integration:** Direct Audio.playPoomShoot() call restored
+- **Energy Feedback:** Auto shows "พลังงานไม่พอ!" for insufficient energy
+
+### 🎨 Balance Notes
+- **Passive Bonuses Still Gated:** Advanced bonuses (crit, lifesteal, heat gain) require unlock
+- **Progressive Skill Flow:** Q (Naga) at Lv2, R (Ritual) after Q, E (Garuda) after passive
+- **Better Player Experience:** Basic actions available immediately while teaching advanced mechanics
+
+---
+
 ## v3.13.0 — Major Gameplay Overhaul: Thematic Passive Unlocks
 *Released: March 8, 2026*
 

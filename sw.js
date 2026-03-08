@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.13.0'; // v3.13.0: Major gameplay overhaul - thematic passive unlocks and new mechanics
+const CACHE_NAME = 'mtc-cache-v3.13.1'; // v3.13.1: Restored basic skills availability - fixed gameplay regression
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
