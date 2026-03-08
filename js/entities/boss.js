@@ -640,6 +640,8 @@ class KruManop extends BossBase {
         this.hp -= amt;
         if (this.hp <= 0 && !this._waveSpawnLocked) {
             this._waveSpawnLocked = true;
+            // ── INCREMENT STAT: ต้องทำก่อน check() เพื่อให้ condition เป็น true ──
+            if (typeof Achievements !== 'undefined') Achievements.stats.manopKills = (Achievements.stats.manopKills ?? 0) + 1;
             Achievements.check('manop_down');
             this._onDeath();
         }
@@ -1050,6 +1052,8 @@ class KruFirst extends BossBase {
             spawnParticles(this.x, this.y, 60, '#39ff14');
             spawnParticles(this.x, this.y, 30, '#00ffff');
             spawnFloatingText('⚛️ PHYSICS DISMISSED!', this.x, this.y, '#39ff14', 35);
+            // ── INCREMENT STAT: ต้องทำก่อน check() เพื่อให้ condition เป็น true ──
+            if (typeof Achievements !== 'undefined') Achievements.stats.firstKills = (Achievements.stats.firstKills ?? 0) + 1;
             Achievements.check('first_down');
             this._onDeath();
         }

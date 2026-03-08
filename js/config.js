@@ -730,28 +730,52 @@ const VISUALS = {
 // 🏆 ACHIEVEMENT DEFINITIONS
 // ══════════════════════════════════════════════════════════════
 const ACHIEVEMENT_DEFS = [
+    // ── Early Game ──────────────────────────────────────────────────────────
     { id: 'first_blood', name: 'First Blood', desc: 'เคลียร์ศัตรูตัวแรก', icon: '⚔️', reward: { type: 'hp', value: 5, text: '+5 Max HP' } },
     { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave แรก', icon: '🌊', reward: { type: 'hp', value: 5, text: '+5 Max HP' } },
+    { id: 'wave_5', name: 'MTC Veteran', desc: 'รอดชีวิตถึง Wave 5', icon: '🎖️', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
+    { id: 'wave_10', name: 'MTC Legend', desc: 'รอดชีวิตถึง Wave 10', icon: '🏆', reward: { type: 'hp', value: 15, text: '+15 Max HP' } },
+
+    // ── Boss Kills ──────────────────────────────────────────────────────────
     { id: 'manop_down', name: '1st Manop Slayer', desc: 'เอาชนะครูมานพครั้งแรก', icon: '👑', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
     { id: 'first_down', name: 'Physics Breaker', desc: 'เอาชนะครูเฟิร์สแซนด์วิชหมู', icon: '⚛️', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
     { id: 'parry_master', name: 'Return to Sender', desc: 'Parry แซนด์วิชหมูกลับไปหาครูเฟิร์ส', icon: '🥪', reward: { type: 'damage', value: 0.03, text: '+3% Damage' } },
-    { id: 'shop_max', name: 'Capitalism', desc: 'ซื้อบัฟร้านค้าจนเต็มสแต็ก 1.5x', icon: '📈', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+
+    // ── Combat ──────────────────────────────────────────────────────────────
     { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
     { id: 'crit_master', name: 'Critical Master', desc: 'ตีติดคริติคอล 5 ครั้ง', icon: '💥', reward: { type: 'crit', value: 0.01, text: '+1% Crit Chance' } },
-    { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
-    { id: 'ghost', name: 'The Ghost of MTC', desc: 'ซุ่มอ่าน 10 ครั้ง', icon: '👻', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
-    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
-    { id: 'weapon_master', name: 'Weapon Master', desc: 'ใช้ปืนครบทั้ง 3 แบบ', icon: '🔫', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
-    { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง', icon: '🛒', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
-    { id: 'drone_master', name: 'Drone Master', desc: 'ปลดล็อค Drone Overdrive ครั้งแรก', icon: '🤖', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'kao_awakened', name: 'Weapon Master Awakened', desc: 'ปลดล็อคสกิล Weapon Master ของเก้าสำเร็จ', icon: '⚡', reward: { type: 'crit', value: 0.01, text: '+1% Crit Chance' } },
-    { id: 'wave_5', name: 'MTC Veteran', desc: 'รอดชีวิตถึง Wave 5', icon: '🎖️', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
-    { id: 'wave_10', name: 'MTC Legend', desc: 'รอดชีวิตถึง Wave 10', icon: '🎖️', reward: { type: 'hp', value: 15, text: '+15 Max HP' } },
     { id: 'bullet_time_kill', name: 'Time Bender', desc: 'ฆ่าศัตรูขณะ Bullet Time 3 ตัว', icon: '🕐', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
     { id: 'barrel_bomber', name: 'Expert Bomber', desc: 'ฆ่าศัตรูด้วยถังระเบิด 3 ตัว', icon: '🛢️', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'stand_rush_kill', name: 'WANCHAI REQUIEM', desc: 'ฆ่าศัตรูด้วย Stand Rush 10 ตัว', icon: '🥊', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'ritual_wipe', name: 'Sticky Situation', desc: 'ฆ่าศัตรู 3 ตัวขึ้นไปด้วย Ritual Burst ครั้งเดียว', icon: '🌾', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } }
+
+    // ── Movement ────────────────────────────────────────────────────────────
+    { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+
+    // ── Collection ──────────────────────────────────────────────────────────
+    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+    { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง', icon: '🛒', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+    { id: 'shop_max', name: 'Capitalism', desc: 'ซื้อบัฟร้านค้าจนเต็มสแต็ก 1.5x', icon: '📈', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+
+    // ── Stealth & Weapons ────────────────────────────────────────────────────
+    { id: 'ghost', name: 'The Ghost of MTC', desc: 'ซุ่มสำเร็จ 10 ครั้ง', icon: '👻', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
+    { id: 'weapon_master', name: 'Arsenal', desc: 'ใช้อาวุธครบทั้ง 3 แบบในเกมเดียว', icon: '🔫', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+
+    // ── Character-specific ───────────────────────────────────────────────────
+    { id: 'kao_awakened', name: 'Weapon Master Awakened', desc: 'ปลดล็อคสกิล Weapon Master ของเก้าสำเร็จ', icon: '⚡', reward: { type: 'crit', value: 0.01, text: '+1% Crit Chance' } },
+    { id: 'drone_master', name: 'Drone Master', desc: 'ปลดล็อค Drone Overdrive ครั้งแรก', icon: '🤖', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
+    { id: 'stand_rush_kill', name: 'WANCHAI-REQUIEM', desc: 'ฆ่าศัตรูด้วย Stand Rush 10 ตัว', icon: '🥊', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'ritual_wipe', name: 'Sticky Situation', desc: 'ฆ่าศัตรู 3 ตัวขึ้นไปด้วย Ritual Burst ครั้งเดียว', icon: '🌾', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+
+    // ── NEW: Passive Awakenings ───────────────────────────────────────────────
+    { id: 'scorched_soul', name: 'SCORCHED SOUL', desc: 'ปลดล็อค Passive ออโต้ด้วยการ Overheat ครั้งแรก', icon: '🔥', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'ritual_king', name: 'King of Isan', desc: 'ปลดล็อค Passive ภูมิด้วย Ritual Burst ครั้งแรก', icon: '🌾', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
+    { id: 'free_stealth', name: 'Free Stealth', desc: 'ปลดล็อค Passive เก้าด้วยการซุ่มครั้งแรก', icon: '👻', reward: { type: 'cdr', value: 0.02, text: '-2% Cooldown' } },
+
+    // ── NEW: Cosmic Balance ───────────────────────────────────────────────────
+    { id: 'cosmic_balance', name: 'Cosmic Balance', desc: 'ใช้ Naga + Garuda พร้อมกันครั้งแรก', icon: '✨', reward: { type: 'damage', value: 0.03, text: '+3% Damage' } },
+
+    // ── NEW: Rage Mode ────────────────────────────────────────────────────────
+    { id: 'rage_mode', name: 'RAGE MODE', desc: 'ออโต้เข้าสู่ Rage Mode (Overheat + HP < 30%)', icon: '💢', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
 ];
 
 // ══════════════════════════════════════════════════════════════

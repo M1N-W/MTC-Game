@@ -4,6 +4,63 @@
 
 ---
 
+## v3.15.0 — Complete Achievement System Overhaul: Character Progression & Stat Tracking
+*Released: March 8, 2026*
+
+### 🏆 Major Achievement System Expansion
+- **NEW Passive Awakening Achievements:** All three characters now have achievements for unlocking their passive skills
+  - **SCORCHED SOUL (Auto):** Unlock passive via first OVERHEAT
+  - **King of Isan (Poom):** Unlock passive via first Ritual Burst  
+  - **Free Stealth (Kao):** Unlock passive via first Stealth use
+- **NEW Combat Achievements:** Advanced character-specific milestones
+  - **Cosmic Balance (Poom):** First time using Naga + Garuda together
+  - **RAGE MODE (Auto):** Enter Rage Mode (Overheat + HP < 30%)
+
+### 🔧 Critical Bug Fixes
+- **Boss Kill Tracking:** Fixed missing achievement cases for boss defeats
+  - **KruManop kills:** Now properly tracked with `manopKills` stat
+  - **KruFirst kills:** Now properly tracked with `firstKills` stat
+  - **Achievement Unlock:** Stats incremented BEFORE check() calls
+- **Stat Naming Consistency:** 
+  - **wanchaiKills → standRushKills:** Synchronized with AutoPlayer.js naming
+  - **Ritual Wipe:** Now uses `ritualKills` stat directly instead of opaque flag
+- **Shop Max Achievement:** Fixed detection for 1.5x damage boost
+
+### 🎨 UI/UX Improvements
+- **Poom Skill Locks:** Reverted to `_nagaUnlocked` logic for Q & R skills
+  - **Naga (Q):** Unlocks at Lv2 via `_nagaUnlocked` flag
+  - **Ritual (R):** Unlocks with Naga via `_nagaUnlocked` flag
+  - **Garuda (E):** Still requires passive unlock
+- **Achievement Categories:** Reorganized achievement definitions with clear sections
+  - Early Game, Boss Kills, Combat, Movement, Collection, Stealth & Weapons, Character-specific
+
+### 📊 Enhanced Stat Tracking
+- **New Stats Added:** `manopKills`, `firstKills` for boss kill tracking
+- **Better Progression:** All character milestones now properly tracked
+- **Achievement Integration:** Seamless stat-to-achievement mapping
+
+### ⚡ Character Balance Updates
+- **Auto Wanchai Energy Cost:** Fixed mismatch (was 35, now 32 to match config)
+- **Skill Lock Messages:** Updated to show level requirement instead of thematic text
+- **Rage Mode Trigger:** Now properly tracked for achievement unlock
+
+### 🎯 Achievement Rewards
+- **Passive Awakenings:** +2% damage, +10 HP, -2% cooldown rewards
+- **Combat Milestones:** +3% damage for Cosmic Balance, +2% for Rage Mode
+- **Boss Kills:** Maintained existing +2% damage rewards
+
+### 📚 Documentation Updates
+- **Achievement Descriptions:** Clear, concise descriptions for all new achievements
+- **Code Comments:** Added detailed explanations for stat tracking fixes
+- **PROJECT_OVERVIEW.md:** Added AI file versioning rule for development workflow
+
+### 🔍 Technical Improvements
+- **Memory Management:** Removed opaque flags in favor of direct stat tracking
+- **Code Consistency:** Synchronized naming conventions across all files
+- **Error Prevention:** Stats incremented before achievement checks to prevent race conditions
+
+---
+
 ## v3.14.0 — Complete Thematic Unlock Overhaul: All Characters Action-Based
 *Released: March 8, 2026*
 

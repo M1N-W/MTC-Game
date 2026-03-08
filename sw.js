@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.14.0'; // v3.14.0: Completed thematic passive unlock overhaul - All characters now use action-based unlocks
+const CACHE_NAME = 'mtc-cache-v3.15.0'; // v3.15.0: Complete achievement system overhaul - Added passive awakening, cosmic balance, rage mode achievements and fixed stat tracking
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

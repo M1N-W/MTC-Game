@@ -252,6 +252,8 @@ class PoomPlayer extends Player {
             addScreenShake(8);
             if (typeof UIManager !== 'undefined')
                 UIManager.showVoiceBubble(GAME_TEXTS?.combat?.cosmicVoice ?? 'พลังจักรวาลรวมกัน!', this.x, this.y - 40);
+            // ── Achievement: Cosmic Balance ──────────────────────────────────
+            if (typeof Achievements !== 'undefined') Achievements.check('cosmic_balance');
         }
         // ── Cosmic Balance: HP regen ตลอดเวลาที่ active ─────────────────────
         // สร้าง visual reward ที่จับต้องได้ — ผู้เล่นรู้สึกได้ว่า combo ทำงานอยู่
@@ -347,6 +349,8 @@ class PoomPlayer extends Player {
         addScreenShake(18);
         this.goldenAuraTimer = 4;
         Audio.playAchievement();
+        // ── Achievement: ราชาแห่งพิธีกรรม ──────────────────────────────────
+        if (typeof Achievements !== 'undefined') Achievements.check('ritual_king');
 
         if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
 
@@ -468,7 +472,8 @@ class PoomPlayer extends Player {
         this.cooldowns.ritual = RC.cooldown || 20;
         // ✨ [ritual_wipe] ปลดล็อคถ้าฆ่า 3+ ตัวในครั้งเดียว
         if (ritualKills >= 3 && typeof Achievements !== 'undefined') {
-            Achievements._ritualWipeUnlocked = true;
+            // FIX: ใช้ ritualKills stat โดยตรง แทน _ritualWipeUnlocked flag
+            Achievements.stats.ritualKills = Math.max(Achievements.stats.ritualKills ?? 0, ritualKills);
             Achievements.check('ritual_wipe');
         }
 

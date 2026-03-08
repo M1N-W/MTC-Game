@@ -156,6 +156,8 @@ class KaoPlayer extends Player {
         addScreenShake(18);
         this.goldenAuraTimer = 4;
         Audio.playAchievement();
+        // ── Achievement: ซุ่มเสรี ─────────────────────────────────────────
+        if (typeof Achievements !== 'undefined') Achievements.check('free_stealth');
 
         if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
 

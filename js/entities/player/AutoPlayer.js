@@ -821,6 +821,7 @@ class AutoPlayer extends Player {
                 // Rising edge — แจ้งผู้เล่นครั้งเดียว
                 spawnFloatingText('🔥 RAGE MODE!', this.x, this.y - 95, '#facc15', 26);
                 addScreenShake(6);
+                if (typeof Achievements !== 'undefined') Achievements.check('rage_mode');
             }
         }
 
@@ -848,14 +849,14 @@ class AutoPlayer extends Player {
         }
 
         if (checkInput('rightClick')) {
-            // ── R-Click: Wanchai Stand — ใช้ได้ตั้งแต่ต้นเกม ──────────────────
-            // passive bonuses (Heat gain, crit, lifesteal) ยังต้องปลดล็อคตามปกติ
-            const energyCost = this.stats?.wanchaiEnergyCost ?? 25;
-            if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
-                this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
-                this._activateWanchai();
-            } else if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) < energyCost) {
-                spawnFloatingText('⚡ พลังงานไม่พอ!', this.x, this.y - 40, '#fbbf24', 14);
+            if (!this.passiveUnlocked) {
+                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats?.passiveUnlockLevel ?? 5}`, this.x, this.y - 40, '#94a3b8', 14);
+            } else {
+                const energyCost = this.stats?.wanchaiEnergyCost ?? 32;  // fix: was 35 ≠ config 32
+                if (!this.wanchaiActive && (this.cooldowns?.wanchai ?? 0) <= 0 && (this.energy ?? 0) >= energyCost) {
+                    this.energy = Math.max(0, (this.energy ?? 0) - energyCost);
+                    this._activateWanchai();
+                }
             }
             consumeInput('rightClick');
         }
@@ -877,7 +878,7 @@ class AutoPlayer extends Player {
         // cooldown 8 วินาที | ออกแบบให้ combo กับ Wanchai
         if (mouse?.middle !== undefined) { /* placeholder */ }
         if (checkInput('q') && !this.passiveUnlocked) {
-            spawnFloatingText('🔒 ทำ Heat เต็ม 100 ก่อน!', this.x, this.y - 40, '#94a3b8', 14);
+            spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats?.passiveUnlockLevel ?? 5}`, this.x, this.y - 40, '#94a3b8', 14);
             consumeInput('q');
         } else if (checkInput('q') && this.passiveUnlocked && (this.cooldowns?.vacuum ?? 0) <= 0) {
             const VACUUM_RANGE = this.stats?.vacuumRange ?? 320;
@@ -939,7 +940,7 @@ class AutoPlayer extends Player {
         // กด E ระหว่าง Wanchai active เท่านั้น
         // AOE = detonationRange (×1.5 ถ้า OVERHEATED), damage = base + heat×scaling
         if (checkInput('e') && !this.passiveUnlocked) {
-            spawnFloatingText('🔒 ทำ Heat เต็ม 100 ก่อน!', this.x, this.y - 40, '#94a3b8', 14);
+            spawnFloatingText(`🔒 ปลดล็อคที่ Lv${this.stats?.passiveUnlockLevel ?? 5}`, this.x, this.y - 40, '#94a3b8', 14);
             consumeInput('e');
         } else if (checkInput('e') && this.passiveUnlocked && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
             const S = this.stats ?? {};
@@ -1173,6 +1174,8 @@ class AutoPlayer extends Player {
         addScreenShake(18);
         this.goldenAuraTimer = 4;
         Audio.playAchievement();
+        // ── Achievement: SCORCHED SOUL ────────────────────────────────────
+        if (typeof Achievements !== 'undefined') Achievements.check('scorched_soul');
 
         if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
 

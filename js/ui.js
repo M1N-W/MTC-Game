@@ -53,8 +53,10 @@ class AchievementSystem {
             weaponsUsed: new Set(),
             slowMoKills: 0,
             barrelKills: 0,
-            wanchaiKills: 0,
-            ritualKills: 0
+            standRushKills: 0,       // FIX: was 'wanchaiKills' — synced with AutoPlayer.js naming
+            ritualKills: 0,
+            manopKills: 0,           // FIX: นับครั้งที่ฆ่า KruManop ได้ — ไม่เคยถูก track มาก่อน
+            firstKills: 0,           // FIX: นับครั้งที่ฆ่า KruFirst ได้ — ไม่เคยถูก track มาก่อน
         };
     }
 
@@ -73,6 +75,14 @@ class AchievementSystem {
             // WARN-9 FIX: window.boss is null at death, old check always falsy.
             // boss.js now sets window.lastBossKilled = true before nulling window.boss.
             case 'boss_down': unlock = !!window.lastBossKilled; break;
+            // ── Boss kill achievements — FIX: cases were MISSING from switch ──
+            // boss.js calls Achievements.check('manop_down') but switch never matched
+            // → manopKills stat is now incremented in boss.js before check() is called
+            case 'manop_down': unlock = this.stats.manopKills >= 1; break;
+            case 'first_down': unlock = this.stats.firstKills >= 1; break;
+            // ── Shop max buff ─────────────────────────────────────────────────
+            // shop_max: ซื้อบัฟจนถึง 1.5x — ตรวจสอบจาก player.damageBoost หรือ shopStack
+            case 'shop_max': unlock = !!(window.player?.damageBoost >= 1.5 || window.player?._shopBuffStacks >= 5); break;
             case 'no_damage': unlock = this.stats.damageTaken === 0 && getEnemiesKilled() >= 5; break;
             case 'crit_master': unlock = this.stats.crits >= 5; break;
             case 'speedster': unlock = this.stats.dashes >= 20; break;
@@ -93,8 +103,21 @@ class AchievementSystem {
             case 'bullet_time_kill': unlock = this.stats.slowMoKills >= 3; break;
             case 'barrel_bomber': unlock = this.stats.barrelKills >= 3; break;
             case 'kao_awakened': unlock = window.player?.charId === 'kao' && !!window.player?.isWeaponMaster; break;
-            case 'stand_rush_kill': unlock = this.stats.wanchaiKills >= 10; break;
-            case 'ritual_wipe': unlock = !!this._ritualWipeUnlocked; break;
+            // FIX: stat renamed wanchaiKills → standRushKills to match AutoPlayer.js
+            case 'stand_rush_kill': unlock = this.stats.standRushKills >= 10; break;
+            // FIX: use ritualKills stat directly — was using opaque _ritualWipeUnlocked flag
+            case 'ritual_wipe': unlock = this.stats.ritualKills >= 3; break;
+
+            // ── NEW: Passive Awakening achievements ───────────────────────────
+            case 'scorched_soul': unlock = window.player?.charId === 'auto' && !!window.player?.passiveUnlocked; break;
+            case 'ritual_king': unlock = window.player?.charId === 'poom' && !!window.player?.passiveUnlocked; break;
+            case 'free_stealth': unlock = window.player?.charId === 'kao' && !!window.player?.passiveUnlocked; break;
+
+            // ── NEW: Cosmic Balance ───────────────────────────────────────────
+            case 'cosmic_balance': unlock = !!(window.player?.charId === 'poom' && window.player?._cosmicBalance); break;
+
+            // ── NEW: Rage Mode ────────────────────────────────────────────────
+            case 'rage_mode': unlock = !!(window.player?.charId === 'auto' && window.player?._rageMode); break;
         }
         if (unlock) this.unlock(ach);
     }
@@ -644,7 +667,7 @@ class UIManager {
                     passiveSkillEl.style.opacity = '0.35';
                     passiveSkillEl.classList.remove('unlocked');
                     const skillName = passiveSkillEl.querySelector('.skill-name');
-                    // Condition ใหม่: ใช้ stealth ครั้งแรก = unlock ทันที → ไม่ต้อง count แล้ว
+                    // Condition ใหม่: ใช้ stealth ครั้งแรก = unlock ทันที
                     if (skillName) { skillName.textContent = 'R-Click!'; skillName.style.color = '#a855f7'; }
                 }      // restore default layout display
             } else {
@@ -887,9 +910,15 @@ class UIManager {
 
             // ── Lock overlays ──────────────────────────────────────────────────
             // eat-icon (R-Click) ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
+            // ── Lock overlays ──────────────────────────────────────────────────
+            // eat-icon  (R-Click) : ใช้ได้ตั้งแต่ต้น — ไม่ล็อค
+            // naga-icon (Q)       : ปลดที่ Lv2 → _nagaUnlocked
+            // ritual-icon (R)     : ปลดพร้อม Naga → _nagaUnlocked
+            // garuda-icon (E)     : ปลดหลัง passive (Ritual ครั้งแรก)
+            const nagaReady = !!(player._nagaUnlocked);
             setLockOverlay(document.getElementById('eat-icon'), false);
-            setLockOverlay(document.getElementById('naga-icon'), !passive);
-            setLockOverlay(document.getElementById('ritual-icon'), !passive);
+            setLockOverlay(document.getElementById('naga-icon'), !nagaReady);
+            setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
             setLockOverlay(document.getElementById('garuda-icon'), !passive);
 
             // ── Eat Rice ─────────────────────────────────────────────
