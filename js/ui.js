@@ -510,7 +510,46 @@ class UIManager {
         if (!hud) return;
         if (boss && !boss.dead) {
             hud.classList.add('active');
-            if (hpBar) hpBar.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+            if (hpBar) {
+                const pct = boss.hp / boss.maxHp;
+                const widthPct = `${Math.max(0, pct * 100)}%`;
+
+                // ── HP fill width ──────────────────────────────────────
+                hpBar.style.width = widthPct;
+
+                // ── Phase color class ──────────────────────────────────
+                hpBar.classList.remove('phase-safe', 'phase-caution', 'phase-danger', 'phase-critical');
+                if (pct > 0.60) hpBar.classList.add('phase-safe');
+                else if (pct > 0.30) hpBar.classList.add('phase-caution');
+                else if (pct > 0.15) hpBar.classList.add('phase-danger');
+                else hpBar.classList.add('phase-critical');
+
+                // ── Drain ghost bar ─────────────────────────────────────
+                // Lazily create drain element inside .boss-hp-bg if missing
+                const bg = hpBar.parentElement;
+                if (bg) {
+                    let drain = bg.querySelector('.boss-hp-drain');
+                    if (!drain) {
+                        drain = document.createElement('div');
+                        drain.className = 'boss-hp-drain';
+                        bg.insertBefore(drain, hpBar);   // drain behind fill
+                        drain._lastPct = pct;
+                        drain.style.width = widthPct;
+                    }
+                    // Only update drain when HP actually drops
+                    if (pct < (drain._lastPct ?? pct)) {
+                        // Hold at current _lastPct for 0.4s then slide down via CSS transition
+                        const snapWidth = drain.style.width;   // keep current ghost width
+                        drain.style.transition = 'none';
+                        drain.style.width = snapWidth;
+                        // Force reflow then let CSS transition carry it
+                        drain.offsetWidth; // eslint-disable-line no-unused-expressions
+                        drain.style.transition = '';
+                        drain.style.width = widthPct;
+                    }
+                    drain._lastPct = pct;
+                }
+            }
         } else {
             hud.classList.remove('active');
         }

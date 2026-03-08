@@ -88,15 +88,15 @@
 
 ---
 
-## 📈 Current Version: v3.16.4 (March 8, 2026)
+## 📈 Current Version: v3.16.5 (March 8, 2026)
 
 **Latest Major Updates:**
+- 🎨 **Enhanced Boss HP Bar:** Complete visual overhaul with phase-based colors, drain effects, and shimmer animations
+- ✨ **Advanced Visual Effects:** Shimmer sweep animations, ghost drain bar, and phase threshold markers
+- 🎯 **Phase Color System:** Dynamic color changes (green→yellow→orange→red) based on HP percentage
+- 🔄 **HUD Layout:** Reverted to original positioning while maintaining enhanced visual effects
 - 🎨 **UI/UX Improvements:** Enhanced floating text stacking, HUD positioning, and wave banner layout
-- 📊 **HUD Layout Reorganization:** Boss HUD moved below weapon bar, proper z-index layering
-- � **Floating Text System:** Wider cluster detection (40→80px), increased spacing (22→32px), higher stack capacity (5→6)
-- 🌊 **Wave Management:** Reverted to original spawn logic for consistent difficulty progression
 - ⚖️ **Game Balance Rework:** Weapon scaling adjustments, Wanchai Stand nerf, and boss HP rework
-- 🧹 **Repository Cleanup:** Removed duplicate skill files and consolidated documentation in single location
 - 🎮 **UI Integration:** Dynamically injected Garuda skill slot with cooldown visuals for Poom character
 - 🔧 **Clone System Balance:** Reduced cooldowns (60→25s) and tactical manual detonation via E-key
 - 🎨 **Visual Enhancements:** Fire trail effects, cosmic aura rings, and enhanced Phantom Blink visual feedback

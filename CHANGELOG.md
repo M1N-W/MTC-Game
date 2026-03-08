@@ -4,6 +4,61 @@
 
 ---
 
+## v3.16.5 — Enhanced Boss HP Bar: Visual Effects & Phase System
+*Released: March 8, 2026*
+
+### 🎨 Boss HP Bar Complete Overhaul
+- **Phase-Based Color System:** Dynamic color changes based on HP percentage
+  - **Safe (>60%):** Green gradient with subtle glow
+  - **Caution (30-60%):** Yellow gradient with warning glow
+  - **Danger (15-30%):** Orange-red gradient with pulsing animation
+  - **Critical (<15%):** Deep red with fast pulse and intense glow
+- **Visual Feedback:** Smooth transitions between phases with appropriate visual intensity
+
+### ✨ Advanced Visual Effects
+- **Shimmer Animation:** Continuous scanline effect across HP bar
+  - 2.2s linear infinite sweep with white gradient highlight
+  - Creates dynamic, high-tech appearance
+  - Subtle 18% opacity for professional look
+- **Drain Ghost Bar:** Secondary bar that lags behind HP changes
+  - Creates "blood draining" effect when boss takes damage
+  - 1.2s ease-out transition for smooth visual feedback
+  - Only updates when HP actually drops (not when healing)
+
+### 📊 Enhanced Visual Design
+- **Improved Bar Styling:** Increased height from 18→20px with enhanced shadows
+  - Darker background (#0d0005) for better contrast
+  - Enhanced box-shadow with deeper, more professional appearance
+  - Rounded corners refined for modern look
+- **Phase Threshold Markers:** Visual notches at 60%, 30%, and 15% HP
+  - Subtle white markers (22% opacity) indicate phase boundaries
+  - Helps players visually track danger zones
+  - Positioned with CSS pseudo-elements for clean implementation
+
+### 🔧 Technical Implementation
+- **CSS Architecture:** Modular class-based system for phase management
+  - JavaScript dynamically applies phase classes based on HP percentage
+  - CSS handles all visual transitions and animations
+  - Clean separation of concerns between logic and presentation
+- **Performance Optimizations:** Efficient DOM manipulation
+  - Drain element created lazily only when needed
+  - Minimal DOM updates with smart change detection
+  - Hardware-accelerated CSS animations for smooth performance
+
+### 🎮 User Experience Improvements
+- **Intuitive Feedback:** Color-coded phases instantly communicate threat level
+- **Visual Satisfaction:** Smooth animations and effects enhance combat feel
+- **Professional Polish:** High-quality visual effects rival commercial games
+- **Accessibility:** Clear visual indicators work alongside existing HP numbers
+
+### 🔄 HUD Layout Reversion
+- **Boss HUD Position:** Reverted to original top:70px (from 110px)
+- **Weapon Indicator Z-Index:** Restored to z-index:15 (from 12)
+- **Purpose:** Maintain original layout while enhancing visual effects
+- **Impact:** Consistent with established UI hierarchy
+
+---
+
 ## v3.16.4 — UI/UX Improvements: HUD Layout & Text Display
 *Released: March 8, 2026*
 

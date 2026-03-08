@@ -190,8 +190,7 @@ body {
     font-size: 16px;
     font-weight: bold;
     pointer-events: none;
-    z-index: 12;
-    /* ลดจาก 15→12: ต่ำกว่า boss-hud (z:15) ให้ boss name/hp ขึ้นทับได้ */
+    z-index: 15;
     clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
 }
 
@@ -1262,8 +1261,7 @@ body {
 /* Boss HUD */
 #boss-hud {
     position: absolute;
-    top: 110px;
-    /* ขยับจาก 70→110px: หลีก weapon-indicator (top:20 + height~70px = ~90px) */
+    top: 70px;
     left: 50%;
     transform: translateX(-50%);
     width: 60%;
@@ -1273,7 +1271,6 @@ body {
     align-items: center;
     opacity: 0;
     transition: opacity 0.5s;
-    z-index: 15;
 }
 
 #boss-hud.active {
@@ -1302,21 +1299,122 @@ body {
     border-radius: 4px;
 }
 
+/* ── Boss HP Bar container ── */
 .boss-hp-bg {
+    position: relative;
     width: 100%;
-    height: 18px;
-    background: #330000;
+    height: 20px;
+    background: #0d0005;
     border: 2px solid #7f1d1d;
-    border-radius: 4px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    overflow: visible;
 }
 
+/* Drain ghost bar — lags behind real HP, creates "blood draining" feel */
+.boss-hp-drain {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255, 100, 100, 0.30);
+    transition: width 1.2s ease-out;
+    border-radius: 1px;
+    pointer-events: none;
+}
+
+/* Main fill */
 .boss-hp-fill {
+    position: relative;
     height: 100%;
     width: 100%;
-    background: linear-gradient(90deg, #dc2626, #991b1b);
-    transition: width 0.2s ease-out;
-    box-shadow: 0 0 10px #dc2626;
+    background: linear-gradient(90deg, #16a34a, #4ade80);
+    /* phase-safe default */
+    transition: width 0.18s ease-out, background 0.6s ease, box-shadow 0.6s ease;
+    border-radius: 1px;
+    box-shadow: 0 0 12px #16a34a;
+    overflow: hidden;
+}
+
+/* Shimmer sweep — always-on scanline inside fill */
+.boss-hp-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    animation: bossHpShimmer 2.2s linear infinite;
+}
+
+@keyframes bossHpShimmer {
+    0% {
+        left: -60%;
+    }
+
+    100% {
+        left: 120%;
+    }
+}
+
+/* ── Phase color states (set via JS on .boss-hp-fill) ── */
+.boss-hp-fill.phase-safe {
+    /* >60% — green */
+    background: linear-gradient(90deg, #15803d, #4ade80);
+    box-shadow: 0 0 10px #16a34a, 0 0 24px rgba(74, 222, 128, 0.25);
+}
+
+.boss-hp-fill.phase-caution {
+    /* 30–60% — yellow */
+    background: linear-gradient(90deg, #a16207, #facc15);
+    box-shadow: 0 0 10px #ca8a04, 0 0 22px rgba(250, 204, 21, 0.25);
+}
+
+.boss-hp-fill.phase-danger {
+    /* 15–30% — orange-red */
+    background: linear-gradient(90deg, #b91c1c, #f97316);
+    box-shadow: 0 0 14px #ef4444, 0 0 28px rgba(249, 115, 22, 0.35);
+    animation: bossHpPulse 1.0s ease-in-out infinite;
+}
+
+.boss-hp-fill.phase-critical {
+    /* <15% — deep red, fast pulse */
+    background: linear-gradient(90deg, #7f1d1d, #ef4444);
+    box-shadow: 0 0 18px #dc2626, 0 0 40px rgba(220, 38, 38, 0.5);
+    animation: bossHpPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes bossHpPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.72;
+    }
+}
+
+/* Phase threshold notch markers — drawn as ::before pseudo on .boss-hp-bg */
+/* 3 notches: 60%, 30%, 15% from left */
+.boss-hp-bg::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    /* Three thin white marks at 60%, 30%, 15% */
+    background:
+        linear-gradient(#fff, #fff) no-repeat calc(60%) 0 / 2px 100%,
+        linear-gradient(#fff, #fff) no-repeat calc(30%) 0 / 2px 100%,
+        linear-gradient(#fff, #fff) no-repeat calc(15%) 0 / 2px 100%;
+    opacity: 0.22;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 3;
+    border-radius: 2px;
 }
 
 /* ─────────────────────────────────────────────────────────
