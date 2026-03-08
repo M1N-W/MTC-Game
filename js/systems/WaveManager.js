@@ -343,7 +343,7 @@ function _drawBanner(ctx) {
         : _evt.announceTimer > 1.2 ? 1 : _evt.announceTimer / 1.2;
     if (alpha <= 0.01) return;
 
-    const cx = W / 2, cy = 82;
+    const cx = W / 2, cy = 155;   // ขยับจาก 82→155: หลีก weapon-indicator (top:20+~60px) และ boss-hud (top:70+~50px)
     const col = _evt.bannerColor;
     const pulse = 1 + Math.sin(now * 4) * 0.025;
     const bw = 460, bh = 68, sl = 14;
@@ -429,7 +429,7 @@ function _drawBanner(ctx) {
 // ══════════════════════════════════════════════════════════════
 function _startTrickle(count, wave) {
     const isDark = DARK_WAVES.has(wave);
-    const batchSize = Math.max(1, Math.min(4, Math.ceil(count / 7)));  // B5 FIX: cap 3→4 แต่หาร 6→7 (ลด pressure wave สุดท้าย)
+    const batchSize = Math.max(1, Math.min(3, Math.ceil(count / 6)));
     const raw = TRICKLE_INTERVAL_BASE - (wave - 1) * 0.04;
     const interval = isDark
         ? TRICKLE_INTERVAL_DARK
@@ -656,13 +656,9 @@ function spawnEnemies(count) {
         const safe = mapSystem.findSafeSpawn(x, y, BALANCE.enemy.radius);
         x = safe.x; y = safe.y;
         const r = Math.random();
-        // Wave-gated spawn: Mage/Tank ค่อยๆ เพิ่มตาม wave (Wave1=0%, Wave15=100% chance)
-        const waveNorm = Math.min(1, (getWave() - 1) / 14);
-        const effectiveMageChance = BALANCE.waves.mageSpawnChance * waveNorm;
-        const effectiveTankChance = BALANCE.waves.tankSpawnChance * (0.3 + waveNorm * 0.7);
-        if (r < effectiveMageChance)
+        if (r < BALANCE.waves.mageSpawnChance)
             window.enemies.push(new MageEnemy(x, y));
-        else if (r < effectiveMageChance + effectiveTankChance)
+        else if (r < BALANCE.waves.mageSpawnChance + BALANCE.waves.tankSpawnChance)
             window.enemies.push(new TankEnemy(x, y));
         else
             window.enemies.push(new Enemy(x, y));

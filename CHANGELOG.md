@@ -4,6 +4,55 @@
 
 ---
 
+## v3.16.4 — UI/UX Improvements: HUD Layout & Text Display
+*Released: March 8, 2026*
+
+### 🎨 Floating Text System Enhancements
+- **Wider Cluster Detection:** Increased horizontal proximity threshold from 40→80px
+  - **Purpose:** Better detection of overlapping text spawns across larger areas
+  - **Impact:** Floating texts that spawn near each other are properly stacked
+- **Increased Vertical Spacing:** Raised step height from 22→32px between stacked texts
+  - **Purpose:** Prevent text overlap and improve readability
+  - **Impact:** Clear visual separation between damage numbers and notifications
+- **Higher Stack Capacity:** Increased maximum stack from 5→6 texts
+  - **Purpose:** Handle multi-spawn events at wave start with many simultaneous texts
+  - **Impact:** Better text organization during intense combat moments
+
+### 📊 HUD Layout Reorganization
+- **Boss HUD Positioning:** Moved boss name/HP bar from top:70px→110px
+  - **Purpose:** Avoid overlap with weapon indicator bar (ends at ~90px)
+  - **Impact:** Clear visual hierarchy with weapon bar above boss information
+- **Wave Banner Position:** Shifted event banner from cy:82→155
+  - **Purpose:** Position below both weapon indicator (~90px) and boss HUD (~160px)
+  - **Impact:** Wave event notifications no longer overlap critical UI elements
+- **Z-Index Layering:** Proper layer ordering for UI elements
+  - **Boss HUD:** Set to z-index:15 (highest priority)
+  - **Weapon Indicator:** Reduced to z-index:12 (below boss HUD)
+  - **Purpose:** Boss name and HP display correctly overlaps weapon bar when needed
+
+### 🌊 Wave Management Revisions
+- **Spawn Logic Simplification:** Reverted to original spawn chance calculations
+  - **Removed:** Wave-gated progressive scaling for Mage/Tank spawns
+  - **Purpose:** Restore original difficulty progression and balance
+  - **Impact:** Consistent enemy distribution across all waves as originally designed
+- **Trickle Spawning:** Reverted batch size to original calculations
+  - **Purpose:** Maintain intended wave pressure and pacing
+  - **Impact:** Original spawn timing and enemy flow restored
+
+### 🎯 User Experience Benefits
+- **Visual Clarity:** No more overlapping UI elements during combat
+- **Readable Text:** Damage numbers and notifications clearly visible
+- **Consistent Layout:** Predictable UI positioning across all game states
+- **Reduced Visual Noise:** Better organization of on-screen information
+
+### 🔧 Technical Improvements
+- **CSS Layer Management:** Proper z-index hierarchy for UI elements
+- **Text Stack Algorithm:** Enhanced floating text collision detection
+- **Position Calculations:** Precise UI positioning to prevent overlaps
+- **Code Documentation:** Added explanatory comments for UI positioning logic
+
+---
+
 ## v3.16.3 — Game Balance Rework: Weapon Scaling & Boss Adjustments
 *Released: March 8, 2026*
 

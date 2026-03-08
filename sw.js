@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.16.3'; // v3.16.3: Game balance adjustments - weapon scaling, Wanchai Stand nerf, boss HP rework
+const CACHE_NAME = 'mtc-cache-v3.16.4'; // v3.16.4: UI/UX improvements - floating text stacking, HUD positioning, wave banner layout
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

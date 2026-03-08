@@ -734,9 +734,9 @@ class FloatingTextSystem {
         // Count live texts within CLUSTER_R world-units horizontally.
         // Each one pushes the new text up by STEP_Y world-units.
         // Cap at MAX_STACK to avoid texts flying off screen.
-        const CLUSTER_R = 40;   // world px horizontal proximity threshold
-        const STEP_Y = 22;   // world px per stacked text
-        const MAX_STACK = 5;
+        const CLUSTER_R = 80;   // world px horizontal proximity threshold (40→80: จับ text ที่ spawn ใกล้กันได้กว้างขึ้น)
+        const STEP_Y = 32;   // world px per stacked text (22→32: ระยะห่างมากพอให้ text ไม่ทับกัน)
+        const MAX_STACK = 6;   // 5→6: รองรับ multi-spawn wave start
 
         let stack = 0;
         for (let i = 0, len = this.texts.length; i < len; i++) {

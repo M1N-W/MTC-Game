@@ -190,7 +190,8 @@ body {
     font-size: 16px;
     font-weight: bold;
     pointer-events: none;
-    z-index: 15;
+    z-index: 12;
+    /* ลดจาก 15→12: ต่ำกว่า boss-hud (z:15) ให้ boss name/hp ขึ้นทับได้ */
     clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
 }
 
@@ -1261,7 +1262,8 @@ body {
 /* Boss HUD */
 #boss-hud {
     position: absolute;
-    top: 70px;
+    top: 110px;
+    /* ขยับจาก 70→110px: หลีก weapon-indicator (top:20 + height~70px = ~90px) */
     left: 50%;
     transform: translateX(-50%);
     width: 60%;
@@ -1271,6 +1273,7 @@ body {
     align-items: center;
     opacity: 0;
     transition: opacity 0.5s;
+    z-index: 15;
 }
 
 #boss-hud.active {

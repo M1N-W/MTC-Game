@@ -88,16 +88,15 @@
 
 ---
 
-## 📈 Current Version: v3.16.3 (March 8, 2026)
+## 📈 Current Version: v3.16.4 (March 8, 2026)
 
 **Latest Major Updates:**
+- 🎨 **UI/UX Improvements:** Enhanced floating text stacking, HUD positioning, and wave banner layout
+- 📊 **HUD Layout Reorganization:** Boss HUD moved below weapon bar, proper z-index layering
+- � **Floating Text System:** Wider cluster detection (40→80px), increased spacing (22→32px), higher stack capacity (5→6)
+- 🌊 **Wave Management:** Reverted to original spawn logic for consistent difficulty progression
 - ⚖️ **Game Balance Rework:** Weapon scaling adjustments, Wanchai Stand nerf, and boss HP rework
-- � **Weapon Balance:** Auto Rifle buff (22→26 dmg), Shotgun nerf (30→28 dmg, 0.50→0.55 cd)
-- 🔥 **Auto Character:** Wanchai Stand damage reduction (38→30) and attack speed nerf (11.1→10.0 punches/s)
-- 👑 **Boss Scaling:** KruFirst HP rework for more consistent difficulty progression
-- 🌊 **Wave Management:** Enhanced spawn logic documentation and balance improvements
 - 🧹 **Repository Cleanup:** Removed duplicate skill files and consolidated documentation in single location
-- 🐛 **Critical Bug Fixes:** Fixed boss kill scoring double-count, meteor spawn rate 60× bug, and wave spawn balance
 - 🎮 **UI Integration:** Dynamically injected Garuda skill slot with cooldown visuals for Poom character
 - 🔧 **Clone System Balance:** Reduced cooldowns (60→25s) and tactical manual detonation via E-key
 - 🎨 **Visual Enhancements:** Fire trail effects, cosmic aura rings, and enhanced Phantom Blink visual feedback
