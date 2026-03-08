@@ -32,7 +32,33 @@
 
 ---
 
-## v3.16.7 — AdminSystem Permission Overhaul & Debug Commands
+## v3.16.9 — Documentation Updates & PROJECT_OVERVIEW.md Enhancement
+*Released: March 8, 2026*
+
+### 📚 Comprehensive Documentation Updates
+- **PROJECT_OVERVIEW.md:** Updated 5 key sections to reflect dev buff system implementation
+- **secrets.js Clarification:** Corrected description to CONFIG_SECRETS (GEMINI_API_KEY) with note that no cheat codes exist
+- **AdminSystem.js Details:** Added comprehensive command documentation including permission system and new commands
+- **PlayerBase.js Documentation:** Added applyDevBuff() method details with flag protection
+- **Dev Mode Architecture:** Updated passive unlock documentation to reflect new applyDevBuff() approach
+- **Power-ups Section:** Enhanced with complete dev buff stat package documentation
+
+### 🔧 Technical Documentation Improvements
+- **Command Reference:** Detailed spawn commands (manop [1|2|3], spawn first [advanced], devbuff)
+- **Permission System:** GUEST/OPERATOR/ROOT tier documentation
+- **Stat Package Details:** Complete breakdown of dev buff effects (HP+50%, EN+50%, DMG×1.25, SPD×1.20, CDR×0.60, Crit+8%)
+- **Architecture Changes:** Clear explanation of passive unlock system changes
+- **Method Signatures:** Proper documentation for applyDevBuff() with inheritance details
+
+### 🎯 Developer Experience
+- **Clearer Architecture:** Better understanding of dev mode vs normal progression
+- **Command Reference:** Complete admin console command documentation
+- **Implementation Details:** Technical specifications for future development
+- **Service Worker:** Updated to v3.16.9 for cache invalidation
+
+---
+
+## v3.16.8 — Universal Dev Buff System
 *Released: March 8, 2026*
 
 ### 🔐 Complete Permission System Redesign

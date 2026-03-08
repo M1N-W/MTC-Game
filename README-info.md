@@ -88,9 +88,12 @@
 
 ---
 
-## 📈 Current Version: v3.16.8 (March 8, 2026)
+## 📈 Current Version: v3.16.9 (March 8, 2026)
 
 **Latest Major Updates:**
+- 📚 **Documentation Enhancement:** Comprehensive PROJECT_OVERVIEW.md updates with dev buff system documentation
+- 🔧 **Technical Reference:** Complete command documentation (spawn manop [1|2|3], spawn first [advanced], devbuff)
+- 🎯 **Architecture Clarity:** Updated passive unlock system documentation and dev mode implementation details
 - 🚀 **Universal Dev Buff System:** Character-agnostic stat enhancement package (HP +50%, Energy +50%, Damage ×1.25, Speed ×1.20, CDR ×0.60, Crit +8%) available to all characters via admin console
 - 💻 **Enhanced Admin Commands:** New `devbuff` command with detailed console output and visual feedback, replacing Kao-specific passive unlock system
 - 🎮 **Universal Character Support:** Dev buff system works for Kao, Auto, Poom, and all future characters through base class inheritance

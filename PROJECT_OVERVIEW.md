@@ -87,7 +87,7 @@
 - **`menu.js`** - เมนูหลัก, character selection
 - **`tutorial.js`** - ระบบ tutorial
 - **`ai.js`** - AI logic สำหรับศัตรู
-- **`secrets.js`** - ระบบลับ, cheat codes
+- **`secrets.js`** - CONFIG_SECRETS (เช่น GEMINI_API_KEY) — ไม่มีระบบ cheat codes
 
 #### 📁 `/js/systems/` - Game Management Systems
 - **`GameState.js`** - State management หลักของเกม
@@ -95,6 +95,10 @@
 - **`TimeManager.js`** - จัดการเวลาในเกม, bullet time
 - **`ShopSystem.js`** - ระบบร้านค้า, upgrades
 - **`AdminSystem.js`** - Admin console, debug commands
+  - Permission system: GUEST / OPERATOR / ROOT
+  - `spawn manop [1|2|3]` — Kru Manop phase 1/2/3
+  - `spawn first [advanced]` — Kru First normal/advanced
+  - `devbuff` — inject dev stat package ให้ player ปัจจุบัน
 
 #### 📁 `/js/entities/` - Game Entities
 - **`base.js`** - Base entity class ทุก entity สืบทอดจากนี้
@@ -105,6 +109,7 @@
 
 ##### 📁 `/js/entities/player/` - Player Characters
 - **`PlayerBase.js`** - Base class สำหรับ player ทุกตัว
+  - `applyDevBuff()` — Dev Mode stat buff (ทุกตัวละครสืบทอดได้, flag `_devBuffApplied` ป้องกันซ้ำ)
 - **`Kaoplayer.js`** - ตัวละคร "เก้า" (Assassin class)
 - **`PoomPlayer.js`** - ตัวละคร "ภูมิ" (Spiritual Warrior)
 - **`AutoPlayer.js`** - ตัวละคร "ออโต้" (Pyromaniac)
@@ -1113,6 +1118,7 @@ spawn(text, x, y, color, size = 20) {
 - **Passive behaviour flags** ใน constructor ทุกตัวละคร — override ใน subclass แทน `instanceof` checks:
   - `this.passiveSpeedBonus = N` — speed mult ที่ได้หลัง passive unlock (0 = ไม่มี)
   - `this.usesOwnLifesteal = bool` — `true` = subclass จัดการ lifesteal เอง ไม่ใช้ base
+- **Dev Mode ไม่ unlock passive อีกต่อไป** — `startGame()` เรียก `player.applyDevBuff()` แทน (ทุกตัวละคร) passive ต้องปลดเองในเกมตามปกติเท่านั้น
 
 #### 🎮 Skill Lock Input Routing (Poom-specific):
 - **`eatRice` (R-Click)**: route จาก **`game.js`** — lock check อยู่ใน game.js Poom block
@@ -1166,6 +1172,7 @@ MAP_CONFIG = { objects: { desk, tree } }
 - `/js/effects.js` - เพิ่ม power-up visual effects, glow effects
 - `/js/audio.js` - เพิ่ม power-up pickup sounds
 - `/js/entities/player/PlayerBase.js` - เพิ่ม power-up application logic
+  - **`applyDevBuff()`** — Dev Mode stat package (HP+50%, EN+50%, DMG×1.25, SPD×1.20, CDR×0.60, Crit+8%, cooldowns reset)
 
 **ไฟล์ที่อาจกระทบ:**
 - `/js/systems/WaveManager.js` - ถ้าต้องการ power-up spawn logic
