@@ -4,6 +4,42 @@
 
 ---
 
+## v3.12.13 — Input Routing Migration & Basic Skill Unlock
+*Released: March 8, 2026*
+
+### 🎮 Gameplay Changes
+- **Unlocked Basic Skills:** Poom and Auto basic skills now available from game start
+  - **Poom:** eatRice (R-Click) and shoot (L-Click) available immediately
+  - **Auto:** Wanchai Stand (R-Click) available immediately
+  - **Passive bonuses still require unlock:** Lifesteal, crit bonuses, heat gain still gated by passive
+
+### 🔄 Input Routing Refactor
+- **PoomPlayer Migration:** All input handling moved from game.js to PoomPlayer.update()
+  - **L-Click shooting:** Now handled directly in PoomPlayer.shoot()
+  - **R-Click eatRice:** Now handled directly in PoomPlayer.update()
+  - **Eliminated duplicate routing:** Single source of truth for all Poom inputs
+- **game.js Cleanup:** Removed Poom-specific input blocks and shootPoom() function
+- **Shooting Logic Update:** Poom removed from main shooting routing (handled internally)
+
+### 🔧 Technical Improvements
+- **PoomPlayer.shoot() Rewrite:** Complete implementation with all logic from shootPoom()
+  - **Attack speed multiplier:** Proper eating rice slowdown (0.7x)
+  - **Crit handling:** GAME_TEXTS.combat.poomCrit with particle effects
+  - **Audio integration:** Direct Audio.playPoomShoot() call
+- **AutoPlayer Energy Fix:** Corrected energyCost fallback from 32→25 to match config
+- **Better Energy Feedback:** Added "พลังงานไม่พอ!" message for insufficient energy
+
+### 📚 Code Quality
+- **Eliminated Code Duplication:** Removed shootPoom() function from game.js
+- **Centralized Input Logic:** All character inputs handled within their respective classes
+- **Cleaner Architecture:** game.js now focuses on game loop, not character-specific routing
+
+### 🎨 UI/UX Improvements
+- **Consistent Energy Feedback:** Auto shows energy shortage message when trying Wanchai
+- **Better Skill Flow:** Basic abilities available immediately, advanced bonuses still gated
+
+---
+
 ## v3.12.12 — Critical Architecture Fixes & Passive Unlock Improvements
 *Released: March 8, 2026*
 

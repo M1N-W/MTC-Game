@@ -176,6 +176,21 @@ class PoomPlayer extends Player {
                 consumeInput('space'); // consume silently — dash blocked by Grounded
             }
         }
+        // ── L-Click: ยิงข้าว — routing ย้ายมาจาก game.js ──────────────────
+        if (mouse && mouse.left === 1 && GameState.phase === 'PLAYING') {
+            this.shoot();
+        }
+
+        // ── R-Click: กินเข่านึ่ง — routing ย้ายมาจาก game.js ─────────────
+        // ใช้ได้ตั้งแต่ต้นเกม (ไม่บล็อคด้วย passiveUnlocked)
+        // Passive bonuses (crit, lifesteal, CosmicBalance) ยังคงต้องปลดล็อคตามปกติ
+        if (mouse && mouse.right === 1) {
+            if (this.cooldowns.eat <= 0 && !this.isEatingRice) {
+                this.eatRice();
+            }
+            mouse.right = 0;
+        }
+
         // ── Skill Lock: ทุกสกิลล็อคจนกว่าจะปลดล็อคพาสซีฟ (Lv4) ──────────
         if (checkInput('e')) {
             if (this.passiveUnlocked && this.cooldowns.garuda <= 0) {
@@ -239,24 +254,29 @@ class PoomPlayer extends Player {
     }
 
     shoot() {
+        // ── ย้ายมาจาก shootPoom() ใน game.js — single source of truth ──
         const S = this.stats;
         if (this.cooldowns.shoot > 0) return;
-        this.cooldowns.shoot = S.riceCooldown * this.cooldownMultiplier;
+        const attackSpeedMult = this.isEatingRice ? 0.7 : 1.0;
+        this.cooldowns.shoot = S.riceCooldown * attackSpeedMult * this.cooldownMultiplier;
         const { damage, isCrit } = this.dealDamage(S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0));
+
         const proj = new Projectile(this.x, this.y, this.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
         proj.isPoom = true;
         proj.isCrit = isCrit;
         // Apply sticky stack on direct hit (Fragment projectiles bypass this)
         const self = this;
         proj.onHit = function (enemy) {
-            self.applyStickyTo(enemy);
+            self.applyStickyTo(enemy); // ── Apply sticky via StatusEffect framework ──
         };
         projectileManager.add(proj);
-        if (isCrit) spawnFloatingText('สาดข้าว!', this.x, this.y - 40, '#fbbf24', 18);
+
+        if (isCrit) {
+            spawnFloatingText(GAME_TEXTS?.combat?.poomCrit ?? 'สาดข้าว!', this.x, this.y - 45, '#fbbf24', 20);
+            spawnParticles(this.x, this.y, 5, '#ffffff');
+        }
         this.speedBoostTimer = S.speedOnHitDuration;
-        // NOTE: Audio.playPoomShoot() is called in shootPoom() (game.js) — the
-        // actual execution path.  This method returns early because shootPoom()
-        // consumes the cooldown first.  Audio lives in game.js to avoid double-fire.
+        if (typeof Audio !== 'undefined' && Audio.playPoomShoot) Audio.playPoomShoot();
     }
 
     eatRice() {

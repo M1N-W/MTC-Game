@@ -248,13 +248,13 @@ function updateGame(dt) {
             if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
         }
 
-        // Route shooting: Kao and Poom use their own shoot(); Auto uses WeaponSystem
+        // Route shooting: Kao uses its own shoot(); Auto and Poom handle shooting internally
         const isPoom = typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer;
-        if (isKao || isPoom) {
+        if (isKao) {
             if (mouse.left === 1 && GameState.phase === 'PLAYING') {
                 window.player.shoot(dt);
             }
-        } else if (mouse.left === 1 && GameState.phase === 'PLAYING') {
+        } else if (!isPoom && mouse.left === 1 && GameState.phase === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
                 if (projectiles && projectiles.length > 0) {
@@ -265,18 +265,8 @@ function updateGame(dt) {
         }
     }
 
-    if (window.player instanceof PoomPlayer) {
-        if (mouse.left === 1 && GameState.phase === 'PLAYING') shootPoom(window.player);
-        if (mouse.right === 1) {
-            if (window.player.passiveUnlocked) {
-                if (window.player.cooldowns.eat <= 0 && !window.player.isEatingRice) window.player.eatRice();
-            } else {
-                spawnFloatingText(`🔒 ปลดล็อคที่ Lv${window.player.stats.passiveUnlockLevel ?? 4}`, window.player.x, window.player.y - 40, '#94a3b8', 14);
-            }
-            mouse.right = 0;
-        }
-        // Q (Naga) handled entirely inside PoomPlayer.update() — no duplicate routing here
-    }
+    // 🌾 NOTE: PoomPlayer input routing (L-Click shoot, R-Click eatRice) is
+    // handled entirely inside PoomPlayer.update() — no duplicate routing here.
     if (window.player) UIManager.updateSkillIcons(window.player);
 
     if (window.drone && window.player && !window.player.dead) window.drone.update(dt, window.player);
@@ -749,34 +739,6 @@ function drawGrid() {
     CTX.strokeStyle = GAME_CONFIG.visual.gridColor;
     CTX.lineWidth = 1;
     CTX.stroke(_gridPath);
-}
-
-// ══════════════════════════════════════════════════════════════
-// 🍚 POOM ATTACK SYSTEM
-// ══════════════════════════════════════════════════════════════
-
-function shootPoom(player) {
-    const S = BALANCE.characters.poom;
-    if (player.cooldowns.shoot > 0) return;
-    const attackSpeedMult = player.isEatingRice ? 0.7 : 1.0;
-    player.cooldowns.shoot = S.riceCooldown * attackSpeedMult;
-    const { damage, isCrit } = player.dealDamage(S.riceDamage * player.damageBoost);
-
-    // ── Session C/D: Create projectile and set onHit callback ──
-    const proj = new Projectile(player.x, player.y, player.angle, S.riceSpeed, damage, S.riceColor, false, 'player');
-    proj.isPoom = true;
-    proj.isCrit = isCrit;
-    proj.onHit = function (enemy) {
-        player.applyStickyTo(enemy); // ── Apply sticky via StatusEffect framework ──
-    };
-    projectileManager.add(proj);
-
-    if (isCrit) {
-        spawnFloatingText(GAME_TEXTS.combat.poomCrit, player.x, player.y - 45, '#fbbf24', 20);
-        spawnParticles(player.x, player.y, 5, '#ffffff');
-    }
-    player.speedBoostTimer = S.speedOnHitDuration;
-    if (typeof Audio !== 'undefined' && Audio.playPoomShoot) Audio.playPoomShoot();
 }
 
 // ══════════════════════════════════════════════════════════════
