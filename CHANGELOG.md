@@ -4,6 +4,33 @@
 
 ---
 
+## v3.13.2 — UI Clarity: Better Unlock Condition Communication
+*Released: March 8, 2026*
+
+### 🎨 UI/UX Improvements
+- **Clearer Unlock Messages:** Updated skill lock feedback to show actual requirements
+  - **Auto Q & E:** Changed from "ปลดล็อคที่ Lv5" to "🔒 ทำ Heat เต็ม 100 ก่อน!"
+  - **Better player guidance:** Players now know exactly what to do to unlock skills
+
+### 🔧 Technical Improvements
+- **Poom Skill Lock Overlays:** Fixed UI to match actual unlock progression
+  - **Q (Naga):** Unlocks at Lv2 → reads from `_nagaUnlocked` flag
+  - **R (Ritual):** Unlocks with Naga → reads from `_nagaUnlocked` flag  
+  - **E (Garuda):** Still requires passive unlock (after first Ritual)
+- **Consistent Visual Feedback:** Lock overlays now accurately reflect skill availability
+
+### 📚 Code Quality
+- **Better Comments:** Added detailed explanations for each skill's unlock condition
+- **Cleaner Code Formatting:** Improved comment structure and readability
+- **Accurate State Tracking:** UI now reads correct internal flags for skill states
+
+### 🎮 Player Experience
+- **Reduced Confusion:** Players no longer see misleading level requirements
+- **Clear Progression Path:** Visual feedback matches actual unlock flow
+- **Better Tutorial Flow:** UI guides players through the intended skill progression
+
+---
+
 ## v3.13.1 — Gameplay Fix: Restored Basic Skills Availability
 *Released: March 8, 2026*
 

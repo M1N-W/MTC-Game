@@ -885,10 +885,14 @@ class UIManager {
             const passive = player.passiveUnlocked;
 
             // ── Lock overlays ──────────────────────────────────────────────────
-            // eat-icon (R-Click) ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
+            // eat-icon  (R-Click) : ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
+            // naga-icon (Q)       : ปลดที่ Lv2  → อ่านจาก _nagaUnlocked
+            // ritual-icon (R)     : ปลดพร้อม Naga → อ่านจาก _nagaUnlocked
+            // garuda-icon (E)     : ปลดหลัง passive (ทำ Ritual ครั้งแรก)
+            const nagaReady = !!(player._nagaUnlocked);
             setLockOverlay(document.getElementById('eat-icon'), false);
-            setLockOverlay(document.getElementById('naga-icon'), !passive);
-            setLockOverlay(document.getElementById('ritual-icon'), !passive);
+            setLockOverlay(document.getElementById('naga-icon'), !nagaReady);
+            setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
             setLockOverlay(document.getElementById('garuda-icon'), !passive);
 
             // ── Eat Rice ─────────────────────────────────────────────
