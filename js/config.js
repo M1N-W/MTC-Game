@@ -436,6 +436,10 @@ const BALANCE = {
                 rocket: { baseDmg: 28, advMult: 1.3, baseSpeed: 480 },
                 berserk: { projDamage: 22, advMult: 1.3, projSpeed: 540, fireCd: 2.2 },
                 dodge: { radius: 130, impulse: 420, cd: 1.2 }
+            },
+            domainExpansion: {
+                dangerPct: 0.62,
+                dangerPctMax: 0.84
             }
         },
         powerups: {

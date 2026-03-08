@@ -4,6 +4,22 @@
 
 ---
 
+## v3.12.9 — Critical Bug Fix: Missing Configuration
+*Released: March 8, 2026*
+
+### 🐛 Bug Fixes
+- **Fixed TypeError in boss_attacks.js:1168:** Added missing `BALANCE.boss.domainExpansion` configuration
+  - Error: `Cannot read properties of undefined (reading 'domainExpansion')`
+  - Added `domainExpansion: { dangerPct: 0.62, dangerPctMax: 0.84 }` to `BALANCE.boss` in config.js
+  - Domain Expansion system now properly initializes with default values
+
+### 🔧 Technical Details
+- **Root Cause:** boss_attacks.js referenced `BALANCE.boss.domainExpansion` which was not defined in config.js
+- **Solution:** Added domainExpansion configuration object with required properties
+- **Impact:** Prevents game initialization crash when Domain Expansion system loads
+
+---
+
 ## v3.12.8 — Tutorial Texts Enhancement
 *Released: March 8, 2026*
 
