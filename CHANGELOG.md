@@ -6,6 +6,31 @@
 
 ---
 
+## v3.12.2 — Bug Fixes & Stability Improvements
+*Released: March 8, 2026*
+
+### 🐛 Critical Bug Fixes
+- **Kao Config Reference:** Fixed `S.phantomBlinkDmgMult` undefined error by using correct `S_fw` reference
+- **Garuda Owner Null Guards:** Added null checks in ORBIT and RETURN states to prevent crashes when owner is undefined
+- **Debug Logging:** Added console.log for Garuda spawn debugging to track specialEffects array length
+
+### 🔧 Technical Improvements
+- **Error Prevention:** Proper null checking prevents runtime errors during entity lifecycle transitions
+- **Debug Support:** Enhanced logging for troubleshooting Garuda summon system
+- **Code Stability:** Improved robustness of entity state management
+
+### 🛡️ Safety Enhancements
+- **Owner Validation:** Guards against undefined owner references in all Garuda states
+- **Config Access:** Fixed variable scope issue in Kao's Phantom Blink damage calculation
+- **Runtime Safety:** Prevents crashes during edge cases in entity updates
+
+**Files Changed:**
+- `js/entities/player/Kaoplayer.js` (config reference fix)
+- `js/entities/summons.js` (owner null guards + debug logging)
+- `sw.js` (cache version update)
+
+---
+
 ## v3.12.1 — Kao Phantom Blink Rework & Poom Garuda Summon System
 *Released: March 8, 2026*
 

@@ -477,7 +477,7 @@ class KaoPlayer extends Player {
             color = '#facc15';
             // ── Phantom Blink ambush multiplier ────────────────────────────
             if (this._blinkAmbushTimer > 0) {
-                dmgMult *= (S.phantomBlinkDmgMult ?? 2.5);
+                dmgMult *= (S_fw.phantomBlinkDmgMult ?? 2.5);
                 this._blinkAmbushTimer = 0;  // consume window
                 if (typeof spawnFloatingText !== 'undefined')
                     spawnFloatingText('\uD83D\uDC7B BLINK STRIKE!', this.x, this.y - 60, '#c4b5fd', 22);

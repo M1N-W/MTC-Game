@@ -785,6 +785,7 @@ class GarudaEntity extends Entity {
         this.diveCooldown = 0.5;
         this.diveTarget = null;
         this._trail = [];   // [{x,y,life,maxLife}]
+        console.log('[Garuda] spawned at', px.toFixed(0), py.toFixed(0), '— specialEffects len:', window.specialEffects?.length);
     }
 
     _findNearest() {
@@ -824,6 +825,7 @@ class GarudaEntity extends Entity {
         }
 
         if (this.state === _GS.ORBIT) {
+            if (!owner) { this.active = false; return true; }   // owner null guard
             this.orbitAngle += S.garudaOrbitSpeed * dt;
             this.x = owner.x + Math.cos(this.orbitAngle) * orbitR;
             this.y = owner.y + Math.sin(this.orbitAngle) * orbitR;
@@ -875,6 +877,7 @@ class GarudaEntity extends Entity {
             }
 
         } else {    // RETURN
+            if (!owner) { this.active = false; return true; }   // owner null guard
             const tx = owner.x + Math.cos(this.orbitAngle) * orbitR;
             const ty = owner.y + Math.sin(this.orbitAngle) * orbitR;
             const dx = tx - this.x, dy = ty - this.y;
