@@ -25,6 +25,9 @@ class PoomPlayer extends Player {
         this.nagaCount = 0;
         this.naga = null;
         this._nagaShieldLeft = 0;   // shield pool (HP) ที่ Naga absorb แทนได้
+        this.garuda = null;
+        this._cosmicBalance = false;
+        this.cooldowns.garuda = 0;
 
         // ── Session C: Legacy sticky system removed - using StatusEffect framework ──
         this.ritualPoints = 0;
@@ -135,6 +138,7 @@ class PoomPlayer extends Player {
         if (this.cooldowns.naga > 0) this.cooldowns.naga -= dt;
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
         if (this.cooldowns.ritual > 0) this.cooldowns.ritual -= dt; // ── Phase 3 Session 2 ──
+        if (this.cooldowns.garuda > 0) this.cooldowns.garuda -= dt;
         if ((this.graphBuffTimer ?? 0) > 0) this.graphBuffTimer = Math.max(0, this.graphBuffTimer - dt);
         // ── Session C: updateStickyStacks removed - enemies manage their own status expiration ──
 
@@ -168,7 +172,10 @@ class PoomPlayer extends Player {
                 consumeInput('space'); // consume silently — dash blocked by Grounded
             }
         }
-        if (keys.e && this.cooldowns.eat <= 0 && !this.isEatingRice) { consumeInput('e'); } // E reserved — eat via R-Click only
+        if (checkInput('e') && this.cooldowns.garuda <= 0) {
+            this.summonGaruda();
+            consumeInput('e');
+        }
         // ── Updated Controls: R = Ritual Burst, Q = Naga Summon ──
         if (checkInput('r') && this.cooldowns.ritual <= 0) {
             this.ritualBurst();
@@ -181,8 +188,15 @@ class PoomPlayer extends Player {
 
         this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
 
-        if (this.naga && this.naga.dead) {
-            this.naga = null;
+        if (this.naga && this.naga.dead) this.naga = null;
+        if (this.garuda && this.garuda.dead) this.garuda = null;
+
+        // ── Cosmic Balance toggle (O(1) per frame) ────────────────
+        const wasCosmicBalance = this._cosmicBalance;
+        this._cosmicBalance = !!(this.naga?.active && this.garuda?.active);
+        if (this._cosmicBalance && !wasCosmicBalance) {
+            spawnFloatingText('⚖️ COSMIC BALANCE!', this.x, this.y - 70, '#fbbf24', 22);
+            addScreenShake(6);
         }
 
         if (window.touchJoystickRight && window.touchJoystickRight.active) {
@@ -253,6 +267,17 @@ class PoomPlayer extends Player {
         addScreenShake(10); Audio.playAchievement();
         this.nagaCount++;
         if (this.nagaCount >= 3) Achievements.check('naga_summoner');
+    }
+
+    summonGaruda() {
+        const S = this.stats;
+        this.cooldowns.garuda = S.garudaCooldown * this.cooldownMultiplier;
+        this.garuda = new GarudaEntity(this.x, this.y, this);
+        window.specialEffects.push(this.garuda);
+        spawnParticles(this.x, this.y, 35, '#f97316');
+        spawnFloatingText('อัญเชิญครุฑ!', this.x, this.y - 60, '#f97316', 24);
+        if (typeof UIManager !== 'undefined') UIManager.showVoiceBubble('ครุฑจงปกป้อง!', this.x, this.y - 40);
+        addScreenShake(8); Audio.playAchievement();
     }
 
     // ════════════════════════════════════════════════════════════
@@ -452,6 +477,7 @@ class PoomPlayer extends Player {
         }
         // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ─────
         if ((this.graphBuffTimer ?? 0) > 0) damage *= 1.5;
+        if (this._cosmicBalance) damage *= (BALANCE.characters.poom.cosmicDamageMult || 1.20);
         // ── Passive Lifesteal ──
         if (this.passiveUnlocked) {
             const healAmount = damage * (S.passiveLifesteal ?? 0.015);  // BUG-3 fix: was S.passiveLifesteal (undefined → NaN)
@@ -539,6 +565,8 @@ class PoomPlayer extends Player {
             const maxRcd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
             UIManager._setCooldownVisual('ritual-icon',
                 Math.max(0, this.cooldowns.ritual), maxRcd);
+            UIManager._setCooldownVisual('garuda-icon',
+                Math.max(0, this.cooldowns.garuda), S.garudaCooldown);
         }
 
         const levelEl = document.getElementById('player-level');

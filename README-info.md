@@ -84,21 +84,28 @@
 - [x] Domain Expansion Ultimate Abilities
 - [x] Military HUD Theme Implementation
 - [x] Tutorial Enhancements
-- [ ] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
+- [x] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
 
 ---
 
-## 📈 Current Version: v3.12.0 (March 8, 2026)
+## 📈 Current Version: v3.12.1 (March 8, 2026)
 
 **Latest Major Updates:**
-- 🔥 **Heat Gauge System:** Complete 4-tier heat system (COLD→WARM→HOT→OVERHEAT) with damage multipliers, punch rate increases, and OVERHEAT crit bonus
-- 💥 **Detonation Rework:** Non-lethal detonation with heat scaling damage (80 + heat × 2.5) and momentum preservation (heat -50 instead of 0)
-- 🌀 **Vacuum Heat Enhancement:** Added 18 instant damage + burning effect (12 DPS for 1.5s) + 25 heat reward on successful pulls
-- 🥊 **Wanchai Stand Spirit of Muay Thai:** Complete visual overhaul with ice-blue/white spectral design, Muay Thai guard stance, and cultural Mongkhon elements
+- 🥊 **Kao Phantom Blink Rework:** Dash-triggered stealth, shadow clone teleport, ambush crit windows, and proximity burst system
+- 🦅 **Poom Garuda Summon:** Complete fire-themed bird entity with ORBIT→DIVE→RETURN FSM and autonomous combat behavior
+- ⚖️ **Cosmic Balance System:** Dual summon synergy with +20% damage, enhanced burn effects, and visual aura feedback
+- 🎮 **UI Integration:** Dynamically injected Garuda skill slot with cooldown visuals for Poom character
+- � **Clone System Balance:** Reduced cooldowns (60→25s) and tactical manual detonation via E-key
+- 🎨 **Visual Enhancements:** Fire trail effects, cosmic aura rings, and enhanced Phantom Blink visual feedback
+- 📊 **Technical Improvements:** O(1) state management, proper entity cleanup, and memory-optimized trail systems
+- �🔥 **Heat Gauge System:** Complete 4-tier heat system (COLD→WARM→HOT→OVERHEAT) with damage multipliers and OVERHEAT mechanics
+- 💥 **Detonation Rework:** Non-lethal detonation with heat scaling damage and momentum preservation
+- 🌀 **Vacuum Heat Enhancement:** Added instant damage + burning effect + heat reward on successful pulls
+- 🥊 **Wanchai Stand Spirit of Muay Thai:** Complete visual overhaul with ice-blue/white spectral design and cultural elements
 - 🎮 **Heat Gauge HUD:** Reuses energy bar slot with tier-specific colors and floating badge display
 - 🔧 **Combat Synergy:** Enhanced Vacuum Heat → Wanchai attacks → Detonation combo system with risk/reward mechanics
-- 🎨 **Heat-Reactive Visuals:** Dynamic color changes COLD→WARM→HOT→OVERHEAT (blue→cyan→amber→orange) with tier-specific effects
-- 🔥 **OVERHEAT Mechanics:** Massive damage potential with 3 HP/sec drain and +20% crit bonus for high-risk gameplay
+- 🎨 **Heat-Reactive Visuals:** Dynamic color changes COLD→WARM→HOT→OVERHEAT with tier-specific effects
+- 🔥 **OVERHEAT Mechanics:** Massive damage potential with HP drain and crit bonus for high-risk gameplay
 - 📊 **Balance Integration:** Heat tiers provide meaningful progression without breaking game balance
 - 🎯 **Visual Distinction:** Complete separation from Auto's red theme with authentic Thai boxing aesthetics
 - 🔧 **Floating Text Overlap Fix:** Fixed damage, healing, and buff notification texts overlapping when spawned at same position

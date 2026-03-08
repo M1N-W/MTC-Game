@@ -109,10 +109,17 @@ class KaoPlayer extends Player {
         this.shootCooldown = 0;
 
         // ── Audio edge-trigger flag: play stealth sound only on first frame ──
-        // Without this, Audio.playStealth() would fire 60 times/sec while
-        // isFreeStealthy is true.  _wasFreeStealthy tracks last-frame state so
-        // the sound only triggers on the rising edge (false → true).
         this._wasFreeStealthy = false;
+
+        // ── Phantom Blink state ──────────────────────────────────────────────
+        this._phantomBlinkActive = false;   // Q pressed during stealth
+        this._blinkAmbushTimer = 0;        // crit window after blink
+
+        // ── Clone proximity burst tracking ──────────────────────────────────
+        this._cloneProxTimers = [];  // [{clone, timer}] detonation countdown
+
+        // ── Dash-stealth (replaces random auto-stealth) ─────────────────────
+        this._dashWasActive = false; // edge-detect dash start
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -157,18 +164,18 @@ class KaoPlayer extends Player {
 
         // ── STRICT GATE: Advanced Skills ──────────────────────────────────
         if (this.passiveUnlocked) {
-            // 1. Auto-stealth (Free Stealth)
-            const isMoving = keys.w || keys.a || keys.s || keys.d;
-            if (isMoving && this.autoStealthCooldown <= 0 && Math.random() < 0.2 * dt) {
-                // FREE STEALTH: ล่องหนแบบ "ผี" — ศัตรูรู้ตำแหน่งแต่กระสุนทะลุผ่าน
-                // ไม่ยุ่ง isInvisible/energy ของระบบ Stealth หลัก
+            // 1. REWORK: Dash-Stealth (replaces random auto-stealth)
+            // Every dash → predictable free stealth (ambushReady)
+            const dashNow = this.isDashing;  // PlayerBase sets isDashing during dash
+            if (dashNow && !this._dashWasActive) {
+                // Rising edge of dash
                 this.isFreeStealthy = true;
-                this.freeStealthTimer = this.maxFreeStealthDuration;
+                this.freeStealthTimer = S.dashStealthDuration ?? 1.5;
+                this.maxFreeStealthDuration = S.dashStealthDuration ?? 1.5;
                 this.ambushReady = true;
-                this.autoStealthCooldown = S.autoStealthCooldown || 8;
-                spawnFloatingText(GAME_TEXTS.combat.kaoFreeStealth, this.x, this.y - 40, '#a855f7', 20);
+                spawnFloatingText(GAME_TEXTS.combat.kaoFreeStealth, this.x, this.y - 40, '#a855f7', 18);
             }
-            if (this.autoStealthCooldown > 0) this.autoStealthCooldown -= dt;
+            this._dashWasActive = dashNow;
             // Free Stealth countdown
             if (this.freeStealthTimer > 0) {
                 this.freeStealthTimer -= dt;
@@ -208,35 +215,78 @@ class KaoPlayer extends Player {
                 const newTimer = { elapsed: 0, max: this.teleportCooldown };
                 this.teleportTimers.push(newTimer);
 
-                // Penalty: หมดทุก stack → เพิ่ม +5s ให้ timer ที่ใกล้ครบสุด (elapsed สูงสุด)
+                // Penalty: หมดทุก stack → เพิ่ม +5s ให้ timer ที่ใกล้ครบสุด
                 if (this.teleportCharges === 0 && this.teleportTimers.length > 1) {
                     let maxElapsed = -1, penaltyIdx = 0;
                     this.teleportTimers.forEach((t, i) => {
                         if (t.elapsed > maxElapsed) { maxElapsed = t.elapsed; penaltyIdx = i; }
                     });
                     this.teleportTimers[penaltyIdx].max += this.teleportPenalty;
-                    spawnFloatingText('⏳ Penalty!', this.x, this.y - 80, '#ef4444', 20);
+                    spawnFloatingText('\u23F3 Penalty!', this.x, this.y - 80, '#ef4444', 20);
                 }
 
+                // ── PHANTOM BLINK: Q during stealth/freeStealthy ─────────
+                // Leave a shadow clone at origin, blink to cursor
+                // Grant ambush crit window at destination
+                const isPhantomBlink = (S.phantomBlinkEnabled ?? true)
+                    && (this.isInvisible || this.isFreeStealthy);
+
+                const prevX = this.x, prevY = this.y;
                 spawnParticles(this.x, this.y, 25, '#3b82f6');
+                // VFX: shadow ripple at departure
+                if (typeof addScreenShake === 'function') addScreenShake(2);
+
                 this.x = window.mouse.wx;
                 this.y = window.mouse.wy;
                 consumeInput('q');
                 spawnParticles(this.x, this.y, 25, '#3b82f6');
+
+                if (isPhantomBlink) {
+                    // ── Leave shadow clone at departure point ──────────
+                    const shadowClone = new KaoClone(this, 0);
+                    shadowClone.x = prevX;
+                    shadowClone.y = prevY;
+                    shadowClone.alpha = 0.85;       // more visible than orbit clones
+                    this.clones.push(shadowClone);
+                    this.clonesActiveTimer = Math.max(
+                        this.clonesActiveTimer,
+                        S.cloneDuration ?? 8
+                    );
+                    // ── Ambush window at destination ───────────────────
+                    this._blinkAmbushTimer = S.phantomBlinkAmbushWindow ?? 1.5;
+                    this.ambushReady = true;
+                    // Break stealth after blink (ambush strike)
+                    this.isFreeStealthy = false;
+                    this.freeStealthTimer = 0;
+                    if (this.isInvisible) this.breakStealth();
+                    spawnFloatingText('\uD83D\uDC7B PHANTOM BLINK!', this.x, this.y - 65, '#93c5fd', 24);
+                    if (typeof addScreenShake === 'function') addScreenShake(4);
+                }
             }
+
+            // ── Tick blink ambush window ──────────────────────────────
+            if (this._blinkAmbushTimer > 0) this._blinkAmbushTimer -= dt;
 
             // 3. Clone of Stealth (Cooldown & E Key)
             if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
-            if (checkInput('e') && this.cloneSkillCooldown <= 0) {
-                this.clones = [
-                    new KaoClone(this, (2 * Math.PI) / 3),
-                    new KaoClone(this, (4 * Math.PI) / 3)
-                ];
-                this.clonesActiveTimer = S.cloneDuration ?? 10;  // BUG-2 fix: was || 15 (config = 10)
-                this.cloneSkillCooldown = this.maxCloneCooldown;
-                spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
-                if (typeof Audio !== 'undefined' && Audio.playClone) Audio.playClone();
-                consumeInput('e');
+            if (checkInput('e')) {
+                // ── REWORK: E during active clones = manual Phantom Shatter ──
+                if (this.clones.length > 0 && this.clonesActiveTimer > 0) {
+                    // Manual early detonate
+                    this.clonesActiveTimer = 0; // force expiry block below
+                    consumeInput('e');
+                } else if (this.cloneSkillCooldown <= 0) {
+                    // ── Spawn 2 orbit clones ──
+                    this.clones = [
+                        new KaoClone(this, (2 * Math.PI) / 3),
+                        new KaoClone(this, (4 * Math.PI) / 3)
+                    ];
+                    this.clonesActiveTimer = S.cloneDuration ?? 8;
+                    this.cloneSkillCooldown = this.maxCloneCooldown;
+                    spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
+                    if (typeof Audio !== 'undefined' && Audio.playClone) Audio.playClone();
+                    consumeInput('e');
+                }
             }
         } else {
             // Force reset keys and buffer if user tries to press before unlocking
@@ -251,6 +301,44 @@ class KaoPlayer extends Player {
             if (this.clones[0]) this.clones[0].angleOffset = aimAngle + Math.PI / 1.5;
             if (this.clones[1]) this.clones[1].angleOffset = aimAngle - Math.PI / 1.5;
             this.clones.forEach(c => c.update(dt));
+
+            // ── Clone Proximity Burst (auto-detonate when enemy too close) ──
+            const proxRange = S.cloneProximityRange ?? 90;
+            const proxDmgMult = S.cloneProximityDmgMult ?? 0.60;
+            const shatterDmgProx = (BALANCE.characters.kao.weapons.shotgun.damage * proxDmgMult)
+                * (this.damageMultiplier || 1.0);
+            for (let ci = this.clones.length - 1; ci >= 0; ci--) {
+                const clone = this.clones[ci];
+                let triggered = false;
+                for (const e of (window.enemies || [])) {
+                    if (e.dead) continue;
+                    if (Math.hypot(e.x - clone.x, e.y - clone.y) < proxRange) {
+                        triggered = true; break;
+                    }
+                }
+                if (!triggered && window.boss && !window.boss.dead
+                    && Math.hypot(window.boss.x - clone.x, window.boss.y - clone.y) < proxRange + 20) {
+                    triggered = true;
+                }
+                if (triggered) {
+                    // ── Mini-Phantom Shatter (single clone) ───────────────
+                    const NUM_RAYS = 8;
+                    spawnParticles(clone.x, clone.y, 14, '#60a5fa');
+                    for (let ri = 0; ri < NUM_RAYS; ri++) {
+                        const angle = (Math.PI * 2 / NUM_RAYS) * ri;
+                        const p = new Projectile(
+                            clone.x, clone.y, angle, 760, shatterDmgProx,
+                            '#93c5fd', false, 'player', { life: 0.7, bounces: 0 }
+                        );
+                        projectileManager.add(p);
+                    }
+                    // Swap-and-pop O(1)
+                    this.clones[ci] = this.clones[this.clones.length - 1];
+                    this.clones.pop();
+                    spawnFloatingText('\uD83D\uDCA5 PROXIMITY!', clone.x, clone.y - 35, '#93c5fd', 15);
+                    if (typeof Audio !== 'undefined' && Audio.playPhantomShatter) Audio.playPhantomShatter();
+                }
+            }
             if (this.clonesActiveTimer <= 0) {
                 // ── PHANTOM SHATTER: โคลนหมดเวลา → ระเบิด 8 ทิศ ──────────
                 // กระสุน 8 ทิศ ดาเมจเบา (20% ของ shotgun pellet) แต่ AoE ดี
@@ -377,13 +465,23 @@ class KaoPlayer extends Player {
         // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ─────
         if ((this.graphBuffTimer ?? 0) > 0) dmgMult *= 1.5;
 
+        const S_fw = BALANCE.characters.kao;
         const passiveCrit = this.passiveUnlocked ? (this.stats.passiveCritBonus ?? 0) : 0;  // INC-1 fix: was BALANCE.characters.kao.passiveCritBonus
-        let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0);
+        // stealthChainBonus: +crit when blink ambush window is active (phantom sequence)
+        const chainBonus = (this._blinkAmbushTimer > 0) ? (S_fw.stealthChainBonus ?? 0.25) : 0;
+        let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0) + chainBonus;
 
-        // Ambush: guaranteed crit (let the standard crit block handle the multiplier)
+        // Ambush: guaranteed crit
         if (isAmbush) {
-            critChance = 2.0;  // FIX (BUG-1): Set >1 to guarantee crit, don't multiply baseDmg here to prevent 9x double-dip
+            critChance = 2.0;  // >1 guarantees crit without double-dip
             color = '#facc15';
+            // ── Phantom Blink ambush multiplier ────────────────────────────
+            if (this._blinkAmbushTimer > 0) {
+                dmgMult *= (S.phantomBlinkDmgMult ?? 2.5);
+                this._blinkAmbushTimer = 0;  // consume window
+                if (typeof spawnFloatingText !== 'undefined')
+                    spawnFloatingText('\uD83D\uDC7B BLINK STRIKE!', this.x, this.y - 60, '#c4b5fd', 22);
+            }
         }
 
         // ── Weapon Master buffs ──

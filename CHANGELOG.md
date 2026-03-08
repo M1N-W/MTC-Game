@@ -6,6 +6,69 @@
 
 ---
 
+## v3.12.1 — Kao Phantom Blink Rework & Poom Garuda Summon System
+*Released: March 8, 2026*
+
+### 🥊 Kao Advanced Skills Rework
+- **Dash-Stealth System:** Replaced random auto-stealth with predictable dash-triggered free stealth (1.5s duration)
+- **Phantom Blink:** Q during stealth/free-stealth leaves shadow clone at origin, teleports to cursor, grants ambush crit window (1.5s)
+- **Clone Proximity Burst:** Auto-detonate clones when enemies get too close (90px range) with 8-direction projectile burst
+- **Manual Phantom Shatter:** E during active clones triggers early detonation for tactical control
+- **Clone System Balance:** Reduced cooldown from 60→25s, duration 10→8s for more frequent usage
+- **Stealth Chain Bonus:** +25% crit chance when chaining attacks from Phantom Blink ambush window
+
+### 🦅 Poom Garuda Summon System
+- **New Entity:** Complete GarudaEntity class with ORBIT→DIVE→RETURN FSM states
+- **Combat Behavior:** Autonomous targeting, diving attacks with fire trail effects, orbital movement
+- **Visual Design:** Fire-themed bird entity with dynamic wing animations, trail effects, and cosmic aura
+- **Damage System:** 150 base damage with Eat Rice multiplier (1.5×), boss damage reduction (0.45×)
+- **Performance:** Optimized trail system with swap-pop O(1) cleanup and viewport culling
+
+### ⚖️ Cosmic Balance System
+- **Dual Summon Synergy:** Active when both Naga and Garuda are summoned simultaneously
+- **Enhanced Effects:** +20% damage multiplier, 22 DPS burn on Naga hits, 1.5× Garuda orbit radius
+- **Visual Feedback:** "⚖️ COSMIC BALANCE!" notification with screen shake and aura effects
+- **State Management:** O(1) per-frame toggle with proper cleanup when entities die
+
+### 🎮 UI Integration
+- **Garuda Skill Slot:** Dynamically injected E-key skill icon for Poom character
+- **Cooldown Visuals:** Arc overlay and countdown timer for Garuda ability
+- **Character-Specific UI:** Garuda slot only visible for Poom, hidden for other characters
+
+### 🔧 Technical Implementation
+- **Config System:** Added 14 new config entries for Garuda stats and Cosmic Balance multipliers
+- **Entity Management:** Proper owner reference cleanup and null-checking for entity lifecycle
+- **State Synchronization:** Cosmic Balance toggle with frame-perfect state detection
+- **Memory Management:** Efficient trail system and entity cleanup to prevent memory leaks
+
+### 🎨 Visual Enhancements
+- **Garuda Rendering:** Multi-layered design with fire gradient, wing animations, and cosmic aura rings
+- **Trail Effects:** Dynamic fire trail during dive state with fade-out animations
+- **Phantom Blink:** Shadow ripple effects at departure point and enhanced visual feedback
+- **Cosmic Effects:** Special aura rendering when both summons are active
+
+### 📊 Balance Changes
+- **Kao Mobility:** More predictable stealth mechanics with dash-triggered activation
+- **Clone Frequency:** Reduced cooldowns for more tactical clone usage
+- **Poom Damage:** Significant damage potential with dual summon synergy
+- **Risk/Reward:** Cosmic Balance requires managing two summons simultaneously
+
+### 🐛 Bug Fixes
+- **Cosmic Balance Spam:** Fixed notification triggering only once per state change
+- **Entity Cleanup:** Proper null-checking when entities die or expire
+- **Burn Timer:** Math.max to prevent overriding longer burn durations
+- **UI State:** Proper skill icon visibility management per character
+
+**Files Changed:**
+- `js/config.js` (Garuda stats + Cosmic Balance config)
+- `js/entities/player/Kaoplayer.js` (Phantom Blink rework + Dash-Stealth)
+- `js/entities/player/PoomPlayer.js` (Garuda summon + Cosmic Balance)
+- `js/entities/summons.js` (GarudaEntity class + cosmic burn effects)
+- `js/ui.js` (Garuda skill slot + cooldown visuals)
+- `sw.js` (cache version update)
+
+---
+
 ## v3.12.0 — Heat Gauge System & Wanchai Stand Spirit of Muay Thai Overhaul
 *Released: March 8, 2026*
 

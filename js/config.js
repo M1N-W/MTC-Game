@@ -83,11 +83,17 @@ const BALANCE = {
             cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
             maxHpPerLevel: 6,                 // BUFF: 4 → 6
             // ── Advanced Kao Skills ──
-            teleportCooldown: 20,
-            cloneCooldown: 60,
-            cloneDuration: 10,
-            autoStealthCooldown: 8,
-            weaponMasterReq: 10
+            teleportCooldown: 18,
+            cloneCooldown: 25,              // 60 → 25 (REWORK: usable mid-game)
+            cloneDuration: 8,               // 10 → 8 (shorter but sharper)
+            cloneProximityRange: 90,        // NEW: clone proximity burst trigger range
+            cloneProximityDmgMult: 0.60,    // NEW: proximity burst dmg mult
+            dashStealthDuration: 1.5,       // NEW: free stealth after every dash
+            phantomBlinkEnabled: true,      // NEW: Q during stealth = Phantom Blink
+            phantomBlinkAmbushWindow: 1.5,  // NEW: crit-window after blink
+            phantomBlinkDmgMult: 2.5,       // NEW: ambush damage mult
+            stealthChainBonus: 0.25,        // NEW: +crit when Q chains from stealth
+            weaponMasterReq: 7
         },
         auto: {
             // ══════════════════════════════════════════════════
@@ -264,7 +270,21 @@ const BALANCE = {
                 bounces: 1,
                 bossReflectionMultiplier: 1.35
             }
-        }
+        },
+        // ── Garuda (E) ──────────────────────────────────────
+        garudaCooldown: 25,
+        garudaDuration: 6,
+        garudaDamage: 150,
+        garudaOrbitRadius: 120,
+        garudaOrbitSpeed: 2.2,
+        garudaDiveCooldown: 1.8,
+        garudaDiveSpeed: 820,
+        garudaReturnSpeed: 620,
+        garudaEatRiceBonus: 1.5,
+        // ── Cosmic Balance (Naga + Garuda active simultaneously) ──
+        cosmicDamageMult: 1.20,
+        cosmicNagaBurnDPS: 22,
+        cosmicGarudaRadiusMult: 1.5,
     },
     drone: {
         radius: 12,

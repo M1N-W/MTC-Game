@@ -59,6 +59,13 @@ class NagaEntity extends Entity {
             for (const seg of this.segments) {
                 if (dist(seg.x, seg.y, enemy.x, enemy.y) < this.radius + enemy.radius) {
                     enemy.takeDamage(liveDamage * dt, player);
+                    // Cosmic Balance: naga hits ignite enemies
+                    if (this.owner?._cosmicBalance && !enemy.dead) {
+                        const burnDPS = BALANCE.characters.poom.cosmicNagaBurnDPS || 22;
+                        enemy.isBurning = true;
+                        enemy.burnTimer = Math.max(enemy.burnTimer || 0, 0.8);
+                        enemy.burnDamage = burnDPS;
+                    }
                     if (Math.random() < 0.1) spawnParticles(seg.x, seg.y, 2, '#10b981');
                     const now = performance.now();
                     if (now - this.lastSoundTime >= NAGA_SOUND_INTERVAL) {
@@ -759,9 +766,250 @@ class Drone extends Entity {
         }
     }
 }
+// ════════════════════════════════════════════════════════════
+// 🦅 GARUDA ENTITY
+// ════════════════════════════════════════════════════════════
+const _GS = { ORBIT: 0, DIVE: 1, RETURN: 2 };
+
+class GarudaEntity extends Entity {
+    constructor(px, py, owner) {
+        super(px, py, 18);
+        this.owner = owner;
+        const S = BALANCE.characters.poom;
+        this.life = S.garudaDuration;
+        this.maxLife = S.garudaDuration;
+        this.active = true;
+        this.orbitAngle = 0;
+        this.facing = 0;
+        this.state = _GS.ORBIT;
+        this.diveCooldown = 0.5;
+        this.diveTarget = null;
+        this._trail = [];   // [{x,y,life,maxLife}]
+    }
+
+    _findNearest() {
+        let best = null, bd = Infinity;
+        for (const e of (window.enemies || [])) {
+            if (e.dead) continue;
+            const d = Math.hypot(e.x - this.x, e.y - this.y);
+            if (d < bd) { bd = d; best = e; }
+        }
+        if (window.boss && !window.boss.dead) {
+            const d = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+            if (d < bd) best = window.boss;
+        }
+        return best;
+    }
+
+    update(dt, player, _meteorZones) {
+        const S = BALANCE.characters.poom;
+        this.life -= dt;
+        if (this.life <= 0) {
+            this.active = false;
+            if (this.owner) this.owner.garuda = null;
+            return true;
+        }
+
+        const owner = this.owner;
+        const cosmic = owner?._cosmicBalance ?? false;
+        const orbitR = S.garudaOrbitRadius * (cosmic ? S.cosmicGarudaRadiusMult : 1);
+
+        // ── Trail decay (swap-pop) ─────────────────────────
+        for (let i = this._trail.length - 1; i >= 0; i--) {
+            this._trail[i].life -= dt;
+            if (this._trail[i].life <= 0) {
+                this._trail[i] = this._trail[this._trail.length - 1];
+                this._trail.pop();
+            }
+        }
+
+        if (this.state === _GS.ORBIT) {
+            this.orbitAngle += S.garudaOrbitSpeed * dt;
+            this.x = owner.x + Math.cos(this.orbitAngle) * orbitR;
+            this.y = owner.y + Math.sin(this.orbitAngle) * orbitR;
+            this.facing = this.orbitAngle + Math.PI * 0.5;
+            this.diveCooldown -= dt;
+            if (this.diveCooldown <= 0) {
+                const t = this._findNearest();
+                if (t) { this.diveTarget = t; this.state = _GS.DIVE; }
+                else { this.diveCooldown = S.garudaDiveCooldown; }
+            }
+
+        } else if (this.state === _GS.DIVE) {
+            if (!this.diveTarget || this.diveTarget.dead) {
+                this.state = _GS.RETURN;
+                this.diveCooldown = S.garudaDiveCooldown;
+                return false;
+            }
+            const tx = this.diveTarget.x, ty = this.diveTarget.y;
+            const dx = tx - this.x, dy = ty - this.y;
+            const d = Math.hypot(dx, dy);
+            this.facing = Math.atan2(dy, dx);
+
+            if (Math.random() < 0.55) {
+                this._trail.push({ x: this.x, y: this.y, life: 0.28, maxLife: 0.28 });
+            }
+
+            if (d < 26) {
+                let dmg = S.garudaDamage * (owner?.damageMultiplier || 1);
+                if (owner?.isEatingRice) dmg *= S.garudaEatRiceBonus;
+                if (cosmic) dmg *= 1.20;
+
+                const isBoss = this.diveTarget === window.boss;
+                if (isBoss) {
+                    this.diveTarget.takeDamage(dmg * 0.45);
+                } else {
+                    this.diveTarget.takeDamage(dmg, owner);
+                }
+                spawnParticles(tx, ty, 18, '#f97316');
+                spawnFloatingText(Math.round(dmg), tx, ty - 40, '#fbbf24', 18);
+                if (typeof Audio !== 'undefined' && Audio.playNagaAttack) Audio.playNagaAttack();
+                this.diveTarget = null;
+                this.state = _GS.RETURN;
+                this.diveCooldown = S.garudaDiveCooldown;
+
+            } else {
+                const step = Math.min(S.garudaDiveSpeed * dt, d);
+                this.x += (dx / d) * step;
+                this.y += (dy / d) * step;
+            }
+
+        } else {    // RETURN
+            const tx = owner.x + Math.cos(this.orbitAngle) * orbitR;
+            const ty = owner.y + Math.sin(this.orbitAngle) * orbitR;
+            const dx = tx - this.x, dy = ty - this.y;
+            const d = Math.hypot(dx, dy);
+            if (d < 18) {
+                this.state = _GS.ORBIT;
+            } else {
+                this.facing = Math.atan2(dy, dx);
+                const step = Math.min(S.garudaReturnSpeed * dt, d);
+                this.x += (dx / d) * step;
+                this.y += (dy / d) * step;
+            }
+        }
+
+        return false;
+    }
+
+    draw() {
+        if (typeof CTX === 'undefined') return;
+        const sc = worldToScreen(this.x, this.y);
+        if (!sc) return;
+        // Viewport cull
+        if (sc.x < -60 || sc.x > (CTX.canvas?.width ?? 9999) + 60 ||
+            sc.y < -60 || sc.y > (CTX.canvas?.height ?? 9999) + 60) return;
+
+        const now = performance.now();
+        const lifeRatio = this.life / this.maxLife;
+        const isDiving = this.state === _GS.DIVE;
+        const pulse = 0.75 + Math.sin(now / 120) * 0.25;
+
+        // ── Fire trail ─────────────────────────────────────────
+        for (const t of this._trail) {
+            const ts = worldToScreen(t.x, t.y);
+            if (!ts) continue;
+            const a = (t.life / t.maxLife) * 0.75;
+            const r = 5 + (1 - t.life / t.maxLife) * 4;
+            CTX.save();
+            CTX.globalAlpha = a * lifeRatio;
+            CTX.shadowBlur = 10; CTX.shadowColor = '#f97316';
+            const tg = CTX.createRadialGradient(ts.x, ts.y, 0, ts.x, ts.y, r);
+            tg.addColorStop(0, '#fbbf24');
+            tg.addColorStop(1, 'rgba(239,68,68,0)');
+            CTX.fillStyle = tg;
+            CTX.beginPath(); CTX.arc(ts.x, ts.y, r, 0, Math.PI * 2); CTX.fill();
+            CTX.restore();
+        }
+
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+        CTX.rotate(this.facing);
+        CTX.globalAlpha = lifeRatio * 0.95;
+
+        const BL = isDiving ? 10 : 16;
+        const BW = isDiving ? 5 : 9;
+        const WL = isDiving ? 18 : 28;
+
+        CTX.shadowBlur = 20 * pulse; CTX.shadowColor = '#f97316';
+
+        // ── Wings ───────────────────────────────────────────────
+        CTX.strokeStyle = `rgba(251,191,36,${0.6 + pulse * 0.3})`;
+        CTX.lineWidth = 2.5;
+        if (isDiving) {
+            // Swept-back wings
+            CTX.beginPath();
+            CTX.moveTo(-BL * 0.3, 0);
+            CTX.quadraticCurveTo(-BL * 0.5, -BW * 0.5, -WL * 0.9, BW * 0.6);
+            CTX.stroke();
+            CTX.beginPath();
+            CTX.moveTo(-BL * 0.3, 0);
+            CTX.quadraticCurveTo(-BL * 0.5, BW * 0.5, -WL * 0.9, -BW * 0.6);
+            CTX.stroke();
+        } else {
+            // Spread wings
+            CTX.beginPath();
+            CTX.moveTo(0, -BW * 0.4);
+            CTX.quadraticCurveTo(-BL * 0.3, -WL * 0.5, -WL, -WL * 0.3);
+            CTX.stroke();
+            CTX.beginPath();
+            CTX.moveTo(0, BW * 0.4);
+            CTX.quadraticCurveTo(-BL * 0.3, WL * 0.5, -WL, WL * 0.3);
+            CTX.stroke();
+            // Wing tip feathers
+            CTX.globalAlpha = lifeRatio * 0.45;
+            CTX.lineWidth = 1.5;
+            for (let f = 0; f < 3; f++) {
+                const ft = (f + 1) / 4;
+                CTX.beginPath();
+                CTX.moveTo(-WL * ft * 0.85, -WL * ft * 0.25);
+                CTX.lineTo(-WL * ft * 0.85 - 5, -WL * ft * 0.55);
+                CTX.stroke();
+                CTX.beginPath();
+                CTX.moveTo(-WL * ft * 0.85, WL * ft * 0.25);
+                CTX.lineTo(-WL * ft * 0.85 - 5, WL * ft * 0.55);
+                CTX.stroke();
+            }
+            CTX.globalAlpha = lifeRatio * 0.95;
+            CTX.lineWidth = 2.5;
+        }
+
+        // ── Body (teardrop ellipse) ─────────────────────────────
+        const bodyG = CTX.createLinearGradient(-BL, 0, BL, 0);
+        bodyG.addColorStop(0, '#ef4444');
+        bodyG.addColorStop(0.5, '#f97316');
+        bodyG.addColorStop(1, '#fbbf24');
+        CTX.fillStyle = bodyG;
+        CTX.shadowBlur = 0;
+        CTX.beginPath();
+        CTX.ellipse(0, 0, BL, BW, 0, 0, Math.PI * 2);
+        CTX.fill();
+
+        // ── Eye ────────────────────────────────────────────────
+        CTX.fillStyle = '#fbbf24';
+        CTX.shadowBlur = 8 * pulse; CTX.shadowColor = '#fbbf24';
+        CTX.beginPath(); CTX.arc(BL * 0.55, 0, 2.5, 0, Math.PI * 2); CTX.fill();
+        CTX.fillStyle = '#0f172a';
+        CTX.shadowBlur = 0;
+        CTX.beginPath(); CTX.arc(BL * 0.55, 0, 1.2, 0, Math.PI * 2); CTX.fill();
+
+        // ── Cosmic Balance aura ring ────────────────────────────
+        if (this.owner?._cosmicBalance) {
+            CTX.globalAlpha = lifeRatio * (0.3 + pulse * 0.2);
+            CTX.strokeStyle = '#fbbf24';
+            CTX.lineWidth = 1.5;
+            CTX.shadowBlur = 12; CTX.shadowColor = '#fbbf24';
+            CTX.beginPath(); CTX.ellipse(0, 0, BL + 7, BW + 7, 0, 0, Math.PI * 2); CTX.stroke();
+        }
+
+        CTX.restore();
+    }
+}
+
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
 window.NagaEntity = NagaEntity;
+window.GarudaEntity = GarudaEntity;
 window.Drone = Drone;
 window.DroneEntity = Drone;   // alias — Debug.html checks 'DroneEntity'

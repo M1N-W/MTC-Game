@@ -816,6 +816,31 @@ class UIManager {
             if (detSlot) detSlot.style.display = 'none';
         }
 
+        // ── Garuda slot (E) — Poom-exclusive, dynamically injected ──
+        let garudaSlot = document.getElementById('garuda-icon');
+        if (isPoom) {
+            if (!garudaSlot && hudBottom) {
+                garudaSlot = document.createElement('div');
+                garudaSlot.className = 'skill-icon';
+                garudaSlot.id = 'garuda-icon';
+                garudaSlot.style.cssText = 'border-color:#f97316; box-shadow:0 0 15px rgba(249,115,22,0.45);';
+                garudaSlot.innerHTML = `
+                    <div class="key-hint" style="background:#f97316;color:#1a0505;">E</div>
+                    <span>🦅</span>
+                    <div class="skill-name" style="color:#fdba74;">GARUDA</div>
+                    <div class="cooldown-mask" id="garuda-cd"></div>`;
+                const passiveRef = document.getElementById('passive-skill');
+                if (passiveRef && passiveRef.parentNode === hudBottom) {
+                    hudBottom.insertBefore(garudaSlot, passiveRef.nextSibling);
+                } else {
+                    hudBottom.appendChild(garudaSlot);
+                }
+            }
+            if (garudaSlot) garudaSlot.style.display = 'flex';
+        } else {
+            if (garudaSlot) garudaSlot.style.display = 'none';
+        }
+
         const btnNaga = document.getElementById('btn-naga');
         if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
         const btnSkill = document.getElementById('btn-skill');
@@ -875,6 +900,15 @@ class UIManager {
             UIManager._setCooldownVisual('ritual-icon',
                 Math.max(0, player.cooldowns.ritual),
                 maxRitualCd);
+
+            // ── Garuda cooldown ────────────────────────────────────
+            const garudaIcon = document.getElementById('garuda-icon');
+            if (garudaIcon) {
+                garudaIcon.classList.toggle('active', player.cooldowns.garuda <= 0);
+            }
+            UIManager._setCooldownVisual('garuda-icon',
+                Math.max(0, player.cooldowns.garuda),
+                BALANCE.characters.poom.garudaCooldown || 25);
 
             // WARN-10 FIX: AutoPlayer's Wanchai Stand cooldown had no arc overlay
             // or countdown. Add a parallel branch so the player sees feedback.
