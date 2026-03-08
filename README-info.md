@@ -88,9 +88,19 @@
 
 ---
 
-## 📈 Current Version: v3.11.19 (March 7, 2026)
+## 📈 Current Version: v3.12.0 (March 8, 2026)
 
 **Latest Major Updates:**
+- 🔥 **Heat Gauge System:** Complete 4-tier heat system (COLD→WARM→HOT→OVERHEAT) with damage multipliers, punch rate increases, and OVERHEAT crit bonus
+- 💥 **Detonation Rework:** Non-lethal detonation with heat scaling damage (80 + heat × 2.5) and momentum preservation (heat -50 instead of 0)
+- 🌀 **Vacuum Heat Enhancement:** Added 18 instant damage + burning effect (12 DPS for 1.5s) + 25 heat reward on successful pulls
+- 🥊 **Wanchai Stand Spirit of Muay Thai:** Complete visual overhaul with ice-blue/white spectral design, Muay Thai guard stance, and cultural Mongkhon elements
+- 🎮 **Heat Gauge HUD:** Reuses energy bar slot with tier-specific colors and floating badge display
+- 🔧 **Combat Synergy:** Enhanced Vacuum Heat → Wanchai attacks → Detonation combo system with risk/reward mechanics
+- 🎨 **Heat-Reactive Visuals:** Dynamic color changes COLD→WARM→HOT→OVERHEAT (blue→cyan→amber→orange) with tier-specific effects
+- 🔥 **OVERHEAT Mechanics:** Massive damage potential with 3 HP/sec drain and +20% crit bonus for high-risk gameplay
+- 📊 **Balance Integration:** Heat tiers provide meaningful progression without breaking game balance
+- 🎯 **Visual Distinction:** Complete separation from Auto's red theme with authentic Thai boxing aesthetics
 - 🔧 **Floating Text Overlap Fix:** Fixed damage, healing, and buff notification texts overlapping when spawned at same position
 - 📚 **Documentation Accuracy:** Updated PROJECT_OVERVIEW.md with correct Canvas-based solution for text overlap issue
 - 🎯 **Canvas-based Implementation:** Added 15-line stack-offset logic in FloatingTextSystem.spawn() using world coordinates

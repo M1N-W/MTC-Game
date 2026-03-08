@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.11.19'; // v3.11.19: Fixed floating text overlap issue + documentation updates
+const CACHE_NAME = 'mtc-cache-v3.12.0'; // v3.12.0: Heat Gauge System + Detonation/Vacuum rework + Wanchai Stand Spirit of Muay Thai visual overhaul
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

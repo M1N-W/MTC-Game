@@ -6,6 +6,72 @@
 
 ---
 
+## v3.12.0 — Heat Gauge System & Wanchai Stand Spirit of Muay Thai Overhaul
+*Released: March 8, 2026*
+
+### 🔥 Heat Gauge System Implementation
+- **Core Mechanic:** Complete heat gauge system with 4 tiers (COLD→WARM→HOT→OVERHEAT)
+- **Heat Generation:** Passive gain from Wanchai Stand attacks, player melee hits, and successful Vacuum Heat pulls
+- **Tier Benefits:** Damage multipliers (×1.15/1.30/1.50), punch rate increases (×0.85/×0.70), and OVERHEAT crit bonus (+20%)
+- **Heat Decay:** 8 heat/sec normal decay, 0/sec during Wanchai Stand active, 3 HP/sec drain at OVERHEAT tier
+- **Kill Synergy:** +15 heat + 8% maxHP heal on kills during Wanchai Stand
+- **Damage Integration:** Player melee attacks gain heat = damage × 0.5 with tier damage multipliers
+
+### 💥 Detonation System Rework
+- **Non-Lethal:** Wanchai Stand no longer dies on detonation - stays active for continued combat
+- **Heat Scaling:** Damage = 80 + heat × 2.5 (OVERHEAT example: 80 + 100 × 2.5 = 330)
+- **Area Enhancement:** OVERHEAT increases detonation radius by 1.5× (360px total)
+- **Momentum Preservation:** Heat resets -50 instead of 0, allowing chain combos
+- **Visual Feedback:** Enhanced damage display and tier-specific visual effects
+
+### 🌀 Vacuum Heat System
+- **Instant Damage:** Added 18 instant damage to enemies being pulled
+- **Burn Effect:** All pulled enemies receive burning status for 1.5s at 12 DPS
+- **Heat Reward:** +25 heat on successful Vacuum Heat usage
+- **Synergy:** Perfect setup for follow-up Wanchai Stand attacks
+
+### 🥊 Wanchai Stand — Spirit of Muay Thai Visual Overhaul
+- **Color Scheme:** Ice-blue/white spectral design, completely distinct from Auto's red theme
+- **Physique:** V-taper Muay Thai build with broader shoulders replacing small circular form
+- **Cultural Elements:** Mongkhon (headband) + rope tie details on chest - authentic Thai boxing signature
+- **Stance:** Muay Thai guard stance - lead arm high (guard), rear arm deep (power punch)
+- **Glove Design:** Round gloves with lace wrapping lines instead of simple fists
+- **Face Design:** Hollow spirit eyes with glow, angular warrior brows, dual scar details
+- **Ghost Trail:** Cyan-white trail replacing red trail
+- **Heat Reactivity:** Dynamic color changes COLD→WARM→HOT→OVERHEAT (blue→cyan→amber→orange)
+- **HUD Integration:** Heat tier badge display (🔥/🔥🔥/💥) on name chip
+
+### 🎮 Game Mechanics
+- **Heat Gauge HUD:** Reuses energy bar slot with floating badge display
+- **Tier Progression:** Visual feedback with color-coded heat bar and tier labels
+- **Combat Flow:** Enhanced synergy between Vacuum Heat, Wanchai attacks, and detonation
+- **Risk/Reward:** OVERHEAT provides massive damage but requires HP management
+
+### 🔧 Technical Implementation
+- **Heat System:** this.heat, this._heatTierState in constructor with gainHeat() method
+- **Passive Bonus:** Automatic tier transitions with floating text notifications
+- **Wanchai Stand Integration:** Heat affects punch rate, damage, and crit chances
+- **Damage Scaling:** Dynamic damage calculation based on heat tiers
+- **Visual System:** Heat-reactive rendering with tier-specific effects
+
+### 🎨 Visual Enhancements
+- **Muay Thai Aesthetics:** Authentic cultural design elements integrated into Stand appearance
+- **Heat Visualization:** Clear visual feedback for heat tiers through color and effects
+- **Combat Readability:** Enhanced visual distinction between different heat states
+- **Spirit Theme:** Ethereal ghost-like appearance fitting the Stand concept
+
+### 📊 Balance Changes
+- **Damage Scaling:** Heat tiers provide meaningful damage increases without breaking balance
+- **Risk Management:** OVERHEAT HP drain creates tactical decision-making
+- **Combo Potential:** Non-lethal detonation enables extended combo sequences
+- **Synergy Rewards:** Proper use of Vacuum Heat + Wanchai + Detonation maximizes damage
+
+**Files Changed:**
+- `js/entities/player/AutoPlayer.js` (Heat Gauge System + Detonation/Vacuum rework + visual overhaul)
+- `sw.js` (cache version update)
+
+---
+
 ## v3.11.19 — Floating Text Overlap Fix & Documentation Updates
 *Released: March 7, 2026*
 

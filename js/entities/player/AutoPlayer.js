@@ -33,7 +33,11 @@ class WanchaiStand {
         if (!owner || !owner.wanchaiActive) { this.active = false; return; }
 
         const S = owner.stats ?? {};
-        this._atkRate = S.wanchaiPunchRate ?? 0.08;
+        // ── Heat tier → punch rate multiplier ─────────────
+        const ht = owner._heatTier ?? 0;
+        const punchRateMult = ht >= 2 ? (S.heatPunchRateHot ?? 0.70)
+            : ht >= 1 ? (S.heatPunchRateWarm ?? 0.85) : 1.0;
+        this._atkRate = (S.wanchaiPunchRate ?? 0.08) * punchRateMult;
         const atkRange = S.standPunchRange ?? 110;  // hitbox reach
         const chaseSpeed = S.standMoveSpeed ?? 340;  // px/s
         const leashRadius = S.standLeashRadius ?? 420;  // max dist from owner
@@ -137,7 +141,17 @@ class WanchaiStand {
 
     _punch(target, owner) {
         const S = owner.stats ?? {};
-        let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0);
+
+        // ── Heat gain per punch ────────────────────────────────
+        if (typeof owner.gainHeat === 'function') owner.gainHeat(S.heatPerHit ?? 12);
+
+        // ── Heat tier damage multiplier ────────────────────────
+        const tier = owner._heatTier ?? 0;
+        const heatDmgMult = tier >= 3 ? (S.heatDmgOverheat ?? 1.50)
+            : tier >= 2 ? (S.heatDmgHot ?? 1.30)
+                : tier >= 1 ? (S.heatDmgWarm ?? 1.15) : 1.0;
+
+        let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0) * heatDmgMult;
 
         // Second Wind bonus
         if (owner.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
@@ -145,6 +159,8 @@ class WanchaiStand {
         // Crit
         let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (owner.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
+        // OVERHEAT crit bonus
+        if ((owner._heatTier ?? 0) >= 3) critChance += (S.heatCritBonusOverheat ?? 0.20);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
             dmg *= (S.critMultiplier ?? 2.0);
@@ -199,6 +215,16 @@ class WanchaiStand {
             if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
             this.lastPunchSoundTime = now;
         }
+
+        // Kill bonus: +Heat + heal (only during Wanchai)
+        if (target.hp !== undefined && target.hp <= 0 && owner.wanchaiActive) {
+            const S2 = owner.stats ?? {};
+            if (typeof owner.gainHeat === 'function') owner.gainHeat(S2.heatOnKillWanchai ?? 15);
+            const healPct = S2.heatHealOnKillWanchai ?? 0.08;
+            owner.hp = Math.min(owner.maxHp, owner.hp + owner.maxHp * healPct);
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText(`+${Math.floor(owner.maxHp * healPct)}hp 🔥`, owner.x, owner.y - 55, '#4ade80', 16);
+        }
     }
 
     draw(ctx) {
@@ -206,129 +232,143 @@ class WanchaiStand {
         const now = performance.now();
         const sc = worldToScreen(this.x, this.y);
         const t = now / 1000;
+        const owner = this.owner;
+
+        // ── HEAT TIER COLORS ─────────────────────────────────────
+        // Base: Ice-blue/white ghost — contrasts sharply with Auto red
+        // HOT/OVERHEAT: core flares amber/red to signal escalation
+        const ht = owner?._heatTier ?? 0;
+        const coreCol = ht >= 3 ? '#f97316' : ht >= 2 ? '#fbbf24' : ht >= 1 ? '#67e8f9' : '#a5f3fc';
+        const auraCol = ht >= 3 ? 'rgba(249,115,22,' : ht >= 2 ? 'rgba(251,191,36,' : 'rgba(103,232,249,';
+        const punchCol = ht >= 2 ? '#fbbf24' : '#e0f2fe';
 
         const isPunch = this._phaseTimer > 0;
         const flashT = isPunch ? Math.min(1, this._phaseTimer / 0.12) : 0;
-        const side = this._punchSide ?? 1;       // +1 right fist active, -1 left
+        const side = this._punchSide ?? 1;
         const facingL = Math.abs(this.angle) > Math.PI / 2;
-        const fs = facingL ? -1 : 1;           // facing scale — applied per-save
+        const fs = facingL ? -1 : 1;
 
-        // Shared oscillators — computed once, never inside draw sub-calls
-        const breath = Math.sin(t * 2.6);          // slow body pulse
-        const eyeFlick = Math.sin(t * 7.1);          // fast eye flicker
-        const sway = Math.sin(t * 1.5) * 1.4;   // idle float
+        // ── Fighter bob oscillators (pre-computed once) ──
+        const bob = Math.sin(t * 3.2);         // weight shift bob
+        const sway = bob * 1.8;                 // horizontal rock
+        const breathe = Math.sin(t * 2.1) * 0.8; // torso expand
+        const eyeFlick = Math.sin(t * 8.5);       // eye intensity
 
-        // ── LAYER 0 : Ghost trail — humanoid silhouettes ─────────────────────
+        // ═══ LAYER 0 — Ghost trail (cyan-white afterimage) ═══════════════════
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
-            const ga = g.alpha * 0.25;
+            const ga = g.alpha * 0.30;
             if (ga < 0.02) continue;
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
             ctx.globalAlpha = ga;
-            ctx.shadowBlur = 8; ctx.shadowColor = '#dc2626';
-            // head ghost
-            ctx.fillStyle = '#ef4444';
-            ctx.beginPath(); ctx.arc(gs.x, gs.y - 20, 9, 0, Math.PI * 2); ctx.fill();
-            // torso ghost
-            ctx.beginPath();
-            ctx.ellipse(gs.x, gs.y + 2, 10, 14, 0, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.shadowBlur = 10; ctx.shadowColor = coreCol;
+            // Muay Thai silhouette ghost — head + torso only
+            ctx.fillStyle = coreCol;
+            ctx.beginPath(); ctx.arc(gs.x, gs.y - 18, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(gs.x, gs.y + 4, 9, 13, 0, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
-        // ── LAYER 1 : Heat-distortion halo ───────────────────────────────────
-        // Large oval — breathes, flares on punch
+        // ═══ LAYER 1 — Spectral halo / aura ══════════════════════════════════
         {
-            const hw = 22 + breath * 2;
-            const hh = 36 + breath * 1.5;
-            const ha = isPunch ? 0.22 + flashT * 0.18 : 0.10 + breath * 0.03;
+            const hw = 24 + breathe * 2;
+            const ha = isPunch ? 0.28 + flashT * 0.22 : 0.12 + breathe * 0.04;
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.3);
-            const hG = ctx.createRadialGradient(0, 0, 2, 0, 0, hw + 8);
-            hG.addColorStop(0, `rgba(249,115,22,${Math.min(1, ha * 1.9)})`);
-            hG.addColorStop(0.45, `rgba(220,38,38,${ha})`);
-            hG.addColorStop(1, 'rgba(30,0,0,0)');
+            ctx.translate(sc.x, sc.y + sway * 0.2);
+            const hG = ctx.createRadialGradient(0, 0, 2, 0, 0, hw + 10);
+            hG.addColorStop(0, `${auraCol}${Math.min(1, ha * 2.2)})`);
+            hG.addColorStop(0.4, `${auraCol}${ha})`);
+            hG.addColorStop(1, 'rgba(0,0,0,0)');
             ctx.globalAlpha = 1;
             ctx.fillStyle = hG;
-            ctx.shadowBlur = isPunch ? 28 : 14; ctx.shadowColor = '#dc2626';
-            ctx.beginPath(); ctx.ellipse(0, 2, hw, hh * 0.58, 0, 0, Math.PI * 2); ctx.fill();
-            // punch burst ring
-            if (isPunch && flashT > 0.12) {
-                ctx.globalAlpha = flashT * 0.50;
-                ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
-                ctx.shadowBlur = 18; ctx.shadowColor = '#fbbf24';
-                ctx.beginPath(); ctx.arc(0, 0, 26 + (1 - flashT) * 12, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = isPunch ? 32 : 16; ctx.shadowColor = coreCol;
+            ctx.beginPath(); ctx.ellipse(0, 0, hw, hw * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+            // Punch burst shockwave ring
+            if (isPunch && flashT > 0.08) {
+                ctx.globalAlpha = flashT * 0.65;
+                ctx.strokeStyle = punchCol; ctx.lineWidth = 2.5;
+                ctx.shadowBlur = 22; ctx.shadowColor = punchCol;
+                ctx.beginPath(); ctx.arc(0, 0, 28 + (1 - flashT) * 18, 0, Math.PI * 2); ctx.stroke();
+                // Second ring
+                ctx.globalAlpha = flashT * 0.30;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(0, 0, 40 + (1 - flashT) * 14, 0, Math.PI * 2); ctx.stroke();
             }
             ctx.restore();
         }
 
-        // ── LAYER 2 : Lower-body / waist fade ────────────────────────────────
-        // Stand has no legs — torso dissolves into heat shimmer below waist
+        // ═══ LAYER 2 — Lower-body fade (spirit dissolves below waist) ════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.4);
-            const fadeG = ctx.createLinearGradient(0, 8, 0, 32);
-            fadeG.addColorStop(0, 'rgba(127,29,29,0.80)');
-            fadeG.addColorStop(0.55, 'rgba(90,10,10,0.38)');
-            fadeG.addColorStop(1, 'rgba(40,0,0,0)');
-            ctx.fillStyle = fadeG;
-            ctx.globalAlpha = 0.88;
+            ctx.translate(sc.x, sc.y + sway * 0.35);
+            const fadeG = ctx.createLinearGradient(0, 10, 0, 36);
+            fadeG.addColorStop(0, ht >= 2 ? 'rgba(180,120,20,0.75)' : 'rgba(20,100,140,0.70)');
+            fadeG.addColorStop(0.5, ht >= 2 ? 'rgba(100,40,0,0.30)' : 'rgba(10,50,90,0.28)');
+            fadeG.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = fadeG; ctx.globalAlpha = 0.85;
             ctx.beginPath();
-            ctx.moveTo(-13, 8);
-            ctx.quadraticCurveTo(-16, 24, 0, 32);
-            ctx.quadraticCurveTo(16, 24, 13, 8);
-            ctx.closePath();
-            ctx.fill();
+            ctx.moveTo(-14, 10);
+            ctx.quadraticCurveTo(-17, 26, 0, 36);
+            ctx.quadraticCurveTo(17, 26, 14, 10);
+            ctx.closePath(); ctx.fill();
             ctx.restore();
         }
 
-        // ── LAYER 3 : Torso ───────────────────────────────────────────────────
+        // ═══ LAYER 3 — Torso (Muay Thai physique) ════════════════════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.4);
+            ctx.translate(sc.x, sc.y + sway * 0.35);
             ctx.scale(fs, 1);
 
-            // Main torso shape — wider at shoulders, tapers to waist
-            const tG = ctx.createRadialGradient(-3, -4, 1, 0, 4, 15);
-            tG.addColorStop(0, '#9b1c1c');
-            tG.addColorStop(0.55, '#7f1d1d');
-            tG.addColorStop(1, '#450a0a');
+            // Main torso — wider shoulders, strong V-taper
+            // Muay Thai fighters: broad shoulder line, narrow waist
+            const tCol1 = ht >= 2 ? '#4a2800' : '#0c3a52';
+            const tCol2 = ht >= 2 ? '#7c4500' : '#0e4f6e';
+            const tCol3 = ht >= 2 ? '#1a0800' : '#061c2e';
+            const tG = ctx.createRadialGradient(-4, -6, 1, 0, 2, 18);
+            tG.addColorStop(0, tCol2);
+            tG.addColorStop(0.6, tCol1);
+            tG.addColorStop(1, tCol3);
             ctx.fillStyle = tG;
-            ctx.globalAlpha = 0.92 + breath * 0.04;
-            ctx.shadowBlur = isPunch ? 18 : 8; ctx.shadowColor = '#dc2626';
+            ctx.globalAlpha = 0.90 + breathe * 0.06;
+            ctx.shadowBlur = isPunch ? 20 : 10; ctx.shadowColor = coreCol;
+
+            // Broader shoulder, fighter V-shape
             ctx.beginPath();
-            ctx.moveTo(-13, 0);
-            ctx.quadraticCurveTo(-16, 10, -11, 20);
-            ctx.lineTo(11, 20);
-            ctx.quadraticCurveTo(16, 10, 13, 0);
-            ctx.quadraticCurveTo(0, -4, -13, 0);
-            ctx.closePath();
-            ctx.fill();
+            ctx.moveTo(-17, -2);          // left shoulder — wide
+            ctx.quadraticCurveTo(-20, 8, -13, 22);
+            ctx.lineTo(13, 22);
+            ctx.quadraticCurveTo(20, 8, 17, -2);
+            ctx.quadraticCurveTo(0, -6, -17, -2);
+            ctx.closePath(); ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Armor plates clipped inside torso
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(-13, 0); ctx.quadraticCurveTo(-16, 10, -11, 20);
-            ctx.lineTo(11, 20); ctx.quadraticCurveTo(16, 10, 13, 0);
-            ctx.quadraticCurveTo(0, -4, -13, 0); ctx.closePath(); ctx.clip();
-            ctx.fillStyle = 'rgba(153,27,27,0.50)';
-            ctx.beginPath(); ctx.roundRect(-13, -2, 9, 13, 2); ctx.fill();  // L shoulder
-            ctx.beginPath(); ctx.roundRect(4, -2, 9, 13, 2); ctx.fill();   // R shoulder
-            ctx.strokeStyle = 'rgba(185,28,28,0.35)'; ctx.lineWidth = 0.8;
-            ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(0, 14); ctx.stroke(); // center seam
-            // rivets
-            ctx.fillStyle = 'rgba(251,146,60,0.45)';
-            for (const [rx, ry] of [[-7, 2], [7, 2], [-7, 9], [7, 9]]) {
-                ctx.beginPath(); ctx.arc(rx, ry, 1.1, 0, Math.PI * 2); ctx.fill();
-            }
-            ctx.restore();
+            // Pec definition lines
+            ctx.strokeStyle = `${auraCol}0.22)`;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.moveTo(-16, 0); ctx.quadraticCurveTo(-8, 4, 0, 3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(16, 0); ctx.quadraticCurveTo(8, 4, 0, 3); ctx.stroke();
 
-            // Hex power core on chest
-            const cp = 0.5 + Math.sin(now / 160) * 0.45;
-            const cr = 4;
-            ctx.save(); ctx.translate(0, 12);
+            // Mongkhon (headband rope) wrapped around upper chest — signature Muay Thai
+            const mongkCol = ht >= 2 ? '#fbbf24' : '#38bdf8';
+            ctx.strokeStyle = mongkCol; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+            ctx.shadowBlur = 6; ctx.shadowColor = mongkCol;
+            ctx.globalAlpha = 0.70;
+            ctx.beginPath();
+            ctx.moveTo(-14, 0);
+            ctx.quadraticCurveTo(0, -4, 14, 0);
+            ctx.stroke();
+            // Mongkhon knot dots
+            ctx.fillStyle = mongkCol; ctx.globalAlpha = 0.80;
+            ctx.beginPath(); ctx.arc(-14, 0, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(14, 0, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+
+            // Spectral energy core (hexagonal, same as Auto but different color)
+            const cp = Math.max(0.3, 0.5 + Math.sin(now / 180) * 0.45) * (isPunch ? 1.6 : 1.0);
+            const cr = 5;
+            ctx.save(); ctx.translate(0, 13);
             ctx.beginPath();
             for (let hi = 0; hi < 6; hi++) {
                 const ha = (hi / 6) * Math.PI * 2 - Math.PI / 6;
@@ -336,284 +376,271 @@ class WanchaiStand {
                     : ctx.lineTo(Math.cos(ha) * cr, Math.sin(ha) * cr);
             }
             ctx.closePath();
-            const cG2 = ctx.createRadialGradient(0, 0, 0, 0, 0, cr);
-            cG2.addColorStop(0, `rgba(255,210,170,${Math.min(1, cp * 1.1)})`);
-            cG2.addColorStop(0.5, `rgba(249,115,22,${Math.min(1, cp)})`);
-            cG2.addColorStop(1, `rgba(153,27,27,${cp * 0.6})`);
-            ctx.fillStyle = cG2;
-            ctx.shadowBlur = 10 * cp; ctx.shadowColor = '#f97316';
+            const cG = ctx.createRadialGradient(0, 0, 0, 0, 0, cr);
+            cG.addColorStop(0, `rgba(255,255,255,${Math.min(1, cp * 0.9)})`);
+            cG.addColorStop(0.5, `${auraCol}${Math.min(1, cp)})`);
+            cG.addColorStop(1, `${auraCol}${cp * 0.4})`);
+            ctx.fillStyle = cG;
+            ctx.shadowBlur = 12 * cp; ctx.shadowColor = coreCol;
             ctx.fill();
-            ctx.strokeStyle = `rgba(251,146,60,${cp * 0.8})`; ctx.lineWidth = 0.8; ctx.stroke();
-            ctx.fillStyle = `rgba(255,235,200,${cp * 0.9})`;
-            ctx.beginPath(); ctx.arc(0, 0, 1.2, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = `${auraCol}${cp * 0.6})`; ctx.lineWidth = 0.8; ctx.stroke();
             ctx.restore();
 
-            // Heat vents left side
-            ctx.shadowBlur = 6 + eyeFlick * 3; ctx.shadowColor = '#fb923c';
-            for (let vi = 0; vi < 3; vi++) {
-                const va = 0.32 + vi * 0.12 + eyeFlick * 0.08;
-                const vG = ctx.createLinearGradient(-13, 0, -9, 0);
-                vG.addColorStop(0, `rgba(251,146,60,${va * 1.2})`);
-                vG.addColorStop(1, `rgba(239,68,68,${va * 0.5})`);
-                ctx.fillStyle = vG; ctx.globalAlpha = 0.78;
-                ctx.beginPath(); ctx.roundRect(-13, 1 + vi * 4, 4, 2, 1); ctx.fill();
-            }
-            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
             ctx.restore(); // end torso
         }
 
-        // ── LAYER 4 : Arms & Fists ────────────────────────────────────────────
+        // ═══ LAYER 4 — Arms (Muay Thai guard stance) ════════════════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.4);
+            ctx.translate(sc.x, sc.y + sway * 0.35);
             ctx.scale(fs, 1);
 
-            // xDir: +1 = right arm, -1 = left arm (in facing-scaled space)
+            // MUAY THAI GUARD: front arm raised (guard), rear arm cocked for power punch
+            // xDir: +1 = lead arm (right in screen space), -1 = rear arm (power)
             const drawArm = (xDir, isActive) => {
-                const sX = xDir * 12;       // shoulder attach X
-                const sY = 2;               // shoulder attach Y (chest)
-                const idleX = xDir * (14 + Math.sin(t * 2.1 + xDir) * 1.2);
-                const idleY = 4 + Math.cos(t * 1.8 + xDir) * 1.5;
-                const hitX = xDir * 30;
-                const hitY = 0;
-                const fX = isActive ? hitX : idleX;
-                const fY = isActive ? hitY : idleY;
+                // Lead arm (guard): elbow up, forearm crosses centerline
+                // Rear arm (power): hip level, wound back for cross punch
+                const isLead = xDir > 0;
+                const elbX = isLead ? xDir * 14 : xDir * 10;
+                const elbY = isLead ? -8 : 2;   // lead arm elbow is HIGH (guard)
+                const idleX = isLead ? xDir * 18 : xDir * 22;
+                const idleY = isLead ? -12 + bob * 1.2 : 6 + bob * 0.5;
+                // Strike: lead = straight jab forward, rear = haymaker cross
+                const hitX = isActive ? (isLead ? xDir * 38 : xDir * 32) : idleX;
+                const hitY = isActive ? (isLead ? -6 : -4) : idleY;
+                const fX = hitX, fY = hitY;
 
                 // Upper arm
-                ctx.strokeStyle = '#6b1010'; ctx.lineWidth = 5.5;
+                ctx.strokeStyle = ht >= 2 ? '#5a3a00' : '#0a2e45';
+                ctx.lineWidth = 6;
                 ctx.lineCap = 'round';
-                ctx.shadowBlur = isActive ? 12 : 3; ctx.shadowColor = '#dc2626';
-                ctx.globalAlpha = 0.88;
+                ctx.shadowBlur = isActive ? 14 : 4; ctx.shadowColor = coreCol;
+                ctx.globalAlpha = 0.90;
                 ctx.beginPath();
-                ctx.moveTo(sX, sY);
-                ctx.quadraticCurveTo(
-                    sX + (fX - sX) * 0.45,
-                    sY + (isActive ? -3 : 2),
-                    fX, fY
-                );
+                ctx.moveTo(xDir * 15, -2);
+                ctx.quadraticCurveTo(elbX + (isActive ? xDir * 4 : 0), elbY, fX, fY);
                 ctx.stroke();
 
-                // Fist
-                const fR = isActive ? 7 : 6;
-                const fBg = ctx.createRadialGradient(fX - 1.5, fY - 1.5, 0.5, fX, fY, fR);
-                fBg.addColorStop(0, isActive ? '#fca5a5' : '#9b3a20');
-                fBg.addColorStop(0.5, isActive ? '#ef4444' : '#7f1d1d');
-                fBg.addColorStop(1, '#3a0808');
+                // Forearm (second segment for more humanoid look)
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = ht >= 2 ? '#7c5200' : '#0e4060';
+                ctx.globalAlpha = 0.82;
+
+                // Muay Thai glove (fist)
+                const fR = isActive ? 8.5 : 7;
+                const gloveColA = isActive ? (ht >= 2 ? '#f97316' : '#0ea5e9') : (ht >= 2 ? '#7c4500' : '#0c4a6e');
+                const gloveColB = isActive ? (ht >= 2 ? '#dc2626' : '#0284c7') : (ht >= 2 ? '#3d1f00' : '#082f49');
+                const fBg = ctx.createRadialGradient(fX - 2, fY - 2, 0.5, fX, fY, fR);
+                fBg.addColorStop(0, isActive ? 'rgba(255,255,255,0.90)' : gloveColA);
+                fBg.addColorStop(0.45, gloveColA);
+                fBg.addColorStop(1, gloveColB);
                 ctx.fillStyle = fBg;
-                ctx.strokeStyle = isActive ? 'rgba(249,115,22,0.65)' : 'rgba(50,8,8,0.7)';
-                ctx.lineWidth = 1.1;
-                ctx.shadowBlur = isActive ? 16 + flashT * 14 : 5;
-                ctx.shadowColor = isActive ? '#f97316' : '#dc2626';
-                ctx.globalAlpha = isActive ? 0.92 + flashT * 0.08 : 0.76;
+                ctx.strokeStyle = isActive ? `${auraCol}0.80)` : 'rgba(0,0,0,0.5)';
+                ctx.lineWidth = 1.2;
+                ctx.shadowBlur = isActive ? 18 + flashT * 16 : 6;
+                ctx.shadowColor = isActive ? punchCol : coreCol;
+                ctx.globalAlpha = isActive ? 0.95 + flashT * 0.05 : 0.78;
                 ctx.beginPath(); ctx.arc(fX, fY, fR, 0, Math.PI * 2);
                 ctx.fill(); ctx.stroke();
 
-                // Knuckle lines
-                ctx.globalAlpha = isActive ? 0.50 : 0.25;
-                ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 0.85;
+                // Glove lace lines (wrapping tape detail)
+                ctx.globalAlpha = isActive ? 0.55 : 0.30;
+                ctx.strokeStyle = isActive ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)';
+                ctx.lineWidth = 0.9;
                 for (let k = 0; k < 3; k++) {
                     ctx.beginPath();
-                    ctx.moveTo(fX - fR * 0.55, fY - fR * 0.25 + k * 1.9);
-                    ctx.lineTo(fX + fR * 0.55, fY - fR * 0.25 + k * 1.9);
+                    ctx.moveTo(fX - fR * 0.6, fY - fR * 0.20 + k * 2.2);
+                    ctx.lineTo(fX + fR * 0.6, fY - fR * 0.20 + k * 2.2);
                     ctx.stroke();
                 }
 
-                // Impact burst on active fist
-                if (isActive && flashT > 0.15) {
-                    const bX = fX + xDir * 4;
-                    ctx.globalAlpha = flashT * 0.82;
-                    ctx.fillStyle = '#fef08a';
-                    ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24';
-                    ctx.beginPath(); ctx.arc(bX, fY, 5 + flashT * 5, 0, Math.PI * 2); ctx.fill();
-                    // radial sparks
-                    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 0.9;
-                    for (let r = 0; r < 6; r++) {
-                        const ra = (r / 6) * Math.PI * 2 + t * 4;
-                        ctx.globalAlpha = flashT * 0.42;
+                // Impact burst on active fist (bigger and more dramatic)
+                if (isActive && flashT > 0.10) {
+                    const bX = fX + xDir * 5;
+                    // Primary burst
+                    ctx.globalAlpha = flashT * 0.90;
+                    ctx.fillStyle = 'white';
+                    ctx.shadowBlur = 24; ctx.shadowColor = punchCol;
+                    ctx.beginPath(); ctx.arc(bX, fY, 6 + flashT * 7, 0, Math.PI * 2); ctx.fill();
+                    // Color overlay
+                    ctx.fillStyle = punchCol; ctx.globalAlpha = flashT * 0.60;
+                    ctx.beginPath(); ctx.arc(bX, fY, 3 + flashT * 4, 0, Math.PI * 2); ctx.fill();
+                    // Star-burst spikes (8 direction)
+                    ctx.strokeStyle = punchCol; ctx.lineWidth = 1.2;
+                    for (let r = 0; r < 8; r++) {
+                        const ra = (r / 8) * Math.PI * 2 + t * 6;
+                        ctx.globalAlpha = flashT * 0.55;
                         ctx.beginPath();
-                        ctx.moveTo(bX, fY);
-                        ctx.lineTo(bX + Math.cos(ra) * 13, fY + Math.sin(ra) * 13);
+                        ctx.moveTo(bX + Math.cos(ra) * 5, fY + Math.sin(ra) * 5);
+                        ctx.lineTo(bX + Math.cos(ra) * 17, fY + Math.sin(ra) * 17);
                         ctx.stroke();
                     }
                 }
                 ctx.globalAlpha = 1; ctx.shadowBlur = 0;
             };
 
-            drawArm(1, isPunch && side > 0);  // right arm
-            drawArm(-1, isPunch && side < 0);  // left arm
+            drawArm(1, isPunch && side > 0);   // lead arm
+            drawArm(-1, isPunch && side < 0);  // power arm
             ctx.restore();
         }
 
-        // ── LAYER 5 : Head ────────────────────────────────────────────────────
+        // ═══ LAYER 5 — Head (Spirit face — angular, hollow eyes) ═════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway);
+            ctx.translate(sc.x, sc.y + bob * 1.5); // bob = fighter weight shift
             ctx.scale(fs, 1);
 
-            const hy = -22 + breath * 0.7;   // head center Y, bobs with breath
+            const hy = -26 + breathe * 0.6; // head center, slightly higher (taller fighter)
 
-            // Neck stub
-            ctx.fillStyle = '#7f1d1d'; ctx.globalAlpha = 0.72;
-            ctx.beginPath(); ctx.roundRect(-3.5, hy + 9, 7, 6, 1); ctx.fill();
+            // Neck
+            ctx.fillStyle = ht >= 2 ? '#3d1a00' : '#082f49'; ctx.globalAlpha = 0.75;
+            ctx.beginPath(); ctx.roundRect(-4, hy + 10, 8, 7, 1); ctx.fill();
 
-            // Head base — skin tone matches Auto portrait
-            const hG = ctx.createRadialGradient(-2.5, hy - 3, 1, 0, hy, 11);
-            hG.addColorStop(0, '#cc7744');
-            hG.addColorStop(0.6, '#a05828');
-            hG.addColorStop(1, '#7a3810');
+            // ── MONGKHON HEADBAND — before head so it clips under ──
+            const mkBandY = hy - 3;
+            const mkCol = ht >= 2 ? '#f59e0b' : '#38bdf8';
+            ctx.shadowBlur = 8; ctx.shadowColor = mkCol;
+            ctx.fillStyle = mkCol; ctx.globalAlpha = 0.80;
+            ctx.beginPath(); ctx.roundRect(-13, mkBandY, 26, 4.5, 2); ctx.fill();
+            // Mongkhon ribbon tie on side
+            ctx.strokeStyle = mkCol; ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.65;
+            ctx.beginPath();
+            ctx.moveTo(13, mkBandY + 2); ctx.lineTo(18, mkBandY); ctx.lineTo(17, mkBandY + 5);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Head base — spirit skin (slightly translucent, slightly inhuman)
+            const hG = ctx.createRadialGradient(-3, hy - 4, 1, 0, hy, 12);
+            hG.addColorStop(0, ht >= 2 ? '#a86030' : '#336688');   // warm/cold skin
+            hG.addColorStop(0.55, ht >= 2 ? '#7a3a14' : '#1a4d6e');
+            hG.addColorStop(1, ht >= 2 ? '#3d1500' : '#091f30');
             ctx.fillStyle = hG;
-            ctx.globalAlpha = 0.93;
-            ctx.shadowBlur = isPunch ? 14 : 6; ctx.shadowColor = '#dc2626';
-            ctx.beginPath(); ctx.arc(0, hy, 11, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 0.88;
+            ctx.shadowBlur = isPunch ? 16 : 7; ctx.shadowColor = coreCol;
+            ctx.beginPath(); ctx.arc(0, hy, 12, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
 
-            // ── Buzzcut base cap ──
-            ctx.fillStyle = '#1a0404'; ctx.globalAlpha = 0.86;
-            ctx.beginPath(); ctx.arc(0, hy, 11, Math.PI, 0); ctx.closePath(); ctx.fill();
+            // ── Short cropped hair ──
+            ctx.fillStyle = '#050505'; ctx.globalAlpha = 0.90;
+            ctx.beginPath(); ctx.arc(0, hy, 12, Math.PI * 1.05, Math.PI * 2.0); ctx.closePath(); ctx.fill();
+            // Hair texture line
+            ctx.strokeStyle = 'rgba(80,40,0,0.20)'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.arc(0, hy, 10, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
 
-            // ── 3 forward-swept spikes — Auto's signature ──
-            const spkBaseY = hy - 10;
-            const spkData = [
-                { bx: -3.5, lean: -3, h: 8 },   // left — shorter, leans left
-                { bx: 0.5, lean: 2, h: 10 },   // center — tallest, forward lean
-                { bx: 4.5, lean: 5, h: 7 },   // right — mid
-            ];
-            spkData.forEach(({ bx, lean, h }, idx) => {
-                const wob = Math.sin(now / 340 + idx * 1.4) * 0.7;
-                const tipX = bx + lean + wob;
-                const tipY = spkBaseY - h - wob * 0.3;
-                // flat dark base
-                ctx.fillStyle = '#220606'; ctx.globalAlpha = 0.88;
-                ctx.beginPath();
-                ctx.moveTo(bx - 2.2, spkBaseY); ctx.lineTo(bx + 2.2, spkBaseY);
-                ctx.lineTo(tipX, tipY); ctx.closePath(); ctx.fill();
-                // gradient overlay base→tip
-                const sg = ctx.createLinearGradient(bx, spkBaseY, tipX, tipY);
-                sg.addColorStop(0, '#5c1010');
-                sg.addColorStop(0.65, '#b91c1c');
-                sg.addColorStop(1, '#f97316');
-                ctx.fillStyle = sg; ctx.globalAlpha = 0.68;
-                ctx.beginPath();
-                ctx.moveTo(bx - 2.2, spkBaseY); ctx.lineTo(bx + 2.2, spkBaseY);
-                ctx.lineTo(tipX, tipY); ctx.closePath(); ctx.fill();
-                // ember tip glow
-                const eA = 0.60 + Math.sin(now / 170 + idx) * 0.28;
-                ctx.globalAlpha = Math.max(0, eA);
-                ctx.fillStyle = '#f97316';
-                ctx.shadowBlur = 9; ctx.shadowColor = '#f97316';
-                ctx.beginPath(); ctx.arc(tipX, tipY, 1.5, 0, Math.PI * 2); ctx.fill();
-                ctx.shadowBlur = 0;
-            });
-            ctx.globalAlpha = 1;
+            // ── Hollow spirit eyes — key distinguisher from Auto ──
+            // Outer glow first
+            const eyeY = hy + 1;
+            ctx.shadowBlur = isPunch ? 18 : 10; ctx.shadowColor = coreCol;
 
-            // ── Thick furrowed brows ──
-            ctx.strokeStyle = '#100202'; ctx.lineWidth = 3.0; ctx.lineCap = 'round';
-            // left brow — slopes toward nose
-            ctx.beginPath();
-            ctx.moveTo(-9, hy - 3.5); ctx.quadraticCurveTo(-4, hy - 5.5, -1.5, hy - 4);
-            ctx.stroke();
-            // right brow
-            ctx.beginPath();
-            ctx.moveTo(1.5, hy - 4); ctx.quadraticCurveTo(4, hy - 5.5, 9, hy - 3.5);
-            ctx.stroke();
-            // inner crease
-            ctx.lineWidth = 1.3; ctx.strokeStyle = '#200404';
-            ctx.beginPath();
-            ctx.moveTo(-2.5, hy - 3.8); ctx.lineTo(0, hy - 2.2); ctx.lineTo(2.5, hy - 3.8);
-            ctx.stroke();
+            // Eye sockets — dark recesses
+            ctx.fillStyle = '#000408'; ctx.globalAlpha = 0.95;
+            ctx.beginPath(); ctx.ellipse(-4.5, eyeY, 4, 2.2, -0.08, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(4.5, eyeY, 4, 2.2, 0.08, 0, Math.PI * 2); ctx.fill();
 
-            // ── Eyes — narrow squint, fire-orange iris ──
-            const eyeY = hy + 0.3;
-            const eyeGA = 0.80 + eyeFlick * 0.20;
-
-            // whites (narrow ellipses — squint)
-            ctx.fillStyle = 'white'; ctx.globalAlpha = 0.82;
-            ctx.beginPath(); ctx.ellipse(-4.2, eyeY, 3.5, 1.8, -0.12, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(4.2, eyeY, 3.5, 1.8, 0.12, 0, Math.PI * 2); ctx.fill();
-
-            // fire iris
-            ctx.globalAlpha = eyeGA;
-            ctx.shadowBlur = 10; ctx.shadowColor = '#f97316';
-            const mkIris = (x, y) => {
-                const ig = ctx.createRadialGradient(x - 0.7, y - 0.7, 0.4, x, y, 2.6);
-                ig.addColorStop(0, '#ffe080');
-                ig.addColorStop(0.5, '#f97316');
-                ig.addColorStop(1, '#7c2d12');
-                return ig;
+            // Spirit glow irises — no pupils (completely hollow glow)
+            const eyeIntensity = Math.max(0.6, 0.7 + eyeFlick * 0.3) * (isPunch ? 1.4 : 1.0);
+            const mkEye = (x, y) => {
+                const eG = ctx.createRadialGradient(x, y, 0, x, y, 3.5);
+                eG.addColorStop(0, `rgba(255,255,255,${Math.min(1, eyeIntensity)})`);
+                eG.addColorStop(0.4, `${auraCol}${Math.min(1, eyeIntensity * 0.9)})`);
+                eG.addColorStop(1, `${auraCol}0.0)`);
+                return eG;
             };
-            ctx.fillStyle = mkIris(-4.2, eyeY);
-            ctx.beginPath(); ctx.arc(-4.2, eyeY, 2.6, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = mkIris(4.2, eyeY);
-            ctx.beginPath(); ctx.arc(4.2, eyeY, 2.6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = mkEye(-4.5, eyeY);
+            ctx.globalAlpha = 0.95;
+            ctx.beginPath(); ctx.ellipse(-4.5, eyeY, 3.5, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = mkEye(4.5, eyeY);
+            ctx.beginPath(); ctx.ellipse(4.5, eyeY, 3.5, 1.9, 0, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
 
-            // narrow pupils
-            ctx.fillStyle = '#040000'; ctx.globalAlpha = 1;
-            ctx.beginPath(); ctx.ellipse(-4.2, eyeY, 0.9, 1.9, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(4.2, eyeY, 0.9, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+            // Eye gleam streaks (horizontal — otherworldly)
+            ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.7;
+            ctx.globalAlpha = 0.55;
+            ctx.beginPath(); ctx.moveTo(-7, eyeY); ctx.lineTo(-2, eyeY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(2, eyeY); ctx.lineTo(7, eyeY); ctx.stroke();
 
-            // eye shine
-            ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.globalAlpha = 0.75;
-            ctx.beginPath(); ctx.arc(-5.0, eyeY - 0.8, 0.8, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(3.4, eyeY - 0.8, 0.8, 0, Math.PI * 2); ctx.fill();
+            // ── Heavy angular brows — warrior intensity ──
+            ctx.strokeStyle = '#080000'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+            ctx.globalAlpha = 0.95;
+            // Left brow — severe inward angle
+            ctx.beginPath();
+            ctx.moveTo(-11, hy - 4); ctx.lineTo(-2, hy - 6.5);
+            ctx.stroke();
+            // Right brow — mirror
+            ctx.beginPath();
+            ctx.moveTo(2, hy - 6.5); ctx.lineTo(11, hy - 4);
+            ctx.stroke();
+            // Unibrow crease at nose bridge (intense warrior expression)
+            ctx.lineWidth = 1.8; ctx.strokeStyle = '#1a0000';
+            ctx.beginPath();
+            ctx.moveTo(-3, hy - 6); ctx.quadraticCurveTo(0, hy - 3.5, 3, hy - 6);
+            ctx.stroke();
 
-            // heavy upper lid (squint)
-            ctx.strokeStyle = '#080000'; ctx.lineWidth = 2.0; ctx.lineCap = 'round';
-            ctx.beginPath(); ctx.moveTo(-7.6, eyeY - 1.6); ctx.quadraticCurveTo(-4.2, eyeY - 3.2, -0.8, eyeY - 1.6); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0.8, eyeY - 1.6); ctx.quadraticCurveTo(4.2, eyeY - 3.2, 7.6, eyeY - 1.6); ctx.stroke();
+            // Battle scar — diagonal on right cheek
+            ctx.strokeStyle = 'rgba(200,80,30,0.60)'; ctx.lineWidth = 1.1;
+            ctx.globalAlpha = 0.70;
+            ctx.beginPath(); ctx.moveTo(5, eyeY + 2.5); ctx.lineTo(9, eyeY + 6.5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(6, eyeY + 3.0); ctx.lineTo(8, eyeY + 5.5); ctx.stroke();
 
-            // ── Scar under left eye — Auto's battle damage ──
-            ctx.strokeStyle = 'rgba(195,70,25,0.55)'; ctx.lineWidth = 0.95; ctx.lineCap = 'round';
-            ctx.beginPath(); ctx.moveTo(-7, eyeY + 2.0); ctx.lineTo(-5.2, eyeY + 4.5); ctx.stroke();
-
-            // ── Tight-set mouth ──
-            ctx.strokeStyle = '#7a3010'; ctx.lineWidth = 1.7; ctx.lineCap = 'round';
-            ctx.globalAlpha = 0.72;
-            ctx.beginPath(); ctx.moveTo(-4, hy + 7); ctx.lineTo(4, hy + 7); ctx.stroke();
-            // jaw tension lines
-            ctx.strokeStyle = 'rgba(100,40,10,0.28)'; ctx.lineWidth = 0.65;
-            ctx.beginPath(); ctx.moveTo(-6.5, hy + 3.5); ctx.lineTo(-6.5, hy + 6.5); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(6.5, hy + 3.5); ctx.lineTo(6.5, hy + 6.5); ctx.stroke();
+            // Tight warrior mouth — set jaw
+            ctx.strokeStyle = ht >= 2 ? '#7c4500' : '#0a3a5a';
+            ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+            ctx.globalAlpha = 0.80;
+            ctx.beginPath(); ctx.moveTo(-4.5, hy + 8); ctx.lineTo(4.5, hy + 8); ctx.stroke();
+            // Jaw clench lines
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.65;
+            ctx.beginPath(); ctx.moveTo(-7, hy + 5); ctx.lineTo(-7, hy + 8); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(7, hy + 5); ctx.lineTo(7, hy + 8); ctx.stroke();
 
             ctx.globalAlpha = 1; ctx.shadowBlur = 0;
             ctx.restore(); // end head
         }
 
-        // ── LAYER 6 : Name chip ───────────────────────────────────────────────
+        // ═══ LAYER 6 — Name chip ════════════════════════════════════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.2);
-            const chipY = -46;
-            const cA = 0.65 + Math.sin(t * 1.9) * 0.12;
+            ctx.translate(sc.x, sc.y + bob * 0.5);
+            const chipY = -52;
+            const cA = 0.60 + Math.sin(t * 2.1) * 0.15;
 
-            // UPGRADE: punch-flash halo ring behind chip
-            if (isPunch && flashT > 0.1) {
-                ctx.globalAlpha = flashT * 0.70;
-                ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
-                ctx.shadowBlur = 22; ctx.shadowColor = '#facc15';
-                ctx.beginPath(); ctx.arc(0, chipY, 26 + (1 - flashT) * 10, 0, Math.PI * 2); ctx.stroke();
+            // Punch flash ring behind chip
+            if (isPunch && flashT > 0.08) {
+                ctx.globalAlpha = flashT * 0.75;
+                ctx.strokeStyle = punchCol; ctx.lineWidth = 2.2;
+                ctx.shadowBlur = 24; ctx.shadowColor = punchCol;
+                ctx.beginPath(); ctx.arc(0, chipY, 28 + (1 - flashT) * 12, 0, Math.PI * 2); ctx.stroke();
                 ctx.shadowBlur = 0;
             }
 
-            // pill bg
-            ctx.globalAlpha = cA * 0.70;
-            ctx.fillStyle = 'rgba(25,2,2,0.72)';
-            // UPGRADE: border flashes amber on punch
+            // Pill bg
+            ctx.globalAlpha = cA * 0.75;
+            ctx.fillStyle = 'rgba(0,8,18,0.80)';
             ctx.strokeStyle = isPunch
-                ? `rgba(251,191,36,${0.55 + flashT * 0.45})`
-                : 'rgba(220,38,38,0.55)';
-            ctx.lineWidth = isPunch ? 1.6 : 0.9;
-            ctx.shadowBlur = isPunch ? 12 : 7;
-            ctx.shadowColor = isPunch ? '#fbbf24' : '#dc2626';
-            ctx.beginPath(); ctx.roundRect(-20, chipY - 5.5, 40, 11, 4);
+                ? `rgba(255,255,255,${0.50 + flashT * 0.50})`
+                : `${auraCol}0.60)`;
+            ctx.lineWidth = isPunch ? 1.8 : 1.0;
+            ctx.shadowBlur = isPunch ? 14 : 8;
+            ctx.shadowColor = isPunch ? punchCol : coreCol;
+            ctx.beginPath(); ctx.roundRect(-22, chipY - 6, 44, 12, 4);
             ctx.fill(); ctx.stroke();
-            // label
+
+            // Heat tier badge (left side of chip)
+            if (ht > 0) {
+                const tierMark = ht >= 3 ? '💥' : ht >= 2 ? '🔥🔥' : '🔥';
+                ctx.globalAlpha = cA * 0.95;
+                ctx.font = 'bold 7px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#fb923c';
+                ctx.fillText(tierMark, -21, chipY);
+            }
+
+            // Label
             ctx.globalAlpha = cA;
-            ctx.fillStyle = isPunch ? '#fef08a' : '#fca5a5';
+            ctx.fillStyle = isPunch ? '#ffffff' : coreCol;
             ctx.font = 'bold 7.5px Arial';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowBlur = isPunch ? 10 : 4;
-            ctx.shadowColor = isPunch ? '#facc15' : '#ef4444';
+            ctx.shadowBlur = isPunch ? 12 : 5;
+            ctx.shadowColor = isPunch ? punchCol : coreCol;
             ctx.fillText('WANCHAI', 0, chipY);
             ctx.globalAlpha = 1; ctx.shadowBlur = 0;
             ctx.restore();
@@ -647,6 +674,11 @@ class AutoPlayer extends Player {
 
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0, vacuum: 0, detonation: 0 };
 
+        // ── Heat Gauge (implements config heatMax/heatTier* system) ──
+        this.heat = 0;              // 0–100
+        this._heatTier = 0;        // 0=COLD 1=WARM 2=HOT 3=OVERHEAT
+        this._heatTierLabel = '';  // for HUD floating text throttle
+
         // ── Wanchai Stand entity (created on activation) ──────
         this.wanchaiStand = null;
     }
@@ -668,6 +700,9 @@ class AutoPlayer extends Player {
         }
         const reduction = this.wanchaiActive ? (this.stats?.standDamageReduction ?? 0.30) : 0;  // fix: was 0.5 ≠ config 0.30
         const scaled = amt * (1 - reduction);
+        // Heat gain from damage taken
+        const heatGain = scaled * (this.stats?.heatPerDamageTaken ?? 0.5);
+        if (heatGain > 0) this.gainHeat(heatGain);
         super.takeDamage(scaled);
     }
 
@@ -711,11 +746,53 @@ class AutoPlayer extends Player {
         }
     }
 
+    // ── Heat Gauge — call from _punch / _doPlayerMelee / takeDamage ─────────
+    gainHeat(amount) {
+        const S = this.stats ?? {};
+        const bonus = this.passiveUnlocked ? (S.passiveHeatGainBonus ?? 1.25) : 1.0;
+        this.heat = Math.min(S.heatMax ?? 100, this.heat + amount * bonus);
+
+        // ── Tier transition floating text (throttled — once per tier change) ──
+        const newTier = this.heat >= (S.heatTierOverheat ?? 100) ? 3
+            : this.heat >= (S.heatTierHot ?? 67) ? 2
+                : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
+        if (newTier > this._heatTier) {
+            this._heatTier = newTier;
+            const labels = ['', '🔥 WARM', '🔥🔥 HOT!', '💥 OVERHEATED!!'];
+            const colors = ['', '#fb923c', '#ef4444', '#facc15'];
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText(labels[newTier], this.x, this.y - 80, colors[newTier], 22);
+            if (typeof addScreenShake === 'function' && newTier === 3) addScreenShake(4);
+        }
+        this._heatTier = newTier; // always sync downward too
+    }
+
     update(dt, keys, mouse) {
         if (this.cooldowns?.wanchai > 0) this.cooldowns.wanchai -= dt;
         if (this.cooldowns?.shoot > 0) this.cooldowns.shoot -= dt;
         if (this.cooldowns?.vacuum > 0) this.cooldowns.vacuum -= dt;
         if (this.cooldowns?.detonation > 0) this.cooldowns.detonation -= dt;
+
+        // ── Heat Gauge tick ───────────────────────────────────────
+        {
+            const S = this.stats ?? {};
+            const decayRate = this.wanchaiActive
+                ? (S.heatDecayRateActive ?? 0)
+                : (S.heatDecayRate ?? 8);
+            this.heat = Math.max(0, this.heat - decayRate * dt);
+
+            // Sync tier downward (gainHeat handles upward)
+            const newTier = this.heat >= (S.heatTierOverheat ?? 100) ? 3
+                : this.heat >= (S.heatTierHot ?? 67) ? 2
+                    : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
+            this._heatTier = newTier;
+
+            // OVERHEAT: HP drain
+            if (newTier === 3) {
+                const drain = (S.heatHpDrainOverheat ?? 3) * dt;
+                this.hp = Math.max(1, this.hp - drain);
+            }
+        }
 
         if (this.wanchaiActive) {
             this.wanchaiTimer -= dt;
@@ -772,6 +849,9 @@ class AutoPlayer extends Player {
             const PULL_DUR = this.stats?.vacuumPullDur ?? 0.45; // continuous pull
 
             let pulled = 0;
+            const vacDmg = this.stats?.vacuumDamage ?? 18;
+            const ignDur = this.stats?.vacuumIgniteDuration ?? 1.5;
+            const ignDps = this.stats?.vacuumIgniteDPS ?? 12;
             for (const enemy of (window.enemies || [])) {
                 if (enemy.dead) continue;
                 const dx = this.x - enemy.x;
@@ -787,9 +867,16 @@ class AutoPlayer extends Player {
                     enemy._vacuumTargetX = this.x;
                     enemy._vacuumTargetY = this.y;
                     enemy._vacuumPullTimer = PULL_DUR;
+                    // ── NEW: instant damage + Ignite ──────────────────
+                    enemy.takeDamage?.(vacDmg * (this.damageMultiplier || 1.0), this);
+                    enemy.isBurning = true;
+                    enemy.burnTimer = ignDur;
+                    enemy.burnDps = ignDps;
                     pulled++;
                 }
             }
+            // ── Heat gain from Vacuum ──────────────────────────
+            if (pulled > 0) this.gainHeat(this.stats?.vacuumHeatGain ?? 25);
             // Boss — weak pull (30%)
             if (window.boss && !window.boss.dead) {
                 const dx = this.x - window.boss.x;
@@ -812,16 +899,20 @@ class AutoPlayer extends Player {
             consumeInput('q');
         }
 
-        // ── E: Overheat Detonation — ระเบิดสแตนด์ทิ้งปิดฉาก ─────
+        // ── E: Overheat Detonation — Heat-scaled, DOES NOT kill Wanchai ─────
         // กด E ระหว่าง Wanchai active เท่านั้น
-        // AOE 220px, ดาเมจสูง, แต่ Wanchai สิ้นสุดทันที
+        // AOE = detonationRange (×1.5 ถ้า OVERHEATED), damage = base + heat×scaling
         if (checkInput('e') && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
-            const DET_RANGE = this.stats?.detonationRange ?? 220;
-            // ดาเมจ = wanchaiDamage × 6 (burst ทิ้ง 6 หมัดพร้อมกัน)
-            const detBaseDmg = (this.stats?.wanchaiDamage ?? 32) * 6 * (this.damageMultiplier || 1.0);
-            let detCrit = this.baseCritChance + (this.stats?.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
+            const S = this.stats ?? {};
+            const isOverheat = (this._heatTier ?? 0) >= 3;
+            const DET_RANGE = (S.detonationRange ?? 240) * (isOverheat ? 1.5 : 1.0);
+            // Heat-scaled damage
+            const detBaseDmg = (S.detonationBaseDamage ?? 80) + this.heat * (S.detonationHeatScaling ?? 2.5);
+            const detFinalBase = detBaseDmg * (this.damageMultiplier || 1.0);
+            let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.25);
+            if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.20);
             let detIsCrit = Math.random() < detCrit;
-            let detFinalDmg = detBaseDmg * (detIsCrit ? (this.stats?.critMultiplier ?? 2.0) : 1.0);
+            let detFinalDmg = detFinalBase * (detIsCrit ? (S.critMultiplier ?? 2.2) : 1.0);
 
             // ── Second Wind bonus ──
             if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
@@ -850,18 +941,19 @@ class AutoPlayer extends Player {
                 this.hp = Math.min(this.maxHp, this.hp + totalDet * (this.stats?.passiveLifesteal ?? 0.01));
             }
 
-            // ── บังคับปิด Wanchai + Stand ──
-            this.wanchaiActive = false;
-            this.wanchaiTimer = 0;
-            if (this.wanchaiStand) { this.wanchaiStand.active = false; this.wanchaiStand = null; }
-            this.cooldowns.detonation = this.stats?.detonationCooldown ?? 5; // short CD เพราะต้องเปิด Wanchai ก่อน
+            // ── REWORK: Wanchai STAYS active after Detonation ──
+            // Heat resets -50 (keeps momentum, can chain)
+            this.heat = Math.max(0, this.heat - 50);
+            this._heatTier = this.heat >= (S.heatTierHot ?? 67) ? 2
+                : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
+            this.cooldowns.detonation = S.detonationCooldown ?? 8;
 
             spawnParticles(this.x, this.y, 60, '#dc2626');
             addScreenShake(10);
             spawnFloatingText(
-                detIsCrit ? '💥 OVERHEAT CRIT!' : '💥 OVERHEAT!',
+                detIsCrit ? `💥 OVERHEAT CRIT! ${Math.floor(detFinalDmg)}` : `💥 OVERHEAT! ${Math.floor(detFinalDmg)}`,
                 this.x, this.y - 70,
-                detIsCrit ? '#facc15' : '#dc2626', 28
+                detIsCrit ? '#facc15' : '#dc2626', isOverheat ? 32 : 28
             );
             if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
             consumeInput('e');
@@ -950,12 +1042,20 @@ class AutoPlayer extends Player {
             this.wanchaiStand.y = target.y - Math.sin(this.angle) * 20;
         }
 
-        let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0);
+        // Heat gain per player rush hit
+        this.gainHeat(S.heatPerPlayerHit ?? 8);
+        // Heat tier damage
+        const pht = this._heatTier ?? 0;
+        const pHeatMult = pht >= 3 ? (S.heatDmgOverheat ?? 1.50)
+            : pht >= 2 ? (S.heatDmgHot ?? 1.30)
+                : pht >= 1 ? (S.heatDmgWarm ?? 1.15) : 1.0;
+        let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0) * pHeatMult;
         let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
+        if (pht >= 3) critChance += (S.heatCritBonusOverheat ?? 0.20);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
-            dmg *= (S.critMultiplier ?? 2.0);
+            dmg *= (S.critMultiplier ?? 2.2);
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
             if (typeof Achievements !== 'undefined') {
                 Achievements.stats.crits = (Achievements.stats.crits ?? 0) + 1;
@@ -1054,6 +1154,28 @@ AutoPlayer.prototype.updateUI = function () {
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
             UIManager._setCooldownVisual('stealth-icon',
                 Math.max(0, this.cooldowns.wanchai ?? 0), wanchaiCd);
+        }
+    }
+
+    // ── Heat Gauge HUD ──────────────────────────────────────────
+    // Reuses energy bar slot label area — injected as a floating badge
+    {
+        const heatPct = (this.heat ?? 0) / ((this.stats?.heatMax) ?? 100);
+        const ht = this._heatTier ?? 0;
+        const heatBarEl = document.getElementById('heat-bar');
+        const heatLabelEl = document.getElementById('heat-label');
+        if (heatBarEl) {
+            heatBarEl.style.width = `${heatPct * 100}%`;
+            heatBarEl.style.background = ht >= 3 ? '#facc15'
+                : ht >= 2 ? '#ef4444'
+                    : ht >= 1 ? '#f97316' : '#fb923c';
+            heatBarEl.style.boxShadow = ht >= 3 ? '0 0 12px #facc15'
+                : ht >= 2 ? '0 0 10px #ef4444'
+                    : ht >= 1 ? '0 0 8px #f97316' : 'none';
+        }
+        if (heatLabelEl) {
+            const label = ht >= 3 ? 'OVERHEAT' : ht >= 2 ? 'HOT' : ht >= 1 ? 'WARM' : 'HEAT';
+            heatLabelEl.textContent = label;
         }
     }
 
