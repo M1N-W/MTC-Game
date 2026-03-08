@@ -33,13 +33,13 @@
 
 ## 🦸‍♂️ Playable Characters
 
-เลือกเล่นเป็น 3 ตัวละครที่มีสกิลและสไตล์การเล่นแตกต่างกันอย่างสิ้นเชิง:
+เลือกเล่นเป็น 3 ตัวละครที่มีสกิลและสไตล์การเล่นแตกต่างกันอย่างสิ้นเชิง พร้อมระบบ stat bar ใหม่ 4 มิติ (HP/DMG/SPD/RANGE) ที่แสดงค่าจริงจาก config.js:
 
-| Character | Class | Key Abilities | Playstyle |
-| :--- | :--- | :--- | :--- |
-| 🎓 **เก้า (Kao)** | Advanced Assassin | 👻 Two-Phase Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
-| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 🔥 Ritual Burst<br>🐉 Naga + Garuda Summon<br>🍚 Cosmic Balance | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
-| 🔥 **ออโต้ (Auto)** | Pyromaniac | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อน และปล่อย Stand Rush ไปตำแหน่งใดก็ได้ |
+| Character | Class | Stats (HP/DMG/SPD/RANGE) | Key Abilities | Playstyle |
+| :--- | :--- | :--- | :--- | :--- |
+| 🎓 **เก้า (Kao)** | Advanced Assassin | 119 / 118 / 298 / 900 | 👻 Two-Phase Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
+| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 165 / 148 / 298 / 750 | 🔥 Ritual Burst<br>🐉 Naga + Garuda Summon<br>🍚 Cosmic Balance | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
+| 🔥 **ออโต้ (Auto)** | Pyromaniac | 230 / MAX / 260 / MELEE | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อน และปล่อย Stand Rush ไปตำแหน่งใดก็ได้ |
 
 ---
 
@@ -88,19 +88,19 @@
 
 ---
 
-## 📈 Current Version: v3.17.0 (March 8, 2026)
+## 📈 Current Version: v3.18.1 (March 8, 2026)
 
 **Latest Major Updates:**
-- �️ **Major Map Redesign:** Complete layout overhaul with zones repositioned 200-300px closer to spawn for immediate engagement
-- 🎨 **Visual Enhancement Suite:** Center landmark with rotating dual-rings, wall drop shadows, ambient micro-particles per zone, and enhanced zone labels
-- 🎮 **Gameplay Improvements:** Strategic corridor walls creating chokepoints, clustered barrel placements, and immediate zone access within 3-5 seconds
-- ⚡ **Performance Optimizations:** Deterministic map generation using sin/cos instead of Math.random(), optimized timing system, and efficient particle rendering
-- �📚 **Documentation Enhancement:** Comprehensive PROJECT_OVERVIEW.md updates with dev buff system documentation
+- 📊 **Character Selection UI Redesign:** Enhanced stat bar system with 4 stats (HP/DMG/SPD/RANGE) displaying real config.js values
+- 🎨 **Visual Identity Overhaul:** Poom theme changed from orange to green across all UI elements, Auto hover border refined to red
+- ✨ **Enhanced Visual Polish:** Improved stat bar styling (7px height, border-radius, tick marks), glow effects, avatar enhancements
+- 🌐 **Menu Enhancements:** Added scanline texture, dual-line section dividers, enhanced high score display with sweep animation
+- �� **Documentation Enhancement:** Comprehensive PROJECT_OVERVIEW.md updates with dev buff system documentation
 - 🔧 **Technical Reference:** Complete command documentation (spawn manop [1|2|3], spawn first [advanced], devbuff)
 - 🎯 **Architecture Clarity:** Updated passive unlock system documentation and dev mode implementation details
 - 🚀 **Universal Dev Buff System:** Character-agnostic stat enhancement package (HP +50%, Energy +50%, Damage ×1.25, Speed ×1.20, CDR ×0.60, Crit +8%) available to all characters via admin console
 - 💻 **Enhanced Admin Commands:** New `devbuff` command with detailed console output and visual feedback, replacing Kao-specific passive unlock system
-- 🎨 **Enhanced Boss HP Bar:** Complete visual overhaul with phase-based colors, drain effects, and shimmer animations
+- 🎨 **Visual Enhancements:** Shimmer sweep animations, ghost drain bar, and phase threshold markers
 - ✨ **Advanced Visual Effects:** Shimmer sweep animations, ghost drain bar, and phase threshold markers
 - 🎯 **Phase Color System:** Dynamic color changes (green→yellow→orange→red) based on HP percentage
 - 🔄 **HUD Layout:** Reverted to original positioning while maintaining enhanced visual effects

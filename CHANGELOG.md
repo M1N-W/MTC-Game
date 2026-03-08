@@ -4,6 +4,32 @@
 
 ---
 
+## v3.18.1 — Character Selection UI Redesign: Enhanced Stat Bars & Visual Identity
+*Released: March 8, 2026*
+
+### 📊 Stat Bar System Overhaul
+- **4-Stat Display:** Expanded from 3 to 4 stats (HP/DMG/SPD/RANGE) for complete character overview
+- **Real Config Values:** Stat percentages and numerical values now calculated from actual config.js values:
+  - Kao: HP=119, DPS≈118, SPD=298, Range=900
+  - Poom: HP=165, DPS≈148, SPD=298, Range=750  
+  - Auto: HP=230, DPS=MAX, SPD=260, Range=MELEE
+- **Enhanced Visual Design:** Increased bar height 6→7px, added border-radius 1px, 4-segment tick marks for tactical UI feel
+- **Glow Effects:** Added box-shadow to stat bar fills for enhanced visibility
+
+### 🎨 Character Theme Updates
+- **Poom Identity Change:** Complete color theme shift from orange to green across all UI elements
+  - Stat bars: Green gradient (#16a34a → #22c55e → #4ade80)
+  - Character tags, titles, and selection borders now green-themed
+  - Hover and selected states match new green identity
+- **Auto Theme Refinement:** Hover border changed from gold to red for better character identity consistency
+- **Enhanced Avatar Display:** Increased avatar height 112→120px with improved scanline overlay effects
+
+### ✨ Visual Polish & Menu Enhancements  
+- **Improved Hover States:** Enhanced glow effects and character-specific shadow colors for better visual feedback
+- **Menu Scanline Texture:** Added subtle scanline texture to menu container for tactical UI aesthetic
+- **Section Dividers:** Implemented dual-line section dividers (wide+narrow) for better visual hierarchy
+- **High Score Enhancement:** Added sweep animation and stronger glow text effects to high score display
+
 ## v3.18.0 — Boss Derivation Mode: PhysicsFormulaZone & Combat System Overhaul
 *Released: March 8, 2026*
 
