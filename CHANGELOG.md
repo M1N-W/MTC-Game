@@ -4,6 +4,41 @@
 
 ---
 
+## v3.16.7 — AdminSystem Permission Overhaul & Debug Commands
+*Released: March 8, 2026*
+
+### 🔐 Complete Permission System Redesign
+- **Three-Tier Permission Levels:** GUEST (○), OPERATOR (◉), and ROOT (★) with distinct visual badges
+- **Dynamic Permission Detection:** Based on `window.isAdmin` values (false/true/'root')
+- **Visual Permission Badges:** Displayed in console titlebar with color-coded indicators
+- **Enhanced Command Prompt:** Shows `[001] ◉OPERATOR@mtcserver:~#` with command counter and role
+- **Permission Guards:** ROOT-only commands automatically blocked with clear error messages
+
+### 🛠️ New Debug Commands & Tools
+- **energy [amount]:** Restore player energy (OPERATOR+)
+- **god / god off:** Toggle invincibility with continuous HP/Energy restoration (ROOT only)
+- **kill all:** Instantly terminate all enemies (ROOT only)  
+- **speed <mult>:** Set player move speed multiplier 0.1-10x (ROOT only)
+- **reset buffs:** Clear all player buffs including god mode and speed modifications (ROOT only)
+- **fps:** Toggle real-time FPS overlay in top-right corner (OPERATOR+)
+- **info:** Display comprehensive game state snapshot (OPERATOR+)
+
+### 🎨 Enhanced Console Experience
+- **Permission-Aware Help System:** Commands show as `[LOCKED]` for insufficient permission levels
+- **Visual Command Feedback:** Secret commands display in orange with glow effect
+- **Improved whoami:** Now shows current permission level with badge
+- **Command Counter:** Tracks all commands executed per session
+- **Styled Output Classes:** New CSS classes for secret commands and locked hints
+
+### 🎯 Technical Implementation
+- **Secure Command Parsing:** Permission checks happen before command execution
+- **Real-time Badge Updates:** Permission badge updates when console opens
+- **Efficient God Mode:** Uses 200ms interval for continuous HP/Energy restoration
+- **FPS Overlay:** Lightweight performance monitoring with requestAnimationFrame
+- **State Management:** Proper cleanup of intervals and temporary modifications
+
+---
+
 ## v3.16.6 — Domain Expansion Bug Fixes & Visual Rework
 *Released: March 8, 2026*
 

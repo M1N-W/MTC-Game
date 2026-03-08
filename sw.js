@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.16.6'; // v3.16.6: Fixed Domain Expansion _DC properties and added visual rework effects
+const CACHE_NAME = 'mtc-cache-v3.16.7'; // v3.16.7: Enhanced AdminSystem with permission levels and debug commands
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

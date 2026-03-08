@@ -644,6 +644,29 @@ body {
     color: #004d14;
 }
 
+/* Permission badge — shown in titlebar */
+#console-perm-badge {
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+/* God-mode / secret command output */
+.cline-secret {
+    color: #f97316;
+    text-shadow: 0 0 6px rgba(249, 115, 22, 0.6);
+}
+
+/* ROOT-locked command hint (dim) */
+.cline-locked {
+    color: #1f3a20;
+}
+
 /* Input row */
 .console-input-row {
     display: flex;

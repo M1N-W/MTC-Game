@@ -26,10 +26,38 @@ const AdminConsole = (() => {
 
     const CHAR_DELAY = 18;
 
+    // ── Permission Levels ──────────────────────────────────────
+    // 0 = GUEST    (no window.isAdmin)
+    // 1 = OPERATOR (window.isAdmin === true)
+    // 2 = ROOT     (window.isAdmin === 'root')
+    const PERM = {
+        GUEST: 0,
+        OPERATOR: 1,
+        ROOT: 2,
+    };
+    const PERM_LABEL = {
+        [PERM.GUEST]: { text: 'GUEST', color: '#6b7280', badge: '○' },
+        [PERM.OPERATOR]: { text: 'OPERATOR', color: '#22c55e', badge: '◉' },
+        [PERM.ROOT]: { text: 'ROOT', color: '#f97316', badge: '★' },
+    };
+
+    function _getPermLevel() {
+        if (window.isAdmin === 'root') return PERM.ROOT;
+        if (window.isAdmin === true) return PERM.OPERATOR;
+        return PERM.GUEST;
+    }
+
+    // ── God-mode state ─────────────────────────────────────────
+    let _godMode = false;
+    let _godInterval = null;
+
     // ── Available commands for Tab auto-complete ───────────────
     const COMMANDS = [
         'heal', 'score', 'next wave', 'set wave', 'give weapon',
-        'spawn manop', 'spawn first', 'clear', 'help', 'exit',
+        'spawn manop', 'spawn first',
+        'god', 'god off',
+        'energy', 'kill all', 'speed', 'fps', 'info', 'reset buffs',
+        'clear', 'help', 'exit',
         // Easter egg commands kept for discoverability
         'whoami', 'ls', 'ls -la', 'cat kru_manop_passwords.txt',
         'sudo make me a sandwich', 'sudo rm -rf /'
@@ -38,6 +66,8 @@ const AdminConsole = (() => {
     // ─────────────────────────────────────────────────────────
     // TYPING ANIMATION OUTPUT
     // ─────────────────────────────────────────────────────────
+    let _cmdCount = 0;
+
     function _appendLine(text, cssClass = 'cline-info', instant = false) {
         const output = document.getElementById('console-output');
         if (!output) return;
@@ -63,6 +93,19 @@ const AdminConsole = (() => {
             }
         };
         tick();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // UPDATE PERMISSION BADGE IN TITLEBAR
+    // ─────────────────────────────────────────────────────────
+    function _updatePermBadge() {
+        const badge = document.getElementById('console-perm-badge');
+        if (!badge) return;
+        const lvl = _getPermLevel();
+        const info = PERM_LABEL[lvl];
+        badge.textContent = `${info.badge} ${info.text}`;
+        badge.style.color = info.color;
+        badge.style.borderColor = info.color;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -92,7 +135,11 @@ const AdminConsole = (() => {
         const trimmed = raw.trim();
         if (!trimmed) return;
 
-        _appendLine('root@mtcserver:~# ' + raw, 'cline-cmd', true);
+        _cmdCount++;
+        const perm = _getPermLevel();
+        const permInfo = PERM_LABEL[perm];
+        // Show prompt with permission-colored label and command counter
+        _appendLine(`[${String(_cmdCount).padStart(3, '0')}] ${permInfo.badge}${permInfo.text}@mtcserver:~# ${raw}`, 'cline-cmd', true);
 
         history.unshift(raw);
         histIdx = -1;
@@ -102,6 +149,14 @@ const AdminConsole = (() => {
         const base = args[0];          // first token
         const sub = args[1] || '';    // second token
         const rest = args.slice(2);    // remainder
+
+        // ── Permission guard ───────────────────────────────────
+        const ROOT_ONLY = ['god', 'kill', 'speed', 'reset'];
+        if (ROOT_ONLY.includes(base) && perm < PERM.ROOT) {
+            _appendLine('⛔ ERR: Permission denied. Required: ROOT', 'cline-error');
+            _appendLine(`   Your level: ${PERM_LABEL[perm].text}  — contact system admin.`, 'cline-warn', true);
+            return;
+        }
 
         // ── Player guard (most commands need an active player) ─
         const needsPlayer = !['help', 'clear', 'exit', 'quit', 'q',
@@ -280,29 +335,215 @@ const AdminConsole = (() => {
         }
 
         // ══════════════════════════════════════════════════════
+        // energy [amount]   — restore player energy
+        // ══════════════════════════════════════════════════════
+        else if (base === 'energy') {
+            const amount = parseInt(args[1]) || 100;
+            const maxE = window.player.maxEnergy || 100;
+            const before = window.player.energy || 0;
+            window.player.energy = Math.min(maxE, before + amount);
+            const gained = Math.round(window.player.energy - before);
+            _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+            _appendLine(`> Injecting ${gained} energy units...`, 'cline-info');
+            _appendLine(`✔ Energy: ${Math.round(window.player.energy)}/${maxE}`, 'cline-ok');
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText(`⚡+${gained} EN`, window.player.x, window.player.y - 70, '#a78bfa', 20);
+            if (typeof spawnParticles === 'function')
+                spawnParticles(window.player.x, window.player.y, 10, '#a78bfa');
+        }
+
+        // ══════════════════════════════════════════════════════
+        // god / god off   — toggle invincibility  [ROOT only]
+        // ══════════════════════════════════════════════════════
+        else if (base === 'god') {
+            if (sub === 'off' || _godMode) {
+                _godMode = false;
+                if (_godInterval) { clearInterval(_godInterval); _godInterval = null; }
+                window.player._godMode = false;
+                _appendLine('> Disabling GOD MODE...', 'cline-info');
+                _appendLine('✔ Normal mortality restored.', 'cline-ok');
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('💀 GOD MODE OFF', window.player.x, window.player.y - 70, '#6b7280', 20);
+            } else {
+                _godMode = true;
+                window.player._godMode = true;
+                if (_godInterval) clearInterval(_godInterval);
+                _godInterval = setInterval(() => {
+                    if (!window.player || !window.player._godMode) {
+                        clearInterval(_godInterval); _godInterval = null; return;
+                    }
+                    window.player.hp = window.player.maxHp || 110;
+                    if (typeof window.player.maxEnergy !== 'undefined')
+                        window.player.energy = window.player.maxEnergy;
+                }, 200);
+                _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+                _appendLine('> Patching damage handler → /dev/null...', 'cline-info');
+                _appendLine('✔ GOD MODE ACTIVE  (type "god off" to disable)', 'cline-ok');
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('★ GOD MODE', window.player.x, window.player.y - 80, '#f97316', 26);
+                if (typeof spawnParticles === 'function')
+                    spawnParticles(window.player.x, window.player.y, 20, '#f97316');
+                if (typeof addScreenShake === 'function') addScreenShake(8);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // kill all   — instantly kill every enemy  [ROOT only]
+        // ══════════════════════════════════════════════════════
+        else if (base === 'kill' && sub === 'all') {
+            _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+            _appendLine('> Broadcasting SIGKILL to all entities...', 'cline-info');
+            const killed = _killAllEntities();
+            _appendLine(`✔ ${killed} entit${killed === 1 ? 'y' : 'ies'} terminated.`, 'cline-ok');
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText(`💀 ×${killed} KILLED`, window.player.x, window.player.y - 80, '#ef4444', 22);
+            if (typeof addScreenShake === 'function') addScreenShake(10);
+        }
+
+        // ══════════════════════════════════════════════════════
+        // speed [mult]   — set player move speed  [ROOT only]
+        // ══════════════════════════════════════════════════════
+        else if (base === 'speed') {
+            const mult = parseFloat(args[1]);
+            if (isNaN(mult) || mult <= 0 || mult > 10) {
+                _appendLine('ERR: usage: speed <multiplier>  (0.1 – 10)', 'cline-error');
+                return;
+            }
+            if (typeof window.player._origSpeed === 'undefined')
+                window.player._origSpeed = window.player.moveSpeed;
+            window.player.moveSpeed = window.player._origSpeed * mult;
+            _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+            _appendLine(`> Patching moveSpeed → ×${mult}...`, 'cline-info');
+            _appendLine(`✔ Speed set to ×${mult}  (base: ${window.player._origSpeed.toFixed(1)})`, 'cline-ok');
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText(`💨 ×${mult} SPEED`, window.player.x, window.player.y - 70, '#22d3ee', 20);
+            if (typeof spawnParticles === 'function')
+                spawnParticles(window.player.x, window.player.y, 12, '#22d3ee');
+        }
+
+        // ══════════════════════════════════════════════════════
+        // reset buffs   — clear all player buffs  [ROOT only]
+        // ══════════════════════════════════════════════════════
+        else if (base === 'reset' && sub === 'buffs') {
+            const p = window.player;
+            if (typeof p._origSpeed !== 'undefined') {
+                p.moveSpeed = p._origSpeed;
+                delete p._origSpeed;
+            }
+            if (_godMode) {
+                _godMode = false; p._godMode = false;
+                if (_godInterval) { clearInterval(_godInterval); _godInterval = null; }
+            }
+            if (typeof p.mtcDmgBuff !== 'undefined') p.mtcDmgBuff = 0;
+            if (typeof p.mtcSpeedBuff !== 'undefined') p.mtcSpeedBuff = 0;
+            if (typeof p.mtcBuffTimer !== 'undefined') p.mtcBuffTimer = 0;
+            if (typeof p.damageBoost !== 'undefined') p.damageBoost = 0;
+            if (typeof p.speedBoost !== 'undefined') p.speedBoost = 0;
+            _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+            _appendLine('> Flushing all player buff registers...', 'cline-info');
+            _appendLine('✔ All buffs cleared. Player state normalized.', 'cline-ok');
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText('🔄 BUFFS RESET', p.x, p.y - 70, '#34d399', 20);
+        }
+
+        // ══════════════════════════════════════════════════════
+        // fps   — toggle FPS debug overlay
+        // ══════════════════════════════════════════════════════
+        else if (base === 'fps') {
+            const overlay = document.getElementById('fps-overlay');
+            if (overlay) {
+                const visible = overlay.style.display !== 'none';
+                overlay.style.display = visible ? 'none' : 'block';
+                _appendLine(`✔ FPS overlay ${visible ? 'hidden' : 'shown'}.`, 'cline-ok');
+            } else {
+                const el = document.createElement('div');
+                el.id = 'fps-overlay';
+                el.style.cssText = [
+                    'position:fixed', 'top:8px', 'right:8px', 'z-index:99999',
+                    'background:rgba(0,0,0,0.65)', 'color:#00ff41',
+                    'font:bold 11px/1 "Courier New",monospace',
+                    'padding:4px 8px', 'border-radius:4px',
+                    'border:1px solid #003d10', 'pointer-events:none',
+                    'letter-spacing:1px'
+                ].join(';');
+                document.body.appendChild(el);
+                let lastTime = performance.now(), frames = 0;
+                const loop = () => {
+                    frames++;
+                    const now = performance.now();
+                    if (now - lastTime >= 500) {
+                        el.textContent = `FPS: ${Math.round(frames * 1000 / (now - lastTime))}`;
+                        frames = 0; lastTime = now;
+                    }
+                    if (el.isConnected) requestAnimationFrame(loop);
+                };
+                requestAnimationFrame(loop);
+                _appendLine('✔ FPS overlay created and active.', 'cline-ok');
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // info   — show current game state snapshot
+        // ══════════════════════════════════════════════════════
+        else if (base === 'info') {
+            const p = window.player;
+            const wave = typeof getWave === 'function' ? getWave() : (window.wave || '?');
+            const score = typeof getScore === 'function' ? getScore() : (window.score || 0);
+            const enemyCnt = (window.enemies || []).filter(e => e && !e.dead).length;
+            const bossAlive = window.boss && !window.boss.dead;
+            const permLvl = _getPermLevel();
+            _appendLine('> Querying game state...', 'cline-info');
+            const infoLines = [
+                `  Wave      : ${wave}`,
+                `  Score     : ${score.toLocaleString()}`,
+                `  HP        : ${Math.round(p.hp)}/${p.maxHp || 110}`,
+                `  Energy    : ${Math.round(p.energy || 0)}/${p.maxEnergy || 100}`,
+                `  Speed     : ${p.moveSpeed?.toFixed(2) ?? '?'}`,
+                `  Enemies   : ${enemyCnt} alive`,
+                `  Boss      : ${bossAlive ? (window.boss.constructor?.name || 'ACTIVE') : 'none'}`,
+                `  God Mode  : ${_godMode ? 'ON ★' : 'off'}`,
+                `  Perm Level: ${PERM_LABEL[permLvl].badge} ${PERM_LABEL[permLvl].text}`,
+                `  GameState : ${window.gameState || '?'}`,
+            ];
+            infoLines.forEach((l, i) => setTimeout(() => _appendLine(l, 'cline-ok', true), i * 25));
+        }
+
+        // ══════════════════════════════════════════════════════
         // help
         // ══════════════════════════════════════════════════════
         else if (base === 'help') {
+            const pLvl = _getPermLevel();
             const helpLines = [
-                '┌─────────────────────────────────────────────────┐',
-                '│  MTC SERVER — AVAILABLE COMMANDS                │',
-                '├──────────────────────┬──────────────────────────┤',
-                '│  heal [amount]       │  Restore HP (def: 100)  │',
-                '│  score [amount]      │  Add score (def: 5000)  │',
-                '│  next wave           │  Force next wave        │',
-                '│  set wave <num>      │  Jump to wave number    │',
-                '│  give weapon <name>  │  Equip a weapon         │',
-                '│  spawn manop         │  Summon Kru Manop       │',
-                '│  spawn first         │  Summon Kru First       │',
-                '│  clear               │  Clear console output   │',
-                '│  help                │  Show this table        │',
-                '│  exit                │  Close console          │',
-                '├──────────────────────┴──────────────────────────┤',
-                '│  [Tab] = auto-complete   [↑↓] = history        │',
-                '└─────────────────────────────────────────────────┘',
+                '┌─────────────────────────────────────────────────────┐',
+                '│  MTC SERVER — AVAILABLE COMMANDS                    │',
+                '├──────────────────────────┬──────────────────────────┤',
+                '│  heal [amount]           │  Restore HP  (def:100)  │',
+                '│  score [amount]          │  Add score (def:5000)   │',
+                '│  energy [amount]         │  Restore energy (100)   │',
+                '│  next wave               │  Force next wave        │',
+                '│  set wave <num>          │  Jump to wave number    │',
+                '│  give weapon <n>         │  Equip a weapon         │',
+                '│  spawn manop             │  Summon Kru Manop       │',
+                '│  spawn first             │  Summon Kru First       │',
+                '│  info                    │  Show game state info   │',
+                '│  fps                     │  Toggle FPS overlay     │',
+                '│  clear / exit            │  Clear / close console  │',
+                '├──────────────────────────┴──────────────────────────┤',
+                pLvl >= PERM.ROOT ? '│  ★ god / god off    │  Toggle invincibility      │'
+                    : '│  ★ god              │  [LOCKED — ROOT only]      │',
+                pLvl >= PERM.ROOT ? '│  ★ speed <mult>     │  Set move speed mult       │'
+                    : '│  ★ speed            │  [LOCKED — ROOT only]      │',
+                pLvl >= PERM.ROOT ? '│  ★ kill all         │  Kill all enemies          │'
+                    : '│  ★ kill all         │  [LOCKED — ROOT only]      │',
+                pLvl >= PERM.ROOT ? '│  ★ reset buffs      │  Clear all player buffs    │'
+                    : '│  ★ reset buffs      │  [LOCKED — ROOT only]      │',
+                '├─────────────────────────────────────────────────────┤',
+                '│  [Tab] = auto-complete    [↑↓] = history            │',
+                '└─────────────────────────────────────────────────────┘',
             ];
             helpLines.forEach((l, i) => {
-                setTimeout(() => _appendLine(l, 'cline-info', true), i * 35);
+                const cls = (l.includes('★') && pLvl < PERM.ROOT) ? 'cline-sys' : 'cline-info';
+                setTimeout(() => _appendLine(l, cls, true), i * 30);
             });
         }
 
@@ -330,7 +571,10 @@ const AdminConsole = (() => {
             _appendLine(GAME_TEXTS.admin.accessDenied, 'cline-error');
         }
         else if (base === 'whoami') {
+            const pLvl = _getPermLevel();
+            const pInfo = PERM_LABEL[pLvl];
             _appendLine(GAME_TEXTS.admin.whoami, 'cline-ok');
+            _appendLine(`  Permission: ${pInfo.badge} ${pInfo.text}`, 'cline-ok', true);
         }
         else if (base === 'ls') {
             GAME_TEXTS.admin.lsEntries.forEach(e => _appendLine(e.text, e.cls, true));
@@ -372,6 +616,7 @@ const AdminConsole = (() => {
         open() {
             if (isOpen) return;
             isOpen = true;
+            _cmdCount = 0;
 
             const modal = document.getElementById('admin-console');
             const inner = document.getElementById('console-inner');
@@ -384,6 +629,17 @@ const AdminConsole = (() => {
             requestAnimationFrame(() => {
                 if (inner) inner.classList.add('console-visible');
             });
+
+            _updatePermBadge();
+
+            // Inject perm badge into titlebar if not already in HTML
+            const titlebar = document.querySelector('.console-titlebar-left');
+            if (titlebar && !document.getElementById('console-perm-badge')) {
+                const badge = document.createElement('span');
+                badge.id = 'console-perm-badge';
+                titlebar.appendChild(badge);
+            }
+            _updatePermBadge();
 
             _appendLine(GAME_TEXTS.admin.sessionWelcome, 'cline-ok');
             _appendLine(GAME_TEXTS.admin.sessionHelp, 'cline-info');
