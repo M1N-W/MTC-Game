@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.16.7'; // v3.16.7: Enhanced AdminSystem with permission levels and debug commands
+const CACHE_NAME = 'mtc-cache-v3.16.8'; // v3.16.8: Added universal dev buff system for all characters
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

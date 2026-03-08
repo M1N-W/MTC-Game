@@ -795,17 +795,12 @@ function startGame(charType = 'kao') {
         window.player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
     }
 
-    // ── Admin Dev Mode: Force Kao Passive ─────────────────────────────────
-    // ทำงานเฉพาะเมื่อ window.isAdmin === true และ Toggle เปิดอยู่เท่านั้น
-    const devToggle = document.getElementById('dev-kao-passive-toggle');
-    if (window.isAdmin && charType === 'kao' && devToggle && devToggle.checked) {
-        const S = window.player.stats;
-        window.player.passiveUnlocked = true;
-        const hpBonus = Math.floor(window.player.maxHp * (S.passiveHpBonusPct || 0));
-        window.player.maxHp += hpBonus;
-        window.player.hp += hpBonus;
-        window.player.goldenAuraTimer = 9999; // visual marker ถาวรสำหรับ Dev Mode
-        console.log('%c[MTC Admin] 🔧 DEV MODE: ซุ่มเสรี unlocked from game start.', 'color:#ef4444; font-weight:bold;');
+    // ── Admin Dev Mode: Apply Dev Buff Package ──────────────────────────────
+    // ทำงานเฉพาะเมื่อ window.isAdmin === true (ทุกตัวละคร)
+    // ไม่ unlock passive อีกต่อไป — passive ต้องปลดเองในเกมตามปกติ
+    if (window.isAdmin && typeof window.player.applyDevBuff === 'function') {
+        window.player.applyDevBuff();
+        console.log('%c[MTC Admin] 🚀 DEV BUFF applied to player.', 'color:#f97316; font-weight:bold;');
     }
 
     dayNightTimer = 0;

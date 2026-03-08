@@ -88,9 +88,12 @@
 
 ---
 
-## 📈 Current Version: v3.16.5 (March 8, 2026)
+## 📈 Current Version: v3.16.8 (March 8, 2026)
 
 **Latest Major Updates:**
+- 🚀 **Universal Dev Buff System:** Character-agnostic stat enhancement package (HP +50%, Energy +50%, Damage ×1.25, Speed ×1.20, CDR ×0.60, Crit +8%) available to all characters via admin console
+- 💻 **Enhanced Admin Commands:** New `devbuff` command with detailed console output and visual feedback, replacing Kao-specific passive unlock system
+- 🎮 **Universal Character Support:** Dev buff system works for Kao, Auto, Poom, and all future characters through base class inheritance
 - 🎨 **Enhanced Boss HP Bar:** Complete visual overhaul with phase-based colors, drain effects, and shimmer animations
 - ✨ **Advanced Visual Effects:** Shimmer sweep animations, ghost drain bar, and phase threshold markers
 - 🎯 **Phase Color System:** Dynamic color changes (green→yellow→orange→red) based on HP percentage

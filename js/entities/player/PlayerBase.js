@@ -588,6 +588,67 @@ class Player extends Entity {
         this.groundedTimer = Math.max(this.groundedTimer, duration);
     }
 
+    // ─────────────────────────────────────────────────────────
+    // DEV BUFF — applied by startGame() when window.isAdmin is set
+    // ─────────────────────────────────────────────────────────
+    // ไม่แตะ passiveUnlocked เลย — passive ยังต้องปลดในเกมเองตามปกติ
+    //
+    // Buffs ที่ให้:
+    //   • HP +50%           (maxHp + hp เต็ม)
+    //   • Energy +50%       (maxEnergy + energy เต็ม)
+    //   • Damage ×1.25      (_damageMultiplier)
+    //   • Speed ×1.20       (metaSpeedMult)
+    //   • CDR ×0.60         (skillCooldownMult — floor 0.1)
+    //   • Crit +8%          (baseCritChance)
+    //   • Cooldowns reset   (cooldowns + skills{} ทั้งหมด → 0)
+    //
+    // Flag: this._devBuffApplied  ป้องกันเรียกซ้ำ
+    // ─────────────────────────────────────────────────────────
+    applyDevBuff() {
+        if (this._devBuffApplied) return;
+        this._devBuffApplied = true;
+
+        // ── HP +50% ────────────────────────────────────────────
+        const hpBonus = Math.floor(this.maxHp * 0.50);
+        this.maxHp += hpBonus;
+        this.hp = this.maxHp;  // start full
+
+        // ── Energy +50% ────────────────────────────────────────
+        const enBonus = Math.floor(this.maxEnergy * 0.50);
+        this.maxEnergy += enBonus;
+        this.energy = this.maxEnergy;
+
+        // ── Damage ×1.25 ───────────────────────────────────────
+        this._damageMultiplier *= 1.25;
+
+        // ── Speed ×1.20 ────────────────────────────────────────
+        this.metaSpeedMult *= 1.20;
+
+        // ── CDR ×0.60 (stack กับ meta CDR ที่มีอยู่) ──────────
+        this.skillCooldownMult = Math.max(0.1, this.skillCooldownMult * 0.60);
+
+        // ── Crit +8% ───────────────────────────────────────────
+        this.baseCritChance = Math.min(0.85, (this.baseCritChance || 0) + 0.08);
+
+        // ── Reset all skill cooldowns to 0 ─────────────────────
+        if (this.cooldowns) {
+            for (const key of Object.keys(this.cooldowns)) this.cooldowns[key] = 0;
+        }
+        // ครอบคลุม .skills{} ของ Kao/Auto ด้วย
+        if (this.skills) {
+            for (const key of Object.keys(this.skills)) {
+                if (this.skills[key] && typeof this.skills[key].cd !== 'undefined')
+                    this.skills[key].cd = 0;
+            }
+        }
+
+        console.log('[MTC Dev] applyDevBuff() →',
+            `HP ${this.maxHp}  EN ${this.maxEnergy}`,
+            `DMG×${this._damageMultiplier.toFixed(2)}  SPD×${this.metaSpeedMult.toFixed(2)}`,
+            `CDR×${this.skillCooldownMult.toFixed(2)}  Crit ${(this.baseCritChance * 100).toFixed(0)}%`
+        );
+    }
+
     // draw() ย้ายไป PlayerRenderer._drawBase() แล้ว
 
 

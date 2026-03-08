@@ -54,8 +54,9 @@ const AdminConsole = (() => {
     // ── Available commands for Tab auto-complete ───────────────
     const COMMANDS = [
         'heal', 'score', 'next wave', 'set wave', 'give weapon',
-        'spawn manop', 'spawn first',
-        'god', 'god off',
+        'spawn manop', 'spawn manop 2', 'spawn manop 3',
+        'spawn first', 'spawn first advanced',
+        'god', 'god off', 'devbuff',
         'energy', 'kill all', 'speed', 'fps', 'info', 'reset buffs',
         'clear', 'help', 'exit',
         // Easter egg commands kept for discoverability
@@ -227,17 +228,45 @@ const AdminConsole = (() => {
                 _appendLine('ERR: usage: set wave <number>', 'cline-error');
                 return;
             }
+            const maxWave = (typeof BALANCE !== 'undefined' && BALANCE.waves?.maxWaves) || 15;
+            if (num > maxWave) {
+                _appendLine(`ERR: wave ${num} exceeds maxWaves (${maxWave})`, 'cline-error');
+                return;
+            }
             _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
             _appendLine(`> Patching wave counter → ${num}...`, 'cline-info');
-            // Set wave to num-1 so WaveManager increments to num on next transition
+
+            // ── Step 1: Kill all live entities + stop trickle ──────────
+            _killAllEntities();
+            // Force-stop trickle so game loop doesn't block wave transition
+            window.isTrickleActive = false;
+            if (typeof window._trickle !== 'undefined') {
+                window._trickle.active = false;
+                window._trickle.remaining = 0;
+            }
+            // Clear enemies array so wave-advance guard sees 0 enemies
+            if (window.enemies) window.enemies.length = 0;
+            if (window.boss) { window.boss.dead = true; window.boss = null; }
+
+            // ── Step 2: Set wave counter to num-1 THEN call startNextWave ─
+            // startNextWave() calls getWave() at the TOP (before incrementing),
+            // so we must pre-set to num-1 and let startNextWave do the +1.
             if (typeof setWave === 'function') {
                 setWave(num - 1);
             } else if (typeof window.wave !== 'undefined') {
                 window.wave = num - 1;
             }
-            const killed = _killAllEntities();
-            _appendLine(`> SIGKILL sent to ${killed} entit${killed === 1 ? 'y' : 'ies'}.`, 'cline-info');
-            _appendLine(`✔ Wave will advance to ${num} on next cycle.`, 'cline-ok');
+
+            // ── Step 3: Fire startNextWave directly ────────────────────
+            _appendLine(`> Calling startNextWave() → wave ${num}...`, 'cline-info');
+            if (typeof startNextWave === 'function') {
+                startNextWave();
+                _appendLine(`✔ Jumped to Wave ${num}. Enemies spawning now.`, 'cline-ok');
+            } else {
+                _appendLine('WARN: startNextWave() not found. Wave counter set but not triggered.', 'cline-warn', true);
+                _appendLine(`✔ Wave counter = ${num - 1}. Will advance on next game-loop cycle.`, 'cline-ok');
+            }
+
             if (typeof spawnFloatingText === 'function')
                 spawnFloatingText(`⏭ WAVE ${num}`, window.player.x, window.player.y - 80, '#06b6d4', 26);
             if (typeof addScreenShake === 'function') addScreenShake(10);
@@ -289,49 +318,115 @@ const AdminConsole = (() => {
         }
 
         // ══════════════════════════════════════════════════════
-        // spawn manop  — summons Kru Manop (Boss)
+        // spawn manop [phase]   — summons Kru Manop  (phase 1/2/3)
+        // spawn first [advanced] — summons Kru First (normal/advanced)
         // ══════════════════════════════════════════════════════
-        else if (base === 'spawn' && sub === 'manop') {
-            _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
-            _appendLine('> Allocating Boss entity: KRU MANOP...', 'cline-info');
-            if (typeof Boss === 'undefined') {
+        else if (base === 'spawn' && (sub === 'manop' || sub === 'first')) {
+            // ── Parse optional 3rd arg ─────────────────────────
+            // manop: phase = 1 | 2 | 3   (default 1)
+            // first: "advanced" or blank  (default normal)
+            const arg3 = (args[2] || '').toLowerCase();
+            const isManop = sub === 'manop';
+
+            if (isManop && typeof Boss === 'undefined') {
                 _appendLine('ERR: Boss class not found. Is boss.js loaded?', 'cline-error');
                 return;
             }
-            const difficulty = Math.max(1, Math.floor((typeof getWave === 'function' ? getWave() : (window.wave || 1)) / 3));
-            if (window.boss && !window.boss.dead) {
-                _appendLine('WARN: existing boss detected — overwriting reference.', 'cline-warn', true);
+            if (!isManop && typeof BossFirst === 'undefined') {
+                _appendLine('ERR: BossFirst class not found. Is boss.js loaded?', 'cline-error');
+                return;
             }
-            window.boss = new Boss(difficulty, false, false);
-            _appendLine(`✔ Boss "KRU MANOP" spawned (difficulty ×${difficulty}).`, 'cline-ok');
-            if (typeof spawnFloatingText === 'function')
-                spawnFloatingText('🐕 KRU MANOP APPEARS!', window.player.x, window.player.y - 80, '#ef4444', 26);
+
+            if (window.boss && !window.boss.dead)
+                _appendLine('WARN: existing boss detected — overwriting reference.', 'cline-warn', true);
+
+            const difficulty = Math.max(1, Math.floor(
+                (typeof getWave === 'function' ? getWave() : (window.wave || 1)) / 3
+            ));
+
+            if (isManop) {
+                // ── Kru Manop — phase 1 / 2 / 3 ──────────────
+                const phase = parseInt(arg3) || 1;
+                if (phase < 1 || phase > 3) {
+                    _appendLine('ERR: usage: spawn manop [1|2|3]', 'cline-error');
+                    _appendLine('>  phase 1 = basic', 'cline-info', true);
+                    _appendLine('>  phase 2 = Dog Rider  (enablePhase2)', 'cline-info', true);
+                    _appendLine('>  phase 3 = Goldfish Lover  (enablePhase2 + enablePhase3)', 'cline-info', true);
+                    return;
+                }
+                const enablePhase2 = phase >= 2;
+                const enablePhase3 = phase >= 3;
+                _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+                _appendLine(`> Allocating Boss: KRU MANOP  Phase ${phase}...`, 'cline-info');
+                window.boss = new Boss(difficulty, enablePhase2, enablePhase3);
+                // Force boss into the requested phase immediately
+                if (phase >= 2) window.boss.phase = phase;
+
+                const phaseLabel = phase === 3 ? '🐟 GOLDFISH LOVER' : phase === 2 ? '🐕 DOG RIDER' : '💢 BASIC';
+                _appendLine(`✔ KRU MANOP  ${phaseLabel}  spawned (difficulty ×${difficulty}).`, 'cline-ok');
+                spawnFloatingText(
+                    phase === 3 ? '🐟 KRU MANOP — GOLDFISH LOVER!'
+                        : phase === 2 ? '🐕 KRU MANOP — DOG RIDER!'
+                            : '💢 KRU MANOP APPEARS!',
+                    window.player.x, window.player.y - 80,
+                    phase === 3 ? '#38bdf8' : phase === 2 ? '#d97706' : '#ef4444', 26
+                );
+
+            } else {
+                // ── Kru First — normal / advanced ──────────────
+                const isAdvanced = (arg3 === 'advanced' || arg3 === 'adv');
+                if (arg3 && !isAdvanced) {
+                    _appendLine('ERR: usage: spawn first [advanced]', 'cline-error');
+                    _appendLine('>  (no arg) = normal', 'cline-info', true);
+                    _appendLine('>  advanced = encounter 4 variant (+35% stats)', 'cline-info', true);
+                    return;
+                }
+                _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+                _appendLine(`> Allocating BossFirst: KRU FIRST  ${isAdvanced ? 'ADVANCED' : 'Normal'}...`, 'cline-info');
+                window.boss = new BossFirst(difficulty, isAdvanced);
+
+                _appendLine(`✔ KRU FIRST  ${isAdvanced ? '⚛️ ADVANCED' : 'Normal'}  spawned (difficulty ×${difficulty}).`, 'cline-ok');
+                spawnFloatingText(
+                    isAdvanced ? '⚛️ KRU FIRST — ADVANCED!' : '⚛️ KRU FIRST APPEARS!',
+                    window.player.x, window.player.y - 80, '#38bdf8', 26
+                );
+            }
+
+            // ── Common post-spawn effects ───────────────────────
+            if (typeof window.UIManager !== 'undefined') window.UIManager.updateBossHUD(window.boss);
             if (typeof addScreenShake === 'function') addScreenShake(20);
             if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+            if (typeof Audio !== 'undefined' && Audio.playBGM) Audio.playBGM('boss');
             setTimeout(() => closeAdminConsole(), 1200);
         }
 
         // ══════════════════════════════════════════════════════
-        // spawn first  — summons Kru First (BossFirst)
+        // devbuff   — apply Dev Mode stat package to player
         // ══════════════════════════════════════════════════════
-        else if (base === 'spawn' && sub === 'first') {
-            _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
-            _appendLine('> Allocating BossFirst entity: KRU FIRST...', 'cline-info');
-            if (typeof BossFirst === 'undefined') {
-                _appendLine('ERR: BossFirst class not found. Is boss.js loaded?', 'cline-error');
+        else if (base === 'devbuff') {
+            if (typeof window.player.applyDevBuff !== 'function') {
+                _appendLine('ERR: applyDevBuff() not found. Is PlayerBase.js updated?', 'cline-error');
                 return;
             }
-            const difficulty = Math.max(1, Math.floor((typeof getWave === 'function' ? getWave() : (window.wave || 1)) / 3));
-            if (window.boss && !window.boss.dead) {
-                _appendLine('WARN: existing boss detected — overwriting reference.', 'cline-warn', true);
+            if (window.player._devBuffApplied) {
+                _appendLine('WARN: Dev buff already active on this player.', 'cline-warn', true);
+                _appendLine(`  HP ${Math.round(window.player.hp)}/${window.player.maxHp}  EN ${Math.round(window.player.energy)}/${window.player.maxEnergy}`, 'cline-info', true);
+                return;
             }
-            window.boss = new BossFirst(difficulty, false);
-            _appendLine(`✔ Boss "KRU FIRST" spawned (difficulty ×${difficulty}).`, 'cline-ok');
+            _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
+            _appendLine('> Injecting DEV BUFF package...', 'cline-info');
+            window.player.applyDevBuff();
+            _appendLine('✔ Dev buffs applied:', 'cline-ok');
+            _appendLine(`  HP  +50%  → ${window.player.maxHp}`, 'cline-ok', true);
+            _appendLine(`  EN  +50%  → ${window.player.maxEnergy}`, 'cline-ok', true);
+            _appendLine(`  DMG ×1.25 | SPD ×1.20 | CDR ×0.60 | Crit +8%`, 'cline-ok', true);
+            _appendLine('  Passive skills: unchanged (unlock normally in-game)', 'cline-info', true);
             if (typeof spawnFloatingText === 'function')
-                spawnFloatingText('⚛️ KRU FIRST APPEARS!', window.player.x, window.player.y - 80, '#38bdf8', 26);
-            if (typeof addScreenShake === 'function') addScreenShake(20);
-            if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
-            setTimeout(() => closeAdminConsole(), 1200);
+                spawnFloatingText('🚀 DEV BUFF ACTIVE', window.player.x, window.player.y - 80, '#f97316', 24);
+            if (typeof spawnParticles === 'function')
+                spawnParticles(window.player.x, window.player.y, 20, '#f97316');
+            if (typeof addScreenShake === 'function') addScreenShake(8);
+            if (typeof Audio !== 'undefined' && Audio.playAchievement) Audio.playAchievement();
         }
 
         // ══════════════════════════════════════════════════════
@@ -523,10 +618,11 @@ const AdminConsole = (() => {
                 '│  next wave               │  Force next wave        │',
                 '│  set wave <num>          │  Jump to wave number    │',
                 '│  give weapon <n>         │  Equip a weapon         │',
-                '│  spawn manop             │  Summon Kru Manop       │',
-                '│  spawn first             │  Summon Kru First       │',
+                '│  spawn manop [1|2|3]     │  Kru Manop + phase      │',
+                '│  spawn first [advanced]  │  Kru First + variant    │',
                 '│  info                    │  Show game state info   │',
                 '│  fps                     │  Toggle FPS overlay     │',
+                '│  devbuff                 │  Apply dev stat package │',
                 '│  clear / exit            │  Clear / close console  │',
                 '├──────────────────────────┴──────────────────────────┤',
                 pLvl >= PERM.ROOT ? '│  ★ god / god off    │  Toggle invincibility      │'

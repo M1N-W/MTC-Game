@@ -4,6 +4,34 @@
 
 ---
 
+## v3.16.8 — Universal Dev Buff System
+*Released: March 8, 2026*
+
+### 🚀 Character-Agnostic Dev Buff Implementation
+- **Universal applyDevBuff() Method:** Added to PlayerBase.js base class, inherited by all characters
+- **Comprehensive Stat Package:** HP +50%, Energy +50%, Damage ×1.25, Speed ×1.20, CDR ×0.60, Crit +8%
+- **Smart Cooldown Reset:** Covers both base cooldowns{} and character-specific skills{} objects
+- **Duplicate Protection:** `_devBuffApplied` flag prevents multiple applications
+- **Passive Preservation:** Does not unlock passive skills - must be earned normally in-game
+
+### 💻 Enhanced Admin Commands
+- **devbuff Command:** Universal command works for all characters (not just Kao)
+- **Detailed Console Output:** Shows all stat changes with precise values
+- **Visual Feedback:** "🚀 DEV BUFF ACTIVE" floating text with particle effects
+- **Error Handling:** Graceful handling of missing methods and duplicate applications
+
+### 🎮 Game Start Integration
+- **Automatic Application:** Dev buff applied on game start when `window.isAdmin` is true
+- **Character Agnostic:** Works for Kao, Auto, Poom, and any future characters
+- **Clean Implementation:** Replaces Kao-specific passive unlock with universal buff system
+
+### 📚 Documentation Updates
+- **Service Worker:** Updated to v3.16.8 for cache invalidation
+- **Code Comments:** Comprehensive Thai documentation for dev buff behavior
+- **Method Signatures:** Clear parameter and return value documentation
+
+---
+
 ## v3.16.7 — AdminSystem Permission Overhaul & Debug Commands
 *Released: March 8, 2026*
 
