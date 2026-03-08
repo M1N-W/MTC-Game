@@ -130,6 +130,7 @@ class Enemy extends Entity {
                 this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
             } else { this.vx *= 0.9; this.vy *= 0.9; }
         }
+        this._steerAroundObstacles(dt);
         this.applyPhysics(dt);
         this.shootTimer -= dt;
         if (this.shootTimer <= 0 && d < BALANCE.enemy.shootRange && !player.isInvisible) {
@@ -356,6 +357,7 @@ class TankEnemy extends Entity {
                 this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
             } else { this.vx *= 0.95; this.vy *= 0.95; }
         }
+        this._steerAroundObstacles(dt);
         this.applyPhysics(dt);
 
         // ── Melee contact damage ─────────────────────────────
@@ -564,6 +566,7 @@ class MageEnemy extends Entity {
                 this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
             } else { this.vx *= 0.95; this.vy *= 0.95; }
         }
+        this._steerAroundObstacles(dt);
         this.applyPhysics(dt);
         if (this.soundWaveCD > 0) this.soundWaveCD -= dt;
         if (this.meteorCD > 0) this.meteorCD -= dt;

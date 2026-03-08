@@ -131,6 +131,7 @@ class BossDog extends Entity {
             this.vx = (dx / d) * this.moveSpeed;
             this.vy = (dy / d) * this.moveSpeed;
         }
+        this._steerAroundObstacles(dt);
         this.applyPhysics(dt);
 
         // Melee contact damage
@@ -448,6 +449,7 @@ class KruManop extends BossBase {
         if (this.state === 'CHASE') {
             if (!player.isInvisible) { this.vx = Math.cos(this.angle) * this.moveSpeed; this.vy = Math.sin(this.angle) * this.moveSpeed; }
             else { this.vx *= 0.95; this.vy *= 0.95; }
+            this._steerAroundObstacles(dt);
             this.applyPhysics(dt);
 
             if (this.timer > 2) {
@@ -694,8 +696,16 @@ class KruFirst extends BossBase {
             freeFall: { cd: 0, max: 15.0 },
             rocket: { cd: 0, max: 9.0 },
             sandwich: { cd: 0, max: 18.0 },
-            emp: { cd: 0, max: 20.0 }
+            emp: { cd: 0, max: 20.0 },
+            formulaZone: { cd: 0, max: 14.0 },   // ── NEW: PhysicsFormulaZone drop
+            parabolic: { cd: 0, max: 6.5 },       // ── NEW: ParabolicVolley burst
         };
+
+        // ── Derivation Mode (HP < 40%) ───────────────────────
+        // Fires once at threshold; reduces all cooldowns and unlocks
+        // formulaZone + parabolic burst skills for sustained pressure.
+        this._derivationMode = false;
+        this._derivationTaunted = false;
 
         // ── SUVAT charge constants ────────────────────────────
         this.SUVAT_WIND_UP = 0.9;          // seconds of wind-up before dash
@@ -775,6 +785,7 @@ class KruFirst extends BossBase {
                     this.vx = (dx / d) * this.moveSpeed;
                     this.vy = (dy / d) * this.moveSpeed;
                 }
+                this._steerAroundObstacles(dt);
                 this.applyPhysics(dt);
 
                 if (this.stateTimer > 2.0) {
@@ -809,7 +820,13 @@ class KruFirst extends BossBase {
                     }
 
                     if (this.stateTimer - this.SUVAT_WIND_UP > this.SUVAT_MAX_DUR) {
-                        this._enterState('CHASE');
+                        // ── Miss Punishment: ยิง ParabolicVolley ทันที + เข้า ORBIT ──
+                        // ไม่กลับ CHASE เฉยๆ — บังคับ sustained pressure หลัง miss
+                        if (typeof ParabolicVolley !== 'undefined') {
+                            ParabolicVolley.fire(this.x, this.y, player.x, player.y, this.isAdvanced);
+                            spawnFloatingText('PARABOLIC RETALIATION!', this.x, this.y - 70, '#c084fc', 22);
+                        }
+                        this._enterOrbit(player);
                     }
                 }
                 break;
@@ -935,6 +952,7 @@ class KruFirst extends BossBase {
                     this.vx = (dx / d) * this.moveSpeed * 1.25;
                     this.vy = (dy / d) * this.moveSpeed * 1.25;
                 }
+                this._steerAroundObstacles(dt);
                 this.applyPhysics(dt);
 
                 if (this._berserkFireCd <= 0) {
@@ -991,8 +1009,46 @@ class KruFirst extends BossBase {
             window.specialEffects.push(new FreeFallWarningRing(
                 this._fallTargetX, this._fallTargetY, this.FREE_FALL_WARN
             ));
+            // ── Drop a PhysicsFormulaZone at boss's current position ──
+            // บังคับผู้เล่นต้องออกจากตำแหน่งที่ยืน
+            if (typeof PhysicsFormulaZone !== 'undefined') {
+                window.specialEffects.push(new PhysicsFormulaZone(
+                    this.x, this.y,
+                    120,   // radius
+                    5.0,   // duration
+                    this.isAdvanced ? 18 : 14  // damage/s
+                ));
+            }
             spawnFloatingText('h=½gt² …', this.x, this.y - 80, '#ef4444', 26);
             this._enterState('FREE_FALL');
+            return;
+        }
+        // ── Derivation Mode only: PhysicsFormulaZone standalone drop ──
+        if (this._derivationMode && this.skills.formulaZone.cd <= 0) {
+            this.skills.formulaZone.cd = this.skills.formulaZone.max;
+            if (typeof PhysicsFormulaZone !== 'undefined') {
+                // Drop at player position — force them to move
+                window.specialEffects.push(new PhysicsFormulaZone(
+                    player.x, player.y,
+                    130, 5.5,
+                    this.isAdvanced ? 20 : 15
+                ));
+                spawnFloatingText('⚠ SLOW FIELD!', player.x, player.y - 60, '#e879f9', 22);
+                addScreenShake(5);
+            }
+            // Immediately chain into ParabolicVolley while player is distracted
+            if (typeof ParabolicVolley !== 'undefined') {
+                ParabolicVolley.fire(this.x, this.y, player.x, player.y, this.isAdvanced);
+            }
+            return;
+        }
+        // ── Derivation Mode: standalone ParabolicVolley ──────────────
+        if (this._derivationMode && this.skills.parabolic.cd <= 0) {
+            this.skills.parabolic.cd = this.skills.parabolic.max;
+            if (typeof ParabolicVolley !== 'undefined') {
+                ParabolicVolley.fire(this.x, this.y, player.x, player.y, this.isAdvanced);
+                spawnFloatingText('PARABOLIC VOLLEY!', this.x, this.y - 75, '#c084fc', 24);
+            }
             return;
         }
         if (this.skills.suvat.cd <= 0 && d > 120) {
@@ -1041,6 +1097,34 @@ class KruFirst extends BossBase {
         this.hp -= amt;
         this.hitFlashTimer = 0.12;
         spawnParticles(this.x, this.y, 3, '#39ff14');
+
+        // ── Derivation Mode: HP < 40% — "งั้นมาคำนวณกันให้จริงจัง" ─────
+        // Fires once. Reduces all cooldown maxes by 35% and unlocks
+        // formulaZone + parabolic skills for relentless pressure.
+        if (!this._derivationMode && this.hp <= this.maxHp * 0.40 && this.hp > 0) {
+            this._derivationMode = true;
+            this._derivationTaunted = true;
+            // Reduce all cooldown maxes by 35%
+            for (const sk of Object.values(this.skills)) {
+                sk.max = Math.max(2.5, sk.max * 0.65);
+                sk.cd = Math.min(sk.cd, sk.max); // clamp current cd
+            }
+            // Fire ParabolicVolley immediately as announcement
+            if (typeof ParabolicVolley !== 'undefined') {
+                ParabolicVolley.fire(this.x, this.y,
+                    window.player?.x ?? this.x + 100,
+                    window.player?.y ?? this.y + 100,
+                    this.isAdvanced);
+            }
+            spawnFloatingText('⚛️ DERIVATION MODE', this.x, this.y - 100, '#39ff14', 34);
+            spawnFloatingText('d/dt ALL COOLDOWNS ×0.65', this.x, this.y - 135, '#a3e635', 18);
+            addScreenShake(18);
+            spawnParticles(this.x, this.y, 50, '#39ff14');
+            spawnParticles(this.x, this.y, 30, '#00ffff');
+            this._enterState('BERSERK');
+            this.speak('กลับไปทบทวนสมการกันหน่อย!');
+            Audio.playBossSpecial();
+        }
 
         // ── Phase transition at 50 % HP — trigger BERSERK with physics taunt ──
         if (!this._halfHpTaunted && this.hp <= this.maxHp * 0.5 && this.hp > 0) {

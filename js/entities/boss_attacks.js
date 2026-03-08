@@ -2243,9 +2243,214 @@ class DeadlyGraph {
     }
 }
 
+// ════════════════════════════════════════════════════════════
+// 🧮 PHYSICS FORMULA ZONE — KruFirst sustained area-denial
+//    วางสูตรฟิสิกส์ค้างไว้บนพื้น ผู้เล่นเหยียบ = ติด slow + damage
+//    ทำให้ต้องเคลื่อนที่ตลอด ไม่สามารถยืนยิงนิ่งได้
+// ════════════════════════════════════════════════════════════
+class PhysicsFormulaZone {
+    /**
+     * @param {number} cx   world centre X
+     * @param {number} cy   world centre Y
+     * @param {number} radius   world-space radius (default 110)
+     * @param {number} duration seconds before zone fades (default 5)
+     * @param {number} damage   damage/s while standing in zone (default 14)
+     */
+    constructor(cx, cy, radius = 110, duration = 5.0, damage = 14) {
+        this.x = cx;
+        this.y = cy;
+        this.radius = radius;
+        this.duration = duration;
+        this.damage = damage;
+        this.timer = 0;
+        this.dead = false;
+
+        // Deterministic formula label — no Math.random() in draw()
+        const FORMULAS = [
+            'F = ma', 'v = u + at', 'KE = ½mv²',
+            'p = mv', 'W = Fd', 'a = v²/r',
+            'F = kx', 'E = mc²', 'τ = Iα',
+        ];
+        this._formula = FORMULAS[Math.floor(Math.abs(Math.sin(cx * 0.07 + cy * 0.13)) * FORMULAS.length)];
+
+        // Slow debuff applied to player each tick while inside
+        this._slowDPS = 0.55;   // speed multiplier while inside
+        this._slowDuration = 0.35;  // seconds of slow per tick (refreshed)
+
+        // Tick interval for damage (avoid per-frame DPS spike)
+        this._tickCd = 0;
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+        if (this._tickCd > 0) this._tickCd -= dt;
+
+        if (this.timer >= this.duration) {
+            this.dead = true;
+            return true;
+        }
+
+        // Check player in zone
+        const d = Math.hypot(player.x - this.x, player.y - this.y);
+        if (d < this.radius + player.radius) {
+            // Damage every 0.20 s (not every frame)
+            if (this._tickCd <= 0) {
+                this._tickCd = 0.20;
+                player.takeDamage(this.damage * 0.20);
+            }
+            // Apply slow debuff — refresh each frame player is inside
+            if (!player._formulaSlowActive) {
+                player._formulaSlowActive = true;
+                player._formulaSlowBase = player.moveSpeed;
+            }
+            player.moveSpeed = (player._formulaSlowBase || player.moveSpeed) * this._slowDPS;
+            player._formulaSlowTimer = this._slowDuration;
+        } else if (player._formulaSlowActive) {
+            // Count down after leaving zone
+            if (player._formulaSlowTimer > 0) {
+                player._formulaSlowTimer -= dt;
+            } else {
+                player._formulaSlowActive = false;
+                player.moveSpeed = player._formulaSlowBase || player.moveSpeed;
+            }
+        }
+
+        return false;
+    }
+
+    draw() {
+        if (this.dead) return;
+        if (typeof CTX === 'undefined' || typeof worldToScreen === 'undefined') return;
+
+        const screen = worldToScreen(this.x, this.y);
+        const edgePt = worldToScreen(this.x + this.radius, this.y);
+        const rSS = Math.abs(edgePt.x - screen.x);
+        if (rSS < 2) return;
+
+        const prog = this.timer / this.duration;
+        const alpha = Math.sin(prog * Math.PI) * 0.90 + 0.10; // fade in + out
+        const now = performance.now();
+        const pulse = 0.5 + Math.sin(now / 200) * 0.5;
+
+        CTX.save();
+        CTX.translate(screen.x, screen.y);
+
+        // ── Outer danger glow ─────────────────────────────────
+        const outerG = CTX.createRadialGradient(0, 0, rSS * 0.5, 0, 0, rSS * 1.2);
+        outerG.addColorStop(0, `rgba(168,85,247,${alpha * 0.12})`);
+        outerG.addColorStop(1, 'rgba(0,0,0,0)');
+        CTX.fillStyle = outerG;
+        CTX.beginPath(); CTX.arc(0, 0, rSS * 1.2, 0, Math.PI * 2); CTX.fill();
+
+        // ── Zone fill ─────────────────────────────────────────
+        const zoneG = CTX.createRadialGradient(0, 0, 0, 0, 0, rSS);
+        zoneG.addColorStop(0, `rgba(139,92,246,${alpha * 0.28})`);
+        zoneG.addColorStop(0.65, `rgba(109,40,217,${alpha * 0.18})`);
+        zoneG.addColorStop(1, `rgba(76,29,149,${alpha * 0.08})`);
+        CTX.fillStyle = zoneG;
+        CTX.beginPath(); CTX.arc(0, 0, rSS, 0, Math.PI * 2); CTX.fill();
+
+        // ── Animated border ring ──────────────────────────────
+        CTX.strokeStyle = `rgba(167,139,250,${alpha * (0.5 + pulse * 0.45)})`;
+        CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 18 * pulse; CTX.shadowColor = '#a855f7';
+        CTX.setLineDash([10, 6]);
+        CTX.lineDashOffset = -(now * 0.06) % 16;
+        CTX.beginPath(); CTX.arc(0, 0, rSS, 0, Math.PI * 2); CTX.stroke();
+        CTX.setLineDash([]); CTX.lineDashOffset = 0;
+        CTX.shadowBlur = 0;
+
+        // ── Rotating inner hex ────────────────────────────────
+        CTX.save();
+        CTX.rotate(now * 0.0008);
+        CTX.strokeStyle = `rgba(196,181,253,${alpha * 0.35})`;
+        CTX.lineWidth = 1.2;
+        CTX.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const a = (Math.PI / 3) * i;
+            const hx = Math.cos(a) * rSS * 0.58, hy = Math.sin(a) * rSS * 0.58;
+            i === 0 ? CTX.moveTo(hx, hy) : CTX.lineTo(hx, hy);
+        }
+        CTX.closePath(); CTX.stroke();
+        CTX.restore();
+
+        // ── Formula label (centre) ────────────────────────────
+        CTX.globalAlpha = alpha * (0.70 + pulse * 0.28);
+        CTX.font = `bold ${Math.round(rSS * 0.22)}px "Orbitron",monospace`;
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.fillStyle = '#e879f9';
+        CTX.shadowBlur = 12 * pulse; CTX.shadowColor = '#a855f7';
+        CTX.fillText(this._formula, 0, 0);
+        CTX.shadowBlur = 0;
+
+        // ── SLOW warning text (bottom) ────────────────────────
+        CTX.globalAlpha = alpha * (0.45 + pulse * 0.30);
+        CTX.font = `bold ${Math.round(rSS * 0.13)}px monospace`;
+        CTX.fillStyle = '#f0abfc';
+        CTX.fillText('⚠ SLOW FIELD', 0, rSS * 0.52);
+
+        // ── Remaining time arc (outer) ────────────────────────
+        const remaining = 1 - prog;
+        CTX.globalAlpha = alpha * 0.55;
+        CTX.strokeStyle = `rgba(216,180,254,${alpha * 0.6})`;
+        CTX.lineWidth = 3;
+        CTX.beginPath();
+        CTX.arc(0, 0, rSS + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * remaining);
+        CTX.stroke();
+
+        CTX.globalAlpha = 1;
+        CTX.restore();
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// 🔴 PARABOLIC VOLLEY — KruFirst adaptive fire pattern
+//    ยิง projectiles 3 ชุดพร้อมกัน: ตรง + ซ้าย + ขวา
+//    offset ถูกคำนวณให้ตัดเส้นทางหนีของผู้เล่น
+//    ใช้ใน Derivation Mode (HP < 40%) เพื่อเพิ่ม sustained pressure
+// ════════════════════════════════════════════════════════════
+class ParabolicVolley {
+    /**
+     * Fires a 3-prong volley — left/centre/right split targeting player.
+     * Call once; it spawns projectiles immediately into projectileManager.
+     *
+     * @param {number} bossX @param {number} bossY   boss world position
+     * @param {number} playerX @param {number} playerY  player world position
+     * @param {boolean} isAdvanced  advanced variant fires 5 prongs
+     */
+    static fire(bossX, bossY, playerX, playerY, isAdvanced = false) {
+        if (typeof projectileManager === 'undefined') return;
+
+        const baseAngle = Math.atan2(playerY - bossY, playerX - bossX);
+        const speed = 420;
+        const damage = 26;
+        const prongCount = isAdvanced ? 5 : 3;
+
+        // Spread offset: evenly spaced around baseAngle
+        const spreadStep = isAdvanced ? 0.28 : 0.38;
+        const halfSpread = ((prongCount - 1) / 2) * spreadStep;
+
+        for (let i = 0; i < prongCount; i++) {
+            const angle = baseAngle - halfSpread + i * spreadStep;
+            projectileManager.add(new Projectile(
+                bossX, bossY,
+                angle, speed, damage,
+                '#c084fc', false, 'enemy'
+            ));
+        }
+
+        // Visual burst at origin
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(bossX, bossY, 8, '#c084fc');
+        }
+        if (typeof addScreenShake === 'function') addScreenShake(4);
+    }
+}
+
 // ─── Node/bundler export ──────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing, MatrixGridAttack, EmpPulse, EquationSlam, DeadlyGraph };
+    module.exports = { BarkWave, GoldfishMinion, BubbleProjectile, FreeFallWarningRing, PorkSandwich, ExpandingRing, MatrixGridAttack, EmpPulse, EquationSlam, DeadlyGraph, PhysicsFormulaZone, ParabolicVolley };
 }
 // ── Global exports ────────────────────────────────────────────
 window.BarkWave = BarkWave;
@@ -2258,3 +2463,5 @@ window.MatrixGridAttack = MatrixGridAttack;
 window.EmpPulse = EmpPulse;
 window.EquationSlam = EquationSlam;
 window.DeadlyGraph = DeadlyGraph;
+window.PhysicsFormulaZone = PhysicsFormulaZone;
+window.ParabolicVolley = ParabolicVolley;

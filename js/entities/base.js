@@ -58,6 +58,67 @@ class Entity {
         }
     }
 
+    /**
+     * Obstacle avoidance steering — call BEFORE applyPhysics() in each enemy update().
+     *
+     * Strategy: sample up to PROBE_COUNT rays in a forward arc. For each ray that
+     * intersects a solid MapObject within PROBE_DIST, add a perpendicular repulsion
+     * impulse proportional to (1 - distance/PROBE_DIST).  The result steers the
+     * entity smoothly around walls and map objects without path-finding.
+     *
+     * Performance: skips entirely if mapSystem.objects is absent or empty.
+     * Per-call cost is O(obj_count × PROBE_COUNT) ≈ O(200×5) = 1 000 ops/entity/frame
+     * — acceptable for ≤ 40 enemies on screen.
+     *
+     * @param {number} dt delta-time (seconds)
+     */
+    _steerAroundObstacles(dt) {
+        if (typeof mapSystem === 'undefined' || !mapSystem.objects || mapSystem.objects.length === 0) return;
+
+        const PROBE_DIST = 80;   // px ahead to probe
+        const FORCE = 520;  // steering impulse magnitude (px/s added to vx/vy)
+        const PROBE_COUNT = 5;    // rays: centre ± 30° ± 60°
+        const PROBE_ANGLES = [-1.047, -0.524, 0, 0.524, 1.047]; // radians offsets
+
+        const speed = Math.hypot(this.vx, this.vy);
+        if (speed < 10) return; // not moving — nothing to steer
+
+        const moveAngle = Math.atan2(this.vy, this.vx);
+        let steerX = 0, steerY = 0;
+
+        for (let pi = 0; pi < PROBE_COUNT; pi++) {
+            const probeAngle = moveAngle + PROBE_ANGLES[pi];
+            const px = this.x + Math.cos(probeAngle) * PROBE_DIST;
+            const py = this.y + Math.sin(probeAngle) * PROBE_DIST;
+
+            for (let oi = 0; oi < mapSystem.objects.length; oi++) {
+                const obj = mapSystem.objects[oi];
+                if (!obj.solid) continue;
+                // Quick AABB broad phase
+                if (px < obj.x - 4 || px > obj.x + obj.w + 4 ||
+                    py < obj.y - 4 || py > obj.y + obj.h + 4) continue;
+
+                // Probe hit — compute repulsion from nearest AABB surface point
+                const nearX = Math.max(obj.x, Math.min(px, obj.x + obj.w));
+                const nearY = Math.max(obj.y, Math.min(py, obj.y + obj.h));
+                const repDx = this.x - nearX;
+                const repDy = this.y - nearY;
+                const repDist = Math.hypot(repDx, repDy) || 1;
+                const strength = Math.max(0, 1 - repDist / PROBE_DIST);
+
+                steerX += (repDx / repDist) * strength;
+                steerY += (repDy / repDist) * strength;
+                break; // one object per ray is enough
+            }
+        }
+
+        if (steerX !== 0 || steerY !== 0) {
+            const mag = Math.hypot(steerX, steerY) || 1;
+            this.vx += (steerX / mag) * FORCE * dt;
+            this.vy += (steerY / mag) * FORCE * dt;
+        }
+    }
+
     isOnScreen(buffer = 120) {
         if (typeof worldToScreen !== 'function' || typeof CANVAS === 'undefined') return true;
         const s = worldToScreen(this.x, this.y);

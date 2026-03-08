@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.17.0'; // v3.17.0: Major map redesign - layout optimization, visual enhancements, and performance improvements
+const CACHE_NAME = 'mtc-cache-v3.18.0'; // v3.18.0: Boss Derivation Mode - PhysicsFormulaZone, ParabolicVolley, and SUVAT miss punishment system
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

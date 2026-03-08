@@ -4,7 +4,77 @@
 
 ---
 
-## v3.16.8 — Universal Dev Buff System
+## v3.18.0 — Boss Derivation Mode: PhysicsFormulaZone & Combat System Overhaul
+*Released: March 8, 2026*
+
+### 🔴 Derivation Mode System (HP < 40%)
+- **Automatic Trigger:** Boss enters Derivation Mode when HP drops below 40% for the first time
+- **Global Cooldown Reduction:** All skill cooldowns reduced by 35% (×0.65 multiplier) for sustained pressure
+- **Immediate ParabolicVolley:** Fires as announcement when Derivation Mode activates
+- **Visual Effects:** "⚛️ DERIVATION MODE" floating text with particle effects and screen shake
+- **New Skill Branches:** Unlocks `formulaZone` and `parabolic` skills for relentless pressure
+
+### 🟣 PhysicsFormulaZone — Area Denial System
+- **Zone Mechanics:** Circular zones (110-130px radius) that persist for 5 seconds
+- **Player Debuff:** Speed reduced to 55%, damage 14/s (18/s advanced) when standing in zone
+- **Visual Design:** Rotating hexagon, animated dashed border, formula labels (F=ma, p=mv, etc.)
+- **Strategic Placement:** 
+  - Drops at boss position during FREE_FALL attacks (forces player repositioning)
+  - Standalone drops at player position every 14s in Derivation Mode
+- **Countdown System:** Visual arc timer showing remaining duration
+
+### 🟡 SUVAT Miss Punishment System
+- **Problem Solved:** Fixed "boss goes idle after burst dodge" issue
+- **New Response:** When SUVAT dash expires without hitting player:
+  - Fires immediate ParabolicVolley retaliation
+  - Enters ORBIT state instead of CHASE for sustained pressure
+  - "PARABOLIC RETALIATION!" floating text feedback
+- **Combat Flow:** Maintains constant pressure, eliminates safe windows
+
+### 🌐 ParabolicVolley Attack System
+- **Adaptive Firing:** 3-prong volley (5-prong advanced) targeting player escape paths
+- **Smart Targeting:** Projectile spread calculated to intercept common dodge patterns
+- **Damage Output:** 26 damage per projectile, 420px/s velocity
+- **Visual Effects:** Purple particle burst at origin with screen shake
+- **Strategic Use:** 
+  - Chained after PhysicsFormulaZone drops
+  - Standalone skill in Derivation Mode
+  - SUVAT miss punishment
+
+### 🎯 Enhanced Boss AI Decision Tree
+- **Derivation Mode Branches:** Two new skill priorities in low HP state
+  - `formulaZone`: Drop zone at player + chain ParabolicVolley
+  - `parabolic`: Standalone volley for direct pressure
+- **Priority System:** New skills take priority over existing attacks during Derivation Mode
+- **Cooldown Management:** Integrated with existing cooldown reduction system
+
+### 🎨 Visual Effects & Polish
+- **PhysicsFormulaZone:** 
+  - Rotating hexagon core with formula labels
+  - Animated dashed border with glow effects
+  - Countdown timer arc with color transitions
+  - "⚠ SLOW FIELD" warning text
+- **Derivation Mode Activation:** 
+  - Dual-color particle effects (green + cyan)
+  - Screen shake and audio cues
+  - "d/dt ALL COOLDOWNS ×0.65" technical feedback
+
+### 🔧 Technical Implementation
+- **New Classes:** `PhysicsFormulaZone` and `ParabolicVolley` in boss_attacks.js
+- **Boss State Management:** Enhanced `_derivationMode` and `_derivationTaunted` flags
+- **Cooldown System:** Global 35% reduction applied to all skill max cooldowns
+- **Steering Enhancement:** Added `_steerAroundObstacles()` calls for improved navigation
+- **Export Updates:** Added new classes to module exports and global window objects
+
+### 🎮 Gameplay Impact
+- **Sustained Pressure:** Eliminates safe windows after successful dodges
+- **Area Control:** PhysicsFormulaZone forces constant repositioning
+- **Adaptive Difficulty:** Boss becomes 35% more aggressive in Derivation Mode
+- **Skill Synergy:** Combined zone denial + projectile attacks create complex patterns
+
+---
+
+## v3.17.0 — Major Map Redesign & Visual Enhancement
 *Released: March 8, 2026*
 
 ### 🚀 Character-Agnostic Dev Buff Implementation
