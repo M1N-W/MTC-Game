@@ -27,7 +27,7 @@
 * **🗄️ MTC Database & Admin Console:** ระบบ Lore และ Terminal ลับสำหรับใส่สูตรโกง (ถ้าคุณรู้คำสั่ง!)
 * **🎨 Visual Polish:** SVG Portrait System, 6-layer Wanchai Stand rendering, Military HUD theme, and enhanced particle effects
 * **🤖 Advanced AI:** Autonomous Wanchai Stand with tactical intelligence and positioning
-* **🌌 Domain Expansion:** Ultimate boss abilities with arena-wide effects and physics manipulation
+* **🌌 Domain Expansion:** Ultimate boss abilities with arena-wide effects, physics manipulation, and enhanced visual effects including pillar of light, energy tendrils, and dynamic grid animations
 
 ---
 

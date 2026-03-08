@@ -1172,8 +1172,10 @@ const _DC = {
     CELL_SIZE: 60,
     CAST_DUR: 2.2,
     WARN_DUR: 1.5,
+    WARN_DUR_MIN: 0.50,           // BUG-FIX B1: was undefined → NaN cycleTimer → cycles never advanced
     WARN_DUR_DECAY: 0.18,
     EXPLODE_DUR: 0.45,
+    END_DUR: 1.8,                 // BUG-FIX B2: was undefined → ending phase never exited, globalA=NaN
     TOTAL_CYCLES: 6,
     DANGER_PCT: _DE.dangerPct || 0.62,
     DANGER_PCT_MAX: _DE.dangerPctMax || 0.84,
@@ -1187,6 +1189,9 @@ const _DC = {
     BOSS_VOLLEY_CYCLE: _DE.bossVolleyCycle || 3,
     BOSS_VOLLEY_COUNT: 8,
     LOCK_PUSH: 80,                // pixels/s push force when entity tries to leave domain
+    // BUG-FIX B3: COLS/ROWS were undefined → _initCells() loop ran 0 times → cells=[] → no grid
+    get COLS() { return Math.ceil((this.ARENA_RADIUS * 2) / this.CELL_SIZE); },  // 50
+    get ROWS() { return Math.ceil((this.ARENA_RADIUS * 2) / this.CELL_SIZE); },  // 50
 };
 
 const _RAIN_POOL = '0123456789ABCDEFΑΒΓΔΩΣΨXYZμσπ∑∫∂∇+-×÷=≠≤≥ΦΘΛ';
@@ -1372,6 +1377,25 @@ const DomainExpansion = {
             const tintR = Math.floor(180 + (dangerPct - _DC.DANGER_PCT) / (_DC.DANGER_PCT_MAX - _DC.DANGER_PCT) * 75);
             const borderCol = `rgb(${tintR},0,255)`;
 
+            // ── REWORK: Inner energy tendrils rotating around border ──
+            const tendrilCount = 8;
+            for (let ti = 0; ti < tendrilCount; ti++) {
+                const baseAngle = (ti / tendrilCount) * Math.PI * 2 + now * 0.8;
+                const wobble = Math.sin(now * 3 + ti * 1.3) * 0.18;
+                const ta = baseAngle + wobble;
+                const innerR = radiusSS * 0.85;
+                const tx1 = bCX + Math.cos(ta) * innerR;
+                const ty1 = bCY + Math.sin(ta) * innerR;
+                const tx2 = bCX + Math.cos(ta + Math.PI * 0.18) * radiusSS;
+                const ty2 = bCY + Math.sin(ta + Math.PI * 0.18) * radiusSS;
+                ctx.globalAlpha = globalA * (0.25 + pulse * 0.20);
+                ctx.strokeStyle = borderCol;
+                ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 8; ctx.shadowColor = borderCol;
+                ctx.beginPath(); ctx.moveTo(tx1, ty1); ctx.lineTo(tx2, ty2); ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
             // Outer glow ring
             ctx.globalAlpha = globalA * (0.55 + pulse * 0.45);
             ctx.shadowBlur = 32 * pulse; ctx.shadowColor = borderCol;
@@ -1437,9 +1461,22 @@ const DomainExpansion = {
             const fastPulse = 0.5 + Math.sin(now * (4 + warnProgress * 10)) * 0.5;
             const isLate = warnProgress > 0.60;
 
+            // ── REWORK: Collapse effect during ending phase ──
+            const isEnding = this.phase === 'ending';
+            const collapsePct = isEnding ? (1.0 - globalA) : 0;  // 0→1 as domain fades
+
             for (const cell of this.cells) {
-                const tl = worldToScreen(cell.wx, cell.wy);
-                const br = worldToScreen(cell.wx + _DC.CELL_SIZE, cell.wy + _DC.CELL_SIZE);
+                // Collapse: shift cell toward origin during ending
+                let drawWx = cell.wx, drawWy = cell.wy;
+                if (isEnding && collapsePct > 0) {
+                    const cellCX = cell.wx + _DC.CELL_SIZE / 2;
+                    const cellCY = cell.wy + _DC.CELL_SIZE / 2;
+                    drawWx = cellCX + (this.originX - cellCX) * collapsePct * 0.6 - _DC.CELL_SIZE / 2;
+                    drawWy = cellCY + (this.originY - cellCY) * collapsePct * 0.6 - _DC.CELL_SIZE / 2;
+                }
+
+                const tl = worldToScreen(drawWx, drawWy);
+                const br = worldToScreen(drawWx + _DC.CELL_SIZE, drawWy + _DC.CELL_SIZE);
                 const sw = br.x - tl.x, sh = br.y - tl.y;
                 if (br.x < 0 || tl.x > W || br.y < 0 || tl.y > H || sw < 2 || sh < 2) continue;
                 const mx = tl.x + sw / 2, my = tl.y + sh / 2;
@@ -1449,7 +1486,6 @@ const DomainExpansion = {
                         // ── Explosion flash ───────────────────
                         const ef = 1.0 - explodeProgress;
                         ctx.globalAlpha = globalA * ef * 0.98;
-                        // White-hot centre → orange → transparent
                         const eg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
                         eg.addColorStop(0, `rgba(255,255,220,${ef})`);
                         eg.addColorStop(0.4, `rgba(239,68,68,${ef * 0.9})`);
@@ -1461,12 +1497,17 @@ const DomainExpansion = {
                         ctx.shadowBlur = 18; ctx.shadowColor = '#ef4444';
                         ctx.globalAlpha = globalA * ef * 0.85;
                         ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
+                        // REWORK: shockwave ring expanding from cell
+                        const swRing = explodeProgress * sw * 1.8;
+                        ctx.globalAlpha = globalA * (1.0 - explodeProgress) * 0.7;
+                        ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
+                        ctx.shadowBlur = 12; ctx.shadowColor = '#facc15';
+                        ctx.beginPath(); ctx.arc(mx, my, swRing * 0.5, 0, Math.PI * 2); ctx.stroke();
                         ctx.shadowBlur = 0;
                     } else {
                         // ── Warning ───────────────────────────
                         const baseCol = isLate ? '#ef4444' : '#d97706';
                         const glowCol = isLate ? '#ef4444' : '#facc15';
-                        // Fill gradient
                         const wg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
                         const fillA = 0.18 + warnProgress * 0.45 * fastPulse;
                         wg.addColorStop(0, isLate ? `rgba(239,68,68,${fillA * 1.4})` : `rgba(251,146,60,${fillA})`);
@@ -1487,6 +1528,25 @@ const DomainExpansion = {
                         [[tl.x, tl.y, 1, 1], [tl.x + sw, tl.y, -1, 1], [tl.x, tl.y + sh, 1, -1], [tl.x + sw, tl.y + sh, -1, -1]].forEach(([bx, by, sx2, sy2]) => {
                             ctx.beginPath(); ctx.moveTo(bx + sx2 * tl2, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + sy2 * tl2); ctx.stroke();
                         });
+                        // REWORK: crack lines — grow as warnProgress increases
+                        if (warnProgress > 0.35) {
+                            const crackProg = (warnProgress - 0.35) / 0.65;
+                            const crackLen = sw * 0.3 * crackProg;
+                            ctx.globalAlpha = globalA * crackProg * 0.75;
+                            ctx.strokeStyle = isLate ? '#fca5a5' : '#fde68a';
+                            ctx.lineWidth = 1;
+                            ctx.shadowBlur = 4; ctx.shadowColor = glowCol;
+                            // 3 cracks from center using cell position as deterministic seed
+                            const seed = Math.abs(Math.round(cell.wx * 0.1 + cell.wy * 0.07));
+                            for (let ci = 0; ci < 3; ci++) {
+                                const ca = ((seed * 37 + ci * 120) % 360) * Math.PI / 180;
+                                ctx.beginPath();
+                                ctx.moveTo(mx, my);
+                                ctx.lineTo(mx + Math.cos(ca) * crackLen, my + Math.sin(ca) * crackLen);
+                                ctx.stroke();
+                            }
+                            ctx.shadowBlur = 0;
+                        }
                         // Countdown bar (bottom of cell)
                         const barW = Math.max(0, (sw - 4) * (1.0 - warnProgress));
                         ctx.globalAlpha = globalA * 0.9;
@@ -1515,7 +1575,7 @@ const DomainExpansion = {
                         ctx.shadowBlur = 0;
                     }
                 } else {
-                    // ── Safe cell ──────────────────────────────
+                    // ── Safe cell — REWORK: shimmer particles inside ──
                     ctx.globalAlpha = globalA * 0.12;
                     ctx.fillStyle = '#22c55e'; ctx.fillRect(tl.x, tl.y, sw, sh);
                     ctx.globalAlpha = globalA * 0.35;
@@ -1523,6 +1583,17 @@ const DomainExpansion = {
                     ctx.shadowBlur = 6; ctx.shadowColor = '#22c55e';
                     ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                     ctx.shadowBlur = 0;
+                    // Shimmer dot — position oscillates using cell seed
+                    const sSeed = Math.abs(Math.round(cell.wx * 0.13 + cell.wy * 0.09));
+                    const sPhase = (sSeed % 100) / 100;
+                    const sX = mx + Math.sin(now * 2.2 + sPhase * 6.28) * sw * 0.22;
+                    const sY = my + Math.cos(now * 1.8 + sPhase * 6.28) * sh * 0.22;
+                    ctx.globalAlpha = globalA * (0.4 + Math.sin(now * 3 + sPhase * 6.28) * 0.3);
+                    ctx.fillStyle = '#86efac';
+                    ctx.shadowBlur = 8; ctx.shadowColor = '#4ade80';
+                    ctx.beginPath(); ctx.arc(sX, sY, 2.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0;
+                    // ✓ icon
                     const iconSize2 = Math.max(8, Math.floor(sh * 0.30));
                     ctx.globalAlpha = globalA * 0.55;
                     ctx.font = `bold ${iconSize2}px Arial`;
@@ -1555,6 +1626,33 @@ const DomainExpansion = {
                 ctx.shadowBlur = 0;
             }
 
+            // REWORK: Pillar of light rising from boss during cast
+            if (elapsed > 0.3) {
+                const pillarProg = Math.min(1.0, (elapsed - 0.3) / 1.0);
+                const pillarH = H * pillarProg;
+                const pillarW = 60 + pillarProg * 40;
+                const pg = ctx.createLinearGradient(ringScreen.x, ringScreen.y, ringScreen.x, ringScreen.y - pillarH);
+                pg.addColorStop(0, `rgba(217,70,239,${0.7 * pillarProg})`);
+                pg.addColorStop(0.5, `rgba(250,204,21,${0.35 * pillarProg})`);
+                pg.addColorStop(1, `rgba(217,70,239,0)`);
+                ctx.globalAlpha = globalA * pillarProg;
+                ctx.fillStyle = pg;
+                ctx.shadowBlur = 40; ctx.shadowColor = '#d946ef';
+                ctx.fillRect(ringScreen.x - pillarW / 2, ringScreen.y - pillarH, pillarW, pillarH);
+                ctx.shadowBlur = 0;
+                // Pillar edge lines
+                ctx.globalAlpha = globalA * pillarProg * 0.6;
+                ctx.strokeStyle = '#f0abfc'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(ringScreen.x - pillarW / 2, ringScreen.y);
+                ctx.lineTo(ringScreen.x - pillarW * 0.1, ringScreen.y - pillarH);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(ringScreen.x + pillarW / 2, ringScreen.y);
+                ctx.lineTo(ringScreen.x + pillarW * 0.1, ringScreen.y - pillarH);
+                ctx.stroke();
+            }
+
             // Chromatic aberration lines — horizontal scan lines
             if (elapsed > 0.8) {
                 const caProg = Math.min(1.0, (elapsed - 0.8) / 1.2);
@@ -1584,7 +1682,6 @@ const DomainExpansion = {
                 for (const cl of this._crackLines) {
                     ctx.globalAlpha = globalA * crackA;
                     ctx.beginPath(); ctx.moveTo(cl.x, cl.y); ctx.lineTo(cl.x + cl.dx, cl.y + cl.dy); ctx.stroke();
-                    // Secondary branch
                     ctx.globalAlpha = globalA * crackA * 0.5;
                     ctx.beginPath(); ctx.moveTo(cl.x + cl.dx * 0.5, cl.y + cl.dy * 0.5);
                     ctx.lineTo(cl.x + cl.dx * 0.5 + cl.dy * 0.4, cl.y + cl.dy * 0.5 - cl.dx * 0.4); ctx.stroke();
@@ -1597,7 +1694,6 @@ const DomainExpansion = {
                 const ta = Math.min(1.0, (elapsed - 0.35) / 0.45);
                 const sc = 0.78 + ta * 0.22;
                 const fontSize = Math.round(52 * sc);
-                // Red/blue chromatic shadows
                 ctx.globalAlpha = globalA * ta * 0.45;
                 ctx.font = `bold ${fontSize}px serif`;
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1605,7 +1701,6 @@ const DomainExpansion = {
                 ctx.fillText('領域展開', W / 2 - 3, H / 2 - 42 + 2);
                 ctx.fillStyle = '#ef4444';
                 ctx.fillText('領域展開', W / 2 + 3, H / 2 - 42 - 2);
-                // Main white text
                 ctx.globalAlpha = globalA * ta;
                 ctx.fillStyle = '#f0abfc';
                 ctx.shadowBlur = 40; ctx.shadowColor = '#d946ef';
@@ -1622,7 +1717,6 @@ const DomainExpansion = {
                 ctx.fillStyle = '#fef08a';
                 ctx.fillText('METRICS-MANIPULATION', W / 2, H / 2 + 28);
                 ctx.shadowBlur = 0;
-                // Underline sweep
                 ctx.globalAlpha = globalA * tb * 0.8;
                 ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
                 const ulW = tb * 280;

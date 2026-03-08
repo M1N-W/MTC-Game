@@ -4,6 +4,32 @@
 
 ---
 
+## v3.16.6 — Domain Expansion Bug Fixes & Visual Rework
+*Released: March 8, 2026*
+
+### 🐛 Critical Domain Expansion Bug Fixes
+- **Fixed _DC Object Properties:** Resolved undefined property issues that broke domain expansion
+  - `WARN_DUR_MIN`: Was undefined → NaN cycleTimer → cycles never advanced
+  - `END_DUR`: Was undefined → ending phase never exited, globalA=NaN
+  - `COLS/ROWS`: Were undefined → _initCells() loop ran 0 times → cells=[] → no grid
+- **Domain Expansion Now Fully Functional:** All phases work correctly, grid cells appear, domain completes properly
+
+### ✨ Complete Visual Rework - Domain Expansion
+- **Casting Phase:** Added pillar of light rising from boss during 2.2s cast with edge lines
+- **Arena Border:** Added 8 energy tendrils rotating around inner ring with sine wobble animation
+- **Danger Cells (Warning):** Added 3 deterministic crack lines from center using cell position as seed
+- **Explode Phase:** Added shockwave ring expanding from each exploding cell
+- **Safe Cells:** Added shimmer dot with elliptical orbit using cell position as phase seed
+- **Ending Phase:** Added collapse effect where grid cells slowly move toward origin before disappearing
+
+### 🎯 Visual Effects Details
+- **Deterministic Patterns:** All effects use cell position seeds for consistent, non-random visuals
+- **Progressive Intensity:** Crack lines grow longer as warnProgress increases
+- **Smooth Animations:** All new effects feature smooth transitions and proper alpha blending
+- **Performance Optimized:** Effects use efficient rendering techniques with proper culling
+
+---
+
 ## v3.16.5 — Enhanced Boss HP Bar: Visual Effects & Phase System
 *Released: March 8, 2026*
 
