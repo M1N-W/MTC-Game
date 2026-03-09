@@ -1391,24 +1391,27 @@ class AutoPlayer extends Player {
         this.isStandAttacking = false;
 
         // Wanchai active: L-Click = player melee Stand Rush (stand punches autonomously too)
+        // ถ้า Stand Rush cooldown ยังไม่หมด → fallthrough ไปยิง Heat Wave แทน (ไม่ return)
         if (this.wanchaiActive && mouse && mouse.left === 1) {
-            this.isStandAttacking = true;
             if (this.wanchaiStand?.active) {
                 this.wanchaiStand._forcedTargetX = mouse.wx;
                 this.wanchaiStand._forcedTargetY = mouse.wy;
             }
             if ((this.cooldowns?.shoot ?? 0) <= 0) {
+                // Stand Rush ready — do melee and return
+                this.isStandAttacking = true;
                 this.cooldowns.shoot = this.stats?.playerRushCooldown ?? 0.10;
                 this._doPlayerMelee(mouse);
+                return;
             }
-            return;
+            // Stand Rush on cooldown — fall through to Heat Wave below
         }
 
         if (!mouse || mouse.left !== 1) return;
         if (typeof projectileManager === 'undefined' || !projectileManager) return;
 
         const heatCd = this.stats?.heatWaveCooldown ?? 0.28;
-        if ((this.cooldowns?.shoot ?? 0) > 0) return;
+        // No cooldown check here - already handled in Stand Rush section above
         this.cooldowns.shoot = heatCd;
 
         if (typeof projectileManager.spawnHeatWave === 'function') {

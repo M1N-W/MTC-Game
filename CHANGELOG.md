@@ -4,6 +4,16 @@
 
 ---
 
+## v3.26.1 — Stand Rush Cooldown Fix
+*Released: March 9, 2026*
+
+### 🐛 Bug Fixes
+- **Fixed Stand Rush cooldown fallthrough:** Removed redundant cooldown check that prevented Heat Wave from firing when Stand Rush was on cooldown
+- **Improved combat flow:** Stand Rush ready → performs melee attack and returns; Stand Rush on cooldown → falls through to Heat Wave normally
+- **Code cleanup:** Added explanatory comments for better code maintainability
+
+---
+
 ## v3.26.0 — Complete Stand System Features Overhaul
 *Released: March 9, 2026*
 
