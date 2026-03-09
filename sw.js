@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.3'; // v3.26.3: Fixed Poom DMG stat bar accuracy - corrected from 99% to 98% to match actual DPS calculation (62/0.42 = 147.6), updated PROJECT_OVERVIEW.md with comprehensive Auto rework documentation and new Character Quick-Stats section
+const CACHE_NAME = 'mtc-cache-v3.26.4'; // v3.26.4: Auto character balance rework - reduced detonation base damage and scaling, added damage hard cap, nerfed passive heat gain, separated stand pull cooldown, improved rendering positioning and visual feedback
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

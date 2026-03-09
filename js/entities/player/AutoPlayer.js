@@ -206,7 +206,7 @@ class WanchaiStand {
         if ((owner._heatTier ?? 0) >= 3) critChance += (S.heatCritBonusOverheat ?? 0.20);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
-            dmg *= (S.critMultiplier ?? 2.0);
+            dmg *= (S.critMultiplier ?? 2.2);  // FIX: fallback 2.0 → 2.2 ให้ match config
             if (owner.passiveUnlocked) owner.goldenAuraTimer = 1;
             if (typeof Achievements !== 'undefined') {
                 Achievements.stats.crits = (Achievements.stats.crits ?? 0) + 1;
@@ -1319,13 +1319,15 @@ class AutoPlayer extends Player {
                     this.energy = Math.max(0, (this.energy ?? 0) - detCost);
                     const isOverheat = (this._heatTier ?? 0) >= 3;
                     const DET_RANGE = (S.detonationRange ?? 240) * rangeMult * (isOverheat ? 1.5 : 1.0);
-                    const detBaseDmg = (S.detonationBaseDamage ?? 80) * dmgMult + this.heat * (S.detonationHeatScaling ?? 2.5);
+                    const detBaseDmg = (S.detonationBaseDamage ?? 55) * dmgMult + this.heat * (S.detonationHeatScaling ?? 1.2);
                     const detFinalBase = detBaseDmg * (this.damageMultiplier || 1.0);
                     let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.25);
                     if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.20);
                     const detIsCrit = Math.random() < detCrit;
                     let detFinalDmg = detFinalBase * (detIsCrit ? (S.critMultiplier ?? 2.2) : 1.0);
                     if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
+                    // Hard cap — กัน RAGE+OVERHEAT+crit stack สุดขีด
+                    detFinalDmg = Math.min(detFinalDmg, S.detonationDamageHardCap ?? 600);
 
                     // Stand position is the blast origin
                     const bx = this.wanchaiStand?.x ?? this.x;
@@ -1351,7 +1353,7 @@ class AutoPlayer extends Player {
                         this.hp = Math.min(this.maxHp, this.hp + totalDet * (S.passiveLifesteal ?? 0.01));
                     }
 
-                    this.heat = Math.max(0, this.heat - 50);
+                    this.heat = Math.max(0, this.heat - 80);  // BUFF drain: 50 → 80 (รู้สึก "ระบาย" จริง)
                     this._heatTier = this.heat >= (S.heatTierHot ?? 67) ? 2
                         : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
                     this.cooldowns.detonation = S.detonationCooldown ?? 8;
@@ -1382,8 +1384,7 @@ class AutoPlayer extends Player {
 
         // ── Feature 3C: Stand Guard — block shooting ───────────────
         if (this._standGuard) {
-            // Stand guard active — เพิ่ม visual signal แค่ครั้งแรก
-            // Shooting blocked (skip the melee/shoot block below)
+            this.isStandAttacking = false;  // FIX: reset ก่อน return กัน ORA visual ค้าง
             return;
         }
 
@@ -1433,8 +1434,9 @@ class AutoPlayer extends Player {
         const cy = mouse?.wy ?? this.y;
 
         // Find nearest enemy to cursor within range
+        // +15 = enemy radius allowance เท่านั้น ไม่ใช่ +60 ที่ทำให้ hit range = 145px
         let target = null;
-        let bestD = range + 60;
+        let bestD = range + 15;
         for (const e of (window.enemies || [])) {
             if (e.dead) continue;
             const d = Math.hypot(e.x - cx, e.y - cy);
@@ -1656,7 +1658,7 @@ class AutoPlayer extends Player {
                 window.boss.vy = ((standY + Math.sin(pullAngle) * bossOffset) - window.boss.y) * 8;
             }
         }
-        this.cooldowns.vacuum = S.vacuumCooldown ?? 6;
+        this.cooldowns.vacuum = S.standPullCooldown ?? 10;  // FIX: Stand Pull CD แยกจาก Vacuum (แรงกว่า = CD ยาวกว่า)
         if (pulled > 0) {
             this.gainHeat(S.vacuumHeatGain ?? 25, true);
             if (typeof spawnParticles === 'function') spawnParticles(standX, standY, 35, '#dc2626');

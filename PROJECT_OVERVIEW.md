@@ -115,13 +115,18 @@ Input (input.js) → Game Update (game.js) → Entity Updates → Collision (map
 เหตุผล: ผู้ใช้อาจแก้ไขใน project จริงหลัง copy output ไปแล้ว ทำให้ output เก่าล้าสมัย
 
 ```
-แชทใหม่ / task ใหม่:
-  ผู้ใช้ส่งไฟล์ → AI แก้ → output → ผู้ใช้ copy ไป project
+แชทใหม่ / task แรก + ผู้ใช้แนบไฟล์มาด้วย:
+  ใช้ uploads ที่แนบมาได้เลย — ไม่ต้องถามหาไฟล์อีก
 
-task ต่อเนื่องในแชทเดิม (ไม่มีไฟล์ใหม่):
+แชทใหม่ / task แรก + ผู้ใช้ไม่ได้แนบไฟล์:
+  แจ้ง "กรุณาส่งไฟล์ล่าสุดจาก project มาด้วยครับ"
+  (ขอเฉพาะไฟล์ที่จำเป็นต่อ task นั้น)
+
+task ต่อเนื่องในแชทเดิม (ผู้ใช้ไม่ได้แนบไฟล์ใหม่):
   ตรวจ /mnt/user-data/outputs/<filename> ก่อนเสมอ
   ถ้ามี → ใช้ output (cp /mnt/user-data/outputs/X /home/claude/X)
   ถ้าไม่มี → ใช้ /mnt/user-data/uploads/<filename>
+  ❌ ห้ามถามหาไฟล์ซ้ำถ้ามีอยู่แล้วใน uploads หรือ outputs
 
 task ต่อเนื่อง + ผู้ใช้อัปโหลดไฟล์ใหม่:
   ใช้ uploads (อาจมีการแก้ไขนอก session) — output เก่าถือเป็น stale
@@ -137,7 +142,10 @@ cp /mnt/user-data/outputs/config.js /home/claude/config.js   ✅
 cp /mnt/user-data/uploads/config.js /home/claude/config.js   ❌ (ถ้ามี output อยู่แล้ว)
 ```
 
-ถ้าผู้ใช้ไม่ส่งไฟล์มา → แจ้ง "กรุณาส่งไฟล์ล่าสุดจาก project มาด้วยครับ"
+**🚫 ห้ามถามหาไฟล์ซ้ำใน scenario เหล่านี้:**
+- ผู้ใช้เพิ่งแนบไฟล์มาใน message ก่อนหน้าในแชทเดียวกัน
+- มีไฟล์อยู่ใน /mnt/user-data/uploads/ หรือ /mnt/user-data/outputs/ แล้ว
+- task ต่อเนื่องจาก task ก่อนหน้าในแชทเดียวกัน (เช่น "แก้ตามลำดับ" หลังจากวิเคราะห์)
 
 ### Commit & Push Workflow
 1. Bump `sw.js` cache version (เช่น v3.11.14 → v3.11.15)

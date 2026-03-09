@@ -497,33 +497,41 @@ class PlayerRenderer {
             const camScale = _s1.x - _s0.x; // px per world unit
             const vacRingR = VACUUM_RANGE_PX * camScale;
             const pulse = 0.14 + Math.sin(now / 420) * 0.09;
+            // ขณะ Wanchai + passive: Q = Stand Pull (origin ที่ Stand)
+            const isStandPull = entity.wanchaiActive && entity.passiveUnlocked;
+            const ringOriginX = isStandPull ? worldToScreen(entity.wanchaiStand?.x ?? entity.x, entity.wanchaiStand?.y ?? entity.y).x : screen.x;
+            const ringOriginY = isStandPull ? worldToScreen(entity.wanchaiStand?.x ?? entity.x, entity.wanchaiStand?.y ?? entity.y).y : screen.y;
             ctx.save();
             ctx.globalAlpha = pulse;
-            ctx.strokeStyle = '#f97316';
+            ctx.strokeStyle = isStandPull ? '#dc2626' : '#f97316';
             ctx.lineWidth = 2;
             ctx.setLineDash([8, 6]);
-            ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
-            ctx.beginPath(); ctx.arc(screen.x, screen.y, vacRingR, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 12; ctx.shadowColor = isStandPull ? '#dc2626' : '#f97316';
+            ctx.beginPath(); ctx.arc(ringOriginX, ringOriginY, vacRingR, 0, Math.PI * 2); ctx.stroke();
             ctx.setLineDash([]);
             // Inner spiral indicator (ready indicator)
             ctx.globalAlpha = pulse * 0.6;
-            ctx.strokeStyle = '#fb923c'; ctx.lineWidth = 1;
+            ctx.strokeStyle = isStandPull ? '#ef4444' : '#fb923c'; ctx.lineWidth = 1;
             ctx.shadowBlur = 6;
-            ctx.beginPath(); ctx.arc(screen.x, screen.y, vacRingR * 0.5, 0, Math.PI * 2); ctx.stroke();
-            // Q label
+            ctx.beginPath(); ctx.arc(ringOriginX, ringOriginY, vacRingR * 0.5, 0, Math.PI * 2); ctx.stroke();
+            // Q label — แสดง context ที่ถูก
+            const qLabel = isStandPull ? '[Q] STAND PULL' : '[Q] VACUUM';
             ctx.globalAlpha = 0.55 + Math.sin(now / 300) * 0.2;
-            ctx.fillStyle = '#f97316'; ctx.shadowBlur = 8; ctx.shadowColor = '#fb923c';
+            ctx.fillStyle = isStandPull ? '#ef4444' : '#f97316';
+            ctx.shadowBlur = 8; ctx.shadowColor = isStandPull ? '#dc2626' : '#fb923c';
             ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('[Q] VACUUM', screen.x, screen.y - vacRingR - 10);
+            ctx.fillText(qLabel, ringOriginX, ringOriginY - vacRingR - 10);
             ctx.restore();
         }
 
-        // ── Detonation AOE ring (active only during Wanchai) ───
+        // ── Detonation AOE ring — วาดรอบ Stand (blast origin จริง) ───
         if (entity.wanchaiActive) {
             const DET_RANGE_PX = BALANCE?.characters?.auto?.detonationRange ?? 220;
-            // BUG-10 FIX: derive scale same as vacuum ring above
-            const _ds0 = worldToScreen(entity.x, entity.y);
-            const _ds1 = worldToScreen(entity.x + 1, entity.y);
+            // ใช้ Stand position เป็น origin (ตรงกับ blast จริงใน AutoPlayer)
+            const standX = entity.wanchaiStand?.x ?? entity.x;
+            const standY = entity.wanchaiStand?.y ?? entity.y;
+            const _ds0 = worldToScreen(standX, standY);
+            const _ds1 = worldToScreen(standX + 1, standY);
             const camScale = _ds1.x - _ds0.x;
             const detRingR = DET_RANGE_PX * camScale;
             const detPulse = 0.18 + Math.sin(now / 200) * 0.12;
@@ -533,42 +541,8 @@ class PlayerRenderer {
             ctx.lineWidth = 2;
             ctx.setLineDash([4, 6]);
             ctx.shadowBlur = 12; ctx.shadowColor = '#dc2626';
-            ctx.beginPath(); ctx.arc(screen.x, screen.y, detRingR, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(_ds0.x, _ds0.y, detRingR, 0, Math.PI * 2); ctx.stroke();
             ctx.setLineDash([]);
-            ctx.restore();
-        }
-
-        // ── Feature 3B: Charge Punch ring (hold E) ─────────────
-        if (entity.wanchaiActive && (entity._chargeTimer ?? 0) > 0) {
-            const chargeRatio = Math.min(1, entity._chargeTimer / (BALANCE?.characters?.auto?.chargeMaxTime ?? 1.5));
-            const isReady = entity._chargeReady ?? false;
-            const _cs0 = worldToScreen(entity.x, entity.y);
-            const _cs1 = worldToScreen(entity.x + 1, entity.y);
-            const camScaleC = _cs1.x - _cs0.x;
-            const baseRange = BALANCE?.characters?.auto?.detonationRange ?? 240;
-            const chargeRingR = baseRange * camScaleC * (0.5 + chargeRatio * 0.8);
-            const pulseRate = 80 + (1 - chargeRatio) * 200;
-            const pulseFactor = 0.7 + Math.sin(now / pulseRate) * 0.3;
-            const chargeColor = isReady ? '#fef08a' : `rgba(${Math.floor(220 + chargeRatio * 35)},${Math.floor(38 + chargeRatio * 170)},38,1)`;
-            ctx.save();
-            ctx.globalAlpha = 0.3 + chargeRatio * 0.5;
-            ctx.strokeStyle = chargeColor;
-            ctx.lineWidth = 2 + chargeRatio * 3;
-            ctx.shadowBlur = 14 + chargeRatio * 20;
-            ctx.shadowColor = isReady ? '#fef08a' : '#dc2626';
-            ctx.beginPath();
-            // Draw arc proportional to charge
-            ctx.arc(screen.x, screen.y, chargeRingR * pulseFactor, 0, Math.PI * 2 * chargeRatio);
-            ctx.stroke();
-            if (isReady) {
-                ctx.globalAlpha = 0.8;
-                ctx.setLineDash([4, 3]);
-                ctx.beginPath(); ctx.arc(screen.x, screen.y, chargeRingR, 0, Math.PI * 2); ctx.stroke();
-                ctx.setLineDash([]);
-                ctx.globalAlpha = 0.9;
-                ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#fef08a';
-                ctx.fillText('MAX!', screen.x, screen.y - chargeRingR - 10);
-            }
             ctx.restore();
         }
 
@@ -753,35 +727,40 @@ class PlayerRenderer {
         if (entity.wanchaiActive && entity._eHeld && entity._chargeTimer > 0) {
             const chargeRatio = Math.min(1, (entity._chargeTimer ?? 0) / (entity.stats?.chargeMaxTime ?? 1.5));
             const standScreen = worldToScreen(entity.wanchaiStand?.x ?? entity.x, entity.wanchaiStand?.y ?? entity.y);
-            
+            const isReady = entity._chargeReady ?? false;
+
             ctx.save();
             ctx.globalAlpha = 0.6 + chargeRatio * 0.4;
-            ctx.strokeStyle = chargeRatio >= 0.99 ? '#facc15' : '#f59e0b';
+            ctx.strokeStyle = isReady ? '#facc15' : chargeRatio >= 0.5 ? '#f59e0b' : '#dc2626';
             ctx.lineWidth = 2 + chargeRatio * 3;
             ctx.shadowBlur = 12 + chargeRatio * 8;
-            ctx.shadowColor = chargeRatio >= 0.99 ? '#facc15' : '#f59e0b';
-            
+            ctx.shadowColor = isReady ? '#facc15' : '#f59e0b';
+
             // Pulsing charge ring
             const pulseRadius = 35 + chargeRatio * 15 + Math.sin(now / 100) * 3;
+            // Arc proportional to charge progress (ไม่เต็มวงจนกว่าจะ MAX)
             ctx.beginPath();
-            ctx.arc(standScreen.x, standScreen.y, pulseRadius, 0, Math.PI * 2);
+            ctx.arc(standScreen.x, standScreen.y, pulseRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * chargeRatio);
             ctx.stroke();
-            
-            // Inner ring for near-full charge
+
+            // Inner ring + MAX text เมื่อใกล้เต็ม
             if (chargeRatio >= 0.8) {
                 ctx.globalAlpha = (chargeRatio - 0.8) * 3;
                 ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
                 ctx.beginPath();
                 ctx.arc(standScreen.x, standScreen.y, pulseRadius - 8, 0, Math.PI * 2);
                 ctx.stroke();
+                ctx.setLineDash([]);
             }
-            
-            ctx.restore();
-        }
+            if (isReady) {
+                ctx.globalAlpha = 0.95;
+                ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#fef08a';
+                ctx.shadowBlur = 10; ctx.shadowColor = '#facc15';
+                ctx.fillText('MAX!', standScreen.x, standScreen.y - pulseRadius - 10);
+            }
 
-        // ── Draw WanchaiStand entity if active ─────────────────
-        if (entity.wanchaiStand?.active) {
-            entity.wanchaiStand.draw(ctx);
+            ctx.restore();
         }
 
         const attackIntensity = entity.wanchaiActive ? 1.0
@@ -1043,6 +1022,11 @@ class PlayerRenderer {
 
         // Low-HP danger glow (screen space)
         PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);
+
+        // ── Draw WanchaiStand entity AFTER Auto body+weapon (z-order: Stand on top) ──
+        if (entity.wanchaiStand?.active) {
+            entity.wanchaiStand.draw(ctx);
+        }
 
         // BUG-8 FIX: Heat shimmer particles belong in update(), not draw().
         // Removed Math.random() + spawnParticles() call from draw path.

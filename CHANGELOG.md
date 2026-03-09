@@ -4,6 +4,38 @@
 
 ---
 
+## v3.26.4 — Auto Character Balance Rework
+*Released: March 9, 2026*
+
+### ⚖️ Balance Changes
+- **Detonation system rework:**
+  - Reduced base damage: 80 → 55
+  - Reduced heat scaling: 2.5 → 1.2
+  - Added damage hard cap: 600 (prevents infinite scaling)
+  - Reduced charge damage multiplier: 3.5 → 2.5
+  - Increased heat drain on detonation: 50 → 80 (better "venting" feel)
+
+- **Passive heat system adjustments:**
+  - Reduced passive heat gain bonus: 1.50 → 1.20
+  - Disabled passive heat no-decay on move (prevents permanent OVERHEAT)
+
+- **Stand ability separation:**
+  - Added separate standPullCooldown: 10 (from vacuumCooldown: 6)
+  - Stand Pull is now stronger but has longer cooldown than basic Vacuum
+
+### 🔧 Bug Fixes
+- **Fixed crit damage fallback:** Updated from 2.0 to 2.2 to match config values
+- **Fixed melee range calculation:** Reduced bestD bonus from +60 to +15 for proper hit detection
+- **Fixed Stand Guard visual:** Reset isStandAttacking before return to prevent ORA visual glitches
+
+### 🎨 Visual Improvements
+- **Detonation ring positioning:** Now draws around Stand position (matches actual blast origin)
+- **Charge ring improvements:** Removed duplicate Auto body ring, enhanced Stand ring with arc progress and MAX! text
+- **Vacuum/Stand Pull indicator:** Shows appropriate label and origin based on Wanchai+passive state
+- **Z-order corrections:** WanchaiStand now renders correctly behind LAYER 2
+
+---
+
 ## v3.26.3 — Character Stat Accuracy & Documentation Update
 *Released: March 9, 2026*
 

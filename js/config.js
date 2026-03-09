@@ -153,7 +153,7 @@ const BALANCE = {
             // ── Vacuum Heat (Q) — REWORK: Pull + Ignite ──────
             vacuumRange: 340,               // 320 → 340
             vacuumForce: 1900,              // 1600 → 1900 (BUFF)
-            vacuumCooldown: 6,              // 8 → 6 (bread-and-butter skill)
+            vacuumCooldown: 6,              // 8 → 6 (bread-and-butter skill, basic pull)
             vacuumEnergyCost: 20,           // NEW: Q Vacuum — pull + ignite ใช้ focus
             vacuumStunDur: 0.50,            // 0.55 → 0.50
             vacuumPullDur: 0.45,
@@ -161,16 +161,19 @@ const BALANCE = {
             vacuumIgniteDuration: 1.5,      // NEW: Ignite debuff duration
             vacuumIgniteDPS: 12,            // NEW: burn DPS ขณะ Ignite
             vacuumHeatGain: 25,             // NEW: +Heat ทุกครั้งที่ใช้สำเร็จ
+            standPullCooldown: 10,          // NEW: Stand Pull CD แยกต่างหาก — แรงกว่า Vacuum = CD ยาวกว่า
 
             // ── Overheat Detonation (E) — REWORK: Heat-scaled, ไม่ kill Wanchai ──
             detonationRange: 240,           // 220 → 240
             detonationCooldown: 8,          // 5 → 8 (ไม่ kill Wanchai แล้ว — trade off)
             detonationEnergyCost: 30,       // NEW: E Detonation — ultimate burst ใช้ focus สูงสุด
-            detonationBaseDamage: 80,       // NEW: base damage (แทน wanchaiDamage×6)
-            detonationHeatScaling: 2.5,     // NEW: bonus damage per Heat point
-            // ตัวอย่าง: Heat 80 → 80 + (80 × 2.5) = 280 damage
+            detonationBaseDamage: 55,       // NERF: 80 → 55 (ลด base เพื่อให้ heat scaling ไม่ทะลุ)
+            detonationHeatScaling: 1.2,     // NERF: 2.5 → 1.2 (Heat 100 → +120 แทน +250)
+            detonationDamageHardCap: 600,   // NEW: hard cap กัน RAGE+crit+charge stack สุดขีด
+            chargeDamageMultMax: 2.5,       // NERF: 3.5 → 2.5 (full charge = ×2.5 ไม่ใช่ ×3.5)
+            // ตัวอย่าง: Heat 100, full charge → 55 + (100×1.2) = 175 × 2.5 = 437 (capped 600)
             // Overheated (Heat 100) → radius ×1.5 = 360px
-            // หลัง Detonate: Heat -50 (ไม่เป็น 0, ยังคง momentum)
+            // หลัง Detonate: Heat -80 (เกือบ reset — รู้สึก "ระบาย" จริง)
 
             // ── Heat Gauge (NEW SYSTEM) ───────────────────────
             // สะสมจากการชก → ให้ bonus tier ตาม heat level
@@ -222,8 +225,8 @@ const BALANCE = {
             passiveUnlockText: '💥 วันชัยโอเวอร์ไดรฟ์!',
             passiveCritBonus: 0.06,         // 0.04 → 0.06
             passiveLifesteal: 0.025,        // 0.01 → 0.025 (brawler identity)
-            passiveHeatGainBonus: 1.50,     // BUFF: 1.25 → 1.50 (รู้สึกได้ชัดขึ้น)
-            passiveHeatNoDecayOnMove: true, // NEW: Heat ไม่ decay ขณะเคลื่อนที่หลัง passive unlock
+            passiveHeatGainBonus: 1.20,     // NERF: 1.50 → 1.20 (กัน permanent OVERHEAT loop)
+            passiveHeatNoDecayOnMove: false, // NERF: ปิด — passive ไม่ยกเลิก decay ขณะเดิน (OVERHEAT ไม่ควรฟรี)
             vacuumEarlyUnlock: true,        // NEW: Vacuum ปลดพร้อม Wanchai (ต้นเกม) ไม่รอ passive
 
             // ── RAGE MODE: OVERHEAT + HP < 30% → damage buff + damage reduction ──
@@ -257,7 +260,7 @@ const BALANCE = {
 
             // ── Feature 3B: Charge Punch (E hold ขณะ Wanchai) ─
             chargeMaxTime: 1.5,         // วินาทีชาร์จเต็ม
-            chargeDamageMultMax: 3.5,   // max damage multiplier ที่ชาร์จเต็ม
+            chargeDamageMultMax: 2.5,   // NERF: 3.5 → 2.5 (sync กับ detonation section)
             chargeRangeMultMax: 1.3,    // max range multiplier ที่ชาร์จเต็ม
 
             // ── Feature 3C: Stand Guard (Shift ขณะ Wanchai) ───
