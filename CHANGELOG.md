@@ -4,6 +4,43 @@
 
 ---
 
+## v3.18.2 — Enhanced Player Rendering & Visual Effects
+*Released: March 9, 2026*
+
+### ⚡ Hit Flash System Improvements
+- **Enhanced Hit Feedback:** Added `_hitFlashTimer` and `_hitFlashBig` properties to PlayerBase for differentiated damage feedback
+- **Fast Decay Rate:** Hit flash timer now decays at 6x per second for quick, responsive visual feedback
+- **Damage-Based Intensity:** Strong flash effects (`_hitFlashBig = true`) trigger for bullet/AoE damage (≥5 HP), subtle effects for contact damage
+- **Universal Flash Helper:** `_drawHitFlash()` helper provides white glow + expanding ring effects for all character types
+
+### 🏃 Walk Animation & Movement Physics
+- **Vertical Bob Implementation:** Added real Y-axis movement with `bobOffsetY`, `poomBobY`, and `kaoBobY` variables
+- **Character-Specific Bob:** Each character now has unique walk cycle timing and amplitude:
+  - Kao: 2.0px amplitude with walkCycle timing
+  - Poom: 2.0px amplitude with walkCycle timing  
+  - Auto: 2.5px amplitude with walkCycle*0.9 timing
+- **Ground Shadow Scaling:** Shadows now properly scale with bob movement and use correct save/restore context management
+
+### 💇 Responsive Hair Animation System
+- **Auto Combat Mode:** Hair wobble period increases from 380ms → 150ms during Wanchai activation for intense combat feel
+- **Poom Dynamic Response:** Hair wobble period adapts to movement speed (220-500ms range) - faster when running, slower when walking
+- **Movement-Based Amplitude:** Poom hair wobble amplitude increases with movement speed for more dynamic animation
+
+### 🔫 Weapon Recoil Animation
+- **Universal Recoil System:** All characters (Kao, Auto, Poom) now feature consistent weapon recoil animations
+- **Character-Specific Tuning:** Recoil intensity calibrated per character:
+  - Kao: 3.5x multiplier
+  - Auto: 3.0x multiplier  
+  - Poom: 2.5x multiplier
+- **Visual Feedback:** Recoil affects weapon positioning and adds realistic shooting feedback
+
+### 🎨 Visual Polish & Fixes
+- **Kranok Pattern Enhancement:** Poom's Thai pattern opacity now reduces during movement and features improved transparency transitions
+- **Dash Ghost Shapes:** Updated dash ghost visual from roundRect to arc shapes to match body design
+- **Context Management:** Fixed ground shadow rendering with proper save/restore state management
+
+---
+
 ## v3.18.1 — Character Selection UI Redesign: Enhanced Stat Bars & Visual Identity
 *Released: March 8, 2026*
 

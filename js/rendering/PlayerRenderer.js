@@ -244,6 +244,35 @@ class PlayerRenderer {
         ctx.restore();
     }
 
+    /**
+     * Hit flash overlay — white/red burst on body when taking damage.
+     * Must be called INSIDE the body ctx.save/translate block (entity-space).
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Player} entity
+     * @param {number} bodyR  — radius of character body
+     */
+    static _drawHitFlash(ctx, entity, bodyR) {
+        const t = entity._hitFlashTimer ?? 0;
+        if (t <= 0) return;
+        // Ease out: fast bright → fade
+        const alpha = t * (entity._hitFlashBig ? 0.82 : 0.52);
+        const r = bodyR + (entity._hitFlashBig ? t * 5 : t * 2);
+        ctx.save();
+        // Inner body flash — white core
+        ctx.globalAlpha = alpha * 0.75;
+        ctx.fillStyle = entity._hitFlashBig ? '#fca5a5' : '#fecaca';
+        ctx.shadowBlur = entity._hitFlashBig ? 18 : 8;
+        ctx.shadowColor = '#ef4444';
+        ctx.beginPath(); ctx.arc(0, 0, bodyR, 0, Math.PI * 2); ctx.fill();
+        // Outer shockwave ring
+        ctx.globalAlpha = alpha * 0.55 * (1 - t * 0.5);
+        ctx.strokeStyle = entity._hitFlashBig ? '#ef4444' : '#fca5a5';
+        ctx.lineWidth = entity._hitFlashBig ? 2.5 : 1.5;
+        ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+    }
+
     // ══════════════════════════════════════════════════════════
     // KAO CLONE
     // เดิมคือ KaoClone.draw()
@@ -443,9 +472,9 @@ class PlayerRenderer {
 
         // Ground shadow
         ctx.save();
-        ctx.globalAlpha = 0.25;
+        ctx.globalAlpha = 0.28 - moveT * 0.08;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 16, 17, 6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 17 + bobOffsetY, 16 - moveT * 2, 6, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
         // ── Vacuum Heat range ring (Q cooldown ready) ──────────
@@ -562,6 +591,14 @@ class PlayerRenderer {
         const stretchX = 1 + breatheAuto * 0.025 + moveT * bobT * 0.09;
         const stretchY = 1 - breatheAuto * 0.025 - moveT * Math.abs(bobT) * 0.065;
 
+        // ── Recoil (same system as Kao) ────────────────────────
+        const recoilAmt = entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.0 : 0;
+        const recoilX = -Math.cos(entity.angle) * recoilAmt;
+        const recoilY = -Math.sin(entity.angle) * recoilAmt;
+
+        // ── Walk bob Y-offset (body dips slightly when moving) ──
+        const bobOffsetY = moveT * Math.abs(Math.sin(entity.walkCycle * 0.9)) * 2.5;
+
         const attackIntensity = entity.wanchaiActive ? 1.0
             : Math.min(1, (Math.abs(entity.vx) + Math.abs(entity.vy)) / 150 + 0.2);
         const ventGlow = Math.max(0, attackIntensity * (0.5 + Math.sin(now / 180) * 0.5));
@@ -570,7 +607,7 @@ class PlayerRenderer {
 
         // ════ LAYER 1 — BODY ════
         ctx.save();
-        ctx.translate(screen.x, screen.y);
+        ctx.translate(screen.x + recoilX, screen.y + recoilY + bobOffsetY);
         ctx.scale(stretchX * facingSign, stretchY);
 
         ctx.shadowBlur = 18; ctx.shadowColor = 'rgba(220,38,38,0.75)';
@@ -717,8 +754,10 @@ class PlayerRenderer {
             [7, 1, 8, '#3d0909'],
             [12, 2, 6, '#2d0606'],
         ];
+        // Wobble period: fast when berserk (wanchaiActive), normal otherwise
+        const hairPeriod = entity.wanchaiActive ? 150 : 380;
         for (const [bx, tipOff, h, col] of spikeData) {
-            const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
+            const wobble = Math.sin(now / hairPeriod + bx * 0.4) * 1.2;
             ctx.fillStyle = col;
             ctx.beginPath();
             ctx.moveTo(bx - 3.5, -R - 1);
@@ -734,7 +773,7 @@ class PlayerRenderer {
         }
         // Spike tips — gradient per spike + ember corona
         spikeData.forEach(([bx, tipOff, h], idx) => {
-            const wobble = Math.sin(now / 380 + bx * 0.4) * 1.2;
+            const wobble = Math.sin(now / hairPeriod + bx * 0.4) * 1.2;
             const tx = bx + tipOff + wobble;
             const ty = -R - 1 - h - wobble * 0.4;
             // Spike fill gradient — dark base to bright tip
@@ -779,12 +818,15 @@ class PlayerRenderer {
             ctx.restore();
         }
 
+        // ── Hit Flash ──────────────────────────────────────────
+        PlayerRenderer._drawHitFlash(ctx, entity, R);
+
         // Energy Shield
         if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
 
         ctx.restore(); // end LAYER 1
         ctx.save();
-        ctx.translate(screen.x, screen.y);
+        ctx.translate(screen.x + recoilX, screen.y + recoilY + bobOffsetY);
         ctx.rotate(entity.angle);
         if (isFacingLeft) ctx.scale(1, -1);
 
@@ -841,21 +883,22 @@ class PlayerRenderer {
         // Dash ghost trail — เขียวมรกต match body Poom
         for (const img of entity.dashGhosts) {
             const s = worldToScreen(img.x, img.y);
-            const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
             ctx.save();
-            ctx.translate(s.x, s.y);
-            ctx.scale(ghostFacing, 1);
             ctx.globalAlpha = img.life * 0.35;
             ctx.fillStyle = '#34d399';
             ctx.shadowBlur = 8 * img.life; ctx.shadowColor = '#10b981';
-            ctx.beginPath(); ctx.roundRect(-15, -12, 30, 24, 8); ctx.fill();
+            ctx.beginPath(); ctx.arc(s.x, s.y, R2 + 1, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
         const screen = worldToScreen(entity.x, entity.y);
 
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 25, 18, 8, 0, 0, Math.PI * 2); ctx.fill();
+        // Ground shadow
+        ctx.save();
+        ctx.globalAlpha = 0.28 - moveT2 * 0.08;
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 16 + poomBobY, 14 - moveT2 * 2, 5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
 
         // Eating-rice power aura
         if (entity.isEatingRice) {
@@ -971,11 +1014,19 @@ class PlayerRenderer {
         const stretchX2 = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
         const stretchY2 = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
 
+        // ── Recoil (Poom) ──────────────────────────────────────
+        const poomRecoilAmt = entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 2.5 : 0;
+        const poomRecoilX = -Math.cos(entity.angle) * poomRecoilAmt;
+        const poomRecoilY = -Math.sin(entity.angle) * poomRecoilAmt;
+
+        // ── Walk bob Y-offset ──────────────────────────────────
+        const poomBobY = moveT2 * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
+
         const R2 = 13;
 
         // ════ LAYER 1 — BODY ════
         ctx.save();
-        ctx.translate(screen.x, screen.y);
+        ctx.translate(screen.x + poomRecoilX, screen.y + poomRecoilY + poomBobY);
         ctx.scale(stretchX2 * facingSign, stretchY2);
 
         // Dual outer ring — purple base + gold shimmer
@@ -1030,7 +1081,7 @@ class PlayerRenderer {
 
         // Thai Kranok pattern
         const kranokT2 = now2 / 500;
-        const kranokAlpha = 0.55 + Math.sin(kranokT2 * 1.3) * 0.25;
+        const kranokAlpha = (0.30 + Math.sin(kranokT2 * 1.3) * 0.15) * (1 - moveT2 * 0.35);
         ctx.save();
         ctx.beginPath(); ctx.arc(0, 0, R2 - 1, 0, Math.PI * 2); ctx.clip();
         ctx.globalAlpha = kranokAlpha;
@@ -1139,10 +1190,12 @@ class PlayerRenderer {
             { bx: 6, angle: -1.1, len: 8 },
             { bx: 10, angle: -0.8, len: 6 },
         ];
+        // Wobble period: faster when moving (responsive to player motion)
+        const poomHairPeriod = 220 + (1 - moveT2) * 280;
         for (const sp of hairSpikes) {
             const tipX = sp.bx + Math.cos(sp.angle) * sp.len;
             const tipY = -R2 - 5 + Math.sin(sp.angle) * sp.len;
-            const wob = Math.sin(now2 / 500 + sp.bx) * 1.2;
+            const wob = Math.sin(now2 / poomHairPeriod + sp.bx) * (1.2 + moveT2 * 1.5);
             ctx.fillStyle = '#15080a';
             ctx.beginPath();
             ctx.moveTo(sp.bx - 3, -R2 - 3);
@@ -1157,6 +1210,9 @@ class PlayerRenderer {
             ctx.closePath(); ctx.stroke();
         }
 
+        // ── Hit Flash ──────────────────────────────────────────
+        PlayerRenderer._drawHitFlash(ctx, entity, R2);
+
         // Energy Shield
         if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now2);
 
@@ -1164,7 +1220,7 @@ class PlayerRenderer {
 
         // ════ LAYER 2 — WEAPON + HANDS ════
         ctx.save();
-        ctx.translate(screen.x, screen.y);
+        ctx.translate(screen.x + poomRecoilX, screen.y + poomRecoilY + poomBobY);
         ctx.rotate(entity.angle);
         if (isFacingLeft) ctx.scale(1, -1);
 
@@ -1223,24 +1279,21 @@ class PlayerRenderer {
         // Dash ghost trail
         for (const img of entity.dashGhosts) {
             const gs = worldToScreen(img.x, img.y);
-            const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
             ctx.save();
-            ctx.translate(gs.x, gs.y);
-            ctx.scale(ghostFacing, 1);
             ctx.globalAlpha = img.life * 0.35;
             ctx.fillStyle = '#60a5fa';
-            ctx.shadowBlur = 8 * img.life; ctx.shadowColor = '#3b82f6';
-            ctx.beginPath(); ctx.roundRect(-11, -11, 22, 22, 6); ctx.fill();
+            ctx.shadowBlur = 10 * img.life; ctx.shadowColor = '#3b82f6';
+            ctx.beginPath(); ctx.arc(gs.x, gs.y, R + 1, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
         const screen = worldToScreen(entity.x, entity.y);
 
-        // Ground shadow
+        // Ground shadow (improved — scales with bob)
         ctx.save();
-        ctx.globalAlpha = 0.22;
+        ctx.globalAlpha = 0.28 - moveT * 0.08;
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 14, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 15 + kaoBobY, 14 - moveT * 2, 5, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
         // Passive aura
@@ -1270,6 +1323,9 @@ class PlayerRenderer {
         const bobT = Math.sin(entity.walkCycle);
         const stretchX = 1 + breatheKao * 0.030 + moveT * bobT * 0.10;
         const stretchY = 1 - breatheKao * 0.030 - moveT * Math.abs(bobT) * 0.07;
+
+        // ── Walk bob Y-offset ──────────────────────────────────
+        const kaoBobY = moveT * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
 
         const R = 13;
 
@@ -1305,7 +1361,7 @@ class PlayerRenderer {
         } else {
             // ════ LAYER 1 — BODY ════
             ctx.save();
-            ctx.translate(screen.x + recoilX, screen.y + recoilY);
+            ctx.translate(screen.x + recoilX, screen.y + recoilY + kaoBobY);
             ctx.scale(stretchX * facingSign, stretchY);
 
             ctx.shadowBlur = 16; ctx.shadowColor = 'rgba(0,255,65,0.70)';
@@ -1431,6 +1487,9 @@ class PlayerRenderer {
             ctx.fill();
             ctx.restore();
 
+            // ── Hit Flash ──────────────────────────────────────────
+            PlayerRenderer._drawHitFlash(ctx, entity, R);
+
             // Energy Shield
             if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
 
@@ -1438,7 +1497,7 @@ class PlayerRenderer {
 
             // ════ LAYER 2 — WEAPON + HANDS ════
             ctx.save();
-            ctx.translate(screen.x + recoilX, screen.y + recoilY);
+            ctx.translate(screen.x + recoilX, screen.y + recoilY + kaoBobY);
             ctx.rotate(entity.angle);
             if (isFacingLeft) ctx.scale(1, -1);
 

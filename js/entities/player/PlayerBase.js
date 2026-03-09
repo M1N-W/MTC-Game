@@ -101,6 +101,10 @@ class Player extends Entity {
         this._contactWarningTimer = 0;
         this._dmgAccum = 0;
 
+        // ── Hit Flash state (used by PlayerRenderer) ───────────
+        this._hitFlashTimer = 0;     // counts DOWN from 1 → 0 after taking damage
+        this._hitFlashBig = false;  // true = bullet/AoE hit (stronger flash)
+
         // ── EMP Grounded status (BossFirst EMP_ATTACK) ─────────
         this.groundedTimer = 0;
 
@@ -154,6 +158,10 @@ class Player extends Entity {
         // ── Contact Warning Timer ──────────────────────────────
         if (this._contactWarningTimer > 0) {
             this._contactWarningTimer = Math.max(0, this._contactWarningTimer - dt);
+        }
+        // ── Hit Flash Timer ────────────────────────────────────
+        if (this._hitFlashTimer > 0) {
+            this._hitFlashTimer = Math.max(0, this._hitFlashTimer - dt * 6);
         }
 
         // ── Combo System Update ────────────────────────────────
@@ -497,6 +505,9 @@ class Player extends Entity {
         }
         spawnParticles(this.x, this.y, 8, '#ef4444');
         addScreenShake(8); Audio.playHit();
+        // ── Hit Flash trigger ──────────────────────────────────
+        this._hitFlashTimer = 1.0;
+        this._hitFlashBig = (amt >= 5);
         Achievements.stats.damageTaken += amt;
         if (this.hp <= 0) {
             this.dead = true;

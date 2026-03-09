@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.18.1'; // v3.18.1: Character stat bar redesign - 4 stats with real config values, enhanced visual styling, Poom theme change to green
+const CACHE_NAME = 'mtc-cache-v3.18.2'; // v3.18.2: Enhanced player rendering - improved hit flash system, walk bob animations, responsive hair wobble, recoil animations, and ground shadow fixes
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
