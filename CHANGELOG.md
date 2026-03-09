@@ -4,6 +4,27 @@
 
 ---
 
+## v3.21.1 — GravitationalSingularity Bug Fix
+*Released: March 9, 2026*
+
+### 🐛 Critical Bug Fixes
+- **Singleton Phase Leak:** Fixed GravitationalSingularity phase persisting across games after boss death
+- **Domain Shield Spam:** Resolved "DOMAIN SHIELD!" infinite loop preventing new domain triggers
+- **Player Speed Debuff:** Corrected domain slow effect to target `stats.moveSpeed` instead of deprecated `moveSpeed` property
+
+### 🔧 Technical Fixes
+- **Boss Death Cleanup:** Added force-reset of both domain singletons (`DomainExpansion._abort()` and `GravitationalSingularity._abort()`) in `BossBase._onDeath()`
+- **Game Loop Update:** Removed `window.boss && !window.boss.dead` guard from `GravitationalSingularity.update()` to allow cleanup when boss is dead/null
+- **Safe Abort Logic:** `_abort(null)` calls are safe due to internal `if (boss)` guards
+- **Speed System Update:** Domain slow effects now correctly modify `player.stats.moveSpeed` for proper stat system integration
+
+### 🎯 Gameplay Impact
+- **Domain Mechanics:** GravitationalSingularity now properly resets between games
+- **Boss Encounters:** Domain triggers work correctly in subsequent games
+- **Player Movement:** Speed debuffs apply and restore correctly through stats system
+
+---
+
 ## v3.21.0 — Complete Boss Rework Implementation
 *Released: March 9, 2026*
 

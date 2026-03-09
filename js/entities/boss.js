@@ -81,6 +81,10 @@ class BossBase extends Entity {
                 new PowerUp(this.x + rand(-50, 50), this.y + rand(-50, 50))
             ), i * 200);
         }
+        // ── Force-reset both domain singletons so isInvincible() doesn't leak ──
+        // หากไม่ reset: phase ค้างใน casting/active → isInvincible() = true ทั้งเกมถัดไป
+        if (typeof DomainExpansion !== 'undefined') DomainExpansion._abort(null);
+        if (typeof GravitationalSingularity !== 'undefined') GravitationalSingularity._abort(null);
         // WARN-9: set flag BEFORE nulling window.boss so achievement check fires
         window.lastBossKilled = true;
         window.boss = null;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.21.0'; // v3.21.0: Complete Boss Rework - 4 Phase implementation with GravitationalSingularity, ChalkWall, Domain sub-phases, and Singularity Mode
+const CACHE_NAME = 'mtc-cache-v3.21.1'; // v3.21.1: GravitationalSingularity Bug Fix - Fixed singleton phase leak across games and player speed debuff targeting
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

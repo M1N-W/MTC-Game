@@ -1265,7 +1265,7 @@ const DomainExpansion = {
             window.player._domainSlowTimer -= dt;
             if (window.player._domainSlowTimer <= 0) {
                 window.player._domainSlowActive = false;
-                window.player.moveSpeed = window.player._domainSlowBase || window.player.moveSpeed;
+                window.player.stats.moveSpeed = window.player._domainSlowBase || window.player.stats.moveSpeed;
                 if (typeof spawnFloatingText === 'function')
                     spawnFloatingText('SPEED RESTORED', window.player.x, window.player.y - 60, '#22c55e', 16);
             }
@@ -1918,12 +1918,12 @@ const DomainExpansion = {
                 const pd = Math.hypot(player.x - cx, player.y - cy);
                 if (pd < _DC.CELL_SIZE * _DC.HIT_RADIUS) {
                     player.takeDamage(_DC.CELL_DAMAGE);
-                    // Apply slow debuff
+                    // Apply slow debuff — target stats.moveSpeed (the actual speed cap)
                     if (!player._domainSlowActive) {
                         player._domainSlowActive = true;
                         player._domainSlowTimer = _DC.CELL_SLOW_DUR;
-                        player._domainSlowBase = player.moveSpeed;
-                        player.moveSpeed *= _DC.CELL_SLOW_FACTOR;
+                        player._domainSlowBase = player.stats.moveSpeed;
+                        player.stats.moveSpeed *= _DC.CELL_SLOW_FACTOR;
                     } else {
                         player._domainSlowTimer = _DC.CELL_SLOW_DUR; // refresh
                     }

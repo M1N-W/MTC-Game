@@ -155,6 +155,10 @@ function updateGame(dt) {
     if (typeof updateWaveEvent === 'function') updateWaveEvent(dt);
     if (typeof DomainExpansion !== 'undefined' && window.boss && !window.boss.dead)
         DomainExpansion.update(dt, window.boss, window.player);
+    // GravitationalSingularity.update ต้องรัน แม้ boss dead — เพื่อให้ _abort() ทำงานและ reset phase
+    // ป้องกัน isInvincible() ค้าง true ข้ามไปเกมถัดไป
+    if (typeof GravitationalSingularity !== 'undefined')
+        GravitationalSingularity.update(dt, window.boss, window.player);
 
     if (GameState.waveSpawnLocked) {
         GameState.waveSpawnTimer -= dt;
@@ -680,6 +684,7 @@ function drawGame() {
     // ── Wave Event overlays (Fog / Speed vignettes + banner) ──
     if (typeof drawWaveEvent === 'function') drawWaveEvent(CTX);
     if (typeof DomainExpansion !== 'undefined') DomainExpansion.draw(CTX);
+    if (typeof GravitationalSingularity !== 'undefined') GravitationalSingularity.draw(CTX);
 
     if (typeof CanvasHUD !== 'undefined' && CanvasHUD.draw) {
         CanvasHUD.draw(CTX, _lastDrawDt);
