@@ -4,6 +4,41 @@
 
 ---
 
+## v3.26.5 — Character Bug Fixes
+*Released: March 9, 2026*
+
+### 🐛 Bug Fixes
+- **AutoPlayer cooldown logic:**
+  - Separated Stand mode and Normal mode with distinct cooldown checks
+  - Fixed Heat Wave cooldown check missing (previously infinite fire rate)
+  - Stand Rush: 0.10s cooldown, no fallthrough to Heat Wave
+  - Normal mode: 0.28s cooldown with proper validation
+
+- **KaoPlayer damage scaling:**
+  - Fixed KaoClone damage calculation (was 30% instead of intended 60%)
+  - Removed duplicate *0.5 multiplier in clone.shoot() method
+  - Caller now properly handles 60% damage scaling
+
+- **PoomPlayer stability:**
+  - Added NaN guard for energyRegen config (?? 0 fallback)
+  - Updated Naga shield comments from 55% to 40% to match actual values
+  - Removed dead code variables (wasAlive, alreadyDead) from ritualBurst()
+
+- **KaoPlayer ability fixes:**
+  - Added isStationary flag for Phantom Blink shadow clones (no orbit behavior)
+  - Fixed teleport penalty logic to target slowest regenerating timer
+  - Added bonusCritFromAuto decay (0.01/s) when not holding AUTO RIFLE
+  - Prevented sniper double-fire by removing duplicate fire path in shoot()
+  - Enhanced updateUI() to display Q/E cooldowns and HUD bars properly
+
+### 🔧 Technical Improvements
+- Improved code clarity with mode separation in AutoPlayer
+- Enhanced error prevention with NaN guards
+- Better visual feedback for ability cooldowns
+- More accurate damage calculations across character abilities
+
+---
+
 ## v3.26.4 — Auto Character Balance Rework
 *Released: March 9, 2026*
 

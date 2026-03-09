@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.26.4 | **Latest Update:** Auto character balance rework with comprehensive adjustments and visual improvements
+> **Current Version:** Beta v3.26.5 | **Latest Update:** Character bug fixes with cooldown logic corrections, damage scaling fixes, and ability improvements
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

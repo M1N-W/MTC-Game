@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.4'; // v3.26.4: Auto character balance rework - reduced detonation base damage and scaling, added damage hard cap, nerfed passive heat gain, separated stand pull cooldown, improved rendering positioning and visual feedback
+const CACHE_NAME = 'mtc-cache-v3.26.5'; // v3.26.5: Character bug fixes - AutoPlayer cooldown logic separation, KaoClone damage scaling correction, PoomPlayer NaN guard, shadow clone orbit fix, teleport penalty correction, bonus crit decay, sniper double-fire prevention, Naga shield comment accuracy
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

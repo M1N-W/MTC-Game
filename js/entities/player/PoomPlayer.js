@@ -258,7 +258,7 @@ class PoomPlayer extends Player {
             consumeInput('q');
         }
 
-        this.energy = Math.min(this.maxEnergy, this.energy + S.energyRegen * dt);
+        this.energy = Math.min(this.maxEnergy, this.energy + (S.energyRegen ?? 0) * dt);  // FIX: ?? 0 กัน NaN ถ้า config miss
 
         if (this.naga && this.naga.dead) this.naga = null;
         if (this.garuda && this.garuda.dead) this.garuda = null;
@@ -390,7 +390,7 @@ class PoomPlayer extends Player {
         const S = this.stats;
         this.cooldowns.naga = S.nagaCooldown * this.cooldownMultiplier;
         this.naga = new NagaEntity(this.x, this.y, this);
-        // ── Shield pool: Naga absorbs up to 55% of max HP per summon ──
+        // ── Shield pool: Naga absorbs up to 40% of max HP per summon ──
         this._nagaShieldLeft = Math.floor(this.maxHp * 0.40);  // NERF: 0.55→0.40 (Poom eff_hp Lv1: 256→231, less tankier than Auto)
         window.specialEffects.push(this.naga);
         spawnParticles(this.x, this.y, 40, '#10b981');
@@ -443,7 +443,6 @@ class PoomPlayer extends Player {
                     const flatDamage = stickyStatus.stacks * DAMAGE_PER_STACK;
                     const pctDamage = enemy.maxHp * RC.stackBurstPct * stickyStatus.stacks;
                     const totalDamage = flatDamage + pctDamage;
-                    const wasAlive = true; // ผ่าน if(enemy.dead) มาแล้ว
                     enemy.takeDamage(totalDamage, this);
                     if (enemy.dead) ritualKills++;
                     spawnFloatingText(Math.round(totalDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
@@ -474,7 +473,6 @@ class PoomPlayer extends Player {
                         const totalDamage = flatDamage + pctDamage;
 
                         enemy.takeDamage(totalDamage, this);
-                        const alreadyDead = false; // ผ่าน if(enemy.dead) มาแล้ว
                         if (enemy.dead) ritualKills++;
                         spawnFloatingText(Math.round(totalDamage), enemy.x, enemy.y - 30, '#00ff88', 16);
                         totalEnemiesAffected++;
@@ -581,7 +579,7 @@ class PoomPlayer extends Player {
 
     takeDamage(amt) {
         // ── Naga Shield: absorb ดาเมจจาก shield pool แทนการบล็อก 100% ──
-        // Pool = 55% maxHP ต่อครั้ง → ถ้าโดนหนักพอยังบาดเจ็บได้
+        // Pool = 40% maxHP ต่อครั้ง → ถ้าโดนหนักพอยังบาดเจ็บได้
         if (this.naga && !this.naga.dead && this.naga.active && this._nagaShieldLeft > 0) {
             const absorbed = Math.min(amt, this._nagaShieldLeft);
             this._nagaShieldLeft -= absorbed;
