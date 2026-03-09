@@ -4,6 +4,37 @@
 
 ---
 
+## v3.26.9 — Comprehensive Game Enhancement
+*Released: March 9, 2026*
+
+### 🎨 Visual Enhancements
+- **Lighting System**: Reduced ambient light from 0.9→0.72 for dramatic atmosphere
+- **Player Visibility**: Increased player light radius from 160→185 for better visibility
+- **Object Lighting**: Enhanced data pillar light radius from 70→85 for prominence
+- **Map Colors**: Improved contrast across all elements (floors, walls, trees, servers)
+- **Hex Grid**: Enhanced stroke alpha from 0.15→0.22 and falloff radius from 1400→1650
+- **Zone Visuals**: Darkened all zone floors for depth, increased courtyard grid density
+- **Aura Effects**: Enhanced rim glow blur from 16→22, arena rim alpha from 0.55→0.65
+
+### 🏗️ Layout Additions
+- **Vending Machine Object**: New interactive object with LED screen, neon stripes, toggle buttons, and dispenser tray
+- **Strategic Placement**: 8 vending machines positioned along main corridors in all directions
+- **Tactical Cover System**: 8 broken wall covers providing tactical positions around center arena
+- **Environmental Enhancement**: 24 corridor trees (12 north, 12 south) for visual variety and cover
+
+### 🚧 Collision & Navigation
+- **Guard Walls**: Added side rails for Citadel approach (north), south guard walls for Server Farm and Library
+- **Courtyard Gates**: Added gate walls on both sides of courtyard entrance
+- **Library Safety**: Added corner walls for safe margin at NW/NE corners
+- **Barrel Navigation**: Reduced barrel collision radius from 35→28 for easier passage
+
+### ⚡ Performance Optimization
+- **Culling Distance**: Reduced CULL from 120→80 for more efficient viewport culling
+- **Smart Sorting**: Implemented dirty flag system to sort objects only when layout changes
+- **Memory Management**: Added _sortedObjects cache with smart invalidation
+
+---
+
 ## v3.26.8 — Boss Null Reference Crash Fix
 *Released: March 9, 2026*
 

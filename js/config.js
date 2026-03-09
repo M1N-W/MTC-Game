@@ -618,17 +618,17 @@ const BALANCE = {
         buffCycleIcons: ['⚔', '💨', '⚡'],
     },
     LIGHTING: {
-        ambientLight: 0.9,
+        ambientLight: 0.72,        // ลด 0.9→0.72 เพิ่ม drama + บรรยากาศมืด
         cycleDuration: 60,
         nightMinLight: 0.12,
         dayMaxLight: 0.95,
-        playerLightRadius: 160,
-        projectileLightRadius: 50,
-        mtcServerLightRadius: 120,
-        shopLightRadius: 85,
-        dataPillarLightRadius: 70,
-        serverRackLightRadius: 55,
-        nightR: 5, nightG: 8, nightB: 22
+        playerLightRadius: 185,    // เพิ่ม 160→185 ผู้เล่นมองเห็นรอบตัวได้ไกลขึ้น
+        projectileLightRadius: 55, // เพิ่ม 50→55 กระสุนสว่างขึ้นเล็กน้อย
+        mtcServerLightRadius: 140, // เพิ่ม 120→140
+        shopLightRadius: 100,      // เพิ่ม 85→100
+        dataPillarLightRadius: 85, // เพิ่ม 70→85 pillar เด่นขึ้น
+        serverRackLightRadius: 65, // เพิ่ม 55→65
+        nightR: 3, nightG: 6, nightB: 20  // เข้มขึ้น เพิ่ม blue tint
     },
     map: {
         size: 3000,
@@ -640,39 +640,56 @@ const BALANCE = {
             { x: 1450, y: -50, w: 50, h: 100 },
             { x: -50, y: -1500, w: 100, h: 50 },
             { x: -50, y: 1450, w: 100, h: 50 },
+
             // ── Corridor walls: Server Farm entrance (east) ──
-            // Creates a funnel from center → server zone
-            { x: 220, y: -220, w: 18, h: 130 },
-            { x: 220, y: -50, w: 18, h: 130 },
+            { x: 220, y: -230, w: 18, h: 140 },   // ยาวขึ้น h:130→140
+            { x: 220, y: -60, w: 18, h: 140 },    // ยาวขึ้น
+            // Server Farm south guard
+            { x: 250, y: 200, w: 18, h: 80 },      // ใหม่: กันด้านล่าง east
+
             // ── Corridor walls: Library entrance (west) ──
-            { x: -238, y: -220, w: 18, h: 130 },
-            { x: -238, y: -50, w: 18, h: 130 },
+            { x: -238, y: -230, w: 18, h: 140 },   // ยาวขึ้น
+            { x: -238, y: -60, w: 18, h: 140 },
+            // Library south guard
+            { x: -268, y: 200, w: 18, h: 80 },     // ใหม่: กันด้านล่าง west
+
             // ── Corridor walls: Courtyard entrance (south) ──
             { x: -180, y: 200, w: 130, h: 18 },
             { x: 50, y: 200, w: 130, h: 18 },
-            // ── Corridor walls: Citadel approach (north) ──
-            { x: -180, y: -220, w: 130, h: 18 },
-            { x: 50, y: -220, w: 130, h: 18 },
+            // Courtyard side rails (กัน enemy ลัดเลาะขอบ)
+            { x: -450, y: 260, w: 18, h: 80 },     // ใหม่: west side courtyard gate
+            { x: 432, y: 260, w: 18, h: 80 },     // ใหม่: east side courtyard gate
+
+            // ── Corridor walls: Citadel approach (north) — สมมาตรขึ้น ──
+            { x: -180, y: -230, w: 130, h: 18 },   // เลื่อน y:-220→-230 สมมาตรกับใต้
+            { x: 50, y: -230, w: 130, h: 18 },
+            // Citadel approach side rails
+            { x: -180, y: -400, w: 18, h: 170 },   // ใหม่: west rail ทางเหนือ
+            { x: 162, y: -400, w: 18, h: 170 },   // ใหม่: east rail ทางเหนือ
+
+            // ── Library safe margin walls (กัน enemy เข้า gap) ──
+            { x: -980, y: -400, w: 30, h: 30 },    // ใหม่: Library NW corner
+            { x: -280, y: -400, w: 30, h: 30 },    // ใหม่: Library NE corner
         ],
         mapColors: {
-            floor: '#0e1320',
-            floorAlt: '#0a0f1a',
-            treeLight: '#365314',
-            treeMid: '#1a2e0a',
-            treeDark: '#0f1a05',
-            treeTrunk: '#451a03',
-            deskTop: '#1c1408',
-            deskLegs: '#0f0b04',
+            floor: '#080d18',          // เข้มขึ้น เพิ่มบรรยากาศ night
+            floorAlt: '#060a14',
+            treeLight: '#4a7a1a',      // สว่างขึ้น ต้นไม้ pop มากขึ้น
+            treeMid: '#243d0e',
+            treeDark: '#142208',
+            treeTrunk: '#5c2204',
+            deskTop: '#251c0a',
+            deskLegs: '#140e04',
             serverBody: '#0d1117',
-            serverLightOn: '#f59e0b',
-            serverLightOff: '#451a03',
+            serverLightOn: '#fbbf24',  // สว่างกว่าเดิม
+            serverLightOff: '#3d1502',
             pillarBase: '#1e293b',
-            pillarCircuit: '#d97706',
-            bookColors: ['#b45309', '#92400e', '#d97706', '#78350f', '#a16207', '#854d0e', '#f59e0b'],
-            wallColor: '#1a1208',
-            wallBrick: '#2d1f0a',
-            whiteboardGreen: '#0d1f0a',
-            chalkWhite: '#fef3c7'
+            pillarCircuit: '#f59e0b',  // สว่างขึ้น
+            bookColors: ['#c26010', '#a85020', '#e8901a', '#8c4010', '#b87010', '#9a5a10', '#fbbf24'],
+            wallColor: '#1f1610',
+            wallBrick: '#352510',
+            whiteboardGreen: '#0f2b0c',
+            chalkWhite: '#fef9ee'
         }
     }
 };
@@ -1211,12 +1228,12 @@ const MAP_CONFIG = {
         midColor: 'rgba(120, 60, 10, {a})',
         rimColor: 'rgba(250, 180, 30, {a})',
         dashColor: 'rgba(245, 158, 11, {a})',
-        haloAlphaBase: 0.08,
-        midAlphaBase: 0.15,
-        rimAlphaBase: 0.55,
-        dashAlphaBase: 0.30,
-        rimGlowBlur: 20,
-        rimGlowColor: 'rgba(250, 180, 30, 0.9)',
+        haloAlphaBase: 0.12,    // เพิ่ม 0.08→0.12
+        midAlphaBase: 0.20,     // เพิ่ม 0.15→0.20
+        rimAlphaBase: 0.65,     // เพิ่ม 0.55→0.65 rim ชัดขึ้น
+        dashAlphaBase: 0.38,    // เพิ่ม 0.30→0.38
+        rimGlowBlur: 28,                               // glow ใหญ่ขึ้น 20→28
+        rimGlowColor: 'rgba(250, 180, 30, 0.95)',
     },
 
     // ── Center Landmark ────────────────────────────────────────
@@ -1242,11 +1259,11 @@ const MAP_CONFIG = {
     // ── Tech-hex grid ──────────────────────────────────────────
     hex: {
         size: 64,
-        fillColor: 'rgba(120, 60, 10, {a})',
-        strokeColor: 'rgba(200, 120, 20, {a})',
-        fillAlpha: 0.05,
-        strokeAlpha: 0.15,
-        falloffRadius: 1400,
+        fillColor: 'rgba(130, 70, 15, {a})',    // สว่างขึ้น
+        strokeColor: 'rgba(210, 130, 25, {a})',  // เส้น hex ชัดขึ้น
+        fillAlpha: 0.07,                          // เพิ่ม 0.05→0.07
+        strokeAlpha: 0.22,                        // เพิ่ม 0.15→0.22
+        falloffRadius: 1650,                      // กว้างขึ้น ครอบ zone ไกล
     },
 
     // ── Circuit paths ──────────────────────────────────────────
@@ -1327,30 +1344,30 @@ const MAP_CONFIG = {
     zones: {
         serverFarm: {
             x: 280, y: -380, w: 700, h: 580,
-            floorColor: 'rgba(6, 182, 212, 0.04)',
-            gridColor: 'rgba(6, 182, 212, 0.12)',
+            floorColor: 'rgba(6, 182, 212, 0.07)',    // เข้มขึ้น 0.04→0.07
+            gridColor: 'rgba(6, 182, 212, 0.18)',       // ชัดขึ้น 0.12→0.18
             gridSize: 36,
-            accentColor: 'rgba(34, 211, 238, 0.18)',
+            accentColor: 'rgba(34, 211, 238, 0.28)',      // เพิ่ม 0.18→0.28
             label: 'SERVER FARM',
-            ambientColor: 'rgba(34, 211, 238, 0.85)',  // cyan data packets
+            ambientColor: 'rgba(34, 211, 238, 0.90)',
         },
         library: {
             x: -980, y: -380, w: 700, h: 580,
-            floorColor: 'rgba(180, 120, 20, 0.06)',
-            gridColor: 'rgba(251, 191, 36, 0.10)',
+            floorColor: 'rgba(180, 120, 20, 0.09)',    // เข้มขึ้น
+            gridColor: 'rgba(251, 191, 36, 0.16)',       // ชัดขึ้น
             gridSize: 48,
-            accentColor: 'rgba(253, 224, 71, 0.15)',
+            accentColor: 'rgba(253, 224, 71, 0.22)',
             label: 'ARCHIVES',
-            ambientColor: 'rgba(251, 191, 36, 0.80)',   // golden dust motes
+            ambientColor: 'rgba(251, 191, 36, 0.90)',
         },
         courtyard: {
             x: -450, y: 260, w: 900, h: 520,
-            floorColor: 'rgba(34, 197, 94, 0.05)',
-            gridColor: 'rgba(74, 222, 128, 0.08)',
-            gridSize: 60,
-            accentColor: 'rgba(134, 239, 172, 0.12)',
+            floorColor: 'rgba(34, 197, 94, 0.08)',     // เข้มขึ้น
+            gridColor: 'rgba(74, 222, 128, 0.14)',       // ชัดขึ้น
+            gridSize: 55,                                 // grid ถี่ขึ้นเล็กน้อย
+            accentColor: 'rgba(134, 239, 172, 0.20)',
             label: 'COURTYARD',
-            ambientColor: 'rgba(134, 239, 172, 0.75)',  // firefly orbs
+            ambientColor: 'rgba(134, 239, 172, 0.90)',    // firefly สว่างขึ้น
         },
         lectureHallL: {
             x: -900, y: 440, w: 380, h: 350,
@@ -1399,14 +1416,14 @@ const MAP_CONFIG = {
             phase: 3.2,
         },
         // Shared aura style
-        innerAlphaBase: 0.22,
-        midAlphaBase: 0.10,
-        outerAlphaBase: 0.04,
-        rimAlphaBase: 0.28,
-        rimWidth: 2,
-        rimGlowBlur: 16,
-        dashAlphaBase: 0.12,
-        dashOuterMult: 1.3,
+        innerAlphaBase: 0.32,   // เพิ่ม 0.22→0.32 aura เด่นขึ้น
+        midAlphaBase: 0.15,     // เพิ่ม 0.10→0.15
+        outerAlphaBase: 0.06,   // เพิ่ม 0.04→0.06
+        rimAlphaBase: 0.38,     // เพิ่ม 0.28→0.38
+        rimWidth: 2.5,           // หนาขึ้น
+        rimGlowBlur: 22,         // glow มากขึ้น 16→22
+        dashAlphaBase: 0.18,    // เพิ่ม 0.12→0.18
+        dashOuterMult: 1.35,
     },
 };
 

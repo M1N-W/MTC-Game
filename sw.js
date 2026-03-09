@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.8'; // v3.26.8: Fixed boss null reference crash in detonation damage - snapshot boss position before takeDamage() to prevent crash when boss sets window.boss = null
+const CACHE_NAME = 'mtc-cache-v3.26.9'; // v3.26.9: Comprehensive game enhancement - visual drama boost, tactical cover system, performance optimization, and navigation improvements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -140,6 +140,83 @@ function drawBookshelf(w, h) {
 }
 
 // ════════════════════════════════════════════════════════════
+
+function drawVendingMachine(w, h) {
+    const now = _mapNow;
+    const pulse = 0.5 + Math.sin(now / 600) * 0.5;
+    const blinkFast = Math.sin(now / 250) > 0;
+
+    // Shadow
+    CTX.fillStyle = 'rgba(0,0,0,0.35)';
+    CTX.beginPath(); CTX.ellipse(w / 2, h + 5, w * 0.55, 7, 0, 0, Math.PI * 2); CTX.fill();
+
+    // Body — deep charcoal with slight blue tint
+    CTX.fillStyle = '#0d1520';
+    CTX.beginPath(); CTX.roundRect(0, 0, w, h, 5); CTX.fill();
+
+    // Side stripe (neon teal)
+    const stripeGrad = CTX.createLinearGradient(0, 0, w, 0);
+    stripeGrad.addColorStop(0, 'rgba(6,182,212,0)');
+    stripeGrad.addColorStop(0.3, `rgba(6,182,212,${0.35 + pulse * 0.25})`);
+    stripeGrad.addColorStop(0.7, `rgba(6,182,212,${0.35 + pulse * 0.25})`);
+    stripeGrad.addColorStop(1, 'rgba(6,182,212,0)');
+    CTX.fillStyle = stripeGrad;
+    CTX.fillRect(0, Math.floor(h * 0.45), w, 4);
+
+    // Display screen
+    CTX.fillStyle = `rgba(6,182,212,${0.07 + pulse * 0.05})`;
+    CTX.beginPath(); CTX.roundRect(5, 5, w - 10, Math.floor(h * 0.42), 3); CTX.fill();
+    CTX.strokeStyle = `rgba(34,211,238,${0.4 + pulse * 0.3})`;
+    CTX.lineWidth = 1;
+    CTX.beginPath(); CTX.roundRect(5, 5, w - 10, Math.floor(h * 0.42), 3); CTX.stroke();
+
+    // Screen content — product slots (3 cols x 2 rows)
+    const itemColors = ['#f59e0b', '#22d3ee', '#f97316', '#a78bfa', '#4ade80', '#fb7185'];
+    const cols = 3, rows = 2;
+    const itemW = Math.floor((w - 22) / cols);
+    const itemH = Math.floor((Math.floor(h * 0.42) - 14) / rows);
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const ix = 8 + c * (itemW + 2), iy = 8 + r * (itemH + 2);
+            CTX.fillStyle = 'rgba(0,0,0,0.4)';
+            CTX.beginPath(); CTX.roundRect(ix, iy, itemW, itemH, 2); CTX.fill();
+            CTX.fillStyle = itemColors[(r * cols + c) % itemColors.length];
+            CTX.globalAlpha = 0.55 + pulse * 0.15;
+            CTX.beginPath(); CTX.roundRect(ix + 2, iy + 2, itemW - 4, itemH - 4, 1); CTX.fill();
+            CTX.globalAlpha = 1;
+        }
+    }
+
+    // Coin slot
+    CTX.fillStyle = '#1a2030';
+    CTX.beginPath(); CTX.roundRect(Math.floor(w * 0.6), Math.floor(h * 0.52), Math.floor(w * 0.32), Math.floor(h * 0.12), 2); CTX.fill();
+    CTX.fillStyle = `rgba(251,191,36,${0.5 + pulse * 0.3})`;
+    CTX.fillRect(Math.floor(w * 0.68), Math.floor(h * 0.565), Math.floor(w * 0.16), 2);
+
+    // Button panel (3 buttons)
+    const btnY = Math.floor(h * 0.52);
+    for (let b = 0; b < 3; b++) {
+        const isLit = blinkFast && b === Math.floor(now / 800) % 3;
+        CTX.fillStyle = isLit ? '#22d3ee' : '#0a1525';
+        CTX.shadowBlur = isLit ? 8 : 0; CTX.shadowColor = '#22d3ee';
+        CTX.beginPath(); CTX.arc(7 + b * 11, btnY + 8, 4, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+    }
+
+    // Dispenser tray
+    CTX.fillStyle = '#060e1a';
+    CTX.beginPath(); CTX.roundRect(4, h - 14, w - 8, 12, 2); CTX.fill();
+    CTX.strokeStyle = 'rgba(34,211,238,0.2)';
+    CTX.lineWidth = 1;
+    CTX.beginPath(); CTX.roundRect(4, h - 14, w - 8, 12, 2); CTX.stroke();
+
+    // Top LED strip
+    CTX.fillStyle = `rgba(34,211,238,${0.6 + pulse * 0.4})`;
+    CTX.shadowBlur = 10; CTX.shadowColor = '#22d3ee';
+    CTX.beginPath(); CTX.roundRect(8, 1, w - 16, 3, 1); CTX.fill();
+    CTX.shadowBlur = 0;
+}
+
 // 🗺️ MAP OBJECT CLASS
 // ════════════════════════════════════════════════════════════
 class MapObject {
@@ -181,6 +258,7 @@ class MapObject {
             case 'mtcwall': this.drawMTCWall(); break; // New high-tech wall
             case 'chair': this.drawChair(); break;     // กู้คืนป้องกัน Error
             case 'cabinet': this.drawCabinet(); break; // กู้คืนป้องกัน Error
+            case 'vendingmachine': drawVendingMachine(this.w, this.h); break;
         }
         CTX.restore();
     }
@@ -303,7 +381,7 @@ class MapObject {
 class ExplosiveBarrel extends MapObject {
     constructor(x, y) {
         super(x, y, 30, 38, 'barrel');
-        this.hp = 50; this.maxHp = 50; this.isExploded = false; this.radius = 35;
+        this.hp = 50; this.maxHp = 50; this.isExploded = false; this.radius = 28; // ลด 35→28 เดินผ่านได้ง่ายขึ้น
     }
 
     draw() {
@@ -773,6 +851,7 @@ class MapSystem {
 
         this.generateCampusMap();
         this._sortedObjects = null;
+        this._objectsDirty = true;
         this.initialized = true;
         console.log(`✅ Campus Map Generated Structurally: ${this.objects.length} objects`);
     }
@@ -805,7 +884,7 @@ class MapSystem {
             const sz = {
                 desk: { w: 60, h: 40 }, tree: { w: 50, h: 50 },
                 server: { w: 45, h: 80 }, datapillar: { w: 35, h: 70 },
-                bookshelf: { w: 80, h: 40 },
+                bookshelf: { w: 80, h: 40 }, vendingmachine: { w: 40, h: 70 },
             }[type];
             if (!sz) return;
             for (let r = 0; r < rows; r++) {
@@ -841,6 +920,44 @@ class MapSystem {
 
         createAisles(620, 510, 3, 3, 95, 95, 'desk');
         this.objects.push(new MapObject(640, 400, 150, 80, 'blackboard'));
+
+        // Zone E: Vending Machine row — เรียงตามทางเดินหลัก (N-S corridor)
+        // วางทั้งสองฝั่งของทางเดินกลาง ให้ผู้เล่นเห็นตอนเดินผ่าน
+        const vendingSpots = [
+            { x: -200, y: -130 }, { x: 165, y: -130 },   // Citadel approach corridor
+            { x: -200, y: 155 }, { x: 165, y: 155 },     // Courtyard approach corridor
+            { x: 255, y: 80 }, { x: 255, y: -80 },     // Server Farm gate
+            { x: -295, y: 80 }, { x: -295, y: -80 },    // Library gate
+        ];
+        for (const vs of vendingSpots) {
+            this.objects.push(new MapObject(vs.x, vs.y, 40, 70, 'vendingmachine'));
+        }
+
+        // Zone F: Broken Wall Cover — tactical cover รอบ center arena
+        // 4 กลุ่ม กระจาย 4 ทิศ ห่าง center ~220–280px
+        const coverWalls = [
+            // North cluster
+            { x: -55, y: -270, w: 90, h: 18 },
+            { x: 30, y: -255, w: 50, h: 18 },
+            // South cluster
+            { x: -55, y: 240, w: 90, h: 18 },
+            { x: 30, y: 225, w: 50, h: 18 },
+            // East cluster
+            { x: 230, y: -55, w: 18, h: 90 },
+            { x: 215, y: 30, w: 18, h: 50 },
+            // West cluster
+            { x: -248, y: -55, w: 18, h: 90 },
+            { x: -233, y: 30, w: 18, h: 50 },
+        ];
+        for (const cw of coverWalls) {
+            this.objects.push(new MapObject(cw.x, cw.y, cw.w, cw.h, 'wall'));
+        }
+
+        // Zone G: Corridor Trees — ต้นไม้เรียงตามทางเดิน N และ S
+        createAisles(-160, -200, 1, 3, 110, 0, 'tree');   // North corridor (west side)
+        createAisles(75, -200, 1, 3, 110, 0, 'tree');   // North corridor (east side)
+        createAisles(-160, 175, 1, 3, 110, 0, 'tree');   // South corridor (west side)
+        createAisles(75, 175, 1, 3, 110, 0, 'tree');   // South corridor (east side)
 
         // ── 3. Arena Boundaries + Corridor Walls ───────────────────
         // wallPositions now includes internal corridor funnels —
@@ -1207,8 +1324,12 @@ class MapSystem {
         // Draw floor/base of MTC room FIRST (so walls appear on top)
         if (this.mtcRoom) this.mtcRoom.draw();
 
-        const CULL = 120;
-        if (!this._sortedObjects) this._sortedObjects = [...this.objects].sort((a, b) => a.y - b.y);
+        const CULL = 80; // ลด 120→80 objects เล็กไม่ต้องรอ margin ใหญ่
+        // Re-sort only when objects change (dirty flag) — ป้องกัน sort ทุกเฟรม
+        if (!this._sortedObjects || this._objectsDirty) {
+            this._sortedObjects = [...this.objects].sort((a, b) => a.y - b.y);
+            this._objectsDirty = false;
+        }
         for (const obj of this._sortedObjects) {
             const screen = worldToScreen(obj.x, obj.y);
             if (screen.x + obj.w < -CULL || screen.x > CANVAS.width + CULL) continue;
@@ -1318,7 +1439,7 @@ class MapSystem {
                 if (typeof addScreenShake === 'function') addScreenShake(5);
             } else { surviving.push(obj); }
         }
-        this.objects = surviving; this._sortedObjects = null;
+        this.objects = surviving; this._sortedObjects = null; this._objectsDirty = true;
 
         if (this.mtcRoom) {
             const r = this.mtcRoom;
@@ -1330,7 +1451,7 @@ class MapSystem {
         }
     }
 
-    clear() { this.objects = []; this.mtcRoom = null; this.initialized = false; this._sortedObjects = null; }
+    clear() { this.objects = []; this.mtcRoom = null; this.initialized = false; this._sortedObjects = null; this._objectsDirty = true; }
     getObjects() { return this.objects; }
     isBlocked(x, y, radius = 0) { for (const obj of this.objects) if (obj.checkCollision(x, y, radius)) return true; return false; }
     findSafeSpawn(preferredX, preferredY, radius) {
