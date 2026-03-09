@@ -552,13 +552,32 @@ Shell casings          effects.js                    ShellCasingSystem
 | Boss spawn ใน MTC Room | spawnY ติด room bounds | ตรวจ BossBase constructor guard + safe Y: −330 |
 | Performance drop | GC / render bottleneck | ตรวจ object pooling ใน effects.js, ใช้ Debug.html profiling |
 | Visual glitch | ctx state leak | ตรวจ `ctx.save()`/`ctx.restore()` ครบคู่ใน PlayerRenderer.js |
-| **"DOMAIN SHIELD!" spam + boss รับ damage ไม่ได้** | **Domain singleton phase ค้างจากเกมก่อน** | **ตรวจ `_onDeath()` + AdminSystem abort calls — ดู Domain Singleton Reset** |
+| **`drawDatabaseServer()` วาด sprite ซ้อนทับ `database` MapObject** | **AdminSystem.js ยังมี full sprite draw อยู่ แม้ MapObject `database` จะ render แล้ว** | **Slim ให้เหลือแค่ proximity aura — pattern เดียวกับ `drawShopObject()`** |
+| **Server rack แสงออกมาสีฟ้า (cool) แต่ LED เป็นสีทอง (amber)** | **`punchLight` type ใช้ `'cool'` แทน `'warm'` สำหรับ `server` type** | **เปลี่ยน `'cool'`→`'warm'` ใน `drawLighting()` loop** |
+| **Courtyard ดูมืดกว่า zone อื่นแม้มีต้นไม้เยอะ** | **`tree` type ไม่มี punchLight — ไม่ emit light เลย** | **เพิ่ม `else if (obj.type === 'tree')` ใน lighting loop + เพิ่ม `'green'` tint type** |
 | **Domain slow ไม่มีผล** | **แก้ `player.moveSpeed` แทน `player.stats.moveSpeed`** | **ใช้ `player.stats.moveSpeed` เสมอ — ดู Domain Slow Critical Note** |
 | **สกิลกดได้ทั้งที่ energy หมด** | **ไม่มี energy guard ใน skill activation block** | **เพิ่ม pattern `if (energy < cost)` ก่อน doSkill() — ดู Energy Cost System** |
 
 ---
 
-## 📝 Recent Major Changes (v3.26.4)
+## 📝 Recent Major Changes (v3.27.6)
+
+### Big Map Visual Overhaul (March 9, 2026)
+**Purpose:** Visual quality pass across all map draw methods + lighting consistency fixes
+
+**Key Changes:**
+- **`drawWall()`** — 3D brick overhaul: right-side face depth, 2-tone mortar rows, top-cap metal strip, left corner post, deeper damage spots
+- **`drawMTCWall()`** — Circuit panel upgrade: panel separation lines, pulsing circuit trace with glow, rivet dots at corners
+- **`drawDesk()`** — Added bottom + left edge shadow for depth
+- **Lighting fix** — `server` punchLight type `'cool'`→`'warm'` (matches amber LED color); added `'green'` tint type for tree ambient light in courtyard
+- **`drawDatabaseServer()` in AdminSystem.js** — Slimmed to aura-only (matching `drawShopObject` pattern); removed duplicate 73-line sprite that was visually overlapping the `'database'` MapObject. Fixed `performance.now()` → `_mapNow`
+- **`MAP_CONFIG.objects`** — Added `wall` and `mtcwall` palette entries for future Godot migration
+
+**Files Changed:** `map.js`, `AdminSystem.js`, `config.js`
+
+---
+
+## 📝 Previous Major Changes (v3.26.4)
 
 ### Auto Character Balance Rework (March 9, 2026)
 **Purpose:** Rebalance detonation system and prevent infinite scaling while improving visual feedback
