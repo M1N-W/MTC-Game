@@ -543,28 +543,57 @@ class PlayerRenderer {
                 const fists = entity._rushFists;
                 const stand = entity.wanchaiStand;
                 if (fists && fists.length > 0) {
+                    const ht = entity._heatTier ?? 0;
+                    const fistCol = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#ef4444';
+                    const trailHex = ht >= 3 ? '251,191,36' : ht >= 2 ? '249,115,22' : '248,113,113';
+
                     ctx.save();
+                    // FIX: ox/oy already precomputed with entity.angle in _doPlayerMelee
+                    // → translate to screen centre only; NO ctx.rotate to avoid double-rotation
                     ctx.translate(screen.x, screen.y);
-                    ctx.rotate(entity.angle);
-                    ctx.shadowBlur = 16; ctx.shadowColor = '#dc2626';
+                    ctx.shadowBlur = 20; ctx.shadowColor = fistCol;
+
                     for (const f of fists) {
                         if (f.alpha <= 0) continue;
-                        const fR = 10 * f.sc;  // uniform round glove — no more elongated ellipse
-                        ctx.globalAlpha = f.alpha * 0.90;
-                        ctx.fillStyle = 'rgba(239,68,68,0.92)';
+                        const fR = 9.5 * f.sc;
+
+                        // Direction-aware trail: angle from player centre → fist position
+                        const trailAngle = Math.atan2(f.oy, f.ox);
+                        const trailLen = 34 * f.sc;
+                        const t0x = f.ox - Math.cos(trailAngle) * trailLen;
+                        const t0y = f.oy - Math.sin(trailAngle) * trailLen;
+
+                        const trailG = ctx.createLinearGradient(t0x, t0y, f.ox, f.oy);
+                        trailG.addColorStop(0, `rgba(${trailHex},0)`);
+                        trailG.addColorStop(1, `rgba(${trailHex},${(f.alpha * 0.70).toFixed(2)})`);
+                        ctx.strokeStyle = trailG;
+                        ctx.lineWidth = 7 * f.sc;
+                        ctx.lineCap = 'round';
+                        ctx.globalAlpha = f.alpha;
+                        ctx.beginPath(); ctx.moveTo(t0x, t0y); ctx.lineTo(f.ox, f.oy); ctx.stroke();
+
+                        // Glove body
+                        ctx.globalAlpha = f.alpha * 0.94;
+                        ctx.fillStyle = fistCol;
                         ctx.beginPath(); ctx.arc(f.ox, f.oy, fR, 0, Math.PI * 2); ctx.fill();
-                        ctx.strokeStyle = 'rgba(251,191,36,0.55)';
-                        ctx.lineWidth = 2 * f.sc; ctx.stroke();
-                        // Short trail behind each fist (local-space, uniform direction)
-                        ctx.strokeStyle = 'rgba(248,113,113,0.6)';
-                        ctx.lineWidth = 5 * f.sc;
+
+                        // Rim
+                        ctx.strokeStyle = `rgba(255,255,255,${(f.alpha * 0.30).toFixed(2)})`;
+                        ctx.lineWidth = 1.4;
+                        ctx.beginPath(); ctx.arc(f.ox, f.oy, fR, 0, Math.PI * 2); ctx.stroke();
+
+                        // Knuckle highlight arc on leading edge
+                        ctx.strokeStyle = `rgba(255,255,255,${(f.alpha * 0.65).toFixed(2)})`;
+                        ctx.lineWidth = 1.8;
+                        ctx.shadowBlur = 6; ctx.shadowColor = '#ffffff';
                         ctx.beginPath();
-                        ctx.moveTo(f.ox - 28 * f.sc, f.oy);
-                        ctx.lineTo(f.ox, f.oy);
+                        ctx.arc(f.ox, f.oy, fR * 0.58, trailAngle - 0.75, trailAngle + 0.75);
                         ctx.stroke();
                     }
+                    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
                     ctx.restore();
-                    // ORA text above player (screen-space, unrotated)
+
+                    // "วันชัย วันชัย วันชัย!" text — screen-space, unrotated
                     ctx.save();
                     const textScale = 1 + Math.sin(now / 30) * 0.18;
                     const jt = stand?._phaseTimer ?? 0;
@@ -574,12 +603,12 @@ class PlayerRenderer {
                     ctx.font = '900 32px "Arial Black", Arial, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.lineWidth = 7; ctx.strokeStyle = '#7c2d12';
-                    ctx.strokeText('วันชัย วันชัย!', jx / textScale, jy / textScale);
+                    ctx.strokeText('วันชัย วันชัย วันชัย!', jx / textScale, jy / textScale);
                     ctx.lineWidth = 3; ctx.strokeStyle = '#fbbf24';
                     ctx.shadowBlur = 20; ctx.shadowColor = '#facc15';
-                    ctx.strokeText('วันชัย วันชัย!', jx / textScale, jy / textScale);
+                    ctx.strokeText('วันชัย วันชัย วันชัย!', jx / textScale, jy / textScale);
                     ctx.fillStyle = '#facc15'; ctx.shadowBlur = 14;
-                    ctx.fillText('วันชัย วันชัย!', jx / textScale, jy / textScale);
+                    ctx.fillText('วันชัย วันชัย วันชัย!', jx / textScale, jy / textScale);
                     ctx.restore();
                 }
             }

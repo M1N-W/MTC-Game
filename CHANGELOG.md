@@ -4,6 +4,23 @@
 
 ---
 
+## v3.25.3 — Rush Fist Advanced Rendering Fixes
+*Released: March 9, 2026*
+
+### 🥊 Rush Fist Rendering Advanced Fixes
+- **Double-Rotation Fix:** Removed ctx.rotate(entity.angle) to prevent double-rotation since ox/oy already precomputed with entity.angle in _doPlayerMelee
+- **Direction-Aware Trails:** Fixed trail direction using Math.atan2(f.oy, f.ox) → trails always point from player center to fist position
+- **Gradient Trail Enhancement:** Replaced solid strokes with createLinearGradient from transparent (0%) to fist color (70% alpha) for natural fade effect
+- **3D Knuckle Highlights:** Added arc highlights on leading edge of gloves (fR * 0.58) at trailAngle ± 0.75 rad for 3D depth perception
+- **Heat-Tier Color System:** Implemented dynamic fist colors based on entity._heatTier:
+  - Tier 0-1: Red (#ef4444)
+  - Tier 2: Orange (#f97316) 
+  - Tier 3+: Gold (#facc15)
+- **Enhanced Visual Polish:** Improved shadow blur (20px), glove size (9.5px), and white rim highlights with proper alpha blending
+- **Battle Cry Enhancement:** Extended "วันชัย" text to "วันชัย วันชัย วันชัย!" for intensified combat atmosphere
+
+---
+
 ## v3.25.2 — Wanchai Stand Visual Fixes
 *Released: March 9, 2026*
 
