@@ -4,6 +4,23 @@
 
 ---
 
+## v3.25.2 — Wanchai Stand Visual Fixes
+*Released: March 9, 2026*
+
+### 🥊 Rush Fist Rendering Fixes
+- **Local-Space Rotation:** Fixed fist fan to rotate with player facing direction using ctx.translate(screen.x, screen.y) + ctx.rotate(entity.angle)
+- **Uniform Round Gloves:** Replaced elliptical fists with perfect circular arc(10*sc) for consistent appearance
+- **Short Motion Trails:** Added compact trail lines behind each fist (moveTo(ox - 28*sc, oy) → lineTo(ox, oy)) for motion effect
+
+### 👑 Mongkhon Crown Redesign
+- **Triangular Crown Spikes:** Replaced flat band with 3 pointed triangles using moveTo/lineTo/closePath geometry
+- **Crown Hierarchy:** Center spike tallest (9px), side spikes shorter (6px) for proper crown appearance
+- **Band Base Structure:** Added supporting band base with highlight stripe for crown foundation
+- **Decorative Elements:** Enhanced with inner gleam lines on each spike and ribbon tassels on both sides
+- **Color Coordination:** Proper color scheme with base band (dim) and spikes (bright) differentiation
+
+---
+
 ## v3.25.1 — Wanchai Stand Visual Refinements
 *Released: March 9, 2026*
 

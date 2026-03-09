@@ -72,7 +72,7 @@
 | `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()`, `_hitFlashTimer`, passive unlock |
 | `Kaoplayer.js` | เก้า | Assassin — stealth, teleport, clone |
 | `PoomPlayer.js` | ภูมิ | Spiritual Warrior — ritual, naga, garuda |
-| `AutoPlayer.js` | ออโต้ | Pyromaniac — vacuum, detonate, Wanchai Stand |
+| `AutoPlayer.js` | ออโต้ | Pyromaniac — vacuum, detonate, Wanchai Stand with refined rush fist rendering and Mongkhon crown design |
 
 ### `/js/rendering/`
 - `PlayerRenderer.js` — วาด player ทั้งหมด (animations, effects, hit flash)

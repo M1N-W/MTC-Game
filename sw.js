@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.25.1'; // v3.25.1: Wanchai Stand Visual Refinements - Improved rush fist rendering with round gloves and afterimage effects, enhanced flame crown with tapered spikes
+const CACHE_NAME = 'mtc-cache-v3.25.2'; // v3.25.2: Wanchai Stand Visual Fixes - Fixed rush fist local-space rotation with round gloves and short trails, redesigned Mongkhon crown with triangular spikes and band base
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
