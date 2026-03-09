@@ -899,65 +899,100 @@ class MapSystem {
             }
         };
 
-        // Zone A: Server Farm (East) — pulled 100px west, tighter grid
-        createAisles(330, -320, 4, 3, 115, 140, 'server');
-        createAisles(700, -320, 4, 2, 115, 140, 'server');
-        // Data pillars mark the western edge of the server aisles (visible from center)
-        createAisles(265, -290, 4, 1, 0, 140, 'datapillar');
+        // ══════════════════════════════════════════════════════════
+        // LAYOUT REDESIGN — ขยายโซนออกไปใช้พื้นที่โดม (radius 1500)
+        // หลักการ:
+        //   • Spawn zone (0,0) ต้องโล่ง ≥ 350px radius — ไม่มี object ใดใน r<320
+        //   • Zone A/B/C/D ย้ายออกไปขอบโดมทุกทิศ
+        //   • Corridor trees/vending ถอยออกจาก center ≥ 380px
+        //   • Cover walls ยังอยู่รอบ center แต่ขยับออก 350px จาก origin
+        //   • Data pillars ไม่ผ่าน y=0 อีกต่อไป — จำกัดแค่เหนือ y=-400
+        // ══════════════════════════════════════════════════════════
 
-        // Zone B: Library Archives (West) — pulled 300px east
-        createAisles(-680, -310, 5, 2, 230, 115, 'bookshelf');
-        createAisles(-940, -310, 5, 2, 230, 115, 'bookshelf');
-        // Study desks sit in the corridor between shelf rows
-        createAisles(-800, -295, 4, 1, 0, 115, 'desk');
+        // Zone A: Server Farm (East) — ขยับออกไปทาง East ไกลขึ้น
+        // เดิม: x=330  ใหม่: x=520  เดิม y row ลงมาถึง y=-40 ใหม่ จำกัด y≤-200
+        createAisles(520, -600, 4, 3, 115, 140, 'server');   // แถวบน — อยู่แถว NE
+        createAisles(520, -180, 3, 3, 115, 140, 'server');   // แถวล่าง — SE quadrant
+        createAisles(900, -580, 3, 2, 115, 140, 'server');   // แถวไกล E
+        // Data pillars — กั้นขอบตะวันตกของ server zone ห่าง center ≥ 430px
+        createAisles(450, -560, 3, 1, 0, 140, 'datapillar'); // NE edge (y=-560,-420,-280)
+        createAisles(450, -140, 2, 1, 0, 140, 'datapillar'); // SE edge (y=-140,+0→ skip: startY=+10 เพื่อไม่บัง spawn)
 
-        // Zone C: Courtyard (South) — 200px closer, organic jitter
-        createAisles(-380, 310, 3, 5, 185, 185, 'tree', 14, 1.0);
+        // Zone B: Library Archives (West) — ขยับออก West ไกลขึ้น
+        // เดิม: x=-680~-940  ใหม่: x=-700~-1050 และ y ขยับออกจาก center
+        createAisles(-760, -580, 5, 2, 230, 115, 'bookshelf');  // NW quadrant
+        createAisles(-1050, -580, 5, 2, 230, 115, 'bookshelf'); // Far NW
+        createAisles(-760, -150, 4, 2, 230, 115, 'bookshelf');  // SW quadrant (y≥-150)
+        // Study desks — ระหว่าง shelf rows
+        createAisles(-900, -560, 4, 1, 0, 115, 'desk');   // NW desks
+        createAisles(-900, -130, 3, 1, 0, 115, 'desk');   // SW desks
 
-        // Zone D: Lecture Halls (corners) — pulled ~200px toward center
-        createAisles(-840, 510, 3, 3, 95, 95, 'desk');
-        this.objects.push(new MapObject(-800, 400, 150, 80, 'blackboard'));
+        // Zone C: Courtyard (South) — ขยับออก South ไกลขึ้น
+        // เดิม: y=310  ใหม่: y=480 ให้ห่าง spawn มากขึ้น
+        createAisles(-500, 480, 3, 5, 185, 185, 'tree', 14, 1.0);  // Main courtyard trees
+        createAisles(300, 480, 2, 3, 185, 185, 'tree', 12, 2.0);   // East courtyard trees
 
-        createAisles(620, 510, 3, 3, 95, 95, 'desk');
-        this.objects.push(new MapObject(640, 400, 150, 80, 'blackboard'));
+        // Zone D: Lecture Halls (Far corners) — ขยับออกไปขอบโดมมากขึ้น
+        createAisles(-950, 580, 3, 3, 95, 95, 'desk');
+        this.objects.push(new MapObject(-980, 460, 150, 80, 'blackboard'));
 
-        // Zone E: Vending Machine row — เรียงตามทางเดินหลัก (N-S corridor)
-        // วางทั้งสองฝั่งของทางเดินกลาง ให้ผู้เล่นเห็นตอนเดินผ่าน
+        createAisles(720, 580, 3, 3, 95, 95, 'desk');
+        this.objects.push(new MapObject(740, 460, 150, 80, 'blackboard'));
+
+        // Zone E: Vending Machines — ถอยออกจาก center ≥ 380px
+        // เดิม: อยู่ที่ x=±200, y=±130 (ใกล้ spawn มาก)
+        // ใหม่: อยู่ที่ทางเข้า zone แต่ละโซน ห่าง center 380-500px
         const vendingSpots = [
-            { x: -200, y: -130 }, { x: 165, y: -130 },   // Citadel approach corridor
-            { x: -200, y: 155 }, { x: 165, y: 155 },     // Courtyard approach corridor
-            { x: 255, y: 80 }, { x: 255, y: -80 },     // Server Farm gate
-            { x: -295, y: 80 }, { x: -295, y: -80 },    // Library gate
+            // Citadel approach corridor — ถอยออก ใกล้ MTC มากขึ้น
+            { x: -195, y: -390 }, { x: 160, y: -390 },
+            // Courtyard approach — ถอยออก South
+            { x: -195, y: 360 }, { x: 160, y: 360 },
+            // Server Farm gate (East) — ใกล้ entrance zone A
+            { x: 420, y: 80 }, { x: 420, y: -200 },
+            // Library gate (West) — ใกล้ entrance zone B
+            { x: -490, y: 80 }, { x: -490, y: -200 },
         ];
         for (const vs of vendingSpots) {
             this.objects.push(new MapObject(vs.x, vs.y, 40, 70, 'vendingmachine'));
         }
 
-        // Zone F: Broken Wall Cover — tactical cover รอบ center arena
-        // 4 กลุ่ม กระจาย 4 ทิศ ห่าง center ~220–280px
+        // Zone F: Tactical Cover Walls — ขยับออกจาก center เป็น r=350px
+        // ผู้เล่น spawn ที่ (0,0) จะมีพื้นที่โล่ง 350px ทุกทิศก่อนเจอ cover
         const coverWalls = [
-            // North cluster
-            { x: -55, y: -270, w: 90, h: 18 },
-            { x: 30, y: -255, w: 50, h: 18 },
-            // South cluster
-            { x: -55, y: 240, w: 90, h: 18 },
-            { x: 30, y: 225, w: 50, h: 18 },
-            // East cluster
-            { x: 230, y: -55, w: 18, h: 90 },
-            { x: 215, y: 30, w: 18, h: 50 },
-            // West cluster
-            { x: -248, y: -55, w: 18, h: 90 },
-            { x: -233, y: 30, w: 18, h: 50 },
+            // North cluster (y≈-350)
+            { x: -80, y: -370, w: 100, h: 18 },
+            { x: 45, y: -350, w: 60, h: 18 },
+            // South cluster (y≈+340)
+            { x: -80, y: 345, w: 100, h: 18 },
+            { x: 45, y: 325, w: 60, h: 18 },
+            // East cluster (x≈+340)
+            { x: 340, y: -70, w: 18, h: 100 },
+            { x: 320, y: 40, w: 18, h: 60 },
+            // West cluster (x≈-360)
+            { x: -358, y: -70, w: 18, h: 100 },
+            { x: -338, y: 40, w: 18, h: 60 },
+            // NE diagonal cover
+            { x: 240, y: -260, w: 18, h: 80 },
+            // NW diagonal cover
+            { x: -258, y: -260, w: 18, h: 80 },
+            // SE diagonal cover
+            { x: 240, y: 200, w: 18, h: 80 },
+            // SW diagonal cover
+            { x: -258, y: 200, w: 18, h: 80 },
         ];
         for (const cw of coverWalls) {
             this.objects.push(new MapObject(cw.x, cw.y, cw.w, cw.h, 'wall'));
         }
 
-        // Zone G: Corridor Trees — ต้นไม้เรียงตามทางเดิน N และ S
-        createAisles(-160, -200, 1, 3, 110, 0, 'tree');   // North corridor (west side)
-        createAisles(75, -200, 1, 3, 110, 0, 'tree');   // North corridor (east side)
-        createAisles(-160, 175, 1, 3, 110, 0, 'tree');   // South corridor (west side)
-        createAisles(75, 175, 1, 3, 110, 0, 'tree');   // South corridor (east side)
+        // Zone G: Corridor Trees — ถอยออกจาก spawn ≥ 380px
+        // เดิม: y=±200 (ใกล้เกิน)  ใหม่: y=±370 (ปลอดภัย)
+        createAisles(-160, -380, 1, 3, 110, 0, 'tree');   // North corridor west side
+        createAisles(75, -380, 1, 3, 110, 0, 'tree');   // North corridor east side
+        createAisles(-160, 355, 1, 3, 110, 0, 'tree');   // South corridor west side
+        createAisles(75, 355, 1, 3, 110, 0, 'tree');   // South corridor east side
+        // Extra trees ทิศ E/W corridor (ใหม่ — ใช้พื้นที่โดมที่เดิมว่างเปล่า)
+        createAisles(380, -80, 1, 2, 0, 160, 'tree');    // East corridor
+        createAisles(-420, -80, 1, 2, 0, 160, 'tree');    // West corridor
 
         // ── 3. Arena Boundaries + Corridor Walls ───────────────────
         // wallPositions now includes internal corridor funnels —
@@ -969,18 +1004,18 @@ class MapSystem {
         // ── 4. Strategic Explosive Barrels ─────────────────────────
         // Grouped in clusters at zone entrances and corridor chokepoints.
         const barrelSpots = [
-            // Server Farm entrance cluster
-            { x: 290, y: -120 }, { x: 290, y: 60 },
+            // Server Farm entrance cluster (East) — ย้ายออกไปกับ zone A
+            { x: 460, y: -80 }, { x: 460, y: 80 },
             // Server Farm interior
-            { x: 620, y: -120 }, { x: 620, y: 60 },
-            // Library entrance cluster
-            { x: -500, y: -120 }, { x: -500, y: 60 },
+            { x: 800, y: -200 }, { x: 800, y: 60 },
+            // Library entrance cluster (West) — ย้ายออกไปกับ zone B
+            { x: -600, y: -80 }, { x: -600, y: 80 },
             // Library interior
-            { x: -770, y: -150 }, { x: -770, y: 80 },
-            // Courtyard entrance (south corridor mouths)
-            { x: -220, y: 250 }, { x: 120, y: 250 },
-            // Defensive barrel below Citadel approach
-            { x: 0, y: -340 },
+            { x: -950, y: -250 }, { x: -950, y: 80 },
+            // Courtyard entrance (south) — ย้ายตาม zone C
+            { x: -220, y: 420 }, { x: 160, y: 420 },
+            // Defensive barrel below Citadel approach — ยังอยู่ทิศเหนือ แต่ไกลขึ้น
+            { x: 0, y: -440 },
         ];
 
         for (let spot of barrelSpots) {

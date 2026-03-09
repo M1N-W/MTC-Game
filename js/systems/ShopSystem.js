@@ -5,9 +5,11 @@
 // ══════════════════════════════════════════════════════════════
 
 // ─── MTC Shop Location ────────────────────────────────────────
+// ย้ายออกไป SW ตามแผนที่ใหม่ — สอดคล้องกับ MAP_CONFIG.auras.shop
+// และ MAP_CONFIG.paths.shop.to ที่อัปเดตใน config.js
 const MTC_SHOP_LOCATION = {
-    x: -350,
-    y: 350,
+    x: -480,
+    y: 480,
     INTERACTION_RADIUS: 90
 };
 

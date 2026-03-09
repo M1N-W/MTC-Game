@@ -4,6 +4,37 @@
 
 ---
 
+## v3.27.1 — Map Reorganization & Spawn Fix
+*Released: March 9, 2026*
+
+### 🗺️ Critical Map Layout Fixes
+- **Root Cause**: Objects were positioned too close to spawn point (0,0), creating a ~200px "cage" around player spawn
+- **Data Pillars**: Moved from y=-290 to +130 range (crossing spawn) → y=-560 to -140 (north of spawn only)
+- **Cover Walls**: Expanded from r=220-280px → r=340-360px from origin
+- **Corridor Trees**: Moved from y=±175/200 → y=±355/380 from spawn
+- **Vending Machines**: Repositioned from y=±130 (near spawn) → y=±360-390 at zone entrances
+
+### 🏗️ Zone Reorganization
+- **Server Farm (Zone A)**: startX=330→520, rows extended to y≤-180
+- **Library (Zone B)**: x=-680~-940 → x=-760~-1050, separated N/S quadrants
+- **Courtyard (Zone C)**: y=310 → y=480 (moved further south)
+- **Lecture Halls (Zone D)**: x=±620/840 → x=±720/950, y=510 → y=580
+- **Corridor Walls**: Funnel expanded from x=±220/±238 → x=±400/±418, y=±200/230 → y=±340/370
+
+### 📍 Interaction Points Updated
+- **MTC Shop**: Moved from {x:-350, y:350} → {x:-480, y:480} (SW quadrant)
+- **Database Server**: Moved from {x:350, y:-350} → {x:480, y:-480} (NE quadrant)
+- **Circuit Paths**: Aura positions expanded from 320px → 480px from origin
+- **Zone Floors**: All zones expanded to use full dome area
+
+### 🔧 Technical Changes
+- **config.js**: Updated MAP_CONFIG.wallPositions, zone floors, aura positions, circuit paths
+- **map.js**: Reorganized generateCampusMap() zone positioning and object placement
+- **ShopSystem.js**: Updated MTC_SHOP_LOCATION coordinates
+- **AdminSystem.js**: Updated MTC_DATABASE_SERVER coordinates
+
+---
+
 ## v3.27.0 — Major Visual Upgrades
 *Released: March 9, 2026*
 

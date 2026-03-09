@@ -5,9 +5,11 @@
 // ══════════════════════════════════════════════════════════════
 
 // ─── MTC Database Server ──────────────────────────────────────
+// ย้ายออกไป NE ตามแผนที่ใหม่ — สอดคล้องกับ MAP_CONFIG.auras.database
+// และ MAP_CONFIG.paths.database.to ที่อัปเดตใน config.js
 const MTC_DATABASE_SERVER = {
-    x: 350,
-    y: -350,
+    x: 480,
+    y: -480,
     INTERACTION_RADIUS: 90
 };
 

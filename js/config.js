@@ -641,35 +641,37 @@ const BALANCE = {
             { x: -50, y: -1500, w: 100, h: 50 },
             { x: -50, y: 1450, w: 100, h: 50 },
 
-            // ── Corridor walls: Server Farm entrance (east) ──
-            { x: 220, y: -230, w: 18, h: 140 },   // ยาวขึ้น h:130→140
-            { x: 220, y: -60, w: 18, h: 140 },    // ยาวขึ้น
-            // Server Farm south guard
-            { x: 250, y: 200, w: 18, h: 80 },      // ใหม่: กันด้านล่าง east
+            // ── Corridor walls: Server Farm entrance (East) ──
+            // ถอยออกไป x=400 (เดิม x=220) เพื่อเปิดพื้นที่ spawn
+            { x: 400, y: -420, w: 18, h: 200 },   // North wing
+            { x: 400, y: -100, w: 18, h: 200 },   // Mid wing
+            { x: 400, y: 160, w: 18, h: 120 },   // South guard
 
-            // ── Corridor walls: Library entrance (west) ──
-            { x: -238, y: -230, w: 18, h: 140 },   // ยาวขึ้น
-            { x: -238, y: -60, w: 18, h: 140 },
-            // Library south guard
-            { x: -268, y: 200, w: 18, h: 80 },     // ใหม่: กันด้านล่าง west
+            // ── Corridor walls: Library entrance (West) ──
+            // ถอยออกไป x=-418 (เดิม x=-238)
+            { x: -418, y: -420, w: 18, h: 200 },
+            { x: -418, y: -100, w: 18, h: 200 },
+            { x: -418, y: 160, w: 18, h: 120 },
 
-            // ── Corridor walls: Courtyard entrance (south) ──
-            { x: -180, y: 200, w: 130, h: 18 },
-            { x: 50, y: 200, w: 130, h: 18 },
-            // Courtyard side rails (กัน enemy ลัดเลาะขอบ)
-            { x: -450, y: 260, w: 18, h: 80 },     // ใหม่: west side courtyard gate
-            { x: 432, y: 260, w: 18, h: 80 },     // ใหม่: east side courtyard gate
+            // ── Corridor walls: Courtyard entrance (South) ──
+            // ถอยออกไป y=340 (เดิม y=200)
+            { x: -180, y: 340, w: 130, h: 18 },
+            { x: 50, y: 340, w: 130, h: 18 },
+            // Courtyard side rails
+            { x: -560, y: 420, w: 18, h: 100 },
+            { x: 542, y: 420, w: 18, h: 100 },
 
-            // ── Corridor walls: Citadel approach (north) — สมมาตรขึ้น ──
-            { x: -180, y: -230, w: 130, h: 18 },   // เลื่อน y:-220→-230 สมมาตรกับใต้
-            { x: 50, y: -230, w: 130, h: 18 },
+            // ── Corridor walls: Citadel approach (North) ──
+            // ถอยออกไป y=-370 (เดิม y=-230) สมมาตรกับใต้
+            { x: -180, y: -370, w: 130, h: 18 },
+            { x: 50, y: -370, w: 130, h: 18 },
             // Citadel approach side rails
-            { x: -180, y: -400, w: 18, h: 170 },   // ใหม่: west rail ทางเหนือ
-            { x: 162, y: -400, w: 18, h: 170 },   // ใหม่: east rail ทางเหนือ
+            { x: -180, y: -540, w: 18, h: 170 },
+            { x: 162, y: -540, w: 18, h: 170 },
 
-            // ── Library safe margin walls (กัน enemy เข้า gap) ──
-            { x: -980, y: -400, w: 30, h: 30 },    // ใหม่: Library NW corner
-            { x: -280, y: -400, w: 30, h: 30 },    // ใหม่: Library NE corner
+            // ── Library safe margin corners ──
+            { x: -1100, y: -620, w: 30, h: 30 },
+            { x: -380, y: -620, w: 30, h: 30 },
         ],
         mapColors: {
             floor: '#080d18',          // เข้มขึ้น เพิ่มบรรยากาศ night
@@ -1271,14 +1273,14 @@ const MAP_CONFIG = {
     paths: {
         database: {
             from: { x: 0, y: 0 },
-            to: { x: 320, y: -300 },
+            to: { x: 480, y: -480 },
             coreColor: '#fbbf24',
             glowColor: 'rgba(251, 191, 36, 0.85)',
             phase: 0.0,
         },
         shop: {
             from: { x: 0, y: 0 },
-            to: { x: -320, y: 300 },
+            to: { x: -480, y: 480 },
             coreColor: '#f97316',
             glowColor: 'rgba(249, 115, 22, 0.85)',
             phase: 2.094,
@@ -1339,69 +1341,68 @@ const MAP_CONFIG = {
     },
 
     // ── Zone Floor Themes ──────────────────────────────────────
-    // Zone positions pulled closer to (0,0) spawn so players
-    // enter each zone within ~3-5 seconds of moving from center.
+    // Zone positions กระจายออกไปใช้พื้นที่โดม (radius 1500) ทุกทิศ
     zones: {
         serverFarm: {
-            x: 280, y: -380, w: 700, h: 580,
-            floorColor: 'rgba(6, 182, 212, 0.07)',    // เข้มขึ้น 0.04→0.07
-            gridColor: 'rgba(6, 182, 212, 0.18)',       // ชัดขึ้น 0.12→0.18
+            x: 430, y: -680, w: 800, h: 700,
+            floorColor: 'rgba(6, 182, 212, 0.07)',
+            gridColor: 'rgba(6, 182, 212, 0.18)',
             gridSize: 36,
-            accentColor: 'rgba(34, 211, 238, 0.28)',      // เพิ่ม 0.18→0.28
+            accentColor: 'rgba(34, 211, 238, 0.28)',
             label: 'SERVER FARM',
             ambientColor: 'rgba(34, 211, 238, 0.90)',
         },
         library: {
-            x: -980, y: -380, w: 700, h: 580,
-            floorColor: 'rgba(180, 120, 20, 0.09)',    // เข้มขึ้น
-            gridColor: 'rgba(251, 191, 36, 0.16)',       // ชัดขึ้น
+            x: -1230, y: -680, w: 800, h: 700,
+            floorColor: 'rgba(180, 120, 20, 0.09)',
+            gridColor: 'rgba(251, 191, 36, 0.16)',
             gridSize: 48,
             accentColor: 'rgba(253, 224, 71, 0.22)',
             label: 'ARCHIVES',
             ambientColor: 'rgba(251, 191, 36, 0.90)',
         },
         courtyard: {
-            x: -450, y: 260, w: 900, h: 520,
-            floorColor: 'rgba(34, 197, 94, 0.08)',     // เข้มขึ้น
-            gridColor: 'rgba(74, 222, 128, 0.14)',       // ชัดขึ้น
-            gridSize: 55,                                 // grid ถี่ขึ้นเล็กน้อย
+            x: -600, y: 400, w: 1200, h: 650,
+            floorColor: 'rgba(34, 197, 94, 0.08)',
+            gridColor: 'rgba(74, 222, 128, 0.14)',
+            gridSize: 55,
             accentColor: 'rgba(134, 239, 172, 0.20)',
             label: 'COURTYARD',
-            ambientColor: 'rgba(134, 239, 172, 0.90)',    // firefly สว่างขึ้น
+            ambientColor: 'rgba(134, 239, 172, 0.90)',
         },
         lectureHallL: {
-            x: -900, y: 440, w: 380, h: 350,
+            x: -1100, y: 500, w: 420, h: 400,
             floorColor: 'rgba(168, 85, 247, 0.04)',
             gridColor: 'rgba(192, 132, 252, 0.10)',
             gridSize: 40,
             accentColor: 'rgba(216, 180, 254, 0.12)',
             label: 'LECTURE A',
-            ambientColor: 'rgba(216, 180, 254, 0.60)',  // chalk dust
+            ambientColor: 'rgba(216, 180, 254, 0.60)',
         },
         lectureHallR: {
-            x: 620, y: 440, w: 380, h: 350,
+            x: 680, y: 500, w: 420, h: 400,
             floorColor: 'rgba(168, 85, 247, 0.04)',
             gridColor: 'rgba(192, 132, 252, 0.10)',
             gridSize: 40,
             accentColor: 'rgba(216, 180, 254, 0.12)',
             label: 'LECTURE B',
-            ambientColor: 'rgba(216, 180, 254, 0.60)',  // chalk dust
+            ambientColor: 'rgba(216, 180, 254, 0.60)',
         },
     },
 
     // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
-            worldX: 320,
-            worldY: -300,
+            worldX: 480,
+            worldY: -480,
             innerRgb: '250, 180, 30',
             outerRgb: '120, 60, 10',
             radius: 130,
             phase: 0.0,
         },
         shop: {
-            worldX: -320,
-            worldY: 300,
+            worldX: -480,
+            worldY: 480,
             innerRgb: '249, 115, 22',
             outerRgb: '154, 52, 18',
             radius: 130,

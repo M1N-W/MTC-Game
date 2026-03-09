@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.27.0 | **Latest Update:** Major visual upgrades - Kao stealth holographic effects, Poom Naga serpentine tether, Auto heat tier gradients, weapon switch indicators
+> **Current Version:** Beta v3.27.1 | **Latest Update:** Map reorganization & spawn fix - expanded object positions, updated shop/database locations
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
