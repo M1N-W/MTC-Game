@@ -88,9 +88,10 @@
 
 ---
 
-## 📈 Current Version: v3.19.1 (March 9, 2026)
+## 📈 Current Version: v3.19.2 (March 9, 2026)
 
 **Latest Major Updates:**
+- 🧹 **Service Worker Cache Cleanup:** Removed references to deleted ai.js and secrets.js files - eliminates 404 cache errors
 - 🐛 **PoomPlayer Hit Flash Fix:** Fixed missing hit flash timer decay - Poom character now properly displays damage feedback
 - 🤖 **AI System Refactor:** Removed external Gemini API dependency - now uses local text-based system for instant responses
 - 🗂️ **Code Cleanup:** Deleted ai.js and secrets.js files, simplified async/await patterns

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.19.1'; // v3.19.1: Fixed PoomPlayer hit flash timer decay - added missing hit flash timer update since PlayerBase.update is not called
+const CACHE_NAME = 'mtc-cache-v3.19.2'; // v3.19.2: Removed deleted ai.js and secrets.js from cache list - files were deleted in v3.19.0 AI refactor
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -19,10 +19,8 @@ const urlsToCache = [
   './js/effects.js?v=' + CACHE_TIMESTAMP,
   './js/weapons.js?v=' + CACHE_TIMESTAMP,
   './js/ui.js?v=' + CACHE_TIMESTAMP,
-  './js/ai.js?v=' + CACHE_TIMESTAMP,
   './js/game.js?v=' + CACHE_TIMESTAMP,
   './js/tutorial.js?v=' + CACHE_TIMESTAMP,
-  './js/secrets.js?v=' + CACHE_TIMESTAMP,
   // Entities
   './js/entities/base.js?v=' + CACHE_TIMESTAMP,
   './js/entities/player/PlayerBase.js?v=' + CACHE_TIMESTAMP,
