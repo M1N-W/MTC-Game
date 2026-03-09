@@ -46,8 +46,19 @@
 ## 👑 Epic Boss Fights
 
 เตรียมพบกับ Boss Encounters ทุกๆ 3 เวฟ ที่มาพร้อมกับ Mechanics ระดับโหดหิน:
-* 📐 **ครูมานพ (The Math Boss):** โจมตีด้วยสมการคณิตศาสตร์, กราฟมรณะ, ตาราง Matrix Grid และการเรียกสุนัขกับปลาทองคู่ใจ
-* ⚛️ **ครูเฟิร์ส (The Physics Master):** โจมตีด้วยกฎฟิสิกส์, การพุ่งชนความเร็วสูง (SUVAT), ตกจากฟ้า (Free Fall) และระเบิดล็อคการเคลื่อนที่ (EMP Pulse)
+
+### 📐 ครูมานพ (The Math Boss) — Phase Structure Rework
+* **Phase 2 Dynamics:** Per-encounter thresholds (enc1=50%, enc3=60%, enc5=65%) guarantee dog encounters
+* **ChalkWall Barrier:** Perpendicular chalk barriers block player escape with mathematical formula overlays
+* **DogPackCombo:** Synchronized attacks where boss freezes while dog rushes and ultimate fires simultaneously
+* **Domain Sub-Phases:** Progressive A/B/C difficulty with extended warnings, chalk volleys, and TeacherFury triggers
+
+### ⚛️ ครูเฟิร์ส (The Physics Master) — Complete Domain System
+* **GravitationalSingularity Domain:** 4-pulse sequence at HP ≤ 25% (PULL → ESCAPE → TIDAL → COLLAPSE)
+* **OrbitalDebris:** 6 orbiting projectiles during TIDAL phase with deterministic spinning visuals
+* **Singularity Mode:** Post-domain enhancement with ×0.50 cooldowns and REBOUND state mechanics
+* **Advanced Skills:** GravityWell distortion fields and SuperpositionClone phantom copies
+* **QuantumLeap:** Teleport behind player with immediate double SUVAT charge capability
 
 ---
 
@@ -88,16 +99,14 @@
 
 ---
 
-## 📈 Current Version: v3.20.0 (March 9, 2026)
+## 📈 Current Version: v3.21.0 (March 9, 2026)
 
 **Latest Major Updates:**
-- 🎓 **Enhanced Tutorial System v3:** Added dynamic UI highlighting with pulsing blue glow and animated gold arrow for better user guidance
-- 🎨 **Visual Tutorial Improvements:** Real-time arrow tracking, edge detection for off-screen elements, and smooth 60fps animations
-- 🔧 **Technical Enhancements:** Improved weapon-switch polling, better state management, and efficient DOM updates
-- 🗂️ **Code Cleanup:** Deleted ai.js and secrets.js files, simplified async/await patterns
-- ⚡ **Performance:** Eliminated loading spinners and API timeouts for instant AI responses
-- 📊 **Character Selection UI Redesign:** Enhanced stat bar system with 4 stats (HP/DMG/SPD/RANGE) displaying real config.js values
-- 🎨 **Visual Identity Overhaul:** Poom theme changed from orange to green across all UI elements, Auto hover border refined to red
+- ⚫ **Complete Boss Rework:** 4-phase implementation with GravitationalSingularity, ChalkWall, Domain sub-phases, and Singularity Mode
+- 🐕 **KruManop Phase Structure:** Per-encounter thresholds, ChalkWall barriers, DogPackCombo synchronized attacks
+- ⚛️ **KruFirst Domain System:** 4-pulse GravitationalSingularity with OrbitalDebris and post-domain Singularity Mode
+- � **Domain Sub-Phases:** Progressive A/B/C difficulty with TeacherFury triggers and safe cell shifting
+- ⚡ **Advanced Boss Mechanics:** QuantumLeap teleportation, GravityWell distortion fields, SuperpositionClone phantom copies
 - ✨ **Enhanced Visual Polish:** Improved stat bar styling (7px height, border-radius, tick marks), glow effects, avatar enhancements
 - 🌐 **Menu Enhancements:** Added scanline texture, dual-line section dividers, enhanced high score display with sweep animation
 - �� **Documentation Enhancement:** Comprehensive PROJECT_OVERVIEW.md updates with dev buff system documentation

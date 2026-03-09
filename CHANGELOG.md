@@ -4,6 +4,50 @@
 
 ---
 
+## v3.21.0 — Complete Boss Rework Implementation
+*Released: March 9, 2026*
+
+### ⚫ Phase 1 — KruFirst GravitationalSingularity Domain
+- **New Domain System:** GravitationalSingularity triggers once at HP ≤ 25% with 4-phase pulse sequence
+- **Pulse Mechanics:** PULL (gravity pull) → ESCAPE (push with safe zone) → TIDAL (oscillating + OrbitalDebris) → COLLAPSE (ramp pull + shockwave)
+- **OrbitalDebris:** 6 projectiles orbit boss during TIDAL phase with deterministic spinning square visuals
+- **Domain Shield:** Boss becomes invincible during domain with "DOMAIN SHIELD!" visual feedback
+- **Advanced Visuals:** Gravity lines, safe zone indicators, tidal effects, and collapse vignette
+
+### 🐕 Phase 2 — KruManop Phase Structure Rework
+- **Per-Encounter Thresholds:** Dynamic phase 2/3 triggers (enc1=50%, enc3=60%, enc5=65% for guaranteed dog encounters)
+- **ChalkWall Barrier:** Perpendicular chalk line placement with damage on crossing, 6s duration, mathematical formula overlay
+- **DogPackCombo:** Synchronized attack where boss freezes 0.5s then dog rush + ultimate fire simultaneously
+- **Skill Priority:** DogPackCombo > ChalkWall > existing skills for phase 2 combat flow
+
+### 📐 Phase 3 — KruManop Domain Sub-Phase System
+- **A/B/C Sub-Phases:** Progressive difficulty with unique mechanics per phase
+- **Sub-Phase A (Cycles 1-2):** Extended warning duration (2.0s) for fair equation rain patterns
+- **Sub-Phase B (Cycles 3-4):** Faster danger escalation (6% per cycle), 3-way chalk volleys every 0.8s, safe cell shifting
+- **Sub-Phase C (Cycles 5-6):** 30% TeacherFury trigger chance per cycle for domain collapse intensity
+- **Visual HUD:** Sub-phase indicators (A=purple, B=yellow, C=red) with dynamic labels
+
+### ⚡ Phase 4 — KruFirst Singularity Mode
+- **Post-Domain Enhancement:** Activates after GravitationalSingularity ends, all cooldowns ×0.50
+- **REBOUND State:** Replaces STUNNED with push-back and immediate double SUVAT charge capability
+- **QUANTUM_LEAP:** Teleport behind player + immediate SUVAT charge with 40% priority in Singularity Mode
+- **GravityWell:** Concentric ring distortion field that pulls player and bends projectiles
+- **SuperpositionClone:** Ghost KruFirst copy with 1 HP, fires 2-way projectiles, destroyable by player
+
+### 🔧 Technical Enhancements
+- **Configuration System:** 28 new GravitationalSingularity balance values, per-encounter thresholds, sub-phase parameters
+- **State Management:** New boss states (REBOUND, QUANTUM_LEAP), domain freeze logic, Singularity Mode tracking
+- **Visual Effects:** Deterministic rendering (no Math.random() in draw calls), pre-seeded values for consistency
+- **Game Loop Integration:** GravitationalSingularity.update/draw hooks in main game loop
+
+### ⚖️ Balance Changes
+- **KruFirst HP Scaling:** Base HP ×1.28 (reduced from ×1.33) for better encounter pacing
+- **Phase Timing:** ChalkWall 12s CD, DogPackCombo 18s CD, domain durations tuned for engagement
+- **Damage Values:** OrbitalDebris 25 damage, ChalkWall 15 damage, well-calculated force multipliers
+- **Skill Cooldowns:** Singularity Mode ×0.50 multiplier, Derivation Mode integration preserved
+
+---
+
 ## v3.20.2 — Boss Safe-Zone Protection System
 *Released: March 9, 2026*
 

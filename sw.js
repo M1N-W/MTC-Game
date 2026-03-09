@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.20.2'; // v3.20.2: Boss Safe-Zone Protection - Added MTC Room exclusion system to prevent spawn-killing exploits
+const CACHE_NAME = 'mtc-cache-v3.21.0'; // v3.21.0: Complete Boss Rework - 4 Phase implementation with GravitationalSingularity, ChalkWall, Domain sub-phases, and Singularity Mode
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

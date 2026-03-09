@@ -1212,6 +1212,10 @@ const DomainExpansion = {
     _rain: [], _indices: [],
     _flashTimer: 0,     // full-screen purple flash on explosion hit
     _crackLines: [],    // screen crack visual during casting
+    // ── Phase 3 Rework additions ──────────────────────────────
+    _subPhase: 'A',          // 'A' (cycles 1-2) | 'B' (cycles 3-4) | 'C' (cycles 5-6)
+    _safeCellShifts: [],     // pre-seeded array of safe-cell index deltas per cycle (B only)
+    _domainChalkTimer: 0,    // countdown to next chalk volley (subPhase B)
 
     canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
     isInvincible() { return this.phase !== 'idle'; },
@@ -1224,6 +1228,12 @@ const DomainExpansion = {
         this.originX = 0;
         this.originY = 0;
         this._initRain();
+        // ── Phase 3 Rework: reset subPhase state ─────────────
+        this._subPhase = 'A';
+        this._domainChalkTimer = 0;
+        // Pre-seed safe cell shifts for subPhase B (cycles 3-4, index 2-3)
+        // 6 values — one per cycle — deterministic, non-zero offsets
+        this._safeCellShifts = [0, 0, 17, 31, 53, 11];
 
         boss._domainCasting = true;
         boss._domainActive = true;
@@ -1289,6 +1299,26 @@ const DomainExpansion = {
 
             case 'active':
                 this.cycleTimer -= dt;
+
+                // ── SubPhase B: chalk volley tick ─────────────────
+                if (this._subPhase === 'B' && this.cyclePhase === 'warn' &&
+                    boss && !boss.dead && typeof projectileManager !== 'undefined') {
+                    const _DEcfg = BALANCE.boss.domainExpansion || {};
+                    const chalkInterval = _DEcfg.subPhaseB_chalkInterval ?? 0.8;
+                    const chalkCount = _DEcfg.subPhaseB_chalkCount ?? 3;
+                    const chalkSpeed = _DEcfg.subPhaseB_chalkSpeed ?? 460;
+                    const chalkDmg = _DEcfg.subPhaseB_chalkDamage ?? 18;
+                    this._domainChalkTimer -= dt;
+                    if (this._domainChalkTimer <= 0) {
+                        this._domainChalkTimer = chalkInterval;
+                        for (let _ci = 0; _ci < chalkCount; _ci++) {
+                            const _ca = (Math.PI * 2 / chalkCount) * _ci;
+                            projectileManager.add(new Projectile(boss.x, boss.y, _ca, chalkSpeed, chalkDmg, '#fef08a', false, 'enemy'));
+                        }
+                        if (typeof addScreenShake === 'function') addScreenShake(5);
+                    }
+                }
+
                 if (this.cyclePhase === 'warn' && this.cycleTimer <= 0) {
                     this.cyclePhase = 'explode'; this.cycleTimer = _DC.EXPLODE_DUR;
                     this._doExplosions(player);
@@ -1303,10 +1333,38 @@ const DomainExpansion = {
                         if (window.UIManager)
                             window.UIManager.showVoiceBubble('...แค่นั้นแหละ.', boss.x, boss.y - 50);
                     } else {
+                        // ── Compute subPhase for next cycle ──────
+                        if (this.cycleCount <= 2) this._subPhase = 'A';
+                        else if (this.cycleCount <= 4) this._subPhase = 'B';
+                        else this._subPhase = 'C';
+
+                        // Reset chalk timer when entering B
+                        if (this._subPhase === 'B') this._domainChalkTimer = 0;
+
+                        // ── SubPhase transition announcements ────
+                        if (this.cycleCount === 2 && typeof spawnFloatingText === 'function' && player) {
+                            spawnFloatingText('📐 LOG457 OVERDRIVE', player.x, player.y - 110, '#facc15', 26);
+                            setTimeout(() => {
+                                if (typeof spawnFloatingText === 'function' && player)
+                                    spawnFloatingText('SAFE CELL MOVES!', player.x, player.y - 148, '#fbbf24', 20);
+                            }, 500);
+                            if (typeof addScreenShake === 'function') addScreenShake(16);
+                        } else if (this.cycleCount === 4 && typeof spawnFloatingText === 'function' && player) {
+                            spawnFloatingText('💀 DOMAIN COLLAPSE', player.x, player.y - 110, '#ef4444', 28);
+                            if (typeof addScreenShake === 'function') addScreenShake(22);
+                        }
+
                         this.cyclePhase = 'warn';
-                        this.cycleTimer = Math.max(_DC.WARN_DUR_MIN, _DC.WARN_DUR - this.cycleCount * _DC.WARN_DUR_DECAY);
+                        // SubPhase A gets longer warn; B/C use normal decay
+                        const _DEcfg2 = BALANCE.boss.domainExpansion || {};
+                        const baseWarn = (this._subPhase === 'A')
+                            ? (_DEcfg2.subPhaseA_warnDur ?? 2.0)
+                            : _DC.WARN_DUR;
+                        const decayedWarn = Math.max(_DC.WARN_DUR_MIN, baseWarn - this.cycleCount * _DC.WARN_DUR_DECAY);
+                        this.cycleTimer = decayedWarn;
                         this._rollCells();
-                        // Boss volley on cycle 3+
+
+                        // ── Boss volley on B/C (cycle 3+) ────────
                         if (this.cycleCount >= _DC.BOSS_VOLLEY_CYCLE && boss && !boss.dead && typeof projectileManager !== 'undefined') {
                             const n = _DC.BOSS_VOLLEY_COUNT;
                             for (let _vi = 0; _vi < n; _vi++) {
@@ -1314,6 +1372,15 @@ const DomainExpansion = {
                                 projectileManager.add(new Projectile(boss.x, boss.y, _va, 520, 20, '#d946ef', true, 'enemy'));
                             }
                             if (typeof addScreenShake === 'function') addScreenShake(12);
+                        }
+
+                        // ── SubPhase C: 30% chance TeacherFury ───
+                        if (this._subPhase === 'C' && boss && !boss.dead) {
+                            const _DEcfg3 = BALANCE.boss.domainExpansion || {};
+                            const furyChance = _DEcfg3.subPhaseC_teacherFuryChance ?? 0.30;
+                            if (Math.random() < furyChance && typeof boss.useTeacherFury === 'function') {
+                                boss.useTeacherFury(player);
+                            }
                         }
                     }
                 }
@@ -1325,6 +1392,7 @@ const DomainExpansion = {
                     boss._domainCasting = false; boss._domainActive = false;
                     if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.timer = 0; }
                     this.cells = []; this._crackLines = []; this._flashTimer = 0;
+                    this._subPhase = 'A'; this._domainChalkTimer = 0; this._safeCellShifts = [];
                     console.log('[DomainExpansion] Domain ended — cooldown 45 s');
                 }
                 break;
@@ -1756,6 +1824,26 @@ const DomainExpansion = {
             ctx.shadowBlur = 0;
         }
 
+        // ── 8. SubPhase label (top-right corner) ─────────────
+        if (this.phase === 'active') {
+            const subLabels = {
+                A: { text: 'PHASE A — EQUATION RAIN', col: '#a78bfa' },
+                B: { text: 'PHASE B — LOG457 OVERDRIVE', col: '#facc15' },
+                C: { text: 'PHASE C — DOMAIN COLLAPSE', col: '#ef4444' },
+            };
+            const sl = subLabels[this._subPhase];
+            if (sl) {
+                const subPulse = 0.7 + Math.sin(now * 4) * 0.3;
+                ctx.globalAlpha = globalA * subPulse * 0.85;
+                ctx.font = 'bold 13px "Orbitron",Arial';
+                ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+                ctx.fillStyle = sl.col;
+                ctx.shadowBlur = 14; ctx.shadowColor = sl.col;
+                ctx.fillText(sl.text, W - 14, 14);
+                ctx.shadowBlur = 0;
+            }
+        }
+
         ctx.restore();
     },
 
@@ -1778,13 +1866,30 @@ const DomainExpansion = {
         this._indices = new Array(this.cells.length);
     },
     _rollCells() {
-        const dangerPct = Math.min(_DC.DANGER_PCT_MAX, _DC.DANGER_PCT + this.cycleCount * _DC.DANGER_PCT_STEP);
+        // SubPhase B uses faster danger escalation
+        const _DEcfg = BALANCE.boss.domainExpansion || {};
+        const stepOverride = (this._subPhase === 'B' || this._subPhase === 'C')
+            ? (_DEcfg.subPhaseB_dangerPctStep ?? 0.06)
+            : _DC.DANGER_PCT_STEP;
+        const dangerPct = Math.min(_DC.DANGER_PCT_MAX, _DC.DANGER_PCT + this.cycleCount * stepOverride);
         const n = this.cells.length, dangCount = Math.floor(n * dangerPct);
         for (let i = 0; i < n; i++) this._indices[i] = i;
         _shuffle(this._indices);
         for (let i = 0; i < n; i++) {
             this.cells[this._indices[i]].dangerous = i < dangCount;
             this.cells[this._indices[i]].exploded = false;
+        }
+        // SubPhase B: shift safe cell index by pre-seeded offset so it moves each cycle
+        if ((this._subPhase === 'B') && this._safeCellShifts.length > 0 && n > 0) {
+            const shift = this._safeCellShifts[Math.min(this.cycleCount, this._safeCellShifts.length - 1)];
+            if (shift > 0) {
+                // Find the one safe cell (index i where dangerous===false nearest start), swap danger state
+                const safeIdx = this._indices.findIndex((_, pos) => pos >= dangCount); // first non-dangerous slot in shuffled order
+                const shiftedIdx = (this._indices[safeIdx] + shift) % n;
+                // Make original safe-slot dangerous, new slot safe
+                this.cells[this._indices[safeIdx]].dangerous = true;
+                this.cells[shiftedIdx].dangerous = false;
+            }
         }
     },
     _initRain() {
@@ -1837,6 +1942,7 @@ const DomainExpansion = {
     _abort(boss) {
         this.phase = 'idle'; this.cooldownTimer = 0;
         this.cells = []; this._crackLines = []; this._flashTimer = 0;
+        this._subPhase = 'A'; this._domainChalkTimer = 0; this._safeCellShifts = [];
         if (boss) { boss._domainCasting = false; boss._domainActive = false; }
         console.log('[DomainExpansion] Aborted — boss dead');
     },
@@ -2465,3 +2571,1127 @@ window.EquationSlam = EquationSlam;
 window.DeadlyGraph = DeadlyGraph;
 window.PhysicsFormulaZone = PhysicsFormulaZone;
 window.ParabolicVolley = ParabolicVolley;
+// ════════════════════════════════════════════════════════════
+// ⚫ ORBITAL DEBRIS — 6 Projectiles orbiting KruFirst during Domain
+//    สร้างจาก GravitationalSingularity ใน Pulse 3
+//    update() รับ (dt, bossX, bossY, player) — โคจรรอบ boss
+// ════════════════════════════════════════════════════════════
+class OrbitalDebris {
+    /**
+     * @param {number} bossX @param {number} bossY  anchor (world)
+     * @param {number} startAngle  initial angle offset for this shard
+     */
+    constructor(bossX, bossY, startAngle) {
+        const _GS = (typeof BALANCE !== 'undefined' && BALANCE.boss && BALANCE.boss.gravitationalSingularity)
+            ? BALANCE.boss.gravitationalSingularity : {};
+        this.orbitR = _GS.orbitalRadius ?? 90;
+        this.orbitSpd = _GS.orbitalSpeed ?? 2.2;
+        this.damage = _GS.orbitalDamage ?? 25;
+        this.angle = startAngle;
+        this.x = bossX + Math.cos(startAngle) * this.orbitR;
+        this.y = bossY + Math.sin(startAngle) * this.orbitR;
+        this.radius = 10;
+        this.dead = false;
+        this._hitCd = 0;     // per-debris hit cooldown to avoid frame spam
+        // Pre-seed visual noise so draw() uses no Math.random()
+        this._glowPhase = startAngle * 2.7;
+    }
+
+    update(dt, bossX, bossY, player) {
+        if (this.dead) return;
+        this.angle += this.orbitSpd * dt;
+        this.x = bossX + Math.cos(this.angle) * this.orbitR;
+        this.y = bossY + Math.sin(this.angle) * this.orbitR;
+
+        if (this._hitCd > 0) this._hitCd -= dt;
+        if (this._hitCd <= 0 && player && !player.dead) {
+            const d = Math.hypot(player.x - this.x, player.y - this.y);
+            if (d < this.radius + player.radius) {
+                player.takeDamage(this.damage);
+                this._hitCd = 0.5;
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('DEBRIS!', player.x, player.y - 50, '#00ffff', 20);
+                if (typeof addScreenShake === 'function') addScreenShake(8);
+            }
+        }
+    }
+
+    draw() {
+        if (this.dead || typeof CTX === 'undefined' || typeof worldToScreen !== 'function') return;
+        const sc = worldToScreen(this.x, this.y);
+        const now = performance.now() / 1000;
+        const pulse = 0.55 + Math.sin(now * 4 + this._glowPhase) * 0.45;
+
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+
+        // Outer glow
+        CTX.globalAlpha = 0.45 * pulse;
+        const grd = CTX.createRadialGradient(0, 0, 0, 0, 0, this.radius * 2.2);
+        grd.addColorStop(0, '#00ffff');
+        grd.addColorStop(1, 'rgba(0,255,255,0)');
+        CTX.fillStyle = grd;
+        CTX.beginPath(); CTX.arc(0, 0, this.radius * 2.2, 0, Math.PI * 2); CTX.fill();
+
+        // Core — spinning square
+        CTX.globalAlpha = 0.9;
+        CTX.fillStyle = '#00ffff';
+        CTX.shadowBlur = 18; CTX.shadowColor = '#39ff14';
+        CTX.save();
+        CTX.rotate(now * 3 + this._glowPhase);
+        const hs = this.radius * 0.82;
+        CTX.fillRect(-hs, -hs, hs * 2, hs * 2);
+        CTX.restore();
+        CTX.shadowBlur = 0;
+
+        // Trail line toward boss (drawn as thin line from debris outward)
+        CTX.globalAlpha = 0.22 * pulse;
+        CTX.strokeStyle = '#39ff14';
+        CTX.lineWidth = 1.5;
+        const trailLen = this.orbitR * 0.35;
+        const trailAng = this.angle + Math.PI;  // pointing away from boss
+        CTX.beginPath();
+        CTX.moveTo(0, 0);
+        CTX.lineTo(Math.cos(trailAng) * trailLen, Math.sin(trailAng) * trailLen);
+        CTX.stroke();
+
+        CTX.restore();
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// ⚫ GRAVITATIONAL SINGULARITY — KruFirst Domain Expansion
+//
+//    Singleton, driven by game.js update/draw hooks.
+//    Mirror structure of DomainExpansion (Manop) so game.js
+//    hooks are identical in pattern.
+//
+//    Pulse sequence:
+//      PULL    (4s) — player + projectiles bent toward boss
+//      ESCAPE  (4.5s) — push outward; near boss = safe zone
+//      TIDAL   (4.5s) — oscillating pull/push + FormulaZones
+//      COLLAPSE(2.5s) — ramp pull + final shockwave AoE
+// ════════════════════════════════════════════════════════════
+const GravitationalSingularity = {
+    phase: 'idle',      // 'idle' | 'casting' | 'active' | 'ending'
+    pulse: 'PULL',      // current active pulse
+    pulseTimer: 0,
+    timer: 0,
+    cooldownTimer: 0,
+    originX: 0, originY: 0,
+    _orbitals: [],      // OrbitalDebris instances (active in TIDAL)
+    _rain: [],          // physics char rain (same pattern as DomainExpansion)
+    _flashTimer: 0,
+    _flashColor: '#00ffff',
+    _pulse2FireTimer: 0,
+    _pulse2TeleportsDone: 0,
+    _pulse3ZonesDone: false,
+    _collapseWarnDone: false,
+    _collapseShockDone: false,
+
+    canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
+    isInvincible() { return this.phase !== 'idle'; },
+
+    trigger(boss) {
+        if (!this.canTrigger()) return;
+        const _GS = BALANCE.boss.gravitationalSingularity;
+        this.phase = 'casting';
+        this.timer = _GS.castDur;
+        this.originX = boss.x;
+        this.originY = boss.y;
+        this._orbitals = [];
+        this._pulse2FireTimer = 0;
+        this._pulse2TeleportsDone = 0;
+        this._pulse3ZonesDone = false;
+        this._collapseWarnDone = false;
+        this._collapseShockDone = false;
+        this._initRain();
+
+        boss._domainCasting = true;
+        boss._domainActive = true;
+
+        if (typeof addScreenShake === 'function') addScreenShake(18);
+        if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+        if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText('領域展開', boss.x, boss.y - 130, '#39ff14', 50);
+            setTimeout(() => {
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('重力特異点', boss.x, boss.y - 185, '#00ffff', 36);
+            }, 700);
+            setTimeout(() => {
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('GRAVITATIONAL SINGULARITY', boss.x, boss.y - 230, '#a3e635', 24);
+            }, 1200);
+        }
+        if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
+            window.UIManager.showVoiceBubble('領域展開...', boss.x, boss.y - 50);
+            setTimeout(() => {
+                if (window.UIManager)
+                    window.UIManager.showVoiceBubble('นิวตัน... อภัยให้ข้าด้วย', boss.x, boss.y - 50);
+            }, 1000);
+        }
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(boss.x, boss.y, 40, '#39ff14');
+            spawnParticles(boss.x, boss.y, 25, '#00ffff');
+            spawnParticles(boss.x, boss.y, 15, '#ffffff');
+        }
+        console.log('[GravitationalSingularity] ⚫ TRIGGERED');
+    },
+
+    update(dt, boss, player) {
+        if (this.phase === 'idle') {
+            if (this.cooldownTimer > 0) this.cooldownTimer -= dt;
+            return;
+        }
+        if (this._flashTimer > 0) this._flashTimer -= dt;
+        if (!boss || boss.dead) { this._abort(boss); return; }
+
+        const _GS = BALANCE.boss.gravitationalSingularity;
+        this.timer -= dt;
+
+        // ── casting ──────────────────────────────────────────
+        if (this.phase === 'casting') {
+            if (this.timer <= 0) {
+                this.phase = 'active';
+                this.pulse = 'PULL';
+                this.pulseTimer = _GS.pullDur;
+                if (typeof addScreenShake === 'function') addScreenShake(30);
+                if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+                if (typeof spawnFloatingText === 'function' && player)
+                    spawnFloatingText('⚫ GRAVITATIONAL FIELD ACTIVE', player.x, player.y - 100, '#39ff14', 26);
+            }
+            return;
+        }
+
+        // ── ending ───────────────────────────────────────────
+        if (this.phase === 'ending') {
+            if (this.timer <= 0) {
+                this.phase = 'idle';
+                this.cooldownTimer = _GS.cooldown;
+                this._orbitals = [];
+                boss._domainCasting = false;
+                boss._domainActive = false;
+                if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.stateTimer = 0; }
+                // Give player a brief immunity window
+                if (player) {
+                    player._gsImmunity = 0.5;
+                    if (typeof spawnFloatingText === 'function')
+                        spawnFloatingText('FIELD COLLAPSED', player.x, player.y - 80, '#39ff14', 22);
+                }
+                if (window.UIManager)
+                    window.UIManager.showVoiceBubble('ยังยืนอยู่ได้... น่าทึ่ง', boss.x, boss.y - 50);
+                console.log('[GravitationalSingularity] Domain ended');
+            }
+            return;
+        }
+
+        // ── active ───────────────────────────────────────────
+        if (this.phase !== 'active') return;
+
+        // Player GS immunity tick
+        if (player && player._gsImmunity > 0) player._gsImmunity -= dt;
+
+        this.pulseTimer -= dt;
+
+        switch (this.pulse) {
+
+            // ── Pulse 1: PULL — constant gravity toward boss ──────────
+            case 'PULL': {
+                if (player && !player.dead) {
+                    const dx = boss.x - player.x, dy = boss.y - player.y;
+                    const d = Math.hypot(dx, dy);
+                    if (d > 0) {
+                        const f = _GS.pullForce * dt;
+                        player.vx = (player.vx || 0) + (dx / d) * f;
+                        player.vy = (player.vy || 0) + (dy / d) * f;
+                    }
+                }
+                // Bend player projectiles toward boss
+                if (typeof projectileManager !== 'undefined' && projectileManager.projectiles) {
+                    for (const p of projectileManager.projectiles) {
+                        if (!p || p.dead || p.team === 'enemy') continue;
+                        const pdx = boss.x - p.x, pdy = boss.y - p.y;
+                        const pd = Math.hypot(pdx, pdy);
+                        if (pd > 0 && pd < 600) {
+                            const pf = _GS.projPullForce * dt;
+                            p.vx = (p.vx || 0) + (pdx / pd) * pf;
+                            p.vy = (p.vy || 0) + (pdy / pd) * pf;
+                        }
+                    }
+                }
+                if (this.pulseTimer <= 0) this._nextPulse(boss, player, 'ESCAPE', _GS.escapeDur);
+                break;
+            }
+
+            // ── Pulse 2: ESCAPE — push outward; near boss = safe zone ─
+            case 'ESCAPE': {
+                if (player && !player.dead) {
+                    const dx = player.x - boss.x, dy = player.y - boss.y;
+                    const d = Math.hypot(dx, dy);
+                    // Outside safe radius → push away
+                    if (d > _GS.safeRadius && d > 0) {
+                        const f = _GS.pushForce * dt;
+                        player.vx = (player.vx || 0) + (dx / d) * f;
+                        player.vy = (player.vy || 0) + (dy / d) * f;
+                    } else if (d <= _GS.safeRadius && !player._gsSafeMsg) {
+                        // Inside safe zone — notify once
+                        player._gsSafeMsg = true;
+                        if (typeof spawnFloatingText === 'function')
+                            spawnFloatingText('⚫ SAFE ZONE', player.x, player.y - 55, '#39ff14', 20);
+                        setTimeout(() => { if (player) player._gsSafeMsg = false; }, 1500);
+                    }
+                }
+                // Boss teleports around arena and fires 3-way bursts
+                this._pulse2FireTimer -= dt;
+                if (this._pulse2FireTimer <= 0 && this._pulse2TeleportsDone < _GS.pulse2Teleports) {
+                    this._pulse2TeleportsDone++;
+                    this._pulse2FireTimer = _GS.pulse2FireCd;
+                    if (player) {
+                        // Teleport to random position near player at safe distance
+                        const tAngle = Math.random() * Math.PI * 2;
+                        const tDist = 180 + Math.random() * 120;
+                        boss.x = player.x + Math.cos(tAngle) * tDist;
+                        boss.y = player.y + Math.sin(tAngle) * tDist;
+                        // 3-way fire toward player
+                        const aimA = Math.atan2(player.y - boss.y, player.x - boss.x);
+                        if (typeof projectileManager !== 'undefined') {
+                            for (let i = -1; i <= 1; i++) {
+                                projectileManager.add(new Projectile(
+                                    boss.x, boss.y, aimA + i * 0.28, 520, 22, '#39ff14', false, 'enemy'
+                                ));
+                            }
+                        }
+                        if (typeof spawnParticles === 'function')
+                            spawnParticles(boss.x, boss.y, 15, '#39ff14');
+                        if (typeof addScreenShake === 'function') addScreenShake(6);
+                    }
+                }
+                if (this.pulseTimer <= 0) this._nextPulse(boss, player, 'TIDAL', _GS.tidalDur);
+                break;
+            }
+
+            // ── Pulse 3: TIDAL — oscillating pull/push + orbitals + zones ─
+            case 'TIDAL': {
+                const totalTidal = _GS.tidalDur;
+                const elapsed = totalTidal - this.pulseTimer;
+                const cycle = Math.sin((elapsed / _GS.tidalPeriod) * Math.PI * 2);
+                const force = cycle * _GS.tidalForce * dt;
+
+                if (player && !player.dead) {
+                    const dx = boss.x - player.x, dy = boss.y - player.y;
+                    const d = Math.hypot(dx, dy);
+                    if (d > 0) {
+                        player.vx = (player.vx || 0) + (dx / d) * force;
+                        player.vy = (player.vy || 0) + (dy / d) * force;
+                    }
+                }
+
+                // Spawn orbitals once at start
+                if (this._orbitals.length === 0) {
+                    const n = _GS.orbitalCount;
+                    for (let i = 0; i < n; i++) {
+                        this._orbitals.push(new OrbitalDebris(boss.x, boss.y, (i / n) * Math.PI * 2));
+                    }
+                    if (typeof spawnFloatingText === 'function')
+                        spawnFloatingText('⚫ ORBITAL DEBRIS!', boss.x, boss.y - 90, '#00ffff', 28);
+                }
+                // Update orbitals
+                for (const orb of this._orbitals) orb.update(dt, boss.x, boss.y, player);
+
+                // Drop PhysicsFormulaZones once in this pulse
+                if (!this._pulse3ZonesDone && elapsed > 1.0 && typeof PhysicsFormulaZone !== 'undefined') {
+                    this._pulse3ZonesDone = true;
+                    const n = _GS.pulse3ZoneCount;
+                    for (let i = 0; i < n; i++) {
+                        const zAngle = (i / n) * Math.PI * 2;
+                        const zDist = 160;
+                        if (player) {
+                            window.specialEffects.push(new PhysicsFormulaZone(
+                                player.x + Math.cos(zAngle) * zDist,
+                                player.y + Math.sin(zAngle) * zDist,
+                                110, 5.0, 15
+                            ));
+                        }
+                    }
+                    if (typeof spawnFloatingText === 'function' && player)
+                        spawnFloatingText('⚠ TIDAL EQUATIONS!', player.x, player.y - 100, '#e879f9', 24);
+                }
+
+                if (this.pulseTimer <= 0) this._nextPulse(boss, player, 'COLLAPSE', _GS.collapseDur);
+                break;
+            }
+
+            // ── Pulse 4: COLLAPSE — ramp pull + final shockwave ──────────
+            case 'COLLAPSE': {
+                const totalCollapse = _GS.collapseDur;
+                const elapsed = totalCollapse - this.pulseTimer;
+                const ramp = elapsed / totalCollapse;  // 0→1
+                const f = _GS.collapseForce * ramp * dt;
+
+                if (player && !player.dead) {
+                    const dx = boss.x - player.x, dy = boss.y - player.y;
+                    const d = Math.hypot(dx, dy);
+                    if (d > 0) {
+                        player.vx = (player.vx || 0) + (dx / d) * f;
+                        player.vy = (player.vy || 0) + (dy / d) * f;
+                    }
+                }
+
+                // Warn text once at start
+                if (!this._collapseWarnDone) {
+                    this._collapseWarnDone = true;
+                    if (typeof spawnFloatingText === 'function') {
+                        spawnFloatingText('⚫ SINGULARITY COLLAPSE!', boss.x, boss.y - 110, '#ef4444', 34);
+                        spawnFloatingText('DASH TO ESCAPE!', boss.x, boss.y - 148, '#fbbf24', 22);
+                    }
+                    // Reset player dash so they always have an escape tool
+                    if (player && player.cooldowns) player.cooldowns.dash = 0;
+                    if (typeof addScreenShake === 'function') addScreenShake(20);
+                    if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+                }
+
+                // Final shockwave at the very end
+                if (!this._collapseShockDone && this.pulseTimer <= 0.15) {
+                    this._collapseShockDone = true;
+                    // AoE damage
+                    if (player && !player.dead) {
+                        const d = Math.hypot(player.x - boss.x, player.y - boss.y);
+                        if (d < _GS.collapseRadius + player.radius) {
+                            const falloff = 1 - (d / _GS.collapseRadius) * 0.5;
+                            player.takeDamage(_GS.collapseDamage * falloff);
+                            spawnFloatingText('💥 COLLAPSE!', player.x, player.y - 60, '#ef4444', 30);
+                        }
+                    }
+                    if (typeof window.specialEffects !== 'undefined') {
+                        window.specialEffects.push(new ExpandingRing(boss.x, boss.y, '#39ff14', _GS.collapseRadius, 0.9));
+                        window.specialEffects.push(new ExpandingRing(boss.x, boss.y, '#00ffff', _GS.collapseRadius * 0.65, 0.7));
+                    }
+                    if (typeof spawnParticles === 'function') {
+                        spawnParticles(boss.x, boss.y, 60, '#39ff14');
+                        spawnParticles(boss.x, boss.y, 35, '#00ffff');
+                        spawnParticles(boss.x, boss.y, 20, '#ffffff');
+                    }
+                    if (typeof addScreenShake === 'function') addScreenShake(35);
+                    this._flashTimer = 0.18;
+                    this._flashColor = '#39ff14';
+                    if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+                }
+
+                if (this.pulseTimer <= 0) {
+                    // Domain ends
+                    const _GS2 = BALANCE.boss.gravitationalSingularity;
+                    this.phase = 'ending';
+                    this.timer = _GS2.endDur;
+                    this._orbitals = [];
+                    boss._domainCasting = false;
+                    if (typeof addScreenShake === 'function') addScreenShake(22);
+                    if (typeof spawnFloatingText === 'function' && player)
+                        spawnFloatingText('Domain Lifted', player.x, player.y - 90, '#39ff14', 26);
+                }
+                break;
+            }
+        }
+    },
+
+    draw(ctx) {
+        if (this.phase === 'idle' || !ctx) return;
+        if (typeof worldToScreen !== 'function') return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        const now = performance.now() / 1000;
+        const _GS = BALANCE.boss.gravitationalSingularity;
+
+        // Compute global alpha for fade in/out
+        let globalA = 1.0;
+        const castDur = _GS.castDur, endDur = _GS.endDur;
+        if (this.phase === 'casting') globalA = 1.0 - this.timer / castDur;
+        else if (this.phase === 'ending') globalA = this.timer / endDur;
+        globalA = Math.max(0, Math.min(1, globalA));
+
+        ctx.save();
+
+        // ── 1. Dark overlay — deep space feel ────────────────
+        ctx.globalAlpha = globalA * 0.72;
+        ctx.fillStyle = 'rgba(0,4,8,1)';
+        ctx.fillRect(0, 0, W, H);
+
+        // ── 2. Physics char rain (green palette) ─────────────
+        ctx.font = '11px "Courier New",monospace';
+        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+        for (const col of this._rain) {
+            const cx = col.xNorm * W, charH = 14;
+            for (let i = 0; i < col.chars.length; i++) {
+                const rawY = ((now * col.speed * H * 0.20 + col.offsetY + i * charH))
+                    % (H + charH * col.chars.length) - charH * 4;
+                const fade = 1.0 - i / col.chars.length;
+                ctx.globalAlpha = globalA * col.alpha * fade;
+                if (i === 0) { ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 8; ctx.shadowColor = '#39ff14'; }
+                else if (i < 3) { ctx.fillStyle = '#39ff14'; ctx.shadowBlur = 4; ctx.shadowColor = '#39ff14'; }
+                else { ctx.fillStyle = '#00ffff'; ctx.shadowBlur = 0; }
+                ctx.fillText(col.chars[i], cx, rawY);
+            }
+        }
+        ctx.shadowBlur = 0;
+
+        // ── 3. Singularity point — black circle at boss ───────
+        if ((this.phase === 'active' || this.phase === 'ending') && window.boss) {
+            const bsc = worldToScreen(window.boss.x, window.boss.y);
+            const pulse = 0.5 + Math.sin(now * 3.5) * 0.5;
+            const singR = 28 + pulse * 8;
+
+            // Lensing rings
+            for (let ri = 0; ri < 4; ri++) {
+                const rp = (ri + now * 0.6) % 4 / 4;
+                const rr = singR * (1.5 + rp * 3.5);
+                const ra = (1 - rp) * 0.55 * globalA;
+                ctx.globalAlpha = ra;
+                ctx.strokeStyle = ri % 2 === 0 ? '#39ff14' : '#00ffff';
+                ctx.lineWidth = 2.5 - ri * 0.5;
+                ctx.shadowBlur = 14; ctx.shadowColor = '#39ff14';
+                ctx.beginPath(); ctx.arc(bsc.x, bsc.y, rr, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // Black hole core
+            ctx.globalAlpha = globalA * 0.95;
+            const coreG = ctx.createRadialGradient(bsc.x, bsc.y, 0, bsc.x, bsc.y, singR);
+            coreG.addColorStop(0, '#000000');
+            coreG.addColorStop(0.55, '#001a00');
+            coreG.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = coreG;
+            ctx.beginPath(); ctx.arc(bsc.x, bsc.y, singR * 1.3, 0, Math.PI * 2); ctx.fill();
+
+            // Event horizon ring
+            ctx.globalAlpha = globalA * (0.7 + pulse * 0.3);
+            ctx.strokeStyle = '#39ff14';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 24; ctx.shadowColor = '#39ff14';
+            ctx.beginPath(); ctx.arc(bsc.x, bsc.y, singR, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // ── 4. Pulse-specific overlays ────────────────────────
+        if (this.phase === 'active' && window.boss && window.player) {
+            const bsc = worldToScreen(window.boss.x, window.boss.y);
+            const psc = worldToScreen(window.player.x, window.player.y);
+
+            if (this.pulse === 'PULL') {
+                // Gravity lines from player toward boss
+                const lineCount = 8;
+                for (let li = 0; li < lineCount; li++) {
+                    const lAngle = (li / lineCount) * Math.PI * 2 + now * 0.4;
+                    const lDist = 80 + li * 20;
+                    const lx = psc.x + Math.cos(lAngle) * lDist;
+                    const ly = psc.y + Math.sin(lAngle) * lDist;
+                    const dx = bsc.x - lx, dy = bsc.y - ly;
+                    const ld = Math.hypot(dx, dy);
+                    if (ld < 5) continue;
+                    const endX = lx + (dx / ld) * Math.min(ld, 55);
+                    const endY = ly + (dy / ld) * Math.min(ld, 55);
+                    ctx.globalAlpha = globalA * 0.35;
+                    ctx.strokeStyle = '#39ff14';
+                    ctx.lineWidth = 1.2;
+                    ctx.setLineDash([6, 5]);
+                    ctx.lineDashOffset = -(now * 60) % 11;
+                    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(endX, endY); ctx.stroke();
+                    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+                }
+                // PULL HUD label
+                ctx.globalAlpha = globalA * 0.80;
+                ctx.font = 'bold 12px "Orbitron",Arial';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#39ff14';
+                ctx.shadowBlur = 8; ctx.shadowColor = '#39ff14';
+                ctx.fillText('⚫ GRAVITATIONAL PULL', W / 2, 28);
+                ctx.shadowBlur = 0;
+            }
+
+            if (this.pulse === 'ESCAPE') {
+                // Safe zone circle around boss
+                const edgeSS = worldToScreen(window.boss.x + _GS.safeRadius, window.boss.y);
+                const rSS = Math.abs(edgeSS.x - bsc.x);
+                const sp = 0.5 + Math.sin(now * 4) * 0.5;
+                ctx.globalAlpha = globalA * (0.25 + sp * 0.20);
+                ctx.fillStyle = 'rgba(57,255,20,0.15)';
+                ctx.beginPath(); ctx.arc(bsc.x, bsc.y, rSS, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = globalA * (0.55 + sp * 0.40);
+                ctx.strokeStyle = '#39ff14';
+                ctx.lineWidth = 2.5;
+                ctx.shadowBlur = 16; ctx.shadowColor = '#39ff14';
+                ctx.setLineDash([8, 5]);
+                ctx.beginPath(); ctx.arc(bsc.x, bsc.y, rSS, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]); ctx.shadowBlur = 0;
+                // SAFE ZONE label near boss
+                ctx.globalAlpha = globalA * 0.85;
+                ctx.font = 'bold 10px "Orbitron",Arial';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#39ff14';
+                ctx.fillText('SAFE', bsc.x, bsc.y + rSS + 14);
+
+                // ESCAPE HUD label
+                ctx.globalAlpha = globalA * 0.80;
+                ctx.font = 'bold 12px "Orbitron",Arial';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowBlur = 8; ctx.shadowColor = '#00ffff';
+                ctx.fillText('⚡ ESCAPE VELOCITY — APPROACH BOSS!', W / 2, 28);
+                ctx.shadowBlur = 0;
+            }
+
+            if (this.pulse === 'TIDAL') {
+                // Tidal force direction hint (arrow pulsing pull/push)
+                const totalTidal = _GS.tidalDur;
+                const elapsed = totalTidal - this.pulseTimer;
+                const cycle = Math.sin((elapsed / _GS.tidalPeriod) * Math.PI * 2);
+                const isPull = cycle > 0;
+                ctx.globalAlpha = globalA * 0.75;
+                ctx.font = 'bold 12px "Orbitron",Arial';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#e879f9';
+                ctx.shadowBlur = 8; ctx.shadowColor = '#e879f9';
+                ctx.fillText(isPull ? '⚫ TIDAL — PULLING' : '⚡ TIDAL — PUSHING', W / 2, 28);
+                ctx.shadowBlur = 0;
+
+                // Draw orbital debris
+                for (const orb of this._orbitals) orb.draw();
+            }
+
+            if (this.pulse === 'COLLAPSE') {
+                // Red vignette ramp
+                const totalCollapse = _GS.collapseDur;
+                const elapsed = totalCollapse - this.pulseTimer;
+                const ramp = elapsed / totalCollapse;
+                ctx.globalAlpha = globalA * ramp * 0.45;
+                ctx.fillStyle = 'rgba(200,0,0,1)';
+                ctx.fillRect(0, 0, W, H);
+
+                // Concentric warning rings
+                ctx.globalAlpha = globalA * 0.55;
+                const edgeSS = worldToScreen(window.boss.x + _GS.collapseRadius, window.boss.y);
+                const colRSS = Math.abs(edgeSS.x - bsc.x);
+                for (let i = 0; i < 3; i++) {
+                    const rr = colRSS * (0.35 + i * 0.32);
+                    const cp = (now * 1.5 + i * 0.5) % 1;
+                    ctx.globalAlpha = globalA * (1 - cp) * 0.55;
+                    ctx.strokeStyle = i === 0 ? '#ef4444' : '#39ff14';
+                    ctx.lineWidth = 2 - i * 0.4;
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#ef4444';
+                    ctx.beginPath(); ctx.arc(bsc.x, bsc.y, rr, 0, Math.PI * 2); ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.globalAlpha = globalA * 0.85;
+                ctx.font = 'bold 14px "Orbitron",Arial';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowBlur = 12; ctx.shadowColor = '#ef4444';
+                ctx.fillText('⚫ SINGULARITY COLLAPSE — DASH!', W / 2, 28);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // ── 5. Full-screen hit flash ──────────────────────────
+        if (this._flashTimer > 0) {
+            ctx.globalAlpha = Math.min(this._flashTimer / 0.18, 1.0) * 0.50;
+            ctx.fillStyle = this._flashColor;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        // ── 6. Slow debuff HUD (reuse existing pattern) ──────
+        if (typeof window !== 'undefined' && window.player && window.player._formulaSlowActive) {
+            const sp = 0.5 + Math.sin(now * 6) * 0.5;
+            ctx.globalAlpha = globalA * 0.22 * sp;
+            ctx.fillStyle = '#39ff14';
+            ctx.fillRect(0, 0, W, H);
+            ctx.globalAlpha = globalA * (0.55 + sp * 0.35);
+            ctx.font = 'bold 14px "Orbitron",Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            ctx.fillStyle = '#a3e635';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#39ff14';
+            ctx.fillText('⚫ SLOW FIELD', W / 2, 12);
+            ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+    },
+
+    _nextPulse(boss, player, nextPulse, duration) {
+        this.pulse = nextPulse;
+        this.pulseTimer = duration;
+        // Reset per-pulse state
+        this._pulse2FireTimer = 0;
+        this._pulse2TeleportsDone = 0;
+        this._pulse3ZonesDone = false;
+        this._collapseWarnDone = false;
+        this._collapseShockDone = false;
+
+        const labels = {
+            ESCAPE: ['⚡ ESCAPE VELOCITY!', 'GO NEAR THE BOSS!', '#00ffff'],
+            TIDAL: ['〰 TIDAL FORCE!', 'BRACE FOR OSCILLATION', '#e879f9'],
+            COLLAPSE: ['⚫ SINGULARITY COLLAPSE!', 'DASH TO ESCAPE!', '#ef4444'],
+        };
+        if (labels[nextPulse] && typeof spawnFloatingText === 'function' && player) {
+            const [title, sub, col] = labels[nextPulse];
+            spawnFloatingText(title, player.x, player.y - 110, col, 30);
+            setTimeout(() => {
+                if (typeof spawnFloatingText === 'function' && player)
+                    spawnFloatingText(sub, player.x, player.y - 148, '#fbbf24', 20);
+            }, 500);
+        }
+        if (typeof addScreenShake === 'function') addScreenShake(12);
+        if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+    },
+
+    _initRain() {
+        const POOL = '0123456789FvamgEtωρABCΔΩΣΨFmav∫∂∇+-×÷=≤≥';
+        const rainChar = () => POOL[Math.floor(Math.random() * POOL.length)];
+        this._rain = [];
+        for (let i = 0; i < 32; i++) {
+            const len = 7 + Math.floor(Math.random() * 9);
+            this._rain.push({
+                xNorm: Math.random(),
+                offsetY: Math.random() * 600,
+                speed: 0.5 + Math.random() * 0.8,
+                alpha: 0.20 + Math.random() * 0.30,
+                chars: Array.from({ length: len }, rainChar),
+            });
+        }
+    },
+
+    _abort(boss) {
+        this.phase = 'idle'; this.cooldownTimer = 0;
+        this._orbitals = []; this._flashTimer = 0;
+        if (boss) { boss._domainCasting = false; boss._domainActive = false; }
+        console.log('[GravitationalSingularity] Aborted — boss dead');
+    },
+};
+
+window.GravitationalSingularity = GravitationalSingularity;
+window.OrbitalDebris = OrbitalDebris;
+
+// ════════════════════════════════════════════════════════════
+// 🖊️ CHALK WALL — KruManop Phase 2 ground hazard
+//
+//    A pair of chalk lines drawn perpendicular to the boss→player
+//    vector, forming a "wall" the player must dodge.
+//    Persists on the ground for chalkWallDuration seconds.
+//    Contact damage fires once per crossing (hit cooldown 0.8s).
+//
+//    update(dt, player) → returns true when expired (dead)
+//    draw()             → draws world-space line with glow + formula text
+// ════════════════════════════════════════════════════════════
+class ChalkWall {
+    /**
+     * @param {number} cx    world centre X (midpoint of wall)
+     * @param {number} cy    world centre Y
+     * @param {number} angle perpendicular angle to boss→player direction
+     */
+    constructor(cx, cy, angle) {
+        const P2 = BALANCE.boss.phase2;
+        this.cx = cx;
+        this.cy = cy;
+        this.angle = angle;          // wall runs perpendicular to this angle
+        this.length = P2.chalkWallLength ?? 340;
+        this.damage = P2.chalkWallDamage ?? 15;
+        this.duration = P2.chalkWallDuration ?? 6.0;
+        this.timer = 0;
+        this.dead = false;
+        this._hitCd = 0;             // per-player crossing cooldown
+
+        // Pre-seed visual — no Math.random() in draw()
+        this._formula = ['∑Δx²=0', 'y=mx+b', 'dy/dx=m', '∫f(x)dx', 'Ax+By=C'][
+            Math.floor(Math.abs(Math.sin(cx * 0.05 + cy * 0.07)) * 5)
+        ];
+        this._dashSeed = (cx * 31 + cy * 17) % 7; // deterministic dash offset
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+        if (this._hitCd > 0) this._hitCd -= dt;
+
+        if (this.timer >= this.duration) { this.dead = true; return true; }
+
+        // Broad-phase: only check if player is roughly near the wall centre
+        if (!player || player.dead) return false;
+        const nearDist = this.length * 0.65;
+        const dcx = Math.abs(player.x - this.cx), dcy = Math.abs(player.y - this.cy);
+        if (dcx > nearDist && dcy > nearDist) return false;
+
+        // Project player onto wall normal to get signed distance from wall line
+        const perpAng = this.angle + Math.PI / 2;   // wall runs along perpAng
+        const dxP = player.x - this.cx, dyP = player.y - this.cy;
+        // Distance along wall normal (positive = one side, negative = other)
+        const normalDist = dxP * Math.cos(this.angle) + dyP * Math.sin(this.angle);
+        // Distance along wall direction (to check if player is within wall length)
+        const tangentDist = Math.abs(dxP * Math.cos(perpAng) + dyP * Math.sin(perpAng));
+
+        if (Math.abs(normalDist) < player.radius + 8 &&
+            tangentDist < this.length * 0.5 &&
+            this._hitCd <= 0) {
+            player.takeDamage(this.damage);
+            this._hitCd = 0.8;
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText('CHALK WALL!', player.x, player.y - 50, '#fef9c3', 20);
+            if (typeof addScreenShake === 'function') addScreenShake(5);
+        }
+        return false;
+    }
+
+    draw() {
+        if (this.dead || typeof CTX === 'undefined' || typeof worldToScreen !== 'function') return;
+
+        const prog = this.timer / this.duration;
+        const alpha = prog < 0.12 ? prog / 0.12                   // fade in
+            : prog > 0.75 ? 1 - (prog - 0.75) / 0.25     // fade out
+                : 1.0;
+        const perpAng = this.angle + Math.PI / 2;
+        const halfLen = this.length * 0.5;
+        const x1w = this.cx + Math.cos(perpAng) * halfLen;
+        const y1w = this.cy + Math.sin(perpAng) * halfLen;
+        const x2w = this.cx - Math.cos(perpAng) * halfLen;
+        const y2w = this.cy - Math.sin(perpAng) * halfLen;
+
+        const s1 = worldToScreen(x1w, y1w);
+        const s2 = worldToScreen(x2w, y2w);
+        const sc = worldToScreen(this.cx, this.cy);
+        const now = performance.now() / 1000;
+
+        CTX.save();
+
+        // ── Chalk glow underglow ──────────────────────────────
+        CTX.globalAlpha = alpha * 0.22;
+        CTX.strokeStyle = '#fef9c3';
+        CTX.lineWidth = 18;
+        CTX.shadowBlur = 24; CTX.shadowColor = '#fef9c3';
+        CTX.lineCap = 'round';
+        CTX.beginPath(); CTX.moveTo(s1.x, s1.y); CTX.lineTo(s2.x, s2.y); CTX.stroke();
+        CTX.shadowBlur = 0;
+
+        // ── Main chalk line — dashed ──────────────────────────
+        CTX.globalAlpha = alpha * 0.92;
+        CTX.strokeStyle = '#fffbeb';
+        CTX.lineWidth = 4;
+        CTX.setLineDash([18, 8]);
+        CTX.lineDashOffset = -(now * 28 + this._dashSeed * 3) % 26;
+        CTX.shadowBlur = 12; CTX.shadowColor = '#fef9c3';
+        CTX.beginPath(); CTX.moveTo(s1.x, s1.y); CTX.lineTo(s2.x, s2.y); CTX.stroke();
+        CTX.setLineDash([]); CTX.lineDashOffset = 0; CTX.shadowBlur = 0;
+
+        // ── Tick marks at endpoints ───────────────────────────
+        CTX.globalAlpha = alpha * 0.70;
+        CTX.strokeStyle = '#fef08a'; CTX.lineWidth = 2.5;
+        const tickLen = 10;
+        for (const [sx, sy] of [[s1.x, s1.y], [s2.x, s2.y]]) {
+            CTX.beginPath();
+            CTX.moveTo(sx + Math.cos(this.angle) * tickLen, sy + Math.sin(this.angle) * tickLen);
+            CTX.lineTo(sx - Math.cos(this.angle) * tickLen, sy - Math.sin(this.angle) * tickLen);
+            CTX.stroke();
+        }
+
+        // ── Formula label at midpoint ─────────────────────────
+        CTX.globalAlpha = alpha * (0.55 + Math.sin(now * 2.8) * 0.28);
+        CTX.font = 'bold 13px "Courier New",monospace';
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.fillStyle = '#fef9c3';
+        CTX.shadowBlur = 8; CTX.shadowColor = '#fbbf24';
+        CTX.fillText(this._formula, sc.x, sc.y - 14);
+        CTX.shadowBlur = 0;
+
+        // ── Remaining-time arc ────────────────────────────────
+        const arcR = 7;
+        CTX.globalAlpha = alpha * 0.55;
+        CTX.strokeStyle = '#fef9c3'; CTX.lineWidth = 2;
+        CTX.beginPath();
+        CTX.arc(sc.x, sc.y, arcR, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - prog));
+        CTX.stroke();
+
+        CTX.restore();
+    }
+}
+
+window.ChalkWall = ChalkWall;
+
+// ════════════════════════════════════════════════════════════
+// 🌀 GRAVITY WELL — KruFirst Derivation Mode hazard
+//
+//    A pull/push field placed between boss and player.
+//    Bends player velocity + all enemy projectiles toward centre.
+//    Radius 80px, duration 4s.
+//
+//    update(dt, player) → true when expired
+//    draw()             → concentric rings + distortion lines
+// ════════════════════════════════════════════════════════════
+class GravityWell {
+    /**
+     * @param {number} x       world centre X
+     * @param {number} y       world centre Y
+     * @param {number} radius  influence radius (px)
+     * @param {number} duration seconds active
+     * @param {number} force   pull force px/s on player
+     * @param {number} projForce pull force px/s on projectiles
+     */
+    constructor(x, y, radius = 80, duration = 4.0, force = 90, projForce = 55) {
+        this.x = x; this.y = y;
+        this.radius = radius;
+        this.duration = duration;
+        this.force = force;
+        this.projForce = projForce;
+        this.timer = 0;
+        this.dead = false;
+        // Pre-seed visual — no Math.random() in draw()
+        this._ringSeeds = [x * 0.13 + y * 0.07, x * 0.09 - y * 0.11, x * 0.17 + y * 0.03];
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+        if (this.timer >= this.duration) { this.dead = true; return true; }
+
+        // ── Pull player if within radius ─────────────────────
+        if (player && !player.dead) {
+            const pdx = this.x - player.x, pdy = this.y - player.y;
+            const pd = Math.hypot(pdx, pdy);
+            if (pd > 0 && pd < this.radius) {
+                const strength = this.force * (1.0 - pd / this.radius);
+                player.vx += (pdx / pd) * strength * dt;
+                player.vy += (pdy / pd) * strength * dt;
+            }
+        }
+
+        // ── Bend player projectiles ───────────────────────────
+        if (typeof projectileManager !== 'undefined') {
+            const projs = projectileManager.getAll
+                ? projectileManager.getAll()
+                : (projectileManager.list || []);
+            for (const p of projs) {
+                if (!p || p.dead || p.team !== 'player') continue;
+                const pdx = this.x - p.x, pdy = this.y - p.y;
+                const pd = Math.hypot(pdx, pdy);
+                if (pd > 0 && pd < this.radius * 1.5) {
+                    const strength = this.projForce * (1.0 - pd / (this.radius * 1.5));
+                    p.vx += (pdx / pd) * strength * dt;
+                    p.vy += (pdy / pd) * strength * dt;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    draw() {
+        if (this.dead || typeof CTX === 'undefined' || typeof worldToScreen !== 'function') return;
+        const sc = worldToScreen(this.x, this.y);
+        const prog = this.timer / this.duration;
+        const alpha = prog < 0.1 ? prog / 0.1 : prog > 0.8 ? 1 - (prog - 0.8) / 0.2 : 1.0;
+        const now = performance.now() / 1000;
+        const pulse = 0.55 + Math.sin(now * 5.5) * 0.45;
+
+        // Approximate screen radius (world→screen scale)
+        const edgeSS = worldToScreen(this.x + this.radius, this.y);
+        const rSS = Math.abs(edgeSS.x - sc.x);
+
+        CTX.save();
+
+        // ── Outer glow fill ───────────────────────────────────
+        const grd = CTX.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, rSS);
+        grd.addColorStop(0, `rgba(16,185,129,${alpha * 0.35})`);
+        grd.addColorStop(0.6, `rgba(6,182,212,${alpha * 0.12})`);
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        CTX.fillStyle = grd;
+        CTX.beginPath(); CTX.arc(sc.x, sc.y, rSS, 0, Math.PI * 2); CTX.fill();
+
+        // ── Concentric pull rings (3) ─────────────────────────
+        for (let ri = 0; ri < 3; ri++) {
+            const rFrac = (((now * (0.8 + ri * 0.3) + this._ringSeeds[ri]) % 1.0) + 1.0) % 1.0;
+            // Rings animate inward (toward centre)
+            const rr = rSS * (1.0 - rFrac);
+            if (rr < 2) continue;
+            CTX.globalAlpha = alpha * (1.0 - rFrac) * (0.7 - ri * 0.15);
+            CTX.strokeStyle = ri === 0 ? '#10b981' : '#06b6d4';
+            CTX.lineWidth = 2.0 - ri * 0.5;
+            CTX.shadowBlur = 10 - ri * 2; CTX.shadowColor = '#10b981';
+            CTX.beginPath(); CTX.arc(sc.x, sc.y, rr, 0, Math.PI * 2); CTX.stroke();
+            CTX.shadowBlur = 0;
+        }
+
+        // ── Inward arrow lines (6 directions) ────────────────
+        CTX.globalAlpha = alpha * pulse * 0.55;
+        CTX.strokeStyle = '#34d399'; CTX.lineWidth = 1.5;
+        for (let ai = 0; ai < 6; ai++) {
+            const ang = (ai / 6) * Math.PI * 2 + now * 0.6;
+            const startR = rSS * 0.85;
+            const endR = rSS * 0.25;
+            CTX.beginPath();
+            CTX.moveTo(sc.x + Math.cos(ang) * startR, sc.y + Math.sin(ang) * startR);
+            CTX.lineTo(sc.x + Math.cos(ang) * endR, sc.y + Math.sin(ang) * endR);
+            CTX.stroke();
+            // Arrowhead
+            const hx = sc.x + Math.cos(ang) * endR;
+            const hy = sc.y + Math.sin(ang) * endR;
+            const perp = ang + Math.PI / 2;
+            CTX.beginPath();
+            CTX.moveTo(hx, hy);
+            CTX.lineTo(hx + Math.cos(ang + 2.4) * 7, hy + Math.sin(ang + 2.4) * 7);
+            CTX.moveTo(hx, hy);
+            CTX.lineTo(hx + Math.cos(ang - 2.4) * 7, hy + Math.sin(ang - 2.4) * 7);
+            CTX.stroke();
+        }
+
+        // ── Centre singularity dot ────────────────────────────
+        CTX.globalAlpha = alpha * (0.7 + pulse * 0.3);
+        CTX.fillStyle = '#ffffff';
+        CTX.shadowBlur = 20 * pulse; CTX.shadowColor = '#10b981';
+        CTX.beginPath(); CTX.arc(sc.x, sc.y, 4 + pulse * 3, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // ── Remaining-time arc ────────────────────────────────
+        CTX.globalAlpha = alpha * 0.45;
+        CTX.strokeStyle = '#34d399'; CTX.lineWidth = 2;
+        CTX.beginPath();
+        CTX.arc(sc.x, sc.y, rSS + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - prog));
+        CTX.stroke();
+
+        CTX.restore();
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// 👻 SUPERPOSITION CLONE — KruFirst Derivation Mode phantom
+//
+//    A phantom copy of KruFirst. 1 HP, fires projectiles like
+//    the real boss. Player must destroy it or take sustained fire.
+//    Does NOT deal contact damage. Dies to 1 hit.
+//
+//    update(dt, player) → true when dead/expired
+//    draw(ctx)          → ghost rendering of KruFirst silhouette
+// ════════════════════════════════════════════════════════════
+class SuperpositionClone {
+    /**
+     * @param {number} x      spawn X (world)
+     * @param {number} y      spawn Y (world)
+     * @param {number} duration seconds before vanishing
+     * @param {boolean} isAdvanced  mirror boss advanced state
+     */
+    constructor(x, y, duration = 3.0, isAdvanced = false) {
+        this.x = x; this.y = y;
+        this.duration = duration;
+        this.isAdvanced = isAdvanced;
+        this.timer = 0;
+        this.dead = false;
+        this.hp = 1;
+        this.radius = (BALANCE.boss.radius ?? 38) * 0.88;
+        this._fireCd = 1.0;    // time until first shot
+        this._fireInterval = isAdvanced ? 1.1 : 1.5;
+        // Pre-seed angle offset so it doesn't mirror exact boss shots
+        this._angleOffset = (x * 0.031 + y * 0.017) % (Math.PI * 2);
+    }
+
+    takeDamage() {
+        this.hp = 0;
+        this.dead = true;
+        if (typeof spawnParticles === 'function') spawnParticles(this.x, this.y, 20, '#06b6d4');
+        if (typeof spawnFloatingText === 'function') spawnFloatingText('CLONE DESTROYED!', this.x, this.y - 55, '#00ffff', 22);
+        if (typeof addScreenShake === 'function') addScreenShake(6);
+    }
+
+    update(dt, player) {
+        if (this.dead) return true;
+        this.timer += dt;
+        if (this.timer >= this.duration) { this.dead = true; return true; }
+
+        this._fireCd -= dt;
+
+        if (!player || player.dead) return false;
+
+        // Rotate to face player
+        const dx = player.x - this.x, dy = player.y - this.y;
+        this.angle = Math.atan2(dy, dx);
+
+        // Fire toward player
+        if (this._fireCd <= 0 && typeof projectileManager !== 'undefined') {
+            this._fireCd = this._fireInterval;
+            const spd = 420;
+            const dmg = this.isAdvanced ? 16 : 12;
+            // 2-way spread (weaker than real boss)
+            for (const spread of [-0.15, 0.15]) {
+                projectileManager.add(new Projectile(
+                    this.x, this.y, this.angle + spread + this._angleOffset * 0.05,
+                    spd, dmg, '#06b6d4', false, 'enemy'
+                ));
+            }
+            if (typeof spawnParticles === 'function') spawnParticles(this.x, this.y, 4, '#06b6d4');
+        }
+
+        // Projectile hit detection (player's bullets)
+        if (typeof projectileManager !== 'undefined') {
+            const projs = projectileManager.getAll
+                ? projectileManager.getAll()
+                : (projectileManager.list || []);
+            for (const p of projs) {
+                if (!p || p.dead || p.team !== 'player') continue;
+                if (Math.hypot(p.x - this.x, p.y - this.y) < this.radius + (p.radius ?? 8)) {
+                    p.dead = true;
+                    this.takeDamage();
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    draw() {
+        if (this.dead || typeof CTX === 'undefined' || typeof worldToScreen !== 'function') return;
+        const sc = worldToScreen(this.x, this.y);
+        const prog = this.timer / this.duration;
+        const alpha = prog < 0.12 ? prog / 0.12 : prog > 0.80 ? 1 - (prog - 0.80) / 0.20 : 1.0;
+        const now = performance.now() / 1000;
+        const flicker = 0.55 + Math.sin(now * 14 + this._angleOffset) * 0.45;
+        const r = this.radius;
+
+        CTX.save();
+        CTX.translate(sc.x, sc.y);
+        CTX.globalAlpha = alpha * flicker * 0.70;
+
+        // ── Ghost silhouette of KruFirst body ─────────────────
+        // Simplified cyan ghost — no per-frame random
+        CTX.shadowBlur = 22; CTX.shadowColor = '#06b6d4';
+
+        // Body circle
+        CTX.strokeStyle = '#00ffff'; CTX.lineWidth = 2.5;
+        CTX.beginPath(); CTX.arc(0, 0, r, 0, Math.PI * 2); CTX.stroke();
+
+        // Lab coat outline (cross shape)
+        CTX.strokeStyle = '#67e8f9'; CTX.lineWidth = 1.5;
+        CTX.beginPath();
+        CTX.moveTo(-r * 0.5, -r * 0.3); CTX.lineTo(-r * 0.5, r * 0.6);
+        CTX.moveTo(r * 0.5, -r * 0.3); CTX.lineTo(r * 0.5, r * 0.6);
+        CTX.moveTo(-r * 0.5, -r * 0.3); CTX.lineTo(r * 0.5, -r * 0.3);
+        CTX.stroke();
+
+        // Head
+        CTX.beginPath(); CTX.arc(0, -r * 0.55, r * 0.32, 0, Math.PI * 2); CTX.stroke();
+
+        // ψ (Quantum superposition symbol) at centre
+        CTX.shadowBlur = 0;
+        CTX.globalAlpha = alpha * (0.6 + Math.sin(now * 8) * 0.4);
+        CTX.font = `bold ${Math.max(12, r * 0.55)}px serif`;
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.fillStyle = '#00ffff';
+        CTX.shadowBlur = 12; CTX.shadowColor = '#06b6d4';
+        CTX.fillText('ψ', 0, 0);
+        CTX.shadowBlur = 0;
+
+        // ── Remaining-time arc ────────────────────────────────
+        CTX.globalAlpha = alpha * 0.40;
+        CTX.strokeStyle = '#06b6d4'; CTX.lineWidth = 2;
+        CTX.beginPath();
+        CTX.arc(0, 0, r + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - prog));
+        CTX.stroke();
+
+        CTX.restore();
+    }
+}
+
+window.GravityWell = GravityWell;
+window.SuperpositionClone = SuperpositionClone;

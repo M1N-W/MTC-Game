@@ -273,9 +273,18 @@ class KruManop extends BossBase {
         this.phase = 1;
         this.enablePhase2 = enablePhase2;
         this.enablePhase3 = enablePhase3;
+
+        // ── Per-encounter phase thresholds ────────────────────
+        // enc 1 (wave 3): phase2 at 50% — guaranteed dog encounter
+        // enc 3 (wave 9): phase2 at 60%  phase3 at 30%
+        // enc 5 (wave 15): phase2 at 65% phase3 at 35%
+        const enc = difficulty;   // difficulty == bossLevel == encounter index (1-based Manop)
+        const p2t = BALANCE.boss.phase2ThresholdByEnc;
+        const p3t = BALANCE.boss.phase3ThresholdByEnc;
+        this._phase2Threshold = (p2t && p2t[enc] != null) ? p2t[enc] : BALANCE.boss.phase2Threshold;
+        this._phase3Threshold = (p3t && p3t[enc] != null) ? p3t[enc] : (BALANCE.boss.phase3Threshold ?? 0.25);
+
         // Phase 2 sub-unit: BossDog is conceptually part of KruManop.
-        // this.dog holds the live BossDog instance (null before summon / after death).
-        // Access: this.dog?.dead  ← check if dog is still alive
         this.dog = null;
 
         this.skills = {
@@ -287,6 +296,9 @@ class KruManop extends BossBase {
             bubble: { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown },
             matrixGrid: { cd: 0, max: 22.0 },
             domain: { cd: 0, max: _DC ? _DC.COOLDOWN : 45.0 },
+            // ── Phase 2 new skills ────────────────────────────
+            chalkWall: { cd: 0, max: BALANCE.boss.phase2.chalkWallCooldown ?? 12.0 },
+            dogPack: { cd: 0, max: BALANCE.boss.phase2.dogPackCooldown ?? 18.0 },
         };
         this._domainCasting = false;
         this._domainActive = false;
@@ -296,6 +308,12 @@ class KruManop extends BossBase {
         this.log457AttackBonus = 0;
         this.isInvulnerable = false;
         this.isEnraged = false;
+
+        // ── DogPackCombo state ────────────────────────────────
+        // Set true while the combo sequence is animating.
+        // KruManop freezes briefly, then simultaneous dog rush + ultimate fires.
+        this._dogPackActive = false;
+        this._dogPackTimer = 0;
     }
 
     update(dt, player) {
@@ -314,7 +332,7 @@ class KruManop extends BossBase {
         }
 
         // ── Phase 2 transition ───────────────────────────────
-        if (this.hp < this.maxHp * BALANCE.boss.phase2Threshold && this.phase === 1 && this.enablePhase2) {
+        if (this.hp < this.maxHp * this._phase2Threshold && this.phase === 1 && this.enablePhase2) {
             this.phase = 2;
             this.isEnraged = true;
             this.moveSpeed = BALANCE.boss.moveSpeed * BALANCE.boss.phase2.enrageSpeedMult;
@@ -330,7 +348,7 @@ class KruManop extends BossBase {
         }
 
         // ── Phase 3 transition — "The Goldfish Lover" ────────
-        if (this.hp < this.maxHp * BALANCE.boss.phase3Threshold && this.phase === 2 && this.enablePhase3) {
+        if (this.hp < this.maxHp * this._phase3Threshold && this.phase === 2 && this.enablePhase3) {
             this.phase = 3;
             this.moveSpeed = BALANCE.boss.moveSpeed
                 * BALANCE.boss.phase2.enrageSpeedMult
@@ -380,6 +398,50 @@ class KruManop extends BossBase {
                 this.speak('You cannot escape my bubbles!');
                 Audio.playBossSpecial();
             }
+        }
+
+        // ── DogPackCombo sequence ─────────────────────────────
+        // Phase: 0.0–0.5s  boss freezes + telegraph
+        //        0.5–1.1s  dog rushes player + boss fires ultimate simultaneously
+        if (this._dogPackActive) {
+            this._dogPackTimer += dt;
+            this.vx = 0; this.vy = 0;
+            if (this._dogPackTimer >= 0.5 && !this._dogPackFired) {
+                this._dogPackFired = true;
+                // Dog gets a direct velocity impulse toward player
+                if (this.dog && !this.dog.dead) {
+                    const ddx = player.x - this.dog.x, ddy = player.y - this.dog.y;
+                    const dd = Math.hypot(ddx, ddy);
+                    if (dd > 0) {
+                        this.dog.vx = (ddx / dd) * 620;
+                        this.dog.vy = (ddy / dd) * 620;
+                    }
+                    spawnFloatingText('🐕 PACK RUSH!', this.dog.x, this.dog.y - 60, '#d97706', 24);
+                }
+                // Boss fires radial ultimate simultaneously
+                const bullets = BALANCE.boss.phase2UltimateBullets;
+                for (let i = 0; i < bullets; i++) {
+                    const a = (Math.PI * 2 / bullets) * i;
+                    projectileManager.add(new Projectile(
+                        this.x, this.y, a,
+                        BALANCE.boss.ultimateProjectileSpeed, BALANCE.boss.ultimateDamage * 0.85,
+                        '#ef4444', true, 'enemy'
+                    ));
+                }
+                if (typeof window.specialEffects !== 'undefined') {
+                    window.specialEffects.push(new ExpandingRing(this.x, this.y, '#d97706', 260, 0.5));
+                }
+                addScreenShake(18);
+                Audio.playBossSpecial();
+            }
+            if (this._dogPackTimer >= 1.2) {
+                this._dogPackActive = false;
+                this._dogPackTimer = 0;
+                this._dogPackFired = false;
+                this.state = 'CHASE';
+            }
+            this._updateHUD();
+            return;
         }
 
         // ── log457 state machine ─────────────────────────────
@@ -452,11 +514,21 @@ class KruManop extends BossBase {
             if (this.timer > 2) {
                 this.timer = 0;
                 const barkChance = this.phase === 2 ? 0.40 : 0;
-                if (this.skills.log.cd <= 0 && Math.random() < 0.20) this.useLog457();
-                else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) this.useDeadlyGraph(player);
-                else if (this.phase === 2 && this.skills.bark.cd <= 0 && Math.random() < barkChance) this.bark(player);
-                else if (this.skills.slam.cd <= 0 && Math.random() < 0.30) this.useEquationSlam();
-                else if (this.phase >= 2 && this.skills.matrixGrid.cd <= 0 && Math.random() < 0.35) {
+                // DogPackCombo — highest phase-2 priority: dog must be alive
+                if (this.phase >= 2 && this.dog && !this.dog.dead &&
+                    this.skills.dogPack.cd <= 0 && Math.random() < 0.30) {
+                    this.useDogPackCombo(player);
+                } else if (this.skills.log.cd <= 0 && Math.random() < 0.20) {
+                    this.useLog457();
+                } else if (this.skills.graph.cd <= 0 && Math.random() < 0.25) {
+                    this.useDeadlyGraph(player);
+                } else if (this.phase === 2 && this.skills.bark.cd <= 0 && Math.random() < barkChance) {
+                    this.bark(player);
+                } else if (this.phase >= 2 && this.skills.chalkWall.cd <= 0 && Math.random() < 0.35) {
+                    this.useChalkWall(player);
+                } else if (this.skills.slam.cd <= 0 && Math.random() < 0.30) {
+                    this.useEquationSlam();
+                } else if (this.phase >= 2 && this.skills.matrixGrid.cd <= 0 && Math.random() < 0.35) {
                     this.useMatrixGrid(player);
                 } else {
                     this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
@@ -631,6 +703,50 @@ class KruManop extends BossBase {
         Audio.playBossSpecial();
     }
 
+    // ── Phase 2: Chalk Wall ───────────────────────────────────
+    // Draws a chalk line perpendicular to the boss→player vector,
+    // blocking the player's direct escape path.
+    useChalkWall(player) {
+        this.skills.chalkWall.cd = this.skills.chalkWall.max;
+        this.state = 'CHASE';
+
+        // Wall angle = boss→player angle (wall is perpendicular to this)
+        const wallAngle = Math.atan2(player.y - this.y, player.x - this.x);
+        // Place wall slightly in front of player (between boss and player, 60% of the way)
+        const d = Math.hypot(player.x - this.x, player.y - this.y);
+        const t = Math.min(0.60, 200 / Math.max(d, 1));
+        const wx = this.x + (player.x - this.x) * t;
+        const wy = this.y + (player.y - this.y) * t;
+
+        if (typeof ChalkWall !== 'undefined' && typeof window.specialEffects !== 'undefined') {
+            window.specialEffects.push(new ChalkWall(wx, wy, wallAngle));
+        }
+        spawnFloatingText('📐 CHALK WALL!', this.x, this.y - 80, '#fef9c3', 28);
+        spawnFloatingText('EQUATION BARRIER', wx, wy - 50, '#fef08a', 17);
+        spawnParticles(this.x, this.y, 12, '#fef9c3');
+        addScreenShake(6);
+        this.speak('You cannot pass!');
+        Audio.playBossSpecial();
+    }
+
+    // ── Phase 2: Dog Pack Combo ───────────────────────────────
+    // Synchronized attack: boss freezes 0.5s (telegraph),
+    // then BossDog rushes player AND boss fires radial ultimate simultaneously.
+    // Requires dog to be alive. Handled in update() _dogPackActive block.
+    useDogPackCombo(player) {
+        this.skills.dogPack.cd = this.skills.dogPack.max;
+        this.state = 'CHASE';
+        this._dogPackActive = true;
+        this._dogPackTimer = 0;
+        this._dogPackFired = false;
+        spawnFloatingText('🐕 PACK TACTICS!', this.x, this.y - 100, '#d97706', 32);
+        spawnFloatingText('COMBO INCOMING!', this.x, this.y - 138, '#ef4444', 20);
+        spawnParticles(this.x, this.y, 18, '#d97706');
+        addScreenShake(10);
+        this.speak('GO, BOY! TOGETHER!');
+        Audio.playBossSpecial();
+    }
+
     takeDamage(amt) {
         if (this._inSafeZone) return; // push-out กำลัง active — immune damage ชั่วคราว
         if (typeof DomainExpansion !== 'undefined' && DomainExpansion.isInvincible()) {
@@ -697,6 +813,8 @@ class KruFirst extends BossBase {
             emp: { cd: 0, max: 20.0 },
             formulaZone: { cd: 0, max: 14.0 },   // ── NEW: PhysicsFormulaZone drop
             parabolic: { cd: 0, max: 6.5 },       // ── NEW: ParabolicVolley burst
+            gravityWell: { cd: 0, max: 16.0 },    // ── Phase 4: Derivation Mode only
+            superClone: { cd: 0, max: 20.0 },     // ── Phase 4: Derivation Mode only
         };
 
         // ── Derivation Mode (HP < 40%) ───────────────────────
@@ -704,6 +822,22 @@ class KruFirst extends BossBase {
         // formulaZone + parabolic burst skills for sustained pressure.
         this._derivationMode = false;
         this._derivationTaunted = false;
+
+        // ── Domain Expansion: Gravitational Singularity ───────
+        // Triggers once at HP ≤ 25%. _domainUsed prevents re-trigger.
+        this._domainUsed = false;
+        this._domainActive = false;   // mirrors KruManop pattern for freeze logic
+
+        // ── SINGULARITY Mode (HP < 25%, post-domain) ─────────
+        // Activates after domain ends. All cooldown ×0.50, double charge,
+        // REBOUND replaces STUNNED.
+        this._singularityMode = false;
+        this._suvatChargeCount = 0;    // tracks double-charge (max 2 per trigger)
+        this._reboundTimer = 0;        // REBOUND state duration
+
+        // ── Clone / GravityWell live refs ─────────────────────
+        this._superClone = null;       // active SuperpositionClone instance
+        this._gravityWell = null;      // active GravityWell instance
 
         // ── SUVAT charge constants ────────────────────────────
         this.SUVAT_WIND_UP = 0.9;          // seconds of wind-up before dash
@@ -754,6 +888,26 @@ class KruFirst extends BossBase {
         if (this._dodgeCd > 0) this._dodgeCd -= dt;
         if (this._orbitFireCd > 0) this._orbitFireCd -= dt;
         if (this._berserkFireCd > 0) this._berserkFireCd -= dt;
+        if (this._reboundTimer > 0) this._reboundTimer -= dt;
+
+        // ── SINGULARITY mode activates once domain ends ───────
+        if (this._domainUsed && !this._singularityMode &&
+            !this._domainActive && this.state !== 'DOMAIN' &&
+            typeof GravitationalSingularity !== 'undefined' &&
+            GravitationalSingularity.phase === 'idle') {
+            this._singularityMode = true;
+            // All cooldowns ×0.50 (stack on Derivation Mode ×0.65 if active)
+            for (const sk of Object.values(this.skills)) {
+                sk.max = Math.max(1.5, sk.max * 0.50);
+                sk.cd = Math.min(sk.cd, sk.max);
+            }
+            spawnFloatingText('⚫ SINGULARITY MODE', this.x, this.y - 110, '#00ffff', 32);
+            spawnFloatingText('ALL COOLDOWNS ×0.50', this.x, this.y - 148, '#39ff14', 18);
+            addScreenShake(20);
+            spawnParticles(this.x, this.y, 50, '#00ffff');
+            spawnParticles(this.x, this.y, 30, '#39ff14');
+            this.speak('ยังยืนอยู่ได้... น่าทึ่ง');
+        }
 
         const dx = player.x - this.x;
         const dy = player.y - this.y;
@@ -774,6 +928,32 @@ class KruFirst extends BossBase {
                 }
             }
         }
+
+        // ── Domain Expansion trigger: Gravitational Singularity ──
+        // Fires once when HP drops to or below 25%.
+        if (!this._domainUsed &&
+            this.hp / this.maxHp <= 0.25 &&
+            typeof GravitationalSingularity !== 'undefined' &&
+            GravitationalSingularity.canTrigger()) {
+            this._domainUsed = true;
+            this.state = 'DOMAIN';
+            this.stateTimer = 0;
+            GravitationalSingularity.trigger(this);
+        }
+
+        // Freeze AI while domain is running — GravitationalSingularity.update() drives it
+        if (this._domainActive) {
+            // Sync: release freeze once domain returns to idle
+            if (typeof GravitationalSingularity !== 'undefined' &&
+                GravitationalSingularity.phase === 'idle') {
+                this._domainActive = false;
+            } else {
+                this.vx = 0; this.vy = 0;
+                this._updateHUD();
+                return;
+            }
+        }
+        if (this.state === 'DOMAIN') { this.state = 'CHASE'; this.stateTimer = 0; }
 
         // ── State machine ─────────────────────────────────────
         switch (this.state) {
@@ -813,18 +993,27 @@ class KruFirst extends BossBase {
                         player.takeDamage(80);
                         addScreenShake(14);
                         spawnFloatingText('v=u+at IMPACT!', player.x, player.y - 55, '#fbbf24', 28);
-                        this._enterOrbit(player);
+                        if (this._singularityMode) {
+                            this._reboundTimer = 0.5;
+                            this._enterState('REBOUND');
+                        } else {
+                            this._enterOrbit(player);
+                        }
                         break;
                     }
 
                     if (this.stateTimer - this.SUVAT_WIND_UP > this.SUVAT_MAX_DUR) {
-                        // ── Miss Punishment: ยิง ParabolicVolley ทันที + เข้า ORBIT ──
-                        // ไม่กลับ CHASE เฉยๆ — บังคับ sustained pressure หลัง miss
+                        // ── Miss Punishment: ยิง ParabolicVolley ทันที ──
                         if (typeof ParabolicVolley !== 'undefined') {
                             ParabolicVolley.fire(this.x, this.y, player.x, player.y, this.isAdvanced);
                             spawnFloatingText('PARABOLIC RETALIATION!', this.x, this.y - 70, '#c084fc', 22);
                         }
-                        this._enterOrbit(player);
+                        if (this._singularityMode) {
+                            this._reboundTimer = 0.5;
+                            this._enterState('REBOUND');
+                        } else {
+                            this._enterOrbit(player);
+                        }
                     }
                 }
                 break;
@@ -967,6 +1156,36 @@ class KruFirst extends BossBase {
                 if (this.stateTimer > 3.5) this._enterState('CHASE');
                 break;
             }
+
+            case 'REBOUND': {
+                // SINGULARITY Mode: replaces STUNNED — brief push-back then re-engage
+                this.vx *= 0.92; this.vy *= 0.92;
+                if (this._reboundTimer <= 0) {
+                    // Immediately queue another SUVAT if double-charge not spent
+                    if (this._suvatChargeCount > 0 && d > 80) {
+                        this._suvatChargeCount--;
+                        this._suvatVel = 0;
+                        this._suvatAimX = player.x;
+                        this._suvatAimY = player.y;
+                        spawnFloatingText('⚫ REBOUND CHARGE!', this.x, this.y - 70, '#00ffff', 24);
+                        this._enterState('SUVAT_CHARGE');
+                    } else {
+                        this._suvatChargeCount = 0;
+                        this._enterState('CHASE');
+                    }
+                }
+                this.applyPhysics(dt);
+                break;
+            }
+
+            case 'QUANTUM_LEAP': {
+                // Brief freeze before teleport fires (handled in _useQuantumLeap)
+                this.vx *= 0.8; this.vy *= 0.8;
+                if (this.stateTimer > 0.25) {
+                    this._executeQuantumLeap(player);
+                }
+                break;
+            }
         }
 
         // Contact damage
@@ -990,7 +1209,13 @@ class KruFirst extends BossBase {
     }
 
     _pickSkill(player, d) {
-        // Sandwich toss is highest priority
+        // ── SINGULARITY Mode: QuantumLeap highest priority ────
+        if (this._singularityMode && this.skills.suvat.cd <= 0 && d > 80 && Math.random() < 0.40) {
+            this._enterState('QUANTUM_LEAP');
+            return;
+        }
+
+        // Sandwich toss is highest priority (non-singularity)
         if (this.skills.sandwich.cd <= 0) {
             this.skills.sandwich.cd = this.skills.sandwich.max;
             this._sandwichFired = false;
@@ -1049,6 +1274,36 @@ class KruFirst extends BossBase {
             }
             return;
         }
+        // ── Derivation Mode: GravityWell ─────────────────────
+        if (this._derivationMode && this.skills.gravityWell.cd <= 0 &&
+            (!this._gravityWell || this._gravityWell.dead) &&
+            typeof GravityWell !== 'undefined') {
+            this.skills.gravityWell.cd = this.skills.gravityWell.max;
+            const midX = (this.x + player.x) / 2;
+            const midY = (this.y + player.y) / 2;
+            this._gravityWell = new GravityWell(midX, midY, 80, 4.0,
+                this.isAdvanced ? 110 : 90, this.isAdvanced ? 70 : 55);
+            window.specialEffects.push(this._gravityWell);
+            spawnFloatingText('∇ GRAVITY WELL!', midX, midY - 60, '#10b981', 24);
+            addScreenShake(7);
+            return;
+        }
+        // ── Derivation Mode: SuperpositionClone ──────────────
+        if (this._derivationMode && this.skills.superClone.cd <= 0 &&
+            (!this._superClone || this._superClone.dead) &&
+            typeof SuperpositionClone !== 'undefined') {
+            this.skills.superClone.cd = this.skills.superClone.max;
+            // Spawn at mirrored position relative to player
+            const cloneX = player.x + (player.x - this.x) * 0.6;
+            const cloneY = player.y + (player.y - this.y) * 0.6;
+            this._superClone = new SuperpositionClone(cloneX, cloneY, 3.0, this.isAdvanced);
+            window.specialEffects.push(this._superClone);
+            spawnFloatingText('ψ SUPERPOSITION!', this.x, this.y - 90, '#06b6d4', 26);
+            spawnFloatingText('DESTROY THE CLONE!', player.x, player.y - 120, '#fbbf24', 20);
+            addScreenShake(10);
+            spawnParticles(cloneX, cloneY, 20, '#06b6d4');
+            return;
+        }
         if (this.skills.suvat.cd <= 0 && d > 120) {
             this.skills.suvat.cd = this.skills.suvat.max;
             this._suvatVel = 0;
@@ -1090,8 +1345,39 @@ class KruFirst extends BossBase {
         Audio.playBossSpecial();
     }
 
+    // ── QuantumLeap: teleport behind player + immediate SUVAT_CHARGE ──
+    _executeQuantumLeap(player) {
+        const dx = player.x - this.x, dy = player.y - this.y;
+        const d = Math.hypot(dx, dy);
+        const behindDist = this.radius + player.radius + 55;
+        // Place boss directly behind player (opposite facing direction)
+        const playerFacing = Math.atan2(dy, dx);
+        const behindAngle = playerFacing + Math.PI;  // behind player
+        this.x = player.x + Math.cos(behindAngle) * behindDist;
+        this.y = player.y + Math.sin(behindAngle) * behindDist;
+        this.vx = 0; this.vy = 0;
+
+        spawnParticles(this.x, this.y, 25, '#00ffff');
+        spawnParticles(this.x, this.y, 15, '#39ff14');
+        spawnFloatingText('⚫ QUANTUM LEAP!', this.x, this.y - 70, '#00ffff', 26);
+        if (typeof addScreenShake === 'function') addScreenShake(12);
+
+        // Set up double charge
+        this.skills.suvat.cd = this.skills.suvat.max;
+        this._suvatVel = 0;
+        this._suvatAimX = player.x;
+        this._suvatAimY = player.y;
+        this._suvatChargeCount = 1;   // 1 extra rebound charge queued
+        this._enterState('SUVAT_CHARGE');
+        if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+    }
+
     takeDamage(amt) {
         if (this._inSafeZone) return; // push-out กำลัง active — immune damage ชั่วคราว
+        if (typeof GravitationalSingularity !== 'undefined' && GravitationalSingularity.isInvincible()) {
+            spawnFloatingText('DOMAIN SHIELD!', this.x, this.y - 40, '#39ff14', 20);
+            return;
+        }
         if (this.state === 'FREE_FALL' && this.stateTimer < this.FREE_FALL_WARN) return; // invulnerable
         this.hp -= amt;
         this.hitFlashTimer = 0.12;

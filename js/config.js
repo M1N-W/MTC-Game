@@ -385,7 +385,10 @@ const BALANCE = {
         hpMultiplier: 1.28,      // NERF: 1.333 → 1.28 (Enc5: ~14,000 HP แทน 16,400)
         moveSpeed: 140,
         phase2Speed: 190,
-        phase2Threshold: 0.5,
+        phase2Threshold: 0.5,   // fallback (overridden per-encounter in KruManop constructor)
+        // Per-encounter phase thresholds — enc 1 triggers phase2 early so wave-3 players see dog
+        phase2ThresholdByEnc: [null, 0.50, null, 0.60, null, 0.65], // index = encounter (1-based)
+        phase3ThresholdByEnc: [null, null, null, 0.30, null, 0.35],
         chalkDamage: 13,
         ultimateDamage: 35,
         ultimateBullets: 20,
@@ -413,7 +416,14 @@ const BALANCE = {
             barkRange: 600,
             barkCooldown: 3.2,
             enrageSpeedMult: 2.0,
-            dogColor: '#d97706'
+            dogColor: '#d97706',
+            // ── ChalkWall ────────────────────────────────────
+            chalkWallCooldown: 12.0,
+            chalkWallDamage: 15,        // damage on contact per crossing
+            chalkWallLength: 340,       // world-unit line length
+            chalkWallDuration: 6.0,     // seconds the wall persists
+            // ── DogPackCombo ─────────────────────────────────
+            dogPackCooldown: 18.0,      // minimum gap between combos
         },
         bossDog: {
             hp: 2000,
@@ -463,8 +473,46 @@ const BALANCE = {
         },
         domainExpansion: {
             dangerPct: 0.62,
-            dangerPctMax: 0.84
-        }
+            dangerPctMax: 0.84,
+            // ── Phase 3 Rework: Sub-phase A / B / C ───────────────
+            // subPhase A (cycles 1-2): EQUATION RAIN — longer warn, overlay
+            subPhaseA_warnDur: 2.0,
+            // subPhase B (cycles 3-4): LOG457 OVERDRIVE — faster danger%, chalk volley, safe cell shifts
+            subPhaseB_dangerPctStep: 0.06,  // default 0.04 → faster
+            subPhaseB_chalkInterval: 0.8,   // s between 3-way chalk volleys
+            subPhaseB_chalkCount: 3,
+            subPhaseB_chalkSpeed: 460,
+            subPhaseB_chalkDamage: 18,
+            subPhaseB_safeCellShift: true,
+            // subPhase C (cycles 5-6): DOMAIN COLLAPSE — TeacherFury chance
+            subPhaseC_teacherFuryChance: 0.30,
+        },
+        // ── KruFirst Domain Expansion: GRAVITATIONAL SINGULARITY ──────────────
+        gravitationalSingularity: {
+            castDur: 2.5,   // casting phase duration (s)
+            endDur: 2.0,   // ending fade-out (s)
+            cooldown: 999,   // effectively once per fight
+            pullDur: 4.0,   // Pulse 1: gravity pull toward boss
+            escapeDur: 4.5,   // Pulse 2: push outward (near boss = safe)
+            tidalDur: 4.5,   // Pulse 3: oscillating pull/push
+            collapseDur: 2.5,   // Pulse 4: massive pull + shockwave
+            pullForce: 95,    // px/s player pull force (Pulse 1)
+            pushForce: 130,   // px/s push force (Pulse 2)
+            tidalForce: 110,   // px/s tidal magnitude (Pulse 3)
+            tidalPeriod: 3.0,   // s per pull→push cycle (Pulse 3)
+            collapseForce: 220,   // px/s ramp pull (Pulse 4)
+            projPullForce: 60,    // px/s projectile bend (Pulse 1)
+            orbitalCount: 6,     // OrbitalDebris projectiles
+            orbitalRadius: 90,    // px orbit radius
+            orbitalSpeed: 2.2,   // rad/s
+            orbitalDamage: 25,    // contact damage per hit
+            pulse2FireCd: 1.2,   // s between boss teleport+fire bursts
+            pulse2Teleports: 4,     // teleport count in Pulse 2
+            pulse3ZoneCount: 3,     // PhysicsFormulaZone drops in Pulse 3
+            collapseRadius: 380,   // AoE shockwave radius
+            collapseDamage: 40,    // shockwave damage
+            safeRadius: 75,    // px near boss = safe from push (Pulse 2)
+        },
     },
     powerups: {
         radius: 20,
