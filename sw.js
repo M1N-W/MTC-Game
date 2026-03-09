@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.23.0'; // v3.23.0: Energy Cost System Implementation - Added comprehensive energy management to all character skills with balance-focused costs
+const CACHE_NAME = 'mtc-cache-v3.24.0'; // v3.24.0: Boss Architecture Refactor - Split boss.js into 4 modular files (BossBase.js, ManopBoss.js, FirstBoss.js, BossRenderer.js) with improved load order and cleaner separation of concerns
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -28,8 +28,10 @@ const urlsToCache = [
   './js/entities/player/AutoPlayer.js?v=' + CACHE_TIMESTAMP,
   './js/entities/player/PoomPlayer.js?v=' + CACHE_TIMESTAMP,
   './js/entities/enemy.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss_attacks.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/boss/boss_attacks.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/boss/BossBase.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/boss/ManopBoss.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/boss/FirstBoss.js?v=' + CACHE_TIMESTAMP,
   './js/entities/summons.js?v=' + CACHE_TIMESTAMP,
   // Systems
   './js/systems/WaveManager.js?v=' + CACHE_TIMESTAMP,
@@ -40,6 +42,7 @@ const urlsToCache = [
   './js/VersionManager.js?v=' + CACHE_TIMESTAMP,
   // Rendering
   './js/rendering/PlayerRenderer.js?v=' + CACHE_TIMESTAMP,
+  './js/rendering/BossRenderer.js?v=' + CACHE_TIMESTAMP,
   // Audio Assets (no cache busting for large files)
   './assets/audio/menu.mp3',
   './assets/audio/battle.mp3',

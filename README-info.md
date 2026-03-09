@@ -99,15 +99,15 @@
 
 ---
 
-## 📈 Current Version: v3.23.0 (March 9, 2026)
+## 📈 Current Version: v3.24.0 (March 9, 2026)
 
 **Latest Major Updates:**
-- ⚡ **Energy Cost System Implementation:** Comprehensive energy management for all character skills with balance-focused costs
-- 🎯 **Strategic Resource Management:** Energy costs prevent skill spam while maintaining combat viability
-- � **Character-Specific Balance:** Each character tuned with unique costs and regen rates (Kao: 15/s, Auto: 20/s, Poom: 12/s)
-- 🪷 **Poom Ritual Design:** Free energy cost for combo finisher with 15s CD + stack requirement
-- 🔧 **Technical Implementation:** Consistent energy guard pattern and config integration across all characters
-- 📚 **Documentation Updates:** Enhanced PROJECT_OVERVIEW.md with energy system, domain pitfalls, and AI workflow improvements
+- 🔧 **Boss Architecture Refactor:** Split monolithic boss.js into 4 modular files for better maintainability and cleaner code structure
+- 📁 **Improved File Organization:** BossBase.js, ManopBoss.js, FirstBoss.js, and BossRenderer.js with proper dependency hierarchy
+- 🎯 **Enhanced Load Order:** Sequential script loading eliminates race conditions and ensures proper class availability
+- ⚡ **Performance Benefits:** Smaller file sizes enable faster loading and better caching granularity
+- � **Zero Breaking Changes:** Maintained full backward compatibility with existing game systems
+- 📚 **Documentation Updates:** Updated service worker cache and changelog with comprehensive refactor details
 
 ---
 

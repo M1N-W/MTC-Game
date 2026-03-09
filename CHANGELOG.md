@@ -4,6 +4,35 @@
 
 ---
 
+## v3.24.0 — Boss Architecture Refactor
+*Released: March 9, 2026*
+
+### 🔧 Major Code Restructuring
+- **Modular Boss System:** Split monolithic boss.js (2,764 lines) into 4 focused files for better maintainability
+- **Clean Separation:** BossBase (base class), ManopBoss (KruManop + BossDog), FirstBoss (KruFirst), BossRenderer (rendering logic)
+- **Improved Load Order:** Sequential dependency chain ensures proper class availability and eliminates race conditions
+- **Better Architecture:** Each file now has single responsibility with clear boundaries and focused functionality
+
+### 📁 File Structure Changes
+- **BossBase.js (89 lines):** Pure base class with shared lifecycle management and death hooks
+- **ManopBoss.js (695 lines):** KruManop class + BossDog class (moved from BossBase.js for better encapsulation)
+- **FirstBoss.js (691 lines):** KruFirst class with GravitationalSingularity and SingularityMode mechanics
+- **BossRenderer.js (1,318 lines):** All boss rendering logic separated from game logic for cleaner architecture
+
+### 🎯 Technical Improvements
+- **Window Exports:** Maintained backward compatibility with existing WaveManager and AdminSystem integration
+- **Clean Dependencies:** Eliminated circular dependencies and established clear inheritance hierarchy
+- **Future-Proof Structure:** Modular design enables easier boss additions and maintenance
+- **Performance:** Reduced file sizes enable faster loading and better caching granularity
+
+### 🔄 Migration Details
+- **index.html:** Updated script tags to load 4 files sequentially in correct dependency order
+- **Service Worker:** Cache list updated to reflect new file paths in js/entities/boss/ subfolder
+- **Backward Compatibility:** All window.Boss, window.BossFirst, window.BossDog aliases preserved
+- **Zero Breaking Changes:** Existing game systems continue to work without modification
+
+---
+
 ## v3.23.0 — Energy Cost System Implementation
 *Released: March 9, 2026*
 

@@ -56,9 +56,15 @@
 |------|--------|
 | `base.js` | Base Entity class — ทุก entity สืบทอด |
 | `enemy.js` | Enemy types (Enemy, TankEnemy, MageEnemy) |
-| `boss.js` | BossBase → KruManop / KruFirst |
-| `boss_attacks.js` | Attack patterns, domain expansion |
 | `summons.js` | Pets, helpers, power-up entities |
+
+### `/js/entities/boss/`
+| ไฟล์ | หน้าที่ |
+|------|--------|
+| `BossBase.js` | Base Boss class — shared lifecycle, death hooks |
+| `ManopBoss.js` | KruManop + BossDog classes (math boss encounters) |
+| `FirstBoss.js` | KruFirst class (physics boss with GravitationalSingularity) |
+| `boss_attacks.js` | Attack patterns, domain expansion, skill mechanics |
 
 ### `/js/entities/player/`
 | ไฟล์ | ตัวละคร | บทบาท |
@@ -70,6 +76,7 @@
 
 ### `/js/rendering/`
 - `PlayerRenderer.js` — วาด player ทั้งหมด (animations, effects, hit flash)
+- `BossRenderer.js` — วาด boss ทั้งหมด (KruManop, KruFirst, BossDog, domain effects)
 
 ### `/assets/audio/`
 `menu.mp3`, `battle.mp3`, `boss.mp3`, `glitch.mp3`
@@ -86,10 +93,11 @@ Input (input.js) → Game Update (game.js) → Entity Updates → Collision (map
 ### Key Design Patterns
 - **Object Pooling** — particles/projectiles/FloatingText (effects.js) ลด GC
 - **State Management** — GameState singleton
-- **Rendering Decoupling** — `PlayerRenderer.draw()` dispatcher → `_drawKao()` / `_drawPoom()` / `_drawAuto()`
+- **Rendering Decoupling** — `PlayerRenderer.draw()` → character-specific methods, `BossRenderer.draw()` → boss-specific methods
 - **Spatial Grid** — weapons.js collision: O(E) build, O(P×k) query — เร็วกว่า O(P×E) brute force ~12×
 - **No `instanceof` in PlayerBase** — ใช้ behavior flags แทน (`passiveSpeedBonus`, `usesOwnLifesteal`)
 - **Deterministic Rendering** — ห้าม `Math.random()` ใน draw loop เด็ดขาด
+- **Boss Architecture** — `BossBase` hierarchy with modular file structure and lifecycle management
 
 ### Integration Points
 - Menu→Game: `selectCharacter()` → `window.selectedChar` → `startGame()`
