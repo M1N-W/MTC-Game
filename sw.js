@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.1'; // v3.26.1: Fixed Stand Rush cooldown fallthrough - removed redundant cooldown check that prevented Heat Wave firing when Stand Rush was on cooldown
+const CACHE_NAME = 'mtc-cache-v3.26.2'; // v3.26.2: Enhanced pause modal UI redesign - added corner brackets, SYSTEM HALT badge, gold divider, and matching game theme colors
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

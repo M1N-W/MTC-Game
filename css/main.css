@@ -324,109 +324,230 @@ body {
     }
 }
 
-/* Resume Prompt Overlay */
+/* ══════════════════════════════════════════
+   GAME PAUSED — Resume Prompt Overlay
+   Theme: MTC gold (#facc15) + navy (#0f172a)
+   ══════════════════════════════════════════ */
 #resume-prompt {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(2, 6, 18, 0.82);
     z-index: 9000;
     justify-content: center;
     align-items: center;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(8px) brightness(0.45);
+    -webkit-backdrop-filter: blur(8px) brightness(0.45);
     pointer-events: auto;
     cursor: pointer;
 }
 
 .resume-prompt-inner {
-    background: rgba(15, 23, 42, 0.98);
-    border: 2px solid #06b6d4;
-    border-radius: 20px;
-    padding: 44px 56px;
+    position: relative;
+    background: linear-gradient(160deg, #1a2236 0%, #0f172a 55%, #161f35 100%);
+    border: 1.5px solid rgba(250, 204, 21, 0.30);
+    border-radius: 4px;
+    padding: 52px 64px 44px;
     text-align: center;
-    box-shadow: 0 0 60px rgba(6, 182, 212, 0.45), 0 25px 50px rgba(0, 0, 0, 0.8);
+    box-shadow:
+        0 0 0 1px rgba(250, 204, 21, 0.06),
+        0 0 80px rgba(250, 204, 21, 0.08),
+        0 40px 80px rgba(0, 0, 0, 0.75);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 18px;
     pointer-events: auto;
-    animation: resumePulse 2s ease-in-out infinite;
+    min-width: 400px;
+    overflow: hidden;
+    animation: rpEnter 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes resumePulse {
+/* Gold top accent line */
+.resume-prompt-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            #facc15 25%,
+            #f59e0b 75%,
+            transparent 100%);
+    opacity: 0.85;
+}
 
-    0%,
-    100% {
-        box-shadow: 0 0 40px rgba(6, 182, 212, 0.35), 0 25px 50px rgba(0, 0, 0, 0.8);
+/* Scanline texture */
+.resume-prompt-inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,
+            transparent,
+            transparent 3px,
+            rgba(255, 255, 255, 0.015) 3px,
+            rgba(255, 255, 255, 0.015) 4px);
+    pointer-events: none;
+}
+
+@keyframes rpEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.93) translateY(14px);
     }
 
-    50% {
-        box-shadow: 0 0 70px rgba(6, 182, 212, 0.65), 0 25px 50px rgba(0, 0, 0, 0.8);
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
     }
 }
 
+/* ── Corner brackets ── */
+.rp-corner {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-color: #facc15;
+    border-style: solid;
+    opacity: 0.55;
+}
+
+.rp-corner--tl {
+    top: 10px;
+    left: 10px;
+    border-width: 2px 0 0 2px;
+}
+
+.rp-corner--tr {
+    top: 10px;
+    right: 10px;
+    border-width: 2px 2px 0 0;
+}
+
+.rp-corner--bl {
+    bottom: 10px;
+    left: 10px;
+    border-width: 0 0 2px 2px;
+}
+
+.rp-corner--br {
+    bottom: 10px;
+    right: 10px;
+    border-width: 0 2px 2px 0;
+}
+
+/* ── Status badge ── */
+.rp-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 3.5px;
+    color: #06b6d4;
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    border-radius: 3px;
+    padding: 4px 14px;
+    text-transform: uppercase;
+}
+
+/* ── Gold divider ── */
+.rp-divider {
+    width: 72px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #facc15 50%, transparent);
+    opacity: 0.35;
+    margin: -4px 0;
+}
+
+/* hide legacy icon element */
 .resume-icon {
-    font-size: 52px;
-    line-height: 1;
+    display: none;
 }
 
 .resume-title {
     font-family: 'Orbitron', sans-serif;
-    font-size: 26px;
-    color: #67e8f9;
-    letter-spacing: 3px;
+    font-size: 32px;
+    font-weight: 900;
+    color: #facc15;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    text-shadow:
+        0 0 24px rgba(250, 204, 21, 0.45),
+        0 0 60px rgba(250, 204, 21, 0.15);
+    line-height: 1;
 }
 
 .resume-sub {
-    font-size: 14px;
-    color: #94a3b8;
-    line-height: 1.6;
+    font-family: 'Kanit', sans-serif;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.8;
 }
 
 .resume-btn {
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
-    color: #001a20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #facc15 0%, #f59e0b 100%);
+    color: #0a0e16;
     border: none;
-    padding: 14px 44px;
-    font-size: 19px;
-    font-family: 'Kanit', sans-serif;
-    font-weight: bold;
-    border-radius: 12px;
+    padding: 15px 52px;
+    font-size: 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    border-radius: 3px;
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 0 24px rgba(6, 182, 212, 0.55);
+    transition: filter 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 28px rgba(250, 204, 21, 0.30), 0 4px 16px rgba(0, 0, 0, 0.4);
     margin-top: 6px;
-    letter-spacing: 1px;
+    letter-spacing: 2.5px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+.resume-btn-icon {
+    font-size: 11px;
+    opacity: 0.8;
 }
 
 .resume-btn:hover {
-    transform: scale(1.06) translateY(-2px);
-    box-shadow: 0 0 40px rgba(6, 182, 212, 0.85);
+    filter: brightness(1.10);
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(250, 204, 21, 0.50), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.resume-btn:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
 }
 
 .resume-hint {
-    font-size: 12px;
-    color: #475569;
-    letter-spacing: 1px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 11px;
+    color: #2d3f56;
+    letter-spacing: 0.5px;
 }
 
-/* Pause Indicator */
+/* ── Pause Indicator (top bar) ── */
 #pause-indicator {
     display: none;
     position: fixed;
     top: 18px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(6, 182, 212, 0.15);
-    border: 1.5px solid #06b6d4;
-    border-radius: 12px;
-    padding: 5px 16px;
-    font-size: 12px;
-    font-weight: bold;
-    color: #67e8f9;
-    letter-spacing: 2px;
+    background: rgba(250, 204, 21, 0.07);
+    border: 1px solid rgba(250, 204, 21, 0.28);
+    border-radius: 3px;
+    padding: 5px 20px;
+    font-size: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: #facc15;
+    letter-spacing: 4px;
     z-index: 9001;
     pointer-events: none;
 }
@@ -3277,11 +3398,15 @@ body {
     }
 
     .resume-prompt-inner {
-        padding: 32px 28px;
+        padding: 40px 28px 36px;
+        min-width: unset;
+        width: 90vw;
+        max-width: 360px;
     }
 
     .resume-title {
-        font-size: 20px;
+        font-size: 22px;
+        letter-spacing: 4px;
     }
 
     .console-inner {
