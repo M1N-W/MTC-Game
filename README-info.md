@@ -88,9 +88,12 @@
 
 ---
 
-## 📈 Current Version: v3.18.1 (March 8, 2026)
+## 📈 Current Version: v3.19.0 (March 9, 2026)
 
 **Latest Major Updates:**
+- 🤖 **AI System Refactor:** Removed external Gemini API dependency - now uses local text-based system for instant responses
+- 🗂️ **Code Cleanup:** Deleted ai.js and secrets.js files, simplified async/await patterns
+- ⚡ **Performance:** Eliminated loading spinners and API timeouts for instant AI responses
 - 📊 **Character Selection UI Redesign:** Enhanced stat bar system with 4 stats (HP/DMG/SPD/RANGE) displaying real config.js values
 - 🎨 **Visual Identity Overhaul:** Poom theme changed from orange to green across all UI elements, Auto hover border refined to red
 - ✨ **Enhanced Visual Polish:** Improved stat bar styling (7px height, border-radius, tick marks), glow effects, avatar enhancements

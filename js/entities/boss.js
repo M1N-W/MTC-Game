@@ -22,7 +22,7 @@
  *   window.Boss      = KruManop
  *   window.BossFirst = KruFirst
  *
- * Depends on: base.js (Entity), game.js (Gemini mock)
+ * Depends on: base.js (Entity), config.js (GAME_TEXTS)
  */
 
 // ════════════════════════════════════════════════════════════
@@ -50,16 +50,12 @@ class BossBase extends Entity {
         this.stickyStacks = 0;
     }
 
-    // ── Shared: Gemini speech ─────────────────────────────────
-    async speak(context) {
-        // Gemini global mock (game.js) guarantees this is always defined.
-        // Returns '' when ai.js is offline → UIManager branch is a no-op.
-        try {
-            const text = await Gemini.getBossTaunt(context);
-            if (text && window.UIManager) window.UIManager.showBossSpeech(text);
-        } catch (e) {
-            console.debug(`[${this.name}] Speech unavailable:`, e);
-        }
+    // ── Boss speech — ดึงข้อความจาก GAME_TEXTS โดยตรง ────────
+    speak(context) {
+        if (!window.UIManager) return;
+        const taunts = GAME_TEXTS.ai.bossTaunts;
+        const text = taunts[Math.floor(Math.random() * taunts.length)];
+        window.UIManager.showBossSpeech(text);
     }
 
     // ── Shared: HUD tick (call once per update frame) ─────────

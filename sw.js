@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.18.4'; // v3.18.4: PlayerRenderer code organization - optimized variable declarations and removed duplicate code
+const CACHE_NAME = 'mtc-cache-v3.19.0'; // v3.19.0: Removed Gemini AI dependency - switched to local text-based system for mission names, boss taunts, and report cards
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

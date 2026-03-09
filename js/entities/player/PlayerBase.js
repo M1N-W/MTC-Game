@@ -104,6 +104,7 @@ class Player extends Entity {
         // ── Hit Flash state (used by PlayerRenderer) ───────────
         this._hitFlashTimer = 0;     // counts DOWN from 1 → 0 after taking damage
         this._hitFlashBig = false;  // true = bullet/AoE hit (stronger flash)
+        this._hitFlashLocked = false; // ป้องกัน contact damage reset ซ้ำทุกเฟรม
 
         // ── EMP Grounded status (BossFirst EMP_ATTACK) ─────────
         this.groundedTimer = 0;
@@ -162,6 +163,10 @@ class Player extends Entity {
         // ── Hit Flash Timer ────────────────────────────────────
         if (this._hitFlashTimer > 0) {
             this._hitFlashTimer = Math.max(0, this._hitFlashTimer - dt * 6);
+            // ปลด lock เมื่อ flash decay ลงมาต่ำกว่า 0.4
+            if (this._hitFlashLocked && this._hitFlashTimer < 0.4) {
+                this._hitFlashLocked = false;
+            }
         }
 
         // ── Combo System Update ────────────────────────────────
@@ -506,8 +511,14 @@ class Player extends Entity {
         spawnParticles(this.x, this.y, 8, '#ef4444');
         addScreenShake(8); Audio.playHit();
         // ── Hit Flash trigger ──────────────────────────────────
-        this._hitFlashTimer = 1.0;
-        this._hitFlashBig = (amt >= 5);
+        if (!this._hitFlashLocked) {
+            this._hitFlashTimer = 1.0;
+            this._hitFlashBig = (amt >= 5);
+            // ── ป้องกัน contact damage reset timer ซ้ำทุกเฟรม ──────
+            // ใช้ _hitFlashCooldown เพื่อ lock ไม่ให้ trigger ใหม่
+            // จนกว่า flash ปัจจุบันจะ decay ลงถึง 0.5 ก่อน
+            this._hitFlashLocked = true;
+        }
         Achievements.stats.damageTaken += amt;
         if (this.hp <= 0) {
             this.dead = true;

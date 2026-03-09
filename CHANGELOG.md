@@ -4,6 +4,34 @@
 
 ---
 
+## v3.19.0 — Gemini AI Dependency Removal
+*Released: March 9, 2026*
+
+### 🤖 AI System Refactoring
+- **Removed External API Dependencies**: Eliminated Gemini AI integration completely
+- **Local Text-Based System**: All AI responses now use predefined text arrays from `GAME_TEXTS`
+- **Mission Names**: `initAI()` now randomly selects from `GAME_TEXTS.ai.missionNames` (sync, no API calls)
+- **Boss Taunts**: `BossBase.speak()` method pulls from `GAME_TEXTS.ai.bossTaunts` directly (sync)
+- **Report Cards**: Score-based tier system uses `GAME_TEXTS.ai.reportCards` with excellent (>5000), good (>2000), poor tiers
+
+### 🗂️ File Cleanup
+- **Deleted Files**: Removed `js/ai.js` and `js/secrets.js` completely
+- **Script References**: Cleaned up index.html to remove AI-related script tags
+- **Code Simplification**: Removed async/await patterns and Promise.race logic
+
+### ⚡ Performance Improvements
+- **Instant Responses**: No more loading spinners or API timeouts
+- **Reduced Complexity**: Simplified error handling and fallback logic
+- **Offline Reliability**: Game now works completely offline without external dependencies
+
+### 🛠️ Technical Changes
+- **Sync Functions**: Converted `initAI()` from async to sync
+- **Direct Text Access**: Boss speech now uses direct array indexing
+- **Tier Logic**: Report card system uses simple score thresholds
+- **Dependency Update**: Boss.js now depends on config.js instead of game.js for text data
+
+---
+
 ## v3.18.4 — PlayerRenderer Code Organization & Optimization
 *Released: March 9, 2026*
 

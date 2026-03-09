@@ -1,20 +1,6 @@
 ﻿'use strict';
 
-// ════════════════════════════════════════════════════════════════
-// 🤖 AI SAFETY FALLBACK
-// ════════════════════════════════════════════════════════════════
-if (typeof window.Gemini === 'undefined') {
-    window.Gemini = {
-        init: () => console.log('🤖 AI System: Offline (Safe Fallback)'),
-        generateText: async () => '...',
-        generateMission: async () => 'Defeat the enemies!',
-        generateReportCard: async () => 'Great job!',
-        speak: () => { },
-        getMissionName: async () => 'MTC Adventure',
-        getReportCard: async () => 'ตั้งใจเรียนให้มากกว่านี้นะ...',
-        getBossTaunt: async () => '',
-    };
-}
+
 
 const DEBUG_MODE = false;
 
@@ -745,20 +731,12 @@ function drawGrid() {
 // 🚀 INIT & START
 // ══════════════════════════════════════════════════════════════
 
-async function initAI() {
+function initAI() {
     const brief = document.getElementById('mission-brief');
-    if (!brief) { console.warn('⚠️ mission-brief not found'); return; }
-    brief.textContent = GAME_TEXTS.ai.loading;
-    try {
-        // BUG FIX: Add timeout to prevent hanging on AI calls
-        const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('AI timeout')), 3000));
-        const name = await Promise.race([Gemini.getMissionName(), timeout]);
-        brief.textContent = GAME_TEXTS.ai.missionPrefix(name);
-    } catch (e) {
-        console.warn('Failed to get mission name:', e);
-        brief.textContent = GAME_TEXTS.ai.missionFallback;
-    }
+    if (!brief) return;
+    const names = GAME_TEXTS.ai.missionNames;
+    const name = names[Math.floor(Math.random() * names.length)];
+    brief.textContent = GAME_TEXTS.ai.missionPrefix(name);
 }
 
 // ── Overlay fade-out helper (🔴 Fix #1) ──────────────────────────────────
@@ -974,17 +952,15 @@ async function endGame(result) {
         }
 
         const ld = document.getElementById('ai-loading');
-        if (ld) ld.style.display = 'block';
+        if (ld) ld.style.display = 'none';
         const reportText = document.getElementById('report-text');
-
-        try {
-            const comment = await Gemini.getReportCard(finalScore, finalWave);
-            if (ld) ld.style.display = 'none';
-            if (reportText) reportText.textContent = comment;
-        } catch (e) {
-            console.warn('Failed to get AI report card:', e);
-            if (ld) ld.style.display = 'none';
-            if (reportText) reportText.textContent = GAME_TEXTS.ai.reportFallback;
+        if (reportText) {
+            let category;
+            if (finalScore > 5000) category = 'excellent';
+            else if (finalScore > 2000) category = 'good';
+            else category = 'poor';
+            const cards = GAME_TEXTS.ai.reportCards[category];
+            reportText.textContent = cards[Math.floor(Math.random() * cards.length)];
         }
     }
 }
