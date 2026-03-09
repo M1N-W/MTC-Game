@@ -146,5 +146,12 @@
 - 🔊 **Complete Boss Attack Visual Rework:** Enhanced BarkWave, BubbleProjectile, ExpandingRing, EmpPulse, MatrixGridAttack, new EquationSlam & DeadlyGraph classes, ultimate attack wind-up effects, log457 visual states
 - 🔧 **Boss Attack Class Consolidation:** Moved EquationSlam & DeadlyGraph to boss_attacks.js for better code organization and maintainability
 - ⚡ **Boss Attacks Performance Optimization:** Improved gradient handling, Math.hypot() distance calculations, enhanced color format support and precision
+- 🎨 **Enhanced Player Rendering System:** Improved hit flash feedback, walk bob animations, responsive hair wobble, weapon recoil, and ground shadow physics for all characters
+- ⚡ **Hit Flash System Overhaul:** Added differentiated damage feedback with fast decay (6x/sec), strong effects for bullet/AoE damage (≥5 HP), and universal white glow + expanding ring effects
+- 🏃 **Advanced Walk Animation:** Implemented real Y-axis bob movement with character-specific timing (Kao: 2.0px, Poom: 2.0px, Auto: 2.5px) and ground shadow scaling
+- 💇 **Dynamic Hair Animation:** Auto combat mode (380ms→150ms wobble), Poom movement-responsive wobble (220-500ms range), and speed-based amplitude adjustments
+- 🔫 **Universal Recoil System:** Character-specific weapon recoil animations (Kao: 3.5x, Auto: 3.0x, Poom: 2.5x) with realistic shooting feedback
+- 🎨 **Visual Polish Fixes:** Enhanced Kranok pattern transparency, arc-shaped dash ghosts, and proper context management for ground shadows
+- 🔧 **Boss Attacks Performance Optimization:** Improved gradient handling, Math.hypot() distance calculations, enhanced color format support and precision
 
 ---

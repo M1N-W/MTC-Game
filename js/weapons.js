@@ -781,7 +781,29 @@ class WeaponSystem {
 
         damage *= player.damageMultiplier || 1.0;
 
-        const offset = 28;
+        // ── Muzzle offset — spawn bullet at actual barrel tip, not player centre ──
+        // Values measured from each weapon's draw function (translate + muzzle x):
+        //   Kao auto  : translate(15,10) + arc x=34  → 49px
+        //   Kao sniper: translate(15,10) + suppressor tip x=54 → 69px
+        //   Kao shotgun: translate(15,10) + muzzle arc x=30 → 45px
+        //   Poom weapon : translate(12,6) + emitter arc x=31 → 43px
+        //   Auto player : translate(12,4) + muzzle arc x=39 → 51px
+        const MUZZLE_OFFSETS = {
+            auto: 49,
+            sniper: 69,
+            shotgun: 45,
+            poom: 43,    // used when charId === 'poom'
+            autoPlayer: 51, // AutoPlayer character's own weapon
+        };
+        let offset;
+        if (player.charId === 'poom') {
+            offset = MUZZLE_OFFSETS.poom;
+        } else if (player.charId === 'auto') {
+            offset = MUZZLE_OFFSETS.autoPlayer;
+        } else {
+            // Kao — depends on active weapon
+            offset = MUZZLE_OFFSETS[this.currentWeapon] ?? 49;
+        }
         for (let i = 0; i < weapon.pellets; i++) {
             const spread = (Math.random() - 0.5) * weapon.spread;
             const angle = player.angle + spread;

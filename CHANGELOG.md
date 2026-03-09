@@ -4,6 +4,23 @@
 
 ---
 
+## v3.18.3 — Enhanced Weapon Muzzle Offset System
+*Released: March 9, 2026*
+
+### 🔫 Character-Specific Bullet Spawn Positions
+- **Accurate Muzzle Offsets**: Implemented character-specific bullet spawn positions based on actual weapon barrel locations
+- **Kao Weapons**: Auto (49px), Sniper (69px), Shotgun (45px) - measured from weapon draw functions
+- **Poom Weapon**: 43px offset for Poom character's unique weapon positioning
+- **Auto Player**: 51px offset for Auto character's personal weapon
+- **Dynamic Offset Selection**: Smart offset system that adapts to active character and weapon type
+
+### 🎯 Improved Gameplay Accuracy
+- **Realistic Bullet Origins**: Bullets now spawn from actual barrel tips instead of player center
+- **Enhanced Visual Feedback**: Better alignment between weapon firing and bullet trajectory
+- **Consistent Crosshair Accuracy**: Improved hit registration due to proper bullet spawn positioning
+
+---
+
 ## v3.18.2 — Enhanced Player Rendering & Visual Effects
 *Released: March 9, 2026*
 

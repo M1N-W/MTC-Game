@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.18.2'; // v3.18.2: Enhanced player rendering - improved hit flash system, walk bob animations, responsive hair wobble, recoil animations, and ground shadow fixes
+const CACHE_NAME = 'mtc-cache-v3.18.3'; // v3.18.3: Enhanced weapon muzzle offset system - character-specific bullet spawn positions for improved accuracy
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
