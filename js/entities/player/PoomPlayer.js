@@ -62,6 +62,13 @@ class PoomPlayer extends Player {
         if (this._contactWarningTimer > 0) {
             this._contactWarningTimer = Math.max(0, this._contactWarningTimer - dt);
         }
+        // ── Hit Flash Timer decay (PlayerBase.update ไม่ถูกเรียกใน PoomPlayer) ──
+        if (this._hitFlashTimer > 0) {
+            this._hitFlashTimer = Math.max(0, this._hitFlashTimer - dt * 6);
+            if (this._hitFlashLocked && this._hitFlashTimer < 0.4) {
+                this._hitFlashLocked = false;
+            }
+        }
 
         // ── Combo System Update ────────────────────────────────
         if (this.comboCount > 0) {

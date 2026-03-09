@@ -4,6 +4,22 @@
 
 ---
 
+## v3.19.1 — PoomPlayer Hit Flash Timer Fix
+*Released: March 9, 2026*
+
+### 🐛 Bug Fixes
+- **PoomPlayer Hit Flash Timer:** Fixed missing hit flash timer decay in PoomPlayer.update()
+- **Root Cause:** PlayerBase.update() is not called in PoomPlayer, causing hit flash visual effects to not decay properly
+- **Solution:** Added explicit hit flash timer decay logic with 6x multiplier and hit flash lock release at 0.4s threshold
+- **Impact:** Poom character now properly displays hit flash effects when taking damage
+
+### 🔧 Technical Details
+- **Timer Decay:** `_hitFlashTimer` now properly decreases by `dt * 6` per frame
+- **Lock Release:** `_hitFlashLocked` flag resets when timer drops below 0.4s
+- **Visual Consistency:** Ensures Poom character has same damage feedback as other characters
+
+---
+
 ## v3.19.0 — Gemini AI Dependency Removal
 *Released: March 9, 2026*
 

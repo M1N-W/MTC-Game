@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.19.0'; // v3.19.0: Removed Gemini AI dependency - switched to local text-based system for mission names, boss taunts, and report cards
+const CACHE_NAME = 'mtc-cache-v3.19.1'; // v3.19.1: Fixed PoomPlayer hit flash timer decay - added missing hit flash timer update since PlayerBase.update is not called
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
