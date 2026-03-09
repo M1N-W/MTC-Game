@@ -4,6 +4,46 @@
 
 ---
 
+## v3.22.0 — Comprehensive Balance Patch
+*Released: March 9, 2026*
+
+### ⚔️ Enemy Scaling Overhaul
+- **Wave 7+ Challenge:** Significant difficulty increase in late waves while preserving early game balance
+- **Normal Enemy HP:** `hpPerWave 0.16 → 0.19` (Wave15: ~410 → ~490 HP)
+- **Tank Enemy HP:** `hpPerWave 0.20 → 0.23` (Wave15: ~1800 → ~2100 HP)  
+- **Shooter Enemy HP:** `hpPerWave 0.22 → 0.25` (Wave15: ~340 → ~390 HP)
+- **Enemy Damage:** `damagePerWave 1.2 → 1.4` (Wave15: ~24 → ~28 damage/sec)
+- **Enemy Count:** `enemiesPerWave 1.8 → 2.0` (Restored original late-game pressure)
+
+### 👤 Character Balance Adjustments
+
+#### 🎓 Kao — Stealth Loop Cost Rework
+- **Lifesteal Nerf:** `passiveLifesteal 0.03 → 0.02` (Reduced healing from stealth loops)
+- **Stealth Drain:** `stealthDrain 35 → 45` (Shorter duration: ~2.2s instead of ~2.8s)
+- **Design Goal:** Force burst usage instead of sustained stealth, make HP management meaningful
+
+#### 🔥 Auto — Overheat Risk Enhancement  
+- **Kill Healing:** `heatHealOnKillWanchai 0.08 → 0.05` (37.5% reduction)
+- **Overheat Damage:** `heatHpDrainOverheat 3 → 5 HP/s` (More painful overheated state)
+- **Design Goal:** Make detonation decisions meaningful, prevent HP trivialization
+
+#### 🌾 Poom — Cosmic Balance Skill Timing
+- **Naga Uptime:** `cooldown 20 → 22s`, `duration 10 → 9s` (50% → 41% uptime)
+- **Garuda Cooldown:** `22 → 24s` (Narrower Naga+Garuda overlap window)
+- **Design Goal:** Require precise timing and coordination between abilities
+
+### 👑 Boss Difficulty Enhancement
+- **Contact Damage:** `25 → 30` (20% increase for close-range danger)
+- **Boss HP Scaling:** `hpMultiplier 1.28 → 1.32` (Enc5: ~14,000 → ~15,000 HP)
+- **Design Goal:** Make boss encounters feel more epic and threatening
+
+### 🎯 Balance Philosophy
+- **Late Game Focus:** Minimal impact on Waves 1-5, significant challenge increase in Waves 10-15
+- **Risk vs Reward:** All character changes increase cost/reward decision depth
+- **Epic Scaling:** Boss difficulty now matches final encounter expectations
+
+---
+
 ## v3.21.2 — AdminSystem Defensive Fixes
 *Released: March 9, 2026*
 

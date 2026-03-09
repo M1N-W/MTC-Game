@@ -68,7 +68,7 @@ const BALANCE = {
             dashCooldown: 1.65,
             stealthCooldown: 5.5,
             stealthCost: 25,
-            stealthDrain: 35,
+            stealthDrain: 45,
             stealthSpeedBonus: 1.5,
             expToNextLevel: 100,
             expLevelMult: 1.5,
@@ -78,7 +78,7 @@ const BALANCE = {
             passiveHpBonusPct: 0.30,        // REWORK: 0.50 → 0.30 (ส่วนที่เหลือรอ Lv2)
             passiveUnlockText: '👻 ซุ่มเสรี Lv1!',
             passiveCritBonus: 0.0,          // REWORK: crit ย้ายไป Lv2
-            passiveLifesteal: 0.03,         // คงเดิม — reward ทันทีที่ปลด
+            passiveLifesteal: 0.02,         // NERF: 0.03 → 0.02 (stealth loop + lifesteal ทำให้ HP ไม่มีความหมาย)
             passiveSpeedAdditive: 0.4,      // NEW: additive +0.4 (แทน Math.max ×1.4 ที่ทับ shop bonus)
             // ── Passive Lv2 "Awakened" (ฆ่าขณะ FreeStealthy 5 ครั้ง) ──
             passiveLv2KillReq: 5,           // NEW: จำนวน FreeStealthy-kills ที่ต้องการ
@@ -189,9 +189,9 @@ const BALANCE = {
             heatPunchRateWarm: 0.85,        // multiplier ต่อ wanchaiPunchRate
             heatPunchRateHot: 0.70,
             heatCritBonusOverheat: 0.20,
-            heatHpDrainOverheat: 3,         // HP/s drain เมื่อ Overheated
+            heatHpDrainOverheat: 5,         // NERF: 3 → 5 HP/s (overheat ควรรู้สึกเป็น risk จริง ไม่ใช่แค่ DPS buff)
             heatOnKillWanchai: 15,          // +Heat ต่อการฆ่าขณะ Wanchai active
-            heatHealOnKillWanchai: 0.08,    // heal 8% maxHp ต่อการฆ่าขณะ Wanchai active
+            heatHealOnKillWanchai: 0.05,    // NERF: 0.08 → 0.05 (heal ลดลง — kill ยังรู้สึกดีแต่ไม่ trivial)
 
             // ── Crit & Scaling ────────────────────────────────
             baseCritChance: 0.06,
@@ -255,8 +255,8 @@ const BALANCE = {
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.2,
-            nagaCooldown: 20,        // BALANCE: uptime 50% (10s active / 20s CD)
-            nagaDuration: 10,        // RESTORE: 7→10s (ผู้เล่นต้องการ spawn นานขึ้น)
+            nagaCooldown: 22,        // NERF: 20 → 22 (uptime 45% → 41% — ยังดีอยู่แต่ต้องจัดการ)
+            nagaDuration: 9,         // NERF: 10 → 9 (Cosmic window แคบลง — ต้องวาง Garuda ให้ sync)
             nagaDamage: 100,         // BUFF: 95 → 100
             nagaSpeed: 525,
             nagaSegments: 18,        // BUFF: 12 → 18 (งูยาวขึ้นชัดเจน)
@@ -294,7 +294,7 @@ const BALANCE = {
                 bossReflectionMultiplier: 1.35
             },
             // ── Garuda Summon (E) ────────────────────────────
-            garudaCooldown: 22,             // BUFF: 25 → 22
+            garudaCooldown: 24,             // NERF: 22 → 24 (Cosmic Balance ต้องใช้ทักษะในการ sync)
             garudaDuration: 9,              // BUFF: 6 → 9 (uptime 24% → 41%)
             garudaDamage: 150,
             garudaOrbitRadius: 120,
@@ -335,9 +335,9 @@ const BALANCE = {
         expValue: 18,
         chaseRange: 150,
         projectileSpeed: 500,
-        baseHp: 40, hpPerWave: 0.16,  // NERF: 0.18 → 0.16 (exponential growth was too fast)
+        baseHp: 40, hpPerWave: 0.19,  // REBALANCE: 0.16 → 0.19 (Wave15 ~490HP แทน ~410HP — ยังไม่ infinite แต่รู้สึกได้)
         baseSpeed: 85, speedPerWave: 6,
-        baseDamage: 8, damagePerWave: 1.2,  // NERF: 1.5 → 1.2 (damage spike was too harsh)
+        baseDamage: 8, damagePerWave: 1.4,  // REBALANCE: 1.2 → 1.4 (Wave15 damage ~28 แทน ~24 — ต้องหลบ)
         shootCooldown: [2.5, 4.5],
         shootRange: 550
     },
@@ -346,7 +346,7 @@ const BALANCE = {
         color: '#78716c',
         expValue: 45,
         powerupDropMult: 1.5,
-        baseHp: 100, hpPerWave: 0.20,  // NERF: 0.24 → 0.20 (Wave15 Tank 2519→1800 HP)
+        baseHp: 100, hpPerWave: 0.23,  // REBALANCE: 0.20 → 0.23 (Tank ควรรู้สึกหนักขึ้นตาม wave)
         baseSpeed: 60, speedPerWave: 3,
         baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
         meleeRange: 55
@@ -358,7 +358,7 @@ const BALANCE = {
         powerupDropMult: 1.3,
         orbitDistance: 300,
         orbitDistanceBuffer: 100,
-        baseHp: 28, hpPerWave: 0.22,  // NERF: 0.28 → 0.22 (glass cannon should stay fragile)
+        baseHp: 28, hpPerWave: 0.25,  // REBALANCE: 0.22 → 0.25 (glass cannon ยังตายง่าย แต่ late game ต้องใส่ใจกว่าเดิม)
         baseSpeed: 70, speedPerWave: 5,
         baseDamage: 12, damagePerWave: 1.8,
         soundWaveCooldown: 10,
@@ -373,7 +373,7 @@ const BALANCE = {
         radius: 50,
         // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
         spawnY: -330,
-        contactDamage: 25,
+        contactDamage: 30,
         speechInterval: 10,
         nextWaveDelay: 2000,
         log457HealRate: 0.06,
@@ -382,7 +382,7 @@ const BALANCE = {
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
         baseHp: 5200,
-        hpMultiplier: 1.28,      // NERF: 1.333 → 1.28 (Enc5: ~14,000 HP แทน 16,400)
+        hpMultiplier: 1.32,      // REBALANCE: 1.28 → 1.32 (Enc5 ~15,000 HP — boss ควรรู้สึก epic)
         moveSpeed: 140,
         phase2Speed: 190,
         phase2Threshold: 0.5,   // fallback (overridden per-encounter in KruManop constructor)
@@ -530,7 +530,7 @@ const BALANCE = {
         maxWaves: 15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
         minKillsForNoDamage: 5,
         enemiesBase: 5,  // BUFF: 4 → 5 (more action early game)
-        enemiesPerWave: 1.8,  // NERF: 2 → 1.8 (less enemy spam late game)
+        enemiesPerWave: 2.0,  // REBALANCE: 1.8 → 2.0 (กลับสู่ค่าเดิม — late game ควรรู้สึกถูกท่วม)
         tankSpawnChance: 0.10,  // NERF: 0.12 → 0.10 (fewer tanks)
         mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
         bossEveryNWaves: 3,
