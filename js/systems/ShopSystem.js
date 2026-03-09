@@ -19,97 +19,39 @@ window.MTC_SHOP_LOCATION = MTC_SHOP_LOCATION;
 // ══════════════════════════════════════════════════════════════
 
 function drawShopObject() {
+    // ── Visual ถูกแทนที่ด้วย MapObject 'coopstore' แล้ว ──
+    // เหลือแค่ proximity aura ring เพื่อบอกผู้เล่นว่าเข้า interact ได้
     const cfg = BALANCE.shop;
     const screen = worldToScreen(cfg.x, cfg.y);
     const t = performance.now() / cfg.glowSpeedMs;
     const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
-    const bounce = Math.sin(performance.now() / cfg.bounceSpeedMs) * cfg.bounceAmplitude;
 
-    if (window.player) {
-        const d = dist(window.player.x, window.player.y, cfg.x, cfg.y);
-        if (d < cfg.interactionRadius * 2) {
-            const alpha = Math.max(0, 1 - d / (cfg.interactionRadius * 2));
+    if (!window.player) return;
+    const d = dist(window.player.x, window.player.y, cfg.x, cfg.y);
+    if (d < cfg.interactionRadius * 2.5) {
+        const alpha = Math.max(0, 1 - d / (cfg.interactionRadius * 2.5));
+        CTX.save();
+        CTX.globalAlpha = alpha * cfg.auraAlphaMult * glow;
+        CTX.strokeStyle = cfg.auraColor;
+        CTX.lineWidth = cfg.auraLineWidth;
+        CTX.setLineDash(cfg.auraDash);
+        CTX.beginPath();
+        CTX.arc(screen.x, screen.y, cfg.interactionRadius, 0, Math.PI * 2);
+        CTX.stroke();
+        CTX.setLineDash([]);
+        CTX.restore();
+
+        // "ENTER" label เมื่อใกล้ enough
+        if (d < cfg.interactionRadius * 1.2) {
             CTX.save();
-            CTX.globalAlpha = alpha * cfg.auraAlphaMult * glow;
-            CTX.strokeStyle = cfg.auraColor;
-            CTX.lineWidth = cfg.auraLineWidth;
-            CTX.setLineDash(cfg.auraDash);
-            CTX.beginPath();
-            CTX.arc(screen.x, screen.y, cfg.interactionRadius, 0, Math.PI * 2);
-            CTX.stroke();
-            CTX.setLineDash([]);
+            CTX.globalAlpha = Math.max(0, 1 - d / cfg.interactionRadius) * (0.7 + glow * 0.3);
+            CTX.fillStyle = cfg.labelColor;
+            CTX.font = 'bold 11px Orbitron,monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText('[B] ENTER SHOP', screen.x, screen.y - cfg.interactionRadius - 12);
             CTX.restore();
         }
     }
-
-    CTX.fillStyle = 'rgba(0,0,0,0.4)';
-    CTX.beginPath();
-    CTX.ellipse(screen.x, screen.y + 32, 22, 8, 0, 0, Math.PI * 2);
-    CTX.fill();
-
-    CTX.save();
-    CTX.translate(screen.x, screen.y + bounce);
-    CTX.shadowBlur = cfg.glowBlurMax * glow;
-    CTX.shadowColor = cfg.glowColor;
-
-    CTX.fillStyle = '#78350f';
-    CTX.strokeStyle = cfg.auraColor;
-    CTX.lineWidth = 2;
-    CTX.beginPath();
-    CTX.roundRect(-22, 0, 44, 28, 4);
-    CTX.fill();
-    CTX.stroke();
-
-    CTX.fillStyle = '#92400e';
-    CTX.beginPath();
-    CTX.roundRect(-22, -6, 44, 10, 3);
-    CTX.fill();
-    CTX.strokeStyle = '#fbbf24';
-    CTX.lineWidth = 1.5;
-    CTX.stroke();
-
-    CTX.strokeStyle = '#d97706';
-    CTX.lineWidth = 3;
-    CTX.beginPath(); CTX.moveTo(-18, -6); CTX.lineTo(-18, -34); CTX.stroke();
-    CTX.beginPath(); CTX.moveTo(18, -6); CTX.lineTo(18, -34); CTX.stroke();
-
-    CTX.fillStyle = `rgba(250,204,21,${0.85 + glow * 0.15})`;
-    CTX.beginPath();
-    CTX.moveTo(-26, -34);
-    CTX.lineTo(26, -34);
-    CTX.lineTo(22, -24);
-    CTX.lineTo(-22, -24);
-    CTX.closePath();
-    CTX.fill();
-    CTX.strokeStyle = '#b45309';
-    CTX.lineWidth = 1.5;
-    CTX.stroke();
-
-    CTX.fillStyle = '#f59e0b';
-    for (let i = 0; i < 5; i++) {
-        CTX.beginPath();
-        CTX.arc(-20 + i * 10, -24, 5, 0, Math.PI);
-        CTX.fill();
-    }
-
-    CTX.font = '16px Arial';
-    CTX.textAlign = 'center';
-    CTX.textBaseline = 'middle';
-    CTX.shadowBlur = 0;
-    CTX.fillText('🛒', 0, 10);
-
-    const coinBounce = Math.sin(performance.now() / cfg.coinBounceSpeedMs) * cfg.coinBounceAmplitude;
-    CTX.font = '14px Arial';
-    CTX.fillText('🪙', 0, -46 + coinBounce);
-
-    CTX.shadowBlur = 0;
-    CTX.fillStyle = cfg.labelColor;
-    CTX.font = cfg.labelFont;
-    CTX.textAlign = 'center';
-    CTX.textBaseline = 'middle';
-    CTX.fillText(cfg.labelText, 0, 38);
-
-    CTX.restore();
 }
 
 function updateShopProximityUI() {

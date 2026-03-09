@@ -978,10 +978,10 @@ class MTCRoom {
         }
 
         // ── 6. ENTRANCE FORCEFIELD ───────────────────────────────
+        const ffY = s.y + H;
         if (active) {
             const ffAlpha = pulse * 0.85;
             // Hex tile chain along the forcefield line
-            const ffY = s.y + H;
             const hexCount = 7;
             const hexSpacing = (W - 40) / (hexCount - 1);
             CTX.strokeStyle = `rgba(250,180,30,${0.18 * pulse})`;
@@ -1018,6 +1018,35 @@ class MTCRoom {
             CTX.font = 'bold 8px Orbitron,monospace';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
             CTX.fillText('⚕  SAFE ZONE ACTIVE', cx, ffY - 13);
+
+            // ── Entrance arrow (bouncing, below forcefield) ──────
+            const arrowBounce = Math.sin(now / 400) * 5;
+            const arrowY = ffY + 18 + arrowBounce;
+            CTX.fillStyle = `rgba(250,180,30,${0.55 + pulse * 0.35})`;
+            CTX.beginPath();
+            CTX.moveTo(cx, arrowY + 12);
+            CTX.lineTo(cx - 10, arrowY);
+            CTX.lineTo(cx - 4, arrowY);
+            CTX.lineTo(cx - 4, arrowY - 8);
+            CTX.lineTo(cx + 4, arrowY - 8);
+            CTX.lineTo(cx + 4, arrowY);
+            CTX.lineTo(cx + 10, arrowY);
+            CTX.closePath();
+            CTX.fill();
+        } else {
+            // COOLDOWN state — red barrier + timer
+            CTX.strokeStyle = 'rgba(239,68,68,0.55)';
+            CTX.lineWidth = 3;
+            CTX.setLineDash([8, 6]);
+            CTX.beginPath(); CTX.moveTo(s.x + 16, ffY); CTX.lineTo(s.x + W - 16, ffY); CTX.stroke();
+            CTX.setLineDash([]);
+            // Cooldown label below entrance
+            CTX.fillStyle = 'rgba(30,5,5,0.75)';
+            CTX.beginPath(); CTX.roundRect(cx - 58, ffY + 4, 116, 16, 4); CTX.fill();
+            CTX.fillStyle = `rgba(239,68,68,${0.8 + sinBlink * 0.2})`;
+            CTX.font = 'bold 8px monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText(`⛔ COOLDOWN ${Math.ceil(this.cooldown)}s`, cx, ffY + 12);
         }
 
         // ── 7. PLAYER INSIDE TIMER ───────────────────────────────
@@ -1155,34 +1184,25 @@ class MapSystem {
         this.objects.push(new MapObject(740, 460, 150, 80, 'blackboard'));
 
         // ── Zone F.1: MTC Database Cluster (NE) ───────────────────
-        // Main building: ใหญ่, มีผนัง MTC-style รอบข้าง
-        // Center: (500, -490) → building ขนาด 120×140
+        // Main building เท่านั้น — ไม่มี flanking objects ขวางทาง
+        // ทางเข้าจากด้านล่าง (South) โล่ง ≥ 120px
         const dbX = 440, dbY = -560;
         this.objects.push(new MapObject(dbX, dbY, 120, 140, 'database'));
-        // Flanking server racks (เพื่อบรรยากาศ data center)
-        this.objects.push(new MapObject(dbX - 70, dbY + 10, 45, 80, 'server'));
-        this.objects.push(new MapObject(dbX + 140, dbY + 10, 45, 80, 'server'));
-        this.objects.push(new MapObject(dbX - 70, dbY + 110, 45, 80, 'server'));
-        this.objects.push(new MapObject(dbX + 140, dbY + 110, 45, 80, 'server'));
-        // Data pillars เป็น boundary markers
-        this.objects.push(new MapObject(dbX - 110, dbY, 35, 70, 'datapillar'));
-        this.objects.push(new MapObject(dbX - 110, dbY + 100, 35, 70, 'datapillar'));
-        this.objects.push(new MapObject(dbX + 200, dbY, 35, 70, 'datapillar'));
-        this.objects.push(new MapObject(dbX + 200, dbY + 100, 35, 70, 'datapillar'));
+        // 2 servers ด้านหลัง (North) — ไม่ขวางทางเข้า
+        this.objects.push(new MapObject(dbX - 55, dbY - 5, 40, 70, 'server'));
+        this.objects.push(new MapObject(dbX + 135, dbY - 5, 40, 70, 'server'));
 
         // ── Zone F.2: MTC Co-op Store (SW) ────────────────────────
-        // Main building: shop front ขนาด 130×110
-        // Center: (-500, 490) → building ที่ (-565, 435)
-        const shopX = -565, shopY = 435;
+        // Sync ตำแหน่งกับ BALANCE.shop.x/y (-500, 490) เพื่อให้ interaction zone ตรง
+        // ทางเข้าจาก North โล่ง — ไม่มี object ขวางในแนว y < shopY
+        const shopX = BALANCE.shop.x - 65;  // center building บน interaction point
+        const shopY = BALANCE.shop.y - 55;
         this.objects.push(new MapObject(shopX, shopY, 130, 110, 'coopstore'));
-        // Trees เป็น landscaping รอบร้าน
-        this.objects.push(new MapObject(shopX - 55, shopY - 10, 50, 50, 'tree'));
-        this.objects.push(new MapObject(shopX + 155, shopY - 10, 50, 50, 'tree'));
-        this.objects.push(new MapObject(shopX - 55, shopY + 80, 50, 50, 'tree'));
-        this.objects.push(new MapObject(shopX + 155, shopY + 80, 50, 50, 'tree'));
-        // Vending machines ใกล้ร้าน (สะดวกซื้อ mini-zone)
-        this.objects.push(new MapObject(shopX + 155, shopY + 30, 40, 70, 'vendingmachine'));
-        this.objects.push(new MapObject(shopX - 55, shopY + 30, 40, 70, 'vendingmachine'));
+        // Trees ด้านหลัง (South) เท่านั้น — ไม่ขวางทางเข้าจาก North
+        this.objects.push(new MapObject(shopX - 50, shopY + 95, 50, 50, 'tree'));
+        this.objects.push(new MapObject(shopX + 130, shopY + 95, 50, 50, 'tree'));
+        // Vending machines ด้านหลัง — ไม่ขวางทางเข้า
+        this.objects.push(new MapObject(shopX - 50, shopY + 25, 40, 70, 'vendingmachine'));
 
         // Zone E: Vending Machines — ถอยออกจาก center ≥ 380px
         // เดิม: อยู่ที่ x=±200, y=±130 (ใกล้ spawn มาก)

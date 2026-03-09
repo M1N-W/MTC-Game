@@ -4,6 +4,42 @@
 
 ---
 
+## v3.27.4 — Map Layout Optimization & Shop System Simplification
+*Released: March 9, 2026*
+
+### 🗺️ Zone F.1 Database Layout Cleanup
+- **Removed Obstacles**: Eliminated 4 flanking servers + 4 data pillars that blocked entrance paths
+- **Streamlined Layout**: Main building (120×140) at (440, -560) with only 2 servers at back (North)
+- **Clear Entrance**: South entrance now completely unobstructed for easy player access
+- **Improved Navigation**: Removed boundary markers that created narrow corridors
+
+### 🛒 Zone F.2 CoopStore Position Sync & Cleanup
+- **Position Synchronization**: Building now centered on BALANCE.shop.x/y (-500, 490) instead of hardcoded (-565, 435)
+- **Interaction Alignment**: Shop visual now properly aligned with interaction point
+- **Entrance Clearance**: Removed 4 surrounding trees + 2 vending machines that blocked North entrance
+- **Strategic Landscaping**: Kept only 2 trees at back + 1 vending machine on left-back for atmosphere
+- **Clear Access**: North entrance now completely open for player approach
+
+### 🚪 MTC Room Entrance Visual Enhancements
+- **Active State Indicator**: Added bouncing arrow ↑ below forcefield when room is active
+- **Cooldown Visualization**: Implemented red dashed barrier + ⛔ COOLDOWN Xs timer display
+- **Improved UX**: Players now have clear visual feedback for room availability status
+- **Dynamic Animation**: Arrow bounces with sinusoidal motion for attention-grabbing effect
+
+### 🎨 ShopSystem.js Rendering Simplification
+- **Removed Redundant Visuals**: Eliminated chest model rendering (shadow, body, lid, coins, etc.)
+- **Proximity-Only Display**: Kept only proximity aura ring + [B] ENTER SHOP label when nearby
+- **Performance Optimization**: Building visual now handled solely by MapObject 'coopstore'
+- **Visual Consistency**: Prevents overlap between shop system rendering and map object rendering
+
+### 🔧 Technical Improvements
+- **Map Navigation**: All major locations now have clear, unobstructed entrance paths
+- **Visual Feedback**: Enhanced state indicators for better player understanding
+- **Code Efficiency**: Reduced duplicate rendering between shop systems
+- **Layout Consistency**: Shop building position synchronized with interaction logic
+
+---
+
 ## v3.27.3 — MTC Game Map Position Adjustments
 *Released: March 9, 2026*
 
