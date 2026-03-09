@@ -452,21 +452,31 @@ class PlayerRenderer {
         const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
         const facingSign = isFacingLeft ? -1 : 1;
 
+        // ── Movement vars (declared early — used by ghost, shadow, body) ──
+        const breatheAuto = Math.sin(now / 200);
+        const speed = Math.hypot(entity.vx, entity.vy);
+        const moveT = Math.min(1, speed / 180);
+        const bobT = Math.sin(entity.walkCycle * 0.9);
+        const stretchX = 1 + breatheAuto * 0.025 + moveT * bobT * 0.09;
+        const stretchY = 1 - breatheAuto * 0.025 - moveT * Math.abs(bobT) * 0.065;
+        const recoilAmt = entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.0 : 0;
+        const recoilX = -Math.cos(entity.angle) * recoilAmt;
+        const recoilY = -Math.sin(entity.angle) * recoilAmt;
+        const bobOffsetY = moveT * Math.abs(Math.sin(entity.walkCycle * 0.9)) * 2.5;
+        const R = 15;
+
         // ── Stand Aura (Signature Auto — แดง/ส้ม) ─────────────
         PlayerRenderer._standAuraDraw(entity, 'auto', ctx);
 
         // ── Dash Ghost Trail ────────────────────────────────────
         for (const img of (entity.dashGhosts || [])) {
             const gs = worldToScreen(img.x, img.y);
-            const ghostFacing = Math.abs(img.angle) > Math.PI / 2 ? -1 : 1;
             ctx.save();
-            ctx.translate(gs.x, gs.y);
-            ctx.scale(ghostFacing, 1);
             ctx.globalAlpha = img.life * 0.35;
             ctx.fillStyle = '#ef4444';
             ctx.shadowBlur = 10 * img.life;
             ctx.shadowColor = '#dc2626';
-            ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(gs.x, gs.y, R, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
@@ -583,27 +593,9 @@ class PlayerRenderer {
             entity.wanchaiStand.draw(ctx);
         }
 
-        // Breathing squash/stretch
-        const breatheAuto = Math.sin(now / 200);
-        const speed = Math.hypot(entity.vx, entity.vy);
-        const moveT = Math.min(1, speed / 180);
-        const bobT = Math.sin(entity.walkCycle * 0.9);
-        const stretchX = 1 + breatheAuto * 0.025 + moveT * bobT * 0.09;
-        const stretchY = 1 - breatheAuto * 0.025 - moveT * Math.abs(bobT) * 0.065;
-
-        // ── Recoil (same system as Kao) ────────────────────────
-        const recoilAmt = entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.0 : 0;
-        const recoilX = -Math.cos(entity.angle) * recoilAmt;
-        const recoilY = -Math.sin(entity.angle) * recoilAmt;
-
-        // ── Walk bob Y-offset (body dips slightly when moving) ──
-        const bobOffsetY = moveT * Math.abs(Math.sin(entity.walkCycle * 0.9)) * 2.5;
-
         const attackIntensity = entity.wanchaiActive ? 1.0
             : Math.min(1, (Math.abs(entity.vx) + Math.abs(entity.vy)) / 150 + 0.2);
         const ventGlow = Math.max(0, attackIntensity * (0.5 + Math.sin(now / 180) * 0.5));
-
-        const R = 15;
 
         // ════ LAYER 1 — BODY ════
         ctx.save();
@@ -878,6 +870,20 @@ class PlayerRenderer {
         const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
         const facingSign = isFacingLeft ? -1 : 1;
 
+        // ── Movement vars (declared early — used by ghost, shadow, body) ──
+        const now2 = performance.now();
+        const breathePoom = Math.sin(now2 / 200);
+        const speed2 = Math.hypot(entity.vx, entity.vy);
+        const moveT2 = Math.min(1, speed2 / 190);
+        const bobT2 = Math.sin(entity.walkCycle);
+        const stretchX2 = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
+        const stretchY2 = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
+        const poomRecoilAmt = entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 2.5 : 0;
+        const poomRecoilX = -Math.cos(entity.angle) * poomRecoilAmt;
+        const poomRecoilY = -Math.sin(entity.angle) * poomRecoilAmt;
+        const poomBobY = moveT2 * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
+        const R2 = 13;
+
         PlayerRenderer._standAuraDraw(entity, 'poom', ctx);
 
         // Dash ghost trail — เขียวมรกต match body Poom
@@ -1004,25 +1010,6 @@ class PlayerRenderer {
                 ctx.restore();
             }
         }
-
-        // Breathing squash/stretch
-        const now2 = performance.now();
-        const breathePoom = Math.sin(now2 / 200);
-        const speed2 = Math.hypot(entity.vx, entity.vy);
-        const moveT2 = Math.min(1, speed2 / 190);
-        const bobT2 = Math.sin(entity.walkCycle);
-        const stretchX2 = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
-        const stretchY2 = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
-
-        // ── Recoil (Poom) ──────────────────────────────────────
-        const poomRecoilAmt = entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 2.5 : 0;
-        const poomRecoilX = -Math.cos(entity.angle) * poomRecoilAmt;
-        const poomRecoilY = -Math.sin(entity.angle) * poomRecoilAmt;
-
-        // ── Walk bob Y-offset ──────────────────────────────────
-        const poomBobY = moveT2 * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
-
-        const R2 = 13;
 
         // ════ LAYER 1 — BODY ════
         ctx.save();
@@ -1276,6 +1263,16 @@ class PlayerRenderer {
         const recoilX = -Math.cos(entity.angle) * recoilAmt;
         const recoilY = -Math.sin(entity.angle) * recoilAmt;
 
+        // ── Movement vars (declared early — used by ghost, shadow, body) ──
+        const breatheKao = Math.sin(now / 200);
+        const speed = Math.hypot(entity.vx, entity.vy);
+        const moveT = Math.min(1, speed / 200);
+        const bobT = Math.sin(entity.walkCycle);
+        const stretchX = 1 + breatheKao * 0.030 + moveT * bobT * 0.10;
+        const stretchY = 1 - breatheKao * 0.030 - moveT * Math.abs(bobT) * 0.07;
+        const kaoBobY = moveT * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
+        const R = 13;
+
         // Dash ghost trail
         for (const img of entity.dashGhosts) {
             const gs = worldToScreen(img.x, img.y);
@@ -1315,19 +1312,6 @@ class PlayerRenderer {
             ctx.font = 'bold 18px Arial';
             ctx.fillText('🔥', screen.x + 18, screen.y - 26);
         }
-
-        // Breathing squash/stretch
-        const breatheKao = Math.sin(now / 200);
-        const speed = Math.hypot(entity.vx, entity.vy);
-        const moveT = Math.min(1, speed / 200);
-        const bobT = Math.sin(entity.walkCycle);
-        const stretchX = 1 + breatheKao * 0.030 + moveT * bobT * 0.10;
-        const stretchY = 1 - breatheKao * 0.030 - moveT * Math.abs(bobT) * 0.07;
-
-        // ── Walk bob Y-offset ──────────────────────────────────
-        const kaoBobY = moveT * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
-
-        const R = 13;
 
         if (entity.isInvisible || entity.isFreeStealthy) {
             // STEALTH: glitch scanlines + ghost bean

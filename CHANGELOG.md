@@ -4,6 +4,27 @@
 
 ---
 
+## v3.18.4 — PlayerRenderer Code Organization & Optimization
+*Released: March 9, 2026*
+
+### 🔧 Code Structure Improvements
+- **Early Variable Declaration**: Movement variables (breathing, speed, bob, stretch, recoil) now declared at the beginning of each character render function
+- **Eliminated Duplicate Declarations**: Removed redundant variable calculations that were scattered throughout render methods
+- **Improved Variable Scope**: Variables used by ghosts, shadows, and body rendering are now available early in the execution flow
+- **Cleaner Code Flow**: Better organization of calculation logic before rendering operations
+
+### 🎨 Rendering Optimization
+- **Simplified Ghost Rendering**: Removed unnecessary transform operations in dash ghost rendering
+- **Consistent Variable Usage**: Standardized variable naming and usage patterns across all character renderers
+- **Maintainability Enhancement**: Easier to modify and debug animation systems with centralized variable declarations
+
+### ⚡ Performance Benefits
+- **Reduced Redundant Calculations**: Eliminated duplicate math operations for movement variables
+- **Improved Readability**: Code structure now follows a more logical top-to-bottom flow
+- **Better Developer Experience**: Easier to understand and modify character rendering behavior
+
+---
+
 ## v3.18.3 — Enhanced Weapon Muzzle Offset System
 *Released: March 9, 2026*
 
