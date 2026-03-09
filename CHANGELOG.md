@@ -4,6 +4,22 @@
 
 ---
 
+## v3.27.3 — MTC Game Map Position Adjustments
+*Released: March 9, 2026*
+
+### 🗺️ Database & Shop Position Refinement
+- **MTC Database**: Moved from (440, -560) → (500, -490) for optimal NE quadrant placement
+- **MTC Co-op Store**: Moved from (-565, 435) → (-500, 490) for better SW quadrant positioning
+- **Updated MAP_CONFIG**: Synchronized all related coordinates (paths, auras, interaction points)
+- **Zone Consistency**: Updated worldX/worldY coordinates to match new positions
+
+### 📍 Technical Changes
+- **config.js**: Updated BALANCE.database, BALANCE.shop, MAP_CONFIG.paths, and MAP_CONFIG.auras
+- **Coordinate Synchronization**: All database and shop related positions now aligned
+- **Map Layout**: Improved spatial distribution for better gameplay flow
+
+---
+
 ## v3.27.2 — MTC Game Map Refactor
 *Released: March 9, 2026*
 

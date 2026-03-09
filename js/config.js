@@ -606,8 +606,8 @@ const BALANCE = {
     // ══════════════════════════════════════════════════════
     database: {
         // World position — must match MAP_CONFIG.auras.database + paths.database.to
-        x: 440,
-        y: -560,
+        x: 500,
+        y: -490,
         interactionRadius: 90,
         // External URL opened when player presses E at database
         url: 'https://claude.ai/public/artifacts/649de47e-b97f-41ad-ae66-c944d35eb24f',
@@ -632,8 +632,8 @@ const BALANCE = {
     // ══════════════════════════════════════════════════════
     shop: {
         // World position — must match MAP_CONFIG.auras.shop + paths.shop.to
-        x: -565,
-        y: 435,
+        x: -500,
+        y: 490,
         interactionRadius: 90,
         // Roguelite shop mechanics
         slotCount: 3,
@@ -1342,14 +1342,14 @@ const MAP_CONFIG = {
     paths: {
         database: {
             from: { x: 0, y: 0 },
-            to: { x: 440, y: -560 },
+            to: { x: 500, y: -490 },
             coreColor: '#fbbf24',
             glowColor: 'rgba(251, 191, 36, 0.85)',
             phase: 0.0,
         },
         shop: {
             from: { x: 0, y: 0 },
-            to: { x: -565, y: 435 },
+            to: { x: -500, y: 490 },
             coreColor: '#f97316',
             glowColor: 'rgba(249, 115, 22, 0.85)',
             phase: 2.094,
@@ -1482,16 +1482,16 @@ const MAP_CONFIG = {
     // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
-            worldX: 440,   // center of database zone
-            worldY: -560,  // center of database zone
+            worldX: 500,   // center of database zone (330+170)
+            worldY: -490,  // center of database zone (-660+170)
             innerRgb: '250, 180, 30',
             outerRgb: '120, 60, 10',
             radius: 160,
             phase: 0.0,
         },
         shop: {
-            worldX: -565,  // center of shop zone
-            worldY: 435,   // center of shop zone
+            worldX: -500,  // center of shop zone (-670+170)
+            worldY: 490,   // center of shop zone (320+170)
             innerRgb: '249, 115, 22',
             outerRgb: '154, 52, 18',
             radius: 160,

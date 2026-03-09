@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.27.1 | **Latest Update:** Map reorganization & spawn fix - expanded object positions, updated shop/database locations
+> **Current Version:** Beta v3.27.3 | **Latest Update:** Map position adjustments - repositioned database and shop for improved layout
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
