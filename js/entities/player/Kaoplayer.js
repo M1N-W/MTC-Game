@@ -20,6 +20,7 @@ class KaoClone {
     }
 
     update(dt) {
+        if (this.isStationary) return;  // FIX: shadow clone จาก Phantom Blink ไม่ควร orbit หา owner
         const dist = 60;
         const targetX = this.owner.x + Math.cos(this.angleOffset) * dist;
         const targetY = this.owner.y + Math.sin(this.angleOffset) * dist;
@@ -51,7 +52,7 @@ class KaoClone {
 
             const p = new Projectile(
                 sx, sy, finalAngle,
-                wep.speed, damage * 0.5, color,  // Clone deals 50% damage
+                wep.speed, damage, color,  // FIX: damage already scaled to 60% by caller (was ×0.5 here → actual 30%)
                 isCrit, 'player', projOptions
             );
             p.isCrit = isCrit;
@@ -279,6 +280,15 @@ class KaoPlayer extends Player {
 
         if (this.shootCooldown > 0) this.shootCooldown -= dt;
 
+        // ── bonusCritFromAuto decay: ลดลง 0.01/s เมื่อถือ weapon อื่น (ไม่ใช่ AUTO RIFLE) ──
+        // กัน permanent 50% crit lock จากการ farm auto rifle
+        if (this.bonusCritFromAuto > 0 && this.isWeaponMaster) {
+            const wepKey = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : 'auto';
+            if (wepKey !== 'auto') {
+                this.bonusCritFromAuto = Math.max(0, this.bonusCritFromAuto - 0.01 * dt);
+            }
+        }
+
         // ── STRICT GATE: Advanced Skills ──────────────────────────────────
         if (this.passiveUnlocked) {
             // 1. REWORK: Dash-Stealth (replaces random auto-stealth)
@@ -338,11 +348,11 @@ class KaoPlayer extends Player {
                     const newTimer = { elapsed: 0, max: this.teleportCooldown };
                     this.teleportTimers.push(newTimer);
 
-                    // Penalty: หมดทุก stack → เพิ่ม +5s ให้ timer ที่ใกล้ครบสุด
+                    // Penalty: หมดทุก stack → เพิ่ม +5s ให้ timer ที่ recharge ช้าสุด (elapsed น้อยสุด)
                     if (this.teleportCharges === 0 && this.teleportTimers.length > 1) {
-                        let maxElapsed = -1, penaltyIdx = 0;
+                        let minElapsed = Infinity, penaltyIdx = 0;
                         this.teleportTimers.forEach((t, i) => {
-                            if (t.elapsed > maxElapsed) { maxElapsed = t.elapsed; penaltyIdx = i; }
+                            if (t.elapsed < minElapsed) { minElapsed = t.elapsed; penaltyIdx = i; }  // FIX: ใช้ < แทน > — penalty = timer ที่ยังรีชาร์จช้าที่สุด
                         });
                         this.teleportTimers[penaltyIdx].max += this.teleportPenalty;
                         spawnFloatingText('\u23F3 Penalty!', this.x, this.y - 80, '#ef4444', 20);
@@ -371,6 +381,7 @@ class KaoPlayer extends Player {
                         shadowClone.x = prevX;
                         shadowClone.y = prevY;
                         shadowClone.alpha = 0.85;       // more visible than orbit clones
+                        shadowClone.isStationary = true; // FIX: ค้างที่จุดออกเดินทาง ไม่ orbit หา owner
                         this.clones.push(shadowClone);
                         this.clonesActiveTimer = Math.max(
                             this.clonesActiveTimer,
@@ -529,6 +540,8 @@ class KaoPlayer extends Player {
             }
             this.sniperChargeTime = 0;
         }
+
+        this.updateUI();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -556,11 +569,8 @@ class KaoPlayer extends Player {
                 if (Math.random() < 0.3) spawnParticles(this.x, this.y, 1, '#ef4444');
                 return;   // don't fire yet
             } else if (!isClick && this.sniperChargeTime > 0) {
-                // Mouse released — fire the charged shot
-                this.fireWeapon(wep, true);
-                this.shootCooldown = baseCd * (this.cooldownMultiplier || 1);
-                weaponSystem.weaponCooldown = this.shootCooldown; // Sync UI
-                this.sniperChargeTime = 0;
+                // FIX: fire path ย้ายไป update() แล้ว — skip ที่นี่เพื่อกัน double-fire
+                // update() รันก่อน shoot() ทุก frame ดังนั้น sniperChargeTime จะ = 0 แล้วถ้า update() fire ไปแล้ว
                 return;
             }
         } else {
@@ -695,7 +705,7 @@ class KaoPlayer extends Player {
             projectileManager.add(p);
         }
 
-        // NERF: Clones deal 60% damage to prevent excessive DPS
+        // Clones deal 60% damage — scaling done here, KaoClone.shoot() uses damage as-is
         const cloneDamage = finalDamage * 0.6;
         this.clones.forEach(c => c.shoot(wep, cloneDamage, color, pellets, spread, wepKey, isCrit));
 
@@ -727,6 +737,39 @@ class KaoPlayer extends Player {
             spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16);
         }
         super.takeDamage(amt);
+    }
+
+    // ── HUD Update: cooldown bars สำหรับ Q (teleport) และ E (clone) ──────────
+    // FIX: KaoPlayer ไม่มี updateUI() เลย → Q/E CD ไม่แสดงบน HUD
+    updateUI() {
+        if (typeof UIManager === 'undefined' || !UIManager._setCooldownVisual) return;
+
+        // Q — Teleport: แสดง CD ของ timer ที่ regen ช้าสุด (timer ที่ elapsed น้อยสุด)
+        const S = BALANCE.characters.kao;
+        if (this.teleportTimers.length > 0) {
+            let minElapsed = Infinity;
+            this.teleportTimers.forEach(t => { if (t.elapsed < minElapsed) minElapsed = t.elapsed; });
+            const slowestTimer = this.teleportTimers.find(t => t.elapsed === minElapsed);
+            const cdRemaining = slowestTimer ? (slowestTimer.max - slowestTimer.elapsed) : 0;
+            UIManager._setCooldownVisual('q-icon', Math.max(0, cdRemaining), this.teleportCooldown);
+        } else {
+            UIManager._setCooldownVisual('q-icon', 0, this.teleportCooldown);
+        }
+
+        // E — Clone of Stealth
+        UIManager._setCooldownVisual('e-icon',
+            Math.max(0, this.cloneSkillCooldown), this.maxCloneCooldown);
+
+        // HP / Energy bars (ผ่าน base class ถ้ามี)
+        const hpBar = document.getElementById('hp-bar');
+        const enBar = document.getElementById('en-bar');
+        if (hpBar) hpBar.style.width = `${this.hp / this.maxHp * 100}%`;
+        if (enBar) enBar.style.width = `${this.energy / this.maxEnergy * 100}%`;
+
+        const levelEl = document.getElementById('player-level');
+        if (levelEl) levelEl.textContent = `Lv.${this.level}`;
+        const expBar = document.getElementById('exp-bar');
+        if (expBar) expBar.style.width = `${(this.exp / this.expToNextLevel) * 100}%`;
     }
 }
 window.KaoPlayer = KaoPlayer;

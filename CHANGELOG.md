@@ -4,6 +4,35 @@
 
 ---
 
+## v3.26.6 — KaoPlayer Complete Bug Fixes
+*Released: March 9, 2026*
+
+### 🐛 Bug Fixes
+- **KaoPlayer ability systems:**
+  - Added bonusCritFromAuto decay (0.01/s) when not holding AUTO RIFLE weapon
+  - Fixed teleport penalty logic to target slowest regenerating timer (elapsed < minElapsed)
+  - Added isStationary flag for Phantom Blink shadow clones (prevents orbit behavior)
+  - Prevented sniper double-fire by removing duplicate fire path in shoot() method
+  - Enhanced updateUI() with complete Q/E cooldown display and HUD bars
+
+- **Damage scaling clarification:**
+  - Updated KaoClone damage comment to clarify 60% scaling handled by caller
+  - Improved code documentation for damage calculation flow
+
+- **UI improvements:**
+  - Added full updateUI() method implementation for KaoPlayer
+  - Proper display of teleport cooldowns (slowest timer)
+  - Clone skill cooldown visualization
+  - HP/Energy bars and level/exp display
+
+### 🔧 Technical Improvements
+- Better weapon switching behavior with crit bonus decay
+- More accurate teleport penalty targeting system
+- Enhanced visual feedback for ability cooldowns
+- Improved code clarity and documentation
+
+---
+
 ## v3.26.5 — Character Bug Fixes
 *Released: March 9, 2026*
 

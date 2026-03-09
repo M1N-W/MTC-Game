@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.5'; // v3.26.5: Character bug fixes - AutoPlayer cooldown logic separation, KaoClone damage scaling correction, PoomPlayer NaN guard, shadow clone orbit fix, teleport penalty correction, bonus crit decay, sniper double-fire prevention, Naga shield comment accuracy
+const CACHE_NAME = 'mtc-cache-v3.26.6'; // v3.26.6: Complete KaoPlayer bug fixes - bonusCritFromAuto decay, teleport penalty correction, shadow clone positioning, sniper double-fire prevention, updateUI() implementation, damage scaling clarification
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
