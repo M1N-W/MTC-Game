@@ -112,9 +112,7 @@ function _activateWaveEvent(type, wave) {
         _patchEnemySpeeds();
     }
 
-    if (typeof spawnFloatingText === 'function' && window.player)
-        spawnFloatingText(_evt.bannerTitle, window.player.x, window.player.y - 90, _evt.bannerColor, 30);
-
+    // voice bubble เท่านั้น — canvas banner แสดง title อยู่แล้ว ไม่ spawn floatingText ซ้ำ
     if (window.player && window.UIManager) {
         const voiceLine = type === 'fog' ? '⚠ Radar offline...' : "⚡ They're moving fast!";
         window.UIManager.showVoiceBubble(voiceLine, window.player.x, window.player.y - 40);
@@ -485,7 +483,12 @@ function startNextWave() {
     }
 
     setElementText('wave-badge', GAME_TEXTS.wave.badge(getWave()));
-    spawnFloatingText(GAME_TEXTS.wave.floatingTitle(getWave()), window.player.x, window.player.y - 100, '#facc15', 40);
+    // stagger 900ms หลัง banner เริ่ม — ปล่อยให้ canvas banner fade-in ก่อน
+    const _waveNum = getWave();
+    setTimeout(() => {
+        if (window.player && !window.player.dead)
+            spawnFloatingText(GAME_TEXTS.wave.floatingTitle(_waveNum), window.player.x, window.player.y - 100, '#facc15', 40);
+    }, 900);
 
     const wave = getWave();
     Achievements.check('wave_5');

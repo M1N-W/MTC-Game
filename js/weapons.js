@@ -693,6 +693,16 @@ class WeaponSystem {
             }
             const nameEl = document.getElementById('weapon-name');
             if (nameEl) { nameEl.textContent = weaponData.name; nameEl.style.color = weaponData.color; }
+
+            // ── Auto-hide: แสดง indicator แล้วซ่อนหลัง 2.5s ──
+            const indicator = document.querySelector('.weapon-indicator');
+            if (indicator) {
+                indicator.classList.remove('weapon-indicator--hidden');
+                clearTimeout(this._weaponHideTimer);
+                this._weaponHideTimer = setTimeout(() => {
+                    indicator.classList.add('weapon-indicator--hidden');
+                }, 2500);
+            }
         } catch (err) {
             console.error('[WeaponSystem] updateWeaponUI failed:', err);
         }

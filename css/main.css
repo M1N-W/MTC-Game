@@ -192,6 +192,13 @@ body {
     pointer-events: none;
     z-index: 15;
     clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.weapon-indicator--hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+    pointer-events: none;
 }
 
 .weapon-name {
@@ -3197,69 +3204,16 @@ body {
     border-color: #6d28d9;
 }
 
-/* ── Tutorial v3: UI Highlight ───────────────────────────── */
-/* Applied via JS to the exact DOM element being taught      */
-.tut-highlighted {
-    position: relative;
-    z-index: 200;
-    border-radius: 10px;
-    animation: tut-highlight-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes tut-highlight-pulse {
+/* Spotlight pulse ring — drawn around highlighted elements */
+@keyframes tutSpotlight {
 
     0%,
     100% {
-        box-shadow:
-            0 0 0 2px #818cf8,
-            0 0 14px 3px rgba(129, 140, 248, 0.5),
-            0 0 32px 6px rgba(129, 140, 248, 0.2);
+        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.5), 0 0 20px rgba(139, 92, 246, 0.3);
     }
 
     50% {
-        box-shadow:
-            0 0 0 4px #a5b4fc,
-            0 0 24px 6px rgba(129, 140, 248, 0.75),
-            0 0 52px 12px rgba(129, 140, 248, 0.35);
-    }
-}
-
-/* ── Tutorial v3: Arrow ──────────────────────────────────── */
-/* Single fixed div — JS sets position + data-dir each frame */
-#tut-arrow {
-    position: fixed;
-    z-index: 19500;
-    /* above tutorial-overlay (19000) */
-    pointer-events: none;
-    width: 36px;
-    height: 46px;
-    animation: tut-arrow-bounce 0.75s ease-in-out infinite alternate;
-}
-
-/* Arrow shape via clip-path — gold gradient pointing down */
-#tut-arrow::before {
-    content: '';
-    display: block;
-    width: 36px;
-    height: 46px;
-    background: linear-gradient(180deg, #facc15 0%, #f59e0b 100%);
-    clip-path: polygon(50% 100%, 0% 30%, 30% 30%, 30% 0%, 70% 0%, 70% 30%, 100% 30%);
-    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85));
-}
-
-/* Edge mode — rotate to point toward off-screen target */
-#tut-arrow[data-dir="edge"]::before {
-    transform: rotate(var(--arrow-rotate, 0deg));
-    transform-origin: center center;
-}
-
-@keyframes tut-arrow-bounce {
-    from {
-        transform: translateY(0px);
-    }
-
-    to {
-        transform: translateY(9px);
+        box-shadow: 0 0 0 8px rgba(139, 92, 246, 0.8), 0 0 40px rgba(139, 92, 246, 0.6);
     }
 }
 

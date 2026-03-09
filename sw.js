@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.20.0'; // v3.20.0: Enhanced Tutorial System v3 - added UI highlighting and animated arrow for better user guidance
+const CACHE_NAME = 'mtc-cache-v3.20.1'; // v3.20.1: UI Polish - Improved level up text timing, weapon indicator transitions, and wave event display
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

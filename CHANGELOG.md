@@ -4,6 +4,39 @@
 
 ---
 
+## v3.20.1 — UI Polish: Level Up & Wave Event Display Improvements
+*Released: March 9, 2026*
+
+### ✨ Level Up Display Enhancement
+- **Staggered Text Timing**: Split level up notification into two phases for better visual hierarchy
+  - Phase 1: Immediate stats display (+X% DMG, -Y% CD) with smaller, cleaner text
+  - Phase 2: Delayed 350ms big "✦ LEVEL N! ✦" announcement with enhanced visual impact
+- **Improved Text Positioning**: Stats text positioned higher (y-55) to avoid overlap with character
+- **Visual Hierarchy**: Clear separation between stat changes and level announcement for better readability
+
+### 🎨 Weapon Indicator Transitions
+- **Smooth Animations**: Added opacity and transform transitions (0.4s ease) for weapon indicator
+- **Hidden State**: New `.weapon-indicator--hidden` class with fade and slide effects
+- **Enhanced Visual Feedback**: Weapon changes now feature smooth fade-in/fade-out animations
+
+### 🌊 Wave Event Display Optimization
+- **Eliminated Duplicate Text**: Removed redundant floating text for wave events - canvas banner already displays event titles
+- **Voice Bubble Only**: Wave events now use voice bubbles for atmospheric feedback without text clutter
+- **Staggered Wave Announcements**: Wave start floating text delayed 900ms after banner begins
+- **Better Visual Flow**: Allows canvas banner fade-in to complete before showing floating text
+
+### 🎯 Tutorial Spotlight Refinement
+- **Simplified Spotlight Effect**: Streamlined tutorial highlighting animation to single pulsing ring
+- **Performance Optimization**: Reduced complex multi-layer animations to efficient single-keyframe design
+- **Cleaner Visual Design**: Removed unnecessary complexity for better focus on tutorial content
+
+### 🔧 Technical Improvements
+- **Reduced Visual Noise**: Eliminated overlapping floating texts during wave transitions
+- **Better Timing Coordination**: Synchronized text displays with existing canvas animations
+- **Improved User Experience**: Cleaner, more organized visual feedback during key game moments
+
+---
+
 ## v3.20.0 — Enhanced Tutorial System v3
 *Released: March 9, 2026*
 

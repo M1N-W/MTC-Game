@@ -456,11 +456,17 @@ class Player extends Entity {
         const dmgPct = Math.round((this._damageMultiplier - 1) * 100);
         const cdPct = Math.round((1 - this.cooldownMultiplier) * 100);
         const hpLine = hpGainPerLevel > 0 ? `, +${hpGainPerLevel} MaxHP` : '';
+        // stat line — เล็กลง ย้ายต่ำลง spawn ก่อน
         spawnFloatingText(
-            `LEVEL ${this.level}! +${dmgPct}% DMG, -${cdPct}% CD${hpLine}`,
-            this.x, this.y - 90, '#fbbf24', 32
+            `+${dmgPct}% DMG, -${cdPct}% CD${hpLine}`,
+            this.x, this.y - 55, '#fbbf24', 20
         );
-        spawnFloatingText(`LEVEL ${this.level}!`, this.x, this.y - 70, '#facc15', 35);
+        // big level text — stagger 350ms, y สูงกว่า ไม่ชนกัน
+        const _lvlSelf = this;
+        setTimeout(() => {
+            if (_lvlSelf.dead) return;
+            spawnFloatingText(`✦ LEVEL ${_lvlSelf.level}! ✦`, _lvlSelf.x, _lvlSelf.y - 115, '#facc15', 36);
+        }, 350);
         spawnParticles(this.x, this.y, 40, '#facc15');
         addScreenShake(12);
         Audio.playLevelUp();

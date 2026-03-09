@@ -156,7 +156,27 @@
 - 🏃 **Advanced Walk Animation:** Implemented real Y-axis bob movement with character-specific timing (Kao: 2.0px, Poom: 2.0px, Auto: 2.5px) and ground shadow scaling
 - 💇 **Dynamic Hair Animation:** Auto combat mode (380ms→150ms wobble), Poom movement-responsive wobble (220-500ms range), and speed-based amplitude adjustments
 - 🔫 **Universal Recoil System:** Character-specific weapon recoil animations (Kao: 3.5x, Auto: 3.0x, Poom: 2.5x) with realistic shooting feedback
-- 🎨 **Visual Polish Fixes:** Enhanced Kranok pattern transparency, arc-shaped dash ghosts, and proper context management for ground shadows
+- 🎨 **Visual Polish Fixes:** Enhanced Kranok pattern transparency, arc-shaped dash ghosts, proper context management for ground shadows, improved level up text timing with staggered display, weapon indicator transitions, and wave event optimization
 - 🔧 **Boss Attacks Performance Optimization:** Improved gradient handling, Math.hypot() distance calculations, enhanced color format support and precision
+
+---
+
+## 📋 Latest Update (v3.20.1)
+
+**UI Polish & Display Improvements - March 9, 2026**
+
+### ✨ Enhanced Level Up Display
+- **Staggered Text Timing**: Level up notifications now split into two phases for better visual hierarchy
+- **Improved Positioning**: Stats text positioned higher to avoid character overlap
+- **Cleaner Visual Design**: Smaller stats text with delayed big level announcement
+
+### 🎨 Weapon Indicator Improvements
+- **Smooth Transitions**: Added fade and slide animations for weapon changes
+- **Enhanced Visual Feedback**: Weapon switching now features smooth 0.4s ease transitions
+
+### 🌊 Wave Event Optimization
+- **Reduced Visual Clutter**: Eliminated duplicate floating text during wave events
+- **Better Timing**: Wave announcements staggered 900ms after banner begins
+- **Cleaner Display**: Voice bubbles only for atmospheric feedback
 
 ---
