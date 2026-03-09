@@ -557,10 +557,27 @@ Shell casings          effects.js                    ShellCasingSystem
 | **Courtyard ดูมืดกว่า zone อื่นแม้มีต้นไม้เยอะ** | **`tree` type ไม่มี punchLight — ไม่ emit light เลย** | **เพิ่ม `else if (obj.type === 'tree')` ใน lighting loop + เพิ่ม `'green'` tint type** |
 | **Domain slow ไม่มีผล** | **แก้ `player.moveSpeed` แทน `player.stats.moveSpeed`** | **ใช้ `player.stats.moveSpeed` เสมอ — ดู Domain Slow Critical Note** |
 | **สกิลกดได้ทั้งที่ energy หมด** | **ไม่มี energy guard ใน skill activation block** | **เพิ่ม pattern `if (energy < cost)` ก่อน doSkill() — ดู Energy Cost System** |
+| **Auto Q-icon arc เกิน 100% ทันทีเมื่อใช้ Stand Pull** | **`updateSkillIcons` ใช้ `vacuumCooldown` (6s) เป็น max เสมอ แต่ Stand Pull set `cooldowns.vacuum = 10s`** | **max CD ต้อง dynamic: `wanchaiActive ? standPullCooldown : vacuumCooldown`** |
+| **Auto Q/E arc ไม่ขึ้นเลย** | **`AutoPlayer.updateUI()` เขียนไปที่ `'q-icon'`/`'e-icon'` แต่ DOM ใช้ id `'vacuum-icon'`/`'auto-det-icon'`** | **เปลี่ยน icon id ใน `AutoPlayer.updateUI()` ให้ตรงกับที่ `ui.js` ตั้งไว้** |
+| **Kao dash/stealth arc ไม่อัปเดต** | **`KaoPlayer.updateUI()` ไม่มี `dash-icon` / `stealth-icon` — comment บอก "handled by PlayerBase" แต่ PlayerBase ไม่มี `updateUI()` เลย** | **เพิ่ม `_setCooldownVisual('dash-icon', ...)` และ `_setCooldownVisual('stealth-icon', ...)` ใน `KaoPlayer.updateUI()`** |
 
 ---
 
 ## 📝 Recent Major Changes (v3.27.6)
+
+### Cooldown HUD Bug Fixes (March 9, 2026)
+**Purpose:** แก้ arc overlay และ timer ของ Skill HUD ทุกตัวละครให้ sync กับ state จริง
+
+**Key Changes:**
+- **Auto Q (`vacuum-icon`) arc overflow** — max CD เปลี่ยนเป็น dynamic: `wanchaiActive ? standPullCooldown(10s) : vacuumCooldown(6s)` แก้ใน `AutoPlayer.js` + `ui.js`
+- **Auto Q/E icon ID mismatch** — `AutoPlayer.updateUI()` เปลี่ยน `'q-icon'`→`'vacuum-icon'` และ `'e-icon'`→`'auto-det-icon'` ให้ตรงกับ DOM id จริง
+- **Auto E detonation fallback** — `?? 5` → `?? 8` ให้ตรงกับ `config.js`
+- **Poom Garuda fallback** — `|| 25` → `?? 24` ให้ตรงกับ `config.js`
+- **Kao dash/stealth arc ไม่อัปเดต** — เพิ่ม `dash-icon` + `stealth-icon` HUD update ใน `KaoPlayer.updateUI()` (PlayerBase ไม่มี updateUI เลย)
+
+**Files Changed:** `AutoPlayer.js`, `ui.js`, `Kaoplayer.js`
+
+---
 
 ### Big Map Visual Overhaul (March 9, 2026)
 **Purpose:** Visual quality pass across all map draw methods + lighting consistency fixes
