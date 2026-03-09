@@ -4,6 +4,18 @@
 
 ---
 
+## v3.26.8 — Boss Null Reference Crash Fix
+*Released: March 9, 2026*
+
+### 🐛 Bug Fixes
+- **AutoPlayer.js**: Fixed boss null reference crash in detonation damage system
+- **Root Cause**: When Detonation damage kills boss, some boss classes set `window.boss = null` inside `takeDamage()` callback
+- **Solution**: Snapshot `bossPx` and `bossPy` before calling `takeDamage()`, then use snapshot values in `spawnParticles()`
+- **Impact**: Prevents crash when accessing `window.boss.x` and `window.boss.y` after boss becomes null
+- **Safety**: Ensures particle effects work correctly regardless of boss nullification timing
+
+---
+
 ## v3.26.7 — ORA Text Timer System Fix
 *Released: March 9, 2026*
 

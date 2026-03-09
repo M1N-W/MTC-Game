@@ -1347,9 +1347,10 @@ class AutoPlayer extends Player {
                     }
                     if (window.boss && !window.boss.dead) {
                         if (Math.hypot(window.boss.x - bx, window.boss.y - by) < DET_RANGE + (window.boss.radius ?? 0)) {
+                            const bossPx = window.boss.x, bossPy = window.boss.y;  // FIX: snapshot ก่อน takeDamage — boss อาจ null หลัง call
                             window.boss.takeDamage(detFinalDmg);
                             totalDet += detFinalDmg;
-                            spawnParticles(window.boss.x, window.boss.y, 8, detIsCrit ? '#facc15' : '#dc2626');
+                            spawnParticles(bossPx, bossPy, 8, detIsCrit ? '#facc15' : '#dc2626');
                         }
                     }
                     if (this.passiveUnlocked && totalDet > 0) {
