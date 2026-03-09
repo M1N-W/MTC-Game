@@ -50,22 +50,13 @@
     ══════════════════════════════════════════ -->
     <div id="resume-prompt" onclick="resumeGame()">
         <div class="resume-prompt-inner">
-            <!-- corner decorations -->
-            <div class="rp-corner rp-corner--tl"></div>
-            <div class="rp-corner rp-corner--tr"></div>
-            <div class="rp-corner rp-corner--bl"></div>
-            <div class="rp-corner rp-corner--br"></div>
-
-            <div class="rp-badge">⏸ SYSTEM HALT</div>
+            <div class="resume-icon">⏸</div>
             <div class="resume-title">GAME PAUSED</div>
-            <div class="rp-divider"></div>
             <div class="resume-sub">
                 MTC Database เปิดในแท็บใหม่แล้ว<br>
                 กลับมาเมื่อพร้อม แล้วกด Resume
             </div>
-            <button class="resume-btn" onclick="event.stopPropagation(); resumeGame()">
-                <span class="resume-btn-icon">▶</span> RESUME GAME
-            </button>
+            <button class="resume-btn" onclick="event.stopPropagation(); resumeGame()">▶ RESUME GAME</button>
             <div class="resume-hint">หรือกดปุ่มใดก็ได้เพื่อเล่นต่อ</div>
         </div>
     </div>
@@ -368,7 +359,7 @@
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 99%;"></div>
+                                    <div class="stat-bar-fill" style="width: 98%;"></div>
                                 </div>
                                 <div class="stat-val">148</div>
                             </div>

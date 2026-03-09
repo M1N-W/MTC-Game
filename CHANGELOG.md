@@ -4,6 +4,34 @@
 
 ---
 
+## v3.26.3 — Character Stat Accuracy & Documentation Update
+*Released: March 9, 2026*
+
+### 🔧 Bug Fixes
+- **Fixed Poom DMG stat bar accuracy:**
+  - Corrected stat bar width from 99% to 98% in character selection
+  - Now accurately reflects actual DPS calculation (62/0.42 = 147.6 ≈ 148)
+  - Ensures visual consistency between stat bars and gameplay mechanics
+
+### 📚 Documentation Updates
+- **Enhanced PROJECT_OVERVIEW.md with comprehensive Auto rework documentation:**
+  - Updated version from Beta v3.11.14+ to Beta v3.18.0
+  - Added detailed AutoPlayer.js description including Heat System, Stand Meter, Synergy, and Rage Mode
+  - Updated Energy Cost table to reflect Wanchai-synergy context (Stand Pull/Charge Punch)
+  - Completely rewrote Auto Rework section with:
+    - Current Base Stats table matching config.js values
+    - Heat Tier system table with detailed mechanics
+    - Bug Fix note for Stand Rush cooldown fallthrough
+  - Added new "Character Quick-Stats" section with complete stats for all 3 characters
+  - Added "แก้ Pause/Menu UI" section with stat bar calculation references
+
+### 📊 Character Balance Verification
+- All character stat bars verified against current config.js values
+- Reference values established: HP max = Auto 230, SPD max = 298, RANGE max = Kao 900, DMG ref ≈ 150 DPS
+- Documentation now provides clear guidance for future balance updates
+
+---
+
 ## v3.26.2 — Enhanced Pause Modal UI Design
 *Released: March 9, 2026*
 

@@ -4,6 +4,8 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
+> **Current Version:** Beta v3.18.0 | **Latest Update:** Character stat accuracy fixes and comprehensive documentation overhaul
+
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
 เกมแนว **Top-down 2D Wave Survival Shooter** สุดมันส์ที่พัฒนาด้วย HTML5 Canvas API และ Vanilla JavaScript ล้วนๆ (No Frameworks!)  

@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.11.14+
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.18.0
 
 ---
 
@@ -72,7 +72,7 @@
 | `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()`, `_hitFlashTimer`, passive unlock |
 | `Kaoplayer.js` | เก้า | Assassin — stealth, teleport, clone |
 | `PoomPlayer.js` | ภูมิ | Spiritual Warrior — ritual, naga, garuda |
-| `AutoPlayer.js` | ออโต้ | Thermodynamic Brawler — vacuum, detonation, Wanchai Stand (JoJo-inspired crimson/gold design, ORA combo system, Heat tiers, Stand Meter, Skill Synergy: Stand Pull, Charge Punch, Stand Guard) |
+| `AutoPlayer.js` | ออโต้ | Thermodynamic Brawler — Heat Wave, Vacuum Pull+Ignite (Q), Overheat Detonation (E), Wanchai Stand (R-Click, JoJo-inspired crimson/gold), Heat Tier System (COLD/WARM/HOT/OVERHEAT), Stand Meter (0–100%), ORA Combo, Skill Synergy (Stand Pull/Charge Punch/Stand Guard), Rage Mode, Killing Blow Supercharge |
 
 ### `/js/rendering/`
 - `PlayerRenderer.js` — วาด player ทั้งหมด (animations, effects, hit flash)
@@ -207,6 +207,16 @@ BALANCE.mtcRoom = { healRate, maxStayTime, cooldownTime, dashResetOnEntry, ... }
 ```
 ⚠️ Ritual (R) ของ Poom ไม่มี energy cost โดยเจตนา — เป็น combo finisher ที่มี CD + stack requirement อยู่แล้ว
 
+### Character Quick-Stats 🔴 (verify in config.js)
+| Char | HP | MoveSpeed | DashSpeed | Key Cooldowns |
+|------|----|-----------|-----------|--------------|
+| **Kao** | 119 | 298 | 550 | Stealth 5.5s, Clone 25s, Teleport 18s, Dash 1.65s |
+| **Poom** | 165 | 298 | 520 | Naga 22s / 9s dur, EatRice 10s, Dash 1.65s |
+| **Auto** | 230 | 260 | 490 | Wanchai 12s / 8s dur, Vacuum 6s, Detonate 8s, Dash 1.7s |
+
+Poom key values: `riceDamage: 62`, `riceCooldown: 0.42`, `nagaDamage: 100`, `nagaSegments: 18`  
+Kao key values: `critMultiplier: 2.5`, `baseCritChance: 0.05`, `damageMultiplierPerLevel: 0.12`
+
 
 ### Wave Events 🟡
 | Event | เงื่อนไข | ผล |
@@ -267,8 +277,8 @@ player.moveSpeed *= _DC.CELL_SLOW_FACTOR;
 | Kao | E Clone | `cloneEnergyCost` | 30 |
 | Kao | R-Click Stealth | `stealthCost` | 25 |
 | Auto | R-Click Wanchai | `wanchaiEnergyCost` | 25 |
-| Auto | Q Vacuum | `vacuumEnergyCost` | 20 |
-| Auto | E Detonation | `detonationEnergyCost` | 30 |
+| Auto | Q Vacuum/Stand Pull | `vacuumEnergyCost` | 20 |
+| Auto | E Detonation/Charge Punch | `detonationEnergyCost` | 30 |
 | Poom | Q Naga | `nagaEnergyCost` | 25 |
 | Poom | E Garuda | `garudaEnergyCost` | 30 |
 | Poom | R-Click EatRice | `eatRiceEnergyCost` | 15 |
@@ -285,44 +295,59 @@ if ((this.energy ?? 0) < cost) {
 }
 ```
 
-### Auto Rework — "The Thermodynamic Stand User" �
+### Auto Rework — "The Thermodynamic Stand User" 🔥
 
-> **Status:** ✅ **COMPLETE** - All features implemented (Heat System, Skill Synergy, Stand Meter, Visual Polish)
+> **Status:** ✅ **COMPLETE** — All 4 features + Bug Fix (Stand Rush cooldown fallthrough)
+> Files: `AutoPlayer.js`, `PlayerRenderer.js`, `config.js`
 
-#### ✅ WanchaiStand — Implemented Features
-- **Color palette:** crimson/gold (`#dc2626`/`#f59e0b`) thermodynamic theme
-- **Stand body redesign:** JoJo-style ไหล่กว้าง, gold pauldrons, gold knee guards, belt buckle
-- **`_oraComboCount`** (0–10) escalation system with combo window
-- **ORA combo mechanics:** fist fan scaling (5→12 หมัด), attack speed progression
-- **"ORA ORA ORA!" text** with gold coloring at combo ≥5
+#### Base Stats (ค่าปัจจุบันใน config.js)
+| Stat | ค่า | หมายเหตุ |
+|------|-----|---------|
+| HP | **230** | Tank identity (+10) |
+| MoveSpeed | **260** | ช้ากว่า Kao/Poom (298) |
+| DashSpeed | 490 / CD 1.7s | |
+| EnergyRegen | 20/s | |
+| Wanchai Duration | **8.0s** | +2s จาก 6.0s |
+| Wanchai Cooldown | **12s** | +3s จาก 9s (less spammy) |
+| Wanchai Damage | **30/punch** | NERF จาก 38 |
+| Punch Rate | **0.10s** (10/s) | NERF จาก 0.09s |
+| HP Drain OVERHEAT | **5/s** | NERF จาก 3 (risk จริง) |
 
-#### ✅ Heat System Overhaul — Implemented
-- **COLD tier penalties (<34):** Stand damage ×0.70, speed ×0.90
-- **Heat idle decay:** 2s+ no hit → 8/s decay (except Wanchai active)
-- **Vent Explosion:** OVERHEAT tier drop → 45 damage AOE (160px radius)
-- **Enhanced gainHeat():** `fromHit=true` parameter for proper idle decay reset
+#### ✅ Heat Tier System
+| Tier | Range | Effect |
+|------|-------|--------|
+| COLD | 0–33% | dmg ×0.70, speed ×0.90 (penalty) |
+| WARM | 34–66% | dmg ×1.15, punch rate ×0.85 |
+| HOT | 67–99% | dmg ×1.30, punch rate ×0.70, melee range+ |
+| OVERHEAT | 100% | dmg ×1.50, crit +20%, HP drain 5/s |
 
-#### ✅ Skill Synergy — Implemented
-- **Q (Stand Pull):** Wanchai active → instant pull to Stand position ±40px + 18 damage
-- **E (Charge Punch):** hold-to-charge system with visual ring, up to 3.5× damage
-- **Stand Guard (Shift):** defensive stance with arms crossed, shield arc, 60% damage reduction
+- **Heat idle decay:** 2.0s ไม่ hit → +8/s extra decay (`heatIdleDecayDelay`, `heatIdleDecayRate`)
+- **Vent Explosion** (OVERHEAT→HOT drop): 45 dmg AOE 160px, screen shake +6
 
-#### ✅ Stand Meter System — Implemented
-- **0-100 meter** replaces countdown timer with percentage display
-- **Dynamic drain rates:** COLD ×1.3, OVERHEAT ×0.5, normal ×1.0
-- **Fill mechanics:** +4 per hit, +12 per kill during Stand active
-- **HUD display:** "❄️42%" / "💥87%" with tier indicators
+#### ✅ Feature 2 — Rage Engine / Killing Blow Supercharge
+- **Supercharge** (kill ขณะ combo ≥5): +30 heat (`heatOnKillSupercharge`), rush cooldown reset
+- **Rage Mode** (OVERHEAT + HP <30%): dmg ×1.30, dmg reduction 20%
+- **Stand Absorb** visual: scale ×1.25 + gold ring ที่ combo ≥5
 
-#### ✅ Rage Engine / Killing Blow Supercharge — Implemented
-- **Supercharge trigger:** Kill at combo ≥5 → +30 heat, rush cooldown reset
-- **Stand Absorb visual:** 25% scale + gold ring effect at combo ≥5
-- **Dual activation:** Works from both player hits and Stand autonomous punches
+#### ✅ Feature 3 — Skill Synergy (Wanchai Active)
+- **Q → Stand Pull**: pull range 380px (`standPullRange`), 18 dmg/enemy, uses vacuumCooldown
+- **E hold → Charge Punch**: max 1.5s charge → ×3.5 dmg, ×1.3 range (ต่างจาก E ปกติ = Detonation)
+- **Shift → Stand Guard**: block input, Stand ยืนหน้า, 60% dmg reduction (`standGuardReduction`)
 
-#### ✅ Visual & Polish — Implemented
-- **Charge ring visual:** Pulsing ring during E charge with color progression
-- **Vent Explosion effects:** Particle burst + screen shake
-- **COLD tier indicator:** blue visual effects on Stand
-- **Stand Absorb scaling:** visual growth during high combo states
+#### ✅ Feature 4 — Stand Meter (แทน countdown timer)
+- Drain: 8/s normal | ×1.30 ขณะ COLD | ×0.50 ขณะ OVERHEAT
+- Fill: +4/hit (Stand หรือ player), +12/kill ขณะ active
+- HUD: `"❄️42%"` / `"🔥87%"` / `"💥94%"` ตาม tier
+
+#### ✅ Bug Fix — Stand Rush Cooldown Fallthrough
+- เดิม: Wanchai active + L-Click → `return` ทุกกรณี → ยิงไม่ได้ระหว่าง CD
+- แก้: CD หมด → Stand Rush; CD ยังอยู่ → fall through ยิง Heat Wave ได้ปกติ
+
+#### WanchaiStand Visual Reference
+- **Palette:** crimson `#dc2626` / gold `#f59e0b`
+- **ORA combo:** 0–10, fist fan 5→12 หมัด, "ORA ORA ORA!" gold text ที่ combo ≥5
+- **Charge ring:** pulsing arc รอบผู้เล่น (#dc2626→#fef08a), "MAX!" เมื่อ ready
+- **Guard stance:** arms crossed + gold shield arc
 
 ### FloatingText Stack-Offset 🟡
 `FloatingTextSystem.spawn()` นับ live texts ในรัศมี 40px ก่อน spawn ใหม่ — offset ขึ้น 22px ต่อชั้น (max 5 ชั้น) ป้องกัน text ซ้อนทับกัน
@@ -368,6 +393,11 @@ if ((this.energy ?? 0) < cost) {
 ### แก้ UI / HUD
 **ต้องแก้:** `ui.js`, `effects.js`, `css/main.css`
 ⚠️ AchievementSystem อยู่ใน `ui.js` | data save ผ่าน `getSaveData()`/`setSaveData()`
+
+### แก้ Pause / Menu UI
+**ต้องแก้:** `css/main.css` (`.resume-prompt-inner`, `.resume-btn`, `.rp-corner` ฯลฯ), `index.html` (HTML structure ของ `#resume-prompt`)
+⚠️ Stat bar ของ char select อยู่ใน `index.html` (hard-coded width % + val) — ถ้าแก้ balance ต้องอัพเดท stat bars ด้วย
+⚠️ Reference สำหรับ stat bars: HP max = Auto 230, SPD max = 298, RANGE max = Kao 900, DMG ref ≈ 150 DPS
 
 ### แก้ Map / MTC Room
 **ต้องแก้:** `map.js`, `config.js`

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.2'; // v3.26.2: Enhanced pause modal UI redesign - added corner brackets, SYSTEM HALT badge, gold divider, and matching game theme colors
+const CACHE_NAME = 'mtc-cache-v3.26.3'; // v3.26.3: Fixed Poom DMG stat bar accuracy - corrected from 99% to 98% to match actual DPS calculation (62/0.42 = 147.6), updated PROJECT_OVERVIEW.md with comprehensive Auto rework documentation and new Character Quick-Stats section
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
