@@ -576,25 +576,51 @@ class WanchaiStand {
 
             // ── OVERHEAT Flame Crown (ht >= 3 only) ──────────────────────────
             if (ht >= 3) {
-                const _fc = 7;         // flame count
-                const _fBaseY = hy - 11;
-                ctx.shadowBlur = 18; ctx.shadowColor = '#f97316';
+                const _fc = 5;  // spike count — odd number looks better as crown
+                ctx.shadowBlur = 20; ctx.shadowColor = '#f97316';
                 for (let fi = 0; fi < _fc; fi++) {
-                    const _fa = (fi / _fc) * Math.PI + Math.PI * 0.02; // arc across top
-                    const _fx = Math.cos(_fa) * 13;
-                    const _fy = _fBaseY + Math.sin(_fa) * 4;
-                    // Flame height oscillates per tongue, offset by index
-                    const _fh = 8 + Math.abs(Math.sin(t * 5.5 + fi * 1.1)) * 9;
-                    const _fw = 3.2 - fi * 0.08;
-                    const _fG = ctx.createLinearGradient(_fx, _fy, _fx, _fy - _fh);
-                    _fG.addColorStop(0, 'rgba(251,191,36,0.0)');
-                    _fG.addColorStop(0.25, 'rgba(249,115,22,0.85)');
-                    _fG.addColorStop(0.65, 'rgba(239,68,68,0.70)');
-                    _fG.addColorStop(1, 'rgba(255,255,255,0.90)');
-                    ctx.globalAlpha = 0.82 + Math.sin(t * 4.1 + fi) * 0.14;
+                    // Spread spikes across top half of head
+                    const _t = fi / (_fc - 1);  // 0→1
+                    const _fa = Math.PI * 1.05 + _t * Math.PI * 0.90; // left→right arc
+                    const _baseR = 11.5;
+                    const _bx = Math.cos(_fa) * _baseR;
+                    const _by = hy + Math.sin(_fa) * _baseR;
+                    // Spike height: tallest in center, shorter on edges
+                    const _centerT = 1 - Math.abs(_t - 0.5) * 2;  // 0→1→0
+                    const _fh = (10 + _centerT * 10) + Math.abs(Math.sin(t * 5.5 + fi * 1.3)) * 7;
+                    // Spike tip direction = outward from head center + upward
+                    const _tipA = _fa - Math.PI * 0.5;  // perpendicular = upward
+                    const _tx = _bx + Math.cos(_tipA) * _fh;
+                    const _ty = _by + Math.sin(_tipA) * _fh;
+                    // Base width for the spike foot
+                    const _bw = 4.5 - _centerT * 1.0;
+                    const _perpA = _fa + Math.PI * 0.5;
+                    const _lx = _bx + Math.cos(_perpA) * _bw;
+                    const _ly = _by + Math.sin(_perpA) * _bw;
+                    const _rx = _bx - Math.cos(_perpA) * _bw;
+                    const _ry = _by - Math.sin(_perpA) * _bw;
+                    // Gradient: base amber → tip white
+                    const _fG = ctx.createLinearGradient(_bx, _by, _tx, _ty);
+                    _fG.addColorStop(0, 'rgba(251,191,36,0.95)');
+                    _fG.addColorStop(0.35, 'rgba(249,115,22,0.90)');
+                    _fG.addColorStop(0.70, 'rgba(239,68,68,0.75)');
+                    _fG.addColorStop(1, 'rgba(255,255,255,0.95)');
+                    ctx.globalAlpha = 0.88 + Math.sin(t * 4.1 + fi * 1.2) * 0.10;
                     ctx.fillStyle = _fG;
+                    // Draw spike as tapered bezier shape
                     ctx.beginPath();
-                    ctx.ellipse(_fx, _fy - _fh * 0.5, _fw, _fh * 0.55, 0, 0, Math.PI * 2);
+                    ctx.moveTo(_lx, _ly);
+                    ctx.quadraticCurveTo(
+                        _bx + Math.cos(_tipA) * _fh * 0.55,
+                        _by + Math.sin(_tipA) * _fh * 0.55,
+                        _tx, _ty
+                    );
+                    ctx.quadraticCurveTo(
+                        _bx + Math.cos(_tipA) * _fh * 0.55,
+                        _by + Math.sin(_tipA) * _fh * 0.55,
+                        _rx, _ry
+                    );
+                    ctx.closePath();
                     ctx.fill();
                 }
                 ctx.shadowBlur = 0; ctx.globalAlpha = 1;

@@ -4,6 +4,32 @@
 
 ---
 
+## v3.25.1 — Wanchai Stand Visual Refinements
+*Released: March 9, 2026*
+
+### 🥊 Rush Fist Rendering Improvements
+- **Round Glove Design:** Replaced elliptical fists with uniform circular gloves for consistent visual appearance
+- **Afterimage Motion Effect:** Added secondary afterimage fists (alpha 0.28) positioned behind main fists for motion blur without trail lines
+- **Eliminated Trail Lines:** Removed all motion trail lines (moveTo(screen.x) → lineTo(fist)) for cleaner visual presentation
+- **Enhanced Visual Depth:** Afterimage fists positioned at 1.4× fist radius behind main fists with 75% scaling
+- **Improved Color Intensity:** Updated main fist alpha to 0.92 with stronger red tone (0.95) and enhanced gold rim (0.70)
+
+### 👑 Flame Crown Spike Redesign
+- **Crown Symmetry:** Reduced spike count from 7 to 5 for perfect odd-numbered symmetry with center spike
+- **Tapered Spike Geometry:** Replaced elliptical flames with quadraticCurveTo() tapered spikes (wide base, sharp tip)
+- **Realistic Crown Shape:** Spike height varies by position - tallest at center (_centerT), shorter toward edges
+- **Surface Attachment:** Spikes now anchor to head surface (radius 11.5) pointing perpendicular to surface instead of floating
+- **Enhanced Gradient:** Improved color progression from amber base through orange/red to white tip
+- **Mathematical Precision:** Spike positions calculated using arc mathematics for perfect crown distribution
+
+### 🎨 Visual Polish Enhancements
+- **Consistent Fist Sizing:** All rush fists now maintain uniform 10× scaling regardless of position
+- **Improved Shadow Effects:** Enhanced shadow blur (18→20) for flame crown with better glow intensity
+- **Refined Alpha Blending:** Optimized alpha values for better visual hierarchy and depth perception
+- **Cleaner Motion Representation:** Afterimage system provides motion indication without visual clutter
+
+---
+
 ## v3.25.0 — Wanchai Stand Visual Enhancement
 *Released: March 9, 2026*
 

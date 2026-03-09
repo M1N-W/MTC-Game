@@ -99,15 +99,14 @@
 
 ---
 
-## 📈 Current Version: v3.25.0 (March 9, 2026)
+## 📈 Current Version: v3.25.1 (March 9, 2026)
 
 **Latest Major Updates:**
-- 🔥 **Wanchai Stand Visual Enhancement:** Complete overhaul with Muay Thai knee-bend animation and athletic fighter stance
-- ⚡ **Radial Rush Fist System:** Deterministic fan patterns with clear hit/miss visual differentiation
-- � **OVERHEAT Flame Crown:** Dynamic flame effects that activate at maximum heat level
-- 🌊 **Physics-Based Movement:** Velocity-based Stand Rush replacing instant teleport for natural motion
-- 🎨 **Rendering Improvements:** World-space coordination and enhanced visual feedback systems
-- 📚 **Visual Workflow Guide:** Comprehensive documentation for visual modification workflows
+- 🥊 **Rush Fist Refinements:** Round glove design with afterimage motion effects replacing trail lines
+- 👑 **Flame Crown Redesign:** Tapered spike geometry with perfect 5-spike crown symmetry
+- � **Visual Polish:** Enhanced color intensity, improved shadows, and cleaner motion representation
+- ⚡ **Performance Optimizations:** Consistent fist sizing and refined alpha blending
+- � **Mathematical Precision:** Surface-attached spikes with arc-based positioning for realistic crown appearance
 
 ---
 

@@ -543,28 +543,25 @@ class PlayerRenderer {
                 const fists = entity._rushFists;
                 const stand = entity.wanchaiStand;
                 if (fists && fists.length > 0) {
-                    // Fists are precomputed as world-relative offsets from player origin
                     ctx.save();
                     ctx.shadowBlur = 16; ctx.shadowColor = '#dc2626';
                     for (const f of fists) {
                         if (f.alpha <= 0) continue;
-                        // Convert world-offset to screen position
                         const fs_ = worldToScreen(entity.x + f.ox, entity.y + f.oy);
-                        ctx.globalAlpha = f.alpha * 0.90;
-                        ctx.fillStyle = 'rgba(239,68,68,0.92)';
-                        ctx.beginPath();
-                        ctx.ellipse(fs_.x, fs_.y, 16 * f.sc, 10 * f.sc, entity.angle, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.strokeStyle = 'rgba(251,191,36,0.55)';
-                        ctx.lineWidth = 2 * f.sc;
-                        ctx.stroke();
-                        // Motion trail line toward player
-                        ctx.strokeStyle = 'rgba(248,113,113,0.6)';
-                        ctx.lineWidth = 5 * f.sc;
-                        ctx.beginPath();
-                        ctx.moveTo(screen.x, screen.y);
-                        ctx.lineTo(fs_.x, fs_.y);
-                        ctx.stroke();
+                        // Main fist — round glove, uniform size across all positions
+                        const fR = 10 * f.sc;
+                        ctx.globalAlpha = f.alpha * 0.92;
+                        ctx.fillStyle = 'rgba(239,68,68,0.95)';
+                        ctx.beginPath(); ctx.arc(fs_.x, fs_.y, fR, 0, Math.PI * 2); ctx.fill();
+                        // Gold rim
+                        ctx.strokeStyle = 'rgba(251,191,36,0.70)';
+                        ctx.lineWidth = 1.8 * f.sc; ctx.stroke();
+                        // Afterimage fist slightly behind (no trail line)
+                        const backX = fs_.x - Math.cos(entity.angle) * fR * 1.4;
+                        const backY = fs_.y - Math.sin(entity.angle) * fR * 1.4;
+                        ctx.globalAlpha = f.alpha * 0.28;
+                        ctx.fillStyle = 'rgba(239,68,68,0.7)';
+                        ctx.beginPath(); ctx.arc(backX, backY, fR * 0.75, 0, Math.PI * 2); ctx.fill();
                     }
                     ctx.restore();
                     // ORA text above player (screen-space, unrotated)
