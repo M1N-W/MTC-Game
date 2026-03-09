@@ -4,6 +4,49 @@
 
 ---
 
+## v3.25.0 — Wanchai Stand Visual Enhancement
+*Released: March 9, 2026*
+
+### 🔥 Muay Thai Knee-Bend Animation System
+- **Anti-Phase Oscillators:** Added kneeL/kneeR variables that alternate weight distribution (0→1) for realistic fighter bounce
+- **Dynamic Smoke Tails:** Replaced single lower-body fade with dual smoke tails that extend/contract based on knee compression
+- **Weight-Responsive Rendering:** Left/right smoke tails shift alpha and drop distance based on current weight distribution
+- **Athletic Stance:** Visual transformation from static spirit to dynamic Muay Thai fighter with continuous movement
+
+### ⚡ Radial Rush Fist Fan System
+- **Deterministic Scatter:** Replaced Math.random() fist positioning with mathematical radial fan distribution
+- **Hit vs Miss Differentiation:** 
+  - Hit: 7 fists across 38° arc with full alpha (1.0) and progressive scaling
+  - Miss: 4 fists across 22° narrow arc with reduced alpha (0.45) for clear whiff feedback
+- **Consistent Patterns:** All rush attacks (_punch, _doPlayerMelee hit/miss) use same deterministic fan mathematics
+- **Visual Clarity:** Players can immediately distinguish successful hits from misses through visual density
+
+### 👑 OVERHEAT Flame Crown System
+- **Conditional Activation:** 7 flame tongues appear only when heat level ≥ 3 (OVERHEAT state)
+- **Individual Flame Animation:** Each flame oscillates at different frequency using Math.sin(t * 5.5 + fi * 1.1) offset
+- **Gradient System:** Amber base → orange body → red tips → white apex for realistic fire appearance
+- **Dynamic Height:** Flame heights vary 8-17px based on individual oscillation cycles
+
+### 🌊 Velocity-Based Stand Rush Movement
+- **Physics-Based Movement:** Replaced instant teleport with velocity burst (2200 px/s over 0.18s decay)
+- **Smooth Acceleration:** Stand Rush now uses _rushBurstVx/_rushBurstVy with exponential decay for natural motion
+- **World-Space Rendering:** Rush fist positions calculated as world coordinates then converted to screen space
+- **Motion Trail Enhancement:** Trail lines now connect player position to actual fist positions in world space
+
+### 🎨 Rendering System Improvements
+- **World-Space Coordination:** Rush fists rendered using worldToScreen() conversion for proper spatial alignment
+- **Unrotated Text Display:** ORA text rendered in screen space without entity rotation for better readability
+- **Motion Blur Enhancement:** Trail lines show actual movement path from player to fist positions
+- **Performance Optimization:** Removed Math.random() from draw loops for consistent 60fps rendering
+
+### 📚 Documentation Enhancement
+- **Visual Workflow Guide:** Added comprehensive section in PROJECT_OVERVIEW.md explaining when to use Renderer.js vs effects.js vs config.js
+- **Decision Tree System:** Clear ASCII flowchart for visual modification workflow
+- **Map Visual Guidelines:** 3-layer map system with specific file responsibilities
+- **Developer Experience:** Simple rules: "วาดซ้ำทุกเฟรม → Renderer.js, spawn ครั้งเดียวแล้วหาย → effects.js"
+
+---
+
 ## v3.24.1 — Documentation Updates: Boss Architecture Guidelines
 *Released: March 9, 2026*
 

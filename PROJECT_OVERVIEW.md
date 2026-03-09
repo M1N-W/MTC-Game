@@ -353,6 +353,116 @@ if ((this.energy ?? 0) < cost) {
 
 ---
 
+## 🎨 Visual Workflow — แก้ Visual ต้องใช้ไฟล์ไหน?
+
+### แกนหลัก 3 ไฟล์ (รู้จักก่อน)
+
+| ไฟล์ | หน้าที่ visual | ตัวอย่าง |
+|------|--------------|---------|
+| `[Name]Renderer.js` | **shape / animation / look** ของ entity นั้นโดยตรง | body, glove, mongkhon, flame crown |
+| `effects.js` | **ผลกระทบชั่วคราว** ที่เกิดจาก event (spawn ครั้งเดียวแล้วหาย) | กระจาย particle, ตัวเลขลอย, screen shake |
+| `config.js` | **ค่าตัวเลข / สี** ที่ Renderer และ effects.js ดึงไปใช้ | สีผนัง, ระยะแสง, ค่า LIGHTING |
+
+---
+
+### ✏️ แก้โมเดลตัวละคร (shape / animation)
+
+**ใช้แค่ `PlayerRenderer.js`** — ไม่ต้องแตะไฟล์อื่น
+
+```
+ต้องการ                         → แก้ที่ไหน
+───────────────────────────────────────────────────────
+เปลี่ยน body shape               PlayerRenderer.js → _drawKao / _drawPoom / _drawAuto
+เพิ่ม accessory (เช่น mongkhon)  PlayerRenderer.js → layer ที่เหมาะ
+แก้ bob / sway animation         PlayerRenderer.js → oscillator vars (bob, breathe)
+เปลี่ยนสี arm / glove             PlayerRenderer.js → color literal หรือดึงจาก config
+แก้ hit flash visual             PlayerRenderer.js → _hitFlashTimer block
+```
+
+**เมื่อไหรถึงต้องใช้ `effects.js` ร่วม?**
+เมื่อ visual นั้น *เกิดจาก event* และ *หายเองหลังเวลาหนึ่ง*:
+- เพิ่ม particle burst เมื่อ skill ถูกกด → `spawnParticles()` เรียกจาก player file, renderer แค่วาด body
+- ตัวเลขลอย damage / heal → `spawnFloatingText()`
+- เพิ่ม OrbitalParticle วนรอบตัวละคร → `OrbitalParticleSystem` ใน effects.js
+- screen shake เมื่อ crit → `addScreenShake()`
+
+> **กฎง่ายๆ:** ถ้า visual นั้น *วาดซ้ำทุกเฟรมตลอดชีวิต entity* → `Renderer.js`  
+> ถ้า *spawn ครั้งเดียวแล้ว fade/หาย* → `effects.js`
+
+---
+
+### ✏️ แก้โมเดลบอส
+
+เหมือนตัวละครทุกอย่าง แต่เปลี่ยนไฟล์:
+
+```
+แก้ shape / animation / layer    → BossRenderer.js  (static draw methods)
+เพิ่ม particle burst / text      → spawnParticles() / spawnFloatingText() ใน boss files
+แก้ domain expansion visual      → BossRenderer.js + boss_attacks.js (DomainExpansion class)
+```
+
+---
+
+### ✏️ แก้ Visual แผนที่ (Map)
+
+แผนที่แบ่งชัดเป็น 3 layer:
+
+```
+Layer                  แก้ที่ไหน                    ตัวอย่าง
+──────────────────────────────────────────────────────────────────────
+Object shape/color     map.js                        drawWall(), drawDesk(), drawServer()
+Object color palette   config.js                     BALANCE.map.mapColors.*
+Object layout/size     map.js (generateCampusMap)    เพิ่ม/ย้าย object, เปลี่ยน grid
+Lighting radius/color  config.js                     BALANCE.LIGHTING.*
+Lighting logic         map.js (drawLighting)         punchLight(), tint type
+Floor base color       config.js                     BALANCE.map.mapColors.floor / floorAlt
+Weather (rain/snow)    effects.js                    WeatherSystem class
+Screen shake           effects.js                    addScreenShake()
+Decals (blood spots)   effects.js                    DecalSystem
+Shell casings          effects.js                    ShellCasingSystem
+```
+
+**workflow ปกติเมื่อแก้ map visual:**
+1. เปลี่ยนสีผนัง/พื้น → `config.js` → `BALANCE.map.mapColors`
+2. เปลี่ยน shape ของ object → `map.js` → `drawWall()` / `drawDesk()` ฯลฯ
+3. เพิ่ม object ใหม่ → `map.js` → เพิ่ม type ใน `MapObject.draw()` switch + `generateCampusMap()`
+4. แก้ระยะแสง/สีแสง → `config.js` → `BALANCE.LIGHTING`
+5. เพิ่ม particle/decal เมื่อ object ถูกทำลาย → `effects.js` → `DecalSystem` / `spawnParticles()`
+
+> ⚠️ `map.js` ใช้ `CTX` (global canvas context) โดยตรง — ต่างจาก Renderer files ที่รับ `ctx` เป็น parameter  
+> ⚠️ ห้าม `Math.random()` ใน `draw()` ของ map object — ใช้ deterministic seed แทน (ดูตัวอย่างใน `drawWall()`)
+
+---
+
+### 📊 Decision Tree สรุป
+
+```
+ต้องการแก้ visual อะไร?
+│
+├─ shape / body / animation ของ entity (วาดทุกเฟรม)
+│   ├─ ตัวละคร   → PlayerRenderer.js
+│   └─ บอส       → BossRenderer.js
+│
+├─ เกิดจาก event แล้วหายไปเอง
+│   ├─ กระจาย particle     → effects.js  (spawnParticles)
+│   ├─ ตัวเลขลอย           → effects.js  (spawnFloatingText)
+│   ├─ orbital ring        → effects.js  (OrbitalParticleSystem)
+│   ├─ screen shake        → effects.js  (addScreenShake)
+│   ├─ decal / blood spot  → effects.js  (DecalSystem)
+│   └─ shell casing        → effects.js  (ShellCasingSystem)
+│
+├─ ค่าตัวเลข / สีที่ใช้ใน Renderer หรือ effects
+│   └─ config.js  (BALANCE.map.mapColors, BALANCE.LIGHTING, BALANCE.characters)
+│
+└─ แผนที่
+    ├─ shape ของ object    → map.js  (draw methods ใน MapObject)
+    ├─ layout / ตำแหน่ง   → map.js  (generateCampusMap)
+    ├─ สี palette          → config.js  (BALANCE.map.mapColors)
+    └─ แสง/เงา            → config.js  (BALANCE.LIGHTING) + map.js  (drawLighting)
+```
+
+---
+
 ## 🐛 Common Debugging Solutions
 
 | ปัญหา | สาเหตุ | วิธีแก้ |

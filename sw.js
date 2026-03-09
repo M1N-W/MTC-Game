@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.24.0'; // v3.24.0: Boss Architecture Refactor - Split boss.js into 4 modular files (BossBase.js, ManopBoss.js, FirstBoss.js, BossRenderer.js) with improved load order and cleaner separation of concerns
+const CACHE_NAME = 'mtc-cache-v3.25.0'; // v3.25.0: Wanchai Stand Visual Enhancement - Added Muay Thai knee-bend animation, radial rush fist fans, OVERHEAT flame crown, and velocity-based Stand Rush movement
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

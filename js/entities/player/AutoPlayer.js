@@ -17,14 +17,19 @@ class WanchaiStand {
 
         // Combat timers
         this._atkTimer = 0;         // countdown to next punch
-        this._atkRate = 0;         // set from BALANCE each frame
-        this._punchPhase = 0;         // 0=idle 1=wind-up 2=strike (visual only)
+        this._atkRate = 0;          // set from BALANCE each frame
+        this._punchPhase = 0;       // 0=idle 1=wind-up 2=strike (visual only)
         this._phaseTimer = 0;
         this.lastPunchSoundTime = 0;
 
+        // Rush burst — velocity dash toward target on L-Click
+        this._rushBurstVx = 0;      // burst velocity this frame
+        this._rushBurstVy = 0;
+        this._rushBurstTimer = 0;   // > 0 = currently dashing
+
         // Rendering
-        this.angle = owner.angle;  // faces toward target
-        this.ghostTrail = [];          // [{x,y,alpha}] motion blur
+        this.angle = owner.angle;   // faces toward target
+        this.ghostTrail = [];       // [{x,y,alpha}] motion blur
     }
 
     update(dt) {
@@ -96,6 +101,19 @@ class WanchaiStand {
                 const step = chaseSpeed * 0.5 * dt;
                 this.x += (ox - this.x) / d * step;
                 this.y += (oy - this.y) / d * step;
+            }
+        }
+
+        // ── Rush burst — player L-Click triggers velocity dash ───────────────
+        // _rushTarget set by _doPlayerMelee; stand surges toward it then decays
+        if (this._rushBurstTimer > 0) {
+            this._rushBurstTimer -= dt;
+            const decay = Math.max(0, this._rushBurstTimer / 0.18); // 0.18s burst window
+            this.x += this._rushBurstVx * dt * decay;
+            this.y += this._rushBurstVy * dt * decay;
+            if (this._rushBurstTimer <= 0) {
+                this._rushBurstVx = 0;
+                this._rushBurstVy = 0;
             }
         }
 
@@ -196,14 +214,20 @@ class WanchaiStand {
         this._phaseTimer = 0.12;
         this._punchSide = (this._punchSide ?? 1) * -1;
 
-        // Precompute rush fists positions for Stand Rush overlay (no Math.random in draw)
+        // Precompute rush fists — radial fan from facing direction (no Math.random in draw)
         this._rushFists = this._rushFists ?? [];
         this._rushFists.length = 0;
-        for (let i = 0; i < 7; i++) {
+        const _fanCount = 7;
+        const _fanSpread = Math.PI * 0.38;  // total arc width
+        const _faceA = this.angle;
+        for (let i = 0; i < _fanCount; i++) {
+            const t_ = i / (_fanCount - 1);        // 0→1
+            const a = _faceA - _fanSpread / 2 + t_ * _fanSpread;
+            const r = 40 + t_ * 55;               // near→far depth
             this._rushFists.push({
-                ox: 38 + Math.random() * 75,
-                oy: (Math.random() - 0.5) * 60,
-                sc: 0.45 + Math.random() * 0.65,
+                ox: Math.cos(a) * r,
+                oy: Math.sin(a) * r,
+                sc: 0.45 + t_ * 0.60,               // small→big toward edge
                 alpha: 1.0
             });
         }
@@ -249,10 +273,13 @@ class WanchaiStand {
         const fs = facingL ? -1 : 1;
 
         // ── Fighter bob oscillators (pre-computed once) ──
-        const bob = Math.sin(t * 3.2);         // weight shift bob
-        const sway = bob * 1.8;                 // horizontal rock
-        const breathe = Math.sin(t * 2.1) * 0.8; // torso expand
-        const eyeFlick = Math.sin(t * 8.5);       // eye intensity
+        const bob = Math.sin(t * 3.2);              // weight shift bob
+        const sway = bob * 1.8;                      // horizontal rock
+        const breathe = Math.sin(t * 2.1) * 0.8;    // torso expand
+        const eyeFlick = Math.sin(t * 8.5);          // eye intensity
+        // Muay Thai knee-bend: alternating leg compress (bouncing fighter stance)
+        const kneeL = Math.abs(Math.sin(t * 3.2));            // 0→1 left compress on downbeat
+        const kneeR = Math.abs(Math.sin(t * 3.2 + Math.PI)); // opposite phase
 
         // ═══ LAYER 0 — Ghost trail (cyan-white afterimage) ═══════════════════
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
@@ -298,19 +325,38 @@ class WanchaiStand {
             ctx.restore();
         }
 
-        // ═══ LAYER 2 — Lower-body fade (spirit dissolves below waist) ════════
+        // ═══ LAYER 2 — Lower-body smoke tail (spirit dissolves, knee-weighted) ══
         {
             ctx.save();
             ctx.translate(sc.x, sc.y + sway * 0.35);
-            const fadeG = ctx.createLinearGradient(0, 10, 0, 36);
-            fadeG.addColorStop(0, ht >= 2 ? 'rgba(180,120,20,0.75)' : 'rgba(20,100,140,0.70)');
-            fadeG.addColorStop(0.5, ht >= 2 ? 'rgba(100,40,0,0.30)' : 'rgba(10,50,90,0.28)');
-            fadeG.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = fadeG; ctx.globalAlpha = 0.85;
+            ctx.scale(fs, 1);
+            // Left "leg" smoke — shifts heavier when weight on left
+            const lAlpha = 0.55 + kneeL * 0.28;
+            const lDrop = 28 + kneeL * 10;
+            const lFadeG = ctx.createLinearGradient(-7, 10, -7, lDrop + 14);
+            lFadeG.addColorStop(0, ht >= 2 ? `rgba(180,100,10,${lAlpha})` : `rgba(20,90,130,${lAlpha})`);
+            lFadeG.addColorStop(0.55, ht >= 2 ? 'rgba(90,30,0,0.20)' : 'rgba(8,45,80,0.20)');
+            lFadeG.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = lFadeG; ctx.globalAlpha = 0.88;
             ctx.beginPath();
             ctx.moveTo(-14, 10);
-            ctx.quadraticCurveTo(-17, 26, 0, 36);
-            ctx.quadraticCurveTo(17, 26, 14, 10);
+            ctx.quadraticCurveTo(-18 - kneeL * 3, 20 + kneeL * 4, -9, lDrop + 14);
+            ctx.quadraticCurveTo(-4, lDrop + 18, 0, lDrop + 10);
+            ctx.quadraticCurveTo(2, 14, -14, 10);
+            ctx.closePath(); ctx.fill();
+            // Right "leg" smoke — opposite phase
+            const rAlpha = 0.55 + kneeR * 0.28;
+            const rDrop = 28 + kneeR * 10;
+            const rFadeG = ctx.createLinearGradient(7, 10, 7, rDrop + 14);
+            rFadeG.addColorStop(0, ht >= 2 ? `rgba(180,100,10,${rAlpha})` : `rgba(20,90,130,${rAlpha})`);
+            rFadeG.addColorStop(0.55, ht >= 2 ? 'rgba(90,30,0,0.20)' : 'rgba(8,45,80,0.20)');
+            rFadeG.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = rFadeG; ctx.globalAlpha = 0.88;
+            ctx.beginPath();
+            ctx.moveTo(14, 10);
+            ctx.quadraticCurveTo(18 + kneeR * 3, 20 + kneeR * 4, 9, rDrop + 14);
+            ctx.quadraticCurveTo(4, rDrop + 18, 0, rDrop + 10);
+            ctx.quadraticCurveTo(-2, 14, 14, 10);
             ctx.closePath(); ctx.fill();
             ctx.restore();
         }
@@ -527,6 +573,32 @@ class WanchaiStand {
             // Hair texture line
             ctx.strokeStyle = 'rgba(80,40,0,0.20)'; ctx.lineWidth = 0.8;
             ctx.beginPath(); ctx.arc(0, hy, 10, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+
+            // ── OVERHEAT Flame Crown (ht >= 3 only) ──────────────────────────
+            if (ht >= 3) {
+                const _fc = 7;         // flame count
+                const _fBaseY = hy - 11;
+                ctx.shadowBlur = 18; ctx.shadowColor = '#f97316';
+                for (let fi = 0; fi < _fc; fi++) {
+                    const _fa = (fi / _fc) * Math.PI + Math.PI * 0.02; // arc across top
+                    const _fx = Math.cos(_fa) * 13;
+                    const _fy = _fBaseY + Math.sin(_fa) * 4;
+                    // Flame height oscillates per tongue, offset by index
+                    const _fh = 8 + Math.abs(Math.sin(t * 5.5 + fi * 1.1)) * 9;
+                    const _fw = 3.2 - fi * 0.08;
+                    const _fG = ctx.createLinearGradient(_fx, _fy, _fx, _fy - _fh);
+                    _fG.addColorStop(0, 'rgba(251,191,36,0.0)');
+                    _fG.addColorStop(0.25, 'rgba(249,115,22,0.85)');
+                    _fG.addColorStop(0.65, 'rgba(239,68,68,0.70)');
+                    _fG.addColorStop(1, 'rgba(255,255,255,0.90)');
+                    ctx.globalAlpha = 0.82 + Math.sin(t * 4.1 + fi) * 0.14;
+                    ctx.fillStyle = _fG;
+                    ctx.beginPath();
+                    ctx.ellipse(_fx, _fy - _fh * 0.5, _fw, _fh * 0.55, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            }
 
             // ── Hollow spirit eyes — key distinguisher from Auto ──
             // Outer glow first
@@ -1036,12 +1108,18 @@ class AutoPlayer extends Player {
             // BUG-FIX (miss no animation): spawn fist overlay ที่ cursor แม้จะ miss
             this._rushFists = this._rushFists ?? [];
             this._rushFists.length = 0;
-            for (let i = 0; i < 4; i++) {
+            // Miss fan — narrower arc, dimmer alpha to signal whiff
+            const _mFanCount = 4, _mSpread = Math.PI * 0.22;
+            const _mFaceA = this.angle;
+            for (let i = 0; i < _mFanCount; i++) {
+                const t_ = i / (_mFanCount - 1);
+                const a = _mFaceA - _mSpread / 2 + t_ * _mSpread;
+                const r = 30 + t_ * 35;
                 this._rushFists.push({
-                    ox: 30 + Math.random() * 55,
-                    oy: (Math.random() - 0.5) * 50,
-                    sc: 0.35 + Math.random() * 0.45,
-                    alpha: 0.55  // ← จางกว่า hit เพื่อบ่งบอกว่า miss
+                    ox: Math.cos(a) * r,
+                    oy: Math.sin(a) * r,
+                    sc: 0.30 + t_ * 0.30,
+                    alpha: 0.45  // ← จางกว่า hit เพื่อบ่งบอกว่า miss
                 });
             }
             this._rushFistTimer = 0.08;
@@ -1051,11 +1129,16 @@ class AutoPlayer extends Player {
             return;
         }
 
-        // Stand Rush fires toward cursor — Stand teleports to target, no range gate
-        // Direct the WanchaiStand to rush that target immediately
+        // Stand Rush — velocity burst toward target (replaces instant teleport)
         if (this.wanchaiStand?.active) {
-            this.wanchaiStand.x = target.x - Math.cos(this.angle) * 20;
-            this.wanchaiStand.y = target.y - Math.sin(this.angle) * 20;
+            const _sd = Math.hypot(target.x - this.wanchaiStand.x, target.y - this.wanchaiStand.y);
+            if (_sd > 1) {
+                const _rushSpeed = 2200; // px/s burst — fast but not instant
+                this.wanchaiStand._rushBurstVx = (target.x - this.wanchaiStand.x) / _sd * _rushSpeed;
+                this.wanchaiStand._rushBurstVy = (target.y - this.wanchaiStand.y) / _sd * _rushSpeed;
+                this.wanchaiStand._rushBurstTimer = 0.18;
+                this.wanchaiStand.angle = Math.atan2(target.y - this.wanchaiStand.y, target.x - this.wanchaiStand.x);
+            }
         }
 
         // Heat gain per player rush hit
@@ -1099,14 +1182,19 @@ class AutoPlayer extends Player {
             spawnFloatingText('ORA!', this.x, this.y - 45, '#facc15', 20);
         if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
 
-        // Precompute rush fist positions for overlay (drawn by PlayerRenderer)
+        // Precompute rush fist positions — radial fan (drawn by PlayerRenderer)
         this._rushFists = this._rushFists ?? [];
         this._rushFists.length = 0;
-        for (let i = 0; i < 7; i++) {
+        const _hFanCount = 7, _hSpread = Math.PI * 0.38;
+        const _hFaceA = this.angle;
+        for (let i = 0; i < _hFanCount; i++) {
+            const t_ = i / (_hFanCount - 1);
+            const a = _hFaceA - _hSpread / 2 + t_ * _hSpread;
+            const r = 40 + t_ * 55;
             this._rushFists.push({
-                ox: 38 + Math.random() * 75,
-                oy: (Math.random() - 0.5) * 60,
-                sc: 0.45 + Math.random() * 0.65,
+                ox: Math.cos(a) * r,
+                oy: Math.sin(a) * r,
+                sc: 0.45 + t_ * 0.60,
                 alpha: 1.0
             });
         }

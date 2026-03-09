@@ -538,51 +538,51 @@ class PlayerRenderer {
             ctx.restore();
         }
         if (entity.wanchaiActive) {
-            // Stand Rush Animation — fist trail + ORA text (player-space VFX)
+            // Stand Rush Animation — fist fan (world-space) + ORA text
             if (entity.isStandAttacking) {
                 const fists = entity._rushFists;
                 const stand = entity.wanchaiStand;
                 if (fists && fists.length > 0) {
+                    // Fists are precomputed as world-relative offsets from player origin
                     ctx.save();
-                    ctx.translate(screen.x, screen.y);
-                    ctx.rotate(entity.angle);
                     ctx.shadowBlur = 16; ctx.shadowColor = '#dc2626';
                     for (const f of fists) {
                         if (f.alpha <= 0) continue;
+                        // Convert world-offset to screen position
+                        const fs_ = worldToScreen(entity.x + f.ox, entity.y + f.oy);
                         ctx.globalAlpha = f.alpha * 0.90;
-                        // UPGRADE: brighter fist ellipse + outline
                         ctx.fillStyle = 'rgba(239,68,68,0.92)';
                         ctx.beginPath();
-                        ctx.ellipse(f.ox, f.oy, 16 * f.sc, 10 * f.sc, 0, 0, Math.PI * 2);
+                        ctx.ellipse(fs_.x, fs_.y, 16 * f.sc, 10 * f.sc, entity.angle, 0, Math.PI * 2);
                         ctx.fill();
                         ctx.strokeStyle = 'rgba(251,191,36,0.55)';
                         ctx.lineWidth = 2 * f.sc;
                         ctx.stroke();
+                        // Motion trail line toward player
                         ctx.strokeStyle = 'rgba(248,113,113,0.6)';
                         ctx.lineWidth = 5 * f.sc;
                         ctx.beginPath();
-                        ctx.moveTo(f.ox - 28 * f.sc, f.oy);
-                        ctx.lineTo(f.ox, f.oy);
+                        ctx.moveTo(screen.x, screen.y);
+                        ctx.lineTo(fs_.x, fs_.y);
                         ctx.stroke();
                     }
-                    ctx.rotate(-entity.angle);
+                    ctx.restore();
+                    // ORA text above player (screen-space, unrotated)
+                    ctx.save();
                     const textScale = 1 + Math.sin(now / 30) * 0.18;
                     const jt = stand?._phaseTimer ?? 0;
-                    const jx = Math.sin(jt * 80) * 5;
-                    const jy = Math.cos(jt * 80) * 5;
-                    ctx.translate(0, -80);
+                    const jx = screen.x + Math.sin(jt * 80) * 5;
+                    const jy = screen.y - 80;
                     ctx.scale(textScale, textScale);
-                    // UPGRADE: larger + drop shadow + amber outline
                     ctx.font = '900 32px "Arial Black", Arial, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.lineWidth = 7; ctx.strokeStyle = '#7c2d12';
-                    ctx.strokeText('วันชัย วันชัย!', jx, jy);
+                    ctx.strokeText('วันชัย วันชัย!', jx / textScale, jy / textScale);
                     ctx.lineWidth = 3; ctx.strokeStyle = '#fbbf24';
                     ctx.shadowBlur = 20; ctx.shadowColor = '#facc15';
-                    ctx.strokeText('วันชัย วันชัย!', jx, jy);
-                    ctx.fillStyle = '#facc15';
-                    ctx.shadowBlur = 14;
-                    ctx.fillText('วันชัย วันชัย!', jx, jy);
+                    ctx.strokeText('วันชัย วันชัย!', jx / textScale, jy / textScale);
+                    ctx.fillStyle = '#facc15'; ctx.shadowBlur = 14;
+                    ctx.fillText('วันชัย วันชัย!', jx / textScale, jy / textScale);
                     ctx.restore();
                 }
             }
