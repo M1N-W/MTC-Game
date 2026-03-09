@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.25.6'; // v3.25.6: WanchaiStand Visual Rework & ORA Combo System - Complete JoJo-style transformation with thermodynamic colors, enhanced body design, and combo-based mechanics
+const CACHE_NAME = 'mtc-cache-v3.26.0'; // v3.26.0: Complete Stand System Features Overhaul - Implemented Heat System Overhaul (COLD tier penalties, idle decay, Vent Explosion), Rage Engine/Killing Blow Supercharge, Skill Synergy (Stand Pull, Charge Punch, Stand Guard), and Stand Meter system with full visual feedback
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

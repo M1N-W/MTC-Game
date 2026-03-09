@@ -537,6 +537,67 @@ class PlayerRenderer {
             ctx.setLineDash([]);
             ctx.restore();
         }
+
+        // ── Feature 3B: Charge Punch ring (hold E) ─────────────
+        if (entity.wanchaiActive && (entity._chargeTimer ?? 0) > 0) {
+            const chargeRatio = Math.min(1, entity._chargeTimer / (BALANCE?.characters?.auto?.chargeMaxTime ?? 1.5));
+            const isReady = entity._chargeReady ?? false;
+            const _cs0 = worldToScreen(entity.x, entity.y);
+            const _cs1 = worldToScreen(entity.x + 1, entity.y);
+            const camScaleC = _cs1.x - _cs0.x;
+            const baseRange = BALANCE?.characters?.auto?.detonationRange ?? 240;
+            const chargeRingR = baseRange * camScaleC * (0.5 + chargeRatio * 0.8);
+            const pulseRate = 80 + (1 - chargeRatio) * 200;
+            const pulseFactor = 0.7 + Math.sin(now / pulseRate) * 0.3;
+            const chargeColor = isReady ? '#fef08a' : `rgba(${Math.floor(220 + chargeRatio * 35)},${Math.floor(38 + chargeRatio * 170)},38,1)`;
+            ctx.save();
+            ctx.globalAlpha = 0.3 + chargeRatio * 0.5;
+            ctx.strokeStyle = chargeColor;
+            ctx.lineWidth = 2 + chargeRatio * 3;
+            ctx.shadowBlur = 14 + chargeRatio * 20;
+            ctx.shadowColor = isReady ? '#fef08a' : '#dc2626';
+            ctx.beginPath();
+            // Draw arc proportional to charge
+            ctx.arc(screen.x, screen.y, chargeRingR * pulseFactor, 0, Math.PI * 2 * chargeRatio);
+            ctx.stroke();
+            if (isReady) {
+                ctx.globalAlpha = 0.8;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath(); ctx.arc(screen.x, screen.y, chargeRingR, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 0.9;
+                ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#fef08a';
+                ctx.fillText('MAX!', screen.x, screen.y - chargeRingR - 10);
+            }
+            ctx.restore();
+        }
+
+        // ── Feature 3C: Stand Guard visual ─────────────────────
+        if (entity._standGuard) {
+            ctx.save();
+            ctx.globalAlpha = 0.55 + Math.sin(now / 80) * 0.15;
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 18; ctx.shadowColor = '#fbbf24';
+            // Shield arc — ครึ่งวงกลมด้านหน้า
+            const guardStartA = entity.angle - Math.PI * 0.6;
+            const guardEndA = entity.angle + Math.PI * 0.6;
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, 28 + Math.sin(now / 100) * 3, guardStartA, guardEndA);
+            ctx.stroke();
+            ctx.globalAlpha = 0.20 + Math.sin(now / 120) * 0.08;
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.moveTo(screen.x, screen.y);
+            ctx.arc(screen.x, screen.y, 28, guardStartA, guardEndA);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 0.7;
+            ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#fbbf24';
+            ctx.shadowBlur = 8; ctx.shadowColor = '#f59e0b';
+            ctx.fillText('GUARD', screen.x, screen.y - 35);
+            ctx.restore();
+        }
         if (entity.wanchaiActive) {
             // Stand Rush Animation — fist fan (local-space rotated) + ORA text
             if (entity.isStandAttacking) {
@@ -686,6 +747,36 @@ class PlayerRenderer {
                     ctx.restore();
                 }
             }
+        }
+
+        // ── Feature 3B: Charge Punch ring (E hold ขณะ Wanchai) ────────
+        if (entity.wanchaiActive && entity._eHeld && entity._chargeTimer > 0) {
+            const chargeRatio = Math.min(1, (entity._chargeTimer ?? 0) / (entity.stats?.chargeMaxTime ?? 1.5));
+            const standScreen = worldToScreen(entity.wanchaiStand?.x ?? entity.x, entity.wanchaiStand?.y ?? entity.y);
+            
+            ctx.save();
+            ctx.globalAlpha = 0.6 + chargeRatio * 0.4;
+            ctx.strokeStyle = chargeRatio >= 0.99 ? '#facc15' : '#f59e0b';
+            ctx.lineWidth = 2 + chargeRatio * 3;
+            ctx.shadowBlur = 12 + chargeRatio * 8;
+            ctx.shadowColor = chargeRatio >= 0.99 ? '#facc15' : '#f59e0b';
+            
+            // Pulsing charge ring
+            const pulseRadius = 35 + chargeRatio * 15 + Math.sin(now / 100) * 3;
+            ctx.beginPath();
+            ctx.arc(standScreen.x, standScreen.y, pulseRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Inner ring for near-full charge
+            if (chargeRatio >= 0.8) {
+                ctx.globalAlpha = (chargeRatio - 0.8) * 3;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(standScreen.x, standScreen.y, pulseRadius - 8, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
         }
 
         // ── Draw WanchaiStand entity if active ─────────────────

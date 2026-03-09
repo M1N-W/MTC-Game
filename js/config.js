@@ -235,6 +235,41 @@ const BALANCE = {
             // ── Speed on Hit ──────────────────────────────────
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
+
+            // ── Feature 1: Heat System Overhaul ───────────────
+            // COLD tier penalty (heat < heatTierWarm)
+            coldDamageMult: 0.70,       // Stand damage ×0.70 ขณะ COLD
+            coldSpeedMult: 0.90,        // move speed ×0.90 ขณะ COLD
+            // Heat idle decay (2s ไม่ hit → heat หาย)
+            heatIdleDecayRate: 8,       // heat/s เมื่อไม่ hit นาน 2s
+            heatIdleDecayDelay: 2.0,    // วินาทีก่อน idle decay เริ่ม
+            // Vent Explosion เมื่อ OVERHEAT tier drop → tier 2
+            ventExplosionRange: 160,    // AOE radius
+            ventExplosionDamage: 45,    // base damage
+
+            // ── Feature 2: Rage Engine / Killing Blow Supercharge ─
+            heatOnKillSupercharge: 30,  // heat bonus เมื่อ kill ขณะ combo >= 5
+            oraComboSuperchargeMin: 5,  // minimum combo สำหรับ supercharge
+
+            // ── Feature 3A: Stand Pull (Q ขณะ Wanchai) ────────
+            standPullRange: 380,        // pull range รอบ Stand
+            standPullDamage: 18,        // damage ต่อ enemy ที่ถูก pull
+
+            // ── Feature 3B: Charge Punch (E hold ขณะ Wanchai) ─
+            chargeMaxTime: 1.5,         // วินาทีชาร์จเต็ม
+            chargeDamageMultMax: 3.5,   // max damage multiplier ที่ชาร์จเต็ม
+            chargeRangeMultMax: 1.3,    // max range multiplier ที่ชาร์จเต็ม
+
+            // ── Feature 3C: Stand Guard (Shift ขณะ Wanchai) ───
+            standGuardReduction: 0.60,  // damage reduction ด้านหน้า 60%
+
+            // ── Feature 4: Stand Meter (แทน Timer) ────────────
+            standMeterMax: 100,
+            standMeterDrainRate: 8,     // meter/s ขณะ Wanchai active
+            standMeterPerHit: 4,        // +meter ต่อ Stand punch / player hit
+            standMeterOnKill: 12,       // +meter ต่อ kill ขณะ Stand active
+            standMeterDrainCold: 1.30,  // drain multiplier ขณะ COLD
+            standMeterDrainOverheat: 0.50, // drain multiplier ขณะ OVERHEAT
         },
         poom: {
             name: 'Poom',

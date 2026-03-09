@@ -4,6 +4,58 @@
 
 ---
 
+## v3.26.0 — Complete Stand System Features Overhaul
+*Released: March 9, 2026*
+
+### 🔥 Feature 1: Heat System Overhaul
+- **COLD Tier Penalties (heat = 0):** 
+  - Stand damage ×0.70 forces players to warm up before combat
+  - Move speed ×0.90 creates strategic pre-combat preparation
+- **Heat Idle Decay System:** After 2+ seconds without hitting enemies, heat decays at 8/s (except during Wanchai active)
+- **Vent Explosion Mechanic:** When dropping from OVERHEAT tier, triggers AOE explosion:
+  - 45 damage in 160px radius with particle burst and screen shake
+  - Provides burst damage opportunity when managing heat levels
+- **Enhanced gainHeat() Function:** Now accepts `fromHit=true` parameter to reset idle decay timer only from actual hits
+
+### ⚡ Feature 2: Rage Engine / Killing Blow Supercharge
+- **Supercharge Mechanic:** Killing enemies while combo ≥ 5 triggers:
+  - +30 heat bonus for rapid heat buildup
+  - Instant reset of rush cooldown for combat flow
+  - "SUPERCHARGE!" floating text with screen shake impact
+- **Dual Trigger System:** Works from both player Stand Rush hits and Stand autonomous punches
+- **Stand Absorb Visual:** Stand scales up to 25% larger with gold ring effect during combo ≥ 5
+
+### 🎯 Feature 3: Skill Synergy Overhaul
+- **Stand Pull (Q during Wanchai):** Enhanced vacuum skill with instant pull mechanics:
+  - Pulls enemies within ±40px of Stand position (instead of player)
+  - Deals 18 damage on successful pull with visual feedback
+  - Replaces vacuum physics with direct positioning for precision control
+- **Charge Punch (E hold during Wanchai):** Hold-to-charge system with visual feedback:
+  - Charge ring displays progress with pulsing visual effect
+  - Up to 3.5× damage multiplier at full charge
+  - Blast originates from Stand position for tactical positioning
+- **Stand Guard (Shift during Wanchai):** Defensive stance with:
+  - Stand positions in front of player with arms crossed animation
+  - Shield arc visual effect showing protection zone
+  - Blocks all incoming actions while active
+
+### 📊 Feature 4: Stand Meter System
+- **0-100 Meter Replacement:** Replaces countdown timer with percentage-based meter
+- **Dynamic Drain Rates:** 
+  - COLD tier: ×1.3 drain rate
+  - OVERHEAT tier: ×0.5 drain rate (reward for high heat)
+  - Normal: ×1.0 drain rate
+- **Meter Fill Mechanics:** +4 per hit, +12 per kill during Stand active
+- **Enhanced HUD Display:** Shows "❄️42%" or "💥87%" with tier indicators instead of seconds
+
+### 🎨 Visual & UX Enhancements
+- **Charge Ring Visual:** Pulsing ring around Stand during E charge with color progression
+- **Stand Absorb Scaling:** Visual growth effect during high combo states
+- **Vent Explosion Effects:** Particle burst and screen shake for impactful feedback
+- **COLD Tier Indicator:** Blue visual effects on Stand when in COLD state
+
+---
+
 ## v3.25.6 — WanchaiStand Visual Rework & ORA Combo System
 *Released: March 9, 2026*
 

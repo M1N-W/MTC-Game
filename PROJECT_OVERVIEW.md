@@ -72,7 +72,7 @@
 | `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()`, `_hitFlashTimer`, passive unlock |
 | `Kaoplayer.js` | เก้า | Assassin — stealth, teleport, clone |
 | `PoomPlayer.js` | ภูมิ | Spiritual Warrior — ritual, naga, garuda |
-| `AutoPlayer.js` | 🔥 **ออโต้ (Auto)** | Pyromaniac Brawler — **Thermodynamic heat system** (3 tiers), **autonomous Stand entity**, **ORA Combo escalation** (5→12 fists, attack speed bonus), **vacuum area control**, **detonation AoE** | **High-tempo brawler** — control space early, stack heat, unleash Stand Rush with combo scaling |
+| `AutoPlayer.js` | ออโต้ | Thermodynamic Brawler — vacuum, detonation, Wanchai Stand (JoJo-inspired crimson/gold design, ORA combo system, Heat tiers, Stand Meter, Skill Synergy: Stand Pull, Charge Punch, Stand Guard) |
 
 ### `/js/rendering/`
 - `PlayerRenderer.js` — วาด player ทั้งหมด (animations, effects, hit flash)
@@ -284,6 +284,45 @@ if ((this.energy ?? 0) < cost) {
     this.doSkill();
 }
 ```
+
+### Auto Rework — "The Thermodynamic Stand User" �
+
+> **Status:** ✅ **COMPLETE** - All features implemented (Heat System, Skill Synergy, Stand Meter, Visual Polish)
+
+#### ✅ WanchaiStand — Implemented Features
+- **Color palette:** crimson/gold (`#dc2626`/`#f59e0b`) thermodynamic theme
+- **Stand body redesign:** JoJo-style ไหล่กว้าง, gold pauldrons, gold knee guards, belt buckle
+- **`_oraComboCount`** (0–10) escalation system with combo window
+- **ORA combo mechanics:** fist fan scaling (5→12 หมัด), attack speed progression
+- **"ORA ORA ORA!" text** with gold coloring at combo ≥5
+
+#### ✅ Heat System Overhaul — Implemented
+- **COLD tier penalties (<34):** Stand damage ×0.70, speed ×0.90
+- **Heat idle decay:** 2s+ no hit → 8/s decay (except Wanchai active)
+- **Vent Explosion:** OVERHEAT tier drop → 45 damage AOE (160px radius)
+- **Enhanced gainHeat():** `fromHit=true` parameter for proper idle decay reset
+
+#### ✅ Skill Synergy — Implemented
+- **Q (Stand Pull):** Wanchai active → instant pull to Stand position ±40px + 18 damage
+- **E (Charge Punch):** hold-to-charge system with visual ring, up to 3.5× damage
+- **Stand Guard (Shift):** defensive stance with arms crossed, shield arc, 60% damage reduction
+
+#### ✅ Stand Meter System — Implemented
+- **0-100 meter** replaces countdown timer with percentage display
+- **Dynamic drain rates:** COLD ×1.3, OVERHEAT ×0.5, normal ×1.0
+- **Fill mechanics:** +4 per hit, +12 per kill during Stand active
+- **HUD display:** "❄️42%" / "💥87%" with tier indicators
+
+#### ✅ Rage Engine / Killing Blow Supercharge — Implemented
+- **Supercharge trigger:** Kill at combo ≥5 → +30 heat, rush cooldown reset
+- **Stand Absorb visual:** 25% scale + gold ring effect at combo ≥5
+- **Dual activation:** Works from both player hits and Stand autonomous punches
+
+#### ✅ Visual & Polish — Implemented
+- **Charge ring visual:** Pulsing ring during E charge with color progression
+- **Vent Explosion effects:** Particle burst + screen shake
+- **COLD tier indicator:** blue visual effects on Stand
+- **Stand Absorb scaling:** visual growth during high combo states
 
 ### FloatingText Stack-Offset 🟡
 `FloatingTextSystem.spawn()` นับ live texts ในรัศมี 40px ก่อน spawn ใหม่ — offset ขึ้น 22px ต่อชั้น (max 5 ชั้น) ป้องกัน text ซ้อนทับกัน

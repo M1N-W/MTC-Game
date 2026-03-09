@@ -87,7 +87,19 @@ class WanchaiStand {
         }
 
         // ── Movement — chase target, leash to owner ─────────
-        if (target) {
+        // Feature 3C: Stand Guard → Stand moves in front of player instead of chasing
+        if (owner._standGuard) {
+            const guardDist = 35;
+            const guardX = owner.x + Math.cos(owner.angle) * guardDist;
+            const guardY = owner.y + Math.sin(owner.angle) * guardDist;
+            const gd = Math.hypot(guardX - this.x, guardY - this.y);
+            if (gd > 5) {
+                const step = chaseSpeed * dt;
+                this.x += (guardX - this.x) / gd * step;
+                this.y += (guardY - this.y) / gd * step;
+            }
+            this.angle = owner.angle;
+        } else if (target) {
             this.angle = Math.atan2(target.y - this.y, target.x - this.x);
             const d = Math.hypot(target.x - this.x, target.y - this.y);
             const step = chaseSpeed * dt;
@@ -172,13 +184,15 @@ class WanchaiStand {
         const S = owner.stats ?? {};
 
         // ── Heat gain per punch ────────────────────────────────
-        if (typeof owner.gainHeat === 'function') owner.gainHeat(S.heatPerHit ?? 12);
+        if (typeof owner.gainHeat === 'function') owner.gainHeat(S.heatPerHit ?? 12, true);
 
         // ── Heat tier damage multiplier ────────────────────────
         const tier = owner._heatTier ?? 0;
+        // Feature 1: COLD tier damage penalty
         const heatDmgMult = tier >= 3 ? (S.heatDmgOverheat ?? 1.50)
             : tier >= 2 ? (S.heatDmgHot ?? 1.30)
-                : tier >= 1 ? (S.heatDmgWarm ?? 1.15) : 1.0;
+                : tier >= 1 ? (S.heatDmgWarm ?? 1.15)
+                    : (S.coldDamageMult ?? 0.70); // COLD penalty
 
         let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0) * heatDmgMult;
 
@@ -262,11 +276,29 @@ class WanchaiStand {
         // Kill bonus: +Heat + heal (only during Wanchai)
         if (target.hp !== undefined && target.hp <= 0 && owner.wanchaiActive) {
             const S2 = owner.stats ?? {};
-            if (typeof owner.gainHeat === 'function') owner.gainHeat(S2.heatOnKillWanchai ?? 15);
+            // ── Feature 4: Stand Meter on kill ──────────────────
+            owner.standMeter = Math.min(S2.standMeterMax ?? 100, (owner.standMeter ?? 0) + (S2.standMeterOnKill ?? 12));
+
+            // ── Feature 2: Killing Blow Supercharge from Stand punch ──
+            if ((owner._oraComboCount ?? 0) >= (S2.oraComboSuperchargeMin ?? 5)) {
+                if (typeof owner.gainHeat === 'function') owner.gainHeat(S2.heatOnKillSupercharge ?? 30, true);
+                owner.cooldowns.shoot = 0; // reset rush cooldown
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('SUPERCHARGE!', owner.x, owner.y - 70, '#fef08a', 22);
+                if (typeof addScreenShake === 'function') addScreenShake(5);
+            } else {
+                if (typeof owner.gainHeat === 'function') owner.gainHeat(S2.heatOnKillWanchai ?? 15, true);
+            }
             const healPct = S2.heatHealOnKillWanchai ?? 0.08;
             owner.hp = Math.min(owner.maxHp, owner.hp + owner.maxHp * healPct);
             if (typeof spawnFloatingText === 'function')
                 spawnFloatingText(`+${Math.floor(owner.maxHp * healPct)}hp 🔥`, owner.x, owner.y - 55, '#4ade80', 16);
+        }
+
+        // ── Feature 4: Stand Meter fill on hit ──────────────────
+        if (owner.wanchaiActive) {
+            const S3 = owner.stats ?? {};
+            owner.standMeter = Math.min(S3.standMeterMax ?? 100, (owner.standMeter ?? 0) + (S3.standMeterPerHit ?? 4));
         }
     }
 
@@ -288,7 +320,7 @@ class WanchaiStand {
         const armorCol1 = ht >= 2 ? '#92400e' : '#7f1d1d';   // dark base
         const armorCol2 = ht >= 2 ? '#b45309' : '#991b1b';   // mid plate
         const armorCol3 = ht >= 2 ? '#f59e0b' : '#dc2626';   // highlight / trim
-        const goldCol   = ht >= 3 ? '#fef08a' : '#f59e0b';   // gold accents
+        const goldCol = ht >= 3 ? '#fef08a' : '#f59e0b';   // gold accents
 
         const isPunch = this._phaseTimer > 0;
         const flashT = isPunch ? Math.min(1, this._phaseTimer / 0.12) : 0;
@@ -297,8 +329,8 @@ class WanchaiStand {
         const fs = facingL ? -1 : 1;
 
         // ── Stand pose oscillators ──
-        const bob     = Math.sin(t * 2.8);           // weight shift (slower = heavier)
-        const sway    = bob * 1.2;
+        const bob = Math.sin(t * 2.8);           // weight shift (slower = heavier)
+        const sway = bob * 1.2;
         const breathe = Math.sin(t * 1.9) * 0.6;
         const eyeFlick = Math.sin(t * 7.0);
         // Ora Ora combo escalation — oraCombo comes from owner
@@ -327,6 +359,31 @@ class WanchaiStand {
             const ha = isPunch ? 0.35 + flashT * 0.30 : 0.10 + breathe * 0.03 + comboIntensity * 0.08;
             ctx.save();
             ctx.translate(sc.x, sc.y + sway * 0.15);
+
+            // ── Feature 2: Stand Absorb — grow with combo ≥ 5 ────────
+            if (owner?.passiveUnlocked && (owner?._oraComboCount ?? 0) >= 5) {
+                const absorbScale = 1.0 + comboIntensity * 0.25;
+                ctx.scale(absorbScale, absorbScale);
+                // Absorb ring
+                ctx.globalAlpha = comboIntensity * 0.45;
+                ctx.strokeStyle = goldCol; ctx.lineWidth = 2 + comboIntensity * 2;
+                ctx.shadowBlur = 18; ctx.shadowColor = goldCol;
+                ctx.setLineDash([3, 4]);
+                ctx.beginPath(); ctx.arc(0, 0, 28 + comboIntensity * 10, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            }
+
+            // ── Feature 1: COLD indicator on Stand ────────────────────
+            if (ht === 0) {
+                ctx.globalAlpha = 0.30 + Math.sin(t * 3) * 0.10;
+                ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 1.5;
+                ctx.setLineDash([3, 5]);
+                ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            }
+
             const hG = ctx.createRadialGradient(0, 0, 2, 0, 0, hw + 14);
             hG.addColorStop(0, `${auraCol}${Math.min(1, ha * 2.5)})`);
             hG.addColorStop(0.35, `${auraCol}${ha})`);
@@ -575,6 +632,24 @@ class WanchaiStand {
 
             drawArm(1, isPunch && side > 0);   // lead arm
             drawArm(-1, isPunch && side < 0);  // power arm
+
+            // ── Feature 3C: Stand Guard — arms crossed + shield arc ──
+            if (owner?._standGuard) {
+                // Arms crossed in front
+                ctx.save();
+                ctx.globalAlpha = 0.75 + Math.sin(t * 6) * 0.10;
+                ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
+                ctx.shadowBlur = 14; ctx.shadowColor = '#fbbf24';
+                // Cross left
+                ctx.beginPath(); ctx.moveTo(-10, -4); ctx.lineTo(22, -14); ctx.stroke();
+                // Cross right
+                ctx.beginPath(); ctx.moveTo(10, -4); ctx.lineTo(-22, -14); ctx.stroke();
+                // Shield arc
+                ctx.globalAlpha = 0.35 + Math.sin(t * 4) * 0.10;
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(0, 0, 26, -Math.PI * 0.65, Math.PI * 0.65); ctx.stroke();
+                ctx.restore();
+            }
             ctx.restore();
         }
 
@@ -591,13 +666,13 @@ class WanchaiStand {
             ctx.beginPath(); ctx.roundRect(-5, hy + 12, 10, 8, 1); ctx.fill();
 
             // ── MONGKHON CROWN — gold tiered, 5 spikes ──────────────────────
-            const mkCol    = goldCol;
+            const mkCol = goldCol;
             const mkColMid = ht >= 2 ? '#92400e' : '#b45309';
             const mkColDim = ht >= 2 ? '#78350f' : '#7c1d1d';
-            const mkGlow   = goldCol;
-            const mkBandY  = hy - 7;
-            const mkBandH  = 7;
-            const mkPulse  = 0.75 + Math.sin(t * 2.8) * 0.25;
+            const mkGlow = goldCol;
+            const mkBandY = hy - 7;
+            const mkBandH = 7;
+            const mkPulse = 0.75 + Math.sin(t * 2.8) * 0.25;
 
             ctx.shadowBlur = 18 * mkPulse; ctx.shadowColor = mkGlow;
 
@@ -874,6 +949,21 @@ class AutoPlayer extends Player {
 
         // ── Wanchai Stand entity (created on activation) ──────
         this.wanchaiStand = null;
+
+        // ── Feature 1: Heat idle decay tracker ───────────────
+        this._timeSinceLastHit = 0;     // reset ทุกครั้งที่ gainHeat จาก hit
+        this._prevHeatTier = 0;         // ใช้ detect OVERHEAT → tier drop (Vent Explosion)
+
+        // ── Feature 3B: Charge Punch state ───────────────────
+        this._chargeTimer = 0;          // > 0 ขณะ hold E
+        this._chargeReady = false;      // true เมื่อ charge ถึง chargeMaxTime
+        this._eHeld = false;            // track E key hold state
+
+        // ── Feature 3C: Stand Guard state ────────────────────
+        this._standGuard = false;
+
+        // ── Feature 4: Stand Meter (แทน wanchaiTimer) ────────
+        this.standMeter = 0;            // 0–100, แทน countdown timer
     }
 
     takeDamage(amt) {
@@ -935,6 +1025,15 @@ class AutoPlayer extends Player {
         this.cooldowns.wanchai = cd;
         this._punchTimer = 0;
 
+        // ── Feature 4: Set Stand Meter full on activation ─────
+        this.standMeter = this.stats?.standMeterMax ?? 100;
+
+        // ── Feature 3B/3C: reset charge/guard state on new activation ──
+        this._chargeTimer = 0;
+        this._chargeReady = false;
+        this._eHeld = false;
+        this._standGuard = false;
+
         // ── Spawn WanchaiStand autonomous entity ─────────────
         this.wanchaiStand = new WanchaiStand(this);
 
@@ -947,10 +1046,13 @@ class AutoPlayer extends Player {
     }
 
     // ── Heat Gauge — call from _punch / _doPlayerMelee / takeDamage ─────────
-    gainHeat(amount) {
+    gainHeat(amount, fromHit = false) {
         const S = this.stats ?? {};
         const bonus = this.passiveUnlocked ? (S.passiveHeatGainBonus ?? 1.25) : 1.0;
         this.heat = Math.min(S.heatMax ?? 100, this.heat + amount * bonus);
+
+        // Feature 1: reset idle decay timer เมื่อ hit (ไม่ใช่จาก damage taken)
+        if (fromHit) this._timeSinceLastHit = 0;
 
         // ── Tier transition floating text (throttled — once per tier change) ──
         const newTier = this.heat >= (S.heatTierOverheat ?? 100) ? 3
@@ -992,11 +1094,55 @@ class AutoPlayer extends Player {
                 : (S.heatDecayRate ?? 8);
             this.heat = Math.max(0, this.heat - decayRate * dt);
 
+            // ── Feature 1: Idle decay — ไม่ hit 2s+ → heat หายเร็วขึ้น ──────
+            this._timeSinceLastHit = (this._timeSinceLastHit ?? 0) + dt;
+            const idleDelay = S.heatIdleDecayDelay ?? 2.0;
+            if (this._timeSinceLastHit > idleDelay && !this.wanchaiActive) {
+                const idleDecay = S.heatIdleDecayRate ?? 8;
+                this.heat = Math.max(0, this.heat - idleDecay * dt);
+            }
+
             // Sync tier downward (gainHeat handles upward)
             const newTier = this.heat >= (S.heatTierOverheat ?? 100) ? 3
                 : this.heat >= (S.heatTierHot ?? 67) ? 2
                     : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
+
+            // ── Feature 1: Vent Explosion — OVERHEAT tier drop ───────────
+            const prevTier = this._prevHeatTier ?? 0;
+            if (prevTier >= 3 && newTier < 3) {
+                // OVERHEAT จบ → AOE burst
+                const ventRange = S.ventExplosionRange ?? 160;
+                const ventDmg = S.ventExplosionDamage ?? 45;
+                for (const e of (window.enemies || [])) {
+                    if (e.dead) continue;
+                    if (Math.hypot(e.x - this.x, e.y - this.y) < ventRange) {
+                        e.takeDamage?.(ventDmg * (this.damageMultiplier || 1.0), this);
+                    }
+                }
+                if (window.boss && !window.boss.dead) {
+                    if (Math.hypot(window.boss.x - this.x, window.boss.y - this.y) < ventRange + (window.boss.radius ?? 0)) {
+                        window.boss.takeDamage?.(ventDmg * 0.5 * (this.damageMultiplier || 1.0), this);
+                    }
+                }
+                if (typeof spawnParticles === 'function') {
+                    spawnParticles(this.x, this.y, 25, '#f97316', 'explosion');
+                }
+                if (typeof addScreenShake === 'function') addScreenShake(6);
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText('VENT!', this.x, this.y - 60, '#fb923c', 20);
+            }
+            this._prevHeatTier = newTier;
             this._heatTier = newTier;
+
+            // ── Feature 1: COLD tier — display text ─────────────────────
+            const prevWasCold = (prevTier > 0);
+            if (newTier === 0 && prevWasCold && typeof spawnFloatingText === 'function') {
+                spawnFloatingText('❄️ COLD', this.x, this.y - 60, '#93c5fd', 14);
+            }
+
+            // ── Feature 1: COLD penalty on move speed ────────────────────
+            // (damage penalty applied in _punch / _doPlayerMelee below)
+            // speedMult applied via speedBoost before super.update()
 
             // OVERHEAT: HP drain
             if (newTier === 3) {
@@ -1018,15 +1164,29 @@ class AutoPlayer extends Player {
         }
 
         if (this.wanchaiActive) {
+            // ── Feature 4: Stand Meter drain (แทน wanchaiTimer) ──────────
+            const S4 = this.stats ?? {};
+            let drainRate = S4.standMeterDrainRate ?? 8;
+            const ht4 = this._heatTier ?? 0;
+            if (ht4 >= 3) drainRate *= (S4.standMeterDrainOverheat ?? 0.50);
+            else if (ht4 === 0) drainRate *= (S4.standMeterDrainCold ?? 1.30);
+            this.standMeter = Math.max(0, (this.standMeter ?? 0) - drainRate * dt);
+
+            // Still tick wanchaiTimer for HUD compat (but deactivation uses standMeter)
             this.wanchaiTimer -= dt;
-            if (this.wanchaiTimer <= 0) {
+
+            if (this.standMeter <= 0) {
                 this.wanchaiActive = false;
                 this.wanchaiTimer = 0;
+                this.standMeter = 0;
                 if (this.wanchaiStand) { this.wanchaiStand.active = false; this.wanchaiStand = null; }
                 // BUG-FIX (OVERHEATED spam): กัน heat wave ยิงทันทีที่ Wanchai จบ
-                // mouse.left ที่ค้างอยู่จะตกลง heat wave path ใน frame เดียวกัน
-                // ใส่ gap เล็กน้อยเพื่อ break the chain
                 this.cooldowns.shoot = Math.max(this.cooldowns.shoot ?? 0, 0.18);
+                // Feature 3B: reset charge state เมื่อ Stand หมด
+                this._chargeTimer = 0;
+                this._chargeReady = false;
+                this._eHeld = false;
+                this._standGuard = false;
             }
         }
 
@@ -1057,6 +1217,17 @@ class AutoPlayer extends Player {
         // Apply Awakening speed buff instead of slowing down
         if (this.wanchaiActive) this.speedBoost = (this.speedBoost || 1) * (this.stats?.standSpeedMod ?? 1.5);
 
+        // ── Feature 1: COLD tier — speed penalty ──────────────────
+        if ((this._heatTier ?? 0) === 0) {
+            const coldSpeedMult = this.stats?.coldSpeedMult ?? 0.90;
+            this.speedBoost = (this.speedBoost || 1) * coldSpeedMult;
+        }
+
+        // ── Feature 3C: Stand Guard — block movement ──────────────
+        this._standGuard = !!(this.wanchaiActive && keys?.shift);
+        // (movement is handled naturally — player can still move while guarding,
+        //  but shooting is blocked below. Full movement block would frustrate players.)
+
         super.update(dt, keys, mouse);
 
         // ── Tick graphBuffTimer ────────────────────────────────
@@ -1069,7 +1240,18 @@ class AutoPlayer extends Player {
         // กด Q ดึงทุกตัวในรัศมี 320px เข้าหาออโต้ทันที
         // cooldown 8 วินาที | ออกแบบให้ combo กับ Wanchai
         if (mouse?.middle !== undefined) { /* placeholder */ }
-        if (checkInput('q') && !this.passiveUnlocked) {
+
+        // ── Feature 3A: Stand Pull — Q ขณะ Wanchai active ─────────
+        if (checkInput('q') && this.wanchaiActive && this.passiveUnlocked && (this.cooldowns?.vacuum ?? 0) <= 0) {
+            const vCost = this.stats?.vacuumEnergyCost ?? 20;
+            if ((this.energy ?? 0) < vCost) {
+                spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+            } else {
+                this.energy = Math.max(0, (this.energy ?? 0) - vCost);
+                this._doStandPull();
+            }
+            consumeInput('q');
+        } else if (checkInput('q') && !this.passiveUnlocked) {
             // ── Vacuum ใช้ได้ตั้งแต่ต้น (basic version: ดูดอย่างเดียว) ──────
             if ((this.cooldowns?.vacuum ?? 0) <= 0) {
                 const vCost = this.stats?.vacuumEnergyCost ?? 20;
@@ -1094,77 +1276,116 @@ class AutoPlayer extends Player {
             consumeInput('q');
         }
 
-        // ── E: Overheat Detonation — Heat-scaled, DOES NOT kill Wanchai ─────
-        // กด E ระหว่าง Wanchai active เท่านั้น
-        // AOE = detonationRange (×1.5 ถ้า OVERHEATED), damage = base + heat×scaling
-        if (checkInput('e') && !this.passiveUnlocked) {
-            spawnFloatingText('🔒 ทำ Heat เต็ม 100 ก่อน!', this.x, this.y - 40, '#94a3b8', 14);
-            consumeInput('e');
-        } else if (checkInput('e') && this.passiveUnlocked && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
-            const S = this.stats ?? {};
-            const detCost = S.detonationEnergyCost ?? 30;
-            if ((this.energy ?? 0) < detCost) {
-                spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+        // ── E: Charge Punch (Feature 3B) / Overheat Detonation ─────
+        // กด E ค้างขณะ Wanchai active = charge, ปล่อย = super punch
+        // กด E ขณะไม่ได้ unlock = locked message
+        if (!this.passiveUnlocked) {
+            if (checkInput('e')) {
+                spawnFloatingText('🔒 ทำ Heat เต็ม 100 ก่อน!', this.x, this.y - 40, '#94a3b8', 14);
                 consumeInput('e');
-            } else {
-                this.energy = Math.max(0, (this.energy ?? 0) - detCost);
-                const isOverheat = (this._heatTier ?? 0) >= 3;
-                const DET_RANGE = (S.detonationRange ?? 240) * (isOverheat ? 1.5 : 1.0);
-                // Heat-scaled damage
-                const detBaseDmg = (S.detonationBaseDamage ?? 80) + this.heat * (S.detonationHeatScaling ?? 2.5);
-                const detFinalBase = detBaseDmg * (this.damageMultiplier || 1.0);
-                let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.25);
-                if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.20);
-                let detIsCrit = Math.random() < detCrit;
-                let detFinalDmg = detFinalBase * (detIsCrit ? (S.critMultiplier ?? 2.2) : 1.0);
+            }
+            // reset charge if passive not unlocked
+            this._chargeTimer = 0; this._chargeReady = false; this._eHeld = false;
+        } else if (this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
+            // ── Charge Punch logic — track hold/release manually ──────
+            const eDown = checkInput('e') || (typeof keys !== 'undefined' && keys?.e);
 
-                // ── Second Wind bonus ──
-                if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
+            if (eDown && !this._eHeld) {
+                // Rising edge — start charge
+                this._eHeld = true;
+                this._chargeTimer = 0;
+                this._chargeReady = false;
+                consumeInput('e'); // consume once on press
+            } else if (eDown && this._eHeld) {
+                // Holding — advance charge
+                const S = this.stats ?? {};
+                this._chargeTimer = Math.min((this._chargeTimer ?? 0) + dt, S.chargeMaxTime ?? 1.5);
+                if (this._chargeTimer >= (S.chargeMaxTime ?? 1.5)) {
+                    this._chargeReady = true;
+                }
+            } else if (!eDown && this._eHeld) {
+                // Release — fire!
+                this._eHeld = false;
+                const S = this.stats ?? {};
+                const chargeRatio = Math.min(1, (this._chargeTimer ?? 0) / (S.chargeMaxTime ?? 1.5));
+                const maxDmgMult = S.chargeDamageMultMax ?? 3.5;
+                const maxRangeMult = S.chargeRangeMultMax ?? 1.3;
+                const dmgMult = 1 + chargeRatio * (maxDmgMult - 1);
+                const rangeMult = 0.5 + chargeRatio * (maxRangeMult - 0.5);
+                const detCost = S.detonationEnergyCost ?? 30;
+                if ((this.energy ?? 0) < detCost) {
+                    spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                } else {
+                    this.energy = Math.max(0, (this.energy ?? 0) - detCost);
+                    const isOverheat = (this._heatTier ?? 0) >= 3;
+                    const DET_RANGE = (S.detonationRange ?? 240) * rangeMult * (isOverheat ? 1.5 : 1.0);
+                    const detBaseDmg = (S.detonationBaseDamage ?? 80) * dmgMult + this.heat * (S.detonationHeatScaling ?? 2.5);
+                    const detFinalBase = detBaseDmg * (this.damageMultiplier || 1.0);
+                    let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.25);
+                    if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.20);
+                    const detIsCrit = Math.random() < detCrit;
+                    let detFinalDmg = detFinalBase * (detIsCrit ? (S.critMultiplier ?? 2.2) : 1.0);
+                    if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
 
-                let totalDet = 0;
-                for (const enemy of (window.enemies || [])) {
-                    if (enemy.dead) continue;
-                    const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-                    if (dist < DET_RANGE) {
-                        enemy.takeDamage(detFinalDmg);
-                        totalDet += detFinalDmg;
-                        spawnParticles(enemy.x, enemy.y, 5, detIsCrit ? '#facc15' : '#dc2626');
+                    // Stand position is the blast origin
+                    const bx = this.wanchaiStand?.x ?? this.x;
+                    const by = this.wanchaiStand?.y ?? this.y;
+
+                    let totalDet = 0;
+                    for (const enemy of (window.enemies || [])) {
+                        if (enemy.dead) continue;
+                        if (Math.hypot(enemy.x - bx, enemy.y - by) < DET_RANGE) {
+                            enemy.takeDamage(detFinalDmg);
+                            totalDet += detFinalDmg;
+                            spawnParticles(enemy.x, enemy.y, 5, detIsCrit ? '#facc15' : '#dc2626');
+                        }
                     }
-                }
-                if (window.boss && !window.boss.dead) {
-                    const dist = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
-                    if (dist < DET_RANGE + window.boss.radius) {
-                        window.boss.takeDamage(detFinalDmg);
-                        totalDet += detFinalDmg;
-                        spawnParticles(window.boss.x, window.boss.y, 8, detIsCrit ? '#facc15' : '#dc2626');
+                    if (window.boss && !window.boss.dead) {
+                        if (Math.hypot(window.boss.x - bx, window.boss.y - by) < DET_RANGE + (window.boss.radius ?? 0)) {
+                            window.boss.takeDamage(detFinalDmg);
+                            totalDet += detFinalDmg;
+                            spawnParticles(window.boss.x, window.boss.y, 8, detIsCrit ? '#facc15' : '#dc2626');
+                        }
                     }
+                    if (this.passiveUnlocked && totalDet > 0) {
+                        this.hp = Math.min(this.maxHp, this.hp + totalDet * (S.passiveLifesteal ?? 0.01));
+                    }
+
+                    this.heat = Math.max(0, this.heat - 50);
+                    this._heatTier = this.heat >= (S.heatTierHot ?? 67) ? 2
+                        : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
+                    this.cooldowns.detonation = S.detonationCooldown ?? 8;
+
+                    spawnParticles(bx, by, 60, '#dc2626');
+                    addScreenShake(chargeRatio >= 0.99 ? 16 : 10);
+                    const chargeLabel = chargeRatio >= 0.99 ? '💥 MAX CHARGE!' : detIsCrit ? `💥 CRIT! ${Math.floor(detFinalDmg)}` : `💥 ${Math.floor(detFinalDmg)}`;
+                    spawnFloatingText(chargeLabel, bx, by - 70, detIsCrit ? '#facc15' : '#dc2626', chargeRatio >= 0.99 ? 34 : 28);
+                    if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
                 }
-
-                // Lifesteal จากดาเมจที่ทำได้
-                if (this.passiveUnlocked && totalDet > 0) {
-                    this.hp = Math.min(this.maxHp, this.hp + totalDet * (this.stats?.passiveLifesteal ?? 0.01));
+                this._chargeTimer = 0;
+                this._chargeReady = false;
+            }
+        } else if (this.passiveUnlocked && !this.wanchaiActive) {
+            // Not in Wanchai — cooldown message only
+            if (checkInput('e')) {
+                if ((this.cooldowns?.detonation ?? 0) > 0) {
+                    spawnFloatingText(`⏳ ${Math.ceil(this.cooldowns.detonation)}s`, this.x, this.y - 40, '#94a3b8', 14);
+                } else {
+                    spawnFloatingText('เรียก Stand ก่อน!', this.x, this.y - 40, '#94a3b8', 14);
                 }
-
-                // ── REWORK: Wanchai STAYS active after Detonation ──
-                // Heat resets -50 (keeps momentum, can chain)
-                this.heat = Math.max(0, this.heat - 50);
-                this._heatTier = this.heat >= (S.heatTierHot ?? 67) ? 2
-                    : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
-                this.cooldowns.detonation = S.detonationCooldown ?? 8;
-
-                spawnParticles(this.x, this.y, 60, '#dc2626');
-                addScreenShake(10);
-                spawnFloatingText(
-                    detIsCrit ? `💥 OVERHEAT CRIT! ${Math.floor(detFinalDmg)}` : `💥 OVERHEAT! ${Math.floor(detFinalDmg)}`,
-                    this.x, this.y - 70,
-                    detIsCrit ? '#facc15' : '#dc2626', isOverheat ? 32 : 28
-                );
-                if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
                 consumeInput('e');
-            } // end energy check
+                this._chargeTimer = 0; this._chargeReady = false; this._eHeld = false;
+            }
         }
 
 
+
+        // ── Feature 3C: Stand Guard — block shooting ───────────────
+        if (this._standGuard) {
+            // Stand guard active — เพิ่ม visual signal แค่ครั้งแรก
+            // Shooting blocked (skip the melee/shoot block below)
+            return;
+        }
 
         // Reset attack state every frame
         this.isStandAttacking = false;
@@ -1261,12 +1482,13 @@ class AutoPlayer extends Player {
         }
 
         // Heat gain per player rush hit
-        this.gainHeat(S.heatPerPlayerHit ?? 8);
-        // Heat tier damage
+        this.gainHeat(S.heatPerPlayerHit ?? 8, true);
+        // Heat tier damage (Feature 1: COLD penalty)
         const pht = this._heatTier ?? 0;
         const pHeatMult = pht >= 3 ? (S.heatDmgOverheat ?? 1.50)
             : pht >= 2 ? (S.heatDmgHot ?? 1.30)
-                : pht >= 1 ? (S.heatDmgWarm ?? 1.15) : 1.0;
+                : pht >= 1 ? (S.heatDmgWarm ?? 1.15)
+                    : (S.coldDamageMult ?? 0.70); // COLD penalty
         let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0) * pHeatMult;
         let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
@@ -1340,6 +1562,19 @@ class AutoPlayer extends Player {
             Achievements.stats.standRushKills = (Achievements.stats.standRushKills ?? 0) + 1;
             Achievements.check?.('stand_rush_kill');
         }
+
+        // ── Feature 4: Stand Meter fill on hit ──────────────────
+        const S_meter = this.stats ?? {};
+        this.standMeter = Math.min(S_meter.standMeterMax ?? 100, (this.standMeter ?? 0) + (S_meter.standMeterPerHit ?? 4));
+
+        // ── Feature 2: Killing Blow Supercharge ─────────────────
+        if (target.hp <= 0 && (this._oraComboCount ?? 0) >= (S_meter.oraComboSuperchargeMin ?? 5)) {
+            this.gainHeat(S_meter.heatOnKillSupercharge ?? 30, true);
+            this.cooldowns.shoot = 0; // reset rush cooldown ทันที
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText('SUPERCHARGE!', this.x, this.y - 70, '#fef08a', 22);
+            if (typeof addScreenShake === 'function') addScreenShake(5);
+        }
     }
 
     // ── Override: Auto ปลดล็อคเมื่อถึง OVERHEAT ครั้งแรก ──────────────────────
@@ -1383,6 +1618,53 @@ class AutoPlayer extends Player {
     }
 
     // draw() ย้ายไป PlayerRenderer._drawAuto() แล้ว
+
+    // ── Feature 3A: Stand Pull — Q ขณะ Wanchai active ─────────────────────
+    // Stand ดึง enemy เข้าหาตำแหน่ง Stand แบบ instant
+    _doStandPull() {
+        const S = this.stats ?? {};
+        const standX = this.wanchaiStand?.x ?? this.x;
+        const standY = this.wanchaiStand?.y ?? this.y;
+        const pullRange = S.standPullRange ?? 380;
+        const pullDmg = S.standPullDamage ?? 18;
+
+        let pulled = 0;
+        for (const enemy of (window.enemies || [])) {
+            if (enemy.dead) continue;
+            const d = Math.hypot(enemy.x - standX, enemy.y - standY);
+            if (d < pullRange) {
+                // Instant position pull → beside Stand
+                const pullAngle = Math.atan2(enemy.y - standY, enemy.x - standX);
+                const offset = (enemy.radius ?? 14) + 40;
+                enemy.x = standX + Math.cos(pullAngle) * offset;
+                enemy.y = standY + Math.sin(pullAngle) * offset;
+                enemy.vx = 0; enemy.vy = 0;
+                enemy.takeDamage?.(pullDmg * (this.damageMultiplier || 1.0), this);
+                pulled++;
+            }
+        }
+        // Boss — weak pull (30%)
+        if (window.boss && !window.boss.dead) {
+            const d = Math.hypot(window.boss.x - standX, window.boss.y - standY);
+            if (d < pullRange && d > 1) {
+                const pullAngle = Math.atan2(window.boss.y - standY, window.boss.x - standX);
+                const bossOffset = (window.boss.radius ?? 30) + 50;
+                window.boss.vx = ((standX + Math.cos(pullAngle) * bossOffset) - window.boss.x) * 8;
+                window.boss.vy = ((standY + Math.sin(pullAngle) * bossOffset) - window.boss.y) * 8;
+            }
+        }
+        this.cooldowns.vacuum = S.vacuumCooldown ?? 6;
+        if (pulled > 0) {
+            this.gainHeat(S.vacuumHeatGain ?? 25, true);
+            if (typeof spawnParticles === 'function') spawnParticles(standX, standY, 35, '#dc2626');
+            if (typeof addScreenShake === 'function') addScreenShake(5);
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText(`🥊 STAND PULL ×${pulled}`, standX, standY - 60, '#dc2626', 22);
+        } else {
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText('STAND PULL', standX, standY - 40, '#94a3b8', 14);
+        }
+    }
 
     // ── Vacuum Heat — shared logic for early (basic) and post-passive (full) ──
     _doVacuum({ earlyMode = false } = {}) {
@@ -1475,7 +1757,12 @@ class AutoPlayer extends Player {
                 UIManager._setCooldownVisual('stealth-icon', 0, wanchaiCd);
             }
             const iconLabelEl = standEl?.querySelector('.skill-name');
-            if (iconLabelEl) iconLabelEl.textContent = `${Math.ceil(this.wanchaiTimer)}s`;
+            if (iconLabelEl) {
+                // Feature 4: Show Stand Meter % instead of countdown timer
+                const meterPct = Math.ceil((this.standMeter ?? 0));
+                const htLabel = (this._heatTier ?? 0) === 0 ? '❄️' : (this._heatTier ?? 0) >= 3 ? '💥' : '';
+                iconLabelEl.textContent = `${htLabel}${meterPct}%`;
+            }
         } else {
             standEl?.classList.remove('active');
             if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
