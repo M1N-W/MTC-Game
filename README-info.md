@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.18.0 | **Latest Update:** Character stat accuracy fixes and comprehensive documentation overhaul
+> **Current Version:** Beta v3.26.4 | **Latest Update:** Auto character balance rework with comprehensive adjustments and visual improvements
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

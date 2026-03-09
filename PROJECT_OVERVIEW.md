@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.18.0
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.26.4
 
 ---
 
@@ -555,6 +555,22 @@ Shell casings          effects.js                    ShellCasingSystem
 | **"DOMAIN SHIELD!" spam + boss รับ damage ไม่ได้** | **Domain singleton phase ค้างจากเกมก่อน** | **ตรวจ `_onDeath()` + AdminSystem abort calls — ดู Domain Singleton Reset** |
 | **Domain slow ไม่มีผล** | **แก้ `player.moveSpeed` แทน `player.stats.moveSpeed`** | **ใช้ `player.stats.moveSpeed` เสมอ — ดู Domain Slow Critical Note** |
 | **สกิลกดได้ทั้งที่ energy หมด** | **ไม่มี energy guard ใน skill activation block** | **เพิ่ม pattern `if (energy < cost)` ก่อน doSkill() — ดู Energy Cost System** |
+
+---
+
+## 📝 Recent Major Changes (v3.26.4)
+
+### Auto Character Balance Rework (March 9, 2026)
+**Purpose:** Rebalance detonation system and prevent infinite scaling while improving visual feedback
+
+**Key Changes:**
+- **Detonation System:** Base damage 80→55, heat scaling 2.5→1.2, added 600 hard cap, charge multiplier 3.5→2.5, heat drain 50→80
+- **Passive Heat:** Gain bonus 1.50→1.20, disabled no-decay on move (prevents permanent OVERHEAT)
+- **Stand Abilities:** Separated standPullCooldown: 10 from vacuumCooldown: 6
+- **Visual Fixes:** Detonation ring around Stand, improved charge ring with arc progress, proper z-order for WanchaiStand
+- **Bug Fixes:** Crit fallback 2.0→2.2, melee range +60→+15, Stand Guard visual reset
+
+**Impact:** More balanced detonation damage, better heat management, clearer visual feedback
 
 ---
 
