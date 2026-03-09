@@ -99,15 +99,14 @@
 
 ---
 
-## 📈 Current Version: v3.24.0 (March 9, 2026)
+## 📈 Current Version: v3.24.1 (March 9, 2026)
 
 **Latest Major Updates:**
-- 🔧 **Boss Architecture Refactor:** Split monolithic boss.js into 4 modular files for better maintainability and cleaner code structure
-- 📁 **Improved File Organization:** BossBase.js, ManopBoss.js, FirstBoss.js, and BossRenderer.js with proper dependency hierarchy
-- 🎯 **Enhanced Load Order:** Sequential script loading eliminates race conditions and ensures proper class availability
-- ⚡ **Performance Benefits:** Smaller file sizes enable faster loading and better caching granularity
-- � **Zero Breaking Changes:** Maintained full backward compatibility with existing game systems
-- 📚 **Documentation Updates:** Updated service worker cache and changelog with comprehensive refactor details
+- � **Documentation Enhancement:** Improved PROJECT_OVERVIEW.md with comprehensive boss development guidelines
+- 🎯 **Developer Experience:** Added detailed rendering pattern documentation and method naming conventions
+- 🔧 **Architecture Guidelines:** Enhanced "เพิ่มบอสใหม่" section with step-by-step boss creation instructions
+- 🔄 **Backward Compatibility:** Documented window exports requirements for system integration
+- � **Development Path:** Clear file locations and integration points for future boss additions
 
 ---
 

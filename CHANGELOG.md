@@ -4,6 +4,23 @@
 
 ---
 
+## v3.24.1 — Documentation Updates: Boss Architecture Guidelines
+*Released: March 9, 2026*
+
+### 📚 PROJECT_OVERVIEW.md Enhancements
+- **Rendering Pattern Documentation:** Updated rendering decoupling description with specific method names for both PlayerRenderer and BossRenderer dispatchers
+- **Boss Development Guidelines:** Enhanced "เพิ่มบอสใหม่" section with detailed steps for new boss creation in modular architecture
+- **Window Exports Guidance:** Added explicit requirement for backward-compatibility aliases for WaveManager and AdminSystem integration
+- **Architecture Reference:** Removed redundant Boss Architecture entry from design patterns (already documented in file structure section)
+
+### 🎯 Developer Experience Improvements
+- **Clear Development Path:** Step-by-step instructions for adding new bosses with file locations and integration points
+- **Method Naming Conventions:** Documented specific dispatcher methods (`drawBoss()`, `drawBossFirst()`, `drawBossDog()`) for consistency
+- **Backward Compatibility Guidelines:** Explicit alias requirements to maintain existing system integration
+- **Comprehensive Integration:** All required files and systems listed for new boss development
+
+---
+
 ## v3.24.0 — Boss Architecture Refactor
 *Released: March 9, 2026*
 

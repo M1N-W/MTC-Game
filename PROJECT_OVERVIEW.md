@@ -93,11 +93,10 @@ Input (input.js) → Game Update (game.js) → Entity Updates → Collision (map
 ### Key Design Patterns
 - **Object Pooling** — particles/projectiles/FloatingText (effects.js) ลด GC
 - **State Management** — GameState singleton
-- **Rendering Decoupling** — `PlayerRenderer.draw()` → character-specific methods, `BossRenderer.draw()` → boss-specific methods
+- **Rendering Decoupling** — `PlayerRenderer.draw()` dispatcher → `_drawKao()` / `_drawPoom()` / `_drawAuto()`, `BossRenderer.draw()` dispatcher → `drawBoss()` / `drawBossFirst()` / `drawBossDog()`
 - **Spatial Grid** — weapons.js collision: O(E) build, O(P×k) query — เร็วกว่า O(P×E) brute force ~12×
 - **No `instanceof` in PlayerBase** — ใช้ behavior flags แทน (`passiveSpeedBonus`, `usesOwnLifesteal`)
 - **Deterministic Rendering** — ห้าม `Math.random()` ใน draw loop เด็ดขาด
-- **Boss Architecture** — `BossBase` hierarchy with modular file structure and lifecycle management
 
 ### Integration Points
 - Menu→Game: `selectCharacter()` → `window.selectedChar` → `startGame()`
@@ -298,9 +297,10 @@ if ((this.energy ?? 0) < cost) {
 **อาจกระทบ:** `game.js`, `WaveManager.js`, `weapons.js`
 
 ### เพิ่มบอสใหม่
-**ต้องแก้:** `boss.js` (extends BossBase), `boss_attacks.js`, `config.js`, `WaveManager.js`, `audio.js`
+**ต้องแก้:** สร้าง `js/entities/boss/[Name]Boss.js` (extends BossBase), `boss_attacks.js`, `BossRenderer.js` (เพิ่ม static draw method + dispatcher), `config.js`, `WaveManager.js`, `audio.js`, `index.html` (script tag)
 **อาจกระทบ:** `summons.js`, `map.js`
 ⚠️ Boss มี Gemini speech integration ผ่าน `speak()` | Boss queue: waves 3,6,9,12,15
+⚠️ window exports ต้องมี backward-compat alias (เช่น `window.BossXxx = XxxClass`) สำหรับ WaveManager + AdminSystem
 
 ### เพิ่มศัตรูใหม่
 **ต้องแก้:** `enemy.js`, `config.js`, `WaveManager.js`, `audio.js`, `effects.js`
