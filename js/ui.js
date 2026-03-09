@@ -1005,7 +1005,7 @@ class UIManager {
             }
             UIManager._setCooldownVisual('garuda-icon',
                 Math.max(0, player.cooldowns.garuda),
-                BALANCE.characters.poom.garudaCooldown || 25);
+                BALANCE.characters.poom.garudaCooldown ?? 24);
 
             // WARN-10 FIX: AutoPlayer's Wanchai Stand cooldown had no arc overlay
             // or countdown. Add a parallel branch so the player sees feedback.
@@ -1044,10 +1044,14 @@ class UIManager {
             }
 
             // ── Vacuum Heat (Q) cooldown arc ────────────────────────────────────
+            // BUG-FIX: max CD is dynamic — standPull (10s, Wanchai active) vs vacuum (6s)
+            const _vacMaxCd = player.wanchaiActive
+                ? (S.standPullCooldown ?? 10)
+                : (S.vacuumCooldown ?? 6);
             UIManager._setCooldownVisual(
                 'vacuum-icon',
                 Math.max(0, player.cooldowns.vacuum ?? 0),
-                S.vacuumCooldown ?? 8
+                _vacMaxCd
             );
 
             // ── Overheat Detonation (E) — lock visual + cooldown arc ────────────
@@ -1068,7 +1072,7 @@ class UIManager {
             UIManager._setCooldownVisual(
                 'auto-det-icon',
                 Math.max(0, player.cooldowns.detonation ?? 0),
-                S.detonationCooldown ?? 5
+                S.detonationCooldown ?? 8
             );
 
             // ── Kao — Teleport (Q) + Clone of Stealth (E) ─────────────────────────

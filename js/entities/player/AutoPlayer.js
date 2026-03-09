@@ -1809,10 +1809,15 @@ class AutoPlayer extends Player {
 
         // INC-4 fix: Q / E cooldown visuals
         if (typeof UIManager !== 'undefined' && UIManager._setCooldownVisual) {
-            UIManager._setCooldownVisual('q-icon',
-                Math.max(0, this.cooldowns.vacuum ?? 0), S.vacuumCooldown ?? 8);
-            UIManager._setCooldownVisual('e-icon',
-                Math.max(0, this.cooldowns.detonation ?? 0), S.detonationCooldown ?? 5);
+            // BUG-FIX: max CD is dynamic — standPull (10s, Wanchai active) vs vacuum (6s)
+            const vacMaxCd = this.wanchaiActive
+                ? (S.standPullCooldown ?? 10)
+                : (S.vacuumCooldown ?? 6);
+            // BUG-FIX: use 'vacuum-icon' / 'auto-det-icon' — matches DOM ids set by ui.js
+            UIManager._setCooldownVisual('vacuum-icon',
+                Math.max(0, this.cooldowns.vacuum ?? 0), vacMaxCd);
+            UIManager._setCooldownVisual('auto-det-icon',
+                Math.max(0, this.cooldowns.detonation ?? 0), S.detonationCooldown ?? 8);
         }
 
         const passiveEl = document.getElementById('passive-skill');

@@ -774,6 +774,14 @@ class KaoPlayer extends Player {
         UIManager._setCooldownVisual('e-icon',
             Math.max(0, this.cloneSkillCooldown), this.maxCloneCooldown);
 
+        // Dash — BUG-5 FIX: PlayerBase ไม่มี updateUI → ต้อง update เองที่นี่
+        UIManager._setCooldownVisual('dash-icon',
+            Math.max(0, this.cooldowns?.dash ?? 0), S.dashCooldown ?? 1.65);
+
+        // Stealth (R-Click) — BUG-5 FIX: comment "handled by PlayerBase" ผิด
+        UIManager._setCooldownVisual('stealth-icon',
+            Math.max(0, this.cooldowns?.stealth ?? 0), S.stealthCooldown ?? 5.5);
+
         // HP / Energy bars (ผ่าน base class ถ้ามี)
         const hpBar = document.getElementById('hp-bar');
         const enBar = document.getElementById('en-bar');

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.27.6'; // v3.27.6: Visual Enhancements - Improved wall and MTC wall rendering with 3D effects, enhanced desk shadows, added green lighting for trees, simplified Database UI to use MapObject rendering
+const CACHE_NAME = 'mtc-cache-v3.27.7'; // v3.27.7: UI Cooldown Bug Fixes - Fixed dynamic cooldown display for Auto's vacuum/standPull, corrected DOM element IDs, fixed Poom's garuda cooldown, added missing Kao dash/stealth cooldown displays
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

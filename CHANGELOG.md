@@ -4,6 +4,30 @@
 
 ---
 
+## v3.27.7 — UI Cooldown Bug Fixes
+*Released: March 9, 2026*
+
+### 🔄 Auto Character Cooldown Fixes
+- **Dynamic Vacuum/StandPull Cooldown**: Fixed cooldown display to properly switch between vacuum (6s) and standPull (10s) based on Wanchai Stand state
+- **Correct DOM Element IDs**: Changed from 'q-icon'/'e-icon' to 'vacuum-icon'/'auto-det-icon' to match actual DOM elements
+- **Accurate Cooldown Values**: Corrected detonation cooldown from 5s to 8s to match actual ability timing
+
+### 🪶 Poom Character Fixes
+- **Garuda Cooldown Correction**: Fixed garuda cooldown from 25s to 24s to match actual ability timing
+- **Consistent Nullish Coalescing**: Updated to use `??` operator for better null safety
+
+### 🥷 Kao Character Cooldown Additions
+- **Missing Dash Cooldown**: Added dash cooldown display (1.65s) that was missing from UI update
+- **Missing Stealth Cooldown**: Added stealth (R-Click) cooldown display (5.5s) that was incorrectly marked as "handled by PlayerBase"
+- **BUG-5 Resolution**: Fixed PlayerBase updateUI gap that left Kao's movement abilities without visual feedback
+
+### 🐛 General UI Improvements
+- **Consistent Cooldown Pattern**: Standardized cooldown visual updates across all character classes
+- **Null Safety**: Enhanced null checking for cooldown objects to prevent UI errors
+- **Dynamic Cooldown Support**: Improved support for abilities with variable cooldown durations
+
+---
+
 ## v3.27.6 — Visual Enhancements & Rendering Improvements
 *Released: March 9, 2026*
 

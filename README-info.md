@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.27.6 | **Latest Update:** Visual enhancements - improved wall and MTC wall rendering with 3D effects, enhanced desk shadows, added green lighting for trees, simplified Database UI
+> **Current Version:** Beta v3.27.7 | **Latest Update:** UI cooldown bug fixes - fixed dynamic cooldown display for Auto's vacuum/standPull, corrected DOM element IDs, fixed Poom's garuda cooldown, added missing Kao dash/stealth cooldown displays
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
