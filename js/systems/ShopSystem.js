@@ -5,14 +5,13 @@
 // ══════════════════════════════════════════════════════════════
 
 // ─── MTC Shop Location ────────────────────────────────────────
-// ย้ายออกไป SW ตามแผนที่ใหม่ — สอดคล้องกับ MAP_CONFIG.auras.shop
-// และ MAP_CONFIG.paths.shop.to ที่อัปเดตใน config.js
+// ⚠️  ห้ามแก้ค่าที่นี่ — แก้ที่ BALANCE.shop ใน config.js เท่านั้น
+// Object นี้เป็น live proxy ให้โค้ดเดิมที่อ้าง MTC_SHOP_LOCATION ยังทำงานได้
 const MTC_SHOP_LOCATION = {
-    x: -480,
-    y: 480,
-    INTERACTION_RADIUS: 90
+    get x() { return BALANCE.shop.x; },
+    get y() { return BALANCE.shop.y; },
+    get INTERACTION_RADIUS() { return BALANCE.shop.interactionRadius; },
 };
-
 window.MTC_SHOP_LOCATION = MTC_SHOP_LOCATION;
 
 // ══════════════════════════════════════════════════════════════
@@ -20,22 +19,23 @@ window.MTC_SHOP_LOCATION = MTC_SHOP_LOCATION;
 // ══════════════════════════════════════════════════════════════
 
 function drawShopObject() {
-    const screen = worldToScreen(MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
-    const t = performance.now() / 700;
+    const cfg = BALANCE.shop;
+    const screen = worldToScreen(cfg.x, cfg.y);
+    const t = performance.now() / cfg.glowSpeedMs;
     const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
-    const bounce = Math.sin(performance.now() / 500) * 3;
+    const bounce = Math.sin(performance.now() / cfg.bounceSpeedMs) * cfg.bounceAmplitude;
 
     if (window.player) {
-        const d = dist(window.player.x, window.player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
-        if (d < MTC_SHOP_LOCATION.INTERACTION_RADIUS * 2) {
-            const alpha = Math.max(0, 1 - d / (MTC_SHOP_LOCATION.INTERACTION_RADIUS * 2));
+        const d = dist(window.player.x, window.player.y, cfg.x, cfg.y);
+        if (d < cfg.interactionRadius * 2) {
+            const alpha = Math.max(0, 1 - d / (cfg.interactionRadius * 2));
             CTX.save();
-            CTX.globalAlpha = alpha * 0.3 * glow;
-            CTX.strokeStyle = '#facc15';
-            CTX.lineWidth = 2;
-            CTX.setLineDash([6, 4]);
+            CTX.globalAlpha = alpha * cfg.auraAlphaMult * glow;
+            CTX.strokeStyle = cfg.auraColor;
+            CTX.lineWidth = cfg.auraLineWidth;
+            CTX.setLineDash(cfg.auraDash);
             CTX.beginPath();
-            CTX.arc(screen.x, screen.y, MTC_SHOP_LOCATION.INTERACTION_RADIUS, 0, Math.PI * 2);
+            CTX.arc(screen.x, screen.y, cfg.interactionRadius, 0, Math.PI * 2);
             CTX.stroke();
             CTX.setLineDash([]);
             CTX.restore();
@@ -49,11 +49,11 @@ function drawShopObject() {
 
     CTX.save();
     CTX.translate(screen.x, screen.y + bounce);
-    CTX.shadowBlur = 18 * glow;
-    CTX.shadowColor = '#facc15';
+    CTX.shadowBlur = cfg.glowBlurMax * glow;
+    CTX.shadowColor = cfg.glowColor;
 
     CTX.fillStyle = '#78350f';
-    CTX.strokeStyle = '#facc15';
+    CTX.strokeStyle = cfg.auraColor;
     CTX.lineWidth = 2;
     CTX.beginPath();
     CTX.roundRect(-22, 0, 44, 28, 4);
@@ -98,24 +98,25 @@ function drawShopObject() {
     CTX.shadowBlur = 0;
     CTX.fillText('🛒', 0, 10);
 
-    const coinBounce = Math.sin(performance.now() / 350) * 4;
+    const coinBounce = Math.sin(performance.now() / cfg.coinBounceSpeedMs) * cfg.coinBounceAmplitude;
     CTX.font = '14px Arial';
     CTX.fillText('🪙', 0, -46 + coinBounce);
 
     CTX.shadowBlur = 0;
-    CTX.fillStyle = '#fbbf24';
-    CTX.font = 'bold 7px Arial';
+    CTX.fillStyle = cfg.labelColor;
+    CTX.font = cfg.labelFont;
     CTX.textAlign = 'center';
     CTX.textBaseline = 'middle';
-    CTX.fillText('MTC CO-OP STORE', 0, 38);
+    CTX.fillText(cfg.labelText, 0, 38);
 
     CTX.restore();
 }
 
 function updateShopProximityUI() {
     if (!window.player) return;
-    const d = dist(window.player.x, window.player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
-    const near = d < MTC_SHOP_LOCATION.INTERACTION_RADIUS;
+    const cfg = BALANCE.shop;
+    const d = dist(window.player.x, window.player.y, cfg.x, cfg.y);
+    const near = d < cfg.interactionRadius;
 
     const promptEl = document.getElementById('shop-prompt');
     const hudIcon = document.getElementById('shop-hud-icon');
@@ -160,13 +161,12 @@ function closeShop() {
 
 window.currentShopOffers = [];
 
-const SHOP_SLOT_COUNT = 3;
-const REROLL_COST = 200;
-
+// ⚠️  slotCount และ rerollCost อ่านจาก BALANCE.shop ใน config.js
 function rollShopItems() {
     const pool = [...SHOP_ITEMS];
+    const slotCount = BALANCE.shop.slotCount;
     window.currentShopOffers = [];
-    for (let i = 0; i < SHOP_SLOT_COUNT && pool.length > 0; i++) {
+    for (let i = 0; i < slotCount && pool.length > 0; i++) {
         const idx = Math.floor(Math.random() * pool.length);
         window.currentShopOffers.push({ item: pool[idx], soldOut: false });
         // swap-and-pop — O(1), no GC churn
@@ -177,12 +177,13 @@ function rollShopItems() {
 
 function rerollShop() {
     if (!window.player) return;
+    const rerollCost = BALANCE.shop.rerollCost;
     const score = typeof getScore === 'function' ? getScore() : 0;
-    if (score < REROLL_COST) {
+    if (score < rerollCost) {
         spawnFloatingText('คะแนนไม่พอ Reroll!', window.player.x, window.player.y - 60, '#ef4444', 18);
         return;
     }
-    addScore(-REROLL_COST);
+    addScore(-rerollCost);
     rollShopItems();
     ShopManager.renderItems();
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();

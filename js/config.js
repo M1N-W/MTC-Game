@@ -599,6 +599,64 @@ const BALANCE = {
         powerup: 120,  // BUFF: 100 → 120
         achievement: 500
     },
+
+    // ══════════════════════════════════════════════════════
+    // 🗄️  MTC DATABASE SERVER — location + interaction + visual
+    // AdminSystem.js reads ALL values from here. Edit here only.
+    // ══════════════════════════════════════════════════════
+    database: {
+        // World position — must match MAP_CONFIG.auras.database + paths.database.to
+        x: 440,
+        y: -560,
+        interactionRadius: 90,
+        // External URL opened when player presses E at database
+        url: 'https://claude.ai/public/artifacts/649de47e-b97f-41ad-ae66-c944d35eb24f',
+        // Proximity aura visual
+        auraColor: '#06b6d4',
+        auraLineWidth: 2,
+        auraDash: [6, 4],
+        auraAlphaMult: 0.25,
+        // Glow animation
+        glowColor: '#06b6d4',
+        glowSpeedMs: 600,       // period of Math.sin pulse
+        glowBlurMax: 14,        // shadowBlur = glowBlurMax * glow
+        // Label
+        labelColor: '#67e8f9',
+        labelFont: 'bold 7px Arial',
+        labelText: 'MTC DATABASE',
+    },
+
+    // ══════════════════════════════════════════════════════
+    // 🛒  MTC CO-OP STORE — location + interaction + shop mechanics
+    // ShopSystem.js reads ALL values from here. Edit here only.
+    // ══════════════════════════════════════════════════════
+    shop: {
+        // World position — must match MAP_CONFIG.auras.shop + paths.shop.to
+        x: -565,
+        y: 435,
+        interactionRadius: 90,
+        // Roguelite shop mechanics
+        slotCount: 3,
+        rerollCost: 200,
+        // Proximity aura visual
+        auraColor: '#facc15',
+        auraLineWidth: 2,
+        auraDash: [6, 4],
+        auraAlphaMult: 0.30,
+        // Glow + bounce animation
+        glowColor: '#facc15',
+        glowSpeedMs: 700,       // period of glow pulse
+        glowBlurMax: 18,        // shadowBlur = glowBlurMax * glow
+        bounceSpeedMs: 500,     // period of vertical bounce
+        bounceAmplitude: 3,     // px
+        coinBounceSpeedMs: 350, // coin bob period
+        coinBounceAmplitude: 4, // px
+        // Label
+        labelColor: '#fbbf24',
+        labelFont: 'bold 7px Arial',
+        labelText: 'MTC CO-OP STORE',
+    },
+
     mtcRoom: {
         healRate: 30,           // ลด 40→30 (offset by new abilities)
         maxStayTime: 4,
@@ -633,7 +691,7 @@ const BALANCE = {
     map: {
         size: 3000,
         objectDensity: 0.12,
-        objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard'],
+        objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard', 'database', 'coopstore'],
         wallPositions: [
             // ── Arena boundary walls (cardinal) ──
             { x: -1500, y: -50, w: 50, h: 100 },
@@ -662,12 +720,12 @@ const BALANCE = {
             { x: 542, y: 420, w: 18, h: 100 },
 
             // ── Corridor walls: Citadel approach (North) ──
-            // ถอยออกไป y=-370 (เดิม y=-230) สมมาตรกับใต้
             { x: -180, y: -370, w: 130, h: 18 },
             { x: 50, y: -370, w: 130, h: 18 },
-            // Citadel approach side rails
-            { x: -180, y: -540, w: 18, h: 170 },
-            { x: 162, y: -540, w: 18, h: 170 },
+            // Citadel approach side rails — หยุดก่อนถึง entrance (y=-370 → y=-480)
+            // ทำให้ entrance กว้าง 300px โล่งสมบูรณ์
+            { x: -180, y: -480, w: 18, h: 110 },
+            { x: 162, y: -480, w: 18, h: 110 },
 
             // ── Library safe margin corners ──
             { x: -1100, y: -620, w: 30, h: 30 },
@@ -691,7 +749,18 @@ const BALANCE = {
             wallColor: '#1f1610',
             wallBrick: '#352510',
             whiteboardGreen: '#0f2b0c',
-            chalkWhite: '#fef9ee'
+            chalkWhite: '#fef9ee',
+            // MTC Database Server Cluster
+            dbBody: '#080f1a',
+            dbAccent: '#fbbf24',
+            dbRackOn: '#f59e0b',
+            dbRackOff: '#3d2a00',
+            // MTC Co-op Store
+            shopBody: '#0f0a04',
+            shopAccent: '#f97316',
+            shopSign: '#fcd34d',
+            shopCounter: '#1c1008',
+            shopShelf: '#78350f'
         }
     }
 };
@@ -1273,14 +1342,14 @@ const MAP_CONFIG = {
     paths: {
         database: {
             from: { x: 0, y: 0 },
-            to: { x: 480, y: -480 },
+            to: { x: 440, y: -560 },
             coreColor: '#fbbf24',
             glowColor: 'rgba(251, 191, 36, 0.85)',
             phase: 0.0,
         },
         shop: {
             from: { x: 0, y: 0 },
-            to: { x: -480, y: 480 },
+            to: { x: -565, y: 435 },
             coreColor: '#f97316',
             glowColor: 'rgba(249, 115, 22, 0.85)',
             phase: 2.094,
@@ -1388,24 +1457,44 @@ const MAP_CONFIG = {
             label: 'LECTURE B',
             ambientColor: 'rgba(216, 180, 254, 0.60)',
         },
+        // MTC Database — NE zone floor
+        database: {
+            x: 330, y: -660, w: 340, h: 340,
+            floorColor: 'rgba(251, 191, 36, 0.06)',
+            gridColor: 'rgba(251, 191, 36, 0.18)',
+            gridSize: 30,
+            accentColor: 'rgba(251, 191, 36, 0.30)',
+            label: 'MTC DATABASE',
+            ambientColor: 'rgba(251, 191, 36, 0.90)',
+        },
+        // MTC Co-op Store — SW zone floor
+        shop: {
+            x: -670, y: 320, w: 340, h: 340,
+            floorColor: 'rgba(249, 115, 22, 0.06)',
+            gridColor: 'rgba(249, 115, 22, 0.16)',
+            gridSize: 32,
+            accentColor: 'rgba(249, 115, 22, 0.28)',
+            label: 'CO-OP STORE',
+            ambientColor: 'rgba(249, 115, 22, 0.90)',
+        },
     },
 
     // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
-            worldX: 480,
-            worldY: -480,
+            worldX: 440,   // center of database zone
+            worldY: -560,  // center of database zone
             innerRgb: '250, 180, 30',
             outerRgb: '120, 60, 10',
-            radius: 130,
+            radius: 160,
             phase: 0.0,
         },
         shop: {
-            worldX: -480,
-            worldY: 480,
+            worldX: -565,  // center of shop zone
+            worldY: 435,   // center of shop zone
             innerRgb: '249, 115, 22',
             outerRgb: '154, 52, 18',
-            radius: 130,
+            radius: 160,
             phase: 1.6,
         },
         origin: {

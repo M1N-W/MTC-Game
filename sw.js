@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.27.1'; // v3.27.1: Fixed spawn trapping - reorganized map zones, expanded object positions, updated shop/database locations
+const CACHE_NAME = 'mtc-cache-v3.27.2'; // v3.27.2: MTC Game Map Refactor - updated database and shop positions, improved entrance accessibility
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -141,6 +141,216 @@ function drawBookshelf(w, h) {
 
 // ════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════
+// 🗄️  MTC DATABASE SERVER CLUSTER
+// Structure: central mainframe tower + 2 flanking server racks
+// + holographic display panel + cable conduits
+// ════════════════════════════════════════════════════════════
+function drawDatabase(w, h) {
+    const pal = BALANCE.map.mapColors;
+    const now = _mapNow;
+    const pulse = 0.5 + Math.sin(now / 700) * 0.5;
+    const fastPulse = 0.5 + Math.sin(now / 280) * 0.5;
+
+    // ── Shadow ──
+    CTX.fillStyle = 'rgba(0,0,0,0.45)';
+    CTX.beginPath(); CTX.ellipse(w / 2, h + 8, w * 0.6, 10, 0, 0, Math.PI * 2); CTX.fill();
+
+    // ── Mainframe body (central tower) ──
+    CTX.fillStyle = pal.dbBody;
+    CTX.beginPath(); CTX.roundRect(0, 0, w, h, 6); CTX.fill();
+
+    // Outer frame glow
+    CTX.strokeStyle = `rgba(251,191,36,${0.25 + pulse * 0.25})`;
+    CTX.lineWidth = 2;
+    CTX.beginPath(); CTX.roundRect(0, 0, w, h, 6); CTX.stroke();
+
+    // ── Header banner ──
+    CTX.fillStyle = `rgba(20,14,2,0.95)`;
+    CTX.beginPath(); CTX.roundRect(0, 0, w, 14, [6, 6, 0, 0]); CTX.fill();
+    CTX.strokeStyle = `rgba(251,191,36,${0.5 + fastPulse * 0.3})`;
+    CTX.lineWidth = 1;
+    CTX.beginPath(); CTX.moveTo(0, 14); CTX.lineTo(w, 14); CTX.stroke();
+
+    // Banner text
+    CTX.fillStyle = `rgba(253,224,71,${0.8 + pulse * 0.2})`;
+    CTX.font = 'bold 7px monospace';
+    CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+    CTX.fillText('MTC DATABASE', w / 2, 7);
+
+    // ── Server rack units (4 rows) ──
+    const rackStartY = 18, unitH = Math.floor((h - rackStartY - 16) / 4);
+    for (let u = 0; u < 4; u++) {
+        const uy = rackStartY + u * unitH;
+        CTX.fillStyle = pal.dbBody;
+        CTX.beginPath(); CTX.roundRect(6, uy, w - 12, unitH - 2, 2); CTX.fill();
+        CTX.strokeStyle = 'rgba(251,191,36,0.12)';
+        CTX.lineWidth = 0.7;
+        CTX.beginPath(); CTX.roundRect(6, uy, w - 12, unitH - 2, 2); CTX.stroke();
+
+        // Status LED
+        const blinkOffset = u * 413;
+        const isOn = Math.sin((now + blinkOffset) / (350 + u * 90)) > 0;
+        CTX.fillStyle = isOn ? pal.dbRackOn : pal.dbRackOff;
+        CTX.shadowBlur = isOn ? 8 : 0; CTX.shadowColor = '#fbbf24';
+        CTX.beginPath(); CTX.arc(13, uy + unitH * 0.45, 3, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Data LEDs (3)
+        for (let d = 0; d < 4; d++) {
+            const dOn = Math.sin((now + blinkOffset + d * 130) / 180) > 0.5;
+            CTX.fillStyle = dOn ? '#f59e0b' : '#3d2a00';
+            CTX.fillRect(20 + d * 6, uy + unitH * 0.3, 4, 4);
+        }
+
+        // Activity bar
+        const actW = (w - 40) * (0.3 + Math.sin(now / (500 + u * 150) + u) * 0.3 + 0.1);
+        CTX.fillStyle = 'rgba(0,0,0,0.35)';
+        CTX.fillRect(w - 36, uy + unitH * 0.3, w - 44, 4);
+        CTX.fillStyle = `rgba(251,191,36,${0.5 + pulse * 0.3})`;
+        CTX.fillRect(w - 36, uy + unitH * 0.3, Math.max(2, actW * 0.5), 4);
+
+        // Vent lines (right side)
+        CTX.strokeStyle = 'rgba(251,191,36,0.08)'; CTX.lineWidth = 0.7;
+        for (let vx = w - 20; vx < w - 8; vx += 3) {
+            CTX.beginPath(); CTX.moveTo(vx, uy + 3); CTX.lineTo(vx, uy + unitH - 4); CTX.stroke();
+        }
+    }
+
+    // ── Bottom port strip ──
+    CTX.fillStyle = '#10080a';
+    CTX.fillRect(4, h - 12, w - 8, 10);
+    CTX.fillStyle = pal.dbRackOn;
+    for (let p = 0; p < 4; p++) CTX.fillRect(6 + p * 11, h - 9, 8, 4);
+
+    // ── Top glow LED bar ──
+    CTX.fillStyle = `rgba(251,191,36,${0.6 + fastPulse * 0.4})`;
+    CTX.shadowBlur = 12; CTX.shadowColor = '#fbbf24';
+    CTX.beginPath(); CTX.roundRect(8, 1, w - 16, 3, 1); CTX.fill();
+    CTX.shadowBlur = 0;
+}
+
+// ════════════════════════════════════════════════════════════
+// 🛒  MTC CO-OP STORE
+// Structure: shop front with counter, shelves, signboard + awning
+// ════════════════════════════════════════════════════════════
+function drawCoopStore(w, h) {
+    const pal = BALANCE.map.mapColors;
+    const now = _mapNow;
+    const pulse = 0.5 + Math.sin(now / 800) * 0.5;
+    const fastPulse = 0.5 + Math.sin(now / 300) * 0.5;
+    const blinkSlow = Math.sin(now / 1200) > 0;
+
+    // ── Shadow ──
+    CTX.fillStyle = 'rgba(0,0,0,0.40)';
+    CTX.beginPath(); CTX.ellipse(w / 2, h + 8, w * 0.6, 10, 0, 0, Math.PI * 2); CTX.fill();
+
+    // ── Main building body ──
+    CTX.fillStyle = pal.shopBody;
+    CTX.beginPath(); CTX.roundRect(0, 0, w, h, 5); CTX.fill();
+
+    // Side walls (darker)
+    CTX.fillStyle = 'rgba(0,0,0,0.25)';
+    CTX.fillRect(0, 0, 6, h);
+    CTX.fillRect(w - 6, 0, 6, h);
+
+    // ── Awning (top accent stripe) ──
+    const awningColors = ['#f97316', '#0f0a04', '#f97316', '#0f0a04', '#f97316'];
+    const stripeW = w / awningColors.length;
+    for (let i = 0; i < awningColors.length; i++) {
+        CTX.fillStyle = awningColors[i];
+        CTX.globalAlpha = 0.85;
+        CTX.fillRect(i * stripeW, 0, stripeW, 10);
+    }
+    CTX.globalAlpha = 1;
+    CTX.strokeStyle = `rgba(249,115,22,${0.6 + fastPulse * 0.3})`;
+    CTX.lineWidth = 1.5;
+    CTX.beginPath(); CTX.moveTo(0, 10); CTX.lineTo(w, 10); CTX.stroke();
+
+    // ── Sign board ──
+    const signH = 18;
+    CTX.fillStyle = 'rgba(10,6,0,0.9)';
+    CTX.beginPath(); CTX.roundRect(8, 12, w - 16, signH, 3); CTX.fill();
+    CTX.strokeStyle = `rgba(249,115,22,${0.55 + pulse * 0.35})`;
+    CTX.lineWidth = 1.5;
+    CTX.beginPath(); CTX.roundRect(8, 12, w - 16, signH, 3); CTX.stroke();
+
+    // Sign text
+    CTX.fillStyle = `rgba(252,211,77,${0.85 + pulse * 0.15})`;
+    CTX.font = 'bold 8px monospace';
+    CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+    CTX.fillText('🛒 CO-OP STORE', w / 2, 12 + signH / 2);
+
+    // ── Glass window / display case ──
+    const winY = 34, winH = Math.floor(h * 0.32);
+    CTX.fillStyle = `rgba(249,115,22,${0.06 + pulse * 0.04})`;
+    CTX.beginPath(); CTX.roundRect(8, winY, w - 16, winH, 3); CTX.fill();
+    CTX.strokeStyle = `rgba(249,115,22,${0.30 + pulse * 0.15})`;
+    CTX.lineWidth = 1;
+    CTX.beginPath(); CTX.roundRect(8, winY, w - 16, winH, 3); CTX.stroke();
+
+    // Items in window (4 item slots)
+    const itemCols = 4, itemPadX = (w - 16 - 8) / itemCols;
+    const itemColors = ['#f59e0b', '#22d3ee', '#f97316', '#a78bfa'];
+    const itemIcons = ['⚡', '🔵', '🔥', '💜'];
+    for (let i = 0; i < itemCols; i++) {
+        const ix = 12 + i * itemPadX, iy = winY + 4;
+        const iw = itemPadX - 4, ih = winH - 8;
+        CTX.fillStyle = 'rgba(0,0,0,0.4)';
+        CTX.beginPath(); CTX.roundRect(ix, iy, iw, ih, 2); CTX.fill();
+        CTX.fillStyle = itemColors[i];
+        CTX.globalAlpha = 0.4 + pulse * 0.2;
+        CTX.beginPath(); CTX.roundRect(ix + 1, iy + 1, iw - 2, ih - 2, 2); CTX.fill();
+        CTX.globalAlpha = 0.85;
+        CTX.font = `${Math.floor(ih * 0.45)}px serif`;
+        CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+        CTX.fillText(itemIcons[i], ix + iw / 2, iy + ih / 2);
+        CTX.globalAlpha = 1;
+    }
+
+    // ── Counter / service desk ──
+    const counterY = winY + winH + 6;
+    const counterH = Math.floor(h * 0.20);
+    CTX.fillStyle = pal.shopCounter;
+    CTX.beginPath(); CTX.roundRect(6, counterY, w - 12, counterH, 3); CTX.fill();
+    CTX.strokeStyle = `rgba(249,115,22,${0.3 + pulse * 0.15})`;
+    CTX.lineWidth = 1;
+    CTX.beginPath(); CTX.roundRect(6, counterY, w - 12, counterH, 3); CTX.stroke();
+
+    // Counter top surface highlight
+    CTX.fillStyle = 'rgba(249,115,22,0.08)';
+    CTX.fillRect(8, counterY + 2, w - 16, 4);
+
+    // Register / terminal
+    CTX.fillStyle = '#0a0600';
+    CTX.beginPath(); CTX.roundRect(w * 0.6, counterY + 4, w * 0.32, counterH - 8, 2); CTX.fill();
+    CTX.strokeStyle = `rgba(249,115,22,${0.4 + fastPulse * 0.25})`;
+    CTX.lineWidth = 1;
+    CTX.beginPath(); CTX.roundRect(w * 0.6, counterY + 4, w * 0.32, counterH - 8, 2); CTX.stroke();
+    // Register screen
+    CTX.fillStyle = `rgba(249,115,22,${0.10 + pulse * 0.06})`;
+    CTX.fillRect(w * 0.62, counterY + 6, w * 0.28, counterH - 14);
+
+    // ── Bottom shelf strip ──
+    const shelfY = h - 14;
+    CTX.fillStyle = pal.shopShelf;
+    CTX.fillRect(6, shelfY, w - 12, 6);
+    // Shelf items (small dots)
+    for (let s = 0; s < 5; s++) {
+        const sx = 12 + s * ((w - 24) / 5);
+        CTX.fillStyle = itemColors[s % itemColors.length];
+        CTX.globalAlpha = 0.7 + (blinkSlow && s === 2 ? 0.3 : 0);
+        CTX.beginPath(); CTX.arc(sx, shelfY - 5, 4, 0, Math.PI * 2); CTX.fill();
+        CTX.globalAlpha = 1;
+    }
+
+    // ── Top orange LED bar ──
+    CTX.fillStyle = `rgba(249,115,22,${0.65 + fastPulse * 0.35})`;
+    CTX.shadowBlur = 12; CTX.shadowColor = '#f97316';
+    CTX.beginPath(); CTX.roundRect(8, 1, w - 16, 3, 1); CTX.fill();
+    CTX.shadowBlur = 0;
+}
+
 function drawVendingMachine(w, h) {
     const now = _mapNow;
     const pulse = 0.5 + Math.sin(now / 600) * 0.5;
@@ -259,6 +469,8 @@ class MapObject {
             case 'chair': this.drawChair(); break;     // กู้คืนป้องกัน Error
             case 'cabinet': this.drawCabinet(); break; // กู้คืนป้องกัน Error
             case 'vendingmachine': drawVendingMachine(this.w, this.h); break;
+            case 'database': drawDatabase(this.w, this.h); break;
+            case 'coopstore': drawCoopStore(this.w, this.h); break;
         }
         CTX.restore();
     }
@@ -868,9 +1080,12 @@ class MapSystem {
         this.objects.push(new MapObject(mtcX - wallThick, mtcY, wallThick, mtcH, 'mtcwall'));
         this.objects.push(new MapObject(mtcX + mtcW, mtcY, wallThick, mtcH, 'mtcwall'));
 
-        // Decorative servers inside citadel corners
-        this.objects.push(new MapObject(mtcX + 10, mtcY + 10, 45, 80, 'server'));
-        this.objects.push(new MapObject(mtcX + mtcW - 55, mtcY + 10, 45, 80, 'server'));
+        // Decorative servers inside citadel corners — ย้ายออกจากกลาง ใส่มุม
+        this.objects.push(new MapObject(mtcX + 18, mtcY + 25, 45, 80, 'server'));
+        this.objects.push(new MapObject(mtcX + mtcW - 63, mtcY + 25, 45, 80, 'server'));
+        // Extra pillars ด้านหลังห้อง (เพื่อบรรยากาศ)
+        this.objects.push(new MapObject(mtcX + 90, mtcY + 10, 35, 55, 'datapillar'));
+        this.objects.push(new MapObject(mtcX + 175, mtcY + 10, 35, 55, 'datapillar'));
 
         // ── 2. Structural Zone Generation ──────────────────────────
         // jitter is DETERMINISTIC (sin-based) — layout is identical
@@ -939,12 +1154,42 @@ class MapSystem {
         createAisles(720, 580, 3, 3, 95, 95, 'desk');
         this.objects.push(new MapObject(740, 460, 150, 80, 'blackboard'));
 
+        // ── Zone F.1: MTC Database Cluster (NE) ───────────────────
+        // Main building: ใหญ่, มีผนัง MTC-style รอบข้าง
+        // Center: (500, -490) → building ขนาด 120×140
+        const dbX = 440, dbY = -560;
+        this.objects.push(new MapObject(dbX, dbY, 120, 140, 'database'));
+        // Flanking server racks (เพื่อบรรยากาศ data center)
+        this.objects.push(new MapObject(dbX - 70, dbY + 10, 45, 80, 'server'));
+        this.objects.push(new MapObject(dbX + 140, dbY + 10, 45, 80, 'server'));
+        this.objects.push(new MapObject(dbX - 70, dbY + 110, 45, 80, 'server'));
+        this.objects.push(new MapObject(dbX + 140, dbY + 110, 45, 80, 'server'));
+        // Data pillars เป็น boundary markers
+        this.objects.push(new MapObject(dbX - 110, dbY, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(dbX - 110, dbY + 100, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(dbX + 200, dbY, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(dbX + 200, dbY + 100, 35, 70, 'datapillar'));
+
+        // ── Zone F.2: MTC Co-op Store (SW) ────────────────────────
+        // Main building: shop front ขนาด 130×110
+        // Center: (-500, 490) → building ที่ (-565, 435)
+        const shopX = -565, shopY = 435;
+        this.objects.push(new MapObject(shopX, shopY, 130, 110, 'coopstore'));
+        // Trees เป็น landscaping รอบร้าน
+        this.objects.push(new MapObject(shopX - 55, shopY - 10, 50, 50, 'tree'));
+        this.objects.push(new MapObject(shopX + 155, shopY - 10, 50, 50, 'tree'));
+        this.objects.push(new MapObject(shopX - 55, shopY + 80, 50, 50, 'tree'));
+        this.objects.push(new MapObject(shopX + 155, shopY + 80, 50, 50, 'tree'));
+        // Vending machines ใกล้ร้าน (สะดวกซื้อ mini-zone)
+        this.objects.push(new MapObject(shopX + 155, shopY + 30, 40, 70, 'vendingmachine'));
+        this.objects.push(new MapObject(shopX - 55, shopY + 30, 40, 70, 'vendingmachine'));
+
         // Zone E: Vending Machines — ถอยออกจาก center ≥ 380px
         // เดิม: อยู่ที่ x=±200, y=±130 (ใกล้ spawn มาก)
         // ใหม่: อยู่ที่ทางเข้า zone แต่ละโซน ห่าง center 380-500px
         const vendingSpots = [
-            // Citadel approach corridor — ถอยออก ใกล้ MTC มากขึ้น
-            { x: -195, y: -390 }, { x: 160, y: -390 },
+            // Citadel approach corridor — ย้ายออกไปด้านข้าง ไม่บัง entrance
+            { x: -230, y: -440 }, { x: 195, y: -440 },
             // Courtyard approach — ถอยออก South
             { x: -195, y: 360 }, { x: 160, y: 360 },
             // Server Farm gate (East) — ใกล้ entrance zone A
@@ -1428,6 +1673,8 @@ class MapSystem {
             }
             if (obj.type === 'datapillar') punchLight(obj.x + obj.w * .5, obj.y - 5, L.dataPillarLightRadius, 'cool');
             else if (obj.type === 'server') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .4, L.serverRackLightRadius, 'cool');
+            else if (obj.type === 'database') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .3, L.mtcServerLightRadius, 'warm');
+            else if (obj.type === 'coopstore') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .3, L.shopLightRadius, 'warm');
         }
 
         for (const light of extraLights) punchLight(light.x, light.y, light.radius || 100, light.type || 'neutral', light.intensity || 1.0);

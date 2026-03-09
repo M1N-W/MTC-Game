@@ -5,18 +5,21 @@
 // ══════════════════════════════════════════════════════════════
 
 // ─── MTC Database Server ──────────────────────────────────────
-// ย้ายออกไป NE ตามแผนที่ใหม่ — สอดคล้องกับ MAP_CONFIG.auras.database
-// และ MAP_CONFIG.paths.database.to ที่อัปเดตใน config.js
+// ⚠️  ห้ามแก้ค่าที่นี่ — แก้ที่ BALANCE.database ใน config.js เท่านั้น
+// Object นี้เป็น live proxy ให้โค้ดเดิมที่อ้าง MTC_DATABASE_SERVER ยังทำงานได้
 const MTC_DATABASE_SERVER = {
-    x: 480,
-    y: -480,
-    INTERACTION_RADIUS: 90
+    get x() { return BALANCE.database.x; },
+    get y() { return BALANCE.database.y; },
+    get INTERACTION_RADIUS() { return BALANCE.database.interactionRadius; },
 };
-
 window.MTC_DATABASE_SERVER = MTC_DATABASE_SERVER;
 
 // ─── External Database URL ────────────────────────────────────
-const MTC_DB_URL = 'https://claude.ai/public/artifacts/649de47e-b97f-41ad-ae66-c944d35eb24f';
+// ⚠️  แก้ URL ที่ BALANCE.database.url ใน config.js
+Object.defineProperty(window, 'MTC_DB_URL', {
+    get() { return BALANCE.database.url; },
+    configurable: true,
+});
 
 // ══════════════════════════════════════════════════════════════
 // 💻 ADMIN CONSOLE MANAGER
@@ -963,21 +966,22 @@ window.addEventListener('focus', () => {
 // ══════════════════════════════════════════════════════════════
 
 function drawDatabaseServer() {
-    const screen = worldToScreen(MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
-    const t = performance.now() / 600;
+    const cfg = BALANCE.database;
+    const screen = worldToScreen(cfg.x, cfg.y);
+    const t = performance.now() / cfg.glowSpeedMs;
     const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
 
     if (player) {
-        const d = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
-        if (d < MTC_DATABASE_SERVER.INTERACTION_RADIUS * 2) {
-            const alpha = Math.max(0, 1 - d / (MTC_DATABASE_SERVER.INTERACTION_RADIUS * 2));
+        const d = dist(player.x, player.y, cfg.x, cfg.y);
+        if (d < cfg.interactionRadius * 2) {
+            const alpha = Math.max(0, 1 - d / (cfg.interactionRadius * 2));
             CTX.save();
-            CTX.globalAlpha = alpha * 0.25 * glow;
-            CTX.strokeStyle = '#06b6d4';
-            CTX.lineWidth = 2;
-            CTX.setLineDash([6, 4]);
+            CTX.globalAlpha = alpha * cfg.auraAlphaMult * glow;
+            CTX.strokeStyle = cfg.auraColor;
+            CTX.lineWidth = cfg.auraLineWidth;
+            CTX.setLineDash(cfg.auraDash);
             CTX.beginPath();
-            CTX.arc(screen.x, screen.y, MTC_DATABASE_SERVER.INTERACTION_RADIUS, 0, Math.PI * 2);
+            CTX.arc(screen.x, screen.y, cfg.interactionRadius, 0, Math.PI * 2);
             CTX.stroke();
             CTX.setLineDash([]);
             CTX.restore();
@@ -991,11 +995,11 @@ function drawDatabaseServer() {
 
     CTX.save();
     CTX.translate(screen.x, screen.y);
-    CTX.shadowBlur = 14 * glow;
-    CTX.shadowColor = '#06b6d4';
+    CTX.shadowBlur = cfg.glowBlurMax * glow;
+    CTX.shadowColor = cfg.glowColor;
 
     CTX.fillStyle = '#0c1a2e';
-    CTX.strokeStyle = '#06b6d4';
+    CTX.strokeStyle = cfg.auraColor;
     CTX.lineWidth = 2;
     CTX.beginPath();
     CTX.roundRect(-18, -26, 36, 50, 5);
@@ -1026,19 +1030,20 @@ function drawDatabaseServer() {
     CTX.fill();
 
     CTX.shadowBlur = 0;
-    CTX.fillStyle = '#67e8f9';
-    CTX.font = 'bold 7px Arial';
+    CTX.fillStyle = cfg.labelColor;
+    CTX.font = cfg.labelFont;
     CTX.textAlign = 'center';
     CTX.textBaseline = 'middle';
-    CTX.fillText('MTC DATABASE', 0, 33);
+    CTX.fillText(cfg.labelText, 0, 33);
 
     CTX.restore();
 }
 
 function updateDatabaseServerUI() {
     if (!player) return;
-    const d = dist(player.x, player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
-    const near = d < MTC_DATABASE_SERVER.INTERACTION_RADIUS;
+    const cfg = BALANCE.database;
+    const d = dist(player.x, player.y, cfg.x, cfg.y);
+    const near = d < cfg.interactionRadius;
 
     const promptEl = document.getElementById('db-prompt');
     const hudIcon = document.getElementById('db-hud-icon');
@@ -1057,4 +1062,4 @@ function updateDatabaseServerUI() {
 
 window.drawDatabaseServer = drawDatabaseServer;
 window.updateDatabaseServerUI = updateDatabaseServerUI;
-window.MTC_DB_URL = MTC_DB_URL;
+// MTC_DATABASE_SERVER และ MTC_DB_URL ถูก expose ผ่าน proxy ที่ header แล้ว

@@ -4,6 +4,26 @@
 
 ---
 
+## v3.27.2 — MTC Game Map Refactor
+*Released: March 9, 2026*
+
+### 🗄️ Database & Shop Relocation
+- **MTC Database**: Moved from (500, -490) → (440, -560) for better NE positioning
+- **MTC Co-op Store**: Moved from (-500, 490) → (-565, 435) for improved SW placement
+- **Updated MAP_CONFIG**: Synchronized paths, auras, and zone coordinates with new positions
+
+### 🚪 Entrance Accessibility Improvements  
+- **MTC Room Entrance**: Side rails shortened from 170px → 110px for wider access
+- **Vending Machines**: Repositioned from (-195,-390)/(160,-390) → (-230,-440)/(195,-440)
+- **Clearer Sightlines**: Enhanced approach visibility to MTC Room
+
+### 🎨 Visual Configuration Updates
+- **New Map Colors**: Added dbBody, dbAccent, dbRackOn, dbRackOff for database
+- **Shop Colors**: Added shopBody, shopAccent, shopSign, shopCounter, shopShelf
+- **Zone Floors**: Updated database and shop zone definitions with proper grid colors
+
+---
+
 ## v3.27.1 — Map Reorganization & Spawn Fix
 *Released: March 9, 2026*
 
