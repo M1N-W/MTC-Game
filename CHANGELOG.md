@@ -4,6 +4,30 @@
 
 ---
 
+## v3.20.0 — Enhanced Tutorial System v3
+*Released: March 9, 2026*
+
+### 🎓 Tutorial System Improvements
+- **UI Highlighting**: Added dynamic element highlighting with pulsing blue glow effect to draw attention to specific UI elements during tutorial steps
+- **Animated Arrow**: Implemented gold gradient arrow that points to tutorial targets with smooth bounce animation and edge detection for off-screen elements
+- **Enhanced Visual Feedback**: Improved tutorial card positioning and added real-time arrow tracking that follows moving targets
+- **Better User Guidance**: Arrow automatically rotates to point toward off-screen elements and hides when not needed
+- **Performance Optimizations**: Efficient DOM updates and frame-based arrow positioning for smooth 60fps experience
+
+### 🎨 Visual Enhancements
+- New `.tut-highlighted` CSS class with multi-layer box-shadow animation
+- Gold gradient arrow with drop-shadow effect using clip-path for clean shape
+- Improved z-index layering for proper visual hierarchy
+- Smooth transitions and micro-animations for better user experience
+
+### 🔧 Technical Improvements
+- Added `_applyUIHighlight()` and `_updateArrow()` functions for dynamic visual guidance
+- Enhanced tutorial system with `draw(ctx)` method for rendering integration
+- Improved weapon-switch polling logic and action handling
+- Better state management for tutorial highlights and arrow positioning
+
+---
+
 ## v3.19.2 — Service Worker Cache Cleanup
 *Released: March 9, 2026*
 

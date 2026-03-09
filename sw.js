@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.19.2'; // v3.19.2: Removed deleted ai.js and secrets.js from cache list - files were deleted in v3.19.0 AI refactor
+const CACHE_NAME = 'mtc-cache-v3.20.0'; // v3.20.0: Enhanced Tutorial System v3 - added UI highlighting and animated arrow for better user guidance
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -1,14 +1,15 @@
 'use strict';
 /**
- * 🎓 TUTORIAL SYSTEM — js/tutorial.js  (v2)
+ * 🎓 TUTORIAL SYSTEM — js/tutorial.js  (v3)
  *
- * Changes vs v1:
- *  • charOnly     — steps filtered per character; Kao never sees Poom steps etc.
- *  • weapon step  — detected via update() polling weaponSystem.currentWeapon
- *                   (works for both mouse-wheel AND keyboard cycling)
- *  • positions    — action steps use 'right' to avoid blocking skill-bar HUD
- *  • progress     — dots reflect only the steps visible for the current char
- *  • content      — all steps updated to match current game state
+ * v3 Changes:
+ *  A. Steps ดึงข้อความจาก GAME_TEXTS.tutorial (config.js) — ไม่ hardcode ซ้ำ
+ *  B. draw(ctx) — canvas spotlight dim + pulse circle ชี้ target ใน world-space
+ *  C. Animated HTML arrow ชี้ DOM element / world target ผ่าน #tut-arrow
+ *     highlight field ใน STEPS:
+ *       { type:'ui',    target:'#element-id' }   → spotlight HTML element
+ *       { type:'world', key:'shop'|'server' }     → pulse circle บน canvas
+ *       { type:'region', region:'bottom-hud'|'top-left' } → dim ยกเว้น region
  */
 
 const TutorialSystem = (() => {
@@ -19,38 +20,40 @@ const TutorialSystem = (() => {
     let _stepDone = false;
     let _actionCount = 0;
     let _charType = 'kao';
-    let _lastWeapon = null;   // weapon-switch polling
+    let _lastWeapon = null;
+    let _pulseT = 0;   // time accumulator for pulse animation (seconds)
 
     const SAVE_KEY = 'mtc_tutorial_done';
+
+    // ── Lazy-read GAME_TEXTS (config.js loads before tutorial.js) ──
+    function T(key) {
+        return (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.tutorial && GAME_TEXTS.tutorial[key])
+            || {};
+    }
 
     // ══════════════════════════════════════════════════════════
     // STEP DEFINITIONS
     // ──────────────────────────────────────────────────────────
     // Fields:
-    //   title    — bold heading
-    //   body     — instruction text (\n → <br>)
-    //   icon     — large emoji
+    //   title, body, icon  — pulled from GAME_TEXTS.tutorial via T(key)
     //   action   — 'none'|'move'|'shoot'|'dash'|'skill'|'weapon'|'bullettime'
     //   count    — times action must be done (default 1)
     //   charOnly — 'kao'|'poom'|'auto'  (omit = all characters)
     //   position — 'center'|'bottom'|'top'|'right'
+    //   highlight— { type, target|key|region } — see header
     // ══════════════════════════════════════════════════════════
     const STEPS = [
 
         // ── 0. Welcome ──────────────────────────────────────
         {
-            title: 'ยินดีต้อนรับสู่ MTC the Game!',
-            body: 'คุณกำลังจะเข้าสู่ห้องเรียนของ KruManop (ครูมานพ) ครูคณิตศาสตร์สุดโหด\n\nภารกิจ: รอดชีวิตให้ครบ 15 เวฟ และเอาชนะบอสทุกตัว\n\nกด NEXT หรือ SPACE เพื่อเริ่มบทเรียน',
-            icon: '🎓',
+            ...T('welcome'),
             action: 'none',
             position: 'center',
         },
 
         // ── 1. Movement ─────────────────────────────────────
         {
-            title: 'การเคลื่อนที่',
-            body: 'กด W A S D เพื่อเดิน\n\nเดินไปรอบๆ สักครู่เพื่อทดสอบ!',
-            icon: '🕹️',
+            ...T('movement'),
             action: 'move',
             count: 1,
             position: 'right',
@@ -58,9 +61,7 @@ const TutorialSystem = (() => {
 
         // ── 2. Shooting ─────────────────────────────────────
         {
-            title: 'การยิง',
-            body: 'เล็งด้วย Mouse แล้วกด Left Click เพื่อยิง\n\nลองยิงดู 3 ครั้ง!',
-            icon: '🔫',
+            ...T('shooting'),
             action: 'shoot',
             count: 3,
             position: 'right',
@@ -68,39 +69,34 @@ const TutorialSystem = (() => {
 
         // ── 3. Dash ─────────────────────────────────────────
         {
-            title: 'Dash — หลบหลีก',
-            body: 'กด SPACE เพื่อ Dash พุ่งหลบศัตรู\nมี Cooldown — ใช้ให้ถูกจังหวะ!\n\nลอง Dash 1 ครั้ง',
-            icon: '💨',
+            ...T('dash'),
             action: 'dash',
             count: 1,
             position: 'right',
+            highlight: { type: 'ui', target: '#dash-icon' },
         },
 
         // ── 4. R-Click Skill (all chars) ────────────────────
         {
-            title: 'ทักษะพิเศษ (Right Click)',
-            body: 'กด Right Click เพื่อใช้ทักษะประจำตัว:\n• เก้า — Stealth ซ่อนตัว 3 วินาที\n• ภูมิ — Eat Rice ฟื้น HP และเพิ่มพลัง\n• Auto — Wanchai Stand เรียก autonomous companion (8s, CD 12s)\n\nลองกด Right Click ดู!',
-            icon: '✨',
+            ...T('rclick'),
             action: 'skill',
             count: 1,
             position: 'right',
+            highlight: { type: 'ui', target: '#stealth-icon' },
         },
 
-        // ── 5. Kao: Passive "ซุ่มเสรี" ──────────────────────
+        // ── 5. Kao: Passive ──────────────────────────────────
         {
-            title: 'เก้า — ซุ่มเสรี (Passive) 👻',
-            body: 'ใช้ Stealth ครบ 5 ครั้ง เพื่อปลดล็อค Passive สุดท้าย!\nดูที่ปุ่ม 0/5 ใน skill bar ด้านล่าง\n\n✦ Crit ขณะซ่อนตัวเพิ่ม 50%\n✦ ความเร็วถาวร +40%\n✦ อาวุธกลายเป็น Golden Awakened Form',
-            icon: '👻',
+            ...T('kaoPassive'),
             action: 'none',
             charOnly: 'kao',
             position: 'center',
+            highlight: { type: 'ui', target: '#passive-skill' },
         },
 
         // ── 6. Kao: Weapon Switch ───────────────────────────
         {
-            title: 'เก้า — สลับอาวุธ 🔫',
-            body: 'เก้ามีอาวุธ 3 ชนิด:\n• Auto Rifle — ยิงเร็ว (ค่าเริ่มต้น)\n• Sniper — Railgun ดาเมจสูง ยิงช้า\n• Shotgun — Molten Shrapnel ระยะใกล้\n\nเลื่อน Mouse Wheel เพื่อสลับ\nสลับให้ครบ 3 ครั้ง!',
-            icon: '🔄',
+            ...T('kaoWeapon'),
             action: 'weapon',
             count: 3,
             charOnly: 'kao',
@@ -115,6 +111,7 @@ const TutorialSystem = (() => {
             action: 'none',
             charOnly: 'kao',
             position: 'center',
+            highlight: { type: 'region', region: 'top-left' },
         },
 
         // ── 8. Poom: R + Q skills ────────────────────────────
@@ -125,23 +122,12 @@ const TutorialSystem = (() => {
             action: 'none',
             charOnly: 'poom',
             position: 'center',
+            highlight: { type: 'ui', target: '#naga-icon' },
         },
 
-        // ── 9. Auto: Vacuum Heat + Detonate ─────────────────
+        // ── 9. Auto: Vacuum + Detonate + Stand Rush ──────────
         {
-            title: 'Auto — ทักษะพิเศษเฉพาะ 🌀',
-            body: 'Auto มีทักษะควบคุมพื้นที่:\n\n🌀 กด Q — Vacuum Heat (CD 6s)\n   ดูดศัตรูทุกตัวเข้าหาตัว + stun\n\n💥 กด E — Detonate (CD 8s, ต้องเปิด Wanchai ก่อน)\n   ระเบิด AOE สูง แต่ปิด Wanchai ทันที\n\n👊 L-Click ระหว่าง Wanchai Active\n   Stand Rush — ส่งสแตนด์พุ่งไปตามเคอร์เซอร์\n\n(ปลดล็อคอัตโนมัติเมื่อเลเวลอัพ)',
-            icon: '🌀',
-            action: 'none',
-            charOnly: 'auto',
-            position: 'center',
-        },
-
-        // ── 9.5. Auto: Stand Rush targeting ─────────────────
-        {
-            title: 'Auto — Stand Rush Manual Targeting 👊',
-            body: 'ระหว่าง Wanchai active:\n\n🎯 ชี้เมาส์แล้ว L-Click = Stand Rush ไปตำแหน่งนั้น\n   Stand teleport หาเป้าแล้วรัวหมัดทันที\n\n✨ 6-layer rendering พร้อม visual effect\n🥊 Dual-fist — _punchSide สลับข้างทุกหมัด\n\n⚡ Wanchai ยังโจมตีอัตโนมัติด้วย\n   L-Click เพิ่ม Stand Rush ทับไปได้เลย',
-            icon: '👊',
+            ...T('autoStandRush'),
             action: 'none',
             charOnly: 'auto',
             position: 'center',
@@ -149,64 +135,54 @@ const TutorialSystem = (() => {
 
         // ── 10. Bullet Time ──────────────────────────────────
         {
-            title: 'Bullet Time ⏱',
-            body: 'กด T เพื่อเปิด Bullet Time\nเวลาจะช้าลง 70% — หลบกระสุนหนาแน่น\n\nแถบพลังงาน FOCUS (ล่างกลาง) ค่อยๆ หมด\nปล่อยให้ชาร์จก่อนใช้อีกครั้ง\n\nกด T เพื่อทดลอง!',
-            icon: '🕐',
+            ...T('bulletTime'),
             action: 'bullettime',
             count: 1,
             position: 'right',
+            highlight: { type: 'region', region: 'top-left' },
         },
 
         // ── 11. Level Up ─────────────────────────────────────
         {
-            title: 'Level Up & EXP 📈',
-            body: 'กำจัดศัตรูเพื่อรับ EXP\nเมื่อเลเวลอัพ Stats ทั้งหมดเพิ่มขึ้น\n\nLv.2 → ปลดล็อค Skill Q\nLv.3 → ปลดล็อค Skill E (หรือ R สำหรับภูมิ)\n\n💡 แถบ EXP อยู่ใต้แถบ HP มุมซ้ายบน',
-            icon: '📈',
+            ...T('levelUp'),
             action: 'none',
             position: 'center',
+            highlight: { type: 'region', region: 'top-left' },
         },
 
         // ── 12. Shop ─────────────────────────────────────────
         {
-            title: 'MTC Co-op Store 🛒',
-            body: 'ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\n🧪 ซื้อด้วย Score:\n• Potion — ฟื้น HP ทันที\n• Damage Up — เพิ่มดาเมจ 10%\n• Speed Up — เพิ่มความเร็ว 10%\n• Shield — โล่กัน 1 ครั้ง',
-            icon: '🛒',
+            ...T('shop'),
             action: 'none',
             position: 'center',
+            highlight: { type: 'world', key: 'shop' },
         },
 
         // ── 13. Database & Terminal ──────────────────────────
         {
-            title: 'MTC Database Server 🗄️',
-            body: 'เซิร์ฟเวอร์อยู่มุมขวาบนของแผนที่\n\n💻 กด E — เปิด MTC Database\n   ดูเนื้อหาและ Lore\n\n🔒 กด F — Admin Terminal\n   พิมพ์ "help" เพื่อดูคำสั่งทั้งหมด\n   เช่น: "sudo heal", "sudo score", "sudo next"',
-            icon: '🗄️',
+            ...T('database'),
             action: 'none',
             position: 'center',
+            highlight: { type: 'world', key: 'server' },
         },
 
         // ── 14. Enemy Types & Wave Events ────────────────────
         {
-            title: 'ประเภทศัตรู & Wave Events 👾',
-            body: 'ศัตรู 3 ประเภท:\n🔴 Basic — เดินเร็ว ยิงได้\n🟠 Tank 🛡️ — HP สูงมาก เดินช้า\n🟣 Mage 🧙 — สายฟ้า + อุกกาบาต\n\nWave Events พิเศษ:\n🌑 Wave 1 — Dark Wave: เปิดตัวด้วยความมืดมิด\n🌫️ Wave 2,8,11,14 — Fog Wave: Radar OFFLINE — minimap ใช้ไม่ได้!\n⚡ Wave 4,7,13 — Speed Wave: ศัตรูเร็ว ×1.5\n⚠️ Wave 5,10 — Glitch Wave: Controls Invert + ได้ HP +100 ชั่วคราว',
-            icon: '👾',
+            ...T('enemyTypes'),
             action: 'none',
             position: 'center',
         },
 
         // ── 15. Boss ─────────────────────────────────────────
         {
-            title: 'Boss Encounters 👑',
-            body: 'ทุก 3 เวฟจะมี Boss — 5 encounters ทั้งหมด:\n\n👑 Wave  3 — KruManop (Basic)\n🐕 Wave  9 — KruManop (Dog Rider) — Phase 2 เรียกหมา\n🐟 Wave 15 — KruManop (Goldfish Lover) — Phase 2+3\n\n⚛️ Wave  6 — KruFirst (Basic)\n⚛️ Wave 12 — KruFirst (Advanced ⚠️ ยากขึ้น)\n\n🌌 Domain Expansion — ทักษะ Ultimate\n   Boss ใช้เมื่อ HP ต่ำ ควบคุมพื้นที่ทั้ง Arena!\n\n💡 ดู Boss HP Bar ด้านบนของจอ',
-            icon: '👑',
+            ...T('boss'),
             action: 'none',
             position: 'center',
         },
 
         // ── 16. Ready ────────────────────────────────────────
         {
-            title: 'พร้อมแล้ว! 🚀',
-            body: 'คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievement มากมาย\n🎯 ผ่านทั้ง 15 Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่สนามรบ!',
-            icon: '🎮',
+            ...T('ready'),
             action: 'none',
             position: 'center',
         },
@@ -216,13 +192,211 @@ const TutorialSystem = (() => {
     function _getCard() { return document.getElementById('tutorial-card'); }
     function _getProgress() { return document.getElementById('tutorial-progress'); }
     function _getOverlay() { return document.getElementById('tutorial-overlay'); }
+    function _getArrow() { return document.getElementById('tut-arrow'); }
 
-    // Returns original STEPS indices visible for the current character
+    // Returns STEPS indices visible for current character
     function _activeIndices() {
         return STEPS.reduce((acc, s, i) => {
             if (!s.charOnly || s.charOnly === _charType) acc.push(i);
             return acc;
         }, []);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // PART B — Canvas draw: spotlight dim + world pulse
+    // Called every frame from game.js after CTX.restore()
+    // ══════════════════════════════════════════════════════════
+    function draw(ctx) {
+        if (!_active) return;
+        const step = STEPS[_stepIndex];
+        if (!step || !step.highlight) return;
+
+        const h = step.highlight;
+        const now = performance.now() / 1000;
+
+        if (h.type === 'world') {
+            // ── Pulse circle on a world-space target ──────────
+            const pos = _worldPos(h.key);
+            if (!pos || typeof worldToScreen === 'undefined') return;
+            const screen = worldToScreen(pos.x, pos.y);
+
+            const pulse = 0.5 + 0.5 * Math.sin(now * 3.5);
+            const r1 = 55 + pulse * 20;
+            const r2 = r1 + 18;
+
+            ctx.save();
+
+            // dim everything outside the pulse ring
+            ctx.fillStyle = 'rgba(0,0,0,0.38)';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+            // cut-out hole
+            ctx.globalCompositeOperation = 'destination-out';
+            const grad = ctx.createRadialGradient(screen.x, screen.y, r1 * 0.6, screen.x, screen.y, r2);
+            grad.addColorStop(0, 'rgba(0,0,0,1)');
+            grad.addColorStop(0.7, 'rgba(0,0,0,0.85)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, r2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalCompositeOperation = 'source-over';
+
+            // animated pulse ring
+            const alpha = 0.55 + 0.45 * Math.sin(now * 4);
+            ctx.strokeStyle = `rgba(250,204,21,${alpha})`;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#facc15';
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, r1, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // second softer ring
+            ctx.strokeStyle = `rgba(250,204,21,${alpha * 0.4})`;
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, r1 + 22, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+
+        } else if (h.type === 'region') {
+            // ── Dim everything except a screen region ─────────
+            const rect = _regionRect(h.region, ctx.canvas);
+            if (!rect) return;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+            // punch out the region
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0,0,0,0.9)';
+            ctx.beginPath();
+            ctx.roundRect(rect.x - 8, rect.y - 8, rect.w + 16, rect.h + 16, 10);
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+
+            // glow border around the region
+            const pulse = 0.5 + 0.5 * Math.sin(now * 3);
+            ctx.strokeStyle = `rgba(99,102,241,${0.5 + pulse * 0.4})`;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#818cf8';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.roundRect(rect.x - 8, rect.y - 8, rect.w + 16, rect.h + 16, 10);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+        // type:'ui' is handled entirely via CSS class on the element (no canvas draw needed)
+    }
+
+    // Resolve world coordinates for named keys
+    function _worldPos(key) {
+        if (key === 'shop' && typeof MTC_SHOP_LOCATION !== 'undefined') return MTC_SHOP_LOCATION;
+        if (key === 'server' && typeof MTC_DATABASE_SERVER !== 'undefined') return MTC_DATABASE_SERVER;
+        return null;
+    }
+
+    // Returns {x,y,w,h} in screen-space for named regions
+    function _regionRect(region, canvas) {
+        const W = canvas.width, H = canvas.height;
+        if (region === 'top-left') return { x: 0, y: 0, w: 320, h: 140 };
+        if (region === 'bottom-hud') return { x: W / 2 - 320, y: H - 120, w: 640, h: 110 };
+        return null;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // PART C — Arrow: points to UI element or world target
+    // Uses a single absolutely-positioned #tut-arrow div
+    // ══════════════════════════════════════════════════════════
+    function _updateArrow() {
+        const arrow = _getArrow();
+        if (!arrow) return;
+
+        if (!_active) { arrow.style.display = 'none'; return; }
+
+        const step = STEPS[_stepIndex];
+        if (!step || !step.highlight) { arrow.style.display = 'none'; return; }
+
+        const h = step.highlight;
+
+        if (h.type === 'ui') {
+            const el = document.querySelector(h.target);
+            if (!el) { arrow.style.display = 'none'; return; }
+
+            const r = el.getBoundingClientRect();
+            const cx = r.left + r.width / 2;
+            const cy = r.top;
+
+            // Position arrow above the element, pointing down
+            arrow.style.display = 'block';
+            arrow.style.left = `${cx - 18}px`;
+            arrow.style.top = `${cy - 52}px`;
+            arrow.dataset.dir = 'down';
+
+        } else if (h.type === 'world') {
+            const pos = _worldPos(h.key);
+            if (!pos || typeof worldToScreen === 'undefined') { arrow.style.display = 'none'; return; }
+
+            const canvas = document.getElementById('gameCanvas') || document.querySelector('canvas');
+            if (!canvas) { arrow.style.display = 'none'; return; }
+
+            const screen = worldToScreen(pos.x, pos.y);
+            const cr = canvas.getBoundingClientRect();
+
+            // clamp to edges if off-screen
+            const sx = cr.left + screen.x;
+            const sy = cr.top + screen.y;
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            const MARGIN = 60;
+
+            const clampedX = Math.max(MARGIN, Math.min(W - MARGIN, sx));
+            const clampedY = Math.max(MARGIN, Math.min(H - MARGIN, sy));
+
+            const onScreen = sx > cr.left + MARGIN && sx < cr.right - MARGIN &&
+                sy > cr.top + MARGIN && sy < cr.bottom - MARGIN;
+
+            if (onScreen) {
+                // target visible — small arrow above it
+                arrow.style.left = `${clampedX - 18}px`;
+                arrow.style.top = `${clampedY - 60}px`;
+                arrow.dataset.dir = 'down';
+            } else {
+                // target off-screen — edge arrow pointing toward it
+                const angle = Math.atan2(sy - H / 2, sx - W / 2);
+                const edgeX = W / 2 + Math.cos(angle) * (W / 2 - MARGIN);
+                const edgeY = H / 2 + Math.sin(angle) * (H / 2 - MARGIN);
+                arrow.style.left = `${Math.max(MARGIN, Math.min(W - MARGIN, edgeX)) - 18}px`;
+                arrow.style.top = `${Math.max(MARGIN, Math.min(H - MARGIN, edgeY)) - 18}px`;
+                arrow.dataset.dir = 'edge';
+                // rotate CSS arrow to point toward target
+                const deg = (angle * 180 / Math.PI) + 90;
+                arrow.style.setProperty('--arrow-rotate', `${deg}deg`);
+            }
+            arrow.style.display = 'block';
+
+        } else {
+            arrow.style.display = 'none';
+        }
+    }
+
+    // Highlight UI element with CSS class
+    function _applyUIHighlight() {
+        // clear previous
+        document.querySelectorAll('.tut-highlighted').forEach(el => el.classList.remove('tut-highlighted'));
+
+        if (!_active) return;
+        const step = STEPS[_stepIndex];
+        if (!step || !step.highlight || step.highlight.type !== 'ui') return;
+
+        const el = document.querySelector(step.highlight.target);
+        if (el) el.classList.add('tut-highlighted');
     }
 
     // ── Render ────────────────────────────────────────────────
@@ -238,8 +412,8 @@ const TutorialSystem = (() => {
         card.className = 'tutorial-card tutorial-card--' + pos;
 
         document.getElementById('tut-icon').textContent = step.icon || '🎓';
-        document.getElementById('tut-title').textContent = step.title;
-        document.getElementById('tut-body').innerHTML = step.body.replace(/\n/g, '<br>');
+        document.getElementById('tut-title').textContent = step.title || '';
+        document.getElementById('tut-body').innerHTML = (step.body || '').replace(/\n/g, '<br>');
 
         const actionHint = document.getElementById('tut-action-hint');
         const nextBtn = document.getElementById('tut-next-btn');
@@ -258,12 +432,12 @@ const TutorialSystem = (() => {
             if (nextBtn) {
                 nextBtn.style.display = 'block';
                 const vis = _activeIndices();
-                const pos = vis.indexOf(_stepIndex);
-                nextBtn.textContent = (pos === vis.length - 1) ? '🚀 START!' : 'NEXT ▶';
+                const cur = vis.indexOf(_stepIndex);
+                nextBtn.textContent = (cur === vis.length - 1) ? '🚀 START!' : 'NEXT ▶';
             }
         }
 
-        // Progress dots — only for visible steps
+        // Progress dots — only visible steps
         const prog = _getProgress();
         if (prog) {
             prog.innerHTML = '';
@@ -277,7 +451,7 @@ const TutorialSystem = (() => {
             });
         }
 
-        // Entrance animation — adjust base transform per position
+        // Entrance animation
         const isCenter = pos === 'center';
         const isRight = pos === 'right';
         const baseT = isCenter ? 'translate(-50%,-50%)' : isRight ? 'translateY(-50%)' : 'translateX(-50%)';
@@ -288,6 +462,9 @@ const TutorialSystem = (() => {
             card.style.opacity = '1';
             card.style.transform = baseT + ' scale(1)';
         });
+
+        _applyUIHighlight();
+        _updateArrow();
     }
 
     function _updateActionBar() {
@@ -307,7 +484,7 @@ const TutorialSystem = (() => {
         }
     }
 
-    // ── Advance — skips steps not matching charType ───────────
+    // ── Advance ───────────────────────────────────────────────
     function _advance() {
         _stepDone = false;
         _actionCount = 0;
@@ -329,10 +506,16 @@ const TutorialSystem = (() => {
         _active = false;
         localStorage.setItem(SAVE_KEY, '1');
 
+        // restore enemies paused at start
         if (window._tutorialEnemyCache) {
             window.enemies = window._tutorialEnemyCache;
             window._tutorialEnemyCache = null;
         }
+
+        // clear highlights & arrow
+        document.querySelectorAll('.tut-highlighted').forEach(el => el.classList.remove('tut-highlighted'));
+        const arrow = _getArrow();
+        if (arrow) arrow.style.display = 'none';
 
         const overlay = _getOverlay();
         if (overlay) {
@@ -372,7 +555,7 @@ const TutorialSystem = (() => {
                 window.enemies = [];
             }
 
-            // Skip leading steps that don't match character
+            // skip leading steps that don't match character
             while (_stepIndex < STEPS.length) {
                 const s = STEPS[_stepIndex];
                 if (!s.charOnly || s.charOnly === _charType) break;
@@ -391,25 +574,33 @@ const TutorialSystem = (() => {
         },
 
         /**
-         * Called every frame from gameLoop().
-         * Handles weapon-step by polling weaponSystem.currentWeapon —
-         * works for both mouse-wheel and keyboard weapon cycling.
+         * Called every frame from gameLoop() — weapon-switch polling.
+         * Also updates arrow position every frame (cheap DOM read).
          */
         update() {
-            if (!_active || _stepDone) return;
-            const step = STEPS[_stepIndex];
-            if (!step || step.action !== 'weapon') return;
-            if (typeof weaponSystem === 'undefined') return;
+            if (!_active) return;
 
-            const w = weaponSystem.currentWeapon;
-            if (_lastWeapon === null) {
-                _lastWeapon = w;
-            } else if (w !== _lastWeapon) {
-                _lastWeapon = w;
-                _actionCount++;
-                _updateActionBar();
+            // weapon polling
+            if (!_stepDone) {
+                const step = STEPS[_stepIndex];
+                if (step && step.action === 'weapon' && typeof weaponSystem !== 'undefined') {
+                    const w = weaponSystem.currentWeapon;
+                    if (_lastWeapon === null) {
+                        _lastWeapon = w;
+                    } else if (w !== _lastWeapon) {
+                        _lastWeapon = w;
+                        _actionCount++;
+                        _updateActionBar();
+                    }
+                }
             }
+
+            // update arrow every frame so it tracks moving targets
+            _updateArrow();
         },
+
+        /** Called from drawGame() — after CTX.restore(), before HUD */
+        draw(ctx) { draw(ctx); },
 
         handleAction(type) {
             if (!_active || _stepDone) return;
@@ -421,7 +612,7 @@ const TutorialSystem = (() => {
             }
             if (type === 'skip') { _finish(); return; }
 
-            // 'weapon' handled via update() polling — ignore here to avoid double-count
+            // 'weapon' handled via update() polling
             if (type === 'weapon') return;
 
             if (step.action && step.action !== 'none' && type === step.action) {

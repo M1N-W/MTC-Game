@@ -83,17 +83,17 @@
 - [x] Advanced AI & Autonomous Systems
 - [x] Domain Expansion Ultimate Abilities
 - [x] Military HUD Theme Implementation
-- [x] Tutorial Enhancements
+- [x] Enhanced Tutorial System v3 with UI highlighting and animated arrows
 - [x] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
 
 ---
 
-## 📈 Current Version: v3.19.2 (March 9, 2026)
+## 📈 Current Version: v3.20.0 (March 9, 2026)
 
 **Latest Major Updates:**
-- 🧹 **Service Worker Cache Cleanup:** Removed references to deleted ai.js and secrets.js files - eliminates 404 cache errors
-- 🐛 **PoomPlayer Hit Flash Fix:** Fixed missing hit flash timer decay - Poom character now properly displays damage feedback
-- 🤖 **AI System Refactor:** Removed external Gemini API dependency - now uses local text-based system for instant responses
+- 🎓 **Enhanced Tutorial System v3:** Added dynamic UI highlighting with pulsing blue glow and animated gold arrow for better user guidance
+- 🎨 **Visual Tutorial Improvements:** Real-time arrow tracking, edge detection for off-screen elements, and smooth 60fps animations
+- 🔧 **Technical Enhancements:** Improved weapon-switch polling, better state management, and efficient DOM updates
 - 🗂️ **Code Cleanup:** Deleted ai.js and secrets.js files, simplified async/await patterns
 - ⚡ **Performance:** Eliminated loading spinners and API timeouts for instant AI responses
 - 📊 **Character Selection UI Redesign:** Enhanced stat bar system with 4 stats (HP/DMG/SPD/RANGE) displaying real config.js values

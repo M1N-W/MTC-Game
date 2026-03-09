@@ -657,6 +657,11 @@ function drawGame() {
     } else if (typeof UIManager !== 'undefined' && UIManager.draw) {
         UIManager.draw(CTX, _lastDrawDt); // compat fallback
     }
+
+    // ── Tutorial canvas overlay (spotlight + world pulse) ──
+    if (typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive()) {
+        TutorialSystem.draw(CTX);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════
