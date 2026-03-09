@@ -124,6 +124,9 @@ const AdminConsole = (() => {
         }
         if (window.boss && !window.boss.dead && typeof window.boss.takeDamage === 'function') {
             window.boss.takeDamage(99999);
+            // _onDeath() fires via takeDamage — but abort defensively in case it doesn't reset
+            if (typeof DomainExpansion !== 'undefined') DomainExpansion._abort(null);
+            if (typeof GravitationalSingularity !== 'undefined') GravitationalSingularity._abort(null);
             killed++;
         }
         return killed;
@@ -247,6 +250,9 @@ const AdminConsole = (() => {
             // Clear enemies array so wave-advance guard sees 0 enemies
             if (window.enemies) window.enemies.length = 0;
             if (window.boss) { window.boss.dead = true; window.boss = null; }
+            // Reset domain singletons — ป้องกัน isInvincible() ค้าง true ข้ามเวฟ
+            if (typeof DomainExpansion !== 'undefined') DomainExpansion._abort(null);
+            if (typeof GravitationalSingularity !== 'undefined') GravitationalSingularity._abort(null);
 
             // ── Step 2: Set wave counter to num-1 THEN call startNextWave ─
             // startNextWave() calls getWave() at the TOP (before incrementing),

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.21.1'; // v3.21.1: GravitationalSingularity Bug Fix - Fixed singleton phase leak across games and player speed debuff targeting
+const CACHE_NAME = 'mtc-cache-v3.21.2'; // v3.21.2: AdminSystem Defensive Fixes - Added domain singleton resets to prevent phase leaks in admin commands
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

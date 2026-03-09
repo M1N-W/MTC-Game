@@ -4,6 +4,26 @@
 
 ---
 
+## v3.21.2 — AdminSystem Defensive Fixes
+*Released: March 9, 2026*
+
+### 🛡️ Enhanced Domain Leak Prevention
+- **Admin Command Safeguards:** Added defensive domain singleton resets to admin kill and wave commands
+- **Wave Advance Protection:** Prevents `isInvincible()` state persistence when using admin commands to skip waves
+- **Boss Kill Command:** Ensures proper domain cleanup when using admin commands to eliminate bosses
+
+### 🔧 AdminSystem Updates
+- **_killAllEntities()**: Added defensive `DomainExpansion._abort()` and `GravitationalSingularity._abort()` calls after boss.takeDamage()
+- **Wave Skipping**: Added domain singleton resets in wave advance commands to prevent phase carryover
+- **Double Protection:** Admin commands now reset domains both through boss death hooks AND defensive abort calls
+
+### 🎯 Admin Command Reliability
+- **Consistent State:** Admin commands now maintain clean domain state across all operations
+- **Wave Management:** Skipping waves no longer risks domain phase leakage
+- **Debug Safety:** Admin testing tools now properly clean up singleton state
+
+---
+
 ## v3.21.1 — GravitationalSingularity Bug Fix
 *Released: March 9, 2026*
 
