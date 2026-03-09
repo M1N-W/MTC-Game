@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.26.9 | **Latest Update:** Comprehensive game enhancement - visual drama boost, tactical cover system, performance optimization, and navigation improvements
+> **Current Version:** Beta v3.27.0 | **Latest Update:** Major visual upgrades - Kao stealth holographic effects, Poom Naga serpentine tether, Auto heat tier gradients, weapon switch indicators
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
@@ -39,9 +39,9 @@
 
 | Character | Class | Stats (HP/DMG/SPD/RANGE) | Energy System | Key Abilities | Playstyle |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 🎓 **เก้า (Kao)** | Advanced Assassin | 119 / 118 / 298 / 900 | **15/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡ | 👻 Two-Phase Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
-| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 165 / 148 / 298 / 750 | **12/s Regen**<br>Q: 25 ⚡<br>E: 30 ⚡<br>R-Click: 15 ⚡<br>R: **FREE** | 🔥 Ritual Burst<br>🐉 Naga + Garuda Summon<br>🍚 Cosmic Balance | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
-| 🔥 **ออโต้ (Auto)** | Thermodynamic Brawler | 230 / MAX / 260 / MELEE | **20/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡<br>R-Click: 25 ⚡ | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand + Complete Feature System | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อนพร้อมระบบ Heat tiers (COLD/WARM/HOT/OVERHEAT), ปล่อย Stand Rush ไปตำแหน่งใดก็ได้พร้อมระบบ combo, Stand Meter 0-100, และ Skill Synergy (Stand Pull, Charge Punch, Stand Guard) |
+| 🎓 **เก้า (Kao)** | Advanced Assassin | 119 / 118 / 298 / 900 | **15/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡ | 👻 Holographic Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone<br>🎯 Weapon Switch FX | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, การสลับอาวุธ (Assault, Sniper, Shotgun) พร้อม visual feedback |
+| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 165 / 148 / 298 / 750 | **12/s Regen**<br>Q: 25 ⚡<br>E: 30 ⚡<br>R-Click: 15 ⚡<br>R: **FREE** | 🔥 Ritual Burst<br>🐉 Serpentine Naga<br>🌪️ Garuda Wind<br>🪷 Lotus Bloom | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
+| 🔥 **ออโต้ (Auto)** | Thermodynamic Brawler | 230 / MAX / 260 / MELEE | **20/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡<br>R-Click: 25 ⚡ | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand<br>🌡️ Heat Tier System | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อนพร้อมระบบ Heat tiers (COLD/WARM/HOT/OVERHEAT), ปล่อย Stand Rush ไปตำแหน่งใดก็ได้พร้อมระบบ combo, Stand Meter 0-100, และ Skill Synergy (Stand Pull, Charge Punch, Stand Guard) |
 
 ---
 
