@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.11.14
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.11.14+
 
 ---
 
@@ -112,10 +112,22 @@ Input (input.js) → Game Update (game.js) → Entity Updates → Collision (map
   ผู้ใช้ส่งไฟล์ → AI แก้ → output → ผู้ใช้ copy ไป project
 
 task ต่อเนื่องในแชทเดิม (ไม่มีไฟล์ใหม่):
-  base จาก /mnt/user-data/outputs/ ของรอบก่อน ได้เลย
+  ตรวจ /mnt/user-data/outputs/<filename> ก่อนเสมอ
+  ถ้ามี → ใช้ output (cp /mnt/user-data/outputs/X /home/claude/X)
+  ถ้าไม่มี → ใช้ /mnt/user-data/uploads/<filename>
 
 task ต่อเนื่อง + ผู้ใช้อัปโหลดไฟล์ใหม่:
-  ใช้ uploads (อาจมีการแก้ไขนอก session)
+  ใช้ uploads (อาจมีการแก้ไขนอก session) — output เก่าถือเป็น stale
+```
+
+**⚠️ ขั้นตอน mandatory ก่อนแก้ไฟล์ใดๆ ในแชทเดิม:**
+```bash
+# 1. ตรวจว่ามี output ล่าสุดไหม
+ls /mnt/user-data/outputs/<filename>
+
+# 2. ถ้ามี → cp จาก outputs ไม่ใช่ uploads
+cp /mnt/user-data/outputs/config.js /home/claude/config.js   ✅
+cp /mnt/user-data/uploads/config.js /home/claude/config.js   ❌ (ถ้ามี output อยู่แล้ว)
 ```
 
 ถ้าผู้ใช้ไม่ส่งไฟล์มา → แจ้ง "กรุณาส่งไฟล์ล่าสุดจาก project มาด้วยครับ"
@@ -179,11 +191,15 @@ Poom **bypasses WeaponSystem ทั้งหมด** — ยิงผ่าน `
 BALANCE.characters[charId] = {
     hp, maxHp, energy, maxEnergy, moveSpeed, dashSpeed,
     passiveUnlockText, passiveUnlockStealthCount,
+    // ── Skill energy costs (ทุกสกิล active ต้องมี) ──
+    xyzEnergyCost: N,   // pattern: <skillName>EnergyCost
     weapons: { weaponName: { damage, cooldown, range, speed, spread, color, icon } }
 }
 BALANCE.map = { mapColors, objects: { desk, tree } }
 BALANCE.mtcRoom = { healRate, maxStayTime, cooldownTime, dashResetOnEntry, ... }
 ```
+⚠️ Ritual (R) ของ Poom ไม่มี energy cost โดยเจตนา — เป็น combo finisher ที่มี CD + stack requirement อยู่แล้ว
+
 
 ### Wave Events 🟡
 | Event | เงื่อนไข | ผล |
@@ -198,6 +214,69 @@ BALANCE.mtcRoom = { healRate, maxStayTime, cooldownTime, dashResetOnEntry, ... }
 - **Bounds:** x: −150→150, y: −700→−460 (300×240px)
 - **Boss safe spawn Y:** −330 (ใต้ห้อง + buffer 130px) — มี runtime guard ใน BossBase constructor
 - **Features:** Dash reset on entry, Crisis Protocol (HP≤25% → +35HP), Rotating Buff (DMG +15% / SPD +10% / CDR −35%), Energy regen 30/s, HP regen 30/s
+
+### Domain Singleton Reset — Critical Pitfall 🔴
+`DomainExpansion` และ `GravitationalSingularity` เป็น **module-level singletons** — ไม่ reset อัตโนมัติระหว่างเกม
+
+**ปัญหา:** ถ้า phase ค้าง (`casting`/`active`) ข้ามเกม → `isInvincible()` return `true` ตลอด → boss รับ damage ไม่ได้
+
+**3 จุดที่ต้อง abort ทุกครั้งที่ boss หายออกจากเกม:**
+1. `BossBase._onDeath()` — abort ทั้งสองก่อน `window.boss = null`
+2. `AdminSystem` `kill` command — abort หลัง `takeDamage(99999)`
+3. `AdminSystem` `skipwave` command — abort หลัง `window.boss = null`
+
+`game.js`: `GravitationalSingularity.update()` **ต้องรันแม้ boss dead** (ไม่มี `window.boss &&` guard) — เพื่อให้ `_abort()` trigger ได้เมื่อ `boss = null`
+
+```js
+// ✅ ถูก — รันเสมอ
+if (typeof GravitationalSingularity !== 'undefined')
+    GravitationalSingularity.update(dt, window.boss, window.player);
+
+// ❌ ผิด — ถ้า boss null แล้ว update ไม่รัน → phase ค้าง
+if (typeof GravitationalSingularity !== 'undefined' && window.boss && !window.boss.dead)
+    GravitationalSingularity.update(dt, window.boss, window.player);
+```
+
+### Domain Slow — stats.moveSpeed vs moveSpeed 🔴
+`DomainExpansion` slow debuff ต้อง target `player.stats.moveSpeed` เท่านั้น
+`player.moveSpeed` เป็น property แยก — PlayerBase ใช้ `S.moveSpeed` เป็น speed cap จริง การแก้ `player.moveSpeed` ไม่มีผล
+
+```js
+// ✅ ถูก
+player._domainSlowBase = player.stats.moveSpeed;
+player.stats.moveSpeed *= _DC.CELL_SLOW_FACTOR;
+
+// ❌ ผิด — ไม่กระทบ speed cap ใน PlayerBase
+player._domainSlowBase = player.moveSpeed;
+player.moveSpeed *= _DC.CELL_SLOW_FACTOR;
+```
+
+### Energy Cost System 🟡
+ทุกสกิล active ทุกตัวละครมี energy cost — ตรวจ config ก่อนเพิ่มสกิลใหม่
+
+| ตัวละคร | Skill | Cost Key | ค่า |
+|---------|-------|----------|-----|
+| Kao | Q Teleport/PhantomBlink | `teleportEnergyCost` | 20 |
+| Kao | E Clone | `cloneEnergyCost` | 30 |
+| Kao | R-Click Stealth | `stealthCost` | 25 |
+| Auto | R-Click Wanchai | `wanchaiEnergyCost` | 25 |
+| Auto | Q Vacuum | `vacuumEnergyCost` | 20 |
+| Auto | E Detonation | `detonationEnergyCost` | 30 |
+| Poom | Q Naga | `nagaEnergyCost` | 25 |
+| Poom | E Garuda | `garudaEnergyCost` | 30 |
+| Poom | R-Click EatRice | `eatRiceEnergyCost` | 15 |
+| Poom | R Ritual | — | ฟรี (combo finisher) |
+
+Pattern ใน player files:
+```js
+const cost = S.xyzEnergyCost ?? DEFAULT;
+if ((this.energy ?? 0) < cost) {
+    spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+} else {
+    this.energy = Math.max(0, (this.energy ?? 0) - cost);
+    this.doSkill();
+}
+```
 
 ### FloatingText Stack-Offset 🟡
 `FloatingTextSystem.spawn()` นับ live texts ในรัศมี 40px ก่อน spawn ใหม่ — offset ขึ้น 22px ต่อชั้น (max 5 ชั้น) ป้องกัน text ซ้อนทับกัน
@@ -278,6 +357,9 @@ BALANCE.mtcRoom = { healRate, maxStayTime, cooldownTime, dashResetOnEntry, ... }
 | Boss spawn ใน MTC Room | spawnY ติด room bounds | ตรวจ BossBase constructor guard + safe Y: −330 |
 | Performance drop | GC / render bottleneck | ตรวจ object pooling ใน effects.js, ใช้ Debug.html profiling |
 | Visual glitch | ctx state leak | ตรวจ `ctx.save()`/`ctx.restore()` ครบคู่ใน PlayerRenderer.js |
+| **"DOMAIN SHIELD!" spam + boss รับ damage ไม่ได้** | **Domain singleton phase ค้างจากเกมก่อน** | **ตรวจ `_onDeath()` + AdminSystem abort calls — ดู Domain Singleton Reset** |
+| **Domain slow ไม่มีผล** | **แก้ `player.moveSpeed` แทน `player.stats.moveSpeed`** | **ใช้ `player.stats.moveSpeed` เสมอ — ดู Domain Slow Critical Note** |
+| **สกิลกดได้ทั้งที่ energy หมด** | **ไม่มี energy guard ใน skill activation block** | **เพิ่ม pattern `if (energy < cost)` ก่อน doSkill() — ดู Energy Cost System** |
 
 ---
 

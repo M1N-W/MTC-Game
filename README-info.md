@@ -35,11 +35,11 @@
 
 เลือกเล่นเป็น 3 ตัวละครที่มีสกิลและสไตล์การเล่นแตกต่างกันอย่างสิ้นเชิง พร้อมระบบ stat bar ใหม่ 4 มิติ (HP/DMG/SPD/RANGE) ที่แสดงค่าจริงจาก config.js:
 
-| Character | Class | Stats (HP/DMG/SPD/RANGE) | Key Abilities | Playstyle |
-| :--- | :--- | :--- | :--- | :--- |
-| 🎓 **เก้า (Kao)** | Advanced Assassin | 119 / 118 / 298 / 900 | 👻 Two-Phase Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
-| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 165 / 148 / 298 / 750 | 🔥 Ritual Burst<br>🐉 Naga + Garuda Summon<br>🍚 Cosmic Balance | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
-| 🔥 **ออโต้ (Auto)** | Pyromaniac | 230 / MAX / 260 / MELEE | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อน และปล่อย Stand Rush ไปตำแหน่งใดก็ได้ |
+| Character | Class | Stats (HP/DMG/SPD/RANGE) | Energy System | Key Abilities | Playstyle |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 🎓 **เก้า (Kao)** | Advanced Assassin | 119 / 118 / 298 / 900 | **15/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡ | 👻 Two-Phase Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
+| 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 165 / 148 / 298 / 750 | **12/s Regen**<br>Q: 25 ⚡<br>E: 30 ⚡<br>R-Click: 15 ⚡<br>R: **FREE** | 🔥 Ritual Burst<br>🐉 Naga + Garuda Summon<br>🍚 Cosmic Balance | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
+| 🔥 **ออโต้ (Auto)** | Pyromaniac | 230 / MAX / 260 / MELEE | **20/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡<br>R-Click: 25 ⚡ | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อน และปล่อย Stand Rush ไปตำแหน่งใดก็ได้ |
 
 ---
 
@@ -99,74 +99,15 @@
 
 ---
 
-## 📈 Current Version: v3.21.0 (March 9, 2026)
+## 📈 Current Version: v3.23.0 (March 9, 2026)
 
 **Latest Major Updates:**
-- ⚫ **Complete Boss Rework:** 4-phase implementation with GravitationalSingularity, ChalkWall, Domain sub-phases, and Singularity Mode
-- 🐕 **KruManop Phase Structure:** Per-encounter thresholds, ChalkWall barriers, DogPackCombo synchronized attacks
-- ⚛️ **KruFirst Domain System:** 4-pulse GravitationalSingularity with OrbitalDebris and post-domain Singularity Mode
-- � **Domain Sub-Phases:** Progressive A/B/C difficulty with TeacherFury triggers and safe cell shifting
-- ⚡ **Advanced Boss Mechanics:** QuantumLeap teleportation, GravityWell distortion fields, SuperpositionClone phantom copies
-- ✨ **Enhanced Visual Polish:** Improved stat bar styling (7px height, border-radius, tick marks), glow effects, avatar enhancements
-- 🌐 **Menu Enhancements:** Added scanline texture, dual-line section dividers, enhanced high score display with sweep animation
-- �� **Documentation Enhancement:** Comprehensive PROJECT_OVERVIEW.md updates with dev buff system documentation
-- 🔧 **Technical Reference:** Complete command documentation (spawn manop [1|2|3], spawn first [advanced], devbuff)
-- 🎯 **Architecture Clarity:** Updated passive unlock system documentation and dev mode implementation details
-- 🚀 **Universal Dev Buff System:** Character-agnostic stat enhancement package (HP +50%, Energy +50%, Damage ×1.25, Speed ×1.20, CDR ×0.60, Crit +8%) available to all characters via admin console
-- 💻 **Enhanced Admin Commands:** New `devbuff` command with detailed console output and visual feedback, replacing Kao-specific passive unlock system
-- 🎨 **Visual Enhancements:** Shimmer sweep animations, ghost drain bar, and phase threshold markers
-- ✨ **Advanced Visual Effects:** Shimmer sweep animations, ghost drain bar, and phase threshold markers
-- 🎯 **Phase Color System:** Dynamic color changes (green→yellow→orange→red) based on HP percentage
-- 🔄 **HUD Layout:** Reverted to original positioning while maintaining enhanced visual effects
-- 🎨 **UI/UX Improvements:** Enhanced floating text stacking, HUD positioning, and wave banner layout
-- ⚖️ **Game Balance Rework:** Weapon scaling adjustments, Wanchai Stand nerf, and boss HP rework
-- 🎮 **UI Integration:** Dynamically injected Garuda skill slot with cooldown visuals for Poom character
-- 🔧 **Clone System Balance:** Reduced cooldowns (60→25s) and tactical manual detonation via E-key
-- 🎨 **Visual Enhancements:** Fire trail effects, cosmic aura rings, and enhanced Phantom Blink visual feedback
-- 📊 **Technical Improvements:** O(1) state management, proper entity cleanup, and memory-optimized trail systems
-- 🔥 **Heat Gauge System:** Complete 4-tier heat system (COLD→WARM→HOT→OVERHEAT) with damage multipliers and OVERHEAT mechanics
-- 🌀 **Vacuum Heat Enhancement:** Added instant damage + burning effect + heat reward on successful pulls
-- 🥊 **Wanchai Stand Spirit of Muay Thai:** Complete visual overhaul with ice-blue/white spectral design and cultural elements
-- 🎮 **Heat Gauge HUD:** Reuses energy bar slot with tier-specific colors and floating badge display
-- 🔧 **Combat Synergy:** Enhanced Vacuum Heat → Wanchai attacks → Detonation combo system with risk/reward mechanics
-- 🎨 **Heat-Reactive Visuals:** Dynamic color changes COLD→WARM→HOT→OVERHEAT with tier-specific effects
-- 🔥 **OVERHEAT Mechanics:** Massive damage potential with HP drain and crit bonus for high-risk gameplay
-- 📊 **Balance Integration:** Heat tiers provide meaningful progression without breaking game balance
-- 🎯 **Visual Distinction:** Complete separation from Auto's red theme with authentic Thai boxing aesthetics
-- 🔧 **Floating Text Overlap Fix:** Fixed damage, healing, and buff notification texts overlapping when spawned at same position
-- 📚 **Documentation Accuracy:** Updated PROJECT_OVERVIEW.md with correct Canvas-based solution for text overlap issue
-- 🎯 **Canvas-based Implementation:** Added 15-line stack-offset logic in FloatingTextSystem.spawn() using world coordinates
-- 📚 **Documentation Stability System:** Added classification system (🟢🟡🔴) for information stability across all documentation
-- 🏰 **MTC Room Abilities Implementation:** Complete buff system with rotating terminal (DMG +15%, SPD +10%, CDR BURST -35%)
-- 🛡️ **Boss Spawn Fix:** Fixed boss entities spawning inside MTC Room preventing player exploitation
-- 🎨 **MTC Room Visual Enhancement:** Complete visual overhaul with diamond grid floor, "MTC CITADEL" header, corner pillars, double-ring hologram, ambient orbs, hex tile forcefield
-- 🗺️ **Zone Floor System:** Added color-coded zone grids with distinct visual themes (Server Farm, Library, Courtyard, Lecture Halls)
-- 🔧 **Multi-round Editing Workflow:** Established proper file handling protocol to prevent code loss during iterative development
-- ⚡ **Performance Optimizations:** Batch rendering, deterministic visual effects, viewport culling for zones
-- ✨ **Boss Architecture Refactor:** Clean class hierarchy with shared lifecycle management
-- 🎨 **Visual Polish:** Complete SVG portrait system and 6-layer Wanchai Stand rendering
-- 🤖 **Advanced AI:** Autonomous Stand system with tactical intelligence
-- 🌌 **Domain Expansion:** Ultimate boss abilities with arena-wide physics manipulation
-- ⚖️ **Balance Overhaul:** Comprehensive weapon and character balance adjustments
-- 📚 **Tutorial System Sync:** Updated all tutorial content to match current game state
-- 🌊 **Wave Events Documentation:** Added detailed breakdown of all wave types and boss encounters
-- ⚔️ **Auto Character Combat Buffs:** Enhanced Wanchai Stand damage, speed, and visual effects
-- 🎯 **Comprehensive Frontend Design Overhaul:** Military HUD theme with scanlines, hex grid, and enhanced visual effects
-- 🔧 **UX Improvements Patch:** Overlay fade transitions, mobile button states, new record badge, and accessibility support
-- ⏱️ **Bullet Time Visual System Overhaul:** Multi-layer cinematic effects with time ripples, clock-hand streaks, and circular energy HUD
-- 🎯 **Enemy Renderer Refactor & Visual Polish:** Performance optimizations, shared helpers, enhanced visual details for all enemy types
-- 🎨 **Comprehensive Visual Polish Overhaul:** Player renderer refactor, boss summons redesign, naturalistic creature designs with dangerous supernatural elements
-- 🌌 **Domain Expansion Enhanced Visuals & New Abilities:** Portal iris opening, rotating hex geometry, ambient particles, Void Pulse rings, Formula Beam sweeping attacks, cinematic visual effects
-- 🔊 **Complete Boss Attack Visual Rework:** Enhanced BarkWave, BubbleProjectile, ExpandingRing, EmpPulse, MatrixGridAttack, new EquationSlam & DeadlyGraph classes, ultimate attack wind-up effects, log457 visual states
-- 🔧 **Boss Attack Class Consolidation:** Moved EquationSlam & DeadlyGraph to boss_attacks.js for better code organization and maintainability
-- ⚡ **Boss Attacks Performance Optimization:** Improved gradient handling, Math.hypot() distance calculations, enhanced color format support and precision
-- 🎨 **Enhanced Player Rendering System:** Improved hit flash feedback, walk bob animations, responsive hair wobble, weapon recoil, and ground shadow physics for all characters
-- ⚡ **Hit Flash System Overhaul:** Added differentiated damage feedback with fast decay (6x/sec), strong effects for bullet/AoE damage (≥5 HP), and universal white glow + expanding ring effects
-- 🏃 **Advanced Walk Animation:** Implemented real Y-axis bob movement with character-specific timing (Kao: 2.0px, Poom: 2.0px, Auto: 2.5px) and ground shadow scaling
-- 💇 **Dynamic Hair Animation:** Auto combat mode (380ms→150ms wobble), Poom movement-responsive wobble (220-500ms range), and speed-based amplitude adjustments
-- 🔫 **Universal Recoil System:** Character-specific weapon recoil animations (Kao: 3.5x, Auto: 3.0x, Poom: 2.5x) with realistic shooting feedback
-- 🎨 **Visual Polish Fixes:** Enhanced Kranok pattern transparency, arc-shaped dash ghosts, proper context management for ground shadows, improved level up text timing with staggered display, weapon indicator transitions, and wave event optimization
-- 🔧 **Boss Attacks Performance Optimization:** Improved gradient handling, Math.hypot() distance calculations, enhanced color format support and precision
+- ⚡ **Energy Cost System Implementation:** Comprehensive energy management for all character skills with balance-focused costs
+- 🎯 **Strategic Resource Management:** Energy costs prevent skill spam while maintaining combat viability
+- � **Character-Specific Balance:** Each character tuned with unique costs and regen rates (Kao: 15/s, Auto: 20/s, Poom: 12/s)
+- 🪷 **Poom Ritual Design:** Free energy cost for combo finisher with 15s CD + stack requirement
+- 🔧 **Technical Implementation:** Consistent energy guard pattern and config integration across all characters
+- 📚 **Documentation Updates:** Enhanced PROJECT_OVERVIEW.md with energy system, domain pitfalls, and AI workflow improvements
 
 ---
 

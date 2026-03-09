@@ -4,6 +4,47 @@
 
 ---
 
+## v3.23.0 — Energy Cost System Implementation
+*Released: March 9, 2026*
+
+### ⚡ Comprehensive Energy Management System
+- **Global Energy System:** All active skills now require energy with character-specific costs and regen rates
+- **Strategic Resource Management:** Energy costs prevent skill spam while maintaining combat viability
+- **Balance-Focused Design:** Each character's costs tuned to their playstyle and regen capabilities
+
+#### 👤 Character Energy Costs & Regen Rates
+
+| ตัวละคร | Skill | Cost | Regen Rate | Recovery Time |
+|---------|-------|------|------------|---------------|
+| **🎓 Kao** | Q Teleport/PhantomBlink | 20 | 15/s | ~1.3s |
+| **🎓 Kao** | E Clone | 30 | 15/s | ~2.0s |
+| **🔥 Auto** | Q Vacuum | 20 | 20/s | ~1.0s |
+| **🔥 Auto** | E Detonation | 30 | 20/s | ~1.5s |
+| **🪷 Poom** | Q Naga | 25 | 12/s | ~2.1s |
+| **🪷 Poom** | E Garuda | 30 | 12/s | ~2.5s |
+| **🪷 Poom** | R-Click EatRice | 15 | 12/s | ~1.3s |
+| **🪷 Poom** | R Ritual | **FREE** | - | - |
+
+#### 🎯 Design Philosophy
+- **Poom Ritual (R):** No energy cost - combo finisher with 15s CD + stack requirement
+- **Poom Lowest Regen (12/s):** Creates strategic resource management, prevents simultaneous skill spam
+- **Auto Highest Regen (20/s):** Supports explosive playstyle with frequent ability usage
+- **Balanced Costs:** Total cost distribution allows meaningful combo decisions without energy starvation
+
+### 🔧 Technical Implementation
+- **Energy Guard Pattern:** Consistent `if (energy < cost)` checks across all character skills
+- **Config Integration:** All costs follow `xyzEnergyCost` pattern in `BALANCE.characters`
+- **Visual Feedback:** "⚡ FOCUS LOW!" floating text for insufficient energy
+- **Future-Proof:** Reusable pattern for new character skills
+
+### 📚 Documentation Updates
+- **PROJECT_OVERVIEW.md:** Added Energy Cost System section with complete cost table
+- **Critical Notes:** New entries for Domain Singleton Reset, Domain Slow pitfalls
+- **Debugging Solutions:** Added energy-related issues and solutions
+- **AI Workflow:** Enhanced file versioning rules with explicit decision tree
+
+---
+
 ## v3.22.0 — Comprehensive Balance Patch
 *Released: March 9, 2026*
 

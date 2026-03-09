@@ -883,13 +883,25 @@ class AutoPlayer extends Player {
         if (checkInput('q') && !this.passiveUnlocked) {
             // ── Vacuum ใช้ได้ตั้งแต่ต้น (basic version: ดูดอย่างเดียว) ──────
             if ((this.cooldowns?.vacuum ?? 0) <= 0) {
-                this._doVacuum({ earlyMode: true });
+                const vCost = this.stats?.vacuumEnergyCost ?? 20;
+                if ((this.energy ?? 0) < vCost) {
+                    spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                } else {
+                    this.energy = Math.max(0, (this.energy ?? 0) - vCost);
+                    this._doVacuum({ earlyMode: true });
+                }
             } else {
                 spawnFloatingText(`⏳ ${Math.ceil(this.cooldowns.vacuum)}s`, this.x, this.y - 40, '#94a3b8', 14);
             }
             consumeInput('q');
         } else if (checkInput('q') && this.passiveUnlocked && (this.cooldowns?.vacuum ?? 0) <= 0) {
-            this._doVacuum({ earlyMode: false });
+            const vCost = this.stats?.vacuumEnergyCost ?? 20;
+            if ((this.energy ?? 0) < vCost) {
+                spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+            } else {
+                this.energy = Math.max(0, (this.energy ?? 0) - vCost);
+                this._doVacuum({ earlyMode: false });
+            }
             consumeInput('q');
         }
 
@@ -901,59 +913,66 @@ class AutoPlayer extends Player {
             consumeInput('e');
         } else if (checkInput('e') && this.passiveUnlocked && this.wanchaiActive && (this.cooldowns?.detonation ?? 0) <= 0) {
             const S = this.stats ?? {};
-            const isOverheat = (this._heatTier ?? 0) >= 3;
-            const DET_RANGE = (S.detonationRange ?? 240) * (isOverheat ? 1.5 : 1.0);
-            // Heat-scaled damage
-            const detBaseDmg = (S.detonationBaseDamage ?? 80) + this.heat * (S.detonationHeatScaling ?? 2.5);
-            const detFinalBase = detBaseDmg * (this.damageMultiplier || 1.0);
-            let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.25);
-            if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.20);
-            let detIsCrit = Math.random() < detCrit;
-            let detFinalDmg = detFinalBase * (detIsCrit ? (S.critMultiplier ?? 2.2) : 1.0);
+            const detCost = S.detonationEnergyCost ?? 30;
+            if ((this.energy ?? 0) < detCost) {
+                spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                consumeInput('e');
+            } else {
+                this.energy = Math.max(0, (this.energy ?? 0) - detCost);
+                const isOverheat = (this._heatTier ?? 0) >= 3;
+                const DET_RANGE = (S.detonationRange ?? 240) * (isOverheat ? 1.5 : 1.0);
+                // Heat-scaled damage
+                const detBaseDmg = (S.detonationBaseDamage ?? 80) + this.heat * (S.detonationHeatScaling ?? 2.5);
+                const detFinalBase = detBaseDmg * (this.damageMultiplier || 1.0);
+                let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.25);
+                if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.20);
+                let detIsCrit = Math.random() < detCrit;
+                let detFinalDmg = detFinalBase * (detIsCrit ? (S.critMultiplier ?? 2.2) : 1.0);
 
-            // ── Second Wind bonus ──
-            if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
+                // ── Second Wind bonus ──
+                if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
 
-            let totalDet = 0;
-            for (const enemy of (window.enemies || [])) {
-                if (enemy.dead) continue;
-                const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-                if (dist < DET_RANGE) {
-                    enemy.takeDamage(detFinalDmg);
-                    totalDet += detFinalDmg;
-                    spawnParticles(enemy.x, enemy.y, 5, detIsCrit ? '#facc15' : '#dc2626');
+                let totalDet = 0;
+                for (const enemy of (window.enemies || [])) {
+                    if (enemy.dead) continue;
+                    const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                    if (dist < DET_RANGE) {
+                        enemy.takeDamage(detFinalDmg);
+                        totalDet += detFinalDmg;
+                        spawnParticles(enemy.x, enemy.y, 5, detIsCrit ? '#facc15' : '#dc2626');
+                    }
                 }
-            }
-            if (window.boss && !window.boss.dead) {
-                const dist = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
-                if (dist < DET_RANGE + window.boss.radius) {
-                    window.boss.takeDamage(detFinalDmg);
-                    totalDet += detFinalDmg;
-                    spawnParticles(window.boss.x, window.boss.y, 8, detIsCrit ? '#facc15' : '#dc2626');
+                if (window.boss && !window.boss.dead) {
+                    const dist = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+                    if (dist < DET_RANGE + window.boss.radius) {
+                        window.boss.takeDamage(detFinalDmg);
+                        totalDet += detFinalDmg;
+                        spawnParticles(window.boss.x, window.boss.y, 8, detIsCrit ? '#facc15' : '#dc2626');
+                    }
                 }
-            }
 
-            // Lifesteal จากดาเมจที่ทำได้
-            if (this.passiveUnlocked && totalDet > 0) {
-                this.hp = Math.min(this.maxHp, this.hp + totalDet * (this.stats?.passiveLifesteal ?? 0.01));
-            }
+                // Lifesteal จากดาเมจที่ทำได้
+                if (this.passiveUnlocked && totalDet > 0) {
+                    this.hp = Math.min(this.maxHp, this.hp + totalDet * (this.stats?.passiveLifesteal ?? 0.01));
+                }
 
-            // ── REWORK: Wanchai STAYS active after Detonation ──
-            // Heat resets -50 (keeps momentum, can chain)
-            this.heat = Math.max(0, this.heat - 50);
-            this._heatTier = this.heat >= (S.heatTierHot ?? 67) ? 2
-                : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
-            this.cooldowns.detonation = S.detonationCooldown ?? 8;
+                // ── REWORK: Wanchai STAYS active after Detonation ──
+                // Heat resets -50 (keeps momentum, can chain)
+                this.heat = Math.max(0, this.heat - 50);
+                this._heatTier = this.heat >= (S.heatTierHot ?? 67) ? 2
+                    : this.heat >= (S.heatTierWarm ?? 34) ? 1 : 0;
+                this.cooldowns.detonation = S.detonationCooldown ?? 8;
 
-            spawnParticles(this.x, this.y, 60, '#dc2626');
-            addScreenShake(10);
-            spawnFloatingText(
-                detIsCrit ? `💥 OVERHEAT CRIT! ${Math.floor(detFinalDmg)}` : `💥 OVERHEAT! ${Math.floor(detFinalDmg)}`,
-                this.x, this.y - 70,
-                detIsCrit ? '#facc15' : '#dc2626', isOverheat ? 32 : 28
-            );
-            if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
-            consumeInput('e');
+                spawnParticles(this.x, this.y, 60, '#dc2626');
+                addScreenShake(10);
+                spawnFloatingText(
+                    detIsCrit ? `💥 OVERHEAT CRIT! ${Math.floor(detFinalDmg)}` : `💥 OVERHEAT! ${Math.floor(detFinalDmg)}`,
+                    this.x, this.y - 70,
+                    detIsCrit ? '#facc15' : '#dc2626', isOverheat ? 32 : 28
+                );
+                if (typeof Audio !== 'undefined' && Audio.playDetonation) Audio.playDetonation();
+                consumeInput('e');
+            } // end energy check
         }
 
 

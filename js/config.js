@@ -92,7 +92,9 @@ const BALANCE = {
             maxHpPerLevel: 6,                 // BUFF: 4 → 6
             // ── Advanced Kao Skills ──
             teleportCooldown: 18,
+            teleportEnergyCost: 20,         // NEW: Q Teleport/PhantomBlink — instant blink ควรมีต้นทุน
             cloneCooldown: 25,              // 60 → 25 (REWORK: usable mid-game)
+            cloneEnergyCost: 30,            // NEW: E Clone — summon clone ใช้พลังงานสร้าง
             cloneDuration: 8,               // 10 → 8 (shorter but sharper)
             cloneProximityRange: 90,        // NEW: clone proximity burst trigger range
             cloneProximityDmgMult: 0.60,    // NEW: proximity burst dmg mult
@@ -152,6 +154,7 @@ const BALANCE = {
             vacuumRange: 340,               // 320 → 340
             vacuumForce: 1900,              // 1600 → 1900 (BUFF)
             vacuumCooldown: 6,              // 8 → 6 (bread-and-butter skill)
+            vacuumEnergyCost: 20,           // NEW: Q Vacuum — pull + ignite ใช้ focus
             vacuumStunDur: 0.50,            // 0.55 → 0.50
             vacuumPullDur: 0.45,
             vacuumDamage: 18,               // NEW: damage ณ จุดดูด
@@ -162,6 +165,7 @@ const BALANCE = {
             // ── Overheat Detonation (E) — REWORK: Heat-scaled, ไม่ kill Wanchai ──
             detonationRange: 240,           // 220 → 240
             detonationCooldown: 8,          // 5 → 8 (ไม่ kill Wanchai แล้ว — trade off)
+            detonationEnergyCost: 30,       // NEW: E Detonation — ultimate burst ใช้ focus สูงสุด
             detonationBaseDamage: 80,       // NEW: base damage (แทน wanchaiDamage×6)
             detonationHeatScaling: 2.5,     // NEW: bonus damage per Heat point
             // ตัวอย่าง: Heat 80 → 80 + (80 × 2.5) = 280 damage
@@ -252,11 +256,13 @@ const BALANCE = {
             critChance: 0.12,
             critMultiplier: 3,
             eatRiceCooldown: 10,
+            eatRiceEnergyCost: 15,          // NEW: R-Click EatRice — heal + speed buff ใช้ focus เล็กน้อย
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.2,
             nagaCooldown: 22,        // NERF: 20 → 22 (uptime 45% → 41% — ยังดีอยู่แต่ต้องจัดการ)
             nagaDuration: 9,         // NERF: 10 → 9 (Cosmic window แคบลง — ต้องวาง Garuda ให้ sync)
+            nagaEnergyCost: 25,      // NEW: Q Naga — summon พญานาค ต้องใช้ focus
             nagaDamage: 100,         // BUFF: 95 → 100
             nagaSpeed: 525,
             nagaSegments: 18,        // BUFF: 12 → 18 (งูยาวขึ้นชัดเจน)
@@ -295,6 +301,7 @@ const BALANCE = {
             },
             // ── Garuda Summon (E) ────────────────────────────
             garudaCooldown: 24,             // NERF: 22 → 24 (Cosmic Balance ต้องใช้ทักษะในการ sync)
+            garudaEnergyCost: 30,           // NEW: E Garuda — summon ครุฑ ใช้ focus สูงสุดของ Poom
             garudaDuration: 9,              // BUFF: 6 → 9 (uptime 24% → 41%)
             garudaDamage: 150,
             garudaOrbitRadius: 120,

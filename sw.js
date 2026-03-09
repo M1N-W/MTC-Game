@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.22.0'; // v3.22.0: Comprehensive Balance Patch - Enemy scaling, character adjustments, and boss difficulty tuning
+const CACHE_NAME = 'mtc-cache-v3.23.0'; // v3.23.0: Energy Cost System Implementation - Added comprehensive energy management to all character skills with balance-focused costs
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

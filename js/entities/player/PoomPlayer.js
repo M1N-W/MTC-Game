@@ -207,25 +207,35 @@ class PoomPlayer extends Player {
         // Passive bonuses (crit, lifesteal, CosmicBalance) ยังคงต้องปลดล็อคตามปกติ
         if (mouse && mouse.right === 1) {
             if (this.cooldowns.eat <= 0 && !this.isEatingRice) {
-                this.eatRice();
+                const riceCost = S.eatRiceEnergyCost ?? 15;
+                if ((this.energy ?? 0) < riceCost) {
+                    spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                } else {
+                    this.energy = Math.max(0, (this.energy ?? 0) - riceCost);
+                    this.eatRice();
+                }
             }
             mouse.right = 0;
         }
 
-        // ── E: Garuda — ล็อคจนกว่า passive จะปลด ────────────────────────────
         if (checkInput('e')) {
             if (this.passiveUnlocked && this.cooldowns.garuda <= 0) {
-                this.summonGaruda();
+                const gCost = S.garudaEnergyCost ?? 30;
+                if ((this.energy ?? 0) < gCost) {
+                    spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                } else {
+                    this.energy = Math.max(0, (this.energy ?? 0) - gCost);
+                    this.summonGaruda();
+                }
             } else if (!this.passiveUnlocked) {
                 spawnFloatingText('🔒 ปลดล็อคหลัง Ritual ครั้งแรก', this.x, this.y - 40, '#94a3b8', 14);
             }
             consumeInput('e');
         }
 
-        // ── R: Ritual Burst — ล็อคจนกว่า Naga จะถูกเรียก ──────────────────
-        // เหตุผล: ต้องมี Sticky stack ก่อนถึง Ritual จะ meaningful
         if (checkInput('r')) {
             if (this._nagaUnlocked && this.cooldowns.ritual <= 0) {
+                // Ritual ไม่มี energy cost — เป็น combo finisher ที่ต้องสะสม stack ก่อน
                 this.ritualBurst();
             } else if (!this._nagaUnlocked) {
                 spawnFloatingText('🔒 ปลดล็อค Naga ก่อน (Lv2)', this.x, this.y - 40, '#94a3b8', 14);
@@ -233,10 +243,15 @@ class PoomPlayer extends Player {
             consumeInput('r');
         }
 
-        // ── Q: Naga Summon — ปลดที่ Lv2 ──────────────────────────────────
         if (checkInput('q')) {
             if (this._nagaUnlocked && this.cooldowns.naga <= 0) {
-                this.summonNaga();
+                const nCost = S.nagaEnergyCost ?? 25;
+                if ((this.energy ?? 0) < nCost) {
+                    spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                } else {
+                    this.energy = Math.max(0, (this.energy ?? 0) - nCost);
+                    this.summonNaga();
+                }
             } else if (!this._nagaUnlocked) {
                 spawnFloatingText(`🔒 ปลดล็อคที่ Lv2`, this.x, this.y - 40, '#94a3b8', 14);
             }

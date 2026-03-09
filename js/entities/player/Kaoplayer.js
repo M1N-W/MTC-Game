@@ -328,61 +328,66 @@ class KaoPlayer extends Player {
             }
             // ── Use charge ───────────────────────────────────────────────
             if (checkInput('q') && this.teleportCharges > 0) {
-                this.teleportCharges--;
-                const newTimer = { elapsed: 0, max: this.teleportCooldown };
-                this.teleportTimers.push(newTimer);
+                const tpCost = S.teleportEnergyCost ?? 20;
+                if ((this.energy ?? 0) < tpCost) {
+                    spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                    consumeInput('q');
+                } else {
+                    this.energy = Math.max(0, (this.energy ?? 0) - tpCost);
+                    this.teleportCharges--;
+                    const newTimer = { elapsed: 0, max: this.teleportCooldown };
+                    this.teleportTimers.push(newTimer);
 
-                // Penalty: หมดทุก stack → เพิ่ม +5s ให้ timer ที่ใกล้ครบสุด
-                if (this.teleportCharges === 0 && this.teleportTimers.length > 1) {
-                    let maxElapsed = -1, penaltyIdx = 0;
-                    this.teleportTimers.forEach((t, i) => {
-                        if (t.elapsed > maxElapsed) { maxElapsed = t.elapsed; penaltyIdx = i; }
-                    });
-                    this.teleportTimers[penaltyIdx].max += this.teleportPenalty;
-                    spawnFloatingText('\u23F3 Penalty!', this.x, this.y - 80, '#ef4444', 20);
-                }
+                    // Penalty: หมดทุก stack → เพิ่ม +5s ให้ timer ที่ใกล้ครบสุด
+                    if (this.teleportCharges === 0 && this.teleportTimers.length > 1) {
+                        let maxElapsed = -1, penaltyIdx = 0;
+                        this.teleportTimers.forEach((t, i) => {
+                            if (t.elapsed > maxElapsed) { maxElapsed = t.elapsed; penaltyIdx = i; }
+                        });
+                        this.teleportTimers[penaltyIdx].max += this.teleportPenalty;
+                        spawnFloatingText('\u23F3 Penalty!', this.x, this.y - 80, '#ef4444', 20);
+                    }
 
-                // ── PHANTOM BLINK: Q during stealth/freeStealthy — requires Lv2 ──
-                // Leave a shadow clone at origin, blink to cursor
-                // Grant ambush crit window at destination
-                const isPhantomBlink = this.passiveLv2Unlocked
-                    && (S.phantomBlinkEnabled ?? true)
-                    && (this.isInvisible || this.isFreeStealthy);
+                    // ── PHANTOM BLINK: Q during stealth/freeStealthy — requires Lv2 ──
+                    // Leave a shadow clone at origin, blink to cursor
+                    // Grant ambush crit window at destination
+                    const isPhantomBlink = this.passiveLv2Unlocked
+                        && (S.phantomBlinkEnabled ?? true)
+                        && (this.isInvisible || this.isFreeStealthy);
 
-                const prevX = this.x, prevY = this.y;
-                spawnParticles(this.x, this.y, 25, '#3b82f6');
-                // VFX: shadow ripple at departure
-                if (typeof addScreenShake === 'function') addScreenShake(2);
+                    const prevX = this.x, prevY = this.y;
+                    spawnParticles(this.x, this.y, 25, '#3b82f6');
+                    // VFX: shadow ripple at departure
+                    if (typeof addScreenShake === 'function') addScreenShake(2);
 
-                this.x = window.mouse.wx;
-                this.y = window.mouse.wy;
-                consumeInput('q');
-                spawnParticles(this.x, this.y, 25, '#3b82f6');
+                    this.x = window.mouse.wx;
+                    this.y = window.mouse.wy;
+                    consumeInput('q');
+                    spawnParticles(this.x, this.y, 25, '#3b82f6');
 
-                if (isPhantomBlink) {
-                    // ── Leave shadow clone at departure point ──────────
-                    const shadowClone = new KaoClone(this, 0);
-                    shadowClone.x = prevX;
-                    shadowClone.y = prevY;
-                    shadowClone.alpha = 0.85;       // more visible than orbit clones
-                    this.clones.push(shadowClone);
-                    this.clonesActiveTimer = Math.max(
-                        this.clonesActiveTimer,
-                        S.cloneDuration ?? 8
-                    );
-                    // ── Ambush window at destination ───────────────────
-                    this._blinkAmbushTimer = S.phantomBlinkAmbushWindow ?? 1.5;
-                    this.ambushReady = true;
-                    // Break stealth after blink (ambush strike)
-                    this.isFreeStealthy = false;
-                    this.freeStealthTimer = 0;
-                    if (this.isInvisible) this.breakStealth();
-                    spawnFloatingText('\uD83D\uDC7B PHANTOM BLINK!', this.x, this.y - 65, '#93c5fd', 24);
-                    if (typeof addScreenShake === 'function') addScreenShake(4);
-                }
-            }
-
-            // ── Tick blink ambush window ──────────────────────────────
+                    if (isPhantomBlink) {
+                        // ── Leave shadow clone at departure point ──────────
+                        const shadowClone = new KaoClone(this, 0);
+                        shadowClone.x = prevX;
+                        shadowClone.y = prevY;
+                        shadowClone.alpha = 0.85;       // more visible than orbit clones
+                        this.clones.push(shadowClone);
+                        this.clonesActiveTimer = Math.max(
+                            this.clonesActiveTimer,
+                            S.cloneDuration ?? 8
+                        );
+                        // ── Ambush window at destination ───────────────────
+                        this._blinkAmbushTimer = S.phantomBlinkAmbushWindow ?? 1.5;
+                        this.ambushReady = true;
+                        // Break stealth after blink (ambush strike)
+                        this.isFreeStealthy = false;
+                        this.freeStealthTimer = 0;
+                        if (this.isInvisible) this.breakStealth();
+                        spawnFloatingText('\uD83D\uDC7B PHANTOM BLINK!', this.x, this.y - 65, '#93c5fd', 24);
+                        if (typeof addScreenShake === 'function') addScreenShake(4);
+                    }
+                } // end energy-sufficient branch
+            } // end checkInput('q') && teleportCharges > 0
             if (this._blinkAmbushTimer > 0) this._blinkAmbushTimer -= dt;
 
             // 3. Clone of Stealth (Cooldown & E Key)
@@ -394,16 +399,23 @@ class KaoPlayer extends Player {
                     this.clonesActiveTimer = 0; // force expiry block below
                     consumeInput('e');
                 } else if (this.cloneSkillCooldown <= 0) {
-                    // ── Spawn 2 orbit clones ──
-                    this.clones = [
-                        new KaoClone(this, (2 * Math.PI) / 3),
-                        new KaoClone(this, (4 * Math.PI) / 3)
-                    ];
-                    this.clonesActiveTimer = S.cloneDuration ?? 8;
-                    this.cloneSkillCooldown = this.maxCloneCooldown;
-                    spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
-                    if (typeof Audio !== 'undefined' && Audio.playClone) Audio.playClone();
-                    consumeInput('e');
+                    const cloneCost = S.cloneEnergyCost ?? 30;
+                    if ((this.energy ?? 0) < cloneCost) {
+                        spawnFloatingText('⚡ FOCUS LOW!', this.x, this.y - 50, '#facc15', 16);
+                        consumeInput('e');
+                    } else {
+                        this.energy = Math.max(0, (this.energy ?? 0) - cloneCost);
+                        // ── Spawn 2 orbit clones ──
+                        this.clones = [
+                            new KaoClone(this, (2 * Math.PI) / 3),
+                            new KaoClone(this, (4 * Math.PI) / 3)
+                        ];
+                        this.clonesActiveTimer = S.cloneDuration ?? 8;
+                        this.cloneSkillCooldown = this.maxCloneCooldown;
+                        spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, '#3b82f6', 25);
+                        if (typeof Audio !== 'undefined' && Audio.playClone) Audio.playClone();
+                        consumeInput('e');
+                    }
                 }
             }
         } else {
