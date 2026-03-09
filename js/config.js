@@ -1030,31 +1030,31 @@ const GAME_TEXTS = {
     // ══════════════════════════════════════════════════════
     skillNames: {
         // ── ทุกตัวละคร ──────────────────────────────────
-        attack: 'ยิง',
-        dash: 'พุ่งหลบ',
+        attack: 'SHOOT',
+        dash: 'DASH',
 
         // ── เก้า (KaoPlayer) ────────────────────────────
         kao: {
-            skill1: 'ซุ่มล่องหน',    // R-Click — ซ่อนตัว
-            teleport: 'เทเลพอร์ต',   // Q — เทเลพอร์ต
-            clones: 'โคลนร่าง',     // E — โคลนร่าง
-            passive: 'ซุ่มเสรี',  // passive — ซุ่มเสรี
+            skill1: 'STEALTH',      // R-Click — ซ่อนตัว
+            teleport: 'TELEPORT',   // Q — เทเลพอร์ต
+            clones: 'CLONE',        // E — โคลนร่าง
+            passive: 'FREE STEALTH', // passive
         },
 
         // ── ภูมิ (PoomPlayer) ───────────────────────────
         poom: {
-            skill1: 'กินเข่านึ่ง',    // R-Click — กินข้าวเหนียว
-            naga: 'พญานาคา',        // Q — เรียกพญานาค
-            garuda: 'ครุฑ',        // E — เรียกครุฑ
-            ritual: 'ระเบิดสังเวย',      // R — พิธีสังเวย
+            skill1: 'EAT RICE',     // R-Click — กินข้าวเหนียว
+            naga: 'NAGA',           // Q — เรียกพญานาค
+            garuda: 'GARUDA',       // E — เรียกครุฑ
+            ritual: 'RITUAL',       // R — พิธีสังเวย
         },
 
         // ── ออโต้ (AutoPlayer) ──────────────────────────
         auto: {
-            skill1: 'แสตนด์วันชัย',   // R-Click — เรียก Stand
-            vacuum: 'เกลียวความร้อน',   // Q — ดูดศัตรู + Ignite
-            detonate: 'ระเบิดความร้อน', // E — Heat-scaled blast (ไม่ยกเลิก Stand)
-            modeToggle: 'สลับโหมด',    // F — toggle Range ↔ Melee
+            skill1: 'WANCHAI',      // R-Click — เรียก Stand
+            vacuum: 'VACUUM',       // Q — ดูดศัตรู + Ignite
+            detonate: 'DETONATE',   // E — Heat-scaled blast
+            modeToggle: 'MODE',     // F — toggle Range ↔ Melee
         },
 
         // ── Utility (proximity shortcuts) ───────────────

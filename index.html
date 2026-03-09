@@ -18,6 +18,9 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e293b'/><text x='50' y='70' font-family='Arial' font-size='60' font-weight='bold' fill='%233b82f6' text-anchor='middle'>M</text></svg>">
 
     <link rel="stylesheet" href="css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
 </head>
 
 <body>
@@ -238,56 +241,70 @@
         </div>
 
         <div class="hud-bottom">
-            <div class="skill-icon">
-                <div class="key-hint">L-Click</div>⚔️
-                <div class="skill-name" id="sn-attack">ATTACK</div>
+            <!-- SHOOT — neutral, always visible -->
+            <div class="skill-icon t-neutral active">
+                <div class="key-hint" style="background:#1e293b;color:#475569;">L-Click</div>🔫
+                <div class="skill-name" id="sn-attack" style="color:#64748b;">SHOOT</div>
             </div>
-            <div class="skill-icon" id="dash-icon">
+            <!-- DASH -->
+            <div class="skill-icon t-blue" id="dash-icon">
                 <div class="key-hint">SPACE</div>💨
                 <div class="cooldown-mask" id="dash-cd"></div>
                 <div class="skill-name" id="sn-dash">DASH</div>
             </div>
-            <div class="skill-icon" id="stealth-icon">
+            <!-- R-Click skill (STEALTH / EAT RICE / WANCHAI — swapped by setupCharacterHUD) -->
+            <div class="skill-icon t-blue" id="stealth-icon">
                 <div class="key-hint" id="skill1-hint">R-Click</div>
-                <span id="skill1-emoji">📖</span>
+                <span id="skill1-emoji">👻</span>
                 <div class="cooldown-mask" id="stealth-cd"></div>
                 <div class="skill-name" id="skill1-name">STEALTH</div>
             </div>
-            <div class="skill-icon" id="naga-icon"
-                style="display:none; border-color:#10b981; box-shadow:0 0 15px rgba(16,185,129,0.4);">
-                <div class="key-hint" style="background:#10b981;">Q</div>🐉
+
+            <!-- Divider: basic | special -->
+            <div class="skill-divider" id="divider-main"></div>
+
+            <!-- Q slot: NAGA (Poom) / TELEPORT (Kao) / VACUUM (Auto) — shown by setupCharacterHUD -->
+            <div class="skill-icon t-emerald" id="naga-icon"
+                style="display:none;">
+                <div class="key-hint" style="background:#064e3b;color:#6ee7b7;">Q</div>🐉
                 <div class="cooldown-mask" id="naga-cd"></div>
                 <span id="naga-timer"></span>
                 <div class="skill-name" id="sn-naga" style="color:#6ee7b7;">NAGA</div>
             </div>
             <!-- Ritual Burst slot — Poom-exclusive, shown by setupCharacterHUD -->
-            <div class="skill-icon" id="ritual-icon"
-                style="display:none; border-color:#00ff88; box-shadow:0 0 15px rgba(0,255,136,0.4);">
-                <div class="key-hint" style="background:#00ff88;color:#0a1a0f;">R</div>🌾
+            <div class="skill-icon t-emerald" id="ritual-icon"
+                style="display:none;">
+                <div class="key-hint" style="background:#064e3b;color:#6ee7b7;">R</div>🌾
                 <div class="cooldown-mask" id="ritual-cd"></div>
                 <span id="ritual-timer"></span>
-                <div class="skill-name" id="sn-ritual" style="color:#86efac;">RITUAL</div>
+                <div class="skill-name" id="sn-ritual" style="color:#6ee7b7;">RITUAL</div>
             </div>
-            <div class="skill-icon" id="passive-skill">
+
+            <!-- Passive unlock slot -->
+            <div class="skill-icon t-gold" id="passive-skill">
                 <div style="font-size:20px;">✨</div>
-                <div class="skill-name" id="sn-passive">ซุ่มเสรี</div>
+                <div class="skill-name" id="sn-passive">FREE STEALTH</div>
             </div>
-            <!-- Database shortcut icon -->
-            <div class="skill-icon" id="db-hud-icon"
-                style="display:none; border-color:#06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.35);">
-                <div class="key-hint" style="background:#06b6d4;color:#0c1a2e;">E</div>🗄️
+
+            <!-- Divider: skills | shortcuts (shown when any shortcut is visible) -->
+            <div class="skill-divider" id="divider-util" style="display:none;"></div>
+
+            <!-- Database shortcut -->
+            <div class="skill-icon t-blue" id="db-hud-icon"
+                style="display:none;">
+                <div class="key-hint" style="background:#0c4a6e;color:#7dd3fc;">E</div>🗄️
                 <div class="skill-name" id="sn-database" style="color:#67e8f9;">DATABASE</div>
             </div>
-            <!-- Admin Console shortcut icon -->
+            <!-- Admin Console shortcut -->
             <div class="skill-icon" id="console-hud-icon"
-                style="display:none; border-color:#00ff41; box-shadow:0 0 15px rgba(0,255,65,0.35);">
-                <div class="key-hint" style="background:#00ff41;color:#001a08;">F</div>💻
-                <div class="skill-name" id="sn-terminal" style="color:#00ff41;">TERMINAL</div>
+                style="display:none; border-color:rgba(0,255,65,0.38); box-shadow:0 2px 10px rgba(0,0,0,0.7);">
+                <div class="key-hint" style="background:#052e16;color:#4ade80;">F</div>💻
+                <div class="skill-name" id="sn-terminal" style="color:#4ade80;">TERMINAL</div>
             </div>
-            <!-- Shop shortcut icon -->
+            <!-- Shop shortcut -->
             <div class="skill-icon" id="shop-hud-icon"
-                style="display:none; border-color:#facc15; box-shadow:0 0 15px rgba(250,204,21,0.35);">
-                <div class="key-hint" style="background:#facc15;color:#0f172a;">B</div>🛒
+                style="display:none; border-color:rgba(250,204,21,0.38); box-shadow:0 2px 10px rgba(0,0,0,0.7);">
+                <div class="key-hint" style="background:#713f12;color:#fde68a;">B</div>🛒
                 <div class="skill-name" id="sn-shop" style="color:#fef08a;">SHOP</div>
             </div>
         </div>

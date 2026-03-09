@@ -675,6 +675,20 @@ class UIManager {
         const weaponIndicator = document.querySelector('.weapon-indicator');
         if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
 
+        // ── Apply per-character color theme to shared HUD slots ───────────────
+        // dash-icon + stealth-icon share between chars — recolor on every setupCharacterHUD call
+        const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
+        const _applyTheme = (id, theme) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            _THEME_CLASSES.forEach(c => el.classList.remove(c));
+            el.classList.add(theme);
+        };
+        const charTheme = isAuto ? 't-red' : isPoom ? 't-emerald' : 't-blue';
+        _applyTheme('dash-icon',    charTheme);
+        _applyTheme('stealth-icon', charTheme);  // also covers eat-icon / wanchai (same element, id swapped later)
+        // Show divider-util when any shortcut icon becomes visible — handled per-use below
+
         const playerAvatar = document.getElementById('player-avatar');
         // Swap HUD portrait SVG
         const hudSvg = document.getElementById('hud-portrait-svg');
@@ -727,22 +741,22 @@ class UIManager {
             if (isPoom) {
                 skill1El.id = 'eat-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '🍚';
+                if (emojiEl) emojiEl.textContent = '🍱';
                 const hintEl = document.getElementById('skill1-hint');
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'eat-cd';
-                nameEl.textContent = SN.poom?.skill1 ?? 'กินข้าว';
-                nameEl.style.color = '#fcd34d';
+                nameEl.textContent = 'EAT RICE';
+                nameEl.style.color = '#6ee7b7';
             } else if (isAuto) {
                 skill1El.id = 'stealth-icon';
                 const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '🔥';
+                if (emojiEl) emojiEl.textContent = '💢';
                 const hintEl = document.getElementById('skill1-hint');
                 if (hintEl) hintEl.textContent = 'R-Click';
                 const cdEl = skill1El.querySelector('.cooldown-mask');
                 if (cdEl) cdEl.id = 'stealth-cd';
-                nameEl.textContent = SN.auto?.skill1 ?? 'WANCHAI';
+                nameEl.textContent = 'WANCHAI';
                 nameEl.style.color = '#fca5a5';
             } else if (isKao) {
                 skill1El.id = 'stealth-icon';
@@ -890,7 +904,7 @@ class UIManager {
                 garudaSlot.innerHTML = `
                     <div class="key-hint" style="background:#f97316;color:#1a0505;">E</div>
                     <span>🦅</span>
-                    <div class="skill-name" style="color:#fdba74;font-size:9px;letter-spacing:0.02em;">${(GAME_TEXTS.skillNames?.poom?.garuda) || 'อัญเชิญครุฑ'}</div>
+                    <div class="skill-name" style="color:#fdba74;font-size:9px;letter-spacing:0.02em;">${(GAME_TEXTS.skillNames?.poom?.garuda) || 'GARUDA'}</div>
                     <div class="cooldown-mask" id="garuda-cd"></div>`;
                 const passiveRef = document.getElementById('passive-skill');
                 if (passiveRef && passiveRef.parentNode === hudBottom) {
@@ -1037,7 +1051,7 @@ class UIManager {
                     } else {
                         // คืนชื่อสกิลตาม config
                         const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
-                        nameEl.textContent = SN.auto?.skill1 ?? 'WANCHAI';
+                        nameEl.textContent = 'WANCHAI';
                         nameEl.style.color = '#fca5a5';
                     }
                 }

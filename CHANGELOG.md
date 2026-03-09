@@ -4,6 +4,35 @@
 
 ---
 
+## v3.27.8 — UI Language & Theme Updates
+*Released: March 9, 2026*
+
+### 🌐 Language Localization
+- **English Skill Names**: Converted all skill names from Thai to English for better accessibility
+- **Character Skills**: Updated Kao (STEALTH/TELEPORT/CLONE), Poom (EAT RICE/NAGA/GARUDA/RITUAL), Auto (WANCHAI/VACUUM/DETONATE/MODE)
+- **UI Text**: Changed attack/dash/passive labels to English (SHOOT/DASH/FREE STEALTH)
+
+### 🎨 Character-Specific Color Themes
+- **Kao (Blue)**: Blue theme with #3b82f6 accents and pulseBlue animation
+- **Poom (Emerald)**: Emerald theme with #10b981 accents and pulseEmerald animation  
+- **Auto (Red)**: Red theme with #dc2626 accents and pulseRed animation
+- **Passive (Gold)**: Gold theme with enhanced pulseGold animation
+- **Dynamic Theme Application**: Shared HUD slots (dash/stealth) recolored based on active character
+
+### 🎯 HUD Visual Improvements
+- **Share Tech Mono Font**: Added monospace font for skill names and key hints for better readability
+- **Enhanced Cooldown Visuals**: New cd-arc-overlay, cd-timer-text, and skill-lock overlays
+- **Improved Skill Icons**: Better spacing, uppercase text, and enhanced shadows
+- **Divider Elements**: Added visual separators between basic/special skills and skills/shortcuts
+- **Wanchai Active State**: Special crimson throb animation for active Stand
+
+### 🔧 Technical Updates
+- **Preconnect Fonts**: Added Google Fonts preconnect for faster loading
+- **CSS Refinements**: Updated skill styling, animations, and responsive elements
+- **DOM Structure**: Improved HTML structure for better theme application
+
+---
+
 ## v3.27.7 — UI Cooldown Bug Fixes
 *Released: March 9, 2026*
 

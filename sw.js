@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.27.7'; // v3.27.7: UI Cooldown Bug Fixes - Fixed dynamic cooldown display for Auto's vacuum/standPull, corrected DOM element IDs, fixed Poom's garuda cooldown, added missing Kao dash/stealth cooldown displays
+const CACHE_NAME = 'mtc-cache-v3.27.8'; // v3.27.8: UI Language & Theme Updates - Converted skill names from Thai to English, added character-specific color themes (blue/emerald/red), improved HUD styling with Share Tech Mono font, enhanced cooldown visuals
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

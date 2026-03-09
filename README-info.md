@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.27.7 | **Latest Update:** UI cooldown bug fixes - fixed dynamic cooldown display for Auto's vacuum/standPull, corrected DOM element IDs, fixed Poom's garuda cooldown, added missing Kao dash/stealth cooldown displays
+> **Current Version:** Beta v3.27.8 | **Latest Update:** UI Language & Theme Updates - Converted skill names from Thai to English, added character-specific color themes (blue/emerald/red), improved HUD styling with Share Tech Mono font, enhanced cooldown visuals
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
