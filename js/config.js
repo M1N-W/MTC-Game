@@ -1407,6 +1407,22 @@ const MAP_CONFIG = {
             bookGloss: 'rgba(255,255,255,0.2)',
             bookShadow: 'rgba(0,0,0,0.3)',
         },
+        wall: {
+            topCap: 'rgba(255,255,255,0.10)',
+            topCapSub: 'rgba(255,255,255,0.04)',
+            sideFace: 'rgba(0,0,0,0.35)',
+            brickAlt: 'rgba(0,0,0,0.28)',
+            brickHighlight: 'rgba(255,255,255,0.025)',
+            cornerPost: 'rgba(255,255,255,0.06)',
+            damageSpot: 'rgba(0,0,0,0.20)',
+        },
+        mtcwall: {
+            base: '#080c12',
+            borderRgb: '217,119,6',
+            panelLine: 'rgba(30,20,5,0.6)',
+            rivetAlphaBase: 0.5,
+            pulseSpeed: 300,
+        },
     },
 
     // ── Zone Floor Themes ──────────────────────────────────────

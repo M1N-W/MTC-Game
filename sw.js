@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.27.5'; // v3.27.5: Major Map Refactor - Fixed MTC Citadel approach blocking, moved Zone A servers east to avoid Database overlap, cleaned up datapillars and courtyard trees, ensured clear building entrances
+const CACHE_NAME = 'mtc-cache-v3.27.6'; // v3.27.6: Visual Enhancements - Improved wall and MTC wall rendering with 3D effects, enhanced desk shadows, added green lighting for trees, simplified Database UI to use MapObject rendering
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

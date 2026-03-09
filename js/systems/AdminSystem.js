@@ -966,77 +966,40 @@ window.addEventListener('focus', () => {
 // ══════════════════════════════════════════════════════════════
 
 function drawDatabaseServer() {
+    // ── Visual ถูกแทนที่ด้วย MapObject 'database' แล้ว ──
+    // เหลือแค่ proximity aura ring เพื่อบอกผู้เล่นว่าเข้า interact ได้
+    // (pattern เดียวกับ drawShopObject ใน ShopSystem.js)
+    if (!window.player) return;
     const cfg = BALANCE.database;
     const screen = worldToScreen(cfg.x, cfg.y);
-    const t = performance.now() / cfg.glowSpeedMs;
+    const t = _mapNow / cfg.glowSpeedMs;
     const glow = Math.abs(Math.sin(t)) * 0.5 + 0.5;
 
-    if (player) {
-        const d = dist(player.x, player.y, cfg.x, cfg.y);
-        if (d < cfg.interactionRadius * 2) {
-            const alpha = Math.max(0, 1 - d / (cfg.interactionRadius * 2));
+    const d = dist(window.player.x, window.player.y, cfg.x, cfg.y);
+    if (d < cfg.interactionRadius * 2.5) {
+        const alpha = Math.max(0, 1 - d / (cfg.interactionRadius * 2.5));
+        CTX.save();
+        CTX.globalAlpha = alpha * cfg.auraAlphaMult * glow;
+        CTX.strokeStyle = cfg.auraColor;
+        CTX.lineWidth = cfg.auraLineWidth;
+        CTX.setLineDash(cfg.auraDash);
+        CTX.beginPath();
+        CTX.arc(screen.x, screen.y, cfg.interactionRadius, 0, Math.PI * 2);
+        CTX.stroke();
+        CTX.setLineDash([]);
+        CTX.restore();
+
+        // "[F] ACCESS" label เมื่อใกล้ enough
+        if (d < cfg.interactionRadius * 1.2) {
             CTX.save();
-            CTX.globalAlpha = alpha * cfg.auraAlphaMult * glow;
-            CTX.strokeStyle = cfg.auraColor;
-            CTX.lineWidth = cfg.auraLineWidth;
-            CTX.setLineDash(cfg.auraDash);
-            CTX.beginPath();
-            CTX.arc(screen.x, screen.y, cfg.interactionRadius, 0, Math.PI * 2);
-            CTX.stroke();
-            CTX.setLineDash([]);
+            CTX.globalAlpha = Math.max(0, 1 - d / cfg.interactionRadius) * (0.7 + glow * 0.3);
+            CTX.fillStyle = cfg.labelColor;
+            CTX.font = 'bold 11px Orbitron,monospace';
+            CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+            CTX.fillText('[F] ACCESS DATABASE', screen.x, screen.y - cfg.interactionRadius - 12);
             CTX.restore();
         }
     }
-
-    CTX.fillStyle = 'rgba(0,0,0,0.35)';
-    CTX.beginPath();
-    CTX.ellipse(screen.x, screen.y + 28, 18, 7, 0, 0, Math.PI * 2);
-    CTX.fill();
-
-    CTX.save();
-    CTX.translate(screen.x, screen.y);
-    CTX.shadowBlur = cfg.glowBlurMax * glow;
-    CTX.shadowColor = cfg.glowColor;
-
-    CTX.fillStyle = '#0c1a2e';
-    CTX.strokeStyle = cfg.auraColor;
-    CTX.lineWidth = 2;
-    CTX.beginPath();
-    CTX.roundRect(-18, -26, 36, 50, 5);
-    CTX.fill();
-    CTX.stroke();
-
-    for (let i = 0; i < 3; i++) {
-        CTX.fillStyle = '#0f2744';
-        CTX.fillRect(-14, -20 + i * 14, 28, 10);
-
-        CTX.fillStyle = i === 0 ? '#22c55e' : '#0e7490';
-        CTX.fillRect(-12, -18 + i * 14, 10, 6);
-
-        CTX.fillStyle = i === 1 ? `rgba(6,182,212,${glow})` : '#22c55e';
-        CTX.shadowBlur = 6;
-        CTX.shadowColor = i === 1 ? '#06b6d4' : '#22c55e';
-        CTX.beginPath();
-        CTX.arc(10, -15 + i * 14, 3.5, 0, Math.PI * 2);
-        CTX.fill();
-    }
-
-    const tGlow = Math.abs(Math.sin(performance.now() / 400)) * 0.6 + 0.4;
-    CTX.fillStyle = `rgba(0,255,65,${tGlow})`;
-    CTX.shadowBlur = 8;
-    CTX.shadowColor = '#00ff41';
-    CTX.beginPath();
-    CTX.arc(-10, 15, 3, 0, Math.PI * 2);
-    CTX.fill();
-
-    CTX.shadowBlur = 0;
-    CTX.fillStyle = cfg.labelColor;
-    CTX.font = cfg.labelFont;
-    CTX.textAlign = 'center';
-    CTX.textBaseline = 'middle';
-    CTX.fillText(cfg.labelText, 0, 33);
-
-    CTX.restore();
 }
 
 function updateDatabaseServerUI() {

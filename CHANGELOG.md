@@ -4,6 +4,43 @@
 
 ---
 
+## v3.27.6 — Visual Enhancements & Rendering Improvements
+*Released: March 9, 2026*
+
+### 🎨 Wall Rendering Overhaul
+- **3D Depth Effects**: Added side-face rendering and proper depth shadows to wall objects
+- **Enhanced Brick Patterns**: Improved 2-tone mortar rendering with proper brick highlights and shadows
+- **Metal Top Caps**: Added metallic edge highlights and corner posts for realistic wall appearance
+- **Damage Textures**: Enhanced moss/damage spot rendering with better integration
+
+### 🏰 MTC Wall Visual Upgrade
+- **Advanced Panel System**: Added panel separation lines and circuit trace patterns
+- **Pulsing Neon Effects**: Enhanced gold neon borders with dynamic pulsing and shadow effects
+- **Rivet Details**: Added corner rivet dots with synchronized pulsing animations
+- **Improved Base Rendering**: Better color depth and panel line organization
+
+### 🪑 Furniture Shadow Enhancement
+- **Desk Shadow System**: Added bottom edge shadows and left-face shadows for 3D depth perception
+- **Realistic Depth**: Improved furniture rendering with proper shadow placement and opacity
+
+### 🌳 Dynamic Lighting System
+- **Green Tree Lighting**: Added dedicated green-tinted lighting for tree objects (radius: 45px)
+- **Warm Server Lighting**: Changed server rack lighting from cool blue to warm orange for better visual hierarchy
+- **Enhanced Light Types**: Added 'green' light type with proper color gradients and falloff
+
+### 🖥️ Database UI Simplification
+- **MapObject Integration**: Replaced custom Database rendering with standardized MapObject 'database' type
+- **Proximity Aura System**: Simplified to use only proximity ring and "[F] ACCESS" label (consistent with Shop pattern)
+- **Performance Optimization**: Removed complex custom rendering in favor of efficient MapObject system
+- **Visual Consistency**: Database now follows same interaction pattern as other map buildings
+
+### 🧹 Code Cleanup
+- **Whitespace Normalization**: Cleaned up spacing inconsistencies in coordinate arrays
+- **Rendering Optimization**: Streamlined Database UI to reduce rendering overhead
+- **Color Palette Expansion**: Added dedicated color schemes for wall and mtcwall objects in config
+
+---
+
 ## v3.27.5 — Major Map Refactor & Blocking Issues Fix
 *Released: March 9, 2026*
 

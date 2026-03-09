@@ -25,6 +25,11 @@ function drawDesk(w, h) {
     CTX.fillStyle = dp.screenGlow;
     CTX.beginPath(); CTX.roundRect(3, 2, w - 6, 6, 2); CTX.fill();
     CTX.fillStyle = pal.deskLegs; CTX.fillRect(4, h, 6, 6); CTX.fillRect(w - 10, h, 6, 6);
+    // Bottom + left edge shadow (depth)
+    CTX.fillStyle = 'rgba(0,0,0,0.30)';
+    CTX.fillRect(0, h - 3, w, 3);
+    CTX.fillStyle = 'rgba(0,0,0,0.15)';
+    CTX.fillRect(0, 0, 2, h);
     CTX.fillStyle = dp.monitorBody;
     CTX.beginPath(); CTX.roundRect(Math.floor(w * .1), Math.floor(h * .2), Math.floor(w * .45), Math.floor(h * .55), 2); CTX.fill();
     CTX.fillStyle = dp.monitorText;
@@ -477,21 +482,45 @@ class MapObject {
 
     drawMTCWall() {
         const now = _mapNow;
-        CTX.fillStyle = '#0a0c0e'; // Dark near-black base
-        CTX.beginPath(); CTX.roundRect(0, 0, this.w, this.h, 4); CTX.fill();
+        const W = this.w, H = this.h;
+        const isHoriz = W > H;
+        const pulse = 0.5 + Math.sin(now / 300) * 0.5;
 
-        CTX.strokeStyle = '#d97706'; CTX.lineWidth = 2; // Gold neon border
+        // Base
+        CTX.fillStyle = '#080c12';
+        CTX.beginPath(); CTX.roundRect(0, 0, W, H, 3); CTX.fill();
+
+        // Gold neon border
+        CTX.strokeStyle = `rgba(217,119,6,${0.6 + pulse * 0.3})`;
+        CTX.lineWidth = 1.5;
+        CTX.beginPath(); CTX.roundRect(0, 0, W, H, 3); CTX.stroke();
+
+        // Panel separation lines
+        CTX.strokeStyle = 'rgba(30,20,5,0.6)';
+        CTX.lineWidth = 1;
+        CTX.beginPath();
+        if (isHoriz) {
+            const step = Math.max(30, Math.floor(W / 4));
+            for (let x = step; x < W - 4; x += step) { CTX.moveTo(x, 3); CTX.lineTo(x, H - 3); }
+        } else {
+            const step = Math.max(20, Math.floor(H / 4));
+            for (let y = step; y < H - 4; y += step) { CTX.moveTo(3, y); CTX.lineTo(W - 3, y); }
+        }
         CTX.stroke();
 
-        // Pulsing neon strip in the middle
-        const pulse = 0.5 + Math.sin(now / 300) * 0.5;
-        CTX.fillStyle = `rgba(217, 119, 6, ${0.3 + pulse * 0.5})`;
+        // Circuit trace + neon strip
+        CTX.strokeStyle = `rgba(217,119,6,${0.25 + pulse * 0.40})`;
+        CTX.lineWidth = 2;
+        CTX.shadowBlur = 8; CTX.shadowColor = '#d97706';
+        CTX.beginPath();
+        if (isHoriz) { CTX.moveTo(10, H / 2); CTX.lineTo(W - 10, H / 2); }
+        else { CTX.moveTo(W / 2, 10); CTX.lineTo(W / 2, H - 10); }
+        CTX.stroke(); CTX.shadowBlur = 0;
 
-        if (this.w > this.h) { // Horizontal wall
-            CTX.fillRect(10, this.h / 2 - 2, this.w - 20, 4);
-        } else { // Vertical wall
-            CTX.fillRect(this.w / 2 - 2, 10, 4, this.h - 20);
-        }
+        // Rivet dots at corners
+        CTX.fillStyle = `rgba(217,119,6,${0.5 + pulse * 0.3})`;
+        const rv = [[3, 3], [W - 5, 3], [3, H - 5], [W - 5, H - 5]];
+        for (const [rx, ry] of rv) { CTX.beginPath(); CTX.arc(rx, ry, 2, 0, Math.PI * 2); CTX.fill(); }
     }
 
     drawChair() {
@@ -556,32 +585,51 @@ class MapObject {
 
     drawWall() {
         const pal = BALANCE.map.mapColors;
-        // Drop shadow (drawn before base so it sits beneath)
-        CTX.fillStyle = 'rgba(0,0,0,0.40)';
-        CTX.fillRect(4, 5, this.w, this.h);
-        // Base + top highlight
-        CTX.fillStyle = pal.wallColor;
-        CTX.fillRect(0, 0, this.w, this.h);
-        CTX.fillStyle = 'rgba(255,255,255,0.06)';
-        CTX.fillRect(0, 0, this.w, 3);
+        const W = this.w, H = this.h;
+        const faceW = Math.min(6, Math.floor(W * 0.12));
 
-        // Brick pattern — single batch stroke
-        CTX.strokeStyle = pal.wallBrick; CTX.lineWidth = 1;
-        CTX.beginPath();
-        for (let y = 0; y < this.h; y += 20) {
-            const offset = (Math.floor(y / 20) % 2) * 25;
-            for (let x = -25; x < this.w + 25; x += 50) {
-                CTX.rect(x + offset, y, 50, 20);
-            }
+        // Drop shadow
+        CTX.fillStyle = 'rgba(0,0,0,0.45)';
+        CTX.fillRect(4, 5, W, H);
+
+        // ── 3D side face (right edge depth) ──
+        CTX.fillStyle = 'rgba(0,0,0,0.35)';
+        CTX.fillRect(W - faceW, 0, faceW, H);
+
+        // Base face
+        CTX.fillStyle = pal.wallColor;
+        CTX.fillRect(0, 0, W - faceW, H);
+
+        // ── Brick rows — 2-tone mortar ──
+        const seed = W * 7 + H * 13;
+        CTX.lineWidth = 0.8;
+        for (let row = 0; row < Math.ceil(H / 20); row++) {
+            const ry = row * 20;
+            const offset = (row % 2) * 25;
+            CTX.strokeStyle = row % 2 === 0 ? pal.wallBrick : 'rgba(0,0,0,0.28)';
+            CTX.beginPath();
+            for (let bx = -25; bx < W + 25; bx += 50) { CTX.rect(bx + offset, ry, 50, 20); }
+            CTX.stroke();
+            // Subtle brick face highlight (top edge each brick)
+            CTX.fillStyle = 'rgba(255,255,255,0.025)';
+            CTX.fillRect(0, ry + 1, W - faceW, 2);
         }
-        CTX.stroke();
+
+        // ── Top cap — metal edge ──
+        CTX.fillStyle = 'rgba(255,255,255,0.10)';
+        CTX.fillRect(0, 0, W - faceW, 4);
+        CTX.fillStyle = 'rgba(255,255,255,0.04)';
+        CTX.fillRect(0, 4, W - faceW, 2);
+
+        // ── Left corner post ──
+        CTX.fillStyle = 'rgba(255,255,255,0.06)';
+        CTX.fillRect(0, 0, 3, H);
 
         // Moss/damage spots — deterministic (no Math.random in draw)
-        CTX.fillStyle = 'rgba(0,0,0,0.18)';
-        const seed = this.w * 7 + this.h * 13;
+        CTX.fillStyle = 'rgba(0,0,0,0.20)';
         for (let i = 0; i < 4; i++) {
-            const px = ((seed * (i + 1) * 31) % (this.w - 8)) + 2;
-            const py = ((seed * (i + 1) * 17) % (this.h - 8)) + 2;
+            const px = ((seed * (i + 1) * 31) % (W - faceW - 8)) + 2;
+            const py = ((seed * (i + 1) * 17) % (H - 8)) + 2;
             CTX.fillRect(px, py, 6 + (i % 3) * 3, 4 + (i % 2) * 3);
         }
     }
@@ -1183,25 +1231,25 @@ class MapSystem {
         // x ≥ 680 — clear of database east edge (x=560) + east corridor wall (x=418)
         // MOVED FURTHER EAST to avoid visual overlap with database
         createAisles(720, -580, 4, 3, 120, 150, 'server', 0, 0);   // NE cluster (moved +40px)
-        createAisles(720,   60, 3, 3, 120, 150, 'server', 0, 0);   // SE cluster (moved +40px)
+        createAisles(720, 60, 3, 3, 120, 150, 'server', 0, 0);   // SE cluster (moved +40px)
         createAisles(1100, -500, 3, 2, 120, 150, 'server', 0, 0);  // Far-East cluster (moved +40px)
         // Data pillars as zone markers — moved further east to clear database zone
         createAisles(680, -550, 3, 1, 0, 160, 'datapillar');  // West edge of zone A (moved +40px)
-        createAisles(680,  80, 2, 1, 0, 160, 'datapillar');   // South section (moved +40px)
+        createAisles(680, 80, 2, 1, 0, 160, 'datapillar');   // South section (moved +40px)
 
         // ── 5. ZONE B: Library Archives (West) ───────────────────
         // x ≤ -680 — clear of west corridor wall (x=-418), gap ≥ 262px
         createAisles(-680, -570, 5, 2, -240, 120, 'bookshelf', 0, 0);  // NW shelves
-        createAisles(-680,   60, 4, 2, -240, 120, 'bookshelf', 0, 0);  // SW shelves
+        createAisles(-680, 60, 4, 2, -240, 120, 'bookshelf', 0, 0);  // SW shelves
         // Study desks between shelf rows — stay at x=-880 to -950
         createAisles(-880, -550, 4, 1, 0, 120, 'desk');  // NW desks
-        createAisles(-880,   80, 3, 1, 0, 120, 'desk');  // SW desks
+        createAisles(-880, 80, 3, 1, 0, 120, 'desk');  // SW desks
 
         // ── 6. ZONE C: Courtyard (South) ─────────────────────────
         // y ≥ 580 — clear of shop (shopY+110=545) + shop approach (y∈[340,445])
         // MOVED FURTHER SOUTH to avoid shop approach interference
         createAisles(-750, 630, 2, 4, 200, 180, 'tree', 12, 1.0);  // SW courtyard (moved +50px)
-        createAisles( 250, 630, 2, 4, 185, 180, 'tree', 10, 2.0);  // SE courtyard (moved +50px)
+        createAisles(250, 630, 2, 4, 185, 180, 'tree', 10, 2.0);  // SE courtyard (moved +50px)
 
         // ... (rest of the code remains the same)
 
@@ -1213,11 +1261,11 @@ class MapSystem {
         // North: REMOVED - no vending inside citadel corridor (was blocking)
         const vendingSpots = [
             { x: 540, y: -260 },   // East gate upper (moved +20px)
-            { x: 540, y:  130 },   // East gate lower (moved +20px)
+            { x: 540, y: 130 },   // East gate lower (moved +20px)
             { x: -570, y: -260 },  // West gate upper (moved -20px)
-            { x: -570, y:  130 },  // West gate lower (moved -20px)
-            { x: -210, y:  390 },  // South approach left (moved +30px)
-            { x:  165, y:  390 },  // South approach right (moved +30px)
+            { x: -570, y: 130 },  // West gate lower (moved -20px)
+            { x: -210, y: 390 },  // South approach left (moved +30px)
+            { x: 165, y: 390 },  // South approach right (moved +30px)
         ];
         for (const vs of vendingSpots) {
             this.objects.push(new MapObject(vs.x, vs.y, 40, 70, 'vendingmachine'));
@@ -1227,13 +1275,13 @@ class MapSystem {
         // Placed at zone entrances as visual landmarks, NOT inside any clear zone
         // East entrance trees: x=540-580 (east of gap), y outside gate gaps
         this.objects.push(new MapObject(550, -310, 50, 50, 'tree'));   // NE approach tree (moved +20px)
-        this.objects.push(new MapObject(550,  190, 50, 50, 'tree'));   // SE approach tree (moved +20px)
+        this.objects.push(new MapObject(550, 190, 50, 50, 'tree'));   // SE approach tree (moved +20px)
         // West entrance trees: x=-630 to -660 (west of gap)
         this.objects.push(new MapObject(-630, -310, 50, 50, 'tree'));  // West approach tree (moved -20px)
-        this.objects.push(new MapObject(-630,  190, 50, 50, 'tree'));  // West approach tree (moved -20px)
+        this.objects.push(new MapObject(-630, 190, 50, 50, 'tree'));  // West approach tree (moved -20px)
         // Citadel flanking trees: MOVED OUTSIDE walled corridor completely
         // Original y=-440 was INSIDE the walled corridor (y∈[-480,-370]) - BLOCKING!
-        this.objects.push(new MapObject( 230, -510, 50, 50, 'tree'));   // East flank (moved south)
+        this.objects.push(new MapObject(230, -510, 50, 50, 'tree'));   // East flank (moved south)
         this.objects.push(new MapObject(-280, -510, 50, 50, 'tree'));   // West flank (moved south)
 
         // ... (rest of the code remains the same)
@@ -1242,9 +1290,9 @@ class MapSystem {
         // Placed at tactical chokepoints, tooClose check prevents overlap
         const barrelSpots = [
             // East zone interior
-            { x: 820, y: -220 }, { x: 820, y:  80 },
+            { x: 820, y: -220 }, { x: 820, y: 80 },
             // West zone interior
-            { x: -840, y: -220 }, { x: -840, y:  80 },
+            { x: -840, y: -220 }, { x: -840, y: 80 },
             // East gate approach (just inside zone A, not in clear gap)
             { x: 560, y: -50 },
             // West gate approach
@@ -1636,6 +1684,7 @@ class MapSystem {
             let tInner, tOuter;
             if (type === 'warm') { tInner = `rgba(255,190,70,${tAlpha})`; tOuter = 'rgba(255,140,30,0)'; }
             else if (type === 'cool') { tInner = `rgba(60,220,255,${tAlpha})`; tOuter = 'rgba(0,180,255,0)'; }
+            else if (type === 'green') { tInner = `rgba(74,222,128,${tAlpha})`; tOuter = 'rgba(34,197,94,0)'; }
             else { tInner = `rgba(210,225,255,${tAlpha * .7})`; tOuter = 'rgba(180,205,255,0)'; }
             const tint = lctx.createRadialGradient(x, y, 0, x, y, tintR);
             tint.addColorStop(0, tInner); tint.addColorStop(1, tOuter);
@@ -1659,7 +1708,8 @@ class MapSystem {
                 if (sp.y + MAX_LIGHT_RADIUS < 0 || sp.y - MAX_LIGHT_RADIUS > lc.height) continue;
             }
             if (obj.type === 'datapillar') punchLight(obj.x + obj.w * .5, obj.y - 5, L.dataPillarLightRadius, 'cool');
-            else if (obj.type === 'server') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .4, L.serverRackLightRadius, 'cool');
+            else if (obj.type === 'server') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .4, L.serverRackLightRadius, 'warm');
+            else if (obj.type === 'tree') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .2, 45, 'green');
             else if (obj.type === 'database') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .3, L.mtcServerLightRadius, 'warm');
             else if (obj.type === 'coopstore') punchLight(obj.x + obj.w * .5, obj.y + obj.h * .3, L.shopLightRadius, 'warm');
         }
