@@ -542,46 +542,113 @@ class WanchaiStand {
             ctx.fillStyle = ht >= 2 ? '#3d1a00' : '#082f49'; ctx.globalAlpha = 0.75;
             ctx.beginPath(); ctx.roundRect(-4, hy + 10, 8, 7, 1); ctx.fill();
 
-            // ── MONGKHON CROWN — 3 pointed spikes + band base ──
-            const mkCol = ht >= 2 ? '#f59e0b' : '#38bdf8';
-            const mkColDim = ht >= 2 ? '#92400e' : '#075985';
-            const mkBandY = hy - 4;   // band sits across forehead
-            ctx.shadowBlur = 10; ctx.shadowColor = mkCol;
+            // ── MONGKHON CROWN — tiered band + 5 tapered spikes + jewel ──
+            const mkCol = ht >= 2 ? '#f59e0b' : '#22d3ee';
+            const mkColMid = ht >= 2 ? '#b45309' : '#0891b2';
+            const mkColDim = ht >= 2 ? '#78350f' : '#164e63';
+            const mkGlow = ht >= 2 ? '#fbbf24' : '#67e8f9';
+            const mkBandY = hy - 5;           // band top edge
+            const mkBandH = 6;                // band height
+            const mkPulse = 0.75 + Math.sin(t * 2.8) * 0.25;
 
-            // Band base — wraps around forehead
-            ctx.fillStyle = mkColDim; ctx.globalAlpha = 0.90;
-            ctx.beginPath(); ctx.roundRect(-13, mkBandY, 26, 5, 2); ctx.fill();
-            // Band highlight stripe
-            ctx.fillStyle = mkCol; ctx.globalAlpha = 0.55;
-            ctx.beginPath(); ctx.roundRect(-12, mkBandY + 0.5, 24, 2, 1); ctx.fill();
+            ctx.shadowBlur = 16 * mkPulse; ctx.shadowColor = mkGlow;
 
-            // 3 crown spikes (center tallest)
-            ctx.fillStyle = mkCol; ctx.globalAlpha = 0.92;
+            // ── Band: 3-layer (dark base → colour fill → bright rim) ──────────
+            ctx.fillStyle = mkColDim; ctx.globalAlpha = 0.95;
+            ctx.beginPath(); ctx.roundRect(-14, mkBandY, 28, mkBandH, 3); ctx.fill();
+
+            const bandG = ctx.createLinearGradient(-14, 0, 14, 0);
+            bandG.addColorStop(0, mkColDim);
+            bandG.addColorStop(0.3, mkCol);
+            bandG.addColorStop(0.5, mkGlow);
+            bandG.addColorStop(0.7, mkCol);
+            bandG.addColorStop(1, mkColDim);
+            ctx.fillStyle = bandG; ctx.globalAlpha = 0.90;
+            ctx.beginPath(); ctx.roundRect(-13, mkBandY + 1, 26, mkBandH - 2, 2); ctx.fill();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 0.9;
+            ctx.globalAlpha = 0.70;
+            ctx.beginPath(); ctx.roundRect(-13, mkBandY + 1, 26, 1.8, 1); ctx.fill();
+
+            // ── 5 Spikes — concave-sided, gradient, gleam + tip dot ──────────
+            ctx.globalAlpha = 1.0;
             const mkSpikes = [
-                { x: 0, h: 9, w: 3.2 },   // center — tallest
-                { x: -7, h: 6, w: 2.6 },   // left
-                { x: 7, h: 6, w: 2.6 },   // right
+                { x: 0, h: 16, w: 3.8 },   // center  — tallest
+                { x: -6, h: 12, w: 3.2 },   // inner L
+                { x: 6, h: 12, w: 3.2 },   // inner R
+                { x: -11, h: 8, w: 2.5 },   // outer L
+                { x: 11, h: 8, w: 2.5 },   // outer R
             ];
             for (const sp of mkSpikes) {
-                const spBase = mkBandY;
+                const bY = mkBandY + 1;
+                const tipY = bY - sp.h;
+
+                const spG = ctx.createLinearGradient(sp.x, bY, sp.x, tipY);
+                spG.addColorStop(0, mkColDim);
+                spG.addColorStop(0.35, mkColMid);
+                spG.addColorStop(0.75, mkCol);
+                spG.addColorStop(1, mkGlow);
+                ctx.fillStyle = spG;
+                ctx.shadowBlur = 12 * mkPulse; ctx.shadowColor = mkGlow;
+                ctx.globalAlpha = 0.95;
+
                 ctx.beginPath();
-                ctx.moveTo(sp.x - sp.w, spBase);             // bottom-left
-                ctx.lineTo(sp.x, spBase - sp.h);       // tip
-                ctx.lineTo(sp.x + sp.w, spBase);             // bottom-right
-                ctx.closePath(); ctx.fill();
-                // inner gleam line on each spike
-                ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 0.8;
+                ctx.moveTo(sp.x - sp.w, bY);
+                ctx.quadraticCurveTo(sp.x - sp.w * 0.55, bY - sp.h * 0.5, sp.x, tipY);
+                ctx.quadraticCurveTo(sp.x + sp.w * 0.55, bY - sp.h * 0.5, sp.x + sp.w, bY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Gleam line
+                ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.85;
+                ctx.shadowBlur = 4; ctx.shadowColor = '#ffffff';
+                ctx.globalAlpha = 0.65;
                 ctx.beginPath();
-                ctx.moveTo(sp.x - sp.w * 0.3, spBase - 1);
-                ctx.lineTo(sp.x, spBase - sp.h + 2);
+                ctx.moveTo(sp.x, bY - 1.5);
+                ctx.lineTo(sp.x, tipY + 3);
                 ctx.stroke();
+
+                // Tip glow dot
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 8; ctx.shadowColor = mkGlow;
+                ctx.globalAlpha = mkPulse * 0.80;
+                ctx.beginPath(); ctx.arc(sp.x, tipY, 1.2, 0, Math.PI * 2); ctx.fill();
             }
 
-            // Ribbon tassels on both sides (Mongkhon style)
-            ctx.strokeStyle = mkCol; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
-            ctx.globalAlpha = 0.60;
-            ctx.beginPath(); ctx.moveTo(-13, mkBandY + 2); ctx.lineTo(-17, mkBandY + 1); ctx.lineTo(-16, mkBandY + 6); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(13, mkBandY + 2); ctx.lineTo(17, mkBandY + 1); ctx.lineTo(16, mkBandY + 6); ctx.stroke();
+            // ── Centre jewel (diamond) on band ──────────────────────────────
+            const jY = mkBandY + mkBandH * 0.5;
+            const jewelG = ctx.createRadialGradient(0, jY - 0.5, 0, 0, jY, 4);
+            jewelG.addColorStop(0, '#ffffff');
+            jewelG.addColorStop(0.35, mkGlow);
+            jewelG.addColorStop(1, mkColDim);
+            ctx.fillStyle = jewelG;
+            ctx.shadowBlur = 14 * mkPulse; ctx.shadowColor = mkGlow;
+            ctx.globalAlpha = mkPulse * 0.95;
+            ctx.beginPath();
+            ctx.moveTo(0, jY - 3.8);
+            ctx.lineTo(3, jY);
+            ctx.lineTo(0, jY + 3.8);
+            ctx.lineTo(-3, jY);
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.60)'; ctx.lineWidth = 0.8;
+            ctx.globalAlpha = 0.70;
+            ctx.beginPath();
+            ctx.moveTo(0, jY - 3.8); ctx.lineTo(3, jY);
+            ctx.lineTo(0, jY + 3.8); ctx.lineTo(-3, jY);
+            ctx.closePath(); ctx.stroke();
+
+            // ── Side tassel ribbons (2 strands each) ────────────────────────
+            ctx.strokeStyle = mkCol; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+            ctx.shadowBlur = 6; ctx.shadowColor = mkGlow;
+            ctx.globalAlpha = 0.65;
+            ctx.beginPath(); ctx.moveTo(-14, mkBandY + 2); ctx.quadraticCurveTo(-18, mkBandY + 4, -17, mkBandY + 9); ctx.stroke();
+            ctx.globalAlpha = 0.40;
+            ctx.beginPath(); ctx.moveTo(-14, mkBandY + 4); ctx.quadraticCurveTo(-19, mkBandY + 5, -18, mkBandY + 10); ctx.stroke();
+            ctx.globalAlpha = 0.65;
+            ctx.beginPath(); ctx.moveTo(14, mkBandY + 2); ctx.quadraticCurveTo(18, mkBandY + 4, 17, mkBandY + 9); ctx.stroke();
+            ctx.globalAlpha = 0.40;
+            ctx.beginPath(); ctx.moveTo(14, mkBandY + 4); ctx.quadraticCurveTo(19, mkBandY + 5, 18, mkBandY + 10); ctx.stroke();
+
             ctx.shadowBlur = 0; ctx.globalAlpha = 1;
 
             // Head base — spirit skin (slightly translucent, slightly inhuman)

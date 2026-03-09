@@ -72,7 +72,7 @@
 | `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()`, `_hitFlashTimer`, passive unlock |
 | `Kaoplayer.js` | เก้า | Assassin — stealth, teleport, clone |
 | `PoomPlayer.js` | ภูมิ | Spiritual Warrior — ritual, naga, garuda |
-| `AutoPlayer.js` | ออโต้ | Pyromaniac — vacuum, detonation, Wanchai Stand with realistic Muay Thai boxing glove rush system featuring anatomical detail, progressive depth scaling, heat-tier colors, and Mongkhon crown design |
+| `AutoPlayer.js` | ออโต้ | Pyromaniac — vacuum, detonation, Wanchai Stand with realistic Muay Thai boxing glove rush system featuring anatomical detail, progressive depth scaling, heat-tier colors, and premium Mongkhon crown with 5 concave spikes, 3-layer band, diamond jewel, and 2-strand tassels |
 
 ### `/js/rendering/`
 - `PlayerRenderer.js` — วาด player ทั้งหมด (animations, effects, hit flash)

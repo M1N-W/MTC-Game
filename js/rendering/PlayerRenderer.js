@@ -544,9 +544,9 @@ class PlayerRenderer {
                 const stand = entity.wanchaiStand;
                 if (fists && fists.length > 0) {
                     const ht = entity._heatTier ?? 0;
-                    const fistCol    = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#ef4444';
+                    const fistCol = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#ef4444';
                     const fistColDim = ht >= 3 ? '#92400e' : ht >= 2 ? '#7c2d12' : '#7f1d1d';
-                    const trailHex   = ht >= 3 ? '251,191,36' : ht >= 2 ? '249,115,22' : '239,68,68';
+                    const trailHex = ht >= 3 ? '251,191,36' : ht >= 2 ? '249,115,22' : '239,68,68';
                     const punchAngle = entity.angle; // ทุก fist เรียงตามทิศนี้
 
                     // ── Helper: วาดหมัดกำปั้น Muay Thai ──────────────────────
@@ -625,10 +625,10 @@ class PlayerRenderer {
                     // ── Layout: fists เรียงแนวเดียวในทิศ punchAngle ─────────
                     // spacing แบบ staggered — ด้านขวาซ้ายสลับกัน ±sideOffset
                     // ระยะ dist เพิ่มตาม index → ดูเหมือนหมัดพุ่งออกมาต่อเนื่อง
-                    const COUNT    = fists.length;   // 7 (hit) or 4 (miss)
-                    const SPACING  = 16;             // px ระหว่างหมัดตาม forward axis
+                    const COUNT = fists.length;   // 7 (hit) or 4 (miss)
+                    const SPACING = 16;             // px ระหว่างหมัดตาม forward axis
                     const SIDE_AMP = 5;              // px สลับซ้ายขวา (เพิ่มความมีชีวิต)
-                    const perpA    = punchAngle + Math.PI / 2; // แกนตั้งฉาก
+                    const perpA = punchAngle + Math.PI / 2; // แกนตั้งฉาก
 
                     for (let i = 0; i < COUNT; i++) {
                         const f = fists[i];
@@ -636,7 +636,7 @@ class PlayerRenderer {
 
                         // ระยะตาม forward axis: หมัดแรก = ใกล้สุด, หมัดหลัง = ไกลสุด
                         const forwardDist = 38 + i * SPACING;
-                        const sideDrift   = Math.sin(i * Math.PI) * SIDE_AMP * f.sc; // สลับซ้ายขวา
+                        const sideDrift = Math.sin(i * Math.PI) * SIDE_AMP * f.sc; // สลับซ้ายขวา
 
                         const fx = Math.cos(punchAngle) * forwardDist + Math.cos(perpA) * sideDrift;
                         const fy = Math.sin(punchAngle) * forwardDist + Math.sin(perpA) * sideDrift;
@@ -650,8 +650,8 @@ class PlayerRenderer {
                         trailG.addColorStop(1, `rgba(${trailHex},${(f.alpha * 0.55).toFixed(2)})`);
                         ctx.save();
                         ctx.strokeStyle = trailG;
-                        ctx.lineWidth   = 8 * f.sc;
-                        ctx.lineCap     = 'round';
+                        ctx.lineWidth = 8 * f.sc;
+                        ctx.lineCap = 'round';
                         ctx.globalAlpha = f.alpha;
                         ctx.beginPath(); ctx.moveTo(t0x, t0y); ctx.lineTo(fx, fy); ctx.stroke();
                         ctx.restore();

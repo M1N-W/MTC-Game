@@ -4,6 +4,29 @@
 
 ---
 
+## v3.25.5 — Mongkhon Crown Rework
+*Released: March 9, 2026*
+
+### 👑 Complete Crown Enhancement
+- **5 Concave Spike Design:** Replaced 3 flat spikes with 5 tapered concave spikes using quadraticCurveTo for authentic Mongkhon shape
+  - Center spike: 16px height (tallest)
+  - Inner spikes: 12px height (medium)
+  - Outer spikes: 8px height (shortest)
+  - Each spike features gradient coloring (dim→mid→bright→glow) and gleam lines
+
+### 🎨 Premium Crown Features
+- **3-Layer Band System:** Dark base → gradient fill → bright rim for depth and richness
+- **Diamond Jewel Center:** Radial gradient jewel with 4-point diamond shape on crown band
+- **2-Strand Tassels:** Each side has dual ribbon strands with quadratic curves and varying opacity
+- **Enhanced Visual Effects:** Tip glow dots, shadow blur pulsing, and improved color theming
+
+### 🔧 Technical Improvements
+- **Concave Geometry:** Used quadraticCurveTo instead of straight lines for authentic Mongkhon curvature
+- **Gradient System:** Multi-stop gradients for each spike (4 color stops) and band (5 color stops)
+- **Performance Optimized:** Pre-calculated positions and reduced redundant calculations
+
+---
+
 ## v3.25.4 — Realistic Boxing Glove Rush System
 *Released: March 9, 2026*
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.25.4'; // v3.25.4: Realistic Boxing Glove Rush System - Complete redesign with linear punch layout, anatomical glove detail, progressive depth scaling, and Muay Thai styling
+const CACHE_NAME = 'mtc-cache-v3.25.5'; // v3.25.5: Mongkhon Crown Rework - Enhanced from 3 flat spikes to 5 concave spikes with 3-layer band, diamond jewel, and 2-strand tassels
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
