@@ -544,10 +544,13 @@ class PlayerRenderer {
                 const stand = entity.wanchaiStand;
                 if (fists && fists.length > 0) {
                     const ht = entity._heatTier ?? 0;
-                    const fistCol = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#ef4444';
-                    const fistColDim = ht >= 3 ? '#92400e' : ht >= 2 ? '#7c2d12' : '#7f1d1d';
-                    const trailHex = ht >= 3 ? '251,191,36' : ht >= 2 ? '249,115,22' : '239,68,68';
-                    const punchAngle = entity.angle; // ทุก fist เรียงตามทิศนี้
+                    const oraCombo = entity._oraComboCount ?? 0;
+                    // Colors match Stand body — crimson/gold palette
+                    const fistCol = ht >= 3 ? '#fef08a' : ht >= 2 ? '#f59e0b' : '#dc2626';
+                    const fistColDim = ht >= 3 ? '#92400e' : ht >= 2 ? '#78350f' : '#7f1d1d';
+                    const trailHex = ht >= 3 ? '254,240,138' : ht >= 2 ? '245,158,11' : '220,38,38';
+                    const goldHex = '245,158,11';
+                    const punchAngle = entity.angle;
 
                     // ── Helper: วาดหมัดกำปั้น Muay Thai ──────────────────────
                     // cx/cy = ตำแหน่งกึ่งกลางหมัด (screen-relative)
@@ -664,22 +667,22 @@ class PlayerRenderer {
                     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
                     ctx.restore();
 
-                    // "วันชัย วันชัย วันชัย!" text — screen-space, unrotated
+                    // ORA BARRAGE text — combo-scaling, gold at high combo
                     ctx.save();
-                    const textScale = 1 + Math.sin(now / 30) * 0.18;
+                    const comboScale = 1 + oraCombo * 0.022 + Math.sin(now / 30) * 0.12;
                     const jt = stand?._phaseTimer ?? 0;
                     const jx = screen.x + Math.sin(jt * 80) * 5;
-                    const jy = screen.y - 80;
-                    ctx.scale(textScale, textScale);
-                    ctx.font = '900 32px "Arial Black", Arial, sans-serif';
+                    const jy = screen.y - 82;
+                    ctx.scale(comboScale, comboScale);
+                    ctx.font = '900 28px "Arial Black", Arial, sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.lineWidth = 7; ctx.strokeStyle = '#7c2d12';
-                    ctx.strokeText('วันชัย วันชัย วันชัย!', jx / textScale, jy / textScale);
-                    ctx.lineWidth = 3; ctx.strokeStyle = '#fbbf24';
-                    ctx.shadowBlur = 20; ctx.shadowColor = '#facc15';
-                    ctx.strokeText('วันชัย วันชัย วันชัย!', jx / textScale, jy / textScale);
-                    ctx.fillStyle = '#facc15'; ctx.shadowBlur = 14;
-                    ctx.fillText('วันชัย วันชัย วันชัย!', jx / textScale, jy / textScale);
+                    ctx.lineWidth = 7; ctx.strokeStyle = '#3d0000';
+                    ctx.strokeText('ORA ORA ORA!', jx / comboScale, jy / comboScale);
+                    ctx.lineWidth = 3; ctx.strokeStyle = oraCombo >= 5 ? '#fef08a' : '#f59e0b';
+                    ctx.shadowBlur = 22; ctx.shadowColor = oraCombo >= 5 ? '#fef08a' : '#f59e0b';
+                    ctx.strokeText('ORA ORA ORA!', jx / comboScale, jy / comboScale);
+                    ctx.fillStyle = oraCombo >= 5 ? '#fef08a' : '#ffffff'; ctx.shadowBlur = 16;
+                    ctx.fillText('ORA ORA ORA!', jx / comboScale, jy / comboScale);
                     ctx.restore();
                 }
             }

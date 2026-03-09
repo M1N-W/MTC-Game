@@ -27,6 +27,9 @@ class WanchaiStand {
         this._rushBurstVy = 0;
         this._rushBurstTimer = 0;   // > 0 = currently dashing
 
+        // ORA Combo escalation — synced with owner._oraComboCount
+        this._oraWindowTimer = 0;   // time window to chain next hit
+
         // Rendering
         this.angle = owner.angle;   // faces toward target
         this.ghostTrail = [];       // [{x,y,alpha}] motion blur
@@ -132,6 +135,14 @@ class WanchaiStand {
         }
         for (const g of this.ghostTrail) g.alpha = Math.max(0, g.alpha - dt * 1.8);
 
+        // ORA combo window decay
+        if (this._oraWindowTimer > 0) {
+            this._oraWindowTimer -= dt;
+            if (this._oraWindowTimer <= 0 && owner) {
+                owner._oraComboCount = 0; // combo expired
+            }
+        }
+
         // Decay precomputed rush fists alpha
         if ((this._rushFistTimer ?? 0) > 0) {
             this._rushFistTimer -= dt;
@@ -214,16 +225,24 @@ class WanchaiStand {
         this._phaseTimer = 0.12;
         this._punchSide = (this._punchSide ?? 1) * -1;
 
-        // Precompute rush fists — radial fan from facing direction (no Math.random in draw)
+        // ── ORA Combo escalation — each punch extends the window ──
+        if (owner) {
+            owner._oraComboCount = Math.min(10, (owner._oraComboCount ?? 0) + 1);
+            this._oraWindowTimer = 0.55; // 550ms window to chain next hit
+        }
+
+        // Precompute rush fists — ORA barrage fan (scales with combo)
         this._rushFists = this._rushFists ?? [];
         this._rushFists.length = 0;
-        const _fanCount = 7;
-        const _fanSpread = Math.PI * 0.38;  // total arc width
+        const _oraCombo = owner._oraComboCount ?? 1;
+        // More combo → more fists, tighter spread (more like Star Platinum barrage)
+        const _fanCount = Math.min(12, 5 + Math.floor(_oraCombo * 0.8));
+        const _fanSpread = Math.max(Math.PI * 0.15, Math.PI * 0.38 - _oraCombo * 0.025); // tightens with combo
         const _faceA = this.angle;
         for (let i = 0; i < _fanCount; i++) {
             const t_ = i / (_fanCount - 1);        // 0→1
             const a = _faceA - _fanSpread / 2 + t_ * _fanSpread;
-            const r = 40 + t_ * 55;               // near→far depth
+            const r = 36 + t_ * 60;               // near→far depth
             this._rushFists.push({
                 ox: Math.cos(a) * r,
                 oy: Math.sin(a) * r,
@@ -231,7 +250,7 @@ class WanchaiStand {
                 alpha: 1.0
             });
         }
-        this._rushFistTimer = 0.10; // fade out over 100ms
+        this._rushFistTimer = 0.12; // slightly longer fade
 
         // Sound
         const now = Date.now();
@@ -258,13 +277,18 @@ class WanchaiStand {
         const t = now / 1000;
         const owner = this.owner;
 
-        // ── HEAT TIER COLORS ─────────────────────────────────────
-        // Base: Ice-blue/white ghost — contrasts sharply with Auto red
-        // HOT/OVERHEAT: core flares amber/red to signal escalation
+        // ── HEAT TIER COLORS — Crimson/Gold palette matching Auto ──
+        // Base: Deep crimson ghost — unified identity with Auto's red theme
+        // HOT: flares to amber/gold — escalation signal
+        // OVERHEAT: blazing white-gold — peak fury
         const ht = owner?._heatTier ?? 0;
-        const coreCol = ht >= 3 ? '#f97316' : ht >= 2 ? '#fbbf24' : ht >= 1 ? '#67e8f9' : '#a5f3fc';
-        const auraCol = ht >= 3 ? 'rgba(249,115,22,' : ht >= 2 ? 'rgba(251,191,36,' : 'rgba(103,232,249,';
-        const punchCol = ht >= 2 ? '#fbbf24' : '#e0f2fe';
+        const coreCol = ht >= 3 ? '#fef08a' : ht >= 2 ? '#f59e0b' : ht >= 1 ? '#ef4444' : '#dc2626';
+        const auraCol = ht >= 3 ? 'rgba(254,240,138,' : ht >= 2 ? 'rgba(245,158,11,' : ht >= 1 ? 'rgba(239,68,68,' : 'rgba(220,38,38,';
+        const punchCol = ht >= 3 ? '#fef08a' : ht >= 2 ? '#fbbf24' : '#ff6b6b';
+        const armorCol1 = ht >= 2 ? '#92400e' : '#7f1d1d';   // dark base
+        const armorCol2 = ht >= 2 ? '#b45309' : '#991b1b';   // mid plate
+        const armorCol3 = ht >= 2 ? '#f59e0b' : '#dc2626';   // highlight / trim
+        const goldCol   = ht >= 3 ? '#fef08a' : '#f59e0b';   // gold accents
 
         const isPunch = this._phaseTimer > 0;
         const flashT = isPunch ? Math.min(1, this._phaseTimer / 0.12) : 0;
@@ -272,253 +296,277 @@ class WanchaiStand {
         const facingL = Math.abs(this.angle) > Math.PI / 2;
         const fs = facingL ? -1 : 1;
 
-        // ── Fighter bob oscillators (pre-computed once) ──
-        const bob = Math.sin(t * 3.2);              // weight shift bob
-        const sway = bob * 1.8;                      // horizontal rock
-        const breathe = Math.sin(t * 2.1) * 0.8;    // torso expand
-        const eyeFlick = Math.sin(t * 8.5);          // eye intensity
-        // Muay Thai knee-bend: alternating leg compress (bouncing fighter stance)
-        const kneeL = Math.abs(Math.sin(t * 3.2));            // 0→1 left compress on downbeat
-        const kneeR = Math.abs(Math.sin(t * 3.2 + Math.PI)); // opposite phase
+        // ── Stand pose oscillators ──
+        const bob     = Math.sin(t * 2.8);           // weight shift (slower = heavier)
+        const sway    = bob * 1.2;
+        const breathe = Math.sin(t * 1.9) * 0.6;
+        const eyeFlick = Math.sin(t * 7.0);
+        // Ora Ora combo escalation — oraCombo comes from owner
+        const oraCombo = owner?._oraComboCount ?? 0;
+        const comboIntensity = Math.min(1, oraCombo / 6); // 0→1 over 6 hits
 
-        // ═══ LAYER 0 — Ghost trail (cyan-white afterimage) ═══════════════════
+        // ═══ LAYER 0 — Ghost trail (crimson afterimage) ════════════════════════
         for (let i = this.ghostTrail.length - 1; i >= 0; i--) {
             const g = this.ghostTrail[i];
-            const ga = g.alpha * 0.30;
+            const ga = g.alpha * 0.35;
             if (ga < 0.02) continue;
             const gs = worldToScreen(g.x, g.y);
             ctx.save();
             ctx.globalAlpha = ga;
-            ctx.shadowBlur = 10; ctx.shadowColor = coreCol;
-            // Muay Thai silhouette ghost — head + torso only
+            ctx.shadowBlur = 12; ctx.shadowColor = coreCol;
+            // Stand silhouette ghost — head + broad shoulders
             ctx.fillStyle = coreCol;
-            ctx.beginPath(); ctx.arc(gs.x, gs.y - 18, 8, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(gs.x, gs.y + 4, 9, 13, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(gs.x, gs.y - 22, 10, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(gs.x, gs.y + 2, 13, 16, 0, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
 
-        // ═══ LAYER 1 — Spectral halo / aura ══════════════════════════════════
+        // ═══ LAYER 1 — Ground aura + shockwave ring ══════════════════════════════
         {
-            const hw = 24 + breathe * 2;
-            const ha = isPunch ? 0.28 + flashT * 0.22 : 0.12 + breathe * 0.04;
+            const hw = 30 + breathe * 3 + comboIntensity * 8;
+            const ha = isPunch ? 0.35 + flashT * 0.30 : 0.10 + breathe * 0.03 + comboIntensity * 0.08;
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.2);
-            const hG = ctx.createRadialGradient(0, 0, 2, 0, 0, hw + 10);
-            hG.addColorStop(0, `${auraCol}${Math.min(1, ha * 2.2)})`);
-            hG.addColorStop(0.4, `${auraCol}${ha})`);
+            ctx.translate(sc.x, sc.y + sway * 0.15);
+            const hG = ctx.createRadialGradient(0, 0, 2, 0, 0, hw + 14);
+            hG.addColorStop(0, `${auraCol}${Math.min(1, ha * 2.5)})`);
+            hG.addColorStop(0.35, `${auraCol}${ha})`);
             hG.addColorStop(1, 'rgba(0,0,0,0)');
             ctx.globalAlpha = 1;
             ctx.fillStyle = hG;
-            ctx.shadowBlur = isPunch ? 32 : 16; ctx.shadowColor = coreCol;
-            ctx.beginPath(); ctx.ellipse(0, 0, hw, hw * 0.55, 0, 0, Math.PI * 2); ctx.fill();
-            // Punch burst shockwave ring
-            if (isPunch && flashT > 0.08) {
-                ctx.globalAlpha = flashT * 0.65;
-                ctx.strokeStyle = punchCol; ctx.lineWidth = 2.5;
-                ctx.shadowBlur = 22; ctx.shadowColor = punchCol;
-                ctx.beginPath(); ctx.arc(0, 0, 28 + (1 - flashT) * 18, 0, Math.PI * 2); ctx.stroke();
-                // Second ring
-                ctx.globalAlpha = flashT * 0.30;
-                ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(0, 0, 40 + (1 - flashT) * 14, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = isPunch ? 40 : 20; ctx.shadowColor = coreCol;
+            ctx.beginPath(); ctx.ellipse(0, 0, hw, hw * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+            // Punch burst shockwave rings — double ring like JoJo impact
+            if (isPunch && flashT > 0.06) {
+                ctx.globalAlpha = flashT * 0.80;
+                ctx.strokeStyle = punchCol; ctx.lineWidth = 3;
+                ctx.shadowBlur = 28; ctx.shadowColor = punchCol;
+                ctx.beginPath(); ctx.arc(0, 0, 32 + (1 - flashT) * 22, 0, Math.PI * 2); ctx.stroke();
+                ctx.globalAlpha = flashT * 0.45;
+                ctx.lineWidth = 1.8;
+                ctx.beginPath(); ctx.arc(0, 0, 50 + (1 - flashT) * 16, 0, Math.PI * 2); ctx.stroke();
+                // Inner bright flash
+                ctx.globalAlpha = flashT * 0.25;
+                ctx.fillStyle = punchCol;
+                ctx.shadowBlur = 50;
+                ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
             }
             ctx.restore();
         }
 
-        // ═══ LAYER 2 — Lower-body smoke tail (spirit dissolves, knee-weighted) ══
+        // ═══ LAYER 2 — Stand body (JoJo-style large warrior) ════════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.35);
-            ctx.scale(fs, 1);
-            // Left "leg" smoke — shifts heavier when weight on left
-            const lAlpha = 0.55 + kneeL * 0.28;
-            const lDrop = 28 + kneeL * 10;
-            const lFadeG = ctx.createLinearGradient(-7, 10, -7, lDrop + 14);
-            lFadeG.addColorStop(0, ht >= 2 ? `rgba(180,100,10,${lAlpha})` : `rgba(20,90,130,${lAlpha})`);
-            lFadeG.addColorStop(0.55, ht >= 2 ? 'rgba(90,30,0,0.20)' : 'rgba(8,45,80,0.20)');
-            lFadeG.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = lFadeG; ctx.globalAlpha = 0.88;
-            ctx.beginPath();
-            ctx.moveTo(-14, 10);
-            ctx.quadraticCurveTo(-18 - kneeL * 3, 20 + kneeL * 4, -9, lDrop + 14);
-            ctx.quadraticCurveTo(-4, lDrop + 18, 0, lDrop + 10);
-            ctx.quadraticCurveTo(2, 14, -14, 10);
-            ctx.closePath(); ctx.fill();
-            // Right "leg" smoke — opposite phase
-            const rAlpha = 0.55 + kneeR * 0.28;
-            const rDrop = 28 + kneeR * 10;
-            const rFadeG = ctx.createLinearGradient(7, 10, 7, rDrop + 14);
-            rFadeG.addColorStop(0, ht >= 2 ? `rgba(180,100,10,${rAlpha})` : `rgba(20,90,130,${rAlpha})`);
-            rFadeG.addColorStop(0.55, ht >= 2 ? 'rgba(90,30,0,0.20)' : 'rgba(8,45,80,0.20)');
-            rFadeG.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = rFadeG; ctx.globalAlpha = 0.88;
-            ctx.beginPath();
-            ctx.moveTo(14, 10);
-            ctx.quadraticCurveTo(18 + kneeR * 3, 20 + kneeR * 4, 9, rDrop + 14);
-            ctx.quadraticCurveTo(4, rDrop + 18, 0, rDrop + 10);
-            ctx.quadraticCurveTo(-2, 14, 14, 10);
-            ctx.closePath(); ctx.fill();
-            ctx.restore();
-        }
-
-        // ═══ LAYER 3 — Torso (Muay Thai physique) ════════════════════════════
-        {
-            ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.35);
+            ctx.translate(sc.x, sc.y + sway * 0.25);
             ctx.scale(fs, 1);
 
-            // Main torso — wider shoulders, strong V-taper
-            // Muay Thai fighters: broad shoulder line, narrow waist
-            const tCol1 = ht >= 2 ? '#4a2800' : '#0c3a52';
-            const tCol2 = ht >= 2 ? '#7c4500' : '#0e4f6e';
-            const tCol3 = ht >= 2 ? '#1a0800' : '#061c2e';
-            const tG = ctx.createRadialGradient(-4, -6, 1, 0, 2, 18);
-            tG.addColorStop(0, tCol2);
-            tG.addColorStop(0.6, tCol1);
-            tG.addColorStop(1, tCol3);
-            ctx.fillStyle = tG;
-            ctx.globalAlpha = 0.90 + breathe * 0.06;
-            ctx.shadowBlur = isPunch ? 20 : 10; ctx.shadowColor = coreCol;
-
-            // Broader shoulder, fighter V-shape
+            // ── Legs — thick, armored, planted stance ──────────────────
+            const legBob = isPunch ? 0 : bob * 1.8;
+            // Left leg
+            const lgG = ctx.createLinearGradient(-10, 18, -10, 52);
+            lgG.addColorStop(0, armorCol2); lgG.addColorStop(1, armorCol1);
+            ctx.fillStyle = lgG; ctx.globalAlpha = 0.88;
             ctx.beginPath();
-            ctx.moveTo(-17, -2);          // left shoulder — wide
-            ctx.quadraticCurveTo(-20, 8, -13, 22);
-            ctx.lineTo(13, 22);
-            ctx.quadraticCurveTo(20, 8, 17, -2);
-            ctx.quadraticCurveTo(0, -6, -17, -2);
+            ctx.moveTo(-13, 18);
+            ctx.lineTo(-16, 48 + legBob * 0.5);
+            ctx.lineTo(-6, 50 + legBob * 0.5);
+            ctx.lineTo(-5, 18);
+            ctx.closePath(); ctx.fill();
+            // Right leg
+            ctx.beginPath();
+            ctx.moveTo(5, 18);
+            ctx.lineTo(4, 50 - legBob * 0.5);
+            ctx.lineTo(14, 48 - legBob * 0.5);
+            ctx.lineTo(13, 18);
+            ctx.closePath(); ctx.fill();
+            // Gold knee guards
+            ctx.fillStyle = goldCol; ctx.globalAlpha = 0.85;
+            ctx.shadowBlur = 6; ctx.shadowColor = goldCol;
+            ctx.beginPath(); ctx.ellipse(-10, 34, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(9, 34, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // ── Main torso — broad, imposing, armored ──────────────────
+            const tG = ctx.createRadialGradient(-5, -8, 2, 0, 0, 22);
+            tG.addColorStop(0, armorCol2);
+            tG.addColorStop(0.5, armorCol1);
+            tG.addColorStop(1, '#3d0000');
+            ctx.fillStyle = tG; ctx.globalAlpha = 0.92 + breathe * 0.05;
+            ctx.shadowBlur = isPunch ? 24 : 12; ctx.shadowColor = coreCol;
+
+            // JoJo-style wide shoulders, defined chest
+            ctx.beginPath();
+            ctx.moveTo(-22, -4);          // left shoulder — very wide
+            ctx.quadraticCurveTo(-26, 6, -18, 20);
+            ctx.lineTo(18, 20);
+            ctx.quadraticCurveTo(26, 6, 22, -4);
+            ctx.quadraticCurveTo(0, -10, -22, -4);
             ctx.closePath(); ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Pec definition lines
-            ctx.strokeStyle = `${auraCol}0.22)`;
-            ctx.lineWidth = 1.2;
-            ctx.beginPath(); ctx.moveTo(-16, 0); ctx.quadraticCurveTo(-8, 4, 0, 3); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(16, 0); ctx.quadraticCurveTo(8, 4, 0, 3); ctx.stroke();
+            // Armor plate details — chest divider + rivet dots
+            ctx.strokeStyle = `${auraCol}0.18)`; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 20); ctx.stroke();
+            // Pec plate lines
+            ctx.beginPath(); ctx.moveTo(-20, -2); ctx.quadraticCurveTo(-10, 2, 0, 1); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(20, -2); ctx.quadraticCurveTo(10, 2, 0, 1); ctx.stroke();
 
-            // Mongkhon (headband rope) wrapped around upper chest — signature Muay Thai
-            const mongkCol = ht >= 2 ? '#fbbf24' : '#38bdf8';
-            ctx.strokeStyle = mongkCol; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
-            ctx.shadowBlur = 6; ctx.shadowColor = mongkCol;
-            ctx.globalAlpha = 0.70;
+            // Gold shoulder pauldrons — signature JoJo detail
+            ctx.fillStyle = goldCol; ctx.globalAlpha = 0.90;
+            ctx.shadowBlur = 8; ctx.shadowColor = goldCol;
+            // Left pauldron
             ctx.beginPath();
-            ctx.moveTo(-14, 0);
-            ctx.quadraticCurveTo(0, -4, 14, 0);
-            ctx.stroke();
-            // Mongkhon knot dots
-            ctx.fillStyle = mongkCol; ctx.globalAlpha = 0.80;
-            ctx.beginPath(); ctx.arc(-14, 0, 2, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(14, 0, 2, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            ctx.ellipse(-22, -4, 8, 5, -0.2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(-22, -4, 5, 3, -0.2, 0, Math.PI * 2);
+            ctx.fillStyle = armorCol1; ctx.fill();
+            // Right pauldron
+            ctx.fillStyle = goldCol;
+            ctx.beginPath(); ctx.ellipse(22, -4, 8, 5, 0.2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(22, -4, 5, 3, 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = armorCol1; ctx.fill();
+            ctx.shadowBlur = 0;
 
-            // Spectral energy core (hexagonal, same as Auto but different color)
-            const cp = Math.max(0.3, 0.5 + Math.sin(now / 180) * 0.45) * (isPunch ? 1.6 : 1.0);
-            const cr = 5;
-            ctx.save(); ctx.translate(0, 13);
+            // Belt / waist band with gold buckle
+            ctx.fillStyle = armorCol1; ctx.globalAlpha = 0.90;
+            ctx.beginPath(); ctx.roundRect(-18, 14, 36, 6, 2); ctx.fill();
+            ctx.fillStyle = goldCol; ctx.globalAlpha = 0.95;
+            ctx.shadowBlur = 6; ctx.shadowColor = goldCol;
+            ctx.beginPath(); ctx.roundRect(-4, 14, 8, 6, 1); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Energy core — hexagonal, crimson/gold pulsing
+            const cp = Math.max(0.4, 0.5 + Math.sin(now / 180) * 0.45) * (isPunch ? 1.8 : 1.0 + comboIntensity * 0.5);
+            const cr = 6;
+            ctx.save(); ctx.translate(0, 8);
             ctx.beginPath();
             for (let hi = 0; hi < 6; hi++) {
-                const ha = (hi / 6) * Math.PI * 2 - Math.PI / 6;
-                hi === 0 ? ctx.moveTo(Math.cos(ha) * cr, Math.sin(ha) * cr)
-                    : ctx.lineTo(Math.cos(ha) * cr, Math.sin(ha) * cr);
+                const ha2 = (hi / 6) * Math.PI * 2 - Math.PI / 6;
+                hi === 0 ? ctx.moveTo(Math.cos(ha2) * cr, Math.sin(ha2) * cr)
+                    : ctx.lineTo(Math.cos(ha2) * cr, Math.sin(ha2) * cr);
             }
             ctx.closePath();
             const cG = ctx.createRadialGradient(0, 0, 0, 0, 0, cr);
             cG.addColorStop(0, `rgba(255,255,255,${Math.min(1, cp * 0.9)})`);
-            cG.addColorStop(0.5, `${auraCol}${Math.min(1, cp)})`);
-            cG.addColorStop(1, `${auraCol}${cp * 0.4})`);
+            cG.addColorStop(0.4, `${auraCol}${Math.min(1, cp)})`);
+            cG.addColorStop(1, `${auraCol}${cp * 0.3})`);
             ctx.fillStyle = cG;
-            ctx.shadowBlur = 12 * cp; ctx.shadowColor = coreCol;
+            ctx.shadowBlur = 16 * cp; ctx.shadowColor = coreCol;
             ctx.fill();
-            ctx.strokeStyle = `${auraCol}${cp * 0.6})`; ctx.lineWidth = 0.8; ctx.stroke();
+            ctx.strokeStyle = goldCol; ctx.lineWidth = 0.9; ctx.globalAlpha = cp * 0.7;
+            ctx.stroke();
             ctx.restore();
 
-            ctx.restore(); // end torso
+            ctx.restore(); // end torso/legs
         }
 
-        // ═══ LAYER 4 — Arms (Muay Thai guard stance) ════════════════════════
+        // ═══ LAYER 3 — Arms (JoJo guard + punch) ════════════════════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + sway * 0.35);
+            ctx.translate(sc.x, sc.y + sway * 0.25);
             ctx.scale(fs, 1);
 
-            // MUAY THAI GUARD: front arm raised (guard), rear arm cocked for power punch
-            // xDir: +1 = lead arm (right in screen space), -1 = rear arm (power)
+            // JoJo stance: one arm forward (jab guard), one arm cocked (power cross)
             const drawArm = (xDir, isActive) => {
-                // Lead arm (guard): elbow up, forearm crosses centerline
-                // Rear arm (power): hip level, wound back for cross punch
                 const isLead = xDir > 0;
-                const elbX = isLead ? xDir * 14 : xDir * 10;
-                const elbY = isLead ? -8 : 2;   // lead arm elbow is HIGH (guard)
-                const idleX = isLead ? xDir * 18 : xDir * 22;
-                const idleY = isLead ? -12 + bob * 1.2 : 6 + bob * 0.5;
-                // Strike: lead = straight jab forward, rear = haymaker cross
-                const hitX = isActive ? (isLead ? xDir * 38 : xDir * 32) : idleX;
-                const hitY = isActive ? (isLead ? -6 : -4) : idleY;
+                const elbX = isLead ? xDir * 16 : xDir * 12;
+                const elbY = isLead ? -10 : 0;
+                const idleX = isLead ? xDir * 20 : xDir * 24;
+                const idleY = isLead ? -14 + bob * 1.0 : 4 + bob * 0.4;
+                // Strike: lead arm jab straight, rear arm wide haymaker
+                const hitX = isActive ? (isLead ? xDir * 42 : xDir * 36) : idleX;
+                const hitY = isActive ? (isLead ? -8 : -5) : idleY;
                 const fX = hitX, fY = hitY;
 
-                // Upper arm
-                ctx.strokeStyle = ht >= 2 ? '#5a3a00' : '#0a2e45';
-                ctx.lineWidth = 6;
-                ctx.lineCap = 'round';
-                ctx.shadowBlur = isActive ? 14 : 4; ctx.shadowColor = coreCol;
-                ctx.globalAlpha = 0.90;
+                // Upper arm — thick armored
+                ctx.strokeStyle = armorCol1; ctx.lineWidth = 8; ctx.lineCap = 'round';
+                ctx.shadowBlur = isActive ? 16 : 4; ctx.shadowColor = coreCol;
+                ctx.globalAlpha = 0.92;
                 ctx.beginPath();
-                ctx.moveTo(xDir * 15, -2);
-                ctx.quadraticCurveTo(elbX + (isActive ? xDir * 4 : 0), elbY, fX, fY);
+                ctx.moveTo(xDir * 20, -4);
+                ctx.quadraticCurveTo(elbX + (isActive ? xDir * 5 : 0), elbY, fX, fY);
                 ctx.stroke();
 
-                // Forearm (second segment for more humanoid look)
-                ctx.lineWidth = 5;
-                ctx.strokeStyle = ht >= 2 ? '#7c5200' : '#0e4060';
-                ctx.globalAlpha = 0.82;
+                // Forearm
+                ctx.lineWidth = 6; ctx.strokeStyle = armorCol2; ctx.globalAlpha = 0.85;
 
-                // Muay Thai glove (fist)
-                const fR = isActive ? 8.5 : 7;
-                const gloveColA = isActive ? (ht >= 2 ? '#f97316' : '#0ea5e9') : (ht >= 2 ? '#7c4500' : '#0c4a6e');
-                const gloveColB = isActive ? (ht >= 2 ? '#dc2626' : '#0284c7') : (ht >= 2 ? '#3d1f00' : '#082f49');
-                const fBg = ctx.createRadialGradient(fX - 2, fY - 2, 0.5, fX, fY, fR);
-                fBg.addColorStop(0, isActive ? 'rgba(255,255,255,0.90)' : gloveColA);
-                fBg.addColorStop(0.45, gloveColA);
-                fBg.addColorStop(1, gloveColB);
-                ctx.fillStyle = fBg;
-                ctx.strokeStyle = isActive ? `${auraCol}0.80)` : 'rgba(0,0,0,0.5)';
-                ctx.lineWidth = 1.2;
-                ctx.shadowBlur = isActive ? 18 + flashT * 16 : 6;
+                // Gold arm guard stripe
+                ctx.strokeStyle = goldCol; ctx.lineWidth = 1.5;
+                ctx.globalAlpha = 0.55;
+                ctx.beginPath();
+                ctx.moveTo(xDir * 19, -3);
+                ctx.quadraticCurveTo(elbX, elbY + 1, fX * 0.7, fY * 0.7 + (idleY > 0 ? 1 : -1));
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // ── Boxing glove — large, gold-trimmed ─────────────────────
+                const fR = isActive ? 11 : 9;
+                // Main glove body
+                const gloveG = ctx.createRadialGradient(fX - 2, fY - 2, 0.5, fX, fY, fR);
+                gloveG.addColorStop(0, isActive ? '#ffffff' : armorCol3);
+                gloveG.addColorStop(0.3, isActive ? punchCol : armorCol2);
+                gloveG.addColorStop(0.7, armorCol1);
+                gloveG.addColorStop(1, '#1a0000');
+                ctx.fillStyle = gloveG;
+                ctx.shadowBlur = isActive ? 22 + flashT * 20 : 8;
                 ctx.shadowColor = isActive ? punchCol : coreCol;
-                ctx.globalAlpha = isActive ? 0.95 + flashT * 0.05 : 0.78;
+                ctx.globalAlpha = isActive ? 0.97 : 0.82;
                 ctx.beginPath(); ctx.arc(fX, fY, fR, 0, Math.PI * 2);
-                ctx.fill(); ctx.stroke();
+                ctx.fill();
 
-                // Glove lace lines (wrapping tape detail)
-                ctx.globalAlpha = isActive ? 0.55 : 0.30;
-                ctx.strokeStyle = isActive ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)';
-                ctx.lineWidth = 0.9;
+                // Gold trim ring around glove
+                ctx.strokeStyle = isActive ? goldCol : armorCol3;
+                ctx.lineWidth = isActive ? 2.0 : 1.2;
+                ctx.shadowBlur = isActive ? 12 : 4; ctx.shadowColor = goldCol;
+                ctx.globalAlpha = isActive ? 0.90 : 0.45;
+                ctx.beginPath(); ctx.arc(fX, fY, fR, 0, Math.PI * 2); ctx.stroke();
+
+                // 4 Knuckle bumps
+                ctx.shadowBlur = isActive ? 10 : 4; ctx.shadowColor = '#ffffff';
+                for (let k = 0; k < 4; k++) {
+                    const ky = fY - fR * 0.35 + k * (fR * 0.24);
+                    const kG = ctx.createRadialGradient(fX + fR * 0.7, ky, 0, fX + fR * 0.7, ky, fR * 0.22);
+                    kG.addColorStop(0, 'rgba(255,255,255,0.85)');
+                    kG.addColorStop(1, 'rgba(220,38,38,0)');
+                    ctx.fillStyle = kG; ctx.globalAlpha = isActive ? 0.90 : 0.50;
+                    ctx.beginPath(); ctx.ellipse(fX + fR * 0.7, ky, fR * 0.22, fR * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+                }
+
+                // Wrist tape lines
+                ctx.strokeStyle = isActive ? 'rgba(255,255,255,0.55)' : `${auraCol}0.25)`;
+                ctx.lineWidth = 1.0; ctx.globalAlpha = isActive ? 0.60 : 0.28;
                 for (let k = 0; k < 3; k++) {
                     ctx.beginPath();
-                    ctx.moveTo(fX - fR * 0.6, fY - fR * 0.20 + k * 2.2);
-                    ctx.lineTo(fX + fR * 0.6, fY - fR * 0.20 + k * 2.2);
+                    ctx.moveTo(fX - fR * 0.65, fY - fR * 0.22 + k * 2.5);
+                    ctx.lineTo(fX + fR * 0.65, fY - fR * 0.22 + k * 2.5);
                     ctx.stroke();
                 }
 
-                // Impact burst on active fist (bigger and more dramatic)
-                if (isActive && flashT > 0.10) {
-                    const bX = fX + xDir * 5;
-                    // Primary burst
-                    ctx.globalAlpha = flashT * 0.90;
-                    ctx.fillStyle = 'white';
-                    ctx.shadowBlur = 24; ctx.shadowColor = punchCol;
-                    ctx.beginPath(); ctx.arc(bX, fY, 6 + flashT * 7, 0, Math.PI * 2); ctx.fill();
-                    // Color overlay
-                    ctx.fillStyle = punchCol; ctx.globalAlpha = flashT * 0.60;
-                    ctx.beginPath(); ctx.arc(bX, fY, 3 + flashT * 4, 0, Math.PI * 2); ctx.fill();
-                    // Star-burst spikes (8 direction)
-                    ctx.strokeStyle = punchCol; ctx.lineWidth = 1.2;
+                // Impact burst on active fist — star burst + shockwave
+                if (isActive && flashT > 0.08) {
+                    const bX = fX + xDir * 7;
+                    ctx.globalAlpha = flashT * 0.95;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowBlur = 28; ctx.shadowColor = punchCol;
+                    ctx.beginPath(); ctx.arc(bX, fY, 7 + flashT * 9, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = punchCol; ctx.globalAlpha = flashT * 0.65;
+                    ctx.beginPath(); ctx.arc(bX, fY, 4 + flashT * 5, 0, Math.PI * 2); ctx.fill();
+                    // 8-spike starburst
+                    ctx.strokeStyle = goldCol; ctx.lineWidth = 1.5;
                     for (let r = 0; r < 8; r++) {
-                        const ra = (r / 8) * Math.PI * 2 + t * 6;
-                        ctx.globalAlpha = flashT * 0.55;
+                        const ra = (r / 8) * Math.PI * 2;
+                        ctx.globalAlpha = flashT * 0.65;
                         ctx.beginPath();
-                        ctx.moveTo(bX + Math.cos(ra) * 5, fY + Math.sin(ra) * 5);
-                        ctx.lineTo(bX + Math.cos(ra) * 17, fY + Math.sin(ra) * 17);
+                        ctx.moveTo(bX + Math.cos(ra) * 6, fY + Math.sin(ra) * 6);
+                        ctx.lineTo(bX + Math.cos(ra) * 20, fY + Math.sin(ra) * 20);
+                        ctx.stroke();
+                    }
+                    // Diamond shards (4 diagonal)
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2;
+                    for (let r = 0; r < 4; r++) {
+                        const ra = (r / 4) * Math.PI * 2 + Math.PI / 4;
+                        ctx.globalAlpha = flashT * 0.45;
+                        ctx.beginPath();
+                        ctx.moveTo(bX + Math.cos(ra) * 4, fY + Math.sin(ra) * 4);
+                        ctx.lineTo(bX + Math.cos(ra) * 28, fY + Math.sin(ra) * 28);
                         ctx.stroke();
                     }
                 }
@@ -530,290 +578,263 @@ class WanchaiStand {
             ctx.restore();
         }
 
-        // ═══ LAYER 5 — Head (Spirit face — angular, hollow eyes) ═════════════
+        // ═══ LAYER 4 — Head (warrior face — intense, angular) ════════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + bob * 1.5); // bob = fighter weight shift
+            ctx.translate(sc.x, sc.y + bob * 1.2);
             ctx.scale(fs, 1);
 
-            const hy = -26 + breathe * 0.6; // head center, slightly higher (taller fighter)
+            const hy = -32 + breathe * 0.5; // head center — taller than before
 
-            // Neck
-            ctx.fillStyle = ht >= 2 ? '#3d1a00' : '#082f49'; ctx.globalAlpha = 0.75;
-            ctx.beginPath(); ctx.roundRect(-4, hy + 10, 8, 7, 1); ctx.fill();
+            // Neck — thick warrior neck
+            ctx.fillStyle = armorCol1; ctx.globalAlpha = 0.80;
+            ctx.beginPath(); ctx.roundRect(-5, hy + 12, 10, 8, 1); ctx.fill();
 
-            // ── MONGKHON CROWN — tiered band + 5 tapered spikes + jewel ──
-            const mkCol = ht >= 2 ? '#f59e0b' : '#22d3ee';
-            const mkColMid = ht >= 2 ? '#b45309' : '#0891b2';
-            const mkColDim = ht >= 2 ? '#78350f' : '#164e63';
-            const mkGlow = ht >= 2 ? '#fbbf24' : '#67e8f9';
-            const mkBandY = hy - 5;           // band top edge
-            const mkBandH = 6;                // band height
-            const mkPulse = 0.75 + Math.sin(t * 2.8) * 0.25;
+            // ── MONGKHON CROWN — gold tiered, 5 spikes ──────────────────────
+            const mkCol    = goldCol;
+            const mkColMid = ht >= 2 ? '#92400e' : '#b45309';
+            const mkColDim = ht >= 2 ? '#78350f' : '#7c1d1d';
+            const mkGlow   = goldCol;
+            const mkBandY  = hy - 7;
+            const mkBandH  = 7;
+            const mkPulse  = 0.75 + Math.sin(t * 2.8) * 0.25;
 
-            ctx.shadowBlur = 16 * mkPulse; ctx.shadowColor = mkGlow;
+            ctx.shadowBlur = 18 * mkPulse; ctx.shadowColor = mkGlow;
 
-            // ── Band: 3-layer (dark base → colour fill → bright rim) ──────────
-            ctx.fillStyle = mkColDim; ctx.globalAlpha = 0.95;
-            ctx.beginPath(); ctx.roundRect(-14, mkBandY, 28, mkBandH, 3); ctx.fill();
-
-            const bandG = ctx.createLinearGradient(-14, 0, 14, 0);
-            bandG.addColorStop(0, mkColDim);
-            bandG.addColorStop(0.3, mkCol);
-            bandG.addColorStop(0.5, mkGlow);
-            bandG.addColorStop(0.7, mkCol);
+            // Band: dark base → gold fill → bright rim
+            ctx.fillStyle = mkColDim; ctx.globalAlpha = 0.96;
+            ctx.beginPath(); ctx.roundRect(-16, mkBandY, 32, mkBandH, 3); ctx.fill();
+            const bandG = ctx.createLinearGradient(-16, 0, 16, 0);
+            bandG.addColorStop(0, mkColDim); bandG.addColorStop(0.25, mkColMid);
+            bandG.addColorStop(0.5, mkGlow); bandG.addColorStop(0.75, mkColMid);
             bandG.addColorStop(1, mkColDim);
-            ctx.fillStyle = bandG; ctx.globalAlpha = 0.90;
-            ctx.beginPath(); ctx.roundRect(-13, mkBandY + 1, 26, mkBandH - 2, 2); ctx.fill();
-
-            ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 0.9;
+            ctx.fillStyle = bandG; ctx.globalAlpha = 0.92;
+            ctx.beginPath(); ctx.roundRect(-15, mkBandY + 1, 30, mkBandH - 2, 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.40)'; ctx.lineWidth = 0.9;
             ctx.globalAlpha = 0.70;
-            ctx.beginPath(); ctx.roundRect(-13, mkBandY + 1, 26, 1.8, 1); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(-15, mkBandY + 1, 30, 2.0, 1); ctx.fill();
 
-            // ── 5 Spikes — concave-sided, gradient, gleam + tip dot ──────────
+            // 5 Spikes — taller, more dramatic
             ctx.globalAlpha = 1.0;
             const mkSpikes = [
-                { x: 0, h: 16, w: 3.8 },   // center  — tallest
-                { x: -6, h: 12, w: 3.2 },   // inner L
-                { x: 6, h: 12, w: 3.2 },   // inner R
-                { x: -11, h: 8, w: 2.5 },   // outer L
-                { x: 11, h: 8, w: 2.5 },   // outer R
+                { x: 0, h: 20, w: 4.2 },
+                { x: -7, h: 15, w: 3.5 },
+                { x: 7, h: 15, w: 3.5 },
+                { x: -13, h: 10, w: 2.8 },
+                { x: 13, h: 10, w: 2.8 },
             ];
             for (const sp of mkSpikes) {
                 const bY = mkBandY + 1;
                 const tipY = bY - sp.h;
-
                 const spG = ctx.createLinearGradient(sp.x, bY, sp.x, tipY);
-                spG.addColorStop(0, mkColDim);
-                spG.addColorStop(0.35, mkColMid);
-                spG.addColorStop(0.75, mkCol);
-                spG.addColorStop(1, mkGlow);
+                spG.addColorStop(0, mkColDim); spG.addColorStop(0.3, mkColMid);
+                spG.addColorStop(0.7, mkCol); spG.addColorStop(1, mkGlow);
                 ctx.fillStyle = spG;
-                ctx.shadowBlur = 12 * mkPulse; ctx.shadowColor = mkGlow;
-                ctx.globalAlpha = 0.95;
-
+                ctx.shadowBlur = 14 * mkPulse; ctx.shadowColor = mkGlow;
+                ctx.globalAlpha = 0.96;
                 ctx.beginPath();
                 ctx.moveTo(sp.x - sp.w, bY);
-                ctx.quadraticCurveTo(sp.x - sp.w * 0.55, bY - sp.h * 0.5, sp.x, tipY);
-                ctx.quadraticCurveTo(sp.x + sp.w * 0.55, bY - sp.h * 0.5, sp.x + sp.w, bY);
-                ctx.closePath();
-                ctx.fill();
-
-                // Gleam line
-                ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.85;
-                ctx.shadowBlur = 4; ctx.shadowColor = '#ffffff';
-                ctx.globalAlpha = 0.65;
-                ctx.beginPath();
-                ctx.moveTo(sp.x, bY - 1.5);
-                ctx.lineTo(sp.x, tipY + 3);
-                ctx.stroke();
-
+                ctx.quadraticCurveTo(sp.x - sp.w * 0.5, bY - sp.h * 0.5, sp.x, tipY);
+                ctx.quadraticCurveTo(sp.x + sp.w * 0.5, bY - sp.h * 0.5, sp.x + sp.w, bY);
+                ctx.closePath(); ctx.fill();
+                // Gleam
+                ctx.strokeStyle = 'rgba(255,255,255,0.50)'; ctx.lineWidth = 0.9;
+                ctx.globalAlpha = 0.60;
+                ctx.beginPath(); ctx.moveTo(sp.x, bY - 2); ctx.lineTo(sp.x, tipY + 4); ctx.stroke();
                 // Tip glow dot
                 ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 8; ctx.shadowColor = mkGlow;
-                ctx.globalAlpha = mkPulse * 0.80;
-                ctx.beginPath(); ctx.arc(sp.x, tipY, 1.2, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 10; ctx.shadowColor = mkGlow;
+                ctx.globalAlpha = mkPulse * 0.85;
+                ctx.beginPath(); ctx.arc(sp.x, tipY, 1.4, 0, Math.PI * 2); ctx.fill();
             }
 
-            // ── Centre jewel (diamond) on band ──────────────────────────────
+            // Centre jewel (diamond) — crimson gem
             const jY = mkBandY + mkBandH * 0.5;
-            const jewelG = ctx.createRadialGradient(0, jY - 0.5, 0, 0, jY, 4);
+            const jewelG = ctx.createRadialGradient(0, jY - 0.5, 0, 0, jY, 4.5);
             jewelG.addColorStop(0, '#ffffff');
-            jewelG.addColorStop(0.35, mkGlow);
+            jewelG.addColorStop(0.3, coreCol);
             jewelG.addColorStop(1, mkColDim);
             ctx.fillStyle = jewelG;
-            ctx.shadowBlur = 14 * mkPulse; ctx.shadowColor = mkGlow;
+            ctx.shadowBlur = 16 * mkPulse; ctx.shadowColor = coreCol;
             ctx.globalAlpha = mkPulse * 0.95;
             ctx.beginPath();
-            ctx.moveTo(0, jY - 3.8);
-            ctx.lineTo(3, jY);
-            ctx.lineTo(0, jY + 3.8);
-            ctx.lineTo(-3, jY);
+            ctx.moveTo(0, jY - 4.5); ctx.lineTo(3.5, jY);
+            ctx.lineTo(0, jY + 4.5); ctx.lineTo(-3.5, jY);
             ctx.closePath(); ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.60)'; ctx.lineWidth = 0.8;
+            ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.8;
             ctx.globalAlpha = 0.70;
-            ctx.beginPath();
-            ctx.moveTo(0, jY - 3.8); ctx.lineTo(3, jY);
-            ctx.lineTo(0, jY + 3.8); ctx.lineTo(-3, jY);
-            ctx.closePath(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, jY - 4.5); ctx.lineTo(3.5, jY);
+            ctx.lineTo(0, jY + 4.5); ctx.lineTo(-3.5, jY); ctx.closePath(); ctx.stroke();
 
-            // ── Side tassel ribbons (2 strands each) ────────────────────────
-            ctx.strokeStyle = mkCol; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+            // Side tassel ribbons
+            ctx.strokeStyle = mkCol; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
             ctx.shadowBlur = 6; ctx.shadowColor = mkGlow;
-            ctx.globalAlpha = 0.65;
-            ctx.beginPath(); ctx.moveTo(-14, mkBandY + 2); ctx.quadraticCurveTo(-18, mkBandY + 4, -17, mkBandY + 9); ctx.stroke();
-            ctx.globalAlpha = 0.40;
-            ctx.beginPath(); ctx.moveTo(-14, mkBandY + 4); ctx.quadraticCurveTo(-19, mkBandY + 5, -18, mkBandY + 10); ctx.stroke();
-            ctx.globalAlpha = 0.65;
-            ctx.beginPath(); ctx.moveTo(14, mkBandY + 2); ctx.quadraticCurveTo(18, mkBandY + 4, 17, mkBandY + 9); ctx.stroke();
-            ctx.globalAlpha = 0.40;
-            ctx.beginPath(); ctx.moveTo(14, mkBandY + 4); ctx.quadraticCurveTo(19, mkBandY + 5, 18, mkBandY + 10); ctx.stroke();
-
+            ctx.globalAlpha = 0.70;
+            ctx.beginPath(); ctx.moveTo(-16, mkBandY + 2); ctx.quadraticCurveTo(-20, mkBandY + 4, -19, mkBandY + 10); ctx.stroke();
+            ctx.globalAlpha = 0.42;
+            ctx.beginPath(); ctx.moveTo(-16, mkBandY + 4); ctx.quadraticCurveTo(-21, mkBandY + 5, -20, mkBandY + 11); ctx.stroke();
+            ctx.globalAlpha = 0.70;
+            ctx.beginPath(); ctx.moveTo(16, mkBandY + 2); ctx.quadraticCurveTo(20, mkBandY + 4, 19, mkBandY + 10); ctx.stroke();
+            ctx.globalAlpha = 0.42;
+            ctx.beginPath(); ctx.moveTo(16, mkBandY + 4); ctx.quadraticCurveTo(21, mkBandY + 5, 20, mkBandY + 11); ctx.stroke();
             ctx.shadowBlur = 0; ctx.globalAlpha = 1;
 
-            // Head base — spirit skin (slightly translucent, slightly inhuman)
-            const hG = ctx.createRadialGradient(-3, hy - 4, 1, 0, hy, 12);
-            hG.addColorStop(0, ht >= 2 ? '#a86030' : '#336688');   // warm/cold skin
-            hG.addColorStop(0.55, ht >= 2 ? '#7a3a14' : '#1a4d6e');
-            hG.addColorStop(1, ht >= 2 ? '#3d1500' : '#091f30');
-            ctx.fillStyle = hG;
-            ctx.globalAlpha = 0.88;
-            ctx.shadowBlur = isPunch ? 16 : 7; ctx.shadowColor = coreCol;
-            ctx.beginPath(); ctx.arc(0, hy, 12, 0, Math.PI * 2); ctx.fill();
+            // Head base — dark warrior skin (same hue as Auto but deeper)
+            const hG = ctx.createRadialGradient(-3, hy - 4, 1, 0, hy, 13);
+            hG.addColorStop(0, ht >= 2 ? '#c47c40' : '#7a3030');
+            hG.addColorStop(0.5, ht >= 2 ? '#8a4a10' : '#4a1010');
+            hG.addColorStop(1, ht >= 2 ? '#3d1500' : '#1a0000');
+            ctx.fillStyle = hG; ctx.globalAlpha = 0.90;
+            ctx.shadowBlur = isPunch ? 18 : 8; ctx.shadowColor = coreCol;
+            ctx.beginPath(); ctx.arc(0, hy, 13, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
 
-            // ── Short cropped hair ──
-            ctx.fillStyle = '#050505'; ctx.globalAlpha = 0.90;
-            ctx.beginPath(); ctx.arc(0, hy, 12, Math.PI * 1.05, Math.PI * 2.0); ctx.closePath(); ctx.fill();
-            // Hair texture line
-            ctx.strokeStyle = 'rgba(80,40,0,0.20)'; ctx.lineWidth = 0.8;
-            ctx.beginPath(); ctx.arc(0, hy, 10, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+            // Short spiky hair (matching Auto's hair style)
+            ctx.fillStyle = '#100000'; ctx.globalAlpha = 0.92;
+            ctx.beginPath(); ctx.arc(0, hy, 13, Math.PI * 1.05, Math.PI * 2.0); ctx.closePath(); ctx.fill();
 
-            // ── OVERHEAT Flame Crown (ht >= 3 only) ──────────────────────────
+            // Overheat flame crown
             if (ht >= 3) {
-                const _fc = 7;         // flame count
-                const _fBaseY = hy - 11;
-                ctx.shadowBlur = 18; ctx.shadowColor = '#f97316';
+                const _fc = 7, _fBaseY = hy - 13;
+                ctx.shadowBlur = 20; ctx.shadowColor = '#f97316';
                 for (let fi = 0; fi < _fc; fi++) {
-                    const _fa = (fi / _fc) * Math.PI + Math.PI * 0.02; // arc across top
-                    const _fx = Math.cos(_fa) * 13;
+                    const _fa = (fi / _fc) * Math.PI + Math.PI * 0.02;
+                    const _fx = Math.cos(_fa) * 14;
                     const _fy = _fBaseY + Math.sin(_fa) * 4;
-                    // Flame height oscillates per tongue, offset by index
-                    const _fh = 8 + Math.abs(Math.sin(t * 5.5 + fi * 1.1)) * 9;
-                    const _fw = 3.2 - fi * 0.08;
+                    const _fh = 9 + Math.abs(Math.sin(t * 5.5 + fi * 1.1)) * 10;
+                    const _fw = 3.5 - fi * 0.08;
                     const _fG = ctx.createLinearGradient(_fx, _fy, _fx, _fy - _fh);
                     _fG.addColorStop(0, 'rgba(251,191,36,0.0)');
                     _fG.addColorStop(0.25, 'rgba(249,115,22,0.85)');
-                    _fG.addColorStop(0.65, 'rgba(239,68,68,0.70)');
-                    _fG.addColorStop(1, 'rgba(255,255,255,0.90)');
-                    ctx.globalAlpha = 0.82 + Math.sin(t * 4.1 + fi) * 0.14;
+                    _fG.addColorStop(0.65, 'rgba(239,68,68,0.72)');
+                    _fG.addColorStop(1, 'rgba(255,255,255,0.92)');
+                    ctx.globalAlpha = 0.85 + Math.sin(t * 4.1 + fi) * 0.12;
                     ctx.fillStyle = _fG;
-                    ctx.beginPath();
-                    ctx.ellipse(_fx, _fy - _fh * 0.5, _fw, _fh * 0.55, 0, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(_fx, _fy - _fh * 0.5, _fw, _fh * 0.55, 0, 0, Math.PI * 2); ctx.fill();
                 }
                 ctx.shadowBlur = 0; ctx.globalAlpha = 1;
             }
 
-            // ── Hollow spirit eyes — key distinguisher from Auto ──
-            // Outer glow first
+            // Hollow spirit eyes — solid crimson glow irises
             const eyeY = hy + 1;
-            ctx.shadowBlur = isPunch ? 18 : 10; ctx.shadowColor = coreCol;
-
-            // Eye sockets — dark recesses
-            ctx.fillStyle = '#000408'; ctx.globalAlpha = 0.95;
-            ctx.beginPath(); ctx.ellipse(-4.5, eyeY, 4, 2.2, -0.08, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(4.5, eyeY, 4, 2.2, 0.08, 0, Math.PI * 2); ctx.fill();
-
-            // Spirit glow irises — no pupils (completely hollow glow)
-            const eyeIntensity = Math.max(0.6, 0.7 + eyeFlick * 0.3) * (isPunch ? 1.4 : 1.0);
+            ctx.shadowBlur = isPunch ? 20 : 11; ctx.shadowColor = coreCol;
+            // Eye sockets
+            ctx.fillStyle = '#000000'; ctx.globalAlpha = 0.96;
+            ctx.beginPath(); ctx.ellipse(-5, eyeY, 4.5, 2.4, -0.08, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(5, eyeY, 4.5, 2.4, 0.08, 0, Math.PI * 2); ctx.fill();
+            // Crimson glow irises (no pupils — spirit eyes)
+            const eyeInt = Math.max(0.65, 0.75 + eyeFlick * 0.25) * (isPunch ? 1.5 : 1.0 + comboIntensity * 0.5);
             const mkEye = (x, y) => {
-                const eG = ctx.createRadialGradient(x, y, 0, x, y, 3.5);
-                eG.addColorStop(0, `rgba(255,255,255,${Math.min(1, eyeIntensity)})`);
-                eG.addColorStop(0.4, `${auraCol}${Math.min(1, eyeIntensity * 0.9)})`);
+                const eG = ctx.createRadialGradient(x, y, 0, x, y, 3.8);
+                eG.addColorStop(0, `rgba(255,255,255,${Math.min(1, eyeInt)})`);
+                eG.addColorStop(0.35, `${auraCol}${Math.min(1, eyeInt * 0.95)})`);
                 eG.addColorStop(1, `${auraCol}0.0)`);
                 return eG;
             };
-            ctx.fillStyle = mkEye(-4.5, eyeY);
-            ctx.globalAlpha = 0.95;
-            ctx.beginPath(); ctx.ellipse(-4.5, eyeY, 3.5, 1.9, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = mkEye(4.5, eyeY);
-            ctx.beginPath(); ctx.ellipse(4.5, eyeY, 3.5, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = mkEye(-5, eyeY); ctx.globalAlpha = 0.96;
+            ctx.beginPath(); ctx.ellipse(-5, eyeY, 4, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = mkEye(5, eyeY);
+            ctx.beginPath(); ctx.ellipse(5, eyeY, 4, 2.2, 0, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Eye gleam streaks (horizontal — otherworldly)
+            // Horizontal eye gleam streaks
             ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.7;
             ctx.globalAlpha = 0.55;
-            ctx.beginPath(); ctx.moveTo(-7, eyeY); ctx.lineTo(-2, eyeY); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(2, eyeY); ctx.lineTo(7, eyeY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-8, eyeY); ctx.lineTo(-2, eyeY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(2, eyeY); ctx.lineTo(8, eyeY); ctx.stroke();
 
-            // ── Heavy angular brows — warrior intensity ──
-            ctx.strokeStyle = '#080000'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
-            ctx.globalAlpha = 0.95;
-            // Left brow — severe inward angle
-            ctx.beginPath();
-            ctx.moveTo(-11, hy - 4); ctx.lineTo(-2, hy - 6.5);
-            ctx.stroke();
-            // Right brow — mirror
-            ctx.beginPath();
-            ctx.moveTo(2, hy - 6.5); ctx.lineTo(11, hy - 4);
-            ctx.stroke();
-            // Unibrow crease at nose bridge (intense warrior expression)
-            ctx.lineWidth = 1.8; ctx.strokeStyle = '#1a0000';
-            ctx.beginPath();
-            ctx.moveTo(-3, hy - 6); ctx.quadraticCurveTo(0, hy - 3.5, 3, hy - 6);
-            ctx.stroke();
+            // Heavy warrior brows — severe inward angle
+            ctx.strokeStyle = '#050000'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+            ctx.globalAlpha = 0.96;
+            ctx.beginPath(); ctx.moveTo(-12, hy - 5); ctx.lineTo(-2, hy - 8); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(2, hy - 8); ctx.lineTo(12, hy - 5); ctx.stroke();
+            // Crease at bridge
+            ctx.lineWidth = 2.0; ctx.strokeStyle = '#1a0000';
+            ctx.beginPath(); ctx.moveTo(-3, hy - 7); ctx.quadraticCurveTo(0, hy - 4.5, 3, hy - 7); ctx.stroke();
 
-            // Battle scar — diagonal on right cheek
-            ctx.strokeStyle = 'rgba(200,80,30,0.60)'; ctx.lineWidth = 1.1;
-            ctx.globalAlpha = 0.70;
-            ctx.beginPath(); ctx.moveTo(5, eyeY + 2.5); ctx.lineTo(9, eyeY + 6.5); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(6, eyeY + 3.0); ctx.lineTo(8, eyeY + 5.5); ctx.stroke();
+            // Battle scar
+            ctx.strokeStyle = 'rgba(200,80,30,0.65)'; ctx.lineWidth = 1.2;
+            ctx.globalAlpha = 0.72;
+            ctx.beginPath(); ctx.moveTo(6, eyeY + 2.5); ctx.lineTo(10, eyeY + 7); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(7, eyeY + 3); ctx.lineTo(9, eyeY + 6); ctx.stroke();
 
-            // Tight warrior mouth — set jaw
-            ctx.strokeStyle = ht >= 2 ? '#7c4500' : '#0a3a5a';
-            ctx.lineWidth = 1.8; ctx.lineCap = 'round';
-            ctx.globalAlpha = 0.80;
-            ctx.beginPath(); ctx.moveTo(-4.5, hy + 8); ctx.lineTo(4.5, hy + 8); ctx.stroke();
-            // Jaw clench lines
-            ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.65;
-            ctx.beginPath(); ctx.moveTo(-7, hy + 5); ctx.lineTo(-7, hy + 8); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(7, hy + 5); ctx.lineTo(7, hy + 8); ctx.stroke();
+            // Tight jaw set
+            ctx.strokeStyle = armorCol2; ctx.lineWidth = 2.0; ctx.lineCap = 'round';
+            ctx.globalAlpha = 0.82;
+            ctx.beginPath(); ctx.moveTo(-5, hy + 9); ctx.lineTo(5, hy + 9); ctx.stroke();
+            ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.moveTo(-8, hy + 6); ctx.lineTo(-8, hy + 9); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(8, hy + 6); ctx.lineTo(8, hy + 9); ctx.stroke();
 
             ctx.globalAlpha = 1; ctx.shadowBlur = 0;
             ctx.restore(); // end head
         }
 
-        // ═══ LAYER 6 — Name chip ════════════════════════════════════════════
+        // ═══ LAYER 5 — ORA combo counter + name chip ═════════════════════════
         {
             ctx.save();
-            ctx.translate(sc.x, sc.y + bob * 0.5);
-            const chipY = -52;
-            const cA = 0.60 + Math.sin(t * 2.1) * 0.15;
+            ctx.translate(sc.x, sc.y + bob * 0.4);
+            const chipY = -60;
+            const cA = 0.65 + Math.sin(t * 2.1) * 0.15;
 
             // Punch flash ring behind chip
-            if (isPunch && flashT > 0.08) {
-                ctx.globalAlpha = flashT * 0.75;
-                ctx.strokeStyle = punchCol; ctx.lineWidth = 2.2;
-                ctx.shadowBlur = 24; ctx.shadowColor = punchCol;
-                ctx.beginPath(); ctx.arc(0, chipY, 28 + (1 - flashT) * 12, 0, Math.PI * 2); ctx.stroke();
+            if (isPunch && flashT > 0.06) {
+                ctx.globalAlpha = flashT * 0.80;
+                ctx.strokeStyle = punchCol; ctx.lineWidth = 2.5;
+                ctx.shadowBlur = 28; ctx.shadowColor = punchCol;
+                ctx.beginPath(); ctx.arc(0, chipY, 30 + (1 - flashT) * 14, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // ORA combo ring — grows with combo count
+            if (oraCombo > 0) {
+                const oraR = 20 + oraCombo * 2.5;
+                const oraA = Math.min(0.7, oraCombo * 0.10);
+                ctx.globalAlpha = oraA;
+                ctx.strokeStyle = goldCol; ctx.lineWidth = 1.5 + oraCombo * 0.2;
+                ctx.shadowBlur = 12; ctx.shadowColor = goldCol;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath(); ctx.arc(0, chipY, oraR, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
                 ctx.shadowBlur = 0;
             }
 
             // Pill bg
-            ctx.globalAlpha = cA * 0.75;
-            ctx.fillStyle = 'rgba(0,8,18,0.80)';
+            ctx.globalAlpha = cA * 0.80;
+            ctx.fillStyle = 'rgba(10,0,0,0.85)';
             ctx.strokeStyle = isPunch
-                ? `rgba(255,255,255,${0.50 + flashT * 0.50})`
-                : `${auraCol}0.60)`;
-            ctx.lineWidth = isPunch ? 1.8 : 1.0;
-            ctx.shadowBlur = isPunch ? 14 : 8;
-            ctx.shadowColor = isPunch ? punchCol : coreCol;
-            ctx.beginPath(); ctx.roundRect(-22, chipY - 6, 44, 12, 4);
+                ? `rgba(255,200,50,${0.55 + flashT * 0.45})`
+                : `${auraCol}0.55)`;
+            ctx.lineWidth = isPunch ? 2.0 : 1.1;
+            ctx.shadowBlur = isPunch ? 16 : 9;
+            ctx.shadowColor = isPunch ? goldCol : coreCol;
+            ctx.beginPath(); ctx.roundRect(-24, chipY - 7, 48, 14, 4);
             ctx.fill(); ctx.stroke();
 
-            // Heat tier badge (left side of chip)
+            // Heat tier badge
             if (ht > 0) {
                 const tierMark = ht >= 3 ? '💥' : ht >= 2 ? '🔥🔥' : '🔥';
-                ctx.globalAlpha = cA * 0.95;
+                ctx.globalAlpha = cA * 0.96;
                 ctx.font = 'bold 7px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-                ctx.fillStyle = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#fb923c';
-                ctx.fillText(tierMark, -21, chipY);
+                ctx.fillStyle = ht >= 3 ? '#fef08a' : ht >= 2 ? '#f97316' : '#fb923c';
+                ctx.fillText(tierMark, -23, chipY);
             }
 
-            // Label
+            // Label — show combo count if active
             ctx.globalAlpha = cA;
-            ctx.fillStyle = isPunch ? '#ffffff' : coreCol;
+            ctx.fillStyle = isPunch ? goldCol : coreCol;
             ctx.font = 'bold 7.5px Arial';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowBlur = isPunch ? 12 : 5;
-            ctx.shadowColor = isPunch ? punchCol : coreCol;
-            ctx.fillText('WANCHAI', 0, chipY);
+            ctx.shadowBlur = isPunch ? 14 : 6;
+            ctx.shadowColor = isPunch ? goldCol : coreCol;
+            const chipLabel = oraCombo >= 3 ? `ORA ×${oraCombo}` : 'WANCHAI';
+            ctx.fillText(chipLabel, 0, chipY);
             ctx.globalAlpha = 1; ctx.shadowBlur = 0;
             ctx.restore();
         }
     }
 }
+
 
 // ════════════════════════════════════════════════════════════
 // 🔥 AUTO PLAYER — Thermodynamic Brawler + Stand "Wanchai"
@@ -838,6 +859,7 @@ class AutoPlayer extends Player {
         this.isStandAttacking = false;
         this.standAttackTimer = 0;
         this.lastPunchSoundTime = 0;
+        this._oraComboCount = 0;    // ORA combo counter (resets on miss/timeout)
 
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0, vacuum: 0, detonation: 0 };
 
@@ -1218,6 +1240,8 @@ class AutoPlayer extends Player {
                 });
             }
             this._rushFistTimer = 0.08;
+            // Miss breaks ORA combo
+            this._oraComboCount = Math.max(0, (this._oraComboCount ?? 0) - 1);
             // Miss VFX + sound
             if (typeof spawnParticles === 'function') spawnParticles(cx, cy, 2, '#ef4444');
             if (typeof Audio !== 'undefined' && Audio.playPunch) Audio.playPunch();
@@ -1277,10 +1301,21 @@ class AutoPlayer extends Player {
             spawnFloatingText('ORA!', this.x, this.y - 45, '#facc15', 20);
         if (typeof Audio !== 'undefined' && Audio.playStandRush) Audio.playStandRush();
 
-        // Precompute rush fist positions — radial fan (drawn by PlayerRenderer)
+        // ── ORA Combo escalation from player hits ─────────────────────────
+        this._oraComboCount = Math.min(10, (this._oraComboCount ?? 0) + 1);
+        // High combo = escalating ORA text
+        if (this._oraComboCount >= 5 && typeof spawnFloatingText === 'function') {
+            spawnFloatingText(`ORA ORA ×${this._oraComboCount}`, this.x, this.y - 60, '#f59e0b', 16);
+        }
+        // Attack speed bonus from combo — faster playerRushCooldown at high combo
+        const _comboSpeedBonus = Math.min(0.04, this._oraComboCount * 0.006);
+        this.cooldowns.shoot = Math.max(0.04, (this.stats?.playerRushCooldown ?? 0.10) - _comboSpeedBonus);
+
+        // Precompute rush fist positions — combo-scaled barrage (drawn by PlayerRenderer)
         this._rushFists = this._rushFists ?? [];
         this._rushFists.length = 0;
-        const _hFanCount = 7, _hSpread = Math.PI * 0.38;
+        const _hFanCount = Math.min(12, 5 + Math.floor(this._oraComboCount * 0.8));
+        const _hSpread = Math.max(Math.PI * 0.15, Math.PI * 0.38 - this._oraComboCount * 0.025);
         const _hFaceA = this.angle;
         for (let i = 0; i < _hFanCount; i++) {
             const t_ = i / (_hFanCount - 1);
@@ -1293,7 +1328,7 @@ class AutoPlayer extends Player {
                 alpha: 1.0
             });
         }
-        this._rushFistTimer = 0.10;
+        this._rushFistTimer = 0.12;
 
         // Sync combo into WanchaiStand so ORA counter escalates
         if (this.wanchaiStand) {

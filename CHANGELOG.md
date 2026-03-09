@@ -4,6 +4,52 @@
 
 ---
 
+## v3.25.6 — WanchaiStand Visual Rework & ORA Combo System
+*Released: March 9, 2026*
+
+### 🎨 Complete Visual Transformation — JoJo-Style WanchaiStand
+- **Thermodynamic Color Palette:** Complete color scheme overhaul from ice-blue to fire theme:
+  - Base: `#dc2626` (dark red) → Warm: `#ef4444` (red) → Hot: `#f59e0b` (amber) → Overheat: `#fef08a` (yellow)
+  - Gold trim `#f59e0b` replaces ice-blue throughout all visual elements
+- **JoJo-Style Body Redesign:** Enhanced physique with authentic Star Platinum aesthetics:
+  - Larger body with broader shoulders and imposing presence
+  - Gold Pauldrons (shoulder armor) on both sides — signature JoJo look
+  - Belt + Gold Buckle at waist with detailed styling
+  - Gold Knee Guards on legs/knees for complete armor coverage
+  - Crimson Hollow Eyes replacing blue eyes with menacing red glow
+  - Mongkhon Crown upgraded to 5-spike design with center spike at 20px height
+- **Enhanced Gloves System:** Premium Muay Thai glove implementation:
+  - Size increase to 11px (active) vs 8.5px (original) for better visibility
+  - Gold trim rings around glove edges for luxury appearance
+  - Impact burst featuring 8-spike starburst with 4-direction diamond shards
+
+### ⚔️ ORA Combo System — Revolutionary Combat Mechanics
+- **Core Combo Mechanics:** `_oraComboCount` tracks consecutive hits from player melee + stand punches
+  - Combo window of 0.55s — resets if no hit or miss occurs
+  - Progressive enhancement: higher combo = more fists (5→12) and tighter spread
+- **Dynamic Attack Scaling:** Combo-based performance improvements:
+  - Attack speed escalation: cooldown reduction of 0.006s per combo (maximum -0.04s)
+  - Fist fan expansion: `Math.min(12, 5 + Math.floor(_oraCombo * 0.8))` for fist count
+  - Spread tightening: `Math.PI * 0.38 - _oraCombo * 0.025` for Star Platinum barrage effect
+- **Visual Feedback System:** Immersive combo indicators:
+  - "ORA ORA ORA!" text replaces "วันชัย วันชัย วันชัย!" — turns gold at combo 5+
+  - Name chip displays "ORA ×N" when combo ≥ 3 for real-time feedback
+  - Floating text notifications at high combo levels (`ORA ORA ×${combo}`)
+- **Technical Implementation:** Sophisticated combo integration:
+  - Speed bonus calculation: `Math.min(0.04, _oraComboCount * 0.006)` for attack rate
+  - Combo ring visualization with growing radius and intensity
+  - Synchronization between player and WanchaiStand combo counters
+
+### 🔧 Technical Enhancements
+- **Color System Integration:** Heat-tier colors seamlessly integrated throughout:
+  - Fist colors: `#dc2626` → `#f59e0b` → `#fef08a` based on heat tier
+  - Trail effects with matching RGB values for consistency
+  - Gold accent system using `#f59e0b` for premium elements
+- **Performance Optimizations:** Efficient combo calculations and visual scaling
+- **Code Architecture:** Clean separation between visual rendering and combat mechanics
+
+---
+
 ## v3.25.5 — Mongkhon Crown Rework
 *Released: March 9, 2026*
 

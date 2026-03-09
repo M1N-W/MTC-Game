@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.25.5'; // v3.25.5: Mongkhon Crown Rework - Enhanced from 3 flat spikes to 5 concave spikes with 3-layer band, diamond jewel, and 2-strand tassels
+const CACHE_NAME = 'mtc-cache-v3.25.6'; // v3.25.6: WanchaiStand Visual Rework & ORA Combo System - Complete JoJo-style transformation with thermodynamic colors, enhanced body design, and combo-based mechanics
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -25,7 +25,7 @@
 * **⏱️ Bullet Time:** กด `T` เพื่อหน่วงเวลา 70% ให้คุณหลบกระสุนแบบ Matrix ได้อย่างเฉียบคม
 * **🏆 Achievement System:** หอเกียรติยศบันทึกสถิติและความสำเร็จของผู้เล่น
 * **🗄️ MTC Database & Admin Console:** Advanced permission-based terminal system with three-tier access levels (GUEST/OPERATOR/ROOT), debug commands, and real-time FPS monitoring
-* **🎨 Visual Polish:** SVG Portrait System, 6-layer Wanchai Stand rendering with realistic Muay Thai boxing glove rush system featuring anatomical detail, progressive depth scaling, and heat-tier colors, premium Mongkhon crown with 5 concave spikes, 3-layer band, diamond jewel, and 2-strand tassels, Military HUD theme, and enhanced particle effects
+* **🎨 Visual Polish:** SVG Portrait System, 6-layer Wanchai Stand rendering with JoJo-style aesthetics, thermodynamic color palette (crimson→amber→yellow), enhanced body design with gold pauldrons and armor, premium Mongkhon crown with 5 concave spikes, realistic Muay Thai boxing glove rush system with ORA Combo escalation, progressive depth scaling, Military HUD theme, and enhanced particle effects
 * **🤖 Advanced AI:** Autonomous Wanchai Stand with tactical intelligence and positioning
 * **🌌 Domain Expansion:** Ultimate boss abilities with arena-wide effects, physics manipulation, and enhanced visual effects including pillar of light, energy tendrils, and dynamic grid animations
 
@@ -39,7 +39,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 🎓 **เก้า (Kao)** | Advanced Assassin | 119 / 118 / 298 / 900 | **15/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡ | 👻 Two-Phase Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, และการสลับอาวุธ (Assault, Sniper, Shotgun) |
 | 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 165 / 148 / 298 / 750 | **12/s Regen**<br>Q: 25 ⚡<br>E: 30 ⚡<br>R-Click: 15 ⚡<br>R: **FREE** | 🔥 Ritual Burst<br>🐉 Naga + Garuda Summon<br>🍚 Cosmic Balance | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
-| 🔥 **ออโต้ (Auto)** | Pyromaniac | 230 / MAX / 260 / MELEE | **20/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡<br>R-Click: 25 ⚡ | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อน และปล่อย Stand Rush ไปตำแหน่งใดก็ได้ |
+| 🔥 **ออโต้ (Auto)** | Pyromaniac | 230 / MAX / 260 / MELEE | **20/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡<br>R-Click: 25 ⚡ | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand + ORA Combo | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อน และปล่อย Stand Rush ไปตำแหน่งใดก็ได้พร้อมระบบ combo เพิ่มความเร็วการโจมตี |
 
 ---
 
