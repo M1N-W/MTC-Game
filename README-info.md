@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.27.4 | **Latest Update:** Map layout optimization - cleared entrance paths, improved visual indicators, simplified shop rendering
+> **Current Version:** Beta v3.27.5 | **Latest Update:** Major map refactor - fixed MTC Citadel approach blocking, moved Zone A servers east, cleaned up datapillars and courtyard trees, ensured clear building entrances
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
