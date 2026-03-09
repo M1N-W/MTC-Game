@@ -145,6 +145,7 @@ class BossDog extends Entity {
     }
 
     takeDamage(amt) {
+        if (this._inSafeZone) return; // push-out กำลัง active — immune damage ชั่วคราว
         this.hp -= amt;
         spawnParticles(this.x, this.y, 3, '#d97706');
     }
@@ -631,6 +632,7 @@ class KruManop extends BossBase {
     }
 
     takeDamage(amt) {
+        if (this._inSafeZone) return; // push-out กำลัง active — immune damage ชั่วคราว
         if (typeof DomainExpansion !== 'undefined' && DomainExpansion.isInvincible()) {
             spawnFloatingText('DOMAIN SHIELD!', this.x, this.y - 40, '#d946ef', 20);
             return;
@@ -1089,6 +1091,7 @@ class KruFirst extends BossBase {
     }
 
     takeDamage(amt) {
+        if (this._inSafeZone) return; // push-out กำลัง active — immune damage ชั่วคราว
         if (this.state === 'FREE_FALL' && this.stateTimer < this.FREE_FALL_WARN) return; // invulnerable
         this.hp -= amt;
         this.hitFlashTimer = 0.12;

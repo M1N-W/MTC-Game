@@ -161,7 +161,24 @@
 
 ---
 
-## 📋 Latest Update (v3.20.1)
+## 📋 Latest Update (v3.20.2)
+
+**Boss Safe-Zone Protection System - March 9, 2026**
+
+### 🛡️ Anti-Exploit Protection
+- **MTC Room Exclusion:** Bosses can no longer be lured into MTC Room for spawn-killing exploits
+- **Smooth Push-Out:** Automatic 380 px/s push force moves bosses away from safe zone
+- **Temporary Immunity:** Bosses immune to damage during push-out with clear visual feedback
+- **Universal Coverage:** Protection applies to all boss types (BossDog, KruManop, KruFirst)
+
+### 🎯 Gameplay Fairness
+- **Maintains Challenge:** Prevents circumventing boss mechanics through safe-room exploitation
+- **Clear Feedback:** "SAFE ZONE" indicator shows when protection is active
+- **Non-Disruptive:** Smooth mechanics maintain game flow without jarring teleportation
+
+---
+
+## 📋 Previous Update (v3.20.1)
 
 **UI Polish & Display Improvements - March 9, 2026**
 

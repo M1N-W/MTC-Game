@@ -259,6 +259,35 @@ function updateGame(dt) {
 
     if (!_inTutorial && window.boss) window.boss.update(dt, window.player);
 
+    // ── Boss Safe-Zone Exclusion ───────────────────────────────────────────────
+    // ป้องกัน player lure boss เข้า MTC Room แล้ว spawn-kill ฟรี
+    // ทำ 2 อย่างพร้อมกัน:
+    //   1) smooth push-out  — boss ค่อยๆ ถูกดันออกจาก room center (380 px/s)
+    //   2) _inSafeZone flag — takeDamage ทุก boss class skip damage ระหว่าง overlap
+    if (window.boss && !window.boss.dead) {
+        const _safeRoom = window.mapSystem && window.mapSystem.mtcRoom;
+        if (_safeRoom) {
+            const _bx = window.boss.x, _by = window.boss.y;
+            const _pad = 28; // px — margin เผื่อ radius boss ไม่ติดขอบแบบ pixel-perfect
+            const _inRoom = _bx > _safeRoom.x - _pad && _bx < _safeRoom.x + _safeRoom.w + _pad &&
+                _by > _safeRoom.y - _pad && _by < _safeRoom.y + _safeRoom.h + _pad;
+            if (_inRoom) {
+                const _rcx = _safeRoom.x + _safeRoom.w * 0.5;
+                const _rcy = _safeRoom.y + _safeRoom.h * 0.5;
+                const _ang = Math.atan2(_by - _rcy, _bx - _rcx);
+                window.boss.x += Math.cos(_ang) * 380 * dt;
+                window.boss.y += Math.sin(_ang) * 380 * dt;
+                if (!window.boss._inSafeZone) {
+                    window.boss._inSafeZone = true;
+                    spawnFloatingText('SAFE ZONE', window.boss.x, window.boss.y - 60, '#22d3ee', 22);
+                }
+            } else {
+                window.boss._inSafeZone = false;
+            }
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (!_inTutorial) {
         for (let i = window.enemies.length - 1; i >= 0; i--) {
             window.enemies[i].update(dt, window.player);
