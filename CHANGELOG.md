@@ -4,6 +4,29 @@
 
 ---
 
+## v3.27.0 — Major Visual Upgrades
+*Released: March 9, 2026*
+
+### 🌟 Character Visual Enhancements
+- **Kao Stealth**: Complete holographic overhaul - iridescent gradient shimmer, deterministic glitch pixel dissolve (12 fragments), prismatic outer ring
+- **Kao Muzzle Flash**: Enhanced with expanding shockwave ring + forward-biased directional spark rays (5 forward + 4 scatter)
+- **Weapon Switch Indicator**: New visual feedback system - glow ring + floating weapon icons (🎯/💥/⚡) with 0.5s timer
+
+### 🐉 Poom Ability Visuals  
+- **Naga Tether**: Upgraded to 16 segments with serpentine dual-wave motion, smooth bezier curves, HP-based glow scaling, scale tick patterns
+- **Lotus Bloom**: 8-petal orbital system with breathing animation when passive unlocked, radial gradient per petal
+- **Garuda Wind**: Complete wind system - 4 rotating arc sweeps, animated wing silhouettes with flap motion, central golden burst
+
+### 🔥 Auto Heat System
+- **Body Color Shift**: 4-tier gradient system - COLD (dark crimson), WARM (orange rim glow), HOT (saturated orange + fire tips), OVERHEAT (white-hot core + crimson rings)
+- **Stand Active Pulse**: Enhanced with third ripple ring, increased intensity (lineWidth 3→3.5, shadowBlur 22→28), body vibrate shimmer overlay
+
+### ⚙️ Technical
+- **Weapon Switch Flow**: Complete edge detection system in KaoPlayer.update() + fallback patch in weapons.js switchWeapon()
+- **Performance**: All effects use deterministic sin-based patterns (no Math.random())
+
+---
+
 ## v3.26.9 — Comprehensive Game Enhancement
 *Released: March 9, 2026*
 

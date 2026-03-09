@@ -669,6 +669,14 @@ class WeaponSystem {
         Audio.playWeaponSwitch();
         Achievements.stats.weaponsUsed = this.weaponsUsed;
         if (this.weaponsUsed.size >= 3) Achievements.check('weapon_master');
+
+        // ── Notify KaoPlayer for weapon-switch visual indicator ──
+        // KaoPlayer.update() ตรวจ edge จาก currentWeapon เอง แต่ถ้า switch มาจาก
+        // ภายนอก (game.js / scroll wheel) ก็ set ตรงนี้เป็น fallback ได้เลย
+        if (typeof player !== 'undefined' && player && player.charId === 'kao') {
+            player._weaponSwitchFlash = 0.5;
+            player._prevWeaponKey = this.currentWeapon;
+        }
     }
 
     updateWeaponUI() {

@@ -280,6 +280,20 @@ class KaoPlayer extends Player {
 
         if (this.shootCooldown > 0) this.shootCooldown -= dt;
 
+        // ── Weapon Switch Flash — visual indicator ใน PlayerRenderer ──────────
+        // ตรวจ edge: weapon เปลี่ยนจาก frame ก่อน → set timer 0.5s
+        {
+            const curWep = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
+            if (this._prevWeaponKey === undefined) this._prevWeaponKey = curWep;
+            if (curWep !== this._prevWeaponKey) {
+                this._weaponSwitchFlash = 0.5;   // PlayerRenderer อ่าน timer นี้
+                this._prevWeaponKey = curWep;
+            }
+            if ((this._weaponSwitchFlash ?? 0) > 0) {
+                this._weaponSwitchFlash = Math.max(0, this._weaponSwitchFlash - dt);
+            }
+        }
+
         // ── bonusCritFromAuto decay: ลดลง 0.01/s เมื่อถือ weapon อื่น (ไม่ใช่ AUTO RIFLE) ──
         // กัน permanent 50% crit lock จากการ farm auto rifle
         if (this.bonusCritFromAuto > 0 && this.isWeaponMaster) {

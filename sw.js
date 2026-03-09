@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.9'; // v3.26.9: Comprehensive game enhancement - visual drama boost, tactical cover system, performance optimization, and navigation improvements
+const CACHE_NAME = 'mtc-cache-v3.27.0'; // v3.27.0: Major visual upgrades - Kao stealth holographic effects, Poom Naga serpentine tether, Auto heat tier gradients, weapon switch indicators
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

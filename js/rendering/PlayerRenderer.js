@@ -778,20 +778,85 @@ class PlayerRenderer {
         ctx.translate(screen.x + recoilX, screen.y + recoilY + bobOffsetY);
         ctx.scale(stretchX * facingSign, stretchY);
 
+        // ── Heat Tier Body Color Shift — COLD/WARM/HOT/OVERHEAT ──
+        const heatTier = entity._heatTier ?? 0;  // 0=COLD, 1=WARM, 2=HOT, 3=OVERHEAT
+
         ctx.shadowBlur = 18; ctx.shadowColor = 'rgba(220,38,38,0.75)';
         ctx.strokeStyle = 'rgba(220,38,38,0.55)'; ctx.lineWidth = 2.8;
         ctx.beginPath(); ctx.arc(0, 0, R + 3, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Body — dark crimson with armor plate layering
+        // Body gradient — shifts warmer per tier
         const bG = ctx.createRadialGradient(-4, -4, 1, 0, 0, R);
-        bG.addColorStop(0, '#7f1d1d');
-        bG.addColorStop(0.5, '#5a0e0e');
-        bG.addColorStop(1, '#2d0606');
+        if (heatTier === 0) {
+            // COLD — original dark crimson
+            bG.addColorStop(0, '#7f1d1d');
+            bG.addColorStop(0.5, '#5a0e0e');
+            bG.addColorStop(1, '#2d0606');
+        } else if (heatTier === 1) {
+            // WARM — body has a soft orange glow bleeding through
+            bG.addColorStop(0, '#9a2a14');
+            bG.addColorStop(0.5, '#6b1a0a');
+            bG.addColorStop(1, '#3a1204');
+        } else if (heatTier === 2) {
+            // HOT — saturated orange-crimson, brighter
+            bG.addColorStop(0, '#c84a10');
+            bG.addColorStop(0.5, '#952208');
+            bG.addColorStop(1, '#5c1404');
+        } else {
+            // OVERHEAT — near-white core, full crimson outer
+            bG.addColorStop(0, '#fff3e0');
+            bG.addColorStop(0.25, '#fb923c');
+            bG.addColorStop(0.6, '#dc2626');
+            bG.addColorStop(1, '#7f1d1d');
+        }
         ctx.fillStyle = bG;
         ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+
+        // ── WARM: subtle orange body glow rim ──
+        if (heatTier === 1) {
+            const warmPulse = 0.15 + Math.sin(now / 320) * 0.08;
+            ctx.save();
+            ctx.globalAlpha = warmPulse;
+            ctx.strokeStyle = '#fb923c'; ctx.lineWidth = 2;
+            ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
+            ctx.beginPath(); ctx.arc(0, 0, R + 1, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+        }
+
+        // ── HOT: hair tips glow orange-hot ──
+        // (handled in spike tip section below via ventGlow override)
+
+        // ── OVERHEAT: full crimson body rim + steam vent bursts ──
+        if (heatTier === 3) {
+            const ohPulse = 0.55 + Math.sin(now / 90) * 0.35;
+            ctx.save();
+            ctx.globalAlpha = ohPulse;
+            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3.5;
+            ctx.shadowBlur = 22; ctx.shadowColor = '#fb923c';
+            ctx.beginPath(); ctx.arc(0, 0, R + 2, 0, Math.PI * 2); ctx.stroke();
+            // Extra outer ring
+            ctx.globalAlpha = ohPulse * 0.45;
+            ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 14; ctx.shadowColor = '#facc15';
+            ctx.beginPath(); ctx.arc(0, 0, R + 7 + Math.sin(now / 80) * 2, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+
+            // Steam vent bursts (bright vents at overheat)
+            ctx.save();
+            ctx.globalAlpha = 0.75 + Math.sin(now / 70) * 0.22;
+            ctx.shadowBlur = 20; ctx.shadowColor = '#fb923c';
+            for (let vi = 0; vi < 3; vi++) {
+                const steamA = 0.55 + Math.sin(now / 90 + vi * 1.2) * 0.35;
+                ctx.globalAlpha = steamA;
+                ctx.fillStyle = vi % 2 === 0 ? '#fb923c' : '#fef08a';
+                ctx.beginPath(); ctx.roundRect(-R, -5 + vi * 5, 5, 3, 1.5); ctx.fill();
+                ctx.beginPath(); ctx.roundRect(R - 5, -5 + vi * 5, 5, 3, 1.5); ctx.fill();
+            }
+            ctx.restore();
+        }
 
         // Specular highlight
         ctx.fillStyle = 'rgba(255,255,255,0.09)';
@@ -860,17 +925,32 @@ class PlayerRenderer {
         ctx.shadowBlur = 0;
 
         if (entity.wanchaiActive) {
-            const hA = 0.35 + Math.sin(now / 90) * 0.20;
+            const hA = 0.35 + Math.sin(now / 90) * 0.20;  // faster pulse when Stand active
             ctx.save();
             ctx.globalAlpha = hA;
             ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1.5;
             ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
             ctx.beginPath(); ctx.arc(0, 0, R + 6, 0, Math.PI * 2); ctx.stroke();
-            // UPGRADE: outer amber pulse ring
-            ctx.globalAlpha = hA * 0.55;
-            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3;
-            ctx.shadowBlur = 22; ctx.shadowColor = '#fbbf24';
+            // UPGRADE: outer amber pulse ring (stronger intensity)
+            ctx.globalAlpha = hA * 0.65;
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3.5;
+            ctx.shadowBlur = 28; ctx.shadowColor = '#fbbf24';
             ctx.beginPath(); ctx.arc(0, 0, R + 14 + Math.sin(now / 110) * 3, 0, Math.PI * 2); ctx.stroke();
+            // UPGRADE: third ripple ring (large, fast-pulsing, low alpha)
+            ctx.globalAlpha = hA * 0.28;
+            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2;
+            ctx.shadowBlur = 18; ctx.shadowColor = '#f97316';
+            ctx.beginPath(); ctx.arc(0, 0, R + 22 + Math.sin(now / 80) * 4, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+
+            // UPGRADE: body vibrate shimmer — rapid horizontal offset shimmer overlay
+            const vibShim = Math.sin(now / 40) * 1.8;  // fast horizontal micro-jitter
+            ctx.save();
+            ctx.globalAlpha = 0.20 + Math.sin(now / 60) * 0.10;
+            ctx.translate(vibShim, 0);
+            ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 1;
+            ctx.shadowBlur = 8; ctx.shadowColor = '#facc15';
+            ctx.beginPath(); ctx.arc(0, 0, R, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
             ctx.restore();
         }
 
@@ -947,30 +1027,39 @@ class PlayerRenderer {
             // Spike fill gradient — dark base to bright tip
             const sg = ctx.createLinearGradient(bx, -R - 1, tx, ty);
             sg.addColorStop(0, '#5c1010');
-            sg.addColorStop(0.6, '#b91c1c');
-            sg.addColorStop(1, '#f97316');
+            // HOT/OVERHEAT: spike tips glow significantly brighter
+            if (heatTier >= 2) {
+                sg.addColorStop(0.5, '#ef4444');
+                sg.addColorStop(1, heatTier === 3 ? '#fef08a' : '#fb923c');
+            } else {
+                sg.addColorStop(0.6, '#b91c1c');
+                sg.addColorStop(1, '#f97316');
+            }
             // Re-fill spike with gradient (on top of flat fill)
             ctx.fillStyle = sg;
-            ctx.globalAlpha = 0.75;
+            ctx.globalAlpha = heatTier >= 2 ? 0.90 : 0.75;
             ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.moveTo(bx - 3.5, -R - 1);
             ctx.lineTo(bx + 3.5, -R - 1);
             ctx.lineTo(tx, ty);
             ctx.closePath(); ctx.fill();
-            // Tip ember glow
-            const eA = (entity.wanchaiActive ? 0.95 : 0.65) + Math.sin(now / 200 + idx) * 0.25;
+            // Tip ember glow — enhanced at HOT/OVERHEAT
+            const eBaseA = heatTier >= 2 ? 0.80 : 0.65;
+            const eA = (entity.wanchaiActive ? 0.95 : eBaseA) + Math.sin(now / 200 + idx) * 0.25;
             ctx.globalAlpha = Math.max(0, Math.min(1, eA));
-            ctx.fillStyle = idx % 2 === 0 ? '#f97316' : '#ef4444';
-            ctx.shadowBlur = entity.wanchaiActive ? 14 : 7;
-            ctx.shadowColor = '#f97316';
-            ctx.beginPath(); ctx.arc(tx, ty, 2.2, 0, Math.PI * 2); ctx.fill();
-            // Tiny spark above tip (wanchai only)
-            if (entity.wanchaiActive && Math.sin(now / 120 + idx * 1.5) > 0.5) {
-                ctx.globalAlpha = 0.8;
-                ctx.fillStyle = '#fef08a';
-                ctx.shadowBlur = 8; ctx.shadowColor = '#facc15';
-                ctx.beginPath(); ctx.arc(tx + Math.sin(now / 80 + idx) * 1.5, ty - 4, 1, 0, Math.PI * 2); ctx.fill();
+            // HOT: orange tips; OVERHEAT: yellow-white tips
+            const tipColor = heatTier === 3 ? '#fef08a' : (heatTier === 2 ? '#fb923c' : (idx % 2 === 0 ? '#f97316' : '#ef4444'));
+            ctx.fillStyle = tipColor;
+            ctx.shadowBlur = entity.wanchaiActive ? 14 : (heatTier >= 2 ? 12 : 7);
+            ctx.shadowColor = heatTier >= 2 ? '#f97316' : '#f97316';
+            ctx.beginPath(); ctx.arc(tx, ty, heatTier >= 2 ? 3.0 : 2.2, 0, Math.PI * 2); ctx.fill();
+            // Tiny spark above tip (wanchai or OVERHEAT)
+            if ((entity.wanchaiActive || heatTier === 3) && Math.sin(now / 120 + idx * 1.5) > 0.5) {
+                ctx.globalAlpha = heatTier === 3 ? 0.95 : 0.8;
+                ctx.fillStyle = heatTier === 3 ? '#ffffff' : '#fef08a';
+                ctx.shadowBlur = 10; ctx.shadowColor = '#facc15';
+                ctx.beginPath(); ctx.arc(tx + Math.sin(now / 80 + idx) * 1.5, ty - 4, heatTier === 3 ? 1.5 : 1, 0, Math.PI * 2); ctx.fill();
             }
         });
         ctx.globalAlpha = 1; ctx.shadowBlur = 0;
@@ -1153,18 +1242,30 @@ class PlayerRenderer {
                 const nagaHead = nagaEntity.segments[0];
                 const nagaScreen = worldToScreen(nagaHead.x, nagaHead.y);
                 const lifeAlpha = Math.min(1, nagaEntity.life / nagaEntity.maxLife);
-                const SEGS = 10;
+                // HP-scaled glow: brighter/thicker when naga is healthy
+                const hpGlow = lifeAlpha;
+                const SEGS = 16;   // more segments = smoother serpentine wave
                 const pts = [];
                 const now_t = performance.now();
+                const dx = nagaScreen.x - screen.x;
+                const dy = nagaScreen.y - screen.y;
+                const dist = Math.hypot(dx, dy);
+                const perp = Math.atan2(dy, dx) + Math.PI / 2;
+
                 for (let i = 0; i <= SEGS; i++) {
                     const t = i / SEGS;
-                    const bx = screen.x + (nagaScreen.x - screen.x) * t;
-                    const by = screen.y + (nagaScreen.y - screen.y) * t;
-                    const jAmp = Math.sin(t * Math.PI) * (8 + Math.sin(now_t / 80 + i) * 4);
-                    const perp = Math.atan2(nagaScreen.y - screen.y, nagaScreen.x - screen.x) + Math.PI / 2;
-                    // BUG-7 FIX: deterministic sin-based jitter instead of Math.random()
-                    const jit = Math.sin(now_t / 55 + i * 1.7) * jAmp;
-                    pts.push({ x: bx + Math.cos(perp) * jit, y: by + Math.sin(perp) * jit });
+                    const bx = screen.x + dx * t;
+                    const by = screen.y + dy * t;
+                    // Serpentine: sin-wave amplitude peaks at midpoint, tapers at ends
+                    const midFactor = Math.sin(t * Math.PI);
+                    // Two overlapping waves for organic serpent motion
+                    const wave1 = Math.sin(t * Math.PI * 2.5 - now_t / 180) * 10 * midFactor;
+                    const wave2 = Math.sin(t * Math.PI * 1.2 - now_t / 240 + 1.0) * 5 * midFactor;
+                    const totalWave = (wave1 + wave2) * hpGlow;
+                    pts.push({
+                        x: bx + Math.cos(perp) * totalWave,
+                        y: by + Math.sin(perp) * totalWave
+                    });
                 }
                 pts[0] = { x: screen.x, y: screen.y };
                 pts[SEGS] = { x: nagaScreen.x, y: nagaScreen.y };
@@ -1174,15 +1275,44 @@ class PlayerRenderer {
                     ctx.globalAlpha = lifeAlpha * alpha;
                     ctx.strokeStyle = color; ctx.lineWidth = lw;
                     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                    ctx.shadowBlur = blur; ctx.shadowColor = '#10b981';
+                    ctx.shadowBlur = blur * hpGlow; ctx.shadowColor = '#10b981';
                     ctx.beginPath();
                     ctx.moveTo(pts[0].x, pts[0].y);
-                    for (let i = 1; i <= SEGS; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                    // Smooth bezier through all points
+                    for (let i = 1; i < pts.length - 1; i++) {
+                        const cpx = (pts[i].x + pts[i + 1].x) / 2;
+                        const cpy = (pts[i].y + pts[i + 1].y) / 2;
+                        ctx.quadraticCurveTo(pts[i].x, pts[i].y, cpx, cpy);
+                    }
+                    ctx.lineTo(pts[SEGS].x, pts[SEGS].y);
                     ctx.stroke();
                     ctx.restore();
                 };
-                drawThread(5, 0.25, '#10b981', 18);
-                drawThread(1.5, 0.85, '#6ee7b7', 8);
+                // Outer glow layer (thick, dim) — scales with HP
+                drawThread(4 + hpGlow * 3, 0.20 + hpGlow * 0.12, '#10b981', 20);
+                // Scale pattern (mid layer) — gold shimmer at high HP
+                const scaleColor = hpGlow > 0.6 ? '#34d399' : '#10b981';
+                drawThread(2, 0.55 + hpGlow * 0.25, scaleColor, 10);
+                // Bright spine (thin, crisp)
+                drawThread(1, 0.90, '#6ee7b7', 6);
+
+                // ── Scale segment ticks along tether ──
+                ctx.save();
+                const tickCount = Math.floor(SEGS * 0.6);
+                for (let i = 2; i < tickCount; i += 2) {
+                    const p = pts[i];
+                    const pn = pts[Math.min(i + 1, SEGS)];
+                    const tickA = Math.atan2(pn.y - p.y, pn.x - p.x) + Math.PI / 2;
+                    const tLen = 2.5 * hpGlow;
+                    ctx.globalAlpha = lifeAlpha * 0.45;
+                    ctx.strokeStyle = '#34d399'; ctx.lineWidth = 0.8;
+                    ctx.shadowBlur = 4; ctx.shadowColor = '#10b981';
+                    ctx.beginPath();
+                    ctx.moveTo(p.x + Math.cos(tickA) * tLen, p.y + Math.sin(tickA) * tLen);
+                    ctx.lineTo(p.x - Math.cos(tickA) * tLen, p.y - Math.sin(tickA) * tLen);
+                    ctx.stroke();
+                }
+                ctx.restore();
 
                 ctx.save();
                 ctx.globalAlpha = lifeAlpha * (0.7 + Math.sin(performance.now() / 120) * 0.3);
@@ -1279,13 +1409,13 @@ class PlayerRenderer {
         ctx.restore();
         ctx.globalAlpha = 1;
 
-        // ── Lotus/petal accent on Kranok center ─────────────
+        // ── Lotus Bloom — expands and orbits body when passive unlocked ──
         ctx.save();
         ctx.beginPath(); ctx.arc(0, 0, R2 - 1, 0, Math.PI * 2); ctx.clip();
         const lotusA = 0.35 + Math.sin(now2 / 320) * 0.18;
         ctx.globalAlpha = lotusA;
         ctx.fillStyle = '#fde68a'; ctx.shadowBlur = 8; ctx.shadowColor = '#fbbf24';
-        // 4 small petals around center diamond
+        // 4 small petals around center diamond (always visible on body)
         for (let pi = 0; pi < 4; pi++) {
             const pa = pi * Math.PI / 2 + Math.PI / 4;
             ctx.save();
@@ -1298,6 +1428,41 @@ class PlayerRenderer {
         }
         ctx.restore();
         ctx.globalAlpha = 1;
+
+        // ── Passive unlock: 8 outer petals orbit and bloom around body ──
+        if (entity.passiveUnlocked) {
+            const bloomAngle = now2 / 1800;    // slow orbit
+            const bloomPulse = 0.7 + Math.sin(now2 / 380) * 0.3;   // breathing bloom
+            const orbitR = R2 + 7 + bloomPulse * 3;
+            const PETAL_COUNT = 8;
+            ctx.save();
+            for (let pi = 0; pi < PETAL_COUNT; pi++) {
+                const pa = (pi / PETAL_COUNT) * Math.PI * 2 + bloomAngle;
+                const pA = (0.55 + Math.sin(now2 / 260 + pi * 0.8) * 0.28) * bloomPulse;
+                ctx.save();
+                ctx.translate(Math.cos(pa) * orbitR, Math.sin(pa) * orbitR);
+                ctx.rotate(pa + Math.PI / 2);
+                ctx.globalAlpha = pA;
+                // Petal shape — elongated ellipse, pink-gold gradient
+                const pG = ctx.createRadialGradient(0, 0, 0, 0, 0, 4.5);
+                pG.addColorStop(0, '#fef3c7');
+                pG.addColorStop(0.5, '#fde68a');
+                pG.addColorStop(1, 'rgba(251,191,36,0)');
+                ctx.fillStyle = pG;
+                ctx.shadowBlur = 6 * bloomPulse; ctx.shadowColor = '#fbbf24';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 2.0, 4.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            // Center lotus glow (visible outside body clip)
+            ctx.globalAlpha = bloomPulse * 0.30;
+            ctx.fillStyle = '#fde68a';
+            ctx.shadowBlur = 14 * bloomPulse; ctx.shadowColor = '#fbbf24';
+            ctx.beginPath(); ctx.arc(0, 0, 5.5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
 
         // ── Floating scroll orbit — signature cultural detail ──
         ctx.save();
@@ -1424,6 +1589,84 @@ class PlayerRenderer {
         // Low-HP danger glow (screen space)
         PlayerRenderer._drawLowHpGlow(ctx, entity, now2, screen);
 
+        // ── Garuda Wind Visual — wing-shadow + wind arcs when garudaActive ──
+        if (entity.garudaActive) {
+            const grdT = now2 / 1;
+            const grdScreen = screen;
+            const wingPhase = now2 / 220;
+            // Wing flap: oscillates between spread and tuck
+            const wingSpread = 0.6 + Math.sin(wingPhase) * 0.4;
+            ctx.save();
+            ctx.translate(grdScreen.x, grdScreen.y);
+
+            // ── Wind arc sweeps (4 arcs rotating around body) ──
+            for (let wi = 0; wi < 4; wi++) {
+                const arcAngle = (wi / 4) * Math.PI * 2 + now2 / 400;
+                const arcAlpha = (0.25 + Math.sin(now2 / 180 + wi * 1.57) * 0.18) * wingSpread;
+                const arcR = 30 + wi * 5 + Math.sin(now2 / 250 + wi) * 4;
+                ctx.save();
+                ctx.globalAlpha = arcAlpha;
+                ctx.strokeStyle = wi % 2 === 0 ? '#fde68a' : '#fbbf24';
+                ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 10 * wingSpread; ctx.shadowColor = '#fbbf24';
+                ctx.setLineDash([4, 6]);
+                ctx.beginPath();
+                ctx.arc(0, 0, arcR, arcAngle, arcAngle + Math.PI * 0.6);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
+
+            // ── Wing silhouettes (left and right) ──
+            const wingAlpha = (0.35 + Math.sin(wingPhase) * 0.20) * wingSpread;
+            for (const side of [-1, 1]) {
+                ctx.save();
+                ctx.scale(side, 1);
+                ctx.globalAlpha = wingAlpha;
+
+                // Wing body — curved shape spreading outward
+                const wG = ctx.createLinearGradient(0, -20, 45 * wingSpread, -5);
+                wG.addColorStop(0, 'rgba(251,191,36,0.70)');
+                wG.addColorStop(0.5, 'rgba(253,230,138,0.35)');
+                wG.addColorStop(1, 'rgba(251,191,36,0)');
+                ctx.fillStyle = wG;
+                ctx.shadowBlur = 14 * wingSpread; ctx.shadowColor = '#fbbf24';
+                ctx.beginPath();
+                ctx.moveTo(5, -8);
+                ctx.quadraticCurveTo(20 * wingSpread, -28, 44 * wingSpread, -18);
+                ctx.quadraticCurveTo(46 * wingSpread, -10, 36 * wingSpread, -2);
+                ctx.quadraticCurveTo(18 * wingSpread, 4, 5, 4);
+                ctx.closePath();
+                ctx.fill();
+
+                // Wing feather edge lines
+                ctx.strokeStyle = 'rgba(253,230,138,0.55)'; ctx.lineWidth = 0.8;
+                ctx.shadowBlur = 6;
+                for (let fi = 0; fi < 4; fi++) {
+                    const ft = fi / 3;
+                    const fx0 = 5 + ft * 20 * wingSpread;
+                    const fy0 = -8 + ft * 6;
+                    const fx1 = 10 + ft * 30 * wingSpread;
+                    const fy1 = -24 + ft * 10;
+                    ctx.globalAlpha = wingAlpha * (0.7 - ft * 0.3);
+                    ctx.beginPath();
+                    ctx.moveTo(fx0, fy0);
+                    ctx.lineTo(fx1, fy1);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // ── Central Garuda glow (golden aura burst) ──
+            const garudaCore = 0.20 + Math.sin(now2 / 150) * 0.12;
+            ctx.globalAlpha = garudaCore * wingSpread;
+            ctx.fillStyle = '#fbbf24';
+            ctx.shadowBlur = 22 * wingSpread; ctx.shadowColor = '#f59e0b';
+            ctx.beginPath(); ctx.arc(0, 0, 10 + wingSpread * 4, 0, Math.PI * 2); ctx.fill();
+
+            ctx.restore();
+        }
+
         // Level badge
         PlayerRenderer._drawLevelBadge(ctx, screen, entity, 'rgba(217,119,6,0.92)', 20, -20);
     }
@@ -1495,31 +1738,67 @@ class PlayerRenderer {
         }
 
         if (entity.isInvisible || entity.isFreeStealthy) {
-            // STEALTH: glitch scanlines + ghost bean
+            // STEALTH: holographic shimmer + glitch pixel dissolve
             const gT = now / 60;
             ctx.save();
             ctx.translate(screen.x, screen.y);
             ctx.scale(stretchX * facingSign, stretchY);
 
+            // ── Holographic body fill (prismatic iridescent shimmer) ──
             ctx.save();
             ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.clip();
-            for (let sy2 = -R; sy2 < R; sy2 += 3) {
-                const la = (Math.sin(gT * 4 + sy2 * 0.7) * 0.5 + 0.5) * 0.3;
-                ctx.globalAlpha = la;
-                ctx.fillStyle = '#60a5fa';
-                ctx.fillRect(-R + Math.sin(gT * 7.3 + sy2) * 2.5, sy2, R * 2, 1.5);
+            // Shifting hologram gradient that moves over time
+            const holoShift = (now / 800) % 1;
+            const holoG = ctx.createLinearGradient(-R, -R, R, R);
+            holoG.addColorStop(0, `rgba(6,182,212,${0.08 + Math.sin(gT * 0.7) * 0.04})`);
+            holoG.addColorStop(Math.max(0, holoShift - 0.1), `rgba(6,182,212,0.04)`);
+            holoG.addColorStop(holoShift, `rgba(180,230,255,${0.22 + Math.sin(gT * 1.3) * 0.10})`);
+            holoG.addColorStop(Math.min(1, holoShift + 0.1), `rgba(99,179,237,0.06)`);
+            holoG.addColorStop(1, `rgba(56,189,248,${0.06 + Math.sin(gT * 0.9 + 1) * 0.03})`);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = holoG;
+            ctx.fillRect(-R, -R, R * 2, R * 2);
+
+            // ── Glitch pixel dissolve — scattered rectangular fragments ──
+            // Uses deterministic sin pattern — no Math.random()
+            const dissolvePixels = [
+                [-8, -9, 4, 2], [3, -7, 5, 2], [-5, -4, 3, 2], [6, -2, 4, 2],
+                [-9, 2, 5, 2], [2, 5, 6, 2], [-3, 8, 4, 2], [7, 7, 3, 2],
+                [-6, -12, 3, 2], [4, -11, 5, 2], [-10, 6, 3, 2], [8, 3, 4, 2],
+            ];
+            for (let di = 0; di < dissolvePixels.length; di++) {
+                const [px, py, pw, ph] = dissolvePixels[di];
+                // Each pixel blinks in/out independently via phase-shifted sin
+                const pixA = (Math.sin(gT * 3.7 + di * 1.57) * 0.5 + 0.5) * 0.55;
+                if (pixA < 0.05) continue;
+                ctx.globalAlpha = pixA;
+                const hue = (di % 3 === 0) ? '#06b6d4' : (di % 3 === 1) ? '#38bdf8' : '#7dd3fc';
+                ctx.fillStyle = hue;
+                ctx.shadowBlur = 4; ctx.shadowColor = '#06b6d4';
+                ctx.fillRect(px, py, pw, ph);
             }
+            ctx.shadowBlur = 0;
             ctx.restore();
 
-            ctx.globalAlpha = 0.18 + Math.sin(gT * 2.1) * 0.07;
-            ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 1.5;
-            ctx.shadowBlur = 8; ctx.shadowColor = '#60a5fa';
+            // ── Outer holographic ring (color-shifting) ──
+            const ringHue1 = `rgba(6,182,212,${0.20 + Math.sin(gT * 2.1) * 0.10})`;
+            const ringHue2 = `rgba(56,189,248,${0.12 + Math.sin(gT * 1.5 + 1) * 0.08})`;
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = ringHue1; ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 10; ctx.shadowColor = '#06b6d4';
             ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+            ctx.strokeStyle = ringHue2; ctx.lineWidth = 1;
+            ctx.shadowBlur = 6; ctx.shadowColor = '#38bdf8';
+            ctx.setLineDash([3, 4]);
+            ctx.beginPath(); ctx.arc(0, 0, R + 3, gT * 0.8, gT * 0.8 + Math.PI * 1.4); ctx.stroke();
+            ctx.setLineDash([]);
 
-            ctx.globalAlpha = 0.5 + Math.sin(gT * 5) * 0.3;
+            // ── Visor ghost (dim cyan slit — shows even stealthed) ──
+            const vGhost = 0.30 + Math.sin(gT * 5) * 0.18;
+            ctx.globalAlpha = vGhost;
             ctx.fillStyle = '#06b6d4';
-            ctx.shadowBlur = 12; ctx.shadowColor = '#06b6d4';
-            ctx.beginPath(); ctx.roundRect(-5, -3.5, 10, 2.5, 1); ctx.fill();
+            ctx.shadowBlur = 8; ctx.shadowColor = '#06b6d4';
+            ctx.beginPath(); ctx.roundRect(-5, -3.5, 10, 2, 1); ctx.fill();
             ctx.shadowBlur = 0;
             ctx.restore();
 
@@ -1701,35 +1980,91 @@ class PlayerRenderer {
 
             ctx.restore(); // end LAYER 2
 
-            // Muzzle flash (screen space)
+            // Muzzle flash (screen space) — directional sparks + shockwave ring
             if (entity.weaponRecoil > 0.45) {
                 const fT = (entity.weaponRecoil - 0.45) / 0.55;
                 const mDist = 36 + (1 - fT) * 10;
                 const mx = screen.x + Math.cos(entity.angle) * mDist;
                 const my = screen.y + Math.sin(entity.angle) * mDist;
                 ctx.save();
-                ctx.globalAlpha = fT * 0.9;
-                ctx.strokeStyle = '#e0f2fe'; ctx.lineWidth = 2;
-                ctx.shadowBlur = 16; ctx.shadowColor = '#06b6d4';
-                ctx.beginPath(); ctx.arc(mx, my, 3 + (1 - fT) * 6, 0, Math.PI * 2); ctx.stroke();
-                ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 1.2;
-                for (let ri = 0; ri < 6; ri++) {
-                    const ra = entity.angle + (ri / 6) * Math.PI * 2;
+
+                // ── Shockwave ring — expands outward as recoil decays ──
+                const swR = 4 + (1 - fT) * 18;
+                ctx.globalAlpha = fT * 0.65;
+                ctx.strokeStyle = '#e0f2fe'; ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 14; ctx.shadowColor = '#06b6d4';
+                ctx.beginPath(); ctx.arc(mx, my, swR, 0, Math.PI * 2); ctx.stroke();
+                // Second inner ring (offset timing)
+                ctx.globalAlpha = fT * 0.35;
+                ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 1;
+                ctx.shadowBlur = 8;
+                ctx.beginPath(); ctx.arc(mx, my, swR * 0.55, 0, Math.PI * 2); ctx.stroke();
+
+                // ── Directional spark rays — forward-biased fan ──
+                // Forward rays: longer, brighter
+                ctx.strokeStyle = '#e0f2fe'; ctx.lineWidth = 1.6;
+                ctx.shadowBlur = 12; ctx.shadowColor = '#38bdf8';
+                const fwdRays = 5;
+                for (let ri = 0; ri < fwdRays; ri++) {
+                    const spread = (ri / (fwdRays - 1) - 0.5) * (Math.PI * 0.45);
+                    const ra = entity.angle + spread;
+                    const rayLen = (8 + fT * 14) * (1 - Math.abs(spread) / (Math.PI * 0.5));
+                    ctx.globalAlpha = fT * (0.8 - Math.abs(spread) * 0.6);
                     ctx.beginPath();
                     ctx.moveTo(mx + Math.cos(ra) * 2, my + Math.sin(ra) * 2);
-                    ctx.lineTo(mx + Math.cos(ra) * (5 + fT * 5), my + Math.sin(ra) * (5 + fT * 5));
+                    ctx.lineTo(mx + Math.cos(ra) * rayLen, my + Math.sin(ra) * rayLen);
                     ctx.stroke();
                 }
+                // Side scatter rays (short, dim)
+                ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 1;
+                ctx.shadowBlur = 6;
+                for (let ri = 0; ri < 4; ri++) {
+                    const ra = entity.angle + Math.PI * 0.55 + (ri / 3) * Math.PI * 0.9;
+                    ctx.globalAlpha = fT * 0.30;
+                    ctx.beginPath();
+                    ctx.moveTo(mx + Math.cos(ra) * 2, my + Math.sin(ra) * 2);
+                    ctx.lineTo(mx + Math.cos(ra) * (3 + fT * 5), my + Math.sin(ra) * (3 + fT * 5));
+                    ctx.stroke();
+                }
+
+                // ── Core flash dot ──
                 ctx.globalAlpha = fT;
                 ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 8; ctx.shadowColor = '#06b6d4';
-                ctx.beginPath(); ctx.arc(mx, my, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 12; ctx.shadowColor = '#06b6d4';
+                ctx.beginPath(); ctx.arc(mx, my, 2.5 + fT * 1.5, 0, Math.PI * 2); ctx.fill();
+
                 ctx.restore();
             }
         }
 
         // Low-HP danger glow (screen space)
         PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);
+
+        // ── Weapon Switch Indicator — flash on body when weapon changes ──
+        if ((entity._weaponSwitchFlash ?? 0) > 0) {
+            const wsT = entity._weaponSwitchFlash;   // counts down 0.5 → 0
+            const wsRatio = wsT / 0.5;               // 1.0 → 0
+            const wsAlpha = wsRatio * (0.7 + Math.sin(wsRatio * Math.PI) * 0.3);
+            const wsScreen = worldToScreen(entity.x, entity.y);
+            // Determine icon character based on current weapon
+            const wIcon = (entity.currentWeapon === 'sniper') ? '🎯'
+                : (entity.currentWeapon === 'shotgun') ? '💥'
+                    : '⚡';
+            ctx.save();
+            ctx.globalAlpha = wsAlpha;
+            // Glow ring around body
+            ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+            ctx.shadowBlur = 14 * wsRatio; ctx.shadowColor = '#06b6d4';
+            ctx.beginPath(); ctx.arc(wsScreen.x, wsScreen.y, 20 + (1 - wsRatio) * 10, 0, Math.PI * 2); ctx.stroke();
+            // Weapon icon above head (rises upward as it fades)
+            const riseY = wsScreen.y - 28 - (1 - wsRatio) * 14;
+            ctx.globalAlpha = wsAlpha * 0.95;
+            ctx.font = `${12 + wsRatio * 4}px Arial`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#06b6d4';
+            ctx.fillText(wIcon, wsScreen.x, riseY);
+            ctx.restore();
+        }
 
         // Level badge (screen space)
         PlayerRenderer._drawLevelBadge(ctx, screen, entity, 'rgba(180,100,10,0.92)', 20, -20);
