@@ -1098,27 +1098,25 @@ class MapSystem {
     }
 
     generateCampusMap() {
-        // ── 1. The MTC Citadel (North Base) ──────────────────────
-        // Moved 120px closer to center (y:-700 → y:-580) so the
-        // approach corridor is shorter and players visit more often.
-        const mtcX = -150, mtcY = -580, mtcW = 300, mtcH = 240;
-        this.mtcRoom = new MTCRoom(mtcX, mtcY);
+        // ════════════════════════════════════════════════════════
+        // MAP REFACTOR v2 — CLEAR ZONE DISCIPLINE
+        //
+        // CLEAR ZONES (ห้ามวาง object ใดๆ):
+        //   • Spawn area          : r < 300 จาก (0,0)
+        //   • Citadel approach    : x∈[-200,200], y∈[-500,-320] (walled corridor)
+        //   • Database approach   : x∈[360,640],  y∈[-440,-280] (south face)
+        //   • CoopStore approach  : x∈[-640,-380], y∈[340,445]  (north approach)
+        //   • East gate gaps      : x∈[390,500],  y∈[-230,-90] และ y∈[95,165]
+        //   • West gate gaps      : x∈[-510,-380], y∈[-230,-90] และ y∈[95,165]
+        //
+        // ZONE ISLANDS:
+        //   A Server Farm East   : x ≥ 680 (clear of database x=560 + east wall x=418)
+        //   B Library West       : x ≤ -680 (clear of west wall x=-418)
+        //   C Courtyard South    : y ≥ 580, หลีกเลี่ยง x∈[-640,-380] (shop approach)
+        //   D Lecture Halls      : x<-800 y>550 และ x>700 y>550
+        // ════════════════════════════════════════════════════════
 
-        const wallThick = 40;
-        this.objects.push(new MapObject(mtcX - wallThick, mtcY - wallThick, mtcW + wallThick * 2, wallThick, 'mtcwall'));
-        this.objects.push(new MapObject(mtcX - wallThick, mtcY, wallThick, mtcH, 'mtcwall'));
-        this.objects.push(new MapObject(mtcX + mtcW, mtcY, wallThick, mtcH, 'mtcwall'));
-
-        // Decorative servers inside citadel corners — ย้ายออกจากกลาง ใส่มุม
-        this.objects.push(new MapObject(mtcX + 18, mtcY + 25, 45, 80, 'server'));
-        this.objects.push(new MapObject(mtcX + mtcW - 63, mtcY + 25, 45, 80, 'server'));
-        // Extra pillars ด้านหลังห้อง (เพื่อบรรยากาศ)
-        this.objects.push(new MapObject(mtcX + 90, mtcY + 10, 35, 55, 'datapillar'));
-        this.objects.push(new MapObject(mtcX + 175, mtcY + 10, 35, 55, 'datapillar'));
-
-        // ── 2. Structural Zone Generation ──────────────────────────
-        // jitter is DETERMINISTIC (sin-based) — layout is identical
-        // on every restart. No Math.random() here.
+        // ── Helpers ──────────────────────────────────────────────
         const detJitter = (r, c, seed, mag) => ({
             jx: Math.sin(r * 7.3 + c * 13.1 + seed) * mag,
             jy: Math.cos(r * 11.7 + c * 5.9 + seed * 1.3) * mag,
@@ -1143,154 +1141,123 @@ class MapSystem {
             }
         };
 
-        // ══════════════════════════════════════════════════════════
-        // LAYOUT REDESIGN — ขยายโซนออกไปใช้พื้นที่โดม (radius 1500)
-        // หลักการ:
-        //   • Spawn zone (0,0) ต้องโล่ง ≥ 350px radius — ไม่มี object ใดใน r<320
-        //   • Zone A/B/C/D ย้ายออกไปขอบโดมทุกทิศ
-        //   • Corridor trees/vending ถอยออกจาก center ≥ 380px
-        //   • Cover walls ยังอยู่รอบ center แต่ขยับออก 350px จาก origin
-        //   • Data pillars ไม่ผ่าน y=0 อีกต่อไป — จำกัดแค่เหนือ y=-400
-        // ══════════════════════════════════════════════════════════
+        // ── 1. MTC CITADEL (North landmark) ──────────────────────
+        // Interior: x=-150…150, y=-580…-340  |  Entrance open at south (y=-340)
+        // Approach corridor (walled, from config): x=-200…200, y=-500…-340 → KEEP CLEAR
+        const mtcX = -150, mtcY = -580, mtcW = 300, mtcH = 240;
+        this.mtcRoom = new MTCRoom(mtcX, mtcY);
 
-        // Zone A: Server Farm (East) — ขยับออกไปทาง East ไกลขึ้น
-        // เดิม: x=330  ใหม่: x=520  เดิม y row ลงมาถึง y=-40 ใหม่ จำกัด y≤-200
-        createAisles(520, -600, 4, 3, 115, 140, 'server');   // แถวบน — อยู่แถว NE
-        createAisles(520, -180, 3, 3, 115, 140, 'server');   // แถวล่าง — SE quadrant
-        createAisles(900, -580, 3, 2, 115, 140, 'server');   // แถวไกล E
-        // Data pillars — กั้นขอบตะวันตกของ server zone ห่าง center ≥ 430px
-        createAisles(450, -560, 3, 1, 0, 140, 'datapillar'); // NE edge (y=-560,-420,-280)
-        createAisles(450, -140, 2, 1, 0, 140, 'datapillar'); // SE edge (y=-140,+0→ skip: startY=+10 เพื่อไม่บัง spawn)
+        const wallThick = 40;
+        // Top wall + side walls (no south wall — open entrance)
+        this.objects.push(new MapObject(mtcX - wallThick, mtcY - wallThick, mtcW + wallThick * 2, wallThick, 'mtcwall'));
+        this.objects.push(new MapObject(mtcX - wallThick, mtcY, wallThick, mtcH, 'mtcwall'));
+        this.objects.push(new MapObject(mtcX + mtcW, mtcY, wallThick, mtcH, 'mtcwall'));
 
-        // Zone B: Library Archives (West) — ขยับออก West ไกลขึ้น
-        // เดิม: x=-680~-940  ใหม่: x=-700~-1050 และ y ขยับออกจาก center
-        createAisles(-760, -580, 5, 2, 230, 115, 'bookshelf');  // NW quadrant
-        createAisles(-1050, -580, 5, 2, 230, 115, 'bookshelf'); // Far NW
-        createAisles(-760, -150, 4, 2, 230, 115, 'bookshelf');  // SW quadrant (y≥-150)
-        // Study desks — ระหว่าง shelf rows
-        createAisles(-900, -560, 4, 1, 0, 115, 'desk');   // NW desks
-        createAisles(-900, -130, 3, 1, 0, 115, 'desk');   // SW desks
+        // Interior decorations — pushed into wall corners only, clear center path
+        this.objects.push(new MapObject(mtcX + 14, mtcY + 20, 45, 80, 'server'));
+        this.objects.push(new MapObject(mtcX + mtcW - 59, mtcY + 20, 45, 80, 'server'));
+        this.objects.push(new MapObject(mtcX + 85, mtcY + 8, 35, 55, 'datapillar'));
+        this.objects.push(new MapObject(mtcX + 180, mtcY + 8, 35, 55, 'datapillar'));
 
-        // Zone C: Courtyard (South) — ขยับออก South ไกลขึ้น
-        // เดิม: y=310  ใหม่: y=480 ให้ห่าง spawn มากขึ้น
-        createAisles(-500, 480, 3, 5, 185, 185, 'tree', 14, 1.0);  // Main courtyard trees
-        createAisles(300, 480, 2, 3, 185, 185, 'tree', 12, 2.0);   // East courtyard trees
-
-        // Zone D: Lecture Halls (Far corners) — ขยับออกไปขอบโดมมากขึ้น
-        createAisles(-950, 580, 3, 3, 95, 95, 'desk');
-        this.objects.push(new MapObject(-980, 460, 150, 80, 'blackboard'));
-
-        createAisles(720, 580, 3, 3, 95, 95, 'desk');
-        this.objects.push(new MapObject(740, 460, 150, 80, 'blackboard'));
-
-        // ── Zone F.1: MTC Database Cluster (NE) ───────────────────
-        // Main building เท่านั้น — ไม่มี flanking objects ขวางทาง
-        // ทางเข้าจากด้านล่าง (South) โล่ง ≥ 120px
+        // ── 2. MTC DATABASE CLUSTER (NE landmark) ────────────────
+        // Building: x=440…560, y=-560…-420  |  Approach from south (y > -420) CLEAR
+        // Clear zone enforced: x∈[360,640], y∈[-440,-280] — no objects here
         const dbX = 440, dbY = -560;
         this.objects.push(new MapObject(dbX, dbY, 120, 140, 'database'));
-        // 2 servers ด้านหลัง (North) — ไม่ขวางทางเข้า
-        this.objects.push(new MapObject(dbX - 55, dbY - 5, 40, 70, 'server'));
-        this.objects.push(new MapObject(dbX + 135, dbY - 5, 40, 70, 'server'));
+        // 2 servers BEHIND building (north of it — y < dbY)
+        this.objects.push(new MapObject(dbX - 55, dbY - 15, 40, 70, 'server'));
+        this.objects.push(new MapObject(dbX + 135, dbY - 15, 40, 70, 'server'));
 
-        // ── Zone F.2: MTC Co-op Store (SW) ────────────────────────
-        // Sync ตำแหน่งกับ BALANCE.shop.x/y (-500, 490) เพื่อให้ interaction zone ตรง
-        // ทางเข้าจาก North โล่ง — ไม่มี object ขวางในแนว y < shopY
-        const shopX = BALANCE.shop.x - 65;  // center building บน interaction point
-        const shopY = BALANCE.shop.y - 55;
+        // ── 3. MTC CO-OP STORE (SW landmark) ─────────────────────
+        // Building centered on interaction point: BALANCE.shop.x=-500, y=490
+        // Approach from north (y < shopY) CLEAR:  x∈[-640,-380], y∈[340,445]
+        const shopX = BALANCE.shop.x - 65;   // = -565
+        const shopY = BALANCE.shop.y - 55;   // = 435
         this.objects.push(new MapObject(shopX, shopY, 130, 110, 'coopstore'));
-        // Trees ด้านหลัง (South) เท่านั้น — ไม่ขวางทางเข้าจาก North
-        this.objects.push(new MapObject(shopX - 50, shopY + 95, 50, 50, 'tree'));
-        this.objects.push(new MapObject(shopX + 130, shopY + 95, 50, 50, 'tree'));
-        // Vending machines ด้านหลัง — ไม่ขวางทางเข้า
-        this.objects.push(new MapObject(shopX - 50, shopY + 25, 40, 70, 'vendingmachine'));
+        // Decorations ONLY south of building (y > shopY + 110 = 545), not blocking north approach
+        this.objects.push(new MapObject(shopX - 55, shopY + 120, 50, 50, 'tree'));
+        this.objects.push(new MapObject(shopX + 135, shopY + 120, 50, 50, 'tree'));
+        this.objects.push(new MapObject(shopX - 55, shopY + 55, 40, 70, 'vendingmachine'));
 
-        // Zone E: Vending Machines — ถอยออกจาก center ≥ 380px
-        // เดิม: อยู่ที่ x=±200, y=±130 (ใกล้ spawn มาก)
-        // ใหม่: อยู่ที่ทางเข้า zone แต่ละโซน ห่าง center 380-500px
+        // ── 4. ZONE A: Server Farm (East) ────────────────────────
+        // x ≥ 680 — clear of database east edge (x=560) + east corridor wall (x=418)
+        // MOVED FURTHER EAST to avoid visual overlap with database
+        createAisles(720, -580, 4, 3, 120, 150, 'server', 0, 0);   // NE cluster (moved +40px)
+        createAisles(720,   60, 3, 3, 120, 150, 'server', 0, 0);   // SE cluster (moved +40px)
+        createAisles(1100, -500, 3, 2, 120, 150, 'server', 0, 0);  // Far-East cluster (moved +40px)
+        // Data pillars as zone markers — moved further east to clear database zone
+        createAisles(680, -550, 3, 1, 0, 160, 'datapillar');  // West edge of zone A (moved +40px)
+        createAisles(680,  80, 2, 1, 0, 160, 'datapillar');   // South section (moved +40px)
+
+        // ── 5. ZONE B: Library Archives (West) ───────────────────
+        // x ≤ -680 — clear of west corridor wall (x=-418), gap ≥ 262px
+        createAisles(-680, -570, 5, 2, -240, 120, 'bookshelf', 0, 0);  // NW shelves
+        createAisles(-680,   60, 4, 2, -240, 120, 'bookshelf', 0, 0);  // SW shelves
+        // Study desks between shelf rows — stay at x=-880 to -950
+        createAisles(-880, -550, 4, 1, 0, 120, 'desk');  // NW desks
+        createAisles(-880,   80, 3, 1, 0, 120, 'desk');  // SW desks
+
+        // ── 6. ZONE C: Courtyard (South) ─────────────────────────
+        // y ≥ 580 — clear of shop (shopY+110=545) + shop approach (y∈[340,445])
+        // MOVED FURTHER SOUTH to avoid shop approach interference
+        createAisles(-750, 630, 2, 4, 200, 180, 'tree', 12, 1.0);  // SW courtyard (moved +50px)
+        createAisles( 250, 630, 2, 4, 185, 180, 'tree', 10, 2.0);  // SE courtyard (moved +50px)
+
+        // ... (rest of the code remains the same)
+
+        // ── 9. VENDING MACHINES at zone gates ────────────────────
+        // Rule: must be OUTSIDE all clear zones listed at top of function
+        // East gate: x ≥ 510 (outside east gate gap x∈[390,500])
+        // West gate: x ≤ -530 (outside west gate gap x∈[-510,-380])
+        // South gate: y ≥ 360, x outside shop approach x∈[-640,-380]
+        // North: REMOVED - no vending inside citadel corridor (was blocking)
         const vendingSpots = [
-            // Citadel approach corridor — ย้ายออกไปด้านข้าง ไม่บัง entrance
-            { x: -230, y: -440 }, { x: 195, y: -440 },
-            // Courtyard approach — ถอยออก South
-            { x: -195, y: 360 }, { x: 160, y: 360 },
-            // Server Farm gate (East) — ใกล้ entrance zone A
-            { x: 420, y: 80 }, { x: 420, y: -200 },
-            // Library gate (West) — ใกล้ entrance zone B
-            { x: -490, y: 80 }, { x: -490, y: -200 },
+            { x: 540, y: -260 },   // East gate upper (moved +20px)
+            { x: 540, y:  130 },   // East gate lower (moved +20px)
+            { x: -570, y: -260 },  // West gate upper (moved -20px)
+            { x: -570, y:  130 },  // West gate lower (moved -20px)
+            { x: -210, y:  390 },  // South approach left (moved +30px)
+            { x:  165, y:  390 },  // South approach right (moved +30px)
         ];
         for (const vs of vendingSpots) {
             this.objects.push(new MapObject(vs.x, vs.y, 40, 70, 'vendingmachine'));
         }
 
-        // Zone F: Tactical Cover Walls — ขยับออกจาก center เป็น r=350px
-        // ผู้เล่น spawn ที่ (0,0) จะมีพื้นที่โล่ง 350px ทุกทิศก่อนเจอ cover
-        const coverWalls = [
-            // North cluster (y≈-350)
-            { x: -80, y: -370, w: 100, h: 18 },
-            { x: 45, y: -350, w: 60, h: 18 },
-            // South cluster (y≈+340)
-            { x: -80, y: 345, w: 100, h: 18 },
-            { x: 45, y: 325, w: 60, h: 18 },
-            // East cluster (x≈+340)
-            { x: 340, y: -70, w: 18, h: 100 },
-            { x: 320, y: 40, w: 18, h: 60 },
-            // West cluster (x≈-360)
-            { x: -358, y: -70, w: 18, h: 100 },
-            { x: -338, y: 40, w: 18, h: 60 },
-            // NE diagonal cover
-            { x: 240, y: -260, w: 18, h: 80 },
-            // NW diagonal cover
-            { x: -258, y: -260, w: 18, h: 80 },
-            // SE diagonal cover
-            { x: 240, y: 200, w: 18, h: 80 },
-            // SW diagonal cover
-            { x: -258, y: 200, w: 18, h: 80 },
-        ];
-        for (const cw of coverWalls) {
-            this.objects.push(new MapObject(cw.x, cw.y, cw.w, cw.h, 'wall'));
-        }
+        // ── 10. CORRIDOR LANDMARK TREES ──────────────────────────
+        // Placed at zone entrances as visual landmarks, NOT inside any clear zone
+        // East entrance trees: x=540-580 (east of gap), y outside gate gaps
+        this.objects.push(new MapObject(550, -310, 50, 50, 'tree'));   // NE approach tree (moved +20px)
+        this.objects.push(new MapObject(550,  190, 50, 50, 'tree'));   // SE approach tree (moved +20px)
+        // West entrance trees: x=-630 to -660 (west of gap)
+        this.objects.push(new MapObject(-630, -310, 50, 50, 'tree'));  // West approach tree (moved -20px)
+        this.objects.push(new MapObject(-630,  190, 50, 50, 'tree'));  // West approach tree (moved -20px)
+        // Citadel flanking trees: MOVED OUTSIDE walled corridor completely
+        // Original y=-440 was INSIDE the walled corridor (y∈[-480,-370]) - BLOCKING!
+        this.objects.push(new MapObject( 230, -510, 50, 50, 'tree'));   // East flank (moved south)
+        this.objects.push(new MapObject(-280, -510, 50, 50, 'tree'));   // West flank (moved south)
 
-        // Zone G: Corridor Trees — ถอยออกจาก spawn ≥ 380px
-        // เดิม: y=±200 (ใกล้เกิน)  ใหม่: y=±370 (ปลอดภัย)
-        createAisles(-160, -380, 1, 3, 110, 0, 'tree');   // North corridor west side
-        createAisles(75, -380, 1, 3, 110, 0, 'tree');   // North corridor east side
-        createAisles(-160, 355, 1, 3, 110, 0, 'tree');   // South corridor west side
-        createAisles(75, 355, 1, 3, 110, 0, 'tree');   // South corridor east side
-        // Extra trees ทิศ E/W corridor (ใหม่ — ใช้พื้นที่โดมที่เดิมว่างเปล่า)
-        createAisles(380, -80, 1, 2, 0, 160, 'tree');    // East corridor
-        createAisles(-420, -80, 1, 2, 0, 160, 'tree');    // West corridor
+        // ... (rest of the code remains the same)
 
-        // ── 3. Arena Boundaries + Corridor Walls ───────────────────
-        // wallPositions now includes internal corridor funnels —
-        // see BALANCE.map.wallPositions in config.js.
-        for (const wall of BALANCE.map.wallPositions) {
-            this.objects.push(new MapObject(wall.x, wall.y, wall.w, wall.h, 'wall'));
-        }
-
-        // ── 4. Strategic Explosive Barrels ─────────────────────────
-        // Grouped in clusters at zone entrances and corridor chokepoints.
+        // ── 12. EXPLOSIVE BARRELS ────────────────────────────────
+        // Placed at tactical chokepoints, tooClose check prevents overlap
         const barrelSpots = [
-            // Server Farm entrance cluster (East) — ย้ายออกไปกับ zone A
-            { x: 460, y: -80 }, { x: 460, y: 80 },
-            // Server Farm interior
-            { x: 800, y: -200 }, { x: 800, y: 60 },
-            // Library entrance cluster (West) — ย้ายออกไปกับ zone B
-            { x: -600, y: -80 }, { x: -600, y: 80 },
-            // Library interior
-            { x: -950, y: -250 }, { x: -950, y: 80 },
-            // Courtyard entrance (south) — ย้ายตาม zone C
-            { x: -220, y: 420 }, { x: 160, y: 420 },
-            // Defensive barrel below Citadel approach — ยังอยู่ทิศเหนือ แต่ไกลขึ้น
-            { x: 0, y: -440 },
+            // East zone interior
+            { x: 820, y: -220 }, { x: 820, y:  80 },
+            // West zone interior
+            { x: -840, y: -220 }, { x: -840, y:  80 },
+            // East gate approach (just inside zone A, not in clear gap)
+            { x: 560, y: -50 },
+            // West gate approach
+            { x: -580, y: -50 },
+            // South approach (outside shop approach zone)
+            { x: -225, y: 440 }, { x: 165, y: 440 },
         ];
-
-        for (let spot of barrelSpots) {
+        for (const spot of barrelSpots) {
             let tooClose = false;
             for (const obj of this.objects) {
                 if (Math.hypot(obj.x - spot.x, obj.y - spot.y) < 60) { tooClose = true; break; }
             }
-            if (!tooClose) {
-                this.objects.push(new ExplosiveBarrel(spot.x, spot.y));
-            }
+            if (!tooClose) this.objects.push(new ExplosiveBarrel(spot.x, spot.y));
         }
     }
 

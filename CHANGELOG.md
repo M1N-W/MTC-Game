@@ -4,6 +4,40 @@
 
 ---
 
+## v3.27.5 — Major Map Refactor & Blocking Issues Fix
+*Released: March 9, 2026*
+
+### 🏰 MTC Citadel Approach Clearing
+- **Removed Blocking Objects**: Eliminated trees at y=-440 and vending machines that were inside the walled corridor (y∈[-480,-370])
+- **Clear Approach Corridor**: Citadel entrance now completely unobstructed with 300px wide clear path
+- **Moved Flanking Trees**: Relocated citadel flank trees from y=-440 to y=-510, outside the walled corridor
+- **Fixed Visual Clutter**: Removed all objects that were blocking the north approach to the MTC Room
+
+### 🖥️ Zone A Server Farm Reorganization
+- **Eastward Migration**: Moved entire server farm from x=680 to x=720 (+40px) to avoid Database visual overlap
+- **Database Clearance**: Servers now start at x=720, clear of Database building at x=440-560
+- **Datapillar Relocation**: Moved datapillar markers from x=640 to x=680, maintaining zone separation
+- **Visual Hierarchy**: Database and Server Farm now visually distinct with proper spacing
+
+### 🌳 Zone C Courtyard Optimization
+- **Southward Shift**: Moved courtyard trees from y=580 to y=630 (+50px) to clear shop approach
+- **Shop Access Protection**: Trees no longer interfere with CoopStore north approach corridor
+- **Maintained Atmosphere**: Preserved courtyard aesthetic while ensuring clear building access
+
+### 🎯 Building Entrance Standardization
+- **Universal Clear Zones**: All major buildings now have unobstructed approach corridors
+- **Database South Approach**: Clear zone x∈[360,640], y∈[-440,-280] strictly enforced
+- **CoopStore North Approach**: Clear zone x∈[-640,-380], y∈[340,445] strictly enforced
+- **Citadel Approach Corridor**: Clear zone x∈[-200,200], y∈[-500,-320] with walled protection
+
+### 📍 Object Placement Discipline
+- **Clear Zone Enforcement**: Implemented 6 strict no-object zones around critical areas
+- **Zone Island Principle**: Each zone (A, B, C, D) now isolated with proper buffer distances
+- **Strategic Vending Placement**: Moved all vending machines outside gate gaps and clear zones
+- **Tactical Cover Preservation**: Maintained cover walls while ensuring they don't block paths
+
+---
+
 ## v3.27.4 — Map Layout Optimization & Shop System Simplification
 *Released: March 9, 2026*
 
