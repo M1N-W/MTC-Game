@@ -702,23 +702,29 @@ class PlayerRenderer {
                     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
                     ctx.restore();
 
-                    // ORA BARRAGE text — combo-scaling, gold at high combo
-                    ctx.save();
-                    const comboScale = 1 + oraCombo * 0.022 + Math.sin(now / 30) * 0.12;
-                    const jt = stand?._phaseTimer ?? 0;
-                    const jx = screen.x + Math.sin(jt * 80) * 5;
-                    const jy = screen.y - 82;
-                    ctx.scale(comboScale, comboScale);
-                    ctx.font = '900 28px "Arial Black", Arial, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.lineWidth = 7; ctx.strokeStyle = '#3d0000';
-                    ctx.strokeText('ORA ORA ORA!', jx / comboScale, jy / comboScale);
-                    ctx.lineWidth = 3; ctx.strokeStyle = oraCombo >= 5 ? '#fef08a' : '#f59e0b';
-                    ctx.shadowBlur = 22; ctx.shadowColor = oraCombo >= 5 ? '#fef08a' : '#f59e0b';
-                    ctx.strokeText('ORA ORA ORA!', jx / comboScale, jy / comboScale);
-                    ctx.fillStyle = oraCombo >= 5 ? '#fef08a' : '#ffffff'; ctx.shadowBlur = 16;
-                    ctx.fillText('ORA ORA ORA!', jx / comboScale, jy / comboScale);
-                    ctx.restore();
+                    // ORA BARRAGE text — แสดงเมื่อ punch และ fade ออก (ไม่กระพริบ)
+                    const oraTimer = entity._oraTextTimer ?? 0;
+                    if (oraTimer > 0) {
+                        ctx.save();
+                        // alpha: เต็มในช่วงแรก (0.45→0.15s) แล้วค่อย fade (0.15→0s)
+                        const fadeAlpha = Math.min(1, oraTimer / 0.15);
+                        // scale: โตขึ้นตาม combo แต่ไม่ pulse
+                        const comboScale = 1 + oraCombo * 0.022;
+                        const jx = screen.x;
+                        const jy = screen.y - 82;
+                        ctx.globalAlpha = fadeAlpha;
+                        ctx.scale(comboScale, comboScale);
+                        ctx.font = '900 28px "Arial Black", Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.lineWidth = 7; ctx.strokeStyle = '#3d0000';
+                        ctx.strokeText('ORA ORA ORA!', jx, jy);
+                        ctx.lineWidth = 3; ctx.strokeStyle = oraCombo >= 5 ? '#fef08a' : '#f59e0b';
+                        ctx.shadowBlur = 22; ctx.shadowColor = oraCombo >= 5 ? '#fef08a' : '#f59e0b';
+                        ctx.strokeText('ORA ORA ORA!', jx, jy);
+                        ctx.fillStyle = oraCombo >= 5 ? '#fef08a' : '#ffffff'; ctx.shadowBlur = 16;
+                        ctx.fillText('ORA ORA ORA!', jx, jy);
+                        ctx.restore();
+                    }
                 }
             }
         }

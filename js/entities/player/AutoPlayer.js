@@ -243,6 +243,7 @@ class WanchaiStand {
         if (owner) {
             owner._oraComboCount = Math.min(10, (owner._oraComboCount ?? 0) + 1);
             this._oraWindowTimer = 0.55; // 550ms window to chain next hit
+            owner._oraTextTimer = 0.45; // Reset ORA text timer to 0.45s on each punch
         }
 
         // Precompute rush fists — ORA barrage fan (scales with combo)
@@ -935,6 +936,7 @@ class AutoPlayer extends Player {
         this.standAttackTimer = 0;
         this.lastPunchSoundTime = 0;
         this._oraComboCount = 0;    // ORA combo counter (resets on miss/timeout)
+        this._oraTextTimer = 0;     // FIX: timer ควบคุมการแสดง ORA text (กัน flash ทุก frame)
 
         this.cooldowns = { ...(this.cooldowns || {}), dash: this.cooldowns?.dash ?? 0, stealth: this.cooldowns?.stealth ?? 0, shoot: 0, wanchai: 0, vacuum: 0, detonation: 0 };
 
@@ -1082,6 +1084,7 @@ class AutoPlayer extends Player {
         if (this.cooldowns?.shoot > 0) this.cooldowns.shoot -= dt;
         if (this.cooldowns?.vacuum > 0) this.cooldowns.vacuum -= dt;
         if (this.cooldowns?.detonation > 0) this.cooldowns.detonation -= dt;
+        if (this._oraTextTimer > 0) this._oraTextTimer = Math.max(0, this._oraTextTimer - dt);
 
         // ── Heat Gauge tick ───────────────────────────────────────
         {
@@ -1530,6 +1533,7 @@ class AutoPlayer extends Player {
 
         // ── ORA Combo escalation from player hits ─────────────────────────
         this._oraComboCount = Math.min(10, (this._oraComboCount ?? 0) + 1);
+        this._oraTextTimer = 0.45;  // FIX: แสดง ORA text 0.45s แล้วจาง — reset ทุกครั้งที่ punch
         // High combo = escalating ORA text
         if (this._oraComboCount >= 5 && typeof spawnFloatingText === 'function') {
             spawnFloatingText(`ORA ORA ×${this._oraComboCount}`, this.x, this.y - 60, '#f59e0b', 16);

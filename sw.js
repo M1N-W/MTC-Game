@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.26.6'; // v3.26.6: Complete KaoPlayer bug fixes - bonusCritFromAuto decay, teleport penalty correction, shadow clone positioning, sniper double-fire prevention, updateUI() implementation, damage scaling clarification
+const CACHE_NAME = 'mtc-cache-v3.26.7'; // v3.26.7: Fixed ORA text timer system - reset _oraTextTimer to 0.45s on each punch, fixed scaling logic in PlayerRenderer
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

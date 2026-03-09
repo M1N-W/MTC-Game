@@ -4,6 +4,18 @@
 
 ---
 
+## v3.26.7 — ORA Text Timer System Fix
+*Released: March 9, 2026*
+
+### 🐛 Bug Fixes
+- **AutoPlayer.js**: Added `_oraTextTimer = 0.45s` reset in WanchaiStand._punch() method
+- **PlayerRenderer.js**: Fixed ORA text scaling logic - removed incorrect division by comboScale
+- **ORA Text Display**: Now properly shows only when `_oraTextTimer > 0` with 0.45s duration
+- **Alpha Fade**: Smooth fade in last 0.15s instead of abrupt blinking
+- **Scale System**: Text scales with combo (1 + oraCombo * 0.022) without sin pulse
+
+---
+
 ## v3.26.6 — KaoPlayer Complete Bug Fixes
 *Released: March 9, 2026*
 
