@@ -25,7 +25,7 @@
 * **⏱️ Bullet Time:** กด `T` เพื่อหน่วงเวลา 70% ให้คุณหลบกระสุนแบบ Matrix ได้อย่างเฉียบคม
 * **🏆 Achievement System:** หอเกียรติยศบันทึกสถิติและความสำเร็จของผู้เล่น
 * **🗄️ MTC Database & Admin Console:** Advanced permission-based terminal system with three-tier access levels (GUEST/OPERATOR/ROOT), debug commands, and real-time FPS monitoring
-* **🎨 Visual Polish:** SVG Portrait System, 6-layer Wanchai Stand rendering with advanced rush fist effects featuring heat-tier colors, gradient trails, and 3D knuckle highlights, Military HUD theme, and enhanced particle effects
+* **🎨 Visual Polish:** SVG Portrait System, 6-layer Wanchai Stand rendering with realistic Muay Thai boxing glove rush system featuring anatomical detail, progressive depth scaling, and heat-tier colors, Military HUD theme, and enhanced particle effects
 * **🤖 Advanced AI:** Autonomous Wanchai Stand with tactical intelligence and positioning
 * **🌌 Domain Expansion:** Ultimate boss abilities with arena-wide effects, physics manipulation, and enhanced visual effects including pillar of light, energy tendrils, and dynamic grid animations
 

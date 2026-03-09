@@ -544,52 +544,123 @@ class PlayerRenderer {
                 const stand = entity.wanchaiStand;
                 if (fists && fists.length > 0) {
                     const ht = entity._heatTier ?? 0;
-                    const fistCol = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#ef4444';
-                    const trailHex = ht >= 3 ? '251,191,36' : ht >= 2 ? '249,115,22' : '248,113,113';
+                    const fistCol    = ht >= 3 ? '#facc15' : ht >= 2 ? '#f97316' : '#ef4444';
+                    const fistColDim = ht >= 3 ? '#92400e' : ht >= 2 ? '#7c2d12' : '#7f1d1d';
+                    const trailHex   = ht >= 3 ? '251,191,36' : ht >= 2 ? '249,115,22' : '239,68,68';
+                    const punchAngle = entity.angle; // ทุก fist เรียงตามทิศนี้
+
+                    // ── Helper: วาดหมัดกำปั้น Muay Thai ──────────────────────
+                    // cx/cy = ตำแหน่งกึ่งกลางหมัด (screen-relative)
+                    // sc    = scale (0.5–1.0)
+                    // faceA = มุมที่หมัดกำลังชี้/พุ่ง
+                    // alpha = ความโปร่งใส
+                    const drawGlove = (cx, cy, sc, faceA, alpha) => {
+                        ctx.save();
+                        ctx.translate(cx, cy);
+                        ctx.rotate(faceA);          // หมุนให้หมัดชี้ไปทิศที่ถูก
+                        ctx.globalAlpha = alpha;
+
+                        const W = 13 * sc;  // ความกว้างหมัด
+                        const H = 10 * sc;  // ความสูงหมัด
+
+                        // ── Wrist / arm stub (ด้านหลัง) ─────────────────────
+                        const wristG = ctx.createLinearGradient(-W * 1.1, 0, -W * 0.3, 0);
+                        wristG.addColorStop(0, `rgba(${trailHex},0)`);
+                        wristG.addColorStop(1, fistColDim);
+                        ctx.fillStyle = wristG;
+                        ctx.beginPath();
+                        ctx.roundRect(-W * 1.1, -H * 0.45, W * 0.85, H * 0.90, 3 * sc);
+                        ctx.fill();
+
+                        // ── Main fist body ────────────────────────────────────
+                        // รูปทรงสี่เหลี่ยมมนนิดหน่อย กว้างกว่าสูง (boxing glove proportion)
+                        const bodyG = ctx.createRadialGradient(-W * 0.15, -H * 0.25, 0.5, 0, 0, W);
+                        bodyG.addColorStop(0, '#ffffff');
+                        bodyG.addColorStop(0.18, fistCol);
+                        bodyG.addColorStop(0.65, fistCol);
+                        bodyG.addColorStop(1, fistColDim);
+                        ctx.fillStyle = bodyG;
+                        ctx.shadowBlur = 18 * sc; ctx.shadowColor = fistCol;
+                        ctx.beginPath();
+                        ctx.roundRect(-W * 0.35, -H * 0.50, W * 1.35, H, 4 * sc);
+                        ctx.fill();
+
+                        // ── Thumb bump (ด้านบน) ──────────────────────────────
+                        ctx.fillStyle = fistCol;
+                        ctx.shadowBlur = 0;
+                        ctx.beginPath();
+                        ctx.ellipse(W * 0.25, -H * 0.48, W * 0.30, H * 0.28, -0.3, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // ── 4 Knuckle ridges (ด้านหน้า leading edge) ──────────
+                        ctx.shadowBlur = 8 * sc; ctx.shadowColor = '#ffffff';
+                        for (let k = 0; k < 4; k++) {
+                            const ky = -H * 0.32 + k * (H * 0.22);
+                            const kw = W * 0.16;
+                            const kh = H * 0.15;
+                            const kG = ctx.createRadialGradient(W * 0.88, ky, 0, W * 0.88, ky, kw);
+                            kG.addColorStop(0, 'rgba(255,255,255,0.90)');
+                            kG.addColorStop(0.5, `rgba(${trailHex},0.55)`);
+                            kG.addColorStop(1, `rgba(${trailHex},0)`);
+                            ctx.fillStyle = kG;
+                            ctx.beginPath();
+                            ctx.ellipse(W * 0.88, ky, kw, kh, 0.2, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+
+                        // ── Rim stroke ────────────────────────────────────────
+                        ctx.shadowBlur = 0;
+                        ctx.strokeStyle = `rgba(255,255,255,${(alpha * 0.25).toFixed(2)})`;
+                        ctx.lineWidth = 1.2 * sc;
+                        ctx.beginPath();
+                        ctx.roundRect(-W * 0.35, -H * 0.50, W * 1.35, H, 4 * sc);
+                        ctx.stroke();
+
+                        ctx.restore();
+                    };
 
                     ctx.save();
-                    // FIX: ox/oy already precomputed with entity.angle in _doPlayerMelee
-                    // → translate to screen centre only; NO ctx.rotate to avoid double-rotation
                     ctx.translate(screen.x, screen.y);
-                    ctx.shadowBlur = 20; ctx.shadowColor = fistCol;
 
-                    for (const f of fists) {
+                    // ── Layout: fists เรียงแนวเดียวในทิศ punchAngle ─────────
+                    // spacing แบบ staggered — ด้านขวาซ้ายสลับกัน ±sideOffset
+                    // ระยะ dist เพิ่มตาม index → ดูเหมือนหมัดพุ่งออกมาต่อเนื่อง
+                    const COUNT    = fists.length;   // 7 (hit) or 4 (miss)
+                    const SPACING  = 16;             // px ระหว่างหมัดตาม forward axis
+                    const SIDE_AMP = 5;              // px สลับซ้ายขวา (เพิ่มความมีชีวิต)
+                    const perpA    = punchAngle + Math.PI / 2; // แกนตั้งฉาก
+
+                    for (let i = 0; i < COUNT; i++) {
+                        const f = fists[i];
                         if (f.alpha <= 0) continue;
-                        const fR = 9.5 * f.sc;
 
-                        // Direction-aware trail: angle from player centre → fist position
-                        const trailAngle = Math.atan2(f.oy, f.ox);
-                        const trailLen = 34 * f.sc;
-                        const t0x = f.ox - Math.cos(trailAngle) * trailLen;
-                        const t0y = f.oy - Math.sin(trailAngle) * trailLen;
+                        // ระยะตาม forward axis: หมัดแรก = ใกล้สุด, หมัดหลัง = ไกลสุด
+                        const forwardDist = 38 + i * SPACING;
+                        const sideDrift   = Math.sin(i * Math.PI) * SIDE_AMP * f.sc; // สลับซ้ายขวา
 
-                        const trailG = ctx.createLinearGradient(t0x, t0y, f.ox, f.oy);
+                        const fx = Math.cos(punchAngle) * forwardDist + Math.cos(perpA) * sideDrift;
+                        const fy = Math.sin(punchAngle) * forwardDist + Math.sin(perpA) * sideDrift;
+
+                        // Trail: ตาม forward axis กลับทาง
+                        const trailLen = 28 * f.sc;
+                        const t0x = fx - Math.cos(punchAngle) * trailLen;
+                        const t0y = fy - Math.sin(punchAngle) * trailLen;
+                        const trailG = ctx.createLinearGradient(t0x, t0y, fx, fy);
                         trailG.addColorStop(0, `rgba(${trailHex},0)`);
-                        trailG.addColorStop(1, `rgba(${trailHex},${(f.alpha * 0.70).toFixed(2)})`);
+                        trailG.addColorStop(1, `rgba(${trailHex},${(f.alpha * 0.55).toFixed(2)})`);
+                        ctx.save();
                         ctx.strokeStyle = trailG;
-                        ctx.lineWidth = 7 * f.sc;
-                        ctx.lineCap = 'round';
+                        ctx.lineWidth   = 8 * f.sc;
+                        ctx.lineCap     = 'round';
                         ctx.globalAlpha = f.alpha;
-                        ctx.beginPath(); ctx.moveTo(t0x, t0y); ctx.lineTo(f.ox, f.oy); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(t0x, t0y); ctx.lineTo(fx, fy); ctx.stroke();
+                        ctx.restore();
 
-                        // Glove body
-                        ctx.globalAlpha = f.alpha * 0.94;
-                        ctx.fillStyle = fistCol;
-                        ctx.beginPath(); ctx.arc(f.ox, f.oy, fR, 0, Math.PI * 2); ctx.fill();
-
-                        // Rim
-                        ctx.strokeStyle = `rgba(255,255,255,${(f.alpha * 0.30).toFixed(2)})`;
-                        ctx.lineWidth = 1.4;
-                        ctx.beginPath(); ctx.arc(f.ox, f.oy, fR, 0, Math.PI * 2); ctx.stroke();
-
-                        // Knuckle highlight arc on leading edge
-                        ctx.strokeStyle = `rgba(255,255,255,${(f.alpha * 0.65).toFixed(2)})`;
-                        ctx.lineWidth = 1.8;
-                        ctx.shadowBlur = 6; ctx.shadowColor = '#ffffff';
-                        ctx.beginPath();
-                        ctx.arc(f.ox, f.oy, fR * 0.58, trailAngle - 0.75, trailAngle + 0.75);
-                        ctx.stroke();
+                        // วาดหมัด
+                        const gloveScale = 0.60 + (i / (COUNT - 1)) * 0.40; // หมัดแรกเล็ก → หมัดหลังใหญ่
+                        drawGlove(fx, fy, f.sc * gloveScale, punchAngle, f.alpha);
                     }
+
                     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
                     ctx.restore();
 

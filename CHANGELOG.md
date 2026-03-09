@@ -4,6 +4,33 @@
 
 ---
 
+## v3.25.4 — Realistic Boxing Glove Rush System
+*Released: March 9, 2026*
+
+### 🥊 Complete Rush Fist Redesign
+- **Linear Punch Layout:** Replaced 360° radial fan with linear arrangement following entity.angle for continuous punching motion
+- **Realistic Boxing Glove Design:** Implemented detailed Muay Thai glove anatomy:
+  - Wrist/arm stub with gradient fade effect
+  - Main body with rounded rectangle proportions (13×10px)
+  - Thumb bump on top surface with elliptical shape
+  - 4 individual knuckle ridges with radial gradient highlights
+  - Rim stroke with proper alpha blending
+
+### 🎨 Advanced Visual Features
+- **Progressive Depth Scaling:** Gloves scale from small (first) to large (last) using 0.60→1.00 multiplier for depth perception
+- **Staggered Positioning:** Added side drift using Math.sin(i * Math.PI) for natural left-right alternation (±5px)
+- **Forward Distance Calculation:** Linear spacing with 38px base + 16px per fist for continuous punch appearance
+- **Enhanced Trail System:** Improved gradient trails aligned with punchAngle (28px length, 8px width, 55% alpha)
+- **Heat-Tier Color Integration:** Extended color system to include fistColDim for darker glove shading
+
+### 📐 Technical Architecture
+- **Helper Function:** Created drawGlove() with modular parameters (position, scale, angle, alpha)
+- **Coordinate System:** Screen-relative positioning with proper rotation matrices
+- **Gradient Mastery:** Multiple gradient types (linear, radial) for realistic material appearance
+- **Performance Optimization:** Efficient loop structure with early alpha filtering
+
+---
+
 ## v3.25.3 — Rush Fist Advanced Rendering Fixes
 *Released: March 9, 2026*
 

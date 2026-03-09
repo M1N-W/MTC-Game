@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.25.3'; // v3.25.3: Rush Fist Advanced Rendering Fixes - Fixed double-rotation, added direction-aware gradient trails, 3D knuckle highlights, heat-tier color system, and enhanced battle cry
+const CACHE_NAME = 'mtc-cache-v3.25.4'; // v3.25.4: Realistic Boxing Glove Rush System - Complete redesign with linear punch layout, anatomical glove detail, progressive depth scaling, and Muay Thai styling
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
