@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.29.1'; // v3.29.1: Fixed shop system bugs - shield duplicate purchase prevention, speed boost stat restoration, and proper speed boost timer mechanics
+const CACHE_NAME = 'mtc-cache-v3.29.2'; // v3.29.2: Fixed WaveAnnouncementFX timing and shop speed boost timer display optimization
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

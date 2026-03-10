@@ -4,6 +4,25 @@
 
 ---
 
+## v3.29.2 — Wave Announcement & Shop Timer Fixes
+*Released: March 10, 2026*
+
+### 🎬 Wave Announcement System Fix
+- **WaveAnnouncementFX Timing**: Moved trigger call after boss/glitch wave detection to ensure correct parameters are passed
+- **Proper Wave Type Detection**: Wave announcements now correctly display boss/glitch indicators based on actual wave calculations
+
+### 🛒 Shop System Optimization
+- **Speed Boost Timer Display**: Fixed shop tick() method to use correct `shopSpeedBoostActive/shopSpeedBoostTimer` properties
+- **Performance Optimization**: Shop tick() now updates only the countdown badge instead of re-rendering entire shop UI
+- **Pause State Compatibility**: Timer display works correctly while game is paused (shop open state)
+
+### 🐛 Bug Fixes
+- Resolved wave announcement showing incorrect wave type indicators
+- Fixed shop speed boost timer not displaying countdown correctly
+- Eliminated unnecessary DOM re-renders during shop timer updates
+
+---
+
 ## v3.29.1 — Shop System Bug Fixes
 *Released: March 10, 2026*
 

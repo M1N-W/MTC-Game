@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.29.1 | **Latest Update:** Shop System Bug Fixes - Fixed shield duplicate purchase prevention, speed boost stat restoration, and proper speed boost timer mechanics
+> **Current Version:** Beta v3.29.2 | **Latest Update:** Wave Announcement & Shop Timer Fixes - Fixed WaveAnnouncementFX timing and shop speed boost timer display optimization
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

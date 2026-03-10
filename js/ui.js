@@ -335,12 +335,13 @@ class ShopManager {
             card.id = `shop-card-slot-${idx}`;
             card.setAttribute('data-item-id', item.id);
             if (item.charReq) card.style.setProperty('--shop-char-color', charLabels[item.charReq]?.color ?? '#94a3b8');
-            
+
             // Active buff badge for items with timers
-            const activeBadge = (item.id === 'speedWave' && window.player?._speedWaveTimer > 0)
-                ? `<span class="shop-card-active-badge">⚡ ${Math.ceil(window.player._speedWaveTimer)}s</span>`
+            // BUG 2/3 FIX: read shopSpeedBoostTimer — the property game.js actually ticks
+            const activeBadge = (item.id === 'speedWave' && window.player?.shopSpeedBoostActive && window.player?.shopSpeedBoostTimer > 0)
+                ? `<span class="shop-card-active-badge">⚡ ${Math.ceil(window.player.shopSpeedBoostTimer)}s</span>`
                 : '';
-            
+
             card.innerHTML = `
                 ${charBadge}
                 ${activeBadge}
@@ -367,7 +368,20 @@ class ShopManager {
     // Kept for backward-compat call-sites (tick, etc.)
     static updateButtons() { ShopManager.renderItems(); }
 
-    static tick() { ShopManager.renderItems(); }
+    // BUG 3 FIX: tick() updates countdown badge in-place — no full DOM re-render,
+    // and works correctly while game is PAUSED (shop open state).
+    static tick() {
+        const p = window.player;
+        if (!p) return;
+        const badge = document.querySelector('[data-item-id="speedWave"] .shop-card-active-badge');
+        if (badge) {
+            if (p.shopSpeedBoostActive && p.shopSpeedBoostTimer > 0) {
+                badge.textContent = `⚡ ${Math.ceil(p.shopSpeedBoostTimer)}s`;
+            } else {
+                badge.textContent = '';
+            }
+        }
+    }
 }
 
 

@@ -485,10 +485,6 @@ function startNextWave() {
     }
 
     setElementText('wave-badge', GAME_TEXTS.wave.badge(getWave()));
-    // ── WaveAnnouncementFX canvas banner ──────────────────────
-    if (typeof waveAnnouncementFX !== 'undefined') {
-        waveAnnouncementFX.trigger(getWave(), isBossWave, isGlitch);
-    }
 
     const wave = getWave();
     Achievements.check('wave_5');
@@ -496,6 +492,11 @@ function startNextWave() {
     const count = BALANCE.waves.enemiesBase + (wave - 1) * BALANCE.waves.enemiesPerWave;
     const isBossWave = wave % BALANCE.waves.bossEveryNWaves === 0;
     const isGlitch = (!isBossWave) && (wave % GLITCH_EVERY_N_WAVES === 0);
+
+    // ── WaveAnnouncementFX canvas banner ──────────────────────
+    if (typeof waveAnnouncementFX !== 'undefined') {
+        waveAnnouncementFX.trigger(wave, isBossWave, isGlitch);
+    }
 
     // ── BGM ──────────────────────────────────────────────────
     if (!isBossWave) Audio.playBGM(isGlitch ? 'glitch' : 'battle');
