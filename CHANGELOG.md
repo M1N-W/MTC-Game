@@ -4,6 +4,24 @@
 
 ---
 
+## v3.29.8 — Minimap Method Call Class Correction
+*Released: March 10, 2026*
+
+### 🐛 Bug Fixes
+- **Class Prefix Correction**: Fixed minimap static method calls to use proper class semantics
+  - Changed `UIManager._minimapDrawShell()` calls to `CanvasHUD._minimapDrawShell()`
+  - Fixed `UIManager._minimapDrawContent()` calls to `CanvasHUD._minimapDrawContent()`  
+  - Fixed `UIManager._minimapDrawLabel()` calls to `CanvasHUD._minimapDrawLabel()`
+- **Root Cause**: Previous v3.29.7 fix used UIManager prefix but methods are defined in CanvasHUD class
+- **Impact**: Proper static method binding with correct class semantics and improved code organization
+
+### 🔧 Technical Details
+- **Files Modified**: `js/ui.js` (3 method call corrections)
+- **Class Organization**: Methods now called using their defining class (CanvasHUD) rather than UIManager
+- **Code Quality**: Improved semantic accuracy and class relationship clarity
+
+---
+
 ## v3.29.7 — Minimap Method Call Correction & Cache Cleanup
 *Released: March 10, 2026*
 

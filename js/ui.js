@@ -1471,17 +1471,17 @@ class CanvasHUD {
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        UIManager._minimapDrawShell(ctx, cx, cy, radarRadius, now);
+        CanvasHUD._minimapDrawShell(ctx, cx, cy, radarRadius, now);
 
         // INNER SAVE — establishes circular clip region
         ctx.save();
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
 
-        UIManager._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
+        CanvasHUD._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
 
         ctx.restore();  // ← INNER restore — releases clip
 
-        UIManager._minimapDrawLabel(ctx, cx, cy, radarRadius);
+        CanvasHUD._minimapDrawLabel(ctx, cx, cy, radarRadius);
 
         ctx.restore();  // ← OUTER restore
     }

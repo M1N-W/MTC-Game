@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.7
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.8
 
 ---
 
@@ -898,6 +898,21 @@ class SniperEnemy extends EnemyBase {
 - **SquadAI** — 1Hz `_BucketGrid` O(N), role assignment ตอน spawn, `window.squadAI`
 - **PlayerPatternAnalyzer** — Float32Array(30) ring buffer, detect kiting/circling/standing, feeds Boss phase decisions
 - **Boss AI hooks** — KruFirst `_pickSkill()` + KruManop phase 2/3 transition ใช้ `playerAnalyzer.getDominantStyle()`
+
+---
+
+## 🔄 Recent Changes (v3.29.8)
+
+### Minimap Method Call Class Correction (v3.29.8 — March 10, 2026)
+**Purpose:** Corrected minimap static method calls to use proper class prefix
+
+**Files Changed:** `js/ui.js`
+
+**Key Fix:**
+- **Class Prefix Correction**: Changed minimap method calls from `UIManager._methodName()` to `CanvasHUD._methodName()`
+- **Methods Corrected**: `_minimapDrawShell()`, `_minimapDrawContent()`, `_minimapDrawLabel()`
+- **Root Cause**: Previous v3.29.7 fix used UIManager prefix but methods are defined in CanvasHUD class
+- **Impact**: Proper static method binding with correct class semantics and improved code organization
 
 ---
 
