@@ -84,10 +84,10 @@ const BALANCE = {
             passiveLv2KillReq: 5,           // NEW: จำนวน FreeStealthy-kills ที่ต้องการ
             passiveLv2HpBonusPct: 0.20,     // NEW: HP +20% เพิ่มเติมเมื่อถึง Lv2
             passiveLv2UnlockText: '👻 ซุ่มเสรี AWAKENED!',
-            passiveLv2CritBonus: 0.05,      // NEW: crit +5% ที่ Lv2
+            passiveLv2CritBonus: 0.04,      // NERF: 0.05 → 0.04 (minor crit trim)
             speedOnHit: 20,
             speedOnHitDuration: 0.4,
-            damageMultiplierPerLevel: 0.12,  // BUFF: 0.08 → 0.12 (level-up felt unrewarding)
+            damageMultiplierPerLevel: 0.09,  // NERF: 0.12 → 0.09 (level scaling -25%, wave10 damMult 2.2→1.9)
             cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
             maxHpPerLevel: 6,                 // BUFF: 4 → 6
             // ── Advanced Kao Skills ──
@@ -101,8 +101,8 @@ const BALANCE = {
             dashStealthDuration: 1.5,       // NEW: free stealth after every dash
             phantomBlinkEnabled: true,      // NEW: Q during stealth = Phantom Blink (ปลดที่ Lv2)
             phantomBlinkAmbushWindow: 2.0,  // BUFF: 1.5 → 2.0 (window ยาวขึ้น)
-            phantomBlinkDmgMult: 1.8,       // NERF: 2.5 → 1.8 (ไม่ double-dip กับ guaranteed crit)
-            stealthChainBonus: 0.25,        // NEW: +crit when Q chains from stealth
+            phantomBlinkDmgMult: 1.4,       // NERF: 2.5 → 1.8 → 1.4 (ambush burst -22% vs 1.8)
+            stealthChainBonus: 0.18,        // NERF: 0.25 → 0.18 (crit stack -7%)
             weaponMasterReq: 5              // ลดจาก 7 → 5 (passive เร็วขึ้น → Weapon Master ก็ควรทำได้เร็วขึ้น)
         },
         auto: {
@@ -132,10 +132,10 @@ const BALANCE = {
             wanchaiCooldown: 12,            // 9 → 12 (trade longer for less spammy)
             wanchaiEnergyCost: 25,          // 32 → 25 (easier loop)
             wanchaiPunchRate: 0.10,          // NERF: 0.09 → 0.10 (10 punches/s แทน 11.1 — ลด sustained DPS)
-            wanchaiDamage: 30,              // NERF: 38 → 30 (Wanchai TTK boss: 8.3s→~12s, ลด Wanchai dominance)
+            wanchaiDamage: 24,              // NERF: 38 → 30 → 24 (base DPS -20% vs 30, aligns boss TTK ~12s effective)
             standSpeedMod: 1.5,
             standDamageReduction: 0.40,     // 0.35 → 0.40 (BUFF: tank identity stronger)
-            standCritBonus: 0.25,
+            standCritBonus: 0.18,           // NERF: 0.25 → 0.18 (crit stack -7%)
             standMoveSpeed: 340,
             standPunchRange: 110,
             standLeashRadius: 420,
@@ -184,18 +184,18 @@ const BALANCE = {
             heatDecayRate: 8,               // -Heat/s ตอน out of Wanchai
             heatDecayRateActive: 0,         // ไม่ decay ระหว่าง Wanchai
             // ── Heat Tier Thresholds ──
-            // WARM (34%+): dmg ×1.15, punch rate ×0.85
-            // HOT  (67%+): dmg ×1.30, punch rate ×0.70, melee range เพิ่ม
-            // OVERHEATED (100%): dmg ×1.50, crit +20%, hp drain 3/s, det radius ×1.5
+            // WARM (34%+): dmg ×1.10, punch rate ×0.92
+            // HOT  (67%+): dmg ×1.20, punch rate ×0.85, melee range เพิ่ม
+            // OVERHEATED (100%): dmg ×1.30, crit +12%, hp drain 5/s, det radius ×1.5
             heatTierWarm: 34,
             heatTierHot: 67,
             heatTierOverheat: 100,
-            heatDmgWarm: 1.15,
-            heatDmgHot: 1.30,
-            heatDmgOverheat: 1.50,
-            heatPunchRateWarm: 0.85,        // multiplier ต่อ wanchaiPunchRate
-            heatPunchRateHot: 0.70,
-            heatCritBonusOverheat: 0.20,
+            heatDmgWarm: 1.10,
+            heatDmgHot: 1.20,
+            heatDmgOverheat: 1.30,
+            heatPunchRateWarm: 0.92,        // NERF: 0.85 → 0.92 (compress tier gap)
+            heatPunchRateHot: 0.85,         // NERF: 0.70 → 0.85 (slower punch, OVERHEAT uses this too)
+            heatCritBonusOverheat: 0.12,
             heatHpDrainOverheat: 5,         // NERF: 3 → 5 HP/s (overheat ควรรู้สึกเป็น risk จริง ไม่ใช่แค่ DPS buff)
             heatOnKillWanchai: 15,          // +Heat ต่อการฆ่าขณะ Wanchai active
             heatHealOnKillWanchai: 0.05,    // NERF: 0.08 → 0.05 (heal ลดลง — kill ยังรู้สึกดีแต่ไม่ trivial)
@@ -213,7 +213,7 @@ const BALANCE = {
             // ── Level Scaling ─────────────────────────────────
             expToNextLevel: 100,
             expLevelMult: 1.5,
-            damageMultiplierPerLevel: 0.12, // 0.10 → 0.12 (เท่า Kao)
+            damageMultiplierPerLevel: 0.08, // NERF: 0.10 → 0.12 → 0.08 (wave10 damMult 2.2→1.8)
             cooldownReductionPerLevel: 0.04,
             maxHpPerLevel: 16,              // 14 → 16
 
@@ -241,7 +241,7 @@ const BALANCE = {
 
             // ── Feature 1: Heat System Overhaul ───────────────
             // COLD tier penalty (heat < heatTierWarm)
-            coldDamageMult: 0.70,       // Stand damage ×0.70 ขณะ COLD
+            coldDamageMult: 0.75,       // NERF: 0.70 → 0.75 (cold not overly punishing)
             coldSpeedMult: 0.90,        // move speed ×0.90 ขณะ COLD
             // Heat idle decay (2s ไม่ hit → heat หาย)
             heatIdleDecayRate: 8,       // heat/s เมื่อไม่ hit นาน 2s
@@ -269,10 +269,10 @@ const BALANCE = {
             // ── Feature 4: Stand Meter (แทน Timer) ────────────
             standMeterMax: 100,
             standMeterDrainRate: 8,     // meter/s ขณะ Wanchai active
-            standMeterPerHit: 4,        // +meter ต่อ Stand punch / player hit
-            standMeterOnKill: 12,       // +meter ต่อ kill ขณะ Stand active
-            standMeterDrainCold: 1.30,  // drain multiplier ขณะ COLD
-            standMeterDrainOverheat: 0.50, // drain multiplier ขณะ OVERHEAT
+            standMeterPerHit: 1,        // NERF: 4 → 1 (fix infinite stand loop at OVERHEAT)
+            standMeterOnKill: 12,       // +meter ต่อ kill ขณะ Stand active (ต้องฆ่าเพื่อ sustain)
+            standMeterDrainCold: 3.0,   // NERF: 1.30 → 3.0 (COLD = real penalty, max ~6s)
+            standMeterDrainOverheat: 2.0, // NERF: 0.50 → 2.0 (drain faster, net 7.5/s → max 13s alone)
         },
         poom: {
             name: 'Poom',
@@ -297,7 +297,7 @@ const BALANCE = {
             eatRiceEnergyCost: 15,          // NEW: R-Click EatRice — heal + speed buff ใช้ focus เล็กน้อย
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
-            eatRiceCritBonus: 0.2,
+            eatRiceCritBonus: 0.12,
             nagaCooldown: 22,        // NERF: 20 → 22 (uptime 45% → 41% — ยังดีอยู่แต่ต้องจัดการ)
             nagaDuration: 9,         // NERF: 10 → 9 (Cosmic window แคบลง — ต้องวาง Garuda ให้ sync)
             nagaEnergyCost: 25,      // NEW: Q Naga — summon พญานาค ต้องใช้ focus
@@ -308,7 +308,7 @@ const BALANCE = {
             nagaRadius: 22,          // BUFF: 20 → 22 (ตัวหนาขึ้นเล็กน้อย)
             speedOnHit: 18,
             speedOnHitDuration: 0.35,
-            damageMultiplierPerLevel: 0.11,  // BUFF: 0.07 → 0.11
+            damageMultiplierPerLevel: 0.09,  // NERF: 0.07 → 0.11 → 0.09 (align with Kao)
             cooldownReductionPerLevel: 0.05,  // BUFF: 0.04 → 0.05
             maxHpPerLevel: 10,                // BUFF: 7 → 10
             // ── Passive Skill (Ritual Mastery) ────────────────
@@ -320,7 +320,7 @@ const BALANCE = {
             passiveCritBonus: 0.06,         // BUFF: 0.04 → 0.06 (เท่า Auto)
             passiveLifesteal: 0.025,        // BUFF: 0.015 → 0.025 (รู้สึกได้จริง)
             // ── Cosmic Balance bonus ─────────────────────────────
-            cosmicDamageMult: 1.35,           // คงเดิม
+            cosmicDamageMult: 1.25,           // NERF: 1.35 → 1.25 (cosmic bonus -7%)
             cosmicHpRegen: 6,                 // BUFF: 4 → 6 HP/s
             cosmicStickyDurationBonus: 1.0,   // NEW: +1.0s ต่อ sticky stack duration ขณะ Cosmic active
             // ── Sticky Rice Stack System ──
@@ -341,7 +341,7 @@ const BALANCE = {
             garudaCooldown: 24,             // NERF: 22 → 24 (Cosmic Balance ต้องใช้ทักษะในการ sync)
             garudaEnergyCost: 30,           // NEW: E Garuda — summon ครุฑ ใช้ focus สูงสุดของ Poom
             garudaDuration: 9,              // BUFF: 6 → 9 (uptime 24% → 41%)
-            garudaDamage: 150,
+            garudaDamage: 120,
             garudaOrbitRadius: 120,
             garudaOrbitSpeed: 2.2,
             garudaDiveCooldown: 1.8,
@@ -953,7 +953,7 @@ const GAME_CONFIG = {
         ritual: {
             // ── Damage model ──────────────────────────────────
             damagePerStack: 15,              // flat dmg per stack; 5 stacks = 75 dmg
-            stackBurstPct: 0.25,             // % of enemy maxHp per stack (burst formula)
+            stackBurstPct: 0.15,             // NERF: 0.25 → 0.15 (5 stacks = 75%hp แทน 125%hp — ไม่ instakill)
             baseDamage: 75,                  // base AoE damage when no sticky
             baseDamagePct: 0.15,             // 15% of enemy maxHp as base damage
             // ── Lifecycle ─────────────────────────────────────

@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.30.3 | **Latest Update:** Boss Attacks Safety Improvements - Added isFinite() checks for coordinate validation and fixed code formatting
+> **Current Version:** Beta v3.30.4 | **Latest Update:** Major Balance Patch - Comprehensive nerfs across all characters to reduce damage scaling and improve game balance
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

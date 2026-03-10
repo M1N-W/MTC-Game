@@ -4,6 +4,58 @@
 
 ---
 
+## v3.30.4 — Major Balance Patch
+*Released: March 10, 2026*
+
+### ⚖️ Global Balance Overhaul
+- **Damage Scaling Reduction**: Significant nerfs to damage multipliers across all characters
+- **Crit Compression**: Reduced critical hit bonuses to prevent burst damage scaling
+- **Sustainability Limits**: Decreased healing and resource generation rates
+- **Heat System Rebalancing**: Compressed damage tiers and increased overheat penalties
+
+### 👤 Kao Character Nerfs
+- **Level Scaling**: `damageMultiplierPerLevel` 0.12 → 0.09 (wave10 damage mult 2.2→1.9)
+- **Passive Crit**: `passiveLv2CritBonus` 0.05 → 0.04
+- **Phantom Blink**: `phantomBlinkDmgMult` 1.8 → 1.4, `stealthChainBonus` 0.25 → 0.18
+
+### 🥊 Wanchai Character Nerfs
+- **Base Damage**: `wanchaiDamage` 30 → 24 (20% DPS reduction)
+- **Crit Scaling**: `standCritBonus` 0.25 → 0.18
+- **Heat System**: Compressed damage tiers (1.15/1.30/1.50 → 1.10/1.20/1.30)
+- **Overheat Penalties**: `heatCritBonusOverheat` 0.20 → 0.12, `heatHpDrainOverheat` 3 → 5
+- **Stand Meter**: `standMeterPerHit` 4 → 1, increased drain rates for COLD/OVERHEAT
+
+### 🔧 Auto Character Nerfs
+- **Level Scaling**: `damageMultiplierPerLevel` 0.12 → 0.08 (wave10 damage mult 2.2→1.8)
+- **Cold Penalty**: `coldDamageMult` 0.70 → 0.75 (less punishing)
+
+### 🍙 Poom Character Nerfs
+- **Level Scaling**: `damageMultiplierPerLevel` 0.11 → 0.09 (aligned with other characters)
+- **Eat Rice**: `eatRiceCritBonus` 0.2 → 0.12
+- **Cosmic Balance**: `cosmicDamageMult` 1.35 → 1.25
+- **Garuda**: `garudaDamage` 150 → 120
+
+### 🎯 Ritual System Nerfs
+- **Stack Burst**: `stackBurstPct` 0.25 → 0.15 (5 stacks = 75% HP instead of 125% HP)
+- **Anti-Instakill**: Prevents ritual from instantly killing high-health enemies
+
+### 🔧 Technical Balance Changes
+- **Heat Tier Compression**: Reduced damage gaps between heat tiers
+- **Stand Meter Sustainability**: Fixed infinite stand loops at OVERHEAT
+- **Level Scaling Alignment**: Unified damage per level across characters
+- **Crit Stack Reduction**: Prevented excessive crit stacking from multiple sources
+
+### 🎮 Gameplay Impact
+- **Longer Boss Fights**: Reduced TTK from ~8s to ~12s for sustained DPS
+- **More Strategic Resource Management**: Increased focus on timing and positioning
+- **Balanced Character Viability**: Reduced dominance of high-damage builds
+- **Risk/Reward Tuning**: Overheat and high-risk abilities now have clearer tradeoffs
+
+### 📁 Files Modified
+- `js/config.js` - Comprehensive balance adjustments across all character systems
+
+---
+
 ## v3.30.3 — Boss Attacks Safety Improvements
 *Released: March 10, 2026*
 

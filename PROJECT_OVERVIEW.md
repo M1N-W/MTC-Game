@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.3
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.4
 
 ---
 
@@ -1124,7 +1124,40 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Changes (v3.30.3)
+## 📝 Recent Changes (v3.30.4)
+
+### Major Balance Patch (March 10, 2026)
+**Purpose:** Comprehensive balance overhaul to reduce damage scaling and improve game fairness
+
+**Key Changes:**
+- **Global Damage Reduction**: Significant nerfs to damage multipliers across all characters
+- **Crit Compression**: Reduced critical hit bonuses to prevent burst damage scaling
+- **Heat System Rebalancing**: Compressed damage tiers and increased overheat penalties
+- **Sustainability Limits**: Decreased healing and resource generation rates
+
+**Character-Specific Nerfs:**
+- **Kao**: Level scaling 0.12→0.09, phantom blink damage 1.8→1.4, crit bonuses reduced
+- **Wanchai**: Base damage 30→24, heat tiers compressed (1.15/1.30/1.50→1.10/1.20/1.30), overheat penalties increased
+- **Auto**: Level scaling 0.12→0.08, cold penalty reduced from 0.70→0.75
+- **Poom**: Level scaling 0.11→0.09, cosmic damage 1.35→1.25, garuda damage 150→120
+
+**System Changes:**
+- **Ritual**: Stack burst reduced from 125% HP to 75% HP (anti-instakill)
+- **Stand Meter**: Fixed infinite stand loops, increased drain rates for extreme states
+- **Level Scaling**: Unified damage per level across all characters
+
+**Gameplay Impact:**
+- **Longer Boss Fights**: Reduced TTK from ~8s to ~12s for sustained DPS
+- **Strategic Resource Management**: Increased focus on timing and positioning
+- **Balanced Character Viability**: Reduced dominance of high-damage builds
+- **Risk/Reward Tuning**: Clearer tradeoffs for high-risk abilities
+
+**Files Changed:**
+- `js/config.js`: Comprehensive balance adjustments across all character systems
+
+---
+
+## 📝 Previous Changes (v3.30.3)
 
 ### Boss Attacks Safety Improvements (March 10, 2026)
 **Purpose:** Enhance stability and prevent rendering crashes through coordinate validation
