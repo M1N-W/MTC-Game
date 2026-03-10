@@ -1,6 +1,7 @@
-# Bundling
-
-Fix common bundling issues with third-party packages.
+---
+name: bundling
+description: Fix common bundling issues with third-party packages.
+---
 
 ## Server-Incompatible Packages
 

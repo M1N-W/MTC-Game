@@ -4,6 +4,21 @@
 
 ---
 
+## v3.27.10 — Documentation Update (Next.js Skills Frontmatter)
+*Released: March 10, 2026*
+
+### 📚 Documentation Improvements
+- **Next.js Skills Documentation**: Added YAML frontmatter to async-patterns.md and bundling.md skill files
+- **Skill Metadata Enhancement**: Standardized skill documentation format with name and description fields
+- **Better Skill Organization**: Improved skill file structure for better categorization and discovery
+
+### 🔧 Technical Details
+- **async-patterns.md**: Added YAML frontmatter with name and description for async patterns documentation
+- **bundling.md**: Added YAML frontmatter with name and description for bundling documentation
+- **Documentation Consistency**: Standardized format across Next.js best practices skill files
+
+---
+
 ## v3.27.9 — Documentation Update (Debugging Section)
 *Released: March 10, 2026*
 
