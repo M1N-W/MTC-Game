@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.29.5 | **Latest Update:** Major Code Architecture Refactoring - Comprehensive function modularization, CSS regional organization, and enhanced maintainability with 998 lines restructured for better development experience
+> **Current Version:** Beta v3.29.6 | **Latest Update:** Minimap Method Call Bug Fix - Corrected static method references to instance method calls in CanvasHUD class after previous refactoring
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

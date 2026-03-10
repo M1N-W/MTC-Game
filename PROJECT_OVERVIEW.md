@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.5
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.6
 
 ---
 
@@ -822,7 +822,6 @@ class SniperEnemy extends EnemyBase {
 **Files Changed:** `js/systems/WaveManager.js`, `js/systems/ShopSystem.js`, `js/ui.js`, `js/game.js`
 
 **Key Fixes:**
-
 **🔴 Critical**
 - **WaveManager TDZ crash** — `ReferenceError: Cannot access 'isBossWave' before initialization` บรรทัด 490: ย้าย `const wave/isBossWave/isGlitch` ขึ้นมาก่อน `waveAnnouncementFX.trigger()` ซึ่งใช้ทั้งสองตัว; แก้ `getWave()` ที่ถูกเรียกซ้ำซ้อน
 - **`speedWave` item ไม่มีผล** — ShopSystem เซ็ต `_speedWaveTimer/_speedWaveMult` แต่ game.js tick `shopSpeedBoostActive/shopSpeedBoostTimer` — เปลี่ยน ShopSystem + game.js ให้ใช้ property เดียวกัน พร้อม restore ผ่าน `stats.moveSpeed`
@@ -899,6 +898,20 @@ class SniperEnemy extends EnemyBase {
 - **SquadAI** — 1Hz `_BucketGrid` O(N), role assignment ตอน spawn, `window.squadAI`
 - **PlayerPatternAnalyzer** — Float32Array(30) ring buffer, detect kiting/circling/standing, feeds Boss phase decisions
 - **Boss AI hooks** — KruFirst `_pickSkill()` + KruManop phase 2/3 transition ใช้ `playerAnalyzer.getDominantStyle()`
+
+---
+
+## 🔄 Recent Changes (v3.29.6)
+
+### Minimap Method Call Bug Fix (v3.29.6 — March 10, 2026)
+**Purpose:** Fixed minimap drawing method calls after previous refactoring
+
+**Files Changed:** `js/ui.js`
+
+**Key Fix:**
+- **Static method reference error** - Corrected `UIManager._minimapDrawShell()` calls to `this._minimapDrawShell()` in CanvasHUD class
+- **Root cause:** Previous refactoring converted static methods to instance methods but method calls weren't updated
+- **Impact:** Minimap now renders correctly without console errors
 
 ---
 

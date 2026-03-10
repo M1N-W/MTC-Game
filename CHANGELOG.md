@@ -4,6 +4,24 @@
 
 ---
 
+## v3.29.6 — Minimap Method Call Bug Fix
+*Released: March 10, 2026*
+
+### 🐛 Bug Fixes
+- **Static Method Reference Error**: Fixed minimap drawing method calls in CanvasHUD class
+  - Corrected `UIManager._minimapDrawShell()` calls to `this._minimapDrawShell()`
+  - Fixed `UIManager._minimapDrawContent()` calls to `this._minimapDrawContent()`  
+  - Fixed `UIManager._minimapDrawLabel()` calls to `this._minimapDrawLabel()`
+- **Root Cause**: Previous v3.29.5 refactoring converted static methods to instance methods but method calls weren't updated
+- **Impact**: Minimap now renders correctly without console errors and proper method binding
+
+### 🔧 Technical Details
+- **Files Modified**: `js/ui.js` (3 method call corrections)
+- **Error Type**: Method binding issue in class instance context
+- **Verification**: All minimap drawing phases now execute correctly with proper `this` context
+
+---
+
 ## v3.29.5 — Major Code Architecture Refactoring
 *Released: March 10, 2026*
 

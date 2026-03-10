@@ -707,10 +707,10 @@ class UIManager {
     // Called once on game start and on every character switch.
     static setupCharacterHUD(player) {
         const isPoom = player instanceof PoomPlayer;
-        const charId  = player.charId || (isPoom ? 'poom' : 'kao');
-        const isKao   = charId === 'kao';
-        const isAuto  = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
-        const SN      = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
+        const charId = player.charId || (isPoom ? 'poom' : 'kao');
+        const isKao = charId === 'kao';
+        const isAuto = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
+        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
         const hudBottom = document.querySelector('.hud-bottom');
 
         UIManager._hudApplyThemeAndLabel(isPoom, isKao, isAuto, hudBottom);
@@ -750,10 +750,10 @@ class UIManager {
             hudBottomEl.prepend(charLabel);
         }
         const lc = isAuto
-            ? { name: 'AUTO',  tag: 'BRAWLER',   color: '#fca5a5', glow: 'rgba(220,38,38,0.5)' }
+            ? { name: 'AUTO', tag: 'BRAWLER', color: '#fca5a5', glow: 'rgba(220,38,38,0.5)' }
             : isPoom
-                ? { name: 'POOM',  tag: 'SPIRITUAL', color: '#6ee7b7', glow: 'rgba(16,185,129,0.5)' }
-                : { name: 'KAO',   tag: 'ASSASSIN',  color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
+                ? { name: 'POOM', tag: 'SPIRITUAL', color: '#6ee7b7', glow: 'rgba(16,185,129,0.5)' }
+                : { name: 'KAO', tag: 'ASSASSIN', color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
         charLabel.innerHTML =
             `<span class="hud-char-name" style="color:${lc.color};text-shadow:0 0 8px ${lc.glow};">${lc.name}</span>` +
             `<span class="hud-char-tag">${lc.tag}</span>`;
@@ -766,23 +766,23 @@ class UIManager {
         const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
         _THEME_CLASSES.forEach(c => attackIcon.classList.remove(c));
         const emoji = document.getElementById('attack-emoji');
-        const hint  = document.getElementById('attack-hint');
-        const name  = document.getElementById('sn-attack');
+        const hint = document.getElementById('attack-hint');
+        const name = document.getElementById('sn-attack');
         if (isPoom) {
             attackIcon.classList.add('t-emerald');
             if (emoji) emoji.textContent = '🍙';
-            if (hint)  { hint.style.background = '#064e3b'; hint.style.color = '#6ee7b7'; }
-            if (name)  { name.textContent = 'SHOOT'; name.style.color = '#6ee7b7'; }
+            if (hint) { hint.style.background = '#064e3b'; hint.style.color = '#6ee7b7'; }
+            if (name) { name.textContent = 'SHOOT'; name.style.color = '#6ee7b7'; }
         } else if (isAuto) {
             attackIcon.classList.add('t-red');
             if (emoji) emoji.textContent = '🔥';
-            if (hint)  { hint.style.background = '#7f1d1d'; hint.style.color = '#fca5a5'; }
-            if (name)  { name.textContent = 'SHOOT'; name.style.color = '#fca5a5'; }
+            if (hint) { hint.style.background = '#7f1d1d'; hint.style.color = '#fca5a5'; }
+            if (name) { name.textContent = 'SHOOT'; name.style.color = '#fca5a5'; }
         } else {
             attackIcon.classList.add('t-blue');
             if (emoji) emoji.textContent = '🔫';
-            if (hint)  { hint.style.background = '#1e3a8a'; hint.style.color = '#bfdbfe'; }
-            if (name)  { name.textContent = 'SHOOT'; name.style.color = '#93c5fd'; }
+            if (hint) { hint.style.background = '#1e3a8a'; hint.style.color = '#bfdbfe'; }
+            if (name) { name.textContent = 'SHOOT'; name.style.color = '#93c5fd'; }
         }
     }
 
@@ -824,31 +824,31 @@ class UIManager {
             const d = document.createElement('div'); d.className = 'skill-name'; skill1El.appendChild(d); return d;
         })();
         const emojiEl = document.getElementById('skill1-emoji');
-        const hintEl  = document.getElementById('skill1-hint');
-        const cdEl    = skill1El.querySelector('.cooldown-mask');
+        const hintEl = document.getElementById('skill1-hint');
+        const cdEl = skill1El.querySelector('.cooldown-mask');
         if (isPoom) {
             skill1El.id = 'eat-icon';
             if (emojiEl) emojiEl.textContent = '🍱';
-            if (hintEl)  hintEl.textContent = 'R-Click';
-            if (cdEl)    cdEl.id = 'eat-cd';
+            if (hintEl) hintEl.textContent = 'R-Click';
+            if (cdEl) cdEl.id = 'eat-cd';
             nameEl.textContent = 'EAT RICE'; nameEl.style.color = '#6ee7b7';
         } else if (isAuto) {
             skill1El.id = 'stealth-icon';
             if (emojiEl) emojiEl.textContent = '💢';
-            if (hintEl)  hintEl.textContent = 'R-Click';
-            if (cdEl)    cdEl.id = 'stealth-cd';
+            if (hintEl) hintEl.textContent = 'R-Click';
+            if (cdEl) cdEl.id = 'stealth-cd';
             nameEl.textContent = 'WANCHAI'; nameEl.style.color = '#fca5a5';
         } else if (isKao) {
             skill1El.id = 'stealth-icon';
             if (emojiEl) emojiEl.textContent = '👻';
-            if (hintEl)  hintEl.textContent = 'R-Click';
-            if (cdEl)    cdEl.id = 'stealth-cd';
+            if (hintEl) hintEl.textContent = 'R-Click';
+            if (cdEl) cdEl.id = 'stealth-cd';
             nameEl.textContent = SN.kao?.skill1 ?? 'STEALTH'; nameEl.style.color = '#c4b5fd';
         } else {
             skill1El.id = 'stealth-icon';
             if (emojiEl) emojiEl.textContent = '📖';
-            if (hintEl)  hintEl.textContent = 'R-Click';
-            if (cdEl)    cdEl.id = 'stealth-cd';
+            if (hintEl) hintEl.textContent = 'R-Click';
+            if (cdEl) cdEl.id = 'stealth-cd';
             nameEl.textContent = 'SKILL'; nameEl.style.color = '#fbbf24';
         }
     }
@@ -1047,8 +1047,8 @@ class UIManager {
         const S = BALANCE.characters.poom;
         const nagaReady = !!(player._nagaUnlocked);
 
-        setLockOverlay(document.getElementById('eat-icon'),    false);
-        setLockOverlay(document.getElementById('naga-icon'),   !nagaReady);
+        setLockOverlay(document.getElementById('eat-icon'), false);
+        setLockOverlay(document.getElementById('naga-icon'), !nagaReady);
         setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
         setLockOverlay(document.getElementById('garuda-icon'), !player.passiveUnlocked);
 
@@ -1086,8 +1086,8 @@ class UIManager {
     static _updateIconsAuto(player, setLockOverlay) {
         const S = BALANCE.characters.auto;
 
-        setLockOverlay(document.getElementById('stealth-icon'),  false);
-        setLockOverlay(document.getElementById('vacuum-icon'),   !player.passiveUnlocked);
+        setLockOverlay(document.getElementById('stealth-icon'), false);
+        setLockOverlay(document.getElementById('vacuum-icon'), !player.passiveUnlocked);
         setLockOverlay(document.getElementById('auto-det-icon'), !player.passiveUnlocked);
 
         // Wanchai Stand cooldown + live timer label
@@ -1140,9 +1140,9 @@ class UIManager {
         const teleportIcon = document.getElementById('teleport-icon');
         setLockOverlay(teleportIcon, !passive);
         if (teleportIcon && passive) {
-            const charges    = player.teleportCharges || 0;
+            const charges = player.teleportCharges || 0;
             const maxCharges = player.maxTeleportCharges || 3;
-            const isFull     = charges >= maxCharges;
+            const isFull = charges >= maxCharges;
             teleportIcon.classList.toggle('active', charges > 0);
 
             if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
@@ -1199,7 +1199,7 @@ class UIManager {
                 cloneIcon.style.boxShadow = '0 0 20px rgba(0,229,255,0.7)';
             } else {
                 cloneIcon.style.borderColor = (passive && cloneReady) ? '#60a5fa' : '#3b82f6';
-                cloneIcon.style.boxShadow   = (passive && cloneReady)
+                cloneIcon.style.boxShadow = (passive && cloneReady)
                     ? '0 0 18px rgba(96,165,250,0.65)'
                     : '0 0 15px rgba(59,130,246,0.45)';
             }
@@ -1446,13 +1446,13 @@ class CanvasHUD {
         if (!UIManager._minimapFrame) UIManager._minimapFrame = 0;
         UIManager._minimapFrame++;
 
-        const canvas      = ctx.canvas;
+        const canvas = ctx.canvas;
         const radarRadius = 60;
-        const scale       = 0.1;
-        const cx          = canvas.width - 200;   // 200 px from right edge
-        const cy          = 90;                    // 90 px from top edge
-        const now         = Date.now();
-        const player      = (typeof window !== 'undefined' && window.player)
+        const scale = 0.1;
+        const cx = canvas.width - 200;   // 200 px from right edge
+        const cy = 90;                    // 90 px from top edge
+        const now = Date.now();
+        const player = (typeof window !== 'undefined' && window.player)
             ? window.player : { x: 0, y: 0 };
 
         // world→radar-screen, clamped to maxR from radar center
@@ -1460,7 +1460,7 @@ class CanvasHUD {
             const rx = cx + (wx - player.x) * scale;
             const ry = cy + (wy - player.y) * scale;
             const dx = rx - cx, dy = ry - cy;
-            const d  = Math.sqrt(dx * dx + dy * dy);
+            const d = Math.sqrt(dx * dx + dy * dy);
             if (d <= maxR) return { x: rx, y: ry, clamped: false };
             return { x: cx + dx * (maxR / d), y: cy + dy * (maxR / d), clamped: true };
         };
@@ -1469,25 +1469,25 @@ class CanvasHUD {
         ctx.save();
         ctx.globalCompositeOperation = 'source-over';
         ctx.globalAlpha = 1;
-        ctx.shadowBlur  = 0;
+        ctx.shadowBlur = 0;
 
-        UIManager._minimapDrawShell(ctx, cx, cy, radarRadius, now);
+        this._minimapDrawShell(ctx, cx, cy, radarRadius, now);
 
         // INNER SAVE — establishes circular clip region
         ctx.save();
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
 
-        UIManager._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
+        this._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
 
         ctx.restore();  // ← INNER restore — releases clip
 
-        UIManager._minimapDrawLabel(ctx, cx, cy, radarRadius);
+        this._minimapDrawLabel(ctx, cx, cy, radarRadius);
 
         ctx.restore();  // ← OUTER restore
     }
 
     // ── Shell: outer glow, navy fill, pulsating border, inner accent ring ────
-    static _minimapDrawShell(ctx, cx, cy, radarRadius, now) {
+    _minimapDrawShell(ctx, cx, cy, radarRadius, now) {
         // Subtle outer glow halo
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius + 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(57,255,20,0.07)'; ctx.fill();
@@ -1497,24 +1497,24 @@ class CanvasHUD {
         ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'; ctx.fill();
 
         // Pulsating neon-green border — width oscillates 1 px → 3 px
-        const borderSin  = Math.sin(now / 500);
+        const borderSin = Math.sin(now / 500);
         const borderWidth = 2 + borderSin;
-        ctx.lineWidth    = borderWidth;
-        ctx.strokeStyle  = `rgba(57,255,20,${0.80 + borderSin * 0.15})`;
-        ctx.shadowBlur   = 12 + borderSin * 6;
-        ctx.shadowColor  = '#39ff14';
+        ctx.lineWidth = borderWidth;
+        ctx.strokeStyle = `rgba(57,255,20,${0.80 + borderSin * 0.15})`;
+        ctx.shadowBlur = 12 + borderSin * 6;
+        ctx.shadowColor = '#39ff14';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur   = 0;
+        ctx.shadowBlur = 0;
 
         // Inner accent ring
-        ctx.lineWidth   = 0.8;
+        ctx.lineWidth = 0.8;
         ctx.strokeStyle = 'rgba(134,239,172,0.28)';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 3, 0, Math.PI * 2); ctx.stroke();
     }
 
     // ── Content: grid, sweep, poi markers, enemies, boss, player dot ─────────
     // Rendered inside the circular clip — nothing escapes the radar circle.
-    static _minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar) {
+    _minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar) {
         if (window.isFogWave) {
             // ── RADAR BLACKOUT during Fog Waves ──────────────────────────────
             ctx.fillStyle = 'rgba(6, 30, 50, 0.95)';
@@ -1522,11 +1522,11 @@ class CanvasHUD {
 
             const noiseNow = Date.now();
             for (let n = 0; n < 6; n++) {
-                const seed   = Math.floor(noiseNow / 80) + n * 7919;
-                const nyOff  = ((seed * 1664525 + 1013904223) & 0x7fffffff) % (radarRadius * 2);
-                const ny     = cy - radarRadius + nyOff;
+                const seed = Math.floor(noiseNow / 80) + n * 7919;
+                const nyOff = ((seed * 1664525 + 1013904223) & 0x7fffffff) % (radarRadius * 2);
+                const ny = cy - radarRadius + nyOff;
                 const nalpha = 0.12 + (((seed * 6364136) & 0xff) / 255) * 0.25;
-                const nw     = 0.6  + (((seed * 22695477) & 0xff) / 255) * 1.4;
+                const nw = 0.6 + (((seed * 22695477) & 0xff) / 255) * 1.4;
                 ctx.save();
                 ctx.globalAlpha = nalpha;
                 ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = nw;
@@ -1540,11 +1540,11 @@ class CanvasHUD {
             ctx.save();
             ctx.globalAlpha = slPulse;
             ctx.shadowBlur = 14; ctx.shadowColor = '#06b6d4';
-            ctx.fillStyle  = '#06b6d4';
-            ctx.font       = 'bold 10px "Orbitron", Arial, sans-serif';
-            ctx.textAlign  = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = 'bold 10px "Orbitron", Arial, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('SIGNAL', cx, cy - 7);
-            ctx.fillText('LOST',   cx, cy + 7);
+            ctx.fillText('LOST', cx, cy + 7);
             ctx.restore();
             return;
         }
@@ -1562,15 +1562,15 @@ class CanvasHUD {
         ctx.stroke();
 
         // ── Sweep line animation ───────────────────────────────────────
-        const SWEEP_RPM  = 1 / 3;
+        const SWEEP_RPM = 1 / 3;
         const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
-        const trailArc   = Math.PI * 2 / 3;
+        const trailArc = Math.PI * 2 / 3;
         const TRAIL_STEPS = 24;
         for (let i = 0; i < TRAIL_STEPS; i++) {
-            const frac   = i / TRAIL_STEPS;
+            const frac = i / TRAIL_STEPS;
             const aStart = sweepAngle - trailArc * (1 - frac);
-            const aEnd   = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
-            const alpha  = frac * frac * 0.22;
+            const aEnd = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
+            const alpha = frac * frac * 0.22;
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
@@ -1584,7 +1584,7 @@ class CanvasHUD {
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(cx + Math.cos(sweepAngle) * (radarRadius - 1),
-                   cy + Math.sin(sweepAngle) * (radarRadius - 1));
+            cy + Math.sin(sweepAngle) * (radarRadius - 1));
         ctx.stroke();
         ctx.restore();
 
@@ -1602,7 +1602,7 @@ class CanvasHUD {
                 ctx.fillStyle = `rgba(59,130,246,${0.8 + dbPulse * 0.2})`;
                 ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
             } else {
-                ctx.fillStyle   = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
+                ctx.fillStyle = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
                 ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.95})`; ctx.lineWidth = 1.2;
                 ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2); ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
             }
@@ -1623,7 +1623,7 @@ class CanvasHUD {
                 ctx.fillStyle = `rgba(245,158,11,${0.7 + shPulse * 0.3})`;
                 ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
             } else {
-                ctx.fillStyle   = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
+                ctx.fillStyle = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
                 ctx.strokeStyle = `rgba(253,230,138,${shPulse * 0.85})`; ctx.lineWidth = 1.2;
                 ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2); ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
             }
@@ -1651,27 +1651,27 @@ class CanvasHUD {
                     ctx.fillStyle = 'rgba(190,75,255,1.0)'; ctx.strokeStyle = 'rgba(220,160,255,0.9)';
                     ctx.lineWidth = 1.2; ctx.shadowBlur = 8; ctx.shadowColor = '#b44dff';
                     ctx.beginPath();
-                    ctx.moveTo(0,-r); ctx.lineTo(r*0.6,0); ctx.lineTo(0,r); ctx.lineTo(-r*0.6,0);
+                    ctx.moveTo(0, -r); ctx.lineTo(r * 0.6, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.6, 0);
                     ctx.closePath(); ctx.fill(); ctx.stroke();
                     ctx.fillStyle = 'rgba(240,200,255,0.85)'; ctx.shadowBlur = 4;
-                    ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
                 } else if (e.type === 'tank') {
                     const r = 5.5;
                     ctx.fillStyle = 'rgba(255,115,35,1.0)'; ctx.strokeStyle = 'rgba(255,185,90,0.9)';
                     ctx.lineWidth = 1.4; ctx.shadowBlur = 7; ctx.shadowColor = '#ff7320';
-                    ctx.beginPath(); ctx.rect(ex-r, ey-r, r*2, r*2); ctx.fill(); ctx.stroke();
+                    ctx.beginPath(); ctx.rect(ex - r, ey - r, r * 2, r * 2); ctx.fill(); ctx.stroke();
                     ctx.strokeStyle = 'rgba(255,220,120,0.75)'; ctx.lineWidth = 1; ctx.shadowBlur = 0;
                     const tk = 2.5;
-                    [[ex-r,ey-r],[ex+r,ey-r],[ex-r,ey+r],[ex+r,ey+r]].forEach(([px,py]) => {
-                        ctx.beginPath(); ctx.arc(px,py,tk,0,Math.PI*2); ctx.stroke();
+                    [[ex - r, ey - r], [ex + r, ey - r], [ex - r, ey + r], [ex + r, ey + r]].forEach(([px, py]) => {
+                        ctx.beginPath(); ctx.arc(px, py, tk, 0, Math.PI * 2); ctx.stroke();
                     });
                 } else {
                     const r = 5;
                     const glow = 0.6 + Math.sin(now / 400 + e.x) * 0.4;
                     ctx.fillStyle = 'rgba(255,38,38,1.0)'; ctx.shadowBlur = 8 * glow; ctx.shadowColor = '#ff2222';
-                    ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
                     ctx.fillStyle = 'rgba(255,180,180,0.75)'; ctx.shadowBlur = 0;
-                    ctx.beginPath(); ctx.arc(ex-1.5, ey-1.5, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(ex - 1.5, ey - 1.5, 1.5, 0, Math.PI * 2); ctx.fill();
                 }
                 ctx.restore();
             }
@@ -1688,12 +1688,12 @@ class CanvasHUD {
                 ctx.translate(bx, by);
                 ctx.rotate(Math.atan2(cy - by, cx - bx));
                 ctx.fillStyle = `rgba(168,85,247,${0.7 + pulse * 0.3})`;
-                ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(0,-5); ctx.lineTo(0,5); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(0, -5); ctx.lineTo(0, 5); ctx.closePath(); ctx.fill();
             } else {
                 ctx.fillStyle = `rgba(170,110,255,${0.75 + 0.25 * pulse})`;
-                ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI * 2); ctx.fill();
                 ctx.strokeStyle = `rgba(216,180,254,${0.30 + 0.15 * pulse})`; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
                 ctx.fillStyle = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
                 ctx.font = 'bold 6px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                 ctx.fillText('BOSS', bx, by - 12 - 2 * pulse);
@@ -1707,14 +1707,14 @@ class CanvasHUD {
         if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
         ctx.shadowBlur = 8; ctx.shadowColor = '#34d399';
         ctx.fillStyle = 'rgba(52,214,88,0.98)';
-        ctx.beginPath(); ctx.moveTo(0,-6); ctx.lineTo(6,6); ctx.lineTo(-6,6); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath(); ctx.fill();
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.beginPath(); ctx.arc(0,-5,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -5, 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
     }
 
     // ── Label + legend strip (rendered outside clip, below radar circle) ──────
-    static _minimapDrawLabel(ctx, cx, cy, radarRadius) {
+    _minimapDrawLabel(ctx, cx, cy, radarRadius) {
         ctx.shadowBlur = 0;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.font = 'bold 8px Orbitron, monospace';
@@ -1723,11 +1723,11 @@ class CanvasHUD {
 
         // Tiny legend row: colored symbols matching blip types
         const legend = [
-            { col: '#ef4444', label: GAME_TEXTS.ui.legendEnm, shape: 'circle'  },
+            { col: '#ef4444', label: GAME_TEXTS.ui.legendEnm, shape: 'circle' },
             { col: '#b44dff', label: GAME_TEXTS.ui.legendMge, shape: 'diamond' },
-            { col: '#ff7320', label: GAME_TEXTS.ui.legendTnk, shape: 'square'  },
-            { col: '#a855f7', label: GAME_TEXTS.ui.legendBss, shape: 'circle'  },
-            { col: '#f59e0b', label: GAME_TEXTS.ui.legendShp, shape: 'square'  },
+            { col: '#ff7320', label: GAME_TEXTS.ui.legendTnk, shape: 'square' },
+            { col: '#a855f7', label: GAME_TEXTS.ui.legendBss, shape: 'circle' },
+            { col: '#f59e0b', label: GAME_TEXTS.ui.legendShp, shape: 'square' },
         ];
         const lx0 = cx - (legend.length - 1) * 12;
         legend.forEach(({ col, label, shape }, i) => {
@@ -1736,12 +1736,12 @@ class CanvasHUD {
             ctx.fillStyle = col; ctx.shadowBlur = 3; ctx.shadowColor = col;
             if (shape === 'diamond') {
                 ctx.beginPath();
-                ctx.moveTo(lx,ly-3.5); ctx.lineTo(lx+3,ly); ctx.lineTo(lx,ly+3.5); ctx.lineTo(lx-3,ly);
+                ctx.moveTo(lx, ly - 3.5); ctx.lineTo(lx + 3, ly); ctx.lineTo(lx, ly + 3.5); ctx.lineTo(lx - 3, ly);
                 ctx.closePath(); ctx.fill();
             } else if (shape === 'square') {
-                ctx.fillRect(lx-3, ly-3, 6, 6);
+                ctx.fillRect(lx - 3, ly - 3, 6, 6);
             } else {
-                ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
             }
             ctx.shadowBlur = 0;
             ctx.font = '6px monospace'; ctx.fillStyle = 'rgba(203,213,225,0.65)';
