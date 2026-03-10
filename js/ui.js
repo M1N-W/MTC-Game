@@ -57,6 +57,18 @@ class AchievementSystem {
             ritualKills: 0,
             manopKills: 0,           // FIX: นับครั้งที่ฆ่า KruManop ได้ — ไม่เคยถูก track มาก่อน
             firstKills: 0,           // FIX: นับครั้งที่ฆ่า KruFirst ได้ — ไม่เคยถูก track มาก่อน
+
+            // ── NEW: Kill Streak Stats (2.3) ─────────────────────────────────
+            maxKillStreak: 0,        // Highest kill streak achieved
+            currentKillStreak: 0,    // Current kill streak (resets on timeout)
+            killStreakTimer: 0,      // Timer for kill streak window (3 seconds)
+
+            // ── NEW: Boss-Specific Stats (2.3) ───────────────────────────────
+            manopPerfectKills: 0,    // Kru Manop killed without taking Singularity damage
+            firstPerfectKills: 0,    // Kru First killed without taking Sandwich damage  
+            speedDemonWins: 0,       // Boss defeated in <30s during Speed Wave
+            fogHunterWins: 0,        // Boss defeated in Fog Wave without taking damage
+            glitchSurvivorWins: 0,   // Survived Glitch Wave with >50% HP remaining
         };
     }
 
@@ -118,6 +130,18 @@ class AchievementSystem {
 
             // ── NEW: Rage Mode ────────────────────────────────────────────────
             case 'rage_mode': unlock = !!(window.player?.charId === 'auto' && window.player?._rageMode); break;
+
+            // ── NEW: Kill Streak Achievements (2.3) ─────────────────────────────
+            case 'kill_streak_5': unlock = this.stats.maxKillStreak >= 5; break;
+            case 'kill_streak_10': unlock = this.stats.maxKillStreak >= 10; break;
+            case 'kill_streak_20': unlock = this.stats.maxKillStreak >= 20; break;
+
+            // ── NEW: Boss-Specific Achievements (2.3) ────────────────────────────
+            case 'manop_perfect': unlock = this.stats.manopPerfectKills >= 1; break;
+            case 'first_perfect': unlock = this.stats.firstPerfectKills >= 1; break;
+            case 'speed_demon': unlock = this.stats.speedDemonWins >= 1; break;
+            case 'fog_hunter': unlock = this.stats.fogHunterWins >= 1; break;
+            case 'glitch_survivor': unlock = this.stats.glitchSurvivorWins >= 1; break;
         }
         if (unlock) this.unlock(ach);
     }
@@ -300,10 +324,26 @@ class ShopManager {
                 ? `<span class="shop-duration" style="color:#a78bfa;">♾ ถาวร</span>`
                 : `<span class="shop-duration" style="color:#22c55e;">⚡ ทันที</span>`;
 
+            // Char-specific badge
+            const charLabels = { kao: { label: 'KAO', color: '#facc15' }, poom: { label: 'POOM', color: '#4ade80' }, auto: { label: 'AUTO', color: '#fb923c' } };
+            const charBadge = item.charReq
+                ? `<span class="shop-card-char-badge" style="background:${charLabels[item.charReq]?.color ?? '#94a3b8'}22; border-color:${charLabels[item.charReq]?.color ?? '#94a3b8'}; color:${charLabels[item.charReq]?.color ?? '#94a3b8'};">${charLabels[item.charReq]?.label ?? item.charReq.toUpperCase()} ONLY</span>`
+                : '';
+
             const card = document.createElement('div');
             card.className = `shop-card${soldOut ? ' shop-card-disabled' : ''}`;
             card.id = `shop-card-slot-${idx}`;
+            card.setAttribute('data-item-id', item.id);
+            if (item.charReq) card.style.setProperty('--shop-char-color', charLabels[item.charReq]?.color ?? '#94a3b8');
+            
+            // Active buff badge for items with timers
+            const activeBadge = (item.id === 'speedWave' && window.player?._speedWaveTimer > 0)
+                ? `<span class="shop-card-active-badge">⚡ ${Math.ceil(window.player._speedWaveTimer)}s</span>`
+                : '';
+            
             card.innerHTML = `
+                ${charBadge}
+                ${activeBadge}
                 <div class="shop-card-icon" style="color:${item.color};${soldOut ? 'filter:grayscale(1) opacity(.35);' : ''}">${item.icon}</div>
                 <div class="shop-card-name">${item.name}</div>
                 <div class="shop-card-desc">${soldOut ? '<span style="color:#64748b;">— SOLD OUT —</span>' : item.desc}</div>

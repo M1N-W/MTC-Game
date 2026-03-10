@@ -189,6 +189,82 @@ window.addEventListener('load', function _injectPortraits() {
 })();
 
 
+// ── Skill Preview Tooltips (1.4) ─────────────────────────────────────────────
+(function _initSkillTooltips() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _init);
+    } else {
+        _init();
+    }
+
+    function _init() {
+        const cards = document.querySelectorAll('.char-card[data-char]');
+        if (!cards.length) return;
+
+        let _activeTooltip = null;
+        let _hideTimer = null;
+
+        cards.forEach(card => {
+            const charId = card.dataset.char;
+            const tooltip = document.getElementById('tooltip-' + charId);
+            if (!tooltip) return;
+
+            // ── Desktop ──────────────────────────────────────────────────────
+            card.addEventListener('mouseenter', () => {
+                clearTimeout(_hideTimer);
+                _showTooltip(tooltip, card);
+            });
+            card.addEventListener('mouseleave', () => {
+                _hideTimer = setTimeout(() => _hideTooltip(tooltip), 120);
+            });
+
+            // ── Mobile: tap-and-hold 350ms ───────────────────────────────────
+            let _holdTimer = null;
+            card.addEventListener('touchstart', () => {
+                _holdTimer = setTimeout(() => {
+                    if (_activeTooltip && _activeTooltip !== tooltip) {
+                        _hideTooltip(_activeTooltip);
+                    }
+                    tooltip.classList.contains('tt-visible')
+                        ? _hideTooltip(tooltip)
+                        : _showTooltip(tooltip, card);
+                }, 350);
+            }, { passive: true });
+            card.addEventListener('touchend', () => clearTimeout(_holdTimer), { passive: true });
+            card.addEventListener('touchcancel', () => clearTimeout(_holdTimer), { passive: true });
+        });
+
+        // Tap outside → close
+        document.addEventListener('touchstart', (e) => {
+            if (_activeTooltip && !e.target.closest('.skill-tooltip') && !e.target.closest('.char-card')) {
+                _hideTooltip(_activeTooltip);
+            }
+        }, { passive: true });
+
+        function _showTooltip(tooltip, card) {
+            _activeTooltip = tooltip;
+            const container = card.closest('.char-cards');
+            if (!container) return;
+            const cardRect = card.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const left = cardRect.left - containerRect.left + cardRect.width / 2 - 120;
+            const topRaw = cardRect.top - containerRect.top - tooltip.offsetHeight - 10;
+            const clampedLeft = Math.max(0, Math.min(left, containerRect.width - 244));
+            const finalTop = topRaw < 0 ? cardRect.bottom - containerRect.top + 8 : topRaw;
+            tooltip.style.left = clampedLeft + 'px';
+            tooltip.style.top = finalTop + 'px';
+            tooltip.classList.add('tt-visible');
+        }
+
+        function _hideTooltip(tooltip) {
+            if (!tooltip) return;
+            tooltip.classList.remove('tt-visible');
+            if (_activeTooltip === tooltip) _activeTooltip = null;
+        }
+    }
+})();
+
+
 // ── Service Worker Registration ───────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

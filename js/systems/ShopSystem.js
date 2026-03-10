@@ -105,7 +105,10 @@ window.currentShopOffers = [];
 
 // ⚠️  slotCount และ rerollCost อ่านจาก BALANCE.shop ใน config.js
 function rollShopItems() {
-    const pool = [...SHOP_ITEMS];
+    // Filter char-specific items to only show current character's items
+    const charType = (typeof _selectedChar !== 'undefined') ? _selectedChar
+        : (window.player?.constructor?.name?.toLowerCase().replace('player', '') ?? null);
+    const pool = SHOP_ITEMS.filter(it => !it.charReq || it.charReq === charType);
     const slotCount = BALANCE.shop.slotCount;
     window.currentShopOffers = [];
     for (let i = 0; i < slotCount && pool.length > 0; i++) {
@@ -202,6 +205,82 @@ function buyItem(slotIndex) {
         spawnFloatingText(`🔮 CDR -${Math.round(item.cdrPct * 100)}%!`, p.x, p.y - 70, '#a78bfa', 22);
         spawnParticles(p.x, p.y, 8, '#a78bfa');
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+        // ── Defensive ──────────────────────────────────────────────
+    } else if (item.id === 'reflectArmor') {
+        p.damageReflectPct = Math.min(0.45, (p.damageReflectPct || 0) + item.reflectPct);
+        spawnFloatingText(`🪞 REFLECT +${Math.round(item.reflectPct * 100)}%!`, p.x, p.y - 70, '#818cf8', 22);
+        spawnParticles(p.x, p.y, 12, '#818cf8');
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+    } else if (item.id === 'shieldBubble') {
+        p.shieldBubbleHits = (p.shieldBubbleHits || 0) + item.bubbleHits;
+        spawnFloatingText(`🫧 BUBBLE ×${p.shieldBubbleHits}!`, p.x, p.y - 70, '#7dd3fc', 22);
+        spawnParticles(p.x, p.y, 15, '#7dd3fc');
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+        // ── Utility ────────────────────────────────────────────────
+    } else if (item.id === 'speedWave') {
+        p._speedWaveTimer = (p._speedWaveTimer || 0) + item.duration;
+        p._speedWaveMult = item.speedMult;
+        spawnFloatingText(`⚡ SPEED WAVE ${item.duration}s!`, p.x, p.y - 70, '#fbbf24', 22);
+        spawnParticles(p.x, p.y, 12, '#fbbf24');
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+    } else if (item.id === 'cdrRound') {
+        if (p.cooldowns) {
+            for (const key of Object.keys(p.cooldowns)) p.cooldowns[key] = 0;
+        }
+        // Kao: refill teleport charges too
+        if (typeof KaoPlayer !== 'undefined' && p instanceof KaoPlayer) {
+            p.teleportCharges = p.maxTeleportCharges;
+            p.teleportTimers = [];
+            p.cloneSkillCooldown = 0;
+        }
+        spawnFloatingText('🔄 ALL COOLDOWNS RESET!', p.x, p.y - 70, '#34d399', 22);
+        spawnParticles(p.x, p.y, 20, '#34d399');
+        addScreenShake(6);
+        if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+
+        // ── Character-specific ─────────────────────────────────────
+    } else if (item.id === 'kaoAmmo') {
+        if (typeof KaoPlayer !== 'undefined' && p instanceof KaoPlayer) {
+            p.maxTeleportCharges = Math.min(4, (p.maxTeleportCharges || 3) + 1);
+            p.teleportCharges = Math.min(p.maxTeleportCharges, (p.teleportCharges || 0) + 1);
+            spawnFloatingText(`👻 GHOST ROUNDS! ×${p.maxTeleportCharges}`, p.x, p.y - 70, '#facc15', 22);
+            spawnParticles(p.x, p.y, 12, '#facc15');
+            if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+        } else {
+            addScore(item.cost); offer.soldOut = false;
+            spawnFloatingText('❌ KAO เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+            ShopManager.renderItems(); return;
+        }
+
+    } else if (item.id === 'poomRice') {
+        if (typeof PoomPlayer !== 'undefined' && p instanceof PoomPlayer) {
+            p.cooldownMultiplier = Math.max(0.1, (p.cooldownMultiplier || 1.0) * 0.85);
+            spawnFloatingText('🍚 SACRED RICE! CD -15%', p.x, p.y - 70, '#4ade80', 22);
+            spawnParticles(p.x, p.y, 12, '#4ade80');
+            if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+        } else {
+            addScore(item.cost); offer.soldOut = false;
+            spawnFloatingText('❌ POOM เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+            ShopManager.renderItems(); return;
+        }
+
+    } else if (item.id === 'autoCore') {
+        if (typeof AutoPlayer !== 'undefined' && p instanceof AutoPlayer) {
+            const current = p.stats?.heatTierHot ?? (p._heatTierHotOverride ?? 67);
+            p._heatTierHotOverride = Math.max(20, Math.round(current * 0.85));
+            if (p.stats) p.stats.heatTierHot = p._heatTierHotOverride;
+            spawnFloatingText(`🔥 HEAT CORE! HOT ↓${p._heatTierHotOverride}`, p.x, p.y - 70, '#fb923c', 22);
+            spawnParticles(p.x, p.y, 15, '#ef4444');
+            if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
+        } else {
+            addScore(item.cost); offer.soldOut = false;
+            spawnFloatingText('❌ AUTO เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+            ShopManager.renderItems(); return;
+        }
     }
 
     Achievements.stats.shopPurchases = (Achievements.stats.shopPurchases || 0) + 1;
@@ -209,6 +288,22 @@ function buyItem(slotIndex) {
 
     ShopManager.renderItems();
 }
+
+// ── Active Buff Countdown Display ───────────────────────────────────────
+ShopManager.tick = () => {
+    const p = window.player;
+    if (!p || GameState.phase !== 'PLAYING') return;
+    
+    // Update any active buff displays in shop
+    const speedWaveCard = document.querySelector('[data-item-id="speedWave"]');
+    if (speedWaveCard && p._speedWaveTimer > 0) {
+        const badge = speedWaveCard.querySelector('.shop-card-active-badge');
+        if (badge) {
+            badge.textContent = `⚡ ${Math.ceil(p._speedWaveTimer)}s`;
+            badge.style.display = 'inline-block';
+        }
+    }
+};
 
 // Initial roll so offers are ready before first shop open
 rollShopItems();

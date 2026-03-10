@@ -183,6 +183,7 @@ function updateWaveEvent(dt) {
     if (!_evt.active) return;
 
     if (_evt.announceTimer > 0) _evt.announceTimer -= dt;
+    if (typeof waveAnnouncementFX !== 'undefined') waveAnnouncementFX.update(dt);
 
     if (_evt.active === 'fog') {
         _evt.fogAlpha = Math.min(0.72, _evt.fogAlpha + dt / 1.5);
@@ -204,6 +205,7 @@ function drawWaveEvent(ctx) {
     if (_evt.active === 'fog') _drawFog(ctx);
     if (_evt.active === 'speed') _drawSpeed(ctx);
     if (_evt.announceTimer > 0) _drawBanner(ctx);
+    if (typeof waveAnnouncementFX !== 'undefined') waveAnnouncementFX.draw(ctx);
 }
 
 // ── Dark vignette (wave 1 ominous intro) ──────────────────────
@@ -483,12 +485,10 @@ function startNextWave() {
     }
 
     setElementText('wave-badge', GAME_TEXTS.wave.badge(getWave()));
-    // stagger 900ms หลัง banner เริ่ม — ปล่อยให้ canvas banner fade-in ก่อน
-    const _waveNum = getWave();
-    setTimeout(() => {
-        if (window.player && !window.player.dead)
-            spawnFloatingText(GAME_TEXTS.wave.floatingTitle(_waveNum), window.player.x, window.player.y - 100, '#facc15', 40);
-    }, 900);
+    // ── WaveAnnouncementFX canvas banner ──────────────────────
+    if (typeof waveAnnouncementFX !== 'undefined') {
+        waveAnnouncementFX.trigger(getWave(), isBossWave, isGlitch);
+    }
 
     const wave = getWave();
     Achievements.check('wave_5');

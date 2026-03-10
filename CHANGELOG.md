@@ -4,6 +4,66 @@
 
 ---
 
+## v3.29.0 — Priority 2 & 3 Systems Implementation
+*Released: March 10, 2026*
+
+### 🎬 Cinematic Wave Announcement System
+- **Canvas-Based Announcements**: Replaced HTML overlays with `WaveAnnouncementFX` class in effects.js
+- **Letterbox Cinematics**: Animated black bars with wave number display and contextual subtitles
+- **Boss Event Integration**: Different colors and text for boss, glitch, and normal waves
+- **Camera Transform Support**: Full integration with camera system for proper positioning
+- **Performance Optimized**: Single update/draw pattern with 0 cost when inactive
+
+### 🛒 Shop System Expansion (7 New Items)
+- **Defensive Items**: 
+  - Reflect Armor (15% damage reflection) - 900 score
+  - Shield Bubble (3-hit block) - 500 score
+- **Utility Items**:
+  - Adrenaline Wave (+30% speed for 8s) - 400 score  
+  - Cooldown Round (reset all skill cooldowns) - 600 score
+- **Character-Specific Items**:
+  - Ghost Rounds (Kao teleport charges +1) - 750 score
+  - Sacred Rice Bag (Poom skill CD -15%) - 650 score
+  - Heat Core (Auto HOT tier easier) - 850 score
+- **Smart Filtering**: Character-specific items only appear for selected character
+
+### 🏆 Achievement System Expansion (9 New Achievements)
+- **Kill Streak Achievements**:
+  - Combo Starter (5 kills in 3s) - +2% Damage
+  - Kill Frenzy (10 kills in 3s) - +2% Crit Chance  
+  - Massacre (20 kills in 3s) - -3% Cooldown
+- **Boss-Specific Achievements**:
+  - Manop Slayer (defeat Manop without Singularity damage) - +15 Max HP
+  - Physics Master (defeat First without Sandwich damage) - +3% Damage
+  - Speed Demon (boss in <30s during Speed Wave) - +5% Speed
+  - Ghost Hunter (boss in Fog Wave without damage) - -2% Cooldown
+  - Glitch Master (survive Glitch Wave with >50% HP) - +10 Max HP
+
+### ⚡ Performance Optimization
+- **tickStatuses() Refactor**: Eliminated ~40 `performance.now()` calls per frame
+- **Duration-Based System**: Changed from absolute timestamps to countdown-based status timers
+- **CPU Impact Reduction**: Significant performance improvement with 40+ enemies on screen
+- **Backward Compatibility**: Legacy `expireAt` timestamps still supported during transition
+
+### 🎮 Loading State System
+- **Progress Indicator**: 5-step loading screen with progress bar and status updates
+- **System Initialization Tracking**: Canvas → Input → Audio → Assets → Ready sequence
+- **Visual Feedback**: Animated loading icon with detailed step-by-step progress
+- **Error Recovery**: Automatic fallback to hide loading screen if initialization fails
+- **Reduced Motion Support**: Accessibility compliance for users with motion sensitivity
+
+### 🐛 Bug Fixes
+- **Camera Scale Bug**: Fixed missing `.scale` property in camera object for vacuum/detonation rings
+- **PlayerRenderer Compatibility**: Added fallback for `camera.scale ?? 1` throughout rendering system
+
+### 🎨 UI Enhancements  
+- **Skill Preview Tooltips**: Hover/tap tooltips on character selection cards showing full skill sets
+- **Mobile-First Design**: Touch-and-hold (350ms) for mobile, hover for desktop
+- **Character-Specific Information**: Accurate skill descriptions for Kao, Poom, and Auto
+- **Positioning System**: Smart tooltip positioning with boundary detection
+
+---
+
 ## v3.28.1 — Priority 1 Mobile UI Improvements
 *Released: March 10, 2026*
 

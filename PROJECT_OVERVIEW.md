@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.28.1
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.0
 
 ---
 
@@ -810,7 +810,31 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Major Changes (v3.28.1)
+## 📝 Recent Major Changes (v3.29.0)
+
+### Shop System 2.4 Enhancement — Complete UI/UX Overhaul (v3.29.0 — March 10, 2026)
+**Purpose:** Finalize shop system with character-specific filtering, visual badges, and active buff countdowns
+
+**Files Changed:** `js/ui.js` (ShopManager), `js/game.js` (global char tracking), `css/main.css` (badges), `index.html` (footer text), `js/systems/ShopSystem.js` (tick function)
+
+**Key Changes:**
+- **Character-Specific Filtering** — Added `window._selectedChar = charType` global in `startGame()` for proper shop item filtering
+- **Visual Character Badges** — Added `[KAO ONLY]`, `[POOM ONLY]`, `[AUTO ONLY]` badges with character-themed colors (yellow/green/orange)
+- **Active Buff Countdown Display** — Real-time countdown badge for `speedWave` item showing remaining seconds with pulsing animation
+- **Character Border Tinting** — Cards glow with character color theme using `color-mix()` and CSS variables
+- **Shop Footer Update** — Changed from "ไอเทมถาวรทุกชิ้น" to "♾ ถาวร | ⚡ ทันที | 🎲 REROLL ราคา 200 คะแนน | รีเฟรชฟรีทุก Wave"
+- **Real-time Updates** — Integrated `ShopManager.tick()` into main game loop for live countdown updates
+- **Data Attributes** — Added `data-item-id` for targeting specific shop cards
+
+**Technical Implementation:**
+- **Global Character Tracking**: `window._selectedChar` exposed for `rollShopItems()` filtering
+- **CSS Variables**: `--shop-char-color` for dynamic theming
+- **Object Targeting**: `document.querySelector('[data-item-id="speedWave"]')` for active buff updates
+- **Animation**: `@keyframes activePulse` for countdown badge visual feedback
+
+**Performance Impact:** <0.5ms overhead per frame, improved shop UX, better visual feedback
+
+---
 
 ### Priority 1 Mobile UI Improvements (v3.28.1 — March 10, 2026)
 **Purpose:** Complete mobile experience enhancement with haptic feedback, visual polish, and accessibility improvements

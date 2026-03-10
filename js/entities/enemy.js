@@ -153,10 +153,14 @@ class EnemyBase extends Entity {
 
     addStatus(type, data) {
         const existing = this.statusEffects.get(type);
-        const now = performance.now() / 1000;
+        // Convert legacy expireAt (absolute timestamp) → remaining (seconds)
+        const incoming = (data.expireAt !== undefined)
+            ? data.expireAt - performance.now() / 1000
+            : (data.duration ?? 5);
         if (existing) {
             if (data.stacks !== undefined) existing.stacks += data.stacks;
-            if (data.expireAt !== undefined) existing.expireAt = Math.max(existing.expireAt, data.expireAt);
+            // Refresh duration: take the longer of current remaining vs incoming
+            existing.remaining = Math.max(existing.remaining, incoming);
             if (data.meta) existing.meta = { ...existing.meta, ...data.meta };
             if (data.onApply) existing.onApply = data.onApply;
             if (data.onExpire) existing.onExpire = data.onExpire;
@@ -165,7 +169,7 @@ class EnemyBase extends Entity {
             const effect = {
                 type,
                 stacks: data.stacks || 1,
-                expireAt: data.expireAt || (now + (data.duration || 5)),
+                remaining: incoming,
                 meta: data.meta || {},
                 onApply: data.onApply,
                 onExpire: data.onExpire,
@@ -189,10 +193,10 @@ class EnemyBase extends Entity {
     }
 
     tickStatuses(dt) {
-        const now = performance.now() / 1000;
         const toRemove = [];
         for (const [type, effect] of this.statusEffects) {
-            if (effect.expireAt <= now) { toRemove.push(type); continue; }
+            effect.remaining -= dt;
+            if (effect.remaining <= 0) { toRemove.push(type); continue; }
             if (effect.onTick) effect.onTick(this, effect, dt);
         }
         for (const type of toRemove) this.removeStatus(type);

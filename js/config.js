@@ -831,6 +831,44 @@ const SHOP_ITEMS = [
         id: 'cdr', name: 'Focus Crystal', icon: '🔮',
         cost: 700, type: 'permanent', cdrPct: 0.05,
         desc: 'ลดคูลดาวน์สกิล 5%', color: '#a78bfa'
+    },
+    // ── Defensive ──────────────────────────────────────────────
+    {
+        id: 'reflectArmor', name: 'Reflect Armor', icon: '🪞',
+        cost: 900, type: 'permanent', reflectPct: 0.15,
+        desc: 'สะท้อน 15% ดาเมจกลับหาศัตรู', color: '#818cf8'
+    },
+    {
+        id: 'shieldBubble', name: 'Shield Bubble', icon: '🫧',
+        cost: 500, type: 'instant', bubbleHits: 3,
+        desc: 'บล็อกการโจมตี 3 ครั้ง', color: '#7dd3fc'
+    },
+    // ── Utility ────────────────────────────────────────────────
+    {
+        id: 'speedWave', name: 'Adrenaline Wave', icon: '⚡',
+        cost: 400, type: 'instant', speedMult: 1.30, duration: 8,
+        desc: 'เพิ่มความเร็ว +30% เป็นเวลา 8 วินาที', color: '#fbbf24'
+    },
+    {
+        id: 'cdrRound', name: 'Cooldown Round', icon: '🔄',
+        cost: 600, type: 'instant',
+        desc: 'รีเซ็ตคูลดาวน์สกิลทั้งหมดทันที', color: '#34d399'
+    },
+    // ── Character-specific ─────────────────────────────────────
+    {
+        id: 'kaoAmmo', name: 'Ghost Rounds', icon: '👻',
+        cost: 750, type: 'permanent', charReq: 'kao',
+        desc: '[KAO] Teleport charges +1 (สูงสุด 4)', color: '#facc15'
+    },
+    {
+        id: 'poomRice', name: 'Sacred Rice Bag', icon: '🍚',
+        cost: 650, type: 'permanent', charReq: 'poom',
+        desc: '[POOM] ลด CD ของ Naga/Garuda/Ritual 15%', color: '#4ade80'
+    },
+    {
+        id: 'autoCore', name: 'Heat Core', icon: '🔥',
+        cost: 850, type: 'permanent', charReq: 'auto',
+        desc: '[AUTO] ถึง HOT tier ง่ายขึ้น 15%', color: '#fb923c'
     }
 ];
 
@@ -1007,18 +1045,9 @@ const ACHIEVEMENT_DEFS = [
     // ── NEW: Passive Awakenings ───────────────────────────────────────────────
     { id: 'scorched_soul', name: 'SCORCHED SOUL', desc: 'ปลดล็อค Passive ออโต้ด้วยการ Overheat ครั้งแรก', icon: '🔥', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
     { id: 'ritual_king', name: 'King of Isan', desc: 'ปลดล็อค Passive ภูมิด้วย Ritual Burst ครั้งแรก', icon: '🌾', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
-    { id: 'free_stealth', name: 'Free Stealth', desc: 'ปลดล็อค Passive เก้าด้วยการซุ่มครั้งแรก', icon: '👻', reward: { type: 'cdr', value: 0.02, text: '-2% Cooldown' } },
-
-    // ── NEW: Cosmic Balance ───────────────────────────────────────────────────
-    { id: 'cosmic_balance', name: 'Cosmic Balance', desc: 'ใช้ Naga + Garuda พร้อมกันครั้งแรก', icon: '✨', reward: { type: 'damage', value: 0.03, text: '+3% Damage' } },
-
-    // ── NEW: Rage Mode ────────────────────────────────────────────────────────
-    { id: 'rage_mode', name: 'RAGE MODE', desc: 'ออโต้เข้าสู่ Rage Mode (Overheat + HP < 30%)', icon: '💢', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
 ];
 
-// ══════════════════════════════════════════════════════════════
-// 📝 GAME TEXTS
-// ══════════════════════════════════════════════════════════════
+// ... (rest of the code remains the same)
 const GAME_TEXTS = {
     wave: {
         badge: (wave) => `WAVE ${wave}`,

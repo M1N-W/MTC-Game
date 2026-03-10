@@ -2057,6 +2057,221 @@ class ShellCasingSystem {
 /** Global singleton */
 var shellCasingSystem = new ShellCasingSystem();
 
+// ══════════════════════════════════════════════════════════════
+// WaveAnnouncementFX — Cinematic wave number announcement
+// update(dt) / draw(ctx) pattern — ไม่มี state ใน draw()
+// ══════════════════════════════════════════════════════════════
+class WaveAnnouncementFX {
+    constructor() {
+        this._timer = 0;     // countdown วินาที
+        this._duration = 3.2;   // total display time
+        this._wave = 0;
+        this._isBoss = false;
+        this._isGlitch = false;
+        // letterbox bar height target (fraction of canvas height)
+        this._barH = 0;     // interpolated
+        this._active = false;
+    }
+
+    /** Call once per wave start */
+    trigger(waveNum, isBoss = false, isGlitch = false) {
+        this._wave = waveNum;
+        this._isBoss = isBoss;
+        this._isGlitch = isGlitch;
+        this._timer = this._duration;
+        this._barH = 0;
+        this._active = true;
+    }
+
+    get active() { return this._active; }
+
+    update(dt) {
+        if (!this._active) return;
+        this._timer -= dt;
+        // Animate letterbox bar height: in 0.3s → hold → out 0.4s
+        const t = this._timer;
+        const d = this._duration;
+        const targetBarH = (t > d - 0.3 || t < 0.4) ? 0 : 0.09;
+        this._barH += (targetBarH - this._barH) * Math.min(1, dt * 14);
+        if (this._timer <= 0) {
+            this._timer = 0;
+            this._active = false;
+            this._barH = 0;
+        }
+    }
+
+    draw(ctx) {
+        if (!this._active) return;
+        if (typeof ctx === 'undefined' || !ctx) return;
+
+        const W = ctx.canvas.width;
+        const H = ctx.canvas.height;
+
+        const elapsed = this._duration - this._timer;
+        // Alpha: fade-in 0.3s, hold, fade-out 0.5s
+        let alpha = elapsed < 0.3
+            ? elapsed / 0.3
+            : this._timer < 0.5 ? this._timer / 0.5 : 1;
+        alpha = Math.max(0, Math.min(1, alpha));
+        if (alpha < 0.01) return;
+
+        const isBoss = this._isBoss;
+        const isGlitch = this._isGlitch;
+        const wave = this._wave;
+
+        // ── Color palette ──────────────────────────────────────
+        const accentCol = isBoss ? '#ef4444'
+            : isGlitch ? '#d946ef'
+                : '#facc15';
+        const accentRGB = isBoss ? '239,68,68'
+            : isGlitch ? '217,70,239'
+                : '250,204,21';
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // ── Letterbox bars ─────────────────────────────────────
+        const barH = Math.round(this._barH * H);
+        if (barH > 0) {
+            ctx.fillStyle = 'rgba(0,0,0,0.82)';
+            ctx.fillRect(0, 0, W, barH);
+            ctx.fillRect(0, H - barH, W, barH);
+
+            // Accent edge line on bars
+            ctx.fillStyle = `rgba(${accentRGB},0.5)`;
+            ctx.fillRect(0, barH - 1, W, 1);
+            ctx.fillRect(0, H - barH, W, 1);
+        }
+
+        // ── Center panel ───────────────────────────────────────
+        const cx = W / 2;
+        const cy = H / 2;
+        const pw = Math.min(W * 0.72, 520);
+        const ph = 88;
+        const sl = 16; // parallelogram slant
+
+        // Subtle pulse on hold
+        const holdProgress = Math.max(0, elapsed - 0.3);
+        const pulse = 1 + Math.sin(holdProgress * 3.5) * 0.012;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(pulse, pulse);
+        ctx.translate(-cx, -cy);
+
+        // Panel shadow
+        ctx.shadowBlur = 60;
+        ctx.shadowColor = `rgba(${accentRGB},0.4)`;
+
+        // Panel background
+        ctx.beginPath();
+        ctx.moveTo(cx - pw / 2 + sl, cy - ph / 2);
+        ctx.lineTo(cx + pw / 2, cy - ph / 2);
+        ctx.lineTo(cx + pw / 2 - sl, cy + ph / 2);
+        ctx.lineTo(cx - pw / 2, cy + ph / 2);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(4,2,12,0.93)';
+        ctx.fill();
+
+        // Panel border
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = accentCol;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Scanline fill
+        ctx.save();
+        ctx.clip(); // clip to panel shape
+        ctx.globalAlpha = 0.07;
+        ctx.fillStyle = accentCol;
+        for (let ly = cy - ph / 2 + 1; ly < cy + ph / 2; ly += 4) {
+            ctx.fillRect(cx - pw / 2 + sl + 1, ly, pw - sl * 2 - 2, 1);
+        }
+        ctx.restore();
+
+        // Corner brackets
+        const bk = 13;
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = accentCol;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        // top-left
+        ctx.moveTo(cx - pw / 2 + sl + bk, cy - ph / 2 + 3);
+        ctx.lineTo(cx - pw / 2 + sl + 3, cy - ph / 2 + 3);
+        ctx.lineTo(cx - pw / 2 + sl + 3, cy - ph / 2 + 3 + bk);
+        // bottom-right
+        ctx.moveTo(cx + pw / 2 - sl - bk, cy + ph / 2 - 3);
+        ctx.lineTo(cx + pw / 2 - sl - 3, cy + ph / 2 - 3);
+        ctx.lineTo(cx + pw / 2 - sl - 3, cy + ph / 2 - 3 - bk);
+        ctx.stroke();
+
+        // ── Wave label (top line) ───────────────────────────────
+        const labelText = isBoss ? '⚔ BOSS ENCOUNTER'
+            : isGlitch ? '⚠ ANOMALY DETECTED'
+                : `— WAVE ${wave} —`;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = accentCol;
+        ctx.fillStyle = accentCol;
+        ctx.font = `700 11px "Rajdhani","Orbitron",Arial,sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.letterSpacing = '3px';
+        ctx.fillText(labelText, cx, cy - 24);
+
+        // ── Wave number / name (main line) ─────────────────────
+        const mainText = isBoss ? (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.boss
+            ? GAME_TEXTS.wave.boss(wave) : `WAVE ${wave}`)
+            : isGlitch ? (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.glitchWave
+                ? 'GLITCH WAVE' : `WAVE ${wave} [GLITCH]`)
+                : (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.floatingTitle
+                    ? GAME_TEXTS.wave.floatingTitle(wave) : `WAVE ${wave}`);
+
+        ctx.shadowBlur = 22;
+        ctx.shadowColor = accentCol;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `900 32px "Bebas Neue","Orbitron",Arial,sans-serif`;
+        ctx.fillText(mainText, cx, cy + 6);
+
+        // Colored echo
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = accentCol;
+        ctx.fillText(mainText, cx, cy + 6);
+        ctx.restore();
+
+        // ── Subtitle ────────────────────────────────────────────
+        const subText = isBoss ? 'PREPARE FOR COMBAT'
+            : isGlitch ? 'CONTROLS INVERTED'
+                : wave <= 3 ? 'ELIMINATE ALL ENEMIES'
+                    : wave <= 8 ? 'HOLD YOUR GROUND'
+                        : wave <= 12 ? 'DANGER LEVEL: HIGH'
+                            : 'FINAL STAND';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = accentCol;
+        ctx.fillStyle = `rgba(254,243,199,0.75)`;
+        ctx.font = `600 10px "Rajdhani",Arial,sans-serif`;
+        ctx.fillText(subText, cx, cy + 30);
+
+        // Tick marks flanking subtitle
+        const tkW = 26, tkX = pw / 2 - sl - 22;
+        ctx.strokeStyle = `rgba(${accentRGB},0.45)`;
+        ctx.lineWidth = 1.2;
+        for (let t2 = 0; t2 < 3; t2++) {
+            const d2 = t2 * 5;
+            ctx.beginPath();
+            ctx.moveTo(cx + tkX + d2, cy + 22); ctx.lineTo(cx + tkX + d2, cy + 38);
+            ctx.moveTo(cx - tkX - d2, cy + 22); ctx.lineTo(cx - tkX - d2, cy + 38);
+            ctx.stroke();
+        }
+
+        ctx.restore(); // pulse scale
+        ctx.restore(); // alpha
+    }
+}
+
+/** Global singleton */
+var waveAnnouncementFX = new WaveAnnouncementFX();
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Export
 // ──────────────────────────────────────────────────────────────────────────────

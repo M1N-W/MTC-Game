@@ -26,6 +26,38 @@
 <body>
     <canvas id="gameCanvas"></canvas>
 
+    <!-- ══════════════════════════════════════════
+         LOADING STATE (3.3) - Shows during asset initialization
+         ══════════════════════════════════════════ -->
+    <div id="loading-overlay">
+        <div class="loading-inner">
+            <div class="loading-header">
+                <div class="loading-icon">🎮</div>
+                <div class="loading-title">MTC THE GAME</div>
+                <div class="loading-subtitle">BETA EDITION</div>
+            </div>
+
+            <div class="loading-progress-container">
+                <div class="loading-progress-bar">
+                    <div class="loading-progress-fill" id="loading-progress-fill"></div>
+                </div>
+                <div class="loading-progress-text" id="loading-progress-text">INITIALIZING...</div>
+            </div>
+
+            <div class="loading-details">
+                <div class="loading-detail-item" id="loading-canvas">✓ Canvas System</div>
+                <div class="loading-detail-item" id="loading-input">⏳ Input System</div>
+                <div class="loading-detail-item" id="loading-audio">⏳ Audio System</div>
+                <div class="loading-detail-item" id="loading-assets">⏳ Game Assets</div>
+                <div class="loading-detail-item" id="loading-ready">⏳ Ready to Play</div>
+            </div>
+
+            <div class="loading-footer">
+                <div class="loading-tip">💡 TIP: Use WASD to move, Mouse to aim</div>
+            </div>
+        </div>
+    </div>
+
     <div id="boss-speech"></div>
     <div id="voice-bubble"></div>
     <div id="achievements"></div>
@@ -149,7 +181,7 @@
             <div class="shop-subtitle">✦ สุ่ม 3 ไอเทม — ซื้อแล้ว SOLD OUT — ขึ้น Wave ใหม่รีเฟรชฟรี ✦</div>
             <div id="shop-items"></div>
             <div class="shop-footer">
-                🎲 ไอเทมถาวรทุกชิ้น &nbsp;|&nbsp; REROLL ราคา 200 คะแนน &nbsp;|&nbsp; รีเฟรชฟรีทุก Wave
+                ♾ ถาวร &nbsp;|&nbsp; ⚡ ทันที &nbsp;|&nbsp; 🎲 REROLL ราคา 200 คะแนน &nbsp;|&nbsp; รีเฟรชฟรีทุก Wave
             </div>
         </div>
     </div>
@@ -432,6 +464,124 @@
                         </div>
                         <div class="char-desc">Close-range powerhouse — Heat Waves + Stand "Wanchai"</div>
                         <div class="char-tag">Horsepower</div>
+                    </div>
+                    <!-- ── Skill Tooltips (1.4) ── -->
+                    <div class="skill-tooltip" id="tooltip-kao" data-char="kao">
+                        <div class="tooltip-header">🎓 KAO — SKILL SET</div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">Q</span>
+                            <span class="tt-icon">⚡</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Teleport Charge</div>
+                                <div class="tt-desc">Blink to cursor (3 charges). Q during Stealth = Phantom Blink —
+                                    crit ×1.8 window</div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">E</span>
+                            <span class="tt-icon">👥</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Clone Orbit</div>
+                                <div class="tt-desc">Spawn 2 orbiting clones that mirror your shots. Press E again to
+                                    detonate early</div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">DASH</span>
+                            <span class="tt-icon">🌫️</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Dash-Stealth</div>
+                                <div class="tt-desc">Every dash triggers stealth — bullets pass through, next shot is
+                                    ambush crit</div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">MAS</span>
+                            <span class="tt-icon">🔫</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Weapon Mastery</div>
+                                <div class="tt-desc">Kill 5× with each weapon (Rifle/Sniper/Shotgun) to unlock passive
+                                    awakening</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skill-tooltip" id="tooltip-poom" data-char="poom">
+                        <div class="tooltip-header">🌾 POOM — SKILL SET</div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">R²</span>
+                            <span class="tt-icon">🍚</span>
+                            <div class="tt-info">
+                                <div class="tt-name">กินข้าวนึ่ง</div>
+                                <div class="tt-desc">R-Click: กินข้าว → สะสม Sticky stack บนศัตรูที่ถูกยิง, regen HP
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">Q</span>
+                            <span class="tt-icon">🐍</span>
+                            <div class="tt-info">
+                                <div class="tt-name">อัญเชิญพญานาค</div>
+                                <div class="tt-desc">Summon Naga familiar — absorbs 40% max HP as shield, unlocks at Lv2
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">E</span>
+                            <span class="tt-icon">🦅</span>
+                            <div class="tt-info">
+                                <div class="tt-name">อัญเชิญครุฑ</div>
+                                <div class="tt-desc">Summon Garuda — Naga+Garuda both active = Cosmic Balance (HP regen
+                                    + ×1.2 dmg)</div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">R</span>
+                            <span class="tt-icon">💚</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Ritual Burst</div>
+                                <div class="tt-desc">Detonate Sticky stacks on all enemies — damage scales with stacks
+                                    consumed</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skill-tooltip" id="tooltip-auto" data-char="auto">
+                        <div class="tooltip-header">🔥 AUTO — SKILL SET</div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">R²</span>
+                            <span class="tt-icon">👊</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Wanchai Stand</div>
+                                <div class="tt-desc">R-Click: Summon Stand — L-Click = ORA rush, Shift = Guard block
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">Q</span>
+                            <span class="tt-icon">🌀</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Vacuum / Stand Pull</div>
+                                <div class="tt-desc">Suck all enemies in range. During Stand = Stand Pull + ignite (CD
+                                    10s)</div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">E</span>
+                            <span class="tt-icon">💥</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Charge Punch / Detonation</div>
+                                <div class="tt-desc">During Stand: hold E to charge, release = super punch (cap 600
+                                    dmg). Drains heat</div>
+                            </div>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tt-key">HEAT</span>
+                            <span class="tt-icon">🌡️</span>
+                            <div class="tt-info">
+                                <div class="tt-name">Heat Tier System</div>
+                                <div class="tt-desc">COLD(slow) → WARM → HOT → OVERHEAT — higher tier = faster fire
+                                    &amp; more crit</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

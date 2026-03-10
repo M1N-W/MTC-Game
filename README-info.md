@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.28.1 | **Latest Update:** Priority 1 Mobile UI Improvements - Complete mobile button feedback system with haptic vibration, pressed states, touchcancel cleanup, high score display, and accessibility enhancements
+> **Current Version:** Beta v3.29.0 | **Latest Update:** Priority 2 & 3 Systems Implementation - Cinematic wave announcements, shop system expansion with 7 new items, loading state system, achievement system expansion, performance optimizations, and camera.scale bug fix
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

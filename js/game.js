@@ -204,6 +204,11 @@ function updateGame(dt) {
         }
     }
 
+    // ── Shop System Updates ───────────────────────────────────────
+    if (typeof ShopManager !== 'undefined' && typeof ShopManager.tick === 'function') {
+        ShopManager.tick();
+    }
+
     const dToServer = dist(window.player.x, window.player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
     const _inTutorial = typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive();
 
@@ -805,6 +810,7 @@ function _fadeOutOverlay() {
 
 function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
+    window._selectedChar = charType; // used by rollShopItems() for char-specific filtering
     Audio.playBGM('battle');
 
     const savedData = getSaveData();
@@ -1021,6 +1027,79 @@ window.endGame = endGame;
 window.onload = () => {
     console.log('🚀 Initializing game...');
 
+    // ── Loading State System (3.3) ─────────────────────────────────────
+    const LoadingState = {
+        overlay: null,
+        progressFill: null,
+        progressText: null,
+        details: {},
+        totalSteps: 5,
+        currentStep: 0,
+
+        init() {
+            this.overlay = document.getElementById('loading-overlay');
+            this.progressFill = document.getElementById('loading-progress-fill');
+            this.progressText = document.getElementById('loading-progress-text');
+            this.details = {
+                canvas: document.getElementById('loading-canvas'),
+                input: document.getElementById('loading-input'),
+                audio: document.getElementById('loading-audio'),
+                assets: document.getElementById('loading-assets'),
+                ready: document.getElementById('loading-ready')
+            };
+        },
+
+        update(step, status, text) {
+            if (!this.overlay) return;
+
+            // Update detail item
+            const detailEl = this.details[step];
+            if (detailEl) {
+                detailEl.className = 'loading-detail-item loading';
+                detailEl.textContent = `⏳ ${status}`;
+            }
+
+            // Update progress
+            this.currentStep++;
+            const progress = (this.currentStep / this.totalSteps) * 100;
+            this.progressFill.style.width = `${progress}%`;
+            this.progressText.textContent = text;
+
+            // Mark as loaded after delay
+            setTimeout(() => {
+                if (detailEl) {
+                    detailEl.className = 'loading-detail-item loaded';
+                    detailEl.textContent = `✓ ${status}`;
+                }
+            }, 300);
+        },
+
+        finish() {
+            if (!this.overlay) return;
+
+            // Complete progress
+            this.progressFill.style.width = '100%';
+            this.progressText.textContent = 'READY TO PLAY';
+
+            // Mark final step
+            if (this.details.ready) {
+                this.details.ready.className = 'loading-detail-item loaded';
+                this.details.ready.textContent = '✓ Ready to Play';
+            }
+
+            // Hide overlay after delay
+            setTimeout(() => {
+                this.overlay.classList.add('hidden');
+                // Remove from DOM after transition
+                setTimeout(() => {
+                    if (this.overlay.parentNode) {
+                        this.overlay.parentNode.removeChild(this.overlay);
+                    }
+                }, 400);
+            }, 800);
+        }
+    };
+
     // BUG FIX: Ensure DOM is fully ready before initialization
     const initializeGame = () => {
         if (!document.getElementById('gameCanvas')) {
@@ -1029,19 +1108,42 @@ window.onload = () => {
             return;
         }
 
+        // Initialize loading state
+        LoadingState.init();
+
         try {
+            // Step 1: Canvas System
+            LoadingState.update('canvas', 'Canvas System', 'INITIALIZING CANVAS...');
             initCanvas();
+
+            // Step 2: Input System  
+            LoadingState.update('input', 'Input System', 'SETTING UP INPUTS...');
             setGameState('MENU');
             if (typeof InputSystem !== 'undefined') InputSystem.init();
+
+            // Step 3: Audio System
+            LoadingState.update('audio', 'Audio System', 'LOADING AUDIO...');
             initAI();
 
-            // ── BGM FIX: Audio.init() moved here from startGame() ────────────────
+            // Step 4: Game Assets (Audio.init happens here)
+            LoadingState.update('assets', 'Game Assets', 'PREPARING ASSETS...');
             if (typeof Audio !== 'undefined') {
                 Audio.init();
                 Audio.playBGM('menu');
             }
+
+            // Step 5: Ready to Play
+            LoadingState.update('ready', 'Ready to Play', 'FINALIZING...');
+
+            // Finish loading
+            setTimeout(() => LoadingState.finish(), 500);
+
         } catch (err) {
             console.error('[window.onload] Initialization error:', err);
+            // Still hide loading on error to prevent stuck screen
+            if (LoadingState.overlay) {
+                LoadingState.overlay.classList.add('hidden');
+            }
         }
     };
 

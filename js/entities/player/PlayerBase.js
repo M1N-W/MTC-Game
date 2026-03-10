@@ -190,6 +190,15 @@ class Player extends Entity {
         }
         if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
 
+        // ── Adrenaline Wave (shop item) ────────────────────────
+        if ((this._speedWaveTimer ?? 0) > 0) {
+            this._speedWaveTimer -= dt;
+            if (this._speedWaveTimer <= 0) {
+                this._speedWaveTimer = 0;
+                spawnFloatingText('⚡ SPEED ENDED', this.x, this.y - 42, '#94a3b8', 14);
+            }
+        }
+
         // ── MTC Buff Timer ────────────────────────────────────────
         if (this.mtcBuffTimer > 0) {
             this.mtcBuffTimer -= dt;
@@ -229,6 +238,7 @@ class Player extends Entity {
 
         let speedMult = (this.isInvisible ? S.stealthSpeedBonus : 1) * this.speedBoost * this.metaSpeedMult;
         if (this.passiveUnlocked && this.passiveSpeedBonus > 0) speedMult = Math.max(speedMult, this.passiveSpeedBonus);
+        if ((this._speedWaveTimer ?? 0) > 0) speedMult *= (this._speedWaveMult ?? 1.3);
         if (this.speedBoostTimer > 0) speedMult += S.speedOnHit / S.moveSpeed;
         if (this.obstacleBuffTimer > 0) speedMult *= BALANCE.player.obstacleBuffPower;
 
@@ -480,6 +490,14 @@ class Player extends Entity {
     takeDamage(amt) {
         const S = this.stats;
         if (this.isDashing) return;
+        // ── Shield Bubble — absorbs hits (multi-stack) ───────────
+        if ((this.shieldBubbleHits ?? 0) > 0) {
+            this.shieldBubbleHits--;
+            spawnFloatingText(`🫧 BUBBLE! (${this.shieldBubbleHits} left)`, this.x, this.y - 45, '#7dd3fc', 20);
+            spawnParticles(this.x, this.y, 12, '#7dd3fc');
+            if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
+            return;
+        }
         // ── Energy Shield block ──────────────────────────────────
         if (this.hasShield) {
             this.hasShield = false;
@@ -490,6 +508,18 @@ class Player extends Entity {
         }
         if (this.onGraph) { amt *= 2; spawnFloatingText('EXPOSED!', this.x, this.y - 40, '#ef4444', 16); }
         this.hp -= amt; this.hp = Math.max(0, this.hp);
+
+        // ── Reflect Armor — bounce % back to attacker ────────────
+        if ((this.damageReflectPct ?? 0) > 0) {
+            const reflected = amt * this.damageReflectPct;
+            // attacker = last argument; base takeDamage only takes amt — subclasses pass attacker
+            const attacker = arguments[1];
+            if (attacker && typeof attacker.takeDamage === 'function' && !attacker.dead) {
+                attacker.hp = Math.max(0, attacker.hp - reflected);
+                if (attacker.hp <= 0) attacker.dead = true;
+                spawnFloatingText(`🪞 ${Math.round(reflected)}`, attacker.x, attacker.y - 28, '#818cf8', 13);
+            }
+        }
 
         // ── Damage display — แยก contact damage (เล็กๆต่อเนื่อง) vs bullet/AoE (ก้อนใหญ่) ──
         // CONTACT DAMAGE: amt < 5 ต่อครั้ง → ไม่แสดงตัวเลขรายเฟรม

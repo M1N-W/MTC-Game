@@ -659,15 +659,13 @@ class PoomPlayer extends Player {
         }
 
         // ── Enemy ปกติ: ใช้ StatusEffect framework ──
-        const now = performance.now() / 1000;
         const stackDuration = (S.sticky.stackDuration || 1.5)
             + (this._cosmicBalance ? (S.cosmicStickyDurationBonus ?? 1.0) : 0);  // NEW: Cosmic = +1.0s
-        const slowPerStack = 0.04;
 
         enemy.addStatus('sticky', {
             stacks: 1,
-            expireAt: now + stackDuration,
-            meta: { slowPerStack: slowPerStack }
+            duration: stackDuration,
+            meta: { slowPerStack: 0.04 }
         });
     }
 
