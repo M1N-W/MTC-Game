@@ -53,19 +53,185 @@ const HIT_FLASH_DURATION = 0.10;
 const GLITCH_DAMAGE_MULT = 0.6;
 
 // ════════════════════════════════════════════════════════════
-// ENEMIES
+// ENEMY BASE — shared foundation for all enemy types
+// ════════════════════════════════════════════════════════════
+// Inherit from this (not Entity) when creating new enemy classes.
+// Provides automatically:
+//   • Unique ID               (this.id)
+//   • StatusEffect framework  (addStatus / removeStatus / getStatus / tickStatuses)
+//   • UtilityAI               (this._ai, this._aiMoveX, this._aiMoveY)
+//   • Hit-flash state         (this.hitFlashTimer)
+//   • Sticky-slow state       (this.stickyStacks, this.stickySlowMultiplier)
+//
+// Minimal new-enemy template:
+//   class MyEnemy extends EnemyBase {
+//       constructor(x, y) {
+//           super(x, y, radius, 'basic'); // last arg = personality type
+//           // set this.hp, this.speed, this.damage, this.type, this.expValue ...
+//       }
+//       update(dt, player) {
+//           if (this.dead) return;
+//           this._tickShared(dt, player); // handles StatusEffect + AI + hitFlash + ignite
+//           // your movement + attack logic here
+//       }
+//       takeDamage(amt, player) {
+//           super.takeDamage(amt, player); // handles flash + death particles (override _onDeath if needed)
+//       }
+//   }
 // ════════════════════════════════════════════════════════════
 
 // ── Phase 2: Unique enemy ID counter for sticky stack tracking ──
 // Incremented on every enemy construction. Never reused within a session.
 let _enemyIdCounter = 0;
 
-class Enemy extends Entity {
+class EnemyBase extends Entity {
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} radius
+     * @param {string} personalityType — 'basic' | 'tank' | 'mage' (for UtilityAI)
+     */
+    constructor(x, y, radius, personalityType) {
+        super(x, y, radius);
+
+        // Unique ID — never reused within a session
+        this.id = ++_enemyIdCounter;
+
+        // ── Hit flash ─────────────────────────────────────────
+        this.hitFlashTimer = 0;
+
+        // ── Sticky slow ───────────────────────────────────────
+        this.stickyStacks = 0;
+        this.stickySlowMultiplier = 1;
+
+        // ── StatusEffect Framework ────────────────────────────
+        this.statusEffects = new Map();
+
+        // ── UtilityAI ─────────────────────────────────────────
+        // Safe to construct even if UtilityAI.js not yet loaded (guard below).
+        // personalityType drives aggression/caution/teamwork weights.
+        this._ai = (typeof UtilityAI !== 'undefined')
+            ? new UtilityAI(this, personalityType || 'basic') : null;
+        // AI movement override — written by UtilityAI, read in subclass update()
+        // Never conflicts with vacuum/sticky: those write vx/vy directly
+        this._aiMoveX = 0;
+        this._aiMoveY = 0;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // _tickShared — call at top of every subclass update()
+    // Handles: StatusEffects, hitFlash decay, ignite DoT, AI tick
+    // ─────────────────────────────────────────────────────────
+    _tickShared(dt, player) {
+        this.tickStatuses(dt);
+
+        // Sticky slow multiplier
+        const stickyStatus = this.getStatus('sticky');
+        if (stickyStatus && stickyStatus.meta) {
+            const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
+            this.stickySlowMultiplier = Math.max(0.2, 1 - (slowPerStack * stickyStatus.stacks));
+            this.stickyStacks = stickyStatus.stacks;
+        }
+
+        // Hit flash decay
+        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+
+        // Ignite DoT (applied by AutoPlayer Vacuum Heat)
+        if ((this.igniteTimer ?? 0) > 0) {
+            this.igniteTimer -= dt;
+            this.takeDamage((this.igniteDPS ?? 12) * dt);
+            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
+        }
+
+        // UtilityAI decision tick (throttled to 2Hz internally)
+        if (this._ai) this._ai.tick(dt, player, window.enemies);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // StatusEffect Framework (single authoritative copy)
+    // ─────────────────────────────────────────────────────────
+
+    addStatus(type, data) {
+        const existing = this.statusEffects.get(type);
+        const now = performance.now() / 1000;
+        if (existing) {
+            if (data.stacks !== undefined) existing.stacks += data.stacks;
+            if (data.expireAt !== undefined) existing.expireAt = Math.max(existing.expireAt, data.expireAt);
+            if (data.meta) existing.meta = { ...existing.meta, ...data.meta };
+            if (data.onApply) existing.onApply = data.onApply;
+            if (data.onExpire) existing.onExpire = data.onExpire;
+            if (data.onTick) existing.onTick = data.onTick;
+        } else {
+            const effect = {
+                type,
+                stacks: data.stacks || 1,
+                expireAt: data.expireAt || (now + (data.duration || 5)),
+                meta: data.meta || {},
+                onApply: data.onApply,
+                onExpire: data.onExpire,
+                onTick: data.onTick,
+            };
+            this.statusEffects.set(type, effect);
+            if (effect.onApply) effect.onApply(this, effect);
+        }
+    }
+
+    removeStatus(type) {
+        const effect = this.statusEffects.get(type);
+        if (effect) {
+            if (effect.onExpire) effect.onExpire(this, effect);
+            this.statusEffects.delete(type);
+        }
+    }
+
+    getStatus(type) {
+        return this.statusEffects.get(type) || null;
+    }
+
+    tickStatuses(dt) {
+        const now = performance.now() / 1000;
+        const toRemove = [];
+        for (const [type, effect] of this.statusEffects) {
+            if (effect.expireAt <= now) { toRemove.push(type); continue; }
+            if (effect.onTick) effect.onTick(this, effect, dt);
+        }
+        for (const type of toRemove) this.removeStatus(type);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Base takeDamage — triggers hit flash, disposes AI on death
+    // Subclasses call super.takeDamage(amt, player) or override fully
+    // ─────────────────────────────────────────────────────────
+    takeDamage(amt, player) {
+        this.hp -= amt;
+        this.hitFlashTimer = HIT_FLASH_DURATION;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.dead = true;
+            if (this._ai) { this._ai.dispose(); this._ai = null; }
+            this._onDeath(player);
+        }
+    }
+
+    // Override in subclass for custom death FX/scoring
+    _onDeath(player) { }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 🌐 EXPORT EnemyBase
+// ══════════════════════════════════════════════════════════════
+window.EnemyBase = EnemyBase;
+
+// ════════════════════════════════════════════════════════════
+// ENEMIES
+// ════════════════════════════════════════════════════════════
+
+class Enemy extends EnemyBase {
     constructor(x, y) {
-        super(x, y, BALANCE.enemy.radius);
-        this.id = ++_enemyIdCounter; // ── Phase 2: unique ID for sticky stack Map key ──
+        // EnemyBase handles: id, hitFlashTimer, stickyStacks/Multiplier,
+        //                    statusEffects, _ai, _aiMoveX/Y
+        super(x, y, BALANCE.enemy.radius, 'basic');
         // Exponential HP scaling: baseHp * ((1 + hpPerWave)^wave)
-        // Uses config values for proper balance tuning
         const hpGrowth = 1 + BALANCE.enemy.hpPerWave;
         this.maxHp = Math.floor(BALANCE.enemy.baseHp * Math.pow(hpGrowth, getWave()));
         this.hp = this.maxHp;
@@ -74,41 +240,13 @@ class Enemy extends Entity {
         this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
         this.color = randomChoice(BALANCE.enemy.colors);
         this.type = 'basic'; this.expValue = BALANCE.enemy.expValue;
-
-        // ── Hit flash state ──────────────────────────────────
-        // Seconds remaining on the white-silhouette flash.
-        // Set to HIT_FLASH_DURATION on every takeDamage() call.
-        // Decays in update(); drawn in draw() if > 0.
-        this.hitFlashTimer = 0;
-
-        // ── Phase 2 Session 3: Sticky slow state ─────────────
-        this.stickyStacks = 0;
-        this.stickySlowMultiplier = 1;
-
-        //  StatusEffect Framework Core 
-        this.statusEffects = new Map();
     }
 
     update(dt, player) {
         if (this.dead) return;
 
-        //  StatusEffect Framework Tick 
-        this.tickStatuses(dt);        // ── Tick hit-flash timer ─────────────────────────────
-
-        // ── Session B: Read sticky status and update slow multiplier ──
-        const stickyStatus = this.getStatus("sticky");
-        if (stickyStatus && stickyStatus.meta) {
-            const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
-            this.stickySlowMultiplier = Math.max(0.2, 1 - (slowPerStack * stickyStatus.stacks));
-            this.stickyStacks = stickyStatus.stacks;
-        }
-        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
-        // ── Ignite debuff (applied by AutoPlayer Vacuum Heat) ────────
-        if ((this.igniteTimer ?? 0) > 0) {
-            this.igniteTimer -= dt;
-            this.takeDamage((this.igniteDPS ?? 12) * dt);
-            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
-        }
+        // ── Shared: StatusEffects + hitFlash + ignite + AI tick ──
+        this._tickShared(dt, player);
 
         const dx = player.x - this.x, dy = player.y - this.y;
         const d = dist(this.x, this.y, player.x, player.y);
@@ -126,8 +264,14 @@ class Enemy extends Entity {
             } else { this.vx *= 0.85; this.vy *= 0.85; }
         } else {
             if (d > BALANCE.enemy.chaseRange && !player.isInvisible) {
-                this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-                this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+                // ── AI steering blend: 70% base direction, 30% AI override ──
+                const baseX = Math.cos(this.angle);
+                const baseY = Math.sin(this.angle);
+                const blendX = baseX * 0.7 + this._aiMoveX * 0.3;
+                const blendY = baseY * 0.7 + this._aiMoveY * 0.3;
+                const blendLen = Math.hypot(blendX, blendY) || 1;
+                this.vx = (blendX / blendLen) * this.speed * this.stickySlowMultiplier;
+                this.vy = (blendY / blendLen) * this.speed * this.stickySlowMultiplier;
             } else { this.vx *= 0.9; this.vy *= 0.9; }
         }
         this._steerAroundObstacles(dt);
@@ -137,10 +281,7 @@ class Enemy extends Entity {
             projectileManager.add(new Projectile(this.x, this.y, this.angle, BALANCE.enemy.projectileSpeed, this.damage, '#fff', false, 'enemy'));
             this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
         }
-
         // ── Melee contact damage ─────────────────────────────
-        // During a Glitch Wave, reduce contact damage by 40 % to keep the
-        // inverted-controls chaos survivable without removing the threat.
         if (d < this.radius + player.radius) {
             const contactDamage = this.damage * dt * 3;
             const glitchMult = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
@@ -148,194 +289,52 @@ class Enemy extends Entity {
         }
     }
 
-    takeDamage(amt, player) {
-        this.hp -= amt;
-
-        // ── Trigger hit flash ────────────────────────────────
-        // Reset to full duration on every hit so rapid hits keep the flash active.
-        this.hitFlashTimer = HIT_FLASH_DURATION;
-
-        if (this.hp <= 0) {
-            this.dead = true; this.hp = 0;
-            spawnParticles(this.x, this.y, 20, this.color);
-            // 🩸 Battle Scars: รอยเลือดสีม่วงคล้ำบนพื้น
-            if (typeof decalSystem !== 'undefined') {
-                decalSystem.spawn(this.x, this.y, '#3b0764', 12 + Math.random() * 6);
-            }
-            addScore(BALANCE.score.basicEnemy * getWave()); addEnemyKill(); Audio.playEnemyDeath();
-            // ✨ [bullet_time_kill] นับคิลขณะ Slow-mo
-            if (window.isSlowMotion && typeof Achievements !== 'undefined') {
-                Achievements.stats.slowMoKills++;
-                Achievements.check('bullet_time_kill');
-            }
-            if (player) player.gainExp(this.expValue);
-
-            // FIX (BUG-4): Correctly identify Kao and fetch weapon string key to allow Awakening
-            if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
-                const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
-                const currentWep = BALANCE.characters.kao.weapons[wepKey];
-                if (currentWep) {
-                    player.addKill(currentWep.name);
-
-                    // ✨ [Weapon Master Progress] แสดง floating text บอกความคืบหน้า
-                    if (player.passiveUnlocked && !player.isWeaponMaster) {
-                        const kills = player.weaponKills[wepKey] || 0;
-                        const req = BALANCE.characters.kao.weaponMasterReq || 10;
-                        spawnFloatingText(`${currentWep.name} ${kills}/${req}`, this.x, this.y - 40, '#facc15', 14);
-                    }
+    // _onDeath: called by EnemyBase.takeDamage() after dead=true + AI disposed
+    _onDeath(player) {
+        spawnParticles(this.x, this.y, 20, this.color);
+        if (typeof decalSystem !== 'undefined') {
+            decalSystem.spawn(this.x, this.y, '#3b0764', 12 + Math.random() * 6);
+        }
+        addScore(BALANCE.score.basicEnemy * getWave()); addEnemyKill(); Audio.playEnemyDeath();
+        // ✨ [bullet_time_kill] นับคิลขณะ Slow-mo
+        if (window.isSlowMotion && typeof Achievements !== 'undefined') {
+            Achievements.stats.slowMoKills++;
+            Achievements.check('bullet_time_kill');
+        }
+        if (player) player.gainExp(this.expValue);
+        if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
+            const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
+            const currentWep = BALANCE.characters.kao.weapons[wepKey];
+            if (currentWep) {
+                player.addKill(currentWep.name);
+                if (player.passiveUnlocked && !player.isWeaponMaster) {
+                    const kills = player.weaponKills[wepKey] || 0;
+                    const req = BALANCE.characters.kao.weaponMasterReq || 10;
+                    spawnFloatingText(`${currentWep.name} ${kills}/${req}`, this.x, this.y - 40, '#facc15', 14);
                 }
             }
-
-            Achievements.stats.kills++; Achievements.check('first_blood');
-            if (Math.random() < BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x, this.y));
         }
+        Achievements.stats.kills++; Achievements.check('first_blood');
+        if (Math.random() < BALANCE.powerups.dropRate) window.powerups.push(new PowerUp(this.x, this.y));
     }
-
-    // 
-    // STATUSEFFECT FRAMEWORK - Session A
-    // 
-
-    /**
-     * Add or merge a status effect on this enemy
-     * @param {string} type - Effect type identifier
-     * @param {object} data - Effect data to merge (stacks, expireAt, meta, callbacks)
-     */
-    addStatus(type, data) {
-        const existing = this.statusEffects.get(type);
-        const now = performance.now() / 1000;
-
-        if (existing) {
-            // Merge with existing effect
-            if (data.stacks !== undefined) {
-                existing.stacks += data.stacks;
-            }
-            if (data.expireAt !== undefined) {
-                existing.expireAt = Math.max(existing.expireAt, data.expireAt);
-            }
-            if (data.meta) {
-                existing.meta = { ...existing.meta, ...data.meta };
-            }
-            // Override callbacks if provided
-            if (data.onApply) existing.onApply = data.onApply;
-            if (data.onExpire) existing.onExpire = data.onExpire;
-            if (data.onTick) existing.onTick = data.onTick;
-        } else {
-            // Create new effect
-            const effect = {
-                type,
-                stacks: data.stacks || 1,
-                expireAt: data.expireAt || (now + (data.duration || 5)),
-                meta: data.meta || {},
-                onApply: data.onApply,
-                onExpire: data.onExpire,
-                onTick: data.onTick
-            };
-            this.statusEffects.set(type, effect);
-
-            // Call onApply callback if provided
-            if (effect.onApply) {
-                effect.onApply(this, effect);
-            }
-        }
-    }
-
-    /**
-     * Remove a status effect from this enemy
-     * @param {string} type - Effect type to remove
-     */
-    removeStatus(type) {
-        const effect = this.statusEffects.get(type);
-        if (effect) {
-            // Call onExpire callback if provided
-            if (effect.onExpire) {
-                effect.onExpire(this, effect);
-            }
-            this.statusEffects.delete(type);
-        }
-    }
-
-    /**
-     * Get status effect data
-     * @param {string} type - Effect type to retrieve
-     * @returns {object|null} Effect data or null if not found
-     */
-    getStatus(type) {
-        return this.statusEffects.get(type) || null;
-    }
-
-    /**
-     * Update all status effects, call onTick callbacks, remove expired ones
-     * @param {number} dt - Delta time in seconds
-     */
-    tickStatuses(dt) {
-        const now = performance.now() / 1000;
-        const toRemove = [];
-
-        for (const [type, effect] of this.statusEffects) {
-            // Check expiration
-            if (effect.expireAt <= now) {
-                toRemove.push(type);
-                continue;
-            }
-
-            // Call onTick callback if provided
-            if (effect.onTick) {
-                effect.onTick(this, effect, dt);
-            }
-        }
-
-        // Remove expired effects
-        for (const type of toRemove) {
-            this.removeStatus(type);
-        }
-    }
-    // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
+    // draw() → EnemyRenderer.drawBasic()
 }
 
-class TankEnemy extends Entity {
+class TankEnemy extends EnemyBase {
     constructor(x, y) {
-        super(x, y, BALANCE.tank.radius);
-        this.id = ++_enemyIdCounter; // ── Phase 2: unique ID for sticky stack Map key ──
-        // Heavy exponential HP scaling: baseHp * ((1 + hpPerWave)^wave)
-        // Uses config values for proper balance tuning
+        super(x, y, BALANCE.tank.radius, 'tank');
         const hpGrowth = 1 + BALANCE.tank.hpPerWave;
         this.maxHp = Math.floor(BALANCE.tank.baseHp * Math.pow(hpGrowth, getWave()));
         this.hp = this.maxHp;
         this.speed = BALANCE.tank.baseSpeed + getWave() * BALANCE.tank.speedPerWave;
         this.damage = BALANCE.tank.baseDamage + getWave() * BALANCE.tank.damagePerWave;
         this.color = BALANCE.tank.color; this.type = 'tank'; this.expValue = BALANCE.tank.expValue;
-
-        // ── Hit flash state ──────────────────────────────────
-        this.hitFlashTimer = 0;
-
-        // ── Phase 2 Session 3: Sticky slow state ─────────────
-        this.stickyStacks = 0;
-        this.stickySlowMultiplier = 1;
-
-        //  StatusEffect Framework Core 
-        this.statusEffects = new Map();
     }
 
     update(dt, player) {
         if (this.dead) return;
 
-        //  StatusEffect Framework Tick 
-        this.tickStatuses(dt);        // ── Tick hit-flash timer ─────────────────────────────
-
-        // ── Session B: Read sticky status and update slow multiplier ──
-        const stickyStatus = this.getStatus("sticky");
-        if (stickyStatus && stickyStatus.meta) {
-            const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
-            this.stickySlowMultiplier = Math.max(0.2, 1 - (slowPerStack * stickyStatus.stacks));
-            this.stickyStacks = stickyStatus.stacks;
-        }
-        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
-        // ── Ignite debuff (applied by AutoPlayer Vacuum Heat) ────────
-        if ((this.igniteTimer ?? 0) > 0) {
-            this.igniteTimer -= dt;
-            this.takeDamage((this.igniteDPS ?? 12) * dt);
-            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
-        }
+        this._tickShared(dt, player);
 
         const dx = player.x - this.x, dy = player.y - this.y;
         const d = dist(this.x, this.y, player.x, player.y);
@@ -348,21 +347,22 @@ class TankEnemy extends Entity {
                 const pvx = (this._vacuumTargetX ?? this.x) - this.x;
                 const pvy = (this._vacuumTargetY ?? this.y) - this.y;
                 const pd = Math.hypot(pvx, pvy);
-                if (pd > 8) { this.vx = (pvx / pd) * 560; this.vy = (pvy / pd) * 560; } // tank = slower pull
+                if (pd > 8) { this.vx = (pvx / pd) * 560; this.vy = (pvy / pd) * 560; }
                 else { this.vx *= 0.5; this.vy *= 0.5; }
             } else { this.vx *= 0.85; this.vy *= 0.85; }
         } else {
             if (!player.isInvisible) {
-                this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-                this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+                // Tank: 80% base (aggressive), 20% AI steering
+                const blendX = Math.cos(this.angle) * 0.8 + this._aiMoveX * 0.2;
+                const blendY = Math.sin(this.angle) * 0.8 + this._aiMoveY * 0.2;
+                const blendLen = Math.hypot(blendX, blendY) || 1;
+                this.vx = (blendX / blendLen) * this.speed * this.stickySlowMultiplier;
+                this.vy = (blendY / blendLen) * this.speed * this.stickySlowMultiplier;
             } else { this.vx *= 0.95; this.vy *= 0.95; }
         }
         this._steerAroundObstacles(dt);
         this.applyPhysics(dt);
-
         // ── Melee contact damage ─────────────────────────────
-        // Glitch Wave reduces Tank melee damage by 40 % — tanks hit
-        // very hard and the player can't dodge reliably with inverted controls.
         if (d < BALANCE.tank.meleeRange + player.radius) {
             const contactDamage = this.damage * dt * 2;
             const glitchMult = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
@@ -370,139 +370,27 @@ class TankEnemy extends Entity {
         }
     }
 
-    takeDamage(amt, player) {
-        this.hp -= amt;
-
-        // ── Trigger hit flash ────────────────────────────────
-        this.hitFlashTimer = HIT_FLASH_DURATION;
-
-        if (this.hp <= 0) {
-            this.dead = true;
-            spawnParticles(this.x, this.y, 30, this.color);
-            // 🩸 Battle Scars: รอยเลือดสีแดงคล้ำขนาดใหญ่ (Tank ตัวใหญ่กว่า)
-            if (typeof decalSystem !== 'undefined') {
-                decalSystem.spawn(this.x, this.y, '#7f1d1d', 20 + Math.random() * 8, 20);
-            }
-            addScore(BALANCE.score.tank * getWave()); addEnemyKill(); Audio.playEnemyDeath();
-            if (player) player.gainExp(this.expValue);
-            // FIX (BUG-4): Correctly identify Kao and fetch weapon string key to allow Awakening
-            if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
-                const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
-                const currentWep = BALANCE.characters.kao.weapons[wepKey];
-                if (currentWep) player.addKill(currentWep.name);
-            }
-            Achievements.stats.kills++;
-            if (Math.random() < BALANCE.powerups.dropRate * BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
+    _onDeath(player) {
+        spawnParticles(this.x, this.y, 30, this.color);
+        if (typeof decalSystem !== 'undefined') {
+            decalSystem.spawn(this.x, this.y, '#7f1d1d', 20 + Math.random() * 8, 20);
         }
-    }
-
-    // 
-    // STATUSEFFECT FRAMEWORK - Session A
-    // 
-
-    /**
-     * Add or merge a status effect on this enemy
-     * @param {string} type - Effect type identifier
-     * @param {object} data - Effect data to merge (stacks, expireAt, meta, callbacks)
-     */
-    addStatus(type, data) {
-        const existing = this.statusEffects.get(type);
-        const now = performance.now() / 1000;
-
-        if (existing) {
-            // Merge with existing effect
-            if (data.stacks !== undefined) {
-                existing.stacks += data.stacks;
-            }
-            if (data.expireAt !== undefined) {
-                existing.expireAt = Math.max(existing.expireAt, data.expireAt);
-            }
-            if (data.meta) {
-                existing.meta = { ...existing.meta, ...data.meta };
-            }
-            // Override callbacks if provided
-            if (data.onApply) existing.onApply = data.onApply;
-            if (data.onExpire) existing.onExpire = data.onExpire;
-            if (data.onTick) existing.onTick = data.onTick;
-        } else {
-            // Create new effect
-            const effect = {
-                type,
-                stacks: data.stacks || 1,
-                expireAt: data.expireAt || (now + (data.duration || 5)),
-                meta: data.meta || {},
-                onApply: data.onApply,
-                onExpire: data.onExpire,
-                onTick: data.onTick
-            };
-            this.statusEffects.set(type, effect);
-
-            // Call onApply callback if provided
-            if (effect.onApply) {
-                effect.onApply(this, effect);
-            }
+        addScore(BALANCE.score.tank * getWave()); addEnemyKill(); Audio.playEnemyDeath();
+        if (player) player.gainExp(this.expValue);
+        if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
+            const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
+            const currentWep = BALANCE.characters.kao.weapons[wepKey];
+            if (currentWep) player.addKill(currentWep.name);
         }
+        Achievements.stats.kills++;
+        if (Math.random() < BALANCE.powerups.dropRate * BALANCE.tank.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
     }
-
-    /**
-     * Remove a status effect from this enemy
-     * @param {string} type - Effect type to remove
-     */
-    removeStatus(type) {
-        const effect = this.statusEffects.get(type);
-        if (effect) {
-            // Call onExpire callback if provided
-            if (effect.onExpire) {
-                effect.onExpire(this, effect);
-            }
-            this.statusEffects.delete(type);
-        }
-    }
-
-    /**
-     * Get status effect data
-     * @param {string} type - Effect type to retrieve
-     * @returns {object|null} Effect data or null if not found
-     */
-    getStatus(type) {
-        return this.statusEffects.get(type) || null;
-    }
-
-    /**
-     * Update all status effects, call onTick callbacks, remove expired ones
-     * @param {number} dt - Delta time in seconds
-     */
-    tickStatuses(dt) {
-        const now = performance.now() / 1000;
-        const toRemove = [];
-
-        for (const [type, effect] of this.statusEffects) {
-            // Check expiration
-            if (effect.expireAt <= now) {
-                toRemove.push(type);
-                continue;
-            }
-
-            // Call onTick callback if provided
-            if (effect.onTick) {
-                effect.onTick(this, effect, dt);
-            }
-        }
-
-        // Remove expired effects
-        for (const type of toRemove) {
-            this.removeStatus(type);
-        }
-    }
-    // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
+    // draw() → EnemyRenderer.drawTank()
 }
 
-class MageEnemy extends Entity {
+class MageEnemy extends EnemyBase {
     constructor(x, y) {
-        super(x, y, BALANCE.mage.radius);
-        this.id = ++_enemyIdCounter; // ── Phase 2: unique ID for sticky stack Map key ──
-        // Moderate exponential HP scaling: baseHp * ((1 + hpPerWave)^wave)
-        // Uses config values for proper balance tuning
+        super(x, y, BALANCE.mage.radius, 'mage');
         const hpGrowth = 1 + BALANCE.mage.hpPerWave;
         this.maxHp = Math.floor(BALANCE.mage.baseHp * Math.pow(hpGrowth, getWave()));
         this.hp = this.maxHp;
@@ -510,38 +398,12 @@ class MageEnemy extends Entity {
         this.damage = BALANCE.mage.baseDamage + getWave() * BALANCE.mage.damagePerWave;
         this.color = BALANCE.mage.color; this.type = 'mage';
         this.soundWaveCD = 0; this.meteorCD = 0; this.expValue = BALANCE.mage.expValue;
-
-        // ── Hit flash state ──────────────────────────────────
-        this.hitFlashTimer = 0;
-
-        // ── Phase 2 Session 3: Sticky slow state ─────────────
-        this.stickyStacks = 0;
-        this.stickySlowMultiplier = 1;
-
-        //  StatusEffect Framework Core 
-        this.statusEffects = new Map();
     }
 
     update(dt, player) {
         if (this.dead) return;
 
-        //  StatusEffect Framework Tick 
-        this.tickStatuses(dt);        // ── Tick hit-flash timer ─────────────────────────────
-
-        // ── Session B: Read sticky status and update slow multiplier ──
-        const stickyStatus = this.getStatus("sticky");
-        if (stickyStatus && stickyStatus.meta) {
-            const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
-            this.stickySlowMultiplier = Math.max(0.2, 1 - (slowPerStack * stickyStatus.stacks));
-            this.stickyStacks = stickyStatus.stacks;
-        }
-        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
-        // ── Ignite debuff (applied by AutoPlayer Vacuum Heat) ────────
-        if ((this.igniteTimer ?? 0) > 0) {
-            this.igniteTimer -= dt;
-            this.takeDamage((this.igniteDPS ?? 12) * dt);
-            if (this.igniteTimer <= 0) { this.igniteTimer = 0; this.igniteDPS = 0; }
-        }
+        this._tickShared(dt, player);
 
         const d = dist(this.x, this.y, player.x, player.y), od = BALANCE.mage.orbitDistance;
         this.angle = Math.atan2(player.y - this.y, player.x - this.x);
@@ -557,10 +419,15 @@ class MageEnemy extends Entity {
                 else { this.vx *= 0.5; this.vy *= 0.5; }
             } else { this.vx *= 0.85; this.vy *= 0.85; }
         } else {
-            // ── Phase 2 Session 3: apply sticky slow multiplier to movement ──
+            // Mage: AI steering 25% — orbit logic takes priority
             if (d < od && !player.isInvisible) {
-                this.vx = -Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-                this.vy = -Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+                const baseX = -Math.cos(this.angle);
+                const baseY = -Math.sin(this.angle);
+                const blendX = baseX * 0.75 + this._aiMoveX * 0.25;
+                const blendY = baseY * 0.75 + this._aiMoveY * 0.25;
+                const blendLen = Math.hypot(blendX, blendY) || 1;
+                this.vx = (blendX / blendLen) * this.speed * this.stickySlowMultiplier;
+                this.vy = (blendY / blendLen) * this.speed * this.stickySlowMultiplier;
             } else if (d > od + BALANCE.mage.orbitDistanceBuffer) {
                 this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
                 this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
@@ -579,138 +446,29 @@ class MageEnemy extends Entity {
             }
             this.soundWaveCD = BALANCE.mage.soundWaveCooldown;
         }
-        if (this.meteorCD <= 0 && Math.random() < (0.005 * dt * 60)) {  // BUG B1 FIX: was per-frame (×60 spikes at 60fps) → now per-second
+        if (this.meteorCD <= 0 && Math.random() < (0.005 * dt * 60)) {
             window.specialEffects.push(new MeteorStrike(player.x + rand(-300, 300), player.y + rand(-300, 300)));
             this.meteorCD = BALANCE.mage.meteorCooldown;
             Audio.playMeteorWarning();
         }
     }
 
-    takeDamage(amt, player) {
-        this.hp -= amt;
-
-        // ── Trigger hit flash ────────────────────────────────
-        this.hitFlashTimer = HIT_FLASH_DURATION;
-
-        if (this.hp <= 0) {
-            this.dead = true;
-            spawnParticles(this.x, this.y, 25, this.color);
-            // 🩸 Battle Scars: รอยม่วงเข้มของ Mage
-            if (typeof decalSystem !== 'undefined') {
-                decalSystem.spawn(this.x, this.y, '#4c1d95', 10 + Math.random() * 6, 16);
-            }
-            addScore(BALANCE.score.mage * getWave()); addEnemyKill(); Audio.playEnemyDeath();
-            if (player) player.gainExp(this.expValue);
-            // FIX (BUG-4): Correctly identify Kao and fetch weapon string key to allow Awakening
-            if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
-                const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
-                const currentWep = BALANCE.characters.kao.weapons[wepKey];
-                if (currentWep) player.addKill(currentWep.name);
-            }
-            Achievements.stats.kills++;
-            if (Math.random() < BALANCE.powerups.dropRate * BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
+    _onDeath(player) {
+        spawnParticles(this.x, this.y, 25, this.color);
+        if (typeof decalSystem !== 'undefined') {
+            decalSystem.spawn(this.x, this.y, '#4c1d95', 10 + Math.random() * 6, 16);
         }
-    }
-
-    // 
-    // STATUSEFFECT FRAMEWORK - Session A
-    // 
-
-    /**
-     * Add or merge a status effect on this enemy
-     * @param {string} type - Effect type identifier
-     * @param {object} data - Effect data to merge (stacks, expireAt, meta, callbacks)
-     */
-    addStatus(type, data) {
-        const existing = this.statusEffects.get(type);
-        const now = performance.now() / 1000;
-
-        if (existing) {
-            // Merge with existing effect
-            if (data.stacks !== undefined) {
-                existing.stacks += data.stacks;
-            }
-            if (data.expireAt !== undefined) {
-                existing.expireAt = Math.max(existing.expireAt, data.expireAt);
-            }
-            if (data.meta) {
-                existing.meta = { ...existing.meta, ...data.meta };
-            }
-            // Override callbacks if provided
-            if (data.onApply) existing.onApply = data.onApply;
-            if (data.onExpire) existing.onExpire = data.onExpire;
-            if (data.onTick) existing.onTick = data.onTick;
-        } else {
-            // Create new effect
-            const effect = {
-                type,
-                stacks: data.stacks || 1,
-                expireAt: data.expireAt || (now + (data.duration || 5)),
-                meta: data.meta || {},
-                onApply: data.onApply,
-                onExpire: data.onExpire,
-                onTick: data.onTick
-            };
-            this.statusEffects.set(type, effect);
-
-            // Call onApply callback if provided
-            if (effect.onApply) {
-                effect.onApply(this, effect);
-            }
+        addScore(BALANCE.score.mage * getWave()); addEnemyKill(); Audio.playEnemyDeath();
+        if (player) player.gainExp(this.expValue);
+        if (player && player.charId === 'kao' && typeof player.addKill === 'function') {
+            const wepKey = typeof weaponSystem !== 'undefined' ? (weaponSystem.currentWeapon || 'auto') : 'auto';
+            const currentWep = BALANCE.characters.kao.weapons[wepKey];
+            if (currentWep) player.addKill(currentWep.name);
         }
+        Achievements.stats.kills++;
+        if (Math.random() < BALANCE.powerups.dropRate * BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
     }
-
-    /**
-     * Remove a status effect from this enemy
-     * @param {string} type - Effect type to remove
-     */
-    removeStatus(type) {
-        const effect = this.statusEffects.get(type);
-        if (effect) {
-            // Call onExpire callback if provided
-            if (effect.onExpire) {
-                effect.onExpire(this, effect);
-            }
-            this.statusEffects.delete(type);
-        }
-    }
-
-    /**
-     * Get status effect data
-     * @param {string} type - Effect type to retrieve
-     * @returns {object|null} Effect data or null if not found
-     */
-    getStatus(type) {
-        return this.statusEffects.get(type) || null;
-    }
-
-    /**
-     * Update all status effects, call onTick callbacks, remove expired ones
-     * @param {number} dt - Delta time in seconds
-     */
-    tickStatuses(dt) {
-        const now = performance.now() / 1000;
-        const toRemove = [];
-
-        for (const [type, effect] of this.statusEffects) {
-            // Check expiration
-            if (effect.expireAt <= now) {
-                toRemove.push(type);
-                continue;
-            }
-
-            // Call onTick callback if provided
-            if (effect.onTick) {
-                effect.onTick(this, effect, dt);
-            }
-        }
-
-        // Remove expired effects
-        for (const type of toRemove) {
-            this.removeStatus(type);
-        }
-    }
-    // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
+    // draw() → EnemyRenderer.drawMage()
 }
 
 // ════════════════════════════════════════════════════════════
@@ -779,7 +537,7 @@ class PowerUp {
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
 window.Enemy = Enemy;
-window.EnemyBase = Enemy;    // alias for Debug.html check
+window.EnemyBase = EnemyBase;  // alias for Debug.html check
 window.TankEnemy = TankEnemy;
 window.MageEnemy = MageEnemy;
 window.PowerUp = PowerUp;

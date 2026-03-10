@@ -257,6 +257,10 @@ class KruManop extends BossBase {
             spawnParticles(this.x, this.y, 35, '#ef4444');
             spawnParticles(this.x, this.y, 20, '#d97706');
 
+            // ── PlayerPatternAnalyzer: reset history at phase break ──
+            // Fresh data more relevant — player may shift strategy now
+            if (typeof playerAnalyzer !== 'undefined') playerAnalyzer.reset();
+
             this._summonDog();
 
             this.speak('You think you can stop me?!');
@@ -271,6 +275,15 @@ class KruManop extends BossBase {
                 * 1.15;
             this.skills.goldfish.cd = 0;
             this.skills.bubble.cd = 0;
+
+            // ── PlayerPatternAnalyzer: reset + immediate kite-counter on phase 3 ──
+            if (typeof playerAnalyzer !== 'undefined') {
+                playerAnalyzer.reset();
+                // Force-prime: reduce DeadlyGraph + ChalkWall CD so kiter gets punished fast
+                if (this.skills.graph.cd > 3) this.skills.graph.cd = 3;
+                if (this.skills.chalkWall.cd > 4) this.skills.chalkWall.cd = 4;
+            }
+
             spawnFloatingText('🐟 THE GOLDFISH LOVER!', this.x, this.y - 100, '#38bdf8', 42);
             spawnFloatingText('🫧 BUBBLE PRISON!', this.x, this.y - 145, '#7dd3fc', 30);
             addScreenShake(30);
@@ -429,6 +442,22 @@ class KruManop extends BossBase {
 
             if (this.timer > 2) {
                 this.timer = 0;
+
+                // ── PlayerPatternAnalyzer: counter-pick attack ──
+                if (typeof playerAnalyzer !== 'undefined') {
+                    const pattern = playerAnalyzer.dominantPattern();
+                    // Kiting: player runs away → DeadlyGraph (ranged) or ChalkWall to cut off
+                    if (pattern === 'kiting' && playerAnalyzer.kitingScore() > 0.55) {
+                        if (this.skills.graph.cd <= 0) { this.useDeadlyGraph(player); return; }
+                        if (this.phase >= 2 && this.skills.chalkWall.cd <= 0) { this.useChalkWall(player); return; }
+                    }
+                    // Standing still: player is stationary → slam for high punishment
+                    if (pattern === 'standing' && playerAnalyzer.standingScore() > 0.6) {
+                        if (this.skills.slam.cd <= 0) { this.useEquationSlam(); return; }
+                        if (this.skills.log.cd <= 0) { this.useLog457(); return; }
+                    }
+                }
+
                 const barkChance = this.phase === 2 ? 0.40 : 0;
                 // DogPackCombo — highest phase-2 priority: dog must be alive
                 if (this.phase >= 2 && this.dog && !this.dog.dead &&

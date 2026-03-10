@@ -666,6 +666,11 @@ function spawnEnemies(count) {
         else
             window.enemies.push(new Enemy(x, y));
 
+        // ── Tag squad role immediately on spawn (before first SquadAI tick) ──
+        if (typeof SquadAI !== 'undefined') {
+            SquadAI.tagOnSpawn(window.enemies[window.enemies.length - 1]);
+        }
+
         // Speed wave: patch freshly spawned enemy immediately
         if (window.isSpeedWave) {
             const e = window.enemies[window.enemies.length - 1];

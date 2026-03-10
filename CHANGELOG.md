@@ -4,6 +4,60 @@
 
 ---
 
+## v3.27.12 — AI Enhancement System (Major Gameplay Update)
+*Released: March 10, 2026*
+
+### 🧠 AI System Implementation
+- **UtilityAI Framework**: 2Hz decision-making system with personality-weighted actions for all enemy types
+- **EnemyBase Refactor**: Consolidated ~220 lines of duplicate StatusEffect code into single inheritance base class
+- **SquadAI Coordination**: 1Hz squad coordination with role assignments (assault, flanker, shield, support)
+- **PlayerPatternAnalyzer**: Float32Array ring buffer tracking player movement patterns for adaptive boss AI
+- **EnemyActions Library**: Static tactical action library (retreat, flank, shieldWall, strafeOrbit)
+
+### 🎯 Enemy Intelligence Features
+- **Personality System**: Basic (balanced), Tank (aggressive), Mage (cautious) with configurable weights
+- **Dynamic Decision Making**: Enemies choose between ATTACK, RETREAT, FLANK, SHIELD_WALL based on context
+- **Squad Role Override**: Formation tactics take priority while retreat always wins for safety
+- **Wall-Aware Retreat**: Enemies avoid canvas edges when fleeing
+- **Ally-Density Flanking**: Spread tactics based on nearby ally positions
+
+### 🤝 Squad Coordination
+- **Role Assignment System**: Automatic tagging of enemies with tactical roles on spawn
+- **BucketGrid Optimization**: O(N) spatial queries instead of O(N²) distance calculations
+- **Formation Behaviors**: Tanks form shield walls, basic enemies assault or flank, mages provide support
+- **Dynamic Role Reassignment**: 1Hz updates adapt to changing battlefield conditions
+
+### 🎮 Boss AI Enhancement
+- **Pattern Recognition**: Detects kiting, circling, standing, and mixed player behaviors
+- **Adaptive Counter-Strategy**: Bosses select skills based on dominant player patterns
+- **KruFirst Integration**: SUVAT_CHARGE for kiting, ParabolicVolley with lead-shot for circling
+- **KruManop Integration**: DeadlyGraph/ChalkWall priority for kiting, Slam/Log457 for standing
+
+### ⚙️ Technical Architecture
+- **Performance Optimized**: <3ms overhead for 40 enemies through throttled updates
+- **Zero Allocation Hot Path**: Ring buffers and object reuse prevent garbage collection spikes
+- **Physics Compatibility**: AI uses _aiMoveX/_aiMoveY overrides, never conflicts with vacuum/sticky systems
+- **Clean Separation**: AI loop separate from StatusEffect.onTick to maintain framework purity
+
+### 📁 New Files Created
+- `js/ai/UtilityAI.js` - Core AI decision system
+- `js/ai/EnemyActions.js` - Static tactical action library  
+- `js/ai/SquadAI.js` - Squad coordination system
+- `js/ai/PlayerPatternAnalyzer.js` - Player behavior tracking
+
+### 📝 Configuration System
+- **BALANCE.ai Section**: Complete configuration for decision intervals, personalities, actions, and squad parameters
+- **Personality Tuning**: Adjustable aggression, caution, and teamwork weights per enemy type
+- **Action Utilities**: Configurable base weights and thresholds for AI decisions
+- **Squad Parameters**: Coordination radius and update intervals
+
+### 🎯 Template System
+- **EnemyBase Inheritance**: New enemies automatically get AI + StatusEffect + hitFlash
+- **Simple Integration**: Extend EnemyBase, call _tickShared(), implement movement logic only
+- **Auto-Tagging**: SquadAI.tagOnSpawn() automatically assigns roles to new enemies
+
+---
+
 ## v3.27.11 — BGM Crossfade System (Audio Enhancement)
 *Released: March 10, 2026*
 

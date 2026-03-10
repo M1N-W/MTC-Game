@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.27.11
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.27.12
 
 ---
 
@@ -38,9 +38,21 @@
 | `map.js` | แผนที่, collision detection, MTCRoom |
 | `ui.js` | HUD, **AchievementSystem** (อยู่ที่นี่ — ไม่ใช่ไฟล์แยก) |
 | `menu.js` | Main menu, `selectCharacter()` |
-| `ai.js` | Enemy AI behaviors |
+| `ai.js` | Legacy AI behaviors (pre-EnemyBase refactor) — verify ยังใช้อยู่ไหม |
 | `utils.js` | Utility functions |
 | `tutorial.js` | Tutorial system |
+
+### `/js/ai/` — AI Enhancement System 🟡
+Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → SquadAI.js`
+
+| ไฟล์ | หน้าที่ |
+|------|--------|
+| `UtilityAI.js` | Core decision system — 2Hz timer, utility scoring, personality-weighted, delegates actions ไป EnemyActions, อ่าน `_squadRole` override |
+| `EnemyActions.js` | Static action library — `retreat()`, `flank()`, `shieldWall()`, `strafeOrbit()` (stateless, ไม่มี state ของตัวเอง) |
+| `PlayerPatternAnalyzer.js` | `window.playerAnalyzer` singleton — Float32Array(30) ring buffer, detect: kiting/circling/standing/mixed, `getDominantStyle()`, `dominantDirection()`, `reset()` |
+| `SquadAI.js` | `window.squadAI` singleton — 1Hz coordinator, `_BucketGrid` O(N), `tagOnSpawn()` static, role assignment: assault/flanker/shield/support |
+
+> ⚠️ `EnemyPersonality.js`, `FormationController.js`, `BossAI.js` **ไม่มี** — ถูก revised ออก: Personality อยู่ใน `BALANCE.ai.personalities` (config.js), Formation รวมใน SquadAI, Boss AI อยู่ใน ManopBoss/FirstBoss โดยตรง
 
 ### `/js/systems/`
 | ไฟล์ | หน้าที่ |
@@ -55,7 +67,7 @@
 | ไฟล์ | หน้าที่ |
 |------|--------|
 | `base.js` | Base Entity class — ทุก entity สืบทอด |
-| `enemy.js` | Enemy types (Enemy, TankEnemy, MageEnemy) |
+| `enemy.js` | **EnemyBase** (บรรทัด 87) + Enemy, TankEnemy, MageEnemy — ศัตรูใหม่ทุกตัว extends EnemyBase ได้ AI+StatusEffect+hitFlash ทันที |
 | `summons.js` | Pets, helpers, power-up entities |
 
 ### `/js/entities/boss/`
@@ -375,8 +387,8 @@ if ((this.energy ?? 0) < cost) {
 ⚠️ window exports ต้องมี backward-compat alias (เช่น `window.BossXxx = XxxClass`) สำหรับ WaveManager + AdminSystem
 
 ### เพิ่มศัตรูใหม่
-**ต้องแก้:** `enemy.js`, `config.js`, `WaveManager.js`, `audio.js`, `effects.js`
-**อาจกระทบ:** `ai.js`, `weapons.js`
+**ต้องแก้:** `enemy.js` (extends EnemyBase — ได้ AI+StatusEffect ทันที), `config.js`, `WaveManager.js` (SquadAI.tagOnSpawn() จะ auto-tag หลัง enemies.push()), `audio.js`, `effects.js`
+**อาจกระทบ:** `weapons.js`
 
 ### เพิ่มอาวุธใหม่
 **ต้องแก้:** `weapons.js`, `config.js`, `[Character].js`, `audio.js`, `effects.js`
@@ -612,9 +624,86 @@ Shell casings          effects.js                    ShellCasingSystem
 
 ---
 
-## 📝 Recent Major Changes (v3.27.6)
+## 🧠 AI Enhancement System 🟡
 
-### Cooldown HUD Bug Fixes (March 9, 2026)
+### Architecture
+| Layer | ไฟล์ | Update Rate |
+|-------|------|------------|
+| Individual AI | `UtilityAI.js` | 2Hz (0.5s timer) |
+| Tactical Actions | `EnemyActions.js` | เรียกจาก UtilityAI (stateless) |
+| Player Analysis | `PlayerPatternAnalyzer.js` | Sample 10Hz / Compute 4Hz |
+| Squad Coordination | `SquadAI.js` | 1Hz (1.0s timer) |
+| Entity Foundation | `EnemyBase` (enemy.js) | Every frame (via `_tickShared`) |
+
+### EnemyBase — Auto-inherited by all enemies
+ศัตรูใหม่ที่ `extends EnemyBase` ได้รับอัตโนมัติ: UtilityAI, StatusEffect framework, hit flash, sticky slow, ignite DoT, squad role tagging, AI dispose on death
+
+**Template:**
+```js
+class SniperEnemy extends EnemyBase {
+    constructor(x, y) { super(x, y, 18, 'mage'); this.type = 'sniper'; }
+    update(dt, player) {
+        if (this.dead) return;
+        this._tickShared(dt, player); // AI+StatusEffect+hitFlash ครบ
+        // movement + attack logic เท่านั้น
+    }
+    _onDeath(player) { /* death FX + score */ }
+}
+```
+
+### SquadAI — Role System
+| Role | Enemy Type | Action | เงื่อนไข |
+|------|-----------|--------|---------|
+| assault | basic | ATTACK direct | basic ใกล้ centroid (< 50% radius) |
+| flanker | basic | FLANK ally-density | basic นอก centroid + flankerCount < 3 |
+| shield | tank | SHIELD_WALL cohesion | tank ทุกตัวเสมอ |
+| support | mage | orbit + cast | mage ทุกตัวเสมอ |
+
+### PlayerPatternAnalyzer — Boss Counter Logic
+| Pattern | Detection | Boss Response |
+|---------|-----------|--------------|
+| kiting | distInc > 55% | KruFirst: SUVAT_CHARGE / FREE_FALL. KruManop: DeadlyGraph/ChalkWall priority |
+| circling | both-side perpendicular | KruFirst: ParabolicVolley lead-shot (dominant direction) |
+| standing | standCount > 60% | KruManop Phase 3: Slam / Log457 priority |
+| mixed | ไม่มี dominant | default skill rotation |
+
+### Key Architecture Rules (อย่าเปลี่ยน)
+- AI เขียนแค่ `_aiMoveX/_aiMoveY` — ห้ามเขียน `vx/vy` โดยตรง (vacuum/sticky เป็นเจ้าของ)
+- `_tickShared()` ต้องเรียกต้น `update()` ของทุก subclass ก่อน logic ของ class
+- BossBase ไม่มี `update()` — Boss AI ใส่ใน ManopBoss/FirstBoss โดยตรง
+- Retreat ชนะ squad role override เสมอ (HP ต่ำ = หนีก่อน formation)
+
+### Performance Budget
+| Component | Cost | Mitigation |
+|-----------|------|-----------|
+| UtilityAI.tick() × 40 enemies | ~2ms/frame | อัปเดต 2Hz ไม่ใช่ 60Hz |
+| SquadAI.assignRoles() | O(N) ทุก 1s | _BucketGrid — ไม่รันทุก frame |
+| PlayerPatternAnalyzer.record() | O(1) | ring buffer ไม่มี allocation |
+
+**เป้าหมาย: < 3ms overhead ต่อ frame บน 40 enemies**
+
+---
+
+## 📝 Recent Major Changes (v3.27.11)
+
+### AI Enhancement System — Week 1–4 Complete (March 10, 2026)
+**Purpose:** ระบบ AI ศัตรูและ Boss แบบ Utility AI พร้อม Squad Coordination และ Player Pattern Analysis
+
+**Files Changed:** `enemy.js` (EnemyBase), `js/ai/UtilityAI.js`, `js/ai/EnemyActions.js` (NEW), `js/ai/SquadAI.js` (NEW), `js/ai/PlayerPatternAnalyzer.js` (NEW), `WaveManager.js`, `game.js`, `config.js`, `index.html`, `ManopBoss.js`, `FirstBoss.js`
+
+**Key Changes:**
+- **EnemyBase refactor** — ตัด ~220 บรรทัด duplicate StatusEffect × 3 classes รวม singleton ไว้ใน EnemyBase
+- **UtilityAI** — 2Hz decision, personality-weighted (config.js `BALANCE.ai.personalities`), delegates actions ไป EnemyActions
+- **EnemyActions** — static `retreat()` (wall-avoid), `flank()` (ally-density), `shieldWall()` (tank cohesion), `strafeOrbit()` (mage)
+- **SquadAI** — 1Hz `_BucketGrid` O(N), role assignment ตอน spawn, `window.squadAI`
+- **PlayerPatternAnalyzer** — Float32Array(30) ring buffer, detect kiting/circling/standing, feeds Boss phase decisions
+- **Boss AI hooks** — KruFirst `_pickSkill()` + KruManop phase 2/3 transition ใช้ `playerAnalyzer.getDominantStyle()`
+
+---
+
+## 📝 Previous Major Changes (v3.27.6)
+
+### Cooldown HUD Bug Fixes (v3.27.6 — March 9, 2026)
 **Purpose:** แก้ arc overlay และ timer ของ Skill HUD ทุกตัวละครให้ sync กับ state จริง
 
 **Key Changes:**
@@ -628,7 +717,7 @@ Shell casings          effects.js                    ShellCasingSystem
 
 ---
 
-### Big Map Visual Overhaul (March 9, 2026)
+### Big Map Visual Overhaul (v3.27.6 — March 9, 2026)
 **Purpose:** Visual quality pass across all map draw methods + lighting consistency fixes
 
 **Key Changes:**

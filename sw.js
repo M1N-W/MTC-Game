@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.27.11'; // v3.27.11: BGM Crossfade System - Implemented smooth audio transitions between tracks with same-track guard, Web Audio API GainNode routing, 400ms fade-out effects, and enhanced volume control to prevent audio cutting during wave transitions
+const CACHE_NAME = 'mtc-cache-v3.27.12'; // v3.27.12: AI Enhancement System - Complete implementation of UtilityAI for enemies with SquadAI coordination, PlayerPatternAnalyzer for boss AI, and EnemyBase refactor with automatic AI+StatusEffect inheritance
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

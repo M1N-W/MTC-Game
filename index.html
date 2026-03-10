@@ -264,16 +264,14 @@
             <div class="skill-divider" id="divider-main"></div>
 
             <!-- Q slot: NAGA (Poom) / TELEPORT (Kao) / VACUUM (Auto) — shown by setupCharacterHUD -->
-            <div class="skill-icon t-emerald" id="naga-icon"
-                style="display:none;">
+            <div class="skill-icon t-emerald" id="naga-icon" style="display:none;">
                 <div class="key-hint" style="background:#064e3b;color:#6ee7b7;">Q</div>🐉
                 <div class="cooldown-mask" id="naga-cd"></div>
                 <span id="naga-timer"></span>
                 <div class="skill-name" id="sn-naga" style="color:#6ee7b7;">NAGA</div>
             </div>
             <!-- Ritual Burst slot — Poom-exclusive, shown by setupCharacterHUD -->
-            <div class="skill-icon t-emerald" id="ritual-icon"
-                style="display:none;">
+            <div class="skill-icon t-emerald" id="ritual-icon" style="display:none;">
                 <div class="key-hint" style="background:#064e3b;color:#6ee7b7;">R</div>🌾
                 <div class="cooldown-mask" id="ritual-cd"></div>
                 <span id="ritual-timer"></span>
@@ -290,8 +288,7 @@
             <div class="skill-divider" id="divider-util" style="display:none;"></div>
 
             <!-- Database shortcut -->
-            <div class="skill-icon t-blue" id="db-hud-icon"
-                style="display:none;">
+            <div class="skill-icon t-blue" id="db-hud-icon" style="display:none;">
                 <div class="key-hint" style="background:#0c4a6e;color:#7dd3fc;">E</div>🗄️
                 <div class="skill-name" id="sn-database" style="color:#67e8f9;">DATABASE</div>
             </div>
@@ -596,6 +593,12 @@
     <script src="js/tutorial.js"></script>
 
     <script src="js/entities/base.js"></script>
+
+    <!-- AI Systems — โหลดหลัง base.js, ก่อน enemy.js -->
+    <script src="js/ai/UtilityAI.js"></script>
+    <script src="js/ai/EnemyActions.js"></script>
+    <script src="js/ai/PlayerPatternAnalyzer.js"></script>
+    <script src="js/ai/SquadAI.js"></script>
 
     <!-- NEW OOP PLAYER HIERARCHY -->
     <script src="js/entities/player/PlayerBase.js"></script>

@@ -688,6 +688,39 @@ const BALANCE = {
         serverRackLightRadius: 65, // เพิ่ม 55→65
         nightR: 3, nightG: 6, nightB: 20  // เข้มขึ้น เพิ่ม blue tint
     },
+    // ══════════════════════════════════════════════════════
+    // 🤖  UTILITY AI SYSTEM — enemy decision making
+    // UtilityAI.js reads all values from here. Edit here only.
+    // ══════════════════════════════════════════════════════
+    ai: {
+        // How often each enemy makes a new decision (seconds)
+        // 0.5 = 2Hz — decoupled from 60Hz game loop
+        decisionInterval: 0.5,
+
+        // Personality weights per enemy type
+        // aggression: desire to attack  (0–1)
+        // caution:    desire to retreat when low HP  (0–1)
+        // teamwork:   desire to flank when allies nearby  (0–1)
+        personalities: {
+            basic: { aggression: 0.6, caution: 0.2, teamwork: 0.3 },
+            tank: { aggression: 0.8, caution: 0.1, teamwork: 0.5 },
+            mage: { aggression: 0.3, caution: 0.8, teamwork: 0.2 },
+        },
+
+        // Base utility weights + per-action tuning
+        actions: {
+            attack: { base: 1.0 },
+            retreat: { base: 0.8, hpThreshold: 0.3 },  // trigger below 30% HP
+            flank: { base: 0.6, optimalDist: 220 },  // best at ~220px from player
+        },
+
+        // Squad / ally awareness
+        squad: {
+            coordinationRadius: 300,  // px — allies within this range count for teamwork
+            squadInterval: 1.0,       // seconds between SquadAI role reassignment ticks
+        },
+    },
+
     map: {
         size: 3000,
         objectDensity: 0.12,

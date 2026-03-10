@@ -263,6 +263,11 @@ function updateGame(dt) {
 
     if (!_inTutorial && window.boss) window.boss.update(dt, window.player);
 
+    // ── PlayerPatternAnalyzer: sample after player update, before boss AI reads it ──
+    if (typeof playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
+        playerAnalyzer.sample(dt, window.player, window.boss);
+        playerAnalyzer.update(dt);
+    }
     // ── Boss Safe-Zone Exclusion ───────────────────────────────────────────────
     // ป้องกัน player lure boss เข้า MTC Room แล้ว spawn-kill ฟรี
     // ทำ 2 อย่างพร้อมกัน:
@@ -300,6 +305,8 @@ function updateGame(dt) {
                 window.enemies.pop();
             }
         }
+        // ── SquadAI: 1Hz role assignment across all living enemies ──
+        if (typeof squadAI !== 'undefined') squadAI.update(dt, window.enemies, window.player);
     }
 
     if (!_inTutorial && (BALANCE.waves.bossEveryNWaves > 0 ? getWave() % BALANCE.waves.bossEveryNWaves !== 0 : true) && window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {

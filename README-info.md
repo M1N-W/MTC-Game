@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.27.11 | **Latest Update:** BGM Crossfade System (Audio Enhancement) - Implemented smooth audio transitions between tracks with same-track guard, Web Audio API GainNode routing, 400ms fade-out effects, and enhanced volume control to prevent audio cutting during wave transitions
+> **Current Version:** Beta v3.27.12 | **Latest Update:** AI Enhancement System - Complete implementation of UtilityAI for enemies with SquadAI coordination, PlayerPatternAnalyzer for boss AI, and EnemyBase refactor with automatic AI+StatusEffect inheritance
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
@@ -29,7 +29,7 @@
 * **🗄️ MTC Database & Admin Console:** Advanced permission-based terminal system with three-tier access levels (GUEST/OPERATOR/ROOT), debug commands, and real-time FPS monitoring
 * **🎨 Visual Polish:** SVG Portrait System, 6-layer Wanchai Stand rendering with JoJo-style aesthetics, thermodynamic color palette (crimson→amber→yellow), enhanced body design with gold pauldrons and armor, premium Mongkhon crown with 5 concave spikes, realistic Muay Thai boxing glove rush system with ORA Combo escalation, progressive depth scaling, Military HUD theme, and enhanced particle effects
 * **🎵 Enhanced Audio System:** BGM crossfade transitions with same-track guard, Web Audio API GainNode routing for smooth volume control, 400ms fade-out effects between tracks (battle↔boss), and seamless wave transitions without audio cutting
-* **🤖 Advanced AI:** Autonomous Wanchai Stand with tactical intelligence and positioning
+* **🤖 Advanced AI System:** UtilityAI decision-making with personality-weighted behaviors, SquadAI coordination with tactical role assignments, PlayerPatternAnalyzer for adaptive boss AI, and EnemyBase refactor providing automatic AI inheritance for all enemies
 * **🌌 Domain Expansion:** Ultimate boss abilities with arena-wide effects, physics manipulation, and enhanced visual effects including pillar of light, energy tendrils, and dynamic grid animations
 
 ---

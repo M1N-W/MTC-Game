@@ -453,6 +453,51 @@ class KruFirst extends BossBase {
     }
 
     _pickSkill(player, d) {
+        // ── PlayerPatternAnalyzer: counter player habits ──────
+        // Reads cached results — no perf cost (recomputed 4Hz externally)
+        if (typeof playerAnalyzer !== 'undefined') {
+            const pattern = playerAnalyzer.dominantPattern();
+            const dir = playerAnalyzer.dominantDirection();
+
+            // Kiting: player running away → SUVAT_CHARGE or FREE_FALL to cut distance
+            if (pattern === 'kiting' && playerAnalyzer.kitingScore() > 0.6) {
+                if (this.skills.suvat.cd <= 0 && d > 150) {
+                    this._enterState('SUVAT_CHARGE');
+                    this.skills.suvat.cd = this.skills.suvat.max;
+                    spawnFloatingText('v = u + at', this.x, this.y - 80, '#ef4444', 24);
+                    return;
+                }
+                if (this.skills.freeFall.cd <= 0) {
+                    this.skills.freeFall.cd = this.skills.freeFall.max;
+                    this._fallTargetX = player.x;
+                    this._fallTargetY = player.y;
+                    window.specialEffects.push(new FreeFallWarningRing(
+                        this._fallTargetX, this._fallTargetY, this.FREE_FALL_WARN
+                    ));
+                    spawnFloatingText('h=½gt² …', this.x, this.y - 80, '#ef4444', 26);
+                    this._enterState('FREE_FALL');
+                    return;
+                }
+            }
+
+            // Circling: spawn ParabolicVolley to intercept orbit path
+            if (pattern === 'circling' && this._derivationMode && this.skills.parabolic.cd <= 0) {
+                // Lead the shot: offset target in dominant orbit direction
+                const leadSign = dir === 'right' ? 1 : -1;
+                const bpDist = d || 1;
+                const perpX = -(player.y - this.y) / bpDist;
+                const perpY = (player.x - this.x) / bpDist;
+                const leadX = player.x + perpX * 120 * leadSign;
+                const leadY = player.y + perpY * 120 * leadSign;
+                this.skills.parabolic.cd = this.skills.parabolic.max;
+                if (typeof ParabolicVolley !== 'undefined') {
+                    ParabolicVolley.fire(this.x, this.y, leadX, leadY, this.isAdvanced);
+                    spawnFloatingText('INTERCEPT!', this.x, this.y - 75, '#c084fc', 22);
+                }
+                return;
+            }
+        }
+
         // ── SINGULARITY Mode: QuantumLeap highest priority ────
         if (this._singularityMode && this.skills.suvat.cd <= 0 && d > 80 && Math.random() < 0.40) {
             this._enterState('QUANTUM_LEAP');
@@ -687,5 +732,5 @@ class KruFirst extends BossBase {
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.KruFirst  = KruFirst;
+window.KruFirst = KruFirst;
 window.BossFirst = KruFirst;  // backward-compat alias (WaveManager, AdminSystem)
