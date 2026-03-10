@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.6
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.7
 
 ---
 
@@ -898,6 +898,21 @@ class SniperEnemy extends EnemyBase {
 - **SquadAI** — 1Hz `_BucketGrid` O(N), role assignment ตอน spawn, `window.squadAI`
 - **PlayerPatternAnalyzer** — Float32Array(30) ring buffer, detect kiting/circling/standing, feeds Boss phase decisions
 - **Boss AI hooks** — KruFirst `_pickSkill()` + KruManop phase 2/3 transition ใช้ `playerAnalyzer.getDominantStyle()`
+
+---
+
+## 🔄 Recent Changes (v3.29.7)
+
+### Minimap Method Call Correction & Cache Cleanup (v3.29.7 — March 10, 2026)
+**Purpose:** Fixed minimap static method calls and cleaned up service worker cache
+
+**Files Changed:** `js/ui.js`, `sw.js`
+
+**Key Fixes:**
+- **Static Method Call Correction**: Fixed minimap drawing method calls to use `UIManager._methodName()` instead of `this._methodName()`
+- **Cache Cleanup**: Removed `./GODOT_EXPORT.md` from service worker cache list as the file doesn't exist
+- **Root Cause**: Previous v3.29.6 fix incorrectly changed method declarations to static but left method calls as instance methods
+- **Impact**: Minimap now renders correctly with proper static method binding and service worker no longer tries to cache non-existent file
 
 ---
 

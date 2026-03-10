@@ -1471,23 +1471,23 @@ class CanvasHUD {
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        this._minimapDrawShell(ctx, cx, cy, radarRadius, now);
+        UIManager._minimapDrawShell(ctx, cx, cy, radarRadius, now);
 
         // INNER SAVE — establishes circular clip region
         ctx.save();
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
 
-        this._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
+        UIManager._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
 
         ctx.restore();  // ← INNER restore — releases clip
 
-        this._minimapDrawLabel(ctx, cx, cy, radarRadius);
+        UIManager._minimapDrawLabel(ctx, cx, cy, radarRadius);
 
         ctx.restore();  // ← OUTER restore
     }
 
     // ── Shell: outer glow, navy fill, pulsating border, inner accent ring ────
-    _minimapDrawShell(ctx, cx, cy, radarRadius, now) {
+    static _minimapDrawShell(ctx, cx, cy, radarRadius, now) {
         // Subtle outer glow halo
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius + 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(57,255,20,0.07)'; ctx.fill();
@@ -1514,7 +1514,7 @@ class CanvasHUD {
 
     // ── Content: grid, sweep, poi markers, enemies, boss, player dot ─────────
     // Rendered inside the circular clip — nothing escapes the radar circle.
-    _minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar) {
+    static _minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar) {
         if (window.isFogWave) {
             // ── RADAR BLACKOUT during Fog Waves ──────────────────────────────
             ctx.fillStyle = 'rgba(6, 30, 50, 0.95)';
@@ -1714,7 +1714,7 @@ class CanvasHUD {
     }
 
     // ── Label + legend strip (rendered outside clip, below radar circle) ──────
-    _minimapDrawLabel(ctx, cx, cy, radarRadius) {
+    static _minimapDrawLabel(ctx, cx, cy, radarRadius) {
         ctx.shadowBlur = 0;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.font = 'bold 8px Orbitron, monospace';

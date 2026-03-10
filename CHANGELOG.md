@@ -4,6 +4,28 @@
 
 ---
 
+## v3.29.7 — Minimap Method Call Correction & Cache Cleanup
+*Released: March 10, 2026*
+
+### 🐛 Bug Fixes
+- **Static Method Call Correction**: Fixed minimap drawing method calls in UIManager class
+  - Corrected `this._minimapDrawShell()` calls to `UIManager._minimapDrawShell()`
+  - Fixed `this._minimapDrawContent()` calls to `UIManager._minimapDrawContent()`  
+  - Fixed `this._minimapDrawLabel()` calls to `UIManager._minimapDrawLabel()`
+- **Root Cause**: Previous v3.29.6 fix incorrectly changed method declarations to static but left method calls as instance methods
+- **Impact**: Minimap now renders correctly with proper static method binding
+
+### 🔧 Technical Improvements
+- **Service Worker Cache Cleanup**: Removed `./GODOT_EXPORT.md` from cache list
+  - File doesn't exist in repository, preventing unnecessary 404 errors
+  - Reduces cache size and improves service worker installation
+
+### 📝 Files Modified
+- `js/ui.js` (3 method call corrections)
+- `sw.js` (1 cache entry removal)
+
+---
+
 ## v3.29.6 — Minimap Method Call Bug Fix
 *Released: March 10, 2026*
 

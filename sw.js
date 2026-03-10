@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.29.6'; // Fixed minimap method calls - corrected static method references to instance method calls in CanvasHUD
+const CACHE_NAME = 'mtc-cache-v3.29.7'; // Fixed minimap static method calls and removed GODOT_EXPORT.md from cache
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -11,7 +11,6 @@ const urlsToCache = [
   './PROJECT_OVERVIEW.md',
   './README-info.md',
   './CHANGELOG.md',
-  './GODOT_EXPORT.md?v=' + CACHE_TIMESTAMP,
   './js/config.js?v=' + CACHE_TIMESTAMP,
   './js/utils.js?v=' + CACHE_TIMESTAMP,
   './js/audio.js?v=' + CACHE_TIMESTAMP,
