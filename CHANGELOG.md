@@ -4,7 +4,7 @@
 
 ---
 
-## v3.27.12 — AI Enhancement System (Major Gameplay Update)
+## v3.28.0 — AI Enhancement System (Major Gameplay Update)
 *Released: March 10, 2026*
 
 ### 🧠 AI System Implementation
