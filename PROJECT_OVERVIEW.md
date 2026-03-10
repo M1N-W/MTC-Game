@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.9
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.0
 
 ---
 
@@ -147,6 +147,25 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
   - `CHANGELOG.md` (add entry)
   - `README-info.md` (update current version)
   - `PROJECT_OVERVIEW.md` (update status version)
+
+### 🚦 Version Bump Ownership — Single Source of Truth
+
+**Windsurf (commit time) is the ONLY place version numbers are bumped.**
+
+| Role | Version Action |
+|------|---------------|
+| Claude (code analysis/fixes) | ❌ ไม่แตะเลขเวอร์ชัน |
+| Claude (doc summary in chat) | ❌ ไม่แตะเลขเวอร์ชัน |
+| Windsurf — commit & push | ✅ bump ทุกไฟล์ในครั้งเดียว |
+
+**เหตุผล:** ถ้า Claude อัพเดทเลขใน `PROJECT_OVERVIEW.md` แล้ว Windsurf bump อีกรอบ → เวอร์ชันใน `sw.js` / `CHANGELOG.md` / `PROJECT_OVERVIEW.md` จะ desync กัน
+
+**Claude workflow:** เมื่อสรุปการเปลี่ยนแปลงในแชท ให้ใช้ `[NEXT VERSION]` แทนเลขจริง เช่น:
+```
+### [NEXT VERSION] — March 10, 2026
+- Fixed WanchaiStand fist overlay rendering
+```
+Windsurf จะเติมเลขจริงตอน commit.
 
 ---
 
@@ -1103,7 +1122,27 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Changes (v3.29.9)
+## 📝 Recent Changes (v3.30.0)
+
+### Boss Attacks Refactoring (March 10, 2026)
+**Purpose:** Improve code organization by splitting monolithic boss_attacks.js into specialized modules
+
+**Key Changes:**
+- **Modular Architecture**: Split 3700+ line boss_attacks.js into three focused files
+- **boss_attacks_shared.js**: Shared effects (ExpandingRing) used by all bosses (90 lines)
+- **boss_attacks_manop.js**: KruManop-specific attacks (BarkWave, GoldfishMinion, DomainExpansion, etc.) (2049 lines)
+- **boss_attacks_first.js**: KruFirst-specific attacks (PorkSandwich, GravitationalSingularity, SuperpositionClone, etc.) (1597 lines)
+- **Load Order Optimization**: Updated index.html and sw.js with proper loading sequence
+- **Development Workflow**: Smaller files enable easier debugging and code reviews
+
+**Files Changed:**
+- **Deleted**: `js/entities/boss/boss_attacks.js` (monolithic file)
+- **Created**: `boss_attacks_shared.js`, `boss_attacks_manop.js`, `boss_attacks_first.js`
+- **Updated**: `index.html`, `sw.js` (loading sequence)
+
+---
+
+## 📝 Previous Changes (v3.29.9)
 
 ### Global Variable References & Voice Bubble Namespacing Fix (March 10, 2026)
 **Purpose:** Fix undefined reference errors by ensuring proper global object access

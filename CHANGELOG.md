@@ -4,6 +4,44 @@
 
 ---
 
+## v3.30.0 — Boss Attacks Refactoring (Major Architecture Improvement)
+*Released: March 10, 2026*
+
+### 🏗️ Code Organization & Architecture
+- **Boss Attacks Modularization**: Split monolithic `boss_attacks.js` (3700+ lines) into three specialized files
+  - `boss_attacks_shared.js` - Shared effects used by all bosses (ExpandingRing)
+  - `boss_attacks_manop.js` - KruManop-specific attacks (BarkWave, GoldfishMinion, DomainExpansion, etc.)
+  - `boss_attacks_first.js` - KruFirst-specific attacks (PorkSandwich, GravitationalSingularity, SuperpositionClone, etc.)
+- **Improved Maintainability**: Smaller, focused files enable easier debugging and future enhancements
+- **Clear Dependencies**: Established proper load order sequence for boss attack modules
+
+### 📁 File Structure Changes
+- **Deleted**: `js/entities/boss/boss_attacks.js` (monolithic file)
+- **Created**: 
+  - `js/entities/boss/boss_attacks_shared.js` (90 lines, shared utilities)
+  - `js/entities/boss/boss_attacks_manop.js` (2049 lines, Manop boss attacks)
+  - `js/entities/boss/boss_attacks_first.js` (1597 lines, First boss attacks)
+
+### 🔧 Technical Improvements
+- **Load Order Optimization**: Updated loading sequence in `index.html` and `sw.js`
+  - Shared → Manop → First → BossBase → Specific Boss classes
+- **Code Organization**: Related attack classes now grouped by boss ownership
+- **Development Efficiency**: Smaller files reduce cognitive load and improve navigation
+- **Future-Proofing**: Modular structure supports adding new boss attack types
+
+### 🎯 Development Workflow Impact
+- **Easier Debugging**: Issues can be isolated to specific boss attack files
+- **Better Code Reviews**: Smaller, focused changes can be reviewed more effectively
+- **Enhanced Readability**: Developers can focus on relevant boss-specific code
+- **Scalability**: New bosses can have dedicated attack files without cluttering existing code
+
+### 📝 Documentation Updates
+- **Version Bump Guidelines**: Added clear ownership rules for version number management
+- **Load Order Documentation**: Updated file loading sequence and dependencies
+- **Architecture Clarity**: Better separation of concerns in boss attack systems
+
+---
+
 ## v3.29.9 — Global Variable References & Voice Bubble Namespacing Fix
 *Released: March 10, 2026*
 

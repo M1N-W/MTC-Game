@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.29.9'; // Fixed global variable references and voice bubble namespacing - updated showVoiceBubble() calls to use window.UIManager prefix and corrected boss class references
+const CACHE_NAME = 'mtc-cache-v3.30.0'; // Boss Attacks Refactoring - Split monolithic boss_attacks.js into three specialized files for better code organization and maintainability
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -34,7 +34,9 @@ const urlsToCache = [
   './js/entities/player/AutoPlayer.js?v=' + CACHE_TIMESTAMP,
   './js/entities/player/PoomPlayer.js?v=' + CACHE_TIMESTAMP,
   './js/entities/enemy.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss/boss_attacks.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/boss/boss_attacks_shared.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/boss/boss_attacks_manop.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/boss/boss_attacks_first.js?v=' + CACHE_TIMESTAMP,
   './js/entities/boss/BossBase.js?v=' + CACHE_TIMESTAMP,
   './js/entities/boss/ManopBoss.js?v=' + CACHE_TIMESTAMP,
   './js/entities/boss/FirstBoss.js?v=' + CACHE_TIMESTAMP,
