@@ -460,196 +460,175 @@ function startNextWave() {
     // B3 FIX: one guarded call only (was called twice — second had no guard)
     if (typeof rollShopItems === 'function') rollShopItems();
 
-    if (window._glitchWaveHpBonus > 0 && window.player) {
-        window.player.maxHp -= window._glitchWaveHpBonus;
-        window.player.hp = Math.min(window.player.hp, window.player.maxHp);
-        window._glitchWaveHpBonus = 0;
-    }
-
-    window.isGlitchWave = false;
-    if (typeof GameState !== 'undefined') GameState.isGlitchWave = false;
-    window.controlsInverted = false;
-    if (typeof GameState !== 'undefined') GameState.controlsInverted = false;
-
-    // B1 FIX: was setting window.* but game.js reads GameState.*
-    if (typeof GameState !== 'undefined') {
-        GameState.waveSpawnLocked = false;
-        GameState.waveSpawnTimer = 0;
-        GameState.pendingSpawnCount = 0;
-        GameState.lastGlitchCountdown = -1;
-    }
-
-    resetEnemiesKilled();
-    if (typeof GameState !== 'undefined') {
-        GameState.waveStartDamage = Achievements.stats.damageTaken;
-    }
-
-    setElementText('wave-badge', GAME_TEXTS.wave.badge(getWave()));
+    _resetWaveState();
 
     const wave = getWave();
-    Achievements.check('wave_5');
-    Achievements.check('wave_10');
     const count = BALANCE.waves.enemiesBase + (wave - 1) * BALANCE.waves.enemiesPerWave;
     const isBossWave = wave % BALANCE.waves.bossEveryNWaves === 0;
     const isGlitch = (!isBossWave) && (wave % GLITCH_EVERY_N_WAVES === 0);
 
-    // ── WaveAnnouncementFX canvas banner ──────────────────────
-    if (typeof waveAnnouncementFX !== 'undefined') {
-        waveAnnouncementFX.trigger(wave, isBossWave, isGlitch);
-    }
+    Achievements.check('wave_5');
+    Achievements.check('wave_10');
+    setElementText('wave-badge', GAME_TEXTS.wave.badge(wave));
 
-    // ── BGM ──────────────────────────────────────────────────
+    if (typeof waveAnnouncementFX !== 'undefined') waveAnnouncementFX.trigger(wave, isBossWave, isGlitch);
     if (!isBossWave) Audio.playBGM(isGlitch ? 'glitch' : 'battle');
 
-    // ── Special event (skip on boss/glitch waves) ────────────
     if (!isBossWave && !isGlitch) {
         if (FOG_WAVES.has(wave)) _activateWaveEvent('fog', wave);
         else if (SPEED_WAVES.has(wave)) _activateWaveEvent('speed', wave);
     }
 
-    // ── Glitch Wave ──────────────────────────────────────────
-    if (isGlitch) {
-        window.isGlitchWave = true;
-        if (typeof GameState !== 'undefined') GameState.isGlitchWave = true;
-        window.controlsInverted = true;
-        if (typeof GameState !== 'undefined') GameState.controlsInverted = true;
-        window.glitchIntensity = 0;
-        if (typeof GameState !== 'undefined') GameState.glitchIntensity = 0;
+    if (isGlitch) { _startGlitchWave(count); }
+    else if (isBossWave) { _startBossWave(wave); }
+    else { _startTrickle(count, wave); }
+}
 
-        if (window.player) {
-            const bonus = 100;
-            window.player.maxHp += bonus; window.player.hp += bonus;
-            window._glitchWaveHpBonus = bonus;
-            spawnFloatingText(GAME_TEXTS.wave.glitchCrisisHp(bonus), window.player.x, window.player.y - 60, '#22c55e', 22);
-            spawnParticles(window.player.x, window.player.y, 10, '#22c55e');
-        }
+// ── Per-wave mutable state reset ─────────────────────────────────────────────
+function _resetWaveState() {
+    if (window._glitchWaveHpBonus > 0 && window.player) {
+        window.player.maxHp -= window._glitchWaveHpBonus;
+        window.player.hp = Math.min(window.player.hp, window.player.maxHp);
+        window._glitchWaveHpBonus = 0;
+    }
+    window.isGlitchWave = false;
+    window.controlsInverted = false;
+    if (typeof GameState !== 'undefined') {
+        GameState.isGlitchWave = false;
+        GameState.controlsInverted = false;
+        GameState.waveSpawnLocked = false;
+        GameState.waveSpawnTimer = 0;
+        GameState.pendingSpawnCount = 0;
+        GameState.lastGlitchCountdown = -1;
+        GameState.waveStartDamage = Achievements.stats.damageTaken;
+    }
+    resetEnemiesKilled();
+}
 
-        // B1 FIX: write to GameState.* so game.js lock check works
-        if (typeof GameState !== 'undefined') {
-            GameState.pendingSpawnCount = Math.floor((count * 2) / 1.5);
-            GameState.waveSpawnLocked = true;
-            GameState.waveSpawnTimer = BALANCE.waves.glitchGracePeriod / 1000;
-            GameState.lastGlitchCountdown = -1;
-        }
-
-        spawnFloatingText(GAME_TEXTS.wave.glitchWave, window.player.x, window.player.y - 200, '#d946ef', 44);
-        addScreenShake(20); Audio.playBossSpecial();
-        setTimeout(() => { if (window.player && !window.player.dead) spawnFloatingText(GAME_TEXTS.wave.glitchAnomaly, window.player.x, window.player.y - 175, '#f472b6', 28); }, 400);
-        setTimeout(() => {
-            if (window.player && !window.player.dead && typeof GameState !== 'undefined' && GameState.waveSpawnLocked) {
-                spawnFloatingText(GAME_TEXTS.wave.glitchControls, window.player.x, window.player.y - 158, '#f472b6', 28);
-                if (window.UIManager) window.UIManager.showVoiceBubble('Controls inverted!', window.player.x, window.player.y - 40);
-            }
-        }, 1200);
-        setTimeout(() => {
-            if (window.player && !window.player.dead && typeof GameState !== 'undefined' && GameState.waveSpawnLocked)
-                spawnFloatingText(GAME_TEXTS.wave.glitchBrace, window.player.x, window.player.y - 148, '#ef4444', 30);
-        }, 2400);
-
-    } else {
-        // B2 FIX: trickle instead of instant spawn; isTrickleActive blocks
-        // premature wave-advance (game.js must guard: && !window.isTrickleActive)
-        _startTrickle(count, wave);
+// ── Glitch wave: invert controls, HP bonus, countdown lock ───────────────────
+function _startGlitchWave(count) {
+    window.isGlitchWave = true;
+    window.controlsInverted = true;
+    window.glitchIntensity = 0;
+    if (typeof GameState !== 'undefined') {
+        GameState.isGlitchWave = true;
+        GameState.controlsInverted = true;
+        GameState.glitchIntensity = 0;
     }
 
-    // ════════════════════════════════════════════════════════════
-    // ── Boss Wave — Deterministic encounter queue ─────────────
-    //
-    //  encounter │ wave │ boss
-    //  ──────────┼──────┼──────────────────────────────────────
-    //      1     │   3  │ Kru Manop  — Basic
-    //      2     │   6  │ Kru First  — Basic
-    //      3     │   9  │ Kru Manop  — Dog Rider (enablePhase2)
-    //      4     │  12  │ Kru First  — Advanced  (isAdvanced flag)
-    //      5     │  15  │ Kru Manop  — Goldfish Lover (phase2+3)
-    // ════════════════════════════════════════════════════════════
-    if (isBossWave) {
-        setTimeout(() => {
-            // B6 FIX: keep both copies in sync so resetRun() zeroing GameState
-            // actually takes effect on the next run's encounter queue
-            window.bossEncounterCount = (window.bossEncounterCount || 0) + 1;
-            if (typeof GameState !== 'undefined') GameState.bossEncounterCount = window.bossEncounterCount;
-            const encounter = window.bossEncounterCount;
-            const bossLevel = Math.floor(wave / BALANCE.waves.bossEveryNWaves);
-            const bossNameEl = document.getElementById('boss-name');
-            const isFirst = (encounter === 2 || encounter === 4);
-            const displayLevel = isFirst ? Math.floor(encounter / 2) : Math.ceil(encounter / 2);
-
-            if (encounter === 2 || encounter === 4) {
-                // ── KRU FIRST ──────────────────────────────────
-                const isAdvanced = (encounter === 4);
-                window.boss = new BossFirst(bossLevel, isAdvanced);
-                UIManager.updateBossHUD(window.boss);
-
-                if (bossNameEl) {
-                    bossNameEl.innerHTML =
-                        `<span style="color:#39ff14;text-shadow:0 0 10px #16a34a">` +
-                        `⚛️ KRU FIRST — PHYSICS MASTER` +
-                        `${isAdvanced ? ' ⚛️ ADVANCED' : ''}` +
-                        `</span>` +
-                        ` <span style="font-size:0.78em;color:#86efac">LV. ${displayLevel}</span>` +
-                        ` <span class="ai-badge">AI</span>`;
-                }
-
-                spawnFloatingText(
-                    isAdvanced ? GAME_TEXTS.wave.firstAdvanced : GAME_TEXTS.wave.firstIncoming,
-                    window.player.x, window.player.y - 100, '#39ff14', 35
-                );
-                setTimeout(() => {
-                    if (window.player) spawnFloatingText(
-                        isAdvanced ? GAME_TEXTS.wave.firstTaglineAdvanced : GAME_TEXTS.wave.firstTagline,
-                        window.player.x, window.player.y - 148, '#86efac', 22
-                    );
-                }, 650);
-                setTimeout(() => {
-                    if (!window.player || !window.UIManager) return;
-                    window.UIManager.showVoiceBubble(
-                        isAdvanced ? "He's gone berserk..." : 'Physics lecture incoming!',
-                        window.player.x, window.player.y - 40
-                    );
-                }, 900);
-
-            } else {
-                // ── KRU MANOP ──────────────────────────────────
-                const enablePhase2 = (encounter >= 3);
-                const enablePhase3 = (encounter >= 5);
-
-                window.boss = new Boss(bossLevel, enablePhase2, enablePhase3);
-                UIManager.updateBossHUD(window.boss);
-
-                if (bossNameEl) {
-                    let phaseTitle = '';
-                    if (enablePhase3) phaseTitle = ' 🐟 GOLDFISH LOVER';
-                    else if (enablePhase2) phaseTitle = ' 🐕 DOG RIDER';
-                    bossNameEl.innerHTML =
-                        `KRU MANOP — LV. ${displayLevel}${phaseTitle}` +
-                        ` <span class="ai-badge">AI</span>`;
-                }
-
-                spawnFloatingText(
-                    enablePhase3 ? GAME_TEXTS.wave.bossIncomingFish
-                        : enablePhase2 ? GAME_TEXTS.wave.bossIncomingRider
-                            : GAME_TEXTS.wave.bossIncoming,
-                    window.player.x, window.player.y - 100,
-                    enablePhase3 ? '#38bdf8' : enablePhase2 ? '#d97706' : '#ef4444',
-                    35
-                );
-                setTimeout(() => {
-                    if (!window.player || !window.UIManager) return;
-                    const line = enablePhase3 ? 'The goldfish... RUN!'
-                        : enablePhase2 ? 'He brought the dog!'
-                            : "He's here. Stay sharp.";
-                    window.UIManager.showVoiceBubble(line, window.player.x, window.player.y - 40);
-                }, 850);
-            }
-
-            addScreenShake(15);
-            Audio.playBossSpecial();
-
-        }, BALANCE.waves.bossSpawnDelay);
-
-        Audio.playBGM('boss');
+    if (window.player) {
+        const bonus = 100;
+        window.player.maxHp += bonus; window.player.hp += bonus;
+        window._glitchWaveHpBonus = bonus;
+        spawnFloatingText(GAME_TEXTS.wave.glitchCrisisHp(bonus), window.player.x, window.player.y - 60, '#22c55e', 22);
+        spawnParticles(window.player.x, window.player.y, 10, '#22c55e');
     }
+
+    // B1 FIX: write to GameState.* so game.js lock check works
+    if (typeof GameState !== 'undefined') {
+        GameState.pendingSpawnCount = Math.floor((count * 2) / 1.5);
+        GameState.waveSpawnLocked = true;
+        GameState.waveSpawnTimer = BALANCE.waves.glitchGracePeriod / 1000;
+        GameState.lastGlitchCountdown = -1;
+    }
+
+    spawnFloatingText(GAME_TEXTS.wave.glitchWave, window.player.x, window.player.y - 200, '#d946ef', 44);
+    addScreenShake(20); Audio.playBossSpecial();
+    setTimeout(() => { if (window.player && !window.player.dead) spawnFloatingText(GAME_TEXTS.wave.glitchAnomaly, window.player.x, window.player.y - 175, '#f472b6', 28); }, 400);
+    setTimeout(() => {
+        if (window.player && !window.player.dead && typeof GameState !== 'undefined' && GameState.waveSpawnLocked) {
+            spawnFloatingText(GAME_TEXTS.wave.glitchControls, window.player.x, window.player.y - 158, '#f472b6', 28);
+            if (window.UIManager) window.UIManager.showVoiceBubble('Controls inverted!', window.player.x, window.player.y - 40);
+        }
+    }, 1200);
+    setTimeout(() => {
+        if (window.player && !window.player.dead && typeof GameState !== 'undefined' && GameState.waveSpawnLocked)
+            spawnFloatingText(GAME_TEXTS.wave.glitchBrace, window.player.x, window.player.y - 148, '#ef4444', 30);
+    }, 2400);
+}
+
+// ── Boss wave: deterministic encounter queue ──────────────────────────────────
+//
+//  encounter │ wave │ boss
+//  ──────────┼──────┼──────────────────────────────────────
+//      1     │   3  │ Kru Manop  — Basic
+//      2     │   6  │ Kru First  — Basic
+//      3     │   9  │ Kru Manop  — Dog Rider (enablePhase2)
+//      4     │  12  │ Kru First  — Advanced  (isAdvanced flag)
+//      5     │  15  │ Kru Manop  — Goldfish Lover (phase2+3)
+function _startBossWave(wave) {
+    Audio.playBGM('boss');
+    setTimeout(() => {
+        // B6 FIX: keep both copies in sync so resetRun() zeroing GameState actually takes effect
+        window.bossEncounterCount = (window.bossEncounterCount || 0) + 1;
+        if (typeof GameState !== 'undefined') GameState.bossEncounterCount = window.bossEncounterCount;
+
+        const encounter = window.bossEncounterCount;
+        const bossLevel = Math.floor(wave / BALANCE.waves.bossEveryNWaves);
+        const bossNameEl = document.getElementById('boss-name');
+        const isFirst = (encounter === 2 || encounter === 4);
+        const displayLevel = isFirst ? Math.floor(encounter / 2) : Math.ceil(encounter / 2);
+
+        if (isFirst) {
+            const isAdvanced = (encounter === 4);
+            window.boss = new BossFirst(bossLevel, isAdvanced);
+            UIManager.updateBossHUD(window.boss);
+            if (bossNameEl) {
+                bossNameEl.innerHTML =
+                    `<span style="color:#39ff14;text-shadow:0 0 10px #16a34a">` +
+                    `⚛️ KRU FIRST — PHYSICS MASTER${isAdvanced ? ' ⚛️ ADVANCED' : ''}` +
+                    `</span>` +
+                    ` <span style="font-size:0.78em;color:#86efac">LV. ${displayLevel}</span>` +
+                    ` <span class="ai-badge">AI</span>`;
+            }
+            spawnFloatingText(
+                isAdvanced ? GAME_TEXTS.wave.firstAdvanced : GAME_TEXTS.wave.firstIncoming,
+                window.player.x, window.player.y - 100, '#39ff14', 35
+            );
+            setTimeout(() => {
+                if (window.player) spawnFloatingText(
+                    isAdvanced ? GAME_TEXTS.wave.firstTaglineAdvanced : GAME_TEXTS.wave.firstTagline,
+                    window.player.x, window.player.y - 148, '#86efac', 22);
+            }, 650);
+            setTimeout(() => {
+                if (!window.player || !window.UIManager) return;
+                window.UIManager.showVoiceBubble(
+                    isAdvanced ? "He's gone berserk..." : 'Physics lecture incoming!',
+                    window.player.x, window.player.y - 40);
+            }, 900);
+        } else {
+            const enablePhase2 = (encounter >= 3);
+            const enablePhase3 = (encounter >= 5);
+            window.boss = new Boss(bossLevel, enablePhase2, enablePhase3);
+            UIManager.updateBossHUD(window.boss);
+            if (bossNameEl) {
+                let phaseTitle = '';
+                if (enablePhase3) phaseTitle = ' 🐟 GOLDFISH LOVER';
+                else if (enablePhase2) phaseTitle = ' 🐕 DOG RIDER';
+                bossNameEl.innerHTML =
+                    `KRU MANOP — LV. ${displayLevel}${phaseTitle}` +
+                    ` <span class="ai-badge">AI</span>`;
+            }
+            spawnFloatingText(
+                enablePhase3 ? GAME_TEXTS.wave.bossIncomingFish
+                    : enablePhase2 ? GAME_TEXTS.wave.bossIncomingRider
+                        : GAME_TEXTS.wave.bossIncoming,
+                window.player.x, window.player.y - 100,
+                enablePhase3 ? '#38bdf8' : enablePhase2 ? '#d97706' : '#ef4444',
+                35
+            );
+            setTimeout(() => {
+                if (!window.player || !window.UIManager) return;
+                const line = enablePhase3 ? 'The goldfish... RUN!'
+                    : enablePhase2 ? 'He brought the dog!'
+                        : "He's here. Stay sharp.";
+                window.UIManager.showVoiceBubble(line, window.player.x, window.player.y - 40);
+            }, 850);
+        }
+
+        addScreenShake(15);
+        Audio.playBossSpecial();
+    }, BALANCE.waves.bossSpawnDelay);
 }
 
 function spawnEnemies(count) {

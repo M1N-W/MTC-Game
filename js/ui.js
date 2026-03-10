@@ -702,18 +702,29 @@ class UIManager {
         set('sn-shop', SN.shop);
     }
 
+    // ── setupCharacterHUD ─────────────────────────────────────────────────────
+    // Orchestrator: derives char flags once, delegates to focused sub-methods.
+    // Called once on game start and on every character switch.
     static setupCharacterHUD(player) {
         const isPoom = player instanceof PoomPlayer;
-        // Derive charId safely from both Player and PoomPlayer instances
-        const charId = player.charId || (isPoom ? 'poom' : 'kao');
-        const isKao = charId === 'kao';
-        const isAuto = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
+        const charId  = player.charId || (isPoom ? 'poom' : 'kao');
+        const isKao   = charId === 'kao';
+        const isAuto  = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
+        const SN      = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
+        const hudBottom = document.querySelector('.hud-bottom');
 
-        const weaponIndicator = document.querySelector('.weapon-indicator');
-        if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
+        UIManager._hudApplyThemeAndLabel(isPoom, isKao, isAuto, hudBottom);
+        UIManager._hudSetupAttackSlot(isPoom, isAuto);
+        UIManager._hudSetupPortraitAndWeapon(isPoom, isAuto, player);
+        UIManager._hudSetupPassiveSlot(isKao, player);
+        UIManager._hudSetupSkill1Slot(isPoom, isKao, isAuto, SN);
+        UIManager._hudSetupQSlot(isPoom, isKao, isAuto, SN, hudBottom);
+        UIManager._hudSetupExclusiveESlots(isPoom, isKao, isAuto, SN, hudBottom);
+        UIManager._hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, SN);
+    }
 
-        // ── Apply per-character color theme to shared HUD slots ───────────────
-        // dash-icon + stealth-icon share between chars — recolor on every setupCharacterHUD call
+    // ── Theme class + character name label on .hud-bottom ────────────────────
+    static _hudApplyThemeAndLabel(isPoom, isKao, isAuto, hudBottomEl) {
         const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
         const _applyTheme = (id, theme) => {
             const el = document.getElementById(id);
@@ -723,159 +734,140 @@ class UIManager {
         };
         const charTheme = isAuto ? 't-red' : isPoom ? 't-emerald' : 't-blue';
         _applyTheme('dash-icon', charTheme);
-        _applyTheme('stealth-icon', charTheme);  // also covers eat-icon / wanchai (same element, id swapped later)
+        _applyTheme('stealth-icon', charTheme);
 
-        // ── hud-bottom: swap character theme class + inject char label ─────────
-        const hudBottomEl = document.querySelector('.hud-bottom');
-        if (hudBottomEl) {
-            hudBottomEl.classList.remove('hud-theme-kao', 'hud-theme-poom', 'hud-theme-auto');
-            hudBottomEl.classList.add(isAuto ? 'hud-theme-auto' : isPoom ? 'hud-theme-poom' : 'hud-theme-kao');
+        const weaponIndicator = document.querySelector('.weapon-indicator');
+        if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
 
-            // Character name label — create once, update every switch
-            let charLabel = hudBottomEl.querySelector('.hud-char-label');
-            if (!charLabel) {
-                charLabel = document.createElement('div');
-                charLabel.className = 'hud-char-label';
-                hudBottomEl.prepend(charLabel);
-            }
-            const labelCfg = isAuto
-                ? { name: 'AUTO', tag: 'BRAWLER', color: '#fca5a5', glow: 'rgba(220,38,38,0.5)' }
-                : isPoom
-                    ? { name: 'POOM', tag: 'SPIRITUAL', color: '#6ee7b7', glow: 'rgba(16,185,129,0.5)' }
-                    : { name: 'KAO', tag: 'ASSASSIN', color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
-            charLabel.innerHTML =
-                `<span class="hud-char-name" style="color:${labelCfg.color};text-shadow:0 0 8px ${labelCfg.glow};">${labelCfg.name}</span>` +
-                `<span class="hud-char-tag">${labelCfg.tag}</span>`;
+        if (!hudBottomEl) return;
+        hudBottomEl.classList.remove('hud-theme-kao', 'hud-theme-poom', 'hud-theme-auto');
+        hudBottomEl.classList.add(isAuto ? 'hud-theme-auto' : isPoom ? 'hud-theme-poom' : 'hud-theme-kao');
+
+        let charLabel = hudBottomEl.querySelector('.hud-char-label');
+        if (!charLabel) {
+            charLabel = document.createElement('div');
+            charLabel.className = 'hud-char-label';
+            hudBottomEl.prepend(charLabel);
         }
+        const lc = isAuto
+            ? { name: 'AUTO',  tag: 'BRAWLER',   color: '#fca5a5', glow: 'rgba(220,38,38,0.5)' }
+            : isPoom
+                ? { name: 'POOM',  tag: 'SPIRITUAL', color: '#6ee7b7', glow: 'rgba(16,185,129,0.5)' }
+                : { name: 'KAO',   tag: 'ASSASSIN',  color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
+        charLabel.innerHTML =
+            `<span class="hud-char-name" style="color:${lc.color};text-shadow:0 0 8px ${lc.glow};">${lc.name}</span>` +
+            `<span class="hud-char-tag">${lc.tag}</span>`;
+    }
 
-        // ── Attack (SHOOT) slot — re-skin emoji + name per character ──────────
+    // ── Attack (SHOOT / L-Click) slot re-skin ─────────────────────────────────
+    static _hudSetupAttackSlot(isPoom, isAuto) {
         const attackIcon = document.getElementById('attack-icon');
-        if (attackIcon) {
-            _THEME_CLASSES.forEach(c => attackIcon.classList.remove(c));
-            const attackEmoji = attackIcon.querySelector('span:not(.skill-name):not(.key-hint):not(.cooldown-mask)');
-            const attackName = attackIcon.querySelector('.skill-name') || attackIcon.querySelector('#sn-attack');
-            if (isPoom) {
-                attackIcon.classList.add('t-emerald');
-                if (attackEmoji) attackEmoji.textContent = '🍙';
-                if (attackName) { attackName.textContent = 'SHOOT'; attackName.style.color = '#6ee7b7'; }
-            } else if (isAuto) {
-                attackIcon.classList.add('t-red');
-                if (attackEmoji) attackEmoji.textContent = '🔥';
-                if (attackName) { attackName.textContent = 'SHOOT'; attackName.style.color = '#fca5a5'; }
-            } else {
-                attackIcon.classList.add('t-blue');
-                if (attackEmoji) attackEmoji.textContent = '🔫';
-                if (attackName) { attackName.textContent = 'SHOOT'; attackName.style.color = '#93c5fd'; }
-            }
+        if (!attackIcon) return;
+        const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
+        _THEME_CLASSES.forEach(c => attackIcon.classList.remove(c));
+        const emoji = document.getElementById('attack-emoji');
+        const hint  = document.getElementById('attack-hint');
+        const name  = document.getElementById('sn-attack');
+        if (isPoom) {
+            attackIcon.classList.add('t-emerald');
+            if (emoji) emoji.textContent = '🍙';
+            if (hint)  { hint.style.background = '#064e3b'; hint.style.color = '#6ee7b7'; }
+            if (name)  { name.textContent = 'SHOOT'; name.style.color = '#6ee7b7'; }
+        } else if (isAuto) {
+            attackIcon.classList.add('t-red');
+            if (emoji) emoji.textContent = '🔥';
+            if (hint)  { hint.style.background = '#7f1d1d'; hint.style.color = '#fca5a5'; }
+            if (name)  { name.textContent = 'SHOOT'; name.style.color = '#fca5a5'; }
+        } else {
+            attackIcon.classList.add('t-blue');
+            if (emoji) emoji.textContent = '🔫';
+            if (hint)  { hint.style.background = '#1e3a8a'; hint.style.color = '#bfdbfe'; }
+            if (name)  { name.textContent = 'SHOOT'; name.style.color = '#93c5fd'; }
         }
-        // Show divider-util when any shortcut icon becomes visible — handled per-use below
+    }
 
-        const playerAvatar = document.getElementById('player-avatar');
-        // Swap HUD portrait SVG
+    // ── Portrait SVG swap ─────────────────────────────────────────────────────
+    static _hudSetupPortraitAndWeapon(isPoom, isAuto, player) {
         const hudSvg = document.getElementById('hud-portrait-svg');
         if (hudSvg) {
             hudSvg.innerHTML = (window.PORTRAITS || {})[isPoom ? 'poom' : isAuto ? 'auto' : 'kao'] || '';
         }
+    }
 
-        // ── [UI-FIX] Passive Icon — Kao-only ───────────────────
-        // The #passive-skill slot (Ghost/Stealth crit passive) is
-        // mechanically tied to Kao's stealth ability and should NEVER
-        // be visible when Poom is selected. We gate it here at setup
-        // time so that even if PoomPlayer.updateUI() runs every frame
-        // it cannot accidentally reveal the element.
-        //
-        // Kao   → show (dimmed at 0.35 opacity until unlocked; entities.js
-        //         updateUI() will promote it to opacity:1 + class 'unlocked'
-        //         once the unlock condition is met)
-        // Poom  → hide completely (display:none wins over any opacity)
-        const passiveSkillEl = document.getElementById('passive-skill');
-        if (passiveSkillEl) {
-            if (isKao) {
-                passiveSkillEl.style.display = '';
-                if (player.passiveUnlocked) {
-                    passiveSkillEl.style.opacity = '1';
-                    passiveSkillEl.classList.add('unlocked');
-                    const skillName = passiveSkillEl.querySelector('.skill-name');
-                    if (skillName) { skillName.textContent = 'MAX'; skillName.style.color = '#facc15'; }
-                } else {
-                    passiveSkillEl.style.opacity = '0.35';
-                    passiveSkillEl.classList.remove('unlocked');
-                    const skillName = passiveSkillEl.querySelector('.skill-name');
-                    // Condition ใหม่: ใช้ stealth ครั้งแรก = unlock ทันที
-                    if (skillName) { skillName.textContent = 'R-Click!'; skillName.style.color = '#a855f7'; }
-                }      // restore default layout display
+    // ── Passive skill slot visibility (Kao-only) ──────────────────────────────
+    static _hudSetupPassiveSlot(isKao, player) {
+        const el = document.getElementById('passive-skill');
+        if (!el) return;
+        if (isKao) {
+            el.style.display = '';
+            const skillName = el.querySelector('.skill-name');
+            if (player.passiveUnlocked) {
+                el.style.opacity = '1';
+                el.classList.add('unlocked');
+                if (skillName) { skillName.textContent = 'MAX'; skillName.style.color = '#facc15'; }
             } else {
-                // Any non-Kao character: suppress entirely
-                passiveSkillEl.style.display = 'none';
-                passiveSkillEl.classList.remove('unlocked');
+                el.style.opacity = '0.35';
+                el.classList.remove('unlocked');
+                if (skillName) { skillName.textContent = 'R-Click!'; skillName.style.color = '#a855f7'; }
             }
+        } else {
+            el.style.display = 'none';
+            el.classList.remove('unlocked');
         }
+    }
 
-        // ── Shorthand to config ────────────────────────────────────────────────
-        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
-
+    // ── Skill 1 (R-Click) slot — id swap + label per character ───────────────
+    static _hudSetupSkill1Slot(isPoom, isKao, isAuto, SN) {
         const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
-        if (skill1El) {
-            const nameEl = skill1El.querySelector('.skill-name') || (() => {
-                const d = document.createElement('div'); d.className = 'skill-name'; skill1El.appendChild(d); return d;
-            })();
-            if (isPoom) {
-                skill1El.id = 'eat-icon';
-                const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '🍱';
-                const hintEl = document.getElementById('skill1-hint');
-                if (hintEl) hintEl.textContent = 'R-Click';
-                const cdEl = skill1El.querySelector('.cooldown-mask');
-                if (cdEl) cdEl.id = 'eat-cd';
-                nameEl.textContent = 'EAT RICE';
-                nameEl.style.color = '#6ee7b7';
-            } else if (isAuto) {
-                skill1El.id = 'stealth-icon';
-                const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '💢';
-                const hintEl = document.getElementById('skill1-hint');
-                if (hintEl) hintEl.textContent = 'R-Click';
-                const cdEl = skill1El.querySelector('.cooldown-mask');
-                if (cdEl) cdEl.id = 'stealth-cd';
-                nameEl.textContent = 'WANCHAI';
-                nameEl.style.color = '#fca5a5';
-            } else if (isKao) {
-                skill1El.id = 'stealth-icon';
-                const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '👻';
-                const hintEl = document.getElementById('skill1-hint');
-                if (hintEl) hintEl.textContent = 'R-Click';
-                const cdEl = skill1El.querySelector('.cooldown-mask');
-                if (cdEl) cdEl.id = 'stealth-cd';
-                nameEl.textContent = SN.kao?.skill1 ?? 'STEALTH';
-                nameEl.style.color = '#c4b5fd';
-            } else {
-                skill1El.id = 'stealth-icon';
-                const emojiEl = document.getElementById('skill1-emoji');
-                if (emojiEl) emojiEl.textContent = '📖';
-                const hintEl = document.getElementById('skill1-hint');
-                if (hintEl) hintEl.textContent = 'R-Click';
-                const cdEl = skill1El.querySelector('.cooldown-mask');
-                if (cdEl) cdEl.id = 'stealth-cd';
-                nameEl.textContent = 'SKILL';
-                nameEl.style.color = '#fbbf24';
-            }
+        if (!skill1El) return;
+        const nameEl = skill1El.querySelector('.skill-name') || (() => {
+            const d = document.createElement('div'); d.className = 'skill-name'; skill1El.appendChild(d); return d;
+        })();
+        const emojiEl = document.getElementById('skill1-emoji');
+        const hintEl  = document.getElementById('skill1-hint');
+        const cdEl    = skill1El.querySelector('.cooldown-mask');
+        if (isPoom) {
+            skill1El.id = 'eat-icon';
+            if (emojiEl) emojiEl.textContent = '🍱';
+            if (hintEl)  hintEl.textContent = 'R-Click';
+            if (cdEl)    cdEl.id = 'eat-cd';
+            nameEl.textContent = 'EAT RICE'; nameEl.style.color = '#6ee7b7';
+        } else if (isAuto) {
+            skill1El.id = 'stealth-icon';
+            if (emojiEl) emojiEl.textContent = '💢';
+            if (hintEl)  hintEl.textContent = 'R-Click';
+            if (cdEl)    cdEl.id = 'stealth-cd';
+            nameEl.textContent = 'WANCHAI'; nameEl.style.color = '#fca5a5';
+        } else if (isKao) {
+            skill1El.id = 'stealth-icon';
+            if (emojiEl) emojiEl.textContent = '👻';
+            if (hintEl)  hintEl.textContent = 'R-Click';
+            if (cdEl)    cdEl.id = 'stealth-cd';
+            nameEl.textContent = SN.kao?.skill1 ?? 'STEALTH'; nameEl.style.color = '#c4b5fd';
+        } else {
+            skill1El.id = 'stealth-icon';
+            if (emojiEl) emojiEl.textContent = '📖';
+            if (hintEl)  hintEl.textContent = 'R-Click';
+            if (cdEl)    cdEl.id = 'stealth-cd';
+            nameEl.textContent = 'SKILL'; nameEl.style.color = '#fbbf24';
         }
+    }
 
-        // ── Naga/Teleport slot — repurposed per character ─────────────────────
-        // Poom: Naga 🐉 (Q).  Kao: Teleport ⚡ (Q).  Others: hidden.
+    // ── Q-slot: Naga (Poom) / Teleport (Kao) / Vacuum (Auto) / hidden ─────────
+    // Handles id-swap and DOM restore when switching away from a char that
+    // repurposed the slot.
+    static _hudSetupQSlot(isPoom, isKao, isAuto, SN, hudBottom) {
         const nagaSlot = document.getElementById('naga-icon');
         if (nagaSlot) {
             if (isPoom) {
                 nagaSlot.style.display = 'flex';
                 nagaSlot.style.borderColor = '#10b981';
                 nagaSlot.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                const nagaHint = nagaSlot.querySelector('.key-hint');
-                if (nagaHint) { nagaHint.textContent = 'Q'; nagaHint.style.background = '#10b981'; }
-                let nagaName = nagaSlot.querySelector('.skill-name');
-                if (!nagaName) { nagaName = document.createElement('div'); nagaName.className = 'skill-name'; nagaSlot.appendChild(nagaName); }
-                nagaName.textContent = SN.poom?.naga ?? 'NAGA';
-                nagaName.style.color = '#6ee7b7';
+                const h = nagaSlot.querySelector('.key-hint');
+                if (h) { h.textContent = 'Q'; h.style.background = '#10b981'; }
+                let n = nagaSlot.querySelector('.skill-name');
+                if (!n) { n = document.createElement('div'); n.className = 'skill-name'; nagaSlot.appendChild(n); }
+                n.textContent = SN.poom?.naga ?? 'NAGA'; n.style.color = '#6ee7b7';
             } else if (isKao) {
                 nagaSlot.style.display = 'flex';
                 nagaSlot.style.borderColor = '#00e5ff';
@@ -901,32 +893,8 @@ class UIManager {
             }
         }
 
-        // ── Clone of Stealth slot (E) — Kao-exclusive, dynamically injected ──
-        const hudBottom = document.querySelector('.hud-bottom');
-        let cloneSlot = document.getElementById('kao-clone-icon');
-
-        if (isKao) {
-            if (!cloneSlot && hudBottom) {
-                cloneSlot = document.createElement('div');
-                cloneSlot.className = 'skill-icon';
-                cloneSlot.id = 'kao-clone-icon';
-                cloneSlot.style.cssText = 'border-color:#3b82f6; box-shadow:0 0 15px rgba(59,130,246,0.45);';
-                cloneSlot.innerHTML = `
-                    <div class="key-hint" style="background:#3b82f6;">E</div>
-                    <span>👥</span>
-                    <div class="skill-name" style="color:#93c5fd;">${SN.kao?.clones ?? 'CLONES'}</div>
-                    <div class="cooldown-mask" id="clone-cd"></div>`;
-                const passiveRef = document.getElementById('passive-skill');
-                if (passiveRef && passiveRef.parentNode === hudBottom) {
-                    hudBottom.insertBefore(cloneSlot, passiveRef.nextSibling);
-                } else {
-                    hudBottom.appendChild(cloneSlot);
-                }
-            }
-            if (cloneSlot) cloneSlot.style.display = 'flex';
-        } else {
-            if (cloneSlot) cloneSlot.style.display = 'none';
-            // Restore naga-icon id if it was repurposed for Kao
+        // When switching away from Kao/Auto, restore the base naga-icon id/content
+        if (!isKao && !isAuto) {
             const maybeTeleport = document.getElementById('teleport-icon');
             if (maybeTeleport) {
                 maybeTeleport.id = 'naga-icon';
@@ -939,22 +907,48 @@ class UIManager {
                     <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
             }
             // ⚠️ DO NOT restore vacuum-icon when isAuto — it was intentionally repurposed
-            if (!isAuto) {
-                const maybeVacuum = document.getElementById('vacuum-icon');
-                if (maybeVacuum) {
-                    maybeVacuum.id = 'naga-icon';
-                    maybeVacuum.style.borderColor = '#10b981';
-                    maybeVacuum.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                    maybeVacuum.innerHTML = `
+            const maybeVacuum = document.getElementById('vacuum-icon');
+            if (maybeVacuum) {
+                maybeVacuum.id = 'naga-icon';
+                maybeVacuum.style.borderColor = '#10b981';
+                maybeVacuum.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
+                maybeVacuum.innerHTML = `
                     <div class="key-hint" style="background:#10b981;">Q</div>🐉
                     <div class="cooldown-mask" id="naga-cd"></div>
                     <span id="naga-timer"></span>
                     <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
-                }
             }
         }
+    }
 
-        // ── Detonation slot (E) — Auto-exclusive, dynamically injected ──
+    // ── E-slot: exclusive dynamic slots injected per character ────────────────
+    // Kao → kao-clone-icon,  Auto → auto-det-icon,  Poom → garuda-icon
+    static _hudSetupExclusiveESlots(isPoom, isKao, isAuto, SN, hudBottom) {
+        // ── Kao Clone (E) ───────────────────────────────────────────────────
+        let cloneSlot = document.getElementById('kao-clone-icon');
+        if (isKao) {
+            if (!cloneSlot && hudBottom) {
+                cloneSlot = document.createElement('div');
+                cloneSlot.className = 'skill-icon';
+                cloneSlot.id = 'kao-clone-icon';
+                cloneSlot.style.cssText = 'border-color:#3b82f6; box-shadow:0 0 15px rgba(59,130,246,0.45);';
+                cloneSlot.innerHTML = `
+                    <div class="key-hint" style="background:#3b82f6;">E</div>
+                    <span>👥</span>
+                    <div class="skill-name" style="color:#93c5fd;">${SN.kao?.clones ?? 'CLONES'}</div>
+                    <div class="cooldown-mask" id="clone-cd"></div>`;
+                const passiveRef = document.getElementById('passive-skill');
+                if (passiveRef && passiveRef.parentNode === hudBottom)
+                    hudBottom.insertBefore(cloneSlot, passiveRef.nextSibling);
+                else
+                    hudBottom.appendChild(cloneSlot);
+            }
+            if (cloneSlot) cloneSlot.style.display = 'flex';
+        } else {
+            if (cloneSlot) cloneSlot.style.display = 'none';
+        }
+
+        // ── Auto Detonate (E) ───────────────────────────────────────────────
         let detSlot = document.getElementById('auto-det-icon');
         if (isAuto) {
             if (!detSlot && hudBottom) {
@@ -974,7 +968,7 @@ class UIManager {
             if (detSlot) detSlot.style.display = 'none';
         }
 
-        // ── Garuda slot (E) — Poom-exclusive, dynamically injected ──
+        // ── Poom Garuda (E) ─────────────────────────────────────────────────
         let garudaSlot = document.getElementById('garuda-icon');
         if (isPoom) {
             if (!garudaSlot && hudBottom) {
@@ -988,37 +982,38 @@ class UIManager {
                     <div class="skill-name" style="color:#fdba74;font-size:9px;letter-spacing:0.02em;">${(GAME_TEXTS.skillNames?.poom?.garuda) || 'GARUDA'}</div>
                     <div class="cooldown-mask" id="garuda-cd"></div>`;
                 const passiveRef = document.getElementById('passive-skill');
-                if (passiveRef && passiveRef.parentNode === hudBottom) {
+                if (passiveRef && passiveRef.parentNode === hudBottom)
                     hudBottom.insertBefore(garudaSlot, passiveRef.nextSibling);
-                } else {
+                else
                     hudBottom.appendChild(garudaSlot);
-                }
             }
             if (garudaSlot) garudaSlot.style.display = 'flex';
         } else {
             if (garudaSlot) garudaSlot.style.display = 'none';
         }
+    }
 
-        const btnNaga = document.getElementById('btn-naga');
-        if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
-        const btnSkill = document.getElementById('btn-skill');
-        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🔥' : isKao ? '👻' : '📖');
-
-        // ── Phase 3 Session 3: Ritual Burst slot — Poom-exclusive ────────
+    // ── Ritual slot (Poom R) + mobile button labels ───────────────────────────
+    static _hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, SN) {
         const ritualSlot = document.getElementById('ritual-icon');
         if (ritualSlot) {
             ritualSlot.style.display = isPoom ? 'flex' : 'none';
             if (isPoom) {
-                let ritualName = ritualSlot.querySelector('.skill-name');
-                if (!ritualName) { ritualName = document.createElement('div'); ritualName.className = 'skill-name'; ritualSlot.appendChild(ritualName); }
-                ritualName.textContent = SN.poom?.ritual ?? 'RITUAL';
-                ritualName.style.color = '#86efac';
+                let n = ritualSlot.querySelector('.skill-name');
+                if (!n) { n = document.createElement('div'); n.className = 'skill-name'; ritualSlot.appendChild(n); }
+                n.textContent = SN.poom?.ritual ?? 'RITUAL'; n.style.color = '#86efac';
             }
         }
+        const btnNaga = document.getElementById('btn-naga');
+        if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
+        const btnSkill = document.getElementById('btn-skill');
+        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🔥' : isKao ? '👻' : '📖');
     }
 
+    // ── updateSkillIcons ──────────────────────────────────────────────────────
+    // Orchestrator: dispatches to per-character cooldown updaters every frame.
     static updateSkillIcons(player) {
-        // ── Helper: แสดง/ซ่อน lock overlay บน skill icon (shared across all characters) ──
+        // Shared helper — create/remove lock overlay on a skill icon
         const setLockOverlay = (icon, locked) => {
             if (!icon) return;
             let lock = icon.querySelector('.skill-lock');
@@ -1039,233 +1034,179 @@ class UIManager {
         };
 
         if (player instanceof PoomPlayer) {
-            const S = BALANCE.characters.poom;
-            const passive = player.passiveUnlocked;
-
-            // ── Lock overlays ──────────────────────────────────────────────────
-            // eat-icon (R-Click) ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
-            // ── Lock overlays ──────────────────────────────────────────────────
-            // eat-icon  (R-Click) : ใช้ได้ตั้งแต่ต้น — ไม่ล็อค
-            // naga-icon (Q)       : ปลดที่ Lv2 → _nagaUnlocked
-            // ritual-icon (R)     : ปลดพร้อม Naga → _nagaUnlocked
-            // garuda-icon (E)     : ปลดหลัง passive (Ritual ครั้งแรก)
-            const nagaReady = !!(player._nagaUnlocked);
-            setLockOverlay(document.getElementById('eat-icon'), false);
-            setLockOverlay(document.getElementById('naga-icon'), !nagaReady);
-            setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
-            setLockOverlay(document.getElementById('garuda-icon'), !passive);
-
-            // ── Eat Rice ─────────────────────────────────────────────
-            const eatIcon = document.getElementById('eat-icon');
-            const eatCd = document.getElementById('eat-cd');
-            if (eatCd) {
-                if (player.isEatingRice) eatIcon?.classList.add('active');
-                else eatIcon?.classList.remove('active');
-            }
-            UIManager._setCooldownVisual('eat-icon',
-                player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
-                S.eatRiceCooldown);
-
-            // ── Naga ──────────────────────────────────────────────────
-            const nagaIcon = document.getElementById('naga-icon');
-            const nagaCd = document.getElementById('naga-cd');
-            const nagaTimer = document.getElementById('naga-timer');
-            if (nagaCd) {
-                nagaIcon?.classList.toggle('active', player.cooldowns.naga <= 0);
-            }
-            // nagaTimer ซ่อนถาวร — Arc จาก _setCooldownVisual จัดการตัวเลขแทน
-            if (nagaTimer) nagaTimer.style.display = 'none';
-            UIManager._setCooldownVisual('naga-icon',
-                Math.max(0, player.cooldowns.naga),
-                S.nagaCooldown);
-
-            // ── Phase 3 Session 3: Ritual Burst cooldown UI ───────────
-            const ritualIcon = document.getElementById('ritual-icon');
-            const ritualCd = document.getElementById('ritual-cd');
-            const ritualTimer = document.getElementById('ritual-timer');
-            const maxRitualCd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
-            if (ritualCd) {
-                ritualIcon?.classList.toggle('active', player.cooldowns.ritual <= 0);
-            }
-            // ritualTimer ซ่อนถาวร — Arc จาก _setCooldownVisual จัดการตัวเลขแทน
-            if (ritualTimer) ritualTimer.style.display = 'none';
-            UIManager._setCooldownVisual('ritual-icon',
-                Math.max(0, player.cooldowns.ritual),
-                maxRitualCd);
-
-            // ── Garuda cooldown ────────────────────────────────────
-            const garudaIcon = document.getElementById('garuda-icon');
-            if (garudaIcon) {
-                garudaIcon.classList.toggle('active', player.cooldowns.garuda <= 0);
-            }
-            UIManager._setCooldownVisual('garuda-icon',
-                Math.max(0, player.cooldowns.garuda),
-                BALANCE.characters.poom.garudaCooldown ?? 24);
-
-            // WARN-10 FIX: AutoPlayer's Wanchai Stand cooldown had no arc overlay
-            // or countdown. Add a parallel branch so the player sees feedback.
+            UIManager._updateIconsPoom(player, setLockOverlay);
         } else if (typeof AutoPlayer !== 'undefined' && player instanceof AutoPlayer) {
-            const S = BALANCE.characters.auto;
-            const passive = player.passiveUnlocked;
-
-            // ── Lock overlays ──────────────────────────────────────────────────
-            // stealth-icon (R-Click Wanchai) ใช้ได้ตั้งแต่ต้นเกม — ไม่ล็อค
-            setLockOverlay(document.getElementById('stealth-icon'), false);
-            setLockOverlay(document.getElementById('vacuum-icon'), !passive);
-            setLockOverlay(document.getElementById('auto-det-icon'), !passive);
-            const wanchaiCd = S.wanchaiCooldown ?? 12;
-            UIManager._setCooldownVisual(
-                'stealth-icon',
-                player.wanchaiActive ? 0 : Math.max(0, player.cooldowns.wanchai ?? 0),
-                wanchaiCd
-            );
-
-            // ── Wanchai Stand timer — แทนที่ชื่อสกิลด้วยตัวนับเวลาขณะ active ──
-            const stealthIcon = document.getElementById('stealth-icon');
-            if (stealthIcon) {
-                const nameEl = stealthIcon.querySelector('.skill-name');
-                if (nameEl) {
-                    if (player.wanchaiActive && player.wanchaiTimer > 0) {
-                        // แสดงเวลาที่เหลือของ Stand แทนชื่อสกิล
-                        nameEl.textContent = player.wanchaiTimer.toFixed(1) + 's';
-                        nameEl.style.color = '#fca5a5';
-                    } else {
-                        // คืนชื่อสกิลตาม config
-                        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
-                        nameEl.textContent = 'WANCHAI';
-                        nameEl.style.color = '#fca5a5';
-                    }
-                }
-            }
-
-            // ── Vacuum Heat (Q) cooldown arc ────────────────────────────────────
-            // BUG-FIX: max CD is dynamic — standPull (10s, Wanchai active) vs vacuum (6s)
-            const _vacMaxCd = player.wanchaiActive
-                ? (S.standPullCooldown ?? 10)
-                : (S.vacuumCooldown ?? 6);
-            UIManager._setCooldownVisual(
-                'vacuum-icon',
-                Math.max(0, player.cooldowns.vacuum ?? 0),
-                _vacMaxCd
-            );
-
-            // ── Overheat Detonation (E) — lock visual + cooldown arc ────────────
-            // ไอเดีย Gemini: ปุ่ม E "โดนล็อค" เมื่อ Wanchai ไม่ active
-            // Implementation: opacity + pointer-events ผ่าน dataset flag (ไม่ต้อง add DOM element)
-            const detIcon = document.getElementById('auto-det-icon');
-            if (detIcon) {
-                if (player.wanchaiActive) {
-                    detIcon.style.opacity = '1';
-                    detIcon.style.boxShadow = '0 0 20px rgba(220,38,38,0.80)';
-                    detIcon.classList.add('active');
-                } else {
-                    detIcon.style.opacity = '0.35';
-                    detIcon.style.boxShadow = '0 0 8px rgba(220,38,38,0.25)';
-                    detIcon.classList.remove('active');
-                }
-            }
-            UIManager._setCooldownVisual(
-                'auto-det-icon',
-                Math.max(0, player.cooldowns.detonation ?? 0),
-                S.detonationCooldown ?? 8
-            );
-
-            // ── Kao — Teleport (Q) + Clone of Stealth (E) ─────────────────────────
+            UIManager._updateIconsAuto(player, setLockOverlay);
         } else if (player.charId === 'kao') {
-            const S = BALANCE.characters.kao;
-            const passive = player.passiveUnlocked;
+            UIManager._updateIconsKao(player, setLockOverlay);
+        }
+    }
 
-            // ── Skill 1 (R-Click) — Stealth: handled by PlayerBase.updateUI() ──
+    // ── Poom: eat / naga / ritual / garuda cooldown arcs ─────────────────────
+    static _updateIconsPoom(player, setLockOverlay) {
+        const S = BALANCE.characters.poom;
+        const nagaReady = !!(player._nagaUnlocked);
 
-            // ── Skill 2 (Q) — Teleport ────────────────────────────────────────
-            const teleportIcon = document.getElementById('teleport-icon');
-            const teleportCd = document.getElementById('teleport-cd');
-            setLockOverlay(teleportIcon, !passive);
+        setLockOverlay(document.getElementById('eat-icon'),    false);
+        setLockOverlay(document.getElementById('naga-icon'),   !nagaReady);
+        setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
+        setLockOverlay(document.getElementById('garuda-icon'), !player.passiveUnlocked);
 
-            if (teleportIcon && passive) {
-                const charges = player.teleportCharges || 0;
-                const maxCharges = player.maxTeleportCharges || 3;
-                const isReady = charges > 0;
-                const isFull = charges >= maxCharges;
-                teleportIcon.classList.toggle('active', isReady);
+        // Eat Rice
+        const eatIcon = document.getElementById('eat-icon');
+        if (eatIcon) eatIcon.classList.toggle('active', !!player.isEatingRice);
+        UIManager._setCooldownVisual('eat-icon',
+            player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
+            S.eatRiceCooldown);
 
-                // Mask ถูก hide แล้ว — ไม่ต้องอัปเดต height
+        // Naga
+        const nagaIcon = document.getElementById('naga-icon');
+        const nagaTimer = document.getElementById('naga-timer');
+        if (nagaIcon) nagaIcon.classList.toggle('active', player.cooldowns.naga <= 0);
+        if (nagaTimer) nagaTimer.style.display = 'none';
+        UIManager._setCooldownVisual('naga-icon', Math.max(0, player.cooldowns.naga), S.nagaCooldown);
 
-                // Arc: แสดง timer ที่ใกล้ครบสุดเสมอ (ถ้ามี timer กำลังวิ่ง)
-                if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
-                    const best = player.teleportTimers.reduce(
-                        (b, t) => t.elapsed > b.elapsed ? t : b,
-                        player.teleportTimers[0]
-                    );
-                    const remaining = Math.max(0, best.max - best.elapsed);
-                    if (charges > 0) {
-                        // มี charge เหลือ: โชว์แค่ Arc เบาๆ ไม่แสดงตัวเลข
-                        const icon = document.getElementById('teleport-icon');
-                        if (icon) {
-                            let arc = icon.querySelector('.cd-arc-overlay');
-                            if (!arc) { arc = document.createElement('div'); arc.className = 'cd-arc-overlay'; icon.appendChild(arc); }
-                            const elapsed = best.max > 0 ? Math.min(1, 1 - remaining / best.max) : 1;
-                            const p = (elapsed * 100).toFixed(1);
-                            arc.style.background = remaining > 0.05
-                                ? `conic-gradient(transparent 0% ${p}%, rgba(0,0,0,0.62) ${p}% 100%)`
-                                : 'transparent';
-                            let tmr = icon.querySelector('.cd-timer-text');
-                            if (!tmr) { tmr = document.createElement('div'); tmr.className = 'cd-timer-text'; icon.appendChild(tmr); }
-                            tmr.style.display = 'none'; // บังคับซ่อน
-                        }
-                    } else {
-                        // หมด charge: แสดง Arc + ตัวเลข (Hybrid จัดการ เพราะ max=15 > 5)
-                        UIManager._setCooldownVisual('teleport-icon', remaining, best.max);
-                    }
+        // Ritual
+        const ritualIcon = document.getElementById('ritual-icon');
+        const ritualTimer = document.getElementById('ritual-timer');
+        const maxRitualCd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
+        if (ritualIcon) ritualIcon.classList.toggle('active', player.cooldowns.ritual <= 0);
+        if (ritualTimer) ritualTimer.style.display = 'none';
+        UIManager._setCooldownVisual('ritual-icon', Math.max(0, player.cooldowns.ritual), maxRitualCd);
+
+        // Garuda
+        const garudaIcon = document.getElementById('garuda-icon');
+        if (garudaIcon) garudaIcon.classList.toggle('active', player.cooldowns.garuda <= 0);
+        UIManager._setCooldownVisual('garuda-icon',
+            Math.max(0, player.cooldowns.garuda),
+            BALANCE.characters.poom.garudaCooldown ?? 24);
+    }
+
+    // ── Auto: wanchai / vacuum / detonation cooldown arcs ────────────────────
+    static _updateIconsAuto(player, setLockOverlay) {
+        const S = BALANCE.characters.auto;
+
+        setLockOverlay(document.getElementById('stealth-icon'),  false);
+        setLockOverlay(document.getElementById('vacuum-icon'),   !player.passiveUnlocked);
+        setLockOverlay(document.getElementById('auto-det-icon'), !player.passiveUnlocked);
+
+        // Wanchai Stand cooldown + live timer label
+        const wanchaiCd = S.wanchaiCooldown ?? 12;
+        UIManager._setCooldownVisual('stealth-icon',
+            player.wanchaiActive ? 0 : Math.max(0, player.cooldowns.wanchai ?? 0),
+            wanchaiCd);
+        const stealthIcon = document.getElementById('stealth-icon');
+        if (stealthIcon) {
+            const nameEl = stealthIcon.querySelector('.skill-name');
+            if (nameEl) {
+                if (player.wanchaiActive && player.wanchaiTimer > 0) {
+                    nameEl.textContent = player.wanchaiTimer.toFixed(1) + 's';
+                    nameEl.style.color = '#fca5a5';
                 } else {
-                    UIManager._setCooldownVisual('teleport-icon', 0, 1);
+                    nameEl.textContent = 'WANCHAI';
+                    nameEl.style.color = '#fca5a5';
                 }
-
-                // Badge จำนวน charge
-                let chargeLabel = teleportIcon.querySelector('.charge-label');
-                if (!chargeLabel) {
-                    chargeLabel = document.createElement('span');
-                    chargeLabel.className = 'charge-label';
-                    chargeLabel.style.cssText =
-                        'position:absolute;bottom:2px;right:4px;font-size:10px;' +
-                        'font-weight:bold;color:#00e5ff;text-shadow:0 0 4px #000;pointer-events:none;';
-                    teleportIcon.appendChild(chargeLabel);
-                }
-                chargeLabel.textContent = charges > 0 ? `${charges}` : '';
-            } else if (teleportIcon && !passive) {
-                UIManager._setCooldownVisual('teleport-icon', 0, 1);
-                const cl = teleportIcon.querySelector('.charge-label');
-                if (cl) cl.textContent = '';
             }
+        }
 
-            // ── Skill 3 (E) — Clone of Stealth ────────────────────────────────
-            const cloneIcon = document.getElementById('kao-clone-icon');
-            const cloneCd = document.getElementById('clone-cd');
-            setLockOverlay(cloneIcon, !passive);
+        // Vacuum — dynamic max CD depending on Wanchai state
+        const vacMaxCd = player.wanchaiActive ? (S.standPullCooldown ?? 10) : (S.vacuumCooldown ?? 6);
+        UIManager._setCooldownVisual('vacuum-icon', Math.max(0, player.cooldowns.vacuum ?? 0), vacMaxCd);
 
-            if (cloneIcon) {
-                const cloneReady = player.cloneSkillCooldown <= 0;
-                cloneIcon.classList.toggle('active', passive && cloneReady);
+        // Detonation — visual lock while Wanchai is not active
+        const detIcon = document.getElementById('auto-det-icon');
+        if (detIcon) {
+            if (player.wanchaiActive) {
+                detIcon.style.opacity = '1';
+                detIcon.style.boxShadow = '0 0 20px rgba(220,38,38,0.80)';
+                detIcon.classList.add('active');
+            } else {
+                detIcon.style.opacity = '0.35';
+                detIcon.style.boxShadow = '0 0 8px rgba(220,38,38,0.25)';
+                detIcon.classList.remove('active');
+            }
+        }
+        UIManager._setCooldownVisual('auto-det-icon',
+            Math.max(0, player.cooldowns.detonation ?? 0),
+            S.detonationCooldown ?? 8);
+    }
 
-                if (player.clonesActiveTimer > 0) {
-                    cloneIcon.style.borderColor = '#00e5ff';
-                    cloneIcon.style.boxShadow = '0 0 20px rgba(0,229,255,0.7)';
-                } else {
-                    cloneIcon.style.borderColor = (passive && cloneReady) ? '#60a5fa' : '#3b82f6';
-                    cloneIcon.style.boxShadow = (passive && cloneReady)
-                        ? '0 0 18px rgba(96,165,250,0.65)'
-                        : '0 0 15px rgba(59,130,246,0.45)';
-                }
+    // ── Kao: teleport charges / clone cooldown arc ────────────────────────────
+    static _updateIconsKao(player, setLockOverlay) {
+        const S = BALANCE.characters.kao;
+        const passive = player.passiveUnlocked;
 
-                if (cloneCd) {
-                    // vertical mask ถูก hide แล้ว — ไม่ต้องอัปเดต height
-                }
-                UIManager._setCooldownVisual(
-                    'kao-clone-icon',
-                    passive ? Math.max(0, player.cloneSkillCooldown) : 0,
-                    player.maxCloneCooldown
+        // Teleport (Q) — charge-based with per-charge arc
+        const teleportIcon = document.getElementById('teleport-icon');
+        setLockOverlay(teleportIcon, !passive);
+        if (teleportIcon && passive) {
+            const charges    = player.teleportCharges || 0;
+            const maxCharges = player.maxTeleportCharges || 3;
+            const isFull     = charges >= maxCharges;
+            teleportIcon.classList.toggle('active', charges > 0);
+
+            if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
+                const best = player.teleportTimers.reduce(
+                    (b, t) => t.elapsed > b.elapsed ? t : b,
+                    player.teleportTimers[0]
                 );
+                const remaining = Math.max(0, best.max - best.elapsed);
+                if (charges > 0) {
+                    // Has charges remaining: show light arc only, hide number
+                    let arc = teleportIcon.querySelector('.cd-arc-overlay');
+                    if (!arc) { arc = document.createElement('div'); arc.className = 'cd-arc-overlay'; teleportIcon.appendChild(arc); }
+                    const elapsed = best.max > 0 ? Math.min(1, 1 - remaining / best.max) : 1;
+                    const p = (elapsed * 100).toFixed(1);
+                    arc.style.background = remaining > 0.05
+                        ? `conic-gradient(transparent 0% ${p}%, rgba(0,0,0,0.62) ${p}% 100%)`
+                        : 'transparent';
+                    let tmr = teleportIcon.querySelector('.cd-timer-text');
+                    if (!tmr) { tmr = document.createElement('div'); tmr.className = 'cd-timer-text'; teleportIcon.appendChild(tmr); }
+                    tmr.style.display = 'none';
+                } else {
+                    // No charges: full arc + countdown number
+                    UIManager._setCooldownVisual('teleport-icon', remaining, best.max);
+                }
+            } else {
+                UIManager._setCooldownVisual('teleport-icon', 0, 1);
             }
+
+            // Charge count badge
+            let chargeLabel = teleportIcon.querySelector('.charge-label');
+            if (!chargeLabel) {
+                chargeLabel = document.createElement('span');
+                chargeLabel.className = 'charge-label';
+                chargeLabel.style.cssText =
+                    'position:absolute;bottom:2px;right:4px;font-size:10px;' +
+                    'font-weight:bold;color:#00e5ff;text-shadow:0 0 4px #000;pointer-events:none;';
+                teleportIcon.appendChild(chargeLabel);
+            }
+            chargeLabel.textContent = charges > 0 ? `${charges}` : '';
+        } else if (teleportIcon && !passive) {
+            UIManager._setCooldownVisual('teleport-icon', 0, 1);
+            const cl = teleportIcon.querySelector('.charge-label');
+            if (cl) cl.textContent = '';
+        }
+
+        // Clone of Stealth (E)
+        const cloneIcon = document.getElementById('kao-clone-icon');
+        setLockOverlay(cloneIcon, !passive);
+        if (cloneIcon) {
+            const cloneReady = player.cloneSkillCooldown <= 0;
+            cloneIcon.classList.toggle('active', passive && cloneReady);
+            if (player.clonesActiveTimer > 0) {
+                cloneIcon.style.borderColor = '#00e5ff';
+                cloneIcon.style.boxShadow = '0 0 20px rgba(0,229,255,0.7)';
+            } else {
+                cloneIcon.style.borderColor = (passive && cloneReady) ? '#60a5fa' : '#3b82f6';
+                cloneIcon.style.boxShadow   = (passive && cloneReady)
+                    ? '0 0 18px rgba(96,165,250,0.65)'
+                    : '0 0 15px rgba(59,130,246,0.45)';
+            }
+            UIManager._setCooldownVisual(
+                'kao-clone-icon',
+                passive ? Math.max(0, player.cloneSkillCooldown) : 0,
+                player.maxCloneCooldown);
         }
     }
 
@@ -1494,53 +1435,59 @@ class CanvasHUD {
     // currently in — if mapSystem.drawLighting() leaked a blend mode, that
     // leak would be captured and every minimap draw call would be invisible.
     // ════════════════════════════════════════════════════════════
+    // ── drawMinimap ───────────────────────────────────────────────────────────
+    // Orchestrator — shared constants then 3 focused drawing phases:
+    //   _minimapDrawShell    outer glow, border, fill
+    //   _minimapDrawContent  grid, sweep, entities (or fog blackout)
+    //   _minimapDrawLabel    label text + legend row (outside clip)
     static drawMinimap(ctx) {
         if (!ctx || !ctx.canvas) return;
 
-        const canvas = ctx.canvas;
-
-        // Config: radius 60 px · safe-zone top-right · world scale 0.1
-        const radarRadius = 60;
-        const scale = 0.1;
-        // Safe-Zone: keeps radar clear of device notches / browser chrome.
-        const cx = canvas.width - 200;   // 200 px from right edge
-        const cy = 90;                    // 90 px from top edge
-        const now = Date.now();
-
-        const player = (typeof window !== 'undefined' && window.player)
-            ? window.player : { x: 0, y: 0 };
-
-        // ── 🔴 DIAGNOSTIC — silenced in production; uncomment to debug ──────
         if (!UIManager._minimapFrame) UIManager._minimapFrame = 0;
         UIManager._minimapFrame++;
-        // Uncomment below for periodic canvas-state diagnostics:
-        // if (UIManager._minimapFrame % 600 === 1) {
-        //     console.log('[MTC Minimap] frame', UIManager._minimapFrame, ...);
-        // }
 
-        // Helper: world→radar-screen, clamped to maxR from radar center
+        const canvas      = ctx.canvas;
+        const radarRadius = 60;
+        const scale       = 0.1;
+        const cx          = canvas.width - 200;   // 200 px from right edge
+        const cy          = 90;                    // 90 px from top edge
+        const now         = Date.now();
+        const player      = (typeof window !== 'undefined' && window.player)
+            ? window.player : { x: 0, y: 0 };
+
+        // world→radar-screen, clamped to maxR from radar center
         const toRadar = (wx, wy, maxR = radarRadius - 6) => {
             const rx = cx + (wx - player.x) * scale;
             const ry = cy + (wy - player.y) * scale;
             const dx = rx - cx, dy = ry - cy;
-            const d = Math.sqrt(dx * dx + dy * dy);
+            const d  = Math.sqrt(dx * dx + dy * dy);
             if (d <= maxR) return { x: rx, y: ry, clamped: false };
             return { x: cx + dx * (maxR / d), y: cy + dy * (maxR / d), clamped: true };
         };
 
-        // ══════════════════════════════════════════════════════
-        // OUTER SAVE — resets to a known-good canvas state.
-        // This is the key fix: explicitly override any blend-mode
-        // leakage left by mapSystem.drawLighting() so that every
-        // minimap draw call is guaranteed to be visible.
-        // ══════════════════════════════════════════════════════
+        // OUTER SAVE — resets blendmode/alpha/shadow leakage from mapSystem
         ctx.save();
-        ctx.globalCompositeOperation = 'source-over';  // ← FIX: undo any lighting blend
-        ctx.globalAlpha = 1;               // ← FIX: undo any alpha leakage
-        ctx.shadowBlur = 0;               // ← FIX: clear any glow leakage
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur  = 0;
 
-        // ── 1. Outer shell (drawn BEFORE clip so they sit outside it) ──
+        UIManager._minimapDrawShell(ctx, cx, cy, radarRadius, now);
 
+        // INNER SAVE — establishes circular clip region
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
+
+        UIManager._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
+
+        ctx.restore();  // ← INNER restore — releases clip
+
+        UIManager._minimapDrawLabel(ctx, cx, cy, radarRadius);
+
+        ctx.restore();  // ← OUTER restore
+    }
+
+    // ── Shell: outer glow, navy fill, pulsating border, inner accent ring ────
+    static _minimapDrawShell(ctx, cx, cy, radarRadius, now) {
         // Subtle outer glow halo
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius + 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(57,255,20,0.07)'; ctx.fill();
@@ -1550,362 +1497,256 @@ class CanvasHUD {
         ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'; ctx.fill();
 
         // Pulsating neon-green border — width oscillates 1 px → 3 px
-        const borderSin = Math.sin(now / 500);   // −1 … +1
-        const borderWidth = 2 + borderSin;          // 1 … 3 px
-        ctx.lineWidth = borderWidth;
-        ctx.strokeStyle = `rgba(57,255,20,${0.80 + borderSin * 0.15})`;
-        ctx.shadowBlur = 12 + borderSin * 6;
-        ctx.shadowColor = '#39ff14';
+        const borderSin  = Math.sin(now / 500);
+        const borderWidth = 2 + borderSin;
+        ctx.lineWidth    = borderWidth;
+        ctx.strokeStyle  = `rgba(57,255,20,${0.80 + borderSin * 0.15})`;
+        ctx.shadowBlur   = 12 + borderSin * 6;
+        ctx.shadowColor  = '#39ff14';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur   = 0;
 
         // Inner accent ring
-        ctx.lineWidth = 0.8;
+        ctx.lineWidth   = 0.8;
         ctx.strokeStyle = 'rgba(134,239,172,0.28)';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 3, 0, Math.PI * 2); ctx.stroke();
+    }
 
-        // ══════════════════════════════════════════════════════
-        // INNER SAVE — establishes the circular clip region.
-        // ctx.restore() on this save RELEASES the clip, allowing
-        // the label and legend to render outside the circle.
-        // ══════════════════════════════════════════════════════
-        ctx.save();
-
-        // ── CLIP — nothing escapes the radar circle from here ──
-        ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
-
+    // ── Content: grid, sweep, poi markers, enemies, boss, player dot ─────────
+    // Rendered inside the circular clip — nothing escapes the radar circle.
+    static _minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar) {
         if (window.isFogWave) {
-            // ── RADAR BLACKOUT — active during Fog Waves ─────────
-            // Fill the radar face with an opaque dark background
+            // ── RADAR BLACKOUT during Fog Waves ──────────────────────────────
             ctx.fillStyle = 'rgba(6, 30, 50, 0.95)';
             ctx.fillRect(cx - radarRadius, cy - radarRadius, radarRadius * 2, radarRadius * 2);
 
-            // Random horizontal noise lines across the circle
-            const noiseCount = 6;
             const noiseNow = Date.now();
-            for (let n = 0; n < noiseCount; n++) {
-                // Pseudo-random but stable per-frame band using time bucketed to 80 ms
-                const seed = Math.floor(noiseNow / 80) + n * 7919;
-                const nyOff = ((seed * 1664525 + 1013904223) & 0x7fffffff) % (radarRadius * 2);
-                const ny = cy - radarRadius + nyOff;
+            for (let n = 0; n < 6; n++) {
+                const seed   = Math.floor(noiseNow / 80) + n * 7919;
+                const nyOff  = ((seed * 1664525 + 1013904223) & 0x7fffffff) % (radarRadius * 2);
+                const ny     = cy - radarRadius + nyOff;
                 const nalpha = 0.12 + (((seed * 6364136) & 0xff) / 255) * 0.25;
-                const nw = 0.6 + (((seed * 22695477) & 0xff) / 255) * 1.4;
+                const nw     = 0.6  + (((seed * 22695477) & 0xff) / 255) * 1.4;
                 ctx.save();
                 ctx.globalAlpha = nalpha;
-                ctx.strokeStyle = '#06b6d4';
-                ctx.lineWidth = nw;
+                ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = nw;
                 ctx.beginPath();
-                ctx.moveTo(cx - radarRadius, ny);
-                ctx.lineTo(cx + radarRadius, ny);
+                ctx.moveTo(cx - radarRadius, ny); ctx.lineTo(cx + radarRadius, ny);
                 ctx.stroke();
                 ctx.restore();
             }
 
-            // "SIGNAL LOST" text — centered in the radar circle
             const slPulse = 0.65 + Math.sin(noiseNow / 350) * 0.35;
             ctx.save();
             ctx.globalAlpha = slPulse;
-            ctx.shadowBlur = 14;
-            ctx.shadowColor = '#06b6d4';
-            ctx.fillStyle = '#06b6d4';
-            ctx.font = 'bold 10px "Orbitron", Arial, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.shadowBlur = 14; ctx.shadowColor = '#06b6d4';
+            ctx.fillStyle  = '#06b6d4';
+            ctx.font       = 'bold 10px "Orbitron", Arial, sans-serif';
+            ctx.textAlign  = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('SIGNAL', cx, cy - 7);
-            ctx.fillText('LOST', cx, cy + 7);
+            ctx.fillText('LOST',   cx, cy + 7);
             ctx.restore();
-        } else {
-            // ── 2. Interior grid ──────────────────────────────────
-            ctx.lineWidth = 0.7;
+            return;
+        }
 
-            // Concentric range rings
-            [radarRadius * 0.33, radarRadius * 0.66].forEach(r => {
-                ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(57,255,20,0.14)'; ctx.stroke();
-            });
+        // ── Interior grid ──────────────────────────────────────────────
+        ctx.lineWidth = 0.7;
+        [radarRadius * 0.33, radarRadius * 0.66].forEach(r => {
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(57,255,20,0.14)'; ctx.stroke();
+        });
+        ctx.strokeStyle = 'rgba(57,255,20,0.20)'; ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(cx - radarRadius + 2, cy); ctx.lineTo(cx + radarRadius - 2, cy);
+        ctx.moveTo(cx, cy - radarRadius + 2); ctx.lineTo(cx, cy + radarRadius - 2);
+        ctx.stroke();
 
-            // Tactical crosshair axes
-            ctx.strokeStyle = 'rgba(57,255,20,0.20)';
-            ctx.lineWidth = 0.8;
-            ctx.beginPath();
-            ctx.moveTo(cx - radarRadius + 2, cy); ctx.lineTo(cx + radarRadius - 2, cy);
-            ctx.moveTo(cx, cy - radarRadius + 2); ctx.lineTo(cx, cy + radarRadius - 2);
-            ctx.stroke();
-
-            // ── 3. Sweep line animation ───────────────────────────
-            const SWEEP_RPM = 1 / 3;   // one full revolution every 3 seconds
-            const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
-
-            // Trail: 120° fading arc behind the sweep head
-            const trailArc = Math.PI * 2 / 3;
-            const TRAIL_STEPS = 24;
-            for (let i = 0; i < TRAIL_STEPS; i++) {
-                const frac = i / TRAIL_STEPS;
-                const aStart = sweepAngle - trailArc * (1 - frac);
-                const aEnd = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
-                const alpha = frac * frac * 0.22;   // quadratic fade toward head
-                ctx.beginPath();
-                ctx.moveTo(cx, cy);
-                ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
-                ctx.closePath();
-                ctx.fillStyle = `rgba(72,187,120,${alpha.toFixed(3)})`;
-                ctx.fill();
-            }
-
-            // Sweep head line
-            ctx.save();
-            ctx.strokeStyle = 'rgba(134,239,172,0.85)';
-            ctx.lineWidth = 1.5;
-            ctx.shadowBlur = 6; ctx.shadowColor = '#48bb78';
+        // ── Sweep line animation ───────────────────────────────────────
+        const SWEEP_RPM  = 1 / 3;
+        const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
+        const trailArc   = Math.PI * 2 / 3;
+        const TRAIL_STEPS = 24;
+        for (let i = 0; i < TRAIL_STEPS; i++) {
+            const frac   = i / TRAIL_STEPS;
+            const aStart = sweepAngle - trailArc * (1 - frac);
+            const aEnd   = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
+            const alpha  = frac * frac * 0.22;
             ctx.beginPath();
             ctx.moveTo(cx, cy);
-            ctx.lineTo(
-                cx + Math.cos(sweepAngle) * (radarRadius - 1),
-                cy + Math.sin(sweepAngle) * (radarRadius - 1)
-            );
-            ctx.stroke();
-            ctx.restore();
-
-            // ── 4. MTC Database Server — bright blue square (5 px) ──
-            if (window.MTC_DATABASE_SERVER) {
-                const S = window.MTC_DATABASE_SERVER;
-                const { x: sx, y: sy, clamped: sc } = toRadar(S.x, S.y, radarRadius - 8);
-                const dbPulse = 0.65 + Math.sin(now / 550) * 0.35;
-                const SZ = sc ? 3.5 : 5;
-
-                ctx.save();
-                ctx.translate(sx, sy);
-                ctx.shadowBlur = 10 * dbPulse;
-                ctx.shadowColor = '#60a5fa';
-
-                if (sc) {
-                    const ax = cx - sx, ay = cy - sy;
-                    ctx.rotate(Math.atan2(ay, ax));
-                    ctx.fillStyle = `rgba(59,130,246,${0.8 + dbPulse * 0.2})`;
-                    ctx.beginPath();
-                    ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
-                    ctx.fill();
-                } else {
-                    ctx.fillStyle = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
-                    ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.95})`;
-                    ctx.lineWidth = 1.2;
-                    ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
-                    ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
-                }
-                ctx.restore();
-            }
-
-            // ── 5. MTC Shop — gold square ─────────────────────────
-            if (window.MTC_SHOP_LOCATION) {
-                const SH = window.MTC_SHOP_LOCATION;
-                const { x: shx, y: shy, clamped: shc } = toRadar(SH.x, SH.y, radarRadius - 8);
-                const shPulse = 0.65 + Math.sin(now / 700 + 1.2) * 0.35;
-                const SZ = shc ? 3.5 : 4.5;
-
-                ctx.save();
-                ctx.translate(shx, shy);
-                ctx.shadowBlur = 7 * shPulse;
-                ctx.shadowColor = '#f59e0b';
-
-                if (shc) {
-                    const ax = cx - shx, ay = cy - shy;
-                    ctx.rotate(Math.atan2(ay, ax));
-                    ctx.fillStyle = `rgba(245,158,11,${0.7 + shPulse * 0.3})`;
-                    ctx.beginPath();
-                    ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath();
-                    ctx.fill();
-                } else {
-                    ctx.fillStyle = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
-                    ctx.strokeStyle = `rgba(253,230,138,${shPulse * 0.85})`;
-                    ctx.lineWidth = 1.2;
-                    ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
-                    ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
-                }
-                ctx.restore();
-            }
-
-            // ── 6. Enemies — distinct shapes & colors per type ────
-            if (Array.isArray(window.enemies)) {
-                for (const e of window.enemies) {
-                    if (!e || e.dead) continue;
-                    const { x: ex, y: ey, clamped: ec } = toRadar(e.x, e.y);
-
-                    ctx.save();
-
-                    if (ec) {
-                        // Clamped: arrow pointing toward enemy (all types same)
-                        ctx.translate(ex, ey);
-                        ctx.rotate(Math.atan2(cy - ey, cx - ex));
-                        const arrowColor = e.type === 'mage'
-                            ? 'rgba(180,80,255,0.9)'
-                            : (e.type === 'tank' ? 'rgba(255,120,40,0.9)' : 'rgba(255,50,50,0.9)');
-                        ctx.fillStyle = arrowColor;
-                        ctx.shadowBlur = 5;
-                        ctx.shadowColor = arrowColor;
-                        ctx.beginPath();
-                        ctx.moveTo(6, 0); ctx.lineTo(0, -3.5); ctx.lineTo(0, 3.5);
-                        ctx.closePath(); ctx.fill();
-                    } else if (e.type === 'mage') {
-                        // ── Mage: purple rotating diamond ─────────────
-                        ctx.translate(ex, ey);
-                        ctx.rotate(now / 800);     // slow spin
-                        const r = 6;
-                        ctx.fillStyle = 'rgba(190,75,255,1.0)';
-                        ctx.strokeStyle = 'rgba(220,160,255,0.9)';
-                        ctx.lineWidth = 1.2;
-                        ctx.shadowBlur = 8;
-                        ctx.shadowColor = '#b44dff';
-                        ctx.beginPath();
-                        ctx.moveTo(0, -r); ctx.lineTo(r * 0.6, 0);
-                        ctx.lineTo(0, r); ctx.lineTo(-r * 0.6, 0);
-                        ctx.closePath(); ctx.fill(); ctx.stroke();
-                        // Inner sparkle dot
-                        ctx.fillStyle = 'rgba(240,200,255,0.85)';
-                        ctx.shadowBlur = 4;
-                        ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
-
-                    } else if (e.type === 'tank') {
-                        // ── Tank: orange bold square ───────────────────
-                        const r = 5.5;
-                        ctx.fillStyle = 'rgba(255,115,35,1.0)';
-                        ctx.strokeStyle = 'rgba(255,185,90,0.9)';
-                        ctx.lineWidth = 1.4;
-                        ctx.shadowBlur = 7;
-                        ctx.shadowColor = '#ff7320';
-                        ctx.beginPath();
-                        ctx.rect(ex - r, ey - r, r * 2, r * 2);
-                        ctx.fill(); ctx.stroke();
-                        // Corner ticks for "armour" feel
-                        ctx.strokeStyle = 'rgba(255,220,120,0.75)';
-                        ctx.lineWidth = 1;
-                        ctx.shadowBlur = 0;
-                        const tk = 2.5;
-                        [[ex - r, ey - r], [ex + r, ey - r],
-                        [ex - r, ey + r], [ex + r, ey + r]].forEach(([px, py]) => {
-                            ctx.beginPath();
-                            ctx.arc(px, py, tk, 0, Math.PI * 2); ctx.stroke();
-                        });
-
-                    } else {
-                        // ── Basic: bright red circle ───────────────────
-                        const r = 5;
-                        const glow = 0.6 + Math.sin(now / 400 + e.x) * 0.4;
-                        ctx.fillStyle = 'rgba(255,38,38,1.0)';
-                        ctx.shadowBlur = 8 * glow;
-                        ctx.shadowColor = '#ff2222';
-                        ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
-                        // Bright highlight dot
-                        ctx.fillStyle = 'rgba(255,180,180,0.75)';
-                        ctx.shadowBlur = 0;
-                        ctx.beginPath(); ctx.arc(ex - 1.5, ey - 1.5, 1.5, 0, Math.PI * 2); ctx.fill();
-                    }
-                    ctx.restore();
-                }
-            }
-
-            // ── 7. Boss — 6 px pulsating purple dot ───────────────
-            if (window.boss && !window.boss.dead) {
-                const t = (now % 1000) / 1000;
-                const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
-                const { x: bx, y: by, clamped: bc } = toRadar(
-                    window.boss.x, window.boss.y, radarRadius - 10
-                );
-
-                ctx.save();
-                ctx.shadowBlur = 14 * pulse;
-                ctx.shadowColor = '#a855f7';
-
-                if (bc) {
-                    ctx.translate(bx, by);
-                    ctx.rotate(Math.atan2(cy - by, cx - bx));
-                    ctx.fillStyle = `rgba(168,85,247,${0.7 + pulse * 0.3})`;
-                    ctx.beginPath();
-                    ctx.moveTo(8, 0); ctx.lineTo(0, -5); ctx.lineTo(0, 5); ctx.closePath();
-                    ctx.fill();
-                } else {
-                    ctx.fillStyle = `rgba(170,110,255,${0.75 + 0.25 * pulse})`;
-                    ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI * 2); ctx.fill();
-                    ctx.strokeStyle = `rgba(216,180,254,${0.30 + 0.15 * pulse})`;
-                    ctx.lineWidth = 1.5;
-                    ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
-                    ctx.fillStyle = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
-                    ctx.font = 'bold 6px monospace';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'bottom';
-                    ctx.fillText('BOSS', bx, by - 12 - 2 * pulse);
-                }
-                ctx.restore();
-            }
-
-            // ── 8. Player — green triangle at radar center (6 px) ──
-            ctx.save();
-            ctx.translate(cx, cy);
-            if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
-            ctx.shadowBlur = 8; ctx.shadowColor = '#34d399';
-            ctx.fillStyle = 'rgba(52,214,88,0.98)';
-            ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
+            ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(72,187,120,${alpha.toFixed(3)})`;
             ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.beginPath(); ctx.arc(0, -5, 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.save();
+        ctx.strokeStyle = 'rgba(134,239,172,0.85)'; ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 6; ctx.shadowColor = '#48bb78';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(sweepAngle) * (radarRadius - 1),
+                   cy + Math.sin(sweepAngle) * (radarRadius - 1));
+        ctx.stroke();
+        ctx.restore();
+
+        // ── POI: Database Server — bright blue ─────────────────────────
+        if (window.MTC_DATABASE_SERVER) {
+            const S = window.MTC_DATABASE_SERVER;
+            const { x: sx, y: sy, clamped: sc } = toRadar(S.x, S.y, radarRadius - 8);
+            const dbPulse = 0.65 + Math.sin(now / 550) * 0.35;
+            const SZ = sc ? 3.5 : 5;
+            ctx.save(); ctx.translate(sx, sy);
+            ctx.shadowBlur = 10 * dbPulse; ctx.shadowColor = '#60a5fa';
+            if (sc) {
+                const ax = cx - sx, ay = cy - sy;
+                ctx.rotate(Math.atan2(ay, ax));
+                ctx.fillStyle = `rgba(59,130,246,${0.8 + dbPulse * 0.2})`;
+                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
+            } else {
+                ctx.fillStyle   = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
+                ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.95})`; ctx.lineWidth = 1.2;
+                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2); ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
+            }
             ctx.restore();
-        } // end if (window.isFogWave) / else
+        }
 
-        // ══════════════════════════════════════════════════════
-        // INNER RESTORE — releases the circular clip region.
-        // Everything drawn after this point renders outside the
-        // circle without being cut off. THIS IS THE CRITICAL FIX
-        // for the clip architecture — the separate save/restore
-        // pair means the clip is self-contained and cannot bleed
-        // into any other canvas operations.
-        // ══════════════════════════════════════════════════════
-        ctx.restore();  // ← ends INNER save — clip released
+        // ── POI: Shop — gold ──────────────────────────────────────────
+        if (window.MTC_SHOP_LOCATION) {
+            const SH = window.MTC_SHOP_LOCATION;
+            const { x: shx, y: shy, clamped: shc } = toRadar(SH.x, SH.y, radarRadius - 8);
+            const shPulse = 0.65 + Math.sin(now / 700 + 1.2) * 0.35;
+            const SZ = shc ? 3.5 : 4.5;
+            ctx.save(); ctx.translate(shx, shy);
+            ctx.shadowBlur = 7 * shPulse; ctx.shadowColor = '#f59e0b';
+            if (shc) {
+                const ax = cx - shx, ay = cy - shy;
+                ctx.rotate(Math.atan2(ay, ax));
+                ctx.fillStyle = `rgba(245,158,11,${0.7 + shPulse * 0.3})`;
+                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
+            } else {
+                ctx.fillStyle   = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
+                ctx.strokeStyle = `rgba(253,230,138,${shPulse * 0.85})`; ctx.lineWidth = 1.2;
+                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2); ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
+            }
+            ctx.restore();
+        }
 
-        // ── 9. Label & legend strip (outside clip) ────────────
+        // ── Enemies — distinct shapes per type ────────────────────────
+        if (Array.isArray(window.enemies)) {
+            for (const e of window.enemies) {
+                if (!e || e.dead) continue;
+                const { x: ex, y: ey, clamped: ec } = toRadar(e.x, e.y);
+                ctx.save();
+                if (ec) {
+                    ctx.translate(ex, ey);
+                    ctx.rotate(Math.atan2(cy - ey, cx - ex));
+                    const arrowColor = e.type === 'mage'
+                        ? 'rgba(180,80,255,0.9)'
+                        : (e.type === 'tank' ? 'rgba(255,120,40,0.9)' : 'rgba(255,50,50,0.9)');
+                    ctx.fillStyle = arrowColor; ctx.shadowBlur = 5; ctx.shadowColor = arrowColor;
+                    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -3.5); ctx.lineTo(0, 3.5);
+                    ctx.closePath(); ctx.fill();
+                } else if (e.type === 'mage') {
+                    ctx.translate(ex, ey); ctx.rotate(now / 800);
+                    const r = 6;
+                    ctx.fillStyle = 'rgba(190,75,255,1.0)'; ctx.strokeStyle = 'rgba(220,160,255,0.9)';
+                    ctx.lineWidth = 1.2; ctx.shadowBlur = 8; ctx.shadowColor = '#b44dff';
+                    ctx.beginPath();
+                    ctx.moveTo(0,-r); ctx.lineTo(r*0.6,0); ctx.lineTo(0,r); ctx.lineTo(-r*0.6,0);
+                    ctx.closePath(); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = 'rgba(240,200,255,0.85)'; ctx.shadowBlur = 4;
+                    ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI*2); ctx.fill();
+                } else if (e.type === 'tank') {
+                    const r = 5.5;
+                    ctx.fillStyle = 'rgba(255,115,35,1.0)'; ctx.strokeStyle = 'rgba(255,185,90,0.9)';
+                    ctx.lineWidth = 1.4; ctx.shadowBlur = 7; ctx.shadowColor = '#ff7320';
+                    ctx.beginPath(); ctx.rect(ex-r, ey-r, r*2, r*2); ctx.fill(); ctx.stroke();
+                    ctx.strokeStyle = 'rgba(255,220,120,0.75)'; ctx.lineWidth = 1; ctx.shadowBlur = 0;
+                    const tk = 2.5;
+                    [[ex-r,ey-r],[ex+r,ey-r],[ex-r,ey+r],[ex+r,ey+r]].forEach(([px,py]) => {
+                        ctx.beginPath(); ctx.arc(px,py,tk,0,Math.PI*2); ctx.stroke();
+                    });
+                } else {
+                    const r = 5;
+                    const glow = 0.6 + Math.sin(now / 400 + e.x) * 0.4;
+                    ctx.fillStyle = 'rgba(255,38,38,1.0)'; ctx.shadowBlur = 8 * glow; ctx.shadowColor = '#ff2222';
+                    ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,180,180,0.75)'; ctx.shadowBlur = 0;
+                    ctx.beginPath(); ctx.arc(ex-1.5, ey-1.5, 1.5, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // ── Boss — 6 px pulsating purple dot ──────────────────────────
+        if (window.boss && !window.boss.dead) {
+            const t = (now % 1000) / 1000;
+            const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
+            const { x: bx, y: by, clamped: bc } = toRadar(window.boss.x, window.boss.y, radarRadius - 10);
+            ctx.save();
+            ctx.shadowBlur = 14 * pulse; ctx.shadowColor = '#a855f7';
+            if (bc) {
+                ctx.translate(bx, by);
+                ctx.rotate(Math.atan2(cy - by, cx - bx));
+                ctx.fillStyle = `rgba(168,85,247,${0.7 + pulse * 0.3})`;
+                ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(0,-5); ctx.lineTo(0,5); ctx.closePath(); ctx.fill();
+            } else {
+                ctx.fillStyle = `rgba(170,110,255,${0.75 + 0.25 * pulse})`;
+                ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = `rgba(216,180,254,${0.30 + 0.15 * pulse})`; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI*2); ctx.stroke();
+                ctx.fillStyle = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
+                ctx.font = 'bold 6px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.fillText('BOSS', bx, by - 12 - 2 * pulse);
+            }
+            ctx.restore();
+        }
+
+        // ── Player — green triangle at radar center ────────────────────
+        ctx.save();
+        ctx.translate(cx, cy);
+        if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
+        ctx.shadowBlur = 8; ctx.shadowColor = '#34d399';
+        ctx.fillStyle = 'rgba(52,214,88,0.98)';
+        ctx.beginPath(); ctx.moveTo(0,-6); ctx.lineTo(6,6); ctx.lineTo(-6,6); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.arc(0,-5,1.5,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    // ── Label + legend strip (rendered outside clip, below radar circle) ──────
+    static _minimapDrawLabel(ctx, cx, cy, radarRadius) {
         ctx.shadowBlur = 0;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.font = 'bold 8px Orbitron, monospace';
         ctx.fillStyle = 'rgba(72,187,120,0.70)';
         ctx.fillText(GAME_TEXTS.ui.minimapTitle, cx, cy + radarRadius + 5);
 
         // Tiny legend row: colored symbols matching blip types
-        // ● red=basic  ◆ purple=mage  ■ orange=tank  ★ boss  □ shop
         const legend = [
-            { col: '#ef4444', label: GAME_TEXTS.ui.legendEnm, shape: 'circle' },
+            { col: '#ef4444', label: GAME_TEXTS.ui.legendEnm, shape: 'circle'  },
             { col: '#b44dff', label: GAME_TEXTS.ui.legendMge, shape: 'diamond' },
-            { col: '#ff7320', label: GAME_TEXTS.ui.legendTnk, shape: 'square' },
-            { col: '#a855f7', label: GAME_TEXTS.ui.legendBss, shape: 'circle' },
-            { col: '#f59e0b', label: GAME_TEXTS.ui.legendShp, shape: 'square' },
+            { col: '#ff7320', label: GAME_TEXTS.ui.legendTnk, shape: 'square'  },
+            { col: '#a855f7', label: GAME_TEXTS.ui.legendBss, shape: 'circle'  },
+            { col: '#f59e0b', label: GAME_TEXTS.ui.legendShp, shape: 'square'  },
         ];
         const lx0 = cx - (legend.length - 1) * 12;
         legend.forEach(({ col, label, shape }, i) => {
             const lx = lx0 + i * 24;
             const ly = cy + radarRadius + 17;
-            ctx.fillStyle = col;
-            ctx.shadowBlur = 3;
-            ctx.shadowColor = col;
+            ctx.fillStyle = col; ctx.shadowBlur = 3; ctx.shadowColor = col;
             if (shape === 'diamond') {
                 ctx.beginPath();
-                ctx.moveTo(lx, ly - 3.5); ctx.lineTo(lx + 3, ly);
-                ctx.lineTo(lx, ly + 3.5); ctx.lineTo(lx - 3, ly);
+                ctx.moveTo(lx,ly-3.5); ctx.lineTo(lx+3,ly); ctx.lineTo(lx,ly+3.5); ctx.lineTo(lx-3,ly);
                 ctx.closePath(); ctx.fill();
             } else if (shape === 'square') {
-                ctx.fillRect(lx - 3, ly - 3, 6, 6);
+                ctx.fillRect(lx-3, ly-3, 6, 6);
             } else {
-                ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI*2); ctx.fill();
             }
             ctx.shadowBlur = 0;
-            ctx.font = '6px monospace';
-            ctx.fillStyle = 'rgba(203,213,225,0.65)';
+            ctx.font = '6px monospace'; ctx.fillStyle = 'rgba(203,213,225,0.65)';
             ctx.fillText(label, lx, ly + 9);
         });
-
-        // ══════════════════════════════════════════════════════
-        // OUTER RESTORE — final cleanup.
-        // Restores composite operation, globalAlpha, shadowBlur
-        // to whatever state they were in before drawMinimap().
-        // ══════════════════════════════════════════════════════
-        ctx.restore();  // ← ends OUTER save
     }
     // -- _roundRect -- moved from module scope --
     // Only used by drawConfusedWarning().

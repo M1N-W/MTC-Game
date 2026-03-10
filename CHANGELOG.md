@@ -4,6 +4,75 @@
 
 ---
 
+## v3.29.5 — Major Code Architecture Refactoring
+*Released: March 10, 2026*
+
+### 🏗️ Function Organization & Modularization
+- **Game Loop Refactoring**: Split massive `updateGame()` function into 6 focused sub-functions
+  - `_tickWaveEvents()` - Wave events, domain effects, glitch intensity, day/night cycle
+  - `_tickShopBuffs()` - Shop damage/speed boost timer management
+  - `_checkProximityInteractions()` - Shop tick, database/admin/shop proximity interactions
+  - `_tickEntities()` - Player, weapons, boss, enemies, AI updates
+  - `_tickBarrelExplosions()` - Explosive barrel projectile collision and AoE damage
+  - `_tickEnvironment()` - Projectiles, powerups, meteors, particles, VFX systems
+- **Game Start Modularization**: Split `startGame()` into 3 clean phases
+  - `_createPlayer()` - Player factory with admin buff handling
+  - `_resetRunState()` - Mutable run state reset for fresh games
+  - `_initGameUI()` - HUD setup, overlays, tutorial, mobile, wave initialization
+- **Wave Management Enhancement**: Split `startNextWave()` into specialized functions
+  - `_resetWaveState()` - Per-wave mutable state cleanup
+  - `_startGlitchWave()` - Glitch wave specific logic with countdown lock
+  - `_startBossWave()` - Deterministic boss encounter queue management
+
+### 🎨 CSS Regional Organization System
+- **13 Logical Sections**: Comprehensive CSS organization with clear regional boundaries
+  - BASE: Reset, fonts, body, canvas, layout foundations
+  - INTERACTION PROMPTS: Database, admin console, shop interaction elements
+  - PAUSE SCREEN: Resume overlay, pause indicator styling
+  - ADMIN CONSOLE: CRT overlay, input fields, permission badges
+  - SHOP MODAL: Item displays, character badges, achievement gallery
+  - ACHIEVEMENTS HUD: Toast notification system
+  - BOSS HUD: Health bars, phase colors, speech bubbles
+  - SKILL BAR: hud-bottom, icons, themes, cooldown arcs, lock overlays
+  - MAIN MENU OVERLAY: Menu panels, transitions
+  - VICTORY SCREEN: Epic cinematic, stats, rank badge
+  - CHARACTER SELECT: Selection cards, stat bars, character themes
+  - TUTORIAL OVERLAY: Tutorial steps, spotlight, progress dots
+  - MOBILE UI: Touch controls, buttons, haptic feedback styles
+- **Enhanced Navigation**: Clear section headers make CSS maintenance and development significantly more efficient
+
+### 🎯 UI System Modularization
+- **HUD Setup Refactoring**: Split `setupCharacterHUD()` into 8 specialized methods
+  - `_hudApplyThemeAndLabel()` - Theme classes and character name labels
+  - `_hudSetupAttackSlot()` - Attack icon reskinning and theming
+  - `_hudSetupPortraitAndWeapon()` - Portrait SVG swap and weapon indicator
+  - `_hudSetupPassiveSlot()` - Kao-only passive skill visibility
+  - `_hudSetupSkill1Slot()` - R-Click skill slot management
+  - `_hudSetupQSlot()` - Q-slot with naga/teleport/vacuum handling
+  - `_hudSetupExclusiveESlots()` - Character-specific E-slot injection
+  - `_hudSetupRitualAndMobileButtons()` - Ritual slot and mobile button labels
+- **Cooldown Update Refactoring**: Split `updateSkillIcons()` into character-specific methods
+  - `_updateIconsPoom()` - Poom's eat/naga/ritual/garuda cooldown management
+  - `_updateIconsAuto()` - Auto's wanchai/vacuum/detonation cooldown arcs
+  - `_updateIconsKao()` - Kao's teleport charges and clone cooldown system
+
+### 🗺️ Minimap System Overhaul
+- **Drawing Phase Separation**: Split `drawMinimap()` into 3 focused methods
+  - `_minimapDrawShell()` - Outer glow, navy fill, pulsating border, accent ring
+  - `_minimapDrawContent()` - Grid, sweep, POI markers, enemies, boss, player (inside clip)
+  - `_minimapDrawLabel()` - Label text and legend row (outside clip)
+- **Clip Architecture Fix**: Proper save/restore pairing prevents blend mode leakage
+- **Code Readability**: Each drawing phase now has clear responsibility and reduced complexity
+
+### 🔧 Technical Enhancements
+- **HTML Structure Improvements**: Added semantic IDs (`attack-emoji`, `attack-hint`) for better DOM manipulation
+- **Code Consistency**: Standardized formatting, reduced complexity, improved naming conventions
+- **Performance Optimization**: Optimized DOM queries, reduced redundant calculations
+- **Maintainability Boost**: Modular architecture enables easier debugging and future enhancements
+- **Documentation**: Enhanced inline comments and function documentation
+
+---
+
 ## v3.29.4 — Character HUD Theming System Enhancement
 *Released: March 10, 2026*
 

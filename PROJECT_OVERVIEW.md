@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.4
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.5
 
 ---
 
@@ -902,7 +902,44 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## � Recent Changes (v3.29.4)
+## 🔄 Recent Changes (v3.29.5)
+
+### 🏗️ Major Code Architecture Refactoring
+- **Function Organization**: Split large monolithic functions into focused, single-responsibility sub-functions
+  - `updateGame()` → `_tickWaveEvents()`, `_tickShopBuffs()`, `_checkProximityInteractions()`, `_tickEntities()`, `_tickBarrelExplosions()`, `_tickEnvironment()`
+  - `startGame()` → `_createPlayer()`, `_resetRunState()`, `_initGameUI()`
+  - `startNextWave()` → `_resetWaveState()`, `_startGlitchWave()`, `_startBossWave()`
+  - `setupCharacterHUD()` → 8 focused sub-methods for different HUD aspects
+- **UI System Refactoring**: Modularized HUD setup with dedicated methods for themes, attack slots, passive skills, and character-specific elements
+- **Minimap System Overhaul**: Split `drawMinimap()` into `_minimapDrawShell()`, `_minimapDrawContent()`, `_minimapDrawLabel()` for better maintainability
+- **Wave Manager Enhancement**: Separated wave type logic into dedicated functions with cleaner state management
+
+### 🎨 CSS Regional Organization
+- **Structured Sections**: Added comprehensive regional comments organizing CSS into 13 logical sections
+  - BASE: Reset, fonts, body, canvas, layout
+  - INTERACTION PROMPTS: Database, admin console, shop
+  - PAUSE SCREEN: Resume overlay, pause indicator
+  - ADMIN CONSOLE: CRT overlay, input, permission badges
+  - SHOP MODAL: Items, char badges, achievement gallery
+  - ACHIEVEMENTS HUD: Toast notifications
+  - BOSS HUD: HP bar, phase colors, speech bubbles
+  - SKILL BAR: hud-bottom, icons, themes, cooldown arc, lock
+  - MAIN MENU OVERLAY: Menu panels, transitions
+  - VICTORY SCREEN: Epic cinematic, stats, rank badge
+  - CHARACTER SELECT: Cards, stat bars, char themes
+  - TUTORIAL OVERLAY: Steps, spotlight, progress dots
+  - MOBILE UI: Controls, buttons, haptic styles
+- **Enhanced Maintainability**: Clear section boundaries make CSS navigation and maintenance significantly easier
+
+### 🔧 Technical Improvements
+- **HTML Structure**: Added semantic IDs for attack emoji and hint elements for better DOM manipulation
+- **Code Readability**: Consistent formatting, reduced complexity, and improved function naming conventions
+- **Performance**: Optimized DOM queries and reduced redundant calculations
+- **Maintainability**: Modular architecture makes future enhancements and debugging more efficient
+
+---
+
+## 🔄 Recent Changes (v3.29.4)
 
 ### 🎨 Character HUD Theming System
 - **Personalized HUD Themes**: Character-specific bottom HUD themes with unique color schemes
@@ -920,7 +957,7 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## �📝 Previous Major Changes (v3.27.6)
+## �� Previous Major Changes (v3.27.6)
 
 ### Cooldown HUD Bug Fixes (v3.27.6 — March 9, 2026)
 **Purpose:** แก้ arc overlay และ timer ของ Skill HUD ทุกตัวละครให้ sync กับ state จริง

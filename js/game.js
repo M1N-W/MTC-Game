@@ -127,11 +127,9 @@ function gameLoop(now) {
 }
 
 function updateGame(dt) {
-    // IMP-4 FIX: guard against null player (can happen on first frame or
-    // if player object is destroyed before the loop detects GAMEOVER)
     if (!window.player) return;
 
-    // Player death check — call endGame once then bail out of the update
+    // Player death — spawn decal once then hand off to endGame
     if (window.player.dead) {
         if (typeof decalSystem !== 'undefined' && !window.player._deathDecalSpawned) {
             window.player._deathDecalSpawned = true;
@@ -144,6 +142,7 @@ function updateGame(dt) {
     updateCamera(window.player.x, window.player.y);
     updateMouseWorld();
 
+    // Glitch intensity ramp
     const GLITCH_RAMP = 0.8;
     if (GameState.isGlitchWave) {
         GameState.glitchIntensity = Math.min(1.0, GameState.glitchIntensity + GLITCH_RAMP * dt);
@@ -151,15 +150,26 @@ function updateGame(dt) {
         GameState.glitchIntensity = Math.max(0.0, GameState.glitchIntensity - GLITCH_RAMP * 2 * dt);
     }
 
-    // ── Wave Events (Fog / Speed) ──────────────────────────────
+    const _inTutorial = typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive();
+
+    _tickWaveEvents(dt);
+    _tickShopBuffs(dt);
+    _checkProximityInteractions(_inTutorial);
+    _tickEntities(dt, _inTutorial);
+    _tickBarrelExplosions();
+    _tickEnvironment(dt, _inTutorial);
+}
+
+// ── Wave & domain events each frame ──────────────────────────────────────────
+function _tickWaveEvents(dt) {
     if (typeof updateWaveEvent === 'function') updateWaveEvent(dt);
     if (typeof DomainExpansion !== 'undefined' && window.boss && !window.boss.dead)
         DomainExpansion.update(dt, window.boss, window.player);
-    // GravitationalSingularity.update ต้องรัน แม้ boss dead — เพื่อให้ _abort() ทำงานและ reset phase
-    // ป้องกัน isInvincible() ค้าง true ข้ามไปเกมถัดไป
+    // Must run even when boss is dead — allows _abort() to reset phase
     if (typeof GravitationalSingularity !== 'undefined')
         GravitationalSingularity.update(dt, window.boss, window.player);
 
+    // Glitch-wave countdown lock
     if (GameState.waveSpawnLocked) {
         GameState.waveSpawnTimer -= dt;
         const secsLeft = Math.ceil(GameState.waveSpawnTimer);
@@ -178,6 +188,7 @@ function updateGame(dt) {
         }
     }
 
+    // Day / Night cycle
     dayNightTimer += dt;
     {
         const L = BALANCE.LIGHTING;
@@ -185,49 +196,52 @@ function updateGame(dt) {
         const dayPhase = Math.sin(phi) * 0.5 + 0.5;
         L.ambientLight = L.nightMinLight + dayPhase * (L.dayMaxLight - L.nightMinLight);
     }
+}
 
-    if (window.player.shopDamageBoostActive) {
-        window.player.shopDamageBoostTimer -= dt;
-        if (window.player.shopDamageBoostTimer <= 0) {
-            window.player.shopDamageBoostActive = false;
-            window.player.damageBoost = window.player._baseDamageBoost !== undefined ? window.player._baseDamageBoost : 1.0;
-            spawnFloatingText(GAME_TEXTS.shop.dmgBoostExpired, window.player.x, window.player.y - 50, '#94a3b8', 14);
+// ── Shop temporary buff timers (damage boost + speed boost) ──────────────────
+function _tickShopBuffs(dt) {
+    const p = window.player;
+    if (p.shopDamageBoostActive) {
+        p.shopDamageBoostTimer -= dt;
+        if (p.shopDamageBoostTimer <= 0) {
+            p.shopDamageBoostActive = false;
+            p.damageBoost = p._baseDamageBoost !== undefined ? p._baseDamageBoost : 1.0;
+            spawnFloatingText(GAME_TEXTS.shop.dmgBoostExpired, p.x, p.y - 50, '#94a3b8', 14);
         }
     }
-
-    if (window.player.shopSpeedBoostActive) {
-        window.player.shopSpeedBoostTimer -= dt;
-        if (window.player.shopSpeedBoostTimer <= 0) {
-            window.player.shopSpeedBoostActive = false;
+    if (p.shopSpeedBoostActive) {
+        p.shopSpeedBoostTimer -= dt;
+        if (p.shopSpeedBoostTimer <= 0) {
+            p.shopSpeedBoostActive = false;
             // BUG 2 FIX: restore stats.moveSpeed (same path ShopSystem.js wrote to)
-            if (window.player._baseMoveSpeed !== undefined) {
-                if (window.player.stats) window.player.stats.moveSpeed = window.player._baseMoveSpeed;
-                else window.player.moveSpeed = window.player._baseMoveSpeed;
+            if (p._baseMoveSpeed !== undefined) {
+                if (p.stats) p.stats.moveSpeed = p._baseMoveSpeed;
+                else p.moveSpeed = p._baseMoveSpeed;
             }
-            spawnFloatingText(GAME_TEXTS.shop.spdBoostExpired, window.player.x, window.player.y - 50, '#94a3b8', 14);
+            spawnFloatingText(GAME_TEXTS.shop.spdBoostExpired, p.x, p.y - 50, '#94a3b8', 14);
         }
     }
+}
 
-    // ── Shop System Updates ───────────────────────────────────────
-    if (typeof ShopManager !== 'undefined' && typeof ShopManager.tick === 'function') {
-        ShopManager.tick();
-    }
+// ── Proximity interactions: shop tick + E/F/B key interactions ────────────────
+function _checkProximityInteractions(_inTutorial) {
+    if (typeof ShopManager !== 'undefined' && typeof ShopManager.tick === 'function') ShopManager.tick();
 
     const dToServer = dist(window.player.x, window.player.y, MTC_DATABASE_SERVER.x, MTC_DATABASE_SERVER.y);
-    const _inTutorial = typeof TutorialSystem !== 'undefined' && TutorialSystem.isActive();
-
     if (!_inTutorial && dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.e === 1) {
         keys.e = 0; openExternalDatabase(); return;
     }
     if (!_inTutorial && dToServer < MTC_DATABASE_SERVER.INTERACTION_RADIUS && keys.f === 1) {
         keys.f = 0; openAdminConsole(); return;
     }
-
     const dToShop = dist(window.player.x, window.player.y, MTC_SHOP_LOCATION.x, MTC_SHOP_LOCATION.y);
     if (!_inTutorial && dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
         keys.b = 0; openShop(); return;
     }
+}
 
+// ── Player, weapon, boss, enemies, AI tick ────────────────────────────────────
+function _tickEntities(dt, _inTutorial) {
     const effectiveKeys = GameState.controlsInverted
         ? { ...keys, w: keys.s, s: keys.w, a: keys.d, d: keys.a }
         : keys;
@@ -235,24 +249,18 @@ function updateGame(dt) {
 
     if (!(window.player instanceof PoomPlayer) && !(typeof AutoPlayer === 'function' && window.player instanceof AutoPlayer)) {
         weaponSystem.update(dt);
-
         // 🛡️ KAO FIX: Do NOT run WeaponSystem's burst loop for KaoPlayer.
-        //    WeaponSystem.updateBurst() calls shootSingle() which fires projectiles
-        //    that bypass KaoPlayer's own this.shootCooldown entirely, producing the
-        //    OP machine-gun effect.  KaoPlayer.shoot() handles all fire-rate gating
-        //    internally — WeaponSystem burst is for other characters only.
+        //    WeaponSystem.updateBurst() calls shootSingle() which bypasses KaoPlayer's
+        //    own fire-rate gating, causing OP machine-gun effect.
         const isKao = typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer;
         if (!isKao) {
             const burstProjectiles = weaponSystem.updateBurst(window.player, window.player.damageBoost);
             if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
         }
-
-        // Route shooting: Kao uses its own shoot(); Auto and Poom handle shooting internally
+        // Route shooting: Kao uses its own shoot(); Auto and Poom handle internally
         const isPoom = typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer;
         if (isKao) {
-            if (mouse.left === 1 && GameState.phase === 'PLAYING') {
-                window.player.shoot(dt);
-            }
+            if (mouse.left === 1 && GameState.phase === 'PLAYING') window.player.shoot(dt);
         } else if (!isPoom && mouse.left === 1 && GameState.phase === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
@@ -263,30 +271,24 @@ function updateGame(dt) {
             }
         }
     }
+    // 🌾 NOTE: PoomPlayer input routing is handled inside PoomPlayer.update()
 
-    // 🌾 NOTE: PoomPlayer input routing (L-Click shoot, R-Click eatRice) is
-    // handled entirely inside PoomPlayer.update() — no duplicate routing here.
     if (window.player) UIManager.updateSkillIcons(window.player);
-
     if (window.drone && window.player && !window.player.dead) window.drone.update(dt, window.player);
-
     if (!_inTutorial && window.boss) window.boss.update(dt, window.player);
 
-    // ── PlayerPatternAnalyzer: sample after player update, before boss AI reads it ──
+    // PlayerPatternAnalyzer: sample after player update, before boss AI reads it
     if (typeof playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
         playerAnalyzer.sample(dt, window.player, window.boss);
         playerAnalyzer.update(dt);
     }
-    // ── Boss Safe-Zone Exclusion ───────────────────────────────────────────────
-    // ป้องกัน player lure boss เข้า MTC Room แล้ว spawn-kill ฟรี
-    // ทำ 2 อย่างพร้อมกัน:
-    //   1) smooth push-out  — boss ค่อยๆ ถูกดันออกจาก room center (380 px/s)
-    //   2) _inSafeZone flag — takeDamage ทุก boss class skip damage ระหว่าง overlap
+
+    // Boss safe-zone exclusion — prevent boss being lured into MTC Room for free kills
     if (window.boss && !window.boss.dead) {
         const _safeRoom = window.mapSystem && window.mapSystem.mtcRoom;
         if (_safeRoom) {
             const _bx = window.boss.x, _by = window.boss.y;
-            const _pad = 28; // px — margin เผื่อ radius boss ไม่ติดขอบแบบ pixel-perfect
+            const _pad = 28;
             const _inRoom = _bx > _safeRoom.x - _pad && _bx < _safeRoom.x + _safeRoom.w + _pad &&
                 _by > _safeRoom.y - _pad && _by < _safeRoom.y + _safeRoom.h + _pad;
             if (_inRoom) {
@@ -304,7 +306,6 @@ function updateGame(dt) {
             }
         }
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
     if (!_inTutorial) {
         for (let i = window.enemies.length - 1; i >= 0; i--) {
@@ -314,10 +315,10 @@ function updateGame(dt) {
                 window.enemies.pop();
             }
         }
-        // ── SquadAI: 1Hz role assignment across all living enemies ──
         if (typeof squadAI !== 'undefined') squadAI.update(dt, window.enemies, window.player);
     }
 
+    // Wave clear check — trigger next wave when all enemies dead and no boss/trickle pending
     if (!_inTutorial && (BALANCE.waves.bossEveryNWaves > 0 ? getWave() % BALANCE.waves.bossEveryNWaves !== 0 : true) && window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {
         if (Achievements.stats.damageTaken === GameState.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
@@ -325,12 +326,97 @@ function updateGame(dt) {
         GameState.waveStartDamage = Achievements.stats.damageTaken;
         setWave(getWave() + 1);
         Achievements.check('wave_1');
-        // ── Wave Events: end old event, start new ──────────────
-        // wave event handled inside startNextWave()
-        // WARN-2 FIX: guard against WaveManager not yet loaded
         if (typeof startNextWave === 'function') startNextWave();
     }
+}
 
+// ── Explosive barrel: projectile hit detection + AoE explosion ────────────────
+function _tickBarrelExplosions() {
+    if (typeof projectileManager === 'undefined' || !projectileManager ||
+        !projectileManager.projectiles || !Array.isArray(projectileManager.projectiles) ||
+        !window.mapSystem || !Array.isArray(window.mapSystem.objects)) return;
+
+    const allProj = projectileManager.projectiles;
+
+    // Pass A: projectile → barrel hit detection
+    for (let pi = allProj.length - 1; pi >= 0; pi--) {
+        const proj = allProj[pi];
+        if (!proj || proj.dead) continue;
+        for (let bi = window.mapSystem.objects.length - 1; bi >= 0; bi--) {
+            const obj = window.mapSystem.objects[bi];
+            if (!(obj instanceof ExplosiveBarrel) || obj.isExploded) continue;
+            const closestX = Math.max(obj.x, Math.min(proj.x, obj.x + obj.w));
+            const closestY = Math.max(obj.y, Math.min(proj.y, obj.y + obj.h));
+            if (Math.hypot(proj.x - closestX, proj.y - closestY) < (proj.radius || 6)) {
+                obj.hp -= proj.damage || 10;
+                spawnParticles(proj.x, proj.y, 5, '#f59e0b');
+                proj.dead = true;
+                window.mapSystem._sortedObjects = null;
+                break;
+            }
+        }
+    }
+
+    // Pass B: barrel death → AoE explosion
+    const survivingObjects = [];
+    for (const obj of window.mapSystem.objects) {
+        if (!(obj instanceof ExplosiveBarrel)) { survivingObjects.push(obj); continue; }
+        if (obj.hp <= 0 && !obj.isExploded) {
+            obj.isExploded = true;
+            const bCX = obj.x + obj.w / 2;
+            const bCY = obj.y + obj.h / 2;
+            addScreenShake(20);
+            spawnParticles(bCX, bCY, 35, '#f97316');
+            spawnParticles(bCX, bCY, 20, '#71717a');
+            spawnParticles(bCX, bCY, 10, '#fef3c7');
+            spawnFloatingText('💥 BOOM!', bCX, bCY - 55, '#f97316', 38);
+            const EXPL_R = 180, EXPL_DMG = 150;
+            // Player
+            if (window.player && !window.player.dead) {
+                const pd = Math.hypot(window.player.x - bCX, window.player.y - bCY);
+                if (pd < EXPL_R) {
+                    const f = 1 - (pd / EXPL_R) * 0.5;
+                    window.player.takeDamage(EXPL_DMG * f);
+                    spawnFloatingText(`🔥 ${Math.round(EXPL_DMG * f)}`, window.player.x, window.player.y - 60, '#ef4444', 22);
+                }
+            }
+            // Enemies
+            for (let ei = window.enemies.length - 1; ei >= 0; ei--) {
+                const enemy = window.enemies[ei];
+                if (!enemy || enemy.dead) continue;
+                const ed = Math.hypot(enemy.x - bCX, enemy.y - bCY);
+                if (ed < EXPL_R) {
+                    const f = 1 - (ed / EXPL_R) * 0.5;
+                    const wasAlive = !enemy.dead;
+                    enemy.takeDamage(EXPL_DMG * f);
+                    if (wasAlive && enemy.dead && typeof Achievements !== 'undefined') {
+                        Achievements.stats.barrelKills++;
+                        Achievements.check('barrel_bomber');
+                    }
+                }
+            }
+            // Boss
+            if (window.boss && !window.boss.dead) {
+                const bd = Math.hypot(window.boss.x - bCX, window.boss.y - bCY);
+                if (bd < EXPL_R) {
+                    const f = 1 - (bd / EXPL_R) * 0.5;
+                    window.boss.takeDamage(EXPL_DMG * f);
+                    spawnFloatingText('BARREL HIT!', window.boss.x, window.boss.y - 80, '#f97316', 26);
+                }
+            }
+            window.mapSystem._sortedObjects = null;
+        } else if (!obj.isExploded) {
+            survivingObjects.push(obj);
+        }
+    }
+    if (survivingObjects.length !== window.mapSystem.objects.length) {
+        window.mapSystem.objects = survivingObjects;
+        window.mapSystem._sortedObjects = null;
+    }
+}
+
+// ── Projectiles, powerups, meteors, particles, VFX systems ───────────────────
+function _tickEnvironment(dt, _inTutorial) {
     for (let i = window.specialEffects.length - 1; i >= 0; i--) {
         const remove = window.specialEffects[i].update(dt, window.player, window.meteorZones);
         if (remove) {
@@ -340,152 +426,6 @@ function updateGame(dt) {
     }
 
     projectileManager.update(dt, window.player, window.enemies, window.boss);
-
-    // ── Explosive Barrel — Projectile Collision & Explosion ───────────
-    // Runs every frame after projectile positions are finalised.
-    // Two passes:
-    //   Pass A — check every live projectile against every barrel.
-    //            Damage the barrel; mark the projectile dead.
-    //   Pass B — for any barrel that just died, trigger the AoE explosion
-    //            and queue it for removal from mapSystem.objects.
-    //
-    // Both passes are guarded so that a barrel which exploded *this frame*
-    // cannot be hit again before it is removed, and a single projectile
-    // cannot damage two barrels in one frame (proj.dead breaks the inner loop).
-    if (typeof projectileManager !== 'undefined' && projectileManager &&
-        projectileManager.projectiles && Array.isArray(projectileManager.projectiles) &&
-        window.mapSystem && Array.isArray(window.mapSystem.objects)) {
-
-        const allProj = projectileManager.projectiles;
-
-        // ── Pass A: projectile → barrel hit detection ─────────────────
-        for (let pi = allProj.length - 1; pi >= 0; pi--) {
-            const proj = allProj[pi];
-            if (!proj || proj.dead) continue;
-
-            for (let bi = window.mapSystem.objects.length - 1; bi >= 0; bi--) {
-                const obj = window.mapSystem.objects[bi];
-                // Only target live ExplosiveBarrel instances
-                if (!(obj instanceof ExplosiveBarrel) || obj.isExploded) continue;
-
-                // Circle–rectangle collision: treat barrel as its AABB
-                const closestX = Math.max(obj.x, Math.min(proj.x, obj.x + obj.w));
-                const closestY = Math.max(obj.y, Math.min(proj.y, obj.y + obj.h));
-                const hitDist = Math.hypot(proj.x - closestX, proj.y - closestY);
-
-                if (hitDist < (proj.radius || 6)) {
-                    // ── Register hit on barrel ──────────────────────────
-                    const dmg = proj.damage || 10;
-                    obj.hp -= dmg;
-
-                    // Hit spark feedback
-                    spawnParticles(proj.x, proj.y, 5, '#f59e0b');
-
-                    // Destroy projectile so it doesn't travel further
-                    proj.dead = true;
-
-                    // Invalidate sorted draw cache (visual state changed)
-                    window.mapSystem._sortedObjects = null;
-
-                    break; // one projectile hits at most one barrel per frame
-                }
-            }
-        }
-
-        // ── Pass B: barrel death → AoE explosion ──────────────────────
-        const survivingObjects = [];
-        for (const obj of window.mapSystem.objects) {
-
-            // Non-barrel objects always survive this loop
-            if (!(obj instanceof ExplosiveBarrel)) {
-                survivingObjects.push(obj);
-                continue;
-            }
-
-            if (obj.hp <= 0 && !obj.isExploded) {
-                // ── Mark exploded first — prevents double-trigger ───────
-                obj.isExploded = true;
-
-                const barrelCX = obj.x + obj.w / 2;
-                const barrelCY = obj.y + obj.h / 2;
-
-                // ── Screen-shake & particle burst ──────────────────────
-                addScreenShake(20);
-
-                // Fire burst — large bright orange spray
-                spawnParticles(barrelCX, barrelCY, 35, '#f97316');
-                // Smoke cloud — grey particles that linger
-                spawnParticles(barrelCX, barrelCY, 20, '#71717a');
-                // Inner white-hot flash
-                spawnParticles(barrelCX, barrelCY, 10, '#fef3c7');
-
-                // ── BOOM floating text ──────────────────────────────────
-                spawnFloatingText('💥 BOOM!', barrelCX, barrelCY - 55, '#f97316', 38);
-
-                // ── AoE Damage — 180 px radius, 150 damage ─────────────
-                const EXPLOSION_RADIUS = 180;
-                const EXPLOSION_DAMAGE = 150;
-
-                // Player
-                if (window.player && !window.player.dead) {
-                    const pd = Math.hypot(window.player.x - barrelCX, window.player.y - barrelCY);
-                    if (pd < EXPLOSION_RADIUS) {
-                        // Scale damage by proximity: full at 0, half at edge
-                        const falloff = 1 - (pd / EXPLOSION_RADIUS) * 0.5;
-                        window.player.takeDamage(EXPLOSION_DAMAGE * falloff);
-                        spawnFloatingText(
-                            `🔥 ${Math.round(EXPLOSION_DAMAGE * falloff)}`,
-                            window.player.x, window.player.y - 60, '#ef4444', 22
-                        );
-                    }
-                }
-
-                // Enemies
-                for (let ei = window.enemies.length - 1; ei >= 0; ei--) {
-                    const enemy = window.enemies[ei];
-                    if (!enemy || enemy.dead) continue;
-                    const ed = Math.hypot(enemy.x - barrelCX, enemy.y - barrelCY);
-                    if (ed < EXPLOSION_RADIUS) {
-                        const falloff = 1 - (ed / EXPLOSION_RADIUS) * 0.5;
-                        const wasAlive = !enemy.dead;
-                        enemy.takeDamage(EXPLOSION_DAMAGE * falloff);
-                        // ✨ [barrel_bomber] นับเฉพาะตัวที่ตายจากระเบิดนี้
-                        if (wasAlive && enemy.dead && typeof Achievements !== 'undefined') {
-                            Achievements.stats.barrelKills++;
-                            Achievements.check('barrel_bomber');
-                        }
-                    }
-                }
-
-                // Boss
-                if (window.boss && !window.boss.dead) {
-                    const bd = Math.hypot(window.boss.x - barrelCX, window.boss.y - barrelCY);
-                    if (bd < EXPLOSION_RADIUS) {
-                        const falloff = 1 - (bd / EXPLOSION_RADIUS) * 0.5;
-                        window.boss.takeDamage(EXPLOSION_DAMAGE * falloff);
-                        spawnFloatingText('BARREL HIT!', window.boss.x, window.boss.y - 80, '#f97316', 26);
-                    }
-                }
-
-                // ── Remove barrel from objects (do not push to surviving) ──
-                window.mapSystem._sortedObjects = null;
-                // intentional: no survivingObjects.push(obj)
-
-            } else if (!obj.isExploded) {
-                // Barrel still alive — keep it
-                survivingObjects.push(obj);
-            }
-            // isExploded but hp > 0 can't happen; if isExploded already,
-            // skip (it was cleaned up in a previous frame's pass).
-        }
-
-        // Replace the objects array with the survivors
-        if (survivingObjects.length !== window.mapSystem.objects.length) {
-            window.mapSystem.objects = survivingObjects;
-            window.mapSystem._sortedObjects = null;
-        }
-    }
-    // ── End Explosive Barrel Logic ─────────────────────────────────────
 
     for (let i = window.powerups.length - 1; i >= 0; i--) {
         if (window.powerups[i].update(dt, window.player)) {
@@ -509,18 +449,14 @@ function updateGame(dt) {
     particleSystem.update(dt);
     floatingTextSystem.update(dt);
 
-    // Orbital effects for Auto & Kao
-    if (typeof updateOrbitalEffects !== 'undefined') {
-        updateOrbitalEffects(dt, [window.player]);
-    }
-
+    if (typeof updateOrbitalEffects !== 'undefined') updateOrbitalEffects(dt, [window.player]);
     if (typeof hitMarkerSystem !== 'undefined') hitMarkerSystem.update(dt);
-
     if (typeof decalSystem !== 'undefined') decalSystem.update(dt);
     if (typeof shellCasingSystem !== 'undefined') shellCasingSystem.update(dt);
 
     weatherSystem.update(dt, getCamera());
     updateScreenShake();
+
     _achFrame++;
     if (_achFrame % 10 === 0) Achievements.checkAll();
     updateDatabaseServerUI();
@@ -814,52 +750,58 @@ function _fadeOutOverlay() {
 
 function startGame(charType = 'kao') {
     console.log('🎮 Starting game... charType:', charType);
-    window._selectedChar = charType; // used by rollShopItems() for char-specific filtering
+    window._selectedChar = charType;
     Audio.playBGM('battle');
 
     const savedData = getSaveData();
     console.log('[MTC Save] Loaded save data:', savedData);
     UIManager.updateHighScoreDisplay(savedData.highScore);
 
-    if (charType === 'auto' && typeof AutoPlayer === 'function') {
-        window.player = new AutoPlayer();
-    } else if (charType === 'kao' && typeof KaoPlayer === 'function') {
-        window.player = new KaoPlayer();
-    } else {
-        window.player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
-    }
+    window.player = _createPlayer(charType);
+    _resetRunState(window.player);
+    _initGameUI(charType);
 
-    // ── Admin Dev Mode: Apply Dev Buff Package ──────────────────────────────
-    // ทำงานเฉพาะเมื่อ window.isAdmin === true (ทุกตัวละคร)
-    // ไม่ unlock passive อีกต่อไป — passive ต้องปลดเองในเกมตามปกติ
-    if (window.isAdmin && typeof window.player.applyDevBuff === 'function') {
-        window.player.applyDevBuff();
+    console.log('✅ Game started!');
+    if (!GameState.loopRunning && rafId === null) {
+        GameState.loopRunning = true;
+        rafId = requestAnimationFrame(gameLoop);
+    }
+}
+
+// ── Player factory — returns the correct subclass for charType ────────────────
+function _createPlayer(charType) {
+    let player;
+    if (charType === 'auto' && typeof AutoPlayer === 'function') {
+        player = new AutoPlayer();
+    } else if (charType === 'kao' && typeof KaoPlayer === 'function') {
+        player = new KaoPlayer();
+    } else {
+        player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
+    }
+    if (window.isAdmin && typeof player.applyDevBuff === 'function') {
+        player.applyDevBuff();
         console.log('%c[MTC Admin] 🚀 DEV BUFF applied to player.', 'color:#f97316; font-weight:bold;');
     }
+    return player;
+}
 
+// ── Mutable run state reset for a fresh game ─────────────────────────────────
+function _resetRunState(player) {
     dayNightTimer = 0;
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
-    // ── Reset all mutable run state via GameState ─────────────
-    // resetRun() calls _syncAliases() which re-points window.enemies /
-    // powerups / specialEffects / meteorZones / boss to fresh arrays.
-    // Do NOT manually reset window.* refs before this call.
     GameState.resetRun();
-    console.log('🐕 Boss encounter counter reset — encounter 1 will be plain boss');
+    console.log('🐕 Boss encounter counter reset');
     console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
     console.log('⚡ Glitch Wave grace period reset');
 
-    window.player.shopDamageBoostActive = false;
-    window.player.shopDamageBoostTimer = 0;
-    window.player._baseDamageBoost = undefined;
-    window.player.shopSpeedBoostActive = false;
-    window.player.shopSpeedBoostTimer = 0;
-    window.player._baseMoveSpeed = undefined;
+    // Clear shop buff state on player (set before first ShopSystem call this run)
+    player.shopDamageBoostActive = false; player.shopDamageBoostTimer = 0; player._baseDamageBoost = undefined;
+    player.shopSpeedBoostActive = false; player.shopSpeedBoostTimer = 0; player._baseMoveSpeed = undefined;
 
     window.drone = new Drone();
-    window.drone.x = window.player.x;
-    window.drone.y = window.player.y;
-    spawnFloatingText(GAME_TEXTS.combat.droneOnline, window.player.x, window.player.y - 90, '#00e5ff', 20);
+    window.drone.x = player.x; window.drone.y = player.y;
+    spawnFloatingText(GAME_TEXTS.combat.droneOnline, player.x, player.y - 90, '#00e5ff', 20);
     console.log('🤖 Engineering Drone initialised');
 
     weatherSystem.clear();
@@ -873,19 +815,21 @@ function startGame(charType = 'kao') {
     if (typeof shellCasingSystem !== 'undefined') shellCasingSystem.clear();
     mapSystem.init();
 
-    weaponSystem.setActiveChar(charType);
-    try {
-        weaponSystem.updateWeaponUI();
-    } catch (err) {
-        console.error('[startGame] updateWeaponUI threw — continuing anyway:', err);
-    }
-    UIManager.initSkillNames();
-    UIManager.setupCharacterHUD(window.player);
-
     Achievements.stats.damageTaken = 0;
     Achievements.stats.kills = 0;
     Achievements.stats.shopPurchases = 0;
     GameState.waveStartDamage = 0;
+}
+
+// ── UI wiring: HUD setup, overlays, tutorial, mobile, wave ───────────────────
+function _initGameUI(charType) {
+    const player = window.player;
+    weaponSystem.setActiveChar(charType);
+    try { weaponSystem.updateWeaponUI(); } catch (err) {
+        console.error('[startGame] updateWeaponUI threw — continuing anyway:', err);
+    }
+    UIManager.initSkillNames();
+    UIManager.setupCharacterHUD(player);
 
     // 🔴 Fix #1: Fade out instead of instant hide
     _fadeOutOverlay();
@@ -906,7 +850,6 @@ function startGame(charType = 'kao') {
     const consoleOutput = document.getElementById('console-output');
     if (consoleOutput) consoleOutput.innerHTML = '';
 
-    // WARN-2 FIX: guard against WaveManager not yet loaded
     rollShopItems();
     if (typeof startNextWave === 'function') startNextWave();
     setGameState('PLAYING');
@@ -922,13 +865,6 @@ function startGame(charType = 'kao') {
         mobileUI.style.display = isTouchDevice ? 'block' : 'none';
     }
     window.focus();
-
-    console.log('✅ Game started!');
-    // BUG FIX: Prevent race condition with RAF ID tracking
-    if (!GameState.loopRunning && rafId === null) {
-        GameState.loopRunning = true;
-        rafId = requestAnimationFrame(gameLoop);
-    }
 }
 
 async function endGame(result) {

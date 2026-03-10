@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.29.3'; // v3.29.3: Enhanced character HUD theming system with personalized visual themes and attack icon reskinning
+const CACHE_NAME = 'mtc-cache-v3.29.5'; // v3.29.5: Major code architecture refactoring with improved function organization, CSS regional structuring, and enhanced maintainability
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
