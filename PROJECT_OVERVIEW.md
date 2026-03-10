@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.4
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.5
 
 ---
 
@@ -1124,7 +1124,55 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Changes (v3.30.4)
+## 📝 Recent Changes (v3.30.5)
+
+### Boss Attack Architecture Refactoring (March 10, 2026)
+**Purpose:** Modularize boss attack system with shared base classes and enhanced visual effects
+
+**Key Changes:**
+- **Modular Architecture**: Split monolithic boss attacks into specialized modules
+- **Shared Base Classes**: Created `DomainBase` for common domain expansion patterns
+- **Code Reuse**: Eliminated duplicate code between boss attack systems
+- **Enhanced Visual Effects**: Improved boss rendering with phase-based auras
+
+**New File Structure:**
+- **`boss_attacks_shared.js`**: Shared base classes and utilities
+  - `DomainBase`: Common domain expansion boilerplate
+  - `ExpandingRing`: Reusable shockwave visual effect
+- **`boss_attacks_manop.js`**: KruManop-specific attacks (8 attack types)
+- **`boss_attacks_first.js`**: Refactored KruFirst attacks with enhanced mechanics
+
+**Gravitational Singularity Enhancements:**
+- **Proximity Punishment**: Anti-hug mechanics with contact damage and repulsion
+- **Dual Ring Collapse**: Inner high-damage ring + outer falloff damage
+- **Visual Contact Zone**: Red dashed ring showing danger area
+- **Enhanced Casting**: Green/cyan cinematic overlay with chromatic effects
+
+**Visual Effects Improvements:**
+- **BossRenderer Phase Auras**: Dynamic auras based on boss phase/HP
+  - Phase 1: Cyan-green science field
+  - Phase 2: Orange-red unstable jetpack  
+  - Phase 3: Purple-white singularity collapse
+- **Quantum Formula Storm**: Dual-orbit system with 12 formulas
+- **Ambient Particles**: Phase 2/3 particle systems with deterministic motion
+
+**Technical Improvements:**
+- **DomainBase Pattern**: Shared state machine and utility functions
+- **Object Composition**: `Object.assign(Object.create(DomainBase), {...})`
+- **Performance**: Eliminated `Math.random()` calls in draw loops
+- **Deterministic Rendering**: All visual effects use seeded calculations
+
+**Configuration Updates:**
+- **Proximity Punishment Settings**: New config section for anti-hug mechanics
+- **Collapse Inner Ring**: `collapseInnerRadius` 110px, `collapseInnerDamage` 65
+
+**Files Changed:**
+- **New Files**: `boss_attacks_shared.js`, `boss_attacks_manop.js`
+- **Modified**: `boss_attacks_first.js`, `BossRenderer.js`, `config.js`
+
+---
+
+## 📝 Previous Changes (v3.30.4)
 
 ### Major Balance Patch (March 10, 2026)
 **Purpose:** Comprehensive balance overhaul to reduce damage scaling and improve game fairness

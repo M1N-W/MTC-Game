@@ -4,6 +4,78 @@
 
 ---
 
+## v3.30.5 — Boss Attack Architecture Refactoring
+*Released: March 10, 2026*
+
+### 🏗️ Architecture Overhaul
+- **Modular Boss Attack System**: Split monolithic boss attacks into specialized modules
+- **Shared Base Classes**: Created `DomainBase` for common domain expansion patterns
+- **Code Reuse**: Eliminated duplicate code between boss attack systems
+- **Enhanced Maintainability**: Improved code organization and separation of concerns
+
+### 📁 New File Structure
+- **`boss_attacks_shared.js`**: Shared base classes and utilities
+  - `DomainBase`: Common domain expansion boilerplate
+  - `ExpandingRing`: Reusable shockwave visual effect
+- **`boss_attacks_manop.js`**: KruManop-specific attacks
+  - `BarkWave`: Sonic cone attack with visual distortion
+  - `GoldfishMinion`: Kamikaze sine-wave chaser
+  - `BubbleProjectile`: Slow AoE projectile with slow effect
+  - `MatrixGridAttack`: Area-denial zone attack
+  - `DomainExpansion`: Enhanced METRICS-MANIPULATION ultimate
+  - `EquationSlam`: Shockwave ring with formula shards
+  - `DeadlyGraph`: Expanding laser beam with risk/reward
+  - `ChalkWall`: Phase 2 ground hazard
+- **`boss_attacks_first.js`**: Refactored KruFirst attacks
+  - `GravitationalSingularity`: Now extends `DomainBase`
+  - Enhanced with proximity punishment mechanics
+  - Improved visual effects and casting animations
+
+### 🎯 Gravitational Singularity Enhancements
+- **Proximity Punishment**: Anti-hug mechanics with contact damage and repulsion
+- **Dual Ring Collapse**: Inner high-damage ring + outer falloff damage
+- **Visual Contact Zone**: Red dashed ring showing danger area
+- **Enhanced Casting**: Green/cyan cinematic overlay with chromatic effects
+- **Code Deduplication**: Shared domain expansion logic
+
+### 🎨 Visual Effects Improvements
+- **BossRenderer Phase Auras**: Dynamic auras based on boss phase/HP
+  - Phase 1: Cyan-green science field
+  - Phase 2: Orange-red unstable jetpack
+  - Phase 3: Purple-white singularity collapse
+- **Quantum Formula Storm**: Dual-orbit system with 12 formulas
+  - Outer orbit: Large, slow formulas
+  - Inner orbit: Small, fast flickering formulas
+  - Enraged mode: Scattered radius oscillation
+- **Ambient Particles**: Phase 2/3 particle systems with deterministic motion
+
+### ⚙️ Configuration Updates
+- **Proximity Punishment Settings**: New config section for anti-hug mechanics
+  - `contactRadius`: 70px danger zone
+  - `contactDPS`: 18 damage per second
+  - `repulseForce`: 260px/s outward push
+- **Collapse Inner Ring**: `collapseInnerRadius` 110px, `collapseInnerDamage` 65
+
+### 🔧 Technical Improvements
+- **DomainBase Pattern**: Shared state machine and utility functions
+- **Object Composition**: `Object.assign(Object.create(DomainBase), {...})`
+- **Performance**: Eliminated `Math.random()` calls in draw loops
+- **Deterministic Rendering**: All visual effects use seeded calculations
+- **Code Organization**: Clear separation between shared and boss-specific logic
+
+### 🎮 Gameplay Impact
+- **Anti-Hug Mechanics**: Prevents exploit of staying next to boss
+- **Enhanced Visual Feedback**: Better indication of danger zones
+- **Improved Boss Identity**: More distinct visual signatures per phase
+- **Risk/Reward Balance**: Proximity punishment encourages tactical positioning
+
+### 📁 Files Modified
+- **New Files**: `boss_attacks_shared.js`, `boss_attacks_manop.js`
+- **Modified**: `boss_attacks_first.js`, `BossRenderer.js`, `config.js`
+- **Documentation**: Updated changelog, readme, and project overview
+
+---
+
 ## v3.30.4 — Major Balance Patch
 *Released: March 10, 2026*
 

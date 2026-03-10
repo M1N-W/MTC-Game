@@ -706,64 +706,40 @@ class OrbitalDebris {
 //      TIDAL   (4.5s) — oscillating pull/push + FormulaZones
 //      COLLAPSE(2.5s) — ramp pull + final shockwave AoE
 // ════════════════════════════════════════════════════════════
-const GravitationalSingularity = {
-    phase: 'idle',      // 'idle' | 'casting' | 'active' | 'ending'
+// GravitationalSingularity extends DomainBase (boss_attacks_shared.js)
+// Inherited: canTrigger, isInvincible, _beginCast, _endDomain, abort,
+//            _initRain, _drawRain, _announceKaijo
+// Owns: gravity pulse logic (PULL/ESCAPE/TIDAL/COLLAPSE), orbitals, GS-specific state
+const GravitationalSingularity = Object.assign(Object.create(DomainBase), {
+    // ── First-specific state (DomainBase handles: phase, timer, cooldownTimer, originX/Y, _flashTimer, _rain) ──
     pulse: 'PULL',      // current active pulse
     pulseTimer: 0,
-    timer: 0,
-    cooldownTimer: 0,
-    originX: 0, originY: 0,
     _orbitals: [],      // OrbitalDebris instances (active in TIDAL)
-    _rain: [],          // physics char rain (same pattern as DomainExpansion)
-    _flashTimer: 0,
     _flashColor: '#00ffff',
     _pulse2FireTimer: 0,
     _pulse2TeleportsDone: 0,
     _pulse3ZonesDone: false,
     _collapseWarnDone: false,
     _collapseShockDone: false,
-
-    canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
-    isInvincible() { return this.phase !== 'idle'; },
+    _contactDmgTimer: 0,    // cooldown between proximity damage ticks
 
     trigger(boss) {
         if (!this.canTrigger()) return;
         const _GS = BALANCE.boss.gravitationalSingularity;
         this.phase = 'casting';
-        this.timer = _GS.castDur;
-        this.originX = boss.x;
-        this.originY = boss.y;
+        // _beginCast handles: phase='casting', timer, originX/Y, boss flags, screenShake, Audio
+        this._beginCast(boss, _GS.castDur);
+        // Reset First-specific state
         this._orbitals = [];
         this._pulse2FireTimer = 0;
         this._pulse2TeleportsDone = 0;
         this._pulse3ZonesDone = false;
         this._collapseWarnDone = false;
         this._collapseShockDone = false;
-        this._initRain();
-
-        boss._domainCasting = true;
-        boss._domainActive = true;
-
-        if (typeof addScreenShake === 'function') addScreenShake(18);
-        if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
-        if (typeof spawnFloatingText === 'function') {
-            spawnFloatingText('領域展開', boss.x, boss.y - 130, '#39ff14', 50);
-            setTimeout(() => {
-                if (typeof spawnFloatingText === 'function')
-                    spawnFloatingText('重力特異点', boss.x, boss.y - 185, '#00ffff', 36);
-            }, 700);
-            setTimeout(() => {
-                if (typeof spawnFloatingText === 'function')
-                    spawnFloatingText('GRAVITATIONAL SINGULARITY', boss.x, boss.y - 230, '#a3e635', 24);
-            }, 1200);
-        }
-        if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
-            window.UIManager.showVoiceBubble('領域展開...', boss.x, boss.y - 50);
-            setTimeout(() => {
-                if (window.UIManager)
-                    window.UIManager.showVoiceBubble('นิวตัน... อภัยให้ข้าด้วย', boss.x, boss.y - 50);
-            }, 1000);
-        }
+        this._contactDmgTimer = 0;
+        this._initRain({ pool: '0123456789FvamgEtωρABCΔΩΣΨFmav∫∂∇+-×÷=≤≥', cols: 32 });
+        // _announceKaijo handles: 領域展開 text, subtitle JP/EN, UIManager voice bubbles
+        this._announceKaijo(boss, '重力特異点', 'GRAVITATIONAL SINGULARITY', '#39ff14', '#00ffff', 'นิวตัน... อภัยให้ข้าด้วย');
         if (typeof spawnParticles === 'function') {
             spawnParticles(boss.x, boss.y, 40, '#39ff14');
             spawnParticles(boss.x, boss.y, 25, '#00ffff');
@@ -800,12 +776,8 @@ const GravitationalSingularity = {
         // ── ending ───────────────────────────────────────────
         if (this.phase === 'ending') {
             if (this.timer <= 0) {
-                this.phase = 'idle';
-                this.cooldownTimer = _GS.cooldown;
                 this._orbitals = [];
-                boss._domainCasting = false;
-                boss._domainActive = false;
-                if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.stateTimer = 0; }
+                this._endDomain(boss, _GS.cooldown);
                 // Give player a brief immunity window
                 if (player) {
                     player._gsImmunity = 0.5;
@@ -824,6 +796,13 @@ const GravitationalSingularity = {
 
         // Player GS immunity tick
         if (player && player._gsImmunity > 0) player._gsImmunity -= dt;
+
+        // ── Proximity punishment — active on PULL, TIDAL, COLLAPSE ─
+        // (NOT on ESCAPE — safeRadius mechanic is intentional there)
+        if (this.pulse !== 'ESCAPE') {
+            if (this._contactDmgTimer > 0) this._contactDmgTimer -= dt;
+            this._applyProximityPunishment(dt, boss, player);
+        }
 
         this.pulseTimer -= dt;
 
@@ -990,18 +969,27 @@ const GravitationalSingularity = {
                 // Final shockwave at the very end
                 if (!this._collapseShockDone && this.pulseTimer <= 0.15) {
                     this._collapseShockDone = true;
-                    // AoE damage
+                    // AoE damage — two rings: outer falloff + inner high-damage
                     if (player && !player.dead) {
                         const d = Math.hypot(player.x - boss.x, player.y - boss.y);
-                        if (d < _GS.collapseRadius + player.radius) {
+                        if (d < _GS.collapseInnerRadius + player.radius) {
+                            // Inner ring — full damage, no falloff (punishes hugging)
+                            player.takeDamage(_GS.collapseInnerDamage);
+                            if (typeof spawnFloatingText === 'function')
+                                spawnFloatingText(`💀 ${_GS.collapseInnerDamage} SINGULARITY`, player.x, player.y - 70, '#ffffff', 28);
+                        } else if (d < _GS.collapseRadius + player.radius) {
+                            // Outer ring — falloff damage
                             const falloff = 1 - (d / _GS.collapseRadius) * 0.5;
                             player.takeDamage(_GS.collapseDamage * falloff);
-                            spawnFloatingText('💥 COLLAPSE!', player.x, player.y - 60, '#ef4444', 30);
+                            if (typeof spawnFloatingText === 'function')
+                                spawnFloatingText('💥 COLLAPSE!', player.x, player.y - 60, '#ef4444', 30);
                         }
                     }
                     if (typeof window.specialEffects !== 'undefined') {
                         window.specialEffects.push(new ExpandingRing(boss.x, boss.y, '#39ff14', _GS.collapseRadius, 0.9));
                         window.specialEffects.push(new ExpandingRing(boss.x, boss.y, '#00ffff', _GS.collapseRadius * 0.65, 0.7));
+                        // Inner ring visual — white/purple to signal danger zone
+                        window.specialEffects.push(new ExpandingRing(boss.x, boss.y, '#ffffff', _GS.collapseInnerRadius, 0.5));
                     }
                     if (typeof spawnParticles === 'function') {
                         spawnParticles(boss.x, boss.y, 60, '#39ff14');
@@ -1052,22 +1040,7 @@ const GravitationalSingularity = {
         ctx.fillRect(0, 0, W, H);
 
         // ── 2. Physics char rain (green palette) ─────────────
-        ctx.font = '11px "Courier New",monospace';
-        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-        for (const col of this._rain) {
-            const cx = col.xNorm * W, charH = 14;
-            for (let i = 0; i < col.chars.length; i++) {
-                const rawY = ((now * col.speed * H * 0.20 + col.offsetY + i * charH))
-                    % (H + charH * col.chars.length) - charH * 4;
-                const fade = 1.0 - i / col.chars.length;
-                ctx.globalAlpha = globalA * col.alpha * fade;
-                if (i === 0) { ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 8; ctx.shadowColor = '#39ff14'; }
-                else if (i < 3) { ctx.fillStyle = '#39ff14'; ctx.shadowBlur = 4; ctx.shadowColor = '#39ff14'; }
-                else { ctx.fillStyle = '#00ffff'; ctx.shadowBlur = 0; }
-                ctx.fillText(col.chars[i], cx, rawY);
-            }
-        }
-        ctx.shadowBlur = 0;
+        this._drawRain(ctx, now, W, H, globalA, ['#39ff14', '#39ff14', '#00ffff']);
 
         // ── 3. Singularity point — black circle at boss ───────
         if ((this.phase === 'active' || this.phase === 'ending') && window.boss) {
@@ -1105,6 +1078,23 @@ const GravitationalSingularity = {
             ctx.shadowBlur = 24; ctx.shadowColor = '#39ff14';
             ctx.beginPath(); ctx.arc(bsc.x, bsc.y, singR, 0, Math.PI * 2); ctx.stroke();
             ctx.shadowBlur = 0;
+
+            // ── Contact danger zone ring (visible on PULL/TIDAL/COLLAPSE) ─
+            if (this.pulse !== 'ESCAPE') {
+                const _GS = BALANCE.boss.gravitationalSingularity;
+                const edgeSS = worldToScreen(window.boss.x + _GS.contactRadius, window.boss.y);
+                const contactRSS = Math.abs(edgeSS.x - bsc.x);
+                const dangerPulse = 0.4 + Math.sin(now * 6) * 0.35;
+                ctx.globalAlpha = globalA * dangerPulse * 0.65;
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 10; ctx.shadowColor = '#ef4444';
+                ctx.setLineDash([5, 4]);
+                ctx.lineDashOffset = -(now * 40) % 9;
+                ctx.beginPath(); ctx.arc(bsc.x, bsc.y, contactRSS, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]); ctx.lineDashOffset = 0;
+                ctx.shadowBlur = 0;
+            }
         }
 
         // ── 4. Pulse-specific overlays ────────────────────────
@@ -1249,6 +1239,92 @@ const GravitationalSingularity = {
             ctx.shadowBlur = 0;
         }
 
+        // ── 7. Casting cinematic overlay ──────────────────────
+        if (this.phase === 'casting') {
+            const _GS = BALANCE.boss.gravitationalSingularity;
+            const elapsed = _GS.castDur - this.timer;
+
+            // Expanding shockwave rings — green/cyan palette
+            if (window.boss) {
+                const originSS = worldToScreen(window.boss.x, window.boss.y);
+                const edgeFar = worldToScreen(window.boss.x + 800, window.boss.y);
+                const maxR = Math.abs(edgeFar.x - originSS.x);
+                for (let ri = 0; ri < 3; ri++) {
+                    const delay = ri * 0.45;
+                    if (elapsed < delay) continue;
+                    const rProg = Math.min(1.0, (elapsed - delay) / (_GS.castDur - delay));
+                    const ringR = rProg * maxR;
+                    ctx.globalAlpha = (1.0 - rProg) * (0.55 - ri * 0.14);
+                    ctx.strokeStyle = ri === 0 ? '#39ff14' : ri === 1 ? '#00ffff' : '#ffffff';
+                    ctx.lineWidth = 3.5 - ri * 0.9;
+                    ctx.shadowBlur = 22 - ri * 5; ctx.shadowColor = '#39ff14';
+                    ctx.beginPath(); ctx.arc(originSS.x, originSS.y, ringR, 0, Math.PI * 2); ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            // Chromatic aberration scanlines — green tint
+            if (elapsed > 0.6) {
+                const caProg = Math.min(1.0, (elapsed - 0.6) / 1.0);
+                const lineCount = Math.floor(caProg * 10);
+                for (let li = 0; li < lineCount; li++) {
+                    const ly = (li / lineCount) * H + Math.sin(now * 7 + li * 1.3) * 18;
+                    ctx.globalAlpha = 0.06 * caProg;
+                    ctx.fillStyle = li % 2 === 0 ? '#39ff14' : '#00ffff';
+                    ctx.fillRect(0, ly, W, 2);
+                }
+            }
+
+            // 領域展開 kanji — scale in with chromatic split
+            if (elapsed > 0.30) {
+                const ta = Math.min(1.0, (elapsed - 0.30) / 0.50);
+                const sc = 0.78 + ta * 0.22;
+                const fontSize = Math.round(52 * sc);
+                // Chromatic split (cyan / green offset)
+                ctx.globalAlpha = ta * 0.40;
+                ctx.font = `bold ${fontSize}px serif`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#00ffff';
+                ctx.fillText('領域展開', W / 2 - 3, H / 2 - 42 + 2);
+                ctx.fillStyle = '#39ff14';
+                ctx.fillText('領域展開', W / 2 + 3, H / 2 - 42 - 2);
+                // Main white kanji
+                ctx.globalAlpha = ta;
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 42; ctx.shadowColor = '#39ff14';
+                ctx.fillText('領域展開', W / 2, H / 2 - 42);
+                ctx.shadowBlur = 0;
+            }
+
+            // 重力特異点 subtitle
+            if (elapsed > 0.95) {
+                const tb = Math.min(1.0, (elapsed - 0.95) / 0.55);
+                ctx.globalAlpha = tb;
+                ctx.font = `900 ${Math.round(22 * (0.88 + tb * 0.12))}px "Orbitron","Bebas Neue",Arial`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 22; ctx.shadowColor = '#00ffff';
+                ctx.fillStyle = '#a3e635';
+                ctx.fillText('GRAVITATIONAL SINGULARITY', W / 2, H / 2 + 14);
+                ctx.shadowBlur = 0;
+                // Underline sweep
+                ctx.globalAlpha = tb * 0.85;
+                ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 1.5;
+                const ulW = tb * 260;
+                ctx.beginPath(); ctx.moveTo(W / 2 - ulW / 2, H / 2 + 28); ctx.lineTo(W / 2 + ulW / 2, H / 2 + 28); ctx.stroke();
+            }
+
+            // Final white flash at end of cast
+            if (elapsed > _GS.castDur - 0.30) {
+                const tf = (elapsed - (_GS.castDur - 0.30)) / 0.30;
+                ctx.globalAlpha = tf * 0.65;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, W, H);
+                ctx.globalAlpha = tf * 0.40;
+                ctx.fillStyle = '#39ff14';
+                ctx.fillRect(0, 0, W, H);
+            }
+        }
+
         ctx.restore();
     },
 
@@ -1279,29 +1355,50 @@ const GravitationalSingularity = {
         if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
     },
 
-    _initRain() {
-        const POOL = '0123456789FvamgEtωρABCΔΩΣΨFmav∫∂∇+-×÷=≤≥';
-        const rainChar = () => POOL[Math.floor(Math.random() * POOL.length)];
-        this._rain = [];
-        for (let i = 0; i < 32; i++) {
-            const len = 7 + Math.floor(Math.random() * 9);
-            this._rain.push({
-                xNorm: Math.random(),
-                offsetY: Math.random() * 600,
-                speed: 0.5 + Math.random() * 0.8,
-                alpha: 0.20 + Math.random() * 0.30,
-                chars: Array.from({ length: len }, rainChar),
-            });
+    // ── Proximity Punishment ─────────────────────────────────
+    // Called every active tick on PULL / TIDAL / COLLAPSE.
+    // Two effects when player is within contactRadius of boss:
+    //   1. Repulsion force — pushes player outward so hugging boss is hard work
+    //   2. Contact damage tick — deals contactDPS * contactTickCd damage on cooldown
+    // This closes the exploit where staying glued to the boss negates all gravity effects.
+    _applyProximityPunishment(dt, boss, player) {
+        if (!player || player.dead || (player._gsImmunity > 0)) return;
+        const _GS = BALANCE.boss.gravitationalSingularity;
+        const dx = player.x - boss.x, dy = player.y - boss.y;
+        const d = Math.hypot(dx, dy);
+        if (d >= _GS.contactRadius || d <= 0) return;
+
+        // ── 1. Repulsion force — harder to hug ────────────────
+        const repulse = _GS.repulseForce * (1 - d / _GS.contactRadius) * dt;
+        player.vx = (player.vx || 0) + (dx / d) * repulse;
+        player.vy = (player.vy || 0) + (dy / d) * repulse;
+
+        // ── 2. Damage tick on cooldown ────────────────────────
+        if (this._contactDmgTimer <= 0) {
+            this._contactDmgTimer = _GS.contactTickCd;
+            const dmg = Math.round(_GS.contactDPS * _GS.contactTickCd);
+            player.takeDamage(dmg);
+            if (typeof spawnFloatingText === 'function')
+                spawnFloatingText(`⚫ ${dmg}`, player.x, player.y - 45, '#a855f7', 18);
+            if (typeof addScreenShake === 'function') addScreenShake(4);
         }
     },
 
+    // _initRain() — inherited from DomainBase; called via this._initRain({ pool: '...', cols: 32 })
+
     _abort(boss) {
-        this.phase = 'idle'; this.cooldownTimer = 0;
-        this._orbitals = []; this._flashTimer = 0;
-        if (boss) { boss._domainCasting = false; boss._domainActive = false; }
+        // Clear First-specific state, then delegate shared cleanup to DomainBase.abort()
+        this._orbitals = [];
+        this._pulse2FireTimer = 0;
+        this._pulse2TeleportsDone = 0;
+        this._pulse3ZonesDone = false;
+        this._collapseWarnDone = false;
+        this._collapseShockDone = false;
+        this._contactDmgTimer = 0;
+        Object.getPrototypeOf(this).abort.call(this, boss);
         console.log('[GravitationalSingularity] Aborted — boss dead');
     },
-};
+});
 
 window.GravitationalSingularity = GravitationalSingularity;
 window.OrbitalDebris = OrbitalDebris;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.4'; // Major Balance Patch - Comprehensive nerfs across all characters to reduce damage scaling and improve game balance
+const CACHE_NAME = 'mtc-cache-v3.30.5'; // Boss Attack Architecture Refactoring - Modular boss attack system with shared base classes and enhanced visual effects
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

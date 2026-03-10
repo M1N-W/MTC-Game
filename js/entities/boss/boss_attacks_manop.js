@@ -753,50 +753,34 @@ function _shuffle(arr) {
     return arr;
 }
 
-const DomainExpansion = {
-    phase: 'idle',   // 'idle' | 'casting' | 'active' | 'ending'
-    timer: 0, cycleTimer: 0, cyclePhase: 'warn', cycleCount: 0,
-    originX: 0, originY: 0,
-    cells: [], cooldownTimer: 0,
-    _rain: [], _indices: [],
-    _flashTimer: 0,     // full-screen purple flash on explosion hit
+// DomainExpansion extends DomainBase (boss_attacks_shared.js)
+// Inherited: canTrigger, isInvincible, _beginCast, _endDomain, abort,
+//            _initRain, _drawRain, _announceKaijo
+// Owns: Manop-specific grid cycle logic, crack lines, chalk volleys, sub-phases
+const DomainExpansion = Object.assign(Object.create(DomainBase), {
+    // ── Manop-specific state ──────────────────────────────────
+    cycleTimer: 0, cyclePhase: 'warn', cycleCount: 0,
+    cells: [], _indices: [],
     _crackLines: [],    // screen crack visual during casting
-    // ── Phase 3 Rework additions ──────────────────────────────
+    // Phase 3 Rework additions
     _subPhase: 'A',          // 'A' (cycles 1-2) | 'B' (cycles 3-4) | 'C' (cycles 5-6)
     _safeCellShifts: [],     // pre-seeded array of safe-cell index deltas per cycle (B only)
     _domainChalkTimer: 0,    // countdown to next chalk volley (subPhase B)
 
-    canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
-    isInvincible() { return this.phase !== 'idle'; },
-
     trigger(boss) {
         if (!this.canTrigger()) return;
-        this.phase = 'casting';
-        this.timer = _DC.CAST_DUR;
         // Domain covers entire map — anchor to world centre
+        this._beginCast(boss, _DC.CAST_DUR);
         this.originX = 0;
         this.originY = 0;
-        this._initRain();
-        // ── Phase 3 Rework: reset subPhase state ─────────────
+        // Reset Manop-specific state
         this._subPhase = 'A';
         this._domainChalkTimer = 0;
         // Pre-seed safe cell shifts for subPhase B (cycles 3-4, index 2-3)
         // 6 values — one per cycle — deterministic, non-zero offsets
         this._safeCellShifts = [0, 0, 17, 31, 53, 11];
-
-        boss._domainCasting = true;
-        boss._domainActive = true;
-
-        if (typeof addScreenShake === 'function') addScreenShake(14);
-        if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
-        if (typeof spawnFloatingText === 'function') {
-            spawnFloatingText('領域展開', boss.x, boss.y - 130, '#d946ef', 50);
-            setTimeout(() => spawnFloatingText('METRICS-MANIPULATION', boss.x, boss.y - 185, '#facc15', 34), 700);
-        }
-        if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
-            window.UIManager.showVoiceBubble('領域展開...', boss.x, boss.y - 50);
-            setTimeout(() => { if (window.UIManager) window.UIManager.showVoiceBubble('Metrics!', boss.x, boss.y - 50); }, 950);
-        }
+        this._initRain({ pool: _RAIN_POOL, cols: _DC.RAIN_COLS });
+        this._announceKaijo(boss, 'METRICS-MANIPULATION', 'METRICS-MANIPULATION', '#d946ef', '#facc15', 'Metrics!');
         if (typeof spawnParticles === 'function') {
             spawnParticles(boss.x, boss.y, 35, '#d946ef');
             spawnParticles(boss.x, boss.y, 20, '#facc15');
@@ -937,11 +921,9 @@ const DomainExpansion = {
 
             case 'ending':
                 if (this.timer <= 0) {
-                    this.phase = 'idle'; this.cooldownTimer = _DC.COOLDOWN;
-                    boss._domainCasting = false; boss._domainActive = false;
-                    if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.timer = 0; }
-                    this.cells = []; this._crackLines = []; this._flashTimer = 0;
+                    this.cells = []; this._crackLines = [];
                     this._subPhase = 'A'; this._domainChalkTimer = 0; this._safeCellShifts = [];
+                    this._endDomain(boss, _DC.COOLDOWN);
                     console.log('[DomainExpansion] Domain ended — cooldown 45 s');
                 }
                 break;
@@ -967,21 +949,7 @@ const DomainExpansion = {
         ctx.fillRect(0, 0, W, H);
 
         // ── 2. Matrix rain — denser, dual-colour ────────────
-        ctx.font = '11px "Courier New",monospace';
-        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-        for (const col of this._rain) {
-            const cx = col.xNorm * W, charH = 14;
-            for (let i = 0; i < col.chars.length; i++) {
-                const rawY = ((now * col.speed * H * 0.20 + col.offsetY + i * charH)) % (H + charH * col.chars.length) - charH * 4;
-                const fade = 1.0 - i / col.chars.length;
-                ctx.globalAlpha = globalA * col.alpha * fade;
-                if (i === 0) { ctx.fillStyle = '#fff'; ctx.shadowBlur = 8; ctx.shadowColor = '#d946ef'; }
-                else if (i < 3) { ctx.fillStyle = '#d946ef'; ctx.shadowBlur = 4; ctx.shadowColor = '#d946ef'; }
-                else { ctx.fillStyle = '#d97706'; ctx.shadowBlur = 0; }
-                ctx.fillText(col.chars[i], cx, rawY);
-            }
-        }
-        ctx.shadowBlur = 0;
+        this._drawRain(ctx, now, W, H, globalA, ['#d946ef', '#d946ef', '#d97706']);
 
         // ── 3. Domain border — circular arena ring ────────────
         if (this.phase === 'active' || this.phase === 'ending') {
@@ -1082,6 +1050,20 @@ const DomainExpansion = {
             const isEnding = this.phase === 'ending';
             const collapsePct = isEnding ? (1.0 - globalA) : 0;  // 0→1 as domain fades
 
+            // ── Performance: shadow budget ────────────────────────────
+            // shadowBlur is the single most expensive canvas op at scale.
+            // Count visible cells first; suppress shadows if > threshold.
+            // This keeps the visual effect while preventing GPU overload from
+            // ~2000 shadow draws per frame.
+            const SHADOW_BUDGET = 80;  // max cells allowed to use shadowBlur
+            let visibleCount = 0;
+            for (const cell of this.cells) {
+                const tl0 = worldToScreen(cell.wx, cell.wy);
+                const br0 = worldToScreen(cell.wx + _DC.CELL_SIZE, cell.wy + _DC.CELL_SIZE);
+                if (br0.x >= 0 && tl0.x <= W && br0.y >= 0 && tl0.y <= H) visibleCount++;
+            }
+            const useShadow = visibleCount <= SHADOW_BUDGET;
+
             for (const cell of this.cells) {
                 // Collapse: shift cell toward origin during ending
                 let drawWx = cell.wx, drawWy = cell.wy;
@@ -1111,30 +1093,38 @@ const DomainExpansion = {
                         ctx.fillRect(tl.x, tl.y, sw, sh);
                         // Bright border
                         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
-                        ctx.shadowBlur = 18; ctx.shadowColor = '#ef4444';
+                        ctx.shadowBlur = useShadow ? 18 : 0; ctx.shadowColor = '#ef4444';
                         ctx.globalAlpha = globalA * ef * 0.85;
                         ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                         // REWORK: shockwave ring expanding from cell
                         const swRing = explodeProgress * sw * 1.8;
                         ctx.globalAlpha = globalA * (1.0 - explodeProgress) * 0.7;
                         ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2;
-                        ctx.shadowBlur = 12; ctx.shadowColor = '#facc15';
+                        ctx.shadowBlur = useShadow ? 12 : 0; ctx.shadowColor = '#facc15';
                         ctx.beginPath(); ctx.arc(mx, my, swRing * 0.5, 0, Math.PI * 2); ctx.stroke();
                         ctx.shadowBlur = 0;
                     } else {
                         // ── Warning ───────────────────────────
                         const baseCol = isLate ? '#ef4444' : '#d97706';
                         const glowCol = isLate ? '#ef4444' : '#facc15';
-                        const wg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
-                        const fillA = 0.18 + warnProgress * 0.45 * fastPulse;
-                        wg.addColorStop(0, isLate ? `rgba(239,68,68,${fillA * 1.4})` : `rgba(251,146,60,${fillA})`);
-                        wg.addColorStop(1, `rgba(0,0,0,0)`);
-                        ctx.globalAlpha = globalA;
-                        ctx.fillStyle = wg;
+                        // Skip expensive radial gradient when many cells visible — flat fill instead
+                        if (useShadow) {
+                            const wg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 0.72);
+                            const fillA = 0.18 + warnProgress * 0.45 * fastPulse;
+                            wg.addColorStop(0, isLate ? `rgba(239,68,68,${fillA * 1.4})` : `rgba(251,146,60,${fillA})`);
+                            wg.addColorStop(1, `rgba(0,0,0,0)`);
+                            ctx.globalAlpha = globalA;
+                            ctx.fillStyle = wg;
+                        } else {
+                            const fillA = (0.18 + warnProgress * 0.45 * fastPulse) * 0.85;
+                            ctx.globalAlpha = globalA * fillA;
+                            ctx.fillStyle = isLate ? '#ef4444' : '#d97706';
+                        }
                         ctx.fillRect(tl.x, tl.y, sw, sh);
                         // Animated border
                         ctx.strokeStyle = baseCol; ctx.lineWidth = isLate ? 2.5 : 1.8;
-                        ctx.shadowBlur = isLate ? (8 + fastPulse * 10) : 4; ctx.shadowColor = glowCol;
+                        ctx.shadowBlur = useShadow ? (isLate ? (8 + fastPulse * 10) : 4) : 0;
+                        ctx.shadowColor = glowCol;
                         ctx.globalAlpha = globalA * (0.4 + fastPulse * 0.6);
                         ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                         ctx.shadowBlur = 0;
@@ -1145,15 +1135,14 @@ const DomainExpansion = {
                         [[tl.x, tl.y, 1, 1], [tl.x + sw, tl.y, -1, 1], [tl.x, tl.y + sh, 1, -1], [tl.x + sw, tl.y + sh, -1, -1]].forEach(([bx, by, sx2, sy2]) => {
                             ctx.beginPath(); ctx.moveTo(bx + sx2 * tl2, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + sy2 * tl2); ctx.stroke();
                         });
-                        // REWORK: crack lines — grow as warnProgress increases
-                        if (warnProgress > 0.35) {
+                        // REWORK: crack lines — grow as warnProgress increases (skip when tiny)
+                        if (useShadow && warnProgress > 0.35) {
                             const crackProg = (warnProgress - 0.35) / 0.65;
                             const crackLen = sw * 0.3 * crackProg;
                             ctx.globalAlpha = globalA * crackProg * 0.75;
                             ctx.strokeStyle = isLate ? '#fca5a5' : '#fde68a';
                             ctx.lineWidth = 1;
                             ctx.shadowBlur = 4; ctx.shadowColor = glowCol;
-                            // 3 cracks from center using cell position as deterministic seed
                             const seed = Math.abs(Math.round(cell.wx * 0.1 + cell.wy * 0.07));
                             for (let ci = 0; ci < 3; ci++) {
                                 const ca = ((seed * 37 + ci * 120) % 360) * Math.PI / 180;
@@ -1172,51 +1161,54 @@ const DomainExpansion = {
                         barG.addColorStop(1, isLate ? '#fbbf24' : '#d97706');
                         ctx.fillStyle = barG;
                         ctx.fillRect(tl.x + 2, tl.y + sh - 6, barW, 5);
-                        // Math formula inside cell
-                        const formulas = ['∑x²', 'dy/dx', 'log(x)', 'f\'(x)', 'det(A)', 'eigenλ', 'μ+σ', '∫f dx'];
-                        const fi = Math.abs(Math.round(cell.wx + cell.wy) % formulas.length);
-                        const formulaAlpha = isLate ? (0.30 + fastPulse * 0.35) : 0.18;
-                        ctx.globalAlpha = globalA * formulaAlpha;
-                        ctx.font = `bold ${Math.max(8, Math.floor(sw * 0.15))}px "Courier New",monospace`;
-                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                        ctx.fillStyle = isLate ? '#fca5a5' : '#fde68a';
-                        ctx.fillText(formulas[fi], mx, my + sh * 0.15);
-                        // ⚠ icon
-                        const iconSize = Math.max(10, Math.floor(sh * 0.38));
-                        ctx.globalAlpha = globalA * (0.6 + fastPulse * 0.4);
-                        ctx.font = `${iconSize}px Arial`;
-                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                        ctx.fillStyle = '#fff';
-                        ctx.shadowBlur = isLate ? 10 : 4; ctx.shadowColor = glowCol;
-                        ctx.fillText('⚠', mx, my - sh * 0.12);
-                        ctx.shadowBlur = 0;
+                        // Math formula + ⚠ icon — skip when cells are small (zoomed out)
+                        if (sw >= 14) {
+                            const formulas = ['∑x²', 'dy/dx', 'log(x)', 'f\'(x)', 'det(A)', 'eigenλ', 'μ+σ', '∫f dx'];
+                            const fi = Math.abs(Math.round(cell.wx + cell.wy) % formulas.length);
+                            const formulaAlpha = isLate ? (0.30 + fastPulse * 0.35) : 0.18;
+                            ctx.globalAlpha = globalA * formulaAlpha;
+                            ctx.font = `bold ${Math.max(8, Math.floor(sw * 0.15))}px "Courier New",monospace`;
+                            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                            ctx.fillStyle = isLate ? '#fca5a5' : '#fde68a';
+                            ctx.fillText(formulas[fi], mx, my + sh * 0.15);
+                            // ⚠ icon
+                            const iconSize = Math.max(10, Math.floor(sh * 0.38));
+                            ctx.globalAlpha = globalA * (0.6 + fastPulse * 0.4);
+                            ctx.font = `${iconSize}px Arial`;
+                            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                            ctx.fillStyle = '#fff';
+                            ctx.shadowBlur = useShadow ? (isLate ? 10 : 4) : 0; ctx.shadowColor = glowCol;
+                            ctx.fillText('⚠', mx, my - sh * 0.12);
+                            ctx.shadowBlur = 0;
+                        }
                     }
                 } else {
-                    // ── Safe cell — REWORK: shimmer particles inside ──
+                    // ── Safe cell ─────────────────────────────
                     ctx.globalAlpha = globalA * 0.12;
                     ctx.fillStyle = '#22c55e'; ctx.fillRect(tl.x, tl.y, sw, sh);
                     ctx.globalAlpha = globalA * 0.35;
                     ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.5;
-                    ctx.shadowBlur = 6; ctx.shadowColor = '#22c55e';
+                    ctx.shadowBlur = useShadow ? 6 : 0; ctx.shadowColor = '#22c55e';
                     ctx.strokeRect(tl.x + 1, tl.y + 1, sw - 2, sh - 2);
                     ctx.shadowBlur = 0;
-                    // Shimmer dot — position oscillates using cell seed
-                    const sSeed = Math.abs(Math.round(cell.wx * 0.13 + cell.wy * 0.09));
-                    const sPhase = (sSeed % 100) / 100;
-                    const sX = mx + Math.sin(now * 2.2 + sPhase * 6.28) * sw * 0.22;
-                    const sY = my + Math.cos(now * 1.8 + sPhase * 6.28) * sh * 0.22;
-                    ctx.globalAlpha = globalA * (0.4 + Math.sin(now * 3 + sPhase * 6.28) * 0.3);
-                    ctx.fillStyle = '#86efac';
-                    ctx.shadowBlur = 8; ctx.shadowColor = '#4ade80';
-                    ctx.beginPath(); ctx.arc(sX, sY, 2.5, 0, Math.PI * 2); ctx.fill();
-                    ctx.shadowBlur = 0;
-                    // ✓ icon
-                    const iconSize2 = Math.max(8, Math.floor(sh * 0.30));
-                    ctx.globalAlpha = globalA * 0.55;
-                    ctx.font = `bold ${iconSize2}px Arial`;
-                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    ctx.fillStyle = '#4ade80';
-                    ctx.fillText('✓', mx, my);
+                    // Shimmer dot + ✓ icon — skip when zoomed out
+                    if (useShadow && sw >= 14) {
+                        const sSeed = Math.abs(Math.round(cell.wx * 0.13 + cell.wy * 0.09));
+                        const sPhase = (sSeed % 100) / 100;
+                        const sX = mx + Math.sin(now * 2.2 + sPhase * 6.28) * sw * 0.22;
+                        const sY = my + Math.cos(now * 1.8 + sPhase * 6.28) * sh * 0.22;
+                        ctx.globalAlpha = globalA * (0.4 + Math.sin(now * 3 + sPhase * 6.28) * 0.3);
+                        ctx.fillStyle = '#86efac';
+                        ctx.shadowBlur = 8; ctx.shadowColor = '#4ade80';
+                        ctx.beginPath(); ctx.arc(sX, sY, 2.5, 0, Math.PI * 2); ctx.fill();
+                        ctx.shadowBlur = 0;
+                        const iconSize2 = Math.max(8, Math.floor(sh * 0.30));
+                        ctx.globalAlpha = globalA * 0.55;
+                        ctx.font = `bold ${iconSize2}px Arial`;
+                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#4ade80';
+                        ctx.fillText('✓', mx, my);
+                    }
                 }
             }
         }
@@ -1441,19 +1433,7 @@ const DomainExpansion = {
             }
         }
     },
-    _initRain() {
-        this._rain = [];
-        for (let i = 0; i < _DC.RAIN_COLS; i++) {
-            const len = 8 + Math.floor(Math.random() * 10);
-            this._rain.push({
-                xNorm: Math.random(),
-                offsetY: Math.random() * 600,
-                speed: 0.6 + Math.random() * 0.9,
-                alpha: 0.25 + Math.random() * 0.35,
-                chars: Array.from({ length: len }, _rainChar),
-            });
-        }
-    },
+    // _initRain() — inherited from DomainBase; called via this._initRain({ pool: _RAIN_POOL, cols: _DC.RAIN_COLS })
     _doExplosions(player) {
         for (const cell of this.cells) {
             if (!cell.dangerous) continue;
@@ -1489,13 +1469,14 @@ const DomainExpansion = {
         }
     },
     _abort(boss) {
-        this.phase = 'idle'; this.cooldownTimer = 0;
-        this.cells = []; this._crackLines = []; this._flashTimer = 0;
+        // Clear Manop-specific state, then delegate shared cleanup to DomainBase.abort()
+        this.cells = []; this._crackLines = [];
         this._subPhase = 'A'; this._domainChalkTimer = 0; this._safeCellShifts = [];
-        if (boss) { boss._domainCasting = false; boss._domainActive = false; }
+        this.cycleCount = 0; this.cycleTimer = 0; this.cyclePhase = 'warn';
+        Object.getPrototypeOf(this).abort.call(this, boss);
         console.log('[DomainExpansion] Aborted — boss dead');
     },
-};
+});
 
 window.DomainExpansion = DomainExpansion;
 DomainExpansion._DC_RADIUS = _DC.ARENA_RADIUS; // exposed for base.js applyPhysics
@@ -2039,10 +2020,10 @@ class ChalkWall {
 }
 
 // ── Global exports ────────────────────────────────────────────
-window.BarkWave          = BarkWave;
-window.GoldfishMinion    = GoldfishMinion;
-window.BubbleProjectile  = BubbleProjectile;
-window.MatrixGridAttack  = MatrixGridAttack;
-window.EquationSlam      = EquationSlam;
-window.DeadlyGraph       = DeadlyGraph;
-window.ChalkWall         = ChalkWall;
+window.BarkWave = BarkWave;
+window.GoldfishMinion = GoldfishMinion;
+window.BubbleProjectile = BubbleProjectile;
+window.MatrixGridAttack = MatrixGridAttack;
+window.EquationSlam = EquationSlam;
+window.DeadlyGraph = DeadlyGraph;
+window.ChalkWall = ChalkWall;

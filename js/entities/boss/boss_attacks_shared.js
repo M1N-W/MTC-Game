@@ -7,8 +7,147 @@
  * Load order: must be loaded BEFORE boss_attacks_manop.js and boss_attacks_first.js
  *
  * Contents:
+ *   DomainBase     — Shared boilerplate for all Domain Expansion singletons
  *   ExpandingRing  — Shockwave ring visual (used by both KruManop and KruFirst)
  */
+
+// ════════════════════════════════════════════════════════════
+// 💠 DOMAIN BASE — Shared boilerplate for Domain Expansion singletons
+//
+//  Both DomainExpansion (Manop) and GravitationalSingularity (First)
+//  extend this via Object.create(DomainBase).
+//
+//  Shared surface:
+//    State machine  — phase, timer, cooldownTimer, originX/Y, _flashTimer, _rain[]
+//    Public API     — canTrigger(), isInvincible()
+//    Helpers        — _beginCast(), _endDomain(), abort()
+//    Rain system    — _initRain(cfg), _drawRain(ctx, now, W, H, globalA)
+//    Announce       — _announceKaijo(boss, subtitleJP, subtitleEN, colorA, colorB, voiceLine)
+//
+//  Each subclass owns:
+//    trigger(boss)         — calls _beginCast() + own state reset + _announceKaijo()
+//    update(dt,boss,player)— full active phase logic (completely domain-specific)
+//    draw(boss,ctx,W,H,now)— full visual rendering (completely domain-specific)
+//    _abort(boss)          — calls abort() + clears own extra state
+// ════════════════════════════════════════════════════════════
+const DomainBase = {
+
+    // ── Shared state ────────────────────────────────────────
+    phase: 'idle',          // 'idle' | 'casting' | 'active' | 'ending'
+    timer: 0,
+    cooldownTimer: 0,
+    originX: 0, originY: 0,
+    _flashTimer: 0,
+    _rain: [],
+
+    // ── Public API ───────────────────────────────────────────
+    canTrigger() { return this.phase === 'idle' && this.cooldownTimer <= 0; },
+    isInvincible() { return this.phase !== 'idle'; },
+
+    // ── Shared trigger bootstrap ─────────────────────────────
+    // Call at the top of each subclass trigger() before own state resets.
+    _beginCast(boss, castDur) {
+        this.phase = 'casting';
+        this.timer = castDur;
+        this.originX = boss.x;
+        this.originY = boss.y;
+        boss._domainCasting = true;
+        boss._domainActive = true;
+        if (typeof addScreenShake === 'function') addScreenShake(14);
+        if (typeof Audio !== 'undefined' && Audio.playBossSpecial) Audio.playBossSpecial();
+    },
+
+    // ── Shared ending teardown ───────────────────────────────
+    // Call when phase === 'ending' timer hits 0.
+    _endDomain(boss, cooldown) {
+        this.phase = 'idle';
+        this.cooldownTimer = cooldown;
+        boss._domainCasting = false;
+        boss._domainActive = false;
+        if (boss.state === 'DOMAIN') { boss.state = 'CHASE'; boss.stateTimer = 0; }
+    },
+
+    // ── Abort (boss death / admin kill) ─────────────────────
+    abort(boss) {
+        this.phase = 'idle';
+        this.cooldownTimer = 0;
+        this._rain = [];
+        this._flashTimer = 0;
+        if (boss) { boss._domainCasting = false; boss._domainActive = false; }
+    },
+
+    // ── Rain system ──────────────────────────────────────────
+    // cfg = { pool: string, cols: number }
+    // Each subclass passes its own character pool and column count.
+    _initRain(cfg) {
+        const pool = cfg.pool;
+        const rainChar = () => pool[Math.floor(Math.random() * pool.length)];
+        this._rain = [];
+        for (let i = 0; i < cfg.cols; i++) {
+            const len = 7 + Math.floor(Math.random() * 10);
+            this._rain.push({
+                xNorm: Math.random(),
+                offsetY: Math.random() * 600,
+                speed: 0.5 + Math.random() * 0.9,
+                alpha: 0.20 + Math.random() * 0.35,
+                chars: Array.from({ length: len }, rainChar),
+            });
+        }
+    },
+
+    // Draw the matrix rain. Colors passed as [headColor, midColor, tailColor].
+    // ctx is the screen canvas context (already in screen space).
+    _drawRain(ctx, now, W, H, globalA, colors) {
+        const [headCol, midCol, tailCol] = colors;
+        ctx.font = '11px "Courier New",monospace';
+        ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+        for (const col of this._rain) {
+            const cx = col.xNorm * W, charH = 14;
+            for (let i = 0; i < col.chars.length; i++) {
+                const rawY = ((now * col.speed * H * 0.20 + col.offsetY + i * charH))
+                    % (H + charH * col.chars.length) - charH * 4;
+                const fade = 1.0 - i / col.chars.length;
+                ctx.globalAlpha = globalA * col.alpha * fade;
+                if (i === 0) { ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 8; ctx.shadowColor = headCol; }
+                else if (i < 3) { ctx.fillStyle = headCol; ctx.shadowBlur = 4; ctx.shadowColor = headCol; }
+                else { ctx.fillStyle = tailCol; ctx.shadowBlur = 0; }
+                ctx.fillText(col.chars[i], cx, rawY);
+            }
+        }
+        ctx.shadowBlur = 0;
+    },
+
+    // ── 領域展開 announce sequence ───────────────────────────
+    // subtitleJP  — kanji subtitle (e.g. '重力特異点')
+    // subtitleEN  — english name  (e.g. 'GRAVITATIONAL SINGULARITY')
+    // colorA      — primary color (used for 領域展開 text + particles)
+    // colorB      — secondary color (used for subtitle)
+    // voiceLine   — second UIManager voice bubble (shown ~950ms after trigger)
+    _announceKaijo(boss, subtitleJP, subtitleEN, colorA, colorB, voiceLine) {
+        if (typeof spawnFloatingText === 'function') {
+            spawnFloatingText('領域展開', boss.x, boss.y - 130, colorA, 50);
+            setTimeout(() => {
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText(subtitleJP, boss.x, boss.y - 185, colorB, 36);
+            }, 700);
+            setTimeout(() => {
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText(subtitleEN, boss.x, boss.y - 235, '#ffffff', 24);
+            }, 1200);
+        }
+        if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
+            window.UIManager.showVoiceBubble('領域展開...', boss.x, boss.y - 50);
+            if (voiceLine) {
+                setTimeout(() => {
+                    if (window.UIManager)
+                        window.UIManager.showVoiceBubble(voiceLine, boss.x, boss.y - 50);
+                }, 950);
+            }
+        }
+    },
+};
+
+window.DomainBase = DomainBase;
 // ════════════════════════════════════════════════════════════
 // 💥 EXPANDING RING — Shockwave visual (BossFirst FREE_FALL)
 // ════════════════════════════════════════════════════════════

@@ -822,6 +822,127 @@ class BossRenderer {
         ctx.fill();
         ctx.restore();
 
+        // ── LAYER 0.5 — Phase-based aura (mirrors Manop structure) ─────
+        // Phase 1 (HP > 60%): calm cyan-green science field
+        // Phase 2 (HP 30-60%): orange-red unstable / jetpack overheating
+        // Phase 3 (HP < 30%): purple-white singularity collapse
+        {
+            const t3 = t * 0.6;
+            const hpRatio = e.maxHp > 0 ? e.hp / e.maxHp : 1;
+            const auraR = R * 1.65 + Math.sin(t3 * 2.5) * R * 0.12;
+
+            ctx.save();
+            if (e.phase === 1 || (!e.phase && hpRatio > 0.60)) {
+                // Cyan-green science aura — calm, mathematical
+                const grad1 = ctx.createRadialGradient(0, 0, auraR * 0.4, 0, 0, auraR);
+                grad1.addColorStop(0, 'rgba(57,255,20,0.0)');
+                grad1.addColorStop(0.65, 'rgba(57,255,20,0.10)');
+                grad1.addColorStop(1, 'rgba(0,255,255,0.22)');
+                ctx.fillStyle = grad1;
+                ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = `rgba(0,255,255,${0.30 + Math.sin(t3 * 3) * 0.18})`;
+                ctx.lineWidth = 1.8; ctx.shadowBlur = 14; ctx.shadowColor = '#00ffff';
+                ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
+                // Orbiting energy nodes
+                for (let i = 0; i < 4; i++) {
+                    const bA = t3 * 1.2 + i * (Math.PI * 2 / 4);
+                    ctx.fillStyle = `rgba(0,255,255,${0.30 + Math.sin(t3 + i) * 0.22})`;
+                    ctx.shadowBlur = 8; ctx.shadowColor = '#00ffff';
+                    ctx.beginPath(); ctx.arc(Math.cos(bA) * (auraR - 6), Math.sin(bA) * (auraR - 6), 3.5 + Math.sin(t3 * 2 + i) * 1.2, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+
+            } else if (e.phase === 2 || (!e.phase && hpRatio > 0.30)) {
+                // Orange-red unstable — jetpack overheating
+                const grad2 = ctx.createRadialGradient(0, 0, auraR * 0.4, 0, 0, auraR);
+                grad2.addColorStop(0, 'rgba(249,115,22,0.0)');
+                grad2.addColorStop(0.65, 'rgba(249,115,22,0.18)');
+                grad2.addColorStop(1, 'rgba(239,68,68,0.40)');
+                ctx.fillStyle = grad2;
+                ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = `rgba(249,115,22,${0.50 + Math.sin(t3 * 4.5) * 0.35})`;
+                ctx.lineWidth = 2.5; ctx.shadowBlur = 20; ctx.shadowColor = '#f97316';
+                ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.stroke();
+                // Inner crackle ring
+                ctx.strokeStyle = `rgba(239,68,68,${0.35 + Math.sin(t3 * 5.5) * 0.28})`;
+                ctx.lineWidth = 1.8;
+                ctx.beginPath(); ctx.arc(0, 0, auraR * 0.72, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
+                // Energy arc sparks × 8
+                for (let i = 0; i < 8; i++) {
+                    const bA = t3 * 2.8 + i * (Math.PI * 2 / 8);
+                    const jitter = Math.sin(t3 * 7 + i * 1.4) * R * 0.18;
+                    ctx.strokeStyle = `rgba(253,186,116,${0.45 + Math.sin(t3 * 3 + i) * 0.35})`;
+                    ctx.lineWidth = 1.5; ctx.shadowBlur = 6; ctx.shadowColor = '#fb923c';
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(bA) * (auraR * 0.78), Math.sin(bA) * (auraR * 0.78));
+                    ctx.lineTo(Math.cos(bA) * (auraR + jitter), Math.sin(bA) * (auraR + jitter));
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+
+            } else {
+                // Purple-white singularity collapse — phase 3 / low HP
+                const grad3 = ctx.createRadialGradient(0, 0, auraR * 0.35, 0, 0, auraR);
+                grad3.addColorStop(0, 'rgba(168,85,247,0.0)');
+                grad3.addColorStop(0.55, 'rgba(168,85,247,0.22)');
+                grad3.addColorStop(1, 'rgba(255,255,255,0.35)');
+                ctx.fillStyle = grad3;
+                ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.fill();
+                // Heavy distortion rings — two counter-rotating
+                ctx.strokeStyle = `rgba(168,85,247,${0.55 + Math.sin(t3 * 5) * 0.35})`;
+                ctx.lineWidth = 2.8; ctx.shadowBlur = 24; ctx.shadowColor = '#a855f7';
+                ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.stroke();
+                ctx.save(); ctx.rotate(t3 * 3.2);
+                ctx.strokeStyle = `rgba(255,255,255,${0.25 + Math.sin(t3 * 6) * 0.20})`;
+                ctx.lineWidth = 1.5; ctx.setLineDash([6, 8]);
+                ctx.beginPath(); ctx.arc(0, 0, auraR * 0.78, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]); ctx.restore();
+                ctx.shadowBlur = 0;
+                // Singularity fragments orbiting (Phase 3)
+                for (let i = 0; i < 6; i++) {
+                    const bA = t3 * 2.5 + i * (Math.PI * 2 / 6);
+                    const orbitEcc = 1 + Math.sin(t3 * 1.8 + i) * 0.25; // elliptical
+                    const ox = Math.cos(bA) * (auraR - 8) * orbitEcc;
+                    const oy = Math.sin(bA) * (auraR - 8) * 0.75;
+                    ctx.fillStyle = i % 2 === 0 ? `rgba(216,180,254,${0.55 + Math.sin(t3 * 3 + i) * 0.30})` : `rgba(255,255,255,${0.45 + Math.sin(t3 * 4 + i) * 0.28})`;
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#a855f7';
+                    ctx.beginPath(); ctx.arc(ox, oy, 3 + Math.sin(t3 * 5 + i) * 1.5, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+            }
+            ctx.restore();
+        }
+
+        // ── LAYER 0.6 — Phase 2/3 ambient particles ─────────────────────
+        {
+            const hpRatio = e.maxHp > 0 ? e.hp / e.maxHp : 1;
+            const isP2 = (e.phase === 2) || (!e.phase && hpRatio <= 0.60 && hpRatio > 0.30);
+            const isP3 = (e.phase === 3) || (!e.phase && hpRatio <= 0.30);
+            if (isP2 || isP3) {
+                ctx.save();
+                const pCount = 8;
+                for (let i = 0; i < pCount; i++) {
+                    // Deterministic oscillation — no Math.random() in draw()
+                    const seed = i * 137.5;
+                    const baseA = (seed % 360) * Math.PI / 180;
+                    const rise = ((t * (0.4 + (i % 3) * 0.2) + seed * 0.01) % 1.0);
+                    const px = Math.cos(baseA + t * 0.5) * R * (1.4 + rise * 0.6);
+                    const py = -rise * R * 1.8 + Math.sin(baseA * 2 + t) * R * 0.2;
+                    const alpha = Math.sin(rise * Math.PI) * (isP3 ? 0.65 : 0.45);
+                    const size = (isP3 ? 3.5 : 2.8) * (1 - rise * 0.5);
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = isP3 ? (i % 2 === 0 ? '#c084fc' : '#ffffff') : '#fb923c';
+                    ctx.shadowBlur = isP3 ? 8 : 5;
+                    ctx.shadowColor = isP3 ? '#a855f7' : '#f97316';
+                    ctx.beginPath(); ctx.arc(px, py, size, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+        }
+
         // ── LAYER 1 — Berserk aura ──────────────────────────────────────
         if (e.isEnraged) {
             ctx.save();
@@ -895,27 +1016,55 @@ class BossRenderer {
         ctx.shadowBlur = 0;
         ctx.restore();
 
-        // Orbiting formula labels
-        const formulas = ['F=ma', 'v=u+at', 'E=mc²', 'p=mv', 'ω=v/r', 'h=½gt²'];
-        const fOrbitR = ringR * 0.88;
-        const fSpeed = e.isEnraged ? 1.35 : 0.72;
-        for (let fi = 0; fi < formulas.length; fi++) {
-            const fAngle = t * fSpeed + (fi / formulas.length) * Math.PI * 2;
-            const fAlpha = 0.45 + Math.sin(t * 1.8 + fi * 0.9) * 0.30;
-            ctx.save();
-            ctx.translate(
-                Math.cos(fAngle) * fOrbitR,
-                Math.sin(fAngle) * fOrbitR * 0.55
-            );
-            ctx.rotate(-fAngle * 0.18);
-            ctx.globalAlpha = fAlpha;
-            ctx.font = `bold ${10 + Math.sin(t * 1.5 + fi) * 1.5}px "Orbitron",monospace,Arial`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowBlur = 10 + Math.sin(t * 2.2 + fi) * 5;
-            ctx.shadowColor = ringGlow;
-            ctx.fillStyle = ringCol;
-            ctx.fillText(formulas[fi], 0, 0);
-            ctx.restore();
+        // ── Quantum Formula Storm — 2-orbit system ──────────────────────
+        // Outer orbit: 6 large formulas, slow, fade in/out
+        // Inner orbit: 6 small formulas, fast, flicker
+        // Enraged: all formulas scatter (radius oscillate ±40px)
+        {
+            const formulasOuter = ['F=ma', 'v=u+at', 'E=mc²', 'p=mv', 'ω=v/r', 'h=½gt²'];
+            const formulasInner = ['KE=½mv²', 'W=Fd', 'τ=Iα', 'L=mvr', 'F=-kx', 'P=mv'];
+            const outerR = ringR * 1.05;
+            const innerR = ringR * 0.62;
+            const outerSpeed = e.isEnraged ? -0.95 : -0.52;
+            const innerSpeed = e.isEnraged ? 2.10 : 1.15;
+
+            // Outer orbit
+            for (let fi = 0; fi < formulasOuter.length; fi++) {
+                const fAngle = t * outerSpeed + (fi / formulasOuter.length) * Math.PI * 2;
+                const scatter = e.isEnraged ? Math.sin(t * 3.5 + fi * 1.7) * 40 : 0;
+                const orR = outerR + scatter;
+                const fAlpha = 0.50 + Math.sin(t * 1.4 + fi * 1.1) * 0.35;
+                ctx.save();
+                ctx.translate(Math.cos(fAngle) * orR, Math.sin(fAngle) * orR * 0.60);
+                ctx.rotate(-fAngle * 0.15);
+                ctx.globalAlpha = fAlpha;
+                ctx.font = `bold ${11 + Math.sin(t * 1.5 + fi) * 1.8}px "Orbitron",monospace,Arial`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 12 + Math.sin(t * 2 + fi) * 5;
+                ctx.shadowColor = ringGlow;
+                ctx.fillStyle = ringCol;
+                ctx.fillText(formulasOuter[fi], 0, 0);
+                ctx.restore();
+            }
+
+            // Inner orbit — faster, smaller, flickering
+            for (let fi = 0; fi < formulasInner.length; fi++) {
+                const fAngle = t * innerSpeed + (fi / formulasInner.length) * Math.PI * 2;
+                const scatter = e.isEnraged ? Math.cos(t * 4.2 + fi * 2.3) * 30 : 0;
+                const irR = innerR + scatter;
+                const flicker = 0.25 + Math.abs(Math.sin(t * 5.5 + fi * 2.1)) * 0.55;
+                ctx.save();
+                ctx.translate(Math.cos(fAngle) * irR, Math.sin(fAngle) * irR * 0.58);
+                ctx.rotate(fAngle * 0.22);
+                ctx.globalAlpha = flicker;
+                ctx.font = `bold ${8 + Math.sin(t * 2.5 + fi) * 1.2}px "Courier New",monospace`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = ringGlow;
+                ctx.fillStyle = e.isEnraged ? '#fbbf24' : `${ringCol}cc`;
+                ctx.fillText(formulasInner[fi], 0, 0);
+                ctx.restore();
+            }
         }
         ctx.globalAlpha = 1; ctx.shadowBlur = 0;
         ctx.restore();

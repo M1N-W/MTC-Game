@@ -557,6 +557,16 @@ const BALANCE = {
             collapseRadius: 380,   // AoE shockwave radius
             collapseDamage: 40,    // shockwave damage
             safeRadius: 75,    // px near boss = safe from push (Pulse 2)
+            // ── Proximity Punishment (anti-hug mechanics) ────────────
+            // Prevents player from standing next to boss to avoid gravity damage.
+            // Active on PULL, TIDAL, COLLAPSE — NOT on ESCAPE (safeRadius intentional).
+            contactRadius: 70,    // px — within this = contact damage tick + repulsion
+            contactDPS: 18,       // damage per second (applied in ticks every contactTickCd s)
+            contactTickCd: 0.7,   // s cooldown between contact damage ticks
+            repulseForce: 260,    // px/s outward push when inside contactRadius
+            // ── Collapse Inner Ring ───────────────────────────────────
+            collapseInnerRadius: 110,   // inner ring AoE (higher damage, smaller)
+            collapseInnerDamage: 65,    // damage for players inside inner ring at collapse
         },
     },
     powerups: {
