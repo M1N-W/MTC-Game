@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.2
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.3
 
 ---
 
@@ -1124,7 +1124,29 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Changes (v3.30.2)
+## 📝 Recent Changes (v3.30.3)
+
+### Boss Attacks Safety Improvements (March 10, 2026)
+**Purpose:** Enhance stability and prevent rendering crashes through coordinate validation
+
+**Key Changes:**
+- **Coordinate Validation**: Added `isFinite()` checks to prevent rendering errors when world-to-screen conversion produces invalid coordinates
+- **Safety Checks**: Enhanced PhysicsFormulaZone, GravitationalSingularity, and GravityWell draw methods with validation
+- **Code Formatting**: Fixed inconsistent spacing in global exports section for better maintainability
+- **Error Prevention**: Prevents canvas rendering crashes when entities are positioned at invalid coordinates
+
+**Technical Impact:**
+- **Crash Prevention**: Eliminates potential rendering crashes from invalid coordinate transformations
+- **Graceful Degradation**: Effects now safely skip rendering when coordinate validation fails
+- **Performance**: Avoids unnecessary rendering operations when coordinates are invalid
+- **Code Consistency**: Uniform formatting improves code navigation and understanding
+
+**Files Changed:**
+- `js/entities/boss/boss_attacks_first.js`: Added safety checks and formatting improvements
+
+---
+
+## 📝 Previous Changes (v3.30.2)
 
 ### Boss Class Alias Enhancement (March 10, 2026)
 **Purpose:** Improve naming consistency and enable proper type checking for boss classes

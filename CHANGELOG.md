@@ -4,6 +4,40 @@
 
 ---
 
+## v3.30.3 — Boss Attacks Safety Improvements
+*Released: March 10, 2026*
+
+### 🛡️ Stability & Safety Enhancements
+- **Coordinate Validation**: Added `isFinite()` checks to prevent rendering errors when world-to-screen conversion produces invalid coordinates
+  - `PhysicsFormulaZone.draw()`: Added safety check for screen radius calculations
+  - `GravitationalSingularity.draw()`: Added validation for boss screen coordinates
+  - `GravityWell.draw()`: Added comprehensive safety check with early return
+- **Error Prevention**: Prevents canvas rendering crashes when entities are positioned at invalid coordinates
+- **Graceful Degradation**: Effects now safely skip rendering when coordinate validation fails
+
+### 🧹 Code Quality Improvements
+- **Export Formatting**: Fixed inconsistent spacing in global exports section
+  - Standardized alignment of `window.ClassName = ClassName` assignments
+  - Improved code readability and maintainability
+- **Consistent Style**: Applied uniform formatting patterns across the file
+
+### 🔧 Technical Benefits
+- **Crash Prevention**: Eliminates potential rendering crashes from invalid coordinate transformations
+- **Debugging Support**: Easier to identify when coordinate systems produce invalid values
+- **Performance**: Avoids unnecessary rendering operations when coordinates are invalid
+- **Code Consistency**: Uniform formatting improves code navigation and understanding
+
+### 📁 Files Modified
+- `js/entities/boss/boss_attacks_first.js` - Added safety checks and formatting improvements
+
+### 🎯 Integration Notes
+- **Backward Compatible**: All existing functionality preserved
+- **Silent Protection**: Safety checks operate transparently without affecting gameplay
+- **Defensive Programming**: Follows best practices for coordinate validation in canvas rendering
+- **Future Proof**: Protects against potential coordinate system edge cases
+
+---
+
 ## v3.30.2 — Boss Class Alias Enhancement
 *Released: March 10, 2026*
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.2'; // Added ManopBoss class alias for better naming consistency and instanceof check support
+const CACHE_NAME = 'mtc-cache-v3.30.3'; // Boss Attacks Safety Improvements - Added isFinite() checks for coordinate validation and fixed code formatting
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

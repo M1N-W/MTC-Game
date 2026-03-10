@@ -483,7 +483,7 @@ class PhysicsFormulaZone {
         const screen = worldToScreen(this.x, this.y);
         const edgePt = worldToScreen(this.x + this.radius, this.y);
         const rSS = Math.abs(edgePt.x - screen.x);
-        if (rSS < 2) return;
+        if (!isFinite(rSS) || rSS < 2) return;
 
         const prog = this.timer / this.duration;
         const alpha = Math.sin(prog * Math.PI) * 0.90 + 0.10; // fade in + out
@@ -1072,6 +1072,7 @@ const GravitationalSingularity = {
         // ── 3. Singularity point — black circle at boss ───────
         if ((this.phase === 'active' || this.phase === 'ending') && window.boss) {
             const bsc = worldToScreen(window.boss.x, window.boss.y);
+            if (!isFinite(bsc.x) || !isFinite(bsc.y)) return;
             const pulse = 0.5 + Math.sin(now * 3.5) * 0.5;
             const singR = 28 + pulse * 8;
 
@@ -1382,6 +1383,7 @@ class GravityWell {
         // Approximate screen radius (world→screen scale)
         const edgeSS = worldToScreen(this.x + this.radius, this.y);
         const rSS = Math.abs(edgeSS.x - sc.x);
+        if (!isFinite(rSS) || rSS < 1) { CTX.restore?.(); return; }
 
         CTX.save();
 
@@ -1589,8 +1591,8 @@ class SuperpositionClone {
 window.GravityWell = GravityWell;
 window.SuperpositionClone = SuperpositionClone;
 // ── Global exports ────────────────────────────────────────────
-window.FreeFallWarningRing    = FreeFallWarningRing;
-window.PorkSandwich           = PorkSandwich;
-window.EmpPulse               = EmpPulse;
-window.PhysicsFormulaZone     = PhysicsFormulaZone;
-window.ParabolicVolley        = ParabolicVolley;
+window.FreeFallWarningRing = FreeFallWarningRing;
+window.PorkSandwich = PorkSandwich;
+window.EmpPulse = EmpPulse;
+window.PhysicsFormulaZone = PhysicsFormulaZone;
+window.ParabolicVolley = ParabolicVolley;
