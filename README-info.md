@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.27.8 | **Latest Update:** UI Language & Theme Updates - Converted skill names from Thai to English, added character-specific color themes (blue/emerald/red), improved HUD styling with Share Tech Mono font, enhanced cooldown visuals
+> **Current Version:** Beta v3.27.9 | **Latest Update:** Documentation Update (Debugging Section) - Added comprehensive debugging tools and workflow documentation, Debug.html feature reference, complete admin console command reference with permissions, systematic 5-step debugging process for developers
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

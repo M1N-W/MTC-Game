@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.27.8
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.27.9
 
 ---
 
@@ -540,7 +540,55 @@ Shell casings          effects.js                    ShellCasingSystem
 
 ---
 
-## 🐛 Common Debugging Solutions
+## � Debugging Tools & Files
+
+### Primary Debugging Files
+| ไฟล์ | หน้าที่ | วิธีใช้ |
+|------|--------|---------|
+| `Debug.html` | **หน้า debug หลัก** - system diagnostics, performance profiling, health checks | เปิดใน browser โดยตรง (ไม่ต้องผ่านเกม) |
+| `js/systems/AdminSystem.js` | **Admin Console** - commands, god mode, entity spawning | กด `~` ในเกม → พิมพ์คำสั่ง (`help`, `spawn manop`, `god`, `devbuff`) |
+| `js/VersionManager.js` | **Version sync** - ดึง version จาก service worker | Auto-run ตอน start เกม |
+| `sw.js` | **Service Worker** - cache management, version control | Update `CACHE_NAME` ทุกครั้งที่แก้โค้ด |
+
+### Debug.html Features
+- **System Health Checks** - ตรวจสอบ files loading, API availability, memory usage
+- **Performance Profiling** - FPS monitoring, object pooling efficiency, GC pressure
+- **Live Console** - Real-time log output พร้อม color coding
+- **Achievement Inspector** - Browse  achievements, unlock states, requirements
+- **BALANCE Inspector** - View all config values, character stats, weapon data
+- **Export Tools** - Copy diagnostics, save logs, generate reports
+
+### Admin Console Commands (ในเกม)
+กด `~` เปิด console แล้วพิมพ์:
+
+| คำสั่ง | ผล | Permission |
+|--------|-----|------------|
+| `help` | แสดงคำสั่งทั้งหมด | GUEST |
+| `heal [100]` | ฟื้น HP | OPERATOR |
+| `score [5000]` | เพิ่มคะแนน | OPERATOR |
+| `next wave` | ข้าม wave ปัจจุบัน | OPERATOR |
+| `set wave [10]` | กระโดดไป wave 10 | OPERATOR |
+| `give weapon [rifle]` | ได้รับอาวุธ | OPERATOR |
+| `spawn manop [1|2|3]` | เรียก Kru Manop (phase 1-3) | OPERATOR |
+| `spawn first [advanced]` | เรียก Kru First (normal/advanced) | OPERATOR |
+| `devbuff` | +50% HP/EN, +25% DMG, +20% SPD | OPERATOR |
+| `energy [100]` | ฟื้นพลังงาน | OPERATOR |
+| `god` / `god off` | ลิงก์เกอร์ / ปิด | ROOT |
+| `kill all` | ฆ่าศัตรูทั้งหมด | ROOT |
+| `speed [2.0]` | เพิ่มความเร็ว ×2 | ROOT |
+| `reset buffs` | ล้าง buff ทั้งหมด | ROOT |
+| `fps` | เปิด/ปิด FPS overlay | GUEST |
+
+### Debugging Workflow
+1. **Start with Debug.html** - ตรวจสอบ system health ก่อน
+2. **Use Admin Console** ในเกมสำหรับ real-time testing
+3. **Check Browser Console** (F12) สำหรับ JavaScript errors
+4. **Use Performance Tab** ใน DevTools สำหรับ profiling
+5. **Network Tab** สำหรับ API calls และ resource loading
+
+---
+
+## �🐛 Common Debugging Solutions
 
 | ปัญหา | สาเหตุ | วิธีแก้ |
 |------|--------|--------|

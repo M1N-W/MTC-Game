@@ -4,6 +4,24 @@
 
 ---
 
+## v3.27.9 — Documentation Update (Debugging Section)
+*Released: March 10, 2026*
+
+### 📚 Documentation Improvements
+- **Added Debugging Section**: Comprehensive debugging tools and workflow documentation in PROJECT_OVERVIEW.md
+- **Debug.html Documentation**: Documented all features including system health checks, performance profiling, and inspection tools
+- **Admin Console Reference**: Complete command reference with permissions and usage examples
+- **Debugging Workflow**: 5-step systematic debugging process for developers
+- **File Organization**: Clear mapping of debugging files to their specific purposes
+
+### 🔍 Debugging Tools Covered
+- **Debug.html**: Main diagnostics page for system health and performance
+- **AdminSystem.js**: In-game admin console with 15+ commands
+- **VersionManager.js**: Version synchronization system
+- **Service Worker**: Cache management and version control
+
+---
+
 ## v3.27.8 — UI Language & Theme Updates
 *Released: March 9, 2026*
 
