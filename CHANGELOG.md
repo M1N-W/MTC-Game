@@ -26,6 +26,10 @@
 - **Code Comments**: Enhanced SquadAI.js with clearer role assignment logic documentation
   - Added explanatory comments about shield role assignment restrictions
   - Improved understanding of squad coordination behavior
+- **Project Overview**: Comprehensive documentation updates to reflect current codebase state
+  - Updated boss attacks file structure documentation
+  - Corrected API method names for consistency
+  - Updated architecture notes to reflect completed refactoring
 
 ### 🔧 Technical Improvements
 - **World Map Awareness**: AI now properly respects world boundaries instead of screen boundaries
@@ -38,6 +42,8 @@
 - `js/ai/UtilityAI.js` - Performance optimization in dispose method
 - `js/ai/PlayerPatternAnalyzer.js` - Load order documentation correction
 - `js/ai/SquadAI.js` - Code formatting and comment improvements
+- `PROJECT_OVERVIEW.md` - Comprehensive documentation updates
+- `.agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md` - Converted to .md format
 
 ---
 

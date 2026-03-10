@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.1
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.9
 
 ---
 
@@ -49,7 +49,7 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 |------|--------|
 | `UtilityAI.js` | Core decision system — 2Hz timer, utility scoring, personality-weighted, delegates actions ไป EnemyActions, อ่าน `_squadRole` override |
 | `EnemyActions.js` | Static action library — `retreat()`, `flank()`, `shieldWall()`, `strafeOrbit()` (stateless, ไม่มี state ของตัวเอง) |
-| `PlayerPatternAnalyzer.js` | `window.playerAnalyzer` singleton — Float32Array(30) ring buffer, detect: kiting/circling/standing/mixed, `getDominantStyle()`, `dominantDirection()`, `reset()` |
+| `PlayerPatternAnalyzer.js` | `window.playerAnalyzer` singleton — Float32Array(30) ring buffer, detect: kiting/circling/standing/mixed, `dominantPattern()`, `dominantDirection()`, `reset()` |
 | `SquadAI.js` | `window.squadAI` singleton — 1Hz coordinator, `_BucketGrid` O(N), `tagOnSpawn()` static, role assignment: assault/flanker/shield/support |
 
 > ⚠️ `EnemyPersonality.js`, `FormationController.js`, `BossAI.js` **ไม่มี** — ถูก revised ออก: Personality อยู่ใน `BALANCE.ai.personalities` (config.js), Formation รวมใน SquadAI, Boss AI อยู่ใน ManopBoss/FirstBoss โดยตรง
@@ -76,7 +76,9 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 | `BossBase.js` | Base Boss class — shared lifecycle, death hooks |
 | `ManopBoss.js` | KruManop + BossDog classes (math boss encounters) |
 | `FirstBoss.js` | KruFirst class (physics boss with GravitationalSingularity) |
-| `boss_attacks.js` | Attack patterns, domain expansion, skill mechanics |
+| `boss_attacks_shared.js` | Shared attack effects — `ExpandingRing` (used by both bosses) |
+| `boss_attacks_manop.js` | KruManop attacks — `BarkWave`, `GoldfishMinion`, `BubbleProjectile`, `MatrixGridAttack`, `DomainExpansion`, `EquationSlam`, `DeadlyGraph`, `ChalkWall` |
+| `boss_attacks_first.js` | KruFirst attacks — `FreeFallWarningRing`, `PorkSandwich`, `EmpPulse`, `PhysicsFormulaZone`, `ParabolicVolley`, `OrbitalDebris`, `GravitationalSingularity`, `GravityWell`, `SuperpositionClone` |
 
 ### `/js/entities/player/`
 | ไฟล์ | ตัวละคร | บทบาท |
@@ -455,7 +457,7 @@ if ((this.energy ?? 0) < cost) {
 **อาจกระทบ:** `game.js`, `WaveManager.js`, `weapons.js`
 
 ### เพิ่มบอสใหม่
-**ต้องแก้:** สร้าง `js/entities/boss/[Name]Boss.js` (extends BossBase), `boss_attacks.js`, `BossRenderer.js` (เพิ่ม static draw method + dispatcher), `config.js`, `WaveManager.js`, `audio.js`, `index.html` (script tag)
+**ต้องแก้:** สร้าง `js/entities/boss/[Name]Boss.js` (extends BossBase), `js/entities/boss/boss_attacks_[name].js` (หรือเพิ่มใน shared ถ้า attack ใช้ได้กับทุก boss), `BossRenderer.js` (เพิ่ม static draw method + dispatcher), `config.js`, `WaveManager.js`, `audio.js`, `index.html` (script tag)
 **อาจกระทบ:** `summons.js`, `map.js`
 ⚠️ Boss มี Gemini speech integration ผ่าน `speak()` | Boss queue: waves 3,6,9,12,15
 ⚠️ window exports ต้องมี backward-compat alias (เช่น `window.BossXxx = XxxClass`) สำหรับ WaveManager + AdminSystem
@@ -563,7 +565,7 @@ if ((this.energy ?? 0) < cost) {
 ```
 แก้ shape / animation / layer    → BossRenderer.js  (static draw methods)
 เพิ่ม particle burst / text      → spawnParticles() / spawnFloatingText() ใน boss files
-แก้ domain expansion visual      → BossRenderer.js + boss_attacks.js (DomainExpansion class)
+แก้ domain expansion visual      → BossRenderer.js + boss_attacks_manop.js (DomainExpansion class)
 ```
 
 ---
@@ -919,7 +921,7 @@ class SniperEnemy extends EnemyBase {
 - **EnemyActions** — static `retreat()` (wall-avoid), `flank()` (ally-density), `shieldWall()` (tank cohesion), `strafeOrbit()` (mage)
 - **SquadAI** — 1Hz `_BucketGrid` O(N), role assignment ตอน spawn, `window.squadAI`
 - **PlayerPatternAnalyzer** — Float32Array(30) ring buffer, detect kiting/circling/standing, feeds Boss phase decisions
-- **Boss AI hooks** — KruFirst `_pickSkill()` + KruManop phase 2/3 transition ใช้ `playerAnalyzer.getDominantStyle()`
+- **Boss AI hooks** — KruFirst `_pickSkill()` + KruManop phase 2/3 transition ใช้ `playerAnalyzer.dominantPattern()`
 
 ---
 
@@ -961,7 +963,7 @@ class SniperEnemy extends EnemyBase {
 - **[MEDIUM] `boss_attacks.js` L2810–2811** — `GravitationalSingularity` PULL iterated `projectileManager.projectiles` (non-existent property). Fixed to consistent `getAll() / .list` fallback pattern.
 - **[MEDIUM] `boss_attacks.js` L403–414** — `BubbleProjectile` slow applied to `player.moveSpeed` (wrong — no effect on speed cap; correct is `player.stats.moveSpeed`) and `_bubbleSlowTimer` was never counted down or restored → permanent slow. Fixed to `stats.moveSpeed` + `setTimeout` restore.
 
-**Architecture Note:** `boss_attacks.js` (3,697 lines, 16 classes) evaluated for file splitting. Recommendation: **defer until Boss 3** — natural break point. Proposed: `boss_attacks_shared.js` / `boss_attacks_manop.js` / `boss_attacks_first.js`. Key blocker: `_DC`/`_DE` module-level constants and vanilla `<script>` load order.
+**Architecture Note:** `boss_attacks.js` (3,697 lines, 16 classes) has been split into 3 files: `boss_attacks_shared.js` / `boss_attacks_manop.js` / `boss_attacks_first.js`. Load order: shared → manop → first → BossBase → ManopBoss → FirstBoss.
 
 ---
 
@@ -1122,52 +1124,7 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Changes (v3.30.1)
-
-### AI System Code Quality Improvements (March 10, 2026)
-**Purpose:** Enhance AI system reliability and performance through bug fixes and optimizations
-
-**Key Changes:**
-- **Wall-Avoidance Fix**: Corrected EnemyActions.retreat() to use MAP_CONFIG world dimensions (3200×3200) instead of CANVAS screen pixels
-- **Performance Optimization**: Optimized UtilityAI.dispose() method to avoid array allocations using length = 0 instead of new array
-- **Code Quality**: Standardized formatting and spacing across all AI modules for better maintainability
-- **Documentation**: Updated load order sequence and enhanced code comments for better developer understanding
-
-**Technical Impact:**
-- **World Map Awareness**: AI now properly respects world boundaries instead of screen edges
-- **Memory Management**: Reduced garbage collection pressure during enemy death cycles
-- **Code Consistency**: Improved readability and maintainability across AI system files
-- **Dependency Resolution**: Corrected module loading sequence to prevent initialization errors
-
-**Files Changed:**
-- `js/ai/EnemyActions.js`: Wall-avoidance bounds fix, formatting improvements
-- `js/ai/UtilityAI.js`: Performance optimization in dispose method
-- `js/ai/PlayerPatternAnalyzer.js`: Load order documentation correction
-- `js/ai/SquadAI.js`: Code formatting and comment improvements
-
----
-
-## 📝 Previous Changes (v3.30.0)
-
-### Boss Attacks Refactoring (March 10, 2026)
-**Purpose:** Improve code organization by splitting monolithic boss_attacks.js into specialized modules
-
-**Key Changes:**
-- **Modular Architecture**: Split 3700+ line boss_attacks.js into three focused files
-- **boss_attacks_shared.js**: Shared effects (ExpandingRing) used by all bosses (90 lines)
-- **boss_attacks_manop.js**: KruManop-specific attacks (BarkWave, GoldfishMinion, DomainExpansion, etc.) (2049 lines)
-- **boss_attacks_first.js**: KruFirst-specific attacks (PorkSandwich, GravitationalSingularity, SuperpositionClone, etc.) (1597 lines)
-- **Load Order Optimization**: Updated index.html and sw.js with proper loading sequence
-- **Development Workflow**: Smaller files enable easier debugging and code reviews
-
-**Files Changed:**
-- **Deleted**: `js/entities/boss/boss_attacks.js` (monolithic file)
-- **Created**: `boss_attacks_shared.js`, `boss_attacks_manop.js`, `boss_attacks_first.js`
-- **Updated**: `index.html`, `sw.js` (loading sequence)
-
----
-
-## 📝 Previous Changes (v3.29.9)
+## 📝 Recent Changes (v3.29.9)
 
 ### Global Variable References & Voice Bubble Namespacing Fix (March 10, 2026)
 **Purpose:** Fix undefined reference errors by ensuring proper global object access
