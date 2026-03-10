@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.29.8'; // Corrected minimap method calls to use CanvasHUD class prefix for proper static method binding
+const CACHE_NAME = 'mtc-cache-v3.29.9'; // Fixed global variable references and voice bubble namespacing - updated showVoiceBubble() calls to use window.UIManager prefix and corrected boss class references
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

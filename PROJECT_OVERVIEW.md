@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.8
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.9
 
 ---
 
@@ -669,6 +669,9 @@ Shell casings          effects.js                    ShellCasingSystem
 | Boss spawn ใน MTC Room | spawnY ติด room bounds | ตรวจ BossBase constructor guard + safe Y: −330 |
 | Performance drop | GC / render bottleneck | ตรวจ object pooling ใน effects.js, ใช้ Debug.html profiling |
 | Visual glitch | ctx state leak | ตรวจ `ctx.save()`/`ctx.restore()` ครบคู่ใน PlayerRenderer.js |
+| **`ReferenceError: EquationSlam is not defined` ใน Node/bundler** | **`effects.js` exports `EquationSlam`, `DeadlyGraph` ที่ไม่มีใน file** | **ลบออกจาก `module.exports` — class เหล่านี้ไม่ได้ถูก implement ใน effects.js** |
+| **`waveAnnouncementFX` / `decalSystem` / `shellCasingSystem` หายใน strict module** | **ใช้แค่ `var` hoisting โดยไม่มี explicit `window.*` assign** | **เพิ่ม `window.X = X` หลัง singleton construction ใน effects.js** |
+| **`showVoiceBubble is not a function` ใน MTCRoom** | **map.js เรียก bare `showVoiceBubble()` ที่ไม่มีใน global scope** | **ใช้ `window.UIManager?.showVoiceBubble()` หรือ global wrapper จาก utils.js** |
 | **`drawDatabaseServer()` วาด sprite ซ้อนทับ `database` MapObject** | **AdminSystem.js ยังมี full sprite draw อยู่ แม้ MapObject `database` จะ render แล้ว** | **Slim ให้เหลือแค่ proximity aura — pattern เดียวกับ `drawShopObject()`** |
 | **Server rack แสงออกมาสีฟ้า (cool) แต่ LED เป็นสีทอง (amber)** | **`punchLight` type ใช้ `'cool'` แทน `'warm'` สำหรับ `server` type** | **เปลี่ยน `'cool'`→`'warm'` ใน `drawLighting()` loop** |
 | **Courtyard ดูมืดกว่า zone อื่นแม้มีต้นไม้เยอะ** | **`tree` type ไม่มี punchLight — ไม่ emit light เลย** | **เพิ่ม `else if (obj.type === 'tree')` ใน lighting loop + เพิ่ม `'green'` tint type** |
@@ -901,6 +904,75 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
+## 🔄 Recent Changes (pending commit)
+
+### Bug Fix Batch — effects.js, map.js, input.js, weapons.js (March 10, 2026)
+**Purpose:** แก้บัคทั่วทั้งระบบจาก code review รวม 5 ไฟล์
+
+**Files Changed:** `js/effects.js`, `js/map.js`, `js/input.js`, `js/weapons.js`
+
+**Key Fixes:**
+
+**effects.js**
+- **`module.exports` — undefined class exports** — `EquationSlam`, `DeadlyGraph` ถูก export แต่ไม่มีใน file → ลบออกจาก exports (ป้องกัน `ReferenceError` ใน Node/bundler; ใน browser ปลอดภัยเพราะมี `typeof module` guard อยู่แล้ว)
+- **Explicit `window.*` exports** — เพิ่ม `window.waveAnnouncementFX`, `window.decalSystem`, `window.shellCasingSystem` explicit exports (เดิมใช้ `var` hoisting อย่างเดียว ซึ่งอาจหายใน strict bundler scope)
+
+**map.js**
+- **`showVoiceBubble` bare call** — บรรทัด 736 ใน `MTCRoom.update()` เรียก `showVoiceBubble(...)` เป็น standalone function ที่ไม่มีอยู่ → แก้เป็น `if (window.UIManager) window.UIManager.showVoiceBubble(...)` (**หมายเหตุ:** ตอนนี้ `utils.js` มี global wrapper `showVoiceBubble` แล้ว ทั้งสอง pattern ใช้ได้ — ไม่ต้องแก้กลับ)
+
+**weapons.js**
+- **Bare `player` reference** — `WeaponSystem.switchWeapon()` ใช้ `typeof player !== 'undefined' && player` แทน `window.player` (inconsistent กับ pattern ที่ใช้ทั่ว codebase) → เปลี่ยนเป็น `window.player && window.player.charId === 'kao'`
+
+**ไฟล์ที่ตรวจแล้วสะอาด (ไม่มีบัค):** `input.js`, `tutorial.js`, `menu.js`, `utils.js`, `VersionManager.js`
+
+---
+
+## 🔄 Recent Changes (v3.29.10)
+
+### Boss System Bug Fixes (v3.29.10 — March 10, 2026)
+**Purpose:** Critical & high-severity bug fixes across all 3 boss files
+
+**Files Changed:** `ManopBoss.js`, `FirstBoss.js`, `boss_attacks.js`
+
+**Fixes Applied:**
+
+- **[CRITICAL] `ManopBoss.js` L709–711** — `Achievements.check('manop_down')` was outside the `typeof Achievements` guard. TypeError would crash the death sequence → `_onDeath()` never fires → boss stays alive, wave never advances. Moved `check()` inside the guard block.
+- **[CRITICAL] `FirstBoss.js` L721–723** — Identical pattern: `Achievements.check('first_down')` outside guard. Same crash risk and wave-lock consequence.
+- **[HIGH] `FirstBoss.js` L227–230** — `SUVAT_CHARGE` `dashAngle` used `atan2(player.y - _suvatAimY, player.x - _suvatAimX)` — vector from aim snapshot toward current player (tracks drift) instead of `boss → snapshot`. If player doesn't move: `atan2(0,0) = 0` → boss always dashes right. Fixed to `atan2(_suvatAimY - this.y, _suvatAimX - this.x)`.
+- **[MEDIUM] `boss_attacks.js` L2810–2811** — `GravitationalSingularity` PULL iterated `projectileManager.projectiles` (non-existent property). Fixed to consistent `getAll() / .list` fallback pattern.
+- **[MEDIUM] `boss_attacks.js` L403–414** — `BubbleProjectile` slow applied to `player.moveSpeed` (wrong — no effect on speed cap; correct is `player.stats.moveSpeed`) and `_bubbleSlowTimer` was never counted down or restored → permanent slow. Fixed to `stats.moveSpeed` + `setTimeout` restore.
+
+**Architecture Note:** `boss_attacks.js` (3,697 lines, 16 classes) evaluated for file splitting. Recommendation: **defer until Boss 3** — natural break point. Proposed: `boss_attacks_shared.js` / `boss_attacks_manop.js` / `boss_attacks_first.js`. Key blocker: `_DC`/`_DE` module-level constants and vanilla `<script>` load order.
+
+---
+
+## 🔄 Recent Changes (v3.29.9)
+
+### Bug Fix Batch — base.js, enemy.js, summons.js (v3.29.9 — March 10, 2026)
+**Purpose:** แก้บัค 7 รายการจาก code review ครอบคลุม 3 ไฟล์
+
+**Files Changed:** `js/entities/enemy.js`, `js/entities/summons.js`, `js/entities/base.js`
+
+**Key Fixes:**
+
+**🔴 Critical**
+- **Enemy chase logic ผิด (enemy.js ~270)** — `else` ใน `if (d > chaseRange && !player.isInvisible)` รวม 2 กรณีเข้าด้วยกัน (อยู่ใน range + invisible) ทำให้ศัตรูชะลอตัวแทน chase เมื่ออยู่ใกล้ player; แก้เป็น `if (!player.isInvisible)` เพียว + ใช้ `chaseSpeed` แยก normal/contact (เทียบกับ TankEnemy pattern)
+- **MageEnemy._onDeath ไม่ check `first_blood` (enemy.js ~472)** — ขาด `Achievements.check('first_blood')` ต่างจาก Enemy และ TankEnemy; เพิ่ม call หลัง `Achievements.stats.kills++`
+
+**🟡 Medium**
+- **Drone overdrive color/dmg/rate ใช้ `this.wasOverdrive` ผิด frame (summons.js 522–524)** — `this.wasOverdrive` ถูก assign `isOverdrive` ก่อนถึง projectile block ทำให้เฟรมแรกที่เข้า overdrive ยิง normal; เปลี่ยนเป็น `isOverdrive` ทั้งหมด
+- **Speed PowerUp restore ผิดสูตร (enemy.js ~529)** — `player.speedBoost / BALANCE.powerups.speedBoost` ใช้ค่าปัจจุบันหาร แทนที่จะ restore shop boost จริงๆ; ควร save `_baseSpeedBoost` ก่อนบวก powerup เหมือน `_baseDamageBoost` pattern
+
+**🟢 Low**
+- **`mapSystem` bare variable ใน strict mode (base.js ~90)** — `_steerAroundObstacles` loop ใช้ `mapSystem.objects` โดยตรงแทน `window.mapSystem.objects`; เปลี่ยนเป็น `window.mapSystem`
+- **NagaEntity ignite ใช้ property ผิด (summons.js 63–68)** — เซ็ต `isBurning`/`burnTimer`/`burnDamage` ซึ่งไม่มีใน EnemyBase `_tickShared` loop; เปลี่ยนเป็น `igniteTimer`/`igniteDPS` ตาม EnemyBase convention
+- **Bug #7** — `window.isGlitchWave` ยืนยันว่าถูกต้องแล้ว (ไม่มีแก้)
+
+**⚠️ Known Remaining Issue:**
+- **Speed PowerUp restore (Bug #4)** ต้องการ refactor เพิ่ม — save `player._baseSpeedBoost` ก่อน apply powerup เช่นเดียวกับ `_baseDamageBoost`; อาจ affect stack behavior ถ้า powerup ถูก apply ซ้ำ
+
+---
+
 ## 🔄 Recent Changes (v3.29.8)
 
 ### Minimap Method Call Class Correction (v3.29.8 — March 10, 2026)
@@ -1028,6 +1100,21 @@ class SniperEnemy extends EnemyBase {
 - **`MAP_CONFIG.objects`** — Added `wall` and `mtcwall` palette entries for future Godot migration
 
 **Files Changed:** `map.js`, `AdminSystem.js`, `config.js`
+
+---
+
+## 📝 Recent Changes (v3.29.9)
+
+### Global Variable References & Voice Bubble Namespacing Fix (March 10, 2026)
+**Purpose:** Fix undefined reference errors by ensuring proper global object access
+
+**Key Changes:**
+- **Voice Bubble Namespacing:** Updated `showVoiceBubble()` calls to use `window.UIManager.showVoiceBubble()` prefix
+- **Boss Class References:** Fixed admin console commands - `Boss`→`ManopBoss`, `BossFirst`→`KruFirst`
+- **Global Variable Access:** Added `window.` prefix to `mapSystem.objects`, `player`, `gameState`, `squadAI`
+- **System Stability:** Prevents runtime errors from undefined global references
+
+**Files Changed:** `js/map.js`, `js/systems/AdminSystem.js`, `js/systems/WaveManager.js`, `js/entities/base.js`, `js/weapons.js`, `js/game.js`
 
 ---
 

@@ -225,8 +225,8 @@ class KruFirst extends BossBase {
                     // Phase 2 — v = u + at dash
                     this._suvatVel += this.SUVAT_ACCEL * dt;
                     const dashAngle = Math.atan2(
-                        player.y - this._suvatAimY,
-                        player.x - this._suvatAimX
+                        this._suvatAimY - this.y,
+                        this._suvatAimX - this.x
                     );
                     this.vx = Math.cos(dashAngle) * this._suvatVel;
                     this.vy = Math.sin(dashAngle) * this._suvatVel;
@@ -718,8 +718,10 @@ class KruFirst extends BossBase {
             spawnParticles(this.x, this.y, 30, '#00ffff');
             spawnFloatingText('⚛️ PHYSICS DISMISSED!', this.x, this.y, '#39ff14', 35);
             // ── INCREMENT STAT: ต้องทำก่อน check() เพื่อให้ condition เป็น true ──
-            if (typeof Achievements !== 'undefined') Achievements.stats.firstKills = (Achievements.stats.firstKills ?? 0) + 1;
-            Achievements.check('first_down');
+            if (typeof Achievements !== 'undefined') {
+                Achievements.stats.firstKills = (Achievements.stats.firstKills ?? 0) + 1;
+                Achievements.check('first_down');
+            }
             this._onDeath();
         }
     }

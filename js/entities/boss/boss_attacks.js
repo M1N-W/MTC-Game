@@ -401,11 +401,16 @@ class BubbleProjectile {
         if (d < this.radius + player.radius) {
             player.takeDamage(this.damage);
             const P3 = BALANCE.boss.phase3;
-            player._bubbleSlowTimer = P3.slowDuration;
             if (!player._bubbleSlowApplied) {
                 player._bubbleSlowApplied = true;
-                player._baseMoveSpeedBubble = player.moveSpeed;
-                player.moveSpeed = player.moveSpeed * P3.slowFactor;
+                player._baseMoveSpeedBubble = player.stats.moveSpeed;
+                player.stats.moveSpeed *= P3.slowFactor;
+                setTimeout(() => {
+                    if (player._bubbleSlowApplied) {
+                        player._bubbleSlowApplied = false;
+                        player.stats.moveSpeed = player._baseMoveSpeedBubble ?? player.stats.moveSpeed;
+                    }
+                }, (P3.slowDuration ?? 2.0) * 1000);
             }
             spawnFloatingText('🫧 SLOWED!', player.x, player.y - 50, '#38bdf8', 22);
             addScreenShake(8);
@@ -2807,8 +2812,11 @@ const GravitationalSingularity = {
                     }
                 }
                 // Bend player projectiles toward boss
-                if (typeof projectileManager !== 'undefined' && projectileManager.projectiles) {
-                    for (const p of projectileManager.projectiles) {
+                if (typeof projectileManager !== 'undefined') {
+                    const _pullProjs = projectileManager.getAll
+                        ? projectileManager.getAll()
+                        : (projectileManager.list || []);
+                    for (const p of _pullProjs) {
                         if (!p || p.dead || p.team === 'enemy') continue;
                         const pdx = boss.x - p.x, pdy = boss.y - p.y;
                         const pd = Math.hypot(pdx, pdy);

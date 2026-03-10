@@ -673,7 +673,7 @@ class WeaponSystem {
         // ── Notify KaoPlayer for weapon-switch visual indicator ──
         // KaoPlayer.update() ตรวจ edge จาก currentWeapon เอง แต่ถ้า switch มาจาก
         // ภายนอก (game.js / scroll wheel) ก็ set ตรงนี้เป็น fallback ได้เลย
-        if (typeof player !== 'undefined' && player && player.charId === 'kao') {
+        if (window.player && window.player.charId === 'kao') {
             player._weaponSwitchFlash = 0.5;
             player._prevWeaponKey = this.currentWeapon;
         }

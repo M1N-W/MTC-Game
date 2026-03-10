@@ -163,7 +163,7 @@ function updateGame(dt) {
 // ── Wave & domain events each frame ──────────────────────────────────────────
 function _tickWaveEvents(dt) {
     if (typeof updateWaveEvent === 'function') updateWaveEvent(dt);
-    if (typeof DomainExpansion !== 'undefined' && window.boss && !window.boss.dead)
+    if (typeof DomainExpansion !== 'undefined')
         DomainExpansion.update(dt, window.boss, window.player);
     // Must run even when boss is dead — allows _abort() to reset phase
     if (typeof GravitationalSingularity !== 'undefined')
@@ -201,6 +201,7 @@ function _tickWaveEvents(dt) {
 // ── Shop temporary buff timers (damage boost + speed boost) ──────────────────
 function _tickShopBuffs(dt) {
     const p = window.player;
+    if (!p) return;
     if (p.shopDamageBoostActive) {
         p.shopDamageBoostTimer -= dt;
         if (p.shopDamageBoostTimer <= 0) {
@@ -278,9 +279,9 @@ function _tickEntities(dt, _inTutorial) {
     if (!_inTutorial && window.boss) window.boss.update(dt, window.player);
 
     // PlayerPatternAnalyzer: sample after player update, before boss AI reads it
-    if (typeof playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
-        playerAnalyzer.sample(dt, window.player, window.boss);
-        playerAnalyzer.update(dt);
+    if (typeof window.playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
+        window.playerAnalyzer.sample(dt, window.player, window.boss);
+        window.playerAnalyzer.update(dt);
     }
 
     // Boss safe-zone exclusion — prevent boss being lured into MTC Room for free kills
@@ -315,7 +316,7 @@ function _tickEntities(dt, _inTutorial) {
                 window.enemies.pop();
             }
         }
-        if (typeof squadAI !== 'undefined') squadAI.update(dt, window.enemies, window.player);
+        if (typeof window.squadAI !== 'undefined') window.squadAI.update(dt, window.enemies, window.player);
     }
 
     // Wave clear check — trigger next wave when all enemies dead and no boss/trickle pending
@@ -473,7 +474,7 @@ function drawGame() {
     if (!drawGame._diagFrame) drawGame._diagFrame = 0;
     drawGame._diagFrame++;
     if (DEBUG_MODE && drawGame._diagFrame % 300 === 1) {
-        console.log('[MTC drawGame] frame', drawGame._diagFrame, '| gameState:', gameState,
+        console.log('[MTC drawGame] frame', drawGame._diagFrame, '| window.gameState:', window.gameState,
             '| player:', !!window.player, '| UIManager:', typeof UIManager,
             '| MTC_DB_SERVER on window:', !!window.MTC_DATABASE_SERVER,
             '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION);
@@ -815,6 +816,7 @@ function _resetRunState(player) {
     if (typeof shellCasingSystem !== 'undefined') shellCasingSystem.clear();
     mapSystem.init();
 
+    Achievements.stats.barrelKills = 0;
     Achievements.stats.damageTaken = 0;
     Achievements.stats.kills = 0;
     Achievements.stats.shopPurchases = 0;
@@ -867,7 +869,7 @@ function _initGameUI(charType) {
     window.focus();
 }
 
-async function endGame(result) {
+function endGame(result) {
     if (GameState.phase === 'GAMEOVER') return;
     setGameState('GAMEOVER');
 

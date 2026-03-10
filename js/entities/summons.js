@@ -62,9 +62,8 @@ class NagaEntity extends Entity {
                     // Cosmic Balance: naga hits ignite enemies
                     if (this.owner?._cosmicBalance && !enemy.dead) {
                         const burnDPS = BALANCE.characters.poom.cosmicNagaBurnDPS || 22;
-                        enemy.isBurning = true;
-                        enemy.burnTimer = Math.max(enemy.burnTimer || 0, 0.8);
-                        enemy.burnDamage = burnDPS;
+                        enemy.igniteTimer = Math.max(enemy.igniteTimer || 0, 0.8);
+                        enemy.igniteDPS = burnDPS;
                     }
                     if (Math.random() < 0.1) spawnParticles(seg.x, seg.y, 2, '#10b981');
                     const now = performance.now();
@@ -519,9 +518,9 @@ class Drone extends Entity {
                 this.hasTarget = true;
                 this.lockTimer = 0;
 
-                const color = this.wasOverdrive ? S.overdriveColor : S.projectileColor;
-                const dmg = this.wasOverdrive ? S.damage * 1.5 : S.damage;
-                const fRate = this.wasOverdrive ? S.overdriveFireRate : S.fireRate;
+                const color = isOverdrive ? S.overdriveColor : S.projectileColor;
+                const dmg = isOverdrive ? S.damage * 1.5 : S.damage;
+                const fRate = isOverdrive ? S.overdriveFireRate : S.fireRate;
 
                 if (this.wasOverdrive) {
                     // Spread Fire (3 projectiles)

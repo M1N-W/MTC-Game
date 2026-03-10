@@ -706,8 +706,10 @@ class KruManop extends BossBase {
         if (this.hp <= 0 && !this._waveSpawnLocked) {
             this._waveSpawnLocked = true;
             // ── INCREMENT STAT: ต้องทำก่อน check() เพื่อให้ condition เป็น true ──
-            if (typeof Achievements !== 'undefined') Achievements.stats.manopKills = (Achievements.stats.manopKills ?? 0) + 1;
-            Achievements.check('manop_down');
+            if (typeof Achievements !== 'undefined') {
+                Achievements.stats.manopKills = (Achievements.stats.manopKills ?? 0) + 1;
+                Achievements.check('manop_down');
+            }
             this._onDeath();
         }
     }

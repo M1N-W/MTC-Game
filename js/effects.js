@@ -2272,6 +2272,11 @@ class WaveAnnouncementFX {
 /** Global singleton */
 var waveAnnouncementFX = new WaveAnnouncementFX();
 
+// ── Explicit window exports ────────────────────────────────────────────────────
+window.waveAnnouncementFX = waveAnnouncementFX;
+window.decalSystem = decalSystem;
+window.shellCasingSystem = shellCasingSystem;
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Export
 // ──────────────────────────────────────────────────────────────────────────────
@@ -2282,7 +2287,7 @@ if (typeof module !== 'undefined' && module.exports) {
         HitMarker, HitMarkerSystem, hitMarkerSystem,
         spawnHitMarker,
         Raindrop, Snowflake, WeatherSystem, weatherSystem,
-        EquationSlam, DeadlyGraph, MeteorStrike,
+        MeteorStrike,
         spawnParticles, spawnFloatingText,
         spawnWanchaiPunchText,
         drawGlitchEffect,

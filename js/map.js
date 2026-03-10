@@ -733,7 +733,7 @@ class MTCRoom {
                 }
 
                 spawnFloatingText('SAFE ZONE!', player.x, player.y - 60, '#fbbf24', 25);
-                showVoiceBubble('เข้าสู่ MTC Room - เริ่มกระบวนการฟื้นฟู', player.x, player.y - 40);
+                if (window.UIManager) window.UIManager.showVoiceBubble('เข้าสู่ MTC Room - เริ่มกระบวนการฟื้นฟู', player.x, player.y - 40);
                 if (typeof Audio !== 'undefined') Audio.playMtcEntry();
             }
             this.playerStayTime += dt;
@@ -759,7 +759,7 @@ class MTCRoom {
     kickOut(player) {
         this.isPlayerInside = false; this.cooldown = this.cooldownTime;
         spawnFloatingText('พลังงานหมด!', player.x, player.y - 60, '#f59e0b', 20);
-        showVoiceBubble('MTC Room เข้าสู่สถานะ Cooldown', player.x, player.y - 40);
+        if (window.UIManager) window.UIManager.showVoiceBubble('MTC Room เข้าสู่สถานะ Cooldown', player.x, player.y - 40);
         // Push south out the entrance
         player.vx = 0; player.vy = 250;
     }

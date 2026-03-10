@@ -571,7 +571,7 @@ function _startBossWave(wave) {
 
         if (isFirst) {
             const isAdvanced = (encounter === 4);
-            window.boss = new BossFirst(bossLevel, isAdvanced);
+            window.boss = new KruFirst(bossLevel, isAdvanced);
             UIManager.updateBossHUD(window.boss);
             if (bossNameEl) {
                 bossNameEl.innerHTML =
@@ -599,7 +599,7 @@ function _startBossWave(wave) {
         } else {
             const enablePhase2 = (encounter >= 3);
             const enablePhase3 = (encounter >= 5);
-            window.boss = new Boss(bossLevel, enablePhase2, enablePhase3);
+            window.boss = new ManopBoss(bossLevel, enablePhase2, enablePhase3);
             UIManager.updateBossHUD(window.boss);
             if (bossNameEl) {
                 let phaseTitle = '';

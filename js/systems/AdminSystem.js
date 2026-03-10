@@ -322,7 +322,7 @@ const AdminConsole = (() => {
                 if (typeof spawnParticles === 'function')
                     spawnParticles(window.player.x, window.player.y, 10, '#a78bfa');
                 if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
-            } else if (!success) {
+            } else {
                 _appendLine(`ERR: weapon "${weaponName}" not found or equip API unavailable.`, 'cline-error');
                 _appendLine('> Try: pistol, rifle, shotgun, sniper, smg, launcher', 'cline-info', true);
             }
@@ -339,12 +339,12 @@ const AdminConsole = (() => {
             const arg3 = (args[2] || '').toLowerCase();
             const isManop = sub === 'manop';
 
-            if (isManop && typeof Boss === 'undefined') {
-                _appendLine('ERR: Boss class not found. Is boss.js loaded?', 'cline-error');
+            if (isManop && typeof ManopBoss === 'undefined') {
+                _appendLine('ERR: ManopBoss class not found. Is ManopBoss.js loaded?', 'cline-error');
                 return;
             }
-            if (!isManop && typeof BossFirst === 'undefined') {
-                _appendLine('ERR: BossFirst class not found. Is boss.js loaded?', 'cline-error');
+            if (!isManop && typeof KruFirst === 'undefined') {
+                _appendLine('ERR: KruFirst class not found. Is FirstBoss.js loaded?', 'cline-error');
                 return;
             }
 
@@ -369,7 +369,7 @@ const AdminConsole = (() => {
                 const enablePhase3 = phase >= 3;
                 _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
                 _appendLine(`> Allocating Boss: KRU MANOP  Phase ${phase}...`, 'cline-info');
-                window.boss = new Boss(difficulty, enablePhase2, enablePhase3);
+                window.boss = new ManopBoss(difficulty, enablePhase2, enablePhase3);
                 // Force boss into the requested phase immediately
                 if (phase >= 2) window.boss.phase = phase;
 
@@ -394,7 +394,7 @@ const AdminConsole = (() => {
                 }
                 _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
                 _appendLine(`> Allocating BossFirst: KRU FIRST  ${isAdvanced ? 'ADVANCED' : 'Normal'}...`, 'cline-info');
-                window.boss = new BossFirst(difficulty, isAdvanced);
+                window.boss = new KruFirst(difficulty, isAdvanced);
 
                 _appendLine(`✔ KRU FIRST  ${isAdvanced ? '⚛️ ADVANCED' : 'Normal'}  spawned (difficulty ×${difficulty}).`, 'cline-ok');
                 spawnFloatingText(
@@ -911,7 +911,7 @@ function openExternalDatabase() {
     if (promptEl) promptEl.style.display = 'none';
 
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
-    if (player) spawnFloatingText(GAME_TEXTS.admin.database, player.x, player.y - 60, '#06b6d4', 22);
+    if (window.player) spawnFloatingText(GAME_TEXTS.admin.database, window.player.x, window.player.y - 60, '#06b6d4', 22);
 }
 
 function resumeGame() {
@@ -926,7 +926,7 @@ function resumeGame() {
 
     window.focus();
 
-    if (player) spawnFloatingText(GAME_TEXTS.admin.resumed, player.x, player.y - 50, '#34d399', 18);
+    if (window.player) spawnFloatingText(GAME_TEXTS.admin.resumed, window.player.x, window.player.y - 50, '#34d399', 18);
 }
 
 function openDatabase() { openExternalDatabase(); }

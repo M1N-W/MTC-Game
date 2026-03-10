@@ -267,15 +267,15 @@ class Enemy extends EnemyBase {
                 else { this.vx *= 0.5; this.vy *= 0.5; }
             } else { this.vx *= 0.85; this.vy *= 0.85; }
         } else {
-            if (d > BALANCE.enemy.chaseRange && !player.isInvisible) {
-                // ── AI steering blend: 70% base direction, 30% AI override ──
+            if (!player.isInvisible) {
                 const baseX = Math.cos(this.angle);
                 const baseY = Math.sin(this.angle);
                 const blendX = baseX * 0.7 + this._aiMoveX * 0.3;
                 const blendY = baseY * 0.7 + this._aiMoveY * 0.3;
                 const blendLen = Math.hypot(blendX, blendY) || 1;
-                this.vx = (blendX / blendLen) * this.speed * this.stickySlowMultiplier;
-                this.vy = (blendY / blendLen) * this.speed * this.stickySlowMultiplier;
+                const chaseSpeed = d > this.radius + (window.player?.radius || 20) ? this.speed : this.speed * 0.3;
+                this.vx = (blendX / blendLen) * chaseSpeed * this.stickySlowMultiplier;
+                this.vy = (blendY / blendLen) * chaseSpeed * this.stickySlowMultiplier;
             } else { this.vx *= 0.9; this.vy *= 0.9; }
         }
         this._steerAroundObstacles(dt);
@@ -469,7 +469,7 @@ class MageEnemy extends EnemyBase {
             const currentWep = BALANCE.characters.kao.weapons[wepKey];
             if (currentWep) player.addKill(currentWep.name);
         }
-        Achievements.stats.kills++;
+        Achievements.stats.kills++; Achievements.check('first_blood');
         if (Math.random() < BALANCE.powerups.dropRate * BALANCE.mage.powerupDropMult) window.powerups.push(new PowerUp(this.x, this.y));
     }
     // draw() → EnemyRenderer.drawMage()
@@ -521,12 +521,14 @@ class PowerUp {
                         ? (player.speedBoost / 1.0)
                         : 1.0;
                     player._powerupSpeedActive = true;
+                    player._preSpeedBoostBase = shopMult; // save shop-only multiplier
                     player.speedBoost = shopMult * BALANCE.powerups.speedBoost;
 
                     setTimeout(() => {
                         player._powerupSpeedActive = false;
-                        // Restore shop boost if still active
-                        player.speedBoost = player.shopSpeedBoostActive ? (player.speedBoost / BALANCE.powerups.speedBoost) : 1.0;
+                        // Restore to pre-powerup value (shop boost or 1.0)
+                        player.speedBoost = player._preSpeedBoostBase ?? 1.0;
+                        player._preSpeedBoostBase = undefined;
                     }, BALANCE.powerups.speedBoostDuration * 1000);
                 }
                 spawnFloatingText('SPEED UP!', player.x, player.y - 40, '#3b82f6', 20);

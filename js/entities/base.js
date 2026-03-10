@@ -91,8 +91,8 @@ class Entity {
             const px = this.x + Math.cos(probeAngle) * PROBE_DIST;
             const py = this.y + Math.sin(probeAngle) * PROBE_DIST;
 
-            for (let oi = 0; oi < mapSystem.objects.length; oi++) {
-                const obj = mapSystem.objects[oi];
+            for (let oi = 0; oi < window.mapSystem.objects.length; oi++) {
+                const obj = window.mapSystem.objects[oi];
                 if (!obj.solid) continue;
                 // Quick AABB broad phase
                 if (px < obj.x - 4 || px > obj.x + obj.w + 4 ||

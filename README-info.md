@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.29.8 | **Latest Update:** Minimap Method Call Class Correction - Fixed static method calls to use CanvasHUD class prefix instead of UIManager for proper class semantics
+> **Current Version:** Beta v3.29.9 | **Latest Update:** Global Variable References & Voice Bubble Namespacing Fix - Fixed showVoiceBubble() calls to use window.UIManager prefix and corrected boss class references
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

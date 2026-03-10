@@ -4,6 +4,41 @@
 
 ---
 
+## v3.29.9 — Global Variable References & Voice Bubble Namespacing Fix
+*Released: March 10, 2026*
+
+### 🐛 Bug Fixes
+- **Voice Bubble Namespacing**: Fixed `showVoiceBubble()` calls to use proper `window.UIManager.showVoiceBubble()` prefix
+  - Updated MTC Room entry/exit voice bubble calls in `js/map.js`
+  - Ensures proper UIManager access and prevents undefined function errors
+- **Boss Class Reference Corrections**: Fixed admin console boss spawning commands
+  - Changed `Boss` class references to `ManopBoss` for Manop boss spawning
+  - Changed `BossFirst` class references to `KruFirst` for First boss spawning
+  - Updated error messages to reference correct class names
+- **Global Variable Access**: Added `window.` prefix for proper global object access
+  - Fixed `mapSystem.objects` references to use `window.mapSystem.objects`
+  - Updated `player` references to use `window.player` in various systems
+  - Corrected `gameState` references to use `window.gameState`
+  - Fixed `squadAI` references to use `window.squadAI`
+
+### 🔧 Technical Details
+- **Root Cause**: Missing `window.` prefix causing undefined references in global scope
+- **Impact**: Prevents runtime errors when accessing global objects and ensures proper namespacing
+- **Files Modified**: 
+  - `js/map.js` (2 voice bubble fixes)
+  - `js/systems/AdminSystem.js` (4 boss class reference fixes)
+  - `js/systems/WaveManager.js` (2 boss spawning fixes)
+  - `js/entities/base.js` (1 mapSystem reference fix)
+  - `js/weapons.js` (1 player reference fix)
+  - `js/game.js` (multiple global reference fixes)
+
+### 🎯 Gameplay Impact
+- **Admin Console**: Boss spawning commands now work correctly without class reference errors
+- **MTC Room**: Voice bubbles now display properly when entering/exiting the room
+- **System Stability**: Improved reliability of global object access across all game systems
+
+---
+
 ## v3.29.8 — Minimap Method Call Class Correction
 *Released: March 10, 2026*
 
