@@ -238,7 +238,7 @@ class UtilityAI {
     /** Call on enemy death to release references (GC) */
     dispose() {
         this._enemy = null;
-        this._nearbyAlliesList = [];
+        this._nearbyAlliesList.length = 0; // clear in-place — no allocation
     }
 }
 

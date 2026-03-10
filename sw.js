@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.0'; // Boss Attacks Refactoring - Split monolithic boss_attacks.js into three specialized files for better code organization and maintainability
+const CACHE_NAME = 'mtc-cache-v3.30.1'; // AI System Code Quality Improvements - Fixed wall-avoidance bounds, optimized dispose method, improved load order and code formatting
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

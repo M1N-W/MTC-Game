@@ -4,6 +4,43 @@
 
 ---
 
+## v3.30.1 — AI System Code Quality Improvements
+*Released: March 10, 2026*
+
+### 🧠 AI System Enhancements
+- **Wall-Avoidance Fix**: Corrected EnemyActions.retreat() to use world map dimensions instead of canvas pixels
+  - Changed from `CANVAS.width/height` to `MAP_CONFIG.mapWidth/mapHeight` (3200×3200)
+  - Prevents enemies from incorrectly avoiding screen edges instead of world boundaries
+  - Critical fix for proper AI behavior in large world maps
+- **Performance Optimization**: Optimized UtilityAI.dispose() method to avoid array allocations
+  - Changed `this._nearbyAlliesList = []` to `this._nearbyAlliesList.length = 0`
+  - Prevents garbage collection pressure during frequent enemy death cycles
+- **Code Formatting**: Standardized spacing and formatting across AI modules
+  - Fixed inconsistent spacing in mathematical calculations
+  - Improved code readability and maintainability
+
+### 📝 Documentation Updates
+- **Load Order Correction**: Updated PlayerPatternAnalyzer.js load order documentation
+  - Corrected sequence: UtilityAI → EnemyActions → PlayerPatternAnalyzer → SquadAI → enemy.js
+  - Ensures proper dependency resolution during initialization
+- **Code Comments**: Enhanced SquadAI.js with clearer role assignment logic documentation
+  - Added explanatory comments about shield role assignment restrictions
+  - Improved understanding of squad coordination behavior
+
+### 🔧 Technical Improvements
+- **World Map Awareness**: AI now properly respects world boundaries instead of screen boundaries
+- **Memory Management**: Reduced object allocations in AI hot paths
+- **Code Consistency**: Standardized formatting across all AI system files
+- **Dependency Clarity**: Clearer documentation of module loading sequence
+
+### 📁 Files Modified
+- `js/ai/EnemyActions.js` - Wall-avoidance bounds fix, formatting improvements
+- `js/ai/UtilityAI.js` - Performance optimization in dispose method
+- `js/ai/PlayerPatternAnalyzer.js` - Load order documentation correction
+- `js/ai/SquadAI.js` - Code formatting and comment improvements
+
+---
+
 ## v3.30.0 — Boss Attacks Refactoring (Major Architecture Improvement)
 *Released: March 10, 2026*
 

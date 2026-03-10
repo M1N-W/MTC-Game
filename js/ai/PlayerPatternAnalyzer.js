@@ -12,8 +12,7 @@
  *   dominantDir  — "left" | "right" | "none" (relative to boss-player axis)
  *
  * LOAD ORDER:
- *   config.js → base.js → UtilityAI.js → EnemyActions.js → SquadAI.js
- *   → [THIS FILE] → enemy.js
+ *   config.js → base.js → UtilityAI.js → EnemyActions.js → [THIS FILE] → SquadAI.js → enemy.js
  *
  * INTEGRATION:
  *   // game.js: after player update, before boss update

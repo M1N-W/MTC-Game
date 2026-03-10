@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.0
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.1
 
 ---
 
@@ -1122,7 +1122,32 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Changes (v3.30.0)
+## 📝 Recent Changes (v3.30.1)
+
+### AI System Code Quality Improvements (March 10, 2026)
+**Purpose:** Enhance AI system reliability and performance through bug fixes and optimizations
+
+**Key Changes:**
+- **Wall-Avoidance Fix**: Corrected EnemyActions.retreat() to use MAP_CONFIG world dimensions (3200×3200) instead of CANVAS screen pixels
+- **Performance Optimization**: Optimized UtilityAI.dispose() method to avoid array allocations using length = 0 instead of new array
+- **Code Quality**: Standardized formatting and spacing across all AI modules for better maintainability
+- **Documentation**: Updated load order sequence and enhanced code comments for better developer understanding
+
+**Technical Impact:**
+- **World Map Awareness**: AI now properly respects world boundaries instead of screen edges
+- **Memory Management**: Reduced garbage collection pressure during enemy death cycles
+- **Code Consistency**: Improved readability and maintainability across AI system files
+- **Dependency Resolution**: Corrected module loading sequence to prevent initialization errors
+
+**Files Changed:**
+- `js/ai/EnemyActions.js`: Wall-avoidance bounds fix, formatting improvements
+- `js/ai/UtilityAI.js`: Performance optimization in dispose method
+- `js/ai/PlayerPatternAnalyzer.js`: Load order documentation correction
+- `js/ai/SquadAI.js`: Code formatting and comment improvements
+
+---
+
+## 📝 Previous Changes (v3.30.0)
 
 ### Boss Attacks Refactoring (March 10, 2026)
 **Purpose:** Improve code organization by splitting monolithic boss_attacks.js into specialized modules

@@ -40,13 +40,14 @@ class EnemyActions {
         let mx = -(dx / norm);
         let my = -(dy / norm);
 
-        // Wall-avoidance: nudge away from canvas edges
+        // Wall-avoidance: nudge away from world map edges
+        // Use MAP_CONFIG world dimensions — NOT CANVAS screen pixels
         const margin = 80;
-        const W = (typeof CANVAS !== 'undefined' ? CANVAS.width  : 800);
-        const H = (typeof CANVAS !== 'undefined' ? CANVAS.height : 600);
-        if (enemy.x < margin)     mx += (margin - enemy.x) / margin;
+        const W = (typeof MAP_CONFIG !== 'undefined' ? MAP_CONFIG.mapWidth : 3200);
+        const H = (typeof MAP_CONFIG !== 'undefined' ? MAP_CONFIG.mapHeight : 3200);
+        if (enemy.x < margin) mx += (margin - enemy.x) / margin;
         if (enemy.x > W - margin) mx -= (enemy.x - (W - margin)) / margin;
-        if (enemy.y < margin)     my += (margin - enemy.y) / margin;
+        if (enemy.y < margin) my += (margin - enemy.y) / margin;
         if (enemy.y > H - margin) my -= (enemy.y - (H - margin)) / margin;
 
         // Renormalize
@@ -70,7 +71,7 @@ class EnemyActions {
         const norm = dist || 1;
 
         // Perpendicular vectors to player direction
-        const perpX =  dy / norm;
+        const perpX = dy / norm;
         const perpY = -(dx / norm);
 
         // Choose side: count allies to left vs right to spread the squad out
@@ -156,7 +157,7 @@ class EnemyActions {
 
         // Tangent (CCW) = (-dy, dx) / dist
         const tanX = -dy / norm;
-        const tanY =  dx / norm;
+        const tanY = dx / norm;
 
         // Radial component: push in or out depending on distance from orbit ring
         const radialBias = (dist - od) / od; // positive = too far, negative = too close

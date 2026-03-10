@@ -34,7 +34,7 @@
 const SQUAD_ROLE = {
     ASSAULT: 'assault',
     FLANKER: 'flanker',
-    SHIELD:  'shield',
+    SHIELD: 'shield',
     SUPPORT: 'support',
 };
 
@@ -44,7 +44,7 @@ const SQUAD_ROLE = {
 class _BucketGrid {
     constructor(cellSize) {
         this._cell = cellSize;
-        this._map  = new Map(); // key: "cx,cy" → Enemy[]
+        this._map = new Map(); // key: "cx,cy" → Enemy[]
     }
 
     /** Rebuild from current enemy array */
@@ -97,7 +97,7 @@ class SquadAI {
         // Role budget per squad (configurable via BALANCE.ai.squad)
         // e.g. of 10 nearby enemies: 2 shield, 2 flanker, rest assault
         this._roleBudget = {
-            shield:  2,
+            shield: 2,
             flanker: 3,
             support: 2,   // mages always stay as support regardless
         };
@@ -146,11 +146,12 @@ class SquadAI {
         const nearby = this._grid.nearby(enemy.x, enemy.y);
 
         // Count current roles in neighbourhood to respect budget
-        let shieldCount = 0, flankerCount = 0;
+        // Note: SHIELD role is assigned only to tank-type enemies (above).
+        //       Basic enemies can only be FLANKER or ASSAULT.
+        let flankerCount = 0;
         for (let i = 0; i < nearby.length; i++) {
             const a = nearby[i];
             if (a === enemy || a.dead) continue;
-            if (a._squadRole === SQUAD_ROLE.SHIELD)  shieldCount++;
             if (a._squadRole === SQUAD_ROLE.FLANKER) flankerCount++;
         }
 
@@ -162,7 +163,7 @@ class SquadAI {
             cx += a.x; cy += a.y; count++;
         }
         if (count > 0) { cx /= count; cy /= count; }
-        else           { cx = enemy.x; cy = enemy.y; }
+        else { cx = enemy.x; cy = enemy.y; }
 
         // Distance from centroid — outer enemies become flankers, inner become assault/shield
         const distFromCentroid = Math.hypot(enemy.x - cx, enemy.y - cy);
@@ -190,8 +191,8 @@ class SquadAI {
      */
     static tagOnSpawn(enemy) {
         if (!enemy) return;
-        if (enemy.type === 'mage')  { enemy._squadRole = SQUAD_ROLE.SUPPORT; return; }
-        if (enemy.type === 'tank')  { enemy._squadRole = SQUAD_ROLE.SHIELD;  return; }
+        if (enemy.type === 'mage') { enemy._squadRole = SQUAD_ROLE.SUPPORT; return; }
+        if (enemy.type === 'tank') { enemy._squadRole = SQUAD_ROLE.SHIELD; return; }
         enemy._squadRole = SQUAD_ROLE.ASSAULT; // basic default
     }
 }
@@ -202,6 +203,6 @@ const squadAI = new SquadAI();
 // ══════════════════════════════════════════════════════════════
 // 🌐 EXPORTS
 // ══════════════════════════════════════════════════════════════
-window.SquadAI   = SquadAI;
-window.squadAI   = squadAI;
+window.SquadAI = SquadAI;
+window.squadAI = squadAI;
 window.SQUAD_ROLE = SQUAD_ROLE;
