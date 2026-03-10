@@ -1,3 +1,8 @@
+---
+name: suspense-boundaries
+description: Client hooks that cause CSR bailout without Suspense boundaries
+---
+
 # Suspense Boundaries
 
 Client hooks that cause CSR bailout without Suspense boundaries.

@@ -1,3 +1,8 @@
+---
+name: hydration-error
+description: Diagnose and fix React hydration mismatch errors.
+---
+
 # Hydration Errors
 
 Diagnose and fix React hydration mismatch errors.

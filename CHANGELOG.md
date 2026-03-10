@@ -4,6 +4,31 @@
 
 ---
 
+## v3.27.11 — BGM Crossfade System (Audio Enhancement)
+*Released: March 10, 2026*
+
+### 🎵 Audio System Improvements
+- **BGM Crossfade Implementation**: Added smooth audio transitions between different background music tracks
+- **Same-Track Guard**: Prevents audio cutting when the same track is requested multiple times (e.g., battle→battle between waves)
+- **Web Audio API Integration**: Routes audio through GainNode for sample-accurate volume control instead of direct .volume property
+- **400ms Fade-Out Effects**: Smooth transitions when switching between different tracks (battle↔boss)
+- **Enhanced Volume Control**: Uses GainNode ramps for smooth volume changes instead of immediate jumps
+
+### 🔧 Technical Details
+- **_crossfadeOutAndStop() Method**: New method for smooth audio fade-out with proper cleanup
+- **Web Audio Routing**: HTMLAudioElement → GainNode → destination for better audio processing
+- **Memory Management**: Proper disconnection of Web Audio nodes and cleanup of timers
+- **Fallback Support**: Graceful degradation to setTimeout-based fading if Web Audio unavailable
+- **State Management**: Enhanced tracking of audio elements, nodes, and fade timers
+
+### 🎮 Gameplay Impact
+- **Wave Transitions**: Battle music continues seamlessly between waves without interruption
+- **Boss Battles**: Smooth fade-out from battle music, then fade-in of boss music
+- **Volume Controls**: Smooth volume slider transitions without audio artifacts
+- **Performance**: Thread-safe audio processing with reduced audio glitches
+
+---
+
 ## v3.27.10 — Documentation Update (Next.js Skills Frontmatter)
 *Released: March 10, 2026*
 

@@ -1,3 +1,8 @@
+---
+name: file-conventions
+description: Next.js App Router uses file-based routing with special file conventions.
+---
+
 # File Conventions
 
 Next.js App Router uses file-based routing with special file conventions.

@@ -1,3 +1,8 @@
+---
+name: error-handling
+description: Handle errors gracefully in Next.js applications.
+---
+
 # Error Handling
 
 Handle errors gracefully in Next.js applications.

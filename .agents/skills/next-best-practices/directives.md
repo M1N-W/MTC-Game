@@ -1,4 +1,7 @@
-# Directives
+---
+name: directives
+description: React and Next.js directives for client/server components.
+---
 
 ## React Directives
 

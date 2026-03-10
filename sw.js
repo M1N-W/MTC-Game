@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.27.8'; // v3.27.8: UI Language & Theme Updates - Converted skill names from Thai to English, added character-specific color themes (blue/emerald/red), improved HUD styling with Share Tech Mono font, enhanced cooldown visuals
+const CACHE_NAME = 'mtc-cache-v3.27.11'; // v3.27.11: BGM Crossfade System - Implemented smooth audio transitions between tracks with same-track guard, Web Audio API GainNode routing, 400ms fade-out effects, and enhanced volume control to prevent audio cutting during wave transitions
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -1,3 +1,8 @@
+---
+name: image
+description: Use `next/image` for automatic image optimization.
+---
+
 # Image Optimization
 
 Use `next/image` for automatic image optimization.

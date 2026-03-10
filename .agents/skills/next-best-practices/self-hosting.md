@@ -1,6 +1,7 @@
-# Self-Hosting Next.js
-
-Deploy Next.js outside of Vercel with confidence.
+---
+name: self-hosting
+description: Deploy Next.js outside of Vercel with confidence
+---
 
 ## Quick Start: Standalone Output
 

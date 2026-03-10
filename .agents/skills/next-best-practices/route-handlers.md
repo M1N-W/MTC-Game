@@ -1,3 +1,8 @@
+---
+name: route-handlers
+description: Create API endpoints with `route.ts` files
+---
+
 # Route Handlers
 
 Create API endpoints with `route.ts` files.

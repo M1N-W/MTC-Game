@@ -1,6 +1,7 @@
-# Scripts
-
-Loading third-party scripts in Next.js.
+---
+name: scripts
+description: Loading third-party scripts in Next.js
+---
 
 ## Use next/script
 

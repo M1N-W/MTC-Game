@@ -1,3 +1,8 @@
+---
+name: rsc-boundaries
+description: Detect and prevent invalid patterns when crossing Server/Client component boundaries
+---
+
 # RSC Boundaries
 
 Detect and prevent invalid patterns when crossing Server/Client component boundaries.

@@ -1,3 +1,8 @@
+---
+name: debug-tricks
+description: Tricks to speed up debugging Next.js applications.
+---
+
 # Debug Tricks
 
 Tricks to speed up debugging Next.js applications.

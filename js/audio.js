@@ -85,6 +85,10 @@ class AudioSystem {
         this.bgmVolume = GAME_CONFIG.audio.bgmVolume;
         this.sfxVolume = GAME_CONFIG.audio.sfxVolume;
         this.userInteracted = false;
+        // ── Crossfade ──────────────────────────────────────────────────────────────
+        this._bgmGainNode = null;      // GainNode ควบคุม volume ของ BGM ปัจจุบัน
+        this._bgmSourceNode = null;    // MediaElementSourceNode wrapper
+        this._fadeOutTimer = null;     // setTimeout handle ของ track ที่กำลัง fade out
 
         // ── Task 3: autoplay-block tracking flag ─────────────────────────────
         // Set true inside .catch() of bgmAudio.play() when the browser's
@@ -1107,8 +1111,15 @@ class AudioSystem {
         // Clear any pending BGM since we're now playing a real track
         this._pendingBGM = null;
 
-        // Stop any currently playing BGM before starting the new track
-        this.stopBGM();
+        // ── SAME-TRACK GUARD ──────────────────────────────────────────────────
+        // ถ้าเพลงที่ขอเหมือนกับที่เล่นอยู่ และกำลังเล่นจริงๆ → ไม่ทำอะไร
+        // แก้ปัญหา: wave ใหม่ที่ใช้ track เดิม (battle→battle) จะไม่ตัดเพลง
+        if (this.currentBGM === type && this.bgmAudio && !this.bgmAudio.paused) {
+            return;
+        }
+
+        // ── CROSSFADE OUT old track (ถ้ามี) ──────────────────────────────────
+        this._crossfadeOutAndStop();
 
         try {
             // ── TASK 1 FIX: Use document.createElement('audio') ──────────────
@@ -1138,8 +1149,29 @@ class AudioSystem {
             this.bgmAudio = document.createElement('audio');
             this.bgmAudio.src = bgmPath;
             this.bgmAudio.loop = true;
-            this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
 
+            // ── Web Audio routing: HTMLAudioElement → GainNode → destination ──
+            // ทำให้ volume fade เป็น sample-accurate แทน setTimeout
+            // Guard: ctx อาจ null ถ้า init() ล้มเหลว
+            if (this.ctx) {
+                try {
+                    this._ensureAudioContextRunning();
+                    this._bgmSourceNode = this.ctx.createMediaElementSource(this.bgmAudio);
+                    this._bgmGainNode = this.ctx.createGain();
+                    this._bgmGainNode.gain.setValueAtTime(this.bgmVolume * this.masterVolume, this.ctx.currentTime);
+                    this._bgmSourceNode.connect(this._bgmGainNode);
+                    this._bgmGainNode.connect(this.ctx.destination);
+                    // ไม่ set .volume ตรงๆ เพราะ routing ผ่าน GainNode แล้ว
+                } catch (webAudioErr) {
+                    // fallback: ถ้า createMediaElementSource ล้มเหลว (เช่น element ถูก reuse)
+                    console.warn('🎵 Web Audio routing failed, fallback to .volume:', webAudioErr);
+                    this._bgmSourceNode = null;
+                    this._bgmGainNode = null;
+                    this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
+                }
+            } else {
+                this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
+            }
             // ── TASK 3 FIX: Robust autoplay promise handling ──────────────────
             //
             // .play() returns a Promise. We must handle rejection or the browser
@@ -1248,6 +1280,69 @@ class AudioSystem {
         document.addEventListener('click', retryPlay, { once: true });
         document.addEventListener('keydown', retryPlay, { once: true });
     }
+    /**
+         * Fade out BGM ที่กำลังเล่นอยู่แล้ว stop — ไม่บล็อก caller
+         * ใช้ GainNode ramp ถ้ามี, fallback เป็น pause() ทันทีถ้าไม่มี
+         */
+    _crossfadeOutAndStop() {
+        if (!this.bgmAudio) return;
+
+        const FADE_MS = 400; // ms
+
+        // เคลียร์ fade timer เก่า (ถ้า crossfade ซ้อนกัน)
+        if (this._fadeOutTimer !== null) {
+            clearTimeout(this._fadeOutTimer);
+            this._fadeOutTimer = null;
+        }
+
+        // ถ้ามี GainNode → fade ผ่าน Web Audio (smooth)
+        if (this._bgmGainNode && this.ctx && this.ctx.state === 'running') {
+            const gain = this._bgmGainNode;
+            const t = this.ctx.currentTime;
+            gain.gain.cancelScheduledValues(t);
+            gain.gain.setValueAtTime(gain.gain.value, t);
+            gain.gain.linearRampToValueAtTime(0, t + FADE_MS / 1000);
+        } else {
+            // fallback: ไม่มี Web Audio context — ค่อยๆ ลด .volume ด้วย setTimeout chain
+            const audio = this.bgmAudio;
+            const steps = 8;
+            const stepMs = FADE_MS / steps;
+            const startVol = audio.volume;
+            let step = 0;
+            const fadeStep = () => {
+                step++;
+                audio.volume = Math.max(0, startVol * (1 - step / steps));
+                if (step < steps) setTimeout(fadeStep, stepMs);
+            };
+            setTimeout(fadeStep, stepMs);
+        }
+
+        // Capture refs ของ track ที่กำลัง fade out
+        const oldAudio = this.bgmAudio;
+        const oldEnded = this._bgmEndedListener;
+        const oldGain = this._bgmGainNode;
+        const oldSource = this._bgmSourceNode;
+
+        // Reset state ทันทีเพื่อให้ playBGM() track ใหม่สร้าง element ได้เลย
+        this.bgmAudio = null;
+        this.currentBGM = null;
+        this._bgmGainNode = null;
+        this._bgmSourceNode = null;
+        this._bgmEndedListener = null;
+        this._bgmPlayInProgress = false;
+
+        // หยุด old track หลัง fade เสร็จ
+        this._fadeOutTimer = setTimeout(() => {
+            this._fadeOutTimer = null;
+            if (oldEnded) {
+                try { oldAudio.removeEventListener('ended', oldEnded); } catch (_) { }
+            }
+            oldAudio.pause();
+            oldAudio.src = '';
+            if (oldSource) { try { oldSource.disconnect(); } catch (_) { } }
+            if (oldGain) { try { oldGain.disconnect(); } catch (_) { } }
+        }, FADE_MS + 50);
+    }
 
     stopBGM() {
         // Clear any queued-but-not-yet-played BGM so it doesn't
@@ -1257,6 +1352,12 @@ class AudioSystem {
         // is pending, the .then()/.catch() will still fire but currentBGM/flags
         // will already be clean, so they become no-ops.
         this._bgmPlayInProgress = false;
+
+        // ยกเลิก fade-out timer ที่ค้างอยู่
+        if (this._fadeOutTimer !== null) {
+            clearTimeout(this._fadeOutTimer);
+            this._fadeOutTimer = null;
+        }
 
         if (this.bgmAudio) {
             // Remove the loop-end safety listener to prevent memory leaks
@@ -1274,8 +1375,12 @@ class AudioSystem {
                 this._bgmWaitingForInteraction = false;
             }
 
+            // Disconnect Web Audio nodes
+            if (this._bgmSourceNode) { try { this._bgmSourceNode.disconnect(); } catch (_) { } this._bgmSourceNode = null; }
+            if (this._bgmGainNode) { try { this._bgmGainNode.disconnect(); } catch (_) { } this._bgmGainNode = null; }
+
             this.bgmAudio.pause();
-            this.bgmAudio.currentTime = 0;
+            this.bgmAudio.src = '';
             this.bgmAudio = null;
             this.currentBGM = null;
             console.log('🎵 BGM stopped');
@@ -1305,7 +1410,13 @@ class AudioSystem {
     setMasterVolume(volume) {
         this.masterVolume = clamp(volume, 0, 1);
         // Update BGM volume if a track is currently playing
-        if (this.bgmAudio) {
+        // Update BGM volume — prefer GainNode (Web Audio), fallback to .volume
+        if (this._bgmGainNode) {
+            this._bgmGainNode.gain.setTargetAtTime(
+                this.bgmVolume * this.masterVolume,
+                this.ctx.currentTime, 0.05
+            );
+        } else if (this.bgmAudio) {
             this.bgmAudio.volume = this.bgmVolume * this.masterVolume;
         }
     }

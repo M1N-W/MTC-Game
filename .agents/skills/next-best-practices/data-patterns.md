@@ -1,6 +1,7 @@
-# Data Patterns
-
-Choose the right data fetching pattern for each use case.
+---
+name: data-patterns
+description: Choose the right data fetching pattern for each use case.
+---
 
 ## Decision Tree
 

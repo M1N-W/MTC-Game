@@ -1,3 +1,8 @@
+---
+name: font
+description: Use `next/font` for automatic font optimization with zero layout shift.
+---
+
 # Font Optimization
 
 Use `next/font` for automatic font optimization with zero layout shift.

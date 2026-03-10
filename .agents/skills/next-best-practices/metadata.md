@@ -1,3 +1,8 @@
+---
+name: metadata
+description: Add SEO metadata to Next.js pages using the Metadata API.
+---
+
 # Metadata
 
 Add SEO metadata to Next.js pages using the Metadata API.

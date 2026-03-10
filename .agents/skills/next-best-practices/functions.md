@@ -1,4 +1,7 @@
-# Functions
+---
+name: functions
+description: Next.js function APIs.
+---
 
 Next.js function APIs.
 

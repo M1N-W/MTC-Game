@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.27.9
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.27.11
 
 ---
 
@@ -32,7 +32,7 @@
 | `game.js` | Game loop หลัก, state transitions, startGame() |
 | `config.js` | ค่าทั้งหมด — BALANCE, MAP_CONFIG, ACHIEVEMENT_DEFS |
 | `input.js` | Keyboard/mouse/touch — global `keys` object |
-| `audio.js` | SFX + BGM, Web Audio API, namespace protection |
+| `audio.js` | SFX + BGM, Web Audio API, BGM crossfade system, namespace protection |
 | `effects.js` | Particles (object pool), FloatingText, OrbitalParticle |
 | `weapons.js` | WeaponSystem, Projectile, ProjectileManager, SpatialGrid |
 | `map.js` | แผนที่, collision detection, MTCRoom |
@@ -397,6 +397,7 @@ if ((this.energy ?? 0) < cost) {
 ### แก้ Audio
 **ต้องแก้:** `audio.js`, `config.js`
 ⚠️ มี BGM namespace collision fix — ตรวจก่อนแก้ Audio constructor
+⚠️ BGM crossfade system uses Web Audio API GainNode — check _crossfadeOutAndStop() for transitions
 
 ### แก้ UI / HUD
 **ต้องแก้:** `ui.js`, `effects.js`, `css/main.css`
