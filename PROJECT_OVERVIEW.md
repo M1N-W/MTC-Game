@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.2
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.3
 
 ---
 
@@ -673,6 +673,10 @@ Shell casings          effects.js                    ShellCasingSystem
 | **Server rack แสงออกมาสีฟ้า (cool) แต่ LED เป็นสีทอง (amber)** | **`punchLight` type ใช้ `'cool'` แทน `'warm'` สำหรับ `server` type** | **เปลี่ยน `'cool'`→`'warm'` ใน `drawLighting()` loop** |
 | **Courtyard ดูมืดกว่า zone อื่นแม้มีต้นไม้เยอะ** | **`tree` type ไม่มี punchLight — ไม่ emit light เลย** | **เพิ่ม `else if (obj.type === 'tree')` ใน lighting loop + เพิ่ม `'green'` tint type** |
 | **Domain slow ไม่มีผล** | **แก้ `player.moveSpeed` แทน `player.stats.moveSpeed`** | **ใช้ `player.stats.moveSpeed` เสมอ — ดู Domain Slow Critical Note** |
+| **`ReferenceError: Cannot access 'isBossWave' before initialization`** | **`const isBossWave` declare หลังบรรทัดที่ใช้มัน (TDZ)** | **ย้าย `const wave/isBossWave/isGlitch` ขึ้นมาก่อน `waveAnnouncementFX.trigger()` เสมอ** |
+| **Shop item `speedWave` ซื้อแล้วไม่มีผล** | **ShopSystem เซ็ต `_speedWaveTimer` แต่ game.js tick `shopSpeedBoostActive`** | **ใช้ `shopSpeedBoostActive/shopSpeedBoostTimer` เท่านั้น — property เดียวที่ game.js อ่าน** |
+| **`ShopManager.tick()` ไม่ทำงานตอน shop เปิด** | **Monkey-patch ใน ShopSystem.js ทับ static method และ guard `GameState.phase !== 'PLAYING'` (shop = PAUSED)** | **ห้าม monkey-patch `ShopManager.tick` นอก class — แก้ `static tick()` ใน ui.js โดยตรง** |
+| **`poomRice` CDR ไม่ stack กับ `cdr` item** | **`poomRice` ใช้ `cooldownMultiplier` ต่างจาก `cdr` item ที่ใช้ `skillCooldownMult`** | **CDR property มาตรฐานคือ `skillCooldownMult` — ใช้ชื่อนี้เสมอในทุก item** |
 | **สกิลกดได้ทั้งที่ energy หมด** | **ไม่มี energy guard ใน skill activation block** | **เพิ่ม pattern `if (energy < cost)` ก่อน doSkill() — ดู Energy Cost System** |
 | **Auto Q-icon arc เกิน 100% ทันทีเมื่อใช้ Stand Pull** | **`updateSkillIcons` ใช้ `vacuumCooldown` (6s) เป็น max เสมอ แต่ Stand Pull set `cooldowns.vacuum = 10s`** | **max CD ต้อง dynamic: `wanchaiActive ? standPullCooldown : vacuumCooldown`** |
 | **Auto Q/E arc ไม่ขึ้นเลย** | **`AutoPlayer.updateUI()` เขียนไปที่ `'q-icon'`/`'e-icon'` แต่ DOM ใช้ id `'vacuum-icon'`/`'auto-det-icon'`** | **เปลี่ยน icon id ใน `AutoPlayer.updateUI()` ให้ตรงกับที่ `ui.js` ตั้งไว้** |
@@ -810,7 +814,34 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Major Changes (v3.29.0)
+## 📝 Recent Major Changes (v3.29.3)
+
+### Bug Fix Batch — Shop System + WaveManager (v3.29.3 — March 10, 2026)
+**Purpose:** แก้บัคใน ShopSystem, WaveManager, ui.js, game.js — รวม 7 บัค (2 Critical, 3 High, 2 Medium)
+
+**Files Changed:** `js/systems/WaveManager.js`, `js/systems/ShopSystem.js`, `js/ui.js`, `js/game.js`
+
+**Key Fixes:**
+
+**🔴 Critical**
+- **WaveManager TDZ crash** — `ReferenceError: Cannot access 'isBossWave' before initialization` บรรทัด 490: ย้าย `const wave/isBossWave/isGlitch` ขึ้นมาก่อน `waveAnnouncementFX.trigger()` ซึ่งใช้ทั้งสองตัว; แก้ `getWave()` ที่ถูกเรียกซ้ำซ้อน
+- **`speedWave` item ไม่มีผล** — ShopSystem เซ็ต `_speedWaveTimer/_speedWaveMult` แต่ game.js tick `shopSpeedBoostActive/shopSpeedBoostTimer` — เปลี่ยน ShopSystem + game.js ให้ใช้ property เดียวกัน พร้อม restore ผ่าน `stats.moveSpeed`
+
+**🟠 High**
+- **`ShopManager.tick()` monkey-patch ทับ static method** — `ShopSystem.js` เขียนทับ `static tick()` จาก `ui.js` และ guard `GameState.phase !== 'PLAYING'` ทำให้ไม่ทำงานขณะ shop เปิด (PAUSED); ลบ monkey-patch ออก + refactor `static tick()` ให้ update badge in-place
+- **`poomRice` CDR property ผิด** — ใช้ `cooldownMultiplier` แทน `skillCooldownMult` ทำให้ไม่ stack กับ `cdr` item; แก้เป็น `skillCooldownMult`
+
+**🟡 Medium**
+- **Double `rollShopItems()` at load** — call ตอน file load (ก่อน `_selectedChar` ถูกเซ็ต) ทำให้ pool ไม่ filter char-specific items; ลบ premature call ออก
+- **Shield `soldOut` flicker** — `offer.soldOut = true` ถูก set ก่อนเช็ค `p.hasShield`; ย้าย early-return guard ขึ้นมาก่อน `addScore(-item.cost)`
+- **`speedUp` item** เปลี่ยนไปแก้ `stats.moveSpeed` แทน `moveSpeed` ตาม convention ของ codebase
+
+**⚠️ Known Remaining Issue:**
+- **`shieldBubble` + `reflectArmor`** ยังเป็น dead items — property ถูกเซ็ตแต่ไม่มี damage pipeline handler อ่านค่า; ต้องเพิ่ม integration ใน damage handler (ไม่อยู่ใน 4 ไฟล์ที่รับมา)
+
+---
+
+## 📝 Previous Major Changes (v3.29.0)
 
 ### Shop System 2.4 Enhancement — Complete UI/UX Overhaul (v3.29.0 — March 10, 2026)
 **Purpose:** Finalize shop system with character-specific filtering, visual badges, and active buff countdowns

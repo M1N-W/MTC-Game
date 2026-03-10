@@ -4,6 +4,24 @@
 
 ---
 
+## v3.29.3 — Documentation Update
+*Released: March 10, 2026*
+
+### 📝 Project Documentation Enhancement
+- **PROJECT_OVERVIEW.md Update**: Added comprehensive bug fix documentation for v3.29.2 changes
+- **Bug Fix Registry**: Added 7 new bug fixes to troubleshooting table with detailed solutions
+- **Recent Changes Section**: Updated to v3.29.3 with complete breakdown of Shop System + WaveManager fixes
+- **Critical Bug Documentation**: Added TDZ crash, speedWave item, and ShopManager.tick() fixes
+- **Known Issues**: Documented remaining shieldBubble + reflectArmor integration needs
+
+### 📚 Documentation Improvements
+- Enhanced troubleshooting table with 4 new critical bug fix entries
+- Added severity classification (Critical/High/Medium) for recent fixes
+- Documented property naming conventions and TDZ prevention patterns
+- Added cross-references between bug symptoms and solutions
+
+---
+
 ## v3.29.2 — Wave Announcement & Shop Timer Fixes
 *Released: March 10, 2026*
 

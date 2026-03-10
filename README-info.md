@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.29.2 | **Latest Update:** Wave Announcement & Shop Timer Fixes - Fixed WaveAnnouncementFX timing and shop speed boost timer display optimization
+> **Current Version:** Beta v3.29.3 | **Latest Update:** Documentation Update - Enhanced PROJECT_OVERVIEW.md with comprehensive bug fix registry and troubleshooting guide
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
