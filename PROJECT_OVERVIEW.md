@@ -95,6 +95,61 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 
 ---
 
+## 📝 Version Increment Criteria 🟡
+
+**Service Worker Location:** `sw.js` line 1: `const CACHE_NAME = 'mtc-cache-vX.X.X';`
+
+### 🎯 Decision Flow
+
+| **Question** | **Answer** | **Version Increment** |
+|--------------|------------|---------------------|
+| 1. Is this a breaking change? | Yes | **+1.00.00** (Major) |
+| 2. Is this a major new system or architecture refactor? | Yes | **+0.01.00** (Minor) |
+| 3. Is this a bug fix or minor improvement? | Yes | **+0.00.01** (Patch) |
+
+### 📋 Version Types
+
+#### **Major Version (+1.00.00)**
+- Breaking changes that affect save compatibility or core game mechanics
+- Complete engine migration (e.g., Godot migration)
+- Fundamental architecture overhaul
+- **NOT currently used in development cycle**
+
+#### **Minor Version (+0.01.00)**
+- Major new systems (AI Enhancement System, BGM Crossfade System)
+- Architecture refactors (EnemyBase consolidation, new inheritance patterns)
+- Complete new gameplay systems (Domain Expansion, Boss AI overhaul)
+- Multiple related features bundled together
+- **4+ new files created**
+- Significant gameplay enhancement
+
+#### **Patch Version (+0.00.01)**
+- Bug fixes (Cooldown HUD fixes, collision corrections)
+- Balance tweaks (Stat adjustments, difficulty modifications)
+- Minor features (Individual skill improvements, UI polish)
+- Documentation updates (README, changelog, PROJECT_OVERVIEW)
+- Small quality-of-life improvements
+
+### 🔄 Recent Examples
+
+| **Version Change** | **Type** | **Reason** |
+|-------------------|----------|------------|
+| v3.27.11 → v3.28.0 | +0.01.00 | AI Enhancement System (4 new files, architecture refactor) |
+| v3.27.10 → v3.27.11 | +0.01.00 | BGM Crossfade System (major audio system) |
+| v3.27.9 → v3.27.10 | +0.00.01 | Documentation Update (patch version) |
+| v3.27.8 → v3.27.9 | +0.00.01 | UI Language & Theme Updates (minor features) |
+
+### ⚠️ Important Notes
+
+- **Documentation-only updates** should increment patch version (+0.00.01) per workflow rules
+- **Always update** all documentation files when incrementing version:
+  - `sw.js` (CACHE_NAME)
+  - `CHANGELOG.md` (add entry)
+  - `README-info.md` (update current version)
+  - `PROJECT_OVERVIEW.md` (update status version)
+
+---
+
 ## 🎮 Architecture 🟢
 
 ### Core Loop
