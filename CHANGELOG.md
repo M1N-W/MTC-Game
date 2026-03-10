@@ -4,6 +4,35 @@
 
 ---
 
+## v3.30.2 — Boss Class Alias Enhancement
+*Released: March 10, 2026*
+
+### 🏷️ Class Naming & Compatibility
+- **ManopBoss Alias**: Added `window.ManopBoss = KruManop` for better naming consistency
+  - Provides semantic class name that matches file naming convention
+  - Enables proper `instanceof` checks for type identification
+  - Improves code readability and developer experience
+- **Backward Compatibility**: Maintains existing `window.Boss` and `window.KruManop` aliases
+  - No breaking changes to existing WaveManager or AdminSystem functionality
+  - Preserves all current integrations and dependencies
+
+### 🔧 Technical Benefits
+- **Type Safety**: Better support for runtime type checking with `instanceof ManopBoss`
+- **Code Clarity**: More intuitive class naming that aligns with file structure
+- **Developer Experience**: Easier debugging and introspection with proper class names
+- **Consistency**: Aligns with `FirstBoss`/`KruFirst` naming patterns
+
+### 📁 Files Modified
+- `js/entities/boss/ManopBoss.js` - Added ManopBoss alias export
+
+### 🎯 Integration Notes
+- **WaveManager**: Can now use either `KruManop` or `ManopBoss` for boss spawning
+- **AdminSystem**: Supports both class names for console commands
+- **Type Checking**: `instanceof ManopBoss` now works as expected
+- **Future Development**: New code can use semantic `ManopBoss` class name
+
+---
+
 ## v3.30.1 — AI System Code Quality Improvements
 *Released: March 10, 2026*
 

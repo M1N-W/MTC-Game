@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.30.1 | **Latest Update:** AI System Code Quality Improvements - Fixed wall-avoidance bounds, optimized dispose method, improved load order and comprehensive documentation updates
+> **Current Version:** Beta v3.30.2 | **Latest Update:** Boss Class Alias Enhancement - Added ManopBoss class alias for better naming consistency and instanceof check support
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

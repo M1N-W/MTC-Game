@@ -723,4 +723,5 @@ class KruManop extends BossBase {
 // ══════════════════════════════════════════════════════════════
 window.BossDog = BossDog;
 window.KruManop = KruManop;
+window.ManopBoss = KruManop;  // alias — WaveManager, AdminSystem, instanceof checks
 window.Boss = KruManop;   // backward-compat alias (WaveManager, AdminSystem)

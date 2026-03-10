@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.1
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.2
 
 ---
 
@@ -1124,7 +1124,29 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Changes (v3.29.9)
+## 📝 Recent Changes (v3.30.2)
+
+### Boss Class Alias Enhancement (March 10, 2026)
+**Purpose:** Improve naming consistency and enable proper type checking for boss classes
+
+**Key Changes:**
+- **ManopBoss Alias**: Added `window.ManopBoss = KruManop` for semantic class naming
+- **Type Safety**: Enables proper `instanceof ManopBoss` checks for runtime type identification
+- **Code Consistency**: Aligns with FirstBoss/KruFirst naming patterns across the codebase
+- **Backward Compatibility**: Maintains existing aliases to prevent breaking changes
+
+**Technical Impact:**
+- **Developer Experience**: More intuitive class names that match file structure
+- **Debugging**: Better introspection capabilities with proper class names
+- **Type Checking**: Runtime type identification now works as expected
+- **Future Development**: New code can use semantic ManopBoss class name
+
+**Files Changed:**
+- `js/entities/boss/ManopBoss.js`: Added ManopBoss alias export
+
+---
+
+## 📝 Previous Changes (v3.30.1)
 
 ### Global Variable References & Voice Bubble Namespacing Fix (March 10, 2026)
 **Purpose:** Fix undefined reference errors by ensuring proper global object access
