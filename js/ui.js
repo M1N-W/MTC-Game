@@ -724,6 +724,50 @@ class UIManager {
         const charTheme = isAuto ? 't-red' : isPoom ? 't-emerald' : 't-blue';
         _applyTheme('dash-icon', charTheme);
         _applyTheme('stealth-icon', charTheme);  // also covers eat-icon / wanchai (same element, id swapped later)
+
+        // ── hud-bottom: swap character theme class + inject char label ─────────
+        const hudBottomEl = document.querySelector('.hud-bottom');
+        if (hudBottomEl) {
+            hudBottomEl.classList.remove('hud-theme-kao', 'hud-theme-poom', 'hud-theme-auto');
+            hudBottomEl.classList.add(isAuto ? 'hud-theme-auto' : isPoom ? 'hud-theme-poom' : 'hud-theme-kao');
+
+            // Character name label — create once, update every switch
+            let charLabel = hudBottomEl.querySelector('.hud-char-label');
+            if (!charLabel) {
+                charLabel = document.createElement('div');
+                charLabel.className = 'hud-char-label';
+                hudBottomEl.prepend(charLabel);
+            }
+            const labelCfg = isAuto
+                ? { name: 'AUTO', tag: 'BRAWLER', color: '#fca5a5', glow: 'rgba(220,38,38,0.5)' }
+                : isPoom
+                    ? { name: 'POOM', tag: 'SPIRITUAL', color: '#6ee7b7', glow: 'rgba(16,185,129,0.5)' }
+                    : { name: 'KAO', tag: 'ASSASSIN', color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
+            charLabel.innerHTML =
+                `<span class="hud-char-name" style="color:${labelCfg.color};text-shadow:0 0 8px ${labelCfg.glow};">${labelCfg.name}</span>` +
+                `<span class="hud-char-tag">${labelCfg.tag}</span>`;
+        }
+
+        // ── Attack (SHOOT) slot — re-skin emoji + name per character ──────────
+        const attackIcon = document.getElementById('attack-icon');
+        if (attackIcon) {
+            _THEME_CLASSES.forEach(c => attackIcon.classList.remove(c));
+            const attackEmoji = attackIcon.querySelector('span:not(.skill-name):not(.key-hint):not(.cooldown-mask)');
+            const attackName = attackIcon.querySelector('.skill-name') || attackIcon.querySelector('#sn-attack');
+            if (isPoom) {
+                attackIcon.classList.add('t-emerald');
+                if (attackEmoji) attackEmoji.textContent = '🍙';
+                if (attackName) { attackName.textContent = 'SHOOT'; attackName.style.color = '#6ee7b7'; }
+            } else if (isAuto) {
+                attackIcon.classList.add('t-red');
+                if (attackEmoji) attackEmoji.textContent = '🔥';
+                if (attackName) { attackName.textContent = 'SHOOT'; attackName.style.color = '#fca5a5'; }
+            } else {
+                attackIcon.classList.add('t-blue');
+                if (attackEmoji) attackEmoji.textContent = '🔫';
+                if (attackName) { attackName.textContent = 'SHOOT'; attackName.style.color = '#93c5fd'; }
+            }
+        }
         // Show divider-util when any shortcut icon becomes visible — handled per-use below
 
         const playerAvatar = document.getElementById('player-avatar');

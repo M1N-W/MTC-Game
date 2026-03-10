@@ -4,6 +4,37 @@
 
 ---
 
+## v3.29.4 — Character HUD Theming System Enhancement
+*Released: March 10, 2026*
+
+### 🎨 Personalized Character HUD Themes
+- **Dynamic HUD Theming**: Character-specific bottom HUD themes with unique gradient backgrounds and accent colors
+  - Kao (Blue): Blue gradient with #3b82f6 accents and matching visual effects
+  - Poom (Emerald): Emerald gradient with #10b981 accents and spiritual theming
+  - Auto (Red): Red gradient with #dc2626 accents and thermodynamic styling
+- **Character Identity Labels**: Dynamic character name and role tags displayed in HUD
+  - Kao: "ASSASSIN" tag with blue glow effects
+  - Poom: "SPIRITUAL" tag with emerald glow effects  
+  - Auto: "BRAWLER" tag with red glow effects
+- **Attack Icon Personalization**: Character-specific attack icons with matching color themes
+  - Kao: 🔫 (gun) with blue theme
+  - Poom: 🍙 (rice ball) with emerald theme
+  - Auto: 🔥 (fire) with red theme
+
+### 🎯 UI/UX Improvements
+- **Enhanced Visual Polish**: Improved CSS formatting for better code readability and maintenance
+- **Smooth Character Switching**: Animated transitions when switching between characters
+- **Cohesive Visual Identity**: Each character now has a complete visual theme throughout the HUD
+- **Better Color Accessibility**: High-contrast color schemes optimized for each character's theme
+
+### 🔧 Technical Enhancements
+- **CSS Architecture**: Modular theme classes for easy maintenance and future character additions
+- **Dynamic DOM Updates**: Character labels created once and updated efficiently on character switch
+- **Theme Consistency**: Shared HUD elements (dash/stealth) properly recolored based on active character
+- **Performance Optimized**: Minimal DOM manipulation with cached element references
+
+---
+
 ## v3.29.3 — Documentation Update
 *Released: March 10, 2026*
 

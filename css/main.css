@@ -1406,8 +1406,17 @@ body {
 }
 
 @keyframes activePulse {
-    0%, 100% { transform: scale(1); opacity: 0.9; }
-    50% { transform: scale(1.05); opacity: 1; }
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
 }
 
 /* Achievements */
@@ -1757,6 +1766,67 @@ body {
     position: relative;
     background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.45) 100%);
 }
+
+/* ── CHARACTER HUD THEMES — applied to .hud-bottom via setupCharacterHUD() ── */
+
+.hud-theme-kao {
+    background: linear-gradient(180deg,
+            rgba(59, 130, 246, 0.06) 0%,
+            rgba(0, 229, 255, 0.04) 30%,
+            rgba(0, 0, 0, 0.50) 100%);
+    border-top: 1px solid rgba(59, 130, 246, 0.22);
+    box-shadow: 0 -2px 18px rgba(59, 130, 246, 0.10);
+}
+
+.hud-theme-poom {
+    background: linear-gradient(180deg,
+            rgba(16, 185, 129, 0.07) 0%,
+            rgba(245, 158, 11, 0.04) 30%,
+            rgba(0, 0, 0, 0.50) 100%);
+    border-top: 1px solid rgba(16, 185, 129, 0.22);
+    box-shadow: 0 -2px 18px rgba(16, 185, 129, 0.10);
+}
+
+.hud-theme-auto {
+    background: linear-gradient(180deg,
+            rgba(220, 38, 38, 0.08) 0%,
+            rgba(249, 115, 22, 0.04) 30%,
+            rgba(0, 0, 0, 0.50) 100%);
+    border-top: 1px solid rgba(220, 38, 38, 0.25);
+    box-shadow: 0 -2px 18px rgba(220, 38, 38, 0.12);
+}
+
+/* ── Character name label — left-anchored inside hud-bottom ── */
+.hud-char-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0 6px 0 2px;
+    margin-right: 4px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    min-width: 44px;
+    flex-shrink: 0;
+}
+
+.hud-char-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1;
+}
+
+.hud-char-tag {
+    font-family: 'Orbitron', monospace;
+    font-size: 7px;
+    font-weight: 500;
+    letter-spacing: 0.10em;
+    color: rgba(255, 255, 255, 0.30);
+    margin-top: 3px;
+    text-transform: uppercase;
+}
+
 
 /* Scanline texture overlay */
 .hud-bottom::before {

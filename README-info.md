@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.29.3 | **Latest Update:** Documentation Update - Enhanced PROJECT_OVERVIEW.md with comprehensive bug fix registry and troubleshooting guide
+> **Current Version:** Beta v3.29.4 | **Latest Update:** Character HUD Theming System - Personalized visual themes, character labels, and attack icon reskinning for enhanced player identity
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

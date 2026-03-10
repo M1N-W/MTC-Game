@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.3
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.29.4
 
 ---
 
@@ -902,7 +902,25 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Previous Major Changes (v3.27.6)
+## � Recent Changes (v3.29.4)
+
+### 🎨 Character HUD Theming System
+- **Personalized HUD Themes**: Character-specific bottom HUD themes with unique color schemes
+  - Kao (Blue): Blue gradient with #3b82f6 accents
+  - Poom (Emerald): Emerald gradient with #10b981 accents  
+  - Auto (Red): Red gradient with #dc2626 accents
+- **Character Labels**: Dynamic character name and role tags displayed in HUD (Kao-ASSASSIN, Poom-SPIRITUAL, AUTO-BRAWLER)
+- **Attack Icon Reskinning**: Character-specific attack icons (🔫/🍙/🔥) with matching color themes
+- **Enhanced Visual Polish**: Improved CSS formatting and animated transitions for character switching
+
+### 📝 Documentation Updates
+- Updated version references across all documentation files
+- Enhanced troubleshooting section with recent bug fixes
+- Improved project context accuracy for AI assistants
+
+---
+
+## �📝 Previous Major Changes (v3.27.6)
 
 ### Cooldown HUD Bug Fixes (v3.27.6 — March 9, 2026)
 **Purpose:** แก้ arc overlay และ timer ของ Skill HUD ทุกตัวละครให้ sync กับ state จริง

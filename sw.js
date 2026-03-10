@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.29.2'; // v3.29.2: Fixed WaveAnnouncementFX timing and shop speed boost timer display optimization
+const CACHE_NAME = 'mtc-cache-v3.29.3'; // v3.29.3: Enhanced character HUD theming system with personalized visual themes and attack icon reskinning
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
