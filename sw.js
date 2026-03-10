@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.29.0'; // v3.29.0: Priority 2 & 3 Systems Implementation - Wave Announcement cinematic system, Shop Items expansion (7 new items), Loading State with progress indicator, Performance optimization (tickStatuses), Achievement System expansion (9 new achievements), and camera.scale bug fix
+const CACHE_NAME = 'mtc-cache-v3.29.1'; // v3.29.1: Fixed shop system bugs - shield duplicate purchase prevention, speed boost stat restoration, and proper speed boost timer mechanics
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

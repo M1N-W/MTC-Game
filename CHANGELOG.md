@@ -4,6 +4,21 @@
 
 ---
 
+## v3.29.1 — Shop System Bug Fixes
+*Released: March 10, 2026*
+
+### 🛒 Shop System Fixes
+- **Shield Duplicate Purchase Fix**: Added guard to prevent buying shield when player already has one, preventing score deduction and soldout flag issues
+- **Speed Boost Restoration Fix**: Corrected speed boost expiration to restore `stats.moveSpeed` instead of `moveSpeed` for proper stat path consistency
+- **Speed Boost Timer Mechanics**: Fixed speed wave items to use `shopSpeedBoostActive/shopSpeedBoostTimer` properties that game.js actually ticks, instead of unused `_speedWaveTimer/_speedWaveMult`
+
+### 🐛 Bug Fixes
+- Fixed shop system race condition where duplicate purchases could occur before proper validation
+- Ensured proper stat restoration paths for speed boosts to match ShopSystem.js implementation
+- Resolved speed boost timer display and duration tracking issues
+
+---
+
 ## v3.29.0 — Priority 2 & 3 Systems Implementation
 *Released: March 10, 2026*
 

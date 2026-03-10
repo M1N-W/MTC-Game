@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.29.0 | **Latest Update:** Priority 2 & 3 Systems Implementation - Cinematic wave announcements, shop system expansion with 7 new items, loading state system, achievement system expansion, performance optimizations, and camera.scale bug fix
+> **Current Version:** Beta v3.29.1 | **Latest Update:** Shop System Bug Fixes - Fixed shield duplicate purchase prevention, speed boost stat restoration, and proper speed boost timer mechanics
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

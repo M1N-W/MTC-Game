@@ -199,7 +199,11 @@ function updateGame(dt) {
         window.player.shopSpeedBoostTimer -= dt;
         if (window.player.shopSpeedBoostTimer <= 0) {
             window.player.shopSpeedBoostActive = false;
-            if (window.player._baseMoveSpeed !== undefined) window.player.moveSpeed = window.player._baseMoveSpeed;
+            // BUG 2 FIX: restore stats.moveSpeed (same path ShopSystem.js wrote to)
+            if (window.player._baseMoveSpeed !== undefined) {
+                if (window.player.stats) window.player.stats.moveSpeed = window.player._baseMoveSpeed;
+                else window.player.moveSpeed = window.player._baseMoveSpeed;
+            }
             spawnFloatingText(GAME_TEXTS.shop.spdBoostExpired, window.player.x, window.player.y - 50, '#94a3b8', 14);
         }
     }

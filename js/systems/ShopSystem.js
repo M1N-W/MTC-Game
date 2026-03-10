@@ -147,10 +147,16 @@ function buyItem(slotIndex) {
         return;
     }
 
+    const p = window.player;
+
+    // BUG 6 FIX: guard duplicate-purchase items BEFORE deducting score/soldOut
+    if (item.id === 'shield' && p.hasShield) {
+        spawnFloatingText('มีโล่อยู่แล้ว!', p.x, p.y - 60, '#94a3b8', 16);
+        return;
+    }
+
     addScore(-item.cost);
     offer.soldOut = true;
-
-    const p = window.player;
 
     if (item.id === 'potion') {
         const lacking = p.maxHp - p.hp;
@@ -165,13 +171,6 @@ function buyItem(slotIndex) {
         }
 
     } else if (item.id === 'shield') {
-        if (p.hasShield) {
-            addScore(item.cost); // refund
-            offer.soldOut = false;
-            spawnFloatingText('มีโล่อยู่แล้ว!', p.x, p.y - 60, '#94a3b8', 16);
-            ShopManager.renderItems();
-            return;
-        }
         p.hasShield = true;
         spawnFloatingText('🛡️ SHIELD ACTIVE!', p.x, p.y - 70, '#8b5cf6', 22);
         spawnParticles(p.x, p.y, 15, '#8b5cf6');
@@ -193,8 +192,9 @@ function buyItem(slotIndex) {
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
 
     } else if (item.id === 'speedUp') {
-        p._baseMoveSpeed = p._baseMoveSpeed || p.moveSpeed;
-        p.moveSpeed *= (1 + item.speedPct);
+        p._baseMoveSpeed = p._baseMoveSpeed || (p.stats?.moveSpeed ?? p.moveSpeed);
+        if (p.stats) p.stats.moveSpeed *= (1 + item.speedPct);
+        else p.moveSpeed *= (1 + item.speedPct);
         spawnFloatingText(`💨 Speed +${Math.round(item.speedPct * 100)}%!`, p.x, p.y - 70, '#06b6d4', 22);
         spawnParticles(p.x, p.y, 8, '#06b6d4');
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -221,8 +221,14 @@ function buyItem(slotIndex) {
 
         // ── Utility ────────────────────────────────────────────────
     } else if (item.id === 'speedWave') {
-        p._speedWaveTimer = (p._speedWaveTimer || 0) + item.duration;
-        p._speedWaveMult = item.speedMult;
+        // BUG 2 FIX: use shopSpeedBoostActive/shopSpeedBoostTimer — the properties
+        // game.js actually ticks. _speedWaveTimer/_speedWaveMult were dead props.
+        p.shopSpeedBoostActive = true;
+        p.shopSpeedBoostTimer = (p.shopSpeedBoostTimer > 0 ? p.shopSpeedBoostTimer : 0) + item.duration;
+        if (p._baseMoveSpeed === undefined) p._baseMoveSpeed = p.stats?.moveSpeed ?? p.moveSpeed;
+        const mult = item.speedMult ?? 1.4;
+        if (p.stats) p.stats.moveSpeed = p._baseMoveSpeed * mult;
+        else p.moveSpeed = p._baseMoveSpeed * mult;
         spawnFloatingText(`⚡ SPEED WAVE ${item.duration}s!`, p.x, p.y - 70, '#fbbf24', 22);
         spawnParticles(p.x, p.y, 12, '#fbbf24');
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -258,7 +264,7 @@ function buyItem(slotIndex) {
 
     } else if (item.id === 'poomRice') {
         if (typeof PoomPlayer !== 'undefined' && p instanceof PoomPlayer) {
-            p.cooldownMultiplier = Math.max(0.1, (p.cooldownMultiplier || 1.0) * 0.85);
+            p.skillCooldownMult = Math.max(0.1, (p.skillCooldownMult || 1.0) * 0.85);
             spawnFloatingText('🍚 SACRED RICE! CD -15%', p.x, p.y - 70, '#4ade80', 22);
             spawnParticles(p.x, p.y, 12, '#4ade80');
             if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -288,25 +294,6 @@ function buyItem(slotIndex) {
 
     ShopManager.renderItems();
 }
-
-// ── Active Buff Countdown Display ───────────────────────────────────────
-ShopManager.tick = () => {
-    const p = window.player;
-    if (!p || GameState.phase !== 'PLAYING') return;
-    
-    // Update any active buff displays in shop
-    const speedWaveCard = document.querySelector('[data-item-id="speedWave"]');
-    if (speedWaveCard && p._speedWaveTimer > 0) {
-        const badge = speedWaveCard.querySelector('.shop-card-active-badge');
-        if (badge) {
-            badge.textContent = `⚡ ${Math.ceil(p._speedWaveTimer)}s`;
-            badge.style.display = 'inline-block';
-        }
-    }
-};
-
-// Initial roll so offers are ready before first shop open
-rollShopItems();
 
 window.drawShopObject = drawShopObject;
 window.updateShopProximityUI = updateShopProximityUI;
