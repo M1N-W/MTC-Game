@@ -4,6 +4,33 @@
 
 ---
 
+## v3.28.1 — Priority 1 Mobile UI Improvements
+*Released: March 10, 2026*
+
+### 📱 Mobile Experience Enhancements
+- **Haptic Feedback System**: Added `navigator.vibrate(12)` for all mobile button presses
+- **Visual Button States**: Implemented `.pressed` class with scale(0.88) transform and enhanced glow effects
+- **Touch Event Cleanup**: Fixed missing `touchcancel` event handlers to prevent stuck button states
+- **Smooth Transitions**: Added 0.08s transitions for transform, background, and box-shadow on action buttons
+- **Accessibility Support**: Implemented `prefers-reduced-motion` media query for users with motion sensitivity
+
+### 🏆 High Score Display System
+- **Static HTML Structure**: Moved high score display to static HTML in index.html for better performance
+- **Version Bump**: Updated version badge from v3.18.0 to v3.27.11 in menu overlay
+- **UI Refactor**: Simplified `updateHighScoreDisplay()` function to target static elements
+
+### 🎨 UI Polish
+- **No Tap Highlight**: Added `-webkit-tap-highlight-color: transparent` for mobile buttons
+- **User Selection Prevention**: Enhanced `user-select: none` for better mobile interaction
+- **Enhanced Visual Feedback**: Improved pressed state with white glow effect (0 0 14px rgba(255,255,255,0.25))
+
+### 🔧 Technical Improvements
+- **Mobile Control Architecture**: Refactored mobile button handlers with unified `_btnPress()` and `_btnRelease()` functions
+- **Event Listener Cleanup**: Comprehensive cleanup including touchcancel events in `cleanupMobileControls()`
+- **Performance Optimization**: Reduced dynamic DOM creation by using static high score display elements
+
+---
+
 ## v3.28.0 — AI Enhancement System (Major Gameplay Update)
 *Released: March 10, 2026*
 

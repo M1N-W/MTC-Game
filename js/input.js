@@ -228,55 +228,70 @@ function initMobileControls() {
 
     // FIX (BUG-7): Store button handler references for cleanup
     if (btnDash) {
-        _mobileHandlers.btnDashStart = function (e) { e.preventDefault(); e.stopPropagation(); inputBuffer.space = performance.now(); keys.space = 1; };
-        _mobileHandlers.btnDashEnd = function (e) { e.preventDefault(); e.stopPropagation(); keys.space = 0; };
+        _mobileHandlers.btnDashStart = function (e) { e.preventDefault(); e.stopPropagation(); _btnPress(btnDash); inputBuffer.space = performance.now(); keys.space = 1; };
+        _mobileHandlers.btnDashEnd = function (e) { e.preventDefault(); e.stopPropagation(); _btnRelease(btnDash); keys.space = 0; };
         btnDash.addEventListener('touchstart', _mobileHandlers.btnDashStart, { passive: false });
         btnDash.addEventListener('touchend', _mobileHandlers.btnDashEnd, { passive: false });
+        btnDash.addEventListener('touchcancel', _mobileHandlers.btnDashEnd, { passive: false });
     }
     if (btnSkill) {
-        _mobileHandlers.btnSkillStart = function (e) { e.preventDefault(); e.stopPropagation(); inputBuffer.rightClick = performance.now(); mouse.right = 1; };
-        _mobileHandlers.btnSkillEnd = function (e) { e.preventDefault(); e.stopPropagation(); mouse.right = 0; };
+        _mobileHandlers.btnSkillStart = function (e) { e.preventDefault(); e.stopPropagation(); _btnPress(btnSkill); inputBuffer.rightClick = performance.now(); mouse.right = 1; };
+        _mobileHandlers.btnSkillEnd = function (e) { e.preventDefault(); e.stopPropagation(); _btnRelease(btnSkill); mouse.right = 0; };
         btnSkill.addEventListener('touchstart', _mobileHandlers.btnSkillStart, { passive: false });
         btnSkill.addEventListener('touchend', _mobileHandlers.btnSkillEnd, { passive: false });
+        btnSkill.addEventListener('touchcancel', _mobileHandlers.btnSkillEnd, { passive: false });
     }
     if (btnSwitch) {
         _mobileHandlers.btnSwitchStart = function (e) {
-            e.preventDefault(); e.stopPropagation();
+            e.preventDefault(); e.stopPropagation(); _btnPress(btnSwitch);
             if (window.gameState === 'PLAYING' && typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon();
         };
+        _mobileHandlers.btnSwitchEnd = function (e) { e.preventDefault(); e.stopPropagation(); _btnRelease(btnSwitch); };
         btnSwitch.addEventListener('touchstart', _mobileHandlers.btnSwitchStart, { passive: false });
+        btnSwitch.addEventListener('touchend', _mobileHandlers.btnSwitchEnd, { passive: false });
+        btnSwitch.addEventListener('touchcancel', _mobileHandlers.btnSwitchEnd, { passive: false });
     }
     if (btnNaga) {
         _mobileHandlers.btnNagaStart = function (e) {
             e.preventDefault(); e.stopPropagation();
             if (window.gameState !== 'PLAYING') return;
+            _btnPress(btnNaga);
             if (typeof PoomPlayer !== 'undefined' && typeof player !== 'undefined' && player instanceof PoomPlayer) {
                 if (player.cooldowns.naga <= 0) player.summonNaga();
             }
         };
+        _mobileHandlers.btnNagaEnd = function (e) { e.preventDefault(); e.stopPropagation(); _btnRelease(btnNaga); };
         btnNaga.addEventListener('touchstart', _mobileHandlers.btnNagaStart, { passive: false });
+        btnNaga.addEventListener('touchend', _mobileHandlers.btnNagaEnd, { passive: false });
+        btnNaga.addEventListener('touchcancel', _mobileHandlers.btnNagaEnd, { passive: false });
     }
     if (btnDatabase) {
         _mobileHandlers.btnDatabaseStart = function (e) {
-            e.preventDefault(); e.stopPropagation();
+            e.preventDefault(); e.stopPropagation(); _btnPress(btnDatabase);
             if (window.gameState === 'PLAYING') { if (typeof openExternalDatabase !== 'undefined') openExternalDatabase(); }
             else if (window.gameState === 'PAUSED') { if (typeof resumeGame !== 'undefined') resumeGame(); }
         };
+        _mobileHandlers.btnDatabaseEnd = function (e) { e.preventDefault(); e.stopPropagation(); _btnRelease(btnDatabase); };
         btnDatabase.addEventListener('touchstart', _mobileHandlers.btnDatabaseStart, { passive: false });
+        btnDatabase.addEventListener('touchend', _mobileHandlers.btnDatabaseEnd, { passive: false });
+        btnDatabase.addEventListener('touchcancel', _mobileHandlers.btnDatabaseEnd, { passive: false });
     }
     if (btnTerminal) {
         _mobileHandlers.btnTerminalStart = function (e) {
-            e.preventDefault(); e.stopPropagation();
+            e.preventDefault(); e.stopPropagation(); _btnPress(btnTerminal);
             if (window.gameState === 'PLAYING') { if (typeof openAdminConsole !== 'undefined') openAdminConsole(); }
             else if (window.gameState === 'PAUSED' && typeof AdminConsole !== 'undefined' && AdminConsole.isOpen) {
                 if (typeof closeAdminConsole !== 'undefined') closeAdminConsole();
             }
         };
+        _mobileHandlers.btnTerminalEnd = function (e) { e.preventDefault(); e.stopPropagation(); _btnRelease(btnTerminal); };
         btnTerminal.addEventListener('touchstart', _mobileHandlers.btnTerminalStart, { passive: false });
+        btnTerminal.addEventListener('touchend', _mobileHandlers.btnTerminalEnd, { passive: false });
+        btnTerminal.addEventListener('touchcancel', _mobileHandlers.btnTerminalEnd, { passive: false });
     }
     if (btnShop) {
         _mobileHandlers.btnShopStart = function (e) {
-            e.preventDefault(); e.stopPropagation();
+            e.preventDefault(); e.stopPropagation(); _btnPress(btnShop);
             if (window.gameState === 'PLAYING') {
                 if (typeof openShop !== 'undefined') openShop();
             } else if (window.gameState === 'PAUSED') {
@@ -284,7 +299,10 @@ function initMobileControls() {
                 if (shopModal && shopModal.style.display === 'flex' && typeof closeShop !== 'undefined') closeShop();
             }
         };
+        _mobileHandlers.btnShopEnd = function (e) { e.preventDefault(); e.stopPropagation(); _btnRelease(btnShop); };
         btnShop.addEventListener('touchstart', _mobileHandlers.btnShopStart, { passive: false });
+        btnShop.addEventListener('touchend', _mobileHandlers.btnShopEnd, { passive: false });
+        btnShop.addEventListener('touchcancel', _mobileHandlers.btnShopEnd, { passive: false });
     }
 
     _mobileHandlers.touchMove = function (e) {
@@ -293,6 +311,15 @@ function initMobileControls() {
         }
     };
     document.addEventListener('touchmove', _mobileHandlers.touchMove, { passive: false });
+}
+
+// ── Mobile button press feedback (haptic + visual) ──────────────────────────
+function _btnPress(el) {
+    if (el) el.classList.add('pressed');
+    if (navigator.vibrate) navigator.vibrate(12);
+}
+function _btnRelease(el) {
+    if (el) el.classList.remove('pressed');
 }
 
 // FIX (BUG-3 & BUG-7): Cleanup function to remove all mobile event listeners
@@ -326,25 +353,37 @@ function cleanupMobileControls() {
     if (btnDash && _mobileHandlers.btnDashStart) {
         btnDash.removeEventListener('touchstart', _mobileHandlers.btnDashStart);
         btnDash.removeEventListener('touchend', _mobileHandlers.btnDashEnd);
+        btnDash.removeEventListener('touchcancel', _mobileHandlers.btnDashEnd);
     }
     if (btnSkill && _mobileHandlers.btnSkillStart) {
         btnSkill.removeEventListener('touchstart', _mobileHandlers.btnSkillStart);
         btnSkill.removeEventListener('touchend', _mobileHandlers.btnSkillEnd);
+        btnSkill.removeEventListener('touchcancel', _mobileHandlers.btnSkillEnd);
     }
     if (btnSwitch && _mobileHandlers.btnSwitchStart) {
         btnSwitch.removeEventListener('touchstart', _mobileHandlers.btnSwitchStart);
+        btnSwitch.removeEventListener('touchend', _mobileHandlers.btnSwitchEnd);
+        btnSwitch.removeEventListener('touchcancel', _mobileHandlers.btnSwitchEnd);
     }
     if (btnNaga && _mobileHandlers.btnNagaStart) {
         btnNaga.removeEventListener('touchstart', _mobileHandlers.btnNagaStart);
+        btnNaga.removeEventListener('touchend', _mobileHandlers.btnNagaEnd);
+        btnNaga.removeEventListener('touchcancel', _mobileHandlers.btnNagaEnd);
     }
     if (btnDatabase && _mobileHandlers.btnDatabaseStart) {
         btnDatabase.removeEventListener('touchstart', _mobileHandlers.btnDatabaseStart);
+        btnDatabase.removeEventListener('touchend', _mobileHandlers.btnDatabaseEnd);
+        btnDatabase.removeEventListener('touchcancel', _mobileHandlers.btnDatabaseEnd);
     }
     if (btnTerminal && _mobileHandlers.btnTerminalStart) {
         btnTerminal.removeEventListener('touchstart', _mobileHandlers.btnTerminalStart);
+        btnTerminal.removeEventListener('touchend', _mobileHandlers.btnTerminalEnd);
+        btnTerminal.removeEventListener('touchcancel', _mobileHandlers.btnTerminalEnd);
     }
     if (btnShop && _mobileHandlers.btnShopStart) {
         btnShop.removeEventListener('touchstart', _mobileHandlers.btnShopStart);
+        btnShop.removeEventListener('touchend', _mobileHandlers.btnShopEnd);
+        btnShop.removeEventListener('touchcancel', _mobileHandlers.btnShopEnd);
     }
 
     if (_mobileHandlers.touchMove) {

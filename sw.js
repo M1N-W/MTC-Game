@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.28.0'; // v3.28.0: AI Enhancement System - Complete implementation of UtilityAI for enemies with SquadAI coordination, PlayerPatternAnalyzer for boss AI, and EnemyBase refactor with automatic AI+StatusEffect inheritance
+const CACHE_NAME = 'mtc-cache-v3.28.1'; // v3.28.1: Priority 1 Mobile UI Improvements - Complete mobile button feedback system with haptic vibration, pressed states, touchcancel cleanup, high score display, and accessibility enhancements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -627,25 +627,8 @@ class UIManager {
 
     static updateHighScoreDisplay(highScore) {
         const formatted = highScore > 0 ? Number(highScore).toLocaleString() : '— —';
-        let el = document.getElementById('high-score-display');
-        if (el) {
-            const valEl = el.querySelector('#hs-value');
-            if (valEl) valEl.textContent = formatted;
-            return;
-        }
-        el = document.createElement('div');
-        el.id = 'high-score-display';
-        el.innerHTML = `
-            <span class="hs-icon">🏆</span>
-            <span class="hs-label">ALL-TIME HIGH SCORE</span>
-            <span id="hs-value" class="hs-value">${formatted}</span>
-        `;
-        const startBtn = document.getElementById('start-btn');
-        if (startBtn && startBtn.parentNode) startBtn.parentNode.insertBefore(el, startBtn);
-        else {
-            const mc = document.querySelector('.menu-container');
-            if (mc) mc.appendChild(el);
-        }
+        const valEl = document.getElementById('hs-value');
+        if (valEl) valEl.textContent = formatted;
     }
 
     // ── initSkillNames — อ่านชื่อ static slots จาก GAME_TEXTS.skillNames ──
@@ -685,7 +668,7 @@ class UIManager {
             el.classList.add(theme);
         };
         const charTheme = isAuto ? 't-red' : isPoom ? 't-emerald' : 't-blue';
-        _applyTheme('dash-icon',    charTheme);
+        _applyTheme('dash-icon', charTheme);
         _applyTheme('stealth-icon', charTheme);  // also covers eat-icon / wanchai (same element, id swapped later)
         // Show divider-util when any shortcut icon becomes visible — handled per-use below
 

@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.28.0 | **Latest Update:** AI Enhancement System - Complete implementation of UtilityAI for enemies with SquadAI coordination, PlayerPatternAnalyzer for boss AI, and EnemyBase refactor with automatic AI+StatusEffect inheritance
+> **Current Version:** Beta v3.28.1 | **Latest Update:** Priority 1 Mobile UI Improvements - Complete mobile button feedback system with haptic vibration, pressed states, touchcancel cleanup, high score display, and accessibility enhancements
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 

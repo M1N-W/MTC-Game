@@ -3827,6 +3827,9 @@ body {
     pointer-events: auto;
     touch-action: none;
     z-index: 10000;
+    transition: transform 0.08s ease, background 0.08s ease, box-shadow 0.08s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 #btn-dash {
@@ -3964,7 +3967,7 @@ body {
 .action-btn.pressed {
     transform: scale(0.88);
     background: rgba(255, 255, 255, 0.18);
-    transition: transform 0.08s ease, background 0.08s ease;
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
 }
 
 /* ── Fix #8: Victory NEW RECORD badge ──────────────────────────── */
