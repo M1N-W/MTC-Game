@@ -42,7 +42,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 🎓 **เก้า (Kao)** | Advanced Assassin | 119 / 118 / 298 / 900 | **15/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡ | 👻 Holographic Stealth<br>⚡ Phantom Blink<br>👥 Hologram Clone<br>🎯 Weapon Switch FX | เน้นการลอบเร้นแบบขั้นบันได, คริติคอลจากการฆ่าตอนซุ่ม, การสลับอาวุธ (Assault, Sniper, Shotgun) พร้อม visual feedback |
 | 🌾 **ภูมิ (Poom)** | Spiritual Warrior | 165 / 148 / 298 / 750 | **12/s Regen**<br>Q: 25 ⚡<br>E: 30 ⚡<br>R-Click: 15 ⚡<br>R: **FREE** | 🔥 Ritual Burst<br>🐉 Serpentine Naga<br>🌪️ Garuda Wind<br>🪷 Lotus Bloom | เน้นการสร้างสถานะสโลว์ติดหนึบ (Sticky) และระเบิดดาเมจวงกว้างพร้อมบัฟ HP 45% สูงสุด |
-| 🔥 **ออโต้ (Auto)** | Thermodynamic Brawler | 230 / MAX / 260 / MELEE | **20/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡<br>R-Click: 25 ⚡ | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand<br>🌡️ Heat Tier System | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อนพร้อมระบบ Heat tiers (COLD/WARM/HOT/OVERHEAT), ปล่อย Stand Rush ไปตำแหน่งใดก็ได้พร้อมระบบ combo, Stand Meter 0-100, และ Skill Synergy (Stand Pull, Charge Punch, Stand Guard) |
+| 🔥 **ออโต้ (Auto)** | Thermodynamic Brawler | 230 / 24 / 260 / MELEE | **20/s Regen**<br>Q: 20 ⚡<br>E: 30 ⚡<br>R-Click: 25 ⚡ | 🌀 Early Vacuum<br>💥 Heat Detonation<br>👊 Wanchai Stand<br>🌡️ Heat Tier System | เน้นการควบคุมพื้นที่ตั้งแต่เริ่มเกม, สะสมความร้อนพร้อมระบบ Heat tiers (COLD/WARM/HOT/OVERHEAT), ปล่อย Stand Rush ไปตำแหน่งใดก็ได้พร้อมระบบ combo, Stand Meter 0-100, และ Skill Synergy (Stand Pull, Charge Punch, Stand Guard) |
 
 ---
 
@@ -98,54 +98,35 @@
 - [x] Domain Expansion Ultimate Abilities
 - [x] Military HUD Theme Implementation
 - [x] Enhanced Tutorial System v3 with UI highlighting and animated arrows
-- [x] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
+- [] 🚧 **Godot Engine Migration:** วางแผนพอร์ตเกมไปสู่ Godot เพื่อยกระดับกราฟิกและประสิทธิภาพในอนาคต!
 
 ---
 
-## 📈 Current Version: v3.25.1 (March 9, 2026)
+## 📈 Current Version: v3.30.8 (March 11, 2026)
 
 **Latest Major Updates:**
-- 🥊 **Rush Fist Refinements:** Round glove design with afterimage motion effects replacing trail lines
-- 👑 **Flame Crown Redesign:** Tapered spike geometry with perfect 5-spike crown symmetry
-- � **Visual Polish:** Enhanced color intensity, improved shadows, and cleaner motion representation
-- ⚡ **Performance Optimizations:** Consistent fist sizing and refined alpha blending
-- � **Mathematical Precision:** Surface-attached spikes with arc-based positioning for realistic crown appearance
+- 🎨 **Wave Event Announcement Integration:** Unified banner system with event badges for fog/speed waves
+- 🎯 **Enhanced Visual Polish:** Event badge strip with icons, colors, and military HUD theme
+- ⚡ **Performance Optimization:** Eliminated redundant banner drawing operations
+- 🏗️ **Architecture Centralization:** Event announcement logic consolidated in effects system
+- 📱 **UI Consistency:** Improved wave event display with proper positioning
 
 ---
 
-## 📋 Latest Update (v3.20.2)
+## 📋 Latest Update (v3.30.8)
 
-**Boss Safe-Zone Protection System - March 9, 2026**
+**Wave Event Announcement Integration - March 11, 2026**
 
-### 🛡️ Anti-Exploit Protection
-- **MTC Room Exclusion:** Bosses can no longer be lured into MTC Room for spawn-killing exploits
-- **Smooth Push-Out:** Automatic 380 px/s push force moves bosses away from safe zone
-- **Temporary Immunity:** Bosses immune to damage during push-out with clear visual feedback
-- **Universal Coverage:** Protection applies to all boss types (BossDog, KruManop, KruFirst)
+### 🎨 UI/UX Enhancements
+- **Unified Banner System:** Integrated wave event badges (fog/speed) into WaveAnnouncementFX
+- **Event Badge Strip:** Added visual event indicators to wave announcement banners
+- **Code Consolidation:** Removed duplicate banner drawing from WaveManager.js
+- **Visual Polish:** Enhanced event display with icons, colors, and proper positioning
 
-### 🎯 Gameplay Fairness
-- **Maintains Challenge:** Prevents circumventing boss mechanics through safe-room exploitation
-- **Clear Feedback:** "SAFE ZONE" indicator shows when protection is active
-- **Non-Disruptive:** Smooth mechanics maintain game flow without jarring teleportation
-
----
-
-## 📋 Previous Update (v3.20.1)
-
-**UI Polish & Display Improvements - March 9, 2026**
-
-### ✨ Enhanced Level Up Display
-- **Staggered Text Timing**: Level up notifications now split into two phases for better visual hierarchy
-- **Improved Positioning**: Stats text positioned higher to avoid character overlap
-- **Cleaner Visual Design**: Smaller stats text with delayed big level announcement
-
-### 🎨 Weapon Indicator Improvements
-- **Smooth Transitions**: Added fade and slide animations for weapon changes
-- **Enhanced Visual Feedback**: Weapon switching now features smooth 0.4s ease transitions
-
-### 🌊 Wave Event Optimization
-- **Reduced Visual Clutter**: Eliminated duplicate floating text during wave events
-- **Better Timing**: Wave announcements staggered 900ms after banner begins
-- **Cleaner Display**: Voice bubbles only for atmospheric feedback
+### 🔧 Technical Improvements
+- **WaveManager.js:** Added `attachEvent()` calls to integrate with WaveAnnouncementFX
+- **effects.js:** Extended WaveAnnouncementFX with event badge rendering
+- **Performance:** Eliminated redundant banner drawing operations
+- **Architecture:** Centralized event announcement logic in effects system
 
 ---
