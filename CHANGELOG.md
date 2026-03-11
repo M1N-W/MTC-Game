@@ -4,6 +4,38 @@
 
 ---
 
+## v3.32.1 — Animation System Documentation & Rendering Architecture Updates
+*Released: March 11, 2026*
+
+### 📚 Documentation Enhancements
+- **Animation State Machine (§16)**: Added comprehensive documentation for the `_anim` system used across all player characters
+- **Rendering Architecture Updates**: Enhanced §8 Rendering Architecture with detailed layer order, helper methods, and limb parameter system
+- **Shared Helper Methods**: Documented `_getLimbParams()`, `_drawGroundShadow()`, and `_drawGroundFeet()` functions
+- **Trigger Points Table**: Complete mapping of when each character sets animation timers
+- **Per-Character Effects**: Detailed rendering effects for skillT timers across all characters
+
+### 🎨 Animation System Details
+- **_anim Object Structure**: Documented state machine with timers (shootT, hurtT, dashT, skillT)
+- **Smooth Movement**: Added smoothMoveT and smoothAngle lerp system for fluid animations
+- **Character-Specific Triggers**: Complete table of where each character sets animation timers
+- **Rendering Integration**: How animation timers affect visual rendering in PlayerRenderer
+- **Guard Patterns**: Safe access patterns for _anim object properties
+
+### 🔧 Technical Architecture
+- **Layer Order Updates**: Clarified Body (LAYER 1) and Weapon (LAYER 2) rendering with new transforms
+- **Pre-Draw System**: Documented ground shadow and feet rendering before main layers
+- **Limb Parameter System**: Centralized motion calculation with character-specific speed caps
+- **Animation Decay Rates**: Specified timer decay speeds (shootT ×5/s, hurtT ×3/s, dashT ×4/s)
+
+### 📁 Files Modified
+```
+✅ MODIFIED: .agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md (+55 lines - §16 Animation System)
+✅ MODIFIED: PROJECT_OVERVIEW.md (updated Recent Changes)
+✅ MODIFIED: sw.js (v3.32.1)
+```
+
+---
+
 ## v3.32.0 — Player Code Standardization & HUD Improvements
 *Released: March 11, 2026*
 

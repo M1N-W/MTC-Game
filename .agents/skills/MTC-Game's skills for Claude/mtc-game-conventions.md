@@ -186,8 +186,9 @@ GravitationalSingularity.update() must run even when boss is dead:
 8. Rendering Architecture
 
 PlayerRenderer — Layer Order:
-  Layer 1: Body    ctx.save() → translate(screen+recoil+bob) → scale(stretch×facing) → body → ctx.restore()
-  Layer 2: Weapon  ctx.save() → translate(screen+recoil+bob) → rotate(angle) → weapon → ctx.restore()
+  Layer 1: Body    ctx.save() → translate(screen+recoil+bob) → scale(stretch×facing) → rotate(runLean) → body → ctx.restore()
+  Layer 2: Weapon  ctx.save() → translate(screen+recoil+bob) → rotate(angle) → translate(shootReach,shootLift) → weapon → ctx.restore()
+  Pre-draw: _drawGroundShadow() → _drawGroundFeet() before LAYER 1
 
 Variable declaration order — declare BEFORE dash ghost loop:
   ✅  const moveT = ..., bobY = ..., stretchX = ..., stretchY = ..., R = ...;
@@ -200,6 +201,24 @@ All PlayerRenderer and BossRenderer methods are static — call as:
   PlayerRenderer._drawKao(entity, ctx)
   BossRenderer.drawBoss(e, ctx)
 Never instantiate these classes.
+
+_getLimbParams(entity, now, speedCap) — shared limb/motion params:
+  Returns: { moveT, bob, breathe, stretchX, stretchY, bobOffsetY,
+             shootLift, shootReach, hurtPushX, hurtPushY, runLean,
+             dashStretchX, animState,
+             shadowScaleX, shadowScaleY, shadowAlphaMod, footL, footR }
+  speedCap: Auto=180, Poom=190, Pat/Base=200
+  Uses entity._anim.smoothMoveT (lerp) and smoothAngle (shortest-arc lerp)
+  ❌ Do NOT read entity.angle directly for hurtPush — use smoothAngle from _getLimbParams
+
+Phase 4 static helpers (call before LAYER 1 save block):
+  PlayerRenderer._drawGroundShadow(ctx, sx, sy, baseRx, baseRy, baseOffY, limb)
+    — shadow ellipse scales: dashT=wide, hurtT=flat, shadowAlphaMod fades at run speed
+    — baseRx/Ry: Auto(16,6), Poom(14,5), Pat(16,5.5), Base/Kao(14,5)
+  PlayerRenderer._drawGroundFeet(ctx, sx, sy, limb, color, entity)
+    — two 3.5×2px foot dots, alternating L/R via walkCycle
+    — auto-skip if isInvisible/isFreeStealthy or moveT < 0.05
+  limbXxx alias required — pass like: { ...limbAuto, bobOffsetY }
 
 Muzzle Offsets (shootSingle in weapons.js):
   Character | Weapon            | Offset
@@ -362,3 +381,54 @@ Also update: sw.js → CHANGELOG.md → README-info.md → PROJECT_OVERVIEW.md (
 
 Version bump ownership: Windsurf (commit time) bumps ALL files in one pass.
 Claude must NOT write version numbers into files — use [NEXT VERSION] as placeholder.
+
+---
+
+16. Animation State Machine — _anim System (PlayerBase + PlayerRenderer)
+
+PlayerBase._anim object (init in constructor):
+  { state, t, shootT, hurtT, dashT, skillT, smoothMoveT, smoothAngle }
+
+  state:       'idle'|'walk'|'run'|'shoot'|'dash'|'hurt' — priority: dash>shoot>hurt>run>walk>idle
+  shootT:      0→1 decay ×5/s (~0.2s) — arm raise after firing
+  hurtT:       0→1 decay ×3/s (~0.33s) — flinch after hit
+  dashT:       0→1 decay ×4/s (~0.25s) — lean/stretch after dash
+  skillT:      free-running per-character timer, decay ×1/s — see trigger table below
+  smoothMoveT: lerp of moveT, 8Hz convergence — prevents snap on start/stop
+  smoothAngle: shortest-arc lerp of entity.angle, same rate — null until first tick
+
+_tickAnim(dt) is called in PlayerBase.update() — called last after movement.
+PoomPlayer overrides update() entirely → must call _tickAnim(dt) manually.
+
+Trigger points — where each character sets timers:
+
+  Character | Timer    | Value              | Where
+  ----------|----------|--------------------|------------------------------------------
+  All       | hurtT=1  | takeDamage()       | PlayerBase.takeDamage() (base handles it)
+  All       | dashT=1  | dash()             | PlayerBase.dash()
+  Kao       | shootT=1 | after Audio.playShoot() | _doShoot()
+  Kao       | dashT=1  | Q teleport blink success | after blink resolve
+  Kao       | skillT=0.5 | E clone spawn   | _activateClone()
+  Auto      | shootT=1 | Stand Rush melee + Heat Wave | _doPlayerMelee()
+  Auto      | skillT=wanchaiDuration | R-Click Wanchai activate | _activateWanchai()
+  Auto      | hurtT=1  | override before super | AutoPlayer.takeDamage()
+  Poom      | shootT=1 | L-Click shoot     | PoomPlayer._doShoot()
+  Poom      | skillT=0.6 | E Garuda summon | _activateGaruda()
+  Poom      | skillT=1.0 | R Ritual burst  | _activateRitual()
+  Poom      | hurtT=1  | override          | PoomPlayer.takeDamage()
+  Pat       | shootT=1 | katana L-Click    | PatPlayer._doAttack()
+  Pat       | dashT=1  | Q Zanzo Flash     | _activateZanzo()
+  Pat       | skillT=(iaidoChargeDur??0.45)+0.3 | R Iaido charge | _activateIaido()
+
+Per-character skillT rendering effects (in PlayerRenderer):
+  Kao   → skillT × 8px lateral Y spread in LAYER 2 (clone spawn arms-out)
+  Auto  → wanchaiEntryT × −0.2 rad lean-back burst at activation window
+           wanchaiEntryT = max(0, (skillT − (wanchaiDuration−0.4)) / 0.4)
+  Poom  → skillT × −10px extra Y lift in LAYER 2 (ritual/garuda arms raise)
+           ritual(1.0) raises higher than garuda(0.6) automatically
+  Pat   → iaidoLean = min(0.28, skillT/iaidoMaxT * 0.28) rad forward lean in LAYER 1
+           replaces runLean during isCharge phase only
+
+Guard pattern — always check before accessing:
+  ✅  if (entity._anim) entity._anim.shootT = 1;
+  ✅  const sT = entity._anim?.shootT ?? 0;
