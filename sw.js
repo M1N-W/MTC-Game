@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.5'; // Boss Attack Architecture Refactoring - Modular boss attack system with shared base classes and enhanced visual effects
+const CACHE_NAME = 'mtc-cache-v3.30.6'; // Auto Player Rendering Refactoring - Moved Wanchai Stand rendering to PlayerRenderer, balance adjustments
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

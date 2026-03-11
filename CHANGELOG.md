@@ -4,6 +4,28 @@
 
 ---
 
+## v3.30.6 — Auto Player Rendering Refactoring
+*Released: March 11, 2026*
+
+### 🎨 Rendering System Improvements
+- **Code Separation**: Moved ~600 lines of Wanchai Stand rendering code from AutoPlayer.js to PlayerRenderer.js
+- **Architecture Cleanup**: Separated rendering logic from entity logic for better maintainability
+- **Performance**: Reduced AutoPlayer class size by ~50% for improved memory usage
+
+### ⚖️ Balance Adjustments
+- **Auto Character**: Reduced damage multiplier per level from 0.12 to 0.09
+- **Heat Tier System**: Refined damage and speed multipliers across all tiers
+  - COLD: dmg ×0.75 (was ×0.70)
+  - WARM: dmg ×1.10, punch rate ×0.92 (was ×1.15, ×0.85)
+  - HOT: dmg ×1.20, punch rate ×0.85 (was ×1.30, ×0.70)
+  - OVERHEAT: dmg ×1.30, crit +12% (was ×1.50, crit +20%)
+
+### 🐛 Bug Fixes
+- **Wanchai Cooldown**: Fixed cooldown timing to start after stand expires, not at activation
+- **Code Organization**: Eliminated duplicate rendering code between player classes
+
+---
+
 ## v3.30.5 — Boss Attack Architecture Refactoring
 *Released: March 10, 2026*
 

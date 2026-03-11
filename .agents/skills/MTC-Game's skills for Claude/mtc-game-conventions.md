@@ -5,7 +5,7 @@ description: "Project-specific conventions, architecture rules, and critical pit
 
 # MTC The Game — Project Conventions & Critical Pitfalls
 Stack: Vanilla JS (ES6+) + HTML5 Canvas 2D + Web Audio API. No frameworks.
-Target: 60 FPS | Status: Beta v3.29.8+
+Target: 60 FPS | Status: Beta v3.30.5
 
 ---
 
@@ -240,10 +240,10 @@ Singleton pattern in effects.js:
 
   Tier      | Range   | Effect
   ----------|---------|----------------------------------------
-  COLD      | 0–33%   | dmg ×0.70, speed ×0.90
-  WARM      | 34–66%  | dmg ×1.15, punch rate ×0.85
-  HOT       | 67–99%  | dmg ×1.30, punch rate ×0.70
-  OVERHEAT  | 100%    | dmg ×1.50, crit +20%, HP drain 5/s
+  COLD      | 0–33%   | dmg ×0.75, speed ×0.90
+  WARM      | 34–66%  | dmg ×1.10, punch rate ×0.92
+  HOT       | 67–99%  | dmg ×1.20, punch rate ×0.85
+  OVERHEAT  | 100%    | dmg ×1.30, crit +12%, HP drain 5/s
 
 Wanchai (R-Click) active changes Q: Stand Pull (range 380px) instead of Vacuum Pull.
 Cooldown key: standPullCooldown: 10 vs vacuumCooldown: 6 — HUD arc max must be dynamic.

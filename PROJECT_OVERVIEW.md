@@ -311,7 +311,7 @@ BALANCE.mtcRoom = { healRate, maxStayTime, cooldownTime, dashResetOnEntry, ... }
 | **Auto** | 230 | 260 | 490 | Wanchai 12s / 8s dur, Vacuum 6s, Detonate 8s, Dash 1.7s |
 
 Poom key values: `riceDamage: 62`, `riceCooldown: 0.42`, `nagaDamage: 100`, `nagaSegments: 18`  
-Kao key values: `critMultiplier: 2.5`, `baseCritChance: 0.05`, `damageMultiplierPerLevel: 0.12`
+Kao key values: `critMultiplier: 2.5`, `baseCritChance: 0.05`, `damageMultiplierPerLevel: 0.09`
 
 
 ### Wave Events 🟡
@@ -405,17 +405,17 @@ if ((this.energy ?? 0) < cost) {
 | EnergyRegen | 20/s | |
 | Wanchai Duration | **8.0s** | +2s จาก 6.0s |
 | Wanchai Cooldown | **12s** | +3s จาก 9s (less spammy) |
-| Wanchai Damage | **30/punch** | NERF จาก 38 |
+| Wanchai Damage | **24/punch** | NERF จาก 38→30→24 |
 | Punch Rate | **0.10s** (10/s) | NERF จาก 0.09s |
 | HP Drain OVERHEAT | **5/s** | NERF จาก 3 (risk จริง) |
 
 #### ✅ Heat Tier System
 | Tier | Range | Effect |
 |------|-------|--------|
-| COLD | 0–33% | dmg ×0.70, speed ×0.90 (penalty) |
-| WARM | 34–66% | dmg ×1.15, punch rate ×0.85 |
-| HOT | 67–99% | dmg ×1.30, punch rate ×0.70, melee range+ |
-| OVERHEAT | 100% | dmg ×1.50, crit +20%, HP drain 5/s |
+| COLD | 0–33% | dmg ×0.75, speed ×0.90 (penalty) |
+| WARM | 34–66% | dmg ×1.10, punch rate ×0.92 |
+| HOT | 67–99% | dmg ×1.20, punch rate ×0.85, melee range+ |
+| OVERHEAT | 100% | dmg ×1.30, crit +12%, HP drain 5/s |
 
 - **Heat idle decay:** 2.0s ไม่ hit → +8/s extra decay (`heatIdleDecayDelay`, `heatIdleDecayRate`)
 - **Vent Explosion** (OVERHEAT→HOT drop): 45 dmg AOE 160px, screen shake +6
