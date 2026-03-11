@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.6'; // Auto Player Rendering Refactoring - Moved Wanchai Stand rendering to PlayerRenderer, balance adjustments
+const CACHE_NAME = 'mtc-cache-v3.30.7'; // Fixed service worker cache - corrected KaoPlayer.js filename casing
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -30,7 +30,7 @@ const urlsToCache = [
   // Entities
   './js/entities/base.js?v=' + CACHE_TIMESTAMP,
   './js/entities/player/PlayerBase.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/player/Kaoplayer.js?v=' + CACHE_TIMESTAMP,
+  './js/entities/player/KaoPlayer.js?v=' + CACHE_TIMESTAMP,
   './js/entities/player/AutoPlayer.js?v=' + CACHE_TIMESTAMP,
   './js/entities/player/PoomPlayer.js?v=' + CACHE_TIMESTAMP,
   './js/entities/enemy.js?v=' + CACHE_TIMESTAMP,

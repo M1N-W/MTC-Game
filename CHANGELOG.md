@@ -4,6 +4,16 @@
 
 ---
 
+## v3.30.7 — Service Worker Cache Fix
+*Released: March 11, 2026*
+
+### 🐛 Bug Fixes
+- **Service Worker Cache**: Fixed filename casing for `KaoPlayer.js` in cache list
+- **File Loading**: Ensured proper caching of Kao player entity file
+- **Case Sensitivity**: Corrected `Kaoplayer.js` → `KaoPlayer.js` to match actual filename
+
+---
+
 ## v3.30.6 — Auto Player Rendering Refactoring
 *Released: March 11, 2026*
 

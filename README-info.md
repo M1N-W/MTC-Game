@@ -4,7 +4,7 @@
 
 **Survive the waves. Defeat the teachers. Master the madness.**
 
-> **Current Version:** Beta v3.30.6 | **Latest Update:** Auto Player Rendering Refactoring - Moved Wanchai Stand rendering to PlayerRenderer, balance adjustments
+> **Current Version:** Beta v3.30.7 | **Latest Update:** Service Worker Cache Fix - Fixed KaoPlayer.js filename casing in cache list
 
 > **⚠️ DOCUMENTATION STABILITY:** This README contains **current implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
