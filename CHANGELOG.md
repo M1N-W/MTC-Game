@@ -4,6 +4,48 @@
 
 ---
 
+## v3.31.3 — Rendering Refactor: Pat Character Simplification
+*Released: March 11, 2026*
+
+### 🎨 Rendering System Optimization
+- **Pat Character Refactor**: Simplified from custom body rendering to base body system
+  - **Removed**: Complex custom drawing (white shirt, navy undershirt, hair, round glasses, cloth wrap, detailed katana)
+  - **Retained**: All unique visual effects and identity markers
+  - **Benefit**: Improved performance, reduced code complexity, better maintainability
+
+### ⚡ Preserved Visual Effects
+- **Zanzo Afterimage Ghosts**: Ice blue crescent silhouettes with fade trails
+- **Iaido Charge Ring**: Dynamic dashed ring with progressive fill and glow
+- **Blade Guard Reflect Ring**: Pulsing protection field with reflect radius indicator
+- **Iaido Flash Line**: White core with ice blue outline for cinematic dash effect
+- **Level Badge**: Ice blue theme maintained for character identity
+
+### 🏗️ Technical Changes
+- **Rendering Layers**: Reorganized from 7 complex layers to 4 streamlined layers
+  - Layer 0: Zanzo ghosts (simplified circles)
+  - Layer 1: Iaido charge ring (enhanced visual feedback)
+  - Layer 2: Blade Guard reflect ring (camera zoom aware)
+  - Layer 3: Base body (reuses existing system)
+  - Layer 4: Iaido flash line (post-body overlay)
+
+- **Code Reduction**: ~400 lines of complex custom drawing removed
+- **Performance**: Eliminated per-frame complex path operations
+- **Maintainability**: Now uses established rendering patterns
+
+### 📊 Visual Consistency
+- **Character Identity**: Maintained through unique effects rather than custom body
+- **Color Theme**: Ice blue (#7ec8e3) preserved across all effects
+- **Gameplay Clarity**: Effects are now more prominent with simplified body
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/rendering/PlayerRenderer.js (-333 lines simplified, +59 lines effects)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+5 lines - rendering refactor entry)
+✅ MODIFIED: sw.js (v3.31.3)
+```
+
+---
+
 ## v3.31.2 — Integration Fixes: Pat Character System
 *Released: March 11, 2026*
 
