@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.31.3'; // Rendering Refactor: Pat character simplification
+const CACHE_NAME = 'mtc-cache-v3.31.4'; // Rendering Restoration: Pat character detail
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

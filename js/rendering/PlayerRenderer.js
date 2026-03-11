@@ -2463,14 +2463,29 @@ class PlayerRenderer {
 
     static _drawPat(entity, ctx) {
         const now = performance.now();
-        const screen = worldToScreen(entity.x, entity.y);
-        if (!screen) return;
+        PlayerRenderer._standAuraDraw(entity, 'pat', ctx);
 
-        const R = entity.radius ?? 17;
+        const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
+        const facingSign = isFacingLeft ? -1 : 1;
 
-        // ══════════════════════════════════════════════════════════
-        // LAYER 0 — ZANZO AFTERIMAGE GHOSTS (behind everything)
-        // ══════════════════════════════════════════════════════════
+        const recoilAmt = entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.5 : 0;
+        const recoilX = -Math.cos(entity.angle) * recoilAmt;
+        const recoilY = -Math.sin(entity.angle) * recoilAmt;
+
+        const breathe = Math.sin(now / 200);
+        const speed = Math.hypot(entity.vx, entity.vy);
+        const moveT = Math.min(1, speed / 200);
+        const bobT = Math.sin(entity.walkCycle);
+        const stretchX = 1 + breathe * 0.030 + moveT * bobT * 0.10;
+        const stretchY = 1 - breathe * 0.030 - moveT * Math.abs(bobT) * 0.07;
+        const bobY = moveT * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
+        const R = 13;
+
+        const isCharge = entity._iaidoPhase === 'charge';
+        const isCinematic = entity._iaidoPhase === 'cinematic';
+        const bladeGuard = entity.bladeGuardActive ?? false;
+
+        // ── Zanzo ghost trail ────────────────────────────────────
         const ghosts = entity._zanzoGhosts;
         if (ghosts) {
             for (let i = 0; i < ghosts.length; i++) {
@@ -2482,21 +2497,50 @@ class PlayerRenderer {
                 ctx.globalAlpha = g.alpha * 0.55;
                 ctx.fillStyle = '#4a90d9';
                 ctx.shadowBlur = 12; ctx.shadowColor = '#4a90d9';
-                ctx.beginPath(); ctx.arc(gs.x, gs.y, R * 0.75, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(gs.x, gs.y, R * 0.80, 0, Math.PI * 2); ctx.fill();
                 ctx.shadowBlur = 0;
                 ctx.restore();
             }
         }
 
-        // ══════════════════════════════════════════════════════════
-        // LAYER 1 — IAIDO CHARGE RING
-        // ══════════════════════════════════════════════════════════
-        if (entity._iaidoPhase === 'charge') {
+        // ── Dash ghost trail ─────────────────────────────────────
+        for (const img of entity.dashGhosts) {
+            const gs = worldToScreen(img.x, img.y);
+            if (!gs) continue;
+            ctx.save();
+            ctx.globalAlpha = img.life * 0.35;
+            ctx.fillStyle = '#7ec8e3';
+            ctx.shadowBlur = 10 * img.life; ctx.shadowColor = '#4a90d9';
+            ctx.beginPath(); ctx.arc(gs.x, gs.y, R + 1, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        const screen = worldToScreen(entity.x, entity.y);
+        if (!screen) return;
+
+        // ── Ground shadow ────────────────────────────────────────
+        ctx.save();
+        ctx.globalAlpha = 0.28 - moveT * 0.08;
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.beginPath(); ctx.ellipse(screen.x, screen.y + 15 + bobY, 14 - moveT * 2, 5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // ── Passive aura (Ronin's Edge) ──────────────────────────
+        if (entity.passiveUnlocked) {
+            const aS = 30 + Math.sin(now / 200) * 4;
+            ctx.save(); ctx.globalAlpha = 0.3 + Math.sin(now / 300) * 0.1;
+            ctx.strokeStyle = '#7ec8e3'; ctx.lineWidth = 3;
+            ctx.shadowBlur = 18; ctx.shadowColor = '#7ec8e3';
+            ctx.beginPath(); ctx.arc(screen.x, screen.y, aS, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+        }
+
+        // ── Iaido charge ring ────────────────────────────────────
+        if (isCharge) {
             const chargeT = Math.min(1, (entity._iaidoChargeTimer ?? 0) / 0.6);
             ctx.save();
             ctx.globalAlpha = 0.20 + chargeT * 0.45;
-            ctx.strokeStyle = '#7ec8e3';
-            ctx.lineWidth = 2 + chargeT * 3;
+            ctx.strokeStyle = '#7ec8e3'; ctx.lineWidth = 2 + chargeT * 3;
             ctx.shadowBlur = 16 + chargeT * 20; ctx.shadowColor = '#7ec8e3';
             ctx.setLineDash([5, 4]);
             ctx.beginPath(); ctx.arc(screen.x, screen.y, R + 6 + chargeT * 10, 0, Math.PI * 2); ctx.stroke();
@@ -2504,32 +2548,173 @@ class PlayerRenderer {
             ctx.restore();
         }
 
-        // ══════════════════════════════════════════════════════════
-        // LAYER 2 — BLADE GUARD REFLECT RING
-        // ══════════════════════════════════════════════════════════
-        if (entity.bladeGuardActive) {
+        // ── Blade Guard reflect ring ─────────────────────────────
+        if (bladeGuard) {
             const bgPulse = 0.35 + Math.sin(now / 120) * 0.15;
+            const zoom = (typeof cameraZoom !== 'undefined') ? cameraZoom : 1;
+            const bgR = (entity.stats?.bladeGuardReflectRadius ?? 55) * zoom;
             ctx.save();
             ctx.globalAlpha = bgPulse;
-            ctx.strokeStyle = '#7ec8e3';
-            ctx.lineWidth = 2.5;
-            ctx.shadowBlur = 20; ctx.shadowColor = '#7ec8e3';
-            ctx.beginPath(); ctx.arc(screen.x, screen.y, (entity.stats?.bladeGuardReflectRadius ?? 55) * (typeof cameraZoom !== 'undefined' ? cameraZoom : 1), 0, Math.PI * 2); ctx.stroke();
-            ctx.globalAlpha = bgPulse * 0.12;
-            ctx.fillStyle = '#7ec8e3';
-            ctx.fill();
+            ctx.strokeStyle = '#7ec8e3'; ctx.lineWidth = 2;
+            ctx.shadowBlur = 18; ctx.shadowColor = '#7ec8e3';
+            ctx.beginPath(); ctx.arc(screen.x, screen.y, bgR, 0, Math.PI * 2); ctx.stroke();
+            ctx.globalAlpha = bgPulse * 0.10;
+            ctx.fillStyle = '#7ec8e3'; ctx.fill();
             ctx.shadowBlur = 0;
             ctx.restore();
         }
 
-        // ══════════════════════════════════════════════════════════
-        // LAYER 3 — BASE BODY (กลม เหมือนตัวละครอื่น)
-        // ══════════════════════════════════════════════════════════
-        PlayerRenderer._drawBase(entity, ctx);
+        if (entity.isConfused) { ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center'; ctx.fillText('😵', screen.x, screen.y - 32); }
+        if (entity.isBurning) { ctx.font = 'bold 18px Arial'; ctx.fillText('🔥', screen.x + 18, screen.y - 26); }
 
-        // ══════════════════════════════════════════════════════════
-        // LAYER 4 — IAIDO FLASH LINE (post-body overlay)
-        // ══════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════
+        // LAYER 1 — BODY  (same transform stack as _drawBase)
+        // ════════════════════════════════════════════════════════
+        ctx.save();
+        ctx.translate(screen.x + recoilX, screen.y + recoilY + bobY);
+        const crouchY = isCharge ? 3 : 0;
+        const crouchSY = isCharge ? 0.90 : 1.0;
+        ctx.translate(0, crouchY);
+        ctx.scale(stretchX * facingSign, stretchY * crouchSY);
+
+        // Body outer ring (ice-blue for Pat)
+        ctx.shadowBlur = 14; ctx.shadowColor = 'rgba(126,200,227,0.55)';
+        ctx.strokeStyle = 'rgba(126,200,227,0.35)'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, 0, R + 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Body fill — navy uniform
+        const bodyG = ctx.createRadialGradient(-3, -3, 1, 0, 0, R);
+        bodyG.addColorStop(0, '#1a2640');
+        bodyG.addColorStop(0.55, '#101825');
+        bodyG.addColorStop(1, '#070e18');
+        ctx.fillStyle = bodyG;
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+
+        // Body outline
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+
+        // Specular highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.beginPath(); ctx.arc(-4, -5, 5, 0, Math.PI * 2); ctx.fill();
+
+        // White shirt front (V-cut opening)
+        ctx.fillStyle = 'rgba(232,232,232,0.70)';
+        ctx.beginPath();
+        ctx.moveTo(-R * 0.40, -R * 0.10);
+        ctx.lineTo(0, R * 0.55);
+        ctx.lineTo(R * 0.40, -R * 0.10);
+        ctx.quadraticCurveTo(0, R * 0.20, -R * 0.40, -R * 0.10);
+        ctx.fill();
+
+        // Cloth wrap on sword hand (right side)
+        ctx.strokeStyle = '#2d2d4a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        for (let wi = 0; wi < 3; wi++) {
+            const wy = R * 0.05 - 2 + wi * 2.5;
+            ctx.globalAlpha = 0.70 - wi * 0.10;
+            ctx.beginPath();
+            ctx.moveTo(R * 0.68 - 4, wy);
+            ctx.lineTo(R * 0.68 + 4, wy + 1.2);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+
+        // ── Head ─────────────────────────────────────────────────
+        const headY = -(R * crouchSY) - R * 0.58;
+        ctx.save();
+        ctx.translate(R * 0.04, headY);
+        ctx.rotate(isCharge ? 0.12 : 0);   // slight forward lean when charging
+
+        // Face
+        const faceG = ctx.createRadialGradient(-1, -1, 1, 0, 0, R * 0.52);
+        faceG.addColorStop(0, '#f5d4b0');
+        faceG.addColorStop(1, '#d4a070');
+        ctx.fillStyle = faceG;
+        ctx.beginPath(); ctx.arc(0, 0, R * 0.52, 0, Math.PI * 2); ctx.fill();
+
+        // Hair — dark, slightly messy top
+        ctx.fillStyle = '#150f06';
+        ctx.beginPath();
+        ctx.arc(0, -R * 0.16, R * 0.50, Math.PI, 0);
+        ctx.closePath(); ctx.fill();
+        // Side wisps
+        ctx.beginPath(); ctx.ellipse(-R * 0.36, -R * 0.05, 3.2, 5.5, -0.3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(R * 0.36, -R * 0.05, 3.2, 5.5, 0.3, 0, Math.PI * 2); ctx.fill();
+        // Slight tuft at top
+        ctx.beginPath(); ctx.ellipse(R * 0.10, -R * 0.54, 2.5, 4, 0.25, 0, Math.PI * 2); ctx.fill();
+
+        // Round glasses
+        const gR = 4.0, gY = R * 0.04;
+        ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1.4;
+        ctx.fillStyle = 'rgba(100,180,220,0.18)';
+        // Left
+        ctx.beginPath(); ctx.arc(-gR * 1.3, gY, gR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Right
+        ctx.beginPath(); ctx.arc(gR * 1.3, gY, gR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Bridge
+        ctx.beginPath(); ctx.moveTo(-gR * 0.3, gY); ctx.lineTo(gR * 0.3, gY); ctx.stroke();
+        // Lens glints
+        ctx.fillStyle = 'rgba(255,255,255,0.50)';
+        ctx.beginPath(); ctx.arc(-gR * 1.3 - 1.2, gY - 1.4, 0.9, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(gR * 1.3 - 1.2, gY - 1.4, 0.9, 0, Math.PI * 2); ctx.fill();
+
+        ctx.restore(); // end head
+
+        // ── Katana ───────────────────────────────────────────────
+        ctx.save();
+        if (isCinematic) {
+            ctx.translate(R * 0.10, -R * 0.05); ctx.rotate(2.35);
+        } else if (bladeGuard) {
+            ctx.translate(R * 0.50, -(R * 0.42)); ctx.rotate(-0.30);
+        } else if (isCharge) {
+            ctx.translate(R * 0.58, R * 0.08);
+            ctx.rotate(entity.angle - (isFacingLeft ? Math.PI + 0.55 : -0.55));
+        } else {
+            const katanaAngle = entity.angle * 0.4 + (isFacingLeft ? 0.5 : -0.5);
+            ctx.translate(R * 0.48, R * 0.22); ctx.rotate(katanaAngle);
+        }
+
+        const BL = R * 2.1, HL = R * 0.62;
+        // Blade
+        ctx.shadowBlur = 5; ctx.shadowColor = '#7ec8e3';
+        const bladeG = ctx.createLinearGradient(0, 0, BL, 0);
+        bladeG.addColorStop(0, '#eaf4ff');
+        bladeG.addColorStop(0.6, '#c8d8e8');
+        bladeG.addColorStop(1, 'rgba(200,216,232,0.25)');
+        ctx.fillStyle = bladeG;
+        ctx.beginPath(); ctx.moveTo(0, -1.4); ctx.lineTo(BL, 0); ctx.lineTo(0, 1.4); ctx.closePath(); ctx.fill();
+        // Edge glow
+        ctx.strokeStyle = 'rgba(126,200,227,0.50)'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(0, -0.9); ctx.lineTo(BL * 0.9, 0); ctx.stroke();
+        // Tsuba
+        ctx.fillStyle = '#3a3a3a'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(-2, 0, 2.2, 4.8, 0, 0, Math.PI * 2); ctx.fill();
+        // Handle
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.roundRect(-HL, -2.2, HL, 4.4, 2); ctx.fill();
+        // Wrap marks (gold)
+        ctx.strokeStyle = 'rgba(180,140,60,0.55)'; ctx.lineWidth = 1.0;
+        for (let hi = 0; hi < 4; hi++) {
+            const hx = -(HL * 0.85) + hi * (HL * 0.22);
+            ctx.beginPath(); ctx.moveTo(hx, -2.2); ctx.lineTo(hx + 1.4, 2.2); ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore(); // end katana
+
+        ctx.restore(); // end LAYER 1
+
+        // ── Hit flash ────────────────────────────────────────────
+        ctx.save();
+        ctx.translate(screen.x + recoilX, screen.y + recoilY + bobY + crouchY);
+        ctx.scale(stretchX * facingSign, stretchY * crouchSY);
+        PlayerRenderer._drawHitFlash(ctx, entity, R);
+        ctx.restore();
+
+        if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
+        PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);
+
+        // ── Iaido flash line ─────────────────────────────────────
         if (entity._iaidoFlashLine?.alpha > 0) {
             const fl = entity._iaidoFlashLine;
             const s1 = worldToScreen(fl.x1, fl.y1);
@@ -2537,15 +2722,11 @@ class PlayerRenderer {
             if (s1 && s2) {
                 ctx.save();
                 ctx.globalAlpha = fl.alpha * 0.80;
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 3.5;
-                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
                 ctx.shadowBlur = 18; ctx.shadowColor = '#7ec8e3';
                 ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
                 ctx.globalAlpha = fl.alpha * 0.55;
-                ctx.strokeStyle = '#7ec8e3';
-                ctx.lineWidth = 1.2;
-                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#7ec8e3'; ctx.lineWidth = 1.2; ctx.shadowBlur = 0;
                 ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
                 ctx.lineCap = 'butt';
                 ctx.restore();
@@ -2554,7 +2735,6 @@ class PlayerRenderer {
             if (entity._iaidoFlashLine.alpha <= 0) entity._iaidoFlashLine = null;
         }
 
-        // Level badge — ice blue theme
         PlayerRenderer._drawLevelBadge(ctx, screen, entity, 'rgba(30,90,140,0.92)', 20, -20);
     }
 

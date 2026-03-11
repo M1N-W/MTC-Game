@@ -4,6 +4,56 @@
 
 ---
 
+## v3.31.4 — Rendering Restoration: Pat Character Detail
+*Released: March 11, 2026*
+
+### 🎨 Visual Identity Restoration
+- **Full Custom Rendering**: Restored complete Pat character visual system
+  - **Body Details**: Navy uniform with gradient, white V-cut shirt, cloth wrap on sword hand
+  - **Facial Features**: Round glasses with lens glints, dark hair with wisps, realistic skin tones
+  - **Katana System**: Detailed blade with gradients, tsuba guard, wrapped handle with gold accents
+  - **Pose Variations**: Different katana positions for idle, charge, guard, cinematic states
+
+### ⚡ Enhanced Effects System
+- **Ghost Trail Effects**: Dual trail system for movement visualization
+  - **Zanzo Ghosts**: Ice blue afterimages from blink ability (4 ghost trail)
+  - **Dash Ghosts**: Light blue ghosts from general movement/dashing
+- **Passive Aura**: Ronin's Edge unlock visualization (pulsing ice blue ring)
+- **Ground Shadows**: Dynamic shadows that respond to movement speed
+- **Status Effects**: Confused (😵) and Burning (🔥) visual indicators
+
+### 🏗️ Rendering Architecture
+- **Multi-Layer System**: Organized rendering pipeline with proper depth ordering
+  - Background effects (ghosts, shadows)
+  - Ground shadow with movement response
+  - Passive aura (when unlocked)
+  - Iaido charge ring (progressive fill)
+  - Blade Guard reflect ring (camera zoom aware)
+  - Main body with full custom detail
+  - Post-body effects (flash lines, hit flashes)
+
+### 🎯 Katana Mechanics
+- **State-Based Positioning**: Katana changes position based on character state
+  - **Idle**: Sheathed at hip, angled with movement
+  - **Blade Guard**: Raised vertical in defensive stance
+  - **Iaido Charge**: Hand on hilt, ready to draw
+  - **Cinematic**: Behind back, sheathing pose
+- **Visual Details**: Steel blade gradients, ice blue edge glow, authentic handle wrapping
+
+### 📊 Performance Optimizations
+- **Efficient Rendering**: Maintained smooth performance despite visual complexity
+- **Conditional Effects**: Effects only render when relevant (passive unlocked, specific states)
+- **Optimized Paths**: Streamlined drawing operations without sacrificing detail
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/rendering/PlayerRenderer.js (+274 lines detailed rendering)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+7 lines - rendering restoration entry)
+✅ MODIFIED: sw.js (v3.31.4)
+```
+
+---
+
 ## v3.31.3 — Rendering Refactor: Pat Character Simplification
 *Released: March 11, 2026*
 

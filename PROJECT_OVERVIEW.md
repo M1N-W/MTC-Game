@@ -1182,11 +1182,13 @@ class SniperEnemy extends EnemyBase {
   - Fixed WeaponSystem to support character-specific weapon sets
   - Added katana muzzle offset (44px) for projectile spawning
   - Dynamic weapon switching based on character weapon configurations
-- **✅ Rendering Refactor: Pat Character Simplification**
-  - Simplified Pat rendering to use base body system instead of custom drawing
-  - Removed complex custom body rendering (shirt, hair, glasses, katana details)
-  - Retained special effects: Zanzo ghosts, Iaido charge ring, Blade Guard reflect ring
-  - Improved performance and maintainability while preserving unique visual identity
+- **✅ Rendering Restoration: Pat Character Detail**
+  - Restored full custom Pat rendering with complete visual identity
+  - Re-added detailed body rendering (navy uniform, white shirt, cloth wrap)
+  - Re-added facial features (round glasses, hair, skin tones)
+  - Re-added detailed katana with blade gradients, tsuba, handle wraps
+  - Enhanced effects: Zanzo ghosts, dash ghosts, passive aura, ground shadows
+  - Maintained performance optimizations while restoring visual fidelity
 
 ### Previous Versions
 *(Archived changes removed for brevity - see git history for full record)*
