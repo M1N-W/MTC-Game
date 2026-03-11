@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.12'; // Numeric literals cleanup - matrixGridCooldown config, rice damage balance, heatWave range adjustment
+const CACHE_NAME = 'mtc-cache-v3.30.13'; // Character selection UI enhancements - portrait animations and visual feedback
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

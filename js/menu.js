@@ -14,6 +14,10 @@ function selectCharacter(charType) {
         || document.getElementById(charType);
     if (card) card.classList.add('selected');
 
+    // ── Mark container so unselected cards can recede ──────────────────────
+    const cardsContainer = card?.closest('.char-cards');
+    if (cardsContainer) cardsContainer.classList.add('has-selection');
+
     // ── Buttons label ──────────────────────────────
     const startBtn = document.getElementById('start-btn');
     const tutBtn = document.getElementById('tutorial-btn');

@@ -4,6 +4,26 @@
 
 ---
 
+## v3.30.13 — Character Selection UI Enhancements
+*Released: March 11, 2026*
+
+### 🎨 Visual Improvements
+- **Portrait Animation**: Added floating animation for selected character cards (2.8s ease-in-out infinite)
+- **Visual Feedback**: Unselected cards now recede visually when a selection is made
+- **Avatar Backgrounds**: Per-character radial gradient backgrounds (Kao: blue, Poom: green, Auto: red)
+- **Hover States**: Enhanced hover interactions that prevent animation conflicts
+
+### 🔧 Technical Changes
+- **CSS Additions**: New `portraitFloat` keyframe animation and `.has-selection` state styling
+- **JavaScript Update**: `selectCharacter()` function now adds `.has-selection` class to container
+- **Responsive Design**: Improved mobile touch interactions and visual polish
+
+### 📁 Files Modified
+- `css/main.css` - Added portrait animations and selection state styling
+- `js/menu.js` - Updated character selection logic for visual feedback
+
+---
+
 ## v3.30.12 — Numeric Literals Cleanup & Balance
 *Released: March 11, 2026*
 

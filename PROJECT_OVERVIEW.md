@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.9
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.13 [NEXT VERSION]
 
 ---
 
@@ -756,7 +756,13 @@ class SniperEnemy extends EnemyBase {
 ## 🔄 Recent Changes (pending commit)
 
 ### [NEXT VERSION] — March 11, 2026
-- **Purpose:** Documentation updates - reference fixes and formatting improvements in PROJECT_OVERVIEW.md
+- **Purpose:** Character selection UI enhancements - portrait animations and visual feedback
+- **Changes:**
+  - Added portrait float animation for selected character cards (2.8s ease-in-out infinite)
+  - Implemented visual recession for unselected cards when selection is made
+  - Added per-character avatar background gradients (Kao: blue, Poom: green, Auto: red)
+  - Enhanced hover states to prevent animation conflicts
+  - Updated menu.js to mark container with .has-selection class for proper styling
 - **Changes:** Updated cross-references to SKILL.md sections, improved formatting in debugging solutions
 
 **Key Changes:**

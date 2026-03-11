@@ -3549,6 +3549,54 @@ body {
     filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.85)) brightness(1.1);
 }
 
+/* ── Portrait idle float — selected card only ──────────────────────────────── */
+@keyframes portraitFloat {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.char-card.selected .char-avatar {
+    animation: portraitFloat 2.8s ease-in-out infinite;
+}
+
+/* Freeze float on hover so it doesn't fight the card lift transform */
+.char-card:hover .char-avatar {
+    animation: none;
+}
+
+/* ── Unselected cards — recede visually ────────────────────────────────────── */
+/* Only active when at least one card IS selected (JS adds .has-selection to parent) */
+.char-cards.has-selection .char-card:not(.selected) {
+    filter: saturate(0.45) brightness(0.65);
+    transform: scale(0.97) translateY(2px);
+    transition: filter 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.char-cards.has-selection .char-card:not(.selected):hover {
+    filter: saturate(0.75) brightness(0.85);
+    transform: scale(1.01) translateY(-2px);
+}
+
+/* ── Per-character avatar background gradient ──────────────────────────────── */
+.char-card[data-char="kao"] .char-avatar {
+    background: radial-gradient(ellipse at 50% 30%, rgba(30, 50, 90, 0.9) 0%, rgba(8, 10, 24, 0.98) 75%);
+}
+
+.char-card[data-char="poom"] .char-avatar {
+    background: radial-gradient(ellipse at 50% 30%, rgba(5, 40, 22, 0.9) 0%, rgba(4, 12, 20, 0.98) 75%);
+}
+
+.char-card[data-char="auto"] .char-avatar {
+    background: radial-gradient(ellipse at 50% 30%, rgba(50, 10, 10, 0.9) 0%, rgba(12, 4, 8, 0.98) 75%);
+}
+
 
 .char-select-hint {
     position: absolute;
