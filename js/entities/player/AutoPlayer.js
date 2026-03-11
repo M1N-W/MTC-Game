@@ -194,7 +194,7 @@ class WanchaiStand {
                 : tier >= 1 ? (S.heatDmgWarm ?? 1.10)
                     : (S.coldDamageMult ?? 0.75); // COLD penalty
 
-        let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0) * heatDmgMult;
+        let dmg = (S.wanchaiDamage ?? 24) * (owner.damageMultiplier || 1.0) * heatDmgMult;
 
         // Second Wind bonus
         if (owner.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
@@ -568,8 +568,8 @@ class AutoPlayer extends Player {
             const S4 = this.stats ?? {};
             let drainRate = S4.standMeterDrainRate ?? 8;
             const ht4 = this._heatTier ?? 0;
-            if (ht4 >= 3) drainRate *= (S4.standMeterDrainOverheat ?? 0.50);
-            else if (ht4 === 0) drainRate *= (S4.standMeterDrainCold ?? 1.30);
+            if (ht4 >= 3) drainRate *= (S4.standMeterDrainOverheat ?? 2.0);
+            else if (ht4 === 0) drainRate *= (S4.standMeterDrainCold ?? 3.0);
             this.standMeter = Math.max(0, (this.standMeter ?? 0) - drainRate * dt);
 
             // Still tick wanchaiTimer for HUD compat (but deactivation uses standMeter)
@@ -898,7 +898,7 @@ class AutoPlayer extends Player {
             : pht >= 2 ? (S.heatDmgHot ?? 1.20)
                 : pht >= 1 ? (S.heatDmgWarm ?? 1.10)
                     : (S.coldDamageMult ?? 0.75); // COLD penalty
-        let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0) * pHeatMult;
+        let dmg = (S.wanchaiDamage ?? 24) * (this.damageMultiplier || 1.0) * pHeatMult;
         let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.18);  // BUG-5 fix: was 0.40
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         if (pht >= 3) critChance += (S.heatCritBonusOverheat ?? 0.12);

@@ -431,8 +431,8 @@ if ((this.energy ?? 0) < cost) {
 - **Shift → Stand Guard**: block input, Stand ยืนหน้า, 60% dmg reduction (`standGuardReduction`)
 
 #### ✅ Feature 4 — Stand Meter (แทน countdown timer)
-- Drain: 8/s normal | ×1.30 ขณะ COLD | ×0.50 ขณะ OVERHEAT
-- Fill: +4/hit (Stand หรือ player), +12/kill ขณะ active
+- Drain: 8/s normal | ×3.0 ขณะ COLD (max ~3.3s) | ×2.0 ขณะ OVERHEAT (max ~6s)
+- Fill: +1/hit (Stand หรือ player), +12/kill ขณะ active
 - HUD: `"❄️42%"` / `"🔥87%"` / `"💥94%"` ตาม tier
 
 #### ✅ Bug Fix — Stand Rush Cooldown Fallthrough
@@ -928,18 +928,16 @@ class SniperEnemy extends EnemyBase {
 ## 🔄 Recent Changes (pending commit)
 
 ### [NEXT VERSION] — March 11, 2026
-**Purpose**: Character balance adjustments and config synchronization
+**Purpose:** Eliminate all hardcoded `?? <number>` fallbacks — config.js is now sole source of truth for all gameplay values
 
-#### 🎯 Balance Changes
-- **AutoPlayer**: Reduced crit bonuses (0.25→0.18), increased HP drain (3→5), adjusted charge damage mult (3.5→2.5)
-- **KaoPlayer**: Reduced passive crit bonus (0.05→0.04), blink ambush window (1.5→2.0s), phantom blink dmg mult (1.8→1.4)
-- **PoomPlayer**: Increased passive crit bonus (0.04→0.06), improved passive lifesteal (0.015→0.025)
-- **Summons**: Updated Naga ignite duration/DPS and Garuda duration to match config values
+**Files Changed:** `AutoPlayer.js`, `KaoPlayer.js`, `PoomPlayer.js`, `summons.js`, `config.js`
 
-#### ⚙️ Configuration Updates
-- Added `vacuumEarlyHeatGain`, `nagaIgniteDuration`, `ritualBossDmgCapPct`, `ritualBossDmgCapCosmicPct`
-- Improved Stand Rush range (85→200) and cooldown (0.12→0.10)
-- Enhanced Cosmic Balance Naga burn DPS (22→30)
+**Key Changes:**
+- **AutoPlayer.js** — fixed 12 wrong fallbacks: `standMeterDrainOverheat` (0.50→2.0), `standMeterDrainCold` (1.30→3.0), `wanchaiDamage` (32→24), `heatHpDrainOverheat` (3→5), `chargeDamageMultMax` (3.5→2.5), `passiveLifesteal` ×2 (0.01→0.025), `standCritBonus` ×4 (0.25→0.18), `playerRushRange` (85→200)
+- **KaoPlayer.js** — fixed `stealthChainBonus` (0.25→0.18), `phantomBlinkDmgMult` (1.8→1.4), `passiveLv2CritBonus` (0.05→0.04), `phantomBlinkAmbushWindow` (1.5→2.0)
+- **PoomPlayer.js** — fixed `passiveCritBonus` (0.04→0.06), `passiveLifesteal` (0.015→0.025), `bossDmgCapPct` hardcode → `S.ritualBossDmgCapPct/CosmicPct`
+- **summons.js** — fixed `cosmicNagaBurnDPS` (22→30), `garudaDuration` ×2 (6→9), `garudaDamage` (150→120); hardcode `0.8` → `nagaIgniteDuration`; converted all `||` to `??` for 9 garuda keys
+- **config.js** — added 7 new keys: `playerRushRange: 200`, `playerRushCooldown: 0.10`, `standCritBonus: 0.18`, `vacuumEarlyHeatGain: 10`, `nagaIgniteDuration: 0.8`, `ritualBossDmgCapPct: 0.35`, `ritualBossDmgCapCosmicPct: 0.45`
 
 ### v3.30.9 — March 11, 2026
 **Purpose:** AutoPlayer.js heat damage fallback values synchronization fix

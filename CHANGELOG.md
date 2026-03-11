@@ -4,6 +4,35 @@
 
 ---
 
+## v3.30.11 — Documentation Updates
+*Released: March 11, 2026*
+
+### 📝 Documentation Corrections
+- **PROJECT_OVERVIEW.md**: Updated Stand Meter drain multipliers to match config.js values
+  - COLD tier drain: ×1.30 → ×3.0 (corrected documentation)
+  - OVERHEAT tier drain: ×0.50 → ×2.0 (corrected documentation)
+  - Stand Meter fill: +4 → +1 per hit (documentation alignment)
+
+- **mtc-game-conventions.md**: Synchronized heat tier system documentation
+  - Added config key references for all heat tier values
+  - Updated Stand Meter drain multiplier documentation
+  - Clarified config.js as source of truth for all gameplay values
+
+- **AutoPlayer.js**: Minor documentation alignment
+  - Updated wanchaiDamage fallback comment to reflect config value
+
+### 🔧 Technical Details
+- No functional gameplay changes - documentation only
+- Ensures consistency between code comments and actual config values
+- Maintains accurate reference material for AI assistants and developers
+
+### 📁 Files Modified
+- `PROJECT_OVERVIEW.md`: Stand Meter drain value corrections
+- `.agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md`: Heat tier system documentation
+- `js/entities/player/AutoPlayer.js`: Comment alignment
+
+---
+
 ## v3.30.10 — Character Balance Adjustments
 *Released: March 11, 2026*
 

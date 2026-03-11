@@ -5,7 +5,7 @@ description: "Project-specific conventions, architecture rules, and critical pit
 
 # MTC The Game — Project Conventions & Critical Pitfalls
 Stack: Vanilla JS (ES6+) + HTML5 Canvas 2D + Web Audio API. No frameworks.
-Target: 60 FPS | Status: Beta v3.30.8
+Target: 60 FPS | Status: Beta [NEXT VERSION]
 
 ---
 
@@ -238,20 +238,25 @@ Singleton pattern in effects.js:
 
 11. AutoPlayer Heat Tier System
 
-  Tier      | Range   | Effect
-  ----------|---------|----------------------------------------
-  COLD      | 0–33%   | dmg ×0.75, speed ×0.90
-  WARM      | 34–66%  | dmg ×1.10, punch rate ×0.92
-  HOT       | 67–99%  | dmg ×1.20, punch rate ×0.85
-  OVERHEAT  | 100%    | dmg ×1.30, crit +12%, HP drain 5/s
+  Tier      | Range   | config keys                    | Effect
+  ----------|---------|--------------------------------|--------------------------------------
+  COLD      | 0–33%   | coldDamageMult(0.75)           | dmg ×0.75, speed ×0.90
+  WARM      | 34–66%  | heatDmgWarm(1.10)              | dmg ×1.10, punch rate ×0.92 (heatPunchRateWarm)
+  HOT       | 67–99%  | heatDmgHot(1.20)               | dmg ×1.20, punch rate ×0.85 (heatPunchRateHot)
+  OVERHEAT  | 100%    | heatDmgOverheat(1.30)          | dmg ×1.30, crit +12%, HP drain 5/s
 
-Config keys: heatDmgWarm/Hot/Overheat, coldDamageMult, heatPunchRateWarm/Hot
-⚠️ AutoPlayer.js fallback values (??) must match config.js — source of truth is config.js.
-   Pre-nerf fallbacks (1.50/1.30/1.15/0.70) were fixed in AutoPlayer.js to match current config.
+config.js is ALWAYS source of truth — ?? fallbacks in AutoPlayer.js must match exactly.
+heatCritBonusOverheat: 0.12 | heatHpDrainOverheat: 5 | standCritBonus: 0.18
 
-Wanchai (R-Click) active changes Q: Stand Pull (range 380px, 18 dmg/enemy) instead of Vacuum Pull.
-Both use this.cooldowns.vacuum slot — Stand Pull sets it to standPullCooldown (10s),
-Vacuum sets it to vacuumCooldown (6s). HUD arc max must be dynamic (already implemented).
+Stand Meter drain multipliers (config keys — critical, were wrong pre-v3.30.10):
+  standMeterDrainRate: 8/s   (normal)
+  standMeterDrainCold: 3.0   (×3.0 — real penalty, max ~3.3s)   ← was ?? 1.30 (wrong)
+  standMeterDrainOverheat: 2.0 (×2.0 — faster burn, max ~6s)    ← was ?? 0.50 (wrong)
+
+Stand Meter fill: standMeterPerHit: 1 | standMeterOnKill: 12
+
+Wanchai (R-Click) active changes Q: Stand Pull (range 380px) instead of Vacuum Pull.
+Cooldown key: standPullCooldown: 10 vs vacuumCooldown: 6 — HUD arc max must be dynamic.
 
 ---
 
