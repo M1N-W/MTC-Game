@@ -1196,6 +1196,30 @@ class SniperEnemy extends EnemyBase {
   - Updated Zanzo afterimage effects to match new character silhouette
   - Separated rendering layers for better visual depth and organization
 
+### v3.31.7 — Input & Rendering Polish: Katana System Refinement
+*Released: March 11, 2026*
+
+**Key Features:**
+- **Left-Click Gated Combat**: Pat's attacks now require explicit mouse input for better control
+- **Enhanced Katana Projectiles**: Detailed curved blade ripple effects with energy trails
+- **UI Cooldown Fix**: Skill cooldowns now properly read from skills object structure
+- **Rendering Optimization**: Removed redundant haori rendering for cleaner visuals
+
+**Technical Changes:**
+- **PatPlayer.js**: Added left-click detection for attack gating
+- **game.js**: Integrated Pat into weapon system bypass logic
+- **weapons.js**: Added comprehensive katana projectile rendering with blade geometry
+- **ui.js**: Fixed cooldown display to use skills.zanzo.cd and skills.iaido.cd
+- **PlayerRenderer.js**: Removed haori rendering, cleaned up variable spacing
+
+**Visual Enhancements:**
+- **Katana Blade Design**: Traditional Japanese blade shape with cutting edge highlights
+- **Energy Trail System**: Gradient trails that fade behind projectiles
+- **Pressure Wave Effects**: Animated arcs expanding from blade tip
+- **Critical Hit Effects**: Golden burst rings with animated spark spokes
+
+---
+
 ### v3.31.6 — Combat FX Enhancement: Slash Arc System
 *Released: March 11, 2026*
 

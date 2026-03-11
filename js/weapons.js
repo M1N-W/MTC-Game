@@ -532,6 +532,89 @@ class Projectile {
                     }
                 }
 
+                // ── KATANA SLASH WAVE — curved blade ripple ─────────────────
+            } else if (wk === 'katana') {
+                const now = performance.now();
+                const isGold = isGolden || this.isCrit;
+                const coreCol = isGold ? '#facc15' : '#7ec8e3';
+                const glowCol = isGold ? '#fde68a' : '#38d0f8';
+                const edgeCol = isGold ? '#fffbe0' : '#daf4ff';
+                const trailCol = isGold ? 'rgba(251,204,21,' : 'rgba(56,208,248,';
+
+                // ── Energy trail (fades behind projectile) ────────────────────
+                const trailLen = isGold ? 38 : 28;
+                const trailG = CTX.createLinearGradient(-trailLen, 0, 0, 0);
+                trailG.addColorStop(0, trailCol + '0)');
+                trailG.addColorStop(0.55, trailCol + '0.15)');
+                trailG.addColorStop(1, trailCol + '0.42)');
+                CTX.globalAlpha = 1;
+                CTX.strokeStyle = trailG; CTX.lineWidth = isGold ? 10 : 7; CTX.lineCap = 'butt';
+                CTX.shadowBlur = isGold ? 18 : 10; CTX.shadowColor = glowCol;
+                CTX.beginPath(); CTX.moveTo(-trailLen, 0); CTX.lineTo(0, 0); CTX.stroke();
+                CTX.shadowBlur = 0;
+
+                // ── Blade body — elongated arc (kamae shape) ──────────────────
+                // Main curve: wide base tapering to a sharp tip
+                const BW = isGold ? 15 : 11;   // blade half-width at base
+                const BL = isGold ? 22 : 16;   // blade length forward
+                const grad = CTX.createLinearGradient(-4, 0, BL, 0);
+                grad.addColorStop(0, edgeCol);
+                grad.addColorStop(0.35, coreCol);
+                grad.addColorStop(0.75, isGold ? '#c89a00' : '#2280a8');
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                CTX.globalAlpha = 0.96;
+                CTX.fillStyle = grad;
+                CTX.shadowBlur = isGold ? 22 : 14; CTX.shadowColor = glowCol;
+                CTX.beginPath();
+                // Upper edge — curved inward like a blade back (mune)
+                CTX.moveTo(-4, -BW * 0.30);
+                CTX.bezierCurveTo(BL * 0.20, -BW * 0.80, BL * 0.55, -BW * 0.60, BL, 0);
+                // Lower edge — cutting edge (ha) — straighter, sharper angle
+                CTX.bezierCurveTo(BL * 0.55, BW * 0.38, BL * 0.22, BW * 0.62, -4, BW * 0.30);
+                CTX.closePath();
+                CTX.fill();
+
+                // ── Ha (cutting edge) — bright white spine highlight ───────────
+                CTX.globalAlpha = 0.82;
+                CTX.strokeStyle = isGold ? '#ffffff' : '#e8f8ff';
+                CTX.lineWidth = 0.9; CTX.lineCap = 'round';
+                CTX.shadowBlur = 6; CTX.shadowColor = edgeCol;
+                CTX.beginPath();
+                CTX.moveTo(-2, BW * 0.05);
+                CTX.bezierCurveTo(BL * 0.22, BW * 0.30, BL * 0.55, BW * 0.18, BL * 0.92, 0);
+                CTX.stroke();
+
+                // ── Pressure wave arcs — shimmer expanding outward from tip ────
+                const wavePhase = (now / 100) % (Math.PI * 2);
+                const wR1 = 10 + Math.sin(wavePhase) * 2.5;
+                CTX.globalAlpha = 0.38 + Math.sin(wavePhase) * 0.18;
+                CTX.strokeStyle = coreCol; CTX.lineWidth = 1.4;
+                CTX.shadowBlur = 10; CTX.shadowColor = glowCol;
+                CTX.beginPath(); CTX.arc(BL + 4, 0, wR1, -Math.PI * 0.55, Math.PI * 0.55); CTX.stroke();
+                CTX.globalAlpha = 0.20;
+                CTX.strokeStyle = edgeCol; CTX.lineWidth = 0.8;
+                CTX.beginPath(); CTX.arc(BL + 4, 0, wR1 + 5, -Math.PI * 0.48, Math.PI * 0.48); CTX.stroke();
+                CTX.shadowBlur = 0;
+
+                // ── Crit / golden burst ring ────────────────────────────────────
+                if (isGold) {
+                    CTX.globalAlpha = 0.72;
+                    CTX.strokeStyle = '#facc15'; CTX.lineWidth = 1.6;
+                    CTX.shadowBlur = 20; CTX.shadowColor = '#facc15';
+                    CTX.beginPath(); CTX.arc(0, 0, BW + 6, 0, Math.PI * 2); CTX.stroke();
+                    // spark spokes
+                    CTX.strokeStyle = '#fef9c3'; CTX.lineWidth = 0.9; CTX.shadowBlur = 8;
+                    for (let si = 0; si < 8; si++) {
+                        const sa = (si / 8) * Math.PI * 2 + now / 400;
+                        CTX.globalAlpha = 0.55 + Math.sin(now / 100 + si) * 0.35;
+                        CTX.beginPath();
+                        CTX.moveTo(Math.cos(sa) * (BW + 2), Math.sin(sa) * (BW + 2));
+                        CTX.lineTo(Math.cos(sa) * (BW + 11), Math.sin(sa) * (BW + 11));
+                        CTX.stroke();
+                    }
+                }
+                CTX.lineCap = 'butt';
+
                 // ── FALLBACK (unknown weaponKind) — glowing dot, no arrow ─────
             } else {
                 const fw = (this.isCrit || isGolden) ? 5 : 3.5;

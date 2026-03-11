@@ -1584,7 +1584,7 @@ class UIManager {
         // Zanzo Flash (Q) cooldown arc
         const zanzoIcon = document.getElementById('zanzo-icon');
         if (zanzoIcon) {
-            const cd = Math.max(0, player.cooldowns?.zanzo ?? 0);
+            const cd = Math.max(0, player.skills?.zanzo?.cd ?? 0);
             const maxCd = S.zanzoCooldown ?? 7;
             zanzoIcon.classList.toggle('active', cd <= 0);
             UIManager._setCooldownVisual('zanzo-icon', cd, maxCd);
@@ -1596,7 +1596,7 @@ class UIManager {
             const phase = player._iaidoPhase ?? 'none';
             const isCharging = phase === 'charge';
             const isCinematic = phase === 'cinematic' || phase === 'flash';
-            const cd = Math.max(0, player.cooldowns?.iaido ?? 0);
+            const cd = Math.max(0, player.skills?.iaido?.cd ?? 0);
             const maxCd = S.iaidoCooldown ?? 14;
 
             if (isCharging) {

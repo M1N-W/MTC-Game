@@ -164,8 +164,9 @@ class PatPlayer extends Player {
             }
         }
 
-        // ── Auto-shoot: slash wave or melee combo ─────────────────────────────
-        if (this.cooldowns.shoot <= 0 && this._iaidoPhase === 'none' && !this.bladeGuardActive) {
+        // ── Auto-shoot: slash wave or melee combo (L-Click gated) ───────────
+        const lClick = !!(window.mouse && window.mouse.left);
+        if (lClick && this.cooldowns.shoot <= 0 && this._iaidoPhase === 'none' && !this.bladeGuardActive) {
             this._doKatanaAttack(S, mouse);
         }
         if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;

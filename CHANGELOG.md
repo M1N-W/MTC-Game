@@ -4,6 +4,68 @@
 
 ---
 
+## v3.31.7 — Input & Rendering Polish: Katana System Refinement
+*Released: March 11, 2026*
+
+### 🖱️ Input System Improvements
+- **Left-Click Gated Combat**: Pat's katana attacks now require explicit mouse input
+  - **Attack Control**: Added `lClick` detection in `PatPlayer.update()`
+  - **Weapon System Integration**: Pat excluded from generic weapon firing in `game.js`
+  - **Better Player Experience**: Prevents accidental attacks and improves combat timing
+
+### 🎯 Enhanced Katana Projectiles
+- **Traditional Blade Design**: Authentic Japanese katana shape with proper geometry
+  - **Blade Body**: Elongated arc with kamae shape (wide base tapering to tip)
+  - **Cutting Edge (Ha)**: Bright white spine highlight with bezier curves
+  - **Blade Back (Mune)**: Curved inward edge for realistic blade profile
+- **Energy Trail System**: Gradient trails that fade behind projectiles
+  - **Trail Length**: 28px normal, 38px for critical hits
+  - **Color Coding**: Ice-blue for normal, gold for critical attacks
+  - **Shadow Effects**: Dynamic glow with intensity based on attack type
+
+### 🌊 Pressure Wave Effects
+- **Animated Arcs**: Shimmering waves expanding from blade tip
+  - **Wave Phase**: Sinusoidal animation with `Math.sin(wavePhase)`
+  - **Dual Ring System**: Inner and outer arcs with different opacities
+  - **Dynamic Radius**: Pulsating size based on animation timing
+
+### ✨ Critical Hit Enhancements
+- **Golden Burst Ring**: Expanding ring with animated spark spokes
+  - **Spark Animation**: 8 rotating spokes with individual alpha modulation
+  - **Ring Glow**: Enhanced shadow blur and color intensity
+  - **Visual Feedback**: Clear distinction between normal and critical attacks
+
+### 🔧 UI Cooldown Fixes
+- **Skills Object Structure**: Fixed cooldown display to use proper property paths
+  - **Zanzo Cooldown**: Changed from `player.cooldowns?.zanzo` to `player.skills?.zanzo?.cd`
+  - **Iaido Cooldown**: Changed from `player.cooldowns?.iaido` to `player.skills?.iaido?.cd`
+  - **Consistent Display**: All skill cooldowns now use unified skills object structure
+
+### 🎨 Rendering Optimizations
+- **Haori Removal**: Eliminated redundant robe rendering for cleaner visuals
+  - **Performance Gain**: Removed 50+ lines of complex quadratic curve rendering
+  - **Visual Clarity**: Cleaner character silhouette without overlapping elements
+  - **Code Cleanup**: Better variable spacing and formatting consistency
+
+### 🏗️ System Integration
+- **Weapon System Bypass**: Pat properly excluded from generic weapon firing
+  - **Character Detection**: Added `_isPat` check in `game.js`
+  - **Input Routing**: Pat handles attacks internally through `_doKatanaAttack()`
+  - **Compatibility**: Maintains existing behavior for Kao, Poom, and Auto characters
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/entities/player/PatPlayer.js (+3 lines left-click gating)
+✅ MODIFIED: js/game.js (+4 lines Pat integration)
+✅ MODIFIED: js/weapons.js (+89 lines katana projectile rendering)
+✅ MODIFIED: js/ui.js (+4 lines cooldown display fix)
+✅ MODIFIED: js/rendering/PlayerRenderer.js (-50 lines haori removal)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+25 lines input & rendering polish entry)
+✅ MODIFIED: sw.js (v3.31.7)
+```
+
+---
+
 ## v3.31.6 — Combat FX Enhancement: Slash Arc System
 *Released: March 11, 2026*
 

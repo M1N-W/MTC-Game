@@ -254,15 +254,17 @@ function _tickEntities(dt, _inTutorial) {
         //    WeaponSystem.updateBurst() calls shootSingle() which bypasses KaoPlayer's
         //    own fire-rate gating, causing OP machine-gun effect.
         const isKao = typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer;
-        if (!isKao) {
+        const _isPat = typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer;
+        if (!isKao && !_isPat) {
             const burstProjectiles = weaponSystem.updateBurst(window.player, window.player.damageBoost);
             if (burstProjectiles && burstProjectiles.length > 0) projectileManager.add(burstProjectiles);
         }
-        // Route shooting: Kao uses its own shoot(); Auto and Poom handle internally
+        // Route shooting: Kao uses its own shoot(); Auto, Poom, Pat handle internally
         const isPoom = typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer;
+        const isPat = typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer;
         if (isKao) {
             if (mouse.left === 1 && GameState.phase === 'PLAYING') window.player.shoot(dt);
-        } else if (!isPoom && mouse.left === 1 && GameState.phase === 'PLAYING') {
+        } else if (!isPoom && !isPat && mouse.left === 1 && GameState.phase === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
                 if (projectiles && projectiles.length > 0) {

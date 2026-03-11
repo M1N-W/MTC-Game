@@ -2650,10 +2650,10 @@ class PlayerRenderer {
         // ── SLASH ARC — crescent swing flash ────────────────────────────────────
         if (arcActive) {
             const arcColor = isCritArc ? '#facc15' : '#7ec8e3';
-            const arcGlow  = isCritArc ? '#fde68a' : '#38d0f8';
+            const arcGlow = isCritArc ? '#fde68a' : '#38d0f8';
             const arcSweep = isCritArc ? Math.PI * 1.0 : Math.PI * 0.80;
             const arcStart = arcAngle - arcSweep / 2;
-            const arcEnd   = arcAngle + arcSweep / 2;
+            const arcEnd = arcAngle + arcSweep / 2;
             // Radius expands outward as timer counts down (starts tight, blooms out)
             const arcR = R + 10 + (1 - arcT) * 24;
 
@@ -2689,59 +2689,16 @@ class PlayerRenderer {
         }
 
         if (entity.isConfused) { ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center'; ctx.fillText('😵', screen.x, screen.y - 32); }
-        if (entity.isBurning)  { ctx.font = 'bold 18px Arial'; ctx.fillText('🔥', screen.x + 18, screen.y - 26); }
+        if (entity.isBurning) { ctx.font = 'bold 18px Arial'; ctx.fillText('🔥', screen.x + 18, screen.y - 26); }
 
         // ════════════════════════════════════════════════════════════════════════
         // LAYER 1 — BODY
         // ════════════════════════════════════════════════════════════════════════
         ctx.save();
-        const crouchY  = isCharge ? 5  : 0;
+        const crouchY = isCharge ? 5 : 0;
         const crouchSY = isCharge ? 0.85 : 1.0;
         ctx.translate(screen.x + recoilX, screen.y + recoilY + bobY + crouchY);
         ctx.scale(stretchX * facingSign, stretchY * crouchSY);
-
-        // ── Haori (sleeveless outer robe — two flowing flaps, behind body circle) ─
-        ctx.save();
-        const haoriBase = bladeGuard ? 'rgba(5,6,16,0.96)' : 'rgba(6,8,18,0.90)';
-        ctx.fillStyle = haoriBase;
-        ctx.shadowBlur = 0;
-        // Left flap
-        ctx.beginPath();
-        ctx.moveTo(-R * 0.52, R * 0.18);
-        ctx.quadraticCurveTo(-R * 1.55, R * 0.52, -R * 1.22, R * 1.32);
-        ctx.quadraticCurveTo(-R * 0.58, R * 1.68, -R * 0.08, R * 1.08);
-        ctx.quadraticCurveTo(-R * 0.26, R * 0.52, -R * 0.52, R * 0.18);
-        ctx.closePath(); ctx.fill();
-        // Right flap
-        ctx.beginPath();
-        ctx.moveTo(R * 0.52, R * 0.18);
-        ctx.quadraticCurveTo(R * 1.55, R * 0.52, R * 1.22, R * 1.32);
-        ctx.quadraticCurveTo(R * 0.58, R * 1.68, R * 0.08, R * 1.08);
-        ctx.quadraticCurveTo(R * 0.26, R * 0.52, R * 0.52, R * 0.18);
-        ctx.closePath(); ctx.fill();
-        // Haori outer edge seam
-        ctx.strokeStyle = 'rgba(22,32,70,0.55)'; ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.moveTo(-R * 0.52, R * 0.18);
-        ctx.quadraticCurveTo(-R * 1.55, R * 0.52, -R * 1.22, R * 1.32);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(R * 0.52, R * 0.18);
-        ctx.quadraticCurveTo(R * 1.55, R * 0.52, R * 1.22, R * 1.32);
-        ctx.stroke();
-        // Ice-blue hem (after passive unlock — battle-worn glow at robe edge)
-        if (entity.passiveUnlocked) {
-            ctx.strokeStyle = 'rgba(126,200,227,0.28)'; ctx.lineWidth = 0.9;
-            ctx.beginPath();
-            ctx.moveTo(-R * 1.22, R * 1.32);
-            ctx.quadraticCurveTo(-R * 0.58, R * 1.68, -R * 0.08, R * 1.08);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(R * 1.22, R * 1.32);
-            ctx.quadraticCurveTo(R * 0.58, R * 1.68, R * 0.08, R * 1.08);
-            ctx.stroke();
-        }
-        ctx.restore();
 
         // ── Outer ring — ice glow (intensifies during charge) ─────────────────
         ctx.shadowBlur = isCharge ? 24 : 9;
@@ -2917,7 +2874,7 @@ class PlayerRenderer {
 
         // ── Blade ────────────────────────────────────────────────────────────────
         const isAmbush = (entity._zanzoAmbushTimer ?? 0) > 0;
-        const bladeGlowStr   = isAmbush ? 24 : isCharge ? 20 : arcActive ? 18 : 8;
+        const bladeGlowStr = isAmbush ? 24 : isCharge ? 20 : arcActive ? 18 : 8;
         const bladeGlowColor = isAmbush ? '#fde68a' : '#7ec8e3';
 
         ctx.shadowBlur = bladeGlowStr; ctx.shadowColor = bladeGlowColor;
