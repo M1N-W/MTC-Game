@@ -56,6 +56,12 @@ class PatPlayer extends Player {
         // Unlock: ใช้ Iaido สำเร็จ (โดน enemy) ครั้งแรก
         this._iaidoKillCount = 0;
         this._passiveUnlockTriggered = false;
+
+        // ── Swing Arc (renderer feedback) ─────────────────────────────────────
+        // Set when katana swings — PlayerRenderer reads these to flash arc FX
+        this._attackArcTimer = 0;   // counts down from 0.25 (slash) or 0.18 (melee)
+        this._attackArcAngle = 0;   // world angle of the swing
+        this._isCritArc = false;    // drives gold vs ice-blue arc colour
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -106,6 +112,7 @@ class PatPlayer extends Player {
         if (this._bladeGuardCooldown > 0) this._bladeGuardCooldown -= dt;
         if (this._zanzoAmbushTimer > 0) this._zanzoAmbushTimer -= dt;
         if (this._meleeCooldownTimer > 0) this._meleeCooldownTimer -= dt;
+        if (this._attackArcTimer > 0) this._attackArcTimer -= dt;
 
         // ── Zanzo ghost alpha decay (O(n), pool — no alloc) ──────────────────
         const ghostCount = S.zanzoGhostCount ?? 4;
@@ -503,6 +510,12 @@ class PatPlayer extends Player {
         p.weaponKind = 'katana';
         projectileManager.add(p);
 
+        // ── Swing arc renderer feedback ──────────────────────────────────────
+        this._attackArcTimer = 0.25;
+        this._attackArcAngle = aimAngle;
+        this._isCritArc = isCrit;
+        if (typeof spawnKatanaSlashArc !== 'undefined') spawnKatanaSlashArc(sx, sy, aimAngle, isCrit);
+
         // Recoil + cooldown
         this.vx -= Math.cos(aimAngle) * 30;
         this.vy -= Math.sin(aimAngle) * 30;
@@ -567,6 +580,12 @@ class PatPlayer extends Player {
         // Combo step
         this._meleeComboStep = (this._meleeComboStep + 1) % (S.meleeComboHits ?? 3);
         const comboWindow = S.meleeComboWindow ?? 0.18;
+
+        // ── Swing arc renderer feedback ──────────────────────────────────────
+        this._attackArcTimer = 0.18;
+        this._attackArcAngle = aimAngle;
+        this._isCritArc = (this._zanzoAmbushTimer > 0);
+        if (typeof spawnKatanaSlashArc !== 'undefined') spawnKatanaSlashArc(this.x, this.y, aimAngle, this._isCritArc);
 
         if (this._meleeComboStep === 0) {
             // Combo finished — full cooldown

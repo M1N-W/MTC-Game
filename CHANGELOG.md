@@ -4,6 +4,61 @@
 
 ---
 
+## v3.31.6 — Combat FX Enhancement: Slash Arc System
+*Released: March 11, 2026*
+
+### ⚔️ Dynamic Slash Arc Effects
+- **Visual Feedback System**: Real-time crescent flash effects for all katana attacks
+  - **Slash Wave**: 0.25s duration arc with ice-blue coloring
+  - **Melee Combo**: 0.18s duration arc with gold during ambush state
+  - **State-Aware Rendering**: Effects respond to charge, guard, and ambush states
+- **Arc Geometry**: Expanding radius as timer counts down (tight start → bloom out)
+- **Critical Hit Differentiation**: Gold arcs for ambush crits vs ice-blue for normal attacks
+
+### 🎨 Enhanced Katana Rendering
+- **Octagonal Tsuba Guard**: Replaced elliptical guard with traditional octagonal design
+- **Diamond Handle Lacing**: Improved tsuka wrapping with 5 diagonal lacing lines
+- **Blood Stain Detail**: Visible blood pattern on blade after Ronin's Edge passive unlock
+- **Blade Geometry**: Enhanced ha-zukuri cross-section with fuller groove and kissaki polish
+- **State-Based Glow**: Intensified blade glow during charge and ambush states
+
+### 👻 Improved Afterimage System
+- **Haori Wing Ghosts**: Added flowing robe wings to zanzo afterimages for depth
+- **Katana Ghost Trails**: Katana silhouette appears in afterimages at original angle
+- **Enhanced Shadow**: Improved ground shadow with better positioning and opacity
+- **Dash Ghost Polish**: Refactored dash ghost colors and sizing for consistency
+
+### 🌊 New Particle System Integration
+- **slash_arc Particle Type**: New elongated teardrop streak particles
+  - **Directional Fan**: Particles spread in attack direction with controlled spread
+  - **Dual Color System**: Gold for crits, ice-blue for normal attacks
+  - **Core Flash Particles**: Bright center particles for enhanced impact feel
+- **spawnKatanaSlashArc()**: Dedicated function for creating slash arc particle effects
+- **Performance Optimized**: Reused particle pool with proper cleanup and MAX_PARTICLES enforcement
+
+### 🎯 Combat State Awareness
+- **Attack Arc Timer**: New `_attackArcTimer` property coordinates visual feedback
+- **Arc Angle Tracking**: `_attackArcAngle` stores world angle for accurate rendering
+- **Critical Arc Flag**: `_isCritArc` drives color differentiation in effects
+- **Ambush Integration**: Arc effects automatically detect ambush state for gold coloring
+
+### 🏗️ Rendering Architecture Improvements
+- **Layer Separation**: Enhanced body and weapon layering with better depth
+- **State-Based Transforms**: Katana positioning adapts to combat state (sheath, guard, charge, follow-through)
+- **Enhanced Hands**: Improved grip hand and support hand rendering with gradients
+- **Visual Polish**: Better specular highlights, shadow consistency, and color coordination
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/rendering/PlayerRenderer.js (+180 lines enhanced rendering)
+✅ MODIFIED: js/entities/player/PatPlayer.js (+20 lines attack arc integration)
+✅ MODIFIED: js/effects.js (+90 lines new particle system)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+20 lines combat FX entry)
+✅ MODIFIED: sw.js (v3.31.6)
+```
+
+---
+
 ## v3.31.5 — Visual Refinement: Pat Ronin Authenticity
 *Released: March 11, 2026*
 

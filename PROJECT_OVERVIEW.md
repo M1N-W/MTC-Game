@@ -1196,6 +1196,28 @@ class SniperEnemy extends EnemyBase {
   - Updated Zanzo afterimage effects to match new character silhouette
   - Separated rendering layers for better visual depth and organization
 
+### v3.31.6 — Combat FX Enhancement: Slash Arc System
+*Released: March 11, 2026*
+
+**Key Features:**
+- **Slash Arc Visual Feedback**: Dynamic crescent flash effects for katana attacks
+- **Enhanced Rendering**: Improved haori (robe) wings, katana details, and visual effects
+- **Particle System Integration**: New `slash_arc` particle type with teardrop streaks
+- **Combat State Awareness**: Visual effects respond to ambush, charge, and critical states
+
+**Technical Changes:**
+- **PlayerRenderer.js**: Added slash arc rendering with state-based colors (gold for crits, ice-blue for normal)
+- **PatPlayer.js**: Integrated attack arc timer system for visual feedback coordination
+- **effects.js**: New `spawnKatanaSlashArc()` function and `slash_arc` particle rendering
+- **Visual Polish**: Enhanced katana with octagonal tsuba, blood stains, and diamond lacing
+
+**Performance Optimizations:**
+- **Efficient Particle Pooling**: Reused particle system with proper cleanup
+- **State-Based Rendering**: Effects only render when relevant timers are active
+- **Optimized Ghost Trails**: Improved zanzo afterimage rendering with haori wing details
+
+---
+
 ### Previous Versions
 *(Archived changes removed for brevity - see git history for full record)*
 

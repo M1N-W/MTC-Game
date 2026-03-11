@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.31.5'; // Visual Refinement: Pat ronin authenticity
+const CACHE_NAME = 'mtc-cache-v3.31.6'; // Combat FX Enhancement: Slash Arc System
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

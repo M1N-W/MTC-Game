@@ -251,6 +251,40 @@ class Particle {
             return;
         }
 
+        // ── TYPE: SLASH_ARC (Katana blade energy — elongated streak) ─
+        if (this.type === 'slash_arc') {
+            CTX.save();
+            CTX.translate(screen.x, screen.y);
+            const bladeAngle = this.data.angle ?? 0;
+            CTX.rotate(bladeAngle);
+            const streakLen = this.size * (2.5 + alpha * 3.5);
+            const streakW = this.size * 0.55 * alpha;
+            CTX.globalAlpha = alpha * 0.88;
+            CTX.shadowBlur = 10 * alpha;
+            CTX.shadowColor = this.color;
+            // Elongated teardrop streak
+            CTX.fillStyle = this.color;
+            CTX.beginPath();
+            CTX.moveTo(streakLen, 0);
+            CTX.quadraticCurveTo(streakLen * 0.4, -streakW, 0, 0);
+            CTX.quadraticCurveTo(streakLen * 0.4, streakW, streakLen, 0);
+            CTX.closePath();
+            CTX.fill();
+            // Bright core spine
+            CTX.globalAlpha = alpha * 0.60;
+            CTX.strokeStyle = '#f0f8ff';
+            CTX.lineWidth = 0.8;
+            CTX.shadowBlur = 4;
+            CTX.beginPath();
+            CTX.moveTo(0, 0);
+            CTX.lineTo(streakLen * 0.85, 0);
+            CTX.stroke();
+            CTX.shadowBlur = 0;
+            CTX.restore();
+            CTX.globalAlpha = 1;
+            return;
+        }
+
         // ── TYPE: STEAM (Rising Smoke) ────────────────────────
         if (this.type === 'steam') {
             // Steam grows slightly as it fades
@@ -347,6 +381,14 @@ class ParticleSystem {
                     angle: options.angle || 0,       // Pat's facing angle
                     alphaScale: options.alphaScale ?? 1.0  // per-ghost brightness
                 };
+            }
+            else if (type === 'slash_arc') {
+                // Katana slash energy — fast directional fan, tapers to a point
+                vx = options.vx ?? 0;
+                vy = options.vy ?? 0;
+                size = options.size || rand(2, 4);
+                lifetime = options.lifetime || rand(0.12, 0.22);
+                data = { angle: options.angle ?? 0 }; // blade angle for elongated draw
             }
             else {
                 // Standard 'circle' explosion
@@ -2465,9 +2507,57 @@ function spawnBloodBurst(x, y, count = 18) {
     }
 }
 
-// Expose to global scope for use in PatPlayer.js
+/**
+ * Spawn katana slash wave arc effect at attack origin.
+ * Creates a fan of blade-energy streak particles spreading in the attack direction.
+ * Called from PatPlayer._doSlashWave() and _doMeleeCombo().
+ *
+ * @param {number}  x       World X of attack origin
+ * @param {number}  y       World Y of attack origin
+ * @param {number}  angle   Aim angle (radians)
+ * @param {boolean} isCrit  Gold (crit) vs ice-blue (normal) colour
+ */
+function spawnKatanaSlashArc(x, y, angle, isCrit = false) {
+    if (typeof particleSystem === 'undefined') return;
+    const color = isCrit ? '#facc15' : '#7ec8e3';
+    const coreColor = isCrit ? '#fff4c0' : '#d0f0ff';
+    const spread = isCrit ? Math.PI * 0.60 : Math.PI * 0.50; // arc spread
+    const count = isCrit ? 16 : 12;
+
+    for (let i = 0; i < count; i++) {
+        // Fan particles spread evenly across the arc
+        const t = count > 1 ? i / (count - 1) : 0.5;
+        const a = angle - spread * 0.5 + spread * t;
+        const speed = 220 + (i % 3) * 70;     // deterministic speed variation
+        const vx = Math.cos(a) * speed;
+        const vy = Math.sin(a) * speed;
+        const size = 3.5 + (i % 3) * 0.8;     // 3.5–5.1px
+        const life = 0.14 + (i % 4) * 0.022;  // 0.14–0.21s
+        particleSystem.particles.push(
+            Particle.acquire(x, y, vx, vy, color, size, life, 'slash_arc', { angle: a })
+        );
+        while (particleSystem.particles.length > ParticleSystem.MAX_PARTICLES) {
+            particleSystem.particles.shift().release();
+        }
+    }
+
+    // Bright core flash particles (short-lived, forward-biased)
+    for (let i = 0; i < 5; i++) {
+        const a = angle + (i - 2) * 0.12;
+        const vx = Math.cos(a) * 380;
+        const vy = Math.sin(a) * 380;
+        particleSystem.particles.push(
+            Particle.acquire(x + Math.cos(angle) * 10, y + Math.sin(angle) * 10,
+                vx, vy, coreColor, 2.5, 0.10, 'slash_arc', { angle: a })
+        );
+        while (particleSystem.particles.length > ParticleSystem.MAX_PARTICLES) {
+            particleSystem.particles.shift().release();
+        }
+    }
+}
 window.spawnZanzoTrail = spawnZanzoTrail;
 window.spawnBloodBurst = spawnBloodBurst;
+window.spawnKatanaSlashArc = spawnKatanaSlashArc;
 
 /** Global singleton */
 var waveAnnouncementFX = new WaveAnnouncementFX();
@@ -2490,7 +2580,7 @@ if (typeof module !== 'undefined' && module.exports) {
         MeteorStrike,
         spawnParticles, spawnFloatingText,
         spawnWanchaiPunchText,
-        spawnZanzoTrail, spawnBloodBurst,
+        spawnZanzoTrail, spawnBloodBurst, spawnKatanaSlashArc,
         drawGlitchEffect,
         OrbitalParticle, OrbitalParticleSystem,
         initOrbitalSystems, updateOrbitalEffects, drawOrbitalEffects,
