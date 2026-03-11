@@ -1425,6 +1425,261 @@ class AudioSystem {
         return this.masterVolume;
     }
 
+    // ══════════════════════════════════════════════════════════
+    // ⚔️  PAT (Samurai Ronin) SFX
+    // Gain values read from GAME_CONFIG.audio.sfx — add pat_* keys there
+    // if you need fine-tuned mixing without touching code here.
+    // Guard pattern: if (!this.enabled || !this.ctx) return — all methods.
+    // ══════════════════════════════════════════════════════════
+
+    // ── pat_slash — Slash Wave projectile fired ───────────────
+    // Sharp metal "sing" → steel ringing on release.
+    // Layer 1: Triangle 1800→400 Hz sweep (blade edge hiss)
+    // Layer 2: Sine  900→300 Hz (body resonance)
+    playPatSlash() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const gainMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.sfx?.pat_slash != null)
+            ? GAME_CONFIG.audio.sfx.pat_slash : 0.45;
+        const t = this.ctx.currentTime;
+
+        // Layer 1 — Triangle blade hiss
+        const o1 = this.ctx.createOscillator();
+        const g1 = this.ctx.createGain();
+        o1.connect(g1); g1.connect(this.ctx.destination);
+        o1.type = 'triangle';
+        o1.frequency.setValueAtTime(1800, t);
+        o1.frequency.exponentialRampToValueAtTime(400, t + 0.12);
+        g1.gain.setValueAtTime(gainMult * this.masterVolume * this.sfxVolume, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        o1.start(t); o1.stop(t + 0.12);
+
+        // Layer 2 — Sine resonance body
+        const o2 = this.ctx.createOscillator();
+        const g2 = this.ctx.createGain();
+        o2.connect(g2); g2.connect(this.ctx.destination);
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(900, t);
+        o2.frequency.exponentialRampToValueAtTime(300, t + 0.20);
+        g2.gain.setValueAtTime(gainMult * 0.5 * this.masterVolume * this.sfxVolume, t);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.20);
+        o2.start(t); o2.stop(t + 0.20);
+    }
+
+    // ── pat_melee_hit — Melee combo hit contact ───────────────
+    // Heavy blunt thud — fist/blade impact on body.
+    // Square wave 300→80 Hz (impact) + noise burst (flesh/crunch).
+    playPatMeleeHit() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const gainMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.sfx?.pat_melee_hit != null)
+            ? GAME_CONFIG.audio.sfx.pat_melee_hit : 0.50;
+        const t = this.ctx.currentTime;
+
+        // Impact thud
+        const o1 = this.ctx.createOscillator();
+        const g1 = this.ctx.createGain();
+        o1.connect(g1); g1.connect(this.ctx.destination);
+        o1.type = 'square';
+        o1.frequency.setValueAtTime(300, t);
+        o1.frequency.exponentialRampToValueAtTime(80, t + 0.08);
+        g1.gain.setValueAtTime(gainMult * this.masterVolume * this.sfxVolume, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+        o1.start(t); o1.stop(t + 0.09);
+
+        // Noise burst — crunch layer
+        const bufSize = Math.floor(this.ctx.sampleRate * 0.06);
+        const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+        const ns = this.ctx.createBufferSource();
+        ns.buffer = buf;
+        const lpf = this.ctx.createBiquadFilter();
+        lpf.type = 'lowpass';
+        lpf.frequency.value = 1200;
+        const ng = this.ctx.createGain();
+        ng.gain.setValueAtTime(gainMult * 0.4 * this.masterVolume * this.sfxVolume, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        ns.connect(lpf); lpf.connect(ng); ng.connect(this.ctx.destination);
+        ns.start(t); ns.stop(t + 0.06);
+    }
+
+    // ── pat_reflect — Blade Guard reflects a projectile ───────
+    // Metallic "CLANG" — steel deflection.
+    // Sine 2400→1200 Hz sharp ping + fast triangle 1600→800 Hz.
+    playPatReflect() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const gainMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.sfx?.pat_reflect != null)
+            ? GAME_CONFIG.audio.sfx.pat_reflect : 0.60;
+        const t = this.ctx.currentTime;
+
+        // Main clang
+        const o1 = this.ctx.createOscillator();
+        const g1 = this.ctx.createGain();
+        o1.connect(g1); g1.connect(this.ctx.destination);
+        o1.type = 'sine';
+        o1.frequency.setValueAtTime(2400, t);
+        o1.frequency.exponentialRampToValueAtTime(1200, t + 0.15);
+        g1.gain.setValueAtTime(gainMult * this.masterVolume * this.sfxVolume, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        o1.start(t); o1.stop(t + 0.22);
+
+        // Shimmer accent
+        const o2 = this.ctx.createOscillator();
+        const g2 = this.ctx.createGain();
+        o2.connect(g2); g2.connect(this.ctx.destination);
+        o2.type = 'triangle';
+        o2.frequency.setValueAtTime(1600, t + 0.01);
+        o2.frequency.exponentialRampToValueAtTime(800, t + 0.12);
+        g2.gain.setValueAtTime(gainMult * 0.55 * this.masterVolume * this.sfxVolume, t + 0.01);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        o2.start(t + 0.01); o2.stop(t + 0.12);
+    }
+
+    // ── pat_zanzo — Zanzo Flash teleport whoosh ───────────────
+    // Fast air-displacement "zip" — speed > sound.
+    // Noise burst through highpass + sine ascend 300→1800 Hz.
+    playPatZanzo() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const gainMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.sfx?.pat_zanzo != null)
+            ? GAME_CONFIG.audio.sfx.pat_zanzo : 0.50;
+        const t = this.ctx.currentTime;
+
+        // Whoosh noise
+        const bufSize = Math.floor(this.ctx.sampleRate * 0.10);
+        const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+        const ns = this.ctx.createBufferSource();
+        ns.buffer = buf;
+        const hpf = this.ctx.createBiquadFilter();
+        hpf.type = 'highpass';
+        hpf.frequency.value = 900;
+        const ng = this.ctx.createGain();
+        ng.gain.setValueAtTime(0, t);
+        ng.gain.linearRampToValueAtTime(gainMult * 0.6 * this.masterVolume * this.sfxVolume, t + 0.02);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
+        ns.connect(hpf); hpf.connect(ng); ng.connect(this.ctx.destination);
+        ns.start(t); ns.stop(t + 0.10);
+
+        // Pitch ascend — speed sensation
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, t);
+        osc.frequency.exponentialRampToValueAtTime(1800, t + 0.08);
+        gain.gain.setValueAtTime(gainMult * 0.4 * this.masterVolume * this.sfxVolume, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+        osc.start(t); osc.stop(t + 0.09);
+    }
+
+    // ── pat_iaido_charge — Iaido Phase 1 charge (0.6s) ────────
+    // Low resonant hum building — tension before the strike.
+    // Sine 120→220 Hz slow rise + triangle shimmer on top.
+    playPatIaidoCharge() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const gainMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.sfx?.pat_iaido_charge != null)
+            ? GAME_CONFIG.audio.sfx.pat_iaido_charge : 0.35;
+        const dur = 0.60; // matches iaidoChargeDuration
+        const t = this.ctx.currentTime;
+
+        // Hum body
+        const o1 = this.ctx.createOscillator();
+        const g1 = this.ctx.createGain();
+        o1.connect(g1); g1.connect(this.ctx.destination);
+        o1.type = 'sine';
+        o1.frequency.setValueAtTime(120, t);
+        o1.frequency.linearRampToValueAtTime(220, t + dur);
+        g1.gain.setValueAtTime(0, t);
+        g1.gain.linearRampToValueAtTime(gainMult * this.masterVolume * this.sfxVolume, t + dur * 0.6);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.05);
+        o1.start(t); o1.stop(t + dur + 0.05);
+
+        // Shimmer accent — ice blue flavor
+        const o2 = this.ctx.createOscillator();
+        const g2 = this.ctx.createGain();
+        o2.connect(g2); g2.connect(this.ctx.destination);
+        o2.type = 'triangle';
+        o2.frequency.setValueAtTime(800, t + dur * 0.3);
+        o2.frequency.linearRampToValueAtTime(1400, t + dur);
+        g2.gain.setValueAtTime(0, t + dur * 0.3);
+        g2.gain.linearRampToValueAtTime(gainMult * 0.4 * this.masterVolume * this.sfxVolume, t + dur);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.05);
+        o2.start(t + dur * 0.3); o2.stop(t + dur + 0.05);
+    }
+
+    // ── pat_iaido_strike — Iaido Phase 2 flash impact ─────────
+    // Instant violent transient — supersonic blade cut.
+    // White noise burst (20ms) + square click + high sine "crack".
+    playPatIaidoStrike() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const gainMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.sfx?.pat_iaido_strike != null)
+            ? GAME_CONFIG.audio.sfx.pat_iaido_strike : 0.75;
+        const t = this.ctx.currentTime;
+
+        // Noise transient — pure impact
+        const bufSize = Math.floor(this.ctx.sampleRate * 0.022);
+        const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+        const ns = this.ctx.createBufferSource();
+        ns.buffer = buf;
+        const ng = this.ctx.createGain();
+        ng.gain.setValueAtTime(gainMult * this.masterVolume * this.sfxVolume, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
+        ns.connect(ng); ng.connect(this.ctx.destination);
+        ns.start(t); ns.stop(t + 0.022);
+
+        // High crack
+        const o1 = this.ctx.createOscillator();
+        const g1 = this.ctx.createGain();
+        o1.connect(g1); g1.connect(this.ctx.destination);
+        o1.type = 'square';
+        o1.frequency.setValueAtTime(3200, t);
+        o1.frequency.exponentialRampToValueAtTime(400, t + 0.06);
+        g1.gain.setValueAtTime(gainMult * 0.6 * this.masterVolume * this.sfxVolume, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        o1.start(t); o1.stop(t + 0.06);
+    }
+
+    // ── pat_sheathe — Iaido Phase 3 sheathing (cinematic end) ─
+    // Soft metallic slide into scabbard — "shing" descend.
+    // Triangle 1400→600 Hz slow fade — restrained, deliberate.
+    playPatSheathe() {
+        if (!this.enabled || !this.ctx) return;
+        this._ensureAudioContextRunning();
+        const gainMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.audio?.sfx?.pat_sheathe != null)
+            ? GAME_CONFIG.audio.sfx.pat_sheathe : 0.30;
+        const t = this.ctx.currentTime;
+
+        // Shing descend
+        const o1 = this.ctx.createOscillator();
+        const g1 = this.ctx.createGain();
+        o1.connect(g1); g1.connect(this.ctx.destination);
+        o1.type = 'triangle';
+        o1.frequency.setValueAtTime(1400, t);
+        o1.frequency.exponentialRampToValueAtTime(600, t + 0.35);
+        g1.gain.setValueAtTime(gainMult * this.masterVolume * this.sfxVolume, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.40);
+        o1.start(t); o1.stop(t + 0.40);
+
+        // Sub-harmonic click — scabbard lock
+        const o2 = this.ctx.createOscillator();
+        const g2 = this.ctx.createGain();
+        o2.connect(g2); g2.connect(this.ctx.destination);
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(600, t + 0.33);
+        o2.frequency.exponentialRampToValueAtTime(200, t + 0.42);
+        g2.gain.setValueAtTime(gainMult * 0.5 * this.masterVolume * this.sfxVolume, t + 0.33);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+        o2.start(t + 0.33); o2.stop(t + 0.42);
+    }
+
     // ── Shell Casing Drop SFX — short metallic tink ──────────────────────────
     playShellDrop() {
         if (!this.enabled || !this.ctx) return;

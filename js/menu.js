@@ -21,7 +21,10 @@ function selectCharacter(charType) {
     // ── Buttons label ──────────────────────────────
     const startBtn = document.getElementById('start-btn');
     const tutBtn = document.getElementById('tutorial-btn');
-    const iconPrefix = charType === 'poom' ? '🌾' : (charType === 'auto' ? '🔥' : '🎓');
+    const iconPrefix = charType === 'poom' ? '🌾'
+        : charType === 'auto' ? '🔥'
+            : charType === 'pat' ? '⚔️'
+                : '🎓';
     if (startBtn) startBtn.textContent = iconPrefix + ' START MISSION';
     if (tutBtn) tutBtn.textContent = iconPrefix + ' REPLAY TUTORIAL';
 
@@ -38,13 +41,15 @@ function selectCharacter(charType) {
     if (hintEl) {
         hintEl.textContent = charType === 'auto' ? 'STAND'
             : charType === 'poom' ? 'EAT'
-                : 'R-Click';
+                : charType === 'pat' ? 'GUARD'
+                    : 'R-Click';
     }
     const emojiEl = document.getElementById('skill1-emoji');
     if (emojiEl) {
         emojiEl.textContent = charType === 'auto' ? '🔥'
             : charType === 'poom' ? '🍚'
-                : '📖';
+                : charType === 'pat' ? '⚔️'
+                    : '📖';
     }
 }
 
@@ -60,7 +65,7 @@ window.addEventListener('load', function _injectPortraits() {
     }
 
     // ── Char-select card portraits (96 × 112 each) ──────────────────────────
-    ['kao', 'poom', 'auto'].forEach(id => {
+    ['kao', 'poom', 'auto', 'pat'].forEach(id => {
         const el = document.getElementById('char-avatar-' + id);
         if (!el) return;
         el.innerHTML =

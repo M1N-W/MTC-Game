@@ -1,23 +1,6 @@
 ---
 name: tauri-event-system
-description: Advanced Tauri event patterns for bidirectional communication, streaming data, window-to-window messaging, and custom event handling
-version: 1.0.0
-category: development
-author: Claude MPM Team
-license: MIT
-progressive_disclosure:
-  entry_point:
-    summary: "Advanced event patterns: bidirectional events, streaming, window messaging, custom payloads, listener management"
-    when_to_use: "When implementing real-time updates, progress tracking, inter-window communication, or streaming data"
-    quick_start: "1. Backend emits with window.emit() 2. Frontend listens with listen() 3. Clean up with unlisten() 4. Use typed payloads"
-context_limit: 500
-tags:
-  - tauri
-  - events
-  - ipc
-  - streaming
-  - real-time
-requires_tools: []
+description: Advanced Tauri event patterns for bidirectional Rust↔Frontend communication. Use this skill whenever working with Tauri events, window.emit(), listen(), real-time updates, progress tracking, streaming data, inter-window messaging, event payloads, unlisten cleanup, or any IPC pattern in a Tauri app.
 ---
 
 # Tauri Advanced Event System

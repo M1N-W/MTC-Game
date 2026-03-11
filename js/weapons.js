@@ -1105,6 +1105,9 @@ class ProjectileManager {
 
             } else if (proj.team === 'enemy') {
                 if (proj.checkCollision(player) && !player.isInvisible && !player.isFreeStealthy) {
+                    if (typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer) {
+                        if (window.player.tryReflectProjectile(proj)) { continue; }
+                    }
                     player.takeDamage(proj.damage);
                     hit = true;
                 }

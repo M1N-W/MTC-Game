@@ -2,6 +2,28 @@
 /**
  * ⚙️ MTC: ENHANCED EDITION - Configuration
  * Single source of truth for ALL game constants and balance values.
+ *
+ * ── FILE MAP (for AI assistants) ──────────────────────────────
+ * BALANCE            → runtime game constants (enemies, characters, bosses)
+ *   .physics         → friction / acceleration
+ *   .player          → shared player mechanics (obstacle, secondWind)
+ *     .auto          → ⚠️ DEPRECATED — use BALANCE.characters.auto
+ *   .characters      → per-character stat blocks (kao / auto / poom / pat)
+ *   .boss / .powerups / .waves / .score / .ai / .map / .LIGHTING
+ * GAME_CONFIG        → engine settings (canvas, audio volumes, abilities)
+ *   .abilities.ritual → shared ritual mechanic values (read by PoomPlayer.js)
+ * VISUALS            → palette + aura constants for renderers
+ * SHOP_ITEMS         → array of purchasable upgrades
+ * ACHIEVEMENT_DEFS   → array of achievement definitions
+ * GAME_TEXTS         → all UI strings + tutorial copy
+ * MAP_CONFIG         → terrain draw constants for MapSystem.drawTerrain()
+ *
+ * ── OWNERSHIP RULES ───────────────────────────────────────────
+ * • Stat tied to one character only → BALANCE.characters.<id>
+ * • Mechanic shared / could apply to another character → GAME_CONFIG.abilities
+ * • Visual color / alpha → VISUALS or BALANCE.map.mapColors / BALANCE.objects
+ * • String shown in UI → GAME_TEXTS
+ * • AI reads GAME_CONFIG.ai for UtilityAI.js — edit there only
  */
 
 const API_KEY = (typeof CONFIG_SECRETS !== 'undefined' && CONFIG_SECRETS.GEMINI_API_KEY)
@@ -21,13 +43,16 @@ const BALANCE = {
         secondWindHpPct: 0.20,
         secondWindSpeedMult: 1.3,
         secondWindDamageMult: 1.5,
+        // ⚠️  DEPRECATED — source of truth is BALANCE.characters.auto
+        // Before removing: grep -r "BALANCE.player.auto" js/ to confirm no readers.
+        // Stale values annotated below for reference.
         auto: {
-            hp: 150,
-            speed: 160,
-            energyRegen: 20,
-            heatWaveRange: 180,
-            wanchaiDuration: 4.0,
-            wanchaiCooldown: 12
+            hp: 150,            // stale — characters.auto.hp = 230
+            speed: 160,         // stale — characters.auto.moveSpeed = 260
+            energyRegen: 20,    // still matches characters.auto.energyRegen
+            heatWaveRange: 180, // still matches characters.auto.heatWaveRange
+            wanchaiDuration: 4.0,   // stale — characters.auto.wanchaiDuration = 8.0
+            wanchaiCooldown: 12     // still matches characters.auto.wanchaiCooldown
         }
     },
     characters: {
@@ -359,6 +384,90 @@ const BALANCE = {
             // ── Ritual Boss Damage Cap ────────────────────────────
             ritualBossDmgCapPct: 0.35,       // single ritual burst cap = 35% boss maxHP
             ritualBossDmgCapCosmicPct: 0.45, // cap ขณะ Cosmic Balance active
+        },
+        pat: {
+            name: 'Pat',
+            radius: 17,                     // เตี้ยกว่า — hitbox เล็กกว่า auto/poom
+
+            // ── Base Stats ────────────────────────────────────────────
+            hp: 140, maxHp: 140,            // glass cannon — เร็วแต่บาง
+            energy: 100, maxEnergy: 100,
+            energyRegen: 18,
+            moveSpeed: 285,                 // ปานกลาง (Kao 298, Auto 260)
+            dashSpeed: 530,
+            dashDistance: 175,
+            dashCooldown: 1.6,
+
+            // ── Katana — Primary Weapon ────────────────────────────────
+            weapons: {
+                katana: {
+                    name: 'KATANA',
+                    damage: 34,             // slash wave base damage
+                    cooldown: 0.38,         // DPS ~89 (ต่ำกว่า Kao auto 118 เพิ่มเติม melee bonus)
+                    range: 750,             // slash wave range
+                    speed: 820,             // projectile speed
+                    color: '#7ec8e3',       // ice blue
+                    icon: '🔵'
+                }
+            },
+
+            // ── Dual Mode ─────────────────────────────────────────────
+            meleeRange: 150,                // ระยะ switch → melee combo
+            meleeDamageMulti: 1.8,          // melee hit = 34 × 1.8 = ~61 per hit
+            meleeComboHits: 3,              // 3-hit combo
+            meleeComboWindow: 0.18,         // วินาทีต่อ hit ใน combo
+            meleeCooldown: 0.55,            // cooldown หลัง combo จบ
+
+            // ── Crit & Scaling ────────────────────────────────────────
+            baseCritChance: 0.08,
+            critMultiplier: 2.4,
+
+            // ── Blade Guard (R-Click) ─────────────────────────────────
+            bladeGuardSpeedMult: 0.6,       // speed × 0.6 ขณะกดค้าง
+            bladeGuardMaxDuration: 3.0,     // max 3s ต่อครั้ง
+            bladeGuardCooldown: 5.0,        // หลัง duration หมด
+            bladeGuardReflectRadius: 55,    // hitbox reflect รอบตัว
+
+            // ── Zanzo Flash (Q) ───────────────────────────────────────
+            qEnergyCost: 22,
+            zanzoRange: 280,                // max teleport distance
+            zanzoCooldown: 7.0,
+            zanzoLandingRange: 120,         // radius เช็ค enemy หลังลงจอด
+            zanzoCritBonus: 0.40,           // +40% crit chance ขณะ ambush window
+            zanzoAmbushWindow: 1.5,         // วินาที window หลัง blink
+            zanzoGhostCount: 4,             // afterimage จำนวน ghost sprites
+            zanzoGhostFadeDur: 0.35,        // วินาที ghost fade out
+
+            // ── Iaido Strike (R) ──────────────────────────────────────
+            rEnergyCost: 40,
+            iaidoRange: 400,                // max dash distance
+            iaidoCooldown: 14.0,
+            iaidoChargeDuration: 0.6,       // Phase 1 charge time
+            iaidoDamage: 160,               // base damage (สูงสุด — single target)
+            iaidoCritMulti: 3.5,            // crit multiplier เฉพาะ Iaido
+            iaidoFreezeDuration: 0.5,       // Phase 3 cinematic freeze (TimeManager)
+            iaidoBloodParticles: 18,        // blood burst particle count
+
+            // ── Level Scaling ─────────────────────────────────────────
+            expToNextLevel: 100,
+            expLevelMult: 1.5,
+            damageMultiplierPerLevel: 0.09,
+            cooldownReductionPerLevel: 0.04,
+            maxHpPerLevel: 7,
+
+            // ── Passive: RONIN'S EDGE ─────────────────────────────────
+            // Unlock: ใช้ Iaido สำเร็จ (โดน enemy) ครั้งแรก
+            passiveUnlockLevel: 3,          // fallback
+            passiveUnlockStealthCount: 0,
+            passiveHpBonusPct: 0.25,
+            passiveUnlockText: '⚔️ โรนินตื่น!',
+            passiveCritBonus: 0.05,
+            passiveLifesteal: 0.02,
+            passiveMeleeDmgBonus: 0.15,     // melee damage +15% หลัง passive ปลด
+
+            // ── Speed on Hit ──────────────────────────────────────────
+            speedOnHit: 18,
+            speedOnHitDuration: 0.38,
         },
     },
     drone: {
@@ -964,9 +1073,19 @@ const GAME_CONFIG = {
         screenShakeDecay: 0.92,
         gridColor: 'rgba(255, 255, 255, 0.03)'
     },
-    // ── Phase 4 Migration: Ability definitions ─────────────────
-    // Rule: value makes sense on another character's ability → lives here.
-    // Rule: value only tied to Poom's stats → stays in BALANCE.characters.poom
+    // ══════════════════════════════════════════════════════
+    // 🎯  SHARED ABILITY DEFINITIONS
+    // Values that belong to a mechanic, not a specific character.
+    // Rule: if a value could meaningfully apply to another character's
+    //       version of the same ability → it lives HERE, not in characters.{}
+    // Rule: if a value is tightly coupled to one character's stats → it
+    //       stays in BALANCE.characters.<id>
+    //
+    // ⚠️  AI NOTE: This block is intentionally inside GAME_CONFIG (not
+    //     BALANCE) because it describes ability *behavior*, not *balance*.
+    //     Do NOT move these values to characters.poom — they are consumed
+    //     by PoomPlayer.js via GAME_CONFIG.abilities.ritual.*
+    // ══════════════════════════════════════════════════════
     abilities: {
         ritual: {
             // ── Damage model ──────────────────────────────────
@@ -1007,6 +1126,11 @@ const VISUALS = {
             primary: '#dc2626',
             secondary: '#fb7185',
             accent: '#f97316'
+        },
+        PAT: {
+            primary: '#1a1a2e',     // navy body
+            secondary: '#e8e8e8',   // white shirt
+            accent: '#7ec8e3'       // ice blue katana glow
         }
     },
     WEAPON_OFFSETS: {
@@ -1137,6 +1261,13 @@ const GAME_TEXTS = {
             modeToggle: 'MODE',     // F — toggle Range ↔ Melee
         },
 
+        // ── แพท (PatPlayer) ─────────────────────────────
+        pat: {
+            skill1: 'BLADE GUARD',  // R-Click — สะท้อนกระสุน
+            zanzo: 'ZANZO',         // Q — Blink + afterimage
+            iaido: 'IAIDO',         // R — 3-phase cinematic kill
+        },
+
         // ── Utility (proximity shortcuts) ───────────────
         database: 'DATABASE',
         terminal: 'TERMINAL',
@@ -1150,14 +1281,14 @@ const GAME_TEXTS = {
         // ── Kao skill texts ──
         kaoWeaponAwaken: '⚡ WEAPON MASTER AWAKENED!',
         kaoTeleport: '⚡ TELEPORT READY',
-        kaoClones: '👥 CLONE OF STEALTH!',
+        kaoClones: '👥 CLONE of STEALTH!',
         kaoFreeStealth: '👻 FREE STEALTH',
         // ── Poom — Garuda & Cosmic Balance texts ──
         garudaSummon: 'อัญเชิญครุฑ!',
         garudaVoice: 'ครุฑจงปกป้อง!',
         garudaExpire: 'ครุฑลาจาก...',
         cosmicActivate: '✨ COSMIC BALANCE!',
-        cosmicVoice: 'พลังจักรวาลรวมกัน!',
+        cosmicVoice: 'พลังจักรวาลมารวมกัน!',
     },
     time: {
         bulletTime: '🕐 BULLET TIME',
@@ -1449,7 +1580,7 @@ const MAP_CONFIG = {
 
     // ── Object palettes (draw helpers) ────────────────────────
     // All hardcoded colors from drawDesk/drawTree/drawServer/drawDataPillar/drawBookshelf live here.
-    // In Godot: becomes a Resource (.tres) for each object type.
+    // Read by map.js render functions — add new object types here before adding draw logic.
     objects: {
         desk: {
             screenGlow: 'rgba(250,200,100,0.15)',   // monitor top-edge highlight

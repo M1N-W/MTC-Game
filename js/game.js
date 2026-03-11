@@ -426,6 +426,14 @@ function _tickEnvironment(dt, _inTutorial) {
         }
     }
 
+    // ── PAT: Blade Guard reflect hook ─────────────────────────────────────────
+    // tryReflectProjectile() is implemented in PatPlayer.js.
+    // Actual per-projectile reflect call lives in ProjectileManager.update()
+    // (weapons.js) where enemy projectile → player collision is checked.
+    // Hook point in weapons.js (search "takeDamage" inside ProjectileManager):
+    //   if (typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer) {
+    //       if (window.player.tryReflectProjectile(proj)) { continue; }
+    //   }
     projectileManager.update(dt, window.player, window.enemies, window.boss);
 
     for (let i = window.powerups.length - 1; i >= 0; i--) {

@@ -746,6 +746,96 @@ window.PORTRAITS = {
         <rect x="0" y="108" width="96" height="4" fill="rgba(220,38,38,0.22)" />
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(220,38,38,0.65)" stroke-width="0.8" />
         <line x1="0" y1="108" x2="28" y2="108" stroke="rgba(251,191,36,0.5)" stroke-width="0.8" />
+    </g>`,
+    pat: `<defs>
+    <clipPath id="cppt"><rect width="96" height="112" rx="4" /></clipPath>
+<linearGradient id="ptBg" x1="0" y1="0" x2="0.1" y2="1">
+<stop offset="0%" stop-color="#0a0b1a"/>
+<stop offset="60%" stop-color="#06070f"/>
+<stop offset="100%" stop-color="#020308"/>
+</linearGradient>
+<radialGradient id="ptFace" cx="50%" cy="44%" r="50%">
+<stop offset="0%" stop-color="#f5d6b8"/>
+<stop offset="70%" stop-color="#ddb07a"/>
+<stop offset="100%" stop-color="#b8844a"/>
+</radialGradient>
+<radialGradient id="ptAura" cx="50%" cy="50%" r="55%">
+<stop offset="0%" stop-color="rgba(126,200,227,0.14)"/>
+<stop offset="100%" stop-color="rgba(126,200,227,0)"/>
+</radialGradient>
+<filter id="ptGlw" x="-40%" y="-40%" width="180%" height="180%">
+<feGaussianBlur stdDeviation="2.5" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="ptSft" x="-20%" y="-20%" width="140%" height="140%">
+<feGaussianBlur stdDeviation="1.2" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+</defs>
+    <g clip-path="url(#cppt)">
+        <!-- Background -->
+        <rect width="96" height="112" fill="url(#ptBg)" />
+        <ellipse cx="48" cy="68" rx="44" ry="48" fill="url(#ptAura)" />
+        <!-- Subtle ice-blue vertical light streak -->
+        <line x1="48" y1="0" x2="48" y2="112" stroke="rgba(126,200,227,0.04)" stroke-width="14" />
+        <!-- Body — navy uniform + white shirt -->
+        <path d="M-6 112 L14 74 Q48 88 82 74 L102 112Z" fill="#1a1a2e" />
+        <path d="M22 76 Q48 88 74 76 L72 86 Q48 98 26 86Z" fill="#23234a" />
+        <!-- Katana silhouette — hip-sheathed, diagonal right -->
+        <g filter="url(#ptSft)">
+            <line x1="62" y1="72" x2="84" y2="95" stroke="#4a4a6a" stroke-width="3.5" stroke-linecap="round" />
+            <line x1="62" y1="72" x2="84" y2="95" stroke="#7ec8e3" stroke-width="1" stroke-linecap="round" opacity="0.55" />
+            <!-- Guard (tsuba) -->
+            <ellipse cx="66" cy="76" rx="4" ry="2" fill="#8a8aaa" transform="rotate(40,66,76)" />
+        </g>
+        <!-- Neck -->
+        <rect x="42" y="66" width="12" height="10" rx="2" fill="#ddb07a" filter="url(#ptSft)" />
+        <!-- Head -->
+        <path d="M28 56 Q26 38 48 30 Q70 38 68 56 Q68 68 60 72 Q48 76 36 72 Q28 65 28 56Z" fill="url(#ptFace)" filter="url(#ptSft)" />
+        <!-- Ears -->
+        <ellipse cx="27" cy="53" rx="3.5" ry="4.5" fill="#ddb07a" />
+        <ellipse cx="69" cy="53" rx="3.5" ry="4.5" fill="#ddb07a" />
+        <!-- Hair — dark bowl cut -->
+        <path d="M28 52 Q26 32 48 24 Q70 32 68 52" fill="#1a1008" />
+        <path d="M28 50 Q20 36 18 22 Q26 28 28 40Z" fill="#100a04" />
+        <path d="M68 50 Q76 36 78 22 Q70 28 68 40Z" fill="#100a04" />
+        <!-- Round glasses — #333333 frame, ice-blue tint lens -->
+        <!-- Left lens -->
+        <circle cx="37" cy="51" r="7.5" fill="rgba(126,200,227,0.12)" stroke="#333333" stroke-width="1.6" />
+        <circle cx="37" cy="51" r="7.5" fill="none" stroke="rgba(126,200,227,0.3)" stroke-width="0.6" />
+        <!-- Right lens -->
+        <circle cx="59" cy="51" r="7.5" fill="rgba(126,200,227,0.12)" stroke="#333333" stroke-width="1.6" />
+        <circle cx="59" cy="51" r="7.5" fill="none" stroke="rgba(126,200,227,0.3)" stroke-width="0.6" />
+        <!-- Bridge -->
+        <line x1="44.5" y1="51" x2="51.5" y2="51" stroke="#333333" stroke-width="1.4" />
+        <!-- Temple arms -->
+        <line x1="29.5" y1="51" x2="26" y2="50" stroke="#333333" stroke-width="1.2" stroke-linecap="round" />
+        <line x1="66.5" y1="51" x2="70" y2="50" stroke="#333333" stroke-width="1.2" stroke-linecap="round" />
+        <!-- Eyes (small, behind glass) -->
+        <circle cx="37" cy="51" r="3.2" fill="#1a0808" />
+        <circle cx="35.2" cy="49.5" r="1.1" fill="white" opacity="0.9" />
+        <circle cx="59" cy="51" r="3.2" fill="#1a0808" />
+        <circle cx="57.2" cy="49.5" r="1.1" fill="white" opacity="0.9" />
+        <!-- Eyebrows -->
+        <path d="M31 45 Q37 43 43 45" fill="none" stroke="#1a1008" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M53 45 Q59 43 65 45" fill="none" stroke="#1a1008" stroke-width="1.8" stroke-linecap="round" />
+        <!-- Nose + mouth -->
+        <path d="M47 57 L48 61 L49 57" fill="none" stroke="rgba(120,70,20,0.4)" stroke-width="1.1" stroke-linejoin="round" />
+        <path d="M43 65 Q48 68 53 65" fill="none" stroke="#a07040" stroke-width="1.6" stroke-linecap="round" />
+        <!-- Ice-blue katana glow accent (top-right corner detail) -->
+        <g opacity="0.35" filter="url(#ptSft)">
+            <line x1="76" y1="10" x2="84" y2="22" stroke="#7ec8e3" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="80" y1="8" x2="88" y2="20" stroke="#7ec8e3" stroke-width="0.8" stroke-linecap="round" opacity="0.5" />
+        </g>
+        <!-- Zanzo ghost hint (dim afterimage left side) -->
+        <g opacity="0.12">
+            <ellipse cx="12" cy="58" rx="6" ry="10" fill="#4a90d9" />
+            <ellipse cx="12" cy="46" rx="4" ry="4" fill="#4a90d9" />
+        </g>
+        <!-- Bottom bar — ice blue theme -->
+        <rect x="0" y="108" width="96" height="4" fill="rgba(126,200,227,0.2)" />
+        <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(126,200,227,0.6)" stroke-width="0.8" />
+        <line x1="0" y1="108" x2="32" y2="108" stroke="rgba(126,200,227,0.85)" stroke-width="0.8" />
     </g>`
 }
 
@@ -1065,21 +1155,22 @@ class UIManager {
         const charId = player.charId || (isPoom ? 'poom' : 'kao');
         const isKao = charId === 'kao';
         const isAuto = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
+        const isPat = charId === 'pat' || (typeof PatPlayer === 'function' && player instanceof PatPlayer);
         const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
         const hudBottom = document.querySelector('.hud-bottom');
 
-        UIManager._hudApplyThemeAndLabel(isPoom, isKao, isAuto, hudBottom);
-        UIManager._hudSetupAttackSlot(isPoom, isAuto);
-        UIManager._hudSetupPortraitAndWeapon(isPoom, isAuto, player);
-        UIManager._hudSetupPassiveSlot(isKao, player);
-        UIManager._hudSetupSkill1Slot(isPoom, isKao, isAuto, SN);
-        UIManager._hudSetupQSlot(isPoom, isKao, isAuto, SN, hudBottom);
-        UIManager._hudSetupExclusiveESlots(isPoom, isKao, isAuto, SN, hudBottom);
-        UIManager._hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, SN);
+        UIManager._hudApplyThemeAndLabel(isPoom, isKao, isAuto, isPat, hudBottom);
+        UIManager._hudSetupAttackSlot(isPoom, isAuto, isPat);
+        UIManager._hudSetupPortraitAndWeapon(isPoom, isAuto, isPat, player);
+        UIManager._hudSetupPassiveSlot(isKao, isPat, player);
+        UIManager._hudSetupSkill1Slot(isPoom, isKao, isAuto, isPat, SN);
+        UIManager._hudSetupQSlot(isPoom, isKao, isAuto, isPat, SN, hudBottom);
+        UIManager._hudSetupExclusiveESlots(isPoom, isKao, isAuto, isPat, SN, hudBottom);
+        UIManager._hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN);
     }
 
     // ── Theme class + character name label on .hud-bottom ────────────────────
-    static _hudApplyThemeAndLabel(isPoom, isKao, isAuto, hudBottomEl) {
+    static _hudApplyThemeAndLabel(isPoom, isKao, isAuto, isPat, hudBottomEl) {
         const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
         const _applyTheme = (id, theme) => {
             const el = document.getElementById(id);
@@ -1087,7 +1178,7 @@ class UIManager {
             _THEME_CLASSES.forEach(c => el.classList.remove(c));
             el.classList.add(theme);
         };
-        const charTheme = isAuto ? 't-red' : isPoom ? 't-emerald' : 't-blue';
+        const charTheme = isAuto ? 't-red' : isPoom ? 't-emerald' : isPat ? 't-neutral' : 't-blue';
         _applyTheme('dash-icon', charTheme);
         _applyTheme('stealth-icon', charTheme);
 
@@ -1095,8 +1186,10 @@ class UIManager {
         if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
 
         if (!hudBottomEl) return;
-        hudBottomEl.classList.remove('hud-theme-kao', 'hud-theme-poom', 'hud-theme-auto');
-        hudBottomEl.classList.add(isAuto ? 'hud-theme-auto' : isPoom ? 'hud-theme-poom' : 'hud-theme-kao');
+        hudBottomEl.classList.remove('hud-theme-kao', 'hud-theme-poom', 'hud-theme-auto', 'hud-theme-pat');
+        hudBottomEl.classList.add(
+            isAuto ? 'hud-theme-auto' : isPoom ? 'hud-theme-poom' : isPat ? 'hud-theme-pat' : 'hud-theme-kao'
+        );
 
         let charLabel = hudBottomEl.querySelector('.hud-char-label');
         if (!charLabel) {
@@ -1108,14 +1201,16 @@ class UIManager {
             ? { name: 'AUTO', tag: 'BRAWLER', color: '#fca5a5', glow: 'rgba(220,38,38,0.5)' }
             : isPoom
                 ? { name: 'POOM', tag: 'SPIRITUAL', color: '#6ee7b7', glow: 'rgba(16,185,129,0.5)' }
-                : { name: 'KAO', tag: 'ASSASSIN', color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
+                : isPat
+                    ? { name: 'PAT', tag: 'RONIN', color: '#7ec8e3', glow: 'rgba(74,144,217,0.5)' }
+                    : { name: 'KAO', tag: 'ASSASSIN', color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
         charLabel.innerHTML =
             `<span class="hud-char-name" style="color:${lc.color};text-shadow:0 0 8px ${lc.glow};">${lc.name}</span>` +
             `<span class="hud-char-tag">${lc.tag}</span>`;
     }
 
     // ── Attack (SHOOT / L-Click) slot re-skin ─────────────────────────────────
-    static _hudSetupAttackSlot(isPoom, isAuto) {
+    static _hudSetupAttackSlot(isPoom, isAuto, isPat) {
         const attackIcon = document.getElementById('attack-icon');
         if (!attackIcon) return;
         const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
@@ -1133,6 +1228,11 @@ class UIManager {
             if (emoji) emoji.textContent = '🔥';
             if (hint) { hint.style.background = '#7f1d1d'; hint.style.color = '#fca5a5'; }
             if (name) { name.textContent = 'SHOOT'; name.style.color = '#fca5a5'; }
+        } else if (isPat) {
+            attackIcon.classList.add('t-neutral');
+            if (emoji) emoji.textContent = '⚔️';
+            if (hint) { hint.style.background = '#0a1a2e'; hint.style.color = '#7ec8e3'; }
+            if (name) { name.textContent = 'SLASH'; name.style.color = '#7ec8e3'; }
         } else {
             attackIcon.classList.add('t-blue');
             if (emoji) emoji.textContent = '🔫';
@@ -1142,28 +1242,35 @@ class UIManager {
     }
 
     // ── Portrait SVG swap ─────────────────────────────────────────────────────
-    static _hudSetupPortraitAndWeapon(isPoom, isAuto, player) {
+    static _hudSetupPortraitAndWeapon(isPoom, isAuto, isPat, player) {
         const hudSvg = document.getElementById('hud-portrait-svg');
         if (hudSvg) {
-            hudSvg.innerHTML = (window.PORTRAITS || {})[isPoom ? 'poom' : isAuto ? 'auto' : 'kao'] || '';
+            const key = isPoom ? 'poom' : isAuto ? 'auto' : isPat ? 'pat' : 'kao';
+            hudSvg.innerHTML = (window.PORTRAITS || {})[key] || '';
         }
     }
 
     // ── Passive skill slot visibility (Kao-only) ──────────────────────────────
-    static _hudSetupPassiveSlot(isKao, player) {
+    static _hudSetupPassiveSlot(isKao, isPat, player) {
         const el = document.getElementById('passive-skill');
         if (!el) return;
-        if (isKao) {
+        if (isKao || isPat) {
             el.style.display = '';
             const skillName = el.querySelector('.skill-name');
             if (player.passiveUnlocked) {
                 el.style.opacity = '1';
                 el.classList.add('unlocked');
-                if (skillName) { skillName.textContent = 'MAX'; skillName.style.color = '#facc15'; }
+                if (skillName) {
+                    skillName.textContent = isPat ? '⚔ EDGE' : 'MAX';
+                    skillName.style.color = isPat ? '#7ec8e3' : '#facc15';
+                }
             } else {
                 el.style.opacity = '0.35';
                 el.classList.remove('unlocked');
-                if (skillName) { skillName.textContent = 'R-Click!'; skillName.style.color = '#a855f7'; }
+                if (skillName) {
+                    skillName.textContent = isPat ? 'RONIN' : 'R-Click!';
+                    skillName.style.color = isPat ? '#4a90d9' : '#a855f7';
+                }
             }
         } else {
             el.style.display = 'none';
@@ -1172,7 +1279,7 @@ class UIManager {
     }
 
     // ── Skill 1 (R-Click) slot — id swap + label per character ───────────────
-    static _hudSetupSkill1Slot(isPoom, isKao, isAuto, SN) {
+    static _hudSetupSkill1Slot(isPoom, isKao, isAuto, isPat, SN) {
         const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
         if (!skill1El) return;
         const nameEl = skill1El.querySelector('.skill-name') || (() => {
@@ -1199,6 +1306,12 @@ class UIManager {
             if (hintEl) hintEl.textContent = 'R-Click';
             if (cdEl) cdEl.id = 'stealth-cd';
             nameEl.textContent = SN.kao?.skill1 ?? 'STEALTH'; nameEl.style.color = '#c4b5fd';
+        } else if (isPat) {
+            skill1El.id = 'pat-guard-icon';
+            if (emojiEl) emojiEl.textContent = '🛡️';
+            if (hintEl) { hintEl.textContent = 'R-Click'; hintEl.style.background = '#0a1a2e'; hintEl.style.color = '#7ec8e3'; }
+            if (cdEl) cdEl.id = 'pat-guard-cd';
+            nameEl.textContent = SN.pat?.skill1 ?? 'BLADE GUARD'; nameEl.style.color = '#7ec8e3';
         } else {
             skill1El.id = 'stealth-icon';
             if (emojiEl) emojiEl.textContent = '📖';
@@ -1211,45 +1324,60 @@ class UIManager {
     // ── Q-slot: Naga (Poom) / Teleport (Kao) / Vacuum (Auto) / hidden ─────────
     // Handles id-swap and DOM restore when switching away from a char that
     // repurposed the slot.
-    static _hudSetupQSlot(isPoom, isKao, isAuto, SN, hudBottom) {
-        const nagaSlot = document.getElementById('naga-icon');
-        if (nagaSlot) {
+    static _hudSetupQSlot(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
+        const nagaSlot = document.getElementById('naga-icon')
+            || document.getElementById('teleport-icon')
+            || document.getElementById('vacuum-icon')
+            || document.getElementById('zanzo-icon');
+        const baseSlot = nagaSlot;
+        if (baseSlot) {
             if (isPoom) {
-                nagaSlot.style.display = 'flex';
-                nagaSlot.style.borderColor = '#10b981';
-                nagaSlot.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                const h = nagaSlot.querySelector('.key-hint');
+                baseSlot.style.display = 'flex';
+                baseSlot.id = 'naga-icon';
+                baseSlot.style.borderColor = '#10b981';
+                baseSlot.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
+                const h = baseSlot.querySelector('.key-hint');
                 if (h) { h.textContent = 'Q'; h.style.background = '#10b981'; }
-                let n = nagaSlot.querySelector('.skill-name');
-                if (!n) { n = document.createElement('div'); n.className = 'skill-name'; nagaSlot.appendChild(n); }
+                let n = baseSlot.querySelector('.skill-name');
+                if (!n) { n = document.createElement('div'); n.className = 'skill-name'; baseSlot.appendChild(n); }
                 n.textContent = SN.poom?.naga ?? 'NAGA'; n.style.color = '#6ee7b7';
             } else if (isKao) {
-                nagaSlot.style.display = 'flex';
-                nagaSlot.style.borderColor = '#00e5ff';
-                nagaSlot.style.boxShadow = '0 0 15px rgba(0,229,255,0.45)';
-                nagaSlot.innerHTML = `
+                baseSlot.style.display = 'flex';
+                baseSlot.id = 'teleport-icon';
+                baseSlot.style.borderColor = '#00e5ff';
+                baseSlot.style.boxShadow = '0 0 15px rgba(0,229,255,0.45)';
+                baseSlot.innerHTML = `
                     <div class="key-hint" id="teleport-hint" style="background:#00e5ff;color:#0c1a2e;">Q</div>
                     <span id="teleport-emoji">⚡</span>
                     <div class="skill-name" style="color:#67e8f9;">${SN.kao?.teleport ?? 'TELEPORT'}</div>
                     <div class="cooldown-mask" id="teleport-cd"></div>`;
-                nagaSlot.id = 'teleport-icon';
             } else if (isAuto) {
-                nagaSlot.style.display = 'flex';
-                nagaSlot.style.borderColor = '#f97316';
-                nagaSlot.style.boxShadow = '0 0 15px rgba(249,115,22,0.45)';
-                nagaSlot.innerHTML = `
+                baseSlot.style.display = 'flex';
+                baseSlot.id = 'vacuum-icon';
+                baseSlot.style.borderColor = '#f97316';
+                baseSlot.style.boxShadow = '0 0 15px rgba(249,115,22,0.45)';
+                baseSlot.innerHTML = `
                     <div class="key-hint" id="vacuum-hint" style="background:#f97316;color:#1a0505;">Q</div>
                     <span id="vacuum-emoji">🌀</span>
                     <div class="skill-name" style="color:#fdba74;">${SN.auto?.vacuum ?? 'VACUUM'}</div>
                     <div class="cooldown-mask" id="vacuum-cd"></div>`;
-                nagaSlot.id = 'vacuum-icon';
+            } else if (isPat) {
+                baseSlot.style.display = 'flex';
+                baseSlot.id = 'zanzo-icon';
+                baseSlot.style.borderColor = '#4a90d9';
+                baseSlot.style.boxShadow = '0 0 15px rgba(74,144,217,0.45)';
+                baseSlot.innerHTML = `
+                    <div class="key-hint" style="background:#4a90d9;color:#0a1020;">Q</div>
+                    <span>💨</span>
+                    <div class="skill-name" style="color:#7ec8e3;">${SN.pat?.zanzo ?? 'ZANZO'}</div>
+                    <div class="cooldown-mask" id="zanzo-cd"></div>`;
             } else {
-                nagaSlot.style.display = 'none';
+                baseSlot.style.display = 'none';
             }
         }
 
-        // When switching away from Kao/Auto, restore the base naga-icon id/content
-        if (!isKao && !isAuto) {
+        // Restore base naga-icon when switching away from Kao/Auto/Pat
+        if (!isKao && !isAuto && !isPat) {
             const maybeTeleport = document.getElementById('teleport-icon');
             if (maybeTeleport) {
                 maybeTeleport.id = 'naga-icon';
@@ -1261,7 +1389,6 @@ class UIManager {
                     <span id="naga-timer"></span>
                     <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
             }
-            // ⚠️ DO NOT restore vacuum-icon when isAuto — it was intentionally repurposed
             const maybeVacuum = document.getElementById('vacuum-icon');
             if (maybeVacuum) {
                 maybeVacuum.id = 'naga-icon';
@@ -1273,12 +1400,23 @@ class UIManager {
                     <span id="naga-timer"></span>
                     <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
             }
+            const maybeZanzo = document.getElementById('zanzo-icon');
+            if (maybeZanzo) {
+                maybeZanzo.id = 'naga-icon';
+                maybeZanzo.style.borderColor = '#10b981';
+                maybeZanzo.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
+                maybeZanzo.innerHTML = `
+                    <div class="key-hint" style="background:#10b981;">Q</div>🐉
+                    <div class="cooldown-mask" id="naga-cd"></div>
+                    <span id="naga-timer"></span>
+                    <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
+            }
         }
     }
 
     // ── E-slot: exclusive dynamic slots injected per character ────────────────
     // Kao → kao-clone-icon,  Auto → auto-det-icon,  Poom → garuda-icon
-    static _hudSetupExclusiveESlots(isPoom, isKao, isAuto, SN, hudBottom) {
+    static _hudSetupExclusiveESlots(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
         // ── Kao Clone (E) ───────────────────────────────────────────────────
         let cloneSlot = document.getElementById('kao-clone-icon');
         if (isKao) {
@@ -1346,10 +1484,34 @@ class UIManager {
         } else {
             if (garudaSlot) garudaSlot.style.display = 'none';
         }
+
+        // ── Pat Iaido Strike (R) ────────────────────────────────────────────
+        let iaidoSlot = document.getElementById('pat-iaido-icon');
+        if (isPat) {
+            if (!iaidoSlot && hudBottom) {
+                iaidoSlot = document.createElement('div');
+                iaidoSlot.className = 'skill-icon';
+                iaidoSlot.id = 'pat-iaido-icon';
+                iaidoSlot.style.cssText = 'border-color:#7ec8e3; box-shadow:0 0 15px rgba(126,200,227,0.45);';
+                iaidoSlot.innerHTML = `
+                    <div class="key-hint" style="background:#4a90d9;color:#0a1020;">R</div>
+                    <span>⚔️</span>
+                    <div class="skill-name" style="color:#7ec8e3;font-size:9px;letter-spacing:0.02em;">${SN.pat?.iaido ?? 'IAIDO'}</div>
+                    <div class="cooldown-mask" id="pat-iaido-cd"></div>`;
+                const passiveRef = document.getElementById('passive-skill');
+                if (passiveRef && passiveRef.parentNode === hudBottom)
+                    hudBottom.insertBefore(iaidoSlot, passiveRef.nextSibling);
+                else
+                    hudBottom.appendChild(iaidoSlot);
+            }
+            if (iaidoSlot) iaidoSlot.style.display = 'flex';
+        } else {
+            if (iaidoSlot) iaidoSlot.style.display = 'none';
+        }
     }
 
     // ── Ritual slot (Poom R) + mobile button labels ───────────────────────────
-    static _hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, SN) {
+    static _hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN) {
         const ritualSlot = document.getElementById('ritual-icon');
         if (ritualSlot) {
             ritualSlot.style.display = isPoom ? 'flex' : 'none';
@@ -1362,7 +1524,7 @@ class UIManager {
         const btnNaga = document.getElementById('btn-naga');
         if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
         const btnSkill = document.getElementById('btn-skill');
-        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : (isAuto ? '🔥' : isKao ? '👻' : '📖');
+        if (btnSkill) btnSkill.textContent = isPoom ? '🍚' : isAuto ? '🔥' : isKao ? '👻' : isPat ? '⚔️' : '📖';
     }
 
     // ── updateSkillIcons ──────────────────────────────────────────────────────
@@ -1392,8 +1554,92 @@ class UIManager {
             UIManager._updateIconsPoom(player, setLockOverlay);
         } else if (typeof AutoPlayer !== 'undefined' && player instanceof AutoPlayer) {
             UIManager._updateIconsAuto(player, setLockOverlay);
+        } else if (typeof PatPlayer !== 'undefined' && player instanceof PatPlayer) {
+            UIManager._updateIconsPat(player, setLockOverlay);
         } else if (player.charId === 'kao') {
             UIManager._updateIconsKao(player, setLockOverlay);
+        }
+    }
+
+    // ── Pat: zanzo / blade-guard / iaido cooldown arcs ───────────────────────
+    static _updateIconsPat(player, setLockOverlay) {
+        const S = (typeof BALANCE !== 'undefined' && BALANCE.characters?.pat) ? BALANCE.characters.pat : {};
+
+        // Blade Guard (R-Click) — no cooldown, just active highlight
+        const guardIcon = document.getElementById('pat-guard-icon');
+        if (guardIcon) {
+            const isActive = !!player.bladeGuardActive;
+            guardIcon.classList.toggle('active', isActive);
+            guardIcon.style.borderColor = isActive ? '#7ec8e3' : '';
+            guardIcon.style.boxShadow = isActive ? '0 0 20px rgba(126,200,227,0.85)' : '';
+            const nameEl = guardIcon.querySelector('.skill-name');
+            if (nameEl) {
+                nameEl.textContent = isActive ? 'ACTIVE' : (
+                    (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.pat?.skill1) ?? 'BLADE GUARD'
+                );
+                nameEl.style.color = isActive ? '#ffffff' : '#7ec8e3';
+            }
+        }
+
+        // Zanzo Flash (Q) cooldown arc
+        const zanzoIcon = document.getElementById('zanzo-icon');
+        if (zanzoIcon) {
+            const cd = Math.max(0, player.cooldowns?.zanzo ?? 0);
+            const maxCd = S.zanzoCooldown ?? 7;
+            zanzoIcon.classList.toggle('active', cd <= 0);
+            UIManager._setCooldownVisual('zanzo-icon', cd, maxCd);
+        }
+
+        // Iaido Strike (R) — shows charge progress during _iaidoPhase==='charge'
+        const iaidoIcon = document.getElementById('pat-iaido-icon');
+        if (iaidoIcon) {
+            const phase = player._iaidoPhase ?? 'none';
+            const isCharging = phase === 'charge';
+            const isCinematic = phase === 'cinematic' || phase === 'flash';
+            const cd = Math.max(0, player.cooldowns?.iaido ?? 0);
+            const maxCd = S.iaidoCooldown ?? 14;
+
+            if (isCharging) {
+                // Show charge fill progress (replaces cooldown arc during charge)
+                iaidoIcon.classList.add('active');
+                iaidoIcon.style.borderColor = '#7ec8e3';
+                iaidoIcon.style.boxShadow = '0 0 22px rgba(126,200,227,0.90)';
+                const chargeTimer = player._iaidoTimer ?? 0;
+                const chargeDur = S.iaidoChargeDuration ?? 0.6;
+                const chargeProgress = Math.min(1, chargeTimer / chargeDur);
+                // Abuse _setCooldownVisual: pass remaining time as (1-progress)*max
+                UIManager._setCooldownVisual('pat-iaido-icon', (1 - chargeProgress) * 0.6, 0.6);
+                const nameEl = iaidoIcon.querySelector('.skill-name');
+                if (nameEl) { nameEl.textContent = 'CHARGING'; nameEl.style.color = '#ffffff'; }
+            } else if (isCinematic) {
+                iaidoIcon.classList.add('active');
+                iaidoIcon.style.borderColor = '#ff4444';
+                iaidoIcon.style.boxShadow = '0 0 22px rgba(204,34,34,0.85)';
+                const nameEl = iaidoIcon.querySelector('.skill-name');
+                if (nameEl) { nameEl.textContent = 'IAIDO!'; nameEl.style.color = '#ff6666'; }
+            } else {
+                iaidoIcon.classList.toggle('active', cd <= 0);
+                iaidoIcon.style.borderColor = '';
+                iaidoIcon.style.boxShadow = '';
+                UIManager._setCooldownVisual('pat-iaido-icon', cd, maxCd);
+                const nameEl = iaidoIcon.querySelector('.skill-name');
+                if (nameEl) {
+                    nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.pat?.iaido) ?? 'IAIDO';
+                    nameEl.style.color = '#7ec8e3';
+                }
+            }
+        }
+
+        // Passive — Ronin's Edge unlock state
+        const passiveEl = document.getElementById('passive-skill');
+        if (passiveEl) {
+            const unlocked = !!player.passiveUnlocked;
+            passiveEl.style.opacity = unlocked ? '1' : '0.35';
+            const skillName = passiveEl.querySelector('.skill-name');
+            if (skillName) {
+                skillName.textContent = unlocked ? '⚔ EDGE' : 'RONIN';
+                skillName.style.color = unlocked ? '#7ec8e3' : '#4a90d9';
+            }
         }
     }
 

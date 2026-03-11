@@ -136,6 +136,10 @@ class Particle {
             // Afterimages are stationary or barely drift
             this.vx *= 0.8;
             this.vy *= 0.8;
+        } else if (this.type === 'zanzo') {
+            // Zanzo ghost — stationary, pure alpha fade (no drift)
+            this.vx = 0;
+            this.vy = 0;
         } else {
             // Standard friction
             this.vx *= 0.95;
@@ -208,6 +212,35 @@ class Particle {
             CTX.globalAlpha = alpha * 0.3;
             CTX.fillRect(-w / 2, -h / 2, w, h);
 
+            CTX.restore();
+            CTX.globalAlpha = 1;
+            return;
+        }
+
+        // ── TYPE: ZANZO (Pat Afterimage — crescent silhouette) ─
+        if (this.type === 'zanzo') {
+            CTX.save();
+            CTX.translate(screen.x, screen.y);
+            if (this.data.angle !== undefined) CTX.rotate(this.data.angle);
+
+            const R = this.size;
+            CTX.globalAlpha = alpha * (this.data.alphaScale ?? 1.0);
+            CTX.fillStyle = this.color;    // '#4a90d9'
+            CTX.shadowBlur = 12 * alpha;
+            CTX.shadowColor = this.color;
+
+            // Head silhouette
+            CTX.beginPath();
+            CTX.arc(0, -R - 3, R * 0.52, 0, Math.PI * 2);
+            CTX.fill();
+
+            // Body silhouette (compressed — Pat is shorter)
+            CTX.globalAlpha = alpha * 0.85 * (this.data.alphaScale ?? 1.0);
+            CTX.beginPath();
+            CTX.ellipse(0, 0, R * 0.72, R * 0.85, 0, 0, Math.PI * 2);
+            CTX.fill();
+
+            CTX.shadowBlur = 0;
             CTX.restore();
             CTX.globalAlpha = 1;
             return;
@@ -298,6 +331,17 @@ class ParticleSystem {
                 size = options.size || 30; // Player size
                 lifetime = 0.25; // Very short life
                 data = { rotation: options.rotation || 0 };
+            }
+            else if (type === 'zanzo') {
+                // Zanzo ghost — stationary at exact position, pure fade
+                vx = 0;
+                vy = 0;
+                size = options.size || 17;          // Pat's radius
+                lifetime = options.lifetime || 0.35; // zanzoGhostFadeDur
+                data = {
+                    angle: options.angle || 0,       // Pat's facing angle
+                    alphaScale: options.alphaScale ?? 1.0  // per-ghost brightness
+                };
             }
             else {
                 // Standard 'circle' explosion
@@ -2343,6 +2387,83 @@ class WaveAnnouncementFX {
     }
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// PAT (Samurai Ronin) — Effect Helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Spawn Pat Zanzo afterimage trail.
+ * Call once when _doZanzoFlash() fires — spawns N ghost silhouettes
+ * spread across the blink path (farthest ghost = lowest alpha).
+ *
+ * @param {number} fromX   Origin world X
+ * @param {number} fromY   Origin world Y
+ * @param {number} toX     Destination world X
+ * @param {number} toY     Destination world Y
+ * @param {number} angle   Pat's facing angle (radians)
+ * @param {number} count   Number of ghost sprites (default 4)
+ */
+function spawnZanzoTrail(fromX, fromY, toX, toY, angle, count = 4) {
+    if (typeof particleSystem === 'undefined') return;
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    for (let i = 0; i < count; i++) {
+        const frac = i / count;                // 0 = origin, near 1 = destination
+        const gx = fromX + dx * frac;
+        const gy = fromY + dy * frac;
+        const alphaScale = 0.90 - frac * 0.45; // origin ghost brighter, destination ghost dim
+        particleSystem.spawn(gx, gy, 1, '#4a90d9', 'zanzo', {
+            angle,
+            alphaScale,
+            size: 17,
+            lifetime: 0.35
+        });
+    }
+}
+
+/**
+ * Spawn Iaido blood burst on lethal hit.
+ * Directed outward from impact point, dark crimson.
+ *
+ * @param {number} x      World X of enemy
+ * @param {number} y      World Y of enemy
+ * @param {number} count  Particle count (default 18 — iaidoBloodParticles)
+ */
+function spawnBloodBurst(x, y, count = 18) {
+    if (typeof particleSystem === 'undefined') return;
+    // Heavy blood splatter — larger, slower particles in crimson
+    for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const speed = 80 + (i % 3) * 60;   // varied speed without random alloc
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        const size = 3 + (i % 4);           // 3–6px, deterministic
+        const life = 0.4 + (i % 3) * 0.15; // 0.4–0.7s, deterministic
+        particleSystem.particles.push(
+            Particle.acquire(x, y, vx, vy, '#cc2222', size, life, 'circle', {})
+        );
+        while (particleSystem.particles.length > ParticleSystem.MAX_PARTICLES) {
+            particleSystem.particles.shift().release();
+        }
+    }
+    // Small bright core burst (whitish-red) for immediate impact flash
+    for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        const vx = Math.cos(angle) * 200;
+        const vy = Math.sin(angle) * 200;
+        particleSystem.particles.push(
+            Particle.acquire(x, y, vx, vy, '#ff4444', 2, 0.18, 'circle', {})
+        );
+        while (particleSystem.particles.length > ParticleSystem.MAX_PARTICLES) {
+            particleSystem.particles.shift().release();
+        }
+    }
+}
+
+// Expose to global scope for use in PatPlayer.js
+window.spawnZanzoTrail = spawnZanzoTrail;
+window.spawnBloodBurst = spawnBloodBurst;
+
 /** Global singleton */
 var waveAnnouncementFX = new WaveAnnouncementFX();
 
@@ -2364,6 +2485,7 @@ if (typeof module !== 'undefined' && module.exports) {
         MeteorStrike,
         spawnParticles, spawnFloatingText,
         spawnWanchaiPunchText,
+        spawnZanzoTrail, spawnBloodBurst,
         drawGlitchEffect,
         OrbitalParticle, OrbitalParticleSystem,
         initOrbitalSystems, updateOrbitalEffects, drawOrbitalEffects,

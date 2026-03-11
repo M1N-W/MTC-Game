@@ -1,6 +1,6 @@
 ---
 name: mtc-game-conventions
-description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT."
+description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, PatPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT, Zanzo Flash, Iaido Strike, Blade Guard, tryReflectProjectile."
 ---
 
 # MTC The Game — Project Conventions & Critical Pitfalls
@@ -60,7 +60,8 @@ Entity (base.js)
 ├── PlayerBase (PlayerBase.js)
 │   ├── KaoPlayer
 │   ├── AutoPlayer
-│   └── PoomPlayer
+│   ├── PoomPlayer
+│   └── PatPlayer
 └── BossBase
     ├── ManopBoss   (file: ManopBoss.js — contains KruManop + BossDog)
     └── FirstBoss   (file: FirstBoss.js — contains KruFirst)
@@ -280,6 +281,18 @@ Energy cost pattern — use in every skill activation:
 ---
 
 13. Adding New Content — Checklist
+
+New playable character:
+  js/entities/player/[Name]Player.js (extends PlayerBase)
+  config.js — BALANCE.characters.[name] block + VISUALS.PALETTE.[NAME] + GAME_TEXTS.skillNames.[name]
+  PlayerRenderer.js — static _draw[Name]() + dispatcher update
+  audio.js — play[Name][Skill]() SFX methods (typically 5-7 skills)
+  effects.js — new particle types + spawn[Name][Effect]() helper functions
+  ui.js — PORTRAITS.[name] + UIManager._updateIcons[Name]() + HUD icons
+  menu.js — character select entry + icon prefix
+  index.html — script tag after existing player files
+  weapons.js — if character has unique weapon mechanics (e.g., projectile reflection)
+  PlayerBase.js — if character needs unique speed/property modifiers
 
 New enemy:
   enemy.js (extends EnemyBase), config.js, WaveManager.js, audio.js, effects.js

@@ -87,6 +87,7 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 | `Kaoplayer.js` | เก้า | Assassin — stealth, teleport, clone |
 | `PoomPlayer.js` | ภูมิ | Spiritual Warrior — ritual, naga, garuda |
 | `AutoPlayer.js` | ออโต้ | Thermodynamic Brawler — Heat Wave, Vacuum Pull+Ignite (Q), Overheat Detonation (E), Wanchai Stand (R-Click, JoJo-inspired crimson/gold), Heat Tier System (COLD/WARM/HOT/OVERHEAT), Stand Meter (0–100%), ORA Combo, Skill Synergy (Stand Pull/Charge Punch/Stand Guard), Rage Mode, Killing Blow Supercharge |
+| `PatPlayer.js` | แพท | Samurai Ronin — Katana dual-mode (Slash Wave / Melee Combo), Zanzo Flash Q (afterimage blink+ambush), Iaido Strike R (3-phase cinematic kill), Blade Guard R-Click (projectile reflect) — **🚧 WIP** |
 
 ### `/js/rendering/`
 - `PlayerRenderer.js` — วาด player ทั้งหมด (animations, effects, hit flash)
@@ -1154,3 +1155,97 @@ class SniperEnemy extends EnemyBase {
 ---
 
 **📌 อัปเดทเอกสารนี้เมื่อมีการเปลี่ยนแปลง architecture, critical patterns, หรือ pitfall ใหม่ที่ค้นพบ**
+
+---
+
+## Recent Changes
+
+### [NEXT VERSION]
+- **✅ NEW CHARACTER: Pat (แพท) - Samurai Ronin**
+  - Added `PatPlayer.js` - Complete playable character with dual-mode katana
+  - Skills: Zanzo Flash (Q), Iaido Strike (R), Blade Guard (R-Click)
+  - Passive: Ronin's Edge unlock after first Iaido hit
+  - Full rendering support in `PlayerRenderer.js` with charge/flash/guard effects
+  - Audio system: 7 new SFX methods for Pat-specific sounds
+  - Effects system: New `zanzo` particle type + `spawnZanzoTrail()` and `spawnBloodBurst()`
+  - UI: Character select entry, HUD icons, cooldown displays for all skills
+  - Weapon integration: Blade Guard projectile reflection in `ProjectileManager`
+  - Config: Complete balance block, visual palette, skill texts
+  - Architecture: Follows existing patterns - inherits from `PlayerBase`, integrates with all core systems
+
+### Previous Versions
+*(Archived changes removed for brevity - see git history for full record)*
+
+---
+
+## ✅ COMPLETE: Pat Character — Samurai Ronin
+
+### Concept
+- **ชื่อ:** แพท (Pat) — หัวหน้าห้อง, ตัวเตี้ย, แว่นกลม, ดูเนิร์ด แต่เป็นซามูไรโรนินเท่มาก
+- **Visual identity:** นักเรียนชาย เสื้อขาวแขนพับ + cloth wrap มือ + katana เหน็บเอว — ขัดแย้งระหว่าง nerdy กับ cool
+- **charId:** `pat` | **File:** `js/entities/player/PatPlayer.js`
+- **Weapon:** Katana dual-mode — Slash Wave (projectile สีฟ้า) ระยะไกล / Melee Combo 3-hit ระยะประชิด (auto-switch ตามระยะ)
+
+### Skills
+| Key | Skill | Description |
+|-----|-------|-------------|
+| Q | **Zanzo Flash** | Blink ไป cursor, spawn afterimage trail 4 ghost (สีฟ้า fade), ถ้า enemy อยู่ใน 120px หลังลงจอด → ambush crit window 1.5s |
+| R | **Iaido Strike** | 3-phase: (1) Charge 0.6s ย่อตัว → (2) Flash พุ่งไป cursor + white line + hit detect → (3) Cinematic freeze 0.5s TimeManager หันหลังเก็บดาบ → damage+blood burst |
+| R-Click | **Blade Guard** | ถือค้าง → speed ×0.6, reflect projectile ของ enemy/boss ที่เข้า radius 55px กลับไปเป็น friendly |
+| Passive | **Ronin's Edge** | Unlock: Iaido โดน enemy ครั้งแรก → HP +25%, Crit +5%, Melee dmg +15% |
+
+### Color Palette
+```
+Body:      #1a1a2e (navy) / #e8e8e8 (white shirt)
+Katana:    #7ec8e3 (ice blue glow)
+Slash Wave:#a8d8ea (light blue projectile)
+Zanzo:     #4a90d9 (afterimage, 40–70% alpha)
+Blood FX:  #cc2222 (Iaido kill only)
+Glasses:   #333333
+```
+
+### Build Progress
+| Session | งาน | Status |
+|---------|-----|--------|
+| Session 1 | `BALANCE.characters['pat']` (config.js) | ✅ Done |
+| Session 1 | `PatPlayer.js` — full class | ✅ Done |
+| Session 1 | `index.html` — script tag (หลัง PoomPlayer.js) | ✅ Done |
+| Session 2 | `config.js` refactor (Godot cleanup, AI comments, VISUALS.PALETTE.PAT) | ✅ Done |
+| Session 2 | `PlayerRenderer._drawPat()` + dispatcher | ✅ Done |
+| Session 3 | `effects.js` — `'zanzo'` particle type, `spawnZanzoTrail()`, `spawnBloodBurst()` | ✅ Done |
+| Session 3 | `audio.js` — 7 Pat SFX methods | ✅ Done |
+| Session 4 | `menu.js` — character select entry | ✅ Done |
+| Session 4 | `ui.js` — PORTRAITS.pat + HUD icons Q/R/R-Click + `_updateIconsPat()` | ✅ Done |
+| Session 5 | `PlayerBase.js` — Blade Guard speed penalty | ✅ Done |
+| **FINAL** | `weapons.js` — Blade Guard reflect hook ใน ProjectileManager | ✅ Done |
+
+### Files to Touch
+```
+js/entities/player/PatPlayer.js     ✅ created
+js/config.js                        ✅ pat block + refactor done
+js/rendering/PlayerRenderer.js      ✅ _drawPat() + dispatcher done
+js/effects.js                       ✅ zanzo type + spawnZanzoTrail + spawnBloodBurst
+js/audio.js                         ✅ 7 Pat SFX methods
+index.html                          ✅ script tag added
+js/menu.js                          ✅ Pat character select entry
+js/ui.js                            ✅ PORTRAITS.pat + HUD icons Q/R/R-Click
+js/PlayerBase.js                    ✅ Blade Guard speed penalty
+js/weapons.js                       ✅ Blade Guard reflect hook — DONE
+```
+
+### Critical Pitfalls (Pat-specific)
+```javascript
+// ✅ Blade Guard speed penalty — DONE (PlayerBase.js ~line 246):
+if (this.bladeGuardActive) speedMult *= (this.stats?.bladeGuardSpeedMult ?? 0.6);
+
+// ✅ Blade Guard reflect — DONE (weapons.js ProjectileManager.update() line 1108–1109):
+// if (typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer) {
+//     if (window.player.tryReflectProjectile(proj)) { continue; }
+// }
+
+// ✅ Iaido TimeManager — มีใน PatPlayer._resolveIaidoDamage() แล้ว
+// ✅ R key conflict — PatPlayer._handleRKey() จัดการเอง
+// ✅ Audio call sites — playPatSlash/Zanzo/IaidoCharge/IaidoStrike/Sheathe/Reflect/MeleeHit
+// ✅ Effects — spawnZanzoTrail(fromX,fromY,toX,toY,angle,4)
+//              spawnBloodBurst(enemy.x,enemy.y,18) ใน _resolveIaidoDamage() เท่านั้น
+```

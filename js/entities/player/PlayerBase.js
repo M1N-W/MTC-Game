@@ -244,6 +244,8 @@ class Player extends Entity {
 
         // ── Apply Combo Speed Buff ──
         speedMult *= (1 + ((this.comboCount || 0) * 0.01));
+        // ── Blade Guard speed penalty (Pat) ──
+        if (this.bladeGuardActive) speedMult *= (this.stats?.bladeGuardSpeedMult ?? 0.6);
         // ── Second Wind Buff ──
         if (this.isSecondWind) {
             speedMult *= (BALANCE.player.secondWindSpeedMult || 1.3);

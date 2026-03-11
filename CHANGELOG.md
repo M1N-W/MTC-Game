@@ -4,6 +4,77 @@
 
 ---
 
+## v3.31.0 — NEW CHARACTER: Pat (แพท) - Samurai Ronin
+*Released: March 11, 2026*
+
+### ⚔️ New Playable Character: Pat (Samurai Ronin)
+- **Character Concept:** แพท - หัวหน้าห้อง, ตัวเตี้ย, แว่นกลม, ดูเนิร์ด แต่เป็นซามูไรโรนินเท่มาก
+- **Visual Identity:** นักเรียนชาย เสื้อขาวแขนพับ + cloth wrap มือ + katana เหน็บเอว
+- **Weapon System:** Katana dual-mode — Slash Wave (projectile สีฟ้า) ระยะไกล / Melee Combo 3-hit ระยะประชิด (auto-switch ตามระยะ)
+
+#### 🎯 Skills & Abilities
+| Key | Skill | Description |
+|-----|-------|-------------|
+| Q | **Zanzo Flash** | Blink ไป cursor, spawn afterimage trail 4 ghost (สีฟ้า fade), ถ้า enemy อยู่ใน 120px หลังลงจอด → ambush crit window 1.5s |
+| R | **Iaido Strike** | 3-phase: (1) Charge 0.6s ย่อตัว → (2) Flash พุ่งไป cursor + white line + hit detect → (3) Cinematic freeze 0.5s TimeManager หันหลังเก็บดาบ → damage+blood burst |
+| R-Click | **Blade Guard** | ถือค้าง → speed ×0.6, reflect projectile ของ enemy/boss ที่เข้า radius 55px กลับไปเป็น friendly |
+| Passive | **Ronin's Edge** | Unlock: Iaido โดน enemy ครั้งแรก → HP +25%, Crit +5%, Melee dmg +15% |
+
+#### 🎨 Visual & Audio Features
+- **Color Palette:** Navy body (#1a1a2e), White shirt (#e8e8e8), Ice blue katana glow (#7ec8e3)
+- **Particle Effects:** New `zanzo` particle type with crescent silhouette afterimages
+- **Blood Effects:** `spawnBloodBurst()` for lethal Iaido kills with dark crimson particles
+- **Audio System:** 7 new SFX methods:
+  - `playPatSlash()` - Katana slash sound
+  - `playPatZanzo()` - Blink/afterimage sound
+  - `playPatIaidoCharge()` - Phase 1 charge (0.6s resonant hum)
+  - `playPatIaidoStrike()` - Phase 2 flash impact (violent transient)
+  - `playPatSheathe()` - Phase 3 cinematic sheathing
+  - `playPatReflect()` - Blade Guard projectile reflection
+  - `playPatMeleeHit()` - Melee combo impact sounds
+
+#### 🏗️ Architecture & Integration
+- **File Structure:** `js/entities/player/PatPlayer.js` - Complete 624-line implementation
+- **Inheritance:** Extends `PlayerBase`, follows established character patterns
+- **Rendering:** Full support in `PlayerRenderer._drawPat()` with charge ring, flash line, guard arc
+- **UI Integration:** Character select entry, HUD icons, cooldown displays, passive unlock indicator
+- **Weapon System:** Blade Guard projectile reflection hook in `ProjectileManager.update()`
+- **Config Integration:** Complete `BALANCE.characters.pat` block with 50+ balance values
+- **Speed System:** Blade Guard speed penalty (×0.6) integrated into `PlayerBase` movement calc
+
+#### 📁 Files Modified/Created
+```
+✅ CREATED: js/entities/player/PatPlayer.js (624 lines)
+✅ MODIFIED: js/config.js (+120 lines - Pat balance block + refactor)
+✅ MODIFIED: js/rendering/PlayerRenderer.js (+332 lines - _drawPat + effects)
+✅ MODIFIED: js/effects.js (+83 lines - zanzo particles + helper functions)
+✅ MODIFIED: js/audio.js (+141 lines - 7 Pat SFX methods)
+✅ MODIFIED: js/menu.js (+8 lines - character select entry)
+✅ MODIFIED: js/ui.js (+317 lines - portraits + HUD + _updateIconsPat)
+✅ MODIFIED: js/PlayerBase.js (+2 lines - Blade Guard speed penalty)
+✅ MODIFIED: js/weapons.js (+3 lines - projectile reflection hook)
+✅ MODIFIED: index.html (+1 line - script tag)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+78 lines - Pat character documentation)
+✅ MODIFIED: .agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md
+```
+
+### 🔧 Technical Implementation Details
+- **State Machines:** Iaido 3-phase system (charge → flash → cinematic), Zanzo ambush window timer
+- **Object Pooling:** Pre-allocated ghost pool (4 objects) to prevent GC during gameplay
+- **Time Management:** Iaido cinematic freeze using `TimeManager.freeze()` integration
+- **Projectile System:** Reflection system converts enemy projectiles to friendly with same damage
+- **Auto-Switch Logic:** Weapon mode switches between Slash Wave (range) and Melee Combo (close) based on enemy distance
+- **Critical System:** Zanzo ambush window grants +40% crit chance for 1.5s after blink
+
+### 🎮 Balance & Scaling
+- **Level Scaling:** damageMultiplierPerLevel: 0.09, cooldownReductionPerLevel: 0.04, maxHpPerLevel: 7
+- **Energy Costs:** Zanzo (Q): 25, Iaido (R): 40, Blade Guard: No cost (hold-based)
+- **Cooldowns:** Zanzo: 7.0s, Iaido: 14.0s
+- **Damage Values:** Iaido: 160 base damage (3.5x crit multiplier), Melee combo: scaling with character level
+- **Range Values:** Zanzo teleport: 280px, Iaido dash: 400px, Blade Guard reflect: 55px radius
+
+---
+
 ## v3.30.10 — Character Selection UI Enhancement
 *Released: March 11, 2026*
 
