@@ -633,6 +633,11 @@ class WeaponSystem {
 
     setActiveChar(charType) {
         this.activeChar = charType || 'kao';
+        // Reset to first weapon key of this char (Pat='katana', Kao='auto', etc.)
+        const charData = BALANCE.characters[this.activeChar];
+        const firstWeapon = charData?.weapons ? Object.keys(charData.weapons)[0] : 'auto';
+        this.currentWeapon = firstWeapon;
+        this.weaponsUsed = new Set([firstWeapon]);
     }
 
     getCharWeapons() {
@@ -661,9 +666,9 @@ class WeaponSystem {
     }
 
     switchWeapon() {
-        const weapons = ['auto', 'sniper', 'shotgun'];
+        const weapons = Object.keys(this.getCharWeapons());
         const idx = weapons.indexOf(this.currentWeapon);
-        this.currentWeapon = weapons[(idx + 1) % 3];
+        this.currentWeapon = weapons[(idx + 1) % weapons.length];
         this.weaponsUsed.add(this.currentWeapon);
         this.updateWeaponUI();
         Audio.playWeaponSwitch();
@@ -812,12 +817,15 @@ class WeaponSystem {
             shotgun: 45,
             poom: 43,    // used when charId === 'poom'
             autoPlayer: 51, // AutoPlayer character's own weapon
+            katana: 44,  // PatPlayer slash wave
         };
         let offset;
         if (player.charId === 'poom') {
             offset = MUZZLE_OFFSETS.poom;
         } else if (player.charId === 'auto') {
             offset = MUZZLE_OFFSETS.autoPlayer;
+        } else if (player.charId === 'pat') {
+            offset = MUZZLE_OFFSETS.katana;
         } else {
             // Kao — depends on active weapon
             offset = MUZZLE_OFFSETS[this.currentWeapon] ?? 49;

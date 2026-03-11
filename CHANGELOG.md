@@ -4,6 +4,50 @@
 
 ---
 
+## v3.31.2 — Integration Fixes: Pat Character System
+*Released: March 11, 2026*
+
+### 🔧 Character System Integration
+- **Player Creation Logic**: Added PatPlayer instantiation in `game.js`
+  - Proper character type detection with `typeof PatPlayer === 'function'` guard
+  - Seamless integration with existing character creation flow
+
+- **Game Over UI**: Added Pat-specific retry button icon
+  - Retry button now shows ⚔️ icon for Pat character (was default 🎓)
+  - Maintains character identity consistency through game session
+
+### ⚔️ Weapon System Enhancements
+- **Character-Specific Weapon Sets**: Dynamic weapon loading per character
+  - `setActiveChar()` now resets to character's first weapon
+  - `getCharWeapons()` reads from `BALANCE.characters[charId].weapons`
+  - `switchWeapon()` uses dynamic weapon array instead of hardcoded list
+
+- **Katana Integration**: Added Pat's katana to weapon system
+  - Muzzle offset: 44px for slash wave projectiles
+  - Proper projectile spawning position aligned with katana visual
+  - Character-specific weapon switching support
+
+### 📊 Technical Architecture
+- **Weapon System Refactor**: From hardcoded to data-driven approach
+  - Before: `const weapons = ['auto', 'sniper', 'shotgun']`
+  - After: `const weapons = Object.keys(this.getCharWeapons())`
+  - Supports any character with custom weapon configurations
+
+- **Muzzle Offset Table**: Updated documentation with Pat entry
+  - Added to SKILL.md §8 Muzzle Offsets table
+  - Katana slash wave: 44px offset for proper projectile alignment
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/game.js (+4 lines - PatPlayer creation + retry icon)
+✅ MODIFIED: js/weapons.js (+11 lines - character weapon sets + katana offset)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+6 lines - integration fixes entry)
+✅ MODIFIED: .agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md (+1 line)
+✅ MODIFIED: sw.js (v3.31.2)
+```
+
+---
+
 ## v3.31.1 — UI Polish: Pat Character Card & Tooltips
 *Released: March 11, 2026*
 

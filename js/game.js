@@ -784,6 +784,8 @@ function _createPlayer(charType) {
         player = new AutoPlayer();
     } else if (charType === 'kao' && typeof KaoPlayer === 'function') {
         player = new KaoPlayer();
+    } else if (charType === 'pat' && typeof PatPlayer === 'function') {
+        player = new PatPlayer();
     } else {
         player = charType === 'poom' ? new PoomPlayer() : new Player(charType);
     }
@@ -949,7 +951,7 @@ function endGame(result) {
         if (_retryBtn) {
             _retryBtn.dataset._originalLabel = _retryBtn.textContent;
             const _charId = window.player?.charId || 'kao';
-            const _icon = _charId === 'poom' ? '🌾' : _charId === 'auto' ? '🔥' : '🎓';
+            const _icon = _charId === 'poom' ? '🌾' : _charId === 'auto' ? '🔥' : _charId === 'pat' ? '⚔️' : '🎓';
             _retryBtn.textContent = _icon + ' RETRY MISSION';
         }
 

@@ -209,6 +209,7 @@ Muzzle Offsets (shootSingle in weapons.js):
   Kao       | Shotgun           | 45px
   Poom      | Spirit gun        | 43px
   Auto      | Thermodynamic     | 51px
+  Pat       | Katana slash wave | 44px
 
 ---
 

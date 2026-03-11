@@ -1176,6 +1176,12 @@ class SniperEnemy extends EnemyBase {
   - Added character selection card with HP/DMG/SPD/RANGE stats
   - Added skill tooltip with detailed skill descriptions
   - Integrated with existing character select UI system
+- **✅ Integration Fixes: Pat Character System**
+  - Added PatPlayer instantiation in `game.js` character creation logic
+  - Added Pat retry button icon (⚔️) in game over screen
+  - Fixed WeaponSystem to support character-specific weapon sets
+  - Added katana muzzle offset (44px) for projectile spawning
+  - Dynamic weapon switching based on character weapon configurations
 
 ### Previous Versions
 *(Archived changes removed for brevity - see git history for full record)*
