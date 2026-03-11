@@ -503,7 +503,7 @@ window.PORTRAITS = {
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(59,130,246,0.6)" stroke-width="0.8" />
         <line x1="0" y1="108" x2="24" y2="108" stroke="rgba(250,204,21,0.7)" stroke-width="0.8" />
     </g>`,
-poom: `<defs>
+    poom: `<defs>
     <clipPath id="cpp"><rect width="96" height="112" rx="4" /></clipPath>
 <linearGradient id="pBg" x1="0.1" y1="0" x2="0.3" y2="1">
 <stop offset="0%" stop-color="#040e08"/>
@@ -626,7 +626,7 @@ poom: `<defs>
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(16,185,129,0.6)" stroke-width="0.8" />
         <line x1="72" y1="108" x2="96" y2="108" stroke="rgba(245,158,11,0.6)" stroke-width="0.8" />
     </g>`,
-auto: `<defs>
+    auto: `<defs>
     <clipPath id="cpa"><rect width="96" height="112" rx="4" /></clipPath>
 <radialGradient id="aBg" cx="50%" cy="50%" r="65%">
 <stop offset="0%" stop-color="#1e0404"/>
