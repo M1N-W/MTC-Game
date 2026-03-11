@@ -4,6 +4,26 @@
 
 ---
 
+## v3.30.10 — Character Selection UI Enhancement
+*Released: March 11, 2026*
+
+### 🎨 UI & Visual Improvements
+- **Character Descriptions**: Enhanced character selection card descriptions for better clarity
+  - KAO: Updated to "Precision tactician" with detailed skill highlights
+  - POOM: Updated to "Mystic summoner" with companion emphasis
+  - AUTO: Updated to "Thermodynamic brawler" with combat mode details
+- **New AUTO Portrait**: Added complete SVG portrait for AUTO character
+  - Thermodynamic theme with red/orange heat effects
+  - Wanchai Stand "W" emblem on chest
+  - Flame hair and heat aura effects
+  - Consistent visual style with existing character portraits
+
+### 📁 Files Modified
+- `index.html` - Updated character card descriptions
+- `js/ui.js` - Added AUTO portrait SVG to window.PORTRAITS
+
+---
+
 ## v3.30.13 — Character Selection UI Enhancements
 *Released: March 11, 2026*
 

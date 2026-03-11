@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.13 [NEXT VERSION]
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.10 [NEXT VERSION]
 
 ---
 
@@ -960,6 +960,28 @@ class SniperEnemy extends EnemyBase {
 - **`MAP_CONFIG.objects`** — Added `wall` and `mtcwall` palette entries for future Godot migration
 
 **Files Changed:** `map.js`, `AdminSystem.js`, `config.js`
+
+---
+
+## 📝 Recent Changes (v3.30.10)
+
+### Character Selection UI Enhancement (March 11, 2026)
+**Purpose:** Improve character presentation with enhanced descriptions and new AUTO character portrait
+
+**Key Changes:**
+- **Character Descriptions**: Updated character selection card descriptions for better clarity and appeal
+  - KAO: "Stealth specialist" → "Precision tactician" with detailed skill description
+  - POOM: "Mystical warrior" → "Mystic summoner" with companion emphasis  
+  - AUTO: "Close-range powerhouse" → "Thermodynamic brawler" with combat mode details
+- **New AUTO Portrait**: Added complete SVG portrait for AUTO character in ui.js
+  - Thermodynamic theme with red/orange heat effects
+  - Wanchai Stand "W" emblem on chest
+  - Flame hair and heat aura effects
+  - Consistent with existing KAO/POOM portrait style
+
+**Files Changed:**
+- `index.html`: Updated character card descriptions
+- `js/ui.js`: Added AUTO portrait SVG to window.PORTRAITS
 
 ---
 

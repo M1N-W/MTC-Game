@@ -389,10 +389,365 @@ class ShopManager {
 // All gradient/clipPath IDs are prefixed k/p/a — safe when all 3 are in the DOM.
 // Exposed as window.PORTRAITS so menu.js can populate char-select cards on load.
 window.PORTRAITS = {
-    kao: '\n<defs>\n  <clipPath id="cpk"><rect width="96" height="112" rx="3"/></clipPath>\n  <linearGradient id="kBg" x1="0" y1="0" x2="0" y2="1">\n    <stop offset="0%" stop-color="#060d20"/>\n    <stop offset="100%" stop-color="#020810"/>\n  </linearGradient>\n  <radialGradient id="kFace" cx="48%" cy="42%" r="50%">\n    <stop offset="0%" stop-color="#e8c49a"/>\n    <stop offset="80%" stop-color="#c8944a"/>\n    <stop offset="100%" stop-color="#b07830"/>\n  </radialGradient>\n  <radialGradient id="kEyeL" cx="35%" cy="30%" r="65%">\n    <stop offset="0%" stop-color="#4a8fff"/>\n    <stop offset="60%" stop-color="#1a4fcc"/>\n    <stop offset="100%" stop-color="#0a1f6e"/>\n  </radialGradient>\n  <radialGradient id="kScope" cx="38%" cy="28%" r="65%">\n    <stop offset="0%" stop-color="#22ddff"/>\n    <stop offset="100%" stop-color="#0090c0"/>\n  </radialGradient>\n  <filter id="kGlw" x="-30%" y="-30%" width="160%" height="160%">\n    <feGaussianBlur stdDeviation="2.5" result="b"/>\n    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>\n  </filter>\n  <filter id="kSoft" x="-20%" y="-20%" width="140%" height="140%">\n    <feGaussianBlur stdDeviation="1.2" result="b"/>\n    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>\n  </filter>\n</defs>\n<g clip-path="url(#cpk)">\n  <!-- BG -->\n  <rect width="96" height="112" fill="url(#kBg)"/>\n  <!-- subtle scan-line bg texture -->\n  <rect width="96" height="112" fill="none" stroke="rgba(59,130,246,0.04)" stroke-width="1" style="stroke-dasharray:1 3"/>\n  <!-- bg accent lines -->\n  <line x1="0" y1="90" x2="96" y2="80" stroke="rgba(250,204,21,0.06)" stroke-width="8"/>\n  <!-- UNIFORM BODY -->\n  <path d="M-6 112 L14 68 Q48 80 82 68 L102 112Z" fill="#0c1a3a"/>\n  <path d="M14 68 Q48 80 82 68 L80 76 Q48 88 16 76Z" fill="#132244"/>\n  <!-- collar V-notch + gold trim -->\n  <path d="M36 68 L48 84 L60 68" fill="none" stroke="#facc15" stroke-width="1.8" stroke-linejoin="round"/>\n  <!-- epaulette stripes left -->\n  <path d="M14 70 L28 70 M14 73 L26 73" stroke="#facc15" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>\n  <!-- MTC badge -->\n  <rect x="40" y="86" width="16" height="9" rx="1" fill="rgba(250,204,21,0.12)" stroke="rgba(250,204,21,0.5)" stroke-width="0.7"/>\n  <text x="48" y="92.5" text-anchor="middle" fill="#facc15" font-size="5" font-family="monospace" font-weight="bold" letter-spacing="0.5">MTC</text>\n  <!-- NECK -->\n  <path d="M39 64 Q48 70 57 64 L56 71 Q48 77 40 71Z" fill="#c48040"/>\n  <!-- ear L -->\n  <ellipse cx="27" cy="50" rx="4" ry="5.5" fill="#c8944a"/>\n  <path d="M28 47 Q25 50 28 53" fill="none" stroke="#b07030" stroke-width="1"/>\n  <!-- ear R -->\n  <ellipse cx="69" cy="50" rx="4" ry="5.5" fill="#c8944a"/>\n  <!-- HEAD shape — anime oval, slightly narrow jaw -->\n  <path d="M28 52 Q26 36 48 28 Q70 36 68 52 Q68 64 58 68 Q48 72 38 68 Q28 64 28 52Z" fill="url(#kFace)"/>\n  <!-- ── HAIR (spiky, swept right-to-left, dark navy) ── -->\n  <!-- base cap -->\n  <path d="M26 46 Q24 28 48 22 Q72 28 70 46" fill="#0a0f28"/>\n  <!-- main side sweep — left spike cluster -->\n  <path d="M26 44 Q20 36 18 24 Q24 28 28 34 Q22 30 24 22 Q30 26 32 33 Q28 25 32 18 Q38 24 36 33Z" fill="#0e1535"/>\n  <!-- right tuft behind ear -->\n  <path d="M70 44 Q74 38 76 28 Q70 32 68 38Z" fill="#0e1535"/>\n  <!-- top peak spikes -->\n  <path d="M38 24 Q36 16 40 12 Q42 18 44 22Z" fill="#0e1535"/>\n  <path d="M44 22 Q44 13 48 10 Q50 16 50 22Z" fill="#0a0f28"/>\n  <path d="M50 22 Q52 14 56 12 Q56 18 54 24Z" fill="#0e1535"/>\n  <!-- hair shine -->\n  <path d="M34 28 Q36 24 42 26" fill="none" stroke="rgba(120,150,255,0.4)" stroke-width="1.5" stroke-linecap="round"/>\n  <!-- GRAD CAP — flat on spiky hair -->\n  <rect x="30" y="30" width="36" height="4" rx="0.8" fill="#05091a"/>\n  <rect x="36" y="25" width="24" height="6" rx="1" fill="#05091a"/>\n  <!-- tassel -->\n  <path d="M60 28 Q67 33 65 41" fill="none" stroke="#facc15" stroke-width="1.4" stroke-linecap="round"/>\n  <circle cx="65" cy="42" r="2.8" fill="#facc15" filter="url(#kGlw)"/>\n  <!-- cap shine -->\n  <line x1="36" y1="27" x2="52" y2="27" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>\n  <!-- ── LEFT EYE (normal) ── -->\n  <!-- white -->\n  <ellipse cx="37" cy="50" rx="6" ry="5" fill="white"/>\n  <!-- iris gradient -->\n  <circle cx="37" cy="50" r="4.2" fill="url(#kEyeL)"/>\n  <!-- pupil -->\n  <circle cx="37" cy="50" r="2.2" fill="#04080f"/>\n  <!-- eye shine — anime double dot -->\n  <circle cx="35.5" cy="48.5" r="1.5" fill="white" opacity="0.9"/>\n  <circle cx="39" cy="51.5" r="0.7" fill="white" opacity="0.5"/>\n  <!-- upper eyelid line -->\n  <path d="M31 47 Q37 44.5 43 47" fill="none" stroke="#1a0a00" stroke-width="1.5" stroke-linecap="round"/>\n  <!-- ── RIGHT EYE (scope monocle overlay) ── -->\n  <ellipse cx="59" cy="50" rx="6" ry="5" fill="white"/>\n  <circle cx="59" cy="50" r="4.2" fill="url(#kEyeL)"/>\n  <circle cx="59" cy="50" r="2.2" fill="#04080f"/>\n  <circle cx="57.5" cy="48.5" r="1.5" fill="white" opacity="0.9"/>\n  <circle cx="61" cy="51.5" r="0.7" fill="white" opacity="0.5"/>\n  <path d="M53 47 Q59 44.5 65 47" fill="none" stroke="#1a0a00" stroke-width="1.5" stroke-linecap="round"/>\n  <!-- scope ring -->\n  <circle cx="59" cy="50" r="8.5" fill="none" stroke="url(#kScope)" stroke-width="1.2" filter="url(#kSoft)" opacity="0.85"/>\n  <!-- scope crosshair ticks -->\n  <line x1="59" y1="40.5" x2="59" y2="43" stroke="#22ddff" stroke-width="0.9" opacity="0.7"/>\n  <line x1="59" y1="57" x2="59" y2="59.5" stroke="#22ddff" stroke-width="0.9" opacity="0.7"/>\n  <line x1="49.5" y1="50" x2="52" y2="50" stroke="#22ddff" stroke-width="0.9" opacity="0.7"/>\n  <line x1="66" y1="50" x2="68.5" y2="50" stroke="#22ddff" stroke-width="0.9" opacity="0.7"/>\n  <!-- arm to temple -->\n  <line x1="67.5" y1="44" x2="73" y2="40" stroke="#22ddff" stroke-width="1" opacity="0.5"/>\n  <!-- ── NOSE + MOUTH ── -->\n  <path d="M46 56 L48 59 L50 56" fill="none" stroke="rgba(160,80,20,0.5)" stroke-width="1" stroke-linejoin="round"/>\n  <path d="M42 63 Q48 67 54 63" fill="none" stroke="#b06030" stroke-width="1.5" stroke-linecap="round"/>\n  <!-- lip highlight -->\n  <path d="M44 63 Q48 65 52 63" fill="rgba(255,180,120,0.2)"/>\n  <!-- EYEBROWS — sharp angled -->\n  <path d="M31 45 Q37 42 43 44" fill="none" stroke="#0a0f28" stroke-width="2.2" stroke-linecap="round"/>\n  <path d="M53 44 Q59 42 65 45" fill="none" stroke="#0a0f28" stroke-width="2.2" stroke-linecap="round"/>\n  <!-- ── CROSSHAIR CORNER ── -->\n  <g opacity="0.28" filter="url(#kSoft)">\n    <circle cx="14" cy="14" r="9" fill="none" stroke="#facc15" stroke-width="0.9"/>\n    <circle cx="14" cy="14" r="2.5" fill="none" stroke="#facc15" stroke-width="0.7"/>\n    <line x1="14" y1="3" x2="14" y2="7" stroke="#facc15" stroke-width="0.8"/>\n    <line x1="14" y1="21" x2="14" y2="25" stroke="#facc15" stroke-width="0.8"/>\n    <line x1="3" y1="14" x2="7" y2="14" stroke="#facc15" stroke-width="0.8"/>\n    <line x1="21" y1="14" x2="25" y2="14" stroke="#facc15" stroke-width="0.8"/>\n  </g>\n  <!-- bottom trim -->\n  <rect x="0" y="109" width="96" height="3" fill="rgba(250,204,21,0.25)"/>\n  <line x1="0" y1="109" x2="96" y2="109" stroke="rgba(250,204,21,0.5)" stroke-width="0.6"/>\n</g>\n',
-    poom: '\n<defs>\n  <clipPath id="cpp"><rect width="96" height="112" rx="3"/></clipPath>\n  <linearGradient id="pBg" x1="0" y1="0" x2="0.3" y2="1">\n    <stop offset="0%" stop-color="#040e08"/>\n    <stop offset="100%" stop-color="#020508"/>\n  </linearGradient>\n  <radialGradient id="pFace" cx="45%" cy="40%" r="52%">\n    <stop offset="0%" stop-color="#d4a870"/>\n    <stop offset="75%" stop-color="#b07840"/>\n    <stop offset="100%" stop-color="#8a5020"/>\n  </radialGradient>\n  <radialGradient id="pEye" cx="30%" cy="28%" r="65%">\n    <stop offset="0%" stop-color="#88ffcc"/>\n    <stop offset="45%" stop-color="#10b981"/>\n    <stop offset="100%" stop-color="#065a3a"/>\n  </radialGradient>\n  <linearGradient id="pRobe" x1="0" y1="0" x2="0.2" y2="1">\n    <stop offset="0%" stop-color="#1a3a22"/>\n    <stop offset="100%" stop-color="#080f0a"/>\n  </linearGradient>\n  <filter id="pNaga" x="-40%" y="-40%" width="180%" height="180%">\n    <feGaussianBlur stdDeviation="3" result="b"/>\n    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>\n  </filter>\n  <filter id="pSft" x="-20%" y="-20%" width="140%" height="140%">\n    <feGaussianBlur stdDeviation="1.2" result="b"/>\n    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>\n  </filter>\n</defs>\n<g clip-path="url(#cpp)">\n  <rect width="96" height="112" fill="url(#pBg)"/>\n  <!-- ambient bg glow -->\n  <circle cx="20" cy="60" r="40" fill="rgba(16,185,129,0.04)"/>\n  <circle cx="48" cy="80" r="30" fill="rgba(245,158,11,0.05)"/>\n  <!-- ROBE -->\n  <path d="M-6 112 L16 66 Q48 78 80 66 L102 112Z" fill="url(#pRobe)"/>\n  <path d="M16 66 Q48 78 80 66 L78 75 Q48 87 18 75Z" fill="#1e4428"/>\n  <!-- robe hem lines -->\n  <path d="M20 76 Q48 86 76 76" fill="none" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>\n  <path d="M24 86 Q48 93 72 86" fill="none" stroke="rgba(245,158,11,0.15)" stroke-width="0.7"/>\n  <!-- center line -->\n  <line x1="48" y1="72" x2="48" y2="112" stroke="rgba(245,158,11,0.2)" stroke-width="1.2"/>\n  <!-- collar ornament -->\n  <path d="M36 66 L48 82 L60 66" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/>\n  <!-- gold beads on collar -->\n  <circle cx="40" cy="72" r="1.5" fill="#f59e0b" opacity="0.8"/>\n  <circle cx="48" cy="82" r="1.5" fill="#f59e0b" opacity="0.8"/>\n  <circle cx="56" cy="72" r="1.5" fill="#f59e0b" opacity="0.8"/>\n  <!-- NECK -->\n  <path d="M39 63 Q48 69 57 63 L56 70 Q48 76 40 70Z" fill="#a06030"/>\n  <!-- ear studs gold -->\n  <ellipse cx="27" cy="51" rx="4" ry="5.5" fill="#b07840"/>\n  <circle cx="27" cy="48" r="2" fill="#f59e0b" opacity="0.8"/>\n  <ellipse cx="69" cy="51" rx="4" ry="5.5" fill="#b07840"/>\n  <circle cx="69" cy="48" r="2" fill="#f59e0b" opacity="0.8"/>\n  <!-- HEAD -->\n  <path d="M28 53 Q27 36 48 28 Q69 36 68 53 Q68 65 58 70 Q48 74 38 70 Q28 65 28 53Z" fill="url(#pFace)"/>\n  <!-- ── HAIR — wavy, medium length, dark brown/auburn, swept back ── -->\n  <!-- main back volume -->\n  <path d="M27 50 Q22 35 28 22 Q38 14 48 14 Q58 14 68 22 Q74 35 69 50" fill="#1a0800"/>\n  <!-- left side flow — waves down past jaw -->\n  <path d="M27 50 Q22 55 20 64 Q18 72 22 78 Q19 72 22 62 Q24 54 28 48Z" fill="#240c00"/>\n  <!-- right side flow -->\n  <path d="M69 50 Q74 55 76 64 Q78 72 74 78 Q77 72 74 62 Q72 54 68 48Z" fill="#240c00"/>\n  <!-- wave texture strands left -->\n  <path d="M24 38 Q20 46 22 56" fill="none" stroke="rgba(80,30,0,0.6)" stroke-width="1.5" stroke-linecap="round"/>\n  <path d="M26 34 Q22 42 24 52" fill="none" stroke="rgba(60,20,0,0.4)" stroke-width="1" stroke-linecap="round"/>\n  <!-- wave texture strands right -->\n  <path d="M72 38 Q76 46 74 56" fill="none" stroke="rgba(80,30,0,0.6)" stroke-width="1.5" stroke-linecap="round"/>\n  <!-- top parting + highlight -->\n  <path d="M40 16 Q48 13 56 16" fill="none" stroke="rgba(160,80,20,0.5)" stroke-width="1"/>\n  <path d="M38 18 Q44 15 50 17" fill="none" stroke="rgba(255,180,80,0.3)" stroke-width="1.5" stroke-linecap="round"/>\n  <!-- hair accessory — gold knotted band -->\n  <rect x="60" y="32" width="12" height="4" rx="2" fill="#f59e0b" opacity="0.7" transform="rotate(-20,66,34)"/>\n  <!-- ── EYES (slit pupils — naga influence) ── -->\n  <!-- L eye white -->\n  <ellipse cx="37" cy="50" rx="6.5" ry="5.2" fill="white"/>\n  <!-- L iris -->\n  <circle cx="37" cy="50" r="4.5" fill="url(#pEye)"/>\n  <!-- L slit pupil -->\n  <ellipse cx="37" cy="50" rx="1.2" ry="3.5" fill="#030f08"/>\n  <!-- L shines -->\n  <circle cx="35" cy="48" r="1.8" fill="white" opacity="0.9"/>\n  <circle cx="39.5" cy="52" r="0.8" fill="white" opacity="0.45"/>\n  <!-- L upper lid -->\n  <path d="M30.5 47 Q37 44 43.5 47" fill="none" stroke="#150800" stroke-width="2" stroke-linecap="round"/>\n  <!-- L lash tips -->\n  <line x1="31" y1="47.5" x2="29.5" y2="45.5" stroke="#150800" stroke-width="1.2" stroke-linecap="round"/>\n  <line x1="43" y1="47.5" x2="44.5" y2="45.5" stroke="#150800" stroke-width="1.2" stroke-linecap="round"/>\n  <!-- R eye white -->\n  <ellipse cx="59" cy="50" rx="6.5" ry="5.2" fill="white"/>\n  <circle cx="59" cy="50" r="4.5" fill="url(#pEye)"/>\n  <ellipse cx="59" cy="50" rx="1.2" ry="3.5" fill="#030f08"/>\n  <circle cx="57" cy="48" r="1.8" fill="white" opacity="0.9"/>\n  <circle cx="61.5" cy="52" r="0.8" fill="white" opacity="0.45"/>\n  <path d="M52.5 47 Q59 44 65.5 47" fill="none" stroke="#150800" stroke-width="2" stroke-linecap="round"/>\n  <line x1="53" y1="47.5" x2="51.5" y2="45.5" stroke="#150800" stroke-width="1.2" stroke-linecap="round"/>\n  <line x1="65" y1="47.5" x2="66.5" y2="45.5" stroke="#150800" stroke-width="1.2" stroke-linecap="round"/>\n  <!-- EYEBROWS — smooth, slightly arched -->\n  <path d="M31 44 Q37 41 43 43" fill="none" stroke="#2a0e00" stroke-width="2.5" stroke-linecap="round"/>\n  <path d="M53 43 Q59 41 65 44" fill="none" stroke="#2a0e00" stroke-width="2.5" stroke-linecap="round"/>\n  <!-- NOSE -->\n  <path d="M46 56 L48 59.5 L50 56" fill="none" stroke="rgba(140,70,10,0.45)" stroke-width="1.1" stroke-linejoin="round"/>\n  <!-- MOUTH — slight enigmatic smile -->\n  <path d="M42 64 Q48 68.5 54 64" fill="none" stroke="#905020" stroke-width="1.6" stroke-linecap="round"/>\n  <path d="M43 64 Q48 66 53 64" fill="rgba(255,160,80,0.15)"/>\n  <!-- ── NAGA — coiled at left shoulder rising ── -->\n  <!-- glow halo -->\n  <path d="M6 92 Q-2 72 8 52 Q14 38 26 38" fill="none" stroke="#10b981" stroke-width="8" stroke-linecap="round" opacity="0.25" filter="url(#pNaga)"/>\n  <!-- body -->\n  <path d="M6 92 Q-2 72 8 52 Q14 38 26 38" fill="none" stroke="#10b981" stroke-width="4.5" stroke-linecap="round"/>\n  <!-- scale pattern -->\n  <path d="M6 92 Q-2 72 8 52 Q14 38 26 38" fill="none" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 3"/>\n  <!-- naga HEAD -->\n  <ellipse cx="26.5" cy="37" rx="8.5" ry="5.5" fill="#10b981" transform="rotate(-40,26.5,37)" filter="url(#pSft)"/>\n  <ellipse cx="26.5" cy="37" rx="8.5" ry="5.5" fill="#34d399" transform="rotate(-40,26.5,37)" opacity="0.5"/>\n  <!-- naga eye — amber vertical slit -->\n  <circle cx="23.5" cy="34" r="2" fill="#f59e0b"/>\n  <ellipse cx="23.5" cy="34" rx="0.7" ry="1.8" fill="#0a0000"/>\n  <circle cx="23" cy="33.3" r="0.7" fill="rgba(255,255,200,0.8)"/>\n  <!-- tongue -->\n  <path d="M31 35 L36 31 M36 31 L35 28.5 M36 31 L37.5 28.5" fill="none" stroke="#34d399" stroke-width="1" stroke-linecap="round"/>\n  <!-- bottom trim -->\n  <rect x="0" y="109" width="96" height="3" fill="rgba(245,158,11,0.2)"/>\n  <line x1="0" y1="109" x2="96" y2="109" stroke="rgba(245,158,11,0.45)" stroke-width="0.7"/>\n</g>\n',
-    auto: '\n<defs>\n  <clipPath id="cpa"><rect width="96" height="112" rx="3"/></clipPath>\n  <radialGradient id="aBg" cx="48%" cy="55%" r="65%">\n    <stop offset="0%" stop-color="#1a0404"/>\n    <stop offset="100%" stop-color="#060101"/>\n  </radialGradient>\n  <radialGradient id="aFace" cx="44%" cy="38%" r="52%">\n    <stop offset="0%" stop-color="#cc8855"/>\n    <stop offset="75%" stop-color="#a05828"/>\n    <stop offset="100%" stop-color="#7a3810"/>\n  </radialGradient>\n  <radialGradient id="aEye" cx="30%" cy="25%" r="65%">\n    <stop offset="0%" stop-color="#ffe080"/>\n    <stop offset="50%" stop-color="#f97316"/>\n    <stop offset="100%" stop-color="#7c2d12"/>\n  </radialGradient>\n  <radialGradient id="aBody" cx="50%" cy="30%" r="70%">\n    <stop offset="0%" stop-color="#3a0808"/>\n    <stop offset="100%" stop-color="#120202"/>\n  </radialGradient>\n  <filter id="aFire" x="-40%" y="-60%" width="180%" height="220%">\n    <feGaussianBlur stdDeviation="3.5" result="b"/>\n    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>\n  </filter>\n  <filter id="aHeat" x="-30%" y="-30%" width="160%" height="160%">\n    <feGaussianBlur stdDeviation="2" result="b"/>\n    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>\n  </filter>\n  <filter id="aSft">\n    <feGaussianBlur stdDeviation="1" result="b"/>\n    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>\n  </filter>\n</defs>\n<g clip-path="url(#cpa)">\n  <rect width="96" height="112" fill="url(#aBg)"/>\n  <!-- heat rings bg -->\n  <circle cx="48" cy="56" r="44" fill="none" stroke="rgba(220,38,38,0.06)" stroke-width="2.5"/>\n  <circle cx="48" cy="56" r="30" fill="none" stroke="rgba(249,115,22,0.09)" stroke-width="1.5"/>\n  <circle cx="48" cy="56" r="16" fill="none" stroke="rgba(251,191,36,0.12)" stroke-width="1"/>\n  <!-- bg diagonal slash -->\n  <line x1="0" y1="100" x2="96" y2="70" stroke="rgba(220,38,38,0.07)" stroke-width="12"/>\n  <!-- BODY -->\n  <path d="M-4 112 L18 64 Q48 76 78 64 L100 112Z" fill="url(#aBody)"/>\n  <!-- muscle shoulder armour L -->\n  <path d="M18 64 Q10 60 8 68 Q10 76 18 76 Q10 74 12 66 Q14 60 18 64Z" fill="#550a0a" stroke="rgba(220,38,38,0.5)" stroke-width="0.8"/>\n  <!-- muscle shoulder armour R -->\n  <path d="M78 64 Q86 60 88 68 Q86 76 78 76 Q86 74 84 66 Q82 60 78 64Z" fill="#550a0a" stroke="rgba(220,38,38,0.5)" stroke-width="0.8"/>\n  <!-- collar -->\n  <path d="M36 64 L48 78 L60 64" fill="none" stroke="rgba(220,38,38,0.6)" stroke-width="2" stroke-linejoin="round"/>\n  <!-- Wanchai emblem -->\n  <circle cx="48" cy="86" r="10" fill="rgba(220,38,38,0.15)" stroke="rgba(220,38,38,0.5)" stroke-width="1" filter="url(#aHeat)"/>\n  <text x="48" y="90" text-anchor="middle" fill="#fca5a5" font-size="9" font-family="Arial Black, Impact, sans-serif" font-weight="900">W</text>\n  <!-- RAISED FIST L (punching toward viewer) -->\n  <g filter="url(#aHeat)">\n    <rect x="4" y="38" width="20" height="17" rx="7" fill="#a05828"/>\n    <!-- knuckle detail -->\n    <line x1="6" y1="44" x2="23" y2="44" stroke="rgba(0,0,0,0.4)" stroke-width="1.2"/>\n    <line x1="6" y1="48" x2="23" y2="48" stroke="rgba(0,0,0,0.25)" stroke-width="0.8"/>\n    <!-- heat crack -->\n    <path d="M8 40 L13 47 L11 54" fill="none" stroke="rgba(251,191,36,0.6)" stroke-width="1" stroke-linecap="round"/>\n    <!-- fist glow -->\n    <rect x="4" y="38" width="20" height="17" rx="7" fill="none" stroke="rgba(249,115,22,0.5)" stroke-width="0.8"/>\n  </g>\n  <!-- arm -->\n  <path d="M22 55 Q18 60 20 64" fill="none" stroke="#8a4020" stroke-width="9" stroke-linecap="round"/>\n  <!-- NECK -->\n  <path d="M39 61 Q48 68 57 61 L56 69 Q48 75 40 69Z" fill="#a05828"/>\n  <!-- ears -->\n  <ellipse cx="26" cy="50" rx="4" ry="5.5" fill="#a05828"/>\n  <path d="M27 47 Q24 50 27 53" fill="none" stroke="#7a3010" stroke-width="1"/>\n  <ellipse cx="70" cy="50" rx="4" ry="5.5" fill="#a05828"/>\n  <!-- HEAD -->\n  <path d="M27 52 Q26 35 48 27 Q70 35 69 52 Q69 64 59 69 Q48 73 37 69 Q27 64 27 52Z" fill="url(#aFace)"/>\n  <!-- ── HAIR — short buzzcut + spiky swept tuft on top ── -->\n  <!-- tight fade sides -->\n  <path d="M27 50 Q25 38 30 28 Q26 36 28 46Z" fill="#180404"/>\n  <path d="M69 50 Q71 38 66 28 Q70 36 68 46Z" fill="#180404"/>\n  <!-- buzzcut cap — short but present -->\n  <path d="M27 45 Q26 30 48 24 Q70 30 69 45 L67 40 Q65 27 48 26 Q31 27 29 40Z" fill="#1a0404"/>\n  <!-- spiky tuft swept forward-right -->\n  <path d="M46 26 Q44 18 40 14 Q46 16 48 22Z" fill="#220606"/>\n  <path d="M50 25 Q50 15 54 11 Q56 17 52 24Z" fill="#1a0404"/>\n  <path d="M54 26 Q56 17 60 14 Q60 20 56 26Z" fill="#220606"/>\n  <!-- tuft highlight -->\n  <path d="M48 20 Q52 17 56 19" fill="none" stroke="rgba(200,80,40,0.4)" stroke-width="1.2" stroke-linecap="round"/>\n  <!-- ── EYES — narrow & intense, fire iris ── -->\n  <!-- L eye — slight squint -->\n  <path d="M30 49 Q37 46 44 49 Q37 53 30 49Z" fill="white"/>\n  <circle cx="37" cy="49.5" r="3.8" fill="url(#aEye)"/>\n  <circle cx="37" cy="49.5" r="2" fill="#0a0000"/>\n  <circle cx="35.5" cy="48" r="1.4" fill="white" opacity="0.9"/>\n  <circle cx="39" cy="51" r="0.6" fill="white" opacity="0.4"/>\n  <!-- L upper lid heavy (squint) -->\n  <path d="M30 48 Q37 44.5 44 48" fill="none" stroke="#0a0000" stroke-width="2.5" stroke-linecap="round"/>\n  <!-- L lower lid line -->\n  <path d="M31 51 Q37 53.5 43 51" fill="none" stroke="#1a0a00" stroke-width="1" stroke-linecap="round" opacity="0.6"/>\n  <!-- R eye -->\n  <path d="M52 49 Q59 46 66 49 Q59 53 52 49Z" fill="white"/>\n  <circle cx="59" cy="49.5" r="3.8" fill="url(#aEye)"/>\n  <circle cx="59" cy="49.5" r="2" fill="#0a0000"/>\n  <circle cx="57.5" cy="48" r="1.4" fill="white" opacity="0.9"/>\n  <circle cx="61" cy="51" r="0.6" fill="white" opacity="0.4"/>\n  <path d="M52 48 Q59 44.5 66 48" fill="none" stroke="#0a0000" stroke-width="2.5" stroke-linecap="round"/>\n  <path d="M53 51 Q59 53.5 65 51" fill="none" stroke="#1a0a00" stroke-width="1" stroke-linecap="round" opacity="0.6"/>\n  <!-- EYEBROWS — thick, angry furrowed -->\n  <path d="M29 44.5 Q37 41 44 43.5" fill="none" stroke="#0f0202" stroke-width="3.5" stroke-linecap="round"/>\n  <path d="M52 43.5 Q59 41 67 44.5" fill="none" stroke="#0f0202" stroke-width="3.5" stroke-linecap="round"/>\n  <!-- inner brow tension crease -->\n  <path d="M43 43 Q48 41.5 53 43" fill="none" stroke="#0f0202" stroke-width="1.5" stroke-linecap="round"/>\n  <!-- NOSE -->\n  <path d="M46 56 L48 59 L50 56" fill="none" stroke="rgba(120,50,10,0.5)" stroke-width="1.2" stroke-linejoin="round"/>\n  <!-- MOUTH — set tight, determined -->\n  <path d="M41 64 L55 64" stroke="#7a3010" stroke-width="1.8" stroke-linecap="round" fill="none"/>\n  <!-- jaw tension lines -->\n  <path d="M38 60 Q37 63 38 66" fill="none" stroke="rgba(100,40,10,0.3)" stroke-width="0.8"/>\n  <path d="M58 60 Q59 63 58 66" fill="none" stroke="rgba(100,40,10,0.3)" stroke-width="0.8"/>\n  <!-- ── FIRE corner accent ── -->\n  <path d="M78 20 Q82 12 80 5 Q85 9 84 16 Q88 11 87 5 Q93 12 90 20 Q95 16 93 9 Q100 18 96 27 Q92 34 84 32 Q76 30 76 22 Q77 21 78 20Z" fill="rgba(220,38,38,0.55)" filter="url(#aFire)"/>\n  <path d="M80 22 Q83 15 81 9 Q85 13 84 19 Q87 15 87 10 Q91 16 88 23 Q86 28 82 27 Q78 26 79 23Z" fill="rgba(251,191,36,0.45)"/>\n  <!-- scar under L eye (battle damage) -->\n  <line x1="31" y1="53" x2="28" y2="57" stroke="rgba(200,80,30,0.5)" stroke-width="0.9" stroke-linecap="round"/>\n  <!-- bottom trim -->\n  <rect x="0" y="109" width="96" height="3" fill="rgba(220,38,38,0.25)"/>\n  <line x1="0" y1="109" x2="96" y2="109" stroke="rgba(220,38,38,0.55)" stroke-width="0.7"/>\n</g>\n'
-};
+    kao: `<defs>
+        <clipPath id="cpk"><rect width="96" height="112" rx="4" /></clipPath>
+<linearGradient id="kBg" x1="0" y1="0" x2="0.2" y2="1">
+<stop offset="0%" stop-color="#08112e"/>
+<stop offset="60%" stop-color="#040c1e"/>
+<stop offset="100%" stop-color="#020610"/>
+</linearGradient>
+<radialGradient id="kFace" cx="50%" cy="44%" r="50%">
+<stop offset="0%" stop-color="#f0c88a"/>
+<stop offset="70%" stop-color="#d4924e"/>
+<stop offset="100%" stop-color="#b87030"/>
+</radialGradient>
+<radialGradient id="kIris" cx="30%" cy="28%" r="65%">
+<stop offset="0%" stop-color="#60aaff"/>
+<stop offset="50%" stop-color="#1a5fdd"/>
+<stop offset="100%" stop-color="#071a70"/>
+</radialGradient>
+<radialGradient id="kAura" cx="50%" cy="50%" r="50%">
+<stop offset="0%" stop-color="rgba(59,130,246,0.18)"/>
+<stop offset="100%" stop-color="rgba(59,130,246,0)"/>
+</radialGradient>
+<filter id="kGlw" x="-40%" y="-40%" width="180%" height="180%">
+<feGaussianBlur stdDeviation="3" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="kSft" x="-20%" y="-20%" width="140%" height="140%">
+<feGaussianBlur stdDeviation="1.5" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="kSkin" x="-10%" y="-10%" width="120%" height="120%">
+<feGaussianBlur stdDeviation="0.6" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+</defs>
+    <g clip-path="url(#cpk)">
+        <rect width="96" height="112" fill="url(#kBg)" />
+        <ellipse cx="48" cy="70" rx="44" ry="50" fill="url(#kAura)" />
+        <line x1="0" y1="56" x2="96" y2="56" stroke="rgba(59,130,246,0.05)" stroke-width="24" />
+        <line x1="48" y1="0" x2="48" y2="112" stroke="rgba(59,130,246,0.04)" stroke-width="16" />
+        <path d="M-8 112 L16 70 Q48 84 80 70 L104 112Z" fill="#0b1a3a" />
+        <path d="M16 70 Q48 84 80 70 L78 80 Q48 94 18 80Z" fill="#102244" />
+        <path d="M16 72 Q10 68 8 74 Q10 80 16 80" fill="#1a3060" stroke="rgba(250,204,21,0.4)" stroke-width="0.8" />
+        <path d="M80 72 Q86 68 88 74 Q86 80 80 80" fill="#1a3060" stroke="rgba(250,204,21,0.4)" stroke-width="0.8" />
+        <line x1="10" y1="72" x2="15" y2="72" stroke="#facc15" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
+        <line x1="9" y1="75" x2="15" y2="75" stroke="#facc15" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+        <path d="M37 70 L48 86 L59 70" fill="none" stroke="#facc15" stroke-width="2" stroke-linejoin="round" />
+        <path d="M40 70 L48 82 L56 70" fill="rgba(0,0,20,0.4)" />
+        <rect x="40" y="90" width="16" height="9" rx="1.5" fill="rgba(250,204,21,0.1)" stroke="rgba(250,204,21,0.55)" stroke-width="0.8" />
+        <text x="48" y="96.5" text-anchor="middle" fill="#facc15" font-size="5.5" font-family="monospace" font-weight="bold" letter-spacing="0.8">MTC</text>
+        <path d="M39 66 Q48 73 57 66 L56 73 Q48 79 40 73Z" fill="#d49050" filter="url(#kSkin)" />
+        <path d="M41 66 Q48 70 55 66 L55 69 Q48 73 41 69Z" fill="rgba(0,0,0,0.2)" />
+        <ellipse cx="27" cy="51" rx="4.5" ry="5.5" fill="#d49050" />
+        <path d="M28.5 48 Q26 51 28.5 54" fill="none" stroke="#b07030" stroke-width="1.2" />
+        <ellipse cx="69" cy="51" rx="4.5" ry="5.5" fill="#d49050" />
+        <path d="M27 53 Q26 36 48 28 Q70 36 69 53 Q69 65 59 70 Q48 74 37 70 Q27 65 27 53Z" fill="url(#kFace)" filter="url(#kSkin)" />
+        <ellipse cx="36" cy="58" rx="5" ry="3" fill="rgba(220,120,80,0.18)" />
+        <ellipse cx="60" cy="58" rx="5" ry="3" fill="rgba(220,120,80,0.18)" />
+        <path d="M44 70 Q48 73 52 70" fill="rgba(255,200,140,0.25)" />
+        <path d="M26 50 Q24 30 48 22 Q72 30 70 50" fill="#080e28" />
+        <path d="M26 48 Q18 38 16 26 Q22 30 26 38 Q20 28 22 18 Q28 24 30 34 Q26 22 30 16 Q36 22 34 34Z" fill="#0c1535" />
+        <path d="M70 48 Q76 38 78 26 Q72 30 68 40Z" fill="#0c1535" />
+        <path d="M38 26 Q36 16 40 11 Q42 18 43 24Z" fill="#0c1535" />
+        <path d="M44 24 Q44 13 48 9 Q50 16 50 23Z" fill="#080e28" />
+        <path d="M50 24 Q53 14 57 12 Q56 19 54 25Z" fill="#0c1535" />
+        <path d="M34 28 Q38 24 44 26" fill="none" stroke="rgba(100,140,255,0.45)" stroke-width="2" stroke-linecap="round" />
+        <path d="M52 24 Q56 22 60 25" fill="none" stroke="rgba(100,140,255,0.25)" stroke-width="1.2" stroke-linecap="round" />
+        <rect x="29" y="30" width="38" height="4.5" rx="1" fill="#04071a" />
+        <rect x="35" y="24" width="26" height="7" rx="1.5" fill="#04071a" />
+        <line x1="35" y1="26" x2="53" y2="26" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" />
+        <path d="M61 27 Q70 33 68 44" fill="none" stroke="#facc15" stroke-width="1.8" stroke-linecap="round" />
+        <circle cx="68" cy="45" r="3.2" fill="#facc15" filter="url(#kGlw)" />
+        <circle cx="68" cy="45" r="1.5" fill="#fff8b0" />
+        <ellipse cx="37" cy="50" rx="6.5" ry="5.5" fill="white" />
+        <ellipse cx="37" cy="51.5" rx="6" ry="4" fill="rgba(200,220,255,0.3)" />
+        <circle cx="37" cy="50" r="4.5" fill="url(#kIris)" />
+        <circle cx="37" cy="50" r="2.4" fill="#040a1e" />
+        <circle cx="34.5" cy="47.5" r="2" fill="white" opacity="0.95" />
+        <circle cx="39.5" cy="52" r="0.9" fill="white" opacity="0.55" />
+        <path d="M30.5 47 Q37 44 43.5 47" fill="none" stroke="#0a0820" stroke-width="2" stroke-linecap="round" />
+        <path d="M31 53 Q37 55 43 53" fill="none" stroke="rgba(20,10,40,0.4)" stroke-width="0.8" stroke-linecap="round" />
+        <ellipse cx="59" cy="50" rx="6.5" ry="5.5" fill="white" />
+        <ellipse cx="59" cy="51.5" rx="6" ry="4" fill="rgba(200,220,255,0.3)" />
+        <circle cx="59" cy="50" r="4.5" fill="url(#kIris)" />
+        <circle cx="59" cy="50" r="2.4" fill="#040a1e" />
+        <circle cx="56.5" cy="47.5" r="2" fill="white" opacity="0.95" />
+        <circle cx="61.5" cy="52" r="0.9" fill="white" opacity="0.55" />
+        <path d="M52.5 47 Q59 44 65.5 47" fill="none" stroke="#0a0820" stroke-width="2" stroke-linecap="round" />
+        <path d="M53 53 Q59 55 65 53" fill="none" stroke="rgba(20,10,40,0.4)" stroke-width="0.8" stroke-linecap="round" />
+        <circle cx="59" cy="50" r="9.5" fill="none" stroke="rgba(34,220,255,0.75)" stroke-width="1.4" filter="url(#kSft)" />
+        <circle cx="59" cy="50" r="9.5" fill="none" stroke="rgba(34,220,255,0.35)" stroke-width="3" />
+        <line x1="59" y1="39.5" x2="59" y2="42.5" stroke="#22ddff" stroke-width="1.1" opacity="0.8" />
+        <line x1="59" y1="57.5" x2="59" y2="60.5" stroke="#22ddff" stroke-width="1.1" opacity="0.8" />
+        <line x1="48.5" y1="50" x2="51.5" y2="50" stroke="#22ddff" stroke-width="1.1" opacity="0.8" />
+        <line x1="66.5" y1="50" x2="69.5" y2="50" stroke="#22ddff" stroke-width="1.1" opacity="0.8" />
+        <path d="M68.5 44 Q74 40 77 37" fill="none" stroke="#22ddff" stroke-width="1.2" stroke-linecap="round" opacity="0.6" />
+        <path d="M30 45.5 Q37 42 44 44.5" fill="none" stroke="#0a0e28" stroke-width="2.8" stroke-linecap="round" />
+        <path d="M52 44.5 Q59 42 66 45.5" fill="none" stroke="#0a0e28" stroke-width="2.8" stroke-linecap="round" />
+        <path d="M43 44 Q48 43 53 44" fill="none" stroke="#0a0e28" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M46 56.5 L48 60 L50 56.5" fill="none" stroke="rgba(150,80,20,0.5)" stroke-width="1.2" stroke-linejoin="round" />
+        <line x1="48" y1="51" x2="48" y2="57" stroke="rgba(100,50,10,0.15)" stroke-width="2.5" />
+        <path d="M42 64.5 Q48 68.5 55 65" fill="none" stroke="#b06030" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M44 65 Q48 67 53 65.5" fill="rgba(255,180,120,0.22)" />
+        <g opacity="0.22" filter="url(#kSft)">
+            <circle cx="13" cy="13" r="9" fill="none" stroke="#facc15" stroke-width="1" />
+            <circle cx="13" cy="13" r="2.5" fill="rgba(250,204,21,0.4)" />
+            <line x1="13" y1="2" x2="13" y2="7" stroke="#facc15" stroke-width="1" />
+            <line x1="13" y1="19" x2="13" y2="24" stroke="#facc15" stroke-width="1" />
+            <line x1="2" y1="13" x2="7" y2="13" stroke="#facc15" stroke-width="1" />
+            <line x1="19" y1="13" x2="24" y2="13" stroke="#facc15" stroke-width="1" />
+        </g>
+        <rect x="0" y="108" width="96" height="4" fill="rgba(59,130,246,0.2)" />
+        <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(59,130,246,0.6)" stroke-width="0.8" />
+        <line x1="0" y1="108" x2="24" y2="108" stroke="rgba(250,204,21,0.7)" stroke-width="0.8" />
+    </g>`,
+poom: `<defs>
+    <clipPath id="cpp"><rect width="96" height="112" rx="4" /></clipPath>
+<linearGradient id="pBg" x1="0.1" y1="0" x2="0.3" y2="1">
+<stop offset="0%" stop-color="#040e08"/>
+<stop offset="50%" stop-color="#030a06"/>
+<stop offset="100%" stop-color="#010402"/>
+</linearGradient>
+<radialGradient id="pFace" cx="50%" cy="42%" r="50%">
+<stop offset="0%" stop-color="#e0b078"/>
+<stop offset="70%" stop-color="#c08040"/>
+<stop offset="100%" stop-color="#8a5020"/>
+</radialGradient>
+<radialGradient id="pIris" cx="28%" cy="26%" r="65%">
+<stop offset="0%" stop-color="#a0ffd8"/>
+<stop offset="40%" stop-color="#10c878"/>
+<stop offset="100%" stop-color="#044a28"/>
+</radialGradient>
+<radialGradient id="pAura" cx="30%" cy="60%" r="60%">
+<stop offset="0%" stop-color="rgba(16,185,129,0.2)"/>
+<stop offset="100%" stop-color="rgba(16,185,129,0)"/>
+</radialGradient>
+<linearGradient id="pRobe" x1="0" y1="0" x2="0.15" y2="1">
+<stop offset="0%" stop-color="#1c4228"/>
+<stop offset="100%" stop-color="#060e08"/>
+</linearGradient>
+<filter id="pNaga" x="-50%" y="-50%" width="200%" height="200%">
+<feGaussianBlur stdDeviation="4" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="pSft" x="-20%" y="-20%" width="140%" height="140%">
+<feGaussianBlur stdDeviation="1.5" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="pSkin" x="-10%" y="-10%" width="120%" height="120%">
+<feGaussianBlur stdDeviation="0.7" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+</defs>
+    <g clip-path="url(#cpp)">
+        <rect width="96" height="112" fill="url(#pBg)" />
+        <ellipse cx="20" cy="65" rx="50" ry="55" fill="url(#pAura)" />
+        <circle cx="14" cy="30" r="1" fill="rgba(16,185,129,0.35)" />
+        <circle cx="8" cy="55" r="0.7" fill="rgba(16,185,129,0.25)" />
+        <circle cx="82" cy="42" r="0.8" fill="rgba(245,158,11,0.3)" />
+        <circle cx="88" cy="25" r="1.2" fill="rgba(245,158,11,0.2)" />
+        <path d="M-8 112 L16 68 Q48 82 80 68 L104 112Z" fill="url(#pRobe)" />
+        <path d="M16 68 Q48 82 80 68 L78 78 Q48 92 18 78Z" fill="#224830" />
+        <path d="M30 78 Q48 88 66 78" fill="none" stroke="rgba(245,158,11,0.2)" stroke-width="1" />
+        <line x1="48" y1="74" x2="48" y2="112" stroke="rgba(245,158,11,0.18)" stroke-width="1.5" />
+        <path d="M36 68 L48 84 L60 68" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linejoin="round" />
+        <circle cx="40" cy="74" r="1.8" fill="#f59e0b" opacity="0.9" />
+        <circle cx="44" cy="80" r="1.5" fill="#f59e0b" opacity="0.8" />
+        <circle cx="48" cy="84" r="2" fill="#f59e0b" opacity="0.9" filter="url(#pSft)" />
+        <circle cx="52" cy="80" r="1.5" fill="#f59e0b" opacity="0.8" />
+        <circle cx="56" cy="74" r="1.8" fill="#f59e0b" opacity="0.9" />
+        <path d="M22 82 Q30 86 38 82" fill="none" stroke="rgba(245,158,11,0.12)" stroke-width="0.8" />
+        <path d="M58 82 Q66 86 74 82" fill="none" stroke="rgba(245,158,11,0.12)" stroke-width="0.8" />
+        <path d="M39 64 Q48 71 57 64 L56 72 Q48 78 40 72Z" fill="#b07040" filter="url(#pSkin)" />
+        <ellipse cx="27" cy="52" rx="4.5" ry="5.5" fill="#c08040" />
+        <circle cx="27" cy="49" r="2.5" fill="#f59e0b" filter="url(#pSft)" opacity="0.9" />
+        <circle cx="27" cy="49" r="1.2" fill="#fff8e0" />
+        <ellipse cx="69" cy="52" rx="4.5" ry="5.5" fill="#c08040" />
+        <circle cx="69" cy="49" r="2.5" fill="#f59e0b" filter="url(#pSft)" opacity="0.9" />
+        <circle cx="69" cy="49" r="1.2" fill="#fff8e0" />
+        <path d="M27 54 Q26 36 48 28 Q70 36 69 54 Q69 66 58 71 Q48 75 38 71 Q27 66 27 54Z" fill="url(#pFace)" filter="url(#pSkin)" />
+        <ellipse cx="36" cy="59" rx="5.5" ry="3" fill="rgba(200,100,60,0.15)" />
+        <ellipse cx="60" cy="59" rx="5.5" ry="3" fill="rgba(200,100,60,0.15)" />
+        <path d="M27 52 Q22 35 28 20 Q38 12 48 13 Q58 12 68 20 Q74 35 69 52" fill="#1a0700" />
+        <path d="M27 52 Q20 58 18 70 Q16 80 20 88" fill="none" stroke="#240c00" stroke-width="8" stroke-linecap="round" />
+        <path d="M69 52 Q76 58 78 70 Q80 80 76 88" fill="none" stroke="#240c00" stroke-width="8" stroke-linecap="round" />
+        <path d="M24 40 Q20 50 22 62" fill="none" stroke="rgba(100,40,0,0.5)" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M26 36 Q22 46 24 58" fill="none" stroke="rgba(70,25,0,0.35)" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M72 40 Q76 50 74 62" fill="none" stroke="rgba(100,40,0,0.5)" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M36 18 Q44 14 52 16" fill="none" stroke="rgba(200,100,30,0.45)" stroke-width="2" stroke-linecap="round" />
+        <path d="M38 20 Q44 16 50 18" fill="none" stroke="rgba(255,180,80,0.3)" stroke-width="1.5" stroke-linecap="round" />
+        <path d="M62 33 Q70 28 72 22" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" opacity="0.7" />
+        <circle cx="62" cy="33" r="3" fill="#f59e0b" opacity="0.8" filter="url(#pSft)" />
+        <circle cx="62" cy="33" r="1.5" fill="#fff8c0" />
+        <ellipse cx="37" cy="50" rx="7" ry="5.5" fill="white" />
+        <ellipse cx="37" cy="51" rx="6.5" ry="4.5" fill="rgba(200,255,220,0.2)" />
+        <circle cx="37" cy="50" r="4.8" fill="url(#pIris)" />
+        <ellipse cx="37" cy="50" rx="1.3" ry="4" fill="#021008" />
+        <circle cx="34.5" cy="47.5" r="2.2" fill="white" opacity="0.95" />
+        <circle cx="40" cy="52.5" r="1" fill="white" opacity="0.5" />
+        <path d="M30 47 Q37 43.5 44 47" fill="none" stroke="#100800" stroke-width="2.2" stroke-linecap="round" />
+        <line x1="30.5" y1="47.5" x2="28.5" y2="45" stroke="#100800" stroke-width="1.4" stroke-linecap="round" />
+        <line x1="43.5" y1="47.5" x2="45.5" y2="45" stroke="#100800" stroke-width="1.4" stroke-linecap="round" />
+        <path d="M31 54 Q37 56.5 43 54" fill="none" stroke="rgba(10,20,5,0.35)" stroke-width="0.8" />
+        <ellipse cx="59" cy="50" rx="7" ry="5.5" fill="white" />
+        <ellipse cx="59" cy="51" rx="6.5" ry="4.5" fill="rgba(200,255,220,0.2)" />
+        <circle cx="59" cy="50" r="4.8" fill="url(#pIris)" />
+        <ellipse cx="59" cy="50" rx="1.3" ry="4" fill="#021008" />
+        <circle cx="56.5" cy="47.5" r="2.2" fill="white" opacity="0.95" />
+        <circle cx="62" cy="52.5" r="1" fill="white" opacity="0.5" />
+        <path d="M52 47 Q59 43.5 66 47" fill="none" stroke="#100800" stroke-width="2.2" stroke-linecap="round" />
+        <line x1="52.5" y1="47.5" x2="50.5" y2="45" stroke="#100800" stroke-width="1.4" stroke-linecap="round" />
+        <line x1="65.5" y1="47.5" x2="67.5" y2="45" stroke="#100800" stroke-width="1.4" stroke-linecap="round" />
+        <path d="M53 54 Q59 56.5 65 54" fill="none" stroke="rgba(10,20,5,0.35)" stroke-width="0.8" />
+        <path d="M30 44 Q37 40.5 44 43" fill="none" stroke="#200800" stroke-width="3" stroke-linecap="round" />
+        <path d="M52 43 Q59 40.5 66 44" fill="none" stroke="#200800" stroke-width="3" stroke-linecap="round" />
+        <path d="M46 57 L48 61 L50 57" fill="none" stroke="rgba(130,65,10,0.45)" stroke-width="1.2" stroke-linejoin="round" />
+        <line x1="48" y1="51" x2="48" y2="57" stroke="rgba(100,50,5,0.12)" stroke-width="3" />
+        <path d="M41 65.5 Q48 70.5 55 65.5" fill="none" stroke="#905030" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M42 65.5 Q45 64 48 65 Q51 64 54 65.5" fill="rgba(200,130,70,0.25)" />
+        <path d="M43 65.5 Q48 67.5 53 65.5" fill="rgba(255,160,80,0.18)" />
+        <path d="M4 110 Q-4 85 5 60 Q12 42 26 38" fill="none" stroke="#10b981" stroke-width="14" stroke-linecap="round" opacity="0.12" filter="url(#pNaga)" />
+        <path d="M4 110 Q-4 85 5 60 Q12 42 26 38" fill="none" stroke="#10b981" stroke-width="7" stroke-linecap="round" opacity="0.3" filter="url(#pSft)" />
+        <path d="M4 110 Q-4 85 5 60 Q12 42 26 38" fill="none" stroke="#059669" stroke-width="5" stroke-linecap="round" />
+        <path d="M4 110 Q-4 85 5 60 Q12 42 26 38" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 4" />
+        <path d="M5 105 Q-3 82 6 58 Q13 44 26 40" fill="none" stroke="rgba(160,255,210,0.3)" stroke-width="1" stroke-linecap="round" />
+        <ellipse cx="27" cy="37" rx="11" ry="7" fill="#059669" transform="rotate(-35,27,37)" filter="url(#pSft)" />
+        <ellipse cx="27" cy="37" rx="11" ry="7" fill="#34d399" transform="rotate(-35,27,37)" opacity="0.45" />
+        <path d="M20 32 Q27 30 33 35" fill="none" stroke="rgba(0,80,40,0.5)" stroke-width="1.5" />
+        <circle cx="22.5" cy="33" r="2.8" fill="#f59e0b" filter="url(#pSft)" />
+        <circle cx="22.5" cy="33" r="2.8" fill="#fbbf24" opacity="0.7" />
+        <ellipse cx="22.5" cy="33" rx="0.9" ry="2.4" fill="#060100" />
+        <circle cx="21.8" cy="32.2" r="1" fill="rgba(255,255,200,0.85)" />
+        <path d="M32 33 L38 28" fill="none" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" />
+        <path d="M38 28 L36.5 25.5 M38 28 L40 25.5" fill="none" stroke="#34d399" stroke-width="1.2" stroke-linecap="round" />
+        <rect x="0" y="108" width="96" height="4" fill="rgba(16,185,129,0.2)" />
+        <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(16,185,129,0.6)" stroke-width="0.8" />
+        <line x1="72" y1="108" x2="96" y2="108" stroke="rgba(245,158,11,0.6)" stroke-width="0.8" />
+    </g>`,
+auto: `<defs>
+    <clipPath id="cpa"><rect width="96" height="112" rx="4" /></clipPath>
+<radialGradient id="aBg" cx="50%" cy="50%" r="65%">
+<stop offset="0%" stop-color="#1e0404"/>
+<stop offset="60%" stop-color="#0e0202"/>
+<stop offset="100%" stop-color="#060101"/>
+</radialGradient>
+<radialGradient id="aFace" cx="48%" cy="40%" r="52%">
+<stop offset="0%" stop-color="#d49060"/>
+<stop offset="70%" stop-color="#a86030"/>
+<stop offset="100%" stop-color="#7a3a10"/>
+</radialGradient>
+<radialGradient id="aIris" cx="28%" cy="24%" r="65%">
+<stop offset="0%" stop-color="#ffdd60"/>
+<stop offset="45%" stop-color="#f97316"/>
+<stop offset="100%" stop-color="#7c1a04"/>
+</radialGradient>
+<radialGradient id="aBody" cx="50%" cy="25%" r="70%">
+<stop offset="0%" stop-color="#400808"/>
+<stop offset="100%" stop-color="#100101"/>
+</radialGradient>
+<radialGradient id="aAura" cx="50%" cy="50%" r="55%">
+<stop offset="0%" stop-color="rgba(220,38,38,0.2)"/>
+<stop offset="100%" stop-color="rgba(220,38,38,0)"/>
+</radialGradient>
+<filter id="aFire" x="-50%" y="-80%" width="200%" height="280%">
+<feGaussianBlur stdDeviation="4" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="aHeat" x="-30%" y="-30%" width="160%" height="160%">
+<feGaussianBlur stdDeviation="2.5" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="aSft" x="-15%" y="-15%" width="130%" height="130%">
+<feGaussianBlur stdDeviation="1.2" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="aSkin" x="-10%" y="-10%" width="120%" height="120%">
+<feGaussianBlur stdDeviation="0.7" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+</defs>
+    <g clip-path="url(#cpa)">
+        <rect width="96" height="112" fill="url(#aBg)" />
+        <ellipse cx="48" cy="60" rx="48" ry="55" fill="url(#aAura)" />
+        <circle cx="48" cy="60" r="46" fill="none" stroke="rgba(220,38,38,0.07)" stroke-width="3" />
+        <circle cx="48" cy="60" r="32" fill="none" stroke="rgba(249,115,22,0.09)" stroke-width="2" />
+        <circle cx="48" cy="60" r="18" fill="none" stroke="rgba(251,191,36,0.1)" stroke-width="1.5" />
+        <line x1="-10" y1="95" x2="106" y2="65" stroke="rgba(220,38,38,0.06)" stroke-width="16" />
+        <path d="M-6 112 L18 66 Q48 80 78 66 L102 112Z" fill="url(#aBody)" />
+        <path d="M18 66 Q8 58 6 68 Q8 78 18 80 Q10 76 12 67 Q14 59 18 66Z" fill="#560a0a" stroke="rgba(220,38,38,0.6)" stroke-width="1" />
+        <path d="M78 66 Q88 58 90 68 Q88 78 78 80 Q86 76 84 67 Q82 59 78 66Z" fill="#560a0a" stroke="rgba(220,38,38,0.6)" stroke-width="1" />
+        <circle cx="10" cy="66" r="1.2" fill="rgba(220,38,38,0.6)" />
+        <circle cx="10" cy="72" r="1.2" fill="rgba(220,38,38,0.6)" />
+        <circle cx="86" cy="66" r="1.2" fill="rgba(220,38,38,0.6)" />
+        <circle cx="86" cy="72" r="1.2" fill="rgba(220,38,38,0.6)" />
+        <path d="M36 66 L48 80 L60 66" fill="none" stroke="rgba(220,38,38,0.7)" stroke-width="2.2" stroke-linejoin="round" />
+        <path d="M39 66 L48 76 L57 66" fill="rgba(0,0,0,0.3)" />
+        <circle cx="48" cy="90" r="11" fill="rgba(220,38,38,0.12)" stroke="rgba(220,38,38,0.55)" stroke-width="1.2" filter="url(#aHeat)" />
+        <circle cx="48" cy="90" r="8" fill="none" stroke="rgba(220,38,38,0.25)" stroke-width="0.6" />
+        <text x="48" y="94.5" text-anchor="middle" fill="#fca5a5" font-size="11" font-family="Arial Black, Impact, sans-serif" font-weight="900" filter="url(#aSft)">W</text>
+        <g filter="url(#aHeat)">
+            <path d="M22 60 Q16 58 14 50" fill="none" stroke="#9a5828" stroke-width="11" stroke-linecap="round" />
+            <rect x="3" y="36" width="22" height="18" rx="8" fill="#9a5828" />
+            <line x1="5" y1="43" x2="24" y2="43" stroke="rgba(0,0,0,0.35)" stroke-width="1.5" />
+            <line x1="5" y1="47" x2="24" y2="47" stroke="rgba(0,0,0,0.22)" stroke-width="1" />
+            <path d="M7 39 L12 47 L10 52" fill="none" stroke="rgba(251,191,36,0.7)" stroke-width="1.2" stroke-linecap="round" />
+            <path d="M16 38 L18 44" fill="none" stroke="rgba(251,191,36,0.4)" stroke-width="0.9" stroke-linecap="round" />
+            <rect x="3" y="36" width="22" height="18" rx="8" fill="none" stroke="rgba(249,115,22,0.6)" stroke-width="1.2" />
+        </g>
+        <path d="M14 38 Q10 30 12 22 Q16 27 15 33 Q18 26 19 19 Q22 25 21 32 Q24 26 25 20 Q28 27 25 34 Q29 28 30 23 Q32 31 28 37 Q24 42 19 40 Q14 38 14 38Z" fill="rgba(220,38,38,0.7)" filter="url(#aFire)" />
+        <path d="M16 40 Q13 33 15 26 Q18 30 17 35 Q20 29 21 24 Q23 29 22 35 Q25 30 26 26 Q28 32 25 38 Q22 42 19 41Z" fill="rgba(251,191,36,0.55)" />
+        <path d="M18 40 Q16 35 18 30 Q20 33 20 37 Q22 32 23 29 Q24 33 23 38Z" fill="rgba(255,230,100,0.35)" />
+        <path d="M39 63 Q48 70 57 63 L56 71 Q48 77 40 71Z" fill="#a06030" filter="url(#aSkin)" />
+        <path d="M41 63 Q48 67 55 63 L55 66 Q48 70 41 66Z" fill="rgba(0,0,0,0.2)" />
+        <ellipse cx="26" cy="51" rx="4.5" ry="5.5" fill="#a06030" />
+        <path d="M27.5 48 Q25 51 27.5 54" fill="none" stroke="#7a3010" stroke-width="1.2" />
+        <ellipse cx="70" cy="51" rx="4.5" ry="5.5" fill="#a06030" />
+        <path d="M26 53 Q25 35 48 27 Q71 35 70 53 Q70 65 60 70 Q48 74 36 70 Q26 65 26 53Z" fill="url(#aFace)" filter="url(#aSkin)" />
+        <path d="M36 68 Q48 73 60 68" fill="none" stroke="rgba(100,45,10,0.3)" stroke-width="1.5" />
+        <path d="M34 60 Q33 64 35 67" fill="none" stroke="rgba(100,45,10,0.25)" stroke-width="1.5" />
+        <path d="M62 60 Q63 64 61 67" fill="none" stroke="rgba(100,45,10,0.25)" stroke-width="1.5" />
+        <path d="M26 46 Q25 28 48 22 Q71 28 70 46 L68 40 Q65 25 48 24 Q31 25 28 40Z" fill="#1a0303" />
+        <path d="M44 26 Q40 16 38 10 Q44 14 46 22Z" fill="#220505" />
+        <path d="M48 24 Q48 12 52 8 Q54 14 52 23Z" fill="#1a0303" />
+        <path d="M52 25 Q56 15 60 12 Q60 18 56 26Z" fill="#220505" />
+        <path d="M56 27 Q62 18 65 14 Q64 22 59 28Z" fill="#1a0303" />
+        <path d="M46 19 Q50 15 55 17" fill="none" stroke="rgba(180,60,30,0.5)" stroke-width="1.5" stroke-linecap="round" />
+        <path d="M54 20 Q58 17 62 19" fill="none" stroke="rgba(180,60,30,0.35)" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M29 49.5 Q37 46 45 49.5 Q37 54 29 49.5Z" fill="white" />
+        <circle cx="37" cy="50" r="4" fill="url(#aIris)" />
+        <circle cx="37" cy="50" r="2.2" fill="#080000" />
+        <circle cx="35" cy="48" r="1.6" fill="white" opacity="0.92" />
+        <circle cx="39.5" cy="52" r="0.8" fill="white" opacity="0.45" />
+        <path d="M29 48.5 Q37 44.5 45 48.5" fill="none" stroke="#080000" stroke-width="3" stroke-linecap="round" />
+        <path d="M30 51.5 Q37 54 44 51.5" fill="none" stroke="#1a0500" stroke-width="1.2" stroke-linecap="round" opacity="0.7" />
+        <path d="M51 49.5 Q59 46 67 49.5 Q59 54 51 49.5Z" fill="white" />
+        <circle cx="59" cy="50" r="4" fill="url(#aIris)" />
+        <circle cx="59" cy="50" r="2.2" fill="#080000" />
+        <circle cx="57" cy="48" r="1.6" fill="white" opacity="0.92" />
+        <circle cx="61.5" cy="52" r="0.8" fill="white" opacity="0.45" />
+        <path d="M51 48.5 Q59 44.5 67 48.5" fill="none" stroke="#080000" stroke-width="3" stroke-linecap="round" />
+        <path d="M52 51.5 Q59 54 66 51.5" fill="none" stroke="#1a0500" stroke-width="1.2" stroke-linecap="round" opacity="0.7" />
+        <path d="M28 44 Q37 40 45 43" fill="none" stroke="#0c0101" stroke-width="4" stroke-linecap="round" />
+        <path d="M51 43 Q59 40 68 44" fill="none" stroke="#0c0101" stroke-width="4" stroke-linecap="round" />
+        <path d="M43.5 42.5 Q48 41 52.5 42.5" fill="none" stroke="#0c0101" stroke-width="2" stroke-linecap="round" />
+        <path d="M30 43 Q37 40.5 44 42.5" fill="none" stroke="rgba(60,15,5,0.4)" stroke-width="1" stroke-linecap="round" />
+        <path d="M30 53.5 L27 58" stroke="rgba(180,70,30,0.6)" stroke-width="1.2" stroke-linecap="round" />
+        <path d="M29 55 L27.5 54" stroke="rgba(180,70,30,0.35)" stroke-width="0.8" stroke-linecap="round" />
+        <path d="M46 57 L48 61 L50 57" fill="none" stroke="rgba(110,45,10,0.5)" stroke-width="1.3" stroke-linejoin="round" />
+        <path d="M40 65.5 L56 65.5" stroke="#7a2808" stroke-width="2" stroke-linecap="round" fill="none" />
+        <path d="M40 65.5 Q39 66.5 40 67.5" fill="none" stroke="rgba(100,30,10,0.4)" stroke-width="0.8" />
+        <path d="M56 65.5 Q57 66.5 56 67.5" fill="none" stroke="rgba(100,30,10,0.4)" stroke-width="0.8" />
+        <path d="M75 28 Q80 16 78 5 Q86 12 84 22 Q90 14 89 5 Q97 15 93 26 Q98 19 96 10 Q104 22 99 33 Q94 42 84 38 Q74 34 74 26 Q74.5 27 75 28Z" fill="rgba(220,38,38,0.5)" filter="url(#aFire)" />
+        <path d="M77 30 Q81 19 79 10 Q85 16 84 24 Q88 17 88 11 Q93 19 90 28 Q87 35 82 33 Q77 31 77 30Z" fill="rgba(249,115,22,0.6)" />
+        <path d="M80 30 Q82 22 81 16 Q84 20 84 26 Q86 21 87 17 Q89 23 87 29 Q85 33 82 32Z" fill="rgba(251,191,36,0.5)" />
+        <path d="M82 28 Q83 22 83 18 Q85 22 84 27Z" fill="rgba(255,240,180,0.4)" />
+        <rect x="0" y="108" width="96" height="4" fill="rgba(220,38,38,0.22)" />
+        <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(220,38,38,0.65)" stroke-width="0.8" />
+        <line x1="0" y1="108" x2="28" y2="108" stroke="rgba(251,191,36,0.5)" stroke-width="0.8" />
+    </g>`
+}
 
 // ════════════════════════════════════════════════════════════
 // 🖥️ UI MANAGER
