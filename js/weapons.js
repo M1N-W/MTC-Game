@@ -648,7 +648,7 @@ class WeaponSystem {
         const S = charData;
         const riceWeapon = {
             name: '🍙 ข้าวเหนียว',
-            damage: S.riceDamage ?? 42.5,
+            damage: S.riceDamage ?? 62,
             cooldown: S.riceCooldown ?? 0.46,
             range: S.riceRange ?? 750,
             speed: S.riceSpeed ?? 600,
@@ -1139,7 +1139,8 @@ class ProjectileManager {
 
     spawnHeatWave(player, angle) {
         const a = angle ?? player?.angle ?? 0;
-        const range = player?.stats?.heatWaveRange ?? BALANCE.player?.auto?.heatWaveRange ?? 150;
+        const range = player?.stats?.heatWaveRange ?? BALANCE.characters?.auto?.heatWaveRange ?? 180;
+
 
         // ── BUG-3 FIX: Read base damage from config instead of hardcoding 34.
         const damageBase = player?.stats?.weapons?.auto?.damage

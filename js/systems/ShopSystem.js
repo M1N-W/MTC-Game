@@ -276,7 +276,7 @@ function buyItem(slotIndex) {
 
     } else if (item.id === 'autoCore') {
         if (typeof AutoPlayer !== 'undefined' && p instanceof AutoPlayer) {
-            const current = p.stats?.heatTierHot ?? (p._heatTierHotOverride ?? 67);
+            const current = p.stats?.heatTierHot ?? (p._heatTierHotOverride ?? BALANCE.characters?.auto?.heatTierHot ?? 67);
             p._heatTierHotOverride = Math.max(20, Math.round(current * 0.85));
             if (p.stats) p.stats.heatTierHot = p._heatTierHotOverride;
             spawnFloatingText(`🔥 HEAT CORE! HOT ↓${p._heatTierHotOverride}`, p.x, p.y - 70, '#fb923c', 22);

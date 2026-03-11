@@ -210,7 +210,7 @@ class KruManop extends BossBase {
             bark: { cd: 0, max: BALANCE.boss.phase2.barkCooldown },
             goldfish: { cd: 0, max: BALANCE.boss.phase3.goldfishCooldown },
             bubble: { cd: 0, max: BALANCE.boss.phase3.bubbleCooldown },
-            matrixGrid: { cd: 0, max: 22.0 },
+            matrixGrid: { cd: 0, max: BALANCE.boss.matrixGridCooldown ?? 22.0 },
             domain: { cd: 0, max: _DC ? _DC.COOLDOWN : 45.0 },
             // ── Phase 2 new skills ────────────────────────────
             chalkWall: { cd: 0, max: BALANCE.boss.phase2.chalkWallCooldown ?? 12.0 },

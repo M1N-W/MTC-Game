@@ -452,6 +452,7 @@ const BALANCE = {
         graphLength: 1600,
         graphDuration: 20,
         graphCooldown: 16,
+        matrixGridCooldown: 22.0,
         log457ChargeDuration: 2,
         log457ActiveDuration: 6,
         log457StunDuration: 1.2,

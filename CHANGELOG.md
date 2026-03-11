@@ -4,6 +4,27 @@
 
 ---
 
+## v3.30.12 — Numeric Literals Cleanup & Balance
+*Released: March 11, 2026*
+
+### 🔧 Code Quality Improvements
+- **Config Integration**: Replaced hardcoded numeric literals with BALANCE config references
+- **ManopBoss.js**: matrixGrid cooldown now uses `BALANCE.boss.matrixGridCooldown ?? 22.0`
+- **ShopSystem.js**: Auto core heat tier properly references `BALANCE.characters?.auto?.heatTierHot ?? 67`
+
+### ⚖️ Balance Adjustments  
+- **Rice Weapon**: Damage fallback increased from 42.5 → 62
+- **Heat Wave**: Range fallback increased from 150 → 180
+- **Boss Config**: Added `matrixGridCooldown: 22.0` to BALANCE.boss section
+
+### 📁 Files Modified
+- `js/config.js` - Added matrixGridCooldown configuration
+- `js/entities/boss/ManopBoss.js` - Use config for matrixGrid cooldown
+- `js/weapons.js` - Rice damage and heatWave range balance changes
+- `js/systems/ShopSystem.js` - Auto core heat tier config reference
+
+---
+
 ## v3.30.11 — Documentation Updates
 *Released: March 11, 2026*
 

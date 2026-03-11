@@ -1178,7 +1178,7 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Previous Changes (v3.30.4)
+## 📝 Recent Changes (v3.30.4)
 
 ### Major Balance Patch (March 10, 2026)
 **Purpose:** Comprehensive balance overhaul to reduce damage scaling and improve game fairness
@@ -1211,7 +1211,7 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Previous Changes (v3.30.3)
+## 📝 Recent Changes (v3.30.9)
 
 ### Boss Attacks Safety Improvements (March 10, 2026)
 **Purpose:** Enhance stability and prevent rendering crashes through coordinate validation

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.11'; // Documentation updates - heat tier values and Stand Meter drain corrections
+const CACHE_NAME = 'mtc-cache-v3.30.12'; // Numeric literals cleanup - matrixGridCooldown config, rice damage balance, heatWave range adjustment
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
