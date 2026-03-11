@@ -1,0 +1,146 @@
+# MTC Game Development Rules
+
+## Doc Sync Rule — runs on EVERY commit
+
+### Trigger
+When committing any file in js/ or css/ — always run this checklist BEFORE writing commit message.
+
+### Step 1: Scan what changed
+List all modified files. For each file, note:
+- New classes / renamed classes
+- New global variables / window.* exports
+- New skills / weapons / enemies / bosses
+- Changed property names (e.g. cooldown keys, stat names)
+- Changed inheritance or file structure
+- Removed classes or features
+
+### Step 2: Update PROJECT_OVERVIEW.md
+Update ONLY sections affected by the changes above:
+- File Structure table — if files added/moved/removed
+- Character Quick-Stats table 🔴 — if config.js balance changed
+- Auto Rework section — if AutoPlayer.js or config auto stats changed
+- Wave Events table — if WaveManager.js wave logic changed
+- MTC Room section — if map.js bounds/features changed
+- Energy Cost table — if new skill costs added
+- Muzzle Offset table — if weapons.js offsets changed
+- Recent Changes — always add [NEXT VERSION] entry summarizing the patch
+- Status line version — leave as [NEXT VERSION]
+
+DO NOT rewrite stable sections (Architecture, Workflow, AI Roles) unless explicitly instructed.
+
+### Step 3: Update SKILL.md
+Update ONLY if the commit changes any of these:
+- Class names or constructor names → Section 2 (Class Name Map)
+- Inheritance chain → Section 3
+- AI file load order or API method names → Section 4
+- Property rules (vx/vy, stats.moveSpeed, etc.) → Section 5
+- Global variable patterns → Section 6
+- Domain singleton behavior → Section 7
+- Rendering layer order or variable declaration rules → Section 8
+- effects.js exports → Section 9
+- Poom routing rules → Section 10
+- Heat tier values or Stand Pull cooldown keys → Section 11
+- config.js BALANCE structure → Section 12
+- New file created → Section 13 (checklist)
+- Version number in status line → Section header
+
+If nothing in the commit touches the above — SKIP SKILL.md update entirely.
+
+### Step 4: Bump version (existing rule)
+sw.js → CHANGELOG.md → README-info.md → PROJECT_OVERVIEW.md status line
+Use format [NEXT VERSION] in PROJECT_OVERVIEW and SKILL.md — bump actual number only in sw.js + CHANGELOG.
+
+### Step 5: Write commit message
+Format: "vX.X.X — <summary>\n\n<bullet list of changes>"
+
+---
+
+## Version Increment Criteria for sw.js CACHE_NAME
+
+### MAJOR VERSION (+1.00.00)
+- Breaking changes that affect save compatibility or core game mechanics
+- Complete engine migration (e.g., Godot migration)
+- Fundamental architecture overhaul
+- NOT currently used in development cycle
+
+### MINOR VERSION (+0.01.00)
+- Major new systems (AI Enhancement System, BGM Crossfade System)
+- Architecture refactors (EnemyBase consolidation, new inheritance patterns)
+- Complete new gameplay systems (Domain Expansion, Boss AI overhaul)
+- Multiple related features bundled together
+- 4+ new files created
+- Significant gameplay enhancement
+
+### PATCH VERSION (+0.00.01)
+- Bug fixes (Cooldown HUD fixes, collision corrections)
+- Balance tweaks (Stat adjustments, difficulty modifications)
+- Minor features (Individual skill improvements, UI polish)
+- Documentation updates (README, changelog, PROJECT_OVERVIEW)
+- Small quality-of-life improvements
+
+---
+
+## Documentation Updates Rule
+
+### Documentation-only updates (no functional code changes):
+- README-info.md
+- CHANGELOG.md  
+- PROJECT_OVERVIEW.md
+- Code comments
+- Inline documentation
+
+### DO NOT increment CACHE_NAME version for:
+- Grammar fixes
+- Information updates
+- Documentation restructuring
+- Adding technical references
+- Updating feature descriptions
+
+### ONLY increment service worker version for:
+- Game logic changes
+- Bug fixes affecting gameplay
+- New features implementation
+- Asset updates (CSS, images, sounds)
+- API changes
+- Performance optimizations affecting player experience
+
+---
+
+## Commit & Push Workflow
+
+### Priority Sequence:
+1. **PROJECT_OVERVIEW.md** (FIRST - PRIORITY #1)
+2. Update sw.js (CACHE_NAME version)
+3. Update CHANGELOG.md 
+4. Update README-info.md
+5. Update other documentation files
+6. Commit & push
+
+### Reason for Priority:
+- PROJECT_OVERVIEW.md serves as the "AI Assistant Handbook" for understanding project context
+- New AI sessions read this file first to understand the codebase
+- Outdated PROJECT_OVERVIEW.md leads to incorrect assumptions and wasted time
+- Other documentation files are secondary to project context understanding
+
+### Commit Message Format:
+- **Standard Format**: "vX.X.X: [Type] [Short Description] - [Detailed Explanation]"
+- **Types**: Fix, Feature, Enhancement, Performance, Documentation, Refactor
+- **Examples**:
+  - "v3.4.17: Fixed malformed CSS selector in index.html - corrected invalid Unicode characters in feature list that was causing display issues"
+  - "v3.4.16: Updated README-info.md with new game features and improved installation instructions"
+  - "v3.3.3: Fixed kills display - added kills param to showGameOver() to properly show player statistics on game over screen"
+
+---
+
+## Cascade Editing Workaround
+
+### If encountering "malformed edit" errors when editing JavaScript files with multi-line strings:
+1. Create temporary Python file to handle the edit
+2. Read file content with UTF-8 encoding
+3. Use string.replace() with exact matching
+4. Write back to file
+5. Clean up temp file
+
+### User instruction: If edit tool fails with malformed edit error, just say "ใช้ Python script" and I'll create the Python script immediately.
+
+This approach has been proven to work for boss.js multi-line edits where Cascade's edit tool fails.

@@ -189,10 +189,10 @@ class WanchaiStand {
         // ── Heat tier damage multiplier ────────────────────────
         const tier = owner._heatTier ?? 0;
         // Feature 1: COLD tier damage penalty
-        const heatDmgMult = tier >= 3 ? (S.heatDmgOverheat ?? 1.50)
-            : tier >= 2 ? (S.heatDmgHot ?? 1.30)
-                : tier >= 1 ? (S.heatDmgWarm ?? 1.15)
-                    : (S.coldDamageMult ?? 0.70); // COLD penalty
+        const heatDmgMult = tier >= 3 ? (S.heatDmgOverheat ?? 1.30)
+            : tier >= 2 ? (S.heatDmgHot ?? 1.20)
+                : tier >= 1 ? (S.heatDmgWarm ?? 1.10)
+                    : (S.coldDamageMult ?? 0.75); // COLD penalty
 
         let dmg = (S.wanchaiDamage ?? 32) * (owner.damageMultiplier || 1.0) * heatDmgMult;
 
@@ -894,10 +894,10 @@ class AutoPlayer extends Player {
         this.gainHeat(S.heatPerPlayerHit ?? 8, true);
         // Heat tier damage (Feature 1: COLD penalty)
         const pht = this._heatTier ?? 0;
-        const pHeatMult = pht >= 3 ? (S.heatDmgOverheat ?? 1.50)
-            : pht >= 2 ? (S.heatDmgHot ?? 1.30)
-                : pht >= 1 ? (S.heatDmgWarm ?? 1.15)
-                    : (S.coldDamageMult ?? 0.70); // COLD penalty
+        const pHeatMult = pht >= 3 ? (S.heatDmgOverheat ?? 1.30)
+            : pht >= 2 ? (S.heatDmgHot ?? 1.20)
+                : pht >= 1 ? (S.heatDmgWarm ?? 1.10)
+                    : (S.coldDamageMult ?? 0.75); // COLD penalty
         let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0) * pHeatMult;
         let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);

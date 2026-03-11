@@ -2,7 +2,7 @@
 > สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.8
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.9
 
 ---
 
@@ -927,24 +927,18 @@ class SniperEnemy extends EnemyBase {
 
 ## 🔄 Recent Changes (pending commit)
 
-### Bug Fix Batch — effects.js, map.js, input.js, weapons.js (March 10, 2026)
-**Purpose:** แก้บัคทั่วทั้งระบบจาก code review รวม 5 ไฟล์
+### v3.30.9 — March 11, 2026
+**Purpose:** AutoPlayer.js heat damage fallback values synchronization fix
 
-**Files Changed:** `js/effects.js`, `js/map.js`, `js/input.js`, `js/weapons.js`
+- **Fixed AutoPlayer.js heat damage fallback values** to match config.js as source of truth:
+  - `heatDmgOverheat`: 1.50 → 1.30 (was using pre-nerf value)
+  - `heatDmgHot`: 1.30 → 1.20 (was using pre-nerf value)  
+  - `heatDmgWarm`: 1.15 → 1.10 (was using pre-nerf value)
+  - `coldDamageMult`: 0.70 → 0.75 (was using pre-nerf value)
+- **Updated mtc-game-conventions.md** to document current heat tier values and clarify config.js as source of truth
+- **Ensured AutoPlayer.js ?? fallbacks match config.js** to prevent desync if config fails to load
 
-**Key Fixes:**
-
-**effects.js**
-- **`module.exports` — undefined class exports** — `EquationSlam`, `DeadlyGraph` ถูก export แต่ไม่มีใน file → ลบออกจาก exports (ป้องกัน `ReferenceError` ใน Node/bundler; ใน browser ปลอดภัยเพราะมี `typeof module` guard อยู่แล้ว)
-- **Explicit `window.*` exports** — เพิ่ม `window.waveAnnouncementFX`, `window.decalSystem`, `window.shellCasingSystem` explicit exports (เดิมใช้ `var` hoisting อย่างเดียว ซึ่งอาจหายใน strict bundler scope)
-
-**map.js**
-- **`showVoiceBubble` bare call** — บรรทัด 736 ใน `MTCRoom.update()` เรียก `showVoiceBubble(...)` เป็น standalone function ที่ไม่มีอยู่ → แก้เป็น `if (window.UIManager) window.UIManager.showVoiceBubble(...)` (**หมายเหตุ:** ตอนนี้ `utils.js` มี global wrapper `showVoiceBubble` แล้ว ทั้งสอง pattern ใช้ได้ — ไม่ต้องแก้กลับ)
-
-**weapons.js**
-- **Bare `player` reference** — `WeaponSystem.switchWeapon()` ใช้ `typeof player !== 'undefined' && player` แทน `window.player` (inconsistent กับ pattern ที่ใช้ทั่ว codebase) → เปลี่ยนเป็น `window.player && window.player.charId === 'kao'`
-
-**ไฟล์ที่ตรวจแล้วสะอาด (ไม่มีบัค):** `input.js`, `tutorial.js`, `menu.js`, `utils.js`, `VersionManager.js`
+**Files Changed:** `js/entities/player/AutoPlayer.js`, `.agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md`
 
 ---
 

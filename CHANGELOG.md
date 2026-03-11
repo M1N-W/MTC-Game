@@ -4,6 +4,25 @@
 
 ---
 
+## v3.30.9 — AutoPlayer Heat Damage Synchronization Fix
+*Released: March 11, 2026*
+
+### 🔧 Balance & Consistency
+- **Heat Damage Fallback Fix**: Synchronized AutoPlayer.js fallback values with config.js as source of truth
+- **Corrected Pre-Nerf Values**: Fixed outdated heat damage multipliers that were using pre-balance values:
+  - `heatDmgOverheat`: 1.50 → 1.30
+  - `heatDmgHot`: 1.30 → 1.20  
+  - `heatDmgWarm`: 1.15 → 1.10
+  - `coldDamageMult`: 0.70 → 0.75
+- **Documentation Update**: Updated mtc-game-conventions.md to reflect current heat tier values
+- **Fail-Safe Consistency**: Ensured `??` fallbacks in AutoPlayer.js match config.js to prevent desync if config fails to load
+
+### 📝 Files Modified
+- `js/entities/player/AutoPlayer.js`: Heat damage fallback values in WanchaiStand._punch() and AutoPlayer._hitPlayer()
+- `.agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md`: Version and heat tier documentation
+
+---
+
 ## v3.30.8 — Wave Event Announcement Integration
 *Released: March 11, 2026*
 

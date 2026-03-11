@@ -5,7 +5,7 @@ description: "Project-specific conventions, architecture rules, and critical pit
 
 # MTC The Game — Project Conventions & Critical Pitfalls
 Stack: Vanilla JS (ES6+) + HTML5 Canvas 2D + Web Audio API. No frameworks.
-Target: 60 FPS | Status: Beta v3.30.5
+Target: 60 FPS | Status: Beta v3.30.8
 
 ---
 
@@ -245,8 +245,13 @@ Singleton pattern in effects.js:
   HOT       | 67–99%  | dmg ×1.20, punch rate ×0.85
   OVERHEAT  | 100%    | dmg ×1.30, crit +12%, HP drain 5/s
 
-Wanchai (R-Click) active changes Q: Stand Pull (range 380px) instead of Vacuum Pull.
-Cooldown key: standPullCooldown: 10 vs vacuumCooldown: 6 — HUD arc max must be dynamic.
+Config keys: heatDmgWarm/Hot/Overheat, coldDamageMult, heatPunchRateWarm/Hot
+⚠️ AutoPlayer.js fallback values (??) must match config.js — source of truth is config.js.
+   Pre-nerf fallbacks (1.50/1.30/1.15/0.70) were fixed in AutoPlayer.js to match current config.
+
+Wanchai (R-Click) active changes Q: Stand Pull (range 380px, 18 dmg/enemy) instead of Vacuum Pull.
+Both use this.cooldowns.vacuum slot — Stand Pull sets it to standPullCooldown (10s),
+Vacuum sets it to vacuumCooldown (6s). HUD arc max must be dynamic (already implemented).
 
 ---
 
