@@ -1,159 +1,179 @@
-const CACHE_NAME = 'mtc-cache-v3.31.9'; // Documentation Update: Critical Pitfalls & Bug Fixes
+const CACHE_NAME = "mtc-cache-v3.31.10"; // Visual Overhaul: MageEnemy & Auto Weapon Enhancements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
 const CACHE_TIMESTAMP = Date.now();
 const urlsToCache = [
-  './',
-  './index.html',
-  './favicon.svg',
-  './css/main.css?v=' + CACHE_TIMESTAMP,
-  './PROJECT_OVERVIEW.md',
-    './CHANGELOG.md',
-  './js/config.js?v=' + CACHE_TIMESTAMP,
-  './js/utils.js?v=' + CACHE_TIMESTAMP,
-  './js/audio.js?v=' + CACHE_TIMESTAMP,
-  './js/input.js?v=' + CACHE_TIMESTAMP,
-  './js/map.js?v=' + CACHE_TIMESTAMP,
-  './js/menu.js?v=' + CACHE_TIMESTAMP,
-  './js/effects.js?v=' + CACHE_TIMESTAMP,
-  './js/weapons.js?v=' + CACHE_TIMESTAMP,
-  './js/ui.js?v=' + CACHE_TIMESTAMP,
-  './js/game.js?v=' + CACHE_TIMESTAMP,
-  './js/tutorial.js?v=' + CACHE_TIMESTAMP,
+  "./",
+  "./index.html",
+  "./favicon.svg",
+  "./css/main.css?v=" + CACHE_TIMESTAMP,
+  "./PROJECT_OVERVIEW.md",
+  "./CHANGELOG.md",
+  "./js/config.js?v=" + CACHE_TIMESTAMP,
+  "./js/utils.js?v=" + CACHE_TIMESTAMP,
+  "./js/audio.js?v=" + CACHE_TIMESTAMP,
+  "./js/input.js?v=" + CACHE_TIMESTAMP,
+  "./js/map.js?v=" + CACHE_TIMESTAMP,
+  "./js/menu.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects.js?v=" + CACHE_TIMESTAMP,
+  "./js/weapons.js?v=" + CACHE_TIMESTAMP,
+  "./js/ui.js?v=" + CACHE_TIMESTAMP,
+  "./js/game.js?v=" + CACHE_TIMESTAMP,
+  "./js/tutorial.js?v=" + CACHE_TIMESTAMP,
   // AI System
-  './js/ai/UtilityAI.js?v=' + CACHE_TIMESTAMP,
-  './js/ai/EnemyActions.js?v=' + CACHE_TIMESTAMP,
-  './js/ai/SquadAI.js?v=' + CACHE_TIMESTAMP,
-  './js/ai/PlayerPatternAnalyzer.js?v=' + CACHE_TIMESTAMP,
+  "./js/ai/UtilityAI.js?v=" + CACHE_TIMESTAMP,
+  "./js/ai/EnemyActions.js?v=" + CACHE_TIMESTAMP,
+  "./js/ai/SquadAI.js?v=" + CACHE_TIMESTAMP,
+  "./js/ai/PlayerPatternAnalyzer.js?v=" + CACHE_TIMESTAMP,
   // Entities
-  './js/entities/base.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/player/PlayerBase.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/player/KaoPlayer.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/player/AutoPlayer.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/player/PoomPlayer.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/enemy.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss/boss_attacks_shared.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss/boss_attacks_manop.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss/boss_attacks_first.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss/BossBase.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss/ManopBoss.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/boss/FirstBoss.js?v=' + CACHE_TIMESTAMP,
-  './js/entities/summons.js?v=' + CACHE_TIMESTAMP,
+  "./js/entities/base.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/player/PlayerBase.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/player/KaoPlayer.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/player/AutoPlayer.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/player/PoomPlayer.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/enemy.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/boss_attacks_shared.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/boss_attacks_manop.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/boss_attacks_first.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/BossBase.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/ManopBoss.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/FirstBoss.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/summons.js?v=" + CACHE_TIMESTAMP,
   // Systems
-  './js/systems/WaveManager.js?v=' + CACHE_TIMESTAMP,
-  './js/systems/ShopSystem.js?v=' + CACHE_TIMESTAMP,
-  './js/systems/TimeManager.js?v=' + CACHE_TIMESTAMP,
-  './js/systems/AdminSystem.js?v=' + CACHE_TIMESTAMP,
-  './js/systems/GameState.js?v=' + CACHE_TIMESTAMP,
-  './js/VersionManager.js?v=' + CACHE_TIMESTAMP,
+  "./js/systems/WaveManager.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/ShopSystem.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/TimeManager.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/AdminSystem.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/GameState.js?v=" + CACHE_TIMESTAMP,
+  "./js/VersionManager.js?v=" + CACHE_TIMESTAMP,
   // Rendering
-  './js/rendering/PlayerRenderer.js?v=' + CACHE_TIMESTAMP,
-  './js/rendering/BossRenderer.js?v=' + CACHE_TIMESTAMP,
+  "./js/rendering/PlayerRenderer.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/BossRenderer.js?v=" + CACHE_TIMESTAMP,
   // Audio Assets (no cache busting for large files)
-  './assets/audio/menu.mp3',
-  './assets/audio/battle.mp3',
-  './assets/audio/boss.mp3',
-  './assets/audio/glitch.mp3'
+  "./assets/audio/menu.mp3",
+  "./assets/audio/battle.mp3",
+  "./assets/audio/boss.mp3",
+  "./assets/audio/glitch.mp3",
 ];
 
 // ── Helper: ดึงเลขเวอร์ชันจาก CACHE_NAME ─────────────────
 function getVersion() {
   const match = CACHE_NAME.match(/mtc-cache-v(.+)/);
-  return match ? match[1] : 'unknown';
+  return match ? match[1] : "unknown";
 }
 
 // 1. ติดตั้ง Service Worker และดึงไฟล์ทั้งหมดลง Cache
-self.addEventListener('install', event => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(async cache => {
-        console.log('📦 [Service Worker] Caching all assets');
-        const failedUrls = [];
+    caches.open(CACHE_NAME).then(async (cache) => {
+      console.log("📦 [Service Worker] Caching all assets");
+      const failedUrls = [];
 
-        await Promise.all(
-          urlsToCache.map(url =>
-            cache.add(url).catch(() => {
-              failedUrls.push(url);
-            })
-          )
+      await Promise.all(
+        urlsToCache.map((url) =>
+          cache.add(url).catch(() => {
+            failedUrls.push(url);
+          }),
+        ),
+      );
+
+      if (failedUrls.length > 0) {
+        console.warn(
+          "⚠️ [Service Worker] Some assets failed to precache:",
+          failedUrls,
         );
-
-        if (failedUrls.length > 0) {
-          console.warn('⚠️ [Service Worker] Some assets failed to precache:', failedUrls);
-        }
-      })
+      }
+    }),
   );
   self.skipWaiting();
 });
 
 // 2. ลบ Cache เก่าทิ้งเมื่อมีการอัปเดตเวอร์ชันใหม่
-self.addEventListener('activate', event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map(cacheName => {
+        cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('🧹 [Service Worker] Deleting old cache:', cacheName);
+            console.log("🧹 [Service Worker] Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           }
-        })
+        }),
       );
-    })
+    }),
   );
   self.clients.claim();
 
   // ✨ ส่ง version ไปบอกทุก tab ที่เปิดอยู่ทันทีหลัง activate
   const version = getVersion();
-  self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
-    clients.forEach(client => client.postMessage({ type: 'VERSION', version }));
+  self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
+    clients.forEach((client) =>
+      client.postMessage({ type: "VERSION", version }),
+    );
   });
 });
 
 // 3. ดึงจาก Cache ก่อน ถ้าไม่มีให้ดึงจากเน็ต แล้วแอบเก็บลง Cache ไว้ใช้คราวหน้า (Runtime Caching)
-self.addEventListener('fetch', event => {
+self.addEventListener("fetch", (event) => {
   const { request } = event;
 
   // Skip requests that are not safe/valid for Cache API.
-  if (request.method !== 'GET') return;
-  if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
+  if (request.method !== "GET") return;
+  if (request.cache === "only-if-cached" && request.mode !== "same-origin")
+    return;
 
   const requestUrl = new URL(request.url);
-  if (requestUrl.protocol !== 'http:' && requestUrl.protocol !== 'https:') return;
+  if (requestUrl.protocol !== "http:" && requestUrl.protocol !== "https:")
+    return;
 
   event.respondWith(
-    caches.match(request)
-      .then(response => {
-        // เจอในแคช -> ส่งคืนทันที (Offline First)
-        if (response) {
-          return response;
-        }
+    caches.match(request).then((response) => {
+      // เจอในแคช -> ส่งคืนทันที (Offline First)
+      if (response) {
+        return response;
+      }
 
-        // ไม่เจอในแคช -> วิ่งไปดึงจากเน็ต
-        return fetch(request).then(networkResponse => {
+      // ไม่เจอในแคช -> วิ่งไปดึงจากเน็ต
+      return fetch(request)
+        .then((networkResponse) => {
           // ตรวจสอบว่าไฟล์โหลดสมบูรณ์ไหม ถ้าสมบูรณ์ให้ก็อปปี้เก็บลงแคชด้วย
-          if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+          if (
+            networkResponse &&
+            networkResponse.status === 200 &&
+            (networkResponse.type === "basic" ||
+              networkResponse.type === "cors")
+          ) {
             const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => {
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => {
                 // แอบแคช Google Fonts หรือไฟล์ที่หลงลืมไว้แบบอัตโนมัติ
                 return cache.put(request, responseToCache);
               })
-              .catch(cacheError => {
-                console.warn('⚠️ [Service Worker] Runtime cache put failed for:', request.url, cacheError);
+              .catch((cacheError) => {
+                console.warn(
+                  "⚠️ [Service Worker] Runtime cache put failed for:",
+                  request.url,
+                  cacheError,
+                );
               });
           }
           return networkResponse;
-        }).catch(() => {
-          console.warn('⚡ [Service Worker] Network & Cache failed for:', request.url);
+        })
+        .catch(() => {
+          console.warn(
+            "⚡ [Service Worker] Network & Cache failed for:",
+            request.url,
+          );
         });
-      })
+    }),
   );
 });
 
 // ✨ ตอบกลับเมื่อ VersionManager.js ถามหา version (กรณี SW active อยู่แล้วตั้งแต่ต้น)
-self.addEventListener('message', event => {
-  if (event.data?.type === 'GET_VERSION') {
-    event.source.postMessage({ type: 'VERSION', version: getVersion() });
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "GET_VERSION") {
+    event.source.postMessage({ type: "VERSION", version: getVersion() });
   }
 });
