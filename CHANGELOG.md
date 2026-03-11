@@ -4,6 +4,62 @@
 
 ---
 
+## v3.31.5 — Visual Refinement: Pat Ronin Authenticity
+*Released: March 11, 2026*
+
+### 🎨 Traditional Ronin Design Overhaul
+- **Authentic Topknot (Chonmage)**: Redesigned hair with traditional samurai styling
+  - **Topknot Base**: Dark cap rising from body with quadratic curves
+  - **Bun Knot**: Tight round bun at crown with gold cord tie
+  - **Loose Strands**: Messy wisps for ronin aesthetic
+  - **Cultural Accuracy**: Proper traditional Japanese hairstyle
+
+### 🥋 Enhanced Uniform System
+- **Gi/Hakama Layering**: Proper traditional martial arts uniform
+  - **Upper Gi**: White/off-white top half with V-collar opening
+  - **Hakama**: Dark indigo lower half with proper pleating
+  - **Obi Belt**: Dark navy stripe separating gi and hakama
+  - **Lapel Details**: Overlapping collar panels for realistic look
+
+### ⚔️ Advanced Katana Rendering
+- **State-Based Positioning**: Dynamic katana placement per combat state
+  - **Sheathing**: Blade behind back (-2.0 rotation) for cinematic pose
+  - **Blade Guard**: Perpendicular to aim (-90°) for defensive blocking
+  - **Iaido Charge**: Pulled back ready (-45° rotation) for dramatic tension
+  - **Idle/Move**: Forward along aim direction for natural movement
+- **Enhanced Details**: Improved tsuba guard, gold wrap patterns, ice blue edge glow
+
+### 🧤 Separated Hand Rendering
+- **Dedicated Hand Layer**: Katana and hands rendered separately from body
+  - **Sword Hand**: Right glove with cloth wrap details
+  - **Back Hand**: Left glove positioned naturally
+  - **Proper Grip**: Realistic hand positioning on katana handle
+  - **Glove Patterns**: Consistent with other character hand designs
+
+### 👻 Updated Afterimage Effects
+- **Zanzo Particle Sync**: Afterimage effects match new character design
+  - **Body Silhouette**: Simple circle base for performance
+  - **Topknot Shape**: Same quadratic curves as main character
+  - **Bun Detail**: Small ellipse at crown for authenticity
+  - **Alpha Blending**: Proper fade with matching silhouette
+
+### 🏗️ Rendering Architecture Improvements
+- **Layer Separation**: Body and weapon/hands rendered in separate layers
+  - **Layer 1**: Body, uniform, topknot, glasses, hit effects
+  - **Layer 2**: Katana, hands, sword-specific effects
+  - **Better Depth**: Proper visual hierarchy and occlusion
+- **Code Organization**: Cleaner structure with state-based transforms
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/rendering/PlayerRenderer.js (+247 lines refined rendering)
+✅ MODIFIED: js/effects.js (+16 lines updated Zanzo particles)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+6 lines - visual refinement entry)
+✅ MODIFIED: sw.js (v3.31.5)
+```
+
+---
+
 ## v3.31.4 — Rendering Restoration: Pat Character Detail
 *Released: March 11, 2026*
 

@@ -217,28 +217,33 @@ class Particle {
             return;
         }
 
-        // ── TYPE: ZANZO (Pat Afterimage — crescent silhouette) ─
+        // ── TYPE: ZANZO (Pat Afterimage — integrated ronin silhouette) ─
         if (this.type === 'zanzo') {
             CTX.save();
             CTX.translate(screen.x, screen.y);
-            if (this.data.angle !== undefined) CTX.rotate(this.data.angle);
 
             const R = this.size;
-            CTX.globalAlpha = alpha * (this.data.alphaScale ?? 1.0);
+            const a = alpha * (this.data.alphaScale ?? 1.0);
+            CTX.globalAlpha = a;
             CTX.fillStyle = this.color;    // '#4a90d9'
             CTX.shadowBlur = 12 * alpha;
             CTX.shadowColor = this.color;
 
-            // Head silhouette
-            CTX.beginPath();
-            CTX.arc(0, -R - 3, R * 0.52, 0, Math.PI * 2);
-            CTX.fill();
+            // Body circle
+            CTX.beginPath(); CTX.arc(0, 0, R * 0.85, 0, Math.PI * 2); CTX.fill();
 
-            // Body silhouette (compressed — Pat is shorter)
-            CTX.globalAlpha = alpha * 0.85 * (this.data.alphaScale ?? 1.0);
+            // Topknot cap — same quadratic shape as _drawPat
             CTX.beginPath();
-            CTX.ellipse(0, 0, R * 0.72, R * 0.85, 0, 0, Math.PI * 2);
-            CTX.fill();
+            CTX.moveTo(-(R - 1), -2);
+            CTX.quadraticCurveTo(-R - 1, -R * 0.75, -R * 0.30, -R - 3);
+            CTX.quadraticCurveTo(0, -R - 5, R * 0.30, -R - 3);
+            CTX.quadraticCurveTo(R + 1, -R * 0.75, R - 1, -2);
+            CTX.quadraticCurveTo(0, 0, -(R - 1), -2);
+            CTX.closePath(); CTX.fill();
+
+            // Bun knot at crown
+            CTX.globalAlpha = a * 0.80;
+            CTX.beginPath(); CTX.ellipse(1, -R - 7, 4, 4, 0, 0, Math.PI * 2); CTX.fill();
 
             CTX.shadowBlur = 0;
             CTX.restore();
