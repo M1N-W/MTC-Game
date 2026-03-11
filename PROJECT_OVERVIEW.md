@@ -927,6 +927,20 @@ class SniperEnemy extends EnemyBase {
 
 ## 🔄 Recent Changes (pending commit)
 
+### [NEXT VERSION] — March 11, 2026
+**Purpose**: Character balance adjustments and config synchronization
+
+#### 🎯 Balance Changes
+- **AutoPlayer**: Reduced crit bonuses (0.25→0.18), increased HP drain (3→5), adjusted charge damage mult (3.5→2.5)
+- **KaoPlayer**: Reduced passive crit bonus (0.05→0.04), blink ambush window (1.5→2.0s), phantom blink dmg mult (1.8→1.4)
+- **PoomPlayer**: Increased passive crit bonus (0.04→0.06), improved passive lifesteal (0.015→0.025)
+- **Summons**: Updated Naga ignite duration/DPS and Garuda duration to match config values
+
+#### ⚙️ Configuration Updates
+- Added `vacuumEarlyHeatGain`, `nagaIgniteDuration`, `ritualBossDmgCapPct`, `ritualBossDmgCapCosmicPct`
+- Improved Stand Rush range (85→200) and cooldown (0.12→0.10)
+- Enhanced Cosmic Balance Naga burn DPS (22→30)
+
 ### v3.30.9 — March 11, 2026
 **Purpose:** AutoPlayer.js heat damage fallback values synchronization fix
 

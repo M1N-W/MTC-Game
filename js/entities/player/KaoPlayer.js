@@ -182,7 +182,7 @@ class KaoPlayer extends Player {
             this.hp += hpBonus2;
 
             // Crit bonus เพิ่มเข้า baseCritChance
-            this.baseCritChance += (S.passiveLv2CritBonus ?? 0.05);
+            this.baseCritChance += (S.passiveLv2CritBonus ?? 0.04);
 
             const unlockText2 = S.passiveLv2UnlockText ?? '👻 ซุ่มเสรี AWAKENED!';
             spawnFloatingText(unlockText2, this.x, this.y - 70, '#fbbf24', 32);
@@ -402,7 +402,7 @@ class KaoPlayer extends Player {
                             S.cloneDuration ?? 8
                         );
                         // ── Ambush window at destination ───────────────────
-                        this._blinkAmbushTimer = S.phantomBlinkAmbushWindow ?? 1.5;
+                        this._blinkAmbushTimer = S.phantomBlinkAmbushWindow ?? 2.0;
                         this.ambushReady = true;
                         // Break stealth after blink (ambush strike)
                         this.isFreeStealthy = false;
@@ -632,7 +632,7 @@ class KaoPlayer extends Player {
         const S_fw = BALANCE.characters.kao;
         const passiveCrit = this.passiveUnlocked ? (this.stats.passiveCritBonus ?? 0) : 0;  // INC-1 fix: was BALANCE.characters.kao.passiveCritBonus
         // stealthChainBonus: +crit when blink ambush window is active (phantom sequence)
-        const chainBonus = (this._blinkAmbushTimer > 0) ? (S_fw.stealthChainBonus ?? 0.25) : 0;
+        const chainBonus = (this._blinkAmbushTimer > 0) ? (S_fw.stealthChainBonus ?? 0.18) : 0;
         let critChance = (this.baseCritChance || 0) + passiveCrit + (this.bonusCritFromAuto || 0) + chainBonus;
 
         // Ambush: guaranteed crit
@@ -641,7 +641,7 @@ class KaoPlayer extends Player {
             color = '#facc15';
             // ── Phantom Blink ambush multiplier (requires Lv2) ─────────────────
             if (this._blinkAmbushTimer > 0 && this.passiveLv2Unlocked) {
-                dmgMult *= (S_fw.phantomBlinkDmgMult ?? 1.8);
+                dmgMult *= (S_fw.phantomBlinkDmgMult ?? 1.4);
                 this._blinkAmbushTimer = 0;  // consume window
                 if (typeof spawnFloatingText !== 'undefined')
                     spawnFloatingText('\uD83D\uDC7B BLINK STRIKE!', this.x, this.y - 60, '#c4b5fd', 22);

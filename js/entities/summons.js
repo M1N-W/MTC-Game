@@ -61,8 +61,8 @@ class NagaEntity extends Entity {
                     enemy.takeDamage(liveDamage * dt, player);
                     // Cosmic Balance: naga hits ignite enemies
                     if (this.owner?._cosmicBalance && !enemy.dead) {
-                        const burnDPS = BALANCE.characters.poom.cosmicNagaBurnDPS || 22;
-                        enemy.igniteTimer = Math.max(enemy.igniteTimer || 0, 0.8);
+                        const burnDPS = BALANCE.characters.poom.cosmicNagaBurnDPS ?? 30;
+                        enemy.igniteTimer = Math.max(enemy.igniteTimer || 0, BALANCE.characters.poom.nagaIgniteDuration ?? 0.8);
                         enemy.igniteDPS = burnDPS;
                     }
                     if (Math.random() < 0.1) spawnParticles(seg.x, seg.y, 2, '#10b981');
@@ -775,8 +775,8 @@ class GarudaEntity extends Entity {
         super(px, py, 18);
         this.owner = owner;
         const S = BALANCE.characters.poom;
-        this.life = S.garudaDuration || 6;
-        this.maxLife = S.garudaDuration || 6;
+        this.life = S.garudaDuration ?? 9;
+        this.maxLife = S.garudaDuration ?? 9;
         this.active = true;
         this.orbitAngle = 0;
         this.facing = 0;
@@ -811,7 +811,7 @@ class GarudaEntity extends Entity {
 
         const owner = this.owner;
         const cosmic = owner?._cosmicBalance ?? false;
-        const orbitR = (S.garudaOrbitRadius || 120) * (cosmic ? (S.cosmicGarudaRadiusMult || 1.5) : 1);
+        const orbitR = (S.garudaOrbitRadius ?? 120) * (cosmic ? (S.cosmicGarudaRadiusMult ?? 1.5) : 1);
 
         // ── Trail decay (swap-pop) ─────────────────────────
         for (let i = this._trail.length - 1; i >= 0; i--) {
@@ -824,7 +824,7 @@ class GarudaEntity extends Entity {
 
         if (this.state === _GS.ORBIT) {
             if (!owner) { this.active = false; return true; }   // owner null guard
-            this.orbitAngle += (S.garudaOrbitSpeed || 2.2) * dt;
+            this.orbitAngle += (S.garudaOrbitSpeed ?? 2.2) * dt;
             this.x = owner.x + Math.cos(this.orbitAngle) * orbitR;
             this.y = owner.y + Math.sin(this.orbitAngle) * orbitR;
             this.facing = this.orbitAngle + Math.PI * 0.5;
@@ -832,13 +832,13 @@ class GarudaEntity extends Entity {
             if (this.diveCooldown <= 0) {
                 const t = this._findNearest();
                 if (t) { this.diveTarget = t; this.state = _GS.DIVE; }
-                else { this.diveCooldown = (S.garudaDiveCooldown || 1.8); }
+                else { this.diveCooldown = (S.garudaDiveCooldown ?? 1.8); }
             }
 
         } else if (this.state === _GS.DIVE) {
             if (!this.diveTarget || this.diveTarget.dead) {
                 this.state = _GS.RETURN;
-                this.diveCooldown = (S.garudaDiveCooldown || 1.8);
+                this.diveCooldown = (S.garudaDiveCooldown ?? 1.8);
                 return false;
             }
             const tx = this.diveTarget.x, ty = this.diveTarget.y;
@@ -851,8 +851,8 @@ class GarudaEntity extends Entity {
             }
 
             if (d < 26) {
-                let dmg = (S.garudaDamage || 150) * (owner?.damageMultiplier || 1);
-                if (owner?.isEatingRice) dmg *= (S.garudaEatRiceBonus || 1.5);
+                let dmg = (S.garudaDamage ?? 120) * (owner?.damageMultiplier || 1);
+                if (owner?.isEatingRice) dmg *= (S.garudaEatRiceBonus ?? 1.5);
                 if (cosmic) dmg *= 1.20;
 
                 const isBoss = this.diveTarget === window.boss;
@@ -866,10 +866,10 @@ class GarudaEntity extends Entity {
                 if (typeof Audio !== 'undefined' && Audio.playNagaAttack) Audio.playNagaAttack();
                 this.diveTarget = null;
                 this.state = _GS.RETURN;
-                this.diveCooldown = (S.garudaDiveCooldown || 1.8);
+                this.diveCooldown = (S.garudaDiveCooldown ?? 1.8);
 
             } else {
-                const step = Math.min((S.garudaDiveSpeed || 820) * dt, d);
+                const step = Math.min((S.garudaDiveSpeed ?? 820) * dt, d);
                 this.x += (dx / d) * step;
                 this.y += (dy / d) * step;
             }
@@ -884,7 +884,7 @@ class GarudaEntity extends Entity {
                 this.state = _GS.ORBIT;
             } else {
                 this.facing = Math.atan2(dy, dx);
-                const step = Math.min((S.garudaReturnSpeed || 620) * dt, d);
+                const step = Math.min((S.garudaReturnSpeed ?? 620) * dt, d);
                 this.x += (dx / d) * step;
                 this.y += (dy / d) * step;
             }

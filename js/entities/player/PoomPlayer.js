@@ -522,7 +522,7 @@ class PoomPlayer extends Player {
                     spawnFloatingText(`🌾 ${Math.round(bossDmg)}`, bx, by - 60, '#00ff88', 20);
                 }
                 // BALANCE: cap single ritual burst at 35% boss maxHP (45% during Cosmic Balance)
-                const bossDmgCapPct = this._cosmicBalance ? 0.45 : 0.35;
+                const bossDmgCapPct = this._cosmicBalance ? (S.ritualBossDmgCapCosmicPct ?? 0.45) : (S.ritualBossDmgCapPct ?? 0.35);
                 const bossDmgCap = currentBoss.maxHp * bossDmgCapPct;
                 if (bossDmg > bossDmgCap) {
                     bossDmg = bossDmgCap;
@@ -604,7 +604,7 @@ class PoomPlayer extends Player {
         let damage = baseDamage, isCrit = false;
         let critChance = this.baseCritChance;
         if (this.isEatingRice) critChance += S.eatRiceCritBonus;
-        if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0.04);  // INC-3 fix
+        if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0.06);  // INC-3 fix
         if (Math.random() < critChance) {
             damage *= S.critMultiplier; isCrit = true;
             if (this.passiveUnlocked) this.goldenAuraTimer = 1;
@@ -619,7 +619,7 @@ class PoomPlayer extends Player {
         if (this._cosmicBalance) damage *= (BALANCE.characters.poom.cosmicDamageMult || 1.20);
         // ── Passive Lifesteal ──
         if (this.passiveUnlocked) {
-            const healAmount = damage * (S.passiveLifesteal ?? 0.015);  // BUG-3 fix: was S.passiveLifesteal (undefined → NaN)
+            const healAmount = damage * (S.passiveLifesteal ?? 0.025);  // BUG-3 fix: was S.passiveLifesteal (undefined → NaN)
             this.hp = Math.min(this.maxHp, this.hp + healAmount);
             if (Math.random() < 0.3) spawnFloatingText(`+${Math.round(healAmount)}`, this.x, this.y - 35, '#10b981', 12);
         }

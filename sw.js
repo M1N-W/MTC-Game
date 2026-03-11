@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.30.9'; // AutoPlayer.js heat damage fallback values synchronization fix - matched config.js values
+const CACHE_NAME = 'mtc-cache-v3.30.10'; // Character balance adjustments and config synchronization
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -149,6 +149,8 @@ const BALANCE = {
             playerMeleeCooldown: 0.12,      // 0.15 → 0.12 (MELEE mode punch rate)
             playerMeleeRange: 200,          // 85 → 200 (REWORK: เพิ่มระยะ melee ให้ใช้งานได้จริง)
             playerMeleeRangeFar: 320,       // range เมื่อ Heat >= 67% (HOT tier)
+            playerRushRange: 200,           // radius รอบ cursor สำหรับ Stand Rush L-click (sync กับ playerMeleeRange)
+            playerRushCooldown: 0.10,       // cooldown ต่อ Stand Rush (combo speed bonus หักจากนี้)
 
             // ── Vacuum Heat (Q) — REWORK: Pull + Ignite ──────
             vacuumRange: 340,               // 320 → 340
@@ -265,6 +267,7 @@ const BALANCE = {
 
             // ── Feature 3C: Stand Guard (Shift ขณะ Wanchai) ───
             standGuardReduction: 0.60,  // damage reduction ด้านหน้า 60%
+            vacuumEarlyHeatGain: 10,     // heat ที่ได้จาก vacuum ก่อน passive ปลด (earlyMode)
 
             // ── Feature 4: Stand Meter (แทน Timer) ────────────
             standMeterMax: 100,
@@ -350,8 +353,12 @@ const BALANCE = {
             garudaEatRiceBonus: 1.5,
             // ── Cosmic Balance (Naga + Garuda active simultaneously) ──
             // cosmicDamageMult ย้ายขึ้นไปอยู่ใน Passive Skill section แล้ว
+            nagaIgniteDuration: 0.8,        // ignite duration เมื่อ Naga hit ขณะ Cosmic Balance
             cosmicNagaBurnDPS: 30,          // BUFF: 22 → 30
             cosmicGarudaRadiusMult: 1.5,
+            // ── Ritual Boss Damage Cap ────────────────────────────
+            ritualBossDmgCapPct: 0.35,       // single ritual burst cap = 35% boss maxHP
+            ritualBossDmgCapCosmicPct: 0.45, // cap ขณะ Cosmic Balance active
         },
     },
     drone: {

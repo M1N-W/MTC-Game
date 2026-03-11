@@ -43,9 +43,9 @@ class WanchaiStand {
         const S = owner.stats ?? {};
         // ── Heat tier → punch rate multiplier ─────────────
         const ht = owner._heatTier ?? 0;
-        const punchRateMult = ht >= 2 ? (S.heatPunchRateHot ?? 0.70)
-            : ht >= 1 ? (S.heatPunchRateWarm ?? 0.85) : 1.0;
-        this._atkRate = (S.wanchaiPunchRate ?? 0.08) * punchRateMult;
+        const punchRateMult = ht >= 2 ? (S.heatPunchRateHot ?? 0.85)
+            : ht >= 1 ? (S.heatPunchRateWarm ?? 0.92) : 1.0;
+        this._atkRate = (S.wanchaiPunchRate ?? 0.10) * punchRateMult;
         const atkRange = S.standPunchRange ?? 110;  // hitbox reach
         const chaseSpeed = S.standMoveSpeed ?? 340;  // px/s
         const leashRadius = S.standLeashRadius ?? 420;  // max dist from owner
@@ -200,10 +200,10 @@ class WanchaiStand {
         if (owner.isSecondWind) dmg *= (BALANCE?.player?.secondWindDamageMult || 1.5);
 
         // Crit
-        let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
+        let critChance = (owner.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.18);  // BUG-5 fix: was 0.40
         if (owner.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
         // OVERHEAT crit bonus
-        if ((owner._heatTier ?? 0) >= 3) critChance += (S.heatCritBonusOverheat ?? 0.20);
+        if ((owner._heatTier ?? 0) >= 3) critChance += (S.heatCritBonusOverheat ?? 0.12);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
             dmg *= (S.critMultiplier ?? 2.2);  // FIX: fallback 2.0 → 2.2 ให้ match config
@@ -223,7 +223,7 @@ class WanchaiStand {
 
         // Knockback — push enemy away from stand
         const ka = Math.atan2(target.y - this.y, target.x - this.x);
-        const kf = S.standKnockback ?? 180;
+        const kf = S.standKnockback ?? 240;
         target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
         target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
@@ -290,7 +290,7 @@ class WanchaiStand {
             } else {
                 if (typeof owner.gainHeat === 'function') owner.gainHeat(S2.heatOnKillWanchai ?? 15, true);
             }
-            const healPct = S2.heatHealOnKillWanchai ?? 0.08;
+            const healPct = S2.heatHealOnKillWanchai ?? 0.05;
             owner.hp = Math.min(owner.maxHp, owner.hp + owner.maxHp * healPct);
             if (typeof spawnFloatingText === 'function')
                 spawnFloatingText(`+${Math.floor(owner.maxHp * healPct)}hp 🔥`, owner.x, owner.y - 55, '#4ade80', 16);
@@ -299,7 +299,7 @@ class WanchaiStand {
         // ── Feature 4: Stand Meter fill on hit ──────────────────
         if (owner.wanchaiActive) {
             const S3 = owner.stats ?? {};
-            owner.standMeter = Math.min(S3.standMeterMax ?? 100, (owner.standMeter ?? 0) + (S3.standMeterPerHit ?? 4));
+            owner.standMeter = Math.min(S3.standMeterMax ?? 100, (owner.standMeter ?? 0) + (S3.standMeterPerHit ?? 1));
         }
     }
 
@@ -395,7 +395,7 @@ class AutoPlayer extends Player {
         // Temporarily boost baseCritChance during calculation if Stand is active
         const originalCrit = this.baseCritChance;
         if (this.wanchaiActive) {
-            this.baseCritChance += (this.stats?.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.50
+            this.baseCritChance += (this.stats?.standCritBonus ?? 0.18);  // BUG-5 fix: was 0.50
         }
 
         const result = super.dealDamage(baseDamage);
@@ -546,7 +546,7 @@ class AutoPlayer extends Player {
 
             // OVERHEAT: HP drain
             if (newTier === 3) {
-                const drain = (S.heatHpDrainOverheat ?? 3) * dt;
+                const drain = (S.heatHpDrainOverheat ?? 5) * dt;
                 this.hp = Math.max(1, this.hp - drain);
             }
 
@@ -711,7 +711,7 @@ class AutoPlayer extends Player {
                 this._eHeld = false;
                 const S = this.stats ?? {};
                 const chargeRatio = Math.min(1, (this._chargeTimer ?? 0) / (S.chargeMaxTime ?? 1.5));
-                const maxDmgMult = S.chargeDamageMultMax ?? 3.5;
+                const maxDmgMult = S.chargeDamageMultMax ?? 2.5;
                 const maxRangeMult = S.chargeRangeMultMax ?? 1.3;
                 const dmgMult = 1 + chargeRatio * (maxDmgMult - 1);
                 const rangeMult = 0.5 + chargeRatio * (maxRangeMult - 0.5);
@@ -724,8 +724,8 @@ class AutoPlayer extends Player {
                     const DET_RANGE = (S.detonationRange ?? 240) * rangeMult * (isOverheat ? 1.5 : 1.0);
                     const detBaseDmg = (S.detonationBaseDamage ?? 55) * dmgMult + this.heat * (S.detonationHeatScaling ?? 1.2);
                     const detFinalBase = detBaseDmg * (this.damageMultiplier || 1.0);
-                    let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.25);
-                    if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.20);
+                    let detCrit = this.baseCritChance + (S.standCritBonus ?? 0.18);
+                    if (isOverheat) detCrit += (S.heatCritBonusOverheat ?? 0.12);
                     const detIsCrit = Math.random() < detCrit;
                     let detFinalDmg = detFinalBase * (detIsCrit ? (S.critMultiplier ?? 2.2) : 1.0);
                     if (this.isSecondWind) detFinalDmg *= (BALANCE.player.secondWindDamageMult || 1.5);
@@ -754,7 +754,7 @@ class AutoPlayer extends Player {
                         }
                     }
                     if (this.passiveUnlocked && totalDet > 0) {
-                        this.hp = Math.min(this.maxHp, this.hp + totalDet * (S.passiveLifesteal ?? 0.01));
+                        this.hp = Math.min(this.maxHp, this.hp + totalDet * (S.passiveLifesteal ?? 0.025));
                     }
 
                     this.heat = Math.max(0, this.heat - 80);  // BUFF drain: 50 → 80 (รู้สึก "ระบาย" จริง)
@@ -833,7 +833,7 @@ class AutoPlayer extends Player {
     // Finds nearest enemy within playerRushRange of cursor, deals wanchaiDamage
     _doPlayerMelee(mouse) {
         const S = this.stats ?? {};
-        const range = S.playerRushRange ?? 85;
+        const range = S.playerRushRange ?? 200;
         const cx = mouse?.wx ?? this.x;
         const cy = mouse?.wy ?? this.y;
 
@@ -899,9 +899,9 @@ class AutoPlayer extends Player {
                 : pht >= 1 ? (S.heatDmgWarm ?? 1.10)
                     : (S.coldDamageMult ?? 0.75); // COLD penalty
         let dmg = (S.wanchaiDamage ?? 32) * (this.damageMultiplier || 1.0) * pHeatMult;
-        let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.25);  // BUG-5 fix: was 0.40
+        let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.18);  // BUG-5 fix: was 0.40
         if (this.passiveUnlocked) critChance += (S.passiveCritBonus ?? 0);
-        if (pht >= 3) critChance += (S.heatCritBonusOverheat ?? 0.20);
+        if (pht >= 3) critChance += (S.heatCritBonusOverheat ?? 0.12);
         const isCrit = Math.random() < critChance;
         if (isCrit) {
             dmg *= (S.critMultiplier ?? 2.2);
@@ -916,11 +916,11 @@ class AutoPlayer extends Player {
         target.takeDamage(dmg, this);
 
         if (this.passiveUnlocked)
-            this.hp = Math.min(this.maxHp, this.hp + dmg * (S.passiveLifesteal ?? 0.01));  // BUG-4 fix: was 0.02
+            this.hp = Math.min(this.maxHp, this.hp + dmg * (S.passiveLifesteal ?? 0.025));  // BUG-4 fix: was 0.02
 
         // Knockback
         const ka = Math.atan2(target.y - this.y, target.x - this.x);
-        const kf = (S.standKnockback ?? 180) * 0.6;
+        const kf = (S.standKnockback ?? 240) * 0.6;
         target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
         target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
@@ -975,7 +975,7 @@ class AutoPlayer extends Player {
 
         // ── Feature 4: Stand Meter fill on hit ──────────────────
         const S_meter = this.stats ?? {};
-        this.standMeter = Math.min(S_meter.standMeterMax ?? 100, (this.standMeter ?? 0) + (S_meter.standMeterPerHit ?? 4));
+        this.standMeter = Math.min(S_meter.standMeterMax ?? 100, (this.standMeter ?? 0) + (S_meter.standMeterPerHit ?? 1));
 
         // ── Feature 2: Killing Blow Supercharge ─────────────────
         if (target.hp <= 0 && (this._oraComboCount ?? 0) >= (S_meter.oraComboSuperchargeMin ?? 5)) {
@@ -1087,7 +1087,7 @@ class AutoPlayer extends Player {
         const vacDmg = earlyMode ? 0 : (S.vacuumDamage ?? 18);
         const ignDur = earlyMode ? 0 : (S.vacuumIgniteDuration ?? 1.5);
         const ignDps = earlyMode ? 0 : (S.vacuumIgniteDPS ?? 12);
-        const heatGain = earlyMode ? 10 : (S.vacuumHeatGain ?? 25);
+        const heatGain = earlyMode ? (S.vacuumEarlyHeatGain ?? 10) : (S.vacuumHeatGain ?? 25);
 
         let pulled = 0;
         for (const enemy of (window.enemies || [])) {

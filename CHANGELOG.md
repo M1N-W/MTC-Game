@@ -4,6 +4,51 @@
 
 ---
 
+## v3.30.10 — Character Balance Adjustments
+*Released: March 11, 2026*
+
+### 🎯 Balance Changes
+- **AutoPlayer Thermodynamic Balance**:
+  - Reduced Stand crit bonus: 0.25 → 0.18
+  - Increased Overheat HP drain: 3 → 5/s
+  - Reduced Charge Punch max damage: 3.5× → 2.5×
+  - Improved Stand Rush range: 85 → 200px
+  - Reduced Stand Rush cooldown: 0.12 → 0.10s
+  - Reduced Stand Meter fill: 4 → 1 per hit
+
+- **KaoPlayer Assassin Balance**:
+  - Reduced passive Lv2 crit bonus: 0.05 → 0.04
+  - Extended Phantom Blink ambush window: 1.5 → 2.0s
+  - Reduced Phantom Blink damage multiplier: 1.8 → 1.4
+  - Reduced stealth chain crit bonus: 0.25 → 0.18
+
+- **PoomPlayer Spiritual Warrior**:
+  - Increased passive crit bonus: 0.04 → 0.06
+  - Improved passive lifesteal: 0.015 → 0.025
+  - Synchronized ritual boss damage caps with config values
+
+- **Summon Entity Updates**:
+  - Enhanced Naga Cosmic Balance burn DPS: 22 → 30
+  - Standardized Naga ignite duration: 0.8s
+  - Extended Garuda duration: 6 → 9s
+  - Synchronized all summon values with config.js
+
+### ⚙️ Configuration Enhancements
+- **New Config Parameters**:
+  - `vacuumEarlyHeatGain`: Early mode heat gain for Vacuum skill
+  - `nagaIgniteDuration`: Standardized ignite duration for Naga attacks
+  - `ritualBossDmgCapPct`: 35% boss maxHP cap for ritual bursts
+  - `ritualBossDmgCapCosmicPct`: 45% cap during Cosmic Balance
+
+### 📝 Files Modified
+- `js/config.js`: Added new balance parameters and updated existing values
+- `js/entities/player/AutoPlayer.js`: Balance synchronization and fallback updates
+- `js/entities/player/KaoPlayer.js`: Crit bonus and damage multiplier adjustments
+- `js/entities/player/PoomPlayer.js`: Passive ability improvements
+- `js/entities/summons.js`: Entity value synchronization with config
+
+---
+
 ## v3.30.9 — AutoPlayer Heat Damage Synchronization Fix
 *Released: March 11, 2026*
 
