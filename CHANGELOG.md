@@ -4,6 +4,23 @@
 
 ---
 
+## v3.30.8 — Wave Event Announcement Integration
+*Released: March 11, 2026*
+
+### 🎨 UI/UX Enhancements
+- **Unified Banner System**: Integrated wave event badges (fog/speed) into WaveAnnouncementFX
+- **Event Badge Strip**: Added visual event indicators to wave announcement banners
+- **Code Consolidation**: Removed duplicate banner drawing from WaveManager.js
+- **Visual Polish**: Enhanced event display with icons, colors, and proper positioning
+
+### 🔧 Technical Improvements
+- **WaveManager.js**: Added `attachEvent()` calls to integrate with WaveAnnouncementFX
+- **effects.js**: Extended WaveAnnouncementFX with event badge rendering
+- **Performance**: Eliminated redundant banner drawing operations
+- **Architecture**: Centralized event announcement logic in effects system
+
+---
+
 ## v3.30.7 — Service Worker Cache Fix
 *Released: March 11, 2026*
 

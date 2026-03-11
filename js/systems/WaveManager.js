@@ -112,6 +112,16 @@ function _activateWaveEvent(type, wave) {
         _patchEnemySpeeds();
     }
 
+    // แนบ event badge เข้า waveAnnouncementFX (รวมป้ายเป็นอันเดียว)
+    if (typeof waveAnnouncementFX !== 'undefined' && waveAnnouncementFX.active) {
+        waveAnnouncementFX.attachEvent(
+            type,
+            _evt.bannerTitle,
+            _evt.bannerSubtitle,
+            _evt.bannerColor
+        );
+    }
+
     // voice bubble เท่านั้น — canvas banner แสดง title อยู่แล้ว ไม่ spawn floatingText ซ้ำ
     if (window.player && window.UIManager) {
         const voiceLine = type === 'fog' ? '⚠ Radar offline...' : "⚡ They're moving fast!";
@@ -204,7 +214,7 @@ function drawWaveEvent(ctx) {
     if (!_evt.active) return;
     if (_evt.active === 'fog') _drawFog(ctx);
     if (_evt.active === 'speed') _drawSpeed(ctx);
-    if (_evt.announceTimer > 0) _drawBanner(ctx);
+    // _drawBanner ถูกรวมเข้า waveAnnouncementFX.draw() แล้ว — ไม่ต้องเรียกแยก
     if (typeof waveAnnouncementFX !== 'undefined') waveAnnouncementFX.draw(ctx);
 }
 
@@ -333,96 +343,7 @@ function _drawSpeed(ctx) {
     ctx.restore();
 }
 
-function _drawBanner(ctx) {
-    const W = ctx.canvas.width;
-    const now = performance.now() / 1000;
-    const elapsed = ANNOUNCE_DUR - _evt.announceTimer;
-
-    let alpha = elapsed < 0.35
-        ? elapsed / 0.35
-        : _evt.announceTimer > 1.2 ? 1 : _evt.announceTimer / 1.2;
-    if (alpha <= 0.01) return;
-
-    const cx = W / 2, cy = 155;   // ขยับจาก 82→155: หลีก weapon-indicator (top:20+~60px) และ boss-hud (top:70+~50px)
-    const col = _evt.bannerColor;
-    const pulse = 1 + Math.sin(now * 4) * 0.025;
-    const bw = 460, bh = 68, sl = 14;
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = alpha;
-
-    ctx.shadowBlur = 36;
-    ctx.shadowColor = col;
-
-    ctx.beginPath();
-    ctx.moveTo(cx - bw / 2 + sl, cy - bh / 2);
-    ctx.lineTo(cx + bw / 2, cy - bh / 2);
-    ctx.lineTo(cx + bw / 2 - sl, cy + bh / 2);
-    ctx.lineTo(cx - bw / 2, cy + bh / 2);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(8,4,18,0.92)';
-    ctx.fill();
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 2;
-    ctx.shadowBlur = 14;
-    ctx.stroke();
-
-    ctx.save();
-    ctx.globalAlpha *= 0.15;
-    ctx.fillStyle = col;
-    for (let ly = cy - bh / 2 + 1; ly < cy + bh / 2; ly += 4) {
-        ctx.fillRect(cx - bw / 2 + sl + 2, ly, bw - sl * 2 - 4, 1);
-    }
-    ctx.restore();
-
-    const bk = 12;
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx - bw / 2 + sl + bk, cy - bh / 2 + 3);
-    ctx.lineTo(cx - bw / 2 + sl + 3, cy - bh / 2 + 3);
-    ctx.lineTo(cx - bw / 2 + sl + 3, cy - bh / 2 + 3 + bk);
-    ctx.moveTo(cx + bw / 2 - sl - bk, cy + bh / 2 - 3);
-    ctx.lineTo(cx + bw / 2 - sl - 3, cy + bh / 2 - 3);
-    ctx.lineTo(cx + bw / 2 - sl - 3, cy + bh / 2 - 3 - bk);
-    ctx.stroke();
-
-    ctx.shadowBlur = 14;
-    ctx.shadowColor = col;
-    ctx.font = `900 ${Math.round(21 * pulse)}px "Orbitron","Bebas Neue",Arial,sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(_evt.bannerTitle, cx, cy - 11);
-
-    ctx.save();
-    ctx.globalAlpha *= 0.45;
-    ctx.fillStyle = col;
-    ctx.fillText(_evt.bannerTitle, cx, cy - 11);
-    ctx.restore();
-
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = col;
-    ctx.fillStyle = 'rgba(254,243,199,0.88)';
-    ctx.font = 'bold 11px "Rajdhani","Orbitron",Arial,sans-serif';
-    ctx.fillText(_evt.bannerSubtitle, cx, cy + 14);
-
-    const tickBase = bw / 2 - sl - 18;
-    const rgbStr = col === '#ef4444' ? '239,68,68' : '217,119,6';
-    ctx.strokeStyle = `rgba(${rgbStr},0.55)`;
-    ctx.lineWidth = 1.2;
-    for (let t = 0; t < 3; t++) {
-        const d = t * 6;
-        ctx.beginPath();
-        ctx.moveTo(cx + tickBase + d, cy - 7); ctx.lineTo(cx + tickBase + d, cy + 7);
-        ctx.moveTo(cx - tickBase - d, cy - 7); ctx.lineTo(cx - tickBase - d, cy + 7);
-        ctx.stroke();
-    }
-
-    ctx.restore();
-}
+// _drawBanner() ถูกลบแล้ว — event banner รวมอยู่ใน WaveAnnouncementFX.draw() (effects.js)
 
 // ══════════════════════════════════════════════════════════════
 // 🌊 _startTrickle — queue batched spawns over time

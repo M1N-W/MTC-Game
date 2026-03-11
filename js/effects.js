@@ -2063,13 +2063,17 @@ var shellCasingSystem = new ShellCasingSystem();
 // ══════════════════════════════════════════════════════════════
 class WaveAnnouncementFX {
     constructor() {
-        this._timer = 0;     // countdown วินาที
-        this._duration = 3.2;   // total display time
+        this._timer = 0;
+        this._duration = 3.5;   // ยืดเล็กน้อยเพื่อให้ event badge อ่านได้
         this._wave = 0;
         this._isBoss = false;
         this._isGlitch = false;
-        // letterbox bar height target (fraction of canvas height)
-        this._barH = 0;     // interpolated
+        // event badge (fog/speed) — แสดงร่วมในป้ายเดียวกัน
+        this._eventType = null;  // null | 'fog' | 'speed'
+        this._eventTitle = '';
+        this._eventSubtitle = '';
+        this._eventColor = '#fff';
+        this._barH = 0;
         this._active = false;
     }
 
@@ -2078,9 +2082,27 @@ class WaveAnnouncementFX {
         this._wave = waveNum;
         this._isBoss = isBoss;
         this._isGlitch = isGlitch;
+        this._eventType = null;
+        this._eventTitle = '';
+        this._eventSubtitle = '';
+        this._eventColor = '#fff';
         this._timer = this._duration;
         this._barH = 0;
         this._active = true;
+    }
+
+    /**
+     * เรียกหลัง trigger() เพื่อแนบ wave-event badge เข้าป้ายเดียวกัน
+     * @param {'fog'|'speed'} type
+     * @param {string} title      เช่น "SPEED WAVE"
+     * @param {string} subtitle   เช่น "ENEMIES ACCELERATED"
+     * @param {string} color      hex color string
+     */
+    attachEvent(type, title, subtitle, color) {
+        this._eventType = type;
+        this._eventTitle = title;
+        this._eventSubtitle = subtitle;
+        this._eventColor = color;
     }
 
     get active() { return this._active; }
@@ -2108,7 +2130,6 @@ class WaveAnnouncementFX {
         const H = ctx.canvas.height;
 
         const elapsed = this._duration - this._timer;
-        // Alpha: fade-in 0.3s, hold, fade-out 0.5s
         let alpha = elapsed < 0.3
             ? elapsed / 0.3
             : this._timer < 0.5 ? this._timer / 0.5 : 1;
@@ -2118,6 +2139,7 @@ class WaveAnnouncementFX {
         const isBoss = this._isBoss;
         const isGlitch = this._isGlitch;
         const wave = this._wave;
+        const hasEvent = !!this._eventType;
 
         // ── Color palette ──────────────────────────────────────
         const accentCol = isBoss ? '#ef4444'
@@ -2130,40 +2152,32 @@ class WaveAnnouncementFX {
         ctx.save();
         ctx.globalAlpha = alpha;
 
-        // ── Letterbox bars ─────────────────────────────────────
+        // ── Letterbox bar (top edge only) ──────────────────────
         const barH = Math.round(this._barH * H);
         if (barH > 0) {
-            ctx.fillStyle = 'rgba(0,0,0,0.82)';
+            ctx.fillStyle = 'rgba(0,0,0,0.72)';
             ctx.fillRect(0, 0, W, barH);
-            ctx.fillRect(0, H - barH, W, barH);
-
-            // Accent edge line on bars
-            ctx.fillStyle = `rgba(${accentRGB},0.5)`;
+            ctx.fillStyle = `rgba(${accentRGB},0.45)`;
             ctx.fillRect(0, barH - 1, W, 1);
-            ctx.fillRect(0, H - barH, W, 1);
         }
 
-        // ── Center panel ───────────────────────────────────────
+        // ── Layout: top-anchored ───────────────────────────────
         const cx = W / 2;
-        const cy = H / 2;
+        const eventExtraH = hasEvent ? 36 : 0;
+        const ph = 88 + eventExtraH;   // total panel height
+        const cy = 72 + ph / 2;         // top edge ≈ 72px from screen top
         const pw = Math.min(W * 0.72, 520);
-        const ph = 88;
-        const sl = 16; // parallelogram slant
+        const sl = 16;                  // parallelogram slant
 
-        // Subtle pulse on hold
         const holdProgress = Math.max(0, elapsed - 0.3);
         const pulse = 1 + Math.sin(holdProgress * 3.5) * 0.012;
 
         ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(pulse, pulse);
-        ctx.translate(-cx, -cy);
+        ctx.translate(cx, cy); ctx.scale(pulse, pulse); ctx.translate(-cx, -cy);
 
-        // Panel shadow
+        // Panel shadow + background
         ctx.shadowBlur = 60;
         ctx.shadowColor = `rgba(${accentRGB},0.4)`;
-
-        // Panel background
         ctx.beginPath();
         ctx.moveTo(cx - pw / 2 + sl, cy - ph / 2);
         ctx.lineTo(cx + pw / 2, cy - ph / 2);
@@ -2179,15 +2193,29 @@ class WaveAnnouncementFX {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Scanline fill
+        // Scanline fill (clipped to panel)
         ctx.save();
-        ctx.clip(); // clip to panel shape
+        ctx.clip();
         ctx.globalAlpha = 0.07;
         ctx.fillStyle = accentCol;
-        for (let ly = cy - ph / 2 + 1; ly < cy + ph / 2; ly += 4) {
+        for (let ly = cy - ph / 2 + 1; ly < cy + ph / 2; ly += 4)
             ctx.fillRect(cx - pw / 2 + sl + 1, ly, pw - sl * 2 - 2, 1);
-        }
         ctx.restore();
+
+        // Divider between event strip and wave body
+        if (hasEvent) {
+            const divY = cy - ph / 2 + eventExtraH;
+            ctx.save();
+            ctx.globalAlpha = 0.28;
+            ctx.strokeStyle = this._eventColor;
+            ctx.lineWidth = 1;
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(cx - pw / 2 + sl + 8, divY);
+            ctx.lineTo(cx + pw / 2 - sl - 8, divY);
+            ctx.stroke();
+            ctx.restore();
+        }
 
         // Corner brackets
         const bk = 13;
@@ -2195,51 +2223,97 @@ class WaveAnnouncementFX {
         ctx.strokeStyle = accentCol;
         ctx.lineWidth = 1.8;
         ctx.beginPath();
-        // top-left
         ctx.moveTo(cx - pw / 2 + sl + bk, cy - ph / 2 + 3);
         ctx.lineTo(cx - pw / 2 + sl + 3, cy - ph / 2 + 3);
         ctx.lineTo(cx - pw / 2 + sl + 3, cy - ph / 2 + 3 + bk);
-        // bottom-right
         ctx.moveTo(cx + pw / 2 - sl - bk, cy + ph / 2 - 3);
         ctx.lineTo(cx + pw / 2 - sl - 3, cy + ph / 2 - 3);
         ctx.lineTo(cx + pw / 2 - sl - 3, cy + ph / 2 - 3 - bk);
         ctx.stroke();
 
-        // ── Wave label (top line) ───────────────────────────────
+        // ═══ EVENT BADGE STRIP ════════════════════════════════
+        if (hasEvent) {
+            const evCy = cy - ph / 2 + eventExtraH / 2;
+            const evCol = this._eventColor;
+            const evRGB = evCol === '#ef4444' ? '239,68,68'
+                : evCol === '#d97706' ? '217,119,6'
+                    : '255,255,255';
+            const icon = this._eventType === 'speed' ? '⚡' : '🌫';
+
+            // Icon pill
+            const pillX = cx - pw / 2 + sl + 22;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = evCol;
+            ctx.fillStyle = evCol;
+            ctx.globalAlpha = 0.16;
+            ctx.beginPath(); ctx.roundRect(pillX - 10, evCy - 9, 20, 18, 3); ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = evCol;
+            ctx.lineWidth = 1.0;
+            ctx.beginPath(); ctx.roundRect(pillX - 10, evCy - 9, 20, 18, 3); ctx.stroke();
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = evCol;
+            ctx.fillText(icon, pillX, evCy);
+
+            // Event title
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = evCol;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '800 13px "Orbitron","Rajdhani",Arial,sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(this._eventTitle, pillX + 16, evCy - 1);
+
+            // Event subtitle (right-aligned, dim)
+            ctx.shadowBlur = 4;
+            ctx.fillStyle = `rgba(${evRGB},0.72)`;
+            ctx.font = '600 9px "Rajdhani",Arial,sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(this._eventSubtitle, cx + pw / 2 - sl - 14, evCy);
+            ctx.shadowBlur = 0;
+        }
+
+        // ═══ WAVE NUMBER BODY ════════════════════════════════
+        const waveBodyTop = cy - ph / 2 + eventExtraH;
+        const waveH = ph - eventExtraH;
+        const waveCy = waveBodyTop + waveH / 2;
+
+        // Wave label (small top line)
         const labelText = isBoss ? '⚔ BOSS ENCOUNTER'
             : isGlitch ? '⚠ ANOMALY DETECTED'
                 : `— WAVE ${wave} —`;
         ctx.shadowBlur = 10;
         ctx.shadowColor = accentCol;
         ctx.fillStyle = accentCol;
-        ctx.font = `700 11px "Rajdhani","Orbitron",Arial,sans-serif`;
+        ctx.font = '700 11px "Rajdhani","Orbitron",Arial,sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.letterSpacing = '3px';
-        ctx.fillText(labelText, cx, cy - 24);
+        ctx.fillText(labelText, cx, waveCy - 24);
 
-        // ── Wave number / name (main line) ─────────────────────
-        const mainText = isBoss ? (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.boss
-            ? GAME_TEXTS.wave.boss(wave) : `WAVE ${wave}`)
-            : isGlitch ? (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.glitchWave
-                ? 'GLITCH WAVE' : `WAVE ${wave} [GLITCH]`)
+        // Main wave number / name
+        const mainText = isBoss
+            ? (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.boss
+                ? GAME_TEXTS.wave.boss(wave) : `WAVE ${wave}`)
+            : isGlitch
+                ? (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.glitchWave
+                    ? 'GLITCH WAVE' : `WAVE ${wave} [GLITCH]`)
                 : (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS?.wave?.floatingTitle
                     ? GAME_TEXTS.wave.floatingTitle(wave) : `WAVE ${wave}`);
 
         ctx.shadowBlur = 22;
         ctx.shadowColor = accentCol;
         ctx.fillStyle = '#ffffff';
-        ctx.font = `900 32px "Bebas Neue","Orbitron",Arial,sans-serif`;
-        ctx.fillText(mainText, cx, cy + 6);
-
-        // Colored echo
+        ctx.font = '900 32px "Bebas Neue","Orbitron",Arial,sans-serif';
+        ctx.fillText(mainText, cx, waveCy + 6);
         ctx.save();
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = accentCol;
-        ctx.fillText(mainText, cx, cy + 6);
+        ctx.fillText(mainText, cx, waveCy + 6);
         ctx.restore();
 
-        // ── Subtitle ────────────────────────────────────────────
+        // Subtitle
         const subText = isBoss ? 'PREPARE FOR COMBAT'
             : isGlitch ? 'CONTROLS INVERTED'
                 : wave <= 3 ? 'ELIMINATE ALL ENEMIES'
@@ -2248,19 +2322,19 @@ class WaveAnnouncementFX {
                             : 'FINAL STAND';
         ctx.shadowBlur = 6;
         ctx.shadowColor = accentCol;
-        ctx.fillStyle = `rgba(254,243,199,0.75)`;
-        ctx.font = `600 10px "Rajdhani",Arial,sans-serif`;
-        ctx.fillText(subText, cx, cy + 30);
+        ctx.fillStyle = 'rgba(254,243,199,0.75)';
+        ctx.font = '600 10px "Rajdhani",Arial,sans-serif';
+        ctx.fillText(subText, cx, waveCy + 30);
 
         // Tick marks flanking subtitle
-        const tkW = 26, tkX = pw / 2 - sl - 22;
+        const tkX = pw / 2 - sl - 22;
         ctx.strokeStyle = `rgba(${accentRGB},0.45)`;
         ctx.lineWidth = 1.2;
         for (let t2 = 0; t2 < 3; t2++) {
             const d2 = t2 * 5;
             ctx.beginPath();
-            ctx.moveTo(cx + tkX + d2, cy + 22); ctx.lineTo(cx + tkX + d2, cy + 38);
-            ctx.moveTo(cx - tkX - d2, cy + 22); ctx.lineTo(cx - tkX - d2, cy + 38);
+            ctx.moveTo(cx + tkX + d2, waveCy + 22); ctx.lineTo(cx + tkX + d2, waveCy + 38);
+            ctx.moveTo(cx - tkX - d2, waveCy + 22); ctx.lineTo(cx - tkX - d2, waveCy + 38);
             ctx.stroke();
         }
 
