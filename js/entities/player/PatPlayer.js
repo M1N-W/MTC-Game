@@ -216,10 +216,11 @@ class PatPlayer extends Player {
         if (dist > (S.bladeGuardReflectRadius ?? 55)) return false;
         if (proj.owner === 'player') return false;
 
-        // Reflect: flip velocity, change owner
+        // Reflect: flip velocity, change owner + team so collision routing hits enemies
         proj.vx *= -1;
         proj.vy *= -1;
         proj.owner = 'player';
+        proj.team = 'player';
         proj.damage *= 1.2; // reflect bonus
 
         spawnParticles(proj.x, proj.y, 8, '#a8d8ea');

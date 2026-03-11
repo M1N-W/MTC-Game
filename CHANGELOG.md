@@ -4,6 +4,56 @@
 
 ---
 
+## v3.31.8 — Combat Polish: Blade Guard & Katana Animation
+*Released: March 11, 2026*
+
+### 🛡️ Blade Guard Team Fix
+- **Collision Routing**: Reflected projectiles now properly inherit player team
+  - **Team Assignment**: Added `proj.team = 'player'` in blade guard reflection logic
+  - **Enemy Targeting**: Ensures reflected projectiles hit enemies instead of player
+  - **Damage Bonus**: Maintains 1.2x damage multiplier on reflected attacks
+- **Visual Feedback**: Particle effects spawn at reflection point with ice-blue coloring
+
+### ⚔️ Katana Animation Enhancements
+- **Idle Sway System**: Gentle resting oscillation when not in combat
+  - **Breathing Effect**: `Math.sin((now ?? 0) * 1.4) * 0.04` creates living feel
+  - **Subtle Movement**: 4% amplitude for natural sword resting motion
+  - **Performance Optimized**: Uses existing `now` parameter to avoid extra calls
+- **Swing Arc Dynamics**: Improved blade rotation during slash animations
+  - **Raised Back Position**: Blade starts at -0.85 rad when arc timer begins (arcT≈1)
+  - **Follow-Through**: Blade rotates to +0.70 rad as arc completes (arcT→0)
+  - **Smooth Transition**: `swingRot = -0.85 + (1 - arcT) * 1.55` for natural motion
+
+### 🤚 Hand Synchronization
+- **Transform Hierarchy**: Sword hands moved inside katana transform for proper sync
+  - **Grip Hand**: Positioned near tsuba at x=0 in local katana space
+  - **Support Hand**: Positioned near pommel end at `-(HL * 0.78)` for realistic grip
+  - **Cloth Wraps**: Hand wrap lines properly follow hand positioning during animations
+- **Visual Consistency**: Hands now move with blade during all combat states
+
+### 🎨 Rendering Improvements
+- **Local Space Coordinates**: Hand positions calculated relative to katana transform origin
+  - **Front Hand**: `createRadialGradient(-2, 0, 0, -1, 1, hR)` for proper lighting
+  - **Back Hand**: Positioned at calculated `backHX` for accurate pommel grip
+  - **Clip Regions**: Hand clipping properly constrained within hand circles
+- **Code Organization**: Better comments explaining transform hierarchy and coordinate systems
+
+### 🏗️ System Architecture
+- **Collision System**: Team-based projectile routing prevents friendly fire issues
+- **Animation Pipeline**: Idle sway integrates with existing combat state system
+- **Transform Management**: Proper save/restore nesting for katana and hand rendering
+- **Performance**: Minimal impact with efficient sine calculations and coordinate transforms
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/entities/player/PatPlayer.js (+1 line team assignment)
+✅ MODIFIED: js/rendering/PlayerRenderer.js (+15 lines animation & hand sync)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+20 lines combat polish entry)
+✅ MODIFIED: sw.js (v3.31.8)
+```
+
+---
+
 ## v3.31.7 — Input & Rendering Polish: Katana System Refinement
 *Released: March 11, 2026*
 

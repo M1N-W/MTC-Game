@@ -2859,6 +2859,8 @@ class PlayerRenderer {
         const HL = R * 0.88;  // handle length
 
         // Katana position per state
+        // idleSway: gentle resting oscillation when not moving
+        const idleSway = Math.sin((now ?? 0) * 1.4) * 0.04;
         if (isCinematic) {
             ctx.save(); ctx.rotate(-2.15); ctx.translate(R * 0.72, 0);
         } else if (bladeGuard) {
@@ -2866,10 +2868,13 @@ class PlayerRenderer {
         } else if (isCharge) {
             ctx.save(); ctx.translate(R * 0.72, 0); ctx.rotate(-0.55);
         } else if (arcActive) {
-            // Follow-through: slightly over-rotated forward after swing
-            ctx.save(); ctx.translate(R * 0.95, 0); ctx.rotate(arcT * 0.28);
+            // Swing arc: blade sweeps from raised back → follow-through forward
+            // arcT goes 1→0 so at start (arcT≈1) blade is raised back, at end (arcT≈0) follow-through
+            const swingRot = -0.85 + (1 - arcT) * 1.55;
+            ctx.save(); ctx.translate(R * 0.88, 0); ctx.rotate(swingRot);
         } else {
-            ctx.save(); ctx.translate(R * 0.88, 0);
+            // Idle rest pose: blade angled back over shoulder (~-0.85 rad from forward)
+            ctx.save(); ctx.translate(R * 0.88, 0); ctx.rotate(-0.85 + idleSway);
         }
 
         // ── Blade ────────────────────────────────────────────────────────────────
@@ -2945,30 +2950,30 @@ class PlayerRenderer {
         ctx.strokeStyle = 'rgba(155,118,32,0.48)'; ctx.lineWidth = 0.8;
         ctx.beginPath(); ctx.roundRect(-HL - 3.5, -3.0, 3.5, 6, 2); ctx.stroke();
 
-        ctx.restore(); // end katana transform
-
-        // ── Sword hands ──────────────────────────────────────────────────────────
+        // ── Sword hands — drawn INSIDE katana transform so they sync with handle ─
         const hR = 4.5;
-        // Front grip hand
-        const hGrad = ctx.createRadialGradient(R + 5, 0, 0, R + 6, 1, hR);
+        // Front grip hand: sits near tsuba at x=0 in local space
+        const hGrad = ctx.createRadialGradient(-2, 0, 0, -1, 1, hR);
         hGrad.addColorStop(0, '#18203a'); hGrad.addColorStop(1, '#0c1220');
         ctx.fillStyle = hGrad;
         ctx.strokeStyle = '#141e36'; ctx.lineWidth = 2.5;
         ctx.shadowBlur = 6; ctx.shadowColor = 'rgba(126,200,227,0.42)';
-        ctx.beginPath(); ctx.arc(R + 5, 1, hR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-2, 0, hR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.save();
-        ctx.beginPath(); ctx.arc(R + 5, 1, hR, 0, Math.PI * 2); ctx.clip();
+        ctx.beginPath(); ctx.arc(-2, 0, hR, 0, Math.PI * 2); ctx.clip();
         ctx.strokeStyle = 'rgba(85,105,148,0.62)'; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(R + 1, -0.5); ctx.lineTo(R + 9, -0.5); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(R + 1, 1.5); ctx.lineTo(R + 9, 1.5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-6, -0.5); ctx.lineTo(2, -0.5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-6, 1.5); ctx.lineTo(2, 1.5); ctx.stroke();
         ctx.restore();
-        // Back support hand
+        // Back support hand: near pommel end of handle
+        const backHX = -(HL * 0.78);
         ctx.fillStyle = '#0b1020'; ctx.strokeStyle = '#131c2e'; ctx.lineWidth = 2;
         ctx.shadowBlur = 3; ctx.shadowColor = 'rgba(126,200,227,0.28)';
-        ctx.beginPath(); ctx.arc(-(R + 4), 1, hR - 1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(backHX, 0, hR - 1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0;
 
-        ctx.restore(); // end LAYER 2
+        ctx.restore(); // end katana transform (= end LAYER 2)
+        ctx.restore(); // end LAYER 2 outer (aim-rotate transform)
 
         // ── Low-HP glow ──────────────────────────────────────────────────────────
         PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);

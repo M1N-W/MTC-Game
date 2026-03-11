@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.31.7'; // Input & Rendering Polish: Katana System Refinement
+const CACHE_NAME = 'mtc-cache-v3.31.8'; // Combat Polish: Blade Guard & Katana Animation
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

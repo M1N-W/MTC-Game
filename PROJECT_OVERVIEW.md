@@ -1196,6 +1196,28 @@ class SniperEnemy extends EnemyBase {
   - Updated Zanzo afterimage effects to match new character silhouette
   - Separated rendering layers for better visual depth and organization
 
+### v3.31.8 — Combat Polish: Blade Guard & Katana Animation
+*Released: March 11, 2026*
+
+**Key Features:**
+- **Blade Guard Team Fix**: Reflected projectiles now properly inherit player team for collision routing
+- **Katana Idle Animation**: Added gentle resting sway when not in combat
+- **Enhanced Swing Dynamics**: Improved blade rotation during slash arc animations
+- **Hand Positioning Fix**: Sword hands now properly positioned relative to katana transform
+
+**Technical Changes:**
+- **PatPlayer.js**: Added `proj.team = 'player'` to blade guard reflection logic
+- **PlayerRenderer.js**: Added idle sway animation and improved swing rotation calculations
+- **Hand Rendering**: Moved sword hands inside katana transform for proper synchronization
+
+**Visual Enhancements:**
+- **Idle Sway**: Gentle oscillation creates living, breathing katana feel
+- **Swing Arc**: Blade sweeps from raised back to follow-through position
+- **Hand Sync**: Grip and support hands move with katana handle during animations
+- **Transform Hierarchy**: Proper layering ensures hands follow blade movements
+
+---
+
 ### v3.31.7 — Input & Rendering Polish: Katana System Refinement
 *Released: March 11, 2026*
 
