@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtc-cache-v3.31.0'; // NEW CHARACTER: Pat (แพท) - Samurai Ronin with dual-mode katana
+const CACHE_NAME = 'mtc-cache-v3.31.1'; // UI Polish: Pat character card & skill tooltips
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

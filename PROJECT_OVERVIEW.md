@@ -1172,6 +1172,10 @@ class SniperEnemy extends EnemyBase {
   - Weapon integration: Blade Guard projectile reflection in `ProjectileManager`
   - Config: Complete balance block, visual palette, skill texts
   - Architecture: Follows existing patterns - inherits from `PlayerBase`, integrates with all core systems
+- **✅ UI Polish: Pat Character Card & Tooltips**
+  - Added character selection card with HP/DMG/SPD/RANGE stats
+  - Added skill tooltip with detailed skill descriptions
+  - Integrated with existing character select UI system
 
 ### Previous Versions
 *(Archived changes removed for brevity - see git history for full record)*

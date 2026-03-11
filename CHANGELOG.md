@@ -4,6 +4,36 @@
 
 ---
 
+## v3.31.1 — UI Polish: Pat Character Card & Tooltips
+*Released: March 11, 2026*
+
+### 🎨 Character Selection UI Enhancements
+- **Pat Character Card**: Added complete character selection card with visual stats
+  - HP: 140 (61% bar), DMG: 89 (59% bar), SPD: 285 (96% bar), RANGE: 750 (83% bar)
+  - Character title: "Samurai Ronin" with "Blade Arts" tag
+  - Description: "Samurai ronin — Katana dual-mode slash & melee, Zanzo Flash blink & Iaido cinematic kill"
+
+- **Pat Skill Tooltip**: Added comprehensive skill breakdown tooltip
+  - **R² (Blade Guard)**: R-Click hold — speed ×0.6, reflect enemy projectiles within 55px radius
+  - **Q (Zanzo Flash)**: Blink to cursor + 4 afterimage trail. Land within 120px of enemy = ambush crit window 1.5s
+  - **R (Iaido Strike)**: 3-phase cinematic kill — charge 0.6s → flash dash → TimeManager freeze + blood burst
+  - **AUTO (Dual-Mode Katana)**: Auto-switch: Slash Wave (range) ↔ Melee Combo 3-hit ×1.8 (close). Iaido unlock = Ronin's Edge passive
+
+### 🔧 Technical Integration
+- **HTML Structure**: Integrated with existing character card grid system
+- **Tooltip System**: Added `tooltip-pat` with consistent styling and data attributes
+- **Icon Consistency**: Used appropriate emojis (🛡️🌀⚡🗡️) matching skill themes
+- **Responsive Design**: Maintains existing responsive breakpoints and hover states
+
+### 📁 Files Modified
+```
+✅ MODIFIED: index.html (+78 lines - Pat character card + skill tooltip)
+✅ MODIFIED: PROJECT_OVERVIEW.md (+4 lines - UI polish entry)
+✅ MODIFIED: sw.js (v3.31.1)
+```
+
+---
+
 ## v3.31.0 — NEW CHARACTER: Pat (แพท) - Samurai Ronin
 *Released: March 11, 2026*
 
