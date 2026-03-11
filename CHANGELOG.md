@@ -4,7 +4,7 @@
 
 ---
 
-## v3.31.12 — Player Code Standardization & HUD Improvements
+## v3.32.0 — Player Code Standardization & HUD Improvements
 *Released: March 11, 2026*
 
 ### 🔧 Code Quality & Standardization
@@ -35,7 +35,7 @@
 ✅ MODIFIED: js/entities/player/PoomPlayer.js (+491 lines - StatusEffect, damage calc)
 ✅ MODIFIED: js/rendering/PlayerRenderer.js (+376 lines - shared helpers, animations)
 ✅ MODIFIED: PROJECT_OVERVIEW.md (updated Recent Changes)
-✅ MODIFIED: sw.js (v3.31.12)
+✅ MODIFIED: sw.js (v3.32.0)
 ```
 
 ---

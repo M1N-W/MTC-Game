@@ -1,14 +1,17 @@
-# 🎮 MTC Game - Project Overview
+# MTC Game - Project Overview
 
-> สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
+สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.30.10 [NEXT VERSION]
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.32.0 [NEXT VERSION]
 
 ---
 
-## 📋 Stability Legend
+## Stability Legend
 
+- **STABLE** — แทบไม่เปลี่ยน (architecture, patterns, file locations)
+- **SEMI-DYNAMIC** — เปลี่ยนบางครั้ง (system integration, task checklists)
+- **DYNAMIC** — เปลี่ยนบ่อย (config values, code snippets, balance) → verify ใน codebase ก่อนใช้เสมอ
 - 🟢 **STABLE** — แทบไม่เปลี่ยน (architecture, patterns, file locations)
 - 🟡 **SEMI-DYNAMIC** — เปลี่ยนบางครั้ง (system integration, task checklists)
 - 🔴 **DYNAMIC** — เปลี่ยนบ่อย (config values, code snippets, balance) → verify ใน codebase ก่อนใช้เสมอ

@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.31.12"; // Player Code Standardization & HUD Improvements
+const CACHE_NAME = "mtc-cache-v3.32.0"; // Player Code Standardization & HUD Improvements
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
