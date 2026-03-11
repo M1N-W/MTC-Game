@@ -360,6 +360,150 @@ class PlayerRenderer {
   }
 
   // ══════════════════════════════════════════════════════════
+  // PHASE 4 HELPERS — shadow scale + foot placement
+  // ══════════════════════════════════════════════════════════
+
+  /** Ground shadow scaled by dashT/hurtT/bob. Replaces inline ctx.ellipse shadow. */
+  static _drawGroundShadow(ctx, sx, sy, baseRx, baseRy, baseOffY, limb) {
+    ctx.save();
+    ctx.globalAlpha = 0.26 * limb.shadowAlphaMod;
+    ctx.fillStyle = "rgba(0,0,0,0.85)";
+    ctx.beginPath();
+    ctx.ellipse(
+      sx,
+      sy + baseOffY + limb.bobOffsetY,
+      baseRx * limb.shadowScaleX,
+      baseRy * limb.shadowScaleY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** Foot placement dots — L/R alternating swing driven by walkCycle. */
+  static _drawGroundFeet(ctx, sx, sy, limb, color, entity) {
+    if (entity.isInvisible || entity.isFreeStealthy) return;
+    if (limb.moveT < 0.05) return;
+    const { footL, footR } = limb;
+    ctx.save();
+    ctx.globalAlpha = limb.moveT * 0.55;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(sx + footL.x, sy + footL.y, 3.5, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(sx + footR.x, sy + footR.y, 3.5, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // SHARED ANIMATION PARAMS
+  // เรียกจาก _drawAuto / _drawPoom / _drawPat / _drawBase
+  // คืน object พร้อม limb params ที่ผสม _anim state แล้ว
+  // ══════════════════════════════════════════════════════════
+
+  /**
+   * Compute shared limb/motion parameters from entity._anim + kinematics.
+   * All draw methods should call this instead of computing moveT/breathe/stretch inline.
+   *
+   * @param {object} entity  — player entity
+   * @param {number} now     — performance.now()
+   * @param {number} speedCap — denominator for moveT (default 180)
+   * @returns {{
+   *   moveT, bob, breathe,
+   *   stretchX, stretchY,
+   *   bobOffsetY,
+   *   shootLift, shootReach,
+   *   hurtPushX, hurtPushY,
+   *   runLean,
+   *   dashStretchX,
+   *   animState
+   * }}
+   */
+  static _getLimbParams(entity, now, speedCap = 180) {
+    const A = entity._anim ?? {};
+    const spd = Math.hypot(entity.vx ?? 0, entity.vy ?? 0);
+    const rawMoveT = Math.min(1, spd / speedCap);
+    // Phase 4: use lerp-smoothed moveT when available — prevents snap on start/stop
+    const moveT =
+      A.smoothMoveT !== undefined
+        ? Math.min(1, A.smoothMoveT * (speedCap / 180)) // renormalize to per-char speedCap
+        : rawMoveT;
+    const bob = Math.sin(entity.walkCycle ?? 0);
+    const breathe = Math.sin(now / 220);
+
+    // Squash-stretch (base)
+    const stretchX = 1 + breathe * 0.025 + moveT * bob * 0.09;
+    const stretchY = 1 - breathe * 0.025 - moveT * Math.abs(bob) * 0.065;
+
+    // Shoot arm raise — upward lift + forward reach (world-relative offsets)
+    const sT = A.shootT ?? 0;
+    const shootLift = sT * -8; // px upward  (applied in LAYER 2 translate)
+    const shootReach = sT * 5; // px forward (applied in LAYER 2 translate)
+
+    // Hurt flinch — push body back along aim direction
+    const hT = A.hurtT ?? 0;
+    // Phase 4: use smoothAngle for hurt push to avoid pop when angle snaps
+    const aimAngle =
+      A.smoothAngle !== null && A.smoothAngle !== undefined
+        ? A.smoothAngle
+        : (entity.angle ?? 0);
+    const hurtPushX = -Math.cos(aimAngle) * hT * 6;
+    const hurtPushY = -Math.sin(aimAngle) * hT * 6;
+
+    // Run lean — forward body tilt (radians, consumed by ctx.rotate in LAYER 1)
+    const runLean = moveT * 0.12; // max ~6.9°
+
+    // Dash horizontal stretch override
+    const dT = A.dashT ?? 0;
+    const dashStretchX = 1 + dT * 0.18; // elongate on dash
+
+    // Phase 4: shadow scale — dash = wide flat, hurt = squashed, bob = breathes
+    const shadowScaleX = (1 + dT * 0.35) * (1 - (A.hurtT ?? 0) * 0.15);
+    const shadowScaleY = (1 - dT * 0.25) * (1 - (A.hurtT ?? 0) * 0.1);
+    const shadowAlphaMod = 1 - moveT * 0.28; // fade slightly at full run
+
+    // Phase 4: foot swing offsets — alternating L/R driven by walkCycle
+    // Returns foot[0]=left, foot[1]=right as {x,y} local offsets from body center
+    const footSwing = moveT * 5; // max ±5px lateral
+    const footLift = moveT * Math.abs(bob) * 4; // max 4px vertical lift at peak
+    const footPhase = entity.walkCycle ?? 0;
+    const footL = {
+      x: -4 + Math.sin(footPhase) * footSwing,
+      y: 8 - Math.max(0, Math.sin(footPhase)) * footLift,
+    };
+    const footR = {
+      x: 4 - Math.sin(footPhase) * footSwing,
+      y: 8 - Math.max(0, -Math.sin(footPhase)) * footLift,
+    };
+
+    return {
+      moveT,
+      bob,
+      breathe,
+      stretchX: stretchX * (dT > 0.01 ? dashStretchX : 1),
+      stretchY,
+      bobOffsetY: moveT * Math.abs(bob) * 2.5,
+      shootLift,
+      shootReach,
+      hurtPushX,
+      hurtPushY,
+      runLean,
+      dashStretchX,
+      animState: A.state ?? "idle",
+      // Phase 4
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════
   // KAO CLONE
   // เดิมคือ KaoClone.draw()
   // ══════════════════════════════════════════════════════════
@@ -566,18 +710,32 @@ class PlayerRenderer {
     const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
     const facingSign = isFacingLeft ? -1 : 1;
 
-    // ── Movement vars (declared early — used by ghost, shadow, body) ──
-    const breatheAuto = Math.sin(now / 200);
-    const speed = Math.hypot(entity.vx, entity.vy);
-    const moveT = Math.min(1, speed / 180);
-    const bobT = Math.sin(entity.walkCycle * 0.9);
-    const stretchX = 1 + breatheAuto * 0.025 + moveT * bobT * 0.09;
-    const stretchY = 1 - breatheAuto * 0.025 - moveT * Math.abs(bobT) * 0.065;
+    // ── Movement vars — via shared helper ──────────────────
+    const {
+      moveT,
+      bob: bobT,
+      stretchX,
+      stretchY,
+      bobOffsetY,
+      hurtPushX,
+      hurtPushY,
+      shootLift,
+      shootReach,
+      runLean,
+    } = PlayerRenderer._getLimbParams(entity, now, 180);
+    const limbAuto = {
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
+      moveT,
+      bobOffsetY,
+    };
     const recoilAmt =
       entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.0 : 0;
-    const recoilX = -Math.cos(entity.angle) * recoilAmt;
-    const recoilY = -Math.sin(entity.angle) * recoilAmt;
-    const bobOffsetY = moveT * Math.abs(Math.sin(entity.walkCycle * 0.9)) * 2.5;
+    const recoilX = -Math.cos(entity.angle) * recoilAmt + hurtPushX;
+    const recoilY = -Math.sin(entity.angle) * recoilAmt + hurtPushY;
     const R = 15;
 
     // ── Stand Aura (Signature Auto — แดง/ส้ม) ─────────────
@@ -597,22 +755,19 @@ class PlayerRenderer {
       ctx.restore();
     }
 
-    // Ground shadow
-    ctx.save();
-    ctx.globalAlpha = 0.28 - moveT * 0.08;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
-    ctx.beginPath();
-    ctx.ellipse(
+    // Ground shadow — Phase 4: scaled by dashT/hurtT
+    PlayerRenderer._drawGroundShadow(ctx, screen.x, screen.y, 16, 6, 17, {
+      ...limbAuto,
+      bobOffsetY,
+    });
+    PlayerRenderer._drawGroundFeet(
+      ctx,
       screen.x,
-      screen.y + 17 + bobOffsetY,
-      16 - moveT * 2,
-      6,
-      0,
-      0,
-      Math.PI * 2,
+      screen.y,
+      limbAuto,
+      "#2d0606",
+      entity,
     );
-    ctx.fill();
-    ctx.restore();
 
     // ── Vacuum Heat range ring (Q cooldown ready) ──────────
     if ((entity.cooldowns?.vacuum ?? 1) <= 0) {
@@ -998,8 +1153,14 @@ class PlayerRenderer {
     ctx.save();
     ctx.translate(screen.x + recoilX, screen.y + recoilY + bobOffsetY);
     ctx.scale(stretchX * facingSign, stretchY);
-
-    // ── Heat Tier Body Color Shift — COLD/WARM/HOT/OVERHEAT ──
+    // wanchai activation: lean back sharply first 0.4s, then recover to runLean
+    const _wEntryT = Math.max(
+      0,
+      ((entity._anim?.skillT ?? 0) -
+        ((entity.stats?.wanchaiDuration ?? 3.0) - 0.4)) /
+        0.4,
+    );
+    ctx.rotate((runLean + _wEntryT * -0.2) * facingSign);
     const heatTier = entity._heatTier ?? 0; // 0=COLD, 1=WARM, 2=HOT, 3=OVERHEAT
 
     ctx.shadowBlur = 18;
@@ -1424,6 +1585,7 @@ class PlayerRenderer {
     ctx.translate(screen.x + recoilX, screen.y + recoilY + bobOffsetY);
     ctx.rotate(entity.angle);
     if (isFacingLeft) ctx.scale(1, -1);
+    ctx.translate(shootReach, shootLift);
 
     if (typeof drawAutoWeapon === "function") {
       drawAutoWeapon(ctx, entity.wanchaiActive, ventGlow);
@@ -2636,20 +2798,34 @@ class PlayerRenderer {
   static _drawPoom(entity, ctx) {
     const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
     const facingSign = isFacingLeft ? -1 : 1;
-
-    // ── Movement vars (declared early — used by ghost, shadow, body) ──
     const now2 = performance.now();
-    const breathePoom = Math.sin(now2 / 200);
-    const speed2 = Math.hypot(entity.vx, entity.vy);
-    const moveT2 = Math.min(1, speed2 / 190);
-    const bobT2 = Math.sin(entity.walkCycle);
-    const stretchX2 = 1 + breathePoom * 0.035 + moveT2 * bobT2 * 0.12;
-    const stretchY2 = 1 - breathePoom * 0.035 - moveT2 * Math.abs(bobT2) * 0.09;
+
+    // ── Movement vars — via shared helper ──────────────────
+    const {
+      moveT: moveT2,
+      bob: bobT2,
+      stretchX: stretchX2,
+      stretchY: stretchY2,
+      bobOffsetY: poomBobY,
+      hurtPushX: poomHurtX,
+      hurtPushY: poomHurtY,
+      shootLift: poomShootLift,
+      shootReach: poomShootReach,
+      runLean: poomRunLean,
+    } = PlayerRenderer._getLimbParams(entity, now2, 190);
+    const limbPoom = {
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
+      moveT: moveT2,
+      bobOffsetY: poomBobY,
+    };
     const poomRecoilAmt =
       entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 2.5 : 0;
-    const poomRecoilX = -Math.cos(entity.angle) * poomRecoilAmt;
-    const poomRecoilY = -Math.sin(entity.angle) * poomRecoilAmt;
-    const poomBobY = moveT2 * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
+    const poomRecoilX = -Math.cos(entity.angle) * poomRecoilAmt + poomHurtX;
+    const poomRecoilY = -Math.sin(entity.angle) * poomRecoilAmt + poomHurtY;
     const R2 = 13;
 
     PlayerRenderer._standAuraDraw(entity, "poom", ctx);
@@ -2670,22 +2846,19 @@ class PlayerRenderer {
 
     const screen = worldToScreen(entity.x, entity.y);
 
-    // Ground shadow
-    ctx.save();
-    ctx.globalAlpha = 0.28 - moveT2 * 0.08;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
-    ctx.beginPath();
-    ctx.ellipse(
+    // Ground shadow — Phase 4: scaled by dashT/hurtT
+    PlayerRenderer._drawGroundShadow(ctx, screen.x, screen.y, 14, 5, 16, {
+      ...limbPoom,
+      bobOffsetY: poomBobY,
+    });
+    PlayerRenderer._drawGroundFeet(
+      ctx,
       screen.x,
-      screen.y + 16 + poomBobY,
-      14 - moveT2 * 2,
-      5,
-      0,
-      0,
-      Math.PI * 2,
+      screen.y,
+      limbPoom,
+      "#120d04",
+      entity,
     );
-    ctx.fill();
-    ctx.restore();
 
     // Eating-rice power aura
     if (entity.isEatingRice) {
@@ -2895,6 +3068,7 @@ class PlayerRenderer {
     ctx.save();
     ctx.translate(screen.x + poomRecoilX, screen.y + poomRecoilY + poomBobY);
     ctx.scale(stretchX2 * facingSign, stretchY2);
+    ctx.rotate(poomRunLean * facingSign);
 
     // Dual outer ring — purple base + gold shimmer
     ctx.shadowBlur = 10;
@@ -3211,6 +3385,10 @@ class PlayerRenderer {
     ctx.translate(screen.x + poomRecoilX, screen.y + poomRecoilY + poomBobY);
     ctx.rotate(entity.angle);
     if (isFacingLeft) ctx.scale(1, -1);
+    ctx.translate(poomShootReach, poomShootLift);
+    // skillT: ritual(1.0) or garuda(0.6) — arms raise proportionally
+    if ((entity._anim?.skillT ?? 0) > 0)
+      ctx.translate(0, -(entity._anim.skillT / 1.0) * 10);
 
     if (typeof drawPoomWeapon === "function") drawPoomWeapon(ctx);
 
@@ -3374,18 +3552,31 @@ class PlayerRenderer {
     const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
     const facingSign = isFacingLeft ? -1 : 1;
 
+    const {
+      moveT,
+      bob: bobT,
+      stretchX,
+      stretchY,
+      bobOffsetY: bobY,
+      hurtPushX,
+      hurtPushY,
+      shootLift,
+      shootReach,
+      runLean,
+    } = PlayerRenderer._getLimbParams(entity, now, 200);
+    const limbPat = {
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
+      moveT,
+      bobOffsetY: bobY,
+    };
     const recoilAmt =
       entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.5 : 0;
-    const recoilX = -Math.cos(entity.angle) * recoilAmt;
-    const recoilY = -Math.sin(entity.angle) * recoilAmt;
-
-    const breathe = Math.sin(now / 220);
-    const speed = Math.hypot(entity.vx, entity.vy);
-    const moveT = Math.min(1, speed / 200);
-    const bobT = Math.sin(entity.walkCycle ?? 0);
-    const stretchX = 1 + breathe * 0.022 + moveT * bobT * 0.085;
-    const stretchY = 1 - breathe * 0.022 - moveT * Math.abs(bobT) * 0.06;
-    const bobY = moveT * Math.abs(Math.sin(entity.walkCycle ?? 0)) * 2.0;
+    const recoilX = -Math.cos(entity.angle) * recoilAmt + hurtPushX;
+    const recoilY = -Math.sin(entity.angle) * recoilAmt + hurtPushY;
     const R = 13;
 
     const isCharge = entity._iaidoPhase === "charge";
@@ -3476,22 +3667,19 @@ class PlayerRenderer {
     const screen = worldToScreen(entity.x, entity.y);
     if (!screen) return;
 
-    // ── Ground shadow ───────────────────────────────────────────────────────
-    ctx.save();
-    ctx.globalAlpha = 0.22 - moveT * 0.07;
-    ctx.fillStyle = "rgba(0,0,0,0.88)";
-    ctx.beginPath();
-    ctx.ellipse(
-      screen.x + 2,
-      screen.y + 16 + bobY,
-      16 - moveT * 2,
-      5.5,
-      0,
-      0,
-      Math.PI * 2,
+    // ── Ground shadow — Phase 4: scaled by dashT/hurtT ──────────────────────
+    PlayerRenderer._drawGroundShadow(ctx, screen.x + 2, screen.y, 16, 5.5, 16, {
+      ...limbPat,
+      bobOffsetY: bobY,
+    });
+    PlayerRenderer._drawGroundFeet(
+      ctx,
+      screen.x,
+      screen.y,
+      limbPat,
+      "#07101e",
+      entity,
     );
-    ctx.fill();
-    ctx.restore();
 
     // ── Passive aura — Ronin's Edge (dashed ring + faint red inner) ─────────
     if (entity.passiveUnlocked) {
@@ -3675,6 +3863,17 @@ class PlayerRenderer {
     const crouchSY = isCharge ? 0.85 : 1.0;
     ctx.translate(screen.x + recoilX, screen.y + recoilY + bobY + crouchY);
     ctx.scale(stretchX * facingSign, stretchY * crouchSY);
+    // runLean: suppressed during charge — replaced by skillT-driven aggressive forward lean
+    if (isCharge) {
+      const iaidoMaxT = (entity.stats?.iaidoChargeDur ?? 0.45) + 0.3;
+      const iaidoLean = Math.min(
+        0.28,
+        ((entity._anim?.skillT ?? 0) / iaidoMaxT) * 0.28,
+      );
+      ctx.rotate(iaidoLean * facingSign);
+    } else {
+      ctx.rotate(runLean * facingSign);
+    }
 
     // ── Outer ring — ice glow (intensifies during charge) ─────────────────
     ctx.shadowBlur = isCharge ? 24 : 9;
@@ -3913,6 +4112,7 @@ class PlayerRenderer {
     ctx.translate(screen.x + recoilX, screen.y + recoilY + bobY + crouchY);
     ctx.rotate(entity.angle);
     if (isFacingLeft) ctx.scale(1, -1);
+    ctx.translate(shootReach, shootLift);
 
     const BL = R * 3.1; // longer blade — more presence
     const HL = R * 0.88; // handle length
@@ -4164,19 +4364,32 @@ class PlayerRenderer {
     const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
     const facingSign = isFacingLeft ? -1 : 1;
 
+    // ── Movement vars — via shared helper ──────────────────
+    const {
+      moveT,
+      bob: bobT,
+      stretchX,
+      stretchY,
+      bobOffsetY: kaoBobY,
+      hurtPushX,
+      hurtPushY,
+      shootLift,
+      shootReach,
+      runLean,
+    } = PlayerRenderer._getLimbParams(entity, now, 200);
+    const limbBase = {
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
+      moveT,
+      bobOffsetY: kaoBobY,
+    };
     const recoilAmt =
       entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.5 : 0;
-    const recoilX = -Math.cos(entity.angle) * recoilAmt;
-    const recoilY = -Math.sin(entity.angle) * recoilAmt;
-
-    // ── Movement vars (declared early — used by ghost, shadow, body) ──
-    const breatheKao = Math.sin(now / 200);
-    const speed = Math.hypot(entity.vx, entity.vy);
-    const moveT = Math.min(1, speed / 200);
-    const bobT = Math.sin(entity.walkCycle);
-    const stretchX = 1 + breatheKao * 0.03 + moveT * bobT * 0.1;
-    const stretchY = 1 - breatheKao * 0.03 - moveT * Math.abs(bobT) * 0.07;
-    const kaoBobY = moveT * Math.abs(Math.sin(entity.walkCycle)) * 2.0;
+    const recoilX = -Math.cos(entity.angle) * recoilAmt + hurtPushX;
+    const recoilY = -Math.sin(entity.angle) * recoilAmt + hurtPushY;
     const R = 13;
 
     // Dash ghost trail
@@ -4195,22 +4408,19 @@ class PlayerRenderer {
 
     const screen = worldToScreen(entity.x, entity.y);
 
-    // Ground shadow (improved — scales with bob)
-    ctx.save();
-    ctx.globalAlpha = 0.28 - moveT * 0.08;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
-    ctx.beginPath();
-    ctx.ellipse(
+    // Ground shadow — Phase 4: scaled by dashT/hurtT
+    PlayerRenderer._drawGroundShadow(ctx, screen.x, screen.y, 14, 5, 15, {
+      ...limbBase,
+      bobOffsetY: kaoBobY,
+    });
+    PlayerRenderer._drawGroundFeet(
+      ctx,
       screen.x,
-      screen.y + 15 + kaoBobY,
-      14 - moveT * 2,
-      5,
-      0,
-      0,
-      Math.PI * 2,
+      screen.y,
+      limbBase,
+      "#0f2140",
+      entity,
     );
-    ctx.fill();
-    ctx.restore();
 
     // Passive aura
     if (entity.passiveUnlocked) {
@@ -4340,6 +4550,7 @@ class PlayerRenderer {
       ctx.save();
       ctx.translate(screen.x + recoilX, screen.y + recoilY + kaoBobY);
       ctx.scale(stretchX * facingSign, stretchY);
+      ctx.rotate(runLean * facingSign);
 
       ctx.shadowBlur = 16;
       ctx.shadowColor = "rgba(0,255,65,0.70)";
@@ -4543,6 +4754,11 @@ class PlayerRenderer {
       ctx.translate(screen.x + recoilX, screen.y + recoilY + kaoBobY);
       ctx.rotate(entity.angle);
       if (isFacingLeft) ctx.scale(1, -1);
+      // _anim shoot arm lift — local-space post-rotate (x=reach forward, y=lift upward)
+      ctx.translate(shootReach, shootLift);
+      // skillT: clone spawn (E) — weapon arm spreads laterally outward
+      if ((entity._anim?.skillT ?? 0) > 0)
+        ctx.translate(0, entity._anim.skillT * 8);
 
       if (typeof weaponSystem !== "undefined")
         weaponSystem.drawWeaponOnPlayer(entity);

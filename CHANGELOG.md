@@ -4,6 +4,42 @@
 
 ---
 
+## v3.31.12 — Player Code Standardization & HUD Improvements
+*Released: March 11, 2026*
+
+### 🔧 Code Quality & Standardization
+- **Universal Code Formatting**: Standardized all player files to use double quotes, consistent spacing, and proper line breaks
+- **Rendering System Refactor**: Added shared helper methods `_getLimbParams()` and `_drawGroundShadow()` for consistency
+- **HUD System Improvements**: Enhanced `updateUI()` methods across all characters with proper cooldown visual handling
+
+### 🐛 Bug Fixes & Enhancements
+- **PlayerBase.js**: Fixed obstacle proximity detection, mobile joystick input handling, and passive unlock display
+- **AutoPlayer.js**: Fixed Wanchai Stand meter display, heat tier HUD updates, and config path resolution
+- **KaoPlayer.js**: Added missing `updateUI()`, fixed projectile spawning at barrel tip, improved lifesteal mechanics
+- **PatPlayer.js**: Enhanced melee combo system, fixed Iaido charge animations, improved collision detection
+- **PoomPlayer.js**: Fixed sticky rice StatusEffect integration, improved damage calculations, enhanced ritual cooldowns
+- **PlayerRenderer.js**: Refactored limb parameter handling, added shoot arm lift animations, improved shadow rendering
+
+### 🎨 Visual & Animation Improvements
+- **Shared Limb System**: Centralized movement calculations for consistent animations across all characters
+- **Enhanced Shoot Animations**: Added arm lift and reach parameters for more realistic weapon handling
+- **Improved Shadow Rendering**: Dynamic shadow scaling based on movement state and special effects
+- **Better Hit Feedback**: Enhanced hurt push, recoil, and visual impact responses
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/entities/player/PlayerBase.js (+421 lines - obstacle detection, mobile fixes)
+✅ MODIFIED: js/entities/player/AutoPlayer.js (+429 lines - HUD fixes, config path)
+✅ MODIFIED: js/entities/player/KaoPlayer.js (+372 lines - missing UI, projectile fixes)
+✅ MODIFIED: js/entities/player/PatPlayer.js (+484 lines - melee system, animations)
+✅ MODIFIED: js/entities/player/PoomPlayer.js (+491 lines - StatusEffect, damage calc)
+✅ MODIFIED: js/rendering/PlayerRenderer.js (+376 lines - shared helpers, animations)
+✅ MODIFIED: PROJECT_OVERVIEW.md (updated Recent Changes)
+✅ MODIFIED: sw.js (v3.31.12)
+```
+
+---
+
 ## v3.31.11 — Documentation Update: PatPlayer Critical Implementation Notes
 *Released: March 11, 2026*
 
