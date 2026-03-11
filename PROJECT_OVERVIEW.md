@@ -1196,25 +1196,15 @@ class SniperEnemy extends EnemyBase {
   - Updated Zanzo afterimage effects to match new character silhouette
   - Separated rendering layers for better visual depth and organization
 
-### v3.31.8 — Combat Polish: Blade Guard & Katana Animation
-*Released: March 11, 2026*
+### [NEXT VERSION] — Combat Polish: Blade Guard & Katana Animation (March 11, 2026)
 
-**Key Features:**
-- **Blade Guard Team Fix**: Reflected projectiles now properly inherit player team for collision routing
-- **Katana Idle Animation**: Added gentle resting sway when not in combat
-- **Enhanced Swing Dynamics**: Improved blade rotation during slash arc animations
-- **Hand Positioning Fix**: Sword hands now properly positioned relative to katana transform
-
-**Technical Changes:**
-- **PatPlayer.js**: Added `proj.team = 'player'` to blade guard reflection logic
-- **PlayerRenderer.js**: Added idle sway animation and improved swing rotation calculations
-- **Hand Rendering**: Moved sword hands inside katana transform for proper synchronization
-
-**Visual Enhancements:**
-- **Idle Sway**: Gentle oscillation creates living, breathing katana feel
-- **Swing Arc**: Blade sweeps from raised back to follow-through position
-- **Hand Sync**: Grip and support hands move with katana handle during animations
-- **Transform Hierarchy**: Proper layering ensures hands follow blade movements
+**Bug Fixes:**
+- **`PatPlayer.js`** — `tryReflectProjectile()`: added `proj.team = 'player'` alongside `proj.owner = 'player'`. Root cause: collision routing in `ProjectileManager` checks `proj.team`, not `proj.owner` — reflected projectiles were still routed as enemy shots → no damage to enemies.
+- **`PlayerRenderer.js` `_drawPat()`** — Katana LAYER 2 overhaul:
+  - **Idle pose**: added `ctx.rotate(-0.85 + idleSway)` — blade now rests at ~−0.85 rad (over-shoulder) with gentle oscillation (`Math.sin(now * 1.4) * 0.04`). Previously no rotate → blade pointed straight forward (stab pose).
+  - **Swing arc**: `swingRot = -0.85 + (1 - arcT) * 1.55` — blade sweeps from raised-back to follow-through as `arcT` decays 1→0. Previously only `arcT * 0.28` follow-through with no wind-up.
+  - **Hand sync**: moved both grip/support hands **inside** katana local transform (tsuba at `(-2, 0)`, pommel at `(-HL*0.78, 0)`). Previously drawn at fixed `(R+5, 1)` in aim-rotate space → desync on all non-forward aim angles.
+  - **ctx save/restore balance**: verified 3 saves (outer LAYER 2 + pose branch + clip) matched by 3 restores at runtime.
 
 ---
 
@@ -1333,6 +1323,11 @@ if (this.bladeGuardActive) speedMult *= (this.stats?.bladeGuardSpeedMult ?? 0.6)
 // if (typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer) {
 //     if (window.player.tryReflectProjectile(proj)) { continue; }
 // }
+// ⚠️ CRITICAL: tryReflectProjectile MUST set proj.team = 'player' AND proj.owner = 'player'
+//    proj.team controls collision routing — owner alone is not enough
+
+// ✅ Katana LAYER 2 hands — MUST be inside katana transform ctx.save() block
+//    hands at tsuba(-2,0) and pommel(-HL*0.78,0) in local space — NOT fixed screen coords
 
 // ✅ Iaido TimeManager — มีใน PatPlayer._resolveIaidoDamage() แล้ว
 // ✅ R key conflict — PatPlayer._handleRKey() จัดการเอง

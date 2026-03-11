@@ -4,6 +4,49 @@
 
 ---
 
+## v3.31.9 — Documentation Update: Critical Pitfalls & Bug Fixes
+*Released: March 11, 2026*
+
+### 📚 Documentation Enhancements
+- **[NEXT VERSION] Entry**: Updated Recent Changes section with detailed bug fix documentation
+- **Critical Pitfalls Section**: Added essential implementation warnings for future developers
+- **Technical Root Cause Analysis**: Documented collision routing and transform hierarchy issues
+
+### 🐛 Bug Fix Documentation
+- **Blade Guard Team Assignment**: 
+  - **Root Cause**: `ProjectileManager` checks `proj.team`, not `proj.owner` for collision routing
+  - **Solution**: Added `proj.team = 'player'` alongside `proj.owner = 'player'` in `tryReflectProjectile()`
+  - **Impact**: Reflected projectiles now properly damage enemies instead of being ignored
+
+### ⚔️ Katana Rendering Fixes
+- **Idle Pose Correction**: 
+  - **Issue**: Blade pointed straight forward (stab pose) with no rotation
+  - **Fix**: Added `ctx.rotate(-0.85 + idleSway)` for over-shoulder resting position
+  - **Animation**: Gentle oscillation using `Math.sin(now * 1.4) * 0.04`
+- **Swing Arc Enhancement**:
+  - **Problem**: Only follow-through rotation with no wind-up animation
+  - **Solution**: `swingRot = -0.85 + (1 - arcT) * 1.55` for full swing motion
+  - **Result**: Blade sweeps from raised-back to follow-through as `arcT` decays 1→0
+
+### 🤚 Hand Synchronization Fix
+- **Transform Hierarchy Issue**: 
+  - **Bug**: Hands drawn at fixed screen coords causing desync on non-forward aim angles
+  - **Fix**: Moved hands inside katana local transform (tsuba at `(-2, 0)`, pommel at `(-HL*0.78, 0)`)
+  - **Verification**: Ensured 3 ctx.save() calls matched by 3 ctx.restore() calls
+
+### ⚠️ Critical Implementation Notes
+- **Collision Routing**: `proj.team` controls collision routing, `proj.owner` alone is insufficient
+- **Transform Context**: Katana LAYER 2 hands MUST be inside katana transform ctx.save() block
+- **Local Space Coordinates**: Use local space positions, NOT fixed screen coordinates
+
+### 📁 Files Modified
+```
+✅ MODIFIED: PROJECT_OVERVIEW.md (+30 lines detailed bug fix documentation)
+✅ MODIFIED: sw.js (v3.31.9)
+```
+
+---
+
 ## v3.31.8 — Combat Polish: Blade Guard & Katana Animation
 *Released: March 11, 2026*
 
