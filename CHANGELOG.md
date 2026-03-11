@@ -4,6 +4,29 @@
 
 ---
 
+## v3.31.11 — Documentation Update: PatPlayer Critical Implementation Notes
+*Released: March 11, 2026*
+
+### 📚 Documentation Enhancements
+- **PatPlayer Critical Pitfalls**: Added essential implementation warnings for Blade Guard collision routing
+- **Katana Rendering Guidelines**: Documented proper context save/restore hierarchy for hand positioning
+- **Collision Routing Fix**: Clarified that `proj.team` must be set alongside `proj.owner` for proper collision detection
+- **Transform Context**: Specified that katana hands must be drawn inside katana local transform context
+
+### ⚠️ Critical Implementation Notes Added
+- **Blade Guard Speed Penalty**: Documented implementation in PlayerBase.js with 0.6x speed multiplier
+- **Projectile Reflection**: Added warning about setting both `proj.team='player'` AND `proj.owner='player'`
+- **Katana Hand Positioning**: Specified local space coordinates within ctx.save() block
+- **Iaido Time Management**: Confirmed TimeManager integration in damage resolution
+
+### 📁 Files Modified
+```
+✅ MODIFIED: PROJECT_OVERVIEW.md (+2 lines - PatPlayer critical notes)
+✅ MODIFIED: sw.js (v3.31.11)
+```
+
+---
+
 ## v3.31.10 — Visual Overhaul: MageEnemy & Auto Weapon Enhancements
 *Released: March 11, 2026*
 

@@ -96,7 +96,7 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 | `Kaoplayer.js`  | เก้า        | Assassin — stealth, teleport, clone                                                                                                                                                                                                                                                                           |
 | `PoomPlayer.js` | ภูมิ        | Spiritual Warrior — ritual, naga, garuda                                                                                                                                                                                                                                                                      |
 | `AutoPlayer.js` | ออโต้       | Thermodynamic Brawler — Heat Wave, Vacuum Pull+Ignite (Q), Overheat Detonation (E), Wanchai Stand (R-Click, JoJo-inspired crimson/gold), Heat Tier System (COLD/WARM/HOT/OVERHEAT), Stand Meter (0–100%), ORA Combo, Skill Synergy (Stand Pull/Charge Punch/Stand Guard), Rage Mode, Killing Blow Supercharge |
-| `PatPlayer.js`  | แพท         | Samurai Ronin — Katana dual-mode (Slash Wave / Melee Combo), Zanzo Flash Q (afterimage blink+ambush), Iaido Strike R (3-phase cinematic kill), Blade Guard R-Click (projectile reflect) — **🚧 WIP**                                                                                                          |
+| `PatPlayer.js`  | แพท         | Samurai Ronin — Katana dual-mode (Slash Wave / Melee Combo), Zanzo Flash Q (afterimage blink+ambush), Iaido Strike R (3-phase cinematic kill), Blade Guard R-Click (projectile reflect) — ⚠️ `tryReflectProjectile` MUST set `proj.team='player'` AND `proj.owner='player'`; katana hands drawn inside katana `ctx.save()` block at local coords |
 
 ### `/js/rendering/`
 
@@ -184,6 +184,7 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 - **MageEnemy Visual Overhaul**: Complete rendering system redesign with arcane aura, floating animations, rune markings, and energy core effects
 - **Auto Weapon Visual Enhancement**: Added barrel shroud, muzzle device, piston assembly, exhaust stacks with fire effects, heat vents, and spine spikes
 - **Code Style Improvements**: Standardized formatting in PlayerRenderer.js for consistency
+- **PatPlayer Documentation**: Added critical implementation notes for Blade Guard collision routing and katana rendering context
 ```
 
 Windsurf จะเติมเลขจริงตอน commit.
