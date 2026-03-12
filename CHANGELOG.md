@@ -4,6 +4,33 @@
 
 ---
 
+## v3.34.0 — Performance: Static Bitmap Caching & Rendering Refactor
+*Released: March 12, 2026*
+
+### 🚀 Performance & Rendering
+- **Static Bitmap Caching**: Introduced `OffscreenCanvas` caching in `BossRenderer` and `PlayerRenderer` to cache static body parts. This significantly reduces redundant draw calls and GPU state switching by pre-rendering static elements.
+- **Improved Camera Scaling**: Refactored `PlayerRenderer` to use `window.camera.zoom` for camera scale detection, with a robust fallback for legacy camera systems.
+- **Rendering Dispatcher Optimization**: Cleaned up dispatcher logic and added safety resets to prevent `shadowBlur` leaks.
+
+### 📝 Documentation & Tooling
+- **PROJECT_OVERVIEW.md**: Updated file structure table and architecture section to reflect new rendering patterns.
+- **SKILL.md (mtc-game-conventions)**: Added `mtc-rendering.skill` to the new content checklist.
+- **New Skills/Instructions**: Added `mtc-rendering.skill` for specialized rendering logic and `commit-push.md` for standardized commit workflows.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/rendering/BossRenderer.js (Static Bitmap Cache)
+✅ MODIFIED: js/rendering/PlayerRenderer.js (Camera scale & caching refactor)
+✅ MODIFIED: PROJECT_OVERVIEW.md (Architecture & File Structure)
+✅ MODIFIED: .agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md (Checklist sync)
+✅ CREATED: .agents/skills/MTC-Game's skills for Claude/mtc-rendering.skill
+✅ CREATED: commit-push.md
+✅ MODIFIED: sw.js (v3.34.0)
+✅ MODIFIED: CHANGELOG.md (v3.34.0)
+```
+
+---
+
 ## v3.33.3 — Documentation Audit & Version Bump
 *Released: March 12, 2026*
 

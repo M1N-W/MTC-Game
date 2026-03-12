@@ -326,6 +326,7 @@ New playable character:
   index.html — script tag after existing player files
   weapons.js — if character has unique weapon mechanics (e.g., projectile reflection)
   PlayerBase.js — if character needs unique speed/property modifiers
+  .agents/skills/MTC-Game's skills for Claude/mtc-rendering.skill — ถ้ามีการแก้ renderer logic
 
 New enemy:
   enemy.js (extends EnemyBase), config.js, WaveManager.js, audio.js, effects.js

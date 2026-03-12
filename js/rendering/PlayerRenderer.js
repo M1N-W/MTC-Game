@@ -62,6 +62,23 @@
 
 class PlayerRenderer {
   // ══════════════════════════════════════════════════════════
+  // INTERNAL HELPER — camera scale
+  // ══════════════════════════════════════════════════════════
+
+  /**
+   * Returns px-per-world-unit scale for the current camera.
+   * Replaces the BUG-10 workaround that called worldToScreen(x+1)−worldToScreen(x).
+   * Reads window.camera.zoom if available, falls back to deriving from worldToScreen.
+   * @param {number} worldX — entity world X (used only when camera.zoom unavailable)
+   * @returns {number} pixels per world unit
+   */
+  static _getCamScale(worldX) {
+    if (window.camera?.zoom != null) return window.camera.zoom;
+    // Fallback: two worldToScreen calls — isolated here, not scattered across methods
+    return worldToScreen(worldX + 1, 0).x - worldToScreen(worldX, 0).x;
+  }
+
+  // ══════════════════════════════════════════════════════════
   // PUBLIC ENTRY POINT — dispatcher
   // ══════════════════════════════════════════════════════════
 
@@ -72,6 +89,7 @@ class PlayerRenderer {
    */
   static draw(entity, ctx) {
     if (!entity || !ctx) return;
+    const now = performance.now();
 
     if (typeof AutoPlayer !== "undefined" && entity instanceof AutoPlayer) {
       PlayerRenderer._drawAuto(entity, ctx);
@@ -99,7 +117,7 @@ class PlayerRenderer {
     if ((entity._contactWarningTimer ?? 0) > 0) {
       const t = entity._contactWarningTimer; // 1.2 → 0
       const ratio = t / 1.2; // 1.0 → 0 (fade out)
-      const pulse = Math.sin(performance.now() / 80) * 0.3 + 0.7;
+      const pulse = Math.sin(now / 80) * 0.3 + 0.7;
       const screen = worldToScreen(entity.x, entity.y);
       const R = (entity.radius || 20) + 8 + (1 - ratio) * 14; // ขยายออกตาม fade
 
@@ -594,31 +612,30 @@ class PlayerRenderer {
     entity.clones.forEach((c) => PlayerRenderer._drawKaoClone(c, ctx));
 
     const now = performance.now();
+    const screen = worldToScreen(entity.x, entity.y);
 
     // ── Weapon Master golden aura (double ring) ───────────
     if (entity.isWeaponMaster) {
-      const wmScreen = worldToScreen(entity.x, entity.y);
       ctx.save();
       ctx.globalAlpha = 0.28 + Math.sin(now / 150) * 0.18;
       ctx.fillStyle = "#facc15";
       ctx.shadowBlur = 24;
       ctx.shadowColor = "#facc15";
       ctx.beginPath();
-      ctx.arc(wmScreen.x, wmScreen.y, entity.radius + 8, 0, Math.PI * 2);
+      ctx.arc(screen.x, screen.y, entity.radius + 8, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 0.12 + Math.sin(now / 200) * 0.08;
       ctx.strokeStyle = "#fbbf24";
       ctx.lineWidth = 2;
       ctx.shadowBlur = 14;
       ctx.beginPath();
-      ctx.arc(wmScreen.x, wmScreen.y, entity.radius + 18, 0, Math.PI * 2);
+      ctx.arc(screen.x, screen.y, entity.radius + 18, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
 
     // ── Sniper charge laser-sight (dual-beam) ─────────────
     if (entity.sniperChargeTime > 0) {
-      const screen = worldToScreen(entity.x, entity.y);
       const aimAngle = Math.atan2(
         window.mouse.wy - entity.y,
         window.mouse.wx - entity.x,
@@ -651,14 +668,11 @@ class PlayerRenderer {
 
     // ── Skill-state indicators (visible only when not stealthed) ──
     if (!entity.isInvisible && !entity.isFreeStealthy) {
-      const kaoNow = performance.now();
-      const kaoScr = worldToScreen(entity.x, entity.y);
-
       // Teleport-ready: spinning dashed ring
       if (entity.passiveUnlocked && entity.teleportCharges > 0) {
         ctx.save();
-        ctx.translate(kaoScr.x, kaoScr.y);
-        ctx.rotate(kaoNow / 600);
+        ctx.translate(screen.x, screen.y);
+        ctx.rotate(now / 600);
         ctx.strokeStyle = "rgba(56,189,248,0.70)";
         ctx.lineWidth = 1.5;
         ctx.shadowBlur = 8;
@@ -673,7 +687,7 @@ class PlayerRenderer {
 
       // Second-wind danger ring
       if (entity.isSecondWind) {
-        const swA = 0.3 + Math.sin(kaoNow / 110) * 0.2;
+        const swA = 0.3 + Math.sin(now / 110) * 0.2;
         ctx.save();
         ctx.globalAlpha = swA;
         ctx.strokeStyle = "#ef4444";
@@ -682,9 +696,9 @@ class PlayerRenderer {
         ctx.shadowColor = "#ef4444";
         ctx.beginPath();
         ctx.arc(
-          kaoScr.x,
-          kaoScr.y,
-          entity.radius + 10 + Math.sin(kaoNow / 100) * 3,
+          screen.x,
+          screen.y,
+          entity.radius + 10 + Math.sin(now / 100) * 3,
           0,
           Math.PI * 2,
         );
@@ -777,27 +791,21 @@ class PlayerRenderer {
     // ── Vacuum Heat range ring (Q cooldown ready) ──────────
     if ((entity.cooldowns?.vacuum ?? 1) <= 0) {
       const VACUUM_RANGE_PX = BALANCE?.characters?.auto?.vacuumRange ?? 320;
-      // BUG-10 FIX: camera.scale doesn't exist. Derive pixel-per-world-unit
-      // scale from worldToScreen by comparing two world points 1px apart.
-      const _s0 = worldToScreen(entity.x, entity.y);
-      const _s1 = worldToScreen(entity.x + 1, entity.y);
-      const camScale = _s1.x - _s0.x; // px per world unit
+      const camScale = PlayerRenderer._getCamScale(entity.x);
       const vacRingR = VACUUM_RANGE_PX * camScale;
       const pulse = 0.14 + Math.sin(now / 420) * 0.09;
       // ขณะ Wanchai + passive: Q = Stand Pull (origin ที่ Stand)
       const isStandPull = entity.wanchaiActive && entity.passiveUnlocked;
-      const ringOriginX = isStandPull
-        ? worldToScreen(
+      let ringOriginX = screen.x;
+      let ringOriginY = screen.y;
+      if (isStandPull) {
+        const standSc = worldToScreen(
           entity.wanchaiStand?.x ?? entity.x,
           entity.wanchaiStand?.y ?? entity.y,
-        ).x
-        : screen.x;
-      const ringOriginY = isStandPull
-        ? worldToScreen(
-          entity.wanchaiStand?.x ?? entity.x,
-          entity.wanchaiStand?.y ?? entity.y,
-        ).y
-        : screen.y;
+        );
+        ringOriginX = standSc.x;
+        ringOriginY = standSc.y;
+      }
       ctx.save();
       ctx.globalAlpha = pulse;
       ctx.strokeStyle = isStandPull ? "#dc2626" : "#f97316";
@@ -837,8 +845,7 @@ class PlayerRenderer {
       const standX = entity.wanchaiStand?.x ?? entity.x;
       const standY = entity.wanchaiStand?.y ?? entity.y;
       const _ds0 = worldToScreen(standX, standY);
-      const _ds1 = worldToScreen(standX + 1, standY);
-      const camScale = _ds1.x - _ds0.x;
+      const camScale = PlayerRenderer._getCamScale(standX);
       const detRingR = DET_RANGE_PX * camScale;
       const detPulse = 0.18 + Math.sin(now / 200) * 0.12;
       ctx.save();
@@ -2878,7 +2885,7 @@ class PlayerRenderer {
 
     // Eating-rice power aura
     if (entity.isEatingRice) {
-      const t = performance.now() / 200;
+      const t = now2 / 200;
       const auraSize = 38 + Math.sin(t) * 6;
       const auraAlpha = 0.4 + Math.sin(t * 1.5) * 0.15;
       ctx.save();
@@ -2899,7 +2906,7 @@ class PlayerRenderer {
 
     // Naga invincibility shield
     if (entity.naga && entity.naga.active) {
-      const gt = performance.now() / 350;
+      const gt = now2 / 350;
       const shieldR = 36 + Math.sin(gt) * 4;
       const shieldA = 0.25 + Math.sin(gt * 1.3) * 0.12;
       ctx.save();
@@ -2941,7 +2948,7 @@ class PlayerRenderer {
       window.specialEffects.find((e) => e instanceof NagaEntity);
     const isChanneling = !!nagaEntity;
     if (isChanneling) {
-      const ct = performance.now() / 220;
+      const ct = now2 / 220;
       const cr = 42 + Math.sin(ct) * 7;
       const ca = 0.55 + Math.sin(ct * 1.6) * 0.25;
       ctx.save();
@@ -2986,7 +2993,7 @@ class PlayerRenderer {
         const hpGlow = lifeAlpha;
         const SEGS = 16; // more segments = smoother serpentine wave
         const pts = [];
-        const now_t = performance.now();
+        const now_t = now2;
         const dx = nagaScreen.x - screen.x;
         const dy = nagaScreen.y - screen.y;
         const dist = Math.hypot(dx, dy);
@@ -3069,7 +3076,7 @@ class PlayerRenderer {
 
         ctx.save();
         ctx.globalAlpha =
-          lifeAlpha * (0.7 + Math.sin(performance.now() / 120) * 0.3);
+          lifeAlpha * (0.7 + Math.sin(now2 / 120) * 0.3);
         ctx.fillStyle = "#34d399";
         ctx.shadowBlur = 14;
         ctx.shadowColor = "#10b981";

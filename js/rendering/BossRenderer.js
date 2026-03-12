@@ -26,6 +26,12 @@
 // ════════════════════════════════════════════════════════════
 class BossRenderer {
 
+    // ── Static bitmap/gradient cache ─────────────────────────────────────────
+    // OffscreenCanvas bitmaps for static boss body parts that don't change per
+    // frame. Key format: '<boss>_<variant>' e.g. 'dog_normal', 'manop_body'.
+    // Cleared when entity state transitions (isEnraged flip, phase change).
+    static _bitmapCache = new Map();
+
     // ── Dispatcher ───────────────────────────────────────────
     // Call this from the game loop instead of boss.draw().
     // KruFirst checked before KruManop — both extend BossBase,
@@ -113,6 +119,35 @@ class BossRenderer {
         ctx.beginPath(); ctx.arc(0, 0, R + 14 + Math.sin(now / 90) * 4, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]);
         ctx.restore();
+    }
+
+    /**
+     * Returns a cached OffscreenCanvas bitmap for a static boss body part.
+     * If the cache is stale (key missing or dirty flag set), calls paintFn to
+     * redraw into a fresh OffscreenCanvas and stores the result.
+     *
+     * Usage:
+     *   const bmp = BossRenderer._getOrCreateBodyBitmap('dog_body', size, size, (octx) => {
+     *     // draw into octx exactly as you would ctx, centred at (size/2, size/2)
+     *   });
+     *   ctx.drawImage(bmp, -size/2, -size/2);
+     *
+     * @param {string}   key      — unique cache key
+     * @param {number}   w        — canvas width in px
+     * @param {number}   h        — canvas height in px
+     * @param {Function} paintFn  — (octx: CanvasRenderingContext2D) => void
+     * @param {boolean}  [dirty]  — pass true to force a repaint (e.g. on state change)
+     * @returns {OffscreenCanvas}
+     */
+    static _getOrCreateBodyBitmap(key, w, h, paintFn, dirty = false) {
+        if (!dirty && BossRenderer._bitmapCache.has(key)) {
+            return BossRenderer._bitmapCache.get(key);
+        }
+        const osc = new OffscreenCanvas(w, h);
+        const octx = osc.getContext('2d');
+        paintFn(octx);
+        BossRenderer._bitmapCache.set(key, osc);
+        return osc;
     }
 
 
@@ -597,14 +632,29 @@ class BossRenderer {
 
         // ── Bean body — tall dark-grey gradient (slightly taller) ─────
         ctx.save(); ctx.scale(0.92, 1.12); // tall bean
-        const bodyG = ctx.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-        bodyG.addColorStop(0, '#374151');
-        bodyG.addColorStop(0.55, '#1f2937');
-        bodyG.addColorStop(1, '#111827');
-        ctx.fillStyle = bodyG;
-        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+        {
+            // Cache key doesn't need isEnraged — body color is always grey
+            const bmpSize = Math.ceil(R * 2) + 4;
+            const bodyBmp = BossRenderer._getOrCreateBodyBitmap(
+                `manop_body_${Math.ceil(R)}`,
+                bmpSize, bmpSize,
+                (octx) => {
+                    const cx = bmpSize / 2, cy = bmpSize / 2;
+                    const bodyG = octx.createRadialGradient(
+                        cx - R * 0.25, cy - R * 0.30, 1,
+                        cx, cy, R
+                    );
+                    bodyG.addColorStop(0, '#374151');
+                    bodyG.addColorStop(0.55, '#1f2937');
+                    bodyG.addColorStop(1, '#111827');
+                    octx.fillStyle = bodyG;
+                    octx.beginPath(); octx.arc(cx, cy, R, 0, Math.PI * 2); octx.fill();
+                    octx.strokeStyle = '#1e293b'; octx.lineWidth = 3;
+                    octx.beginPath(); octx.arc(cx, cy, R, 0, Math.PI * 2); octx.stroke();
+                }
+            );
+            ctx.drawImage(bodyBmp, -bmpSize / 2, -bmpSize / 2);
+        }
         ctx.restore(); // end tall scale
 
         // Specular highlight
@@ -1219,16 +1269,33 @@ class BossRenderer {
 
         // ── LAYER 6 — Bean body ─────────────────────────────────────────
         ctx.save(); ctx.scale(0.90, 1.10);
-        const bodyDark = e.isEnraged ? '#2d0a0a' : '#0a1a08';
-        const bodyMid = e.isEnraged ? '#3f0e0e' : '#0f2d0c';
-        const bodyG = ctx.createRadialGradient(-R * 0.22, -R * 0.25, 1, 0, 0, R);
-        bodyG.addColorStop(0, bodyDark);
-        bodyG.addColorStop(0.5, bodyMid);
-        bodyG.addColorStop(1, '#050c04');
-        ctx.fillStyle = bodyG;
-        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#0a1a08'; ctx.lineWidth = 3.2;
-        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+        {
+            // Two cache variants: normal (green) and enraged (red)
+            const variant = e.isEnraged ? 'enraged' : 'normal';
+            const bodyDark = e.isEnraged ? '#2d0a0a' : '#0a1a08';
+            const bodyMid = e.isEnraged ? '#3f0e0e' : '#0f2d0c';
+            const bmpSize = Math.ceil(R * 2) + 4;
+            // Invalidate cache when isEnraged flips (different key per variant)
+            const bodyBmp = BossRenderer._getOrCreateBodyBitmap(
+                `first_body_${variant}_${Math.ceil(R)}`,
+                bmpSize, bmpSize,
+                (octx) => {
+                    const cx = bmpSize / 2, cy = bmpSize / 2;
+                    const bodyG = octx.createRadialGradient(
+                        cx - R * 0.22, cy - R * 0.25, 1,
+                        cx, cy, R
+                    );
+                    bodyG.addColorStop(0, bodyDark);
+                    bodyG.addColorStop(0.5, bodyMid);
+                    bodyG.addColorStop(1, '#050c04');
+                    octx.fillStyle = bodyG;
+                    octx.beginPath(); octx.arc(cx, cy, R, 0, Math.PI * 2); octx.fill();
+                    octx.strokeStyle = '#0a1a08'; octx.lineWidth = 3.2;
+                    octx.beginPath(); octx.arc(cx, cy, R, 0, Math.PI * 2); octx.stroke();
+                }
+            );
+            ctx.drawImage(bodyBmp, -bmpSize / 2, -bmpSize / 2);
+        }
         ctx.restore();
 
         // ── LAYER 7 — Khaki uniform + dark-grey tech vest ──────────────
