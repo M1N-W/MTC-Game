@@ -1323,7 +1323,7 @@ class MapSystem {
         if (typeof MAP_CONFIG === 'undefined') return;
 
         // ── Frame counter for animation throttling ────────────────────
-        drawTerrain._frame = ((drawTerrain._frame || 0) + 1) & 0xFF; // 0–255 wrap
+        this._terrainFrame = ((this._terrainFrame || 0) + 1) & 0xFF; // 0–255 wrap
 
         const C = MAP_CONFIG;
         const ws = (wx, wy) => worldToScreen(wx, wy);
@@ -1411,7 +1411,7 @@ class MapSystem {
 
             const seg1Len = Math.hypot(M.x - A.x, M.y - A.y), seg2Len = Math.hypot(B.x - M.x, B.y - M.y), total = seg1Len + seg2Len;
             // ── Packet throttle: render every 2nd frame — imperceptible at 60fps ──
-            const _drawPackets = (drawTerrain._frame & 1) === 0;
+            const _drawPackets = (this._terrainFrame & 1) === 0;
             if (_drawPackets && total > 1) {
                 for (let p = 0; p < P.packetCount; p++) {
                     const progress = ((t * P.packetSpeed + pc.phase * 0.25 + p * (1 / P.packetCount)) % 1 + 1) % 1;
