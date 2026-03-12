@@ -579,7 +579,14 @@ class ParabolicVolley {
     static fire(bossX, bossY, playerX, playerY, isAdvanced = false) {
         if (typeof projectileManager === 'undefined') return;
 
-        const baseAngle = Math.atan2(playerY - bossY, playerX - bossX);
+        // Predictive aim: lead 0.28s (tuned to speed=420, avg engagement ~120u)
+        const _pred = (typeof playerAnalyzer !== 'undefined')
+            ? playerAnalyzer.predictedPosition(isAdvanced ? 0.22 : 0.28)
+            : null;
+        const _aimX = _pred ? _pred.x : playerX;
+        const _aimY = _pred ? _pred.y : playerY;
+
+        const baseAngle = Math.atan2(_aimY - bossY, _aimX - bossX);
         const speed = 420;
         const damage = 26;
         const prongCount = isAdvanced ? 5 : 3;
@@ -869,7 +876,12 @@ const GravitationalSingularity = Object.assign(Object.create(DomainBase), {
                         boss.x = player.x + Math.cos(tAngle) * tDist;
                         boss.y = player.y + Math.sin(tAngle) * tDist;
                         // 3-way fire toward player
-                        const aimA = Math.atan2(player.y - boss.y, player.x - boss.x);
+                        const _tPred = (typeof playerAnalyzer !== 'undefined')
+                            ? playerAnalyzer.predictedPosition(0.18)
+                            : null;
+                        const aimA = _tPred
+                            ? Math.atan2(_tPred.y - boss.y, _tPred.x - boss.x)
+                            : Math.atan2(player.y - boss.y, player.x - boss.x);
                         if (typeof projectileManager !== 'undefined') {
                             for (let i = -1; i <= 1; i++) {
                                 projectileManager.add(new Projectile(

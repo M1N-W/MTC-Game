@@ -479,15 +479,26 @@ class KruManop extends BossBase {
                     this.state = Math.random() < 0.3 ? 'ULTIMATE' : 'ATTACK';
                 }
             }
+            // ManopBoss.js — ATTACK state, แทนที่ทั้ง block (line ~482–494)
+
         } else if (this.state === 'ATTACK') {
             this.vx *= 0.9; this.vy *= 0.9;
             const fr = this.phase === 2 ? BALANCE.boss.phase2AttackFireRate : BALANCE.boss.attackFireRate;
             const bf = fr / (1 + this.log457AttackBonus);
             if (this.timer > bf) {
-                projectileManager.add(new Projectile(this.x, this.y, this.angle, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
+                // Predictive aim — lead scales with phase (phase2 boss is smarter)
+                const _leadT = this.phase === 2 ? 0.35 : 0.20;
+                const _pred = (typeof playerAnalyzer !== 'undefined')
+                    ? playerAnalyzer.predictedPosition(_leadT)
+                    : null;
+                const _aimAngle = _pred
+                    ? Math.atan2(_pred.y - this.y, _pred.x - this.x)
+                    : this.angle;
+
+                projectileManager.add(new Projectile(this.x, this.y, _aimAngle, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
                 if (this.phase === 2) {
-                    projectileManager.add(new Projectile(this.x, this.y, this.angle + 0.3, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
-                    projectileManager.add(new Projectile(this.x, this.y, this.angle - 0.3, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
+                    projectileManager.add(new Projectile(this.x, this.y, _aimAngle + 0.3, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
+                    projectileManager.add(new Projectile(this.x, this.y, _aimAngle - 0.3, BALANCE.boss.chalkProjectileSpeed, BALANCE.boss.chalkDamage, '#fff', false, 'enemy'));
                 }
                 this.timer = 0;
                 if (Math.random() < 0.08) this.state = 'CHASE';

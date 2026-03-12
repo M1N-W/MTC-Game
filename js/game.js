@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 
 
@@ -125,6 +125,20 @@ function gameLoop(now) {
 
     rafId = requestAnimationFrame(gameLoop);
 }
+
+/**
+ * triggerHitStop — freeze game loop for `duration` seconds.
+ * Safe to call from any player/boss file via window.triggerHitStop().
+ * No-op if hitStop is already longer than requested (prevents downgrade).
+ * @param {number} [duration=0.05]
+ */
+function triggerHitStop(duration = 0.05) {
+    if (typeof GameState === 'undefined') return;
+    if ((GameState.hitStopTimer ?? 0) < duration) {
+        GameState.hitStopTimer = duration;
+    }
+}
+window.triggerHitStop = triggerHitStop;
 
 function updateGame(dt) {
     if (!window.player) return;
@@ -280,8 +294,11 @@ function _tickEntities(dt, _inTutorial) {
     if (window.drone && window.player && !window.player.dead) window.drone.update(dt, window.player);
     if (!_inTutorial && window.boss) window.boss.update(dt, window.player);
 
-    // PlayerPatternAnalyzer: sample after player update, before boss AI reads it
-    if (typeof window.playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
+    // PlayerPatternAnalyzer: routed through WorkerBridge (off-thread when available)
+    // Falls back to main-thread playerAnalyzer if Worker unavailable.
+    if (typeof WorkerBridge !== 'undefined') {
+        WorkerBridge.sendSample(dt, window.player, window.boss);
+    } else if (typeof window.playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
         window.playerAnalyzer.sample(dt, window.player, window.boss);
         window.playerAnalyzer.update(dt);
     }
@@ -322,7 +339,9 @@ function _tickEntities(dt, _inTutorial) {
     }
 
     // Wave clear check — trigger next wave when all enemies dead and no boss/trickle pending
-    if (!_inTutorial && (BALANCE.waves.bossEveryNWaves > 0 ? getWave() % BALANCE.waves.bossEveryNWaves !== 0 : true) && window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {
+    if (!_inTutorial &&
+        (window.WAVE_SCHEDULE?.bossWaves ? !window.WAVE_SCHEDULE.bossWaves.includes(getWave()) : true) &&
+        window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {
         if (Achievements.stats.damageTaken === GameState.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
         }
@@ -764,6 +783,9 @@ function startGame(charType = 'kao') {
     window._selectedChar = charType;
     Audio.playBGM('battle');
 
+    // ── WorkerBridge: start analyzer worker (no-op if already running) ────
+    if (typeof WorkerBridge !== 'undefined') WorkerBridge.init();
+
     const savedData = getSaveData();
     console.log('[MTC Save] Loaded save data:', savedData);
     UIManager.updateHighScoreDisplay(savedData.highScore);
@@ -884,6 +906,9 @@ function _initGameUI(charType) {
 function endGame(result) {
     if (GameState.phase === 'GAMEOVER') return;
     setGameState('GAMEOVER');
+
+    // ── WorkerBridge: reset analyzer history on game end ─────────────────
+    if (typeof WorkerBridge !== 'undefined') WorkerBridge.reset();
 
     // BUG FIX: Cancel RAF and cleanup mobile controls
     if (rafId) {

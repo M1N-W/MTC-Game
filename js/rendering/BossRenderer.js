@@ -31,9 +31,19 @@ class BossRenderer {
     // KruFirst checked before KruManop — both extend BossBase,
     // so instanceof KruManop would also match BossBase.
     static draw(e, ctx) {
+        // ── Viewport cull — skip ALL draw work when off-screen ──────────
+        // isOnScreen(200): 200px margin covers glow rings / domain auras
+        // that extend beyond the entity radius.
+        if (!e.isOnScreen(200)) return;
+
         if (e instanceof KruFirst) BossRenderer.drawBossFirst(e, ctx);
         else if (e instanceof KruManop) BossRenderer.drawBoss(e, ctx);
         else if (e instanceof BossDog) BossRenderer.drawBossDog(e, ctx);
+
+        // ── Safety reset — prevents shadowBlur leaking into next draw ───
+        // Any early-return or throw inside a draw method skips its own
+        // ctx.shadowBlur = 0 cleanup. This is the catch-all.
+        ctx.shadowBlur = 0;
     }
 
     // ── Shared: polished rounded HP bar ──────────────────────
@@ -97,7 +107,7 @@ class BossRenderer {
         ctx.globalAlpha = pulse * severity;
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 3.5;
-        ctx.shadowBlur = 24 + Math.sin(now / 75) * 10;
+        ctx.shadowBlur = 20 + Math.sin(now / 75) * 6; // capped: was 24+10
         ctx.shadowColor = '#ef4444';
         ctx.setLineDash([6, 4]);
         ctx.beginPath(); ctx.arc(0, 0, R + 14 + Math.sin(now / 90) * 4, 0, Math.PI * 2); ctx.stroke();
@@ -369,6 +379,7 @@ class BossRenderer {
         // ║  KRU MANOP — The Math Boss · Chibi Strict Teacher       ║
         // ║  Dark-grey bean · Suit+tie · Glowing glasses · Ruler    ║
         // ╚══════════════════════════════════════════════════════════╝
+        ctx.shadowBlur = 0; // ── Guard: reset leaked state from prior draws ──
         const screen = worldToScreen(e.x, e.y);
         const now = performance.now();
         const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
@@ -789,6 +800,7 @@ class BossRenderer {
         // ║  Agile chibi teacher · Jetpack · Holographic equation ring  ║
         // ║  Cyan science goggles · Neon-green tech vest · Hit-flash    ║
         // ╚══════════════════════════════════════════════════════════════╝
+        ctx.shadowBlur = 0; // ── Guard: reset leaked state from prior draws ──
 
         // ── Draw active sandwich BEFORE the boss body (world space) ────
         if (e._activeSandwich && !e._activeSandwich.dead) {

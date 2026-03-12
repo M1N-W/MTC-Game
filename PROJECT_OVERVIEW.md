@@ -754,7 +754,13 @@ class SniperEnemy extends EnemyBase {
 ### Bug Fix Batch — Shop System + WaveManager (v3.29.3 — March 10, 2026)
 
 **Purpose:** แก้บัคใน ShopSystem, WaveManager, ui.js, game.js — รวม 7 บัค (2 Critical, 3 High, 2 Medium)
-
+#### ✅ Phase 1.1 — ECS Migration: HealthComponent (Started)
+#### ✅ Phase 1.3 — High-Impact Performance & Scoped Web Worker (DONE)
+- GPU Opt: `shadowBlur` guards / `isOnScreen` cull ใน Boss Renderers
+- Logic: ย้าย `PlayerPatternAnalyzer` ไป Web Worker (`WorkerBridge.js`)
+- Throttling: ลด rate ของ static terrain animations (circuit packets) ให้ทำงานแบบข้ามเฟรม
+- `base.js` — เพิ่ม `HealthComponent` สำหรับจัดการ HP/Death/Flash
+- `enemy.js` & `PlayerBase.js` — Integrate `HealthComponent` (using Proxy getters for backward compatibility)
 **Files Changed:** `js/systems/WaveManager.js`, `js/systems/ShopSystem.js`, `js/ui.js`, `js/game.js`
 
 **Key Fixes:**
@@ -849,6 +855,86 @@ class SniperEnemy extends EnemyBase {
 ---
 
 ## 🔄 Recent Changes (pending commit)
+
+### [NEXT VERSION] — March 12, 2026 (Roadmap Phase 2.1 + 2.2)
+
+**Phase 2.1 — Predictive AI Aiming (complete)**
+
+- **`PlayerPatternAnalyzer.js`** — เพิ่ม `velocityEstimate()` (O(1), zero GC — อ่าน Float32Array ring buffer โดยตรง) และ `predictedPosition(aheadSeconds)` (capped 0.5s, fallback null ถ้า <2 samples)
+- **`enemy.js` MageEnemy** — MeteorStrike เปลี่ยนจาก `player.x/y` ± rand(300) เป็น predictive aim + wave-scaled lead (`0.15s→0.40s` by wave10) + shrinking spread (`300→120`) + guard `_wave >= 3` (analyzer ต้องมี sample พอก่อน)
+- **`enemy.js` Enemy** — projectile เปลี่ยนจาก positional เป็น predictive aim + wave-scaled lead (`0.08s→0.25s` by wave12), guard `_wave >= 4`
+- **`ManopBoss.js` ATTACK state** — chalk projectile ใช้ `_aimAngle` จาก `predictedPosition()` แทน `this.angle` — phase1 lead 0.20s, phase2 lead 0.35s (smarter on enrage)
+- **`boss_attacks_first.js` ParabolicVolley.fire()** — predictive aim ก่อน `baseAngle` — isAdvanced lead 0.22s, normal lead 0.28s
+- **`boss_attacks_first.js` GravSingularity TIDAL** — `aimA` ใช้ `_tPred` lead 0.18s (conservative — TIDAL already high pressure)
+- **Fallback pattern สม่ำเสมอทุกจุด:** `typeof playerAnalyzer !== 'undefined'` guard + fallback `player.x/y` ถ้า `_count < 2`
+
+**Phase 2.2 — Elemental Reaction: IGNITE + SLOW → SHATTER**
+
+- **`AutoPlayer.js` `_doVacuum()`** — Bug fix: เปลี่ยน `enemy.isBurning/burnTimer/burnDps` → `enemy.igniteTimer/igniteDPS` (property เดิมไม่มีใน EnemyBase — ignite ไม่ทำงานมาตลอด)
+- **`enemy.js` `EnemyBase._tickShared()`** — เพิ่ม SHATTER reaction block หลัง ignite DoT tick:
+  - Trigger: `igniteTimer > 0` && `stickySlowMultiplier < 0.65` หรือ `stickyStacks >= 3`
+  - Effect: burst damage `igniteDPS × 2.5`, consume ignite, stun 0.4s (`_shatterStunTimer` → `_aiMoveX/Y = 0` ก่อน AI tick)
+  - Guard: `_shatterUsed` flag กัน double-trigger ใน frame เดียว, reset เมื่อ ignite หมด
+  - Placement: หลัง ignite block, ก่อน UtilityAI tick — ให้ AI เห็น stun ใน frame เดียวกัน
+
+**Phase 2.3 — KruFirst Multi-Phase State Machine (in progress)**
+
+- **`FirstBoss.js`** — เพิ่ม logic transition เมื่อ HP < 50% (`this.hp <= this.maxHp * 0.5`):
+  - Set `isEnraged = true` เพื่อปลดล็อก attack pool ใหม่
+  - `moveSpeed *= 1.18` (speed bump on phase break)
+  - `playerAnalyzer.reset()` ทั้งในตอนเข้า 50% HP และตอนเข้า `_derivationMode` (HP < 40%) เพราะเวลา boss เปลี่ยน phase ผู้เล่นมักจะเปลี่ยนแพทเทิร์นการเดิน
+- **`FirstBoss.js`** — อัปเดตแพทเทิร์น `isEnraged`:
+  - Enraged + Derivation Mode: โอกาส 45% ที่จะ chain `ParabolicVolley.fire()` หลัง `SUVAT_CHARGE`
+
+**Phase 3.1 — Hit-Stop & Dynamic Camera (in progress)**
+**Phase 1.1 — Entity Component System (ECS) Migration (In Progress)**
+
+- **`HealthComponent` Implementation** — แยก logic เลือดและความตายออกมาเป็น Component:
+  - ย้าย `hp`, `maxHp`, `dead`, `hitFlashTimer` ไปไว้ใน `HealthComponent` (ใน `base.js`)
+  - อัปเดต `EnemyBase` และ `PlayerBase` ให้ใช้การ Composition (Proxy getters เพื่อความเข้ากันได้ย้อนหลัง)
+  - จัดการ `takeDamage` และ `_onDeathCb` ผ่านระบบ Component ✅
+- **`game.js`** — สร้างฟังก์ชัน `window.triggerHitStop(duration)`:
+  - หยุด game loop (ไม่แก้ `deltaTime` หลัก แต่เซ็ต `GameState.hitStopTimer`)
+  - ไม่ทับซ้อนถ้ามี hit-stop ที่นานกว่าอยู่แล้ว
+- **`AutoPlayer.js`** — เพิ่ม `triggerHitStop(0.04)` ในจังหวะที่ Wanchai Punch (R) ทำ Critical Hit และ Stand Rush (L-click) ทำ Critical Hit
+- **`PatPlayer.js`** — เพิ่ม `triggerHitStop(isCrit ? 0.09 : 0.07)` ในทักษะ `Iaido Strike (R)` เพื่อความแพคเกจ "Game Feel" ที่ดุดันแบบ Zero-GC
+
+**Phase 1.2 — JSON-ready Wave Schedule Refactor (complete)**
+
+- **`config.js`** — เพิ่ม `window.WAVE_SCHEDULE` object เพื่อเก็บข้อมูล timing ของ wave ทั้งหมด (fog, speed, glitch, dark, boss) แยกออกจาก `BALANCE`
+- **`WaveManager.js`** — รีแฟคเตอร์ `_getWaveSchedule()` และ `startNextWave()` ให้ดึงข้อมูลจาก `window.WAVE_SCHEDULE` แทนการคำนวณ modulo หรืออ่านค่ากระจัดกระจาย
+- **`game.js`** — อัปเดตเงื่อนไข wave clear ให้เช็ค boss waves จาก `WAVE_SCHEDULE.bossWaves.includes()`
+- **ผลลัพธ์**: ลดความเสี่ยงในการเปลี่ยนผ่านสู่ระบบ async JSON ในอนาคต โค้ดอ่านง่ายขึ้นและจัดการตาราง wave ได้จากจุดเดียว ✅
+
+**ไฟล์ที่แก้ในเซสชันนี้:**
+```
+js/ai/PlayerPatternAnalyzer.js   ✅ velocityEstimate() + predictedPosition()
+js/entities/enemy.js             ✅ MageEnemy meteor + Enemy projectile predictive aim + SHATTER reaction
+js/entities/boss/ManopBoss.js    ✅ ATTACK state predictive aim
+js/entities/boss/boss_attacks_first.js  ✅ ParabolicVolley + GravSingularity TIDAL
+js/entities/player/AutoPlayer.js ✅ ignite bug fix (_doVacuum) + Hit-Stop on critical punch
+js/entities/boss/FirstBoss.js    ✅ Multi-Phase state trigger (isEnraged) + Analyzer reset
+js/game.js                       ✅ triggerHitStop() base logic
+js/entities/player/PatPlayer.js  ✅ Hit-Stop on Iaido Strike
+js/systems/WaveManager.js        ✅ Lazy loaded wave config (_getWaveSchedule)
+```
+
+**Next:** Option A (ECS Migration Part 2) หรือ Option B (JSON Data Loading)
+
+---
+
+### [NEXT VERSION] — March 12, 2026
+
+- **Core Architecture Update (v3.33.0):** Phase 1.1 - 1.3 is complete.
+- **ECS Migration:** Introduced `HealthComponent` to handle `hp`, `maxHp`, `dead`, and `hitFlashTimer` securely. Integrated into `EnemyBase` and `PlayerBase` with Proxy getters to ensure backward compatibility across the entire combat system.
+- **Data-Driven Prep (JSON):** Centralized wave spawn loops and configs into `window.WAVE_SCHEDULE`. `WaveManager` now lazy-loads these settings instead of running localized logic checks, ready to be fetched asynchronously later without causing crashes.
+- **Web Worker Migration:** Moved the CPU-heavy ring-buffer math calculations of `PlayerPatternAnalyzer` off the main thread into a dedicated `analyzer-worker.js`. 
+- **WorkerBridge:** Implemented a robust communication bridge (`WorkerBridge.js`) with graceful fallback to the main thread.
+- **Zero-GC & Rendering Opt:**
+  - `isOnScreen` guard added to Boss Renderers, saving massive GPU draw calls for off-screen effects.
+  - Slashed per-frame array allocations in `EnemyBase.tickStatuses()` by introducing a shared zero-GC scratch array.
+  - Trashed unused `Date.now()` calls in `_standAura_update()`.
+  - Throttled the visual tick rate of circuit packet animations on the background from 60fps to 30fps.
 
 ### [NEXT VERSION] — March 12, 2026
 

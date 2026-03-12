@@ -30,6 +30,20 @@ const API_KEY = (typeof CONFIG_SECRETS !== 'undefined' && CONFIG_SECRETS.GEMINI_
     ? CONFIG_SECRETS.GEMINI_API_KEY
     : '';
 
+/**
+ * 📅 WAVE_SCHEDULE — JSON-ready Wave Timing Config
+ * Decoupled from BALANCE to allow future async loading without crashing game loop.
+ */
+const WAVE_SCHEDULE = Object.freeze({
+    fogWaves:    [2, 8, 11, 14],
+    speedWaves:  [4, 7, 13],
+    glitchWaves: [5, 10],
+    darkWave:    1,
+    bossWaves:   [3, 6, 9, 12, 15],
+    maxWaves:    15
+});
+window.WAVE_SCHEDULE = WAVE_SCHEDULE;
+
 const BALANCE = {
     physics: {
         friction: 0.88,

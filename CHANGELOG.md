@@ -4,6 +4,40 @@
 
 ---
 
+## v3.33.0 — Core Architecture: ECS, Scoped Workers & Zero-GC
+*Released: March 12, 2026*
+
+### 🏗️ Architecture & Performance (Phase 1.1 - 1.3)
+- **ECS Migration**: Extracted `HealthComponent` from base entity logic. `EnemyBase` and `PlayerBase` now use composition with Proxy getters for backward compatibility, drastically cleaning up the core tick cycle.
+- **Zero-GC Optimization**: 
+  - Eliminated per-frame array allocations in `EnemyBase.tickStatuses()` by introducing a shared scratch array (`this._statusToRemove`).
+  - Removed unused `Date.now()` allocations from `_standAura_update()` ghost frame spawning.
+- **Data-Driven Prep (JSON)**: Decoupled wave timing data from `BALANCE` into a centralized `window.WAVE_SCHEDULE`. `WaveManager` now lazy-loads this structure, laying the groundwork for asynchronous JSON fetching.
+- **Scoped Web Worker Integration**: 
+  - Offloaded the heavy predictive ring-buffer math of `PlayerPatternAnalyzer` to a dedicated Web Worker (`analyzer-worker.js`).
+  - Built `WorkerBridge.js` to handle asynchronous message passing and graceful main-thread fallbacks.
+- **GPU Throttling**: 
+  - Implemented `isOnScreen(200)` culling in `BossRenderer` to skip drawing off-screen aura rings.
+  - Added strict `ctx.shadowBlur = 0` guards to prevent expensive shadow state leaks between draw calls.
+  - Throttled the `drawTerrain` circuit packet animation from 60fps to 30fps.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/entities/base.js (HealthComponent, Zero-GC updates)
+✅ MODIFIED: js/entities/enemy.js (ECS integration, Status effect GC fixes)
+✅ MODIFIED: js/entities/player/PlayerBase.js (ECS integration)
+✅ MODIFIED: js/config.js (WAVE_SCHEDULE decoupling)
+✅ MODIFIED: js/systems/WaveManager.js (Lazy wave loading)
+✅ MODIFIED: js/game.js (Wave clear logic, WorkerBridge init)
+✅ MODIFIED: js/rendering/BossRenderer.js (Culling & shadowBlur guards)
+✅ MODIFIED: js/map.js (drawTerrain throttling)
+✅ CREATED: js/workers/analyzer-worker.js
+✅ CREATED: js/systems/WorkerBridge.js
+✅ MODIFIED: index.html (Worker script loading path)
+```
+
+---
+
 ## v3.32.3 — Remove README-info References & Version Doc Sync
 *Released: March 12, 2026*
 

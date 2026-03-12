@@ -497,6 +497,18 @@ class KruFirst extends BossBase {
                 return;
             }
         }
+        // ── Enraged (HP < 50%): chain parabolic after every SUVAT ────
+        if (this.isEnraged && this._derivationMode &&
+            this.skills.parabolic.cd <= 0 && Math.random() < 0.45) {
+            this.skills.parabolic.cd = this.skills.parabolic.max;
+            if (typeof ParabolicVolley !== 'undefined') {
+                ParabolicVolley.fire(this.x, this.y,
+                    window.player?.x ?? this.x,
+                    window.player?.y ?? this.y,
+                    this.isAdvanced);
+                spawnFloatingText('∂v/∂t ≠ 0', this.x, this.y - 70, '#c084fc', 20);
+            }
+        }
 
         // ── SINGULARITY Mode: QuantumLeap highest priority ────
         if (this._singularityMode && this.skills.suvat.cd <= 0 && d > 80 && Math.random() < 0.40) {
@@ -677,6 +689,8 @@ class KruFirst extends BossBase {
         // formulaZone + parabolic skills for relentless pressure.
         if (!this._derivationMode && this.hp <= this.maxHp * 0.40 && this.hp > 0) {
             this._derivationMode = true;
+            // Reset analyzer — derivation mode is a distinct behavioral phase
+            if (typeof playerAnalyzer !== 'undefined') playerAnalyzer.reset();
             this._derivationTaunted = true;
             // Reduce all cooldown maxes by 35%
             for (const sk of Object.values(this.skills)) {
@@ -700,9 +714,13 @@ class KruFirst extends BossBase {
             Audio.playBossSpecial();
         }
 
-        // ── Phase transition at 50 % HP — trigger BERSERK with physics taunt ──
+        // ── Phase transition at 50 % HP ───────────────────────────────
         if (!this._halfHpTaunted && this.hp <= this.maxHp * 0.5 && this.hp > 0) {
             this._halfHpTaunted = true;
+            this.isEnraged = true;          // ← NEW: unlock enraged _pickSkill path
+            this.moveSpeed *= 1.18;         // ← NEW: speed bump on phase break
+            // NEW: reset analyzer — player often shifts strategy at phase break
+            if (typeof playerAnalyzer !== 'undefined') playerAnalyzer.reset();
             const taunts = GAME_TEXTS.boss.firstTaunts;
             const taunt = taunts[Math.floor(Math.random() * taunts.length)];
             spawnFloatingText(`⚛️ ${taunt}`, this.x, this.y - 90, '#39ff14', 28);

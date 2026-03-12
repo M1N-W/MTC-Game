@@ -12,12 +12,14 @@ class Player extends Entity {
   constructor(charId = "kao") {
     const stats = BALANCE.characters[charId];
     super(0, 0, stats.radius);
+    // ── HealthComponent ──────────────────────────────────────
+    this.health = new HealthComponent(stats.maxHp);
+    // _onDeathCb: health.dead is already true at this point — no action needed.
+    // game.js reads player.dead via proxy getter → health.dead automatically.
 
     this.charId = charId;
     this.stats = stats;
 
-    this.hp = stats.hp;
-    this.maxHp = stats.maxHp;
     this.energy = stats.energy;
     this.maxEnergy = stats.maxEnergy;
 
@@ -105,8 +107,8 @@ class Player extends Entity {
     this._dmgAccum = 0;
 
     // ── Hit Flash state (used by PlayerRenderer) ───────────
-    this._hitFlashTimer = 0; // counts DOWN from 1 → 0 after taking damage
-    this._hitFlashBig = false; // true = bullet/AoE hit (stronger flash)
+    // _hitFlashTimer → proxy getter to this.health.hitFlashTimer (see below)
+    this._hitFlashBig = false;    // true = bullet/AoE hit (stronger flash)
     this._hitFlashLocked = false; // ป้องกัน contact damage reset ซ้ำทุกเฟรม
 
     // ── Animation State Machine ─────────────────────────────
@@ -170,6 +172,17 @@ class Player extends Entity {
     }
   }
 
+  // ── Proxy getters — keep call sites backward-compatible ──────
+  get hp() { return this.health.hp; }
+  set hp(v) { this.health.hp = v; }
+  get maxHp() { return this.health.maxHp; }
+  set maxHp(v) { this.health.maxHp = v; }
+  get dead() { return this.health.dead; }
+  set dead(v) { this.health.dead = v; }
+  // _hitFlashTimer proxies to health.hitFlashTimer — PlayerRenderer reads this
+  get _hitFlashTimer() { return this.health.hitFlashTimer; }
+  set _hitFlashTimer(v) { this.health.hitFlashTimer = v; }
+
   get S() {
     return this.stats;
   }
@@ -190,12 +203,9 @@ class Player extends Entity {
       this._contactWarningTimer = Math.max(0, this._contactWarningTimer - dt);
     }
     // ── Hit Flash Timer ────────────────────────────────────
-    if (this._hitFlashTimer > 0) {
-      this._hitFlashTimer = Math.max(0, this._hitFlashTimer - dt * 6);
-      // ปลด lock เมื่อ flash decay ลงมาต่ำกว่า 0.4
-      if (this._hitFlashLocked && this._hitFlashTimer < 0.4) {
-        this._hitFlashLocked = false;
-      }
+    this.health.tick(dt * 6); // Player flash fades 6× faster than enemies
+    if (this._hitFlashLocked && this.health.hitFlashTimer < 0.4) {
+      this._hitFlashLocked = false;
     }
 
     // ── Combo System Update ────────────────────────────────
@@ -433,7 +443,7 @@ class Player extends Entity {
       for (const timeoutId of ids) {
         try {
           clearTimeout(timeoutId);
-        } catch (e) {}
+        } catch (e) { }
       }
     }
 

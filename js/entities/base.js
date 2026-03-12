@@ -31,8 +31,9 @@ class Entity {
         this.vx = 0; this.vy = 0;
         this.radius = radius;
         this.angle = 0;
-        this.hp = 100; this.maxHp = 100;
-        this.dead = false;
+        // hp / maxHp / dead are NOT set here — subclasses that use
+        // HealthComponent define proxy getters that shadow these names.
+        // Subclasses that don't use HealthComponent must set them manually.
     }
 
     applyPhysics(dt) {
@@ -146,6 +147,62 @@ const STAND_SYMBOL_COUNT = STAND_SYMBOLS.length;
  * @param {Object} entity  — the player instance
  * @param {number} dt      — delta time in seconds
  */
+// ════════════════════════════════════════════════════════════
+// HealthComponent — ECS-style composition
+// Used by: Entity subclasses via this.health = new HealthComponent(...)
+// Proxy getters on the owner keep call sites backward-compatible.
+// ════════════════════════════════════════════════════════════
+class HealthComponent {
+    /**
+     * @param {number} maxHp
+     * @param {number} [flashDuration=0.10] seconds — hit-flash duration
+     */
+    constructor(maxHp, flashDuration = 0.10) {
+        this.maxHp = maxHp;
+        this.hp = maxHp;
+        this.dead = false;
+        this.flashDuration = flashDuration;
+        this.hitFlashTimer = 0;   // counts DOWN from flashDuration → 0
+        this._onDeathCb = null; // set by owner: fn(owner, killer)
+    }
+
+    /** @param {number} dt seconds */
+    tick(dt) {
+        if (this.hitFlashTimer > 0)
+            this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
+    }
+
+    /**
+     * Apply damage. Triggers flash + death callback.
+     * @param {number} amt        raw damage (already finalised)
+     * @param {*}      [killer]   player reference — forwarded to _onDeathCb
+     * @returns {boolean} true if this hit killed the entity
+     */
+    takeDamage(amt, killer) {
+        if (this.dead) return false;
+        this.hp -= amt;
+        this.hitFlashTimer = this.flashDuration;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.dead = true;
+            if (this._onDeathCb) this._onDeathCb(killer);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param {number} amt
+     * @param {number} [cap] defaults to maxHp
+     */
+    heal(amt, cap) {
+        if (this.dead) return;
+        this.hp = Math.min(cap ?? this.maxHp, this.hp + amt);
+    }
+
+    /** @returns {boolean} */
+    get isAlive() { return !this.dead; }
+}
 function _standAura_update(entity, dt) {
     const ts = (typeof window !== 'undefined' && window.timeScale !== undefined)
         ? window.timeScale : 1;
@@ -167,8 +224,7 @@ function _standAura_update(entity, dt) {
                 x: entity.x,
                 y: entity.y,
                 angle: entity.angle,
-                alpha: 0.75,
-                time: Date.now()
+                alpha: 0.75
             });
         }
     }
@@ -327,3 +383,4 @@ window.EntityBase = Entity;   // alias for Debug.html check
 window._standAura_update = _standAura_update;
 window._standAura_draw = _standAura_draw;
 window.STAND_SYMBOLS = STAND_SYMBOLS;
+window.HealthComponent = HealthComponent;

@@ -122,7 +122,8 @@ class EnemyBase extends Entity {
     this.id = ++_enemyIdCounter;
 
     // ── Hit flash ─────────────────────────────────────────
-    this.hitFlashTimer = 0;
+    this.health = new HealthComponent(100, HIT_FLASH_DURATION);
+    // Proxy getters — call sites เดิม (this.hp, this.dead) ทำงานปกติ
 
     // ── Sticky slow ───────────────────────────────────────
     this.stickyStacks = 0;
@@ -144,6 +145,16 @@ class EnemyBase extends Entity {
     this._aiMoveY = 0;
   }
 
+  // ── Proxy getters — keep call sites backward-compatible ──
+  get hp() { return this.health.hp; }
+  set hp(v) { this.health.hp = v; }
+  get maxHp() { return this.health.maxHp; }
+  set maxHp(v) { this.health.maxHp = v; }
+  get dead() { return this.health.dead; }
+  set dead(v) { this.health.dead = v; }
+  get hitFlashTimer() { return this.health.hitFlashTimer; }
+  set hitFlashTimer(v) { this.health.hitFlashTimer = v; }
+
   // ─────────────────────────────────────────────────────────
   // _tickShared — call at top of every subclass update()
   // Handles: StatusEffects, hitFlash decay, ignite DoT, AI tick
@@ -163,7 +174,7 @@ class EnemyBase extends Entity {
     }
 
     // Hit flash decay
-    if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+    this.health.tick(dt);
 
     // Ignite DoT (applied by AutoPlayer Vacuum Heat)
     if ((this.igniteTimer ?? 0) > 0) {
@@ -173,6 +184,36 @@ class EnemyBase extends Entity {
         this.igniteTimer = 0;
         this.igniteDPS = 0;
       }
+    }
+
+    // ── Elemental Reaction: IGNITE + SLOW → SHATTER ───────────────
+    // Triggers when ignited enemy is also significantly slowed (sticky ≥3 stacks
+    // OR PhysicsFormulaZone slow detected via stickySlowMultiplier < 0.65).
+    // One reaction per ignite application — flag _shatterUsed prevents repeat.
+    if ((this.igniteTimer ?? 0) > 0 && !this._shatterUsed) {
+      const isSlowed = this.stickySlowMultiplier < 0.65 || (this.stickyStacks ?? 0) >= 3;
+      if (isSlowed) {
+        this._shatterUsed = true;
+        const shatterDmg = (this.igniteDPS ?? 12) * 2.5; // 2.5× ignite DPS as burst
+        this.takeDamage(shatterDmg);
+        this.igniteTimer = 0; // consume ignite
+        this.igniteDPS = 0;
+        // Brief stun — write AI stun directly (safe per architecture rules)
+        this._shatterStunTimer = 0.4;
+        if (typeof spawnFloatingText === 'function')
+          spawnFloatingText('💥 SHATTER!', this.x, this.y - 50, '#f0abfc', 22);
+        if (typeof spawnParticles === 'function')
+          spawnParticles(this.x, this.y, 14, '#f0abfc');
+      }
+    }
+    // Reset shatter flag when ignite expires naturally
+    if ((this.igniteTimer ?? 0) <= 0) this._shatterUsed = false;
+
+    // ── Shatter stun tick ─────────────────────────────────────────
+    if ((this._shatterStunTimer ?? 0) > 0) {
+      this._shatterStunTimer -= dt;
+      this._aiMoveX = 0;
+      this._aiMoveY = 0;
     }
 
     // UtilityAI decision tick (throttled to 2Hz internally)
@@ -226,16 +267,18 @@ class EnemyBase extends Entity {
   }
 
   tickStatuses(dt) {
-    const toRemove = [];
+    this._statusToRemove.length = 0;
     for (const [type, effect] of this.statusEffects) {
       effect.remaining -= dt;
       if (effect.remaining <= 0) {
-        toRemove.push(type);
+        this._statusToRemove.push(type);
         continue;
       }
       if (effect.onTick) effect.onTick(this, effect, dt);
     }
-    for (const type of toRemove) this.removeStatus(type);
+    for (let i = 0; i < this._statusToRemove.length; i++) {
+        this.removeStatus(this._statusToRemove[i]);
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -243,21 +286,18 @@ class EnemyBase extends Entity {
   // Subclasses call super.takeDamage(amt, player) or override fully
   // ─────────────────────────────────────────────────────────
   takeDamage(amt, player) {
-    this.hp -= amt;
-    this.hitFlashTimer = HIT_FLASH_DURATION;
-    if (this.hp <= 0) {
-      this.hp = 0;
-      this.dead = true;
-      if (this._ai) {
-        this._ai.dispose();
-        this._ai = null;
-      }
-      this._onDeath(player);
+    // Wire _onDeathCb once (cheap — same reference check)
+    if (!this.health._onDeathCb) {
+      this.health._onDeathCb = (killer) => {
+        if (this._ai) { this._ai.dispose(); this._ai = null; }
+        this._onDeath(killer);
+      };
     }
+    this.health.takeDamage(amt, player);
   }
 
   // Override in subclass for custom death FX/scoring
-  _onDeath(player) {}
+  _onDeath(player) { }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -345,11 +385,18 @@ class Enemy extends EnemyBase {
       d < BALANCE.enemy.shootRange &&
       !player.isInvisible
     ) {
+      const _wave = typeof getWave === 'function' ? getWave() : 1;
+      const _leadT = Math.min(0.08 + (_wave - 1) * 0.015, 0.25); // 0.08s→0.25s by wave12
+      const _pred = (typeof playerAnalyzer !== 'undefined' && _wave >= 4)
+        ? playerAnalyzer.predictedPosition(_leadT)
+        : null;
+      const _aimX = _pred ? _pred.x : player.x;
+      const _aimY = _pred ? _pred.y : player.y;
       projectileManager.add(
         new Projectile(
           this.x,
           this.y,
-          this.angle,
+          Math.atan2(_aimY - this.y, _aimX - this.x),  // ← predictive angle
           BALANCE.enemy.projectileSpeed,
           this.damage,
           "#fff",
@@ -607,10 +654,20 @@ class MageEnemy extends EnemyBase {
       this.soundWaveCD = BALANCE.mage.soundWaveCooldown;
     }
     if (this.meteorCD <= 0 && Math.random() < 0.005 * dt * 60) {
+      // Lead time scales with wave: 0.15s (wave1) → 0.40s (wave10+)
+      // Spread shrinks inversely so total difficulty curve stays smooth.
+      const _wave = typeof getWave === 'function' ? getWave() : 1;
+      const _leadT = Math.min(0.15 + (_wave - 1) * 0.028, 0.40); // caps at wave 10
+      const _spread = Math.max(120, 300 - (_wave - 1) * 18);       // 300→120 by wave 11
+      const _pred = (typeof playerAnalyzer !== 'undefined' && _wave >= 3)
+        ? playerAnalyzer.predictedPosition(_leadT)
+        : null;
+      const _aimX = _pred ? _pred.x : player.x;
+      const _aimY = _pred ? _pred.y : player.y;
       window.specialEffects.push(
         new MeteorStrike(
-          player.x + rand(-300, 300),
-          player.y + rand(-300, 300),
+          _aimX + rand(-_spread, _spread),
+          _aimY + rand(-_spread, _spread),
         ),
       );
       this.meteorCD = BALANCE.mage.meteorCooldown;
@@ -696,8 +753,8 @@ class PowerUp {
             // Restore shop boost if still active
             const currentShopMult = player.shopDamageBoostActive
               ? player.damageBoost /
-                ((player._baseDamageBoost || 1.0) *
-                  BALANCE.powerups.damageBoost)
+              ((player._baseDamageBoost || 1.0) *
+                BALANCE.powerups.damageBoost)
               : 1.0;
             player.damageBoost =
               (player._baseDamageBoost || 1.0) * currentShopMult;

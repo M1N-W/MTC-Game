@@ -45,9 +45,19 @@ window.GLITCH_EVERY_N_WAVES = GLITCH_EVERY_N_WAVES;
 //   Fog   : 2, 8, 11, 14
 //   Speed : 4, 7, 13
 //   Dark  : 1
-const FOG_WAVES = new Set(BALANCE.waves.fogWaves);
-const SPEED_WAVES = new Set(BALANCE.waves.speedWaves);
-const DARK_WAVES = new Set([BALANCE.waves.darkWave]);
+// NEW — lazy: อ่านตอน startNextWave() เพื่อให้ config แก้ได้ runtime
+// (ยังเป็น in-memory, JSON-ready: เปลี่ยน BALANCE.waves → parsed JSON ได้ทันที)
+// NEW — JSON-ready: อ่านจาก window.WAVE_SCHEDULE แทนชุดค่าคงที่แบบกระจาย
+function _getWaveSchedule() {
+    const ws = window.WAVE_SCHEDULE || {};
+    return {
+        fog: new Set(ws.fogWaves ?? [2, 8, 11, 14]),
+        speed: new Set(ws.speedWaves ?? [4, 7, 13]),
+        glitch: new Set(ws.glitchWaves ?? [5, 10]),
+        dark: new Set(Array.isArray(ws.darkWave) ? ws.darkWave : [ws.darkWave ?? 1]),
+        boss: new Set(ws.bossWaves ?? [3, 6, 9, 12, 15]),
+    };
+}
 const SPEED_MULT = 1.5;
 
 // Trickle spawn — enemies arrive in small batches over time (normal/fog/speed waves)
@@ -349,7 +359,7 @@ function _drawSpeed(ctx) {
 // 🌊 _startTrickle — queue batched spawns over time
 // ══════════════════════════════════════════════════════════════
 function _startTrickle(count, wave) {
-    const isDark = DARK_WAVES.has(wave);
+    const isDark = _getWaveSchedule().dark.has(wave);
     const batchSize = Math.max(1, Math.min(3, Math.ceil(count / 6)));
     const raw = TRICKLE_INTERVAL_BASE - (wave - 1) * 0.04;
     const interval = isDark
@@ -385,8 +395,9 @@ function startNextWave() {
 
     const wave = getWave();
     const count = BALANCE.waves.enemiesBase + (wave - 1) * BALANCE.waves.enemiesPerWave;
-    const isBossWave = wave % BALANCE.waves.bossEveryNWaves === 0;
-    const isGlitch = (!isBossWave) && (wave % GLITCH_EVERY_N_WAVES === 0);
+    const _sched = _getWaveSchedule();
+    const isBossWave = _sched.boss.has(wave);
+    const isGlitch = (!isBossWave) && _sched.glitch.has(wave);
 
     Achievements.check('wave_5');
     Achievements.check('wave_10');
@@ -396,8 +407,9 @@ function startNextWave() {
     if (!isBossWave) Audio.playBGM(isGlitch ? 'glitch' : 'battle');
 
     if (!isBossWave && !isGlitch) {
-        if (FOG_WAVES.has(wave)) _activateWaveEvent('fog', wave);
-        else if (SPEED_WAVES.has(wave)) _activateWaveEvent('speed', wave);
+        const _sched = _getWaveSchedule();
+        if (_sched.fog.has(wave)) _activateWaveEvent('fog', wave);
+        else if (_sched.speed.has(wave)) _activateWaveEvent('speed', wave);
     }
 
     if (isGlitch) { _startGlitchWave(count); }

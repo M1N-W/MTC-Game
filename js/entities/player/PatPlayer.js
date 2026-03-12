@@ -474,6 +474,7 @@ class PatPlayer extends Player {
     const bloodCount = S.iaidoBloodParticles ?? 18;
     spawnParticles(e.x, e.y, bloodCount, "#cc2222");
     addScreenShake(8);
+    if (typeof triggerHitStop === 'function') triggerHitStop(isCrit ? 0.09 : 0.07);
 
     if (typeof Audio !== "undefined" && Audio.playIaidoSheathe)
       Audio.playIaidoSheathe();

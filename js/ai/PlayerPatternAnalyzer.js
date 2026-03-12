@@ -174,6 +174,46 @@ class PlayerPatternAnalyzer {
         else if (bias < -total * 0.25) this._cachedDir = 'right';
         else this._cachedDir = 'none';
     }
+
+    /**
+     * Estimated player velocity (world-units/sec) from the 2 newest samples.
+     * Zero GC — reads pre-allocated Float32Arrays only.
+     * @returns {{ vx: number, vy: number }}
+     */
+    velocityEstimate() {
+        if (this._count < 2) return { vx: 0, vy: 0 };
+        const inv = 1 / this._sampleInterval;
+        const cur = (this._head - 1 + ANALYZER_SAMPLES) % ANALYZER_SAMPLES;
+        const prev = (this._head - 2 + ANALYZER_SAMPLES) % ANALYZER_SAMPLES;
+        return {
+            vx: (this._posX[cur] - this._posX[prev]) * inv,
+            vy: (this._posY[cur] - this._posY[prev]) * inv
+        };
+    }
+
+    /**
+     * Predicted player world position `aheadSeconds` into the future.
+     * When WorkerBridge is active, returns the worker's pre-computed result
+     * (zero allocation, 1-frame stale at most — acceptable for aim prediction).
+     * Falls back to local ring-buffer calculation when worker is unavailable.
+     * @param {number} [aheadSeconds=0.25]
+     * @returns {{ x: number, y: number } | null}
+     */
+    predictedPosition(aheadSeconds = 0.25) {
+        // Worker path — use pre-computed prediction (avoids ring-buffer walk)
+        if (this._workerPredReady) {
+            return { x: this._workerPredX, y: this._workerPredY };
+        }
+        // Fallback: local calculation
+        if (this._count < 2) return null;
+        const t = Math.min(aheadSeconds, 0.5);
+        const vel = this.velocityEstimate();
+        const cur = (this._head - 1 + ANALYZER_SAMPLES) % ANALYZER_SAMPLES;
+        return {
+            x: this._posX[cur] + vel.vx * t,
+            y: this._posY[cur] + vel.vy * t
+        };
+    }
 }
 
 // ── Singleton instance ────────────────────────────────────────────────────────

@@ -266,7 +266,8 @@ class WanchaiStand {
         isCrit ? 5 : 3,
         isCrit ? "#facc15" : "#ef4444",
       );
-    if (typeof addScreenShake === "function") addScreenShake(isCrit ? 5 : 2);
+    if (isCrit && typeof addScreenShake === "function") addScreenShake(isCrit ? 5 : 2);
+    if (isCrit && typeof triggerHitStop === 'function') triggerHitStop(0.04);
     if (isCrit && typeof spawnFloatingText === "function")
       spawnFloatingText("วันชัย!", this.x, this.y - 30, "#facc15", 18);
 
@@ -1062,7 +1063,7 @@ class AutoPlayer extends Player {
             "player",
           ),
         );
-      } catch (e) {}
+      } catch (e) { }
     }
     if (typeof Audio !== "undefined" && Audio.playPunch) Audio.playPunch();
   }
@@ -1191,7 +1192,8 @@ class AutoPlayer extends Player {
         isCrit ? 6 : 3,
         isCrit ? "#facc15" : "#ef4444",
       );
-    if (typeof addScreenShake === "function") addScreenShake(isCrit ? 4 : 2);
+    if (isCrit && typeof addScreenShake === "function") addScreenShake(isCrit ? 4 : 2);
+    if (isCrit && typeof triggerHitStop === 'function') triggerHitStop(0.04);
     if (isCrit && typeof spawnFloatingText === "function")
       spawnFloatingText("ORA!", this.x, this.y - 45, "#facc15", 20);
     if (typeof Audio !== "undefined" && Audio.playStandRush)
@@ -1407,9 +1409,8 @@ class AutoPlayer extends Player {
         enemy._vacuumPullTimer = PULL_DUR;
         if (!earlyMode) {
           enemy.takeDamage?.(vacDmg * (this.damageMultiplier || 1.0), this);
-          enemy.isBurning = true;
-          enemy.burnTimer = ignDur;
-          enemy.burnDps = ignDps;
+          enemy.igniteTimer = ignDur;
+          enemy.igniteDPS = ignDps;
         }
         pulled++;
       }
