@@ -131,6 +131,7 @@ class EnemyBase extends Entity {
 
     // ── StatusEffect Framework ────────────────────────────
     this.statusEffects = new Map();
+    this._statusToRemove = [];
 
     // ── UtilityAI ─────────────────────────────────────────
     // Safe to construct even if UtilityAI.js not yet loaded (guard below).
