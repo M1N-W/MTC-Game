@@ -1364,25 +1364,43 @@ class MapSystem {
             const colStart = Math.floor(viewL / COL_STEP) - 1, colEnd = colStart + Math.ceil((CANVAS.width + HEX_W * 2) / COL_STEP) + 2;
             const rowStart = Math.floor(viewT / ROW_STEP) - 1, rowEnd = rowStart + Math.ceil((CANVAS.height + HEX_H * 2) / ROW_STEP) + 2;
 
+            // ── Perf: pre-compute 6 corner offsets once per drawTerrain call ──
+            // Eliminates 6× Math.cos/sin per cell (was recalculated every cell every frame).
+            const _hexOffX = new Float32Array(6);
+            const _hexOffY = new Float32Array(6);
+            for (let _i = 0; _i < 6; _i++) {
+                const _a = (Math.PI / 3) * _i;
+                _hexOffX[_i] = HEX_SIZE * Math.cos(_a);
+                _hexOffY[_i] = HEX_SIZE * Math.sin(_a);
+            }
+
+            // ── Perf: parse RGB once from config string — immune to color changes ──
+            // Expects format: 'rgba(R, G, B, {a})' — strips everything after last comma
+            const _fillRGB = H.fillColor.substring(5, H.fillColor.lastIndexOf(','));
+            const _strokeRGB = H.strokeColor.substring(5, H.strokeColor.lastIndexOf(','));
+            const _fillBase = H.fillAlpha;
+            const _strokeBase = H.strokeAlpha;
+            const _falloffR = H.falloffRadius;
+
             ctx.save(); ctx.lineWidth = 0.9;
             for (let col = colStart; col <= colEnd; col++) {
                 for (let row = rowStart; row <= rowEnd; row++) {
                     const wx = col * COL_STEP, wy = row * ROW_STEP + (col % 2 === 0 ? 0 : HEX_H * 0.5);
                     const distW = Math.sqrt(wx * wx + wy * wy);
-                    const falloff = Math.max(0, 1 - distW / H.falloffRadius);
+                    const falloff = Math.max(0, 1 - distW / _falloffR);
                     if (falloff < 0.02) continue;
 
                     ctx.beginPath();
                     for (let i = 0; i < 6; i++) {
-                        const angle = (Math.PI / 3) * i, corner = ws(wx + HEX_SIZE * Math.cos(angle), wy + HEX_SIZE * Math.sin(angle));
+                        const corner = ws(wx + _hexOffX[i], wy + _hexOffY[i]);
                         i === 0 ? ctx.moveTo(corner.x, corner.y) : ctx.lineTo(corner.x, corner.y);
                     }
                     ctx.closePath();
 
                     if ((Math.abs(col) + Math.abs(row)) % 3 === 0) {
-                        ctx.fillStyle = H.fillColor.replace('{a}', (H.fillAlpha * falloff).toFixed(3)); ctx.fill();
+                        ctx.fillStyle = `rgba(${_fillRGB},${_fillBase * falloff})`; ctx.fill();
                     }
-                    ctx.strokeStyle = H.strokeColor.replace('{a}', (H.strokeAlpha * falloff).toFixed(3)); ctx.stroke();
+                    ctx.strokeStyle = `rgba(${_strokeRGB},${_strokeBase * falloff})`; ctx.stroke();
                 }
             }
             ctx.restore();

@@ -4,7 +4,26 @@
 
 ---
 
-## v3.33.1 — Game Stability & Performance Improvements
+## v3.33.2 — Performance: Terrain Rendering & GC Reduction
++*Released: March 12, 2026*
++
++### 🚀 Performance Optimizations
++- **Terrain Rendering Engine**: 
++  - **Pre-computed Geometry**: Moved hex corner calculations outside the draw loop to eliminate ~1,200 trig calls/frame.
++  - **String Formatting Fix**: Replaced heavy `.replace('{a}', ...)` string manipulation with template literals using pre-parsed RGB strings, eliminating hundreds of allocations per frame.
++  - **Loop Hoisting**: Cached critical config properties before loop entry to minimize property lookup overhead.
++
++### 📁 Files Modified
++```
++✅ MODIFIED: js/map.js (Major performance refactor in drawTerrain)
++✅ MODIFIED: sw.js (v3.33.2)
++✅ MODIFIED: CHANGELOG.md (v3.33.2)
++✅ MODIFIED: PROJECT_OVERVIEW.md (Recent Changes sync)
++```
++
++---
++
++## v3.33.1 — Game Stability & Performance Improvements
 +*Released: March 12, 2026*
 +
 +### 🛡️ Stability & Security

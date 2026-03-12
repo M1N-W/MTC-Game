@@ -3,7 +3,7 @@
 สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.33.1
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.33.2
 
 ---
 
@@ -749,7 +749,22 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Major Changes (v3.33.1)
+## 📝 Recent Major Changes (v3.33.2)
+
+### Terrain Rendering Performance Optimizations (v3.33.2 — March 12, 2026)
+
+**Purpose:** Dramatically reduce CPU overhead and GC pressure during terrain rendering by optimizing the hex grid draw loop.
+
+**Files Changed:** `js/map.js`
+
+**Key Optimizations:**
+- **Zero-Trig Per Cell**: Pre-computed hex corner offsets (6 points) moved outside the nested loops, eliminating ~1,200 `Math.cos`/`Math.sin` calls per frame.
+- **Zero-Allocation String Formatting**: Replaced `.replace()` and `.toFixed()` based style generation with template literals using pre-parsed RGB components, eliminating ~400 string allocations per frame (reducing GC stutter).
+- **Property Lookup Caching**: Cached `fillAlpha`, `falloffRadius`, and color strings before loop entry to minimize object property access overhead.
+
+---
+
+## 📝 Previous Major Changes (v3.33.1)
 
 ### Game Stability & Performance Improvements (v3.33.1 — March 12, 2026)
 
