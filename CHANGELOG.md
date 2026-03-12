@@ -4,6 +4,24 @@
 
 ---
 
+## v3.32.2 — PlayerRenderer Parameter Enhancement & Rendering System Consistency
+*Released: March 11, 2026*
+
+### 🎨 Rendering System Improvements
+- **Parameter Enhancement**: Added `shadowScaleX`, `shadowScaleY`, `shadowAlphaMod`, `footL`, `footR` parameters to `_getLimbParams()` destructuring across all player rendering methods
+- **Standardized Parameter Handling**: Enhanced consistency in `_drawAuto`, `_drawPoom`, `_drawPat`, and `_drawBase` methods with unified limb parameter access
+- **Ground Shadow & Foot Rendering**: Improved parameter passing for enhanced shadow scaling and foot positioning calculations
+- **Code Consistency**: Standardized formatting in PlayerRenderer.js for better maintainability
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/rendering/PlayerRenderer.js (+20 lines - parameter destructuring enhancement)
+✅ MODIFIED: PROJECT_OVERVIEW.md (updated Recent Changes)
+✅ MODIFIED: sw.js (v3.32.2)
+```
+
+---
+
 ## v3.32.1 — Animation System Documentation & Rendering Architecture Updates
 *Released: March 11, 2026*
 

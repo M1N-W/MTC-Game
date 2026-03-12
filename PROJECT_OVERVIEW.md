@@ -3,7 +3,7 @@
 สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.32.0 [NEXT VERSION]
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.32.2
 
 ---
 
@@ -184,11 +184,10 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 
 ```
 ### [NEXT VERSION] — March 11, 2026
-- **MageEnemy Visual Overhaul**: Complete rendering system redesign with arcane aura, floating animations, rune markings, and energy core effects
-- **Auto Weapon Visual Enhancement**: Added barrel shroud, muzzle device, piston assembly, exhaust stacks with fire effects, heat vents, and spine spikes
+- **PlayerRenderer Parameter Enhancement**: Added shadowScaleX, shadowScaleY, shadowAlphaMod, footL, footR parameters to _getLimbParams() destructuring across all player rendering methods
+- **Rendering System Consistency**: Standardized limb parameter handling for _drawAuto, _drawPoom, _drawPat, and _drawBase methods
+- **Ground Shadow & Foot Rendering**: Enhanced parameter passing for improved shadow scaling and foot positioning calculations
 - **Code Style Improvements**: Standardized formatting in PlayerRenderer.js for consistency
-- **PatPlayer Documentation**: Added critical implementation notes for Blade Guard collision routing and katana rendering context
-- **Player Code Standardization**: Major refactoring across all player files with double quotes, consistent formatting, improved HUD updates, and bug fixes
 - **Animation System Documentation**: Added comprehensive §16 Animation State Machine documentation covering _anim system, trigger points, and rendering effects
 ```
 

@@ -722,6 +722,11 @@ class PlayerRenderer {
       shootLift,
       shootReach,
       runLean,
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
     } = PlayerRenderer._getLimbParams(entity, now, 180);
     const limbAuto = {
       shadowScaleX,
@@ -2812,6 +2817,11 @@ class PlayerRenderer {
       shootLift: poomShootLift,
       shootReach: poomShootReach,
       runLean: poomRunLean,
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
     } = PlayerRenderer._getLimbParams(entity, now2, 190);
     const limbPoom = {
       shadowScaleX,
@@ -3563,6 +3573,11 @@ class PlayerRenderer {
       shootLift,
       shootReach,
       runLean,
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
     } = PlayerRenderer._getLimbParams(entity, now, 200);
     const limbPat = {
       shadowScaleX,
@@ -4376,6 +4391,11 @@ class PlayerRenderer {
       shootLift,
       shootReach,
       runLean,
+      shadowScaleX,
+      shadowScaleY,
+      shadowAlphaMod,
+      footL,
+      footR,
     } = PlayerRenderer._getLimbParams(entity, now, 200);
     const limbBase = {
       shadowScaleX,
