@@ -1,11 +1,87 @@
 'use strict';
 /**
- * 🏫 MTC the Game Beta Edition - Campus Map System (ARCHITECTURAL OVERHAUL)
+ * js/map.js
+ * ════════════════════════════════════════════════════════════════
+ * MTC Campus Map System — world geometry, objects, terrain & lighting
  *
- * CHANGES:
- * - 🏗️ Architectural Level Design: No more random scatter. Objects are placed in strict grids/rows.
- * - 🏰 MTC Citadel: The MTC Room is now a physical bunker in the North with solid walls and a forcefield.
- * - 🏛️ Distinct Zones: Server Aisles (East), Library Maze (West), Symmetry Courtyard (South).
+ * Owns:
+ *  - All static map objects (desks, trees, pillars, explosive barrels, etc.)
+ *  - MTCRoom  — safe zone bunker (north) with HP regen + forcefield
+ *  - MapSystem — singleton that manages object placement, update loop,
+ *                terrain draw (hex grid + circuit paths + zone auras),
+ *                and dynamic lighting overlay
+ *
+ * World layout (3200 × 3200 units, origin at center):
+ *  North  — MTC Citadel (MTCRoom safe zone)
+ *  East   — Server Aisles  (drawServer / drawDataPillar clusters)
+ *  West   — Library Maze   (drawBookshelf / drawDatabase clusters)
+ *  South  — Symmetry Courtyard (drawCoopStore / drawVendingMachine)
+ *  Center — open arena with hex grid floor
+ *
+ * Globals exported (window.*):
+ *  window.mapSystem        — MapSystem singleton instance
+ *  window.MapSystem        — class ref (WaveManager / AdminSystem spawn)
+ *  window.MapObject        — class ref (instanceof checks)
+ *  window.MTCRoom          — class ref
+ *  window.ExplosiveBarrel  — class ref (ProjectileManager hit detection)
+ *
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────
+ *  Ctrl+G → line number (VS Code) | Ctrl+F → method name
+ *
+ *  ── SHARED TIMING ─────────────────────────────────────────────
+ *  L.11   _mapNow / _updateMapNow()      shared perf timestamp (avoids per-draw calls)
+ *
+ *  ── STANDALONE DRAW HELPERS (ctx primitives, no state) ────────
+ *  L.17   drawDesk(w, h)
+ *  L.42   drawTree(size)
+ *  L.66   drawServer(w, h)
+ *  L.98   drawDataPillar(w, h)
+ *  L.124  drawBookshelf(w, h)
+ *  L.154  drawDatabase(w, h)
+ *  L.242  drawCoopStore(w, h)
+ *  L.359  drawVendingMachine(w, h)
+ *
+ *  ── MAP OBJECTS ───────────────────────────────────────────────
+ *  L.437  class MapObject               base: x/y/w/h, draw(), collision rect
+ *           L.462  draw()               dispatcher → type-specific sub-draw
+ *           L.483  drawMTCWall()
+ *           L.526  drawChair()
+ *           L.532  drawCabinet()
+ *           L.541  drawBlackboard()
+ *           L.586  drawWall()
+ *  L.641  class ExplosiveBarrel         extends MapObject — hp, isExploded flag
+ *           L.647  draw()               barrel sprite + low-HP warning glow
+ *  ⚠️  ExplosiveBarrel hit detection lives in game.js _tickBarrelExplosions()
+ *      — NOT inside this file. AoE explosion handled there, not in draw/update.
+ *
+ *  ── MTC ROOM (Safe Zone) ──────────────────────────────────────
+ *  L.687  class MTCRoom
+ *           L.700  update(dt, player)   HP regen when player inside, forcefield pulse
+ *           L.767  draw()               bunker walls + hologram rings + buff indicators
+ *
+ *  ── MAP SYSTEM (Singleton) ────────────────────────────────────
+ *  L.1123 class MapSystem
+ *           L.1132 init()               place all objects + mtcRoom init
+ *           L.1312 update(entities, dt) push entities out of solid objects (collision)
+ *           L.1322 drawTerrain(ctx, camera)
+ *                    └─ 1. Arena boundary ring
+ *                    └─ 2. Tech-hex grid            ← perf: corners pre-computed, no string alloc
+ *                    └─ 2b. Zone floors
+ *                    └─ 3. Circuit paths + packets  ← throttled: draw every 2nd frame
+ *                    └─ 4. Zone auras
+ *                    └─ 5. Lighting map overlay
+ *           L.1552 drawZoneFloors(ctx)  colored floor tiles per zone
+ *           L.1660 draw()               all MapObjects + mtcRoom draw
+ *           L.1679 drawLighting(...)    radial light sources → composite shadow overlay
+ *
+ * ── PERF NOTES ─────────────────────────────────────────────────
+ *  Hex grid (drawTerrain §2): corners pre-computed (6× cos/sin outside loop).
+ *  Fill/stroke colors parsed once from MAP_CONFIG strings — no .replace()/.toFixed() per cell.
+ *  Circuit packets: _terrainFrame & 1 gate — renders every other frame only.
+ *  drawLighting: composite overlay drawn once per frame at full canvas size — keep light
+ *  source count low (< 12) to avoid GPU fillRect overdraw cost.
+ *
+ * ════════════════════════════════════════════════════════════════
  */
 
 let _mapNow = 0;

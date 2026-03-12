@@ -1,6 +1,6 @@
 ---
 name: mtc-game-conventions
-description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, PatPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT, Zanzo Flash, Iaido Strike, Blade Guard, tryReflectProjectile."
+description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, PatPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT, Zanzo Flash, Iaido Strike, Blade Guard, tryReflectProjectile, WorkerBridge, analyzer-worker, WAVE_SCHEDULE, SHATTER reaction, HealthComponent, predictedPosition, velocityEstimate, file header documentation, JSDoc header, module header."
 ---
 
 # MTC The Game — Project Conventions & Critical Pitfalls
@@ -82,19 +82,32 @@ New enemy template:
 4. AI System Architecture
 
 Load order: UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → SquadAI.js → enemy.js
+Worker files (loaded separately in index.html):
+  js/workers/analyzer-worker.js  — standalone worker, no window.* imports
+  js/systems/WorkerBridge.js     — main thread bridge, loaded after game.js
 
   Layer               | File                      | Rate
   --------------------|---------------------------|----------------------
   Individual AI       | UtilityAI.js              | 2Hz (0.5s timer)
   Tactical actions    | EnemyActions.js           | called by UtilityAI
-  Player analysis     | PlayerPatternAnalyzer.js  | sample 10Hz / compute 4Hz
+  Player analysis     | PlayerPatternAnalyzer.js  | sample 10Hz / compute 4Hz (main-thread fallback)
+  Player analysis     | analyzer-worker.js        | off main thread via WorkerBridge (Phase 1.3)
   Squad coordination  | SquadAI.js                | 1Hz
+
+WorkerBridge integration (Phase 1.3):
+  WorkerBridge.onmessage writes _workerPredReady/_workerPredX/_workerPredY
+  onto window.playerAnalyzer so predictedPosition() returns worker result.
+  ❌ Never import window.* in analyzer-worker.js — it runs in a Worker scope
+  ✅ analyzer-worker.js must be self-contained with its own Float32Array ring buffer
 
 Immutable rules:
 - AI writes _aiMoveX/_aiMoveY only — never vx/vy directly
 - _tickShared() must be first line of every subclass update()
 - BossBase has no update() — Boss AI goes in ManopBoss/FirstBoss directly
 - Retreat always beats squad role override
+- SHATTER reaction lives in EnemyBase._tickShared() after ignite DoT block — never move it
+  Trigger: igniteTimer > 0 && (stickySlowMultiplier < 0.65 || stickyStacks >= 3)
+  Effect: igniteDPS × 2.5 burst + 0.4s stun (_shatterStunTimer) + _shatterUsed flag guard
 
 game.js integration:
   if (typeof playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
@@ -356,6 +369,8 @@ index.html script order (AI section):
   <script src="js/ai/PlayerPatternAnalyzer.js"></script>
   <script src="js/ai/SquadAI.js"></script>
   <!-- then player files, enemy.js, boss files -->
+  <script src="js/systems/WorkerBridge.js"></script>  <!-- after game.js -->
+  <!-- analyzer-worker.js is loaded via new Worker('js/workers/analyzer-worker.js') in WorkerBridge.js — NOT a script tag -->
 
 ---
 
@@ -432,3 +447,93 @@ Per-character skillT rendering effects (in PlayerRenderer):
 Guard pattern — always check before accessing:
   ✅  if (entity._anim) entity._anim.shootT = 1;
   ✅  const sT = entity._anim?.shootT ?? 0;
+---
+
+17. HitStop System — triggerHitStop()
+
+window.triggerHitStop(duration) — defined in game.js, exported to window.*
+
+  ✅  triggerHitStop(0.04)   // seconds — use for punch crits
+  ✅  triggerHitStop(0.09)   // seconds — use for Iaido kill
+  ❌  triggerHitStop(40)     // ms — old pattern, backward-compat shim exists but avoid
+
+Rules:
+- Does NOT modify main deltaTime — sets GameState.hitStopTimer only
+- Does NOT downgrade: if existing hitStopTimer > new duration, keeps old (no regression)
+- Hard-capped to 0.5s in implementation — values above are silently clamped
+- No-op if typeof triggerHitStop === 'undefined' (safe to call before game.js loads with guard)
+
+Call sites (Phase 3.1 complete):
+  AutoPlayer — Wanchai Punch (R) crit:    triggerHitStop(0.04)
+  AutoPlayer — Stand Rush (L-click) crit: triggerHitStop(0.04)
+  PatPlayer  — Iaido Strike (R):          triggerHitStop(isCrit ? 0.09 : 0.07)
+
+---
+
+18. File Header Documentation Plan — Module-level JSDoc
+
+Goal: Every JS file in the project gets a module-level JSDoc header so AI assistants
+can navigate the codebase without loading file bodies.
+
+Header format (established pattern from this project):
+  /**
+   * js/path/to/file.js
+   * ════════════════════════════════════════════════
+   * One-line purpose + owner summary
+   *
+   * Design notes / load order / integration points
+   *
+   * ── TABLE OF CONTENTS ────────────────────────
+   *  L.N  ClassName / functionName     brief role
+   *  ⚠️  Critical pitfall note
+   *
+   * ════════════════════════════════════════════════
+   */
+
+Completed headers (as of March 12, 2026):
+  ✅  js/ai/EnemyActions.js
+  ✅  js/ai/PlayerPatternAnalyzer.js
+  ✅  js/ai/SquadAI.js
+  ✅  js/ai/UtilityAI.js
+  ✅  js/menu.js
+  ✅  js/tutorial.js
+  ✅  js/map.js
+  ✅  css/main.css
+  ✅  js/rendering/PlayerRenderer.js
+
+Priority queue (do next, largest navigation value):
+  🔲  js/game.js                (largest file — game loop, state machine, all integrations)
+  🔲  js/entities/enemy.js      (EnemyBase + 3 enemy classes, AI integration)
+  🔲  js/entities/player/PlayerBase.js
+  🔲  js/entities/player/AutoPlayer.js
+  🔲  js/entities/player/KaoPlayer.js
+  🔲  js/entities/player/PoomPlayer.js
+  🔲  js/entities/player/PatPlayer.js
+  🔲  js/rendering/BossRenderer.js
+  🔲  js/entities/boss/ManopBoss.js
+  🔲  js/entities/boss/FirstBoss.js
+  🔲  js/entities/boss/boss_attacks_manop.js
+  🔲  js/entities/boss/boss_attacks_first.js
+  🔲  js/systems/WaveManager.js
+  🔲  js/systems/ShopSystem.js
+  🔲  js/ui.js
+  🔲  js/config.js
+  🔲  js/effects.js
+  🔲  js/weapons.js
+  🔲  js/audio.js
+  🔲  js/entities/base.js
+  🔲  js/systems/GameState.js
+  🔲  js/systems/AdminSystem.js
+  🔲  js/systems/WorkerBridge.js
+  🔲  js/workers/analyzer-worker.js
+
+Batch capacity guide (to avoid context overflow per prompt):
+  Large files (1500+ lines): 1 file per prompt
+  Medium files (300–800 lines): 3–4 files per prompt
+  Small files (<300 lines): 5–6 files per prompt
+
+When writing a header, always:
+  1. Read the actual file first — never guess line numbers
+  2. List ⚠️ pitfalls discovered during prior sessions (check §Common Debugging Solutions in PROJECT_OVERVIEW.md)
+  3. Note load order dependencies
+  4. Mark exports: window.Xxx = Xxx pattern

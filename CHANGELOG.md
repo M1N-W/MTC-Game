@@ -4,6 +4,31 @@
 
 ---
 
+## v3.33.3 — Documentation Audit & Version Bump
+*Released: March 12, 2026*
+
+### 📝 Documentation Audit
+- **Standardized JSDoc Headers**: Fully audited and updated headers for AI, Map, Rendering, and Tutorial systems to include load order, internal TOC, and critical pitfall warnings.
+- **Improved Traceability**: Standardized `window.*` export patterns and established clear inheritance/dependency chains in module headers.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/ai/UtilityAI.js
+✅ MODIFIED: js/ai/EnemyActions.js
+✅ MODIFIED: js/ai/PlayerPatternAnalyzer.js
+✅ MODIFIED: js/ai/SquadAI.js
+✅ MODIFIED: js/map.js
+✅ MODIFIED: js/menu.js
+✅ MODIFIED: js/rendering/PlayerRenderer.js
+✅ MODIFIED: js/tutorial.js
+✅ MODIFIED: css/main.css
+✅ MODIFIED: sw.js (v3.33.3)
+✅ MODIFIED: CHANGELOG.md (v3.33.3)
+✅ MODIFIED: PROJECT_OVERVIEW.md (v3.33.3)
+```
+
+---
+
 ## v3.33.2 — Performance: Terrain Rendering & GC Reduction
 +*Released: March 12, 2026*
 +

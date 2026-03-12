@@ -1,8 +1,44 @@
 'use strict';
-// ════════════════════════════════════════════════════════════════
-// menu.js — Menu scripts extracted from index.html
-// Sections: selectCharacter | Portrait injection | Victory Screen | SW
-// ════════════════════════════════════════════════════════════════
+/**
+ * js/menu.js
+ * ════════════════════════════════════════════════════════════════
+ * Main menu scripts — character select, portrait injection,
+ * victory screen animations, skill tooltips, and Service Worker.
+ * Extracted from inline <script> in index.html.
+ *
+ * Depends on (must load before menu.js):
+ *  ui.js          — window.PORTRAITS (SVG strings per char)
+ *  effects.js     — spawnParticles() (victory burst)
+ *  game.js        — CANVAS, window.Achievements, ACHIEVEMENT_DEFS
+ *
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────
+ *  L.8   selectCharacter(charType)
+ *          updates .char-card.selected, start/tutorial button labels,
+ *          HUD portrait SVG swap, skill slot hint text
+ *  ⚠️  Reads window.PORTRAITS — safe only after ui.js executes.
+ *      Called by onclick on char cards; also callable from game.js on restart.
+ *
+ *  L.57  window 'load' → _injectPortraits()
+ *          populates #char-avatar-[id] SVG elements (96×112)
+ *          sets default HUD portrait to _selectedChar (default: 'kao')
+ *
+ *  L.79  Victory Screen IIFE
+ *          MutationObserver on #victory-screen style → triggers _launchVictory()
+ *          L.96   _startStarfield()     canvas particle rain on #victory-stars
+ *          L.128  _countUp(id, delay)   ease-out number count-up animation
+ *          L.144  _buildAchievements()  chip list from window.Achievements.unlocked
+ *          L.159  _particleBurst()      gold spawnParticles on victory entry (600ms delay)
+ *
+ *  L.168 Skill Preview Tooltips IIFE (_initSkillTooltips)
+ *          desktop: mouseenter/mouseleave with 120ms hide debounce
+ *          mobile:  touchstart 350ms hold → toggle tooltip
+ *          positions tooltip above card (flips below if near top edge)
+ *
+ *  L.251 Service Worker registration (sw.js)
+ *  ⚠️  sw.js cache version must be bumped on every deploy — see sw.js header.
+ *
+ * ════════════════════════════════════════════════════════════════
+ */
 
 // ── Character Selection ───────────────────────────────────────────────────────
 let _selectedChar = 'kao';

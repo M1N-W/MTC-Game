@@ -1,24 +1,42 @@
 'use strict';
 /**
- * js/ai/EnemyActions.js  —  Week 2
+ * js/ai/EnemyActions.js
+ * ════════════════════════════════════════════════════════════════
+ * Static action library — movement execution for UtilityAI decisions.
+ * Called by UtilityAI._applyDecision(). Never called directly by enemy.js.
  *
- * Static action library consumed by UtilityAI._applyDecision().
- * Each method accepts (enemy, context) and writes enemy._aiMoveX/_aiMoveY.
+ * Design contract:
+ *  • Pure static methods — no instance state, zero allocation in hot path
+ *  • Input:  (enemy, context)  →  writes enemy._aiMoveX / _aiMoveY only
+ *  • Never touches vx/vy directly (vacuum pull + sticky slow own those)
+ *  • context object is reused by UtilityAI caller — never store a reference
+ *  • All methods guard for dead / missing refs at entry
  *
- * DESIGN:
- * • Pure functions — no state, no allocation in hot path
- * • Never writes vx/vy directly (vacuum/sticky still own those)
- * • context object is reused by caller — never stored
- * • All methods guard for dead/missing refs
+ * Load order:
+ *   config.js → base.js → UtilityAI.js → [THIS FILE] → SquadAI.js → enemy.js
  *
- * LOAD ORDER:
- *   config.js → base.js → UtilityAI.js → [THIS FILE] → enemy.js
- *
- * ADDING A NEW ACTION:
+ * Adding a new action (checklist):
  *   1. Add static method here
- *   2. Add AI_ACTION.MY_ACTION constant in UtilityAI.js (or locally below)
- *   3. Add utility function _utilMyAction() in UtilityAI
- *   4. Wire in UtilityAI._applyDecision() switch-case
+ *   2. Add AI_ACTION.MY_ACTION string constant in UtilityAI.js
+ *   3. Add _utilMyAction() scorer in UtilityAI
+ *   4. Wire switch-case in UtilityAI._applyDecision()
+ *
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────
+ *  L.37  EnemyActions.retreat(enemy, ctx)
+ *          flee from player + wall-avoidance bias (world bounds, NOT canvas px)
+ *  ⚠️  Wall margin uses MAP_CONFIG.mapWidth/mapHeight (~3200) — never CANVAS.width
+ *
+ *  L.66  EnemyActions.flank(enemy, ctx)
+ *          perpendicular strafe; side chosen by ally density to spread squad
+ *
+ *  L.100 EnemyActions.shieldWall(enemy, ctx)
+ *          tank cohesion: blend toward squad centroid (60%) + advance on player (40%)
+ *          called by SquadAI when role === 'shield'
+ *
+ *  L.133 EnemyActions.strafeOrbit(enemy, ctx, orbitDist)
+ *          mage-style CCW orbit at fixed distance; blends tangent + radial correction
+ *
+ * ════════════════════════════════════════════════════════════════
  */
 
 class EnemyActions {

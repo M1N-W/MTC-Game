@@ -788,15 +788,15 @@ class PlayerRenderer {
       const isStandPull = entity.wanchaiActive && entity.passiveUnlocked;
       const ringOriginX = isStandPull
         ? worldToScreen(
-            entity.wanchaiStand?.x ?? entity.x,
-            entity.wanchaiStand?.y ?? entity.y,
-          ).x
+          entity.wanchaiStand?.x ?? entity.x,
+          entity.wanchaiStand?.y ?? entity.y,
+        ).x
         : screen.x;
       const ringOriginY = isStandPull
         ? worldToScreen(
-            entity.wanchaiStand?.x ?? entity.x,
-            entity.wanchaiStand?.y ?? entity.y,
-          ).y
+          entity.wanchaiStand?.x ?? entity.x,
+          entity.wanchaiStand?.y ?? entity.y,
+        ).y
         : screen.y;
       ctx.save();
       ctx.globalAlpha = pulse;
@@ -1163,7 +1163,7 @@ class PlayerRenderer {
       0,
       ((entity._anim?.skillT ?? 0) -
         ((entity.stats?.wanchaiDuration ?? 3.0) - 0.4)) /
-        0.4,
+      0.4,
     );
     ctx.rotate((runLean + _wEntryT * -0.2) * facingSign);
     const heatTier = entity._heatTier ?? 0; // 0=COLD, 1=WARM, 2=HOT, 3=OVERHEAT
@@ -1586,44 +1586,47 @@ class PlayerRenderer {
     ctx.restore(); // end LAYER 1
 
     // ════ LAYER 2 — WEAPON + HANDS (rotates with aim angle) ════
+    // ── Auto punch mechanics: fists stay at waist level (no lift).
+    // shootT drives forward punch-extend on lead fist instead of raising up.
+    const sT = entity._anim?.shootT ?? 0;
+    const punchExtend = sT * 10; // lead fist punches forward along aim axis
     ctx.save();
     ctx.translate(screen.x + recoilX, screen.y + recoilY + bobOffsetY);
     ctx.rotate(entity.angle);
     if (isFacingLeft) ctx.scale(1, -1);
-    ctx.translate(shootReach, shootLift);
+    // Remove shootLift (vertical raise) — Auto never lifts weapon up.
+    // Horizontal reach only: punchExtend adds to base shootReach.
+    ctx.translate(shootReach + punchExtend, 2); // +2: waist offset (below center)
 
     if (typeof drawAutoWeapon === "function") {
       drawAutoWeapon(ctx, entity.wanchaiActive, ventGlow);
     }
 
     const fistGlow = ventGlow * 0.8 + (entity.wanchaiActive ? 0.6 : 0);
+    // ── Lead fist: punches forward along aim axis ──────────────────────────
+    // x: R+4 base (not R+8 — was overlapping body). Punch extend already in translate.
+    // y: 0 = waist center (was +3, drifting into torso)
     ctx.shadowBlur = 10 * fistGlow;
     ctx.shadowColor = "#dc2626";
     ctx.fillStyle = "#4a0e0e";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(R + 8, 3, 7, 0, Math.PI * 2);
+    ctx.arc(R + 4, 0, 7, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "#7f1d1d";
     ctx.beginPath();
-    ctx.arc(R + 6, 1, 3.5, 0, Math.PI * 2);
+    ctx.arc(R + 2, -2, 3.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#2d0606";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(R + 3, 1);
-    ctx.lineTo(R + 13, 1);
-    ctx.stroke();
+    ctx.moveTo(R - 1, -2); ctx.lineTo(R + 9, -2); ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(R + 3, 4);
-    ctx.lineTo(R + 13, 4);
-    ctx.stroke();
+    ctx.moveTo(R - 1, 1); ctx.lineTo(R + 9, 1); ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(R + 3, 6.5);
-    ctx.lineTo(R + 13, 6.5);
-    ctx.stroke();
+    ctx.moveTo(R - 1, 3.5); ctx.lineTo(R + 9, 3.5); ctx.stroke();
     const fistEmber =
       Math.max(0, 0.5 + Math.sin(now / 160) * 0.4) *
       (entity.wanchaiActive ? 1 : 0.6);
@@ -1631,21 +1634,24 @@ class PlayerRenderer {
     ctx.shadowBlur = 8 * fistEmber;
     ctx.shadowColor = "#fb923c";
     ctx.beginPath();
-    ctx.roundRect(R + 4, 2.5, 8, 1.5, 1);
+    ctx.roundRect(R, -0.5, 8, 1.5, 1);
     ctx.fill();
     ctx.shadowBlur = 0;
+    // ── Rear fist: pulled back at hip, ready to punch ──────────────────────
+    // Moves BACKWARD when lead fist punches (= weight transfer)
+    const rearPullBack = sT * 5;
     ctx.fillStyle = "#3d0808";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2.5;
     ctx.shadowBlur = 6 * fistGlow;
     ctx.shadowColor = "#dc2626";
     ctx.beginPath();
-    ctx.arc(-(R + 7), -1, 6, 0, Math.PI * 2);
+    ctx.arc(-(R + 2 + rearPullBack), 0, 6, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "#5c1010";
     ctx.beginPath();
-    ctx.arc(-(R + 9), -2, 2.5, 0, Math.PI * 2);
+    ctx.arc(-(R + 4 + rearPullBack), -1, 2.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
@@ -3391,11 +3397,17 @@ class PlayerRenderer {
     ctx.restore(); // end LAYER 1
 
     // ════ LAYER 2 — WEAPON + HANDS ════
+    // ── Gatling hold: gun stays LOW (waist level), never lifts up.
+    // shootT drives body lean-into-gun (recoil resistance) instead of arm raise.
+    const poomShootT = entity._anim?.shootT ?? 0;
+    const gatlingLowerY = 5; // constant downward offset — gun at waist, not chest
     ctx.save();
     ctx.translate(screen.x + poomRecoilX, screen.y + poomRecoilY + poomBobY);
     ctx.rotate(entity.angle);
     if (isFacingLeft) ctx.scale(1, -1);
-    ctx.translate(poomShootReach, poomShootLift);
+    // poomShootLift suppressed (set to 0) — Gatling never raises.
+    // poomShootReach: slight forward lean when firing (leaning into recoil).
+    ctx.translate(poomShootReach * 0.5, gatlingLowerY);
     // skillT: ritual(1.0) or garuda(0.6) — arms raise proportionally
     if ((entity._anim?.skillT ?? 0) > 0)
       ctx.translate(0, -(entity._anim.skillT / 1.0) * 10);
@@ -3403,44 +3415,49 @@ class PlayerRenderer {
     if (typeof drawPoomWeapon === "function") drawPoomWeapon(ctx);
 
     const pR = 5;
+    // ── Trigger/rear hand: grips back of gun near body ────────────────────
+    // Moved from R2+6 → R2+2: closer to body, not floating out front
     ctx.fillStyle = "#d97706";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2.5;
     ctx.shadowBlur = 6;
     ctx.shadowColor = "#f59e0b";
     ctx.beginPath();
-    ctx.arc(R2 + 6, 1, pR, 0, Math.PI * 2);
+    ctx.arc(R2 + 2, 0, pR, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.save();
     ctx.beginPath();
-    ctx.arc(R2 + 6, 1, pR, 0, Math.PI * 2);
+    ctx.arc(R2 + 2, 0, pR, 0, Math.PI * 2);
     ctx.clip();
     ctx.fillStyle = "rgba(255,255,255,0.80)";
-    ctx.fillRect(R2 + 1, -1.5, 10, 1.5);
-    ctx.fillRect(R2 + 1, 1.5, 10, 1.2);
+    ctx.fillRect(R2 - 3, -1.5, 10, 1.5);
+    ctx.fillRect(R2 - 3, 1.5, 10, 1.2);
     ctx.fillStyle = "rgba(220,38,38,0.60)";
-    ctx.fillRect(R2 + 1, 0.1, 10, 0.8);
+    ctx.fillRect(R2 - 3, 0.1, 10, 0.8);
     ctx.restore();
 
+    // ── Front support hand: grips mid-barrel — two-hand Gatling hold ──────
+    // Was opposite side (-(R2+5)) = wrong direction for Gatling grip.
+    // Front hand should be FORWARD along aim, bracing the barrel.
     ctx.fillStyle = "#b45309";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2.5;
     ctx.shadowBlur = 4;
     ctx.shadowColor = "#f59e0b";
     ctx.beginPath();
-    ctx.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2);
+    ctx.arc(R2 + 14, 0, pR - 1, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.save();
     ctx.beginPath();
-    ctx.arc(-(R2 + 5), 1, pR - 1, 0, Math.PI * 2);
+    ctx.arc(R2 + 14, 0, pR - 1, 0, Math.PI * 2);
     ctx.clip();
     ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.fillRect(-(R2 + 10), -1, 10, 1.3);
-    ctx.fillRect(-(R2 + 10), 1.5, 10, 1.1);
+    ctx.fillRect(R2 + 9, -1, 10, 1.3);
+    ctx.fillRect(R2 + 9, 1.5, 10, 1.1);
     ctx.restore();
 
     ctx.restore(); // end LAYER 2
@@ -4133,32 +4150,38 @@ class PlayerRenderer {
     const HL = R * 0.88; // handle length
 
     // Katana position per state
-    // idleSway: gentle resting oscillation when not moving
-    const idleSway = Math.sin((now ?? 0) * 1.4) * 0.04;
+    // ── Samurai stance reference: Chudan-no-kamae (middle guard) as base ──
+    // Blade points forward along aim axis, slight upward tilt, hands at navel level.
+    // No idle tremor — samurai stillness = confidence.
     if (isCinematic) {
+      // Iaido follow-through: blade swept across, pointing away at low angle
       ctx.save();
       ctx.rotate(-2.15);
       ctx.translate(R * 0.72, 0);
     } else if (bladeGuard) {
+      // Jodan-no-kamae: blade raised overhead at ~45° — true blocking guard
+      // Translate up so guard feels "above" body, rotate to diagonal block angle
       ctx.save();
-      ctx.translate(R * 0.5, -R * 0.5);
-      ctx.rotate(-Math.PI * 0.5);
+      ctx.translate(-R * 0.2, -R * 1.0);
+      ctx.rotate(-Math.PI * 0.28); // ~50° — angled to deflect, not straight up
     } else if (isCharge) {
+      // Iaido draw: blade half-drawn from scabbard, body coiled before release
       ctx.save();
-      ctx.translate(R * 0.72, 0);
-      ctx.rotate(-0.55);
+      ctx.translate(R * 0.6, R * 0.3);
+      ctx.rotate(-0.30); // low draw angle, building tension
     } else if (arcActive) {
-      // Swing arc: blade sweeps from raised back → follow-through forward
-      // arcT goes 1→0 so at start (arcT≈1) blade is raised back, at end (arcT≈0) follow-through
-      const swingRot = -0.85 + (1 - arcT) * 1.55;
+      // Kesa-giri (diagonal slash): sweeps from upper-back → lower-front
+      // arcT: 1→0, so start = cocked back-high, end = follow-through low-forward
+      const swingRot = -0.55 + (1 - arcT) * 1.35;
       ctx.save();
-      ctx.translate(R * 0.88, 0);
+      ctx.translate(R * 0.72, -R * 0.2 * arcT); // drops as swing completes
       ctx.rotate(swingRot);
     } else {
-      // Idle rest pose: blade angled back over shoulder (~-0.85 rad from forward)
+      // Chudan-no-kamae: steady forward guard, blade at ~10° upward tilt
+      // No oscillation — replace shaky idle with composed stillness
       ctx.save();
-      ctx.translate(R * 0.88, 0);
-      ctx.rotate(-0.85 + idleSway);
+      ctx.translate(R * 0.55, R * 0.15); // hands at navel height
+      ctx.rotate(-0.18); // ~10° upward tilt along aim axis
     }
 
     // ── Blade ────────────────────────────────────────────────────────────────

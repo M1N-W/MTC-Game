@@ -1,33 +1,47 @@
 'use strict';
 /**
- * js/ai/SquadAI.js  —  Week 3
+ * js/ai/SquadAI.js
+ * ════════════════════════════════════════════════════════════════
+ * Squad-level coordination layer — assigns roles to enemies at 1Hz.
+ * Writes _squadRole onto each enemy; UtilityAI reads role to override decisions.
  *
- * Squad-level coordination layer. Runs at 1Hz (not every frame).
- * Assigns roles to enemies, then writes _squadRole onto each one.
- * EnemyActions reads _squadRole to adjust behaviour.
+ * Roles:
+ *  'assault'  — basic enemies, rush player directly (default)
+ *  'flanker'  — outer-ring basic enemies, strafe wide
+ *  'shield'   — tank enemies only, cluster in front of squad
+ *  'support'  — mage enemies only, hold back and cast
  *
- * ROLES:
- *   'assault'  — basic enemies, rush the player directly (default)
- *   'flanker'  — basic enemies on the outer ring, strafe wide
- *   'shield'   — tank enemies, cluster in front of squad
- *   'support'  — mage enemies, hold back and cast
+ * Design:
+ *  • Singleton — one SquadAI per session, updated from game.js
+ *  • 1Hz tick via _timer accumulator (never performance.now())
+ *  • Spatial bucket grid (_BucketGrid) — O(N) build, O(1) cell lookup
+ *    avoids O(N²) distance checks per frame
+ *  • Writes onto existing enemy objects — zero new allocations in hot path
+ *  • tagOnSpawn() sets default role immediately on spawn before first tick
  *
- * DESIGN:
- *   • Singleton — one SquadAI per game session, updated in game loop
- *   • 1Hz tick via _timer accumulator (never performance.now())
- *   • Role assignment uses a lightweight bucket grid (O(N) build, O(1) cell lookup)
- *     — avoids O(N²) distance checks every frame
- *   • Writes onto existing enemy objects — no new allocations in hot path
- *   • All guards for undefined globals (safe if loaded early)
- *
- * LOAD ORDER:
+ * Load order:
  *   config.js → base.js → UtilityAI.js → EnemyActions.js → [THIS FILE] → enemy.js
  *
- * INTEGRATION (game.js updateGame, after enemies update loop):
- *   if (typeof squadAI !== 'undefined') squadAI.update(dt, window.enemies, window.player);
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────
+ *  L.35  SQUAD_ROLE constants       'assault'|'flanker'|'shield'|'support'
  *
- * INTEGRATION (WaveManager.js spawnEnemies, after push):
- *   SquadAI.tagOnSpawn(enemy);
+ *  L.42  class _BucketGrid          internal spatial hash (not exported)
+ *          build(enemies)           rebuild from current array — call once/tick
+ *          nearby(x, y)             return enemies in 3×3 cell neighbourhood
+ *
+ *  L.80  class SquadAI
+ *          L.97  update(dt, enemies, player)   1Hz main tick
+ *          L.118 _assignRole(enemy, ...)       role logic per enemy
+ *  ⚠️  SHIELD role assigned exclusively to type==='tank'.
+ *      Basic enemies can only be FLANKER or ASSAULT — shieldCount budget
+ *      in the nearby loop has no effect on basic enemy assignment.
+ *
+ *          L.164 static tagOnSpawn(enemy)      call after enemies.push(e)
+ *
+ *  L.178 Singleton: window.squadAI
+ *  L.179 window.SQUAD_ROLE          (consumed by UtilityAI + EnemyActions)
+ *
+ * ════════════════════════════════════════════════════════════════
  */
 
 // ── Role constants ────────────────────────────────────────────────────────────

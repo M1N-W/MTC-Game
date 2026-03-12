@@ -1,15 +1,65 @@
 'use strict';
 /**
- * 🎓 TUTORIAL SYSTEM — js/tutorial.js  (v3)
+ * js/tutorial.js
+ * ════════════════════════════════════════════════════════════════
+ * TutorialSystem — IIFE singleton, 17-step guided walkthrough.
+ * Freezes enemy spawns during tutorial (caches + restores window.enemies).
+ * Step text pulled from GAME_TEXTS.tutorial (config.js) — no hardcoded strings.
  *
- * v3 Changes:
- *  A. Steps ดึงข้อความจาก GAME_TEXTS.tutorial (config.js) — ไม่ hardcode ซ้ำ
- *  B. draw(ctx) — canvas spotlight dim + pulse circle ชี้ target ใน world-space
- *  C. Animated HTML arrow ชี้ DOM element / world target ผ่าน #tut-arrow
- *     highlight field ใน STEPS:
- *       { type:'ui',    target:'#element-id' }   → spotlight HTML element
- *       { type:'world', key:'shop'|'server' }     → pulse circle บน canvas
- *       { type:'region', region:'bottom-hud'|'top-left' } → dim ยกเว้น region
+ * Highlight types per step:
+ *  { type:'ui',     target:'#element-id' }          → spotlight HTML element
+ *  { type:'world',  key:'shop'|'server'|... }        → pulse circle on canvas (world-space)
+ *  { type:'region', region:'bottom-hud'|'top-left' } → dim everything except region
+ *
+ * Persistence: completion stored in localStorage (SAVE_KEY).
+ * isDone() → true if already completed; reset() clears the flag.
+ *
+ * Load order: config.js → game.js → [THIS FILE]
+ * (tutorial.js reads GAME_TEXTS + CANVAS + window.player + weaponSystem)
+ *
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────
+ *  L.17  State vars         _active, _stepIndex, _charType, _actionCount, _stepDone
+ *  L.29  T(key)             lazy GAME_TEXTS.tutorial accessor (config-driven text)
+ *
+ *  L.34  STEPS array        17 step definitions (steps 5–10 are char-specific)
+ *          steps 0–4   shared (movement / shoot / dash / R-click)
+ *          steps 5–7   Kao only (passive / weapon switch / Q+E)
+ *          steps 8–9   Poom only (R+Q skills)
+ *          step  10    Auto only (vacuum + detonate + stand rush)
+ *          steps 10–16 shared (bullet time / level up / shop / database / enemies / boss / ready)
+ *
+ *  L.191 DOM helpers        _activeIndices() — visible step indices
+ *
+ *  L.205 draw(ctx)          canvas layer: spotlight dim + pulse circle + region mask
+ *          L.217 world highlight  — pulse arc at worldToScreen(target)
+ *          L.267 region highlight — darken canvas except rect
+ *  L.299 _worldPos(key)     key → {x,y} world coords (shop / server / player)
+ *  L.306 _regionRect(region, canvas)  region name → {x,y,w,h} screen rect
+ *
+ *  L.313 _updateArrow()     positions #tut-arrow DOM element every frame
+ *  L.390 _applyUIHighlight() adds .tut-highlight CSS class to target element
+ *  L.403 _render()          updates step panel HTML + progress dots + next button
+ *  L.470 _updateActionBar() increments action progress, triggers _advance() on completion
+ *  L.488 _advance()         moves to next applicable step (skips char-mismatched steps)
+ *  L.505 _finish()          restores window.enemies, clears DOM, saves to localStorage
+ *
+ *  ── Public API (returned object) ───────────────────────────────
+ *  L.542 isDone()           → bool (localStorage check)
+ *  L.543 reset()            clears localStorage flag
+ *  L.545 start(charType)    freezes enemies, renders step 0
+ *  L.569 isActive()         → bool
+ *  L.571 isActionStep()     → bool (step requires player action, not just 'next')
+ *  L.578 update()           call every frame — weapon polling + arrow tracking
+ *  L.601 draw(ctx)          call from drawGame() after CTX.restore(), before HUD
+ *  L.603 handleAction(type) type: 'move'|'shoot'|'dash'|'skill'|'weapon'|'next'|'skip'
+ *  L.625 next() / skip()    convenience wrappers
+ *  ⚠️  window.enemies is stashed into window._tutorialEnemyCache during tutorial.
+ *      If game resets mid-tutorial, _tutorialEnemyCache must be cleared manually
+ *      or enemies will be double-restored. _finish() handles normal flow.
+ *
+ *  L.629 window.TutorialSystem export
+ *
+ * ════════════════════════════════════════════════════════════════
  */
 
 const TutorialSystem = (() => {

@@ -749,7 +749,23 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Major Changes (v3.33.2)
+## 📝 Recent Major Changes (v3.33.3)
+
+### File Header Documentation Audit (v3.33.3 — March 12, 2026)
+
+**Purpose:** Standardize JSDoc headers across core systems to track load order, internal ownership, and prevent recurrent architectural pitfalls.
+
+**Files Changed:** `js/ai/UtilityAI.js`, `js/ai/EnemyActions.js`, `js/ai/PlayerPatternAnalyzer.js`, `js/ai/SquadAI.js`, `js/map.js`, `js/menu.js`, `js/rendering/PlayerRenderer.js`, `js/tutorial.js`, `css/main.css`
+
+**Key Improvements:**
+- **Load Order Tracking**: Added explicit `Load order` keys to headers to prevent TDZ (Temporal Dead Zone) and initialization sequence errors.
+- **Table of Contents**: Embedded `TABLE OF CONTENTS` with line number references for faster navigation in large files like `map.js`.
+- **Pitfall Documentation**: Added `⚠️` warning sections to headers documenting known bugs and critical logic rules (e.g., zero-allocation rules in AI ticks).
+- **Export Consistency**: Standardized `window.X = X` export patterns in file footers.
+
+---
+
+## 📝 Previous Major Changes (v3.33.2)
 
 ### Terrain Rendering Performance Optimizations (v3.33.2 — March 12, 2026)
 

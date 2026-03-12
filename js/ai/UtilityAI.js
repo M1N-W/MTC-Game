@@ -1,33 +1,54 @@
 'use strict';
 /**
  * js/ai/UtilityAI.js
+ * ════════════════════════════════════════════════════════════════
+ * Per-enemy utility-based AI — scores actions and picks the best one at 2Hz.
+ * Instantiated once per EnemyBase in constructor; ticked from enemy.update().
  *
- * UtilityAI — Utility-based AI decision system for Enemy, TankEnemy, MageEnemy
+ * Decision flow per tick:
+ *   gather context (dx/dy/dist/hpRatio/allies)
+ *   → score: _utilAttack / _utilRetreat / _utilFlank  (0–1, personality-weighted)
+ *   → SquadAI role override (flanker → FLANK, shield → SHIELD_WALL, retreat always wins)
+ *   → _applyDecision() → writes _aiMoveX/_aiMoveY on enemy
  *
- * DESIGN PRINCIPLES:
- * ─────────────────
- * • Decoupled from StatusEffect framework (StatusEffect = visual/stat debuffs only)
- * • 2Hz decision rate — _aiTimer accumulates dt, NOT performance.now()
- * • Zero allocations in tick() hot path — decision object is reused (_decision)
- * • AI overrides movement via enemy._aiMoveX / _aiMoveY (never overwrites vx/vy
- *   directly — vacuum/sticky systems still own vx/vy)
- * • Guard clauses throughout — safe to load even if BALANCE.ai is missing
+ * Design:
+ *  • 2Hz tick via _aiTimer accumulator — never performance.now()
+ *  • Zero allocation in tick() hot path (_decision object reused, _nearbyAlliesList
+ *    cleared with .length = 0 — no new array)
+ *  • Writes _aiMoveX/_aiMoveY only — never vx/vy (vacuum/sticky own those)
+ *  • Personality pulled from BALANCE.ai.personalities; fallback table if missing
+ *  • Degrades gracefully if EnemyActions.js not loaded (inline fallbacks)
  *
- * LOAD ORDER:
- * ───────────
- * config.js → base.js → [THIS FILE] → EnemyActions.js → SquadAI.js → enemy.js
+ * Load order:
+ *   config.js → base.js → [THIS FILE] → EnemyActions.js → SquadAI.js → enemy.js
  *
- * INTEGRATION (enemy.js constructor):
- *   this._ai = (typeof UtilityAI !== 'undefined')
- *       ? new UtilityAI(this, this.type) : null;
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────
+ *  L.42  _DEFAULT_PERSONALITIES    fallback if BALANCE.ai.personalities missing
+ *  L.48  AI_ACTION constants       'attack'|'retreat'|'flank'|'shield_wall'|'idle'
  *
- * INTEGRATION (enemy.js update(), after tickStatuses, before movement):
- *   if (this._ai) this._ai.tick(dt, player, window.enemies);
+ *  L.52  class UtilityAI
+ *          L.62  constructor(enemy, personalityType)
+ *          L.88  tick(dt, player, enemies)     2Hz main loop
  *
- * READING THE OVERRIDE in enemy.js movement block:
- *   const aiMx = this._aiMoveX ?? 0;
- *   const aiMy = this._aiMoveY ?? 0;
- *   // blend ai steering into existing vx/vy (see enemy.js patch)
+ *  ── Utility scorers (0–1) ──────────────────────────────────────
+ *          L.131 _utilAttack(dist, hpRatio)
+ *          L.141 _utilRetreat(dist, hpRatio)   only non-zero when HP < threshold
+ *          L.151 _utilFlank(dist, hpRatio)     only non-zero when allies nearby
+ *
+ *  ── Execution ──────────────────────────────────────────────────
+ *          L.161 _applyDecision(action, dx, dy, dist, player)
+ *                  delegates to EnemyActions.* with inline fallback
+ *  ⚠️  _nearbyAlliesList must be cleared with .length = 0 (never reassign [])
+ *      to avoid GC allocation — see dispose() for correct teardown pattern.
+ *
+ *          L.196 dispose()         call on enemy death — clears refs for GC
+ *          L.200 currentAction     getter → last decided AI_ACTION string
+ *          L.201 nearbyAllies      getter → int count from last tick
+ *
+ *  L.206 _actionCfg(name)         safe BALANCE.ai.actions lookup with defaults
+ *  L.218 window.UtilityAI / window.AI_ACTION exports
+ *
+ * ════════════════════════════════════════════════════════════════
  */
 
 // ── Personality table (mirrors BALANCE.ai.personalities, used as fallback) ──

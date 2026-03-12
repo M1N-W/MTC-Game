@@ -1,26 +1,53 @@
 'use strict';
 /**
- * js/ai/PlayerPatternAnalyzer.js  —  Week 4
+ * js/ai/PlayerPatternAnalyzer.js
+ * ════════════════════════════════════════════════════════════════
+ * Ring-buffer player movement tracker — feeds Boss AI counter-play.
+ * Zero allocation per tick after construction (Float32Array / Int8Array only).
  *
- * Tracks player movement/position history via a Float32Array ring buffer.
- * Zero allocation per tick after init. Used by Boss AI to counter player habits.
+ * Detected patterns:
+ *  kiting     — player consistently increases distance from boss
+ *  circling   — player moves perpendicular (tangential velocity dominant)
+ *  standing   — player barely moves between samples
+ *  mixed      — no dominant pattern
+ *  dominantDir — 'left' | 'right' | 'none' relative to boss-player axis
  *
- * TRACKED PATTERNS:
- *   kiting       — player consistently moves away from boss (distance increasing)
- *   circling     — player moves perpendicular to boss (tangential velocity > radial)
- *   standing     — player barely moves between samples
- *   dominantDir  — "left" | "right" | "none" (relative to boss-player axis)
+ * Sampling: 10Hz internal throttle (ANALYZER_SAMPLES = 30 → ~3s history)
+ * Cache:    results recomputed 4Hz (_recompute), safe to read every frame
  *
- * LOAD ORDER:
+ * Load order:
  *   config.js → base.js → UtilityAI.js → EnemyActions.js → [THIS FILE] → SquadAI.js → enemy.js
  *
- * INTEGRATION:
- *   // game.js: after player update, before boss update
- *   if (typeof playerAnalyzer !== 'undefined') playerAnalyzer.sample(dt, window.player, window.boss);
+ * WorkerBridge integration (Phase 1.3):
+ *   When WorkerBridge is active, WorkerAnalyzer runs off main thread.
+ *   WorkerBridge.onmessage writes _workerPredReady / _workerPredX / _workerPredY
+ *   onto the main-thread singleton so predictedPosition() returns worker result.
+ *   Main-thread ring buffer is NOT updated in worker mode — sample() is skipped.
  *
- *   // Boss _pickSkill():
- *   const pattern = playerAnalyzer.dominantPattern();   // 'kiting'|'circling'|'standing'|'mixed'
- *   const dir     = playerAnalyzer.dominantDirection(); // 'left'|'right'|'none'
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────
+ *  L.40  constructor()          ring buffer init, cache fields
+ *  L.59  sample(dt, player, boss)   10Hz throttled position record
+ *  L.80  update(dt)             4Hz cache refresh trigger
+ *
+ *  ── Accessors (read cache — safe every frame) ──────────────────
+ *  L.89  dominantPattern()      → 'kiting'|'circling'|'standing'|'mixed'
+ *  L.94  dominantDirection()    → 'left'|'right'|'none'
+ *  L.100 kitingScore()          → 0–1
+ *  L.101 circlingScore()        → 0–1
+ *  L.102 standingScore()        → 0–1
+ *  L.104 reset()                call on boss death / wave end
+ *
+ *  ── Internal ───────────────────────────────────────────────────
+ *  L.112 _recompute()           walks ring buffer once, updates cache
+ *  L.153 velocityEstimate()     → {vx, vy} world-units/sec, zero GC
+ *  L.165 predictedPosition(t)   → {x, y} | null  (worker path or local)
+ *  ⚠️  predictedPosition() returns worker result when _workerPredReady=true.
+ *      Worker result is 1 frame stale — acceptable for aim prediction.
+ *      Do NOT call this inside draw() — it reads state, not a pure function.
+ *
+ *  L.184 Singleton: window.playerAnalyzer
+ *
+ * ════════════════════════════════════════════════════════════════
  */
 
 const ANALYZER_SAMPLES = 30; // ~3 seconds at 10Hz sample rate
