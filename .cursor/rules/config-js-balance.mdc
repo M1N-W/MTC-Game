@@ -1,0 +1,49 @@
+---
+description: "Rules when editing js/config.js — single source of truth for balance, visuals, and game constants."
+globs: ["**/config.js", "**/js/config.js"]
+---
+
+# config.js — Single Source of Truth
+
+`js/config.js` is the **only** file that defines game constants, balance numbers, and config. Do not add balance or config keys elsewhere (e.g. in character or boss files) unless they are truly runtime-only.
+
+## 1. Do NOT change numeric values unless asked
+
+- **Never** change HP, damage, cooldowns, ranges, speeds, multipliers, or other balance numbers when fixing bugs, refactoring, or adding features unrelated to balance.
+- If the user asks for a "balance change", "buff", "nerf", or "tweak stats", then and only then edit the relevant numbers in `config.js`.
+- Exception: adding **new** keys for **new** content (e.g. a new character or skill) is allowed; do not change existing numeric values for existing content unless requested.
+
+## 2. Respect the FILE MAP and ownership
+
+Use the file’s own FILE MAP and OWNERSHIP RULES at the top of `config.js`:
+
+| Purpose | Object / location |
+|--------|---------------------|
+| Character stats, weapons, skills | `BALANCE.characters.<id>` (kao, auto, poom, pat) |
+| Shared ability behaviour | `GAME_CONFIG.abilities` (e.g. ritual) |
+| Enemy / boss / wave tuning | `BALANCE.enemy`, `BALANCE.boss`, `BALANCE.waves` |
+| Physics / player-global | `BALANCE.physics`, `BALANCE.player` |
+| AI tuning | `BALANCE.ai` (UtilityAI.js reads from here) |
+| UI strings, skill names, tutorial | `GAME_TEXTS` |
+| Colors, palettes | `VISUALS.PALETTE`, `BALANCE.map.mapColors`, `MAP_CONFIG` |
+| Map/terrain rendering | `MAP_CONFIG` (MapSystem.drawTerrain) |
+| Shop / database / MTC Room | `BALANCE.shop`, `BALANCE.database`, `BALANCE.mtcRoom` |
+
+- **Stat for one character only** → `BALANCE.characters.<id>`.
+- **Mechanic that could apply to more than one character** → `GAME_CONFIG.abilities` or the appropriate shared block.
+- **Strings shown in UI** → `GAME_TEXTS` (including `skillNames`, `tutorial`, `wave`, `shop`, etc.).
+
+## 3. Structure and keys
+
+- Do **not** add new top-level constants (e.g. `BALANCE.foo`) unless they match existing patterns (e.g. a new `BALANCE.characters.<newId>` block for a new character).
+- Keep the same key names that are already used in code (see mtc-game-conventions and grep in `js/`). Renaming or removing keys can cause runtime errors.
+- For deprecated keys: add a comment, then search the repo for readers (`grep -r "keyName" js/`) before removing.
+
+## 4. Exports and globals
+
+- The file attaches to `window`: `BALANCE`, `GAME_CONFIG`, `VISUALS`, `SHOP_ITEMS`, `ACHIEVEMENT_DEFS`, `GAME_TEXTS`, `MAP_CONFIG`, `API_KEY`. Do not remove or rename these global names without updating all references.
+- The optional `module.exports` block at the end is for Node/bundler; keep it in sync if you add or remove exported objects.
+
+## 5. Docs and commit-push
+
+- The **commit-push** command says: do **not** update numeric stat values, config key values, Character Quick-Stats, Base Stats, or Heat Tier multipliers in docs. Those values live only in `config.js`; docs should not duplicate or override them.

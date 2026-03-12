@@ -4,6 +4,27 @@
 
 ---
 
+## v3.32.3 — Remove README-info References & Version Doc Sync
+*Released: March 12, 2026*
+
+### 📚 Documentation & Workflow Updates
+- **README-info.md removed from project:** Removed all references to `README-info.md` across documentation and workflow files (file no longer exists in repo).
+- **PROJECT_OVERVIEW.md:** Removed README-info from File Structure table; updated version bump list and Commit & Push Workflow to only reference sw.js, CHANGELOG.md, and PROJECT_OVERVIEW.md.
+- **Cursor / Windsurf:** Updated `.cursor/commands/commit-push.md`, `.cursor/rules/version-bump.mdc`, `.windsurfrules` to drop README-info from version bump steps and doc lists.
+- **mtc-game-conventions.md (§15):** Version sync list is now sw.js → CHANGELOG.md → PROJECT_OVERVIEW.md only.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: PROJECT_OVERVIEW.md (File Structure, version list, workflow, Recent Changes)
+✅ MODIFIED: .cursor/commands/commit-push.md (STEP 2.6)
+✅ MODIFIED: .cursor/rules/version-bump.mdc
+✅ MODIFIED: .agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md
+✅ MODIFIED: .windsurfrules (version bump steps, doc list, examples)
+✅ MODIFIED: sw.js (v3.32.3)
+```
+
+---
+
 ## v3.32.2 — PlayerRenderer Parameter Enhancement & Rendering System Consistency
 *Released: March 11, 2026*
 

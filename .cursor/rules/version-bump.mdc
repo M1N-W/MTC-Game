@@ -1,0 +1,39 @@
+---
+description: "How to update the game version on every commit/push — single source in sw.js, sync to CHANGELOG and PROJECT_OVERVIEW."
+globs: ["**/sw.js", "**/CHANGELOG.md", "**/PROJECT_OVERVIEW.md"]
+---
+
+# Version Bump (MTC-Game)
+
+The game version is defined in **one place**: `sw.js` line 1:
+
+```js
+const CACHE_NAME = "mtc-cache-vX.Y.Z"; // Short description
+```
+
+- The version string is **vX.Y.Z** (e.g. v3.32.2). `VersionManager.js` and the UI read it via the Service Worker; the SW uses `CACHE_NAME` to invalidate old caches when the version changes.
+- **Every commit that touches code or docs must bump this version** so players get fresh assets (no stale cache).
+
+## When to bump
+
+- **Every** commit/push that includes code or doc changes: run the version bump as part of the commit-push flow.
+- Do **not** bump when the only change is in non-shipped files (e.g. `.cursor/` only with no change to `sw.js` or cached assets).
+
+## How to bump (canonical procedure)
+
+1. **Read current version** from `sw.js` line 1: parse **X.Y.Z** from `mtc-cache-vX.Y.Z`.
+2. **Choose next version**:
+   - **Patch** (+0.00.01): docs-only, small fixes, no new features → e.g. 3.32.2 → 3.32.3.
+   - **Minor** (+0.01.00): new features, new files, architecture/refactor → e.g. 3.32.2 → 3.33.0.
+3. **Update `sw.js`**: change only the version (and optionally the comment) in line 1. Example:  
+   `const CACHE_NAME = "mtc-cache-v3.32.3"; // Short description";`
+4. **Update `CHANGELOG.md`**: add a new top entry `## vX.Y.Z — Title`, release date, and "Files Modified" including `✅ MODIFIED: sw.js (vX.Y.Z)`.
+5. **Update `PROJECT_OVERVIEW.md`**: set the status line to `**Status:** Beta vX.Y.Z` to match.
+6. README-info.md has been removed from the project; do not reference it.
+
+All references to the **current** version (sw.js, CHANGELOG, PROJECT_OVERVIEW) must use the **same** X.Y.Z.
+
+## Reference
+
+- Full step-by-step for the commit flow: `.cursor/commands/commit-push.md` (STEP 2).
+- Version table / ownership notes: `PROJECT_OVERVIEW.md` (Version Bump Guidelines, Version Bump Ownership).

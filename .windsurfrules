@@ -47,7 +47,7 @@ Update ONLY if the commit changes any of these:
 If nothing in the commit touches the above — SKIP SKILL.md update entirely.
 
 ### Step 4: Bump version (existing rule)
-sw.js → CHANGELOG.md → README-info.md → PROJECT_OVERVIEW.md status line
+sw.js → CHANGELOG.md → PROJECT_OVERVIEW.md status line
 Use format [NEXT VERSION] in PROJECT_OVERVIEW and SKILL.md — bump actual number only in sw.js + CHANGELOG.
 
 ### Step 5: Write commit message
@@ -83,8 +83,7 @@ Format: "vX.X.X — <summary>\n\n<bullet list of changes>"
 ## Documentation Updates Rule
 
 ### Documentation-only updates (no functional code changes):
-- README-info.md
-- CHANGELOG.md  
+- CHANGELOG.md
 - PROJECT_OVERVIEW.md
 - Code comments
 - Inline documentation
@@ -111,10 +110,9 @@ Format: "vX.X.X — <summary>\n\n<bullet list of changes>"
 ### Priority Sequence:
 1. **PROJECT_OVERVIEW.md** (FIRST - PRIORITY #1)
 2. Update sw.js (CACHE_NAME version)
-3. Update CHANGELOG.md 
-4. Update README-info.md
-5. Update other documentation files
-6. Commit & push
+3. Update CHANGELOG.md
+4. Update other documentation files
+5. Commit & push
 
 ### Reason for Priority:
 - PROJECT_OVERVIEW.md serves as the "AI Assistant Handbook" for understanding project context
@@ -127,7 +125,6 @@ Format: "vX.X.X — <summary>\n\n<bullet list of changes>"
 - **Types**: Fix, Feature, Enhancement, Performance, Documentation, Refactor
 - **Examples**:
   - "v3.4.17: Fixed malformed CSS selector in index.html - corrected invalid Unicode characters in feature list that was causing display issues"
-  - "v3.4.16: Updated README-info.md with new game features and improved installation instructions"
   - "v3.3.3: Fixed kills display - added kills param to showGameOver() to properly show player statistics on game over screen"
 
 ---

@@ -377,7 +377,7 @@ index.html script order (AI section):
   const CACHE_NAME = 'mtc-game-v3.X.X';  // bump every time any code changes
 
 Forgetting this = players get stale cached JS.
-Also update: sw.js → CHANGELOG.md → README-info.md → PROJECT_OVERVIEW.md (status line)
+Also update: sw.js → CHANGELOG.md → PROJECT_OVERVIEW.md (status line)
 
 Version bump ownership: Windsurf (commit time) bumps ALL files in one pass.
 Claude must NOT write version numbers into files — use [NEXT VERSION] as placeholder.
