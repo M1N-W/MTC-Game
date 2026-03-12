@@ -135,10 +135,16 @@ var showVoiceBubble = (text, worldX, worldY) => {
 let screenShake = 0;
 
 var addScreenShake = (amount) => {
-    screenShake = Math.max(screenShake, amount);
+    // Guard: ignore non-finite values to prevent NaN screenShake
+    // which would propagate into CTX.translate(NaN,NaN) and destabilize rendering.
+    if (!Number.isFinite(amount)) return;
+    // Hard cap to keep shake bounded even if a caller passes an extreme value.
+    const capped = Math.max(0, Math.min(80, amount));
+    screenShake = Math.max(screenShake, capped);
 };
 
 var updateScreenShake = () => {
+    if (!Number.isFinite(screenShake)) { screenShake = 0; return; }
     if (screenShake > 0) {
         screenShake *= GAME_CONFIG.visual.screenShakeDecay;
         if (screenShake < 0.1) screenShake = 0;
@@ -146,6 +152,7 @@ var updateScreenShake = () => {
 };
 
 var getScreenShakeOffset = () => {
+    if (!Number.isFinite(screenShake)) return { x: 0, y: 0 };
     if (screenShake <= 1) return { x: 0, y: 0 };
     return {
         x: (Math.random() - 0.5) * screenShake,

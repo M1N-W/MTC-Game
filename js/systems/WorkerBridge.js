@@ -10,6 +10,10 @@
 window.WorkerBridge = {
     _worker: null,
     _isReady: false,
+    // Throttle main→worker samples to avoid unbounded postMessage queue growth.
+    // WorkerAnalyzer samples at 10Hz internally; sending at 60Hz only builds backlog and can freeze the game.
+    _sampleAccum: 0,
+    _sampleInterval: 0.1,
 
     init() {
         if (this._worker) return;
@@ -59,9 +63,17 @@ window.WorkerBridge = {
         if (!player || !boss || boss.dead) return;
 
         if (this._isReady && this._worker) {
+            // Throttle to ~10Hz to match worker sampling and prevent message queue buildup.
+            // Coalesce: only the latest position matters for pattern detection.
+            this._sampleAccum += dt;
+            if (this._sampleAccum < this._sampleInterval) return;
+            // Send the real elapsed time since last sample so the worker's internal timers stay correct.
+            const sendDt = this._sampleAccum;
+            // Keep remainder to maintain stable cadence even with variable dt.
+            this._sampleAccum = this._sampleAccum % this._sampleInterval;
             this._worker.postMessage({
                 type: 'sample',
-                dt: dt,
+                dt: sendDt,
                 px: player.x,
                 py: player.y,
                 bx: boss.x,
@@ -79,6 +91,7 @@ window.WorkerBridge = {
             // Worker mode: reset worker state + clear proxy cache only.
             // Main-thread ring buffer is unused in this mode — skip playerAnalyzer.reset().
             this._worker.postMessage({ type: 'reset' });
+            this._sampleAccum = 0;
             if (window.playerAnalyzer) {
                 window.playerAnalyzer._workerPredReady = false;
                 window.playerAnalyzer._cachedPattern = 'mixed';
@@ -91,6 +104,7 @@ window.WorkerBridge = {
             // Fallback mode: reset the main-thread analyzer fully.
             window.playerAnalyzer.reset();
             window.playerAnalyzer._workerPredReady = false;
+            this._sampleAccum = 0;
         }
     }
 };

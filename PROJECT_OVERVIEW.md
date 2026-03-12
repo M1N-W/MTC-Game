@@ -3,7 +3,7 @@
 สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.32.3
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.33.1
 
 ---
 
@@ -749,9 +749,25 @@ class SniperEnemy extends EnemyBase {
 
 ---
 
-## 📝 Recent Major Changes (v3.29.3)
+## 📝 Recent Major Changes (v3.33.1)
 
-### Bug Fix Batch — Shop System + WaveManager (v3.29.3 — March 10, 2026)
+### Game Stability & Performance Improvements (v3.33.1 — March 12, 2026)
+
+**Purpose:** Enhance game stability by preventing infinite loops, NaN propagation, and main-thread freezes.
+
+**Files Changed:** `js/game.js`, `js/systems/WorkerBridge.js`, `js/entities/player/PlayerBase.js`, `js/utils.js`
+
+**Key Fixes:**
+- **WorkerBridge Throttling**: Implemented 10Hz throttling for main→worker messaging (was 60Hz).
+- **HitStop Hard-Cap**: Added 0.5s hard-cap to `triggerHitStop()` and backward compatibility for ms inputs.
+- **EXP Loop Guard**: Added safety check to ensure `expToNextLevel` is always >= 1.
+- **Screen Shake Protection**: Added `Number.isFinite()` guards and 80px hard-cap.
+
+---
+
+## 📝 Previous Major Changes (v3.33.0)
+
+### Core Architecture: ECS, Scoped Workers & Zero-GC (v3.33.0 — March 12, 2026)
 
 **Purpose:** แก้บัคใน ShopSystem, WaveManager, ui.js, game.js — รวม 7 บัค (2 Critical, 3 High, 2 Medium)
 #### ✅ Phase 1.1 — ECS Migration: HealthComponent (Started)

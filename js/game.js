@@ -127,15 +127,23 @@ function gameLoop(now) {
 }
 
 /**
- * triggerHitStop — freeze game loop for `duration` seconds.
- * Safe to call from any player/boss file via window.triggerHitStop().
+ * triggerHitStop — freeze game loop briefly for impact.
+ * Backward-compatible: accepts either seconds (< 1) or milliseconds (>= 1).
  * No-op if hitStop is already longer than requested (prevents downgrade).
- * @param {number} [duration=0.05]
+ * Hard-capped to 0.5s to prevent accidental long freezes.
+ * @param {number} [duration=0.05] seconds (recommended) OR ms if >= 1
  */
 function triggerHitStop(duration = 0.05) {
     if (typeof GameState === 'undefined') return;
-    if ((GameState.hitStopTimer ?? 0) < duration) {
-        GameState.hitStopTimer = duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+
+    // Heuristic: legacy call-sites pass milliseconds (20/40/60),
+    // newer ones pass seconds (0.04/0.07/0.09).
+    const seconds = duration >= 1 ? (duration / 1000) : duration;
+    const capped = Math.min(0.5, seconds);
+
+    if ((GameState.hitStopTimer ?? 0) < capped) {
+        GameState.hitStopTimer = capped;
     }
 }
 window.triggerHitStop = triggerHitStop;

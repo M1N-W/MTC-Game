@@ -1,0 +1,136 @@
+﻿diff --git a/js/entities/player/PlayerBase.js b/js/entities/player/PlayerBase.js
+index aa99ae9..59ccc58 100644
+--- a/js/entities/player/PlayerBase.js
++++ b/js/entities/player/PlayerBase.js
+@@ -602,6 +602,8 @@ class Player extends Entity {
+ 
+     if (this.comboCount % 3 === 0)
+       spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, "#8b5cf6", 14);
++    // Safety: expToNextLevel must never be 0 (infinite loop guard)
++    if (!this.expToNextLevel || this.expToNextLevel <= 0) this.expToNextLevel = 1;
+     while (this.exp >= this.expToNextLevel) this.levelUp();
+     this.updateUI();
+   }
+@@ -612,7 +614,7 @@ class Player extends Entity {
+     // โ”€โ”€ 1. Consume EXP and advance level โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+     this.exp -= this.expToNextLevel;
+     this.level++;
+-    this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
++    this.expToNextLevel = Math.max(1, Math.floor(this.expToNextLevel * S.expLevelMult));
+ 
+     // โ”€โ”€ 2. Damage multiplier โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+     // Reads per-character scalar from config; falls back to universal +5%
+diff --git a/js/game.js b/js/game.js
+index b6d55ef..7a03e5e 100644
+--- a/js/game.js
++++ b/js/game.js
+@@ -127,15 +127,23 @@ function gameLoop(now) {
+ }
+ 
+ /**
+- * triggerHitStop โ€” freeze game loop for `duration` seconds.
+- * Safe to call from any player/boss file via window.triggerHitStop().
++ * triggerHitStop โ€” freeze game loop briefly for impact.
++ * Backward-compatible: accepts either seconds (< 1) or milliseconds (>= 1).
+  * No-op if hitStop is already longer than requested (prevents downgrade).
+- * @param {number} [duration=0.05]
++ * Hard-capped to 0.5s to prevent accidental long freezes.
++ * @param {number} [duration=0.05] seconds (recommended) OR ms if >= 1
+  */
+ function triggerHitStop(duration = 0.05) {
+     if (typeof GameState === 'undefined') return;
+-    if ((GameState.hitStopTimer ?? 0) < duration) {
+-        GameState.hitStopTimer = duration;
++    if (!Number.isFinite(duration) || duration <= 0) return;
++
++    // Heuristic: legacy call-sites pass milliseconds (20/40/60),
++    // newer ones pass seconds (0.04/0.07/0.09).
++    const seconds = duration >= 1 ? (duration / 1000) : duration;
++    const capped = Math.min(0.5, seconds);
++
++    if ((GameState.hitStopTimer ?? 0) < capped) {
++        GameState.hitStopTimer = capped;
+     }
+ }
+ window.triggerHitStop = triggerHitStop;
+diff --git a/js/systems/WorkerBridge.js b/js/systems/WorkerBridge.js
+index bebb429..4eaa1e2 100644
+--- a/js/systems/WorkerBridge.js
++++ b/js/systems/WorkerBridge.js
+@@ -10,6 +10,10 @@
+ window.WorkerBridge = {
+     _worker: null,
+     _isReady: false,
++    // Throttle mainโ’worker samples to avoid unbounded postMessage queue growth.
++    // WorkerAnalyzer samples at 10Hz internally; sending at 60Hz only builds backlog and can freeze the game.
++    _sampleAccum: 0,
++    _sampleInterval: 0.1,
+ 
+     init() {
+         if (this._worker) return;
+@@ -59,9 +63,17 @@ window.WorkerBridge = {
+         if (!player || !boss || boss.dead) return;
+ 
+         if (this._isReady && this._worker) {
++            // Throttle to ~10Hz to match worker sampling and prevent message queue buildup.
++            // Coalesce: only the latest position matters for pattern detection.
++            this._sampleAccum += dt;
++            if (this._sampleAccum < this._sampleInterval) return;
++            // Send the real elapsed time since last sample so the worker's internal timers stay correct.
++            const sendDt = this._sampleAccum;
++            // Keep remainder to maintain stable cadence even with variable dt.
++            this._sampleAccum = this._sampleAccum % this._sampleInterval;
+             this._worker.postMessage({
+                 type: 'sample',
+-                dt: dt,
++                dt: sendDt,
+                 px: player.x,
+                 py: player.y,
+                 bx: boss.x,
+@@ -79,6 +91,7 @@ window.WorkerBridge = {
+             // Worker mode: reset worker state + clear proxy cache only.
+             // Main-thread ring buffer is unused in this mode โ€” skip playerAnalyzer.reset().
+             this._worker.postMessage({ type: 'reset' });
++            this._sampleAccum = 0;
+             if (window.playerAnalyzer) {
+                 window.playerAnalyzer._workerPredReady = false;
+                 window.playerAnalyzer._cachedPattern = 'mixed';
+@@ -91,6 +104,7 @@ window.WorkerBridge = {
+             // Fallback mode: reset the main-thread analyzer fully.
+             window.playerAnalyzer.reset();
+             window.playerAnalyzer._workerPredReady = false;
++            this._sampleAccum = 0;
+         }
+     }
+ };
+\ No newline at end of file
+diff --git a/js/utils.js b/js/utils.js
+index 4604ab7..de3986a 100644
+--- a/js/utils.js
++++ b/js/utils.js
+@@ -135,10 +135,16 @@ var showVoiceBubble = (text, worldX, worldY) => {
+ let screenShake = 0;
+ 
+ var addScreenShake = (amount) => {
+-    screenShake = Math.max(screenShake, amount);
++    // Guard: ignore non-finite values to prevent NaN screenShake
++    // which would propagate into CTX.translate(NaN,NaN) and destabilize rendering.
++    if (!Number.isFinite(amount)) return;
++    // Hard cap to keep shake bounded even if a caller passes an extreme value.
++    const capped = Math.max(0, Math.min(80, amount));
++    screenShake = Math.max(screenShake, capped);
+ };
+ 
+ var updateScreenShake = () => {
++    if (!Number.isFinite(screenShake)) { screenShake = 0; return; }
+     if (screenShake > 0) {
+         screenShake *= GAME_CONFIG.visual.screenShakeDecay;
+         if (screenShake < 0.1) screenShake = 0;
+@@ -146,6 +152,7 @@ var updateScreenShake = () => {
+ };
+ 
+ var getScreenShakeOffset = () => {
++    if (!Number.isFinite(screenShake)) return { x: 0, y: 0 };
+     if (screenShake <= 1) return { x: 0, y: 0 };
+     return {
+         x: (Math.random() - 0.5) * screenShake,

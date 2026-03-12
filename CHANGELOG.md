@@ -4,7 +4,29 @@
 
 ---
 
-## v3.33.0 — Core Architecture: ECS, Scoped Workers & Zero-GC
+## v3.33.1 — Game Stability & Performance Improvements
++*Released: March 12, 2026*
++
++### 🛡️ Stability & Security
++- **WorkerBridge Throttling**: Implemented 10Hz throttling for main→worker messaging (was 60Hz). Prevents `postMessage` queue backlog that caused periodic game freezes during intense boss patterns.
++- **HitStop Hard-Cap**: Added 0.5s hard-cap to `triggerHitStop()` and backward compatibility for call-sites using milliseconds (>= 1) vs seconds (< 1).
++- **EXP Loop Guard**: Added `PlayerBase` safety check to ensure `expToNextLevel` is always >= 1, preventing permanent browser freezes.
++- **Screen Shake Protection**: Added `Number.isFinite()` guards and 80px hard-cap to `addScreenShake()` to prevent NaN propagation that could break canvas transforms.
++
++### 📁 Files Modified
++```
++✅ MODIFIED: js/game.js (HitStop heuristic & capping)
++✅ MODIFIED: js/systems/WorkerBridge.js (10Hz throttle logic)
++✅ MODIFIED: js/entities/player/PlayerBase.js (EXP guard)
++✅ MODIFIED: js/utils.js (ScreenShake guards)
++✅ MODIFIED: sw.js (v3.33.1)
++✅ MODIFIED: CHANGELOG.md (v3.33.1)
++✅ MODIFIED: PROJECT_OVERVIEW.md (Recent Changes sync)
++```
++
++---
++
++## v3.33.0 — Core Architecture: ECS, Scoped Workers & Zero-GC
 *Released: March 12, 2026*
 
 ### 🏗️ Architecture & Performance (Phase 1.1 - 1.3)

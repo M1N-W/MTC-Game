@@ -602,6 +602,8 @@ class Player extends Entity {
 
     if (this.comboCount % 3 === 0)
       spawnFloatingText(`+${amount} EXP`, this.x, this.y - 50, "#8b5cf6", 14);
+    // Safety: expToNextLevel must never be 0 (infinite loop guard)
+    if (!this.expToNextLevel || this.expToNextLevel <= 0) this.expToNextLevel = 1;
     while (this.exp >= this.expToNextLevel) this.levelUp();
     this.updateUI();
   }
@@ -612,7 +614,7 @@ class Player extends Entity {
     // ── 1. Consume EXP and advance level ───────────────────────────────────
     this.exp -= this.expToNextLevel;
     this.level++;
-    this.expToNextLevel = Math.floor(this.expToNextLevel * S.expLevelMult);
+    this.expToNextLevel = Math.max(1, Math.floor(this.expToNextLevel * S.expLevelMult));
 
     // ── 2. Damage multiplier ────────────────────────────────────────────────
     // Reads per-character scalar from config; falls back to universal +5%
