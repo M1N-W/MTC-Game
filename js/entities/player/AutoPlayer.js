@@ -1,3 +1,62 @@
+"use strict";
+/**
+ * js/entities/player/AutoPlayer.js
+ * ════════════════════════════════════════════════════════════════════════════
+ * "ออโต้" — Thermodynamic Brawler. Heat-driven melee combatant with
+ * an autonomous Stand entity, vacuum pull, and ORA combo system.
+ *
+ * Extends: AutoPlayer → Player (PlayerBase) → Entity
+ * Exports: window.AutoPlayer
+ *
+ * Load order: base.js → PlayerBase.js → AutoPlayer.js
+ *   PlayerRenderer.js reads: heatMeter, wanchaiStand, isOverheat,
+ *                             _oraComboCount, passiveUnlocked, _anim
+ *   game.js routes L-Click → player.shoot(dt) for AutoPlayer (same as Kao)
+ *   enemy.js: WanchaiStand targets window.enemies[] directly
+ *
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
+ *  L.67   WanchaiStand           Autonomous Stand entity — spawned by _activateWanchai()
+ *  L.68     constructor          Spawns at owner facing position
+ *  L.97     .update(dt)          Chases nearest enemy, punches on contact, ORA combo tick
+ *  L.434  AutoPlayer             Main character class
+ *  L.435    constructor          Heat gauge, Wanchai state, combo, passive flags
+ *  L.495    .takeDamage(amt)     hurtT=1 override + heat gain on hit + super
+ *  L.548    ._activateWanchai()  Spawn WanchaiStand, energy cost guard, wanchaiTimer
+ *  L.627    .update(dt,k,m)      Main tick — heat decay, Q/E/R-Click routing,
+ *                                L-Click melee vs shoot decision, Stand Pull, Vacuum
+ *  L.1132   ._doPlayerMelee(m)   Melee hit detection, heat gain, ORA escalation,
+ *                                crit → triggerHitStop(0.04), Stand Rush surge
+ *  L.1338   .checkPassiveUnlock() Override — triggers on first OVERHEAT (not stealth count)
+ *  L.1383   ._doStandPull()      Q during Wanchai active — pull enemies toward Stand
+ *  L.1442   ._doVacuum(opts)     Q base skill — earlyMode (pre-passive) vs full vacuum+ignite
+ *  L.1501   .updateUI()          Heat bar, Stand meter, Q/E/R-Click cooldown arcs
+ *
+ * ── HEAT TIER SYSTEM ────────────────────────────────────────────────────
+ * Four tiers driven by heatMeter (0–heatMax): COLD → WARM → HOT → OVERHEAT
+ * Each tier modifies: damage multiplier, punch rate, and at OVERHEAT: crit bonus + HP drain
+ * Config keys (source of truth — verify ?? fallbacks match config exactly):
+ *   coldDamageMult, heatDmgWarm, heatDmgHot, heatDmgOverheat
+ *   heatCritBonusOverheat, heatHpDrainOverheat, standCritBonus
+ *   standMeterDrainRate, standMeterDrainCold, standMeterDrainOverheat
+ *   standMeterPerHit, standMeterOnKill
+ * ⚠️ Wrong ?? fallbacks caused pre-v3.30.10 stand meter drain bugs.
+ *    Always verify fallback values against config.js before editing.
+ *
+ * ── WANCHAI Q ROUTING ───────────────────────────────────────────────────
+ * Q behavior changes when Wanchai is active:
+ *   Wanchai inactive → _doVacuum() (vacuum pull + ignite post-passive)
+ *   Wanchai active   → _doStandPull() (range pull toward Stand position)
+ * HUD arc max for Q must read from config dynamically:
+ *   standPullCooldown (Wanchai active) vs vacuumCooldown (normal)
+ *   ❌ Never hard-code either value in updateUI()
+ *
+ * ⚠️  checkPassiveUnlock() overrides base — unlock triggers on first OVERHEAT,
+ *     NOT on stealth use count. Base logic would never fire for Auto.
+ * ⚠️  WanchaiStand accesses window.enemies[] directly — guard with typeof check.
+ * ⚠️  triggerHitStop() called on crit in _doPlayerMelee — use seconds (0.04),
+ *     not milliseconds. Guard: typeof triggerHitStop !== 'undefined'.
+ * ════════════════════════════════════════════════════════════════════════════
+ */
 // ════════════════════════════════════════════════════════════
 // 👊 WANCHAI STAND — Autonomous Stand Entity
 //    - Spawned on _activateWanchai(), removed when wanchaiTimer <= 0

@@ -1,15 +1,44 @@
 'use strict';
 /**
  * js/rendering/BossRenderer.js
+ * ════════════════════════════════════════════════════════════════════
+ * BossRenderer — All canvas draw calls for boss entities (static class).
+ * Zero game state; pure rendering driven by boss properties.
+ * Godot equiv: AnimatedSprite2D children owned by boss Node.
  *
- * BossRenderer — Canvas draw calls for all boss entities.
+ * Load after: BossBase.js, ManopBoss.js (KruManop + BossDog),
+ *             FirstBoss.js (KruFirst), worldToScreen (map.js)
+ * Exports: window.BossRenderer
  *
- * Entry point: BossRenderer.draw(entity, ctx)
- *   Dispatches to the correct static method via instanceof.
- *   KruFirst checked first — both extend BossBase so order matters.
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────────
+ *  L.27  class BossRenderer                      static-only class
+ *  L.33  static _bitmapCache                     Map — OffscreenCanvas body part cache
+ *  L.39  static draw(e, ctx)                     dispatcher + viewport cull + shadowBlur reset
+ *  L.58  static _drawBossHpBar(...)              shared rounded HP bar (colour-coded)
+ *  L.104 static _drawBossLowHpGlow(...)          shared low-HP danger pulse ring (<30%)
+ *  L.142 static _getOrCreateBodyBitmap(...)      OffscreenCanvas cache helper
+ *  L.154 static drawBossDog(e, ctx)              BossDog — hellhound combat summon
+ *  L.412 static drawBoss(e, ctx)                 KruManop — maths teacher chibi
+ *  L.847 static drawBossFirst(e, ctx)            KruFirst — physics master + jetpack + domain
+ *  L.1543 window.BossRenderer = BossRenderer     export
  *
- * Depends on: BossBase.js, ManopBoss.js, FirstBoss.js (all must load first)
- * Loaded after: FirstBoss.js
+ * Dispatcher order (CRITICAL — do not reorder):
+ *   KruFirst → KruManop (ManopBoss) → BossDog
+ *   Reason: ManopBoss is the base; checking it first would also match KruFirst
+ *   if class hierarchy ever converges. KruFirst must always be checked first.
+ *
+ * ⚠️  Never call BossRenderer.draw() before FirstBoss.js loads —
+ *     instanceof KruFirst will throw ReferenceError.
+ * ⚠️  _bitmapCache keys are '<boss>_<variant>' (e.g. 'dog_normal').
+ *     Pass dirty=true to _getOrCreateBodyBitmap on phase/enraged transitions
+ *     or stale bitmaps will persist.
+ * ⚠️  Math.random() inside draw methods is FORBIDDEN (breaks determinism).
+ *     All per-frame animation uses performance.now() deterministic trig only.
+ * ⚠️  Every draw method must end with ctx.shadowBlur = 0 or rely on the
+ *     catch-all reset in draw() L.52 — any early return skips per-method cleanup.
+ * ⚠️  drawBossFirst checks e.state === 'FREE_FALL' and returns early (L.861) —
+ *     the boss is intentionally invisible during that window.
+ * ════════════════════════════════════════════════════════════════════
  */
 
 // ════════════════════════════════════════════════════════════

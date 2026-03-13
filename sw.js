@@ -1,15 +1,12 @@
-const CACHE_NAME = "mtc-cache-v3.34.1"; // JSDoc Headers & Stealth Fixes
+const CACHE_NAME = "mtc-cache-v3.34.2"; // Full JSDoc Header Standardization
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
 const CACHE_TIMESTAMP = Date.now();
 const urlsToCache = [
   "./",
-  "./index.html",
-  "./favicon.svg",
+  "./index.html?v=" + CACHE_TIMESTAMP,
   "./css/main.css?v=" + CACHE_TIMESTAMP,
-  "./PROJECT_OVERVIEW.md",
-  "./CHANGELOG.md",
   "./js/config.js?v=" + CACHE_TIMESTAMP,
   "./js/utils.js?v=" + CACHE_TIMESTAMP,
   "./js/audio.js?v=" + CACHE_TIMESTAMP,
@@ -32,6 +29,7 @@ const urlsToCache = [
   "./js/entities/player/KaoPlayer.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/player/AutoPlayer.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/player/PoomPlayer.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/player/PatPlayer.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/enemy.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/boss/boss_attacks_shared.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/boss/boss_attacks_manop.js?v=" + CACHE_TIMESTAMP,
@@ -50,11 +48,6 @@ const urlsToCache = [
   // Rendering
   "./js/rendering/PlayerRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/BossRenderer.js?v=" + CACHE_TIMESTAMP,
-  // Audio Assets (no cache busting for large files)
-  "./assets/audio/menu.mp3",
-  "./assets/audio/battle.mp3",
-  "./assets/audio/boss.mp3",
-  "./assets/audio/glitch.mp3",
 ];
 
 // ── Helper: ดึงเลขเวอร์ชันจาก CACHE_NAME ─────────────────

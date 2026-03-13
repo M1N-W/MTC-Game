@@ -1,12 +1,59 @@
 'use strict';
+/**
+ * js/systems/AdminSystem.js
+ * ════════════════════════════════════════════════
+ * In-game terminal console (AdminConsole IIFE), database server rendering,
+ * game-pause/resume helpers, and MTC Database Server proximity UI.
+ * 1027 lines.
+ *
+ * Design notes:
+ *   - AdminConsole is an IIFE — private state (history, isOpen, _godMode) is
+ *     fully encapsulated. Public API: open(), close(), isOpen, addLine().
+ *   - Permission tiers: GUEST (0) → OPERATOR (isAdmin=true) → ROOT (isAdmin='root').
+ *     Most destructive commands require ROOT.
+ *   - _parse() is the single command dispatcher — arg-based tokenizer, no "sudo" prefix.
+ *   - MTC_DATABASE_SERVER is a live proxy → BALANCE.database (config.js).
+ *     Old code referencing MTC_DATABASE_SERVER.x/y still works transparently.
+ *   - openExternalDatabase() opens the external math URL in a new tab and pauses
+ *     the game. resumeGame() / closeMathModal() resume.
+ *   - blur/focus listeners at L.943/L.953 auto-pause/resume when window loses focus.
+ *
+ * Integration:
+ *   input.js  → openAdminConsole() / closeAdminConsole()  (backtick key)
+ *   game.js   → drawDatabaseServer() / updateDatabaseServerUI()  (render + frame)
+ *   config.js → BALANCE.database   sole source of truth for DB server position/radius
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.10   MTC_DATABASE_SERVER       live proxy → BALANCE.database.{x,y,interactionRadius}
+ *  L.17   MTC_DB_URL                external database URL constant
+ *  L.27   AdminConsole              IIFE — full terminal system
+ *  L.34   PERM / PERM_LABEL         permission tier constants
+ *  L.49   _getPermLevel()           reads window.isAdmin → GUEST/OPERATOR/ROOT
+ *  L.77   _appendLine()             typewriter output to #console-output
+ *  L.107  _updatePermBadge()        updates titlebar permission badge DOM
+ *  L.120  _killAllEntities()        kills all enemies + boss (shared by wave commands)
+ *  L.143  _parse()                  command tokenizer + full command dispatcher
+ *  L.722  AdminConsole.open()       show modal, wire keydown, print welcome
+ *  L.825  AdminConsole.close()      hide modal, remove keydown listener
+ *  L.850  window.AdminConsole       export
+ *  L.852  openAdminConsole()        wrapper: setGameState PAUSED + AdminConsole.open()
+ *  L.874  closeAdminConsole()       wrapper: AdminConsole.close() + resume
+ *  L.896  showResumePrompt()        show/hide #resume-prompt DOM element
+ *  L.903  openExternalDatabase()    open MTC_DB_URL in new tab + pause game
+ *  L.917  resumeGame()              PAUSED→PLAYING + key flush
+ *  L.968  drawDatabaseServer()      canvas proximity aura ring for DB server
+ *  L.1005 updateDatabaseServerUI()  show/hide #db-prompt, #db-hud-icon, #btn-database
+ *
+ * ⚠️  AdminConsole.open() attaches keydown listener to #console-input and stores
+ *     it as input._onKeydown. close() MUST remove it — double-open causes stacked
+ *     listeners and duplicate command execution.
+ * ⚠️  _killAllEntities() calls DomainExpansion._abort() + GravitationalSingularity._abort()
+ *     defensively — do not remove these guards when boss domain is active.
+ * ⚠️  MTC_DATABASE_SERVER proxy reads BALANCE.database at access time — config.js
+ *     must be loaded before AdminSystem.js or proxy reads will throw.
+ * ════════════════════════════════════════════════
+ */
 
-// ══════════════════════════════════════════════════════════════
-// 💻 ADMIN SYSTEM (extracted from game.js)
-// ══════════════════════════════════════════════════════════════
-
-// ─── MTC Database Server ──────────────────────────────────────
-// ⚠️  ห้ามแก้ค่าที่นี่ — แก้ที่ BALANCE.database ใน config.js เท่านั้น
-// Object นี้เป็น live proxy ให้โค้ดเดิมที่อ้าง MTC_DATABASE_SERVER ยังทำงานได้
 const MTC_DATABASE_SERVER = {
     get x() { return BALANCE.database.x; },
     get y() { return BALANCE.database.y; },

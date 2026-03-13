@@ -1,71 +1,63 @@
 "use strict";
 /**
  * js/entities/enemy.js
+ * ════════════════════════════════════════════════════════════════════════════
+ * All enemy classes + EnemyRenderer. Single file containing EnemyBase
+ * (shared foundation), three enemy subclasses, PowerUp, and the static
+ * EnemyRenderer dispatcher.
  *
- * ► Enemy      — Basic grunt
- * ► TankEnemy  — Heavy melee bruiser
- * ► MageEnemy  — Ranged caster (confusion + meteor)
- * ► PowerUp    — Loot drop (collected by player)
+ * Exports: window.EnemyBase, window.Enemy, window.TankEnemy,
+ *          window.MageEnemy, window.PowerUp, window.EnemyRenderer
  *
- * Depends on: base.js (Entity)
+ * Load order:
+ *   base.js (Entity) → UtilityAI.js → EnemyActions.js → enemy.js
+ *   (SquadAI.js loads after, calls EnemyBase via window.enemies[])
  *
- * ────────────────────────────────────────────────────────────────
- * COMBAT FEEDBACK ADDITIONS (Lead Gameplay Developer pass)
- * ────────────────────────────────────────────────────────────────
- * ✅ HIT FLASH — All three enemy classes (Enemy, TankEnemy, MageEnemy)
- * now implement a white-silhouette flash whenever takeDamage() is called:
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
+ *  L.103  EnemyBase              Shared foundation — extend this, NOT Entity
+ *  L.155    ._tickShared(dt,p)   ⚠️ MUST be FIRST line of every subclass update()
+ *                                 Handles: StatusEffect tick, UtilityAI, hitFlash,
+ *                                 ignite DoT, SHATTER reaction, stun timer
+ *  L.220    .addStatus()         StatusEffect framework entry point
+ *  L.250    .removeStatus()
+ *  L.262    .tickStatuses(dt)    Ticks all active effects, removes expired
+ *  L.281    .takeDamage(amt,p)   hitFlash trigger + death routing
+ *  L.293    ._onDeath(p)         No-op stub — override in subclass
+ *  L.305  Enemy                  Basic grunt — melee contact + glitch-wave damage
+ *  L.461  TankEnemy              Heavy bruiser — slow, high HP, charge attack
+ *  L.563  MageEnemy              Ranged caster — confusion beam + meteor volley
+ *  L.706  PowerUp                Loot drop — not an enemy, no AI
+ *  L.803  EnemyRenderer          Static draw dispatcher + shared helpers
+ *  L.806    .draw(e,ctx)         Dispatcher: instanceof order Mage→Tank→Enemy→PowerUp
+ *  L.838    ._drawHpBar()        Shared HP bar (all enemy types)
+ *  L.892    ._drawGroundShadow() Shared ellipse shadow
+ *  L.910    ._drawStatusOverlays() Sticky-slow, ignite, SHATTER VFX overlays
+ *  L.991    .drawEnemy()
+ *  L.1178   .drawTank()
+ *  L.1371   .drawMage()
+ *  L.1583   .drawPowerUp()
  *
- * Construction:  this.hitFlashTimer = 0;
- * On damage:     this.hitFlashTimer = HIT_FLASH_DURATION;   // 0.10 s
- * In update():   if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
- * In draw():     a full-coverage white shape (matching the enemy's silhouette)
- * is painted on top of the normal sprite at up to 75 % alpha,
- * linearly fading to 0 over the flash duration.
+ * ── NEW ENEMY TEMPLATE ──────────────────────────────────────────────────
+ *  class MyEnemy extends EnemyBase {
+ *      constructor(x, y) { super(x, y, radius, 'basic'); }
+ *      update(dt, player) {
+ *          if (this.dead) return;
+ *          this._tickShared(dt, player); // ← FIRST, always
+ *          // movement + attack logic here
+ *      }
+ *      _onDeath(player) { /* FX + score *\/ }
+ *  }
  *
- * The flash duration constant HIT_FLASH_DURATION = 0.10 s (≈ 6 frames at
- * 60 fps) sits at the top of this file so it can be tuned centrally.
- *
- * Draw implementation uses `CTX.save()/restore()` so no canvas state
- * leaks into the health-bar drawing that immediately follows.
- *
- * ────────────────────────────────────────────────────────────────
- * BALANCE — GLITCH WAVE DAMAGE REDUCTION (Balance Designer pass)
- * ────────────────────────────────────────────────────────────────
- * ✅ GLITCH WAVE MITIGATION — When window.isGlitchWave is true (set by
- * game.js whenever a Glitch Wave is in progress), all melee contact
- * damage dealt to the player by Enemy and TankEnemy is multiplied by
- * GLITCH_DAMAGE_MULT (0.6), giving a 40 % reduction.
- *
- * Rationale: Glitch Waves already invert player controls and spawn a
- * double horde; reducing contact damage prevents unavoidable death
- * from disorientation without removing the tension of the mechanic.
- *
- * window.isGlitchWave is a boolean synced by game.js on every state
- * change; reading it here via window avoids any import/scope coupling.
- *
- * ── TABLE OF CONTENTS ──────────────────────────────────────────
- *  L.111  class EnemyBase extends Entity
- *           constructor / _tickShared ← MUST be first line of every subclass update()
- *           StatusEffect: addStatus / removeStatus / getStatus / tickStatuses
- *           takeDamage / _onDeath (override in subclass)
- *
- *  L.257  class Enemy extends EnemyBase       basic grunt
- *  L.354  class TankEnemy extends EnemyBase   heavy melee bruiser
- *  L.426  class MageEnemy extends EnemyBase   ranged caster (confusion + meteor)
- *  L.512  class PowerUp                       loot drop
- *
- *  L.591  class EnemyRenderer                 all Canvas draw calls (separated from logic)
- *           static draw() ← dispatcher (instanceof order: Mage→Tank→Enemy→PowerUp)
- *           static _drawHpBar / _drawGroundShadow / _drawStatusOverlays ← shared helpers
- *           static drawEnemy / drawTank / drawMage / drawPowerUp
- *
- * ── ARCHITECTURE RULES ─────────────────────────────────────────
- *  • New enemy → extends EnemyBase (not Entity) — gets AI+StatusEffect+hitFlash free
- *  • _tickShared(dt, player) MUST be first call inside every subclass update()
- *  • AI writes _aiMoveX/_aiMoveY only — never vx/vy directly
- *  • _onDeath: call Achievements.check() INSIDE typeof guard or crash kills wave
- *  • EnemyRenderer.draw() instanceof order is significant — MageEnemy checked first
- * ════════════════════════════════════════════════════════════════
+ * ⚠️  SHATTER reaction lives in _tickShared() after the ignite DoT block.
+ *     Trigger: igniteTimer > 0 && (stickySlowMultiplier < 0.65 || stickyStacks >= 3)
+ *     Effect:  igniteDPS × 2.5 burst + 0.4s stun (_shatterStunTimer) + _shatterUsed flag guard
+ *     NEVER move this block — order relative to ignite tick is load-bearing.
+ * ⚠️  AI writes _aiMoveX/_aiMoveY only — never vx/vy directly.
+ * ⚠️  _onDeath: wrap Achievements.check() in typeof guard or an unloaded
+ *     Achievements object crashes the entire wave resolution.
+ * ⚠️  EnemyRenderer.draw() instanceof order is significant — MageEnemy FIRST
+ *     because MageEnemy extends EnemyBase same as Enemy; wrong order = misrender.
+ * ════════════════════════════════════════════════════════════════════════════
  */
 
 // ─── Tunable: seconds a hit-flash stays at full opacity before fading out ───
@@ -278,7 +270,7 @@ class EnemyBase extends Entity {
       if (effect.onTick) effect.onTick(this, effect, dt);
     }
     for (let i = 0; i < this._statusToRemove.length; i++) {
-        this.removeStatus(this._statusToRemove[i]);
+      this.removeStatus(this._statusToRemove[i]);
     }
   }
 

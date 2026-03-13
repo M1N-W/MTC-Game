@@ -1,28 +1,56 @@
 'use strict';
 /**
- * js/entities/FirstBoss.js
+ * js/entities/boss/FirstBoss.js
+ * ════════════════════════════════════════════════════════════
+ * KruFirst — "Physics Master" boss (Encounters 2 & 4)
+ * Extends BossBase. All AI + state machine lives here.
+ * Visual rendering → BossRenderer.drawBossFirst()
+ * Attack objects  → boss_attacks_first.js
  *
- * KruFirst extends BossBase — "Kru First the Physics Master"
+ * Load order:
+ *   boss_attacks_shared.js → boss_attacks_first.js
+ *   → BossBase.js → THIS FILE
  *
- * Encounter 2 (Wave 6):  KruFirst(bossLevel, false)
- * Encounter 4 (Wave 12): KruFirst(bossLevel, true)  ← isAdvanced
+ * Encounters:
+ *   Wave  6 → KruFirst(bossLevel, false)   normal
+ *   Wave 12 → KruFirst(bossLevel, true)    isAdvanced (+35% stats)
  *
- * States: IDLE | CHASE | SUVAT_CHARGE | ORBIT_ATTACK |
- *         FREE_FALL | ROCKET | SANDWICH_TOSS | STUNNED | BERSERK
+ * Phase thresholds (HP %):
+ *   100% → 40% : Normal — state machine, SUVAT dashes
+ *    <40%       : Derivation Mode — extra skills unlock
+ *    <40% (once): GravitationalSingularity domain triggered
+ *   Post-domain : SINGULARITY mode — REBOUND added to state set
  *
- * Depends on: BossBase.js (BossBase), boss_attacks.js
- * Loaded after: BossBase.js
+ * ── TABLE OF CONTENTS ────────────────────────────────────
+ *  L.26   class KruFirst          Main boss class
+ *  L.31   constructor()           HP/speed/skill timers, all _state props
+ *  L.122  update()                dt loop — timers, domain gate, state machine
+ *  L.451  _enterState()           State transition + stateTimer reset
+ *  L.455  _pickSkill()            Skill selector (normal + enraged + Derivation paths)
+ *  L.638  _enterOrbit()           Orbit entry helper — sets _orbitCX/Y/T
+ *  L.676  takeDamage()            HP reduction, phase-break guards,
+ *                                  Derivation trigger (≤40%), death gate
+ *  L.755  window exports          window.KruFirst, window.BossFirst (alias)
+ *
+ * Key state enum (this.state):
+ *   IDLE | CHASE | SUVAT_CHARGE | ORBIT_ATTACK | FREE_FALL |
+ *   ROCKET | SANDWICH_TOSS | STUNNED | BERSERK | REBOUND | QUANTUM_LEAP |
+ *   EMP_ATTACK | DOMAIN (frozen — GravitationalSingularity drives loop)
+ *
+ * ⚠️  PITFALLS
+ *   • BossRenderer dispatcher must check KruFirst BEFORE ManopBoss —
+ *     both extend BossBase; wrong order silently matches KruManop first.
+ *   • Domain freeze: update() returns early while _domainActive=true.
+ *     GravitationalSingularity.update() drives all logic during domain.
+ *   • SINGULARITY mode activates AFTER domain ends (_domainUsed &&
+ *     !_domainActive && state≠'DOMAIN') — do NOT set it during domain.
+ *   • _waveSpawnLocked guards prevent double death; never skip it.
+ *   • isAdvanced multiplier stacks on top of difficulty — check both
+ *     before editing any damage/speed constant.
+ *   • playerAnalyzer.reset() is called on Derivation phase break —
+ *     ensures pattern analysis reflects post-threshold player behaviour.
+ * ════════════════════════════════════════════════════════════
  */
-
-// ════════════════════════════════════════════════════════════
-// ⚛️  KRU FIRST — "PHYSICS MASTER"
-//
-// Encounter 2 (Wave 6):  KruFirst(bossLevel, false)
-// Encounter 4 (Wave 12): KruFirst(bossLevel, true)  ← isAdvanced
-//
-// States: IDLE | CHASE | SUVAT_CHARGE | ORBIT_ATTACK |
-//         FREE_FALL | ROCKET | SANDWICH_TOSS | STUNNED | BERSERK
-// ════════════════════════════════════════════════════════════
 class KruFirst extends BossBase {
     /**
      * @param {number}  difficulty  - HP/score multiplier

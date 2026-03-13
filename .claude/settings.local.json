@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:/Mawin-Game/mtc-game-react/src\" && mkdir components hooks data)",
+      "Bash(cd \"C:/Mawin-Game/mtc-game-react\" && npm install -D tailwindcss postcss autoprefixer && npx tailwindcss init -p)",
+      "Bash(cd \"C:/Mawin-Game/mtc-game-react\" && npm run dev)"
+    ]
+  }
+}

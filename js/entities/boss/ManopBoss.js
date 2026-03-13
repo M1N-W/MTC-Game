@@ -1,15 +1,62 @@
 'use strict';
 /**
- * js/entities/ManopBoss.js
+ * js/entities/boss/ManopBoss.js
+ * ════════════════════════════════════════════════════════════════════
+ * Two classes in one file:
+ *   BossDog  — standalone melee sub-unit (extends Entity, not BossBase)
+ *   KruManop — "The Dog Summoner" math teacher boss (extends BossBase)
  *
- * KruManop extends BossBase — "Kru Manop the Dog Summoner"
+ * Encounter scaling (constructor args: difficulty, enablePhase2, enablePhase3):
+ *   Wave 3 : KruManop(diff, false, false) — Phase 1 only
+ *   Wave 6 : KruManop(diff, true,  false) — Phase 1 + 2 (dog + enrage)
+ *   Wave 9 : KruManop(diff, true,  true)  — Phase 1 + 2 + 3 (goldfish)
  *
- * Encounter 1 (Wave 3):  KruManop(diff, false, false)  → Phase 1 only
- * Encounter 2 (Wave 6):  KruManop(diff, true,  false)  → Phase 1 + 2
- * Encounter 3 (Wave 9):  KruManop(diff, true,  true)   → Phase 1 + 2 + 3
+ * Load after: BossBase.js, boss_attacks_manop.js (EquationSlam, DeadlyGraph,
+ *             MatrixGridAttack, BarkWave, ChalkWall, BubbleProjectile,
+ *             GoldfishMinion, ExpandingRing), DomainExpansion.js
+ * Exports: window.BossDog, window.KruManop,
+ *          window.ManopBoss (= KruManop),
+ *          window.Boss      (= KruManop, backward-compat)
  *
- * Depends on: BossBase.js (BossBase), boss_attacks.js
- * Loaded after: BossBase.js
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────────
+ *  L.18  class BossDog extends Entity       sub-unit constructor + update + takeDamage
+ *  L.70  BossDog._drawDogBody()             legacy CTX draw — DEAD CODE (use BossRenderer)
+ *  L.173 class KruManop extends BossBase    constructor (difficulty, enablePhase2, enablePhase3)
+ *  L.235 KruManop.update(dt, player)        main state machine — all phases, log457, domain
+ *  L.556 KruManop.bark(player)              Phase 2 — sonic cone push
+ *  L.590 KruManop._summonDog()              Phase 2 — spawns BossDog into window.enemies
+ *  L.600 KruManop.useEquationSlam()         skill — AoE shockwave
+ *  L.611 KruManop.useDeadlyGraph(player)    skill — laser line (kiter counter)
+ *  L.631 KruManop.useMatrixGrid(player)     skill — grid with one safe cell
+ *  L.656 KruManop.useLog457()               skill — charge→active→stun 3-phase buff
+ *  L.665 KruManop.useChalkWall(player)      Phase 2 — perpendicular barrier
+ *  L.692 KruManop.useDogPackCombo(player)   Phase 2 — dog rush + radial burst sync
+ *  L.706 KruManop.takeDamage(amt)           domain/invuln guards → _onDeath → Achievement
+ *  L.735 window exports                     BossDog, KruManop, ManopBoss, Boss
+ *
+ * State machine states (this.state):
+ *   'CHASE' → 'ATTACK' → 'ULTIMATE' → 'MATRIX_GRID' → 'DOMAIN'
+ *   log457 runs as a parallel sub-state (log457State: null|'charging'|'active'|'stunned')
+ *   _dogPackActive is a parallel freeze flag, not a state string
+ *
+ * ⚠️  Class name: KruManop (not ManopBoss, Boss, or KruManopBoss).
+ *     window.ManopBoss and window.Boss are aliases only — never use as constructor name.
+ * ⚠️  BossDog extends Entity (NOT BossBase / EnemyBase) — has no StatusEffect framework,
+ *     no _tickShared(), no addStatus(). Do NOT call addStatus on dog.
+ * ⚠️  BossDog._drawDogBody() is dead code — uses bare CTX (global) instead of ctx param.
+ *     All rendering goes through BossRenderer.drawBossDog(). Do not resurrect.
+ * ⚠️  DomainExpansion.trigger() sets _domainActive=true; update() freezes boss and
+ *     returns early while it's true. Any code after the domain return block is skipped.
+ * ⚠️  log457 'stunned' phase also returns early — boss cannot act or take skill decisions.
+ *     isInvulnerable=true only during 'charging' sub-phase, NOT during 'stunned'.
+ * ⚠️  _phase2Threshold / _phase3Threshold read from BALANCE.boss.phase2ThresholdByEnc[]
+ *     keyed by difficulty (1-based encounter index). Missing key silently falls back to
+ *     BALANCE.boss.phase2Threshold. Always provide both arrays in config.
+ * ⚠️  takeDamage: three independent invulnerability layers in priority order —
+ *     _inSafeZone → DomainExpansion.isInvincible() → this.isInvulnerable (log457 charge)
+ * ⚠️  PlayerPatternAnalyzer is consulted every 2s in CHASE (L.447–458).
+ *     Uses dominantPattern(), kitingScore(), standingScore() — NOT getDominantStyle().
+ * ════════════════════════════════════════════════════════════════════
  */
 
 // ════════════════════════════════════════════════════════════

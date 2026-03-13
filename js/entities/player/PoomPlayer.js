@@ -1,4 +1,46 @@
 "use strict";
+/**
+ * js/entities/player/PoomPlayer.js
+ * ════════════════════════════════════════════════════════════════════
+ * PoomPlayer — "ภูมิ" Isan Rice Mage (extends Player / PlayerBase)
+ * Combo loop: sticky stacks → Ritual Burst → passive awakening
+ * Owns NagaEntity + GarudaEntity summons; Cosmic Balance synergy.
+ *
+ * Load after: PlayerBase.js, config.js (BALANCE + GAME_CONFIG),
+ *             NagaEntity.js, GarudaEntity.js, effects.js
+ * Exports: window.PoomPlayer
+ *
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────────
+ *  L.6   class PoomPlayer extends Player        constructor / props
+ *  L.52  get isSecondWind                       computed HP-threshold flag
+ *  L.60  update(dt, keys, mouse)                full override — calls _tickAnim manually
+ *  L.446 shoot()                                L-Click sticky-rice projectile
+ *  L.489 eatRice()                              R-Click speed+crit buff
+ *  L.505 checkPassiveUnlock()                   "ราชาแห่งพิธีกรรม" trigger (after first Ritual)
+ *  L.558 summonNaga()                           Q — NagaEntity + shield pool
+ *  L.575 summonGaruda()                         E — GarudaEntity (post-passive only)
+ *  L.605 ritualBurst()                          R — consumes sticky stacks, boss cap 35%/45%
+ *  L.780 dash()                                 timeScale-compensated dash override
+ *  L.825 takeDamage(amt)                        Naga shield absorption → Graph ×2 → super
+ *  L.859 dealDamage(baseDamage)                 crit + second wind + cosmic + lifesteal
+ *  L.897 heal(amt)                              HP + FX wrapper
+ *  L.904 addSpeedBoost()                        speedBoostTimer setter
+ *  L.920 applyStickyTo(enemy)                   StatusEffect sticky (boss: direct stickyStacks)
+ *  L.946 updateUI()                             cooldown dials + HP/EN bars + level
+ *  L.1006 window.PoomPlayer = PoomPlayer        export
+ *
+ * ⚠️  update() overrides PlayerBase.update() entirely —
+ *     _tickAnim(dt) must be called manually (L.432) or animation state breaks.
+ * ⚠️  cooldowns.garuda is added in constructor AFTER cooldowns.naga —
+ *     accessing cooldowns.garuda before constructor completes returns undefined.
+ * ⚠️  Cosmic Balance (_cosmicBalance) checks naga?.active AND garuda?.active —
+ *     both must be truthy simultaneously; just being summoned is not enough.
+ * ⚠️  ritualBurst boss cap reads S.ritualBossDmgCapPct / S.ritualBossDmgCapCosmicPct
+ *     from BALANCE.characters.poom — missing keys silently fall back to 0.35/0.45.
+ * ⚠️  applyStickyTo: bosses lack addStatus() → falls back to direct stickyStacks++;
+ *     do not add StatusEffect calls to boss path.
+ * ════════════════════════════════════════════════════════════════════
+ */
 
 // ════════════════════════════════════════════════════════════
 // 🌾 POOM PLAYER

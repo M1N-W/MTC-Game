@@ -1,21 +1,48 @@
 'use strict';
 /**
  * js/entities/boss/boss_attacks_first.js
+ * ════════════════════════════════════════════════════════════
+ * All attack objects and area effects for KruFirst (FirstBoss).
+ * GravitationalSingularity drives its own update loop while active
+ * (FirstBoss.update() returns early; domain owns the frame).
  *
- * Attack effects used exclusively by KruFirst (FirstBoss).
+ * Load order:
+ *   boss_attacks_shared.js → THIS FILE → BossBase.js → FirstBoss.js
  *
- * Load order: boss_attacks_shared.js → THIS FILE → BossBase.js → FirstBoss.js
+ * ── TABLE OF CONTENTS ────────────────────────────────────
+ *  L.23   FreeFallWarningRing      AoE ground indicator before FREE_FALL impact
+ *  L.69   PorkSandwich             Slow-homing explosive; parry returns ×2 dmg
+ *  L.281  EmpPulse                 Radial dome burst + lightning arc visuals
+ *  L.408  PhysicsFormulaZone       Sustained slow field + formula label;
+ *                                   dropped on SUVAT miss (Derivation Mode)
+ *  L.570  ParabolicVolley          3-prong adaptive volley; leads circling players
+ *  L.620  OrbitalDebris            Shards that orbit boss inside GravSingularity
+ *  L.721  GravitationalSingularity Boss ultimate — singleton; extends DomainBase
+ *                                   Four phases: PULL → ESCAPE → TIDAL → COLLAPSE
+ *  L.1370 _applyProximityPunishment  Repulsion + tick dmg when hugging boss in domain
+ *  L.1427 GravityWell              Pull/bend-projectile field (Derivation Mode)
+ *  L.1572 SuperpositionClone       Ghost decoy of KruFirst; collapses on contact
  *
- * Contents:
- *   FreeFallWarningRing    — Visual AoE warning indicator
- *   PorkSandwich           — Seeking explosive projectile
- *   EmpPulse               — Radial energy burst
- *   PhysicsFormulaZone     — Sustained area-denial + slow
- *   ParabolicVolley        — 3-prong adaptive fire pattern
- *   OrbitalDebris          — Orbiting shards (used inside GravSingularity)
- *   GravitationalSingularity — Boss ultimate — singleton
- *   GravityWell            — Pull/push field (Derivation Mode)
- *   SuperpositionClone     — Quantum decoy clone
+ * Window exports (L.1415, L.1700–1707):
+ *   GravitationalSingularity, OrbitalDebris, GravityWell,
+ *   SuperpositionClone, FreeFallWarningRing, PorkSandwich,
+ *   EmpPulse, PhysicsFormulaZone, ParabolicVolley
+ *
+ * ⚠️  PITFALLS
+ *   • GravitationalSingularity is a singleton (Object.create pattern from
+ *     DomainBase in boss_attacks_shared.js) — never `new GravitationalSingularity()`.
+ *     Call GravitationalSingularity.activate(boss, player) to start.
+ *   • Domain update() signature: (dt, boss, player) — NOT (dt, player).
+ *     FirstBoss calls it as: GravitationalSingularity.update(dt, this, player).
+ *   • OrbitalDebris.update() signature: (dt, bossX, bossY, player) — passes
+ *     live boss coords each frame because domain moves boss during TIDAL.
+ *   • PorkSandwich parry detection iterates window.projectiles — ensure
+ *     projectile objects expose x/y/radius or parry silently never fires.
+ *   • Math.random() inside draw() is intentional for crackle/lightning VFX —
+ *     do NOT cache or seed; deterministic flicker breaks the aesthetic.
+ *   • PhysicsFormulaZone slow debuff writes to window.player.stats.moveSpeed —
+ *     uses stats.moveSpeed (not moveSpeed) per §5 Critical Property Rules.
+ * ════════════════════════════════════════════════════════════
  */
 // ════════════════════════════════════════════════════════════
 // ⚠️  FREE FALL WARNING RING — AoE visual indicator (BossFirst)

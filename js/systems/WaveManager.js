@@ -1,4 +1,58 @@
 'use strict';
+/**
+ * js/systems/WaveManager.js
+ * ════════════════════════════════════════════════
+ * Wave lifecycle, enemy spawning, wave-modifier events (Glitch/Fog/Speed/Dark),
+ * trickle spawning, and boss encounter queue. Sole owner of wave progression state.
+ *
+ * Design notes:
+ *   - Exports via window.* only (no ES modules). Loaded after enemy.js + boss files.
+ *   - Wave schedule is dynamic: _getWaveSchedule() builds from WAVE_SCHEDULE config.
+ *   - Glitch wave fires every GLITCH_EVERY_N_WAVES (=5) waves — invert controls,
+ *     HP bonus, countdown lock until all enemies dead.
+ *   - Trickle spawning: enemies drip in over time rather than all at once.
+ *     _trickle object owns the queue; updateWaveEvent() ticks it.
+ *   - Boss encounter queue: _startBossWave() deterministic per bossEncounterCount.
+ *   - SpeedWave patches enemy .speed directly via _patchedEnemies WeakSet;
+ *     _restoreEnemySpeeds() reverses on deactivate.
+ *
+ * Integration:
+ *   game.js  → startNextWave()       (wave clear / game start)
+ *   game.js  → updateWaveEvent(dt)   (every frame)
+ *   game.js  → drawWaveEvent(ctx)    (render pass)
+ *   game.js  → spawnEnemies(count)   (called by startNextWave internally)
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.34   GLITCH_EVERY_N_WAVES       glitch cadence constant
+ *  L.51   _getWaveSchedule()         builds wave config from WAVE_SCHEDULE
+ *  L.61   SPEED_MULT                 speed-wave enemy multiplier
+ *  L.69   window.isGlitchWave        mutable wave-event state (globals)
+ *  L.83   _evt                       active event descriptor object
+ *  L.97   _trickle                   trickle-spawn state object
+ *  L.106  _activateWaveEvent()       sets _evt, applies modifiers
+ *  L.144  _deactivateWaveEvent()     teardown + restores enemy speeds
+ *  L.160  _patchEnemySpeeds()        multiplies speed on live enemies
+ *  L.171  _restoreEnemySpeeds()      reverses _patchEnemySpeeds via WeakSet
+ *  L.184  updateWaveEvent()          per-frame tick: trickle + event timer
+ *  L.221  drawWaveEvent()            dispatches to _drawDark/_drawFog/_drawSpeed
+ *  L.232  _drawDark()                ominous vignette (wave 1 intro)
+ *  L.247  _drawFog()                 fog-of-war overlay
+ *  L.317  _drawSpeed()               speed-wave VFX
+ *  L.361  _startTrickle()            initialises trickle queue for a wave
+ *  L.388  startNextWave()            main wave-start entry point
+ *  L.421  _resetWaveState()          clears per-wave mutable state
+ *  L.442  _startGlitchWave()         glitch modifier: invert + HP bonus
+ *  L.492  _startBossWave()           boss encounter queue dispatch
+ *  L.567  spawnEnemies()             instantiates enemies + tags squad role
+ *
+ * ⚠️  Boss class names: ManopBoss (KruManop) and KruFirst — NEVER Boss/BossFirst.
+ *     KruFirst instanceof check MUST come before ManopBoss in _startBossWave().
+ * ⚠️  _patchEnemySpeeds() uses a WeakSet guard — do NOT call twice without
+ *     _restoreEnemySpeeds() in between or speed doubles permanently.
+ * ⚠️  window.bossEncounterCount persists across waves — reset only on full game reset,
+ *     not on wave clear. Drives deterministic boss order.
+ * ════════════════════════════════════════════════
+ */
 
 // ══════════════════════════════════════════════════════════════
 // 🌊 WAVE MANAGER  (WaveManager.js)

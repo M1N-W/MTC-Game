@@ -1,5 +1,47 @@
 "use strict";
-
+/**
+ * js/entities/player/PatPlayer.js
+ * ════════════════════════════════════════════════════════════════════
+ * PatPlayer — "แพท" Samurai Ronin (extends Player / PlayerBase)
+ * Skills: Zanzo Flash (Q blink+ambush) · Iaido Strike (R 3-phase)
+ *         Blade Guard (R-Click reflect) · Katana dual-mode (L-Click)
+ *
+ * Load after: PlayerBase.js, config.js (BALANCE), effects.js,
+ *             audio.js (playZanzo, playIaidoCharge, playIaidoStrike,
+ *                       playIaidoSheathe, playReflect, playMeleeHit)
+ * Exports: window.PatPlayer
+ *
+ * ── TABLE OF CONTENTS ──────────────────────────────────────────────
+ *  L.9   class PatPlayer extends Player         constructor / props
+ *  L.71  checkPassiveUnlock()                   "Ronin's Edge" — first Iaido hit
+ *  L.113 update(dt, keys, mouse)                calls super.update() — minimal override
+ *  L.207 _tickBladeGuard(dt, keys, S)           R-Click hold → reflect window
+ *  L.233 _endBladeGuard(S)                      release cleanup + cooldown set
+ *  L.241 tryReflectProjectile(proj)             called from game.js projectile loop
+ *  L.265 _doZanzoFlash(S, mouse)                Q teleport + ghost trail + ambush window
+ *  L.317 _beginIaidoCharge(S, mouse)            R — starts charge phase
+ *  L.332 _tickIaido(dt, S)                      phase state machine: charge→flash→cinematic
+ *  L.366 _executeIaidoFlash(S)                  segment hit detection + bullet-time
+ *  L.439 _resolveIaidoDamage(S)                 crit + triggerHitStop + passive unlock
+ *  L.498 _doKatanaAttack(S, mouse)              range check → slash wave or melee
+ *  L.523 _doSlashWave(S, mouse)                 ranged katana projectile
+ *  L.584 _doMeleeCombo(S, mouse)                3-hit arc melee
+ *  L.674 updateUI()                             zanzo/iaido/guard/dash cooldown dials
+ *  L.721 window.PatPlayer = PatPlayer           export
+ *
+ * ⚠️  update() calls super.update() — _tickAnim is handled by PlayerBase.
+ *     Do NOT call _tickAnim again inside PatPlayer.
+ * ⚠️  _zanzoGhosts is a pre-allocated pool (size = S.zanzoGhostCount ?? 4).
+ *     Never push/splice — set g.active = false to recycle.
+ * ⚠️  _iaidoPhase 'charge' and 'cinematic' both return early from update(),
+ *     consuming Q and R-Click inputs silently — do not add skill input here.
+ * ⚠️  tryReflectProjectile() is called externally from game.js collision loop,
+ *     not from inside PatPlayer.update(). Guard with bladeGuardActive check.
+ * ⚠️  triggerHitStop called at L.477 — uses seconds (0.09 / 0.07), not ms.
+ * ⚠️  skills.zanzo.cd / skills.iaido.cd use the {cd, max} object pattern
+ *     (not flat this.cooldowns.*) — don't mix the two accessor styles.
+ * ════════════════════════════════════════════════════════════════════
+ */
 // ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  PatPlayer.js — "แพท" Samurai Ronin Character                           ║
 // ║  Skills: Zanzo Flash (Q) · Iaido Strike (R) · Blade Guard (R-Click)    ║

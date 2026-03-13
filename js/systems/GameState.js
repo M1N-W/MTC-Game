@@ -1,13 +1,43 @@
 'use strict';
-// ══════════════════════════════════════════════════════════════
-// 🗂️  GameState — Single source of truth for mutable runtime state
-//
-// ─── BUG FIXES ───────────────────────────────────────────────
-//   B5 [CRITICAL] — _syncAliases() never wrote window.bossEncounterCount.
-//                   resetRun() zeroed this.bossEncounterCount but the window
-//                   global stayed stale → on restart encounter queue started
-//                   from N+1, spawning wrong boss.  Line added in _syncAliases.
-// ══════════════════════════════════════════════════════════════
+/**
+ * js/systems/GameState.js
+ * ════════════════════════════════════════════════
+ * Single source of truth for all mutable runtime state.
+ * Consolidates globals that were previously scattered across game.js.
+ *
+ * Design notes:
+ *   - setPhase() writes both this.phase and window.gameState simultaneously —
+ *     never write window.gameState directly elsewhere.
+ *   - _syncAliases() must be called after every resetRun() to keep window.*
+ *     primitives in sync. Reference types (arrays) are shared by reference
+ *     automatically after first sync.
+ *   - Primitive aliases (hitStopTimer, timeScale, etc.) must be re-synced
+ *     after every write because JS primitives are copy-on-assign.
+ *
+ * Integration:
+ *   game.js   → GameState.setPhase() / GameState.resetRun()
+ *   game.js   → reads GameState.hitStopTimer, .timeScale per frame
+ *   All files → window.enemies, window.boss, window.player (via sync)
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.12  GameState                 singleton object
+ *  L.15  .loopRunning / .phase     loop + phase state
+ *  L.19  .player/.enemies/.boss    world entity references
+ *  L.28  .hitStopTimer/.timeScale  timing + hit-FX
+ *  L.34  .isGlitchWave / glitch    glitch-wave modifier state
+ *  L.44  .bossEncounterCount       persistent boss queue counter
+ *  L.47  .setPhase()               write phase + window.gameState
+ *  L.52  .resetRun()               zero all mutable state + _syncAliases
+ *  L.88  ._syncAliases()           push all primitives to window.*
+ *
+ * ⚠️  B5 FIX: _syncAliases() was missing window.bossEncounterCount —
+ *     on restart the encounter queue started from N+1, spawning wrong boss.
+ *     Line added at L.103. Do NOT remove it.
+ * ⚠️  Primitive aliases go stale if written directly to GameState without
+ *     calling _syncAliases(). Always go through setPhase()/resetRun() or
+ *     sync manually after mutation.
+ * ════════════════════════════════════════════════
+ */
 
 const GameState = {
 

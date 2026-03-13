@@ -1,61 +1,70 @@
 'use strict';
 /**
- * 💥 MTC: ENHANCED EDITION - Effects System
- * Particles, floating text, hit markers, and special effects
+ * js/effects.js
+ * ════════════════════════════════════════════════
+ * All visual effect systems: particles, floating text, hit markers, weather,
+ * meteor strike, orbital particles, decals, shell casings, wave announcement FX,
+ * and Pat-specific trail/burst/slash helpers.
+ * 2589 lines.
  *
- * WEATHER SYSTEM (v9 — unchanged):
- *   ✅ WeatherSystem class — atmospheric rain & snow effects
- *   ✅ Rain: spawns at screen top, falls with speed + wind drift, drawn as thin blue lines
- *   ✅ Snow: spawns at screen top, falls slowly with sin() horizontal sway, drawn as white circles
- *   ✅ Optimized: MAX_PARTICLES cap (200), off-screen culling, efficient array reuse
- *   ✅ API: weatherSystem.setWeather('rain'|'snow'|'none'), update(dt, camera), draw()
+ * Design notes:
+ *   - All major systems use object pools (static _pool[]) + swap-and-pop O(1)
+ *     removal. Zero `new` allocations after warm-up for Particle, FloatingText,
+ *     OrbitalParticle.
+ *   - ParticleSystem hard cap: MAX_PARTICLES = 150 (oldest evicted).
+ *   - shadowBlur skipped for particles with rendered radius < 3 px (perf guard).
+ *   - Viewport cull in Particle.draw() and OrbitalParticle.draw() before any ctx calls.
+ *   - FloatingText categories (CRIT/DAMAGE/HEAL/IMPACT/STATUS/DEFAULT) are
+ *     auto-detected from text content and cached after first call.
+ *   - WaveAnnouncementFX owns the full wave-start cinematic (typewriter + flash).
  *
- * HIT MARKER SYSTEM (v10 — Combat Feedback pass):
- *   ✅ HitMarker class — short-lived X-crosshair at projectile impact point
- *   ✅ HitMarkerSystem — manages pool, update loop, draw loop
- *   ✅ Normal hits: white crosshair, 0.30 s lifetime, slight expand-on-fade
- *   ✅ Crit hits:   golden crosshair, 0.40 s lifetime, larger arms, glow
- *   ✅ spawnHitMarker(x, y, isCrit) — global convenience wrapper
- *   ✅ var hitMarkerSystem — global singleton
- *   ✅ INTEGRATED: hitMarkerSystem.update(dt) + .draw() wired into game.js loop
+ * Integration:
+ *   game.js → particleSystem.update(dt) + .draw()
+ *   game.js → floatingTextSystem.update(dt) + .draw()
+ *   game.js → hitMarkerSystem.update(dt) + .draw()
+ *   game.js → weatherSystem.update(dt, camera) + .draw()
+ *   game.js → updateOrbitalEffects(dt, players) + drawOrbitalEffects()
+ *   game.js → decalSystem.update(dt) + .draw()
+ *   game.js → shellCasingSystem.update(dt) + .draw()
+ *   game.js → waveAnnouncementFX.update(dt) + .draw()
  *
- * GLITCH WAVE (v8 — unchanged):
- *   ✅ drawGlitchEffect(intensity, controlsInverted) — top-level export
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.62   Particle                 pooled particle entity (circle/binary/afterimage/zanzo/slash_arc/steam)
+ *  L.321  ParticleSystem           update + draw, MAX_PARTICLES cap
+ *  L.477  FloatingText             pooled damage/heal/status number popup
+ *  L.818  FloatingTextSystem       stack-offset, pool reuse, swap-and-pop
+ *  L.898  HitMarker                X-crosshair at impact point (normal/crit)
+ *  L.1032 HitMarkerSystem          update + draw
+ *  L.1100 spawnHitMarker()         convenience wrapper
+ *  L.1112 Raindrop / Snowflake     weather particle entities
+ *  L.1195 WeatherSystem            rain/snow atmospheric system
+ *  L.1300 MeteorStrike             falling meteor warning + impact zone
+ *  L.1383 spawnParticles()         global convenience spawn wrapper
+ *  L.1387 spawnFloatingText()      global convenience spawn wrapper
+ *  L.1410 drawGlitchEffect()       glitch-wave screen distortion overlay
+ *  L.1624 spawnWanchaiPunchText()  Auto stand-rush impact text spawner
+ *  L.1644 OrbitalParticle          pooled orbital ring particle
+ *  L.1750 OrbitalParticleSystem    per-player orbital ring manager
+ *  L.1830 initOrbitalSystems()     create one system per player slot
+ *  L.1836 updateOrbitalEffects()   tick all orbital systems
+ *  L.1861 drawOrbitalEffects()     draw all orbital systems
+ *  L.1879 Decal                    persistent floor decal (blood/scorch)
+ *  L.1954 DecalSystem              update + draw, fade-out over lifetime
+ *  L.2012 ShellCasing              physics-simulated ejected brass
+ *  L.2093 ShellCasingSystem        update + draw shell casings
+ *  L.2155 WaveAnnouncementFX       full-screen wave-start cinematic
+ *  L.2453 spawnZanzoTrail()        Pat Zanzo Flash afterimage trail
+ *  L.2479 spawnBloodBurst()        enemy death blood burst
+ *  L.2520 spawnKatanaSlashArc()    Pat katana slash arc spawn helper
  *
- * PERFORMANCE (v12 — Swap-and-pop + OrbitalParticle Pool pass):
- *   ✅ ParticleSystem.MAX_PARTICLES = 150  — hard cap; oldest particle evicted
- *   ✅ Particle.draw(): shadowBlur skipped for particles with rendered radius < 3 px
- *
- *   ✅ OBJECT POOL — Particle (up to 300 instances recycled, zero `new` after warm-up):
- *        Particle._pool[]         static array of waiting instances
- *        Particle.acquire(...)    pulls from pool or allocates; always calls reset()
- *        Particle.reset(...)      re-initialises a live instance in-place
- *        Particle.release()       returns the instance to the pool for reuse
- *        ParticleSystem.spawn()   → Particle.acquire() instead of `new Particle()`
- *        ParticleSystem.update()  → swap-and-pop O(1) + dead particles returned via p.release()
- *        ParticleSystem.clear()   → all particles released before array is emptied
- *
- *   ✅ OBJECT POOL — FloatingText (up to 80 instances recycled):
- *        Same pattern: FloatingText._pool[], acquire(), reset(), release()
- *        FloatingTextSystem.update() → swap-and-pop O(1)
- *
- *   ✅ OBJECT POOL — OrbitalParticle (up to 40 instances recycled) [NEW v12]:
- *        OrbitalParticle._pool[], acquire(), reset(), release()
- *        OrbitalParticleSystem.update()     → swap-and-pop O(1) + pool release
- *        OrbitalParticleSystem.spawnParticle() → OrbitalParticle.acquire()
- *        OrbitalParticleSystem.clear()      → releases all live particles to pool
- *        OrbitalParticle.draw()             → viewport cull + shadowBlur guard
- *
- *   ✅ SWAP-AND-POP O(1) everywhere [NEW v12]:
- *        ParticleSystem.update(), FloatingTextSystem.update(),
- *        HitMarkerSystem.update(), WeatherSystem.update(),
- *        OrbitalParticleSystem.update() — all replaced splice(i,1) with swap-and-pop.
- *        Z-order impact: none (particles/texts/markers are additive visuals, no depth ordering).
- *
- *   ✅ VIEWPORT CULL — Particle.draw() + OrbitalParticle.draw() [OrbitalParticle new v12]:
- *        Canvas-bounds check before any ctx calls.
+ * ⚠️  spawnParticles() and spawnFloatingText() are called everywhere in the codebase —
+ *     never rename or change their signatures without a full grep pass.
+ * ⚠️  OrbitalParticle pool cap is 40 — spawning beyond this silently drops oldest.
+ *     initOrbitalSystems() must be called after player creation, not at file load.
+ * ⚠️  WaveAnnouncementFX.draw() writes directly to CTX global — must be called
+ *     last in the render pass to overlay everything else.
+ * ════════════════════════════════════════════════
  */
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Particle System
 // ──────────────────────────────────────────────────────────────────────────────

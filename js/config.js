@@ -1,29 +1,67 @@
 'use strict';
 /**
- * ⚙️ MTC: ENHANCED EDITION - Configuration
- * Single source of truth for ALL game constants and balance values.
+ * js/config.js
+ * ════════════════════════════════════════════════
+ * Single source of truth for ALL game constants, balance values, UI strings,
+ * map config, shop items, and achievement definitions.
+ * 1770 lines — load order: FIRST after base.js (everything reads from here).
  *
- * ── FILE MAP (for AI assistants) ──────────────────────────────
- * BALANCE            → runtime game constants (enemies, characters, bosses)
- *   .physics         → friction / acceleration
- *   .player          → shared player mechanics (obstacle, secondWind)
- *     .auto          → ⚠️ DEPRECATED — use BALANCE.characters.auto
- *   .characters      → per-character stat blocks (kao / auto / poom / pat)
- *   .boss / .powerups / .waves / .score / .ai / .map / .LIGHTING
- * GAME_CONFIG        → engine settings (canvas, audio volumes, abilities)
- *   .abilities.ritual → shared ritual mechanic values (read by PoomPlayer.js)
- * VISUALS            → palette + aura constants for renderers
- * SHOP_ITEMS         → array of purchasable upgrades
- * ACHIEVEMENT_DEFS   → array of achievement definitions
- * GAME_TEXTS         → all UI strings + tutorial copy
- * MAP_CONFIG         → terrain draw constants for MapSystem.drawTerrain()
+ * ── CONSTANT MAP ─────────────────────────────────────────────
+ *  WAVE_SCHEDULE      wave modifier schedule (fog/speed/glitch/boss/maxWaves)
+ *  BALANCE            runtime gameplay constants — subkeys below:
+ *    .physics          friction, acceleration
+ *    .player           shared mechanics (obstacle avoidance, secondWind)
+ *      .auto           ⚠️ DEPRECATED — use BALANCE.characters.auto
+ *    .characters       per-character stat blocks:
+ *      .kao            stealth, teleport, clone, passives, weapon modes
+ *      .auto           heat gauge, wanchai stand, vacuum, detonation, rage mode
+ *      .poom           rice, naga, garuda, ritual, cosmic balance
+ *      .pat            katana, blade guard, zanzo, iaido, ronin's edge
+ *    .boss             shared boss constants
+ *    .manop            KruManop phases, ChalkWall, DogPackCombo
+ *    .first            KruFirst domain, physics formula zones, SUVAT
+ *    .powerups         powerup drop rates + values
+ *    .waves            wave event configs (fog/speed/glitch/dark)
+ *    .score            score multipliers
+ *    .ai               UtilityAI constants (read by UtilityAI.js only)
+ *    .map              world size, camera, lighting
+ *    .database         MTC Database Server position + radius (proxy source)
+ *    .shop             MTC Co-op Store position, radius, slot count, costs
+ *    .mtcRoom          MTC Room buff terminal config
+ *    .objects          map object visual constants
+ *    .LIGHTING         ambient light levels per zone
+ *  GAME_CONFIG        engine settings (canvas, audio volumes, ability tuning)
+ *    .abilities.ritual  Poom ritual shared mechanic values
+ *  SHOP_ITEMS         array of purchasable upgrades (id, cost, charReq, effects)
+ *  VISUALS            palette + aura constants for renderers
+ *  ACHIEVEMENT_DEFS   array of achievement definitions
+ *  GAME_TEXTS         all UI strings + tutorial copy + admin console strings
+ *  MAP_CONFIG         terrain draw constants for MapSystem.drawTerrain()
  *
- * ── OWNERSHIP RULES ───────────────────────────────────────────
- * • Stat tied to one character only → BALANCE.characters.<id>
- * • Mechanic shared / could apply to another character → GAME_CONFIG.abilities
- * • Visual color / alpha → VISUALS or BALANCE.map.mapColors / BALANCE.objects
- * • String shown in UI → GAME_TEXTS
- * • AI reads GAME_CONFIG.ai for UtilityAI.js — edit there only
+ * ── OWNERSHIP RULES ──────────────────────────────────────────
+ *  Stat tied to one character          → BALANCE.characters.<id>
+ *  Mechanic shared / multi-character   → GAME_CONFIG.abilities
+ *  Visual color / alpha                → VISUALS or BALANCE.map.mapColors
+ *  String shown in UI                  → GAME_TEXTS
+ *  AI tuning                           → GAME_CONFIG.ai (UtilityAI.js reads here)
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.29   API_KEY                  Gemini key (from CONFIG_SECRETS or '')
+ *  L.37   WAVE_SCHEDULE            frozen wave modifier schedule
+ *  L.47   BALANCE                  main balance object (see subkey map above)
+ *  L.945  SHOP_ITEMS               purchasable upgrade definitions
+ *  L.1016 GAME_CONFIG              engine + ability settings
+ *  L.1127 VISUALS                  colour palette + aura constants
+ *  L.1164 ACHIEVEMENT_DEFS         achievement id/label/condition definitions
+ *  L.1207 GAME_TEXTS               all UI/tutorial/admin strings
+ *  L.1518 MAP_CONFIG               terrain rendering constants
+ *
+ * ⚠️  BALANCE.player.auto is DEPRECATED — grep before removing to confirm no readers.
+ * ⚠️  BALANCE.database / BALANCE.shop positions must match MAP_CONFIG aura paths —
+ *     if you move the shop/DB server, update both blocks.
+ * ⚠️  GAME_TEXTS strings are referenced by key in GAME_TEXTS.admin.* and
+ *     GAME_TEXTS.shop.* — do NOT rename keys without grepping all call sites.
+ * ════════════════════════════════════════════════
  */
 
 const API_KEY = (typeof CONFIG_SECRETS !== 'undefined' && CONFIG_SECRETS.GEMINI_API_KEY)

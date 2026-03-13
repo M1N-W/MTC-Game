@@ -1,5 +1,65 @@
 'use strict';
 /**
+ * js/ui.js
+ * ════════════════════════════════════════════════
+ * All DOM + Canvas HUD systems: achievements, shop panel, skill icons,
+ * boss HP bar, combo UI, minimap radar, voice bubbles, boss speech.
+ * 2419 lines — largest UI file in the project.
+ *
+ * Design notes:
+ *   - Four classes exported to window.*: AchievementSystem, AchievementGallery,
+ *     ShopManager, UIManager, CanvasHUD. Instantiated at bottom of file.
+ *   - PORTRAITS (L.391) is a plain object of inline SVG strings keyed by charId.
+ *     Add new character portrait here when adding a 5th character.
+ *   - UIManager.setupCharacterHUD() must be called after character selection —
+ *     it wires skill slot IDs, portrait SVG, theme class, and mobile button labels.
+ *   - CanvasHUD draws directly onto the game canvas each frame (combo, ammo pill,
+ *     stand meter warning, minimap). No DOM for these elements.
+ *   - ShopManager owns the shop DOM panel only — buy/roll logic lives in ShopSystem.js.
+ *   - High-score static display wired via DOMContentLoaded at L.2408.
+ *
+ * Singleton instances (bottom of file):
+ *   window.Achievements   = new AchievementSystem()
+ *   window.ShopManager    = ShopManager   (class ref, not instance — used as static)
+ *   window.UIManager      = UIManager
+ *   window.CanvasHUD      = CanvasHUD
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.40   AchievementSystem         unlock/check/persist achievements
+ *  L.198  AchievementGallery        render achievement card grid in DOM
+ *  L.287  ShopManager               DOM shop panel: open/close/render items
+ *  L.388  PORTRAITS                 inline SVG map keyed by charId
+ *  L.845  UIManager                 skill HUD wiring, boss HP bar, voice bubbles,
+ *                                   boss speech, cooldown arcs per character
+ *  L.948  .voiceBubble()            queue-based military HUD chip (canvas)
+ *  L.1057 .bossSpeech()             typewriter reveal, per-frame reposition
+ *  L.1133 .initSkillNames()         static slot labels from GAME_TEXTS.skillNames
+ *  L.1150 .setupCharacterHUD()      full HUD rewire on character select
+ *  L.1530 .updateSkillIcons()       per-frame cooldown arc updates
+ *  L.1564 .updateSkillIcons Pat     zanzo / blade-guard / iaido arcs
+ *  L.1646 .updateSkillIcons Poom    eat / naga / ritual / garuda arcs
+ *  L.1686 .updateSkillIcons Auto    wanchai / vacuum / detonation arcs
+ *  L.1735 .updateSkillIcons Kao     teleport charges / clone arc
+ *  L.1859 CanvasHUD                 combo counter, ammo pill, stand warning, minimap
+ *  L.2039 .drawMinimap()            radar: sweep, POI, enemies, boss, player dot
+ *  L.2375 addCombo()                combo counter increment + shake/scale impulse
+ *  L.2397 Achievements (instance)   window.Achievements singleton
+ *  L.2408 DOMContentLoaded          high-score static display init
+ *
+ * ⚠️  setupCharacterHUD() must be called AFTER window.player is assigned —
+ *     it reads player.constructor.name and player stats for slot labelling.
+ * ⚠️  CanvasHUD methods draw to the shared CTX — always ctx.save()/restore().
+ *     Drawing order relative to game entities is set by drawGame() in game.js.
+ * ⚠️  Minimap radar blackout during fog waves reads window.isFogWave (WaveManager).
+ *     If WaveManager.js loads after ui.js, first-frame radar will briefly show
+ *     (harmless — isFogWave defaults falsy).
+ * ⚠️  AchievementSystem.unlock() guards against duplicate unlocks via _unlocked Set.
+ *     Old code path used unlock(string) which left stale `undefined` entries —
+ *     fully cleaned up but do not re-introduce string-key unlock calls.
+ * ════════════════════════════════════════════════
+ */
+
+/**
  * MTC: ENHANCED EDITION - UI System (REFACTORED)
  *
  * CHANGES (Stability Overhaul):

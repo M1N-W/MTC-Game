@@ -1,7 +1,44 @@
 'use strict';
 /**
  * js/entities/base.js
+ * ════════════════════════════════════════════════
+ * Root entity class, HealthComponent, and shared Stand-Aura/Afterimage system.
+ * Everything in the game that moves or takes damage extends from here.
  *
+ * Design notes:
+ *   - Entity does NOT set hp/maxHp/dead — subclasses using HealthComponent expose
+ *     these as proxy getters. Subclasses without it must set them manually.
+ *   - applyPhysics() enforces DomainExpansion boundary lock when phase === 'active'.
+ *   - _steerAroundObstacles() uses a 5-ray probe arc for smooth wall avoidance.
+ *     O(obj_count × 5) per entity per frame — skip guard exits early if no objects.
+ *   - _standAura_draw() and _standAura_update() are standalone functions, not methods,
+ *     so they can be called from both PlayerRenderer and BossRenderer without coupling.
+ *
+ * Load order: FIRST script in index.html — all other entity files depend on this.
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.28   Entity                   base class (x, y, vx, vy, radius, angle)
+ *  L.39   .applyPhysics()          integrate velocity + domain boundary clamp
+ *  L.63   ._steerAroundObstacles() 5-ray AABB repulsion steering
+ *  L.128  .isOnScreen()            viewport cull check via worldToScreen()
+ *  L.141  STAND_SYMBOLS            math-symbol pool for aura ring
+ *  L.155  HealthComponent          hp/maxHp/dead + hitFlashTimer component
+ *  L.173  .tick()                  decay hitFlashTimer
+ *  L.181  .takeDamage()            damage + flash + death callback
+ *  L.198  .heal()                  clamp to maxHp (or custom cap)
+ *  L.206  _standAura_update()      rotate aura, spawn afterimage ghosts
+ *  L.249  _standAura_draw()        5-layer aura: afterimages, glow ring,
+ *                                  symbol ring, core pulse, chromatic aberration
+ *
+ * ⚠️  hp/maxHp/dead are NOT on Entity.prototype — never read them from a bare
+ *     Entity reference. Always access via the subclass or HealthComponent.
+ * ⚠️  _steerAroundObstacles() must be called BEFORE applyPhysics() in enemy update().
+ * ⚠️  _standAura_draw() calls ctx.save()/restore() internally — safe to call mid-pass,
+ *     but must be called in the render pass only (no state side effects).
+ * ════════════════════════════════════════════════
+ */
+
+/** 
  * ► Base Entity class
  * ► Stand-Aura & Afterimage shared helpers (_standAura_update, _standAura_draw)
  *

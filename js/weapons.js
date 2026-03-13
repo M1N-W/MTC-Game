@@ -1,69 +1,62 @@
 "use strict";
 /**
- * 🔫 MTC: ENHANCED EDITION - Weapon System
- * Beautiful 3D-style gun models + Auto Rifle Burst Fire
+ * js/weapons.js
+ * ════════════════════════════════════════════════
+ * Projectile logic, WeaponSystem (fire pipeline + weapon art), SpatialGrid
+ * broadphase, ProjectileManager collision, and character weapon draw functions.
+ * 2596 lines.
  *
- * COLLISION OPTIMIZATION (v2 — Spatial Grid pass):
- *   ✅ SpatialGrid class — O(E) build, O(P×k) query (k = avg enemies/cell ≈ 4)
- *      Replaces O(P×E) brute-force enemy scan in ProjectileManager.update().
- *      Cell size: 128 px (safely larger than max collision radius ~20 px).
- *      9-cell neighbourhood query (3×3 block) prevents missed hits at cell edges.
- *   ✅ ProjectileManager.update() — reverse loop + swap-and-pop O(1) removal
- *      (replaces splice O(n); reverse order makes swap safe — index never skipped).
- *   ✅ ProjectileManager — _grid instance reused every frame (no per-frame alloc).
+ * Design notes:
+ *   - WeaponSystem governs Kao's weapon modes only (auto/sniper/shotgun).
+ *     Poom bypasses it entirely — PoomPlayer.shoot() fires directly.
+ *   - SpatialGrid: O(E) build, O(P×k) query (k ≈ 4). Cell size 128 px.
+ *     9-cell 3×3 neighbourhood prevents missed hits at cell edges.
+ *   - ProjectileManager.update() uses reverse loop + swap-and-pop O(1) removal.
+ *   - All BALANCE reads use BALANCE.characters[activeChar] — never BALANCE.player.weapons.
+ *   - drawPoomWeapon() / drawKaoGunEnhanced() are standalone draw functions called
+ *     from WeaponSystem.drawWeaponOnPlayer() — not methods on any player class.
  *
- * ROLLBACK (1 line): in ProjectileManager.update(), swap the spatial-grid block back to:
- *   for (let enemy of enemies) { if (!enemy.dead && proj.checkCollision(enemy)) { … } }
- *   and restore splice(i,1) in place of the swap-and-pop at the bottom.
+ * Integration:
+ *   game.js      → weaponSystem.update(dt) + projectileManager.update(dt, player, enemies, boss)
+ *   game.js      → weaponSystem.drawWeaponOnPlayer(player)  (render pass)
+ *   game.js      → weaponSystem.setActiveChar(charType)     (on game start)
+ *   AutoPlayer   → projectileManager.spawnWanchaiPunch() / spawnHeatWave()
  *
- * FIXED BUGS (refactor):
- * - All BALANCE.player.weapons.* → BALANCE.characters[this.activeChar].weapons.*
- * - All BALANCE.player.critMultiplier → BALANCE.characters[this.activeChar].critMultiplier
- * - WeaponSystem stores this.activeChar, set via setActiveChar(charType) in startGame
- * - Guard clauses in updateWeaponUI / getWeaponData prevent crash when char unset
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.72   Projectile               base projectile entity
+ *  L.100  .getSymbol()             crit/team symbol for floating text
+ *  L.106  .update()                move + lifetime decay
+ *  L.171  .draw()                  full multi-variant projectile renderer:
+ *                                  punch fist, rice cluster, plasma tracer,
+ *                                  shotgun shrapnel, sniper lance/railgun,
+ *                                  katana slash wave
+ *  L.1023 .checkCollision()        circle vs circle hit test
+ *  L.1039 WeaponSystem             weapon state, fire pipeline, weapon art
+ *  L.1056 .setActiveChar()         set character → loads weapon config
+ *  L.1067 .getCharWeapons()        read weapon list from BALANCE.characters
+ *  L.1113 .updateWeaponUI()        sync weapon HUD slots
+ *  L.1186 .canShoot()              cooldown + burst gate
+ *  L.1192 .shoot()                 entry point → updateBurst or shootSingle
+ *  L.1221 .shootSingle()           spawn projectile + muzzle FX + audio
+ *  L.1338 .drawWeaponOnPlayer()    dispatch to drawKaoGunEnhanced/drawSniper/drawShotgun
+ *  L.1486 SpatialGrid              broadphase grid for enemy collision
+ *  L.1554 ProjectileManager        update/draw/clear all live projectiles
+ *  L.1566 .update()                collision: player→boss, player→enemy (spatial grid)
+ *  L.1712 .spawnWanchaiPunch()     Auto stand punch projectile spawner
+ *  L.1726 .spawnHeatWave()         Auto heat-wave arc spawner
+ *  L.1776 weaponSystem             window.weaponSystem singleton
+ *  L.1777 projectileManager        window.projectileManager singleton
+ *  L.1783 drawPoomWeapon()         Poom bamboo launcher draw function
+ *  L.1972 drawKaoGunEnhanced()     Kao multi-weapon model draw function
  *
- * AUDIO NOTE (Poom character sounds):
- * - Poom's shooting sound (Audio.playPoomShoot) is called inside
- * PoomPlayer.shoot() in js/entities/player.js, NOT here.
- * Reason: Poom bypasses WeaponSystem entirely — his projectile is fired
- * directly via PoomPlayer.shoot() which reads his rice* stats from BALANCE.
- * WeaponSystem only governs Kao's auto/sniper/shotgun weapon modes.
- * - Naga hit sound (Audio.playNagaAttack) is called inside
- * NagaEntity.update() in js/entities/player.js with a 220 ms cooldown
- * to prevent rapid-tick audio stacking.
- *
- * ── TABLE OF CONTENTS ──────────────────────────────────────────
- *  L.72   class Projectile
- *           constructor / getSymbol / update (ricochet) / draw / checkCollision
- *
- *  L.734  class WeaponSystem                 (Kao weapons only — Poom/Auto/Pat bypass)
- *           setActiveChar / getCharWeapons / switchWeapon / updateWeaponUI
- *           getWeaponData / update / shoot / updateBurst / shootSingle ← muzzle offsets here
- *           drawWeaponOnPlayer / drawAutoRifle / drawSniper / drawShotgun
- *
- *  L.1072 class SpatialGrid                  O(E) build, O(P×k) query — cell=128px
- *           build / query
- *
- *  L.1137 class ProjectileManager
- *           add / update ← collision routing + Pat reflect here / draw / clear / getAll
- *           spawnWanchaiPunch / spawnHeatWave
- *
- *  L.1310 Singletons: weaponSystem, projectileManager
- *
- *  L.1317 Standalone weapon art functions (called from PlayerRenderer)
- *           drawPoomWeapon / drawKaoGunEnhanced / drawAutoWeapon
- *
- *  L.1817 class ProjectileRenderer            thin shim — delegates to Projectile.draw()
- *
- * ── CRITICAL PITFALLS ──────────────────────────────────────────
- *  • Reflect (Pat Blade Guard): set proj.team='player' AND proj.owner='player'
- *    proj.team controls routing in update() — owner alone does nothing
- *  • Poom bypasses WeaponSystem — never route Poom through shootSingle()
- *  • Pat bypasses WeaponSystem — _doKatanaAttack() in PatPlayer.js handles shoot
- *  • Muzzle offsets live in shootSingle() MUZZLE_OFFSETS table — update there
- *    when adding new characters or changing weapon draw translate values
- *  • SpatialGrid queries enemy projectiles only — player→player never checked
- * ════════════════════════════════════════════════════════════════
+ * ⚠️  Poom's shoot sound (Audio.playPoomShoot) is called in PoomPlayer.shoot(),
+ *     NOT here. WeaponSystem does not handle Poom fire at all.
+ * ⚠️  triggerHitStop() in ProjectileManager.update() still passes ms values (60/20) —
+ *     legacy shim handles conversion. Do not normalise to seconds without updating
+ *     all call sites simultaneously.
+ * ⚠️  SpatialGrid is rebuilt every frame in ProjectileManager.update() — do NOT
+ *     cache it across frames as enemy positions change each tick.
+ * ════════════════════════════════════════════════
  */
 
 // ============================================================================

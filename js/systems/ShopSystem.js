@@ -1,4 +1,47 @@
 'use strict';
+/**
+ * js/systems/ShopSystem.js
+ * ════════════════════════════════════════════════
+ * Shop rendering, proximity detection, open/close lifecycle, item rolling,
+ * reroll, and per-item buy logic. Extracted from game.js.
+ *
+ * Design notes:
+ *   - All config (position, radius, costs, slot count) lives in BALANCE.shop (config.js).
+ *     MTC_SHOP_LOCATION is a live proxy — reads from BALANCE.shop at access time.
+ *   - ShopManager (class in ui.js) owns the DOM panel; this file owns the game-side
+ *     logic (state mutation, score deduction, player property writes).
+ *   - rollShopItems() uses swap-and-pop (O(1)) to avoid GC churn in pool draw.
+ *   - speedWave item writes shopSpeedBoostActive/shopSpeedBoostTimer — NOT the
+ *     dead _speedWaveTimer/_speedWaveMult props (BUG 2 fix).
+ *   - shield duplicate-purchase guard fires BEFORE score deduction (BUG 6 fix).
+ *
+ * Integration:
+ *   game.js      → drawShopObject()         (render pass, canvas)
+ *   game.js      → updateShopProximityUI()  (every frame, DOM)
+ *   input.js     → openShop() / closeShop() (B key)
+ *   ui.js        → ShopManager.renderItems() called after every buy/reroll
+ *   config.js    → BALANCE.shop             sole source of truth for all values
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.10   MTC_SHOP_LOCATION         live proxy → BALANCE.shop.{x,y,interactionRadius}
+ *  L.21   drawShopObject()          proximity aura ring + [B] label on canvas
+ *  L.57   updateShopProximityUI()   show/hide #shop-prompt, #shop-hud-icon, #btn-shop
+ *  L.72   openShop()                PLAYING→PAUSED + ShopManager.open()
+ *  L.85   closeShop()               PAUSED→PLAYING + key state flush
+ *  L.104  window.currentShopOffers  live offer array [{item, soldOut}]
+ *  L.107  rollShopItems()           filters pool by charReq, fills slotCount offers
+ *  L.123  rerollShop()              deducts rerollCost, re-rolls, re-renders
+ *  L.137  buyItem(slotIndex)        full purchase handler for all item IDs
+ *
+ * ⚠️  drawShopObject() reads worldToScreen() — must be called in render pass, not update.
+ * ⚠️  charReq filtering in rollShopItems() uses constructor name lowercased minus 'player'.
+ *     If a new character's class name deviates from this pattern, items won't show.
+ * ⚠️  speedWave stacks duration additively but resets base speed on first activation only
+ *     (_baseMoveSpeed guard). Buying twice extends timer, does NOT re-multiply speed.
+ * ⚠️  cdr item compounds (×= factor) and floors at 0.1 — buying 10+ times approaches
+ *     but never reaches zero. Intentional.
+ * ════════════════════════════════════════════════
+ */
 
 // ══════════════════════════════════════════════════════════════
 // 🛒 SHOP SYSTEM (extracted from game.js)

@@ -151,6 +151,13 @@ SquadAI._assignRole() — basic enemies can only be FLANKER or ASSAULT:
   SHIELD role is assigned exclusively to type==='tank' (hard-coded above the budget check)
   shieldCount budget has no effect on basic enemy assignment — do not add shield logic there
 
+KaoPlayer stealth properties — two distinct states, both can be true simultaneously:
+  isInvisible        — R-Click Skill Stealth (PlayerBase), enemies cannot see player
+  isFreeStealthActive — Free-Stealth passive state (auto-triggered by dash or bullet-pass-through)
+                        damage ×1.5, guaranteed crit, kills count toward Lv2 passive
+  ❌  Do NOT conflate these — PlayerRenderer and fireWeapon() check them independently
+  ❌  Old name isFreeStealthy is REMOVED — will cause silent undefined = falsy bugs if used
+
 ---
 
 6. Global Variable Patterns
@@ -230,18 +237,14 @@ Phase 4 static helpers (call before LAYER 1 save block):
     — baseRx/Ry: Auto(16,6), Poom(14,5), Pat(16,5.5), Base/Kao(14,5)
   PlayerRenderer._drawGroundFeet(ctx, sx, sy, limb, color, entity)
     — two 3.5×2px foot dots, alternating L/R via walkCycle
-    — auto-skip if isInvisible/isFreeStealthy or moveT < 0.05
+    — auto-skip if isInvisible/isFreeStealthActive or moveT < 0.05
   limbXxx alias required — pass like: { ...limbAuto, bobOffsetY }
 
 Muzzle Offsets (shootSingle in weapons.js):
-  Character | Weapon            | Offset
-  ----------|-------------------|-------
-  Kao       | Auto rifle        | 49px
-  Kao       | Sniper            | 69px
-  Kao       | Shotgun           | 45px
-  Poom      | Spirit gun        | 43px
-  Auto      | Thermodynamic     | 51px
-  Pat       | Katana slash wave | 44px
+  Each character+weapon combo has a distinct barrel offset (px).
+  Source of truth: shootSingle() in weapons.js — grep 'barrelOffset' or 'muzzleOffset'.
+  ⚠️ KaoPlayer bypasses shootSingle() entirely → muzzle offset lives in KaoPlayer.fireWeapon().
+     Adding a new Kao weapon requires adding its offset there, not in weapons.js.
 
 ---
 
@@ -272,25 +275,21 @@ Singleton pattern in effects.js:
 
 11. AutoPlayer Heat Tier System
 
-  Tier      | Range   | config keys                    | Effect
-  ----------|---------|--------------------------------|--------------------------------------
-  COLD      | 0–33%   | coldDamageMult(0.75)           | dmg ×0.75, speed ×0.90
-  WARM      | 34–66%  | heatDmgWarm(1.10)              | dmg ×1.10, punch rate ×0.92 (heatPunchRateWarm)
-  HOT       | 67–99%  | heatDmgHot(1.20)               | dmg ×1.20, punch rate ×0.85 (heatPunchRateHot)
-  OVERHEAT  | 100%    | heatDmgOverheat(1.30)          | dmg ×1.30, crit +12%, HP drain 5/s
+Four tiers: COLD → WARM → HOT → OVERHEAT (0–100% heat meter).
+Each tier applies damage multipliers, punch rate factors, and at OVERHEAT: crit bonus + HP drain.
 
-config.js is ALWAYS source of truth — ?? fallbacks in AutoPlayer.js must match exactly.
-heatCritBonusOverheat: 0.12 | heatHpDrainOverheat: 5 | standCritBonus: 0.18
+config.js is ALWAYS source of truth — verify ?? fallback values in AutoPlayer.js match config exactly.
+Key config fields: coldDamageMult, heatDmgWarm, heatDmgHot, heatDmgOverheat,
+                   heatCritBonusOverheat, heatHpDrainOverheat,
+                   standMeterDrainRate, standMeterDrainCold, standMeterDrainOverheat,
+                   standMeterPerHit, standMeterOnKill, standCritBonus
 
-Stand Meter drain multipliers (config keys — critical, were wrong pre-v3.30.10):
-  standMeterDrainRate: 8/s   (normal)
-  standMeterDrainCold: 3.0   (×3.0 — real penalty, max ~3.3s)   ← was ?? 1.30 (wrong)
-  standMeterDrainOverheat: 2.0 (×2.0 — faster burn, max ~6s)    ← was ?? 0.50 (wrong)
+Stand Meter drain multipliers have direction-specific hazards (COLD = penalty, OVERHEAT = faster burn).
+Wrong ?? fallbacks caused pre-v3.30.10 bugs — always verify against config.js before editing.
 
-Stand Meter fill: standMeterPerHit: 1 | standMeterOnKill: 12
-
-Wanchai (R-Click) active changes Q: Stand Pull (range 380px) instead of Vacuum Pull.
-Cooldown key: standPullCooldown: 10 vs vacuumCooldown: 6 — HUD arc max must be dynamic.
+Wanchai (R-Click) active: Q becomes Stand Pull instead of Vacuum Pull.
+HUD arc max for Q must be dynamic (read from config key, not hard-coded) because
+standPullCooldown ≠ vacuumCooldown.
 
 ---
 
@@ -311,9 +310,7 @@ Energy cost pattern — use in every skill activation:
       this.doSkill();
   }
 
----
-
-13. Adding New Content — Checklist
+### 13. Adding New Content — Checklist
 
 New playable character:
   js/entities/player/[Name]Player.js (extends PlayerBase)
@@ -327,6 +324,7 @@ New playable character:
   weapons.js — if character has unique weapon mechanics (e.g., projectile reflection)
   PlayerBase.js — if character needs unique speed/property modifiers
   .agents/skills/MTC-Game's skills for Claude/mtc-rendering.skill — ถ้ามีการแก้ renderer logic
+  **Header Documentation — add module-level JSDoc header (see §18)**
 
 New enemy:
   enemy.js (extends EnemyBase), config.js, WaveManager.js, audio.js, effects.js
@@ -491,42 +489,7 @@ Header format (established pattern from this project):
    * ════════════════════════════════════════════════
    */
 
-Completed headers (as of March 12, 2026):
-  ✅  js/ai/EnemyActions.js
-  ✅  js/ai/PlayerPatternAnalyzer.js
-  ✅  js/ai/SquadAI.js
-  ✅  js/ai/UtilityAI.js
-  ✅  js/menu.js
-  ✅  js/tutorial.js
-  ✅  js/map.js
-  ✅  css/main.css
-  ✅  js/rendering/PlayerRenderer.js
-  ✅  js/game.js
-  ✅  js/entities/player/KaoPlayer.js
-
-Priority queue (do next, largest navigation value):
-  🔲  js/entities/enemy.js      (EnemyBase + 3 enemy classes, AI integration)
-  🔲  js/entities/player/PlayerBase.js
-  🔲  js/entities/player/AutoPlayer.js
-  🔲  js/entities/player/PoomPlayer.js
-  🔲  js/entities/player/PatPlayer.js
-  🔲  js/rendering/BossRenderer.js
-  🔲  js/entities/boss/ManopBoss.js
-  🔲  js/entities/boss/FirstBoss.js
-  🔲  js/entities/boss/boss_attacks_manop.js
-  🔲  js/entities/boss/boss_attacks_first.js
-  🔲  js/systems/WaveManager.js
-  🔲  js/systems/ShopSystem.js
-  🔲  js/ui.js
-  🔲  js/config.js
-  🔲  js/effects.js
-  🔲  js/weapons.js
-  🔲  js/audio.js
-  🔲  js/entities/base.js
-  🔲  js/systems/GameState.js
-  🔲  js/systems/AdminSystem.js
-  🔲  js/systems/WorkerBridge.js
-  🔲  js/workers/analyzer-worker.js
+Status: ✅ ALL files complete as of March 13, 2026 — every JS file in the project has a header.
 
 Batch capacity guide (to avoid context overflow per prompt):
   Large files (1500+ lines): 1 file per prompt
@@ -538,3 +501,25 @@ When writing a header, always:
   2. List ⚠️ pitfalls discovered during prior sessions (check §Common Debugging Solutions in PROJECT_OVERVIEW.md)
   3. Note load order dependencies
   4. Mark exports: window.Xxx = Xxx pattern
+
+Header maintenance protocol:
+  A header becomes stale when:
+    - A new class or top-level function is added to the file
+    - An existing function is moved, renamed, or removed
+    - A new ⚠️ pitfall or bug fix is discovered in a session
+    - A BALANCE key, config block, or integration point changes
+    - A file's line count shifts by more than ~20 lines (L.N references drift)
+
+  When any of the above happens in a session:
+    1. Identify which header section(s) are now wrong (TOC line numbers, notes, integration list)
+    2. Read the affected file section with grep/view to get current line numbers
+    3. Output a targeted str_replace for the stale block only — never rewrite the whole header
+    4. Update §18 status date if a full re-pass was done
+
+  Trigger phrases that should prompt a header check:
+    "added X to file Y", "moved function", "refactored", "new skill/boss/character",
+    "file changed", "line numbers shifted", "update the header"
+
+  What NOT to update proactively:
+    - Do not re-scan headers on every session — only when the file itself changed
+    - Do not bump L.N numbers for trivial whitespace/comment-only edits

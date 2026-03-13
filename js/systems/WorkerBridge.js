@@ -1,10 +1,38 @@
 'use strict';
 /**
  * js/systems/WorkerBridge.js
- * 
- * Bridges communication between the main thread and background workers.
- * Offloads heavy mathematical calculations (like PlayerPatternAnalyzer's 
- * ring buffer logic) to a background thread to prevent GC pauses and frame drops.
+ * ════════════════════════════════════════════════
+ * Main-thread bridge: routes PlayerPattern analysis to analyzer-worker.js.
+ * Falls back to window.playerAnalyzer (main thread) if Worker fails.
+ *
+ * Design notes:
+ *   - Singleton: window.WorkerBridge. Loaded after game.js (see index.html).
+ *   - Throttles postMessage to ~10Hz via _sampleAccum to match worker's
+ *     internal sample rate and prevent message queue buildup at 60fps.
+ *   - On worker message, writes _cachedPattern/_cachedDir/scores +
+ *     _workerPredReady/_workerPredX/_workerPredY directly onto window.playerAnalyzer.
+ *   - Worker errors trigger graceful fallback (_isReady = false).
+ *
+ * Integration:
+ *   game.js  → WorkerBridge.sendSample(dt, player, boss)   (every frame, boss-only)
+ *   game.js  → WorkerBridge.reset()                        (boss death / wave end)
+ *   WorkerBridge.init() called once at game start.
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.13  window.WorkerBridge       singleton object
+ *  L.14  _worker / _isReady        worker handle + health flag
+ *  L.16  _sampleAccum              10Hz throttle accumulator
+ *  L.22  .init()                   spawn Worker, wire onmessage/onerror
+ *  L.56  .sendSample()             throttled postMessage or main-thread fallback
+ *  L.80  .reset()                  reset worker state + proxy cache fields
+ *
+ * ⚠️  Worker requires HTTP/HTTPS — new Worker() fails on file:// protocol.
+ * ⚠️  reset() in worker mode skips playerAnalyzer.reset() — main-thread ring
+ *     buffer is unused when worker is active; calling reset() on it is a no-op
+ *     but misleading. Do not add it.
+ * ⚠️  sendSample sends real elapsed time (sampleAccum), not dt — worker timers
+ *     must receive wall-time delta, not per-frame delta.
+ * ════════════════════════════════════════════════
  */
 
 window.WorkerBridge = {

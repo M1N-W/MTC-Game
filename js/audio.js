@@ -1,76 +1,81 @@
 'use strict';
 /**
- * 🔊 MTC: ENHANCED EDITION - Audio System (IMPROVED)
- * Smoother, more pleasant sound effects
+ * js/audio.js
+ * ════════════════════════════════════════════════
+ * Procedural Web Audio API sound engine. All SFX synthesised at runtime —
+ * no audio files loaded. Single AudioSystem class, exported as window.Audio.
+ * 1736 lines.
  *
- * IMPROVEMENTS:
- * - Reduced volume across all sounds
- * - Softer attack/decay envelopes
- * - More pleasant frequencies
- * - Smoother transitions
+ * Design notes:
+ *   - All sounds use AudioContext oscillators/buffers routed through GainNodes.
+ *     No <audio> elements except BGM (HTMLAudioElement for streaming).
+ *   - init() must be called from a user-gesture handler (click/keydown) to
+ *     satisfy browser autoplay policy. _ensureAudioContextRunning() re-resumes
+ *     a suspended context on subsequent gestures.
+ *   - BGM uses a crossfade + HTMLAudioElement → GainNode → destination routing.
+ *     Pre-interaction BGM calls are queued and flushed on first interaction.
+ *   - playBGM() guards against same-track re-start (SAME-TRACK GUARD at L.1114).
+ *   - setSFXVolume() / setMasterVolume() adjust gain nodes live.
+ *   - playSound(name) is a generic alias required by Debug.html — maps to playHit().
  *
- * ADDITIONS (Poom character sounds — Lead Gameplay Developer pass):
- * ─────────────────────────────────────────────────────────────────
- * ✅ playPoomShoot()  — Low-mid bamboo-tube "Tuk" thump.
- * Two-layer design:
- * Layer 1 (Sine body): 130 Hz sweeps down to 55 Hz over 180 ms.
- * Models air pressure releasing from a bamboo tube.
- * Layer 2 (Triangle click): 280→100 Hz fast transient decaying in 60 ms.
- * The wooden "pop" of the launch mechanism.
- * Trigger: PoomPlayer.shoot() in player.js after projectile is created.
+ * Integration:
+ *   game.js, players, bosses → Audio.playXxx() directly
+ *   game.js                  → Audio.init() on first user gesture
+ *   game.js                  → Audio.playBGM('menu'|'game'|'boss')
  *
- * ✅ playNagaAttack() — Sharp energy burst / hiss on Naga contact.
- * Two-layer design:
- * Layer 1 (White noise + bandpass): 120 ms burst centred at 1200 Hz.
- * The mystical "sizzle" of magical energy.
- * Layer 2 (Sine shimmer): 900→1300 Hz rising sine decaying in 90 ms.
- * A sparkle accent on impact.
- * Trigger: NagaEntity.update() in player.js, rate-limited to every 220 ms
- * via this.lastSoundTime to prevent rapid-tick audio stacking.
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.76   AudioSystem              class definition
+ *  L.124  .init()                  create AudioContext, master gain, BGM gain
+ *  L.174  ._ensureAudioContextRunning()  resume suspended context
+ *  L.180  .playShootAuto/Sniper/Shotgun  weapon fire SFX (3 variants)
+ *  L.243  .playShoot()             dispatcher → weapon-type SFX
+ *  L.266  .playPoomShoot()         bamboo-tube two-layer thump
+ *  L.324  .playNagaAttack()        energy burst + sine shimmer
+ *  L.387  .playStandRush()         Auto stand-rush punch thud+snap
+ *  L.442  .playStealth()           Kao free-stealth digital swoosh
+ *  L.463  .playClone()             Kao clone activation ping
+ *  L.483  .playRiceShoot()         Poom normal shoot splat
+ *  L.507  .playRitualBurst()       Poom ritual magic explosion
+ *  L.540  .playPunch()             Auto heat-wave punch whoosh
+ *  L.582  .playVacuum()            Auto Q whoosh-pull
+ *  L.629  .playDetonation()        Auto E overheat explosion
+ *  L.683  .playPhantomShatter()    Kao clone-expiry 8-way crystal break
+ *  L.721  .playDash()              dash whoosh
+ *  L.778  .playSound()             generic alias → playHit() (Debug.html compat)
+ *  L.791  .playHit()               enemy hit SFX
+ *  L.815  .playPlayerDamage()      player damage harsh chord
+ *  L.843  .playPowerUp()           power-up chime
+ *  L.864  .playAchievement()       achievement unlock fanfare
+ *  L.893  .playWeaponSwitch()      weapon swap click
+ *  L.914  .playEnemyDeath()        enemy death pop
+ *  L.935  .playBossSpecial()       boss special attack cue
+ *  L.956  .playMeteorWarning()     meteor incoming warning
+ *  L.979  .playLevelUp()           level-up ascend tone
+ *  L.1009 .playMtcEntry()          MTC Room entry chime
+ *  L.1030 .playMtcBuff()           MTC Room buff activation ping
+ *  L.1045 .playHeal()              heal pickup tone
+ *  L.1066 .playBGM()               BGM manager — crossfade + autoplay queue
+ *  L.1287 ._crossfadeOutAndStop()  BGM fade-out helper
+ *  L.1406 .setSFXVolume()          live SFX gain adjust
+ *  L.1410 .setMasterVolume()       live master gain adjust
+ *  L.1424 .getMasterVolume()       read master gain
+ *  L.1439 .playPatSlash()          Pat slash wave SFX
+ *  L.1472 .playPatMeleeHit()       Pat melee combo contact
+ *  L.1510 .playPatReflect()        Pat Blade Guard reflect
+ *  L.1543 .playPatZanzo()          Pat Zanzo Flash teleport
+ *  L.1582 .playPatIaidoCharge()    Pat Iaido Phase 1 charge
+ *  L.1618 .playPatIaidoStrike()    Pat Iaido Phase 2 impact
+ *  L.1653 .playPatSheathe()        Pat Iaido Phase 3 sheathe
+ *  L.1684 .playShellDrop()         shell casing metallic tink
+ *  L.1727 Audio (instance)         window.Audio singleton
  *
- * ✅ playStandRush()  — Fast, heavy multi-punch audio for Auto's "Wanchai" Stand.
- * Designed for rapid firing (every ~60ms). Short punchy thud with noise impact.
- *
- * ─────────────────────────────────────────────────────────────────
- * 🐛 BUG FIX — BGM namespace collision (Senior Game Debugger pass)
- * ─────────────────────────────────────────────────────────────────
- * ROOT CAUSE:
- * The module-level declaration  `var Audio = new AudioSystem()`  at the
- * bottom of this file uses `var`, which in a global (non-module) script
- * context hoists the identifier onto `window`.  This OVERWRITES the native
- * HTML5 `Audio` constructor with an AudioSystem *instance*.  Any subsequent
- * call to `new window.Audio(path)` therefore throws:
- *
- * TypeError: window.Audio is not a constructor
- *
- * The previous workaround comment "Use the browser's Audio constructor
- * explicitly" did NOT actually work: `new window.Audio(bgmPath)` fails for
- * exactly the same reason — `window.Audio` is still the shadowed instance.
- *
- * FIX SUMMARY (three tasks, all inside playBGM / constructor / stopBGM):
- *
- * Task 1 — Immune BGM element creation:
- * Replace `new window.Audio(bgmPath)` with the DOM factory pattern:
- * this.bgmAudio     = document.createElement('audio');
- * this.bgmAudio.src = bgmPath;
- * `document.createElement` targets the `document` object directly and
- * cannot be shadowed by any `var Audio` declaration on `window`.
- *
- * Task 2 — Namespace audit result:
- * config.js — `GAME_CONFIG.audio` is a plain object property; it does
- * NOT assign to window.Audio. No changes needed.
- * game.js   — no `window.Audio =` assignment exists. No changes needed.
- * Sole collision source remains `var Audio = new AudioSystem()` below.
- * Renaming that variable would break every `Audio.playX()` call site
- * across the entire codebase; since Task 1 removes the only call that
- * depended on window.Audio as a constructor, the collision is fully
- * defused without touching call sites.
- *
- * Task 3 — Autoplay promise handling:
- * .play() rejection now sets this._bgmWaitingForInteraction = true BEFORE
- * delegating to setupRetryBGM() so the retry guard has accurate state.
- * setupRetryBGM() checks this flag before re-invoking playBGM().
- * stopBGM() clears the flag alongside the other cleanup.
+ * ⚠️  AudioContext must be created inside a user-gesture — init() is gated.
+ *     Calling any playXxx() before init() is safe (context guard exits silently).
+ * ⚠️  BGM uses HTMLAudioElement, not oscillators — subject to browser autoplay block.
+ *     Queued calls in _bgmQueue are flushed on first successful interaction.
+ * ⚠️  Do NOT rename window.Audio — many call sites use Audio.playXxx() directly.
+ *     Shadowing the browser's built-in Audio constructor is intentional here.
+ * ════════════════════════════════════════════════
  */
 
 class AudioSystem {

@@ -4,6 +4,52 @@
 
 ---
 
+## v3.34.2 — Documentation: Full JSDoc Header Standardization
+*Released: March 13, 2026*
+
+### 📝 Documentation & Code Quality
+- **Standardized JSDoc Headers**: Completed the project-wide documentation audit by adding structured module-level JSDoc headers to ALL remaining JavaScript files. Headers include load order, internal Table of Contents (TOC) with line references, and critical pitfall warnings.
+- **Project Structure Update**: Migrated all core documentation files (`PROJECT_OVERVIEW.md`, `CHANGELOG.md`, `walkthrough.md`, `commit-push.md`) to the `Markdown Source/` directory for better organization.
+- **Architecture Section**: Updated `PROJECT_OVERVIEW.md` to include "Module-level JSDoc Headers" as a key architectural pattern for improved AI assistant navigation.
+
+### 🛡️ Bug Fixes & Refactoring
+- **WaveManager Bug Fixes**:
+  - **B1 [CRITICAL]**: Fixed Glitch wave state synchronization between `window` and `GameState`.
+  - **B2 [CRITICAL]**: Fixed premature wave clearing during trickle spawning by exposing `isTrickleActive`.
+  - **B3 [MEDIUM]**: Deduplicated `rollShopItems()` calls in `startNextWave()`.
+  - **B4 [MINOR]**: Reset fog drift accumulation in `_deactivateWaveEvent()`.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/config.js (Full JSDoc Header)
+✅ MODIFIED: js/weapons.js (Full JSDoc Header)
+✅ MODIFIED: js/effects.js (Full JSDoc Header)
+✅ MODIFIED: js/systems/WaveManager.js (Full JSDoc Header + B1-B4 Fixes)
+✅ MODIFIED: js/systems/GameState.js (Full JSDoc Header)
+✅ MODIFIED: js/systems/AdminSystem.js (Full JSDoc Header)
+✅ MODIFIED: js/systems/ShopSystem.js (Full JSDoc Header)
+✅ MODIFIED: js/systems/WorkerBridge.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/base.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/enemy.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/player/PlayerBase.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/player/AutoPlayer.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/player/PoomPlayer.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/player/PatPlayer.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/boss/FirstBoss.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/boss/ManopBoss.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/boss/boss_attacks_manop.js (Full JSDoc Header)
+✅ MODIFIED: js/entities/boss/boss_attacks_first.js (Full JSDoc Header)
+✅ MODIFIED: js/rendering/BossRenderer.js (Full JSDoc Header)
+✅ MODIFIED: js/ui.js (Full JSDoc Header)
+✅ MODIFIED: js/audio.js (Full JSDoc Header)
+✅ MODIFIED: js/workers/analyzer-worker.js (Full JSDoc Header)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (File structure & Architecture)
+✅ MODIFIED: sw.js (v3.34.2)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.34.2)
+```
+
+---
+
 ## v3.34.1 — Documentation: JSDoc Headers & Stealth Logic Fix
 *Released: March 13, 2026*
 

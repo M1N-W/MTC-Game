@@ -1,6 +1,43 @@
+'use strict';
 // js/workers/analyzer-worker.js
 // Runs the PlayerPatternAnalyzer math off the main thread.
 // Communicates via postMessage with WorkerBridge.js.
+/**
+ * ════════════════════════════════════════════════
+ * Off-main-thread PlayerPattern math. Runs inside a Web Worker (no window.*).
+ * Owned by: WorkerBridge.js (main thread). Never loaded via <script> tag.
+ *
+ * Design notes:
+ *   - Mirrors WorkerAnalyzer ring-buffer logic from PlayerPatternAnalyzer.js but
+ *     self-contained — Float32Array/Int8Array only, zero DOM access.
+ *   - Samples at 10Hz internally; WorkerBridge throttles postMessage to match.
+ *   - Posts back only on cache tick (~4Hz) to minimize serialize overhead.
+ *   - Prediction: linear extrapolation only — no physics, intentionally cheap.
+ *
+ * Message protocol (in):
+ *   { type:'sample', dt, px, py, bx, by }  → sample() + conditionally update()
+ *   { type:'reset' }                        → reset()
+ *
+ * Message protocol (out, ~4Hz):
+ *   { pattern, dir, kiteScore, circleScore, standScore, predictX, predictY }
+ *   WorkerBridge writes these directly onto window.playerAnalyzer proxy fields.
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.3   ANALYZER_SAMPLES          ring-buffer capacity (~3s @ 10Hz)
+ *  L.5   WorkerAnalyzer            main class
+ *  L.28  .sample()                 push position into ring buffer
+ *  L.50  .update()                 cache-tick gate (4Hz)
+ *  L.57  ._recompute()             kite/circle/stand scoring logic
+ *  L.86  .velocityEstimate()       Δpos / sampleInterval
+ *  L.94  .predictedPosition()      linear extrapolation, capped 0.5s
+ *  L.103 .reset()                  zero all buffers + cached state
+ *  L.111 self.onmessage            message dispatcher
+ *
+ * ⚠️  Worker scope only — never add window.*, document, or canvas refs here.
+ * ⚠️  _recompute() exits early if count < 4 — scores stay at last cached values.
+ * ⚠️  predictedPosition returns null when count < 2; callers must null-check.
+ * ════════════════════════════════════════════════
+ */
 
 const ANALYZER_SAMPLES = 30; // ~3 seconds at 10Hz sample rate
 

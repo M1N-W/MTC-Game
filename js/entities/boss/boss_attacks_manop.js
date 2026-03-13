@@ -1,20 +1,48 @@
 'use strict';
 /**
  * js/entities/boss/boss_attacks_manop.js
+ * ════════════════════════════════════════════════════════════
+ * All attack objects, minions, and DomainExpansion for KruManop (ManopBoss).
+ * DomainExpansion is a singleton (Object.assign/Object.create from DomainBase);
+ * ManopBoss.update() freezes while domain is active — domain owns its own loop.
  *
- * Attack effects and minions used exclusively by KruManop (ManopBoss).
+ * Load order:
+ *   boss_attacks_shared.js → THIS FILE → BossBase.js → ManopBoss.js
  *
- * Load order: boss_attacks_shared.js → THIS FILE → BossBase.js → ManopBoss.js
+ * ── TABLE OF CONTENTS ────────────────────────────────────
+ *  L.22   BarkWave             Sonic cone shockwave; emitted on bark attack (Phase 2)
+ *  L.155  GoldfishMinion       Kamikaze sine-wave chaser minion; extends Entity
+ *  L.370  BubbleProjectile     Slow AoE orb (Phase 3); slow written to stats.moveSpeed
+ *  L.518  MatrixGridAttack     Grid area-denial with safe cell; used in DomainExpansion
+ *  L.747  _rainChar()          Helper — random char from rain pool (used in domain draw)
+ *  L.748  _shuffle()           Fisher-Yates shuffle helper for grid safe-cell selection
+ *  L.760  DomainExpansion      Boss ultimate singleton (extends DomainBase);
+ *                               Phases: SubPhase A (chalk volley) → B → C (TeacherFury)
+ *  L.1486 EquationSlam         Shockwave ring + radial chalk spikes + formula shards
+ *  L.1607 DeadlyGraph          Tracking sine-wave laser; phases: expanding→blocking→active
+ *  L.1892 ChalkWall            Ground hazard line; bounce-back on contact
  *
- * Contents:
- *   BarkWave         — Sonic cone from KruManop's bark (Phase 2)
- *   GoldfishMinion   — Kamikaze sine-wave chaser (Phase 3)
- *   BubbleProjectile — Slow AoE projectile (Phase 3)
- *   MatrixGridAttack — Area-denial zone attack (Phase 2+)
- *   DomainExpansion  — Boss ultimate — singleton
- *   EquationSlam     — Shockwave ring with formula shards
- *   DeadlyGraph      — Tracking sine-wave projectile burst
- *   ChalkWall        — Phase 2 ground hazard
+ * Window exports (L.1481, L.2023–2029):
+ *   DomainExpansion, BarkWave, GoldfishMinion, BubbleProjectile,
+ *   MatrixGridAttack, EquationSlam, DeadlyGraph, ChalkWall
+ *
+ * ⚠️  PITFALLS
+ *   • DomainExpansion is a singleton — never `new DomainExpansion()`.
+ *     Call DomainExpansion.activate(boss, player) to start.
+ *   • DomainExpansion._DC_RADIUS is exposed on window at L.1482 for
+ *     base.js applyPhysics — do NOT rename or move this assignment.
+ *   • GoldfishMinion extends Entity (not EnemyBase) — it has no UtilityAI,
+ *     no StatusEffect, and no _tickShared(). Manual update only.
+ *   • MatrixGridAttack safe-cell index is passed at construction time;
+ *     changing it mid-flight has no effect (cells are drawn from snapshot).
+ *   • DeadlyGraph phases (expanding → blocking → active) are time-gated
+ *     internally — do NOT call draw() before the first update() tick or
+ *     phase state is undefined.
+ *   • BubbleProjectile slow writes to player.stats.moveSpeed (NOT moveSpeed)
+ *     per §5 Critical Property Rules — same rule as PhysicsFormulaZone.
+ *   • Math.random() inside all draw() methods is intentional — crackle/rain
+ *     VFX must remain non-deterministic; do NOT seed or cache.
+ * ════════════════════════════════════════════════════════════
  */
 // ════════════════════════════════════════════════════════════
 // 🌊 BARK WAVE — Sonic cone emitted by KruManop's bark attack

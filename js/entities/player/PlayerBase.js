@@ -1,8 +1,58 @@
 "use strict";
 /**
  * js/entities/player/PlayerBase.js
- * * CORE PLAYER CLASS
- * Base implementation for all playable characters.
+ * ════════════════════════════════════════════════════════════════════════════
+ * Base class for all playable characters. Exported as window.Player.
+ * Contains: movement, dash, stealth, hit-flash, animation state machine,
+ * passive unlock framework, combo system, and RPG scaling multipliers.
+ *
+ * Inheritance: Player (PlayerBase) → Entity (base.js)
+ * Subclasses: KaoPlayer, AutoPlayer, PoomPlayer, PatPlayer
+ * Exports: window.Player
+ *
+ * Load order: base.js → PlayerBase.js → [character files]
+ *
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
+ *  L.61   Player                 Base class (exported as window.Player)
+ *  L.62     constructor          All shared state: health, cooldowns, anim,
+ *                                passive flags, hit-flash, combo, RPG mults
+ *  L.225    proxy getters        hp/maxHp/energy/maxEnergy — backward-compat shims
+ *  L.247    .update(dt,k,m)      Movement, dash, stealth tick, anim, collision
+ *  L.507    ._tickAnim(dt)       Animation state machine — sets _anim.state
+ *                                ⚠️ PoomPlayer overrides update() and must call this manually
+ *  L.537    .activateStealth()   R-Click stealth — sets isInvisible, starts cooldown
+ *  L.551    .breakStealth()      Clears isInvisible + ambushReady
+ *  L.559    .dash(ax, ay)        Dash impulse + dashT=1 anim trigger + cooldown
+ *  L.601    .checkPassiveUnlock() Lv1 gate: stealthUseCount >= 1
+ *                                ⚠️ Kao-only logic — Auto/Poom MUST override this method
+ *  L.735    .takeDamage(amt)     _hitFlashTimer + _hitFlashLocked + death check
+ *  L.943    .applyDevBuff()      Dev mode stat boost — _devBuffApplied flag prevents repeat
+ *
+ * ── CRITICAL PATTERNS ───────────────────────────────────────────────────
+ * Behavior flags (avoids instanceof checks in base):
+ *   passiveSpeedBonus   — speedMult added after passive unlock (0 = no bonus)
+ *   usesOwnLifesteal    — true = subclass handles lifesteal, base skips it
+ *   bladeGuardActive    — Pat only: speed × bladeGuardSpeedMult during block
+ *
+ * Hit-flash lock pattern (prevents contact damage from keeping flash permanent):
+ *   takeDamage() sets _hitFlashLocked = true
+ *   update() clears lock when _hitFlashTimer drops below 0.4
+ *   ❌ Never reset _hitFlashTimer while _hitFlashLocked is true
+ *
+ * speedBoost stateless pattern (KaoPlayer):
+ *   Subclass injects speedBoost additive BEFORE super.update(), restores AFTER.
+ *   ❌ Never persist the modified speedBoost value across frames.
+ *
+ * _anim object (init in constructor, read by PlayerRenderer._getLimbParams):
+ *   { state, t, shootT, hurtT, dashT, skillT, smoothMoveT, smoothAngle }
+ *   smoothAngle starts null → initialized on first _tickAnim tick
+ *
+ * ⚠️  checkPassiveUnlock() base checks stealth count only — wrong for Auto/Poom.
+ *     Every non-Kao subclass must override it with its own unlock condition.
+ * ⚠️  draw() is NOT here — all rendering lives in PlayerRenderer.
+ * ⚠️  shoot() is a no-op stub in base — each character overrides or game.js
+ *     routes to weaponSystem.shoot() based on instanceof checks.
+ * ════════════════════════════════════════════════════════════════════════════
  */
 
 // ════════════════════════════════════════════════════════════
