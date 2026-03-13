@@ -202,6 +202,10 @@ function triggerHitStop(duration = 0.05) {
 }
 window.triggerHitStop = triggerHitStop;
 
+// ── PERF: reusable entity buffer for mapSystem.update ────────────────────
+// Avoids [...spread] + .filter() allocating 2 new arrays every frame.
+const _mapUpdateEntities = [];
+
 function updateGame(dt) {
     if (!window.player) return;
 
@@ -537,7 +541,14 @@ function _tickEnvironment(dt, _inTutorial) {
         }
     }
 
-    mapSystem.update([window.player, ...window.enemies, window.boss].filter(e => e && !e.dead), dt);
+    // ── PERF: zero-alloc entity list — reuse module-scope buffer ─────────
+    _mapUpdateEntities.length = 0;
+    if (window.player && !window.player.dead) _mapUpdateEntities.push(window.player);
+    for (let _i = 0; _i < window.enemies.length; _i++) {
+        if (!window.enemies[_i].dead) _mapUpdateEntities.push(window.enemies[_i]);
+    }
+    if (window.boss && !window.boss.dead) _mapUpdateEntities.push(window.boss);
+    mapSystem.update(_mapUpdateEntities, dt);
     particleSystem.update(dt);
     floatingTextSystem.update(dt);
 
@@ -594,14 +605,17 @@ function drawGame() {
     drawGrid();
 
     const _drawNow = performance.now();
+    // ── PERF: globalAlpha + solid color — no template literal alloc per zone ──
+    CTX.fillStyle = '#ef4444';
     for (const z of window.meteorZones) {
         const screen = worldToScreen(z.x, z.y);
         const a = Math.sin(_drawNow / 200) * 0.3 + 0.7;
-        CTX.fillStyle = `rgba(239, 68, 68, ${a * 0.4})`;
+        CTX.globalAlpha = a * 0.4;
         CTX.beginPath();
         CTX.arc(screen.x, screen.y, z.radius, 0, Math.PI * 2);
         CTX.fill();
     }
+    CTX.globalAlpha = 1;
 
     mapSystem.draw();
     drawDatabaseServer();
@@ -672,7 +686,7 @@ function drawGame() {
         if (p.isOnScreen ? p.isOnScreen(60) : true) EnemyRenderer.draw(p, CTX);
     }
 
-    window.specialEffects.forEach(e => e.draw());
+    for (let _i = 0; _i < window.specialEffects.length; _i++) window.specialEffects[_i].draw();
 
     if (window.drone) window.drone.draw();
 

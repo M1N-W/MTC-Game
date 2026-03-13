@@ -804,9 +804,13 @@ class EnemyRenderer {
   // ── Dispatcher ───────────────────────────────────────────
   // Call this from the game loop instead of entity.draw().
   static draw(e, ctx) {
-    // Swap global CTX for the passed ctx so all sub-methods
-    // work with whichever canvas is active (future-proofing).
-    const _prevCTX = typeof window !== "undefined" ? window.CTX : undefined;
+    // ── Viewport cull ─────────────────────────────────────────
+    const screen = worldToScreen(e.x, e.y);
+    const R = (e.radius ?? 20) + 40; // 40px margin for auras/overlays
+    if (screen.x < -R || screen.x > CANVAS.width + R ||
+      screen.y < -R || screen.y > CANVAS.height + R) return;
+    // ─────────────────────────────────────────────────────────
+    const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;
     if (typeof window !== "undefined") window.CTX = ctx;
     try {
       if (e instanceof MageEnemy) EnemyRenderer.drawMage(e);
@@ -994,7 +998,7 @@ class EnemyRenderer {
     // ║  Slim gray/purple bean · Dual visor · Spiked hands      ║
     // ╚══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
-    const now = Date.now(); // single call — reused throughout
+    const now = performance.now();
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;
@@ -1181,7 +1185,7 @@ class EnemyRenderer {
     // ║  Wide dark-red bean · Layered armor · Kite-shield fists  ║
     // ╚══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
-    const now = Date.now();
+    const now = performance.now();
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;
@@ -1374,7 +1378,7 @@ class EnemyRenderer {
     // ║  Sleek green diamond-bean · Blaster · Floating orb hands ║
     // ╚══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
-    const now = Date.now();
+    const now = performance.now();
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;

@@ -9,7 +9,7 @@
  * Design notes:
  *   - WeaponSystem governs Kao's weapon modes only (auto/sniper/shotgun).
  *     Poom bypasses it entirely — PoomPlayer.shoot() fires directly.
- *   - SpatialGrid: O(E) build, O(P×k) query (k ≈ 4). Cell size 128 px.
+ *   - SpatialGrid: O(E) build, O(P×k) query (k ≈ 4). Cell 128 px. Integer key (zero string alloc).
  *     9-cell 3×3 neighbourhood prevents missed hits at cell edges.
  *   - ProjectileManager.update() uses reverse loop + swap-and-pop O(1) removal.
  *   - All BALANCE reads use BALANCE.characters[activeChar] — never BALANCE.player.weapons.
@@ -958,7 +958,7 @@ class Projectile {
       coronaG.addColorStop(
         0,
         this.color.replace(")", ",0.35)").replace("rgb", "rgba") ||
-          `rgba(220,38,38,0.35)`,
+        `rgba(220,38,38,0.35)`,
       );
       coronaG.addColorStop(1, "rgba(0,0,0,0)");
       CTX.fillStyle = coronaG;
@@ -1482,9 +1482,13 @@ class SpatialGrid {
   static CELL = 128;
 
   constructor() {
-    // Plain object used as a hash map: key = "cx,cy" → Enemy[]
+    // Plain object used as a hash map: key = integer (packed cx,cy) → Enemy[]
     // Reuse the same Map instance across frames to avoid GC pressure.
     this._cells = new Map();
+    // Reusable result buffer — cleared and refilled each query(), no array alloc per projectile.
+    this._results = [];
+    // Pool of reusable cell arrays — reclaimed on clear(), avoids [] alloc per unique cell.
+    this._pool = [];
   }
 
   /** Convert world coordinate to grid cell index (integer). */
@@ -1493,19 +1497,35 @@ class SpatialGrid {
   }
 
   /**
+   * Pack two cell indices into a single 32-bit integer key.
+   * Safe range: map 3200 px / cell 128 px = 25 cells max → fits 16-bit easily.
+   * @param {number} cx  Integer cell X
+   * @param {number} cy  Integer cell Y
+   * @returns {number}   Unique integer key (no string alloc)
+   */
+  _cellKey(cx, cy) {
+    return ((cx & 0xFFFF) << 16) | (cy & 0xFFFF);
+  }
+
+  /**
    * Populate the grid with the current enemy list.
    * Must be called once per frame before any query().
    * @param {Array} enemies  Live enemy array from GameState
    */
   build(enemies) {
+    // Return all cell arrays to pool before clearing the map.
+    for (const cell of this._cells.values()) {
+      cell.length = 0;
+      this._pool.push(cell);
+    }
     this._cells.clear();
     for (let i = 0; i < enemies.length; i++) {
       const e = enemies[i];
       if (e.dead) continue;
-      const key = `${this._cellCoord(e.x)},${this._cellCoord(e.y)}`;
+      const key = this._cellKey(this._cellCoord(e.x), this._cellCoord(e.y));
       let cell = this._cells.get(key);
       if (!cell) {
-        cell = [];
+        cell = this._pool.length > 0 ? this._pool.pop() : [];
         this._cells.set(key, cell);
       }
       cell.push(e);
@@ -1527,17 +1547,17 @@ class SpatialGrid {
   query(wx, wy) {
     const cx = this._cellCoord(wx);
     const cy = this._cellCoord(wy);
-    const results = [];
+    this._results.length = 0;
 
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        const cell = this._cells.get(`${cx + dx},${cy + dy}`);
+        const cell = this._cells.get(this._cellKey(cx + dx, cy + dy));
         if (cell) {
-          for (let i = 0; i < cell.length; i++) results.push(cell[i]);
+          for (let i = 0; i < cell.length; i++) this._results.push(cell[i]);
         }
       }
     }
-    return results;
+    return this._results;
   }
 }
 
@@ -1738,7 +1758,7 @@ class ProjectileManager {
         const res = player.dealDamage(damage);
         damage = res?.damage ?? damage;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const speed = Math.max(600, range * 9);
     const sx = player.x + Math.cos(a) * 22;

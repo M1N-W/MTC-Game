@@ -1937,6 +1937,14 @@ class Decal {
     }
 
     draw() {
+        // ── PERF: viewport cull — decals are static, cull on anchor point ───
+        if (typeof CANVAS !== 'undefined') {
+            const screen = worldToScreen(this.x, this.y);
+            const pad = this.radius + 4;
+            if (screen.x < -pad || screen.x > CANVAS.width  + pad ||
+                screen.y < -pad || screen.y > CANVAS.height + pad) return;
+        }
+
         // เฟดจางใน 20% สุดท้ายของ lifetime
         const t = this.life / this.maxLife;
         const alpha = t < 0.2 ? t / 0.2 * 0.55 : 0.55;

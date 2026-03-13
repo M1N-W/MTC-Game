@@ -4,6 +4,41 @@
 
 ---
 
+## v3.35.0 — Architecture: Performance Audit Phase 1 (Invariants)
+*Released: March 13, 2026*
+
+### ⚡ Performance & Optimization
+- **Standardized Performance Invariants**: Implemented Tier 1 performance rules across all high-impact files (`enemy.js`, `effects.js`, `ui.js`, `weapons.js`, `game.js`).
+- **Zero-Allocation Rendering**: Replaced all template literals and string concatenations in `draw()` paths with `ctx.globalAlpha` and solid hex/RGB strings to eliminate GC stutter.
+- **Viewport Culling**: Standardized viewport culling logic in `Decal.draw()`, `EnemyRenderer.draw()`, and `CanvasHUD` radar systems.
+- **Array Management**: Replaced `.splice()` with O(1) `swap-and-pop` for entity and projectile removals in hot loops (`effects.js`, `weapons.js`, `PlayerBase.js`).
+- **Memory Reuse**: Implemented reusable buffers for entity processing in `game.js` to avoid frame-by-frame allocations.
+
+### 🗺️ Map & World
+- **Citadel Corridor Clearance**: Moved trees and vending machines out of the "Citadel approach corridor" (`x∈[-200,200], y∈[-500,-340]`) to prevent collision blocking.
+- **Updated Documentation**: Added `PERF_PLAN.md` to track the ongoing performance audit status.
+
+### 📝 Documentation & Rules
+- **PROJECT_OVERVIEW.md**: Added "Citadel Approach Corridor" to MTC Room section and added `PERF_PLAN.md` to file structure.
+- **SKILL.md**: Added `PERF_PLAN.md` to §13 checklist and formalized §19 Performance Invariants.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/config.js (Formatting & WAVE_SCHEDULE update)
+✅ MODIFIED: js/effects.js (Performance Audit: Decal culling, swap-and-pop)
+✅ MODIFIED: js/entities/enemy.js (Performance Audit: Viewport culling dispatcher)
+✅ MODIFIED: js/game.js (Performance Audit: Zero-alloc buffers, solid-color rendering)
+✅ MODIFIED: js/map.js (Citadel Corridor cleanup, tree/vending relocation)
+✅ MODIFIED: js/ui.js (Performance Audit: HUD radar string alloc removal)
+✅ MODIFIED: js/weapons.js (Performance Audit: SpatialGrid optimization, swap-and-pop)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.35.0, MTC Room update)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.35.0)
+✅ MODIFIED: sw.js (v3.35.0)
+✅ ADDED:    Markdown Source/Successed-Plan/PERF_PLAN.md (Tracking)
+```
+
+---
+
 ## v3.34.2 — Documentation: Full JSDoc Header Standardization
 *Released: March 13, 2026*
 

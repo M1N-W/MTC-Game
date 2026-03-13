@@ -324,6 +324,7 @@ New playable character:
   weapons.js — if character has unique weapon mechanics (e.g., projectile reflection)
   PlayerBase.js — if character needs unique speed/property modifiers
   .agents/skills/MTC-Game's skills for Claude/mtc-rendering.skill — ถ้ามีการแก้ renderer logic
+  Markdown Source/Successed-Plan/PERF_PLAN.md — ถ้ามีการแก้ performance logic/audit
   **Header Documentation — add module-level JSDoc header (see §18)**
 
 New enemy:
@@ -523,3 +524,90 @@ Header maintenance protocol:
   What NOT to update proactively:
     - Do not re-scan headers on every session — only when the file itself changed
     - Do not bump L.N numbers for trivial whitespace/comment-only edits
+
+---
+
+19. Performance Invariants — อย่าละเมิด
+
+These rules apply to every file in the project. Violating any one of them causes
+GC stutter or frame budget overrun at 40+ enemies.
+
+── Draw path: zero allocation ──────────────────────────────────────────────────
+
+  ❌  ctx.strokeStyle = `rgba(255,100,20,${alpha})`;   // string alloc every frame
+  ✅  ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ff6414';                    // solid hex — engine-interned
+
+  Rule: ห้าม template literal หรือ string concatenation ที่มี dynamic value ใน draw()
+  ทดแทนด้วย ctx.globalAlpha + solid RGB/hex string เสมอ
+  ⚠️ ctx.globalAlpha เป็น sticky state — reset เป็น 1 ก่อน draw call ถัดไปที่ไม่ใช้ alpha
+
+── Viewport culling — cull ก่อน run draw logic ใดๆ ──────────────────────────
+
+  ทุก entity draw() ต้องมี cull guard ก่อน sub-method ใดๆ ทำงาน:
+  const screen = worldToScreen(e.x, e.y);
+  const R = (e.radius ?? 20) + 40;
+  if (screen.x < -R || screen.x > CANVAS.width + R ||
+      screen.y < -R || screen.y > CANVAS.height + R) return;
+
+  ไฟล์ที่มี cull guard แล้ว (อย่า remove): EnemyRenderer, BossRenderer, Decal,
+  Particle, FloatingText, OrbitalParticle, ShellCasing, MapSystem objects, hex grid
+  ไฟล์ที่ player always on-screen (ไม่ต้อง cull): PlayerRenderer
+
+── SpatialGrid — integer key เท่านั้น ─────────────────────────────────────────
+
+  ❌  key = `${cx},${cy}`          // string alloc ×(N enemies + 9×P projectiles)/frame
+  ✅  _cellKey(cx, cy) { return ((cx & 0xFFFF) << 16) | (cy & 0xFFFF); }
+
+  query() reuse _results buffer — ห้าม new [] ต่อ call:
+  ✅  this._results.length = 0; ... return this._results;
+  ⚠️  caller ต้อง consume results ก่อน call query() อีกครั้ง (buffer ถูก overwrite)
+
+  build() pool cell arrays — ห้าม new [] ต่อ unique cell:
+  ✅  cell = this._pool.length > 0 ? this._pool.pop() : [];
+      (on clear: push back to _pool, not discarded)
+
+── Entity removal: swap-and-pop เท่านั้น ───────────────────────────────────────
+
+  ❌  arr.splice(i, 1)             // O(N) shift ทุก remove
+  ✅  arr[i] = arr[arr.length - 1]; arr.length--;   // O(1), ใช้ทั่ว codebase
+
+── Particle spawn: pool wrapper เท่านั้น ────────────────────────────────────────
+
+  ❌  new Particle(...)            // bypasses pool → GC pressure
+  ❌  new FloatingText(...)
+  ✅  spawnParticles(x, y, count, color)    // utils.js wrapper → pool
+  ✅  floatingTextSystem.spawn(...)         // pool path
+
+── ไม่มี Math.random() ใน draw() ───────────────────────────────────────────────
+
+  random ใส่ได้แค่ใน spawn/init เท่านั้น — draw() ต้องเป็น deterministic
+
+── Performance Audit Checklist — ใช้ก่อน add feature ใหม่ที่มี draw path ─────
+
+  1. draw() path มี template literal หรือ string concat dynamic value ไหม?
+     → เปลี่ยนเป็น globalAlpha + solid string
+  2. entity loop มี splice() ไหม?
+     → เปลี่ยนเป็น swap-and-pop
+  3. new Particle / new FloatingText โดยตรงไหม?
+     → เปลี่ยนเป็น pool wrapper
+  4. SpatialGrid key เป็น integer ไหม?
+     → ห้ามใช้ template literal key
+  5. entity draw มี cull guard ไหม?
+     → เพิ่มก่อน draw logic ใดๆ
+
+── การวางแผน performance session ใหม่ ──────────────────────────────────────────
+
+  ลำดับความสำคัญตามผลกระทบจริง (จากประสบการณ์ codebase นี้):
+  TIER 1  draw path string allocs (ทุก frame × ทุก entity on-screen) — สูงสุด
+  TIER 2  entity remove O(N) splice ใน hot loop — สูง
+  TIER 3  new [] / new object ต่อ call ใน query path — กลาง
+  TIER 4  instanceof ใน dispatch loop — ต่ำ (prototype chain walk 1x/entity)
+          ยกเว้น N > 50 entities ต่อ frame ถึงจะพิจารณา type flag
+
+  ไฟล์ที่ audit ก่อนเสมอ (impact สูงสุด):
+    enemy.js, effects.js, map.js, weapons.js (SpatialGrid), ui.js (minimap)
+  ไฟล์ที่ audit ทีหลัง:
+    game.js (splice audit), boss_attacks_*.js (particle spawn path)
+  ไฟล์ที่ไม่ต้อง audit บ่อย:
+    BossRenderer.js (single boss, low entity count), PlayerRenderer.js (always on-screen)

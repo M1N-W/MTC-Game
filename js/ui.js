@@ -2161,11 +2161,13 @@ class CanvasHUD {
         const borderSin = Math.sin(now / 500);
         const borderWidth = 2 + borderSin;
         ctx.lineWidth = borderWidth;
-        ctx.strokeStyle = `rgba(57,255,20,${0.80 + borderSin * 0.15})`;
+        ctx.globalAlpha = 0.80 + borderSin * 0.15;
+        ctx.strokeStyle = '#39ff14';
         ctx.shadowBlur = 12 + borderSin * 6;
         ctx.shadowColor = '#39ff14';
         ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
 
         // Inner accent ring
         ctx.lineWidth = 0.8;
@@ -2227,18 +2229,20 @@ class CanvasHUD {
         const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
         const trailArc = Math.PI * 2 / 3;
         const TRAIL_STEPS = 24;
+        // ── PERF: solid color set once — globalAlpha per step, no toFixed alloc ──
+        ctx.fillStyle = 'rgb(72,187,120)';
         for (let i = 0; i < TRAIL_STEPS; i++) {
             const frac = i / TRAIL_STEPS;
             const aStart = sweepAngle - trailArc * (1 - frac);
             const aEnd = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
-            const alpha = frac * frac * 0.22;
+            ctx.globalAlpha = frac * frac * 0.22;
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
             ctx.closePath();
-            ctx.fillStyle = `rgba(72,187,120,${alpha.toFixed(3)})`;
             ctx.fill();
         }
+        ctx.globalAlpha = 1;
         ctx.save();
         ctx.strokeStyle = 'rgba(134,239,172,0.85)'; ctx.lineWidth = 1.5;
         ctx.shadowBlur = 6; ctx.shadowColor = '#48bb78';
@@ -2260,12 +2264,16 @@ class CanvasHUD {
             if (sc) {
                 const ax = cx - sx, ay = cy - sy;
                 ctx.rotate(Math.atan2(ay, ax));
-                ctx.fillStyle = `rgba(59,130,246,${0.8 + dbPulse * 0.2})`;
+                ctx.globalAlpha = 0.8 + dbPulse * 0.2;
+                ctx.fillStyle = '#3b82f6';
                 ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
             } else {
-                ctx.fillStyle = `rgba(59,130,246,${0.85 + dbPulse * 0.15})`;
-                ctx.strokeStyle = `rgba(147,197,253,${dbPulse * 0.95})`; ctx.lineWidth = 1.2;
-                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2); ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
+                ctx.globalAlpha = 0.85 + dbPulse * 0.15;
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
+                ctx.globalAlpha = dbPulse * 0.95;
+                ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 1.2;
+                ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
             }
             ctx.restore();
         }
@@ -2281,12 +2289,16 @@ class CanvasHUD {
             if (shc) {
                 const ax = cx - shx, ay = cy - shy;
                 ctx.rotate(Math.atan2(ay, ax));
-                ctx.fillStyle = `rgba(245,158,11,${0.7 + shPulse * 0.3})`;
+                ctx.globalAlpha = 0.7 + shPulse * 0.3;
+                ctx.fillStyle = '#f59e0b';
                 ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
             } else {
-                ctx.fillStyle = `rgba(251,191,36,${0.7 + shPulse * 0.25})`;
-                ctx.strokeStyle = `rgba(253,230,138,${shPulse * 0.85})`; ctx.lineWidth = 1.2;
-                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2); ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
+                ctx.globalAlpha = 0.7 + shPulse * 0.25;
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
+                ctx.globalAlpha = shPulse * 0.85;
+                ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 1.2;
+                ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
             }
             ctx.restore();
         }
@@ -2348,14 +2360,18 @@ class CanvasHUD {
             if (bc) {
                 ctx.translate(bx, by);
                 ctx.rotate(Math.atan2(cy - by, cx - bx));
-                ctx.fillStyle = `rgba(168,85,247,${0.7 + pulse * 0.3})`;
+                ctx.globalAlpha = 0.7 + pulse * 0.3;
+                ctx.fillStyle = '#a855f7';
                 ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(0, -5); ctx.lineTo(0, 5); ctx.closePath(); ctx.fill();
             } else {
-                ctx.fillStyle = `rgba(170,110,255,${0.75 + 0.25 * pulse})`;
+                ctx.globalAlpha = 0.75 + 0.25 * pulse;
+                ctx.fillStyle = '#aa6eff';
                 ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = `rgba(216,180,254,${0.30 + 0.15 * pulse})`; ctx.lineWidth = 1.5;
+                ctx.globalAlpha = 0.30 + 0.15 * pulse;
+                ctx.strokeStyle = '#d8b4fe'; ctx.lineWidth = 1.5;
                 ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
-                ctx.fillStyle = `rgba(255,220,255,${0.75 + 0.25 * pulse})`;
+                ctx.globalAlpha = 0.75 + 0.25 * pulse;
+                ctx.fillStyle = '#ffdcff';
                 ctx.font = 'bold 6px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                 ctx.fillText('BOSS', bx, by - 12 - 2 * pulse);
             }

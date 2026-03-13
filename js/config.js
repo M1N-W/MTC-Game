@@ -73,12 +73,12 @@ const API_KEY = (typeof CONFIG_SECRETS !== 'undefined' && CONFIG_SECRETS.GEMINI_
  * Decoupled from BALANCE to allow future async loading without crashing game loop.
  */
 const WAVE_SCHEDULE = Object.freeze({
-    fogWaves:    [2, 8, 11, 14],
-    speedWaves:  [4, 7, 13],
+    fogWaves: [2, 8, 11, 14],
+    speedWaves: [4, 7, 13],
     glitchWaves: [5, 10],
-    darkWave:    1,
-    bossWaves:   [3, 6, 9, 12, 15],
-    maxWaves:    15
+    darkWave: 1,
+    bossWaves: [3, 6, 9, 12, 15],
+    maxWaves: 15
 });
 window.WAVE_SCHEDULE = WAVE_SCHEDULE;
 
@@ -1562,6 +1562,11 @@ const MAP_CONFIG = {
         midColor: 'rgba(120, 60, 10, {a})',
         rimColor: 'rgba(250, 180, 30, {a})',
         dashColor: 'rgba(245, 158, 11, {a})',
+        // Perf: solid RGB strings for globalAlpha path — avoids .replace()+toFixed() per frame
+        haloColorBase: 'rgb(180,100,20)',
+        midColorBase: 'rgb(120,60,10)',
+        rimColorBase: 'rgb(250,180,30)',
+        dashColorBase: 'rgb(245,158,11)',
         haloAlphaBase: 0.12,    // เพิ่ม 0.08→0.12
         midAlphaBase: 0.20,     // เพิ่ม 0.15→0.20
         rimAlphaBase: 0.65,     // เพิ่ม 0.55→0.65 rim ชัดขึ้น
@@ -1579,6 +1584,10 @@ const MAP_CONFIG = {
         ringWidth: 2.5,
         outerColor: 'rgba(250, 180, 30, {a})',   // gold
         innerColor: 'rgba(34,  211, 238, {a})',   // cyan
+        // Perf: solid RGB strings for globalAlpha path
+        outerColorBase: 'rgb(250,180,30)',
+        innerColorBase: 'rgb(34,211,238)',
+        spokeColorBase: 'rgb(250,180,30)',
         spokeCount: 8,
         spokeAlpha: 0.18,
         glowBlur: 18,

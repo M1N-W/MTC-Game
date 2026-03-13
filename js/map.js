@@ -1412,18 +1412,23 @@ class MapSystem {
             const edgePt = ws(A.radius, 0);
             const radiusSS = Math.abs(edgePt.x - origin.x);
 
+            // Perf: globalAlpha + solid color — no .replace()+toFixed() string alloc per frame
             ctx.save();
-            ctx.strokeStyle = A.haloColor.replace('{a}', (A.haloAlphaBase + Math.sin(t * 0.6) * 0.03).toFixed(3));
+            ctx.globalAlpha = A.haloAlphaBase + Math.sin(t * 0.6) * 0.03;
+            ctx.strokeStyle = A.haloColorBase;
             ctx.lineWidth = 52; ctx.beginPath(); ctx.arc(origin.x, origin.y, radiusSS, 0, Math.PI * 2); ctx.stroke();
 
-            ctx.strokeStyle = A.midColor.replace('{a}', (A.midAlphaBase + Math.sin(t * 0.9) * 0.04).toFixed(3));
+            ctx.globalAlpha = A.midAlphaBase + Math.sin(t * 0.9) * 0.04;
+            ctx.strokeStyle = A.midColorBase;
             ctx.lineWidth = 20; ctx.beginPath(); ctx.arc(origin.x, origin.y, radiusSS, 0, Math.PI * 2); ctx.stroke();
 
-            ctx.strokeStyle = A.rimColor.replace('{a}', (A.rimAlphaBase + Math.sin(t * 1.4) * 0.12).toFixed(3));
+            ctx.globalAlpha = A.rimAlphaBase + Math.sin(t * 1.4) * 0.12;
+            ctx.strokeStyle = A.rimColorBase;
             ctx.lineWidth = 3; ctx.shadowBlur = A.rimGlowBlur; ctx.shadowColor = A.rimGlowColor;
             ctx.beginPath(); ctx.arc(origin.x, origin.y, radiusSS, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0;
 
-            ctx.strokeStyle = A.dashColor.replace('{a}', (A.dashAlphaBase + Math.sin(t * 1.8) * 0.10).toFixed(3));
+            ctx.globalAlpha = A.dashAlphaBase + Math.sin(t * 1.8) * 0.10;
+            ctx.strokeStyle = A.dashColorBase;
             ctx.lineWidth = 1.5; ctx.setLineDash([6, 30]); ctx.lineDashOffset = -(t * 18) % 36;
             ctx.beginPath(); ctx.arc(origin.x, origin.y, radiusSS + 10, 0, Math.PI * 2); ctx.stroke();
             ctx.setLineDash([]); ctx.lineDashOffset = 0;
@@ -1588,14 +1593,17 @@ class MapSystem {
             ctx.shadowColor = LM.glowColor;
 
             // Outer ring (gold, clockwise)
-            ctx.strokeStyle = LM.outerColor.replace('{a}', aOuter.toFixed(3));
+            // Perf: globalAlpha + solid color — no .replace()+toFixed() string alloc per frame
+            ctx.strokeStyle = LM.outerColorBase;
+            ctx.globalAlpha = aOuter;
             ctx.lineWidth = LM.ringWidth;
             ctx.setLineDash([18, 10]);
             ctx.lineDashOffset = -rotOuter * rOuter;
             ctx.beginPath(); ctx.arc(ox, oy, rOuter, 0, Math.PI * 2); ctx.stroke();
 
             // Inner ring (cyan, counter-clockwise)
-            ctx.strokeStyle = LM.innerColor.replace('{a}', aInner.toFixed(3));
+            ctx.strokeStyle = LM.innerColorBase;
+            ctx.globalAlpha = aInner;
             ctx.setLineDash([12, 14]);
             ctx.lineDashOffset = -rotInner * rInner;
             ctx.beginPath(); ctx.arc(ox, oy, rInner, 0, Math.PI * 2); ctx.stroke();
@@ -1605,7 +1613,8 @@ class MapSystem {
             ctx.shadowBlur = 0;
 
             // Spokes — faint lines from inner to outer ring
-            ctx.strokeStyle = `rgba(250,180,30,${(LM.spokeAlpha * pulse).toFixed(3)})`;
+            ctx.strokeStyle = LM.spokeColorBase;
+            ctx.globalAlpha = LM.spokeAlpha * pulse;
             ctx.lineWidth = 1;
             for (let i = 0; i < LM.spokeCount; i++) {
                 const angle = rotOuter + (Math.PI * 2 / LM.spokeCount) * i;
@@ -1616,7 +1625,8 @@ class MapSystem {
             }
 
             // Center dot
-            ctx.fillStyle = `rgba(250,180,30,${(0.7 + pulse * 0.3).toFixed(3)})`;
+            ctx.fillStyle = LM.spokeColorBase;
+            ctx.globalAlpha = 0.7 + pulse * 0.3;
             ctx.shadowBlur = 10; ctx.shadowColor = LM.glowColor;
             ctx.beginPath(); ctx.arc(ox, oy, 4, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;

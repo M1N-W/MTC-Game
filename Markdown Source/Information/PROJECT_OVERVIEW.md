@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.34.2
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.35.0
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -15,7 +15,9 @@ Coding Standards & Architecture:
    - Avoid garbage collection (GC) churn in the game loop.
    - Use the Object Pool pattern for particles, projectiles, and floating texts.
    - Use O(1) swap-and-pop for array removals instead of `splice()`.
-   - Implement Viewport Culling for `draw()` methods.
+   - Implement Viewport Culling for `draw()` methods — cull before any sub-method runs.
+   - draw() path: ห้าม template literal / string concat dynamic value → ใช้ ctx.globalAlpha + solid hex string
+   - SpatialGrid (weapons.js): integer key only — ห้าม template literal key ใน build()/query()
 3. Separation of Concerns: Strictly separate logic (`update(dt)`) from rendering (`draw(ctx)`). Never put `Math.random()` or state changes inside `draw()`.
 4. Defensive Programming: Always use guard clauses for globals (e.g., `if (typeof CTX === 'undefined') return;`) and check variable existence before access.
 
@@ -59,6 +61,7 @@ Output Preferences:
 | `walkthrough.md`      | คู่มือการเล่นและระบบเกม                                  |
 | `commit-push.md`      | Instruction สำหรับ commit และ push การเปลี่ยนแปลง        |
 | `PROMPT_MEMORY.md`    | Memory สำหรับ AI Assistant                               |
+| `PERF_PLAN.md`        | แผนและสถานะการทำ Performance Audit (Tier 1-4)            |
 
 ### `/js/` — Core Logic
 
@@ -328,8 +331,8 @@ _"commit and push, check changes first, write detailed description, update @sw\.
 | Boss   | Waves 3,6,9,12,15 | deterministic boss queue              |
 
 ### MTC Room
-
 - ห้องฟื้นฟู — bounds, features, boss safe spawn Y อยู่ใน `BALANCE.mtcRoom` และ `BossBase` constructor guard
+- **Citadel Approach Corridor** — x∈[-200,200], y∈[-500,-340] ต้องไม่มีสิ่งกีดขวาง (trees/vending) เพื่อไม่ให้ติดกำแพง
 
 ***
 
@@ -766,8 +769,15 @@ class SniperEnemy extends EnemyBase {
 | UtilityAI.tick() × 40 enemies  | \~2ms/frame | อัปเดต 2Hz ไม่ใช่ 60Hz         |
 | SquadAI.assignRoles()          | O(N) ทุก 1s | \_BucketGrid — ไม่รันทุก frame |
 | PlayerPatternAnalyzer.record() | O(1)        | ring buffer ไม่มี allocation   |
+| EnemyRenderer.draw() × 40     | O(visible)  | viewport cull ก่อน sub-method  |
+| Decal.draw() × 80 (18s life)  | O(visible)  | viewport cull, world 3200×3200 |
+| SpatialGrid build+query/frame  | O(E + P×9)  | integer key, pooled cell arrays, reuse _results buffer |
+| Arena/landmark draw strings    | ~0 allocs   | globalAlpha + solid hex string (ไม่ใช่ rgba template) |
+| Minimap POI pulse              | ~0 allocs   | globalAlpha + solid hex string |
 
 **เป้าหมาย: < 3ms overhead ต่อ frame บน 40 enemies**
+
+**Performance Invariants** — ดู §19 ใน mtc-game-conventions SKILL.md สำหรับ rules ครบ
 
 ***
 
