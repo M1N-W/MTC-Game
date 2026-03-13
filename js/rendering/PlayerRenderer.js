@@ -402,7 +402,7 @@ class PlayerRenderer {
 
   /** Foot placement dots — L/R alternating swing driven by walkCycle. */
   static _drawGroundFeet(ctx, sx, sy, limb, color, entity) {
-    if (entity.isInvisible || entity.isFreeStealthy) return;
+    if (entity.isInvisible || entity.isFreeStealthActive) return;
     if (limb.moveT < 0.05) return;
     const { footL, footR } = limb;
     ctx.save();
@@ -537,7 +537,7 @@ class PlayerRenderer {
     const now = performance.now();
     const flicker = 0.85 + Math.sin(now * 0.017) * 0.08;
     const baseAlpha =
-      clone.owner.isInvisible || clone.owner.isFreeStealthy
+      clone.owner.isInvisible || clone.owner.isFreeStealthActive
         ? 0.15
         : clone.alpha;
 
@@ -667,7 +667,7 @@ class PlayerRenderer {
     }
 
     // ── Skill-state indicators (visible only when not stealthed) ──
-    if (!entity.isInvisible && !entity.isFreeStealthy) {
+    if (!entity.isInvisible && !entity.isFreeStealthActive) {
       // Teleport-ready: spinning dashed ring
       if (entity.passiveUnlocked && entity.teleportCharges > 0) {
         ctx.save();
@@ -4498,7 +4498,7 @@ class PlayerRenderer {
       ctx.fillText("🔥", screen.x + 18, screen.y - 26);
     }
 
-    if (entity.isInvisible || entity.isFreeStealthy) {
+    if (entity.isInvisible || entity.isFreeStealthActive) {
       // STEALTH: holographic shimmer + glitch pixel dissolve
       const gT = now / 60;
       ctx.save();

@@ -4,6 +4,28 @@
 
 ---
 
+## v3.34.1 — Documentation: JSDoc Headers & Stealth Logic Fix
+*Released: March 13, 2026*
+
+### 📝 Documentation & Code Quality
+- **Standardized JSDoc Headers**: Added comprehensive module headers for `js/game.js` and `js/entities/player/KaoPlayer.js` including load order, internal TOC, and critical pitfalls.
+- **Audit Update**: Updated `mtc-game-conventions.md` (SKILL.md) priority queue to reflect completed headers.
+
+### 🛡️ Bug Fixes & Refactoring
+- **Stealth Property Fix**: Corrected property name from `isFreeStealthy` to `isFreeStealthActive` in `PlayerRenderer.js` to match the implementation in `KaoPlayer.js`. This fixes footstep rendering and clone transparency during free stealth.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/game.js (Header Documentation)
+✅ MODIFIED: js/entities/player/KaoPlayer.js (Header Documentation)
+✅ MODIFIED: js/rendering/PlayerRenderer.js (Property name fix)
+✅ MODIFIED: .agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md (Audit sync)
+✅ MODIFIED: sw.js (v3.34.1)
+✅ MODIFIED: CHANGELOG.md (v3.34.1)
+```
+
+---
+
 ## v3.34.0 — Performance: Static Bitmap Caching & Rendering Refactor
 *Released: March 12, 2026*
 

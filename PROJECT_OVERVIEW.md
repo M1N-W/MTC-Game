@@ -3,7 +3,7 @@
 สำหรับ AI Assistant — อ่านเมื่อเริ่มแชทใหม่เพื่อเข้าใจโปรเจคต์ก่อนลงมือ
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.33.2
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.34.1
 
 ---
 
@@ -47,6 +47,7 @@
 | `ai.js`       | Legacy AI behaviors (pre-EnemyBase refactor) — verify ยังใช้อยู่ไหม                                                       |
 | `utils.js`    | Utility functions                                                                                                         |
 | `tutorial.js` | Tutorial system                                                                                                           |
+| `commit-push.md` | Instruction สำหรับ commit และ push การเปลี่ยนแปลง                                                                      |
 
 ### `/js/ai/` — AI Enhancement System 🟡
 
@@ -194,6 +195,7 @@ Input (input.js) → Game Update (game.js) → Entity Updates → Collision (map
 
 - **Object Pooling** — particles/projectiles/FloatingText (effects.js) ลด GC
 - **State Management** — GameState singleton
+- **Static Bitmap Caching** — ใช้ `OffscreenCanvas` ใน `BossRenderer` และ `PlayerRenderer` เพื่อ cache static body parts (ช่วยลด draw calls และ GPU state switching)
 - **Rendering Decoupling** — `PlayerRenderer.draw()` dispatcher → `_drawKao()` / `_drawPoom()` / `_drawAuto()`, `BossRenderer.draw()` dispatcher → `drawBoss()` / `drawBossFirst()` / `drawBossDog()`
 - **Spatial Grid** — weapons.js collision: O(E) build, O(P×k) query — เร็วกว่า O(P×E) brute force ~12×
 - **No `instanceof` in PlayerBase** — ใช้ behavior flags แทน (`passiveSpeedBonus`, `usesOwnLifesteal`)

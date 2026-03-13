@@ -501,13 +501,13 @@ Completed headers (as of March 12, 2026):
   ✅  js/map.js
   ✅  css/main.css
   ✅  js/rendering/PlayerRenderer.js
+  ✅  js/game.js
+  ✅  js/entities/player/KaoPlayer.js
 
 Priority queue (do next, largest navigation value):
-  🔲  js/game.js                (largest file — game loop, state machine, all integrations)
   🔲  js/entities/enemy.js      (EnemyBase + 3 enemy classes, AI integration)
   🔲  js/entities/player/PlayerBase.js
   🔲  js/entities/player/AutoPlayer.js
-  🔲  js/entities/player/KaoPlayer.js
   🔲  js/entities/player/PoomPlayer.js
   🔲  js/entities/player/PatPlayer.js
   🔲  js/rendering/BossRenderer.js

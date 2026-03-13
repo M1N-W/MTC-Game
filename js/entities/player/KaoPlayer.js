@@ -1,9 +1,62 @@
 "use strict";
 
-// ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  KaoPlayer.js — "เก้า" Advanced Assassin Character                      ║
-// ║  Skills: Teleport · Weapon Master Awakening · Clone of Stealth          ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
+/**
+ * js/entities/player/KaoPlayer.js
+ * ════════════════════════════════════════════════════════════════════════════
+ * "เก้า" — Advanced Assassin. Passive-driven stealth combatant with
+ * two-phase passive unlock, weapon mastery, and phantom clone mechanics.
+ *
+ * Extends: KaoPlayer → Player (PlayerBase) → Entity
+ * Exports: window.KaoPlayer
+ *
+ * Load order dependency:
+ *   base.js → PlayerBase.js → KaoPlayer.js
+ *   PlayerRenderer.js reads isFreeStealthActive, clones[], teleportCharges
+ *   enemy.js calls player.addKill(weaponName) on every enemy death
+ *   game.js calls player.update(dt, keys, mouse) and player.shoot(dt)
+ *
+ * ── PASSIVE SYSTEM OVERVIEW ──────────────────────────────────────────────
+ *  Lv1  first stealth use → HP+30%, lifesteal 3%, speed+0.4, Dash-Stealth,
+ *                            Q (Teleport) + E (Clone) UNLOCKED
+ *  Lv2  5 kills while isFreeStealthActive → HP+20%, crit+5%,
+ *                                            Phantom Blink UNLOCKED
+ *
+ * ── FREE-STEALTH vs AUTO-STEALTH TERMINOLOGY ────────────────────────────
+ *  Free-Stealth  (ซุ่มเสรี)  — the passive STATE: isFreeStealthActive=true
+ *                               Damage×1.5, guaranteed crit, kills count toward Lv2
+ *  Auto-Stealth  (ซุ่มอัตโนมัติ) — the TRIGGER mechanism that activates Free-Stealth
+ *                               Currently: rising-edge of dash → Free-Stealth
+ *                               lastAutoStealthTrigger: 'dash' | 'bullet'
+ *  Skill Stealth (R-Click)  — player-activated via PlayerBase, separate cooldown
+ *
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
+ *  L.63   KaoClone            Orbit / shadow phantom that mirrors Kao's shots
+ *  L.75     .update(dt)       Smooth-follow orbit or stay stationary (Phantom Blink shadow)
+ *  L.88     .shoot(...)       Mirror fire from clone position at 60% damage
+ *  L.135  KaoPlayer           Main character class
+ *  L.136    constructor       All state fields — passive, stealth, weapon, clone, blink
+ *  L.205    .checkPassiveUnlock()  Lv1 (first stealth) + Lv2 (5 free-stealth kills)
+ *  L.298    .onKillWhileFreeStealthy()  Increment _freeStealthKills → trigger Lv2 check
+ *  L.316    .addKill(wN)      Called by enemy.js; routes to Lv2 counter + weapon mastery
+ *  L.379    .update(dt,k,m)   Main tick — stealth state, skills, timers, super.update()
+ *  L.418      ↳ Dash-Stealth  Rising-edge isDashing → isFreeStealthActive for dashStealthDuration
+ *  L.456      ↳ Teleport (Q)  Per-charge independent timers; Phantom Blink if Lv2+stealthy
+ *  L.570      ↳ Clone (E)     Spawn/detonate 2 orbit clones; manual shatter via second E press
+ *  L.618      ↳ Clone tick    Proximity burst (auto-detonate <90px) + Phantom Shatter on expiry
+ *  L.777    .shoot(dt)        Entry point called by game.js; routes to fireWeapon()
+ *  L.812    .fireWeapon(w,c)  Ambush/stealth break, crit calc, Weapon Master buffs, clone mirror
+ *  L.1001   .takeDamage(amt)  Graph-risk ×1.5 penalty then super
+ *  L.1012   .updateUI()       Q/E/Dash/Stealth cooldown bars + HP/energy/XP bars
+ *
+ * ⚠️  KaoPlayer bypasses WeaponSystem.shootSingle() entirely — ambush break,
+ *     stealth check, and shell casings must all be handled inside fireWeapon().
+ * ⚠️  speedBoost is injected and restored around super.update() every frame
+ *     (stateless additive pattern) — never persist the modified value.
+ * ⚠️  draw() lives in PlayerRenderer._drawKao() — nothing renders here.
+ * ⚠️  isFreeStealthActive is NOT the same as isInvisible (R-Click stealth).
+ *     Both can be true simultaneously. Renderer checks both independently.
+ * ════════════════════════════════════════════════════════════════════════════
+ */
 
 // ── KaoClone ─────────────────────────────────────────────────────────────────
 // Phantom duplicate that mirrors Kao's attacks but is invisible to enemies.
@@ -93,11 +146,14 @@ class KaoPlayer extends Player {
     this.teleportPenalty = 5; // วินาทีบทลงโทษเมื่อหมดทุก stack
     this.teleportTimers = []; // [{elapsed, max}] แต่ละ slot = 1 stack ที่ถูกใช้ไป
     this._teleportInited = false; // flag: เซ็ต 3 charge ครั้งแรกที่ passive unlock
-    // ── Auto-stealth (Passive: ซุ่มเสรี) ──────────────────────────────────
-    this.autoStealthCooldown = 0; // internal cooldown for free stealth
-    this.isFreeStealthy = false; // FREE STEALTH: กระสุน enemy ทะลุผ่าน แต่ศัตรูยังรู้ตำแหน่ง
-    this.freeStealthTimer = 0;
+    // ── Free-Stealth State (ซุ่มเสรี — Passive ของเก้า) ───────────────────
+    this.isFreeStealthActive = false;       // ← ขณะนี้ Free-Stealth อยู่หรือ?
+    this.freeStealthRemainingTime = 0;      // ← เวลาที่เหลือของ Free-Stealth
     this.maxFreeStealthDuration = 2.0;
+
+    // ── Auto-Stealth Trigger (กลไกที่เรียก Free-Stealth อัตโนมัติ) ────────
+    this.autoStealthCooldown = 0;           // ← cooldown ก่อน auto-trigger ครั้งถัดไป
+    this.lastAutoStealthTrigger = 'dash';   // ← trigger จากอะไร: 'dash' | 'bullet';
 
     // ── Weapon Master Awakening ────────────────────────────────────────────
     this.weaponKills = { auto: 0, sniper: 0, shotgun: 0 };
@@ -119,8 +175,8 @@ class KaoPlayer extends Player {
     //               prevent the machine-gun NaN glitch.
     this.shootCooldown = 0;
 
-    // ── Audio edge-trigger flag: play stealth sound only on first frame ──
-    this._wasFreeStealthy = false;
+    // ── Audio edge-trigger flag: play stealth sound only on rising edge ──
+    this._wasFreeStealthActive = false;
 
     // ── Phantom Blink state ──────────────────────────────────────────────
     this._phantomBlinkActive = false; // Q pressed during stealth
@@ -138,7 +194,7 @@ class KaoPlayer extends Player {
 
     // ── Passive Lv2 "Awakened" state ────────────────────────────────────
     this.passiveLv2Unlocked = false; // Phantom Blink + crit bonus ปลดที่ Lv2
-    this._freeStealthKills = 0; // นับ kills ขณะ isFreeStealthy
+    this._freeStealthKills = 0; // นับ kills ขณะ isFreeStealthActive
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -261,8 +317,8 @@ class KaoPlayer extends Player {
     // 🛡️ STRICT GATE: Cannot build weapon mastery if passive is not unlocked
     if (!this.passiveUnlocked) return;
 
-    // ── Passive Lv2: นับ kills ขณะ isFreeStealthy ──────────────────────
-    if (!this.passiveLv2Unlocked && this.isFreeStealthy) {
+    // ── Passive Lv2: นับ kills ขณะ isFreeStealthActive ──────────────────────
+    if (!this.passiveLv2Unlocked && this.isFreeStealthActive) {
       this.onKillWhileFreeStealthy();
     }
 
@@ -364,8 +420,9 @@ class KaoPlayer extends Player {
       const dashNow = this.isDashing; // PlayerBase sets isDashing during dash
       if (dashNow && !this._dashWasActive) {
         // Rising edge of dash
-        this.isFreeStealthy = true;
-        this.freeStealthTimer = S.dashStealthDuration ?? 1.5;
+        this.isFreeStealthActive = true;
+        this.lastAutoStealthTrigger = 'dash';
+        this.freeStealthRemainingTime = S.dashStealthDuration ?? 1.5;
         this.maxFreeStealthDuration = S.dashStealthDuration ?? 1.5;
         this.ambushReady = true;
         spawnFloatingText(
@@ -377,24 +434,24 @@ class KaoPlayer extends Player {
         );
       }
       this._dashWasActive = dashNow;
-      // Free Stealth countdown
-      if (this.freeStealthTimer > 0) {
-        this.freeStealthTimer -= dt;
-        if (this.freeStealthTimer <= 0) {
-          this.freeStealthTimer = 0;
-          this.isFreeStealthy = false;
+      // Free-Stealth countdown
+      if (this.freeStealthRemainingTime > 0) {
+        this.freeStealthRemainingTime -= dt;
+        if (this.freeStealthRemainingTime <= 0) {
+          this.freeStealthRemainingTime = 0;
+          this.isFreeStealthActive = false;
         }
       }
 
       // ── Audio hook: playStealth on RISING EDGE only ──────────────────
-      // Checked AFTER isFreeStealthy is fully updated this frame.
-      // Fires once when isFreeStealthy flips false→true; stays silent
+      // Checked AFTER isFreeStealthActive is fully updated this frame.
+      // Fires once when isFreeStealthActive flips false→true; stays silent
       // every subsequent frame while stealth is active.
-      if (this.isFreeStealthy && !this._wasFreeStealthy) {
+      if (this.isFreeStealthActive && !this._wasFreeStealthActive) {
         if (typeof Audio !== "undefined" && Audio.playStealth)
           Audio.playStealth();
       }
-      this._wasFreeStealthy = this.isFreeStealthy;
+      this._wasFreeStealthActive = this.isFreeStealthActive;
 
       // 2. Teleport (Q Key) — Independent per-charge cooldown timers
       // ── Init: ให้ 3 charge เต็มทันทีที่ passive ถูก unlock ────────
@@ -464,7 +521,7 @@ class KaoPlayer extends Player {
           const isPhantomBlink =
             this.passiveLv2Unlocked &&
             (S.phantomBlinkEnabled ?? true) &&
-            (this.isInvisible || this.isFreeStealthy);
+            (this.isInvisible || this.isFreeStealthActive);
 
           const prevX = this.x,
             prevY = this.y;
@@ -494,8 +551,8 @@ class KaoPlayer extends Player {
             this._blinkAmbushTimer = S.phantomBlinkAmbushWindow ?? 2.0;
             this.ambushReady = true;
             // Break stealth after blink (ambush strike)
-            this.isFreeStealthy = false;
-            this.freeStealthTimer = 0;
+            this.isFreeStealthActive = false;
+            this.freeStealthRemainingTime = 0;
             if (this.isInvisible) this.breakStealth();
             spawnFloatingText(
               "\uD83D\uDC7B PHANTOM BLINK!",
@@ -591,7 +648,7 @@ class KaoPlayer extends Player {
           window.boss &&
           !window.boss.dead &&
           Math.hypot(window.boss.x - clone.x, window.boss.y - clone.y) <
-            proxRange + 20
+          proxRange + 20
         ) {
           triggered = true;
         }

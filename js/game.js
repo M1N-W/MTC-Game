@@ -1,13 +1,67 @@
 'use strict';
 
-
-
 const DEBUG_MODE = false;
 
 /**
- * 🎮 MTC the Game Beta Edition - Main Game Loop (REFACTORED)
- * BGM FIX: Audio.init() moved to window.onload so menu BGM fires correctly.
- * startGame() no longer calls Audio.init() to avoid resetting userInteracted.
+ * js/game.js
+ * ════════════════════════════════════════════════════════════════════════════
+ * Master game loop, state machine, and orchestration hub for MTC The Game.
+ * Owns the rAF loop, update/draw dispatch, entity tick order, and game
+ * lifecycle (startGame → gameLoop → endGame).
+ *
+ * Exports (window.*):
+ *   window.startGame(charType)   — called by menu.js on character select
+ *   window.endGame(result)       — called internally + AdminSystem
+ *   window.triggerHitStop(dur)   — called by AutoPlayer, PatPlayer crits
+ *   window.setGameState(s)       — thin wrapper → GameState.setPhase()
+ *
+ * Key globals consumed (must be loaded before game.js):
+ *   GameState, WaveManager, ShopManager, UIManager, Audio
+ *   weaponSystem, projectileManager, playerAnalyzer, squadAI
+ *   WorkerBridge (loaded after game.js — safe via typeof guard)
+ *   MAP_CONFIG, BALANCE, GAME_TEXTS, MTC_SHOP_LOCATION, MTC_DATABASE_SERVER
+ *
+ * Load order (this file loads AFTER all entities and systems):
+ *   base.js → PlayerBase → [KaoPlayer|AutoPlayer|PoomPlayer|PatPlayer]
+ *   enemy.js → ManopBoss.js → FirstBoss.js
+ *   GameState.js → WaveManager.js → ShopSystem.js → game.js
+ *   WorkerBridge.js   ← loads AFTER game.js (index.html script order)
+ *
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
+ *  L.69   Module-level vars     rafId, _bgGrad, dayNightTimer, window.player
+ *  L.73   setGameState(s)       Thin alias → GameState.setPhase(); window export
+ *  L.105  _tut                  Tutorial input bridge state object
+ *  L.110  _tutorialForwardInput() Forward WASD/mouse/dash to TutorialSystem
+ *  L.129  gameLoop(now)         rAF callback — hitStop gate, dt clamp, update+draw
+ *  L.190  triggerHitStop(dur)   Freeze-frame effect; no-downgrade; 0.5s cap
+ *  L.205  updateGame(dt)        Top-level update: death check, camera, tick fns
+ *  L.240  _tickWaveEvents(dt)   DomainExpansion, Singularity, wave countdown FX
+ *  L.278  _tickShopBuffs(dt)    Decay damageBoost + speedBoost from shop purchases
+ *  L.304  _checkProximityInteractions()  Shop/server proximity, E/F/B key actions
+ *  L.321  _tickEntities(dt)     Player → weapon → boss → enemies → AI → squad tick
+ *  L.418  _tickBarrelExplosions()  Projectile-barrel hit detection + AoE chain
+ *  L.503  _tickEnvironment(dt)  Projectiles, powerups, meteors, decals, particles
+ *  L.558  drawGame()            Full render pipeline: bg → map → entities → HUD
+ *  L.749  drawDayNightHUD()     Day/night overlay gradient + cycle indicator
+ *  L.794  drawGrid()            Debug grid overlay (DEBUG_MODE only)
+ *  L.817  initAI()             Instantiate playerAnalyzer + squadAI singletons
+ *  L.826  _fadeOutOverlay()     CSS opacity fade for loading/transition overlays
+ *  L.843  startGame(charType)   Full game init: player factory, reset, UI wire-up
+ *  L.867  _createPlayer(t)      Character factory → KaoPlayer|AutoPlayer|Poom|Pat
+ *  L.886  _resetRunState(p)     Zero all mutable run state (enemies, boss, pickups…)
+ *  L.923  _initGameUI(t)        HUD setup, overlays, tutorial, mobile, WaveManager
+ *  L.968  endGame(result)       Teardown: cancel rAF, BGM swap, GameState reset
+ *  L.1068 window.onload         Boot sequence: canvas, audio, input, menu init
+ *
+ * ⚠️  triggerHitStop does NOT modify main dt — it sets GameState.hitStopTimer
+ *     only. The gameLoop skips update/draw while timer > 0.
+ * ⚠️  WorkerBridge is loaded AFTER game.js. All references must use
+ *     typeof WorkerBridge !== 'undefined' guards.
+ * ⚠️  window.player is assigned in startGame() and stays null between runs.
+ *     Every function that runs outside PLAYING phase must null-check it.
+ * ⚠️  KaoPlayer calls player.shoot(dt) directly (bypasses weaponSystem).
+ *     The instanceof KaoPlayer branch in _tickEntities gates this correctly.
+ * ════════════════════════════════════════════════════════════════════════════
  */
 
 // ─── Game State ───────────────────────────────────────────────
