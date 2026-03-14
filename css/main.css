@@ -4372,8 +4372,8 @@ body {
    ══════════════════════════════════════════════════════════════ */
 
 .skill-tooltip {
-    position: absolute;
-    z-index: 999;
+    position: fixed;
+    z-index: 9999;
     width: 240px;
     background: rgba(6, 5, 18, 0.97);
     border: 1px solid rgba(250, 204, 21, 0.22);

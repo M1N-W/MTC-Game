@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.35.0"; // Performance Audit Phase 1: Invariants
+const CACHE_NAME = "mtc-cache-v3.35.1"; // HUD Emojis & UI Polish
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

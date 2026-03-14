@@ -1325,6 +1325,56 @@ const GAME_TEXTS = {
         terminal: 'TERMINAL',
         shop: 'SHOP',
     },
+
+    // ══════════════════════════════════════════════════════
+    // 🎨 HUD EMOJI — อิโมจิทุกตัวในหน้าต่าง Skill HUD
+    // แก้ที่นี่เพื่อเปลี่ยนอิโมจิทั้งหมดในเกม
+    // ── ไฟล์ที่อ่านค่านี้: ui.js (UIManager) ──────────────
+    // ══════════════════════════════════════════════════════
+    hudEmoji: {
+        // ── L-Click (Attack slot) ─────────────────────────
+        attack: {
+            poom: '🍚',   // Poom — ยิงปืน
+            auto: '👊🏽',   // Auto — ยิงปืน
+            pat: '⚔️',  // Pat  — ฟัน/ดาบ
+            default: '🔫',  // Kao + others
+        },
+        // ── R-Click (Skill 1 slot) ────────────────────────
+        skill1: {
+            poom: '🍱',   // EAT RICE
+            auto: '🥊',   // WANCHAI Stand
+            kao: '👻',   // STEALTH
+            pat: '🛡️',  // BLADE GUARD
+            default: '📖',  // fallback
+        },
+        // ── Q slot ───────────────────────────────────────
+        q: {
+            kao: '⚡',   // TELEPORT
+            auto: '🌀',   // VACUUM
+            pat: '🌪️',  // ZANZO FLASH
+            poom: '🐉',   // NAGA
+        },
+        // ── E slot ───────────────────────────────────────
+        e: {
+            kao: '👥',   // CLONE ORBIT
+            auto: '💥',   // DETONATE
+            poom: '🦅',   // GARUDA
+            pat: '🗡️',  // IAIDO STRIKE
+        },
+        // ── R slot (Poom only) ────────────────────────────
+        r: {
+            poom: '🌾',   // RITUAL BURST
+        },
+        // ── Mobile btn-skill (R-Click shortcut) ──────────
+        mobile: {
+            poom: '🍚',
+            auto: '🥊',
+            kao: '👻',
+            pat: '⚔️',
+            default: '📖',
+        },
+    },
+
     combat: {
         poomCrit: 'ข้าวเหนียวคริติคอล! 💥',
         highGround: 'HIGH GROUND!',

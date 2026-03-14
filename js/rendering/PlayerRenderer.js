@@ -3091,7 +3091,8 @@ class PlayerRenderer {
     ctx.save();
     ctx.translate(screen.x + poomRecoilX, screen.y + poomRecoilY + poomBobY);
     ctx.scale(stretchX2 * facingSign, stretchY2);
-    ctx.rotate(poomRunLean * facingSign);
+    const poomShootKick = (entity._anim?.shootT ?? 0) * -0.06;
+    ctx.rotate((poomRunLean + poomShootKick) * facingSign);
 
     // Dual outer ring — purple base + gold shimmer
     ctx.shadowBlur = 10;
@@ -3414,12 +3415,66 @@ class PlayerRenderer {
     if (isFacingLeft) ctx.scale(1, -1);
     // poomShootLift suppressed (set to 0) — Gatling never raises.
     // poomShootReach: slight forward lean when firing (leaning into recoil).
-    ctx.translate(poomShootReach * 0.5, gatlingLowerY);
+    // poomShootT: kick gun BACK on fire (recoil pushback), decays forward.
+    ctx.translate(poomShootReach * 0.5 - poomShootT * 3, gatlingLowerY + poomShootT * 1.5);
     // skillT: ritual(1.0) or garuda(0.6) — arms raise proportionally
     if ((entity._anim?.skillT ?? 0) > 0)
       ctx.translate(0, -(entity._anim.skillT / 1.0) * 10);
 
     if (typeof drawPoomWeapon === "function") drawPoomWeapon(ctx);
+
+    // ── SHOOT ANIMATION: muzzle flash + barrel glow ───────────────────────
+    // Muzzle position in LAYER 2 local space: weapon_translate(12) + muzzle_x(31) = 43
+    // (matching the offset used in shoot() for projectile spawn)
+    if (poomShootT > 0.05) {
+      const muzzleLocalX = 43; // weapon.translate(12) + arc(31) = 43 from LAYER 2 origin
+      const muzzleLocalY = 6;  // weapon.translate(6) + arc(0)  =  6
+
+      ctx.save();
+      ctx.translate(muzzleLocalX, muzzleLocalY);
+
+      // ── Core flash: bright green burst, sharp falloff ──
+      const flashEase = poomShootT * poomShootT; // ease-out quad
+      ctx.globalAlpha = flashEase * 0.92;
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowBlur = 18 * flashEase;
+      ctx.shadowColor = "#4ade80";
+      ctx.beginPath();
+      ctx.arc(0, 0, 4 + flashEase * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // ── Outer glow ring ──
+      ctx.globalAlpha = flashEase * 0.55;
+      ctx.strokeStyle = "#4ade80";
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 12 * flashEase;
+      ctx.shadowColor = "#4ade80";
+      ctx.beginPath();
+      ctx.arc(0, 0, 7 + (1 - poomShootT) * 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // ── Forward spark rays (3 rays, fan forward along aim) ──
+      ctx.lineCap = "round";
+      for (let ri = 0; ri < 3; ri++) {
+        const spread = (ri - 1) * 0.28; // -0.28, 0, +0.28 rad
+        const rayLen = flashEase * (14 - Math.abs(ri - 1) * 4);
+        ctx.globalAlpha = flashEase * (0.8 - Math.abs(ri - 1) * 0.25);
+        ctx.strokeStyle = ri === 1 ? "#ffffff" : "#86efac";
+        ctx.lineWidth = ri === 1 ? 1.8 : 1.2;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#4ade80";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(spread) * rayLen, Math.sin(spread) * rayLen);
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
 
     const pR = 5;
     // ── Trigger/rear hand: grips back of gun near body ────────────────────
@@ -3836,9 +3891,20 @@ class PlayerRenderer {
 
     // ── SLASH ARC — crescent swing flash ────────────────────────────────────
     if (arcActive) {
-      const arcColor = isCritArc ? "#facc15" : "#7ec8e3";
-      const arcGlow = isCritArc ? "#fde68a" : "#38d0f8";
-      const arcSweep = isCritArc ? Math.PI * 1.0 : Math.PI * 0.8;
+      // Melee combo: distinct arc shape per hit (slash/thrust/heavy)
+      // _meleeVisualStep: 0=diagonal slash, 1=thrust, 2=heavy
+      const comboStep = entity._meleeVisualStep ?? 0;
+      const isMeleeArc = entity._attackArcTimer <= 0.18; // melee dur < slash dur
+      const arcColor = isCritArc ? "#facc15"
+        : (isMeleeArc && comboStep === 2) ? "#e8c0f8"  // heavy = soft purple
+          : "#7ec8e3";
+      const arcGlow = isCritArc ? "#fde68a"
+        : (isMeleeArc && comboStep === 2) ? "#c080e8"
+          : "#38d0f8";
+      // sweep angle: slash=0.8π, thrust=0.25π (narrow stab), heavy=1.2π (big)
+      const arcSweepMap = [Math.PI * 0.8, Math.PI * 0.25, Math.PI * 1.2];
+      const arcSweep = isCritArc ? Math.PI * 1.0
+        : isMeleeArc ? arcSweepMap[comboStep] : Math.PI * 0.8;
       const arcStart = arcAngle - arcSweep / 2;
       const arcEnd = arcAngle + arcSweep / 2;
       // Radius expands outward as timer counts down (starts tight, blooms out)
@@ -3894,13 +3960,65 @@ class PlayerRenderer {
       ctx.fillText("🔥", screen.x + 18, screen.y - 26);
     }
 
+    // ── Zanzo phase-distortion shimmer — orbiting ghost rings during ambush window ──
+    const zanzoAmbushT = entity._zanzoAmbushTimer ?? 0;
+    if (zanzoAmbushT > 0) {
+      const zRatio = zanzoAmbushT / (entity.stats?.zanzoAmbushWindow ?? 1.5);
+      const phase1 = Math.sin(now / 55) * 2.5 * zRatio;
+      const phase2 = Math.sin(now / 80 + 1.2) * 2.0 * zRatio;
+      ctx.save();
+      ctx.globalAlpha = zRatio * 0.22;
+      ctx.strokeStyle = "#7ec8e3";
+      ctx.lineWidth = 1.2;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "#38d0f8";
+      ctx.beginPath();
+      ctx.arc(screen.x + phase1, screen.y + phase2, R + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(screen.x - phase2, screen.y - phase1, R + 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // ── Reflect burst sparks — 6 deterministic rays on successful reflect ────
+    const reflectT = (entity._reflectFlashTimer ?? 0) / 0.32; // 1→0
+    if (reflectT > 0) {
+      ctx.save();
+      ctx.translate(screen.x, screen.y);
+      const rEase = reflectT * reflectT;
+      ctx.lineCap = "round";
+      for (let ri = 0; ri < 6; ri++) {
+        const seed = ri * (Math.PI * 2 / 6);
+        const rayLen = rEase * (28 + ri * 3);
+        ctx.globalAlpha = rEase * (0.7 - ri * 0.05);
+        ctx.strokeStyle = ri % 2 === 0 ? "#ffffff" : "#7ec8e3";
+        ctx.lineWidth = 1.8 - ri * 0.1;
+        ctx.shadowBlur = 14 * rEase;
+        ctx.shadowColor = "#c8e8f8";
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(seed) * rayLen, Math.sin(seed) * rayLen);
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
     // ════════════════════════════════════════════════════════════════════════
     // LAYER 1 — BODY (translate+scale — crouchY applied here)
     // ════════════════════════════════════════════════════════════════════════
     ctx.save();
     const crouchY = isCharge ? 5 : 0;
     const crouchSY = isCharge ? 0.85 : 1.0;
-    ctx.translate(screen.x + recoilX, screen.y + recoilY + bobY + crouchY);
+    // Idle breathing: gentle ±1.5px sine — suppressed during active states
+    const breathActive = !isCharge && !isCinematic && !bladeGuard && !arcActive;
+    const breathY = breathActive ? Math.sin(now / 1100) * 1.5 : 0;
+    ctx.translate(screen.x + recoilX, screen.y + recoilY + bobY + crouchY + breathY);
     ctx.scale(stretchX * facingSign, stretchY * crouchSY);
     // runLean: suppressed during charge — replaced by skillT-driven aggressive forward lean
     if (isCharge) {
@@ -4137,11 +4255,114 @@ class PlayerRenderer {
       ctx.globalAlpha = 1;
     }
 
+    // ── Reflect flash burst — white sheen spike on successful reflect ───────
+    // reflectT declared above (before LAYER 1) — reuse same value
+    if (reflectT > 0) {
+      const eased = reflectT * reflectT; // ease-out quad
+      ctx.globalAlpha = eased * 0.72;
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowBlur = 28 * eased;
+      ctx.shadowColor = "#c8e8f8";
+      ctx.beginPath();
+      ctx.arc(0, 0, R * (1 + eased * 0.22), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
     // ── Hit Flash ────────────────────────────────────────────────────────────
     PlayerRenderer._drawHitFlash(ctx, entity, R);
     if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
 
     ctx.restore(); // end LAYER 1
+
+    // ── UNSHEATH FLASH — golden ring burst on every katana swing ─────────────
+    // Drives from shootT (set by both slash and melee) — no new _anim field needed
+    {
+      const shootT = entity._anim?.shootT ?? 0;
+      if (shootT > 0.05) {
+        const sEase = shootT * shootT;
+        // Ring blooms outward as shootT decays (starts tight at body edge, expands)
+        const flashR = R + 8 + (1 - shootT) * 12;
+        ctx.save();
+        ctx.globalAlpha = sEase * 0.52;
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 18 * sEase;
+        ctx.shadowColor = "#facc15";
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, flashR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // LAYER 1.5 — SPEED STREAKS (world space, behind body)
+    // Short trailing lines opposite move direction — scale with speed
+    // Visible during run + dash. Suppressed when idle/blocking/charging.
+    // ════════════════════════════════════════════════════════════════════════
+    {
+      const svx = entity.vx ?? 0;
+      const svy = entity.vy ?? 0;
+      const speed = Math.hypot(svx, svy);
+      const speedThreshold = 60; // px/s — below this no streaks
+      if (speed > speedThreshold && !bladeGuard && !isCharge && !isCinematic) {
+        const camScale = PlayerRenderer._getCamScale(entity.x);
+        // Direction opposite to velocity = where streaks trail from
+        const trailAngle = Math.atan2(svy, svx) + Math.PI;
+        const speedRatio = Math.min(1, (speed - speedThreshold) / 200); // 0→1
+        const isDashing = (entity._anim?.dashT ?? 0) > 0.1;
+        // Streak colour: ice-blue normal, brighter white-blue on dash
+        const streakColor = isDashing ? "#a8d8ea" : "#4a90b8";
+        const streakGlow = isDashing ? "#c8eeff" : "#2a6888";
+        const streakCount = isDashing ? 4 : 3;
+        const baseLen = isDashing ? 18 + speedRatio * 14 : 10 + speedRatio * 8;
+        const baseAlpha = isDashing ? 0.62 : 0.38;
+
+        ctx.save();
+        ctx.lineCap = "round";
+        for (let si = 0; si < streakCount; si++) {
+          // Fan streaks slightly around trail axis (±18°)
+          const spread = ((si / (streakCount - 1)) - 0.5) * 0.62;
+          const sAngle = trailAngle + spread;
+          // Stagger length and alpha per streak
+          const lenMult = 1 - Math.abs(spread) * 0.4;
+          const len = baseLen * lenMult;
+          // Origin: edge of body + small offset in trail direction
+          const ox = screen.x + Math.cos(sAngle) * (R + 2);
+          const oy = screen.y + Math.sin(sAngle) * (R + 2);
+          const tx = ox + Math.cos(sAngle) * len;
+          const ty = oy + Math.sin(sAngle) * len;
+
+          const alpha = baseAlpha * speedRatio * (1 - Math.abs(spread) * 0.5);
+          // Glow pass
+          ctx.globalAlpha = alpha * 0.45;
+          ctx.strokeStyle = streakGlow;
+          ctx.lineWidth = (isDashing ? 2.8 : 1.8) * lenMult;
+          ctx.shadowBlur = isDashing ? 10 : 5;
+          ctx.shadowColor = streakGlow;
+          ctx.beginPath();
+          ctx.moveTo(ox, oy);
+          ctx.lineTo(tx, ty);
+          ctx.stroke();
+          // Core pass
+          ctx.globalAlpha = alpha;
+          ctx.strokeStyle = streakColor;
+          ctx.lineWidth = (isDashing ? 1.4 : 0.9) * lenMult;
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.moveTo(ox, oy);
+          ctx.lineTo(tx, ty);
+          ctx.stroke();
+        }
+        ctx.lineCap = "butt";
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // LAYER 2 — KATANA + HANDS (rotates with aim angle)
@@ -4161,16 +4382,27 @@ class PlayerRenderer {
     // Blade points forward along aim axis, slight upward tilt, hands at navel level.
     // No idle tremor — samurai stillness = confidence.
     if (isCinematic) {
-      // Iaido follow-through: blade swept across, pointing away at low angle
+      // Iaido follow-through: lerps from swept position toward hip-scabbard rest
+      // _iaidoCinematicT: 0→1 over cinematic duration
+      const cT = entity._iaidoCinematicT ?? 0;
+      // ease-out cubic
+      const eC = 1 - Math.pow(1 - cT, 3);
+      // swept angle → scabbard angle (hip, slightly behind)
+      const sweptAngle = -2.15;
+      const scabbardAngle = 0.62; // at hip, blade pointing back-down
+      const lerpAngle = sweptAngle + (scabbardAngle - sweptAngle) * eC;
+      // x pos: forward → retracted to hip
+      const lerpX = R * 0.72 * (1 - eC) + R * 0.42 * eC;
+      const lerpY = 0 * (1 - eC) + R * 0.55 * eC;
       ctx.save();
-      ctx.rotate(-2.15);
-      ctx.translate(R * 0.72, 0);
+      ctx.translate(lerpX, lerpY);
+      ctx.rotate(lerpAngle);
     } else if (bladeGuard) {
-      // Jodan-no-kamae: blade raised overhead at ~45° — true blocking guard
-      // Translate up so guard feels "above" body, rotate to diagonal block angle
+      // Jodan-no-kamae: blade raised, tip pointing directly along cursor aim axis.
+      // Cancel any residual shootReach/shootLift that leaked from previous shoot state
+      // by translating BACK by those amounts first, then re-position clean.
       ctx.save();
-      ctx.translate(-R * 0.2, -R * 1.0);
-      ctx.rotate(-Math.PI * 0.28); // ~50° — angled to deflect, not straight up
+      ctx.translate(-shootReach + R * 0.3, -shootLift - R * 0.55); // zero accumulated arm offsets, raise to guard height
     } else if (isCharge) {
       // Iaido draw: blade half-drawn from scabbard, body coiled before release
       ctx.save();
@@ -4178,23 +4410,28 @@ class PlayerRenderer {
       ctx.rotate(-0.30); // low draw angle, building tension
     } else if (arcActive) {
       // Kesa-giri (diagonal slash): sweeps from upper-back → lower-front
-      // arcT: 1→0, so start = cocked back-high, end = follow-through low-forward
-      const swingRot = -0.55 + (1 - arcT) * 1.35;
+      // arcT: 1→0, start = cocked back-high, end = follow-through low-forward
+      // Wider 120° sweep (was ~77°) + blade lunges forward at peak of swing
+      const swingRot = -0.9 + (1 - arcT) * 2.1;
+      const swingReach = R * 0.72 + (1 - arcT) * R * 0.4; // forward lunge during swing
       ctx.save();
-      ctx.translate(R * 0.72, -R * 0.2 * arcT); // drops as swing completes
+      ctx.translate(swingReach, -R * 0.25 * arcT); // drops as swing completes
       ctx.rotate(swingRot);
     } else {
-      // Chudan-no-kamae: steady forward guard, blade at ~10° upward tilt
-      // No oscillation — replace shaky idle with composed stillness
+      // Chudan-no-kamae: steady forward guard, blade at ~13° upward tilt
+      // x extended so sword reaches well past body radius — classic chudan reach
       ctx.save();
-      ctx.translate(R * 0.55, R * 0.15); // hands at navel height
-      ctx.rotate(-0.18); // ~10° upward tilt along aim axis
+      ctx.translate(R * 1.1, R * 0.05); // hands at solar-plexus height, arm extended
+      ctx.rotate(-0.22); // ~13° upward tilt — more confident forward point
     }
 
     // ── Blade ────────────────────────────────────────────────────────────────
     const isAmbush = (entity._zanzoAmbushTimer ?? 0) > 0;
-    const bladeGlowStr = isAmbush ? 24 : isCharge ? 20 : arcActive ? 18 : 8;
-    const bladeGlowColor = isAmbush ? "#fde68a" : "#7ec8e3";
+    const reflectGlow = (entity._reflectFlashTimer ?? 0) / 0.32; // 1→0
+    const bladeGlowStr = reflectGlow > 0 ? 32 + reflectGlow * 18
+      : isAmbush ? 24 : isCharge ? 20 : arcActive ? 18 : 8;
+    const bladeGlowColor = reflectGlow > 0 ? "#ffffff"
+      : isAmbush ? "#fde68a" : "#7ec8e3";
 
     ctx.shadowBlur = bladeGlowStr;
     ctx.shadowColor = bladeGlowColor;
@@ -4385,6 +4622,40 @@ class PlayerRenderer {
       }
       entity._iaidoFlashLine.alpha -= 0.052;
       if (entity._iaidoFlashLine.alpha <= 0) entity._iaidoFlashLine = null;
+    }
+
+    // ── Iaido blood trail — thin crimson slash, fades 0.5s ─────────────────
+    const bt = entity._iaidoBloodTrail;
+    if (bt && bt.alpha > 0) {
+      const bs1 = worldToScreen(bt.x1, bt.y1);
+      const bs2 = worldToScreen(bt.x2, bt.y2);
+      if (bs1 && bs2) {
+        const btEased = bt.alpha * bt.alpha; // ease-out quad
+        ctx.save();
+        ctx.lineCap = "round";
+        // Diffuse outer bleed
+        ctx.globalAlpha = btEased * 0.28;
+        ctx.strokeStyle = "#7a1010";
+        ctx.lineWidth = 5;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "#9b1c1c";
+        ctx.beginPath();
+        ctx.moveTo(bs1.x, bs1.y);
+        ctx.lineTo(bs2.x, bs2.y);
+        ctx.stroke();
+        // Thin bright core
+        ctx.globalAlpha = btEased * 0.55;
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 1.4;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "#dc2626";
+        ctx.beginPath();
+        ctx.moveTo(bs1.x, bs1.y);
+        ctx.lineTo(bs2.x, bs2.y);
+        ctx.stroke();
+        ctx.lineCap = "butt";
+        ctx.restore();
+      }
     }
 
     PlayerRenderer._drawLevelBadge(

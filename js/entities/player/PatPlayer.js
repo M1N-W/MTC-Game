@@ -104,6 +104,21 @@ class PatPlayer extends Player {
     this._attackArcTimer = 0; // counts down from 0.25 (slash) or 0.18 (melee)
     this._attackArcAngle = 0; // world angle of the swing
     this._isCritArc = false; // drives gold vs ice-blue arc colour
+
+    // ── Melee combo visual step (renderer reads for distinct hit shapes) ──
+    // Mirrors _meleeComboStep but persists during arc flash window.
+    // 0 = diagonal slash, 1 = thrust, 2 = heavy downward
+    this._meleeVisualStep = 0;
+
+    // ── Blade Guard reflect flash ─────────────────────────────────────────
+    // Spike to 1.0 on reflect, decay ~0.3s — drives body sheen + katana glow burst
+    this._reflectFlashTimer = 0;
+
+    // ── Iaido cinematic sheathe ────────────────────────────────────────────
+    // 0→1 during cinematic phase (lerps katana to scabbard position at hip)
+    this._iaidoCinematicT = 0;
+    // Blood trail line: set at iaido flash moment, alpha fades over 0.5s
+    this._iaidoBloodTrail = { x1: 0, y1: 0, x2: 0, y2: 0, alpha: 0 };
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -165,6 +180,16 @@ class PatPlayer extends Player {
     if (this._zanzoAmbushTimer > 0) this._zanzoAmbushTimer -= dt;
     if (this._meleeCooldownTimer > 0) this._meleeCooldownTimer -= dt;
     if (this._attackArcTimer > 0) this._attackArcTimer -= dt;
+    if (this._reflectFlashTimer > 0) this._reflectFlashTimer -= dt;
+    if (this._iaidoBloodTrail.alpha > 0) this._iaidoBloodTrail.alpha -= dt / 0.5;
+
+    // ── Iaido cinematic T — 0→1 over cinematic duration ─────────────────
+    if (this._iaidoPhase === "cinematic") {
+      const dur = (this.stats?.iaidoCinematicDur ?? 0.55);
+      this._iaidoCinematicT = Math.min(1, this._iaidoCinematicT + dt / dur);
+    } else {
+      this._iaidoCinematicT = 0;
+    }
 
     // ── Zanzo ghost alpha decay (O(n), pool — no alloc) ──────────────────
     const ghostCount = S.zanzoGhostCount ?? 4;
@@ -298,6 +323,7 @@ class PatPlayer extends Player {
     spawnFloatingText("⚔ REFLECT!", this.x, this.y - 55, "#7ec8e3", 20);
     if (typeof Audio !== "undefined" && Audio.playReflect) Audio.playReflect();
     addScreenShake(3);
+    this._reflectFlashTimer = 0.32; // renderer reads for body sheen burst + katana glow spike
     return true;
   }
 
@@ -456,6 +482,14 @@ class PatPlayer extends Player {
       this._iaidoHitEnemy = hit;
       this._iaidoPhase = "cinematic";
       this._iaidoTimer = 0;
+      this._iaidoCinematicT = 0; // reset so renderer lerps from 0
+
+      // Blood trail: world-space slash line from origin → Pat's current pos
+      this._iaidoBloodTrail.x1 = this._iaidoOriginX;
+      this._iaidoBloodTrail.y1 = this._iaidoOriginY;
+      this._iaidoBloodTrail.x2 = this.x;
+      this._iaidoBloodTrail.y2 = this.y;
+      this._iaidoBloodTrail.alpha = 1.0;
 
       // Slow time
       if (typeof TimeManager !== "undefined") {
@@ -683,6 +717,7 @@ class PatPlayer extends Player {
     }
 
     // Combo step
+    this._meleeVisualStep = this._meleeComboStep; // snapshot BEFORE increment — renderer reads this during arc flash
     this._meleeComboStep = (this._meleeComboStep + 1) % (S.meleeComboHits ?? 3);
     const comboWindow = S.meleeComboWindow ?? 0.18;
 

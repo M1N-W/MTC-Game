@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.35.0
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.35.1
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -68,13 +68,13 @@ Output Preferences:
 | ไฟล์             | หน้าที่สำคัญ                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `game.js`        | Game loop หลัก, state transitions, startGame()                                                                            |
-| `config.js`      | ค่าทั้งหมด — BALANCE, MAP\_CONFIG, ACHIEVEMENT\_DEFS                                                                      |
+| `config.js`      | ค่าทั้งหมด — BALANCE, MAP\_CONFIG, ACHIEVEMENT\_DEFS, GAME\_TEXTS (UI strings + skill names + **HUD emoji**)                |
 | `input.js`       | Keyboard/mouse/touch — global `keys` object, **mobile haptic feedback**, **button press states**, **touchcancel cleanup** |
 | `audio.js`       | SFX + BGM, Web Audio API, BGM crossfade system, namespace protection                                                      |
 | `effects.js`     | Particles (object pool), FloatingText, OrbitalParticle                                                                    |
 | `weapons.js`     | WeaponSystem, Projectile, ProjectileManager, SpatialGrid                                                                  |
 | `map.js`         | แผนที่, collision detection, MTCRoom                                                                                      |
-| `ui.js`          | HUD, **AchievementSystem** (อยู่ที่นี่ — ไม่ใช่ไฟล์แยก), **high score display**, **mobile UI polish**                     |
+| `ui.js`          | HUD, **AchievementSystem** (อยู่ที่นี่ — ไม่ใช่ไฟล์แยก), **high score display**, **mobile UI polish**, **`window.PORTRAITS[charId]`** (SVG strings injected into `<div id="char-avatar-{charId}">` 96×112px — character select portraits) |
 | `menu.js`        | Main menu, `selectCharacter()`                                                                                            |
 | `ai.js`          | Legacy AI behaviors (pre-EnemyBase refactor) — verify ยังใช้อยู่ไหม                                                       |
 | `utils.js`       | Utility functions                                                                                                         |
@@ -127,7 +127,7 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 
 | ไฟล์            | ตัวละคร     | บทบาท                                                                                                                                                                                                                                                                                                                                            |
 | --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()`, `_hitFlashTimer`, passive unlock                                                                                                                                                                                                                                                                                               |
+| `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()` — Dev Mode stat-package buff (OPERATOR `devbuff` command), `_hitFlashTimer`, passive unlock. charId-branching allowed here (no instanceof). |
 | `Kaoplayer.js`  | เก้า        | Assassin — stealth, teleport, clone                                                                                                                                                                                                                                                                                                              |
 | `PoomPlayer.js` | ภูมิ        | Spiritual Warrior — ritual, naga, garuda                                                                                                                                                                                                                                                                                                         |
 | `AutoPlayer.js` | ออโต้       | Thermodynamic Brawler — Heat Wave, Vacuum Pull+Ignite (Q), Overheat Detonation (E), Wanchai Stand (R-Click, JoJo-inspired crimson/gold), Heat Tier System (COLD/WARM/HOT/OVERHEAT), Stand Meter (0–100%), ORA Combo, Skill Synergy (Stand Pull/Charge Punch/Stand Guard), Rage Mode, Killing Blow Supercharge                                    |
@@ -386,6 +386,7 @@ _"commit and push, check changes first, write detailed description, update @sw\.
 **ต้องแก้:** `ui.js`, `effects.js`, `css/main.css`
 ⚠️ AchievementSystem อยู่ใน `ui.js` | data save ผ่าน `getSaveData()`/`setSaveData()`
 ⚠️ **Mobile UI Enhancement:** Use `.pressed` class for button states, `navigator.vibrate(12)` for haptic feedback, `-webkit-tap-highlight-color: transparent` for better mobile experience
+⚠️ **Character portraits** = static SVG strings in `window.PORTRAITS[charId]` (ui.js) — injected into `<div id="char-avatar-{charId}">`. NOT canvas draw. See mtc-rendering §18 for SVG art conventions.
 
 ### แก้ Pause / Menu UI
 
@@ -605,6 +606,7 @@ Shell casings          effects.js                    ShellCasingSystem
 | **Server rack แสงออกมาสีฟ้า (cool) แต่ LED เป็นสีทอง (amber)**                                         | **`punchLight`** **type ใช้** **`'cool'`** **แทน** **`'warm'`** **สำหรับ** **`server`** **type**                                                                      | **เปลี่ยน** **`'cool'`→`'warm'`** **ใน** **`drawLighting()`** **loop**                                                                       |
 | **Courtyard ดูมืดกว่า zone อื่นแม้มีต้นไม้เยอะ**                                                       | **`tree`** **type ไม่มี punchLight — ไม่ emit light เลย**                                                                                                             | **เพิ่ม** **`else if (obj.type === 'tree')`** **ใน lighting loop + เพิ่ม** **`'green'`** **tint type**                                       |
 | **Domain slow ไม่มีผล**                                                                                | **แก้** **`player.moveSpeed`** **แทน** **`player.stats.moveSpeed`**                                                                                                   | **ใช้** **`player.stats.moveSpeed`** **เสมอ — ดู SKILL.md §5 (stats.moveSpeed vs moveSpeed)**                                                |
+| **Tooltip floats over portrait / wrong position** | `position:absolute` on `.skill-tooltip` + wrong containing block, or `offsetHeight=0` before `tt-visible` | Change to `position:fixed; z-index:9999` in CSS; force-measure height with `visibility:hidden + tt-visible` trick before positioning in `_showTooltip()` |
 | **`ReferenceError: Cannot access 'isBossWave' before initialization`**                                 | **`const isBossWave`** **declare หลังบรรทัดที่ใช้มัน (TDZ)**                                                                                                          | **ย้าย** **`const wave/isBossWave/isGlitch`** **ขึ้นมาก่อน** **`waveAnnouncementFX.trigger()`** **เสมอ**                                     |
 | **Shop item** **`speedWave`** **ซื้อแล้วไม่มีผล**                                                      | **ShopSystem เซ็ต** **`_speedWaveTimer`** **แต่ game.js tick** **`shopSpeedBoostActive`**                                                                             | **ใช้** **`shopSpeedBoostActive/shopSpeedBoostTimer`** **เท่านั้น — property เดียวที่ game.js อ่าน**                                         |
 | **`ShopManager.tick()`** **ไม่ทำงานตอน shop เปิด**                                                     | **Monkey-patch ใน ShopSystem.js ทับ static method และ guard** **`GameState.phase !== 'PLAYING'`** **(shop = PAUSED)**                                                 | **ห้าม monkey-patch** **`ShopManager.tick`** **นอก class — แก้** **`static tick()`** **ใน ui.js โดยตรง**                                     |
@@ -907,26 +909,28 @@ dashStretchX = 1 + dT * 0.25;  // แทน 0.18 (ยืดมากขึ้น
 
 #### 2️⃣ PlayerRenderer.js → `_draw[Character]()` (เช่น `_drawKao()` L.610-850)
 
-**LAYER structure:**
+**LAYER structure (actual code — verified March 2026):**
 
 ```
-LAYER 0: Background effects (Weapon Master aura, sniper laser)
+Pre-draw: _drawGroundShadow() → _drawGroundFeet()  (before LAYER 1)
   ↓
-LAYER 1: Body setup & transform (ctx.save, translate, rotate, scale)
-  • ctx.translate(screen.x, screen.y)  ← ตำแหน่งตัวละคร
-  • ctx.rotate(angle)  ← facing direction
-  • ctx.scale(limb.stretchX, limb.stretchY)  ← ยืดหด
+LAYER 0: Background effects (Weapon Master aura, sniper laser, state indicators)
   ↓
-LAYER 2: Body parts (Head, torso, limbs)
-  • Head position: ctx.arc(0, -entity.radius * 0.7, ...)
-  • Arms, legs positioning
+LAYER 1: Body (ctx.save → translate+recoil+bob → scale(stretch×facing) → rotate(runLean) → body fill/details → hitFlash → ctx.restore)
   ↓
-LAYER 3: Weapon positioning
-  • Weapon angle & position relative to body
-  • ctx.translate(28, 0)  ← ระยะห่างจากตัว
+LAYER 1.5: Speed streaks (world space, velocity-driven, isDashing changes color/count)
   ↓
-LAYER 4: Restore & post-effects (ctx.restore)
+LAYER 2: Weapon + hands (ctx.save → translate+recoil+bob → rotate(angle) → translate(shootReach,shootLift) → weapon → hands → ctx.restore)
+  ↓
+Post: Low HP glow, level badge, muzzle flash (screen space)
 ```
+
+⚠️ Kao and Pat route through `_drawBase()` for their body+weapon — do NOT create separate LAYER
+   logic for them outside `_drawBase`. Character-specific effects inside _drawBase must use
+   `if (entity.charId === 'kao')` / `if (entity.charId === 'pat')` guards.
+
+⚠️ Auto and Poom have their own `_drawAuto()` / `_drawPoom()` with the same LAYER structure
+   but character-specific weapon geometry and shoot animations.
 
 **ตัวอย่างการปรับตำแหน่ง:**
 
@@ -943,18 +947,20 @@ ctx.rotate(aimAngle + someOffset)  // เพิ่ม offset มุม
 
 #### 3️⃣ \[Character]Player.js → `update()` / constructor
 
-**Animation state variables:**
+**Animation state variables (actual fields in PlayerBase._anim):**
 
 ```javascript
 entity._anim = {
-    state: "idle",           // idle, walking, dashing, hurt
-    moveT: 0,               // 0→1 (used in _getLimbParams)
-    shootT: 0,              // 0→1 during shooting (arm lift)
-    hurtT: 0,               // 0→1 during damage (flinch)
-    dashT: 0,               // 0→1 during dash (stretch)
-    angle: 0,               // facing direction (radians)
-    ...
+    state: "idle",        // 'idle'|'walk'|'run'|'shoot'|'dash'|'hurt'|'skill'
+    t: 0,                 // time in current state (seconds)
+    shootT: 0,            // 0→1 decay — arm raise after firing
+    hurtT: 0,             // 0→1 decay — flinch after hit
+    dashT: 0,             // 0→1 decay — lean/stretch after dash
+    skillT: 0,            // per-character skill cast timer
+    smoothMoveT: 0,       // lerp of moveT — prevents snap on start/stop
+    smoothAngle: null,    // lerp of entity.angle — null until first _tickAnim tick
 };
+// ⚠️ No 'angle' or 'moveT' field directly — use entity.angle and _getLimbParams()
 ```
 
 **การเพิ่ม animation ใหม่:**

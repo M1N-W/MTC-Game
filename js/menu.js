@@ -288,16 +288,31 @@ window.addEventListener('load', function _injectPortraits() {
 
         function _showTooltip(tooltip, card) {
             _activeTooltip = tooltip;
-            const container = card.closest('.char-cards');
-            if (!container) return;
+
+            // Force layout so offsetHeight is accurate before tt-visible adds opacity
+            tooltip.style.visibility = 'hidden';
+            tooltip.classList.add('tt-visible');
+            const h = tooltip.offsetHeight || 224;
+            const w = tooltip.offsetWidth || 240;
+            tooltip.classList.remove('tt-visible');
+            tooltip.style.visibility = '';
+
             const cardRect = card.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            const left = cardRect.left - containerRect.left + cardRect.width / 2 - 120;
-            const topRaw = cardRect.top - containerRect.top - tooltip.offsetHeight - 10;
-            const clampedLeft = Math.max(0, Math.min(left, containerRect.width - 244));
-            const finalTop = topRaw < 0 ? cardRect.bottom - containerRect.top + 8 : topRaw;
-            tooltip.style.left = clampedLeft + 'px';
-            tooltip.style.top = finalTop + 'px';
+            const VW = window.innerWidth;
+            const VH = window.innerHeight;
+
+            // Prefer above the card; fall back to below if no room
+            const topAbove = cardRect.top - h - 10;
+            const top = topAbove >= 8 ? topAbove : cardRect.bottom + 8;
+
+            // Centre on card, clamped to viewport
+            const left = Math.max(8, Math.min(
+                cardRect.left + cardRect.width / 2 - w / 2,
+                VW - w - 8
+            ));
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = Math.min(top, VH - h - 8) + 'px';
             tooltip.classList.add('tt-visible');
         }
 

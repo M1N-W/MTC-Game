@@ -479,7 +479,7 @@ class PoomPlayer extends Player {
       for (const timeoutId of ids) {
         try {
           clearTimeout(timeoutId);
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     this.updateUI();
@@ -495,9 +495,22 @@ class PoomPlayer extends Player {
     const { damage, isCrit } = this.dealDamage(
       S.riceDamage * this.damageBoost * (this.damageMultiplier || 1.0),
     );
+
+    // ── Muzzle offset: spawn จากปากกระบอกปืนจริงๆ ──────────────────────────
+    // LAYER 2 geometry: weapon translate(12,6) + muzzle x=31 → +43 along aim
+    // gatlingLowerY=5 + weapon_y=6 → +11 perpendicular (rotated by aim angle)
+    const MUZZLE_FORWARD = 56; // px along aim axis (R2:13 + weapon_local:43)
+    const MUZZLE_PERP = 11; // px perpendicular (down in local = cross-aim)
+    const ca = Math.cos(this.angle);
+    const sa = Math.sin(this.angle);
+    // perp offset: rotate +90° from aim → (-sin, cos), flipped by facing
+    const facingSign = Math.abs(this.angle) > Math.PI / 2 ? -1 : 1;
+    const muzzleX = this.x + ca * MUZZLE_FORWARD - sa * MUZZLE_PERP * facingSign;
+    const muzzleY = this.y + sa * MUZZLE_FORWARD + ca * MUZZLE_PERP * facingSign;
+
     const proj = new Projectile(
-      this.x,
-      this.y,
+      muzzleX,
+      muzzleY,
       this.angle,
       S.riceSpeed,
       damage,

@@ -1,6 +1,6 @@
 ---
 name: mtc-game-conventions
-description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, PatPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT, Zanzo Flash, Iaido Strike, Blade Guard, tryReflectProjectile, WorkerBridge, analyzer-worker, WAVE_SCHEDULE, SHATTER reaction, HealthComponent, predictedPosition, velocityEstimate, file header documentation, JSDoc header, module header."
+description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, PatPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT, Zanzo Flash, Iaido Strike, Blade Guard, tryReflectProjectile, WorkerBridge, analyzer-worker, WAVE_SCHEDULE, SHATTER reaction, HealthComponent, predictedPosition, velocityEstimate, file header documentation, JSDoc header, module header, hudEmoji, GAME_TEXTS, UIManager._E, patchTooltipEmojis, injectCooldownStyles, eat-buff-active, buff-bar, skill icon HUD."
 ---
 
 # MTC The Game — Project Conventions & Critical Pitfalls
@@ -205,10 +205,19 @@ GravitationalSingularity.update() must run even when boss is dead:
 
 8. Rendering Architecture
 
-PlayerRenderer — Layer Order:
-  Layer 1: Body    ctx.save() → translate(screen+recoil+bob) → scale(stretch×facing) → rotate(runLean) → body → ctx.restore()
-  Layer 2: Weapon  ctx.save() → translate(screen+recoil+bob) → rotate(angle) → translate(shootReach,shootLift) → weapon → ctx.restore()
-  Pre-draw: _drawGroundShadow() → _drawGroundFeet() before LAYER 1
+PlayerRenderer — Full Layer Order (verified March 2026):
+  Pre-draw: _drawGroundShadow() → _drawGroundFeet()   ← BEFORE any LAYER save block
+  LAYER 0:   Background effects (Weapon Master aura, sniper laser, state indicators)
+  LAYER 1:   Body  ctx.save() → translate(screen+recoil+bob) → scale(stretch×facing) → rotate(runLean) → body → hitFlash → ctx.restore()
+  LAYER 1.5: Speed streaks (world space, velocity-driven — isDashing changes color/count)
+  LAYER 2:   Weapon  ctx.save() → translate(screen+recoil+bob) → rotate(angle) → translate(shootReach,shootLift) → weapon → hands → ctx.restore()
+  Post:      Low HP glow, level badge, muzzle flash (screen space)
+
+  ⚠️ Kao and Pat route through _drawBase() for body+weapon — do NOT add separate LAYER
+     logic outside _drawBase. Character-specific effects inside _drawBase use:
+     if (entity.charId === 'kao') { ... }  /  if (entity.charId === 'pat') { ... }
+  ⚠️ Auto and Poom have their own _drawAuto() / _drawPoom() with the same LAYER structure
+     but character-specific weapon geometry and shoot animations.
 
 Variable declaration order — declare BEFORE dash ghost loop:
   ✅  const moveT = ..., bobY = ..., stretchX = ..., stretchY = ..., R = ...;
@@ -245,6 +254,9 @@ Muzzle Offsets (shootSingle in weapons.js):
   Source of truth: shootSingle() in weapons.js — grep 'barrelOffset' or 'muzzleOffset'.
   ⚠️ KaoPlayer bypasses shootSingle() entirely → muzzle offset lives in KaoPlayer.fireWeapon().
      Adding a new Kao weapon requires adding its offset there, not in weapons.js.
+  ⚠️ PoomPlayer bypasses shootSingle() entirely → muzzle offset lives in PoomPlayer.shoot().
+     Offset is computed from drawPoomWeapon() geometry — see §10 for the formula.
+     Do NOT add Poom muzzle logic to weapons.js or shootSingle().
 
 ---
 
@@ -270,6 +282,17 @@ Singleton pattern in effects.js:
 - Ritual (R) has no energy cost — combo finisher with CD + stack requirement
 - E/R/Q routing: all in PoomPlayer.update(); eatRice (R-Click) routed from game.js
 - Never add Q-consume block in game.js for Poom — skips cooldown
+
+Poom muzzle offset — spawn projectile from barrel tip, NOT body center:
+  shoot() computes world-space muzzle position from drawPoomWeapon() geometry:
+    MUZZLE_FORWARD = 56   // px along aim axis: R2(13) + weapon_translate(12) + muzzle_x(31)
+    MUZZLE_PERP    = 11   // px perpendicular:  gatlingLowerY(5) + weapon_translate_y(6)
+    facingSign = Math.abs(angle) > Math.PI/2 ? -1 : 1
+    muzzleX = x + cos(angle)*FORWARD - sin(angle)*PERP*facingSign
+    muzzleY = y + sin(angle)*FORWARD + cos(angle)*PERP*facingSign
+  ❌ new Projectile(this.x, this.y, ...) — spawns from body center, visually wrong
+  ✅ new Projectile(muzzleX, muzzleY, ...)
+  ⚠️ If drawPoomWeapon() geometry changes, recalculate MUZZLE_FORWARD/PERP to match
 
 ---
 
@@ -321,8 +344,10 @@ New playable character:
   ui.js — PORTRAITS.[name] + UIManager._updateIcons[Name]() + HUD icons
   menu.js — character select entry + icon prefix
   index.html — script tag after existing player files
+              — stat bar widths (HP/DMG/SPD/RANGE) are hard-coded % in index.html — update to match BALANCE
   weapons.js — if character has unique weapon mechanics (e.g., projectile reflection)
   PlayerBase.js — if character needs unique speed/property modifiers
+              — applyDevBuff() stat-package: add charId branch if devbuff needs char-specific values
   .agents/skills/MTC-Game's skills for Claude/mtc-rendering.skill — ถ้ามีการแก้ renderer logic
   Markdown Source/Successed-Plan/PERF_PLAN.md — ถ้ามีการแก้ performance logic/audit
   **Header Documentation — add module-level JSDoc header (see §18)**
@@ -427,7 +452,7 @@ Trigger points — where each character sets timers:
   Auto      | shootT=1 | Stand Rush melee + Heat Wave | _doPlayerMelee()
   Auto      | skillT=wanchaiDuration | R-Click Wanchai activate | _activateWanchai()
   Auto      | hurtT=1  | override before super | AutoPlayer.takeDamage()
-  Poom      | shootT=1 | L-Click shoot     | PoomPlayer._doShoot()
+  Poom      | shootT=1 | L-Click shoot     | PoomPlayer.update() — set inline after shoot() call (no _doShoot method)
   Poom      | skillT=0.6 | E Garuda summon | _activateGaruda()
   Poom      | skillT=1.0 | R Ritual burst  | _activateRitual()
   Poom      | hurtT=1  | override          | PoomPlayer.takeDamage()
@@ -611,3 +636,77 @@ GC stutter or frame budget overrun at 40+ enemies.
     game.js (splice audit), boss_attacks_*.js (particle spawn path)
   ไฟล์ที่ไม่ต้อง audit บ่อย:
     BossRenderer.js (single boss, low entity count), PlayerRenderer.js (always on-screen)
+
+---
+
+20. HUD Emoji Architecture — Single Source of Truth
+
+All skill-slot emoji live in GAME_TEXTS.hudEmoji (config.js).
+Read through UIManager._E(group, key) — never hardcode emoji strings in ui.js directly.
+
+Groups:
+  attack  — L-Click slot  { poom, auto, pat, default }
+  skill1  — R-Click slot  { poom, auto, kao, pat, default }
+  q       — Q slot        { kao, auto, pat, poom }
+  e       — E slot        { kao, auto, poom, pat }
+  r       — R slot        { poom }
+  mobile  — btn-skill     { poom, auto, kao, pat, default }
+
+_E() fallback chain: hudEmoji[group][key] → hudEmoji[group]['default'] → ''
+  ✅  UIManager._E('q', 'pat')          // reads config, falls back gracefully
+  ❌  emojiEl.textContent = '🌪️';      // hardcoded — breaks when config changes
+
+Tooltip sync — static HTML tooltip spans carry data attributes:
+  <span class="tt-icon" data-emoji-group="q" data-emoji-key="pat">🌪️</span>
+  UIManager.patchTooltipEmojis() — called once in initSkillNames(), patches all [data-emoji-group] spans
+  Fallback emoji stays in HTML so tooltip renders correctly before JS runs.
+  ⚠️ Passive/mechanic rows (DASH Kao 🌫️, HEAT Auto 🌡️, AUTO Pat 🗡️) have NO data-emoji-group
+     — they are intentionally static and not driven by config.
+
+---
+
+21. UIManager CSS Injection Architecture
+
+All skill-icon CSS (cooldown overlay, buff states, animations) is injected once via:
+  UIManager.injectCooldownStyles()  // no-op after first call — safe to call every frame
+
+This is the ONLY place to add new .skill-icon CSS rules or @keyframes.
+Pattern for a new buff-active visual state:
+  1. Add @keyframes + .xxx-buff-active class inside injectCooldownStyles() s.textContent
+  2. In the relevant _updateIconsXxx() method: classList.toggle('xxx-buff-active', isActive)
+  3. Drain bar: querySelector('.xxx-buff-bar') → create once, update width every frame, remove when inactive
+
+Poom eat-buff reference implementation (established pattern):
+  CSS:  @keyframes mtc-eat-pulse (emerald glow pulse 1.1s ease-in-out)
+        .eat-buff-active  — animation + border color override
+        .eat-buff-bar     — absolute 3px bottom strip, width driven by timer/duration ratio
+  Logic (in _updateIconsPoom, runs every frame):
+    eating = player.isEatingRice
+    classList.toggle('eat-buff-active', eating)
+    bar.style.width = (eatRiceTimer / eatRiceDuration * 100) + '%'
+    nameEl.textContent = eating ? timer.toFixed(1)+'s' : 'EAT RICE'
+  ⚠️ bar element is created lazily on first active tick and removed on deactivation — never pre-create
+---
+
+22. Dev Mode — applyDevBuff() Architecture
+
+applyDevBuff() lives in PlayerBase.js. It replaces the old per-character passive unlock
+with a stat-package buff that applies immediately when triggered.
+
+  Trigger:  AdminSystem `devbuff` console command → window.player.applyDevBuff()
+  Pattern:  reads BALANCE.characters[this.charId] + hard-coded boost ratios
+  Effect:   HP/EN/Speed/Damage multipliers — NOT permanent, does not persist on restart
+
+Structure invariant:
+  applyDevBuff() must guard on charId for any char-specific branch:
+  ✅  if (this.charId === 'pat') { /* katana-specific buff */ }
+  ❌  instanceof PatPlayer  — violates no-instanceof-in-PlayerBase rule (§Architecture)
+
+Adding a new character:
+  - Default buff in applyDevBuff() base path covers most cases
+  - Only add charId branch when the character has a mechanic that needs special seeding
+    (e.g., pre-filling Pat's Blade Guard charge, pre-unlocking Poom's Lv2 passive)
+
+AdminSystem integration:
+  ✅  case 'devbuff': if (window.player) window.player.applyDevBuff(); break;
+  — The command is permission-gated at OPERATOR level — no ROOT required

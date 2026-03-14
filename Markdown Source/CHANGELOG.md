@@ -4,6 +4,40 @@
 
 ---
 
+## v3.35.1 — UI/UX: HUD Emojis & Visual Polish
+*Released: March 14, 2026*
+
+### 🎨 UI & HUD Enhancement
+- **Centralized HUD Emojis**: Migrated all skill and action emojis to `GAME_TEXTS.hudEmoji` in `config.js` for easier customization.
+- **Dynamic Tooltip Emojis**: Implemented `UIManager.patchTooltipEmojis()` to synchronize character select tooltips with centralized config.
+- **Eat Rice Visuals**: Added a pulsing glow effect (`eat-buff-active`) and a countdown timer to Poom's rice buff icon.
+- **Tooltip Position Fix**: Changed skill tooltips to `position: fixed` to resolve clipping issues on mobile and high-zoom layouts.
+
+### ⚔️ Combat & Visuals
+- **Poom Muzzle Correction**: Fixed muzzle spawn coordinates for Poom's Gatling Rice to match the weapon's barrel position.
+- **Pat Visual Polish**: 
+  - Added `_meleeVisualStep` for distinct combo slash shapes.
+  - Implemented `_reflectFlashTimer` for a visual burst on successful Blade Guard reflects.
+  - Added speed streaks behind Pat during high-speed movement and dashing.
+  - Refined Iaido cinematic transitions and added a fading blood trail effect.
+- **Kao Portrait Update**: Cleaned up SVG path data in Kao's character select portrait.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/config.js (hudEmoji centralization)
+✅ MODIFIED: js/ui.js (UIManager emoji logic, Eat Rice polish, portrait cleanup)
+✅ MODIFIED: js/entities/player/PatPlayer.js (Combo/Reflect/Iaido visual logic)
+✅ MODIFIED: js/entities/player/PoomPlayer.js (Muzzle spawn fix)
+✅ MODIFIED: js/rendering/PlayerRenderer.js (Pat/Poom visual implementations)
+✅ MODIFIED: js/menu.js (Tooltip position & emoji patching)
+✅ MODIFIED: css/main.css (Tooltip positioning)
+✅ MODIFIED: index.html (Tooltip data-attributes)
+✅ MODIFIED: sw.js (v3.35.1)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.35.1)
+```
+
+---
+
 ## v3.35.0 — Architecture: Performance Audit Phase 1 (Invariants)
 *Released: March 13, 2026*
 
