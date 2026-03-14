@@ -364,6 +364,13 @@ New boss:
   window.BossXxx = XxxClass alias required for WaveManager + AdminSystem
   Boss queue: waves 3, 6, 9, 12, 15
 
+  speak() — inherited from BossBase (architectural coupling):
+    Reads a random entry from GAME_TEXTS.ai.bossTaunts[], passes to UIManager.showBossSpeech()
+    Pure synchronous — no Gemini, no fetch, no try-catch needed
+    Guard only: if (!window.UIManager) return; (already in base)
+    Call sites: phase transitions, attack telegraphs — never inside draw() or hot update loops
+    ✅ Call once per event: this.speak('context') — context param is accepted but unused in base
+
 boss_attacks split (DONE as of v3.29.x):
   boss_attacks_shared.js  — ExpandingRing (used by both bosses)
   boss_attacks_manop.js   — BarkWave, GoldfishMinion, BubbleProjectile, MatrixGridAttack,
@@ -710,3 +717,69 @@ Adding a new character:
 AdminSystem integration:
   ✅  case 'devbuff': if (window.player) window.player.applyDevBuff(); break;
   — The command is permission-gated at OPERATOR level — no ROOT required
+
+---
+
+23. PatPlayer — Architectural Invariants
+
+takeDamage() override:
+  PatPlayer overrides takeDamage() with an _invincibleTimer guard.
+  Any character-level i-frame (point-blank Iaido, Perfect Parry) sets this._invincibleTimer = N.
+  The override fires BEFORE super.takeDamage() — do NOT add i-frame logic inside PlayerBase.takeDamage().
+
+  ✅  // In PatPlayer.js:
+      takeDamage(amt, attacker) {
+          if (this._invincibleTimer > 0) return;
+          super.takeDamage(amt, attacker);
+      }
+  ❌  Do NOT add _invincibleTimer logic to PlayerBase — it is Pat-specific
+
+tryReflectProjectile() — dual-path architecture:
+  Two distinct paths keyed on which flag is true at call time:
+    _perfectParryArmed = true  → Perfect Parry path (tap < perfectParryWindow seconds)
+    bladeGuardActive = true    → Normal Guard path (hold ≥ perfectParryWindow seconds)
+
+  Both paths MUST set all three ownership flags on the projectile:
+    proj.vx *= -1;  proj.vy *= -1;
+    proj.owner = 'player';
+    proj.team  = 'player';
+    proj.isReflected = true;   ← renderer uses this to keep original enemy visual/color
+
+  proj.isReflected = true is CRITICAL — without it the renderer may recolor the projectile
+  to the player's bullet color (e.g., Kao's blue auto rounds) on the frame after reflect.
+
+Iaido boss hit:
+  _executeIaidoFlash() checks window.boss AFTER the enemy loop.
+  Hit detection uses segment-to-point distance (same algorithm as enemy hit).
+  boss.radius falls back to 50px if undefined.
+  ❌  Do NOT guard with if (!window.boss.isInvincible()) — bosses handle their own invincibility
+      inside takeDamage(); the caller should not skip the call.
+
+---
+
+24. specialEffects[] — update() Signature Contract
+
+game.js loop:
+  for (let i = window.specialEffects.length - 1; i >= 0; i--) {
+      const remove = window.specialEffects[i].update(dt, window.player, window.meteorZones, window.boss);
+      ...
+  }
+
+Positional args (fixed — do NOT reorder):
+  arg 0: dt
+  arg 1: player
+  arg 2: meteorZones  ← MeteorStrike and others consume this; must stay at position 2
+  arg 3: boss         ← optional; effects that don't need boss ignore it
+
+When writing a new specialEffect class that needs to interact with the boss:
+  ✅  update(dt, player, _meteorZones, boss) { ... }   // accept _meteorZones even if unused
+  ❌  update(dt, player, boss)                         // wrong position — boss arrives at arg 2 slot
+
+DeadlyGraph._reflected flag (established pattern):
+  When a specialEffect changes "team" mid-flight (e.g., reflected back at boss),
+  use a _reflected boolean flag rather than changing ownership fields.
+  Guard every player-damage and boss-damage branch independently:
+    if (!this._reflected) { /* damage player */ }
+    if (this._reflected && boss) { /* damage boss */ }
+  _reflected must be set BEFORE the next update() tick — set it in the reflect hook in game.js,
+  not inside update().

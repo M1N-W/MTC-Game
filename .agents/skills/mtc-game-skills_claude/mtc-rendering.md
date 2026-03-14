@@ -93,6 +93,18 @@ static draw(e, ctx) {
 `draw()` runs 60×/s. `Math.random()` in draw = different value every frame = visible flicker.
 Use time-based deterministic oscillation instead.
 
+`performance.now()` — call ONCE per draw method, reuse everywhere inside it:
+```js
+// ✅ Call once at top, pass through to every sub-layer
+static drawBossFirst(e, ctx) {
+    const now = performance.now();
+    const t   = now / 1000;   // seconds — for sin/cos oscillators
+    // pass `now` or `t` to any layer that needs time-based animation
+}
+// ❌ Calling performance.now() inside each sub-layer = multiple calls per frame
+//    with subtly different timestamps → phase jitter between layers
+```
+
 ```js
 // ❌ Never
 for (let i = 0; i < 6; i++) {
@@ -119,6 +131,20 @@ ctx.globalAlpha = 1;
 ## 5. World Space vs Screen Space
 
 Entity positions are world coords. Canvas draws in screen coords. Convert once at the top of the draw method.
+
+```js
+const screen = worldToScreen(entity.x, entity.y);
+```
+
+Camera scale — always use the static helper, never read `camera.scale` directly:
+```js
+// ✅ Safe — handles undefined camera and missing scale property
+const camScale = PlayerRenderer._getCamScale();   // same helper on BossRenderer
+// ❌ camera.scale              — TypeError if camera is not yet initialised
+// ❌ window.camera?.scale ?? 1 — spreads the silent-undefined pattern elsewhere
+```
+`_getCamScale()` is a static method on both `PlayerRenderer` and `BossRenderer`.
+Use it everywhere camera scale is needed inside a draw path.
 
 ```js
 const screen = worldToScreen(entity.x, entity.y);
@@ -458,22 +484,87 @@ JS invariant — `_showTooltip()` in menu.js:
 
 ## 20. UIManager Decomposition Pattern
 
-After the March 2026 refactor, large UIManager methods are split into private helpers.
+After the March 2026 refactor, `setupCharacterHUD` delegates to private `_hud*` helpers.
 Pattern to follow for any new HUD section:
 
-  setupCharacterHUD(player)     — public orchestrator, calls private helpers
-  _applyHUDTheme(player)       — sets data-char attr + character name label
-  _setupSkillIconsXxx(player)  — creates skill icon DOM + registers listeners (per char)
-  _updateIconsXxx()            — reads player state, toggles CSS classes, updates CD arcs (per char)
-  drawMinimap()                — canvas-only, called from the game loop
+```
+setupCharacterHUD(player)              — public orchestrator; derives isPoom/isKao/isAuto/isPat
+  _hudApplyThemeAndLabel(...)          — sets data-char attr + character name label
+  _hudSetupAttackSlot(...)             — L-Click slot emoji
+  _hudSetupPortraitAndWeapon(...)      — SVG portrait injection + weapon label
+  _hudSetupPassiveSlot(...)            — passive badge (charId-specific)
+  _hudSetupSkill1Slot(...)             — R-Click skill slot
+  _hudSetupQSlot(...)                  — Q slot (creates DOM + arc canvas)
+  _hudSetupExclusiveESlots(...)        — E slot (only one per char rendered)
+  _hudSetupRitualAndMobileButtons(...) — Poom ritual slot + mobile skill btn emoji
 
-Decomposition rule:
-  ✅ Each private helper must be independently callable without side effects on siblings
-  ✅ Orchestrator does no DOM work itself — only delegates and guards
-  ❌ Do NOT merge icon setup + icon update into one method — setup runs once, update runs every frame
+updateSkillIcons(player)               — per-frame dispatcher
+  _updateIconsPoom(player, setLock)    — Poom: eat/naga/ritual/garuda arc + eat-buff bar
+  _updateIconsAuto(player, setLock)    — Auto: stealth/vacuum/det arcs, wanchai Q label
+  _updateIconsPat(player,  setLock)    — Pat: zanzo/iaido/blade arcs
+  _updateIconsKao(player,  setLock)    — Kao: stealth/teleport/clone arcs
+```
 
-WaveManager follows the same pattern:
+`drawMinimap(ctx)` lives on **`CanvasHUD`**, not `UIManager`.
+  Called from `CanvasHUD.draw(ctx, dt)` every game frame.
+  Internal helpers: `_minimapDrawShell()`, `_minimapDrawContent()`, `_minimapDrawLabel()`
+
+Decomposition rules:
+  ✅ Each `_hud*` setup helper must be independently callable — no side effects on siblings
+  ✅ Orchestrator (`setupCharacterHUD`) does no DOM work itself — only derives booleans and delegates
+  ❌ Do NOT merge setup + update into one method — setup runs ONCE, update runs every frame
+  ❌ Do NOT add char-specific logic to the orchestrator — it belongs in the matching `_hud*` helper
+
+WaveManager follows the same orchestrator → pure helper pattern:
   startNextWave()               — public orchestrator
   _buildWavePayload(waveNum)   — pure: returns { enemies[], bossWave, glitch }
   _spawnWaveEnemies(payload)   — side effects: pushes to window.enemies
   _triggerWaveAnnouncement()   — FX only
+
+---
+
+## 21. OffscreenCanvas Bitmap Caching — Static Body Parts
+
+For geometry that never changes frame-to-frame, cache once to an `OffscreenCanvas`
+and call `drawImage()` on every subsequent frame. Eliminates redundant path construction
+and GPU state switches for the body layer.
+
+**Cache lives on the Renderer class (static), never on the entity:**
+
+```js
+// At class level:
+static _cache = {};   // PlayerRenderer._cache  /  BossRenderer._cache
+
+// In the draw method:
+const key = `${entity.charId}_${entity.radius}`;
+if (!PlayerRenderer._cache[key]) {
+    const size = entity.radius * 2 + 16;       // +16px margin for glow/outline
+    const osc  = new OffscreenCanvas(size, size);
+    const octx = osc.getContext('2d');
+    octx.translate(size / 2, size / 2);        // centre matches live canvas convention
+    // ... draw static body geometry to octx ...
+    PlayerRenderer._cache[key] = osc.transferToImageBitmap();
+}
+const bm = PlayerRenderer._cache[key];
+ctx.drawImage(bm, sx - bm.width / 2, sy - bm.height / 2);
+```
+
+**What belongs in the cache (drawn to OffscreenCanvas):**
+- ✅ Static body silhouette (filled path, no animation)
+- ✅ Fixed equipment geometry (collar, belt, static accessories)
+- ✅ Boss body shape at a given phase (use phase-keyed entry: `boss_manop_p2`)
+
+**What must NOT go in the cache:**
+- ❌ Anything reading `performance.now()` or `entity._anim` — changes every frame
+- ❌ Hit flash, glow overlays, oscillator-driven effects
+- ❌ Anything driven by an external timer or game state
+
+**Cache invalidation:**
+- Boss phase change → delete the stale entry: `delete BossRenderer._cache[key]`
+- Entity radius change (size-up attack) → same: delete and let it rebuild next frame
+- ❌ Never clear the entire `_cache` object mid-session — forces full rebuild for all entities
+
+**_getCamScale() coupling:**
+Cache bitmaps at world-unit size (1:1). Apply `ctx.scale(camScale, camScale)` in the
+live draw path after `worldToScreen()`. This keeps the bitmap stable across zoom changes
+rather than keying a separate bitmap per scale level.

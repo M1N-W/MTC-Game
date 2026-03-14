@@ -1665,23 +1665,47 @@ class DeadlyGraph {
         this.activeDuration = duration !== null ? duration / 2 : 5;
     }
 
-    update(dt, player) {
+    update(dt, player, _meteorZones, boss) {
         this.timer += dt;
         this._waveOffset += dt;
 
         if (this.phase === 'expanding') {
             this.length += this.speed * dt;
 
-            const pd = this._pointToLineDistance(
-                player.x, player.y,
-                this.startX, this.startY,
-                this.startX + Math.cos(this.angle) * this.length,
-                this.startY + Math.sin(this.angle) * this.length
-            );
-            if (!this.hasHit && pd < 20) {
-                player.takeDamage(this.damage);
-                this.hasHit = true;
+            const tipX = this.startX + Math.cos(this.angle) * this.length;
+            const tipY = this.startY + Math.sin(this.angle) * this.length;
+
+            // ── Player hit (only if graph is NOT reflected) ───────
+            if (!this._reflected) {
+                const pd = this._pointToLineDistance(
+                    player.x, player.y,
+                    this.startX, this.startY, tipX, tipY
+                );
+                if (!this.hasHit && pd < 20) {
+                    player.takeDamage(this.damage);
+                    this.hasHit = true;
+                }
             }
+
+            // ── Boss hit (only if graph IS reflected back) ────────
+            if (this._reflected && boss && !boss.dead) {
+                const bd = this._pointToLineDistance(
+                    boss.x, boss.y,
+                    this.startX, this.startY, tipX, tipY
+                );
+                if (!this.hasHit && bd < (boss.radius ?? 50) + 10) {
+                    if (typeof boss.takeDamage === 'function') {
+                        boss.takeDamage(this.damage, player);
+                    }
+                    this.hasHit = true;
+                    if (typeof spawnFloatingText === 'function') {
+                        spawnFloatingText('📈 GRAPH REFLECTED!', boss.x, boss.y - 90, '#facc15', 28);
+                    }
+                    if (typeof spawnParticles === 'function') spawnParticles(boss.x, boss.y, 20, '#facc15');
+                    if (typeof addScreenShake === 'function') addScreenShake(10);
+                }
+            }
+
             if (this.length >= this.maxLength) {
                 this.length = this.maxLength;
                 this.phase = 'blocking';
@@ -1694,7 +1718,7 @@ class DeadlyGraph {
                 this.timer = 0;
 
                 // ── Destruction FX when laser activates ──────────────
-                if (window.mapSystem && typeof window.mapSystem.damageArea === 'function') {
+                if (!this._reflected && window.mapSystem && typeof window.mapSystem.damageArea === 'function') {
                     const ex = this.startX + Math.cos(this.angle) * this.maxLength;
                     const ey = this.startY + Math.sin(this.angle) * this.maxLength;
                     window.mapSystem.damageArea(this.startX, this.startY, ex, ey);
@@ -1704,22 +1728,23 @@ class DeadlyGraph {
         } else if (this.phase === 'active') {
             const endX = this.startX + Math.cos(this.angle) * this.length;
             const endY = this.startY + Math.sin(this.angle) * this.length;
-            const pd = this._pointToLineDistance(
-                player.x, player.y,
-                this.startX, this.startY, endX, endY
-            );
 
-            const onBeam = pd < 25;
-            player.onGraph = onBeam;
-
-            // ── Universal Risk/Reward buff timer ──────────────────
-            if (onBeam) {
-                player.graphBuffTimer = 0.15;
+            // ── Player exposure (only if not reflected — reflected graph chases boss) ──
+            if (!this._reflected) {
+                const pd = this._pointToLineDistance(
+                    player.x, player.y,
+                    this.startX, this.startY, endX, endY
+                );
+                const onBeam = pd < 25;
+                player.onGraph = onBeam;
+                if (onBeam) player.graphBuffTimer = 0.15;
             }
 
             if (this.timer >= this.activeDuration) {
-                player.onGraph = false;
-                player.graphBuffTimer = 0;
+                if (!this._reflected) {
+                    player.onGraph = false;
+                    player.graphBuffTimer = 0;
+                }
                 return true; // Remove
             }
         }

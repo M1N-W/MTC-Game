@@ -1697,6 +1697,9 @@ class ProjectileManager {
               continue;
             }
           }
+          if (window.player instanceof PatPlayer) {
+            if (window.player.tryReflectProjectile(proj)) { continue; }
+          }
           player.takeDamage(proj.damage);
           hit = true;
         }

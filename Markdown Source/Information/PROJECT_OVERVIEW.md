@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.35.1
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.36.0
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -31,9 +31,6 @@ Output Preferences:
 
 ## Stability Legend
 
-- **STABLE** — แทบไม่เปลี่ยน (architecture, patterns, file locations)
-- **SEMI-DYNAMIC** — เปลี่ยนบางครั้ง (system integration, task checklists)
-- **DYNAMIC** — เปลี่ยนบ่อย (config values, code snippets, balance) → verify ใน codebase ก่อนใช้เสมอ
 - 🟢 **STABLE** — แทบไม่เปลี่ยน (architecture, patterns, file locations)
 - 🟡 **SEMI-DYNAMIC** — เปลี่ยนบางครั้ง (system integration, task checklists)
 - 🔴 **DYNAMIC** — เปลี่ยนบ่อย (config values, code snippets, balance) → verify ใน codebase ก่อนใช้เสมอ
@@ -76,10 +73,9 @@ Output Preferences:
 | `map.js`         | แผนที่, collision detection, MTCRoom                                                                                      |
 | `ui.js`          | HUD, **AchievementSystem** (อยู่ที่นี่ — ไม่ใช่ไฟล์แยก), **high score display**, **mobile UI polish**, **`window.PORTRAITS[charId]`** (SVG strings injected into `<div id="char-avatar-{charId}">` 96×112px — character select portraits) |
 | `menu.js`        | Main menu, `selectCharacter()`                                                                                            |
-| `ai.js`          | Legacy AI behaviors (pre-EnemyBase refactor) — verify ยังใช้อยู่ไหม                                                       |
+| `ai.js`          | Legacy AI behaviors (pre-EnemyBase refactor) — ส่วนใหญ่ถูกแทนที่โดย `/js/ai/*.js` แล้ว; ตรวจว่ายังมี caller ก่อนแก้   |
 | `utils.js`       | Utility functions                                                                                                         |
 | `tutorial.js`    | Tutorial system                                                                                                           |
-| `commit-push.md` | Instruction สำหรับ commit และ push การเปลี่ยนแปลง                                                                         |
 
 ### `/js/ai/` — AI Enhancement System 🟡
 
@@ -131,7 +127,7 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 | `Kaoplayer.js`  | เก้า        | Assassin — stealth, teleport, clone                                                                                                                                                                                                                                                                                                              |
 | `PoomPlayer.js` | ภูมิ        | Spiritual Warrior — ritual, naga, garuda                                                                                                                                                                                                                                                                                                         |
 | `AutoPlayer.js` | ออโต้       | Thermodynamic Brawler — Heat Wave, Vacuum Pull+Ignite (Q), Overheat Detonation (E), Wanchai Stand (R-Click, JoJo-inspired crimson/gold), Heat Tier System (COLD/WARM/HOT/OVERHEAT), Stand Meter (0–100%), ORA Combo, Skill Synergy (Stand Pull/Charge Punch/Stand Guard), Rage Mode, Killing Blow Supercharge                                    |
-| `PatPlayer.js`  | แพท         | Samurai Ronin — Katana dual-mode (Slash Wave / Melee Combo), Zanzo Flash Q (afterimage blink+ambush), Iaido Strike R (3-phase cinematic kill), Blade Guard R-Click (projectile reflect) — ⚠️ `tryReflectProjectile` MUST set `proj.team='player'` AND `proj.owner='player'`; katana hands drawn inside katana `ctx.save()` block at local coords |
+| `PatPlayer.js`  | แพท         | Samurai Ronin — Katana dual-mode (Slash Wave / Melee Combo), Zanzo Flash Q (afterimage blink+ambush), Iaido Strike R (3-phase cinematic kill, hits **both** enemies and boss), Blade Guard R-Click (hold=Guard reflect ×2 / tap<0.15s=Perfect Parry reflect ×4 + i-frame) — ⚠️ `tryReflectProjectile` branches on `_perfectParryArmed` vs `bladeGuardActive`; MUST set `proj.team='player'`, `proj.owner='player'`, AND `proj.isReflected=true` (keeps original visual); Iaido point-blank sets `_invincibleTimer`; `takeDamage()` is overridden to guard `_invincibleTimer > 0`; katana hands drawn inside katana `ctx.save()` block at local coords |
 
 ### `/js/rendering/`
 
@@ -347,7 +343,7 @@ _"commit and push, check changes first, write detailed description, update @sw\.
 
 **ต้องแก้:** สร้าง `js/entities/boss/[Name]Boss.js` (extends BossBase), `js/entities/boss/boss_attacks_[name].js` (หรือเพิ่มใน shared ถ้า attack ใช้ได้กับทุก boss), `BossRenderer.js` (เพิ่ม static draw method + dispatcher), `config.js`, `WaveManager.js`, `audio.js`, `index.html` (script tag)
 **อาจกระทบ:** `summons.js`, `map.js`
-⚠️ Boss มี Gemini speech integration ผ่าน `speak()` | Boss queue: waves 3,6,9,12,15
+⚠️ Boss speech: `speak()` (BossBase) reads `GAME_TEXTS.ai.bossTaunts[]` → `UIManager.showBossSpeech()` (typewriter DOM chip) — **ไม่ใช่ Gemini**, ไม่ async, ไม่ต้อง try-catch | Boss queue: waves 3,6,9,12,15
 ⚠️ window exports ต้องมี backward-compat alias (เช่น `window.BossXxx = XxxClass`) สำหรับ WaveManager + AdminSystem
 
 ### เพิ่มศัตรูใหม่

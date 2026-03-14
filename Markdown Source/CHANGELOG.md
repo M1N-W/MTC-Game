@@ -4,6 +4,34 @@
 
 ---
 
+## v3.36.0 — Mechanics: Pat Perfect Parry & Reflect Overhaul
+*Released: March 15, 2026*
+
+### ⚔️ Combat Mechanics (Pat Player)
+- **Perfect Parry System**: Tapping R-Click within 0.15s now triggers a Perfect Parry.
+  - **Rewards**: ×4 Reflect Damage (vs ×2 for hold), 20 Energy restore, and 0.4s I-Frames.
+  - **Risk**: Missing the window results in a full cooldown with no guard active.
+- **Dynamic Reflect Scaling**: Migrated `reflectDamageMult` to `config.js` (now 2.0x base).
+- **DeadlyGraph Reflection**: Pat can now reflect Kru Manop's `DeadlyGraph` lines back at the boss, flipping the origin and angle upon successful contact during guard/parry.
+- **I-Frame Integration**: Added `_invincibleTimer` for Pat, triggered by point-blank Iaido executes and Perfect Parries.
+
+### 🛠️ Core Systems
+- **VFX System Update**: `specialEffects.update()` now receives the `boss` reference to allow interaction with boss-spawned entities (like DeadlyGraph).
+- **Projectile System**: Standardized `tryReflectProjectile` calls within `ProjectileManager` to use centralized config values.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/config.js (Pat balance & reflect multipliers)
+✅ MODIFIED: js/entities/player/PatPlayer.js (Perfect Parry & Invincibility logic)
+✅ MODIFIED: js/entities/boss/boss_attacks_manop.js (DeadlyGraph reflection support)
+✅ MODIFIED: js/game.js (Effect update loop & DeadlyGraph reflect check)
+✅ MODIFIED: js/weapons.js (Projectile reflect integration)
+✅ MODIFIED: sw.js (v3.36.0)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.36.0)
+```
+
+---
+
 ## v3.35.1 — UI/UX: HUD Emojis & Visual Polish
 *Released: March 14, 2026*
 

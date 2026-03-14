@@ -520,6 +520,34 @@ const BALANCE = {
             // ── Speed on Hit ──────────────────────────────────────────
             speedOnHit: 18,
             speedOnHitDuration: 0.38,
+
+            // ── Blade Guard Reflect (R-Click hold) ───────────────────
+            // reflectDamageMult ใหม่: 2.0 (เดิมเขียน 1.2 hardcode ใน tryReflectProjectile)
+            reflectDamageMult: 2.0,
+
+            // ── Perfect Parry (R-Click tap < perfectParryWindow วินาที) ──
+            // tap แทนที่จะ hold → reflect ×4 + energy restore + i-frame สั้น
+            // กะเวลาพลาด = Blade Guard ไม่ทำงาน + cooldown เต็ม
+            perfectParryWindow: 0.15,           // วินาที: tap ต้องสั้นกว่านี้จึงเป็น Perfect Parry
+            perfectParryReflectMult: 4.0,       // reflect damage ×4 (vs hold ×2)
+            perfectParryEnergyRestore: 20,      // energy คืนเมื่อ parry สำเร็จ
+            perfectParryIFrameDur: 0.4,         // i-frame วินาทีหลัง Perfect Parry
+            perfectParryScreenFreeze: 0.05,     // TimeManager.setBulletTime() duration
+
+            // ── Iaido Strike — Boss Hit & Point-Blank Execute ─────────
+            // point-blank = Pat หยุดที่ระยะ ≤ iaidoPointBlankRange px จาก target
+            iaidoPointBlankRange: 45,           // px — threshold execute range
+            iaidoPointBlankDmgMult: 2.0,        // dmg ×2 ถ้า point-blank
+            iaidoPointBlankIFrameDur: 1.5,      // วินาที อมตะหลัง point-blank hit
+
+            // ── Iaido Cinematic ───────────────────────────────────────
+            // (ใช้อยู่แล้วใน _tickIaido แต่อ่านจาก this.stats — เพิ่มให้ครบ)
+            iaidoCinematicDur: 0.55,
+
+            // ── DeadlyGraph Reflect ───────────────────────────────────
+            // ระยะที่ Pat ต้องอยู่ใกล้แนวกราฟเพื่อ reflect ได้
+            graphReflectRange: 80,              // px จาก midpoint ของ beam
+            graphReflectDamageMult: 2.0,        // damage ×2 หลัง reflect กลับ
         },
     },
     drone: {

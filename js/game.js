@@ -506,7 +506,7 @@ function _tickBarrelExplosions() {
 // ── Projectiles, powerups, meteors, particles, VFX systems ───────────────────
 function _tickEnvironment(dt, _inTutorial) {
     for (let i = window.specialEffects.length - 1; i >= 0; i--) {
-        const remove = window.specialEffects[i].update(dt, window.player, window.meteorZones);
+        const remove = window.specialEffects[i].update(dt, window.player, window.meteorZones, window.boss);
         if (remove) {
             window.specialEffects[i] = window.specialEffects[window.specialEffects.length - 1];
             window.specialEffects.pop();
@@ -522,6 +522,62 @@ function _tickEnvironment(dt, _inTutorial) {
     //       if (window.player.tryReflectProjectile(proj)) { continue; }
     //   }
     projectileManager.update(dt, window.player, window.enemies, window.boss);
+
+    // ── PAT: DeadlyGraph reflect — check during 'blocking' phase ──────────────
+    // Pat (Blade Guard active OR Perfect Parry armed) near graph midpoint →
+    // flip angle, swap origin to current endpoint, reset to 'expanding'.
+    // Only runs when window.boss is alive (graph only spawns during boss fight).
+    if (window.boss && !window.boss.dead &&
+        window.player instanceof PatPlayer &&
+        (window.player.bladeGuardActive || window.player._perfectParryArmed)) {
+
+        const patS = window.player.stats;
+        const reflectRange = patS.graphReflectRange ?? 80;
+        const reflectDmgMult = patS.graphReflectDamageMult ?? 2.0;
+
+        for (let i = 0; i < window.specialEffects.length; i++) {
+            const fx = window.specialEffects[i];
+            if (!(fx instanceof DeadlyGraph)) continue;
+            if (fx.phase !== 'blocking') continue;
+            if (fx._reflected) continue; // already reflected once — no double-bounce
+
+            // Midpoint of current beam
+            const midX = fx.startX + Math.cos(fx.angle) * fx.length * 0.5;
+            const midY = fx.startY + Math.sin(fx.angle) * fx.length * 0.5;
+            const dToMid = Math.hypot(window.player.x - midX, window.player.y - midY);
+            if (dToMid > reflectRange) continue;
+
+            // ── Reflect: flip beam back toward boss ───────────────────────────
+            const newStartX = fx.startX + Math.cos(fx.angle) * fx.length;
+            const newStartY = fx.startY + Math.sin(fx.angle) * fx.length;
+            fx.startX = newStartX;
+            fx.startY = newStartY;
+            fx.angle = Math.atan2(window.boss.y - newStartY, window.boss.x - newStartX);
+            fx.length = 0;
+            fx.phase = 'expanding';
+            fx.timer = 0;
+            fx.hasHit = false;
+            fx._reflected = true;
+            fx.damage *= reflectDmgMult;
+
+            spawnFloatingText('⚔ GRAPH PARRIED!', window.player.x, window.player.y - 70, '#facc15', 28);
+            spawnParticles(window.player.x, window.player.y, 18, '#7ec8e3');
+            if (typeof Audio !== 'undefined' && Audio.playReflect) Audio.playReflect();
+            addScreenShake(8);
+            window.player._reflectFlashTimer = 0.5;
+
+            // Consume Perfect Parry if it was armed
+            if (window.player._perfectParryArmed) {
+                window.player._perfectParryArmed = false;
+                window.player._invincibleTimer = window.player.stats.perfectParryIFrameDur ?? 0.4;
+                window.player.energy = Math.min(
+                    window.player.maxEnergy ?? 100,
+                    (window.player.energy ?? 0) + (patS.perfectParryEnergyRestore ?? 20)
+                );
+                spawnFloatingText('⚔ PERFECT!', window.player.x, window.player.y - 100, '#ff4500', 22);
+            }
+        }
+    }
 
     for (let i = window.powerups.length - 1; i >= 0; i--) {
         if (window.powerups[i].update(dt, window.player)) {

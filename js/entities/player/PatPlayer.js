@@ -94,6 +94,11 @@ class PatPlayer extends Player {
     this.usesOwnLifesteal = false;
     this.passiveSpeedBonus = 0;
 
+    // ── Invincibility timer (Pat-specific) ───────────────────────────────
+    // Counts DOWN — set by point-blank Iaido execute and Perfect Parry.
+    // takeDamage() guards against this; isDashing already handled by PlayerBase.
+    this._invincibleTimer = 0;
+
     // ── Passive: RONIN'S EDGE ─────────────────────────────────────────────
     // Unlock: ใช้ Iaido สำเร็จ (โดน enemy) ครั้งแรก
     this._iaidoKillCount = 0;
@@ -113,6 +118,14 @@ class PatPlayer extends Player {
     // ── Blade Guard reflect flash ─────────────────────────────────────────
     // Spike to 1.0 on reflect, decay ~0.3s — drives body sheen + katana glow burst
     this._reflectFlashTimer = 0;
+
+    // ── Perfect Parry state ───────────────────────────────────────────────
+    // Tap R-Click < perfectParryWindow → Perfect Parry (×4 reflect + i-frame)
+    // _bladeGuardHoldTime tracks how long R-Click has been pressed THIS press.
+    // Reset to 0 on button release or when guard activates normally.
+    this._perfectParryArmed = false;  // true = button just pressed, waiting for release/timeout
+    this._perfectParrySucceeded = false; // latches true for 1 frame when parry fires
+    this._prevRightHeld = false;      // previous frame R-Click state for edge detection
 
     // ── Iaido cinematic sheathe ────────────────────────────────────────────
     // 0→1 during cinematic phase (lerps katana to scabbard position at hip)
@@ -182,6 +195,7 @@ class PatPlayer extends Player {
     if (this._attackArcTimer > 0) this._attackArcTimer -= dt;
     if (this._reflectFlashTimer > 0) this._reflectFlashTimer -= dt;
     if (this._iaidoBloodTrail.alpha > 0) this._iaidoBloodTrail.alpha -= dt / 0.5;
+    if (this._invincibleTimer > 0) this._invincibleTimer -= dt;
 
     // ── Iaido cinematic T — 0→1 over cinematic duration ─────────────────
     if (this._iaidoPhase === "cinematic") {
@@ -273,28 +287,51 @@ class PatPlayer extends Player {
   // ──────────────────────────────────────────────────────────────────────────
   _tickBladeGuard(dt, keys, S) {
     const held = !!(window.mouse && window.mouse.right);
+    const parryWindow = S.perfectParryWindow ?? 0.15;
 
+    // ── Button just pressed: arm Perfect Parry ───────────────────────────
+    if (held && !this._prevRightHeld && this._bladeGuardCooldown <= 0) {
+      this._perfectParryArmed = true;
+      this._bladeGuardDuration = 0; // reset hold timer
+    }
+
+    // ── Button held: count duration ──────────────────────────────────────
     if (held && this._bladeGuardCooldown <= 0) {
-      if (!this.bladeGuardActive) {
-        this.bladeGuardActive = true;
-        this._bladeGuardDuration = 0;
-        spawnFloatingText("🛡 BLADE GUARD", this.x, this.y - 45, "#a8d8ea", 16);
-      }
       this._bladeGuardDuration += dt;
 
-      // Speed penalty
-      // (speedMult override done in PlayerBase via bladeGuardActive flag check)
-
-      // Duration cap
-      const maxDur = S.bladeGuardMaxDuration ?? 3.0;
-      if (this._bladeGuardDuration >= maxDur) {
-        this._endBladeGuard(S);
+      // Held past parry window → switch to normal Blade Guard
+      if (this._perfectParryArmed && this._bladeGuardDuration >= parryWindow) {
+        this._perfectParryArmed = false;
+        if (!this.bladeGuardActive) {
+          this.bladeGuardActive = true;
+          spawnFloatingText('🛡 BLADE GUARD', this.x, this.y - 45, '#a8d8ea', 16);
+        }
       }
-    } else {
+
+      if (this.bladeGuardActive) {
+        // Duration cap for normal guard
+        const maxDur = S.bladeGuardMaxDuration ?? 3.0;
+        if (this._bladeGuardDuration >= maxDur) {
+          this._endBladeGuard(S);
+        }
+      }
+    }
+
+    // ── Button released ──────────────────────────────────────────────────
+    if (!held && this._prevRightHeld) {
+      if (this._perfectParryArmed && this._bladeGuardCooldown <= 0) {
+        // Released within parry window — Perfect Parry armed, waits for incoming proj
+        // _perfectParryArmed stays true; tryReflectProjectile handles the actual fire.
+        // Set a short window before it expires on its own.
+        this._perfectParryArmed = true; // kept until hit or timeout
+      }
       if (this.bladeGuardActive) {
         this._endBladeGuard(S);
       }
+      this._perfectParryArmed = false; // no projectile hit in time = miss, no penalty
     }
+
+    this._prevRightHeld = held;
   }
 
   _endBladeGuard(S) {
@@ -303,27 +340,57 @@ class PatPlayer extends Player {
     this._bladeGuardDuration = 0;
   }
 
-  // Called from game.js projectile collision loop
+  // Called from game.js / ProjectileManager projectile collision loop
   // Returns true if projectile was reflected
   tryReflectProjectile(proj) {
-    if (!this.bladeGuardActive) return false;
     const S = this.stats;
-    const dist = Math.hypot(proj.x - this.x, proj.y - this.y);
-    if (dist > (S.bladeGuardReflectRadius ?? 55)) return false;
-    if (proj.owner === "player") return false;
+    const isPerfectParryArmed = this._perfectParryArmed;
+    const isGuardActive = this.bladeGuardActive;
 
-    // Reflect: flip velocity, change owner + team so collision routing hits enemies
+    if (!isPerfectParryArmed && !isGuardActive) return false;
+    if (proj.owner === 'player') return false;
+
+    const dist2 = Math.hypot(proj.x - this.x, proj.y - this.y);
+    if (dist2 > (S.bladeGuardReflectRadius ?? 55)) return false;
+
+    // ── Determine reflect type ────────────────────────────────────────────
+    const isPerfect = isPerfectParryArmed;
+
+    // Reflect: flip velocity, mark as player-owned
     proj.vx *= -1;
     proj.vy *= -1;
-    proj.owner = "player";
-    proj.team = "player";
-    proj.damage *= 1.2; // reflect bonus
+    proj.owner = 'player';
+    proj.team = 'player';
+    // isReflected flag → Projectile renderer keeps original color/visual
+    proj.isReflected = true;
 
-    spawnParticles(proj.x, proj.y, 8, "#a8d8ea");
-    spawnFloatingText("⚔ REFLECT!", this.x, this.y - 55, "#7ec8e3", 20);
-    if (typeof Audio !== "undefined" && Audio.playReflect) Audio.playReflect();
-    addScreenShake(3);
-    this._reflectFlashTimer = 0.32; // renderer reads for body sheen burst + katana glow spike
+    if (isPerfect) {
+      // ── Perfect Parry ─────────────────────────────────────────────────
+      proj.damage *= S.perfectParryReflectMult ?? 4.0;
+      this._perfectParryArmed = false;
+      this._invincibleTimer = S.perfectParryIFrameDur ?? 0.4;
+      this.energy = Math.min(this.maxEnergy ?? 100,
+        (this.energy ?? 0) + (S.perfectParryEnergyRestore ?? 20));
+
+      spawnFloatingText('⚔ PERFECT PARRY!', this.x, this.y - 65, '#facc15', 26);
+      spawnParticles(proj.x, proj.y, 14, '#facc15');
+      this._bladeGuardCooldown = S.bladeGuardCooldown ?? 5.0;
+
+      // Micro bullet-time
+      if (typeof TimeManager !== 'undefined') {
+        TimeManager.setBulletTime(0.1, S.perfectParryScreenFreeze ?? 0.05);
+      }
+      addScreenShake(6);
+    } else {
+      // ── Normal Blade Guard reflect ────────────────────────────────────
+      proj.damage *= S.reflectDamageMult ?? 2.0;
+      spawnFloatingText('⚔ REFLECT!', this.x, this.y - 55, '#7ec8e3', 20);
+      spawnParticles(proj.x, proj.y, 8, '#a8d8ea');
+      addScreenShake(3);
+    }
+
+    if (typeof Audio !== 'undefined' && Audio.playReflect) Audio.playReflect();
+    this._reflectFlashTimer = 0.32;
     return true;
   }
 
@@ -476,6 +543,20 @@ class PatPlayer extends Player {
         }
       }
     }
+    // Also check boss — original code only hit enemies, never boss
+    if (!hit && window.boss && !window.boss.dead) {
+      const bx2 = window.boss.x - this._iaidoOriginX;
+      const by2 = window.boss.y - this._iaidoOriginY;
+      const segLen = dist * t;
+      const segDx = (dx * t) / (segLen || 1);
+      const segDy = (dy * t) / (segLen || 1);
+      const proj2 = Math.max(0, Math.min(segLen, bx2 * segDx + by2 * segDy));
+      const closestX = this._iaidoOriginX + segDx * proj2;
+      const closestY = this._iaidoOriginY + segDy * proj2;
+      if (Math.hypot(window.boss.x - closestX, window.boss.y - closestY) <= hitRange + (window.boss.radius ?? 50)) {
+        hit = window.boss;
+      }
+    }
 
     if (hit) {
       // Phase 3: cinematic freeze
@@ -522,6 +603,17 @@ class PatPlayer extends Player {
     // Passive melee bonus
     if (this.passiveUnlocked) {
       dmg *= 1 + (this.stats.passiveMeleeDmgBonus ?? 0.15);
+    }
+
+    // ── Point-blank execute check ─────────────────────────────────────────
+    // Pat หยุด ≤ iaidoPointBlankRange px จาก target → dmg ×2 + i-frame 1.5s
+    const pointBlankRange = S.iaidoPointBlankRange ?? 45;
+    const isPointBlank = Math.hypot(this.x - e.x, this.y - e.y) <= pointBlankRange + (e.radius ?? 30);
+    if (isPointBlank) {
+      dmg *= S.iaidoPointBlankDmgMult ?? 2.0;
+      this._invincibleTimer = S.iaidoPointBlankIFrameDur ?? 1.5;
+      spawnFloatingText('⚔ EXECUTE!', this.x, this.y - 80, '#ff4500', 28);
+      spawnParticles(this.x, this.y, 20, '#ff4500');
     }
 
     // Crit
@@ -743,6 +835,14 @@ class PatPlayer extends Player {
 
     if (typeof Audio !== "undefined" && Audio.playMeleeHit)
       Audio.playMeleeHit();
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // TAKE DAMAGE — guard invincibility from point-blank Iaido / Perfect Parry
+  // ──────────────────────────────────────────────────────────────────────────
+  takeDamage(amt, attacker) {
+    if (this._invincibleTimer > 0) return; // i-frame active
+    super.takeDamage(amt, attacker);
   }
 
   // ──────────────────────────────────────────────────────────────────────────
