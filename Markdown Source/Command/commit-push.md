@@ -2,6 +2,11 @@ Analyze all unstaged and modified files in the current workspace, then execute t
 
 ---
 
+### ⚡ Efficiency Rule (Fast Patch)
+If the user provides detailed changes in the prompt (e.g., "Big-Balancing Session — Complete") and emphasizes that no further file edits are needed, **SKIP manual file scanning.** Trust the provided details for documentation updates and commit messages.
+
+---
+
 ## STEP 1: UPDATE DOCUMENTATION (only if relevant files changed)
 
 Apply only the rules below. Do not modify any other sections.

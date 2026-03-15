@@ -41,6 +41,7 @@ The user is on Claude Free Plan. Sessions end mid-task. This is expected and nor
 - Any unresolved decisions the user must make
 
 ### Token efficiency rules:
+- **Efficiency Rule (User-Provided Patch):** If the user provides detailed change logs (e.g., in a `commit and push` command) and explicitly states "No more file edits needed / Patch complete", DO NOT re-scan the entire codebase. Trust the user's provided details for documentation updates and commit messages. This saves significant tokens and time.
 - Read only the sections of files needed for the task (use view_range, grep, bash)
 - Do not re-read files already in context unless the task requires verification
 - Do not output file contents to chat — write to filesystem and present_files

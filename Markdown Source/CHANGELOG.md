@@ -4,6 +4,23 @@
 
 ---
 
+## v3.37.1 — Docs: Fast Patch Efficiency Rule & Command Update
+*Released: March 15, 2026*
+
+### 🛠️ Workflow & Automation
+- **Efficiency Rule (Fast Patch):** Added a new rule to `working-standards.md` to skip manual file scanning when the user provides patch details directly in the command. This improves speed and reduces token consumption.
+- **Command Update:** Updated `commit-push.md` to include a template for users to provide "Patch Details" for faster commit processing.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/working-standards.md
+✅ MODIFIED: Markdown Source/Command/commit-push.md
+✅ MODIFIED: sw.js (v3.37.1)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.37.1)
+```
+
+---
+
 ## v3.37.0 — Balance: Big-Balancing Session (Characters & Bosses)
 *Released: March 15, 2026*
 
