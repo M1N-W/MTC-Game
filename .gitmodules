@@ -1,0 +1,3 @@
+[submodule "ccflare"]
+	path = ccflare
+	url = https://github.com/snipeship/ccflare.git
