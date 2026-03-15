@@ -148,7 +148,7 @@ const BALANCE = {
             stealthDrain: 45,
             stealthSpeedBonus: 1.5,
             expToNextLevel: 100,
-            expLevelMult: 1.5,
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
             passiveUnlockLevel: 1,          // fallback เท่านั้น — KaoPlayer.checkPassiveUnlock() override
             passiveUnlockStealthCount: 1,   // fallback: ปลดตั้งแต่ stealth ครั้งแรก
             // ── Passive Lv1 (Stealth ครั้งแรก) ──
@@ -166,7 +166,7 @@ const BALANCE = {
             speedOnHitDuration: 0.4,
             damageMultiplierPerLevel: 0.09,  // NERF: 0.12 → 0.09 (level scaling -25%, wave10 damMult 2.2→1.9)
             cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
-            maxHpPerLevel: 6,                 // BUFF: 4 → 6
+            maxHpPerLevel: 8,                 // BIG-BALANCE: 6 → 8 (Lv12 HP: 119+11×8=207 vs old 167 — survives PorkSandwich)
             // ── Advanced Kao Skills ──
             teleportCooldown: 18,
             teleportEnergyCost: 20,         // NEW: Q Teleport/PhantomBlink — instant blink ควรมีต้นทุน
@@ -209,10 +209,10 @@ const BALANCE = {
             wanchaiCooldown: 12,            // 9 → 12 (trade longer for less spammy)
             wanchaiEnergyCost: 25,          // 32 → 25 (easier loop)
             wanchaiPunchRate: 0.10,          // NERF: 0.09 → 0.10 (10 punches/s แทน 11.1 — ลด sustained DPS)
-            wanchaiDamage: 24,              // NERF: 38 → 30 → 24 (base DPS -20% vs 30, aligns boss TTK ~12s effective)
+            wanchaiDamage: 18,              // BIG-BALANCE: 24 → 18 (−25%) — HOT DPS 461→315, ratio vs Poom 2.5×→1.7×
             standSpeedMod: 1.5,
             standDamageReduction: 0.40,     // 0.35 → 0.40 (BUFF: tank identity stronger)
-            standCritBonus: 0.18,           // NERF: 0.25 → 0.18 (crit stack -7%)
+            standCritBonus: 0.10,           // BIG-BALANCE: 0.18 → 0.10 (−8% crit stack, กด ceiling)
             standMoveSpeed: 340,
             standPunchRange: 110,
             standLeashRadius: 420,
@@ -291,7 +291,7 @@ const BALANCE = {
 
             // ── Level Scaling ─────────────────────────────────
             expToNextLevel: 100,
-            expLevelMult: 1.5,
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
             damageMultiplierPerLevel: 0.08, // NERF: 0.10 → 0.12 → 0.08 (wave10 damMult 2.2→1.8)
             cooldownReductionPerLevel: 0.04,
             maxHpPerLevel: 16,              // 14 → 16
@@ -350,7 +350,7 @@ const BALANCE = {
             standMeterMax: 100,
             standMeterDrainRate: 8,     // meter/s ขณะ Wanchai active
             standMeterPerHit: 1,        // NERF: 4 → 1 (fix infinite stand loop at OVERHEAT)
-            standMeterOnKill: 12,       // +meter ต่อ kill ขณะ Stand active (ต้องฆ่าเพื่อ sustain)
+            standMeterOnKill: 8,        // DEBT-FIX: 12 → 8 — break-even normal=1.0 kills/s, HOT=2.0 kills/s (ไม่ infinite แล้ว)
             standMeterDrainCold: 3.0,   // NERF: 1.30 → 3.0 (COLD = real penalty, max ~6s)
             standMeterDrainOverheat: 2.0, // NERF: 0.50 → 2.0 (drain faster, net 7.5/s → max 13s alone)
         },
@@ -365,7 +365,7 @@ const BALANCE = {
             dashDistance: 170,
             dashCooldown: 1.65,
             expToNextLevel: 100,
-            expLevelMult: 1.5,
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
             riceDamage: 62,
             riceCooldown: 0.42,
             riceSpeed: 600,
@@ -454,8 +454,8 @@ const BALANCE = {
             weapons: {
                 katana: {
                     name: 'KATANA',
-                    damage: 34,             // slash wave base damage
-                    cooldown: 0.38,         // DPS ~89 (ต่ำกว่า Kao auto 118 เพิ่มเติม melee bonus)
+                    damage: 42,             // BIG-BALANCE: 34 → 42 (+23%) — Ranged DPS 99→146
+                    cooldown: 0.32,         // BIG-BALANCE: 0.38 → 0.32 (tighter rhythm)
                     range: 750,             // slash wave range
                     speed: 820,             // projectile speed
                     color: '#7ec8e3',       // ice blue
@@ -465,7 +465,7 @@ const BALANCE = {
 
             // ── Dual Mode ─────────────────────────────────────────────
             meleeRange: 150,                // ระยะ switch → melee combo
-            meleeDamageMulti: 1.8,          // melee hit = 34 × 1.8 = ~61 per hit
+            meleeDamageMulti: 2.0,          // BIG-BALANCE: 1.8 → 2.0 (melee DPS 168→198, post-passive ~215)
             meleeComboHits: 3,              // 3-hit combo
             meleeComboWindow: 0.18,         // วินาทีต่อ hit ใน combo
             meleeCooldown: 0.55,            // cooldown หลัง combo จบ
@@ -495,14 +495,14 @@ const BALANCE = {
             iaidoRange: 400,                // max dash distance
             iaidoCooldown: 14.0,
             iaidoChargeDuration: 0.6,       // Phase 1 charge time
-            iaidoDamage: 160,               // base damage (สูงสุด — single target)
+            iaidoDamage: 180,               // BIG-BALANCE: 160 → 180 (single target burst reward)
             iaidoCritMulti: 3.5,            // crit multiplier เฉพาะ Iaido
             iaidoFreezeDuration: 0.5,       // Phase 3 cinematic freeze (TimeManager)
             iaidoBloodParticles: 18,        // blood burst particle count
 
             // ── Level Scaling ─────────────────────────────────────────
             expToNextLevel: 100,
-            expLevelMult: 1.5,
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
             damageMultiplierPerLevel: 0.09,
             cooldownReductionPerLevel: 0.04,
             maxHpPerLevel: 7,
@@ -587,7 +587,7 @@ const BALANCE = {
         color: '#78716c',
         expValue: 45,
         powerupDropMult: 1.5,
-        baseHp: 100, hpPerWave: 0.23,  // REBALANCE: 0.20 → 0.23 (Tank ควรรู้สึกหนักขึ้นตาม wave)
+        baseHp: 100, hpPerWave: 0.20,  // BIG-BALANCE: 0.23 → 0.20 (W15 Tank HP ~1350 จาก 1814 — Kao TTK 5.5s แทน 8.3s)
         baseSpeed: 60, speedPerWave: 3,
         baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
         meleeRange: 55
@@ -599,7 +599,7 @@ const BALANCE = {
         powerupDropMult: 1.3,
         orbitDistance: 300,
         orbitDistanceBuffer: 100,
-        baseHp: 28, hpPerWave: 0.25,  // REBALANCE: 0.22 → 0.25 (glass cannon ยังตายง่าย แต่ late game ต้องใส่ใจกว่าเดิม)
+        baseHp: 28, hpPerWave: 0.22,  // BIG-BALANCE: 0.25 → 0.22 (W15 Mage HP ~470 จาก 637 — glass cannon identity คงไว้)
         baseSpeed: 70, speedPerWave: 5,
         baseDamage: 12, damagePerWave: 1.8,
         soundWaveCooldown: 10,

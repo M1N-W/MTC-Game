@@ -1,9 +1,9 @@
 ---
-name: claude-working-standards
-description: "Universal working standards and session management for Claude across ALL projects. Use this skill at the start of any multi-file, multi-session, or complex coding task. Trigger on: planning a large change, token budget concerns, session handoff, multi-file refactor, architecture decisions, \"where do we start\", \"split into sessions\", \"continue from last chat\", version control workflow, or any task where scope is unclear."
+name: working-standards
+description: "Universal session management and coding standards for complex, multi-file, or multi-session projects. Use at the start of any structured task involving planning, token budgeting, file handoffs across chats, or architecture decisions. Trigger on: planning a large change, token budget concerns, session handoff, multi-file refactor, architecture decisions, 'where do we start', 'split into sessions', 'continue from last chat', version control workflow, or any task where scope is unclear. Applies to all languages and all projects."
 ---
 
-# Claude Working Standards — Universal
+# Working Standards — Universal
 
 Applies to every project, every language, every session.
 
@@ -25,7 +25,7 @@ Surgical edits only:
 
 ---
 
-## 2. Session & Token Management (Free Plan)
+## 2. Session & Token Management (Free Plan Workflow)
 
 The user is on Claude Free Plan. Sessions end mid-task. This is expected and normal.
 
@@ -134,3 +134,25 @@ Do NOT stop to ask about:
 - Config values / stat numbers (use ?? fallbacks from the codebase)
 - Formatting preferences (follow the file's existing style)
 - Whether to proceed (if the plan was approved, proceed)
+
+---
+
+## 9. Multi-Session Project Handoff Template
+
+When ending a session on a large task, use this format:
+
+```
+📊 Progress: XX% complete
+
+**This session:**
+- [file] — [one sentence]
+- [file] — [one sentence]
+
+**Next session needs:**
+- [exact file paths, one per line]
+
+**Unresolved decisions:**
+- [decision], needs user input: [question]
+```
+
+This ensures the next session resumes without asking for files or context.

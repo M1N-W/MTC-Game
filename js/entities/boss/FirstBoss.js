@@ -60,13 +60,19 @@ class KruFirst extends BossBase {
         const BASE_R = BALANCE.boss.radius * 0.88;
         super(0, BALANCE.boss.spawnY, BASE_R);
 
-        const advMult = isAdvanced ? 1.35 : 1.0;
-        this.maxHp = BALANCE.boss.baseHp * difficulty * 0.85 * advMult;
+        // DEBT-FIX: read multipliers from BALANCE.boss.first (config single source of truth)
+        // hpBaseMult=0.72, advancedHpMult=0.85, speedBaseMult=1.55, advancedSpeedMult=1.35
+        const _F = BALANCE.boss.first;
+        const hpBase = _F.hpBaseMult ?? 0.72;
+        const hpAdv = isAdvanced ? (_F.advancedHpMult ?? 0.85) : 1.0;
+        const spdBase = _F.speedBaseMult ?? 1.55;
+        const spdAdv = isAdvanced ? (_F.advancedSpeedMult ?? 1.35) : 1.0;
+        this.maxHp = BALANCE.boss.baseHp * difficulty * hpBase * hpAdv;
         this.hp = this.maxHp;
         this.name = 'KRU FIRST';
         this.moveSpeed = Math.min(
             BALANCE.boss.moveSpeed * 2.2,
-            BALANCE.boss.moveSpeed * 1.55 * advMult
+            BALANCE.boss.moveSpeed * spdBase * spdAdv
         );
         this.difficulty = difficulty;
         this.isAdvanced = isAdvanced;

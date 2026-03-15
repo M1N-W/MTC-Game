@@ -117,7 +117,7 @@ class PorkSandwich {
         // Lifetime & damage
         this.lifeTimer = 0;
         this.maxLife = 3.5;
-        this.damage = 160;
+        this.damage = 120; // BIG-BALANCE: 160 → 120 — Kao W15 takes 58% HP (was 96%), Pat 61% (was 82%). Parry return = 240 dmg to boss.
         this.hitCd = 0; // i-frame cooldown after hit
 
         // Motion trail: [{x, y, age}]

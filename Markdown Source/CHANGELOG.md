@@ -4,6 +4,47 @@
 
 ---
 
+## v3.37.0 — Balance: Big-Balancing Session (Characters & Bosses)
+*Released: March 15, 2026*
+
+### ⚖️ Gameplay Balancing
+- **Auto (AutoPlayer)**:
+  - Reduced `wanchaiDamage` from 24 to 18 (HOT DPS nerf).
+  - Reduced `standCritBonus` from 0.18 to 0.10 (OVERHEAT DPS nerf).
+  - Reduced `standMeterOnKill` from 12 to 8 to require higher kill frequency for sustain.
+- **Pat (PatPlayer)**:
+  - Increased `katana.damage` from 34 to 42 (Ranged DPS buff).
+  - Reduced `katana.cooldown` from 0.38 to 0.32.
+  - Increased `meleeDamageMulti` from 1.8 to 2.0 (Melee DPS buff).
+  - Increased `iaidoDamage` from 160 to 180.
+- **Kao (KaoPlayer)**:
+  - Increased `maxHpPerLevel` from 6 to 8 for better late-game survivability.
+- **Progression & Scaling**:
+  - Reduced `expLevelMult` from 1.5 to 1.30 (Faster leveling to reach Lv12 by Wave 15).
+  - Reduced Tank enemy HP scaling (`hpPerWave`) from 0.23 to 0.20.
+  - Reduced Mage enemy HP scaling (`hpPerWave`) from 0.25 to 0.22.
+
+### 👹 Boss & Enemy Adjustments
+- **First Boss (Kru First)**:
+  - Refactored constructor to use `BALANCE.boss.first` config values (`hpBaseMult`, `advancedHpMult`, etc.).
+  - Reduced effective HP: Wave 6 (~15% reduction) and Wave 12 (~47% reduction).
+  - Reduced `PorkSandwich.damage` from 160 to 120.
+
+### 🛠️ Maintenance
+- **Internal Tools**: Updated AI working standards and reorganized agent skills.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/config.js (Big-Balancing constants)
+✅ MODIFIED: js/entities/boss/FirstBoss.js (Config-driven scaling)
+✅ MODIFIED: js/entities/boss/boss_attacks_first.js (PorkSandwich damage nerf)
+✅ MODIFIED: sw.js (v3.37.0)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.37.0)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.37.0)
+```
+
+---
+
 ## v3.36.0 — Mechanics: Pat Perfect Parry & Reflect Overhaul
 *Released: March 15, 2026*
 
