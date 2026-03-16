@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.38.1"; // UI & Compatibility Polish (CSS Prefixes & Viewport)
+const CACHE_NAME = "mtc-cache-v3.39.0"; // Major Modularization Refactor
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -7,15 +7,29 @@ const urlsToCache = [
   "./",
   "./index.html?v=" + CACHE_TIMESTAMP,
   "./css/main.css?v=" + CACHE_TIMESTAMP,
-  "./js/config.js?v=" + CACHE_TIMESTAMP,
+  "./js/config/BalanceConfig.js?v=" + CACHE_TIMESTAMP,
+  "./js/config/SystemConfig.js?v=" + CACHE_TIMESTAMP,
+  "./js/config/GameTexts.js?v=" + CACHE_TIMESTAMP,
   "./js/utils.js?v=" + CACHE_TIMESTAMP,
   "./js/audio.js?v=" + CACHE_TIMESTAMP,
   "./js/input.js?v=" + CACHE_TIMESTAMP,
   "./js/map.js?v=" + CACHE_TIMESTAMP,
   "./js/menu.js?v=" + CACHE_TIMESTAMP,
-  "./js/effects.js?v=" + CACHE_TIMESTAMP,
-  "./js/weapons.js?v=" + CACHE_TIMESTAMP,
-  "./js/ui.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/ParticleSystem.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/WeatherSystem.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/CombatEffects.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/VisualPolish.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/OrbitalEffects.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/PatEffects.js?v=" + CACHE_TIMESTAMP,
+  "./js/weapons/SpatialGrid.js?v=" + CACHE_TIMESTAMP,
+  "./js/weapons/Projectile.js?v=" + CACHE_TIMESTAMP,
+  "./js/weapons/ProjectileManager.js?v=" + CACHE_TIMESTAMP,
+  "./js/weapons/WeaponSystem.js?v=" + CACHE_TIMESTAMP,
+  "./js/weapons/PoomWeapon.js?v=" + CACHE_TIMESTAMP,
+  "./js/ui/AchievementSystem.js?v=" + CACHE_TIMESTAMP,
+  "./js/ui/ShopManager.js?v=" + CACHE_TIMESTAMP,
+  "./js/ui/UIManager.js?v=" + CACHE_TIMESTAMP,
+  "./js/ui/CanvasHUD.js?v=" + CACHE_TIMESTAMP,
   "./js/game.js?v=" + CACHE_TIMESTAMP,
   "./js/tutorial.js?v=" + CACHE_TIMESTAMP,
   // AI System
@@ -32,7 +46,14 @@ const urlsToCache = [
   "./js/entities/player/PatPlayer.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/enemy.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/boss/boss_attacks_shared.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/boss/boss_attacks_manop.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/BarkWave.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/GoldfishMinion.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/BubbleProjectile.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/MatrixGridAttack.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/DomainExpansion.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/EquationSlam.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/DeadlyGraph.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/boss/ChalkWall.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/boss/boss_attacks_first.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/boss/BossBase.js?v=" + CACHE_TIMESTAMP,
   "./js/entities/boss/ManopBoss.js?v=" + CACHE_TIMESTAMP,
@@ -46,6 +67,10 @@ const urlsToCache = [
   "./js/systems/GameState.js?v=" + CACHE_TIMESTAMP,
   "./js/VersionManager.js?v=" + CACHE_TIMESTAMP,
   // Rendering
+  "./js/rendering/KaoRenderer.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/AutoRenderer.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/PoomRenderer.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/PatRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/PlayerRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/BossRenderer.js?v=" + CACHE_TIMESTAMP,
 ];
@@ -67,17 +92,17 @@ self.addEventListener("install", (event) => {
         urlsToCache.map((url) =>
           cache.add(url).catch(() => {
             failedUrls.push(url);
-          }),
-        ),
+          })
+        )
       );
 
       if (failedUrls.length > 0) {
         console.warn(
           "⚠️ [Service Worker] Some assets failed to precache:",
-          failedUrls,
+          failedUrls
         );
       }
-    }),
+    })
   );
   self.skipWaiting();
 });
@@ -92,9 +117,9 @@ self.addEventListener("activate", (event) => {
             console.log("🧹 [Service Worker] Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           }
-        }),
+        })
       );
-    }),
+    })
   );
   self.clients.claim();
 
@@ -102,7 +127,7 @@ self.addEventListener("activate", (event) => {
   const version = getVersion();
   self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
     clients.forEach((client) =>
-      client.postMessage({ type: "VERSION", version }),
+      client.postMessage({ type: "VERSION", version })
     );
   });
 });
@@ -148,7 +173,7 @@ self.addEventListener("fetch", (event) => {
                 console.warn(
                   "⚠️ [Service Worker] Runtime cache put failed for:",
                   request.url,
-                  cacheError,
+                  cacheError
                 );
               });
           }
@@ -157,10 +182,10 @@ self.addEventListener("fetch", (event) => {
         .catch(() => {
           console.warn(
             "⚡ [Service Worker] Network & Cache failed for:",
-            request.url,
+            request.url
           );
         });
-    }),
+    })
   );
 });
 

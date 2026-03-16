@@ -1,453 +1,14 @@
 'use strict';
-/**
- * js/ui.js
- * ════════════════════════════════════════════════
- * All DOM + Canvas HUD systems: achievements, shop panel, skill icons,
- * boss HP bar, combo UI, minimap radar, voice bubbles, boss speech.
- * 2419 lines — largest UI file in the project.
- *
- * Design notes:
- *   - Four classes exported to window.*: AchievementSystem, AchievementGallery,
- *     ShopManager, UIManager, CanvasHUD. Instantiated at bottom of file.
- *   - PORTRAITS (L.391) is a plain object of inline SVG strings keyed by charId.
- *     Add new character portrait here when adding a 5th character.
- *   - UIManager.setupCharacterHUD() must be called after character selection —
- *     it wires skill slot IDs, portrait SVG, theme class, and mobile button labels.
- *   - CanvasHUD draws directly onto the game canvas each frame (combo, ammo pill,
- *     stand meter warning, minimap). No DOM for these elements.
- *   - ShopManager owns the shop DOM panel only — buy/roll logic lives in ShopSystem.js.
- *   - High-score static display wired via DOMContentLoaded at L.2408.
- *
- * Singleton instances (bottom of file):
- *   window.Achievements   = new AchievementSystem()
- *   window.ShopManager    = ShopManager   (class ref, not instance — used as static)
- *   window.UIManager      = UIManager
- *   window.CanvasHUD      = CanvasHUD
- *
- * ── TABLE OF CONTENTS ────────────────────────
- *  L.40   AchievementSystem         unlock/check/persist achievements
- *  L.198  AchievementGallery        render achievement card grid in DOM
- *  L.287  ShopManager               DOM shop panel: open/close/render items
- *  L.388  PORTRAITS                 inline SVG map keyed by charId
- *  L.845  UIManager                 skill HUD wiring, boss HP bar, voice bubbles,
- *                                   boss speech, cooldown arcs per character
- *  L.948  .voiceBubble()            queue-based military HUD chip (canvas)
- *  L.1057 .bossSpeech()             typewriter reveal, per-frame reposition
- *  L.1133 .initSkillNames()         static slot labels from GAME_TEXTS.skillNames
- *  L.1150 .setupCharacterHUD()      full HUD rewire on character select
- *  L.1530 .updateSkillIcons()       per-frame cooldown arc updates
- *  L.1564 .updateSkillIcons Pat     zanzo / blade-guard / iaido arcs
- *  L.1646 .updateSkillIcons Poom    eat / naga / ritual / garuda arcs
- *  L.1686 .updateSkillIcons Auto    wanchai / vacuum / detonation arcs
- *  L.1735 .updateSkillIcons Kao     teleport charges / clone arc
- *  L.1859 CanvasHUD                 combo counter, ammo pill, stand warning, minimap
- *  L.2039 .drawMinimap()            radar: sweep, POI, enemies, boss, player dot
- *  L.2375 addCombo()                combo counter increment + shake/scale impulse
- *  L.2397 Achievements (instance)   window.Achievements singleton
- *  L.2408 DOMContentLoaded          high-score static display init
- *
- * ⚠️  setupCharacterHUD() must be called AFTER window.player is assigned —
- *     it reads player.constructor.name and player stats for slot labelling.
- * ⚠️  CanvasHUD methods draw to the shared CTX — always ctx.save()/restore().
- *     Drawing order relative to game entities is set by drawGame() in game.js.
- * ⚠️  Minimap radar blackout during fog waves reads window.isFogWave (WaveManager).
- *     If WaveManager.js loads after ui.js, first-frame radar will briefly show
- *     (harmless — isFogWave defaults falsy).
- * ⚠️  AchievementSystem.unlock() guards against duplicate unlocks via _unlocked Set.
- *     Old code path used unlock(string) which left stale `undefined` entries —
- *     fully cleaned up but do not re-introduce string-key unlock calls.
- * ════════════════════════════════════════════════
- */
 
 /**
- * MTC: ENHANCED EDITION - UI System (REFACTORED)
- *
- * CHANGES (Stability Overhaul):
- * - ✅ lerpColorHex() and lerpColor() REMOVED from this file.
- *       They now live in utils.js and are globally available.
- *       Removing them here eliminates the "duplicate identifier" crash
- *       that occurred when both files were loaded.
- * - ✅ hexToRgb() REMOVED from this file (defined in utils.js).
- * - ✅ ShopManager and UIManager explicitly assigned to window.* so
- *       other scripts can reference them before class parsing is complete.
- * - ✅ initHighScoreOnLoad() wrapped in DOMContentLoaded for safer timing.
- *
- * Load order: config.js → utils.js → audio.js → effects.js → weapons.js → map.js → ui.js → ai.js → entities.js → game.js
- *
- * ────────────────────────────────────────────────────────────────
- * UX — CONFUSED-STATE WARNING BANNER (UX Designer pass)
- * ────────────────────────────────────────────────────────────────
- * ✅ drawConfusedWarning(ctx) — Static method on UIManager.
- *    Called every frame from UIManager.draw() when
- *    window.player.isConfused is true.
- *
- *    Appearance:
- *      • Bold pill-shaped banner, purple background with neon glow.
- *      • Text: "⚠️ CONFUSED : INVERT YOUR MOVEMENT! ⚠️"
- *      • Flashes at ~4 Hz (Math.sin period 125 ms) so it grabs
- *        attention without becoming permanently distracting.
- *      • Positioned at H - 270 px so it sits clearly above the
- *        Bullet Time energy badge (H - 140) and the skill-slot row.
- *
- *    The Glitch Wave floating-text announcements in game.js have been
- *    raised to Y offsets ≥ −200 px (world space) so they do not
- *    overlap this banner in screen space.
+ * js/ui/UIManager.js
+ * ════════════════════════════════════════════════
+ * Main UI manager. Handles skill icons, boss HP bars, voice bubbles,
+ * boss speech, and high-score displays.
+ * ════════════════════════════════════════════════
  */
-
-// ════════════════════════════════════════════════════════════
-// 🏆 ACHIEVEMENT SYSTEM
-// ════════════════════════════════════════════════════════════
-class AchievementSystem {
-    constructor() {
-        this.list = ACHIEVEMENT_DEFS;
-        const saved = (typeof getSaveData === 'function')
-            ? (getSaveData().unlockedAchievements || [])
-            : [];
-        this.unlocked = new Set(saved);
-        this.stats = {
-            kills: 0, damageTaken: 0, crits: 0,
-            dashes: 0, stealths: 0, powerups: 0,
-            shopPurchases: 0,
-            parries: 0,              // FIX: tracks successful PorkSandwich parries
-            droneOverdrives: 0,      // FIX: tracks first drone overdrive activation
-            weaponsUsed: new Set(),
-            slowMoKills: 0,
-            barrelKills: 0,
-            standRushKills: 0,       // FIX: was 'wanchaiKills' — synced with AutoPlayer.js naming
-            ritualKills: 0,
-            manopKills: 0,           // FIX: นับครั้งที่ฆ่า KruManop ได้ — ไม่เคยถูก track มาก่อน
-            firstKills: 0,           // FIX: นับครั้งที่ฆ่า KruFirst ได้ — ไม่เคยถูก track มาก่อน
-
-            // ── NEW: Kill Streak Stats (2.3) ─────────────────────────────────
-            maxKillStreak: 0,        // Highest kill streak achieved
-            currentKillStreak: 0,    // Current kill streak (resets on timeout)
-            killStreakTimer: 0,      // Timer for kill streak window (3 seconds)
-
-            // ── NEW: Boss-Specific Stats (2.3) ───────────────────────────────
-            manopPerfectKills: 0,    // Kru Manop killed without taking Singularity damage
-            firstPerfectKills: 0,    // Kru First killed without taking Sandwich damage  
-            speedDemonWins: 0,       // Boss defeated in <30s during Speed Wave
-            fogHunterWins: 0,        // Boss defeated in Fog Wave without taking damage
-            glitchSurvivorWins: 0,   // Survived Glitch Wave with >50% HP remaining
-        };
-    }
-
-    check(id) {
-        // ── Clean up stale `undefined` entry left by old unlock(string) bug ──
-        this.unlocked.delete(undefined);
-
-        if (this.unlocked.has(id)) return;
-        const ach = this.list.find(a => a.id === id);
-        if (!ach) return;
-
-        let unlock = false;
-        switch (id) {
-            case 'first_blood': unlock = this.stats.kills >= 1; break;
-            case 'wave_1': unlock = getWave() >= 2; break;
-            // WARN-9 FIX: window.boss is null at death, old check always falsy.
-            // boss.js now sets window.lastBossKilled = true before nulling window.boss.
-            case 'boss_down': unlock = !!window.lastBossKilled; break;
-            // ── Boss kill achievements — FIX: cases were MISSING from switch ──
-            // boss.js calls Achievements.check('manop_down') but switch never matched
-            // → manopKills stat is now incremented in boss.js before check() is called
-            case 'manop_down': unlock = this.stats.manopKills >= 1; break;
-            case 'first_down': unlock = this.stats.firstKills >= 1; break;
-            // ── Shop max buff ─────────────────────────────────────────────────
-            // shop_max: ซื้อบัฟจนถึง 1.5x — ตรวจสอบจาก player.damageBoost หรือ shopStack
-            case 'shop_max': unlock = !!(window.player?.damageBoost >= 1.5 || window.player?._shopBuffStacks >= 5); break;
-            case 'no_damage': unlock = this.stats.damageTaken === 0 && getEnemiesKilled() >= 5; break;
-            case 'crit_master': unlock = this.stats.crits >= 5; break;
-            case 'speedster': unlock = this.stats.dashes >= 20; break;
-            case 'ghost': unlock = this.stats.stealths >= 10; break;
-            case 'collector': unlock = this.stats.powerups >= 10; break;
-            case 'weapon_master': unlock = this.stats.weaponsUsed.size >= 3; break;
-            // WARN-15 FIX: PoomPlayer.js loads after ui.js — guard with typeof
-            case 'naga_summoner': unlock = typeof PoomPlayer !== 'undefined'
-                && window.player instanceof PoomPlayer
-                && window.player.nagaCount >= 3; break;
-            case 'shopaholic': unlock = this.stats.shopPurchases >= 5; break;
-            // FIX: was `unlock = true` — caused instant unlock on every checkAll() call
-            case 'parry_master': unlock = this.stats.parries >= 1; break;
-            // FIX: was missing entirely — unlock(string) bug caused undefined popup + multi-fire
-            case 'drone_master': unlock = this.stats.droneOverdrives >= 1; break;
-            case 'wave_5': unlock = getWave() >= 6; break;
-            case 'wave_10': unlock = getWave() >= 11; break;
-            case 'bullet_time_kill': unlock = this.stats.slowMoKills >= 3; break;
-            case 'barrel_bomber': unlock = this.stats.barrelKills >= 3; break;
-            case 'kao_awakened': unlock = window.player?.charId === 'kao' && !!window.player?.isWeaponMaster; break;
-            // FIX: stat renamed wanchaiKills → standRushKills to match AutoPlayer.js
-            case 'stand_rush_kill': unlock = this.stats.standRushKills >= 10; break;
-            // FIX: use ritualKills stat directly — was using opaque _ritualWipeUnlocked flag
-            case 'ritual_wipe': unlock = this.stats.ritualKills >= 3; break;
-
-            // ── NEW: Passive Awakening achievements ───────────────────────────
-            case 'scorched_soul': unlock = window.player?.charId === 'auto' && !!window.player?.passiveUnlocked; break;
-            case 'ritual_king': unlock = window.player?.charId === 'poom' && !!window.player?.passiveUnlocked; break;
-            case 'free_stealth': unlock = window.player?.charId === 'kao' && !!window.player?.passiveUnlocked; break;
-
-            // ── NEW: Cosmic Balance ───────────────────────────────────────────
-            case 'cosmic_balance': unlock = !!(window.player?.charId === 'poom' && window.player?._cosmicBalance); break;
-
-            // ── NEW: Rage Mode ────────────────────────────────────────────────
-            case 'rage_mode': unlock = !!(window.player?.charId === 'auto' && window.player?._rageMode); break;
-
-            // ── NEW: Kill Streak Achievements (2.3) ─────────────────────────────
-            case 'kill_streak_5': unlock = this.stats.maxKillStreak >= 5; break;
-            case 'kill_streak_10': unlock = this.stats.maxKillStreak >= 10; break;
-            case 'kill_streak_20': unlock = this.stats.maxKillStreak >= 20; break;
-
-            // ── NEW: Boss-Specific Achievements (2.3) ────────────────────────────
-            case 'manop_perfect': unlock = this.stats.manopPerfectKills >= 1; break;
-            case 'first_perfect': unlock = this.stats.firstPerfectKills >= 1; break;
-            case 'speed_demon': unlock = this.stats.speedDemonWins >= 1; break;
-            case 'fog_hunter': unlock = this.stats.fogHunterWins >= 1; break;
-            case 'glitch_survivor': unlock = this.stats.glitchSurvivorWins >= 1; break;
-        }
-        if (unlock) this.unlock(ach);
-    }
-
-    unlock(ach, retryCount = 0) {
-        const MAX_RETRIES = 3;
-
-        // ── Mark as unlocked only on first attempt ───────────────
-        if (retryCount === 0) {
-            this.unlocked.add(ach.id);
-            if (typeof updateSaveData === 'function') {
-                updateSaveData({ unlockedAchievements: Array.from(this.unlocked) });
-            }
-        }
-
-        // ── Audio (guarded — Audio may not be ready yet) ─────────
-        try {
-            if (typeof Audio !== 'undefined' && Audio.playAchievement) Audio.playAchievement();
-        } catch (e) { /* audio failure must not block the popup */ }
-
-        // ── DOM popup ────────────────────────────────────────────
-        const container = document.getElementById('achievements');
-        if (!container) {
-            if (retryCount < MAX_RETRIES) {
-                console.warn(`[Achievement] Container not found, retry ${retryCount + 1}/${MAX_RETRIES}`);
-                setTimeout(() => this.unlock(ach, retryCount + 1), 100);
-            } else {
-                console.error('[Achievement] Failed to display after max retries - DOM element missing');
-            }
-            return;
-        }
-
-        const el = document.createElement('div');
-        el.className = 'achievement';
-        el.innerHTML = `
-            <div class="achievement-title">${ach.icon} ${ach.name}</div>
-            <div class="achievement-desc">${ach.desc}</div>
-        `;
-        container.appendChild(el);
-        setTimeout(() => {
-            el.style.opacity = '0';
-            setTimeout(() => el.remove(), 500);
-        }, 3000);
-
-        addScore(BALANCE.score.achievement);
-    }
-
-    checkAll() { this.list.forEach(ach => this.check(ach.id)); }
-}
-
-// ════════════════════════════════════════════════════════════
-// 🏆 ACHIEVEMENT GALLERY (หอเกียรติยศ)
-// ════════════════════════════════════════════════════════════
-class AchievementGallery {
-    static open() {
-        AchievementGallery.render();
-        const modal = document.getElementById('achievements-modal');
-        if (!modal) return;
-        modal.style.display = 'flex';
-        requestAnimationFrame(() => {
-            const inner = modal.querySelector('.ach-inner');
-            if (inner) inner.classList.add('ach-visible');
-        });
-    }
-
-    static close() {
-        const modal = document.getElementById('achievements-modal');
-        if (!modal) return;
-        const inner = modal.querySelector('.ach-inner');
-        if (inner) inner.classList.remove('ach-visible');
-        setTimeout(() => { modal.style.display = 'none'; }, 260);
-    }
-
-    static render() {
-        const container = document.getElementById('ach-items');
-        const summary = document.getElementById('ach-summary');
-        const buffSummEl = document.getElementById('ach-buff-summary');
-        if (!container) return;
-        container.innerHTML = '';
-
-        // Guard: Achievements global may not be ready in some edge cases
-        const unlockedSet = (window.Achievements instanceof AchievementSystem)
-            ? window.Achievements.unlocked
-            : new Set((typeof getSaveData === 'function'
-                ? (getSaveData().unlockedAchievements || [])
-                : []));
-
-        const total = ACHIEVEMENT_DEFS.length;
-        const count = ACHIEVEMENT_DEFS.filter(a => unlockedSet.has(a.id)).length;
-
-        if (summary) summary.textContent = `🏆 ปลดล็อคแล้ว: ${count} / ${total}`;
-
-        // ── Part 1: Tally unlocked rewards ───────────────────────
-        const tally = { hp: 0, damage: 0, speed: 0, crit: 0, cdr: 0 };
-        ACHIEVEMENT_DEFS.forEach(ach => {
-            if (!unlockedSet.has(ach.id) || !ach.reward) return;
-            tally[ach.reward.type] = (tally[ach.reward.type] || 0) + ach.reward.value;
-        });
-
-        if (buffSummEl) {
-            const chips = [];
-            if (tally.hp > 0) chips.push(`❤️ +${tally.hp} Max HP`);
-            if (tally.damage > 0) chips.push(`⚔️ +${Math.round(tally.damage * 100)}% DMG`);
-            if (tally.speed > 0) chips.push(`💨 +${Math.round(tally.speed * 100)}% SPD`);
-            if (tally.crit > 0) chips.push(`💥 +${Math.round(tally.crit * 100)}% CRIT`);
-            if (tally.cdr > 0) chips.push(`🔮 -${Math.round(tally.cdr * 100)}% CDR`);
-
-            if (chips.length > 0) {
-                buffSummEl.innerHTML = chips
-                    .map(c => `<span class="buff-chip">${c}</span>`)
-                    .join('');
-            } else {
-                buffSummEl.innerHTML = `<span style="color:#475569; font-size:11px;">${(typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.noActiveBuffs) ?? 'ไม่มีบัฟ'}</span>`;
-            }
-        }
-
-        // ── Part 2: Render cards with reward pill ─────────────────
-        ACHIEVEMENT_DEFS.forEach(ach => {
-            const isUnlocked = unlockedSet.has(ach.id);
-            const rewardHtml = ach.reward
-                ? `<div class="ach-reward ${isUnlocked ? 'active' : 'locked-reward'}">🎁 ${ach.reward.text}</div>`
-                : '';
-
-            const card = document.createElement('div');
-            card.className = `ach-card ${isUnlocked ? 'unlocked' : 'locked'}`;
-            card.innerHTML = `
-                <div class="ach-icon">${ach.icon}</div>
-                <div class="ach-info">
-                    <div class="ach-name">${ach.name}</div>
-                    <div class="ach-desc">${isUnlocked ? ach.desc : '???'}</div>
-                    ${rewardHtml}
-                </div>
-            `;
-            container.appendChild(card);
-        });
-    }
-}
-window.AchievementGallery = AchievementGallery;
-
-// ════════════════════════════════════════════════════════════
-// 🛒 SHOP MANAGER
-// ════════════════════════════════════════════════════════════
-class ShopManager {
-
-    static open() {
-        ShopManager.renderItems();
-        const modal = document.getElementById('shop-modal');
-        if (modal) {
-            modal.style.display = 'flex';
-            requestAnimationFrame(() => {
-                const inner = modal.querySelector('.shop-inner');
-                if (inner) inner.classList.add('shop-visible');
-            });
-        }
-    }
-
-    static close() {
-        const modal = document.getElementById('shop-modal');
-        if (!modal) return;
-        const inner = modal.querySelector('.shop-inner');
-        if (inner) inner.classList.remove('shop-visible');
-        setTimeout(() => { modal.style.display = 'none'; }, 260);
-    }
-
-    static renderItems() {
-        const container = document.getElementById('shop-items');
-        if (!container) return;
-        container.innerHTML = '';
-
-        const offers = window.currentShopOffers || [];
-        const currentScore = typeof getScore === 'function' ? getScore() : 0;
-
-        const scoreDisplay = document.getElementById('shop-score-display');
-        if (scoreDisplay) scoreDisplay.textContent = currentScore.toLocaleString();
-
-        offers.forEach((offer, idx) => {
-            const { item, soldOut } = offer;
-            const canAfford = !soldOut && currentScore >= item.cost;
-            const typeLabel = item.type === 'permanent'
-                ? `<span class="shop-duration" style="color:#a78bfa;">♾ ถาวร</span>`
-                : `<span class="shop-duration" style="color:#22c55e;">⚡ ทันที</span>`;
-
-            // Char-specific badge
-            const charLabels = { kao: { label: 'KAO', color: '#facc15' }, poom: { label: 'POOM', color: '#4ade80' }, auto: { label: 'AUTO', color: '#fb923c' } };
-            const charBadge = item.charReq
-                ? `<span class="shop-card-char-badge" style="background:${charLabels[item.charReq]?.color ?? '#94a3b8'}22; border-color:${charLabels[item.charReq]?.color ?? '#94a3b8'}; color:${charLabels[item.charReq]?.color ?? '#94a3b8'};">${charLabels[item.charReq]?.label ?? item.charReq.toUpperCase()} ONLY</span>`
-                : '';
-
-            const card = document.createElement('div');
-            card.className = `shop-card${soldOut ? ' shop-card-disabled' : ''}`;
-            card.id = `shop-card-slot-${idx}`;
-            card.setAttribute('data-item-id', item.id);
-            if (item.charReq) card.style.setProperty('--shop-char-color', charLabels[item.charReq]?.color ?? '#94a3b8');
-
-            // Active buff badge for items with timers
-            // BUG 2/3 FIX: read shopSpeedBoostTimer — the property game.js actually ticks
-            const activeBadge = (item.id === 'speedWave' && window.player?.shopSpeedBoostActive && window.player?.shopSpeedBoostTimer > 0)
-                ? `<span class="shop-card-active-badge">⚡ ${Math.ceil(window.player.shopSpeedBoostTimer)}s</span>`
-                : '';
-
-            card.innerHTML = `
-                ${charBadge}
-                ${activeBadge}
-                <div class="shop-card-icon" style="color:${item.color};${soldOut ? 'filter:grayscale(1) opacity(.35);' : ''}">${item.icon}</div>
-                <div class="shop-card-name">${item.name}</div>
-                <div class="shop-card-desc">${soldOut ? '<span style="color:#64748b;">— SOLD OUT —</span>' : item.desc}</div>
-                ${typeLabel}
-                <div class="shop-card-cost">
-                    <span class="shop-cost-icon">🏆</span>
-                    <span class="shop-cost-value">${item.cost.toLocaleString()}</span>
-                </div>
-                <button
-                    class="shop-buy-btn"
-                    onclick="buyItem(${idx})"
-                    ontouchstart="event.preventDefault(); buyItem(${idx});"
-                    style="border-color:${item.color}; --shop-btn-color:${item.color};"
-                    ${soldOut || !canAfford ? 'disabled' : ''}
-                >${soldOut ? 'SOLD OUT' : 'BUY'}</button>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    // Kept for backward-compat call-sites (tick, etc.)
-    static updateButtons() { ShopManager.renderItems(); }
-
-    // BUG 3 FIX: tick() updates countdown badge in-place — no full DOM re-render,
-    // and works correctly while game is PAUSED (shop open state).
-    static tick() {
-        const p = window.player;
-        if (!p) return;
-        const badge = document.querySelector('[data-item-id="speedWave"] .shop-card-active-badge');
-        if (badge) {
-            if (p.shopSpeedBoostActive && p.shopSpeedBoostTimer > 0) {
-                badge.textContent = `⚡ ${Math.ceil(p.shopSpeedBoostTimer)}s`;
-            } else {
-                badge.textContent = '';
-            }
-        }
-    }
-}
-
 
 // ── Portrait SVG definitions (inner-content, no outer <svg> tag) ────────────
-// All gradient/clipPath IDs are prefixed k/p/a — safe when all 3 are in the DOM.
-// Exposed as window.PORTRAITS so menu.js can populate char-select cards on load.
 window.PORTRAITS = {
     kao: `<defs>
         <clipPath id="cpk"><rect width="96" height="112" rx="4" /></clipPath>
@@ -942,7 +503,7 @@ window.PORTRAITS = {
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(126,200,227,0.6)" stroke-width="0.8" />
         <line x1="0" y1="108" x2="32" y2="108" stroke="rgba(126,200,227,0.85)" stroke-width="0.8" />
     </g>`
-}
+};
 
 // ════════════════════════════════════════════════════════════
 // 🖥️ UI MANAGER
@@ -1085,18 +646,13 @@ class UIManager {
     }
 
     // ── VoiceBubble — queue-based, military HUD chip ─────────────────────────
-    // Queue prevents bubbles stomping each other when rapid-fired (e.g. stealth
-    // + obstacle warning in the same frame).  Each entry holds: text, world x/y.
     static _vbQueue = [];
     static _vbTimer = null;
     static _vbHideTimer = null;
 
     static showVoiceBubble(text, x, y) {
-        // Push to queue — drop oldest if queue is getting long (max 3 pending)
         if (UIManager._vbQueue.length >= 3) UIManager._vbQueue.shift();
         UIManager._vbQueue.push({ text, x, y });
-
-        // If nothing is currently showing, fire immediately
         if (!UIManager._vbTimer) UIManager._flushVoiceBubble();
     }
 
@@ -1107,26 +663,20 @@ class UIManager {
         const bubble = document.getElementById('voice-bubble');
         if (!bubble) { UIManager._vbTimer = null; return; }
 
-        // Clear any pending hide
         if (UIManager._vbHideTimer) {
             clearTimeout(UIManager._vbHideTimer);
             UIManager._vbHideTimer = null;
         }
 
-        // Position — offset above the entity
         const screen = worldToScreen(x, y - 40);
         bubble.style.left = (screen.x - bubble.offsetWidth / 2) + 'px';
         bubble.style.top = (screen.y - bubble.offsetHeight) + 'px';
-
-        // Content
         bubble.textContent = text;
 
-        // Reset animation: force reflow so transition fires fresh
         bubble.classList.remove('visible', 'hiding');
         void bubble.offsetWidth;
         bubble.classList.add('visible');
 
-        // Hide after display time, then chain next in queue
         const displayMs = Math.max(1200, text.length * 55);
         UIManager._vbHideTimer = setTimeout(() => {
             bubble.classList.remove('visible');
@@ -1134,13 +684,12 @@ class UIManager {
             UIManager._vbHideTimer = setTimeout(() => {
                 bubble.classList.remove('hiding');
                 UIManager._vbTimer = null;
-                UIManager._flushVoiceBubble(); // chain next
+                UIManager._flushVoiceBubble();
             }, 200);
         }, displayMs);
 
-        UIManager._vbTimer = true; // mark as active
+        UIManager._vbTimer = true;
     }
-
 
     static updateBossHUD(boss) {
         const hud = document.getElementById('boss-hud');
@@ -1151,37 +700,28 @@ class UIManager {
             if (hpBar) {
                 const pct = boss.hp / boss.maxHp;
                 const widthPct = `${Math.max(0, pct * 100)}%`;
-
-                // ── HP fill width ──────────────────────────────────────
                 hpBar.style.width = widthPct;
-
-                // ── Phase color class ──────────────────────────────────
                 hpBar.classList.remove('phase-safe', 'phase-caution', 'phase-danger', 'phase-critical');
                 if (pct > 0.60) hpBar.classList.add('phase-safe');
                 else if (pct > 0.30) hpBar.classList.add('phase-caution');
                 else if (pct > 0.15) hpBar.classList.add('phase-danger');
                 else hpBar.classList.add('phase-critical');
 
-                // ── Drain ghost bar ─────────────────────────────────────
-                // Lazily create drain element inside .boss-hp-bg if missing
                 const bg = hpBar.parentElement;
                 if (bg) {
                     let drain = bg.querySelector('.boss-hp-drain');
                     if (!drain) {
                         drain = document.createElement('div');
                         drain.className = 'boss-hp-drain';
-                        bg.insertBefore(drain, hpBar);   // drain behind fill
+                        bg.insertBefore(drain, hpBar);
                         drain._lastPct = pct;
                         drain.style.width = widthPct;
                     }
-                    // Only update drain when HP actually drops
                     if (pct < (drain._lastPct ?? pct)) {
-                        // Hold at current _lastPct for 0.4s then slide down via CSS transition
-                        const snapWidth = drain.style.width;   // keep current ghost width
+                        const snapWidth = drain.style.width;
                         drain.style.transition = 'none';
                         drain.style.width = snapWidth;
-                        // Force reflow then let CSS transition carry it
-                        drain.offsetWidth; // eslint-disable-line no-unused-expressions
+                        drain.offsetWidth;
                         drain.style.transition = '';
                         drain.style.width = widthPct;
                     }
@@ -1196,10 +736,9 @@ class UIManager {
     // ── BossSpeech — typewriter reveal, per-frame reposition ─────────────────
     static _bsTypeTimer = null;
     static _bsHideTimer = null;
-    static _bsBossRef = null;  // set by updateBossSpeech so we know who's speaking
+    static _bsBossRef = null;
 
     static updateBossSpeech(boss) {
-        // Called every frame — reposition if visible
         const speech = document.getElementById('boss-speech');
         if (!speech || !boss) return;
         UIManager._bsBossRef = boss;
@@ -1214,30 +753,25 @@ class UIManager {
         const speech = document.getElementById('boss-speech');
         if (!speech) return;
 
-        // Cancel any existing timers
         if (UIManager._bsTypeTimer) { clearTimeout(UIManager._bsTypeTimer); UIManager._bsTypeTimer = null; }
         if (UIManager._bsHideTimer) { clearTimeout(UIManager._bsHideTimer); UIManager._bsHideTimer = null; }
 
-        // Build DOM: label + text content span
         speech.innerHTML =
             '<span class="speech-label">⚠ KRU MANOP</span>' +
             '<span class="speech-text"></span>';
 
         const textEl = speech.querySelector('.speech-text');
 
-        // Position near boss if available
         if (UIManager._bsBossRef && !UIManager._bsBossRef.dead) {
             const screen = worldToScreen(UIManager._bsBossRef.x, UIManager._bsBossRef.y - 100);
             speech.style.left = (screen.x - 140) + 'px';
             speech.style.top = (screen.y - 60) + 'px';
         }
 
-        // Show chip
         speech.classList.remove('visible', 'hiding');
         void speech.offsetWidth;
         speech.classList.add('visible');
 
-        // Typewriter reveal — ~28 chars/sec
         let i = 0;
         const interval = Math.max(22, Math.min(55, 1100 / text.length));
         const type = () => {
@@ -1247,7 +781,6 @@ class UIManager {
                 UIManager._bsTypeTimer = setTimeout(type, interval);
             } else {
                 UIManager._bsTypeTimer = null;
-                // Hold fully visible, then fade out
                 const holdMs = Math.max(2000, text.length * 45);
                 UIManager._bsHideTimer = setTimeout(() => {
                     speech.classList.remove('visible');
@@ -1262,16 +795,12 @@ class UIManager {
         type();
     }
 
-
     static updateHighScoreDisplay(highScore) {
         const formatted = highScore > 0 ? Number(highScore).toLocaleString() : '— —';
         const valEl = document.getElementById('hs-value');
         if (valEl) valEl.textContent = formatted;
     }
 
-    // ── initSkillNames — อ่านชื่อ static slots จาก GAME_TEXTS.skillNames ──
-    // เรียกครั้งเดียวตอนหน้า load ก่อน startGame()
-    // slot ที่เปลี่ยนตามตัวละคร (skill1-name ฯลฯ) จัดการใน setupCharacterHUD แทน
     static initSkillNames() {
         const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
         const set = (id, text) => { const el = document.getElementById(id); if (el && text) el.textContent = text; };
@@ -1287,8 +816,6 @@ class UIManager {
         UIManager.patchTooltipEmojis();
     }
 
-    // ── patchTooltipEmojis — sync tooltip tt-icon spans จาก GAME_TEXTS.hudEmoji ──
-    // เรียกครั้งเดียวใน initSkillNames() — ทุก span ที่มี data-emoji-group จะถูก patch
     static patchTooltipEmojis() {
         const spans = document.querySelectorAll('.tt-icon[data-emoji-group]');
         spans.forEach(span => {
@@ -1297,9 +824,6 @@ class UIManager {
         });
     }
 
-    // ── setupCharacterHUD ─────────────────────────────────────────────────────
-    // Orchestrator: derives char flags once, delegates to focused sub-methods.
-    // Called once on game start and on every character switch.
     static setupCharacterHUD(player) {
         const isPoom = player instanceof PoomPlayer;
         const charId = player.charId || (isPoom ? 'poom' : 'kao');
@@ -1319,7 +843,6 @@ class UIManager {
         UIManager._hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN);
     }
 
-    // ── Theme class + character name label on .hud-bottom ────────────────────
     static _hudApplyThemeAndLabel(isPoom, isKao, isAuto, isPat, hudBottomEl) {
         const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
         const _applyTheme = (id, theme) => {
@@ -1359,7 +882,6 @@ class UIManager {
             `<span class="hud-char-tag">${lc.tag}</span>`;
     }
 
-    // ── Attack (SHOOT / L-Click) slot re-skin ─────────────────────────────────
     static _hudSetupAttackSlot(isPoom, isAuto, isPat) {
         const attackIcon = document.getElementById('attack-icon');
         if (!attackIcon) return;
@@ -1392,7 +914,6 @@ class UIManager {
         }
     }
 
-    // ── Portrait SVG swap ─────────────────────────────────────────────────────
     static _hudSetupPortraitAndWeapon(isPoom, isAuto, isPat, player) {
         const hudSvg = document.getElementById('hud-portrait-svg');
         if (hudSvg) {
@@ -1401,7 +922,6 @@ class UIManager {
         }
     }
 
-    // ── Passive skill slot visibility (Kao-only) ──────────────────────────────
     static _hudSetupPassiveSlot(isKao, isPat, player) {
         const el = document.getElementById('passive-skill');
         if (!el) return;
@@ -1429,7 +949,6 @@ class UIManager {
         }
     }
 
-    // ── Skill 1 (R-Click) slot — id swap + label per character ───────────────
     static _hudSetupSkill1Slot(isPoom, isKao, isAuto, isPat, SN) {
         const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
         if (!skill1El) return;
@@ -1472,9 +991,6 @@ class UIManager {
         }
     }
 
-    // ── Q-slot: Naga (Poom) / Teleport (Kao) / Vacuum (Auto) / hidden ─────────
-    // Handles id-swap and DOM restore when switching away from a char that
-    // repurposed the slot.
     static _hudSetupQSlot(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
         const nagaSlot = document.getElementById('naga-icon')
             || document.getElementById('teleport-icon')
@@ -1527,7 +1043,6 @@ class UIManager {
             }
         }
 
-        // Restore base naga-icon when switching away from Kao/Auto/Pat
         if (!isKao && !isAuto && !isPat) {
             const maybeTeleport = document.getElementById('teleport-icon');
             if (maybeTeleport) {
@@ -1565,10 +1080,7 @@ class UIManager {
         }
     }
 
-    // ── E-slot: exclusive dynamic slots injected per character ────────────────
-    // Kao → kao-clone-icon,  Auto → auto-det-icon,  Poom → garuda-icon
     static _hudSetupExclusiveESlots(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
-        // ── Kao Clone (E) ───────────────────────────────────────────────────
         let cloneSlot = document.getElementById('kao-clone-icon');
         if (isKao) {
             if (!cloneSlot && hudBottom) {
@@ -1592,7 +1104,6 @@ class UIManager {
             if (cloneSlot) cloneSlot.style.display = 'none';
         }
 
-        // ── Auto Detonate (E) ───────────────────────────────────────────────
         let detSlot = document.getElementById('auto-det-icon');
         if (isAuto) {
             if (!detSlot && hudBottom) {
@@ -1612,7 +1123,6 @@ class UIManager {
             if (detSlot) detSlot.style.display = 'none';
         }
 
-        // ── Poom Garuda (E) ─────────────────────────────────────────────────
         let garudaSlot = document.getElementById('garuda-icon');
         if (isPoom) {
             if (!garudaSlot && hudBottom) {
@@ -1636,7 +1146,6 @@ class UIManager {
             if (garudaSlot) garudaSlot.style.display = 'none';
         }
 
-        // ── Pat Iaido Strike (R) ────────────────────────────────────────────
         let iaidoSlot = document.getElementById('pat-iaido-icon');
         if (isPat) {
             if (!iaidoSlot && hudBottom) {
@@ -1661,7 +1170,6 @@ class UIManager {
         }
     }
 
-    // ── Ritual slot (Poom R) + mobile button labels ───────────────────────────
     static _hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN) {
         const ritualSlot = document.getElementById('ritual-icon');
         if (ritualSlot) {
@@ -1678,10 +1186,7 @@ class UIManager {
         if (btnSkill) btnSkill.textContent = isPoom ? UIManager._E('mobile', 'poom') : isAuto ? UIManager._E('mobile', 'auto') : isKao ? UIManager._E('mobile', 'kao') : isPat ? UIManager._E('mobile', 'pat') : UIManager._E('mobile', 'default');
     }
 
-    // ── updateSkillIcons ──────────────────────────────────────────────────────
-    // Orchestrator: dispatches to per-character cooldown updaters every frame.
     static updateSkillIcons(player) {
-        // Shared helper — create/remove lock overlay on a skill icon
         const setLockOverlay = (icon, locked) => {
             if (!icon) return;
             let lock = icon.querySelector('.skill-lock');
@@ -1712,11 +1217,8 @@ class UIManager {
         }
     }
 
-    // ── Pat: zanzo / blade-guard / iaido cooldown arcs ───────────────────────
     static _updateIconsPat(player, setLockOverlay) {
         const S = (typeof BALANCE !== 'undefined' && BALANCE.characters?.pat) ? BALANCE.characters.pat : {};
-
-        // Blade Guard (R-Click) — no cooldown, just active highlight
         const guardIcon = document.getElementById('pat-guard-icon');
         if (guardIcon) {
             const isActive = !!player.bladeGuardActive;
@@ -1731,8 +1233,6 @@ class UIManager {
                 nameEl.style.color = isActive ? '#ffffff' : '#7ec8e3';
             }
         }
-
-        // Zanzo Flash (Q) cooldown arc
         const zanzoIcon = document.getElementById('zanzo-icon');
         if (zanzoIcon) {
             const cd = Math.max(0, player.skills?.zanzo?.cd ?? 0);
@@ -1740,8 +1240,6 @@ class UIManager {
             zanzoIcon.classList.toggle('active', cd <= 0);
             UIManager._setCooldownVisual('zanzo-icon', cd, maxCd);
         }
-
-        // Iaido Strike (R) — shows charge progress during _iaidoPhase==='charge'
         const iaidoIcon = document.getElementById('pat-iaido-icon');
         if (iaidoIcon) {
             const phase = player._iaidoPhase ?? 'none';
@@ -1751,14 +1249,12 @@ class UIManager {
             const maxCd = S.iaidoCooldown ?? 14;
 
             if (isCharging) {
-                // Show charge fill progress (replaces cooldown arc during charge)
                 iaidoIcon.classList.add('active');
                 iaidoIcon.style.borderColor = '#7ec8e3';
                 iaidoIcon.style.boxShadow = '0 0 22px rgba(126,200,227,0.90)';
                 const chargeTimer = player._iaidoTimer ?? 0;
                 const chargeDur = S.iaidoChargeDuration ?? 0.6;
                 const chargeProgress = Math.min(1, chargeTimer / chargeDur);
-                // Abuse _setCooldownVisual: pass remaining time as (1-progress)*max
                 UIManager._setCooldownVisual('pat-iaido-icon', (1 - chargeProgress) * 0.6, 0.6);
                 const nameEl = iaidoIcon.querySelector('.skill-name');
                 if (nameEl) { nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patCharging) ?? 'CHARGING'; nameEl.style.color = '#ffffff'; }
@@ -1780,8 +1276,6 @@ class UIManager {
                 }
             }
         }
-
-        // Passive — Ronin's Edge unlock state
         const passiveEl = document.getElementById('passive-skill');
         if (passiveEl) {
             const unlocked = !!player.passiveUnlocked;
@@ -1796,24 +1290,18 @@ class UIManager {
         }
     }
 
-    // ── Poom: eat / naga / ritual / garuda cooldown arcs ─────────────────────
     static _updateIconsPoom(player, setLockOverlay) {
         const S = BALANCE.characters.poom;
         const nagaReady = !!(player._nagaUnlocked);
-
         setLockOverlay(document.getElementById('eat-icon'), false);
         setLockOverlay(document.getElementById('naga-icon'), !nagaReady);
         setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
         setLockOverlay(document.getElementById('garuda-icon'), !player.passiveUnlocked);
-
-        // Eat Rice
         const eatIcon = document.getElementById('eat-icon');
         if (eatIcon) {
             const eating = !!player.isEatingRice;
             eatIcon.classList.toggle('active', eating);
             eatIcon.classList.toggle('eat-buff-active', eating);
-
-            // Drain bar — create once, update width every frame
             let bar = eatIcon.querySelector('.eat-buff-bar');
             if (eating) {
                 if (!bar) {
@@ -1826,8 +1314,6 @@ class UIManager {
             } else {
                 if (bar) bar.remove();
             }
-
-            // skill-name: show countdown while buff is active
             const nameEl = eatIcon.querySelector('.skill-name');
             if (nameEl) {
                 if (eating && player.eatRiceTimer > 0) {
@@ -1842,23 +1328,17 @@ class UIManager {
         UIManager._setCooldownVisual('eat-icon',
             player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
             S.eatRiceCooldown);
-
-        // Naga
         const nagaIcon = document.getElementById('naga-icon');
         const nagaTimer = document.getElementById('naga-timer');
         if (nagaIcon) nagaIcon.classList.toggle('active', player.cooldowns.naga <= 0);
         if (nagaTimer) nagaTimer.style.display = 'none';
         UIManager._setCooldownVisual('naga-icon', Math.max(0, player.cooldowns.naga), S.nagaCooldown);
-
-        // Ritual
         const ritualIcon = document.getElementById('ritual-icon');
         const ritualTimer = document.getElementById('ritual-timer');
         const maxRitualCd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
         if (ritualIcon) ritualIcon.classList.toggle('active', player.cooldowns.ritual <= 0);
         if (ritualTimer) ritualTimer.style.display = 'none';
         UIManager._setCooldownVisual('ritual-icon', Math.max(0, player.cooldowns.ritual), maxRitualCd);
-
-        // Garuda
         const garudaIcon = document.getElementById('garuda-icon');
         if (garudaIcon) garudaIcon.classList.toggle('active', player.cooldowns.garuda <= 0);
         UIManager._setCooldownVisual('garuda-icon',
@@ -1866,15 +1346,11 @@ class UIManager {
             BALANCE.characters.poom.garudaCooldown ?? 24);
     }
 
-    // ── Auto: wanchai / vacuum / detonation cooldown arcs ────────────────────
     static _updateIconsAuto(player, setLockOverlay) {
         const S = BALANCE.characters.auto;
-
         setLockOverlay(document.getElementById('stealth-icon'), false);
         setLockOverlay(document.getElementById('vacuum-icon'), !player.passiveUnlocked);
         setLockOverlay(document.getElementById('auto-det-icon'), !player.passiveUnlocked);
-
-        // Wanchai Stand cooldown + live timer label
         const wanchaiCd = S.wanchaiCooldown ?? 12;
         UIManager._setCooldownVisual('stealth-icon',
             player.wanchaiActive ? 0 : Math.max(0, player.cooldowns.wanchai ?? 0),
@@ -1892,12 +1368,8 @@ class UIManager {
                 }
             }
         }
-
-        // Vacuum — dynamic max CD depending on Wanchai state
         const vacMaxCd = player.wanchaiActive ? (S.standPullCooldown ?? 10) : (S.vacuumCooldown ?? 6);
         UIManager._setCooldownVisual('vacuum-icon', Math.max(0, player.cooldowns.vacuum ?? 0), vacMaxCd);
-
-        // Detonation — visual lock while Wanchai is not active
         const detIcon = document.getElementById('auto-det-icon');
         if (detIcon) {
             if (player.wanchaiActive) {
@@ -1915,12 +1387,9 @@ class UIManager {
             S.detonationCooldown ?? 8);
     }
 
-    // ── Kao: teleport charges / clone cooldown arc ────────────────────────────
     static _updateIconsKao(player, setLockOverlay) {
         const S = BALANCE.characters.kao;
         const passive = player.passiveUnlocked;
-
-        // Teleport (Q) — charge-based with per-charge arc
         const teleportIcon = document.getElementById('teleport-icon');
         setLockOverlay(teleportIcon, !passive);
         if (teleportIcon && passive) {
@@ -1928,7 +1397,6 @@ class UIManager {
             const maxCharges = player.maxTeleportCharges || 3;
             const isFull = charges >= maxCharges;
             teleportIcon.classList.toggle('active', charges > 0);
-
             if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
                 const best = player.teleportTimers.reduce(
                     (b, t) => t.elapsed > b.elapsed ? t : b,
@@ -1936,7 +1404,6 @@ class UIManager {
                 );
                 const remaining = Math.max(0, best.max - best.elapsed);
                 if (charges > 0) {
-                    // Has charges remaining: show light arc only, hide number
                     let arc = teleportIcon.querySelector('.cd-arc-overlay');
                     if (!arc) { arc = document.createElement('div'); arc.className = 'cd-arc-overlay'; teleportIcon.appendChild(arc); }
                     const elapsed = best.max > 0 ? Math.min(1, 1 - remaining / best.max) : 1;
@@ -1948,14 +1415,11 @@ class UIManager {
                     if (!tmr) { tmr = document.createElement('div'); tmr.className = 'cd-timer-text'; teleportIcon.appendChild(tmr); }
                     tmr.style.display = 'none';
                 } else {
-                    // No charges: full arc + countdown number
                     UIManager._setCooldownVisual('teleport-icon', remaining, best.max);
                 }
             } else {
                 UIManager._setCooldownVisual('teleport-icon', 0, 1);
             }
-
-            // Charge count badge
             let chargeLabel = teleportIcon.querySelector('.charge-label');
             if (!chargeLabel) {
                 chargeLabel = document.createElement('span');
@@ -1971,8 +1435,6 @@ class UIManager {
             const cl = teleportIcon.querySelector('.charge-label');
             if (cl) cl.textContent = '';
         }
-
-        // Clone of Stealth (E)
         const cloneIcon = document.getElementById('kao-clone-icon');
         setLockOverlay(cloneIcon, !passive);
         if (cloneIcon) {
@@ -2008,11 +1470,9 @@ class UIManager {
         const rc = document.getElementById('report-card');
         if (rc) rc.style.display = 'block';
 
-        // Show character selection so player can switch characters
         const charSection = document.querySelector('.char-select-section');
         if (charSection) charSection.style.display = 'block';
 
-        // Update mission brief
         const missionBrief = document.getElementById('mission-brief');
         if (missionBrief) missionBrief.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.endGameSubtitle) ?? 'เลือกตัวละครใหม่หรือลองอีกครั้ง';
     }
@@ -2023,597 +1483,15 @@ class UIManager {
             'report-wave': '0',
             'report-text': 'Loading...'
         };
-        for (const [id, val] of Object.entries(els)) setElementText(id, val);
+        for (const [id, val] of Object.entries(els)) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
     }
 
-    // -- Canvas HUD (Combo / Confused / Minimap) ----------
-    // Moved to CanvasHUD class (defined below).
-    // UIManager.draw() is a compat shim -- see deprecation notice.
-}
-// ============================================================
-// CanvasHUD -- Canvas 2D rendering layer
-//
-// Owns every ctx.* draw call previously in UIManager.
-// Godot equivalent: CanvasLayer (Layer 10) > Control children.
-//
-// Entry:  CanvasHUD.draw(ctx, dt) -- called each frame from game.js
-// Compat: UIManager.draw(ctx, dt) -- deprecated shim, delegates here
-// ============================================================
-class CanvasHUD {
-
-    // -- Frame entry point -----------------------------------
     static draw(ctx, dt) {
-        UIManager.injectCooldownStyles(); // no-op after first call
-        CanvasHUD.updateCombo(dt);
-        CanvasHUD.drawCombo(ctx);
-        if (!ctx || !ctx.canvas) return;
-        CanvasHUD.drawConfusedWarning(ctx); // before minimap
-        CanvasHUD.drawMinimap(ctx);         // always on top
-    }
-
-    // ── Combo UI ──────────────────────────────────────────────
-    static updateCombo(dt) {
-        // WARN-12 FIX: removed partial typeof guard on comboTimer only.
-        // comboTimer/comboCount/comboScale/comboShake are all module-scope
-        // lets declared below — they're initialised long before this runs.
-        if (comboTimer > 0) {
-            comboTimer -= dt;
-            if (comboTimer <= 0) {
-                comboTimer = 0; comboCount = 0;
-                comboScale = 1; comboShake = 0;
-            }
-        }
-        comboScale += (1 - comboScale) * Math.min(1, dt * comboScaleDecay);
-        comboShake = Math.max(0, comboShake - dt * comboShakeDecay);
-    }
-
-    static drawCombo(ctx) {
-        if (!ctx || comboCount <= 0) return;
-        const canvas = ctx.canvas;
-        const x = canvas.width / 2;
-        const y = Math.max(60, canvas.height * 0.14);
-        const baseFont = 72;
-        const size = Math.round(baseFont * comboScale + Math.min(40, comboCount * 1.2));
-
-        ctx.save();
-        ctx.font = `bold ${size}px "Orbitron", sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-
-        const gWidth = Math.max(240, size * 4);
-        const grad = ctx.createLinearGradient(x - gWidth / 2, y - 30, x + gWidth / 2, y + 30);
-        const t = Math.min(comboCount / 30, 1);
-        // lerpColorHex is now in utils.js — no redefinition needed here
-        grad.addColorStop(0, lerpColorHex('#FFD54A', '#FF3B3B', t));
-        grad.addColorStop(1, lerpColorHex('#FFE08A', '#FF6B6B', Math.min(1, t + 0.18)));
-        ctx.fillStyle = grad;
-        ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 22;
-
-        const maxShake = Math.min(12, comboCount * 0.6);
-        const shakeAmp = maxShake * comboShake;
-        const shakeX = (Math.random() - 0.5) * shakeAmp;
-        const shakeY = (Math.random() - 0.5) * shakeAmp;
-        ctx.translate(x + shakeX, y + shakeY);
-
-        const mainText = `${comboCount} ${GAME_TEXTS.ui.hits}`;
-        ctx.fillText(mainText, 0, -size * 0.14);
-        ctx.lineWidth = Math.max(4, size * 0.07);
-        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-        ctx.strokeText(mainText, 0, -size * 0.14);
-
-        let special = '';
-        if (comboCount > 20) special = GAME_TEXTS.ui.godlike;
-        else if (comboCount > 10) special = GAME_TEXTS.ui.unstoppable;
-        if (special) {
-            const smallSize = Math.max(18, Math.round(size * 0.44));
-            ctx.font = `bold ${smallSize}px "Orbitron", sans-serif`;
-            ctx.fillText(special, 0, Math.round(size * 0.62));
-            ctx.lineWidth = Math.max(3, smallSize * 0.08);
-            ctx.strokeText(special, 0, Math.round(size * 0.62));
-        }
-        ctx.restore();
-    }
-
-    // ════════════════════════════════════════════════════════════
-    // 😵 CONFUSED STATE WARNING BANNER
-    //
-    // Drawn every frame when window.player.isConfused is true.
-    // Flashes at ~4 Hz to grab attention; fades cleanly when the
-    // confusion debuff expires (isConfused becomes false).
-    //
-    // Vertical position: H - 270 px (above the Bullet Time energy
-    // badge at H - 140 and the skill-icon row beneath it).
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * drawConfusedWarning(ctx)
-     *
-     * Renders a flashing purple pill banner:
-     *   "⚠️ CONFUSED : INVERT YOUR MOVEMENT! ⚠️"
-     *
-     * Only visible while window.player.isConfused === true.
-     * Uses ctx.save/restore so no canvas state leaks outward.
-     *
-     * @param {CanvasRenderingContext2D} ctx
-     */
-    static drawConfusedWarning(ctx) {
-        if (!ctx || !ctx.canvas) return;
-        if (!window.player || !window.player.isConfused) return;
-
-        const canvas = ctx.canvas;
-        const now = performance.now();
-
-        // ── Flash gate: visible for ~125 ms, hidden for ~125 ms (~4 Hz) ──
-        // Math.sin returns values in [−1, 1]; we gate on > 0 for a 50 % duty cycle.
-        const flashVisible = Math.sin(now / 125) > 0;
-        if (!flashVisible) return;
-
-        // ── Layout ────────────────────────────────────────────────
-        // Centred horizontally; sits at H − 270 px so it clears the
-        // Bullet Time badge (H − 140) and the skill-slot row below it.
-        const W = canvas.width;
-        const H = canvas.height;
-        const cx = W / 2;
-        const cy = H - 270;
-        const text = GAME_TEXTS.ui.confusedWarning;
-        const fontSize = 17;
-        const padX = 22;
-        const padY = 11;
-        const radius = 10;
-
-        ctx.save();
-
-        // ── Measure text to size the pill precisely ───────────────
-        ctx.font = `bold ${fontSize}px "Orbitron", Arial, sans-serif`;
-        const textW = ctx.measureText(text).width;
-        const pillW = textW + padX * 2;
-        const pillH = fontSize + padY * 2;
-        const pillX = cx - pillW / 2;
-        const pillY = cy - pillH / 2;
-
-        // ── Outer glow halo (drawn before clip/fill for correct layering) ──
-        ctx.shadowBlur = 28;
-        ctx.shadowColor = '#d946ef';
-
-        // ── Pill background ───────────────────────────────────────
-        // Deep purple, semi-transparent so world content shows through
-        // at the edges and the banner doesn't feel too opaque.
-        ctx.fillStyle = 'rgba(88, 28, 135, 0.88)';
-        CanvasHUD._roundRect(ctx, pillX, pillY, pillW, pillH, radius);
-        ctx.fill();
-
-        // ── Pill border ───────────────────────────────────────────
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#e879f9';
-        ctx.strokeStyle = 'rgba(233, 121, 249, 0.90)';
-        ctx.lineWidth = 2;
-        CanvasHUD._roundRect(ctx, pillX, pillY, pillW, pillH, radius);
-        ctx.stroke();
-
-        // ── Warning text ──────────────────────────────────────────
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = '#ffffff';
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, cx, cy);
-
-        ctx.restore();
-    }
-
-
-    // ════════════════════════════════════════════════════════════
-    // 🎯 TACTICAL MINIMAP / RADAR  (drawn last — always on top)
-    //
-    // CLIP ARCHITECTURE (two nested save/restore pairs):
-    //
-    //   ctx.save()  ← OUTER: resets composite/alpha; draws the shell ring
-    //     ctx.save()  ← INNER: establishes the circular clip region
-    //       ctx.clip()
-    //       // ... interior content (grid, sweep, blips, player) ...
-    //     ctx.restore()  ← INNER restore: releases clip — CRITICAL
-    //     // ... label & legend drawn outside the clip ...
-    //   ctx.restore()  ← OUTER restore: final cleanup
-    //
-    // The outer save() MUST explicitly override globalCompositeOperation and
-    // globalAlpha because ctx.save() captures whatever state the canvas is
-    // currently in — if mapSystem.drawLighting() leaked a blend mode, that
-    // leak would be captured and every minimap draw call would be invisible.
-    // ════════════════════════════════════════════════════════════
-    // ── drawMinimap ───────────────────────────────────────────────────────────
-    // Orchestrator — shared constants then 3 focused drawing phases:
-    //   _minimapDrawShell    outer glow, border, fill
-    //   _minimapDrawContent  grid, sweep, entities (or fog blackout)
-    //   _minimapDrawLabel    label text + legend row (outside clip)
-    static drawMinimap(ctx) {
-        if (!ctx || !ctx.canvas) return;
-
-        if (!UIManager._minimapFrame) UIManager._minimapFrame = 0;
-        UIManager._minimapFrame++;
-
-        const canvas = ctx.canvas;
-        const radarRadius = 60;
-        const scale = 0.1;
-        const cx = canvas.width - 200;   // 200 px from right edge
-        const cy = 90;                    // 90 px from top edge
-        const now = Date.now();
-        const player = (typeof window !== 'undefined' && window.player)
-            ? window.player : { x: 0, y: 0 };
-
-        // world→radar-screen, clamped to maxR from radar center
-        const toRadar = (wx, wy, maxR = radarRadius - 6) => {
-            const rx = cx + (wx - player.x) * scale;
-            const ry = cy + (wy - player.y) * scale;
-            const dx = rx - cx, dy = ry - cy;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            if (d <= maxR) return { x: rx, y: ry, clamped: false };
-            return { x: cx + dx * (maxR / d), y: cy + dy * (maxR / d), clamped: true };
-        };
-
-        // OUTER SAVE — resets blendmode/alpha/shadow leakage from mapSystem
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
-
-        CanvasHUD._minimapDrawShell(ctx, cx, cy, radarRadius, now);
-
-        // INNER SAVE — establishes circular clip region
-        ctx.save();
-        ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 1, 0, Math.PI * 2); ctx.clip();
-
-        CanvasHUD._minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar);
-
-        ctx.restore();  // ← INNER restore — releases clip
-
-        CanvasHUD._minimapDrawLabel(ctx, cx, cy, radarRadius);
-
-        ctx.restore();  // ← OUTER restore
-    }
-
-    // ── Shell: outer glow, navy fill, pulsating border, inner accent ring ────
-    static _minimapDrawShell(ctx, cx, cy, radarRadius, now) {
-        // Subtle outer glow halo
-        ctx.beginPath(); ctx.arc(cx, cy, radarRadius + 4, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(57,255,20,0.07)'; ctx.fill();
-
-        // Main deep-navy fill — high-contrast background
-        ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'; ctx.fill();
-
-        // Pulsating neon-green border — width oscillates 1 px → 3 px
-        const borderSin = Math.sin(now / 500);
-        const borderWidth = 2 + borderSin;
-        ctx.lineWidth = borderWidth;
-        ctx.globalAlpha = 0.80 + borderSin * 0.15;
-        ctx.strokeStyle = '#39ff14';
-        ctx.shadowBlur = 12 + borderSin * 6;
-        ctx.shadowColor = '#39ff14';
-        ctx.beginPath(); ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
-
-        // Inner accent ring
-        ctx.lineWidth = 0.8;
-        ctx.strokeStyle = 'rgba(134,239,172,0.28)';
-        ctx.beginPath(); ctx.arc(cx, cy, radarRadius - 3, 0, Math.PI * 2); ctx.stroke();
-    }
-
-    // ── Content: grid, sweep, poi markers, enemies, boss, player dot ─────────
-    // Rendered inside the circular clip — nothing escapes the radar circle.
-    static _minimapDrawContent(ctx, cx, cy, radarRadius, now, player, toRadar) {
-        if (window.isFogWave) {
-            // ── RADAR BLACKOUT during Fog Waves ──────────────────────────────
-            ctx.fillStyle = 'rgba(6, 30, 50, 0.95)';
-            ctx.fillRect(cx - radarRadius, cy - radarRadius, radarRadius * 2, radarRadius * 2);
-
-            const noiseNow = Date.now();
-            for (let n = 0; n < 6; n++) {
-                const seed = Math.floor(noiseNow / 80) + n * 7919;
-                const nyOff = ((seed * 1664525 + 1013904223) & 0x7fffffff) % (radarRadius * 2);
-                const ny = cy - radarRadius + nyOff;
-                const nalpha = 0.12 + (((seed * 6364136) & 0xff) / 255) * 0.25;
-                const nw = 0.6 + (((seed * 22695477) & 0xff) / 255) * 1.4;
-                ctx.save();
-                ctx.globalAlpha = nalpha;
-                ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = nw;
-                ctx.beginPath();
-                ctx.moveTo(cx - radarRadius, ny); ctx.lineTo(cx + radarRadius, ny);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            const slPulse = 0.65 + Math.sin(noiseNow / 350) * 0.35;
-            ctx.save();
-            ctx.globalAlpha = slPulse;
-            ctx.shadowBlur = 14; ctx.shadowColor = '#06b6d4';
-            ctx.fillStyle = '#06b6d4';
-            ctx.font = 'bold 10px "Orbitron", Arial, sans-serif';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('SIGNAL', cx, cy - 7);
-            ctx.fillText('LOST', cx, cy + 7);
-            ctx.restore();
-            return;
-        }
-
-        // ── Interior grid ──────────────────────────────────────────────
-        ctx.lineWidth = 0.7;
-        [radarRadius * 0.33, radarRadius * 0.66].forEach(r => {
-            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(57,255,20,0.14)'; ctx.stroke();
-        });
-        ctx.strokeStyle = 'rgba(57,255,20,0.20)'; ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(cx - radarRadius + 2, cy); ctx.lineTo(cx + radarRadius - 2, cy);
-        ctx.moveTo(cx, cy - radarRadius + 2); ctx.lineTo(cx, cy + radarRadius - 2);
-        ctx.stroke();
-
-        // ── Sweep line animation ───────────────────────────────────────
-        const SWEEP_RPM = 1 / 3;
-        const sweepAngle = ((now / 1000) * SWEEP_RPM * Math.PI * 2) % (Math.PI * 2);
-        const trailArc = Math.PI * 2 / 3;
-        const TRAIL_STEPS = 24;
-        // ── PERF: solid color set once — globalAlpha per step, no toFixed alloc ──
-        ctx.fillStyle = 'rgb(72,187,120)';
-        for (let i = 0; i < TRAIL_STEPS; i++) {
-            const frac = i / TRAIL_STEPS;
-            const aStart = sweepAngle - trailArc * (1 - frac);
-            const aEnd = sweepAngle - trailArc * (1 - frac - 1 / TRAIL_STEPS);
-            ctx.globalAlpha = frac * frac * 0.22;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, radarRadius - 1, aStart, aEnd);
-            ctx.closePath();
-            ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-        ctx.save();
-        ctx.strokeStyle = 'rgba(134,239,172,0.85)'; ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 6; ctx.shadowColor = '#48bb78';
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(cx + Math.cos(sweepAngle) * (radarRadius - 1),
-            cy + Math.sin(sweepAngle) * (radarRadius - 1));
-        ctx.stroke();
-        ctx.restore();
-
-        // ── POI: Database Server — bright blue ─────────────────────────
-        if (window.MTC_DATABASE_SERVER) {
-            const S = window.MTC_DATABASE_SERVER;
-            const { x: sx, y: sy, clamped: sc } = toRadar(S.x, S.y, radarRadius - 8);
-            const dbPulse = 0.65 + Math.sin(now / 550) * 0.35;
-            const SZ = sc ? 3.5 : 5;
-            ctx.save(); ctx.translate(sx, sy);
-            ctx.shadowBlur = 10 * dbPulse; ctx.shadowColor = '#60a5fa';
-            if (sc) {
-                const ax = cx - sx, ay = cy - sy;
-                ctx.rotate(Math.atan2(ay, ax));
-                ctx.globalAlpha = 0.8 + dbPulse * 0.2;
-                ctx.fillStyle = '#3b82f6';
-                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
-            } else {
-                ctx.globalAlpha = 0.85 + dbPulse * 0.15;
-                ctx.fillStyle = '#3b82f6';
-                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
-                ctx.globalAlpha = dbPulse * 0.95;
-                ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 1.2;
-                ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
-            }
-            ctx.restore();
-        }
-
-        // ── POI: Shop — gold ──────────────────────────────────────────
-        if (window.MTC_SHOP_LOCATION) {
-            const SH = window.MTC_SHOP_LOCATION;
-            const { x: shx, y: shy, clamped: shc } = toRadar(SH.x, SH.y, radarRadius - 8);
-            const shPulse = 0.65 + Math.sin(now / 700 + 1.2) * 0.35;
-            const SZ = shc ? 3.5 : 4.5;
-            ctx.save(); ctx.translate(shx, shy);
-            ctx.shadowBlur = 7 * shPulse; ctx.shadowColor = '#f59e0b';
-            if (shc) {
-                const ax = cx - shx, ay = cy - shy;
-                ctx.rotate(Math.atan2(ay, ax));
-                ctx.globalAlpha = 0.7 + shPulse * 0.3;
-                ctx.fillStyle = '#f59e0b';
-                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
-            } else {
-                ctx.globalAlpha = 0.7 + shPulse * 0.25;
-                ctx.fillStyle = '#fbbf24';
-                ctx.fillRect(-SZ, -SZ, SZ * 2, SZ * 2);
-                ctx.globalAlpha = shPulse * 0.85;
-                ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 1.2;
-                ctx.strokeRect(-SZ, -SZ, SZ * 2, SZ * 2);
-            }
-            ctx.restore();
-        }
-
-        // ── Enemies — distinct shapes per type ────────────────────────
-        if (Array.isArray(window.enemies)) {
-            for (const e of window.enemies) {
-                if (!e || e.dead) continue;
-                const { x: ex, y: ey, clamped: ec } = toRadar(e.x, e.y);
-                ctx.save();
-                if (ec) {
-                    ctx.translate(ex, ey);
-                    ctx.rotate(Math.atan2(cy - ey, cx - ex));
-                    const arrowColor = e.type === 'mage'
-                        ? 'rgba(180,80,255,0.9)'
-                        : (e.type === 'tank' ? 'rgba(255,120,40,0.9)' : 'rgba(255,50,50,0.9)');
-                    ctx.fillStyle = arrowColor; ctx.shadowBlur = 5; ctx.shadowColor = arrowColor;
-                    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -3.5); ctx.lineTo(0, 3.5);
-                    ctx.closePath(); ctx.fill();
-                } else if (e.type === 'mage') {
-                    ctx.translate(ex, ey); ctx.rotate(now / 800);
-                    const r = 6;
-                    ctx.fillStyle = 'rgba(190,75,255,1.0)'; ctx.strokeStyle = 'rgba(220,160,255,0.9)';
-                    ctx.lineWidth = 1.2; ctx.shadowBlur = 8; ctx.shadowColor = '#b44dff';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -r); ctx.lineTo(r * 0.6, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.6, 0);
-                    ctx.closePath(); ctx.fill(); ctx.stroke();
-                    ctx.fillStyle = 'rgba(240,200,255,0.85)'; ctx.shadowBlur = 4;
-                    ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, Math.PI * 2); ctx.fill();
-                } else if (e.type === 'tank') {
-                    const r = 5.5;
-                    ctx.fillStyle = 'rgba(255,115,35,1.0)'; ctx.strokeStyle = 'rgba(255,185,90,0.9)';
-                    ctx.lineWidth = 1.4; ctx.shadowBlur = 7; ctx.shadowColor = '#ff7320';
-                    ctx.beginPath(); ctx.rect(ex - r, ey - r, r * 2, r * 2); ctx.fill(); ctx.stroke();
-                    ctx.strokeStyle = 'rgba(255,220,120,0.75)'; ctx.lineWidth = 1; ctx.shadowBlur = 0;
-                    const tk = 2.5;
-                    [[ex - r, ey - r], [ex + r, ey - r], [ex - r, ey + r], [ex + r, ey + r]].forEach(([px, py]) => {
-                        ctx.beginPath(); ctx.arc(px, py, tk, 0, Math.PI * 2); ctx.stroke();
-                    });
-                } else {
-                    const r = 5;
-                    const glow = 0.6 + Math.sin(now / 400 + e.x) * 0.4;
-                    ctx.fillStyle = 'rgba(255,38,38,1.0)'; ctx.shadowBlur = 8 * glow; ctx.shadowColor = '#ff2222';
-                    ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = 'rgba(255,180,180,0.75)'; ctx.shadowBlur = 0;
-                    ctx.beginPath(); ctx.arc(ex - 1.5, ey - 1.5, 1.5, 0, Math.PI * 2); ctx.fill();
-                }
-                ctx.restore();
-            }
-        }
-
-        // ── Boss — 6 px pulsating purple dot ──────────────────────────
-        if (window.boss && !window.boss.dead) {
-            const t = (now % 1000) / 1000;
-            const pulse = 0.5 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.8;
-            const { x: bx, y: by, clamped: bc } = toRadar(window.boss.x, window.boss.y, radarRadius - 10);
-            ctx.save();
-            ctx.shadowBlur = 14 * pulse; ctx.shadowColor = '#a855f7';
-            if (bc) {
-                ctx.translate(bx, by);
-                ctx.rotate(Math.atan2(cy - by, cx - bx));
-                ctx.globalAlpha = 0.7 + pulse * 0.3;
-                ctx.fillStyle = '#a855f7';
-                ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(0, -5); ctx.lineTo(0, 5); ctx.closePath(); ctx.fill();
-            } else {
-                ctx.globalAlpha = 0.75 + 0.25 * pulse;
-                ctx.fillStyle = '#aa6eff';
-                ctx.beginPath(); ctx.arc(bx, by, 6 * pulse, 0, Math.PI * 2); ctx.fill();
-                ctx.globalAlpha = 0.30 + 0.15 * pulse;
-                ctx.strokeStyle = '#d8b4fe'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(bx, by, 10 + 3 * pulse, 0, Math.PI * 2); ctx.stroke();
-                ctx.globalAlpha = 0.75 + 0.25 * pulse;
-                ctx.fillStyle = '#ffdcff';
-                ctx.font = 'bold 6px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-                ctx.fillText('BOSS', bx, by - 12 - 2 * pulse);
-            }
-            ctx.restore();
-        }
-
-        // ── Player — green triangle at radar center ────────────────────
-        ctx.save();
-        ctx.translate(cx, cy);
-        if (player.angle !== undefined) ctx.rotate(player.angle + Math.PI / 2);
-        ctx.shadowBlur = 8; ctx.shadowColor = '#34d399';
-        ctx.fillStyle = 'rgba(52,214,88,0.98)';
-        ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.beginPath(); ctx.arc(0, -5, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-    }
-
-    // ── Label + legend strip (rendered outside clip, below radar circle) ──────
-    static _minimapDrawLabel(ctx, cx, cy, radarRadius) {
-        ctx.shadowBlur = 0;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-        ctx.font = 'bold 8px Orbitron, monospace';
-        ctx.fillStyle = 'rgba(72,187,120,0.70)';
-        ctx.fillText(GAME_TEXTS.ui.minimapTitle, cx, cy + radarRadius + 5);
-
-        // Tiny legend row: colored symbols matching blip types
-        const legend = [
-            { col: '#ef4444', label: GAME_TEXTS.ui.legendEnm, shape: 'circle' },
-            { col: '#b44dff', label: GAME_TEXTS.ui.legendMge, shape: 'diamond' },
-            { col: '#ff7320', label: GAME_TEXTS.ui.legendTnk, shape: 'square' },
-            { col: '#a855f7', label: GAME_TEXTS.ui.legendBss, shape: 'circle' },
-            { col: '#f59e0b', label: GAME_TEXTS.ui.legendShp, shape: 'square' },
-        ];
-        const lx0 = cx - (legend.length - 1) * 12;
-        legend.forEach(({ col, label, shape }, i) => {
-            const lx = lx0 + i * 24;
-            const ly = cy + radarRadius + 17;
-            ctx.fillStyle = col; ctx.shadowBlur = 3; ctx.shadowColor = col;
-            if (shape === 'diamond') {
-                ctx.beginPath();
-                ctx.moveTo(lx, ly - 3.5); ctx.lineTo(lx + 3, ly); ctx.lineTo(lx, ly + 3.5); ctx.lineTo(lx - 3, ly);
-                ctx.closePath(); ctx.fill();
-            } else if (shape === 'square') {
-                ctx.fillRect(lx - 3, ly - 3, 6, 6);
-            } else {
-                ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
-            }
-            ctx.shadowBlur = 0;
-            ctx.font = '6px monospace'; ctx.fillStyle = 'rgba(203,213,225,0.65)';
-            ctx.fillText(label, lx, ly + 9);
-        });
-    }
-    // -- _roundRect -- moved from module scope --
-    // Only used by drawConfusedWarning().
-    static _roundRect(ctx, x, y, w, h, r) {
-        r = Math.min(r, w / 2, h / 2);
-        if (typeof ctx.roundRect === 'function') {
-            ctx.beginPath();
-            ctx.roundRect(x, y, w, h, r);
-        } else {
-            ctx.beginPath();
-            ctx.moveTo(x + r, y);
-            ctx.lineTo(x + w - r, y);
-            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-            ctx.lineTo(x + w, y + h - r);
-            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-            ctx.lineTo(x + r, y + h);
-            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-            ctx.lineTo(x, y + r);
-            ctx.quadraticCurveTo(x, y, x + r, y);
-            ctx.closePath();
-        }
+        if (window.CanvasHUD) CanvasHUD.draw(ctx, dt);
     }
 }
 
-// ════════════════════════════════════════════════════════════
-// Combo state variables
-// ════════════════════════════════════════════════════════════
-let comboCount = 0;
-let comboTimer = 0;
-let comboScale = 1.0;
-let comboShake = 0.0;
-const comboShakeDecay = 4.5;
-const comboScaleDecay = 6.0;
-
-function addCombo() {
-    comboCount++;
-    comboTimer = 2.0;
-    comboScale = 1.6;
-    comboShake = Math.min(1.0, 0.15 + comboCount / 30);
-    try { if (typeof Audio !== 'undefined' && Audio.playCombo) Audio.playCombo(); } catch (e) { }
-}
-
-// ════════════════════════════════════════════════════════════
-// Global singletons — must be on window for cross-script access
-// ════════════════════════════════════════════════════════════
-// 'var' declarations auto-register on window; class declarations do NOT.
-var Achievements = new AchievementSystem();
-
-// Expose ShopManager and UIManager on window so game.js and map.js
-// can access them regardless of which script tag loads first.
-window.ShopManager = ShopManager;
 window.UIManager = UIManager;
-window.CanvasHUD = CanvasHUD;
-window.Achievements = Achievements;
-
-// ── High-score display on initial page load ───────────────────
-// Wrapped in DOMContentLoaded so the DOM is ready before we query it.
-window.addEventListener('DOMContentLoaded', () => {
-    try {
-        const saved = getSaveData();
-        UIManager.updateHighScoreDisplay(saved.highScore || 0);
-    } catch (e) {
-        console.warn('[MTC Save] Could not init high score display:', e);
-    }
-});
-
-// ── Node/bundler export ───────────────────────────────────────
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AchievementSystem, ShopManager, UIManager, CanvasHUD, Achievements, addCombo, comboCount, comboTimer };
-}

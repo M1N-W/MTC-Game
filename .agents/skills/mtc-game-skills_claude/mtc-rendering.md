@@ -18,6 +18,21 @@ When in doubt about any draw code in this project, apply these rules.
 
 ---
 
+## 0. Frame Lifecycle & Rendering Pipeline
+
+The game loop in `game.js` follows a strict sequence every frame (Target: 60FPS):
+
+1. **Input Handling** (`input.js`): Process keys and mouse.
+2. **Logic Update** (`game.js` → `update(dt)`):
+   - Physics, AI (`_tickShared`), state transitions.
+   - **CRITICAL**: All state mutations MUST happen here.
+3. **Canvas Clearing**: `ctx.clearRect(0, 0, width, height)`.
+4. **Rendering Dispatch** (`game.js` → `draw(ctx)`):
+   - Background/Map (`map.js`) → Entities (`enemies`, `boss`) → Player (`PlayerRenderer`) → Effects (`effects.js`) → UI (`ui.js`).
+   - **Architectural Constraint**: Rendering logic must be "read-only" relative to the game state.
+
+---
+
 ## 1. The Three Immutable Laws of draw()
 
 ```
@@ -43,16 +58,16 @@ ctx.restore();
 // ✅ Nested — one pair per level
 ctx.save();
 ctx.translate(x, y);
-  ctx.save();
-  ctx.rotate(t);
-  ctx.stroke();
-  ctx.restore();
+ctx.save();
+ctx.rotate(t);
+ctx.stroke();
+ctx.restore();
 ctx.restore();
 
 // ❌ Early return without restore = permanent transform leak
 ctx.save();
 ctx.translate(x, y);
-if (entity.dead) return;   // BUG — save without matching restore
+if (entity.dead) return; // BUG — save without matching restore
 
 // ✅ Fix: guard before the save, not inside it
 if (entity.dead) return;
@@ -94,6 +109,7 @@ static draw(e, ctx) {
 Use time-based deterministic oscillation instead.
 
 `performance.now()` — call ONCE per draw method, reuse everywhere inside it:
+
 ```js
 // ✅ Call once at top, pass through to every sub-layer
 static drawBossFirst(e, ctx) {
@@ -108,20 +124,22 @@ static drawBossFirst(e, ctx) {
 ```js
 // ❌ Never
 for (let i = 0; i < 6; i++) {
-    ctx.arc(Math.random() * R, 0, 3, 0, Math.PI * 2);   // flickers every frame
+  ctx.arc(Math.random() * R, 0, 3, 0, Math.PI * 2); // flickers every frame
 }
 
 // ✅ Deterministic seed pattern — animated, stable, no RNG
 const t = performance.now() / 1000;
 for (let i = 0; i < 6; i++) {
-    const seed = i * 137.5;                                        // golden angle spread
-    const baseA = (seed % 360) * Math.PI / 180;
-    const rise  = (t * 0.3 + seed * 0.01) % 1.0;                  // 0→1 loop
-    const px    = Math.cos(baseA + t * 0.5) * R * 1.4;
-    const py    = -rise * R * 1.8;
-    const alpha = Math.sin(rise * Math.PI);                        // fade in, fade out
-    ctx.globalAlpha = alpha;
-    ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+  const seed = i * 137.5; // golden angle spread
+  const baseA = ((seed % 360) * Math.PI) / 180;
+  const rise = (t * 0.3 + seed * 0.01) % 1.0; // 0→1 loop
+  const px = Math.cos(baseA + t * 0.5) * R * 1.4;
+  const py = -rise * R * 1.8;
+  const alpha = Math.sin(rise * Math.PI); // fade in, fade out
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.arc(px, py, 3, 0, Math.PI * 2);
+  ctx.fill();
 }
 ctx.globalAlpha = 1;
 ```
@@ -137,12 +155,14 @@ const screen = worldToScreen(entity.x, entity.y);
 ```
 
 Camera scale — always use the static helper, never read `camera.scale` directly:
+
 ```js
 // ✅ Safe — handles undefined camera and missing scale property
-const camScale = PlayerRenderer._getCamScale();   // same helper on BossRenderer
+const camScale = PlayerRenderer._getCamScale(); // same helper on BossRenderer
 // ❌ camera.scale              — TypeError if camera is not yet initialised
 // ❌ window.camera?.scale ?? 1 — spreads the silent-undefined pattern elsewhere
 ```
+
 `_getCamScale()` is a static method on both `PlayerRenderer` and `BossRenderer`.
 Use it everywhere camera scale is needed inside a draw path.
 
@@ -152,12 +172,12 @@ const screen = worldToScreen(entity.x, entity.y);
 // ── World-space elements: translate to screen, draw in local coords ──
 ctx.save();
 ctx.translate(screen.x, screen.y);
-ctx.arc(0, 0, R, 0, Math.PI * 2);   // (0,0) = entity centre in local space
+ctx.arc(0, 0, R, 0, Math.PI * 2); // (0,0) = entity centre in local space
 ctx.restore();
 
 // ── Screen-space elements: use screen.x/y directly, no translate ──
 // HP bars, labels — drawn relative to screen pos, not inside any save block
-ctx.fillText('HP', screen.x, screen.y - R - 20);
+ctx.fillText("HP", screen.x, screen.y - R - 20);
 
 // ⚠️ Text inside a rotated ctx.save() block will also rotate — keep labels outside
 // ⚠️ HP bar drawn OUTSIDE the body ctx.save() block — must stay screen-space
@@ -212,7 +232,7 @@ ctx.restore();
 // ── Orbiting text labels — counter-rotate to stay readable ──
 ctx.save();
 ctx.translate(ox, oy);
-ctx.rotate(-entity.angle);   // cancels parent rotation
+ctx.rotate(-entity.angle); // cancels parent rotation
 ctx.fillText(label, 0, 0);
 ctx.restore();
 ```
@@ -225,8 +245,8 @@ For floating/flying entities. Shadow ellipse compensates for the hover offset.
 
 ```js
 const now = performance.now();
-const hoverY = Math.sin(now / 150) * 4;     // vertical bob
-const hoverX = Math.sin(now / 230) * 1.2;   // subtle lateral drift
+const hoverY = Math.sin(now / 150) * 4; // vertical bob
+const hoverX = Math.sin(now / 230) * 1.2; // subtle lateral drift
 
 ctx.save();
 ctx.translate(screen.x + hoverX, screen.y + hoverY);
@@ -247,7 +267,7 @@ Subtle scale pulse for living entities. Apply inside the body save block only.
 ```js
 ctx.save();
 ctx.translate(screen.x, screen.y);
-const breathe = Math.sin(now / 250);              // ~1.6s cycle
+const breathe = Math.sin(now / 250); // ~1.6s cycle
 ctx.scale(1 + breathe * 0.018, 1 - breathe * 0.022);
 // ... draw body
 ctx.restore();
@@ -262,13 +282,17 @@ This ensures the aura renders correctly even before `this.phase` is set.
 
 ```js
 const hpRatio = e.maxHp > 0 ? e.hp / e.maxHp : 1;
-const isP1 = (e.phase === 1) || (!e.phase && hpRatio > 0.60);
-const isP2 = (e.phase === 2) || (!e.phase && hpRatio > 0.30 && hpRatio <= 0.60);
-const isP3 = (e.phase === 3) || (!e.phase && hpRatio <= 0.30);
+const isP1 = e.phase === 1 || (!e.phase && hpRatio > 0.6);
+const isP2 = e.phase === 2 || (!e.phase && hpRatio > 0.3 && hpRatio <= 0.6);
+const isP3 = e.phase === 3 || (!e.phase && hpRatio <= 0.3);
 
-if (isP1)      { /* calm aura — cyan/green  */ }
-else if (isP2) { /* stressed aura — orange/red */ }
-else           { /* critical aura — purple/white */ }
+if (isP1) {
+  /* calm aura — cyan/green  */
+} else if (isP2) {
+  /* stressed aura — orange/red */
+} else {
+  /* critical aura — purple/white */
+}
 ```
 
 ---
@@ -298,8 +322,8 @@ Label every visual layer so draw order is scannable. Use decimal layers to slot 
 
 ```js
 // ✅ Read in draw
-const sT     = entity._anim?.skillT ?? 0;
-const hurtT  = entity._anim?.hurtT  ?? 0;
+const sT = entity._anim?.skillT ?? 0;
+const hurtT = entity._anim?.hurtT ?? 0;
 const shootT = entity._anim?.shootT ?? 0;
 
 // ❌ Never write in draw — this is a hidden state mutation
@@ -312,12 +336,14 @@ entity._anim.shootT = 1;
 
 ```js
 // Inner offset (-R*0.25, -R*0.30) creates a "light source from top-left" feel
-const grad = ctx.createRadialGradient(-R * 0.25, -R * 0.30, 1, 0, 0, R);
-grad.addColorStop(0,    '#374151');   // bright centre
-grad.addColorStop(0.55, '#1f2937');
-grad.addColorStop(1,    '#111827');   // dark edge
+const grad = ctx.createRadialGradient(-R * 0.25, -R * 0.3, 1, 0, 0, R);
+grad.addColorStop(0, "#374151"); // bright centre
+grad.addColorStop(0.55, "#1f2937");
+grad.addColorStop(1, "#111827"); // dark edge
 ctx.fillStyle = grad;
-ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath();
+ctx.arc(0, 0, R, 0, Math.PI * 2);
+ctx.fill();
 ```
 
 ---
@@ -345,25 +371,26 @@ ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
 
 ---
 
-## 16. charId-Guarded Effects in _drawBase
+## 16. charId-Guarded Effects in \_drawBase
 
 `_drawBase()` is shared by Kao, Pat, and the generic player fallback.
 Character-specific effects that belong inside the body save block must be gated by `entity.charId`:
 
 ```js
 // Inside _drawBase() body save block, after _drawHitFlash():
-if (entity.charId === 'kao') {
-    const kaoDashT = entity._anim?.dashT ?? 0;
-    // ... Kao-only dash glow
+if (entity.charId === "kao") {
+  const kaoDashT = entity._anim?.dashT ?? 0;
+  // ... Kao-only dash glow
 }
-if (entity.charId === 'pat') {
-    const patHurtT = entity._anim?.hurtT ?? 0;
-    // ... Pat-only parry flash
+if (entity.charId === "pat") {
+  const patHurtT = entity._anim?.hurtT ?? 0;
+  // ... Pat-only parry flash
 }
 ```
 
 Rules:
-- ❌ Do NOT add a separate `_drawKaoExtra()` dispatch — _drawBase is already the Kao body path
+
+- ❌ Do NOT add a separate `_drawKaoExtra()` dispatch — \_drawBase is already the Kao body path
 - ❌ Do NOT check `instanceof KaoPlayer` inside draw() — charId string check is cheaper and safer
 - ✅ Always reset `ctx.shadowBlur = 0` and `ctx.globalAlpha = 1` at the end of each guarded block
 - Effects go AFTER `_drawHitFlash()` — flash must be the innermost layer
@@ -400,12 +427,12 @@ They live in `window.PORTRAITS[charId]` inside `ui.js` and are injected into
 
 ### Per-character signature elements (visual identity)
 
-| charId | Signature element     | Notes                                              |
-|--------|-----------------------|----------------------------------------------------|
-| `kao`  | Scope ring (r=9.5)    | Glowing cyan ring over right eye                   |
-| `poom` | Naga snake            | Large serpent coiled behind body                   |
-| `auto` | Fire crown            | Flame burst above head                             |
-| `pat`  | Iaido flash sweep     | Diagonal ice-blue blur lines corner-to-corner      |
+| charId | Signature element  | Notes                                         |
+| ------ | ------------------ | --------------------------------------------- |
+| `kao`  | Scope ring (r=9.5) | Glowing cyan ring over right eye              |
+| `poom` | Naga snake         | Large serpent coiled behind body              |
+| `auto` | Fire crown         | Flame burst above head                        |
+| `pat`  | Iaido flash sweep  | Diagonal ice-blue blur lines corner-to-corner |
 
 ### Pat portrait specifics (established v3.35.x)
 
@@ -434,23 +461,24 @@ For characters whose weapon geometry is defined in a standalone `draw[X]Weapon(c
 the muzzle flash must be drawn in the same local coordinate space as that function.
 
 Pattern:
+
 ```js
 // After drawPoomWeapon(ctx) call in LAYER 2:
 if (poomShootT > 0.05) {
-    const muzzleLocalX = 43;  // weapon.translate(12) + muzzle_x(31) from weapon function
-    const muzzleLocalY = 6;   // weapon.translate(6) + muzzle_y(0)
-    ctx.save();
-    ctx.translate(muzzleLocalX, muzzleLocalY);
-    // ... draw flash, rays — all relative to muzzle tip (0,0)
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1;
-    ctx.restore();
+  const muzzleLocalX = 43; // weapon.translate(12) + muzzle_x(31) from weapon function
+  const muzzleLocalY = 6; // weapon.translate(6) + muzzle_y(0)
+  ctx.save();
+  ctx.translate(muzzleLocalX, muzzleLocalY);
+  // ... draw flash, rays — all relative to muzzle tip (0,0)
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 ```
 
 ⚠️ If the weapon draw function changes its internal `ctx.translate()`, recalculate muzzleLocalX/Y.
 ⚠️ This block must be INSIDE the same `ctx.save()` that called `ctx.rotate(entity.angle)` —
-   the muzzle position is in aim-rotated local space, not world space.
+the muzzle position is in aim-rotated local space, not world space.
 
 ---
 
@@ -461,24 +489,25 @@ the viewport rather than any DOM ancestor. This avoids containing-block ambiguit
 tooltips are children of grid/flex containers.
 
 CSS invariant:
-  .skill-tooltip {
-      position: fixed;
-      z-index: 9999;    /* above all game overlays */
-  }
+.skill-tooltip {
+position: fixed;
+z-index: 9999; /_ above all game overlays _/
+}
 
 JS invariant — `_showTooltip()` in menu.js:
-  1. Force-measure height BEFORE adding `tt-visible` (opacity:0 → offsetHeight=0 trap):
-       tooltip.style.visibility = 'hidden';
-       tooltip.classList.add('tt-visible');
-       const h = tooltip.offsetHeight || 224;   // 224px = safe fallback
-       tooltip.classList.remove('tt-visible');
-       tooltip.style.visibility = '';
-  2. Use `getBoundingClientRect()` on the card — viewport-relative coords match `fixed`.
-  3. Prefer above card; fall back to below if topAbove < 8px from viewport edge.
-  4. Clamp left/right to [8, VW - w - 8].
 
-  ❌  containerRect subtraction with position:absolute — containing block is unpredictable
-  ❌  tooltip.offsetHeight before tt-visible — always returns 0 (opacity:0 not rendered)
+1. Force-measure height BEFORE adding `tt-visible` (opacity:0 → offsetHeight=0 trap):
+   tooltip.style.visibility = 'hidden';
+   tooltip.classList.add('tt-visible');
+   const h = tooltip.offsetHeight || 224; // 224px = safe fallback
+   tooltip.classList.remove('tt-visible');
+   tooltip.style.visibility = '';
+2. Use `getBoundingClientRect()` on the card — viewport-relative coords match `fixed`.
+3. Prefer above card; fall back to below if topAbove < 8px from viewport edge.
+4. Clamp left/right to [8, VW - w - 8].
+
+❌ containerRect subtraction with position:absolute — containing block is unpredictable
+❌ tooltip.offsetHeight before tt-visible — always returns 0 (opacity:0 not rendered)
 
 ---
 
@@ -506,20 +535,20 @@ updateSkillIcons(player)               — per-frame dispatcher
 ```
 
 `drawMinimap(ctx)` lives on **`CanvasHUD`**, not `UIManager`.
-  Called from `CanvasHUD.draw(ctx, dt)` every game frame.
-  Internal helpers: `_minimapDrawShell()`, `_minimapDrawContent()`, `_minimapDrawLabel()`
+Called from `CanvasHUD.draw(ctx, dt)` every game frame.
+Internal helpers: `_minimapDrawShell()`, `_minimapDrawContent()`, `_minimapDrawLabel()`
 
 Decomposition rules:
-  ✅ Each `_hud*` setup helper must be independently callable — no side effects on siblings
-  ✅ Orchestrator (`setupCharacterHUD`) does no DOM work itself — only derives booleans and delegates
-  ❌ Do NOT merge setup + update into one method — setup runs ONCE, update runs every frame
-  ❌ Do NOT add char-specific logic to the orchestrator — it belongs in the matching `_hud*` helper
+✅ Each `_hud*` setup helper must be independently callable — no side effects on siblings
+✅ Orchestrator (`setupCharacterHUD`) does no DOM work itself — only derives booleans and delegates
+❌ Do NOT merge setup + update into one method — setup runs ONCE, update runs every frame
+❌ Do NOT add char-specific logic to the orchestrator — it belongs in the matching `_hud*` helper
 
 WaveManager follows the same orchestrator → pure helper pattern:
-  startNextWave()               — public orchestrator
-  _buildWavePayload(waveNum)   — pure: returns { enemies[], bossWave, glitch }
-  _spawnWaveEnemies(payload)   — side effects: pushes to window.enemies
-  _triggerWaveAnnouncement()   — FX only
+startNextWave() — public orchestrator
+\_buildWavePayload(waveNum) — pure: returns { enemies[], bossWave, glitch }
+\_spawnWaveEnemies(payload) — side effects: pushes to window.enemies
+\_triggerWaveAnnouncement() — FX only
 
 ---
 
@@ -550,21 +579,36 @@ ctx.drawImage(bm, sx - bm.width / 2, sy - bm.height / 2);
 ```
 
 **What belongs in the cache (drawn to OffscreenCanvas):**
+
 - ✅ Static body silhouette (filled path, no animation)
 - ✅ Fixed equipment geometry (collar, belt, static accessories)
 - ✅ Boss body shape at a given phase (use phase-keyed entry: `boss_manop_p2`)
 
 **What must NOT go in the cache:**
+
 - ❌ Anything reading `performance.now()` or `entity._anim` — changes every frame
 - ❌ Hit flash, glow overlays, oscillator-driven effects
 - ❌ Anything driven by an external timer or game state
 
 **Cache invalidation:**
+
 - Boss phase change → delete the stale entry: `delete BossRenderer._cache[key]`
 - Entity radius change (size-up attack) → same: delete and let it rebuild next frame
 - ❌ Never clear the entire `_cache` object mid-session — forces full rebuild for all entities
 
-**_getCamScale() coupling:**
+**\_getCamScale() coupling:**
 Cache bitmaps at world-unit size (1:1). Apply `ctx.scale(camScale, camScale)` in the
 live draw path after `worldToScreen()`. This keeps the bitmap stable across zoom changes
 rather than keying a separate bitmap per scale level.
+
+## 22. Batching & Optimization Strategies
+
+1. **State Switch Minimization**:
+   - Group entities with the same `shadowBlur` or `fillStyle` together to minimize `ctx` state overhead.
+   - Dispatchers (`PlayerRenderer.draw`, `BossRenderer.draw`) ensure state is reset ONLY after all entities are processed.
+2. **Resource Pools (Effects)**:
+   - `ParticleSystem`, `FloatingTextSystem`, and `OrbitalParticleSystem` in `js/effects/` reuse objects from a pre-allocated pool to eliminate GC stutter.
+3. **Spatial Partitioning**:
+   - `SpatialGrid` (`js/weapons/SpatialGrid.js`) optimizes collision queries, reducing the number of `draw()` calls for off-screen entities when combined with viewport culling.
+4. **Bitmap Caching**:
+   - See §21 for using `OffscreenCanvas` to cache static geometry.

@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.38.1
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.39.0
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -17,9 +17,10 @@ Coding Standards & Architecture:
    - Use O(1) swap-and-pop for array removals instead of `splice()`.
    - Implement Viewport Culling for `draw()` methods — cull before any sub-method runs.
    - draw() path: ห้าม template literal / string concat dynamic value → ใช้ ctx.globalAlpha + solid hex string
-   - SpatialGrid (weapons.js): integer key only — ห้าม template literal key ใน build()/query()
+   - SpatialGrid (js/weapons/SpatialGrid.js): integer key only — ห้าม template literal key ใน build()/query()
 3. Separation of Concerns: Strictly separate logic (`update(dt)`) from rendering (`draw(ctx)`). Never put `Math.random()` or state changes inside `draw()`.
 4. Defensive Programming: Always use guard clauses for globals (e.g., `if (typeof CTX === 'undefined') return;`) and check variable existence before access.
+5. Modular Structure (v3.39+): Core systems are split into specialized modules within directories (e.g., `js/ui/`, `js/weapons/`). Always check the directory for the specific class definition.
 
 Output Preferences:
 
@@ -62,20 +63,53 @@ Output Preferences:
 
 ### `/js/` — Core Logic
 
-| ไฟล์          | หน้าที่สำคัญ                                                                                                                                                                                                                              |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `game.js`     | Game loop หลัก, state transitions, startGame()                                                                                                                                                                                            |
-| `config.js`   | ค่าทั้งหมด — BALANCE, MAP_CONFIG, ACHIEVEMENT_DEFS, GAME_TEXTS (UI strings + skill names + **HUD emoji**)                                                                                                                                 |
-| `input.js`    | Keyboard/mouse/touch — global `keys` object, **mobile haptic feedback**, **button press states**, **touchcancel cleanup**                                                                                                                 |
-| `audio.js`    | SFX + BGM, Web Audio API, BGM crossfade system, namespace protection                                                                                                                                                                      |
-| `effects.js`  | Particles (object pool), FloatingText, OrbitalParticle                                                                                                                                                                                    |
-| `weapons.js`  | WeaponSystem, Projectile, ProjectileManager, SpatialGrid                                                                                                                                                                                  |
-| `map.js`      | แผนที่, collision detection, MTCRoom                                                                                                                                                                                                      |
-| `ui.js`       | HUD, **AchievementSystem** (อยู่ที่นี่ — ไม่ใช่ไฟล์แยก), **high score display**, **mobile UI polish**, **`window.PORTRAITS[charId]`** (SVG strings injected into `<div id="char-avatar-{charId}">` 96×112px — character select portraits) |
-| `menu.js`     | Main menu, `selectCharacter()`                                                                                                                                                                                                            |
-| `ai.js`       | Legacy AI behaviors (pre-EnemyBase refactor) — ส่วนใหญ่ถูกแทนที่โดย `/js/ai/*.js` แล้ว; ตรวจว่ายังมี caller ก่อนแก้                                                                                                                       |
-| `utils.js`    | Utility functions                                                                                                                                                                                                                         |
-| `tutorial.js` | Tutorial system                                                                                                                                                                                                                           |
+| ไฟล์          | หน้าที่สำคัญ                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `game.js`     | Game loop หลัก, state transitions, startGame()                                                                            |
+| `utils.js`    | Utility functions                                                                                                         |
+| `tutorial.js` | Tutorial system                                                                                                           |
+| `audio.js`    | SFX + BGM, Web Audio API, BGM crossfade system, namespace protection                                                      |
+| `input.js`    | Keyboard/mouse/touch — global `keys` object, **mobile haptic feedback**, **button press states**, **touchcancel cleanup** |
+| `map.js`      | แผนที่, collision detection, MTCRoom                                                                                      |
+| `menu.js`     | Main menu, `selectCharacter()`                                                                                            |
+
+### `/js/config/` — Configuration 🟢
+
+| ไฟล์               | หน้าที่                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `BalanceConfig.js` | ค่าพลังตัวละคร, shop items, achievements, wave schedules       |
+| `SystemConfig.js`  | Engine settings, audio volumes, map visual configs, API keys   |
+| `GameTexts.js`     | UI strings, skill names, tutorial copy, admin console messages |
+
+### `/js/effects/` — FX Engine 🟢
+
+| ไฟล์                | หน้าที่                                     |
+| ------------------- | ------------------------------------------- |
+| `ParticleSystem.js` | Core FX engine (object pool)                |
+| `WeatherSystem.js`  | Rain/Snow systems                           |
+| `CombatEffects.js`  | FloatingText, impact sparks, hit flashes    |
+| `VisualPolish.js`   | Glitch FX, screen shake, wave announcements |
+| `OrbitalEffects.js` | OrbitalParticle system                      |
+| `PatEffects.js`     | Pat-specific effects (Zanzo, Katana arc)    |
+
+### `/js/weapons/` — Combat Systems 🟢
+
+| ไฟล์                   | หน้าที่                                                |
+| ---------------------- | ------------------------------------------------------ |
+| `Projectile.js`        | คลาส `Projectile` และ Logic การเคลื่อนที่/ชน           |
+| `WeaponSystem.js`      | คลาส `WeaponSystem` (การจัดการอาวุธของ Kao)            |
+| `ProjectileManager.js` | คลาส `ProjectileManager`                               |
+| `SpatialGrid.js`       | คลาส `SpatialGrid` สำหรับ Optimization การตรวจจับการชน |
+| `PoomWeapon.js`        | Poom-specific weapon rendering logic                   |
+
+### `/js/ui/` — User Interface 🟢
+
+| ไฟล์                   | หน้าที่                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `AchievementSystem.js` | คลาส `AchievementSystem` และ gallery                        |
+| `ShopManager.js`       | คลาส `ShopManager` (DOM interaction)                        |
+| `UIManager.js`         | HUD management, Boss HP, voice bubbles, character portraits |
+| `CanvasHUD.js`         | การวาด UI บน Canvas (Minimap, Combo, Ammo)                  |
 
 ### `/js/ai/` — AI Enhancement System 🟡
 
@@ -116,7 +150,14 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 | `ManopBoss.js`           | KruManop + BossDog classes (math boss encounters)                                                                                                                                                                                                   |
 | `FirstBoss.js`           | KruFirst class (physics boss with GravitationalSingularity) — HP scaling reads `BALANCE.boss.first.hpBaseMult` + `advancedHpMult` via `const _F = BALANCE.boss.first` (fixed March 2026; previously hardcoded, config values were silently ignored) |
 | `boss_attacks_shared.js` | Shared attack effects — `ExpandingRing` (used by both bosses)                                                                                                                                                                                       |
-| `boss_attacks_manop.js`  | KruManop attacks — `BarkWave`, `GoldfishMinion`, `BubbleProjectile`, `MatrixGridAttack`, `DomainExpansion`, `EquationSlam`, `DeadlyGraph`, `ChalkWall`                                                                                              |
+| `BarkWave.js`            | KruManop: Sonic cone bark attack (Phase 2)                                                                                                                                                                                                          |
+| `GoldfishMinion.js`      | KruManop: Kamikaze sine-wave fish (Phase 3)                                                                                                                                                                                                         |
+| `BubbleProjectile.js`    | KruManop: Slowing bubbles (Phase 3)                                                                                                                                                                                                                 |
+| `MatrixGridAttack.js`    | KruManop: Grid-based area denial                                                                                                                                                                                                                    |
+| `DomainExpansion.js`     | KruManop: Ultimate "Metrics-Manipulation" singleton                                                                                                                                                                                                 |
+| `EquationSlam.js`        | KruManop: Shockwave ring with formula shards                                                                                                                                                                                                        |
+| `DeadlyGraph.js`         | KruManop: Expanding laser beam with risk/reward zone                                                                                                                                                                                                |
+| `ChalkWall.js`           | KruManop: Ground hazard chalk lines                                                                                                                                                                                                                 |
 | `boss_attacks_first.js`  | KruFirst attacks — `FreeFallWarningRing`, `PorkSandwich`, `EmpPulse`, `PhysicsFormulaZone`, `ParabolicVolley`, `OrbitalDebris`, `GravitationalSingularity`, `GravityWell`, `SuperpositionClone`                                                     |
 
 ### `/js/entities/player/`
