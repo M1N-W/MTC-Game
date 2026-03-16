@@ -4,6 +4,38 @@
 
 ---
 
+## v3.38.0 — Environment: Arena Layout Overhaul & Visual Polish
+*Released: March 16, 2026*
+
+### 🗺️ Arena & Map Layout
+- **Anti-Trap Geometry (Jittered Grid):** Implemented random jitter for all environmental objects to break straight-line channels.
+  - Servers (±18px), Bookshelves (±14px), Desks (±12px), Datapillars/Trees (±10-12px).
+- **Tactical Cover:** Added 4 center-cover objects (Servers, Vending, Datapillar) at r=300-400px to provide depth near spawn without blocking.
+- **Zone Identity:**
+  - **Lecture Halls:** Added 4 Bookshelves and 4 Desks to each room to fill empty spaces.
+  - **Courtyard:** Replaced some trees with desks/vending machines to create a "food court" feel.
+  - **East/West Gaps:** Filled empty gaps with Datapillars and Trees to connect zone floors with object clusters.
+- **Arena Balancing:** Pulled the Far-East cluster inward (x=1100→950) to keep it away from the arena edge.
+- **Destructibles:** Increased explosive barrel count (8→12) and reduced `tooClose` spawn distance (60→45px).
+
+### 🎨 Visual Enhancements
+- **Zone Visibility:** Significantly boosted floor alpha for Server Farm (x2.3), Library (x2), Courtyard (x1.9), and Lecture Halls (x3).
+- **UI & Attention Polish:** 
+  - Dimmed circuit path brightness (glowAlpha 0.10, coreAlpha 0.65) to focus attention on zones.
+  - Brightened Bookshelf frames (#92400e) for better visibility during Fog waves.
+  - Boosted Aura/Beacon alpha (inner 0.40, rim 0.45) for better long-range navigation.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: js/map.js (Layout logic, jitter, object placement)
+✅ MODIFIED: js/config.js (Visual constants, zone alpha, colors)
+✅ MODIFIED: sw.js (v3.38.0)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.38.0)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.38.0)
+```
+
+---
+
 ## v3.37.1 — Docs: Fast Patch Efficiency Rule & Command Update
 *Released: March 15, 2026*
 

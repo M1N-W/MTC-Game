@@ -323,10 +323,20 @@ function _checkProximityInteractions(_inTutorial) {
 
 // ── Player, weapon, boss, enemies, AI tick ────────────────────────────────────
 function _tickEntities(dt, _inTutorial) {
+    const _mtcRoom = window.mapSystem && window.mapSystem.mtcRoom;
+    // Combat lock: only when room is ACTIVE (cooldown=0) AND player is inside.
+    // When room is on cooldown, player fights normally and enemies may enter freely.
+    const _playerInMTC = !!(_mtcRoom && _mtcRoom.isPlayerInside && _mtcRoom.cooldown <= 0);
     const effectiveKeys = GameState.controlsInverted
         ? { ...keys, w: keys.s, s: keys.w, a: keys.d, d: keys.a }
         : keys;
-    window.player.update(dt, effectiveKeys, mouse);
+    // MTC Room combat lock — block all attack/skill keys, keep movement + dash
+    if (_playerInMTC) {
+        effectiveKeys.q = effectiveKeys.e = effectiveKeys.r = 0;
+    }
+    // effectiveMouse blocks L-Click shoot and R-Click skills inside player.update()
+    const effectiveMouse = _playerInMTC ? { ...mouse, left: 0, right: 0 } : mouse;
+    window.player.update(dt, effectiveKeys, effectiveMouse);
 
     if (!(window.player instanceof PoomPlayer) && !(typeof AutoPlayer === 'function' && window.player instanceof AutoPlayer)) {
         weaponSystem.update(dt);
@@ -343,8 +353,8 @@ function _tickEntities(dt, _inTutorial) {
         const isPoom = typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer;
         const isPat = typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer;
         if (isKao) {
-            if (mouse.left === 1 && GameState.phase === 'PLAYING') window.player.shoot(dt);
-        } else if (!isPoom && !isPat && mouse.left === 1 && GameState.phase === 'PLAYING') {
+            if (effectiveMouse.left === 1 && GameState.phase === 'PLAYING') window.player.shoot(dt);
+        } else if (!isPoom && !isPat && effectiveMouse.left === 1 && GameState.phase === 'PLAYING') {
             if (weaponSystem.canShoot()) {
                 const projectiles = weaponSystem.shoot(window.player, window.player.damageBoost);
                 if (projectiles && projectiles.length > 0) {
@@ -374,9 +384,13 @@ function _tickEntities(dt, _inTutorial) {
         const _safeRoom = window.mapSystem && window.mapSystem.mtcRoom;
         if (_safeRoom) {
             const _bx = window.boss.x, _by = window.boss.y;
-            const _pad = 28;
-            const _inRoom = _bx > _safeRoom.x - _pad && _bx < _safeRoom.x + _safeRoom.w + _pad &&
-                _by > _safeRoom.y - _pad && _by < _safeRoom.y + _safeRoom.h + _pad;
+            // Hysteresis: enter threshold tight (28px), exit threshold wide (90px).
+            // Prevents boundary oscillation that caused text to spam every frame.
+            const _entryPad = 28, _exitPad = 90;
+            const _inRoom = _bx > _safeRoom.x - _entryPad && _bx < _safeRoom.x + _safeRoom.w + _entryPad &&
+                _by > _safeRoom.y - _entryPad && _by < _safeRoom.y + _safeRoom.h + _entryPad;
+            const _clearOut = _bx < _safeRoom.x - _exitPad || _bx > _safeRoom.x + _safeRoom.w + _exitPad ||
+                _by < _safeRoom.y - _exitPad || _by > _safeRoom.y + _safeRoom.h + _exitPad;
             if (_inRoom) {
                 const _rcx = _safeRoom.x + _safeRoom.w * 0.5;
                 const _rcy = _safeRoom.y + _safeRoom.h * 0.5;
@@ -385,9 +399,11 @@ function _tickEntities(dt, _inTutorial) {
                 window.boss.y += Math.sin(_ang) * 380 * dt;
                 if (!window.boss._inSafeZone) {
                     window.boss._inSafeZone = true;
-                    spawnFloatingText('SAFE ZONE', window.boss.x, window.boss.y - 60, '#22d3ee', 22);
+                    spawnFloatingText(GAME_TEXTS.environment?.safeZone ?? 'SAFE ZONE', window.boss.x, window.boss.y - 60, '#22d3ee', 22);
                 }
-            } else {
+            } else if (_clearOut) {
+                // Only clear flag once truly outside the wider exit zone.
+                // Middle band (_entryPad < dist < _exitPad) holds existing state.
                 window.boss._inSafeZone = false;
             }
         }
@@ -402,6 +418,23 @@ function _tickEntities(dt, _inTutorial) {
             }
         }
         if (typeof window.squadAI !== 'undefined') window.squadAI.update(dt, window.enemies, window.player);
+
+        // MTC Room enemy exclusion — only while room is ACTIVE (cooldown=0).
+        // During cooldown the room is open: enemies may enter and player may fight back.
+        if (!_inTutorial && _mtcRoom && _mtcRoom.cooldown <= 0) {
+            const _er = _mtcRoom;
+            for (let _ei = 0; _ei < window.enemies.length; _ei++) {
+                const _en = window.enemies[_ei];
+                if (_en.dead) continue;
+                if (_en.x > _er.x && _en.x < _er.x + _er.w &&
+                    _en.y > _er.y && _en.y < _er.y + _er.h) {
+                    // Push south through the open entrance at constant speed
+                    _en.y += 300 * dt;
+                    // Cancel any AI intent to move north (back into room)
+                    if (_en._aiMoveY !== undefined && _en._aiMoveY < 0) _en._aiMoveY = 0;
+                }
+            }
+        }
     }
 
     // Wave clear check — trigger next wave when all enemies dead and no boss/trickle pending
@@ -457,7 +490,7 @@ function _tickBarrelExplosions() {
             spawnParticles(bCX, bCY, 35, '#f97316');
             spawnParticles(bCX, bCY, 20, '#71717a');
             spawnParticles(bCX, bCY, 10, '#fef3c7');
-            spawnFloatingText('💥 BOOM!', bCX, bCY - 55, '#f97316', 38);
+            spawnFloatingText(GAME_TEXTS.environment?.barrelBoom ?? '💥 BOOM!', bCX, bCY - 55, '#f97316', 38);
             const EXPL_R = 180, EXPL_DMG = 150;
             // Player
             if (window.player && !window.player.dead) {
@@ -489,7 +522,7 @@ function _tickBarrelExplosions() {
                 if (bd < EXPL_R) {
                     const f = 1 - (bd / EXPL_R) * 0.5;
                     window.boss.takeDamage(EXPL_DMG * f);
-                    spawnFloatingText('BARREL HIT!', window.boss.x, window.boss.y - 80, '#f97316', 26);
+                    spawnFloatingText(GAME_TEXTS.environment?.barrelHit ?? 'BARREL HIT!', window.boss.x, window.boss.y - 80, '#f97316', 26);
                 }
             }
             window.mapSystem._sortedObjects = null;
@@ -560,7 +593,7 @@ function _tickEnvironment(dt, _inTutorial) {
             fx._reflected = true;
             fx.damage *= reflectDmgMult;
 
-            spawnFloatingText('⚔ GRAPH PARRIED!', window.player.x, window.player.y - 70, '#facc15', 28);
+            spawnFloatingText(GAME_TEXTS.combat?.graphParried ?? '⚔ GRAPH PARRIED!', window.player.x, window.player.y - 70, '#facc15', 28);
             spawnParticles(window.player.x, window.player.y, 18, '#7ec8e3');
             if (typeof Audio !== 'undefined' && Audio.playReflect) Audio.playReflect();
             addScreenShake(8);
@@ -574,7 +607,7 @@ function _tickEnvironment(dt, _inTutorial) {
                     window.player.maxEnergy ?? 100,
                     (window.player.energy ?? 0) + (patS.perfectParryEnergyRestore ?? 20)
                 );
-                spawnFloatingText('⚔ PERFECT!', window.player.x, window.player.y - 100, '#ff4500', 22);
+                spawnFloatingText(GAME_TEXTS.combat?.perfectParry ?? '⚔ PERFECT!', window.player.x, window.player.y - 100, '#ff4500', 22);
             }
         }
     }

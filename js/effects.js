@@ -1124,8 +1124,8 @@ class Raindrop {
         this.y = y;
         this.speed = speed;      // vertical fall speed (pixels/sec)
         this.wind = wind;        // horizontal drift (pixels/sec)
-        this.length = 8 + Math.random() * 8;  // visual streak length
-        this.alpha = 0.4 + Math.random() * 0.2; // fixed per-drop alpha
+        this.length = 5 + Math.random() * 6;  // shorter streaks — less obtrusive
+        this.alpha = 0.18 + Math.random() * 0.14; // 0.18–0.32 — ambient, not distracting
     }
 
     update(dt, camera) {
@@ -1137,36 +1137,24 @@ class Raindrop {
         return this.y > screenBottom;
     }
 
-    draw() {
-        const screen = worldToScreen(this.x, this.y);
-        const endY = screen.y + this.length;
-
-        CTX.save();
-        CTX.globalAlpha = this.alpha;
-        CTX.strokeStyle = '#60a5fa';  // light blue
-        CTX.lineWidth = 1;
-        CTX.beginPath();
-        CTX.moveTo(screen.x, screen.y);
-        CTX.lineTo(screen.x, endY);
-        CTX.stroke();
-        CTX.restore();
-    }
+    // No per-instance draw() — WeatherSystem batches all drops in one path
+    // to avoid 200× CTX.save/restore per frame
 }
 
 /**
  * Snowflake class
- * Spawns at top, falls slowly with horizontal sin() sway, drawn as white circle
+ * Spawns at top, falls slowly with horizontal sin() sway, drawn as small soft circle
  */
 class Snowflake {
     constructor(x, y, speed) {
         this.x = x;
         this.y = y;
-        this.speed = speed;           // slower than rain
-        this.size = 2 + Math.random() * 3;
+        this.speed = speed;                           // slower than rain
+        this.size = 1 + Math.random() * 2;            // 1–3px — smaller, less cluttered
         this.swaySpeed = 0.5 + Math.random() * 1.5;  // sway frequency
         this.swayAmount = 10 + Math.random() * 20;   // sway amplitude
         this.time = Math.random() * Math.PI * 2;     // offset for varied sway
-        this.alpha = 0.6 + Math.random() * 0.3;      // fixed per-flake alpha
+        this.alpha = 0.25 + Math.random() * 0.20;    // 0.25–0.45 — soft, not stark white
     }
 
     update(dt, camera) {
@@ -1179,17 +1167,7 @@ class Snowflake {
         return this.y > screenBottom;
     }
 
-    draw() {
-        const screen = worldToScreen(this.x, this.y);
-
-        CTX.save();
-        CTX.globalAlpha = this.alpha;
-        CTX.fillStyle = '#ffffff';
-        CTX.beginPath();
-        CTX.arc(screen.x, screen.y, this.size, 0, Math.PI * 2);
-        CTX.fill();
-        CTX.restore();
-    }
+    // No per-instance draw() — WeatherSystem batches all flakes
 }
 
 /**
@@ -1202,36 +1180,33 @@ class Snowflake {
  *   weatherSystem.draw();
  */
 class WeatherSystem {
-    static MAX_PARTICLES = 200;  // Cap to prevent performance issues
+    static MAX_PARTICLES = 120;  // reduced cap — 200 was overkill for ambient effect
 
     constructor() {
         this.mode = 'none';       // 'none', 'rain', 'snow'
         this.particles = [];
         this.spawnTimer = 0;
 
-        // Rain config
-        this.rainSpawnRate = 30;   // particles per second
-        this.rainSpeed = 600;      // fall speed
-        this.rainWind = 80;        // horizontal drift
+        // Rain config — reduced density for ambient feel
+        this.rainSpawnRate = 16;   // was 30 — fewer drops, less clutter
+        this.rainSpeed = 520;      // slightly slower
+        this.rainWind = 70;        // horizontal drift
 
         // Snow config
-        this.snowSpawnRate = 20;   // particles per second
-        this.snowSpeed = 100;      // fall speed (slower than rain)
+        this.snowSpawnRate = 12;   // was 20
+        this.snowSpeed = 80;       // slower drift
     }
 
     setWeather(mode) {
         if (mode !== this.mode) {
             this.mode = mode;
-            this.particles = [];  // clear old particles when switching
+            this.particles = [];
             this.spawnTimer = 0;
         }
     }
 
     update(dt, camera) {
         if (this.mode === 'none') {
-            // WARN-14 FIX: only reallocate when there are actually particles to
-            // discard.  The old code did `this.particles = []` unconditionally
-            // every frame, creating a new Array object at ~60 Hz for no reason.
             if (this.particles.length > 0) this.particles = [];
             return;
         }
@@ -1246,52 +1221,85 @@ class WeatherSystem {
             this._spawnParticle(camera);
         }
 
-        // Update existing particles — swap-and-pop O(1), order irrelevant
+        // Update — swap-and-pop O(1)
         const arr = this.particles;
         let i = arr.length - 1;
         while (i >= 0) {
             if (arr[i].update(dt, camera)) {
                 arr[i] = arr[arr.length - 1];
                 arr.pop();
-                i--;
-            } else {
-                i--;
             }
+            i--;
         }
 
-        // Hard cap enforcement (evict oldest if needed)
+        // Hard cap
         while (this.particles.length > WeatherSystem.MAX_PARTICLES) {
             this.particles.shift();
         }
     }
 
     draw() {
-        if (this.mode === 'none') return;
-
-        // ── STABILITY FIX (Zone 3): Guard against uninitialised CTX.
+        if (this.mode === 'none' || this.particles.length === 0) return;
         if (typeof CTX === 'undefined' || !CTX) return;
 
-        for (let particle of this.particles) {
-            particle.draw();
+        if (this.mode === 'rain') this._drawRainBatch();
+        else if (this.mode === 'snow') this._drawSnowBatch();
+    }
+
+    // ── Batch rain draw — single CTX.save/restore for ALL drops ───────────────
+    // Each drop is a wind-tilted streak: tip at (x,y), tail offset by wind ratio.
+    _drawRainBatch() {
+        // wind tilt: horizontal offset = (wind/speed) * length — capped at 45°
+        const tiltRatio = Math.min(0.6, this.rainWind / this.rainSpeed);
+
+        CTX.save();
+        CTX.strokeStyle = '#d4e8f5';  // off-white blue — neutral on dark map
+        CTX.lineWidth = 0.8;
+        CTX.lineCap = 'round';
+
+        for (const drop of this.particles) {
+            const s = worldToScreen(drop.x, drop.y);
+            const dx = drop.length * tiltRatio;
+            const dy = drop.length;
+            CTX.globalAlpha = drop.alpha;
+            CTX.beginPath();
+            CTX.moveTo(s.x, s.y);
+            CTX.lineTo(s.x + dx, s.y + dy);
+            CTX.stroke();
         }
+
+        CTX.restore();
+    }
+
+    // ── Batch snow draw — single CTX.save/restore for ALL flakes ─────────────
+    _drawSnowBatch() {
+        CTX.save();
+        CTX.fillStyle = '#c8dff0';   // cool blue-white — blends with hex-grid bg
+
+        for (const flake of this.particles) {
+            const s = worldToScreen(flake.x, flake.y);
+            CTX.globalAlpha = flake.alpha;
+            CTX.beginPath();
+            CTX.arc(s.x, s.y, flake.size, 0, Math.PI * 2);
+            CTX.fill();
+        }
+
+        CTX.restore();
     }
 
     _spawnParticle(camera) {
-        // Spawn at top of visible screen with some padding
         const screenTop = camera.y - 10;
         const screenLeft = camera.x - 50;
         const screenRight = camera.x + CANVAS.width + 50;
-
         const x = screenLeft + Math.random() * (screenRight - screenLeft);
-        const y = screenTop;
 
         if (this.mode === 'rain') {
-            const speed = this.rainSpeed + (Math.random() - 0.5) * 100;
-            const wind = this.rainWind + (Math.random() - 0.5) * 40;
-            this.particles.push(new Raindrop(x, y, speed, wind));
+            const speed = this.rainSpeed + (Math.random() - 0.5) * 80;
+            const wind = this.rainWind + (Math.random() - 0.5) * 30;
+            this.particles.push(new Raindrop(x, screenTop, speed, wind));
         } else if (this.mode === 'snow') {
-            const speed = this.snowSpeed + (Math.random() - 0.5) * 30;
-            this.particles.push(new Snowflake(x, y, speed));
+            const speed = this.snowSpeed + (Math.random() - 0.5) * 25;
+            this.particles.push(new Snowflake(x, screenTop, speed));
         }
     }
 
@@ -1941,7 +1949,7 @@ class Decal {
         if (typeof CANVAS !== 'undefined') {
             const screen = worldToScreen(this.x, this.y);
             const pad = this.radius + 4;
-            if (screen.x < -pad || screen.x > CANVAS.width  + pad ||
+            if (screen.x < -pad || screen.x > CANVAS.width + pad ||
                 screen.y < -pad || screen.y > CANVAS.height + pad) return;
         }
 

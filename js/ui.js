@@ -314,7 +314,7 @@ class AchievementGallery {
                     .map(c => `<span class="buff-chip">${c}</span>`)
                     .join('');
             } else {
-                buffSummEl.innerHTML = '<span style="color:#475569; font-size:11px;">No active buffs</span>';
+                buffSummEl.innerHTML = `<span style="color:#475569; font-size:11px;">${(typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.noActiveBuffs) ?? 'ไม่มีบัฟ'}</span>`;
             }
         }
 
@@ -1368,26 +1368,27 @@ class UIManager {
         const emoji = document.getElementById('attack-emoji');
         const hint = document.getElementById('attack-hint');
         const name = document.getElementById('sn-attack');
+        const _SN = (typeof GAME_TEXTS !== 'undefined') ? GAME_TEXTS.skillNames : {};
         if (isPoom) {
             attackIcon.classList.add('t-emerald');
             if (emoji) emoji.textContent = UIManager._E('attack', 'poom');
             if (hint) { hint.style.background = '#064e3b'; hint.style.color = '#6ee7b7'; }
-            if (name) { name.textContent = 'SHOOT'; name.style.color = '#6ee7b7'; }
+            if (name) { name.textContent = _SN.attack ?? 'SHOOT'; name.style.color = '#6ee7b7'; }
         } else if (isAuto) {
             attackIcon.classList.add('t-red');
             if (emoji) emoji.textContent = UIManager._E('attack', 'auto');
             if (hint) { hint.style.background = '#7f1d1d'; hint.style.color = '#fca5a5'; }
-            if (name) { name.textContent = 'SHOOT'; name.style.color = '#fca5a5'; }
+            if (name) { name.textContent = _SN.attack ?? 'SHOOT'; name.style.color = '#fca5a5'; }
         } else if (isPat) {
             attackIcon.classList.add('t-neutral');
             if (emoji) emoji.textContent = UIManager._E('attack', 'pat');
             if (hint) { hint.style.background = '#0a1a2e'; hint.style.color = '#7ec8e3'; }
-            if (name) { name.textContent = 'SLASH'; name.style.color = '#7ec8e3'; }
+            if (name) { name.textContent = _SN.pat?.attack ?? 'SLASH'; name.style.color = '#7ec8e3'; }
         } else {
             attackIcon.classList.add('t-blue');
             if (emoji) emoji.textContent = UIManager._E('attack', 'default');
             if (hint) { hint.style.background = '#1e3a8a'; hint.style.color = '#bfdbfe'; }
-            if (name) { name.textContent = 'SHOOT'; name.style.color = '#93c5fd'; }
+            if (name) { name.textContent = _SN.attack ?? 'SHOOT'; name.style.color = '#93c5fd'; }
         }
     }
 
@@ -1411,14 +1412,14 @@ class UIManager {
                 el.style.opacity = '1';
                 el.classList.add('unlocked');
                 if (skillName) {
-                    skillName.textContent = isPat ? '⚔ EDGE' : 'MAX';
+                    skillName.textContent = isPat ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patEdge) ?? '⚔ EDGE') : 'MAX';
                     skillName.style.color = isPat ? '#7ec8e3' : '#facc15';
                 }
             } else {
                 el.style.opacity = '0.35';
                 el.classList.remove('unlocked');
                 if (skillName) {
-                    skillName.textContent = isPat ? 'RONIN' : 'R-Click!';
+                    skillName.textContent = isPat ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patRonin) ?? 'RONIN') : 'R-Click!';
                     skillName.style.color = isPat ? '#4a90d9' : '#a855f7';
                 }
             }
@@ -1443,13 +1444,13 @@ class UIManager {
             if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'poom');
             if (hintEl) hintEl.textContent = 'R-Click';
             if (cdEl) cdEl.id = 'eat-cd';
-            nameEl.textContent = 'EAT RICE'; nameEl.style.color = '#6ee7b7';
+            nameEl.textContent = SN.poom?.skill1 ?? 'EAT RICE'; nameEl.style.color = '#6ee7b7';
         } else if (isAuto) {
             skill1El.id = 'stealth-icon';
             if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'auto');
             if (hintEl) hintEl.textContent = 'R-Click';
             if (cdEl) cdEl.id = 'stealth-cd';
-            nameEl.textContent = 'WANCHAI'; nameEl.style.color = '#fca5a5';
+            nameEl.textContent = SN.auto?.skill1 ?? 'WANCHAI'; nameEl.style.color = '#fca5a5';
         } else if (isKao) {
             skill1El.id = 'stealth-icon';
             if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'kao');
@@ -1724,7 +1725,7 @@ class UIManager {
             guardIcon.style.boxShadow = isActive ? '0 0 20px rgba(126,200,227,0.85)' : '';
             const nameEl = guardIcon.querySelector('.skill-name');
             if (nameEl) {
-                nameEl.textContent = isActive ? 'ACTIVE' : (
+                nameEl.textContent = isActive ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.skillActive) ?? 'ACTIVE') : (
                     (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.pat?.skill1) ?? 'BLADE GUARD'
                 );
                 nameEl.style.color = isActive ? '#ffffff' : '#7ec8e3';
@@ -1760,13 +1761,13 @@ class UIManager {
                 // Abuse _setCooldownVisual: pass remaining time as (1-progress)*max
                 UIManager._setCooldownVisual('pat-iaido-icon', (1 - chargeProgress) * 0.6, 0.6);
                 const nameEl = iaidoIcon.querySelector('.skill-name');
-                if (nameEl) { nameEl.textContent = 'CHARGING'; nameEl.style.color = '#ffffff'; }
+                if (nameEl) { nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patCharging) ?? 'CHARGING'; nameEl.style.color = '#ffffff'; }
             } else if (isCinematic) {
                 iaidoIcon.classList.add('active');
                 iaidoIcon.style.borderColor = '#ff4444';
                 iaidoIcon.style.boxShadow = '0 0 22px rgba(204,34,34,0.85)';
                 const nameEl = iaidoIcon.querySelector('.skill-name');
-                if (nameEl) { nameEl.textContent = 'IAIDO!'; nameEl.style.color = '#ff6666'; }
+                if (nameEl) { nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patIaido) ?? 'IAIDO!'; nameEl.style.color = '#ff6666'; }
             } else {
                 iaidoIcon.classList.toggle('active', cd <= 0);
                 iaidoIcon.style.borderColor = '';
@@ -1787,7 +1788,9 @@ class UIManager {
             passiveEl.style.opacity = unlocked ? '1' : '0.35';
             const skillName = passiveEl.querySelector('.skill-name');
             if (skillName) {
-                skillName.textContent = unlocked ? '⚔ EDGE' : 'RONIN';
+                skillName.textContent = unlocked
+                    ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patEdge) ?? '⚔ EDGE')
+                    : ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patRonin) ?? 'RONIN');
                 skillName.style.color = unlocked ? '#7ec8e3' : '#4a90d9';
             }
         }
@@ -1831,7 +1834,7 @@ class UIManager {
                     nameEl.textContent = player.eatRiceTimer.toFixed(1) + 's';
                     nameEl.style.color = '#34d399';
                 } else {
-                    nameEl.textContent = 'EAT RICE';
+                    nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.poom?.skill1) ?? 'EAT RICE';
                     nameEl.style.color = '#6ee7b7';
                 }
             }
@@ -1884,7 +1887,7 @@ class UIManager {
                     nameEl.textContent = player.wanchaiTimer.toFixed(1) + 's';
                     nameEl.style.color = '#fca5a5';
                 } else {
-                    nameEl.textContent = 'WANCHAI';
+                    nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.auto?.skill1) ?? 'WANCHAI';
                     nameEl.style.color = '#fca5a5';
                 }
             }
@@ -2011,7 +2014,7 @@ class UIManager {
 
         // Update mission brief
         const missionBrief = document.getElementById('mission-brief');
-        if (missionBrief) missionBrief.textContent = 'เลือกตัวละครใหม่หรือลองอีกครั้ง';
+        if (missionBrief) missionBrief.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.endGameSubtitle) ?? 'เลือกตัวละครใหม่หรือลองอีกครั้ง';
     }
 
     static resetGameOverUI() {

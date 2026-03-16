@@ -209,6 +209,8 @@ function _deactivateWaveEvent() {
     _trickle.remaining = 0;
     _trickle.isDark = false;
     window.isTrickleActive = false;
+    // Clear weather from previous wave
+    if (typeof weatherSystem !== 'undefined') weatherSystem.setWeather('none');
 }
 
 function _patchEnemySpeeds() {
@@ -464,6 +466,17 @@ function startNextWave() {
         const _sched = _getWaveSchedule();
         if (_sched.fog.has(wave)) _activateWaveEvent('fog', wave);
         else if (_sched.speed.has(wave)) _activateWaveEvent('speed', wave);
+    }
+
+    // ── Random weather roll (independent of wave event type) ──────────────────
+    if (typeof weatherSystem !== 'undefined') {
+        const _ws = (typeof WAVE_SCHEDULE !== 'undefined') ? WAVE_SCHEDULE : {};
+        const _roll = Math.random();
+        const _snow = _ws.snowChance ?? 0.12;
+        const _any = _ws.weatherChance ?? 0.35;
+        if (_roll < _snow) weatherSystem.setWeather('snow');
+        else if (_roll < _any) weatherSystem.setWeather('rain');
+        else weatherSystem.setWeather('none');
     }
 
     if (isGlitch) { _startGlitchWave(count); }

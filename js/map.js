@@ -529,9 +529,29 @@ class MapObject {
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < entity.radius) {
             const overlap = entity.radius - distance;
-            if (distance > 0) { entity.x += (dx / distance) * overlap; entity.y += (dy / distance) * overlap; }
-            else { entity.x += overlap; }
-            entity.vx *= 0.5; entity.vy *= 0.5;
+            // ── Push entity out ───────────────────────────────────────────
+            let nx = 0, ny = 1; // surface normal (up by default when distance===0)
+            if (distance > 0) {
+                nx = dx / distance; ny = dy / distance;
+                entity.x += nx * overlap; entity.y += ny * overlap;
+            } else {
+                entity.x += overlap;
+            }
+            // ── Cancel velocity components moving INTO the surface ────────
+            // vx/vy: physics velocity (player, projectiles)
+            const vDot = (entity.vx || 0) * nx + (entity.vy || 0) * ny;
+            if (vDot < 0) { entity.vx -= vDot * nx; entity.vy -= vDot * ny; }
+            // _aiMoveX/_aiMoveY: AI movement direction (enemies, boss)
+            // Without this, AI re-enters the object every frame after push-out.
+            if (entity._aiMoveX !== undefined) {
+                const aDot = entity._aiMoveX * nx + entity._aiMoveY * ny;
+                if (aDot < 0) { entity._aiMoveX -= aDot * nx; entity._aiMoveY -= aDot * ny; }
+                // Extra positional boost along the escape normal so AI clears the
+                // surface in fewer frames. Scaled by overlap depth — deep stuck = bigger nudge.
+                const boostDist = Math.min(overlap * 2.0, entity.radius * 0.5);
+                entity.x += nx * boostDist;
+                entity.y += ny * boostDist;
+            }
         }
     }
 
@@ -851,7 +871,6 @@ class MTCRoom {
         const sinSlow = Math.sin(now / 350);
         const sinFast = Math.sin(now / 180);
         const sinBlink = Math.sin(now / 200);
-        const sinOrb = Math.sin(now / 900);
         const pulse = active ? (sinSlow * 0.3 + 0.7) : 0.2;
         const fastPulse = active ? (sinFast * 0.5 + 0.5) : 0;
         const scanLine = (now / 8) % H;
@@ -923,20 +942,16 @@ class MTCRoom {
             CTX.fillText('◈  MTC CITADEL  ◈', cx, s.y + barH / 2);
         }
 
-        // ── 3. WALL COLUMNS (4 corners inside room) ──────────────
-        const colW = 14, colH = H;
-        const colPositions = [s.x, s.x + W - colW];
-        for (const cpx of colPositions) {
-            CTX.fillStyle = '#0c1220';
-            CTX.fillRect(cpx, s.y, colW, colH);
-            // Column highlight stripe
-            CTX.fillStyle = `rgba(250,180,30,${0.12 + fastPulse * 0.08})`;
-            CTX.fillRect(cpx + 2, s.y + 18, 2, colH - 36);
-            CTX.fillRect(cpx + colW - 4, s.y + 18, 2, colH - 36);
-            // Column cap lights
-            CTX.fillStyle = `rgba(250,180,30,${0.6 + fastPulse * 0.4})`;
-            CTX.beginPath(); CTX.arc(cpx + colW / 2, s.y + 26, 4, 0, Math.PI * 2); CTX.fill();
-            CTX.beginPath(); CTX.arc(cpx + colW / 2, s.y + H - 26, 4, 0, Math.PI * 2); CTX.fill();
+        // ── 3. SIDE RAILS (replaces busy wall columns) ────────────
+        // Two thin vertical accent lines — structural, not decorative clutter.
+        const railPositions = [s.x + 6, s.x + W - 8];
+        for (const rx of railPositions) {
+            CTX.fillStyle = `rgba(250,180,30,${0.18 + fastPulse * 0.10})`;
+            CTX.fillRect(rx, s.y + 22, 2, H - 44);
+            // Single cap dot top + bottom
+            CTX.fillStyle = `rgba(250,180,30,${0.55 + fastPulse * 0.35})`;
+            CTX.beginPath(); CTX.arc(rx + 1, s.y + 28, 3, 0, Math.PI * 2); CTX.fill();
+            CTX.beginPath(); CTX.arc(rx + 1, s.y + H - 28, 3, 0, Math.PI * 2); CTX.fill();
         }
 
         // ── 4. CENTRAL HOLO-TABLE ────────────────────────────────
@@ -946,69 +961,31 @@ class MTCRoom {
         // Table body
         CTX.fillStyle = '#0a0f1a';
         CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.fill();
-        // Double border (fake glow)
-        if (active) {
-            CTX.strokeStyle = `rgba(217,119,6,${0.18 + fastPulse * 0.12})`;
-            CTX.lineWidth = 7;
-            CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.stroke();
-        }
-        CTX.strokeStyle = active ? `rgba(250,180,30,${0.65 + fastPulse * 0.35})` : 'rgba(60,30,5,0.5)';
+        // Border
+        CTX.strokeStyle = active ? `rgba(250,180,30,${0.55 + fastPulse * 0.30})` : 'rgba(60,30,5,0.5)';
         CTX.lineWidth = 1.5;
         CTX.beginPath(); CTX.roundRect(holoX, holoY, holoW, holoH, 8); CTX.stroke();
 
         if (active) {
-            // Hologram projection cone
-            const holoHeight = 32 + fastPulse * 8;
-            CTX.fillStyle = `rgba(217,119,6,${0.07 * pulse})`;
-            CTX.beginPath();
-            CTX.moveTo(cx - 4, holoY - holoHeight);
-            CTX.lineTo(cx - holoW * 0.38, holoY);
-            CTX.lineTo(cx + holoW * 0.38, holoY);
-            CTX.lineTo(cx + 4, holoY - holoHeight);
-            CTX.closePath(); CTX.fill();
-            // Cone edge lines
-            CTX.strokeStyle = `rgba(250,180,30,${0.20 * pulse})`;
-            CTX.lineWidth = 1;
-            CTX.beginPath();
-            CTX.moveTo(cx - 4, holoY - holoHeight); CTX.lineTo(cx - holoW * 0.38, holoY);
-            CTX.moveTo(cx + 4, holoY - holoHeight); CTX.lineTo(cx + holoW * 0.38, holoY);
-            CTX.stroke();
-
-            // Hologram: double rotating hex rings
+            // Single hex ring above table (replaces spinning double-ring + cone)
             CTX.save();
-            CTX.translate(cx, holoY - 18);
-            for (let ring = 0; ring < 2; ring++) {
-                const r = 9 + ring * 6;
-                const rot = (ring % 2 === 0 ? 1 : -1) * now / (2000 + ring * 500);
-                CTX.rotate(rot);
-                CTX.strokeStyle = `rgba(250,180,30,${(0.7 - ring * 0.2) + fastPulse * 0.25})`;
-                CTX.lineWidth = 1.5 - ring * 0.4;
-                CTX.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    const a = (Math.PI / 3) * i;
-                    i === 0 ? CTX.moveTo(Math.cos(a) * r, Math.sin(a) * r)
-                        : CTX.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-                }
-                CTX.closePath(); CTX.stroke();
+            CTX.translate(cx, holoY - 16);
+            const hexR = 10;
+            CTX.strokeStyle = `rgba(250,180,30,${0.65 + fastPulse * 0.25})`;
+            CTX.lineWidth = 1.5;
+            CTX.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const a = (Math.PI / 3) * i + now / 3000;
+                i === 0 ? CTX.moveTo(Math.cos(a) * hexR, Math.sin(a) * hexR)
+                    : CTX.lineTo(Math.cos(a) * hexR, Math.sin(a) * hexR);
             }
-            // Center dot
-            CTX.fillStyle = `rgba(251,191,36,${0.8 + fastPulse * 0.2})`;
-            CTX.beginPath(); CTX.arc(0, 0, 2.5, 0, Math.PI * 2); CTX.fill();
+            CTX.closePath(); CTX.stroke();
+            CTX.fillStyle = `rgba(251,191,36,${0.7 + fastPulse * 0.3})`;
+            CTX.beginPath(); CTX.arc(0, 0, 2, 0, Math.PI * 2); CTX.fill();
             CTX.restore();
 
-            // Status bars
-            const bars = [
-                { w: (holoW - 32) * (0.4 + Math.sin(now / 600) * 0.3), col: 'rgba(250,180,30,0.6)' },
-                { w: (holoW - 32) * (0.4 + Math.sin(now / 800 + 1) * 0.3), col: 'rgba(34,211,238,0.55)' },
-                { w: (holoW - 32) * (0.4 + Math.sin(now / 700 + 2) * 0.3), col: 'rgba(249,115,22,0.6)' },
-            ];
-            for (let i = 0; i < 3; i++) {
-                CTX.fillStyle = 'rgba(255,255,255,0.05)';
-                CTX.fillRect(holoX + 16, holoY + 12 + i * 14, holoW - 32, 5);
-                CTX.fillStyle = bars[i].col;
-                CTX.fillRect(holoX + 16, holoY + 12 + i * 14, bars[i].w, 5);
-            }
-            CTX.fillStyle = 'rgba(254,243,199,0.9)';
+            // Status label
+            CTX.fillStyle = 'rgba(254,243,199,0.85)';
             CTX.font = 'bold 8px Orbitron,monospace';
             CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
             CTX.fillText('MTC SYSTEM ONLINE', cx, holoY + holoH - 11);
@@ -1019,8 +996,7 @@ class MTCRoom {
                 const nextName = C.buffCycleNames[this.buffCycleIndex];
                 const nextColor = C.buffCycleColors[this.buffCycleIndex];
                 const nextIcon = C.buffCycleIcons[this.buffCycleIndex];
-                // Badge background
-                CTX.fillStyle = `rgba(0,0,0,0.35)`;
+                CTX.fillStyle = 'rgba(0,0,0,0.35)';
                 CTX.beginPath(); CTX.roundRect(holoX + 8, holoY + 3, holoW - 16, 11, 3); CTX.fill();
                 CTX.fillStyle = nextColor;
                 CTX.globalAlpha = 0.7 + fastPulse * 0.25;
@@ -1029,7 +1005,7 @@ class MTCRoom {
                 CTX.globalAlpha = 1;
             }
 
-            // ── Active Buff Timer (if player has one running) ──
+            // ── Active Buff Timer ──
             const pl = window.player;
             if (pl && pl.mtcBuffTimer > 0 && pl.mtcBuffType >= 0) {
                 const C = BALANCE.mtcRoom;
@@ -1037,7 +1013,6 @@ class MTCRoom {
                 const buffName = C.buffCycleNames[pl.mtcBuffType];
                 const totalDur = C.buffCycleDuration[pl.mtcBuffType] || 1;
                 const pct = pl.mtcBuffTimer / totalDur;
-                // Progress bar under the table
                 CTX.fillStyle = 'rgba(0,0,0,0.4)';
                 CTX.fillRect(holoX + 6, holoY + holoH + 4, holoW - 12, 5);
                 CTX.fillStyle = buffCol;
@@ -1051,17 +1026,14 @@ class MTCRoom {
                 CTX.globalAlpha = 1;
             }
 
-            // ── Ambient floating orbs (left & right of table) ──
-            const orbData = [
-                { ox: holoX - 28, oy: cy + Math.sin(now / 900) * 8, col: '250,180,30' },
-                { ox: holoX + holoW + 28, oy: cy + Math.sin(now / 900 + 2) * 8, col: '34,211,238' },
-                { ox: cx, oy: holoY - holoHeight - 18 + sinOrb * 5, col: '251,191,36' },
-            ];
-            for (const o of orbData) {
-                CTX.fillStyle = `rgba(${o.col},${0.12 + fastPulse * 0.06})`;
-                CTX.beginPath(); CTX.arc(o.ox, o.oy, 10, 0, Math.PI * 2); CTX.fill();
-                CTX.fillStyle = `rgba(${o.col},${0.7 + fastPulse * 0.3})`;
-                CTX.beginPath(); CTX.arc(o.ox, o.oy, 3, 0, Math.PI * 2); CTX.fill();
+            // ── Combat Lock Badge (shown when player is inside) ──
+            if (this.isPlayerInside) {
+                CTX.fillStyle = 'rgba(239,68,68,0.18)';
+                CTX.beginPath(); CTX.roundRect(holoX + 8, holoY + holoH - 22, holoW - 16, 12, 3); CTX.fill();
+                CTX.fillStyle = `rgba(239,68,68,${0.75 + fastPulse * 0.25})`;
+                CTX.font = 'bold 7px monospace';
+                CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
+                CTX.fillText('⚔️  COMBAT LOCKED', cx, holoY + holoH - 16);
             }
         } else {
             // Rebooting state
@@ -1078,48 +1050,12 @@ class MTCRoom {
             }
         }
 
-        // ── 5. SIDE TERMINALS ────────────────────────────────────
-        const termY = s.y + H / 2 - 24;
-        const termDefs = [
-            { x: s.x + colW + 6, color: '#fbbf24', rgb: '251,191,36' },
-            { x: s.x + W - colW - 30, color: '#22d3ee', rgb: '34,211,238' }
-        ];
-        for (const term of termDefs) {
-            CTX.fillStyle = '#080e1c';
-            CTX.beginPath(); CTX.roundRect(term.x, termY, 24, 48, 4); CTX.fill();
-            CTX.strokeStyle = active ? `rgba(${term.rgb},${0.5 + fastPulse * 0.3})` : 'rgba(30,20,5,0.5)';
-            CTX.lineWidth = 1.5;
-            CTX.beginPath(); CTX.roundRect(term.x, termY, 24, 48, 4); CTX.stroke();
-            // Screen mini-display
-            CTX.fillStyle = active ? `rgba(${term.rgb},0.08)` : 'rgba(0,0,0,0.3)';
-            CTX.fillRect(term.x + 3, termY + 3, 18, 10);
-            // LED dots
-            for (let d = 0; d < 5; d++) {
-                const isOn = active && Math.sin(now / (280 + d * 110) + d * 1.5) > 0;
-                CTX.fillStyle = isOn ? term.color : '#1a0e02';
-                CTX.beginPath(); CTX.arc(term.x + 12, termY + 18 + d * 7, 2.5, 0, Math.PI * 2); CTX.fill();
-            }
-        }
+        // ── 5. (side terminals removed — visual simplification) ──
 
         // ── 6. ENTRANCE FORCEFIELD ───────────────────────────────
         const ffY = s.y + H;
         if (active) {
             const ffAlpha = pulse * 0.85;
-            // Hex tile chain along the forcefield line
-            const hexCount = 7;
-            const hexSpacing = (W - 40) / (hexCount - 1);
-            CTX.strokeStyle = `rgba(250,180,30,${0.18 * pulse})`;
-            CTX.lineWidth = 0.8;
-            for (let hi = 0; hi < hexCount; hi++) {
-                const hx = s.x + 20 + hi * hexSpacing;
-                CTX.beginPath();
-                for (let k = 0; k < 6; k++) {
-                    const ha = (Math.PI / 3) * k - Math.PI / 6;
-                    const hpx = hx + Math.cos(ha) * 8, hpy = ffY + Math.sin(ha) * 8;
-                    k === 0 ? CTX.moveTo(hpx, hpy) : CTX.lineTo(hpx, hpy);
-                }
-                CTX.closePath(); CTX.stroke();
-            }
             // Outer glow line
             CTX.strokeStyle = `rgba(180,100,10,${ffAlpha * 0.45})`;
             CTX.lineWidth = 7;
@@ -1127,6 +1063,10 @@ class MTCRoom {
             // Bright core
             CTX.strokeStyle = `rgba(250,180,30,${ffAlpha})`;
             CTX.lineWidth = 2;
+            CTX.beginPath(); CTX.moveTo(s.x + 20, ffY); CTX.lineTo(s.x + W - 20, ffY); CTX.stroke();
+            // Inner highlight
+            CTX.strokeStyle = `rgba(255,230,120,${ffAlpha * 0.4})`;
+            CTX.lineWidth = 1;
             CTX.beginPath(); CTX.moveTo(s.x + 20, ffY); CTX.lineTo(s.x + W - 20, ffY); CTX.stroke();
             // Energy posts
             for (const px of [s.x + 20, s.x + W - 20]) {
@@ -1305,29 +1245,54 @@ class MapSystem {
 
         // ── 4. ZONE A: Server Farm (East) ────────────────────────
         // x ≥ 680 — clear of database east edge (x=560) + east corridor wall (x=418)
-        // MOVED FURTHER EAST to avoid visual overlap with database
-        createAisles(720, -580, 4, 3, 120, 150, 'server', 0, 0);   // NE cluster (moved +40px)
-        createAisles(720, 60, 3, 3, 120, 150, 'server', 0, 0);   // SE cluster (moved +40px)
-        createAisles(1100, -500, 3, 2, 120, 150, 'server', 0, 0);  // Far-East cluster (moved +40px)
-        // Data pillars as zone markers — moved further east to clear database zone
-        createAisles(680, -550, 3, 1, 0, 160, 'datapillar');  // West edge of zone A (moved +40px)
-        createAisles(680, 80, 2, 1, 0, 160, 'datapillar');   // South section (moved +40px)
+        // Gap fill: x=470–680 — datapillar + tree scatter bridges zone floor to cluster
+        this.objects.push(new MapObject(480, -480, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(480, -60, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(580, -380, 50, 50, 'tree'));
+        this.objects.push(new MapObject(600, 100, 50, 50, 'tree'));
+        createAisles(720, -580, 4, 3, 120, 150, 'server', 18, 1.0);  // NE cluster — jitter breaks straight walls
+        createAisles(720, 60, 3, 3, 120, 150, 'server', 15, 2.5);  // SE cluster
+        createAisles(950, -500, 3, 2, 120, 150, 'server', 20, 4.0);  // Far-East cluster (pulled in 1100→950 to avoid arena edge)
+        // Data pillars as zone markers
+        createAisles(680, -550, 3, 1, 0, 160, 'datapillar', 10, 0.5);
+        createAisles(680, 80, 2, 1, 0, 160, 'datapillar', 10, 1.5);
 
         // ── 5. ZONE B: Library Archives (West) ───────────────────
         // x ≤ -680 — clear of west corridor wall (x=-418), gap ≥ 262px
-        createAisles(-680, -570, 5, 2, -240, 120, 'bookshelf', 0, 0);  // NW shelves
-        createAisles(-680, 60, 4, 2, -240, 120, 'bookshelf', 0, 0);  // SW shelves
-        // Study desks between shelf rows — stay at x=-880 to -950
-        createAisles(-880, -550, 4, 1, 0, 120, 'desk');  // NW desks
-        createAisles(-880, 80, 3, 1, 0, 120, 'desk');  // SW desks
+        // Gap fill: x=-480 to -680 — datapillar + tree scatter bridges to bookshelf cluster
+        this.objects.push(new MapObject(-510, -460, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(-510, 60, 35, 70, 'datapillar'));
+        this.objects.push(new MapObject(-615, -370, 50, 50, 'tree'));
+        this.objects.push(new MapObject(-625, 110, 50, 50, 'tree'));
+        createAisles(-680, -570, 5, 2, -240, 120, 'bookshelf', 14, 3.0);  // NW shelves — jitter
+        createAisles(-680, 60, 4, 2, -240, 120, 'bookshelf', 12, 5.5);  // SW shelves
+        // Study desks between shelf rows
+        createAisles(-880, -550, 4, 1, 0, 120, 'desk', 12, 2.0);  // NW desks
+        createAisles(-880, 80, 3, 1, 0, 120, 'desk', 10, 4.0);  // SW desks
 
         // ── 6. ZONE C: Courtyard (South) ─────────────────────────
-        // y ≥ 580 — clear of shop (shopY+110=545) + shop approach (y∈[340,445])
-        // MOVED FURTHER SOUTH to avoid shop approach interference
-        createAisles(-750, 630, 2, 4, 200, 180, 'tree', 12, 1.0);  // SW courtyard (moved +50px)
-        createAisles(250, 630, 2, 4, 185, 180, 'tree', 10, 2.0);  // SE courtyard (moved +50px)
+        // y ≥ 580 — objects moved inside zone boundary (zone y ends at 1050)
+        createAisles(-750, 630, 2, 4, 200, 160, 'tree', 12, 1.0);  // SW courtyard — rows pulled in
+        createAisles(250, 630, 2, 4, 185, 160, 'tree', 10, 2.0);  // SE courtyard — rows pulled in
+        // Courtyard center: mixed cover (desk + vending) — food court feel, not just trees
+        this.objects.push(new MapObject(-160, 680, 60, 40, 'desk'));
+        this.objects.push(new MapObject(100, 680, 60, 40, 'desk'));
+        this.objects.push(new MapObject(-55, 750, 40, 70, 'vendingmachine'));
+        this.objects.push(new MapObject(15, 750, 40, 70, 'vendingmachine'));
 
-        // ... (rest of the code remains the same)
+        // ── 7. CENTER COVER (spawn area edge r=300-400) ──────────
+        // Provides tactical depth without blocking spawn point (r<300 stays clear).
+        this.objects.push(new MapObject(-370, -100, 45, 80, 'server'));
+        this.objects.push(new MapObject(310, 90, 45, 80, 'server'));
+        this.objects.push(new MapObject(-100, 310, 40, 70, 'vendingmachine'));
+        this.objects.push(new MapObject(60, -330, 35, 70, 'datapillar'));
+
+        // ── 8. LECTURE HALLS (SE + SW far zones) ─────────────────
+        // Each hall gets bookshelf rows + desk rows for identity
+        createAisles(720, 540, 2, 2, 130, 120, 'bookshelf', 10, 6.0);  // Lecture R bookshelves
+        createAisles(720, 720, 2, 2, 130, 100, 'desk', 12, 7.5);  // Lecture R desks
+        createAisles(-900, 540, 2, 2, -130, 120, 'bookshelf', 10, 8.0); // Lecture L bookshelves
+        createAisles(-900, 720, 2, 2, -130, 100, 'desk', 12, 9.5); // Lecture L desks
 
         // ── 9. VENDING MACHINES at zone gates ────────────────────
         // Rule: must be OUTSIDE all clear zones listed at top of function
@@ -1363,7 +1328,7 @@ class MapSystem {
         // ... (rest of the code remains the same)
 
         // ── 12. EXPLOSIVE BARRELS ────────────────────────────────
-        // Placed at tactical chokepoints, tooClose check prevents overlap
+        // Placed at tactical chokepoints — tooClose threshold 60→45px allows more placements
         const barrelSpots = [
             // East zone interior
             { x: 820, y: -220 }, { x: 820, y: 80 },
@@ -1375,11 +1340,15 @@ class MapSystem {
             { x: -580, y: -50 },
             // South approach (outside shop approach zone)
             { x: -225, y: 440 }, { x: 165, y: 440 },
+            // Center zone approaches — reward aggression
+            { x: -280, y: -180 }, { x: 250, y: 180 },
+            // Lecture Hall approaches
+            { x: 700, y: 520 }, { x: -870, y: 520 },
         ];
         for (const spot of barrelSpots) {
             let tooClose = false;
             for (const obj of this.objects) {
-                if (Math.hypot(obj.x - spot.x, obj.y - spot.y) < 60) { tooClose = true; break; }
+                if (Math.hypot(obj.x - spot.x, obj.y - spot.y) < 45) { tooClose = true; break; }
             }
             if (!tooClose) this.objects.push(new ExplosiveBarrel(spot.x, spot.y));
         }

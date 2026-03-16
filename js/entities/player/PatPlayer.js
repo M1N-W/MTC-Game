@@ -229,7 +229,7 @@ class PatPlayer extends Player {
     }
 
     // ── Blade Guard (R-Click hold) ────────────────────────────────────────
-    this._tickBladeGuard(dt, keys, S);
+    this._tickBladeGuard(dt, keys, S, mouse);
 
     // ── Zanzo Flash (Q) ───────────────────────────────────────────────────
     if (
@@ -269,7 +269,7 @@ class PatPlayer extends Player {
     }
 
     // ── Auto-shoot: slash wave or melee combo (L-Click gated) ───────────
-    const lClick = !!(window.mouse && window.mouse.left);
+    const lClick = !!(mouse && mouse.left);
     if (
       lClick &&
       this.cooldowns.shoot <= 0 &&
@@ -285,8 +285,8 @@ class PatPlayer extends Player {
   // ──────────────────────────────────────────────────────────────────────────
   // BLADE GUARD — R-Click hold
   // ──────────────────────────────────────────────────────────────────────────
-  _tickBladeGuard(dt, keys, S) {
-    const held = !!(window.mouse && window.mouse.right);
+  _tickBladeGuard(dt, keys, S, mouse) {
+    const held = !!(mouse && mouse.right);
     const parryWindow = S.perfectParryWindow ?? 0.15;
 
     // ── Button just pressed: arm Perfect Parry ───────────────────────────

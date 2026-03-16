@@ -78,6 +78,8 @@ const WAVE_SCHEDULE = Object.freeze({
     glitchWaves: [5, 10],
     darkWave: 1,
     bossWaves: [3, 6, 9, 12, 15],
+    weatherChance: 0.35,  // โอกาสมีสภาพอากาศต่อ wave (rain หรือ snow รวมกัน)
+    snowChance: 0.12,  // subset ของ weatherChance — 12% snow, 23% rain, 65% none
     maxWaves: 15
 });
 window.WAVE_SCHEDULE = WAVE_SCHEDULE;
@@ -1280,8 +1282,8 @@ const GAME_TEXTS = {
         // ── BossFirst (Kru First) announce texts ──────────────
         firstIncoming: '⚛️ KRU FIRST — BOSS INCOMING!',
         firstAdvanced: '⚛️ KRU FIRST — ADVANCED MODE ⚡',
-        firstTagline: 'F=ma · v=u+at · DODGE THIS!',
-        firstTaglineAdvanced: 'F=ma · E=mc² · MAXIMUM POWER!',
+        firstTagline: 'F=ma · v=u+at · หลบให้ทัน!',
+        firstTaglineAdvanced: 'F=ma · E=mc² · ไม่มีทางรอด!',
         glitchWave: '⚡ GLITCH WAVE ⚡',
         glitchAnomaly: 'SYSTEM ANOMALY DETECTED...⚠️',
         glitchControls: 'CONTROLS INVERTED!',
@@ -1303,10 +1305,10 @@ const GAME_TEXTS = {
         healPickup: (amt) => `+${amt} HP 🧃`,
         dmgBoostActive: '🔧 DMG. ×1.1!',
         dmgBoostExtended: '🔧 DMG +30s.',
-        dmgBoostExpired: 'DMG+ Expired',
+        dmgBoostExpired: 'หมดบัฟดาเมจ',
         spdBoostActive: '👟 SPD. ×1.1!',
         spdBoostExtended: '👟 SPD +30s.',
-        spdBoostExpired: 'SPD+ Expired',
+        spdBoostExpired: 'หมดบัฟความเร็ว',
     },
     // ══════════════════════════════════════════════════════
     // 🎮 SKILL NAMES — ชื่อที่แสดงใต้ปุ่มสกิลใน HUD
@@ -1343,6 +1345,7 @@ const GAME_TEXTS = {
 
         // ── แพท (PatPlayer) ─────────────────────────────
         pat: {
+            attack: 'SLASH',        // L-Click — katana swing
             skill1: 'BLADE GUARD',  // R-Click — สะท้อนกระสุน
             zanzo: 'ZANZO',         // Q — Blink + afterimage
             iaido: 'IAIDO',         // R — 3-phase cinematic kill
@@ -1405,20 +1408,23 @@ const GAME_TEXTS = {
 
     combat: {
         poomCrit: 'ข้าวเหนียวคริติคอล! 💥',
-        highGround: 'HIGH GROUND!',
-        droneOnline: '🤖 DRONE ONLINE',
+        highGround: 'VANTAGE POINT!',
+        droneOnline: '🤖 DRONE DEPLOYED',
         droneOverdrive: '🔥 DRONE OVERDRIVE!',
         // ── Kao skill texts ──
-        kaoWeaponAwaken: '⚡ WEAPON MASTER AWAKENED!',
-        kaoTeleport: '⚡ TELEPORT READY',
-        kaoClones: '👥 CLONE of STEALTH!',
+        kaoWeaponAwaken: '⚡ WEAPON MASTER!',
+        kaoTeleport: '⚡ BLINK READY',
+        kaoClones: '👥 PHANTOM CLONE!',
         kaoFreeStealth: '👻 FREE STEALTH',
         // ── Poom — Garuda & Cosmic Balance texts ──
         garudaSummon: 'อัญเชิญครุฑ!',
         garudaVoice: 'ครุฑจงปกป้อง!',
         garudaExpire: 'ครุฑลาจาก...',
-        cosmicActivate: '✨ COSMIC BALANCE!',
-        cosmicVoice: 'พลังจักรวาลมารวมกัน!',
+        cosmicActivate: '✨ สมดุลจักรวาล!',
+        cosmicVoice: 'พลังจักรวาลหลั่งไหล!',
+        // ── Combat feedback (centralised from game.js) ──
+        graphParried: '⚔ GRAPH PARRIED!',
+        perfectParry: '⚔ PERFECT!',
     },
     time: {
         bulletTime: '🕐 BULLET TIME',
@@ -1504,8 +1510,8 @@ const GAME_TEXTS = {
                 'คะแนนเต็ม! นักเรียนดีเด่น',
             ],
             good: [
-                'ดีมาก ค่อนข้างพอใช้',
-                'ผ่านได้ แต่ยังต้องฝึกต่อ',
+                'ดีทีเดียว แต่ยังมีช่องว่างให้พัฒนา',
+                'ผ่านฉลุย — แต่อย่าหยุดแค่นี้',
                 'ไม่เลว แต่ต้องพยายามให้มากกว่านี้',
             ],
             poor: [
@@ -1518,10 +1524,10 @@ const GAME_TEXTS = {
     boss: {
         // ── BossFirst (Kru First) phase-transition physics taunts
         firstTaunts: [
-            'E = mc²',
-            'Action = Reaction',
-            'Calculate this!',
-            'Physics is everything!',
+            'E = mc²... คำนวณออกมั้ย?',
+            'แรงปฏิกิริยา — เท่ากัน ตรงข้าม',
+            'หนีจากแรงโน้มถ่วงได้เหรอ?',
+            'ฟิสิกส์ไม่มีทางโกหก',
         ],
     },
     ui: {
@@ -1536,10 +1542,20 @@ const GAME_TEXTS = {
         legendBss: "BSS",
         legendShp: "SHP",
         dayPhase: (pct) => `DAY ${pct}%`,
-        nightPhase: (pct) => `NIGHT ${pct}%`
+        nightPhase: (pct) => `NIGHT ${pct}%`,
+        // ── HUD state labels (centralised from ui.js) ──────
+        noActiveBuffs: 'ไม่มีบัฟ',
+        endGameSubtitle: 'เลือกตัวละครใหม่หรือลองอีกครั้ง',
+        patCharging: 'CHARGING',
+        patIaido: 'IAIDO!',
+        patEdge: '⚔ EDGE',
+        patRonin: 'RONIN',
+        skillActive: 'ACTIVE',
     },
     environment: {
-        barrelBoom: "💥BOOM!"
+        barrelBoom: '💥 BOOM!',
+        barrelHit: 'BARREL HIT!',
+        safeZone: 'SAFE ZONE',
     },
     // ══════════════════════════════════════════════════════
     // 🎓 TUTORIAL TEXTS — ข้อความสอนการเล่นทั้งหมด
@@ -1707,8 +1723,8 @@ const MAP_CONFIG = {
         // Shared path style
         glowWidth: 16,
         coreWidth: 3.5,
-        glowAlphaBase: 0.20,
-        coreAlphaBase: 0.85,
+        glowAlphaBase: 0.10,   // 0.20→0.10 less dominant
+        coreAlphaBase: 0.65,   // 0.85→0.65 less dominant
         coreGlowBlur: 18,
         packetCount: 3,
         packetSpeed: 0.45,
@@ -1751,10 +1767,10 @@ const MAP_CONFIG = {
             circuit: 'rgba(217,119,6,',           // alpha appended at runtime
         },
         bookshelf: {
-            frameBody: '#78350f',
-            frameSide: '#92400e',
-            shelfBoard: '#a16207',
-            bookGloss: 'rgba(255,255,255,0.2)',
+            frameBody: '#92400e',   // #78350f→#92400e (+1 stop brighter)
+            frameSide: '#a16207',   // #92400e→#a16207
+            shelfBoard: '#b45309',  // #a16207→#b45309 warm amber
+            bookGloss: 'rgba(255,255,255,0.25)',   // 0.20→0.25
             bookShadow: 'rgba(0,0,0,0.3)',
         },
         wall: {
@@ -1780,48 +1796,48 @@ const MAP_CONFIG = {
     zones: {
         serverFarm: {
             x: 430, y: -680, w: 800, h: 700,
-            floorColor: 'rgba(6, 182, 212, 0.07)',
-            gridColor: 'rgba(6, 182, 212, 0.18)',
+            floorColor: 'rgba(6, 182, 212, 0.16)',   // 0.07→0.16
+            gridColor: 'rgba(6, 182, 212, 0.25)',    // 0.18→0.25
             gridSize: 36,
-            accentColor: 'rgba(34, 211, 238, 0.28)',
+            accentColor: 'rgba(34, 211, 238, 0.35)', // 0.28→0.35
             label: 'SERVER FARM',
             ambientColor: 'rgba(34, 211, 238, 0.90)',
         },
         library: {
             x: -1230, y: -680, w: 800, h: 700,
-            floorColor: 'rgba(180, 120, 20, 0.09)',
-            gridColor: 'rgba(251, 191, 36, 0.16)',
+            floorColor: 'rgba(180, 120, 20, 0.18)',  // 0.09→0.18
+            gridColor: 'rgba(251, 191, 36, 0.22)',   // 0.16→0.22
             gridSize: 48,
-            accentColor: 'rgba(253, 224, 71, 0.22)',
+            accentColor: 'rgba(253, 224, 71, 0.30)', // 0.22→0.30
             label: 'ARCHIVES',
             ambientColor: 'rgba(251, 191, 36, 0.90)',
         },
         courtyard: {
             x: -600, y: 400, w: 1200, h: 650,
-            floorColor: 'rgba(34, 197, 94, 0.08)',
-            gridColor: 'rgba(74, 222, 128, 0.14)',
+            floorColor: 'rgba(34, 197, 94, 0.15)',   // 0.08→0.15
+            gridColor: 'rgba(74, 222, 128, 0.20)',   // 0.14→0.20
             gridSize: 55,
-            accentColor: 'rgba(134, 239, 172, 0.20)',
+            accentColor: 'rgba(134, 239, 172, 0.28)', // 0.20→0.28
             label: 'COURTYARD',
             ambientColor: 'rgba(134, 239, 172, 0.90)',
         },
         lectureHallL: {
             x: -1100, y: 500, w: 420, h: 400,
-            floorColor: 'rgba(168, 85, 247, 0.04)',
-            gridColor: 'rgba(192, 132, 252, 0.10)',
+            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04→0.12
+            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10→0.18
             gridSize: 40,
-            accentColor: 'rgba(216, 180, 254, 0.12)',
+            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12→0.22
             label: 'LECTURE A',
-            ambientColor: 'rgba(216, 180, 254, 0.60)',
+            ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60→0.85
         },
         lectureHallR: {
             x: 680, y: 500, w: 420, h: 400,
-            floorColor: 'rgba(168, 85, 247, 0.04)',
-            gridColor: 'rgba(192, 132, 252, 0.10)',
+            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04→0.12
+            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10→0.18
             gridSize: 40,
-            accentColor: 'rgba(216, 180, 254, 0.12)',
+            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12→0.22
             label: 'LECTURE B',
-            ambientColor: 'rgba(216, 180, 254, 0.60)',
+            ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60→0.85
         },
         // MTC Database — NE zone floor
         database: {
@@ -1872,10 +1888,10 @@ const MAP_CONFIG = {
             phase: 3.2,
         },
         // Shared aura style
-        innerAlphaBase: 0.32,   // เพิ่ม 0.22→0.32 aura เด่นขึ้น
-        midAlphaBase: 0.15,     // เพิ่ม 0.10→0.15
-        outerAlphaBase: 0.06,   // เพิ่ม 0.04→0.06
-        rimAlphaBase: 0.38,     // เพิ่ม 0.28→0.38
+        innerAlphaBase: 0.40,   // 0.32→0.40 zone beacons more visible
+        midAlphaBase: 0.20,     // 0.15→0.20
+        outerAlphaBase: 0.08,   // 0.06→0.08
+        rimAlphaBase: 0.45,     // 0.38→0.45 rim more defined
         rimWidth: 2.5,           // หนาขึ้น
         rimGlowBlur: 22,         // glow มากขึ้น 16→22
         dashAlphaBase: 0.18,    // เพิ่ม 0.12→0.18

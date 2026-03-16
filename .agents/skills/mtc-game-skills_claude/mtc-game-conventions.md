@@ -110,11 +110,11 @@ Immutable rules:
   Effect: igniteDPS × 2.5 burst + 0.4s stun (_shatterStunTimer) + _shatterUsed flag guard
 
 game.js integration:
-  if (typeof playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
-      playerAnalyzer.sample(dt, window.player, window.boss);
-      playerAnalyzer.update(dt);
+  if (typeof window.playerAnalyzer !== 'undefined' && window.boss && !window.boss.dead) {
+      window.playerAnalyzer.sample(dt, window.player, window.boss);
+      window.playerAnalyzer.update(dt);
   }
-  if (typeof squadAI !== 'undefined') squadAI.update(dt, window.enemies, window.player);
+  if (typeof window.squadAI !== 'undefined') window.squadAI.update(dt, window.enemies, window.player);
 
 PlayerPatternAnalyzer API — correct method names:
   playerAnalyzer.dominantPattern()    // 'kiting'|'circling'|'standing'|'mixed'
@@ -274,6 +274,19 @@ Singleton pattern in effects.js:
   var shellCasingSystem = new ShellCasingSystem();
   window.shellCasingSystem = shellCasingSystem;
 
+Character-specific spawn helpers — explicit window.* export required (end of effects.js):
+  window.spawnZanzoTrail = spawnZanzoTrail;      // Pat — Zanzo Flash afterimage trail
+  window.spawnBloodBurst = spawnBloodBurst;      // enemy death burst
+  window.spawnKatanaSlashArc = spawnKatanaSlashArc;  // Pat — katana slash arc
+  window.spawnWanchaiPunchText = spawnWanchaiPunchText;  // Auto — stand-rush impact text
+  (spawnParticles / spawnFloatingText are declared globally in utils.js scope — no window.* needed)
+
+  When adding a new character-specific spawner to effects.js:
+  ✅ Declare as a bare function at file scope
+  ✅ Add window.spawnXxx = spawnXxx at the explicit exports block at end of file
+  ✅ Add to module.exports {...} block for Node/bundler compat
+  ❌ Do NOT attach helpers to the object pool classes (ParticleSystem, etc.) — they are standalone functions
+
 ---
 
 10. Poom Special Cases
@@ -386,6 +399,24 @@ boss_attacks split (DONE as of v3.29.x):
     <script src="js/entities/boss/BossBase.js"></script>
     <script src="js/entities/boss/ManopBoss.js"></script>
     <script src="js/entities/boss/FirstBoss.js"></script>
+
+Boss constructor — config-driven scaling (invariant, established March 2026):
+  Every boss constructor MUST read HP/speed multipliers from BALANCE.boss.[name], not hardcode them.
+  Use ?? fallbacks so the constructor is safe if a config key is temporarily missing.
+
+  ✅ Standard pattern (from FirstBoss):
+    const _F     = BALANCE.boss.first;
+    const hpBase = _F.hpBaseMult         ?? 0.72;
+    const hpAdv  = isAdvanced ? (_F.advancedHpMult ?? 0.85) : 1.0;
+    const spdMul = _F.speedBaseMult       ?? 1.55;
+    this.maxHp   = BALANCE.boss.baseHp * difficulty * hpBase * hpAdv;
+    this.moveSpeed = Math.min(BALANCE.boss.moveSpeed * 2.2, BALANCE.boss.moveSpeed * spdMul * spdAdv);
+
+  ❌ Anti-pattern (was the bug in FirstBoss pre-March 2026):
+    const advMult = isAdvanced ? 1.35 : 1.0;          // hardcoded — BALANCE.boss.first.advancedHpMult ignored
+    this.maxHp = BALANCE.boss.baseHp * difficulty * 0.85 * advMult;   // config value silently unused
+
+  Config block to add for each new boss: BALANCE.boss.[name] = { hpBaseMult, advancedHpMult?, speedBaseMult, ... }
 
 New active skill:
   [Character].js — energy cost guard (see pattern above)
@@ -783,3 +814,48 @@ DeadlyGraph._reflected flag (established pattern):
     if (this._reflected && boss) { /* damage boss */ }
   _reflected must be set BEFORE the next update() tick — set it in the reflect hook in game.js,
   not inside update().
+
+---
+
+25. GameState Singleton — Property Migration
+
+State that was previously scattered across bare `window.*` globals now lives on the
+`GameState` singleton (js/systems/GameState.js). The migration is in progress.
+
+Properties on GameState (use GameState.xxx in new code — NOT window.isGlitchWave etc.):
+  GameState.phase              // 'PLAYING'|'PAUSED'|'GAMEOVER'|etc.
+  GameState.hitStopTimer       // freeze-frame remaining time (seconds)
+  GameState.timeScale          // bullet-time multiplier (1.0 = normal)
+  GameState.isSlowMotion       // bool — driven by TimeManager
+  GameState.loopRunning        // rAF loop guard
+  GameState.waveSpawnLocked    // glitch-wave spawn lock
+  GameState.waveSpawnTimer     // countdown before locked spawn releases
+  GameState.lastGlitchCountdown // last displayed countdown tick
+  GameState.pendingSpawnCount  // enemies queued during lock
+  GameState.isGlitchWave       // glitch visual active (read here, written by WaveManager)
+  GameState.glitchIntensity    // 0→1 ramp — game.js drives this each frame
+  GameState.controlsInverted   // bool — written by WaveManager, read by game.js
+
+Properties still on window.* (NOT migrated — use window.xxx):
+  window.enemies               // live enemy array
+  window.boss                  // current boss instance (null between waves)
+  window.player                // current player instance (null between runs)
+  window.specialEffects        // active special-effect instances
+  window.meteorZones           // active meteor damage zones
+  window.isTrickleActive       // WaveManager trickle spawn in progress
+  window.bossEncounterCount    // deterministic boss queue counter
+
+Compat aliases (window.gameState / GameState.loopRunning) exist for backward compat
+during transition — do NOT add new code that depends on these aliases.
+
+Rules:
+  ✅  if (GameState.phase === 'PLAYING') { ... }
+  ✅  GameState.hitStopTimer = capped;
+  ❌  window.isGlitchWave      // stale pattern — read GameState.isGlitchWave
+  ❌  window.hitStopTimer      // never existed on window — silently undefined
+
+Split-ownership warning (WaveManager ↔ game.js):
+  WaveManager still WRITES isGlitchWave / controlsInverted via window.isGlitchWave = true,
+  but game.js READS them via GameState.isGlitchWave. GameState._syncAliases() bridges this.
+  ❌ Do NOT read window.isGlitchWave in new code — use GameState.isGlitchWave
+  ❌ Do NOT write GameState.isGlitchWave from WaveManager — the sync direction is one-way

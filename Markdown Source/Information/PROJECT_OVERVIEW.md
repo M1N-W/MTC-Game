@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.37.0
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.38.0
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -114,7 +114,7 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BossBase.js`            | Base Boss class — shared lifecycle, death hooks                                                                                                                                                 |
 | `ManopBoss.js`           | KruManop + BossDog classes (math boss encounters)                                                                                                                                               |
-| `FirstBoss.js`           | KruFirst class (physics boss with GravitationalSingularity)                                                                                                                                     |
+| `FirstBoss.js`           | KruFirst class (physics boss with GravitationalSingularity) — HP scaling reads `BALANCE.boss.first.hpBaseMult` + `advancedHpMult` via `const _F = BALANCE.boss.first` (fixed March 2026; previously hardcoded, config values were silently ignored) |
 | `boss_attacks_shared.js` | Shared attack effects — `ExpandingRing` (used by both bosses)                                                                                                                                   |
 | `boss_attacks_manop.js`  | KruManop attacks — `BarkWave`, `GoldfishMinion`, `BubbleProjectile`, `MatrixGridAttack`, `DomainExpansion`, `EquationSlam`, `DeadlyGraph`, `ChalkWall`                                          |
 | `boss_attacks_first.js`  | KruFirst attacks — `FreeFallWarningRing`, `PorkSandwich`, `EmpPulse`, `PhysicsFormulaZone`, `ParabolicVolley`, `OrbitalDebris`, `GravitationalSingularity`, `GravityWell`, `SuperpositionClone` |
@@ -345,6 +345,13 @@ _"commit and push, check changes first, write detailed description, update @sw\.
 **อาจกระทบ:** `summons.js`, `map.js`
 ⚠️ Boss speech: `speak()` (BossBase) reads `GAME_TEXTS.ai.bossTaunts[]` → `UIManager.showBossSpeech()` (typewriter DOM chip) — **ไม่ใช่ Gemini**, ไม่ async, ไม่ต้อง try-catch | Boss queue: waves 3,6,9,12,15
 ⚠️ window exports ต้องมี backward-compat alias (เช่น `window.BossXxx = XxxClass`) สำหรับ WaveManager + AdminSystem
+⚠️ **Config-driven scaling invariant** — boss constructor ต้องอ่านค่า scaling จาก `BALANCE.boss.[name]` ห้าม hardcode multipliers ในโค้ด:
+  ```js
+  const _B = BALANCE.boss.myBoss;                          // ✅ config-driven
+  this.maxHp = BALANCE.boss.baseHp * difficulty * (_B.hpBaseMult ?? 1.0);
+  // ❌ this.maxHp = BALANCE.boss.baseHp * difficulty * 0.85;  // hardcode — config ignored
+  ```
+  ใช้ `?? fallback` เสมอ — ป้องกัน crash ถ้า config key ยังไม่ได้ใส่
 
 ### เพิ่มศัตรูใหม่
 

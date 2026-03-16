@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.37.1"; // Fast Patch Efficiency Rule & Command Update
+const CACHE_NAME = "mtc-cache-v3.38.0"; // Arena Layout Overhaul & Visual Polish
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
