@@ -4,6 +4,28 @@
 
 ---
 
+## v3.38.1 — UI & Compatibility Polish (CSS Prefixes & Viewport)
+*Released: March 16, 2026*
+
+### 🎨 UI & CSS Compatibility
+- **WebKit Prefixing:** Added `-webkit-clip-path` to all elements using `clip-path` for better compatibility with Safari and mobile browsers.
+- **Backdrop Filter Polish:** Verified and added missing `-webkit-backdrop-filter` prefixes for consistent blur effects across devices.
+- **Viewport Optimization:** Updated `index.html` viewport meta tag to `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover` to prevent accidental zooming and improve mobile layout.
+
+### 🧹 Code Cleanup & Refactoring
+- **Inline Style Extraction:** Removed 17 instances of inline `style=` attributes from `index.html`.
+- **CSS Utility Classes:** Introduced `.hud-labels` and `.stat-bar-fill-[percent]` utility classes in `main.css` to manage UI styles centrally.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: css/main.css (Prefixes, utility classes)
+✅ MODIFIED: index.html (Viewport meta, inline styles removal)
+✅ MODIFIED: sw.js (v3.38.1)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.38.1)
+```
+
+---
+
 ## v3.38.0 — Environment: Arena Layout Overhaul & Visual Polish
 *Released: March 16, 2026*
 

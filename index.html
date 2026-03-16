@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MTC the Game (Beta Edition)</title>
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -63,18 +63,15 @@
     <div id="achievements"></div>
 
     <!-- Database proximity prompt -->
-    <div id="db-prompt">🗄️ กด <kbd
-            style="background:#06b6d4;color:#000;padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:bold;">E</kbd>
+    <div id="db-prompt">🗄️ กด <kbd class="kbd-cyan">E</kbd>
         เพื่อเปิด MTC DATABASE</div>
 
     <!-- Admin Console proximity prompt -->
-    <div id="console-prompt">💻 กด <kbd
-            style="background:#00ff41;color:#000;padding:1px 6px;border-radius:4px;font-family:'Courier New',monospace;font-weight:bold;">F</kbd>
+    <div id="console-prompt">💻 กด <kbd class="kbd-green">F</kbd>
         เพื่อเปิด ADMIN TERMINAL</div>
 
     <!-- Shop proximity prompt -->
-    <div id="shop-prompt">🛒 กด <kbd
-            style="background:#facc15;color:#000;padding:1px 6px;border-radius:4px;font-family:monospace;font-weight:bold;">B</kbd>
+    <div id="shop-prompt">🛒 กด <kbd class="kbd-gold">B</kbd>
         เพื่อเปิด MTC CO-OP STORE</div>
 
     <!-- Pause indicator strip (top-center) -->
@@ -122,12 +119,12 @@
             <!-- Boot lines -->
             <div class="console-boot">
                 <div class="console-boot-line dim">MTC KERNEL 6.1.0-mtc-amd64 #1 SMP PREEMPT_DYNAMIC</div>
-                <div class="console-boot-line dim">Initialising MTC Server Node... <span style="color:#00ff41;">[ OK
+                <div class="console-boot-line dim">Initialising MTC Server Node... <span class="console-boot-ok">[ OK
                         ]</span></div>
                 <div class="console-boot-line highlight">WARNING: Unauthorised access is prohibited by MTC Policy §4.2
                 </div>
-                <div class="console-boot-line">Type <span style="color:#00ff41;">help</span> for available commands.
-                    Type <span style="color:#00ff41;">exit</span> to quit.</div>
+                <div class="console-boot-line">Type <span class="console-boot-cmd">help</span> for available commands.
+                    Type <span class="console-boot-cmd">exit</span> to quit.</div>
             </div>
             <hr class="console-divider">
 
@@ -170,10 +167,9 @@
                     <span>💰 คะแนน:</span>
                     <span class="shop-score-value" id="shop-score-display">0</span>
                 </div>
-                <button class="shop-buy-btn" onclick="rerollShop()" ontouchstart="event.preventDefault(); rerollShop();"
-                    style="border-color:#a78bfa; --shop-btn-color:#a78bfa; font-size:13px; padding:6px 14px; height:auto; flex-shrink:0;"
+                <button class="shop-buy-btn shop-reroll-btn" onclick="rerollShop()" ontouchstart="event.preventDefault(); rerollShop();"
                     title="สุ่มไอเทมใหม่ทั้งหมด (เสีย 200 คะแนน)">
-                    🎲 REROLL <span style="color:#a78bfa; font-size:11px;">(200 🏆)</span>
+                    🎲 REROLL <span class="shop-reroll-cost">(200 🏆)</span>
                 </button>
                 <button class="shop-close-btn" onclick="closeShop()" ontouchstart="event.preventDefault(); closeShop();"
                     title="ปิดร้าน (Escape)">✕</button>
@@ -220,8 +216,7 @@
         <button id="btn-switch" class="action-btn">🔄</button>
         <button id="btn-skill" class="action-btn">📖</button>
         <button id="btn-dash" class="action-btn">💨</button>
-        <button id="btn-naga" class="action-btn"
-            style="display:none; right:18px; bottom:270px; border-color:#10b981; background:rgba(16,185,129,0.2);">🐉</button>
+        <button id="btn-naga" class="action-btn">🐉</button>
         <!-- MTC Database -->
         <button id="btn-database" class="action-btn">📚</button>
         <!-- Admin Terminal -->
@@ -236,16 +231,16 @@
             <div class="player-card">
                 <div id="player-avatar">
                     <svg id="hud-portrait-svg" viewBox="0 0 96 112" width="34" height="40"
-                        xmlns="http://www.w3.org/2000/svg" style="display:block;width:34px;height:40px;"></svg>
+                        xmlns="http://www.w3.org/2000/svg"></svg>
                 </div>
                 <div class="status-bars">
                     <div class="bar-wrap">
-                        <div id="hp-bar" class="bar-fill hp-fill" style="width:100%;"></div>
+                        <div id="hp-bar" class="bar-fill hp-fill bar-fill--full"></div>
                     </div>
                     <div class="bar-wrap">
-                        <div id="en-bar" class="bar-fill en-fill" style="width:100%;"></div>
+                        <div id="en-bar" class="bar-fill en-fill bar-fill--full"></div>
                     </div>
-                    <div style="font-size:11px; color:#94a3b8;">HP & FOCUS</div>
+                    <div class="hud-labels">HP & FOCUS</div>
                     <div class="level-info">
                         <div class="level-display">
                             <span id="player-level">Lv.1</span>
@@ -258,7 +253,7 @@
             </div>
             <div class="stats-box">
                 <div class="score-num" id="score">0</div>
-                <div style="color:#94a3b8; font-size:12px;">SCORE</div>
+                <div class="score-label">SCORE</div>
                 <div class="wave-badge" id="wave-badge">WAVE 1</div>
             </div>
         </div>
@@ -275,9 +270,9 @@
         <div class="hud-bottom">
             <!-- SHOOT — neutral, always visible -->
             <div class="skill-icon t-neutral active" id="attack-icon">
-                <div class="key-hint" id="attack-hint" style="background:#1e293b;color:#475569;">L-Click</div>
+                <div class="key-hint key-hint--attack" id="attack-hint">L-Click</div>
                 <span id="attack-emoji">🔫</span>
-                <div class="skill-name" id="sn-attack" style="color:#64748b;">SHOOT</div>
+                <div class="skill-name skill-name--attack" id="sn-attack">SHOOT</div>
             </div>
             <!-- DASH -->
             <div class="skill-icon t-blue" id="dash-icon">
@@ -297,45 +292,43 @@
             <div class="skill-divider" id="divider-main"></div>
 
             <!-- Q slot: NAGA (Poom) / TELEPORT (Kao) / VACUUM (Auto) — shown by setupCharacterHUD -->
-            <div class="skill-icon t-emerald" id="naga-icon" style="display:none;">
-                <div class="key-hint" style="background:#064e3b;color:#6ee7b7;">Q</div>🐉
+            <div class="skill-icon t-emerald skill-icon--naga-hidden" id="naga-icon">
+                <div class="key-hint key-hint--naga">Q</div>🐉
                 <div class="cooldown-mask" id="naga-cd"></div>
                 <span id="naga-timer"></span>
-                <div class="skill-name" id="sn-naga" style="color:#6ee7b7;">NAGA</div>
+                <div class="skill-name skill-name--naga" id="sn-naga">NAGA</div>
             </div>
             <!-- Ritual Burst slot — Poom-exclusive, shown by setupCharacterHUD -->
-            <div class="skill-icon t-emerald" id="ritual-icon" style="display:none;">
-                <div class="key-hint" style="background:#064e3b;color:#6ee7b7;">R</div>🌾
+            <div class="skill-icon t-emerald skill-icon--ritual-hidden" id="ritual-icon">
+                <div class="key-hint key-hint--ritual">R</div>🌾
                 <div class="cooldown-mask" id="ritual-cd"></div>
                 <span id="ritual-timer"></span>
-                <div class="skill-name" id="sn-ritual" style="color:#6ee7b7;">RITUAL</div>
+                <div class="skill-name skill-name--ritual" id="sn-ritual">RITUAL</div>
             </div>
 
             <!-- Passive unlock slot -->
             <div class="skill-icon t-gold" id="passive-skill">
-                <div style="font-size:20px;">✨</div>
+                <div class="passive-icon">✨</div>
                 <div class="skill-name" id="sn-passive">FREE STEALTH</div>
             </div>
 
             <!-- Divider: skills | shortcuts (shown when any shortcut is visible) -->
-            <div class="skill-divider" id="divider-util" style="display:none;"></div>
+            <div class="skill-divider skill-divider--hidden" id="divider-util"></div>
 
             <!-- Database shortcut -->
-            <div class="skill-icon t-blue" id="db-hud-icon" style="display:none;">
-                <div class="key-hint" style="background:#0c4a6e;color:#7dd3fc;">E</div>🗄️
-                <div class="skill-name" id="sn-database" style="color:#67e8f9;">DATABASE</div>
+            <div class="skill-icon t-blue skill-icon--db-hidden" id="db-hud-icon">
+                <div class="key-hint key-hint--db">E</div>🗄️
+                <div class="skill-name skill-name--database" id="sn-database">DATABASE</div>
             </div>
             <!-- Admin Console shortcut -->
-            <div class="skill-icon" id="console-hud-icon"
-                style="display:none; border-color:rgba(0,255,65,0.38); box-shadow:0 2px 10px rgba(0,0,0,0.7);">
-                <div class="key-hint" style="background:#052e16;color:#4ade80;">F</div>💻
-                <div class="skill-name" id="sn-terminal" style="color:#4ade80;">TERMINAL</div>
+            <div class="skill-icon skill-icon--console-hidden" id="console-hud-icon">
+                <div class="key-hint key-hint--console">F</div>💻
+                <div class="skill-name skill-name--terminal" id="sn-terminal">TERMINAL</div>
             </div>
             <!-- Shop shortcut -->
-            <div class="skill-icon" id="shop-hud-icon"
-                style="display:none; border-color:rgba(250,204,21,0.38); box-shadow:0 2px 10px rgba(0,0,0,0.7);">
-                <div class="key-hint" style="background:#713f12;color:#fde68a;">B</div>🛒
-                <div class="skill-name" id="sn-shop" style="color:#fef08a;">SHOP</div>
+            <div class="skill-icon skill-icon--shop-hidden" id="shop-hud-icon">
+                <div class="key-hint key-hint--shop">B</div>🛒
+                <div class="skill-name skill-name--shop" id="sn-shop">SHOP</div>
             </div>
         </div>
     </div>
@@ -362,28 +355,28 @@
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 52%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-52"></div>
                                 </div>
                                 <div class="stat-val">119</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 79%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-79"></div>
                                 </div>
                                 <div class="stat-val">118</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 100%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
                                 </div>
                                 <div class="stat-val">298</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 100%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
                                 </div>
                                 <div class="stat-val">900</div>
                             </div>
@@ -400,28 +393,28 @@
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 72%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-72"></div>
                                 </div>
                                 <div class="stat-val">165</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 98%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-98"></div>
                                 </div>
                                 <div class="stat-val">148</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 100%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
                                 </div>
                                 <div class="stat-val">298</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 83%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-83"></div>
                                 </div>
                                 <div class="stat-val">750</div>
                             </div>
@@ -438,28 +431,28 @@
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 100%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
                                 </div>
                                 <div class="stat-val">230</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 100%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
                                 </div>
                                 <div class="stat-val">MAX</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 87%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-87"></div>
                                 </div>
                                 <div class="stat-val">260</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 20%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-20"></div>
                                 </div>
                                 <div class="stat-val">MELEE</div>
                             </div>
@@ -476,28 +469,28 @@
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 61%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-61"></div>
                                 </div>
                                 <div class="stat-val">140</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 59%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-59"></div>
                                 </div>
                                 <div class="stat-val">89</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 96%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-96"></div>
                                 </div>
                                 <div class="stat-val">285</div>
                             </div>
                             <div class="stat-bar">
                                 <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
                                 <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill" style="width: 83%;"></div>
+                                    <div class="stat-bar-fill stat-bar-fill-83"></div>
                                 </div>
                                 <div class="stat-val">750</div>
                             </div>
@@ -688,18 +681,13 @@
             </div>
 
             <!-- ══ DEV MODE PANEL (hidden by default, unlocked via secret keylogger) ══ -->
-            <div id="dev-mode-panel"
-                style="display:none; width:100%; margin-bottom:15px; background:rgba(220,38,38,0.15); border:1px solid #ef4444; border-radius:12px; padding:14px; text-align:center;">
-                <div style="color:#fca5a5; font-weight:bold; font-size:14px; margin-bottom:10px; letter-spacing:2px;">⚠️
-                    DEVELOPER MODE UNLOCKED</div>
-                <label
-                    style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; color:#f87171; font-size:13px; user-select:none;">
-                    <input type="checkbox" id="dev-kao-passive-toggle" checked
-                        style="width:16px; height:16px; accent-color:#ef4444;">
-                    [เก้า] เปิดใช้งาน <strong style="color:#fca5a5;">'ซุ่มเสรี'</strong> ตั้งแต่ต้นเกม
+            <div id="dev-mode-panel">
+                <div class="dev-mode-title">⚠️ DEVELOPER MODE UNLOCKED</div>
+                <label class="dev-mode-label">
+                    <input type="checkbox" id="dev-kao-passive-toggle" checked class="dev-mode-checkbox">
+                    [เก้า] เปิดใช้งาน <strong class="dev-mode-highlight">'ซุ่มเสรี'</strong> ตั้งแต่ต้นเกม
                 </label>
-                <div style="margin-top:8px; color:#94a3b8; font-size:11px; font-style:italic;">⚡
-                    ปิดเพื่อสัมผัสประสบการณ์แบบผู้เล่นจริง</div>
+                <div class="dev-mode-note">⚡ ปิดเพื่อสัมผัสประสบการณ์แบบผู้เล่นจริง</div>
             </div>
 
             <div id="high-score-display">
@@ -708,22 +696,18 @@
                 <span id="hs-value" class="hs-value">— —</span>
             </div>
 
-            <div
-                style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; width: 100%; margin-top: 10px;">
+            <div class="btn-group-row">
                 <button class="btn" id="start-btn" onclick="startGame(_selectedChar)"
-                    ontouchstart="event.preventDefault(); startGame(_selectedChar);"
-                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer;">
+                    ontouchstart="event.preventDefault(); startGame(_selectedChar);">
                     🎓 START MISSION
                 </button>
-                <button class="btn" id="tutorial-btn"
+                <button class="btn btn--tutorial" id="tutorial-btn"
                     onclick="if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
-                    ontouchstart="event.preventDefault(); if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
-                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);">
+                    ontouchstart="event.preventDefault(); if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);">
                     🎓 REPLAY TUTORIAL
                 </button>
-                <button class="btn" onclick="AchievementGallery.open()"
-                    ontouchstart="event.preventDefault(); AchievementGallery.open();"
-                    style="-webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer; background: linear-gradient(135deg, #b45309, #78350f); box-shadow: 0 0 20px rgba(250, 204, 21, 0.35);">
+                <button class="btn btn--achievements" onclick="AchievementGallery.open()"
+                    ontouchstart="event.preventDefault(); AchievementGallery.open();">
                     🏆 ACHIEVEMENTS
                 </button>
             </div>
@@ -778,7 +762,7 @@
          🎓 TUTORIAL OVERLAY
     ══════════════════════════════════════════ -->
     <!-- ── Tutorial Arrow — animated pointer ── -->
-    <div id="tut-arrow" data-dir="down" style="display:none;"></div>
+    <div id="tut-arrow" data-dir="down"></div>
 
     <div id="tutorial-overlay">
         <div class="tutorial-card tutorial-card--center" id="tutorial-card">
@@ -804,7 +788,7 @@
             <!-- Buttons row -->
             <div class="tut-btn-row">
                 <div id="tutorial-progress"></div>
-                <div style="display:flex; gap:10px; align-items:center;">
+                <div class="tut-btn-inner">
                     <button id="tut-skip-btn" onclick="TutorialSystem.skip()"
                         ontouchstart="event.preventDefault(); TutorialSystem.skip();">
                         SKIP
