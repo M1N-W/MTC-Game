@@ -835,6 +835,10 @@ class KaoPlayer extends Player {
     }
 
     let dmgMult = (this.damageMultiplier || 1.0) * (this.damageBoost || 1.0);
+    // PowerNode Buff
+    if (this.powerNodeActive && BALANCE.interactive && BALANCE.interactive.powerNode) {
+        dmgMult *= (1 + BALANCE.interactive.powerNode.damageBonus);
+    }
     if (this.isSecondWind)
       dmgMult *= BALANCE.player.secondWindDamageMult || 1.5;
     // ── Graph Buff: ยืนบนเลเซอร์ระยะ 3 → ดาเมจ x1.5 ─────

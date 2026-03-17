@@ -325,6 +325,7 @@ class PatRenderer {
     }
 
     const zanzoAmbushT = entity._zanzoAmbushTimer ?? 0;
+    const isAmbush = zanzoAmbushT > 0;
     if (zanzoAmbushT > 0) {
       const zRatio = zanzoAmbushT / (entity.stats?.zanzoAmbushWindow ?? 1.5);
       const phase1 = Math.sin(now / 55) * 2.5 * zRatio;

@@ -3,6 +3,7 @@
  * js/rendering/PlayerRenderer.js
  * ════════════════════════════════════════════════════════════════
  * Step 4: Rendering Decoupling — PlayerRenderer
+ * Session 2 (Remaster): shared helpers ใช้ RT.* tokens แทน hardcode
  *
  * รวมโค้ดวาดทั้งหมดของ Player classes ไว้ที่นี่
  * Dispatcher และ Shared Utilities (Aura, Shield, Badge)
@@ -160,23 +161,24 @@ class PlayerRenderer {
    */
   static _drawEnergyShield(ctx, now) {
     const shieldT = now / 200;
-    const pulse = 0.6 + Math.sin(shieldT) * 0.2;
+    const pulse =
+      RT.alpha.shieldPulseBase + Math.sin(shieldT) * RT.alpha.shieldPulseRange;
     ctx.save();
     ctx.globalAlpha = pulse;
-    ctx.strokeStyle = "#8b5cf6";
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = 15 + Math.sin(shieldT * 1.4) * 5;
-    ctx.shadowColor = "#8b5cf6";
+    ctx.strokeStyle = RT.palette.shield;
+    ctx.lineWidth = RT.stroke.thick;
+    ctx.shadowBlur = RT.glow.shield.blur + Math.sin(shieldT * 1.4) * 5;
+    ctx.shadowColor = RT.palette.shield;
     ctx.beginPath();
     ctx.arc(0, 0, 25, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = "rgba(139,92,246,0.15)";
+    ctx.fillStyle = RT.palette.shieldFill;
     ctx.fill();
-    ctx.globalAlpha = pulse * 0.55;
-    ctx.strokeStyle = "#c4b5fd";
+    ctx.globalAlpha = pulse * RT.alpha.shieldInner;
+    ctx.strokeStyle = RT.palette.shieldInner;
     ctx.lineWidth = 1.5;
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = "#c4b5fd";
+    ctx.shadowBlur = RT.glow.shieldInner.blur;
+    ctx.shadowColor = RT.palette.shieldInner;
     ctx.setLineDash([6, 10]);
     ctx.beginPath();
     ctx.arc(0, 0, 25, shieldT * 2.5, shieldT * 2.5 + Math.PI * 1.2);
@@ -228,10 +230,10 @@ class PlayerRenderer {
     const R = (entity.radius || 18) + 10 + Math.sin(now / 90) * 3;
     ctx.save();
     ctx.globalAlpha = pulse * severity;
-    ctx.strokeStyle = "#ef4444";
-    ctx.lineWidth = 2.5;
-    ctx.shadowBlur = 18 + Math.sin(now / 80) * 8;
-    ctx.shadowColor = "#ef4444";
+    ctx.strokeStyle = RT.palette.danger;
+    ctx.lineWidth = RT.stroke.medium;
+    ctx.shadowBlur = RT.glow.danger.blur + Math.sin(now / 80) * 8;
+    ctx.shadowColor = RT.palette.danger;
     ctx.setLineDash([4, 3]);
     ctx.beginPath();
     ctx.arc(screen.x, screen.y, R, 0, Math.PI * 2);
@@ -249,16 +251,22 @@ class PlayerRenderer {
     const alpha = t * (entity._hitFlashBig ? 0.82 : 0.52);
     const r = bodyR + (entity._hitFlashBig ? t * 5 : t * 2);
     ctx.save();
-    ctx.globalAlpha = alpha * 0.75;
-    ctx.fillStyle = entity._hitFlashBig ? "#fca5a5" : "#fecaca";
-    ctx.shadowBlur = entity._hitFlashBig ? 18 : 8;
-    ctx.shadowColor = "#ef4444";
+    ctx.globalAlpha = alpha * RT.alpha.hitFlashFill;
+    ctx.fillStyle = entity._hitFlashBig
+      ? RT.palette.dangerSoft
+      : RT.palette.dangerSofter;
+    ctx.shadowBlur = entity._hitFlashBig
+      ? RT.glow.hitFlashBig.blur
+      : RT.glow.hitFlashSml.blur;
+    ctx.shadowColor = RT.palette.danger;
     ctx.beginPath();
     ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = alpha * 0.55 * (1 - t * 0.5);
-    ctx.strokeStyle = entity._hitFlashBig ? "#ef4444" : "#fca5a5";
-    ctx.lineWidth = entity._hitFlashBig ? 2.5 : 1.5;
+    ctx.globalAlpha = alpha * RT.alpha.hitFlashRing * (1 - t * 0.5);
+    ctx.strokeStyle = entity._hitFlashBig
+      ? RT.palette.danger
+      : RT.palette.dangerSoft;
+    ctx.lineWidth = entity._hitFlashBig ? RT.stroke.medium : 1.5;
     ctx.shadowBlur = 12;
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);

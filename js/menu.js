@@ -79,6 +79,15 @@ function selectCharacter(charType) {
     hudSvg.innerHTML = window.PORTRAITS[charType];
   }
 
+  // ── Apply skin for selected character — must run before first render frame ──
+  // RenderSkins resets RT, applies the saved palette patch, and clears bitmap caches.
+  if (typeof RenderSkins !== "undefined" && typeof GameState !== "undefined") {
+    RenderSkins.applySkin(
+      charType,
+      GameState.activeSkin?.[charType] ?? "default"
+    );
+  }
+
   // ── Skill slot hint preview ──────────────────────────────────────────────
   const hintEl = document.getElementById("skill1-hint");
   if (hintEl) {

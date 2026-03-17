@@ -1,6 +1,6 @@
 ---
 name: mtc-game-conventions
-description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, PatPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT, Zanzo Flash, Iaido Strike, Blade Guard, tryReflectProjectile, WorkerBridge, analyzer-worker, WAVE_SCHEDULE, SHATTER reaction, HealthComponent, predictedPosition, velocityEstimate, file header documentation, JSDoc header, module header, hudEmoji, GAME_TEXTS, UIManager._E, patchTooltipEmojis, injectCooldownStyles, eat-buff-active, buff-bar, skill icon HUD."
+description: "Project-specific conventions, architecture rules, and critical pitfalls for MTC The Game (github.com/M1N-W/MTC-Game). Use this skill at the start of EVERY task involving this codebase. Trigger on: MTC Game, MTC the game, enemy.js, AutoPlayer, KaoPlayer, PoomPlayer, PatPlayer, WanchaiStand, EnemyBase, UtilityAI, SquadAI, BossBase, ManopBoss, FirstBoss, PlayerRenderer, BossRenderer, WaveManager, game.js, config.js BALANCE, MTC Room, GravitationalSingularity, DomainExpansion, weapon system, heat tier, stand meter, ORA combo, vacuum pull, sticky slow, ignite DoT, Zanzo Flash, Iaido Strike, Blade Guard, tryReflectProjectile, WorkerBridge, analyzer-worker, WAVE_SCHEDULE, SHATTER reaction, HealthComponent, predictedPosition, hudEmoji, GAME_TEXTS, UIManager._E, patchTooltipEmojis, injectCooldownStyles, eat-buff-active, buff-bar, skill icon HUD, RenderTokens, RT.palette, _bodyCache, OffscreenCanvas cache, GameState singleton, specialEffects signature, applyDevBuff, PatPlayer invariants."
 ---
 
 # MTC The Game — Project Conventions & Critical Pitfalls
@@ -21,7 +21,7 @@ Target: 60 FPS | Status: Beta v3.39.0
    - ❌ NEVER spawn entities (particles, projectiles) inside `draw()`.
 
 2. Core Invariants:
-   - `_tickShared(dt, player)`: Must be the FIRST line executed in any `EnemyBase` or `BossBase` subclass `update()` method. It handles AI ticking, status effects, and hit flashes.
+   - `_tickShared(dt, player)`: Must be the FIRST line executed in any `EnemyBase` subclass `update()` method. It handles AI ticking, status effects, and hit flashes. (Note: `BossBase` subclasses currently manage these manually or via custom state machines).
    - `window.PORTRAITS`: Static SVG strings injected into DOM. Never draw these on canvas.
    - Object Pooling: Always use `spawnParticles()` or `spawnFloatingText()` wrappers. Never use `new Particle()`.
 
@@ -47,23 +47,23 @@ Never ask for a file already present in uploads or outputs.
 
 2. Class Name Map — CRITICAL (wrong name = TypeError at runtime)
 
-| File         | Class inside | Alias / used as             |
-| ------------ | ------------ | --------------------------- |
-| ManopBoss.js | ManopBoss    | KruManop (instanceof check) |
-| FirstBoss.js | KruFirst     | KruFirst                    |
-| ManopBoss.js | BossDog      | BossDog (sub-boss)          |
+| File         | Class inside | Alias / used as           |
+| ------------ | ------------ | ------------------------- |
+| ManopBoss.js | KruManop     | ManopBoss, Boss (aliases) |
+| FirstBoss.js | KruFirst     | BossFirst (alias)         |
+| ManopBoss.js | BossDog      | BossDog (sub-boss)        |
 
-❌ NEVER use: Boss, BossFirst, KruManop as constructor names
+❌ NEVER use: Boss, BossFirst, or KruManop as constructor names (use the established aliases for consistency)
 ✅ ALWAYS use: ManopBoss, KruFirst, BossDog
 
 Applies everywhere: WaveManager.\_startBossWave(), AdminSystem spawn commands,
 BossRenderer dispatcher, typeof guards.
 
-BossRenderer dispatcher — KruFirst MUST be checked before KruManop:
+BossRenderer dispatcher — KruFirst MUST be checked before KruManop/ManopBoss:
 if (e instanceof KruFirst) BossRenderer.drawBossFirst(e, ctx);
 else if (e instanceof ManopBoss) BossRenderer.drawBoss(e, ctx); // KruManop
 else if (e instanceof BossDog) BossRenderer.drawBossDog(e, ctx);
-Reason: ManopBoss extends BossBase — if KruManop checked first it would also
+Reason: ManopBoss (KruManop) extends BossBase — if checked first it would also
 match any future BossBase subclass. KruFirst also extends BossBase.
 
 ---
@@ -71,7 +71,7 @@ match any future BossBase subclass. KruFirst also extends BossBase.
 3. Inheritance Chain
 
 Entity (base.js)
-├── EnemyBase (enemy.js, line 87) ← UtilityAI + StatusEffect + hitFlash here
+├── EnemyBase (enemy.js) ← UtilityAI + StatusEffect + hitFlash here
 │ ├── Enemy
 │ ├── TankEnemy
 │ └── MageEnemy
@@ -80,9 +80,9 @@ Entity (base.js)
 │ ├── AutoPlayer
 │ ├── PoomPlayer
 │ └── PatPlayer
-└── BossBase
-├── ManopBoss (file: ManopBoss.js — contains KruManop + BossDog)
-└── FirstBoss (file: FirstBoss.js — contains KruFirst)
+└── BossBase (BossBase.js)
+├── KruManop (file: ManopBoss.js — also contains BossDog)
+└── KruFirst (file: FirstBoss.js)
 
 New enemy template:
 class SniperEnemy extends EnemyBase {
@@ -102,7 +102,7 @@ this.\_tickShared(dt, player); // AI + StatusEffect + hitFlash — FIRST always
 Load order: UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → SquadAI.js → enemy.js
 Worker files (loaded separately in index.html):
 js/workers/analyzer-worker.js — standalone worker, no window.\* imports
-js/systems/WorkerBridge.js — main thread bridge, loaded after game.js
+js/systems/WorkerBridge.js — main thread bridge, loaded before game.js
 
 | Layer              | File                     | Rate                                             |
 | ------------------ | ------------------------ | ------------------------------------------------ |
@@ -121,8 +121,8 @@ onto window.playerAnalyzer so predictedPosition() returns worker result.
 Immutable rules:
 
 - AI writes \_aiMoveX/\_aiMoveY only — never vx/vy directly
-- \_tickShared() must be first line of every subclass update()
-- BossBase has no update() — Boss AI goes in ManopBoss/FirstBoss directly
+- \_tickShared() must be first line of every EnemyBase subclass update()
+- BossBase has no update() — Boss AI goes in KruManop/KruFirst directly
 - Retreat always beats squad role override
 - SHATTER reaction lives in EnemyBase.\_tickShared() after ignite DoT block — never move it
   Trigger: igniteTimer > 0 && (stickySlowMultiplier < 0.65 || stickyStacks >= 3)
@@ -224,6 +224,45 @@ GravitationalSingularity.update(...)
 
 8. Rendering Architecture
 
+Renderer file split (js/rendering/) — verified against actual files:
+
+PlayerRenderer.js — Dispatcher + shared helpers ONLY:
+static draw() — entry point; calls per-char renderers, graceful fallback
+static \_drawBase() — generic fallback body + Kao/Pat body via charId guard
+static \_getLimbParams() — shared animation params (moveT, bob, stretch, etc.)
+static \_drawGroundShadow() / \_drawGroundFeet() — shared pre-draw helpers
+static \_drawHitFlash() / \_drawLevelBadge() / \_drawLowHpGlow() / \_drawEnergyShield()
+
+Per-character renderer files (each exports window.XxxRenderer):
+KaoRenderer.js → \_drawKao(entity,ctx) + \_drawKaoClone(clone,ctx)
+AutoRenderer.js → \_drawAuto(entity,ctx) [dispatcher] + 9 part functions:
+\_drawAutoDashTrail / \_drawAutoGroundFX / \_drawAutoVacuumRing
+\_drawAutoDetonationRing / \_drawAutoStandGuard / \_drawAutoStandRush
+\_drawAutoChargePunch / \_drawAutoBody(entity,ctx,p) / \_drawAutoWeaponFists(entity,ctx,p)
+
+- \_drawAutoAura(entity,ctx) + \_drawWanchaiStand(stand,ctx)
+  Static cache: \_bodyCache (Map) — keys 'body_t0'..'body_t3', 'hair_base'
+  Invalidation: never — 4 fixed heat tiers; hair is state-independent
+  PoomRenderer.js → \_drawPoom(entity,ctx)
+  PatRenderer.js → \_drawPat(entity,ctx)
+
+RenderTokens.js — Visual token system (js/rendering/RenderTokens.js)
+window.RT — singleton. Load BEFORE all renderer files in index.html.
+RT.palette.[key] — hex string colors (danger, gold, crit, heal, shield, bossOrange, etc.)
+RT.glow.[key] — {blur, color} pairs for ctx.shadowBlur + ctx.shadowColor
+RT.stroke.[key] — lineWidth values (thin/normal/medium/thick/heavy)
+RT.alpha.[key] — globalAlpha presets
+RT.hp.[threshold] — HP bar color thresholds
+RT.override(patch) — non-destructive merge for skin/theme; invalidate body bitmap caches after calling
+RT.reset() — restores all defaults; call when unloading skin
+Rules: ห้าม hardcode hex colors in renderer if RT token exists; ห้าม new object in draw loop (tokens are primitives)
+
+Dispatch pattern — graceful fallback (CRITICAL invariant):
+if (window.KaoRenderer) KaoRenderer.\_drawKao(entity, ctx);
+else PlayerRenderer.\_drawKao(entity, ctx); // fallback if file not loaded
+⚠️ Fallback stubs inside PlayerRenderer must NOT be deleted — used during dev hot-reload
+⚠️ New character: add XxxRenderer file + add fallback stub in PlayerRenderer.draw()
+
 PlayerRenderer — Full Layer Order (verified March 2026):
 Pre-draw: \_drawGroundShadow() → \_drawGroundFeet() ← BEFORE any LAYER save block
 LAYER 0: Background effects (Weapon Master aura, sniper laser, state indicators)
@@ -232,11 +271,11 @@ LAYER 1.5: Speed streaks (world space, velocity-driven — isDashing changes col
 LAYER 2: Weapon ctx.save() → translate(screen+recoil+bob) → rotate(angle) → translate(shootReach,shootLift) → weapon → hands → ctx.restore()
 Post: Low HP glow, level badge, muzzle flash (screen space)
 
-⚠️ Kao and Pat route through \_drawBase() for body+weapon — do NOT add separate LAYER
-logic outside \_drawBase. Character-specific effects inside \_drawBase use:
+⚠️ Kao + Pat — their renderer (KaoRenderer.\_drawKao / PatRenderer.\_drawPat) calls
+PlayerRenderer.\_drawBase() internally for the body block. Do NOT add separate LAYER
+logic outside \_drawBase for these chars. Character-specific effects inside \_drawBase:
 if (entity.charId === 'kao') { ... } / if (entity.charId === 'pat') { ... }
-⚠️ Auto and Poom have their own \_drawAuto() / \_drawPoom() with the same LAYER structure
-but character-specific weapon geometry and shoot animations.
+⚠️ Auto and Poom have their own full LAYER structure inside AutoRenderer / PoomRenderer
 
 Variable declaration order — declare BEFORE dash ghost loop:
 ✅ const moveT = ..., bobY = ..., stretchX = ..., stretchY = ..., R = ...;
@@ -245,8 +284,10 @@ for (const ghost of this.\_dashGhosts) { ... } // uses those vars
 
 No Math.random() in draw() — deterministic rendering only.
 
-All PlayerRenderer and BossRenderer methods are static — call as:
-PlayerRenderer.\_drawKao(entity, ctx)
+All renderer methods are static — call as:
+KaoRenderer.\_drawKao(entity, ctx)
+AutoRenderer.\_drawAuto(entity, ctx)
+PlayerRenderer.\_drawBase(entity, ctx)
 BossRenderer.drawBoss(e, ctx)
 Never instantiate these classes.
 
@@ -279,32 +320,16 @@ Do NOT add Poom muzzle logic to weapons.js or shootSingle().
 
 ---
 
-9. effects.js — module.exports Pitfall
+9. js/effects/ — Module Directory (NOT effects.js)
 
-Only export classes that are actually defined in the file.
-EquationSlam and DeadlyGraph were removed — never add them back to exports.
+Effects are split into modules under `js/effects/` (not a single `effects.js` file):
 
-❌ module.exports = { ..., EquationSlam, DeadlyGraph, ... }
-// ReferenceError in Node/bundler (browser is safe due to typeof module guard)
-
-Singleton pattern in effects.js:
-var decalSystem = new DecalSystem();
-window.decalSystem = decalSystem; // ✅ always add explicit window export
-var shellCasingSystem = new ShellCasingSystem();
-window.shellCasingSystem = shellCasingSystem;
-
-Character-specific spawn helpers — explicit window._ export required (end of effects.js):
-window.spawnZanzoTrail = spawnZanzoTrail; // Pat — Zanzo Flash afterimage trail
-window.spawnBloodBurst = spawnBloodBurst; // enemy death burst
-window.spawnKatanaSlashArc = spawnKatanaSlashArc; // Pat — katana slash arc
-window.spawnWanchaiPunchText = spawnWanchaiPunchText; // Auto — stand-rush impact text
-(spawnParticles / spawnFloatingText are declared globally in utils.js scope — no window._ needed)
-
-When adding a new character-specific spawner to effects.js:
-✅ Declare as a bare function at file scope
-✅ Add window.spawnXxx = spawnXxx at the explicit exports block at end of file
-✅ Add to module.exports {...} block for Node/bundler compat
-❌ Do NOT attach helpers to the object pool classes (ParticleSystem, etc.) — they are standalone functions
+- ParticleSystem.js
+- WeatherSystem.js
+- CombatEffects.js (FloatingText/HitMarker) — `window.spawnWanchaiPunchText` lives here
+- VisualPolish.js
+- OrbitalEffects.js
+- PatEffects.js
 
 ---
 
@@ -369,13 +394,14 @@ this.doSkill();
 
 New playable character:
 js/entities/player/[Name]Player.js (extends PlayerBase)
+js/rendering/[Name]Renderer.js — static \_draw[Name](entity,ctx) method + window.[Name]Renderer export
 config.js — BALANCE.characters.[name] block + VISUALS.PALETTE.[NAME] + GAME_TEXTS.skillNames.[name]
-PlayerRenderer.js — static \_draw[Name]() + dispatcher update
+PlayerRenderer.js — add fallback stub: else PlayerRenderer.\_draw[Name]() in dispatch switch + add fallback \_draw[Name]() method body in PlayerRenderer (copy of XxxRenderer logic)
 audio.js — play[Name][Skill]() SFX methods (typically 5-7 skills)
 effects.js — new particle types + spawn[Name][Effect]() helper functions
 ui.js — PORTRAITS.[name] + UIManager.\_updateIcons[Name]() + HUD icons
 menu.js — character select entry + icon prefix
-index.html — script tag after existing player files
+index.html — script tag: [Name]Renderer.js MUST load BEFORE PlayerRenderer.js (or same block)
 — stat bar widths (HP/DMG/SPD/RANGE) are hard-coded % in index.html — update to match BALANCE
 weapons.js — if character has unique weapon mechanics (e.g., projectile reflection)
 PlayerBase.js — if character needs unique speed/property modifiers
@@ -499,23 +525,23 @@ PoomPlayer overrides update() entirely → must call \_tickAnim(dt) manually.
 
 Trigger points — where each character sets timers:
 
-| Character | Timer                             | Value                        | Where                                                                     |
-| --------- | --------------------------------- | ---------------------------- | ------------------------------------------------------------------------- |
-| All       | hurtT=1                           | takeDamage()                 | PlayerBase.takeDamage() (base handles it)                                 |
-| All       | dashT=1                           | dash()                       | PlayerBase.dash()                                                         |
-| Kao       | shootT=1                          | after Audio.playShoot()      | \_doShoot()                                                               |
-| Kao       | dashT=1                           | Q teleport blink success     | after blink resolve                                                       |
-| Kao       | skillT=0.5                        | E clone spawn                | \_activateClone()                                                         |
-| Auto      | shootT=1                          | Stand Rush melee + Heat Wave | \_doPlayerMelee()                                                         |
-| Auto      | skillT=wanchaiDuration            | R-Click Wanchai activate     | \_activateWanchai()                                                       |
-| Auto      | hurtT=1                           | override before super        | AutoPlayer.takeDamage()                                                   |
-| Poom      | shootT=1                          | L-Click shoot                | PoomPlayer.update() — set inline after shoot() call (no \_doShoot method) |
-| Poom      | skillT=0.6                        | E Garuda summon              | \_activateGaruda()                                                        |
-| Poom      | skillT=1.0                        | R Ritual burst               | \_activateRitual()                                                        |
-| Poom      | hurtT=1                           | override                     | PoomPlayer.takeDamage()                                                   |
-| Pat       | shootT=1                          | katana L-Click               | PatPlayer.\_doAttack()                                                    |
-| Pat       | dashT=1                           | Q Zanzo Flash                | \_activateZanzo()                                                         |
-| Pat       | skillT=(iaidoChargeDur??0.45)+0.3 | R Iaido charge               | \_activateIaido()                                                         |
+| Character | Timer  | Where                                               |
+| --------- | ------ | --------------------------------------------------- |
+| All       | hurtT  | PlayerBase.takeDamage() (base handles it)           |
+| All       | dashT  | PlayerBase.dash()                                   |
+| Kao       | shootT | \_doShoot()                                         |
+| Kao       | dashT  | after blink resolve                                 |
+| Kao       | skillT | \_activateClone()                                   |
+| Auto      | shootT | \_doPlayerMelee()                                   |
+| Auto      | skillT | \_activateWanchai()                                 |
+| Auto      | hurtT  | AutoPlayer.takeDamage()                             |
+| Poom      | shootT | PoomPlayer.update() — set inline after shoot() call |
+| Poom      | skillT | \_activateGaruda()                                  |
+| Poom      | skillT | \_activateRitual()                                  |
+| Poom      | hurtT  | PoomPlayer.takeDamage()                             |
+| Pat       | shootT | PatPlayer.\_doAttack()                              |
+| Pat       | dashT  | \_activateZanzo()                                   |
+| Pat       | skillT | \_activateIaido()                                   |
 
 Per-character skillT rendering effects (in PlayerRenderer):
 Kao → skillT × 8px lateral Y spread in LAYER 2 (clone spawn arms-out)
@@ -536,9 +562,8 @@ Guard pattern — always check before accessing:
 
 window.triggerHitStop(duration) — defined in game.js, exported to window.\*
 
-✅ triggerHitStop(0.04) // seconds — use for punch crits
-✅ triggerHitStop(0.09) // seconds — use for Iaido kill
-❌ triggerHitStop(40) // ms — old pattern, backward-compat shim exists but avoid
+✅ triggerHitStop(duration) // seconds — use for punch crits, Iaido kills, etc.
+❌ triggerHitStop(40) // ms — old pattern, avoid
 
 Rules:
 
@@ -842,6 +867,7 @@ GameState.phase // 'PLAYING'|'PAUSED'|'GAMEOVER'|etc.
 GameState.hitStopTimer // freeze-frame remaining time (seconds)
 GameState.timeScale // bullet-time multiplier (1.0 = normal)
 GameState.isSlowMotion // bool — driven by TimeManager
+GameState.slowMoEnergy
 GameState.loopRunning // rAF loop guard
 GameState.waveSpawnLocked // glitch-wave spawn lock
 GameState.waveSpawnTimer // countdown before locked spawn releases
@@ -850,6 +876,7 @@ GameState.pendingSpawnCount // enemies queued during lock
 GameState.isGlitchWave // glitch visual active (read here, written by WaveManager)
 GameState.glitchIntensity // 0→1 ramp — game.js drives this each frame
 GameState.controlsInverted // bool — written by WaveManager, read by game.js
+GameState.waveStartDamage
 
 Properties still on window.\* (NOT migrated — use window.xxx):
 window.enemies // live enemy array
@@ -858,7 +885,6 @@ window.player // current player instance (null between runs)
 window.specialEffects // active special-effect instances
 window.meteorZones // active meteor damage zones
 window.isTrickleActive // WaveManager trickle spawn in progress
-window.bossEncounterCount // deterministic boss queue counter
 
 Compat aliases (window.gameState / GameState.loopRunning) exist for backward compat
 during transition — do NOT add new code that depends on these aliases.

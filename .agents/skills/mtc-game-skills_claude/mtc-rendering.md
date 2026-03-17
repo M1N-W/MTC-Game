@@ -8,7 +8,8 @@ description: >
   ctx.save, ctx.restore, shadowBlur, worldToScreen, viewport cull, Math.random in draw,
   facing flip, hover animation, phase aura, deterministic particle, breathe animation,
   HP bar, hit flash, new boss visual, new player visual, rendering bug, glow leak,
-  transform leak, draw order, layer system, screen-space vs world-space.
+  transform leak, draw order, layer system, screen-space vs world-space, RenderTokens,
+  RT.palette, RT.glow, AutoRenderer, _bodyCache.
 ---
 
 # MTC Rendering — Pure Draw Patterns
@@ -23,12 +24,12 @@ When in doubt about any draw code in this project, apply these rules.
 The game loop in `game.js` follows a strict sequence every frame (Target: 60FPS):
 
 1. **Input Handling** (`input.js`): Process keys and mouse.
-2. **Logic Update** (`game.js` → `update(dt)`):
+2. **Logic Update** (`game.js` → `updateGame(dt)`):
    - Physics, AI (`_tickShared`), state transitions.
    - **CRITICAL**: All state mutations MUST happen here.
-3. **Canvas Clearing**: `ctx.clearRect(0, 0, width, height)`.
-4. **Rendering Dispatch** (`game.js` → `draw(ctx)`):
-   - Background/Map (`map.js`) → Entities (`enemies`, `boss`) → Player (`PlayerRenderer`) → Effects (`effects.js`) → UI (`ui.js`).
+3. **Background Fill**: `drawGame()` fills the canvas with a linear gradient or solid color (no `clearRect` needed).
+4. **Rendering Dispatch** (`game.js` → `drawGame()`):
+   - Terrain (`map.js`) → Scars (decals, casings) → Entities (`enemies`, `boss`) → Player (`PlayerRenderer`) → Effects (`specialEffects`) → HUD (`CanvasHUD`, `UIManager`).
    - **Architectural Constraint**: Rendering logic must be "read-only" relative to the game state.
 
 ---
@@ -363,17 +364,22 @@ ctx.fill();
 
 ## 15. New Player Draw Method — Checklist
 
-1. Add `instanceof NewPlayer` check in `PlayerRenderer.draw()` dispatcher
-2. Call `PlayerRenderer._drawGroundShadow()` and `PlayerRenderer._drawGroundFeet()` before LAYER 1
-3. Read `entity._anim` only — never write
-4. Extra effects (aura, ring, indicator): outside the body save/restore block
-5. Verify stand aura helper name in PlayerRenderer.js before adding — no assumed helper names
+1. Create `js/rendering/[Name]Renderer.js` with `class [Name]Renderer { static _draw[Name](entity, ctx) {...} }`
+2. Export: `window.[Name]Renderer = [Name]Renderer;` at end of file
+3. In `PlayerRenderer.draw()` dispatcher: add `if (window.[Name]Renderer) [Name]Renderer._draw[Name](entity, ctx); else PlayerRenderer._draw[Name](entity, ctx);`
+4. Add fallback stub `static _draw[Name](entity, ctx)` in `PlayerRenderer.js` (same body as XxxRenderer — used if file load order fails)
+5. Load order in index.html: `[Name]Renderer.js` script tag BEFORE `PlayerRenderer.js`
+6. Call `PlayerRenderer._drawGroundShadow()` and `PlayerRenderer._drawGroundFeet()` before LAYER 1
+7. Call `PlayerRenderer._drawBase(entity, ctx)` for the body block if sharing Kao/Pat body shape
+8. Read `entity._anim` only — never write
+9. Extra effects (aura, ring, indicator): outside the body save/restore block
+10. Verify stand aura helper name in PlayerRenderer.js before adding — no assumed helper names
 
 ---
 
 ## 16. charId-Guarded Effects in \_drawBase
 
-`_drawBase()` is shared by Kao, Pat, and the generic player fallback.
+`_drawBase()` is shared body code called by `KaoRenderer._drawKao()` and `PatRenderer._drawPat()` (and used directly as the fallback for unknown characters).
 Character-specific effects that belong inside the body save block must be gated by `entity.charId`:
 
 ```js
@@ -390,7 +396,7 @@ if (entity.charId === "pat") {
 
 Rules:
 
-- ❌ Do NOT add a separate `_drawKaoExtra()` dispatch — \_drawBase is already the Kao body path
+- ❌ Do NOT add a separate `KaoRenderer._drawKaoExtra()` dispatch — `_drawBase` is already the Kao body path
 - ❌ Do NOT check `instanceof KaoPlayer` inside draw() — charId string check is cheaper and safer
 - ✅ Always reset `ctx.shadowBlur = 0` and `ctx.globalAlpha = 1` at the end of each guarded block
 - Effects go AFTER `_drawHitFlash()` — flash must be the innermost layer
@@ -601,6 +607,29 @@ Cache bitmaps at world-unit size (1:1). Apply `ctx.scale(camScale, camScale)` in
 live draw path after `worldToScreen()`. This keeps the bitmap stable across zoom changes
 rather than keying a separate bitmap per scale level.
 
+**AutoRenderer cache pattern (Map-based, tier-keyed):**
+
+AutoRenderer uses a Map cache (different from BossRenderer's single-key helper):
+
+```js
+// At class level:
+static _bodyCache = new Map();  // AutoRenderer._bodyCache
+
+static _getBodyBitmap(heatTier) {  // key 'body_t0'..'body_t3'
+    const key = `body_t${heatTier}`;
+    // build OffscreenCanvas once, then cache ImageBitmap
+}
+
+static _getHairBaseBitmap() {       // key 'hair_base'
+    const key = 'hair_base';
+    // build once
+}
+```
+
+Cache invalidation is not needed (4 fixed heat tiers + static hair).
+If `RT.override()` changes colors baked into these bitmaps → call:
+`AutoRenderer._bodyCache.clear()`.
+
 ## 22. Batching & Optimization Strategies
 
 1. **State Switch Minimization**:
@@ -612,3 +641,21 @@ rather than keying a separate bitmap per scale level.
    - `SpatialGrid` (`js/weapons/SpatialGrid.js`) optimizes collision queries, reducing the number of `draw()` calls for off-screen entities when combined with viewport culling.
 4. **Bitmap Caching**:
    - See §21 for using `OffscreenCanvas` to cache static geometry.
+
+## 26. RenderTokens.js — Visual Token System
+
+Single source of truth for all ctx style values. Load before all renderer files.
+Never hardcode hex colors or shadow values that have RT equivalents.
+
+Usage:
+
+```js
+ctx.strokeStyle = RT.palette.danger;          // '#ef4444'
+ctx.shadowBlur  = RT.glow.danger.blur;        // 18
+ctx.shadowColor = RT.glow.danger.color;       // '#ef4444'
+ctx.lineWidth   = RT.stroke.medium;           // 2.5
+ctx.globalAlpha = RT.alpha.hitFlashFill;      // 0.75
+```
+
+Skin override: `RT.override({ palette: { danger: '#ff0000' } })`
+After override: invalidate any OffscreenCanvas caches that baked those colors.

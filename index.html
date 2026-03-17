@@ -24,6 +24,7 @@
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e293b'/><text x='50' y='70' font-family='Arial' font-size='60' font-weight='bold' fill='%233b82f6' text-anchor='middle'>M</text></svg>"
     />
 
+    <link rel="stylesheet" href="css/tailwind.css" />
     <link rel="stylesheet" href="css/main.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,28 +36,57 @@
 
   <body>
     <canvas id="gameCanvas"></canvas>
+    <!-- Post-processing overlay — bloom + vignette drawn here each frame.
+         pointer-events:none so all mouse/touch pass through to game.
+         z-index sits above gameCanvas but below all DOM UI elements. -->
+    <canvas id="postCanvas"></canvas>
 
     <!-- ══════════════════════════════════════════
          LOADING STATE (3.3) - Shows during asset initialization
          ══════════════════════════════════════════ -->
-    <div id="loading-overlay">
-      <div class="loading-inner">
-        <div class="loading-header">
-          <div class="loading-icon">🎮</div>
-          <div class="loading-title">MTC THE GAME</div>
-          <div class="loading-subtitle">BETA EDITION</div>
-        </div>
-
-        <div class="loading-progress-container">
-          <div class="loading-progress-bar">
-            <div class="loading-progress-fill" id="loading-progress-fill"></div>
+    <!-- LOADING STATE (3.3) — Tailwind (Session 11) ══════════════════════
+         .loading-detail-item/.loading/.loaded kept in main.css (JS-toggled)
+         ════════════════════════════════════════════════════════════════════ -->
+    <div
+      id="loading-overlay"
+      class="fixed inset-0 flex items-center justify-center z-[9999] bg-gradient-to-br from-mtc-navy via-mtc-navy-md to-mtc-navy opacity-100 transition-opacity duration-[400ms] font-['Rajdhani','Orbitron',Arial,sans-serif] text-slate-100"
+    >
+      <div
+        class="w-[90%] max-w-[420px] text-center px-6 py-8 bg-[rgba(15,23,42,0.85)] border border-[rgba(250,204,21,0.2)] rounded backdrop-blur-[12px] shadow-[0_20px_60px_rgba(0,0,0,0.8),inset_0_0_0_1px_rgba(250,204,21,0.05)]"
+      >
+        <div class="mb-7">
+          <div
+            class="text-5xl mb-3"
+            style="animation: loadingPulse 2s ease-in-out infinite"
+          >
+            🎮
           </div>
-          <div class="loading-progress-text" id="loading-progress-text">
+          <div
+            class="font-['Bebas_Neue','Orbitron',Arial,sans-serif] text-2xl font-black tracking-[4px] text-mtc-gold mb-1 [text-shadow:0_0_20px_rgba(250,204,21,0.3)]"
+          >
+            MTC THE GAME
+          </div>
+          <div class="text-[10px] text-slate-500 tracking-[2px] font-semibold">
+            BETA EDITION
+          </div>
+        </div>
+        <div class="mb-6">
+          <div
+            class="w-full h-[6px] bg-[rgba(30,41,59,0.8)] border border-[rgba(250,204,21,0.15)] rounded-[3px] overflow-hidden mb-2"
+          >
+            <div
+              id="loading-progress-fill"
+              class="h-full w-0 rounded-[2px] transition-[width] duration-300 ease-out bg-gradient-to-r from-mtc-gold via-mtc-gold-dk to-amber-500 shadow-[0_0_10px_rgba(250,204,21,0.4)]"
+            ></div>
+          </div>
+          <div
+            id="loading-progress-text"
+            class="text-[11px] text-slate-400 font-semibold tracking-[1px] uppercase"
+          >
             INITIALIZING...
           </div>
         </div>
-
-        <div class="loading-details">
+        <div class="mb-5">
           <div class="loading-detail-item" id="loading-canvas">
             ✓ Canvas System
           </div>
@@ -73,9 +103,8 @@
             ⏳ Ready to Play
           </div>
         </div>
-
-        <div class="loading-footer">
-          <div class="loading-tip">💡 TIP: Use WASD to move, Mouse to aim</div>
+        <div class="text-[10px] text-slate-600 italic opacity-80">
+          💡 TIP: Use WASD to move, Mouse to aim
         </div>
       </div>
     </div>
@@ -84,42 +113,94 @@
     <div id="voice-bubble"></div>
     <div id="achievements"></div>
 
+    <!-- ── Proximity prompts + Pause indicator — Tailwind (Session 11) ───
+         Animations kept as @keyframes in main.css (glow pulse via CSS var).
+         display:none toggled by JS — Tailwind cannot do that safely here.
+    ───────────────────────────────────────────────────────────────────── -->
+
     <!-- Database proximity prompt -->
-    <div id="db-prompt">
+    <div
+      id="db-prompt"
+      class="absolute left-1/2 -translate-x-1/2 z-20 hidden px-[22px] py-[10px] text-sm font-bold text-mtc-cyan-lt whitespace-nowrap pointer-events-none text-center bg-[rgba(6,182,212,0.15)] border-2 border-mtc-cyan rounded-2xl backdrop-blur-[4px] shadow-[0_0_20px_rgba(6,182,212,0.3)] animate-prompt-pulse [bottom:160px]"
+    >
       🗄️ กด <kbd class="kbd-cyan">E</kbd> เพื่อเปิด MTC DATABASE
     </div>
 
     <!-- Admin Console proximity prompt -->
-    <div id="console-prompt">
+    <div
+      id="console-prompt"
+      class="absolute left-1/2 -translate-x-1/2 z-20 hidden px-[22px] py-[10px] text-sm font-bold text-mtc-green whitespace-nowrap pointer-events-none text-center bg-[rgba(0,255,65,0.08)] border-2 border-mtc-green rounded-2xl backdrop-blur-[4px] shadow-[0_0_20px_rgba(0,255,65,0.25)] animate-prompt-pulse font-mono [bottom:120px]"
+    >
       💻 กด <kbd class="kbd-green">F</kbd> เพื่อเปิด ADMIN TERMINAL
     </div>
 
     <!-- Shop proximity prompt -->
-    <div id="shop-prompt">
+    <div
+      id="shop-prompt"
+      class="absolute left-1/2 -translate-x-1/2 z-20 hidden px-[22px] py-[10px] text-sm font-bold text-yellow-200 whitespace-nowrap pointer-events-none text-center bg-[rgba(250,204,21,0.12)] border-2 border-mtc-gold rounded-2xl backdrop-blur-[4px] shadow-[0_0_20px_rgba(250,204,21,0.25)] animate-prompt-pulse [bottom:200px]"
+    >
       🛒 กด <kbd class="kbd-gold">B</kbd> เพื่อเปิด MTC CO-OP STORE
     </div>
 
-    <!-- Pause indicator strip (top-center) -->
-    <div id="pause-indicator">⏸ PAUSED — DATABASE</div>
+    <!-- Pause indicator strip (top-centre) -->
+    <div
+      id="pause-indicator"
+      class="fixed top-[18px] left-1/2 -translate-x-1/2 z-[9001] hidden px-5 py-[5px] pointer-events-none bg-[rgba(250,204,21,0.07)] border border-[rgba(250,204,21,0.28)] rounded-[3px] text-[10px] font-['Orbitron',sans-serif] font-bold text-mtc-gold tracking-[4px]"
+    >
+      ⏸ PAUSED — DATABASE
+    </div>
 
     <!-- ══════════════════════════════════════════
          RESUME PROMPT (DB / window blur pause)
     ══════════════════════════════════════════ -->
-    <div id="resume-prompt" onclick="resumeGame()">
-      <div class="resume-prompt-inner">
-        <div class="resume-icon">⏸</div>
-        <div class="resume-title">GAME PAUSED</div>
-        <div class="resume-sub">
+    <!-- ── Resume / Pause overlay — Tailwind (Session 11) ─────────────────
+         ::before gold bar + ::after scanline + rpEnter anim kept in main.css
+         (CSS pseudo-elements + keyframe cannot be done with Tailwind CDN alone)
+    ──────────────────────────────────────────────────────────────────────── -->
+    <div
+      id="resume-prompt"
+      onclick="resumeGame()"
+      class="fixed inset-0 z-[9000] hidden justify-center items-center cursor-pointer pointer-events-auto bg-[rgba(2,6,18,0.82)] backdrop-blur-[8px] backdrop-brightness-[0.45]"
+    >
+      <!-- Card — ::before/::after decorations stay in main.css -->
+      <div
+        class="resume-prompt-inner relative flex flex-col items-center gap-[18px] text-center overflow-hidden min-w-[400px] px-16 py-[52px] pb-11 rounded pointer-events-auto bg-gradient-to-br from-[#1a2236] via-[#0f172a] to-[#161f35] border border-[rgba(250,204,21,0.30)] shadow-[0_0_0_1px_rgba(250,204,21,0.06),0_0_80px_rgba(250,204,21,0.08),0_40px_80px_rgba(0,0,0,0.75)] animate-rp-enter"
+      >
+        <!-- Corner brackets (decorative — position absolute, keep via main.css rp-corner classes) -->
+        <div class="rp-corner rp-corner--tl"></div>
+        <div class="rp-corner rp-corner--tr"></div>
+        <div class="rp-corner rp-corner--bl"></div>
+        <div class="rp-corner rp-corner--br"></div>
+        <!-- Status badge -->
+        <div class="rp-badge">SYSTEM PAUSED</div>
+        <!-- Title -->
+        <div
+          class="font-['Orbitron',sans-serif] text-[32px] font-black tracking-[6px] uppercase leading-none text-mtc-gold [text-shadow:0_0_24px_rgba(250,204,21,0.45),0_0_60px_rgba(250,204,21,0.15)]"
+        >
+          GAME PAUSED
+        </div>
+        <!-- Gold divider -->
+        <div class="rp-divider"></div>
+        <!-- Sub-text -->
+        <div
+          class="font-['Kanit',sans-serif] text-[13px] text-slate-500 leading-[1.8]"
+        >
           เกมถูกหยุดลงชั่วคราว<br />
           Press "<strong>Resume Game</strong>" to continue
         </div>
+        <!-- Resume button -->
         <button
-          class="resume-btn"
           onclick="event.stopPropagation(); resumeGame()"
+          class="mt-1.5 flex items-center gap-2.5 px-[52px] py-[15px] font-['Orbitron',sans-serif] text-sm font-bold tracking-[2.5px] text-mtc-navy rounded-[3px] border-none cursor-pointer bg-gradient-to-br from-mtc-gold to-mtc-gold-dk shadow-[0_0_28px_rgba(250,204,21,0.30),0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-150 touch-manipulation hover:brightness-110 hover:-translate-y-0.5 hover:shadow-[0_0_50px_rgba(250,204,21,0.50),0_8px_24px_rgba(0,0,0,0.4)] active:translate-y-0 active:brightness-95"
         >
           ▶ RESUME GAME
         </button>
-        <div class="resume-hint">หรือกดปุ่มใดก็ได้เพื่อเล่นต่อ</div>
+        <!-- Hint -->
+        <div
+          class="font-['Kanit',sans-serif] text-[11px] text-[#2d3f56] tracking-[0.5px]"
+        >
+          หรือกดปุ่มใดก็ได้เพื่อเล่นต่อ
+        </div>
       </div>
     </div>
 
@@ -129,7 +210,13 @@
          Game is paused while console is open.
          Closed via × button, Escape, or 'exit' command.
     ══════════════════════════════════════════ -->
-    <div id="admin-console">
+    <!-- ── Admin Console — outer backdrop Tailwind, inner CRT keeps CSS (Session 12) ─
+         .console-inner/.console-visible/cline-* kept in main.css (JS-injected)
+    ──────────────────────────────────────────────────────────────────────────── -->
+    <div
+      id="admin-console"
+      class="fixed inset-0 z-[9800] hidden justify-center items-center bg-[rgba(0,0,0,0.88)] backdrop-blur-[4px] pointer-events-auto"
+    >
       <div class="console-inner" id="console-inner">
         <!-- Title bar -->
         <div class="console-titlebar">
@@ -203,27 +290,48 @@
     <!-- ══════════════════════════════════════════
          🛒 SHOP MODAL
     ══════════════════════════════════════════ -->
-    <div id="shop-modal">
+    <!-- ── Shop Modal — outer backdrop Tailwind, inner card keeps CSS (Session 12) ─
+         .shop-inner/.shop-visible/::before/::after kept in main.css
+         .shop-item/.shop-buy-btn JS-injected by ShopManager — untouched
+    ────────────────────────────────────────────────────────────────────────── -->
+    <div
+      id="shop-modal"
+      class="fixed inset-0 z-[9500] hidden justify-center items-center bg-[rgba(0,0,0,0.72)] backdrop-blur-[8px] pointer-events-auto"
+    >
       <div class="shop-inner">
-        <div class="shop-header">
-          <div class="shop-title">
-            <span class="shop-title-icon">🛒</span>
+        <!-- Shop header — CSS classes kept for JS bindings; Tailwind added alongside -->
+        <div
+          class="shop-header flex justify-between items-center mb-6 pb-4 flex-wrap gap-3 border-b border-[rgba(250,204,21,0.25)]"
+        >
+          <div
+            class="shop-title font-['Orbitron',sans-serif] text-2xl text-mtc-gold tracking-[3px] flex items-center gap-2.5 [text-shadow:0_0_20px_rgba(250,204,21,0.6)]"
+          >
+            <span class="shop-title-icon text-[28px]">🛒</span>
             MTC CO-OP STORE
           </div>
-          <div class="shop-score-info">
+          <div
+            class="shop-score-info text-sm text-slate-400 flex items-center gap-2"
+          >
             <span>💰 คะแนน:</span>
-            <span class="shop-score-value" id="shop-score-display">0</span>
+            <span
+              class="shop-score-value font-['Orbitron',sans-serif] text-xl text-blue-400 bg-[rgba(96,165,250,0.1)] px-3.5 py-1 rounded-lg border border-[rgba(96,165,250,0.3)]"
+              id="shop-score-display"
+              >0</span
+            >
           </div>
           <button
-            class="shop-buy-btn shop-reroll-btn"
+            class="shop-buy-btn shop-reroll-btn px-4 py-2 text-sm font-bold font-['Orbitron',sans-serif] tracking-wide bg-[rgba(250,204,21,0.1)] border border-[rgba(250,204,21,0.4)] text-mtc-gold rounded-lg cursor-pointer transition-all duration-150 hover:bg-[rgba(250,204,21,0.22)] touch-manipulation"
             onclick="rerollShop()"
             ontouchstart="event.preventDefault(); rerollShop();"
             title="สุ่มไอเทมใหม่ทั้งหมด (เสีย 200 คะแนน)"
           >
-            🎲 REROLL <span class="shop-reroll-cost">(200 🏆)</span>
+            🎲 REROLL
+            <span class="shop-reroll-cost text-[11px] opacity-75"
+              >(200 🏆)</span
+            >
           </button>
           <button
-            class="shop-close-btn"
+            class="shop-close-btn w-[38px] h-[38px] text-xl flex items-center justify-center bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.4)] text-red-400 rounded-[10px] cursor-pointer transition-all duration-150 flex-shrink-0 hover:bg-[rgba(239,68,68,0.25)] hover:border-red-500 hover:scale-110 touch-manipulation"
             onclick="closeShop()"
             ontouchstart="event.preventDefault(); closeShop();"
             title="ปิดร้าน (Escape)"
@@ -231,11 +339,15 @@
             ✕
           </button>
         </div>
-        <div class="shop-subtitle">
+        <div
+          class="shop-subtitle text-center text-[11px] text-slate-500 tracking-[1.5px] mb-5 uppercase"
+        >
           ✦ สุ่ม 3 ไอเทม — ซื้อแล้ว SOLD OUT — ขึ้น Wave ใหม่รีเฟรชฟรี ✦
         </div>
         <div id="shop-items"></div>
-        <div class="shop-footer">
+        <div
+          class="shop-footer mt-4 pt-3 border-t border-[rgba(250,204,21,0.12)] text-center text-[10px] text-slate-600 tracking-wide"
+        >
           ♾ ถาวร &nbsp;|&nbsp; ⚡ ทันที &nbsp;|&nbsp; 🎲 REROLL ราคา 200 คะแนน
           &nbsp;|&nbsp; รีเฟรชฟรีทุก Wave
         </div>
@@ -1062,6 +1174,9 @@
     <script src="js/effects/VisualPolish.js"></script>
     <script src="js/effects/OrbitalEffects.js"></script>
     <script src="js/effects/PatEffects.js"></script>
+    <script src="js/effects/EffectPresets.js"></script>
+    <!-- PostProcessor must load after all renderers + before game.js -->
+    <script src="js/effects/PostProcessor.js"></script>
     <script src="js/weapons/SpatialGrid.js"></script>
     <script src="js/weapons/Projectile.js"></script>
     <script src="js/weapons/ProjectileManager.js"></script>
@@ -1107,15 +1222,21 @@
     <script src="js/input.js"></script>
 
     <!-- Step 4: Rendering Decoupled -->
+    <script src="js/rendering/RenderTokens.js"></script>
+    <script src="js/rendering/RenderSkins.js"></script>
+    <script src="js/rendering/enemy/EnemyOverlays.js"></script>
     <script src="js/rendering/KaoRenderer.js"></script>
     <script src="js/rendering/AutoRenderer.js"></script>
     <script src="js/rendering/PoomRenderer.js"></script>
     <script src="js/rendering/PatRenderer.js"></script>
+    <script src="js/rendering/ProjectileRenderer.js"></script>
     <script src="js/rendering/PlayerRenderer.js"></script>
+    <script src="js/rendering/boss/BossPresets.js"></script>
     <script src="js/rendering/BossRenderer.js"></script>
 
     <!-- Extracted Systems -->
     <script src="js/systems/GameState.js"></script>
+    <script src="js/systems/RenderProfiler.js"></script>
     <script src="js/systems/AdminSystem.js"></script>
     <script src="js/systems/ShopSystem.js"></script>
     <script src="js/systems/TimeManager.js"></script>

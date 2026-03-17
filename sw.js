@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.39.0"; // Major Modularization Refactor
+const CACHE_NAME = "mtc-cache-v3.39.5"; // Architectural Audit & Release Cycle
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -6,6 +6,7 @@ const CACHE_TIMESTAMP = Date.now();
 const urlsToCache = [
   "./",
   "./index.html?v=" + CACHE_TIMESTAMP,
+  "./css/tailwind.css?v=" + CACHE_TIMESTAMP,
   "./css/main.css?v=" + CACHE_TIMESTAMP,
   "./js/config/BalanceConfig.js?v=" + CACHE_TIMESTAMP,
   "./js/config/SystemConfig.js?v=" + CACHE_TIMESTAMP,
@@ -71,6 +72,7 @@ const urlsToCache = [
   "./js/rendering/AutoRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/PoomRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/PatRenderer.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/ProjectileRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/PlayerRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/BossRenderer.js?v=" + CACHE_TIMESTAMP,
 ];

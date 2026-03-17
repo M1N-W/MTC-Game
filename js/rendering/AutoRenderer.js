@@ -4,6 +4,31 @@
  * js/rendering/AutoRenderer.js
  * ════════════════════════════════════════════════════════════════
  * Rendering logic for Auto (Thermodynamic Brawler)
+ *
+ * CHANGELOG:
+ *  Session 4: _drawAuto() แตกเป็น 9 part functions:
+ *    _drawAutoDashTrail | _drawAutoGroundFX | _drawAutoVacuumRing
+ *    _drawAutoDetonationRing | _drawAutoStandGuard | _drawAutoStandRush
+ *    _drawAutoChargePunch | _drawAutoBody | _drawAutoWeaponFists
+ *    Token adoption: danger/dangerDark/bossOrange/bossOrangeMid/gold/crit (×79)
+ *  Session 5: OffscreenCanvas cache for static body geometry:
+ *    _getBodyBitmap(tier) — outer ring + fill + outline + specular + inner detail
+ *    _getHairBaseBitmap() — hair silhouette + centre spike
+ *    Saves ~22 path/gradient ops per frame → replaced with 2 drawImage calls
+ *
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────
+ *  L.14   _drawAutoAura()           heat shimmer aura + symbol ring
+ *  L.103  _drawAuto()               dispatcher — calls all part functions
+ *  L.160  _drawAutoDashTrail()      dash ghost afterimages
+ *  L.175  _drawAutoGroundFX()       ground shadow + foot dots
+ *  L.185  _drawAutoVacuumRing()     vacuum / stand pull range ring
+ *  L.235  _drawAutoDetonationRing() detonation AOE ring
+ *  L.260  _drawAutoStandGuard()     stand guard arc + fill
+ *  L.300  _drawAutoStandRush()      stand rush gloves + ORA ORA text
+ *  L.460  _drawAutoChargePunch()    charge punch arc + ventGlow computation
+ *  L.530  _drawAutoBody()           LAYER 1 — body, heat rings, hair, hex-core
+ *  L.930  _drawAutoWeaponFists()    LAYER 2 — weapon + leading/trailing fists
+ *  L.1000 _drawWanchaiStand()       wanchai stand rendering
  * ════════════════════════════════════════════════════════════════
  */
 
@@ -16,9 +41,9 @@ class AutoRenderer {
     const ts = window.timeScale ?? 1;
     const inSlowmo = ts < 1.0;
 
-    // สีหลัก: ส้มแดง — ตาม theme Thermodynamic Brawler
-    const auraCol = inSlowmo ? "#ff6b00" : "#dc2626";
-    const ghostCol = inSlowmo ? "rgba(255,107,0,0.55)" : "rgba(220,38,38,0.55)";
+    // สีหลัก: อ่านจาก RT — override ได้ผ่าน RenderSkins.applySkin()
+    const auraCol = inSlowmo ? RT.palette.bossOrange : RT.palette.dangerDark;
+    const ghostCol = inSlowmo ? RT.palette.bossOrange : RT.palette.dangerDark;
     const BASE_R = 44;
     const auraR = inSlowmo ? BASE_R * 1.5 : BASE_R;
     const screen = worldToScreen(entity.x, entity.y);
@@ -30,7 +55,7 @@ class AutoRenderer {
       ctx.translate(gs.x, gs.y);
       ctx.rotate(img.angle);
       ctx.globalAlpha = Math.max(0, img.alpha) * 0.55;
-      ctx.fillStyle = inSlowmo ? "#ff6b00" : ghostCol;
+      ctx.fillStyle = inSlowmo ? RT.palette.bossOrange : ghostCol;
       ctx.shadowBlur = inSlowmo ? 14 : 8;
       ctx.shadowColor = auraCol;
       ctx.beginPath();
@@ -88,17 +113,178 @@ class AutoRenderer {
     if (inSlowmo) {
       ctx.save();
       ctx.globalAlpha = 0.4;
-      drawRing(-2.5, 0, "#ff0055"); // red-pink (left)
-      drawRing(2.5, 0, "#ff6b00"); // orange   (right)
-      drawRing(0, -2.5, "#fbbf24"); // amber    (up)
+      drawRing(-2.5, 0, "#ff0055"); // red-pink (left) — intentional non-token accent
+      drawRing(2.5, 0, RT.palette.bossOrange); // orange   (right)
+      drawRing(0, -2.5, RT.palette.gold); // amber    (up)
       ctx.restore();
     }
     drawRing(0, 0, null);
   }
 
+  // ── Static body bitmap cache (keyed by heatTier: 0-3) ──────────────────────
+  // Caches: outer glow ring + body radialGradient fill + outline + specular +
+  //         clipped inner detail panels. 4 fixed tier keys, never invalidated.
+  static _bodyCache = new Map();
+
+  static _getBodyBitmap(heatTier) {
+    // skinId included in key so skin changes get a fresh bitmap without evicting other tiers
+    const skinId =
+      (typeof GameState !== "undefined" && GameState.activeSkin?.auto) ||
+      "default";
+    const key = `body_${skinId}_t${heatTier}`;
+    if (AutoRenderer._bodyCache.has(key))
+      return AutoRenderer._bodyCache.get(key);
+    const R = 15;
+    const pad = 24; // covers R(15)+ring(3)+shadowBlur(18)+margin(3)
+    const size = (R + pad) * 2;
+    const osc = new OffscreenCanvas(size, size);
+    const oc = osc.getContext("2d");
+    oc.translate(size / 2, size / 2);
+
+    // Outer glow ring — static shadowBlur baked into bitmap
+    oc.shadowBlur = 18;
+    oc.shadowColor = "rgba(220,38,38,0.75)";
+    oc.strokeStyle = "rgba(220,38,38,0.55)";
+    oc.lineWidth = 2.8;
+    oc.beginPath();
+    oc.arc(0, 0, R + 3, 0, Math.PI * 2);
+    oc.stroke();
+    oc.shadowBlur = 0;
+
+    // Body fill — tier-keyed radialGradient
+    const bG = oc.createRadialGradient(-4, -4, 1, 0, 0, R);
+    if (heatTier === 0) {
+      bG.addColorStop(0, "#7f1d1d");
+      bG.addColorStop(0.5, "#5a0e0e");
+      bG.addColorStop(1, "#2d0606");
+    } else if (heatTier === 1) {
+      bG.addColorStop(0, "#9a2a14");
+      bG.addColorStop(0.5, "#6b1a0a");
+      bG.addColorStop(1, "#3a1204");
+    } else if (heatTier === 2) {
+      bG.addColorStop(0, "#c84a10");
+      bG.addColorStop(0.5, "#952208");
+      bG.addColorStop(1, "#5c1404");
+    } else {
+      bG.addColorStop(0, "#fff3e0");
+      bG.addColorStop(0.25, RT.palette.bossOrangeMid);
+      bG.addColorStop(0.6, RT.palette.dangerDark);
+      bG.addColorStop(1, "#7f1d1d");
+    }
+    oc.fillStyle = bG;
+    oc.beginPath();
+    oc.arc(0, 0, R, 0, Math.PI * 2);
+    oc.fill();
+    oc.strokeStyle = "#1e293b";
+    oc.lineWidth = 3;
+    oc.beginPath();
+    oc.arc(0, 0, R, 0, Math.PI * 2);
+    oc.stroke();
+
+    // Specular highlight
+    oc.fillStyle = "rgba(255,255,255,0.09)";
+    oc.beginPath();
+    oc.arc(-5, -6, 6, 0, Math.PI * 2);
+    oc.fill();
+
+    // Inner detail — clipped circuit pattern
+    oc.save();
+    oc.beginPath();
+    oc.arc(0, 0, R, 0, Math.PI * 2);
+    oc.clip();
+    oc.fillStyle = "rgba(120,20,20,0.65)";
+    oc.beginPath();
+    oc.roundRect(-R, -R, R * 0.7, R * 0.9, 2);
+    oc.fill();
+    oc.beginPath();
+    oc.roundRect(R * 0.25, -R, R * 0.8, R * 0.9, 2);
+    oc.fill();
+    oc.strokeStyle = "rgba(153,27,27,0.55)";
+    oc.lineWidth = 0.9;
+    oc.beginPath();
+    oc.moveTo(-R * 0.25, -R);
+    oc.lineTo(-R * 0.25, 0);
+    oc.stroke();
+    oc.beginPath();
+    oc.moveTo(R * 0.25, -R);
+    oc.lineTo(R * 0.25, 0);
+    oc.stroke();
+    oc.fillStyle = "rgba(220,38,38,0.45)";
+    for (const [rx, ry] of [
+      [-R * 0.45, -R * 0.6],
+      [R * 0.45, -R * 0.6],
+      [-R * 0.45, -R * 0.2],
+      [R * 0.45, -R * 0.2],
+    ]) {
+      oc.beginPath();
+      oc.arc(rx, ry, 1.2, 0, Math.PI * 2);
+      oc.fill();
+    }
+    oc.restore();
+
+    AutoRenderer._bodyCache.set(key, osc);
+    return osc;
+  }
+
+  static _getHairBaseBitmap() {
+    // skinId included in key — hair color may differ per skin
+    const skinId =
+      (typeof GameState !== "undefined" && GameState.activeSkin?.auto) ||
+      "default";
+    const key = `hair_${skinId}`;
+    if (AutoRenderer._bodyCache.has(key))
+      return AutoRenderer._bodyCache.get(key);
+    const R = 15;
+    // Hair occupies y from -(R+5)=-20 to +3 (below centre), x ≈ ±(R+2)=±17
+    // Canvas 40×32: entity origin maps to (20, 28) i.e. bottom-margin=4
+    const W = 40,
+      H = 32,
+      originY = H - 4;
+    const osc = new OffscreenCanvas(W, H);
+    const oc = osc.getContext("2d");
+    oc.translate(W / 2, originY);
+
+    oc.fillStyle = "#1a0505";
+    oc.beginPath();
+    oc.moveTo(-(R - 1), -1);
+    oc.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);
+    oc.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);
+    oc.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);
+    oc.quadraticCurveTo(R * 0.5, 2, 0, 2.5);
+    oc.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
+    oc.closePath();
+    oc.fill();
+    oc.strokeStyle = "#1e293b";
+    oc.lineWidth = 2;
+    oc.beginPath();
+    oc.moveTo(-(R - 1), -1);
+    oc.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);
+    oc.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);
+    oc.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);
+    oc.quadraticCurveTo(R * 0.5, 2, 0, 2.5);
+    oc.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
+    oc.closePath();
+    oc.stroke();
+    // Centre dark spike highlight
+    oc.fillStyle = "#5c1010";
+    oc.beginPath();
+    oc.moveTo(-5, -R - 2);
+    oc.quadraticCurveTo(-1, -R - 5, 4, -R - 2);
+    oc.quadraticCurveTo(2, -R + 2, -2, -R + 1);
+    oc.quadraticCurveTo(-4, -R, -5, -R - 2);
+    oc.closePath();
+    oc.fill();
+
+    AutoRenderer._bodyCache.set(key, osc);
+    return osc;
+  }
+
   /**
-   * MAIN AUTO BODY + WEAPON
-   * เดิมคือ AutoPlayer.draw()
+   * MAIN AUTO BODY + WEAPON — dispatcher
+   * เดิมคือ AutoPlayer.draw(). แตกแล้วเป็น part functions:
+   *   _drawAutoDashTrail | _drawAutoGroundFX | _drawAutoVacuumRing
+   *   _drawAutoDetonationRing | _drawAutoStandGuard | _drawAutoStandRush
+   *   _drawAutoChargePunch | _drawAutoBody | _drawAutoWeaponFists
    */
   static _drawAuto(entity, ctx) {
     const screen = worldToScreen(entity.x, entity.y);
@@ -107,8 +293,9 @@ class AutoRenderer {
 
     const isFacingLeft = Math.abs(entity.angle) > Math.PI / 2;
     const facingSign = isFacingLeft ? -1 : 1;
+    const R = 15;
 
-    // ── Movement vars — via shared helper ──────────────────
+    // ── Shared limb params ─────────────────────────────────────
     const {
       moveT,
       bob: bobT,
@@ -139,30 +326,90 @@ class AutoRenderer {
       entity.weaponRecoil > 0.05 ? entity.weaponRecoil * 3.0 : 0;
     const recoilX = -Math.cos(entity.angle) * recoilAmt + hurtPushX;
     const recoilY = -Math.sin(entity.angle) * recoilAmt + hurtPushY;
-    const R = 15;
 
-    // ── Stand Aura (Signature Auto — แดง/ส้ม) ─────────────
+    // ── Stand Aura (Signature Auto — แดง/ส้ม) ─────────────────
     PlayerRenderer._standAuraDraw(entity, "auto", ctx);
 
-    // ── Dash Ghost Trail ────────────────────────────────────
+    AutoRenderer._drawAutoDashTrail(entity, ctx, screen, R);
+    AutoRenderer._drawAutoGroundFX(entity, ctx, screen, limbAuto, bobOffsetY);
+    AutoRenderer._drawAutoVacuumRing(entity, ctx, screen, now);
+    AutoRenderer._drawAutoDetonationRing(entity, ctx, screen, now);
+    AutoRenderer._drawAutoStandGuard(entity, ctx, screen, now);
+    AutoRenderer._drawAutoStandRush(entity, ctx, screen, now);
+    const { ventGlow } = AutoRenderer._drawAutoChargePunch(
+      entity,
+      ctx,
+      screen,
+      now
+    );
+
+    // ── Shared render params passed to body + weapon ────────────
+    const p = {
+      screen,
+      now,
+      isFacingLeft,
+      facingSign,
+      recoilX,
+      recoilY,
+      bobOffsetY,
+      stretchX,
+      stretchY,
+      runLean,
+      shootReach,
+      ventGlow,
+      R,
+      limbAuto,
+    };
+
+    AutoRenderer._drawAutoBody(entity, ctx, p);
+    AutoRenderer._drawAutoWeaponFists(entity, ctx, p);
+
+    PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);
+    if (entity.wanchaiStand?.active) {
+      AutoRenderer._drawWanchaiStand(entity.wanchaiStand, ctx);
+    }
+    PlayerRenderer._drawLevelBadge(
+      ctx,
+      screen,
+      entity,
+      "rgba(185,28,28,0.92)",
+      22,
+      -22
+    );
+  }
+
+  /**
+   * Dash ghost afterimages (LAYER 0.5)
+   */
+  static _drawAutoDashTrail(entity, ctx, screen, R) {
     for (const img of entity.dashGhosts || []) {
       const gs = worldToScreen(img.x, img.y);
       ctx.save();
       ctx.globalAlpha = img.life * 0.35;
-      ctx.fillStyle = "#ef4444";
+      ctx.fillStyle = RT.palette.danger;
       ctx.shadowBlur = 10 * img.life;
-      ctx.shadowColor = "#dc2626";
+      ctx.shadowColor = RT.palette.dangerDark;
       ctx.beginPath();
       ctx.arc(gs.x, gs.y, R, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
+  }
 
+  /**
+   * Ground shadow + foot dots
+   */
+  static _drawAutoGroundFX(entity, ctx, screen, limbAuto, bobOffsetY) {
     // Ground shadow
-    PlayerRenderer._drawGroundShadow(ctx, screen.x, screen.y, 16, 6, 17, {
-      ...limbAuto,
-      bobOffsetY,
-    });
+    PlayerRenderer._drawGroundShadow(
+      ctx,
+      screen.x,
+      screen.y,
+      16,
+      6,
+      17,
+      limbAuto
+    );
     PlayerRenderer._drawGroundFeet(
       ctx,
       screen.x,
@@ -171,8 +418,12 @@ class AutoRenderer {
       "#2d0606",
       entity
     );
+  }
 
-    // ── Vacuum Heat range ring (Q cooldown ready) ──────────
+  /**
+   * Vacuum / Stand Pull range ring — shown when Q cooldown ready
+   */
+  static _drawAutoVacuumRing(entity, ctx, screen, now) {
     if ((entity.cooldowns?.vacuum ?? 1) <= 0) {
       const VACUUM_RANGE_PX = BALANCE?.characters?.auto?.vacuumRange ?? 320;
       const camScale = PlayerRenderer._getCamScale(entity.x);
@@ -191,17 +442,23 @@ class AutoRenderer {
       }
       ctx.save();
       ctx.globalAlpha = pulse;
-      ctx.strokeStyle = isStandPull ? "#dc2626" : "#f97316";
+      ctx.strokeStyle = isStandPull
+        ? RT.palette.dangerDark
+        : RT.palette.bossOrange;
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 6]);
       ctx.shadowBlur = 12;
-      ctx.shadowColor = isStandPull ? "#dc2626" : "#f97316";
+      ctx.shadowColor = isStandPull
+        ? RT.palette.dangerDark
+        : RT.palette.bossOrange;
       ctx.beginPath();
       ctx.arc(ringOriginX, ringOriginY, vacRingR, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalAlpha = pulse * 0.6;
-      ctx.strokeStyle = isStandPull ? "#ef4444" : "#fb923c";
+      ctx.strokeStyle = isStandPull
+        ? RT.palette.danger
+        : RT.palette.bossOrangeMid;
       ctx.lineWidth = 1;
       ctx.shadowBlur = 6;
       ctx.beginPath();
@@ -209,17 +466,23 @@ class AutoRenderer {
       ctx.stroke();
       const qLabel = isStandPull ? "[Q] STAND PULL" : "[Q] VACUUM";
       ctx.globalAlpha = 0.55 + Math.sin(now / 300) * 0.2;
-      ctx.fillStyle = isStandPull ? "#ef4444" : "#f97316";
+      ctx.fillStyle = isStandPull ? RT.palette.danger : RT.palette.bossOrange;
       ctx.shadowBlur = 8;
-      ctx.shadowColor = isStandPull ? "#dc2626" : "#fb923c";
+      ctx.shadowColor = isStandPull
+        ? RT.palette.dangerDark
+        : RT.palette.bossOrangeMid;
       ctx.font = "bold 11px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(qLabel, ringOriginX, ringOriginY - vacRingR - 10);
       ctx.restore();
     }
+  }
 
-    // ── Detonation AOE ring ──
+  /**
+   * Detonation AOE ring — shown when wanchaiActive
+   */
+  static _drawAutoDetonationRing(entity, ctx, screen, now) {
     if (entity.wanchaiActive) {
       const DET_RANGE_PX = BALANCE?.characters?.auto?.detonationRange ?? 220;
       const standX = entity.wanchaiStand?.x ?? entity.x;
@@ -230,26 +493,30 @@ class AutoRenderer {
       const detPulse = 0.18 + Math.sin(now / 200) * 0.12;
       ctx.save();
       ctx.globalAlpha = detPulse;
-      ctx.strokeStyle = "#dc2626";
+      ctx.strokeStyle = RT.palette.dangerDark;
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 6]);
       ctx.shadowBlur = 12;
-      ctx.shadowColor = "#dc2626";
+      ctx.shadowColor = RT.palette.dangerDark;
       ctx.beginPath();
       ctx.arc(_ds0.x, _ds0.y, detRingR, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
     }
+  }
 
-    // ── Stand Guard visual ─────────────────────
+  /**
+   * Stand Guard arc + fill + label
+   */
+  static _drawAutoStandGuard(entity, ctx, screen, now) {
     if (entity._standGuard) {
       ctx.save();
       ctx.globalAlpha = 0.55 + Math.sin(now / 80) * 0.15;
       ctx.strokeStyle = "#f59e0b";
       ctx.lineWidth = 3;
       ctx.shadowBlur = 18;
-      ctx.shadowColor = "#fbbf24";
+      ctx.shadowColor = RT.palette.gold;
       const guardStartA = entity.angle - Math.PI * 0.6;
       const guardEndA = entity.angle + Math.PI * 0.6;
       ctx.beginPath();
@@ -262,7 +529,7 @@ class AutoRenderer {
       );
       ctx.stroke();
       ctx.globalAlpha = 0.2 + Math.sin(now / 120) * 0.08;
-      ctx.fillStyle = "#fbbf24";
+      ctx.fillStyle = RT.palette.gold;
       ctx.beginPath();
       ctx.moveTo(screen.x, screen.y);
       ctx.arc(screen.x, screen.y, 28, guardStartA, guardEndA);
@@ -271,20 +538,25 @@ class AutoRenderer {
       ctx.globalAlpha = 0.7;
       ctx.font = "bold 10px Arial";
       ctx.textAlign = "center";
-      ctx.fillStyle = "#fbbf24";
+      ctx.fillStyle = RT.palette.gold;
       ctx.shadowBlur = 8;
       ctx.shadowColor = "#f59e0b";
       ctx.fillText("GUARD", screen.x, screen.y - 35);
       ctx.restore();
     }
+  }
 
-    // ── Stand Rush Animation ─────────────────────
+  /**
+   * Stand Rush gloves, ORA ORA trail + combo text
+   */
+  static _drawAutoStandRush(entity, ctx, screen, now) {
     if (entity.wanchaiActive && entity.isStandAttacking) {
       const fists = entity._rushFists;
       if (fists && fists.length > 0) {
         const ht = entity._heatTier ?? 0;
         const oraCombo = entity._oraComboCount ?? 0;
-        const fistCol = ht >= 3 ? "#fef08a" : ht >= 2 ? "#f59e0b" : "#dc2626";
+        const fistCol =
+          ht >= 3 ? "#fef08a" : ht >= 2 ? "#f59e0b" : RT.palette.dangerDark;
         const fistColDim =
           ht >= 3 ? "#92400e" : ht >= 2 ? "#78350f" : "#7f1d1d";
         const trailHex =
@@ -433,8 +705,14 @@ class AutoRenderer {
         }
       }
     }
+  }
 
-    // ── Charge Punch ring ──
+  /**
+   * Charge Punch arc ring + MAX! label.
+   * Also computes attackIntensity + ventGlow.
+   * @returns {{ ventGlow: number }}
+   */
+  static _drawAutoChargePunch(entity, ctx, screen, now) {
     if (entity.wanchaiActive && entity._eHeld && entity._chargeTimer > 0) {
       const chargeRatio = Math.min(
         1,
@@ -448,13 +726,13 @@ class AutoRenderer {
       ctx.save();
       ctx.globalAlpha = 0.6 + chargeRatio * 0.4;
       ctx.strokeStyle = isReady
-        ? "#facc15"
+        ? RT.palette.crit
         : chargeRatio >= 0.5
         ? "#f59e0b"
-        : "#dc2626";
+        : RT.palette.dangerDark;
       ctx.lineWidth = 2 + chargeRatio * 3;
       ctx.shadowBlur = 12 + chargeRatio * 8;
-      ctx.shadowColor = isReady ? "#facc15" : "#f59e0b";
+      ctx.shadowColor = isReady ? RT.palette.crit : "#f59e0b";
       const pulseRadius = 35 + chargeRatio * 15 + Math.sin(now / 100) * 3;
       ctx.beginPath();
       ctx.arc(
@@ -480,7 +758,7 @@ class AutoRenderer {
         ctx.textAlign = "center";
         ctx.fillStyle = "#fef08a";
         ctx.shadowBlur = 10;
-        ctx.shadowColor = "#facc15";
+        ctx.shadowColor = RT.palette.crit;
         ctx.fillText("MAX!", standScreen.x, standScreen.y - pulseRadius - 10);
       }
       ctx.restore();
@@ -493,7 +771,29 @@ class AutoRenderer {
       0,
       attackIntensity * (0.5 + Math.sin(now / 180) * 0.5)
     );
+    return { ventGlow };
+  }
 
+  /**
+   * LAYER 1 — Body fill, heat tier rings, hair, vents, hex-core, wanchai/passive rings,
+   * hit flash, energy shield. Runs inside its own ctx.save/restore.
+   * @param {{screen,now,isFacingLeft,facingSign,recoilX,recoilY,bobOffsetY,stretchX,stretchY,runLean,ventGlow,R}} p
+   */
+  static _drawAutoBody(entity, ctx, p) {
+    const {
+      screen,
+      now,
+      isFacingLeft,
+      facingSign,
+      recoilX,
+      recoilY,
+      bobOffsetY,
+      stretchX,
+      stretchY,
+      runLean,
+      ventGlow,
+      R,
+    } = p;
     // ════ LAYER 1 — BODY ════
     ctx.save();
     ctx.translate(screen.x + recoilX, screen.y + recoilY + bobOffsetY);
@@ -507,52 +807,18 @@ class AutoRenderer {
     ctx.rotate((runLean + _wEntryT * -0.2) * facingSign);
     const heatTier = entity._heatTier ?? 0;
 
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = "rgba(220,38,38,0.75)";
-    ctx.strokeStyle = "rgba(220,38,38,0.55)";
-    ctx.lineWidth = 2.8;
-    ctx.beginPath();
-    ctx.arc(0, 0, R + 3, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    const bG = ctx.createRadialGradient(-4, -4, 1, 0, 0, R);
-    if (heatTier === 0) {
-      bG.addColorStop(0, "#7f1d1d");
-      bG.addColorStop(0.5, "#5a0e0e");
-      bG.addColorStop(1, "#2d0606");
-    } else if (heatTier === 1) {
-      bG.addColorStop(0, "#9a2a14");
-      bG.addColorStop(0.5, "#6b1a0a");
-      bG.addColorStop(1, "#3a1204");
-    } else if (heatTier === 2) {
-      bG.addColorStop(0, "#c84a10");
-      bG.addColorStop(0.5, "#952208");
-      bG.addColorStop(1, "#5c1404");
-    } else {
-      bG.addColorStop(0, "#fff3e0");
-      bG.addColorStop(0.25, "#fb923c");
-      bG.addColorStop(0.6, "#dc2626");
-      bG.addColorStop(1, "#7f1d1d");
-    }
-    ctx.fillStyle = bG;
-    ctx.beginPath();
-    ctx.arc(0, 0, R, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, R, 0, Math.PI * 2);
-    ctx.stroke();
+    // Body base bitmap: outer glow ring + tier fill + outline + specular + inner detail
+    const _bodyBm = AutoRenderer._getBodyBitmap(heatTier);
+    ctx.drawImage(_bodyBm, -_bodyBm.width / 2, -_bodyBm.height / 2);
 
     if (heatTier === 1) {
       const warmPulse = 0.15 + Math.sin(now / 320) * 0.08;
       ctx.save();
       ctx.globalAlpha = warmPulse;
-      ctx.strokeStyle = "#fb923c";
+      ctx.strokeStyle = RT.palette.bossOrangeMid;
       ctx.lineWidth = 2;
       ctx.shadowBlur = 12;
-      ctx.shadowColor = "#f97316";
+      ctx.shadowColor = RT.palette.bossOrange;
       ctx.beginPath();
       ctx.arc(0, 0, R + 1, 0, Math.PI * 2);
       ctx.stroke();
@@ -563,10 +829,10 @@ class AutoRenderer {
       const ohPulse = 0.55 + Math.sin(now / 90) * 0.35;
       ctx.save();
       ctx.globalAlpha = ohPulse;
-      ctx.strokeStyle = "#f97316";
+      ctx.strokeStyle = RT.palette.bossOrange;
       ctx.lineWidth = 3.5;
       ctx.shadowBlur = 22;
-      ctx.shadowColor = "#fb923c";
+      ctx.shadowColor = RT.palette.bossOrangeMid;
       ctx.beginPath();
       ctx.arc(0, 0, R + 2, 0, Math.PI * 2);
       ctx.stroke();
@@ -574,7 +840,7 @@ class AutoRenderer {
       ctx.strokeStyle = "#fef08a";
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = 14;
-      ctx.shadowColor = "#facc15";
+      ctx.shadowColor = RT.palette.crit;
       ctx.beginPath();
       ctx.arc(0, 0, R + 7 + Math.sin(now / 80) * 2, 0, Math.PI * 2);
       ctx.stroke();
@@ -582,11 +848,11 @@ class AutoRenderer {
       ctx.save();
       ctx.globalAlpha = 0.75 + Math.sin(now / 70) * 0.22;
       ctx.shadowBlur = 20;
-      ctx.shadowColor = "#fb923c";
+      ctx.shadowColor = RT.palette.bossOrangeMid;
       for (let vi = 0; vi < 3; vi++) {
         const steamA = 0.55 + Math.sin(now / 90 + vi * 1.2) * 0.35;
         ctx.globalAlpha = steamA;
-        ctx.fillStyle = vi % 2 === 0 ? "#fb923c" : "#fef08a";
+        ctx.fillStyle = vi % 2 === 0 ? RT.palette.bossOrangeMid : "#fef08a";
         ctx.beginPath();
         ctx.roundRect(-R, -5 + vi * 5, 5, 3, 1.5);
         ctx.fill();
@@ -597,47 +863,8 @@ class AutoRenderer {
       ctx.restore();
     }
 
-    ctx.fillStyle = "rgba(255,255,255,0.09)";
-    ctx.beginPath();
-    ctx.arc(-5, -6, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(0, 0, R, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.fillStyle = "rgba(120,20,20,0.65)";
-    ctx.beginPath();
-    ctx.roundRect(-R, -R, R * 0.7, R * 0.9, 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.roundRect(R * 0.25, -R, R * 0.8, R * 0.9, 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(153,27,27,0.55)";
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(-R * 0.25, -R);
-    ctx.lineTo(-R * 0.25, 0);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(R * 0.25, -R);
-    ctx.lineTo(R * 0.25, 0);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(220,38,38,0.45)";
-    for (const [rx, ry] of [
-      [-R * 0.45, -R * 0.6],
-      [R * 0.45, -R * 0.6],
-      [-R * 0.45, -R * 0.2],
-      [R * 0.45, -R * 0.2],
-    ]) {
-      ctx.beginPath();
-      ctx.arc(rx, ry, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
     ctx.shadowBlur = 10 * ventGlow;
-    ctx.shadowColor = "#fb923c";
+    ctx.shadowColor = RT.palette.bossOrangeMid;
     for (let vi = 0; vi < 3; vi++) {
       const va = ventGlow * (0.45 + vi * 0.18);
       const ventG = ctx.createLinearGradient(-R, 0, -R + 4, 0);
@@ -676,7 +903,7 @@ class AutoRenderer {
     hexG.addColorStop(1, `rgba(153,27,27,${cP * 0.7})`);
     ctx.fillStyle = hexG;
     ctx.shadowBlur = 14 * cP;
-    ctx.shadowColor = "#dc2626";
+    ctx.shadowColor = RT.palette.dangerDark;
     ctx.fill();
     ctx.strokeStyle = `rgba(252,165,165,${cP * 0.7})`;
     ctx.lineWidth = 1;
@@ -692,26 +919,26 @@ class AutoRenderer {
       const hA = 0.35 + Math.sin(now / 90) * 0.2;
       ctx.save();
       ctx.globalAlpha = hA;
-      ctx.strokeStyle = "#f97316";
+      ctx.strokeStyle = RT.palette.bossOrange;
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = 12;
-      ctx.shadowColor = "#f97316";
+      ctx.shadowColor = RT.palette.bossOrange;
       ctx.beginPath();
       ctx.arc(0, 0, R + 6, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = hA * 0.65;
-      ctx.strokeStyle = "#fbbf24";
+      ctx.strokeStyle = RT.palette.gold;
       ctx.lineWidth = 3.5;
       ctx.shadowBlur = 28;
-      ctx.shadowColor = "#fbbf24";
+      ctx.shadowColor = RT.palette.gold;
       ctx.beginPath();
       ctx.arc(0, 0, R + 14 + Math.sin(now / 110) * 3, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = hA * 0.28;
-      ctx.strokeStyle = "#f97316";
+      ctx.strokeStyle = RT.palette.bossOrange;
       ctx.lineWidth = 2;
       ctx.shadowBlur = 18;
-      ctx.shadowColor = "#f97316";
+      ctx.shadowColor = RT.palette.bossOrange;
       ctx.beginPath();
       ctx.arc(0, 0, R + 22 + Math.sin(now / 80) * 4, 0, Math.PI * 2);
       ctx.stroke();
@@ -723,7 +950,7 @@ class AutoRenderer {
       ctx.strokeStyle = "#fef08a";
       ctx.lineWidth = 1;
       ctx.shadowBlur = 8;
-      ctx.shadowColor = "#facc15";
+      ctx.shadowColor = RT.palette.crit;
       ctx.beginPath();
       ctx.arc(0, 0, R, Math.PI * 0.1, Math.PI * 0.9);
       ctx.stroke();
@@ -734,10 +961,10 @@ class AutoRenderer {
       const gA = 0.12 + Math.sin(now / 300) * 0.07;
       ctx.save();
       ctx.globalAlpha = gA;
-      ctx.strokeStyle = "#facc15";
+      ctx.strokeStyle = RT.palette.crit;
       ctx.lineWidth = 2.5;
       ctx.shadowBlur = 18;
-      ctx.shadowColor = "#facc15";
+      ctx.shadowColor = RT.palette.crit;
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
       ctx.arc(0, 0, R + 20 + Math.sin(now / 220) * 4, 0, Math.PI * 2);
@@ -746,36 +973,10 @@ class AutoRenderer {
       ctx.restore();
     }
 
-    // Anime-Spiky Hair
-    ctx.fillStyle = "#1a0505";
-    ctx.beginPath();
-    ctx.moveTo(-(R - 1), -1);
-    ctx.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);
-    ctx.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);
-    ctx.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);
-    ctx.quadraticCurveTo(R * 0.5, 2, 0, 2.5);
-    ctx.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-(R - 1), -1);
-    ctx.quadraticCurveTo(-R - 1, -R * 0.6, -R * 0.4, -R - 2);
-    ctx.quadraticCurveTo(0, -R - 4, R * 0.4, -R - 2);
-    ctx.quadraticCurveTo(R + 1, -R * 0.6, R - 1, -1);
-    ctx.quadraticCurveTo(R * 0.5, 2, 0, 2.5);
-    ctx.quadraticCurveTo(-R * 0.5, 2, -(R - 1), -1);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.fillStyle = "#5c1010";
-    ctx.beginPath();
-    ctx.moveTo(-5, -R - 2);
-    ctx.quadraticCurveTo(-1, -R - 5, 4, -R - 2);
-    ctx.quadraticCurveTo(2, -R + 2, -2, -R + 1);
-    ctx.quadraticCurveTo(-4, -R, -5, -R - 2);
-    ctx.closePath();
-    ctx.fill();
+    // Hair silhouette — baked to OffscreenCanvas (static shape, no now-dependency)
+    const _hairBm = AutoRenderer._getHairBaseBitmap();
+    // originY = H-4=28 → entity (0,0) at bitmap (W/2, 28) → offset (-W/2, -(H-4))
+    ctx.drawImage(_hairBm, -_hairBm.width / 2, -(_hairBm.height - 4));
 
     const spikeData = [
       [-11, -2, 12, "#3d0909"],
@@ -810,11 +1011,14 @@ class AutoRenderer {
       const sg = ctx.createLinearGradient(bx, -R - 1, tx, ty);
       sg.addColorStop(0, "#5c1010");
       if (heatTier >= 2) {
-        sg.addColorStop(0.5, "#ef4444");
-        sg.addColorStop(1, heatTier === 3 ? "#fef08a" : "#fb923c");
+        sg.addColorStop(0.5, RT.palette.danger);
+        sg.addColorStop(
+          1,
+          heatTier === 3 ? "#fef08a" : RT.palette.bossOrangeMid
+        );
       } else {
         sg.addColorStop(0.6, "#b91c1c");
-        sg.addColorStop(1, "#f97316");
+        sg.addColorStop(1, RT.palette.bossOrange);
       }
       ctx.fillStyle = sg;
       ctx.globalAlpha = heatTier >= 2 ? 0.9 : 0.75;
@@ -834,13 +1038,13 @@ class AutoRenderer {
         heatTier === 3
           ? "#fef08a"
           : heatTier === 2
-          ? "#fb923c"
+          ? RT.palette.bossOrangeMid
           : idx % 2 === 0
-          ? "#f97316"
-          : "#ef4444";
+          ? RT.palette.bossOrange
+          : RT.palette.danger;
       ctx.fillStyle = tipColor;
       ctx.shadowBlur = entity.wanchaiActive ? 14 : heatTier >= 2 ? 12 : 7;
-      ctx.shadowColor = "#f97316";
+      ctx.shadowColor = RT.palette.bossOrange;
       ctx.beginPath();
       ctx.arc(tx, ty, heatTier >= 2 ? 3.0 : 2.2, 0, Math.PI * 2);
       ctx.fill();
@@ -851,7 +1055,7 @@ class AutoRenderer {
         ctx.globalAlpha = heatTier === 3 ? 0.95 : 0.8;
         ctx.fillStyle = heatTier === 3 ? "#ffffff" : "#fef08a";
         ctx.shadowBlur = 10;
-        ctx.shadowColor = "#facc15";
+        ctx.shadowColor = RT.palette.crit;
         ctx.beginPath();
         ctx.arc(
           tx + Math.sin(now / 80 + idx) * 1.5,
@@ -870,10 +1074,10 @@ class AutoRenderer {
       const swA = 0.3 + Math.sin(now / 110) * 0.2;
       ctx.save();
       ctx.globalAlpha = swA;
-      ctx.strokeStyle = "#ef4444";
+      ctx.strokeStyle = RT.palette.danger;
       ctx.lineWidth = 2;
       ctx.shadowBlur = 14;
-      ctx.shadowColor = "#dc2626";
+      ctx.shadowColor = RT.palette.dangerDark;
       ctx.beginPath();
       ctx.arc(0, 0, R + 9 + Math.sin(now / 100) * 2, 0, Math.PI * 2);
       ctx.stroke();
@@ -883,7 +1087,24 @@ class AutoRenderer {
     PlayerRenderer._drawHitFlash(ctx, entity, R);
     if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
     ctx.restore();
+  }
 
+  /**
+   * LAYER 2 — Weapon socket + leading/trailing fists.
+   * Runs inside its own ctx.save/restore (aim-rotated space).
+   */
+  static _drawAutoWeaponFists(entity, ctx, p) {
+    const {
+      screen,
+      now,
+      isFacingLeft,
+      recoilX,
+      recoilY,
+      bobOffsetY,
+      shootReach,
+      ventGlow,
+      R,
+    } = p;
     const sT = entity._anim?.shootT ?? 0;
     const punchExtend = sT * 10;
     ctx.save();
@@ -896,7 +1117,7 @@ class AutoRenderer {
     }
     const fistGlow = ventGlow * 0.8 + (entity.wanchaiActive ? 0.6 : 0);
     ctx.shadowBlur = 10 * fistGlow;
-    ctx.shadowColor = "#dc2626";
+    ctx.shadowColor = RT.palette.dangerDark;
     ctx.fillStyle = "#4a0e0e";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2.5;
@@ -927,7 +1148,7 @@ class AutoRenderer {
       (entity.wanchaiActive ? 1 : 0.6);
     ctx.fillStyle = `rgba(251,146,60,${fistEmber})`;
     ctx.shadowBlur = 8 * fistEmber;
-    ctx.shadowColor = "#fb923c";
+    ctx.shadowColor = RT.palette.bossOrangeMid;
     ctx.beginPath();
     ctx.roundRect(R, -0.5, 8, 1.5, 1);
     ctx.fill();
@@ -937,7 +1158,7 @@ class AutoRenderer {
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2.5;
     ctx.shadowBlur = 6 * fistGlow;
-    ctx.shadowColor = "#dc2626";
+    ctx.shadowColor = RT.palette.dangerDark;
     ctx.beginPath();
     ctx.arc(-(R + 2 + rearPullBack), 0, 6, 0, Math.PI * 2);
     ctx.fill();
@@ -948,19 +1169,6 @@ class AutoRenderer {
     ctx.fill();
     ctx.shadowBlur = 0;
     ctx.restore();
-
-    PlayerRenderer._drawLowHpGlow(ctx, entity, now, screen);
-    if (entity.wanchaiStand?.active) {
-      AutoRenderer._drawWanchaiStand(entity.wanchaiStand, ctx);
-    }
-    PlayerRenderer._drawLevelBadge(
-      ctx,
-      screen,
-      entity,
-      "rgba(185,28,28,0.92)",
-      22,
-      -22
-    );
   }
 
   /**

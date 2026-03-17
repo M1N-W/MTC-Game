@@ -1221,6 +1221,7 @@
     <script src="js/entities/boss.js"></script>
     <script src="js/input.js"></script>
     <script src="js/systems/GameState.js"></script>
+    <script src="js/systems/RenderProfiler.js"></script>
     <script src="js/systems/AdminSystem.js"></script>
     <script src="js/systems/ShopSystem.js"></script>
     <script src="js/systems/TimeManager.js"></script>
@@ -1297,6 +1298,11 @@
           <div class="qs-value" id="qs-lastrun" style="font-size: 13px">—</div>
           <div class="qs-sub">timestamp</div>
         </div>
+        <div class="qs-card">
+          <div class="qs-label">Live FPS</div>
+          <div class="qs-value" id="qs-fps">—</div>
+          <div class="qs-sub" id="qs-fps-scenario">profiler inactive</div>
+        </div>
       </div>
 
       <!-- Progress -->
@@ -1364,6 +1370,138 @@
             </div>
           </div>
           <div class="section-body" id="sec-systems-body"></div>
+        </div>
+
+        <!-- ── RENDER PROFILER PANEL ── -->
+        <div class="section-card" id="sec-profiler" style="grid-column: 1 / -1">
+          <div class="section-header" onclick="toggleSection('sec-profiler')">
+            <div class="section-title-wrap">
+              <div class="section-icon ic-system">📊</div>
+              <div>
+                <div class="section-title">Render Profiler — Baseline</div>
+                <div style="font-size: 10px; color: #475569; margin-top: 1px">
+                  วัด FPS avg / 1%low / min · 4 scenarios · export JSON
+                </div>
+              </div>
+            </div>
+            <div class="section-meta">
+              <span class="mini-badge idle" id="sec-profiler-badge">IDLE</span
+              ><span class="collapse-arrow">▾</span>
+            </div>
+          </div>
+          <div
+            class="section-body"
+            id="sec-profiler-body"
+            style="padding: 16px"
+          >
+            <!-- Controls row -->
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 14px;
+                align-items: center;
+              "
+            >
+              <button
+                class="btn btn-run"
+                id="prof-btn-start"
+                onclick="profilerCmd('start')"
+              >
+                ▶ START
+              </button>
+              <button
+                class="btn btn-clear"
+                id="prof-btn-stop"
+                onclick="profilerCmd('stop')"
+              >
+                ■ STOP
+              </button>
+              <button
+                class="btn btn-clear"
+                id="prof-btn-reset"
+                onclick="profilerCmd('reset')"
+              >
+                ↺ RESET
+              </button>
+              <button
+                class="btn btn-run"
+                id="prof-btn-snap"
+                onclick="profilerSnapPrompt()"
+              >
+                📌 SNAP
+              </button>
+              <button
+                class="btn btn-export"
+                id="prof-btn-stress"
+                onclick="profilerCmd('stress')"
+              >
+                ⚡ STRESS
+              </button>
+              <button
+                class="btn btn-copy"
+                id="prof-btn-export"
+                onclick="profilerExport()"
+              >
+                ⬇ EXPORT
+              </button>
+              <span
+                style="margin-left: auto; font-size: 11px; color: var(--accent)"
+                id="prof-live-fps"
+                >FPS: —</span
+              >
+              <span
+                style="font-size: 11px; color: var(--text)"
+                id="prof-live-scenario"
+                >scenario: —</span
+              >
+            </div>
+
+            <!-- Snapshot table -->
+            <div style="overflow-x: auto">
+              <table
+                id="prof-table"
+                style="width: 100%; border-collapse: collapse; font-size: 12px"
+              >
+                <thead>
+                  <tr
+                    style="
+                      color: var(--accent);
+                      border-bottom: 1px solid var(--border);
+                    "
+                  >
+                    <th style="text-align: left; padding: 6px 10px">
+                      Scenario
+                    </th>
+                    <th style="text-align: right; padding: 6px 10px">
+                      Avg FPS
+                    </th>
+                    <th style="text-align: right; padding: 6px 10px">1% Low</th>
+                    <th style="text-align: right; padding: 6px 10px">
+                      Min FPS
+                    </th>
+                    <th style="text-align: right; padding: 6px 10px">Frames</th>
+                    <th style="text-align: right; padding: 6px 10px">Budget</th>
+                  </tr>
+                </thead>
+                <tbody id="prof-table-body">
+                  <tr>
+                    <td
+                      colspan="6"
+                      style="
+                        padding: 12px 10px;
+                        color: #475569;
+                        text-align: center;
+                      "
+                    >
+                      No snapshots yet — press ▶ START then 📌 SNAP
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div class="section-card" id="sec-entities">
@@ -2363,6 +2501,26 @@
           await T(
             "sec-systems",
             "sec-systems-body",
+            "RenderProfiler (window.renderProfiler)",
+            () => {
+              const prof = window.renderProfiler;
+              if (!prof) return false;
+              const ok =
+                typeof prof.tick === "function" &&
+                typeof prof.snapshot === "function" &&
+                prof._buf instanceof Float32Array;
+              if (ok)
+                diag.log(
+                  "  ok RenderProfiler ready — Float32Array ring buffer confirmed",
+                  "success"
+                );
+              return ok;
+            },
+            "Failed: RenderProfiler ไม่พบ — check js/systems/RenderProfiler.js และ script order"
+          );
+          await T(
+            "sec-systems",
+            "sec-systems-body",
             "TutorialSystem",
             () =>
               isObject("window.TutorialSystem") ||
@@ -2913,6 +3071,140 @@
           renderChars();
           renderGameState();
         };
+
+        // ── Render Profiler Panel ─────────────────────────────────────────
+        function profilerCmd(cmd, label) {
+          const prof = window.renderProfiler;
+          if (!prof) {
+            alert("RenderProfiler not loaded — check script order.");
+            return;
+          }
+          switch (cmd) {
+            case "start":
+              prof.start();
+              document.getElementById("sec-profiler-badge").textContent =
+                "RUNNING";
+              document.getElementById("sec-profiler-badge").className =
+                "mini-badge pass";
+              break;
+            case "stop":
+              prof.stop();
+              document.getElementById("sec-profiler-badge").textContent =
+                "STOPPED";
+              document.getElementById("sec-profiler-badge").className =
+                "mini-badge warn";
+              break;
+            case "reset":
+              prof.reset();
+              document.getElementById("prof-table-body").innerHTML =
+                '<tr><td colspan="6" style="padding:12px 10px;color:#475569;text-align:center">Reset — no snapshots</td></tr>';
+              document.getElementById("sec-profiler-badge").textContent =
+                "IDLE";
+              document.getElementById("sec-profiler-badge").className =
+                "mini-badge idle";
+              break;
+            case "stress":
+              prof.stressParticles(1500);
+              break;
+            case "snap": {
+              const snap = prof.snapshot(label);
+              if (snap) _profilerRenderTable();
+              break;
+            }
+          }
+        }
+
+        function profilerSnapPrompt() {
+          const label = prompt(
+            "Snapshot label:",
+            window.renderProfiler?.getLiveStats().scenario || "snap"
+          );
+          if (label !== null) profilerCmd("snap", label.trim() || "snap");
+        }
+
+        function _profilerRenderTable() {
+          const snaps = window.renderProfiler?._snapshots;
+          if (!snaps || snaps.length === 0) return;
+          const BUDGET_AVG = 50,
+            BUDGET_LOW = 35;
+          const rows = snaps
+            .map((s) => {
+              const avgOk = s.avgFPS >= BUDGET_AVG;
+              const lowOk = s.p1low >= BUDGET_LOW;
+              const budget = avgOk && lowOk ? "✔ PASS" : "✖ FAIL";
+              const budgetColor =
+                avgOk && lowOk ? "var(--success)" : "var(--danger)";
+              const avgColor = avgOk ? "var(--success)" : "var(--danger)";
+              const lowColor = lowOk ? "var(--success)" : "var(--warning)";
+              return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 10px;color:var(--text-bright)">${s.scenario}</td>
+              <td style="padding:6px 10px;text-align:right;color:${avgColor}">${s.avgFPS}</td>
+              <td style="padding:6px 10px;text-align:right;color:${lowColor}">${s.p1low}</td>
+              <td style="padding:6px 10px;text-align:right;color:var(--text)">${s.minFPS}</td>
+              <td style="padding:6px 10px;text-align:right;color:var(--text)">${s.frames}</td>
+              <td style="padding:6px 10px;text-align:right;font-weight:700;color:${budgetColor}">${budget}</td>
+            </tr>`;
+            })
+            .join("");
+          document.getElementById("prof-table-body").innerHTML = rows;
+        }
+
+        function profilerExport() {
+          const snaps = window.renderProfiler?._snapshots;
+          if (!snaps || snaps.length === 0) {
+            alert("No snapshots to export.");
+            return;
+          }
+          const blob = new Blob(
+            [
+              JSON.stringify(
+                { date: new Date().toISOString(), snapshots: snaps },
+                null,
+                2
+              ),
+            ],
+            { type: "application/json" }
+          );
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `mtc-baseline-${Date.now()}.json`;
+          a.click();
+        }
+
+        // Live FPS polling
+        setInterval(() => {
+          const prof = window.renderProfiler;
+          if (!prof) return;
+          const s = prof.getLiveStats();
+          const fpsEl = document.getElementById("prof-live-fps");
+          const scnEl = document.getElementById("prof-live-scenario");
+          const qsFps = document.getElementById("qs-fps");
+          const qsScn = document.getElementById("qs-fps-scenario");
+          if (fpsEl) {
+            const fps = s.fps ? s.fps.toFixed(1) : "—";
+            const color = !s.fps
+              ? ""
+              : s.fps >= 55
+              ? "color:var(--success)"
+              : s.fps >= 45
+              ? "color:var(--warning)"
+              : "color:var(--danger)";
+            fpsEl.innerHTML = `<span style="${color}">FPS: ${fps}</span>${
+              s.active ? "" : ' <span style="color:#475569">[paused]</span>'
+            }`;
+          }
+          if (scnEl) scnEl.textContent = `scenario: ${s.scenario}`;
+          if (qsFps) {
+            qsFps.textContent = s.fps ? s.fps.toFixed(1) : "—";
+            qsFps.className = `qs-value ${
+              !s.fps ? "" : s.fps >= 55 ? "ok" : s.fps >= 45 ? "warn" : "err"
+            }`;
+          }
+          if (qsScn) qsScn.textContent = s.scenario;
+        }, 500);
+
+        // Diagnostic test — add after sec-systems AdminSystem check
+        // (injected at runtime so it piggybacks on the existing T() harness)
 
         // ── Auto-init on load ──
         window.addEventListener("load", () => {

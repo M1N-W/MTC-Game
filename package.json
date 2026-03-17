@@ -1,0 +1,27 @@
+{
+  "name": "mtc-game",
+  "version": "1.0.0",
+  "description": "**MTC The Game** เป็นโปรเจกต์เกมแนว Wave-based Survival Shooter ที่สร้างขึ้นด้วย **Vanilla JavaScript** และ **HTML5 Canvas** โดยเน้นความลื่นไหลระดับ 60 FPS และระบบ AI ที่มีความซับซ้อน โปรเจกต์นี้ถูกออกแบบมาเพื่อท้าทายขีดจำกัดของการพัฒนาเกมบนเว็บโดยไม่พึ่งพา Framework ใดๆ",
+  "main": "sw.js",
+  "scripts": {
+    "build:css": "npx tailwindcss -i .\\css\\tailwind-input.css -o .\\css\\tailwind.css --minify",
+    "watch:css": "npx tailwindcss -i .\\css\\tailwind-input.css -o .\\css\\tailwind.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/M1N-W/MTC-Game.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/M1N-W/MTC-Game/issues"
+  },
+  "homepage": "https://github.com/M1N-W/MTC-Game#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "tailwindcss": "^4.2.1"
+  }
+}

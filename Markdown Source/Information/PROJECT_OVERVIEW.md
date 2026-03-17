@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.39.0
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.39.5
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -63,15 +63,15 @@ Output Preferences:
 
 ### `/js/` — Core Logic
 
-| ไฟล์          | หน้าที่สำคัญ                                                                                                              |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `game.js`     | Game loop หลัก, state transitions, startGame()                                                                            |
-| `utils.js`    | Utility functions                                                                                                         |
-| `tutorial.js` | Tutorial system                                                                                                           |
-| `audio.js`    | SFX + BGM, Web Audio API, BGM crossfade system, namespace protection                                                      |
-| `input.js`    | Keyboard/mouse/touch — global `keys` object, **mobile haptic feedback**, **button press states**, **touchcancel cleanup** |
-| `map.js`      | แผนที่, collision detection, MTCRoom                                                                                      |
-| `menu.js`     | Main menu, `selectCharacter()`                                                                                            |
+| ไฟล์          | หน้าที่สำคัญ                                                                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `game.js`     | Game loop หลัก, state transitions, startGame()                                                                                    |
+| `utils.js`    | Utility functions                                                                                                                 |
+| `tutorial.js` | Tutorial system                                                                                                                   |
+| `audio.js`    | SFX + BGM, Web Audio API, BGM crossfade system, namespace protection                                                              |
+| `input.js`    | Keyboard/mouse/touch — global `keys` object, **mobile haptic feedback**, **button press states**, **touchcancel cleanup**         |
+| `map.js`      | แผนที่, collision detection, MTCRoom, interactive objects (HackTerminal / MedStation / AmmoCrate / PowerNode), zone pattern cache |
+| `menu.js`     | Main menu, `selectCharacter()`                                                                                                    |
 
 ### `/js/config/` — Configuration 🟢
 
@@ -144,36 +144,44 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 
 ### `/js/entities/boss/`
 
-| ไฟล์                     | หน้าที่                                                                                                                                                                                                                                             |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BossBase.js`            | Base Boss class — shared lifecycle, death hooks                                                                                                                                                                                                     |
-| `ManopBoss.js`           | KruManop + BossDog classes (math boss encounters)                                                                                                                                                                                                   |
-| `FirstBoss.js`           | KruFirst class (physics boss with GravitationalSingularity) — HP scaling reads `BALANCE.boss.first.hpBaseMult` + `advancedHpMult` via `const _F = BALANCE.boss.first` (fixed March 2026; previously hardcoded, config values were silently ignored) |
-| `boss_attacks_shared.js` | Shared attack effects — `ExpandingRing` (used by both bosses)                                                                                                                                                                                       |
-| `BarkWave.js`            | KruManop: Sonic cone bark attack (Phase 2)                                                                                                                                                                                                          |
-| `GoldfishMinion.js`      | KruManop: Kamikaze sine-wave fish (Phase 3)                                                                                                                                                                                                         |
-| `BubbleProjectile.js`    | KruManop: Slowing bubbles (Phase 3)                                                                                                                                                                                                                 |
-| `MatrixGridAttack.js`    | KruManop: Grid-based area denial                                                                                                                                                                                                                    |
-| `DomainExpansion.js`     | KruManop: Ultimate "Metrics-Manipulation" singleton                                                                                                                                                                                                 |
-| `EquationSlam.js`        | KruManop: Shockwave ring with formula shards                                                                                                                                                                                                        |
-| `DeadlyGraph.js`         | KruManop: Expanding laser beam with risk/reward zone                                                                                                                                                                                                |
-| `ChalkWall.js`           | KruManop: Ground hazard chalk lines                                                                                                                                                                                                                 |
-| `boss_attacks_first.js`  | KruFirst attacks — `FreeFallWarningRing`, `PorkSandwich`, `EmpPulse`, `PhysicsFormulaZone`, `ParabolicVolley`, `OrbitalDebris`, `GravitationalSingularity`, `GravityWell`, `SuperpositionClone`                                                     |
+| ไฟล์                     | หน้าที่                                                                                                                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BossBase.js`            | Base Boss class — shared lifecycle, death hooks                                                                                                                                                 |
+| `ManopBoss.js`           | KruManop + BossDog classes (math boss encounters)                                                                                                                                               |
+| `FirstBoss.js`           | KruFirst class (physics boss with GravitationalSingularity) — HP scaling is config-driven via `BALANCE.boss.first`.                                                                             |
+| `boss_attacks_shared.js` | Shared attack effects — `ExpandingRing` (used by both bosses)                                                                                                                                   |
+| `BarkWave.js`            | KruManop: Sonic cone bark attack (Phase 2)                                                                                                                                                      |
+| `GoldfishMinion.js`      | KruManop: Kamikaze sine-wave fish (Phase 3)                                                                                                                                                     |
+| `BubbleProjectile.js`    | KruManop: Slowing bubbles (Phase 3)                                                                                                                                                             |
+| `MatrixGridAttack.js`    | KruManop: Grid-based area denial                                                                                                                                                                |
+| `DomainExpansion.js`     | KruManop: Ultimate "Metrics-Manipulation" singleton                                                                                                                                             |
+| `EquationSlam.js`        | KruManop: Shockwave ring with formula shards                                                                                                                                                    |
+| `DeadlyGraph.js`         | KruManop: Expanding laser beam with risk/reward zone                                                                                                                                            |
+| `ChalkWall.js`           | KruManop: Ground hazard chalk lines                                                                                                                                                             |
+| `boss_attacks_first.js`  | KruFirst attacks — `FreeFallWarningRing`, `PorkSandwich`, `EmpPulse`, `PhysicsFormulaZone`, `ParabolicVolley`, `OrbitalDebris`, `GravitationalSingularity`, `GravityWell`, `SuperpositionClone` |
 
 ### `/js/entities/player/`
 
-| ไฟล์            | ตัวละคร     | บทบาท                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| --------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()` — Dev Mode stat-package buff (OPERATOR `devbuff` command), `_hitFlashTimer`, passive unlock. charId-branching allowed here (no instanceof).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `Kaoplayer.js`  | เก้า        | Assassin — stealth, teleport, clone                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `PoomPlayer.js` | ภูมิ        | Spiritual Warrior — ritual, naga, garuda                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `AutoPlayer.js` | ออโต้       | Thermodynamic Brawler — Heat Wave, Vacuum Pull+Ignite (Q), Overheat Detonation (E), Wanchai Stand (R-Click, JoJo-inspired crimson/gold), Heat Tier System (COLD/WARM/HOT/OVERHEAT), Stand Meter (0–100%), ORA Combo, Skill Synergy (Stand Pull/Charge Punch/Stand Guard), Rage Mode, Killing Blow Supercharge                                                                                                                                                                                                                                                                                                                                         |
-| `PatPlayer.js`  | แพท         | Samurai Ronin — Katana dual-mode (Slash Wave / Melee Combo), Zanzo Flash Q (afterimage blink+ambush), Iaido Strike R (3-phase cinematic kill, hits **both** enemies and boss), Blade Guard R-Click (hold=Guard reflect ×2 / tap<0.15s=Perfect Parry reflect ×4 + i-frame) — ⚠️ `tryReflectProjectile` branches on `_perfectParryArmed` vs `bladeGuardActive`; MUST set `proj.team='player'`, `proj.owner='player'`, AND `proj.isReflected=true` (keeps original visual); Iaido point-blank sets `_invincibleTimer`; `takeDamage()` is overridden to guard `_invincibleTimer > 0`; katana hands drawn inside katana `ctx.save()` block at local coords |
+| ไฟล์            | ตัวละคร     | บทบาท                                                                                                                                                                                                    |
+| --------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PlayerBase.js` | Base ทุกตัว | `applyDevBuff()` — Dev Mode stat-package buff, `_hitFlashTimer`, passive unlock. charId-branching allowed here (no instanceof).                                                                          |
+| `Kaoplayer.js`  | เก้า        | Assassin — stealth, teleport, clone                                                                                                                                                                      |
+| `PoomPlayer.js` | ภูมิ        | Spiritual Warrior — ritual, naga, garuda                                                                                                                                                                 |
+| `AutoPlayer.js` | ออโต้       | Thermodynamic Brawler — Heat Wave, Vacuum Pull+Ignite (Q), Overheat Detonation (E), Wanchai Stand (R-Click), Heat Tier System (COLD/WARM/HOT/OVERHEAT), Stand Meter, ORA Combo, Skill Synergy, Rage Mode |
+| `PatPlayer.js`  | แพท         | Samurai Ronin — Katana dual-mode (Slash Wave / Melee Combo), Zanzo Flash Q (afterimage blink+ambush), Iaido Strike R (cinematic kill), Blade Guard R-Click (reflect projectiles)                         |
 
 ### `/js/rendering/`
 
-- `PlayerRenderer.js` — วาด player ทั้งหมด (animations, effects, hit flash)
+- `PlayerRenderer.js` — Dispatcher (`static draw()`) + shared helpers: `_drawBase()` (generic fallback), `_getLimbParams()`, `_drawGroundShadow()`, `_drawGroundFeet()`, `_drawHitFlash()`, `_drawLevelBadge()`, `_drawLowHpGlow()`, `_drawEnergyShield()`
+- `KaoRenderer.js` — `_drawKao()` + `_drawKaoClone()`
+- `AutoRenderer.js` — dispatcher `_drawAuto()` + 9 part functions (`_drawAutoDashTrail`, `_drawAutoGroundFX`, `_drawAutoVacuumRing`, `_drawAutoDetonationRing`, `_drawAutoStandGuard`, `_drawAutoStandRush`, `_drawAutoChargePunch`, `_drawAutoBody`, `_drawAutoWeaponFists`) + `_drawAutoAura()` + `_drawWanchaiStand()`. Static body cache: `_bodyCache` (Map, tier-keyed).
+- `PoomRenderer.js` — `_drawPoom()`
+- `PatRenderer.js` — `_drawPat()`
 - `BossRenderer.js` — วาด boss ทั้งหมด (KruManop, KruFirst, BossDog, domain effects)
+- `ProjectileRenderer.js` — วาด projectile ทั้งหมด (bullets, punches, FX)
+- `RenderTokens.js` — Visual token system — single source of truth for palette, glow, stroke, alpha. All renderers read `RT.*`; never hardcode style values. `RT.override(patch)` for skin themes; `RT.reset()` to unload.
+
+> ⚠️ **Dispatch pattern — graceful fallback:** `PlayerRenderer.draw()` เรียก `window.KaoRenderer?._drawKao()` ก่อนเสมอ; ถ้า file ยังไม่โหลด (เช่น index.html load order ผิด) จะ fallback กลับมาเรียก `PlayerRenderer._drawKao()` แทน — ป้องกัน crash ระหว่าง dev
 
 ### `/assets/audio/`
 
@@ -219,15 +227,6 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 - Documentation updates (README, changelog, PROJECT_OVERVIEW)
 - Small quality-of-life improvements
 
-### 🔄 Recent Examples
-
-| **Version Change**  | **Type** | **Reason**                                                 |
-| ------------------- | -------- | ---------------------------------------------------------- |
-| v3.27.11 → v3.28.0  | +0.01.00 | AI Enhancement System (4 new files, architecture refactor) |
-| v3.27.10 → v3.27.11 | +0.01.00 | BGM Crossfade System (major audio system)                  |
-| v3.27.9 → v3.27.10  | +0.00.01 | Documentation Update (patch version)                       |
-| v3.27.8 → v3.27.9   | +0.00.01 | UI Language & Theme Updates (minor features)               |
-
 ### ⚠️ Important Notes
 
 - **Documentation-only updates** should increment patch version (+0.00.01) per workflow rules
@@ -254,6 +253,86 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 
 ## 🎮 Architecture 🟢
 
+#### Complete Class Hierarchy
+
+```mermaid
+classDiagram
+    class Entity {
+        +x, y, vx, vy, radius, angle
+        +applyPhysics(dt)
+        +isOnScreen(buffer)
+    }
+    class PlayerBase {
+        +health: HealthComponent
+        +charId, stats, energy, cooldowns
+        +update(dt, keys, mouse)
+        +dash(ax, ay)
+        +takeDamage(amt)
+    }
+    class EnemyBase {
+        +health: HealthComponent
+        +stickyStacks, statusEffects
+        +_ai: UtilityAI
+        +_tickShared(dt, player)
+    }
+    class BossBase {
+        +difficulty, sayTimer, hitFlashTimer
+        +speak(context)
+        +_updateHUD()
+        +_onDeath()
+    }
+
+    Entity <|-- PlayerBase
+    Entity <|-- EnemyBase
+    Entity <|-- BossBase
+    Entity <|-- BossDog
+
+    PlayerBase <|-- KaoPlayer
+    PlayerBase <|-- AutoPlayer
+    PlayerBase <|-- PoomPlayer
+    PlayerBase <|-- PatPlayer
+
+    EnemyBase <|-- Enemy
+    EnemyBase <|-- TankEnemy
+    EnemyBase <|-- MageEnemy
+
+    BossBase <|-- KruManop
+    BossBase <|-- KruFirst
+
+    KruManop ..> BossDog : summons
+```
+
+#### Core Loop & Lifecycle
+
+The game follows a strict frame lifecycle (60 FPS target):
+
+1. **Input Handling** (`input.js`): Captures keyboard, mouse, and touch states.
+2. **Logic Update** (`game.js` → `updateGame(dt)`):
+   - **Physics & AI**: `applyPhysics`, `_tickShared`, `UtilityAI`, `SquadAI`.
+   - **State Changes**: Health reduction, cooldown decay, status effects.
+   - **Collision**: `SpatialGrid` query and resolution.
+3. **Rendering Dispatch** (`game.js` → `drawGame()`):
+   - **Clear**: `ctx.clearRect()`.
+   - **Draw Order**: Map/Terrain → Environment (decals, casings) → Power-ups → Special Effects → Drone → Player → Enemies → Boss → HUD.
+   - **Post-Processing**: `PostProcessor.js` (bloom, vignette).
+
+#### Key Design Patterns
+
+- **Separation of Concerns**: Logic (`update(dt)`) is strictly isolated from rendering (`draw(ctx)`). `draw` methods are read-only and deterministic.
+- **Object Pooling**: `ParticleSystem`, `FloatingTextSystem`, and `ProjectileManager` reuse objects to eliminate Garbage Collection (GC) stutter.
+- **Spatial Grid**: `SpatialGrid.js` provides O(1) cell-based collision lookups, essential for high entity counts.
+- **Bitmap Caching**: `OffscreenCanvas` caches static body parts (e.g., `AutoRenderer._bodyCache`) to reduce per-frame path construction overhead.
+- **Singleton State**: `GameState.js` is the single source of truth for game phase, time scale, and global flags.
+- **Visual Tokens**: `RenderTokens.js` centralizes all colors, glows, and stroke weights.
+
+#### Hidden Cross-File Dependencies
+
+- **GameState Singleton**: Centralized state manager consumed by almost every core system.
+- **Special Effects System**: `window.specialEffects` array used for complex, multi-frame visual/logic objects (e.g., `DomainExpansion`, `DeadlyGraph`).
+- **Audio Namespace**: Global `Audio` instance with protected namespaces to prevent overlapping BGM/SFX.
+- **WorkerBridge**: Main-thread bridge to `analyzer-worker.js` for off-thread AI pattern analysis.
+- **UIManager / CanvasHUD**: UIManager handles DOM-based HUD, while CanvasHUD handles direct-to-canvas rendering (Minimap, arcs).
+
 ### Core Loop
 
 ```
@@ -264,7 +343,7 @@ Input (input.js) → Game Update (game.js) → Entity Updates → Collision (map
 
 - **Object Pooling** — particles/projectiles/FloatingText (effects.js) ลด GC
 - **State Management** — GameState singleton
-- **Static Bitmap Caching** — ใช้ `OffscreenCanvas` ใน `BossRenderer` และ `PlayerRenderer` เพื่อ cache static body parts (ช่วยลด draw calls และ GPU state switching)
+- **Static Bitmap Caching** — ใช้ `OffscreenCanvas` ใน `BossRenderer` (`_getOrCreateBodyBitmap`), `PlayerRenderer`, และ `AutoRenderer` (`_bodyCache` Map keyed by heatTier) เพื่อ cache static body parts
 - **Rendering Decoupling** — `PlayerRenderer.draw()` dispatcher → `_drawKao()` / `_drawPoom()` / `_drawAuto()`, `BossRenderer.draw()` dispatcher → `drawBoss()` / `drawBossFirst()` / `drawBossDog()`
 - **Spatial Grid** — weapons.js collision: O(E) build, O(P×k) query — เร็วกว่า O(P×E) brute force \~12×
 - **Module-level JSDoc Headers** — ทุกไฟล์ JS มี header บอกสารบัญ (TOC) พร้อมเลขบรรทัด ช่วยให้ AI Assistant นำทาง codebase ได้เร็วขึ้นโดยไม่ต้องอ่านไฟล์ทั้งหมด
@@ -359,13 +438,13 @@ _"commit and push, check changes first, write detailed description, update @sw\.
 
 ### Wave Events 🟡
 
-| Event  | เงื่อนไข          | ผล                                    |
-| ------ | ----------------- | ------------------------------------- |
-| Dark   | Wave 1            | มืด                                   |
-| Fog    | Waves 2,8,11,14   | หมอก                                  |
-| Speed  | Waves 4,7,13      | ศัตรูเร็วขึ้น                         |
-| Glitch | ทุก 5 waves       | invert controls, enemy melee dmg −40% |
-| Boss   | Waves 3,6,9,12,15 | deterministic boss queue              |
+| Event  | Effect                                |
+| ------ | ------------------------------------- |
+| Dark   | Darkens the arena                     |
+| Fog    | Spawns fog overlay                    |
+| Speed  | Increases enemy movement speed        |
+| Glitch | Inverts controls, reduces melee dmg   |
+| Boss   | Spawns a deterministic boss encounter |
 
 ### MTC Room
 
@@ -439,12 +518,14 @@ this.maxHp = BALANCE.boss.baseHp * difficulty * (_B.hpBaseMult ?? 1.0);
 
 **ต้องแก้:** `css/main.css` (`.resume-prompt-inner`, `.resume-btn`, `.rp-corner` ฯลฯ), `index.html` (HTML structure ของ `#resume-prompt`)
 ⚠️ Stat bar ของ char select อยู่ใน `index.html` (hard-coded width % + val) — ถ้าแก้ balance ต้องอัพเดท stat bars ด้วย
-⚠️ Reference สำหรับ stat bars: HP max = Auto 230, SPD max = 298, RANGE max = Kao 900, DMG ref ≈ 150 DPS
 
 ### แก้ Map / MTC Room
 
 **ต้องแก้:** `map.js`, `config.js`
 ⚠️ Bounds: x:−150→150, y:−700→−460 | Boss spawn guard ใน BossBase constructor
+⚠️ Interactive object interaction lives in `game.js _checkProximityInteractions()` — NOT inside map.js update()
+⚠️ Interactive object update (cooldown, PowerNode aura) lives in `game.js _tickEnvironment()` — map.js ไม่มี per-frame update ของตัวเอง
+⚠️ Wave reset hook for usedThisWave flag: loop `mapSystem.objects` in game.js wave-clear trigger
 
 ### เพิ่ม Achievement
 
@@ -547,6 +628,25 @@ Shell casings          effects.js                    ShellCasingSystem
 3. เพิ่ม object ใหม่ → `map.js` → เพิ่ม type ใน `MapObject.draw()` switch + `generateCampusMap()`
 4. แก้ระยะแสง/สีแสง → `config.js` → `BALANCE.LIGHTING`
 5. เพิ่ม particle/decal เมื่อ object ถูกทำลาย → `effects.js` → `DecalSystem` / `spawnParticles()`
+
+**Interactive Map Objects** (added v3.39+):
+
+| Class          | Type string      | Location | mechanic                                                        |
+| -------------- | ---------------- | -------- | --------------------------------------------------------------- |
+| `HackTerminal` | `'hackterminal'` | map.js   | กด E → pause trickle spawn (window.hackTerminalActive flag)     |
+| `MedStation`   | `'medstation'`   | map.js   | กด E → regen HP, usedThisWave flag resets per wave              |
+| `AmmoCrate`    | `'ammocrate'`    | map.js   | กด E → restore energy, usedThisWave flag                        |
+| `PowerNode`    | `'powernode'`    | map.js   | passive aura — player.damageBoost ×(1+mult) on enter, ÷ on exit |
+
+⚠️ Interactive objects extend `MapObject` — inherits AABB collision and draw() dispatch automatically
+⚠️ PowerNode uses multiplication/division on `damageBoost` (never additive) to compose correctly with shop buffs
+⚠️ `window.hackTerminalActive` flag read by `WaveManager.updateWaveEvent()` trickle block
+
+**Zone Pattern Cache** (`_initPatternCanvases`):
+
+- Called once per canvas context from `drawZoneFloors()` — zero GC after first frame
+- Builds offscreen tile canvases and calls `ctx.createPattern()` per zone key
+- Patterns are world-locked: phase offset derived from `worldToScreen(0,0)` mod tile dimensions so patterns stay fixed as camera pans
 
 > ⚠️ `map.js` ใช้ `CTX` (global canvas context) โดยตรง — ต่างจาก Renderer files ที่รับ `ctx` เป็น parameter\
 > ⚠️ ห้าม `Math.random()` ใน `draw()` ของ map object — ใช้ deterministic seed แทน (ดูตัวอย่างใน `drawWall()`)
@@ -1052,20 +1152,20 @@ const limb = _getLimbParams(entity, now)
 
 ---
 
-## 🤖 AI Roles
+## 🤖 AI Roles — Trae Agent Workflow (Updated March 2026) 🟢
 
-| Claude (ใช้ผ่าน claude.ai — อาจสลับ session บ่อยเพราะ token) | IDE (Windsurf / Cursor / Antigravity / Trae/ อื่นๆ) |
-| ------------------------------------------------------------ | --------------------------------------------------- |
-| Complex refactoring, multi-file changes                      | Simple features, small tweaks                       |
-| Deep bug analysis, root cause                                | Commit & push                                       |
-| Architecture redesign                                        | Documentation sync                                  |
-| Performance optimization                                     | File analysis, grep                                 |
-| Critical bug fixes                                           | UI/visual minor edits                               |
-| Animation/rendering improvements                             | Visual polish                                       |
+ในยุคของ **Trae IDE**, บทบาทของ AI ได้ถูกรวมศูนย์ (Centralized) เพื่อประสิทธิภาพสูงสุด:
 
-> ⚠️ **Multi-session note:** Claude ใช้แบบ free plan — token อาจหมดกลาง session ทำให้ต้องขึ้นแชทใหม่บ่อย
-> ทุกแชทใหม่ควรแนบ `Markdown Source/Information/PROJECT_OVERVIEW.md` + ไฟล์ที่เกี่ยวข้องเพื่อให้ Claude มี context ครบ \
-> (ความจริงแล้วไฟล์ชื่อ `PROJECT_OVERVIEW.md`แต่ผมแค่อยากชี้แจง Pathway ปัจจุบัน)
+| Role                       | Workflow ใน Trae (Agent Mode)                                                                                               | หมายเหตุ                                           |
+| :------------------------- | :-------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------- |
+| **Senior AI Agent (Trae)** | **ทุกอย่าง (End-to-End):** ตั้งแต่การวิเคราะห์, วางแผน, เขียนโค้ด (Complex/Simple), แก้ไขบั๊ก, จนถึงการทดสอบและอัปเดตเอกสาร | **Primary Role:** ใช้เป็นตัวหลักสำหรับทุกงานพัฒนา  |
+| **Claude (Website)**       | **Creative Brainstorming:** ออกแบบเนื้อเรื่อง, คิดความสามารถบอสใหม่ๆ ในเชิงไอเดีย, หรือจำลอง Logic ยากๆ (Artifacts)         | **Secondary Role:** ใช้เป็นที่ปรึกษาเชิงสร้างสรรค์ |
+
+### 💡 Why Trae Agent?
+
+- **Full Context:** เห็นไฟล์ทั้งหมดในโปรเจกต์ (Monorepo/Packages)
+- **Direct Action:** แก้ไขไฟล์ได้โดยตรง ไม่ต้องก๊อปปี้โค้ด
+- **Integrated Tools:** รัน Terminal, เช็ค Error, และจัดการ Versioning ได้ในที่เดียว
 
 ---
 

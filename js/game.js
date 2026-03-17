@@ -84,6 +84,8 @@ let _bgGradW = 0,
   _bgGradH = 0;
 let _bgGradTop = "",
   _bgGradBot = "";
+// _gameLoopLastNow: tracks previous rAF timestamp for PostProcessor FPS sampler
+let _gameLoopLastNow = 0;
 
 // ─── Achievement throttle ─────────────────────────────────────
 let _achFrame = 0;
@@ -134,6 +136,15 @@ function _tutorialForwardInput() {
 // ══════════════════════════════════════════════════════════════
 
 function gameLoop(now) {
+  // ── PostProcessor FPS tracking (before draw — accurate per-frame dt) ──
+  // dt computed here mirrors the clamp logic below; safe to double-compute.
+  if (typeof PostProcessor !== "undefined" && PostProcessor._ready) {
+    PostProcessor._trackFps(
+      Math.min((now - (_gameLoopLastNow || now)) / 1000, 0.1)
+    );
+  }
+  _gameLoopLastNow = now;
+  window.renderProfiler?.tick(); // Phase 0 — frame time sampling
   // BUG FIX: Validate canvas context before drawing
   if (!CTX || !CANVAS) {
     console.warn("[gameLoop] Canvas context lost, stopping loop");
@@ -168,6 +179,7 @@ function gameLoop(now) {
       drawGame();
     } else {
       updateGame(scaledDt);
+      _updateProfilerScenario();
       drawGame();
     }
   } else if (GameState.phase === "PAUSED") {
@@ -184,6 +196,20 @@ function gameLoop(now) {
   }
 
   rafId = requestAnimationFrame(gameLoop);
+}
+
+// ── RenderProfiler scenario auto-tagger (Phase 0) ──────────────────────────
+let _profilerScenarioTick = 0;
+function _updateProfilerScenario() {
+  if (++_profilerScenarioTick < 60) return; // sample every ~1s
+  _profilerScenarioTick = 0;
+  if (typeof window.renderProfiler === "undefined") return;
+  const bossActive = window.boss && !window.boss.dead;
+  const wave = typeof getWave === "function" ? getWave() : 0;
+  let tag = "normal_wave";
+  if (bossActive) tag = "boss_fight";
+  else if (wave >= 8) tag = "heavy_wave";
+  window.renderProfiler.setScenario(tag);
 }
 
 /**
@@ -257,6 +283,7 @@ function updateGame(dt) {
   _tickWaveEvents(dt);
   _tickShopBuffs(dt);
   _checkProximityInteractions(_inTutorial);
+  _checkObjectInteractions(dt);
   _tickEntities(dt, _inTutorial);
   _tickBarrelExplosions();
   _tickEnvironment(dt, _inTutorial);
@@ -405,6 +432,128 @@ function _checkProximityInteractions(_inTutorial) {
   }
 }
 
+// ── Interactive Objects Logic (Hack, Med, Ammo, Power) ───────────────────
+function _checkObjectInteractions(dt) {
+  if (!window.mapSystem || !window.mapSystem.objects) return;
+  const player = window.player;
+  if (!player || player.dead) return;
+
+  // Reset PowerNode buff (will be re-applied if still in range)
+  player.powerNodeActive = false;
+
+  for (const obj of window.mapSystem.objects) {
+    // HackTerminal
+    if (obj instanceof HackTerminal) {
+      // Cooldown tick
+      if (obj.cooldown > 0) obj.cooldown -= dt;
+
+      const dist = Math.hypot(player.x - obj.x, player.y - obj.y);
+      const conf = BALANCE.interactive.hackTerminal;
+
+      if (dist < conf.interactionRadius) {
+        if (keys.e && obj.cooldown <= 0) {
+          obj.isChanneling = true;
+          obj.channelTime += dt;
+
+          // Floating Progress (Optional: handled in draw, but logic here)
+          const pct = Math.min(1, obj.channelTime / conf.channelDuration);
+          if (pct >= 1) {
+            // Hack Complete
+            obj.cooldown = conf.cooldown;
+            obj.channelTime = 0;
+            obj.isChanneling = false;
+            keys.e = 0; // Consume input
+
+            // Trigger Effect
+            if (typeof WaveManager !== "undefined" && WaveManager.pauseWave) {
+              WaveManager.pauseWave(conf.pauseDuration);
+            }
+            spawnFloatingText(
+              "SYSTEM HACKED! WAVE PAUSED",
+              obj.x,
+              obj.y - 60,
+              conf.color,
+              24
+            );
+            addScreenShake(10);
+          }
+        } else {
+          obj.isChanneling = false;
+          obj.channelTime = Math.max(0, obj.channelTime - dt * 2);
+        }
+      } else {
+        obj.isChanneling = false;
+        obj.channelTime = 0;
+      }
+    }
+    // MedStation
+    else if (obj instanceof MedStation) {
+      if (obj.cooldown > 0) obj.cooldown -= dt;
+      const dist = Math.hypot(player.x - obj.x, player.y - obj.y);
+      const conf = BALANCE.interactive.medStation;
+
+      if (dist < conf.interactionRadius) {
+        if (
+          keys.e &&
+          obj.usesLeft > 0 &&
+          obj.cooldown <= 0 &&
+          player.hp < player.maxHp
+        ) {
+          keys.e = 0;
+          player.heal(conf.healAmount);
+          obj.usesLeft--;
+          obj.cooldown = conf.cooldown;
+          spawnFloatingText(
+            `+${conf.healAmount} HP`,
+            obj.x,
+            obj.y - 50,
+            conf.color,
+            24
+          );
+        }
+      }
+    }
+    // AmmoCrate
+    else if (obj instanceof AmmoCrate) {
+      if (obj.cooldown > 0) obj.cooldown -= dt;
+      const dist = Math.hypot(player.x - obj.x, player.y - obj.y);
+      const conf = BALANCE.interactive.ammoCrate;
+
+      if (dist < conf.interactionRadius) {
+        if (
+          keys.e &&
+          obj.usesLeft > 0 &&
+          obj.cooldown <= 0 &&
+          player.energy < player.maxEnergy
+        ) {
+          keys.e = 0;
+          player.energy = Math.min(
+            player.maxEnergy ?? 100,
+            (player.energy ?? 0) + conf.energyAmount
+          );
+          obj.usesLeft--;
+          obj.cooldown = conf.cooldown;
+          spawnFloatingText(
+            "ENERGY REFILLED",
+            obj.x,
+            obj.y - 50,
+            conf.color,
+            24
+          );
+        }
+      }
+    }
+    // PowerNode
+    else if (obj instanceof PowerNode) {
+      const dist = Math.hypot(player.x - obj.x, player.y - obj.y);
+      const conf = BALANCE.interactive.powerNode;
+      if (dist < conf.radius) {
+        player.powerNodeActive = true;
+      }
+    }
+  }
+}
+
 // ── Player, weapon, boss, enemies, AI tick ────────────────────────────────────
 function _tickEntities(dt, _inTutorial) {
   const _mtcRoom = window.mapSystem && window.mapSystem.mtcRoom;
@@ -438,10 +587,21 @@ function _tickEntities(dt, _inTutorial) {
       typeof KaoPlayer !== "undefined" && window.player instanceof KaoPlayer;
     const _isPat =
       typeof PatPlayer !== "undefined" && window.player instanceof PatPlayer;
+
+    // PowerNode Buff Logic
+    let effectiveBoost = window.player.damageBoost;
+    if (
+      window.player.powerNodeActive &&
+      BALANCE.interactive &&
+      BALANCE.interactive.powerNode
+    ) {
+      effectiveBoost *= 1 + BALANCE.interactive.powerNode.damageBonus;
+    }
+
     if (!isKao && !_isPat) {
       const burstProjectiles = weaponSystem.updateBurst(
         window.player,
-        window.player.damageBoost
+        effectiveBoost
       );
       if (burstProjectiles && burstProjectiles.length > 0)
         projectileManager.add(burstProjectiles);
@@ -461,10 +621,7 @@ function _tickEntities(dt, _inTutorial) {
       GameState.phase === "PLAYING"
     ) {
       if (weaponSystem.canShoot()) {
-        const projectiles = weaponSystem.shoot(
-          window.player,
-          window.player.damageBoost
-        );
+        const projectiles = weaponSystem.shoot(window.player, effectiveBoost);
         if (projectiles && projectiles.length > 0) {
           projectileManager.add(projectiles);
           if (typeof window.player.triggerRecoil === "function")
@@ -479,6 +636,26 @@ function _tickEntities(dt, _inTutorial) {
   if (window.drone && window.player && !window.player.dead)
     window.drone.update(dt, window.player);
   if (!_inTutorial && window.boss) window.boss.update(dt, window.player);
+
+  // ── Boss phase-change shockwave ───────────────────────────────────────────
+  // Track phase transitions without touching boss internals.
+  // _prevBossPhase lives on window to survive across ticks.
+  if (
+    window.boss &&
+    !window.boss.dead &&
+    typeof spawnShockwave === "function"
+  ) {
+    const _bp = window.boss.phase;
+    if (
+      typeof window._prevBossPhase === "number" &&
+      _bp !== window._prevBossPhase
+    ) {
+      spawnShockwave("bossPhase", window.boss.x, window.boss.y);
+    }
+    window._prevBossPhase = _bp;
+  } else if (!window.boss || window.boss.dead) {
+    window._prevBossPhase = undefined; // reset on boss death/absence
+  }
 
   // PlayerPatternAnalyzer: routed through WorkerBridge (off-thread when available)
   // Falls back to main-thread playerAnalyzer if Worker unavailable.
@@ -539,8 +716,14 @@ function _tickEntities(dt, _inTutorial) {
 
   if (!_inTutorial) {
     for (let i = window.enemies.length - 1; i >= 0; i--) {
+      const _e = window.enemies[i];
       window.enemies[i].update(dt, window.player);
       if (window.enemies[i].dead) {
+        // ── Crit-kill shockwave — fires when enemy dies from a crit hit ──────
+        // _lastHitWasCrit is set by ProjectileManager on crit damage application
+        if (typeof spawnShockwave === "function" && _e._lastHitWasCrit) {
+          spawnShockwave("crit", _e.x, _e.y);
+        }
         window.enemies[i] = window.enemies[window.enemies.length - 1];
         window.enemies.pop();
       }
@@ -1048,7 +1231,27 @@ function drawGame() {
         ? projectileManager.projectiles
         : [];
     CTX.save();
-    mapSystem.drawLighting(window.player, allProj, [
+
+    // ── Option B: Always-on player ground glow (works at any ambient level) ──
+    // Drawn directly on CTX with 'overlay' blend BEFORE the shadow mask so
+    // the warm pool shows in full daylight. Intensity scales with dash state.
+    if (window.player && !window.player.dead) {
+      const _ps = worldToScreen(window.player.x, window.player.y);
+      const _pr = window.player.isDashing ? 90 : 65;
+      const _pg = CTX.createRadialGradient(_ps.x, _ps.y, 0, _ps.x, _ps.y, _pr);
+      _pg.addColorStop(0, "rgba(255,190,80,0.28)");
+      _pg.addColorStop(0.5, "rgba(255,140,40,0.12)");
+      _pg.addColorStop(1, "rgba(0,0,0,0)");
+      CTX.globalCompositeOperation = "overlay";
+      CTX.fillStyle = _pg;
+      CTX.beginPath();
+      CTX.arc(_ps.x, _ps.y, _pr, 0, Math.PI * 2);
+      CTX.fill();
+      CTX.globalCompositeOperation = "source-over";
+    }
+
+    // ── Build extraLights: static objects + live boss ──────────────────────
+    const _extraLights = [
       {
         x: MTC_DATABASE_SERVER.x,
         y: MTC_DATABASE_SERVER.y,
@@ -1061,7 +1264,36 @@ function drawGame() {
         radius: BALANCE.LIGHTING.shopLightRadius,
         type: "warm",
       },
-    ]);
+    ];
+
+    // Boss light — phase-colored; only feeds into the shadow-mask system
+    // (punchLight destination-out), brightening the ground around the boss.
+    if (window.boss && !window.boss.dead) {
+      const _b = window.boss;
+      // Color matches BossPresets phase theme; falls back to neutral
+      let _bType = "neutral";
+      if (typeof BOSS_PRESETS !== "undefined") {
+        if (_b instanceof KruFirst) {
+          _bType = _b.isEnraged ? "warm" : "cool"; // red vs cyan-green
+        } else if (_b instanceof ManopBoss) {
+          _bType =
+            _b.phase === 3
+              ? "cool" // cyan water phase
+              : _b.phase >= 2
+              ? "warm" // red enraged phase
+              : "neutral"; // gold math phase
+        }
+      }
+      _extraLights.push({
+        x: _b.x,
+        y: _b.y,
+        radius: 160,
+        type: _bType,
+        intensity: _b.isEnraged ? 1.3 : 0.9,
+      });
+    }
+
+    mapSystem.drawLighting(window.player, allProj, _extraLights);
     CTX.restore();
   }
 
@@ -1089,6 +1321,11 @@ function drawGame() {
   if (typeof TutorialSystem !== "undefined" && TutorialSystem.isActive()) {
     TutorialSystem.draw(CTX);
   }
+
+  // ── Post-processing pass (bloom + vignette) ──────────────────────────────
+  // Runs after ALL game draws so the bloom source is the complete frame.
+  // PostProcessor writes to #postCanvas (DOM overlay) — not to CTX.
+  if (typeof PostProcessor !== "undefined") PostProcessor.draw();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1561,6 +1798,14 @@ window.onload = () => {
       // Step 1: Canvas System
       LoadingState.update("canvas", "Canvas System", "INITIALIZING CANVAS...");
       initCanvas();
+
+      // ── PostProcessor: init + resize listener ──────────────────────────
+      if (typeof PostProcessor !== "undefined") {
+        PostProcessor.init();
+        window.addEventListener("resize", () => {
+          if (typeof PostProcessor !== "undefined") PostProcessor.resize();
+        });
+      }
 
       // Step 2: Input System
       LoadingState.update("input", "Input System", "SETTING UP INPUTS...");
