@@ -1102,15 +1102,120 @@ function drawGame() {
   drawGrid();
 
   const _drawNow = performance.now();
-  // ── PERF: globalAlpha + solid color — no template literal alloc per zone ──
-  CTX.fillStyle = "#ef4444";
+  // ── Meteor burn zones: lava crater visual ────────────────────────────────
+  // No Math.random — all animation is deterministic (sin/hash). No state writes.
   for (const z of window.meteorZones) {
     const screen = worldToScreen(z.x, z.y);
-    const a = Math.sin(_drawNow / 200) * 0.3 + 0.7;
-    CTX.globalAlpha = a * 0.4;
+    const r = z.radius;
+    // Viewport cull (glow margin 40px)
+    if (
+      screen.x < -r - 40 ||
+      screen.x > CANVAS.width + r + 40 ||
+      screen.y < -r - 40 ||
+      screen.y > CANVAS.height + r + 40
+    )
+      continue;
+
+    const t = _drawNow / 1000;
+    const fadeAlpha = z.life < 0.8 ? z.life / 0.8 : 1.0; // fade out in last 0.8s
+
+    // ① Scorch crater floor — dark radial fill
+    const floorG = CTX.createRadialGradient(
+      screen.x,
+      screen.y,
+      0,
+      screen.x,
+      screen.y,
+      r
+    );
+    floorG.addColorStop(0, "rgba(25,5,0,0.92)");
+    floorG.addColorStop(0.45, "rgba(80,10,0,0.75)");
+    floorG.addColorStop(0.82, "rgba(130,18,0,0.45)");
+    floorG.addColorStop(1, "rgba(0,0,0,0)");
+    CTX.globalAlpha = fadeAlpha;
+    CTX.fillStyle = floorG;
     CTX.beginPath();
-    CTX.arc(screen.x, screen.y, z.radius, 0, Math.PI * 2);
+    CTX.arc(screen.x, screen.y, r, 0, Math.PI * 2);
     CTX.fill();
+
+    // ② Lava core — pulsing orange-red radial
+    const heatPulse = Math.sin(t * 3.2 + z.x * 0.013) * 0.28 + 0.72;
+    const lavaG = CTX.createRadialGradient(
+      screen.x,
+      screen.y,
+      0,
+      screen.x,
+      screen.y,
+      r * 0.52
+    );
+    lavaG.addColorStop(0, "rgba(253,186,116,0.95)");
+    lavaG.addColorStop(0.4, "rgba(239,68,68,0.70)");
+    lavaG.addColorStop(1, "rgba(0,0,0,0)");
+    CTX.globalAlpha = fadeAlpha * heatPulse * 0.75;
+    CTX.fillStyle = lavaG;
+    CTX.shadowBlur = 28;
+    CTX.shadowColor = "#f97316";
+    CTX.beginPath();
+    CTX.arc(screen.x, screen.y, r * 0.52, 0, Math.PI * 2);
+    CTX.fill();
+    CTX.shadowBlur = 0;
+
+    // ③ Deterministic crack lines — hash of zone world position
+    //    Integer bit-mix so every zone gets a unique stable crack layout.
+    const sx = Math.round(z.x);
+    const sy = Math.round(z.y);
+    const hash = (sx * 73856093) ^ (sy * 19349663);
+    const numCracks = 5 + Math.abs(hash % 3); // 5–7 cracks
+    CTX.lineWidth = 1.4;
+    CTX.lineCap = "round";
+    for (let ci = 0; ci < numCracks; ci++) {
+      const h1 = Math.abs(hash * (ci + 1) * 12345);
+      const h2 = Math.abs(hash * (ci + 7) * 99991);
+      const h3 = Math.abs(hash * (ci + 3) * 77777);
+      const ca = ((h1 % 1000) / 1000) * Math.PI * 2; // crack angle
+      const cl = r * (0.4 + (h2 % 100) / 200); // crack length (0.4r – 0.9r)
+      const x1 = screen.x + Math.cos(ca) * r * 0.04;
+      const y1 = screen.y + Math.sin(ca) * r * 0.04;
+      const x2 = screen.x + Math.cos(ca) * cl;
+      const y2 = screen.y + Math.sin(ca) * cl;
+      // fork at 65% length
+      const fx = screen.x + Math.cos(ca) * cl * 0.65;
+      const fy = screen.y + Math.sin(ca) * cl * 0.65;
+      const fa = ca + ((h3 % 100) / 100 - 0.5) * 1.1; // ±0.55 rad
+      const flen = cl * 0.38;
+      const x3 = fx + Math.cos(fa) * flen;
+      const y3 = fy + Math.sin(fa) * flen;
+
+      const crackG = CTX.createLinearGradient(x1, y1, x2, y2);
+      crackG.addColorStop(0, "rgba(253,186,116,0.95)");
+      crackG.addColorStop(0.4, "rgba(239,68,68,0.65)");
+      crackG.addColorStop(1, "rgba(80,0,0,0.10)");
+      CTX.globalAlpha = fadeAlpha * (0.55 + Math.sin(t * 2.2 + ci * 1.1) * 0.3);
+      CTX.strokeStyle = crackG;
+      CTX.shadowBlur = 7;
+      CTX.shadowColor = "#ef4444";
+      CTX.beginPath();
+      CTX.moveTo(x1, y1);
+      CTX.lineTo(x2, y2);
+      CTX.stroke();
+      CTX.beginPath();
+      CTX.moveTo(fx, fy);
+      CTX.lineTo(x3, y3);
+      CTX.stroke();
+      CTX.shadowBlur = 0;
+    }
+
+    // ④ Outer danger ring
+    const ringPulse = Math.sin(t * 4.5 + z.x * 0.018) * 0.25 + 0.75;
+    CTX.globalAlpha = fadeAlpha * ringPulse * 0.85;
+    CTX.strokeStyle = "#ef4444";
+    CTX.lineWidth = 2.2;
+    CTX.shadowBlur = 14;
+    CTX.shadowColor = "#dc2626";
+    CTX.beginPath();
+    CTX.arc(screen.x, screen.y, r - 2, 0, Math.PI * 2);
+    CTX.stroke();
+    CTX.shadowBlur = 0;
   }
   CTX.globalAlpha = 1;
 

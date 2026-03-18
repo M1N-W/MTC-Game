@@ -53,7 +53,12 @@ class Projectile {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
-    this.angle += dt * 2; // Preserves visual spinning effect
+    // (ผู้เล่น = ล็อกตามทิศ), (ศัตรู = หมุนตามเดิม);
+    if (this.team === "player") {
+      this.angle = Math.atan2(this.vy, this.vx);
+    } else {
+      this.angle += dt * 2;
+    }
 
     // --- BULLET-PROOF RICOCHET & BOUNDARY PHYSICS ---
     const _wb =

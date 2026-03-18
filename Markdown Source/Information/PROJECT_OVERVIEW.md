@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.40.1
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.40.2
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -52,26 +52,26 @@ Output Preferences:
 
 ### `/Markdown Source/` — Documentation & Guides 🟢
 
-| ไฟล์                  | หน้าที่                                           |
-| --------------------- | ------------------------------------------------- |
+| ไฟล์                              | หน้าที่                                           |
+| --------------------------------- | ------------------------------------------------- |
 | `Information/PROJECT_OVERVIEW.md` | ภาพรวมโปรเจกต์ (ไฟล์นี้)                          |
-| `CHANGELOG.md`        | บันทึกการเปลี่ยนแปลง                              |
-| `Command/commit-push.md` | Instruction สำหรับ commit และ push การเปลี่ยนแปลง |
+| `CHANGELOG.md`                    | บันทึกการเปลี่ยนแปลง                              |
+| `Command/commit-push.md`          | Instruction สำหรับ commit และ push การเปลี่ยนแปลง |
 
 ### `/Markdown Source/Successed-Plan/` — Completed Milestone Documents 🟢
 
-| ไฟล์                  | หน้าที่                                           |
-| --------------------- | ------------------------------------------------- |
-| `walkthrough.md`      | คู่มือการเล่นและระบบเกม                           |
-| `PERF_PLAN.md`        | แผนและสถานะการทำ Performance Audit (Tier 1-4)     |
-| `RENDERING_REMASTER_PLAN.md` | แผนการรีแฟคเตอร์ระบบเรนเดอร์ (v3.40.0)             |
-| `REGRESSION_CHECKLIST.md` | รายการตรวจสอบเพื่อป้องกันบั๊กถดถอย                 |
-| `MAP_REFACTOR_PLAN.md` | แผนการรีแฟคเตอร์ระบบแผนที่                         |
-| `MTC_BACKLOG.md`      | รายการงานที่เสร็จสิ้นแล้ว                         |
-| `COMPREHENSIVE_DEVELOPMENT_PLAN.md` | แผนการพัฒนาฉบับสมบูรณ์ (Archive)           |
-| `REFACTOR_PLAN.md`    | แผนการรีแฟคเตอร์ระบบดั้งเดิม                       |
-| `claude_master_prompt.md` | Master Prompt สำหรับ AI Assistant (Archive)      |
-| `manop_phase2_storyboard.html` | Storyboard สำหรับ Kru Manop Phase 2              |
+| ไฟล์                                | หน้าที่                                       |
+| ----------------------------------- | --------------------------------------------- |
+| `walkthrough.md`                    | คู่มือการเล่นและระบบเกม                       |
+| `PERF_PLAN.md`                      | แผนและสถานะการทำ Performance Audit (Tier 1-4) |
+| `RENDERING_REMASTER_PLAN.md`        | แผนการรีแฟคเตอร์ระบบเรนเดอร์ (v3.40.0)        |
+| `REGRESSION_CHECKLIST.md`           | รายการตรวจสอบเพื่อป้องกันบั๊กถดถอย            |
+| `MAP_REFACTOR_PLAN.md`              | แผนการรีแฟคเตอร์ระบบแผนที่                    |
+| `MTC_BACKLOG.md`                    | รายการงานที่เสร็จสิ้นแล้ว                     |
+| `COMPREHENSIVE_DEVELOPMENT_PLAN.md` | แผนการพัฒนาฉบับสมบูรณ์ (Archive)              |
+| `REFACTOR_PLAN.md`                  | แผนการรีแฟคเตอร์ระบบดั้งเดิม                  |
+| `claude_master_prompt.md`           | Master Prompt สำหรับ AI Assistant (Archive)   |
+| `manop_phase2_storyboard.html`      | Storyboard สำหรับ Kru Manop Phase 2           |
 
 ### `/js/` — Core Logic
 
