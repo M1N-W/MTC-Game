@@ -642,6 +642,125 @@ If `RT.override()` changes colors baked into these bitmaps → call:
 4. **Bitmap Caching**:
    - See §21 for using `OffscreenCanvas` to cache static geometry.
 
+---
+
+## 23. MapSystem Rendering Pipeline (map.js)
+
+`MapSystem` has THREE separate draw calls per frame, invoked in sequence from `game.js`:
+
+```
+MapSystem.drawTerrain(ctx, camera)   ← BEFORE entities
+MapSystem.draw()                     ← AFTER entities (objects in draw order)
+MapSystem.drawLighting(ctx, ...)     ← LAST — composite shadow overlay
+```
+
+### drawTerrain() — 5-pass pipeline (order is fixed):
+
+```
+Pass 1: Arena boundary ring       — animated stroke arcs (haloAlphaBase + sin)
+Pass 2: Tech-hex grid             — corners pre-computed (6× cos/sin outside loop), no string alloc
+Pass 2b: Zone floors              — drawZoneFloors() colored floor tiles per zone
+Pass 3: Circuit paths + packets   — throttled: _terrainFrame & 1 gate (every other frame only)
+Pass 4: Zone auras                — zone-keyed radial gradients
+```
+
+### drawLighting() — composite shadow overlay:
+
+```
+1. Resize _lightCanvas to match main canvas if dimensions changed
+2. lctx.fillStyle = rgba(night color) → fill entire canvas (establishes ambient darkness)
+3. lctx.globalCompositeOperation = 'destination-out'  ← punches holes in the darkness
+4. For each light source: radialGradient circle drawn at screen position
+5. lctx.globalCompositeOperation = 'source-over'     ← restore for tint pass
+6. CTX.drawImage(_lightCanvas, 0, 0)                 ← composite onto main canvas
+```
+
+⚠️ `_lightCanvas` is a persistent OffscreenCanvas on `MapSystem` — do NOT recreate every frame.
+⚠️ Keep total light source count < 12 to avoid GPU fillRect overdraw cost.
+⚠️ `punchLight(wx, wy, radius, type, intensity)` takes WORLD coordinates — it calls `worldToScreen()` internally.
+
+### MapObject.draw() — type dispatcher:
+
+`MapObject.draw()` is a switch on `this.type` that calls the matching standalone draw helper:
+
+```
+'desk'         → drawDesk(w, h)
+'tree'         → drawTree(size)
+'server'       → drawServer(w, h)
+'datapillar'   → drawDataPillar(w, h)
+'bookshelf'    → drawBookshelf(w, h)
+'database'     → drawDatabase(w, h)
+'coopstore'    → drawCoopStore(w, h)
+'vendingmachine' → drawVendingMachine(w, h)
+'mtcwall'      → drawMTCWall()
+'chair'        → drawChair()
+'cabinet'      → drawCabinet()
+'blackboard'   → drawBlackboard()
+'wall'         → drawWall()
+```
+
+Interactive subclasses (HackTerminal, MedStation, AmmoCrate, PowerNode) bypass this dispatcher
+entirely — they override `draw()` directly and call `worldToScreen()` themselves.
+
+⚠️ All standalone draw helpers assume `CTX` is pre-translated to the object's screen position
+via `ctx.save() → ctx.translate(screen.x, screen.y)` in `MapObject.draw()`.
+⚠️ Standalone helpers are pure draw functions — zero state mutation, zero `Math.random()`.
+
+---
+
+## 24. worldToScreen() — Global Coordinate Helper
+
+`worldToScreen(wx, wy)` is a global function defined in `utils.js`.
+Returns `{ x, y }` in canvas pixels. Used by ALL renderer files.
+
+```js
+// ✅ Every draw method starts with:
+const screen = worldToScreen(entity.x, entity.y);
+
+// ❌ Never read window.camera directly in draw code
+// ❌ Never compute your own camera offset
+```
+
+Cross-file dependency: `worldToScreen` is a bare global (not on `window.*`) —
+it is safe in strict mode only because `utils.js` loads first in index.html.
+
+---
+
+## 25. Section Index (quick reference)
+
+| §   | Topic                                              |
+| --- | -------------------------------------------------- |
+| 0   | Frame lifecycle & rendering pipeline               |
+| 1   | Three immutable laws of draw()                     |
+| 2   | ctx.save / ctx.restore pairing                     |
+| 3   | shadowBlur reset                                   |
+| 4   | No Math.random() — deterministic oscillation       |
+| 5   | World space vs screen space                        |
+| 6   | Viewport culling                                   |
+| 7   | Facing flip pattern                                |
+| 8   | Hover animation pattern                            |
+| 9   | Breathe animation pattern                          |
+| 10  | Phase-aura pattern (Boss)                          |
+| 11  | Layer naming convention                            |
+| 12  | Animation state — read only in draw()              |
+| 13  | Radial gradient standard setup                     |
+| 14  | New boss draw method checklist                     |
+| 15  | New player draw method checklist                   |
+| 16  | charId-guarded effects in \_drawBase               |
+| 17  | Muzzle flash pattern (weapon-local space)          |
+| 18  | SVG portrait system                                |
+| 19  | Skill tooltip positioning                          |
+| 20  | UIManager decomposition pattern                    |
+| 21  | OffscreenCanvas bitmap caching                     |
+| 22  | Batching & optimization strategies                 |
+| 23  | MapSystem rendering pipeline                       |
+| 24  | worldToScreen() global helper                      |
+| 25  | This index                                         |
+| 26  | RenderTokens.js                                    |
+| 27  | Font system — CSS properties + ctx.font convention |
+
+---
+
 ## 26. RenderTokens.js — Visual Token System
 
 Single source of truth for all ctx style values. Load before all renderer files.
@@ -650,12 +769,80 @@ Never hardcode hex colors or shadow values that have RT equivalents.
 Usage:
 
 ```js
-ctx.strokeStyle = RT.palette.danger;          // '#ef4444'
-ctx.shadowBlur  = RT.glow.danger.blur;        // 18
-ctx.shadowColor = RT.glow.danger.color;       // '#ef4444'
-ctx.lineWidth   = RT.stroke.medium;           // 2.5
-ctx.globalAlpha = RT.alpha.hitFlashFill;      // 0.75
+ctx.strokeStyle = RT.palette.danger; // '#ef4444'
+ctx.shadowBlur = RT.glow.danger.blur; // 18
+ctx.shadowColor = RT.glow.danger.color; // '#ef4444'
+ctx.lineWidth = RT.stroke.medium; // 2.5
+ctx.globalAlpha = RT.alpha.hitFlashFill; // 0.75
 ```
 
 Skin override: `RT.override({ palette: { danger: '#ff0000' } })`
 After override: invalidate any OffscreenCanvas caches that baked those colors.
+
+---
+
+## 27. Font System — CSS Custom Properties + ctx.font Convention
+
+MTC uses a 4-family font system defined as CSS custom properties in `index.html`:
+
+```css
+:root {
+  --font-display: "Orbitron", "Share Tech Mono", monospace; /* headers, zone IDs, score */
+  --font-hud: "Rajdhani", sans-serif; /* HUD body, skill names, cooldown */
+  --font-mono: "Share Tech Mono", monospace; /* canvas numbers, terminal text */
+  --font-body: "Kanit", "Rajdhani", sans-serif; /* descriptions, Thai text */
+}
+```
+
+### Canvas ctx.font rules (STRICT — applies to every draw method in map.js and renderers)
+
+| Context                   | Font string                                         | Used for                                     |
+| ------------------------- | --------------------------------------------------- | -------------------------------------------- |
+| Zone labels, MTCRoom UI   | `"bold Npx 'Orbitron','Share Tech Mono',monospace"` | Zone IDs, citadel header, SAFE ZONE label    |
+| Canvas numbers / timers   | `"bold Npx 'Share Tech Mono',monospace"`            | Damage numbers, cooldown timers, HP counts   |
+| Small terminal text       | `"Npx 'Share Tech Mono',monospace"`                 | Subtitles, secondary labels on canvas        |
+| Interactive object labels | `"700 Npx 'Rajdhani',sans-serif"`                   | HackTerminal, MedStation, AmmoCrate DOM text |
+
+```js
+// ✅ Canvas number — Share Tech Mono
+CTX.font = "bold 9px 'Share Tech Mono',monospace";
+
+// ✅ Zone label — Orbitron with monospace fallback
+ctx.font = "bold 8px 'Orbitron','Share Tech Mono',monospace";
+
+// ❌ Never use bare system fonts on canvas
+CTX.font = "bold 9px Arial"; // no personality, inconsistent across OS
+CTX.font = "bold 9px monospace"; // falls back to Courier New on Windows
+```
+
+### DOM HUD font rules (UIManager.js / injectCooldownStyles)
+
+```css
+/* Cooldown timer overlay — Rajdhani reads better than Orbitron at 11-13px */
+.cd-timer-text {
+  font: 700 13px "Rajdhani", sans-serif;
+}
+
+/* Skill name labels */
+.skill-name {
+  font-family: var(--font-hud);
+}
+
+/* Title-weight elements (wave announce, boss name) */
+font-family: var(--font-display);
+```
+
+### Cross-file dependency
+
+All four font families are imported in a **single Google Fonts request** in `index.html` `<head>`.
+Adding a new canvas draw method that uses `Orbitron` or `Rajdhani` requires no additional import —
+the fonts are globally available after page load. Do NOT add per-file `@import` or `<link>` tags.
+
+⚠️ `ctx.font` strings with quotes MUST use single quotes inside the string literal:
+
+```js
+// ✅
+CTX.font = "bold 8px 'Share Tech Mono',monospace";
+// ❌ — breaks the JS string
+CTX.font = 'bold 8px "Share Tech Mono",monospace';
+```

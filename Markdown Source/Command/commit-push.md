@@ -1,79 +1,42 @@
-Analyze all unstaged and modified files in the current workspace, then execute the following steps sequentially.
+# ROLE: Senior Game Developer (IDE Agent Mode)
 
----
+Analyze all unstaged and modified files. You are authorized to perform the full release cycle including version bumping.
 
-### ⚡ Efficiency Rule (Fast Patch)
-If the user provides detailed changes in the prompt (e.g., "Big-Balancing Session — Complete") and emphasizes that no further file edits are needed, **SKIP manual file scanning.** Trust the provided details for documentation updates and commit messages.
+## STEP 1: SMART DOCUMENTATION UPDATE
 
----
+Apply updates ONLY if relevant files changed. Maintain strict semantic consistency.
 
-## STEP 1: UPDATE DOCUMENTATION (only if relevant files changed)
+### 📄 PROJECT_OVERVIEW.md
 
-Apply only the rules below. Do not modify any other sections.
+- **Update File Structure:** If files were added/deleted.
+- **Update Wave Events:** If `WaveManager.js` logic/schedule changed.
+- **Update Architecture:** If a new design pattern or core system was introduced.
+- ⛔ **RESTRICTION:** Never modify stats, config values, or the 'Recent Changes' section.
 
-### PROJECT_OVERVIEW.md
+### 🧠 SKILL.md & RENDERING.skill
 
-| Condition | Section to update |
-|---|---|
-| New file added or existing file deleted | File Structure table |
-| Wave schedule changed in `WaveManager.js` | Wave Events table |
-| Room bounds or BossBase spawn guard changed in `map.js` | MTC Room section |
-| New architectural pattern introduced | Architecture section |
+- **Class Map/Inheritance:** Update if class names, aliases, or `extends` changed.
+- **API/Property Rules:** Update if AI methods, physics properties (`vx/vy`), or Poom/Auto special cases changed.
+- **Rendering Loop:** Update if `ctx` flow, layering, or caching strategy changed.
 
-⛔ Never touch:
-- `Recent Changes` section — changelog lives in `CHANGELOG.md` only
-- Any numeric stats: HP, damage, cooldowns, ranges
-- Config key values — source of truth is `config.js`
-- Character Quick-Stats, Base Stats, Heat Tier multipliers
-- Muzzle offset px values unless `shootSingle()` pixel geometry actually changed
+## STEP 2: ATOMIC VERSION BUMP
 
-### SKILL.md (mtc-game-conventions)
+1. **Identify Version:** Read current `CACHE_NAME` in `sw.js`.
+2. **Increment:** Bump the Patch version (v3.x.X) unless the change is Major.
+3. **Synchronize:**
+   - Update `sw.js` (CACHE_NAME).
+   - Add entry to `CHANGELOG.md` with a bulleted list of technical changes.
+   - Update `PROJECT_OVERVIEW.md` (Status line).
+4. **Verify:** Ensure all three files reflect the exact same version number.
 
-| Condition | Section to update |
-|---|---|
-| New constructor or alias added | §2 Class Name Map |
-| `extends` chain changed | §3 Inheritance Chain |
-| `UtilityAI`, `SquadAI`, or `PlayerPatternAnalyzer` API changed | §4 AI method names / load order |
-| `vx/vy`, `stats.moveSpeed`, or `StatusEffect` timing changed | §5 Critical Property Rules |
-| `shootSingle()` offsets in `weapons.js` changed | §8 Muzzle Offsets table |
-| Poom input routing or WeaponSystem bypass changed | §10 Poom Special Cases |
-| Heat tier names or Q/Wanchai behavior changed (not numeric values) | §11 AutoPlayer Heat Tier |
-| New file added or script load order changed | §13 New Content checklist |
+## STEP 3: VERIFICATION & COMMIT
 
-### mtc-rendering.skill (Rendering Conventions)
-
-| Condition | Section to update |
-|---|---|
-| Canvas context flow changed (`ctx.save()` / `ctx.restore()` blocks) | Core Rendering Loop |
-| Layer order or draw sequence changed in `PlayerRenderer.js` / `BossRenderer.js` | Z-Index & Layering |
-| Object pooling logic added or removed in `effects.js` | Performance & Particle GC |
-| Caching strategy changed (e.g. `OffscreenCanvas` usage) | Rendering Decoupling / Cache |
-
----
-
-## STEP 2: BUMP VERSION
-
-1. Increment version in `sw.js` (CACHE_NAME) following the Version Increment Criteria in `PROJECT_OVERVIEW.md`
-2. Add a new entry in `CHANGELOG.md` with full detail of all changes
-3. Verify the version number in `sw.js` and `CHANGELOG.md` match exactly
-
-⚠️ Version bump ownership:
-- Claude / AI agents (code, analysis, chat) → ❌ never touch version numbers
-  Reason: prevents desync between files when token/session limits are hit
-- IDE at commit time (Windsurf / Cursor / Roo Code / Trae) → ✅ bump all files in one pass
-
----
-
-## STEP 3: COMMIT AND PUSH
-
-Generate a detailed, professional git commit message based on all changed files.
-
-Format:
-<type>(<scope>): <short summary>
-<body — bullet list of key changes>
-Files changed: <comma-separated list>
-
-Then execute:
-git add .
-git commit -m "[generated commit message]"
-git push
+1. **Sanity Check:** Ensure no `console.log` or temporary debugging code is left.
+2. **Commit Message:** Generate using Conventional Commits format.
+   - `Format: <type>(<scope>): <short summary>`
+   - `Body: Detailed list of technical impacts.`
+   - `Footer: Files changed list.`
+3. **Execution:**
+   - `git add .`
+   - `git commit -m "[message]"`
+   - `git push` (If rejected, perform `git pull --rebase` then push again).

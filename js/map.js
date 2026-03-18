@@ -411,7 +411,7 @@ function drawDatabase(w, h) {
 
   // Banner text
   CTX.fillStyle = `rgba(253,224,71,${0.8 + pulse * 0.2})`;
-  CTX.font = "bold 7px monospace";
+  CTX.font = "bold 8px 'Share Tech Mono',monospace";
   CTX.textAlign = "center";
   CTX.textBaseline = "middle";
   CTX.fillText("MTC DATABASE", w / 2, 7);
@@ -542,7 +542,7 @@ function drawCoopStore(w, h) {
 
   // Sign text
   CTX.fillStyle = `rgba(252,211,77,${0.85 + pulse * 0.15})`;
-  CTX.font = "bold 8px monospace";
+  CTX.font = "bold 8px 'Share Tech Mono',monospace";
   CTX.textAlign = "center";
   CTX.textBaseline = "middle";
   CTX.fillText("🛒 CO-OP STORE", w / 2, 12 + signH / 2);
@@ -991,10 +991,10 @@ class MapObject {
     CTX.fillStyle = pal.chalkWhite;
     CTX.textAlign = "center";
     CTX.textBaseline = "middle";
-    CTX.font = `bold ${Math.floor(this.h * 0.2)}px monospace`;
+    CTX.font = `bold ${Math.floor(this.h * 0.2)}px 'Share Tech Mono',monospace`;
     CTX.globalAlpha = 0.92;
     CTX.fillText("ax²+bx+c = 0", this.w / 2, this.h * 0.32);
-    CTX.font = `${Math.floor(this.h * 0.14)}px monospace`;
+    CTX.font = `${Math.floor(this.h * 0.14)}px 'Share Tech Mono',monospace`;
     CTX.globalAlpha = 0.65;
     CTX.fillText("x = (-b±√Δ)/2a", this.w / 2, this.h * 0.57);
     CTX.globalAlpha = 1;
@@ -1148,7 +1148,7 @@ class ExplosiveBarrel extends MapObject {
       CTX.fill();
     }
     CTX.restore();
-    CTX.font = "12px Arial";
+    CTX.font = "700 13px 'Rajdhani',sans-serif";
     CTX.textAlign = "center";
     CTX.textBaseline = "middle";
     CTX.fillText("⚠️", W / 2, H / 2);
@@ -1200,7 +1200,7 @@ class HackTerminal extends MapObject {
     CTX.fillRect(6, 6, 48, 40);
 
     // Icon / Status
-    CTX.font = "20px Arial";
+    CTX.font = "600 16px 'Rajdhani',sans-serif";
     CTX.textAlign = "center";
     CTX.textBaseline = "middle";
     CTX.fillStyle = "#ffffff";
@@ -1248,11 +1248,10 @@ class MedStation extends MapObject {
     CTX.lineWidth = 2;
     CTX.strokeRect(0, 0, 50, 50);
 
-    CTX.font = "30px Arial";
-    CTX.textAlign = "center";
-    CTX.textBaseline = "middle";
-    CTX.fillStyle = "#ef4444";
-    CTX.fillText(conf.icon, 25, 25);
+    // Canvas medical cross — no emoji font dependency, renders at any DPR.
+    CTX.fillStyle = isActive ? "#ef4444" : "#6b2424";
+    CTX.fillRect(21, 7, 8, 28); // vertical bar  (x:21–29, y:7–35)
+    CTX.fillRect(8, 19, 34, 8); // horizontal bar (x:8–42,  y:19–27)
 
     // Uses indicator dots
     for (let i = 0; i < BALANCE.interactive.medStation.usesPerWave; i++) {
@@ -1297,11 +1296,17 @@ class AmmoCrate extends MapObject {
     CTX.lineWidth = 2;
     CTX.strokeRect(0, 0, 50, 50);
 
-    CTX.font = "30px Arial";
-    CTX.textAlign = "center";
-    CTX.textBaseline = "middle";
-    CTX.fillStyle = "#f59e0b";
-    CTX.fillText(conf.icon, 25, 25);
+    // Canvas lightning bolt — energy refill visual, no emoji dep.
+    CTX.fillStyle = isActive ? "#fbbf24" : "#92400e";
+    CTX.beginPath();
+    CTX.moveTo(29, 6); // top right
+    CTX.lineTo(17, 26); // mid left
+    CTX.lineTo(25, 26); // mid inner right
+    CTX.lineTo(16, 44); // bottom tip
+    CTX.lineTo(33, 22); // upper right
+    CTX.lineTo(25, 22); // connector
+    CTX.closePath();
+    CTX.fill();
 
     // Uses indicator dots
     for (let i = 0; i < BALANCE.interactive.ammoCrate.usesPerWave; i++) {
@@ -1572,7 +1577,7 @@ class MTCRoom {
       CTX.stroke();
       // Banner text
       CTX.fillStyle = `rgba(254,243,199,${0.75 + pulse * 0.2})`;
-      CTX.font = "bold 8px Orbitron,monospace";
+      CTX.font = "bold 8px 'Orbitron','Share Tech Mono',monospace";
       CTX.textAlign = "center";
       CTX.textBaseline = "middle";
       CTX.fillText("◈  MTC CITADEL  ◈", cx, s.y + barH / 2);
@@ -1638,7 +1643,7 @@ class MTCRoom {
 
       // Status label
       CTX.fillStyle = "rgba(254,243,199,0.85)";
-      CTX.font = "bold 8px Orbitron,monospace";
+      CTX.font = "bold 8px 'Orbitron','Share Tech Mono',monospace";
       CTX.textAlign = "center";
       CTX.textBaseline = "middle";
       CTX.fillText("MTC SYSTEM ONLINE", cx, holoY + holoH - 11);
@@ -1659,7 +1664,7 @@ class MTCRoom {
         CTX.fill();
         CTX.fillStyle = nextColor;
         CTX.globalAlpha = 0.7 + fastPulse * 0.25;
-        CTX.font = "bold 7px monospace";
+        CTX.font = "bold 8px 'Share Tech Mono',monospace";
         CTX.fillText(`NEXT: ${nextIcon} ${nextName}`, cx, holoY + 9);
         CTX.globalAlpha = 1;
       }
@@ -1679,7 +1684,7 @@ class MTCRoom {
         CTX.fillRect(holoX + 6, holoY + holoH + 4, (holoW - 12) * pct, 5);
         CTX.globalAlpha = 0.7;
         CTX.fillStyle = buffCol;
-        CTX.font = "7px monospace";
+        CTX.font = "7px 'Share Tech Mono',monospace";
         CTX.textAlign = "center";
         CTX.textBaseline = "top";
         CTX.fillText(
@@ -1697,7 +1702,7 @@ class MTCRoom {
         CTX.roundRect(holoX + 8, holoY + holoH - 22, holoW - 16, 12, 3);
         CTX.fill();
         CTX.fillStyle = `rgba(239,68,68,${0.75 + fastPulse * 0.25})`;
-        CTX.font = "bold 7px monospace";
+        CTX.font = "bold 8px 'Share Tech Mono',monospace";
         CTX.textAlign = "center";
         CTX.textBaseline = "middle";
         CTX.fillText("⚔️  COMBAT LOCKED", cx, holoY + holoH - 16);
@@ -1709,13 +1714,13 @@ class MTCRoom {
       CTX.roundRect(holoX + 4, holoY + 4, holoW - 8, holoH - 8, 6);
       CTX.fill();
       CTX.fillStyle = "#ef4444";
-      CTX.font = "bold 9px monospace";
+      CTX.font = "bold 9px 'Share Tech Mono',monospace";
       CTX.textAlign = "center";
       CTX.textBaseline = "middle";
       CTX.fillText(`REBOOTING: ${Math.ceil(this.cooldown)}s`, cx, cy);
       if (sinBlink > 0) {
         CTX.fillStyle = "rgba(239,68,68,0.75)";
-        CTX.font = "bold 12px monospace";
+        CTX.font = "bold 12px 'Share Tech Mono',monospace";
         CTX.fillText("⚠", cx, cy - 20);
       }
     }
@@ -1764,7 +1769,7 @@ class MTCRoom {
       CTX.roundRect(cx - 72, ffY - 22, 144, 18, 5);
       CTX.fill();
       CTX.fillStyle = `rgba(250,180,30,${0.75 + pulse * 0.25})`;
-      CTX.font = "bold 8px Orbitron,monospace";
+      CTX.font = "bold 8px 'Orbitron','Share Tech Mono',monospace";
       CTX.textAlign = "center";
       CTX.textBaseline = "middle";
       CTX.fillText("⚕  SAFE ZONE ACTIVE", cx, ffY - 13);
@@ -1799,7 +1804,7 @@ class MTCRoom {
       CTX.roundRect(cx - 58, ffY + 4, 116, 16, 4);
       CTX.fill();
       CTX.fillStyle = `rgba(239,68,68,${0.8 + sinBlink * 0.2})`;
-      CTX.font = "bold 8px monospace";
+      CTX.font = "bold 8px 'Share Tech Mono',monospace";
       CTX.textAlign = "center";
       CTX.textBaseline = "middle";
       CTX.fillText(`⛔ COOLDOWN ${Math.ceil(this.cooldown)}s`, cx, ffY + 12);
@@ -1830,7 +1835,9 @@ class MTCRoom {
       );
       CTX.stroke();
       CTX.fillStyle = timerColor;
-      CTX.font = `bold ${timeLeft < 3 ? "13" : "11"}px monospace`;
+      CTX.font = `bold ${
+        timeLeft < 3 ? "13" : "11"
+      }px 'Share Tech Mono',monospace`;
       CTX.textAlign = "center";
       CTX.textBaseline = "middle";
       CTX.fillText(timeLeft.toFixed(1), timerCx, timerCy);
@@ -1955,24 +1962,28 @@ class MapSystem {
 
   generateCampusMap() {
     // ════════════════════════════════════════════════════════
-    // MAP REFACTOR v2 — CLEAR ZONE DISCIPLINE
+    // MAP v3 — ZONE-ALIGNED PLACEMENT
     //
-    // CLEAR ZONES (ห้ามวาง object ใดๆ):
-    //   • Spawn area          : r < 300 จาก (0,0)
-    //   • Citadel approach    : x∈[-200,200], y∈[-500,-320] (walled corridor)
-    //   • Database approach   : x∈[360,640],  y∈[-440,-280] (south face)
-    //   • CoopStore approach  : x∈[-640,-380], y∈[340,445]  (north approach)
-    //   • East gate gaps      : x∈[390,500],  y∈[-230,-90] และ y∈[95,165]
-    //   • West gate gaps      : x∈[-510,-380], y∈[-230,-90] และ y∈[95,165]
+    // All cluster centers derived from MAP_CONFIG.zones (SystemConfig.js).
+    // Zone boundaries (world coords):
+    //   serverFarm  : x:430→1230,   y:-680→20   (800×700)
+    //   library     : x:-1230→-430, y:-680→20   (800×700)
+    //   courtyard   : x:-600→600,   y:400→1050  (1200×650)
+    //   lectureHallL: x:-1100→-680, y:500→900   (420×400)
+    //   lectureHallR: x:680→1100,   y:500→900   (420×400)
+    //   database    : x:330→670,    y:-660→-320 (340×340)
+    //   shop        : x:-670→-330,  y:320→660   (340×340)
     //
-    // ZONE ISLANDS:
-    //   A Server Farm East   : x ≥ 680 (clear of database x=560 + east wall x=418)
-    //   B Library West       : x ≤ -680 (clear of west wall x=-418)
-    //   C Courtyard South    : y ≥ 580, หลีกเลี่ยง x∈[-640,-380] (shop approach)
-    //   D Lecture Halls      : x<-800 y>550 และ x>700 y>550
+    // CLEAR ZONES (no objects):
+    //   Spawn area        : r < 300 from (0,0)
+    //   Citadel corridor  : x∈[-200,200], y∈[-500,-320]
+    //   Database approach : x∈[360,640],  y∈[-440,-280]
+    //   Shop approach     : x∈[-640,-380], y∈[340,445]
+    //   East gate gaps    : x∈[390,500],  y∈[-230,-90] and y∈[95,165]
+    //   West gate gaps    : x∈[-510,-380], y∈[-230,-90] and y∈[95,165]
     // ════════════════════════════════════════════════════════
 
-    // ── Helpers ──────────────────────────────────────────────
+    // ── Helper: place a grid of objects, center-anchored ─────
     const createCluster = (config) => {
       const {
         centerX,
@@ -1986,37 +1997,29 @@ class MapSystem {
       } = config;
       const sz = BALANCE.map.objectSizes[type];
       if (!sz) return;
-
-      const totalWidth = (cols - 1) * xSpacing;
-      const totalHeight = (rows - 1) * ySpacing;
-      const startX = centerX - totalWidth / 2;
-      const startY = centerY - totalHeight / 2;
-
+      const startX = centerX - ((cols - 1) * xSpacing) / 2;
+      const startY = centerY - ((rows - 1) * ySpacing) / 2;
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const jx = (Math.random() - 0.5) * jitter;
           const jy = (Math.random() - 0.5) * jitter;
           const objX = startX + c * xSpacing + jx;
           const objY = startY + r * ySpacing + jy;
-
-          if (!this._isClearZone(objX, objY, sz.w, sz.h)) {
+          if (!this._isClearZone(objX, objY, sz.w, sz.h))
             this.objects.push(new MapObject(objX, objY, sz.w, sz.h, type));
-          }
         }
       }
     };
 
     // ── 1. MTC CITADEL (North landmark) ──────────────────────
-    // Interior: x=-150…150, y=-580…-340  |  Entrance open at south (y=-340)
-    // Approach corridor (walled, from config): x=-200…200, y=-500…-340 → KEEP CLEAR
+    // Room interior: x=-150…150, y=-580…-340. Entrance south. Approach corridor CLEAR.
     const mtcX = -150,
       mtcY = -580,
       mtcW = 300,
       mtcH = 240;
     this.mtcRoom = new MTCRoom(mtcX, mtcY);
-
     const wallThick = 40;
-    // Landmarks bypass clearzone check to ensure they always spawn
+    // Top + side walls (bypass clearzone — landmarks always spawn)
     this.objects.push(
       new MapObject(
         mtcX - wallThick,
@@ -2032,168 +2035,195 @@ class MapSystem {
     this.objects.push(
       new MapObject(mtcX + mtcW, mtcY, wallThick, mtcH, "mtcwall")
     );
-
-    // Interior decorations — pushed into wall corners only, clear center path
-    if (!this._isClearZone(mtcX + 14, mtcY + 20, 45, 80)) {
+    // Interior corner servers — walls only, center path clear
+    if (!this._isClearZone(mtcX + 14, mtcY + 20, 45, 80))
       this.objects.push(new MapObject(mtcX + 14, mtcY + 20, 45, 80, "server"));
-    }
-    if (!this._isClearZone(mtcX + mtcW - 59, mtcY + 20, 45, 80)) {
+    if (!this._isClearZone(mtcX + mtcW - 59, mtcY + 20, 45, 80))
       this.objects.push(
         new MapObject(mtcX + mtcW - 59, mtcY + 20, 45, 80, "server")
       );
-    }
-    if (!this._isClearZone(mtcX + 85, mtcY + 8, 35, 55)) {
+    if (!this._isClearZone(mtcX + 85, mtcY + 8, 35, 55))
       this.objects.push(
         new MapObject(mtcX + 85, mtcY + 8, 35, 55, "datapillar")
       );
-    }
-    if (!this._isClearZone(mtcX + 180, mtcY + 8, 35, 55)) {
+    if (!this._isClearZone(mtcX + 180, mtcY + 8, 35, 55))
       this.objects.push(
         new MapObject(mtcX + 180, mtcY + 8, 35, 55, "datapillar")
       );
-    }
 
-    // ── 2. MTC DATABASE CLUSTER (NE landmark) ────────────────
-    // Building: x=440…560, y=-560…-420  |  Approach from south (y > -420) CLEAR
-    // Clear zone enforced: x∈[360,640], y∈[-440,-280] — no objects here
+    // ── 2. MTC DATABASE (NE landmark) ─────────────────────────
+    // database zone: x:330→670, y:-660→-320. Approach (south face) CLEAR.
+    // Building at x:440→560, y:-560→-420 (inside zone, bypass clearzone).
     const dbX = 440,
       dbY = -560;
-    // Landmark bypass check
     this.objects.push(new MapObject(dbX, dbY, 120, 140, "database"));
-
-    // 2 servers BEHIND building (north of it — y < dbY)
-    if (!this._isClearZone(dbX - 55, dbY - 15, 40, 70)) {
+    // Flanking servers north of building — inside serverFarm zone, outside clear zones.
+    if (!this._isClearZone(dbX - 55, dbY - 15, 40, 70))
       this.objects.push(new MapObject(dbX - 55, dbY - 15, 40, 70, "server"));
-    }
-    if (!this._isClearZone(dbX + 135, dbY - 15, 40, 70)) {
+    if (!this._isClearZone(dbX + 135, dbY - 15, 40, 70))
       this.objects.push(new MapObject(dbX + 135, dbY - 15, 40, 70, "server"));
-    }
 
-    // ── 3. MTC CO-OP STORE (SW landmark) ─────────────────────
-    // Building centered on interaction point: BALANCE.shop.x=-500, y=490
-    // Approach from north (y < shopY) CLEAR:  x∈[-640,-380], y∈[340,445]
-    const shopX = BALANCE.shop.x - 65; // = -565
-    const shopY = BALANCE.shop.y - 55; // = 435
-    // Landmark bypass check
+    // ── 3. CO-OP STORE (SW landmark) ──────────────────────────
+    // shop zone: x:-670→-330, y:320→660. North approach CLEAR.
+    const shopX = BALANCE.shop.x - 65; // -565
+    const shopY = BALANCE.shop.y - 55; // 435
     this.objects.push(new MapObject(shopX, shopY, 130, 110, "coopstore"));
-
-    // Decorations ONLY south of building (y > shopY + 110 = 545), not blocking north approach
-    if (!this._isClearZone(shopX - 55, shopY + 120, 50, 50)) {
+    // Decorations south of building only (y > shopY+110 = 545)
+    if (!this._isClearZone(shopX - 55, shopY + 120, 50, 50))
       this.objects.push(new MapObject(shopX - 55, shopY + 120, 50, 50, "tree"));
-    }
-    if (!this._isClearZone(shopX + 135, shopY + 120, 50, 50)) {
+    if (!this._isClearZone(shopX + 135, shopY + 120, 50, 50))
       this.objects.push(
         new MapObject(shopX + 135, shopY + 120, 50, 50, "tree")
       );
-    }
-    if (!this._isClearZone(shopX - 55, shopY + 55, 40, 70)) {
+    if (!this._isClearZone(shopX - 55, shopY + 55, 40, 70))
       this.objects.push(
         new MapObject(shopX - 55, shopY + 55, 40, 70, "vendingmachine")
       );
-    }
 
-    // ── 4. ZONE A: Server Farm (East) ────────────────────────
+    // ── 4. ZONE A: Server Farm (East) ─────────────────────────
+    // serverFarm zone: x:430→1230, y:-680→20. Center:(830,-330).
+    // Usable (margin 70px): x:500→1160, y:-610→-50.
+    // Layout: N aisle | 220px corridor | S aisle | east datapillar column.
+    // North server aisle — y center:-520, within -610→-390 ✓
     createCluster({
-      centerX: 850,
-      centerY: 0,
-      rows: 8,
-      cols: 2,
-      xSpacing: 180,
-      ySpacing: 110,
-      type: "server",
-      jitter: 15,
-    });
-    createCluster({
-      centerX: 850,
-      centerY: 0,
-      rows: 8,
-      cols: 2,
-      xSpacing: 180,
-      ySpacing: 110,
-      type: "datapillar",
-      jitter: 15,
-    });
-
-    // ── 5. ZONE B: Library Archives (West) ───────────────────
-    createCluster({
-      centerX: -850,
-      centerY: 0,
-      rows: 10,
+      centerX: 830,
+      centerY: -520,
+      rows: 2,
       cols: 3,
-      xSpacing: 150,
-      ySpacing: 90,
-      type: "bookshelf",
-      jitter: 5,
+      xSpacing: 105,
+      ySpacing: 100,
+      type: "server",
+      jitter: 0,
     });
-
-    // ── 6. ZONE C: Courtyard (South) ─────────────────────────
+    // South server aisle — y center:-150, within -200→-50 ✓
     createCluster({
-      centerX: 0,
-      centerY: 750,
+      centerX: 830,
+      centerY: -150,
+      rows: 2,
+      cols: 3,
+      xSpacing: 105,
+      ySpacing: 100,
+      type: "server",
+      jitter: 0,
+    });
+    // East datapillar column — x:1110 (within 1093→1162), y covers full zone height
+    createCluster({
+      centerX: 1110,
+      centerY: -330,
       rows: 4,
-      cols: 8,
-      xSpacing: 160,
+      cols: 1,
+      xSpacing: 0,
       ySpacing: 130,
-      type: "tree",
-      jitter: 40,
-    });
-    createCluster({
-      centerX: 0,
-      centerY: 750,
-      rows: 3,
-      cols: 6,
-      xSpacing: 200,
-      ySpacing: 160,
-      type: "desk",
-      jitter: 50,
+      type: "datapillar",
+      jitter: 0,
     });
 
-    // ── 7. CENTER COVER & CONNECTORS ──────────────────────────
-    // Connectors between zones to guide flow and provide cover
+    // ── 5. ZONE B: Library Archives (West) ────────────────────
+    // library zone: x:-1230→-430, y:-680→20. Center:(-830,-330).
+    // Usable (margin 70px): x:-1160→-500, y:-610→-50.
+    // Layout: 3 bookshelf rows with ~140px walking aisles between.
+    // Row width=(4-1)*120+80=440px → -830±220 = -1050→-610 ✓
     createCluster({
-      centerX: 450,
-      centerY: 0,
-      rows: 5,
-      cols: 1,
-      xSpacing: 0,
-      ySpacing: 100,
-      type: "datapillar",
-      jitter: 10,
-    });
-    createCluster({
-      centerX: -450,
-      centerY: 0,
-      rows: 5,
-      cols: 1,
-      xSpacing: 0,
-      ySpacing: 100,
-      type: "datapillar",
-      jitter: 10,
-    });
-    createCluster({
-      centerX: 0,
-      centerY: 450,
+      centerX: -830,
+      centerY: -510,
       rows: 1,
       cols: 4,
       xSpacing: 120,
       ySpacing: 0,
-      type: "desk",
-      jitter: 20,
+      type: "bookshelf",
+      jitter: 0,
     });
     createCluster({
-      centerX: 0,
-      centerY: -450,
+      centerX: -830,
+      centerY: -330,
       rows: 1,
-      cols: 2,
-      xSpacing: 150,
+      cols: 4,
+      xSpacing: 120,
       ySpacing: 0,
-      type: "server",
-      jitter: 10,
+      type: "bookshelf",
+      jitter: 0,
+    });
+    createCluster({
+      centerX: -830,
+      centerY: -150,
+      rows: 1,
+      cols: 4,
+      xSpacing: 120,
+      ySpacing: 0,
+      type: "bookshelf",
+      jitter: 0,
     });
 
-    // ── 8. LECTURE HALLS (SE + SW far zones) ─────────────────
+    // ── 6. ZONE C: Courtyard (South) ──────────────────────────
+    // courtyard zone: x:-600→600, y:400→1050. Center:(0,725).
+    // Usable (margin 60px): x:-540→540, y:460→990.
+    // Layout: left/right tree groves on flanks + back hedge. Center lane CLEAR for enemy flow.
+    createCluster({
+      centerX: -360,
+      centerY: 680,
+      rows: 2,
+      cols: 2,
+      xSpacing: 80,
+      ySpacing: 90,
+      type: "tree",
+      jitter: 0,
+    });
+    createCluster({
+      centerX: 360,
+      centerY: 680,
+      rows: 2,
+      cols: 2,
+      xSpacing: 80,
+      ySpacing: 90,
+      type: "tree",
+      jitter: 0,
+    });
+    // Back hedge — y:940 (within 460→990) ✓, x: ±320 (within ±540) ✓
+    createCluster({
+      centerX: 0,
+      centerY: 940,
+      rows: 1,
+      cols: 5,
+      xSpacing: 160,
+      ySpacing: 0,
+      type: "tree",
+      jitter: 0,
+    });
 
-    // ── 9. VENDING MACHINES at zone gates ────────────────────
+    // ── 7. LECTURE HALLS ──────────────────────────────────────
+    // lectureHallL: x:-1100→-680, y:500→900. Center:(-890,700). Margin 60px.
+    createCluster({
+      centerX: -890,
+      centerY: 700,
+      rows: 2,
+      cols: 2,
+      xSpacing: 85,
+      ySpacing: 70,
+      type: "desk",
+      jitter: 0,
+    });
+    // lectureHallR: x:680→1100, y:500→900. Center:(890,700). Margin 60px.
+    createCluster({
+      centerX: 890,
+      centerY: 700,
+      rows: 2,
+      cols: 2,
+      xSpacing: 85,
+      ySpacing: 70,
+      type: "desk",
+      jitter: 0,
+    });
+
+    // ── 8. GATE PILLARS (Center → Zone boundary markers) ──────
+    // 4 datapillars frame east/west wall passage gaps.
+    // x=510: east of clear zone x∈[390,500]. x=-545: west of clear zone x∈[-510,-380].
+    // y=-210 and y=130 align with wall gap edges (not inside gaps).
+    this.objects.push(new MapObject(510, -210, 35, 70, "datapillar"));
+    this.objects.push(new MapObject(510, 130, 35, 70, "datapillar"));
+    this.objects.push(new MapObject(-545, -210, 35, 70, "datapillar"));
+    this.objects.push(new MapObject(-545, 130, 35, 70, "datapillar"));
+
+    // ── 9. VENDING MACHINES at zone gates ─────────────────────
     const vendingSpots = [
       { x: 550, y: -250 },
       { x: 550, y: 250 },
@@ -2202,37 +2232,24 @@ class MapSystem {
       { x: 0, y: 550 },
     ];
     for (const vs of vendingSpots) {
-      if (!this._isClearZone(vs.x, vs.y, 40, 70)) {
+      if (!this._isClearZone(vs.x, vs.y, 40, 70))
         this.objects.push(new MapObject(vs.x, vs.y, 40, 70, "vendingmachine"));
-      }
     }
 
-    // ── 10. CORRIDOR LANDMARK TREES ──────────────────────────
-
-    // ── 11. EXTRA FILLER (Beauty & Density) ─────────────────
-
-    // ── 12. EXPLOSIVE BARRELS ────────────────────────────────
-    // Placed at tactical chokepoints — tooClose threshold 60→45px allows more placements
+    // ── 10. EXPLOSIVE BARRELS (tactical chokepoints) ──────────
     const barrelSpots = [
-      // East zone interior
-      { x: 820, y: -220 },
-      { x: 820, y: 80 },
-      // West zone interior
-      { x: -840, y: -220 },
-      { x: -840, y: 80 },
-      // East gate approach (just inside zone A, not in clear gap)
-      { x: 560, y: -50 },
-      // West gate approach
-      { x: -580, y: -50 },
-      // South approach (outside shop approach zone)
-      { x: -225, y: 440 },
-      { x: 165, y: 440 },
-      // Center zone approaches — reward aggression
-      { x: -280, y: -180 },
-      { x: 250, y: 180 },
-      // Lecture Hall approaches
-      { x: 700, y: 520 },
-      { x: -870, y: 520 },
+      { x: 830, y: -430 }, // serverFarm — between N aisle and database approach
+      { x: 830, y: -50 }, // serverFarm — south side, near east gate
+      { x: -830, y: -430 }, // library — north aisle flank
+      { x: -830, y: -50 }, // library — south side, near west gate
+      { x: 560, y: -50 }, // east gate approach (x=560 > 500 clear zone boundary ✓)
+      { x: -580, y: -50 }, // west gate approach (x=-580 < -510 clear zone boundary ✓)
+      { x: -225, y: 460 }, // courtyard N approach — outside shop clear zone ✓
+      { x: 165, y: 460 }, // courtyard N approach
+      { x: -280, y: -180 }, // center arena W side
+      { x: 250, y: 180 }, // center arena E side
+      { x: 720, y: 520 }, // lectureHallR approach
+      { x: -900, y: 520 }, // lectureHallL approach
     ];
     for (const spot of barrelSpots) {
       let tooClose = false;
@@ -2242,9 +2259,8 @@ class MapSystem {
           break;
         }
       }
-      if (!tooClose && !this._isClearZone(spot.x, spot.y, 30, 38)) {
+      if (!tooClose && !this._isClearZone(spot.x, spot.y, 30, 38))
         this.objects.push(new ExplosiveBarrel(spot.x, spot.y));
-      }
     }
   }
 
@@ -2811,7 +2827,7 @@ class MapSystem {
       // ── 5. Zone ID tag + connecting line (Direction C) ────────────────
       // Tag sits just below the TR bracket, connected by a short vertical line.
       if (sh > bL + 30) {
-        ctx.font = "bold 7px Orbitron,monospace";
+        ctx.font = "bold 7px 'Orbitron','Share Tech Mono',monospace";
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
         const tw = ctx.measureText(meta.id).width;
@@ -2869,7 +2885,7 @@ class MapSystem {
         const s = (v) => (v >= 0 ? "+" : "") + v;
         ctx.globalAlpha = 0.26;
         ctx.fillStyle = meta.bc;
-        ctx.font = "6px Orbitron,monospace";
+        ctx.font = "6px 'Orbitron','Share Tech Mono',monospace";
         ctx.textAlign = "left";
         ctx.textBaseline = "bottom";
         ctx.fillText(`[${s(cx)} / ${s(cy)}]`, tl.x + 6, br.y - 5);

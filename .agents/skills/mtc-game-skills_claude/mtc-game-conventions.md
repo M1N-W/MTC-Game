@@ -84,6 +84,18 @@ Entity (base.js)
 ├── KruManop (file: ManopBoss.js — also contains BossDog)
 └── KruFirst (file: FirstBoss.js)
 
+MapObject (map.js) ← base for all static world objects; NOT in Entity hierarchy
+├── ExplosiveBarrel — adds hp, isExploded; hit detection in game.js \_tickBarrelExplosions()
+├── HackTerminal — adds cooldown, isChanneling; overrides draw()
+├── MedStation — adds usesLeft, cooldown; overrides draw()
+├── AmmoCrate — adds usesLeft, cooldown; overrides draw()
+└── PowerNode — passive aura; overrides draw()
+
+⚠️ MapObject subclasses are NOT Entities — they have no vx/vy, no \_tickShared(), no AI.
+⚠️ Interactive object update (cooldown tick, PowerNode aura) lives in game.js \_tickEnvironment() — NOT MapSystem.update().
+⚠️ Interactive object interaction (player press E) lives in game.js \_checkProximityInteractions() — NOT inside map.js.
+⚠️ window.hackTerminalActive flag is written by HackTerminal and READ by WaveManager.updateWaveEvent() trickle block — hidden cross-file dependency.
+
 New enemy template:
 class SniperEnemy extends EnemyBase {
 constructor(x, y) { super(x, y, 18, 'mage'); this.type = 'sniper'; }
@@ -358,14 +370,12 @@ muzzleY = y + sin(angle)*FORWARD + cos(angle)*PERP*facingSign
 Four tiers: COLD → WARM → HOT → OVERHEAT (0–100% heat meter).
 Each tier applies damage multipliers, punch rate factors, and at OVERHEAT: crit bonus + HP drain.
 
-config.js is ALWAYS source of truth — verify ?? fallback values in AutoPlayer.js match config exactly.
-Key config fields: coldDamageMult, heatDmgWarm, heatDmgHot, heatDmgOverheat,
-heatCritBonusOverheat, heatHpDrainOverheat,
-standMeterDrainRate, standMeterDrainCold, standMeterDrainOverheat,
-standMeterPerHit, standMeterOnKill, standCritBonus
+Source of truth for all tier values: BALANCE.characters.auto in BalanceConfig.js.
+Always verify ?? fallback values in AutoPlayer.js match BalanceConfig.js exactly.
+Key config fields live under BALANCE.characters.auto — do NOT hardcode multipliers inline.
 
 Stand Meter drain multipliers have direction-specific hazards (COLD = penalty, OVERHEAT = faster burn).
-Wrong ?? fallbacks caused pre-v3.30.10 bugs — always verify against config.js before editing.
+Wrong ?? fallbacks caused pre-v3.30.10 bugs — always verify against BalanceConfig.js before editing.
 
 Wanchai (R-Click) active: Q becomes Stand Pull instead of Vacuum Pull.
 HUD arc max for Q must be dynamic (read from config key, not hard-coded) because
@@ -373,7 +383,7 @@ standPullCooldown ≠ vacuumCooldown.
 
 ---
 
-12. config.js Structure
+12. BalanceConfig.js Structure (js/config/BalanceConfig.js)
 
 BALANCE.characters[charId] = {
 hp, maxHp, energy, maxEnergy, moveSpeed, dashSpeed,
@@ -395,10 +405,10 @@ this.doSkill();
 New playable character:
 js/entities/player/[Name]Player.js (extends PlayerBase)
 js/rendering/[Name]Renderer.js — static \_draw[Name](entity,ctx) method + window.[Name]Renderer export
-config.js — BALANCE.characters.[name] block + VISUALS.PALETTE.[NAME] + GAME_TEXTS.skillNames.[name]
+js/config/BalanceConfig.js — BALANCE.characters.[name] block + VISUALS.PALETTE.[NAME] + GAME_TEXTS.skillNames.[name]
 PlayerRenderer.js — add fallback stub: else PlayerRenderer.\_draw[Name]() in dispatch switch + add fallback \_draw[Name]() method body in PlayerRenderer (copy of XxxRenderer logic)
 audio.js — play[Name][Skill]() SFX methods (typically 5-7 skills)
-effects.js — new particle types + spawn[Name][Effect]() helper functions
+js/effects/ — add new particle types to the relevant module (CombatEffects.js for hit effects, PatEffects.js pattern for character-specific effects)
 ui.js — PORTRAITS.[name] + UIManager.\_updateIcons[Name]() + HUD icons
 menu.js — character select entry + icon prefix
 index.html — script tag: [Name]Renderer.js MUST load BEFORE PlayerRenderer.js (or same block)
@@ -411,14 +421,14 @@ Markdown Source/Successed-Plan/PERF_PLAN.md — ถ้ามีการแก�
 **Header Documentation — add module-level JSDoc header (see §18)**
 
 New enemy:
-enemy.js (extends EnemyBase), config.js, WaveManager.js, audio.js, effects.js
+enemy.js (extends EnemyBase), js/config/BalanceConfig.js, WaveManager.js, audio.js, js/effects/ (CombatEffects.js)
 
 New boss:
 js/entities/boss/[Name]Boss.js (extends BossBase)
 BossRenderer.js — static draw + dispatcher (KruFirst first, then ManopBoss, then BossDog)
 js/entities/boss/boss*attacks*[name].js — new attack file for this boss
 (or boss_attacks_shared.js if attacks are reusable across bosses)
-config.js, WaveManager.js, audio.js, index.html (3 script tags: shared → manop/first → new)
+js/config/BalanceConfig.js, WaveManager.js, audio.js, index.html (3 script tags: shared → manop/first → new)
 window.BossXxx = XxxClass alias required for WaveManager + AdminSystem
 Boss queue: waves 3, 6, 9, 12, 15
 
@@ -442,31 +452,41 @@ boss_attacks_first.js — FreeFallWarningRing, PorkSandwich, EmpPulse, PhysicsFo
 ParabolicVolley, OrbitalDebris, GravitationalSingularity,
 GravityWell, SuperpositionClone
 
-Load order in index.html (STRICT): 1. config/BalanceConfig.js, SystemConfig.js, GameTexts.js 2. utils.js 3. effects/ (ParticleSystem.js FIRST) 4. weapons/ (SpatialGrid.js FIRST) 5. entities/base.js 6. ai/ (UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → SquadAI.js) 7. entities/player/ (PlayerBase.js → specific players) 8. entities/boss/ (boss_attacks_shared.js → Manop attacks → first attacks → BossBase.js → specific bosses) 9. systems/ (GameState.js → WaveManager.js → etc.) 10. game.js (Core loop)
+Load order in index.html (STRICT):
+
+1. config/BalanceConfig.js, SystemConfig.js, GameTexts.js ← BALANCE, MAP_CONFIG, GAME_TEXTS globals
+2. utils.js ← worldToScreen(), spawnParticles(), etc.
+3. effects/ (ParticleSystem.js FIRST, then others)
+4. weapons/ (SpatialGrid.js FIRST, then Projectile, WeaponSystem, ProjectileManager, PoomWeapon)
+5. entities/base.js ← Entity base class
+6. ai/ (UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → SquadAI.js)
+7. map.js ← MapObject, MapSystem, MTCRoom, ExplosiveBarrel
+8. entities/player/ (PlayerBase.js → KaoPlayer, AutoPlayer, PoomPlayer, PatPlayer)
+9. entities/enemy.js, entities/summons.js
+10. entities/boss/ (boss_attacks_shared.js → Manop attacks → first attacks → BossBase.js → ManopBoss.js → FirstBoss.js)
+11. rendering/ (RenderTokens.js FIRST → KaoRenderer → AutoRenderer → PoomRenderer → PatRenderer → PlayerRenderer → BossRenderer → ProjectileRenderer)
+    ⚠️ XxxRenderer.js MUST load BEFORE PlayerRenderer.js (fallback stubs inside PlayerRenderer depend on char renderers being absent)
+12. systems/ (GameState.js → WaveManager.js → TimeManager.js → ShopSystem.js → AdminSystem.js)
+13. ui/ (UIManager.js, CanvasHUD.js, AchievementSystem.js, ShopManager.js)
+14. audio.js
+15. tutorial.js, menu.js
+16. game.js (Core loop — LAST)
+17. systems/WorkerBridge.js (after game.js — spawns analyzer-worker via new Worker())
 
 Boss constructor — config-driven scaling (invariant, established March 2026):
 Every boss constructor MUST read HP/speed multipliers from BALANCE.boss.[name], not hardcode them.
 Use ?? fallbacks so the constructor is safe if a config key is temporarily missing.
 
-✅ Standard pattern (from FirstBoss):
-const \_F = BALANCE.boss.first;
-const hpBase = \_F.hpBaseMult ?? 0.72;
-const hpAdv = isAdvanced ? (\_F.advancedHpMult ?? 0.85) : 1.0;
-const spdMul = \_F.speedBaseMult ?? 1.55;
-this.maxHp = BALANCE.boss.baseHp _ difficulty _ hpBase _ hpAdv;
-this.moveSpeed = Math.min(BALANCE.boss.moveSpeed _ 2.2, BALANCE.boss.moveSpeed _ spdMul _ spdAdv);
-
-❌ Anti-pattern (was the bug in FirstBoss pre-March 2026):
-const advMult = isAdvanced ? 1.35 : 1.0; // hardcoded — BALANCE.boss.first.advancedHpMult ignored
-this.maxHp = BALANCE.boss.baseHp _ difficulty _ 0.85 \* advMult; // config value silently unused
+✅ Pattern: read from BALANCE.boss.[name], apply ?? fallback to a config-driven default — never a hardcoded literal.
+❌ Anti-pattern: using a hardcoded numeric literal (e.g. 1.35) where a config key exists — the config value is silently ignored.
 
 Config block to add for each new boss: BALANCE.boss.[name] = { hpBaseMult, advancedHpMult?, speedBaseMult, ... }
 
 New active skill:
 [Character].js — energy cost guard (see pattern above)
-config.js — xyzEnergyCost
+js/config/BalanceConfig.js — xyzEnergyCost
 ui.js — HUD icon
-audio.js, effects.js
+audio.js, js/effects/ (relevant module)
 PlayerRenderer.js — if animation needed
 
 index.html script order (AI section):
@@ -706,7 +726,7 @@ TIER 4 instanceof ใน dispatch loop — ต่ำ (prototype chain walk 1x/en
 ยกเว้น N > 50 entities ต่อ frame ถึงจะพิจารณา type flag
 
 ไฟล์ที่ audit ก่อนเสมอ (impact สูงสุด):
-enemy.js, effects.js, map.js, weapons.js (SpatialGrid), ui.js (minimap)
+enemy.js, js/effects/ (CombatEffects.js / ParticleSystem.js), map.js, weapons.js (SpatialGrid), ui.js (minimap)
 ไฟล์ที่ audit ทีหลัง:
 game.js (splice audit), boss*attacks*\*.js (particle spawn path)
 ไฟล์ที่ไม่ต้อง audit บ่อย:

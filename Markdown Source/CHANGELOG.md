@@ -4,24 +4,77 @@
 
 ---
 
-## v3.39.5 — Architectural Audit & Documentation Sync
+## [v3.40.1] - 2026-03-18
+### Fix
+- **Rendering Fonts:** Updated `MapObject` rendering in `js/map.js` to use `'Share Tech Mono'` font, ensuring consistency with the project's font system.
+- **UI Refinement:** Applied minor formatting and SVG definition updates to `js/ui/UIManager.js`.
+- **UI Overhaul (Finalization):** Finalized Tailwind CSS integration in `index.html` with improved layouts and responsive design patterns.
 
-_Released: March 18, 2026_
+### Docs
+- **File Structure Update:** Synchronized `PROJECT_OVERVIEW.md` with the new modular directory layout, including the migration of planning documents to `Successed-Plan`.
+- **Skill Documentation:** Verified and synchronized `mtc-game-conventions.md` and `mtc-rendering.md` with current implementation details (MapObject hierarchy, font rules).
 
-### 🏗️ Architecture & Documentation
+## [v3.40.0] - 2026-03-18
 
-- **PROJECT_OVERVIEW.md Refactor:** Updated core architecture descriptions, added Mermaid class hierarchy diagrams, and removed volatile balance statistics to ensure documentation longevity.
-- **Skill System Synchronization:** Audited and updated `mtc-game-conventions.md` and `mtc-rendering.md` to reflect actual implementation patterns (e.g., `_tickShared` invariant, Boss class map).
-- **Core Loop Documentation:** Refined the logic update vs. rendering dispatch sequence in `game.js` within all architectural guides.
-- **File Structure Audit:** Verified and synchronized the project file structure table with the current modular directory layout.
+### Refactor
+
+- **Rendering Remaster:** Completed a major architectural refactor of the rendering engine to improve developer velocity and enable powerful visual customization.
+  - **Visual Tokens:** Centralized all visual styles (colors, glows, strokes, alpha) into a single source of truth at `js/rendering/RenderTokens.js`. This allows for consistent, themeable visuals across the entire game.
+  - **Render Parts & Composition:** Decomposed monolithic `draw()` functions in `AutoRenderer.js`, `BossRenderer.js`, and others into smaller, pure, and reusable "part" functions (e.g., `_drawAutoBody`, `_drawAutoWeaponFists`). This simplifies render logic and improves maintainability.
+  - **Asset-Driven Presets:** Abstracted complex visual logic into data-driven presets. New files like `js/rendering/boss/BossPresets.js` and `js/effects/EffectPresets.js` now define the behavior of auras and effects, moving logic from code to configuration.
+  - **Skinning System:** Implemented a new skinning system via `js/rendering/RenderSkins.js` that can override base `RenderTokens`, allowing for dynamic visual themes on characters and enemies.
+  - **Performance:** Continued the use of `OffscreenCanvas` caching for static character parts (e.g., `AutoRenderer._bodyCache`) to optimize performance by reducing per-frame draw calls.
+
+### Feat
+
+- **UI Overhaul with Tailwind CSS:** Migrated all major DOM-based UI components (loading screen, modals, prompts, admin console) from legacy CSS to Tailwind CSS. This significantly speeds up UI development and ensures consistency.
+
+### Docs
+
+- **Architectural Audit:** Updated `PROJECT_OVERVIEW.md` and skill documentation to reflect the new rendering architecture, including the introduction of Visual Tokens and the asset-driven preset patterns.
 
 ### 📁 Files Modified
 
 ```
-✅ MODIFIED: sw.js (v3.39.5)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.39.5)
 ✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
 ✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md
+✅ MODIFIED: Debug.html
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ CREATED:  Markdown Source/Future-Plan/MTC_BACKLOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+✅ CREATED:  Markdown Source/Successed-Plan/MAP_REFACTOR_PLAN.md
+✅ CREATED:  Markdown Source/Successed-Plan/REGRESSION_CHECKLIST.md
+✅ CREATED:  Markdown Source/Successed-Plan/RENDERING_REMASTER_PLAN.md
+✅ RENAMED:  manop_phase2_storyboard.html -> Markdown Source/Successed-Plan/manop_phase2_storyboard.html
+✅ MODIFIED: css/main.css
+✅ CREATED:  css/tailwind-input.css
+✅ CREATED:  css/tailwind.css
+✅ MODIFIED: index.html
+✅ MODIFIED: js/config/BalanceConfig.js
+✅ MODIFIED: js/effects/CombatEffects.js
+✅ CREATED:  js/effects/EffectPresets.js
+✅ CREATED:  js/effects/PostProcessor.js
+✅ MODIFIED: js/entities/enemy.js
+✅ MODIFIED: js/entities/player/KaoPlayer.js
+✅ MODIFIED: js/game.js
+✅ MODIFIED: js/map.js
+✅ MODIFIED: js/menu.js
+✅ MODIFIED: js/rendering/AutoRenderer.js
+✅ MODIFIED: js/rendering/BossRenderer.js
+✅ MODIFIED: js/rendering/PlayerRenderer.js
+✅ CREATED:  js/rendering/RenderSkins.js
+✅ CREATED:  js/rendering/RenderTokens.js
+✅ CREATED:  js/rendering/boss/BossPresets.js
+✅ CREATED:  js/rendering/enemy/EnemyOverlays.js
+✅ MODIFIED: js/systems/AdminSystem.js
+✅ MODIFIED: js/systems/GameState.js
+✅ CREATED:  js/systems/RenderProfiler.js
+✅ MODIFIED: js/systems/WaveManager.js
+✅ MODIFIED: js/utils.js
+✅ CREATED:  package-lock.json
+✅ CREATED:  package.json
+✅ MODIFIED: sw.js
+✅ CREATED:  tailwind.config.js
 ```
 
 ---

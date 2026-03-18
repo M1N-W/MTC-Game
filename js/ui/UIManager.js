@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * js/ui/UIManager.js
@@ -10,7 +10,7 @@
 
 // ── Portrait SVG definitions (inner-content, no outer <svg> tag) ────────────
 window.PORTRAITS = {
-    kao: `<defs>
+  kao: `<defs>
         <clipPath id="cpk"><rect width="96" height="112" rx="4" /></clipPath>
 <linearGradient id="kBg" x1="0" y1="0" x2="0.2" y2="1">
 <stop offset="0%" stop-color="#08112e"/>
@@ -124,7 +124,7 @@ window.PORTRAITS = {
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(59,130,246,0.6)" stroke-width="0.8" />
         <line x1="0" y1="108" x2="24" y2="108" stroke="rgba(250,204,21,0.7)" stroke-width="0.8" />
     </g>`,
-    poom: `<defs>
+  poom: `<defs>
     <clipPath id="cpp"><rect width="96" height="112" rx="4" /></clipPath>
 <linearGradient id="pBg" x1="0.1" y1="0" x2="0.3" y2="1">
 <stop offset="0%" stop-color="#040e08"/>
@@ -247,7 +247,7 @@ window.PORTRAITS = {
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(16,185,129,0.6)" stroke-width="0.8" />
         <line x1="72" y1="108" x2="96" y2="108" stroke="rgba(245,158,11,0.6)" stroke-width="0.8" />
     </g>`,
-    auto: `<defs>
+  auto: `<defs>
     <clipPath id="cpa"><rect width="96" height="112" rx="4" /></clipPath>
 <radialGradient id="aBg" cx="50%" cy="50%" r="65%">
 <stop offset="0%" stop-color="#1e0404"/>
@@ -366,7 +366,7 @@ window.PORTRAITS = {
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(220,38,38,0.65)" stroke-width="0.8" />
         <line x1="0" y1="108" x2="28" y2="108" stroke="rgba(251,191,36,0.5)" stroke-width="0.8" />
     </g>`,
-    pat: `<defs>
+  pat: `<defs>
     <clipPath id="cppt"><rect width="96" height="112" rx="4" /></clipPath>
 <linearGradient id="ptBg" x1="0" y1="0" x2="0.1" y2="1">
 <stop offset="0%" stop-color="#08091a"/>
@@ -502,29 +502,28 @@ window.PORTRAITS = {
         <rect x="0" y="108" width="96" height="4" fill="rgba(126,200,227,0.2)" />
         <line x1="0" y1="108" x2="96" y2="108" stroke="rgba(126,200,227,0.6)" stroke-width="0.8" />
         <line x1="0" y1="108" x2="32" y2="108" stroke="rgba(126,200,227,0.85)" stroke-width="0.8" />
-    </g>`
+    </g>`,
 };
 
 // ════════════════════════════════════════════════════════════
 // 🖥️ UI MANAGER
 // ════════════════════════════════════════════════════════════
 class UIManager {
+  // ════════════════════════════════════════════════════════════
+  // 💉 COOLDOWN VISUAL SYSTEM
+  // Injects CSS once, then draws circular arc + countdown text
+  // on any skill icon element via _setCooldownVisual().
+  // ════════════════════════════════════════════════════════════
 
-    // ════════════════════════════════════════════════════════════
-    // 💉 COOLDOWN VISUAL SYSTEM
-    // Injects CSS once, then draws circular arc + countdown text
-    // on any skill icon element via _setCooldownVisual().
-    // ════════════════════════════════════════════════════════════
-
-    /**
-     * Inject the shared CSS rules for circular cooldown overlays.
-     * Safe to call every frame — exits immediately after first run.
-     */
-    static injectCooldownStyles() {
-        if (document.getElementById('mtc-cd-styles')) return;
-        const s = document.createElement('style');
-        s.id = 'mtc-cd-styles';
-        s.textContent = `
+  /**
+   * Inject the shared CSS rules for circular cooldown overlays.
+   * Safe to call every frame — exits immediately after first run.
+   */
+  static injectCooldownStyles() {
+    if (document.getElementById("mtc-cd-styles")) return;
+    const s = document.createElement("style");
+    s.id = "mtc-cd-styles";
+    s.textContent = `
             .skill-icon { position: relative !important; }
             .cooldown-mask { display: none !important; }
             .cd-arc-overlay {
@@ -537,8 +536,8 @@ class UIManager {
             .cd-timer-text {
                 position: absolute; inset: 0;
                 display: flex; align-items: center; justify-content: center;
-                font: bold 11px 'Orbitron', monospace;
-                color: #fff;
+                font: 700 13px 'Rajdhani', sans-serif;
+                letter-spacing: 0.5px;
                 text-shadow:
                     0 0 6px #000,
                     0  1px 4px rgba(0,0,0,0.95),
@@ -547,7 +546,6 @@ class UIManager {
                    -1px 0   4px rgba(0,0,0,0.95);
                 pointer-events: none;
                 z-index: 6;
-                letter-spacing: -0.5px;
             }
             /* Text contrast: strong drop-shadow on all HUD bar labels */
             #player-level, .hud-label, .skill-name {
@@ -579,919 +577,1207 @@ class UIManager {
                 transition: width 0.1s linear;
             }
         `;
-        document.head.appendChild(s);
+    document.head.appendChild(s);
+  }
+
+  /**
+   * _E(group, key)
+   * อ่าน emoji จาก GAME_TEXTS.hudEmoji — ถ้าหา config ไม่เจอ fallback เป็น key นั้น
+   * @param {string} group  — 'attack' | 'skill1' | 'q' | 'e' | 'r' | 'mobile'
+   * @param {string} key    — ชื่อ character หรือ 'default'
+   */
+  static _E(group, key) {
+    const HE =
+      typeof GAME_TEXTS !== "undefined"
+        ? GAME_TEXTS.hudEmoji?.[group]
+        : undefined;
+    return HE?.[key] ?? HE?.["default"] ?? "";
+  }
+
+  /**
+   * _setCooldownVisual(iconId, cooldownCurrent, cooldownMax)
+   *
+   * Renders a circular clock-wipe overlay + numeric countdown on top
+   * of any .skill-icon element. Call this every frame from updateUI().
+   *
+   * @param {string} iconId           — id of the skill icon element
+   * @param {number} cooldownCurrent  — seconds remaining on cooldown
+   * @param {number} cooldownMax      — full cooldown duration in seconds
+   */
+  static _setCooldownVisual(iconId, cooldownCurrent, cooldownMax) {
+    const icon = document.getElementById(iconId);
+    if (!icon) return;
+
+    // ── Circular arc overlay (conic-gradient clock-wipe) ──────
+    let arc = icon.querySelector(".cd-arc-overlay");
+    if (!arc) {
+      arc = document.createElement("div");
+      arc.className = "cd-arc-overlay";
+      icon.appendChild(arc);
     }
 
-    /**
-     * _E(group, key)
-     * อ่าน emoji จาก GAME_TEXTS.hudEmoji — ถ้าหา config ไม่เจอ fallback เป็น key นั้น
-     * @param {string} group  — 'attack' | 'skill1' | 'q' | 'e' | 'r' | 'mobile'
-     * @param {string} key    — ชื่อ character หรือ 'default'
-     */
-    static _E(group, key) {
-        const HE = (typeof GAME_TEXTS !== 'undefined') ? GAME_TEXTS.hudEmoji?.[group] : undefined;
-        return HE?.[key] ?? HE?.['default'] ?? '';
+    const elapsed =
+      cooldownMax > 0 ? Math.min(1, 1 - cooldownCurrent / cooldownMax) : 1;
+    const pct = (elapsed * 100).toFixed(1);
+
+    if (cooldownCurrent > 0.05) {
+      // Transparent slice = elapsed (done); dark slice = remaining
+      arc.style.background = `conic-gradient(transparent 0% ${pct}%, rgba(0,0,0,0.62) ${pct}% 100%)`;
+    } else {
+      arc.style.background = "transparent";
     }
 
-    /**
-     * _setCooldownVisual(iconId, cooldownCurrent, cooldownMax)
-     *
-     * Renders a circular clock-wipe overlay + numeric countdown on top
-     * of any .skill-icon element. Call this every frame from updateUI().
-     *
-     * @param {string} iconId           — id of the skill icon element
-     * @param {number} cooldownCurrent  — seconds remaining on cooldown
-     * @param {number} cooldownMax      — full cooldown duration in seconds
-     */
-    static _setCooldownVisual(iconId, cooldownCurrent, cooldownMax) {
-        const icon = document.getElementById(iconId);
-        if (!icon) return;
-
-        // ── Circular arc overlay (conic-gradient clock-wipe) ──────
-        let arc = icon.querySelector('.cd-arc-overlay');
-        if (!arc) {
-            arc = document.createElement('div');
-            arc.className = 'cd-arc-overlay';
-            icon.appendChild(arc);
-        }
-
-        const elapsed = cooldownMax > 0
-            ? Math.min(1, 1 - cooldownCurrent / cooldownMax)
-            : 1;
-        const pct = (elapsed * 100).toFixed(1);
-
-        if (cooldownCurrent > 0.05) {
-            // Transparent slice = elapsed (done); dark slice = remaining
-            arc.style.background =
-                `conic-gradient(transparent 0% ${pct}%, rgba(0,0,0,0.62) ${pct}% 100%)`;
-        } else {
-            arc.style.background = 'transparent';
-        }
-
-        // ── Countdown text ─────────────────────────────────────────
-        let timer = icon.querySelector('.cd-timer-text');
-        if (!timer) {
-            timer = document.createElement('div');
-            timer.className = 'cd-timer-text';
-            icon.appendChild(timer);
-        }
-
-        // Hybrid: แสดง timer เฉพาะ cooldown ยาว (> 5s) เพื่อลด Visual Noise
-        if (cooldownCurrent > 0.09 && cooldownMax > 5) {
-            timer.textContent = cooldownCurrent.toFixed(1) + 's';
-            timer.style.display = 'flex';
-        } else {
-            timer.style.display = 'none';
-        }
+    // ── Countdown text ─────────────────────────────────────────
+    let timer = icon.querySelector(".cd-timer-text");
+    if (!timer) {
+      timer = document.createElement("div");
+      timer.className = "cd-timer-text";
+      icon.appendChild(timer);
     }
 
-    // ── VoiceBubble — queue-based, military HUD chip ─────────────────────────
-    static _vbQueue = [];
-    static _vbTimer = null;
-    static _vbHideTimer = null;
+    // Hybrid: แสดง timer เฉพาะ cooldown ยาว (> 5s) เพื่อลด Visual Noise
+    if (cooldownCurrent > 0.09 && cooldownMax > 5) {
+      timer.textContent = cooldownCurrent.toFixed(1) + "s";
+      timer.style.display = "flex";
+    } else {
+      timer.style.display = "none";
+    }
+  }
 
-    static showVoiceBubble(text, x, y) {
-        if (UIManager._vbQueue.length >= 3) UIManager._vbQueue.shift();
-        UIManager._vbQueue.push({ text, x, y });
-        if (!UIManager._vbTimer) UIManager._flushVoiceBubble();
+  // ── VoiceBubble — queue-based, military HUD chip ─────────────────────────
+  static _vbQueue = [];
+  static _vbTimer = null;
+  static _vbHideTimer = null;
+
+  static showVoiceBubble(text, x, y) {
+    if (UIManager._vbQueue.length >= 3) UIManager._vbQueue.shift();
+    UIManager._vbQueue.push({ text, x, y });
+    if (!UIManager._vbTimer) UIManager._flushVoiceBubble();
+  }
+
+  static _flushVoiceBubble() {
+    if (UIManager._vbQueue.length === 0) {
+      UIManager._vbTimer = null;
+      return;
     }
 
-    static _flushVoiceBubble() {
-        if (UIManager._vbQueue.length === 0) { UIManager._vbTimer = null; return; }
-
-        const { text, x, y } = UIManager._vbQueue.shift();
-        const bubble = document.getElementById('voice-bubble');
-        if (!bubble) { UIManager._vbTimer = null; return; }
-
-        if (UIManager._vbHideTimer) {
-            clearTimeout(UIManager._vbHideTimer);
-            UIManager._vbHideTimer = null;
-        }
-
-        const screen = worldToScreen(x, y - 40);
-        bubble.style.left = (screen.x - bubble.offsetWidth / 2) + 'px';
-        bubble.style.top = (screen.y - bubble.offsetHeight) + 'px';
-        bubble.textContent = text;
-
-        bubble.classList.remove('visible', 'hiding');
-        void bubble.offsetWidth;
-        bubble.classList.add('visible');
-
-        const displayMs = Math.max(1200, text.length * 55);
-        UIManager._vbHideTimer = setTimeout(() => {
-            bubble.classList.remove('visible');
-            bubble.classList.add('hiding');
-            UIManager._vbHideTimer = setTimeout(() => {
-                bubble.classList.remove('hiding');
-                UIManager._vbTimer = null;
-                UIManager._flushVoiceBubble();
-            }, 200);
-        }, displayMs);
-
-        UIManager._vbTimer = true;
+    const { text, x, y } = UIManager._vbQueue.shift();
+    const bubble = document.getElementById("voice-bubble");
+    if (!bubble) {
+      UIManager._vbTimer = null;
+      return;
     }
 
-    static updateBossHUD(boss) {
-        const hud = document.getElementById('boss-hud');
-        const hpBar = document.getElementById('boss-hp-bar');
-        if (!hud) return;
-        if (boss && !boss.dead) {
-            hud.classList.add('active');
-            if (hpBar) {
-                const pct = boss.hp / boss.maxHp;
-                const widthPct = `${Math.max(0, pct * 100)}%`;
-                hpBar.style.width = widthPct;
-                hpBar.classList.remove('phase-safe', 'phase-caution', 'phase-danger', 'phase-critical');
-                if (pct > 0.60) hpBar.classList.add('phase-safe');
-                else if (pct > 0.30) hpBar.classList.add('phase-caution');
-                else if (pct > 0.15) hpBar.classList.add('phase-danger');
-                else hpBar.classList.add('phase-critical');
-
-                const bg = hpBar.parentElement;
-                if (bg) {
-                    let drain = bg.querySelector('.boss-hp-drain');
-                    if (!drain) {
-                        drain = document.createElement('div');
-                        drain.className = 'boss-hp-drain';
-                        bg.insertBefore(drain, hpBar);
-                        drain._lastPct = pct;
-                        drain.style.width = widthPct;
-                    }
-                    if (pct < (drain._lastPct ?? pct)) {
-                        const snapWidth = drain.style.width;
-                        drain.style.transition = 'none';
-                        drain.style.width = snapWidth;
-                        drain.offsetWidth;
-                        drain.style.transition = '';
-                        drain.style.width = widthPct;
-                    }
-                    drain._lastPct = pct;
-                }
-            }
-        } else {
-            hud.classList.remove('active');
-        }
+    if (UIManager._vbHideTimer) {
+      clearTimeout(UIManager._vbHideTimer);
+      UIManager._vbHideTimer = null;
     }
 
-    // ── BossSpeech — typewriter reveal, per-frame reposition ─────────────────
-    static _bsTypeTimer = null;
-    static _bsHideTimer = null;
-    static _bsBossRef = null;
+    const screen = worldToScreen(x, y - 40);
+    bubble.style.left = screen.x - bubble.offsetWidth / 2 + "px";
+    bubble.style.top = screen.y - bubble.offsetHeight + "px";
+    bubble.textContent = text;
 
-    static updateBossSpeech(boss) {
-        const speech = document.getElementById('boss-speech');
-        if (!speech || !boss) return;
-        UIManager._bsBossRef = boss;
-        if (speech.classList.contains('visible')) {
-            const screen = worldToScreen(boss.x, boss.y - 100);
-            speech.style.left = (screen.x - speech.offsetWidth / 2) + 'px';
-            speech.style.top = (screen.y - speech.offsetHeight) + 'px';
-        }
-    }
+    bubble.classList.remove("visible", "hiding");
+    void bubble.offsetWidth;
+    bubble.classList.add("visible");
 
-    static showBossSpeech(text) {
-        const speech = document.getElementById('boss-speech');
-        if (!speech) return;
+    const displayMs = Math.max(1200, text.length * 55);
+    UIManager._vbHideTimer = setTimeout(() => {
+      bubble.classList.remove("visible");
+      bubble.classList.add("hiding");
+      UIManager._vbHideTimer = setTimeout(() => {
+        bubble.classList.remove("hiding");
+        UIManager._vbTimer = null;
+        UIManager._flushVoiceBubble();
+      }, 200);
+    }, displayMs);
 
-        if (UIManager._bsTypeTimer) { clearTimeout(UIManager._bsTypeTimer); UIManager._bsTypeTimer = null; }
-        if (UIManager._bsHideTimer) { clearTimeout(UIManager._bsHideTimer); UIManager._bsHideTimer = null; }
+    UIManager._vbTimer = true;
+  }
 
-        speech.innerHTML =
-            '<span class="speech-label">⚠ KRU MANOP</span>' +
-            '<span class="speech-text"></span>';
-
-        const textEl = speech.querySelector('.speech-text');
-
-        if (UIManager._bsBossRef && !UIManager._bsBossRef.dead) {
-            const screen = worldToScreen(UIManager._bsBossRef.x, UIManager._bsBossRef.y - 100);
-            speech.style.left = (screen.x - 140) + 'px';
-            speech.style.top = (screen.y - 60) + 'px';
-        }
-
-        speech.classList.remove('visible', 'hiding');
-        void speech.offsetWidth;
-        speech.classList.add('visible');
-
-        let i = 0;
-        const interval = Math.max(22, Math.min(55, 1100 / text.length));
-        const type = () => {
-            if (i <= text.length) {
-                textEl.textContent = text.slice(0, i);
-                i++;
-                UIManager._bsTypeTimer = setTimeout(type, interval);
-            } else {
-                UIManager._bsTypeTimer = null;
-                const holdMs = Math.max(2000, text.length * 45);
-                UIManager._bsHideTimer = setTimeout(() => {
-                    speech.classList.remove('visible');
-                    speech.classList.add('hiding');
-                    UIManager._bsHideTimer = setTimeout(() => {
-                        speech.classList.remove('hiding');
-                        speech.textContent = '';
-                    }, 280);
-                }, holdMs);
-            }
-        };
-        type();
-    }
-
-    static updateHighScoreDisplay(highScore) {
-        const formatted = highScore > 0 ? Number(highScore).toLocaleString() : '— —';
-        const valEl = document.getElementById('hs-value');
-        if (valEl) valEl.textContent = formatted;
-    }
-
-    static initSkillNames() {
-        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
-        const set = (id, text) => { const el = document.getElementById(id); if (el && text) el.textContent = text; };
-
-        set('sn-attack', SN.attack);
-        set('sn-dash', SN.dash);
-        set('sn-naga', SN.poom?.naga);
-        set('sn-ritual', SN.poom?.ritual);
-        set('sn-passive', SN.kao?.passive);
-        set('sn-database', SN.database);
-        set('sn-terminal', SN.terminal);
-        set('sn-shop', SN.shop);
-        UIManager.patchTooltipEmojis();
-    }
-
-    static patchTooltipEmojis() {
-        const spans = document.querySelectorAll('.tt-icon[data-emoji-group]');
-        spans.forEach(span => {
-            const e = UIManager._E(span.dataset.emojiGroup, span.dataset.emojiKey);
-            if (e) span.textContent = e;
-        });
-    }
-
-    static setupCharacterHUD(player) {
-        const isPoom = player instanceof PoomPlayer;
-        const charId = player.charId || (isPoom ? 'poom' : 'kao');
-        const isKao = charId === 'kao';
-        const isAuto = charId === 'auto' || (typeof AutoPlayer === 'function' && player instanceof AutoPlayer);
-        const isPat = charId === 'pat' || (typeof PatPlayer === 'function' && player instanceof PatPlayer);
-        const SN = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames) ? GAME_TEXTS.skillNames : {};
-        const hudBottom = document.querySelector('.hud-bottom');
-
-        UIManager._hudApplyThemeAndLabel(isPoom, isKao, isAuto, isPat, hudBottom);
-        UIManager._hudSetupAttackSlot(isPoom, isAuto, isPat);
-        UIManager._hudSetupPortraitAndWeapon(isPoom, isAuto, isPat, player);
-        UIManager._hudSetupPassiveSlot(isKao, isPat, player);
-        UIManager._hudSetupSkill1Slot(isPoom, isKao, isAuto, isPat, SN);
-        UIManager._hudSetupQSlot(isPoom, isKao, isAuto, isPat, SN, hudBottom);
-        UIManager._hudSetupExclusiveESlots(isPoom, isKao, isAuto, isPat, SN, hudBottom);
-        UIManager._hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN);
-    }
-
-    static _hudApplyThemeAndLabel(isPoom, isKao, isAuto, isPat, hudBottomEl) {
-        const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
-        const _applyTheme = (id, theme) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            _THEME_CLASSES.forEach(c => el.classList.remove(c));
-            el.classList.add(theme);
-        };
-        const charTheme = isAuto ? 't-red' : isPoom ? 't-emerald' : isPat ? 't-neutral' : 't-blue';
-        _applyTheme('dash-icon', charTheme);
-        _applyTheme('stealth-icon', charTheme);
-
-        const weaponIndicator = document.querySelector('.weapon-indicator');
-        if (weaponIndicator) weaponIndicator.style.display = (isPoom || isAuto) ? 'none' : '';
-
-        if (!hudBottomEl) return;
-        hudBottomEl.classList.remove('hud-theme-kao', 'hud-theme-poom', 'hud-theme-auto', 'hud-theme-pat');
-        hudBottomEl.classList.add(
-            isAuto ? 'hud-theme-auto' : isPoom ? 'hud-theme-poom' : isPat ? 'hud-theme-pat' : 'hud-theme-kao'
+  static updateBossHUD(boss) {
+    const hud = document.getElementById("boss-hud");
+    const hpBar = document.getElementById("boss-hp-bar");
+    if (!hud) return;
+    if (boss && !boss.dead) {
+      hud.classList.add("active");
+      if (hpBar) {
+        const pct = boss.hp / boss.maxHp;
+        const widthPct = `${Math.max(0, pct * 100)}%`;
+        hpBar.style.width = widthPct;
+        hpBar.classList.remove(
+          "phase-safe",
+          "phase-caution",
+          "phase-danger",
+          "phase-critical"
         );
+        if (pct > 0.6) hpBar.classList.add("phase-safe");
+        else if (pct > 0.3) hpBar.classList.add("phase-caution");
+        else if (pct > 0.15) hpBar.classList.add("phase-danger");
+        else hpBar.classList.add("phase-critical");
 
-        let charLabel = hudBottomEl.querySelector('.hud-char-label');
-        if (!charLabel) {
-            charLabel = document.createElement('div');
-            charLabel.className = 'hud-char-label';
-            hudBottomEl.prepend(charLabel);
+        const bg = hpBar.parentElement;
+        if (bg) {
+          let drain = bg.querySelector(".boss-hp-drain");
+          if (!drain) {
+            drain = document.createElement("div");
+            drain.className = "boss-hp-drain";
+            bg.insertBefore(drain, hpBar);
+            drain._lastPct = pct;
+            drain.style.width = widthPct;
+          }
+          if (pct < (drain._lastPct ?? pct)) {
+            const snapWidth = drain.style.width;
+            drain.style.transition = "none";
+            drain.style.width = snapWidth;
+            drain.offsetWidth;
+            drain.style.transition = "";
+            drain.style.width = widthPct;
+          }
+          drain._lastPct = pct;
         }
-        const lc = isAuto
-            ? { name: 'AUTO', tag: 'BRAWLER', color: '#fca5a5', glow: 'rgba(220,38,38,0.5)' }
-            : isPoom
-                ? { name: 'POOM', tag: 'SPIRITUAL', color: '#6ee7b7', glow: 'rgba(16,185,129,0.5)' }
-                : isPat
-                    ? { name: 'PAT', tag: 'RONIN', color: '#7ec8e3', glow: 'rgba(74,144,217,0.5)' }
-                    : { name: 'KAO', tag: 'ASSASSIN', color: '#93c5fd', glow: 'rgba(59,130,246,0.5)' };
-        charLabel.innerHTML =
-            `<span class="hud-char-name" style="color:${lc.color};text-shadow:0 0 8px ${lc.glow};">${lc.name}</span>` +
-            `<span class="hud-char-tag">${lc.tag}</span>`;
+      }
+    } else {
+      hud.classList.remove("active");
+    }
+  }
+
+  // ── BossSpeech — typewriter reveal, per-frame reposition ─────────────────
+  static _bsTypeTimer = null;
+  static _bsHideTimer = null;
+  static _bsBossRef = null;
+
+  static updateBossSpeech(boss) {
+    const speech = document.getElementById("boss-speech");
+    if (!speech || !boss) return;
+    UIManager._bsBossRef = boss;
+    if (speech.classList.contains("visible")) {
+      const screen = worldToScreen(boss.x, boss.y - 100);
+      speech.style.left = screen.x - speech.offsetWidth / 2 + "px";
+      speech.style.top = screen.y - speech.offsetHeight + "px";
+    }
+  }
+
+  static showBossSpeech(text) {
+    const speech = document.getElementById("boss-speech");
+    if (!speech) return;
+
+    if (UIManager._bsTypeTimer) {
+      clearTimeout(UIManager._bsTypeTimer);
+      UIManager._bsTypeTimer = null;
+    }
+    if (UIManager._bsHideTimer) {
+      clearTimeout(UIManager._bsHideTimer);
+      UIManager._bsHideTimer = null;
     }
 
-    static _hudSetupAttackSlot(isPoom, isAuto, isPat) {
-        const attackIcon = document.getElementById('attack-icon');
-        if (!attackIcon) return;
-        const _THEME_CLASSES = ['t-neutral', 't-blue', 't-emerald', 't-red', 't-gold'];
-        _THEME_CLASSES.forEach(c => attackIcon.classList.remove(c));
-        const emoji = document.getElementById('attack-emoji');
-        const hint = document.getElementById('attack-hint');
-        const name = document.getElementById('sn-attack');
-        const _SN = (typeof GAME_TEXTS !== 'undefined') ? GAME_TEXTS.skillNames : {};
-        if (isPoom) {
-            attackIcon.classList.add('t-emerald');
-            if (emoji) emoji.textContent = UIManager._E('attack', 'poom');
-            if (hint) { hint.style.background = '#064e3b'; hint.style.color = '#6ee7b7'; }
-            if (name) { name.textContent = _SN.attack ?? 'SHOOT'; name.style.color = '#6ee7b7'; }
-        } else if (isAuto) {
-            attackIcon.classList.add('t-red');
-            if (emoji) emoji.textContent = UIManager._E('attack', 'auto');
-            if (hint) { hint.style.background = '#7f1d1d'; hint.style.color = '#fca5a5'; }
-            if (name) { name.textContent = _SN.attack ?? 'SHOOT'; name.style.color = '#fca5a5'; }
-        } else if (isPat) {
-            attackIcon.classList.add('t-neutral');
-            if (emoji) emoji.textContent = UIManager._E('attack', 'pat');
-            if (hint) { hint.style.background = '#0a1a2e'; hint.style.color = '#7ec8e3'; }
-            if (name) { name.textContent = _SN.pat?.attack ?? 'SLASH'; name.style.color = '#7ec8e3'; }
-        } else {
-            attackIcon.classList.add('t-blue');
-            if (emoji) emoji.textContent = UIManager._E('attack', 'default');
-            if (hint) { hint.style.background = '#1e3a8a'; hint.style.color = '#bfdbfe'; }
-            if (name) { name.textContent = _SN.attack ?? 'SHOOT'; name.style.color = '#93c5fd'; }
-        }
+    speech.innerHTML =
+      '<span class="speech-label">⚠ KRU MANOP</span>' +
+      '<span class="speech-text"></span>';
+
+    const textEl = speech.querySelector(".speech-text");
+
+    if (UIManager._bsBossRef && !UIManager._bsBossRef.dead) {
+      const screen = worldToScreen(
+        UIManager._bsBossRef.x,
+        UIManager._bsBossRef.y - 100
+      );
+      speech.style.left = screen.x - 140 + "px";
+      speech.style.top = screen.y - 60 + "px";
     }
 
-    static _hudSetupPortraitAndWeapon(isPoom, isAuto, isPat, player) {
-        const hudSvg = document.getElementById('hud-portrait-svg');
-        if (hudSvg) {
-            const key = isPoom ? 'poom' : isAuto ? 'auto' : isPat ? 'pat' : 'kao';
-            hudSvg.innerHTML = (window.PORTRAITS || {})[key] || '';
-        }
-    }
+    speech.classList.remove("visible", "hiding");
+    void speech.offsetWidth;
+    speech.classList.add("visible");
 
-    static _hudSetupPassiveSlot(isKao, isPat, player) {
-        const el = document.getElementById('passive-skill');
-        if (!el) return;
-        if (isKao || isPat) {
-            el.style.display = '';
-            const skillName = el.querySelector('.skill-name');
-            if (player.passiveUnlocked) {
-                el.style.opacity = '1';
-                el.classList.add('unlocked');
-                if (skillName) {
-                    skillName.textContent = isPat ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patEdge) ?? '⚔ EDGE') : 'MAX';
-                    skillName.style.color = isPat ? '#7ec8e3' : '#facc15';
-                }
-            } else {
-                el.style.opacity = '0.35';
-                el.classList.remove('unlocked');
-                if (skillName) {
-                    skillName.textContent = isPat ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patRonin) ?? 'RONIN') : 'R-Click!';
-                    skillName.style.color = isPat ? '#4a90d9' : '#a855f7';
-                }
-            }
-        } else {
-            el.style.display = 'none';
-            el.classList.remove('unlocked');
-        }
-    }
+    let i = 0;
+    const interval = Math.max(22, Math.min(55, 1100 / text.length));
+    const type = () => {
+      if (i <= text.length) {
+        textEl.textContent = text.slice(0, i);
+        i++;
+        UIManager._bsTypeTimer = setTimeout(type, interval);
+      } else {
+        UIManager._bsTypeTimer = null;
+        const holdMs = Math.max(2000, text.length * 45);
+        UIManager._bsHideTimer = setTimeout(() => {
+          speech.classList.remove("visible");
+          speech.classList.add("hiding");
+          UIManager._bsHideTimer = setTimeout(() => {
+            speech.classList.remove("hiding");
+            speech.textContent = "";
+          }, 280);
+        }, holdMs);
+      }
+    };
+    type();
+  }
 
-    static _hudSetupSkill1Slot(isPoom, isKao, isAuto, isPat, SN) {
-        const skill1El = document.getElementById('eat-icon') || document.getElementById('stealth-icon');
-        if (!skill1El) return;
-        const nameEl = skill1El.querySelector('.skill-name') || (() => {
-            const d = document.createElement('div'); d.className = 'skill-name'; skill1El.appendChild(d); return d;
-        })();
-        const emojiEl = document.getElementById('skill1-emoji');
-        const hintEl = document.getElementById('skill1-hint');
-        const cdEl = skill1El.querySelector('.cooldown-mask');
-        if (isPoom) {
-            skill1El.id = 'eat-icon';
-            if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'poom');
-            if (hintEl) hintEl.textContent = 'R-Click';
-            if (cdEl) cdEl.id = 'eat-cd';
-            nameEl.textContent = SN.poom?.skill1 ?? 'EAT RICE'; nameEl.style.color = '#6ee7b7';
-        } else if (isAuto) {
-            skill1El.id = 'stealth-icon';
-            if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'auto');
-            if (hintEl) hintEl.textContent = 'R-Click';
-            if (cdEl) cdEl.id = 'stealth-cd';
-            nameEl.textContent = SN.auto?.skill1 ?? 'WANCHAI'; nameEl.style.color = '#fca5a5';
-        } else if (isKao) {
-            skill1El.id = 'stealth-icon';
-            if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'kao');
-            if (hintEl) hintEl.textContent = 'R-Click';
-            if (cdEl) cdEl.id = 'stealth-cd';
-            nameEl.textContent = SN.kao?.skill1 ?? 'STEALTH'; nameEl.style.color = '#c4b5fd';
-        } else if (isPat) {
-            skill1El.id = 'pat-guard-icon';
-            if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'pat');
-            if (hintEl) { hintEl.textContent = 'R-Click'; hintEl.style.background = '#0a1a2e'; hintEl.style.color = '#7ec8e3'; }
-            if (cdEl) cdEl.id = 'pat-guard-cd';
-            nameEl.textContent = SN.pat?.skill1 ?? 'BLADE GUARD'; nameEl.style.color = '#7ec8e3';
-        } else {
-            skill1El.id = 'stealth-icon';
-            if (emojiEl) emojiEl.textContent = UIManager._E('skill1', 'default');
-            if (hintEl) hintEl.textContent = 'R-Click';
-            if (cdEl) cdEl.id = 'stealth-cd';
-            nameEl.textContent = 'SKILL'; nameEl.style.color = '#fbbf24';
-        }
-    }
+  static updateHighScoreDisplay(highScore) {
+    const formatted =
+      highScore > 0 ? Number(highScore).toLocaleString() : "— —";
+    const valEl = document.getElementById("hs-value");
+    if (valEl) valEl.textContent = formatted;
+  }
 
-    static _hudSetupQSlot(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
-        const nagaSlot = document.getElementById('naga-icon')
-            || document.getElementById('teleport-icon')
-            || document.getElementById('vacuum-icon')
-            || document.getElementById('zanzo-icon');
-        const baseSlot = nagaSlot;
-        if (baseSlot) {
-            if (isPoom) {
-                baseSlot.style.display = 'flex';
-                baseSlot.id = 'naga-icon';
-                baseSlot.style.borderColor = '#10b981';
-                baseSlot.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                const h = baseSlot.querySelector('.key-hint');
-                if (h) { h.textContent = 'Q'; h.style.background = '#10b981'; }
-                let n = baseSlot.querySelector('.skill-name');
-                if (!n) { n = document.createElement('div'); n.className = 'skill-name'; baseSlot.appendChild(n); }
-                n.textContent = SN.poom?.naga ?? 'NAGA'; n.style.color = '#6ee7b7';
-            } else if (isKao) {
-                baseSlot.style.display = 'flex';
-                baseSlot.id = 'teleport-icon';
-                baseSlot.style.borderColor = '#00e5ff';
-                baseSlot.style.boxShadow = '0 0 15px rgba(0,229,255,0.45)';
-                baseSlot.innerHTML = `
+  static initSkillNames() {
+    const SN =
+      typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.skillNames
+        ? GAME_TEXTS.skillNames
+        : {};
+    const set = (id, text) => {
+      const el = document.getElementById(id);
+      if (el && text) el.textContent = text;
+    };
+
+    set("sn-attack", SN.attack);
+    set("sn-dash", SN.dash);
+    set("sn-naga", SN.poom?.naga);
+    set("sn-ritual", SN.poom?.ritual);
+    set("sn-passive", SN.kao?.passive);
+    set("sn-database", SN.database);
+    set("sn-terminal", SN.terminal);
+    set("sn-shop", SN.shop);
+    UIManager.patchTooltipEmojis();
+  }
+
+  static patchTooltipEmojis() {
+    const spans = document.querySelectorAll(".tt-icon[data-emoji-group]");
+    spans.forEach((span) => {
+      const e = UIManager._E(span.dataset.emojiGroup, span.dataset.emojiKey);
+      if (e) span.textContent = e;
+    });
+  }
+
+  static setupCharacterHUD(player) {
+    const isPoom = player instanceof PoomPlayer;
+    const charId = player.charId || (isPoom ? "poom" : "kao");
+    const isKao = charId === "kao";
+    const isAuto =
+      charId === "auto" ||
+      (typeof AutoPlayer === "function" && player instanceof AutoPlayer);
+    const isPat =
+      charId === "pat" ||
+      (typeof PatPlayer === "function" && player instanceof PatPlayer);
+    const SN =
+      typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.skillNames
+        ? GAME_TEXTS.skillNames
+        : {};
+    const hudBottom = document.querySelector(".hud-bottom");
+
+    UIManager._hudApplyThemeAndLabel(isPoom, isKao, isAuto, isPat, hudBottom);
+    UIManager._hudSetupAttackSlot(isPoom, isAuto, isPat);
+    UIManager._hudSetupPortraitAndWeapon(isPoom, isAuto, isPat, player);
+    UIManager._hudSetupPassiveSlot(isKao, isPat, player);
+    UIManager._hudSetupSkill1Slot(isPoom, isKao, isAuto, isPat, SN);
+    UIManager._hudSetupQSlot(isPoom, isKao, isAuto, isPat, SN, hudBottom);
+    UIManager._hudSetupExclusiveESlots(
+      isPoom,
+      isKao,
+      isAuto,
+      isPat,
+      SN,
+      hudBottom
+    );
+    UIManager._hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN);
+  }
+
+  static _hudApplyThemeAndLabel(isPoom, isKao, isAuto, isPat, hudBottomEl) {
+    const _THEME_CLASSES = [
+      "t-neutral",
+      "t-blue",
+      "t-emerald",
+      "t-red",
+      "t-gold",
+    ];
+    const _applyTheme = (id, theme) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      _THEME_CLASSES.forEach((c) => el.classList.remove(c));
+      el.classList.add(theme);
+    };
+    const charTheme = isAuto
+      ? "t-red"
+      : isPoom
+      ? "t-emerald"
+      : isPat
+      ? "t-neutral"
+      : "t-blue";
+    _applyTheme("dash-icon", charTheme);
+    _applyTheme("stealth-icon", charTheme);
+
+    const weaponIndicator = document.querySelector(".weapon-indicator");
+    if (weaponIndicator)
+      weaponIndicator.style.display = isPoom || isAuto ? "none" : "";
+
+    if (!hudBottomEl) return;
+    hudBottomEl.classList.remove(
+      "hud-theme-kao",
+      "hud-theme-poom",
+      "hud-theme-auto",
+      "hud-theme-pat"
+    );
+    hudBottomEl.classList.add(
+      isAuto
+        ? "hud-theme-auto"
+        : isPoom
+        ? "hud-theme-poom"
+        : isPat
+        ? "hud-theme-pat"
+        : "hud-theme-kao"
+    );
+
+    let charLabel = hudBottomEl.querySelector(".hud-char-label");
+    if (!charLabel) {
+      charLabel = document.createElement("div");
+      charLabel.className = "hud-char-label";
+      hudBottomEl.prepend(charLabel);
+    }
+    const lc = isAuto
+      ? {
+          name: "AUTO",
+          tag: "BRAWLER",
+          color: "#fca5a5",
+          glow: "rgba(220,38,38,0.5)",
+        }
+      : isPoom
+      ? {
+          name: "POOM",
+          tag: "SPIRITUAL",
+          color: "#6ee7b7",
+          glow: "rgba(16,185,129,0.5)",
+        }
+      : isPat
+      ? {
+          name: "PAT",
+          tag: "RONIN",
+          color: "#7ec8e3",
+          glow: "rgba(74,144,217,0.5)",
+        }
+      : {
+          name: "KAO",
+          tag: "ASSASSIN",
+          color: "#93c5fd",
+          glow: "rgba(59,130,246,0.5)",
+        };
+    charLabel.innerHTML =
+      `<span class="hud-char-name" style="color:${lc.color};text-shadow:0 0 8px ${lc.glow};">${lc.name}</span>` +
+      `<span class="hud-char-tag">${lc.tag}</span>`;
+  }
+
+  static _hudSetupAttackSlot(isPoom, isAuto, isPat) {
+    const attackIcon = document.getElementById("attack-icon");
+    if (!attackIcon) return;
+    const _THEME_CLASSES = [
+      "t-neutral",
+      "t-blue",
+      "t-emerald",
+      "t-red",
+      "t-gold",
+    ];
+    _THEME_CLASSES.forEach((c) => attackIcon.classList.remove(c));
+    const emoji = document.getElementById("attack-emoji");
+    const hint = document.getElementById("attack-hint");
+    const name = document.getElementById("sn-attack");
+    const _SN = typeof GAME_TEXTS !== "undefined" ? GAME_TEXTS.skillNames : {};
+    if (isPoom) {
+      attackIcon.classList.add("t-emerald");
+      if (emoji) emoji.textContent = UIManager._E("attack", "poom");
+      if (hint) {
+        hint.style.background = "#064e3b";
+        hint.style.color = "#6ee7b7";
+      }
+      if (name) {
+        name.textContent = _SN.attack ?? "SHOOT";
+        name.style.color = "#6ee7b7";
+      }
+    } else if (isAuto) {
+      attackIcon.classList.add("t-red");
+      if (emoji) emoji.textContent = UIManager._E("attack", "auto");
+      if (hint) {
+        hint.style.background = "#7f1d1d";
+        hint.style.color = "#fca5a5";
+      }
+      if (name) {
+        name.textContent = _SN.attack ?? "SHOOT";
+        name.style.color = "#fca5a5";
+      }
+    } else if (isPat) {
+      attackIcon.classList.add("t-neutral");
+      if (emoji) emoji.textContent = UIManager._E("attack", "pat");
+      if (hint) {
+        hint.style.background = "#0a1a2e";
+        hint.style.color = "#7ec8e3";
+      }
+      if (name) {
+        name.textContent = _SN.pat?.attack ?? "SLASH";
+        name.style.color = "#7ec8e3";
+      }
+    } else {
+      attackIcon.classList.add("t-blue");
+      if (emoji) emoji.textContent = UIManager._E("attack", "default");
+      if (hint) {
+        hint.style.background = "#1e3a8a";
+        hint.style.color = "#bfdbfe";
+      }
+      if (name) {
+        name.textContent = _SN.attack ?? "SHOOT";
+        name.style.color = "#93c5fd";
+      }
+    }
+  }
+
+  static _hudSetupPortraitAndWeapon(isPoom, isAuto, isPat, player) {
+    const hudSvg = document.getElementById("hud-portrait-svg");
+    if (hudSvg) {
+      const key = isPoom ? "poom" : isAuto ? "auto" : isPat ? "pat" : "kao";
+      hudSvg.innerHTML = (window.PORTRAITS || {})[key] || "";
+    }
+  }
+
+  static _hudSetupPassiveSlot(isKao, isPat, player) {
+    const el = document.getElementById("passive-skill");
+    if (!el) return;
+    if (isKao || isPat) {
+      el.style.display = "";
+      const skillName = el.querySelector(".skill-name");
+      if (player.passiveUnlocked) {
+        el.style.opacity = "1";
+        el.classList.add("unlocked");
+        if (skillName) {
+          skillName.textContent = isPat
+            ? (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.patEdge) ??
+              "⚔ EDGE"
+            : "MAX";
+          skillName.style.color = isPat ? "#7ec8e3" : "#facc15";
+        }
+      } else {
+        el.style.opacity = "0.35";
+        el.classList.remove("unlocked");
+        if (skillName) {
+          skillName.textContent = isPat
+            ? (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.patRonin) ??
+              "RONIN"
+            : "R-Click!";
+          skillName.style.color = isPat ? "#4a90d9" : "#a855f7";
+        }
+      }
+    } else {
+      el.style.display = "none";
+      el.classList.remove("unlocked");
+    }
+  }
+
+  static _hudSetupSkill1Slot(isPoom, isKao, isAuto, isPat, SN) {
+    const skill1El =
+      document.getElementById("eat-icon") ||
+      document.getElementById("stealth-icon");
+    if (!skill1El) return;
+    const nameEl =
+      skill1El.querySelector(".skill-name") ||
+      (() => {
+        const d = document.createElement("div");
+        d.className = "skill-name";
+        skill1El.appendChild(d);
+        return d;
+      })();
+    const emojiEl = document.getElementById("skill1-emoji");
+    const hintEl = document.getElementById("skill1-hint");
+    const cdEl = skill1El.querySelector(".cooldown-mask");
+    if (isPoom) {
+      skill1El.id = "eat-icon";
+      if (emojiEl) emojiEl.textContent = UIManager._E("skill1", "poom");
+      if (hintEl) hintEl.textContent = "R-Click";
+      if (cdEl) cdEl.id = "eat-cd";
+      nameEl.textContent = SN.poom?.skill1 ?? "EAT RICE";
+      nameEl.style.color = "#6ee7b7";
+    } else if (isAuto) {
+      skill1El.id = "stealth-icon";
+      if (emojiEl) emojiEl.textContent = UIManager._E("skill1", "auto");
+      if (hintEl) hintEl.textContent = "R-Click";
+      if (cdEl) cdEl.id = "stealth-cd";
+      nameEl.textContent = SN.auto?.skill1 ?? "WANCHAI";
+      nameEl.style.color = "#fca5a5";
+    } else if (isKao) {
+      skill1El.id = "stealth-icon";
+      if (emojiEl) emojiEl.textContent = UIManager._E("skill1", "kao");
+      if (hintEl) hintEl.textContent = "R-Click";
+      if (cdEl) cdEl.id = "stealth-cd";
+      nameEl.textContent = SN.kao?.skill1 ?? "STEALTH";
+      nameEl.style.color = "#c4b5fd";
+    } else if (isPat) {
+      skill1El.id = "pat-guard-icon";
+      if (emojiEl) emojiEl.textContent = UIManager._E("skill1", "pat");
+      if (hintEl) {
+        hintEl.textContent = "R-Click";
+        hintEl.style.background = "#0a1a2e";
+        hintEl.style.color = "#7ec8e3";
+      }
+      if (cdEl) cdEl.id = "pat-guard-cd";
+      nameEl.textContent = SN.pat?.skill1 ?? "BLADE GUARD";
+      nameEl.style.color = "#7ec8e3";
+    } else {
+      skill1El.id = "stealth-icon";
+      if (emojiEl) emojiEl.textContent = UIManager._E("skill1", "default");
+      if (hintEl) hintEl.textContent = "R-Click";
+      if (cdEl) cdEl.id = "stealth-cd";
+      nameEl.textContent = "SKILL";
+      nameEl.style.color = "#fbbf24";
+    }
+  }
+
+  static _hudSetupQSlot(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
+    const nagaSlot =
+      document.getElementById("naga-icon") ||
+      document.getElementById("teleport-icon") ||
+      document.getElementById("vacuum-icon") ||
+      document.getElementById("zanzo-icon");
+    const baseSlot = nagaSlot;
+    if (baseSlot) {
+      if (isPoom) {
+        baseSlot.style.display = "flex";
+        baseSlot.id = "naga-icon";
+        baseSlot.style.borderColor = "#10b981";
+        baseSlot.style.boxShadow = "0 0 15px rgba(16,185,129,0.4)";
+        const h = baseSlot.querySelector(".key-hint");
+        if (h) {
+          h.textContent = "Q";
+          h.style.background = "#10b981";
+        }
+        let n = baseSlot.querySelector(".skill-name");
+        if (!n) {
+          n = document.createElement("div");
+          n.className = "skill-name";
+          baseSlot.appendChild(n);
+        }
+        n.textContent = SN.poom?.naga ?? "NAGA";
+        n.style.color = "#6ee7b7";
+      } else if (isKao) {
+        baseSlot.style.display = "flex";
+        baseSlot.id = "teleport-icon";
+        baseSlot.style.borderColor = "#00e5ff";
+        baseSlot.style.boxShadow = "0 0 15px rgba(0,229,255,0.45)";
+        baseSlot.innerHTML = `
                     <div class="key-hint" id="teleport-hint" style="background:#00e5ff;color:#0c1a2e;">Q</div>
-                    <span id="teleport-emoji">${UIManager._E('q', 'kao')}</span>
-                    <div class="skill-name" style="color:#67e8f9;">${SN.kao?.teleport ?? 'TELEPORT'}</div>
+                    <span id="teleport-emoji">${UIManager._E("q", "kao")}</span>
+                    <div class="skill-name" style="color:#67e8f9;">${
+                      SN.kao?.teleport ?? "TELEPORT"
+                    }</div>
                     <div class="cooldown-mask" id="teleport-cd"></div>`;
-            } else if (isAuto) {
-                baseSlot.style.display = 'flex';
-                baseSlot.id = 'vacuum-icon';
-                baseSlot.style.borderColor = '#f97316';
-                baseSlot.style.boxShadow = '0 0 15px rgba(249,115,22,0.45)';
-                baseSlot.innerHTML = `
+      } else if (isAuto) {
+        baseSlot.style.display = "flex";
+        baseSlot.id = "vacuum-icon";
+        baseSlot.style.borderColor = "#f97316";
+        baseSlot.style.boxShadow = "0 0 15px rgba(249,115,22,0.45)";
+        baseSlot.innerHTML = `
                     <div class="key-hint" id="vacuum-hint" style="background:#f97316;color:#1a0505;">Q</div>
-                    <span id="vacuum-emoji">${UIManager._E('q', 'auto')}</span>
-                    <div class="skill-name" style="color:#fdba74;">${SN.auto?.vacuum ?? 'VACUUM'}</div>
+                    <span id="vacuum-emoji">${UIManager._E("q", "auto")}</span>
+                    <div class="skill-name" style="color:#fdba74;">${
+                      SN.auto?.vacuum ?? "VACUUM"
+                    }</div>
                     <div class="cooldown-mask" id="vacuum-cd"></div>`;
-            } else if (isPat) {
-                baseSlot.style.display = 'flex';
-                baseSlot.id = 'zanzo-icon';
-                baseSlot.style.borderColor = '#4a90d9';
-                baseSlot.style.boxShadow = '0 0 15px rgba(74,144,217,0.45)';
-                baseSlot.innerHTML = `
+      } else if (isPat) {
+        baseSlot.style.display = "flex";
+        baseSlot.id = "zanzo-icon";
+        baseSlot.style.borderColor = "#4a90d9";
+        baseSlot.style.boxShadow = "0 0 15px rgba(74,144,217,0.45)";
+        baseSlot.innerHTML = `
                     <div class="key-hint" style="background:#4a90d9;color:#0a1020;">Q</div>
-                    <span>${UIManager._E('q', 'pat')}</span>
-                    <div class="skill-name" style="color:#7ec8e3;">${SN.pat?.zanzo ?? 'ZANZO'}</div>
+                    <span>${UIManager._E("q", "pat")}</span>
+                    <div class="skill-name" style="color:#7ec8e3;">${
+                      SN.pat?.zanzo ?? "ZANZO"
+                    }</div>
                     <div class="cooldown-mask" id="zanzo-cd"></div>`;
-            } else {
-                baseSlot.style.display = 'none';
-            }
-        }
-
-        if (!isKao && !isAuto && !isPat) {
-            const maybeTeleport = document.getElementById('teleport-icon');
-            if (maybeTeleport) {
-                maybeTeleport.id = 'naga-icon';
-                maybeTeleport.style.borderColor = '#10b981';
-                maybeTeleport.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                maybeTeleport.innerHTML = `
-                    <div class="key-hint" style="background:#10b981;">Q</div>${UIManager._E('q', 'poom')}
-                    <div class="cooldown-mask" id="naga-cd"></div>
-                    <span id="naga-timer"></span>
-                    <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
-            }
-            const maybeVacuum = document.getElementById('vacuum-icon');
-            if (maybeVacuum) {
-                maybeVacuum.id = 'naga-icon';
-                maybeVacuum.style.borderColor = '#10b981';
-                maybeVacuum.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                maybeVacuum.innerHTML = `
-                    <div class="key-hint" style="background:#10b981;">Q</div>${UIManager._E('q', 'poom')}
-                    <div class="cooldown-mask" id="naga-cd"></div>
-                    <span id="naga-timer"></span>
-                    <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
-            }
-            const maybeZanzo = document.getElementById('zanzo-icon');
-            if (maybeZanzo) {
-                maybeZanzo.id = 'naga-icon';
-                maybeZanzo.style.borderColor = '#10b981';
-                maybeZanzo.style.boxShadow = '0 0 15px rgba(16,185,129,0.4)';
-                maybeZanzo.innerHTML = `
-                    <div class="key-hint" style="background:#10b981;">Q</div>${UIManager._E('q', 'poom')}
-                    <div class="cooldown-mask" id="naga-cd"></div>
-                    <span id="naga-timer"></span>
-                    <div class="skill-name" style="color:#6ee7b7;">${SN.poom?.naga ?? 'NAGA'}</div>`;
-            }
-        }
+      } else {
+        baseSlot.style.display = "none";
+      }
     }
 
-    static _hudSetupExclusiveESlots(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
-        let cloneSlot = document.getElementById('kao-clone-icon');
-        if (isKao) {
-            if (!cloneSlot && hudBottom) {
-                cloneSlot = document.createElement('div');
-                cloneSlot.className = 'skill-icon';
-                cloneSlot.id = 'kao-clone-icon';
-                cloneSlot.style.cssText = 'border-color:#3b82f6; box-shadow:0 0 15px rgba(59,130,246,0.45);';
-                cloneSlot.innerHTML = `
+    if (!isKao && !isAuto && !isPat) {
+      const maybeTeleport = document.getElementById("teleport-icon");
+      if (maybeTeleport) {
+        maybeTeleport.id = "naga-icon";
+        maybeTeleport.style.borderColor = "#10b981";
+        maybeTeleport.style.boxShadow = "0 0 15px rgba(16,185,129,0.4)";
+        maybeTeleport.innerHTML = `
+                    <div class="key-hint" style="background:#10b981;">Q</div>${UIManager._E(
+                      "q",
+                      "poom"
+                    )}
+                    <div class="cooldown-mask" id="naga-cd"></div>
+                    <span id="naga-timer"></span>
+                    <div class="skill-name" style="color:#6ee7b7;">${
+                      SN.poom?.naga ?? "NAGA"
+                    }</div>`;
+      }
+      const maybeVacuum = document.getElementById("vacuum-icon");
+      if (maybeVacuum) {
+        maybeVacuum.id = "naga-icon";
+        maybeVacuum.style.borderColor = "#10b981";
+        maybeVacuum.style.boxShadow = "0 0 15px rgba(16,185,129,0.4)";
+        maybeVacuum.innerHTML = `
+                    <div class="key-hint" style="background:#10b981;">Q</div>${UIManager._E(
+                      "q",
+                      "poom"
+                    )}
+                    <div class="cooldown-mask" id="naga-cd"></div>
+                    <span id="naga-timer"></span>
+                    <div class="skill-name" style="color:#6ee7b7;">${
+                      SN.poom?.naga ?? "NAGA"
+                    }</div>`;
+      }
+      const maybeZanzo = document.getElementById("zanzo-icon");
+      if (maybeZanzo) {
+        maybeZanzo.id = "naga-icon";
+        maybeZanzo.style.borderColor = "#10b981";
+        maybeZanzo.style.boxShadow = "0 0 15px rgba(16,185,129,0.4)";
+        maybeZanzo.innerHTML = `
+                    <div class="key-hint" style="background:#10b981;">Q</div>${UIManager._E(
+                      "q",
+                      "poom"
+                    )}
+                    <div class="cooldown-mask" id="naga-cd"></div>
+                    <span id="naga-timer"></span>
+                    <div class="skill-name" style="color:#6ee7b7;">${
+                      SN.poom?.naga ?? "NAGA"
+                    }</div>`;
+      }
+    }
+  }
+
+  static _hudSetupExclusiveESlots(isPoom, isKao, isAuto, isPat, SN, hudBottom) {
+    let cloneSlot = document.getElementById("kao-clone-icon");
+    if (isKao) {
+      if (!cloneSlot && hudBottom) {
+        cloneSlot = document.createElement("div");
+        cloneSlot.className = "skill-icon";
+        cloneSlot.id = "kao-clone-icon";
+        cloneSlot.style.cssText =
+          "border-color:#3b82f6; box-shadow:0 0 15px rgba(59,130,246,0.45);";
+        cloneSlot.innerHTML = `
                     <div class="key-hint" style="background:#3b82f6;">E</div>
-                    <span>${UIManager._E('e', 'kao')}</span>
-                    <div class="skill-name" style="color:#93c5fd;">${SN.kao?.clones ?? 'CLONES'}</div>
+                    <span>${UIManager._E("e", "kao")}</span>
+                    <div class="skill-name" style="color:#93c5fd;">${
+                      SN.kao?.clones ?? "CLONES"
+                    }</div>
                     <div class="cooldown-mask" id="clone-cd"></div>`;
-                const passiveRef = document.getElementById('passive-skill');
-                if (passiveRef && passiveRef.parentNode === hudBottom)
-                    hudBottom.insertBefore(cloneSlot, passiveRef.nextSibling);
-                else
-                    hudBottom.appendChild(cloneSlot);
-            }
-            if (cloneSlot) cloneSlot.style.display = 'flex';
-        } else {
-            if (cloneSlot) cloneSlot.style.display = 'none';
-        }
+        const passiveRef = document.getElementById("passive-skill");
+        if (passiveRef && passiveRef.parentNode === hudBottom)
+          hudBottom.insertBefore(cloneSlot, passiveRef.nextSibling);
+        else hudBottom.appendChild(cloneSlot);
+      }
+      if (cloneSlot) cloneSlot.style.display = "flex";
+    } else {
+      if (cloneSlot) cloneSlot.style.display = "none";
+    }
 
-        let detSlot = document.getElementById('auto-det-icon');
-        if (isAuto) {
-            if (!detSlot && hudBottom) {
-                detSlot = document.createElement('div');
-                detSlot.className = 'skill-icon';
-                detSlot.id = 'auto-det-icon';
-                detSlot.style.cssText = 'border-color:#dc2626; box-shadow:0 0 15px rgba(220,38,38,0.45); opacity:0.4; transition:opacity 0.2s;';
-                detSlot.innerHTML = `
+    let detSlot = document.getElementById("auto-det-icon");
+    if (isAuto) {
+      if (!detSlot && hudBottom) {
+        detSlot = document.createElement("div");
+        detSlot.className = "skill-icon";
+        detSlot.id = "auto-det-icon";
+        detSlot.style.cssText =
+          "border-color:#dc2626; box-shadow:0 0 15px rgba(220,38,38,0.45); opacity:0.4; transition:opacity 0.2s;";
+        detSlot.innerHTML = `
                     <div class="key-hint" style="background:#dc2626;">E</div>
-                    <span>${UIManager._E('e', 'auto')}</span>
-                    <div class="skill-name" style="color:#fca5a5;">${SN.auto?.detonate ?? 'DETONATE'}</div>
+                    <span>${UIManager._E("e", "auto")}</span>
+                    <div class="skill-name" style="color:#fca5a5;">${
+                      SN.auto?.detonate ?? "DETONATE"
+                    }</div>
                     <div class="cooldown-mask" id="det-cd"></div>`;
-                hudBottom.appendChild(detSlot);
-            }
-            if (detSlot) detSlot.style.display = 'flex';
-        } else {
-            if (detSlot) detSlot.style.display = 'none';
-        }
+        hudBottom.appendChild(detSlot);
+      }
+      if (detSlot) detSlot.style.display = "flex";
+    } else {
+      if (detSlot) detSlot.style.display = "none";
+    }
 
-        let garudaSlot = document.getElementById('garuda-icon');
-        if (isPoom) {
-            if (!garudaSlot && hudBottom) {
-                garudaSlot = document.createElement('div');
-                garudaSlot.className = 'skill-icon';
-                garudaSlot.id = 'garuda-icon';
-                garudaSlot.style.cssText = 'border-color:#f97316; box-shadow:0 0 15px rgba(249,115,22,0.45);';
-                garudaSlot.innerHTML = `
+    let garudaSlot = document.getElementById("garuda-icon");
+    if (isPoom) {
+      if (!garudaSlot && hudBottom) {
+        garudaSlot = document.createElement("div");
+        garudaSlot.className = "skill-icon";
+        garudaSlot.id = "garuda-icon";
+        garudaSlot.style.cssText =
+          "border-color:#f97316; box-shadow:0 0 15px rgba(249,115,22,0.45);";
+        garudaSlot.innerHTML = `
                     <div class="key-hint" style="background:#f97316;color:#1a0505;">E</div>
-                    <span>${UIManager._E('e', 'poom')}</span>
-                    <div class="skill-name" style="color:#fdba74;font-size:9px;letter-spacing:0.02em;">${(GAME_TEXTS.skillNames?.poom?.garuda) || 'GARUDA'}</div>
+                    <span>${UIManager._E("e", "poom")}</span>
+                    <div class="skill-name" style="color:#fdba74;font-size:9px;letter-spacing:0.02em;">${
+                      GAME_TEXTS.skillNames?.poom?.garuda || "GARUDA"
+                    }</div>
                     <div class="cooldown-mask" id="garuda-cd"></div>`;
-                const passiveRef = document.getElementById('passive-skill');
-                if (passiveRef && passiveRef.parentNode === hudBottom)
-                    hudBottom.insertBefore(garudaSlot, passiveRef.nextSibling);
-                else
-                    hudBottom.appendChild(garudaSlot);
-            }
-            if (garudaSlot) garudaSlot.style.display = 'flex';
-        } else {
-            if (garudaSlot) garudaSlot.style.display = 'none';
-        }
+        const passiveRef = document.getElementById("passive-skill");
+        if (passiveRef && passiveRef.parentNode === hudBottom)
+          hudBottom.insertBefore(garudaSlot, passiveRef.nextSibling);
+        else hudBottom.appendChild(garudaSlot);
+      }
+      if (garudaSlot) garudaSlot.style.display = "flex";
+    } else {
+      if (garudaSlot) garudaSlot.style.display = "none";
+    }
 
-        let iaidoSlot = document.getElementById('pat-iaido-icon');
-        if (isPat) {
-            if (!iaidoSlot && hudBottom) {
-                iaidoSlot = document.createElement('div');
-                iaidoSlot.className = 'skill-icon';
-                iaidoSlot.id = 'pat-iaido-icon';
-                iaidoSlot.style.cssText = 'border-color:#7ec8e3; box-shadow:0 0 15px rgba(126,200,227,0.45);';
-                iaidoSlot.innerHTML = `
+    let iaidoSlot = document.getElementById("pat-iaido-icon");
+    if (isPat) {
+      if (!iaidoSlot && hudBottom) {
+        iaidoSlot = document.createElement("div");
+        iaidoSlot.className = "skill-icon";
+        iaidoSlot.id = "pat-iaido-icon";
+        iaidoSlot.style.cssText =
+          "border-color:#7ec8e3; box-shadow:0 0 15px rgba(126,200,227,0.45);";
+        iaidoSlot.innerHTML = `
                     <div class="key-hint" style="background:#4a90d9;color:#0a1020;">R</div>
-                    <span>${UIManager._E('e', 'pat')}</span>
-                    <div class="skill-name" style="color:#7ec8e3;font-size:9px;letter-spacing:0.02em;">${SN.pat?.iaido ?? 'IAIDO'}</div>
+                    <span>${UIManager._E("e", "pat")}</span>
+                    <div class="skill-name" style="color:#7ec8e3;font-size:9px;letter-spacing:0.02em;">${
+                      SN.pat?.iaido ?? "IAIDO"
+                    }</div>
                     <div class="cooldown-mask" id="pat-iaido-cd"></div>`;
-                const passiveRef = document.getElementById('passive-skill');
-                if (passiveRef && passiveRef.parentNode === hudBottom)
-                    hudBottom.insertBefore(iaidoSlot, passiveRef.nextSibling);
-                else
-                    hudBottom.appendChild(iaidoSlot);
-            }
-            if (iaidoSlot) iaidoSlot.style.display = 'flex';
+        const passiveRef = document.getElementById("passive-skill");
+        if (passiveRef && passiveRef.parentNode === hudBottom)
+          hudBottom.insertBefore(iaidoSlot, passiveRef.nextSibling);
+        else hudBottom.appendChild(iaidoSlot);
+      }
+      if (iaidoSlot) iaidoSlot.style.display = "flex";
+    } else {
+      if (iaidoSlot) iaidoSlot.style.display = "none";
+    }
+  }
+
+  static _hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN) {
+    const ritualSlot = document.getElementById("ritual-icon");
+    if (ritualSlot) {
+      ritualSlot.style.display = isPoom ? "flex" : "none";
+      if (isPoom) {
+        let n = ritualSlot.querySelector(".skill-name");
+        if (!n) {
+          n = document.createElement("div");
+          n.className = "skill-name";
+          ritualSlot.appendChild(n);
+        }
+        n.textContent = SN.poom?.ritual ?? "RITUAL";
+        n.style.color = "#86efac";
+      }
+    }
+    const btnNaga = document.getElementById("btn-naga");
+    if (btnNaga) btnNaga.style.display = isPoom || isKao ? "flex" : "none";
+    const btnSkill = document.getElementById("btn-skill");
+    if (btnSkill)
+      btnSkill.textContent = isPoom
+        ? UIManager._E("mobile", "poom")
+        : isAuto
+        ? UIManager._E("mobile", "auto")
+        : isKao
+        ? UIManager._E("mobile", "kao")
+        : isPat
+        ? UIManager._E("mobile", "pat")
+        : UIManager._E("mobile", "default");
+  }
+
+  static updateSkillIcons(player) {
+    const setLockOverlay = (icon, locked) => {
+      if (!icon) return;
+      let lock = icon.querySelector(".skill-lock");
+      if (locked) {
+        if (!lock) {
+          lock = document.createElement("div");
+          lock.className = "skill-lock";
+          lock.style.cssText =
+            "position:absolute;inset:0;display:flex;align-items:center;" +
+            "justify-content:center;font-size:20px;background:rgba(0,0,0,0.65);" +
+            "border-radius:8px;z-index:10;pointer-events:none;";
+          lock.textContent = "\uD83D\uDD12";
+          icon.appendChild(lock);
+        }
+      } else if (lock) {
+        lock.remove();
+      }
+    };
+
+    if (player instanceof PoomPlayer) {
+      UIManager._updateIconsPoom(player, setLockOverlay);
+    } else if (
+      typeof AutoPlayer !== "undefined" &&
+      player instanceof AutoPlayer
+    ) {
+      UIManager._updateIconsAuto(player, setLockOverlay);
+    } else if (
+      typeof PatPlayer !== "undefined" &&
+      player instanceof PatPlayer
+    ) {
+      UIManager._updateIconsPat(player, setLockOverlay);
+    } else if (player.charId === "kao") {
+      UIManager._updateIconsKao(player, setLockOverlay);
+    }
+  }
+
+  static _updateIconsPat(player, setLockOverlay) {
+    const S =
+      typeof BALANCE !== "undefined" && BALANCE.characters?.pat
+        ? BALANCE.characters.pat
+        : {};
+    const guardIcon = document.getElementById("pat-guard-icon");
+    if (guardIcon) {
+      const isActive = !!player.bladeGuardActive;
+      guardIcon.classList.toggle("active", isActive);
+      guardIcon.style.borderColor = isActive ? "#7ec8e3" : "";
+      guardIcon.style.boxShadow = isActive
+        ? "0 0 20px rgba(126,200,227,0.85)"
+        : "";
+      const nameEl = guardIcon.querySelector(".skill-name");
+      if (nameEl) {
+        nameEl.textContent = isActive
+          ? (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.skillActive) ??
+            "ACTIVE"
+          : (typeof GAME_TEXTS !== "undefined" &&
+              GAME_TEXTS.skillNames?.pat?.skill1) ??
+            "BLADE GUARD";
+        nameEl.style.color = isActive ? "#ffffff" : "#7ec8e3";
+      }
+    }
+    const zanzoIcon = document.getElementById("zanzo-icon");
+    if (zanzoIcon) {
+      const cd = Math.max(0, player.skills?.zanzo?.cd ?? 0);
+      const maxCd = S.zanzoCooldown ?? 7;
+      zanzoIcon.classList.toggle("active", cd <= 0);
+      UIManager._setCooldownVisual("zanzo-icon", cd, maxCd);
+    }
+    const iaidoIcon = document.getElementById("pat-iaido-icon");
+    if (iaidoIcon) {
+      const phase = player._iaidoPhase ?? "none";
+      const isCharging = phase === "charge";
+      const isCinematic = phase === "cinematic" || phase === "flash";
+      const cd = Math.max(0, player.skills?.iaido?.cd ?? 0);
+      const maxCd = S.iaidoCooldown ?? 14;
+
+      if (isCharging) {
+        iaidoIcon.classList.add("active");
+        iaidoIcon.style.borderColor = "#7ec8e3";
+        iaidoIcon.style.boxShadow = "0 0 22px rgba(126,200,227,0.90)";
+        const chargeTimer = player._iaidoTimer ?? 0;
+        const chargeDur = S.iaidoChargeDuration ?? 0.6;
+        const chargeProgress = Math.min(1, chargeTimer / chargeDur);
+        UIManager._setCooldownVisual(
+          "pat-iaido-icon",
+          (1 - chargeProgress) * 0.6,
+          0.6
+        );
+        const nameEl = iaidoIcon.querySelector(".skill-name");
+        if (nameEl) {
+          nameEl.textContent =
+            (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.patCharging) ??
+            "CHARGING";
+          nameEl.style.color = "#ffffff";
+        }
+      } else if (isCinematic) {
+        iaidoIcon.classList.add("active");
+        iaidoIcon.style.borderColor = "#ff4444";
+        iaidoIcon.style.boxShadow = "0 0 22px rgba(204,34,34,0.85)";
+        const nameEl = iaidoIcon.querySelector(".skill-name");
+        if (nameEl) {
+          nameEl.textContent =
+            (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.patIaido) ??
+            "IAIDO!";
+          nameEl.style.color = "#ff6666";
+        }
+      } else {
+        iaidoIcon.classList.toggle("active", cd <= 0);
+        iaidoIcon.style.borderColor = "";
+        iaidoIcon.style.boxShadow = "";
+        UIManager._setCooldownVisual("pat-iaido-icon", cd, maxCd);
+        const nameEl = iaidoIcon.querySelector(".skill-name");
+        if (nameEl) {
+          nameEl.textContent =
+            (typeof GAME_TEXTS !== "undefined" &&
+              GAME_TEXTS.skillNames?.pat?.iaido) ??
+            "IAIDO";
+          nameEl.style.color = "#7ec8e3";
+        }
+      }
+    }
+    const passiveEl = document.getElementById("passive-skill");
+    if (passiveEl) {
+      const unlocked = !!player.passiveUnlocked;
+      passiveEl.style.opacity = unlocked ? "1" : "0.35";
+      const skillName = passiveEl.querySelector(".skill-name");
+      if (skillName) {
+        skillName.textContent = unlocked
+          ? (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.patEdge) ??
+            "⚔ EDGE"
+          : (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.patRonin) ??
+            "RONIN";
+        skillName.style.color = unlocked ? "#7ec8e3" : "#4a90d9";
+      }
+    }
+  }
+
+  static _updateIconsPoom(player, setLockOverlay) {
+    const S = BALANCE.characters.poom;
+    const nagaReady = !!player._nagaUnlocked;
+    setLockOverlay(document.getElementById("eat-icon"), false);
+    setLockOverlay(document.getElementById("naga-icon"), !nagaReady);
+    setLockOverlay(document.getElementById("ritual-icon"), !nagaReady);
+    setLockOverlay(
+      document.getElementById("garuda-icon"),
+      !player.passiveUnlocked
+    );
+    const eatIcon = document.getElementById("eat-icon");
+    if (eatIcon) {
+      const eating = !!player.isEatingRice;
+      eatIcon.classList.toggle("active", eating);
+      eatIcon.classList.toggle("eat-buff-active", eating);
+      let bar = eatIcon.querySelector(".eat-buff-bar");
+      if (eating) {
+        if (!bar) {
+          bar = document.createElement("div");
+          bar.className = "eat-buff-bar";
+          eatIcon.appendChild(bar);
+        }
+        const pct = Math.max(
+          0,
+          Math.min(1, (player.eatRiceTimer ?? 0) / (S.eatRiceDuration ?? 6))
+        );
+        bar.style.width = pct * 100 + "%";
+      } else {
+        if (bar) bar.remove();
+      }
+      const nameEl = eatIcon.querySelector(".skill-name");
+      if (nameEl) {
+        if (eating && player.eatRiceTimer > 0) {
+          nameEl.textContent = player.eatRiceTimer.toFixed(1) + "s";
+          nameEl.style.color = "#34d399";
         } else {
-            if (iaidoSlot) iaidoSlot.style.display = 'none';
+          nameEl.textContent =
+            (typeof GAME_TEXTS !== "undefined" &&
+              GAME_TEXTS.skillNames?.poom?.skill1) ??
+            "EAT RICE";
+          nameEl.style.color = "#6ee7b7";
         }
+      }
     }
+    UIManager._setCooldownVisual(
+      "eat-icon",
+      player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
+      S.eatRiceCooldown
+    );
+    const nagaIcon = document.getElementById("naga-icon");
+    const nagaTimer = document.getElementById("naga-timer");
+    if (nagaIcon)
+      nagaIcon.classList.toggle("active", player.cooldowns.naga <= 0);
+    if (nagaTimer) nagaTimer.style.display = "none";
+    UIManager._setCooldownVisual(
+      "naga-icon",
+      Math.max(0, player.cooldowns.naga),
+      S.nagaCooldown
+    );
+    const ritualIcon = document.getElementById("ritual-icon");
+    const ritualTimer = document.getElementById("ritual-timer");
+    const maxRitualCd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
+    if (ritualIcon)
+      ritualIcon.classList.toggle("active", player.cooldowns.ritual <= 0);
+    if (ritualTimer) ritualTimer.style.display = "none";
+    UIManager._setCooldownVisual(
+      "ritual-icon",
+      Math.max(0, player.cooldowns.ritual),
+      maxRitualCd
+    );
+    const garudaIcon = document.getElementById("garuda-icon");
+    if (garudaIcon)
+      garudaIcon.classList.toggle("active", player.cooldowns.garuda <= 0);
+    UIManager._setCooldownVisual(
+      "garuda-icon",
+      Math.max(0, player.cooldowns.garuda),
+      BALANCE.characters.poom.garudaCooldown ?? 24
+    );
+  }
 
-    static _hudSetupRitualAndMobileButtons(isPoom, isKao, isAuto, isPat, SN) {
-        const ritualSlot = document.getElementById('ritual-icon');
-        if (ritualSlot) {
-            ritualSlot.style.display = isPoom ? 'flex' : 'none';
-            if (isPoom) {
-                let n = ritualSlot.querySelector('.skill-name');
-                if (!n) { n = document.createElement('div'); n.className = 'skill-name'; ritualSlot.appendChild(n); }
-                n.textContent = SN.poom?.ritual ?? 'RITUAL'; n.style.color = '#86efac';
-            }
+  static _updateIconsAuto(player, setLockOverlay) {
+    const S = BALANCE.characters.auto;
+    setLockOverlay(document.getElementById("stealth-icon"), false);
+    setLockOverlay(
+      document.getElementById("vacuum-icon"),
+      !player.passiveUnlocked
+    );
+    setLockOverlay(
+      document.getElementById("auto-det-icon"),
+      !player.passiveUnlocked
+    );
+    const wanchaiCd = S.wanchaiCooldown ?? 12;
+    UIManager._setCooldownVisual(
+      "stealth-icon",
+      player.wanchaiActive ? 0 : Math.max(0, player.cooldowns.wanchai ?? 0),
+      wanchaiCd
+    );
+    const stealthIcon = document.getElementById("stealth-icon");
+    if (stealthIcon) {
+      const nameEl = stealthIcon.querySelector(".skill-name");
+      if (nameEl) {
+        if (player.wanchaiActive && player.wanchaiTimer > 0) {
+          nameEl.textContent = player.wanchaiTimer.toFixed(1) + "s";
+          nameEl.style.color = "#fca5a5";
+        } else {
+          nameEl.textContent =
+            (typeof GAME_TEXTS !== "undefined" &&
+              GAME_TEXTS.skillNames?.auto?.skill1) ??
+            "WANCHAI";
+          nameEl.style.color = "#fca5a5";
         }
-        const btnNaga = document.getElementById('btn-naga');
-        if (btnNaga) btnNaga.style.display = (isPoom || isKao) ? 'flex' : 'none';
-        const btnSkill = document.getElementById('btn-skill');
-        if (btnSkill) btnSkill.textContent = isPoom ? UIManager._E('mobile', 'poom') : isAuto ? UIManager._E('mobile', 'auto') : isKao ? UIManager._E('mobile', 'kao') : isPat ? UIManager._E('mobile', 'pat') : UIManager._E('mobile', 'default');
+      }
     }
-
-    static updateSkillIcons(player) {
-        const setLockOverlay = (icon, locked) => {
-            if (!icon) return;
-            let lock = icon.querySelector('.skill-lock');
-            if (locked) {
-                if (!lock) {
-                    lock = document.createElement('div');
-                    lock.className = 'skill-lock';
-                    lock.style.cssText =
-                        'position:absolute;inset:0;display:flex;align-items:center;' +
-                        'justify-content:center;font-size:20px;background:rgba(0,0,0,0.65);' +
-                        'border-radius:8px;z-index:10;pointer-events:none;';
-                    lock.textContent = '\uD83D\uDD12';
-                    icon.appendChild(lock);
-                }
-            } else if (lock) {
-                lock.remove();
-            }
-        };
-
-        if (player instanceof PoomPlayer) {
-            UIManager._updateIconsPoom(player, setLockOverlay);
-        } else if (typeof AutoPlayer !== 'undefined' && player instanceof AutoPlayer) {
-            UIManager._updateIconsAuto(player, setLockOverlay);
-        } else if (typeof PatPlayer !== 'undefined' && player instanceof PatPlayer) {
-            UIManager._updateIconsPat(player, setLockOverlay);
-        } else if (player.charId === 'kao') {
-            UIManager._updateIconsKao(player, setLockOverlay);
-        }
+    const vacMaxCd = player.wanchaiActive
+      ? S.standPullCooldown ?? 10
+      : S.vacuumCooldown ?? 6;
+    UIManager._setCooldownVisual(
+      "vacuum-icon",
+      Math.max(0, player.cooldowns.vacuum ?? 0),
+      vacMaxCd
+    );
+    const detIcon = document.getElementById("auto-det-icon");
+    if (detIcon) {
+      if (player.wanchaiActive) {
+        detIcon.style.opacity = "1";
+        detIcon.style.boxShadow = "0 0 20px rgba(220,38,38,0.80)";
+        detIcon.classList.add("active");
+      } else {
+        detIcon.style.opacity = "0.35";
+        detIcon.style.boxShadow = "0 0 8px rgba(220,38,38,0.25)";
+        detIcon.classList.remove("active");
+      }
     }
+    UIManager._setCooldownVisual(
+      "auto-det-icon",
+      Math.max(0, player.cooldowns.detonation ?? 0),
+      S.detonationCooldown ?? 8
+    );
+  }
 
-    static _updateIconsPat(player, setLockOverlay) {
-        const S = (typeof BALANCE !== 'undefined' && BALANCE.characters?.pat) ? BALANCE.characters.pat : {};
-        const guardIcon = document.getElementById('pat-guard-icon');
-        if (guardIcon) {
-            const isActive = !!player.bladeGuardActive;
-            guardIcon.classList.toggle('active', isActive);
-            guardIcon.style.borderColor = isActive ? '#7ec8e3' : '';
-            guardIcon.style.boxShadow = isActive ? '0 0 20px rgba(126,200,227,0.85)' : '';
-            const nameEl = guardIcon.querySelector('.skill-name');
-            if (nameEl) {
-                nameEl.textContent = isActive ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.skillActive) ?? 'ACTIVE') : (
-                    (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.pat?.skill1) ?? 'BLADE GUARD'
-                );
-                nameEl.style.color = isActive ? '#ffffff' : '#7ec8e3';
-            }
+  static _updateIconsKao(player, setLockOverlay) {
+    const S = BALANCE.characters.kao;
+    const passive = player.passiveUnlocked;
+    const teleportIcon = document.getElementById("teleport-icon");
+    setLockOverlay(teleportIcon, !passive);
+    if (teleportIcon && passive) {
+      const charges = player.teleportCharges || 0;
+      const maxCharges = player.maxTeleportCharges || 3;
+      const isFull = charges >= maxCharges;
+      teleportIcon.classList.toggle("active", charges > 0);
+      if (
+        !isFull &&
+        player.teleportTimers &&
+        player.teleportTimers.length > 0
+      ) {
+        const best = player.teleportTimers.reduce(
+          (b, t) => (t.elapsed > b.elapsed ? t : b),
+          player.teleportTimers[0]
+        );
+        const remaining = Math.max(0, best.max - best.elapsed);
+        if (charges > 0) {
+          let arc = teleportIcon.querySelector(".cd-arc-overlay");
+          if (!arc) {
+            arc = document.createElement("div");
+            arc.className = "cd-arc-overlay";
+            teleportIcon.appendChild(arc);
+          }
+          const elapsed =
+            best.max > 0 ? Math.min(1, 1 - remaining / best.max) : 1;
+          const p = (elapsed * 100).toFixed(1);
+          arc.style.background =
+            remaining > 0.05
+              ? `conic-gradient(transparent 0% ${p}%, rgba(0,0,0,0.62) ${p}% 100%)`
+              : "transparent";
+          let tmr = teleportIcon.querySelector(".cd-timer-text");
+          if (!tmr) {
+            tmr = document.createElement("div");
+            tmr.className = "cd-timer-text";
+            teleportIcon.appendChild(tmr);
+          }
+          tmr.style.display = "none";
+        } else {
+          UIManager._setCooldownVisual("teleport-icon", remaining, best.max);
         }
-        const zanzoIcon = document.getElementById('zanzo-icon');
-        if (zanzoIcon) {
-            const cd = Math.max(0, player.skills?.zanzo?.cd ?? 0);
-            const maxCd = S.zanzoCooldown ?? 7;
-            zanzoIcon.classList.toggle('active', cd <= 0);
-            UIManager._setCooldownVisual('zanzo-icon', cd, maxCd);
-        }
-        const iaidoIcon = document.getElementById('pat-iaido-icon');
-        if (iaidoIcon) {
-            const phase = player._iaidoPhase ?? 'none';
-            const isCharging = phase === 'charge';
-            const isCinematic = phase === 'cinematic' || phase === 'flash';
-            const cd = Math.max(0, player.skills?.iaido?.cd ?? 0);
-            const maxCd = S.iaidoCooldown ?? 14;
-
-            if (isCharging) {
-                iaidoIcon.classList.add('active');
-                iaidoIcon.style.borderColor = '#7ec8e3';
-                iaidoIcon.style.boxShadow = '0 0 22px rgba(126,200,227,0.90)';
-                const chargeTimer = player._iaidoTimer ?? 0;
-                const chargeDur = S.iaidoChargeDuration ?? 0.6;
-                const chargeProgress = Math.min(1, chargeTimer / chargeDur);
-                UIManager._setCooldownVisual('pat-iaido-icon', (1 - chargeProgress) * 0.6, 0.6);
-                const nameEl = iaidoIcon.querySelector('.skill-name');
-                if (nameEl) { nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patCharging) ?? 'CHARGING'; nameEl.style.color = '#ffffff'; }
-            } else if (isCinematic) {
-                iaidoIcon.classList.add('active');
-                iaidoIcon.style.borderColor = '#ff4444';
-                iaidoIcon.style.boxShadow = '0 0 22px rgba(204,34,34,0.85)';
-                const nameEl = iaidoIcon.querySelector('.skill-name');
-                if (nameEl) { nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patIaido) ?? 'IAIDO!'; nameEl.style.color = '#ff6666'; }
-            } else {
-                iaidoIcon.classList.toggle('active', cd <= 0);
-                iaidoIcon.style.borderColor = '';
-                iaidoIcon.style.boxShadow = '';
-                UIManager._setCooldownVisual('pat-iaido-icon', cd, maxCd);
-                const nameEl = iaidoIcon.querySelector('.skill-name');
-                if (nameEl) {
-                    nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.pat?.iaido) ?? 'IAIDO';
-                    nameEl.style.color = '#7ec8e3';
-                }
-            }
-        }
-        const passiveEl = document.getElementById('passive-skill');
-        if (passiveEl) {
-            const unlocked = !!player.passiveUnlocked;
-            passiveEl.style.opacity = unlocked ? '1' : '0.35';
-            const skillName = passiveEl.querySelector('.skill-name');
-            if (skillName) {
-                skillName.textContent = unlocked
-                    ? ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patEdge) ?? '⚔ EDGE')
-                    : ((typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.patRonin) ?? 'RONIN');
-                skillName.style.color = unlocked ? '#7ec8e3' : '#4a90d9';
-            }
-        }
+      } else {
+        UIManager._setCooldownVisual("teleport-icon", 0, 1);
+      }
+      let chargeLabel = teleportIcon.querySelector(".charge-label");
+      if (!chargeLabel) {
+        chargeLabel = document.createElement("span");
+        chargeLabel.className = "charge-label";
+        chargeLabel.style.cssText =
+          "position:absolute;bottom:2px;right:4px;font-size:10px;" +
+          "font-weight:bold;color:#00e5ff;text-shadow:0 0 4px #000;pointer-events:none;";
+        teleportIcon.appendChild(chargeLabel);
+      }
+      chargeLabel.textContent = charges > 0 ? `${charges}` : "";
+    } else if (teleportIcon && !passive) {
+      UIManager._setCooldownVisual("teleport-icon", 0, 1);
+      const cl = teleportIcon.querySelector(".charge-label");
+      if (cl) cl.textContent = "";
     }
-
-    static _updateIconsPoom(player, setLockOverlay) {
-        const S = BALANCE.characters.poom;
-        const nagaReady = !!(player._nagaUnlocked);
-        setLockOverlay(document.getElementById('eat-icon'), false);
-        setLockOverlay(document.getElementById('naga-icon'), !nagaReady);
-        setLockOverlay(document.getElementById('ritual-icon'), !nagaReady);
-        setLockOverlay(document.getElementById('garuda-icon'), !player.passiveUnlocked);
-        const eatIcon = document.getElementById('eat-icon');
-        if (eatIcon) {
-            const eating = !!player.isEatingRice;
-            eatIcon.classList.toggle('active', eating);
-            eatIcon.classList.toggle('eat-buff-active', eating);
-            let bar = eatIcon.querySelector('.eat-buff-bar');
-            if (eating) {
-                if (!bar) {
-                    bar = document.createElement('div');
-                    bar.className = 'eat-buff-bar';
-                    eatIcon.appendChild(bar);
-                }
-                const pct = Math.max(0, Math.min(1, (player.eatRiceTimer ?? 0) / (S.eatRiceDuration ?? 6)));
-                bar.style.width = (pct * 100) + '%';
-            } else {
-                if (bar) bar.remove();
-            }
-            const nameEl = eatIcon.querySelector('.skill-name');
-            if (nameEl) {
-                if (eating && player.eatRiceTimer > 0) {
-                    nameEl.textContent = player.eatRiceTimer.toFixed(1) + 's';
-                    nameEl.style.color = '#34d399';
-                } else {
-                    nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.poom?.skill1) ?? 'EAT RICE';
-                    nameEl.style.color = '#6ee7b7';
-                }
-            }
-        }
-        UIManager._setCooldownVisual('eat-icon',
-            player.isEatingRice ? 0 : Math.max(0, player.cooldowns.eat),
-            S.eatRiceCooldown);
-        const nagaIcon = document.getElementById('naga-icon');
-        const nagaTimer = document.getElementById('naga-timer');
-        if (nagaIcon) nagaIcon.classList.toggle('active', player.cooldowns.naga <= 0);
-        if (nagaTimer) nagaTimer.style.display = 'none';
-        UIManager._setCooldownVisual('naga-icon', Math.max(0, player.cooldowns.naga), S.nagaCooldown);
-        const ritualIcon = document.getElementById('ritual-icon');
-        const ritualTimer = document.getElementById('ritual-timer');
-        const maxRitualCd = GAME_CONFIG?.abilities?.ritual?.cooldown || 20;
-        if (ritualIcon) ritualIcon.classList.toggle('active', player.cooldowns.ritual <= 0);
-        if (ritualTimer) ritualTimer.style.display = 'none';
-        UIManager._setCooldownVisual('ritual-icon', Math.max(0, player.cooldowns.ritual), maxRitualCd);
-        const garudaIcon = document.getElementById('garuda-icon');
-        if (garudaIcon) garudaIcon.classList.toggle('active', player.cooldowns.garuda <= 0);
-        UIManager._setCooldownVisual('garuda-icon',
-            Math.max(0, player.cooldowns.garuda),
-            BALANCE.characters.poom.garudaCooldown ?? 24);
+    const cloneIcon = document.getElementById("kao-clone-icon");
+    setLockOverlay(cloneIcon, !passive);
+    if (cloneIcon) {
+      const cloneReady = player.cloneSkillCooldown <= 0;
+      cloneIcon.classList.toggle("active", passive && cloneReady);
+      if (player.clonesActiveTimer > 0) {
+        cloneIcon.style.borderColor = "#00e5ff";
+        cloneIcon.style.boxShadow = "0 0 20px rgba(0,229,255,0.7)";
+      } else {
+        cloneIcon.style.borderColor =
+          passive && cloneReady ? "#60a5fa" : "#3b82f6";
+        cloneIcon.style.boxShadow =
+          passive && cloneReady
+            ? "0 0 18px rgba(96,165,250,0.65)"
+            : "0 0 15px rgba(59,130,246,0.45)";
+      }
+      UIManager._setCooldownVisual(
+        "kao-clone-icon",
+        passive ? Math.max(0, player.cloneSkillCooldown) : 0,
+        player.maxCloneCooldown
+      );
     }
+  }
 
-    static _updateIconsAuto(player, setLockOverlay) {
-        const S = BALANCE.characters.auto;
-        setLockOverlay(document.getElementById('stealth-icon'), false);
-        setLockOverlay(document.getElementById('vacuum-icon'), !player.passiveUnlocked);
-        setLockOverlay(document.getElementById('auto-det-icon'), !player.passiveUnlocked);
-        const wanchaiCd = S.wanchaiCooldown ?? 12;
-        UIManager._setCooldownVisual('stealth-icon',
-            player.wanchaiActive ? 0 : Math.max(0, player.cooldowns.wanchai ?? 0),
-            wanchaiCd);
-        const stealthIcon = document.getElementById('stealth-icon');
-        if (stealthIcon) {
-            const nameEl = stealthIcon.querySelector('.skill-name');
-            if (nameEl) {
-                if (player.wanchaiActive && player.wanchaiTimer > 0) {
-                    nameEl.textContent = player.wanchaiTimer.toFixed(1) + 's';
-                    nameEl.style.color = '#fca5a5';
-                } else {
-                    nameEl.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.skillNames?.auto?.skill1) ?? 'WANCHAI';
-                    nameEl.style.color = '#fca5a5';
-                }
-            }
-        }
-        const vacMaxCd = player.wanchaiActive ? (S.standPullCooldown ?? 10) : (S.vacuumCooldown ?? 6);
-        UIManager._setCooldownVisual('vacuum-icon', Math.max(0, player.cooldowns.vacuum ?? 0), vacMaxCd);
-        const detIcon = document.getElementById('auto-det-icon');
-        if (detIcon) {
-            if (player.wanchaiActive) {
-                detIcon.style.opacity = '1';
-                detIcon.style.boxShadow = '0 0 20px rgba(220,38,38,0.80)';
-                detIcon.classList.add('active');
-            } else {
-                detIcon.style.opacity = '0.35';
-                detIcon.style.boxShadow = '0 0 8px rgba(220,38,38,0.25)';
-                detIcon.classList.remove('active');
-            }
-        }
-        UIManager._setCooldownVisual('auto-det-icon',
-            Math.max(0, player.cooldowns.detonation ?? 0),
-            S.detonationCooldown ?? 8);
+  static showGameOver(score, wave, kills) {
+    const titleEl = document.querySelector(".title");
+    if (titleEl) {
+      titleEl.textContent = "MTC the Game";
     }
+    const reportScoreEl = document.getElementById("report-score");
+    if (reportScoreEl) reportScoreEl.textContent = score.toLocaleString();
+    const reportWaveEl = document.getElementById("report-wave");
+    if (reportWaveEl) reportWaveEl.textContent = wave;
+    const reportKillsEl = document.getElementById("report-kills");
+    if (reportKillsEl)
+      reportKillsEl.textContent = (kills || 0).toLocaleString();
+    const rc = document.getElementById("report-card");
+    if (rc) rc.style.display = "block";
 
-    static _updateIconsKao(player, setLockOverlay) {
-        const S = BALANCE.characters.kao;
-        const passive = player.passiveUnlocked;
-        const teleportIcon = document.getElementById('teleport-icon');
-        setLockOverlay(teleportIcon, !passive);
-        if (teleportIcon && passive) {
-            const charges = player.teleportCharges || 0;
-            const maxCharges = player.maxTeleportCharges || 3;
-            const isFull = charges >= maxCharges;
-            teleportIcon.classList.toggle('active', charges > 0);
-            if (!isFull && player.teleportTimers && player.teleportTimers.length > 0) {
-                const best = player.teleportTimers.reduce(
-                    (b, t) => t.elapsed > b.elapsed ? t : b,
-                    player.teleportTimers[0]
-                );
-                const remaining = Math.max(0, best.max - best.elapsed);
-                if (charges > 0) {
-                    let arc = teleportIcon.querySelector('.cd-arc-overlay');
-                    if (!arc) { arc = document.createElement('div'); arc.className = 'cd-arc-overlay'; teleportIcon.appendChild(arc); }
-                    const elapsed = best.max > 0 ? Math.min(1, 1 - remaining / best.max) : 1;
-                    const p = (elapsed * 100).toFixed(1);
-                    arc.style.background = remaining > 0.05
-                        ? `conic-gradient(transparent 0% ${p}%, rgba(0,0,0,0.62) ${p}% 100%)`
-                        : 'transparent';
-                    let tmr = teleportIcon.querySelector('.cd-timer-text');
-                    if (!tmr) { tmr = document.createElement('div'); tmr.className = 'cd-timer-text'; teleportIcon.appendChild(tmr); }
-                    tmr.style.display = 'none';
-                } else {
-                    UIManager._setCooldownVisual('teleport-icon', remaining, best.max);
-                }
-            } else {
-                UIManager._setCooldownVisual('teleport-icon', 0, 1);
-            }
-            let chargeLabel = teleportIcon.querySelector('.charge-label');
-            if (!chargeLabel) {
-                chargeLabel = document.createElement('span');
-                chargeLabel.className = 'charge-label';
-                chargeLabel.style.cssText =
-                    'position:absolute;bottom:2px;right:4px;font-size:10px;' +
-                    'font-weight:bold;color:#00e5ff;text-shadow:0 0 4px #000;pointer-events:none;';
-                teleportIcon.appendChild(chargeLabel);
-            }
-            chargeLabel.textContent = charges > 0 ? `${charges}` : '';
-        } else if (teleportIcon && !passive) {
-            UIManager._setCooldownVisual('teleport-icon', 0, 1);
-            const cl = teleportIcon.querySelector('.charge-label');
-            if (cl) cl.textContent = '';
-        }
-        const cloneIcon = document.getElementById('kao-clone-icon');
-        setLockOverlay(cloneIcon, !passive);
-        if (cloneIcon) {
-            const cloneReady = player.cloneSkillCooldown <= 0;
-            cloneIcon.classList.toggle('active', passive && cloneReady);
-            if (player.clonesActiveTimer > 0) {
-                cloneIcon.style.borderColor = '#00e5ff';
-                cloneIcon.style.boxShadow = '0 0 20px rgba(0,229,255,0.7)';
-            } else {
-                cloneIcon.style.borderColor = (passive && cloneReady) ? '#60a5fa' : '#3b82f6';
-                cloneIcon.style.boxShadow = (passive && cloneReady)
-                    ? '0 0 18px rgba(96,165,250,0.65)'
-                    : '0 0 15px rgba(59,130,246,0.45)';
-            }
-            UIManager._setCooldownVisual(
-                'kao-clone-icon',
-                passive ? Math.max(0, player.cloneSkillCooldown) : 0,
-                player.maxCloneCooldown);
-        }
+    const charSection = document.querySelector(".char-select-section");
+    if (charSection) charSection.style.display = "block";
+
+    const missionBrief = document.getElementById("mission-brief");
+    if (missionBrief)
+      missionBrief.textContent =
+        (typeof GAME_TEXTS !== "undefined" && GAME_TEXTS.ui?.endGameSubtitle) ??
+        "เลือกตัวละครใหม่หรือลองอีกครั้ง";
+  }
+
+  static resetGameOverUI() {
+    const els = {
+      "report-score": "0",
+      "report-wave": "0",
+      "report-text": "Loading...",
+    };
+    for (const [id, val] of Object.entries(els)) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
     }
+  }
 
-    static showGameOver(score, wave, kills) {
-        const titleEl = document.querySelector('.title');
-        if (titleEl) {
-            titleEl.textContent = 'MTC the Game';
-        }
-        const reportScoreEl = document.getElementById('report-score');
-        if (reportScoreEl) reportScoreEl.textContent = score.toLocaleString();
-        const reportWaveEl = document.getElementById('report-wave');
-        if (reportWaveEl) reportWaveEl.textContent = wave;
-        const reportKillsEl = document.getElementById('report-kills');
-        if (reportKillsEl) reportKillsEl.textContent = (kills || 0).toLocaleString();
-        const rc = document.getElementById('report-card');
-        if (rc) rc.style.display = 'block';
-
-        const charSection = document.querySelector('.char-select-section');
-        if (charSection) charSection.style.display = 'block';
-
-        const missionBrief = document.getElementById('mission-brief');
-        if (missionBrief) missionBrief.textContent = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ui?.endGameSubtitle) ?? 'เลือกตัวละครใหม่หรือลองอีกครั้ง';
-    }
-
-    static resetGameOverUI() {
-        const els = {
-            'report-score': '0',
-            'report-wave': '0',
-            'report-text': 'Loading...'
-        };
-        for (const [id, val] of Object.entries(els)) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
-        }
-    }
-
-    static draw(ctx, dt) {
-        if (window.CanvasHUD) CanvasHUD.draw(ctx, dt);
-    }
+  static draw(ctx, dt) {
+    if (window.CanvasHUD) CanvasHUD.draw(ctx, dt);
+  }
 }
 
 window.UIManager = UIManager;

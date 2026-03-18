@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.39.5
+**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.40.1
 
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
@@ -54,12 +54,24 @@ Output Preferences:
 
 | ไฟล์                  | หน้าที่                                           |
 | --------------------- | ------------------------------------------------- |
-| `PROJECT_OVERVIEW.md` | ภาพรวมโปรเจกต์ (ไฟล์นี้)                          |
+| `Information/PROJECT_OVERVIEW.md` | ภาพรวมโปรเจกต์ (ไฟล์นี้)                          |
 | `CHANGELOG.md`        | บันทึกการเปลี่ยนแปลง                              |
+| `Command/commit-push.md` | Instruction สำหรับ commit และ push การเปลี่ยนแปลง |
+
+### `/Markdown Source/Successed-Plan/` — Completed Milestone Documents 🟢
+
+| ไฟล์                  | หน้าที่                                           |
+| --------------------- | ------------------------------------------------- |
 | `walkthrough.md`      | คู่มือการเล่นและระบบเกม                           |
-| `commit-push.md`      | Instruction สำหรับ commit และ push การเปลี่ยนแปลง |
-| `PROMPT_MEMORY.md`    | Memory สำหรับ AI Assistant                        |
 | `PERF_PLAN.md`        | แผนและสถานะการทำ Performance Audit (Tier 1-4)     |
+| `RENDERING_REMASTER_PLAN.md` | แผนการรีแฟคเตอร์ระบบเรนเดอร์ (v3.40.0)             |
+| `REGRESSION_CHECKLIST.md` | รายการตรวจสอบเพื่อป้องกันบั๊กถดถอย                 |
+| `MAP_REFACTOR_PLAN.md` | แผนการรีแฟคเตอร์ระบบแผนที่                         |
+| `MTC_BACKLOG.md`      | รายการงานที่เสร็จสิ้นแล้ว                         |
+| `COMPREHENSIVE_DEVELOPMENT_PLAN.md` | แผนการพัฒนาฉบับสมบูรณ์ (Archive)           |
+| `REFACTOR_PLAN.md`    | แผนการรีแฟคเตอร์ระบบดั้งเดิม                       |
+| `claude_master_prompt.md` | Master Prompt สำหรับ AI Assistant (Archive)      |
+| `manop_phase2_storyboard.html` | Storyboard สำหรับ Kru Manop Phase 2              |
 
 ### `/js/` — Core Logic
 
@@ -110,6 +122,17 @@ Output Preferences:
 | `ShopManager.js`       | คลาส `ShopManager` (DOM interaction)                        |
 | `UIManager.js`         | HUD management, Boss HP, voice bubbles, character portraits |
 | `CanvasHUD.js`         | การวาด UI บน Canvas (Minimap, Combo, Ammo)                  |
+
+**Font System (index.html `<head>`)** 🟢 — 4 families, single Google Fonts request:
+
+| CSS Variable     | Font                 | ใช้ที่                                  |
+| ---------------- | -------------------- | --------------------------------------- |
+| `--font-display` | Orbitron 700/900     | Zone labels, Wave title, Score, MTCRoom |
+| `--font-hud`     | Rajdhani 500/600/700 | Skill names, cooldown timer, HUD body   |
+| `--font-mono`    | Share Tech Mono      | Canvas numbers, timers, terminal text   |
+| `--font-body`    | Kanit 400/600        | Body text, Thai language                |
+
+> ⚠️ `postCanvas` (`<canvas id="postCanvas">`) exists in `index.html` as a placeholder for future post-processing (bloom/vignette) — **no JS implementation exists yet**. Do not reference `PostProcessor.js`; it does not exist.
 
 ### `/js/ai/` — AI Enhancement System 🟡
 
@@ -312,9 +335,9 @@ The game follows a strict frame lifecycle (60 FPS target):
    - **State Changes**: Health reduction, cooldown decay, status effects.
    - **Collision**: `SpatialGrid` query and resolution.
 3. **Rendering Dispatch** (`game.js` → `drawGame()`):
-   - **Clear**: `ctx.clearRect()`.
+   - **Background Fill**: Canvas filled via linear gradient (no `clearRect` — gradient covers full frame).
    - **Draw Order**: Map/Terrain → Environment (decals, casings) → Power-ups → Special Effects → Drone → Player → Enemies → Boss → HUD.
-   - **Post-Processing**: `PostProcessor.js` (bloom, vignette).
+   - ⚠️ `PostProcessor.js` — **does NOT exist**. Post-processing is not yet implemented.
 
 #### Key Design Patterns
 
@@ -332,6 +355,9 @@ The game follows a strict frame lifecycle (60 FPS target):
 - **Audio Namespace**: Global `Audio` instance with protected namespaces to prevent overlapping BGM/SFX.
 - **WorkerBridge**: Main-thread bridge to `analyzer-worker.js` for off-thread AI pattern analysis.
 - **UIManager / CanvasHUD**: UIManager handles DOM-based HUD, while CanvasHUD handles direct-to-canvas rendering (Minimap, arcs).
+- **`window.hackTerminalActive`**: Written by `HackTerminal` (map.js) when player activates it; READ by `WaveManager.updateWaveEvent()` trickle block — cross-file flag with no direct import.
+- **`game.js _checkProximityInteractions()`**: Owns all player-E interactions with interactive objects (HackTerminal, MedStation, AmmoCrate, PowerNode). Logic does NOT live in map.js.
+- **`game.js _tickEnvironment()`**: Owns per-frame cooldown ticks and PowerNode aura for interactive objects. MapSystem.update() only resolves entity collisions with static objects.
 
 ### Core Loop
 
