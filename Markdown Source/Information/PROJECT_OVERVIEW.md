@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**STACK:** HTML5 Canvas + Vanilla JS + Tailwind CSS | **STATUS:** Beta v3.40.5 | **BUILD:** Standard
+**STACK:** HTML5 Canvas + Vanilla JS + Tailwind CSS | **STATUS:** Beta v3.40.6 | **BUILD:** Standard
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
 Coding Standards & Architecture:

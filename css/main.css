@@ -709,8 +709,6 @@ body {
   gap: 3px;
   min-height: 180px;
   max-height: 340px;
-  scrollbar-width: thin;
-  scrollbar-color: #00ff41 #001a08;
 }
 
 #console-output::-webkit-scrollbar {
@@ -724,6 +722,21 @@ body {
 #console-output::-webkit-scrollbar-thumb {
   background: #00ff41;
   border-radius: 3px;
+}
+
+@keyframes loadingPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.loading-pulse-emoji {
+  animation: loadingPulse 2s ease-in-out infinite;
 }
 
 .console-line {

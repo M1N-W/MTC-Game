@@ -4,6 +4,27 @@
 
 ---
 
+## [v3.40.6] - 2026-03-19
+
+_Released: March 19, 2026_
+
+### 🛠️ UI & Compatibility Fixes
+- **Viewport Optimization:** Fixed `index.html` viewport meta tag by removing `maximum-scale` and `user-scalable` to adhere to modern accessibility and SEO standards.
+- **CSS Refactoring:**
+  - Extracted inline animation from `index.html` into a new `.loading-pulse-emoji` class in `main.css`.
+  - Removed deprecated/unsupported `scrollbar-width` and `scrollbar-color` properties from `main.css` to resolve browser compatibility warnings.
+- **Safari Support:** Removed `autocapitalize` attribute from Admin Console input in `index.html` due to lack of support in Safari.
+
+### 📁 Files Modified
+```
+✅ MODIFIED: css/main.css
+✅ MODIFIED: index.html
+✅ MODIFIED: sw.js (v3.40.6)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.40.6)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.40.6)
+```
+
+
 ## [v3.40.5] - 2026-03-19
 
 _Released: March 19, 2026_
