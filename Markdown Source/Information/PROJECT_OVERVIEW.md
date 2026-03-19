@@ -4,7 +4,7 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**STACK:** HTML5 Canvas + Vanilla JS + Tailwind CSS | **STATUS:** Beta v3.40.4 | **BUILD:** Standard
+**STACK:** HTML5 Canvas + Vanilla JS + Tailwind CSS | **STATUS:** Beta v3.40.5 | **BUILD:** Standard
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
 Coding Standards & Architecture:
@@ -288,18 +288,17 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 classDiagram
     class Entity {
         +x, y, vx, vy, radius, angle
+        +health: HealthComponent
         +applyPhysics(dt)
         +isOnScreen(buffer)
     }
     class PlayerBase {
-        +health: HealthComponent
         +charId, stats, energy, cooldowns
         +update(dt, keys, mouse)
         +dash(ax, ay)
         +takeDamage(amt)
     }
     class EnemyBase {
-        +health: HealthComponent
         +stickyStacks, statusEffects
         +_ai: UtilityAI
         +_tickShared(dt, player)
@@ -329,20 +328,21 @@ classDiagram
     BossBase <|-- KruFirst
 
     KruManop ..> BossDog : summons
+    Entity *-- HealthComponent : composes
 ```
 
 #### Core Loop & Lifecycle
 
 The game follows a strict frame lifecycle (60 FPS target):
 
-1.  **Input Handling** (`input.js`): Captures keyboard, mouse, and touch states.
+1.  **Input Handling** (`input.js`): Captures keyboard, mouse, and touch states into a global `keys` object.
 2.  **Logic Update** (`game.js` → `updateGame(dt)`):
     -   **Physics & AI**: `applyPhysics`, `_tickShared`, `UtilityAI`, `SquadAI`.
-    -   **State Changes**: Health reduction, cooldown decay, status effects.
+    -   **State Changes**: `HealthComponent` updates, cooldown decay, status effects.
     -   **Collision**: `SpatialGrid` query and resolution.
 3.  **Rendering Dispatch** (`game.js` → `drawGame()`):
-    -   **Background Fill**: Canvas filled via linear gradient (no `clearRect` — gradient covers full frame).
-    -   **Draw Order**: Map/Terrain → Environment (decals, casings) → Power-ups → Special Effects → Drone → Player → Enemies → Boss → HUD.
+    -   **Multi-Pass Pipeline**: 27-step sequence (from Background → Map → Entities → HUD → Post-Process).
+    -   **Strict Separation**: `draw(ctx)` methods are read-only and deterministic (`no Math.random()`).
     -   ⚠️ `PostProcessor.js` — **Active**. Handles screen-space bloom and vignette effects on a secondary `#postCanvas`.
 
 #### Key Design Patterns
@@ -354,14 +354,13 @@ The game follows a strict frame lifecycle (60 FPS target):
 
 #### Hidden Cross-File Dependencies
 
-- **GameState Singleton**: Centralized state manager consumed by almost every core system.
+- **GameState Singleton**: Centralized state manager (`js/systems/GameState.js`) consumed by almost every core system.
 - **Special Effects System**: `window.specialEffects` array used for complex, multi-frame visual/logic objects (e.g., `DomainExpansion`, `DeadlyGraph`).
-- **Audio Namespace**: Global `Audio` instance with protected namespaces to prevent overlapping BGM/SFX.
+- **Meteor Zones**: `window.meteorZones` array managed in `game.js` but used for damage in `_tickEnvironment` and rendering in `drawGame`.
 - **WorkerBridge**: Main-thread bridge to `analyzer-worker.js` for off-thread AI pattern analysis.
-- **UIManager / CanvasHUD**: UIManager handles DOM-based HUD, while CanvasHUD handles direct-to-canvas rendering (Minimap, arcs).
-- **`window.hackTerminalActive`**: Written by `HackTerminal` (map.js) when player activates it; READ by `WaveManager.updateWaveEvent()` trickle block — cross-file flag with no direct import.
-- **`game.js _checkProximityInteractions()`**: Owns all player-E interactions with interactive objects (HackTerminal, MedStation, AmmoCrate, PowerNode). Logic does NOT live in map.js.
-- **`game.js _tickEnvironment()`**: Owns per-frame cooldown ticks and PowerNode aura for interactive objects. MapSystem.update() only resolves entity collisions with static objects.
+- **UIManager / CanvasHUD**: `UIManager` handles DOM-based HUD, while `CanvasHUD` handles direct-to-canvas rendering (Minimap, arcs).
+- **`window.hackTerminalActive`**: Written by `HackTerminal` (map.js) when player activates it; READ by `WaveManager.updateWaveEvent()` to pause enemies.
+- **Proximity Interactions**: `game.js _checkProximityInteractions()` owns the logic for interacting with terminals, chests, and stations, decoupled from `map.js`.
 
 ### Core Loop
 

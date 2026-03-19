@@ -39,7 +39,8 @@ MTC uses a deep OOP structure for entities and a shallow structure for world obj
 Every entity is logically ticked and rendered in the main loop.
 
 *   **`Entity`** (`base.js`): Base physics, position, radius.
-    *   **`PlayerBase`** (`PlayerBase.js`): Shared HUD wire-up, lifesteal, and death handlers.
+    *   **Composition: `HealthComponent`** (`base.js`): All entities possess a `this.health` component which encapsulates HP, maxHp, and lifesteal logic, separating it from movement/AI.
+    *   **`PlayerBase`** (`PlayerBase.js`): Proxies properties to `HealthComponent`. Shared HUD wire-up and death handlers.
         *   `KaoPlayer`, `AutoPlayer`, `PoomPlayer`, `PatPlayer`.
     *   **`EnemyBase`** (`enemy.js`): Owns `_tickShared`, status effects, and UtilityAI interface.
         *   `Enemy`, `TankEnemy`, `MageEnemy`.
@@ -77,13 +78,15 @@ The AI is distributed across four distinct layers to balance complexity and perf
 Script order in `index.html` is critical for dependency availability. If a file loads out of order, the game will crash on `ReferenceError`.
 
 1.  **Configuration**: `BalanceConfig.js` → `SystemConfig.js` → `GameTexts.js`
-2.  **Core Utilities**: `utils.js` (provides `worldToScreen`, `spawnParticles`).
-3.  **Visual Systems**: `ParticleSystem.js` → `WeatherSystem.js` → `PostProcessor.js`.
-4.  **Combat Engine**: `SpatialGrid.js` → `Projectile.js` → `WeaponSystem.js`.
-5.  **AI & Hierarchy**: `base.js` → `UtilityAI.js` → `PlayerPatternAnalyzer.js` → `SquadAI.js`.
-6.  **Entity Implementation**: `PlayerBase.js` → [Characters] → `enemy.js` → `BossBase.js` → [Bosses].
-7.  **Rendering Dispatchers**: `RenderTokens.js` → [CharRenderers] → `PlayerRenderer.js` → `BossRenderer.js`.
-8.  **App Orchestration**: `GameState.js` → `WaveManager.js` → `game.js` (Loops started here).
+2.  **Core Utilities**: `utils.js` (global `worldToScreen`) → `audio.js`.
+3.  **Visual Systems**: `ParticleSystem.js` → `WeatherSystem.js` → `CombatEffects.js` → ... → `PostProcessor.js`.
+4.  **Combat Engine**: `SpatialGrid.js` → `Projectile.js` → `ProjectileManager.js` → `WeaponSystem.js` → `PoomWeapon.js`.
+5.  **Systems & UI**: `map.js` → `ShopManager.js` → `UIManager.js` → `CanvasHUD.js` → `tutorial.js`.
+6.  **Entity Foundations**: `base.js` (must be first entity file).
+7.  **AI & Logic**: `UtilityAI.js` → `EnemyActions.js` → `PlayerPatternAnalyzer.js` → `SquadAI.js`.
+8.  **Concrete Entities**: `PlayerBase.js` → [Kao/Auto/Poom/Pat] → `enemy.js` → `BossBase.js` → [Manop/First].
+9.  **Rendering Dispatchers**: `RenderTokens.js` → `RenderSkins.js` → [CharRenderers] → `ProjectileRenderer.js` → `PlayerRenderer.js` → `BossRenderer.js`.
+10. **Game Heart**: `GameState.js` → `AdminSystem.js` → `WaveManager.js` → `WorkerBridge.js` → `game.js`.
 
 ---
 
@@ -109,13 +112,20 @@ if (!this.isOnScreen(80)) return; // Cull with buffer margin
 
 ---
 
-## §5. Documentation Standards
+## §6. Hidden Dependencies & Implicit Coupling
 
-### 1. JSDoc Module Headers
-Every JS file MUST start with a block comment containing a Table of Contents (TOC) and Critical Pitfalls. This allows AI assistants to understand the file structure without reading the entire content.
+MTC Game relies on several "global singletons" and resource pools that create implicit dependencies between seemingly unrelated modules.
 
-### 2. Versioning (`sw.js`)
-The `CACHE_NAME` in `sw.js` must be incremented on EVERY commit involving code changes to ensure players receive the latest assets.
-*   **Major**: Breaking changes / Engine migration.
-*   **Minor**: New major systems or 4+ new files.
-*   **Patch**: Bug fixes, balance tweaks, or documentation updates.
+### 1. Global State Managers (window.*)
+*   **`window.gameState`**: The central source of truth for wave progress, score, and shop status. Modules like `enemy.js` read this to scale difficulty.
+*   **`window.player`**: Set in `game.js` during `startGame()`. Accessed by AI and rendering systems to calculate distances and aim angles.
+*   **`window.enemies` / `window.boss`**: Arrays/Objects managed by `WaveManager.js`. Renderers iterate over these to perform viewport culling.
+
+### 2. Resource Pools & Shared Arrays
+*   **`window.specialEffects`**: A shared array where `meteorZones`, `Shockwave`, and `DomainExpansion` effects are pushed. `drawGame()` iterates this to render non-entity visuals.
+*   **`window.renderProfiler`**: Used for frame-timing diagnostics. If `RenderProfiler.js` is missing, the game will fail during the `requestAnimationFrame` loop.
+*   **`window.adminSystem`**: Handles cheats and dev-console state. It can override `BALANCE` values at runtime, which is why documentation must never rely on static config numbers.
+
+### 3. Event-Like Callbacks
+*   **`spawnParticles()` / `spawnFloatingText()`**: Global functions (from `utils.js` via `ParticleSystem.js`) used everywhere.
+*   **`ParticleSystem._inst`**: The hidden singleton instance that manages the particle pool.

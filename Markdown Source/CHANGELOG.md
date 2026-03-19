@@ -4,30 +4,29 @@
 
 ---
 
-## [v3.40.4] - 2026-03-19
+## [v3.40.5] - 2026-03-19
 
 _Released: March 19, 2026_
 
-### 🎨 Visuals & Lighting
-- **Dynamic Boss Lighting:** Implemented phase-aware radial lighting for bosses (e.g., Manop red/cyan shift, First enrage glow) in the `drawGame` shadow-mask pass.
-- **Static Object Illumination:** Added dedicated light sources for `MTC_DATABASE_SERVER` and `MTC_SHOP_LOCATION`.
-- **PowerNode Re-design:** Updated `PowerNode` class with a violet-900 pulsing core visual and passive buff theme.
-- **Day/Night HUD v2:** Redesigned the clock HUD with a circular progress arc and percentage-of-phase readout.
-
-### 🏗️ Documentation & Architecture
-- **Conventions Refactor:** Restructured `mtc-game-conventions.md` to focus on **timeless architectural patterns** (inheritance, AI layers, core invariants) while removing volatile balance data.
-- **Rendering Docs Expansion:** Enhanced `mtc-rendering.md` with details on the `PostProcessor` (#postCanvas) pipeline and `RenderTokens` override patterns.
+### 🏗️ Documentation & Architecture Audit
+- **Comprehensive Audit:** Finalized the synchronization of `PROJECT_OVERVIEW.md`, `mtc-game-conventions.md`, and `mtc-rendering.md` with the current codebase.
+- **Hierarchy Mapping:** Updated Mermaid diagrams to explicitly show the `HealthComponent` composition pattern across all entity types.
+- **Rendering Lifecycle:** Documented the verified 27-step frame pipeline in `mtc-rendering.md`, covering everything from background transitions to post-processing.
+- **Hidden Dependencies:** Identified and documented implicit coupling points involving global singletons (`window.gameState`, `window.player`) and shared resource pools.
+- **Deterministic Rendering:** Formalized rules against `Math.random()` and side-effects in `draw()` methods.
 
 ### 📁 Files Modified
 ```
-✅ MODIFIED: js/game.js (Lighting system, HUD v2)
-✅ MODIFIED: js/map.js (PowerNode visuals)
-✅ MODIFIED: sw.js (v3.40.4)
-✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.40.4)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.40.4)
+✅ MODIFIED: sw.js (v3.40.5)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.40.5)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.40.5)
 ✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
 ✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md
 ```
+
+---
+
+## [v3.40.4] - 2026-03-19
 
 ---
 

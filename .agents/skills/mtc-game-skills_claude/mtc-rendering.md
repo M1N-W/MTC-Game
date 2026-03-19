@@ -19,35 +19,36 @@ These patterns never change regardless of game balance or new features.
 When in doubt about any draw code in this project, apply these rules.
 
 ---
+Frame render pipeline (`drawGame()` in `game.js`) — verified v3.40.4 sequence:
 
-## 0. Frame Lifecycle: Complete Draw Order
-
-Replace the current §0 draw order description with the verified sequence from game.js:
-
-```
-Frame render pipeline (drawGame() in game.js) — verified order:
-
-1.  Background gradient fill (no clearRect — gradient covers full canvas)
-2.  CTX.save() + screen shake translate
-3.  mapSystem.drawTerrain(CTX, camera)      — hex grid, arena ring, zone auras, circuit paths
-4.  meteorZones draw loop                   — lava crater visuals (BEFORE map objects)
-5.  mapSystem.draw()                         — MapObjects (desks, trees, servers, etc.)
-6.  drawDatabaseServer() / drawShopObject() — proximity aura helpers
-7.  decalSystem.draw()                       — floor decals (blood, scorch)
-8.  shellCasingSystem.draw()                 — ejected shell casings
-9.  Low-HP navigation guide line             — floor-level routing cue
-10. Power-ups
-11. specialEffects[].draw(ctx)              — MeteorStrike, DomainExpansion, DeadlyGraph, etc.
-12. window.enemies — EnemyBase.draw() per enemy
-13. window.boss — BossRenderer.draw()
-14. PlayerRenderer.draw() — player character
-16. mapSystem.drawLighting() — dynamic lighting pass (punchLight / extras)
-17. drawDayNightHUD() — day phase circle and icon overlay
-18. drawSlowMoOverlay() / drawGlitchEffect() — screen-space distortion filters
-19. drawWaveEvent() / DomainExpansion / GravitationalSingularity — cinematic auras
-20. CanvasHUD.draw() — minimap, combo bar, weapon info (Drawn on CTX)
-21. PostProcessor.draw() — bloom + vignette pass (Drawn to #postCanvas)
-```
+1.  **Background**: Linear gradient fill (no `clearRect`).
+2.  **Screen Shake**: `CTX.save()` + global translation.
+3.  **Terrain**: `mapSystem.drawTerrain()` (Hex grid, zone auras, arena ring).
+4.  **Debug**: `drawGrid()` (Visible in `DEBUG_MODE`).
+5.  **Meteor Zones**: Lava crater/scorch visuals (Under map objects).
+6.  **Map Objects**: `mapSystem.draw()` (Desks, servers, bookshelf, etc.).
+7.  **Proximity**: `drawDatabaseServer()`, `drawShopObject()` (Aura cues).
+8.  **Decals**: `decalSystem.draw()`, `shellCasingSystem.draw()` (Floor scars).
+9.  **Guide Icons**: Low-HP Navigation Guide (Dashed line to healing).
+10. **Power-ups**: Pickups waiting on the ground.
+11. **Floor VFX**: `specialEffects[].draw()` (Meteor shadows, Domain grids).
+12. **Drone**: `window.drone` helper.
+13. **Player**: `PlayerRenderer.draw(window.player)`.
+14. **Enemies**: `window.enemies` loop (`BossDog` routed to `BossRenderer`).
+15. **Boss**: `window.boss` -> `BossRenderer.draw()`.
+16. **Projectiles**: `ProjectileRenderer.drawAll()`.
+17. **Soft VFX**: `particleSystem.draw()`, `floatingTextSystem.draw()`.
+18. **Environment**: `drawOrbitalEffects()`, `hitMarkerSystem.draw()`, `weatherSystem.draw()`.
+19. **Restore**: `CTX.restore()` (Ends shake/base-world transforms).
+20. **Glow Pass**: Player Ground Glow (`overlay` blend mode).
+21. **Lighting**: `mapSystem.drawLighting()` (Composite shadow mask).
+22. **Status**: `drawDayNightHUD()` (Sun/Moon cycle indicator).
+23. **Filters**: `drawSlowMoOverlay()`, `drawGlitchEffect()`.
+24. **Events**: `drawWaveEvent()`, `DomainExpansion`, `GravitationalSingularity`.
+25. **HUD**: `CanvasHUD.draw()` (Minimap, skill bars, combo info).
+26. **Tutorial**: `TutorialSystem.draw()` (Overlay spotlight if active).
+27. **Post-Process**: `PostProcessor.draw()` (Final bloom → #postCanvas).
+ + vignette pass (Drawn to #postCanvas)
 
 Key ordering constraints that must not change:
 
@@ -604,7 +605,7 @@ if (!PlayerRenderer._cache[key]) {
     PlayerRenderer._cache[key] = osc.transferToImageBitmap();
 }
 const bm = PlayerRenderer._cache[key];
-ctx.drawImage(bm, sx - bm.width / 2, sy - bm.height / 2);
+ctx.drawImage(bm, -bm.width / 2, -bm.height / 2); // sx/sy handled by parent translate
 ```
 
 **What belongs in the cache (drawn to OffscreenCanvas):**
