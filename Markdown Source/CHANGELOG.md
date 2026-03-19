@@ -4,82 +4,181 @@
 
 ---
 
-## [v3.40.1] - 2026-03-18
-### Fix
-- **Rendering Fonts:** Updated `MapObject` rendering in `js/map.js` to use `'Share Tech Mono'` font, ensuring consistency with the project's font system.
-- **UI Refinement:** Applied minor formatting and SVG definition updates to `js/ui/UIManager.js`.
-- **UI Overhaul (Finalization):** Finalized Tailwind CSS integration in `index.html` with improved layouts and responsive design patterns.
+## [v3.40.4] - 2026-03-19
 
-### Docs
-- **File Structure Update:** Synchronized `PROJECT_OVERVIEW.md` with the new modular directory layout, including the migration of planning documents to `Successed-Plan`.
-- **Skill Documentation:** Verified and synchronized `mtc-game-conventions.md` and `mtc-rendering.md` with current implementation details (MapObject hierarchy, font rules).
+_Released: March 19, 2026_
 
-## [v3.40.0] - 2026-03-18
+### 🎨 Visuals & Lighting
+- **Dynamic Boss Lighting:** Implemented phase-aware radial lighting for bosses (e.g., Manop red/cyan shift, First enrage glow) in the `drawGame` shadow-mask pass.
+- **Static Object Illumination:** Added dedicated light sources for `MTC_DATABASE_SERVER` and `MTC_SHOP_LOCATION`.
+- **PowerNode Re-design:** Updated `PowerNode` class with a violet-900 pulsing core visual and passive buff theme.
+- **Day/Night HUD v2:** Redesigned the clock HUD with a circular progress arc and percentage-of-phase readout.
 
-### Refactor
+### 🏗️ Documentation & Architecture
+- **Conventions Refactor:** Restructured `mtc-game-conventions.md` to focus on **timeless architectural patterns** (inheritance, AI layers, core invariants) while removing volatile balance data.
+- **Rendering Docs Expansion:** Enhanced `mtc-rendering.md` with details on the `PostProcessor` (#postCanvas) pipeline and `RenderTokens` override patterns.
 
-- **Rendering Remaster:** Completed a major architectural refactor of the rendering engine to improve developer velocity and enable powerful visual customization.
-  - **Visual Tokens:** Centralized all visual styles (colors, glows, strokes, alpha) into a single source of truth at `js/rendering/RenderTokens.js`. This allows for consistent, themeable visuals across the entire game.
-  - **Render Parts & Composition:** Decomposed monolithic `draw()` functions in `AutoRenderer.js`, `BossRenderer.js`, and others into smaller, pure, and reusable "part" functions (e.g., `_drawAutoBody`, `_drawAutoWeaponFists`). This simplifies render logic and improves maintainability.
-  - **Asset-Driven Presets:** Abstracted complex visual logic into data-driven presets. New files like `js/rendering/boss/BossPresets.js` and `js/effects/EffectPresets.js` now define the behavior of auras and effects, moving logic from code to configuration.
-  - **Skinning System:** Implemented a new skinning system via `js/rendering/RenderSkins.js` that can override base `RenderTokens`, allowing for dynamic visual themes on characters and enemies.
-  - **Performance:** Continued the use of `OffscreenCanvas` caching for static character parts (e.g., `AutoRenderer._bodyCache`) to optimize performance by reducing per-frame draw calls.
+### 📁 Files Modified
+```
+✅ MODIFIED: js/game.js (Lighting system, HUD v2)
+✅ MODIFIED: js/map.js (PowerNode visuals)
+✅ MODIFIED: sw.js (v3.40.4)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.40.4)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.40.4)
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md
+```
 
-### Feat
+---
 
-- **UI Overhaul with Tailwind CSS:** Migrated all major DOM-based UI components (loading screen, modals, prompts, admin console) from legacy CSS to Tailwind CSS. This significantly speeds up UI development and ensures consistency.
+## [v3.40.3] - 2026-03-18
 
-### Docs
+_Released: March 18, 2026_
 
-- **Architectural Audit:** Updated `PROJECT_OVERVIEW.md` and skill documentation to reflect the new rendering architecture, including the introduction of Visual Tokens and the asset-driven preset patterns.
+### 🧹 Removed & Cleanup
+
+- **Interactive Objects Cleanup:** Removed `HackTerminal`, `MedStation`, and `AmmoCrate` from the game map and logic.
+- **Map Logic:** Deleted class definitions and window exports in `map.js`. Removed spawn logic and lighting effects.
+- **Game Logic:** Removed interaction logic and cooldown handling in `game.js`.
+- **Configuration:** Cleaned up `BalanceConfig.js` by removing related configurations and object types.
+
+### 📁 Files Modified
+
+```
+✅ MODIFIED: js/map.js
+✅ MODIFIED: js/game.js
+✅ MODIFIED: js/config/BalanceConfig.js
+✅ MODIFIED: sw.js (v3.40.3)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.40.3)
+```
+
+---
+
+## [v3.40.2] - 2026-03-18
+
+_Released: March 18, 2026_
+
+### 🚀 Features
+
+- **Projectile Ricochet Logic:** Implemented a new physics-based ricochet system for projectiles.
+  - Bullets now bounce off world boundaries if the `bounces` property is greater than zero.
+  - Automatic angle recalculation upon impact to maintain realistic travel direction.
+  - Integration with `GAME_CONFIG.physics.worldBounds` for precise collision detection.
+- **Meteor Strike Visual Overhaul:** Completely redesigned the meteor strike effect for enemy mages.
+  - **Dynamic Warning Phase:** Renders a radial gradient and pulsing danger ring to signal impact zones.
+  - **Atmospheric Entry:** Added an angled (135°) descent visual arc with trailing smoke and fire effects.
+  - **Impact Dynamics:** Integrated screen shake and particle bursts on successful impact.
+
+### 🛠️ Bug Fixes
+
+- **Projectile Orientation:** Locked player projectile angles to their velocity vectors (`Math.atan2(vy, vx)`), preventing visual "drifting" during movement or after bounces.
+
+### 🏗️ Documentation & Skill Alignment
+
+- **Skill Audit & Alignment:** Completed a comprehensive audit of all skill documentation.
+- **Factual Corrections:** Fixed stale file references (`weapons.js` → `WeaponSystem.js`, `config.js` → `GameTexts.js`).
+- **Architectural Purity:** Removed all hardcoded balance values from skill docs, deferring to `BalanceConfig.js`.
+- **Rendering Pipeline Sync:** Updated §0 Frame Lifecycle with the verified 19-step draw order from `game.js`.
+- **New Architectural Sections:** Added §28-31 to `mtc-rendering.md` covering `ProjectileRenderer` dispatch, `specialEffects` architecture, `meteorZones` rendering, and World vs. Screen space quick reference.
+- **Projectile Contract:** Added §26 to `mtc-game-conventions.md detailing the projectile architecture and cross-file `isReflected` contract.
 
 ### 📁 Files Modified
 
 ```
 ✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
 ✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md
-✅ MODIFIED: Debug.html
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-✅ CREATED:  Markdown Source/Future-Plan/MTC_BACKLOG.md
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
-✅ CREATED:  Markdown Source/Successed-Plan/MAP_REFACTOR_PLAN.md
-✅ CREATED:  Markdown Source/Successed-Plan/REGRESSION_CHECKLIST.md
-✅ CREATED:  Markdown Source/Successed-Plan/RENDERING_REMASTER_PLAN.md
-✅ RENAMED:  manop_phase2_storyboard.html -> Markdown Source/Successed-Plan/manop_phase2_storyboard.html
-✅ MODIFIED: css/main.css
-✅ CREATED:  css/tailwind-input.css
-✅ CREATED:  css/tailwind.css
-✅ MODIFIED: index.html
-✅ MODIFIED: js/config/BalanceConfig.js
-✅ MODIFIED: js/effects/CombatEffects.js
-✅ CREATED:  js/effects/EffectPresets.js
-✅ CREATED:  js/effects/PostProcessor.js
-✅ MODIFIED: js/entities/enemy.js
-✅ MODIFIED: js/entities/player/KaoPlayer.js
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.40.2)
+✅ MODIFIED: js/effects/VisualPolish.js
 ✅ MODIFIED: js/game.js
-✅ MODIFIED: js/map.js
-✅ MODIFIED: js/menu.js
-✅ MODIFIED: js/rendering/AutoRenderer.js
-✅ MODIFIED: js/rendering/BossRenderer.js
-✅ MODIFIED: js/rendering/PlayerRenderer.js
-✅ CREATED:  js/rendering/RenderSkins.js
-✅ CREATED:  js/rendering/RenderTokens.js
-✅ CREATED:  js/rendering/boss/BossPresets.js
-✅ CREATED:  js/rendering/enemy/EnemyOverlays.js
-✅ MODIFIED: js/systems/AdminSystem.js
-✅ MODIFIED: js/systems/GameState.js
-✅ CREATED:  js/systems/RenderProfiler.js
-✅ MODIFIED: js/systems/WaveManager.js
-✅ MODIFIED: js/utils.js
-✅ CREATED:  package-lock.json
-✅ CREATED:  package.json
-✅ MODIFIED: sw.js
-✅ CREATED:  tailwind.config.js
+✅ MODIFIED: js/rendering/ProjectileRenderer.js
+✅ MODIFIED: js/weapons/Projectile.js
+✅ MODIFIED: sw.js (v3.40.2)
 ```
 
 ---
 
-## v3.39.4 — Fix: ReferenceError in PatRenderer
+## [v3.40.1] - 2026-03-18
+
+_Released: March 18, 2026_
+
+### 🛠️ Bug Fixes & UI Refinement
+
+- **Rendering Fonts:** Updated `MapObject` rendering in `js/map.js` to use 'Share Tech Mono' font, ensuring consistency with the project's font system.
+- **UI Refinement:** Applied minor formatting and SVG definition updates to `js/ui/UIManager.js`.
+- **UI Overhaul (Finalization):** Finalized Tailwind CSS integration in `index.html` with improved layouts and responsive design patterns.
+
+### 🏗️ Architecture & Documentation
+
+- **File Structure Update:** Synchronized `PROJECT_OVERVIEW.md` with the new modular directory layout, including the migration of planning documents to `Successed-Plan`.
+- **Skill Documentation:** Verified and synchronized `mtc-game-conventions.md` and `mtc-rendering.md` with current implementation details (MapObject hierarchy, font rules).
+
+### 📁 Files Modified
+
+```
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.40.1)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.40.1)
+✅ MODIFIED: index.html
+✅ MODIFIED: js/map.js
+✅ MODIFIED: js/ui/UIManager.js
+✅ MODIFIED: sw.js (v3.40.1)
+```
+
+---
+
+## [v3.40.0] - 2026-03-18
+
+_Released: March 18, 2026_
+
+### 🏗️ Architectural Overhaul (Rendering Remaster)
+
+- **Rendering Remaster:** Completed a major architectural refactor of the rendering engine to improve developer velocity and enable powerful visual customization.
+- **Visual Tokens:** Centralized all visual styles (colors, glows, strokes, alpha) into a single source of truth at `js/rendering/RenderTokens.js`.
+- **Render Parts & Composition:** Decomposed monolithic `draw()` functions into smaller, pure, and reusable "part" functions.
+- **Asset-Driven Presets:** Abstracted complex visual logic into data-driven presets.
+- **Skinning System:** Implemented a new skinning system via `js/rendering/RenderSkins.js`.
+- **Performance:** Continued the use of `OffscreenCanvas` caching for static character parts.
+
+### 🚀 Features
+
+- **UI Overhaul with Tailwind CSS:** Migrated all major DOM-based UI components from legacy CSS to Tailwind CSS.
+
+### 📁 Files Modified
+
+```
+✅ MODIFIED: js/rendering/RenderTokens.js
+✅ MODIFIED: js/rendering/RenderSkins.js
+✅ MODIFIED: index.html
+✅ MODIFIED: sw.js (v3.40.0)
+✅ MODIFIED: Markdown Source/CHANGELOG.md (v3.40.0)
+```
+
+---
+
+## [v3.39.5] - 2026-03-18
+
+_Released: March 18, 2026_
+
+### 🏗️ Architecture & Documentation
+
+- **PROJECT_OVERVIEW.md Refactor:** Updated core architecture descriptions, added Mermaid class hierarchy diagrams, and removed volatile balance statistics to ensure documentation longevity.
+- **Skill System Synchronization:** Audited and updated `mtc-game-conventions.md` and `mtc-rendering.md` to reflect actual implementation patterns (e.g., `_tickShared` invariant, Boss class map).
+- **Core Loop Documentation:** Refined the logic update vs. rendering dispatch sequence in `game.js` within all architectural guides.
+- **File Structure Audit:** Verified and synchronized the project file structure table with the current modular directory layout.
+
+### 📁 Files Modified
+
+```
+✅ MODIFIED: sw.js (v3.39.5)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.39.5)
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md
+```
+
+---
+
+## [v3.39.4] - 2026-03-17
 
 _Released: March 17, 2026_
 
@@ -89,7 +188,7 @@ _Released: March 17, 2026_
 
 ---
 
-## v3.39.3 — Fix: ReferenceError & Projectile Rendering Decoupling
+## [v3.39.3] - 2026-03-17
 
 _Released: March 17, 2026_
 
@@ -111,7 +210,7 @@ _Released: March 17, 2026_
 
 ---
 
-## v3.39.2 — Boss: Kru Manop Phase 2 AI & New Attacks
+## [v3.39.2] - 2026-03-17
 
 _Released: March 17, 2026_
 
@@ -129,7 +228,7 @@ _Released: March 17, 2026_
 
 ---
 
-## v3.39.1 — Boss: Kru Manop Phase 2 "The Final Exam" (Initial)
+## [v3.39.1] - 2026-03-17
 
 _Released: March 17, 2026_
 
@@ -158,7 +257,7 @@ _Released: March 17, 2026_
 
 ---
 
-## v3.39.0 — Major Modularization & Architecture Refactor
+## [v3.39.0] - 2026-03-17
 
 _Released: March 17, 2026_
 
@@ -193,7 +292,7 @@ _Released: March 17, 2026_
 
 ---
 
-## v3.38.1 — UI & Compatibility Polish (CSS Prefixes & Viewport)
+## [v3.38.1] - 2026-03-16
 
 _Released: March 16, 2026_
 
@@ -219,7 +318,7 @@ _Released: March 16, 2026_
 
 ---
 
-## v3.38.0 — Environment: Arena Layout Overhaul & Visual Polish
+## [v3.38.0] - 2026-03-16
 
 _Released: March 16, 2026_
 
@@ -255,7 +354,7 @@ _Released: March 16, 2026_
 
 ---
 
-## v3.37.1 — Docs: Fast Patch Efficiency Rule & Command Update
+## [v3.37.1] - 2026-03-15
 
 _Released: March 15, 2026_
 
@@ -275,7 +374,7 @@ _Released: March 15, 2026_
 
 ---
 
-## v3.37.0 — Balance: Big-Balancing Session (Characters & Bosses)
+## [v3.37.0] - 2026-03-15
 
 _Released: March 15, 2026_
 
@@ -321,7 +420,7 @@ _Released: March 15, 2026_
 
 ---
 
-## v3.36.0 — Mechanics: Pat Perfect Parry & Reflect Overhaul
+## [v3.36.0] - 2026-03-15
 
 _Released: March 15, 2026_
 
@@ -353,7 +452,7 @@ _Released: March 15, 2026_
 
 ---
 
-## v3.35.1 — UI/UX: HUD Emojis & Visual Polish
+## [v3.35.1] - 2026-03-14
 
 _Released: March 14, 2026_
 
@@ -391,7 +490,7 @@ _Released: March 14, 2026_
 
 ---
 
-## v3.35.0 — Architecture: Performance Audit Phase 1 (Invariants)
+## [v3.35.0] - 2026-03-13
 
 _Released: March 13, 2026_
 
@@ -431,7 +530,7 @@ _Released: March 13, 2026_
 
 ---
 
-## v3.34.2 — Documentation: Full JSDoc Header Standardization
+## [v3.34.2] - 2026-03-13
 
 _Released: March 13, 2026_
 
@@ -481,7 +580,7 @@ _Released: March 13, 2026_
 
 ---
 
-## v3.34.1 — Documentation: JSDoc Headers & Stealth Logic Fix
+## [v3.34.1] - 2026-03-13
 
 _Released: March 13, 2026_
 
@@ -507,7 +606,7 @@ _Released: March 13, 2026_
 
 ---
 
-## v3.34.0 — Performance: Static Bitmap Caching & Rendering Refactor
+## [v3.34.0] - 2026-03-12
 
 _Released: March 12, 2026_
 
@@ -538,7 +637,7 @@ _Released: March 12, 2026_
 
 ---
 
-## v3.33.3 — Documentation Audit & Version Bump
+## [v3.33.3] - 2026-03-12
 
 _Released: March 12, 2026_
 
@@ -566,40 +665,50 @@ _Released: March 12, 2026_
 
 ---
 
-## v3.33.2 — Performance: Terrain Rendering & GC Reduction
+## [v3.33.2] - 2026-03-12
 
-+_Released: March 12, 2026_
+### 🚀 Performance Optimizations
 
-- +### 🚀 Performance Optimizations
-  +- **Terrain Rendering Engine**:
-- - **Pre-computed Geometry**: Moved hex corner calculations outside the draw loop to eliminate ~1,200 trig calls/frame.
-- - **String Formatting Fix**: Replaced heavy `.replace('{a}', ...)` string manipulation with template literals using pre-parsed RGB strings, eliminating hundreds of allocations per frame.
-- - **Loop Hoisting**: Cached critical config properties before loop entry to minimize property lookup overhead.
-- +### 📁 Files Modified +`
-+✅ MODIFIED: js/map.js (Major performance refactor in drawTerrain)
-+✅ MODIFIED: sw.js (v3.33.2)
-+✅ MODIFIED: CHANGELOG.md (v3.33.2)
-+✅ MODIFIED: PROJECT_OVERVIEW.md (Recent Changes sync)
-+`
-- +---
-- +## v3.33.1 — Game Stability & Performance Improvements +_Released: March 12, 2026_
-- +### 🛡️ Stability & Security
-  +- **WorkerBridge Throttling**: Implemented 10Hz throttling for main→worker messaging (was 60Hz). Prevents `postMessage` queue backlog that caused periodic game freezes during intense boss patterns.
-  +- **HitStop Hard-Cap**: Added 0.5s hard-cap to `triggerHitStop()` and backward compatibility for call-sites using milliseconds (>= 1) vs seconds (< 1).
-  +- **EXP Loop Guard**: Added `PlayerBase` safety check to ensure `expToNextLevel` is always >= 1, preventing permanent browser freezes.
-  +- **Screen Shake Protection**: Added `Number.isFinite()` guards and 80px hard-cap to `addScreenShake()` to prevent NaN propagation that could break canvas transforms.
-- +### 📁 Files Modified +`
-+✅ MODIFIED: js/game.js (HitStop heuristic & capping)
-+✅ MODIFIED: js/systems/WorkerBridge.js (10Hz throttle logic)
-+✅ MODIFIED: js/entities/player/PlayerBase.js (EXP guard)
-+✅ MODIFIED: js/utils.js (ScreenShake guards)
-+✅ MODIFIED: sw.js (v3.33.1)
-+✅ MODIFIED: CHANGELOG.md (v3.33.1)
-+✅ MODIFIED: PROJECT_OVERVIEW.md (Recent Changes sync)
-+`
-- +---
-- +## v3.33.0 — Core Architecture: ECS, Scoped Workers & Zero-GC
-  _Released: March 12, 2026_
+- **Terrain Rendering Engine**:
+  - **Pre-computed Geometry**: Moved hex corner calculations outside the draw loop to eliminate ~1,200 trig calls/frame.
+  - **String Formatting Fix**: Replaced heavy `.replace('{a}', ...)` string manipulation with template literals using pre-parsed RGB strings, eliminating hundreds of allocations per frame.
+  - **Loop Hoisting**: Cached critical config properties before loop entry to minimize property lookup overhead.
+
+### 📁 Files Modified
+
+```
+✅ MODIFIED: js/map.js (Major performance refactor in drawTerrain)
+✅ MODIFIED: sw.js (v3.33.2)
+✅ MODIFIED: CHANGELOG.md (v3.33.2)
+✅ MODIFIED: PROJECT_OVERVIEW.md (Recent Changes sync)
+```
+
+---
+
+## [v3.33.1] - 2026-03-12
+
+### 🛡️ Stability & Security
+
+- **WorkerBridge Throttling**: Implemented 10Hz throttling for main→worker messaging (was 60Hz). Prevents `postMessage` queue backlog that caused periodic game freezes during intense boss patterns.
+- **HitStop Hard-Cap**: Added 0.5s hard-cap to `triggerHitStop()` and backward compatibility for call-sites using milliseconds (>= 1) vs seconds (< 1).
+- **EXP Loop Guard**: Added `PlayerBase` safety check to ensure `expToNextLevel` is always >= 1, preventing permanent browser freezes.
+- **Screen Shake Protection**: Added `Number.isFinite()` guards and 80px hard-cap to `addScreenShake()` to prevent NaN propagation that could break canvas transforms.
+
+### 📁 Files Modified
+
+```
+✅ MODIFIED: js/game.js (HitStop heuristic & capping)
+✅ MODIFIED: js/systems/WorkerBridge.js (10Hz throttle logic)
+✅ MODIFIED: js/entities/player/PlayerBase.js (EXP guard)
+✅ MODIFIED: js/utils.js (ScreenShake guards)
+✅ MODIFIED: sw.js (v3.33.1)
+✅ MODIFIED: CHANGELOG.md (v3.33.1)
+✅ MODIFIED: PROJECT_OVERVIEW.md (Recent Changes sync)
+```
+
+---
+
+## [v3.33.0] - 2026-03-12
 
 ### 🏗️ Architecture & Performance (Phase 1.1 - 1.3)
 
@@ -634,9 +743,7 @@ _Released: March 12, 2026_
 
 ---
 
-## v3.32.3 — Remove README-info References & Version Doc Sync
-
-_Released: March 12, 2026_
+## [v3.32.3] - 2026-03-12
 
 ### 📚 Documentation & Workflow Updates
 
@@ -658,9 +765,7 @@ _Released: March 12, 2026_
 
 ---
 
-## v3.32.2 — PlayerRenderer Parameter Enhancement & Rendering System Consistency
-
-_Released: March 11, 2026_
+## [v3.32.2] - 2026-03-11
 
 ### 🎨 Rendering System Improvements
 
@@ -679,9 +784,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.32.1 — Animation System Documentation & Rendering Architecture Updates
-
-_Released: March 11, 2026_
+## [v3.32.1] - 2026-03-11
 
 ### 📚 Documentation Enhancements
 
@@ -716,9 +819,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.32.0 — Player Code Standardization & HUD Improvements
-
-_Released: March 11, 2026_
+## [v3.32.0] - 2026-03-11
 
 ### 🔧 Code Quality & Standardization
 
@@ -757,9 +858,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.31.11 — Documentation Update: PatPlayer Critical Implementation Notes
-
-_Released: March 11, 2026_
+## [v3.31.11] - 2026-03-11
 
 ### 📚 Documentation Enhancements
 
@@ -784,9 +883,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.31.10 — Visual Overhaul: MageEnemy & Auto Weapon Enhancements
-
-_Released: March 11, 2026_
+## [v3.31.10] - 2026-03-11
 
 ### 🎨 Visual Enhancements
 
@@ -824,9 +921,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.31.9 — Documentation Update: Critical Pitfalls & Bug Fixes
-
-_Released: March 11, 2026_
+## [v3.31.9] - 2026-03-11
 
 ### 📚 Documentation Enhancements
 
@@ -874,9 +969,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.31.8 — Combat Polish: Blade Guard & Katana Animation
-
-_Released: March 11, 2026_
+## [v3.31.8] - 2026-03-11
 
 ### 🛡️ Blade Guard Team Fix
 
@@ -931,9 +1024,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.31.7 — Input & Rendering Polish: Katana System Refinement
-
-_Released: March 11, 2026_
+## [v3.31.7] - 2026-03-11
 
 ### 🖱️ Input System Improvements
 
@@ -1002,9 +1093,7 @@ _Released: March 11, 2026_
 
 ---
 
-## v3.31.6 — Combat FX Enhancement: Slash Arc System
-
-_Released: March 11, 2026_
+## [v3.31.6] - 2026-03-11
 
 ### ⚔️ Dynamic Slash Arc Effects
 

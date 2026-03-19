@@ -28,6 +28,7 @@ When tackling complex tasks, adopt these perspectives:
 2. **Context First**: Always search the codebase (Grep/SearchCodebase) before modifying unfamiliar areas.
 3. **End-to-End**: A task is only done when implemented, verified, and documented.
 4. **Versioning**: IDE (you) must bump the version in `sw.js` and update `CHANGELOG.md` during the commit phase.
+5. **Changelog Invariant**: ALWAYS include a `### 📁 Files Modified` section in `CHANGELOG.md` for every release, listing all changed files with clickable markdown links (using the `file:///` protocol and basenames).
 
 ## Output Standards
 

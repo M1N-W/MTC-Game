@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.40.2"; // Architectural Audit & Release Cycle
+const CACHE_NAME = "mtc-cache-v3.40.4"; // Architectural Audit & Release Cycle
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -22,6 +22,8 @@ const urlsToCache = [
   "./js/effects/VisualPolish.js?v=" + CACHE_TIMESTAMP,
   "./js/effects/OrbitalEffects.js?v=" + CACHE_TIMESTAMP,
   "./js/effects/PatEffects.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/EffectPresets.js?v=" + CACHE_TIMESTAMP,
+  "./js/effects/PostProcessor.js?v=" + CACHE_TIMESTAMP,
   "./js/weapons/SpatialGrid.js?v=" + CACHE_TIMESTAMP,
   "./js/weapons/Projectile.js?v=" + CACHE_TIMESTAMP,
   "./js/weapons/ProjectileManager.js?v=" + CACHE_TIMESTAMP,
@@ -66,14 +68,21 @@ const urlsToCache = [
   "./js/systems/TimeManager.js?v=" + CACHE_TIMESTAMP,
   "./js/systems/AdminSystem.js?v=" + CACHE_TIMESTAMP,
   "./js/systems/GameState.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/RenderProfiler.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/WorkerBridge.js?v=" + CACHE_TIMESTAMP,
+  "./js/workers/analyzer-worker.js?v=" + CACHE_TIMESTAMP,
   "./js/VersionManager.js?v=" + CACHE_TIMESTAMP,
   // Rendering
+  "./js/rendering/RenderTokens.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/RenderSkins.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/enemy/EnemyOverlays.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/KaoRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/AutoRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/PoomRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/PatRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/ProjectileRenderer.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/PlayerRenderer.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/boss/BossPresets.js?v=" + CACHE_TIMESTAMP,
   "./js/rendering/BossRenderer.js?v=" + CACHE_TIMESTAMP,
 ];
 

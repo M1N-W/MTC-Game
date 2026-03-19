@@ -1172,163 +1172,6 @@ class ExplosiveBarrel extends MapObject {
 // 🎮 INTERACTIVE OBJECTS
 // ════════════════════════════════════════════════════════════
 
-class HackTerminal extends MapObject {
-  constructor(x, y) {
-    super(x, y, 60, 80, "hackTerminal");
-    this.cooldown = 0;
-    this.isChanneling = false;
-    this.channelTime = 0;
-  }
-
-  draw() {
-    const screen = worldToScreen(this.x, this.y);
-    const conf = BALANCE.interactive.hackTerminal;
-    const isActive = this.cooldown <= 0;
-
-    CTX.save();
-    CTX.translate(screen.x, screen.y);
-
-    // Base
-    CTX.fillStyle = "#0f172a"; // Slate-900
-    CTX.fillRect(0, 0, 60, 80);
-    CTX.strokeStyle = isActive ? conf.color : "#475569";
-    CTX.lineWidth = 2;
-    CTX.strokeRect(0, 0, 60, 80);
-
-    // Screen
-    CTX.fillStyle = isActive ? "#064e3b" : "#1f2937"; // Emerald-900 or Gray-800
-    CTX.fillRect(6, 6, 48, 40);
-
-    // Icon / Status
-    CTX.font = "600 16px 'Rajdhani',sans-serif";
-    CTX.textAlign = "center";
-    CTX.textBaseline = "middle";
-    CTX.fillStyle = "#ffffff";
-    CTX.fillText(conf.icon, 30, 26);
-
-    // Status Light
-    CTX.fillStyle = isActive ? conf.color : "#ef4444";
-    CTX.beginPath();
-    CTX.arc(30, 60, 4, 0, Math.PI * 2);
-    CTX.fill();
-
-    // Cooldown Ring
-    if (this.cooldown > 0) {
-      const pct = this.cooldown / conf.cooldown;
-      CTX.beginPath();
-      CTX.arc(30, 40, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
-      CTX.strokeStyle = "#ef4444";
-      CTX.lineWidth = 3;
-      CTX.stroke();
-    }
-
-    CTX.restore();
-  }
-}
-
-class MedStation extends MapObject {
-  constructor(x, y) {
-    super(x, y, 50, 50, "medStation");
-    this.usesLeft = BALANCE.interactive.medStation.usesPerWave;
-    this.cooldown = 0;
-  }
-
-  draw() {
-    const screen = worldToScreen(this.x, this.y);
-    const conf = BALANCE.interactive.medStation;
-    const isActive = this.usesLeft > 0 && this.cooldown <= 0;
-
-    CTX.save();
-    CTX.translate(screen.x, screen.y);
-
-    // Base
-    CTX.fillStyle = isActive ? "#fef2f2" : "#7f1d1d";
-    CTX.fillRect(0, 0, 50, 50);
-    CTX.strokeStyle = "#991b1b";
-    CTX.lineWidth = 2;
-    CTX.strokeRect(0, 0, 50, 50);
-
-    // Canvas medical cross — no emoji font dependency, renders at any DPR.
-    CTX.fillStyle = isActive ? "#ef4444" : "#6b2424";
-    CTX.fillRect(21, 7, 8, 28); // vertical bar  (x:21–29, y:7–35)
-    CTX.fillRect(8, 19, 34, 8); // horizontal bar (x:8–42,  y:19–27)
-
-    // Uses indicator dots
-    for (let i = 0; i < BALANCE.interactive.medStation.usesPerWave; i++) {
-      CTX.fillStyle = i < this.usesLeft ? "#22c55e" : "#374151";
-      CTX.beginPath();
-      CTX.arc(15 + i * 20, 42, 3, 0, Math.PI * 2);
-      CTX.fill();
-    }
-
-    if (this.cooldown > 0) {
-      const pct = this.cooldown / conf.cooldown;
-      CTX.beginPath();
-      CTX.arc(25, 25, 25, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
-      CTX.strokeStyle = "#991b1b";
-      CTX.lineWidth = 3;
-      CTX.stroke();
-    }
-
-    CTX.restore();
-  }
-}
-
-class AmmoCrate extends MapObject {
-  constructor(x, y) {
-    super(x, y, 50, 50, "ammoCrate");
-    this.usesLeft = BALANCE.interactive.ammoCrate.usesPerWave;
-    this.cooldown = 0;
-  }
-
-  draw() {
-    const screen = worldToScreen(this.x, this.y);
-    const conf = BALANCE.interactive.ammoCrate;
-    const isActive = this.usesLeft > 0 && this.cooldown <= 0;
-
-    CTX.save();
-    CTX.translate(screen.x, screen.y);
-
-    // Base
-    CTX.fillStyle = "#451a03"; // Brown
-    CTX.fillRect(0, 0, 50, 50);
-    CTX.strokeStyle = "#78350f";
-    CTX.lineWidth = 2;
-    CTX.strokeRect(0, 0, 50, 50);
-
-    // Canvas lightning bolt — energy refill visual, no emoji dep.
-    CTX.fillStyle = isActive ? "#fbbf24" : "#92400e";
-    CTX.beginPath();
-    CTX.moveTo(29, 6); // top right
-    CTX.lineTo(17, 26); // mid left
-    CTX.lineTo(25, 26); // mid inner right
-    CTX.lineTo(16, 44); // bottom tip
-    CTX.lineTo(33, 22); // upper right
-    CTX.lineTo(25, 22); // connector
-    CTX.closePath();
-    CTX.fill();
-
-    // Uses indicator dots
-    for (let i = 0; i < BALANCE.interactive.ammoCrate.usesPerWave; i++) {
-      CTX.fillStyle = i < this.usesLeft ? "#22c55e" : "#374151";
-      CTX.beginPath();
-      CTX.arc(15 + i * 20, 42, 3, 0, Math.PI * 2);
-      CTX.fill();
-    }
-
-    if (this.cooldown > 0) {
-      const pct = this.cooldown / conf.cooldown;
-      CTX.beginPath();
-      CTX.arc(25, 25, 25, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
-      CTX.strokeStyle = "#78350f";
-      CTX.lineWidth = 3;
-      CTX.stroke();
-    }
-
-    CTX.restore();
-  }
-}
-
 class PowerNode extends MapObject {
   constructor(x, y) {
     super(x, y, 40, 100, "powerNode");
@@ -1355,9 +1198,6 @@ class PowerNode extends MapObject {
   }
 }
 
-window.HackTerminal = HackTerminal;
-window.MedStation = MedStation;
-window.AmmoCrate = AmmoCrate;
 window.PowerNode = PowerNode;
 
 // ════════════════════════════════════════════════════════════
@@ -1874,39 +1714,7 @@ class MapSystem {
     this._objectsDirty = true;
     // ── 13. INTERACTIVE OBJECTS ──────────────────────────────
 
-    // 1. Hack Terminals (Landmarks)
-    // Citadel (North) - Centered against back wall
-    if (!this._isClearZone(0, -380, 60, 80)) {
-      this.objects.push(new HackTerminal(0, -380));
-    }
-    // Database (East) - Next to the main server building
-    if (!this._isClearZone(580, -500, 60, 80)) {
-      this.objects.push(new HackTerminal(580, -500));
-    }
-    // Co-op Store (West) - Near the shop entrance area
-    if (!this._isClearZone(-380, 480, 60, 80)) {
-      this.objects.push(new HackTerminal(-380, 480));
-    }
-
-    // 2. Support Stations (MedStation + AmmoCrate pairs)
-    const stations = [
-      { x: 280, y: -200 }, // NE (near Citadel/Database path)
-      { x: -280, y: -200 }, // NW (near Citadel/Library path)
-      { x: 280, y: 500 }, // SE (near Courtyard)
-      { x: -280, y: 500 }, // SW (near Courtyard)
-    ];
-
-    for (const st of stations) {
-      if (!this._isClearZone(st.x, st.y, 50, 50)) {
-        this.objects.push(new MedStation(st.x, st.y));
-        // Place AmmoCrate nearby (offset x+60)
-        if (!this._isClearZone(st.x + 60, st.y, 50, 50)) {
-          this.objects.push(new AmmoCrate(st.x + 60, st.y));
-        }
-      }
-    }
-
-    // 3. Power Nodes (Buff Zones)
+    // 1. Power Nodes (Buff Zones)
     const powerNodes = [
       { x: 0, y: -150 }, // North Center (Citadel approach)
       { x: 0, y: 250 }, // South Center (Courtyard approach)
@@ -2081,155 +1889,59 @@ class MapSystem {
       );
 
     // ── 4. ZONE A: Server Farm (East) ─────────────────────────
-    // serverFarm zone: x:430→1230, y:-680→20. Center:(830,-330).
-    // Usable (margin 70px): x:500→1160, y:-610→-50.
-    // Layout: N aisle | 220px corridor | S aisle | east datapillar column.
-    // North server aisle — y center:-520, within -610→-390 ✓
-    createCluster({
-      centerX: 830,
-      centerY: -520,
-      rows: 2,
-      cols: 3,
-      xSpacing: 105,
-      ySpacing: 100,
-      type: "server",
-      jitter: 0,
-    });
-    // South server aisle — y center:-150, within -200→-50 ✓
-    createCluster({
-      centerX: 830,
-      centerY: -150,
-      rows: 2,
-      cols: 3,
-      xSpacing: 105,
-      ySpacing: 100,
-      type: "server",
-      jitter: 0,
-    });
-    // East datapillar column — x:1110 (within 1093→1162), y covers full zone height
-    createCluster({
-      centerX: 1110,
-      centerY: -330,
-      rows: 4,
-      cols: 1,
-      xSpacing: 0,
-      ySpacing: 130,
-      type: "datapillar",
-      jitter: 0,
-    });
+    // serverFarm zone: x:430→1230, y:-680→20. Usable: x:500→1160, y:-610→-50.
+    // Layout: 3 aisles (N/M/S) × 4 servers + 5-row datapillar east wall.
+    // N aisle — y:-530, x:620→980 ✓
+    createCluster({ centerX: 800, centerY: -530, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: "server", jitter: 0 });
+    // M aisle — y:-330, 200px corridor above/below ✓
+    createCluster({ centerX: 800, centerY: -330, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: "server", jitter: 0 });
+    // S aisle — y:-130 ✓
+    createCluster({ centerX: 800, centerY: -130, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: "server", jitter: 0 });
+    // East datapillar wall — x:1120, 5 rows spanning full zone height ✓
+    createCluster({ centerX: 1120, centerY: -330, rows: 5, cols: 1, xSpacing: 0, ySpacing: 135, type: "datapillar", jitter: 0 });
 
     // ── 5. ZONE B: Library Archives (West) ────────────────────
-    // library zone: x:-1230→-430, y:-680→20. Center:(-830,-330).
-    // Usable (margin 70px): x:-1160→-500, y:-610→-50.
-    // Layout: 3 bookshelf rows with ~140px walking aisles between.
-    // Row width=(4-1)*120+80=440px → -830±220 = -1050→-610 ✓
-    createCluster({
-      centerX: -830,
-      centerY: -510,
-      rows: 1,
-      cols: 4,
-      xSpacing: 120,
-      ySpacing: 0,
-      type: "bookshelf",
-      jitter: 0,
-    });
-    createCluster({
-      centerX: -830,
-      centerY: -330,
-      rows: 1,
-      cols: 4,
-      xSpacing: 120,
-      ySpacing: 0,
-      type: "bookshelf",
-      jitter: 0,
-    });
-    createCluster({
-      centerX: -830,
-      centerY: -150,
-      rows: 1,
-      cols: 4,
-      xSpacing: 120,
-      ySpacing: 0,
-      type: "bookshelf",
-      jitter: 0,
-    });
+    // library zone: x:-1230→-430, y:-680→20. Usable: x:-1160→-500, y:-610→-50.
+    // Layout: 4 bookshelf rows + reading desk clusters in aisles.
+    // Row1 y:-540 ✓
+    createCluster({ centerX: -830, centerY: -540, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: "bookshelf", jitter: 0 });
+    // Reading desks — aisle y:-455 ✓
+    createCluster({ centerX: -830, centerY: -455, rows: 1, cols: 2, xSpacing: 100, ySpacing: 0, type: "desk", jitter: 0 });
+    // Row2 y:-370 ✓
+    createCluster({ centerX: -830, centerY: -370, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: "bookshelf", jitter: 0 });
+    // Row3 y:-200 ✓
+    createCluster({ centerX: -830, centerY: -200, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: "bookshelf", jitter: 0 });
+    // Reading desks — aisle y:-130 ✓
+    createCluster({ centerX: -830, centerY: -130, rows: 1, cols: 2, xSpacing: 100, ySpacing: 0, type: "desk", jitter: 0 });
+    // Row4 y:-80, 2 cols — south entrance path open ✓
+    createCluster({ centerX: -830, centerY: -80, rows: 1, cols: 2, xSpacing: 120, ySpacing: 0, type: "bookshelf", jitter: 0 });
 
     // ── 6. ZONE C: Courtyard (South) ──────────────────────────
-    // courtyard zone: x:-600→600, y:400→1050. Center:(0,725).
-    // Usable (margin 60px): x:-540→540, y:460→990.
-    // Layout: left/right tree groves on flanks + back hedge. Center lane CLEAR for enemy flow.
-    createCluster({
-      centerX: -360,
-      centerY: 680,
-      rows: 2,
-      cols: 2,
-      xSpacing: 80,
-      ySpacing: 90,
-      type: "tree",
-      jitter: 0,
-    });
-    createCluster({
-      centerX: 360,
-      centerY: 680,
-      rows: 2,
-      cols: 2,
-      xSpacing: 80,
-      ySpacing: 90,
-      type: "tree",
-      jitter: 0,
-    });
-    // Back hedge — y:940 (within 460→990) ✓, x: ±320 (within ±540) ✓
-    createCluster({
-      centerX: 0,
-      centerY: 940,
-      rows: 1,
-      cols: 5,
-      xSpacing: 160,
-      ySpacing: 0,
-      type: "tree",
-      jitter: 0,
-    });
+    // courtyard zone: x:-600→600, y:400→1050. Usable: x:-540→540, y:460→990.
+    // Layout: 4 corner groves (NW/NE/SW/SE) + back hedge. Center lane CLEAR.
+    // NW grove ✓
+    createCluster({ centerX: -400, centerY: 540, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: "tree", jitter: 0 });
+    // NE grove ✓
+    createCluster({ centerX: 400, centerY: 540, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: "tree", jitter: 0 });
+    // SW grove ✓
+    createCluster({ centerX: -400, centerY: 840, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: "tree", jitter: 0 });
+    // SE grove ✓
+    createCluster({ centerX: 400, centerY: 840, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: "tree", jitter: 0 });
+    // Back hedge — y:970, x:±320 ✓
+    createCluster({ centerX: 0, centerY: 970, rows: 1, cols: 5, xSpacing: 160, ySpacing: 0, type: "tree", jitter: 0 });
 
     // ── 7. LECTURE HALLS ──────────────────────────────────────
     // lectureHallL: x:-1100→-680, y:500→900. Center:(-890,700). Margin 60px.
-    createCluster({
-      centerX: -890,
-      centerY: 700,
-      rows: 2,
-      cols: 2,
-      xSpacing: 85,
-      ySpacing: 70,
-      type: "desk",
-      jitter: 0,
-    });
+    // 3r×2c — dense classroom. x:±42px from -890 = -933→-848 ✓; y:640→800 ✓
+    createCluster({ centerX: -890, centerY: 720, rows: 3, cols: 2, xSpacing: 85, ySpacing: 80, type: "desk", jitter: 0 });
     // lectureHallR: x:680→1100, y:500→900. Center:(890,700). Margin 60px.
-    createCluster({
-      centerX: 890,
-      centerY: 700,
-      rows: 2,
-      cols: 2,
-      xSpacing: 85,
-      ySpacing: 70,
-      type: "desk",
-      jitter: 0,
-    });
-
-    // ── 8. GATE PILLARS (Center → Zone boundary markers) ──────
-    // 4 datapillars frame east/west wall passage gaps.
-    // x=510: east of clear zone x∈[390,500]. x=-545: west of clear zone x∈[-510,-380].
-    // y=-210 and y=130 align with wall gap edges (not inside gaps).
-    this.objects.push(new MapObject(510, -210, 35, 70, "datapillar"));
-    this.objects.push(new MapObject(510, 130, 35, 70, "datapillar"));
-    this.objects.push(new MapObject(-545, -210, 35, 70, "datapillar"));
-    this.objects.push(new MapObject(-545, 130, 35, 70, "datapillar"));
+    createCluster({ centerX: 890, centerY: 720, rows: 3, cols: 2, xSpacing: 85, ySpacing: 80, type: "desk", jitter: 0 });
 
     // ── 9. VENDING MACHINES at zone gates ─────────────────────
     const vendingSpots = [
-      { x: 550, y: -250 },
-      { x: 550, y: 250 },
-      { x: -550, y: -250 },
-      { x: -550, y: 250 },
-      { x: 0, y: 550 },
+      { x: 550, y: -250 },  // east wall north gate ✓
+      { x: -550, y: -250 }, // west wall north gate ✓
+      { x: 0, y: 550 },     // courtyard south entrance ✓
     ];
     for (const vs of vendingSpots) {
       if (!this._isClearZone(vs.x, vs.y, 40, 70))
@@ -2238,18 +1950,16 @@ class MapSystem {
 
     // ── 10. EXPLOSIVE BARRELS (tactical chokepoints) ──────────
     const barrelSpots = [
-      { x: 830, y: -430 }, // serverFarm — between N aisle and database approach
-      { x: 830, y: -50 }, // serverFarm — south side, near east gate
-      { x: -830, y: -430 }, // library — north aisle flank
-      { x: -830, y: -50 }, // library — south side, near west gate
-      { x: 560, y: -50 }, // east gate approach (x=560 > 500 clear zone boundary ✓)
-      { x: -580, y: -50 }, // west gate approach (x=-580 < -510 clear zone boundary ✓)
-      { x: -225, y: 460 }, // courtyard N approach — outside shop clear zone ✓
-      { x: 165, y: 460 }, // courtyard N approach
-      { x: -280, y: -180 }, // center arena W side
-      { x: 250, y: 180 }, // center arena E side
-      { x: 720, y: 520 }, // lectureHallR approach
-      { x: -900, y: 520 }, // lectureHallL approach
+      { x: 830, y: -430 },  // serverFarm — between N and M aisles ✓
+      { x: 830, y: -50 },   // serverFarm — south side ✓
+      { x: -830, y: -430 }, // library — north aisle flank ✓
+      { x: -830, y: -50 },  // library — south side ✓
+      { x: 560, y: -50 },   // east gate approach ✓
+      { x: -580, y: -50 },  // west gate approach ✓
+      { x: -225, y: 460 },  // courtyard N approach ✓
+      { x: 165, y: 460 },   // courtyard N approach ✓
+      { x: 720, y: 520 },   // lectureHallR approach ✓
+      { x: -900, y: 520 },  // lectureHallL approach ✓
     ];
     for (const spot of barrelSpots) {
       let tooClose = false;
@@ -3089,22 +2799,7 @@ class MapSystem {
           L.shopLightRadius,
           "warm"
         );
-      else if (obj instanceof HackTerminal) {
-        const isActive = obj.cooldown <= 0;
-        punchLight(
-          obj.x + 30,
-          obj.y + 40,
-          60,
-          isActive ? "green" : "neutral",
-          0.8
-        );
-      } else if (obj instanceof MedStation) {
-        const isActive = obj.usesLeft > 0 && obj.cooldown <= 0;
-        if (isActive) punchLight(obj.x + 25, obj.y + 25, 45, "warm", 0.7);
-      } else if (obj instanceof AmmoCrate) {
-        const isActive = obj.usesLeft > 0 && obj.cooldown <= 0;
-        if (isActive) punchLight(obj.x + 25, obj.y + 25, 45, "warm", 0.7);
-      } else if (obj instanceof PowerNode) {
+      else if (obj instanceof PowerNode) {
         punchLight(obj.x + 20, obj.y + 50, 120, "cool", 0.9);
       }
     }

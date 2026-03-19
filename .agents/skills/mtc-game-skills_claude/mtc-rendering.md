@@ -2,6 +2,7 @@
 name: mtc-rendering
 description: >
   Canvas draw patterns and conventions for MTC The Game's rendering system.
+  Target: 60 FPS | Status: Beta v3.40.4
   Use this skill at the start of EVERY task that touches BossRenderer.js, PlayerRenderer.js,
   or any canvas draw code for bosses or players. Trigger on: BossRenderer, PlayerRenderer,
   draw boss, draw player, add visual effect, add aura, add glow, add particle, add layer,
@@ -40,11 +41,12 @@ Frame render pipeline (drawGame() in game.js) — verified order:
 12. window.enemies — EnemyBase.draw() per enemy
 13. window.boss — BossRenderer.draw()
 14. PlayerRenderer.draw() — player character
-15. ProjectileRenderer.drawAll() — all projectiles
-16. CTX.restore() — end shake block
-17. CanvasHUD.draw() — minimap, combo bar, ammo
-18. UIManager DOM updates (skill arcs, HP bars)
-19. drawGlitchEffect() — post-process chromatic aberration overlay (last)
+16. mapSystem.drawLighting() — dynamic lighting pass (punchLight / extras)
+17. drawDayNightHUD() — day phase circle and icon overlay
+18. drawSlowMoOverlay() / drawGlitchEffect() — screen-space distortion filters
+19. drawWaveEvent() / DomainExpansion / GravitationalSingularity — cinematic auras
+20. CanvasHUD.draw() — minimap, combo bar, weapon info (Drawn on CTX)
+21. PostProcessor.draw() — bloom + vignette pass (Drawn to #postCanvas)
 ```
 
 Key ordering constraints that must not change:
@@ -802,7 +804,7 @@ ctx.globalAlpha = RT.alpha.hitFlashFill; // 0.75
 ```
 
 Skin override: `RT.override({ palette: { danger: '#ff0000' } })`
-After override: invalidate any OffscreenCanvas caches that baked those colors.
+Rule: After calling `RT.override()`, you MUST invalidate any `OffscreenCanvas` caches (e.g., `_bodyCache` in AutoRenderer or PoomRenderer) that might have baked the previous color values into a bitmap. Use `RT.reset()` to restore all defaults when unloading a skin.
 
 ---
 
@@ -1036,3 +1038,44 @@ ctx.rotate(angle);
 ctx.fillText("97", 0, -30); // rotates with the entity!
 ctx.restore();
 ```
+
+---
+
+## §32. Documentation & Release Invariants
+
+### CHANGELOG.md — Files Modified Section
+
+ALWAYS include a `### 📁 Files Modified` section in `CHANGELOG.md` for every release.
+Format:
+
+- Bulleted list of clickable markdown links.
+- Use `file:///` protocol with absolute paths.
+- Use the file basename as the link text.
+
+Example:
+
+- [game.js](file:///c:/Mawin-Game/MTC-Game/js/game.js)
+- [sw.js](file:///c:/Mawin-Game/MTC-Game/sw.js)
+
+---
+
+## §33. Post-Processing Pipeline (`#postCanvas`)
+
+MTC uses a double-canvas architecture to achieve high-performance bloom and vignette effects without overdrawing the main world CTX.
+
+### Architecture:
+*   **Source**: Main `CANVAS` (the world render).
+*   **Destination**: `#postCanvas` (a separate DOM element layered ON TOP of the main canvas).
+*   **Driver**: `PostProcessor.js` singleton.
+
+### Pipeline Steps (PostProcessor.draw()):
+1.  **Downsample**: The main canvas is drawn onto a smaller internal buffer to reduce pixel count for blurring.
+2.  **Bloom Pass**: A multi-pass box blur is applied to highlighted areas (driven by `RT.palette.gold` or bright highlights).
+3.  **Vignette Pass**: A radial gradient is drawn on top of the bloom buffer to darken screen corners.
+4.  **Final Compose**: The resulting buffer is scaled back up and drawn to `#postCanvas`.
+
+### Invariants:
+*   **`postCanvas` is opaque**: It does NOT support transparency for the main world; it completely overlays the world except for specific "glitch" or "bloom" areas if not carefully masked.
+*   **Load Order**: `PostProcessor.js` must load before `game.js`.
+*   **Visibility**: If the game is paused, `PostProcessor.draw()` typically continues to run to maintain the static bloom look, unless `GameState.loopRunning` is false.
+

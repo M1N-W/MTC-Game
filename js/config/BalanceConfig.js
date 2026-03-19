@@ -730,30 +730,6 @@ const BALANCE = {
     buffCycleIcons: ["⚔", "💨", "⚡"],
   },
   interactive: {
-    hackTerminal: {
-      interactionRadius: 80,
-      channelDuration: 3.0,
-      pauseDuration: 15.0, // Pauses wave timer & spawns
-      cooldown: 45.0,
-      color: "#10b981", // Emerald-500
-      icon: "💻",
-    },
-    medStation: {
-      interactionRadius: 60,
-      healAmount: 50,
-      cooldown: 30.0,
-      usesPerWave: 2,
-      color: "#ef4444", // Red-500
-      icon: "🏥",
-    },
-    ammoCrate: {
-      interactionRadius: 60,
-      energyAmount: 100, // Full refill
-      cooldown: 30.0,
-      usesPerWave: 2,
-      color: "#f59e0b", // Amber-500
-      icon: "🔋",
-    },
     powerNode: {
       radius: 250, // Buff radius
       damageBonus: 0.2, // +20% damage
@@ -805,9 +781,6 @@ const BALANCE = {
       "blackboard",
       "database",
       "coopstore",
-      "hackTerminal",
-      "medStation",
-      "ammoCrate",
       "powerNode",
     ],
     objectSizes: {

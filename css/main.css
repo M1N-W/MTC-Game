@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
- * js/main.css
+ * css/main.css
  * ════════════════════════════════════════════════════════════════
  * MTC The Game — Master Stylesheet (4583 lines)
  * Extracted from index.html. All UI styling lives here.
@@ -523,6 +523,26 @@ body {
    GAME PAUSED — Resume Prompt Overlay
    Theme: MTC gold (#facc15) + navy (#0f172a)
    ══════════════════════════════════════════ */
+
+/* ── Pause Indicator (top-centre strip) ── */
+/* #resume-prompt backdrop + card → Tailwind (Session 11/12)               */
+/* .rp-corner / .rp-badge / .rp-divider + @keyframes rpEnter kept above.   */
+
+/* Top-centre pause label shown when DB/console is open */
+#pause-indicator {
+  /* JS removes 'hidden' to show; Tailwind sets position/color/font.
+     This rule ensures the flex layout is correct when it becomes visible. */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 4px;
+}
+
+#pause-indicator.visible,
+#pause-indicator:not(.hidden) {
+  display: flex;
+}
+
 /* ----- END REGION: PAUSE SCREEN — Resume overlay · Pause indicator ------ */
 /* ------------------------------------------------------------------------ */
 
@@ -797,6 +817,20 @@ body {
 
 #console-input::placeholder {
   color: #003d14;
+}
+
+/* Blinking block cursor in the input row */
+.console-cursor {
+  width: 8px;
+  height: 16px;
+  background: #00ff41;
+  flex-shrink: 0;
+  animation: cursorBlink 1.1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 /* Blinking cursor is provided natively by the input caret;
@@ -4602,12 +4636,7 @@ body {
   font-weight: bold;
 }
 
-/* ── HUD portrait SVG ── */
-#hud-portrait-svg {
-  display: block;
-  width: 34px;
-  height: 40px;
-}
+
 
 /* ── HUD stat bars initial fill ── */
 .bar-fill--full {

@@ -4,13 +4,12 @@
 
 **MTC the Game** — Top-down 2D Wave Survival Shooter, 15 waves + bosses + upgrades
 
-**Stack:** Vanilla JS + HTML5 Canvas (ไม่มี framework) | **Target:** 60 FPS | **Status:** Beta v3.40.2
-
+**STACK:** HTML5 Canvas + Vanilla JS + Tailwind CSS | **STATUS:** Beta v3.40.4 | **BUILD:** Standard
 **Role:** You are an Expert HTML5 Canvas Game Developer (Lead Coder) working on the "MTC-Game" project.
 
 Coding Standards & Architecture:
 
-1. Tech Stack: Vanilla JavaScript (ES6+), HTML5 Canvas 2D, Web Audio API. No external frameworks.
+1. Tech Stack: Vanilla JavaScript (ES6+), HTML5 Canvas 2D, Web Audio API, Tailwind CSS (for DOM-based UI). No JS frameworks.
 2. Performance First (60FPS):
    - Avoid garbage collection (GC) churn in the game loop.
    - Use the Object Pool pattern for particles, projectiles, and floating texts.
@@ -64,7 +63,7 @@ Output Preferences:
 | ----------------------------------- | --------------------------------------------- |
 | `walkthrough.md`                    | คู่มือการเล่นและระบบเกม                       |
 | `PERF_PLAN.md`                      | แผนและสถานะการทำ Performance Audit (Tier 1-4) |
-| `RENDERING_REMASTER_PLAN.md`        | แผนการรีแฟคเตอร์ระบบเรนเดอร์ (v3.40.0)        |
+| `RENDERING_REMASTER_PLAN.md`        | แผนการรีแฟคเตอร์ระบบเรนเดอร์ (v3.40.3)        |
 | `REGRESSION_CHECKLIST.md`           | รายการตรวจสอบเพื่อป้องกันบั๊กถดถอย            |
 | `MAP_REFACTOR_PLAN.md`              | แผนการรีแฟคเตอร์ระบบแผนที่                    |
 | `MTC_BACKLOG.md`                    | รายการงานที่เสร็จสิ้นแล้ว                     |
@@ -95,20 +94,22 @@ Output Preferences:
 
 ### `/js/effects/` — FX Engine 🟢
 
-| ไฟล์                | หน้าที่                                     |
-| ------------------- | ------------------------------------------- |
-| `ParticleSystem.js` | Core FX engine (object pool)                |
-| `WeatherSystem.js`  | Rain/Snow systems                           |
-| `CombatEffects.js`  | FloatingText, impact sparks, hit flashes    |
-| `VisualPolish.js`   | Glitch FX, screen shake, wave announcements |
-| `OrbitalEffects.js` | OrbitalParticle system                      |
-| `PatEffects.js`     | Pat-specific effects (Zanzo, Katana arc)    |
+| ไฟล์                | หน้าที่                                          |
+| ------------------- | ------------------------------------------------ |
+| `ParticleSystem.js` | Core FX engine (object pool)                     |
+| `WeatherSystem.js`  | Rain/Snow systems                                |
+| `CombatEffects.js`  | FloatingText, impact sparks, hit flashes         |
+| `VisualPolish.js`   | Glitch FX, screen shake, wave announcements      |
+| `OrbitalEffects.js` | OrbitalParticle system                           |
+| `PatEffects.js`     | Pat-specific effects (Zanzo, Katana arc)         |
+| `EffectPresets.js`  | Data-driven visual effect presets (Meteor, etc.) |
+| `PostProcessor.js`  | Screen-space bloom + vignette (Step 19)          |
 
 ### `/js/weapons/` — Combat Systems 🟢
 
 | ไฟล์                   | หน้าที่                                                |
 | ---------------------- | ------------------------------------------------------ |
-| `Projectile.js`        | คลาส `Projectile` และ Logic การเคลื่อนที่/ชน           |
+| `Projectile.js`        | คลาส `Projectile` (v3.40.2: ricochet logic)            |
 | `WeaponSystem.js`      | คลาส `WeaponSystem` (การจัดการอาวุธของ Kao)            |
 | `ProjectileManager.js` | คลาส `ProjectileManager`                               |
 | `SpatialGrid.js`       | คลาส `SpatialGrid` สำหรับ Optimization การตรวจจับการชน |
@@ -119,7 +120,7 @@ Output Preferences:
 | ไฟล์                   | หน้าที่                                                     |
 | ---------------------- | ----------------------------------------------------------- |
 | `AchievementSystem.js` | คลาส `AchievementSystem` และ gallery                        |
-| `ShopManager.js`       | คลาส `ShopManager` (DOM interaction)                        |
+| `ShopManager.js`       | คลาส `ShopManager` (Tailwind-integrated)                    |
 | `UIManager.js`         | HUD management, Boss HP, voice bubbles, character portraits |
 | `CanvasHUD.js`         | การวาด UI บน Canvas (Minimap, Combo, Ammo)                  |
 
@@ -132,7 +133,7 @@ Output Preferences:
 | `--font-mono`    | Share Tech Mono      | Canvas numbers, timers, terminal text   |
 | `--font-body`    | Kanit 400/600        | Body text, Thai language                |
 
-> ⚠️ `postCanvas` (`<canvas id="postCanvas">`) exists in `index.html` as a placeholder for future post-processing (bloom/vignette) — **no JS implementation exists yet**. Do not reference `PostProcessor.js`; it does not exist.
+> ⚠️ `postCanvas` (`<canvas id="postCanvas">`) is used by `PostProcessor.js` for screen-space bloom and vignette effects.
 
 ### `/js/ai/` — AI Enhancement System 🟡
 
@@ -149,13 +150,15 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 
 ### `/js/systems/`
 
-| ไฟล์             | หน้าที่                                                                                            |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| `GameState.js`   | State management (single source of truth) + `window.gameState` compat                              |
-| `WaveManager.js` | Wave progression, enemy spawning, deterministic schedule                                           |
-| `TimeManager.js` | Bullet time                                                                                        |
-| `ShopSystem.js`  | ร้านค้า, upgrades                                                                                  |
-| `AdminSystem.js` | Debug console (GUEST/OPERATOR/ROOT) — `spawn manop [1\|2\|3]`, `spawn first [advanced]`, `devbuff` |
+| ไฟล์                | หน้าที่                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| `GameState.js`      | State management (single source of truth) + `window.gameState` compat                              |
+| `WaveManager.js`    | Wave progression, enemy spawning, deterministic schedule                                           |
+| `TimeManager.js`    | Bullet time                                                                                        |
+| `ShopSystem.js`     | ร้านค้า, upgrades                                                                                  |
+| `AdminSystem.js`    | Debug console (GUEST/OPERATOR/ROOT) — `spawn manop [1\|2\|3]`, `spawn first [advanced]`, `devbuff` |
+| `RenderProfiler.js` | Performance monitoring (Step 18 in draw loop)                                                      |
+| `WorkerBridge.js`   | Off-main-thread heavy computation bridge (analyzer worker)                                         |
 
 ### `/js/entities/`
 
@@ -203,6 +206,9 @@ Load order: `UtilityAI.js → EnemyActions.js → PlayerPatternAnalyzer.js → S
 - `BossRenderer.js` — วาด boss ทั้งหมด (KruManop, KruFirst, BossDog, domain effects)
 - `ProjectileRenderer.js` — วาด projectile ทั้งหมด (bullets, punches, FX)
 - `RenderTokens.js` — Visual token system — single source of truth for palette, glow, stroke, alpha. All renderers read `RT.*`; never hardcode style values. `RT.override(patch)` for skin themes; `RT.reset()` to unload.
+- `RenderSkins.js` — Skinning system (Golden, etc.)
+- `enemy/EnemyOverlays.js` — Shared overlays for enemies
+- `boss/BossPresets.js` — Data-driven boss visual presets
 
 > ⚠️ **Dispatch pattern — graceful fallback:** `PlayerRenderer.draw()` เรียก `window.KaoRenderer?._drawKao()` ก่อนเสมอ; ถ้า file ยังไม่โหลด (เช่น index.html load order ผิด) จะ fallback กลับมาเรียก `PlayerRenderer._drawKao()` แทน — ป้องกัน crash ระหว่าง dev
 
@@ -329,20 +335,18 @@ classDiagram
 
 The game follows a strict frame lifecycle (60 FPS target):
 
-1. **Input Handling** (`input.js`): Captures keyboard, mouse, and touch states.
-2. **Logic Update** (`game.js` → `updateGame(dt)`):
-   - **Physics & AI**: `applyPhysics`, `_tickShared`, `UtilityAI`, `SquadAI`.
-   - **State Changes**: Health reduction, cooldown decay, status effects.
-   - **Collision**: `SpatialGrid` query and resolution.
-3. **Rendering Dispatch** (`game.js` → `drawGame()`):
-   - **Background Fill**: Canvas filled via linear gradient (no `clearRect` — gradient covers full frame).
-   - **Draw Order**: Map/Terrain → Environment (decals, casings) → Power-ups → Special Effects → Drone → Player → Enemies → Boss → HUD.
-   - ⚠️ `PostProcessor.js` — **does NOT exist**. Post-processing is not yet implemented.
+1.  **Input Handling** (`input.js`): Captures keyboard, mouse, and touch states.
+2.  **Logic Update** (`game.js` → `updateGame(dt)`):
+    -   **Physics & AI**: `applyPhysics`, `_tickShared`, `UtilityAI`, `SquadAI`.
+    -   **State Changes**: Health reduction, cooldown decay, status effects.
+    -   **Collision**: `SpatialGrid` query and resolution.
+3.  **Rendering Dispatch** (`game.js` → `drawGame()`):
+    -   **Background Fill**: Canvas filled via linear gradient (no `clearRect` — gradient covers full frame).
+    -   **Draw Order**: Map/Terrain → Environment (decals, casings) → Power-ups → Special Effects → Drone → Player → Enemies → Boss → HUD.
+    -   ⚠️ `PostProcessor.js` — **Active**. Handles screen-space bloom and vignette effects on a secondary `#postCanvas`.
 
 #### Key Design Patterns
 
-- **Separation of Concerns**: Logic (`update(dt)`) is strictly isolated from rendering (`draw(ctx)`). `draw` methods are read-only and deterministic.
-- **Object Pooling**: `ParticleSystem`, `FloatingTextSystem`, and `ProjectileManager` reuse objects to eliminate Garbage Collection (GC) stutter.
 - **Spatial Grid**: `SpatialGrid.js` provides O(1) cell-based collision lookups, essential for high entity counts.
 - **Bitmap Caching**: `OffscreenCanvas` caches static body parts (e.g., `AutoRenderer._bodyCache`) to reduce per-frame path construction overhead.
 - **Singleton State**: `GameState.js` is the single source of truth for game phase, time scale, and global flags.
