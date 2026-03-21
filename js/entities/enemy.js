@@ -139,30 +139,14 @@ class EnemyBase extends Entity {
   }
 
   // ── Proxy getters — keep call sites backward-compatible ──
-  get hp() {
-    return this.health.hp;
-  }
-  set hp(v) {
-    this.health.hp = v;
-  }
-  get maxHp() {
-    return this.health.maxHp;
-  }
-  set maxHp(v) {
-    this.health.maxHp = v;
-  }
-  get dead() {
-    return this.health.dead;
-  }
-  set dead(v) {
-    this.health.dead = v;
-  }
-  get hitFlashTimer() {
-    return this.health.hitFlashTimer;
-  }
-  set hitFlashTimer(v) {
-    this.health.hitFlashTimer = v;
-  }
+  get hp() { return this.health.hp; }
+  set hp(v) { this.health.hp = v; }
+  get maxHp() { return this.health.maxHp; }
+  set maxHp(v) { this.health.maxHp = v; }
+  get dead() { return this.health.dead; }
+  set dead(v) { this.health.dead = v; }
+  get hitFlashTimer() { return this.health.hitFlashTimer; }
+  set hitFlashTimer(v) { this.health.hitFlashTimer = v; }
 
   // ─────────────────────────────────────────────────────────
   // _tickShared — call at top of every subclass update()
@@ -177,7 +161,7 @@ class EnemyBase extends Entity {
       const slowPerStack = stickyStatus.meta.slowPerStack || 0.04;
       this.stickySlowMultiplier = Math.max(
         0.2,
-        1 - slowPerStack * stickyStatus.stacks
+        1 - slowPerStack * stickyStatus.stacks,
       );
       this.stickyStacks = stickyStatus.stacks;
     }
@@ -200,8 +184,7 @@ class EnemyBase extends Entity {
     // OR PhysicsFormulaZone slow detected via stickySlowMultiplier < 0.65).
     // One reaction per ignite application — flag _shatterUsed prevents repeat.
     if ((this.igniteTimer ?? 0) > 0 && !this._shatterUsed) {
-      const isSlowed =
-        this.stickySlowMultiplier < 0.65 || (this.stickyStacks ?? 0) >= 3;
+      const isSlowed = this.stickySlowMultiplier < 0.65 || (this.stickyStacks ?? 0) >= 3;
       if (isSlowed) {
         this._shatterUsed = true;
         const shatterDmg = (this.igniteDPS ?? 12) * 2.5; // 2.5× ignite DPS as burst
@@ -210,10 +193,10 @@ class EnemyBase extends Entity {
         this.igniteDPS = 0;
         // Brief stun — write AI stun directly (safe per architecture rules)
         this._shatterStunTimer = 0.4;
-        if (typeof spawnFloatingText === "function")
-          spawnFloatingText("💥 SHATTER!", this.x, this.y - 50, "#f0abfc", 22);
-        if (typeof spawnParticles === "function")
-          spawnParticles(this.x, this.y, 14, "#f0abfc");
+        if (typeof spawnFloatingText === 'function')
+          spawnFloatingText('💥 SHATTER!', this.x, this.y - 50, '#f0abfc', 22);
+        if (typeof spawnParticles === 'function')
+          spawnParticles(this.x, this.y, 14, '#f0abfc');
       }
     }
     // Reset shatter flag when ignite expires naturally
@@ -240,7 +223,7 @@ class EnemyBase extends Entity {
     const incoming =
       data.expireAt !== undefined
         ? data.expireAt - performance.now() / 1000
-        : data.duration ?? 5;
+        : (data.duration ?? 5);
     if (existing) {
       if (data.stacks !== undefined) existing.stacks += data.stacks;
       // Refresh duration: take the longer of current remaining vs incoming
@@ -299,10 +282,7 @@ class EnemyBase extends Entity {
     // Wire _onDeathCb once (cheap — same reference check)
     if (!this.health._onDeathCb) {
       this.health._onDeathCb = (killer) => {
-        if (this._ai) {
-          this._ai.dispose();
-          this._ai = null;
-        }
+        if (this._ai) { this._ai.dispose(); this._ai = null; }
         this._onDeath(killer);
       };
     }
@@ -310,7 +290,7 @@ class EnemyBase extends Entity {
   }
 
   // Override in subclass for custom death FX/scoring
-  _onDeath(player) {}
+  _onDeath(player) { }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -330,7 +310,7 @@ class Enemy extends EnemyBase {
     // Exponential HP scaling: baseHp * ((1 + hpPerWave)^wave)
     const hpGrowth = 1 + BALANCE.enemy.hpPerWave;
     this.maxHp = Math.floor(
-      BALANCE.enemy.baseHp * Math.pow(hpGrowth, getWave())
+      BALANCE.enemy.baseHp * Math.pow(hpGrowth, getWave()),
     );
     this.hp = this.maxHp;
     this.speed =
@@ -398,25 +378,24 @@ class Enemy extends EnemyBase {
       d < BALANCE.enemy.shootRange &&
       !player.isInvisible
     ) {
-      const _wave = typeof getWave === "function" ? getWave() : 1;
+      const _wave = typeof getWave === 'function' ? getWave() : 1;
       const _leadT = Math.min(0.08 + (_wave - 1) * 0.015, 0.25); // 0.08s→0.25s by wave12
-      const _pred =
-        typeof playerAnalyzer !== "undefined" && _wave >= 4
-          ? playerAnalyzer.predictedPosition(_leadT)
-          : null;
+      const _pred = (typeof playerAnalyzer !== 'undefined' && _wave >= 4)
+        ? playerAnalyzer.predictedPosition(_leadT)
+        : null;
       const _aimX = _pred ? _pred.x : player.x;
       const _aimY = _pred ? _pred.y : player.y;
       projectileManager.add(
         new Projectile(
           this.x,
           this.y,
-          Math.atan2(_aimY - this.y, _aimX - this.x), // ← predictive angle
+          Math.atan2(_aimY - this.y, _aimX - this.x),  // ← predictive angle
           BALANCE.enemy.projectileSpeed,
           this.damage,
           "#fff",
           false,
-          "enemy"
-        )
+          "enemy",
+        ),
       );
       this.shootTimer = rand(...BALANCE.enemy.shootCooldown);
     }
@@ -463,7 +442,7 @@ class Enemy extends EnemyBase {
             this.x,
             this.y - 40,
             "#facc15",
-            14
+            14,
           );
         }
       }
@@ -484,7 +463,7 @@ class TankEnemy extends EnemyBase {
     super(x, y, BALANCE.tank.radius, "tank");
     const hpGrowth = 1 + BALANCE.tank.hpPerWave;
     this.maxHp = Math.floor(
-      BALANCE.tank.baseHp * Math.pow(hpGrowth, getWave())
+      BALANCE.tank.baseHp * Math.pow(hpGrowth, getWave()),
     );
     this.hp = this.maxHp;
     this.speed = BALANCE.tank.baseSpeed + getWave() * BALANCE.tank.speedPerWave;
@@ -586,7 +565,7 @@ class MageEnemy extends EnemyBase {
     super(x, y, BALANCE.mage.radius, "mage");
     const hpGrowth = 1 + BALANCE.mage.hpPerWave;
     this.maxHp = Math.floor(
-      BALANCE.mage.baseHp * Math.pow(hpGrowth, getWave())
+      BALANCE.mage.baseHp * Math.pow(hpGrowth, getWave()),
     );
     this.hp = this.maxHp;
     this.speed = BALANCE.mage.baseSpeed + getWave() * BALANCE.mage.speedPerWave;
@@ -662,7 +641,7 @@ class MageEnemy extends EnemyBase {
           this.x + Math.cos(a) * 50,
           this.y + Math.sin(a) * 50,
           3,
-          "#a855f7"
+          "#a855f7",
         );
       }
       this.soundWaveCD = BALANCE.mage.soundWaveCooldown;
@@ -670,20 +649,19 @@ class MageEnemy extends EnemyBase {
     if (this.meteorCD <= 0 && Math.random() < 0.005 * dt * 60) {
       // Lead time scales with wave: 0.15s (wave1) → 0.40s (wave10+)
       // Spread shrinks inversely so total difficulty curve stays smooth.
-      const _wave = typeof getWave === "function" ? getWave() : 1;
-      const _leadT = Math.min(0.15 + (_wave - 1) * 0.028, 0.4); // caps at wave 10
-      const _spread = Math.max(120, 300 - (_wave - 1) * 18); // 300→120 by wave 11
-      const _pred =
-        typeof playerAnalyzer !== "undefined" && _wave >= 3
-          ? playerAnalyzer.predictedPosition(_leadT)
-          : null;
+      const _wave = typeof getWave === 'function' ? getWave() : 1;
+      const _leadT = Math.min(0.15 + (_wave - 1) * 0.028, 0.40); // caps at wave 10
+      const _spread = Math.max(120, 300 - (_wave - 1) * 18);       // 300→120 by wave 11
+      const _pred = (typeof playerAnalyzer !== 'undefined' && _wave >= 3)
+        ? playerAnalyzer.predictedPosition(_leadT)
+        : null;
       const _aimX = _pred ? _pred.x : player.x;
       const _aimY = _pred ? _pred.y : player.y;
       window.specialEffects.push(
         new MeteorStrike(
           _aimX + rand(-_spread, _spread),
-          _aimY + rand(-_spread, _spread)
-        )
+          _aimY + rand(-_spread, _spread),
+        ),
       );
       this.meteorCD = BALANCE.mage.meteorCooldown;
       Audio.playMeteorWarning();
@@ -768,8 +746,8 @@ class PowerUp {
             // Restore shop boost if still active
             const currentShopMult = player.shopDamageBoostActive
               ? player.damageBoost /
-                ((player._baseDamageBoost || 1.0) *
-                  BALANCE.powerups.damageBoost)
+              ((player._baseDamageBoost || 1.0) *
+                BALANCE.powerups.damageBoost)
               : 1.0;
             player.damageBoost =
               (player._baseDamageBoost || 1.0) * currentShopMult;
@@ -804,290 +782,6 @@ class PowerUp {
   }
   // draw() moved to EnemyRenderer.drawXxx() — see bottom of this file.
 }
-// ════════════════════════════════════════════════════════════
-// HEALER ENEMY — coward support; heals lowest-HP ally nearby
-// SquadAI role: SUPPORT | First appears: WAVE_SCHEDULE.healerFirstWave
-// ════════════════════════════════════════════════════════════
-class HealerEnemy extends EnemyBase {
-  constructor(x, y) {
-    super(x, y, BALANCE.healer.radius, "mage"); // 'mage' personality = orbit + kite
-    const hpGrowth = 1 + BALANCE.healer.hpPerWave;
-    this.maxHp = Math.floor(
-      BALANCE.healer.baseHp * Math.pow(hpGrowth, getWave())
-    );
-    this.hp = this.maxHp;
-    this.speed =
-      BALANCE.healer.baseSpeed + getWave() * BALANCE.healer.speedPerWave;
-    this.damage =
-      BALANCE.healer.baseDamage + getWave() * BALANCE.healer.damagePerWave;
-    this.type = "healer";
-    this.expValue = BALANCE.healer.expValue;
-
-    // Heal state
-    this._healTimer = BALANCE.healer.healInterval;
-    this._healPulseT = 0; // 0→1 visual pulse timer (draw reads this)
-  }
-
-  update(dt, player) {
-    if (this.dead) return;
-    this._tickShared(dt, player); // StatusEffects + AI + hitFlash — FIRST always
-
-    // ── Orbit logic (mirrors MageEnemy kiting) ───────────────
-    const dx = player.x - this.x,
-      dy = player.y - this.y;
-    const d = dist(this.x, this.y, player.x, player.y);
-    this.angle = Math.atan2(dy, dx);
-
-    const orbitD = BALANCE.healer.orbitDistance;
-    const buf = BALANCE.healer.orbitDistanceBuffer;
-    if (!player.isInvisible) {
-      if (d < orbitD - buf) {
-        // Too close — flee directly away from player
-        this.vx =
-          -Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-        this.vy =
-          -Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
-      } else if (d > orbitD + buf) {
-        // Too far — close in
-        this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-        this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
-      } else {
-        // In orbit band — strafe perpendicular
-        this.vx =
-          -Math.sin(this.angle) * this.speed * 0.6 * this.stickySlowMultiplier;
-        this.vy =
-          Math.cos(this.angle) * this.speed * 0.6 * this.stickySlowMultiplier;
-      }
-    } else {
-      this.vx *= 0.9;
-      this.vy *= 0.9;
-    }
-
-    this._steerAroundObstacles(dt);
-    this.applyPhysics(dt);
-
-    // ── Heal pulse ───────────────────────────────────────────
-    this._healTimer -= dt;
-    if (this._healTimer <= 0) {
-      this._healTimer = BALANCE.healer.healInterval;
-      this._tryHealAlly();
-    }
-    // Visual pulse timer decay
-    if (this._healPulseT > 0)
-      this._healPulseT = Math.max(0, this._healPulseT - dt / 0.45);
-
-    // ── Weak harassment shot at player ───────────────────────
-    if (!this._shootTimer)
-      this._shootTimer = rand(...BALANCE.healer.shootCooldown);
-    this._shootTimer -= dt;
-    if (
-      this._shootTimer <= 0 &&
-      d < BALANCE.healer.shootRange &&
-      !player.isInvisible
-    ) {
-      projectileManager.add(
-        new Projectile(
-          this.x,
-          this.y,
-          Math.atan2(player.y - this.y, player.x - this.x),
-          BALANCE.healer.projectileSpeed,
-          this.damage,
-          "#10b981",
-          false,
-          "enemy"
-        )
-      );
-      this._shootTimer = rand(...BALANCE.healer.shootCooldown);
-    }
-  }
-
-  _tryHealAlly() {
-    if (!window.enemies) return;
-    const range = BALANCE.healer.healRange;
-    const healAmt =
-      BALANCE.healer.healAmount + getWave() * BALANCE.healer.healAmountPerWave;
-    let target = null,
-      lowestRatio = 1.0;
-
-    for (let i = 0; i < window.enemies.length; i++) {
-      const e = window.enemies[i];
-      if (e === this || e.dead || e.maxHp <= 0) continue;
-      if (dist(this.x, this.y, e.x, e.y) > range) continue;
-      const ratio = e.hp / e.maxHp;
-      if (ratio < lowestRatio) {
-        lowestRatio = ratio;
-        target = e;
-      }
-    }
-
-    if (target && lowestRatio < 0.95) {
-      target.hp = Math.min(target.maxHp, target.hp + healAmt);
-      this._healPulseT = 1.0; // trigger visual
-      spawnParticles(target.x, target.y, 8, "#10b981");
-      spawnFloatingText(
-        `+${Math.round(healAmt)}`,
-        target.x,
-        target.y - 35,
-        "#10b981",
-        16
-      );
-    }
-  }
-
-  _onDeath(player) {
-    spawnParticles(this.x, this.y, 18, BALANCE.healer.color);
-    if (typeof decalSystem !== "undefined")
-      decalSystem.spawn(this.x, this.y, "#064e3b", 10 + Math.random() * 6);
-    addScore((BALANCE.score.basicEnemy * getWave() * 1.5) | 0);
-    addEnemyKill();
-    Audio.playEnemyDeath();
-    if (window.isSlowMotion && typeof Achievements !== "undefined") {
-      Achievements.stats.slowMoKills++;
-      Achievements.check("bullet_time_kill");
-    }
-    if (player) player.gainExp(this.expValue);
-    if (
-      Math.random() <
-      BALANCE.powerups.dropRate * BALANCE.healer.powerupDropMult
-    )
-      window.powerups.push(new PowerUp(this.x, this.y));
-  }
-  // draw() → EnemyRenderer.drawHealer()
-}
-
-// ════════════════════════════════════════════════════════════
-// SNIPER ENEMY — precision ranged; punishes standing still
-// SquadAI role: FLANKER | First appears: WAVE_SCHEDULE.sniperFirstWave
-// ════════════════════════════════════════════════════════════
-class SniperEnemy extends EnemyBase {
-  constructor(x, y) {
-    super(x, y, BALANCE.sniper.radius, "basic"); // basic personality (direct threat)
-    const hpGrowth = 1 + BALANCE.sniper.hpPerWave;
-    this.maxHp = Math.floor(
-      BALANCE.sniper.baseHp * Math.pow(hpGrowth, getWave())
-    );
-    this.hp = this.maxHp;
-    this.speed =
-      BALANCE.sniper.baseSpeed + getWave() * BALANCE.sniper.speedPerWave;
-    this.damage =
-      BALANCE.sniper.baseDamage + getWave() * BALANCE.sniper.damagePerWave;
-    this.type = "sniper";
-    this.expValue = BALANCE.sniper.expValue;
-
-    this._shootTimer = rand(...BALANCE.sniper.shootCooldown);
-    this._chargeTimer = 0; // counts up to laserChargeTime before firing
-    this._charging = false;
-    this._aimAngle = 0; // locked-in aim angle during charge
-  }
-
-  update(dt, player) {
-    if (this.dead) return;
-    this._tickShared(dt, player); // FIRST always
-
-    const dx = player.x - this.x,
-      dy = player.y - this.y;
-    const d = dist(this.x, this.y, player.x, player.y);
-    this.angle = Math.atan2(dy, dx);
-
-    const prefD = BALANCE.sniper.preferredRange;
-    const fleeD = BALANCE.sniper.fleeRange;
-
-    // ── Positioning: flee close range, maintain preferred distance ──
-    if (d < fleeD) {
-      // Dash away — fast retreat
-      this.vx =
-        -Math.cos(this.angle) * this.speed * 1.4 * this.stickySlowMultiplier;
-      this.vy =
-        -Math.sin(this.angle) * this.speed * 1.4 * this.stickySlowMultiplier;
-    } else if (d < prefD - 60) {
-      // Back off to preferred range
-      this.vx =
-        -Math.cos(this.angle) * this.speed * 0.7 * this.stickySlowMultiplier;
-      this.vy =
-        -Math.sin(this.angle) * this.speed * 0.7 * this.stickySlowMultiplier;
-    } else if (d > prefD + 60) {
-      // Creep forward
-      this.vx =
-        Math.cos(this.angle) * this.speed * 0.5 * this.stickySlowMultiplier;
-      this.vy =
-        Math.sin(this.angle) * this.speed * 0.5 * this.stickySlowMultiplier;
-    } else {
-      // In sweet spot — strafe slowly + face player
-      this.vx =
-        -Math.sin(this.angle) * this.speed * 0.35 * this.stickySlowMultiplier;
-      this.vy =
-        Math.cos(this.angle) * this.speed * 0.35 * this.stickySlowMultiplier;
-    }
-
-    this._steerAroundObstacles(dt);
-    this.applyPhysics(dt);
-
-    // ── Shoot logic: charge-then-fire ───────────────────────
-    if (!this._charging) {
-      this._shootTimer -= dt;
-      if (
-        this._shootTimer <= 0 &&
-        d < BALANCE.sniper.shootRange &&
-        !player.isInvisible &&
-        d >= fleeD
-      ) {
-        // Start charge — lock in predictive aim angle now
-        this._charging = true;
-        this._chargeTimer = 0;
-        const _wave = typeof getWave === "function" ? getWave() : 1;
-        const _pred =
-          typeof playerAnalyzer !== "undefined"
-            ? playerAnalyzer.predictedPosition(0.3)
-            : null;
-        const _aimX = _pred ? _pred.x : player.x;
-        const _aimY = _pred ? _pred.y : player.y;
-        this._aimAngle = Math.atan2(_aimY - this.y, _aimX - this.x);
-      }
-    } else {
-      this._chargeTimer += dt;
-      if (this._chargeTimer >= BALANCE.sniper.laserChargeTime) {
-        // Fire
-        projectileManager.add(
-          new Projectile(
-            this.x,
-            this.y,
-            this._aimAngle,
-            BALANCE.sniper.projectileSpeed,
-            this.damage,
-            "#38bdf8",
-            false,
-            "enemy"
-          )
-        );
-        spawnParticles(this.x, this.y, 6, "#38bdf8");
-        this._charging = false;
-        this._chargeTimer = 0;
-        this._shootTimer = rand(...BALANCE.sniper.shootCooldown);
-      }
-    }
-  }
-
-  _onDeath(player) {
-    spawnParticles(this.x, this.y, 16, BALANCE.sniper.color);
-    if (typeof decalSystem !== "undefined")
-      decalSystem.spawn(this.x, this.y, "#0c4a6e", 10 + Math.random() * 5);
-    addScore((BALANCE.score.basicEnemy * getWave() * 1.8) | 0);
-    addEnemyKill();
-    Audio.playEnemyDeath();
-    if (window.isSlowMotion && typeof Achievements !== "undefined") {
-      Achievements.stats.slowMoKills++;
-      Achievements.check("bullet_time_kill");
-    }
-    if (player) player.gainExp(this.expValue);
-    if (
-      Math.random() <
-      BALANCE.powerups.dropRate * BALANCE.sniper.powerupDropMult
-    )
-      window.powerups.push(new PowerUp(this.x, this.y));
-  }
-  // draw() → EnemyRenderer.drawSniper()
-}
-
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
 // ══════════════════════════════════════════════════════════════
@@ -1095,8 +789,6 @@ window.Enemy = Enemy;
 window.EnemyBase = EnemyBase; // alias for Debug.html check
 window.TankEnemy = TankEnemy;
 window.MageEnemy = MageEnemy;
-window.HealerEnemy = HealerEnemy;
-window.SniperEnemy = SniperEnemy;
 window.PowerUp = PowerUp;
 // ============================================================
 // EnemyRenderer — Canvas draw calls for all enemy types
@@ -1115,21 +807,14 @@ class EnemyRenderer {
     // ── Viewport cull ─────────────────────────────────────────
     const screen = worldToScreen(e.x, e.y);
     const R = (e.radius ?? 20) + 40; // 40px margin for auras/overlays
-    if (
-      screen.x < -R ||
-      screen.x > CANVAS.width + R ||
-      screen.y < -R ||
-      screen.y > CANVAS.height + R
-    )
-      return;
+    if (screen.x < -R || screen.x > CANVAS.width + R ||
+      screen.y < -R || screen.y > CANVAS.height + R) return;
     // ─────────────────────────────────────────────────────────
-    const _prevCTX = typeof window !== "undefined" ? window.CTX : undefined;
+    const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;
     if (typeof window !== "undefined") window.CTX = ctx;
     try {
       if (e instanceof MageEnemy) EnemyRenderer.drawMage(e);
       else if (e instanceof TankEnemy) EnemyRenderer.drawTank(e);
-      else if (e instanceof HealerEnemy) EnemyRenderer.drawHealer(e);
-      else if (e instanceof SniperEnemy) EnemyRenderer.drawSniper(e);
       else if (e instanceof Enemy) EnemyRenderer.drawEnemy(e);
       else if (e instanceof PowerUp) EnemyRenderer.drawPowerUp(e);
       // Fallback: entities with own draw() (e.g. GoldfishMinion, future minions)
@@ -1165,7 +850,7 @@ class EnemyRenderer {
       const pulse = 0.55 + Math.sin(now / 100) * 0.45;
       CTX.save();
       CTX.globalAlpha = pulse * 0.35;
-      CTX.fillStyle = RT.palette.danger;
+      CTX.fillStyle = "#ef4444";
       CTX.beginPath();
       CTX.arc(sx, sy, R + 4 + pulse * 3, 0, Math.PI * 2);
       CTX.fill();
@@ -1183,7 +868,7 @@ class EnemyRenderer {
     // ── Fill ─────────────────────────────────────────────
     // Colour: green → amber → red as HP drops
     const fillColor =
-      ratio > 0.6 ? "#22c55e" : ratio > 0.3 ? "#f59e0b" : RT.palette.danger;
+      ratio > 0.6 ? "#22c55e" : ratio > 0.3 ? "#f59e0b" : "#ef4444";
     CTX.fillStyle = fillColor;
     if (ratio > 0.01) {
       CTX.beginPath();
@@ -1193,7 +878,7 @@ class EnemyRenderer {
 
     // ── Specular sheen on fill (top half lighter strip) ──
     CTX.globalAlpha = 0.28;
-    CTX.fillStyle = RT.palette.white;
+    CTX.fillStyle = "#ffffff";
     CTX.beginPath();
     CTX.roundRect(bx, by, bw * ratio, Math.floor(bh / 2), [2, 2, 0, 0]);
     CTX.fill();
@@ -1226,11 +911,83 @@ class EnemyRenderer {
    * @param {number} R collision radius
    * @param {number} now Date.now() value from caller
    */
-  // Delegates to EnemyOverlays — each overlay is a pure, independently
-  // maintained method. To add a new status effect, edit EnemyOverlays.js only.
   static _drawStatusOverlays(e, sx, sy, R, now) {
-    if (typeof EnemyOverlays !== "undefined") {
-      EnemyOverlays.draw(e, sx, sy, R, now);
+    // ── Hit flash — white silhouette ──────────────────────
+    if (e.hitFlashTimer > 0) {
+      CTX.save();
+      CTX.globalAlpha = (e.hitFlashTimer / HIT_FLASH_DURATION) * 0.8;
+      CTX.fillStyle = "#ffffff";
+      CTX.shadowBlur = 10;
+      CTX.shadowColor = "#ffffff";
+      CTX.beginPath();
+      CTX.arc(sx, sy, R, 0, Math.PI * 2);
+      CTX.fill();
+      CTX.restore();
+    }
+
+    // ── Sticky stacks — green tint ────────────────────────
+    if (e.stickyStacks > 0) {
+      const intensity = Math.min(1, e.stickyStacks / 10);
+      CTX.save();
+      CTX.globalAlpha = 0.4 * intensity;
+      CTX.fillStyle = "#00ff88";
+      CTX.beginPath();
+      CTX.arc(sx, sy, R, 0, Math.PI * 2);
+      CTX.fill();
+      // Stack count pip dots above entity
+      if (e.stickyStacks >= 3) {
+        const pipCount = Math.min(e.stickyStacks, 6);
+        CTX.globalAlpha = 0.85;
+        CTX.fillStyle = "#00ff88";
+        CTX.shadowBlur = 5;
+        CTX.shadowColor = "#00ff88";
+        for (let pi = 0; pi < pipCount; pi++) {
+          const pa = (pi / pipCount) * Math.PI * 2 - Math.PI / 2;
+          CTX.beginPath();
+          CTX.arc(
+            sx + Math.cos(pa) * (R + 6),
+            sy + Math.sin(pa) * (R + 6),
+            2,
+            0,
+            Math.PI * 2,
+          );
+          CTX.fill();
+        }
+        CTX.shadowBlur = 0;
+      }
+      CTX.restore();
+    }
+
+    // ── Ignite — pulsing fire ring + inner ember tint ─────
+    if ((e.igniteTimer ?? 0) > 0) {
+      const igPulse = 0.5 + Math.sin(now / 75) * 0.3;
+      CTX.save();
+      // Outer ring
+      CTX.globalAlpha = igPulse;
+      CTX.strokeStyle = "#f97316";
+      CTX.lineWidth = 2.5;
+      CTX.shadowBlur = 14;
+      CTX.shadowColor = "#f97316";
+      CTX.beginPath();
+      CTX.arc(sx, sy, R + 4, 0, Math.PI * 2);
+      CTX.stroke();
+      // Second thinner outer ring (shimmer)
+      CTX.globalAlpha = igPulse * 0.55;
+      CTX.strokeStyle = "#fbbf24";
+      CTX.lineWidth = 1;
+      CTX.shadowBlur = 6;
+      CTX.shadowColor = "#fbbf24";
+      CTX.beginPath();
+      CTX.arc(sx, sy, R + 7 + Math.sin(now / 60) * 2, 0, Math.PI * 2);
+      CTX.stroke();
+      // Inner ember fill
+      CTX.globalAlpha = igPulse * 0.22;
+      CTX.fillStyle = "#fb923c";
+      CTX.shadowBlur = 0;
+      CTX.beginPath();
+      CTX.arc(sx, sy, R, 0, Math.PI * 2);
+      CTX.fill();
+      CTX.restore();
     }
   }
 
@@ -1838,175 +1595,6 @@ class EnemyRenderer {
     CTX.textBaseline = "middle";
     CTX.fillText(e.icons[e.type], 0, 0);
     CTX.restore();
-  }
-  // ══════════════════════════════════════════════════════════
-  // HEALER ENEMY — emerald coward with heal pulse visual
-  // ══════════════════════════════════════════════════════════
-  static drawHealer(e) {
-    const screen = worldToScreen(e.x, e.y);
-    const now = performance.now();
-    const R = e.radius;
-    const sx = screen.x,
-      sy = screen.y;
-
-    EnemyRenderer._drawGroundShadow(sx, sy, R, 0.18, 3);
-
-    // ── Heal pulse ring (triggered by _healPulseT) ────────
-    if (e._healPulseT > 0) {
-      const p = e._healPulseT; // 1→0
-      CTX.save();
-      CTX.globalAlpha = p * 0.7;
-      CTX.strokeStyle = RT.palette.heal;
-      CTX.lineWidth = 2.5;
-      CTX.shadowBlur = 14;
-      CTX.shadowColor = RT.palette.heal;
-      CTX.beginPath();
-      CTX.arc(sx, sy, R + 6 + (1 - p) * 22, 0, Math.PI * 2);
-      CTX.stroke();
-      CTX.shadowBlur = 0;
-      CTX.restore();
-    }
-
-    // ── Body: soft emerald bean ───────────────────────────
-    CTX.save();
-    CTX.translate(sx, sy);
-    const breathe = Math.sin(now / 230) * 0.015;
-    CTX.scale(1 + breathe, 1 - breathe);
-
-    // Outer glow
-    CTX.shadowBlur = 10;
-    CTX.shadowColor = RT.palette.heal;
-    CTX.fillStyle = "#064e3b";
-    CTX.beginPath();
-    CTX.arc(0, 0, R, 0, Math.PI * 2);
-    CTX.fill();
-
-    // Mid ring
-    CTX.fillStyle = "#065f46";
-    CTX.beginPath();
-    CTX.arc(0, 0, R * 0.72, 0, Math.PI * 2);
-    CTX.fill();
-
-    // Core glow
-    CTX.shadowBlur = 8;
-    CTX.fillStyle = RT.palette.healText;
-    CTX.beginPath();
-    CTX.arc(0, 0, R * 0.32, 0, Math.PI * 2);
-    CTX.fill();
-    CTX.shadowBlur = 0;
-
-    // Cross symbol
-    CTX.strokeStyle = "#ffffff";
-    CTX.lineWidth = 2;
-    CTX.lineCap = "round";
-    CTX.beginPath();
-    CTX.moveTo(0, -R * 0.4);
-    CTX.lineTo(0, R * 0.4);
-    CTX.moveTo(-R * 0.4, 0);
-    CTX.lineTo(R * 0.4, 0);
-    CTX.stroke();
-
-    CTX.restore();
-
-    EnemyRenderer._drawStatusOverlays(e, sx, sy, R, now);
-    EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 28, 10, now);
-  }
-
-  // ══════════════════════════════════════════════════════════
-  // SNIPER ENEMY — icy cyan with charge wind-up laser dot
-  // ══════════════════════════════════════════════════════════
-  static drawSniper(e) {
-    const screen = worldToScreen(e.x, e.y);
-    const now = performance.now();
-    const R = e.radius;
-    const sx = screen.x,
-      sy = screen.y;
-
-    EnemyRenderer._drawGroundShadow(sx, sy, R, 0.18, 3);
-
-    // ── Charge wind-up: laser sight line ─────────────────
-    if (e._charging && e._chargeTimer !== undefined) {
-      const chargeP = Math.min(
-        1,
-        e._chargeTimer / BALANCE.sniper.laserChargeTime
-      );
-      const lineLen = 180 * chargeP;
-      const lx = sx + Math.cos(e._aimAngle) * lineLen;
-      const ly = sy + Math.sin(e._aimAngle) * lineLen;
-      CTX.save();
-      CTX.globalAlpha = chargeP * 0.65;
-      CTX.strokeStyle = RT.palette.slowRing;
-      CTX.lineWidth = 1.5;
-      CTX.setLineDash([6, 4]);
-      CTX.shadowBlur = 8;
-      CTX.shadowColor = RT.palette.slowRing;
-      CTX.beginPath();
-      CTX.moveTo(sx, sy);
-      CTX.lineTo(lx, ly);
-      CTX.stroke();
-      CTX.setLineDash([]);
-      // Dot at tip
-      CTX.globalAlpha = chargeP;
-      CTX.fillStyle = RT.palette.slowRing;
-      CTX.shadowBlur = 12;
-      CTX.beginPath();
-      CTX.arc(lx, ly, 3.5, 0, Math.PI * 2);
-      CTX.fill();
-      CTX.shadowBlur = 0;
-      CTX.restore();
-    }
-
-    // ── Body: angular icy diamond ─────────────────────────
-    CTX.save();
-    CTX.translate(sx, sy);
-    CTX.rotate(e.angle + Math.PI * 0.25); // diamond orientation
-
-    const bob = Math.sin(now / 210) * 1.5;
-    CTX.translate(0, bob);
-
-    // Outer glow ring
-    CTX.shadowBlur = e._charging ? 18 : 8;
-    CTX.shadowColor = RT.palette.slowRing;
-    CTX.strokeStyle = RT.palette.slowRing;
-    CTX.lineWidth = 1.8;
-    CTX.beginPath();
-    CTX.arc(0, 0, R + 3, 0, Math.PI * 2);
-    CTX.stroke();
-    CTX.shadowBlur = 0;
-
-    // Body — dark navy diamond (square rotated 45°)
-    CTX.fillStyle = "#0c1a2e";
-    CTX.beginPath();
-    CTX.moveTo(0, -R);
-    CTX.lineTo(R, 0);
-    CTX.lineTo(0, R);
-    CTX.lineTo(-R, 0);
-    CTX.closePath();
-    CTX.fill();
-
-    // Inner icy core
-    CTX.fillStyle = e._charging ? RT.palette.slowFill : "#1e3a5f";
-    CTX.beginPath();
-    CTX.moveTo(0, -R * 0.5);
-    CTX.lineTo(R * 0.5, 0);
-    CTX.lineTo(0, R * 0.5);
-    CTX.lineTo(-R * 0.5, 0);
-    CTX.closePath();
-    CTX.fill();
-
-    // Scope dot
-    CTX.fillStyle = RT.palette.slowRing;
-    CTX.shadowBlur = e._charging ? 12 : 4;
-    CTX.shadowColor = RT.palette.slowRing;
-    CTX.beginPath();
-    CTX.arc(0, 0, 2.5, 0, Math.PI * 2);
-    CTX.fill();
-    CTX.shadowBlur = 0;
-
-    CTX.restore();
-
-    EnemyRenderer._drawStatusOverlays(e, sx, sy, R, now);
-    EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 26, 10, now);
   }
 }
 

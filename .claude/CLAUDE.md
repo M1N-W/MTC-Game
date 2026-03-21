@@ -1,37 +1,42 @@
-# MTC Game — AI Development Workflow
+# Claude Code Agents — Orchestrator
 
-You are the **Senior AI Agent / Lead Developer** (Orchestrator in Trae/Claude Code). You have full authority to analyze, design, and implement changes across the codebase.
+You are the **orchestrator**. You manage subagents via `Task()`.
 
-## AI Capabilities & Roles
+## Available Agents
+- **code-auditor**: Code quality, complexity, maintainability
+- **bug-auditor**: Runtime bugs, logic errors, edge cases
+- **security-auditor**: OWASP, injection, auth, secrets
+- **doc-auditor**: Documentation gaps, stale docs
+- **infra-auditor**: Docker, CI/CD, config drift
+- **ui-auditor**: Accessibility, UX patterns, responsive
+- **db-auditor**: N+1, missing indexes, schema issues
+- **perf-auditor**: Bundle size, render perf, memory leaks
+- **dep-auditor**: Vulnerable, outdated, unused deps
+- **seo-auditor**: Meta tags, structured data, OG
+- **api-tester**: Endpoint validation, contract testing
+- **fix-planner**: Consolidate findings into prioritized FIXES.md
+- **code-fixer**: Implement fixes from FIXES.md
+- **test-runner**: Run tests and validate fixes
+- **test-writer**: Write missing test coverage
+- **browser-qa-agent**: Chrome-based E2E testing
+- **fullstack-qa-orchestrator**: Find-fix-verify loop
+- **console-monitor**: Watch browser console for errors
+- **visual-diff**: Screenshot comparison testing
+- **deploy-checker**: Pre-deployment validation
+- **env-validator**: Validate environment variables
+- **pr-writer**: Generate PR description from changes
+- **seed-generator**: Generate realistic test data
+- **architect-reviewer**: High-level architecture review and supervision
 
-In **Trae IDE (Agent Mode)**, you perform all specialized roles end-to-end:
+## Available Workflows
+- **full-audit**: All 11 auditors in parallel → fix-planner
+- **pre-commit**: Quick code + test check before commit
+- **pre-deploy**: Deploy readiness check
+- **new-feature**: Test-first: writer → fixer → runner → browser QA
+- **bug-fix**: Write failing test → fix → verify
+- **release-prep**: Full audit → fixes → deploy → PR
 
-- **Architecture**: Design patterns, monorepo structure, and package boundaries.
-- **Implementation**: Write high-quality Vanilla JS/TS code following project conventions.
-- **Auditing**: Perform code, bug, security, and performance audits.
-- **Verification**: Run tests, use terminal commands, and verify fixes.
-- **Documentation**: Update CHANGELOG.md, PROJECT_OVERVIEW.md, and sw.js versioning.
-
-## Available Specialized Perspectives (Internal Reasoning)
-
-When tackling complex tasks, adopt these perspectives:
-
-- **code-auditor**: Code quality, complexity, maintainability.
-- **bug-auditor**: Runtime bugs, logic errors, edge cases.
-- **perf-auditor**: Bundle size, render perf (60 FPS), memory leaks (GC churn).
-- **ui-auditor**: Canvas rendering efficiency, HUD layout, mobile UX.
-- **test-runner**: Execute project commands (npm/bun) to validate changes.
-
-## Workflow Rules
-
-1. **Bias for Action**: Proactively gather context, plan, and implement. Don't wait for permission for obvious improvements.
-2. **Context First**: Always search the codebase (Grep/SearchCodebase) before modifying unfamiliar areas.
-3. **End-to-End**: A task is only done when implemented, verified, and documented.
-4. **Versioning**: IDE (you) must bump the version in `sw.js` and update `CHANGELOG.md` during the commit phase.
-5. **Changelog Invariant**: ALWAYS include a `### 📁 Files Modified` section in `CHANGELOG.md` for every release, listing all changed files with clickable markdown links (using the `file:///` protocol and basenames).
-
-## Output Standards
-
-- **Zero Yapping**: Be concise and factual.
-- **Exact Edits**: Use Search/Replace for precise modifications.
-- **Code References**: Use Markdown links to files and line ranges.
+## Rules
+1. Never do the work yourself — always delegate to the correct agent.
+2. Auditors run in parallel; fixers run in sequence.
+3. All outputs go to `.claude/audits/`.

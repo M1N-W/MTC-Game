@@ -1,131 +1,189 @@
 ---
 name: mtc-game-conventions
-description: "Project-specific architectural patterns, constraints, and invariants for MTC The Game. Focuses on long-term stability and high-level structure. Trigger on: architecture rules, update/draw separation, tickShared, inheritance, AI architecture, load order, performance invariants."
+description: "Timeless architecture and integration rules for MTC The Game. Use when modifying gameplay systems, entities, rendering dispatch, script load order, global state interactions, GameState migration paths, or AI/boss update flow contracts."
 ---
 
-# MTC The Game — Timeless Architectural Patterns
+# MTC The Game - Stable Architectural Conventions
 
-Stack: Vanilla JS (ES6+) + HTML5 Canvas 2D + Web Audio API.
-Target: 60 FPS | Status: Beta v3.40.4
-
----
-
-## §0. Architectural Constraints (STRICT)
-
-### 1. Separation of Concerns (Logic vs Rendering)
-MTC Game follows a rigid separation between `update(dt)` and `draw(ctx)`. Violating this causes desync and performance degradation.
-
-*   **`update(dt, player, ...)`**:
-    *   Handles physics (`this.x += this.vx * dt`), AI logic, and state changes.
-    *   **Mandatory dt usage**: All continuous changes must be multiplied by `dt`.
-*   **`draw(ctx)`**:
-    *   **READ-ONLY**: Never modify entity health, position, or any state property.
-    *   **Deterministic**: Use time-based oscillators (e.g., `Math.sin(now * speed)`) for animation.
-    *   ❌ **No `Math.random()`**: Randomization is strictly forbidden in the draw path.
-    *   ❌ **No Object Allocation**: Never use `new` or `{ }` / `[ ]` literals inside `draw()`.
-
-### 2. Critical Invariants
-*   **`_tickShared(dt, player)`**: For all `EnemyBase` subclasses, this MUST be the first line of the `update()` method. It handles AI timers, status effects (Freeze/Ignite), and hit flashes.
-*   **`_anim` State Machine**: Both Players and Enemies use an `_anim` object to store decay timers (`hurtT`, `dashT`, `shootT`) that drive visual offsets without affecting logical collisions.
-*   **Strict Mode**: All files use `"use strict";`. Global variables must be accessed via `window.*` (e.g., `window.player`, `window.enemies`) except when using `typeof` guards.
+This skill documents long-lived architectural constraints.
+It excludes balance values, cooldown numbers, damage values, and feature tuning data.
 
 ---
 
-## §1. Inheritance Hierarchy
+## 1) Canonical Class Map and Naming
 
-MTC uses a deep OOP structure for entities and a shallow structure for world objects.
+Use constructor names exactly as implemented.
 
-### Entity Hierarchy (`js/entities/`)
-Every entity is logically ticked and rendered in the main loop.
+- `KruManop` is the canonical class in `js/entities/boss/ManopBoss.js`.
+- `KruFirst` is the canonical class in `js/entities/boss/FirstBoss.js`.
+- `BossDog` is a separate class in `ManopBoss.js`.
+- Compatibility aliases may exist on `window`, but constructor checks should target canonical class names.
 
-*   **`Entity`** (`base.js`): Base physics, position, radius.
-    *   **Composition: `HealthComponent`** (`base.js`): All entities possess a `this.health` component which encapsulates HP, maxHp, and lifesteal logic, separating it from movement/AI.
-    *   **`PlayerBase`** (`PlayerBase.js`): Proxies properties to `HealthComponent`. Shared HUD wire-up and death handlers.
-        *   `KaoPlayer`, `AutoPlayer`, `PoomPlayer`, `PatPlayer`.
-    *   **`EnemyBase`** (`enemy.js`): Owns `_tickShared`, status effects, and UtilityAI interface.
-        *   `Enemy`, `TankEnemy`, `MageEnemy`.
-    *   **`BossBase`** (`BossBase.js`): Shared boss lifecycle, music management, and death explosions.
-        *   `KruManop`, `KruFirst`.
-
-### MapObject Hierarchy (`js/map.js`)
-Static or interactable objects. They do NOT have physics velocity or AI.
-
-*   **`MapObject`**: Base collision and standard drawing.
-    *   `ExplosiveBarrel`: Destructible hazard.
-    *   `PowerNode`: Passive ground aura system (pulsing violet-900 core).
+Incorrect constructor naming causes runtime branch misses in dispatcher logic.
 
 ---
 
-## §2. AI Architecture
+## 2) Inheritance Hierarchy (Authoritative)
 
-The AI is distributed across four distinct layers to balance complexity and performance.
+### 2.1 Entity tree
 
-| Layer | System | Tick Rate | Role |
-| :--- | :--- | :--- | :--- |
-| **Individual** | `UtilityAI.js` | 2Hz (0.5s) | Core decision tree; scores actions then calls `EnemyActions`. |
-| **Tactical** | `EnemyActions.js` | N/A | Static library of movement routines (`retreat`, `flank`, `strafe`). |
-| **Analysis** | `WorkerBridge.js` | 4Hz–10Hz | Off-main-thread pattern detection via `analyzer-worker.js`. |
-| **Squad** | `SquadAI.js` | 1Hz (1.0s) | Global coordination; assigns roles (Assault, Flanker, Shield). |
+- `Entity` (`js/entities/base.js`)
+  - `Player` (`js/entities/player/PlayerBase.js`)
+    - `KaoPlayer`
+    - `AutoPlayer`
+    - `PoomPlayer`
+    - `PatPlayer`
+  - `EnemyBase` (`js/entities/enemy.js`)
+    - `Enemy`
+    - `TankEnemy`
+    - `MageEnemy`
+  - `BossBase` (`js/entities/boss/BossBase.js`)
+    - `KruManop`
+    - `KruFirst`
+  - other direct subclasses:
+    - `BossDog`
+    - summon/attack entities in boss and summon files
 
-### Invariants for AI Development:
-1.  **Indirect Movement**: AI must never write directly to `vx`/`vy`. It writes to `_aiMoveX`/`_aiMoveY`, which are resolved by the base physics system.
-2.  **Stateless Actions**: `EnemyActions` is a stateless library; if an action needs memory (e.g., a "retreating" flag), that memory belongs to the entity's `UtilityAI` instance.
+### 2.2 Non-inheritance architecture notes
 
----
-
-## §3. Initialization & Script Load Order
-
-Script order in `index.html` is critical for dependency availability. If a file loads out of order, the game will crash on `ReferenceError`.
-
-1.  **Configuration**: `BalanceConfig.js` → `SystemConfig.js` → `GameTexts.js`
-2.  **Core Utilities**: `utils.js` (global `worldToScreen`) → `audio.js`.
-3.  **Visual Systems**: `ParticleSystem.js` → `WeatherSystem.js` → `CombatEffects.js` → ... → `PostProcessor.js`.
-4.  **Combat Engine**: `SpatialGrid.js` → `Projectile.js` → `ProjectileManager.js` → `WeaponSystem.js` → `PoomWeapon.js`.
-5.  **Systems & UI**: `map.js` → `ShopManager.js` → `UIManager.js` → `CanvasHUD.js` → `tutorial.js`.
-6.  **Entity Foundations**: `base.js` (must be first entity file).
-7.  **AI & Logic**: `UtilityAI.js` → `EnemyActions.js` → `PlayerPatternAnalyzer.js` → `SquadAI.js`.
-8.  **Concrete Entities**: `PlayerBase.js` → [Kao/Auto/Poom/Pat] → `enemy.js` → `BossBase.js` → [Manop/First].
-9.  **Rendering Dispatchers**: `RenderTokens.js` → `RenderSkins.js` → [CharRenderers] → `ProjectileRenderer.js` → `PlayerRenderer.js` → `BossRenderer.js`.
-10. **Game Heart**: `GameState.js` → `AdminSystem.js` → `WaveManager.js` → `WorkerBridge.js` → `game.js`.
+- Rendering classes are static utility classes (`PlayerRenderer`, `BossRenderer`).
+- Shared behavior composition (for example health/status components) is used in addition to inheritance.
 
 ---
 
-## §4. Performance Invariants
+## 3) Script Load Order Contract
 
-Performance is managed by minimizing **Redraws**, **Memory Allocation**, and **String Operations** in the hot loop.
+The game runs on ordered global script tags. Load order is part of architecture.
 
-### 1. Zero-Allocation Rule
-Avoid creating any objects or strings inside any method that runs 60 times per second.
-*   ✅ `ctx.globalAlpha = 0.5; ctx.fillStyle = '#ff0000';`
-*   ❌ `ctx.fillStyle = \`rgba(255,0,0,${alpha})\`;` (Creates a new string every frame).
+### 3.1 High-level order
 
-### 2. Viewport Culling
-Every `draw()` method (except the player) MUST verify visibility before executing logic.
-```js
-const screen = worldToScreen(this.x, this.y);
-if (!this.isOnScreen(80)) return; // Cull with buffer margin
-```
+1. core config/util/audio/effects/weapons/map/ui/tutorial
+2. entity base + AI files
+3. player/enemy/boss class files
+4. input
+5. renderers
+6. systems (`GameState`, admin/shop/time/wave/worker bridge)
+7. orchestration (`game.js`, `VersionManager.js`, `menu.js`)
 
-### 3. Array Management
-*   **Swap-and-Pop**: Use `arr[i] = arr[arr.length-1]; arr.length--;` for O(1) removals. Never use `splice()`.
-*   **Object Pooling**: Use `spawnParticles()` and `floatingTextSystem`. Never `new` particles in the update loop.
+### 3.2 Dependency-sensitive zones
+
+- AI files must load before enemy classes that instantiate AI helpers.
+- boss attack files must load before boss classes that call them.
+- `WorkerBridge` must load before `game.js` if startup flow expects bridge availability.
 
 ---
 
-## §6. Hidden Dependencies & Implicit Coupling
+## 4) Update and Draw Separation (Hard Rule)
 
-MTC Game relies on several "global singletons" and resource pools that create implicit dependencies between seemingly unrelated modules.
+### 4.1 Invariant
 
-### 1. Global State Managers (window.*)
-*   **`window.gameState`**: The central source of truth for wave progress, score, and shop status. Modules like `enemy.js` read this to scale difficulty.
-*   **`window.player`**: Set in `game.js` during `startGame()`. Accessed by AI and rendering systems to calculate distances and aim angles.
-*   **`window.enemies` / `window.boss`**: Arrays/Objects managed by `WaveManager.js`. Renderers iterate over these to perform viewport culling.
+- `update()` owns simulation and gameplay mutation.
+- `draw()` owns rendering only.
+- Do not mutate gameplay state in draw paths.
 
-### 2. Resource Pools & Shared Arrays
-*   **`window.specialEffects`**: A shared array where `meteorZones`, `Shockwave`, and `DomainExpansion` effects are pushed. `drawGame()` iterates this to render non-entity visuals.
-*   **`window.renderProfiler`**: Used for frame-timing diagnostics. If `RenderProfiler.js` is missing, the game will fail during the `requestAnimationFrame` loop.
-*   **`window.adminSystem`**: Handles cheats and dev-console state. It can override `BALANCE` values at runtime, which is why documentation must never rely on static config numbers.
+### 4.2 Prohibited draw-side mutations
 
-### 3. Event-Like Callbacks
-*   **`spawnParticles()` / `spawnFloatingText()`**: Global functions (from `utils.js` via `ParticleSystem.js`) used everywhere.
-*   **`ParticleSystem._inst`**: The hidden singleton instance that manages the particle pool.
+- hp/energy/cooldowns/status flags
+- wave progression flags
+- entity physics or AI state
+- combat ownership and damage resolution
+
+### 4.3 Allowed draw-local state
+
+- renderer caches and memoized draw artifacts that do not alter gameplay outcomes.
+
+---
+
+## 5) Enemy Update Contract: `_tickShared()` First
+
+Every enemy subclass `update(dt, player)` must call:
+
+- `this._tickShared(dt, player)` as the first gameplay operation after dead/guard checks.
+
+Reason:
+
+- shared status timing
+- common reaction/state transitions
+- shared AI/support hooks
+
+Any subclass that delays or skips this call can desynchronize status behavior.
+
+---
+
+## 6) Rendering Dispatch and Ownership
+
+### 6.1 Dispatcher responsibility
+
+- `PlayerRenderer.draw(...)` and `BossRenderer.draw(...)` select subtype render paths.
+- Dispatcher checks rely on constructors being available and correctly named.
+
+### 6.2 Rendering ownership boundary
+
+- Entity classes expose state.
+- Renderers decide visual layers and drawing strategy.
+- Gameplay logic stays outside renderer classes.
+
+---
+
+## 7) Global State and Cross-Module Coupling
+
+### 7.1 Shared runtime globals
+
+Modules depend on shared surfaces such as:
+
+- `window.player`
+- `window.enemies`
+- `window.boss`
+- shared manager singletons
+
+When refactoring, treat these as compatibility boundaries.
+
+### 7.2 `GameState` as canonical owner
+
+- `js/systems/GameState.js` is the canonical state manager.
+- alias synchronization to legacy globals exists for backward compatibility.
+- new code should read/write canonical `GameState` fields first.
+
+### 7.3 Worker pipeline coupling
+
+- `WorkerBridge` exchanges samples/results with `analyzer-worker`.
+- analyzer outputs are consumed by gameplay AI decisions.
+- this creates a hidden dependency chain across `game.js`, `WorkerBridge`, analyzer code, and enemy/boss logic.
+
+---
+
+## 8) Boss Lifecycle and Reset Contracts
+
+Boss lifecycle operations must remain consistent across:
+
+- normal defeat paths
+- forced admin/debug transitions
+- wave skip or state reset flows
+
+Any singleton-like boss attack resource/state must be reset via the same lifecycle contract in all paths.
+
+---
+
+## 9) Safe Conventions for New Systems
+
+When adding architecture-level features:
+
+1. Preserve load-order assumptions in `index.html`.
+2. Preserve update/draw separation.
+3. Preserve `EnemyBase` shared-update contract.
+4. Keep `GameState` as canonical source and only bridge to globals for compatibility.
+5. Document new hidden coupling points in this file.
+
+---
+
+## 10) Explicitly Out of Scope for This Skill
+
+Do not document or maintain here:
+
+- cooldown, damage, hp, speed, or economic numbers
+- balance and tuning parameters in config blocks
+- release-specific feature snapshots
+- one-off bugfix values
+
+Those belong in code/config and changelog, not in timeless architecture guidance.
+
