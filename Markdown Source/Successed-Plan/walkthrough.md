@@ -1,6 +1,6 @@
 # Walkthrough: MTC Roadmap Session History
 
-อัปเดตล่าสุด: March 12, 2026
+อัปเดตล่าสุด: March 23, 2026
 
 ---
 
@@ -86,6 +86,29 @@
 
 ---
 
+### Session — March 23, 2026 (Firebase Spark, cloud save, leaderboard UI, campus map v3, docs)
+
+**Online / persistence (Firebase Spark — ไม่บังคับ Cloud Functions)**
+
+- `package.json` + `npm run build:firebase` → `js/firebase-bundle.js` จาก `js/firebase-init.js` (Auth anonymous + Google link/popup, Firestore, Analytics, Remote Config)
+- `js/systems/CloudSaveSystem.js` — ซิงก์ `mtc_save_v1` + tutorial flag ไป `users/{uid}`; เรียกจาก `utils.js` / `tutorial.js`
+- `js/systems/LeaderboardUI.js` + ปุ่มใน `index.html` / `css/main.css` — Google sign-in row + modal; ส่งคะแนนผ่าน Firestore ภายใต้ `firestore.rules` (ลง Google แล้วเท่านั้น)
+- `firestore.rules`, `firebase.json`, `.firebaserc`, `GITHUB_PAGES_FIREBASE.md` — deploy กฎด้วย `firebase deploy --only firestore:rules`; โฟลเดอร์ `functions/` เป็นของอ้างอิงถ้าอัปเกรด Blaze ภายหลัง
+
+**Campus map generation (v3)**
+
+- `js/map.js` — `_isClearZone()` กันวางวัตถุทับ spawn / citadel / database / shop / gate gaps; `createCluster()` แบบ center-anchored grid + jitter
+- `js/config.js` — `BALANCE.map.objectSizes` สำหรับ footprint ตอน generate
+
+**เอกสารสถาปัตย์ / a11y**
+
+- `Markdown Source/Information/PROJECT_OVERVIEW.md` + `.agents/skills/mtc-game-skills_claude/SKILL.md` — load order รวม Firebase prelude; สรุป `MapSystem` generation
+- `index.html` — viewport ปรับให้สอด accessibility linter (อนุญาต zoom); `mtc-game-conventions.md` ชี้ไป `SKILL.md`
+
+**Release:** `sw.js` / `CHANGELOG.md` — v3.38.7 (ดู changelog สำหรับรายการไฟล์เต็ม)
+
+---
+
 ## 💡 Future Ideas (Phase 2.x - Gameplay Features)
 
 **Option 1 — New Enemy Type (High-Impact)**
@@ -94,25 +117,28 @@
 
 ---
 
-## Next Session — สิ่งที่ต้องทำ
+## Next Session — คิวถัดไป (สอด `COMPREHENSIVE_DEVELOPMENT_PLAN.md`)
 
-### Option A — Phase 1.1: ECS Migration (High Priority / High Value)
-ไฟล์ที่ต้องอัปโหลด: `js/entities/base.js`, `js/entities/player/PlayerBase.js`, `js/entities/enemy.js`
-งาน:
-- วิเคราะห์ว่าจะแยก Component รูปร่างไหนก่อนเป็น First Step (เช่น RenderComponent หรือ HealthComponent)
-- Implement โครงสร้าง Component System เล็กๆ แบบไม่ใช้ Framework
+> HealthComponent + `WAVE_SCHEDULE` + JSON-prep ทำแล้ว — **ไม่**เปิดซ้ำเป็น “Option A/B” เดิม
 
-### Option B — Phase 1.2: JSON Data Loading
-ไฟล์ที่ต้องอัปโหลด: `js/config.js`, `js/game.js`
-งาน:
-- ย้ายข้อมูลที่เป็น Data ล้วนๆ อย่าง `BALANCE.waves` ออกมาเป็นไฟล์ `waves.json`
-- โหลดไฟล์ตอนบูทเกม (`fetch()`)
+### 1) Performance (วัดก่อนแก้)
+- อ่าน `Markdown Source/Successed-Plan/PERF_PLAN.md` — ส่วน **W1** (`weapons.js` / `SpatialGrid`) และไฟล์ที่ยัง **not yet audited** (`game.js`, `ui.js`, `summons.js`, boss attacks)
+- ใช้ `Debug.html` + Chrome Performance/Memory ยืนยันคอขวดก่อน OffscreenCanvas / particle pooling
 
-1. เปิดแชทใหม่กับ Claude
-2. อัปโหลด PROJECT_OVERVIEW.md, claude_master_prompt.md, walkthrough.md
-3. วาง prompt จาก claude_master_prompt.md ส่วนที่ 2
-4. อัปโหลดไฟล์โค้ดที่ต้องการตาม "Next Session" ด้านบน
-5. Claude จะตรวจไฟล์และเสนอ patch ทันที
+### 2) UX / engagement
+- FTUE safety zone, dynamic camera ช่วง Domain Expansion, ปุ่ม feedback export JSON — ตามแผนฉบับรวม; ไฟล์หลัก `tutorial.js`, `game.js`, `config.js` (สตริง/UI)
+
+### 3) Content pipeline
+- โหลด `waves.json` / แยก data จาก `config.js` — **หลัง** มี loading gate ที่ไม่ทำให้ boot พัง (สอด `WAVE_SCHEDULE` ที่มีอยู่)
+
+### 4) QA / automation
+- Playwright stress (Wave 15+) — หลังมีสคริปต์/CI
+
+**ขั้นตอนเปิดเซสชันกับ AI**
+
+1. อัปโหลด `PROJECT_OVERVIEW.md`, `SKILL.md` (โฟลเดอร์ `.agents/skills/mtc-game-skills_claude/`), และจาก `Markdown Source/Successed-Plan/`: `claude_master_prompt.md`, `walkthrough.md`, `COMPREHENSIVE_DEVELOPMENT_PLAN.md`
+2. วาง prompt จาก `claude_master_prompt.md` ส่วนที่ 2
+3. แนบไฟล์โค้ดตามหัวข้อคิวด้านบนที่จะทำในรอบนั้น
 
 ---
 

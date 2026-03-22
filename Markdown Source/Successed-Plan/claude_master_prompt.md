@@ -6,9 +6,12 @@
 
 ### 📥 ส่วนที่ 1: การเตรียม Context (สำคัญมาก)
 **คำแนะนำ:** ก่อนวาง Prompt หลัก ให้แน่ใจว่าได้อัปโหลดไฟล์เหล่านี้ให้ Claude:
-1. `PROJECT_OVERVIEW.md` — context หลักของโปรเจกต์
-2. `claude_master_prompt.md` + `walkthrough.md` — เอกสารแชทนี้
-3. ไฟล์ที่จะแก้ในเซสชันนั้น (ดู "Next" ใน walkthrough.md)
+1. `Markdown Source/Information/PROJECT_OVERVIEW.md` — context หลักของโปรเจกต์
+2. `.agents/skills/mtc-game-skills_claude/SKILL.md` — กฎโหลดสคริปต์, สรุประบบ, ข้อจำกัดเอกสาร
+3. `Markdown Source/Successed-Plan/claude_master_prompt.md` + `walkthrough.md` + `COMPREHENSIVE_DEVELOPMENT_PLAN.md` — แผนและประวัติเซสชัน
+4. `GITHUB_PAGES_FIREBASE.md` (ถ้าทำงาน deploy GitHub Pages + Firebase)
+5. ไฟล์ที่จะแก้ในเซสชันนั้น (ดู "Next Session" ใน walkthrough.md)
+6. **ระบบ cloud (เมื่อเกี่ยวข้อง):** `js/firebase-init.js`, `js/systems/CloudSaveSystem.js`, `js/systems/LeaderboardUI.js`, `firestore.rules`, `firebase.json`
 
 ---
 
@@ -29,7 +32,7 @@
 
 ---
 
-### 🗺️ Roadmap Status (อัปเดต March 12, 2026)
+### 🗺️ Roadmap Status (อัปเดต March 23, 2026)
 
 #### ✅ Phase 2.1 — Predictive AI Aiming (DONE)
 - `PlayerPatternAnalyzer.js` — `velocityEstimate()` + `predictedPosition(aheadSeconds)`
@@ -37,13 +40,6 @@
 - `enemy.js` Enemy — projectile predictive aim (wave 4+)
 - `ManopBoss.js` — chalk ATTACK state predictive aim (phase1: 0.20s / phase2: 0.35s lead)
 - `boss_attacks_first.js` — ParabolicVolley + GravSingularity TIDAL predictive aim
-
-#### ✅ **Phase 1.2 — JSON-ready Wave Schedule Refactor ✅ COMPLETE**
-
-- `js/config.js` — เพิ่ม `window.WAVE_SCHEDULE` constant เพื่อ decoupling ข้อมูล timing ออกจาก `BALANCE`
-- `js/systems/WaveManager.js` — อัปเดต `_getWaveSchedule()` และ `startNextWave()` ให้ใช้ `WAVE_SCHEDULE`
-- `js/game.js` — เปลี่ยนเงื่อนไข wave clear boss check ให้ใช้ `WAVE_SCHEDULE.bossWaves.includes()`
-- **Risk Mitigation**: เปลี่ยนจาก async fetch มาเป็นโครงสร้าง in-memory ที่พร้อมโหลด JSON ในอนาคตเพื่อป้องกัน game crash ✅predictive aim
 
 #### ✅ Phase 2.2 — Elemental Reaction: IGNITE + SLOW → SHATTER (DONE)
 - `AutoPlayer.js` — ignite bug fix: `isBurning/burnTimer/burnDps` → `igniteTimer/igniteDPS`
@@ -56,17 +52,34 @@
 - `game.js` — `triggerHitStop(duration)` (GameState.hitStopTimer loop pause)
 - `AutoPlayer.js` / `PatPlayer.js` — เรียก `triggerHitStop()` เมื่อเกิด critical hit และ Iaido Strike
 
-#### ✅ Phase 1.1 — ECS Migration: HealthComponent (Started)
-- `base.js` — เพิ่ม `HealthComponent` สำหรับจัดการ HP/Death/Flash
-- `enemy.js` & `PlayerBase.js` — Integrate `HealthComponent` (using Proxy getters for backward compatibility) ✅
+#### ✅ Phase 1.1 — ECS Migration: HealthComponent (DONE)
+- `base.js` — `HealthComponent` สำหรับ HP/Death/Flash
+- `enemy.js` & `PlayerBase.js` — เชื่อมผ่าน Proxy getters (backward compatible)
+
 #### ✅ Phase 1.2 — JSON-ready Wave Schedule Refactor (DONE)
-- `config.js` — เพิ่ม `window.WAVE_SCHEDULE` เพื่อรวมศูนย์ข้อมูล wave timing (fog, speed, glitch, dark, boss)
-- `WaveManager.js` — ดึงข้อมูลจาก `WAVE_SCHEDULE` แทนการคำนวณ modulo/static
-- `game.js` — ใช้ `WAVE_SCHEDULE.bossWaves.includes()` สำหรับ boss checks
+- `config.js` — `window.WAVE_SCHEDULE` รวมศูนย์ wave timing (fog, speed, glitch, dark, boss)
+- `WaveManager.js` — `_getWaveSchedule()` / `startNextWave()` ใช้ `WAVE_SCHEDULE`
+- `game.js` — `WAVE_SCHEDULE.bossWaves.includes()` สำหรับ boss checks
+- **Risk mitigation:** in-memory ก่อน; async `fetch` JSON ภายหลังต้องไม่ทำลาย boot
+
 #### ✅ Phase 1.3 — High-Impact Performance & Scoped Web Worker (DONE)
-- GPU Opt: ยืดหยุ่น `shadowBlur` ด้วย `isOnScreen` guards ใน Boss Renderers
-- Logic: ย้าย `PlayerPatternAnalyzer` ไปประมวลผลบน Web Worker อย่างสมบูรณ์
-- Throttling: กำหนดเฟรมเรตวงจรไฟแผนที่ให้เบาเครื่องขึ้น
+- GPU: `shadowBlur` + `isOnScreen` guards ใน Boss render path
+- Logic: `PlayerPatternAnalyzer` บน Web Worker (`analyzer-worker.js`, `WorkerBridge.js`)
+- Throttling: วงจรไฟแผนที่ (`map.js`)
+
+#### ✅ March 2026 — Online / Persistence (Firebase Spark)
+- Bundle: `npm run build:firebase` → `js/firebase-bundle.js` จาก `js/firebase-init.js` (Auth, Firestore, Analytics, Remote Config)
+- `CloudSaveSystem.js` — sync save + tutorial flag ไป Firestore ภายใต้ `users/{uid}`
+- `LeaderboardUI.js` + UI ใน `index.html` — ลีดเดอร์บอร์ด (กฎใน `firestore.rules`; รายละเอียด deploy → `GITHUB_PAGES_FIREBASE.md`)
+
+#### ✅ March 2026 — Campus map generation (v3)
+- `map.js` — `_isClearZone()`, `createCluster()` (center-anchored grid + jitter)
+- `config.js` — `BALANCE.map.objectSizes` สำหรับ footprint ตอน generate
+
+#### ✅ March 2026 — Docs / a11y / release hygiene
+- `PROJECT_OVERVIEW.md`, `SKILL.md`, `mtc-game-conventions.md` — สอด Firebase + MapSystem
+- `index.html` — viewport / accessibility
+- เวอร์ชันรีลีส: ดู `CHANGELOG.md` + `sw.js` (`CACHE_NAME`)
 ----
 
 ### 💡 เคล็ดลับการคุยกับ Claude:
