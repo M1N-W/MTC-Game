@@ -89,6 +89,11 @@ class PlayerRenderer {
    */
   static draw(entity, ctx) {
     if (!entity || !ctx) return;
+    // ── PERF: Viewport cull — skip all draw work when off-screen ────────
+    const _cullScreen = worldToScreen(entity.x, entity.y);
+    const _cullR = (entity.radius || 20) + 80;
+    if (_cullScreen.x < -_cullR || _cullScreen.x > CANVAS.width + _cullR ||
+        _cullScreen.y < -_cullR || _cullScreen.y > CANVAS.height + _cullR) return;
     const now = performance.now();
 
     if (typeof AutoPlayer !== "undefined" && entity instanceof AutoPlayer) {
@@ -125,7 +130,7 @@ class PlayerRenderer {
       ctx.globalAlpha = ratio * pulse * 0.85;
       ctx.strokeStyle = "#fbbf24";
       ctx.lineWidth = 2.5;
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 10;  // PERF: 20→10
       ctx.shadowColor = "#fbbf24";
       ctx.setLineDash([6, 4]);
       ctx.beginPath();
@@ -178,7 +183,7 @@ class PlayerRenderer {
       ctx.rotate(img.angle);
       ctx.globalAlpha = Math.max(0, img.alpha) * 0.55;
       ctx.fillStyle = inSlowmo ? "#ff6b00" : ghostCol;
-      ctx.shadowBlur = inSlowmo ? 14 : 8;
+      ctx.shadowBlur = inSlowmo ? 8 : 4;
       ctx.shadowColor = auraCol;
       ctx.beginPath();
       ctx.arc(0, 0, 15, 0, Math.PI * 2);
@@ -199,7 +204,7 @@ class PlayerRenderer {
     ctx.arc(screen.x, screen.y, auraR * 0.52, 0, Math.PI * 2);
     ctx.strokeStyle = auraCol;
     ctx.lineWidth = inSlowmo ? 3.5 : 1.8;
-    ctx.shadowBlur = inSlowmo ? 30 : 14;
+    ctx.shadowBlur = inSlowmo ? 16 : 8;  // PERF: 30/14→16/8
     ctx.shadowColor = auraCol;
     ctx.stroke();
     ctx.restore();
@@ -223,7 +228,7 @@ class PlayerRenderer {
         ctx.translate(sx, sy);
         ctx.rotate(orbit + Math.PI / 2);
         ctx.fillStyle = col;
-        ctx.shadowBlur = inSlowmo ? 22 : 11;
+        ctx.shadowBlur = inSlowmo ? 12 : 6;  // PERF: 22/11→12/6
         ctx.shadowColor = col;
         ctx.font = `bold ${10 + Math.round(pulse * 5)}px monospace`;
         ctx.textAlign = "center";
@@ -258,7 +263,7 @@ class PlayerRenderer {
     ctx.globalAlpha = pulse;
     ctx.strokeStyle = "#8b5cf6";
     ctx.lineWidth = 3;
-    ctx.shadowBlur = 15 + Math.sin(shieldT * 1.4) * 5;
+    ctx.shadowBlur = 8 + Math.sin(shieldT * 1.4) * 3;  // PERF: 15+5x→8+3x
     ctx.shadowColor = "#8b5cf6";
     ctx.beginPath();
     ctx.arc(0, 0, 25, 0, Math.PI * 2);
@@ -269,7 +274,7 @@ class PlayerRenderer {
     ctx.globalAlpha = pulse * 0.55;
     ctx.strokeStyle = "#c4b5fd";
     ctx.lineWidth = 1.5;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 4;  // PERF: 8→4
     ctx.shadowColor = "#c4b5fd";
     ctx.setLineDash([6, 10]);
     ctx.beginPath();
@@ -334,7 +339,7 @@ class PlayerRenderer {
     ctx.globalAlpha = pulse * severity;
     ctx.strokeStyle = "#ef4444";
     ctx.lineWidth = 2.5;
-    ctx.shadowBlur = 18 + Math.sin(now / 80) * 8;
+    ctx.shadowBlur = 10 + Math.sin(now / 80) * 4;  // PERF: 18+8x→10+4x
     ctx.shadowColor = "#ef4444";
     ctx.setLineDash([4, 3]);
     ctx.beginPath();
@@ -361,7 +366,7 @@ class PlayerRenderer {
     // Inner body flash — white core
     ctx.globalAlpha = alpha * 0.75;
     ctx.fillStyle = entity._hitFlashBig ? "#fca5a5" : "#fecaca";
-    ctx.shadowBlur = entity._hitFlashBig ? 18 : 8;
+    ctx.shadowBlur = entity._hitFlashBig ? 10 : 5;  // PERF: 18/8→10/5
     ctx.shadowColor = "#ef4444";
     ctx.beginPath();
     ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
@@ -370,7 +375,7 @@ class PlayerRenderer {
     ctx.globalAlpha = alpha * 0.55 * (1 - t * 0.5);
     ctx.strokeStyle = entity._hitFlashBig ? "#ef4444" : "#fca5a5";
     ctx.lineWidth = entity._hitFlashBig ? 2.5 : 1.5;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 6;  // PERF: 12→6
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.stroke();

@@ -142,7 +142,7 @@ class BossRenderer {
         ctx.globalAlpha = pulse * severity;
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 3.5;
-        ctx.shadowBlur = 20 + Math.sin(now / 75) * 6; // capped: was 24+10
+        ctx.shadowBlur = 12 + Math.sin(now / 75) * 4;  // PERF: 20+6x→12+4x
         ctx.shadowColor = '#ef4444';
         ctx.setLineDash([6, 4]);
         ctx.beginPath(); ctx.arc(0, 0, R + 14 + Math.sin(now / 90) * 4, 0, Math.PI * 2); ctx.stroke();
@@ -398,7 +398,8 @@ class BossRenderer {
         ctx.beginPath(); ctx.ellipse(R * 1.36, -R * 0.32, R * 0.20, R * 0.16, -0.25, 0, Math.PI * 2); ctx.fill();
         // Iris glow
         ctx.fillStyle = `rgba(220,38,38,${eyePulse})`;
-        ctx.shadowBlur = 16 * eyePulse; ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 8 * eyePulse;  // PERF: 16x→8x
+        ctx.shadowColor = '#ef4444';
         ctx.beginPath(); ctx.ellipse(R * 1.36, -R * 0.32, R * 0.16, R * 0.14, -0.25, 0, Math.PI * 2); ctx.fill();
         // Slit pupil
         ctx.fillStyle = '#0a0000'; ctx.shadowBlur = 0;
@@ -464,7 +465,8 @@ class BossRenderer {
             ctx.fillStyle = healG;
             ctx.beginPath(); ctx.arc(0, 0, 90, 0, Math.PI * 2); ctx.fill();
             // Pulsing ring
-            ctx.shadowBlur = 28 * pu; ctx.shadowColor = '#4ade80';
+            ctx.shadowBlur = 14 * pu;  // PERF: 28x→14x
+            ctx.shadowColor = '#4ade80';
             ctx.strokeStyle = `rgba(74,222,128,${pu * 0.75})`; ctx.lineWidth = 3.5;
             ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2); ctx.stroke();
             // Spinning rune circles
@@ -486,7 +488,8 @@ class BossRenderer {
         if (e.log457State === 'active') {
             // Gold aura burst
             const activePulse = 0.5 + Math.sin(now / 55) * 0.5;
-            ctx.shadowBlur = 30 * activePulse; ctx.shadowColor = '#facc15';
+            ctx.shadowBlur = 15 * activePulse;  // PERF: 30x→15x
+            ctx.shadowColor = '#facc15';
             const actG = ctx.createRadialGradient(0, 0, 30, 0, 0, 80);
             actG.addColorStop(0, `rgba(251,191,36,${activePulse * 0.25})`);
             actG.addColorStop(1, 'rgba(0,0,0,0)');
@@ -514,7 +517,8 @@ class BossRenderer {
                 const impR = 72 + (1 - windProg) * 55;
                 ctx.globalAlpha = windProg * (0.55 + impPulse * 0.40);
                 ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 6 * windProg;
-                ctx.shadowBlur = 28 * windProg; ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 14 * windProg;  // PERF: 28x→14x
+                ctx.shadowColor = '#ef4444';
                 ctx.beginPath(); ctx.arc(0, 0, impR, 0, Math.PI * 2); ctx.stroke();
                 // Inner contracted burst
                 ctx.globalAlpha = windProg * impPulse * 0.50;
@@ -545,7 +549,8 @@ class BossRenderer {
             ctx.fillStyle = grad1;
             ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = `rgba(252,211,77,${0.45 + Math.sin(t3 * 3) * 0.25})`;
-            ctx.lineWidth = 2.5; ctx.shadowBlur = 18; ctx.shadowColor = '#fbbf24';
+            ctx.lineWidth = 2.5; ctx.shadowBlur = 10;  // PERF: 18→10
+            ctx.shadowColor = '#fbbf24';
             ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.stroke();
             ctx.shadowBlur = 0;
             for (let i = 0; i < 4; i++) {
@@ -565,7 +570,8 @@ class BossRenderer {
             ctx.fillStyle = grad2;
             ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = `rgba(248,113,113,${0.55 + Math.sin(t3 * 4) * 0.35})`;
-            ctx.lineWidth = 3; ctx.shadowBlur = 22; ctx.shadowColor = '#ef4444';
+            ctx.lineWidth = 3; ctx.shadowBlur = 12;  // PERF: 22→12
+            ctx.shadowColor = '#ef4444';
             ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.stroke();
             // Inner pulsing ring
             ctx.strokeStyle = `rgba(220,38,38,${0.40 + Math.sin(t3 * 5) * 0.30})`;
@@ -589,7 +595,8 @@ class BossRenderer {
             ctx.fillStyle = grad3;
             ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = `rgba(125,211,252,${0.5 + Math.sin(t3 * 3) * 0.3})`;
-            ctx.lineWidth = 3; ctx.shadowBlur = 20; ctx.shadowColor = '#38bdf8';
+            ctx.lineWidth = 3; ctx.shadowBlur = 10;  // PERF: 20→10
+            ctx.shadowColor = '#38bdf8';
             ctx.beginPath(); ctx.arc(0, 0, auraR, 0, Math.PI * 2); ctx.stroke();
             ctx.shadowBlur = 0;
             for (let i = 0; i < 5; i++) {
@@ -619,7 +626,7 @@ class BossRenderer {
             ctx.globalAlpha = alpha;
             ctx.font = `bold ${14 + Math.sin(now / 400 + i) * 2}px Arial`;
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowBlur = 12 + Math.sin(now / 250 + i) * 5;
+            ctx.shadowBlur = 6 + Math.sin(now / 250 + i) * 3;  // PERF: 12+5x→6+3x
             ctx.shadowColor = gCol;
             ctx.fillStyle = gCol;
             ctx.fillText(symbols[i], 0, 0);
@@ -642,7 +649,8 @@ class BossRenderer {
 
         // ── Phase 2 enrage glow ring ──────────────────────────────────
         if (e.phase === 2 && e.log457State !== 'charging') {
-            ctx.shadowBlur = 22; ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = 12;  // PERF: 22→12
+            ctx.shadowColor = '#ef4444';
             ctx.strokeStyle = 'rgba(220,38,38,0.55)'; ctx.lineWidth = 3;
             ctx.beginPath(); ctx.arc(0, 0, R + 5, 0, Math.PI * 2); ctx.stroke();
             ctx.shadowBlur = 0;
@@ -654,7 +662,8 @@ class BossRenderer {
                 : 'rgba(148,163,184,0.40)';
         const shadowC = e.phase === 3 ? '#38bdf8'
             : e.isEnraged ? '#ef4444' : '#94a3b8';
-        ctx.shadowBlur = 16; ctx.shadowColor = shadowC;
+        ctx.shadowBlur = 8;  // PERF: 16→8
+        ctx.shadowColor = shadowC;
         ctx.strokeStyle = glowCol; ctx.lineWidth = 2.8;
         ctx.beginPath(); ctx.arc(0, 0, R + 3, 0, Math.PI * 2); ctx.stroke();
         ctx.shadowBlur = 0;
@@ -791,7 +800,8 @@ class BossRenderer {
         const lensY = -R * 0.28;
 
         // Left lens
-        ctx.shadowBlur = 14; ctx.shadowColor = glassGlow;
+        ctx.shadowBlur = 8;  // PERF: 14→8
+        ctx.shadowColor = glassGlow;
         ctx.fillStyle = `rgba(224,242,254,0.20)`;
         ctx.strokeStyle = glassGlow; ctx.lineWidth = 2.2;
         ctx.beginPath(); ctx.roundRect(-R * 0.72, lensY - lensH / 2, lensW, lensH, 3); ctx.fill(); ctx.stroke();
@@ -848,7 +858,8 @@ class BossRenderer {
         // Ruler extending from front hand
         const rulerGlow = e.state === 'ATTACK' || e.state === 'ULTIMATE' ? 1.0 : 0.55;
         ctx.fillStyle = '#f59e0b';
-        ctx.shadowBlur = 12 * rulerGlow; ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 6 * rulerGlow;  // PERF: 12x→6x
+        ctx.shadowColor = '#fbbf24';
         ctx.beginPath(); ctx.roundRect(R + 9, 1, R * 1.6, R * 0.22, 2); ctx.fill();
         // Ruler tick marks
         ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1;

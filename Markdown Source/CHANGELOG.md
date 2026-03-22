@@ -4,6 +4,36 @@
 
 ---
 
+## v3.38.10 — Rendering Performance: shadowBlur Reduction + Viewport Culling
+*Released: March 23, 2026*
+
+### ⚡ Performance — `EnemyRenderer.js` (`js/entities/enemy.js`)
+- Reduced `shadowBlur` across all enemy types by ~50%: hit flash 10→8, sticky pip 5→3, ignite ring 14→10/6→4, body glow 12→6, visor slits 12→6/10→5, front hand/spike 6→3/8→4, back hand 3→2
+- Tank: threat glow 16→8, heat slit 10x→5x/4→2, shield 10x→5x, shield boss 8→4, back gauntlet 5→3
+- Mage: aura 16→8, core 16x→8x/6x→3x, blaster 10x→5x/8→4, orbs 10x→5x/6→3
+- PowerUp icon: 20→10
+
+### ⚡ Performance — `PlayerRenderer.js` (`js/rendering/PlayerRenderer.js`)
+- **Added viewport culling** to `PlayerRenderer.draw()` — players fully off-screen are skipped entirely (saves all draw calls for off-screen players)
+- Reduced `shadowBlur` in all shared helpers: contact warning ring 20→10, energy shield 15+5x→8+3x/8→4, low-HP glow 18+8x→10+4x, hit flash 18/8→10/5 and 12→6
+- Auto aura: ghost silhouettes 14/8→8/4, inner ring 30/14→16/8, symbol ring 22/11→12/6
+
+### ⚡ Performance — `BossRenderer.js` (`js/rendering/BossRenderer.js`)
+- Low-HP glow ring 20+6x→12+4x (shared across all bosses)
+- BossDog eye glow 16x→8x
+- Manop: heal aura 28x→14x, log457 active 30x→15x, ultimate wind-up 28x→14x
+- Manop phase auras: Phase 1 ring 18→10, Phase 2 ring 22→12, Phase 3 ring 20→10
+- Orbiting math symbols 12+5x→6+3x, Phase 2 enrage ring 22→12, silhouette ring 16→8
+- Glasses glow 14→8, ruler glow 12x→6x
+
+### Files touched
+```
+✅ MODIFIED: js/entities/enemy.js, js/rendering/PlayerRenderer.js, js/rendering/BossRenderer.js
+✅ MODIFIED: sw.js (v3.38.10), Markdown Source/CHANGELOG.md, Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.38.9 — Balance Nerf + Domain Expansion Performance & Visibility
 *Released: March 23, 2026*
 
