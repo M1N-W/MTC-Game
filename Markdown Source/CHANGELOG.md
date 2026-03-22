@@ -4,6 +4,33 @@
 
 ---
 
+## v3.38.9 — Balance Nerf + Domain Expansion Performance & Visibility
+*Released: March 23, 2026*
+
+### ⚡ Performance — Domain Expansion (Manop boss)
+- **`boss_attacks_manop.js`:** `CELL_SIZE` 60→90 — reduces grid cell count ~55% (from ~1900 to ~870 cells inside arena circle)
+- **`boss_attacks_manop.js`:** `RAIN_COLS` 32→20 — fewer matrix rain columns each frame
+- **`boss_attacks_manop.js`:** `SHADOW_BUDGET` 80→40 — halves max shadow-blur draws per frame (most expensive canvas op)
+- **`boss_attacks_manop.js`:** Tendril count 8→4, rune symbols 12→6 — fewer decorative elements during active phase
+
+### 👁️ Visibility — Domain Expansion dark overlay
+- **`boss_attacks_manop.js`:** Dark overlay `globalAlpha` stays at 0.55 (confirmed value) — player character remains visible during Domain Expansion
+
+### ⚖️ Balance — Player nerf (feedback: "ตัวละคร OP ไม่ตายเลย")
+- **Kao:** `passiveLifesteal` 0.02→0.01, `maxHpPerLevel` 8→6 (Lv12 HP: 207→185), `phantomBlinkDmgMult` 1.4→1.2
+- **Auto:** `hp/maxHp` 230→190, `standDamageReduction` 0.40→0.30, `heatHealOnKillWanchai` 0.05→0.03, `heatHpDrainOverheat` 5→8 HP/s
+
+### ⚔️ Balance — Boss buff (harder challenge)
+- **Manop all attacks +~25%:** `contactDamage` 30→38, `chalkDamage` 13→16, `ultimateDamage` 35→44, `slamDamage` 60→75, `graphDamage` 70→88, `barkDamage` 32→40
+
+### Files touched
+```
+✅ MODIFIED: js/entities/boss/boss_attacks_manop.js, js/config.js, sw.js (v3.38.9)
+✅ MODIFIED: Markdown Source/CHANGELOG.md, Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.38.8 — A11y: Viewport zoom, scrollbar compat, dev console input
 *Released: March 23, 2026*
 

@@ -157,7 +157,7 @@ const BALANCE = {
             passiveHpBonusPct: 0.30,        // REWORK: 0.50 → 0.30 (ส่วนที่เหลือรอ Lv2)
             passiveUnlockText: '👻 ซุ่มเสรี Lv1!',
             passiveCritBonus: 0.0,          // REWORK: crit ย้ายไป Lv2
-            passiveLifesteal: 0.02,         // NERF: 0.03 → 0.02 (stealth loop + lifesteal ทำให้ HP ไม่มีความหมาย)
+            passiveLifesteal: 0.01,         // NERF: 0.03 → 0.02 → 0.01 (ผู้เล่นแจ้งว่ารอดง่ายเกินไป)
             passiveSpeedAdditive: 0.4,      // NEW: additive +0.4 (แทน Math.max ×1.4 ที่ทับ shop bonus)
             // ── Passive Lv2 "Awakened" (ฆ่าขณะ FreeStealthy 5 ครั้ง) ──
             passiveLv2KillReq: 5,           // NEW: จำนวน FreeStealthy-kills ที่ต้องการ
@@ -168,7 +168,7 @@ const BALANCE = {
             speedOnHitDuration: 0.4,
             damageMultiplierPerLevel: 0.09,  // NERF: 0.12 → 0.09 (level scaling -25%, wave10 damMult 2.2→1.9)
             cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
-            maxHpPerLevel: 8,                 // BIG-BALANCE: 6 → 8 (Lv12 HP: 119+11×8=207 vs old 167 — survives PorkSandwich)
+            maxHpPerLevel: 6,                 // NERF: 8 → 6 (ลด HP scaling — Lv12 HP: 119+11×6=185 แทน 207)
             // ── Advanced Kao Skills ──
             teleportCooldown: 18,
             teleportEnergyCost: 20,         // NEW: Q Teleport/PhantomBlink — instant blink ควรมีต้นทุน
@@ -180,7 +180,7 @@ const BALANCE = {
             dashStealthDuration: 1.5,       // NEW: free stealth after every dash
             phantomBlinkEnabled: true,      // NEW: Q during stealth = Phantom Blink (ปลดที่ Lv2)
             phantomBlinkAmbushWindow: 2.0,  // BUFF: 1.5 → 2.0 (window ยาวขึ้น)
-            phantomBlinkDmgMult: 1.4,       // NERF: 2.5 → 1.8 → 1.4 (ambush burst -22% vs 1.8)
+            phantomBlinkDmgMult: 1.2,       // NERF: 2.5 → 1.8 → 1.4 → 1.2 (ลด burst เพื่อเพิ่มความท้าทาย)
             stealthChainBonus: 0.18,        // NERF: 0.25 → 0.18 (crit stack -7%)
             weaponMasterReq: 5              // ลดจาก 7 → 5 (passive เร็วขึ้น → Weapon Master ก็ควรทำได้เร็วขึ้น)
         },
@@ -194,7 +194,7 @@ const BALANCE = {
             radius: 20,
 
             // ── Base Stats (Tank Brawler) ──────────────────────
-            hp: 230, maxHp: 230,           // +10 เพิ่ม tank identity
+            hp: 190, maxHp: 190,           // NERF: 230 → 190 (ผู้เล่นแจ้งว่ารอดง่ายเกินไป)
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
             moveSpeed: 260,                 // 250 → 260 (ยังช้ากว่าคนอื่น)
@@ -213,7 +213,7 @@ const BALANCE = {
             wanchaiPunchRate: 0.10,          // NERF: 0.09 → 0.10 (10 punches/s แทน 11.1 — ลด sustained DPS)
             wanchaiDamage: 18,              // BIG-BALANCE: 24 → 18 (−25%) — HOT DPS 461→315, ratio vs Poom 2.5×→1.7×
             standSpeedMod: 1.5,
-            standDamageReduction: 0.40,     // 0.35 → 0.40 (BUFF: tank identity stronger)
+            standDamageReduction: 0.30,     // NERF: 0.40 → 0.30 (ลด damage reduction เพื่อเพิ่มความเสี่ยง)
             standCritBonus: 0.10,           // BIG-BALANCE: 0.18 → 0.10 (−8% crit stack, กด ceiling)
             standMoveSpeed: 340,
             standPunchRange: 110,
@@ -277,9 +277,9 @@ const BALANCE = {
             heatPunchRateWarm: 0.92,        // NERF: 0.85 → 0.92 (compress tier gap)
             heatPunchRateHot: 0.85,         // NERF: 0.70 → 0.85 (slower punch, OVERHEAT uses this too)
             heatCritBonusOverheat: 0.12,
-            heatHpDrainOverheat: 5,         // NERF: 3 → 5 HP/s (overheat ควรรู้สึกเป็น risk จริง ไม่ใช่แค่ DPS buff)
+            heatHpDrainOverheat: 8,         // NERF: 3 → 5 → 8 HP/s (overheat เป็น risk จริง — ต้องระวัง)
             heatOnKillWanchai: 15,          // +Heat ต่อการฆ่าขณะ Wanchai active
-            heatHealOnKillWanchai: 0.05,    // NERF: 0.08 → 0.05 (heal ลดลง — kill ยังรู้สึกดีแต่ไม่ trivial)
+            heatHealOnKillWanchai: 0.03,    // NERF: 0.08 → 0.05 → 0.03 (heal ต่อ kill ลดลง ผู้เล่นไม่ควร full heal จากการฆ่า)
 
             // ── Crit & Scaling ────────────────────────────────
             baseCritChance: 0.06,
@@ -616,7 +616,7 @@ const BALANCE = {
         radius: 50,
         // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
         spawnY: -330,
-        contactDamage: 30,
+        contactDamage: 38,           // BUFF: 30→38 (+27% เพิ่มความอันตราย)
         speechInterval: 10,
         nextWaveDelay: 2000,
         log457HealRate: 0.06,
@@ -632,14 +632,14 @@ const BALANCE = {
         // Per-encounter phase thresholds — enc 1 triggers phase2 early so wave-3 players see dog
         phase2ThresholdByEnc: [null, 0.50, null, 0.60, null, 0.65], // index = encounter (1-based)
         phase3ThresholdByEnc: [null, null, null, 0.30, null, 0.35],
-        chalkDamage: 13,
-        ultimateDamage: 35,
+        chalkDamage: 16,            // BUFF: 13→16 (+23%)
+        ultimateDamage: 44,          // BUFF: 35→44 (+26%)
         ultimateBullets: 20,
         phase2UltimateBullets: 28,
-        slamDamage: 60,
+        slamDamage: 75,             // BUFF: 60→75 (+25%)
         slamRadius: 360,
         slamCooldown: 14,
-        graphDamage: 70,
+        graphDamage: 88,            // BUFF: 70→88 (+26%)
         graphLength: 1600,
         graphDuration: 20,
         graphCooldown: 16,
@@ -656,7 +656,7 @@ const BALANCE = {
         burstArmorDuration: 4.0,
         burstArmorCooldown: 25,
         phase2: {
-            barkDamage: 32,
+            barkDamage: 40,           // BUFF: 32→40 (+25%)
             barkRange: 600,
             barkCooldown: 3.2,
             enrageSpeedMult: 2.0,

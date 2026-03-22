@@ -746,7 +746,7 @@ const _DE = BALANCE.boss.domainExpansion || {};
 const _DC = {
     ARENA_RADIUS: 1500,
     GRID_SIZE: 120,
-    CELL_SIZE: 60,
+    CELL_SIZE: 90,           // PERF: 60→90 — ลดจำนวน cells ~55% เพื่อลด lag
     CAST_DUR: 2.2,
     WARN_DUR: 1.5,
     WARN_DUR_MIN: 0.50,           // BUG-FIX B1: was undefined → NaN cycleTimer → cycles never advanced
@@ -762,7 +762,7 @@ const _DC = {
     CELL_SLOW_FACTOR: _DE.cellSlowFactor || 0.45,
     COOLDOWN: _DE.cooldown || 45.0,
     HIT_RADIUS: _DE.hitRadius || 0.58,
-    RAIN_COLS: _DE.rainCols || 32,
+    RAIN_COLS: _DE.rainCols || 20,  // PERF: 32→20 — ลด matrix rain columns
     BOSS_VOLLEY_CYCLE: _DE.bossVolleyCycle || 3,
     BOSS_VOLLEY_COUNT: 8,
     LOCK_PUSH: 80,                // pixels/s push force when entity tries to leave domain
@@ -972,7 +972,7 @@ const DomainExpansion = Object.assign(Object.create(DomainBase), {
         ctx.save();
 
         // ── 1. Dark overlay ──────────────────────────────────
-        ctx.globalAlpha = globalA * 0.80;
+        ctx.globalAlpha = globalA * 0.55;  // VISIBILITY: 0.80→0.55 — มองเห็นตัวละครชัดขึ้น
         ctx.fillStyle = 'rgba(2,0,14,1)';
         ctx.fillRect(0, 0, W, H);
 
@@ -991,7 +991,7 @@ const DomainExpansion = Object.assign(Object.create(DomainBase), {
             const borderCol = `rgb(${tintR},0,255)`;
 
             // ── REWORK: Inner energy tendrils rotating around border ──
-            const tendrilCount = 8;
+            const tendrilCount = 4;  // PERF: 8→4
             for (let ti = 0; ti < tendrilCount; ti++) {
                 const baseAngle = (ti / tendrilCount) * Math.PI * 2 + now * 0.8;
                 const wobble = Math.sin(now * 3 + ti * 1.3) * 0.18;
@@ -1024,7 +1024,7 @@ const DomainExpansion = Object.assign(Object.create(DomainBase), {
             ctx.setLineDash([]);
 
             // Rotating rune symbols around the circle
-            const runeSymbols = ['Σ', 'Ψ', 'Ω', '∇', 'Φ', '∫', 'Δ', 'Λ', 'θ', 'π', 'μ', '∂'];
+            const runeSymbols = ['Σ', 'Ψ', 'Ω', '∫', 'Δ', 'π'];  // PERF: 12→6 runes
             ctx.font = 'bold 14px serif';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             for (let ri = 0; ri < runeSymbols.length; ri++) {
@@ -1083,7 +1083,7 @@ const DomainExpansion = Object.assign(Object.create(DomainBase), {
             // Count visible cells first; suppress shadows if > threshold.
             // This keeps the visual effect while preventing GPU overload from
             // ~2000 shadow draws per frame.
-            const SHADOW_BUDGET = 80;  // max cells allowed to use shadowBlur
+            const SHADOW_BUDGET = 40;  // PERF: 80→40 — ลด shadow draws ต่อ frame
             let visibleCount = 0;
             for (const cell of this.cells) {
                 const tl0 = worldToScreen(cell.wx, cell.wy);
