@@ -13,145 +13,169 @@ It excludes balance values, tuning constants, and release-specific visual tweaks
 
 ---
 
-## 1) Frame Lifecycle Ownership
+## 1) Frame lifecycle ownership
 
 ### 1.1 Canonical frame contract
 
-- `game.js` controls frame progression.
-- simulation updates happen before rendering.
-- rendering consumes finalized simulation state for that frame.
+- `js/game.js` → `gameLoop` owns scheduling.
+- **Simulation** runs in `updateGame` when the loop mode allows it.
+- **Rendering** runs in `drawGame`, consuming the current simulation snapshot.
 
-### 1.2 Phase separation
+### 1.2 Loop modes affecting update vs draw
 
-1. input and simulation update phase
-2. world/entity rendering phase
-3. HUD/overlay rendering phase
+- **Hit-stop:** `updateGame` is skipped; `drawGame` still runs (freeze frame effect).
+- **Tutorial (active):** `TutorialSystem.update` always; `updateGame` only when the tutorial step requires player action; then `drawGame`.
+- **Paused:** `drawGame` only.
+- **Playing (normal):** `updateGame` then `drawGame`.
 
-Do not interleave simulation mutation into render phase.
+Do not assume every `PLAYING` frame executes `updateGame`.
+
+### 1.3 Phase separation (logical)
+
+1. Input and simulation update (when scheduled).
+2. World / entity rendering inside camera transform where applicable.
+3. Screen-space overlays: lighting pass, day/night HUD, slow-mo overlay, glitch, wave-event overlays, domain/singularity draw hooks.
+4. **CanvasHUD** (combo, minimap, warnings) — primary; `UIManager.draw` remains legacy fallback in `drawGame`.
+5. **TutorialSystem.draw** — canvas tutorial overlay (spotlight / world pulse), after most world content.
 
 ---
 
 ## 2) Update/Draw Separation Rule
 
 - `update()` mutates gameplay state.
-- `draw()` reads state and writes pixels.
-- no gameplay mutations inside draw paths.
+- `draw()` / renderer entrypoints read state and write pixels.
+- No authoritative gameplay mutations inside draw paths.
 
-Allowed:
+**Allowed in draw:** render-local caches, deterministic animation phase derived from `performance.now()` or frame dt passed as read-only, strict `ctx.save`/`restore` pairs.
 
-- render-local cache updates
-- precomputed geometry cache refreshes
-
-Not allowed:
-
-- hp/cooldown/status changes
-- combat ownership changes
-- wave progression mutations
+**Not allowed:** HP/cooldown/score/wave mutations, entity physics writes for simulation, AI state mutation.
 
 ---
 
-## 3) Rendering Pipeline Structure
+## 3) `drawGame` layer order (structural)
 
-### 3.1 Entity rendering pipeline
+Order is defined in `drawGame()` in `js/game.js`:
 
-- Convert world to screen coordinates at draw entry.
-- Apply culling before expensive work.
-- Dispatch to type-specific renderer paths.
-- Draw layers in deterministic order.
-- reset draw context leak-prone fields before returning.
+1. Background gradient (full canvas).
+2. Camera translate (screen shake offset).
+3. Terrain (`mapSystem.drawTerrain`), grid, meteor zones, `mapSystem.draw`, database server draw, shop object draw.
+4. Decals / shell casings (below entities).
+5. Optional low-HP navigation guide (world-space line — visual only).
+6. Powerups → `EnemyRenderer` where applicable.
+7. `specialEffects` collection `draw()`.
+8. `window.drone` draw.
+9. `PlayerRenderer.draw(player)`.
+10. **Enemies:** cull with `isOnScreen`; `BossDog` → `BossRenderer`, else `EnemyRenderer`.
+11. Boss → `BossRenderer` if alive and on screen.
+12. `ProjectileRenderer.drawAll` / projectile batch.
+13. Particle and floating-text systems.
+14. Orbital effects (character-specific hook), hit markers, weather.
+15. Restore camera transform; then lighting pass (`mapSystem.drawLighting`) with projectile list for occlusion cues.
+16. Day/night HUD, slow-mo overlay, glitch overlay, wave-event / domain / singularity draws.
+17. `CanvasHUD.draw` (or `UIManager.draw` fallback).
+18. `TutorialSystem.draw` last among canvas layers.
 
-### 3.2 Layer discipline
-
-- Keep visual layers explicit and ordered.
-- Draw world-space layers inside transformed blocks.
-- Draw UI labels/HP bars in screen-space outside body transforms.
+**Cross-cutting:** `CTX.save`/`restore` discipline around sub-passes; reset `globalAlpha` and other sticky state after world draws.
 
 ---
 
-## 4) Dispatcher and Type Resolution
+## 4) Dispatcher and type resolution
 
-### 4.1 Boss dispatch
+### 4.1 Boss / special enemy dispatch
 
-- dispatch order must respect concrete constructors and inheritance relationships.
-- use canonical classes (`KruFirst`, `KruManop`, `BossDog`) in checks.
+- `BossRenderer` handles boss types and `BossDog` when detected in the enemy list.
+- Branching uses `instanceof` / constructor identity — class definitions must be loaded before `drawGame` runs.
 
 ### 4.2 Player dispatch
 
-- player dispatch should branch by stable subtype identity.
-- renderer-specific effects should remain in renderer paths, not leak into game loop orchestrators.
+- `PlayerRenderer.draw` switches on character implementation type.
+
+### 4.3 Projectile and particle systems
+
+- `projectileManager` and `particleSystem` are shared pools mutated in `updateGame` and read-only in draw.
+- Rendering must not enqueue new simulation events; spawn paths belong in update / combat code.
 
 ---
 
-## 5) Batching and Loop Efficiency Patterns
+## 5) Batching and loop efficiency patterns
 
 ### 5.1 Culling-first strategy
 
-- cull off-screen entities before allocating draw state or building effects.
-- avoid per-entity expensive setup for entities that will not be visible.
+- Call `isOnScreen` (or equivalent) before running heavy per-entity draws.
 
 ### 5.2 Draw-loop determinism
 
-- avoid randomness during draw.
-- use deterministic time-based oscillation from a single frame timestamp.
-- compute reusable frame values once and pass through sub-layers.
+- Avoid `Math.random()` in draw paths for gameplay-affecting visuals.
+- Prefer deterministic oscillation from `performance.now()` or a frame `dt` passed in.
 
 ### 5.3 Context state hygiene
 
-- pair every `ctx.save()` with matching `ctx.restore()`.
-- reset sticky context fields (for example `shadowBlur`, `globalAlpha`) after use.
+- Pair `ctx.save()` / `ctx.restore()`.
+- Reset `globalAlpha`, `shadowBlur`, `lineDash`, and similar after use.
 
 ---
 
-## 6) Resource Management and Render Caches
+## 6) Resource management and render caches
 
 ### 6.1 Cache ownership
 
-- renderer-owned caches belong on renderer classes, not gameplay entities.
-- cache keys should encode structural draw identity (type/phase/shape), not transient gameplay state.
+- Renderer-owned caches belong on renderer modules or static renderer state — not on gameplay entities.
 
-### 6.2 Invalidation rules
+### 6.2 Invalidation
 
-- invalidate only affected cache entries on structural visual changes.
-- avoid global cache flushes unless renderer schema changed.
+- Invalidate when structural visual identity changes (character, phase, weapon mode), not every frame.
 
-### 6.3 Offscreen bitmap strategy
+### 6.3 Background gradient cache
 
-- use bitmap/offscreen caches for static geometry segments.
-- keep dynamic and time-varying layers out of static caches.
+- `drawGame` caches a gradient object when canvas size or palette identity changes — pattern: avoid rebuilding every frame.
 
 ---
 
-## 7) Cross-Module Rendering Dependencies
+## 7) Cross-module rendering dependencies
 
-### 7.1 `CanvasHUD` ownership
+### 7.1 CanvasHUD ownership
 
-- HUD/minimap canvas responsibilities belong to HUD systems, not entity renderers.
-- entity renderers should not duplicate HUD logic.
+- `CanvasHUD` (`js/ui.js`) owns combo, minimap shell, and related canvas HUD. Entity renderers must not duplicate that responsibility.
 
 ### 7.2 Load-order dependencies
 
-- renderers rely on constructor availability for runtime dispatch checks.
-- `worldToScreen` and related camera helpers must exist before renderer draw calls.
+- Renderers require `worldToScreen`, `getCamera`, and constructor globals to exist.
+- `TutorialSystem.draw` depends on `TutorialSystem` state updated in `update` / tutorial step logic.
 
 ### 7.3 Shared-state dependencies
 
-- renderers depend on state objects prepared by game/system layers.
-- preserve contract boundaries so rendering remains a read-only consumer.
+- Renderers read `window.player`, `window.enemies`, `window.boss`, and manager singletons.
+- `mapSystem` provides terrain + lighting APIs consumed in `drawGame`.
 
 ---
 
-## 8) Safe Pattern for New Rendering Features
+## 8) Documentation completeness (skill-creator checklist)
 
-1. Define which phase owns the feature (world render vs HUD render).
-2. Ensure feature reads simulation state only.
-3. Add culling and deterministic timing.
-4. Keep context hygiene strict.
-5. Add cache only if geometry is structurally stable.
-6. Document new cross-file dependency if it introduces implicit coupling.
+| Area | Status |
+|------|--------|
+| Frame pipeline ownership | Documented (`drawGame` + loop modes). |
+| Update vs draw | Documented. |
+| Concrete draw order | Documented (section 3). |
+| Renderer types (Player/Boss/Enemy/Projectile) | Documented. |
+| Pool / system coupling (projectiles, particles) | Documented. |
+| HUD boundary (CanvasHUD vs entities) | Documented. |
+| Hidden coupling | Implicit via globals and `mapSystem`; called out in section 7. |
+
+**Residual gaps (inherent to codebase):** any future extract of `EnemyRenderer`/`drawGame` sub-steps should update section 3 in lockstep. Shader/post-process pipelines are not used (Canvas 2D only).
 
 ---
 
-## 9) Explicit Exclusions
+## 9) Safe pattern for new rendering features
+
+1. Decide world pass vs overlay pass vs HUD pass using section 3.
+2. Read simulation state only; mutate nothing authoritative.
+3. Add culling before expensive work.
+4. Keep `ctx` hygiene strict.
+5. Document new cross-file dependency if it introduces implicit coupling.
+
+---
+
+## 10) Explicit exclusions
 
 This rendering skill must not track:
 
@@ -161,4 +185,3 @@ This rendering skill must not track:
 - temporary effects tuning details
 
 Keep this file architecture-stable across game updates.
-

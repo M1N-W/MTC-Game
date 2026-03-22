@@ -1161,196 +1161,163 @@ class MapSystem {
         console.log(`✅ Campus Map Generated Structurally: ${this.objects.length} objects`);
     }
 
+    // Returns true if (x,y,w,h) overlaps any reserved clear zone.
+    // Landmark walls bypass this check; all cluster objects must pass it.
+    _isClearZone(x, y, w = 0, h = 0) {
+        const zones = [
+            { type: 'circle', x: 0, y: 0, r: 300 },          // Spawn area
+            { type: 'rect', x: -200, y: -500, w: 400, h: 180 },  // Citadel corridor
+            { type: 'rect', x: 360, y: -440, w: 280, h: 160 },  // Database approach
+            { type: 'rect', x: -640, y: 340, w: 260, h: 105 },  // Shop approach
+            { type: 'rect', x: 390, y: -230, w: 110, h: 140 },  // East gate N gap
+            { type: 'rect', x: 390, y: 95, w: 110, h: 70 },  // East gate S gap
+            { type: 'rect', x: -510, y: -230, w: 130, h: 140 },  // West gate N gap
+            { type: 'rect', x: -510, y: 95, w: 130, h: 70 },  // West gate S gap
+        ];
+        for (const zone of zones) {
+            if (zone.type === 'circle') {
+                if (Math.hypot(x - zone.x, y - zone.y) < zone.r) return true;
+            } else {
+                if (x + w > zone.x && x < zone.x + zone.w &&
+                    y + h > zone.y && y < zone.y + zone.h) return true;
+            }
+        }
+        return false;
+    }
+
     generateCampusMap() {
         // ════════════════════════════════════════════════════════
-        // MAP REFACTOR v2 — CLEAR ZONE DISCIPLINE
+        // MAP v3 — ZONE-ALIGNED PLACEMENT (backport from v3.40.6)
         //
-        // CLEAR ZONES (ห้ามวาง object ใดๆ):
-        //   • Spawn area          : r < 300 จาก (0,0)
-        //   • Citadel approach    : x∈[-200,200], y∈[-500,-320] (walled corridor)
-        //   • Database approach   : x∈[360,640],  y∈[-440,-280] (south face)
-        //   • CoopStore approach  : x∈[-640,-380], y∈[340,445]  (north approach)
-        //   • East gate gaps      : x∈[390,500],  y∈[-230,-90] และ y∈[95,165]
-        //   • West gate gaps      : x∈[-510,-380], y∈[-230,-90] และ y∈[95,165]
+        // Zone boundaries (world coords):
+        //   serverFarm  : x:430→1230,   y:-680→20   (800×700)
+        //   library     : x:-1230→-430, y:-680→20   (800×700)
+        //   courtyard   : x:-600→600,   y:400→1050  (1200×650)
+        //   lectureHallL: x:-1100→-680, y:500→900   (420×400)
+        //   lectureHallR: x:680→1100,   y:500→900   (420×400)
+        //   database    : x:330→670,    y:-660→-320 (340×340)
+        //   shop        : x:-670→-330,  y:320→660   (340×340)
         //
-        // ZONE ISLANDS:
-        //   A Server Farm East   : x ≥ 680 (clear of database x=560 + east wall x=418)
-        //   B Library West       : x ≤ -680 (clear of west wall x=-418)
-        //   C Courtyard South    : y ≥ 580, หลีกเลี่ยง x∈[-640,-380] (shop approach)
-        //   D Lecture Halls      : x<-800 y>550 และ x>700 y>550
+        // CLEAR ZONES — enforced by _isClearZone():
+        //   Spawn area : r < 300 from (0,0)
+        //   Citadel corridor, Database/Shop approaches, East/West gate gaps
         // ════════════════════════════════════════════════════════
 
-        // ── Helpers ──────────────────────────────────────────────
-        const detJitter = (r, c, seed, mag) => ({
-            jx: Math.sin(r * 7.3 + c * 13.1 + seed) * mag,
-            jy: Math.cos(r * 11.7 + c * 5.9 + seed * 1.3) * mag,
-        });
-
-        const createAisles = (startX, startY, rows, cols, xStep, yStep, type, jitter = 0, seed = 0) => {
-            const sz = {
-                desk: { w: 60, h: 40 }, tree: { w: 50, h: 50 },
-                server: { w: 45, h: 80 }, datapillar: { w: 35, h: 70 },
-                bookshelf: { w: 80, h: 40 }, vendingmachine: { w: 40, h: 70 },
-            }[type];
+        // ── Helper: place a center-anchored grid, skip clear zones ──
+        const createCluster = (config) => {
+            const { centerX, centerY, rows, cols, xSpacing, ySpacing, type, jitter = 0 } = config;
+            const sz = BALANCE.map.objectSizes[type];
             if (!sz) return;
+            const startX = centerX - ((cols - 1) * xSpacing) / 2;
+            const startY = centerY - ((rows - 1) * ySpacing) / 2;
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    const { jx, jy } = jitter > 0 ? detJitter(r, c, seed, jitter) : { jx: 0, jy: 0 };
-                    this.objects.push(new MapObject(
-                        startX + c * xStep + jx,
-                        startY + r * yStep + jy,
-                        sz.w, sz.h, type
-                    ));
+                    const jx = (Math.random() - 0.5) * jitter;
+                    const jy = (Math.random() - 0.5) * jitter;
+                    const objX = startX + c * xSpacing + jx;
+                    const objY = startY + r * ySpacing + jy;
+                    if (!this._isClearZone(objX, objY, sz.w, sz.h))
+                        this.objects.push(new MapObject(objX, objY, sz.w, sz.h, type));
                 }
             }
         };
 
         // ── 1. MTC CITADEL (North landmark) ──────────────────────
-        // Interior: x=-150…150, y=-580…-340  |  Entrance open at south (y=-340)
-        // Approach corridor (walled, from config): x=-200…200, y=-500…-340 → KEEP CLEAR
         const mtcX = -150, mtcY = -580, mtcW = 300, mtcH = 240;
         this.mtcRoom = new MTCRoom(mtcX, mtcY);
-
         const wallThick = 40;
-        // Top wall + side walls (no south wall — open entrance)
+        // Landmark walls bypass _isClearZone — they must always spawn
         this.objects.push(new MapObject(mtcX - wallThick, mtcY - wallThick, mtcW + wallThick * 2, wallThick, 'mtcwall'));
         this.objects.push(new MapObject(mtcX - wallThick, mtcY, wallThick, mtcH, 'mtcwall'));
         this.objects.push(new MapObject(mtcX + mtcW, mtcY, wallThick, mtcH, 'mtcwall'));
+        // Interior corners — individually checked
+        if (!this._isClearZone(mtcX + 14, mtcY + 20, 45, 80))
+            this.objects.push(new MapObject(mtcX + 14, mtcY + 20, 45, 80, 'server'));
+        if (!this._isClearZone(mtcX + mtcW - 59, mtcY + 20, 45, 80))
+            this.objects.push(new MapObject(mtcX + mtcW - 59, mtcY + 20, 45, 80, 'server'));
+        if (!this._isClearZone(mtcX + 85, mtcY + 8, 35, 55))
+            this.objects.push(new MapObject(mtcX + 85, mtcY + 8, 35, 55, 'datapillar'));
+        if (!this._isClearZone(mtcX + 180, mtcY + 8, 35, 55))
+            this.objects.push(new MapObject(mtcX + 180, mtcY + 8, 35, 55, 'datapillar'));
 
-        // Interior decorations — pushed into wall corners only, clear center path
-        this.objects.push(new MapObject(mtcX + 14, mtcY + 20, 45, 80, 'server'));
-        this.objects.push(new MapObject(mtcX + mtcW - 59, mtcY + 20, 45, 80, 'server'));
-        this.objects.push(new MapObject(mtcX + 85, mtcY + 8, 35, 55, 'datapillar'));
-        this.objects.push(new MapObject(mtcX + 180, mtcY + 8, 35, 55, 'datapillar'));
-
-        // ── 2. MTC DATABASE CLUSTER (NE landmark) ────────────────
-        // Building: x=440…560, y=-560…-420  |  Approach from south (y > -420) CLEAR
-        // Clear zone enforced: x∈[360,640], y∈[-440,-280] — no objects here
+        // ── 2. MTC DATABASE (NE landmark) ─────────────────────────
         const dbX = 440, dbY = -560;
         this.objects.push(new MapObject(dbX, dbY, 120, 140, 'database'));
-        // 2 servers BEHIND building (north of it — y < dbY)
-        this.objects.push(new MapObject(dbX - 55, dbY - 15, 40, 70, 'server'));
-        this.objects.push(new MapObject(dbX + 135, dbY - 15, 40, 70, 'server'));
+        if (!this._isClearZone(dbX - 55, dbY - 15, 40, 70))
+            this.objects.push(new MapObject(dbX - 55, dbY - 15, 40, 70, 'server'));
+        if (!this._isClearZone(dbX + 135, dbY - 15, 40, 70))
+            this.objects.push(new MapObject(dbX + 135, dbY - 15, 40, 70, 'server'));
 
-        // ── 3. MTC CO-OP STORE (SW landmark) ─────────────────────
-        // Building centered on interaction point: BALANCE.shop.x=-500, y=490
-        // Approach from north (y < shopY) CLEAR:  x∈[-640,-380], y∈[340,445]
-        const shopX = BALANCE.shop.x - 65;   // = -565
-        const shopY = BALANCE.shop.y - 55;   // = 435
+        // ── 3. CO-OP STORE (SW landmark) ──────────────────────────
+        const shopX = BALANCE.shop.x - 65;   // -565
+        const shopY = BALANCE.shop.y - 55;   // 435
         this.objects.push(new MapObject(shopX, shopY, 130, 110, 'coopstore'));
-        // Decorations ONLY south of building (y > shopY + 110 = 545), not blocking north approach
-        this.objects.push(new MapObject(shopX - 55, shopY + 120, 50, 50, 'tree'));
-        this.objects.push(new MapObject(shopX + 135, shopY + 120, 50, 50, 'tree'));
-        this.objects.push(new MapObject(shopX - 55, shopY + 55, 40, 70, 'vendingmachine'));
+        if (!this._isClearZone(shopX - 55, shopY + 120, 50, 50))
+            this.objects.push(new MapObject(shopX - 55, shopY + 120, 50, 50, 'tree'));
+        if (!this._isClearZone(shopX + 135, shopY + 120, 50, 50))
+            this.objects.push(new MapObject(shopX + 135, shopY + 120, 50, 50, 'tree'));
+        if (!this._isClearZone(shopX - 55, shopY + 55, 40, 70))
+            this.objects.push(new MapObject(shopX - 55, shopY + 55, 40, 70, 'vendingmachine'));
 
-        // ── 4. ZONE A: Server Farm (East) ────────────────────────
-        // x ≥ 680 — clear of database east edge (x=560) + east corridor wall (x=418)
-        // Gap fill: x=470–680 — datapillar + tree scatter bridges zone floor to cluster
-        this.objects.push(new MapObject(480, -480, 35, 70, 'datapillar'));
-        this.objects.push(new MapObject(480, -60, 35, 70, 'datapillar'));
-        this.objects.push(new MapObject(580, -380, 50, 50, 'tree'));
-        this.objects.push(new MapObject(600, 100, 50, 50, 'tree'));
-        createAisles(720, -580, 4, 3, 120, 150, 'server', 18, 1.0);  // NE cluster — jitter breaks straight walls
-        createAisles(720, 60, 3, 3, 120, 150, 'server', 15, 2.5);  // SE cluster
-        createAisles(950, -500, 3, 2, 120, 150, 'server', 20, 4.0);  // Far-East cluster (pulled in 1100→950 to avoid arena edge)
-        // Data pillars as zone markers
-        createAisles(680, -550, 3, 1, 0, 160, 'datapillar', 10, 0.5);
-        createAisles(680, 80, 2, 1, 0, 160, 'datapillar', 10, 1.5);
+        // ── 4. ZONE A: Server Farm (East) ─────────────────────────
+        // 3 aisles (N/M/S) × 4 servers + datapillar east wall
+        createCluster({ centerX: 800, centerY: -530, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'server' });
+        createCluster({ centerX: 800, centerY: -330, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'server' });
+        createCluster({ centerX: 800, centerY: -130, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'server' });
+        createCluster({ centerX: 1120, centerY: -330, rows: 5, cols: 1, xSpacing: 0, ySpacing: 135, type: 'datapillar' });
 
-        // ── 5. ZONE B: Library Archives (West) ───────────────────
-        // x ≤ -680 — clear of west corridor wall (x=-418), gap ≥ 262px
-        // Gap fill: x=-480 to -680 — datapillar + tree scatter bridges to bookshelf cluster
-        this.objects.push(new MapObject(-510, -460, 35, 70, 'datapillar'));
-        this.objects.push(new MapObject(-510, 60, 35, 70, 'datapillar'));
-        this.objects.push(new MapObject(-615, -370, 50, 50, 'tree'));
-        this.objects.push(new MapObject(-625, 110, 50, 50, 'tree'));
-        createAisles(-680, -570, 5, 2, -240, 120, 'bookshelf', 14, 3.0);  // NW shelves — jitter
-        createAisles(-680, 60, 4, 2, -240, 120, 'bookshelf', 12, 5.5);  // SW shelves
-        // Study desks between shelf rows
-        createAisles(-880, -550, 4, 1, 0, 120, 'desk', 12, 2.0);  // NW desks
-        createAisles(-880, 80, 3, 1, 0, 120, 'desk', 10, 4.0);  // SW desks
+        // ── 5. ZONE B: Library Archives (West) ────────────────────
+        // 4 bookshelf rows + reading desks in aisles
+        createCluster({ centerX: -830, centerY: -540, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
+        createCluster({ centerX: -830, centerY: -455, rows: 1, cols: 2, xSpacing: 100, ySpacing: 0, type: 'desk' });
+        createCluster({ centerX: -830, centerY: -370, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
+        createCluster({ centerX: -830, centerY: -200, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
+        createCluster({ centerX: -830, centerY: -130, rows: 1, cols: 2, xSpacing: 100, ySpacing: 0, type: 'desk' });
+        createCluster({ centerX: -830, centerY: -80, rows: 1, cols: 2, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
 
-        // ── 6. ZONE C: Courtyard (South) ─────────────────────────
-        // y ≥ 580 — objects moved inside zone boundary (zone y ends at 1050)
-        createAisles(-750, 630, 2, 4, 200, 160, 'tree', 12, 1.0);  // SW courtyard — rows pulled in
-        createAisles(250, 630, 2, 4, 185, 160, 'tree', 10, 2.0);  // SE courtyard — rows pulled in
-        // Courtyard center: mixed cover (desk + vending) — food court feel, not just trees
-        this.objects.push(new MapObject(-160, 680, 60, 40, 'desk'));
-        this.objects.push(new MapObject(100, 680, 60, 40, 'desk'));
-        this.objects.push(new MapObject(-55, 750, 40, 70, 'vendingmachine'));
-        this.objects.push(new MapObject(15, 750, 40, 70, 'vendingmachine'));
+        // ── 6. ZONE C: Courtyard (South) ──────────────────────────
+        // 4 corner groves (NW/NE/SW/SE) + back hedge; center lane clear
+        createCluster({ centerX: -400, centerY: 540, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
+        createCluster({ centerX: 400, centerY: 540, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
+        createCluster({ centerX: -400, centerY: 840, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
+        createCluster({ centerX: 400, centerY: 840, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
+        createCluster({ centerX: 0, centerY: 970, rows: 1, cols: 5, xSpacing: 160, ySpacing: 0, type: 'tree' });
 
-        // ── 7. CENTER COVER (spawn area edge r=300-400) ──────────
-        // Provides tactical depth without blocking spawn point (r<300 stays clear).
-        this.objects.push(new MapObject(-370, -100, 45, 80, 'server'));
-        this.objects.push(new MapObject(310, 90, 45, 80, 'server'));
-        this.objects.push(new MapObject(-100, 310, 40, 70, 'vendingmachine'));
-        this.objects.push(new MapObject(60, -330, 35, 70, 'datapillar'));
+        // ── 7. LECTURE HALLS ──────────────────────────────────────
+        createCluster({ centerX: -890, centerY: 720, rows: 3, cols: 2, xSpacing: 85, ySpacing: 80, type: 'desk' });
+        createCluster({ centerX: 890, centerY: 720, rows: 3, cols: 2, xSpacing: 85, ySpacing: 80, type: 'desk' });
 
-        // ── 8. LECTURE HALLS (SE + SW far zones) ─────────────────
-        // Each hall gets bookshelf rows + desk rows for identity
-        createAisles(720, 540, 2, 2, 130, 120, 'bookshelf', 10, 6.0);  // Lecture R bookshelves
-        createAisles(720, 720, 2, 2, 130, 100, 'desk', 12, 7.5);  // Lecture R desks
-        createAisles(-900, 540, 2, 2, -130, 120, 'bookshelf', 10, 8.0); // Lecture L bookshelves
-        createAisles(-900, 720, 2, 2, -130, 100, 'desk', 12, 9.5); // Lecture L desks
-
-        // ── 9. VENDING MACHINES at zone gates ────────────────────
-        // Rule: must be OUTSIDE all clear zones listed at top of function
-        // East gate: x ≥ 510 (outside east gate gap x∈[390,500])
-        // West gate: x ≤ -530 (outside west gate gap x∈[-510,-380])
-        // South gate: y ≥ 360, x outside shop approach x∈[-640,-380]
-        // North: REMOVED - no vending inside citadel corridor (was blocking)
+        // ── 9. VENDING MACHINES at zone gates ─────────────────────
         const vendingSpots = [
-            { x: 540, y: -260 },   // East gate upper (moved +20px)
-            { x: 540, y: 130 },   // East gate lower (moved +20px)
-            { x: -570, y: -260 },  // West gate upper (moved -20px)
-            { x: -570, y: 130 },  // West gate lower (moved -20px)
-            { x: -210, y: 390 },  // South approach left (moved +30px)
-            { x: 165, y: 390 },  // South approach right (moved +30px)
+            { x: 550, y: -250 },  // East wall gate
+            { x: -550, y: -250 },  // West wall gate
+            { x: 0, y: 550 },  // Courtyard south entrance
         ];
         for (const vs of vendingSpots) {
-            this.objects.push(new MapObject(vs.x, vs.y, 40, 70, 'vendingmachine'));
+            if (!this._isClearZone(vs.x, vs.y, 40, 70))
+                this.objects.push(new MapObject(vs.x, vs.y, 40, 70, 'vendingmachine'));
         }
 
-        // ── 10. CORRIDOR LANDMARK TREES ──────────────────────────
-        // Placed at zone entrances as visual landmarks, NOT inside any clear zone
-        // East entrance trees: x=540-580 (east of gap), y outside gate gaps
-        this.objects.push(new MapObject(550, -310, 50, 50, 'tree'));   // NE approach tree (moved +20px)
-        this.objects.push(new MapObject(550, 190, 50, 50, 'tree'));   // SE approach tree (moved +20px)
-        // West entrance trees: x=-630 to -660 (west of gap)
-        this.objects.push(new MapObject(-630, -310, 50, 50, 'tree'));  // West approach tree (moved -20px)
-        this.objects.push(new MapObject(-630, 190, 50, 50, 'tree'));  // West approach tree (moved -20px)
-        // Citadel flanking trees: MOVED OUTSIDE walled corridor completely
-        // Original y=-440 was INSIDE the walled corridor (y∈[-480,-370]) - BLOCKING!
-        this.objects.push(new MapObject(230, -510, 50, 50, 'tree'));   // East flank (moved south)
-        this.objects.push(new MapObject(-280, -510, 50, 50, 'tree'));   // West flank (moved south)
-
-        // ... (rest of the code remains the same)
-
-        // ── 12. EXPLOSIVE BARRELS ────────────────────────────────
-        // Placed at tactical chokepoints — tooClose threshold 60→45px allows more placements
+        // ── 10. EXPLOSIVE BARRELS (tactical chokepoints) ──────────
         const barrelSpots = [
-            // East zone interior
-            { x: 820, y: -220 }, { x: 820, y: 80 },
-            // West zone interior
-            { x: -840, y: -220 }, { x: -840, y: 80 },
-            // East gate approach (just inside zone A, not in clear gap)
-            { x: 560, y: -50 },
-            // West gate approach
-            { x: -580, y: -50 },
-            // South approach (outside shop approach zone)
-            { x: -225, y: 440 }, { x: 165, y: 440 },
-            // Center zone approaches — reward aggression
-            { x: -280, y: -180 }, { x: 250, y: 180 },
-            // Lecture Hall approaches
-            { x: 700, y: 520 }, { x: -870, y: 520 },
+            { x: 830, y: -430 },  // serverFarm — between N and M aisles
+            { x: 830, y: -50 },  // serverFarm — south side
+            { x: -830, y: -430 },  // library — north aisle flank
+            { x: -830, y: -50 },  // library — south side
+            { x: 560, y: -50 },  // east gate approach
+            { x: -580, y: -50 },  // west gate approach
+            { x: -225, y: 460 },  // courtyard N approach
+            { x: 165, y: 460 },  // courtyard N approach
+            { x: 720, y: 520 },  // lectureHallR approach
+            { x: -900, y: 520 },  // lectureHallL approach
         ];
         for (const spot of barrelSpots) {
             let tooClose = false;
             for (const obj of this.objects) {
                 if (Math.hypot(obj.x - spot.x, obj.y - spot.y) < 45) { tooClose = true; break; }
             }
-            if (!tooClose) this.objects.push(new ExplosiveBarrel(spot.x, spot.y));
+            if (!tooClose && !this._isClearZone(spot.x, spot.y, 30, 38))
+                this.objects.push(new ExplosiveBarrel(spot.x, spot.y));
         }
     }
 

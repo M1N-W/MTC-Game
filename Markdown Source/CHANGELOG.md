@@ -4,6 +4,41 @@
 
 ---
 
+## v3.38.7 — Firebase (Spark), Leaderboard UI, Campus Map v3, Docs
+*Released: March 23, 2026*
+
+### ☁️ Firebase & persistence (Spark / no Cloud Functions)
+- **Client SDK:** `npm` + `esbuild` → `js/firebase-bundle.js` from `js/firebase-init.js` (Auth anonymous + Google link/popup, Firestore, Analytics, Remote Config).
+- **Cloud save:** `js/systems/CloudSaveSystem.js` syncs local save + tutorial flag to `users/{uid}` with merge semantics; hooks from `utils.js` / `tutorial.js`.
+- **Leaderboard:** `js/systems/LeaderboardUI.js` + menu controls; score submit uses Firestore under **Security Rules** (Google identity + bounds + monotonic score updates) — suitable for Spark without deploying Functions.
+- **Project aux:** `firestore.rules`, `firebase.json`, `.firebaserc`, `GITHUB_PAGES_FIREBASE.md`; `functions/` retained as optional reference only.
+
+### 🗺️ Campus map generation
+- **MapSystem:** `_isClearZone` predicate for spawn and landmark approaches; `createCluster` center-anchored grids with jitter; zone-aligned placement refactor.
+- **Config:** `BALANCE.map.objectSizes` table for generator footprint lookup.
+
+### 🎮 Game loop & UI wiring
+- **Analytics events:** `game_start`, `game_end`, `high_score` from `game.js` when Firebase is present.
+- **Styles:** Google auth row, leaderboard modal (`css/main.css`); `index.html` script order updated for Firebase + new systems.
+
+### 📚 Documentation
+- **PROJECT_OVERVIEW.md:** Release alignment line; campus map generation subsection (architecture, no numeric tuning).
+- **SKILL.md / mtc-game-conventions.md / mtc-rendering.md:** Synced with load order, coupling, and rendering pipeline.
+
+### 🧹 Repository hygiene
+- Removed stray artifact files (`_diff.txt`, `_diff_cached.txt`, `_status.txt`, `commit_msg.txt`).
+
+### 📁 Files touched (summary)
+```
+✅ ADDED/MODIFIED: package.json, package-lock.json, firebase.json, firestore.rules, .firebaserc, GITHUB_PAGES_FIREBASE.md
+✅ ADDED: js/firebase-init.js, js/firebase-bundle.js, js/systems/CloudSaveSystem.js, js/systems/LeaderboardUI.js, functions/*, .agents/.../SKILL.md
+✅ MODIFIED: index.html, sw.js (v3.38.7), js/game.js, js/utils.js, js/menu.js, js/tutorial.js, js/map.js, js/config.js, css/main.css
+✅ MODIFIED: Markdown Source/CHANGELOG.md, Markdown Source/Information/PROJECT_OVERVIEW.md, .agents/skills/.../mtc-*.md
+✅ REMOVED: _diff.txt, _diff_cached.txt, _status.txt, commit_msg.txt
+```
+
+---
+
 ## v3.38.2 — System Reversion & Architecture Checklist
 *Released: March 21, 2026*
 

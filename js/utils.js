@@ -558,7 +558,16 @@ var updateSaveData = (partial) => {
     const current = getSaveData();
     const merged  = { ...current, ...partial };
     const ok      = saveData(MTC_SAVE_KEY, merged);
-    if (ok) console.log('[MTC Save] Saved:', merged);
+    if (ok) {
+        console.log('[MTC Save] Saved:', merged);
+        try {
+            if (typeof CloudSaveSystem !== 'undefined' && typeof CloudSaveSystem.schedulePush === 'function') {
+                CloudSaveSystem.schedulePush();
+            }
+        } catch (e) {
+            /* optional cloud sync */
+        }
+    }
     return ok;
 };
 

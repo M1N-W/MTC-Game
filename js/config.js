@@ -934,6 +934,15 @@ const BALANCE = {
         size: 3000,
         objectDensity: 0.12,
         objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard', 'database', 'coopstore'],
+        // ── Object sizes — consumed by generateCampusMap() createCluster() helper ──
+        objectSizes: {
+            desk: { w: 60, h: 40 },
+            tree: { w: 50, h: 50 },
+            server: { w: 45, h: 80 },
+            datapillar: { w: 35, h: 70 },
+            bookshelf: { w: 80, h: 40 },
+            vendingmachine: { w: 40, h: 70 },
+        },
         wallPositions: [
             // ── Arena boundary walls (cardinal) ──
             { x: -1500, y: -50, w: 50, h: 100 },

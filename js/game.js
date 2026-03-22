@@ -1056,6 +1056,14 @@ function _initGameUI(charType) {
     setGameState('PLAYING');
     resetTime();
 
+    try {
+        if (typeof firebaseLogEvent === 'function') {
+            firebaseLogEvent('game_start', { character: charType || 'unknown' });
+        }
+    } catch (e) {
+        /* optional analytics */
+    }
+
     if (typeof TutorialSystem !== 'undefined' && !TutorialSystem.isDone()) {
         TutorialSystem.start(charType);
     }
@@ -1071,6 +1079,18 @@ function _initGameUI(charType) {
 function endGame(result) {
     if (GameState.phase === 'GAMEOVER') return;
     setGameState('GAMEOVER');
+
+    try {
+        if (typeof firebaseLogEvent === 'function') {
+            firebaseLogEvent('game_end', {
+                result: result || 'unknown',
+                score: typeof getScore === 'function' ? getScore() : 0,
+                wave: typeof getWave === 'function' ? getWave() : 0,
+            });
+        }
+    } catch (e) {
+        /* optional analytics */
+    }
 
     // ── WorkerBridge: reset analyzer history on game end ─────────────────
     if (typeof WorkerBridge !== 'undefined') WorkerBridge.reset();
@@ -1115,6 +1135,16 @@ function endGame(result) {
             updateSaveData({ highScore: runScore });
             console.log(`[MTC Save] 🏆 New high score: ${runScore}`);
             UIManager.updateHighScoreDisplay(runScore);
+            try {
+                if (typeof firebaseLogEvent === 'function') {
+                    firebaseLogEvent('high_score', { value: runScore });
+                }
+                if (typeof CloudSaveSystem !== 'undefined' && typeof CloudSaveSystem.submitLeaderboardScore === 'function') {
+                    CloudSaveSystem.submitLeaderboardScore(runScore, typeof getWave === 'function' ? getWave() : 0);
+                }
+            } catch (e) {
+                /* optional analytics / leaderboard */
+            }
         } else {
             UIManager.updateHighScoreDisplay(existing.highScore);
         }

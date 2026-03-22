@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.38.2"; // System Reversion & Architecture Checklist
+const CACHE_NAME = "mtc-cache-v3.38.7"; // Firebase + map campus v3 + docs sync
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
@@ -8,6 +8,9 @@ const urlsToCache = [
   "./index.html?v=" + CACHE_TIMESTAMP,
   "./css/main.css?v=" + CACHE_TIMESTAMP,
   "./js/config.js?v=" + CACHE_TIMESTAMP,
+  "./js/firebase-bundle.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/CloudSaveSystem.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/LeaderboardUI.js?v=" + CACHE_TIMESTAMP,
   "./js/utils.js?v=" + CACHE_TIMESTAMP,
   "./js/audio.js?v=" + CACHE_TIMESTAMP,
   "./js/input.js?v=" + CACHE_TIMESTAMP,

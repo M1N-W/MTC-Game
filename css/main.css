@@ -4957,6 +4957,115 @@ body {
     margin-top: 10px;
 }
 
+/* ── Google auth + Leaderboard (Firebase) ── */
+.google-auth-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 12px 0 6px;
+    width: 100%;
+}
+
+.btn-google {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.5);
+    background: rgba(15, 23, 42, 0.85);
+    color: #93c5fd;
+    cursor: pointer;
+}
+
+.btn-google:hover {
+    border-color: #60a5fa;
+    color: #e0f2fe;
+}
+
+.google-auth-status {
+    font-size: 12px;
+    color: #86efac;
+    max-width: 100%;
+    text-align: center;
+}
+
+.btn--leaderboard {
+    border-color: rgba(250, 204, 21, 0.45) !important;
+}
+
+.leaderboard-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    align-items: center;
+    justify-content: center;
+}
+
+.leaderboard-modal.active {
+    display: flex;
+}
+
+.leaderboard-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.leaderboard-panel {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 92vw);
+    max-height: 80vh;
+    overflow: auto;
+    padding: 20px 18px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(250, 204, 21, 0.35);
+    background: rgba(15, 23, 42, 0.96);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.leaderboard-head {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    text-align: center;
+    margin-bottom: 12px;
+    color: #fde68a;
+}
+
+.leaderboard-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.leaderboard-close:hover {
+    color: #f1f5f9;
+}
+
+.leaderboard-list {
+    margin: 0;
+    padding-left: 1.2em;
+    color: #e2e8f0;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.leaderboard-hint {
+    margin: 14px 0 0;
+    font-size: 11px;
+    color: #94a3b8;
+    text-align: center;
+}
+
 /* ── Tutorial button row inner flex ── */
 .tut-btn-inner {
     display: flex;

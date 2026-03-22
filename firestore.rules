@@ -1,0 +1,45 @@
+rules_version = '2';
+// Spark (ฟรี): ไม่มี Cloud Functions — Leaderboard ผ่าน client + กฎเข้ม
+// บังคับ Google (sign_in_provider) + คะแนนต้องไม่ต่ำกว่าเดิม + ขอบเขตเทียบ wave
+// Deploy: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    function signedInWithGoogle() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function scoreWaveOk() {
+      return request.resource.data.score is number
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 2000000000
+        && request.resource.data.wave is number
+        && request.resource.data.wave >= 0
+        && request.resource.data.wave <= 50
+        && request.resource.data.score
+           <= request.resource.data.wave * 3000000 + 15000000;
+    }
+
+    match /leaderboard/{userId} {
+      allow read: if true;
+
+      allow create: if signedInWithGoogle()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && scoreWaveOk();
+
+      allow update: if signedInWithGoogle()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && scoreWaveOk()
+        && request.resource.data.score >= resource.data.score;
+
+      allow delete: if false;
+    }
+  }
+}

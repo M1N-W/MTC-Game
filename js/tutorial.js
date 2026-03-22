@@ -555,6 +555,13 @@ const TutorialSystem = (() => {
     function _finish() {
         _active = false;
         localStorage.setItem(SAVE_KEY, '1');
+        try {
+            if (typeof CloudSaveSystem !== 'undefined' && typeof CloudSaveSystem.schedulePush === 'function') {
+                CloudSaveSystem.schedulePush();
+            }
+        } catch (e) {
+            /* optional cloud sync */
+        }
 
         // restore enemies paused at start
         if (window._tutorialEnemyCache) {

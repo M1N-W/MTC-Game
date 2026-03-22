@@ -325,6 +325,22 @@ window.addEventListener('load', function _injectPortraits() {
 })();
 
 
+// ── Remote Config (optional DOM: #mtc-announcement, #mtc-shop-banner) ────────
+(function _remoteConfigUiHook() {
+    window.addEventListener('load', () => {
+        if (typeof firebaseRemoteConfigReady === 'undefined' || typeof getRemoteConfigString !== 'function') return;
+        firebaseRemoteConfigReady.then(() => {
+            const ann = getRemoteConfigString('announcement', '');
+            const annEl = document.getElementById('mtc-announcement');
+            if (annEl && ann) annEl.textContent = ann;
+            const shop = getRemoteConfigString('shop_banner', '');
+            const shopEl = document.getElementById('mtc-shop-banner');
+            if (shopEl && shop) shopEl.textContent = shop;
+        });
+    });
+})();
+
+
 // ── Service Worker Registration ───────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

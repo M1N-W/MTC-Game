@@ -696,6 +696,11 @@
                 <span id="hs-value" class="hs-value">— —</span>
             </div>
 
+            <div id="google-auth-row" class="google-auth-row">
+                <button type="button" id="btn-google-signin" class="btn-google">Google — ลงชื่อเข้า Leaderboard</button>
+                <span id="google-auth-status" class="google-auth-status" aria-live="polite"></span>
+            </div>
+
             <div class="btn-group-row">
                 <button class="btn" id="start-btn" onclick="startGame(_selectedChar)"
                     ontouchstart="event.preventDefault(); startGame(_selectedChar);">
@@ -710,8 +715,24 @@
                     ontouchstart="event.preventDefault(); AchievementGallery.open();">
                     🏆 ACHIEVEMENTS
                 </button>
+                <button type="button" class="btn btn--leaderboard" id="btn-leaderboard"
+                    onclick="if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();"
+                    ontouchstart="event.preventDefault(); if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();">
+                    🏆 LEADERBOARD
+                </button>
             </div>
             <div id="ai-loading">Initializing systems...</div>
+        </div>
+    </div>
+
+    <!-- Leaderboard modal (global leaderboard from Firestore) -->
+    <div id="leaderboard-modal" class="leaderboard-modal" aria-hidden="true">
+        <div class="leaderboard-backdrop" id="leaderboard-backdrop"></div>
+        <div class="leaderboard-panel" role="dialog" aria-labelledby="leaderboard-title">
+            <button type="button" class="leaderboard-close" id="leaderboard-close" aria-label="Close">&times;</button>
+            <div class="leaderboard-head" id="leaderboard-title">🏆 HALL OF FAME</div>
+            <ol id="leaderboard-list" class="leaderboard-list"></ol>
+            <p id="leaderboard-hint" class="leaderboard-hint">ลงชื่อ Google แล้วทำคะแนนสูงสุดเพื่อขึ้นกระดาน (คะแนนส่งผ่านเซิร์ฟเวอร์)</p>
         </div>
     </div>
 
@@ -803,8 +824,12 @@
         </div>
     </div>
 
+    <!-- Firebase (npm + esbuild → js/firebase-bundle.js); optional CONFIG_SECRETS.FIREBASE_CONFIG if loaded earlier -->
+    <script src="js/firebase-bundle.js"></script>
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/systems/CloudSaveSystem.js"></script>
+    <script src="js/systems/LeaderboardUI.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/effects.js"></script>
     <script src="js/weapons.js"></script>

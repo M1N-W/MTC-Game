@@ -1,0 +1,13 @@
+{
+  "name": "mtc-game",
+  "private": true,
+  "scripts": {
+    "build:firebase": "esbuild js/firebase-init.js --bundle --outfile=js/firebase-bundle.js --format=iife --platform=browser"
+  },
+  "dependencies": {
+    "firebase": "^11.6.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

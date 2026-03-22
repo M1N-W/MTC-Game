@@ -1,6 +1,0 @@
-chore(release): v3.38.2 system reversion & architecture rules
-
-- Full Codebase Revert: Reverted all game logic, rendering, and configurations back to the stable v3.38.1 state to resolve persistent bugs introduced in later versions.
-- Architecture Consistency Checklist: Created a universal .agents/skills/architecture-consistency-checklist/SKILL.md to prevent future documentation drift and ensure strict update/draw separation and load-order invariants.
-
-Files changed: All core files restored to v3.38.1 state, sw.js (v3.38.2), CHANGELOG.md (v3.38.2), SKILL.md
