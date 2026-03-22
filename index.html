@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- No maximum-scale / user-scalable=no — allows pinch-zoom for a11y; Edge Tools meta-viewport rule -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>MTC the Game (Beta Edition)</title>
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -137,7 +138,7 @@
             <div class="console-input-row">
                 <span class="console-prompt-symbol">root@mtcserver:~#&nbsp;</span>
                 <input type="text" id="console-input" placeholder="type command..." autocomplete="off" autocorrect="off"
-                    autocapitalize="off" spellcheck="false" />
+                    spellcheck="false" />
                 <div class="console-cursor"></div>
             </div>
 

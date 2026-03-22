@@ -4,6 +4,22 @@
 
 ---
 
+## v3.38.8 — A11y: Viewport zoom, scrollbar compat, dev console input
+*Released: March 23, 2026*
+
+### Accessibility and compatibility
+- **`index.html`:** Viewport meta no longer sets `maximum-scale=1` or `user-scalable=no` so pinch-zoom works (WCAG / Edge Tools meta-viewport rule).
+- **`index.html`:** Removed `autocapitalize` from `#console-input` (not supported on Safari; behavior unchanged for command typing).
+- **`css/main.css`:** Wrapped `#console-output` `scrollbar-width` / `scrollbar-color` in `@supports (scrollbar-width: thin)` so engines without support skip those declarations cleanly.
+
+### Files touched
+```
+✅ MODIFIED: index.html, css/main.css, sw.js (v3.38.8)
+✅ MODIFIED: Markdown Source/CHANGELOG.md, Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.38.7 — Firebase (Spark), Leaderboard UI, Campus Map v3, Docs
 *Released: March 23, 2026*
 

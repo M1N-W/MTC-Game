@@ -105,7 +105,7 @@
 - `Markdown Source/Information/PROJECT_OVERVIEW.md` + `.agents/skills/mtc-game-skills_claude/SKILL.md` — load order รวม Firebase prelude; สรุป `MapSystem` generation
 - `index.html` — viewport ปรับให้สอด accessibility linter (อนุญาต zoom); `mtc-game-conventions.md` ชี้ไป `SKILL.md`
 
-**Release:** `sw.js` / `CHANGELOG.md` — v3.38.7 (ดู changelog สำหรับรายการไฟล์เต็ม)
+**Release:** `sw.js` / `CHANGELOG.md` — v3.38.8 (ดู changelog สำหรับรายการไฟล์เต็ม)
 
 ---
 

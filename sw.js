@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.38.7"; // Firebase + map campus v3 + docs sync
+const CACHE_NAME = "mtc-cache-v3.38.8"; // a11y viewport + scrollbar @supports + console input
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

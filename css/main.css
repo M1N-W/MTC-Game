@@ -851,8 +851,14 @@ body {
     gap: 3px;
     min-height: 180px;
     max-height: 340px;
-    scrollbar-width: thin;
-    scrollbar-color: #00ff41 #001a08;
+}
+
+/* Firefox 121+; Chrome 121+ — scoped so unsupported engines skip (Edge compat hints) */
+@supports (scrollbar-width: thin) {
+    #console-output {
+        scrollbar-width: thin;
+        scrollbar-color: #00ff41 #001a08;
+    }
 }
 
 #console-output::-webkit-scrollbar {
