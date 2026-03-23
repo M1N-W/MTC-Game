@@ -1042,6 +1042,9 @@ class UIManager {
      * @param {number} cooldownCurrent  — seconds remaining on cooldown
      * @param {number} cooldownMax      — full cooldown duration in seconds
      */
+    // Per-icon smoothed progress — keyed by element to survive ID reuse
+    static _cdSmoothed = new WeakMap();
+
     static _setCooldownVisual(iconId, cooldownCurrent, cooldownMax) {
         const icon = document.getElementById(iconId);
         if (!icon) return;
@@ -1054,17 +1057,25 @@ class UIManager {
             icon.appendChild(arc);
         }
 
-        const elapsed = cooldownMax > 0
+        const targetElapsed = cooldownMax > 0
             ? Math.min(1, 1 - cooldownCurrent / cooldownMax)
             : 1;
-        const pct = (elapsed * 100).toFixed(1);
+
+        // Low-pass smooth: lerp smoothed value toward target each frame
+        // Factor ~0.18 → ~60Hz update: reaches 95% of target in ~1.5 frames visual lag
+        const LERP = 0.18;
+        const prev = UIManager._cdSmoothed.get(icon) ?? targetElapsed;
+        const smoothed = prev + (targetElapsed - prev) * LERP;
+        UIManager._cdSmoothed.set(icon, smoothed);
+
+        const pct = (smoothed * 100).toFixed(1);
 
         if (cooldownCurrent > 0.05) {
-            // Transparent slice = elapsed (done); dark slice = remaining
             arc.style.background =
                 `conic-gradient(transparent 0% ${pct}%, rgba(0,0,0,0.62) ${pct}% 100%)`;
         } else {
             arc.style.background = 'transparent';
+            UIManager._cdSmoothed.set(icon, 1); // snap to full when ready
         }
 
         // ── Countdown text ─────────────────────────────────────────
@@ -1075,7 +1086,7 @@ class UIManager {
             icon.appendChild(timer);
         }
 
-        // Hybrid: แสดง timer เฉพาะ cooldown ยาว (> 5s) เพื่อลด Visual Noise
+        // Show timer only for long cooldowns (> 5s) to reduce visual noise
         if (cooldownCurrent > 0.09 && cooldownMax > 5) {
             timer.textContent = cooldownCurrent.toFixed(1) + 's';
             timer.style.display = 'flex';

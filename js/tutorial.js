@@ -73,6 +73,13 @@ const TutorialSystem = (() => {
     let _lastWeapon = null;
     let _pulseT = 0;   // time accumulator for pulse animation (seconds)
 
+    // Arrow throttle — update at ~20Hz instead of 60Hz to reduce DOM read cost
+    let _arrowLastUpdate = 0;
+    const ARROW_UPDATE_INTERVAL = 50; // ms
+
+    // Highlight cache — avoid clearing/re-adding class when target hasn't changed
+    let _lastHighlightTarget = null;
+
     const SAVE_KEY = 'mtc_tutorial_done';
 
     // ── Lazy-read GAME_TEXTS (config.js loads before tutorial.js) ──
@@ -436,17 +443,27 @@ const TutorialSystem = (() => {
         }
     }
 
-    // Highlight UI element with CSS class
+    // Highlight UI element with CSS class — cached to avoid DOM churn every frame
     function _applyUIHighlight() {
-        // clear previous
-        document.querySelectorAll('.tut-highlighted').forEach(el => el.classList.remove('tut-highlighted'));
-
-        if (!_active) return;
+        if (!_active) {
+            if (_lastHighlightTarget) {
+                _lastHighlightTarget.classList.remove('tut-highlighted');
+                _lastHighlightTarget = null;
+            }
+            return;
+        }
         const step = STEPS[_stepIndex];
-        if (!step || !step.highlight || step.highlight.type !== 'ui') return;
+        const newTarget = (step && step.highlight && step.highlight.type === 'ui')
+            ? document.querySelector(step.highlight.target)
+            : null;
 
-        const el = document.querySelector(step.highlight.target);
-        if (el) el.classList.add('tut-highlighted');
+        if (newTarget === _lastHighlightTarget) return; // no change — skip DOM write
+
+        // Clear old
+        if (_lastHighlightTarget) _lastHighlightTarget.classList.remove('tut-highlighted');
+        // Set new
+        _lastHighlightTarget = newTarget;
+        if (newTarget) newTarget.classList.add('tut-highlighted');
     }
 
     // ── Render ────────────────────────────────────────────────
@@ -569,7 +586,11 @@ const TutorialSystem = (() => {
             window._tutorialEnemyCache = null;
         }
 
-        // clear highlights & arrow
+        // clear highlights & arrow (also reset the cache to avoid stale ref)
+        if (_lastHighlightTarget) {
+            _lastHighlightTarget.classList.remove('tut-highlighted');
+            _lastHighlightTarget = null;
+        }
         document.querySelectorAll('.tut-highlighted').forEach(el => el.classList.remove('tut-highlighted'));
         const arrow = _getArrow();
         if (arrow) arrow.style.display = 'none';
@@ -652,8 +673,12 @@ const TutorialSystem = (() => {
                 }
             }
 
-            // update arrow every frame so it tracks moving targets
-            _updateArrow();
+            // Arrow: throttle to ~20Hz to reduce getBoundingClientRect calls
+            const _now = performance.now();
+            if (_now - _arrowLastUpdate >= ARROW_UPDATE_INTERVAL) {
+                _arrowLastUpdate = _now;
+                _updateArrow();
+            }
         },
 
         /** Called from drawGame() — after CTX.restore(), before HUD */

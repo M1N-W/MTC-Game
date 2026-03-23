@@ -4,6 +4,37 @@
 
 ---
 
+## v3.39.0 — UIUX Smooth Pass: Motion Tokens, Parallax, Tutorial Throttle, Cooldown Smoothing
+*Released: March 23, 2026*
+
+### ✨ UX — `css/main.css`
+- **Motion Tokens**: Added `:root` CSS variables `--ease-tactical`, `--ease-organic`, `--ease-flow`, `--dur-fast/med/slow`, `--ls-tactical/title/header` for design-system-wide consistency
+- **Interaction Prompts**: `#db-prompt`, `#console-prompt`, `#shop-prompt` now have organic entry animation (`dbAppear`/etc.) and slower 3s pulse (was 1.5s) — less "robotic", more "handmade"
+- **Char Card Transitions**: Replaced `all 0.28s` with specific property transitions using motion tokens; avatar lifts on hover `translateY(-4px) scale(1.06)` for parallax depth effect
+- **Skill Icon Pulses**: All `pulseBlue/Emerald/Red` slowed from 2.6s → 3.8s; `pulseGold` from 2.2s → 4.0s; `btnPulse` from 3s → 4.5s with reduced amplitude — less constant shimmer
+- **Button Transitions**: `.btn` now uses specific `filter/transform/box-shadow` transitions with tokens instead of `all 0.2s ease`
+- **Mobile Pressed Feel**: `.action-btn.pressed` has weighted `scale(0.82) translateY(2px)` + organic transition using tokens
+- **Focus-Visible**: Added `outline` states for `.action-btn`, `.resume-btn`, `.shop-close-btn`, `.console-close-btn`, `#start-btn`, `#tutorial-btn`
+- `prefers-reduced-motion` blanket rule covers all new animations (existing rule extended)
+
+### ⚡ Performance — `js/tutorial.js`
+- **Arrow Throttle**: `_updateArrow()` throttled to ~20Hz (50ms interval) instead of 60Hz — eliminates ~40 `getBoundingClientRect` calls per second
+- **Highlight Cache**: `_applyUIHighlight()` now caches the current highlighted element; only clears/re-adds `.tut-highlighted` class when the target actually changes, not every frame
+
+### ✨ UX — `js/ui.js`
+- **Cooldown Arc Smoothing**: `_setCooldownVisual()` now lerps the conic-gradient arc progress toward the target value each frame (LERP=0.18) using a `WeakMap` per icon — eliminates jitter on the cooldown arc visual
+
+### Files touched
+```
+✅ MODIFIED: css/main.css (motion tokens, parallax, pulse timing, focus-visible)
+✅ MODIFIED: js/tutorial.js (arrow throttle, highlight cache)
+✅ MODIFIED: js/ui.js (cooldown arc smoothing via WeakMap lerp)
+✅ MODIFIED: sw.js (v3.39.0)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.38.10 — Rendering Performance: shadowBlur Reduction + Viewport Culling
 *Released: March 23, 2026*
 
