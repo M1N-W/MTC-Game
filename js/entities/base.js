@@ -121,6 +121,14 @@ class Entity {
         const speed = Math.hypot(this.vx, this.vy);
         if (speed < 10) return; // not moving — nothing to steer
 
+        // PERF Phase 1: query only nearby objects (static grid) instead of all objects
+        // Radius covers all 5 probe tips (PROBE_DIST ahead) + entity radius
+        const nearbyObjs = (typeof mapSystem.queryNearby === 'function')
+            ? mapSystem.queryNearby(this.x, this.y, PROBE_DIST + 32)
+            : mapSystem.objects;
+
+        if (nearbyObjs.length === 0) return; // nothing nearby — skip entirely
+
         const moveAngle = Math.atan2(this.vy, this.vx);
         let steerX = 0, steerY = 0;
 
@@ -129,8 +137,8 @@ class Entity {
             const px = this.x + Math.cos(probeAngle) * PROBE_DIST;
             const py = this.y + Math.sin(probeAngle) * PROBE_DIST;
 
-            for (let oi = 0; oi < window.mapSystem.objects.length; oi++) {
-                const obj = window.mapSystem.objects[oi];
+            for (let oi = 0; oi < nearbyObjs.length; oi++) {
+                const obj = nearbyObjs[oi];
                 if (!obj.solid) continue;
                 // Quick AABB broad phase
                 if (px < obj.x - 4 || px > obj.x + obj.w + 4 ||

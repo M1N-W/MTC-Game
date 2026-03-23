@@ -793,14 +793,33 @@ window.PowerUp = PowerUp;
 // ============================================================
 // EnemyRenderer — Canvas draw calls for all enemy types
 //
-// Separated from entity logic so game data and visuals are
 // independently testable. Godot equivalent: Sprite2D / AnimatedSprite2D
-// nodes that are children of the enemy Node2D but own no game state.
-//
 // Entry point: EnemyRenderer.draw(entity, ctx)
 //   Dispatches to the correct static method based on entity type.
 // ============================================================
 class EnemyRenderer {
+  // PERF Phase 4: per-type body gradient sprite cache (offscreen canvas, lazily created)
+  // Key format: `${type}_${R}` — one sprite per (type × radius) pair (only 3 combos in practice)
+  static _bodyCache = new Map();
+
+  /**
+   * PERF Phase 4: lazy offscreen sprite for the enemy body gradient.
+   * @param {string} key  e.g. 'enemy_18'
+   * @param {number} R    collision radius
+   * @param {Function} fn (oc, R, cx, cy) => void  draws into the offscreen canvas
+   */
+  static _getBodySprite(key, R, fn) {
+    if (EnemyRenderer._bodyCache.has(key)) return EnemyRenderer._bodyCache.get(key);
+    const PAD = 3;
+    const size = Math.ceil(R * 2) + PAD * 2 + 4;
+    const oc = document.createElement('canvas');
+    oc.width = oc.height = size;
+    const ox = oc.getContext('2d');
+    fn(ox, R, size / 2, size / 2);
+    EnemyRenderer._bodyCache.set(key, oc);
+    return oc;
+  }
+
   // ── Dispatcher ───────────────────────────────────────────
   // Call this from the game loop instead of entity.draw().
   static draw(e, ctx) {
@@ -809,13 +828,15 @@ class EnemyRenderer {
     const R = (e.radius ?? 20) + 40; // 40px margin for auras/overlays
     if (screen.x < -R || screen.x > CANVAS.width + R ||
       screen.y < -R || screen.y > CANVAS.height + R) return;
+    // PERF Phase 5: capture timestamp once for all three draw methods
+    const _now = performance.now();
     // ─────────────────────────────────────────────────────────
     const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;
     if (typeof window !== "undefined") window.CTX = ctx;
     try {
-      if (e instanceof MageEnemy) EnemyRenderer.drawMage(e);
-      else if (e instanceof TankEnemy) EnemyRenderer.drawTank(e);
-      else if (e instanceof Enemy) EnemyRenderer.drawEnemy(e);
+      if (e instanceof MageEnemy) EnemyRenderer.drawMage(e, _now);
+      else if (e instanceof TankEnemy) EnemyRenderer.drawTank(e, _now);
+      else if (e instanceof Enemy) EnemyRenderer.drawEnemy(e, _now);
       else if (e instanceof PowerUp) EnemyRenderer.drawPowerUp(e);
       // Fallback: entities with own draw() (e.g. GoldfishMinion, future minions)
       else if (typeof e.draw === "function") e.draw();
@@ -992,13 +1013,12 @@ class EnemyRenderer {
   }
 
   // ── Basic Enemy (Corrupted Student Drone) ────────────────
-  static drawEnemy(e) {
+  static drawEnemy(e, now = performance.now()) {
     // ╔══════════════════════════════════════════════════════════╗
     // ║  BASIC ENEMY — Corrupted Student Drone                  ║
     // ║  Slim gray/purple bean · Dual visor · Spiked hands      ║
     // ╚══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
-    const now = performance.now();
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;
@@ -1027,28 +1047,19 @@ class EnemyRenderer {
     CTX.stroke();
     CTX.shadowBlur = 0;
 
-    // ── Bean body — charcoal/gray-purple radial gradient ──────────
-    const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.25, 1, 0, 0, R);
-    bodyG.addColorStop(0, "#5a5a7a");
-    bodyG.addColorStop(0.5, "#2d2d44");
-    bodyG.addColorStop(1, "#1a1a2e");
-    CTX.fillStyle = bodyG;
-    CTX.beginPath();
-    CTX.arc(0, 0, R, 0, Math.PI * 2);
-    CTX.fill();
-
-    // Thick outline
-    CTX.strokeStyle = "#1e293b";
-    CTX.lineWidth = 3;
-    CTX.beginPath();
-    CTX.arc(0, 0, R, 0, Math.PI * 2);
-    CTX.stroke();
-
-    // Specular highlight — top-left dome
-    CTX.fillStyle = "rgba(255,255,255,0.12)";
-    CTX.beginPath();
-    CTX.arc(-R * 0.32, -R * 0.32, R * 0.32, 0, Math.PI * 2);
-    CTX.fill();
+    // PERF Phase 4: body gradient cached as offscreen sprite
+    const _eKey = `enemy_${R}`;
+    const _eSprite = EnemyRenderer._getBodySprite(_eKey, R, (ox, R, cx, cy) => {
+      const g = ox.createRadialGradient(cx - R * 0.25, cy - R * 0.25, 1, cx, cy, R);
+      g.addColorStop(0, '#5a5a7a'); g.addColorStop(0.5, '#2d2d44'); g.addColorStop(1, '#1a1a2e');
+      ox.fillStyle = g;
+      ox.beginPath(); ox.arc(cx, cy, R, 0, Math.PI * 2); ox.fill();
+      ox.strokeStyle = '#1e293b'; ox.lineWidth = 3;
+      ox.beginPath(); ox.arc(cx, cy, R, 0, Math.PI * 2); ox.stroke();
+      ox.fillStyle = 'rgba(255,255,255,0.12)';
+      ox.beginPath(); ox.arc(cx - R * 0.32, cy - R * 0.32, R * 0.32, 0, Math.PI * 2); ox.fill();
+    });
+    CTX.drawImage(_eSprite, -(_eSprite.width / 2), -(_eSprite.height / 2));
 
     // ── Corrupted circuit lines on body surface ───────────────────
     CTX.save();
@@ -1171,13 +1182,12 @@ class EnemyRenderer {
   }
 
   // ── Tank Enemy (Heavy Armored Brute) ─────────────────────
-  static drawTank(e) {
+  static drawTank(e, now = performance.now()) {
     // ╔══════════════════════════════════════════════════════════╗
     // ║  TANK ENEMY — Heavy Armored Brute                       ║
     // ║  Wide dark-red bean · Layered armor · Kite-shield fists  ║
     // ╚══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
-    const now = performance.now();
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;
@@ -1206,22 +1216,19 @@ class EnemyRenderer {
     CTX.stroke();
     CTX.shadowBlur = 0;
 
-    // ── Main bean body — wide dark-red (1.15× X scale) ───────────
+    // PERF Phase 4: tank body gradient cached as offscreen sprite
     CTX.save();
     CTX.scale(1.15, 1.0);
-    const bodyG = CTX.createRadialGradient(-R * 0.3, -R * 0.3, 1, 0, 0, R);
-    bodyG.addColorStop(0, "#8f2020");
-    bodyG.addColorStop(0.5, "#4a0d0d");
-    bodyG.addColorStop(1, "#2d0606");
-    CTX.fillStyle = bodyG;
-    CTX.beginPath();
-    CTX.arc(0, 0, R, 0, Math.PI * 2);
-    CTX.fill();
-    CTX.strokeStyle = "#1e293b";
-    CTX.lineWidth = 3;
-    CTX.beginPath();
-    CTX.arc(0, 0, R, 0, Math.PI * 2);
-    CTX.stroke();
+    const _tKey = `tank_${R}`;
+    const _tSprite = EnemyRenderer._getBodySprite(_tKey, R, (ox, R, cx, cy) => {
+      const g = ox.createRadialGradient(cx - R * 0.3, cy - R * 0.3, 1, cx, cy, R);
+      g.addColorStop(0, '#8f2020'); g.addColorStop(0.5, '#4a0d0d'); g.addColorStop(1, '#2d0606');
+      ox.fillStyle = g;
+      ox.beginPath(); ox.arc(cx, cy, R, 0, Math.PI * 2); ox.fill();
+      ox.strokeStyle = '#1e293b'; ox.lineWidth = 3;
+      ox.beginPath(); ox.arc(cx, cy, R, 0, Math.PI * 2); ox.stroke();
+    });
+    CTX.drawImage(_tSprite, -(_tSprite.width / 2), -(_tSprite.height / 2));
     CTX.restore();
 
     // ── Layered armor plates ──────────────────────────────────────
@@ -1364,13 +1371,12 @@ class EnemyRenderer {
   }
 
   // ── Mage Enemy (Arcane Shooter Drone) ────────────────────
-  static drawMage(e) {
+  static drawMage(e, now = performance.now()) {
     // ╔══════════════════════════════════════════════════════════╗
     // ║  MAGE ENEMY — Arcane Shooter Drone                      ║
     // ║  Sleek green diamond-bean · Blaster · Floating orb hands ║
     // ╚══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
-    const now = performance.now();
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;
@@ -1417,29 +1423,22 @@ class EnemyRenderer {
     CTX.restore();
     CTX.shadowBlur = 0;
 
-    // ── Bean body — emerald gradient, diamond silhouette ──────────
+    // PERF Phase 4: mage body gradient cached as offscreen sprite
     CTX.save();
     CTX.scale(0.88, 1.12); // taller/narrower = diamond
-    const bodyG = CTX.createRadialGradient(-R * 0.25, -R * 0.3, 1, 0, 0, R);
-    bodyG.addColorStop(0, "#1a7a40");
-    bodyG.addColorStop(0.5, "#14532d");
-    bodyG.addColorStop(1, "#052e16");
-    CTX.fillStyle = bodyG;
-    CTX.beginPath();
-    CTX.arc(0, 0, R, 0, Math.PI * 2);
-    CTX.fill();
-    CTX.strokeStyle = "#1e293b";
-    CTX.lineWidth = 3;
-    CTX.beginPath();
-    CTX.arc(0, 0, R, 0, Math.PI * 2);
-    CTX.stroke();
-    CTX.restore();
-
-    // Specular highlight
-    CTX.fillStyle = "rgba(255,255,255,0.13)";
-    CTX.beginPath();
-    CTX.arc(-R * 0.28, -R * 0.32, R * 0.26, 0, Math.PI * 2);
-    CTX.fill();
+    const _mKey = `mage_${R}`;
+    const _mSprite = EnemyRenderer._getBodySprite(_mKey, R, (ox, R, cx, cy) => {
+      const g = ox.createRadialGradient(cx - R * 0.25, cy - R * 0.3, 1, cx, cy, R);
+      g.addColorStop(0, '#1a7a40'); g.addColorStop(0.5, '#14532d'); g.addColorStop(1, '#052e16');
+      ox.fillStyle = g;
+      ox.beginPath(); ox.arc(cx, cy, R, 0, Math.PI * 2); ox.fill();
+      ox.strokeStyle = '#1e293b'; ox.lineWidth = 3;
+      ox.beginPath(); ox.arc(cx, cy, R, 0, Math.PI * 2); ox.stroke();
+      ox.fillStyle = 'rgba(255,255,255,0.13)';
+      ox.beginPath(); ox.arc(cx - R * 0.28, cy - R * 0.32, R * 0.26, 0, Math.PI * 2); ox.fill();
+    });
+    CTX.drawImage(_mSprite, -(_mSprite.width / 2), -(_mSprite.height / 2));
+    CTX.restore(); // specular baked into sprite
 
     // ── Rune markings on body ─────────────────────────────────────
     CTX.save();

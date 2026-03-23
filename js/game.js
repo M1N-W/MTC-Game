@@ -83,8 +83,11 @@ let _bgGrad = null;
 let _bgGradW = 0, _bgGradH = 0;
 let _bgGradTop = '', _bgGradBot = '';
 
-// ─── Achievement throttle ─────────────────────────────────────
+// ── Achievement throttle ─────────────────────────────────────
 let _achFrame = 0;
+
+// PERF Phase 6: skill icon DOM update throttle — every 2nd frame
+let _skillIconFrame = 0;
 
 // ─── Day / Night cycle ────────────────────────────────────────
 let dayNightTimer = 0;
@@ -366,7 +369,9 @@ function _tickEntities(dt, _inTutorial) {
     }
     // 🌾 NOTE: PoomPlayer input routing is handled inside PoomPlayer.update()
 
-    if (window.player) UIManager.updateSkillIcons(window.player);
+    // PERF Phase 6: throttle DOM skill icon updates to 30Hz (every 2nd frame)
+    _skillIconFrame = (_skillIconFrame + 1) & 0xFF;
+    if (window.player && (_skillIconFrame & 1) === 0) UIManager.updateSkillIcons(window.player);
     if (window.drone && window.player && !window.player.dead) window.drone.update(dt, window.player);
     if (!_inTutorial && window.boss) window.boss.update(dt, window.player);
 

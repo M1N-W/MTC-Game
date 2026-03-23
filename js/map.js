@@ -1136,6 +1136,9 @@ class MTCRoom {
 // ════════════════════════════════════════════════════════════
 // 🗺️ MAP SYSTEM
 // ════════════════════════════════════════════════════════════
+// PERF: static grid cell size — matches SpatialGrid in weapons.js for consistency
+const _MAP_GRID_CELL = 128;
+
 class MapSystem {
     constructor() {
         this.objects = [];
@@ -1143,6 +1146,58 @@ class MapSystem {
         this.initialized = false;
         this._lightCanvas = null;
         this._lightCtx = null;
+        // PERF Phase 1: static spatial grid for map objects (never move)
+        this._staticGrid = new Map(); // cellKey → MapObject[]
+        this._staticGridResults = [];  // reusable query result buffer
+    }
+
+    // PERF Phase 1: build the static grid from this.objects
+    // Called once after generateCampusMap(). Objects never move so this is valid forever.
+    _buildStaticGrid() {
+        this._staticGrid.clear();
+        const C = _MAP_GRID_CELL;
+        for (let i = 0; i < this.objects.length; i++) {
+            const obj = this.objects[i];
+            // Register object in every cell it overlaps
+            const x0 = Math.floor(obj.x / C);
+            const x1 = Math.floor((obj.x + obj.w) / C);
+            const y0 = Math.floor(obj.y / C);
+            const y1 = Math.floor((obj.y + obj.h) / C);
+            for (let cx = x0; cx <= x1; cx++) {
+                for (let cy = y0; cy <= y1; cy++) {
+                    const key = ((cx & 0xFFFF) << 16) | (cy & 0xFFFF);
+                    let cell = this._staticGrid.get(key);
+                    if (!cell) { cell = []; this._staticGrid.set(key, cell); }
+                    cell.push(obj);
+                }
+            }
+        }
+    }
+
+    // PERF Phase 1: return nearby map objects within a square radius of (wx, wy)
+    // Uses 3×3 cell neighbourhood — fast O(k) where k << total objects
+    queryNearby(wx, wy, radius) {
+        const C = _MAP_GRID_CELL;
+        const results = this._staticGridResults;
+        results.length = 0;
+        const seen = this._staticGridSeen || (this._staticGridSeen = new Set());
+        seen.clear();
+        const minCx = Math.floor((wx - radius) / C);
+        const maxCx = Math.floor((wx + radius) / C);
+        const minCy = Math.floor((wy - radius) / C);
+        const maxCy = Math.floor((wy + radius) / C);
+        for (let cx = minCx; cx <= maxCx; cx++) {
+            for (let cy = minCy; cy <= maxCy; cy++) {
+                const key = ((cx & 0xFFFF) << 16) | (cy & 0xFFFF);
+                const cell = this._staticGrid.get(key);
+                if (!cell) continue;
+                for (let i = 0; i < cell.length; i++) {
+                    const obj = cell[i];
+                    if (!seen.has(obj)) { seen.add(obj); results.push(obj); }
+                }
+            }
+        }
+        return results;
     }
 
     init() {
@@ -1155,6 +1210,7 @@ class MapSystem {
         }
 
         this.generateCampusMap();
+        this._buildStaticGrid(); // PERF Phase 1: build once after map generation
         this._sortedObjects = null;
         this._objectsDirty = true;
         this.initialized = true;
@@ -1322,9 +1378,12 @@ class MapSystem {
     }
 
     update(entities, dt = 0) {
+        // PERF Phase 1: query only nearby objects per entity instead of all objects
         for (const entity of entities) {
             if (entity.dead) continue;
-            for (const obj of this.objects) obj.resolveCollision(entity);
+            const r = (entity.radius || 20) + 48; // 48px margin covers object half-widths
+            const nearby = this.queryNearby(entity.x, entity.y, r);
+            for (let i = 0; i < nearby.length; i++) nearby[i].resolveCollision(entity);
         }
         if (this.mtcRoom && window.player) {
             this.mtcRoom.update(dt, window.player);
@@ -1473,7 +1532,9 @@ class MapSystem {
         drawCircuitPath(C.paths.database);
         drawCircuitPath(C.paths.shop);
 
-        // ── 4. ZONE AURAS ─────────────────────────────────────────
+        // ── 4. ZONE AURAS ─────────────────────────
+        // PERF Phase 3: gradient fill every 4th frame; rim+dash every frame
+        const _drawAuraGrad = (this._terrainFrame & 3) === 0;
         const drawZoneAura = (auraCfg) => {
             const S = C.auras, ac = auraCfg;
             const sc = ws(ac.worldX, ac.worldY), edgePt = ws(ac.worldX + ac.radius, ac.worldY);
@@ -1482,12 +1543,14 @@ class MapSystem {
             if (!isFinite(sc.x) || !isFinite(sc.y) || !isFinite(rSS) || rSS <= 0) return;
 
             ctx.save();
-            const grad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, rSS);
-            grad.addColorStop(0, `rgba(${ac.innerRgb}, ${(S.innerAlphaBase * pulse).toFixed(3)})`);
-            grad.addColorStop(0.50, `rgba(${ac.innerRgb}, ${(S.midAlphaBase * pulse).toFixed(3)})`);
-            grad.addColorStop(0.80, `rgba(${ac.outerRgb}, ${(S.outerAlphaBase * pulse).toFixed(3)})`);
-            grad.addColorStop(1, `rgba(${ac.outerRgb}, 0)`);
-            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(sc.x, sc.y, rSS, 0, Math.PI * 2); ctx.fill();
+            if (_drawAuraGrad) {
+                const grad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, rSS);
+                grad.addColorStop(0, `rgba(${ac.innerRgb}, ${(S.innerAlphaBase * pulse).toFixed(3)})`);
+                grad.addColorStop(0.50, `rgba(${ac.innerRgb}, ${(S.midAlphaBase * pulse).toFixed(3)})`);
+                grad.addColorStop(0.80, `rgba(${ac.outerRgb}, ${(S.outerAlphaBase * pulse).toFixed(3)})`);
+                grad.addColorStop(1, `rgba(${ac.outerRgb}, 0)`);
+                ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(sc.x, sc.y, rSS, 0, Math.PI * 2); ctx.fill();
+            }
 
             ctx.globalAlpha = S.rimAlphaBase * pulse; ctx.strokeStyle = `rgba(${ac.innerRgb}, 1)`;
             ctx.lineWidth = S.rimWidth; ctx.shadowBlur = S.rimGlowBlur; ctx.shadowColor = `rgba(${ac.innerRgb}, 0.9)`;
@@ -1500,13 +1563,12 @@ class MapSystem {
             ctx.restore();
         };
 
-        // If you want an aura under the Citadel
         drawZoneAura({ worldX: -150 + 150, worldY: -580 + 120, innerRgb: '250, 180, 30', outerRgb: '100, 50, 5', radius: 350, phase: 0.5 });
         drawZoneAura(C.auras.database);
         drawZoneAura(C.auras.shop);
         drawZoneAura(C.auras.origin);
 
-        // ── 5. CENTER LANDMARK ────────────────────────────────────
+                // ── 5. CENTER LANDMARK ────────────────────────────────────
         // Two counter-rotating rings at (0,0) — persistent directional
         // reference for players, marks the spawn point visually.
         if (C.landmark) {
@@ -1704,7 +1766,17 @@ class MapSystem {
         if (darkness < 0.02) return;
 
         const lc = this._lightCanvas, lctx = this._lightCtx;
-        if (lc.width !== CANVAS.width || lc.height !== CANVAS.height) { lc.width = CANVAS.width; lc.height = CANVAS.height; }
+        const sizeChanged = lc.width !== CANVAS.width || lc.height !== CANVAS.height;
+        if (sizeChanged) { lc.width = CANVAS.width; lc.height = CANVAS.height; }
+
+        // PERF Phase 2: throttle full redraw to every 2nd frame (~30Hz refresh).
+        // Lighting changes gradually — 30Hz is visually indistinguishable from 60Hz.
+        // On skip frames, blit the cached canvas directly and return early.
+        this._lightFrame = ((this._lightFrame || 0) + 1) & 0xFF;
+        if (!sizeChanged && (this._lightFrame & 1) !== 0) {
+            CTX.drawImage(lc, 0, 0);
+            return;
+        }
 
         const shake = getScreenShakeOffset();
         const toSS = (wx, wy) => { const s = worldToScreen(wx, wy); return { x: s.x + shake.x, y: s.y + shake.y }; };

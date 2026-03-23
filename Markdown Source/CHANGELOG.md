@@ -4,6 +4,35 @@
 
 ---
 
+## v3.40.0 — Performance Optimization: Full Pass (CPU + GPU)
+*Released: March 23, 2026*
+
+### ⚡ CPU — `js/map.js` + `js/entities/base.js`
+- **Phase 1 — Static Spatial Grid**: `MapSystem._buildStaticGrid()` builds a 128px-cell grid of all map objects once at `init()` (objects never move). Both `MapSystem.update()` collision and `Entity._steerAroundObstacles()` now call `queryNearby(x, y, r)` instead of iterating all ~150 objects. Estimated: ~98% fewer checks per frame at 20 enemies.
+
+### ⚡ GPU — `js/map.js`
+- **Phase 2 — Lighting Throttle**: `drawLighting()` skips full offscreen canvas repaint on odd frames (`_lightFrame & 1`), blitting cached canvas instead. Halves `createRadialGradient` cost for 20+ light sources (~40 gradient allocs/frame → ~20).
+- **Phase 3 — Zone Aura Throttle**: `createRadialGradient` fill inside `drawZoneAura` gated to every 4th frame (`_terrainFrame & 3`). Cheap rim stroke and dashed ring drawn every frame. Saves 3/4 of 4×4=16 gradient allocs per 4 frames.
+
+### ⚡ GPU — `js/entities/enemy.js`
+- **Phase 4 — Enemy Body Sprite Cache**: `EnemyRenderer._getBodySprite(key, R, fn)` lazy-creates a per-type offscreen canvas (created once per game session). `drawEnemy/drawTank/drawMage` now call `CTX.drawImage(sprite, ...)` instead of `CTX.createRadialGradient(...)` every frame. Eliminates 1 gradient alloc per enemy per frame (~15–20 saves/frame at peak).
+- **Phase 5 — Shared Timestamp**: `EnemyRenderer.draw()` captures `performance.now()` once and passes it to `drawEnemy/drawTank/drawMage` via a parameter. Removes 1 `performance.now()` call per enemy draw per frame.
+
+### ⚡ CPU — `js/game.js`
+- **Phase 6 — Skill Icon DOM Throttle**: `UIManager.updateSkillIcons()` throttled to every 2nd frame via `_skillIconFrame` counter. Halves DOM update frequency for skill cooldown icons.
+
+### Files touched
+```
+✅ MODIFIED: js/map.js (static grid, lighting throttle, zone aura throttle)
+✅ MODIFIED: js/entities/base.js (_steerAroundObstacles uses queryNearby)
+✅ MODIFIED: js/entities/enemy.js (body sprite cache, shared timestamp)
+✅ MODIFIED: js/game.js (skill icon throttle)
+✅ MODIFIED: sw.js (v3.40.0)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.39.0 — UIUX Smooth Pass: Motion Tokens, Parallax, Tutorial Throttle, Cooldown Smoothing
 *Released: March 23, 2026*
 

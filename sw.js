@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.39.0"; // UIUX smooth pass: motion tokens, char parallax, tutorial throttle, cooldown smoothing
+const CACHE_NAME = "mtc-cache-v3.40.0"; // perf: static spatial grid, lighting throttle, enemy body sprite cache, aura throttle
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
