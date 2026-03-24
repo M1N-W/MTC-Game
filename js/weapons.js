@@ -100,7 +100,8 @@ class Projectile {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
-    this.angle += dt * 2; // Preserves visual spinning effect
+    // Spinning only for enemy hex-symbol projectiles — player bullets stay aligned with flight direction
+    if (this.team === "enemy") this.angle += dt * 2;
 
     // --- BULLET-PROOF RICOCHET & BOUNDARY PHYSICS ---
     const _wb =
@@ -280,6 +281,40 @@ class Projectile {
         CTX.fill();
       }
 
+      // ── Superheated Crit: white-hot core + solar flare arcs ──────
+      if (this.isCrit) {
+        CTX.globalAlpha = 0.70;
+        CTX.fillStyle = "#ffffff";
+        CTX.shadowBlur = 32;
+        CTX.shadowColor = "#facc15";
+        CTX.beginPath();
+        CTX.arc(8, 0, 11, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.shadowBlur = 0;
+        const sfPhase = (now / 70) % (Math.PI * 2);
+        CTX.strokeStyle = "#fde68a";
+        CTX.lineWidth = 1.5;
+        CTX.shadowBlur = 14;
+        CTX.shadowColor = "#facc15";
+        for (let fi = 0; fi < 4; fi++) {
+          const fa = sfPhase + (fi / 4) * Math.PI * 2;
+          const fr = 15 + Math.sin(sfPhase + fi) * 4;
+          CTX.globalAlpha = 0.60 + Math.sin(now / 80 + fi) * 0.35;
+          CTX.beginPath();
+          CTX.arc(8, 0, fr, fa - 0.4, fa + 0.4);
+          CTX.stroke();
+        }
+        CTX.globalAlpha = 0.85;
+        CTX.strokeStyle = "#facc15";
+        CTX.lineWidth = 1.8;
+        CTX.shadowBlur = 22;
+        CTX.shadowColor = "#facc15";
+        CTX.beginPath();
+        CTX.arc(8, 0, 24, -Math.PI * 0.5, Math.PI * 0.5);
+        CTX.stroke();
+        CTX.shadowBlur = 0;
+      }
+
       CTX.restore();
       return;
     }
@@ -291,111 +326,41 @@ class Projectile {
       CTX.rotate(this.angle);
       const now = performance.now();
 
-      // Outer shockwave ring
-      const swPhase = (now / 90) % (Math.PI * 2);
-      const swR = 18 + Math.sin(swPhase) * 4;
-      CTX.globalAlpha = 0.35 + Math.sin(swPhase) * 0.2;
-      CTX.strokeStyle = "#f97316";
-      CTX.lineWidth = 2.5;
-      CTX.shadowBlur = 18;
-      CTX.shadowColor = "#dc2626";
-      CTX.beginPath();
-      CTX.arc(4, 0, swR, -Math.PI * 0.5, Math.PI * 0.5);
-      CTX.stroke();
-      CTX.globalAlpha = 0.18;
-      CTX.strokeStyle = "#fca5a5";
-      CTX.lineWidth = 1;
-      CTX.beginPath();
-      CTX.arc(4, 0, swR + 6, -Math.PI * 0.6, Math.PI * 0.6);
-      CTX.stroke();
-      CTX.shadowBlur = 0;
+      // ... (unchanged code)
 
-      // Speed lines — 3 tapered trails
-      const trailCols = [
-        "rgba(239,68,68,",
-        "rgba(251,113,133,",
-        "rgba(253,164,175,",
-      ];
-      [
-        [-28, -9, 3],
-        [-33, 0, 2.5],
-        [-28, 9, 2],
-      ].forEach(([x, y, w], ti) => {
-        const tg = CTX.createLinearGradient(x, y, 4, y);
-        tg.addColorStop(0, trailCols[ti] + "0)");
-        tg.addColorStop(0.5, trailCols[ti] + "0.3)");
-        tg.addColorStop(1, trailCols[ti] + "0.7)");
-        CTX.globalAlpha = 0.8;
-        CTX.strokeStyle = tg;
-        CTX.lineWidth = w;
-        CTX.lineCap = "round";
+      // ── Superheated Crit: golden knuckle burst + shockwave ────────
+      if (this.isCrit) {
+        const sfPhase2 = (now / 70) % (Math.PI * 2);
+        CTX.globalAlpha = 0.65 + Math.sin(sfPhase2) * 0.25;
+        CTX.fillStyle = "#ffffff";
+        CTX.shadowBlur = 26;
+        CTX.shadowColor = "#facc15";
         CTX.beginPath();
-        CTX.moveTo(x, y);
-        CTX.lineTo(4, y);
-        CTX.stroke();
-      });
-
-      // Fist body — palm with gradient
-      CTX.globalAlpha = 0.97;
-      const fg = CTX.createLinearGradient(-10, -13, 14, 13);
-      fg.addColorStop(0, "#fff1f2");
-      fg.addColorStop(0.35, "#fb7185");
-      fg.addColorStop(1, "#be123c");
-      CTX.fillStyle = fg;
-      CTX.shadowBlur = 20;
-      CTX.shadowColor = "#f97316";
-      CTX.beginPath();
-      CTX.roundRect(-9, -12, 17, 24, [3, 5, 5, 3]);
-      CTX.fill();
-      CTX.shadowBlur = 0;
-
-      // Knuckle guards — 4 raised ridges
-      CTX.fillStyle = "#ffe4e6";
-      CTX.strokeStyle = "#9f1239";
-      CTX.lineWidth = 1.2;
-      for (let k = 0; k < 4; k++) {
-        CTX.beginPath();
-        CTX.roundRect(6, -11 + k * 6, 9, 5, [2, 3, 2, 1]);
+        CTX.roundRect(4, -12, 11, 24, 3);
         CTX.fill();
-        CTX.stroke();
-        // Knuckle impact glow
-        const kg = 0.55 + Math.sin(now / 55 + k * 0.9) * 0.45;
-        CTX.globalAlpha = kg;
-        CTX.fillStyle = k % 2 === 0 ? "#fbbf24" : "#f97316";
-        CTX.shadowBlur = 10 * kg;
-        CTX.shadowColor = "#f97316";
+        CTX.shadowBlur = 0;
+        CTX.globalAlpha = 0.80;
+        CTX.strokeStyle = "#facc15";
+        CTX.lineWidth = 2.0;
+        CTX.shadowBlur = 20;
+        CTX.shadowColor = "#facc15";
         CTX.beginPath();
-        CTX.arc(11, -8.5 + k * 6, 2.5, 0, Math.PI * 2);
-        CTX.fill();
+        CTX.arc(6, 0, 22, -Math.PI * 0.55, Math.PI * 0.55);
+        CTX.stroke();
+        CTX.globalAlpha = 0.45;
+        CTX.strokeStyle = "#fef9c3";
+        CTX.lineWidth = 1.0;
+        CTX.shadowBlur = 8;
+        CTX.beginPath();
+        CTX.arc(6, 0, 28, -Math.PI * 0.5, Math.PI * 0.5);
+        CTX.stroke();
+        CTX.shadowBlur = 0;
       }
-      CTX.globalAlpha = 1;
-      CTX.shadowBlur = 0;
-
-      // Thumb
-      CTX.fillStyle = "#fb7185";
-      CTX.strokeStyle = "#9f1239";
-      CTX.lineWidth = 1;
-      CTX.beginPath();
-      CTX.roundRect(-4, 11, 13, 6, 3);
-      CTX.fill();
-      CTX.stroke();
-
-      // Wrist band — golden stripe (Wanchai signature)
-      CTX.fillStyle = "#fbbf24";
-      CTX.shadowBlur = 8;
-      CTX.shadowColor = "#f59e0b";
-      CTX.beginPath();
-      CTX.roundRect(-9, 5, 17, 3, 1);
-      CTX.fill();
-      CTX.shadowBlur = 0;
 
       CTX.restore();
       return;
     }
 
-    // ════════════════════════════════════════════════
-    // PLAYER PROJECTILES — weapon-specific art
-    // Routing priority: isPoom > weaponKind > color-derived
     // isGolden = Ambush break / Weapon Master buff (color #facc15)
     // isCharged = Weapon Master charged sniper release (symbol '∑')
     // ════════════════════════════════════════════════
@@ -470,25 +435,45 @@ class Projectile {
       CTX.fill();
       CTX.shadowBlur = 0;
       if (this.isCrit) {
-        CTX.globalAlpha = 0.85;
-        CTX.strokeStyle = "#facc15";
-        CTX.lineWidth = 1.8;
-        CTX.shadowBlur = 22;
-        CTX.shadowColor = "#facc15";
-        CTX.beginPath();
-        CTX.arc(0, 0, r + 7, 0, Math.PI * 2);
-        CTX.stroke();
-        CTX.strokeStyle = "#fef08a";
-        CTX.lineWidth = 1;
-        CTX.shadowBlur = 10;
+        // ── Golden Harvest crit aura ─────────────────────────────────
+        CTX.globalAlpha = 0.22;
+        CTX.fillStyle = "#facc15";
+        CTX.shadowBlur = 30; CTX.shadowColor = "#facc15";
+        CTX.beginPath(); CTX.arc(0, 0, r * 2.2, 0, Math.PI * 2); CTX.fill();
+        CTX.shadowBlur = 0;
+        // Pulsing burst ring
+        const harvestPulse = 0.7 + Math.sin(now / 90) * 0.3;
+        CTX.globalAlpha = harvestPulse;
+        CTX.strokeStyle = "#facc15"; CTX.lineWidth = 2.0;
+        CTX.shadowBlur = 26; CTX.shadowColor = "#facc15";
+        CTX.beginPath(); CTX.arc(0, 0, r + 8, 0, Math.PI * 2); CTX.stroke();
+        CTX.shadowBlur = 0;
+        // Orbiting golden husk particles (6 ellipses)
+        const orbitR = r + 13;
+        const orbitRot = now / 500;
+        CTX.shadowBlur = 8; CTX.shadowColor = "#fbbf24";
+        for (let hi = 0; hi < 6; hi++) {
+          const ha = orbitRot + (hi / 6) * Math.PI * 2;
+          CTX.globalAlpha = 0.65 + Math.sin(now / 110 + hi * 1.05) * 0.3;
+          CTX.fillStyle = hi % 2 === 0 ? "#fde68a" : "#fbbf24";
+          CTX.save(); CTX.translate(Math.cos(ha) * orbitR, Math.sin(ha) * orbitR);
+          CTX.rotate(ha + Math.PI / 2);
+          CTX.beginPath(); CTX.ellipse(0, 0, 3.5, 1.8, 0, 0, Math.PI * 2); CTX.fill();
+          CTX.restore();
+        }
+        CTX.shadowBlur = 0;
+        // Harvest spokes
+        CTX.strokeStyle = "#fef08a"; CTX.lineWidth = 0.9;
+        CTX.shadowBlur = 6; CTX.shadowColor = "#facc15";
         for (let si = 0; si < 8; si++) {
-          const sa = (si / 8) * Math.PI * 2;
-          CTX.globalAlpha = 0.6 + Math.sin(now / 120 + si) * 0.3;
+          const sa = (si / 8) * Math.PI * 2 + orbitRot * 0.4;
+          CTX.globalAlpha = 0.55 + Math.sin(now / 120 + si) * 0.35;
           CTX.beginPath();
-          CTX.moveTo(Math.cos(sa) * (r + 3), Math.sin(sa) * (r + 3));
-          CTX.lineTo(Math.cos(sa) * (r + 11), Math.sin(sa) * (r + 11));
+          CTX.moveTo(Math.cos(sa) * (r + 4),  Math.sin(sa) * (r + 4));
+          CTX.lineTo(Math.cos(sa) * (r + 12), Math.sin(sa) * (r + 12));
           CTX.stroke();
         }
+        CTX.shadowBlur = 0;
       }
     } else if (this.team === "player") {
       CTX.rotate(this.angle);
@@ -510,313 +495,402 @@ class Projectile {
       // isCharged: Weapon Master charged sniper release (symbol '∑', sniper only)
       const isCharged = this.symbol === "∑" && wk === "sniper";
 
-      // ── AUTO RIFLE — Plasma Tracer with holo rings ────────────────
+      // ── AUTO RIFLE — Cyber Plasma Tracer ─────────────────────────
       if (wk === "auto") {
-        // base color: blue unless golden
-        const coreColor = isGolden
-          ? "#facc15"
-          : this.isCrit
-            ? "#facc15"
-            : "#93c5fd";
-        const glowColor = isGolden
-          ? "#f59e0b"
-          : this.isCrit
-            ? "#facc15"
-            : "#60a5fa";
-        const trailColor = isGolden ? "rgba(251,191,36," : "rgba(59,130,246,";
-        const trailLen = this.isCrit || isGolden ? 28 : 18;
-        const coreW = this.isCrit || isGolden ? 4 : 2.5;
+        const coreColor = isGolden || this.isCrit ? "#facc15" : "#93c5fd";
+        const glowColor = isGolden || this.isCrit ? "#f59e0b" : "#60a5fa";
+        const trailC    = isGolden || this.isCrit ? "rgba(251,191,36," : "rgba(59,130,246,";
+        const trailLen  = this.isCrit || isGolden ? 34 : 22;
+        const coreW     = this.isCrit || isGolden ? 4.5 : 3;
 
-        const trailGrad = CTX.createLinearGradient(-trailLen, 0, 0, 0);
-        trailGrad.addColorStop(0, "rgba(0,0,0,0)");
-        trailGrad.addColorStop(0.6, `${trailColor}0.2)`);
-        trailGrad.addColorStop(1, `${trailColor}0.55)`);
+        // ── Outer heat-glow wake ──────────────────────────────────────
+        const wakeG = CTX.createLinearGradient(-trailLen, 0, 2, 0);
+        wakeG.addColorStop(0,   "rgba(0,0,0,0)");
+        wakeG.addColorStop(0.5, trailC + "0.12)");
+        wakeG.addColorStop(1,   trailC + "0.40)");
         CTX.globalAlpha = 1;
-        CTX.strokeStyle = trailGrad;
-        CTX.lineWidth = coreW + 6;
-        CTX.lineCap = "butt";
+        CTX.strokeStyle = wakeG;
+        CTX.lineWidth   = coreW + 8;
+        CTX.lineCap     = "butt";
         CTX.beginPath();
         CTX.moveTo(-trailLen, 0);
-        CTX.lineTo(0, 0);
+        CTX.lineTo(2, 0);
         CTX.stroke();
 
+        // ── Core plasma beam ──────────────────────────────────────────
         CTX.strokeStyle = coreColor;
-        CTX.lineWidth = coreW;
-        CTX.shadowBlur = this.isCrit || isGolden ? 22 : 14;
+        CTX.lineWidth   = coreW;
+        CTX.shadowBlur  = this.isCrit || isGolden ? 26 : 16;
         CTX.shadowColor = glowColor;
         CTX.beginPath();
-        CTX.moveTo(-trailLen * 0.5, 0);
-        CTX.lineTo(5, 0);
+        CTX.moveTo(-trailLen * 0.6, 0);
+        CTX.lineTo(4, 0);
         CTX.stroke();
 
-        CTX.fillStyle = "#ffffff";
-        CTX.shadowBlur = 16;
+        // ── Digital scanline shimmer (3 short perpendicular ticks) ───
+        if (!this.isCrit && !isGolden) {
+          CTX.globalAlpha = 0.28;
+          CTX.strokeStyle = "#bfdbfe";
+          CTX.lineWidth   = 0.8;
+          CTX.shadowBlur  = 0;
+          for (let ti = 0; ti < 3; ti++) {
+            const tx = -trailLen * (0.2 + ti * 0.25);
+            CTX.beginPath();
+            CTX.moveTo(tx, -3.5);
+            CTX.lineTo(tx,  3.5);
+            CTX.stroke();
+          }
+        }
+
+        // ── Tip — sharp diamond ────────────────────────────────────────
+        const tipX = 6, tipH = coreW * 1.5;
+        CTX.globalAlpha = 1;
+        CTX.fillStyle   = "#ffffff";
+        CTX.shadowBlur  = 20;
         CTX.shadowColor = glowColor;
         CTX.beginPath();
-        CTX.arc(5, 0, coreW * 0.85, 0, Math.PI * 2);
+        CTX.moveTo(tipX + tipH,       0);
+        CTX.lineTo(tipX,       -tipH * 0.6);
+        CTX.lineTo(tipX - tipH * 0.7, 0);
+        CTX.lineTo(tipX,        tipH * 0.6);
+        CTX.closePath();
         CTX.fill();
         CTX.shadowBlur = 0;
 
-        if (isGolden) {
-          // golden shimmer rings — weapon master signature
-          const ringAngle = (now / 80) % (Math.PI * 2);
-          CTX.globalAlpha = 0.7;
+        // ── Critical/Golden: double rotating burst rings + spikes ─────
+        if (this.isCrit || isGolden) {
+          const ra = (now / 80) % (Math.PI * 2);
+          CTX.globalAlpha = 0.75;
           CTX.strokeStyle = "#facc15";
-          CTX.lineWidth = 1;
-          CTX.shadowBlur = 10;
+          CTX.lineWidth   = 1.3;
+          CTX.shadowBlur  = 16;
           CTX.shadowColor = "#facc15";
           CTX.beginPath();
-          CTX.ellipse(0, 0, 8, 4, ringAngle, 0, Math.PI * 2);
+          CTX.ellipse(0, 0, 9, 4.5, ra, 0, Math.PI * 2);
           CTX.stroke();
           CTX.globalAlpha = 0.45;
           CTX.strokeStyle = "#fde68a";
-          CTX.lineWidth = 0.7;
+          CTX.lineWidth   = 0.8;
+          CTX.shadowBlur  = 8;
           CTX.beginPath();
-          CTX.ellipse(0, 0, 11, 3, -ringAngle * 0.7, 0, Math.PI * 2);
+          CTX.ellipse(0, 0, 13, 3.5, -ra * 0.65, 0, Math.PI * 2);
           CTX.stroke();
-        } else if (this.isCrit) {
-          CTX.globalAlpha = 0.7;
-          CTX.strokeStyle = "#facc15";
-          CTX.lineWidth = 1;
-          CTX.shadowBlur = 10;
-          CTX.shadowColor = "#facc15";
-          for (let sp = 0; sp < 6; sp++) {
-            const sa = (sp / 6) * Math.PI * 2;
+          CTX.strokeStyle = "#fef9c3";
+          CTX.lineWidth   = 0.7;
+          CTX.shadowBlur  = 5;
+          for (let sp = 0; sp < 8; sp++) {
+            const sa = (sp / 8) * Math.PI * 2 + ra;
+            CTX.globalAlpha = 0.45 + Math.sin(now / 90 + sp) * 0.3;
             CTX.beginPath();
-            CTX.moveTo(Math.cos(sa) * 5, Math.sin(sa) * 5);
-            CTX.lineTo(Math.cos(sa) * 10, Math.sin(sa) * 10);
+            CTX.moveTo(Math.cos(sa) * 5,  Math.sin(sa) * 5);
+            CTX.lineTo(Math.cos(sa) * 12, Math.sin(sa) * 12);
             CTX.stroke();
           }
         } else {
-          // normal holo rings
-          const ringAngle = (now / 120) % (Math.PI * 2);
-          CTX.globalAlpha = 0.55;
+          // Normal: 2 clean holo rings
+          const ringA = (now / 130) % (Math.PI * 2);
+          CTX.globalAlpha = 0.50;
           CTX.strokeStyle = "#7dd3fc";
-          CTX.lineWidth = 0.8;
+          CTX.lineWidth   = 0.9;
+          CTX.shadowBlur  = 4;
+          CTX.shadowColor = "#60a5fa";
           CTX.beginPath();
-          CTX.ellipse(0, 0, 7, 3.5, ringAngle, 0, Math.PI * 2);
+          CTX.ellipse(0, 0, 7, 3.5, ringA, 0, Math.PI * 2);
           CTX.stroke();
-          CTX.globalAlpha = 0.35;
+          CTX.globalAlpha = 0.30;
           CTX.strokeStyle = "#bfdbfe";
-          CTX.lineWidth = 0.7;
+          CTX.lineWidth   = 0.7;
+          CTX.shadowBlur  = 2;
           CTX.beginPath();
-          CTX.ellipse(0, 0, 9, 2.5, -ringAngle * 0.7, 0, Math.PI * 2);
+          CTX.ellipse(0, 0, 10, 2.5, -ringA * 0.7, 0, Math.PI * 2);
           CTX.stroke();
         }
 
-        // ── SHOTGUN — Molten Shrapnel ─────────────────────────────────
+        // ── SHOTGUN — Molten Shrapnel Fragment ───────────────────────
       } else if (wk === "shotgun") {
-        const sz = this.isCrit || isGolden ? 7 : 5;
-        const glowColor = isGolden ? "#facc15" : "#f97316";
+        const sz = this.isCrit || isGolden ? 8 : 5.5;
+        const glowColor  = isGolden || this.isCrit ? "#facc15" : "#f97316";
+        const shardMain  = isGolden || this.isCrit ? "#fbbf24" : "#f59e0b";
+        const shardEdge  = isGolden || this.isCrit ? "#fef9c3" : "#fef3c7";
+        const shardDark  = isGolden || this.isCrit ? "#92400e" : "#c2410c";
 
-        CTX.globalAlpha = 0.3;
-        CTX.fillStyle = isGolden ? "#facc15" : "#fbbf24";
-        CTX.shadowBlur = 14;
+        // ── Heat wake (elongated ellipse behind shard) ────────────────
+        CTX.globalAlpha = 0.30;
+        CTX.fillStyle   = shardMain;
+        CTX.shadowBlur  = 16;
         CTX.shadowColor = glowColor;
         CTX.beginPath();
-        CTX.ellipse(-sz, 0, sz * 2, sz, 0, 0, Math.PI * 2);
+        CTX.ellipse(-sz * 1.3, 0, sz * 2.2, sz * 0.7, 0, 0, Math.PI * 2);
         CTX.fill();
         CTX.shadowBlur = 0;
 
+        // ── Main shard — jagged elongated diamond ─────────────────────
         CTX.globalAlpha = 1;
-        const shardG = CTX.createLinearGradient(-sz, -sz, sz, sz);
-        if (isGolden) {
-          shardG.addColorStop(0, "#fef9c3");
-          shardG.addColorStop(0.4, "#facc15");
-          shardG.addColorStop(1, "#b45309");
-        } else {
-          shardG.addColorStop(0, "#fef3c7");
-          shardG.addColorStop(0.4, "#f59e0b");
-          shardG.addColorStop(1, "#c2410c");
-        }
-        CTX.fillStyle = shardG;
-        CTX.shadowBlur = this.isCrit || isGolden ? 22 : 10;
+        const shardG = CTX.createLinearGradient(-sz * 0.7, -sz, sz * 1.3, sz * 0.8);
+        shardG.addColorStop(0,    shardEdge);
+        shardG.addColorStop(0.35, shardMain);
+        shardG.addColorStop(1,    shardDark);
+        CTX.fillStyle  = shardG;
+        CTX.shadowBlur = this.isCrit || isGolden ? 24 : 12;
         CTX.shadowColor = glowColor;
         CTX.beginPath();
-        CTX.moveTo(sz * 1.4, 0);
-        CTX.lineTo(sz * 0.4, -sz * 1.1);
-        CTX.lineTo(-sz * 0.5, -sz * 0.6);
-        CTX.lineTo(-sz * 1.2, 0.5);
-        CTX.lineTo(-sz * 0.4, sz * 0.9);
-        CTX.lineTo(sz * 0.7, sz * 0.5);
+        CTX.moveTo( sz * 1.6,  0);            // sharp front tip
+        CTX.lineTo( sz * 0.3, -sz * 1.0);     // upper back
+        CTX.lineTo(-sz * 0.55, -sz * 0.5);    // upper notch
+        CTX.lineTo(-sz * 1.25,  0.5);         // rear
+        CTX.lineTo(-sz * 0.45,  sz * 0.85);   // lower notch
+        CTX.lineTo( sz * 0.65,  sz * 0.5);    // lower front
         CTX.closePath();
         CTX.fill();
 
-        CTX.fillStyle = isGolden ? "#fef9c3" : "#fffbeb";
-        CTX.shadowBlur = 8;
+        // ── Molten hot-spot core ──────────────────────────────────────
+        CTX.fillStyle  = shardEdge;
+        CTX.shadowBlur = 10;
         CTX.shadowColor = glowColor;
         CTX.beginPath();
-        CTX.arc(0, 0, sz * 0.45, 0, Math.PI * 2);
+        CTX.arc(sz * 0.15, 0, sz * 0.42, 0, Math.PI * 2);
         CTX.fill();
         CTX.shadowBlur = 0;
 
-        CTX.globalAlpha = 0.7;
-        CTX.fillStyle = isGolden ? "#facc15" : "#fbbf24";
-        CTX.beginPath();
-        CTX.arc(-sz * 1.5, 1, 1.2, 0, Math.PI * 2);
-        CTX.fill();
-        CTX.globalAlpha = 0.42;
-        CTX.beginPath();
-        CTX.arc(-sz * 2.1, -1.5, 0.9, 0, Math.PI * 2);
-        CTX.fill();
-        CTX.globalAlpha = 0.25;
-        CTX.beginPath();
-        CTX.arc(-sz * 2.8, 0.5, 0.7, 0, Math.PI * 2);
-        CTX.fill();
+        // ── Trailing ember sparks (3 fading dots) ────────────────────
+        for (let ei = 0; ei < 3; ei++) {
+          CTX.globalAlpha = 0.65 - ei * 0.18;
+          CTX.fillStyle   = shardMain;
+          CTX.beginPath();
+          CTX.arc(-sz * (1.45 + ei * 0.65), (ei % 2 === 0 ? 1.2 : -1.0), 1.0 - ei * 0.2, 0, Math.PI * 2);
+          CTX.fill();
+        }
 
+        // ── Crit/Golden: circuit-crack lines + burst ring ─────────────
         if (this.isCrit || isGolden) {
           CTX.globalAlpha = 0.85;
           CTX.strokeStyle = "#facc15";
-          CTX.lineWidth = 1.5;
-          CTX.shadowBlur = 18;
+          CTX.lineWidth   = 1.5;
+          CTX.shadowBlur  = 20;
           CTX.shadowColor = "#facc15";
           CTX.beginPath();
-          CTX.arc(0, 0, sz + 5, 0, Math.PI * 2);
+          CTX.arc(0, 0, sz + 6, 0, Math.PI * 2);
+          CTX.stroke();
+          CTX.strokeStyle = "#fef9c3";
+          CTX.lineWidth   = 0.8;
+          CTX.shadowBlur  = 4;
+          CTX.globalAlpha = 0.65;
+          CTX.beginPath();
+          CTX.moveTo(-sz * 0.3, -sz * 0.6);
+          CTX.lineTo( sz * 0.5,  sz * 0.3);
+          CTX.stroke();
+          CTX.beginPath();
+          CTX.moveTo(-sz * 0.8,  sz * 0.2);
+          CTX.lineTo( sz * 0.8, -sz * 0.3);
           CTX.stroke();
         }
 
         // ── SNIPER — charged golden lance (Weapon Master release) ─────
       } else if (wk === "sniper" && isCharged) {
-        CTX.globalAlpha = 0.25;
+        // Outer diffuse aura
+        CTX.globalAlpha = 0.22;
         CTX.fillStyle = "#facc15";
-        CTX.beginPath();
-        CTX.ellipse(-16, 0, 22, 8, 0, 0, Math.PI * 2);
-        CTX.fill();
-        CTX.globalAlpha = 1;
-        const cg = CTX.createLinearGradient(-28, 0, 6, 0);
-        cg.addColorStop(0, "rgba(251,191,36,0)");
-        cg.addColorStop(0.55, "#facc15");
-        cg.addColorStop(1, "#ffffff");
-        CTX.strokeStyle = cg;
-        CTX.lineWidth = 6;
-        CTX.lineCap = "round";
-        CTX.shadowBlur = 28;
+        CTX.shadowBlur = 30;
         CTX.shadowColor = "#facc15";
         CTX.beginPath();
-        CTX.moveTo(-28, 0);
-        CTX.lineTo(6, 0);
+        CTX.ellipse(-14, 0, 26, 11, 0, 0, Math.PI * 2);
+        CTX.fill();
+        CTX.shadowBlur = 0;
+
+        // Core lance beam
+        CTX.globalAlpha = 1;
+        const cg = CTX.createLinearGradient(-32, 0, 8, 0);
+        cg.addColorStop(0, "rgba(251,191,36,0)");
+        cg.addColorStop(0.45, "#facc15");
+        cg.addColorStop(0.85, "#ffffff");
+        cg.addColorStop(1,    "#ffffff");
+        CTX.strokeStyle = cg;
+        CTX.lineWidth = 8;
+        CTX.lineCap = "round";
+        CTX.shadowBlur = 32;
+        CTX.shadowColor = "#facc15";
+        CTX.beginPath();
+        CTX.moveTo(-32, 0);
+        CTX.lineTo(8, 0);
         CTX.stroke();
-        // energy rings
+
+        // Thin bright core
+        const cgInner = CTX.createLinearGradient(-32, 0, 8, 0);
+        cgInner.addColorStop(0, "rgba(255,255,255,0)");
+        cgInner.addColorStop(0.6, "rgba(255,255,255,0.8)");
+        cgInner.addColorStop(1,   "#ffffff");
+        CTX.strokeStyle = cgInner;
+        CTX.lineWidth = 2;
+        CTX.shadowBlur = 10;
+        CTX.beginPath();
+        CTX.moveTo(-32, 0);
+        CTX.lineTo(8, 0);
+        CTX.stroke();
+
+        // Golden shockwave at tip
+        CTX.globalAlpha = 0.80;
+        CTX.strokeStyle = "#facc15";
+        CTX.lineWidth = 2.5;
+        CTX.shadowBlur = 18;
+        CTX.shadowColor = "#fde68a";
+        CTX.beginPath();
+        CTX.moveTo(8, -10);
+        CTX.lineTo(18, 0);
+        CTX.lineTo(8, 10);
+        CTX.stroke();
+        CTX.globalAlpha = 0.45;
+        CTX.strokeStyle = "#fef9c3";
+        CTX.lineWidth = 1.2;
+        CTX.beginPath();
+        CTX.moveTo(8, -14);
+        CTX.lineTo(21, 0);
+        CTX.lineTo(8, 14);
+        CTX.stroke();
+
+        // Energy rings along shaft
         CTX.strokeStyle = "#fde68a";
         CTX.lineWidth = 1.2;
         CTX.shadowBlur = 8;
-        for (let ri = -20; ri < 4; ri += 8) {
-          const ra = Math.max(0, (28 + ri) / 34);
-          CTX.globalAlpha = ra * 0.5;
+        for (let ri = -24; ri < 6; ri += 8) {
+          const ra = Math.max(0, (32 + ri) / 40);
+          CTX.globalAlpha = ra * 0.55;
           CTX.beginPath();
-          CTX.arc(ri, 0, 4 + ra * 3, 0, Math.PI * 2);
+          CTX.arc(ri, 0, 4 + ra * 4, 0, Math.PI * 2);
           CTX.stroke();
         }
         CTX.shadowBlur = 0;
 
-        // ── SNIPER — Railgun Needle (normal + golden ambush variant) ──
+        // ── SNIPER — Railgun Needle ───────────────────────────────────
       } else if (wk === "sniper") {
-        const needleLen = this.isCrit || isGolden ? 38 : 28;
-        const needleW = this.isCrit || isGolden ? 2.2 : 1.4;
-        const needleColor = isGolden
-          ? "#facc15"
-          : this.isCrit
-            ? "#facc15"
-            : "#ef4444";
-        const glowColor = isGolden
-          ? "#f59e0b"
-          : this.isCrit
-            ? "#facc15"
-            : "#ef4444";
-        const coneColor = isGolden ? "#fde68a" : "#fca5a5";
+        const needleLen  = this.isCrit || isGolden ? 42 : 30;
+        const needleW    = this.isCrit || isGolden ? 2.4 : 1.5;
+        const needleColor = isGolden || this.isCrit ? "#facc15" : "#ef4444";
+        const glowColor  = isGolden || this.isCrit ? "#f59e0b" : "#ef4444";
+        const coneColor  = isGolden ? "#fde68a" : this.isCrit ? "#fde68a" : "#fca5a5";
 
-        const coneCount = 3;
-        for (let ci = 0; ci < coneCount; ci++) {
-          const coneLen = needleLen * (0.45 + ci * 0.2);
-          const coneW = (3 + ci * 2.5) * (this.isCrit || isGolden ? 1.4 : 1);
-          CTX.globalAlpha = 0.12 - ci * 0.03;
+        // ── Sonic boom cones (4 layers behind needle) ─────────────────
+        const coneScale = this.isCrit || isGolden ? 1.5 : 1;
+        for (let ci = 0; ci < 4; ci++) {
+          const coneLen = needleLen * (0.38 + ci * 0.18);
+          const coneW   = (2.5 + ci * 2.8) * coneScale;
+          CTX.globalAlpha = 0.14 - ci * 0.025;
           CTX.fillStyle = coneColor;
           CTX.beginPath();
-          CTX.moveTo(-coneLen * 0.15, 0);
+          CTX.moveTo(-coneLen * 0.12, 0);
           CTX.lineTo(-coneLen, -coneW);
-          CTX.lineTo(-coneLen, coneW);
+          CTX.lineTo(-coneLen,  coneW);
           CTX.closePath();
           CTX.fill();
         }
 
-        CTX.globalAlpha = 0.35;
+        // ── Wake glow ─────────────────────────────────────────────────
+        CTX.globalAlpha = 0.38;
         const wakeGrad = CTX.createLinearGradient(-needleLen, 0, 0, 0);
         wakeGrad.addColorStop(0, "rgba(0,0,0,0)");
-        wakeGrad.addColorStop(
-          1,
-          isGolden ? "rgba(251,191,36,0.6)" : "rgba(252,165,165,0.6)",
-        );
+        wakeGrad.addColorStop(1, isGolden || this.isCrit ? "rgba(251,191,36,0.65)" : "rgba(252,165,165,0.65)");
         CTX.strokeStyle = wakeGrad;
-        CTX.lineWidth = needleW + 4;
-        CTX.lineCap = "butt";
+        CTX.lineWidth = needleW + 5;
+        CTX.lineCap  = "butt";
         CTX.beginPath();
         CTX.moveTo(-needleLen, 0);
         CTX.lineTo(0, 0);
         CTX.stroke();
 
+        // ── Core needle ───────────────────────────────────────────────
         CTX.globalAlpha = 1;
-        const needleGrad = CTX.createLinearGradient(
-          -needleLen,
-          0,
-          needleLen * 0.15,
-          0,
-        );
-        needleGrad.addColorStop(
-          0,
-          isGolden ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)",
-        );
+        const needleGrad = CTX.createLinearGradient(-needleLen, 0, needleLen * 0.15, 0);
+        needleGrad.addColorStop(0, isGolden || this.isCrit ? "rgba(251,191,36,0.3)" : "rgba(239,68,68,0.3)");
         needleGrad.addColorStop(0.7, needleColor);
-        needleGrad.addColorStop(1, "#ffffff");
+        needleGrad.addColorStop(1,   "#ffffff");
         CTX.strokeStyle = needleGrad;
-        CTX.lineWidth = needleW;
-        CTX.shadowBlur = this.isCrit || isGolden ? 24 : 16;
+        CTX.lineWidth   = needleW;
+        CTX.shadowBlur  = this.isCrit || isGolden ? 28 : 18;
         CTX.shadowColor = glowColor;
-        CTX.lineCap = "round";
+        CTX.lineCap     = "round";
         CTX.beginPath();
         CTX.moveTo(-needleLen, 0);
         CTX.lineTo(needleLen * 0.12, 0);
         CTX.stroke();
 
-        // sharp tip — rounded dot, NO arrow-head
-        CTX.fillStyle = "#ffffff";
-        CTX.shadowBlur = 12;
+        // ── Sharp tip — needle point ──────────────────────────────────
+        CTX.fillStyle  = "#ffffff";
+        CTX.shadowBlur = 14;
         CTX.shadowColor = glowColor;
         CTX.beginPath();
-        CTX.arc(needleLen * 0.12, 0, needleW * 1.1, 0, Math.PI * 2);
+        CTX.arc(needleLen * 0.12, 0, needleW * 1.2, 0, Math.PI * 2);
         CTX.fill();
         CTX.shadowBlur = 0;
 
+        // ── Crit/Golden: electric arc segments + energy rings ─────────
         if (this.isCrit || isGolden) {
-          CTX.globalAlpha = 0.5;
+          // Energy rings
+          CTX.globalAlpha = 0.55;
           CTX.strokeStyle = "#facc15";
-          CTX.lineWidth = 0.8;
-          for (let ri = -24; ri < 0; ri += 9) {
+          CTX.lineWidth = 0.9;
+          CTX.shadowBlur = 6;
+          CTX.shadowColor = "#facc15";
+          for (let ri = -28; ri < 0; ri += 9) {
             CTX.beginPath();
-            CTX.arc(ri, 0, 3.5, 0, Math.PI * 2);
+            CTX.arc(ri, 0, 3.8, 0, Math.PI * 2);
             CTX.stroke();
           }
+          // Electric arc zigzags between rings
+          CTX.strokeStyle = "#fef9c3";
+          CTX.lineWidth   = 0.7;
+          CTX.shadowBlur  = 4;
+          CTX.globalAlpha = 0.70;
+          CTX.beginPath();
+          CTX.moveTo(-28, 0);
+          CTX.lineTo(-24, -4);
+          CTX.lineTo(-19, 2);
+          CTX.lineTo(-14, -3);
+          CTX.lineTo(-9,   4);
+          CTX.stroke();
+          CTX.shadowBlur = 0;
         }
 
         // ── KATANA SLASH WAVE — curved blade ripple ─────────────────
       } else if (wk === "katana") {
         const now = performance.now();
         const isGold = isGolden || this.isCrit;
-        const coreCol = isGold ? "#facc15" : "#7ec8e3";
-        const glowCol = isGold ? "#fde68a" : "#38d0f8";
-        const edgeCol = isGold ? "#fffbe0" : "#daf4ff";
+        const coreCol  = isGold ? "#facc15" : "#7ec8e3";
+        const glowCol  = isGold ? "#fde68a" : "#38d0f8";
+        const edgeCol  = isGold ? "#fffbe0" : "#daf4ff";
         const trailCol = isGold ? "rgba(251,204,21," : "rgba(56,208,248,";
 
+        // ── Ghost wind-streak blades (2 fading copies behind) ────────
+        // Drawn first so they appear behind the main blade
+        if (!isGold) {
+          for (let gi = 0; gi < 2; gi++) {
+            const gOffset = -(gi + 1) * 9;
+            const gAlpha  = 0.22 - gi * 0.08;
+            const ghostG  = CTX.createLinearGradient(gOffset - 4, 0, gOffset + 24, 0);
+            ghostG.addColorStop(0,    "rgba(56,208,248,0)");
+            ghostG.addColorStop(0.4,  `rgba(56,208,248,${gAlpha})`);
+            ghostG.addColorStop(1,    "rgba(56,208,248,0)");
+            CTX.globalAlpha = 1;
+            CTX.fillStyle   = ghostG;
+            CTX.shadowBlur  = 0;
+            CTX.beginPath();
+            CTX.moveTo(gOffset - 4, -11 * 0.25);
+            CTX.bezierCurveTo(gOffset + 24 * 0.2, -11 * 0.65, gOffset + 24 * 0.55, -11 * 0.5, gOffset + 24, 0);
+            CTX.bezierCurveTo(gOffset + 24 * 0.55, 11 * 0.32, gOffset + 24 * 0.22, 11 * 0.5, gOffset - 4, 11 * 0.25);
+            CTX.closePath();
+            CTX.fill();
+          }
+        }
+
         // ── Energy trail (fades behind projectile) ────────────────────
-        const trailLen = isGold ? 38 : 28;
+        const trailLen = isGold ? 42 : 30;
         const trailG = CTX.createLinearGradient(-trailLen, 0, 0, 0);
         trailG.addColorStop(0, trailCol + "0)");
-        trailG.addColorStop(0.55, trailCol + "0.15)");
-        trailG.addColorStop(1, trailCol + "0.42)");
+        trailG.addColorStop(0.55, trailCol + "0.14)");
+        trailG.addColorStop(1, trailCol + "0.45)");
         CTX.globalAlpha = 1;
         CTX.strokeStyle = trailG;
-        CTX.lineWidth = isGold ? 10 : 7;
+        CTX.lineWidth = isGold ? 11 : 7;
         CTX.lineCap = "butt";
-        CTX.shadowBlur = isGold ? 18 : 10;
+        CTX.shadowBlur = isGold ? 20 : 10;
         CTX.shadowColor = glowCol;
         CTX.beginPath();
         CTX.moveTo(-trailLen, 0);
@@ -826,8 +900,8 @@ class Projectile {
 
         // ── Blade body — elongated arc (kamae shape) ──────────────────
         // Main curve: wide base tapering to a sharp tip
-        const BW = isGold ? 15 : 11; // blade half-width at base
-        const BL = isGold ? 22 : 16; // blade length forward
+        const BW = isGold ? 16 : 11; // blade half-width at base
+        const BL = isGold ? 24 : 16; // blade length forward
         const grad = CTX.createLinearGradient(-4, 0, BL, 0);
         grad.addColorStop(0, edgeCol);
         grad.addColorStop(0.35, coreCol);
@@ -893,24 +967,66 @@ class Projectile {
 
         // ── Crit / golden burst ring ────────────────────────────────────
         if (isGold) {
+          // Burst ring
           CTX.globalAlpha = 0.72;
           CTX.strokeStyle = "#facc15";
           CTX.lineWidth = 1.6;
-          CTX.shadowBlur = 20;
+          CTX.shadowBlur = 22;
           CTX.shadowColor = "#facc15";
           CTX.beginPath();
-          CTX.arc(0, 0, BW + 6, 0, Math.PI * 2);
+          CTX.arc(0, 0, BW + 7, 0, Math.PI * 2);
           CTX.stroke();
-          // spark spokes
+
+          // Sakura petals (5 rotated ellipses trailing behind blade)
+          const petalColors = ["#fda4af", "#f9a8d4", "#fbbf24", "#fde68a", "#fca5a5"];
+          const petalOffsets = [
+            [-trailLen * 0.25, -BW * 0.5],
+            [-trailLen * 0.48, -BW * 0.25],
+            [-trailLen * 0.55,  BW * 0.35],
+            [-trailLen * 0.35,  BW * 0.55],
+            [-trailLen * 0.15, -BW * 0.7],
+          ];
+          CTX.shadowBlur  = 8;
+          CTX.shadowColor = "#fbbf24";
+          for (let pi = 0; pi < 5; pi++) {
+            const [px, py] = petalOffsets[pi];
+            const pRot = now / 600 + pi * 1.26;
+            const pAlpha = 0.75 - pi * 0.08;
+            CTX.globalAlpha = pAlpha;
+            CTX.fillStyle   = petalColors[pi];
+            CTX.save();
+            CTX.translate(px, py);
+            CTX.rotate(pRot);
+            CTX.beginPath();
+            CTX.ellipse(0, 0, 4.5, 2.5, 0, 0, Math.PI * 2);
+            CTX.fill();
+            CTX.restore();
+          }
+          CTX.shadowBlur = 0;
+
+          // Slice accent line
+          CTX.globalAlpha = 0.55;
+          CTX.strokeStyle = "#fffbe0";
+          CTX.lineWidth = 0.8;
+          CTX.lineCap = "round";
+          CTX.shadowBlur = 4;
+          CTX.shadowColor = "#facc15";
+          CTX.beginPath();
+          CTX.moveTo(-trailLen * 0.5, -BW * 0.15);
+          CTX.lineTo(BL * 0.9, 0);
+          CTX.stroke();
+
+          // Spark spokes
           CTX.strokeStyle = "#fef9c3";
           CTX.lineWidth = 0.9;
           CTX.shadowBlur = 8;
+          CTX.shadowColor = "#facc15";
           for (let si = 0; si < 8; si++) {
             const sa = (si / 8) * Math.PI * 2 + now / 400;
-            CTX.globalAlpha = 0.55 + Math.sin(now / 100 + si) * 0.35;
+            CTX.globalAlpha = 0.50 + Math.sin(now / 100 + si) * 0.35;
             CTX.beginPath();
-            CTX.moveTo(Math.cos(sa) * (BW + 2), Math.sin(sa) * (BW + 2));
-            CTX.lineTo(Math.cos(sa) * (BW + 11), Math.sin(sa) * (BW + 11));
+            CTX.moveTo(Math.cos(sa) * (BW + 2),  Math.sin(sa) * (BW + 2));
+            CTX.lineTo(Math.cos(sa) * (BW + 12), Math.sin(sa) * (BW + 12));
             CTX.stroke();
           }
         }

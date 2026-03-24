@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.40.0"; // perf: static spatial grid, lighting throttle, enemy body sprite cache, aura throttle
+const CACHE_NAME = "mtc-cache-v3.41.0"; // feat: projectile visual revamp — all characters, crit states, no-spin fix
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

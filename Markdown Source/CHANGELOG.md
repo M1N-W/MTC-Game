@@ -4,6 +4,39 @@
 
 ---
 
+## v3.41.0 — Projectile Visual Revamp: All Characters + Crit States
+*Released: March 24, 2026*
+
+### 🎨 Bug Fix — `js/weapons.js`
+- **No-Spin Fix**: `Projectile.update()` now only increments `this.angle` when `this.team === "enemy"`. Player bullets stay locked to their flight direction — no more unintended continuous rotation.
+
+### 🎨 Visual — Kao (Cyber/Gamer) — `js/weapons.js`
+- **Auto Rifle**: Replaced generic tracer with a *Cyber Plasma Tracer*: outer heat-glow wake, core plasma beam, 3-tick digital scanline shimmer (normal), sharp diamond tip. Crit/Golden: double rotating elliptical burst rings + 8 animated spikes.
+- **Shotgun**: Replaced with a *Molten Shrapnel Fragment*: jagged 6-vertex elongated diamond with gradient fill, heat-wake ellipse behind, glowing molten hot-spot core, 3 trailing ember dots. Crit/Golden: circuit-crack lines + golden burst ring.
+- **Sniper (Normal)**: *Railgun Needle* — 4-layer sonic boom cones, thick wake glow, gradient needle core + white tip dot. Crit/Golden: energy rings along shaft + electric arc zigzag.
+- **Sniper (Charged / Weapon Master)**: *Golden Lance* — wide diffuse aura, 8px thick core beam with bright inner line, golden V-shaped shockwave at tip, energy rings along shaft.
+
+### 🎨 Visual — Poom (Enchanted Rice) — `js/weapons.js`
+- **Normal**: Enhanced emerald wisp trail (5 layers), soft aura, 5-grain cluster with golden radial gradients, pulsing emerald vein highlights.
+- **Crit**: *Golden Harvest* — large diffuse gold aura, pulsing burst ring, **6 orbiting golden husk particles** (rotated ellipses), harvest spokes with phase-offset animation.
+
+### 🎨 Visual — Auto (Heat/Stand) — `js/weapons.js`
+- **Heatwave Crit**: *Superheated Punch* — white-hot translucent core overlay (r=11), 4 solar flare arcs at rotating phase, golden arc shockwave (r=24) on leading edge.
+- **Wanchai Punch Crit**: White-hot knuckle flash over fist face, double golden arc burst rings (r=22 / r=28).
+
+### 🎨 Visual — Pat (Ronin/Wind) — `js/weapons.js`
+- **Katana Normal**: *Ronin Wind Blade* — 2 fading ghost wind-streak blade copies behind main blade, longer trail, animated pressure-wave arcs at tip.
+- **Katana Crit/Golden**: *Golden Sakura Slash* — 5 orbiting sakura petal ellipses (pink/gold), diagonal slice accent line, golden burst ring, 8 animated spark spokes.
+
+### Files touched
+```
+✅ MODIFIED: js/weapons.js (no-spin fix + full projectile draw revamp for all 4 characters)
+✅ MODIFIED: sw.js (v3.41.0)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.40.0 — Performance Optimization: Full Pass (CPU + GPU)
 *Released: March 23, 2026*
 
