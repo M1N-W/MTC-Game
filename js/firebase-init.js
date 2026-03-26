@@ -60,7 +60,7 @@ isSupported()
             analytics = getAnalytics(app);
         }
     })
-    .catch(() => {});
+    .catch(() => { });
 
 window.firebaseApp = app;
 window.firebaseAuth = auth;

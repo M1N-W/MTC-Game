@@ -22657,7 +22657,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var firebaseConfig = typeof CONFIG_SECRETS !== "undefined" && CONFIG_SECRETS && CONFIG_SECRETS.FIREBASE_CONFIG ? CONFIG_SECRETS.FIREBASE_CONFIG : DEFAULT_FIREBASE_CONFIG;
   var app = initializeApp(firebaseConfig);
   var auth = getAuth(app);
-  var db = getFirestore(app);
+  var db = getFirestore(app, { experimentalForceLongPolling: true });
   var googleProvider = new GoogleAuthProvider();
   var analytics = null;
   isSupported().then((ok) => {
@@ -22696,8 +22696,10 @@ This typically indicates that your device does not have a healthy Internet conne
       }
     });
   });
-  signInAnonymously(auth).catch((err) => {
-    console.warn("[Firebase] Anonymous sign-in failed:", err && err.message ? err.message : err);
+  signInAnonymously(auth).then((result) => {
+    console.log("[Firebase] Anonymous sign-in successful:", result.user.uid);
+  }).catch((err) => {
+    console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
   });
   var remoteConfig = getRemoteConfig(app);
   remoteConfig.settings.minimumFetchIntervalMillis = 36e5;
@@ -22739,11 +22741,25 @@ This typically indicates that your device does not have a healthy Internet conne
     async signInWithGoogle() {
       const u = auth.currentUser;
       if (u && u.isAnonymous) {
-        await linkWithPopup(u, googleProvider);
-        return auth.currentUser;
+        try {
+          await linkWithPopup(u, googleProvider);
+          return auth.currentUser;
+        } catch (err) {
+          console.warn("[Firebase] Linking failed, falling back to direct sign-in:", err.code || err);
+          try {
+            return await signInWithPopup(auth, googleProvider);
+          } catch (popupErr) {
+            if (popupErr.code === "auth/popup-blocked") {
+              alert("Browser \u0E1A\u0E25\u0E47\u0E2D\u0E01 Popup! \u0E42\u0E1B\u0E23\u0E14\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 Popup \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E04\u0E23\u0E31\u0E1A");
+            }
+            throw popupErr;
+          }
+        }
       }
-      await signInWithPopup(auth, googleProvider);
-      return auth.currentUser;
+      return await signInWithPopup(auth, googleProvider);
+    },
+    async signOut() {
+      await auth.signOut();
     },
     /**
      * Leaderboard แบบ Spark: เขียน Firestore โดยตรง (กฎบังคับ Google + ขอบเขตคะแนน)

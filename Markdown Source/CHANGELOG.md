@@ -4,6 +4,27 @@
 
 ---
 
+## v3.41.7 — Fix: Rebuild Firebase Bundle (Critical)
+*Released: March 26, 2026*
+
+### 🐛 Critical Bug Fix
+- **Root Cause**: All Firebase auth and Firestore fixes in `v3.41.4`–`v3.41.6` were applied to `js/firebase-init.js` (the source) but `js/firebase-bundle.js` (the compiled output that browsers actually load) was **never rebuilt**. The browser was running the original, unfixed code the entire time.
+- **Fix**: Ran `npm run build:firebase` (`esbuild`) to recompile `firebase-init.js` → `firebase-bundle.js`. All fixes from previous versions now take effect:
+  - `experimentalForceLongPolling` for Firestore connectivity.
+  - Robust `signInWithGoogle` fallback for `auth/credential-already-in-use`.
+  - Improved error diagnostics.
+
+### Files touched
+```
+✅ REBUILT: js/firebase-bundle.js (recompiled from firebase-init.js)
+✅ MODIFIED: sw.js (v3.41.7)
+✅ MODIFIED: index.html (v3.41.7 fallback)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.6 — Firebase: Robust Auth Linking & Popup Resilience
 *Released: March 26, 2026*
 
