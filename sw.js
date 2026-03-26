@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.41.2"; // fix: zone aura flickering — removed 4-frame gradient throttle in drawZoneAura
+const CACHE_NAME = "mtc-cache-v3.41.3"; // security: removed window.API_KEY global exposure
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

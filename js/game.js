@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const DEBUG_MODE = false;
 
@@ -673,7 +673,7 @@ function drawGame() {
         // console.log('[MTC drawGame] frame', drawGame._diagFrame, '| window.gameState:', window.gameState,
             '| player:', !!window.player, '| UIManager:', typeof UIManager,
             '| MTC_DB_SERVER on window:', !!window.MTC_DATABASE_SERVER,
-            '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION);
+            '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION;
     }
 
     const _bgTop = GAME_CONFIG.visual.bgColorTop;

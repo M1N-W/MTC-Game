@@ -4,6 +4,30 @@
 
 ---
 
+## v3.41.3 — Security Fix: API Key Exposure + Debug Logging
+*Released: March 26, 2026*
+
+### 🔒 Security Fix — `js/config.js`
+- **Root Cause**: `window.API_KEY = API_KEY;` exposed the API key globally, making it accessible via browser console (`window.API_KEY`).
+- **Fix**: Removed the global assignment. The `API_KEY` constant remains available within the config module scope for internal use, but is no longer attached to `window`.
+
+### 🐛 Debug Logging — `js/entities/player/PoomPlayer.js`
+- **Enabled `console.log` statements** in `ritualBurst()` method for development visibility:
+  - Logs when ritual deals base damage (no sticky enemies found)
+  - Logs ritual damage dealt to enemies count
+  - Logs ritual burst consumed sticky on enemies count
+
+### Files touched
+```
+✅ MODIFIED: js/config.js (removed window.API_KEY global exposure)
+✅ MODIFIED: js/entities/player/PoomPlayer.js (enabled debug console.log)
+✅ MODIFIED: sw.js (v3.41.3)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.2 — Fix: Zone Aura Flickering
 *Released: March 26, 2026*
 
