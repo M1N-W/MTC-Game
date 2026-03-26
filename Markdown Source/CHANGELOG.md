@@ -4,6 +4,25 @@
 
 ---
 
+## v3.41.5 — Firebase: Fix Connectivity & Account Linking
+*Released: March 26, 2026*
+
+### ☁️ Firebase — `js/firebase-init.js`
+- **Firestore Connectivity**: Enabled `experimentalForceLongPolling: true` to resolve "client is offline" errors on environments with restrictive network policies (common on some GitHub Pages configurations).
+- **Google Sign-in Overhaul**: Improved `signInWithGoogle` to handle `auth/credential-already-in-use` and `auth/email-already-in-use`. The system now gracefully switches from an anonymous session to an existing Google account if linking fails.
+- **COOP Policy Handling**: Improved popup polling logic resilience.
+
+### Files touched
+```
+✅ MODIFIED: js/firebase-init.js (long-polling enabled + auth linking fix)
+✅ MODIFIED: sw.js (v3.41.5)
+✅ MODIFIED: index.html (v3.41.5 fallback)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.4 — Firebase: GitHub Pages Integration & Improved Diagnostics
 *Released: March 26, 2026*
 

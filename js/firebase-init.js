@@ -50,7 +50,7 @@ const firebaseConfig = (typeof CONFIG_SECRETS !== 'undefined'
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = getFirestore(app, { experimentalForceLongPolling: true });
 const googleProvider = new GoogleAuthProvider();
 
 let analytics = null;
@@ -158,8 +158,18 @@ window.MTCFirebase = {
     async signInWithGoogle() {
         const u = auth.currentUser;
         if (u && u.isAnonymous) {
-            await linkWithPopup(u, googleProvider);
-            return auth.currentUser;
+            try {
+                await linkWithPopup(u, googleProvider);
+                return auth.currentUser;
+            } catch (err) {
+                // If account already exists, fallback to normal sign-in
+                if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
+                    console.log('[Firebase] Account already exists, switching from anonymous to Google account.');
+                    await signInWithPopup(auth, googleProvider);
+                    return auth.currentUser;
+                }
+                throw err;
+            }
         }
         await signInWithPopup(auth, googleProvider);
         return auth.currentUser;
