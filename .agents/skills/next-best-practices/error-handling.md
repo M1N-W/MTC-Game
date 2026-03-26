@@ -7,7 +7,7 @@ description: Handle errors gracefully in Next.js applications.
 
 Handle errors gracefully in Next.js applications.
 
-Reference: https://nextjs.org/docs/app/getting-started/error-handling
+Reference: <https://nextjs.org/docs/app/getting-started/error-handling>
 
 ## Error Boundaries
 
@@ -67,7 +67,7 @@ export default function GlobalError({
 
 **Do NOT wrap navigation APIs in try-catch.** They throw special errors that Next.js handles internally.
 
-Reference: https://nextjs.org/docs/app/api-reference/functions/redirect#behavior
+Reference: <https://nextjs.org/docs/app/api-reference/functions/redirect#behavior>
 
 ```tsx
 'use server'
@@ -112,6 +112,7 @@ async function createPost(formData: FormData) {
 ```
 
 Same applies to:
+
 - `redirect()` - 307 temporary redirect
 - `permanentRedirect()` - 308 permanent redirect
 - `notFound()` - 404 not found
@@ -220,7 +221,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
 Errors bubble up to the nearest error boundary:
 
-```
+```text
 app/
 ├── error.tsx           # Catches errors from all children
 ├── blog/

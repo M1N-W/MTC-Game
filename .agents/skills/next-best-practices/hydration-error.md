@@ -88,7 +88,7 @@ import Script from 'next/script'
 export default function Page() {
   return (
     <Script
-      src="https://example.com/script.js"
+      src="<https://example.com/script.js>"
       strategy="afterInteractive"
     />
   )

@@ -708,7 +708,7 @@ class PoomPlayer extends Player {
 
     // Always trigger cooldown and effects
     if (totalEnemiesAffected === 0) {
-      console.log(
+      // console.log(
         "[Poom] No sticky enemies found - dealing base ritual damage",
       );
       // Deal base damage to nearby enemies without sticky
@@ -741,14 +741,14 @@ class PoomPlayer extends Player {
       }
 
       if (totalEnemiesAffected === 0) {
-        console.log("[Poom] No enemies in range - ritual used anyway");
+        // console.log("[Poom] No enemies in range - ritual used anyway");
       } else {
-        console.log(
+        // console.log(
           `[Poom] Ritual dealt base damage to ${totalEnemiesAffected} enemies`,
         );
       }
     } else {
-      console.log(
+      // console.log(
         `[Poom] Ritual burst consumed sticky on ${totalEnemiesAffected} enemies`,
       );
     }

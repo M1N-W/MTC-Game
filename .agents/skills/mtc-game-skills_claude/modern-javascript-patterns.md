@@ -920,8 +920,8 @@ const first = doubled.next().value; // Only computes first value
 
 ## Resources
 
-- **MDN Web Docs**: https://developer.mozilla.org/en-US/docs/Web/JavaScript
-- **JavaScript.info**: https://javascript.info/
-- **You Don't Know JS**: https://github.com/getify/You-Dont-Know-JS
-- **Eloquent JavaScript**: https://eloquentjavascript.net/
-- **ES6 Features**: http://es6-features.org/
+- **MDN Web Docs**: <https://developer.mozilla.org/en-US/docs/Web/JavaScript>
+- **JavaScript.info**: <https://javascript.info/>
+- **You Don't Know JS**: <https://github.com/getify/You-Dont-Know-JS>
+- **Eloquent JavaScript**: <https://eloquentjavascript.net/>
+- **ES6 Features**: <http://es6-features.org/>

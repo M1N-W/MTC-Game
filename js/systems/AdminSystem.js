@@ -907,14 +907,14 @@ function openAdminConsole() {
             spawnFloatingText('AUTHORIZATION REQUIRED', window.player.x, window.player.y - 100, '#fca5a5', 14);
         }
         if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
-        console.log('%c[MTC Admin] ⛔ Access denied — Developer Mode not active.', 'color:#ef4444;');
+        // console.log('%c[MTC Admin] ⛔ Access denied — Developer Mode not active.', 'color:#ef4444;');
         return;
     }
 
     setGameState('PAUSED');
     AdminConsole.open();
     Audio.pauseBGM();
-    console.log('%c[MTC Admin] ✅ Admin Console opened.', 'color:#22c55e; font-weight:bold;');
+    // console.log('%c[MTC Admin] ✅ Admin Console opened.', 'color:#22c55e; font-weight:bold;');
     window.focus();
 }
 

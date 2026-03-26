@@ -28,7 +28,7 @@ import heroImage from './hero.png'
 <Image src={heroImage} alt="Hero" />
 
 // Remote images - must specify width/height
-<Image src="https://example.com/image.jpg" alt="Hero" width={800} height={400} />
+<Image src="<https://example.com/image.jpg>" alt="Hero" width={800} height={400} />
 
 // Or use fill for parent-relative sizing
 <div style={{ position: 'relative', width: '100%', height: 400 }}>
@@ -101,7 +101,7 @@ import heroImage from './hero.png'
 
 // Remote images - provide blurDataURL
 <Image
-  src="https://example.com/image.jpg"
+  src="<https://example.com/image.jpg>"
   alt="Hero"
   width={800}
   height={400}
@@ -111,7 +111,7 @@ import heroImage from './hero.png'
 
 // Or use color placeholder
 <Image
-  src="https://example.com/image.jpg"
+  src="<https://example.com/image.jpg>"
   alt="Hero"
   width={800}
   height={400}
@@ -148,7 +148,7 @@ Use `priority` for above-the-fold images (LCP):
 <Image src="/hero.png" alt="Hero" fill sizes="100vw" style={{ objectFit: 'cover' }} />
 
 // Bad: Remote image without config
-<Image src="https://untrusted.com/image.jpg" alt="Image" width={400} height={300} />
+<Image src="<https://untrusted.com/image.jpg>" alt="Image" width={400} height={300} />
 // Error: Invalid src prop, hostname not configured
 
 // Good: Add hostname to next.config.js remotePatterns
@@ -171,7 +171,7 @@ module.exports = {
 
 // Option 3: Custom loader (Cloudinary, Imgix, etc.)
 const cloudinaryLoader = ({ src, width, quality }) => {
-  return `https://res.cloudinary.com/demo/image/upload/w_${width},q_${quality || 75}/${src}`
+  return `<https://res.cloudinary.com/demo/image/upload/w_${width},q_${quality || 75}/${src}>`
 }
 
 <Image loader={cloudinaryLoader} src="sample.jpg" alt="Sample" width={800} height={400} />

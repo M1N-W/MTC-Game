@@ -62,11 +62,6 @@
  * ⚠️  GAME_TEXTS strings are referenced by key in GAME_TEXTS.admin.* and
  *     GAME_TEXTS.shop.* — do NOT rename keys without grepping all call sites.
  * ════════════════════════════════════════════════
- */
-
-const API_KEY = (typeof CONFIG_SECRETS !== 'undefined' && CONFIG_SECRETS.GEMINI_API_KEY)
-    ? CONFIG_SECRETS.GEMINI_API_KEY
-    : '';
 
 /**
  * 📅 WAVE_SCHEDULE — JSON-ready Wave Timing Config
@@ -155,14 +150,14 @@ const BALANCE = {
             passiveUnlockStealthCount: 1,   // fallback: ปลดตั้งแต่ stealth ครั้งแรก
             // ── Passive Lv1 (Stealth ครั้งแรก) ──
             passiveHpBonusPct: 0.30,        // REWORK: 0.50 → 0.30 (ส่วนที่เหลือรอ Lv2)
-            passiveUnlockText: '👻 ซุ่มเสรี Lv1!',
+            passiveUnlockText: '👻 ซุ่มเสรี',
             passiveCritBonus: 0.0,          // REWORK: crit ย้ายไป Lv2
             passiveLifesteal: 0.01,         // NERF: 0.03 → 0.02 → 0.01 (ผู้เล่นแจ้งว่ารอดง่ายเกินไป)
             passiveSpeedAdditive: 0.4,      // NEW: additive +0.4 (แทน Math.max ×1.4 ที่ทับ shop bonus)
             // ── Passive Lv2 "Awakened" (ฆ่าขณะ FreeStealthy 5 ครั้ง) ──
             passiveLv2KillReq: 5,           // NEW: จำนวน FreeStealthy-kills ที่ต้องการ
             passiveLv2HpBonusPct: 0.20,     // NEW: HP +20% เพิ่มเติมเมื่อถึง Lv2
-            passiveLv2UnlockText: '👻 ซุ่มเสรี AWAKENED!',
+            passiveLv2UnlockText: '👻 เทพแห่งซุ่ม!',
             passiveLv2CritBonus: 0.04,      // NERF: 0.05 → 0.04 (minor crit trim)
             speedOnHit: 20,
             speedOnHitDuration: 0.4,
@@ -514,7 +509,7 @@ const BALANCE = {
             passiveUnlockLevel: 3,          // fallback
             passiveUnlockStealthCount: 0,
             passiveHpBonusPct: 0.25,
-            passiveUnlockText: '⚔️ โรนินตื่น!',
+            passiveUnlockText: '⚔️ Ronin-Edge!',
             passiveCritBonus: 0.05,
             passiveLifesteal: 0.02,
             passiveMeleeDmgBonus: 0.15,     // melee damage +15% หลัง passive ปลด
@@ -1074,17 +1069,17 @@ const SHOP_ITEMS = [
     },
     // ── Character-specific ─────────────────────────────────────
     {
-        id: 'kaoAmmo', name: 'Ghost Rounds', icon: '👻',
+        id: 'kaoAmmo', name: 'ผีซุ่ม', icon: '👻',
         cost: 750, type: 'permanent', charReq: 'kao',
         desc: '[KAO] Teleport charges +1 (สูงสุด 4)', color: '#facc15'
     },
     {
-        id: 'poomRice', name: 'Sacred Rice Bag', icon: '🍚',
+        id: 'poomRice', name: 'เทพเจ้าอีสาน', icon: '🍚',
         cost: 650, type: 'permanent', charReq: 'poom',
         desc: '[POOM] ลด CD ของ Naga/Garuda/Ritual 15%', color: '#4ade80'
     },
     {
-        id: 'autoCore', name: 'Heat Core', icon: '🔥',
+        id: 'autoCore', name: 'วันชัยระเบิด', icon: '🔥',
         cost: 850, type: 'permanent', charReq: 'auto',
         desc: '[AUTO] ถึง HOT tier ง่ายขึ้น 15%', color: '#fb923c'
     }
@@ -1534,7 +1529,7 @@ const GAME_TEXTS = {
         // ── BossFirst (Kru First) phase-transition physics taunts
         firstTaunts: [
             'E = mc²... คำนวณออกมั้ย?',
-            'แรงปฏิกิริยา — เท่ากัน ตรงข้าม',
+            'แรงปฏิกิริยา!',
             'หนีจากแรงโน้มถ่วงได้เหรอ?',
             'ฟิสิกส์ไม่มีทางโกหก',
         ],

@@ -129,7 +129,7 @@ class AudioSystem {
     init() {
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            console.log('✅ Audio System initialized');
+            // console.log('✅ Audio System initialized');
 
             // Set up user interaction listener for BGM autoplay compliance
             this.setupUserInteractionListener();
@@ -163,7 +163,7 @@ class AudioSystem {
             if (this._pendingBGM) {
                 const type = this._pendingBGM;
                 this._pendingBGM = null;
-                console.log(`🎵 User interacted — playing queued BGM: ${type}`);
+                // console.log(`🎵 User interacted — playing queued BGM: ${type}`);
                 this.playBGM(type);
             }
         };
@@ -1073,7 +1073,7 @@ class AudioSystem {
 
         const bgmPath = GAME_CONFIG.audio.bgmPaths[type];
         if (!bgmPath || bgmPath.trim() === '') {
-            console.log('🎵 BGM path is empty, skipping.');
+            // console.log('🎵 BGM path is empty, skipping.');
             return;
         }
 
@@ -1108,7 +1108,7 @@ class AudioSystem {
         //     → startGame() → playBGM('battle') → stopBGM() + battle BGM starts
         //   Wave 3 boss → playBGM('boss') → stopBGM() + boss BGM starts
         if (!this.userInteracted) {
-            console.log(`🎵 BGM queued until user interaction: ${type}`);
+            // console.log(`🎵 BGM queued until user interaction: ${type}`);
             this._pendingBGM = type;   // most-recent requested type always wins
             return;
         }
@@ -1201,7 +1201,7 @@ class AudioSystem {
                         this._bgmPlayInProgress = false;
                         this.currentBGM = type;
                         this._bgmWaitingForInteraction = false;
-                        console.log(`🎵 Now playing BGM: ${type}`);
+                        // console.log(`🎵 Now playing BGM: ${type}`);
                     })
                     .catch(error => {
                         // ปลดล็อคสถานะการเล่นก่อนเสมอ
@@ -1388,14 +1388,14 @@ class AudioSystem {
             this.bgmAudio.src = '';
             this.bgmAudio = null;
             this.currentBGM = null;
-            console.log('🎵 BGM stopped');
+            // console.log('🎵 BGM stopped');
         }
     }
 
     pauseBGM() {
         if (this.bgmAudio && !this.bgmAudio.paused) {
             this.bgmAudio.pause();
-            console.log('🎵 BGM paused');
+            // console.log('🎵 BGM paused');
         }
     }
 
@@ -1404,7 +1404,7 @@ class AudioSystem {
             this.bgmAudio.play().catch(error => {
                 console.warn('🎵 BGM resume failed:', error);
             });
-            console.log('🎵 BGM resumed');
+            // console.log('🎵 BGM resumed');
         }
     }
 

@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.41.0`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.41.1`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
@@ -30,40 +30,40 @@ Load order is explicit in `index.html` and is a hard architectural contract. Any
 
 ### 2.2 Early core scripts
 
-6. `js/audio.js`
-7. `js/effects.js`
-8. `js/weapons.js`
-9. `js/map.js`
-10. `js/ui.js`
-11. `js/tutorial.js`
+1. `js/audio.js`
+2. `js/effects.js`
+3. `js/weapons.js`
+4. `js/map.js`
+5. `js/ui.js`
+6. `js/tutorial.js`
 
 ### 2.3 Entity and AI foundations
 
-12. `js/entities/base.js`
-13. `js/ai/UtilityAI.js`
-14. `js/ai/EnemyActions.js`
-15. `js/ai/PlayerPatternAnalyzer.js`
-16. `js/ai/SquadAI.js`
-17. Player class files (`PlayerBase`, then character subclasses)
-18. `js/entities/summons.js`
-19. `js/entities/enemy.js`
-20. Boss attack modules (`boss_attacks_shared.js`, `boss_attacks_manop.js`, `boss_attacks_first.js`)
-21. `js/entities/boss/BossBase.js`, `ManopBoss.js`, `FirstBoss.js`
+1. `js/entities/base.js`
+2. `js/ai/UtilityAI.js`
+3. `js/ai/EnemyActions.js`
+4. `js/ai/PlayerPatternAnalyzer.js`
+5. `js/ai/SquadAI.js`
+6. Player class files (`PlayerBase`, then character subclasses)
+7. `js/entities/summons.js`
+8. `js/entities/enemy.js`
+9. Boss attack modules (`boss_attacks_shared.js`, `boss_attacks_manop.js`, `boss_attacks_first.js`)
+10. `js/entities/boss/BossBase.js`, `ManopBoss.js`, `FirstBoss.js`
 
 ### 2.4 Input, rendering, systems, orchestration
 
-22. `js/input.js`
-23. `js/rendering/PlayerRenderer.js`
-24. `js/rendering/BossRenderer.js`
-25. `js/systems/GameState.js`
-26. `js/systems/AdminSystem.js`
-27. `js/systems/ShopSystem.js`
-28. `js/systems/TimeManager.js`
-29. `js/systems/WaveManager.js`
-30. `js/systems/WorkerBridge.js`
-31. `js/game.js`
-32. `js/VersionManager.js`
-33. `js/menu.js`
+1. `js/input.js`
+2. `js/rendering/PlayerRenderer.js`
+3. `js/rendering/BossRenderer.js`
+4. `js/systems/GameState.js`
+5. `js/systems/AdminSystem.js`
+6. `js/systems/ShopSystem.js`
+7. `js/systems/TimeManager.js`
+8. `js/systems/WaveManager.js`
+9. `js/systems/WorkerBridge.js`
+10. `js/game.js`
+11. `js/VersionManager.js`
+12. `js/menu.js`
 
 ---
 

@@ -3,6 +3,8 @@ name: self-hosting
 description: Deploy Next.js outside of Vercel with confidence
 ---
 
+# Self-Hosting Next.js
+
 ## Quick Start: Standalone Output
 
 For Docker or any containerized deployment, use standalone output:
@@ -227,7 +229,7 @@ module.exports = class CacheHandler {
 ## What Works vs What Needs Setup
 
 | Feature | Single Instance | Multi-Instance | Notes |
-|---------|----------------|----------------|-------|
+| --- | --- | --- | --- |
 | SSR | Yes | Yes | No special setup |
 | SSG | Yes | Yes | Built at deploy time |
 | ISR | Yes | Needs cache handler | Filesystem cache breaks |
@@ -309,7 +311,7 @@ export async function GET() {
 
 ## OpenNext: Serverless Without Vercel
 
-[OpenNext](https://open-next.js.org/) adapts Next.js for AWS Lambda, Cloudflare Workers, etc.
+[OpenNext](<https://open-next.js.org/>) adapts Next.js for AWS Lambda, Cloudflare Workers, etc.
 
 ```bash
 npx create-sst@latest

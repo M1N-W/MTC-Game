@@ -84,7 +84,7 @@ export const metadata: Metadata = {
 
 ## Metadata File Conventions
 
-Reference: https://nextjs.org/docs/app/getting-started/project-structure#metadata-file-conventions
+Reference: <https://nextjs.org/docs/app/getting-started/project-structure#metadata-file-conventions>
 
 Place these files in `app/` directory (or route segments):
 
@@ -297,7 +297,7 @@ export default async function sitemap({
   const products = await getProducts(start, end)
 
   return products.map((product) => ({
-    url: `https://example.com/product/${product.id}`,
+    url: `<https://example.com/product/${product.id}>`,
     lastModified: product.updatedAt,
   }))
 }

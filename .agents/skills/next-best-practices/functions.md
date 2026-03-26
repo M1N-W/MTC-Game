@@ -3,14 +3,16 @@ name: functions
 description: Next.js function APIs.
 ---
 
+# Functions
+
 Next.js function APIs.
 
-Reference: https://nextjs.org/docs/app/api-reference/functions
+Reference: <https://nextjs.org/docs/app/api-reference/functions>
 
 ## Navigation Hooks (Client)
 
 | Hook | Purpose | Reference |
-|------|---------|-----------|
+| --- | --- | --- |
 | `useRouter` | Programmatic navigation (`push`, `replace`, `back`, `refresh`) | [Docs](https://nextjs.org/docs/app/api-reference/functions/use-router) |
 | `usePathname` | Get current pathname | [Docs](https://nextjs.org/docs/app/api-reference/functions/use-pathname) |
 | `useSearchParams` | Read URL search parameters | [Docs](https://nextjs.org/docs/app/api-reference/functions/use-search-params) |
@@ -23,7 +25,7 @@ Reference: https://nextjs.org/docs/app/api-reference/functions
 ## Server Functions
 
 | Function | Purpose | Reference |
-|----------|---------|-----------|
+| --- | --- | --- |
 | `cookies` | Read/write cookies | [Docs](https://nextjs.org/docs/app/api-reference/functions/cookies) |
 | `headers` | Read request headers | [Docs](https://nextjs.org/docs/app/api-reference/functions/headers) |
 | `draftMode` | Enable preview of unpublished CMS content | [Docs](https://nextjs.org/docs/app/api-reference/functions/draft-mode) |
@@ -34,7 +36,7 @@ Reference: https://nextjs.org/docs/app/api-reference/functions
 ## Generate Functions
 
 | Function | Purpose | Reference |
-|----------|---------|-----------|
+| --- | --- | --- |
 | `generateStaticParams` | Pre-render dynamic routes at build time | [Docs](https://nextjs.org/docs/app/api-reference/functions/generate-static-params) |
 | `generateMetadata` | Dynamic metadata | [Docs](https://nextjs.org/docs/app/api-reference/functions/generate-metadata) |
 | `generateViewport` | Dynamic viewport config | [Docs](https://nextjs.org/docs/app/api-reference/functions/generate-viewport) |
@@ -44,7 +46,7 @@ Reference: https://nextjs.org/docs/app/api-reference/functions
 ## Request/Response
 
 | Function | Purpose | Reference |
-|----------|---------|-----------|
+| --- | --- | --- |
 | `NextRequest` | Extended Request with helpers | [Docs](https://nextjs.org/docs/app/api-reference/functions/next-request) |
 | `NextResponse` | Extended Response with helpers | [Docs](https://nextjs.org/docs/app/api-reference/functions/next-response) |
 | `ImageResponse` | Generate OG images | [Docs](https://nextjs.org/docs/app/api-reference/functions/image-response) |

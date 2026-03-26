@@ -1,8 +1,11 @@
+# Commit and Push Command
+
 Analyze all unstaged and modified files in the current workspace, then execute the following steps sequentially.
 
 ---
 
-### ⚡ Efficiency Rule (Fast Patch)
+## ⚡ Efficiency Rule (Fast Patch)
+
 If the user provides detailed changes in the prompt (e.g., "Big-Balancing Session — Complete") and emphasizes that no further file edits are needed, **SKIP manual file scanning.** Trust the provided details for documentation updates and commit messages.
 
 ---
@@ -14,7 +17,7 @@ Apply only the rules below. Do not modify any other sections.
 ### PROJECT_OVERVIEW.md
 
 | Condition | Section to update |
-|---|---|
+| --- | --- |
 | New file added or existing file deleted | File Structure table |
 | Wave schedule changed in `WaveManager.js` | Wave Events table |
 | Room bounds or BossBase spawn guard changed in `map.js` | MTC Room section |
@@ -30,7 +33,7 @@ Apply only the rules below. Do not modify any other sections.
 ### SKILL.md (mtc-game-conventions)
 
 | Condition | Section to update |
-|---|---|
+| --- | --- |
 | New constructor or alias added | §2 Class Name Map |
 | `extends` chain changed | §3 Inheritance Chain |
 | `UtilityAI`, `SquadAI`, or `PlayerPatternAnalyzer` API changed | §4 AI method names / load order |
@@ -43,7 +46,7 @@ Apply only the rules below. Do not modify any other sections.
 ### mtc-rendering.skill (Rendering Conventions)
 
 | Condition | Section to update |
-|---|---|
+| --- | --- |
 | Canvas context flow changed (`ctx.save()` / `ctx.restore()` blocks) | Core Rendering Loop |
 | Layer order or draw sequence changed in `PlayerRenderer.js` / `BossRenderer.js` | Z-Index & Layering |
 | Object pooling logic added or removed in `effects.js` | Performance & Particle GC |

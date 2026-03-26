@@ -1214,7 +1214,7 @@ class MapSystem {
         this._sortedObjects = null;
         this._objectsDirty = true;
         this.initialized = true;
-        console.log(`✅ Campus Map Generated Structurally: ${this.objects.length} objects`);
+        // console.log(`✅ Campus Map Generated Structurally: ${this.objects.length} objects`);
     }
 
     // Returns true if (x,y,w,h) overlaps any reserved clear zone.

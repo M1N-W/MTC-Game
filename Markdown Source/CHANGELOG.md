@@ -4,6 +4,29 @@
 
 ---
 
+## v3.41.1 — Documentation Lint Fixes & Production Cleanup
+*Released: March 26, 2026*
+
+### 📝 Documentation — `.agents/skills/`
+- **Lint Cleanup**: Fixed MD034 (bare URLs), MD040 (fenced code language), MD041 (H1 headings), MD032 (list spacing), and MD060 (table styles) across 15+ architectural and skill files.
+- **Improved Readability**: Standardized table formats and link wrapping for better IDE and web rendering.
+
+### 🛠️ Optimization & Cleanup
+- **Production Logs**: Commented out `console.log` statements in core game systems (`game.js`, `audio.js`, `input.js`, `map.js`, `menu.js`, `AdminSystem.js`) and boss modules to reduce main-thread overhead and console noise.
+- **Bug Fix**: Fixed a minor typo in `js/config.js` for FirstBoss taunt text.
+
+### Files touched
+```
+✅ MODIFIED: .agents/skills/ (multiple files - lint fixes)
+✅ MODIFIED: js/game.js, audio.js, input.js, map.js, menu.js, AdminSystem.js (log cleanup)
+✅ MODIFIED: js/config.js (taunt text fix)
+✅ MODIFIED: sw.js (v3.41.1)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.0 — Projectile Visual Revamp: All Characters + Crit States
 *Released: March 24, 2026*
 

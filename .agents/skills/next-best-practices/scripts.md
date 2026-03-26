@@ -3,18 +3,20 @@ name: scripts
 description: Loading third-party scripts in Next.js
 ---
 
+# Scripts
+
 ## Use next/script
 
 Always use `next/script` instead of native `<script>` tags for better performance.
 
 ```tsx
 // Bad: Native script tag
-<script src="https://example.com/script.js"></script>
+<script src="<https://example.com/script.js>"></script>
 
 // Good: Next.js Script component
 import Script from 'next/script'
 
-<Script src="https://example.com/script.js" />
+<Script src="<https://example.com/script.js>" />
 ```
 
 ## Inline Scripts Need ID
@@ -77,7 +79,7 @@ Use `@next/third-parties` instead of inline GA scripts.
 
 ```tsx
 // Bad: Inline GA script
-<Script src="https://www.googletagmanager.com/gtag/js?id=G-XXXXX" />
+<Script src="<https://www.googletagmanager.com/gtag/js?id=G-XXXXX>" />
 <Script id="ga-init">
   {`window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
@@ -133,8 +135,8 @@ import { GoogleMapsEmbed } from '@next/third-parties/google'
 
 ## Quick Reference
 
-| Pattern | Issue | Fix |
-|---------|-------|-----|
+| Pattern | Use Case | Fix |
+| --- | --- | --- |
 | `<script src="...">` | No optimization | Use `next/script` |
 | `<Script>` without id | Can't track inline scripts | Add `id` attribute |
 | `<Script>` inside `<Head>` | Wrong placement | Move outside Head |

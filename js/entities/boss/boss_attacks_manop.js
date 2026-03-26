@@ -814,7 +814,7 @@ const DomainExpansion = Object.assign(Object.create(DomainBase), {
             spawnParticles(boss.x, boss.y, 20, '#facc15');
             spawnParticles(boss.x, boss.y, 15, '#ffffff');
         }
-        console.log('[DomainExpansion] 💠 METRICS-MANIPULATION TRIGGERED');
+        // console.log('[DomainExpansion] 💠 METRICS-MANIPULATION TRIGGERED');
     },
 
     update(dt, boss, player) {
@@ -952,7 +952,7 @@ const DomainExpansion = Object.assign(Object.create(DomainBase), {
                     this.cells = []; this._crackLines = [];
                     this._subPhase = 'A'; this._domainChalkTimer = 0; this._safeCellShifts = [];
                     this._endDomain(boss, _DC.COOLDOWN);
-                    console.log('[DomainExpansion] Domain ended — cooldown 45 s');
+                    // console.log('[DomainExpansion] Domain ended — cooldown 45 s');
                 }
                 break;
         }
@@ -1502,7 +1502,7 @@ const DomainExpansion = Object.assign(Object.create(DomainBase), {
         this._subPhase = 'A'; this._domainChalkTimer = 0; this._safeCellShifts = [];
         this.cycleCount = 0; this.cycleTimer = 0; this.cyclePhase = 'warn';
         Object.getPrototypeOf(this).abort.call(this, boss);
-        console.log('[DomainExpansion] Aborted — boss dead');
+        // console.log('[DomainExpansion] Aborted — boss dead');
     },
 });
 

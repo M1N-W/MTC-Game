@@ -3,13 +3,15 @@ name: bundling
 description: Fix common bundling issues with third-party packages.
 ---
 
+# Package Bundling
+
 ## Server-Incompatible Packages
 
 Some packages use browser APIs (`window`, `document`, `localStorage`) and fail in Server Components.
 
 ### Error Signs
 
-```
+```text
 ReferenceError: window is not defined
 ReferenceError: document is not defined
 ReferenceError: localStorage is not defined
@@ -52,6 +54,7 @@ module.exports = {
 ```
 
 Use this for:
+
 - Packages with native bindings (sharp, bcrypt)
 - Packages that don't bundle well (some ORMs)
 - Packages with circular dependencies
@@ -101,16 +104,16 @@ Already included: `Array.from`, `Object.assign`, `Promise`, `fetch`, `Map`, `Set
 
 ```tsx
 // Bad: Redundant polyfills
-<script src="https://polyfill.io/v3/polyfill.min.js?features=fetch,Promise,Array.from" />
+<script src="<https://polyfill.io/v3/polyfill.min.js?features=fetch,Promise,Array.from>" />
 
 // Good: Next.js includes these automatically
 ```
 
 ## ESM/CommonJS Issues
 
-### Error Signs
+### ESM/CommonJS Signs
 
-```
+```text
 SyntaxError: Cannot use import statement outside a module
 Error: require() of ES Module
 Module not found: ESM packages need to be imported
@@ -128,7 +131,7 @@ module.exports = {
 ## Common Problematic Packages
 
 | Package | Issue | Solution |
-|---------|-------|----------|
+| --- | --- | --- |
 | `sharp` | Native bindings | `serverExternalPackages: ['sharp']` |
 | `bcrypt` | Native bindings | `serverExternalPackages: ['bcrypt']` or use `bcryptjs` |
 | `canvas` | Native bindings | `serverExternalPackages: ['canvas']` |
@@ -147,6 +150,7 @@ next experimental-analyze
 ```
 
 This opens an interactive UI to:
+
 - Filter by route, environment (client/server), and type
 - Inspect module sizes and import chains
 - View treemap visualization
@@ -158,7 +162,7 @@ next experimental-analyze --output
 # Output saved to .next/diagnostics/analyze
 ```
 
-Reference: https://nextjs.org/docs/app/guides/package-bundling
+Reference: <https://nextjs.org/docs/app/guides/package-bundling>
 
 ## Migrating from Webpack to Turbopack
 
@@ -178,4 +182,4 @@ module.exports = {
 }
 ```
 
-Reference: https://nextjs.org/docs/app/building-your-application/upgrading/from-webpack-to-turbopack
+Reference: <https://nextjs.org/docs/app/building-your-application/upgrading/from-webpack-to-turbopack>

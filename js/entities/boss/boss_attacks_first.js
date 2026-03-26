@@ -779,7 +779,7 @@ const GravitationalSingularity = Object.assign(Object.create(DomainBase), {
             spawnParticles(boss.x, boss.y, 25, '#00ffff');
             spawnParticles(boss.x, boss.y, 15, '#ffffff');
         }
-        console.log('[GravitationalSingularity] ⚫ TRIGGERED');
+        // console.log('[GravitationalSingularity] ⚫ TRIGGERED');
     },
 
     update(dt, boss, player) {
@@ -820,7 +820,7 @@ const GravitationalSingularity = Object.assign(Object.create(DomainBase), {
                 }
                 if (window.UIManager)
                     window.UIManager.showVoiceBubble('ยังยืนอยู่ได้... น่าทึ่ง', boss.x, boss.y - 50);
-                console.log('[GravitationalSingularity] Domain ended');
+                // console.log('[GravitationalSingularity] Domain ended');
             }
             return;
         }
@@ -1435,7 +1435,7 @@ const GravitationalSingularity = Object.assign(Object.create(DomainBase), {
         this._collapseShockDone = false;
         this._contactDmgTimer = 0;
         Object.getPrototypeOf(this).abort.call(this, boss);
-        console.log('[GravitationalSingularity] Aborted — boss dead');
+        // console.log('[GravitationalSingularity] Aborted — boss dead');
     },
 });
 

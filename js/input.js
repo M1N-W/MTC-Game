@@ -456,7 +456,7 @@ function _setupKeyboardListeners() {
                         if (typeof Audio !== 'undefined' && Audio.playLevelUp) Audio.playLevelUp();
                     } catch (err) { }
 
-                    console.log('%c[MTC Admin] 🔐 Authentication successful. Developer Mode UNLOCKED.', 'color:#ef4444; font-weight:bold;');
+                    // console.log('%c[MTC Admin] 🔐 Authentication successful. Developer Mode UNLOCKED.', 'color:#ef4444; font-weight:bold;');
                 }
             }
         }
@@ -600,7 +600,7 @@ var InputSystem = {
         _setupKeyboardListeners();
         _setupMouseListeners();
         initMobileControls();
-        console.log('🕹️ InputSystem initialised.');
+        // console.log('🕹️ InputSystem initialised.');
     }
 };
 

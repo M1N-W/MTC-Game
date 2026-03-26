@@ -3,6 +3,8 @@ name: directives
 description: React and Next.js directives for client/server components.
 ---
 
+# Directives
+
 ## React Directives
 
 These are React directives, not Next.js specific.
@@ -10,6 +12,7 @@ These are React directives, not Next.js specific.
 ### `'use client'`
 
 Marks a component as a Client Component. Required for:
+
 - React hooks (`useState`, `useEffect`, etc.)
 - Event handlers (`onClick`, `onChange`)
 - Browser APIs (`window`, `localStorage`)
@@ -25,9 +28,9 @@ export function Counter() {
 }
 ```
 
-Reference: https://react.dev/reference/rsc/use-client
+Reference: [https://react.dev/reference/rsc/use-client](https://react.dev/reference/rsc/use-client)
 
-### `'use server'`
+#### `'use server'`
 
 Marks a function as a Server Action. Can be passed to Client Components.
 
@@ -51,7 +54,7 @@ export default function Page() {
 }
 ```
 
-Reference: https://react.dev/reference/rsc/use-server
+Reference: <https://react.dev/reference/rsc/use-server>
 
 ---
 
