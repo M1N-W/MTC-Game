@@ -4,6 +4,24 @@
 
 ---
 
+## v3.41.2 — Fix: Zone Aura Flickering
+*Released: March 26, 2026*
+
+### 🐛 Bug Fix — `js/map.js`
+- **Root Cause**: The `drawZoneAura` function was throttled to only draw the radial gradient fill every 4th frame (`_drawAuraGrad = (_terrainFrame & 3) === 0`) while the rim stroke and dashed ring were drawn every frame. This mismatch caused the fill to visually "strobe" on and off, creating a rapid flickering effect visible on all zone auras (MTC Room/Citadel, Database, Co-op Store, spawn point origin).
+- **Fix**: Removed the 4-frame gradient skip. `drawZoneAura` now draws its gradient fill unconditionally every frame, matching the cadence of the rim and dash elements. The gradient is inexpensive (4 fixed color stops, single `arc` fill) and does not justify a per-frame skip.
+- **Affected zones**: MTC Citadel aura, Database aura, Co-op Store aura, origin/spawn aura.
+
+### Files touched
+```
+✅ MODIFIED: js/map.js (removed _drawAuraGrad throttle from drawZoneAura)
+✅ MODIFIED: sw.js (v3.41.2)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.1 — Documentation Lint Fixes & Production Cleanup
 *Released: March 26, 2026*
 

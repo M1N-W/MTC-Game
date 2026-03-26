@@ -1533,8 +1533,6 @@ class MapSystem {
         drawCircuitPath(C.paths.shop);
 
         // ── 4. ZONE AURAS ─────────────────────────
-        // PERF Phase 3: gradient fill every 4th frame; rim+dash every frame
-        const _drawAuraGrad = (this._terrainFrame & 3) === 0;
         const drawZoneAura = (auraCfg) => {
             const S = C.auras, ac = auraCfg;
             const sc = ws(ac.worldX, ac.worldY), edgePt = ws(ac.worldX + ac.radius, ac.worldY);
@@ -1543,14 +1541,12 @@ class MapSystem {
             if (!isFinite(sc.x) || !isFinite(sc.y) || !isFinite(rSS) || rSS <= 0) return;
 
             ctx.save();
-            if (_drawAuraGrad) {
-                const grad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, rSS);
-                grad.addColorStop(0, `rgba(${ac.innerRgb}, ${(S.innerAlphaBase * pulse).toFixed(3)})`);
-                grad.addColorStop(0.50, `rgba(${ac.innerRgb}, ${(S.midAlphaBase * pulse).toFixed(3)})`);
-                grad.addColorStop(0.80, `rgba(${ac.outerRgb}, ${(S.outerAlphaBase * pulse).toFixed(3)})`);
-                grad.addColorStop(1, `rgba(${ac.outerRgb}, 0)`);
-                ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(sc.x, sc.y, rSS, 0, Math.PI * 2); ctx.fill();
-            }
+            const grad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, rSS);
+            grad.addColorStop(0, `rgba(${ac.innerRgb}, ${(S.innerAlphaBase * pulse).toFixed(3)})`);
+            grad.addColorStop(0.50, `rgba(${ac.innerRgb}, ${(S.midAlphaBase * pulse).toFixed(3)})`);
+            grad.addColorStop(0.80, `rgba(${ac.outerRgb}, ${(S.outerAlphaBase * pulse).toFixed(3)})`);
+            grad.addColorStop(1, `rgba(${ac.outerRgb}, 0)`);
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(sc.x, sc.y, rSS, 0, Math.PI * 2); ctx.fill();
 
             ctx.globalAlpha = S.rimAlphaBase * pulse; ctx.strokeStyle = `rgba(${ac.innerRgb}, 1)`;
             ctx.lineWidth = S.rimWidth; ctx.shadowBlur = S.rimGlowBlur; ctx.shadowColor = `rgba(${ac.innerRgb}, 0.9)`;
