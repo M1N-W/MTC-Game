@@ -4,6 +4,25 @@
 
 ---
 
+## v3.41.6 — Firebase: Robust Auth Linking & Popup Resilience
+*Released: March 26, 2026*
+
+### ☁️ Firebase — `js/firebase-init.js`
+- **Simplified Auth Flow**: Refactored `signInWithGoogle` to handle account linking more aggressively. Any error during linking (like `credential-already-in-use`) now automatically triggers a direct sign-in fallback, ensuring the user can always entry the game.
+- **Improved UX**: Added explicit checks for blocked popups with user-facing alerts.
+- **Diagnostics**: Added `signOut` method hook for manual troubleshooting.
+
+### Files touched
+```
+✅ MODIFIED: js/firebase-init.js (linking fallback refactor + signOut)
+✅ MODIFIED: sw.js (v3.41.6)
+✅ MODIFIED: index.html (v3.41.6 fallback)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.5 — Firebase: Fix Connectivity & Account Linking
 *Released: March 26, 2026*
 

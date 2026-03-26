@@ -159,20 +159,29 @@ window.MTCFirebase = {
         const u = auth.currentUser;
         if (u && u.isAnonymous) {
             try {
+                // Try linking first to preserve anonymous progress
                 await linkWithPopup(u, googleProvider);
                 return auth.currentUser;
             } catch (err) {
-                // If account already exists, fallback to normal sign-in
-                if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
-                    console.log('[Firebase] Account already exists, switching from anonymous to Google account.');
-                    await signInWithPopup(auth, googleProvider);
-                    return auth.currentUser;
+                console.warn('[Firebase] Linking failed, falling back to direct sign-in:', err.code || err);
+                // If account exists or linking is blocked, just sign in directly
+                // (This will switch to the Google account and drop the anonymous data)
+                try {
+                    return await signInWithPopup(auth, googleProvider);
+                } catch (popupErr) {
+                    if (popupErr.code === 'auth/popup-blocked') {
+                        alert('Browser บล็อก Popup! โปรดอนุญาต Popup สำหรับหน้านี้แล้วลองใหม่ครับ');
+                    }
+                    throw popupErr;
                 }
-                throw err;
             }
         }
-        await signInWithPopup(auth, googleProvider);
-        return auth.currentUser;
+        return await signInWithPopup(auth, googleProvider);
+    },
+
+    async signOut() {
+        await auth.signOut();
+        // Anonymous sign-in will trigger again via onAuthStateChanged if script is active
     },
 
     /**
