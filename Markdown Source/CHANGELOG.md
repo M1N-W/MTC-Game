@@ -4,6 +4,30 @@
 
 ---
 
+## v3.41.4 — Firebase: GitHub Pages Integration & Improved Diagnostics
+*Released: March 26, 2026*
+
+### ☁️ Firebase — `js/firebase-init.js`
+- **GitHub Pages Support**: Confirmed `m1n-w.github.io` authorization.
+- **Improved Logging**: Added `console.log` for successful anonymous sign-in and `console.error` with specific troubleshooting advice for GitHub Pages.
+- **Connectivity Fallback**: Added `experimentalForceLongPolling` as a commented-out option for environments with restrictive network policies.
+
+### 💾 Cloud Save — `js/systems/CloudSaveSystem.js`
+- **Error Handling**: Improved Firestore error parsing in `pullThenMergePush`.
+- **Diagnostic Feedback**: Added specific console warnings for "offline" and "permission denied" states to help distinguish between network issues and authorization problems.
+
+### Files touched
+```
+✅ MODIFIED: js/firebase-init.js (logging + long-polling comment)
+✅ MODIFIED: js/systems/CloudSaveSystem.js (improved offline/permission error handling)
+✅ MODIFIED: sw.js (v3.41.4)
+✅ MODIFIED: index.html (v3.41.4 fallback)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.3 — Security Fix: API Key Exposure + Debug Logging
 *Released: March 26, 2026*
 

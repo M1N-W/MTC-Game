@@ -98,9 +98,17 @@ window.firebaseUserReady = new Promise((resolve) => {
     });
 });
 
-signInAnonymously(auth).catch((err) => {
-    console.warn('[Firebase] Anonymous sign-in failed:', err && err.message ? err.message : err);
-});
+signInAnonymously(auth)
+    .then((result) => {
+        console.log('[Firebase] Anonymous sign-in successful:', result.user.uid);
+    })
+    .catch((err) => {
+        console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
+    });
+
+// TIP: If you still see "Failed to get document because the client is offline" on GitHub Pages,
+// try enabling long-polling by uncommenting the lines below in the getFirestore call:
+// const db = getFirestore(app, { experimentalForceLongPolling: true });
 
 const remoteConfig = getRemoteConfig(app);
 remoteConfig.settings.minimumFetchIntervalMillis = 3600000;

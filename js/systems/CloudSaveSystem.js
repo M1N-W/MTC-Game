@@ -77,7 +77,14 @@
         try {
             cloud = await window.MTCFirebase.loadUserGameData(uid);
         } catch (e) {
-            console.warn('[CloudSave] load failed:', e && e.message ? e.message : e);
+            const msg = e && e.message ? e.message : String(e);
+            if (msg.includes('offline')) {
+                console.warn('[CloudSave] load failed: Device/Client is offline. Firestore will retry when connected.');
+            } else if (msg.toLowerCase().includes('permission')) {
+                console.warn('[CloudSave] load failed: Permission denied. Check Firebase Console Security Rules.');
+            } else {
+                console.warn('[CloudSave] load failed:', msg);
+            }
         }
         const meta = getLocalMeta();
         const cloudMs = cloudTimeMs(cloud);
