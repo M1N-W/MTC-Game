@@ -2383,6 +2383,48 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 12px 0;
+    transition: background 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Character theme backgrounds for #overlay ── */
+#overlay.theme-kao {
+    background:
+        repeating-linear-gradient(0deg, transparent, transparent 3px,
+            rgba(0, 0, 0, 0.07) 3px, rgba(0, 0, 0, 0.07) 4px),
+        radial-gradient(ellipse at 50% 30%,
+            rgba(60, 40, 4, 0.95) 0%,
+            rgba(30, 20, 4, 0.97) 35%,
+            rgba(4, 2, 12, 1) 80%);
+}
+
+#overlay.theme-poom {
+    background:
+        repeating-linear-gradient(0deg, transparent, transparent 3px,
+            rgba(0, 0, 0, 0.07) 3px, rgba(0, 0, 0, 0.07) 4px),
+        radial-gradient(ellipse at 50% 30%,
+            rgba(4, 35, 14, 0.95) 0%,
+            rgba(3, 20, 10, 0.97) 35%,
+            rgba(4, 2, 12, 1) 80%);
+}
+
+#overlay.theme-auto {
+    background:
+        repeating-linear-gradient(0deg, transparent, transparent 3px,
+            rgba(0, 0, 0, 0.07) 3px, rgba(0, 0, 0, 0.07) 4px),
+        radial-gradient(ellipse at 50% 30%,
+            rgba(50, 8, 8, 0.96) 0%,
+            rgba(28, 4, 4, 0.97) 35%,
+            rgba(4, 2, 12, 1) 80%);
+}
+
+#overlay.theme-pat {
+    background:
+        repeating-linear-gradient(0deg, transparent, transparent 3px,
+            rgba(0, 0, 0, 0.07) 3px, rgba(0, 0, 0, 0.07) 4px),
+        radial-gradient(ellipse at 50% 30%,
+            rgba(4, 20, 50, 0.96) 0%,
+            rgba(3, 12, 30, 0.97) 35%,
+            rgba(4, 2, 12, 1) 80%);
 }
 
 /* Animated gold sweep bar at top of overlay */
@@ -3242,21 +3284,101 @@ body {
     opacity: 1;
 }
 
-.char-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+/* ── Carousel row: nav button + single card display + nav button ── */
+.char-carousel-row {
+    display: flex;
+    align-items: center;
     justify-content: center;
-    max-width: 840px;
+    gap: 16px;
+    max-width: 560px;
     margin: 0 auto;
-    position: relative;
 }
 
-@media (max-width: 900px) {
-    .char-cards {
-        grid-template-columns: 1fr;
-        max-width: 400px;
-    }
+.char-cards {
+    /* Single-card display — only .selected child is shown */
+    display: block;
+    width: 300px;
+    flex-shrink: 0;
+    position: relative;
+    min-height: 360px;
+}
+
+/* ── Carousel nav buttons ── */
+.char-nav-btn {
+    background: rgba(8, 4, 18, 0.85);
+    border: 1px solid rgba(250, 204, 21, 0.22);
+    color: rgba(250, 204, 21, 0.75);
+    font-size: 22px;
+    width: 48px;
+    height: 48px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        background var(--dur-fast) var(--ease-tactical),
+        border-color var(--dur-fast) var(--ease-organic),
+        color var(--dur-fast) var(--ease-organic),
+        transform var(--dur-fast) var(--ease-tactical);
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    line-height: 1;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.char-nav-btn:hover {
+    background: rgba(250, 204, 21, 0.10);
+    border-color: rgba(250, 204, 21, 0.55);
+    color: #facc15;
+    transform: scale(1.08);
+}
+
+.char-nav-btn:active {
+    transform: scale(0.95);
+}
+
+/* Theme-match arrow colour for each char */
+#overlay.theme-poom .char-nav-btn:hover  { border-color: rgba(34,197,94,0.55); color: #4ade80; background: rgba(34,197,94,0.10); }
+#overlay.theme-auto .char-nav-btn:hover  { border-color: rgba(239,68,68,0.55); color: #fca5a5; background: rgba(239,68,68,0.10); }
+#overlay.theme-pat  .char-nav-btn:hover  { border-color: rgba(96,165,250,0.55); color: #93c5fd; background: rgba(96,165,250,0.10); }
+
+/* ── Dot indicators ── */
+.char-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.char-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: background 0.3s, transform 0.3s, border-color 0.3s;
+    cursor: pointer;
+}
+
+.char-dot.active {
+    background: rgba(250, 204, 21, 0.85);
+    border-color: #facc15;
+    transform: scale(1.25);
+}
+
+#overlay.theme-poom .char-dot.active { background: rgba(74, 222, 128, 0.9); border-color: #4ade80; }
+#overlay.theme-auto .char-dot.active { background: rgba(252, 165, 165, 0.9); border-color: #fca5a5; }
+#overlay.theme-pat  .char-dot.active { background: rgba(147, 197, 253, 0.9); border-color: #93c5fd; }
+
+@media (max-width: 600px) {
+    .char-carousel-row { gap: 8px; max-width: 100%; }
+    .char-cards { width: min(280px, 72vw); }
+    .char-nav-btn { width: 40px; height: 40px; font-size: 18px; }
 }
 
 .char-card {
@@ -3322,34 +3444,26 @@ body {
     height: 14px;
 }
 
-/* Stagger entrance animation */
-.char-card:nth-child(1) {
-    animation: cardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both 0.12s;
+/* ── Carousel: hide all cards; only .selected is visible ── */
+.char-card {
+    /* override: hidden by default in carousel */
+    display: none;
 }
 
-.char-card:nth-child(2) {
-    animation: cardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both 0.22s;
+.char-card.selected {
+    display: block;
+    animation: cardSlideIn 0.30s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.char-card:nth-child(3) {
-    animation: cardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both 0.32s;
-}
-
-@keyframes cardIn {
+@keyframes cardSlideIn {
     from {
         opacity: 0;
-        transform: translateY(20px) scale(0.97);
+        transform: translateY(14px) scale(0.96);
     }
-
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
-}
-
-.char-card:hover {
-    transform: scale(1.04) translateY(-8px);
-    border-color: rgba(250, 204, 21, 0.28) !important;
 }
 
 .char-card[data-char="kao"]:hover {

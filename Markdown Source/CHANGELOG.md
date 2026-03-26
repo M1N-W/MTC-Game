@@ -4,6 +4,37 @@
 
 ---
 
+## v3.41.8 — UI: Character Selection Carousel Redesign
+*Released: March 26, 2026*
+
+### ✨ UI/UX — Menu Redesign
+- **Character Carousel**: Replaced the 4-card grid with a single-character carousel for a more focused and cinematic selection experience.
+- **Dynamic Background Themes**: Implemented smooth background transitions on the `#overlay` element. The background color now dynamically updates to match the selected character's theme (Gold, Green, Red, Blue) when navigating.
+- **Interactive Navigation**:
+  - Added `❮` and `❯` navigation buttons with per-theme hover effects.
+  - Added dot indicators for direct character access and visual state tracking.
+  - Implemented keyboard support (Left/Right Arrow keys) for character cycling.
+- **Button Hierarchy**: Reorganized menu buttons into prioritized rows:
+  - **Primary**: Start Mission, Achievements, Tutorial.
+  - **Secondary**: Global Leaderboard (full width).
+  - **Login**: Google Sign-in moved to the bottom.
+
+### 🛠️ Technical Improvements
+- **CSS Architecture**: Introduced theme-specific classes (`.theme-kao`, `.theme-poom`, etc.) to manage global overlay state. Added `-webkit-user-select: none` to navigation buttons for Safari/iOS compatibility.
+- **JS State Management**: Centralized character navigation in `js/menu.js` with `_navigateChar` and `_updateCarousel`, ensuring synchronization with existing HUD and selection logic.
+
+### Files touched
+```
+✅ MODIFIED: index.html (carousel structure + button reorganization)
+✅ MODIFIED: css/main.css (carousel styles + dynamic theme classes)
+✅ MODIFIED: js/menu.js (carousel navigation & event logic)
+✅ MODIFIED: sw.js (v3.41.8)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+```
+
+---
+
 ## v3.41.7 — Fix: Rebuild Firebase Bundle (Critical)
 *Released: March 26, 2026*
 

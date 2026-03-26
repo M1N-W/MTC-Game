@@ -168,8 +168,8 @@
                     <span>💰 คะแนน:</span>
                     <span class="shop-score-value" id="shop-score-display">0</span>
                 </div>
-                <button class="shop-buy-btn shop-reroll-btn" onclick="rerollShop()" ontouchstart="event.preventDefault(); rerollShop();"
-                    title="สุ่มไอเทมใหม่ทั้งหมด (เสีย 200 คะแนน)">
+                <button class="shop-buy-btn shop-reroll-btn" onclick="rerollShop()"
+                    ontouchstart="event.preventDefault(); rerollShop();" title="สุ่มไอเทมใหม่ทั้งหมด (เสีย 200 คะแนน)">
                     🎲 REROLL <span class="shop-reroll-cost">(200 🏆)</span>
                 </button>
                 <button class="shop-close-btn" onclick="closeShop()" ontouchstart="event.preventDefault(); closeShop();"
@@ -347,536 +347,575 @@
             <!-- Character Selection -->
             <div class="char-select-section">
                 <h3>SELECT YOUR OPERATOR</h3>
-                <div class="char-cards">
-                    <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
-                        <div class="char-avatar" id="char-avatar-kao"></div>
-                        <div class="char-name">KAO</div>
-                        <div class="char-title">Tactical Ranged</div>
-                        <div class="char-stats">
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-52"></div>
+                <!-- ── Carousel Row ── -->
+                <div class="char-carousel-row">
+                    <button class="char-nav-btn char-nav-prev" id="char-nav-prev" onclick="_navigateChar(-1)"
+                        ontouchstart="event.preventDefault();_navigateChar(-1);"
+                        aria-label="Previous character">❮</button>
+
+                    <div class="char-cards">
+                        <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
+                            <div class="char-avatar" id="char-avatar-kao"></div>
+                            <div class="char-name">KAO</div>
+                            <div class="char-title">Tactical Ranged</div>
+                            <div class="char-stats">
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-52"></div>
+                                    </div>
+                                    <div class="stat-val">119</div>
                                 </div>
-                                <div class="stat-val">119</div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-79"></div>
+                                    </div>
+                                    <div class="stat-val">118</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+                                    </div>
+                                    <div class="stat-val">298</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+                                    </div>
+                                    <div class="stat-val">900</div>
+                                </div>
                             </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-79"></div>
+                            <div class="char-desc">Precision tactician — triple weapon loadout, phantom blink strike
+                                &amp;
+                                clone decoy burst</div>
+                            <div class="char-tag">Stealth Ops</div>
+                        </div>
+                        <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
+                            <div class="char-avatar" id="char-avatar-poom"></div>
+                            <div class="char-name">POOM</div>
+                            <div class="char-title">Naga Summoner</div>
+                            <div class="char-stats">
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-72"></div>
+                                    </div>
+                                    <div class="stat-val">165</div>
                                 </div>
-                                <div class="stat-val">118</div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-98"></div>
+                                    </div>
+                                    <div class="stat-val">148</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+                                    </div>
+                                    <div class="stat-val">298</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-83"></div>
+                                    </div>
+                                    <div class="stat-val">750</div>
+                                </div>
                             </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
+                            <div class="char-desc">Mystic summoner — Sticky Rice stacks, Naga serpent companion &amp;
+                                Cosmic
+                                Balance ritual</div>
+                            <div class="char-tag">Mystic Force</div>
+                        </div>
+                        <div class="char-card" id="btn-auto" data-char="auto" onclick="selectCharacter('auto')">
+                            <div class="char-avatar" id="char-avatar-auto"></div>
+                            <div class="char-name">AUTO</div>
+                            <div class="char-title">Thermodynamic Brawler</div>
+                            <div class="char-stats">
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+                                    </div>
+                                    <div class="stat-val">230</div>
                                 </div>
-                                <div class="stat-val">298</div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+                                    </div>
+                                    <div class="stat-val">MAX</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-87"></div>
+                                    </div>
+                                    <div class="stat-val">260</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-20"></div>
+                                    </div>
+                                    <div class="stat-val">MELEE</div>
+                                </div>
                             </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
+                            <div class="char-desc">Thermodynamic brawler — Heat Wave inferno, Wanchai Stand combat mode
+                                &amp; melee dominance</div>
+                            <div class="char-tag">Horsepower</div>
+                        </div>
+                        <div class="char-card" id="card-pat" data-char="pat" onclick="selectCharacter('pat')">
+                            <div class="char-avatar" id="char-avatar-pat"></div>
+                            <div class="char-name">PAT</div>
+                            <div class="char-title">Samurai Ronin</div>
+                            <div class="char-stats">
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-61"></div>
+                                    </div>
+                                    <div class="stat-val">140</div>
                                 </div>
-                                <div class="stat-val">900</div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-59"></div>
+                                    </div>
+                                    <div class="stat-val">89</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-96"></div>
+                                    </div>
+                                    <div class="stat-val">285</div>
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+                                    <div class="stat-bar-bg">
+                                        <div class="stat-bar-fill stat-bar-fill-83"></div>
+                                    </div>
+                                    <div class="stat-val">750</div>
+                                </div>
+                            </div>
+                            <div class="char-desc">Samurai ronin — Katana dual-mode slash &amp; melee, Zanzo Flash blink
+                                &amp; Iaido cinematic kill</div>
+                            <div class="char-tag">Blade Arts</div>
+                        </div>
+                        <!-- ── Skill Tooltips (1.4) ── -->
+                        <div class="skill-tooltip" id="tooltip-kao" data-char="kao">
+                            <div class="tooltip-header">🎓 KAO — SKILL SET</div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">Q</span>
+                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="kao">⚡</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Teleport Charge</div>
+                                    <div class="tt-desc">Blink to cursor (3 charges). Q during Stealth = Phantom Blink —
+                                        crit ×1.8 window</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">E</span>
+                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="kao">👥</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Clone Orbit</div>
+                                    <div class="tt-desc">Spawn 2 orbiting clones that mirror your shots. Press E again
+                                        to
+                                        detonate early</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">DASH</span>
+                                <span class="tt-icon">🌫️</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Dash-Stealth</div>
+                                    <div class="tt-desc">Every dash triggers stealth — bullets pass through, next shot
+                                        is
+                                        ambush crit</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">MAS</span>
+                                <span class="tt-icon" data-emoji-group="attack" data-emoji-key="default">🔫</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Weapon Mastery</div>
+                                    <div class="tt-desc">Kill 5× with each weapon (Rifle/Sniper/Shotgun) to unlock
+                                        passive
+                                        awakening</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="char-desc">Precision tactician — triple weapon loadout, phantom blink strike &amp;
-                            clone decoy burst</div>
-                        <div class="char-tag">Stealth Ops</div>
+                        <div class="skill-tooltip" id="tooltip-poom" data-char="poom">
+                            <div class="tooltip-header">🌾 POOM — SKILL SET</div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">R²</span>
+                                <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="poom">🍚</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">กินข้าวนึ่ง</div>
+                                    <div class="tt-desc">R-Click: กินข้าว → สะสม Sticky stack บนศัตรูที่ถูกยิง, regen HP
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">Q</span>
+                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="poom">🐍</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">อัญเชิญพญานาค</div>
+                                    <div class="tt-desc">Summon Naga familiar — absorbs 40% max HP as shield, unlocks at
+                                        Lv2
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">E</span>
+                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="poom">🦅</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">อัญเชิญครุฑ</div>
+                                    <div class="tt-desc">Summon Garuda — Naga+Garuda both active = Cosmic Balance (HP
+                                        regen
+                                        + ×1.2 dmg)</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">R</span>
+                                <span class="tt-icon" data-emoji-group="r" data-emoji-key="poom">🌾</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Ritual Burst</div>
+                                    <div class="tt-desc">Detonate Sticky stacks on all enemies — damage scales with
+                                        stacks
+                                        consumed</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="skill-tooltip" id="tooltip-auto" data-char="auto">
+                            <div class="tooltip-header">🔥 AUTO — SKILL SET</div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">R²</span>
+                                <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="auto">👊</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Wanchai Stand</div>
+                                    <div class="tt-desc">R-Click: Summon Stand — L-Click = ORA rush, Shift = Guard block
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">Q</span>
+                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="auto">🌀</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Vacuum / Stand Pull</div>
+                                    <div class="tt-desc">Suck all enemies in range. During Stand = Stand Pull + ignite
+                                        (CD
+                                        10s)</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">E</span>
+                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="auto">💥</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Charge Punch / Detonation</div>
+                                    <div class="tt-desc">During Stand: hold E to charge, release = super punch (cap 600
+                                        dmg). Drains heat</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">HEAT</span>
+                                <span class="tt-icon">🌡️</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Heat Tier System</div>
+                                    <div class="tt-desc">COLD(slow) → WARM → HOT → OVERHEAT — higher tier = faster fire
+                                        &amp; more crit</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="skill-tooltip" id="tooltip-pat" data-char="pat">
+                            <div class="tooltip-header">⚔️ PAT — SKILL SET</div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">R²</span>
+                                <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="pat">🛡️</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Blade Guard</div>
+                                    <div class="tt-desc">R-Click hold — speed ×0.6, reflect enemy projectiles within
+                                        55px
+                                        radius back as friendly</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">Q</span>
+                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="pat">🌪️</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Zanzo Flash</div>
+                                    <div class="tt-desc">Blink to cursor + 4 afterimage trail. Land within 120px of
+                                        enemy =
+                                        ambush crit window 1.5s</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">R</span>
+                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="pat">🗡️</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Iaido Strike</div>
+                                    <div class="tt-desc">3-phase cinematic kill — charge 0.6s → flash dash → TimeManager
+                                        freeze + blood burst</div>
+                                </div>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tt-key">AUTO</span>
+                                <span class="tt-icon">🗡️</span>
+                                <div class="tt-info">
+                                    <div class="tt-name">Dual-Mode Katana</div>
+                                    <div class="tt-desc">Auto-switch: Slash Wave (range) ↔ Melee Combo 3-hit ×1.8
+                                        (close).
+                                        Iaido unlock = Ronin's Edge passive</div>
+                                </div>
+                            </div>
+                        </div><!-- /.char-cards -->
+
+                        <button class="char-nav-btn char-nav-next" id="char-nav-next" onclick="_navigateChar(1)"
+                            ontouchstart="event.preventDefault();_navigateChar(1);"
+                            aria-label="Next character">❯</button>
+                    </div><!-- /.char-carousel-row -->
+
+                    <!-- ── Dot indicators ── -->
+                    <div class="char-dots" id="char-dots">
+                        <span class="char-dot active" data-index="0"></span>
+                        <span class="char-dot" data-index="1"></span>
+                        <span class="char-dot" data-index="2"></span>
+                        <span class="char-dot" data-index="3"></span>
                     </div>
-                    <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
-                        <div class="char-avatar" id="char-avatar-poom"></div>
-                        <div class="char-name">POOM</div>
-                        <div class="char-title">Naga Summoner</div>
-                        <div class="char-stats">
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-72"></div>
-                                </div>
-                                <div class="stat-val">165</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-98"></div>
-                                </div>
-                                <div class="stat-val">148</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
-                                </div>
-                                <div class="stat-val">298</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-83"></div>
-                                </div>
-                                <div class="stat-val">750</div>
-                            </div>
+                </div><!-- /.char-select-section -->
+
+
+
+                <div id="report-card">
+                    <div class="report-header">MISSION FAILED</div>
+                    <div class="report-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Score</div>
+                            <div class="stat-value" id="report-score">0</div>
                         </div>
-                        <div class="char-desc">Mystic summoner — Sticky Rice stacks, Naga serpent companion &amp; Cosmic
-                            Balance ritual</div>
-                        <div class="char-tag">Mystic Force</div>
-                    </div>
-                    <div class="char-card" id="btn-auto" data-char="auto" onclick="selectCharacter('auto')">
-                        <div class="char-avatar" id="char-avatar-auto"></div>
-                        <div class="char-name">AUTO</div>
-                        <div class="char-title">Thermodynamic Brawler</div>
-                        <div class="char-stats">
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
-                                </div>
-                                <div class="stat-val">230</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
-                                </div>
-                                <div class="stat-val">MAX</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-87"></div>
-                                </div>
-                                <div class="stat-val">260</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-20"></div>
-                                </div>
-                                <div class="stat-val">MELEE</div>
-                            </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Wave</div>
+                            <div class="stat-value" id="report-wave">0</div>
                         </div>
-                        <div class="char-desc">Thermodynamic brawler — Heat Wave inferno, Wanchai Stand combat mode
-                            &amp; melee dominance</div>
-                        <div class="char-tag">Horsepower</div>
-                    </div>
-                    <div class="char-card" id="card-pat" data-char="pat" onclick="selectCharacter('pat')">
-                        <div class="char-avatar" id="char-avatar-pat"></div>
-                        <div class="char-name">PAT</div>
-                        <div class="char-title">Samurai Ronin</div>
-                        <div class="char-stats">
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-61"></div>
-                                </div>
-                                <div class="stat-val">140</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-59"></div>
-                                </div>
-                                <div class="stat-val">89</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-96"></div>
-                                </div>
-                                <div class="stat-val">285</div>
-                            </div>
-                            <div class="stat-bar">
-                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
-                                <div class="stat-bar-bg">
-                                    <div class="stat-bar-fill stat-bar-fill-83"></div>
-                                </div>
-                                <div class="stat-val">750</div>
-                            </div>
-                        </div>
-                        <div class="char-desc">Samurai ronin — Katana dual-mode slash &amp; melee, Zanzo Flash blink
-                            &amp; Iaido cinematic kill</div>
-                        <div class="char-tag">Blade Arts</div>
-                    </div>
-                    <!-- ── Skill Tooltips (1.4) ── -->
-                    <div class="skill-tooltip" id="tooltip-kao" data-char="kao">
-                        <div class="tooltip-header">🎓 KAO — SKILL SET</div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">Q</span>
-                            <span class="tt-icon" data-emoji-group="q" data-emoji-key="kao">⚡</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Teleport Charge</div>
-                                <div class="tt-desc">Blink to cursor (3 charges). Q during Stealth = Phantom Blink —
-                                    crit ×1.8 window</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">E</span>
-                            <span class="tt-icon" data-emoji-group="e" data-emoji-key="kao">👥</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Clone Orbit</div>
-                                <div class="tt-desc">Spawn 2 orbiting clones that mirror your shots. Press E again to
-                                    detonate early</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">DASH</span>
-                            <span class="tt-icon">🌫️</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Dash-Stealth</div>
-                                <div class="tt-desc">Every dash triggers stealth — bullets pass through, next shot is
-                                    ambush crit</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">MAS</span>
-                            <span class="tt-icon" data-emoji-group="attack" data-emoji-key="default">🔫</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Weapon Mastery</div>
-                                <div class="tt-desc">Kill 5× with each weapon (Rifle/Sniper/Shotgun) to unlock passive
-                                    awakening</div>
-                            </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Kills</div>
+                            <div class="stat-value" id="report-kills">0</div>
                         </div>
                     </div>
-                    <div class="skill-tooltip" id="tooltip-poom" data-char="poom">
-                        <div class="tooltip-header">🌾 POOM — SKILL SET</div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">R²</span>
-                            <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="poom">🍚</span>
-                            <div class="tt-info">
-                                <div class="tt-name">กินข้าวนึ่ง</div>
-                                <div class="tt-desc">R-Click: กินข้าว → สะสม Sticky stack บนศัตรูที่ถูกยิง, regen HP
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">Q</span>
-                            <span class="tt-icon" data-emoji-group="q" data-emoji-key="poom">🐍</span>
-                            <div class="tt-info">
-                                <div class="tt-name">อัญเชิญพญานาค</div>
-                                <div class="tt-desc">Summon Naga familiar — absorbs 40% max HP as shield, unlocks at Lv2
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">E</span>
-                            <span class="tt-icon" data-emoji-group="e" data-emoji-key="poom">🦅</span>
-                            <div class="tt-info">
-                                <div class="tt-name">อัญเชิญครุฑ</div>
-                                <div class="tt-desc">Summon Garuda — Naga+Garuda both active = Cosmic Balance (HP regen
-                                    + ×1.2 dmg)</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">R</span>
-                            <span class="tt-icon" data-emoji-group="r" data-emoji-key="poom">🌾</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Ritual Burst</div>
-                                <div class="tt-desc">Detonate Sticky stacks on all enemies — damage scales with stacks
-                                    consumed</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="skill-tooltip" id="tooltip-auto" data-char="auto">
-                        <div class="tooltip-header">🔥 AUTO — SKILL SET</div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">R²</span>
-                            <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="auto">👊</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Wanchai Stand</div>
-                                <div class="tt-desc">R-Click: Summon Stand — L-Click = ORA rush, Shift = Guard block
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">Q</span>
-                            <span class="tt-icon" data-emoji-group="q" data-emoji-key="auto">🌀</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Vacuum / Stand Pull</div>
-                                <div class="tt-desc">Suck all enemies in range. During Stand = Stand Pull + ignite (CD
-                                    10s)</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">E</span>
-                            <span class="tt-icon" data-emoji-group="e" data-emoji-key="auto">💥</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Charge Punch / Detonation</div>
-                                <div class="tt-desc">During Stand: hold E to charge, release = super punch (cap 600
-                                    dmg). Drains heat</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">HEAT</span>
-                            <span class="tt-icon">🌡️</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Heat Tier System</div>
-                                <div class="tt-desc">COLD(slow) → WARM → HOT → OVERHEAT — higher tier = faster fire
-                                    &amp; more crit</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="skill-tooltip" id="tooltip-pat" data-char="pat">
-                        <div class="tooltip-header">⚔️ PAT — SKILL SET</div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">R²</span>
-                            <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="pat">🛡️</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Blade Guard</div>
-                                <div class="tt-desc">R-Click hold — speed ×0.6, reflect enemy projectiles within 55px
-                                    radius back as friendly</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">Q</span>
-                            <span class="tt-icon" data-emoji-group="q" data-emoji-key="pat">🌪️</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Zanzo Flash</div>
-                                <div class="tt-desc">Blink to cursor + 4 afterimage trail. Land within 120px of enemy =
-                                    ambush crit window 1.5s</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">R</span>
-                            <span class="tt-icon" data-emoji-group="e" data-emoji-key="pat">🗡️</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Iaido Strike</div>
-                                <div class="tt-desc">3-phase cinematic kill — charge 0.6s → flash dash → TimeManager
-                                    freeze + blood burst</div>
-                            </div>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tt-key">AUTO</span>
-                            <span class="tt-icon">🗡️</span>
-                            <div class="tt-info">
-                                <div class="tt-name">Dual-Mode Katana</div>
-                                <div class="tt-desc">Auto-switch: Slash Wave (range) ↔ Melee Combo 3-hit ×1.8 (close).
-                                    Iaido unlock = Ronin's Edge passive</div>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="report-text">Awaiting performance evaluation...</div>
                 </div>
-            </div>
 
-
-
-            <div id="report-card">
-                <div class="report-header">MISSION FAILED</div>
-                <div class="report-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">Score</div>
-                        <div class="stat-value" id="report-score">0</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Wave</div>
-                        <div class="stat-value" id="report-wave">0</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Kills</div>
-                        <div class="stat-value" id="report-kills">0</div>
-                    </div>
+                <!-- ══ DEV MODE PANEL (hidden by default, unlocked via secret keylogger) ══ -->
+                <div id="dev-mode-panel">
+                    <div class="dev-mode-title">⚠️ DEVELOPER MODE UNLOCKED</div>
+                    <label class="dev-mode-label">
+                        <input type="checkbox" id="dev-kao-passive-toggle" checked class="dev-mode-checkbox">
+                        [เก้า] เปิดใช้งาน <strong class="dev-mode-highlight">'ซุ่มเสรี'</strong> ตั้งแต่ต้นเกม
+                    </label>
+                    <div class="dev-mode-note">⚡ ปิดเพื่อสัมผัสประสบการณ์แบบผู้เล่นจริง</div>
                 </div>
-                <div id="report-text">Awaiting performance evaluation...</div>
-            </div>
 
-            <!-- ══ DEV MODE PANEL (hidden by default, unlocked via secret keylogger) ══ -->
-            <div id="dev-mode-panel">
-                <div class="dev-mode-title">⚠️ DEVELOPER MODE UNLOCKED</div>
-                <label class="dev-mode-label">
-                    <input type="checkbox" id="dev-kao-passive-toggle" checked class="dev-mode-checkbox">
-                    [เก้า] เปิดใช้งาน <strong class="dev-mode-highlight">'ซุ่มเสรี'</strong> ตั้งแต่ต้นเกม
-                </label>
-                <div class="dev-mode-note">⚡ ปิดเพื่อสัมผัสประสบการณ์แบบผู้เล่นจริง</div>
-            </div>
+                <div id="high-score-display">
+                    <span class="hs-icon">🏆</span>
+                    <span class="hs-label">ALL-TIME HIGH SCORE</span>
+                    <span id="hs-value" class="hs-value">— —</span>
+                </div>
 
-            <div id="high-score-display">
-                <span class="hs-icon">🏆</span>
-                <span class="hs-label">ALL-TIME HIGH SCORE</span>
-                <span id="hs-value" class="hs-value">— —</span>
-            </div>
+                <!-- Row 1: primary actions (Start · Achievements · Tutorial) -->
+                <div class="btn-group-row btn-group-row--primary">
+                    <button class="btn" id="start-btn" onclick="startGame(_selectedChar)"
+                        ontouchstart="event.preventDefault(); startGame(_selectedChar);">
+                        🎓 START MISSION
+                    </button>
+                    <button class="btn btn--achievements" onclick="AchievementGallery.open()"
+                        ontouchstart="event.preventDefault(); AchievementGallery.open();">
+                        🏆 ACHIEVEMENTS
+                    </button>
+                    <button class="btn btn--tutorial" id="tutorial-btn"
+                        onclick="if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
+                        ontouchstart="event.preventDefault(); if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);">
+                        🎓 TUTORIAL
+                    </button>
+                </div>
 
-            <div id="google-auth-row" class="google-auth-row">
-                <button type="button" id="btn-google-signin" class="btn-google">Google — ลงชื่อเข้า Leaderboard</button>
-                <span id="google-auth-status" class="google-auth-status" aria-live="polite"></span>
-            </div>
+                <!-- Row 2: Leaderboard — full width per sketch -->
+                <div class="btn-group-row btn-group-row--secondary">
+                    <button type="button" class="btn btn--leaderboard" id="btn-leaderboard"
+                        onclick="if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();"
+                        ontouchstart="event.preventDefault(); if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();">
+                        🏆 LEADERBOARD
+                    </button>
+                </div>
 
-            <div class="btn-group-row">
-                <button class="btn" id="start-btn" onclick="startGame(_selectedChar)"
-                    ontouchstart="event.preventDefault(); startGame(_selectedChar);">
-                    🎓 START MISSION
-                </button>
-                <button class="btn btn--tutorial" id="tutorial-btn"
-                    onclick="if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
-                    ontouchstart="event.preventDefault(); if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);">
-                    🎓 REPLAY TUTORIAL
-                </button>
-                <button class="btn btn--achievements" onclick="AchievementGallery.open()"
-                    ontouchstart="event.preventDefault(); AchievementGallery.open();">
-                    🏆 ACHIEVEMENTS
-                </button>
-                <button type="button" class="btn btn--leaderboard" id="btn-leaderboard"
-                    onclick="if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();"
-                    ontouchstart="event.preventDefault(); if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();">
-                    🏆 LEADERBOARD
-                </button>
+                <!-- Row 3: Sign In / Log In — bottom of menu per sketch -->
+                <div id="google-auth-row" class="google-auth-row">
+                    <button type="button" id="btn-google-signin" class="btn-google">Google — ลงชื่อเข้า
+                        Leaderboard</button>
+                    <span id="google-auth-status" class="google-auth-status" aria-live="polite"></span>
+                </div>
+                <div id="ai-loading">Initializing systems...</div>
             </div>
-            <div id="ai-loading">Initializing systems...</div>
         </div>
-    </div>
 
-    <!-- Leaderboard modal (global leaderboard from Firestore) -->
-    <div id="leaderboard-modal" class="leaderboard-modal" aria-hidden="true">
-        <div class="leaderboard-backdrop" id="leaderboard-backdrop"></div>
-        <div class="leaderboard-panel" role="dialog" aria-labelledby="leaderboard-title">
-            <button type="button" class="leaderboard-close" id="leaderboard-close" aria-label="Close">&times;</button>
-            <div class="leaderboard-head" id="leaderboard-title">🏆 HALL OF FAME</div>
-            <ol id="leaderboard-list" class="leaderboard-list"></ol>
-            <p id="leaderboard-hint" class="leaderboard-hint">ลงชื่อ Google แล้วทำคะแนนสูงสุดเพื่อขึ้นกระดาน (คะแนนส่งผ่านเซิร์ฟเวอร์)</p>
-        </div>
-    </div>
-
-    <div id="victory-screen">
-        <!-- Starfield canvas -->
-        <canvas id="victory-stars"></canvas>
-
-        <div class="victory-content">
-            <!-- Rank badge (populated by JS) -->
-            <div class="victory-rank-badge" id="victory-rank">⚔ WAVE 15 CLEARED ⚔</div>
-            <div class="victory-new-record" id="victory-new-record">🎉 NEW RECORD!</div>
-
-            <!-- Main title -->
-            <div class="victory-title">MISSION COMPLETE</div>
-
-            <!-- Gold divider -->
-            <div class="victory-divider"></div>
-
-            <!-- Stats -->
-            <div class="victory-stats">
-                <div class="victory-stat-item">
-                    <span class="victory-stat-icon">🏆</span>
-                    <div class="victory-stat-label">Final Score</div>
-                    <div class="victory-stat-value" id="final-score">0</div>
-                </div>
-                <div class="victory-stat-item">
-                    <span class="victory-stat-icon">🌊</span>
-                    <div class="victory-stat-label">Waves Cleared</div>
-                    <div class="victory-stat-value" id="final-wave">0</div>
-                </div>
-                <div class="victory-stat-item">
-                    <span class="victory-stat-icon">💀</span>
-                    <div class="victory-stat-label">Total Kills</div>
-                    <div class="victory-stat-value" id="final-kills">0</div>
-                </div>
+        <!-- Leaderboard modal (global leaderboard from Firestore) -->
+        <div id="leaderboard-modal" class="leaderboard-modal" aria-hidden="true">
+            <div class="leaderboard-backdrop" id="leaderboard-backdrop"></div>
+            <div class="leaderboard-panel" role="dialog" aria-labelledby="leaderboard-title">
+                <button type="button" class="leaderboard-close" id="leaderboard-close"
+                    aria-label="Close">&times;</button>
+                <div class="leaderboard-head" id="leaderboard-title">🏆 HALL OF FAME</div>
+                <ol id="leaderboard-list" class="leaderboard-list"></ol>
+                <p id="leaderboard-hint" class="leaderboard-hint">ลงชื่อ Google แล้วทำคะแนนสูงสุดเพื่อขึ้นกระดาน
+                    (คะแนนส่งผ่านเซิร์ฟเวอร์)</p>
             </div>
-
-            <!-- Unlocked achievements strip -->
-            <div class="victory-achievements" id="victory-achs"></div>
-
-            <!-- CTA -->
-            <button class="victory-play-again" onclick="location.reload()">PLAY AGAIN</button>
         </div>
-    </div>
+
+        <div id="victory-screen">
+            <!-- Starfield canvas -->
+            <canvas id="victory-stars"></canvas>
+
+            <div class="victory-content">
+                <!-- Rank badge (populated by JS) -->
+                <div class="victory-rank-badge" id="victory-rank">⚔ WAVE 15 CLEARED ⚔</div>
+                <div class="victory-new-record" id="victory-new-record">🎉 NEW RECORD!</div>
+
+                <!-- Main title -->
+                <div class="victory-title">MISSION COMPLETE</div>
+
+                <!-- Gold divider -->
+                <div class="victory-divider"></div>
+
+                <!-- Stats -->
+                <div class="victory-stats">
+                    <div class="victory-stat-item">
+                        <span class="victory-stat-icon">🏆</span>
+                        <div class="victory-stat-label">Final Score</div>
+                        <div class="victory-stat-value" id="final-score">0</div>
+                    </div>
+                    <div class="victory-stat-item">
+                        <span class="victory-stat-icon">🌊</span>
+                        <div class="victory-stat-label">Waves Cleared</div>
+                        <div class="victory-stat-value" id="final-wave">0</div>
+                    </div>
+                    <div class="victory-stat-item">
+                        <span class="victory-stat-icon">💀</span>
+                        <div class="victory-stat-label">Total Kills</div>
+                        <div class="victory-stat-value" id="final-kills">0</div>
+                    </div>
+                </div>
+
+                <!-- Unlocked achievements strip -->
+                <div class="victory-achievements" id="victory-achs"></div>
+
+                <!-- CTA -->
+                <button class="victory-play-again" onclick="location.reload()">PLAY AGAIN</button>
+            </div>
+        </div>
 
 
-    <!-- ══════════════════════════════════════════
+        <!-- ══════════════════════════════════════════
          🎓 TUTORIAL OVERLAY
     ══════════════════════════════════════════ -->
-    <!-- ── Tutorial Arrow — animated pointer ── -->
-    <div id="tut-arrow" data-dir="down"></div>
+        <!-- ── Tutorial Arrow — animated pointer ── -->
+        <div id="tut-arrow" data-dir="down"></div>
 
-    <div id="tutorial-overlay">
-        <div class="tutorial-card tutorial-card--center" id="tutorial-card">
+        <div id="tutorial-overlay">
+            <div class="tutorial-card tutorial-card--center" id="tutorial-card">
 
-            <!-- Header: icon + title -->
-            <div class="tut-header">
-                <div id="tut-icon">🎓</div>
-                <div id="tut-title">ยินดีต้อนรับ!</div>
-            </div>
-
-            <!-- Body text -->
-            <div id="tut-body">กำลังโหลด...</div>
-
-            <!-- Action hint label -->
-            <div id="tut-action-hint">ทำตามคำสั่งเพื่อดำเนินต่อ</div>
-
-            <!-- Action progress bar -->
-            <div id="tut-action-bar">
-                <div id="tut-action-fill"></div>
-            </div>
-            <div id="tut-action-label"></div>
-
-            <!-- Buttons row -->
-            <div class="tut-btn-row">
-                <div id="tutorial-progress"></div>
-                <div class="tut-btn-inner">
-                    <button id="tut-skip-btn" onclick="TutorialSystem.skip()"
-                        ontouchstart="event.preventDefault(); TutorialSystem.skip();">
-                        SKIP
-                    </button>
-                    <button id="tut-next-btn" onclick="TutorialSystem.next()"
-                        ontouchstart="event.preventDefault(); TutorialSystem.next();">
-                        NEXT ▶
-                    </button>
+                <!-- Header: icon + title -->
+                <div class="tut-header">
+                    <div id="tut-icon">🎓</div>
+                    <div id="tut-title">ยินดีต้อนรับ!</div>
                 </div>
+
+                <!-- Body text -->
+                <div id="tut-body">กำลังโหลด...</div>
+
+                <!-- Action hint label -->
+                <div id="tut-action-hint">ทำตามคำสั่งเพื่อดำเนินต่อ</div>
+
+                <!-- Action progress bar -->
+                <div id="tut-action-bar">
+                    <div id="tut-action-fill"></div>
+                </div>
+                <div id="tut-action-label"></div>
+
+                <!-- Buttons row -->
+                <div class="tut-btn-row">
+                    <div id="tutorial-progress"></div>
+                    <div class="tut-btn-inner">
+                        <button id="tut-skip-btn" onclick="TutorialSystem.skip()"
+                            ontouchstart="event.preventDefault(); TutorialSystem.skip();">
+                            SKIP
+                        </button>
+                        <button id="tut-next-btn" onclick="TutorialSystem.next()"
+                            ontouchstart="event.preventDefault(); TutorialSystem.next();">
+                            NEXT ▶
+                        </button>
+                    </div>
+                </div>
+
             </div>
-
         </div>
-    </div>
 
-    <!-- Firebase (npm + esbuild → js/firebase-bundle.js); optional CONFIG_SECRETS.FIREBASE_CONFIG if loaded earlier -->
-    <script src="js/firebase-bundle.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/systems/CloudSaveSystem.js"></script>
-    <script src="js/systems/LeaderboardUI.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/effects.js"></script>
-    <script src="js/weapons.js"></script>
-    <script src="js/map.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/tutorial.js"></script>
+        <!-- Firebase (npm + esbuild → js/firebase-bundle.js); optional CONFIG_SECRETS.FIREBASE_CONFIG if loaded earlier -->
+        <script src="js/firebase-bundle.js"></script>
+        <script src="js/config.js"></script>
+        <script src="js/utils.js"></script>
+        <script src="js/systems/CloudSaveSystem.js"></script>
+        <script src="js/systems/LeaderboardUI.js"></script>
+        <script src="js/audio.js"></script>
+        <script src="js/effects.js"></script>
+        <script src="js/weapons.js"></script>
+        <script src="js/map.js"></script>
+        <script src="js/ui.js"></script>
+        <script src="js/tutorial.js"></script>
 
-    <script src="js/entities/base.js"></script>
+        <script src="js/entities/base.js"></script>
 
-    <!-- AI Systems — โหลดหลัง base.js, ก่อน enemy.js -->
-    <script src="js/ai/UtilityAI.js"></script>
-    <script src="js/ai/EnemyActions.js"></script>
-    <script src="js/ai/PlayerPatternAnalyzer.js"></script>
-    <script src="js/ai/SquadAI.js"></script>
+        <!-- AI Systems — โหลดหลัง base.js, ก่อน enemy.js -->
+        <script src="js/ai/UtilityAI.js"></script>
+        <script src="js/ai/EnemyActions.js"></script>
+        <script src="js/ai/PlayerPatternAnalyzer.js"></script>
+        <script src="js/ai/SquadAI.js"></script>
 
-    <!-- NEW OOP PLAYER HIERARCHY -->
-    <script src="js/entities/player/PlayerBase.js"></script>
-    <script src="js/entities/player/KaoPlayer.js"></script>
-    <script src="js/entities/player/AutoPlayer.js"></script>
-    <script src="js/entities/player/PoomPlayer.js"></script>
-    <script src="js/entities/player/PatPlayer.js"></script>
-    <script src="js/entities/summons.js"></script>
-    <script src="js/entities/enemy.js"></script>
-    <script src="js/entities/boss/boss_attacks_shared.js"></script>
-    <script src="js/entities/boss/boss_attacks_manop.js"></script>
-    <script src="js/entities/boss/boss_attacks_first.js"></script>
-    <script src="js/entities/boss/BossBase.js"></script>
-    <script src="js/entities/boss/ManopBoss.js"></script>
-    <script src="js/entities/boss/FirstBoss.js"></script>
+        <!-- NEW OOP PLAYER HIERARCHY -->
+        <script src="js/entities/player/PlayerBase.js"></script>
+        <script src="js/entities/player/KaoPlayer.js"></script>
+        <script src="js/entities/player/AutoPlayer.js"></script>
+        <script src="js/entities/player/PoomPlayer.js"></script>
+        <script src="js/entities/player/PatPlayer.js"></script>
+        <script src="js/entities/summons.js"></script>
+        <script src="js/entities/enemy.js"></script>
+        <script src="js/entities/boss/boss_attacks_shared.js"></script>
+        <script src="js/entities/boss/boss_attacks_manop.js"></script>
+        <script src="js/entities/boss/boss_attacks_first.js"></script>
+        <script src="js/entities/boss/BossBase.js"></script>
+        <script src="js/entities/boss/ManopBoss.js"></script>
+        <script src="js/entities/boss/FirstBoss.js"></script>
 
-    <script src="js/input.js"></script>
+        <script src="js/input.js"></script>
 
-    <!-- Step 4: Rendering Decoupled -->
-    <script src="js/rendering/PlayerRenderer.js"></script>
-    <script src="js/rendering/BossRenderer.js"></script>
+        <!-- Step 4: Rendering Decoupled -->
+        <script src="js/rendering/PlayerRenderer.js"></script>
+        <script src="js/rendering/BossRenderer.js"></script>
 
-    <!-- Extracted Systems -->
-    <script src="js/systems/GameState.js"></script>
-    <script src="js/systems/AdminSystem.js"></script>
-    <script src="js/systems/ShopSystem.js"></script>
-    <script src="js/systems/TimeManager.js"></script>
-    <script src="js/systems/WaveManager.js"></script>
-    <script src="js/systems/WorkerBridge.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/VersionManager.js"></script>
-    <script src="js/menu.js"></script>
+        <!-- Extracted Systems -->
+        <script src="js/systems/GameState.js"></script>
+        <script src="js/systems/AdminSystem.js"></script>
+        <script src="js/systems/ShopSystem.js"></script>
+        <script src="js/systems/TimeManager.js"></script>
+        <script src="js/systems/WaveManager.js"></script>
+        <script src="js/systems/WorkerBridge.js"></script>
+        <script src="js/game.js"></script>
+        <script src="js/VersionManager.js"></script>
+        <script src="js/menu.js"></script>
 
 
 </body>

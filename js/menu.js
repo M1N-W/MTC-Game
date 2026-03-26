@@ -90,7 +90,86 @@ function selectCharacter(charType) {
 }
 
 
-// ── Portrait injection — window.load fires AFTER ui.js executes ──────────────
+// ── Character Carousel Navigation ─────────────────────────────────────────────
+// Characters in display order (must match IDs used by selectCharacter)
+const _CHAR_ORDER = ['kao', 'poom', 'auto', 'pat'];
+let _currentCharIndex = 0;
+
+/**
+ * Navigate the carousel by `dir` steps (+1 = next, -1 = prev).
+ * Wraps around. Exposed on window so HTML onclick can reach it.
+ */
+function _navigateChar(dir) {
+    _currentCharIndex = (_currentCharIndex + dir + _CHAR_ORDER.length) % _CHAR_ORDER.length;
+    selectCharacter(_CHAR_ORDER[_currentCharIndex]);
+    _updateCarousel();
+}
+window._navigateChar = _navigateChar;
+
+function _updateCarousel() {
+    const charId = _CHAR_ORDER[_currentCharIndex];
+
+    // ── Show only active card ────────────────────────────────────────────────
+    _CHAR_ORDER.forEach((id, i) => {
+        const el = document.getElementById('card-' + id)
+            || document.getElementById('btn-' + id);
+        if (!el) return;
+        if (i === _currentCharIndex) {
+            el.classList.add('selected');
+        } else {
+            el.classList.remove('selected');
+        }
+    });
+
+    // ── Update dot indicators ────────────────────────────────────────────────
+    document.querySelectorAll('.char-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === _currentCharIndex);
+    });
+
+    // ── Apply theme to #overlay ──────────────────────────────────────────────
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+        // Strip existing theme-* classes, add new one
+        const classes = overlay.className.split(' ').filter(c => !c.startsWith('theme-'));
+        classes.push('theme-' + charId);
+        overlay.className = classes.join(' ').trim();
+    }
+}
+
+// Initialise carousel on DOMContentLoaded
+(function _initCarousel() {
+    function _setup() {
+        // Dots click→navigate
+        document.querySelectorAll('.char-dot').forEach((dot) => {
+            const idx = parseInt(dot.dataset.index, 10);
+            dot.addEventListener('click', () => {
+                _currentCharIndex = idx;
+                selectCharacter(_CHAR_ORDER[_currentCharIndex]);
+                _updateCarousel();
+            });
+        });
+
+        // Keyboard left/right arrow navigation
+        document.addEventListener('keydown', (e) => {
+            // Only when overlay is visible
+            const overlay = document.getElementById('overlay');
+            if (!overlay || overlay.style.display === 'none') return;
+            if (e.key === 'ArrowLeft')  _navigateChar(-1);
+            if (e.key === 'ArrowRight') _navigateChar(+1);
+        });
+
+        // Set initial theme & state
+        _updateCarousel();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _setup);
+    } else {
+        _setup();
+    }
+})();
+
+
 // This guarantees window.PORTRAITS (defined in ui.js) is ready before we try
 // to populate the char-select cards and the default HUD portrait.
 window.addEventListener('load', function _injectPortraits() {
