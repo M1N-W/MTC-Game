@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.41.9`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.41.8`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
@@ -20,26 +20,22 @@ It intentionally excludes balance values, cooldowns, damage numbers, and release
 
 Load order is explicit in `index.html` and is a hard architectural contract. Any new script that introduces globals must load **before** its consumers.
 
-### 2.1 Bootstrap and optional cloud (before entity scripts)
+### 2.1 Bootstrap and optional cloud (before `audio.js`)
 
 1. `js/firebase-bundle.js` — Firebase client init (`window.firebaseAuth`, `window.MTCFirebase`, etc.).
-2. `js/config/BalanceConfig.js` — `window.BALANCE` (all character/enemy/boss stats).
-   `js/config/SystemConfig.js` — `window.MAP_CONFIG`, `window.GAME_CONFIG` (map dimensions, system settings).
-   `js/config/GameTexts.js` — `window.GAME_TEXTS` (UI strings, skill names, HUD emoji, boss taunts).
-3. `js/utils.js` — `worldToScreen()`, `spawnParticles()`, `showVoiceBubble()` globals.
+2. `js/config.js`
+3. `js/utils.js`
 4. `js/systems/CloudSaveSystem.js` — Firestore sync for local save (depends on utils + Firebase).
 5. `js/systems/LeaderboardUI.js` — Google / leaderboard UI (depends on utils + Firebase).
 
-### 2.2 Effects, weapons, map, and UI foundations
+### 2.2 Early core scripts
 
-1. `js/effects/ParticleSystem.js` — particle pool (must load first in effects block).
-   `js/effects/WeatherSystem.js`, `CombatEffects.js`, `VisualPolish.js`, `OrbitalEffects.js`, `PatEffects.js`.
-   ⚠️ `effects/` is a **directory of modules**, not a single `effects.js` file.
-2. `js/weapons/SpatialGrid.js` — collision grid (must load first in weapons block).
-   `js/weapons/Projectile.js`, `WeaponSystem.js`, `ProjectileManager.js`, `PoomWeapon.js`.
-3. `js/map.js`
-4. `js/ui.js` — `window.PORTRAITS`, `UIManager`, `CanvasHUD`.
-5. `js/tutorial.js`
+1. `js/audio.js`
+2. `js/effects.js`
+3. `js/weapons.js`
+4. `js/map.js`
+5. `js/ui.js`
+6. `js/tutorial.js`
 
 ### 2.3 Entity and AI foundations
 
@@ -57,21 +53,17 @@ Load order is explicit in `index.html` and is a hard architectural contract. Any
 ### 2.4 Input, rendering, systems, orchestration
 
 1. `js/input.js`
-2. `js/rendering/RenderTokens.js` — visual token singleton (`window.RT`). **Must load first** in the rendering block; all renderer files depend on `RT.*` constants.
-   `js/rendering/KaoRenderer.js`, `AutoRenderer.js`, `PoomRenderer.js`, `PatRenderer.js` — per-character renderers. Each must load **before** `PlayerRenderer.js`.
-   `js/rendering/PlayerRenderer.js` — dispatcher + shared helpers + fallback stubs for each char renderer.
-   `js/rendering/BossRenderer.js`, `ProjectileRenderer.js`
-3. `js/systems/GameState.js`
-4. `js/systems/AdminSystem.js`
-5. `js/systems/ShopSystem.js`
-6. `js/systems/TimeManager.js`
-7. `js/systems/WaveManager.js`
-8. `js/ui/UIManager.js`, `CanvasHUD.js`, `AchievementSystem.js`, `ShopManager.js`
-9. `js/audio.js`
+2. `js/rendering/PlayerRenderer.js`
+3. `js/rendering/BossRenderer.js`
+4. `js/systems/GameState.js`
+5. `js/systems/AdminSystem.js`
+6. `js/systems/ShopSystem.js`
+7. `js/systems/TimeManager.js`
+8. `js/systems/WaveManager.js`
+9. `js/systems/WorkerBridge.js`
 10. `js/game.js`
 11. `js/VersionManager.js`
 12. `js/menu.js`
-13. `js/systems/WorkerBridge.js` — spawns `analyzer-worker` via `new Worker(...)`. **Must load after `game.js`**; the worker is a separate thread context that does not share `window.*`.
 
 ---
 
@@ -80,7 +72,7 @@ Load order is explicit in `index.html` and is a hard architectural contract. Any
 ### 3.1 Core entity inheritance
 
 - `Entity` (`js/entities/base.js`)
-  - `PlayerBase` (`js/entities/player/PlayerBase.js`, exported as `window.Player`)
+  - `Player` (`js/entities/player/PlayerBase.js`, `window.Player`)
     - `KaoPlayer`, `AutoPlayer`, `PoomPlayer`, `PatPlayer`
   - `EnemyBase` (`js/entities/enemy.js`)
     - `Enemy`, `TankEnemy`, `MageEnemy`
@@ -88,7 +80,7 @@ Load order is explicit in `index.html` and is a hard architectural contract. Any
     - `KruManop` (`js/entities/boss/ManopBoss.js`)
     - `KruFirst` (`js/entities/boss/FirstBoss.js`)
   - Other direct `Entity` subclasses (illustrative):
-    - `BossDog` (`js/entities/boss/ManopBoss.js` — same file as `KruManop`)
+    - `BossDog` (boss-related modules)
     - `Drone` and summon/minion types in `js/entities/summons.js`
     - Boss attack-spawned entity classes in `boss_attacks_*.js` where defined
 
@@ -158,8 +150,7 @@ Load order is explicit in `index.html` and is a hard architectural contract. Any
 ### 7.1 Frame draw sequence
 
 - `drawGame` in `game.js` defines the frame draw sequence: background / terrain / map / world objects / decals / entities (player, enemies, boss, drone) / projectiles / particles / lighting / HUD overlays / tutorial canvas overlay.
-- **CanvasHUD** (`ui.js`) owns combo, minimap, and related canvas HUD; `game.js` calls `CanvasHUD.draw` when defined, with `UIManager.draw` as legacy fallback. Minimap helpers (`_minimapDrawShell`, `_minimapDrawContent`, `_minimapDrawLabel`) live on `CanvasHUD`, not `UIManager`.
-- **RenderTokens** (`js/rendering/RenderTokens.js`, `window.RT`) is the single source of truth for all `ctx` style values (palette hex, glow blur/color, stroke widths, alpha presets). All renderer files read from `RT.*`; never hardcode hex colors or shadow values that have RT equivalents.
+- **CanvasHUD** (`ui.js`) owns combo, minimap, and related canvas HUD; `game.js` calls `CanvasHUD.draw` when defined, with `UIManager.draw` as legacy fallback.
 - Entity classes supply state; renderers and `drawGame` orchestrate order — renderers must not own simulation.
 
 Detail: see `.agents/skills/mtc-game-skills_claude/mtc-rendering.md`.
@@ -171,27 +162,6 @@ Detail: see `.agents/skills/mtc-game-skills_claude/mtc-rendering.md`.
 - Cache identity: `sw.js` (`CACHE_NAME`).
 - Version display: `js/VersionManager.js` messaging from the service worker.
 - Do not treat documentation version strings as source of truth for architecture.
-
-## 9) CSS Architecture
-
-- `css/main.css` is an **`@import` manifest** — it contains no styles itself, only `@import` calls to 10 sub-files in the same `css/` directory.
-- Sub-files and their REGION coverage:
-
-| File                   | Region                                              |
-| ---------------------- | --------------------------------------------------- |
-| `base.css`             | CSS vars · reset · body · canvas                    |
-| `overlays.css`         | Interaction prompts · Pause screen · Admin console  |
-| `shop.css`             | Shop modal · Achievement gallery                    |
-| `hud.css`              | Achievements toast · Boss HP bar · Skill bar        |
-| `menu.css`             | Main menu overlay · panels · transitions            |
-| `character-select.css` | Victory screen · Character cards · Flip card system |
-| `tutorial.css`         | Tutorial overlay                                    |
-| `mobile.css`           | Mobile controls · touch · haptic                    |
-| `ux.css`               | UX patches · high score · skill tooltips            |
-| `loading.css`          | Loading screen · extracted inline styles            |
-
-- `index.html` references `css/main.css` via a single `<link>` tag — no per-module `<link>` tags.
-- CSS custom properties (`--font-*`, `--dur-*`, `--ease-*`) are defined in `base.css` and consumed by all subsequent files; **load order of `@import` statements in `main.css` is a hard contract**.
 
 ---
 
