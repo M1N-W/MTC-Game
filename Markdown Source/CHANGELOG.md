@@ -4,6 +4,37 @@
 
 ---
 
+## v3.41.10 — UI: Start Modal, Carousel Theme System & CSS Refactor
+*Released: March 27, 2026*
+
+### ✨ UI/UX Enhancements
+- **Start Mission Modal** (`js/menu.js`, `css/main.css`):
+  - Added `_openStartModal()` / `_closeStartModal()` — START MISSION button now opens a sub-panel before launching the game.
+  - Two choices in modal: **START GAME** → `startGame()` and **TUTORIAL MODE** → `TutorialSystem.reset()` + `startGame()`.
+  - Escape key closes the modal when overlay is visible.
+  - `window._openStartModal`, `window._closeStartModal`, `window._startModalPlay`, `window._startModalTutorial` all exported to `window.*` for `index.html` `onclick` compatibility.
+- **Per-Theme Carousel Selectors** (`css/main.css`):
+  - New `#overlay.theme-{kao|poom|auto|pat}` CSS classes applied dynamically via `_updateCarousel()` in `menu.js`.
+  - Per-theme hover styles for `.char-nav-btn`, active state for `.char-dot`, accent colour on `.char-card.selected`, `.card-back-header`, `.back-skill-row .tt-key`, and `.char-flip-hint`.
+- **CSS Code Reformat** (`css/main.css`):
+  - Entire stylesheet reformatted from 4-space to 2-space indentation; single quotes → double quotes (Prettier pass).
+  - No visual changes — functional parity confirmed.
+- **JS Code Reformat** (`js/menu.js`):
+  - Entire file reformatted to 2-space indentation and double quotes (Prettier pass).
+  - Skill tooltip section replaced with comment (`disabled — skills now live on card back face`).
+
+### Files touched
+```
+✅ MODIFIED: css/main.css (Prettier reformat + Start Modal styles + theme selectors)
+✅ MODIFIED: js/menu.js (Prettier reformat + Start Modal JS logic)
+✅ MODIFIED: sw.js (v3.41.10)
+✅ MODIFIED: index.html (v3.41.10)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.10)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.9 — Audit: Codebase Integrity, Bug Fixes & Architecture Documentation
 *Released: March 27, 2026*
 
