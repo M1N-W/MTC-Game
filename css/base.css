@@ -1,0 +1,354 @@
+/* ════════════════════════════════════════════════════════════════
+ * js/main.css
+ * ════════════════════════════════════════════════════════════════
+ * MTC The Game — Master Stylesheet (4583 lines)
+ * Extracted from index.html. All UI styling lives here.
+ *
+ * Stack: Pure CSS3 — no preprocessor, no framework.
+ * Fonts: Inter · Orbitron · Bebas Neue · Rajdhani (Google Fonts @import L.7)
+ *
+ * JS integration points (classes toggled at runtime):
+ *  .boss-hp-fill[data-phase]     — BossRenderer / ManopBoss phase colors
+ *  .hud-bottom[data-char]        — setupCharacterHUD() in ui.js
+ *  .skill-icon .cd-arc-overlay   — _setCooldownVisual() injected SVG
+ *  .skill-icon .lock-overlay     — setLockOverlay() injected div
+ *  #admin-console.active         — AdminSystem toggle
+ *  #pause-screen.active          — game.js pause toggle
+ *  .char-card.selected           — menu.js character select
+ *
+ * ── TABLE OF CONTENTS ────────────────────────────────────────
+ *  Ctrl+G → line number | Ctrl+F → selector or region name
+ *
+ *  L.7    BASE                    Reset · body · canvas · layout (~224 lines)
+ *
+ *  L.228  INTERACTION PROMPTS     Database modal · Admin entry · Shop entry (~109 lines)
+ *
+ *  L.341  PAUSE SCREEN            Resume overlay · corner brackets · status badge
+ *           L.424  corner brackets
+ *           L.458  status badge
+ *           L.472  gold divider
+ *           L.552  pause indicator (top bar)              (~231 lines)
+ *
+ *  L.576  ADMIN CONSOLE           CRT overlay · terminal input · output log
+ *           L.1035 achievement gallery modal (sub-modal)  (~330 lines)
+ *
+ *  L.910  SHOP MODAL              Item grid · purchase buttons · char badges
+ *           L.1398 char-specific item badge
+ *           L.1420 active buff badge                      (~543 lines)
+ *
+ *  L.1457 ACHIEVEMENTS HUD        Toast notification strip (top-right) (~48 lines)
+ *
+ *  L.1509 BOSS HUD                HP bar · phase colors · speech bubbles
+ *           L.1553 HP bar container
+ *           L.1612 phase color states  ← data-phase attr, must match BossBase._phase
+ *           L.1671 KruFirst speech bubble
+ *           L.1742 KruManop speech bubble                 (~291 lines)
+ *  ⚠️  Phase color selectors keyed to BossBase._phase string values —
+ *      if phase names change in JS, update selectors here too.
+ *
+ *  L.1804 SKILL BAR               .hud-bottom · icons · char themes · cooldown arc
+ *           L.1822 character HUD themes  (.hud-bottom[data-char="kao/auto/poom/pat"])
+ *           L.1851 character name label
+ *           L.1894 skill icon base
+ *           L.1937 active/ready state
+ *           L.1953 cooldown arc system
+ *           L.2093 passive skill legacy IDs
+ *           L.2105 Wanchai Stand ACTIVE state (crimson throb)
+ *           L.2166 charge badge (Kao teleport stacks)
+ *           L.2180 CD arc overlay    ← injected SVG by _setCooldownVisual()
+ *           L.2190 CD timer text     ← injected div by _setCooldownVisual()
+ *           L.2206 lock overlay      ← injected div by setLockOverlay()
+ *                                                         (~417 lines)
+ *
+ *  L.2225 MAIN MENU OVERLAY       Title · character panels · transitions (~469 lines)
+ *
+ *  L.2698 VICTORY SCREEN          Cinematic overlay · starfield · rank badge
+ *           L.2784 rank badge
+ *           L.2803 MISSION COMPLETE title
+ *           L.2872 stats grid
+ *           L.2995 play again button                      (~367 lines)
+ *
+ *  L.3069 CHARACTER SELECT        Cards · stat bars · per-char themes · portrait float
+ *           L.3448 AUTO theme block
+ *           L.3552 portrait idle float (selected card)
+ *           L.3587 per-char avatar background gradients   (~544 lines)
+ *
+ *  L.3618 TUTORIAL OVERLAY        Step panels · spotlight cutout · progress dots (~369 lines)
+ *
+ *  L.3992 MOBILE UI               Touch controls · D-pad · action buttons
+ *           L.4008 show controls on touch devices
+ *           L.4118 admin console mobile button            (~136 lines)
+ *
+ *  L.4133 UX PATCHES              Overlay fade · high score · button states (~141 lines)
+ *
+ *  L.4279 SKILL TOOLTIPS          Preview popup cards on skill icon hover (~126 lines)
+ *
+ *  L.4410 LOADING SCREEN          Progress bar · spinner · reduced-motion (~173 lines)
+ *
+ * ════════════════════════════════════════════════════════════════ */
+
+/* ======================================================================== */
+/* ======== REGION: BASE — Reset · Fonts · Body · Canvas · Layout ========= */
+/* ======================================================================== */
+/* MTC The Game — Main Stylesheet */
+/* Extracted from index.html */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@700;900&family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap");
+
+:root {
+  /* ── UIUX SMOOTH PASS: Motion Tokens ──────────────────────────────── */
+  /* Tactical: Snappy entry, sharp stop */
+  --ease-tactical: cubic-bezier(0.19, 1, 0.22, 1);
+  /* Organic: Smooth, handmade feel */
+  --ease-organic: cubic-bezier(0.4, 0, 0.2, 1);
+  /* In-out: Balanced flow */
+  --ease-flow: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --dur-fast: 140ms;
+  --dur-med: 280ms;
+  --dur-slow: 450ms;
+
+  /* Spacing & Typography (for visual consistency) */
+  --ls-tactical: 2px;
+  --ls-title: 6px;
+  --ls-header: 4px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  font-family: "Inter", sans-serif;
+  color: white;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  cursor: crosshair;
+}
+
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 15px;
+  z-index: 10;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.player-card {
+  display: flex;
+  gap: 12px;
+  background: rgba(8, 4, 18, 0.92);
+  padding: 10px 15px;
+  border-radius: 2px;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(250, 204, 21, 0.08);
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+
+  #player-avatar {
+    width: 34px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: 2px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8));
+  }
+
+  #hud-portrait-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.status-bars {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 150px;
+}
+
+.hud-labels {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.bar-wrap {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  margin: 3px 0;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.1s linear;
+}
+
+.hp-fill {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.en-fill {
+  background: linear-gradient(90deg, #facc15, #f59e0b);
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
+}
+
+.level-info {
+  margin-top: 8px;
+}
+
+.level-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+#player-level {
+  font-weight: 700;
+  color: #facc15;
+  font-size: 12px;
+  background: rgba(250, 204, 21, 0.12);
+  padding: 2px 8px;
+  border-radius: 0;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  font-family: "Rajdhani", sans-serif;
+  letter-spacing: 1px;
+}
+
+.exp-bar-bg {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+#exp-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #facc15, #f97316);
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
+  transition: width 0.3s ease-out;
+}
+
+.stats-box {
+  text-align: right;
+  background: rgba(8, 4, 18, 0.92);
+  padding: 10px 15px;
+  border-radius: 2px;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  -webkit-clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+}
+
+.score-num {
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: 28px;
+  color: #facc15;
+  text-shadow: 0 0 18px rgba(250, 204, 21, 0.6);
+  letter-spacing: 2px;
+}
+
+.wave-badge {
+  background: linear-gradient(
+    135deg,
+    rgba(250, 204, 21, 0.15),
+    rgba(249, 115, 22, 0.15)
+  );
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  padding: 3px 10px;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: "Rajdhani", sans-serif;
+  letter-spacing: 2px;
+  margin-top: 5px;
+  display: inline-block;
+  color: #facc15;
+  -webkit-clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+  clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+}
+
+.weapon-indicator {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(8, 4, 18, 0.94);
+  padding: 10px 22px;
+  border-radius: 2px;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  box-shadow:
+    0 0 20px rgba(250, 180, 20, 0.2),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+  font-size: 16px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 15;
+  -webkit-clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.weapon-indicator--hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
+  pointer-events: none;
+}
+
+.weapon-name {
+  color: #facc15;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: 18px;
+}
+
+.weapon-hint {
+  font-size: 10px;
+  color: rgba(250, 204, 21, 0.4);
+  margin-top: 3px;
+  text-align: center;
+  letter-spacing: 1px;
+  font-family: "Rajdhani", sans-serif;
+}
+
+/* ------ END REGION: BASE — Reset · Fonts · Body · Canvas · Layout ------- */
+/* ------------------------------------------------------------------------ */
+

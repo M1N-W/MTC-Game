@@ -1,0 +1,607 @@
+/* ======================================================================== */
+/* ======== REGION: MAIN MENU OVERLAY — Menu panels · Transitions ========= */
+/* ======================================================================== */
+/* Overlay / Menu */
+#overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.07) 4px
+    ),
+    repeating-linear-gradient(
+      60deg,
+      transparent,
+      transparent 30px,
+      rgba(250, 204, 21, 0.018) 30px,
+      rgba(250, 204, 21, 0.018) 31px
+    ),
+    repeating-linear-gradient(
+      -60deg,
+      transparent,
+      transparent 30px,
+      rgba(250, 204, 21, 0.018) 30px,
+      rgba(250, 204, 21, 0.018) 31px
+    ),
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(32, 14, 4, 0.97) 0%,
+      rgba(9, 5, 20, 0.99) 55%,
+      rgba(4, 2, 12, 1) 100%
+    );
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  z-index: 100;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 0;
+  transition: background 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Character theme backgrounds for #overlay ── */
+#overlay.theme-kao {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.07) 4px
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      rgba(60, 40, 4, 0.95) 0%,
+      rgba(30, 20, 4, 0.97) 35%,
+      rgba(4, 2, 12, 1) 80%
+    );
+}
+
+#overlay.theme-poom {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.07) 4px
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      rgba(4, 35, 14, 0.95) 0%,
+      rgba(3, 20, 10, 0.97) 35%,
+      rgba(4, 2, 12, 1) 80%
+    );
+}
+
+#overlay.theme-auto {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.07) 4px
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      rgba(50, 8, 8, 0.96) 0%,
+      rgba(28, 4, 4, 0.97) 35%,
+      rgba(4, 2, 12, 1) 80%
+    );
+}
+
+#overlay.theme-pat {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.07) 4px
+    ),
+    radial-gradient(
+      ellipse at 50% 30%,
+      rgba(4, 20, 50, 0.96) 0%,
+      rgba(3, 12, 30, 0.97) 35%,
+      rgba(4, 2, 12, 1) 80%
+    );
+}
+
+/* Animated gold sweep bar at top of overlay */
+#overlay::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #f97316 20%,
+    #facc15 50%,
+    #f97316 80%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: overlayTopSweep 3.5s linear infinite;
+  z-index: 200;
+  pointer-events: none;
+}
+
+@keyframes overlayTopSweep {
+  0% {
+    background-position: 220% 0;
+  }
+
+  100% {
+    background-position: -220% 0;
+  }
+}
+
+.menu-container {
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(36, 15, 4, 0.99) 0%,
+    rgba(10, 5, 22, 0.99) 100%
+  );
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  box-shadow:
+    0 0 0 1px rgba(250, 204, 21, 0.05) inset,
+    0 0 120px rgba(250, 180, 20, 0.12),
+    0 0 50px rgba(249, 115, 22, 0.05) inset,
+    0 32px 80px rgba(0, 0, 0, 0.95);
+  border-radius: 4px;
+  padding: 44px 40px;
+  max-width: 940px;
+  width: 92%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+  flex-shrink: 0;
+  position: relative;
+  -webkit-clip-path: polygon(16px 0%, 100% 0%, calc(100% - 16px) 100%, 0% 100%);
+  clip-path: polygon(16px 0%, 100% 0%, calc(100% - 16px) 100%, 0% 100%);
+  animation: menuContainerIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* scanline texture */
+  background-image:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(36, 15, 4, 0.99) 0%,
+      rgba(10, 5, 22, 0.99) 100%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.07) 4px
+    );
+  background-blend-mode: normal;
+}
+
+@keyframes menuContainerIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Animated top accent line */
+.menu-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(250, 204, 21, 0.55) 30%,
+    rgba(249, 115, 22, 0.85) 50%,
+    rgba(250, 204, 21, 0.55) 70%,
+    transparent
+  );
+  animation: menuTopLine 3.2s ease-in-out infinite;
+  width: auto;
+  border: none;
+}
+
+@keyframes menuTopLine {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Bottom-right gold bracket */
+.menu-container::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid #facc15;
+  border-right: 2px solid #facc15;
+}
+
+.title {
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: clamp(42px, 6vw, 72px);
+  font-weight: 900;
+  background: linear-gradient(
+    135deg,
+    #fff 0%,
+    #facc15 35%,
+    #f97316 60%,
+    #facc15 80%,
+    #fff 100%
+  );
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+  text-align: center;
+  letter-spacing: 8px;
+  animation:
+    goldShimmerMenu 4s linear infinite,
+    titleFlicker 9s ease-in-out infinite;
+  filter: drop-shadow(0 0 38px rgba(250, 180, 20, 0.58))
+    drop-shadow(0 5px 14px rgba(0, 0, 0, 0.95));
+}
+
+@keyframes titleFlicker {
+  0%,
+  92%,
+  94%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+
+  93% {
+    opacity: 0.88;
+  }
+
+  95% {
+    opacity: 0.94;
+  }
+}
+
+@keyframes goldShimmerMenu {
+  0% {
+    background-position: 0% center;
+  }
+
+  100% {
+    background-position: 300% center;
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.5));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 32px rgba(249, 115, 22, 0.8));
+  }
+}
+
+.subtitle {
+  font-size: 11px;
+  color: rgba(250, 204, 21, 0.5);
+  margin-bottom: 28px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.version-badge {
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  padding: 3px 10px;
+  border-radius: 2px;
+  font-size: 11px;
+  margin-left: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+#mission-brief {
+  margin-bottom: 20px;
+  color: rgba(250, 204, 21, 0.8);
+  font-style: italic;
+  font-size: 13px;
+  text-align: center;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+#mission-brief::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(250, 204, 21, 0.55),
+    transparent
+  );
+  animation: missionLine 2s ease forwards 0.4s;
+}
+
+@keyframes missionLine {
+  to {
+    width: 240px;
+  }
+}
+
+#report-card {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(239, 68, 68, 0.016) 3px,
+      rgba(239, 68, 68, 0.016) 4px
+    ),
+    linear-gradient(
+      160deg,
+      rgba(100, 10, 10, 0.22) 0%,
+      rgba(50, 5, 5, 0.14) 45%,
+      rgba(10, 4, 18, 0.11) 100%
+    );
+  border: 1px solid rgba(239, 68, 68, 0.44);
+  border-top: 2px solid rgba(239, 68, 68, 0.75);
+  padding: 28px 24px;
+  border-radius: 0;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 24px;
+  box-shadow:
+    0 0 70px rgba(239, 68, 68, 0.22),
+    0 0 24px rgba(239, 68, 68, 0.12) inset,
+    0 10px 40px rgba(0, 0, 0, 0.75);
+  display: none;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+  animation: reportCardIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes reportCardIn {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(16px);
+    filter: brightness(2);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: brightness(1);
+  }
+}
+
+.report-header {
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  color: #fca5a5;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  filter: drop-shadow(0 0 24px rgba(239, 68, 68, 0.7));
+  animation: reportGlitch 7s ease-in-out infinite;
+}
+
+@keyframes reportGlitch {
+  0%,
+  86%,
+  88%,
+  90%,
+  100% {
+    transform: none;
+    text-shadow: none;
+  }
+
+  87% {
+    transform: translateX(3px);
+    text-shadow:
+      -4px 0 rgba(0, 255, 255, 0.55),
+      4px 0 rgba(255, 0, 0, 0.55);
+  }
+
+  89% {
+    transform: translateX(-2px);
+    text-shadow: 2px 0 rgba(0, 255, 255, 0.4);
+  }
+}
+
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  background: rgba(8, 4, 18, 0.7);
+  padding: 14px 10px;
+  border-radius: 0;
+  border: 1px solid rgba(250, 204, 21, 0.12);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  clip-path: polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%);
+}
+
+.stat-label {
+  font-size: 10px;
+  color: rgba(250, 204, 21, 0.5);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  color: #facc15;
+  font-weight: 700;
+  letter-spacing: 2px;
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.4));
+}
+
+#report-text {
+  display: none;
+}
+
+.btn {
+  background: linear-gradient(135deg, #facc15 0%, #f97316 100%);
+  color: #0a0a0a;
+  border: none;
+  padding: 15px 44px;
+  font-size: 14px;
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-weight: 700;
+  border-radius: 0;
+  cursor: pointer;
+  transition:
+    filter var(--dur-fast) var(--ease-organic),
+    transform var(--dur-fast) var(--ease-tactical),
+    box-shadow var(--dur-med) var(--ease-organic);
+  pointer-events: auto;
+  margin: 6px;
+  letter-spacing: 3px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  text-transform: uppercase;
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+  animation: btnPulse 4.5s var(--ease-organic) infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Diagonal sweep shine */
+.btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -85%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.24),
+    transparent
+  );
+  transform: skewX(-14deg);
+  animation: btnSweep 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes btnPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px rgba(250, 180, 20, 0.2),
+      0 6px 20px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 32px rgba(250, 180, 20, 0.38),
+      0 6px 24px rgba(249, 115, 22, 0.28);
+  }
+}
+
+@keyframes btnSweep {
+  0%,
+  55% {
+    left: -85%;
+  }
+
+  80% {
+    left: 130%;
+  }
+
+  100% {
+    left: 130%;
+  }
+}
+
+.btn:hover {
+  transform: scale(1.06) translateY(-3px);
+  filter: brightness(1.18) drop-shadow(0 0 22px rgba(250, 204, 21, 0.8));
+  animation: none;
+  box-shadow:
+    0 0 56px rgba(250, 180, 20, 0.58),
+    0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+.btn:active {
+  transform: scale(0.97) translateY(1px);
+  filter: brightness(0.92);
+  animation: none;
+}
+
+#ai-loading {
+  font-size: 14px;
+  color: #60a5fa;
+  margin-top: 15px;
+  display: none;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ------ END REGION: MAIN MENU OVERLAY — Menu panels · Transitions ------- */
+/* ------------------------------------------------------------------------ */

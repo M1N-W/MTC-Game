@@ -4,6 +4,34 @@
 
 ---
 
+## v3.41.9 — Architecture: CSS Modularization & UI Systems Refactor
+*Released: March 27, 2026*
+
+### ✨ UI/UX — Character Select & Flow
+- **Flip-Card Feature**: Transformed the character carousel cards into interactive flip-cards. Tapping a card now flips it to reveal the character's skill set on the back, replacing the separate tooltip overlays.
+- **Unified Start Modal**: Replaced raw start/tutorial buttons with a new "Start Modal" interceptor. Choosing "Start Mission" now opens a modal confirming the selected operator (e.g., KAO, POOM) and offering choices between "Start Game", "Tutorial Mode", or "Cancel".
+
+### 🛠️ Technical Architecture & Refactoring
+- **CSS Modularization**: Executed a massive refactor of the monolithic `main.css`. `main.css` is now strictly an `@import` manifest loading 10 modular, domain-specific CSS files (e.g., `base.css`, `hud.css`, `character-select.css`).
+- **Documentation Overhaul**: 
+  - Synchronized `PROJECT_OVERVIEW.md` with the new CSS architecture manifest.
+  - Significantly expanded `mtc-game-conventions.md` and `mtc-rendering.md` (now over 27 sections) detailing rigid rendering invariants, UI Manager decomposition patterns, `OffscreenCanvas` caching strategies, and MapSystem pipelines.
+
+### Files touched
+```text
+✅ MODIFIED: index.html (flip-cards + start modal structure)
+✅ MODIFIED: css/main.css (transformed to `@import` manifest)
+✅ ADDED: css/*.css (10 new modular subset files)
+✅ MODIFIED: js/menu.js (start modal orchestrator + flip logic)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md 
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
+✅ MODIFIED: sw.js (v3.41.9)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.8 — UI: Character Selection Carousel Redesign
 *Released: March 26, 2026*
 

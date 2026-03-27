@@ -1,0 +1,1505 @@
+/* ======================================================================== */
+/* ===== REGION: VICTORY SCREEN — Epic cinematic · Stats · Rank badge ===== */
+/* ======================================================================== */
+/* ═══════════════════════════════════════════════════
+           🏆 VICTORY SCREEN — EPIC CINEMATIC
+        ═══════════════════════════════════════════════════ */
+
+#victory-screen {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 101;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    rgba(10, 4, 30, 0.97) 0%,
+    rgba(4, 2, 18, 0.99) 100%
+  );
+}
+
+/* ── Starfield canvas ── */
+#victory-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ── Gold light sweep across screen ── */
+#victory-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 220deg at 50% 35%,
+    transparent 0deg,
+    rgba(250, 204, 21, 0.04) 15deg,
+    transparent 30deg
+  );
+  animation: victoryRotate 12s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes victoryRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Bottom floor glow ── */
+#victory-screen::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #facc15,
+    #f97316,
+    #facc15,
+    transparent
+  );
+  box-shadow: 0 0 60px 20px rgba(250, 180, 20, 0.18);
+  animation: floorPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes floorPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Content wrapper ── */
+.victory-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* ── Rank badge ── */
+.victory-rank-badge {
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: 11px;
+  letter-spacing: 7px;
+  color: #facc15;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-10px);
+  animation: victoryFadeDown 0.5s ease forwards 0.3s;
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.8);
+  margin-bottom: 14px;
+  padding: 5px 22px;
+  border: 1px solid rgba(250, 204, 21, 0.38);
+  background: rgba(250, 204, 21, 0.055);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  box-shadow: 0 0 24px rgba(250, 180, 20, 0.16);
+}
+
+/* ── MISSION COMPLETE title ── */
+.victory-title {
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: clamp(52px, 8vw, 96px);
+  letter-spacing: 8px;
+  line-height: 1;
+  margin-bottom: 6px;
+  opacity: 0;
+  animation: victoryTitleIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.5s;
+  background: linear-gradient(
+    135deg,
+    #fff 0%,
+    #facc15 30%,
+    #f97316 55%,
+    #facc15 75%,
+    #fff 100%
+  );
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation:
+    victoryTitleIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.5s,
+    goldShimmer 3s linear infinite 1.4s;
+  filter: drop-shadow(0 0 30px rgba(250, 180, 20, 0.5));
+}
+
+@keyframes victoryTitleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(20px);
+    letter-spacing: 2px;
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    letter-spacing: 8px;
+  }
+}
+
+@keyframes goldShimmer {
+  0% {
+    background-position: 0% center;
+  }
+
+  100% {
+    background-position: 300% center;
+  }
+}
+
+/* ── Divider line ── */
+.victory-divider {
+  width: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #facc15 30%,
+    #f97316 50%,
+    #facc15 70%,
+    transparent
+  );
+  box-shadow: 0 0 12px rgba(250, 180, 20, 0.5);
+  animation: dividerExpand 0.6s ease forwards 1.2s;
+  margin: 14px 0 30px;
+}
+
+@keyframes dividerExpand {
+  to {
+    width: min(480px, 80vw);
+  }
+}
+
+/* ── Stats grid ── */
+.victory-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+  width: min(600px, 88vw);
+}
+
+.victory-stat-item {
+  position: relative;
+  text-align: center;
+  padding: 22px 16px 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(250, 204, 21, 0.07) 0%,
+    rgba(15, 10, 40, 0.9) 100%
+  );
+  border: 1px solid rgba(250, 204, 21, 0.18);
+  border-radius: 4px;
+  opacity: 0;
+  transform: translateY(24px);
+  -webkit-clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  transition:
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+
+.victory-stat-item:hover {
+  border-color: rgba(250, 204, 21, 0.5);
+  box-shadow:
+    0 0 24px rgba(250, 180, 20, 0.15),
+    inset 0 0 24px rgba(250, 180, 20, 0.05);
+}
+
+/* Corner accent */
+.victory-stat-item::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid #facc15;
+  border-right: 2px solid #facc15;
+}
+
+.victory-stat-item::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 2px solid #facc15;
+  border-left: 2px solid #facc15;
+}
+
+/* staggered reveal */
+.victory-stat-item:nth-child(1) {
+  animation: statReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards 1.4s;
+}
+
+.victory-stat-item:nth-child(2) {
+  animation: statReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards 1.6s;
+}
+
+.victory-stat-item:nth-child(3) {
+  animation: statReveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards 1.8s;
+}
+
+@keyframes statReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.victory-stat-icon {
+  font-size: 22px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.victory-stat-label {
+  font-family: "Rajdhani", "Orbitron", sans-serif;
+  font-size: 10px;
+  color: rgba(250, 204, 21, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.victory-stat-value {
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: 36px;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
+  line-height: 1;
+}
+
+/* ── Achievements row ── */
+.victory-achievements {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: victoryFadeDown 0.5s ease forwards 2.1s;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: min(600px, 88vw);
+}
+
+.victory-ach-chip {
+  font-family: "Rajdhani", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 2px;
+  padding: 4px 10px;
+  background: rgba(250, 204, 21, 0.06);
+  text-transform: uppercase;
+}
+
+/* ── Play Again button ── */
+.victory-play-again {
+  position: relative;
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: 18px;
+  letter-spacing: 5px;
+  color: #0a0414;
+  background: linear-gradient(135deg, #facc15 0%, #f97316 100%);
+  border: none;
+  padding: 16px 52px;
+  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  animation:
+    victoryFadeDown 0.5s ease forwards 2.3s,
+    btnPulse 3s ease-in-out infinite 2.4s;
+  transition:
+    filter 0.2s,
+    transform 0.15s;
+  overflow: hidden;
+}
+
+.victory-play-again::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* Sweep shine */
+.victory-play-again::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -85%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  transform: skewX(-14deg);
+  animation: btnSweep 4.2s ease-in-out infinite 3s;
+  pointer-events: none;
+}
+
+.victory-play-again:hover {
+  filter: brightness(1.15) drop-shadow(0 0 18px rgba(250, 204, 21, 0.7));
+  transform: translateY(-2px);
+  animation: none;
+}
+
+.victory-play-again:hover::before {
+  opacity: 1;
+}
+
+.victory-play-again:active {
+  transform: translateY(1px);
+  filter: brightness(0.95);
+}
+
+/* ── Shared fade-down ── */
+@keyframes victoryFadeDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- END REGION: VICTORY SCREEN — Epic cinematic · Stats · Rank badge --- */
+/* ------------------------------------------------------------------------ */
+
+/* ======================================================================== */
+/* ====== REGION: CHARACTER SELECT — Cards · Stat bars · Char themes ====== */
+/* ======================================================================== */
+/* Character Selection */
+.char-select-section {
+  width: 100%;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.char-select-section h3 {
+  color: rgba(250, 204, 21, 0.65);
+  font-size: 11px;
+  text-align: center;
+  margin-bottom: 18px;
+  letter-spacing: 7px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-family: "Rajdhani", "Orbitron", sans-serif;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.char-select-section h3::before,
+.char-select-section h3::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(250, 204, 21, 0.5),
+    transparent
+  );
+}
+
+.char-select-section h3::before {
+  width: 220px;
+  opacity: 0.35;
+}
+
+.char-select-section h3::after {
+  width: 80px;
+  opacity: 1;
+}
+
+/* ── Carousel row: nav button + single card display + nav button ── */
+.char-carousel-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0; /* buttons use negative margin to sit flush beside card */
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ── Center column: card + dots stacked vertically ── */
+.char-center-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  /* side margins create the visual gap between buttons and card */
+  margin: 0 12px;
+}
+
+/* ── Nav buttons sit beside the card, vertically centered ── */
+/* dots are now outside .char-center-col so center-col height == card height only */
+.char-carousel-row > .char-nav-btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.char-cards {
+  /* Single-card display — only .selected child is shown */
+  display: block;
+  width: 300px;
+  flex-shrink: 0;
+  position: relative;
+  min-height: 360px;
+  margin: 0 auto; /* center within .char-center-col */
+  align-self: center; /* guard against flex cross-axis drift */
+}
+
+/* ── Carousel nav buttons ── */
+.char-nav-btn {
+  background: rgba(8, 4, 18, 0.85);
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  color: rgba(250, 204, 21, 0.75);
+  font-size: 22px;
+  width: 48px;
+  height: 48px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--dur-fast) var(--ease-tactical),
+    border-color var(--dur-fast) var(--ease-organic),
+    color var(--dur-fast) var(--ease-organic),
+    transform var(--dur-fast) var(--ease-tactical);
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  line-height: 1;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.char-nav-btn:hover {
+  background: rgba(250, 204, 21, 0.1);
+  border-color: rgba(250, 204, 21, 0.55);
+  color: #facc15;
+  transform: scale(1.08);
+}
+
+.char-nav-btn:active {
+  transform: scale(0.95);
+}
+
+/* Theme-match arrow colour for each char */
+#overlay.theme-poom .char-nav-btn:hover {
+  border-color: rgba(34, 197, 94, 0.55);
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.1);
+}
+#overlay.theme-auto .char-nav-btn:hover {
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+}
+#overlay.theme-pat .char-nav-btn:hover {
+  border-color: rgba(96, 165, 250, 0.55);
+  color: #93c5fd;
+  background: rgba(96, 165, 250, 0.1);
+}
+
+/* ── Dot indicators ── */
+.char-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.char-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition:
+    background 0.3s,
+    transform 0.3s,
+    border-color 0.3s;
+  cursor: pointer;
+}
+
+.char-dot.active {
+  background: rgba(250, 204, 21, 0.85);
+  border-color: #facc15;
+  transform: scale(1.25);
+}
+
+#overlay.theme-poom .char-dot.active {
+  background: rgba(74, 222, 128, 0.9);
+  border-color: #4ade80;
+}
+#overlay.theme-auto .char-dot.active {
+  background: rgba(252, 165, 165, 0.9);
+  border-color: #fca5a5;
+}
+#overlay.theme-pat .char-dot.active {
+  background: rgba(147, 197, 253, 0.9);
+  border-color: #93c5fd;
+}
+
+@media (max-width: 600px) {
+  .char-carousel-row {
+    gap: 8px;
+    max-width: 100%;
+  }
+  .char-cards {
+    width: min(280px, 72vw);
+  }
+  .char-nav-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+}
+
+.char-card {
+  background: linear-gradient(
+    170deg,
+    rgba(18, 9, 4, 0.98) 0%,
+    rgba(6, 5, 18, 0.98) 100%
+  );
+  border: 1px solid rgba(250, 204, 21, 0.1);
+  border-radius: 2px;
+  padding: 20px 16px 18px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    transform var(--dur-med) var(--ease-tactical),
+    border-color var(--dur-med) var(--ease-organic),
+    box-shadow var(--dur-med) var(--ease-organic),
+    background var(--dur-med) var(--ease-organic);
+  position: relative;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  overflow: hidden;
+}
+
+/* Bottom accent line */
+.char-card::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(250, 204, 21, 0.45),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.3s;
+  border: none;
+  width: auto;
+}
+
+.char-card:hover::before,
+.char-card.selected::before {
+  opacity: 1;
+}
+
+/* Top-left corner bracket */
+.char-card::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 10px;
+  height: 10px;
+  border-top: 1.5px solid rgba(250, 204, 21, 0.3);
+  border-left: 1.5px solid rgba(250, 204, 21, 0.3);
+  transition: all 0.28s;
+}
+
+.char-card:hover::after,
+.char-card.selected::after {
+  border-color: #facc15;
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Carousel: hide all cards; only .selected is visible ── */
+.char-card {
+  /* override: hidden by default in carousel */
+  display: none;
+}
+
+.char-card.selected {
+  display: block;
+  animation: cardSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.char-card[data-char="kao"]:hover {
+  border-color: rgba(250, 204, 21, 0.4) !important;
+  background: linear-gradient(
+    170deg,
+    rgba(30, 20, 5, 0.99) 0%,
+    rgba(12, 9, 28, 0.99) 100%
+  );
+  box-shadow:
+    0 16px 40px rgba(250, 180, 20, 0.22),
+    0 0 0 1px rgba(250, 204, 21, 0.14),
+    0 0 60px rgba(250, 204, 21, 0.06) inset;
+}
+
+.char-card[data-char="poom"]:hover {
+  border-color: rgba(34, 197, 94, 0.45) !important;
+  background: linear-gradient(
+    170deg,
+    rgba(5, 22, 10, 0.99) 0%,
+    rgba(5, 14, 22, 0.99) 100%
+  );
+  box-shadow:
+    0 16px 40px rgba(34, 197, 94, 0.2),
+    0 0 0 1px rgba(34, 197, 94, 0.12),
+    0 0 60px rgba(34, 197, 94, 0.06) inset;
+}
+
+.char-card.selected {
+  border-color: rgba(250, 204, 21, 0.45);
+  background: linear-gradient(
+    170deg,
+    rgba(36, 18, 4, 0.99) 0%,
+    rgba(12, 9, 32, 0.99) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(250, 204, 21, 0.08) inset,
+    0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Portrait Frame — tactical corner-bracket border ── */
+.char-portrait-frame {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto 14px;
+  padding: 5px;
+  --frame-color: rgba(250, 204, 21, 0.55);
+}
+.char-portrait-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-style: solid;
+  border-color: var(--frame-color);
+  border-width: 2px 0 0 2px;
+  pointer-events: none;
+  transition:
+    border-color 0.4s,
+    box-shadow 0.4s;
+}
+.char-portrait-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-style: solid;
+  border-color: var(--frame-color);
+  border-width: 0 2px 2px 0;
+  pointer-events: none;
+  transition:
+    border-color 0.4s,
+    box-shadow 0.4s;
+}
+/* Per-character frame tint */
+.char-card[data-char="kao"] .char-portrait-frame {
+  --frame-color: rgba(250, 204, 21, 0.65);
+}
+.char-card[data-char="poom"] .char-portrait-frame {
+  --frame-color: rgba(74, 222, 128, 0.65);
+}
+.char-card[data-char="auto"] .char-portrait-frame {
+  --frame-color: rgba(252, 165, 165, 0.65);
+}
+.char-card[data-char="pat"] .char-portrait-frame {
+  --frame-color: rgba(147, 197, 253, 0.65);
+}
+/* Brighter when selected */
+.char-card.selected[data-char="kao"] .char-portrait-frame {
+  --frame-color: rgba(250, 204, 21, 0.95);
+}
+.char-card.selected[data-char="poom"] .char-portrait-frame {
+  --frame-color: rgba(74, 222, 128, 0.95);
+}
+.char-card.selected[data-char="auto"] .char-portrait-frame {
+  --frame-color: rgba(252, 165, 165, 0.95);
+}
+.char-card.selected[data-char="pat"] .char-portrait-frame {
+  --frame-color: rgba(147, 197, 253, 0.95);
+}
+
+.char-card .char-avatar {
+  width: 100px;
+  height: 120px;
+  margin: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 3px;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.85));
+  border: 1px solid rgba(250, 204, 21, 0.08);
+  box-shadow: 0 0 22px rgba(0, 0, 0, 0.7) inset;
+  transition:
+    box-shadow var(--dur-med) var(--ease-organic),
+    filter var(--dur-med) var(--ease-organic),
+    transform var(--dur-med) var(--ease-tactical);
+  position: relative;
+  transform: translateY(0) scale(1);
+}
+
+.char-card:hover .char-avatar,
+.char-card.selected .char-avatar {
+  transform: translateY(-4px) scale(1.06);
+}
+
+/* Scanline overlay on avatar */
+.char-card .char-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.08) 3px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  border-radius: 3px;
+}
+
+.char-card:hover .char-avatar,
+.char-card.selected .char-avatar {
+  box-shadow:
+    0 0 0 1px rgba(250, 204, 21, 0.32),
+    0 0 28px rgba(250, 180, 20, 0.2) inset;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.85)) brightness(1.08);
+}
+
+.char-card .char-avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.char-card .char-name {
+  font-family: "Bebas Neue", "Orbitron", sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+.char-card .char-title {
+  font-size: 9px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.char-card[data-char="kao"] .char-title {
+  color: rgba(250, 204, 21, 0.6);
+}
+
+.char-card[data-char="poom"] .char-title {
+  color: rgba(34, 197, 94, 0.75);
+}
+
+.char-card .char-desc {
+  font-size: 11px;
+  color: rgba(203, 213, 225, 0.7);
+  line-height: 1.5;
+  margin-bottom: 14px;
+  min-height: 34px;
+}
+
+/* Stat Bars */
+.char-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.stat-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.stat-label {
+  font-size: 8.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  width: 52px;
+  text-align: left;
+  color: rgba(250, 204, 21, 0.55);
+  font-family: "Rajdhani", sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.stat-icon {
+  font-size: 9px;
+  line-height: 1;
+  filter: saturate(0.8);
+}
+
+.stat-val {
+  font-size: 8px;
+  font-family: "Rajdhani", "Orbitron", sans-serif;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.5px;
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.stat-bar-bg {
+  flex: 1;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+/* Segmented tick marks on the track */
+.stat-bar-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent calc(25% - 1px),
+    rgba(0, 0, 0, 0.45) calc(25% - 1px),
+    rgba(0, 0, 0, 0.45) 25%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+/* Stat bar width variations */
+.stat-bar-fill-20 {
+  width: 20%;
+}
+.stat-bar-fill-52 {
+  width: 52%;
+}
+.stat-bar-fill-59 {
+  width: 59%;
+}
+.stat-bar-fill-61 {
+  width: 61%;
+}
+.stat-bar-fill-72 {
+  width: 72%;
+}
+.stat-bar-fill-79 {
+  width: 79%;
+}
+.stat-bar-fill-83 {
+  width: 83%;
+}
+.stat-bar-fill-87 {
+  width: 87%;
+}
+.stat-bar-fill-96 {
+  width: 96%;
+}
+.stat-bar-fill-98 {
+  width: 98%;
+}
+.stat-bar-fill-100 {
+  width: 100%;
+}
+
+/* Shimmer sweep */
+.stat-bar-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -65%;
+  width: 48%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.42),
+    transparent
+  );
+  animation: statShimmer 2.6s ease-in-out infinite;
+}
+
+@keyframes statShimmer {
+  0% {
+    left: -65%;
+  }
+
+  100% {
+    left: 120%;
+  }
+}
+
+.char-card[data-char="kao"] .stat-bar-fill {
+  background: linear-gradient(90deg, #eab308, #facc15, #fde68a);
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
+}
+
+.char-card[data-char="poom"] .stat-bar-fill {
+  background: linear-gradient(90deg, #16a34a, #22c55e, #4ade80);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.char-card[data-char="auto"] .stat-bar-fill {
+  background: linear-gradient(90deg, #dc2626, #ef4444, #fb7185);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.55);
+}
+
+.char-card .char-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-family: "Rajdhani", sans-serif;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+}
+
+.char-card[data-char="kao"] .char-tag {
+  background: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  color: #facc15;
+}
+
+.char-card[data-char="poom"] .char-tag {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.38);
+  color: #4ade80;
+}
+
+/* ── AUTO — Thermodynamic Brawler ─────────────────────── */
+.char-card[data-char="auto"]:hover {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  background: linear-gradient(
+    170deg,
+    rgba(28, 6, 6, 0.99) 0%,
+    rgba(12, 4, 18, 0.99) 100%
+  );
+  box-shadow:
+    0 16px 40px rgba(220, 38, 38, 0.25),
+    0 0 0 1px rgba(239, 68, 68, 0.14),
+    0 0 60px rgba(239, 68, 68, 0.06) inset;
+}
+
+.char-card[data-char="auto"].selected {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: linear-gradient(
+    170deg,
+    rgba(30, 6, 6, 0.99) 0%,
+    rgba(12, 4, 18, 0.99) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.08) inset,
+    0 0 40px rgba(239, 68, 68, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.7);
+  animation: wanchaiGlow 1.6s ease-in-out infinite;
+}
+
+.char-card[data-char="auto"] .char-name {
+  color: #fecaca;
+}
+
+.char-card[data-char="auto"] .char-title {
+  color: rgba(251, 113, 133, 0.7);
+}
+
+.char-card[data-char="auto"] .char-desc {
+  color: rgba(252, 165, 165, 0.7);
+}
+
+.char-card[data-char="auto"] .char-tag {
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #fca5a5;
+}
+
+.char-card[data-char="auto"] .char-avatar {
+  filter: drop-shadow(0 0 12px rgba(220, 38, 38, 0.65));
+}
+
+.char-card[data-char="auto"].selected .char-avatar,
+.char-card[data-char="auto"]:hover .char-avatar {
+  filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.9)) brightness(1.1);
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.4),
+    0 0 28px rgba(239, 68, 68, 0.2) inset;
+}
+
+@keyframes wanchaiGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+  }
+
+  50% {
+    box-shadow:
+      0 0 28px rgba(220, 38, 38, 0.7),
+      0 0 50px rgba(249, 115, 22, 0.3);
+  }
+}
+
+.char-card[data-char="auto"].selected {
+  animation: wanchaiGlow 1.6s ease-in-out infinite;
+}
+
+/* Character glow animations */
+@keyframes kaoGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.2);
+  }
+
+  50% {
+    box-shadow:
+      0 0 28px rgba(250, 204, 21, 0.6),
+      0 0 50px rgba(249, 115, 22, 0.25);
+  }
+}
+
+@keyframes poomGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+  }
+
+  50% {
+    box-shadow:
+      0 0 28px rgba(34, 197, 94, 0.55),
+      0 0 50px rgba(74, 222, 128, 0.2);
+  }
+}
+
+.char-card[data-char="kao"].selected {
+  border-color: rgba(250, 204, 21, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(250, 204, 21, 0.1) inset,
+    0 0 40px rgba(250, 204, 21, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.7);
+  animation: kaoGlow 1.8s ease-in-out infinite;
+}
+
+.char-card[data-char="poom"].selected {
+  border-color: rgba(34, 197, 94, 0.55);
+  background: linear-gradient(
+    170deg,
+    rgba(5, 22, 10, 0.99) 0%,
+    rgba(5, 14, 22, 0.99) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.1) inset,
+    0 0 40px rgba(34, 197, 94, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.7);
+  animation: poomGlow 1.8s ease-in-out infinite;
+}
+
+.char-card[data-char="kao"].selected .char-avatar {
+  filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.9)) brightness(1.1);
+}
+
+.char-card[data-char="poom"].selected .char-avatar {
+  filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.85)) brightness(1.1);
+}
+
+/* ── Portrait idle float — selected card only ──────────────────────────────── */
+@keyframes portraitFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.char-card.selected .char-avatar {
+  animation: portraitFloat 2.8s ease-in-out infinite;
+}
+
+/* Freeze float on hover so it doesn't fight the card lift transform */
+.char-card:hover .char-avatar {
+  animation: none;
+}
+
+.char-cards.has-selection .char-card:not(.selected):hover {
+  filter: saturate(0.75) brightness(0.85);
+  transform: scale(1.01) translateY(-2px);
+}
+
+/* ── Per-character avatar background gradient ──────────────────────────────── */
+.char-card[data-char="kao"] .char-avatar {
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    rgba(30, 50, 90, 0.9) 0%,
+    rgba(8, 10, 24, 0.98) 75%
+  );
+}
+
+.char-card[data-char="poom"] .char-avatar {
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    rgba(5, 40, 22, 0.9) 0%,
+    rgba(4, 12, 20, 0.98) 75%
+  );
+}
+
+.char-card[data-char="auto"] .char-avatar {
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    rgba(50, 10, 10, 0.9) 0%,
+    rgba(12, 4, 8, 0.98) 75%
+  );
+}
+
+.char-select-hint {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: bold;
+  color: #10b981;
+  pointer-events: none;
+  display: none;
+}
+
+/* ---- END REGION: CHARACTER SELECT — Cards · Stat bars · Char themes ---- */
+
+/* ══════════════════════════════════════════════════════════════════
+   FLIP CARD SYSTEM (v2)
+   .char-card           — outer shell; perspective host; no clip/overflow
+   .char-card-inner     — clip-path + overflow host; no 3D transform
+   .char-card-face      — front / back faces; cross-fade via opacity+scale
+   .char-card.is-flipped → swap faces
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Remove clip from outer card — inner handles it */
+.char-card {
+  overflow: visible;
+  -webkit-clip-path: none;
+  clip-path: none;
+}
+
+.char-card-inner {
+  position: relative;
+  width: 100%;
+  -webkit-clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.char-card-face--front {
+  padding: 20px 16px 14px;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  transform-origin: center top;
+}
+
+.char-card-face--back {
+  position: absolute;
+  inset: 0;
+  padding: 16px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
+  transition: opacity 0.22s ease 0.12s, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) 0.12s;
+  transform-origin: center top;
+  background: linear-gradient(170deg, rgba(14, 6, 2, 0.99) 0%, rgba(4, 4, 18, 0.99) 100%);
+}
+
+.char-card.is-flipped .char-card-face--front {
+  opacity: 0;
+  transform: scale(0.93);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.char-card.is-flipped .char-card-face--back {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* ── Back face content ─────────────────────────────────── */
+.card-back-header {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(250, 204, 21, 0.9);
+  border-bottom: 1px solid rgba(250, 204, 21, 0.14);
+  padding-bottom: 7px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.card-back-skills {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.back-skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.back-skill-row .tt-key {
+  flex-shrink: 0;
+  min-width: 28px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  border-radius: 2px;
+  padding: 2px 3px;
+  text-align: center;
+  color: rgba(250, 204, 21, 0.82);
+  line-height: 1.5;
+}
+
+.back-skill-row .tt-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+
+.back-skill-row .tt-info .tt-name {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+}
+
+.back-skill-row .tt-info .tt-desc {
+  font-size: 8px;
+  color: rgba(190, 185, 210, 0.7);
+  line-height: 1.35;
+  margin-top: 1px;
+}
+
+/* ── Flip hint strip ───────────────────────────────────── */
+.char-flip-hint {
+  display: none;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(250, 204, 21, 0.38);
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(250, 204, 21, 0.07);
+  pointer-events: none;
+}
+
+.char-card.selected .char-flip-hint {
+  display: block;
+}
+
+/* ── Panel 2 themed glow — .char-select-section bg ────── */
+.char-select-section {
+  position: relative;
+}
+
+.char-select-section::before {
+  content: '';
+  position: absolute;
+  inset: -12px -20px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 0;
+  transition: background 0.5s ease, box-shadow 0.5s ease;
+}
+
+.char-select-section > * {
+  position: relative;
+  z-index: 1;
+}
+
+#overlay.theme-kao .char-select-section::before {
+  background: radial-gradient(ellipse at 50% 45%, rgba(200, 150, 8, 0.11) 0%, rgba(90, 55, 4, 0.05) 55%, transparent 80%);
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.05);
+}
+#overlay.theme-poom .char-select-section::before {
+  background: radial-gradient(ellipse at 50% 45%, rgba(34, 197, 94, 0.11) 0%, rgba(10, 55, 22, 0.05) 55%, transparent 80%);
+  box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.05);
+}
+#overlay.theme-auto .char-select-section::before {
+  background: radial-gradient(ellipse at 50% 45%, rgba(220, 38, 18, 0.13) 0%, rgba(80, 8, 4, 0.05) 55%, transparent 80%);
+  box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.05);
+}
+#overlay.theme-pat .char-select-section::before {
+  background: radial-gradient(ellipse at 50% 45%, rgba(60, 130, 230, 0.11) 0%, rgba(8, 25, 70, 0.05) 55%, transparent 80%);
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.05);
+}
+
+/* ── Selected card border per theme ───────────────────── */
+#overlay.theme-poom .char-card.selected {
+  border-color: rgba(74, 222, 128, 0.42);
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.16), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+#overlay.theme-auto .char-card.selected {
+  border-color: rgba(252, 165, 165, 0.42);
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.2), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+#overlay.theme-pat .char-card.selected {
+  border-color: rgba(147, 197, 253, 0.42);
+  box-shadow: 0 0 24px rgba(96, 165, 250, 0.16), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Back face themed header + key badges ──────────────── */
+#overlay.theme-poom .card-back-header {
+  color: rgba(74, 222, 128, 0.9);
+  border-bottom-color: rgba(74, 222, 128, 0.14);
+}
+#overlay.theme-poom .back-skill-row .tt-key {
+  background: rgba(74, 222, 128, 0.09);
+  border-color: rgba(74, 222, 128, 0.22);
+  color: rgba(74, 222, 128, 0.82);
+}
+#overlay.theme-auto .card-back-header {
+  color: rgba(252, 165, 165, 0.9);
+  border-bottom-color: rgba(252, 165, 165, 0.14);
+}
+#overlay.theme-auto .back-skill-row .tt-key {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.26);
+  color: rgba(252, 165, 165, 0.82);
+}
+#overlay.theme-pat .card-back-header {
+  color: rgba(147, 197, 253, 0.9);
+  border-bottom-color: rgba(147, 197, 253, 0.14);
+}
+#overlay.theme-pat .back-skill-row .tt-key {
+  background: rgba(96, 165, 250, 0.09);
+  border-color: rgba(96, 165, 250, 0.25);
+  color: rgba(147, 197, 253, 0.82);
+}
+
+/* ── Flip hint per theme ───────────────────────────────── */
+#overlay.theme-poom .char-flip-hint {
+  color: rgba(74, 222, 128, 0.4);
+  border-top-color: rgba(74, 222, 128, 0.08);
+}
+#overlay.theme-auto .char-flip-hint {
+  color: rgba(252, 165, 165, 0.4);
+  border-top-color: rgba(252, 165, 165, 0.08);
+}
+#overlay.theme-pat .char-flip-hint {
+  color: rgba(147, 197, 253, 0.4);
+  border-top-color: rgba(147, 197, 253, 0.08);
+}
+
+/* ---- END REGION: FLIP CARD SYSTEM ---- */
+/* --------------------------------------- */

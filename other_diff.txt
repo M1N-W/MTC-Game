@@ -1,0 +1,1653 @@
+diff --git a/index.html b/index.html
+index 1ad6c32..eb0ee09 100644
+--- a/index.html
++++ b/index.html
+@@ -353,335 +353,374 @@
+                         ontouchstart="event.preventDefault();_navigateChar(-1);"
+                         aria-label="Previous character">❮</button>
+ 
+-                    <div class="char-cards">
+-                        <div class="char-card selected" id="card-kao" data-char="kao" onclick="selectCharacter('kao')">
+-                            <div class="char-avatar" id="char-avatar-kao"></div>
+-                            <div class="char-name">KAO</div>
+-                            <div class="char-title">Tactical Ranged</div>
+-                            <div class="char-stats">
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-52"></div>
++                    <!-- Center column: card only — dots are below the row -->
++                    <div class="char-center-col">
++                        <div class="char-cards">
++                            <!-- ── KAO ── -->
++                            <div class="char-card selected" id="card-kao" data-char="kao"
++                                onclick="handleCardClick('kao')">
++                                <div class="char-card-inner">
++                                    <div class="char-card-face char-card-face--front">
++                                        <div class="char-portrait-frame">
++                                            <div class="char-avatar" id="char-avatar-kao"></div>
++                                        </div>
++                                        <div class="char-name">KAO</div>
++                                        <div class="char-title">Tactical Ranged</div>
++                                        <div class="char-stats">
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-52"></div>
++                                                </div>
++                                                <div class="stat-val">119</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-79"></div>
++                                                </div>
++                                                <div class="stat-val">118</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
++                                                </div>
++                                                <div class="stat-val">298</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
++                                                </div>
++                                                <div class="stat-val">900</div>
++                                            </div>
++                                        </div>
++                                        <div class="char-desc">Triple weapon master — blink strike, clone burst &amp;
++                                            dash-stealth.</div>
++                                        <div class="char-tag">Stealth Ops</div>
++                                        <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
+                                     </div>
+-                                    <div class="stat-val">119</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-79"></div>
+-                                    </div>
+-                                    <div class="stat-val">118</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+-                                    </div>
+-                                    <div class="stat-val">298</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+-                                    </div>
+-                                    <div class="stat-val">900</div>
+-                                </div>
+-                            </div>
+-                            <div class="char-desc">Precision tactician — triple weapon loadout, phantom blink strike
+-                                &amp;
+-                                clone decoy burst</div>
+-                            <div class="char-tag">Stealth Ops</div>
+-                        </div>
+-                        <div class="char-card" id="card-poom" data-char="poom" onclick="selectCharacter('poom')">
+-                            <div class="char-avatar" id="char-avatar-poom"></div>
+-                            <div class="char-name">POOM</div>
+-                            <div class="char-title">Naga Summoner</div>
+-                            <div class="char-stats">
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-72"></div>
+-                                    </div>
+-                                    <div class="stat-val">165</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-98"></div>
+-                                    </div>
+-                                    <div class="stat-val">148</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+-                                    </div>
+-                                    <div class="stat-val">298</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-83"></div>
++                                    <div class="char-card-face char-card-face--back">
++                                        <div class="card-back-header">🎓 KAO — SKILL SET</div>
++                                        <div class="card-back-skills">
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">Q</span>
++                                                <span class="tt-icon">⚡</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Teleport Charge</div>
++                                                    <div class="tt-desc">Blink to cursor (3 charges). In Stealth =
++                                                        Phantom Blink crit ×1.8</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">E</span>
++                                                <span class="tt-icon">👥</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Clone Orbit</div>
++                                                    <div class="tt-desc">2 orbiting clones mirror shots. E again to
++                                                        detonate early</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">DASH</span>
++                                                <span class="tt-icon">🌫️</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Dash-Stealth</div>
++                                                    <div class="tt-desc">Every dash triggers stealth — next shot is
++                                                        ambush crit</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">MAS</span>
++                                                <span class="tt-icon">🔫</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Weapon Mastery</div>
++                                                    <div class="tt-desc">Kill 5× with each weapon to unlock passive
++                                                        awakening</div>
++                                                </div>
++                                            </div>
++                                        </div>
++                                        <div class="char-flip-hint">✦ TAP TO FLIP BACK</div>
+                                     </div>
+-                                    <div class="stat-val">750</div>
+                                 </div>
+                             </div>
+-                            <div class="char-desc">Mystic summoner — Sticky Rice stacks, Naga serpent companion &amp;
+-                                Cosmic
+-                                Balance ritual</div>
+-                            <div class="char-tag">Mystic Force</div>
+-                        </div>
+-                        <div class="char-card" id="btn-auto" data-char="auto" onclick="selectCharacter('auto')">
+-                            <div class="char-avatar" id="char-avatar-auto"></div>
+-                            <div class="char-name">AUTO</div>
+-                            <div class="char-title">Thermodynamic Brawler</div>
+-                            <div class="char-stats">
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+-                                    </div>
+-                                    <div class="stat-val">230</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-100"></div>
+-                                    </div>
+-                                    <div class="stat-val">MAX</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-87"></div>
++
++                            <!-- ── POOM ── -->
++                            <div class="char-card" id="card-poom" data-char="poom" onclick="handleCardClick('poom')">
++                                <div class="char-card-inner">
++                                    <div class="char-card-face char-card-face--front">
++                                        <div class="char-portrait-frame">
++                                            <div class="char-avatar" id="char-avatar-poom"></div>
++                                        </div>
++                                        <div class="char-name">POOM</div>
++                                        <div class="char-title">Naga Summoner</div>
++                                        <div class="char-stats">
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-72"></div>
++                                                </div>
++                                                <div class="stat-val">165</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-98"></div>
++                                                </div>
++                                                <div class="stat-val">148</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
++                                                </div>
++                                                <div class="stat-val">298</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-83"></div>
++                                                </div>
++                                                <div class="stat-val">750</div>
++                                            </div>
++                                        </div>
++                                        <div class="char-desc">Mystic summoner — Naga shield, Garuda striker &amp;
++                                            Sticky ritual burst.</div>
++                                        <div class="char-tag">Mystic Force</div>
++                                        <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
+                                     </div>
+-                                    <div class="stat-val">260</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-20"></div>
++                                    <div class="char-card-face char-card-face--back">
++                                        <div class="card-back-header">🌾 POOM — SKILL SET</div>
++                                        <div class="card-back-skills">
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">R²</span>
++                                                <span class="tt-icon">🍚</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">กินข้าวนึ่ง</div>
++                                                    <div class="tt-desc">R-Click: กินข้าว → สะสม Sticky stack + regen HP
++                                                    </div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">Q</span>
++                                                <span class="tt-icon">🐍</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">อัญเชิญพญานาค</div>
++                                                    <div class="tt-desc">Summon Naga — absorbs 40% max HP as shield,
++                                                        unlocks Lv2</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">E</span>
++                                                <span class="tt-icon">🦅</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">อัญเชิญครุฑ</div>
++                                                    <div class="tt-desc">Summon Garuda — Naga+Garuda = Cosmic Balance
++                                                        (regen + ×1.2 dmg)</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">R</span>
++                                                <span class="tt-icon">🌾</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Ritual Burst</div>
++                                                    <div class="tt-desc">Detonate all Sticky stacks — damage scales with
++                                                        stacks consumed</div>
++                                                </div>
++                                            </div>
++                                        </div>
++                                        <div class="char-flip-hint">✦ TAP TO FLIP BACK</div>
+                                     </div>
+-                                    <div class="stat-val">MELEE</div>
+                                 </div>
+                             </div>
+-                            <div class="char-desc">Thermodynamic brawler — Heat Wave inferno, Wanchai Stand combat mode
+-                                &amp; melee dominance</div>
+-                            <div class="char-tag">Horsepower</div>
+-                        </div>
+-                        <div class="char-card" id="card-pat" data-char="pat" onclick="selectCharacter('pat')">
+-                            <div class="char-avatar" id="char-avatar-pat"></div>
+-                            <div class="char-name">PAT</div>
+-                            <div class="char-title">Samurai Ronin</div>
+-                            <div class="char-stats">
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-61"></div>
+-                                    </div>
+-                                    <div class="stat-val">140</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-59"></div>
+-                                    </div>
+-                                    <div class="stat-val">89</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-96"></div>
+-                                    </div>
+-                                    <div class="stat-val">285</div>
+-                                </div>
+-                                <div class="stat-bar">
+-                                    <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
+-                                    <div class="stat-bar-bg">
+-                                        <div class="stat-bar-fill stat-bar-fill-83"></div>
++
++                            <!-- ── AUTO ── -->
++                            <div class="char-card" id="btn-auto" data-char="auto" onclick="handleCardClick('auto')">
++                                <div class="char-card-inner">
++                                    <div class="char-card-face char-card-face--front">
++                                        <div class="char-portrait-frame">
++                                            <div class="char-avatar" id="char-avatar-auto"></div>
++                                        </div>
++                                        <div class="char-name">AUTO</div>
++                                        <div class="char-title">Thermodynamic Brawler</div>
++                                        <div class="char-stats">
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
++                                                </div>
++                                                <div class="stat-val">230</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-100"></div>
++                                                </div>
++                                                <div class="stat-val">MAX</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-87"></div>
++                                                </div>
++                                                <div class="stat-val">260</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-20"></div>
++                                                </div>
++                                                <div class="stat-val">MELEE</div>
++                                            </div>
++                                        </div>
++                                        <div class="char-desc">Heat Wave brawler — Wanchai Stand ORA rush &amp; melee
++                                            inferno.</div>
++                                        <div class="char-tag">Horsepower</div>
++                                        <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
+                                     </div>
+-                                    <div class="stat-val">750</div>
+-                                </div>
+-                            </div>
+-                            <div class="char-desc">Samurai ronin — Katana dual-mode slash &amp; melee, Zanzo Flash blink
+-                                &amp; Iaido cinematic kill</div>
+-                            <div class="char-tag">Blade Arts</div>
+-                        </div>
+-                        <!-- ── Skill Tooltips (1.4) ── -->
+-                        <div class="skill-tooltip" id="tooltip-kao" data-char="kao">
+-                            <div class="tooltip-header">🎓 KAO — SKILL SET</div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">Q</span>
+-                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="kao">⚡</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Teleport Charge</div>
+-                                    <div class="tt-desc">Blink to cursor (3 charges). Q during Stealth = Phantom Blink —
+-                                        crit ×1.8 window</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">E</span>
+-                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="kao">👥</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Clone Orbit</div>
+-                                    <div class="tt-desc">Spawn 2 orbiting clones that mirror your shots. Press E again
+-                                        to
+-                                        detonate early</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">DASH</span>
+-                                <span class="tt-icon">🌫️</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Dash-Stealth</div>
+-                                    <div class="tt-desc">Every dash triggers stealth — bullets pass through, next shot
+-                                        is
+-                                        ambush crit</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">MAS</span>
+-                                <span class="tt-icon" data-emoji-group="attack" data-emoji-key="default">🔫</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Weapon Mastery</div>
+-                                    <div class="tt-desc">Kill 5× with each weapon (Rifle/Sniper/Shotgun) to unlock
+-                                        passive
+-                                        awakening</div>
+-                                </div>
+-                            </div>
+-                        </div>
+-                        <div class="skill-tooltip" id="tooltip-poom" data-char="poom">
+-                            <div class="tooltip-header">🌾 POOM — SKILL SET</div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">R²</span>
+-                                <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="poom">🍚</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">กินข้าวนึ่ง</div>
+-                                    <div class="tt-desc">R-Click: กินข้าว → สะสม Sticky stack บนศัตรูที่ถูกยิง, regen HP
++                                    <div class="char-card-face char-card-face--back">
++                                        <div class="card-back-header">🔥 AUTO — SKILL SET</div>
++                                        <div class="card-back-skills">
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">R²</span>
++                                                <span class="tt-icon">👊</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Wanchai Stand</div>
++                                                    <div class="tt-desc">R-Click: Summon Stand — L-Click = ORA rush,
++                                                        Shift = Guard block</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">Q</span>
++                                                <span class="tt-icon">🌀</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Vacuum / Stand Pull</div>
++                                                    <div class="tt-desc">Suck all enemies in range. In Stand = Stand
++                                                        Pull + ignite (CD 10s)</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">E</span>
++                                                <span class="tt-icon">💥</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Charge Punch</div>
++                                                    <div class="tt-desc">In Stand: hold E to charge, release = super
++                                                        punch (cap 600 dmg)</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">HEAT</span>
++                                                <span class="tt-icon">🌡️</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Heat Tier System</div>
++                                                    <div class="tt-desc">COLD → WARM → HOT → OVERHEAT — higher tier =
++                                                        faster fire &amp; crit</div>
++                                                </div>
++                                            </div>
++                                        </div>
++                                        <div class="char-flip-hint">✦ TAP TO FLIP BACK</div>
+                                     </div>
+                                 </div>
+                             </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">Q</span>
+-                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="poom">🐍</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">อัญเชิญพญานาค</div>
+-                                    <div class="tt-desc">Summon Naga familiar — absorbs 40% max HP as shield, unlocks at
+-                                        Lv2
++
++                            <!-- ── PAT ── -->
++                            <div class="char-card" id="card-pat" data-char="pat" onclick="handleCardClick('pat')">
++                                <div class="char-card-inner">
++                                    <div class="char-card-face char-card-face--front">
++                                        <div class="char-portrait-frame">
++                                            <div class="char-avatar" id="char-avatar-pat"></div>
++                                        </div>
++                                        <div class="char-name">PAT</div>
++                                        <div class="char-title">Samurai Ronin</div>
++                                        <div class="char-stats">
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">❤️</span>HP</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-61"></div>
++                                                </div>
++                                                <div class="stat-val">140</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">⚔️</span>DMG</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-59"></div>
++                                                </div>
++                                                <div class="stat-val">89</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">💨</span>SPD</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-96"></div>
++                                                </div>
++                                                <div class="stat-val">285</div>
++                                            </div>
++                                            <div class="stat-bar">
++                                                <div class="stat-label"><span class="stat-icon">🎯</span>RANGE</div>
++                                                <div class="stat-bar-bg">
++                                                    <div class="stat-bar-fill stat-bar-fill-83"></div>
++                                                </div>
++                                                <div class="stat-val">750</div>
++                                            </div>
++                                        </div>
++                                        <div class="char-desc">Samurai ronin — Zanzo Flash blink, Blade Guard parry
++                                            &amp; Iaido cinematic kill.</div>
++                                        <div class="char-tag">Blade Arts</div>
++                                        <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
+                                     </div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">E</span>
+-                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="poom">🦅</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">อัญเชิญครุฑ</div>
+-                                    <div class="tt-desc">Summon Garuda — Naga+Garuda both active = Cosmic Balance (HP
+-                                        regen
+-                                        + ×1.2 dmg)</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">R</span>
+-                                <span class="tt-icon" data-emoji-group="r" data-emoji-key="poom">🌾</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Ritual Burst</div>
+-                                    <div class="tt-desc">Detonate Sticky stacks on all enemies — damage scales with
+-                                        stacks
+-                                        consumed</div>
+-                                </div>
+-                            </div>
+-                        </div>
+-                        <div class="skill-tooltip" id="tooltip-auto" data-char="auto">
+-                            <div class="tooltip-header">🔥 AUTO — SKILL SET</div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">R²</span>
+-                                <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="auto">👊</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Wanchai Stand</div>
+-                                    <div class="tt-desc">R-Click: Summon Stand — L-Click = ORA rush, Shift = Guard block
++                                    <div class="char-card-face char-card-face--back">
++                                        <div class="card-back-header">⚔️ PAT — SKILL SET</div>
++                                        <div class="card-back-skills">
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">R²</span>
++                                                <span class="tt-icon">🛡️</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Blade Guard</div>
++                                                    <div class="tt-desc">R-Click hold — speed ×0.6, reflect projectiles
++                                                        within 55px radius</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">Q</span>
++                                                <span class="tt-icon">🌪️</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Zanzo Flash</div>
++                                                    <div class="tt-desc">Blink to cursor + 4 afterimage trail. Land near
++                                                        enemy = ambush crit 1.5s</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">R</span>
++                                                <span class="tt-icon">🗡️</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Iaido Strike</div>
++                                                    <div class="tt-desc">3-phase kill — charge 0.6s → flash dash →
++                                                        TimeManager freeze + burst</div>
++                                                </div>
++                                            </div>
++                                            <div class="back-skill-row">
++                                                <span class="tt-key">AUTO</span>
++                                                <span class="tt-icon">🗡️</span>
++                                                <div class="tt-info">
++                                                    <div class="tt-name">Dual-Mode Katana</div>
++                                                    <div class="tt-desc">Auto-switch: Slash Wave (range) ↔ Melee Combo
++                                                        ×1.8 (close)</div>
++                                                </div>
++                                            </div>
++                                        </div>
++                                        <div class="char-flip-hint">✦ TAP TO FLIP BACK</div>
+                                     </div>
+                                 </div>
+                             </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">Q</span>
+-                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="auto">🌀</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Vacuum / Stand Pull</div>
+-                                    <div class="tt-desc">Suck all enemies in range. During Stand = Stand Pull + ignite
+-                                        (CD
+-                                        10s)</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">E</span>
+-                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="auto">💥</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Charge Punch / Detonation</div>
+-                                    <div class="tt-desc">During Stand: hold E to charge, release = super punch (cap 600
+-                                        dmg). Drains heat</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">HEAT</span>
+-                                <span class="tt-icon">🌡️</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Heat Tier System</div>
+-                                    <div class="tt-desc">COLD(slow) → WARM → HOT → OVERHEAT — higher tier = faster fire
+-                                        &amp; more crit</div>
+-                                </div>
+-                            </div>
+-                        </div>
+-                        <div class="skill-tooltip" id="tooltip-pat" data-char="pat">
+-                            <div class="tooltip-header">⚔️ PAT — SKILL SET</div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">R²</span>
+-                                <span class="tt-icon" data-emoji-group="skill1" data-emoji-key="pat">🛡️</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Blade Guard</div>
+-                                    <div class="tt-desc">R-Click hold — speed ×0.6, reflect enemy projectiles within
+-                                        55px
+-                                        radius back as friendly</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">Q</span>
+-                                <span class="tt-icon" data-emoji-group="q" data-emoji-key="pat">🌪️</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Zanzo Flash</div>
+-                                    <div class="tt-desc">Blink to cursor + 4 afterimage trail. Land within 120px of
+-                                        enemy =
+-                                        ambush crit window 1.5s</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">R</span>
+-                                <span class="tt-icon" data-emoji-group="e" data-emoji-key="pat">🗡️</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Iaido Strike</div>
+-                                    <div class="tt-desc">3-phase cinematic kill — charge 0.6s → flash dash → TimeManager
+-                                        freeze + blood burst</div>
+-                                </div>
+-                            </div>
+-                            <div class="tooltip-row">
+-                                <span class="tt-key">AUTO</span>
+-                                <span class="tt-icon">🗡️</span>
+-                                <div class="tt-info">
+-                                    <div class="tt-name">Dual-Mode Katana</div>
+-                                    <div class="tt-desc">Auto-switch: Slash Wave (range) ↔ Melee Combo 3-hit ×1.8
+-                                        (close).
+-                                        Iaido unlock = Ronin's Edge passive</div>
+-                                </div>
+-                            </div>
+-                        </div><!-- /.char-cards -->
++                            <!-- /.char-cards -->
++                        </div><!-- /.char-center-col -->
+ 
+                         <button class="char-nav-btn char-nav-next" id="char-nav-next" onclick="_navigateChar(1)"
+                             ontouchstart="event.preventDefault();_navigateChar(1);"
+                             aria-label="Next character">❯</button>
+                     </div><!-- /.char-carousel-row -->
+ 
+-                    <!-- ── Dot indicators ── -->
++                    <!-- ── Dot indicators (below carousel row, outside center column) ── -->
+                     <div class="char-dots" id="char-dots">
+                         <span class="char-dot active" data-index="0"></span>
+                         <span class="char-dot" data-index="1"></span>
+@@ -727,39 +766,59 @@
+                     <span id="hs-value" class="hs-value">— —</span>
+                 </div>
+ 
+-                <!-- Row 1: primary actions (Start · Achievements · Tutorial) -->
+-                <div class="btn-group-row btn-group-row--primary">
+-                    <button class="btn" id="start-btn" onclick="startGame(_selectedChar)"
+-                        ontouchstart="event.preventDefault(); startGame(_selectedChar);">
+-                        🎓 START MISSION
+-                    </button>
+-                    <button class="btn btn--achievements" onclick="AchievementGallery.open()"
+-                        ontouchstart="event.preventDefault(); AchievementGallery.open();">
+-                        🏆 ACHIEVEMENTS
+-                    </button>
+-                    <button class="btn btn--tutorial" id="tutorial-btn"
+-                        onclick="if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);"
+-                        ontouchstart="event.preventDefault(); if(window.TutorialSystem) TutorialSystem.reset(); startGame(_selectedChar);">
+-                        🎓 TUTORIAL
++                <!-- ── CTA row: START (full width) ── -->
++                <div class="btn-group-row btn-group-row--cta">
++                    <button class="btn btn--start" id="start-btn" onclick="_openStartModal()"
++                        ontouchstart="event.preventDefault(); _openStartModal();">
++                        ▶ &nbsp;START MISSION
+                     </button>
+                 </div>
+ 
+-                <!-- Row 2: Leaderboard — full width per sketch -->
++                <!-- ── Secondary row: Achievements + Leaderboard ── -->
+                 <div class="btn-group-row btn-group-row--secondary">
+-                    <button type="button" class="btn btn--leaderboard" id="btn-leaderboard"
++                    <button class="btn btn--secondary btn--achievements" onclick="AchievementGallery.open()"
++                        ontouchstart="event.preventDefault(); AchievementGallery.open();">
++                        🏆 &nbsp;ACHIEVEMENTS
++                    </button>
++                    <button type="button" class="btn btn--secondary btn--leaderboard" id="btn-leaderboard"
+                         onclick="if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();"
+                         ontouchstart="event.preventDefault(); if(window.MTCLeaderboardUI) MTCLeaderboardUI.open();">
+-                        🏆 LEADERBOARD
++                        📋 &nbsp;LEADERBOARD
+                     </button>
+                 </div>
+ 
+-                <!-- Row 3: Sign In / Log In — bottom of menu per sketch -->
++                <!-- ── Sign In / Log In — bottom of menu ── -->
+                 <div id="google-auth-row" class="google-auth-row">
+-                    <button type="button" id="btn-google-signin" class="btn-google">Google — ลงชื่อเข้า
+-                        Leaderboard</button>
++                    <button type="button" id="btn-google-signin" class="btn btn--signin">
++                        ⚡ &nbsp;SIGN IN / LOG IN
++                    </button>
+                     <span id="google-auth-status" class="google-auth-status" aria-live="polite"></span>
+                 </div>
++
+                 <div id="ai-loading">Initializing systems...</div>
++
++                <!-- ── START MODAL — game vs tutorial choice ── -->
++                <div id="start-modal" class="start-modal" aria-hidden="true" role="dialog"
++                    aria-label="Choose game mode">
++                    <div class="start-modal-backdrop" id="start-modal-backdrop" onclick="_closeStartModal()"></div>
++                    <div class="start-modal-panel">
++                        <div class="start-modal-eyebrow">— DEPLOY OPERATOR —</div>
++                        <div class="start-modal-char-name" id="start-modal-char-name">KAO</div>
++                        <button class="btn btn--start-modal-play" id="start-modal-play-btn" onclick="_startModalPlay()"
++                            ontouchstart="event.preventDefault(); _startModalPlay();">
++                            ▶ &nbsp;START GAME
++                        </button>
++                        <button class="btn btn--start-modal-tut" id="start-modal-tut-btn"
++                            onclick="_startModalTutorial()"
++                            ontouchstart="event.preventDefault(); _startModalTutorial();">
++                            🎓 &nbsp;TUTORIAL MODE
++                        </button>
++                        <button class="start-modal-cancel" id="start-modal-cancel" onclick="_closeStartModal()"
++                            ontouchstart="event.preventDefault(); _closeStartModal();">
++                            ✕ &nbsp;CANCEL
++                        </button>
++                    </div>
++                </div><!-- /#start-modal -->
+             </div>
+         </div>
+ 
+@@ -863,59 +922,60 @@
+ 
+             </div>
+         </div>
++    </div>
+ 
+-        <!-- Firebase (npm + esbuild → js/firebase-bundle.js); optional CONFIG_SECRETS.FIREBASE_CONFIG if loaded earlier -->
+-        <script src="js/firebase-bundle.js"></script>
+-        <script src="js/config.js"></script>
+-        <script src="js/utils.js"></script>
+-        <script src="js/systems/CloudSaveSystem.js"></script>
+-        <script src="js/systems/LeaderboardUI.js"></script>
+-        <script src="js/audio.js"></script>
+-        <script src="js/effects.js"></script>
+-        <script src="js/weapons.js"></script>
+-        <script src="js/map.js"></script>
+-        <script src="js/ui.js"></script>
+-        <script src="js/tutorial.js"></script>
+-
+-        <script src="js/entities/base.js"></script>
+-
+-        <!-- AI Systems — โหลดหลัง base.js, ก่อน enemy.js -->
+-        <script src="js/ai/UtilityAI.js"></script>
+-        <script src="js/ai/EnemyActions.js"></script>
+-        <script src="js/ai/PlayerPatternAnalyzer.js"></script>
+-        <script src="js/ai/SquadAI.js"></script>
+-
+-        <!-- NEW OOP PLAYER HIERARCHY -->
+-        <script src="js/entities/player/PlayerBase.js"></script>
+-        <script src="js/entities/player/KaoPlayer.js"></script>
+-        <script src="js/entities/player/AutoPlayer.js"></script>
+-        <script src="js/entities/player/PoomPlayer.js"></script>
+-        <script src="js/entities/player/PatPlayer.js"></script>
+-        <script src="js/entities/summons.js"></script>
+-        <script src="js/entities/enemy.js"></script>
+-        <script src="js/entities/boss/boss_attacks_shared.js"></script>
+-        <script src="js/entities/boss/boss_attacks_manop.js"></script>
+-        <script src="js/entities/boss/boss_attacks_first.js"></script>
+-        <script src="js/entities/boss/BossBase.js"></script>
+-        <script src="js/entities/boss/ManopBoss.js"></script>
+-        <script src="js/entities/boss/FirstBoss.js"></script>
+-
+-        <script src="js/input.js"></script>
+-
+-        <!-- Step 4: Rendering Decoupled -->
+-        <script src="js/rendering/PlayerRenderer.js"></script>
+-        <script src="js/rendering/BossRenderer.js"></script>
+-
+-        <!-- Extracted Systems -->
+-        <script src="js/systems/GameState.js"></script>
+-        <script src="js/systems/AdminSystem.js"></script>
+-        <script src="js/systems/ShopSystem.js"></script>
+-        <script src="js/systems/TimeManager.js"></script>
+-        <script src="js/systems/WaveManager.js"></script>
+-        <script src="js/systems/WorkerBridge.js"></script>
+-        <script src="js/game.js"></script>
+-        <script src="js/VersionManager.js"></script>
+-        <script src="js/menu.js"></script>
++    <!-- Firebase (npm + esbuild → js/firebase-bundle.js); optional CONFIG_SECRETS.FIREBASE_CONFIG if loaded earlier -->
++    <script src="js/firebase-bundle.js"></script>
++    <script src="js/config.js"></script>
++    <script src="js/utils.js"></script>
++    <script src="js/systems/CloudSaveSystem.js"></script>
++    <script src="js/systems/LeaderboardUI.js"></script>
++    <script src="js/audio.js"></script>
++    <script src="js/effects.js"></script>
++    <script src="js/weapons.js"></script>
++    <script src="js/map.js"></script>
++    <script src="js/ui.js"></script>
++    <script src="js/tutorial.js"></script>
++
++    <script src="js/entities/base.js"></script>
++
++    <!-- AI Systems — โหลดหลัง base.js, ก่อน enemy.js -->
++    <script src="js/ai/UtilityAI.js"></script>
++    <script src="js/ai/EnemyActions.js"></script>
++    <script src="js/ai/PlayerPatternAnalyzer.js"></script>
++    <script src="js/ai/SquadAI.js"></script>
++
++    <!-- NEW OOP PLAYER HIERARCHY -->
++    <script src="js/entities/player/PlayerBase.js"></script>
++    <script src="js/entities/player/KaoPlayer.js"></script>
++    <script src="js/entities/player/AutoPlayer.js"></script>
++    <script src="js/entities/player/PoomPlayer.js"></script>
++    <script src="js/entities/player/PatPlayer.js"></script>
++    <script src="js/entities/summons.js"></script>
++    <script src="js/entities/enemy.js"></script>
++    <script src="js/entities/boss/boss_attacks_shared.js"></script>
++    <script src="js/entities/boss/boss_attacks_manop.js"></script>
++    <script src="js/entities/boss/boss_attacks_first.js"></script>
++    <script src="js/entities/boss/BossBase.js"></script>
++    <script src="js/entities/boss/ManopBoss.js"></script>
++    <script src="js/entities/boss/FirstBoss.js"></script>
++
++    <script src="js/input.js"></script>
++
++    <!-- Step 4: Rendering Decoupled -->
++    <script src="js/rendering/PlayerRenderer.js"></script>
++    <script src="js/rendering/BossRenderer.js"></script>
++
++    <!-- Extracted Systems -->
++    <script src="js/systems/GameState.js"></script>
++    <script src="js/systems/AdminSystem.js"></script>
++    <script src="js/systems/ShopSystem.js"></script>
++    <script src="js/systems/TimeManager.js"></script>
++    <script src="js/systems/WaveManager.js"></script>
++    <script src="js/systems/WorkerBridge.js"></script>
++    <script src="js/game.js"></script>
++    <script src="js/VersionManager.js"></script>
++    <script src="js/menu.js"></script>
+ 
+ 
+ </body>
+diff --git a/js/menu.js b/js/menu.js
+index 27e01a4..c8b7a52 100644
+--- a/js/menu.js
++++ b/js/menu.js
+@@ -1,4 +1,4 @@
+-'use strict';
++"use strict";
+ /**
+  * js/menu.js
+  * ════════════════════════════════════════════════════════════════
+@@ -41,58 +41,72 @@
+  */
+ 
+ // ── Character Selection ───────────────────────────────────────────────────────
+-let _selectedChar = 'kao';
++let _selectedChar = "kao";
+ function selectCharacter(charType) {
+-    _selectedChar = charType;
+-    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+-    const card = document.getElementById('card-' + charType)
+-        || document.getElementById('btn-' + charType)
+-        || document.getElementById(charType);
+-    if (card) card.classList.add('selected');
+-
+-    // ── Mark container so unselected cards can recede ──────────────────────
+-    const cardsContainer = card?.closest('.char-cards');
+-    if (cardsContainer) cardsContainer.classList.add('has-selection');
+-
+-    // ── Buttons label ──────────────────────────────
+-    const startBtn = document.getElementById('start-btn');
+-    const tutBtn = document.getElementById('tutorial-btn');
+-    const iconPrefix = charType === 'poom' ? '🌾'
+-        : charType === 'auto' ? '🔥'
+-            : charType === 'pat' ? '⚔️'
+-                : '🎓';
+-    if (startBtn) startBtn.textContent = iconPrefix + ' START MISSION';
+-    if (tutBtn) tutBtn.textContent = iconPrefix + ' REPLAY TUTORIAL';
+-
+-    // ── HUD portrait SVG swap ────────────────────────────────────────────────
+-    // window.PORTRAITS defined in ui.js at module scope (loaded before user
+-    // can click a card).  Guard covers edge-case of early call.
+-    const hudSvg = document.getElementById('hud-portrait-svg');
+-    if (hudSvg && window.PORTRAITS?.[charType]) {
+-        hudSvg.innerHTML = window.PORTRAITS[charType];
+-    }
+-
+-    // ── Skill slot hint preview ──────────────────────────────────────────────
+-    const hintEl = document.getElementById('skill1-hint');
+-    if (hintEl) {
+-        hintEl.textContent = charType === 'auto' ? 'STAND'
+-            : charType === 'poom' ? 'EAT'
+-                : charType === 'pat' ? 'GUARD'
+-                    : 'R-Click';
+-    }
+-    const emojiEl = document.getElementById('skill1-emoji');
+-    if (emojiEl) {
+-        emojiEl.textContent = charType === 'auto' ? '🔥'
+-            : charType === 'poom' ? '🍚'
+-                : charType === 'pat' ? '⚔️'
+-                    : '📖';
+-    }
++  _selectedChar = charType;
++  document
++    .querySelectorAll(".char-card")
++    .forEach((c) => c.classList.remove("selected"));
++  const card =
++    document.getElementById("card-" + charType) ||
++    document.getElementById("btn-" + charType) ||
++    document.getElementById(charType);
++  if (card) card.classList.add("selected");
++
++  // ── Mark container so unselected cards can recede ──────────────────────
++  const cardsContainer = card?.closest(".char-cards");
++  if (cardsContainer) cardsContainer.classList.add("has-selection");
++
++  // ── Buttons label ──────────────────────────────
++  const startBtn = document.getElementById("start-btn");
++  const tutBtn = document.getElementById("tutorial-btn");
++  const iconPrefix =
++    charType === "poom"
++      ? "🌾"
++      : charType === "auto"
++        ? "🔥"
++        : charType === "pat"
++          ? "⚔️"
++          : "🎓";
++  if (startBtn) startBtn.textContent = iconPrefix + " START MISSION";
++  if (tutBtn) tutBtn.textContent = iconPrefix + " REPLAY TUTORIAL";
++
++  // ── HUD portrait SVG swap ────────────────────────────────────────────────
++  // window.PORTRAITS defined in ui.js at module scope (loaded before user
++  // can click a card).  Guard covers edge-case of early call.
++  const hudSvg = document.getElementById("hud-portrait-svg");
++  if (hudSvg && window.PORTRAITS?.[charType]) {
++    hudSvg.innerHTML = window.PORTRAITS[charType];
++  }
++
++  // ── Skill slot hint preview ──────────────────────────────────────────────
++  const hintEl = document.getElementById("skill1-hint");
++  if (hintEl) {
++    hintEl.textContent =
++      charType === "auto"
++        ? "STAND"
++        : charType === "poom"
++          ? "EAT"
++          : charType === "pat"
++            ? "GUARD"
++            : "R-Click";
++  }
++  const emojiEl = document.getElementById("skill1-emoji");
++  if (emojiEl) {
++    emojiEl.textContent =
++      charType === "auto"
++        ? "🔥"
++        : charType === "poom"
++          ? "🍚"
++          : charType === "pat"
++            ? "⚔️"
++            : "📖";
++  }
+ }
+ 
+-
+ // ── Character Carousel Navigation ─────────────────────────────────────────────
+ // Characters in display order (must match IDs used by selectCharacter)
+-const _CHAR_ORDER = ['kao', 'poom', 'auto', 'pat'];
++const _CHAR_ORDER = ["kao", "poom", "auto", "pat"];
+ let _currentCharIndex = 0;
+ 
+ /**
+@@ -100,331 +114,351 @@ let _currentCharIndex = 0;
+  * Wraps around. Exposed on window so HTML onclick can reach it.
+  */
+ function _navigateChar(dir) {
+-    _currentCharIndex = (_currentCharIndex + dir + _CHAR_ORDER.length) % _CHAR_ORDER.length;
+-    selectCharacter(_CHAR_ORDER[_currentCharIndex]);
+-    _updateCarousel();
++  _resetFlip();
++  _currentCharIndex =
++    (_currentCharIndex + dir + _CHAR_ORDER.length) % _CHAR_ORDER.length;
++  selectCharacter(_CHAR_ORDER[_currentCharIndex]);
++  _updateCarousel();
+ }
+ window._navigateChar = _navigateChar;
+ 
+-function _updateCarousel() {
+-    const charId = _CHAR_ORDER[_currentCharIndex];
+-
+-    // ── Show only active card ────────────────────────────────────────────────
+-    _CHAR_ORDER.forEach((id, i) => {
+-        const el = document.getElementById('card-' + id)
+-            || document.getElementById('btn-' + id);
+-        if (!el) return;
+-        if (i === _currentCharIndex) {
+-            el.classList.add('selected');
+-        } else {
+-            el.classList.remove('selected');
+-        }
+-    });
++// ── Flip state ────────────────────────────────────────────────────────────────
++let _flippedChar = null;
+ 
+-    // ── Update dot indicators ────────────────────────────────────────────────
+-    document.querySelectorAll('.char-dot').forEach((dot, i) => {
+-        dot.classList.toggle('active', i === _currentCharIndex);
+-    });
++function _resetFlip() {
++  if (!_flippedChar) return;
++  const el =
++    document.getElementById("card-" + _flippedChar) ||
++    document.getElementById("btn-" + _flippedChar);
++  if (el) el.classList.remove("is-flipped");
++  _flippedChar = null;
++}
++
++/**
++ * Card click handler (replaces inline onclick="selectCharacter(...)").
++ * First click  → select character, reset flip.
++ * Second click → toggle front / back face.
++ */
++function handleCardClick(charId) {
++  if (_selectedChar !== charId) {
++    _resetFlip();
++    selectCharacter(charId);
++    const idx = _CHAR_ORDER.indexOf(charId);
++    if (idx !== -1) _currentCharIndex = idx;
++    _updateCarousel();
++  } else {
++    const el =
++      document.getElementById("card-" + charId) ||
++      document.getElementById("btn-" + charId);
++    if (!el) return;
++    const flipping = !el.classList.contains("is-flipped");
++    el.classList.toggle("is-flipped", flipping);
++    _flippedChar = flipping ? charId : null;
++  }
++}
++window.handleCardClick = handleCardClick;
+ 
+-    // ── Apply theme to #overlay ──────────────────────────────────────────────
+-    const overlay = document.getElementById('overlay');
+-    if (overlay) {
+-        // Strip existing theme-* classes, add new one
+-        const classes = overlay.className.split(' ').filter(c => !c.startsWith('theme-'));
+-        classes.push('theme-' + charId);
+-        overlay.className = classes.join(' ').trim();
++function _updateCarousel() {
++  const charId = _CHAR_ORDER[_currentCharIndex];
++
++  // ── Show only active card ────────────────────────────────────────────────
++  _CHAR_ORDER.forEach((id, i) => {
++    const el =
++      document.getElementById("card-" + id) ||
++      document.getElementById("btn-" + id);
++    if (!el) return;
++    if (i === _currentCharIndex) {
++      el.classList.add("selected");
++    } else {
++      el.classList.remove("selected");
+     }
++  });
++
++  // ── Update dot indicators ────────────────────────────────────────────────
++  document.querySelectorAll(".char-dot").forEach((dot, i) => {
++    dot.classList.toggle("active", i === _currentCharIndex);
++  });
++
++  // ── Apply theme to #overlay ──────────────────────────────────────────────
++  const overlay = document.getElementById("overlay");
++  if (overlay) {
++    // Strip existing theme-* classes, add new one
++    const classes = overlay.className
++      .split(" ")
++      .filter((c) => !c.startsWith("theme-"));
++    classes.push("theme-" + charId);
++    overlay.className = classes.join(" ").trim();
++  }
++
++  // ── Sync start modal char name if visible ────────────────────────────────
++  const startModalName = document.getElementById("start-modal-char-name");
++  if (startModalName) startModalName.textContent = charId.toUpperCase();
+ }
+ 
+ // Initialise carousel on DOMContentLoaded
+ (function _initCarousel() {
+-    function _setup() {
+-        // Dots click→navigate
+-        document.querySelectorAll('.char-dot').forEach((dot) => {
+-            const idx = parseInt(dot.dataset.index, 10);
+-            dot.addEventListener('click', () => {
+-                _currentCharIndex = idx;
+-                selectCharacter(_CHAR_ORDER[_currentCharIndex]);
+-                _updateCarousel();
+-            });
+-        });
+-
+-        // Keyboard left/right arrow navigation
+-        document.addEventListener('keydown', (e) => {
+-            // Only when overlay is visible
+-            const overlay = document.getElementById('overlay');
+-            if (!overlay || overlay.style.display === 'none') return;
+-            if (e.key === 'ArrowLeft')  _navigateChar(-1);
+-            if (e.key === 'ArrowRight') _navigateChar(+1);
+-        });
+-
+-        // Set initial theme & state
++  function _setup() {
++    // Dots click→navigate
++    document.querySelectorAll(".char-dot").forEach((dot) => {
++      const idx = parseInt(dot.dataset.index, 10);
++      dot.addEventListener("click", () => {
++        _resetFlip();
++        _currentCharIndex = idx;
++        selectCharacter(_CHAR_ORDER[_currentCharIndex]);
+         _updateCarousel();
+-    }
++      });
++    });
+ 
+-    if (document.readyState === 'loading') {
+-        document.addEventListener('DOMContentLoaded', _setup);
+-    } else {
+-        _setup();
+-    }
+-})();
++    // Keyboard left/right arrow navigation
++    document.addEventListener("keydown", (e) => {
++      // Only when overlay is visible
++      const overlay = document.getElementById("overlay");
++      if (!overlay || overlay.style.display === "none") return;
++      if (e.key === "ArrowLeft") _navigateChar(-1);
++      if (e.key === "ArrowRight") _navigateChar(+1);
++    });
+ 
++    // Set initial theme & state
++    _updateCarousel();
++  }
++
++  if (document.readyState === "loading") {
++    document.addEventListener("DOMContentLoaded", _setup);
++  } else {
++    _setup();
++  }
++})();
+ 
+ // This guarantees window.PORTRAITS (defined in ui.js) is ready before we try
+ // to populate the char-select cards and the default HUD portrait.
+-window.addEventListener('load', function _injectPortraits() {
+-    if (!window.PORTRAITS) {
+-        // ui.js wasn't loaded yet — shouldn't happen, but don't crash
+-        console.warn('[menu] window.PORTRAITS not found — portrait injection skipped');
+-        return;
+-    }
+-
+-    // ── Char-select card portraits (96 × 112 each) ──────────────────────────
+-    ['kao', 'poom', 'auto', 'pat'].forEach(id => {
+-        const el = document.getElementById('char-avatar-' + id);
+-        if (!el) return;
+-        el.innerHTML =
+-            '<svg viewBox="0 0 96 112" xmlns="http://www.w3.org/2000/svg"' +
+-            ' width="96" height="112" style="display:block;width:100%;height:100%;">' +
+-            (window.PORTRAITS[id] || '') +
+-            '</svg>';
+-    });
+-
+-    // ── Default HUD portrait (Kao on fresh load) ─────────────────────────────
+-    const hudSvg = document.getElementById('hud-portrait-svg');
+-    if (hudSvg && window.PORTRAITS[_selectedChar]) {
+-        hudSvg.innerHTML = window.PORTRAITS[_selectedChar];
+-    }
++window.addEventListener("load", function _injectPortraits() {
++  if (!window.PORTRAITS) {
++    // ui.js wasn't loaded yet — shouldn't happen, but don't crash
++    console.warn(
++      "[menu] window.PORTRAITS not found — portrait injection skipped",
++    );
++    return;
++  }
++
++  // ── Char-select card portraits (96 × 112 each) ──────────────────────────
++  ["kao", "poom", "auto", "pat"].forEach((id) => {
++    const el = document.getElementById("char-avatar-" + id);
++    if (!el) return;
++    el.innerHTML =
++      '<svg viewBox="0 0 96 112" xmlns="http://www.w3.org/2000/svg"' +
++      ' width="96" height="112" style="display:block;width:100%;height:100%;">' +
++      (window.PORTRAITS[id] || "") +
++      "</svg>";
++  });
++
++  // ── Default HUD portrait (Kao on fresh load) ─────────────────────────────
++  const hudSvg = document.getElementById("hud-portrait-svg");
++  if (hudSvg && window.PORTRAITS[_selectedChar]) {
++    hudSvg.innerHTML = window.PORTRAITS[_selectedChar];
++  }
+ });
+ 
+-
+ // ── Victory Screen — Starfield + Count-up + Achievement chips ────────────────
+ (function () {
+-    const vs = document.getElementById('victory-screen');
+-    if (!vs) return;
+-
+-    const obs = new MutationObserver(() => {
+-        if (vs.style.display !== 'none' && vs.style.display !== '') {
+-            _launchVictory();
+-            obs.disconnect();
+-        }
+-    });
+-    obs.observe(vs, { attributes: true, attributeFilter: ['style'] });
+-
+-    function _launchVictory() {
+-        _startStarfield();
+-        _countUp('final-score', 1800);
+-        _countUp('final-wave', 2000);
+-        _countUp('final-kills', 2200);
+-        _buildAchievements();
+-        _particleBurst();
+-    }
+-
+-    // ── Starfield ────────────────────────────────────────────────────────────
+-    function _startStarfield() {
+-        const c = document.getElementById('victory-stars');
+-        if (!c) return;
+-        const ctx = c.getContext('2d');
+-        let W, H, stars;
+-
+-        function resize() {
+-            W = c.width = vs.offsetWidth;
+-            H = c.height = vs.offsetHeight;
+-            stars = Array.from({ length: 180 }, () => ({
+-                x: Math.random() * W, y: Math.random() * H,
+-                r: Math.random() * 1.4 + 0.3,
+-                a: Math.random(),
+-                speed: Math.random() * 0.4 + 0.1,
+-                drift: (Math.random() - 0.5) * 0.15
+-            }));
+-        }
+-        resize();
+-        window.addEventListener('resize', resize);
+-
+-        function tick() {
+-            ctx.clearRect(0, 0, W, H);
+-            stars.forEach(s => {
+-                s.y += s.speed; s.x += s.drift;
+-                s.a += (Math.random() - 0.5) * 0.04;
+-                s.a = Math.max(0.1, Math.min(1, s.a));
+-                if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+-                if (s.x < 0 || s.x > W) s.x = Math.random() * W;
+-                const isGold = s.r > 1.2;
+-                ctx.beginPath();
+-                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+-                ctx.fillStyle = isGold
+-                    ? `rgba(250,204,21,${s.a * 0.7})`
+-                    : `rgba(255,255,255,${s.a * 0.55})`;
+-                ctx.fill();
+-            });
+-            if (vs.style.display !== 'none') requestAnimationFrame(tick);
+-        }
+-        tick();
+-    }
+-
+-    // ── Count-up animation ───────────────────────────────────────────────────
+-    function _countUp(id, delay) {
+-        const el = document.getElementById(id);
+-        if (!el) return;
+-        const target = parseInt(el.textContent.replace(/\D/g, '')) || 0;
+-        if (target === 0) return;
+-        let start = null;
+-        const dur = 1400;
+-        setTimeout(() => {
+-            function frame(ts) {
+-                if (!start) start = ts;
+-                const p = Math.min((ts - start) / dur, 1);
+-                const ease = 1 - Math.pow(1 - p, 3);
+-                el.textContent = Math.round(target * ease).toLocaleString();
+-                if (p < 1) requestAnimationFrame(frame);
+-                else el.textContent = target.toLocaleString();
+-            }
+-            requestAnimationFrame(frame);
+-        }, delay);
+-    }
+-
+-    // ── Achievement chips ────────────────────────────────────────────────────
+-    function _buildAchievements() {
+-        const container = document.getElementById('victory-achs');
+-        if (!container) return;
+-        const ach = window.Achievements;
+-        if (!ach || !ach.unlocked || ach.unlocked.size === 0) return;
+-        const defs = window.ACHIEVEMENT_DEFS || [];
+-        ach.unlocked.forEach(id => {
+-            const def = defs.find(a => a.id === id);
+-            if (!def) return;
+-            const chip = document.createElement('span');
+-            chip.className = 'victory-ach-chip';
+-            chip.textContent = (def.icon || '★') + ' ' + (def.name || id);
+-            container.appendChild(chip);
+-        });
+-    }
++  const vs = document.getElementById("victory-screen");
++  if (!vs) return;
+ 
+-    // ── Gold particle burst on entry ─────────────────────────────────────────
+-    function _particleBurst() {
+-        if (typeof spawnParticles !== 'function') return;
+-        setTimeout(() => {
+-            const cx = (typeof CANVAS !== 'undefined' && CANVAS) ? CANVAS.width / 2 : window.innerWidth / 2;
+-            const cy = (typeof CANVAS !== 'undefined' && CANVAS) ? CANVAS.height / 2 : window.innerHeight / 2;
+-            spawnParticles(cx, cy, 80, '#facc15');
+-            spawnParticles(cx, cy, 40, '#f97316');
+-        }, 600);
++  const obs = new MutationObserver(() => {
++    if (vs.style.display !== "none" && vs.style.display !== "") {
++      _launchVictory();
++      obs.disconnect();
+     }
+-})();
+-
+-
+-// ── Skill Preview Tooltips (1.4) ─────────────────────────────────────────────
+-(function _initSkillTooltips() {
+-    if (document.readyState === 'loading') {
+-        document.addEventListener('DOMContentLoaded', _init);
+-    } else {
+-        _init();
++  });
++  obs.observe(vs, { attributes: true, attributeFilter: ["style"] });
++
++  function _launchVictory() {
++    _startStarfield();
++    _countUp("final-score", 1800);
++    _countUp("final-wave", 2000);
++    _countUp("final-kills", 2200);
++    _buildAchievements();
++    _particleBurst();
++  }
++
++  // ── Starfield ────────────────────────────────────────────────────────────
++  function _startStarfield() {
++    const c = document.getElementById("victory-stars");
++    if (!c) return;
++    const ctx = c.getContext("2d");
++    let W, H, stars;
++
++    function resize() {
++      W = c.width = vs.offsetWidth;
++      H = c.height = vs.offsetHeight;
++      stars = Array.from({ length: 180 }, () => ({
++        x: Math.random() * W,
++        y: Math.random() * H,
++        r: Math.random() * 1.4 + 0.3,
++        a: Math.random(),
++        speed: Math.random() * 0.4 + 0.1,
++        drift: (Math.random() - 0.5) * 0.15,
++      }));
+     }
+-
+-    function _init() {
+-        const cards = document.querySelectorAll('.char-card[data-char]');
+-        if (!cards.length) return;
+-
+-        let _activeTooltip = null;
+-        let _hideTimer = null;
+-
+-        cards.forEach(card => {
+-            const charId = card.dataset.char;
+-            const tooltip = document.getElementById('tooltip-' + charId);
+-            if (!tooltip) return;
+-
+-            // ── Desktop ──────────────────────────────────────────────────────
+-            card.addEventListener('mouseenter', () => {
+-                clearTimeout(_hideTimer);
+-                _showTooltip(tooltip, card);
+-            });
+-            card.addEventListener('mouseleave', () => {
+-                _hideTimer = setTimeout(() => _hideTooltip(tooltip), 120);
+-            });
+-
+-            // ── Mobile: tap-and-hold 350ms ───────────────────────────────────
+-            let _holdTimer = null;
+-            card.addEventListener('touchstart', () => {
+-                _holdTimer = setTimeout(() => {
+-                    if (_activeTooltip && _activeTooltip !== tooltip) {
+-                        _hideTooltip(_activeTooltip);
+-                    }
+-                    tooltip.classList.contains('tt-visible')
+-                        ? _hideTooltip(tooltip)
+-                        : _showTooltip(tooltip, card);
+-                }, 350);
+-            }, { passive: true });
+-            card.addEventListener('touchend', () => clearTimeout(_holdTimer), { passive: true });
+-            card.addEventListener('touchcancel', () => clearTimeout(_holdTimer), { passive: true });
+-        });
+-
+-        // Tap outside → close
+-        document.addEventListener('touchstart', (e) => {
+-            if (_activeTooltip && !e.target.closest('.skill-tooltip') && !e.target.closest('.char-card')) {
+-                _hideTooltip(_activeTooltip);
+-            }
+-        }, { passive: true });
+-
+-        function _showTooltip(tooltip, card) {
+-            _activeTooltip = tooltip;
+-
+-            // Force layout so offsetHeight is accurate before tt-visible adds opacity
+-            tooltip.style.visibility = 'hidden';
+-            tooltip.classList.add('tt-visible');
+-            const h = tooltip.offsetHeight || 224;
+-            const w = tooltip.offsetWidth || 240;
+-            tooltip.classList.remove('tt-visible');
+-            tooltip.style.visibility = '';
+-
+-            const cardRect = card.getBoundingClientRect();
+-            const VW = window.innerWidth;
+-            const VH = window.innerHeight;
+-
+-            // Prefer above the card; fall back to below if no room
+-            const topAbove = cardRect.top - h - 10;
+-            const top = topAbove >= 8 ? topAbove : cardRect.bottom + 8;
+-
+-            // Centre on card, clamped to viewport
+-            const left = Math.max(8, Math.min(
+-                cardRect.left + cardRect.width / 2 - w / 2,
+-                VW - w - 8
+-            ));
+-
+-            tooltip.style.left = left + 'px';
+-            tooltip.style.top = Math.min(top, VH - h - 8) + 'px';
+-            tooltip.classList.add('tt-visible');
+-        }
+-
+-        function _hideTooltip(tooltip) {
+-            if (!tooltip) return;
+-            tooltip.classList.remove('tt-visible');
+-            if (_activeTooltip === tooltip) _activeTooltip = null;
++    resize();
++    window.addEventListener("resize", resize);
++
++    function tick() {
++      ctx.clearRect(0, 0, W, H);
++      stars.forEach((s) => {
++        s.y += s.speed;
++        s.x += s.drift;
++        s.a += (Math.random() - 0.5) * 0.04;
++        s.a = Math.max(0.1, Math.min(1, s.a));
++        if (s.y > H) {
++          s.y = 0;
++          s.x = Math.random() * W;
+         }
++        if (s.x < 0 || s.x > W) s.x = Math.random() * W;
++        const isGold = s.r > 1.2;
++        ctx.beginPath();
++        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
++        ctx.fillStyle = isGold
++          ? `rgba(250,204,21,${s.a * 0.7})`
++          : `rgba(255,255,255,${s.a * 0.55})`;
++        ctx.fill();
++      });
++      if (vs.style.display !== "none") requestAnimationFrame(tick);
+     }
++    tick();
++  }
++
++  // ── Count-up animation ───────────────────────────────────────────────────
++  function _countUp(id, delay) {
++    const el = document.getElementById(id);
++    if (!el) return;
++    const target = parseInt(el.textContent.replace(/\D/g, "")) || 0;
++    if (target === 0) return;
++    let start = null;
++    const dur = 1400;
++    setTimeout(() => {
++      function frame(ts) {
++        if (!start) start = ts;
++        const p = Math.min((ts - start) / dur, 1);
++        const ease = 1 - Math.pow(1 - p, 3);
++        el.textContent = Math.round(target * ease).toLocaleString();
++        if (p < 1) requestAnimationFrame(frame);
++        else el.textContent = target.toLocaleString();
++      }
++      requestAnimationFrame(frame);
++    }, delay);
++  }
++
++  // ── Achievement chips ────────────────────────────────────────────────────
++  function _buildAchievements() {
++    const container = document.getElementById("victory-achs");
++    if (!container) return;
++    const ach = window.Achievements;
++    if (!ach || !ach.unlocked || ach.unlocked.size === 0) return;
++    const defs = window.ACHIEVEMENT_DEFS || [];
++    ach.unlocked.forEach((id) => {
++      const def = defs.find((a) => a.id === id);
++      if (!def) return;
++      const chip = document.createElement("span");
++      chip.className = "victory-ach-chip";
++      chip.textContent = (def.icon || "★") + " " + (def.name || id);
++      container.appendChild(chip);
++    });
++  }
++
++  // ── Gold particle burst on entry ─────────────────────────────────────────
++  function _particleBurst() {
++    if (typeof spawnParticles !== "function") return;
++    setTimeout(() => {
++      const cx =
++        typeof CANVAS !== "undefined" && CANVAS
++          ? CANVAS.width / 2
++          : window.innerWidth / 2;
++      const cy =
++        typeof CANVAS !== "undefined" && CANVAS
++          ? CANVAS.height / 2
++          : window.innerHeight / 2;
++      spawnParticles(cx, cy, 80, "#facc15");
++      spawnParticles(cx, cy, 40, "#f97316");
++    }, 600);
++  }
+ })();
+ 
++// ── Skill Preview Tooltips — disabled; skills now live on card back face ─────
++// Replaced by handleCardClick() flip mechanic (select-then-flip pattern).
+ 
+ // ── Remote Config (optional DOM: #mtc-announcement, #mtc-shop-banner) ────────
+ (function _remoteConfigUiHook() {
+-    window.addEventListener('load', () => {
+-        if (typeof firebaseRemoteConfigReady === 'undefined' || typeof getRemoteConfigString !== 'function') return;
+-        firebaseRemoteConfigReady.then(() => {
+-            const ann = getRemoteConfigString('announcement', '');
+-            const annEl = document.getElementById('mtc-announcement');
+-            if (annEl && ann) annEl.textContent = ann;
+-            const shop = getRemoteConfigString('shop_banner', '');
+-            const shopEl = document.getElementById('mtc-shop-banner');
+-            if (shopEl && shop) shopEl.textContent = shop;
+-        });
++  window.addEventListener("load", () => {
++    if (
++      typeof firebaseRemoteConfigReady === "undefined" ||
++      typeof getRemoteConfigString !== "function"
++    )
++      return;
++    firebaseRemoteConfigReady.then(() => {
++      const ann = getRemoteConfigString("announcement", "");
++      const annEl = document.getElementById("mtc-announcement");
++      if (annEl && ann) annEl.textContent = ann;
++      const shop = getRemoteConfigString("shop_banner", "");
++      const shopEl = document.getElementById("mtc-shop-banner");
++      if (shopEl && shop) shopEl.textContent = shop;
+     });
++  });
+ })();
+ 
++// ── Start Modal ───────────────────────────────────────────────────────────────
++/**
++ * Opens the START MISSION sub-panel.
++ * Reads _selectedChar / _currentCharIndex (module scope in this file).
++ * Two choices: START GAME → startGame(), TUTORIAL → TutorialSystem.reset() + startGame().
++ */
++function _openStartModal() {
++  const modal = document.getElementById("start-modal");
++  if (!modal) return;
++  const nameEl = document.getElementById("start-modal-char-name");
++  if (nameEl)
++    nameEl.textContent = (
++      _CHAR_ORDER[_currentCharIndex] || _selectedChar
++    ).toUpperCase();
++  modal.classList.add("start-modal--open");
++  modal.setAttribute("aria-hidden", "false");
++}
++window._openStartModal = _openStartModal;
++
++function _closeStartModal() {
++  const modal = document.getElementById("start-modal");
++  if (!modal) return;
++  modal.classList.remove("start-modal--open");
++  modal.setAttribute("aria-hidden", "true");
++}
++window._closeStartModal = _closeStartModal;
++
++function _startModalPlay() {
++  _closeStartModal();
++  if (typeof startGame === "function") startGame(_selectedChar);
++}
++window._startModalPlay = _startModalPlay;
++
++function _startModalTutorial() {
++  _closeStartModal();
++  if (window.TutorialSystem) TutorialSystem.reset();
++  if (typeof startGame === "function") startGame(_selectedChar);
++}
++window._startModalTutorial = _startModalTutorial;
++
++// Escape closes start modal (only while overlay is visible)
++document.addEventListener("keydown", (e) => {
++  if (e.key !== "Escape") return;
++  const modal = document.getElementById("start-modal");
++  if (modal && modal.classList.contains("start-modal--open"))
++    _closeStartModal();
++});
+ 
+ // ── Service Worker Registration ───────────────────────────────────────────────
+-if ('serviceWorker' in navigator) {
+-    window.addEventListener('load', () => {
+-        navigator.serviceWorker.register('sw.js')
+-            .then(r => console.log('✅ ServiceWorker registered:', r.scope))
+-            .catch(e => console.error('❌ ServiceWorker failed:', e));
+-    });
++if ("serviceWorker" in navigator) {
++  window.addEventListener("load", () => {
++    navigator.serviceWorker
++      .register("sw.js")
++      .then((r) => console.log("✅ ServiceWorker registered:", r.scope))
++      .catch((e) => console.error("❌ ServiceWorker failed:", e));
++  });
+ }

@@ -1,0 +1,29 @@
+commit fa6dbc71f71ea55d800626e5d1f681d36bc07dba
+Author: M1N-W <yooyenmawin@gmail.com>
+Date:   Thu Mar 26 15:11:37 2026 +0700
+
+    feat(menu): redesigned character selection carousel v3.41.8
+    
+    Detailed technical impacts:
+    - Replaced 4-card grid with single-card carousel in index.html.
+    - Implemented character-specific dynamic background themes on #overlay via CSS classes.
+    - Added navigation arrows and dot indicators with per-theme animations.
+    - Implemented carousel logic and keyboard support in js/menu.js.
+    - Reorganized menu buttons into primary/secondary rows for improved hierarchy.
+    - Updated sw.js, CHANGELOG.md, and PROJECT_OVERVIEW.md to v3.41.8.
+    
+    Files changed:
+    - index.html
+    - css/main.css
+    - js/menu.js
+    - sw.js
+    - Markdown Source/CHANGELOG.md
+    - Markdown Source/Information/PROJECT_OVERVIEW.md
+
+ Markdown Source/CHANGELOG.md                    |  31 +
+ Markdown Source/Information/PROJECT_OVERVIEW.md |   2 +-
+ css/main.css                                    | 168 ++++-
+ index.html                                      | 945 ++++++++++++------------
+ js/menu.js                                      |  81 +-
+ sw.js                                           |   2 +-
+ 6 files changed, 746 insertions(+), 483 deletions(-)
