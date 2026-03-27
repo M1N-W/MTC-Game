@@ -4,6 +4,67 @@
 
 ---
 
+## v3.41.9 — Audit: Codebase Integrity, Bug Fixes & Architecture Documentation
+*Released: March 27, 2026*
+
+### 🐛 Bug Fixes & Stability
+- **Weapons System** (`js/weapons.js`):
+  - Fixed property name mismatch: `isFreeStealthy` → `isFreeStealthActive` (synced with `KaoPlayer.js` definition).
+  - Removed redundant duplicate `tryReflectProjectile` call in enemy→player collision branch.
+- **Input System** (`js/input.js`):
+  - Added `PatPlayer` to Q-key weapon-switch exclusion list (Pat uses Q for Zanzo Flash, not weapon switch).
+- **AI System** (`js/ai/EnemyActions.js`):
+  - Fixed `retreat()` wall-avoidance: old code assumed world coords started at `0` (maps `MAP_CONFIG.mapWidth`); corrected to use `GAME_CONFIG.physics.worldBounds` for centered `[-1500, 1500]` coordinate space.
+- **Core Loop** (`js/game.js`):
+  - Fixed partial syntax error in `drawGame` diagnostic log comment that could crash if uncommented.
+- **Config Cleanup** (`js/config.js`):
+  - Removed deprecated `BALANCE.player.auto` block (no active references; replaced by `BALANCE.characters.auto`).
+
+### 📚 Architecture Documentation
+- **Created `SKILL.md`** (`Markdown Source/Information/SKILL.md`):
+  - §2 Class Name Map — all constructor→window alias mappings
+  - §3 Inheritance Chain — Entity tree including BossDog/GoldfishMinion caveats (extend Entity, NOT EnemyBase/BossBase)
+  - §4 AI Load Order & API — UtilityAI/SquadAI/PlayerPatternAnalyzer method signatures, throttle patterns
+  - §5 Critical Property Rules — vx/vy physics, stats.moveSpeed vs enemy.speed, cooldown keys, hit flash, squad roles
+  - §6 Global Window Variables — CANVAS/CTX, entity refs, GameState, all system singletons, input globals
+  - §7 Domain Singleton Behavior — DomainBase inheritance pattern, phase machine, game.js integration hooks
+  - §8 Rendering Layer Order — 24-step frame draw sequence, update/draw separation invariant
+  - §9 effects.js Exports — all global spawn functions and system instances
+  - §10 Poom Special Cases — WeaponSystem bypass, input routing table, Cosmic Balance condition
+  - §11 Auto Heat Tier & Wanchai — tier names (not values), Q context switch, Stand entity z-order
+  - §12 BALANCE/config key structure (keys only, no values)
+  - §13 New Content Checklist — load order, sw.js, window export, _tickShared, draw rules, shadowBlur
+- **Created `mtc-rendering.md`** (`.windsurf/workflows/mtc-rendering.md`):
+  - BossRenderer/PlayerRenderer dispatcher patterns + dispatch order invariants
+  - 24-step canonical frame draw sequence
+  - worldToScreen coordinate system
+  - OffscreenCanvas caching in BossRenderer
+  - Lighting system 30Hz throttle + destination-out compositing
+  - Screen shake single-translate architecture
+  - Minimap dual-clip architecture
+  - `performance.now()` animation rule + no `Math.random()` in draw()
+  - `shadowBlur` reset rule + `_getLimbParams` shared animation state
+  - Full cross-file rendering dependency table
+- **Updated `PROJECT_OVERVIEW.md`**:
+  - Added §9 Living Documentation Files table pointing to all doc files
+
+### Files touched
+```
+✅ MODIFIED: index.html (v3.41.9 update)
+✅ MODIFIED: sw.js (v3.41.9 update)
+✅ MODIFIED: js/game.js (diagnostic log fix)
+✅ MODIFIED: js/config.js (removed deprecated auto block)
+✅ MODIFIED: js/weapons.js (property name fix + redundant call removal)
+✅ MODIFIED: js/input.js (PatPlayer Q exclusion)
+✅ MODIFIED: js/ai/EnemyActions.js (retreat wall-avoidance bounds fix)
+✅ CREATED:  Markdown Source/Information/SKILL.md (architectural conventions, §2–§13)
+✅ CREATED:  .windsurf/workflows/mtc-rendering.md (rendering pipeline skill)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (§9 living docs table)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.8 — UI: Character Selection Carousel Redesign
 *Released: March 26, 2026*
 

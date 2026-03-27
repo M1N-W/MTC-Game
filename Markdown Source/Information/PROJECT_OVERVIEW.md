@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.41.8`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.41.9`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
@@ -165,7 +165,18 @@ Detail: see `.agents/skills/mtc-game-skills_claude/mtc-rendering.md`.
 
 ---
 
-## 9) Documentation Scope Rules
+## 9) Living Documentation Files
+
+| File | Location | Purpose |
+|---|---|---|
+| `PROJECT_OVERVIEW.md` | `Markdown Source/Information/` | Architecture baseline — class hierarchy, load order, invariants, cross-module coupling |
+| `SKILL.md` | `Markdown Source/Information/` | Architectural conventions reference — §2 class map, §3 inheritance, §4 AI API, §5 property rules, §6 globals, §7 domain singletons, §8 render layers, §9–§13 system-specific rules |
+| `CHANGELOG.md` | `Markdown Source/` | Per-version change log |
+| `mtc-rendering` skill | `.windsurf/workflows/mtc-rendering.md` | Rendering pipeline architecture — dispatcher patterns, frame sequence, caching strategies, coordinate system, cross-file rendering dependencies |
+
+---
+
+## 10) Documentation Scope Rules
 
 This overview should stay stable by documenting only:
 

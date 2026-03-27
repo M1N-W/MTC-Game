@@ -25,8 +25,9 @@ const DEBUG_MODE = false;
  *   base.js → PlayerBase → [KaoPlayer|AutoPlayer|PoomPlayer|PatPlayer]
  *   enemy.js → ManopBoss.js → FirstBoss.js
  *   GameState.js → WaveManager.js → ShopSystem.js → game.js
- *   WorkerBridge.js   ← loads AFTER game.js (index.html script order)
- *
+ *   WorkerBridge.js   ← loads BEFORE game.js in index.html (typeof guard used for access)
+
+ 
  * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
  *  L.69   Module-level vars     rafId, _bgGrad, dayNightTimer, window.player
  *  L.73   setGameState(s)       Thin alias → GameState.setPhase(); window export
@@ -670,10 +671,12 @@ function drawGame() {
     if (!drawGame._diagFrame) drawGame._diagFrame = 0;
     drawGame._diagFrame++;
     if (DEBUG_MODE && drawGame._diagFrame % 300 === 1) {
-        // console.log('[MTC drawGame] frame', drawGame._diagFrame, '| window.gameState:', window.gameState,
+        /*
+        console.log('[MTC drawGame] frame', drawGame._diagFrame, '| window.gameState:', window.gameState,
             '| player:', !!window.player, '| UIManager:', typeof UIManager,
             '| MTC_DB_SERVER on window:', !!window.MTC_DATABASE_SERVER,
-            '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION;
+            '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION);
+        */
     }
 
     const _bgTop = GAME_CONFIG.visual.bgColorTop;

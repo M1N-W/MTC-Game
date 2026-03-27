@@ -92,17 +92,6 @@ const BALANCE = {
         secondWindHpPct: 0.20,
         secondWindSpeedMult: 1.3,
         secondWindDamageMult: 1.5,
-        // ⚠️  DEPRECATED — source of truth is BALANCE.characters.auto
-        // Before removing: grep -r "BALANCE.player.auto" js/ to confirm no readers.
-        // Stale values annotated below for reference.
-        auto: {
-            hp: 150,            // stale — characters.auto.hp = 230
-            speed: 160,         // stale — characters.auto.moveSpeed = 260
-            energyRegen: 20,    // still matches characters.auto.energyRegen
-            heatWaveRange: 180, // still matches characters.auto.heatWaveRange
-            wanchaiDuration: 4.0,   // stale — characters.auto.wanchaiDuration = 8.0
-            wanchaiCooldown: 12     // still matches characters.auto.wanchaiCooldown
-        }
     },
     characters: {
         kao: {

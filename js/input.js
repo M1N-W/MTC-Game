@@ -518,9 +518,11 @@ function _setupKeyboardListeners() {
                 else if (typeof PoomPlayer !== 'undefined' && window.player instanceof PoomPlayer) {
                     keys.q = 0;
                 } else if (typeof KaoPlayer !== 'undefined' && window.player instanceof KaoPlayer) {
-                    keys.q = 0;  // Kao: Q is Teleport, not weapon switch
+                    keys.q = 0;  // Kao: Q is Teleport
                 } else if (typeof AutoPlayer !== 'undefined' && window.player instanceof AutoPlayer) {
-                    keys.q = 0;  // Auto: Q is Vacuum Heat, not weapon switch
+                    keys.q = 0;  // Auto: Q is Vacuum Heat
+                } else if (typeof PatPlayer !== 'undefined' && window.player instanceof PatPlayer) {
+                    keys.q = 0;  // Pat: Q is Zanzo Flash
                 } else {
                     if (typeof weaponSystem !== 'undefined') weaponSystem.switchWeapon();
                     keys.q = 0;
@@ -597,10 +599,37 @@ var InputSystem = {
      * Wires up all keyboard, mouse, and touch input handlers.
      */
     init: function () {
-        _setupKeyboardListeners();
-        _setupMouseListeners();
-        initMobileControls();
-        // console.log('🕹️ InputSystem initialised.');
+      _setupKeyboardListeners();
+      _setupMouseListeners();
+      initMobileControls();
+
+      // ── BUG FIX: Reset all input state when window loses focus ──────────
+      // Prevents keys/mouse stuck at 1 when user alt-tabs, receives a call,
+      // or browser is minimised (keyup/mouseup/touchend don't fire off-screen).
+      function _resetAllInput() {
+        keys.w = keys.a = keys.s = keys.d = 0;
+        keys.space =
+          keys.q =
+          keys.e =
+          keys.b =
+          keys.f =
+          keys.r =
+          keys.shift =
+            0;
+        mouse.left = mouse.right = 0;
+        joysticks.left.active = false;
+        joysticks.left.id = null;
+        joysticks.left.nx = joysticks.left.ny = 0;
+        joysticks.right.active = false;
+        joysticks.right.id = null;
+        joysticks.right.nx = joysticks.right.ny = 0;
+      }
+      window._resetAllInput = _resetAllInput;
+      window.addEventListener("blur", _resetAllInput);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") _resetAllInput();
+      });
+      // console.log('🕹️ InputSystem initialised.');
     }
 };
 

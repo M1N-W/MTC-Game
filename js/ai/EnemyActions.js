@@ -59,14 +59,15 @@ class EnemyActions {
         let my = -(dy / norm);
 
         // Wall-avoidance: nudge away from world map edges
-        // Use MAP_CONFIG world dimensions — NOT CANVAS screen pixels
-        const margin = 80;
-        const W = (typeof MAP_CONFIG !== 'undefined' ? MAP_CONFIG.mapWidth : 3200);
-        const H = (typeof MAP_CONFIG !== 'undefined' ? MAP_CONFIG.mapHeight : 3200);
-        if (enemy.x < margin) mx += (margin - enemy.x) / margin;
-        if (enemy.x > W - margin) mx -= (enemy.x - (W - margin)) / margin;
-        if (enemy.y < margin) my += (margin - enemy.y) / margin;
-        if (enemy.y > H - margin) my -= (enemy.y - (H - margin)) / margin;
+        // Use GAME_CONFIG.physics.worldBounds — [-1500, 1500] range
+        const margin = 100;
+        const bounds = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.physics)
+            ? GAME_CONFIG.physics.worldBounds : 1500;
+
+        if (enemy.x < -bounds + margin) mx += ((-bounds + margin) - enemy.x) / margin;
+        if (enemy.x > bounds - margin)  mx -= (enemy.x - (bounds - margin)) / margin;
+        if (enemy.y < -bounds + margin) my += ((-bounds + margin) - enemy.y) / margin;
+        if (enemy.y > bounds - margin)  my -= (enemy.y - (bounds - margin)) / margin;
 
         // Renormalize
         const len = Math.hypot(mx, my) || 1;
