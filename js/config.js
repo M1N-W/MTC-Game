@@ -596,6 +596,150 @@ const BALANCE = {
         meteorBurnDuration: 3,
         meteorBurnDPS: 4.0  // NERF: 4.5 → 4.0
     },
+    enemies: {
+        sniper: {
+            radius: 17,
+            color: '#60a5fa',
+            expValue: 70,
+            personality: 'sniper',
+            squadRole: 'anchor',
+            baseHp: 34, hpPerWave: 0.19,
+            baseSpeed: 72, speedPerWave: 4,
+            baseDamage: 26, damagePerWave: 2.0,
+            preferredRange: 680,
+            shootRange: 980,
+            projectileSpeed: 980,
+            chargeTime: 0.65,
+            cooldown: [3.4, 4.6],
+            aimLeadMax: 0.30,
+            alignCos: 0.965
+        },
+        shield_bravo: {
+            radius: 24,
+            color: '#94a3b8',
+            expValue: 78,
+            personality: 'anchor',
+            squadRole: 'anchor',
+            baseHp: 135, hpPerWave: 0.21,
+            baseSpeed: 58, speedPerWave: 3,
+            baseDamage: 18, damagePerWave: 2.2,
+            meleeRange: 62,
+            frontReduction: 0.45,
+            frontArcCos: 0.15
+        },
+        poison_spitter: {
+            radius: 18,
+            color: '#22c55e',
+            expValue: 66,
+            personality: 'anchor',
+            squadRole: 'anchor',
+            baseHp: 42, hpPerWave: 0.18,
+            baseSpeed: 74, speedPerWave: 4,
+            baseDamage: 5, damagePerWave: 0.5,
+            preferredRange: 460,
+            spitRange: 760,
+            cooldown: 4.2,
+            poolRadius: 86,
+            poolDuration: 4.0,
+            poolDamagePerSec: 14,
+            maxPools: 4
+        },
+        charger: {
+            radius: 19,
+            color: '#f97316',
+            expValue: 64,
+            personality: 'pressure',
+            squadRole: 'pressure',
+            baseHp: 58, hpPerWave: 0.18,
+            baseSpeed: 92, speedPerWave: 5,
+            baseDamage: 20, damagePerWave: 1.8,
+            chargeMinRange: 120,
+            chargeMaxRange: 420,
+            windup: 0.28,
+            chargeDuration: 0.20,
+            recovery: 0.55,
+            chargeSpeed: 520
+        },
+        hunter: {
+            radius: 20,
+            color: '#f43f5e',
+            expValue: 72,
+            personality: 'pressure',
+            squadRole: 'pressure',
+            baseHp: 72, hpPerWave: 0.18,
+            baseSpeed: 98, speedPerWave: 5,
+            baseDamage: 24, damagePerWave: 2.2,
+            lockRange: 820,
+            attackRange: 46,
+            attackCooldown: 0.9
+        },
+        fatality_bomber: {
+            radius: 21,
+            color: '#f59e0b',
+            expValue: 68,
+            personality: 'pressure',
+            squadRole: 'pressure',
+            baseHp: 64, hpPerWave: 0.19,
+            baseSpeed: 54, speedPerWave: 3,
+            baseDamage: 8, damagePerWave: 0.6,
+            explosionRadius: 160,
+            explosionDelay: 0.55,
+            explosionDamage: 38
+        },
+        healer: {
+            radius: 17,
+            color: '#34d399',
+            expValue: 74,
+            personality: 'support',
+            squadRole: 'support',
+            baseHp: 34, hpPerWave: 0.18,
+            baseSpeed: 70, speedPerWave: 4,
+            baseDamage: 4, damagePerWave: 0.3,
+            healRange: 320,
+            healAmount: 18,
+            healCooldown: 2.6,
+            healThreshold: 0.78
+        },
+        summoner: {
+            radius: 18,
+            color: '#a78bfa',
+            expValue: 82,
+            personality: 'support',
+            squadRole: 'support',
+            baseHp: 40, hpPerWave: 0.18,
+            baseSpeed: 68, speedPerWave: 4,
+            baseDamage: 5, damagePerWave: 0.4,
+            summonCooldown: 4.8,
+            summonRange: 260,
+            maxMinions: 3
+        },
+        buffer: {
+            radius: 17,
+            color: '#38bdf8',
+            expValue: 76,
+            personality: 'support',
+            squadRole: 'support',
+            baseHp: 38, hpPerWave: 0.18,
+            baseSpeed: 70, speedPerWave: 4,
+            baseDamage: 4, damagePerWave: 0.3,
+            buffRadius: 250,
+            buffCooldown: 4.0,
+            buffDuration: 2.6,
+            speedMult: 1.18,
+            damageMult: 1.22
+        },
+        summon_minion: {
+            radius: 13,
+            color: '#c084fc',
+            expValue: 10,
+            personality: 'pressure',
+            squadRole: 'pressure',
+            baseHp: 18, hpPerWave: 0.12,
+            baseSpeed: 118, speedPerWave: 4,
+            baseDamage: 9, damagePerWave: 0.8,
+            meleeRange: 30
+        }
+    },
     boss: {
         radius: 50,
         // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
@@ -769,8 +913,17 @@ const BALANCE = {
         minKillsForNoDamage: 5,
         enemiesBase: 5,  // BUFF: 4 → 5 (more action early game)
         enemiesPerWave: 2.0,  // REBALANCE: 1.8 → 2.0 (กลับสู่ค่าเดิม — late game ควรรู้สึกถูกท่วม)
+        enableExpandedRoster: true,
         tankSpawnChance: 0.10,  // NERF: 0.12 → 0.10 (fewer tanks)
         mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
+        enemyPools: [
+            { minWave: 1, weights: { basic: 78, tank: 10, mage: 12 } },
+            { minWave: 2, weights: { basic: 56, tank: 10, mage: 12, charger: 10, poison_spitter: 6, shield_bravo: 6 } },
+            { minWave: 4, weights: { basic: 38, tank: 9, mage: 10, charger: 11, hunter: 8, poison_spitter: 7, shield_bravo: 7, sniper: 4, healer: 3, fatality_bomber: 3 } },
+            { minWave: 6, weights: { basic: 25, tank: 9, mage: 10, charger: 11, hunter: 9, poison_spitter: 7, shield_bravo: 8, sniper: 6, healer: 4, summoner: 4, buffer: 4, fatality_bomber: 3 } },
+            { minWave: 9, weights: { basic: 18, tank: 8, mage: 10, charger: 11, hunter: 10, poison_spitter: 8, shield_bravo: 8, sniper: 7, healer: 5, summoner: 5, buffer: 5, fatality_bomber: 5 } },
+            { minWave: 12, weights: { basic: 12, tank: 8, mage: 10, charger: 11, hunter: 11, poison_spitter: 8, shield_bravo: 8, sniper: 8, healer: 5, summoner: 6, buffer: 6, fatality_bomber: 7 } }
+        ],
         bossEveryNWaves: 3,
         glitchGracePeriod: 4000,
         // ── Wave Event Configurations ──────────────────────
@@ -898,6 +1051,10 @@ const BALANCE = {
             basic: { aggression: 0.6, caution: 0.2, teamwork: 0.3 },
             tank: { aggression: 0.8, caution: 0.1, teamwork: 0.5 },
             mage: { aggression: 0.3, caution: 0.8, teamwork: 0.2 },
+            sniper: { aggression: 0.72, caution: 0.35, teamwork: 0.20 },
+            anchor: { aggression: 0.55, caution: 0.35, teamwork: 0.55 },
+            pressure: { aggression: 0.92, caution: 0.08, teamwork: 0.25 },
+            support: { aggression: 0.22, caution: 0.78, teamwork: 0.72 },
         },
 
         // Base utility weights + per-action tuning
@@ -905,12 +1062,33 @@ const BALANCE = {
             attack: { base: 1.0 },
             retreat: { base: 0.8, hpThreshold: 0.3 },  // trigger below 30% HP
             flank: { base: 0.6, optimalDist: 220 },  // best at ~220px from player
+            hold_line: { base: 0.72, optimalDist: 420 },
+            charge: { base: 0.92, optimalDist: 240 },
+            heal_ally: { base: 0.95, allyHpThreshold: 0.78 },
+            buff_ally: { base: 0.82, allyCountThreshold: 2 },
+            summon: { base: 0.76, maxMinions: 3 },
+            hazard_drop: { base: 0.78, optimalDist: 420 },
         },
 
         // Squad / ally awareness
         squad: {
             coordinationRadius: 300,  // px — allies within this range count for teamwork
             squadInterval: 1.0,       // seconds between SquadAI role reassignment ticks
+            roleDefaults: {
+                basic: 'assault',
+                tank: 'shield',
+                mage: 'support',
+                sniper: 'anchor',
+                shield_bravo: 'anchor',
+                poison_spitter: 'anchor',
+                charger: 'pressure',
+                hunter: 'pressure',
+                fatality_bomber: 'pressure',
+                healer: 'support',
+                summoner: 'support',
+                buffer: 'support',
+                summon_minion: 'pressure'
+            }
         },
     },
 

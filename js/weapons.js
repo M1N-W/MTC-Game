@@ -1801,7 +1801,7 @@ class ProjectileManager {
         if (
           proj.checkCollision(player) &&
           !player.isInvisible &&
-          !player.isFreeStealthy
+          !player.isFreeStealthActive
         ) {
           // ⚠️ REFLECT: tryReflectProjectile must set proj.team='player' (not just owner)
           // After reflect, proj stays in array — next frame team='player' routes to enemy hit

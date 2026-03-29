@@ -1,6 +1,55 @@
 # 🎮 MTC Game — Changelog
 
-> **⚠️ DOCUMENTATION STABILITY:** This changelog contains **version-specific implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
+> **⚠️ DOCUMENTATION STABILITY:** This changelog contains **version-specific implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./Information/PROJECT_OVERVIEW.md).
+
+---
+
+## v3.41.11 — Enemy Roster Expansion, Registry Spawn Flow, and Architecture Doc Audit
+*Released: March 29, 2026*
+
+### 🤖 Enemy and AI Architecture
+- **Expanded enemy roster** (`js/entities/enemy.js`, `js/config.js`):
+  - Added registry-backed enemy classes for sniper, shield, poison, pressure, and support families.
+  - Introduced `window.ENEMY_REGISTRY` as the shared constructor surface for wave spawning and admin spawning.
+  - Added shared helper patterns in `EnemyBase` descendants for ranged hold-line, support, summon, and hazard-style behaviors.
+- **Utility AI growth** (`js/ai/UtilityAI.js`, `js/ai/EnemyActions.js`, `js/ai/SquadAI.js`):
+  - Added new action families for hold-line, charge, support-backline, summon, buff, and hazard behaviors.
+  - Extended squad role vocabulary and moved default role assignment toward config-driven lookup rather than hardcoded type-only rules.
+  - Preserved the `_aiMoveX/_aiMoveY` intent contract so AI continues to steer without taking ownership of physics velocity.
+
+### 🌊 Wave and Debug Tooling
+- **WaveManager registry spawn flow** (`js/systems/WaveManager.js`):
+  - Added registry-aware enemy selection and per-wave enemy pool support.
+  - Centralized speed-wave patching into `applyWaveModifiersToEnemy` so normal waves, admin spawns, and summoned minions reuse the same modifier path.
+- **Admin spawn command** (`js/systems/AdminSystem.js`):
+  - Added `spawn enemy <type> [count]` for targeted enemy-family testing against the live registry.
+- **Combat fix** (`js/weapons.js`):
+  - Synced enemy projectile collision logic with the active stealth flag name used by the player implementation.
+
+### 📚 Documentation Audit
+- **PROJECT_OVERVIEW.md**:
+  - Re-audited class hierarchy, load order, hidden coupling, rendering ownership, and wave-registry flow against the current codebase.
+- **SKILL.md / mtc-game-conventions / mtc-rendering**:
+  - Pruned volatile sections and rewrote them around stable architecture only: inheritance, update/draw separation, load order, `_tickShared()` invariants, registry coupling, renderer cache ownership, and frame-pass structure.
+  - Corrected the rendering-skill path and aligned docs with the current renderer and wave architecture.
+
+### Files touched
+```
+✅ MODIFIED: js/entities/enemy.js (expanded enemy roster + registry + render overlays)
+✅ MODIFIED: js/config.js (expanded enemy definitions + wave pool support)
+✅ MODIFIED: js/ai/UtilityAI.js (new action families + role-aware decisions)
+✅ MODIFIED: js/ai/EnemyActions.js (hold-line, charge, support helpers)
+✅ MODIFIED: js/ai/SquadAI.js (role defaults + new role vocabulary)
+✅ MODIFIED: js/systems/WaveManager.js (registry spawn flow + shared wave modifiers)
+✅ MODIFIED: js/systems/AdminSystem.js (spawn enemy command)
+✅ MODIFIED: js/weapons.js (stealth flag fix)
+✅ MODIFIED: sw.js (v3.41.11)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (architecture audit)
+✅ MODIFIED: Markdown Source/Information/SKILL.md (stable architecture rewrite)
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md (skill audit)
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md (rendering architecture audit)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
 
 ---
 

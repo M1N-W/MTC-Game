@@ -191,6 +191,77 @@ class EnemyActions {
         enemy._aiMoveX = mx / len;
         enemy._aiMoveY = my / len;
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HOLD_LINE — maintain ideal distance, drift sideways if already in lane
+    // ─────────────────────────────────────────────────────────────────────────
+    static holdLine(enemy, ctx, preferredDist) {
+        if (!enemy || enemy.dead) return;
+        const { dx, dy, dist } = ctx;
+        const norm = dist || 1;
+        const ideal = preferredDist || 420;
+
+        if (dist < ideal * 0.78) {
+            enemy._aiMoveX = -(dx / norm);
+            enemy._aiMoveY = -(dy / norm);
+            return;
+        }
+        if (dist > ideal * 1.12) {
+            enemy._aiMoveX = dx / norm;
+            enemy._aiMoveY = dy / norm;
+            return;
+        }
+
+        const sign = (enemy.id % 2 === 0) ? 1 : -1;
+        enemy._aiMoveX = (dy / norm) * sign * 0.85;
+        enemy._aiMoveY = -(dx / norm) * sign * 0.85;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CHARGE — direct aggressive lane pressure with slight aim stabilization
+    // ─────────────────────────────────────────────────────────────────────────
+    static charge(enemy, ctx) {
+        if (!enemy || enemy.dead) return;
+        const { dx, dy, dist } = ctx;
+        const norm = dist || 1;
+        enemy._aiMoveX = dx / norm;
+        enemy._aiMoveY = dy / norm;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SUPPORT_BACKLINE — hover behind the nearest ally while avoiding player
+    // ─────────────────────────────────────────────────────────────────────────
+    static supportBackline(enemy, ctx, fallbackDist) {
+        if (!enemy || enemy.dead) return;
+        const { dx, dy, dist, allies } = ctx;
+        const norm = dist || 1;
+        let anchor = null;
+
+        if (allies && allies.length) {
+            for (let i = 0; i < allies.length; i++) {
+                const ally = allies[i];
+                if (!ally || ally.dead || ally === enemy) continue;
+                if (ally.type === 'healer' || ally.type === 'summoner' || ally.type === 'buffer') continue;
+                if (!anchor || Math.hypot(ally.x - enemy.x, ally.y - enemy.y) < Math.hypot(anchor.x - enemy.x, anchor.y - enemy.y)) {
+                    anchor = ally;
+                }
+            }
+        }
+
+        if (anchor) {
+            const ax = anchor.x - enemy.x;
+            const ay = anchor.y - enemy.y;
+            const ad = Math.hypot(ax, ay) || 1;
+            const mx = (ax / ad) * 0.55 - (dx / norm) * 0.45;
+            const my = (ay / ad) * 0.55 - (dy / norm) * 0.45;
+            const len = Math.hypot(mx, my) || 1;
+            enemy._aiMoveX = mx / len;
+            enemy._aiMoveY = my / len;
+            return;
+        }
+
+        EnemyActions.holdLine(enemy, ctx, fallbackDist || 320);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════

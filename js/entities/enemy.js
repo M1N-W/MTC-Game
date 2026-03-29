@@ -136,6 +136,10 @@ class EnemyBase extends Entity {
     // Never conflicts with vacuum/sticky: those write vx/vy directly
     this._aiMoveX = 0;
     this._aiMoveY = 0;
+    this._enemySpeedBuff = 1;
+    this._enemySpeedBuffTimer = 0;
+    this._enemyDamageBuff = 1;
+    this._enemyDamageBuffTimer = 0;
   }
 
   // ── Proxy getters — keep call sites backward-compatible ──
@@ -207,6 +211,21 @@ class EnemyBase extends Entity {
       this._shatterStunTimer -= dt;
       this._aiMoveX = 0;
       this._aiMoveY = 0;
+    }
+
+    if ((this._enemySpeedBuffTimer ?? 0) > 0) {
+      this._enemySpeedBuffTimer -= dt;
+      if (this._enemySpeedBuffTimer <= 0) {
+        this._enemySpeedBuffTimer = 0;
+        this._enemySpeedBuff = 1;
+      }
+    }
+    if ((this._enemyDamageBuffTimer ?? 0) > 0) {
+      this._enemyDamageBuffTimer -= dt;
+      if (this._enemyDamageBuffTimer <= 0) {
+        this._enemyDamageBuffTimer = 0;
+        this._enemyDamageBuff = 1;
+      }
     }
 
     // UtilityAI decision tick (throttled to 2Hz internally)
@@ -289,6 +308,135 @@ class EnemyBase extends Entity {
     this.health.takeDamage(amt, player);
   }
 
+  heal(amt) {
+    if (!this.health) return;
+    this.health.heal(amt);
+  }
+
+  getMoveSpeed(mult = 1) {
+    return (this.speed || 0) * (this._enemySpeedBuff || 1) * mult;
+  }
+
+  getAttackDamage(mult = 1) {
+    return (this.damage || 0) * (this._enemyDamageBuff || 1) * mult;
+  }
+
+  tickCooldown(prop, dt) {
+    this[prop] = Math.max(0, (this[prop] || 0) - dt);
+    return this[prop];
+  }
+
+  hasLineOfSightTo(target, maxDist) {
+    if (!target) return false;
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+    const total = Math.hypot(dx, dy) || 1;
+    if (maxDist && total > maxDist) return false;
+    if (typeof mapSystem === 'undefined' || typeof mapSystem.queryNearby !== 'function') return true;
+
+    const step = 48;
+    const steps = Math.max(1, Math.floor(total / step));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const px = this.x + dx * t;
+      const py = this.y + dy * t;
+      const objs = mapSystem.queryNearby(px, py, 24);
+      for (let j = 0; j < objs.length; j++) {
+        const obj = objs[j];
+        if (!obj || !obj.solid) continue;
+        if (px >= obj.x && px <= obj.x + obj.w && py >= obj.y && py <= obj.y + obj.h) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  isFrontHit(attacker, cosThreshold = 0.15) {
+    if (!attacker) return false;
+    const ax = attacker.x - this.x;
+    const ay = attacker.y - this.y;
+    const ad = Math.hypot(ax, ay) || 1;
+    const fx = Math.cos(this.angle || 0);
+    const fy = Math.sin(this.angle || 0);
+    return ((ax / ad) * fx + (ay / ad) * fy) >= cosThreshold;
+  }
+
+  findLowestHpAlly(range, ratioThreshold = 0.85) {
+    if (typeof window === 'undefined' || !window.enemies) return null;
+    let best = null;
+    let bestRatio = ratioThreshold;
+    const maxRange = range || 280;
+    for (let i = 0; i < window.enemies.length; i++) {
+      const ally = window.enemies[i];
+      if (!ally || ally.dead || ally === this) continue;
+      const ratio = ally.hp / Math.max(ally.maxHp || 1, 1);
+      if (ratio >= bestRatio) continue;
+      if (Math.hypot(ally.x - this.x, ally.y - this.y) > maxRange) continue;
+      best = ally;
+      bestRatio = ratio;
+    }
+    return best;
+  }
+
+  countNearbyAllies(range) {
+    if (typeof window === 'undefined' || !window.enemies) return 0;
+    let count = 0;
+    const maxRange = range || 240;
+    for (let i = 0; i < window.enemies.length; i++) {
+      const ally = window.enemies[i];
+      if (!ally || ally.dead || ally === this) continue;
+      if (Math.hypot(ally.x - this.x, ally.y - this.y) <= maxRange) count++;
+    }
+    return count;
+  }
+
+  moveByIntent(dt, player, directWeight, aiWeight, closeSlowFactor, pullSpeed, idleDrag) {
+    if (!player) return;
+    if ((this.vacuumStunTimer ?? 0) > 0) {
+      this.vacuumStunTimer -= dt;
+      if ((this._vacuumPullTimer ?? 0) > 0) {
+        this._vacuumPullTimer -= dt;
+        const pvx = (this._vacuumTargetX ?? this.x) - this.x;
+        const pvy = (this._vacuumTargetY ?? this.y) - this.y;
+        const pd = Math.hypot(pvx, pvy);
+        if (pd > 8) {
+          this.vx = (pvx / pd) * (pullSpeed || 860);
+          this.vy = (pvy / pd) * (pullSpeed || 860);
+        } else {
+          this.vx *= 0.5;
+          this.vy *= 0.5;
+        }
+      } else {
+        this.vx *= idleDrag || 0.85;
+        this.vy *= idleDrag || 0.85;
+      }
+      return;
+    }
+
+    if (player.isInvisible) {
+      this.vx *= idleDrag || 0.9;
+      this.vy *= idleDrag || 0.9;
+      return;
+    }
+
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const distToPlayer = Math.hypot(dx, dy) || 1;
+    this.angle = Math.atan2(dy, dx);
+    const baseX = Math.cos(this.angle) * (directWeight || 0);
+    const baseY = Math.sin(this.angle) * (directWeight || 0);
+    const blendX = baseX + this._aiMoveX * (aiWeight || 0);
+    const blendY = baseY + this._aiMoveY * (aiWeight || 0);
+    const blendLen = Math.hypot(blendX, blendY) || 1;
+    const slowFactor = distToPlayer > this.radius + (player.radius || 20)
+      ? 1
+      : (closeSlowFactor ?? 0.3);
+    const speed = this.getMoveSpeed(slowFactor) * this.stickySlowMultiplier;
+    this.vx = (blendX / blendLen) * speed;
+    this.vy = (blendY / blendLen) * speed;
+  }
+
   // Override in subclass for custom death FX/scoring
   _onDeath(player) { }
 }
@@ -359,12 +507,12 @@ class Enemy extends EnemyBase {
         const blendX = baseX * 0.7 + this._aiMoveX * 0.3;
         const blendY = baseY * 0.7 + this._aiMoveY * 0.3;
         const blendLen = Math.hypot(blendX, blendY) || 1;
-        const chaseSpeed =
+        const moveSpeed =
           d > this.radius + (window.player?.radius || 20)
-            ? this.speed
-            : this.speed * 0.3;
-        this.vx = (blendX / blendLen) * chaseSpeed * this.stickySlowMultiplier;
-        this.vy = (blendY / blendLen) * chaseSpeed * this.stickySlowMultiplier;
+            ? this.getMoveSpeed()
+            : this.getMoveSpeed(0.3);
+        this.vx = (blendX / blendLen) * moveSpeed * this.stickySlowMultiplier;
+        this.vy = (blendY / blendLen) * moveSpeed * this.stickySlowMultiplier;
       } else {
         this.vx *= 0.9;
         this.vy *= 0.9;
@@ -391,7 +539,7 @@ class Enemy extends EnemyBase {
           this.y,
           Math.atan2(_aimY - this.y, _aimX - this.x),  // ← predictive angle
           BALANCE.enemy.projectileSpeed,
-          this.damage,
+          this.getAttackDamage(),
           "#fff",
           false,
           "enemy",
@@ -401,7 +549,7 @@ class Enemy extends EnemyBase {
     }
     // ── Melee contact damage ─────────────────────────────
     if (d < this.radius + player.radius) {
-      const contactDamage = this.damage * dt * 3;
+      const contactDamage = this.getAttackDamage() * dt * 3;
       const glitchMult = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
       player.takeDamage(contactDamage * glitchMult);
     }
@@ -508,8 +656,8 @@ class TankEnemy extends EnemyBase {
         const blendX = Math.cos(this.angle) * 0.8 + this._aiMoveX * 0.2;
         const blendY = Math.sin(this.angle) * 0.8 + this._aiMoveY * 0.2;
         const blendLen = Math.hypot(blendX, blendY) || 1;
-        this.vx = (blendX / blendLen) * this.speed * this.stickySlowMultiplier;
-        this.vy = (blendY / blendLen) * this.speed * this.stickySlowMultiplier;
+        this.vx = (blendX / blendLen) * this.getMoveSpeed() * this.stickySlowMultiplier;
+        this.vy = (blendY / blendLen) * this.getMoveSpeed() * this.stickySlowMultiplier;
       } else {
         this.vx *= 0.95;
         this.vy *= 0.95;
@@ -519,7 +667,7 @@ class TankEnemy extends EnemyBase {
     this.applyPhysics(dt);
     // ── Melee contact damage ─────────────────────────────
     if (d < BALANCE.tank.meleeRange + player.radius) {
-      const contactDamage = this.damage * dt * 2;
+      const contactDamage = this.getAttackDamage() * dt * 2;
       const glitchMult = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
       player.takeDamage(contactDamage * glitchMult);
     }
@@ -613,11 +761,11 @@ class MageEnemy extends EnemyBase {
         const blendX = baseX * 0.75 + this._aiMoveX * 0.25;
         const blendY = baseY * 0.75 + this._aiMoveY * 0.25;
         const blendLen = Math.hypot(blendX, blendY) || 1;
-        this.vx = (blendX / blendLen) * this.speed * this.stickySlowMultiplier;
-        this.vy = (blendY / blendLen) * this.speed * this.stickySlowMultiplier;
+        this.vx = (blendX / blendLen) * this.getMoveSpeed() * this.stickySlowMultiplier;
+        this.vy = (blendY / blendLen) * this.getMoveSpeed() * this.stickySlowMultiplier;
       } else if (d > od + BALANCE.mage.orbitDistanceBuffer) {
-        this.vx = Math.cos(this.angle) * this.speed * this.stickySlowMultiplier;
-        this.vy = Math.sin(this.angle) * this.speed * this.stickySlowMultiplier;
+        this.vx = Math.cos(this.angle) * this.getMoveSpeed() * this.stickySlowMultiplier;
+        this.vy = Math.sin(this.angle) * this.getMoveSpeed() * this.stickySlowMultiplier;
       } else {
         this.vx *= 0.95;
         this.vy *= 0.95;
@@ -698,6 +846,609 @@ class MageEnemy extends EnemyBase {
       window.powerups.push(new PowerUp(this.x, this.y));
   }
   // draw() → EnemyRenderer.drawMage()
+}
+
+function _enemyCfg(key) {
+  return (typeof BALANCE !== "undefined" && BALANCE.enemies)
+    ? BALANCE.enemies[key]
+    : null;
+}
+
+function _scaledEnemyValue(cfg, baseKey, growthKey) {
+  const wave = typeof getWave === "function" ? getWave() : 1;
+  if (!cfg) return 0;
+  return cfg[growthKey] !== undefined
+    ? cfg[baseKey] + wave * cfg[growthKey]
+    : cfg[baseKey];
+}
+
+function _setupExpandedEnemy(enemy, key) {
+  const cfg = _enemyCfg(key);
+  if (!cfg) return;
+  const wave = typeof getWave === "function" ? getWave() : 1;
+  const hpGrowth = 1 + (cfg.hpPerWave || 0);
+  enemy.maxHp = Math.floor(cfg.baseHp * Math.pow(hpGrowth, wave));
+  enemy.hp = enemy.maxHp;
+  enemy.speed = _scaledEnemyValue(cfg, "baseSpeed", "speedPerWave");
+  enemy.damage = _scaledEnemyValue(cfg, "baseDamage", "damagePerWave");
+  enemy.color = cfg.color;
+  enemy.type = key;
+  enemy.expValue = cfg.expValue || 0;
+  enemy.preferredRange =
+    cfg.preferredRange || cfg.healRange || cfg.buffRadius || cfg.spitRange || 320;
+  enemy._enemyConfig = cfg;
+}
+
+function _expandedEnemyDeath(enemy, player, scoreValue, dropMult = 1) {
+  if (typeof spawnParticles === "function")
+    spawnParticles(enemy.x, enemy.y, 18, enemy.color || "#fff");
+  if (typeof decalSystem !== "undefined") {
+    decalSystem.spawn(
+      enemy.x,
+      enemy.y,
+      enemy.color || "#334155",
+      10 + Math.random() * 6,
+      14
+    );
+  }
+  if (typeof addScore === "function" && typeof getWave === "function")
+    addScore(scoreValue * getWave());
+  if (typeof addEnemyKill === "function") addEnemyKill();
+  if (typeof Audio !== "undefined" && Audio.playEnemyDeath) Audio.playEnemyDeath();
+  if (player && typeof player.gainExp === "function") player.gainExp(enemy.expValue || 0);
+  if (
+    player &&
+    player.charId === "kao" &&
+    typeof player.addKill === "function" &&
+    typeof BALANCE !== "undefined" &&
+    BALANCE.characters?.kao?.weapons
+  ) {
+    const wepKey =
+      typeof weaponSystem !== "undefined"
+        ? weaponSystem.currentWeapon || "auto"
+        : "auto";
+    const currentWep = BALANCE.characters.kao.weapons[wepKey];
+    if (currentWep) player.addKill(currentWep.name);
+  }
+  if (typeof Achievements !== "undefined") {
+    Achievements.stats.kills++;
+    Achievements.check("first_blood");
+  }
+  if (Math.random() < ((BALANCE.powerups?.dropRate || 0) * dropMult) && window.powerups) {
+    window.powerups.push(new PowerUp(enemy.x, enemy.y));
+  }
+}
+
+class PoisonPoolEffect {
+  constructor(x, y, cfg) {
+    this.x = x;
+    this.y = y;
+    this.radius = cfg.poolRadius;
+    this.duration = cfg.poolDuration;
+    this.life = cfg.poolDuration;
+    this.damagePerSec = cfg.poolDamagePerSec;
+    this.color = cfg.color;
+  }
+
+  update(dt, player) {
+    this.life -= dt;
+    if (
+      player &&
+      !player.dead &&
+      Math.hypot(player.x - this.x, player.y - this.y) <= this.radius
+    ) {
+      player.takeDamage(this.damagePerSec * dt);
+    }
+    return this.life <= 0;
+  }
+
+  draw() {
+    if (typeof worldToScreen !== "function") return;
+    const s = worldToScreen(this.x, this.y);
+    const alpha = Math.max(0.18, this.life / Math.max(this.duration, 0.01));
+    CTX.save();
+    CTX.globalAlpha = alpha * 0.55;
+    CTX.fillStyle = this.color;
+    CTX.shadowBlur = 16;
+    CTX.shadowColor = this.color;
+    CTX.beginPath();
+    CTX.arc(s.x, s.y, this.radius, 0, Math.PI * 2);
+    CTX.fill();
+    CTX.globalAlpha = alpha * 0.9;
+    CTX.strokeStyle = "#86efac";
+    CTX.lineWidth = 2;
+    CTX.beginPath();
+    CTX.arc(
+      s.x,
+      s.y,
+      this.radius * (0.82 + Math.sin(performance.now() / 120) * 0.04),
+      0,
+      Math.PI * 2
+    );
+    CTX.stroke();
+    CTX.restore();
+  }
+}
+
+class FatalityExplosionEffect {
+  constructor(x, y, cfg) {
+    this.x = x;
+    this.y = y;
+    this.radius = cfg.explosionRadius;
+    this.damage = cfg.explosionDamage;
+    this.delay = cfg.explosionDelay;
+    this.timer = cfg.explosionDelay;
+    this.color = cfg.color;
+    this._detonated = false;
+  }
+
+  update(dt, player) {
+    this.timer -= dt;
+    if (!this._detonated && this.timer <= 0) {
+      this._detonated = true;
+      if (
+        player &&
+        !player.dead &&
+        Math.hypot(player.x - this.x, player.y - this.y) <= this.radius
+      ) {
+        player.takeDamage(this.damage);
+      }
+      if (typeof spawnParticles === "function") spawnParticles(this.x, this.y, 26, this.color);
+      if (typeof addScreenShake === "function") addScreenShake(12);
+      return true;
+    }
+    return false;
+  }
+
+  draw() {
+    if (typeof worldToScreen !== "function") return;
+    const s = worldToScreen(this.x, this.y);
+    const progress = 1 - Math.max(0, this.timer / Math.max(this.delay, 0.01));
+    CTX.save();
+    CTX.globalAlpha = 0.15 + progress * 0.35;
+    CTX.fillStyle = this.color;
+    CTX.beginPath();
+    CTX.arc(s.x, s.y, this.radius * progress, 0, Math.PI * 2);
+    CTX.fill();
+    CTX.globalAlpha = 0.9;
+    CTX.strokeStyle = "#fde68a";
+    CTX.lineWidth = 3;
+    CTX.beginPath();
+    CTX.arc(s.x, s.y, this.radius * (0.3 + progress * 0.7), 0, Math.PI * 2);
+    CTX.stroke();
+    CTX.restore();
+  }
+}
+
+class SniperEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("sniper");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "sniper");
+    this.shootTimer = rand(...cfg.cooldown);
+    this.chargeTimer = 0;
+    this._telegraphTimer = 0;
+    this._lockedAim = 0;
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    const d = dist(this.x, this.y, player.x, player.y);
+    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
+    this.moveByIntent(dt, player, 0.10, 0.90, 0.25, 860, 0.88);
+    if (this.chargeTimer > 0) {
+      this.chargeTimer -= dt;
+      this._telegraphTimer = this.chargeTimer;
+      this.vx *= 0.75;
+      this.vy *= 0.75;
+    }
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    this.shootTimer -= dt;
+
+    if (player.isInvisible) return;
+    if (this.chargeTimer <= 0 && this._lockedAim) {
+      if (typeof projectileManager === "undefined") return;
+      projectileManager.add(
+        new Projectile(
+          this.x,
+          this.y,
+          this._lockedAim,
+          cfg.projectileSpeed,
+          this.getAttackDamage(),
+          cfg.color,
+          true,
+          "enemy",
+          { size: 18, radius: 12, life: 1.6 }
+        )
+      );
+      this._lockedAim = 0;
+      this.shootTimer = rand(...cfg.cooldown);
+      return;
+    }
+
+    if (this.shootTimer > 0 || this.chargeTimer > 0 || d > cfg.shootRange) return;
+    if (!this.hasLineOfSightTo(player, cfg.shootRange)) return;
+    const align = Math.max(Math.abs(player.x - this.x), Math.abs(player.y - this.y)) / Math.max(d, 1);
+    if (align < cfg.alignCos) return;
+    const leadT = Math.min(cfg.aimLeadMax, 0.12 + ((typeof getWave === "function" ? getWave() : 1) - 1) * 0.02);
+    const pred = typeof playerAnalyzer !== "undefined" ? playerAnalyzer.predictedPosition(leadT) : null;
+    const tx = pred ? pred.x : player.x;
+    const ty = pred ? pred.y : player.y;
+    this._lockedAim = Math.atan2(ty - this.y, tx - this.x);
+    this.chargeTimer = cfg.chargeTime;
+    this._telegraphTimer = cfg.chargeTime;
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.mage, 1.15);
+  }
+}
+
+class ShieldBraverEnemy extends TankEnemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("shield_bravo");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "shield_bravo");
+  }
+
+  takeDamage(amt, player) {
+    const cfg = this._enemyConfig;
+    if (player && this.isFrontHit(player, cfg.frontArcCos)) {
+      amt *= cfg.frontReduction;
+    }
+    super.takeDamage(amt, player);
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+
+    this._tickShared(dt, player);
+
+    const cfg = this._enemyConfig;
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const d = dist(this.x, this.y, player.x, player.y);
+    this.angle = Math.atan2(dy, dx);
+    this.moveByIntent(dt, player, 0.78, 0.22, 0.25, 560, 0.95);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    if (d < cfg.meleeRange + player.radius) {
+      const contactDamage = this.getAttackDamage() * dt * 2.1;
+      const glitchMult = window.isGlitchWave ? GLITCH_DAMAGE_MULT : 1.0;
+      player.takeDamage(contactDamage * glitchMult);
+    }
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.tank, 1.25);
+  }
+}
+
+class PoisonSpitterEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("poison_spitter");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "poison_spitter");
+    this.spitCooldown = cfg.cooldown;
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    const d = dist(this.x, this.y, player.x, player.y);
+    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
+    this.moveByIntent(dt, player, 0.20, 0.80, 0.35, 860, 0.9);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    this.tickCooldown("spitCooldown", dt);
+    if (player.isInvisible || this.spitCooldown > 0 || d > cfg.spitRange) return;
+
+    let activePools = 0;
+    if (window.specialEffects) {
+      for (let i = 0; i < window.specialEffects.length; i++) {
+        if (window.specialEffects[i] instanceof PoisonPoolEffect) activePools++;
+      }
+      if (activePools >= cfg.maxPools) return;
+      const pred = typeof playerAnalyzer !== "undefined" ? playerAnalyzer.predictedPosition(0.18) : null;
+      const tx = pred ? pred.x : player.x;
+      const ty = pred ? pred.y : player.y;
+      window.specialEffects.push(new PoisonPoolEffect(tx, ty, cfg));
+    }
+    this.spitCooldown = cfg.cooldown;
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.basicEnemy, 1.05);
+  }
+}
+
+class ChargerEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("charger");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "charger");
+    this._state = "idle";
+    this._stateTimer = rand(0.6, 1.2);
+    this._chargeDirX = 0;
+    this._chargeDirY = 0;
+    this._chargeHit = false;
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const d = Math.hypot(dx, dy) || 1;
+    this.angle = Math.atan2(dy, dx);
+
+    if (this._state === "windup") {
+      this._stateTimer -= dt;
+      this.vx *= 0.6;
+      this.vy *= 0.6;
+      if (this._stateTimer <= 0) {
+        this._state = "charge";
+        this._stateTimer = cfg.chargeDuration;
+        this._chargeDirX = dx / d;
+        this._chargeDirY = dy / d;
+        this._chargeHit = false;
+      }
+    } else if (this._state === "charge") {
+      this._stateTimer -= dt;
+      this.vx = this._chargeDirX * cfg.chargeSpeed;
+      this.vy = this._chargeDirY * cfg.chargeSpeed;
+      if (!this._chargeHit && d <= this.radius + player.radius + 12) {
+        player.takeDamage(this.getAttackDamage(1.4));
+        this._chargeHit = true;
+        this._state = "recover";
+        this._stateTimer = cfg.recovery;
+      } else if (this._stateTimer <= 0) {
+        this._state = "recover";
+        this._stateTimer = cfg.recovery;
+      }
+    } else if (this._state === "recover") {
+      this._stateTimer -= dt;
+      this.vx *= 0.84;
+      this.vy *= 0.84;
+      if (this._stateTimer <= 0) {
+        this._state = "idle";
+        this._stateTimer = rand(0.7, 1.1);
+      }
+    } else {
+      this._stateTimer -= dt;
+      this.moveByIntent(dt, player, 0.50, 0.50, 0.28, 900, 0.9);
+      if (!player.isInvisible && this._stateTimer <= 0 && d >= cfg.chargeMinRange && d <= cfg.chargeMaxRange) {
+        this._state = "windup";
+        this._stateTimer = cfg.windup;
+      }
+    }
+
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.basicEnemy, 1.1);
+  }
+}
+
+class HunterEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("hunter");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "hunter");
+    this.attackCooldown = rand(0.3, 0.7);
+    this._lockedOn = true;
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    const d = dist(this.x, this.y, player.x, player.y);
+    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
+    this.moveByIntent(dt, player, 0.60, 0.40, 0.22, 900, 0.92);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    this.tickCooldown("attackCooldown", dt);
+    this._lockedOn = !player.isInvisible && d <= cfg.lockRange;
+    if (this._lockedOn && d <= cfg.attackRange + player.radius && this.attackCooldown <= 0) {
+      player.takeDamage(this.getAttackDamage(1.25));
+      this.attackCooldown = cfg.attackCooldown;
+    }
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.basicEnemy, 1.1);
+  }
+}
+
+class FatalityBomberEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("fatality_bomber");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "fatality_bomber");
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    this.moveByIntent(dt, player, 0.65, 0.35, 0.35, 820, 0.9);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+  }
+
+  _onDeath(player) {
+    if (window.specialEffects) {
+      window.specialEffects.push(new FatalityExplosionEffect(this.x, this.y, this._enemyConfig));
+    }
+    _expandedEnemyDeath(this, player, BALANCE.score.basicEnemy, 1.15);
+  }
+}
+
+class HealerEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("healer");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "healer");
+    this.healCooldown = rand(1.2, cfg.healCooldown);
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
+    this.moveByIntent(dt, player, 0.0, 1.0, 0.30, 860, 0.92);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    this.tickCooldown("healCooldown", dt);
+    if (this.healCooldown > 0) return;
+    const ally = this.findLowestHpAlly(cfg.healRange, cfg.healThreshold);
+    if (!ally) return;
+    ally.heal(cfg.healAmount);
+    if (typeof spawnFloatingText === "function") {
+      spawnFloatingText(`+${cfg.healAmount}`, ally.x, ally.y - 42, "#34d399", 16);
+    }
+    this.healCooldown = cfg.healCooldown;
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.mage, 1.0);
+  }
+}
+
+class SummonedMinionEnemy extends Enemy {
+  constructor(x, y, owner) {
+    const cfg = _enemyCfg("summon_minion");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "summon_minion");
+    this.owner = owner || null;
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    const d = dist(this.x, this.y, player.x, player.y);
+    this.moveByIntent(dt, player, 0.65, 0.35, 0.20, 920, 0.9);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    if (d <= cfg.meleeRange + player.radius) {
+      player.takeDamage(this.getAttackDamage() * dt * 2.2);
+    }
+  }
+
+  _onDeath(player) {
+    if (this.owner) this.owner._activeMinions = Math.max(0, (this.owner._activeMinions || 1) - 1);
+    _expandedEnemyDeath(this, player, 30, 0);
+  }
+}
+
+class SummonerEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("summoner");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "summoner");
+    this.summonCooldown = rand(1.5, cfg.summonCooldown);
+    this._activeMinions = 0;
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
+    this.moveByIntent(dt, player, 0.0, 1.0, 0.28, 860, 0.92);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    this.tickCooldown("summonCooldown", dt);
+    if (this.summonCooldown > 0 || this._activeMinions >= cfg.maxMinions) return;
+    if (!window.enemies) return;
+    const angle = Math.random() * Math.PI * 2;
+    const spawnX = this.x + Math.cos(angle) * cfg.summonRange * 0.4;
+    const spawnY = this.y + Math.sin(angle) * cfg.summonRange * 0.4;
+    const minion = new SummonedMinionEnemy(spawnX, spawnY, this);
+    this._activeMinions++;
+    window.enemies.push(minion);
+    if (typeof SquadAI !== "undefined") SquadAI.tagOnSpawn(minion);
+    if (typeof window.applyWaveModifiersToEnemy === "function") window.applyWaveModifiersToEnemy(minion);
+    this.summonCooldown = cfg.summonCooldown;
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.mage, 1.0);
+  }
+}
+
+class BufferEnemy extends Enemy {
+  constructor(x, y) {
+    const cfg = _enemyCfg("buffer");
+    super(x, y);
+    this.radius = cfg.radius;
+    this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
+    _setupExpandedEnemy(this, "buffer");
+    this.buffCooldown = rand(1.4, cfg.buffCooldown);
+    this._buffMode = "speed";
+  }
+
+  update(dt, player) {
+    if (this.dead) return;
+    this._tickShared(dt, player);
+    const cfg = this._enemyConfig;
+    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
+    this.moveByIntent(dt, player, 0.0, 1.0, 0.28, 860, 0.92);
+    this._steerAroundObstacles(dt);
+    this.applyPhysics(dt);
+    this.tickCooldown("buffCooldown", dt);
+    if (this.buffCooldown > 0 || !window.enemies) return;
+
+    let buffed = 0;
+    for (let i = 0; i < window.enemies.length; i++) {
+      const ally = window.enemies[i];
+      if (!ally || ally.dead || ally === this) continue;
+      if (Math.hypot(ally.x - this.x, ally.y - this.y) > cfg.buffRadius) continue;
+      if (this._buffMode === "speed") {
+        ally._enemySpeedBuff = Math.max(ally._enemySpeedBuff || 1, cfg.speedMult);
+        ally._enemySpeedBuffTimer = Math.max(ally._enemySpeedBuffTimer || 0, cfg.buffDuration);
+      } else {
+        ally._enemyDamageBuff = Math.max(ally._enemyDamageBuff || 1, cfg.damageMult);
+        ally._enemyDamageBuffTimer = Math.max(ally._enemyDamageBuffTimer || 0, cfg.buffDuration);
+      }
+      buffed++;
+    }
+    if (buffed > 0) {
+      this._buffMode = this._buffMode === "speed" ? "damage" : "speed";
+      this.buffCooldown = cfg.buffCooldown;
+    }
+  }
+
+  _onDeath(player) {
+    _expandedEnemyDeath(this, player, BALANCE.score.mage, 1.0);
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -789,7 +1540,32 @@ window.Enemy = Enemy;
 window.EnemyBase = EnemyBase; // alias for Debug.html check
 window.TankEnemy = TankEnemy;
 window.MageEnemy = MageEnemy;
+window.SniperEnemy = SniperEnemy;
+window.ShieldBraverEnemy = ShieldBraverEnemy;
+window.PoisonSpitterEnemy = PoisonSpitterEnemy;
+window.ChargerEnemy = ChargerEnemy;
+window.HunterEnemy = HunterEnemy;
+window.FatalityBomberEnemy = FatalityBomberEnemy;
+window.HealerEnemy = HealerEnemy;
+window.SummonerEnemy = SummonerEnemy;
+window.BufferEnemy = BufferEnemy;
+window.SummonedMinionEnemy = SummonedMinionEnemy;
 window.PowerUp = PowerUp;
+window.ENEMY_REGISTRY = {
+  basic: { ctor: Enemy },
+  tank: { ctor: TankEnemy },
+  mage: { ctor: MageEnemy },
+  sniper: { ctor: SniperEnemy },
+  shield_bravo: { ctor: ShieldBraverEnemy },
+  poison_spitter: { ctor: PoisonSpitterEnemy },
+  charger: { ctor: ChargerEnemy },
+  hunter: { ctor: HunterEnemy },
+  fatality_bomber: { ctor: FatalityBomberEnemy },
+  healer: { ctor: HealerEnemy },
+  summoner: { ctor: SummonerEnemy },
+  buffer: { ctor: BufferEnemy },
+  summon_minion: { ctor: SummonedMinionEnemy }
+};
 // ============================================================
 // EnemyRenderer — Canvas draw calls for all enemy types
 //
@@ -1012,6 +1788,81 @@ class EnemyRenderer {
     }
   }
 
+  static _drawExpandedEnemyOverlay(e, sx, sy, R, now) {
+    if (e.type === "sniper" && (e._telegraphTimer ?? 0) > 0) {
+      const chargeTime = e._enemyConfig?.chargeTime || 0.65;
+      const alpha = Math.min(1, e._telegraphTimer / chargeTime);
+      CTX.save();
+      CTX.globalAlpha = 0.18 + alpha * 0.35;
+      CTX.strokeStyle = "#93c5fd";
+      CTX.lineWidth = 3;
+      CTX.beginPath();
+      CTX.moveTo(sx, sy);
+      CTX.lineTo(
+        sx + Math.cos(e._lockedAim || e.angle) * 180,
+        sy + Math.sin(e._lockedAim || e.angle) * 180
+      );
+      CTX.stroke();
+      CTX.restore();
+    }
+
+    if (e.type === "poison_spitter") {
+      CTX.save();
+      CTX.globalAlpha = 0.35;
+      CTX.fillStyle = "#22c55e";
+      CTX.beginPath();
+      CTX.arc(sx, sy + R * 0.35, R * 0.28, 0, Math.PI * 2);
+      CTX.fill();
+      CTX.restore();
+    }
+
+    if (e.type === "charger" && e._state === "windup") {
+      CTX.save();
+      CTX.globalAlpha = 0.7;
+      CTX.strokeStyle = "#fb923c";
+      CTX.lineWidth = 2;
+      CTX.beginPath();
+      CTX.arc(sx, sy, R + 8 + Math.sin(now / 80) * 3, 0, Math.PI * 2);
+      CTX.stroke();
+      CTX.restore();
+    }
+
+    if (e.type === "hunter" && e._lockedOn) {
+      CTX.save();
+      CTX.globalAlpha = 0.55;
+      CTX.strokeStyle = "#fb7185";
+      CTX.lineWidth = 1.5;
+      CTX.beginPath();
+      CTX.arc(sx, sy, R + 6, 0, Math.PI * 2);
+      CTX.stroke();
+      CTX.restore();
+    }
+
+    if (e.type === "healer" || e.type === "summoner" || e.type === "buffer") {
+      CTX.save();
+      CTX.globalAlpha = 0.55;
+      CTX.strokeStyle = e.color;
+      CTX.lineWidth = 2;
+      CTX.beginPath();
+      CTX.arc(sx, sy - R * 0.2, R * 0.45, 0, Math.PI * 2);
+      CTX.stroke();
+      CTX.restore();
+    }
+
+    if (e.type === "shield_bravo") {
+      CTX.save();
+      CTX.translate(sx, sy);
+      CTX.rotate(e.angle);
+      CTX.globalAlpha = 0.6;
+      CTX.strokeStyle = "#e2e8f0";
+      CTX.lineWidth = 4;
+      CTX.beginPath();
+      CTX.arc(0, 0, R + 10, -0.7, 0.7);
+      CTX.stroke();
+      CTX.restore();
+    }
+  }
+
   // ── Basic Enemy (Corrupted Student Drone) ────────────────
   static drawEnemy(e, now = performance.now()) {
     // ╔══════════════════════════════════════════════════════════╗
@@ -1176,6 +2027,7 @@ class EnemyRenderer {
 
     // ── Shared status overlays (hit flash, sticky, ignite) ────────
     EnemyRenderer._drawStatusOverlays(e, sx, sy, R, now);
+    EnemyRenderer._drawExpandedEnemyOverlay(e, sx, sy, R, now);
 
     // ── HP bar ────────────────────────────────────────────────────
     EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 30, 10, now);
@@ -1365,6 +2217,7 @@ class EnemyRenderer {
 
     // ── Shared status overlays (hit flash, sticky, ignite) ────────
     EnemyRenderer._drawStatusOverlays(e, sx, sy, R, now);
+    EnemyRenderer._drawExpandedEnemyOverlay(e, sx, sy, R, now);
 
     // ── HP bar (wider — tank has more HP to show) ─────────────────
     EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 44, 12, now);
@@ -1569,6 +2422,7 @@ class EnemyRenderer {
     // ── Shared status overlays (hit flash, sticky, ignite) ────────
     // Note: use sy + bobOffset so overlays align with floating body
     EnemyRenderer._drawStatusOverlays(e, sx, sy + bobOffset, R, now);
+    EnemyRenderer._drawExpandedEnemyOverlay(e, sx, sy + bobOffset, R, now);
 
     // ── HP bar ────────────────────────────────────────────────────
     EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 30, 14, now);

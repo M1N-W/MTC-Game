@@ -1,141 +1,131 @@
 ---
 name: mtc-game-conventions
-description: "Timeless MTC The Game architecture — class hierarchy, update/draw separation, script load order, GameState/globals contracts, enemy _tickShared invariant, WorkerBridge coupling, and frame-loop modes. Excludes BALANCE/config numbers and balance tuning."
+description: "Stable MTC The Game architecture: class hierarchy, update-versus-draw separation, script load order, EnemyBase shared-tick invariants, GameState ownership, enemy registry coupling, and worker/render hidden dependencies. Excludes BALANCE values and release-specific tuning."
 ---
 
-# MTC The Game — Stable Architecture (SKILL)
+# MTC The Game — Stable Architecture
 
-Use this skill when changing gameplay systems, entities, render dispatch, load order, globals, `GameState`, AI/worker flows, or boss lifecycle.
+Use this skill when changing entities, AI, rendering dispatch, load order, globals, `GameState`, wave spawning, or boss lifecycle.
 
-**Out of scope here:** any numeric tuning, cooldowns, damage, economy, or feature lists that live in `js/config.js` / `BALANCE` / changelogs.
-
----
-
-## 1. Class hierarchy (inheritance)
-
-Root: `Entity` (`js/entities/base.js`) — position, physics, `HealthComponent` pattern for combatants.
-
-- **`Player`** (`js/entities/player/PlayerBase.js`, exported as `window.Player`)
-  - `KaoPlayer`, `AutoPlayer`, `PoomPlayer`, `PatPlayer`
-- **`EnemyBase`** (`js/entities/enemy.js`)
-  - `Enemy`, `TankEnemy`, `MageEnemy`
-- **`BossBase`** (`js/entities/boss/BossBase.js`)
-  - `KruManop` (class in `ManopBoss.js`), `KruFirst` (class in `FirstBoss.js`)
-- **Other `Entity` subclasses** (non-exhaustive; extend via boss/summon modules):
-  - `BossDog` (same module family as Manop boss content)
-  - Summons and boss-linked entities in `js/entities/summons.js` (includes `Drone extends Entity`)
-  - Boss attack / minion classes defined in `boss_attacks_*.js` as applicable
-
-**Rendering:** `PlayerRenderer`, `BossRenderer` are not entity subclasses — they are static draw dispatchers keyed off runtime types (`instanceof` / constructor identity). `EnemyRenderer` and `ProjectileRenderer` are used from `game.js` for enemies, powerups, and projectiles.
+Do not use this file for balance values, cooldowns, damage, economy, or other volatile config details.
 
 ---
 
-## 2. Update vs draw (hard rule)
+## 1. Class hierarchy
 
-- **`update(dt, …)`** — owns simulation: movement intent, timers, combat resolution hooks, AI, status effects.
-- **`draw(ctx)` / renderer `draw(...)`** — reads entity state and issues canvas operations only.
+Root: `Entity` in `js/entities/base.js`
 
-**Forbidden in draw paths:** mutating gameplay state (HP, energy, cooldowns, wave flags, score, entity positions for simulation purposes, AI internal state).
+- `Player` in `js/entities/player/PlayerBase.js`
+  - `KaoPlayer`
+  - `AutoPlayer`
+  - `PoomPlayer`
+  - `PatPlayer`
+- `EnemyBase` in `js/entities/enemy.js`
+  - `Enemy`
+  - `TankEnemy`
+  - `MageEnemy`
+  - `SniperEnemy`
+  - `ShieldBraverEnemy`
+  - `PoisonSpitterEnemy`
+  - `ChargerEnemy`
+  - `HunterEnemy`
+  - `FatalityBomberEnemy`
+  - `HealerEnemy`
+  - `SummonerEnemy`
+  - `BufferEnemy`
+  - `SummonedMinionEnemy`
+- `BossBase` in `js/entities/boss/BossBase.js`
+  - `KruManop`
+  - `KruFirst`
+- direct `Entity` subclasses outside those trunks
+  - `BossDog`
+  - `Drone`
+  - `NagaEntity`
 
-**Allowed:** render-only caches (e.g. easing buffers used only for visuals), `ctx.save`/`restore`, and diagnostics stored only on function objects for logging — never authoritative game state.
-
-**Entity base note:** `_standAura_update` vs `_standAura_draw` in `base.js` — update belongs in the simulation tick; draw helpers must not advance gameplay rules.
-
----
-
-## 3. Enemy `_tickShared(dt, player)` invariant
-
-Defined on `EnemyBase` (`js/entities/enemy.js`). Every concrete enemy `update()` must:
-
-1. Return immediately if `this.dead` (when that guard exists).
-2. Call **`this._tickShared(dt, player)`** as the **first** substantive step of the living path — before movement, steering, or shooting.
-
-Skipping or reordering breaks shared status/AI/hit-flash/ignite behavior across enemy types.
-
----
-
-## 4. Script load order (contract)
-
-Order is fixed in `index.html`. Anything that defines globals consumed later must appear **above** consumers.
-
-**Pre-game / services (before `config.js`):**
-
-1. `js/firebase-bundle.js` — Firebase SDK init (`window.firebaseAuth`, `MTCFirebase`, …).
-2. `js/config.js` — game constants and text tables.
-3. `js/utils.js` — persistence helpers, math, camera, score/wave accessors.
-4. `js/systems/CloudSaveSystem.js` — cloud sync (depends on utils + Firebase).
-5. `js/systems/LeaderboardUI.js` — auth UI hook (depends on utils + Firebase).
-
-### Core engine
-
-1. `js/audio.js` → `effects.js` → `weapons.js` → `map.js` → `ui.js` → `tutorial.js`
-
-### Entities & AI
-
-1. `js/entities/base.js`
-2. `js/ai/UtilityAI.js` → `EnemyActions.js` → `PlayerPatternAnalyzer.js` → `SquadAI.js`
-3. Player classes → `summons.js` → `enemy.js` → boss attack modules → `BossBase.js` → `ManopBoss.js` → `FirstBoss.js`
-
-### Input & render
-
-1. `js/input.js`
-2. `js/rendering/PlayerRenderer.js` → `BossRenderer.js`
-
-### Systems & loop
-
-1. `GameState.js` → `AdminSystem.js` → `ShopSystem.js` → `TimeManager.js` → `WaveManager.js` → `WorkerBridge.js`
-2. `js/game.js` → `VersionManager.js` → `menu.js`
-
-New scripts must be inserted where dependency direction allows (consumers after providers).
-
-## 5. Frame loop modes (`js/game.js`)
-
-`gameLoop` drives all frames. Modes:
-
-- **Hit-stop:** while `GameState.hitStopTimer > 0`, **`drawGame()` only** — no `updateGame`.
-- **`PLAYING` + tutorial active:** `TutorialSystem.update()` always; **`updateGame`** runs only when `TutorialSystem.isActionStep()` is true; then `drawGame`.
-- **`PLAYING` (normal):** `updateGame` then `drawGame`.
-- **`PAUSED`:** `drawGame` only (frozen simulation).
-- **`GAMEOVER`:** loop stops; static menu/victory DOM takes over.
-
-This is an architectural constraint: tutorial and hit-stop deliberately bypass full simulation on some frames.
+Important aliases:
+- `KruManop` is also exported as `window.ManopBoss` and `window.Boss`
+- `KruFirst` is also exported as `window.BossFirst`
+- enemy constructors are additionally exposed through `window.ENEMY_REGISTRY`
 
 ---
 
-## 6. Canonical state ownership
+## 2. Update versus draw
 
-- **`GameState`** (`js/systems/GameState.js`) — phase (`MENU` / `PLAYING` / `PAUSED` / `GAMEOVER`), loop flags, entity references, hit-stop / time scale, glitch-wave flags. It syncs selected fields to legacy `window.*` aliases — new code should prefer `GameState` and existing sync methods.
-- **Globals:** `window.player`, `window.enemies`, `window.boss`, `window.powerups`, `window.drone`, etc. Many modules assume these exist during `PLAYING`. Refactors must preserve shape and sync timing.
+- `update(...)` owns authoritative simulation state.
+- `draw(...)` and renderer `draw(...)` methods only read state and emit pixels.
 
----
+Never mutate inside draw:
+- HP, cooldowns, wave flags, score, phase, AI state, entity arrays, projectile arrays
 
-## 7. Hidden cross-module coupling
-
-- **Worker pipeline:** `WorkerBridge` ↔ `js/workers/analyzer-worker.js` — sampled inputs feed analyzer state consumed by AI (`PlayerPatternAnalyzer` / related). Changing sampling frequency or message schema affects difficulty and fairness.
-- **Shop / map / UI:** `ShopManager`, `MTC_SHOP_LOCATION`, `MTC_DATABASE_SERVER` — proximity and pause behavior tie `game.js`, `ShopSystem.js`, `ui.js`, `input.js`.
-- **Campus procedural map:** `MapSystem.generateCampusMap` (`js/map.js`) uses `_isClearZone` and center-anchored cluster placement; footprint sizes for placement must stay aligned with the map configuration consumed by that generator (navigation and collisions depend on consistent object layout).
-- **Wave / boss:** `WaveManager`, `game.js`, `BossBase` subclasses, and admin commands share boss spawn/cleanup paths — attack singletons must be cleared on every exit path.
-- **Firebase (optional):** `firebase-bundle` and `CloudSaveSystem` run after utils; failure must not block offline play.
+Allowed inside draw:
+- renderer-local caches
+- `ctx.save()` and `ctx.restore()`
+- deterministic visual animation based on read-only state
 
 ---
 
-## 8. Boss lifecycle contract
+## 3. Enemy shared-tick invariant
 
-Boss spawn, phase transitions, defeat, and admin-forced clears must all run the same cleanup for boss-owned singletons and attack state. Asymmetric cleanup causes stale attacks or orphaned entities.
+`EnemyBase._tickShared(dt, player)` must run first in every living enemy update path.
+
+That invariant protects:
+- status-effect ticking
+- shared hit-flash decay
+- shared enemy buff timers
+- shared AI tick and role consumption
+
+AI contract:
+- `UtilityAI` writes `_aiMoveX` and `_aiMoveY`
+- enemy subclasses decide how to blend that intent into `vx` and `vy`
 
 ---
 
-## 9. Safe change checklist
+## 4. Script load order
+
+Load order in `index.html` is a hard contract:
+
+```text
+config -> utils -> base -> AI files -> player files -> summons -> enemy ->
+boss files -> input -> renderers -> GameState -> systems -> WaveManager ->
+WorkerBridge -> game -> VersionManager -> menu
+```
+
+If a script defines globals consumed later, it must remain above those consumers.
+
+---
+
+## 5. Canonical ownership
+
+- `GameState` is the canonical owner for game phase and loop state.
+- `window.player`, `window.enemies`, `window.boss`, `window.powerups`, and `window.specialEffects` remain shared compatibility surfaces.
+- `WaveManager` owns wave progression and boss-wave entry.
+- `drawGame()` in `js/game.js` owns frame orchestration.
+
+---
+
+## 6. Hidden coupling to preserve
+
+- `window.ENEMY_REGISTRY` couples `enemy.js`, `WaveManager.js`, and `AdminSystem.js`.
+- `window.applyWaveModifiersToEnemy` is reused by normal spawns, admin spawns, and summoner-created minions.
+- `WorkerBridge` and `analyzer-worker.js` feed prediction data back into AI consumers.
+- `EnemyRenderer.draw()` temporarily binds `window.CTX` for shared draw helpers and fallback draw paths.
+- Lighting is a separate pass through `mapSystem.drawLighting(...)` after world rendering completes.
+
+---
+
+## 7. Rendering boundaries
+
+- `PlayerRenderer`, `BossRenderer`, `EnemyRenderer`, and `ProjectileRenderer` are static render dispatchers.
+- Renderer caches belong to renderer modules, not gameplay entities.
+- HUD ownership stays in `CanvasHUD` with `UIManager.draw` as fallback.
+- Tutorial overlay is last.
+
+---
+
+## 8. Safe change checklist
 
 1. Preserve `index.html` load order semantics.
-2. Preserve update/draw separation and `_tickShared` ordering.
-3. Prefer `GameState` + documented sync over new globals.
-4. When touching workers, verify analyzer consumers still agree on data shape.
-5. Document new coupling edges in project overview or rendering skill if they affect architecture.
-
----
-
-## 10. Related skills
-
-- **Rendering pipeline detail:** `mtc-rendering.md` (draw phases, renderers, HUD ownership).
-- **Project narrative baseline:** `Markdown Source/Information/PROJECT_OVERVIEW.md`.
+2. Keep draw paths free of gameplay mutation.
+3. Keep `_tickShared()` first in all enemy living update paths.
+4. Prefer `GameState` over adding new global state owners.
+5. Document new hidden coupling in the project overview or rendering skill when structure changes.

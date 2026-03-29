@@ -50,6 +50,8 @@ const SQUAD_ROLE = {
     FLANKER: 'flanker',
     SHIELD: 'shield',
     SUPPORT: 'support',
+    PRESSURE: 'pressure',
+    ANCHOR: 'anchor',
 };
 
 // ── Lightweight spatial bucket grid ──────────────────────────────────────────
@@ -100,8 +102,8 @@ class SquadAI {
     constructor() {
         // 1Hz update timer
         this._timer = 0;
-        this._interval = (typeof BALANCE !== 'undefined' && BALANCE.ai && BALANCE.ai.squadInterval)
-            ? BALANCE.ai.squadInterval : 1.0;
+        this._interval = (typeof BALANCE !== 'undefined' && BALANCE.ai && BALANCE.ai.squad)
+            ? BALANCE.ai.squad.squadInterval : 1.0;
 
         // Bucket grid — cell size = squad coordination radius
         const coordR = (typeof BALANCE !== 'undefined' && BALANCE.ai && BALANCE.ai.squad)
@@ -144,15 +146,12 @@ class SquadAI {
     // ─────────────────────────────────────────────────────────────────────────
 
     _assignRole(enemy, enemies, player) {
-        // Mages always support — no override needed
-        if (enemy.type === 'mage') {
-            enemy._squadRole = SQUAD_ROLE.SUPPORT;
-            return;
-        }
-
-        // Tanks always shield
-        if (enemy.type === 'tank') {
-            enemy._squadRole = SQUAD_ROLE.SHIELD;
+        const defaultRole = SquadAI._defaultRoleFor(enemy);
+        if (defaultRole === SQUAD_ROLE.SUPPORT ||
+            defaultRole === SQUAD_ROLE.SHIELD ||
+            defaultRole === SQUAD_ROLE.PRESSURE ||
+            defaultRole === SQUAD_ROLE.ANCHOR) {
+            enemy._squadRole = defaultRole;
             return;
         }
 
@@ -205,9 +204,23 @@ class SquadAI {
      */
     static tagOnSpawn(enemy) {
         if (!enemy) return;
-        if (enemy.type === 'mage') { enemy._squadRole = SQUAD_ROLE.SUPPORT; return; }
-        if (enemy.type === 'tank') { enemy._squadRole = SQUAD_ROLE.SHIELD; return; }
-        enemy._squadRole = SQUAD_ROLE.ASSAULT; // basic default
+        enemy._squadRole = SquadAI._defaultRoleFor(enemy);
+    }
+
+    static _defaultRoleFor(enemy) {
+        if (!enemy) return SQUAD_ROLE.ASSAULT;
+        const defaults = (typeof BALANCE !== 'undefined' && BALANCE.ai && BALANCE.ai.squad && BALANCE.ai.squad.roleDefaults)
+            ? BALANCE.ai.squad.roleDefaults
+            : null;
+        const role = defaults ? defaults[enemy.type] : null;
+        if (role === SQUAD_ROLE.SUPPORT || role === SQUAD_ROLE.SHIELD ||
+            role === SQUAD_ROLE.PRESSURE || role === SQUAD_ROLE.ANCHOR ||
+            role === SQUAD_ROLE.FLANKER || role === SQUAD_ROLE.ASSAULT) {
+            return role;
+        }
+        if (enemy.type === 'mage') return SQUAD_ROLE.SUPPORT;
+        if (enemy.type === 'tank') return SQUAD_ROLE.SHIELD;
+        return SQUAD_ROLE.ASSAULT;
     }
 }
 

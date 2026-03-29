@@ -56,6 +56,10 @@ const _DEFAULT_PERSONALITIES = {
     basic: { aggression: 0.6, caution: 0.2, teamwork: 0.3 },
     tank: { aggression: 0.8, caution: 0.1, teamwork: 0.5 },
     mage: { aggression: 0.3, caution: 0.8, teamwork: 0.2 },
+    sniper: { aggression: 0.72, caution: 0.35, teamwork: 0.2 },
+    anchor: { aggression: 0.55, caution: 0.35, teamwork: 0.55 },
+    pressure: { aggression: 0.92, caution: 0.08, teamwork: 0.25 },
+    support: { aggression: 0.22, caution: 0.78, teamwork: 0.72 },
 };
 
 // ── Action names (string constants — avoid typos) ─────────────────────────
@@ -64,6 +68,12 @@ const AI_ACTION = {
     RETREAT: 'retreat',
     FLANK: 'flank',
     SHIELD_WALL: 'shield_wall',
+    HOLD_LINE: 'hold_line',
+    CHARGE: 'charge',
+    HEAL_ALLY: 'heal_ally',
+    BUFF_ALLY: 'buff_ally',
+    SUMMON: 'summon',
+    HAZARD_DROP: 'hazard_drop',
     IDLE: 'idle',
 };
 
@@ -144,18 +154,38 @@ class UtilityAI {
         const uAttack = this._utilAttack(distToPlayer, hpRatio);
         const uRetreat = this._utilRetreat(distToPlayer, hpRatio);
         const uFlank = this._utilFlank(distToPlayer, hpRatio);
+        const uHoldLine = this._utilHoldLine(distToPlayer, hpRatio);
+        const uCharge = this._utilCharge(distToPlayer, hpRatio);
+        const uSupport = this._utilSupport(distToPlayer, hpRatio);
+        const uHazard = this._utilHazardDrop(distToPlayer, hpRatio);
 
         // ── Select best action ──────────────────────────────────────────────
         let best = AI_ACTION.ATTACK;
         let bestU = uAttack;
         if (uRetreat > bestU) { best = AI_ACTION.RETREAT; bestU = uRetreat; }
         if (uFlank > bestU) { best = AI_ACTION.FLANK; bestU = uFlank; }
+        if (uHoldLine > bestU) { best = AI_ACTION.HOLD_LINE; bestU = uHoldLine; }
+        if (uCharge > bestU) { best = AI_ACTION.CHARGE; bestU = uCharge; }
+        if (uSupport > bestU) {
+            if (e.type === 'summoner') best = AI_ACTION.SUMMON;
+            else if (e.type === 'buffer') best = AI_ACTION.BUFF_ALLY;
+            else best = AI_ACTION.HEAL_ALLY;
+            bestU = uSupport;
+        }
+        if (uHazard > bestU) { best = AI_ACTION.HAZARD_DROP; bestU = uHazard; }
 
         // ── Squad role override — SquadAI may have assigned a role this tick ──
         // Roles take priority over utility scores for formation coherence
         const role = this._enemy._squadRole;
         if (role === 'flanker' && best !== AI_ACTION.RETREAT) best = AI_ACTION.FLANK;
         if (role === 'shield' && best !== AI_ACTION.RETREAT) best = AI_ACTION.SHIELD_WALL;
+        if (role === 'anchor' && best !== AI_ACTION.RETREAT) best = AI_ACTION.HOLD_LINE;
+        if (role === 'pressure' && best !== AI_ACTION.RETREAT) best = AI_ACTION.CHARGE;
+        if (role === 'support' && best !== AI_ACTION.RETREAT) {
+            if (e.type === 'summoner') best = AI_ACTION.SUMMON;
+            else if (e.type === 'buffer') best = AI_ACTION.BUFF_ALLY;
+            else best = AI_ACTION.HEAL_ALLY;
+        }
 
         this._decision.action = best;
 
@@ -197,6 +227,45 @@ class UtilityAI {
         const distScore = 1 - Math.min(1, Math.abs(dist - optDist) / optDist);
         let u = cfg.base * this._personality.teamwork * distScore;
         u *= hpRatio; // don't flank when near death
+        return Math.min(1, u);
+    }
+
+    _utilHoldLine(dist, hpRatio) {
+        const cfg = _actionCfg('hold_line');
+        const preferred = cfg.optimalDist || 420;
+        const distScore = 1 - Math.min(1, Math.abs(dist - preferred) / preferred);
+        let u = cfg.base * (0.45 + this._personality.teamwork * 0.55);
+        u *= (0.65 + hpRatio * 0.35);
+        u *= Math.max(0.25, distScore);
+        return Math.min(1, u);
+    }
+
+    _utilCharge(dist, hpRatio) {
+        const cfg = _actionCfg('charge');
+        const preferred = cfg.optimalDist || 240;
+        const distScore = 1 - Math.min(1, Math.abs(dist - preferred) / Math.max(preferred, 1));
+        let u = cfg.base * this._personality.aggression * Math.max(0.2, distScore);
+        u *= (0.5 + hpRatio * 0.5);
+        return Math.min(1, u);
+    }
+
+    _utilSupport(dist, hpRatio) {
+        const type = this._enemy.type;
+        if (type !== 'healer' && type !== 'summoner' && type !== 'buffer') return 0;
+        const cfg = _actionCfg(type === 'summoner' ? 'summon' : (type === 'buffer' ? 'buff_ally' : 'heal_ally'));
+        let u = cfg.base * (0.55 + this._personality.teamwork * 0.45);
+        if (dist < 180) u *= 0.4;
+        u *= (0.7 + hpRatio * 0.3);
+        return Math.min(1, u);
+    }
+
+    _utilHazardDrop(dist, hpRatio) {
+        if (this._enemy.type !== 'poison_spitter') return 0;
+        const cfg = _actionCfg('hazard_drop');
+        const preferred = cfg.optimalDist || 420;
+        const distScore = 1 - Math.min(1, Math.abs(dist - preferred) / preferred);
+        let u = cfg.base * Math.max(0.25, distScore);
+        u *= (0.7 + hpRatio * 0.3);
         return Math.min(1, u);
     }
 
@@ -243,6 +312,28 @@ class UtilityAI {
                 else { e._aiMoveX = dx / norm; e._aiMoveY = dy / norm; } // fallback = advance
                 break;
 
+            case AI_ACTION.HOLD_LINE:
+                if (EA) EnemyActions.holdLine(e, ctx, e.preferredRange || e.holdLineDist || 420);
+                else { e._aiMoveX = 0; e._aiMoveY = 0; }
+                break;
+
+            case AI_ACTION.CHARGE:
+                if (EA) EnemyActions.charge(e, ctx);
+                else { e._aiMoveX = dx / norm; e._aiMoveY = dy / norm; }
+                break;
+
+            case AI_ACTION.HEAL_ALLY:
+            case AI_ACTION.BUFF_ALLY:
+            case AI_ACTION.SUMMON:
+                if (EA) EnemyActions.supportBackline(e, ctx, e.preferredRange || 320);
+                else { e._aiMoveX = -(dx / norm); e._aiMoveY = -(dy / norm); }
+                break;
+
+            case AI_ACTION.HAZARD_DROP:
+                if (EA) EnemyActions.holdLine(e, ctx, e.preferredRange || 420);
+                else { e._aiMoveX = 0; e._aiMoveY = 0; }
+                break;
+
             default:
                 e._aiMoveX = 0;
                 e._aiMoveY = 0;
@@ -269,6 +360,12 @@ function _actionCfg(name) {
         attack: { base: 1.0 },
         retreat: { base: 0.8, hpThreshold: 0.3 },
         flank: { base: 0.6, optimalDist: 220 },
+        hold_line: { base: 0.72, optimalDist: 420 },
+        charge: { base: 0.92, optimalDist: 240 },
+        heal_ally: { base: 0.95, allyHpThreshold: 0.78 },
+        buff_ally: { base: 0.82, allyCountThreshold: 2 },
+        summon: { base: 0.76, maxMinions: 3 },
+        hazard_drop: { base: 0.78, optimalDist: 420 },
     };
     if (typeof BALANCE !== 'undefined' && BALANCE.ai && BALANCE.ai.actions && BALANCE.ai.actions[name]) {
         return { ...defaults[name], ...BALANCE.ai.actions[name] };

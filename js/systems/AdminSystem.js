@@ -106,6 +106,7 @@ const AdminConsole = (() => {
     // ── Available commands for Tab auto-complete ───────────────
     const COMMANDS = [
         'heal', 'score', 'next wave', 'set wave', 'give weapon',
+        'spawn enemy',
         'spawn manop', 'spawn manop 2', 'spawn manop 3',
         'spawn first', 'spawn first advanced',
         'god', 'god off', 'devbuff',
@@ -373,6 +374,34 @@ const AdminConsole = (() => {
                 _appendLine(`ERR: weapon "${weaponName}" not found or equip API unavailable.`, 'cline-error');
                 _appendLine('> Try: pistol, rifle, shotgun, sniper, smg, launcher', 'cline-info', true);
             }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // spawn enemy <type> [count]
+        // ══════════════════════════════════════════════════════
+        else if (base === 'spawn' && sub === 'enemy') {
+            const enemyKey = args[2];
+            const count = Math.max(1, Math.min(parseInt(args[3]) || 1, 8));
+            if (!enemyKey) {
+                _appendLine('ERR: usage: spawn enemy <type> [count]', 'cline-error');
+                return;
+            }
+            if (typeof window.ENEMY_REGISTRY === 'undefined' || !window.ENEMY_REGISTRY[enemyKey]) {
+                _appendLine(`ERR: unknown enemy type "${enemyKey}"`, 'cline-error');
+                return;
+            }
+            const ctor = window.ENEMY_REGISTRY[enemyKey].ctor;
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count;
+                const dist = 180 + i * 18;
+                const x = window.player.x + Math.cos(angle) * dist;
+                const y = window.player.y + Math.sin(angle) * dist;
+                const enemy = new ctor(x, y);
+                window.enemies.push(enemy);
+                if (typeof SquadAI !== 'undefined') SquadAI.tagOnSpawn(enemy);
+                if (typeof window.applyWaveModifiersToEnemy === 'function') window.applyWaveModifiersToEnemy(enemy);
+            }
+            _appendLine(`> spawned ${count}x ${enemyKey}`, 'cline-ok');
         }
 
         // ══════════════════════════════════════════════════════
@@ -676,6 +705,7 @@ const AdminConsole = (() => {
                 '│  next wave               │  Force next wave        │',
                 '│  set wave <num>          │  Jump to wave number    │',
                 '│  give weapon <n>         │  Equip a weapon         │',
+                '│  spawn enemy <t> [n]     │  Spawn test enemies     │',
                 '│  spawn manop [1|2|3]     │  Kru Manop + phase      │',
                 '│  spawn first [advanced]  │  Kru First + variant    │',
                 '│  info                    │  Show game state info   │',

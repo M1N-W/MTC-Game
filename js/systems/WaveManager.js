@@ -217,10 +217,7 @@ function _patchEnemySpeeds() {
     const all = [...(window.enemies || [])];
     if (window.boss && !window.boss.dead) all.push(window.boss);
     for (const e of all) {
-        if (!e || e.dead || _patchedEnemies.has(e) || typeof e.speed !== 'number') continue;
-        e._preSpeedWave = e.speed;
-        e.speed *= SPEED_MULT;
-        _patchedEnemies.add(e);
+        _applyWaveModifiersToEnemy(e);
     }
 }
 
@@ -232,6 +229,57 @@ function _restoreEnemySpeeds() {
             delete e._preSpeedWave;
         }
     }
+}
+
+function _applyWaveModifiersToEnemy(e) {
+    if (!e || e.dead || _patchedEnemies.has(e) || typeof e.speed !== 'number') return;
+    if (!window.isSpeedWave) return;
+    e._preSpeedWave = e.speed;
+    e.speed *= SPEED_MULT;
+    _patchedEnemies.add(e);
+}
+
+function _getEnemyPoolForWave(wave) {
+    const wavesCfg = (typeof BALANCE !== 'undefined') ? BALANCE.waves : null;
+    const pools = wavesCfg?.enemyPools;
+    if (!wavesCfg?.enableExpandedRoster || !Array.isArray(pools) || pools.length === 0) return null;
+    let selected = pools[0];
+    for (let i = 0; i < pools.length; i++) {
+        const pool = pools[i];
+        if (wave >= (pool.minWave || 1)) selected = pool;
+    }
+    return selected?.weights || null;
+}
+
+function _spawnEnemyFromRegistry(x, y, wave) {
+    const registry = window.ENEMY_REGISTRY;
+    if (!registry) return null;
+
+    const pool = _getEnemyPoolForWave(wave);
+    if (!pool) {
+        const r = Math.random();
+        if (r < BALANCE.waves.mageSpawnChance) return new MageEnemy(x, y);
+        if (r < BALANCE.waves.mageSpawnChance + BALANCE.waves.tankSpawnChance) return new TankEnemy(x, y);
+        return new Enemy(x, y);
+    }
+
+    let total = 0;
+    for (const key in pool) {
+        if (!Object.prototype.hasOwnProperty.call(pool, key)) continue;
+        if (!registry[key] || typeof registry[key].ctor !== 'function') continue;
+        total += pool[key];
+    }
+    if (total <= 0) return new Enemy(x, y);
+
+    let roll = Math.random() * total;
+    for (const key in pool) {
+        if (!Object.prototype.hasOwnProperty.call(pool, key)) continue;
+        const entry = registry[key];
+        if (!entry || typeof entry.ctor !== 'function') continue;
+        roll -= pool[key];
+        if (roll <= 0) return new entry.ctor(x, y);
+    }
+    return new Enemy(x, y);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -632,19 +680,16 @@ function _startBossWave(wave) {
 }
 
 function spawnEnemies(count) {
+    const wave = (typeof getWave === 'function') ? getWave() : 1;
     for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
         let x = window.player.x + Math.cos(angle) * BALANCE.waves.spawnDistance;
         let y = window.player.y + Math.sin(angle) * BALANCE.waves.spawnDistance;
-        const safe = mapSystem.findSafeSpawn(x, y, BALANCE.enemy.radius);
-        x = safe.x; y = safe.y;
-        const r = Math.random();
-        if (r < BALANCE.waves.mageSpawnChance)
-            window.enemies.push(new MageEnemy(x, y));
-        else if (r < BALANCE.waves.mageSpawnChance + BALANCE.waves.tankSpawnChance)
-            window.enemies.push(new TankEnemy(x, y));
-        else
-            window.enemies.push(new Enemy(x, y));
+        const spawned = _spawnEnemyFromRegistry(x, y, wave);
+        const safe = mapSystem.findSafeSpawn(x, y, spawned?.radius || BALANCE.enemy.radius);
+        spawned.x = safe.x;
+        spawned.y = safe.y;
+        window.enemies.push(spawned);
 
         // ── Tag squad role immediately on spawn (before first SquadAI tick) ──
         if (typeof SquadAI !== 'undefined') {
@@ -652,14 +697,7 @@ function spawnEnemies(count) {
         }
 
         // Speed wave: patch freshly spawned enemy immediately
-        if (window.isSpeedWave) {
-            const e = window.enemies[window.enemies.length - 1];
-            if (e && !_patchedEnemies.has(e) && typeof e.speed === 'number') {
-                e._preSpeedWave = e.speed;
-                e.speed *= SPEED_MULT;
-                _patchedEnemies.add(e);
-            }
-        }
+        _applyWaveModifiersToEnemy(window.enemies[window.enemies.length - 1]);
     }
 }
 
@@ -670,3 +708,4 @@ window.startNextWave = startNextWave;
 window.spawnEnemies = spawnEnemies;
 window.updateWaveEvent = updateWaveEvent;
 window.drawWaveEvent = drawWaveEvent;
+window.applyWaveModifiersToEnemy = _applyWaveModifiersToEnemy;

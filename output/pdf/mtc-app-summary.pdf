@@ -1,0 +1,608 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 10035 >>
+stream
+1.000 0.980 0.957 rg
+0.918 0.875 0.808 RG
+1 w
+18.00 18.00 805.89 559.28 re B
+0.969 0.929 0.882 rg
+18.00 525.28 805.89 52.00 re f
+BT
+0.631 0.294 0.071 rg
+/F2 9 Tf
+1 0 0 1 34.00 555.28 Tm
+(REPO SUMMARY) Tj
+ET
+BT
+0.122 0.161 0.200 rg
+/F2 24 Tf
+1 0 0 1 34.00 534.28 Tm
+(MTC The Game) Tj
+ET
+BT
+0.329 0.380 0.439 rg
+/F1 10 Tf
+1 0 0 1 34.00 511.28 Tm
+(MTC The Game is a browser-based top-down wave survival shooter built with vanilla) Tj
+ET
+BT
+0.329 0.380 0.439 rg
+/F1 10 Tf
+1 0 0 1 34.00 498.28 Tm
+(JavaScript and HTML5 Canvas. The repo shows a performance-focused game loop with) Tj
+ET
+BT
+0.329 0.380 0.439 rg
+/F1 10 Tf
+1 0 0 1 34.00 485.28 Tm
+(character classes, boss fights, off-thread pattern analysis, optional) Tj
+ET
+BT
+0.329 0.380 0.439 rg
+/F1 10 Tf
+1 0 0 1 34.00 472.28 Tm
+(Firebase-backed cloud features, and PWA caching.) Tj
+ET
+0.973 0.945 0.910 rg
+0.875 0.827 0.765 RG
+1 w
+444.00 489.28 363.89 82.00 re B
+BT
+0.122 0.161 0.200 rg
+/F2 9.5 Tf
+1 0 0 1 458.00 553.28 Tm
+(Primary user/persona:) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 9.2 Tf
+1 0 0 1 458.00 541.28 Tm
+(Players who want a fast browser action game on desktop or mobile web.) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 9.2 Tf
+1 0 0 1 458.00 530.28 Tm
+(Formal persona documentation: Not found in repo.) Tj
+ET
+BT
+0.122 0.161 0.200 rg
+/F2 9.5 Tf
+1 0 0 1 458.00 517.28 Tm
+(Platform and stack:) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 9.2 Tf
+1 0 0 1 458.00 505.28 Tm
+(Web app / PWA using vanilla JS, HTML5 Canvas, Web Workers, Firebase) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 9.2 Tf
+1 0 0 1 458.00 494.28 Tm
+(Auth/Firestore/Remote Config, and a service worker cache.) Tj
+ET
+BT
+0.631 0.294 0.071 rg
+/F2 10 Tf
+1 0 0 1 34.00 440.28 Tm
+(WHAT IT DOES) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 424.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 424.28 Tm
+(Runs a 15-wave survival loop with scheduled boss encounters) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 412.78 Tm
+(and special wave modifiers.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 399.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 399.28 Tm
+(Offers 4 playable characters with distinct skills, weapons,) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 387.78 Tm
+(and progression paths.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 374.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 374.28 Tm
+(Includes tutorial flow, pause and resume states, and) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 362.78 Tm
+(character-select plus victory UI overlays.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 349.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 349.28 Tm
+(Adds interactable spaces such as the MTC Database, Admin) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 337.78 Tm
+(Terminal, and Co-op Store.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 324.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 324.28 Tm
+(Tracks saves locally and can sync progress plus leaderboard) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 312.78 Tm
+(scores through Firebase.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 299.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 299.28 Tm
+(Supports Google sign-in for leaderboard submission and Hall) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 287.78 Tm
+(of Fame viewing.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 274.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 274.28 Tm
+(Pre-caches core assets with a service worker for faster) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 262.78 Tm
+(reloads and offline-first behavior.) Tj
+ET
+0.988 0.973 0.949 rg
+0.875 0.827 0.765 RG
+1 w
+26.00 155.28 332.00 92.00 re B
+BT
+0.631 0.294 0.071 rg
+/F2 10 Tf
+1 0 0 1 34.00 231.28 Tm
+(HOW TO RUN) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 215.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 215.28 Tm
+(Serve the repo root over local HTTP or HTTPS, not file://.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 203.78 Tm
+(Repo evidence: WorkerBridge.js says the worker fails on) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 192.28 Tm
+(file://.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 178.78 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 178.78 Tm
+(Open index.html in the browser through that local server.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 34.00 165.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 165.28 Tm
+(Optional only if rebuilding the Firebase bundle: npm) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.4 Tf
+1 0 0 1 46.00 153.78 Tm
+(install, then npm run build:firebase.) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.8 Tf
+1 0 0 1 34.00 138.28 Tm
+(Minimal local-server command: npx serve . A full production) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.8 Tf
+1 0 0 1 34.00 127.28 Tm
+(deployment guide for the root game app was not found beyond) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.8 Tf
+1 0 0 1 34.00 116.28 Tm
+(Firebase-related files.) Tj
+ET
+BT
+0.631 0.294 0.071 rg
+/F2 10 Tf
+1 0 0 1 372.00 440.28 Tm
+(HOW IT WORKS) Tj
+ET
+BT
+0.294 0.333 0.388 rg
+/F1 9.6 Tf
+1 0 0 1 372.00 424.28 Tm
+(The app boots from index.html, which creates the canvas and overlays, then loads) Tj
+ET
+BT
+0.294 0.333 0.388 rg
+/F1 9.6 Tf
+1 0 0 1 372.00 412.28 Tm
+(config, systems, entities, AI modules, renderers, and finally game.js and menu.js.) Tj
+ET
+BT
+0.294 0.333 0.388 rg
+/F1 9.6 Tf
+1 0 0 1 372.00 400.28 Tm
+(The runtime centers on a requestAnimationFrame loop in game.js and a singleton-style) Tj
+ET
+BT
+0.294 0.333 0.388 rg
+/F1 9.6 Tf
+1 0 0 1 372.00 388.28 Tm
+(state model in js/systems/GameState.js.) Tj
+ET
+0.973 0.945 0.910 rg
+0.875 0.827 0.765 RG
+1 w
+372.00 276.28 139.96 88.00 re B
+0.973 0.945 0.910 rg
+0.875 0.827 0.765 RG
+1 w
+519.96 276.28 139.96 88.00 re B
+0.973 0.945 0.910 rg
+0.875 0.827 0.765 RG
+1 w
+667.93 276.28 139.96 88.00 re B
+BT
+0.122 0.161 0.200 rg
+/F2 9 Tf
+1 0 0 1 380.00 350.28 Tm
+(UI + Boot Layer) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 380.00 336.28 Tm
+(index.html, menu.js, ui.js,) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 380.00 326.28 Tm
+(and tutorial.js manage) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 380.00 316.28 Tm
+(menus, overlays, HUD,) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 380.00 306.28 Tm
+(prompts, and character) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 380.00 296.28 Tm
+(selection.) Tj
+ET
+BT
+0.122 0.161 0.200 rg
+/F2 9 Tf
+1 0 0 1 527.96 350.28 Tm
+(Core Game Layer) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 527.96 336.28 Tm
+(game.js updates player,) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 527.96 326.28 Tm
+(enemies, bosses,) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 527.96 316.28 Tm
+(projectiles, environment,) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 527.96 306.28 Tm
+(and draw order. Systems) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 527.96 296.28 Tm
+(include wave, shop, time,) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 527.96 286.28 Tm
+(admin, and global state.) Tj
+ET
+BT
+0.122 0.161 0.200 rg
+/F2 9 Tf
+1 0 0 1 675.93 350.28 Tm
+(Data + Platform Layer) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 675.93 336.28 Tm
+(utils.js uses localStorage.) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 675.93 326.28 Tm
+(Firebase modules handle) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 675.93 316.28 Tm
+(auth, Firestore saves,) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 675.93 306.28 Tm
+(leaderboard, analytics, and) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 675.93 296.28 Tm
+(remote config. sw.js caches) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.5 Tf
+1 0 0 1 675.93 286.28 Tm
+(app assets.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 372.00 258.28 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 258.28 Tm
+(Entities and combat: character classes live under js/entities/player; enemies and) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 247.08 Tm
+(bosses live under js/entities and js/entities/boss; visuals are separated into) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 235.88 Tm
+(js/rendering.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 372.00 222.68 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 222.68 Tm
+(AI path: UtilityAI.js, SquadAI.js, and PlayerPatternAnalyzer.js drive enemy) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 211.48 Tm
+(decisions; WorkerBridge.js forwards samples to js/workers/analyzer-worker.js for) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 200.28 Tm
+(off-main-thread analysis and falls back if worker init fails.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 372.00 187.08 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 187.08 Tm
+(Save and leaderboard path: gameplay updates local save data,) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 175.88 Tm
+(CloudSaveSystem.schedulePush\(\) queues cloud sync, and Firebase writes to users/{uid}) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 164.68 Tm
+(plus leaderboard/{uid} in Firestore.) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 372.00 151.48 Tm
+(-) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 151.48 Tm
+(Startup and data flow: browser loads static assets -> menu starts run -> game.js owns) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 140.28 Tm
+(loop and state -> optional worker processes prediction data -> localStorage and) Tj
+ET
+BT
+0.141 0.192 0.239 rg
+/F1 9.3 Tf
+1 0 0 1 384.00 129.08 Tm
+(Firebase persist user progress -> service worker caches files for later sessions.) Tj
+ET
+0.875 0.827 0.765 RG
+1 w
+34.00 104.00 m 807.89 104.00 l S
+BT
+0.631 0.294 0.071 rg
+/F2 9 Tf
+1 0 0 1 34.00 90.00 Tm
+(Evidence:) Tj
+ET
+BT
+0.357 0.404 0.455 rg
+/F1 8.6 Tf
+1 0 0 1 86.00 90.00 Tm
+(README, index.html, game.js, WorkerBridge.js, firebase-init.js, CloudSaveSystem.js, sw.js, manifest.json, and package.json. Generated on 2026-03-29.) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 5 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+6 0 obj
+<< /Type /Catalog /Pages 5 0 R >>
+endobj
+7 0 obj
+<< /Title (MTC The Game - App Summary) /Producer (Node PDF generator) >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000154 00000 n 
+0000010242 00000 n 
+0000010384 00000 n 
+0000010441 00000 n 
+0000010490 00000 n 
+trailer
+<< /Size 8 /Root 6 0 R /Info 7 0 R >>
+startxref
+10578
+%%EOF
