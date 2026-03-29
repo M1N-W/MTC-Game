@@ -661,20 +661,22 @@
                                 </div>
                             </div>
                             <!-- /.char-cards -->
+
+                            <!-- ── Dot indicators (now inside center column, below card) ── -->
+                            <div class="char-dots char-dots--vertical" id="char-dots">
+                                <span class="char-dot active" data-index="0"></span>
+                                <span class="char-dot" data-index="1"></span>
+                                <span class="char-dot" data-index="2"></span>
+                                <span class="char-dot" data-index="3"></span>
+                            </div>
                         </div><!-- /.char-center-col -->
 
-                        <button class="char-nav-btn char-nav-next" id="char-nav-next" onclick="_navigateChar(1)"
-                            ontouchstart="event.preventDefault();_navigateChar(1);"
-                            aria-label="Next character">❯</button>
                     </div><!-- /.char-carousel-row -->
 
-                    <!-- ── Dot indicators (below carousel row, outside center column) ── -->
-                    <div class="char-dots" id="char-dots">
-                        <span class="char-dot active" data-index="0"></span>
-                        <span class="char-dot" data-index="1"></span>
-                        <span class="char-dot" data-index="2"></span>
-                        <span class="char-dot" data-index="3"></span>
-                    </div>
+                    <!-- ── Next button (now below carousel row) ── -->
+                    <button class="char-nav-btn char-nav-next" id="char-nav-next" onclick="_navigateChar(1)"
+                        ontouchstart="event.preventDefault();_navigateChar(1);"
+                        aria-label="Next character">❯</button>
                 </div><!-- /.char-select-section -->
 
 

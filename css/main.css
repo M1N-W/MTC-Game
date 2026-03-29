@@ -3623,6 +3623,11 @@ body {
   position: relative;
 }
 
+/* Add margin-bottom to carousel row when next button is below */
+.char-select-section .char-nav-next {
+  margin-top: 16px;
+}
+
 /* ── Center column: card + dots stacked vertically ── */
 .char-center-col {
   display: flex;
@@ -3632,6 +3637,7 @@ body {
   flex-shrink: 0;
   /* side margins create the visual gap between buttons and card */
   margin: 0 12px;
+  position: relative; /* For absolute positioning of vertical dots */
 }
 
 /* ── Nav buttons sit beside the card, vertically centered ── */
@@ -3715,6 +3721,17 @@ body {
   gap: 8px;
   margin-top: 12px;
   margin-bottom: 4px;
+}
+
+/* Vertical dots - positioned to the right of card */
+.char-dots--vertical {
+  position: absolute;
+  right: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
 }
 
 .char-dot {
@@ -4035,6 +4052,10 @@ body {
   color: rgba(34, 197, 94, 0.75);
 }
 
+.char-card[data-char="pat"] .char-title {
+  color: rgba(96, 165, 250, 0.75);
+}
+
 .char-card .char-desc {
   font-size: 11px;
   color: rgba(203, 213, 225, 0.7);
@@ -4200,6 +4221,11 @@ body {
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.55);
 }
 
+.char-card[data-char="pat"] .stat-bar-fill {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+}
+
 .char-card .char-tag {
   display: inline-block;
   font-size: 9px;
@@ -4222,6 +4248,12 @@ body {
   background: rgba(34, 197, 94, 0.12);
   border: 1px solid rgba(34, 197, 94, 0.38);
   color: #4ade80;
+}
+
+.char-card[data-char="pat"] .char-tag {
+  background: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.38);
+  color: #93c5fd;
 }
 
 /* ── AUTO — Thermodynamic Brawler ─────────────────────── */
@@ -4357,6 +4389,38 @@ body {
   filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.85)) brightness(1.1);
 }
 
+/* Pat glow effects */
+@keyframes patGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+  }
+
+  50% {
+    box-shadow:
+      0 0 28px rgba(96, 165, 250, 0.55),
+      0 0 50px rgba(147, 197, 253, 0.2);
+  }
+}
+
+.char-card[data-char="pat"].selected {
+  border-color: rgba(96, 165, 250, 0.55);
+  background: linear-gradient(
+    170deg,
+    rgba(5, 15, 35, 0.99) 0%,
+    rgba(4, 8, 22, 0.99) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(96, 165, 250, 0.1) inset,
+    0 0 40px rgba(96, 165, 250, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.7);
+  animation: patGlow 1.8s ease-in-out infinite;
+}
+
+.char-card[data-char="pat"].selected .char-avatar {
+  filter: drop-shadow(0 0 16px rgba(96, 165, 250, 0.9)) brightness(1.1);
+}
+
 /* ── Portrait idle float — selected card only ──────────────────────────────── */
 @keyframes portraitFloat {
   0%,
@@ -4406,6 +4470,23 @@ body {
     rgba(50, 10, 10, 0.9) 0%,
     rgba(12, 4, 8, 0.98) 75%
   );
+}
+
+.char-card[data-char="pat"] .char-avatar {
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    rgba(20, 40, 80, 0.9) 0%,
+    rgba(6, 8, 20, 0.98) 75%
+  );
+  filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.55));
+}
+
+.char-card[data-char="pat"].selected .char-avatar,
+.char-card[data-char="pat"]:hover .char-avatar {
+  filter: drop-shadow(0 0 18px rgba(96, 165, 250, 0.85)) brightness(1.1);
+  box-shadow:
+    0 0 0 1px rgba(96, 165, 250, 0.35),
+    0 0 28px rgba(96, 165, 250, 0.2) inset;
 }
 
 .char-select-hint {

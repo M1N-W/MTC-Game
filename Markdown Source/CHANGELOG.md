@@ -4,6 +4,30 @@
 
 ---
 
+## v3.41.12 — UI Polish: Character Menu Layout & Pat Portrait Glow
+*Released: March 29, 2026*
+
+### 🎨 Character Selection UI Enhancements
+- **Menu layout improvements** (`index.html`, `css/main.css`):
+  - Swapped position of pagination dots with next button (dots now on right, button below)
+  - Added vertical dots styling with `char-dots--vertical` class
+  - Improved visual flow of character carousel
+- **Pat character glow effect** (`css/main.css`):
+  - Added `patGlow` keyframe animation with blue theme colors (rgba(96, 165, 250))
+  - Added glow filter for Pat's portrait in selected state
+  - Added blue radial gradient background for Pat's avatar
+  - Added Pat-specific styles: stat-bar-fill (blue gradient), char-title, char-tag with theme colors
+
+### Files touched
+```
+✅ MODIFIED: index.html (swapped dots/next button positions)
+✅ MODIFIED: css/main.css (Pat glow effects + vertical dots layout)
+✅ MODIFIED: sw.js (v3.41.12)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.11 — Enemy Roster Expansion, Registry Spawn Flow, and Architecture Doc Audit
 *Released: March 29, 2026*
 
