@@ -4,6 +4,67 @@
 
 ---
 
+## v3.41.13 — Gameplay: Expanded Enemy Roster Stabilization
+*Released: March 30, 2026*
+
+### ⚔️ Enemy Roster — 9 New Enemy Types Stabilized
+All 9 expanded enemies are now playtest-ready and verified at runtime.
+
+**New enemy classes** (`js/entities/enemy.js`):
+- `SniperEnemy` — long-range, charge-then-fire with aim telegraph
+- `ShieldBraverEnemy` — tank subclass, front-arc damage reduction
+- `PoisonSpitterEnemy` — places `PoisonPoolEffect` hazard zones with pool spacing guard (`minPoolSpacing`)
+- `ChargerEnemy` — windup → charge → recover state machine
+- `HunterEnemy` — persistent lock-on with `_strikeTelegraphTimer` readability
+- `FatalityBomberEnemy` — spawns `FatalityExplosionEffect` on death
+- `HealerEnemy` — heals lowest-HP non-support ally via `findLowestHpAlly()` with category priority filter
+- `SummonerEnemy` — spawns `SummonedMinionEnemy` with engage-range gate and max-minion cap
+- `BufferEnemy` — alternates speed/damage buffs on non-support non-minion allies
+
+**New supporting entity** (`js/entities/enemy.js`):
+- `SummonedMinionEnemy` — lifetime-capped minion; cleans up on `owner.dead` or lifetime expiry; decrements `owner._activeMinions` on death
+
+### 🌊 Wave Spawning Layer (`js/systems/WaveManager.js`)
+- `_waveRuleValue(rule, wave)` — reads per-wave array OR flat cap value from `expandedRosterRules`
+- `_getExpandedEnemyLiveCounts()` — live census by type, support family, hazard family
+- `_isEnemyEligibleForWave(key, wave, liveCounts)` — filters candidates against support/hazard/sniper/summoner/buffer caps before weighted selection
+- `_spawnEnemyFromRegistry()` patched to run eligibility filter before weighting and selection
+
+### ⚙️ Config Balance Layer (`js/config.js`)
+- `BALANCE.enemies.*` — per-type metadata with `category`, `support`, `hazard` flags
+- `BALANCE.waves.enemyPools` — per-wave weighted pools (minWave-indexed tiers)
+- `BALANCE.waves.expandedRosterRules` — live caps: `maxSupportAlive[]`, `maxHazardAlive[]`, `maxSnipersAlive[]`, `supportMixUnlockWave`, `hazardMixUnlockWave`, `maxSummonersAlive`, `maxBuffersAlive`
+- `BALANCE.waves.enableExpandedRoster` flag guards old-path fallback
+
+### 🛠️ Admin Playtest Tooling (`js/systems/AdminSystem.js`)
+- `spawn pack <preset>` — presets: `duel`, `anchor`, `pressure`, `support`, `supportpressure`, `crossfire`
+- `enemy report` — live roster snapshot with support/hazard counts vs. wave caps
+- `_spawnEnemyByKey()` helper — centralized registry-based spawning used by both `spawn enemy` and `spawn pack`
+- `_expandedEnemySnapshot()` helper — reads `_enemyConfig.support/.hazard` flags for report
+
+### ✅ Runtime Verification Results
+- All 9 individual enemies: spawn, engage, telegraph, and clean up correctly
+- All 4 pack presets (`anchor`, `pressure`, `support`, `supportpressure`): all types alive after spawning
+- `enemy report` command: live counts and wave caps display correctly
+- No new console errors in boot/start/admin flow
+- `window.specialEffects` and minion counts remain bounded by caps
+- `SummonerEnemy` logic confirmed via direct `update()` step test: spawned 2 minions at t≈2.1s and t≈8.2s
+- `PoisonSpitterEnemy` logic confirmed: pool created at t≈4.8s, spacing guard correctly prevents duplicate pools on stationary player
+
+### Files touched
+```
+✅ MODIFIED: js/config.js       (enemy metadata, wave pools, expandedRosterRules)
+✅ MODIFIED: js/entities/enemy.js  (9 new enemy classes + SummonedMinionEnemy + registry)
+✅ MODIFIED: js/systems/WaveManager.js  (eligibility filter, live-count tracking)
+✅ MODIFIED: js/systems/AdminSystem.js  (spawn pack, enemy report, spawn helper)
+✅ MODIFIED: sw.js              (v3.41.13)
+✅ MODIFIED: index.html         (v3.41.13)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.13)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.12 — UI Polish: Character Menu Layout & Pat Portrait Glow
 *Released: March 29, 2026*
 

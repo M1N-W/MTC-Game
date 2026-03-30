@@ -106,7 +106,7 @@ const AdminConsole = (() => {
     // ── Available commands for Tab auto-complete ───────────────
     const COMMANDS = [
         'heal', 'score', 'next wave', 'set wave', 'give weapon',
-        'spawn enemy',
+        'spawn enemy', 'spawn pack', 'enemy report',
         'spawn manop', 'spawn manop 2', 'spawn manop 3',
         'spawn first', 'spawn first advanced',
         'god', 'god off', 'devbuff',
@@ -147,6 +147,31 @@ const AdminConsole = (() => {
             }
         };
         tick();
+    }
+
+    function _spawnEnemyByKey(enemyKey, x, y) {
+        if (typeof window.ENEMY_REGISTRY === 'undefined' || !window.ENEMY_REGISTRY[enemyKey]) return false;
+        if (typeof window.enemies === 'undefined') return false;
+        const ctor = window.ENEMY_REGISTRY[enemyKey].ctor;
+        const enemy = new ctor(x, y);
+        window.enemies.push(enemy);
+        if (typeof SquadAI !== 'undefined') SquadAI.tagOnSpawn(enemy);
+        if (typeof window.applyWaveModifiersToEnemy === 'function') window.applyWaveModifiersToEnemy(enemy);
+        return true;
+    }
+
+    function _expandedEnemySnapshot() {
+        const live = (window.enemies || []).filter(e => e && !e.dead);
+        const counts = {};
+        let support = 0;
+        let hazard = 0;
+        for (const enemy of live) {
+            const key = enemy.type || 'unknown';
+            counts[key] = (counts[key] || 0) + 1;
+            if (enemy._enemyConfig?.support) support++;
+            if (enemy._enemyConfig?.hazard) hazard++;
+        }
+        return { live, counts, support, hazard };
     }
 
     // ─────────────────────────────────────────────────────────
@@ -390,18 +415,61 @@ const AdminConsole = (() => {
                 _appendLine(`ERR: unknown enemy type "${enemyKey}"`, 'cline-error');
                 return;
             }
-            const ctor = window.ENEMY_REGISTRY[enemyKey].ctor;
             for (let i = 0; i < count; i++) {
                 const angle = (Math.PI * 2 * i) / count;
                 const dist = 180 + i * 18;
                 const x = window.player.x + Math.cos(angle) * dist;
                 const y = window.player.y + Math.sin(angle) * dist;
-                const enemy = new ctor(x, y);
-                window.enemies.push(enemy);
-                if (typeof SquadAI !== 'undefined') SquadAI.tagOnSpawn(enemy);
-                if (typeof window.applyWaveModifiersToEnemy === 'function') window.applyWaveModifiersToEnemy(enemy);
+                _spawnEnemyByKey(enemyKey, x, y);
             }
             _appendLine(`> spawned ${count}x ${enemyKey}`, 'cline-ok');
+        }
+
+        // ══════════════════════════════════════════════════════
+        // spawn pack <duel|anchor|pressure|support|crossfire>
+        // ══════════════════════════════════════════════════════
+        else if (base === 'spawn' && sub === 'pack') {
+            const preset = (args[2] || '').toLowerCase();
+            const packs = {
+                duel: ['sniper'],
+                anchor: ['sniper', 'shield_bravo', 'poison_spitter'],
+                pressure: ['charger', 'hunter', 'fatality_bomber'],
+                support: ['healer', 'summoner', 'buffer'],
+                supportpressure: ['buffer', 'hunter', 'fatality_bomber'],
+                'support-pressure': ['buffer', 'hunter', 'fatality_bomber'],
+                crossfire: ['buffer', 'sniper', 'fatality_bomber']
+            };
+            const pack = packs[preset];
+            if (!pack) {
+                _appendLine('ERR: usage: spawn pack <duel|anchor|pressure|support|supportpressure|crossfire>', 'cline-error');
+                return;
+            }
+            for (let i = 0; i < pack.length; i++) {
+                const angle = -Math.PI / 3 + (i * Math.PI / Math.max(pack.length - 1, 1));
+                const dist = preset === 'duel' ? 260 : 220;
+                const x = window.player.x + Math.cos(angle) * dist;
+                const y = window.player.y + Math.sin(angle) * dist;
+                _spawnEnemyByKey(pack[i], x, y);
+            }
+            _appendLine(`> spawned pack ${preset}: ${pack.join(', ')}`, 'cline-ok');
+        }
+
+        // ══════════════════════════════════════════════════════
+        // enemy report — lightweight roster diagnostics
+        // ══════════════════════════════════════════════════════
+        else if (base === 'enemy' && sub === 'report') {
+            const snap = _expandedEnemySnapshot();
+            const rules = BALANCE?.waves?.expandedRosterRules;
+            const wave = typeof getWave === 'function' ? getWave() : (window.wave || 1);
+            const waveIndex = Math.max(0, Math.min((rules?.maxSupportAlive?.length || 1) - 1, wave - 1));
+            const maxSupport = Array.isArray(rules?.maxSupportAlive) ? rules.maxSupportAlive[waveIndex] : (rules?.maxSupportAlive ?? '?');
+            const maxHazard = Array.isArray(rules?.maxHazardAlive) ? rules.maxHazardAlive[waveIndex] : (rules?.maxHazardAlive ?? '?');
+            const maxSnipers = Array.isArray(rules?.maxSnipersAlive) ? rules.maxSnipersAlive[waveIndex] : (rules?.maxSnipersAlive ?? '?');
+            const typeLines = Object.keys(snap.counts).sort().map((key) => `  ${key}: ${snap.counts[key]}`);
+            _appendLine(`> Enemy report @ wave ${wave}`, 'cline-info');
+            _appendLine(`  live=${snap.live.length}  support=${snap.support}/${maxSupport}  hazard=${snap.hazard}/${maxHazard}  sniperCap=${maxSnipers}`, 'cline-ok', true);
+            if (typeLines.length === 0) _appendLine('  no live enemies', 'cline-info', true);
+            typeLines.forEach((line, idx) => setTimeout(() => _appendLine(line, 'cline-ok', true), idx * 20));
         }
 
         // ══════════════════════════════════════════════════════
@@ -706,6 +774,9 @@ const AdminConsole = (() => {
                 '│  set wave <num>          │  Jump to wave number    │',
                 '│  give weapon <n>         │  Equip a weapon         │',
                 '│  spawn enemy <t> [n]     │  Spawn test enemies     │',
+                '│  spawn pack <preset>     │  Spawn playtest pack    │',
+                '│    presets: duel, anchor │  pressure, support...   │',
+                '│  enemy report            │  Show roster caps/live  │',
                 '│  spawn manop [1|2|3]     │  Kru Manop + phase      │',
                 '│  spawn first [advanced]  │  Kru First + variant    │',
                 '│  info                    │  Show game state info   │',

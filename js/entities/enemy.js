@@ -362,21 +362,37 @@ class EnemyBase extends Entity {
     return ((ax / ad) * fx + (ay / ad) * fy) >= cosThreshold;
   }
 
-  findLowestHpAlly(range, ratioThreshold = 0.85) {
+  findLowestHpAlly(range, ratioThreshold = 0.85, options = null) {
     if (typeof window === 'undefined' || !window.enemies) return null;
-    let best = null;
-    let bestRatio = ratioThreshold;
     const maxRange = range || 280;
-    for (let i = 0; i < window.enemies.length; i++) {
-      const ally = window.enemies[i];
-      if (!ally || ally.dead || ally === this) continue;
-      const ratio = ally.hp / Math.max(ally.maxHp || 1, 1);
-      if (ratio >= bestRatio) continue;
-      if (Math.hypot(ally.x - this.x, ally.y - this.y) > maxRange) continue;
-      best = ally;
-      bestRatio = ratio;
+    const preferFn = typeof options?.prefer === 'function' ? options.prefer : null;
+    const acceptFn = typeof options?.accept === 'function' ? options.accept : null;
+    const scan = (strictPreference) => {
+      let best = null;
+      let bestRatio = ratioThreshold;
+      for (let i = 0; i < window.enemies.length; i++) {
+        const ally = window.enemies[i];
+        if (!ally || ally.dead || ally === this) continue;
+        if (Math.hypot(ally.x - this.x, ally.y - this.y) > maxRange) continue;
+        if (acceptFn && !acceptFn(ally)) continue;
+        if (strictPreference && preferFn && !preferFn(ally)) continue;
+        const ratio = ally.hp / Math.max(ally.maxHp || 1, 1);
+        if (ratio >= bestRatio) continue;
+        best = ally;
+        bestRatio = ratio;
+      }
+      return best;
+    };
+    return scan(true) || scan(false);
+  }
+
+  countSpecialEffectsByType(ctor) {
+    if (typeof window === 'undefined' || !window.specialEffects || typeof ctor === 'undefined') return 0;
+    let count = 0;
+    for (let i = 0; i < window.specialEffects.length; i++) {
+      if (window.specialEffects[i] instanceof ctor) count++;
     }
-    return best;
+    return count;
   }
 
   countNearbyAllies(range) {
@@ -946,26 +962,33 @@ class PoisonPoolEffect {
     if (typeof worldToScreen !== "function") return;
     const s = worldToScreen(this.x, this.y);
     const alpha = Math.max(0.18, this.life / Math.max(this.duration, 0.01));
+    const pulse = 0.92 + Math.sin(performance.now() / 140) * 0.06;
     CTX.save();
-    CTX.globalAlpha = alpha * 0.55;
+    CTX.globalAlpha = alpha * 0.52;
     CTX.fillStyle = this.color;
-    CTX.shadowBlur = 16;
+    CTX.shadowBlur = 18;
     CTX.shadowColor = this.color;
     CTX.beginPath();
     CTX.arc(s.x, s.y, this.radius, 0, Math.PI * 2);
     CTX.fill();
-    CTX.globalAlpha = alpha * 0.9;
-    CTX.strokeStyle = "#86efac";
-    CTX.lineWidth = 2;
+    CTX.globalAlpha = alpha * 0.75;
+    CTX.strokeStyle = "#93c5fd";
+    CTX.lineWidth = 2.5;
     CTX.beginPath();
     CTX.arc(
       s.x,
       s.y,
-      this.radius * (0.82 + Math.sin(performance.now() / 120) * 0.04),
+      this.radius * pulse,
       0,
       Math.PI * 2
     );
     CTX.stroke();
+    CTX.globalAlpha = alpha * 0.35;
+    CTX.setLineDash([8, 6]);
+    CTX.beginPath();
+    CTX.arc(s.x, s.y, this.radius * 0.62, 0, Math.PI * 2);
+    CTX.stroke();
+    CTX.setLineDash([]);
     CTX.restore();
   }
 }
@@ -1005,17 +1028,19 @@ class FatalityExplosionEffect {
     const s = worldToScreen(this.x, this.y);
     const progress = 1 - Math.max(0, this.timer / Math.max(this.delay, 0.01));
     CTX.save();
-    CTX.globalAlpha = 0.15 + progress * 0.35;
+    CTX.globalAlpha = 0.12 + progress * 0.28;
     CTX.fillStyle = this.color;
     CTX.beginPath();
     CTX.arc(s.x, s.y, this.radius * progress, 0, Math.PI * 2);
     CTX.fill();
-    CTX.globalAlpha = 0.9;
-    CTX.strokeStyle = "#fde68a";
+    CTX.globalAlpha = 0.95;
+    CTX.strokeStyle = progress < 0.8 ? "#fde68a" : "#fb7185";
     CTX.lineWidth = 3;
+    CTX.setLineDash([10, 8]);
     CTX.beginPath();
     CTX.arc(s.x, s.y, this.radius * (0.3 + progress * 0.7), 0, Math.PI * 2);
     CTX.stroke();
+    CTX.setLineDash([]);
     CTX.restore();
   }
 }
@@ -1071,7 +1096,7 @@ class SniperEnemy extends Enemy {
       return;
     }
 
-    if (this.shootTimer > 0 || this.chargeTimer > 0 || d > cfg.shootRange) return;
+    if (this.shootTimer > 0 || this.chargeTimer > 0 || d > cfg.shootRange || d < (cfg.minRange || 0)) return;
     if (!this.hasLineOfSightTo(player, cfg.shootRange)) return;
     const align = Math.max(Math.abs(player.x - this.x), Math.abs(player.y - this.y)) / Math.max(d, 1);
     if (align < cfg.alignCos) return;
@@ -1162,6 +1187,11 @@ class PoisonSpitterEnemy extends Enemy {
       const pred = typeof playerAnalyzer !== "undefined" ? playerAnalyzer.predictedPosition(0.18) : null;
       const tx = pred ? pred.x : player.x;
       const ty = pred ? pred.y : player.y;
+      for (let i = 0; i < window.specialEffects.length; i++) {
+        const fx = window.specialEffects[i];
+        if (!(fx instanceof PoisonPoolEffect)) continue;
+        if (Math.hypot(fx.x - tx, fx.y - ty) < (cfg.minPoolSpacing || 140)) return;
+      }
       window.specialEffects.push(new PoisonPoolEffect(tx, ty, cfg));
     }
     this.spitCooldown = cfg.cooldown;
@@ -1180,7 +1210,7 @@ class ChargerEnemy extends Enemy {
     this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
     _setupExpandedEnemy(this, "charger");
     this._state = "idle";
-    this._stateTimer = rand(0.6, 1.2);
+    this._stateTimer = rand(...(cfg.idleDelay || [0.8, 1.2]));
     this._chargeDirX = 0;
     this._chargeDirY = 0;
     this._chargeHit = false;
@@ -1225,7 +1255,7 @@ class ChargerEnemy extends Enemy {
       this.vy *= 0.84;
       if (this._stateTimer <= 0) {
         this._state = "idle";
-        this._stateTimer = rand(0.7, 1.1);
+        this._stateTimer = rand(...(cfg.idleDelay || [0.8, 1.2]));
       }
     } else {
       this._stateTimer -= dt;
@@ -1254,6 +1284,7 @@ class HunterEnemy extends Enemy {
     _setupExpandedEnemy(this, "hunter");
     this.attackCooldown = rand(0.3, 0.7);
     this._lockedOn = true;
+    this._strikeTelegraphTimer = 0;
   }
 
   update(dt, player) {
@@ -1267,9 +1298,15 @@ class HunterEnemy extends Enemy {
     this.applyPhysics(dt);
     this.tickCooldown("attackCooldown", dt);
     this._lockedOn = !player.isInvisible && d <= cfg.lockRange;
-    if (this._lockedOn && d <= cfg.attackRange + player.radius && this.attackCooldown <= 0) {
+    if (this._lockedOn && d <= cfg.attackRange + player.radius * 1.35 && this.attackCooldown <= Math.max(0.18, cfg.telegraphTime || 0.18)) {
+      this._strikeTelegraphTimer = Math.max(this._strikeTelegraphTimer, cfg.telegraphTime || 0.18);
+    } else {
+      this._strikeTelegraphTimer = Math.max(0, (this._strikeTelegraphTimer || 0) - dt);
+    }
+    if (this._lockedOn && d <= cfg.attackRange + player.radius && this.attackCooldown <= 0 && (this._strikeTelegraphTimer || 0) <= 0) {
       player.takeDamage(this.getAttackDamage(1.25));
       this.attackCooldown = cfg.attackCooldown;
+      this._strikeTelegraphTimer = 0;
     }
   }
 
@@ -1323,7 +1360,12 @@ class HealerEnemy extends Enemy {
     this.applyPhysics(dt);
     this.tickCooldown("healCooldown", dt);
     if (this.healCooldown > 0) return;
-    const ally = this.findLowestHpAlly(cfg.healRange, cfg.healThreshold);
+    const ally = this.findLowestHpAlly(cfg.healRange, cfg.healThreshold, {
+      prefer: (candidate) => {
+        const cat = candidate._enemyConfig?.category;
+        return cat !== "support" && candidate.type !== "summon_minion";
+      }
+    });
     if (!ally) return;
     ally.heal(cfg.healAmount);
     if (typeof spawnFloatingText === "function") {
@@ -1345,12 +1387,18 @@ class SummonedMinionEnemy extends Enemy {
     this._ai = typeof UtilityAI !== "undefined" ? new UtilityAI(this, cfg.personality) : null;
     _setupExpandedEnemy(this, "summon_minion");
     this.owner = owner || null;
+    this.lifeTimer = cfg.lifetime || 10;
   }
 
   update(dt, player) {
     if (this.dead) return;
     this._tickShared(dt, player);
     const cfg = this._enemyConfig;
+    this.lifeTimer -= dt;
+    if (this.lifeTimer <= 0 || (this.owner && this.owner.dead)) {
+      this.takeDamage((this.hp || 1) + 999, this.owner || player);
+      return;
+    }
     const d = dist(this.x, this.y, player.x, player.y);
     this.moveByIntent(dt, player, 0.65, 0.35, 0.20, 920, 0.9);
     this._steerAroundObstacles(dt);
@@ -1386,7 +1434,8 @@ class SummonerEnemy extends Enemy {
     this._steerAroundObstacles(dt);
     this.applyPhysics(dt);
     this.tickCooldown("summonCooldown", dt);
-    if (this.summonCooldown > 0 || this._activeMinions >= cfg.maxMinions) return;
+    const d = dist(this.x, this.y, player.x, player.y);
+    if (this.summonCooldown > 0 || this._activeMinions >= cfg.maxMinions || d > (cfg.summonEngageRange || 620)) return;
     if (!window.enemies) return;
     const angle = Math.random() * Math.PI * 2;
     const spawnX = this.x + Math.cos(angle) * cfg.summonRange * 0.4;
@@ -1431,6 +1480,8 @@ class BufferEnemy extends Enemy {
       const ally = window.enemies[i];
       if (!ally || ally.dead || ally === this) continue;
       if (Math.hypot(ally.x - this.x, ally.y - this.y) > cfg.buffRadius) continue;
+      if (ally._enemyConfig?.support || ally.type === "summon_minion") continue;
+      if (buffed >= (cfg.maxBuffTargets || 3)) break;
       if (this._buffMode === "speed") {
         ally._enemySpeedBuff = Math.max(ally._enemySpeedBuff || 1, cfg.speedMult);
         ally._enemySpeedBuffTimer = Math.max(ally._enemySpeedBuffTimer || 0, cfg.buffDuration);
@@ -1789,27 +1840,36 @@ class EnemyRenderer {
   }
 
   static _drawExpandedEnemyOverlay(e, sx, sy, R, now) {
+    const familyColor =
+      e._enemyConfig?.category === "support" ? "#67e8f9" :
+        e._enemyConfig?.category === "pressure" ? "#fb7185" :
+          "#93c5fd";
     if (e.type === "sniper" && (e._telegraphTimer ?? 0) > 0) {
       const chargeTime = e._enemyConfig?.chargeTime || 0.65;
+      const telegraphLength = e._enemyConfig?.telegraphLength || 220;
       const alpha = Math.min(1, e._telegraphTimer / chargeTime);
       CTX.save();
       CTX.globalAlpha = 0.18 + alpha * 0.35;
-      CTX.strokeStyle = "#93c5fd";
+      CTX.strokeStyle = familyColor;
       CTX.lineWidth = 3;
       CTX.beginPath();
       CTX.moveTo(sx, sy);
       CTX.lineTo(
-        sx + Math.cos(e._lockedAim || e.angle) * 180,
-        sy + Math.sin(e._lockedAim || e.angle) * 180
+        sx + Math.cos(e._lockedAim || e.angle) * telegraphLength,
+        sy + Math.sin(e._lockedAim || e.angle) * telegraphLength
       );
+      CTX.stroke();
+      CTX.globalAlpha = 0.12 + alpha * 0.18;
+      CTX.beginPath();
+      CTX.arc(sx, sy, R + 10 + alpha * 8, 0, Math.PI * 2);
       CTX.stroke();
       CTX.restore();
     }
 
     if (e.type === "poison_spitter") {
       CTX.save();
-      CTX.globalAlpha = 0.35;
-      CTX.fillStyle = "#22c55e";
+      CTX.globalAlpha = 0.32;
+      CTX.fillStyle = familyColor;
       CTX.beginPath();
       CTX.arc(sx, sy + R * 0.35, R * 0.28, 0, Math.PI * 2);
       CTX.fill();
@@ -1819,7 +1879,7 @@ class EnemyRenderer {
     if (e.type === "charger" && e._state === "windup") {
       CTX.save();
       CTX.globalAlpha = 0.7;
-      CTX.strokeStyle = "#fb923c";
+      CTX.strokeStyle = familyColor;
       CTX.lineWidth = 2;
       CTX.beginPath();
       CTX.arc(sx, sy, R + 8 + Math.sin(now / 80) * 3, 0, Math.PI * 2);
@@ -1829,22 +1889,31 @@ class EnemyRenderer {
 
     if (e.type === "hunter" && e._lockedOn) {
       CTX.save();
-      CTX.globalAlpha = 0.55;
-      CTX.strokeStyle = "#fb7185";
-      CTX.lineWidth = 1.5;
+      CTX.globalAlpha = (e._strikeTelegraphTimer ?? 0) > 0 ? 0.78 : 0.5;
+      CTX.strokeStyle = familyColor;
+      CTX.lineWidth = (e._strikeTelegraphTimer ?? 0) > 0 ? 2.2 : 1.5;
       CTX.beginPath();
       CTX.arc(sx, sy, R + 6, 0, Math.PI * 2);
       CTX.stroke();
+      if ((e._strikeTelegraphTimer ?? 0) > 0) {
+        CTX.beginPath();
+        CTX.arc(sx, sy, R + 13 + Math.sin(now / 65) * 2, 0, Math.PI * 2);
+        CTX.stroke();
+      }
       CTX.restore();
     }
 
     if (e.type === "healer" || e.type === "summoner" || e.type === "buffer") {
       CTX.save();
-      CTX.globalAlpha = 0.55;
-      CTX.strokeStyle = e.color;
+      CTX.globalAlpha = 0.62;
+      CTX.strokeStyle = familyColor;
       CTX.lineWidth = 2;
       CTX.beginPath();
       CTX.arc(sx, sy - R * 0.2, R * 0.45, 0, Math.PI * 2);
+      CTX.stroke();
+      CTX.beginPath();
+      CTX.moveTo(sx - R * 0.5, sy - R * 0.85);
+      CTX.lineTo(sx + R * 0.5, sy - R * 0.85);
       CTX.stroke();
       CTX.restore();
     }
@@ -1853,7 +1922,14 @@ class EnemyRenderer {
       CTX.save();
       CTX.translate(sx, sy);
       CTX.rotate(e.angle);
-      CTX.globalAlpha = 0.6;
+      CTX.globalAlpha = 0.22;
+      CTX.fillStyle = familyColor;
+      CTX.beginPath();
+      CTX.moveTo(0, 0);
+      CTX.arc(0, 0, R + 12, -0.7, 0.7);
+      CTX.closePath();
+      CTX.fill();
+      CTX.globalAlpha = 0.72;
       CTX.strokeStyle = "#e2e8f0";
       CTX.lineWidth = 4;
       CTX.beginPath();

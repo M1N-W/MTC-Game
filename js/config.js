@@ -603,16 +603,19 @@ const BALANCE = {
             expValue: 70,
             personality: 'sniper',
             squadRole: 'anchor',
+            category: 'anchor',
             baseHp: 34, hpPerWave: 0.19,
             baseSpeed: 72, speedPerWave: 4,
             baseDamage: 26, damagePerWave: 2.0,
+            minRange: 260,
             preferredRange: 680,
             shootRange: 980,
             projectileSpeed: 980,
             chargeTime: 0.65,
             cooldown: [3.4, 4.6],
             aimLeadMax: 0.30,
-            alignCos: 0.965
+            alignCos: 0.972,
+            telegraphLength: 260
         },
         shield_bravo: {
             radius: 24,
@@ -620,12 +623,13 @@ const BALANCE = {
             expValue: 78,
             personality: 'anchor',
             squadRole: 'anchor',
+            category: 'anchor',
             baseHp: 135, hpPerWave: 0.21,
             baseSpeed: 58, speedPerWave: 3,
             baseDamage: 18, damagePerWave: 2.2,
             meleeRange: 62,
             frontReduction: 0.45,
-            frontArcCos: 0.15
+            frontArcCos: 0.26
         },
         poison_spitter: {
             radius: 18,
@@ -633,16 +637,19 @@ const BALANCE = {
             expValue: 66,
             personality: 'anchor',
             squadRole: 'anchor',
+            category: 'anchor',
+            hazard: true,
             baseHp: 42, hpPerWave: 0.18,
             baseSpeed: 74, speedPerWave: 4,
             baseDamage: 5, damagePerWave: 0.5,
             preferredRange: 460,
             spitRange: 760,
-            cooldown: 4.2,
+            cooldown: 4.8,
             poolRadius: 86,
-            poolDuration: 4.0,
-            poolDamagePerSec: 14,
-            maxPools: 4
+            poolDuration: 3.6,
+            poolDamagePerSec: 12,
+            maxPools: 3,
+            minPoolSpacing: 150
         },
         charger: {
             radius: 19,
@@ -650,15 +657,17 @@ const BALANCE = {
             expValue: 64,
             personality: 'pressure',
             squadRole: 'pressure',
+            category: 'pressure',
             baseHp: 58, hpPerWave: 0.18,
             baseSpeed: 92, speedPerWave: 5,
             baseDamage: 20, damagePerWave: 1.8,
             chargeMinRange: 120,
             chargeMaxRange: 420,
-            windup: 0.28,
+            windup: 0.34,
             chargeDuration: 0.20,
-            recovery: 0.55,
-            chargeSpeed: 520
+            recovery: 0.62,
+            chargeSpeed: 500,
+            idleDelay: [0.95, 1.35]
         },
         hunter: {
             radius: 20,
@@ -666,12 +675,14 @@ const BALANCE = {
             expValue: 72,
             personality: 'pressure',
             squadRole: 'pressure',
+            category: 'pressure',
             baseHp: 72, hpPerWave: 0.18,
             baseSpeed: 98, speedPerWave: 5,
             baseDamage: 24, damagePerWave: 2.2,
             lockRange: 820,
             attackRange: 46,
-            attackCooldown: 0.9
+            attackCooldown: 1.15,
+            telegraphTime: 0.18
         },
         fatality_bomber: {
             radius: 21,
@@ -679,11 +690,13 @@ const BALANCE = {
             expValue: 68,
             personality: 'pressure',
             squadRole: 'pressure',
+            category: 'pressure',
+            hazard: true,
             baseHp: 64, hpPerWave: 0.19,
             baseSpeed: 54, speedPerWave: 3,
             baseDamage: 8, damagePerWave: 0.6,
             explosionRadius: 160,
-            explosionDelay: 0.55,
+            explosionDelay: 0.72,
             explosionDamage: 38
         },
         healer: {
@@ -692,12 +705,14 @@ const BALANCE = {
             expValue: 74,
             personality: 'support',
             squadRole: 'support',
+            category: 'support',
+            support: true,
             baseHp: 34, hpPerWave: 0.18,
             baseSpeed: 70, speedPerWave: 4,
             baseDamage: 4, damagePerWave: 0.3,
             healRange: 320,
-            healAmount: 18,
-            healCooldown: 2.6,
+            healAmount: 16,
+            healCooldown: 3.2,
             healThreshold: 0.78
         },
         summoner: {
@@ -706,12 +721,15 @@ const BALANCE = {
             expValue: 82,
             personality: 'support',
             squadRole: 'support',
+            category: 'support',
+            support: true,
             baseHp: 40, hpPerWave: 0.18,
             baseSpeed: 68, speedPerWave: 4,
             baseDamage: 5, damagePerWave: 0.4,
-            summonCooldown: 4.8,
+            summonCooldown: 6.0,
             summonRange: 260,
-            maxMinions: 3
+            summonEngageRange: 620,
+            maxMinions: 2
         },
         buffer: {
             radius: 17,
@@ -719,14 +737,17 @@ const BALANCE = {
             expValue: 76,
             personality: 'support',
             squadRole: 'support',
+            category: 'support',
+            support: true,
             baseHp: 38, hpPerWave: 0.18,
             baseSpeed: 70, speedPerWave: 4,
             baseDamage: 4, damagePerWave: 0.3,
-            buffRadius: 250,
-            buffCooldown: 4.0,
-            buffDuration: 2.6,
-            speedMult: 1.18,
-            damageMult: 1.22
+            buffRadius: 235,
+            buffCooldown: 4.8,
+            buffDuration: 2.1,
+            maxBuffTargets: 3,
+            speedMult: 1.14,
+            damageMult: 1.18
         },
         summon_minion: {
             radius: 13,
@@ -734,10 +755,12 @@ const BALANCE = {
             expValue: 10,
             personality: 'pressure',
             squadRole: 'pressure',
+            category: 'pressure',
             baseHp: 18, hpPerWave: 0.12,
             baseSpeed: 118, speedPerWave: 4,
             baseDamage: 9, damagePerWave: 0.8,
-            meleeRange: 30
+            meleeRange: 30,
+            lifetime: 10
         }
     },
     boss: {
@@ -918,12 +941,21 @@ const BALANCE = {
         mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
         enemyPools: [
             { minWave: 1, weights: { basic: 78, tank: 10, mage: 12 } },
-            { minWave: 2, weights: { basic: 56, tank: 10, mage: 12, charger: 10, poison_spitter: 6, shield_bravo: 6 } },
-            { minWave: 4, weights: { basic: 38, tank: 9, mage: 10, charger: 11, hunter: 8, poison_spitter: 7, shield_bravo: 7, sniper: 4, healer: 3, fatality_bomber: 3 } },
-            { minWave: 6, weights: { basic: 25, tank: 9, mage: 10, charger: 11, hunter: 9, poison_spitter: 7, shield_bravo: 8, sniper: 6, healer: 4, summoner: 4, buffer: 4, fatality_bomber: 3 } },
-            { minWave: 9, weights: { basic: 18, tank: 8, mage: 10, charger: 11, hunter: 10, poison_spitter: 8, shield_bravo: 8, sniper: 7, healer: 5, summoner: 5, buffer: 5, fatality_bomber: 5 } },
-            { minWave: 12, weights: { basic: 12, tank: 8, mage: 10, charger: 11, hunter: 11, poison_spitter: 8, shield_bravo: 8, sniper: 8, healer: 5, summoner: 6, buffer: 6, fatality_bomber: 7 } }
+            { minWave: 2, weights: { basic: 58, tank: 10, mage: 12, charger: 10, poison_spitter: 5, shield_bravo: 5 } },
+            { minWave: 4, weights: { basic: 42, tank: 9, mage: 11, charger: 11, hunter: 7, poison_spitter: 6, shield_bravo: 7, sniper: 4, fatality_bomber: 3 } },
+            { minWave: 6, weights: { basic: 28, tank: 9, mage: 10, charger: 11, hunter: 9, poison_spitter: 6, shield_bravo: 8, sniper: 6, healer: 5, fatality_bomber: 3, summoner: 2, buffer: 3 } },
+            { minWave: 9, weights: { basic: 19, tank: 8, mage: 10, charger: 11, hunter: 10, poison_spitter: 7, shield_bravo: 8, sniper: 7, healer: 5, summoner: 4, buffer: 4, fatality_bomber: 4 } },
+            { minWave: 12, weights: { basic: 12, tank: 8, mage: 10, charger: 11, hunter: 11, poison_spitter: 8, shield_bravo: 8, sniper: 8, healer: 5, summoner: 5, buffer: 5, fatality_bomber: 6 } }
         ],
+        expandedRosterRules: {
+            maxSupportAlive: [0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
+            maxHazardAlive: [0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2],
+            maxSnipersAlive: [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
+            maxSummonersAlive: 1,
+            maxBuffersAlive: 1,
+            supportMixUnlockWave: 10,
+            hazardMixUnlockWave: 9
+        },
         bossEveryNWaves: 3,
         glitchGracePeriod: 4000,
         // ── Wave Event Configurations ──────────────────────

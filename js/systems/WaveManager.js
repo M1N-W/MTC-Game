@@ -251,6 +251,70 @@ function _getEnemyPoolForWave(wave) {
     return selected?.weights || null;
 }
 
+function _waveRuleValue(rule, wave) {
+    if (Array.isArray(rule)) {
+        const idx = Math.max(0, Math.min(rule.length - 1, (wave || 1) - 1));
+        return rule[idx];
+    }
+    return rule;
+}
+
+function _getExpandedEnemyLiveCounts() {
+    const counts = { byType: {}, support: 0, hazard: 0, supportTypes: {}, hazardTypes: {} };
+    const roster = (typeof BALANCE !== 'undefined' && BALANCE.enemies) ? BALANCE.enemies : {};
+    const live = window.enemies || [];
+    for (let i = 0; i < live.length; i++) {
+        const enemy = live[i];
+        if (!enemy || enemy.dead || !enemy.type) continue;
+        counts.byType[enemy.type] = (counts.byType[enemy.type] || 0) + 1;
+        const cfg = roster[enemy.type];
+        if (!cfg) continue;
+        if (cfg.support) {
+            counts.support++;
+            counts.supportTypes[enemy.type] = (counts.supportTypes[enemy.type] || 0) + 1;
+        }
+        if (cfg.hazard) {
+            counts.hazard++;
+            counts.hazardTypes[enemy.type] = (counts.hazardTypes[enemy.type] || 0) + 1;
+        }
+    }
+    return counts;
+}
+
+function _isEnemyEligibleForWave(key, wave, liveCounts) {
+    const roster = (typeof BALANCE !== 'undefined' && BALANCE.enemies) ? BALANCE.enemies : null;
+    const rules = (typeof BALANCE !== 'undefined' && BALANCE.waves) ? BALANCE.waves.expandedRosterRules : null;
+    const cfg = roster?.[key];
+    if (!cfg || !rules) return true;
+
+    const typeCount = liveCounts.byType[key] || 0;
+    if (cfg.support) {
+        const maxSupport = _waveRuleValue(rules.maxSupportAlive, wave);
+        if (typeof maxSupport === 'number' && liveCounts.support >= maxSupport) return false;
+        const mixUnlockWave = rules.supportMixUnlockWave || 10;
+        if (wave < mixUnlockWave) {
+            const supportTypesAlive = Object.keys(liveCounts.supportTypes).filter((type) => (liveCounts.supportTypes[type] || 0) > 0);
+            if (supportTypesAlive.length > 0 && !liveCounts.supportTypes[key]) return false;
+        }
+    }
+    if (cfg.hazard) {
+        const maxHazard = _waveRuleValue(rules.maxHazardAlive, wave);
+        if (typeof maxHazard === 'number' && liveCounts.hazard >= maxHazard) return false;
+        const hazardMixUnlockWave = rules.hazardMixUnlockWave || 9;
+        if (wave < hazardMixUnlockWave) {
+            const hazardTypesAlive = Object.keys(liveCounts.hazardTypes).filter((type) => (liveCounts.hazardTypes[type] || 0) > 0);
+            if (hazardTypesAlive.length > 0 && !liveCounts.hazardTypes[key]) return false;
+        }
+    }
+    if (key === 'sniper') {
+        const maxSnipers = _waveRuleValue(rules.maxSnipersAlive, wave);
+        if (typeof maxSnipers === 'number' && typeCount >= maxSnipers) return false;
+    }
+    if (key === 'summoner' && typeCount >= (rules.maxSummonersAlive || 1)) return false;
+    if (key === 'buffer' && typeCount >= (rules.maxBuffersAlive || 1)) return false;
+    return true;
+}
+
 function _spawnEnemyFromRegistry(x, y, wave) {
     const registry = window.ENEMY_REGISTRY;
     if (!registry) return null;
@@ -263,10 +327,12 @@ function _spawnEnemyFromRegistry(x, y, wave) {
         return new Enemy(x, y);
     }
 
+    const liveCounts = _getExpandedEnemyLiveCounts();
     let total = 0;
     for (const key in pool) {
         if (!Object.prototype.hasOwnProperty.call(pool, key)) continue;
         if (!registry[key] || typeof registry[key].ctor !== 'function') continue;
+        if (!_isEnemyEligibleForWave(key, wave, liveCounts)) continue;
         total += pool[key];
     }
     if (total <= 0) return new Enemy(x, y);
@@ -276,6 +342,7 @@ function _spawnEnemyFromRegistry(x, y, wave) {
         if (!Object.prototype.hasOwnProperty.call(pool, key)) continue;
         const entry = registry[key];
         if (!entry || typeof entry.ctor !== 'function') continue;
+        if (!_isEnemyEligibleForWave(key, wave, liveCounts)) continue;
         roll -= pool[key];
         if (roll <= 0) return new entry.ctor(x, y);
     }
