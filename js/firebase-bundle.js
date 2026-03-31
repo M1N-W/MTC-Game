@@ -299,22 +299,6 @@
     var _a, _b;
     return (_b = (_a = getDefaults()) === null || _a === void 0 ? void 0 : _a.emulatorHosts) === null || _b === void 0 ? void 0 : _b[productName];
   };
-  var getDefaultEmulatorHostnameAndPort = (productName) => {
-    const host = getDefaultEmulatorHost(productName);
-    if (!host) {
-      return void 0;
-    }
-    const separatorIndex = host.lastIndexOf(":");
-    if (separatorIndex <= 0 || separatorIndex + 1 === host.length) {
-      throw new Error(`Invalid host ${host} with no separate hostname and port!`);
-    }
-    const port = parseInt(host.substring(separatorIndex + 1), 10);
-    if (host[0] === "[") {
-      return [host.substring(1, separatorIndex - 1), port];
-    } else {
-      return [host.substring(0, separatorIndex), port];
-    }
-  };
   var getDefaultAppConfig = () => {
     var _a;
     return (_a = getDefaults()) === null || _a === void 0 ? void 0 : _a.config;
@@ -371,41 +355,6 @@
       credentials: "include"
     });
     return result.ok;
-  }
-  function createMockUserToken(token, projectId) {
-    if (token.uid) {
-      throw new Error('The "uid" field is no longer supported by mockUserToken. Please use "sub" instead for Firebase Auth User ID.');
-    }
-    const header = {
-      alg: "none",
-      type: "JWT"
-    };
-    const project = projectId || "demo-project";
-    const iat = token.iat || 0;
-    const sub = token.sub || token.user_id;
-    if (!sub) {
-      throw new Error("mockUserToken must contain 'sub' or 'user_id' field!");
-    }
-    const payload = Object.assign({
-      // Set all required fields to decent defaults
-      iss: `https://securetoken.google.com/${project}`,
-      aud: project,
-      iat,
-      exp: iat + 3600,
-      auth_time: iat,
-      sub,
-      user_id: sub,
-      firebase: {
-        sign_in_provider: "custom",
-        identities: {}
-      }
-    }, token);
-    const signature = "";
-    return [
-      base64urlEncodeWithoutPadding(JSON.stringify(header)),
-      base64urlEncodeWithoutPadding(JSON.stringify(payload)),
-      signature
-    ].join(".");
   }
   var emulatorStatus = {};
   function getEmulatorSummary() {
@@ -12087,28 +12036,6 @@
     shutdown() {
     }
   };
-  var __PRIVATE_EmulatorAuthCredentialsProvider = class {
-    constructor(e) {
-      this.token = e, /**
-       * Stores the listener registered with setChangeListener()
-       * This isn't actually necessary since the UID never changes, but we use this
-       * to verify the listen contract is adhered to in tests.
-       */
-      this.changeListener = null;
-    }
-    getToken() {
-      return Promise.resolve(this.token);
-    }
-    invalidateToken() {
-    }
-    start(e, t) {
-      this.changeListener = t, // Fire with initial user.
-      e.enqueueRetryable((() => t(this.token.user)));
-    }
-    shutdown() {
-      this.changeListener = null;
-    }
-  };
   var __PRIVATE_FirebaseAuthCredentialsProvider = class {
     constructor(e) {
       this.t = e, /** Tracks the current User. */
@@ -20272,30 +20199,6 @@ This typically indicates that your device does not have a healthy Internet conne
       })(this), Promise.resolve();
     }
   };
-  function connectFirestoreEmulator(e, t, n, r = {}) {
-    var i;
-    e = __PRIVATE_cast(e, Firestore$1);
-    const s = isCloudWorkstation(t), o = e._getSettings(), _ = Object.assign(Object.assign({}, o), {
-      emulatorOptions: e._getEmulatorOptions()
-    }), a = `${t}:${n}`;
-    s && (pingServer(`https://${a}`), updateEmulatorBanner("Firestore", true)), o.host !== on && o.host !== a && __PRIVATE_logWarn("Host has been set in both settings() and connectFirestoreEmulator(), emulator host will be used.");
-    const u = Object.assign(Object.assign({}, o), {
-      host: a,
-      ssl: s,
-      emulatorOptions: r
-    });
-    if (!deepEqual(u, _) && (e._setSettings(u), r.mockUserToken)) {
-      let t2, n2;
-      if ("string" == typeof r.mockUserToken) t2 = r.mockUserToken, n2 = User.MOCK_USER;
-      else {
-        t2 = createMockUserToken(r.mockUserToken, null === (i = e._app) || void 0 === i ? void 0 : i.options.projectId);
-        const s2 = r.mockUserToken.sub || r.mockUserToken.user_id;
-        if (!s2) throw new FirestoreError(N.INVALID_ARGUMENT, "mockUserToken must contain 'sub' or 'user_id' field!");
-        n2 = new User(s2);
-      }
-      e._authCredentials = new __PRIVATE_EmulatorAuthCredentialsProvider(new __PRIVATE_OAuthToken(t2, n2));
-    }
-  }
   var Query = class _Query {
     // This is the lite version of the Query class in the main SDK.
     /** @hideconstructor protected */
@@ -20596,15 +20499,22 @@ This typically indicates that your device does not have a healthy Internet conne
       }
     }
   };
-  function getFirestore(e, n) {
-    const r = "object" == typeof e ? e : getApp(), i = "string" == typeof e ? e : n || ut, s = _getProvider(r, "firestore").getImmediate({
-      identifier: i
-    });
-    if (!s._initialized) {
-      const e2 = getDefaultEmulatorHostnameAndPort("firestore");
-      e2 && connectFirestoreEmulator(s, ...e2);
+  function initializeFirestore(e, t, n) {
+    n || (n = ut);
+    const r = _getProvider(e, "firestore");
+    if (r.isInitialized(n)) {
+      const e2 = r.getImmediate({
+        identifier: n
+      }), i = r.getOptions(n);
+      if (deepEqual(i, t)) return e2;
+      throw new FirestoreError(N.FAILED_PRECONDITION, "initializeFirestore() has already been called with different options. To avoid this error, call initializeFirestore() with the same options as when it was originally called, or call getFirestore() to return the already initialized instance.");
     }
-    return s;
+    if (void 0 !== t.cacheSizeBytes && void 0 !== t.localCache) throw new FirestoreError(N.INVALID_ARGUMENT, "cache and cacheSizeBytes cannot be specified at the same time as cacheSizeBytes willbe deprecated. Instead, specify the cache size in the cache object");
+    if (void 0 !== t.cacheSizeBytes && -1 !== t.cacheSizeBytes && t.cacheSizeBytes < Ot) throw new FirestoreError(N.INVALID_ARGUMENT, "cacheSizeBytes must be at least 1048576");
+    return t.host && isCloudWorkstation(t.host) && pingServer(t.host), r.initialize({
+      options: t,
+      instanceIdentifier: n
+    });
   }
   function ensureFirestoreConfigured(e) {
     if (e._terminated) throw new FirestoreError(N.FAILED_PRECONDITION, "The client has already been terminated.");
@@ -22657,7 +22567,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var firebaseConfig = typeof CONFIG_SECRETS !== "undefined" && CONFIG_SECRETS && CONFIG_SECRETS.FIREBASE_CONFIG ? CONFIG_SECRETS.FIREBASE_CONFIG : DEFAULT_FIREBASE_CONFIG;
   var app = initializeApp(firebaseConfig);
   var auth = getAuth(app);
-  var db = getFirestore(app, { experimentalForceLongPolling: true });
+  var db = initializeFirestore(app, { experimentalForceLongPolling: true });
   var googleProvider = new GoogleAuthProvider();
   var analytics = null;
   isSupported().then((ok) => {
@@ -22800,6 +22710,7 @@ This typically indicates that your device does not have a healthy Internet conne
 @firebase/util/dist/index.esm2017.js:
 @firebase/util/dist/index.esm2017.js:
 @firebase/util/dist/index.esm2017.js:
+@firebase/util/dist/index.esm2017.js:
 @firebase/logger/dist/esm/index.esm2017.js:
 @firebase/firestore/dist/index.esm2017.js:
 @firebase/firestore/dist/index.esm2017.js:
@@ -22832,6 +22743,14 @@ This typically indicates that your device does not have a healthy Internet conne
    *)
 
 @firebase/util/dist/index.esm2017.js:
+@firebase/util/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
   (**
    * @license
    * Copyright 2022 Google LLC
@@ -22848,6 +22767,9 @@ This typically indicates that your device does not have a healthy Internet conne
    * See the License for the specific language governing permissions and
    * limitations under the License.
    *)
+
+@firebase/util/dist/index.esm2017.js:
+@firebase/firestore/dist/index.esm2017.js:
   (**
    * @license
    * Copyright 2017 Google LLC
@@ -22883,31 +22805,6 @@ This typically indicates that your device does not have a healthy Internet conne
   (**
    * @license
    * Copyright 2021 Google LLC
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *   http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   *)
-
-@firebase/util/dist/index.esm2017.js:
-@firebase/firestore/dist/index.esm2017.js:
-@firebase/firestore/dist/index.esm2017.js:
-@firebase/firestore/dist/index.esm2017.js:
-@firebase/firestore/dist/index.esm2017.js:
-@firebase/firestore/dist/index.esm2017.js:
-@firebase/firestore/dist/index.esm2017.js:
-@firebase/firestore/dist/index.esm2017.js:
-  (**
-   * @license
-   * Copyright 2022 Google LLC
    *
    * Licensed under the Apache License, Version 2.0 (the "License");
    * you may not use this file except in compliance with the License.
@@ -23112,6 +23009,7 @@ firebase/app/dist/esm/index.esm.js:
 @firebase/auth/dist/esm2017/index-35c79a8a.js:
 @firebase/auth/dist/esm2017/index-35c79a8a.js:
 @firebase/auth/dist/esm2017/index-35c79a8a.js:
+@firebase/firestore/dist/index.esm2017.js:
 @firebase/firestore/dist/index.esm2017.js:
 @firebase/firestore/dist/index.esm2017.js:
 @firebase/firestore/dist/index.esm2017.js:
@@ -23511,56 +23409,6 @@ firebase/app/dist/esm/index.esm.js:
   (**
    * @license
    * Copyright 2017 Google LLC
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *   http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   *)
-
-@firebase/firestore/dist/index.esm2017.js:
-  (**
-   * @license
-   * Copyright 2017 Google LLC
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *   http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   *)
-  (**
-   * @license
-   * Copyright 2025 Google LLC
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   *   http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   *)
-  (**
-   * @license
-   * Copyright 2021 Google LLC
    *
    * Licensed under the Apache License, Version 2.0 (the "License");
    * you may not use this file except in compliance with the License.

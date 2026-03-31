@@ -827,6 +827,57 @@
             </div>
         </div>
 
+        <!-- ══════════════════════════════════════════
+         💀 GAME OVER SCREEN (dedicated overlay)
+    ══════════════════════════════════════════ -->
+        <div id="gameover-screen">
+            <div class="gameover-bg-grid"></div>
+            <div class="gameover-content">
+
+                <div class="gameover-icon-wrap">
+                    <div class="gameover-skull">💀</div>
+                </div>
+
+                <div class="gameover-title">MISSION FAILED</div>
+                <div class="gameover-new-record" id="go-new-record">🏆 NEW RECORD!</div>
+
+                <div class="gameover-divider"></div>
+
+                <div class="gameover-stats">
+                    <div class="gameover-stat">
+                        <div class="gameover-stat-icon">🏆</div>
+                        <div class="gameover-stat-label">SCORE</div>
+                        <div class="gameover-stat-value" id="go-score">0</div>
+                    </div>
+                    <div class="gameover-stat">
+                        <div class="gameover-stat-icon">🌊</div>
+                        <div class="gameover-stat-label">WAVE</div>
+                        <div class="gameover-stat-value" id="go-wave">0</div>
+                    </div>
+                    <div class="gameover-stat">
+                        <div class="gameover-stat-icon">💀</div>
+                        <div class="gameover-stat-label">KILLS</div>
+                        <div class="gameover-stat-value" id="go-kills">0</div>
+                    </div>
+                </div>
+
+                <div class="gameover-eval" id="go-eval"></div>
+
+                <div class="gameover-actions">
+                    <button class="gameover-btn gameover-btn--retry"
+                        onclick="window.retryMission()"
+                        ontouchstart="event.preventDefault(); window.retryMission();">
+                        ▶ &nbsp;RETRY MISSION
+                    </button>
+                    <button class="gameover-btn gameover-btn--menu"
+                        onclick="window.goToMainMenu()"
+                        ontouchstart="event.preventDefault(); window.goToMainMenu();">
+                        ⌂ &nbsp;MAIN MENU
+                    </button>
+                </div>
+
+            </div>
+        </div>
 
         <!-- ══════════════════════════════════════════
          🎓 TUTORIAL OVERLAY

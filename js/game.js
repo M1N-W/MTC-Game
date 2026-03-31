@@ -1043,6 +1043,7 @@ function _initGameUI(charType) {
     // 🔴 Fix #1: Fade out instead of instant hide
     _fadeOutOverlay();
     hideElement('report-card');
+    hideElement('gameover-screen');
     UIManager.resetGameOverUI();
 
     // 🟡 Fix #6: Reset RETRY label back to original START MISSION
@@ -1072,7 +1073,7 @@ function _initGameUI(charType) {
         /* optional analytics */
     }
 
-    if (typeof TutorialSystem !== 'undefined' && !TutorialSystem.isDone()) {
+    if (typeof TutorialSystem !== 'undefined' && !TutorialSystem.isDone() && window._tutorialModeRequested) {
         TutorialSystem.start(charType);
     }
 
@@ -1173,30 +1174,37 @@ function endGame(result) {
         const finalWave = getWave();
         const finalKills = Achievements.stats.kills || 0;
 
-        showElement('overlay');
-        UIManager.showGameOver(finalScore, finalWave, finalKills);
-
-        // 🟡 Fix #6: Change start button label to RETRY MISSION
-        const _retryBtn = document.getElementById('start-btn');
-        if (_retryBtn) {
-            _retryBtn.dataset._originalLabel = _retryBtn.textContent;
-            const _charId = window.player?.charId || 'kao';
-            const _icon = _charId === 'poom' ? '🌾' : _charId === 'auto' ? '🔥' : _charId === 'pat' ? '⚔️' : '🎓';
-            _retryBtn.textContent = _icon + ' RETRY MISSION';
-        }
-
-        const ld = document.getElementById('ai-loading');
-        if (ld) ld.style.display = 'none';
-        const reportText = document.getElementById('report-text');
-        if (reportText) {
+        // ── Dedicated Game Over screen (Issue 4b / Fix #9) ─────────────────────
+        setElementText('go-score', finalScore.toLocaleString());
+        setElementText('go-wave', String(finalWave));
+        setElementText('go-kills', finalKills.toLocaleString());
+        const goEval = document.getElementById('go-eval');
+        if (goEval) {
             let category;
             if (finalScore > 5000) category = 'excellent';
             else if (finalScore > 2000) category = 'good';
             else category = 'poor';
             const cards = GAME_TEXTS.ai.reportCards[category];
-            reportText.textContent = cards[Math.floor(Math.random() * cards.length)];
+            goEval.textContent = cards[Math.floor(Math.random() * cards.length)];
         }
+        const goNewRecord = document.getElementById('go-new-record');
+        if (goNewRecord) goNewRecord.classList.toggle('visible', _isNewHighScore);
+        showElement('gameover-screen');
     }
+}
+
+// ── Game Over screen actions ────────────────────────────────────────────────
+function retryMission() {
+    hideElement('gameover-screen');
+    startGame(window._selectedChar || 'kao');
+}
+window.retryMission = retryMission;
+
+function goToMainMenu() {
+    hideElement('gameover-screen');
+    const ov = document.getElementById('overlay');
+    if (ov) ov.classList.remove('fade-out');
+    showElement('overlay');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1205,6 +1213,7 @@ function endGame(result) {
 
 window.startGame = startGame;
 window.endGame = endGame;
+window.goToMainMenu = goToMainMenu;
 
 window.onload = () => {
     // console.log('🚀 Initializing game...');

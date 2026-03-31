@@ -434,12 +434,14 @@ window._closeStartModal = _closeStartModal;
 
 function _startModalPlay() {
   _closeStartModal();
+  window._tutorialModeRequested = false;
   if (typeof startGame === "function") startGame(_selectedChar);
 }
 window._startModalPlay = _startModalPlay;
 
 function _startModalTutorial() {
   _closeStartModal();
+  window._tutorialModeRequested = true;
   if (window.TutorialSystem) TutorialSystem.reset();
   if (typeof startGame === "function") startGame(_selectedChar);
 }
