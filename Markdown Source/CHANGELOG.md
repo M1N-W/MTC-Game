@@ -4,6 +4,41 @@
 
 ---
 
+## v3.41.14 — Bug Fix: Firebase Offline, Tutorial Freeze, Game Over Screen, Menu Dots
+*Released: March 31, 2026*
+
+### 🔥 Firebase Offline Fix (`js/firebase-init.js`)
+- Replaced `getFirestore(app, {...})` call with `initializeFirestore(app, { experimentalForceLongPolling: true })`.
+- `getFirestore` ignores the settings object when called after initialization, silently omitting long-polling and causing offline errors.
+- `initializeFirestore` is the correct API surface for applying Firestore settings at construction time.
+
+### 🎓 Tutorial Freeze Fix (`js/menu.js`, `js/game.js`)
+- Added `window._tutorialModeRequested` flag: set to `false` in `_startModalPlay`, set to `true` in `_startModalTutorial`.
+- Guarded `TutorialSystem.start()` in `_initGameUI` behind `window._tutorialModeRequested` so tutorial no longer auto-starts on every game start, only when explicitly selected.
+
+### 💀 Game Over Black Screen Fix (`js/game.js`, `index.html`, `css/main.css`)
+- Replaced `showElement('overlay')` on defeat with a dedicated `#gameover-screen` overlay to prevent lingering `.fade-out` class on `#overlay` from causing a black screen.
+- Added full-screen `#gameover-screen` HTML overlay with run stats, retry button, and main menu button.
+- Added `retryMission()` and `goToMainMenu()` global handlers; `goToMainMenu` clears `.fade-out` from `#overlay` before showing it.
+- Added comprehensive CSS for `#gameover-screen` including entrance animation, stat layout, and button styling.
+
+### 🎨 Menu Dots Layout Fix (`css/main.css`)
+- Changed `.char-dots--vertical` from absolute positioning to static horizontal flex layout so pagination dots render correctly below the character card.
+
+### Files touched
+```
+✅ MODIFIED: js/firebase-init.js   (initializeFirestore + experimentalForceLongPolling)
+✅ MODIFIED: js/menu.js            (_tutorialModeRequested flag)
+✅ MODIFIED: js/game.js            (tutorial guard, gameover-screen, retryMission, goToMainMenu)
+✅ MODIFIED: index.html            (#gameover-screen overlay HTML)
+✅ MODIFIED: css/main.css          (.char-dots--vertical fix, #gameover-screen styles)
+✅ MODIFIED: sw.js                 (v3.41.14)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.14)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.13 — Gameplay: Expanded Enemy Roster Stabilization
 *Released: March 30, 2026*
 
