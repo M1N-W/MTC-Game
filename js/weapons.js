@@ -1897,6 +1897,10 @@ class ProjectileManager {
         pierce: 2,
         bounces: 3,
       },
+    );
+    this.add(p);
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 // 🎨 STANDALONE WEAPON ART FUNCTIONS
