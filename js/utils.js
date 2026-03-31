@@ -11,8 +11,8 @@
  * - ✅ lerpColorHex / lerpColor moved HERE from ui.js (removes duplicate)
  * - ✅ showVoiceBubble() global wrapper added — safe even before UIManager loads
  * - ✅ All save/load helpers kept here (getSaveData, updateSaveData, …)
- * - ✅ All functions declared with `var` so they are available on window globally
- *       in every other script regardless of load order.
+ * - ✅ All globals registered on `window` explicitly at the bottom of this file
+ *       so they are available in every other script regardless of load order.
  * - ✅ `mouse`, `updateMouseWorld`, and `getMouse` REMOVED — now owned by input.js
  *       (fixes "Identifier 'mouse' has already been declared" SyntaxError).
  * - ✅ drawBambooPattern, drawHologramRect, drawNeonLine added — procedural
@@ -20,19 +20,19 @@
  */
 
 // ─── Math utilities ───────────────────────────────────────────
-var dist  = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
-var rand  = (min, max) => Math.random() * (max - min) + min;
-var clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-var lerp  = (a, b, t) => a + (b - a) * t;
+const dist  = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+const rand  = (min, max) => Math.random() * (max - min) + min;
+const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+const lerp  = (a, b, t) => a + (b - a) * t;
 
 // ─── Angle utilities ──────────────────────────────────────────
-var normalizeAngle = (angle) => {
+const normalizeAngle = (angle) => {
     while (angle >  Math.PI) angle -= Math.PI * 2;
     while (angle < -Math.PI) angle += Math.PI * 2;
     return angle;
 };
 
-var angleDiff = (a1, a2) => {
+const angleDiff = (a1, a2) => {
     let diff = a2 - a1;
     while (diff >  Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
@@ -40,16 +40,16 @@ var angleDiff = (a1, a2) => {
 };
 
 // ─── Collision detection ──────────────────────────────────────
-var circleCollision = (x1, y1, r1, x2, y2, r2) =>
+const circleCollision = (x1, y1, r1, x2, y2, r2) =>
     dist(x1, y1, x2, y2) < r1 + r2;
 
-var pointInRect = (px, py, rx, ry, rw, rh) =>
+const pointInRect = (px, py, rx, ry, rw, rh) =>
     px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
 
-var rectCollision = (x1, y1, w1, h1, x2, y2, w2, h2) =>
+const rectCollision = (x1, y1, w1, h1, x2, y2, w2, h2) =>
     x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 
-var circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
+const circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
     const closestX = clamp(cx, rx, rx + rw);
     const closestY = clamp(cy, ry, ry + rh);
     const dx = cx - closestX;
@@ -57,7 +57,7 @@ var circleRectCollision = (cx, cy, radius, rx, ry, rw, rh) => {
     return (dx * dx + dy * dy) < (radius * radius);
 };
 
-var pointToLineDistance = (px, py, x1, y1, x2, y2) => {
+const pointToLineDistance = (px, py, x1, y1, x2, y2) => {
     const A = px - x1, B = py - y1;
     const C = x2 - x1, D = y2 - y1;
     const dot   = A * C + B * D;
@@ -74,7 +74,7 @@ var pointToLineDistance = (px, py, x1, y1, x2, y2) => {
 // NOTE: These are defined here to avoid the duplicate that previously
 // lived in ui.js. ui.js references these globals — no redefinition needed.
 
-var hexToRgb = (hex) => {
+const hexToRgb = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
         r: parseInt(result[1], 16),
@@ -83,7 +83,7 @@ var hexToRgb = (hex) => {
     } : null;
 };
 
-var rgbaString = (hex, alpha) => {
+const rgbaString = (hex, alpha) => {
     const rgb = hexToRgb(hex);
     return rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})` : hex;
 };
@@ -96,7 +96,7 @@ var rgbaString = (hex, alpha) => {
  * MOVED HERE from ui.js to eliminate the duplicate-identifier crash.
  * ui.js now calls this global directly.
  */
-var lerpColorHex = (a, b, t) => {
+const lerpColorHex = (a, b, t) => {
     t = Math.max(0, Math.min(1, t));
     const ac = hexToRgb(a);
     const bc = hexToRgb(b);
@@ -108,7 +108,7 @@ var lerpColorHex = (a, b, t) => {
 };
 
 /** Alias kept for any existing call-sites that use lerpColor(). */
-var lerpColor = lerpColorHex;
+const lerpColor = lerpColorHex;
 
 // ─── UI helper — voice bubble ─────────────────────────────────
 /**
@@ -121,7 +121,7 @@ var lerpColor = lerpColorHex;
  *
  * FIXES: map.js MTCRoom crash when calling UIManager before ui.js loads.
  */
-var showVoiceBubble = (text, worldX, worldY) => {
+const showVoiceBubble = (text, worldX, worldY) => {
     try {
         if (window.UIManager && typeof window.UIManager.showVoiceBubble === 'function') {
             window.UIManager.showVoiceBubble(text, worldX, worldY);
@@ -134,7 +134,7 @@ var showVoiceBubble = (text, worldX, worldY) => {
 // ─── Screen shake ─────────────────────────────────────────────
 let screenShake = 0;
 
-var addScreenShake = (amount) => {
+const addScreenShake = (amount) => {
     // Guard: ignore non-finite values to prevent NaN screenShake
     // which would propagate into CTX.translate(NaN,NaN) and destabilize rendering.
     if (!Number.isFinite(amount)) return;
@@ -143,7 +143,7 @@ var addScreenShake = (amount) => {
     screenShake = Math.max(screenShake, capped);
 };
 
-var updateScreenShake = () => {
+const updateScreenShake = () => {
     if (!Number.isFinite(screenShake)) { screenShake = 0; return; }
     if (screenShake > 0) {
         screenShake *= GAME_CONFIG.visual.screenShakeDecay;
@@ -151,7 +151,7 @@ var updateScreenShake = () => {
     }
 };
 
-var getScreenShakeOffset = () => {
+const getScreenShakeOffset = () => {
     if (!Number.isFinite(screenShake)) return { x: 0, y: 0 };
     if (screenShake <= 1) return { x: 0, y: 0 };
     return {
@@ -163,60 +163,62 @@ var getScreenShakeOffset = () => {
 // ─── Score management ─────────────────────────────────────────
 let score = 0;
 
-var addScore = (points) => {
+const addScore = (points) => {
     score += points;
     updateScoreUI();
 };
 
-var getScore = () => score;
+const getScore = () => score;
 
-var resetScore = () => {
+const resetScore = () => {
     score = 0;
     updateScoreUI();
 };
 
-var updateScoreUI = () => {
+const updateScoreUI = () => {
     const scoreEl = document.getElementById('score');
     if (scoreEl) scoreEl.textContent = score.toLocaleString();
 };
 
 // ─── Canvas utilities ─────────────────────────────────────────
-var CANVAS, CTX;
+let CANVAS, CTX;
 
-var initCanvas = () => {
+const initCanvas = () => {
     CANVAS = document.getElementById('gameCanvas');
     if (!CANVAS) { console.error('[MTC] #gameCanvas not found!'); return; }
     CTX = CANVAS.getContext('2d', { alpha: false });
+    window.CANVAS = CANVAS;
+    window.CTX = CTX;
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 };
 
-var resizeCanvas = () => {
+const resizeCanvas = () => {
     if (!CANVAS) return;
     CANVAS.width  = window.innerWidth;
     CANVAS.height = window.innerHeight;
 };
 
-var getCanvas  = () => CANVAS;
-var getContext = () => CTX;
+const getCanvas  = () => CANVAS;
+const getContext = () => CTX;
 
 // ─── Camera system ────────────────────────────────────────────
-var camera = { x: 0, y: 0 };
+const camera = { x: 0, y: 0 };
 
-var updateCamera = (targetX, targetY) => {
+const updateCamera = (targetX, targetY) => {
     const smoothing = GAME_CONFIG.canvas.cameraSmooth;
     camera.x += (targetX - CANVAS.width  / 2 - camera.x) * smoothing;
     camera.y += (targetY - CANVAS.height / 2 - camera.y) * smoothing;
 };
 
-var getCamera = () => camera;
+const getCamera = () => camera;
 
-var screenToWorld = (screenX, screenY) => ({
+const screenToWorld = (screenX, screenY) => ({
     x: screenX + camera.x,
     y: screenY + camera.y
 });
 
-var worldToScreen = (worldX, worldY) => ({
+const worldToScreen = (worldX, worldY) => ({
     x: worldX - camera.x,
     y: worldY - camera.y
 });
@@ -227,41 +229,41 @@ var worldToScreen = (worldX, worldY) => ({
 // and input.js's mousemove listener calls it. Safe to define here
 // because by the time any listener fires, input.js has already run
 // and `mouse` exists on window.
-var updateMouseWorld = () => {
+const updateMouseWorld = () => {
     const world = screenToWorld(mouse.x, mouse.y);
     mouse.wx = world.x;
     mouse.wy = world.y;
 };
 
 /** Convenience accessor — returns the shared mouse state object. */
-var getMouse = () => mouse;
+const getMouse = () => mouse;
 
 // ─── Time utilities ───────────────────────────────────────────
 let lastTime = 0;
 
-var getDeltaTime = (now) => {
+const getDeltaTime = (now) => {
     const dt = Math.min((now - lastTime) / 1000, 0.1); // cap at 100 ms
     lastTime = now;
     return dt;
 };
 
-var resetTime = () => {
+const resetTime = () => {
     lastTime = performance.now();
 };
 
 // ─── Random utilities ─────────────────────────────────────────
-var randomChoice = (array) => array[Math.floor(Math.random() * array.length)];
-var randomInt    = (min, max) => Math.floor(rand(min, max + 1));
-var randomBool   = (probability = 0.5) => Math.random() < probability;
+const randomChoice = (array) => array[Math.floor(Math.random() * array.length)];
+const randomInt    = (min, max) => Math.floor(rand(min, max + 1));
+const randomBool   = (probability = 0.5) => Math.random() < probability;
 
 // ─── Wave management ──────────────────────────────────────────
 let wave = 1;
 
-var getWave  = () => wave;
-var setWave  = (w) => { wave = w; updateWaveUI(); };
-var nextWave = () => { wave++; updateWaveUI(); };
+const getWave  = () => wave;
+const setWave  = (w) => { wave = w; updateWaveUI(); };
+const nextWave = () => { wave++; updateWaveUI(); };
 
-var updateWaveUI = () => {
+const updateWaveUI = () => {
     const waveEl = document.getElementById('wave-badge');
     if (waveEl) waveEl.textContent = `WAVE ${wave}`;
 };
@@ -269,35 +271,35 @@ var updateWaveUI = () => {
 // ─── Enemy kill tracking ──────────────────────────────────────
 let enemiesKilled = 0;
 
-var addEnemyKill       = () => { enemiesKilled++; };
-var getEnemiesKilled   = () => enemiesKilled;
-var resetEnemiesKilled = () => { enemiesKilled = 0; };
+const addEnemyKill       = () => { enemiesKilled++; };
+const getEnemiesKilled   = () => enemiesKilled;
+const resetEnemiesKilled = () => { enemiesKilled = 0; };
 
 // ─── Text formatting ──────────────────────────────────────────
-var formatNumber = (num) => {
+const formatNumber = (num) => {
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
     if (num >= 1_000)     return (num / 1_000).toFixed(1)     + 'K';
     return Math.round(num).toString();
 };
 
 // ─── DOM utilities ────────────────────────────────────────────
-var showElement = (id) => {
+const showElement = (id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'flex';
 };
 
-var hideElement = (id) => {
+const hideElement = (id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
 };
 
-var setElementText = (id, text) => {
+const setElementText = (id, text) => {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
 };
 
 // ─── Debounce ─────────────────────────────────────────────────
-var debounce = (func, wait) => {
+const debounce = (func, wait) => {
     let timeout;
     return function executedFunction(...args) {
         clearTimeout(timeout);
@@ -329,7 +331,7 @@ var debounce = (func, wait) => {
  * @param {number} width   Width of the bounding rectangle.
  * @param {number} height  Height of the bounding rectangle.
  */
-var drawBambooPattern = (ctx, x, y, width, height) => {
+const drawBambooPattern = (ctx, x, y, width, height) => {
     ctx.save();
 
     // Clip all drawing to the target rect so lines never bleed outside.
@@ -402,7 +404,7 @@ var drawBambooPattern = (ctx, x, y, width, height) => {
  * @param {number} height  Rectangle height.
  * @param {string} color   CSS hex or rgb color string (e.g. '#00ffcc').
  */
-var drawHologramRect = (ctx, x, y, width, height, color) => {
+const drawHologramRect = (ctx, x, y, width, height, color) => {
     ctx.save();
 
     // Clip scanlines to rect bounds.
@@ -477,7 +479,7 @@ var drawHologramRect = (ctx, x, y, width, height, color) => {
  * @param {string} color  CSS hex or rgb color string (e.g. '#ff00ff').
  * @param {number} width  Core line width in pixels (glow scales with it).
  */
-var drawNeonLine = (ctx, x1, y1, x2, y2, color, width) => {
+const drawNeonLine = (ctx, x1, y1, x2, y2, color, width) => {
     ctx.save();
 
     const glowRadius = width * 6;   // outer bloom radius
@@ -528,7 +530,7 @@ const DEFAULT_SAVE_DATA = {
     unlockedAchievements: []
  };
 
-var saveData = (key, value) => {
+const saveData = (key, value) => {
     try {
         localStorage.setItem(key, JSON.stringify(value));
         return true;
@@ -538,7 +540,7 @@ var saveData = (key, value) => {
     }
 };
 
-var loadData = (key, defaultValue = null) => {
+const loadData = (key, defaultValue = null) => {
     try {
         const raw = localStorage.getItem(key);
         if (raw === null) return defaultValue;
@@ -549,12 +551,12 @@ var loadData = (key, defaultValue = null) => {
     }
 };
 
-var getSaveData = () => {
+const getSaveData = () => {
     const stored = loadData(MTC_SAVE_KEY, {});
     return { ...DEFAULT_SAVE_DATA, ...stored };
 };
 
-var updateSaveData = (partial) => {
+const updateSaveData = (partial) => {
     const current = getSaveData();
     const merged  = { ...current, ...partial };
     const ok      = saveData(MTC_SAVE_KEY, merged);
@@ -570,6 +572,71 @@ var updateSaveData = (partial) => {
     }
     return ok;
 };
+
+// ══════════════════════════════════════════════════════════════
+// 🌐 WINDOW EXPORTS — register all globals explicitly
+// (const/let do not auto-hoist to window unlike var)
+// ══════════════════════════════════════════════════════════════
+if (typeof window !== 'undefined') {
+    window.dist              = dist;
+    window.rand              = rand;
+    window.clamp             = clamp;
+    window.lerp              = lerp;
+    window.normalizeAngle    = normalizeAngle;
+    window.angleDiff         = angleDiff;
+    window.circleCollision   = circleCollision;
+    window.pointInRect       = pointInRect;
+    window.rectCollision     = rectCollision;
+    window.circleRectCollision = circleRectCollision;
+    window.pointToLineDistance = pointToLineDistance;
+    window.hexToRgb          = hexToRgb;
+    window.rgbaString        = rgbaString;
+    window.lerpColorHex      = lerpColorHex;
+    window.lerpColor         = lerpColor;
+    window.showVoiceBubble   = showVoiceBubble;
+    window.addScreenShake    = addScreenShake;
+    window.updateScreenShake = updateScreenShake;
+    window.getScreenShakeOffset = getScreenShakeOffset;
+    window.addScore          = addScore;
+    window.getScore          = getScore;
+    window.resetScore        = resetScore;
+    window.updateScoreUI     = updateScoreUI;
+    window.initCanvas        = initCanvas;
+    window.resizeCanvas      = resizeCanvas;
+    window.getCanvas         = getCanvas;
+    window.getContext        = getContext;
+    window.camera            = camera;
+    window.updateCamera      = updateCamera;
+    window.getCamera         = getCamera;
+    window.screenToWorld     = screenToWorld;
+    window.worldToScreen     = worldToScreen;
+    window.updateMouseWorld  = updateMouseWorld;
+    window.getMouse          = getMouse;
+    window.getDeltaTime      = getDeltaTime;
+    window.resetTime         = resetTime;
+    window.randomChoice      = randomChoice;
+    window.randomInt         = randomInt;
+    window.randomBool        = randomBool;
+    window.getWave           = getWave;
+    window.setWave           = setWave;
+    window.nextWave          = nextWave;
+    window.updateWaveUI      = updateWaveUI;
+    window.addEnemyKill      = addEnemyKill;
+    window.getEnemiesKilled  = getEnemiesKilled;
+    window.resetEnemiesKilled = resetEnemiesKilled;
+    window.formatNumber      = formatNumber;
+    window.showElement       = showElement;
+    window.hideElement       = hideElement;
+    window.setElementText    = setElementText;
+    window.debounce          = debounce;
+    window.saveData          = saveData;
+    window.loadData          = loadData;
+    window.getSaveData       = getSaveData;
+    window.updateSaveData    = updateSaveData;
+    window.drawBambooPattern = drawBambooPattern;
+    window.drawHologramRect  = drawHologramRect;
+    window.drawNeonLine      = drawNeonLine;
+}
 
 // ─── Exports (Node / bundler) ──────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {

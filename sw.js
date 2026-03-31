@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.41.14"; // Fix: Firebase long-polling, tutorial freeze, game over dedicated screen, menu dots
+const CACHE_NAME = "mtc-cache-v3.41.15"; // Refactor: var→const/let, Debug.html fixes, remove ccflare
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.41.14`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.41.15`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
@@ -16,6 +16,7 @@ It intentionally excludes balance values, cooldowns, damage numbers, and release
 - Simulation and rendering are deliberately decoupled: update mutates world state, draw consumes the finalized snapshot.
 
 Frame modes in `gameLoop` are part of the architecture:
+
 - Hit-stop can skip `updateGame` while still rendering.
 - Tutorial mode may run tutorial state without running the full gameplay update.
 - Pause renders without advancing simulation.
@@ -130,11 +131,13 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 - Draw code must not modify score, HP, cooldowns, spawn state, AI intent, wave progression, or authoritative positions.
 
 Permitted render-local behavior:
+
 - sprite or bitmap caches owned by renderer classes
 - context state setup and cleanup
 - deterministic visual animation derived from current read-only state
 
 Forbidden render behavior:
+
 - spawning gameplay entities
 - mutating `window.enemies`, `window.specialEffects`, `projectileManager`, or `GameState`
 - advancing cooldowns or status timers
@@ -224,7 +227,7 @@ Forbidden render behavior:
 ## 8) Documentation Files and Stable Scope
 
 | File | Location | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `PROJECT_OVERVIEW.md` | `Markdown Source/Information/` | Architecture baseline for runtime structure, invariants, and hidden coupling |
 | `SKILL.md` | `Markdown Source/Information/` | Stable architectural conventions reference for class hierarchy, load order, and invariants |
 | `mtc-game-conventions.md` | `.agents/skills/mtc-game-skills_claude/` | Agent-facing stable architecture skill |
@@ -232,12 +235,14 @@ Forbidden render behavior:
 | `CHANGELOG.md` | `Markdown Source/` | Version-specific implementation notes |
 
 This overview should stay stable by documenting only:
+
 - class hierarchy and ownership boundaries
 - initialization and dependency order
 - update/draw separation
 - critical invariants and hidden cross-file dependencies
 
 This overview should not store:
+
 - balance or config values
 - damage, cooldown, economy, or spawn percentages
 - release-specific tuning notes

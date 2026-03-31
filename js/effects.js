@@ -1095,7 +1095,7 @@ class HitMarkerSystem {
 }
 
 // Global singleton — hook update() + draw() into game.js (see class comment)
-var hitMarkerSystem = new HitMarkerSystem();
+const hitMarkerSystem = new HitMarkerSystem();
 
 /**
  * spawnHitMarker(x, y, isCrit)
@@ -1310,7 +1310,7 @@ class WeatherSystem {
 }
 
 // Global instance
-var weatherSystem = new WeatherSystem();
+const weatherSystem = new WeatherSystem();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Meteor Strike Effect
@@ -1393,8 +1393,8 @@ class MeteorStrike {
 // ──────────────────────────────────────────────────────────────────────────────
 // Create singleton instances
 // ──────────────────────────────────────────────────────────────────────────────
-var particleSystem = new ParticleSystem();
-var floatingTextSystem = new FloatingTextSystem();
+const particleSystem = new ParticleSystem();
+const floatingTextSystem = new FloatingTextSystem();
 
 // Helper functions for global use
 function spawnParticles(x, y, count, color, type = 'circle', options = {}) {
@@ -1734,7 +1734,7 @@ class OrbitalParticle {
         const y = this.centerY + Math.sin(this.angle) * (this.orbitRadius + wobbleOffset);
         const screen = worldToScreen(x, y);
 
-        // ── PERF: viewport cull ──────────────────────────────────────────────
+        // ── PERF: viewport cull — decals are static, cull on anchor point ───
         if (typeof CANVAS !== 'undefined') {
             const pad = this.size + 4;
             if (screen.x < -pad || screen.x > CANVAS.width + pad ||
@@ -2023,7 +2023,7 @@ class DecalSystem {
 }
 
 /** Global singleton */
-var decalSystem = new DecalSystem();
+const decalSystem = new DecalSystem();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 🔫 SHELL CASING SYSTEM — ปลอกกระสุนกระเด็นออกด้านข้างของปืน
@@ -2171,7 +2171,7 @@ class ShellCasingSystem {
 }
 
 /** Global singleton */
-var shellCasingSystem = new ShellCasingSystem();
+const shellCasingSystem = new ShellCasingSystem();
 
 // ══════════════════════════════════════════════════════════════
 // WaveAnnouncementFX — Cinematic wave number announcement
@@ -2585,9 +2585,13 @@ window.spawnBloodBurst = spawnBloodBurst;
 window.spawnKatanaSlashArc = spawnKatanaSlashArc;
 
 /** Global singleton */
-var waveAnnouncementFX = new WaveAnnouncementFX();
+const waveAnnouncementFX = new WaveAnnouncementFX();
 
 // ── Explicit window exports ────────────────────────────────────────────────────
+window.hitMarkerSystem   = hitMarkerSystem;
+window.weatherSystem     = weatherSystem;
+window.particleSystem    = particleSystem;
+window.floatingTextSystem = floatingTextSystem;
 window.waveAnnouncementFX = waveAnnouncementFX;
 window.decalSystem = decalSystem;
 window.shellCasingSystem = shellCasingSystem;

@@ -1155,6 +1155,8 @@
         <div id="admin-console"></div>
         <div id="admin-output"></div>
         <input id="admin-input" type="text">
+        <div id="console-input"></div>
+        <div id="gameover-screen" style="display:none;"></div>
     </div>
 
     <!-- Real canvas for 2D context tests -->
@@ -1170,22 +1172,33 @@
     <script src="js/map.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/tutorial.js"></script>
-    <!-- <script src="js/ai.js"></script> -->
+    <script src="js/ai/UtilityAI.js"></script>
+    <script src="js/ai/EnemyActions.js"></script>
+    <script src="js/ai/PlayerPatternAnalyzer.js"></script>
+    <script src="js/ai/SquadAI.js"></script>
     <script src="js/entities/base.js"></script>
     <script src="js/entities/player/PlayerBase.js"></script>
-    <script src="js/entities/player/Kaoplayer.js"></script>
+    <script src="js/entities/player/KaoPlayer.js"></script>
     <script src="js/entities/player/AutoPlayer.js"></script>
     <script src="js/entities/player/PoomPlayer.js"></script>
+    <script src="js/entities/player/PatPlayer.js"></script>
     <script src="js/entities/summons.js"></script>
     <script src="js/entities/enemy.js"></script>
-    <script src="js/entities/boss_attacks.js"></script>
-    <script src="js/entities/boss.js"></script>
+    <script src="js/entities/boss/boss_attacks_shared.js"></script>
+    <script src="js/entities/boss/boss_attacks_manop.js"></script>
+    <script src="js/entities/boss/boss_attacks_first.js"></script>
+    <script src="js/entities/boss/BossBase.js"></script>
+    <script src="js/entities/boss/ManopBoss.js"></script>
+    <script src="js/entities/boss/FirstBoss.js"></script>
     <script src="js/input.js"></script>
+    <script src="js/rendering/PlayerRenderer.js"></script>
+    <script src="js/rendering/BossRenderer.js"></script>
     <script src="js/systems/GameState.js"></script>
     <script src="js/systems/AdminSystem.js"></script>
     <script src="js/systems/ShopSystem.js"></script>
     <script src="js/systems/TimeManager.js"></script>
     <script src="js/systems/WaveManager.js"></script>
+    <script src="js/systems/WorkerBridge.js"></script>
     <script src="js/game.js"></script>
     <script src="js/VersionManager.js"></script>
 
@@ -1409,10 +1422,10 @@
                 <span style="font-size:10px;color:#475569;">อ่านค่า live จาก window ได้เลย</span>
             </div>
             <div class="tab-bar">
-                <button class="tab-btn active" onclick="switchTab('tab-achievements')">🏆 Achievements</button>
-                <button class="tab-btn" onclick="switchTab('tab-balance')">⚖️ BALANCE</button>
-                <button class="tab-btn" onclick="switchTab('tab-chars')">👤 Characters</button>
-                <button class="tab-btn" onclick="switchTab('tab-gamestate')">🗂️ GameState</button>
+                <button class="tab-btn active" onclick="switchTab('tab-achievements', event)">🏆 Achievements</button>
+                <button class="tab-btn" onclick="switchTab('tab-balance', event)">⚖️ BALANCE</button>
+                <button class="tab-btn" onclick="switchTab('tab-chars', event)">👤 Characters</button>
+                <button class="tab-btn" onclick="switchTab('tab-gamestate', event)">🗂️ GameState</button>
             </div>
 
             <!-- Tab: Achievements -->
@@ -1607,11 +1620,11 @@
             };
 
             // ── Tab switcher ──
-            window.switchTab = function (tabId) {
+            window.switchTab = function (tabId, evt) {
                 document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.getElementById(tabId)?.classList.add('active');
-                event.target.classList.add('active');
+                if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
                 // Refresh content on switch
                 if (tabId === 'tab-achievements') renderAchievements();
                 if (tabId === 'tab-balance') renderBalanceSections();

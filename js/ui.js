@@ -2603,8 +2603,8 @@ function addCombo() {
 // ════════════════════════════════════════════════════════════
 // Global singletons — must be on window for cross-script access
 // ════════════════════════════════════════════════════════════
-// 'var' declarations auto-register on window; class declarations do NOT.
-var Achievements = new AchievementSystem();
+// Registered explicitly on window below; class declarations do not auto-hoist.
+const Achievements = new AchievementSystem();
 
 // Expose ShopManager and UIManager on window so game.js and map.js
 // can access them regardless of which script tag loads first.

@@ -31,15 +31,14 @@
  */
 
 // ══════════════════════════════════════════════════════════════
-// GLOBAL INPUT STATE  (var → window-scoped, cross-file safe)
+// GLOBAL INPUT STATE  (registered explicitly on window below)
 // ══════════════════════════════════════════════════════════════
-// Top-level 'var' declarations are window-globals in browser script tags.
 /**
  * Digital keyboard state.
  * keys.t  → Bullet Time toggle  (fires on keydown; no keyup needed)
  * keys.f  → Admin Terminal open (proximity-gated in game.js)
  */
-var keys = {
+const keys = {
     w: 0, a: 0, s: 0, d: 0,
     space: 0,
     q: 0, e: 0, b: 0, t: 0, f: 0,
@@ -52,7 +51,7 @@ var keys = {
  * implement ~200 ms input buffering so players don't miss inputs
  * when pressing slightly before cooldown expires.
  */
-var inputBuffer = { space: 0, rightClick: 0, q: 0, e: 0, r: 0 };
+const inputBuffer = { space: 0, rightClick: 0, q: 0, e: 0, r: 0 };
 window.inputBuffer = inputBuffer;
 
 /**
@@ -88,7 +87,7 @@ window.consumeInput = function (action) {
  *
  * wx / wy are updated by updateMouseWorld() (utils.js) each frame.
  */
-var mouse = {
+const mouse = {
     x: 0, y: 0,        // canvas-space pixel position
     wx: 0, wy: 0,      // world-space position (updated by updateMouseWorld)
     left: 0, right: 0  // button state  1 = held, 0 = released
@@ -101,7 +100,7 @@ var mouse = {
  * window.touchJoystickLeft / Right are set as aliases below so any
  * existing code referencing those names continues to work.
  */
-var joysticks = {
+const joysticks = {
     left: { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 },
     right: { active: false, id: null, originX: 0, originY: 0, nx: 0, ny: 0 }
 };
@@ -122,7 +121,7 @@ let secretBuffer = "";
 // ══════════════════════════════════════════════════════════════
 
 // FIX (BUG-3): Store handler references to enable cleanup and prevent memory leaks
-var _mobileHandlers = {
+let _mobileHandlers = {
     leftStart: null, leftMove: null, leftEnd: null, leftCancel: null,
     rightStart: null, rightMove: null, rightEnd: null, rightCancel: null,
     btnDash: null, btnSkill: null, btnSwitch: null, btnNaga: null,
@@ -130,30 +129,30 @@ var _mobileHandlers = {
 };
 
 function initMobileControls() {
-    var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (!isTouchDevice) return;
 
-    var maxRadius = 60;
-    var zoneL = document.getElementById('joystick-left-zone');
-    var baseL = document.getElementById('joystick-left-base');
-    var stickL = document.getElementById('joystick-left-stick');
-    var zoneR = document.getElementById('joystick-right-zone');
-    var baseR = document.getElementById('joystick-right-base');
-    var stickR = document.getElementById('joystick-right-stick');
+    const maxRadius = 60;
+    const zoneL = document.getElementById('joystick-left-zone');
+    const baseL = document.getElementById('joystick-left-base');
+    const stickL = document.getElementById('joystick-left-stick');
+    const zoneR = document.getElementById('joystick-right-zone');
+    const baseR = document.getElementById('joystick-right-base');
+    const stickR = document.getElementById('joystick-right-stick');
 
     function startJoystick(e, joystick, baseElem, stickElem, zoneElem, isRight) {
         // WARN-8 FIX: use window.gameState — bare gameState is not yet
         // defined if an OS-level touch fires before game.js loads
         if (window.gameState !== 'PLAYING') return;
         e.preventDefault();
-        for (var i = 0; i < e.changedTouches.length; i++) {
-            var touch = e.changedTouches[i];
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
             if (joystick.id === null) {
                 joystick.id = touch.identifier;
                 joystick.active = true;
                 joystick.originX = touch.clientX;
                 joystick.originY = touch.clientY;
-                var zr = zoneElem.getBoundingClientRect();
+                const zr = zoneElem.getBoundingClientRect();
                 baseElem.style.display = 'block';
                 baseElem.style.left = (touch.clientX - zr.left) + 'px';
                 baseElem.style.top = (touch.clientY - zr.top) + 'px';
@@ -166,12 +165,12 @@ function initMobileControls() {
 
     function moveJoystick(e, joystick, stickElem) {
         e.preventDefault();
-        for (var i = 0; i < e.changedTouches.length; i++) {
-            var touch = e.changedTouches[i];
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
             if (touch.identifier === joystick.id) {
-                var dx = touch.clientX - joystick.originX;
-                var dy = touch.clientY - joystick.originY;
-                var d = Math.hypot(dx, dy);
+                let dx = touch.clientX - joystick.originX;
+                let dy = touch.clientY - joystick.originY;
+                const d = Math.hypot(dx, dy);
                 if (d > maxRadius) { dx = (dx / d) * maxRadius; dy = (dy / d) * maxRadius; }
                 joystick.nx = dx / maxRadius;
                 joystick.ny = dy / maxRadius;
@@ -182,8 +181,8 @@ function initMobileControls() {
 
     function endJoystick(e, joystick, baseElem, stickElem, isRight) {
         e.preventDefault();
-        for (var i = 0; i < e.changedTouches.length; i++) {
-            var touch = e.changedTouches[i];
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
             if (touch.identifier === joystick.id) {
                 joystick.active = false;
                 joystick.id = null;
@@ -218,13 +217,13 @@ function initMobileControls() {
     zoneR.addEventListener('touchcancel', _mobileHandlers.rightCancel, { passive: false });
 
     // ── Action buttons ─────────────────────────────────────────
-    var btnDash = document.getElementById('btn-dash');
-    var btnSkill = document.getElementById('btn-skill');
-    var btnSwitch = document.getElementById('btn-switch');
-    var btnNaga = document.getElementById('btn-naga');
-    var btnDatabase = document.getElementById('btn-database');
-    var btnTerminal = document.getElementById('btn-terminal');
-    var btnShop = document.getElementById('btn-shop');
+    const btnDash = document.getElementById('btn-dash');
+    const btnSkill = document.getElementById('btn-skill');
+    const btnSwitch = document.getElementById('btn-switch');
+    const btnNaga = document.getElementById('btn-naga');
+    const btnDatabase = document.getElementById('btn-database');
+    const btnTerminal = document.getElementById('btn-terminal');
+    const btnShop = document.getElementById('btn-shop');
 
     // FIX (BUG-7): Store button handler references for cleanup
     if (btnDash) {
@@ -295,7 +294,7 @@ function initMobileControls() {
             if (window.gameState === 'PLAYING') {
                 if (typeof openShop !== 'undefined') openShop();
             } else if (window.gameState === 'PAUSED') {
-                var shopModal = document.getElementById('shop-modal');
+                const shopModal = document.getElementById('shop-modal');
                 if (shopModal && shopModal.style.display === 'flex' && typeof closeShop !== 'undefined') closeShop();
             }
         };
@@ -324,8 +323,8 @@ function _btnRelease(el) {
 
 // FIX (BUG-3 & BUG-7): Cleanup function to remove all mobile event listeners
 function cleanupMobileControls() {
-    var zoneL = document.getElementById('joystick-left-zone');
-    var zoneR = document.getElementById('joystick-right-zone');
+    const zoneL = document.getElementById('joystick-left-zone');
+    const zoneR = document.getElementById('joystick-right-zone');
 
     if (zoneL && _mobileHandlers.leftStart) {
         zoneL.removeEventListener('touchstart', _mobileHandlers.leftStart);
@@ -342,13 +341,13 @@ function cleanupMobileControls() {
     }
 
     // FIX (BUG-7): Remove button event listeners
-    var btnDash = document.getElementById('btn-dash');
-    var btnSkill = document.getElementById('btn-skill');
-    var btnSwitch = document.getElementById('btn-switch');
-    var btnNaga = document.getElementById('btn-naga');
-    var btnDatabase = document.getElementById('btn-database');
-    var btnTerminal = document.getElementById('btn-terminal');
-    var btnShop = document.getElementById('btn-shop');
+    const btnDash = document.getElementById('btn-dash');
+    const btnSkill = document.getElementById('btn-skill');
+    const btnSwitch = document.getElementById('btn-switch');
+    const btnNaga = document.getElementById('btn-naga');
+    const btnDatabase = document.getElementById('btn-database');
+    const btnTerminal = document.getElementById('btn-terminal');
+    const btnShop = document.getElementById('btn-shop');
 
     if (btnDash && _mobileHandlers.btnDashStart) {
         btnDash.removeEventListener('touchstart', _mobileHandlers.btnDashStart);
@@ -409,7 +408,7 @@ function cleanupMobileControls() {
 function _setupKeyboardListeners() {
     window.addEventListener('keydown', function (e) {
         // While admin console input has focus, ignore all game hotkeys
-        var consoleInput = document.getElementById('console-input');
+        const consoleInput = document.getElementById('console-input');
         if (consoleInput && document.activeElement === consoleInput) return;
 
         // ── Global Escape for Modals (Menu or Paused) ──
@@ -418,9 +417,9 @@ function _setupKeyboardListeners() {
         }
 
         if (window.gameState === 'PAUSED') {
-            var shopModal = document.getElementById('shop-modal');
-            var shopOpen = shopModal && shopModal.style.display === 'flex';
-            var consoleOpen = AdminConsole.isOpen;
+            const shopModal = document.getElementById('shop-modal');
+            const shopOpen = shopModal && shopModal.style.display === 'flex';
+            const consoleOpen = AdminConsole.isOpen;
 
             if (consoleOpen && e.code === 'Escape') { closeAdminConsole(); return; }
             if (shopOpen && e.code === 'Escape') { closeShop(); return; }
@@ -440,11 +439,11 @@ function _setupKeyboardListeners() {
                     secretBuffer = '';
 
                     // แสดง Dev Mode Panel
-                    var panel = document.getElementById('dev-mode-panel');
+                    const panel = document.getElementById('dev-mode-panel');
                     if (panel) panel.style.display = 'block';
 
                     // เปลี่ยนปุ่ม Start เป็นสีแดง Dev Mode
-                    var startBtn = document.getElementById('start-btn');
+                    const startBtn = document.getElementById('start-btn');
                     if (startBtn) {
                         startBtn.style.background = 'linear-gradient(135deg, #ef4444, #991b1b)';
                         startBtn.style.boxShadow = '0 0 30px rgba(239,68,68,0.5)';
@@ -537,7 +536,7 @@ function _setupKeyboardListeners() {
 function _setupMouseListeners() {
     window.addEventListener('mousemove', function (e) {
         if (!CANVAS) return;
-        var r = CANVAS.getBoundingClientRect();
+        const r = CANVAS.getBoundingClientRect();
         mouse.x = e.clientX - r.left;
         mouse.y = e.clientY - r.top;
         // updateMouseWorld is defined in utils.js (loaded before input.js)
@@ -593,7 +592,7 @@ function _setupMouseListeners() {
 // PUBLIC API
 // ══════════════════════════════════════════════════════════════
 
-var InputSystem = {
+const InputSystem = {
     /**
      * Call once from window.onload (before startGame).
      * Wires up all keyboard, mouse, and touch input handlers.
@@ -634,3 +633,6 @@ var InputSystem = {
 };
 
 window.InputSystem = InputSystem;
+window.keys        = keys;
+window.mouse       = mouse;
+window.joysticks   = joysticks;

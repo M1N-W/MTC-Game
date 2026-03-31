@@ -4,6 +4,57 @@
 
 ---
 
+## v3.41.15 — Refactor: var→const/let, Debug.html Fixes, Remove ccflare
+*Released: April 1, 2026*
+
+### ♻️ `var` → `const`/`let` Modernisation
+All top-level `var` declarations converted to `const` or `let` across 6 files. Each global that previously relied on `var`-hoisting to `window` now has an explicit `window.xxx = xxx` export.
+
+**Files modified:**
+- `js/utils.js` — ~57 `var` declarations → `const`; `CANVAS`/`CTX` → `let` (reassigned inside `initCanvas`); `initCanvas()` now sets `window.CANVAS`/`window.CTX` explicitly; new `window` exports block added before `module.exports`.
+- `js/input.js` — `keys`, `mouse`, `joysticks`, `inputBuffer` → `const`; `_mobileHandlers` → `let` (reassigned in `cleanupMobileControls`); `InputSystem` → `const`; all local `var` inside functions → `const`/`let`; `window.keys`, `window.mouse`, `window.joysticks` added.
+- `js/effects.js` — 7 singleton `var` → `const`; added `window.hitMarkerSystem`, `window.weatherSystem`, `window.particleSystem`, `window.floatingTextSystem` (previously missing).
+- `js/audio.js` — `var Audio` → `const Audio`; naming comment updated (no longer relies on var-hoisting; `window.Audio` set explicitly in existing exports block).
+- `js/ui.js` — `var Achievements` → `const Achievements`; comment updated.
+- `js/weapons.js` — `var weaponSystem`, `var projectileManager` → `const`; window exports already present.
+
+### 🐛 Debug.html — 7 Bugs Fixed
+- **`switchTab` implicit `event` global** — added `evt` parameter; all 4 `onclick` callers now pass `event` explicitly.
+- **Stale boss script paths** — replaced `js/entities/boss.js` and `js/entities/boss_attacks.js` with correct split paths: `boss/BossBase.js`, `boss/ManopBoss.js`, `boss/FirstBoss.js`, `boss/boss_attacks_shared.js`, `boss/boss_attacks_manop.js`, `boss/boss_attacks_first.js`.
+- **Missing AI scripts** — added `js/ai/UtilityAI.js`, `EnemyActions.js`, `PlayerPatternAnalyzer.js`, `SquadAI.js` (required by `enemy.js`).
+- **Missing `PatPlayer.js`** — added to script list.
+- **Missing rendering scripts** — added `js/rendering/PlayerRenderer.js`, `BossRenderer.js` (required by `game.js`).
+- **Missing `WorkerBridge.js`** — added `js/systems/WorkerBridge.js`.
+- **Missing DOM stubs** — added `#console-input` and `#gameover-screen` stubs.
+
+### 📄 `PROJECT_OVERVIEW.md` — Markdown Lint Fixes
+- MD032: added blank lines around 5 list blocks (lines 19, 133, 138, 235, 241).
+- MD060: fixed table separator row `|---|---|---|` → `| --- | --- | --- |`.
+
+### 🗑️ Removed Unnecessary Files
+- `ccflare/` — accidentally cloned third-party Claude API proxy tool; has own `.git`; zero relation to MTC game.
+- `tmp/` — dev artifacts (Chrome profiles, PDFs).
+- `output/` — generated PDF output folder.
+
+### Files touched
+```
+✅ MODIFIED: js/utils.js          (var→const/let + window exports block)
+✅ MODIFIED: js/input.js          (var→const/let + window exports)
+✅ MODIFIED: js/effects.js        (var→const + 4 missing window exports)
+✅ MODIFIED: js/audio.js          (var Audio→const + comment)
+✅ MODIFIED: js/ui.js             (var Achievements→const + comment)
+✅ MODIFIED: js/weapons.js        (var→const)
+✅ MODIFIED: Debug.html           (7 bugs fixed: event, paths, stubs)
+✅ MODIFIED: sw.js                (v3.41.15)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.15 + MD lint)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+✅ DELETED:  ccflare/             (third-party, unrelated)
+✅ DELETED:  tmp/                 (dev artifacts)
+✅ DELETED:  output/              (generated output)
+```
+
+---
+
 ## v3.41.14 — Bug Fix: Firebase Offline, Tutorial Freeze, Game Over Screen, Menu Dots
 *Released: March 31, 2026*
 

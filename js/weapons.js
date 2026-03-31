@@ -1897,13 +1897,6 @@ class ProjectileManager {
         pierce: 2,
         bounces: 3,
       },
-    );
-    this.add(p);
-  }
-}
-
-var weaponSystem = new WeaponSystem();
-var projectileManager = new ProjectileManager();
 
 // ════════════════════════════════════════════════════════════
 // 🎨 STANDALONE WEAPON ART FUNCTIONS

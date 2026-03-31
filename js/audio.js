@@ -1721,15 +1721,14 @@ class AudioSystem {
 }
 
 // ── NOTE ON NAMING ─────────────────────────────────────────────────────────────
-// `var Audio` in global script scope → hoists to window.Audio → shadows the
-// native HTML5 Audio constructor.  This is why playBGM() uses
-// document.createElement('audio') instead of `new window.Audio(path)`.
+// The identifier `Audio` intentionally shadows the native HTML5 Audio constructor.
+// playBGM() uses document.createElement('audio') instead of `new window.Audio(path)`
+// so the shadow is harmless.  window.Audio is set explicitly in the exports block
+// below — no longer relies on var-hoisting.
 //
-// The variable name is intentionally preserved here because every other file
-// in the project calls `Audio.playX()`.  Renaming it would require touching
-// every single call site.  Since playBGM() no longer calls `new window.Audio`,
-// the shadow is harmless.
-var Audio = new AudioSystem();
+// The variable name is preserved because every other file calls `Audio.playX()`.
+// Renaming it would require touching every single call site.
+const Audio = new AudioSystem();
 
 // ══════════════════════════════════════════════════════════════
 // 🌐 WINDOW EXPORTS
