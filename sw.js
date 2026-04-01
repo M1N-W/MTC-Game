@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.41.15"; // Refactor: var→const/let, Debug.html fixes, remove ccflare
+const CACHE_NAME = "mtc-cache-v3.41.16"; // Fix: weaponSystem/projectileManager restore + spawnHeatWave + tutorial freeze
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่

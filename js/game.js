@@ -1074,6 +1074,7 @@ function _initGameUI(charType) {
     }
 
     if (typeof TutorialSystem !== 'undefined' && !TutorialSystem.isDone() && window._tutorialModeRequested) {
+        window._tutorialModeRequested = false;
         TutorialSystem.start(charType);
     }
 

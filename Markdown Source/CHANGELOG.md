@@ -4,6 +4,33 @@
 
 ---
 
+## v3.41.16 — Fix: Tutorial Freeze, Service Worker Cache Bust
+*Released: April 1, 2026*
+
+### 🐛 Tutorial Mode Freeze — Root Cause and Fixes
+
+**Root cause chain:**
+1. `var weaponSystem` and `var projectileManager` were converted to `const` in v3.41.15 but their declarations were accidentally deleted when `spawnHeatWave` body corruption was repaired (separate commit `dc59c45`).
+2. Without these declarations, `weapons.js` threw `ReferenceError: weaponSystem is not defined` at load time and `ReferenceError: projectileManager is not defined` at runtime.
+3. `startGame()` → `_resetRunState()` crashed at `projectileManager.clear()` before `_initGameUI()` could run.
+4. Since `_initGameUI()` never executed, `TutorialSystem.start()` was never called and the tutorial overlay never appeared.
+5. The old game loop (from a previous session) kept running in `PLAYING` state, producing the "frozen game" visual.
+6. **Service Worker cache was NOT bumped** for the `weaponSystem`/`projectileManager` restore commit (`a449bde`), so users with the v3.41.15 cache still received the broken `weapons.js`.
+
+**Fixes applied:**
+- `sw.js`: bumped to `v3.41.16` — forces all clients to fetch updated `weapons.js` and `game.js`.
+- `js/game.js`: clear `window._tutorialModeRequested = false` immediately before `TutorialSystem.start()` so that `retryMission()` after a tutorial run does not re-trigger the tutorial.
+
+### Files touched
+```
+✅ MODIFIED: sw.js                (v3.41.16 — critical cache bust)
+✅ MODIFIED: js/game.js           (clear _tutorialModeRequested before TutorialSystem.start)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.16)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.15 — Refactor: var→const/let, Debug.html Fixes, Remove ccflare
 *Released: April 1, 2026*
 
