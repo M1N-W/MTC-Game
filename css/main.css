@@ -93,7 +93,7 @@
 /* MTC The Game — Main Stylesheet */
 /* Extracted from index.html */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@700;900&family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap");
+/* Google Fonts loaded via <link rel="stylesheet"> in index.html head — @import removed to eliminate render-blocking waterfall */
 
 :root {
   /* ── UIUX SMOOTH PASS: Motion Tokens ──────────────────────────────── */

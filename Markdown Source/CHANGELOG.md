@@ -4,6 +4,61 @@
 
 ---
 
+## v3.41.17 — Perf SEO: SW Cache Fix, defer Scripts, Font Waterfall, Meta Tags
+*Released: April 1, 2026*
+
+### 🔴 P1 Critical Fixes
+
+**SW precache URLs now match actual requests** (`sw.js`)
+- Removed `?v=CACHE_TIMESTAMP` from all `urlsToCache` entries. These versioned URLs never matched unversioned script requests from `index.html`, so the precache was populated but never served — every page load fell back to network. Cache-busting is now handled solely by `CACHE_NAME` version bumps.
+- Removed `const CACHE_TIMESTAMP = Date.now()` (no longer needed).
+- Added `./js/systems/WorkerBridge.js` to precache (was missing).
+
+**Google Fonts `@import` replaced with `<link>` in `<head>`** (`index.html` + `main.css`)
+- `main.css` had `@import url(…Google Fonts…)` which forced a 2-hop waterfall: download CSS → discover import → download font CSS → download font files. Removed `@import`.
+- Consolidated all 5 font families (Inter, Orbitron, Bebas Neue, Rajdhani, Share Tech Mono) into a single `<link rel="stylesheet">` in `index.html` `<head>`. Removes one full RTT from FCP.
+- Removed the separate `<link>` for Share Tech Mono (was a duplicate request).
+
+**`defer` added to all 31 `<script>` tags** (`index.html`)
+- All body scripts now use `defer`. Browser can download all 31 scripts in parallel via the preload scanner. Execution order is preserved (DOM order). Reduces total blocking time on slow connections.
+- `firebase-bundle.js` moved after `config.js` + `utils.js` but before `CloudSaveSystem.js` + `LeaderboardUI.js` (which depend on Firebase SDK). No functional change, correct execution order maintained.
+
+### 🟡 P2 High-Impact Fixes
+
+**Offline fallback added to SW fetch handler** (`sw.js`)
+- When both network and cache fail for a navigation request, now returns a minimal Thai-language offline page instead of `undefined` (which caused a blank error screen).
+
+**`<link rel="preload">` for `main.css` and Orbitron font** (`index.html`)
+- `<link rel="preload" href="css/main.css" as="style">` — browser starts downloading CSS earlier in the waterfall.
+- `<link rel="preload" as="font" type="font/woff2" href="…orbitron…woff2" crossorigin>` — eliminates FOUT for the primary display font.
+
+**Meta tags added** (`index.html`)
+- `<meta name="description">` — Google search snippet.
+- `<meta name="theme-color" content="#16213e">` — mobile browser chrome colour.
+- `<link rel="canonical">` — prevents duplicate-content indexing.
+- Open Graph tags: `og:type`, `og:url`, `og:title`, `og:description`.
+- Twitter card tags: `twitter:card`, `twitter:title`, `twitter:description`.
+
+### 🟢 P3 Low-Effort Fixes
+
+**`robots.txt` created** — explicitly allows all crawlers.
+
+**`manifest.json` icon entries split** — `"purpose": "any maskable"` on one entry was a Lighthouse warning. Now two separate entries: one `"purpose": "any"` and one `"purpose": "maskable"`.
+
+### Files touched
+
+```
+✅ MODIFIED: sw.js                (v3.41.17; precache URLs fixed; WorkerBridge added; offline fallback)
+✅ MODIFIED: index.html           (defer on all scripts; consolidated font <link>; preload hints; meta/OG tags)
+✅ MODIFIED: css/main.css         (@import removed)
+✅ MODIFIED: manifest.json        (icon purpose split)
+✅ CREATED:  robots.txt
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.17)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.16 — Fix: Tutorial Freeze, Service Worker Cache Bust
 *Released: April 1, 2026*
 

@@ -1,56 +1,57 @@
-const CACHE_NAME = "mtc-cache-v3.41.16"; // Fix: weaponSystem/projectileManager restore + spawnHeatWave + tutorial freeze
+const CACHE_NAME = "mtc-cache-v3.41.17"; // Perf SEO: fix precache URLs, defer scripts, font waterfall, offline fallback
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
-// Cache busting: เพิ่ม timestamp เพื่อบังคับให้โหลดไฟล์ใหม่
-const CACHE_TIMESTAMP = Date.now();
+// NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.
+// Cache-busting is handled by changing CACHE_NAME (triggers full SW reinstall).
 const urlsToCache = [
   "./",
-  "./index.html?v=" + CACHE_TIMESTAMP,
-  "./css/main.css?v=" + CACHE_TIMESTAMP,
-  "./js/config.js?v=" + CACHE_TIMESTAMP,
-  "./js/firebase-bundle.js?v=" + CACHE_TIMESTAMP,
-  "./js/systems/CloudSaveSystem.js?v=" + CACHE_TIMESTAMP,
-  "./js/systems/LeaderboardUI.js?v=" + CACHE_TIMESTAMP,
-  "./js/utils.js?v=" + CACHE_TIMESTAMP,
-  "./js/audio.js?v=" + CACHE_TIMESTAMP,
-  "./js/input.js?v=" + CACHE_TIMESTAMP,
-  "./js/map.js?v=" + CACHE_TIMESTAMP,
-  "./js/menu.js?v=" + CACHE_TIMESTAMP,
-  "./js/effects.js?v=" + CACHE_TIMESTAMP,
-  "./js/weapons.js?v=" + CACHE_TIMESTAMP,
-  "./js/ui.js?v=" + CACHE_TIMESTAMP,
-  "./js/game.js?v=" + CACHE_TIMESTAMP,
-  "./js/tutorial.js?v=" + CACHE_TIMESTAMP,
+  "./index.html",
+  "./css/main.css",
+  "./js/config.js",
+  "./js/firebase-bundle.js",
+  "./js/systems/CloudSaveSystem.js",
+  "./js/systems/LeaderboardUI.js",
+  "./js/utils.js",
+  "./js/audio.js",
+  "./js/input.js",
+  "./js/map.js",
+  "./js/menu.js",
+  "./js/effects.js",
+  "./js/weapons.js",
+  "./js/ui.js",
+  "./js/game.js",
+  "./js/tutorial.js",
   // AI System
-  "./js/ai/UtilityAI.js?v=" + CACHE_TIMESTAMP,
-  "./js/ai/EnemyActions.js?v=" + CACHE_TIMESTAMP,
-  "./js/ai/SquadAI.js?v=" + CACHE_TIMESTAMP,
-  "./js/ai/PlayerPatternAnalyzer.js?v=" + CACHE_TIMESTAMP,
+  "./js/ai/UtilityAI.js",
+  "./js/ai/EnemyActions.js",
+  "./js/ai/SquadAI.js",
+  "./js/ai/PlayerPatternAnalyzer.js",
   // Entities
-  "./js/entities/base.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/player/PlayerBase.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/player/KaoPlayer.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/player/AutoPlayer.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/player/PoomPlayer.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/player/PatPlayer.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/enemy.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/boss/boss_attacks_shared.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/boss/boss_attacks_manop.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/boss/boss_attacks_first.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/boss/BossBase.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/boss/ManopBoss.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/boss/FirstBoss.js?v=" + CACHE_TIMESTAMP,
-  "./js/entities/summons.js?v=" + CACHE_TIMESTAMP,
+  "./js/entities/base.js",
+  "./js/entities/player/PlayerBase.js",
+  "./js/entities/player/KaoPlayer.js",
+  "./js/entities/player/AutoPlayer.js",
+  "./js/entities/player/PoomPlayer.js",
+  "./js/entities/player/PatPlayer.js",
+  "./js/entities/enemy.js",
+  "./js/entities/boss/boss_attacks_shared.js",
+  "./js/entities/boss/boss_attacks_manop.js",
+  "./js/entities/boss/boss_attacks_first.js",
+  "./js/entities/boss/BossBase.js",
+  "./js/entities/boss/ManopBoss.js",
+  "./js/entities/boss/FirstBoss.js",
+  "./js/entities/summons.js",
   // Systems
-  "./js/systems/WaveManager.js?v=" + CACHE_TIMESTAMP,
-  "./js/systems/ShopSystem.js?v=" + CACHE_TIMESTAMP,
-  "./js/systems/TimeManager.js?v=" + CACHE_TIMESTAMP,
-  "./js/systems/AdminSystem.js?v=" + CACHE_TIMESTAMP,
-  "./js/systems/GameState.js?v=" + CACHE_TIMESTAMP,
-  "./js/VersionManager.js?v=" + CACHE_TIMESTAMP,
+  "./js/systems/WaveManager.js",
+  "./js/systems/ShopSystem.js",
+  "./js/systems/TimeManager.js",
+  "./js/systems/AdminSystem.js",
+  "./js/systems/GameState.js",
+  "./js/systems/WorkerBridge.js",
+  "./js/VersionManager.js",
   // Rendering
-  "./js/rendering/PlayerRenderer.js?v=" + CACHE_TIMESTAMP,
-  "./js/rendering/BossRenderer.js?v=" + CACHE_TIMESTAMP,
+  "./js/rendering/PlayerRenderer.js",
+  "./js/rendering/BossRenderer.js",
 ];
 
 // ── Helper: ดึงเลขเวอร์ชันจาก CACHE_NAME ─────────────────
@@ -162,6 +163,15 @@ self.addEventListener("fetch", (event) => {
             "⚡ [Service Worker] Network & Cache failed for:",
             request.url,
           );
+          // ── Offline fallback for navigation requests ──────────────
+          if (request.mode === "navigate") {
+            return caches.match("./").then((cached) => cached ||
+              new Response(
+                "<!DOCTYPE html><html lang='th'><head><meta charset='UTF-8'><title>MTC Game — Offline</title></head><body style='background:#0f172a;color:#94a3b8;font-family:sans-serif;text-align:center;padding-top:20vh'><h1>📡 Offline</h1><p>กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต</p></body></html>",
+                { headers: { "Content-Type": "text/html; charset=utf-8" } },
+              )
+            );
+          }
         });
     }),
   );

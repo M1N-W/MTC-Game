@@ -6,6 +6,18 @@
     <!-- No maximum-scale / user-scalable=no — allows pinch-zoom for a11y; Edge Tools meta-viewport rule -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>MTC the Game (Beta Edition)</title>
+    <meta name="description" content="MTC the Game — เกม top-down survival action สไตล์ไทย เล่นได้เลยในเบราว์เซอร์">
+    <meta name="theme-color" content="#16213e">
+    <link rel="canonical" href="https://m1n-w.github.io/MTC-Game/">
+
+    <!-- Open Graph / social preview -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://m1n-w.github.io/MTC-Game/">
+    <meta property="og:title" content="MTC the Game (Beta Edition)">
+    <meta property="og:description" content="เกม top-down survival action สไตล์ไทย เล่นได้เลยในเบราว์เซอร์">
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:title" content="MTC the Game (Beta Edition)">
+    <meta property="twitter:description" content="เกม top-down survival action สไตล์ไทย">
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="manifest" href="manifest.json">
@@ -18,10 +30,18 @@
     <link rel="alternate icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e293b'/><text x='50' y='70' font-family='Arial' font-size='60' font-weight='bold' fill='%233b82f6' text-anchor='middle'>M</text></svg>">
 
+    <!-- Preload critical assets before browser discovers them in CSS -->
+    <link rel="preload" href="css/main.css" as="style">
+    <link rel="preload" as="font" type="font/woff2"
+        href="https://fonts.gstatic.com/s/orbitron/v31/yMJMMIlzdpvBhQQL_SC3X9yhF25-T1nyysimBoWgz.woff2"
+        crossorigin>
+
     <link rel="stylesheet" href="css/main.css">
+
+    <!-- Single consolidated Google Fonts request (replaces @import in main.css + separate Share Tech Mono link) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap">
 </head>
 
 <body>
@@ -925,58 +945,58 @@
         </div>
     </div>
 
-    <!-- Firebase (npm + esbuild → js/firebase-bundle.js); optional CONFIG_SECRETS.FIREBASE_CONFIG if loaded earlier -->
-    <script src="js/firebase-bundle.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/systems/CloudSaveSystem.js"></script>
-    <script src="js/systems/LeaderboardUI.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/effects.js"></script>
-    <script src="js/weapons.js"></script>
-    <script src="js/map.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/tutorial.js"></script>
+    <script defer src="js/config.js"></script>
+    <script defer src="js/utils.js"></script>
+    <!-- firebase-bundle before CloudSave/Leaderboard which depend on Firebase SDK -->
+    <script defer src="js/firebase-bundle.js"></script>
+    <script defer src="js/systems/CloudSaveSystem.js"></script>
+    <script defer src="js/systems/LeaderboardUI.js"></script>
+    <script defer src="js/audio.js"></script>
+    <script defer src="js/effects.js"></script>
+    <script defer src="js/weapons.js"></script>
+    <script defer src="js/map.js"></script>
+    <script defer src="js/ui.js"></script>
+    <script defer src="js/tutorial.js"></script>
 
-    <script src="js/entities/base.js"></script>
+    <script defer src="js/entities/base.js"></script>
 
     <!-- AI Systems — โหลดหลัง base.js, ก่อน enemy.js -->
-    <script src="js/ai/UtilityAI.js"></script>
-    <script src="js/ai/EnemyActions.js"></script>
-    <script src="js/ai/PlayerPatternAnalyzer.js"></script>
-    <script src="js/ai/SquadAI.js"></script>
+    <script defer src="js/ai/UtilityAI.js"></script>
+    <script defer src="js/ai/EnemyActions.js"></script>
+    <script defer src="js/ai/PlayerPatternAnalyzer.js"></script>
+    <script defer src="js/ai/SquadAI.js"></script>
 
     <!-- NEW OOP PLAYER HIERARCHY -->
-    <script src="js/entities/player/PlayerBase.js"></script>
-    <script src="js/entities/player/KaoPlayer.js"></script>
-    <script src="js/entities/player/AutoPlayer.js"></script>
-    <script src="js/entities/player/PoomPlayer.js"></script>
-    <script src="js/entities/player/PatPlayer.js"></script>
-    <script src="js/entities/summons.js"></script>
-    <script src="js/entities/enemy.js"></script>
-    <script src="js/entities/boss/boss_attacks_shared.js"></script>
-    <script src="js/entities/boss/boss_attacks_manop.js"></script>
-    <script src="js/entities/boss/boss_attacks_first.js"></script>
-    <script src="js/entities/boss/BossBase.js"></script>
-    <script src="js/entities/boss/ManopBoss.js"></script>
-    <script src="js/entities/boss/FirstBoss.js"></script>
+    <script defer src="js/entities/player/PlayerBase.js"></script>
+    <script defer src="js/entities/player/KaoPlayer.js"></script>
+    <script defer src="js/entities/player/AutoPlayer.js"></script>
+    <script defer src="js/entities/player/PoomPlayer.js"></script>
+    <script defer src="js/entities/player/PatPlayer.js"></script>
+    <script defer src="js/entities/summons.js"></script>
+    <script defer src="js/entities/enemy.js"></script>
+    <script defer src="js/entities/boss/boss_attacks_shared.js"></script>
+    <script defer src="js/entities/boss/boss_attacks_manop.js"></script>
+    <script defer src="js/entities/boss/boss_attacks_first.js"></script>
+    <script defer src="js/entities/boss/BossBase.js"></script>
+    <script defer src="js/entities/boss/ManopBoss.js"></script>
+    <script defer src="js/entities/boss/FirstBoss.js"></script>
 
-    <script src="js/input.js"></script>
+    <script defer src="js/input.js"></script>
 
     <!-- Step 4: Rendering Decoupled -->
-    <script src="js/rendering/PlayerRenderer.js"></script>
-    <script src="js/rendering/BossRenderer.js"></script>
+    <script defer src="js/rendering/PlayerRenderer.js"></script>
+    <script defer src="js/rendering/BossRenderer.js"></script>
 
     <!-- Extracted Systems -->
-    <script src="js/systems/GameState.js"></script>
-    <script src="js/systems/AdminSystem.js"></script>
-    <script src="js/systems/ShopSystem.js"></script>
-    <script src="js/systems/TimeManager.js"></script>
-    <script src="js/systems/WaveManager.js"></script>
-    <script src="js/systems/WorkerBridge.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/VersionManager.js"></script>
-    <script src="js/menu.js"></script>
+    <script defer src="js/systems/GameState.js"></script>
+    <script defer src="js/systems/AdminSystem.js"></script>
+    <script defer src="js/systems/ShopSystem.js"></script>
+    <script defer src="js/systems/TimeManager.js"></script>
+    <script defer src="js/systems/WaveManager.js"></script>
+    <script defer src="js/systems/WorkerBridge.js"></script>
+    <script defer src="js/game.js"></script>
+    <script defer src="js/VersionManager.js"></script>
+    <script defer src="js/menu.js"></script>
 
 
 </body>
