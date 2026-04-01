@@ -2502,6 +2502,9 @@ function drawKaoGunEnhanced(ctx, weaponType, isAwakened = false) {
   ctx.restore();
 }
 
+const weaponSystem = new WeaponSystem();
+const projectileManager = new ProjectileManager();
+
 window.Projectile = Projectile;
 window.WeaponSystem = WeaponSystem;
 window.ProjectileManager = ProjectileManager;
