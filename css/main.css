@@ -3340,9 +3340,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    max-width: 560px;
+    gap: 0;
+    max-width: 480px;
     margin: 0 auto;
+    position: relative;
 }
 
 .char-cards {
@@ -3572,10 +3573,47 @@ body {
     box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.08) inset, 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
+/* ── Portrait Frame — tactical corner-bracket border ── */
+.char-portrait-frame {
+    position: relative;
+    display: inline-block;
+    margin: 0 auto 14px;
+    padding: 5px;
+    --frame-color: rgba(250, 204, 21, 0.55);
+}
+.char-portrait-frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-style: solid;
+    border-color: var(--frame-color);
+    border-width: 2px 0 0 2px;
+    pointer-events: none;
+    transition: border-color 0.4s, box-shadow 0.4s;
+}
+.char-portrait-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-style: solid;
+    border-color: var(--frame-color);
+    border-width: 0 2px 2px 0;
+    pointer-events: none;
+    transition: border-color 0.4s, box-shadow 0.4s;
+}
+.char-card[data-char="kao"] .char-portrait-frame { --frame-color: rgba(250, 204, 21, 0.65); }
+.char-card[data-char="poom"] .char-portrait-frame { --frame-color: rgba(74, 222, 128, 0.65); }
+.char-card[data-char="auto"] .char-portrait-frame { --frame-color: rgba(252, 165, 165, 0.65); }
+.char-card[data-char="pat"] .char-portrait-frame { --frame-color: rgba(147, 197, 253, 0.65); }
+.char-card.selected[data-char="kao"] .char-portrait-frame { --frame-color: rgba(250, 204, 21, 0.95); }
+.char-card.selected[data-char="poom"] .char-portrait-frame { --frame-color: rgba(74, 222, 128, 0.95); }
+.char-card.selected[data-char="auto"] .char-portrait-frame { --frame-color: rgba(252, 165, 165, 0.95); }
+.char-card.selected[data-char="pat"] .char-portrait-frame { --frame-color: rgba(147, 197, 253, 0.95); }
+
 .char-card .char-avatar {
     width: 100px;
     height: 120px;
-    margin: 0 auto 14px;
+    margin: 0;
     display: block;
     overflow: hidden;
     border-radius: 3px;
@@ -5423,8 +5461,8 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
 .char-card-face--back {

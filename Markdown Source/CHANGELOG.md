@@ -4,6 +4,29 @@
 
 ---
 
+## v3.41.19 — Fix Font 404 & Revert Menu Layout
+*Released: April 5, 2026*
+
+### 🐛 Bug Fixes
+- **Font 404 / Preload Warning**: Removed hardcoded Orbitron woff2 preload URL from `index.html`. The stale `fonts.gstatic.com/s/orbitron/v31/...` URL was returning 404 and also triggering a "preloaded but not used" warning. Google Fonts stylesheet already handles dynamic font delivery.
+- **CloudSaveSystem offline warning**: Expected behavior when device is offline — Firestore retries automatically on reconnect. No code change needed.
+
+### 🎨 UI Revert (keep SKILL SET + dots)
+- **Restored `char-portrait-frame` CSS**: Tactical corner-bracket border around character portraits was accidentally removed in v3.41.18's reformatting pass. Restored all per-character frame tint variants.
+- **Reverted `char-carousel-row`**: `gap` restored to `0` (was `16px`), `max-width` restored to `480px` (was `560px`), `position: relative` re-added.
+- **Reverted `.char-card .char-avatar` margin**: Back to `margin: 0` (was `margin: 0 auto 14px`) since the portrait-frame wrapper provides the bottom margin.
+- **Preserved**: All SKILL SET Thai descriptions and improved dots positioning (horizontal below card) from prior commits remain unchanged.
+
+### Files touched
+```text
+✅ MODIFIED: index.html (removed stale font preload)
+✅ MODIFIED: css/main.css (portrait-frame restored, carousel gap/max-width reverted, avatar margin fixed, backface-visibility prefix order fixed)
+✅ MODIFIED: sw.js (v3.41.19)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.18 — Gameplay Flow, Pat Reflect, Map Rendering, and Architecture Docs
 *Released: April 5, 2026*
 
