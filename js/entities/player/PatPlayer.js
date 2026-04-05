@@ -65,7 +65,6 @@ class PatPlayer extends Player {
     this.bladeGuardActive = false;
     this._bladeGuardDuration = 0; // counts UP while held
     this._bladeGuardCooldown = 0; // counts DOWN after release
-    this._bladeGuardBonusDuration = 0;
 
     // ── Zanzo Flash (Q) ───────────────────────────────────────────────────
     this._zanzoGhosts = []; // [{x,y,angle,alpha}] object pool (max 4)
@@ -311,8 +310,7 @@ class PatPlayer extends Player {
 
       if (this.bladeGuardActive) {
         // Duration cap for normal guard
-        const maxDur =
-          (S.bladeGuardMaxDuration ?? 3.0) + this._bladeGuardBonusDuration;
+        const maxDur = S.bladeGuardMaxDuration ?? 3.0;
         if (this._bladeGuardDuration >= maxDur) {
           this._endBladeGuard(S);
         }
@@ -329,8 +327,6 @@ class PatPlayer extends Player {
       }
       if (this.bladeGuardActive) {
         this._endBladeGuard(S);
-      } else {
-        this._bladeGuardBonusDuration = 0;
       }
       this._perfectParryArmed = false; // no projectile hit in time = miss, no penalty
     }
@@ -342,7 +338,6 @@ class PatPlayer extends Player {
     this.bladeGuardActive = false;
     this._bladeGuardCooldown = S.bladeGuardCooldown ?? 5.0;
     this._bladeGuardDuration = 0;
-    this._bladeGuardBonusDuration = 0;
   }
 
   // Called from game.js / ProjectileManager projectile collision loop
@@ -389,10 +384,6 @@ class PatPlayer extends Player {
     } else {
       // ── Normal Blade Guard reflect ────────────────────────────────────
       proj.damage *= S.reflectDamageMult ?? 2.0;
-      this._bladeGuardBonusDuration = Math.min(
-        S.bladeGuardExtendMaxBonus ?? 1.5,
-        this._bladeGuardBonusDuration + (S.bladeGuardExtendOnReflect ?? 0.35),
-      );
       spawnFloatingText('⚔ REFLECT!', this.x, this.y - 55, '#7ec8e3', 20);
       spawnParticles(proj.x, proj.y, 8, '#a8d8ea');
       addScreenShake(3);

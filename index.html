@@ -32,6 +32,9 @@
 
     <!-- Preload critical assets before browser discovers them in CSS -->
     <link rel="preload" href="css/main.css" as="style">
+    <link rel="preload" as="font" type="font/woff2"
+        href="https://fonts.gstatic.com/s/orbitron/v31/yMJMMIlzdpvBhQQL_SC3X9yhF25-T1nyysimBoWgz.woff2"
+        crossorigin>
 
     <link rel="stylesheet" href="css/main.css">
 
@@ -417,7 +420,7 @@
                                                 <span class="tt-icon">⚡</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Teleport Charge</div>
-                                                    <div class="tt-desc">Blink through danger, reposition instantly, and turn stealth openings into burst windows.</div>
+                                                    <div class="tt-desc">Blink to cursor (3 charges). In Stealth = Phantom Blink crit ×1.8</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -425,7 +428,7 @@
                                                 <span class="tt-icon">👥</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Clone Orbit</div>
-                                                    <div class="tt-desc">Summon support clones that mirror your pressure and can be popped early for a fast area burst.</div>
+                                                    <div class="tt-desc">2 orbiting clones mirror shots. E again to detonate early</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -433,7 +436,7 @@
                                                 <span class="tt-icon">🌫️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Dash-Stealth</div>
-                                                    <div class="tt-desc">Slip into stealth off movement and line up a stronger follow-up shot from a safer angle.</div>
+                                                    <div class="tt-desc">Every dash triggers stealth — next shot is ambush crit</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -441,7 +444,7 @@
                                                 <span class="tt-icon">🔫</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Weapon Mastery</div>
-                                                    <div class="tt-desc">Rotate through the full arsenal to awaken a passive payoff and reward adaptable gunplay.</div>
+                                                    <div class="tt-desc">Kill 5× with each weapon to unlock passive awakening</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -493,7 +496,7 @@
                                                 <span class="tt-icon">🍚</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">กินข้าวนึ่ง</div>
-                                                    <div class="tt-desc">กินข้าวเพื่อประคองไฟต์ สะสมพลังพิธี และเตรียมระเบิดชุดต่อไปให้แรงขึ้น.</div>
+                                                    <div class="tt-desc">R-Click: กินข้าว → สะสม Sticky stack + regen HP</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -501,7 +504,7 @@
                                                 <span class="tt-icon">🐍</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">อัญเชิญพญานาค</div>
-                                                    <div class="tt-desc">อัญเชิญพญานาคมาเป็นแนวป้องกันหลัก ช่วยกันดาเมจและเปิดจังหวะคุมพื้นที่.</div>
+                                                    <div class="tt-desc">Summon Naga — absorbs 40% max HP as shield, unlocks Lv2</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -509,7 +512,7 @@
                                                 <span class="tt-icon">🦅</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">อัญเชิญครุฑ</div>
-                                                    <div class="tt-desc">เรียกครุฑเสริมเกมรุก และเมื่อจับคู่กับนาคจะเปลี่ยนไฟต์ให้สมดุลทั้งรุกและฟื้นตัว.</div>
+                                                    <div class="tt-desc">Summon Garuda — Naga+Garuda = Cosmic Balance (regen + ×1.2 dmg)</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -517,7 +520,7 @@
                                                 <span class="tt-icon">🌾</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Ritual Burst</div>
-                                                    <div class="tt-desc">จุดระเบิดเครื่องหมายที่สะสมไว้ทั้งหมดเพื่อปิดไฟต์หรือกวาดศัตรูที่ยืนรวมกัน.</div>
+                                                    <div class="tt-desc">Detonate all Sticky stacks — damage scales with stacks consumed</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -569,7 +572,7 @@
                                                 <span class="tt-icon">👊</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Wanchai Stand</div>
-                                                    <div class="tt-desc">เรียกสแตนด์ออกมาสลับบทบาทระหว่างบุกประชิด ป้องกัน และคุมจังหวะไฟต์ระยะสั้น.</div>
+                                                    <div class="tt-desc">R-Click: Summon Stand — L-Click = ORA rush, Shift = Guard block</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -577,7 +580,7 @@
                                                 <span class="tt-icon">🌀</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Vacuum / Stand Pull</div>
-                                                    <div class="tt-desc">ดูดศัตรูให้เสียตำแหน่งและเปิดคอมโบ โดยโหมดสแตนด์จะยิ่งปั้นไฟต์ให้เข้าทางมากขึ้น.</div>
+                                                    <div class="tt-desc">Suck all enemies in range. In Stand = Stand Pull + ignite (CD 10s)</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -585,7 +588,7 @@
                                                 <span class="tt-icon">💥</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Charge Punch</div>
-                                                    <div class="tt-desc">ชาร์จหมัดเพื่อแลกเวลาเป็นแรงปะทะก้อนใหญ่ เหมาะกับการตัดศัตรูตัวหนาหรือเปิดวง.</div>
+                                                    <div class="tt-desc">In Stand: hold E to charge, release = super punch (cap 600 dmg)</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -593,7 +596,7 @@
                                                 <span class="tt-icon">🌡️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Heat Tier System</div>
-                                                    <div class="tt-desc">ยิ่งต่อคอมโบและเดินเกมรุก ความร้อนยิ่งเร่งจังหวะโจมตีและทำให้รูปแบบการเล่นดุดันขึ้น.</div>
+                                                    <div class="tt-desc">COLD → WARM → HOT → OVERHEAT — higher tier = faster fire &amp; crit</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -645,7 +648,7 @@
                                                 <span class="tt-icon">🛡️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Blade Guard</div>
-                                                    <div class="tt-desc">ยกดาบรับการโจมตีระยะไกลแล้วสะท้อนกลับ เพื่อเปลี่ยนแรงกดดันของศัตรูให้ย้อนคืนหาเจ้าตัว.</div>
+                                                    <div class="tt-desc">R-Click hold — speed ×0.6, reflect projectiles within 55px radius</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -653,7 +656,7 @@
                                                 <span class="tt-icon">🌪️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Zanzo Flash</div>
-                                                    <div class="tt-desc">พุ่งวาร์ประยะสั้นพร้อมภาพเงาตามหลัง ใช้เปิดมุมใหม่หรือเข้าไปสร้างจังหวะลอบฟัน.</div>
+                                                    <div class="tt-desc">Blink to cursor + 4 afterimage trail. Land near enemy = ambush crit 1.5s</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -661,7 +664,7 @@
                                                 <span class="tt-icon">🗡️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Iaido Strike</div>
-                                                    <div class="tt-desc">ชาร์จท่าฟันเดียวแล้วพุ่งตัดผ่านเป้าหมาย สร้างจังหวะหยุดภาพและปิดงานแบบซามูไร.</div>
+                                                    <div class="tt-desc">3-phase kill — charge 0.6s → flash dash → TimeManager freeze + burst</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -669,7 +672,7 @@
                                                 <span class="tt-icon">🗡️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Dual-Mode Katana</div>
-                                                    <div class="tt-desc">คาตานะสลับระหว่างคลื่นฟันระยะกลางกับคอมโบประชิดตามตำแหน่งและจังหวะเข้าปะทะ.</div>
+                                                    <div class="tt-desc">Auto-switch: Slash Wave (range) ↔ Melee Combo ×1.8 (close)</div>
                                                 </div>
                                             </div>
                                         </div>
