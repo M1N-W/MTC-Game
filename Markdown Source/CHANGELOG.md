@@ -1,398 +1,60 @@
 # 🎮 MTC Game — Changelog
 
-> **⚠️ DOCUMENTATION STABILITY:** This changelog contains **version-specific implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./Information/PROJECT_OVERVIEW.md).
+> **⚠️ DOCUMENTATION STABILITY:** This changelog contains **version-specific implementation details** that change with updates. For stable architectural patterns, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
 ---
 
-## v3.41.17 — Perf SEO: SW Cache Fix, defer Scripts, Font Waterfall, Meta Tags
-*Released: April 1, 2026*
+## v3.41.18 — Gameplay Flow, Pat Reflect, Map Rendering, and Architecture Docs
+*Released: April 5, 2026*
 
-### 🔴 P1 Critical Fixes
-
-**SW precache URLs now match actual requests** (`sw.js`)
-- Removed `?v=CACHE_TIMESTAMP` from all `urlsToCache` entries. These versioned URLs never matched unversioned script requests from `index.html`, so the precache was populated but never served — every page load fell back to network. Cache-busting is now handled solely by `CACHE_NAME` version bumps.
-- Removed `const CACHE_TIMESTAMP = Date.now()` (no longer needed).
-- Added `./js/systems/WorkerBridge.js` to precache (was missing).
-
-**Google Fonts `@import` replaced with `<link>` in `<head>`** (`index.html` + `main.css`)
-- `main.css` had `@import url(…Google Fonts…)` which forced a 2-hop waterfall: download CSS → discover import → download font CSS → download font files. Removed `@import`.
-- Consolidated all 5 font families (Inter, Orbitron, Bebas Neue, Rajdhani, Share Tech Mono) into a single `<link rel="stylesheet">` in `index.html` `<head>`. Removes one full RTT from FCP.
-- Removed the separate `<link>` for Share Tech Mono (was a duplicate request).
-
-**`defer` added to all 31 `<script>` tags** (`index.html`)
-- All body scripts now use `defer`. Browser can download all 31 scripts in parallel via the preload scanner. Execution order is preserved (DOM order). Reduces total blocking time on slow connections.
-- `firebase-bundle.js` moved after `config.js` + `utils.js` but before `CloudSaveSystem.js` + `LeaderboardUI.js` (which depend on Firebase SDK). No functional change, correct execution order maintained.
-
-### 🟡 P2 High-Impact Fixes
-
-**Offline fallback added to SW fetch handler** (`sw.js`)
-- When both network and cache fail for a navigation request, now returns a minimal Thai-language offline page instead of `undefined` (which caused a blank error screen).
-
-**`<link rel="preload">` for `main.css` and Orbitron font** (`index.html`)
-- `<link rel="preload" href="css/main.css" as="style">` — browser starts downloading CSS earlier in the waterfall.
-- `<link rel="preload" as="font" type="font/woff2" href="…orbitron…woff2" crossorigin>` — eliminates FOUT for the primary display font.
-
-**Meta tags added** (`index.html`)
-- `<meta name="description">` — Google search snippet.
-- `<meta name="theme-color" content="#16213e">` — mobile browser chrome colour.
-- `<link rel="canonical">` — prevents duplicate-content indexing.
-- Open Graph tags: `og:type`, `og:url`, `og:title`, `og:description`.
-- Twitter card tags: `twitter:card`, `twitter:title`, `twitter:description`.
-
-### 🟢 P3 Low-Effort Fixes
-
-**`robots.txt` created** — explicitly allows all crawlers.
-
-**`manifest.json` icon entries split** — `"purpose": "any maskable"` on one entry was a Lighthouse warning. Now two separate entries: one `"purpose": "any"` and one `"purpose": "maskable"`.
+### 🛠️ Technical Changes
+- **Game Over Flow**: Split defeat handling so gameplay shutdown, run summary capture, and overlay presentation are no longer collapsed into one reset path. The dedicated Game Over screen now shows first, while retry and return-to-menu perform the shared teardown afterward.
+- **Pat Reflect Logic**: Preserved original enemy projectile visuals on reflected shots by separating projectile rendering identity from collision ownership. Blade Guard now extends its active hold window only after successful reflects, without moving that timing logic into rendering.
+- **Map Rendering Performance**: Added a cached static terrain layer for the hex grid and zone-floor base, moved reusable hex-corner data out of the hot render loop, and kept lighting as a throttled post-world pass with off-screen projectile-light culling.
+- **Menu and Skill Panels**: Rebalanced menu stacking, dots, and CTA spacing in the current visual style. Character skill-set copy was rewritten toward stable mechanic descriptions rather than volatile stat text.
+- **Architecture Documentation**: Re-audited `PROJECT_OVERVIEW.md`, `SKILL.md`, `mtc-game-conventions.md`, and `mtc-rendering.md` against the live codebase. The docs now reflect the exact load order, full inheritance tree, `GameState` alias mirroring, render fallback ownership, terrain-cache ownership, and worker-driven analyzer coupling.
 
 ### Files touched
-
-```
-✅ MODIFIED: sw.js                (v3.41.17; precache URLs fixed; WorkerBridge added; offline fallback)
-✅ MODIFIED: index.html           (defer on all scripts; consolidated font <link>; preload hints; meta/OG tags)
-✅ MODIFIED: css/main.css         (@import removed)
-✅ MODIFIED: manifest.json        (icon purpose split)
-✅ CREATED:  robots.txt
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.17)
+```text
+✅ MODIFIED: js/game.js
+✅ MODIFIED: js/entities/player/PatPlayer.js
+✅ MODIFIED: js/weapons.js
+✅ MODIFIED: js/map.js
+✅ MODIFIED: index.html
+✅ MODIFIED: css/main.css
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+✅ MODIFIED: Markdown Source/Information/SKILL.md
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md
+✅ MODIFIED: sw.js (v3.41.18)
 ✅ MODIFIED: Markdown Source/CHANGELOG.md
 ```
 
 ---
 
-## v3.41.16 — Fix: Tutorial Freeze, Service Worker Cache Bust
-*Released: April 1, 2026*
-
-### 🐛 Tutorial Mode Freeze — Root Cause and Fixes
-
-**Root cause chain:**
-1. `var weaponSystem` and `var projectileManager` were converted to `const` in v3.41.15 but their declarations were accidentally deleted when `spawnHeatWave` body corruption was repaired (separate commit `dc59c45`).
-2. Without these declarations, `weapons.js` threw `ReferenceError: weaponSystem is not defined` at load time and `ReferenceError: projectileManager is not defined` at runtime.
-3. `startGame()` → `_resetRunState()` crashed at `projectileManager.clear()` before `_initGameUI()` could run.
-4. Since `_initGameUI()` never executed, `TutorialSystem.start()` was never called and the tutorial overlay never appeared.
-5. The old game loop (from a previous session) kept running in `PLAYING` state, producing the "frozen game" visual.
-6. **Service Worker cache was NOT bumped** for the `weaponSystem`/`projectileManager` restore commit (`a449bde`), so users with the v3.41.15 cache still received the broken `weapons.js`.
-
-**Fixes applied:**
-- `sw.js`: bumped to `v3.41.16` — forces all clients to fetch updated `weapons.js` and `game.js`.
-- `js/game.js`: clear `window._tutorialModeRequested = false` immediately before `TutorialSystem.start()` so that `retryMission()` after a tutorial run does not re-trigger the tutorial.
-
-### Files touched
-```
-✅ MODIFIED: sw.js                (v3.41.16 — critical cache bust)
-✅ MODIFIED: js/game.js           (clear _tutorialModeRequested before TutorialSystem.start)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.16)
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-```
-
----
-
-## v3.41.15 — Refactor: var→const/let, Debug.html Fixes, Remove ccflare
-*Released: April 1, 2026*
-
-### ♻️ `var` → `const`/`let` Modernisation
-All top-level `var` declarations converted to `const` or `let` across 6 files. Each global that previously relied on `var`-hoisting to `window` now has an explicit `window.xxx = xxx` export.
-
-**Files modified:**
-- `js/utils.js` — ~57 `var` declarations → `const`; `CANVAS`/`CTX` → `let` (reassigned inside `initCanvas`); `initCanvas()` now sets `window.CANVAS`/`window.CTX` explicitly; new `window` exports block added before `module.exports`.
-- `js/input.js` — `keys`, `mouse`, `joysticks`, `inputBuffer` → `const`; `_mobileHandlers` → `let` (reassigned in `cleanupMobileControls`); `InputSystem` → `const`; all local `var` inside functions → `const`/`let`; `window.keys`, `window.mouse`, `window.joysticks` added.
-- `js/effects.js` — 7 singleton `var` → `const`; added `window.hitMarkerSystem`, `window.weatherSystem`, `window.particleSystem`, `window.floatingTextSystem` (previously missing).
-- `js/audio.js` — `var Audio` → `const Audio`; naming comment updated (no longer relies on var-hoisting; `window.Audio` set explicitly in existing exports block).
-- `js/ui.js` — `var Achievements` → `const Achievements`; comment updated.
-- `js/weapons.js` — `var weaponSystem`, `var projectileManager` → `const`; window exports already present.
-
-### 🐛 Debug.html — 7 Bugs Fixed
-- **`switchTab` implicit `event` global** — added `evt` parameter; all 4 `onclick` callers now pass `event` explicitly.
-- **Stale boss script paths** — replaced `js/entities/boss.js` and `js/entities/boss_attacks.js` with correct split paths: `boss/BossBase.js`, `boss/ManopBoss.js`, `boss/FirstBoss.js`, `boss/boss_attacks_shared.js`, `boss/boss_attacks_manop.js`, `boss/boss_attacks_first.js`.
-- **Missing AI scripts** — added `js/ai/UtilityAI.js`, `EnemyActions.js`, `PlayerPatternAnalyzer.js`, `SquadAI.js` (required by `enemy.js`).
-- **Missing `PatPlayer.js`** — added to script list.
-- **Missing rendering scripts** — added `js/rendering/PlayerRenderer.js`, `BossRenderer.js` (required by `game.js`).
-- **Missing `WorkerBridge.js`** — added `js/systems/WorkerBridge.js`.
-- **Missing DOM stubs** — added `#console-input` and `#gameover-screen` stubs.
-
-### 📄 `PROJECT_OVERVIEW.md` — Markdown Lint Fixes
-- MD032: added blank lines around 5 list blocks (lines 19, 133, 138, 235, 241).
-- MD060: fixed table separator row `|---|---|---|` → `| --- | --- | --- |`.
-
-### 🗑️ Removed Unnecessary Files
-- `ccflare/` — accidentally cloned third-party Claude API proxy tool; has own `.git`; zero relation to MTC game.
-- `tmp/` — dev artifacts (Chrome profiles, PDFs).
-- `output/` — generated PDF output folder.
-
-### Files touched
-```
-✅ MODIFIED: js/utils.js          (var→const/let + window exports block)
-✅ MODIFIED: js/input.js          (var→const/let + window exports)
-✅ MODIFIED: js/effects.js        (var→const + 4 missing window exports)
-✅ MODIFIED: js/audio.js          (var Audio→const + comment)
-✅ MODIFIED: js/ui.js             (var Achievements→const + comment)
-✅ MODIFIED: js/weapons.js        (var→const)
-✅ MODIFIED: Debug.html           (7 bugs fixed: event, paths, stubs)
-✅ MODIFIED: sw.js                (v3.41.15)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.15 + MD lint)
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-✅ DELETED:  ccflare/             (third-party, unrelated)
-✅ DELETED:  tmp/                 (dev artifacts)
-✅ DELETED:  output/              (generated output)
-```
-
----
-
-## v3.41.14 — Bug Fix: Firebase Offline, Tutorial Freeze, Game Over Screen, Menu Dots
-*Released: March 31, 2026*
-
-### 🔥 Firebase Offline Fix (`js/firebase-init.js`)
-- Replaced `getFirestore(app, {...})` call with `initializeFirestore(app, { experimentalForceLongPolling: true })`.
-- `getFirestore` ignores the settings object when called after initialization, silently omitting long-polling and causing offline errors.
-- `initializeFirestore` is the correct API surface for applying Firestore settings at construction time.
-
-### 🎓 Tutorial Freeze Fix (`js/menu.js`, `js/game.js`)
-- Added `window._tutorialModeRequested` flag: set to `false` in `_startModalPlay`, set to `true` in `_startModalTutorial`.
-- Guarded `TutorialSystem.start()` in `_initGameUI` behind `window._tutorialModeRequested` so tutorial no longer auto-starts on every game start, only when explicitly selected.
-
-### 💀 Game Over Black Screen Fix (`js/game.js`, `index.html`, `css/main.css`)
-- Replaced `showElement('overlay')` on defeat with a dedicated `#gameover-screen` overlay to prevent lingering `.fade-out` class on `#overlay` from causing a black screen.
-- Added full-screen `#gameover-screen` HTML overlay with run stats, retry button, and main menu button.
-- Added `retryMission()` and `goToMainMenu()` global handlers; `goToMainMenu` clears `.fade-out` from `#overlay` before showing it.
-- Added comprehensive CSS for `#gameover-screen` including entrance animation, stat layout, and button styling.
-
-### 🎨 Menu Dots Layout Fix (`css/main.css`)
-- Changed `.char-dots--vertical` from absolute positioning to static horizontal flex layout so pagination dots render correctly below the character card.
-
-### Files touched
-```
-✅ MODIFIED: js/firebase-init.js   (initializeFirestore + experimentalForceLongPolling)
-✅ MODIFIED: js/menu.js            (_tutorialModeRequested flag)
-✅ MODIFIED: js/game.js            (tutorial guard, gameover-screen, retryMission, goToMainMenu)
-✅ MODIFIED: index.html            (#gameover-screen overlay HTML)
-✅ MODIFIED: css/main.css          (.char-dots--vertical fix, #gameover-screen styles)
-✅ MODIFIED: sw.js                 (v3.41.14)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.14)
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-```
-
----
-
-## v3.41.13 — Gameplay: Expanded Enemy Roster Stabilization
-*Released: March 30, 2026*
-
-### ⚔️ Enemy Roster — 9 New Enemy Types Stabilized
-All 9 expanded enemies are now playtest-ready and verified at runtime.
-
-**New enemy classes** (`js/entities/enemy.js`):
-- `SniperEnemy` — long-range, charge-then-fire with aim telegraph
-- `ShieldBraverEnemy` — tank subclass, front-arc damage reduction
-- `PoisonSpitterEnemy` — places `PoisonPoolEffect` hazard zones with pool spacing guard (`minPoolSpacing`)
-- `ChargerEnemy` — windup → charge → recover state machine
-- `HunterEnemy` — persistent lock-on with `_strikeTelegraphTimer` readability
-- `FatalityBomberEnemy` — spawns `FatalityExplosionEffect` on death
-- `HealerEnemy` — heals lowest-HP non-support ally via `findLowestHpAlly()` with category priority filter
-- `SummonerEnemy` — spawns `SummonedMinionEnemy` with engage-range gate and max-minion cap
-- `BufferEnemy` — alternates speed/damage buffs on non-support non-minion allies
-
-**New supporting entity** (`js/entities/enemy.js`):
-- `SummonedMinionEnemy` — lifetime-capped minion; cleans up on `owner.dead` or lifetime expiry; decrements `owner._activeMinions` on death
-
-### 🌊 Wave Spawning Layer (`js/systems/WaveManager.js`)
-- `_waveRuleValue(rule, wave)` — reads per-wave array OR flat cap value from `expandedRosterRules`
-- `_getExpandedEnemyLiveCounts()` — live census by type, support family, hazard family
-- `_isEnemyEligibleForWave(key, wave, liveCounts)` — filters candidates against support/hazard/sniper/summoner/buffer caps before weighted selection
-- `_spawnEnemyFromRegistry()` patched to run eligibility filter before weighting and selection
-
-### ⚙️ Config Balance Layer (`js/config.js`)
-- `BALANCE.enemies.*` — per-type metadata with `category`, `support`, `hazard` flags
-- `BALANCE.waves.enemyPools` — per-wave weighted pools (minWave-indexed tiers)
-- `BALANCE.waves.expandedRosterRules` — live caps: `maxSupportAlive[]`, `maxHazardAlive[]`, `maxSnipersAlive[]`, `supportMixUnlockWave`, `hazardMixUnlockWave`, `maxSummonersAlive`, `maxBuffersAlive`
-- `BALANCE.waves.enableExpandedRoster` flag guards old-path fallback
-
-### 🛠️ Admin Playtest Tooling (`js/systems/AdminSystem.js`)
-- `spawn pack <preset>` — presets: `duel`, `anchor`, `pressure`, `support`, `supportpressure`, `crossfire`
-- `enemy report` — live roster snapshot with support/hazard counts vs. wave caps
-- `_spawnEnemyByKey()` helper — centralized registry-based spawning used by both `spawn enemy` and `spawn pack`
-- `_expandedEnemySnapshot()` helper — reads `_enemyConfig.support/.hazard` flags for report
-
-### ✅ Runtime Verification Results
-- All 9 individual enemies: spawn, engage, telegraph, and clean up correctly
-- All 4 pack presets (`anchor`, `pressure`, `support`, `supportpressure`): all types alive after spawning
-- `enemy report` command: live counts and wave caps display correctly
-- No new console errors in boot/start/admin flow
-- `window.specialEffects` and minion counts remain bounded by caps
-- `SummonerEnemy` logic confirmed via direct `update()` step test: spawned 2 minions at t≈2.1s and t≈8.2s
-- `PoisonSpitterEnemy` logic confirmed: pool created at t≈4.8s, spacing guard correctly prevents duplicate pools on stationary player
-
-### Files touched
-```
-✅ MODIFIED: js/config.js       (enemy metadata, wave pools, expandedRosterRules)
-✅ MODIFIED: js/entities/enemy.js  (9 new enemy classes + SummonedMinionEnemy + registry)
-✅ MODIFIED: js/systems/WaveManager.js  (eligibility filter, live-count tracking)
-✅ MODIFIED: js/systems/AdminSystem.js  (spawn pack, enemy report, spawn helper)
-✅ MODIFIED: sw.js              (v3.41.13)
-✅ MODIFIED: index.html         (v3.41.13)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.13)
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-```
-
----
-
-## v3.41.12 — UI Polish: Character Menu Layout & Pat Portrait Glow
-*Released: March 29, 2026*
-
-### 🎨 Character Selection UI Enhancements
-- **Menu layout improvements** (`index.html`, `css/main.css`):
-  - Swapped position of pagination dots with next button (dots now on right, button below)
-  - Added vertical dots styling with `char-dots--vertical` class
-  - Improved visual flow of character carousel
-- **Pat character glow effect** (`css/main.css`):
-  - Added `patGlow` keyframe animation with blue theme colors (rgba(96, 165, 250))
-  - Added glow filter for Pat's portrait in selected state
-  - Added blue radial gradient background for Pat's avatar
-  - Added Pat-specific styles: stat-bar-fill (blue gradient), char-title, char-tag with theme colors
-
-### Files touched
-```
-✅ MODIFIED: index.html (swapped dots/next button positions)
-✅ MODIFIED: css/main.css (Pat glow effects + vertical dots layout)
-✅ MODIFIED: sw.js (v3.41.12)
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-```
-
----
-
-## v3.41.11 — Enemy Roster Expansion, Registry Spawn Flow, and Architecture Doc Audit
-*Released: March 29, 2026*
-
-### 🤖 Enemy and AI Architecture
-- **Expanded enemy roster** (`js/entities/enemy.js`, `js/config.js`):
-  - Added registry-backed enemy classes for sniper, shield, poison, pressure, and support families.
-  - Introduced `window.ENEMY_REGISTRY` as the shared constructor surface for wave spawning and admin spawning.
-  - Added shared helper patterns in `EnemyBase` descendants for ranged hold-line, support, summon, and hazard-style behaviors.
-- **Utility AI growth** (`js/ai/UtilityAI.js`, `js/ai/EnemyActions.js`, `js/ai/SquadAI.js`):
-  - Added new action families for hold-line, charge, support-backline, summon, buff, and hazard behaviors.
-  - Extended squad role vocabulary and moved default role assignment toward config-driven lookup rather than hardcoded type-only rules.
-  - Preserved the `_aiMoveX/_aiMoveY` intent contract so AI continues to steer without taking ownership of physics velocity.
-
-### 🌊 Wave and Debug Tooling
-- **WaveManager registry spawn flow** (`js/systems/WaveManager.js`):
-  - Added registry-aware enemy selection and per-wave enemy pool support.
-  - Centralized speed-wave patching into `applyWaveModifiersToEnemy` so normal waves, admin spawns, and summoned minions reuse the same modifier path.
-- **Admin spawn command** (`js/systems/AdminSystem.js`):
-  - Added `spawn enemy <type> [count]` for targeted enemy-family testing against the live registry.
-- **Combat fix** (`js/weapons.js`):
-  - Synced enemy projectile collision logic with the active stealth flag name used by the player implementation.
-
-### 📚 Documentation Audit
-- **PROJECT_OVERVIEW.md**:
-  - Re-audited class hierarchy, load order, hidden coupling, rendering ownership, and wave-registry flow against the current codebase.
-- **SKILL.md / mtc-game-conventions / mtc-rendering**:
-  - Pruned volatile sections and rewrote them around stable architecture only: inheritance, update/draw separation, load order, `_tickShared()` invariants, registry coupling, renderer cache ownership, and frame-pass structure.
-  - Corrected the rendering-skill path and aligned docs with the current renderer and wave architecture.
-
-### Files touched
-```
-✅ MODIFIED: js/entities/enemy.js (expanded enemy roster + registry + render overlays)
-✅ MODIFIED: js/config.js (expanded enemy definitions + wave pool support)
-✅ MODIFIED: js/ai/UtilityAI.js (new action families + role-aware decisions)
-✅ MODIFIED: js/ai/EnemyActions.js (hold-line, charge, support helpers)
-✅ MODIFIED: js/ai/SquadAI.js (role defaults + new role vocabulary)
-✅ MODIFIED: js/systems/WaveManager.js (registry spawn flow + shared wave modifiers)
-✅ MODIFIED: js/systems/AdminSystem.js (spawn enemy command)
-✅ MODIFIED: js/weapons.js (stealth flag fix)
-✅ MODIFIED: sw.js (v3.41.11)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (architecture audit)
-✅ MODIFIED: Markdown Source/Information/SKILL.md (stable architecture rewrite)
-✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md (skill audit)
-✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md (rendering architecture audit)
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-```
-
----
-
-## v3.41.10 — UI: Start Modal, Carousel Theme System & CSS Refactor
+## v3.41.9 — Architecture: CSS Modularization & UI Systems Refactor
 *Released: March 27, 2026*
 
-### ✨ UI/UX Enhancements
-- **Start Mission Modal** (`js/menu.js`, `css/main.css`):
-  - Added `_openStartModal()` / `_closeStartModal()` — START MISSION button now opens a sub-panel before launching the game.
-  - Two choices in modal: **START GAME** → `startGame()` and **TUTORIAL MODE** → `TutorialSystem.reset()` + `startGame()`.
-  - Escape key closes the modal when overlay is visible.
-  - `window._openStartModal`, `window._closeStartModal`, `window._startModalPlay`, `window._startModalTutorial` all exported to `window.*` for `index.html` `onclick` compatibility.
-- **Per-Theme Carousel Selectors** (`css/main.css`):
-  - New `#overlay.theme-{kao|poom|auto|pat}` CSS classes applied dynamically via `_updateCarousel()` in `menu.js`.
-  - Per-theme hover styles for `.char-nav-btn`, active state for `.char-dot`, accent colour on `.char-card.selected`, `.card-back-header`, `.back-skill-row .tt-key`, and `.char-flip-hint`.
-- **CSS Code Reformat** (`css/main.css`):
-  - Entire stylesheet reformatted from 4-space to 2-space indentation; single quotes → double quotes (Prettier pass).
-  - No visual changes — functional parity confirmed.
-- **JS Code Reformat** (`js/menu.js`):
-  - Entire file reformatted to 2-space indentation and double quotes (Prettier pass).
-  - Skill tooltip section replaced with comment (`disabled — skills now live on card back face`).
+### ✨ UI/UX — Character Select & Flow
+- **Flip-Card Feature**: Transformed the character carousel cards into interactive flip-cards. Tapping a card now flips it to reveal the character's skill set on the back, replacing the separate tooltip overlays.
+- **Unified Start Modal**: Replaced raw start/tutorial buttons with a new "Start Modal" interceptor. Choosing "Start Mission" now opens a modal confirming the selected operator (e.g., KAO, POOM) and offering choices between "Start Game", "Tutorial Mode", or "Cancel".
+
+### 🛠️ Technical Architecture & Refactoring
+- **CSS Modularization**: Executed a massive refactor of the monolithic `main.css`. `main.css` is now strictly an `@import` manifest loading 10 modular, domain-specific CSS files (e.g., `base.css`, `hud.css`, `character-select.css`).
+- **Documentation Overhaul**: 
+  - Synchronized `PROJECT_OVERVIEW.md` with the new CSS architecture manifest.
+  - Significantly expanded `mtc-game-conventions.md` and `mtc-rendering.md` (now over 27 sections) detailing rigid rendering invariants, UI Manager decomposition patterns, `OffscreenCanvas` caching strategies, and MapSystem pipelines.
 
 ### Files touched
-```
-✅ MODIFIED: css/main.css (Prettier reformat + Start Modal styles + theme selectors)
-✅ MODIFIED: js/menu.js (Prettier reformat + Start Modal JS logic)
-✅ MODIFIED: sw.js (v3.41.10)
-✅ MODIFIED: index.html (v3.41.10)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (v3.41.10)
-✅ MODIFIED: Markdown Source/CHANGELOG.md
-```
-
----
-
-## v3.41.9 — Audit: Codebase Integrity, Bug Fixes & Architecture Documentation
-*Released: March 27, 2026*
-
-### 🐛 Bug Fixes & Stability
-- **Weapons System** (`js/weapons.js`):
-  - Fixed property name mismatch: `isFreeStealthy` → `isFreeStealthActive` (synced with `KaoPlayer.js` definition).
-  - Removed redundant duplicate `tryReflectProjectile` call in enemy→player collision branch.
-- **Input System** (`js/input.js`):
-  - Added `PatPlayer` to Q-key weapon-switch exclusion list (Pat uses Q for Zanzo Flash, not weapon switch).
-- **AI System** (`js/ai/EnemyActions.js`):
-  - Fixed `retreat()` wall-avoidance: old code assumed world coords started at `0` (maps `MAP_CONFIG.mapWidth`); corrected to use `GAME_CONFIG.physics.worldBounds` for centered `[-1500, 1500]` coordinate space.
-- **Core Loop** (`js/game.js`):
-  - Fixed partial syntax error in `drawGame` diagnostic log comment that could crash if uncommented.
-- **Config Cleanup** (`js/config.js`):
-  - Removed deprecated `BALANCE.player.auto` block (no active references; replaced by `BALANCE.characters.auto`).
-
-### 📚 Architecture Documentation
-- **Created `SKILL.md`** (`Markdown Source/Information/SKILL.md`):
-  - §2 Class Name Map — all constructor→window alias mappings
-  - §3 Inheritance Chain — Entity tree including BossDog/GoldfishMinion caveats (extend Entity, NOT EnemyBase/BossBase)
-  - §4 AI Load Order & API — UtilityAI/SquadAI/PlayerPatternAnalyzer method signatures, throttle patterns
-  - §5 Critical Property Rules — vx/vy physics, stats.moveSpeed vs enemy.speed, cooldown keys, hit flash, squad roles
-  - §6 Global Window Variables — CANVAS/CTX, entity refs, GameState, all system singletons, input globals
-  - §7 Domain Singleton Behavior — DomainBase inheritance pattern, phase machine, game.js integration hooks
-  - §8 Rendering Layer Order — 24-step frame draw sequence, update/draw separation invariant
-  - §9 effects.js Exports — all global spawn functions and system instances
-  - §10 Poom Special Cases — WeaponSystem bypass, input routing table, Cosmic Balance condition
-  - §11 Auto Heat Tier & Wanchai — tier names (not values), Q context switch, Stand entity z-order
-  - §12 BALANCE/config key structure (keys only, no values)
-  - §13 New Content Checklist — load order, sw.js, window export, _tickShared, draw rules, shadowBlur
-- **Created `mtc-rendering.md`** (`.windsurf/workflows/mtc-rendering.md`):
-  - BossRenderer/PlayerRenderer dispatcher patterns + dispatch order invariants
-  - 24-step canonical frame draw sequence
-  - worldToScreen coordinate system
-  - OffscreenCanvas caching in BossRenderer
-  - Lighting system 30Hz throttle + destination-out compositing
-  - Screen shake single-translate architecture
-  - Minimap dual-clip architecture
-  - `performance.now()` animation rule + no `Math.random()` in draw()
-  - `shadowBlur` reset rule + `_getLimbParams` shared animation state
-  - Full cross-file rendering dependency table
-- **Updated `PROJECT_OVERVIEW.md`**:
-  - Added §9 Living Documentation Files table pointing to all doc files
-
-### Files touched
-```
-✅ MODIFIED: index.html (v3.41.9 update)
-✅ MODIFIED: sw.js (v3.41.9 update)
-✅ MODIFIED: js/game.js (diagnostic log fix)
-✅ MODIFIED: js/config.js (removed deprecated auto block)
-✅ MODIFIED: js/weapons.js (property name fix + redundant call removal)
-✅ MODIFIED: js/input.js (PatPlayer Q exclusion)
-✅ MODIFIED: js/ai/EnemyActions.js (retreat wall-avoidance bounds fix)
-✅ CREATED:  Markdown Source/Information/SKILL.md (architectural conventions, §2–§13)
-✅ CREATED:  .windsurf/workflows/mtc-rendering.md (rendering pipeline skill)
-✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md (§9 living docs table)
+```text
+✅ MODIFIED: index.html (flip-cards + start modal structure)
+✅ MODIFIED: css/main.css (transformed to `@import` manifest)
+✅ ADDED: css/*.css (10 new modular subset files)
+✅ MODIFIED: js/menu.js (start modal orchestrator + flip logic)
+✅ MODIFIED: Markdown Source/Information/PROJECT_OVERVIEW.md
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-rendering.md 
+✅ MODIFIED: .agents/skills/mtc-game-skills_claude/mtc-game-conventions.md
+✅ MODIFIED: sw.js (v3.41.9)
 ✅ MODIFIED: Markdown Source/CHANGELOG.md
 ```
 

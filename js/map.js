@@ -1149,6 +1149,19 @@ class MapSystem {
         // PERF Phase 1: static spatial grid for map objects (never move)
         this._staticGrid = new Map(); // cellKey → MapObject[]
         this._staticGridResults = [];  // reusable query result buffer
+        this._terrainCacheCanvas = null;
+        this._terrainCacheCtx = null;
+        this._terrainCacheReady = false;
+        this._terrainCacheOriginX = 0;
+        this._terrainCacheOriginY = 0;
+        this._zoneLabelWidths = Object.create(null);
+        this._hexOffX = new Float32Array(6);
+        this._hexOffY = new Float32Array(6);
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i;
+            this._hexOffX[i] = Math.cos(angle);
+            this._hexOffY[i] = Math.sin(angle);
+        }
     }
 
     // PERF Phase 1: build the static grid from this.objects
@@ -1208,13 +1221,149 @@ class MapSystem {
             this._lightCanvas = document.createElement('canvas');
             this._lightCtx = this._lightCanvas.getContext('2d');
         }
+        if (!this._terrainCacheCanvas) {
+            this._terrainCacheCanvas = document.createElement('canvas');
+            this._terrainCacheCtx = this._terrainCacheCanvas.getContext('2d');
+        }
 
         this.generateCampusMap();
         this._buildStaticGrid(); // PERF Phase 1: build once after map generation
         this._sortedObjects = null;
         this._objectsDirty = true;
+        this._terrainCacheReady = false;
         this.initialized = true;
         // console.log(`✅ Campus Map Generated Structurally: ${this.objects.length} objects`);
+    }
+
+    _ensureTerrainCache() {
+        if (this._terrainCacheReady || typeof MAP_CONFIG === 'undefined' || !this._terrainCacheCtx) return;
+
+        const _wb =
+            typeof GAME_CONFIG !== "undefined" && GAME_CONFIG.physics?.worldBounds
+                ? GAME_CONFIG.physics.worldBounds
+                : 1500;
+        const pad = 160;
+        const minX = -_wb - pad;
+        const minY = -_wb - pad;
+        const width = _wb * 2 + pad * 2;
+        const height = _wb * 2 + pad * 2;
+
+        const tc = this._terrainCacheCanvas;
+        const tctx = this._terrainCacheCtx;
+        if (tc.width !== width || tc.height !== height) {
+            tc.width = width;
+            tc.height = height;
+        } else {
+            tctx.clearRect(0, 0, width, height);
+        }
+
+        this._terrainCacheOriginX = minX;
+        this._terrainCacheOriginY = minY;
+        this._cacheStaticHexGrid(tctx);
+        this._cacheStaticZoneFloors(tctx);
+        this._terrainCacheReady = true;
+    }
+
+    _cacheStaticHexGrid(ctx) {
+        const H = MAP_CONFIG.hex;
+        const HEX_SIZE = H.size;
+        const HEX_W = HEX_SIZE * 2;
+        const HEX_H = Math.sqrt(3) * HEX_SIZE;
+        const COL_STEP = HEX_W * 0.75;
+        const ROW_STEP = HEX_H;
+        const colStart = Math.floor(this._terrainCacheOriginX / COL_STEP) - 1;
+        const rowStart = Math.floor(this._terrainCacheOriginY / ROW_STEP) - 1;
+        const colEnd = colStart + Math.ceil((this._terrainCacheCanvas.width + HEX_W * 2) / COL_STEP) + 2;
+        const rowEnd = rowStart + Math.ceil((this._terrainCacheCanvas.height + HEX_H * 2) / ROW_STEP) + 2;
+        const fillRGB = H.fillColor.substring(5, H.fillColor.lastIndexOf(','));
+        const strokeRGB = H.strokeColor.substring(5, H.strokeColor.lastIndexOf(','));
+        const fillBase = H.fillAlpha;
+        const strokeBase = H.strokeAlpha;
+        const falloffR = H.falloffRadius;
+
+        ctx.save();
+        ctx.lineWidth = 0.9;
+        for (let col = colStart; col <= colEnd; col++) {
+            for (let row = rowStart; row <= rowEnd; row++) {
+                const wx = col * COL_STEP;
+                const wy = row * ROW_STEP + (col % 2 === 0 ? 0 : HEX_H * 0.5);
+                const distW = Math.sqrt(wx * wx + wy * wy);
+                const falloff = Math.max(0, 1 - distW / falloffR);
+                if (falloff < 0.02) continue;
+
+                const cx = wx - this._terrainCacheOriginX;
+                const cy = wy - this._terrainCacheOriginY;
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const px = cx + this._hexOffX[i] * HEX_SIZE;
+                    const py = cy + this._hexOffY[i] * HEX_SIZE;
+                    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                if ((Math.abs(col) + Math.abs(row)) % 3 === 0) {
+                    ctx.fillStyle = `rgba(${fillRGB},${fillBase * falloff})`;
+                    ctx.fill();
+                }
+                ctx.strokeStyle = `rgba(${strokeRGB},${strokeBase * falloff})`;
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    }
+
+    _cacheStaticZoneFloors(ctx) {
+        if (!MAP_CONFIG.zones) return;
+
+        const zoneKeys = Object.keys(MAP_CONFIG.zones);
+        ctx.save();
+        ctx.font = 'bold 11px monospace';
+        for (let zi = 0; zi < zoneKeys.length; zi++) {
+            const z = MAP_CONFIG.zones[zoneKeys[zi]];
+            const x = z.x - this._terrainCacheOriginX;
+            const y = z.y - this._terrainCacheOriginY;
+            const sw = z.w;
+            const sh = z.h;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x, y, sw, sh);
+            ctx.clip();
+
+            ctx.fillStyle = z.floorColor;
+            ctx.fillRect(x, y, sw, sh);
+
+            const worldGS = z.gridSize;
+            const startCol = Math.floor(z.x / worldGS) * worldGS;
+            const startRow = Math.floor(z.y / worldGS) * worldGS;
+            ctx.strokeStyle = z.gridColor;
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            for (let wx = startCol; wx <= z.x + z.w + worldGS; wx += worldGS) {
+                const sx = wx - this._terrainCacheOriginX;
+                ctx.moveTo(sx, y);
+                ctx.lineTo(sx, y + sh);
+            }
+            for (let wy = startRow; wy <= z.y + z.h + worldGS; wy += worldGS) {
+                const sy = wy - this._terrainCacheOriginY;
+                ctx.moveTo(x, sy);
+                ctx.lineTo(x + sw, sy);
+            }
+            ctx.stroke();
+            this._zoneLabelWidths[zoneKeys[zi]] = ctx.measureText(z.label).width;
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+
+    _drawStaticTerrain(ctx, camera) {
+        if (!this._terrainCacheReady || !this._terrainCacheCanvas) return;
+        const tc = this._terrainCacheCanvas;
+        const srcW = Math.min(CANVAS.width, tc.width);
+        const srcH = Math.min(CANVAS.height, tc.height);
+        const maxSrcX = Math.max(0, tc.width - srcW);
+        const maxSrcY = Math.max(0, tc.height - srcH);
+        const srcX = Math.min(maxSrcX, Math.max(0, Math.floor(camera.x - this._terrainCacheOriginX)));
+        const srcY = Math.min(maxSrcY, Math.max(0, Math.floor(camera.y - this._terrainCacheOriginY)));
+        ctx.drawImage(tc, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
     }
 
     // Returns true if (x,y,w,h) overlaps any reserved clear zone.
@@ -1392,6 +1541,7 @@ class MapSystem {
 
     drawTerrain(ctx, camera) {
         if (typeof MAP_CONFIG === 'undefined') return;
+        this._ensureTerrainCache();
 
         // ── Frame counter for animation throttling ────────────────────
         this._terrainFrame = ((this._terrainFrame || 0) + 1) & 0xFF; // 0–255 wrap
@@ -1430,59 +1580,10 @@ class MapSystem {
             ctx.restore();
         }
 
-        // ── 2. TECH-HEX GRID ─────────────────────────────────────
-        {
-            const H = C.hex;
-            const HEX_SIZE = H.size, HEX_W = HEX_SIZE * 2, HEX_H = Math.sqrt(3) * HEX_SIZE;
-            const COL_STEP = HEX_W * 0.75, ROW_STEP = HEX_H;
+        // ── 2. Static cached terrain (hex grid + zone floor base) ─────
+        this._drawStaticTerrain(ctx, camera);
 
-            const viewL = camera.x - CANVAS.width * 0.5, viewT = camera.y - CANVAS.height * 0.5;
-            const colStart = Math.floor(viewL / COL_STEP) - 1, colEnd = colStart + Math.ceil((CANVAS.width + HEX_W * 2) / COL_STEP) + 2;
-            const rowStart = Math.floor(viewT / ROW_STEP) - 1, rowEnd = rowStart + Math.ceil((CANVAS.height + HEX_H * 2) / ROW_STEP) + 2;
-
-            // ── Perf: pre-compute 6 corner offsets once per drawTerrain call ──
-            // Eliminates 6× Math.cos/sin per cell (was recalculated every cell every frame).
-            const _hexOffX = new Float32Array(6);
-            const _hexOffY = new Float32Array(6);
-            for (let _i = 0; _i < 6; _i++) {
-                const _a = (Math.PI / 3) * _i;
-                _hexOffX[_i] = HEX_SIZE * Math.cos(_a);
-                _hexOffY[_i] = HEX_SIZE * Math.sin(_a);
-            }
-
-            // ── Perf: parse RGB once from config string — immune to color changes ──
-            // Expects format: 'rgba(R, G, B, {a})' — strips everything after last comma
-            const _fillRGB = H.fillColor.substring(5, H.fillColor.lastIndexOf(','));
-            const _strokeRGB = H.strokeColor.substring(5, H.strokeColor.lastIndexOf(','));
-            const _fillBase = H.fillAlpha;
-            const _strokeBase = H.strokeAlpha;
-            const _falloffR = H.falloffRadius;
-
-            ctx.save(); ctx.lineWidth = 0.9;
-            for (let col = colStart; col <= colEnd; col++) {
-                for (let row = rowStart; row <= rowEnd; row++) {
-                    const wx = col * COL_STEP, wy = row * ROW_STEP + (col % 2 === 0 ? 0 : HEX_H * 0.5);
-                    const distW = Math.sqrt(wx * wx + wy * wy);
-                    const falloff = Math.max(0, 1 - distW / _falloffR);
-                    if (falloff < 0.02) continue;
-
-                    ctx.beginPath();
-                    for (let i = 0; i < 6; i++) {
-                        const corner = ws(wx + _hexOffX[i], wy + _hexOffY[i]);
-                        i === 0 ? ctx.moveTo(corner.x, corner.y) : ctx.lineTo(corner.x, corner.y);
-                    }
-                    ctx.closePath();
-
-                    if ((Math.abs(col) + Math.abs(row)) % 3 === 0) {
-                        ctx.fillStyle = `rgba(${_fillRGB},${_fillBase * falloff})`; ctx.fill();
-                    }
-                    ctx.strokeStyle = `rgba(${_strokeRGB},${_strokeBase * falloff})`; ctx.stroke();
-                }
-            }
-            ctx.restore();
-        }
-
-        // ── 2b. ZONE FLOORS ──────────────────────────────────────
+        // ── 2b. ZONE FLOOR overlays ─────────────────────────────
         this.drawZoneFloors(ctx);
 
         // ── 3. CIRCUIT PATHS ─────────────────────────────────────
@@ -1646,27 +1747,6 @@ class MapSystem {
             ctx.save();
             ctx.beginPath(); ctx.rect(tl.x, tl.y, sw, sh); ctx.clip();
 
-            // Floor tint
-            ctx.fillStyle = z.floorColor;
-            ctx.fillRect(tl.x, tl.y, sw, sh);
-
-            // Ortho grid — one stroke batch
-            const worldGS = z.gridSize;
-            const startCol = Math.floor(z.x / worldGS) * worldGS;
-            const startRow = Math.floor(z.y / worldGS) * worldGS;
-            ctx.strokeStyle = z.gridColor;
-            ctx.lineWidth = 0.7;
-            ctx.beginPath();
-            for (let wx = startCol; wx <= z.x + z.w + worldGS; wx += worldGS) {
-                const sx = worldToScreen(wx, 0).x;
-                ctx.moveTo(sx, tl.y); ctx.lineTo(sx, br.y);
-            }
-            for (let wy = startRow; wy <= z.y + z.h + worldGS; wy += worldGS) {
-                const sy = worldToScreen(0, wy).y;
-                ctx.moveTo(tl.x, sy); ctx.lineTo(br.x, sy);
-            }
-            ctx.stroke();
-
             // Pulsing inner border accent
             const pulse = 0.5 + Math.sin(t * 1.2 + zi) * 0.5;
             ctx.strokeStyle = z.accentColor;
@@ -1679,8 +1759,7 @@ class MapSystem {
                 ctx.font = 'bold 11px monospace';
                 ctx.textAlign = 'left'; ctx.textBaseline = 'top';
                 const labelAlpha = 0.70 + pulse * 0.20;
-                const metrics = ctx.measureText(z.label);
-                const lw = metrics.width;
+                const lw = this._zoneLabelWidths[zoneKeys[zi]] ?? ctx.measureText(z.label).width;
                 const px = 6, py = 5, lh = 13;
                 const pillX = tl.x + 8, pillY = tl.y + 6;
 
@@ -1712,7 +1791,7 @@ class MapSystem {
             // PHI-spaced seeds prevent all dots pulsing in sync.
             if (z.ambientColor) {
                 const PHI = 2.399; // golden-angle increment
-                const COUNT = 7;
+                const COUNT = 4;
                 ctx.save();
                 ctx.beginPath(); ctx.rect(tl.x, tl.y, sw, sh); ctx.clip();
                 for (let i = 0; i < COUNT; i++) {
@@ -1806,9 +1885,13 @@ class MapSystem {
 
         if (player && !player.dead) punchLight(player.x, player.y, L.playerLightRadius, 'warm', player.isDashing ? 1.25 : 1.0);
 
-        if (typeof window.projectiles !== 'undefined' && Array.isArray(window.projectiles)) {
-            for (const proj of window.projectiles) {
+        if (Array.isArray(projectiles)) {
+            const PROJ_MARGIN = L.projectileLightRadius + 60;
+            for (const proj of projectiles) {
                 if (!proj || proj.dead) continue;
+                const ss = toSS(proj.x, proj.y);
+                if (ss.x < -PROJ_MARGIN || ss.x > lc.width + PROJ_MARGIN ||
+                    ss.y < -PROJ_MARGIN || ss.y > lc.height + PROJ_MARGIN) continue;
                 punchLight(proj.x, proj.y, L.projectileLightRadius, proj.team === 'player' ? 'cool' : 'warm');
             }
         }

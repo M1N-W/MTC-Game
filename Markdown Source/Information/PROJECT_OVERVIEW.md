@@ -1,38 +1,41 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.41.17`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Status:** v3.41.18
 
 This document is the architecture baseline for the current codebase.
-It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
+It documents stable structure only.
+It excludes balance values, cooldowns, damage numbers, and release-specific tuning.
 
 ---
 
-## 1) Runtime Stack and Execution Model
+## 1) Runtime Model
 
-- Runtime: Vanilla JavaScript loaded by global script tags in `index.html`.
-- Rendering: HTML5 Canvas 2D with static renderer classes and manager-owned draw passes.
-- Audio: Web Audio API via `js/audio.js`.
-- Authoritative frame loop: `js/game.js` owns `gameLoop`, `updateGame(dt)`, and `drawGame()`.
-- Simulation and rendering are deliberately decoupled: update mutates world state, draw consumes the finalized snapshot.
+- Runtime: global browser scripts loaded explicitly from `index.html`.
+- Main loop owner: `js/game.js`.
+- Canonical frame entry points: `gameLoop(now)`, `updateGame(dt)`, `drawGame()`.
+- Simulation and rendering are separate phases.
+- `updateGame(dt)` mutates authoritative runtime state.
+- `drawGame()` reads the finalized state snapshot and emits pixels only.
 
-Frame modes in `gameLoop` are part of the architecture:
+Loop modes that shape the architecture:
 
-- Hit-stop can skip `updateGame` while still rendering.
-- Tutorial mode may run tutorial state without running the full gameplay update.
+- Hit-stop can render without advancing gameplay simulation.
+- Tutorial mode can advance tutorial state while skipping parts of gameplay update.
 - Pause renders without advancing simulation.
-- Game over stops the normal RAF gameplay loop.
+- Game over stops the normal gameplay RAF loop.
 
 ---
 
-## 2) Script Load Order and Dependency Chain
+## 2) Precise Script Load Order
 
-Load order is explicit in `index.html` and is a hard contract. New globals must load before their consumers.
+Load order in `index.html` is a hard dependency contract.
+New globals must load before their consumers.
 
-### 2.1 Bootstrap and cloud-first scripts
+### 2.1 Bootstrap and shared utilities
 
-1. `js/firebase-bundle.js`
-2. `js/config.js`
-3. `js/utils.js`
+1. `js/config.js`
+2. `js/utils.js`
+3. `js/firebase-bundle.js`
 4. `js/systems/CloudSaveSystem.js`
 5. `js/systems/LeaderboardUI.js`
 
@@ -52,15 +55,21 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 3. `js/ai/EnemyActions.js`
 4. `js/ai/PlayerPatternAnalyzer.js`
 5. `js/ai/SquadAI.js`
-6. Player class files
-7. `js/entities/summons.js`
-8. `js/entities/enemy.js`
-9. Boss attack files
-10. `js/entities/boss/BossBase.js`
-11. `js/entities/boss/ManopBoss.js`
-12. `js/entities/boss/FirstBoss.js`
+6. `js/entities/player/PlayerBase.js`
+7. `js/entities/player/KaoPlayer.js`
+8. `js/entities/player/AutoPlayer.js`
+9. `js/entities/player/PoomPlayer.js`
+10. `js/entities/player/PatPlayer.js`
+11. `js/entities/summons.js`
+12. `js/entities/enemy.js`
+13. `js/entities/boss/boss_attacks_shared.js`
+14. `js/entities/boss/boss_attacks_manop.js`
+15. `js/entities/boss/boss_attacks_first.js`
+16. `js/entities/boss/BossBase.js`
+17. `js/entities/boss/ManopBoss.js`
+18. `js/entities/boss/FirstBoss.js`
 
-### 2.4 Input, rendering, systems, orchestration
+### 2.4 Input, render dispatch, state, orchestration
 
 1. `js/input.js`
 2. `js/rendering/PlayerRenderer.js`
@@ -75,175 +84,216 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 11. `js/VersionManager.js`
 12. `js/menu.js`
 
+Load-order consequences:
+
+- `Entity` must exist before any player, enemy, summon, or boss class.
+- AI helpers must exist before `EnemyBase` constructs `UtilityAI`.
+- Player and boss constructors must exist before render dispatchers rely on `instanceof`.
+- `GameState` must exist before `game.js` writes canonical phase and alias state.
+- `WorkerBridge` loads before `game.js` finishes booting, but `game.js` still guards all accesses.
+
 ---
 
 ## 3) Class Hierarchy and Runtime Surfaces
 
-### 3.1 Core inheritance tree
+JavaScript does not define formal interfaces here.
+The codebase uses inheritance plus shared method contracts such as `update()`, `draw()`, `takeDamage()`, and `_tickShared()`.
 
-- `Entity` (`js/entities/base.js`)
-  - `Player` (`js/entities/player/PlayerBase.js`, exported as `window.Player`)
-    - `KaoPlayer`
-    - `AutoPlayer`
-    - `PoomPlayer`
-    - `PatPlayer`
-  - `EnemyBase` (`js/entities/enemy.js`)
-    - `Enemy`
-    - `TankEnemy`
-    - `MageEnemy`
-    - `SniperEnemy`
-    - `ShieldBraverEnemy`
-    - `PoisonSpitterEnemy`
-    - `ChargerEnemy`
-    - `HunterEnemy`
-    - `FatalityBomberEnemy`
-    - `HealerEnemy`
-    - `SummonerEnemy`
-    - `BufferEnemy`
-    - `SummonedMinionEnemy`
-  - `BossBase` (`js/entities/boss/BossBase.js`)
-    - `KruManop` (`window.ManopBoss`, `window.Boss` aliases)
-    - `KruFirst` (`window.BossFirst` alias)
-  - Other direct `Entity` subclasses
-    - `BossDog`
-    - `Drone`
-    - `NagaEntity`
-    - boss attack and minion entities defined in `boss_attacks_*.js`
+### 3.1 Inheritance tree
 
-### 3.2 Non-Entity gameplay objects with frame contracts
+```text
+Entity
+├── Player
+│   ├── KaoPlayer
+│   ├── AutoPlayer
+│   ├── PoomPlayer
+│   └── PatPlayer
+├── EnemyBase
+│   ├── Enemy
+│   │   ├── SniperEnemy
+│   │   ├── PoisonSpitterEnemy
+│   │   ├── ChargerEnemy
+│   │   ├── HunterEnemy
+│   │   ├── FatalityBomberEnemy
+│   │   ├── HealerEnemy
+│   │   ├── SummonedMinionEnemy
+│   │   ├── SummonerEnemy
+│   │   └── BufferEnemy
+│   ├── TankEnemy
+│   │   └── ShieldBraverEnemy
+│   └── MageEnemy
+├── BossBase
+│   ├── KruManop
+│   └── KruFirst
+├── BossDog
+├── NagaEntity
+├── Drone
+└── GarudaEntity
+```
 
-- `HealthComponent` supports combatant health state and hit-flash timing.
-- `UtilityAI`, `SquadAI`, `PlayerPatternAnalyzer`, and `WorkerBridge` are logic objects, not entities.
-- `PoisonPoolEffect` and `FatalityExplosionEffect` participate in the `specialEffects` pipeline through `update()` + `draw()`, but do not inherit from `Entity`.
+### 3.2 Important non-Entity classes
 
-### 3.3 Renderer structure
+- `HealthComponent` is a composition helper used by `EnemyBase`.
+- `KaoClone` is a helper class owned by `KaoPlayer`.
+- `WanchaiStand` is a helper class owned by `AutoPlayer`.
+- `PoisonPoolEffect` and `FatalityExplosionEffect` are effect objects in the `specialEffects` pipeline.
+- `PlayerPatternAnalyzer`, `UtilityAI`, `SquadAI`, and `WorkerBridge` are logic systems, not entities.
 
-- `PlayerRenderer`, `BossRenderer`, `EnemyRenderer`, and `ProjectileRenderer` are static dispatchers.
-- Renderer dispatch is keyed by constructor identity and `instanceof`.
-- Renderers are consumers of simulation state, not owners of gameplay rules.
+### 3.3 Aliases and registry surfaces
 
----
-
-## 4) Update/Draw Separation Invariant
-
-- `update()` paths own authoritative mutation: timers, HP, movement, AI, spawning, wave state, buffs, and damage.
-- `draw()` paths and renderer methods own canvas output only.
-- Draw code must not modify score, HP, cooldowns, spawn state, AI intent, wave progression, or authoritative positions.
-
-Permitted render-local behavior:
-
-- sprite or bitmap caches owned by renderer classes
-- context state setup and cleanup
-- deterministic visual animation derived from current read-only state
-
-Forbidden render behavior:
-
-- spawning gameplay entities
-- mutating `window.enemies`, `window.specialEffects`, `projectileManager`, or `GameState`
-- advancing cooldowns or status timers
+- `Player` exports as `window.Player`.
+- `KruManop` also exports as `window.KruManop`, `window.ManopBoss`, and `window.Boss`.
+- `KruFirst` also exports as `window.KruFirst` and `window.BossFirst`.
+- Enemy constructors are mirrored through `window.ENEMY_REGISTRY`.
+- `PowerUp` is not part of the `Entity` inheritance tree, but it is drawn through `EnemyRenderer`.
 
 ---
 
-## 5) Critical Invariants and Contracts
+## 4) Update/Draw Separation
 
-### 5.1 Enemy lifecycle contract
+- `update(...)` owns timers, AI, movement, physics, damage, spawning, wave progression, and authoritative state transitions.
+- `draw(...)` and renderer entry points own canvas output only.
+- Draw code must not mutate HP, cooldowns, phase, score, AI intent, entity arrays, or spawn state.
 
-- `EnemyBase._tickShared(dt, player)` must run first in every living enemy `update()` path.
-- `UtilityAI` writes intent into `_aiMoveX` and `_aiMoveY`; it does not own physics velocity directly.
-- Shared enemy buffs and debuffs are normalized through `EnemyBase`, not duplicated in renderer code.
+Allowed draw-side behavior:
 
-### 5.2 Wave and spawn contract
+- renderer-local bitmap or sprite caches
+- deterministic visual oscillation derived from current state
+- `ctx` setup and cleanup
+- read-only viewport culling
 
-- `WaveManager` is the sole owner of wave progression, trickle spawn state, boss-wave entry, and wave-event activation.
-- Enemy creation now routes through `window.ENEMY_REGISTRY` and registry-aware spawn selection.
-- Wave-specific speed modifiers are centralized in `window.applyWaveModifiersToEnemy`, which is reused by normal spawning, admin spawning, and summoner-created minions.
+Forbidden draw-side behavior:
 
-### 5.3 Boss lifecycle contract
+- spawning projectiles, enemies, pickups, or gameplay effects
+- mutating `GameState`
+- mutating `window.enemies`, `window.specialEffects`, `projectileManager`, or wave state
+- advancing cooldowns, status timers, or AI state
 
-- Boss setup and cleanup span `WaveManager`, `BossBase`, boss subclasses, `game.js`, and `AdminSystem`.
-- Boss-owned attack singletons and domain/singularity state must reset through every boss exit path, including admin shortcuts.
-
-### 5.4 Array ownership and removal pattern
-
-- `window.specialEffects` is updated in-place and uses swap-remove semantics in `game.js` for O(1) removals.
-- Entity arrays and pooled managers are updated before draw and then read in draw passes without mid-frame mutation.
+This is a project-wide invariant.
+`drawGame()` orchestrates passes.
+Simulation mutations belong in `updateGame()` and subsystem update methods only.
 
 ---
 
-## 6) Hidden Cross-Module Coupling
+## 5) Critical Invariants
 
-### 6.1 Canonical and legacy state channels
+### 5.1 Enemy shared-tick invariant
 
-- `GameState` is the canonical owner for phase and loop state.
-- Legacy `window.*` globals remain compatibility surfaces for older systems and renderer access.
+- Every living enemy update path must call `EnemyBase._tickShared(dt, player)` first.
+- `_tickShared()` centralizes status ticking, shared hit-flash decay, shared buff timers, ignite and shatter handling, and `UtilityAI` consumption.
+- Enemy subclasses may add movement and attacks after that call only.
+
+### 5.2 Physics and intent invariant
+
+- `UtilityAI` writes `_aiMoveX` and `_aiMoveY`.
+- Enemy subclasses decide how to translate that intent into `vx` and `vy`.
+- `Entity.applyPhysics(dt)` remains the shared physics integration point.
+
+### 5.3 State ownership invariant
+
+- `GameState` is the canonical owner of phase, loop, and run-scoped mutable state.
+- Compatibility globals still exist on `window.*`.
+- `GameState._syncAliases()` is the bridge that mirrors canonical state into those globals.
+- Any new primitive state mirrored to `window.*` must be re-synced deliberately.
+
+### 5.4 Wave and boss ownership invariant
+
+- `WaveManager` owns wave advancement, event activation, trickle spawning, and boss-wave entry.
+- `BossBase` owns shared boss death cleanup.
+- Boss subclasses own boss-specific AI and state machines.
+- `game.js` owns the frame loop and delegates to wave, entity, and render systems.
+
+### 5.5 Render boundary invariant
+
+- `drawGame()` is the only canonical world-frame orchestrator.
+- `CanvasHUD.draw()` is the primary HUD pass.
+- `UIManager.draw()` exists as a compatibility fallback.
+- `TutorialSystem.draw()` must remain last.
+
+---
+
+## 6) Hidden Cross-File Dependencies
+
+### 6.1 Canonical state versus compatibility globals
+
+- Many older systems still read `window.player`, `window.enemies`, `window.boss`, `window.powerups`, and `window.specialEffects`.
+- `GameState` is canonical, but compatibility globals are still part of the runtime contract.
+- Reset flows must update both the canonical owner and the mirrored surfaces.
 
 ### 6.2 Enemy registry coupling
 
-- `enemy.js` exports constructors and `window.ENEMY_REGISTRY`.
-- `WaveManager` consumes the registry for wave composition.
-- `AdminSystem` consumes the same registry for debug spawning.
+- `js/entities/enemy.js` defines constructors and `window.ENEMY_REGISTRY`.
+- `js/systems/WaveManager.js` consumes that registry for roster selection.
+- `js/systems/AdminSystem.js` consumes the same registry for debug/admin spawns.
 
-### 6.3 Rendering cross-file coupling
+### 6.3 Wave modifier coupling
 
-- `drawGame()` orchestrates the frame, but `EnemyRenderer.draw()` temporarily binds `window.CTX` so fallback draw paths and shared helpers can still render correctly.
-- `mapSystem.drawLighting()` runs after the main world draw pass and depends on projectile and landmark data prepared outside the lighting module.
+- `window.applyWaveModifiersToEnemy` is a shared modifier entry point.
+- It is reused by normal wave spawns, admin spawns, and summoner-created minions.
+- Wave-specific enemy mutation must stay centralized there instead of being duplicated.
 
-### 6.4 Worker pipeline coupling
+### 6.4 Worker analysis coupling
 
-- `WorkerBridge` and `js/workers/analyzer-worker.js` feed `PlayerPatternAnalyzer` results back into gameplay consumers.
-- Changes to analyzer data flow affect boss prediction and enemy aim prediction.
+- `WorkerBridge` communicates with `js/workers/analyzer-worker.js`.
+- Worker results are written directly onto `window.playerAnalyzer` cache fields.
+- Boss prediction behavior depends on that bridge even though the analyzer object lives elsewhere.
 
-### 6.5 Optional cloud coupling
+### 6.5 Rendering coupling
 
-- Firebase bootstrap and cloud save systems depend on early load order and must fail soft so offline local play remains functional.
+- `EnemyRenderer.draw()` temporarily binds `window.CTX` for shared draw helpers and fallback draw paths.
+- `mapSystem.drawLighting(...)` depends on the current player, projectile list, landmark lights, camera transform, and screen shake state prepared outside the map module.
+- `CanvasHUD` depends on wave-state globals such as fog-wave blackout state even though it is rendered as a HUD layer.
 
 ---
 
 ## 7) Rendering Pipeline Ownership
 
-### 7.1 Frame draw sequence
+### 7.1 Canonical pass order
 
-`drawGame()` in `js/game.js` owns the canonical pass order:
+`drawGame()` in `js/game.js` owns the frame pass order:
 
-1. world background and camera transform
-2. terrain, map objects, decals, and low-HP guide
-3. powerups and `specialEffects`
-4. drone and player renderers
-5. enemy and boss renderers
-6. projectile, particle, floating-text, orbital, hit-marker, and weather passes
-7. lighting pass
-8. screen-space overlays such as day/night HUD, slow-mo, glitch, wave events, and domain overlays
-9. `CanvasHUD` with `UIManager.draw` as fallback
-10. `TutorialSystem.draw` last
+1. background fill and camera transform
+2. `mapSystem.drawTerrain(...)`
+3. debug grid when enabled
+4. meteor zone telegraphs
+5. `mapSystem.draw()`
+6. world landmarks such as database server and shop
+7. decals and shell casings
+8. low-HP navigation guide
+9. powerups and `specialEffects`
+10. drone and player renderer
+11. enemy and boss renderers
+12. projectile, particle, floating-text, orbital, hit-marker, and weather passes
+13. lighting pass via `mapSystem.drawLighting(...)`
+14. screen-space overlays such as day/night, slow-mo, glitch, wave events, and domain overlays
+15. `CanvasHUD.draw(...)` with `UIManager.draw(...)` fallback
+16. `TutorialSystem.draw(...)` last
 
-### 7.2 Resource management patterns
+### 7.2 Resource and cache ownership
 
 - `EnemyRenderer` owns a body-sprite cache.
-- `BossRenderer` owns an offscreen bitmap cache.
-- Manager-owned systems such as projectiles, particles, floating text, decals, and weather are updated elsewhere and drawn here.
+- `BossRenderer` owns offscreen bitmap caches.
+- `MapSystem` owns the terrain cache canvas and the lighting canvas.
+- Projectile, particle, floating-text, decal, shell-casing, and weather systems update outside draw and render read-only during draw.
 
 ---
 
-## 8) Documentation Files and Stable Scope
+## 8) Stable Documentation Scope
 
-| File | Location | Purpose |
-| --- | --- | --- |
-| `PROJECT_OVERVIEW.md` | `Markdown Source/Information/` | Architecture baseline for runtime structure, invariants, and hidden coupling |
-| `SKILL.md` | `Markdown Source/Information/` | Stable architectural conventions reference for class hierarchy, load order, and invariants |
-| `mtc-game-conventions.md` | `.agents/skills/mtc-game-skills_claude/` | Agent-facing stable architecture skill |
-| `mtc-rendering.md` | `.agents/skills/mtc-game-skills_claude/` | Rendering pipeline, dispatcher, cache, and frame-pass skill |
-| `CHANGELOG.md` | `Markdown Source/` | Version-specific implementation notes |
+These documentation files should stay stable by documenting only:
 
-This overview should stay stable by documenting only:
+- class hierarchy and alias surfaces
+- initialization order and dependency chains
+- update versus draw boundaries
+- canonical state ownership
+- hidden cross-file coupling
+- rendering pass ownership
 
-- class hierarchy and ownership boundaries
-- initialization and dependency order
-- update/draw separation
-- critical invariants and hidden cross-file dependencies
+These files should not document:
 
-This overview should not store:
-
-- balance or config values
-- damage, cooldown, economy, or spawn percentages
-- release-specific tuning notes
-- transient implementation details that belong in the changelog
+- cooldown values
+- damage values
+- spawn percentages
+- economy values
+- balance constants from `BALANCE` or config tuning tables
+- release or cache identifiers

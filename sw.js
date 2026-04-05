@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.41.17"; // Perf SEO: fix precache URLs, defer scripts, font waterfall, offline fallback
+const CACHE_NAME = "mtc-cache-v3.41.18"; // Game over handoff, Pat reflect visuals, map terrain caching, menu doc sync
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.
