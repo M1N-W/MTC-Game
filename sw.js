@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.41.19"; // Fix font 404, revert menu layout (portrait-frame, carousel gap), keep SKILL SET + dots
+const CACHE_NAME = "mtc-cache-v3.41.20"; // Full menu CSS restore to v3.41.17: flip card system, glow, per-theme styles, button group rows
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.

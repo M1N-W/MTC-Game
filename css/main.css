@@ -3299,6 +3299,9 @@ body {
 .char-select-section {
     width: 100%;
     margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .char-select-section h3 {
@@ -3353,6 +3356,14 @@ body {
     flex-shrink: 0;
     position: relative;
     min-height: 360px;
+    margin: 0 auto;
+    align-self: center;
+}
+
+/* ── Nav buttons sit beside the card, vertically centered ── */
+.char-carousel-row > .char-nav-btn {
+    flex-shrink: 0;
+    align-self: center;
 }
 
 /* ── Carousel nav buttons ── */
@@ -5313,16 +5324,6 @@ body {
     margin-top: 10px;
 }
 
-/* ── Secondary row: Leaderboard spans full card width ── */
-.btn-group-row--secondary {
-    margin-top: 8px;
-}
-
-.btn-group-row--secondary .btn {
-    width: 100%;
-    max-width: 400px;
-}
-
 .btn--leaderboard {
     border-color: rgba(250, 204, 21, 0.45) !important;
 }
@@ -5426,114 +5427,255 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
+    gap: 0;
+    flex-shrink: 0;
+    margin: 0 12px;
+    position: relative;
 }
 
-.char-carousel-row {
-    gap: 14px;
-    margin-bottom: 10px;
-}
-
-.char-cards {
-    width: 300px;
-    min-height: 404px;
-}
-
+/* ── FLIP CARD SYSTEM (v2) ── */
+/* Remove clip from outer card — inner handles it */
 .char-card {
-    min-height: 400px;
+    overflow: visible;
+    -webkit-clip-path: none;
+    clip-path: none;
 }
 
 .char-card-inner {
     position: relative;
     width: 100%;
-    min-height: 400px;
-    transform-style: preserve-3d;
-    transition: transform var(--dur-med) var(--ease-tactical);
+    -webkit-clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    overflow: hidden;
+    border-radius: 2px;
 }
 
-.char-card.is-flipped .char-card-inner {
-    transform: rotateY(180deg);
-}
-
-.char-card-face {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
+.char-card-face--front {
+    padding: 20px 16px 14px;
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+    transform-origin: center top;
 }
 
 .char-card-face--back {
-    transform: rotateY(180deg);
-    padding: 18px 16px 16px;
-    background: linear-gradient(180deg, rgba(16, 9, 4, 0.98) 0%, rgba(6, 5, 18, 0.98) 100%);
-    border: 1px solid rgba(250, 204, 21, 0.18);
-    justify-content: space-between;
+    position: absolute;
+    inset: 0;
+    padding: 16px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: scale(1.04);
+    pointer-events: none;
+    transition: opacity 0.22s ease 0.12s, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) 0.12s;
+    transform-origin: center top;
+    background: linear-gradient(170deg, rgba(14, 6, 2, 0.99) 0%, rgba(4, 4, 18, 0.99) 100%);
 }
 
+.char-card.is-flipped .char-card-face--front {
+    opacity: 0;
+    transform: scale(0.93);
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.char-card.is-flipped .char-card-face--back {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+/* ── Back face content ── */
 .card-back-header {
-    font-family: 'Bebas Neue', 'Orbitron', sans-serif;
-    font-size: 18px;
-    letter-spacing: 2px;
-    color: #facc15;
-    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(250, 204, 21, 0.9);
+    border-bottom: 1px solid rgba(250, 204, 21, 0.14);
+    padding-bottom: 7px;
     margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(250, 204, 21, 0.18);
+    text-align: center;
 }
 
 .card-back-skills {
     flex: 1;
-    display: grid;
-    grid-template-rows: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    align-content: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
 }
 
 .back-skill-row {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    gap: 10px;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
 }
 
-.back-skill-row:last-child {
-    border-bottom: none;
+.back-skill-row .tt-key {
+    flex-shrink: 0;
+    min-width: 28px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    background: rgba(250, 204, 21, 0.1);
+    border: 1px solid rgba(250, 204, 21, 0.22);
+    border-radius: 2px;
+    padding: 2px 3px;
+    text-align: center;
+    color: rgba(250, 204, 21, 0.82);
+    line-height: 1.5;
+}
+
+.back-skill-row .tt-icon {
+    flex-shrink: 0;
+    font-size: 14px;
+    line-height: 1.3;
+    margin-top: 1px;
+}
+
+.back-skill-row .tt-info .tt-name {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+}
+
+.back-skill-row .tt-info .tt-desc {
+    font-size: 8px;
+    color: rgba(190, 185, 210, 0.7);
+    line-height: 1.35;
+    margin-top: 1px;
 }
 
 .tt-info {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-self: stretch;
+    flex: 1;
+    min-width: 0;
 }
 
-.tt-desc {
-    line-height: 1.55;
-    margin-top: 3px;
-}
-
+/* ── Flip hint strip ── */
 .char-flip-hint {
-    margin-top: 12px;
+    display: none;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     text-align: center;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: rgba(250, 204, 21, 0.52);
+    color: rgba(250, 204, 21, 0.38);
+    margin-top: 9px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(250, 204, 21, 0.07);
+    pointer-events: none;
+}
+
+.char-card.selected .char-flip-hint {
+    display: block;
+}
+
+/* ── Panel 2 themed glow ── .char-select-section bg ── */
+.char-select-section {
+    position: relative;
+}
+
+.char-select-section::before {
+    content: '';
+    position: absolute;
+    inset: -12px -20px;
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 0;
+    transition: background 0.5s ease, box-shadow 0.5s ease;
+}
+
+.char-select-section > * {
+    position: relative;
+    z-index: 1;
+}
+
+#overlay.theme-kao .char-select-section::before {
+    background: radial-gradient(ellipse at 50% 45%, rgba(200, 150, 8, 0.11) 0%, rgba(90, 55, 4, 0.05) 55%, transparent 80%);
+    box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.05);
+}
+#overlay.theme-poom .char-select-section::before {
+    background: radial-gradient(ellipse at 50% 45%, rgba(34, 197, 94, 0.11) 0%, rgba(10, 55, 22, 0.05) 55%, transparent 80%);
+    box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.05);
+}
+#overlay.theme-auto .char-select-section::before {
+    background: radial-gradient(ellipse at 50% 45%, rgba(220, 38, 18, 0.13) 0%, rgba(80, 8, 4, 0.05) 55%, transparent 80%);
+    box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.05);
+}
+#overlay.theme-pat .char-select-section::before {
+    background: radial-gradient(ellipse at 50% 45%, rgba(60, 130, 230, 0.11) 0%, rgba(8, 25, 70, 0.05) 55%, transparent 80%);
+    box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.05);
+}
+
+/* ── Selected card border per theme ── */
+#overlay.theme-poom .char-card.selected {
+    border-color: rgba(74, 222, 128, 0.42);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.16), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+#overlay.theme-auto .char-card.selected {
+    border-color: rgba(252, 165, 165, 0.42);
+    box-shadow: 0 0 24px rgba(239, 68, 68, 0.2), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+#overlay.theme-pat .char-card.selected {
+    border-color: rgba(147, 197, 253, 0.42);
+    box-shadow: 0 0 24px rgba(96, 165, 250, 0.16), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Back face themed header + key badges ── */
+#overlay.theme-poom .card-back-header {
+    color: rgba(74, 222, 128, 0.9);
+    border-bottom-color: rgba(74, 222, 128, 0.14);
+}
+#overlay.theme-poom .back-skill-row .tt-key {
+    background: rgba(74, 222, 128, 0.09);
+    border-color: rgba(74, 222, 128, 0.22);
+    color: rgba(74, 222, 128, 0.82);
+}
+#overlay.theme-auto .card-back-header {
+    color: rgba(252, 165, 165, 0.9);
+    border-bottom-color: rgba(252, 165, 165, 0.14);
+}
+#overlay.theme-auto .back-skill-row .tt-key {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.26);
+    color: rgba(252, 165, 165, 0.82);
+}
+#overlay.theme-pat .card-back-header {
+    color: rgba(147, 197, 253, 0.9);
+    border-bottom-color: rgba(147, 197, 253, 0.14);
+}
+#overlay.theme-pat .back-skill-row .tt-key {
+    background: rgba(96, 165, 250, 0.09);
+    border-color: rgba(96, 165, 250, 0.25);
+    color: rgba(147, 197, 253, 0.82);
+}
+
+/* ── Flip hint per theme ── */
+#overlay.theme-poom .char-flip-hint {
+    color: rgba(74, 222, 128, 0.4);
+    border-top-color: rgba(74, 222, 128, 0.08);
+}
+#overlay.theme-auto .char-flip-hint {
+    color: rgba(252, 165, 165, 0.4);
+    border-top-color: rgba(252, 165, 165, 0.08);
+}
+#overlay.theme-pat .char-flip-hint {
+    color: rgba(147, 197, 253, 0.4);
+    border-top-color: rgba(147, 197, 253, 0.08);
 }
 
 .char-dots--vertical {
     position: static;
-    display: flex;
     flex-direction: row;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 8px;
-    margin-bottom: 18px;
+    margin-top: 14px;
+    transform: none;
+    top: auto;
+    right: auto;
 }
 
 .char-dot {
@@ -5546,22 +5688,85 @@ body {
     margin-bottom: 18px;
 }
 
+/* CTA row: START spans full width */
 .btn-group-row--cta {
-    margin-top: 0;
+    margin-top: 16px;
 }
 
 .btn-group-row--cta .btn--start {
-    width: min(300px, 100%);
-    min-height: 50px;
+    width: 100%;
+    max-width: 360px;
+    padding: 18px 0;
+    font-size: 16px;
+    letter-spacing: 5px;
+    clip-path: polygon(14px 0%, 100% 0%, calc(100% - 14px) 100%, 0% 100%);
 }
 
+/* Secondary row: Achievements + Leaderboard side-by-side */
 .btn-group-row--secondary {
-    gap: 12px;
-    margin-top: 12px;
+    margin-top: 10px;
+    gap: 10px;
 }
 
-.btn-group-row--secondary .btn {
-    max-width: 180px;
+.btn-group-row--secondary .btn--secondary {
+    flex: 1;
+    max-width: 168px;
+    padding: 12px 10px;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+}
+
+/* Ghost dark style for secondary buttons */
+.btn--secondary {
+    background: rgba(8, 4, 18, 0.88) !important;
+    color: rgba(250, 204, 21, 0.8) !important;
+    border: 1px solid rgba(250, 204, 21, 0.28) !important;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    animation: none !important;
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.07), inset 0 0 0 1px rgba(250, 204, 21, 0.04) !important;
+}
+.btn--secondary::after {
+    display: none;
+}
+.btn--secondary:hover {
+    background: rgba(250, 204, 21, 0.1) !important;
+    border-color: rgba(250, 204, 21, 0.65) !important;
+    color: #facc15 !important;
+    box-shadow: 0 0 22px rgba(250, 204, 21, 0.22) !important;
+    transform: scale(1.04) translateY(-2px);
+    filter: none;
+    animation: none !important;
+}
+.btn--achievements.btn--secondary {
+    border-color: rgba(250, 180, 20, 0.28) !important;
+}
+.btn--leaderboard.btn--secondary {
+    border-color: rgba(250, 204, 21, 0.45) !important;
+}
+
+/* Sign In / Log In — minimal ghost at bottom */
+.btn--signin {
+    background: transparent !important;
+    color: rgba(148, 163, 184, 0.7) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    padding: 9px 28px !important;
+    font-size: 11px !important;
+    letter-spacing: 2.5px !important;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    animation: none !important;
+    box-shadow: none !important;
+}
+.btn--signin::after {
+    display: none;
+}
+.btn--signin:hover {
+    background: rgba(148, 163, 184, 0.08) !important;
+    border-color: rgba(148, 163, 184, 0.5) !important;
+    color: #e2e8f0 !important;
+    transform: scale(1.03) translateY(-1px);
+    filter: none;
+    box-shadow: none !important;
+    animation: none !important;
 }
 
 .google-auth-row {

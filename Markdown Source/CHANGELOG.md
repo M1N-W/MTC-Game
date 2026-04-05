@@ -4,6 +4,30 @@
 
 ---
 
+## v3.41.20 — Full Menu CSS Restore to v3.41.17
+*Released: April 5, 2026*
+
+### 🎨 UI Restore (v3.41.17 exact match)
+- **Flip Card System**: Restored v3.41.17's opacity+scale flip (was 3D rotateY/preserve-3d). `.char-card-inner` now uses clip-path instead of min-height/transform-style.
+- **`.char-center-col`**: Restored `gap: 0; flex-shrink: 0; margin: 0 12px; position: relative;` (was `width: 100%`).
+- **`.char-select-section`**: Added `display: flex; flex-direction: column; align-items: center;` + `position: relative` + themed glow `::before` effects.
+- **`.char-carousel-row > .char-nav-btn`**: Re-added `flex-shrink: 0; align-self: center;` rule.
+- **`.char-cards`**: Re-added `margin: 0 auto; align-self: center;` to base rule.
+- **Button group rows**: `btn-group-row--cta` → `margin-top: 16px`, `btn--start` → `width: 100%; max-width: 360px; padding: 18px 0; font-size: 16px; letter-spacing: 5px;`.
+- **Secondary buttons**: `btn-group-row--secondary` → `margin-top: 10px; gap: 10px;` with `flex: 1; max-width: 168px;`. Restored `.btn--secondary` ghost dark style.
+- **Per-theme styles**: Restored `char-card.selected` border/shadow overrides, back-face header/key themed colours, flip-hint themed colours.
+- **Back face content**: Restored `card-back-header` at 10px font, `back-skill-row` flex layout, `.tt-key` badge styling from v3.41.17.
+- **`.btn--signin`** and `.btn--achievements/leaderboard` secondary border overrides restored.
+
+### Files touched
+```text
+✅ MODIFIED: css/main.css
+✅ MODIFIED: sw.js (v3.41.20)
+✅ MODIFIED: Markdown Source/CHANGELOG.md
+```
+
+---
+
 ## v3.41.19 — Fix Font 404 & Revert Menu Layout
 *Released: April 5, 2026*
 
