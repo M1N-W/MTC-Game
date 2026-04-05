@@ -1,5 +1,5 @@
 # MTC Game — Architectural Conventions (SKILL.md)
-**Status:** mtc-cache-v3.41.11
+**Status:** mtc-cache-v3.41.17a
 
 > **SCOPE:** This document captures stable architectural patterns only. It intentionally excludes balance values, cooldowns, damage numbers, economy tuning, and other volatile `BALANCE` details.
 
@@ -34,7 +34,10 @@
 | `KruFirst` | `window.KruFirst`, `window.BossFirst` | `js/entities/boss/FirstBoss.js` |
 | `BossDog` | `window.BossDog` | `js/entities/boss/ManopBoss.js` |
 | `NagaEntity` | `window.NagaEntity` | `js/entities/summons.js` |
-| `Drone` | `window.Drone` | `js/entities/summons.js` |
+| `GarudaEntity` | `window.GarudaEntity` | `js/entities/summons.js` |
+| `Drone` | `window.Drone`, `window.DroneEntity` | `js/entities/summons.js` |
+| `GoldfishMinion` | (no window export) | `js/entities/boss/boss_attacks_manop.js` |
+| `HealthComponent` | (no window export) | `js/entities/base.js` |
 | `ENEMY_REGISTRY` | `window.ENEMY_REGISTRY` | `js/entities/enemy.js` |
 
 ---
@@ -50,30 +53,35 @@ Entity
 │   └── PatPlayer
 ├── EnemyBase
 │   ├── Enemy
+│   │   ├── SniperEnemy
+│   │   ├── PoisonSpitterEnemy
+│   │   ├── ChargerEnemy
+│   │   ├── HunterEnemy
+│   │   ├── FatalityBomberEnemy
+│   │   ├── HealerEnemy
+│   │   ├── SummonerEnemy
+│   │   ├── BufferEnemy
+│   │   └── SummonedMinionEnemy
 │   ├── TankEnemy
-│   ├── MageEnemy
-│   ├── SniperEnemy
-│   ├── ShieldBraverEnemy
-│   ├── PoisonSpitterEnemy
-│   ├── ChargerEnemy
-│   ├── HunterEnemy
-│   ├── FatalityBomberEnemy
-│   ├── HealerEnemy
-│   ├── SummonerEnemy
-│   ├── BufferEnemy
-│   └── SummonedMinionEnemy
+│   │   └── ShieldBraverEnemy
+│   └── MageEnemy
 ├── BossBase
 │   ├── KruManop
 │   └── KruFirst
-├── BossDog
-├── NagaEntity
-└── Drone
+├── BossDog                  (Entity direct — not EnemyBase or BossBase)
+├── GoldfishMinion           (Entity direct — boss attack minion)
+├── NagaEntity               (Entity direct — Poom summon)
+├── GarudaEntity             (Entity direct — Poom summon)
+└── Drone                    (Entity direct — Auto/all characters)
 ```
 
 Notes:
-- `BossDog` is not an `EnemyBase` subclass.
-- `SummonedMinionEnemy` is still a first-class `EnemyBase` descendant and participates in the same shared enemy contracts.
+- `TankEnemy` and `MageEnemy` are direct `EnemyBase` subclasses. All other named enemy types descend through `Enemy`.
+- `ShieldBraverEnemy` extends `TankEnemy`, not `EnemyBase` directly.
+- `BossDog`, `GoldfishMinion`, `NagaEntity`, `GarudaEntity`, and `Drone` extend `Entity` directly; they are not `EnemyBase` descendants and do not go through `_tickShared()`.
+- `SummonedMinionEnemy` extends `Enemy` and therefore participates in the `EnemyBase` shared contracts (`_tickShared`, `_ai`, `statusEffects`).
 - `PowerUp` is not part of the `Entity` inheritance tree but is rendered through `EnemyRenderer`.
+- `HealthComponent` is defined in `base.js` alongside `Entity`. It is composed in via `this.health = new HealthComponent(maxHp)`. Proxy getters (`hp`, `maxHp`, `dead`, `hitFlashTimer`) preserve backward-compatible call sites.
 
 ---
 
@@ -168,11 +176,13 @@ If a file defines globals consumed by later scripts, it must remain above its co
 - `PlayerRenderer`, `BossRenderer`, `EnemyRenderer`, and `ProjectileRenderer` are static dispatchers.
 - `EnemyRenderer` owns renderer-local body sprite caches.
 - `BossRenderer` owns offscreen bitmap caches for stable boss parts.
-- Lighting is a separate pass via `mapSystem.drawLighting(...)` after the world-space draw pass.
+- Lighting is a separate pass via `mapSystem.drawLighting(...)` that runs **outside** the camera transform (after `CTX.restore()`).
 
-Dispatcher invariants:
-- Boss rendering branches by subtype and relies on constructor availability.
-- Enemy rendering branches by `instanceof MageEnemy`, then `TankEnemy`, then `Enemy`, then `PowerUp`, then optional fallback `draw()`.
+Dispatcher invariants (in check order):
+- `PlayerRenderer`: `AutoPlayer` → `PoomPlayer` → `KaoPlayer` → `PatPlayer` → base fallback.
+- `BossRenderer`: `KruFirst` → `KruManop` → `BossDog`. `KruFirst` is checked first because both `KruFirst` and `KruManop` extend `BossBase`.
+- `EnemyRenderer`: `MageEnemy` → `TankEnemy` → `Enemy` → `PowerUp` → optional fallback `draw()`. Wraps `window.CTX` rebind in `try/finally` so helpers and fallback paths can use the active ctx.
+- `BossDog` instances inside the enemies array are routed to `BossRenderer`, not `EnemyRenderer`.
 
 ---
 

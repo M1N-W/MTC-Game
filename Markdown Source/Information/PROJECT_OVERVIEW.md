@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.41.17`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.41.17a`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
@@ -88,31 +88,32 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
     - `PoomPlayer`
     - `PatPlayer`
   - `EnemyBase` (`js/entities/enemy.js`)
-    - `Enemy`
-    - `TankEnemy`
-    - `MageEnemy`
-    - `SniperEnemy`
-    - `ShieldBraverEnemy`
-    - `PoisonSpitterEnemy`
-    - `ChargerEnemy`
-    - `HunterEnemy`
-    - `FatalityBomberEnemy`
-    - `HealerEnemy`
-    - `SummonerEnemy`
-    - `BufferEnemy`
-    - `SummonedMinionEnemy`
+    - `Enemy` (direct `EnemyBase` subclass — most specific types inherit from this)
+      - `SniperEnemy`
+      - `PoisonSpitterEnemy`
+      - `ChargerEnemy`
+      - `HunterEnemy`
+      - `FatalityBomberEnemy`
+      - `HealerEnemy`
+      - `SummonerEnemy`
+      - `BufferEnemy`
+      - `SummonedMinionEnemy`
+    - `TankEnemy` (direct `EnemyBase` subclass)
+      - `ShieldBraverEnemy`
+    - `MageEnemy` (direct `EnemyBase` subclass)
   - `BossBase` (`js/entities/boss/BossBase.js`)
     - `KruManop` (`window.ManopBoss`, `window.Boss` aliases)
     - `KruFirst` (`window.BossFirst` alias)
-  - Other direct `Entity` subclasses
-    - `BossDog`
-    - `Drone`
-    - `NagaEntity`
-    - boss attack and minion entities defined in `boss_attacks_*.js`
+  - Other direct `Entity` subclasses (not `EnemyBase` or `BossBase`)
+    - `BossDog` (`js/entities/boss/ManopBoss.js`)
+    - `GoldfishMinion` (`js/entities/boss/boss_attacks_manop.js`)
+    - `Drone` (`js/entities/summons.js`, also exported as `window.DroneEntity`)
+    - `NagaEntity` (`js/entities/summons.js`)
+    - `GarudaEntity` (`js/entities/summons.js`, exported as `window.GarudaEntity`)
 
 ### 3.2 Non-Entity gameplay objects with frame contracts
 
-- `HealthComponent` supports combatant health state and hit-flash timing.
+- `HealthComponent` is defined in `js/entities/base.js` (same file as `Entity`). It is composed into combatants via `this.health = new HealthComponent(maxHp)`. Proxy getters on the owner (`hp`, `maxHp`, `dead`, `hitFlashTimer`) keep call sites backward-compatible.
 - `UtilityAI`, `SquadAI`, `PlayerPatternAnalyzer`, and `WorkerBridge` are logic objects, not entities.
 - `PoisonPoolEffect` and `FatalityExplosionEffect` participate in the `specialEffects` pipeline through `update()` + `draw()`, but do not inherit from `Entity`.
 
@@ -185,8 +186,8 @@ Forbidden render behavior:
 
 ### 6.3 Rendering cross-file coupling
 
-- `drawGame()` orchestrates the frame, but `EnemyRenderer.draw()` temporarily binds `window.CTX` so fallback draw paths and shared helpers can still render correctly.
-- `mapSystem.drawLighting()` runs after the main world draw pass and depends on projectile and landmark data prepared outside the lighting module.
+- `drawGame()` orchestrates the frame, but `EnemyRenderer.draw()` saves the previous `window.CTX`, rebinds it to the current `ctx` parameter, executes in a `try/finally` block, and restores the saved value on exit. This lets fallback `draw()` paths and shared draw helpers reach the active canvas context safely.
+- `mapSystem.drawLighting()` runs **outside** the camera transform (`CTX.restore()` ends the world-space translate before lighting begins). It depends on the full projectile array and static landmark positions provided by the caller.
 
 ### 6.4 Worker pipeline coupling
 
@@ -203,18 +204,35 @@ Forbidden render behavior:
 
 ### 7.1 Frame draw sequence
 
-`drawGame()` in `js/game.js` owns the canonical pass order:
+`drawGame()` in `js/game.js` owns the canonical pass order. Steps 1–16 execute inside a camera `CTX.save()/translate(shake)` block; steps 17 onward are screen-space (outside that transform).
 
-1. world background and camera transform
-2. terrain, map objects, decals, and low-HP guide
-3. powerups and `specialEffects`
-4. drone and player renderers
-5. enemy and boss renderers
-6. projectile, particle, floating-text, orbital, hit-marker, and weather passes
-7. lighting pass
-8. screen-space overlays such as day/night HUD, slow-mo, glitch, wave events, and domain overlays
-9. `CanvasHUD` with `UIManager.draw` as fallback
-10. `TutorialSystem.draw` last
+**World-space (inside camera transform):**
+
+1. Background gradient fill
+2. `mapSystem.drawTerrain()` — arena boundary, hex grid, zone auras, circuit paths, center landmark
+3. `drawGrid()` — debug grid overlay
+4. `meteorZones` visual indicators
+5. `mapSystem.draw()` — walls, zone objects, MTC room
+6. `drawDatabaseServer()`, `drawShopObject()` — interactive world objects
+7. `decalSystem.draw()`, `shellCasingSystem.draw()` — floor-level battle scars
+8. Low-HP navigation guide (dashed line to nearest heal source)
+9. `powerups` via `EnemyRenderer`
+10. `specialEffects` (update-driven, drawn sequentially)
+11. `drone.draw()`
+12. `PlayerRenderer.draw(window.player, CTX)`
+13. Enemy list: `EnemyRenderer.draw()` per enemy; `BossDog` instances route to `BossRenderer`
+14. `BossRenderer.draw(window.boss, CTX)`
+15. `ProjectileRenderer.drawAll()`, `particleSystem.draw()`, `floatingTextSystem.draw()`
+16. `drawOrbitalEffects()`, `hitMarkerSystem.draw()`, `weatherSystem.draw()`
+17. `CTX.restore()` — **camera transform ends here**
+
+**Screen-space (outside camera transform):**
+
+18. `mapSystem.drawLighting()` — full-screen lighting pass; receives projectile array and landmark positions
+19. `drawDayNightHUD()`, `drawSlowMoOverlay()`, glitch effect
+20. `drawWaveEvent()`, `DomainExpansion.draw()`, `GravitationalSingularity.draw()`
+21. `CanvasHUD.draw()` with `UIManager.draw` as fallback
+22. `TutorialSystem.draw()` last
 
 ### 7.2 Resource management patterns
 

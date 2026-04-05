@@ -43,23 +43,42 @@ Renderer-local caches are allowed when they do not feed back into gameplay decis
 
 ## 3. Canonical draw order
 
-`drawGame()` in `js/game.js` owns the pass order:
+`drawGame()` in `js/game.js` owns the pass order.
+Passes 1–16 run **inside** a camera `CTX.save()/translate(shake)` block.
+Passes 17 onward are **screen-space** (after `CTX.restore()` ends the world transform).
 
-1. background and camera transform
-2. terrain, map objects, decals, and low-HP world guide
-3. powerups and `specialEffects`
-4. drone and player
-5. enemy list and boss
-6. projectiles, particles, floating text, orbital effects, hit markers, weather
-7. lighting pass
-8. screen-space overlays: day/night HUD, slow-mo, glitch, wave events, domain overlays
-9. `CanvasHUD` with `UIManager.draw` fallback
-10. `TutorialSystem.draw` last
+**World-space (inside camera transform):**
+
+1. Background gradient fill
+2. `mapSystem.drawTerrain()` — arena boundary, hex grid, zone auras, circuit paths, center landmark
+3. `drawGrid()` — debug grid overlay
+4. `meteorZones` visual indicators
+5. `mapSystem.draw()` — walls, zone objects, MTC room
+6. `drawDatabaseServer()`, `drawShopObject()` — interactive world objects
+7. `decalSystem.draw()`, `shellCasingSystem.draw()` — floor-level battle scars
+8. Low-HP navigation guide (animated dashed line to nearest heal source)
+9. `powerups` via `EnemyRenderer`
+10. `specialEffects` (drawn sequentially)
+11. `drone.draw()`
+12. `PlayerRenderer.draw(window.player, CTX)`
+13. Enemy list — `EnemyRenderer.draw()` per enemy; `BossDog` instances route to `BossRenderer`
+14. `BossRenderer.draw(window.boss, CTX)`
+15. `ProjectileRenderer.drawAll()`, `particleSystem.draw()`, `floatingTextSystem.draw()`
+16. `drawOrbitalEffects()`, `hitMarkerSystem.draw()`, `weatherSystem.draw()`
+17. `CTX.restore()` — **camera transform ends here**
+
+**Screen-space (outside camera transform):**
+
+1. `mapSystem.drawLighting()` — receives full projectile array and landmark positions from caller
+2. `drawDayNightHUD()`, `drawSlowMoOverlay()`, glitch effect
+3. `drawWaveEvent()`, `DomainExpansion.draw()`, `GravitationalSingularity.draw()`
+4. `CanvasHUD.draw()` with `UIManager.draw` as fallback
+5. `TutorialSystem.draw()` last
 
 When adding a new visual feature, decide first whether it belongs to:
-- world pass
-- lighting pass
-- overlay pass
+- world pass (camera-translated, behind HUD)
+- lighting pass (screen-space, no camera transform)
+- overlay pass (screen-space vignettes/banners)
 - HUD pass
 - tutorial-last pass
 
@@ -67,12 +86,29 @@ When adding a new visual feature, decide first whether it belongs to:
 
 ## 4. Dispatcher structure
 
-- `PlayerRenderer.draw(entity, ctx)` dispatches by player subtype.
-- `BossRenderer.draw(entity, ctx)` dispatches by boss subtype and `BossDog`.
-- `EnemyRenderer.draw(entity, ctx)` dispatches `MageEnemy`, then `TankEnemy`, then generic `Enemy`, then `PowerUp`, then optional fallback `draw()`.
-- `ProjectileRenderer.drawAll(projectiles, ctx)` renders projectile state owned elsewhere.
+**`PlayerRenderer.draw(entity, ctx)`** — instanceof check order:
+1. `AutoPlayer`
+2. `PoomPlayer`
+3. `KaoPlayer`
+4. `PatPlayer`
+5. generic `Player` fallback
+
+**`BossRenderer.draw(entity, ctx)`** — instanceof check order:
+1. `KruFirst` (checked before `KruManop` because both extend `BossBase`)
+2. `KruManop`
+3. `BossDog`
+
+**`EnemyRenderer.draw(entity, ctx)`** — instanceof check order:
+1. `MageEnemy`
+2. `TankEnemy`
+3. generic `Enemy`
+4. `PowerUp`
+5. optional fallback `e.draw()` (e.g. `GoldfishMinion`, future minions)
+
+**`ProjectileRenderer.drawAll(projectiles, ctx)`** delegates to each projectile's own `draw()` method.
 
 Dispatch depends on class identity and load order. Constructor globals must exist before draw begins.
+Note: `BossDog` instances in the enemies array route to `BossRenderer`, not `EnemyRenderer`.
 
 ---
 
@@ -103,7 +139,8 @@ Keep cache ownership on renderer modules or dedicated managers, not on gameplay 
 ## 7. Hidden rendering dependencies
 
 - `worldToScreen`, `CANVAS`, `CTX`, and constructor globals must exist before any renderer executes.
-- `EnemyRenderer.draw()` temporarily binds `window.CTX` so shared helpers and fallback draw paths can render correctly.
+- `EnemyRenderer.draw()` saves the current `window.CTX`, rebinds it to the active `ctx` parameter, and restores in a `try/finally` block. This is required so fallback `e.draw()` paths and shared helpers can reach the canvas context without an explicit argument.
+- **Lighting is outside the camera transform**: `mapSystem.drawLighting()` is called after `CTX.restore()` ends the world-space translate. It receives the full projectile array and static landmark positions as arguments from the `drawGame()` caller.
 - `drawGame()` depends on shared runtime surfaces such as `window.player`, `window.enemies`, `window.boss`, `window.specialEffects`, and manager singletons.
 - HUD ownership belongs to `CanvasHUD`; entity renderers must not duplicate HUD responsibilities.
 
