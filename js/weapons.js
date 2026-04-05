@@ -88,6 +88,10 @@ class Projectile {
 
     this.hitSet = null;
     this.symbol = options?.symbol || this.getSymbol(isCrit, team);
+    this.visualKind = options?.visualKind || this.kind;
+    this.visualColor = options?.visualColor || color;
+    this.visualSymbol = options?.visualSymbol || this.symbol;
+    this.visualTeam = options?.visualTeam || team;
   }
 
   getSymbol(isCrit, team) {
@@ -101,7 +105,7 @@ class Projectile {
     this.y += this.vy * dt;
     this.life -= dt;
     // Spinning only for enemy hex-symbol projectiles — player bullets stay aligned with flight direction
-    if (this.team === "enemy") this.angle += dt * 2;
+    if (this.visualTeam === "enemy") this.angle += dt * 2;
 
     // --- BULLET-PROOF RICOCHET & BOUNDARY PHYSICS ---
     const _wb =
@@ -155,8 +159,8 @@ class Projectile {
       this.life = 0;
     }
 
-    if (this.kind !== "punch" && Math.random() < 0.15) {
-      spawnParticles(this.x, this.y, 1, this.color);
+    if (this.visualKind !== "punch" && Math.random() < 0.15) {
+      spawnParticles(this.x, this.y, 1, this.visualColor);
     }
 
     return this.life <= 0;
@@ -164,13 +168,17 @@ class Projectile {
 
   draw() {
     const screen = worldToScreen(this.x, this.y);
+    const renderKind = this.visualKind || this.kind;
+    const renderColor = this.visualColor || this.color;
+    const renderSymbol = this.visualSymbol || this.symbol;
+    const renderTeam = this.visualTeam || this.team;
     CTX.save();
     CTX.translate(screen.x, screen.y);
 
     // ════════════════════════════════════════════════
     // HEAT WAVE (Auto — หมัดพุ่งออกมาจากสแตนด์)
     // ════════════════════════════════════════════════
-    if (this.kind === "heatwave") {
+    if (renderKind === "heatwave") {
       CTX.rotate(this.angle);
 
       const now = performance.now();
@@ -322,7 +330,7 @@ class Projectile {
     // ════════════════════════════════════════════════
     // WANCHAI PUNCH (Actual Fist Model)
     // ════════════════════════════════════════════════
-    if (this.kind === "punch") {
+    if (renderKind === "punch") {
       CTX.rotate(this.angle);
       const now = performance.now();
 
@@ -475,7 +483,7 @@ class Projectile {
         }
         CTX.shadowBlur = 0;
       }
-    } else if (this.team === "player") {
+    } else if (renderTeam === "player") {
       CTX.rotate(this.angle);
       const now = performance.now();
 
@@ -483,17 +491,17 @@ class Projectile {
       // weaponKind tagged at spawn; fall back to color-derived guess
       const wk =
         this.weaponKind ||
-        (this.color === "#3b82f6"
+        (renderColor === "#3b82f6"
           ? "auto"
-          : this.color === "#f59e0b"
+          : renderColor === "#f59e0b"
             ? "shotgun"
-            : this.color === "#ef4444"
+            : renderColor === "#ef4444"
               ? "sniper"
               : "auto");
       // isGolden: Ambush break OR Weapon Master buff (color forced to #facc15)
-      const isGolden = this.color === "#facc15";
+      const isGolden = renderColor === "#facc15";
       // isCharged: Weapon Master charged sniper release (symbol '∑', sniper only)
-      const isCharged = this.symbol === "∑" && wk === "sniper";
+      const isCharged = renderSymbol === "∑" && wk === "sniper";
 
       // ── AUTO RIFLE — Cyber Plasma Tracer ─────────────────────────
       if (wk === "auto") {
@@ -1035,9 +1043,9 @@ class Projectile {
         // ── FALLBACK (unknown weaponKind) — glowing dot, no arrow ─────
       } else {
         const fw = this.isCrit || isGolden ? 5 : 3.5;
-        CTX.fillStyle = isGolden ? "#facc15" : this.color || "#ffffff";
+        CTX.fillStyle = isGolden ? "#facc15" : renderColor || "#ffffff";
         CTX.shadowBlur = this.isCrit || isGolden ? 20 : 10;
-        CTX.shadowColor = isGolden ? "#facc15" : this.color;
+        CTX.shadowColor = isGolden ? "#facc15" : renderColor;
         CTX.beginPath();
         CTX.arc(0, 0, fw, 0, Math.PI * 2);
         CTX.fill();
@@ -1049,7 +1057,7 @@ class Projectile {
       // Old color-only Poom check removed — routing now
       // uses isPoom flag set at spawn (shootPoom / PoomPlayer.shoot).
       // ════════════════════════════════════════════════
-    } else if (this.team === "player" && false) {
+    } else if (renderTeam === "player" && false) {
       // dead branch — kept as merge anchor, never executes
       void 0;
 
@@ -1073,7 +1081,7 @@ class Projectile {
       );
       coronaG.addColorStop(
         0,
-        this.color.replace(")", ",0.35)").replace("rgb", "rgba") ||
+        renderColor.replace(")", ",0.35)").replace("rgb", "rgba") ||
         `rgba(220,38,38,0.35)`,
       );
       coronaG.addColorStop(1, "rgba(0,0,0,0)");
@@ -1087,11 +1095,11 @@ class Projectile {
       const hexRot = (now / 600) % (Math.PI * 2);
       CTX.save();
       CTX.rotate(hexRot);
-      CTX.strokeStyle = this.color;
+      CTX.strokeStyle = renderColor;
       CTX.lineWidth = 1;
       CTX.globalAlpha = 0.45 + Math.sin(now / 220) * 0.25;
       CTX.shadowBlur = 8;
-      CTX.shadowColor = this.color;
+      CTX.shadowColor = renderColor;
       CTX.beginPath();
       for (let hi = 0; hi < 6; hi++) {
         const ha = (hi / 6) * Math.PI * 2;
@@ -1101,7 +1109,7 @@ class Projectile {
       CTX.closePath();
       CTX.stroke();
       // Hex corner dots
-      CTX.fillStyle = this.color;
+      CTX.fillStyle = renderColor;
       CTX.shadowBlur = 6;
       for (let hi = 0; hi < 6; hi += 2) {
         const ha = (hi / 6) * Math.PI * 2;
@@ -1114,15 +1122,15 @@ class Projectile {
       // Symbol — bright with outline
       CTX.globalAlpha = 1;
       CTX.shadowBlur = 14;
-      CTX.shadowColor = this.color;
-      CTX.fillStyle = this.color;
+      CTX.shadowColor = renderColor;
+      CTX.fillStyle = renderColor;
       CTX.font = `bold ${symSize}px monospace`;
       CTX.textAlign = "center";
       CTX.textBaseline = "middle";
       CTX.strokeStyle = "rgba(0,0,0,0.6)";
       CTX.lineWidth = 3;
-      CTX.strokeText(this.symbol, 0, 0);
-      CTX.fillText(this.symbol, 0, 0);
+      CTX.strokeText(renderSymbol, 0, 0);
+      CTX.fillText(renderSymbol, 0, 0);
       CTX.shadowBlur = 0;
     }
 

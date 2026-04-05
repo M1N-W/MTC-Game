@@ -92,6 +92,7 @@ let _skillIconFrame = 0;
 
 // ─── Day / Night cycle ────────────────────────────────────────
 let dayNightTimer = 0;
+let _pendingRunSummary = null;
 
 // ─── Game Objects (global) ────────────────────────────────────
 // Entity refs — now owned by GameState; window.* aliases set via GameState._syncAliases()
@@ -770,7 +771,7 @@ function drawGame() {
         // Dash pattern: 15 px on, 20 px off — offset animated to "march"
         // toward the target so the line reads as directional.
         CTX.setLineDash([15, 20]);
-        CTX.lineDashOffset = -(performance.now() / 20) % 35;
+        CTX.lineDashOffset = -(_drawNow / 20) % 35;
         CTX.beginPath();
         CTX.moveTo(pScreen.x, pScreen.y);
         CTX.lineTo(tScreen.x, tScreen.y);
@@ -951,9 +952,75 @@ function _fadeOutOverlay() {
     });
 }
 
+function _buildRunSummary(result = 'unknown') {
+    const score = typeof getScore === 'function' ? getScore() : 0;
+    const wave = typeof getWave === 'function' ? getWave() : 0;
+    const kills = typeof Achievements !== 'undefined' ? (Achievements.stats.kills || 0) : 0;
+    return { result, score, wave, kills };
+}
+
+function _showGameOverScreen(summary) {
+    if (!summary) return;
+
+    setElementText('go-score', summary.score.toLocaleString());
+    setElementText('go-wave', String(summary.wave));
+    setElementText('go-kills', summary.kills.toLocaleString());
+
+    const goEval = document.getElementById('go-eval');
+    if (goEval && typeof GAME_TEXTS !== 'undefined') {
+        let category;
+        if (summary.score > 5000) category = 'excellent';
+        else if (summary.score > 2000) category = 'good';
+        else category = 'poor';
+        const cards = GAME_TEXTS.ai.reportCards[category];
+        goEval.textContent = cards[Math.floor(Math.random() * cards.length)];
+    }
+
+    const goNewRecord = document.getElementById('go-new-record');
+    if (goNewRecord) goNewRecord.classList.toggle('visible', !!summary.isNewHighScore);
+    showElement('gameover-screen');
+}
+
+function _teardownRunState() {
+    if (typeof WorkerBridge !== 'undefined') WorkerBridge.reset();
+
+    GameState.hitStopTimer = 0;
+    GameState.resetRun();
+    _pendingRunSummary = null;
+
+    window.player = null;
+    window.drone = null;
+
+    if (typeof cleanupMobileControls === 'function') cleanupMobileControls();
+    if (typeof projectileManager !== 'undefined' && projectileManager) projectileManager.clear();
+    if (typeof particleSystem !== 'undefined' && particleSystem) particleSystem.clear();
+    if (typeof floatingTextSystem !== 'undefined' && floatingTextSystem) floatingTextSystem.clear();
+    if (typeof weatherSystem !== 'undefined' && weatherSystem) weatherSystem.clear();
+    if (typeof decalSystem !== 'undefined' && decalSystem) decalSystem.clear();
+    if (typeof shellCasingSystem !== 'undefined' && shellCasingSystem) shellCasingSystem.clear();
+    if (typeof resetScore === 'function') resetScore();
+    if (typeof setWave === 'function') setWave(1);
+    if (typeof resetEnemiesKilled === 'function') resetEnemiesKilled();
+
+    showResumePrompt(false);
+    if (typeof ShopManager !== 'undefined' && ShopManager) ShopManager.close();
+    if (typeof AdminConsole !== 'undefined' && AdminConsole?.isOpen) AdminConsole.close();
+    if (typeof UIManager !== 'undefined' && UIManager?.updateBossHUD) UIManager.updateBossHUD(null);
+
+    const mobileUI = document.getElementById('mobile-ui');
+    if (mobileUI) mobileUI.style.display = 'none';
+    const consoleOutput = document.getElementById('console-output');
+    if (consoleOutput) consoleOutput.innerHTML = '';
+
+    hideElement('gameover-screen');
+    hideElement('victory-screen');
+    hideElement('report-card');
+}
+
 function startGame(charType = 'kao') {
     // console.log('🎮 Starting game... charType:', charType);
     window._selectedChar = charType;
+    _pendingRunSummary = null;
     Audio.playBGM('battle');
 
     // ── WorkerBridge: start analyzer worker (no-op if already running) ────
@@ -1089,6 +1156,8 @@ function _initGameUI(charType) {
 function endGame(result) {
     if (GameState.phase === 'GAMEOVER') return;
     setGameState('GAMEOVER');
+    const summary = _buildRunSummary(result);
+    _pendingRunSummary = summary;
 
     try {
         if (typeof firebaseLogEvent === 'function') {
@@ -1101,9 +1170,6 @@ function endGame(result) {
     } catch (e) {
         /* optional analytics */
     }
-
-    // ── WorkerBridge: reset analyzer history on game end ─────────────────
-    if (typeof WorkerBridge !== 'undefined') WorkerBridge.reset();
 
     // BUG FIX: Cancel RAF and cleanup mobile controls
     if (rafId) {
@@ -1130,15 +1196,9 @@ function endGame(result) {
 
     window.drone = null;
 
-    // ── Reset mutable state (mirrors startGame — prevents stale values on restart) ──
-    GameState.resetRun();
-    // wave event cleared by WaveManager._deactivateWaveEvent() on next startNextWave()
-
-    weatherSystem.clear();
-
     let _isNewHighScore = false;
     {
-        const runScore = getScore();
+        const runScore = summary.score;
         const existing = getSaveData();
         if (runScore > existing.highScore) {
             _isNewHighScore = true;
@@ -1159,50 +1219,33 @@ function endGame(result) {
             UIManager.updateHighScoreDisplay(existing.highScore);
         }
     }
+    summary.isNewHighScore = _isNewHighScore;
 
     if (result === 'victory') {
         showElement('victory-screen');
-        setElementText('final-score', `SCORE ${getScore()}`);
-        setElementText('final-wave', `WAVES CLEARED ${getWave() - 1}`);
-        setElementText('final-kills', `${(Achievements.stats.kills || 0).toLocaleString()}`);
+        setElementText('final-score', `SCORE ${summary.score}`);
+        setElementText('final-wave', `WAVES CLEARED ${Math.max(0, summary.wave - 1)}`);
+        setElementText('final-kills', `${summary.kills.toLocaleString()}`);
         // 🟢 Fix #8: NEW RECORD badge
         if (_isNewHighScore) {
             const recBadge = document.getElementById('victory-new-record');
             if (recBadge) recBadge.classList.add('visible');
         }
     } else {
-        const finalScore = getScore();
-        const finalWave = getWave();
-        const finalKills = Achievements.stats.kills || 0;
-
-        // ── Dedicated Game Over screen (Issue 4b / Fix #9) ─────────────────────
-        setElementText('go-score', finalScore.toLocaleString());
-        setElementText('go-wave', String(finalWave));
-        setElementText('go-kills', finalKills.toLocaleString());
-        const goEval = document.getElementById('go-eval');
-        if (goEval) {
-            let category;
-            if (finalScore > 5000) category = 'excellent';
-            else if (finalScore > 2000) category = 'good';
-            else category = 'poor';
-            const cards = GAME_TEXTS.ai.reportCards[category];
-            goEval.textContent = cards[Math.floor(Math.random() * cards.length)];
-        }
-        const goNewRecord = document.getElementById('go-new-record');
-        if (goNewRecord) goNewRecord.classList.toggle('visible', _isNewHighScore);
-        showElement('gameover-screen');
+        _showGameOverScreen(summary);
     }
 }
 
 // ── Game Over screen actions ────────────────────────────────────────────────
 function retryMission() {
-    hideElement('gameover-screen');
+    _teardownRunState();
     startGame(window._selectedChar || 'kao');
 }
 window.retryMission = retryMission;
 
 function goToMainMenu() {
-    hideElement('gameover-screen');
+    _teardownRunState();
+    setGameState('MENU');
     const ov = document.getElementById('overlay');
     if (ov) ov.classList.remove('fade-out');
     showElement('overlay');
