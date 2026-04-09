@@ -4,6 +4,18 @@
 
 ---
 
+## v3.41.18 — Architecture Documentation Audit & Character UI Updates
+*Released: April 9, 2026*
+
+### 📝 Documentation & Architecture
+- **Documentation Audit**: Audited PROJECT_OVERVIEW.md, SKILL.md, mtc-game-conventions.md, and mtc-rendering.md to ensure they strictly document timeless architectural invariants (class hierarchies, update/draw separation, script load order) and removed volatile balance or tuning values.
+- **JSDoc Maintenance**: Updated CloudSaveSystem.js header to follow the strict table of contents format and included architecture/pitfalls notes.
+
+### 🎨 UI & Quality of Life
+- **Character Select UI**: Updated skill descriptions and formatting in index.html for better readability and presentation.
+- **Game Over Screen**: Added missing ontouchstart events to the retry and main menu buttons for better mobile responsiveness.
+
+
 ## v3.41.17 — Perf SEO: SW Cache Fix, defer Scripts, Font Waterfall, Meta Tags
 *Released: April 1, 2026*
 
@@ -8103,3 +8115,4 @@ _Released: February 26, 2026_
 ---
 
 _Older versions not archived._
+

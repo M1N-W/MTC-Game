@@ -1,140 +1,106 @@
 ---
 name: mtc-game-conventions
-description: "Stable MTC The Game architecture: class hierarchy, update-versus-draw separation, script load order, EnemyBase shared-tick invariants, GameState ownership, enemy registry coupling, and worker/render hidden dependencies. Excludes BALANCE values and release-specific tuning."
+description: "Stable MTC The Game architecture: class hierarchy, update-versus-draw separation, script load order, EnemyBase shared-tick invariants, GameState ownership, enemy registry coupling. Excludes BALANCE values and release-specific tuning."
 ---
 
-# MTC The Game — Stable Architecture
+# MTC Game — Architectural Conventions (SKILL.md)
 
-Use this skill when changing entities, AI, rendering dispatch, load order, globals, `GameState`, wave spawning, or boss lifecycle.
-
-Do not use this file for balance values, cooldowns, damage, economy, or other volatile config details.
-
----
-
-## 1. Class hierarchy
-
-Root: `Entity` in `js/entities/base.js`
-
-- `Player` in `js/entities/player/PlayerBase.js`
-  - `KaoPlayer`
-  - `AutoPlayer`
-  - `PoomPlayer`
-  - `PatPlayer`
-- `EnemyBase` in `js/entities/enemy.js`
-  - `Enemy` (direct `EnemyBase` child — most specific types inherit from here)
-    - `SniperEnemy`, `PoisonSpitterEnemy`, `ChargerEnemy`, `HunterEnemy`
-    - `FatalityBomberEnemy`, `HealerEnemy`, `SummonerEnemy`, `BufferEnemy`
-    - `SummonedMinionEnemy`
-  - `TankEnemy` (direct `EnemyBase` child)
-    - `ShieldBraverEnemy`
-  - `MageEnemy` (direct `EnemyBase` child)
-- `BossBase` in `js/entities/boss/BossBase.js`
-  - `KruManop`
-  - `KruFirst`
-- direct `Entity` subclasses (not `EnemyBase` or `BossBase`)
-  - `BossDog` (`js/entities/boss/ManopBoss.js`)
-  - `GoldfishMinion` (`js/entities/boss/boss_attacks_manop.js`)
-  - `Drone` (`js/entities/summons.js`, also `window.DroneEntity`)
-  - `NagaEntity` (`js/entities/summons.js`)
-  - `GarudaEntity` (`js/entities/summons.js`, `window.GarudaEntity`)
-
-Important aliases:
-- `KruManop` is also exported as `window.ManopBoss` and `window.Boss`
-- `KruFirst` is also exported as `window.BossFirst`
-- `Drone` is also exported as `window.DroneEntity`
-- enemy constructors are additionally exposed through `window.ENEMY_REGISTRY`
-
-Inheritance notes:
-- `TankEnemy` and `MageEnemy` are direct `EnemyBase` subclasses. All other named enemy types go through `Enemy` first.
-- `ShieldBraverEnemy` extends `TankEnemy`, not `EnemyBase` directly.
-- `BossDog`, `GoldfishMinion`, `NagaEntity`, `GarudaEntity`, and `Drone` extend `Entity` directly and do **not** participate in `_tickShared()`.
-- `HealthComponent` is defined in `js/entities/base.js` alongside `Entity`. Composed in via `this.health = new HealthComponent(maxHp)` with proxy getters to keep call sites backward-compatible.
+> **SCOPE:** This document exclusively captures **timeless architectural patterns**. It deliberately excludes configurable values, balance statistics (like cooldowns, damage multipliers, durations), feature lists, and any numeric constants tied to gameplay tuning. This ensures the skill file remains a stable, robust reference across all versions.
 
 ---
 
-## 2. Update versus draw
+## 1. Class Hierarchy and Inheritance Chains
 
-- `update(...)` owns authoritative simulation state.
-- `draw(...)` and renderer `draw(...)` methods only read state and emit pixels.
+The game object graph originates from a strict inheritance tree built upon the root `Entity` class.
 
-Never mutate inside draw:
-- HP, cooldowns, wave flags, score, phase, AI state, entity arrays, projectile arrays
-
-Allowed inside draw:
-- renderer-local caches
-- `ctx.save()` and `ctx.restore()`
-- deterministic visual animation based on read-only state
-
----
-
-## 3. Enemy shared-tick invariant
-
-`EnemyBase._tickShared(dt, player)` must run first in every living enemy update path.
-
-That invariant protects:
-- status-effect ticking
-- shared hit-flash decay
-- shared enemy buff timers
-- shared AI tick and role consumption
-
-AI contract:
-- `UtilityAI` writes `_aiMoveX` and `_aiMoveY`
-- enemy subclasses decide how to blend that intent into `vx` and `vy`
-
----
-
-## 4. Script load order
-
-Load order in `index.html` is a hard contract:
+### 1.1 Core Inheritance Tree
 
 ```text
-config -> utils -> base -> AI files -> player files -> summons -> enemy ->
-boss files -> input -> renderers -> GameState -> systems -> WaveManager ->
-WorkerBridge -> game -> VersionManager -> menu
+Entity (Root Base Class)
+├── Player
+│   ├── KaoPlayer
+│   ├── AutoPlayer
+│   ├── PoomPlayer
+│   └── PatPlayer
+├── EnemyBase
+│   ├── Enemy
+│   │   ├── SniperEnemy
+│   │   ├── PoisonSpitterEnemy
+│   │   ├── ChargerEnemy
+│   │   ├── HunterEnemy
+│   │   ├── FatalityBomberEnemy
+│   │   ├── HealerEnemy
+│   │   ├── SummonerEnemy
+│   │   ├── BufferEnemy
+│   │   └── SummonedMinionEnemy
+│   ├── TankEnemy
+│   │   └── ShieldBraverEnemy
+│   └── MageEnemy
+├── BossBase
+│   ├── KruManop
+│   └── KruFirst
+├── BossDog                  (Entity direct child)
+├── GoldfishMinion           (Entity direct child)
+├── NagaEntity               (Entity direct child)
+├── GarudaEntity             (Entity direct child)
+└── Drone                    (Entity direct child)
 ```
 
-If a script defines globals consumed later, it must remain above those consumers.
+### 1.2 Hierarchy Invariants
+- **Direct Entity Subclasses**: Entities like `BossDog`, `GoldfishMinion`, `Drone`, `NagaEntity`, and `GarudaEntity` bypass the core combatant logic and thus extend `Entity` directly. They do **not** participate in the standard `_tickShared()` pipelines.
+- **Component Composition**: `HealthComponent` is distinct from the inheritance tree. It is composed into combatants (`this.health = new HealthComponent(maxHp)`), but proxy getters (`hp`, `maxHp`, `dead`) wrap this on the entity surface for backward compatibility.
 
 ---
 
-## 5. Canonical ownership
+## 2. Update() / Draw() Separation Axiom
 
-- `GameState` is the canonical owner for game phase and loop state.
-- `window.player`, `window.enemies`, `window.boss`, `window.powerups`, and `window.specialEffects` remain shared compatibility surfaces.
-- `WaveManager` owns wave progression and boss-wave entry.
-- `drawGame()` in `js/game.js` owns frame orchestration.
+The system architecture mandates a strict separation between logical simulation and view rendering.
 
----
+### 2.1 The `update()` Path
+- **Purpose**: Authoritative simulation mutation.
+- **Responsibilities**: Modifying positions (`vx`, `vy`), executing AI logic, resolving hit detection, applying damage, ticking state timers, orchestrating spawn functions, and updating flags.
 
-## 6. Hidden coupling to preserve
-
-- `window.ENEMY_REGISTRY` couples `enemy.js`, `WaveManager.js`, and `AdminSystem.js`.
-- `window.applyWaveModifiersToEnemy` is reused by normal spawns, admin spawns, and summoner-created minions.
-- `WorkerBridge` and `analyzer-worker.js` feed prediction data back into AI consumers.
-- `EnemyRenderer.draw()` saves the previous `window.CTX`, rebinds it to the active `ctx`, then restores in a `try/finally` block. This lets fallback `draw()` paths and shared helpers reach the canvas safely.
-- Lighting runs through `mapSystem.drawLighting(...)` **outside** the camera transform — after `CTX.restore()` ends the world-space translate.
+### 2.2 The `draw()` Path
+- **Purpose**: Pure view manifestation.
+- **Responsibilities**: Emitting pixels, deterministic visual animations derived from read-only states, and managing context states via `ctx.save()` / `ctx.restore()`.
+- **PROHIBITION**: Any code within a `draw()` call must **never** mutate authoritative state. It cannot alter `hp`, advance cooldown cycles, decrement effect timers, push additions to `window.enemies` / `window.specialEffects`, or update AI intent flags.
 
 ---
 
-## 7. Rendering boundaries
+## 3. The `_tickShared` Invariant
 
-- `PlayerRenderer`, `BossRenderer`, `EnemyRenderer`, and `ProjectileRenderer` are static render dispatchers.
-- Renderer caches belong to renderer modules, not gameplay entities.
-- HUD ownership stays in `CanvasHUD` with `UIManager.draw` as fallback.
-- Tutorial overlay is last.
+All subclasses of `EnemyBase` must adhere to a strict implementation contract regarding their lifecycle updates.
 
-Dispatch check order (matters for `instanceof` correctness):
-- `PlayerRenderer`: `AutoPlayer` → `PoomPlayer` → `KaoPlayer` → `PatPlayer` → base
-- `BossRenderer`: `KruFirst` → `KruManop` → `BossDog` (KruFirst first because both extend BossBase)
-- `EnemyRenderer`: `MageEnemy` → `TankEnemy` → `Enemy` → `PowerUp` → fallback `e.draw()`
-- `BossDog` in the enemies array routes to `BossRenderer`, not `EnemyRenderer`
+- **The Rule**: `this._tickShared(dt, player)` **must** be the very first operation executed within the living logic path of an enemy's `update(dt, player)` override.
+- **Purpose**: `_tickShared` centralizes mandatory state resolution. It handles ticking status effects, resolving elemental reactions, advancing hit-flash decay, processing buff logic, and consuming base AI intent. Bypassing or delaying this call compromises the core logic and forces the simulation out of sync.
+
+### 3.1 AI Movement Intent Delegation
+- The `UtilityAI` does not directly mutate enemy velocities. Instead, it writes purely to intent vectors (`_aiMoveX` and `_aiMoveY`).
+- The specific `EnemyBase` subclass evaluates this intent within its `update()` method and calculates the final `vx` and `vy` applications.
 
 ---
 
-## 8. Safe change checklist
+## 4. Initialization and Runtime Script Load Order
 
-1. Preserve `index.html` load order semantics.
-2. Keep draw paths free of gameplay mutation.
-3. Keep `_tickShared()` first in all enemy living update paths.
-4. Prefer `GameState` over adding new global state owners.
-5. Document new hidden coupling in the project overview or rendering skill when structure changes.
+Script loading order defined in the application entrypoint (`index.html`) is a hard architectural constraint. A module must safely load to the global scope before its consumers instantiate.
+
+The deterministic load sequence is:
+1. Environment & Utility (`config.js`, `utils.js`)
+2. Core Entity Foundation (`entities/base.js`)
+3. Logic & AI Analyzers (`ai/UtilityAI.js`, `ai/EnemyActions.js`, `ai/PlayerPatternAnalyzer.js`, `ai/SquadAI.js`)
+4. Entity Implementations (`entities/player/*`, `entities/summons.js`, `entities/enemy.js`, `entities/boss/*`)
+5. Sub-Systems & Input (`input.js`)
+6. Rendering Engines (`rendering/PlayerRenderer.js`, `rendering/BossRenderer.js`)
+7. Central Orchestration (`systems/GameState.js`, `systems/AdminSystem.js`, `systems/TimeManager.js`, `systems/WaveManager.js`, `systems/WorkerBridge.js`)
+8. Main Application Frame (`game.js`, `VersionManager.js`, `menu.js`)
+
+---
+
+## 5. Explicit Cross-Module Dependencies
+
+Certain globally scoped channels create implicit system couplings that orchestrate broader interactions.
+
+- **Canonical State Ownership**: `GameState` strictly owns phase transitions and loop execution states. Shared arrays (`window.enemies`, `window.specialEffects`) are maintained for surface level compatibility.
+- **Enemy Registry Instantiation**: `window.ENEMY_REGISTRY` serves as the centralized factory. `WaveManager` (for normal gameplay spawns) and `AdminSystem` (for developer tools) both strictly couple to this registry for generic instantiations.
+- **Asynchronous Workloads**: `WorkerBridge` couples background pattern analytics to the `PlayerPatternAnalyzer`, creating an asynchronous pipeline feeding back into `UtilityAI`.
+- **System-wide Scaling**: `window.applyWaveModifiersToEnemy` is a required invocation applicable seamlessly across standard spawns, boss-summoned entities, and admin debug creations to ensure standardized stat adjustments.

@@ -1,8 +1,26 @@
 'use strict';
 /**
- * js/systems/CloudSaveSystem.js
- * Cloud sync for local persistence (mtc_save_v1, tutorial flag) via Firestore users/{uid}.
+ * @module CloudSaveSystem
+ * @fileoverview Cloud sync for local persistence (mtc_save_v1, tutorial flag) via Firestore users/{uid}.
  * Depends: utils.js (getSaveData, saveData), firebase-bundle.js (MTCFirebase, firebaseUserReady).
+ * 
+ * L.8    CLOUD_META_KEY
+ * L.16   getLocalMeta
+ * L.27   setLocalMeta
+ * L.35   cloudTimeMs
+ * L.41   mergeCloudIntoLocal
+ * L.63   pushToCloud
+ * L.74   pullThenMergePush
+ * L.114  schedulePush
+ * L.126  userHasGoogle
+ * L.132  submitLeaderboardScore
+ * L.148  fetchLeaderboardTop
+ * L.158  init
+ * L.170  @exports window.CloudSaveSystem
+ * 
+ * [Architecture & Pitfalls]
+ * - Fails soft if offline or if Firestore permission is denied.
+ * - Local saves take precedence if localUpdatedAt > cloudUpdatedAt.
  */
 (function () {
     const CLOUD_META_KEY = 'mtc_cloud_meta_v1';
