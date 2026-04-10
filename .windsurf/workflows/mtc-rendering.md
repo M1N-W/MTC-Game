@@ -280,7 +280,77 @@ All values read from `entity._anim` (set by `PlayerBase.update()`) — never rec
 
 ---
 
-## 10. Cross-File Rendering Dependencies
+## 10. EnemyRenderer Sprite Caching (Perf Phase 4)
+
+`EnemyRenderer` maintains a `Map` cache for offscreen body gradient sprites to eliminate per-frame gradient recreation:
+
+```javascript
+// Key format: `${type}_${R}` — one sprite per (type × radius) pair
+static _bodyCache = new Map();
+
+static _getBodySprite(key, R, fn) {
+    if (EnemyRenderer._bodyCache.has(key)) {
+        return EnemyRenderer._bodyCache.get(key);
+    }
+    const PAD = 3;
+    const size = Math.ceil(R * 2) + PAD * 2 + 4;
+    const oc = document.createElement('canvas');
+    oc.width = oc.height = size;
+    const ox = oc.getContext('2d');
+    fn(ox, R, size / 2, size / 2);
+    EnemyRenderer._bodyCache.set(key, oc);
+    return oc;
+}
+```
+
+**Cache key pattern**: `'enemy_18'`, `'tank_25'`, `'mage_20'` — type + collision radius.
+
+**Invalidation**: Lazy — new keys create new entries; stale entries are GC'd when no longer referenced. No manual cache clearing needed.
+
+**Context rebind pattern**: `EnemyRenderer.draw()` saves/restores `window.CTX` so legacy `draw()` methods can access the active context:
+
+```javascript
+const _prevCTX = window.CTX;
+window.CTX = ctx;
+try {
+    // dispatch to specific draw methods
+} finally {
+    window.CTX = _prevCTX;
+}
+```
+
+---
+
+## 11. JSDoc Navigation Convention (Cross-Cutting)
+
+All renderer source files follow the JSDoc header convention for AI-assisted navigation:
+
+```javascript
+/**
+ * js/rendering/EnemyRenderer.js
+ * ════════════════════════════════════════════════════════════════════════════
+ * Enemy-only draw dispatcher and renderer helpers.
+ *
+ * @module js/rendering/EnemyRenderer
+ * @fileoverview Static dispatcher for all enemy type rendering
+ *
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
+ *  L.11   static _bodyCache       Offscreen sprite cache Map
+ *  L.12   static draw(e, ctx)    Main entry — viewport cull + dispatch
+ *  L.72   static _getBodySprite() Lazy offscreen canvas creator
+ *  ...
+ *
+ * ⚠️  draw() rebinds window.CTX — must restore in finally block
+ * ⚠️  _bodyCache grows unbounded — lazy GC only when entries unreferenced
+ * ════════════════════════════════════════════════════════════════════════════
+ */
+```
+
+**Navigation contract**: `grep -n 'L\.' js/rendering/*.js` returns all TOC entries with exact line numbers.
+
+---
+
+## 12. Cross-File Rendering Dependencies
 
 | Renderer / Draw Method | Depends On (implicit) | Source |
 |---|---|---|
@@ -288,7 +358,7 @@ All values read from `entity._anim` (set by `PlayerBase.update()`) — never rec
 | `PlayerRenderer.draw()` | `worldToScreen()`, `CANVAS`, `CTX`, `mouse.wx/wy` | `utils.js`, `input.js` |
 | `CanvasHUD.drawMinimap()` | `worldToScreen()`, `window.isFogWave`, `MTC_DATABASE_SERVER`, `BALANCE.shop` | `utils.js`, `WaveManager.js`, `AdminSystem.js`, `config.js` |
 | `mapSystem.drawLighting()` | `getScreenShakeOffset()`, `CANVAS`, `CTX` | `utils.js` |
-| `EnemyRenderer` (inline in game.js) | `worldToScreen()`, `CTX` | `utils.js` |
+| `EnemyRenderer` | `worldToScreen()`, `CTX`, `window.CTX` | `utils.js` |
 | `DomainExpansion.draw(ctx)` | `worldToScreen()`, `window.boss`, `window.player` | `utils.js`, `GameState.js` |
 | `GravitationalSingularity.draw(ctx)` | `worldToScreen()`, `window.boss`, `window.player`, `BALANCE.boss.gravitationalSingularity` | `utils.js`, `config.js` |
 | `TutorialSystem.draw(ctx)` | `worldToScreen()`, `MTC_SHOP_LOCATION`, `MTC_DATABASE_SERVER` | `utils.js`, `ShopSystem.js`, `AdminSystem.js` |
@@ -296,7 +366,7 @@ All values read from `entity._anim` (set by `PlayerBase.update()`) — never rec
 
 ---
 
-## 11. Rendering & Global State Invariants
+## 13. Rendering & Global State Invariants
 
 1. **No state mutation in draw:** `draw()` methods must not write to `entity.hp`, `player.cooldowns`, `window.score`, `GameState`, etc.
 2. **World-space all entities:** Never hardcode screen coordinates for entity positions — always use `worldToScreen(entity.x, entity.y)`.

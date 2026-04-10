@@ -8,7 +8,7 @@
 
 class EnemyRenderer {
   // PERF Phase 4: per-type body gradient sprite cache (offscreen canvas, lazily created)
-  // Key format: `${type}_${R}` โ€” one sprite per (type ร— radius) pair (only 3 combos in practice)
+  // Key format: `${type}_${R}` — one sprite per (type × radius) pair (only 3 combos in practice)
   static _bodyCache = new Map();
 
   /**
@@ -29,17 +29,17 @@ class EnemyRenderer {
     return oc;
   }
 
-  // โ”€โ”€ Dispatcher โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // —€—€ Dispatcher —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
   // Call this from the game loop instead of entity.draw().
   static draw(e, ctx) {
-    // โ”€โ”€ Viewport cull โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Viewport cull —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const screen = worldToScreen(e.x, e.y);
     const R = (e.radius ?? 20) + 40; // 40px margin for auras/overlays
     if (screen.x < -R || screen.x > CANVAS.width + R ||
       screen.y < -R || screen.y > CANVAS.height + R) return;
     // PERF Phase 5: capture timestamp once for all three draw methods
     const _now = performance.now();
-    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;
     if (typeof window !== "undefined") window.CTX = ctx;
     try {
@@ -55,19 +55,19 @@ class EnemyRenderer {
     }
   }
 
-  // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-  // SHARED HELPERS โ€” called by all 3 draw methods
-  // Extracted to eliminate 3ร— duplicate blocks and reduce
+  // ══════════════════════════════════════════════════════════
+  // SHARED HELPERS — called by all 3 draw methods
+  // Extracted to eliminate 3× duplicate blocks and reduce
   // per-frame GC pressure (no inline object literals in hot path)
-  // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+  // ══════════════════════════════════════════════════════════
 
   /**
-   * Draw HP bar above entity โ€” rounded, multi-tone, low-HP danger pulse.
+   * Draw HP bar above entity — rounded, multi-tone, low-HP danger pulse.
    * @param {number} sx screen x  @param {number} sy screen y
    * @param {number} R  collision radius
    * @param {number} hp current HP  @param {number} maxHp max HP
    * @param {number} bw bar width (px)  @param {number} yOff y offset above head
-   * @param {number} now Date.now() โ€” passed in, not re-called
+   * @param {number} now Date.now() — passed in, not re-called
    */
   static _drawHpBar(sx, sy, R, hp, maxHp, bw, yOff, now) {
     const ratio = Math.max(0, hp / maxHp);
@@ -75,7 +75,7 @@ class EnemyRenderer {
     const bx = sx - bw / 2;
     const by = sy - R - yOff;
 
-    // โ”€โ”€ Low-HP danger pulse (ratio < 0.30) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Low-HP danger pulse (ratio < 0.30) —€—€—€—€—€—€—€—€—€—€—€—€—€—€
     if (ratio < 0.3) {
       const pulse = 0.55 + Math.sin(now / 100) * 0.45;
       CTX.save();
@@ -87,15 +87,15 @@ class EnemyRenderer {
       CTX.restore();
     }
 
-    // โ”€โ”€ Bar background โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Bar background —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.fillStyle = "rgba(0,0,0,0.65)";
-    // Rounded background via clip โ€” cheap alternative to roundRect path
+    // Rounded background via clip — cheap alternative to roundRect path
     CTX.beginPath();
     CTX.roundRect(bx - 1, by - 1, bw + 2, bh + 2, 3);
     CTX.fill();
 
-    // โ”€โ”€ Fill โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Fill —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     // Colour: green โ’ amber โ’ red as HP drops
     const fillColor =
       ratio > 0.6 ? "#22c55e" : ratio > 0.3 ? "#f59e0b" : "#ef4444";
@@ -106,7 +106,7 @@ class EnemyRenderer {
       CTX.fill();
     }
 
-    // โ”€โ”€ Specular sheen on fill (top half lighter strip) โ”€โ”€
+    // —€—€ Specular sheen on fill (top half lighter strip) —€—€
     CTX.globalAlpha = 0.28;
     CTX.fillStyle = "#ffffff";
     CTX.beginPath();
@@ -117,7 +117,7 @@ class EnemyRenderer {
   }
 
   /**
-   * Ground shadow ellipse โ€” shared across all 3 enemy types.
+   * Ground shadow ellipse — shared across all 3 enemy types.
    * @param {number} sx @param {number} sy screen coords
    * @param {number} R  collision radius
    * @param {number} alpha base opacity
@@ -134,7 +134,7 @@ class EnemyRenderer {
   }
 
   /**
-   * Status effect overlays โ€” hit flash, sticky, ignite.
+   * Status effect overlays — hit flash, sticky, ignite.
    * Called AFTER the main body so overlays render on top.
    * @param {Enemy|TankEnemy|MageEnemy} e
    * @param {number} sx @param {number} sy screen coords
@@ -142,7 +142,7 @@ class EnemyRenderer {
    * @param {number} now Date.now() value from caller
    */
   static _drawStatusOverlays(e, sx, sy, R, now) {
-    // โ”€โ”€ Hit flash โ€” white silhouette โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Hit flash — white silhouette —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     if (e.hitFlashTimer > 0) {
       CTX.save();
       CTX.globalAlpha = (e.hitFlashTimer / HIT_FLASH_DURATION) * 0.8;
@@ -155,7 +155,7 @@ class EnemyRenderer {
       CTX.restore();
     }
 
-    // โ”€โ”€ Sticky stacks โ€” green tint โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Sticky stacks — green tint —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     if (e.stickyStacks > 0) {
       const intensity = Math.min(1, e.stickyStacks / 10);
       CTX.save();
@@ -188,7 +188,7 @@ class EnemyRenderer {
       CTX.restore();
     }
 
-    // โ”€โ”€ Ignite โ€” pulsing fire ring + inner ember tint โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Ignite — pulsing fire ring + inner ember tint —€—€—€—€—€
     if ((e.igniteTimer ?? 0) > 0) {
       const igPulse = 0.5 + Math.sin(now / 75) * 0.3;
       CTX.save();
@@ -321,22 +321,22 @@ class EnemyRenderer {
     }
   }
 
-  // โ”€โ”€ Basic Enemy (Corrupted Student Drone) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // —€—€ Basic Enemy (Corrupted Student Drone) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
   static drawEnemy(e, now = performance.now()) {
-    // โ•”โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•—
-    // โ•‘  BASIC ENEMY โ€” Corrupted Student Drone                  โ•‘
-    // โ•‘  Slim gray/purple bean ยท Dual visor ยท Spiked hands      โ•‘
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+    // โ•”══════════════════════════════════════════════════════════╗
+    // ║  BASIC ENEMY — Corrupted Student Drone                  ║
+    // ║  Slim gray/purple bean ยท Dual visor ยท Spiked hands      ║
+    // โ•══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;
     const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
 
-    // โ”€โ”€ Ground shadow โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Ground shadow —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     EnemyRenderer._drawGroundShadow(sx, sy, R, 0.22, 4);
 
-    // โ”€โ”€ Body Block (Body Anti-Flip) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Body Block (Body Anti-Flip) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.translate(sx, sy);
     if (isFacingLeft) CTX.scale(-1, 1);
@@ -345,7 +345,7 @@ class EnemyRenderer {
     const breathe = Math.sin(now / 200);
     CTX.scale(1 + breathe * 0.028, 1 - breathe * 0.028);
 
-    // โ”€โ”€ Outer glow ring (corrupted purple) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Outer glow ring (corrupted purple) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const glowPulse = 0.45 + Math.sin(now / 320) * 0.2;
     CTX.shadowBlur = 6;  // PERF: 12โ’6
     CTX.shadowColor = `rgba(168,85,247,${glowPulse})`;
@@ -370,7 +370,7 @@ class EnemyRenderer {
     });
     CTX.drawImage(_eSprite, -(_eSprite.width / 2), -(_eSprite.height / 2));
 
-    // โ”€โ”€ Corrupted circuit lines on body surface โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Corrupted circuit lines on body surface —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.beginPath();
     CTX.arc(0, 0, R - 0.5, 0, Math.PI * 2);
@@ -401,7 +401,7 @@ class EnemyRenderer {
     }
     CTX.restore();
 
-    // โ”€โ”€ Dual visor slits (side-by-side, glowing red) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Dual visor slits (side-by-side, glowing red) —€—€—€—€—€—€—€—€—€—€—€—€—€
     const visorPulse = 0.7 + Math.sin(now / 280) * 0.28;
     const vp2 = 0.55 + Math.sin(now / 220 + 0.9) * 0.28;
     // Left shard
@@ -426,7 +426,7 @@ class EnemyRenderer {
 
     CTX.restore(); // end body transform
 
-    // โ”€โ”€ Weapon Block (Weapon Anti-Flip) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Weapon Block (Weapon Anti-Flip) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.translate(sx, sy);
     CTX.rotate(e.angle);
@@ -434,7 +434,7 @@ class EnemyRenderer {
 
     const handR = R * 0.38;
 
-    // Front hand โ€” weapon-pointing side
+    // Front hand — weapon-pointing side
     CTX.fillStyle = "#3b3b55";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2;
@@ -445,7 +445,7 @@ class EnemyRenderer {
     CTX.fill();
     CTX.stroke();
 
-    // Front spike โ€” larger jagged triangle + inner glow tip
+    // Front spike — larger jagged triangle + inner glow tip
     const fsx = R + 7 + handR;
     CTX.fillStyle = "#ef4444";
     CTX.shadowBlur = 4;  // PERF: 8โ’4
@@ -459,7 +459,7 @@ class EnemyRenderer {
     CTX.fill();
     CTX.shadowBlur = 0;
 
-    // Back hand โ€” off-side
+    // Back hand — off-side
     CTX.fillStyle = "#2d2d44";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2;
@@ -483,30 +483,30 @@ class EnemyRenderer {
 
     CTX.restore(); // end weapon block
 
-    // โ”€โ”€ Shared status overlays (hit flash, sticky, ignite) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Shared status overlays (hit flash, sticky, ignite) —€—€—€—€—€—€—€—€
     EnemyRenderer._drawStatusOverlays(e, sx, sy, R, now);
     EnemyRenderer._drawExpandedEnemyOverlay(e, sx, sy, R, now);
 
-    // โ”€โ”€ HP bar โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ HP bar —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 30, 10, now);
   }
 
-  // โ”€โ”€ Tank Enemy (Heavy Armored Brute) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // —€—€ Tank Enemy (Heavy Armored Brute) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
   static drawTank(e, now = performance.now()) {
-    // โ•”โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•—
-    // โ•‘  TANK ENEMY โ€” Heavy Armored Brute                       โ•‘
-    // โ•‘  Wide dark-red bean ยท Layered armor ยท Kite-shield fists  โ•‘
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+    // โ•”══════════════════════════════════════════════════════════╗
+    // ║  TANK ENEMY — Heavy Armored Brute                       ║
+    // ║  Wide dark-red bean ยท Layered armor ยท Kite-shield fists  ║
+    // โ•══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
     const R = e.radius;
     const sx = screen.x,
       sy = screen.y;
     const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
 
-    // โ”€โ”€ Ground shadow (wider for big body) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Ground shadow (wider for big body) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     EnemyRenderer._drawGroundShadow(sx, sy, R, 0.3, 5);
 
-    // โ”€โ”€ Body Block (Body Anti-Flip) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Body Block (Body Anti-Flip) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.translate(sx, sy);
     if (isFacingLeft) CTX.scale(-1, 1);
@@ -515,7 +515,7 @@ class EnemyRenderer {
     const breathe = Math.sin(now / 320);
     CTX.scale(1 + breathe * 0.022, 1 - breathe * 0.022);
 
-    // โ”€โ”€ Threat glow ring โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Threat glow ring —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const threatPulse = 0.55 + Math.sin(now / 250) * 0.22;
     CTX.shadowBlur = 8;  // PERF: 16โ’8
     CTX.shadowColor = `rgba(185,28,28,${threatPulse})`;
@@ -541,7 +541,7 @@ class EnemyRenderer {
     CTX.drawImage(_tSprite, -(_tSprite.width / 2), -(_tSprite.height / 2));
     CTX.restore();
 
-    // โ”€โ”€ Layered armor plates โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Layered armor plates —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     // Front chest plate
     CTX.fillStyle = "#57121a";
     CTX.strokeStyle = "#1e293b";
@@ -581,7 +581,7 @@ class EnemyRenderer {
     }
     CTX.shadowBlur = 0;
 
-    // โ”€โ”€ Overheating slit โ€” orange engine glow โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Overheating slit — orange engine glow —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const heatPulse = 0.5 + Math.sin(now / 220) * 0.45;
     CTX.fillStyle = `rgba(251,146,60,${heatPulse * 0.9})`;
     CTX.shadowBlur = 5 * heatPulse;  // PERF: 10xโ’5x
@@ -605,7 +605,7 @@ class EnemyRenderer {
 
     CTX.restore(); // end body transform
 
-    // โ”€โ”€ Weapon Block (Weapon Anti-Flip) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Weapon Block (Weapon Anti-Flip) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.translate(sx, sy);
     CTX.rotate(e.angle);
@@ -673,20 +673,20 @@ class EnemyRenderer {
 
     CTX.restore(); // end weapon transform
 
-    // โ”€โ”€ Shared status overlays (hit flash, sticky, ignite) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Shared status overlays (hit flash, sticky, ignite) —€—€—€—€—€—€—€—€
     EnemyRenderer._drawStatusOverlays(e, sx, sy, R, now);
     EnemyRenderer._drawExpandedEnemyOverlay(e, sx, sy, R, now);
 
-    // โ”€โ”€ HP bar (wider โ€” tank has more HP to show) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ HP bar (wider — tank has more HP to show) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 44, 12, now);
   }
 
-  // โ”€โ”€ Mage Enemy (Arcane Shooter Drone) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // —€—€ Mage Enemy (Arcane Shooter Drone) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
   static drawMage(e, now = performance.now()) {
-    // โ•”โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•—
-    // โ•‘  MAGE ENEMY โ€” Arcane Shooter Drone                      โ•‘
-    // โ•‘  Sleek green diamond-bean ยท Blaster ยท Floating orb hands โ•‘
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+    // โ•”══════════════════════════════════════════════════════════╗
+    // ║  MAGE ENEMY — Arcane Shooter Drone                      ║
+    // ║  Sleek green diamond-bean ยท Blaster ยท Floating orb hands ║
+    // โ•══════════════════════════════════════════════════════════╝
     const screen = worldToScreen(e.x, e.y);
     const R = e.radius;
     const sx = screen.x,
@@ -694,7 +694,7 @@ class EnemyRenderer {
     const bobOffset = Math.sin(now / 300) * 3; // hover float
     const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
 
-    // โ”€โ”€ Ground shadow (offset โ€” mage floats above) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Ground shadow (offset — mage floats above) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.globalAlpha = 0.14;
     CTX.fillStyle = "rgba(0,0,0,0.85)";
@@ -703,7 +703,7 @@ class EnemyRenderer {
     CTX.fill();
     CTX.restore();
 
-    // โ”€โ”€ Body Block (Body Anti-Flip + float bob) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Body Block (Body Anti-Flip + float bob) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.translate(sx, sy + bobOffset);
     if (isFacingLeft) CTX.scale(-1, 1);
@@ -712,7 +712,7 @@ class EnemyRenderer {
     const breathe = Math.sin(now / 170);
     CTX.scale(1 + breathe * 0.025, 1 - breathe * 0.03);
 
-    // โ”€โ”€ Arcane outer aura ring โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Arcane outer aura ring —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const auraA = 0.45 + Math.sin(now / 240) * 0.22;
     CTX.shadowBlur = 8;  // PERF: 16โ’8
     CTX.shadowColor = "rgba(126,34,206,0.85)";
@@ -751,7 +751,7 @@ class EnemyRenderer {
     CTX.drawImage(_mSprite, -(_mSprite.width / 2), -(_mSprite.height / 2));
     CTX.restore(); // specular baked into sprite
 
-    // โ”€โ”€ Rune markings on body โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Rune markings on body —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.beginPath();
     CTX.arc(0, 0, R - 0.5, 0, Math.PI * 2);
@@ -778,7 +778,7 @@ class EnemyRenderer {
     CTX.stroke();
     CTX.restore();
 
-    // โ”€โ”€ Arcane energy core โ€” glowing belly rune โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Arcane energy core — glowing belly rune —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const coreP = Math.max(0, 0.4 + Math.sin(now / 190) * 0.55);
     CTX.fillStyle = `rgba(74,222,128,${coreP})`;
     CTX.shadowBlur = 8 * coreP;  // PERF: 16xโ’8x
@@ -796,13 +796,13 @@ class EnemyRenderer {
 
     CTX.restore(); // end body transform
 
-    // โ”€โ”€ Weapon Block (Weapon Anti-Flip + float bob) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Weapon Block (Weapon Anti-Flip + float bob) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.save();
     CTX.translate(sx, sy + bobOffset);
     CTX.rotate(e.angle);
     if (isFacingLeft) CTX.scale(1, -1);
 
-    // โ”€โ”€ Blaster barrel โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Blaster barrel —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     CTX.fillStyle = "#1a2a1a";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 1.5;
@@ -835,9 +835,9 @@ class EnemyRenderer {
     }
     CTX.shadowBlur = 0;
 
-    // โ”€โ”€ Floating Arcane Orb Hands โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Floating Arcane Orb Hands —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const orbPulse = 0.6 + Math.sin(now / 210 + 1.0) * 0.35;
-    // Front orb โ€” green
+    // Front orb — green
     CTX.fillStyle = "#14532d";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2;
@@ -859,7 +859,7 @@ class EnemyRenderer {
     CTX.fill();
     CTX.shadowBlur = 0;
 
-    // Back orb โ€” dimmer violet
+    // Back orb — dimmer violet
     CTX.fillStyle = "#1a0a2e";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2;
@@ -877,16 +877,16 @@ class EnemyRenderer {
 
     CTX.restore(); // end weapon transform
 
-    // โ”€โ”€ Shared status overlays (hit flash, sticky, ignite) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ Shared status overlays (hit flash, sticky, ignite) —€—€—€—€—€—€—€—€
     // Note: use sy + bobOffset so overlays align with floating body
     EnemyRenderer._drawStatusOverlays(e, sx, sy + bobOffset, R, now);
     EnemyRenderer._drawExpandedEnemyOverlay(e, sx, sy + bobOffset, R, now);
 
-    // โ”€โ”€ HP bar โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // —€—€ HP bar —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 30, 14, now);
   }
 
-  // โ”€โ”€ Power-Up โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+  // —€—€ Power-Up —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
   static drawPowerUp(e) {
     const screen = worldToScreen(e.x, e.y + Math.sin(e.bobTimer) * 5);
     CTX.save();

@@ -1,5 +1,4 @@
 "use strict";
-
 /**
  * js/entities/player/KaoPlayer.js
  * ════════════════════════════════════════════════════════════════════════════
@@ -9,11 +8,31 @@
  * Extends: KaoPlayer → Player (PlayerBase) → Entity
  * Exports: window.KaoPlayer
  *
+ * @module js/entities/player/KaoPlayer
+ * @fileoverview Kao character implementation with stealth, clones, and weapon mastery
+ *
  * Load order dependency:
  *   base.js → PlayerBase.js → KaoPlayer.js
  *   PlayerRenderer.js reads isFreeStealthActive, clones[], teleportCharges
  *   enemy.js calls player.addKill(weaponName) on every enemy death
  *   game.js calls player.update(dt, keys, mouse) and player.shoot(dt)
+ *
+ * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
+ *  L.63   class KaoClone           Phantom duplicate that mirrors attacks
+ *  L.63     constructor            Spawns at owner position with angle offset
+ *  L.75     .update(dt)            Orbits around owner (if not stationary)
+ *  L.88     .shoot()               Fire projectiles from clone position
+ *  L.135  class KaoPlayer          Main character class
+ *  L.136    constructor            Stealth state, weapon kills, clones array
+ *  L.213    checkPassiveUnlock()   Lv1/Lv2 passive progression (stealth → kills)
+ *  L.289    onKillWhileFreeStealthy()  Count kills toward Lv2 unlock
+ *  L.307    addKill(weaponName)    Weapon mastery kill tracker (called by enemy.js)
+ *  L.369    update(dt,k,m)         Main tick — stealth, cooldowns, input
+ *  L.773    shoot(dt)              L-Click entry — delegates to weaponSystem
+ *  L.808    fireWeapon()           Fire with Weapon Master buffs + clone mirrors
+ *  L.1004   takeDamage(amt)        Graph Risk ×1.5 multiplier check
+ *  L.1015   updateUI()             Q/E cooldown dials + HP/EN bars
+ *  L.1075 window.KaoPlayer = KaoPlayer  Global export
  *
  * ── PASSIVE SYSTEM OVERVIEW ──────────────────────────────────────────────
  *  Lv1  first stealth use → HP+30%, lifesteal 3%, speed+0.4, Dash-Stealth,
@@ -29,25 +48,13 @@
  *                               lastAutoStealthTrigger: 'dash' | 'bullet'
  *  Skill Stealth (R-Click)  — player-activated via PlayerBase, separate cooldown
  *
- * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
- *  L.63   KaoClone            Orbit / shadow phantom that mirrors Kao's shots
- *  L.75     .update(dt)       Smooth-follow orbit or stay stationary (Phantom Blink shadow)
- *  L.88     .shoot(...)       Mirror fire from clone position at 60% damage
- *  L.135  KaoPlayer           Main character class
- *  L.136    constructor       All state fields — passive, stealth, weapon, clone, blink
- *  L.205    .checkPassiveUnlock()  Lv1 (first stealth) + Lv2 (5 free-stealth kills)
- *  L.298    .onKillWhileFreeStealthy()  Increment _freeStealthKills → trigger Lv2 check
- *  L.316    .addKill(wN)      Called by enemy.js; routes to Lv2 counter + weapon mastery
- *  L.379    .update(dt,k,m)   Main tick — stealth state, skills, timers, super.update()
- *  L.418      ↳ Dash-Stealth  Rising-edge isDashing → isFreeStealthActive for dashStealthDuration
- *  L.456      ↳ Teleport (Q)  Per-charge independent timers; Phantom Blink if Lv2+stealthy
- *  L.570      ↳ Clone (E)     Spawn/detonate 2 orbit clones; manual shatter via second E press
- *  L.618      ↳ Clone tick    Proximity burst (auto-detonate <90px) + Phantom Shatter on expiry
- *  L.777    .shoot(dt)        Entry point called by game.js; routes to fireWeapon()
- *  L.812    .fireWeapon(w,c)  Ambush/stealth break, crit calc, Weapon Master buffs, clone mirror
- *  L.1001   .takeDamage(amt)  Graph-risk ×1.5 penalty then super
- *  L.1012   .updateUI()       Q/E/Dash/Stealth cooldown bars + HP/energy/XP bars
- *
+ * ⚠️  Clones are created in constructor (this.clones = []) but only activated
+ *     after Lv1 passive unlock — check this.passiveUnlocked before spawning.
+ * ⚠️  Weapon mastery requires 5 kills PER WEAPON — track via this.weaponKills{}.
+ * ⚠️  isFreeStealthActive must be true for kills to count toward Lv2 — stealth
+ *     must be triggered BEFORE the killing blow lands.
+ * ⚠️  Graph Risk damage multiplier (1.5×) is applied in takeDamage() — any other
+ *     damage mods must stack multiplicatively, not replace this.
  * ⚠️  KaoPlayer bypasses WeaponSystem.shootSingle() entirely — ambush break,
  *     stealth check, and shell casings must all be handled inside fireWeapon().
  * ⚠️  speedBoost is injected and restored around super.update() every frame

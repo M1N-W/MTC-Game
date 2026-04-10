@@ -1,25 +1,22 @@
-﻿'use strict';
+'use strict';
 /**
  * js/balance.js
  * Shared gameplay balance, runtime config, visuals, achievements, and map constants.
- * Load before shop-items.js and game-texts.js so downstream systems see globals in order.
  */
 
-/**
- * ๐“… WAVE_SCHEDULE โ€” JSON-ready Wave Timing Config
- * Decoupled from BALANCE to allow future async loading without crashing game loop.
- */
+
 const WAVE_SCHEDULE = Object.freeze({
     fogWaves: [2, 8, 11, 14],
     speedWaves: [4, 7, 13],
     glitchWaves: [5, 10],
     darkWave: 1,
     bossWaves: [3, 6, 9, 12, 15],
-    weatherChance: 0.35,  // เนเธญเธเธฒเธชเธกเธตเธชเธ เธฒเธเธญเธฒเธเธฒเธจเธ•เนเธญ wave (rain เธซเธฃเธทเธญ snow เธฃเธงเธกเธเธฑเธ)
-    snowChance: 0.12,  // subset เธเธญเธ weatherChance โ€” 12% snow, 23% rain, 65% none
+    weatherChance: 0.35,  // โอกาสมีสภาพอากาศต่อ wave (rain หรือ snow รวมกัน)
+    snowChance: 0.12,  // subset ของ weatherChance — 12% snow, 23% rain, 65% none
     maxWaves: 15
 });
 window.WAVE_SCHEDULE = WAVE_SCHEDULE;
+
 
 const BALANCE = {
     physics: {
@@ -39,7 +36,7 @@ const BALANCE = {
         kao: {
             name: 'Kao',
             radius: 20,
-            hp: 92, maxHp: 92,
+            hp: 119, maxHp: 119,
             energy: 100, maxEnergy: 100,
             energyRegen: 15,
             moveSpeed: 298,
@@ -48,24 +45,24 @@ const BALANCE = {
             weapons: {
                 auto: {
                     name: 'AUTO RIFLE',
-                    damage: 26, cooldown: 0.22,  // BUFF: 22โ’26 dmg, 0.20โ’0.22 cd (DPS 110โ’118, gap vs Shotgun เนเธเธเธฅเธ)
+                    damage: 26, cooldown: 0.22,  // BUFF: 22→26 dmg, 0.20→0.22 cd (DPS 110→118, gap vs Shotgun แคบลง)
                     range: 900, speed: 900,
                     spread: 0, pellets: 1,
-                    color: '#3b82f6', icon: '๐”ต'
+                    color: '#3b82f6', icon: '🔵'
                 },
                 sniper: {
                     name: 'SNIPER',
                     damage: 95, cooldown: 0.85,
                     range: 1200, speed: 1200,
                     spread: 0, pellets: 1,
-                    color: '#ef4444', icon: '๐”ด'
+                    color: '#ef4444', icon: '🔴'
                 },
                 shotgun: {
                     name: 'SHOTGUN',
-                    damage: 28, cooldown: 0.55,   // NERF: 30โ’28 dmg, 0.50โ’0.55 cd (DPS 180โ’153, เธขเธฑเธเน€เธเนเธ top เนเธ•เน gap เธฅเธ”เธฅเธ)
+                    damage: 28, cooldown: 0.55,   // NERF: 30→28 dmg, 0.50→0.55 cd (DPS 180→153, ยังเป็น top แต่ gap ลดลง)
                     range: 400, speed: 700,
                     spread: 0.45, pellets: 3,
-                    color: '#f59e0b', icon: '๐ '
+                    color: '#f59e0b', icon: '🟠'
                 }
             },
             baseCritChance: 0.05,
@@ -76,222 +73,216 @@ const BALANCE = {
             stealthDrain: 45,
             stealthSpeedBonus: 1.5,
             expToNextLevel: 100,
-            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 โ’ 1.30 โ€” player reaches Lv12 at W15 (was Lv9)
-            passiveUnlockLevel: 1,          // fallback เน€เธ—เนเธฒเธเธฑเนเธ โ€” KaoPlayer.checkPassiveUnlock() override
-            passiveUnlockStealthCount: 1,   // fallback: เธเธฅเธ”เธ•เธฑเนเธเนเธ•เน stealth เธเธฃเธฑเนเธเนเธฃเธ
-            // โ”€โ”€ Passive Lv1 (Stealth เธเธฃเธฑเนเธเนเธฃเธ) โ”€โ”€
-            passiveHpBonusPct: 0.22,        // BALANCE: 0.50 โ’ 0.30 โ’ 0.22
-            passiveUnlockText: '๐‘ป เธเธธเนเธกเน€เธชเธฃเธต',
-            passiveCritBonus: 0.0,          // REWORK: crit เธขเนเธฒเธขเนเธ Lv2
-            passiveLifesteal: 0.01,         // NERF: 0.03 โ’ 0.02 โ’ 0.01 (เธเธนเนเน€เธฅเนเธเนเธเนเธเธงเนเธฒเธฃเธญเธ”เธเนเธฒเธขเน€เธเธดเธเนเธ)
-            passiveSpeedAdditive: 0.4,      // NEW: additive +0.4 (เนเธ—เธ Math.max ร—1.4 เธ—เธตเนเธ—เธฑเธ shop bonus)
-            // โ”€โ”€ Passive Lv2 "Awakened" (เธเนเธฒเธเธ“เธฐ FreeStealthy 5 เธเธฃเธฑเนเธ) โ”€โ”€
-            passiveLv2KillReq: 5,           // NEW: เธเธณเธเธงเธ FreeStealthy-kills เธ—เธตเนเธ•เนเธญเธเธเธฒเธฃ
-            passiveLv2HpBonusPct: 0.20,     // NEW: HP +20% เน€เธเธดเนเธกเน€เธ•เธดเธกเน€เธกเธทเนเธญเธ–เธถเธ Lv2
-            passiveLv2UnlockText: '๐‘ป เน€เธ—เธเนเธซเนเธเธเธธเนเธก!',
-            passiveLv2CritBonus: 0.04,      // NERF: 0.05 โ’ 0.04 (minor crit trim)
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
+            passiveUnlockLevel: 1,          // fallback เท่านั้น — KaoPlayer.checkPassiveUnlock() override
+            passiveUnlockStealthCount: 1,   // fallback: ปลดตั้งแต่ stealth ครั้งแรก
+            // ── Passive Lv1 (Stealth ครั้งแรก) ──
+            passiveHpBonusPct: 0.30,        // REWORK: 0.50 → 0.30 (ส่วนที่เหลือรอ Lv2)
+            passiveUnlockText: '👻 ซุ่มเสรี',
+            passiveCritBonus: 0.0,          // REWORK: crit ย้ายไป Lv2
+            passiveLifesteal: 0.01,         // NERF: 0.03 → 0.02 → 0.01 (ผู้เล่นแจ้งว่ารอดง่ายเกินไป)
+            passiveSpeedAdditive: 0.4,      // NEW: additive +0.4 (แทน Math.max ×1.4 ที่ทับ shop bonus)
+            // ── Passive Lv2 "Awakened" (ฆ่าขณะ FreeStealthy 5 ครั้ง) ──
+            passiveLv2KillReq: 5,           // NEW: จำนวน FreeStealthy-kills ที่ต้องการ
+            passiveLv2HpBonusPct: 0.20,     // NEW: HP +20% เพิ่มเติมเมื่อถึง Lv2
+            passiveLv2UnlockText: '👻 เทพแห่งซุ่ม!',
+            passiveLv2CritBonus: 0.04,      // NERF: 0.05 → 0.04 (minor crit trim)
             speedOnHit: 20,
             speedOnHitDuration: 0.4,
-            damageMultiplierPerLevel: 0.065,  // BALANCE: 0.12 โ’ 0.09 โ’ 0.065
-            cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 โ’ 0.04
-            maxHpPerLevel: 4,                 // BALANCE: 8 โ’ 6 โ’ 4
-            // โ”€โ”€ Advanced Kao Skills โ”€โ”€
+            damageMultiplierPerLevel: 0.09,  // NERF: 0.12 → 0.09 (level scaling -25%, wave10 damMult 2.2→1.9)
+            cooldownReductionPerLevel: 0.04,  // BUFF: 0.03 → 0.04
+            maxHpPerLevel: 6,                 // NERF: 8 → 6 (ลด HP scaling — Lv12 HP: 119+11×6=185 แทน 207)
+            // ── Advanced Kao Skills ──
             teleportCooldown: 18,
-            teleportEnergyCost: 20,         // NEW: Q Teleport/PhantomBlink โ€” instant blink เธเธงเธฃเธกเธตเธ•เนเธเธ—เธธเธ
-            cloneCooldown: 25,              // 60 โ’ 25 (REWORK: usable mid-game)
-            cloneEnergyCost: 30,            // NEW: E Clone โ€” summon clone เนเธเนเธเธฅเธฑเธเธเธฒเธเธชเธฃเนเธฒเธ
-            cloneDuration: 8,               // 10 โ’ 8 (shorter but sharper)
+            teleportEnergyCost: 20,         // NEW: Q Teleport/PhantomBlink — instant blink ควรมีต้นทุน
+            cloneCooldown: 25,              // 60 → 25 (REWORK: usable mid-game)
+            cloneEnergyCost: 30,            // NEW: E Clone — summon clone ใช้พลังงานสร้าง
+            cloneDuration: 8,               // 10 → 8 (shorter but sharper)
             cloneProximityRange: 90,        // NEW: clone proximity burst trigger range
             cloneProximityDmgMult: 0.60,    // NEW: proximity burst dmg mult
             dashStealthDuration: 1.5,       // NEW: free stealth after every dash
-            phantomBlinkEnabled: true,      // NEW: Q during stealth = Phantom Blink (เธเธฅเธ”เธ—เธตเน Lv2)
-            phantomBlinkAmbushWindow: 2.0,  // BUFF: 1.5 โ’ 2.0 (window เธขเธฒเธงเธเธถเนเธ)
-            phantomBlinkDmgMult: 1.2,       // NERF: 2.5 โ’ 1.8 โ’ 1.4 โ’ 1.2 (เธฅเธ” burst เน€เธเธทเนเธญเน€เธเธดเนเธกเธเธงเธฒเธกเธ—เนเธฒเธ—เธฒเธข)
-            stealthChainBonus: 0.18,        // NERF: 0.25 โ’ 0.18 (crit stack -7%)
-            weaponMasterReq: 5,             // เธฅเธ”เธเธฒเธ 7 โ’ 5 (passive เน€เธฃเนเธงเธเธถเนเธ โ’ Weapon Master เธเนเธเธงเธฃเธ—เธณเนเธ”เนเน€เธฃเนเธงเธเธถเนเธ)
-            // โ”€โ”€ AbilityUnlock thresholds โ”€โ”€
-            su1AmbushDmgReq: 200,           // SU1: total guaranteed-crit ambush damage to unlock Q (Teleport)
-            su2ChainReq: 3                  // SU2: stealthโ’attack chain completions to unlock E (Clone)
+            phantomBlinkEnabled: true,      // NEW: Q during stealth = Phantom Blink (ปลดที่ Lv2)
+            phantomBlinkAmbushWindow: 2.0,  // BUFF: 1.5 → 2.0 (window ยาวขึ้น)
+            phantomBlinkDmgMult: 1.2,       // NERF: 2.5 → 1.8 → 1.4 → 1.2 (ลด burst เพื่อเพิ่มความท้าทาย)
+            stealthChainBonus: 0.18,        // NERF: 0.25 → 0.18 (crit stack -7%)
+            weaponMasterReq: 5              // ลดจาก 7 → 5 (passive เร็วขึ้น → Weapon Master ก็ควรทำได้เร็วขึ้น)
         },
         auto: {
-            // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-            // ๐”ฅ AUTO โ€” THERMODYNAMIC BRAWLER REWORK v2
-            // Identity: เธญเธธเนเธเน€เธเธฃเธทเนเธญเธเธขเธดเนเธเธเธเธเธฒเธ เธขเธดเนเธเน€เธเนเธ
-            // Loop: เธชเธฐเธชเธก Heat โ’ Wanchai โ’ Combo โ’ Detonate โ’ เธฃเธตเน€เธเนเธ•เนเธ”เนเธเนเธฒเธข
-            // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+            // ══════════════════════════════════════════════════
+            // 🔥 AUTO — THERMODYNAMIC BRAWLER REWORK v2
+            // Identity: อุ่นเครื่องยิ่งชกนาน ยิ่งเก่ง
+            // Loop: สะสม Heat → Wanchai → Combo → Detonate → รีเซ็ตได้ง่าย
+            // ══════════════════════════════════════════════════
             name: 'Auto',
             radius: 20,
 
-            // โ”€โ”€ Base Stats (Tank Brawler) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            hp: 150, maxHp: 150,           // BALANCE: 230 โ’ 190 โ’ 150
+            // ── Base Stats (Tank Brawler) ──────────────────────
+            hp: 190, maxHp: 190,           // NERF: 230 → 190 (ผู้เล่นแจ้งว่ารอดง่ายเกินไป)
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
-            moveSpeed: 260,                 // 250 โ’ 260 (เธขเธฑเธเธเนเธฒเธเธงเนเธฒเธเธเธญเธทเนเธ)
+            moveSpeed: 260,                 // 250 → 260 (ยังช้ากว่าคนอื่น)
             dashSpeed: 490,
-            dashDistance: 170,              // 160 โ’ 170
-            dashCooldown: 1.7,              // 1.8 โ’ 1.7
+            dashDistance: 170,              // 160 → 170
+            dashCooldown: 1.7,              // 1.8 → 1.7
 
-            // โ”€โ”€ Heat Wave (L-Click เธเธเธ•เธด / เนเธซเธกเธ”เธขเธดเธ) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Heat Wave (L-Click ปกติ / โหมดยิง) ─────────────
             heatWaveRange: 180,
             heatWaveCooldown: 0.22,
 
-            // โ”€โ”€ Wanchai Stand (R-Click) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            wanchaiDuration: 8.0,           // 6.0 โ’ 8.0 (longer payoff window)
-            wanchaiCooldown: 12,            // 9 โ’ 12 (trade longer for less spammy)
-            wanchaiEnergyCost: 25,          // 32 โ’ 25 (easier loop)
-            wanchaiPunchRate: 0.22,          // PERF+NERF: 0.10 โ’ 0.22 (~4.5 punches/s, HOT tier: 0.187s โ€” prevent particle spam at high punch rate)
-            wanchaiDamage: 18,              // BIG-BALANCE: 24 โ’ 18 (โ’25%) โ€” HOT DPS 461โ’315, ratio vs Poom 2.5ร—โ’1.7ร—
+            // ── Wanchai Stand (R-Click) ───────────────────────
+            wanchaiDuration: 8.0,           // 6.0 → 8.0 (longer payoff window)
+            wanchaiCooldown: 12,            // 9 → 12 (trade longer for less spammy)
+            wanchaiEnergyCost: 25,          // 32 → 25 (easier loop)
+            wanchaiPunchRate: 0.10,          // NERF: 0.09 → 0.10 (10 punches/s แทน 11.1 — ลด sustained DPS)
+            wanchaiDamage: 18,              // BIG-BALANCE: 24 → 18 (−25%) — HOT DPS 461→315, ratio vs Poom 2.5×→1.7×
             standSpeedMod: 1.5,
-            standDamageReduction: 0.30,     // NERF: 0.40 โ’ 0.30 (เธฅเธ” damage reduction เน€เธเธทเนเธญเน€เธเธดเนเธกเธเธงเธฒเธกเน€เธชเธตเนเธขเธ)
-            standCritBonus: 0.10,           // BIG-BALANCE: 0.18 โ’ 0.10 (โ’8% crit stack, เธเธ” ceiling)
+            standDamageReduction: 0.30,     // NERF: 0.40 → 0.30 (ลด damage reduction เพื่อเพิ่มความเสี่ยง)
+            standCritBonus: 0.10,           // BIG-BALANCE: 0.18 → 0.10 (−8% crit stack, กด ceiling)
             standMoveSpeed: 340,
             standPunchRange: 110,
             standLeashRadius: 420,
-            standKnockback: 240,            // 180 โ’ 240 (BUFF)
+            standKnockback: 240,            // 180 → 240 (BUFF)
 
-            // โ”€โ”€ Attack Mode Toggle โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // เธฃเธฐเธซเธงเนเธฒเธ Wanchai active: เธเธ” F (เธซเธฃเธทเธญ Middle-Click) เธชเธฅเธฑเธเนเธซเธกเธ”
-            // MODE 0 = RANGE: เธขเธดเธ Heat Wave เธเธเธ•เธด (เนเธกเนเธเธณเธเธฑเธ”เธฃเธฐเธขเธฐ)
-            // MODE 1 = MELEE: เธฃเธฑเธงเธซเธกเธฑเธ” Stand Rush (เธฃเธฐเธขเธฐเนเธเธฅเน)
-            // เธ—เธฑเนเธเธชเธญเธเนเธซเธกเธ”เนเธเน cooldowns.shoot เน€เธ”เธตเธขเธงเธเธฑเธ
-            playerMeleeCooldown: 0.12,      // 0.15 โ’ 0.12 (MELEE mode punch rate)
-            playerMeleeRange: 200,          // 85 โ’ 200 (REWORK: เน€เธเธดเนเธกเธฃเธฐเธขเธฐ melee เนเธซเนเนเธเนเธเธฒเธเนเธ”เนเธเธฃเธดเธ)
-            playerMeleeRangeFar: 320,       // range เน€เธกเธทเนเธญ Heat >= 67% (HOT tier)
-            playerRushRange: 200,           // radius เธฃเธญเธ cursor เธชเธณเธซเธฃเธฑเธ Stand Rush L-click (sync เธเธฑเธ playerMeleeRange)
-            playerRushCooldown: 0.10,       // cooldown เธ•เนเธญ Stand Rush (combo speed bonus เธซเธฑเธเธเธฒเธเธเธตเน)
+            // ── Attack Mode Toggle ────────────────────────────
+            // ระหว่าง Wanchai active: กด F (หรือ Middle-Click) สลับโหมด
+            // MODE 0 = RANGE: ยิง Heat Wave ปกติ (ไม่จำกัดระยะ)
+            // MODE 1 = MELEE: รัวหมัด Stand Rush (ระยะใกล้)
+            // ทั้งสองโหมดใช้ cooldowns.shoot เดียวกัน
+            playerMeleeCooldown: 0.12,      // 0.15 → 0.12 (MELEE mode punch rate)
+            playerMeleeRange: 200,          // 85 → 200 (REWORK: เพิ่มระยะ melee ให้ใช้งานได้จริง)
+            playerMeleeRangeFar: 320,       // range เมื่อ Heat >= 67% (HOT tier)
+            playerRushRange: 200,           // radius รอบ cursor สำหรับ Stand Rush L-click (sync กับ playerMeleeRange)
+            playerRushCooldown: 0.10,       // cooldown ต่อ Stand Rush (combo speed bonus หักจากนี้)
 
-            // โ”€โ”€ Vacuum Heat (Q) โ€” REWORK: Pull + Ignite โ”€โ”€โ”€โ”€โ”€โ”€
-            vacuumRange: 340,               // 320 โ’ 340
-            vacuumForce: 1900,              // 1600 โ’ 1900 (BUFF)
-            vacuumCooldown: 6,              // 8 โ’ 6 (bread-and-butter skill, basic pull)
-            vacuumEnergyCost: 20,           // NEW: Q Vacuum โ€” pull + ignite เนเธเน focus
-            vacuumStunDur: 0.50,            // 0.55 โ’ 0.50
+            // ── Vacuum Heat (Q) — REWORK: Pull + Ignite ──────
+            vacuumRange: 340,               // 320 → 340
+            vacuumForce: 1900,              // 1600 → 1900 (BUFF)
+            vacuumCooldown: 6,              // 8 → 6 (bread-and-butter skill, basic pull)
+            vacuumEnergyCost: 20,           // NEW: Q Vacuum — pull + ignite ใช้ focus
+            vacuumStunDur: 0.50,            // 0.55 → 0.50
             vacuumPullDur: 0.45,
-            vacuumDamage: 18,               // NEW: damage เธ“ เธเธธเธ”เธ”เธนเธ”
+            vacuumDamage: 18,               // NEW: damage ณ จุดดูด
             vacuumIgniteDuration: 1.5,      // NEW: Ignite debuff duration
-            vacuumIgniteDPS: 12,            // NEW: burn DPS เธเธ“เธฐ Ignite
-            vacuumHeatGain: 25,             // NEW: +Heat เธ—เธธเธเธเธฃเธฑเนเธเธ—เธตเนเนเธเนเธชเธณเน€เธฃเนเธ
-            standPullCooldown: 10,          // NEW: Stand Pull CD เนเธขเธเธ•เนเธฒเธเธซเธฒเธ โ€” เนเธฃเธเธเธงเนเธฒ Vacuum = CD เธขเธฒเธงเธเธงเนเธฒ
+            vacuumIgniteDPS: 12,            // NEW: burn DPS ขณะ Ignite
+            vacuumHeatGain: 25,             // NEW: +Heat ทุกครั้งที่ใช้สำเร็จ
+            standPullCooldown: 10,          // NEW: Stand Pull CD แยกต่างหาก — แรงกว่า Vacuum = CD ยาวกว่า
 
-            // โ”€โ”€ Overheat Detonation (E) โ€” REWORK: Heat-scaled, เนเธกเน kill Wanchai โ”€โ”€
-            detonationRange: 240,           // 220 โ’ 240
-            detonationCooldown: 8,          // 5 โ’ 8 (เนเธกเน kill Wanchai เนเธฅเนเธง โ€” trade off)
-            detonationEnergyCost: 30,       // NEW: E Detonation โ€” ultimate burst เนเธเน focus เธชเธนเธเธชเธธเธ”
-            detonationBaseDamage: 55,       // NERF: 80 โ’ 55 (เธฅเธ” base เน€เธเธทเนเธญเนเธซเน heat scaling เนเธกเนเธ—เธฐเธฅเธธ)
-            detonationHeatScaling: 1.2,     // NERF: 2.5 โ’ 1.2 (Heat 100 โ’ +120 เนเธ—เธ +250)
-            detonationDamageHardCap: 600,   // NEW: hard cap เธเธฑเธ RAGE+crit+charge stack เธชเธธเธ”เธเธตเธ”
-            chargeDamageMultMax: 2.5,       // NERF: 3.5 โ’ 2.5 (full charge = ร—2.5 เนเธกเนเนเธเน ร—3.5)
-            // เธ•เธฑเธงเธญเธขเนเธฒเธ: Heat 100, full charge โ’ 55 + (100ร—1.2) = 175 ร— 2.5 = 437 (capped 600)
-            // Overheated (Heat 100) โ’ radius ร—1.5 = 360px
-            // เธซเธฅเธฑเธ Detonate: Heat -80 (เน€เธเธทเธญเธ reset โ€” เธฃเธนเนเธชเธถเธ "เธฃเธฐเธเธฒเธข" เธเธฃเธดเธ)
+            // ── Overheat Detonation (E) — REWORK: Heat-scaled, ไม่ kill Wanchai ──
+            detonationRange: 240,           // 220 → 240
+            detonationCooldown: 8,          // 5 → 8 (ไม่ kill Wanchai แล้ว — trade off)
+            detonationEnergyCost: 30,       // NEW: E Detonation — ultimate burst ใช้ focus สูงสุด
+            detonationBaseDamage: 55,       // NERF: 80 → 55 (ลด base เพื่อให้ heat scaling ไม่ทะลุ)
+            detonationHeatScaling: 1.2,     // NERF: 2.5 → 1.2 (Heat 100 → +120 แทน +250)
+            detonationDamageHardCap: 600,   // NEW: hard cap กัน RAGE+crit+charge stack สุดขีด
+            chargeDamageMultMax: 2.5,       // NERF: 3.5 → 2.5 (full charge = ×2.5 ไม่ใช่ ×3.5)
+            // ตัวอย่าง: Heat 100, full charge → 55 + (100×1.2) = 175 × 2.5 = 437 (capped 600)
+            // Overheated (Heat 100) → radius ×1.5 = 360px
+            // หลัง Detonate: Heat -80 (เกือบ reset — รู้สึก "ระบาย" จริง)
 
-            // โ”€โ”€ Heat Gauge (NEW SYSTEM) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // เธชเธฐเธชเธกเธเธฒเธเธเธฒเธฃเธเธ โ’ เนเธซเน bonus tier เธ•เธฒเธก heat level
+            // ── Heat Gauge (NEW SYSTEM) ───────────────────────
+            // สะสมจากการชก → ให้ bonus tier ตาม heat level
             heatMax: 100,
-            heatPerHit: 12,                 // +Heat เธ•เนเธญ Stand punch
-            heatPerPlayerHit: 8,            // +Heat เธ•เนเธญ Stand Rush / Heat Wave
-            heatPerDamageTaken: 0.5,        // +Heat เธ•เนเธญ 1 damage เธ—เธตเนเธฃเธฑเธ
-            heatDecayRate: 8,               // -Heat/s เธ•เธญเธ out of Wanchai
-            heatDecayRateActive: 0,         // เนเธกเน decay เธฃเธฐเธซเธงเนเธฒเธ Wanchai
-            // โ”€โ”€ Heat Tier Thresholds โ”€โ”€
-            // WARM (34%+): dmg ร—1.10, punch rate ร—0.92
-            // HOT  (67%+): dmg ร—1.20, punch rate ร—0.85, melee range เน€เธเธดเนเธก
-            // OVERHEATED (100%): dmg ร—1.30, crit +12%, hp drain 5/s, det radius ร—1.5
+            heatPerHit: 12,                 // +Heat ต่อ Stand punch
+            heatPerPlayerHit: 8,            // +Heat ต่อ Stand Rush / Heat Wave
+            heatPerDamageTaken: 0.5,        // +Heat ต่อ 1 damage ที่รับ
+            heatDecayRate: 8,               // -Heat/s ตอน out of Wanchai
+            heatDecayRateActive: 0,         // ไม่ decay ระหว่าง Wanchai
+            // ── Heat Tier Thresholds ──
+            // WARM (34%+): dmg ×1.10, punch rate ×0.92
+            // HOT  (67%+): dmg ×1.20, punch rate ×0.85, melee range เพิ่ม
+            // OVERHEATED (100%): dmg ×1.30, crit +12%, hp drain 5/s, det radius ×1.5
             heatTierWarm: 34,
             heatTierHot: 67,
             heatTierOverheat: 100,
             heatDmgWarm: 1.10,
             heatDmgHot: 1.20,
             heatDmgOverheat: 1.30,
-            heatPunchRateWarm: 0.92,        // NERF: 0.85 โ’ 0.92 (compress tier gap)
-            heatPunchRateHot: 0.85,         // NERF: 0.70 โ’ 0.85 (slower punch, OVERHEAT uses this too)
+            heatPunchRateWarm: 0.92,        // NERF: 0.85 → 0.92 (compress tier gap)
+            heatPunchRateHot: 0.85,         // NERF: 0.70 → 0.85 (slower punch, OVERHEAT uses this too)
             heatCritBonusOverheat: 0.12,
-            heatHpDrainOverheat: 8,         // NERF: 3 โ’ 5 โ’ 8 HP/s (overheat เน€เธเนเธ risk เธเธฃเธดเธ โ€” เธ•เนเธญเธเธฃเธฐเธงเธฑเธ)
-            heatOnKillWanchai: 15,          // +Heat เธ•เนเธญเธเธฒเธฃเธเนเธฒเธเธ“เธฐ Wanchai active
-            heatHealOnKillWanchai: 0.03,    // NERF: 0.08 โ’ 0.05 โ’ 0.03 (heal เธ•เนเธญ kill เธฅเธ”เธฅเธ เธเธนเนเน€เธฅเนเธเนเธกเนเธเธงเธฃ full heal เธเธฒเธเธเธฒเธฃเธเนเธฒ)
+            heatHpDrainOverheat: 8,         // NERF: 3 → 5 → 8 HP/s (overheat เป็น risk จริง — ต้องระวัง)
+            heatOnKillWanchai: 15,          // +Heat ต่อการฆ่าขณะ Wanchai active
+            heatHealOnKillWanchai: 0.03,    // NERF: 0.08 → 0.05 → 0.03 (heal ต่อ kill ลดลง ผู้เล่นไม่ควร full heal จากการฆ่า)
 
-            // โ”€โ”€ Crit & Scaling โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Crit & Scaling ────────────────────────────────
             baseCritChance: 0.06,
-            critMultiplier: 2.2,            // 2.0 โ’ 2.2
+            critMultiplier: 2.2,            // 2.0 → 2.2
 
-            // โ”€โ”€ Stealth (disabled for Auto) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Stealth (disabled for Auto) ───────────────────
             stealthCooldown: 12,
             stealthCost: 9999,
             stealthDrain: 0,
             stealthSpeedBonus: 1.0,
 
-            // โ”€โ”€ Level Scaling โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Level Scaling ─────────────────────────────────
             expToNextLevel: 100,
-            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 โ’ 1.30 โ€” player reaches Lv12 at W15 (was Lv9)
-            damageMultiplierPerLevel: 0.06, // BALANCE: 0.10 โ’ 0.12 โ’ 0.08 โ’ 0.06
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
+            damageMultiplierPerLevel: 0.08, // NERF: 0.10 → 0.12 → 0.08 (wave10 damMult 2.2→1.8)
             cooldownReductionPerLevel: 0.04,
-            maxHpPerLevel: 10,              // BALANCE: 14 โ’ 16 โ’ 10
+            maxHpPerLevel: 16,              // 14 → 16
 
-            // โ”€โ”€ Passive: SCORCHED SOUL โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // Unlock: เธ–เธถเธ OVERHEAT เธเธฃเธฑเนเธเนเธฃเธ (เน€เธเธฅเธตเนเธขเธเธเธฒเธ Lv5 เน€เธเธทเนเธญ thematic)
-            passiveUnlockLevel: 5,          // fallback เน€เธ—เนเธฒเธเธฑเนเธ โ€” เนเธกเนเนเธ”เนเนเธเนเธเธฃเธดเธเนเธฅเนเธง
-            passiveUnlockStealthCount: 0,   // เนเธกเนเนเธเน stealth โ€” unlock via OVERHEAT
-            passiveHpBonusPct: 0.20,
-            passiveUnlockText: '๐’ฅ เธงเธฑเธเธเธฑเธขเนเธญเน€เธงเธญเธฃเนเนเธ”เธฃเธเน!',
-            passiveCritBonus: 0.06,         // 0.04 โ’ 0.06
-            passiveLifesteal: 0.025,        // 0.01 โ’ 0.025 (brawler identity)
-            passiveHeatGainBonus: 1.20,     // NERF: 1.50 โ’ 1.20 (เธเธฑเธ permanent OVERHEAT loop)
-            passiveHeatNoDecayOnMove: false, // NERF: เธเธดเธ” โ€” passive เนเธกเนเธขเธเน€เธฅเธดเธ decay เธเธ“เธฐเน€เธ”เธดเธ (OVERHEAT เนเธกเนเธเธงเธฃเธเธฃเธต)
-            vacuumEarlyUnlock: true,        // NEW: Vacuum เธเธฅเธ”เธเธฃเนเธญเธก Wanchai (เธ•เนเธเน€เธเธก) เนเธกเนเธฃเธญ passive
+            // ── Passive: SCORCHED SOUL ────────────────────────
+            // Unlock: ถึง OVERHEAT ครั้งแรก (เปลี่ยนจาก Lv5 เพื่อ thematic)
+            passiveUnlockLevel: 5,          // fallback เท่านั้น — ไม่ได้ใช้จริงแล้ว
+            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via OVERHEAT
+            passiveHpBonusPct: 0.35,
+            passiveUnlockText: '💥 วันชัยโอเวอร์ไดรฟ์!',
+            passiveCritBonus: 0.06,         // 0.04 → 0.06
+            passiveLifesteal: 0.025,        // 0.01 → 0.025 (brawler identity)
+            passiveHeatGainBonus: 1.20,     // NERF: 1.50 → 1.20 (กัน permanent OVERHEAT loop)
+            passiveHeatNoDecayOnMove: false, // NERF: ปิด — passive ไม่ยกเลิก decay ขณะเดิน (OVERHEAT ไม่ควรฟรี)
+            vacuumEarlyUnlock: true,        // NEW: Vacuum ปลดพร้อม Wanchai (ต้นเกม) ไม่รอ passive
 
-            // โ”€โ”€ RAGE MODE: OVERHEAT + HP < 30% โ’ damage buff + damage reduction โ”€โ”€
-            // High-risk-high-reward โ€” เธขเธดเนเธเนเธเธฅเนเธ•เธฒเธขเธขเธดเนเธเธญเธฑเธเธ•เธฃเธฒเธข
-            rageModeHpThreshold: 0.30,      // HP % เธ—เธตเน trigger Rage Mode
-            rageDamageMult: 1.30,           // เธ”เธฒเน€เธกเธ ร—1.3 เธเธ“เธฐ Rage
-            rageDamageReduction: 0.20,      // เธฃเธฑเธเธ”เธฒเน€เธกเธเธเนเธญเธขเธฅเธ 20% เธเธ“เธฐ Rage
+            // ── RAGE MODE: OVERHEAT + HP < 30% → damage buff + damage reduction ──
+            // High-risk-high-reward — ยิ่งใกล้ตายยิ่งอันตราย
+            rageModeHpThreshold: 0.30,      // HP % ที่ trigger Rage Mode
+            rageDamageMult: 1.30,           // ดาเมจ ×1.3 ขณะ Rage
+            rageDamageReduction: 0.20,      // รับดาเมจน้อยลง 20% ขณะ Rage
 
-            // โ”€โ”€ Speed on Hit โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Speed on Hit ──────────────────────────────────
             speedOnHit: 15,
             speedOnHitDuration: 0.35,
 
-            // โ”€โ”€ Feature 1: Heat System Overhaul โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Feature 1: Heat System Overhaul ───────────────
             // COLD tier penalty (heat < heatTierWarm)
-            coldDamageMult: 0.75,       // NERF: 0.70 โ’ 0.75 (cold not overly punishing)
-            coldSpeedMult: 0.90,        // move speed ร—0.90 เธเธ“เธฐ COLD
-            // Heat idle decay (2s เนเธกเน hit โ’ heat เธซเธฒเธข)
-            heatIdleDecayRate: 8,       // heat/s เน€เธกเธทเนเธญเนเธกเน hit เธเธฒเธ 2s
-            heatIdleDecayDelay: 2.0,    // เธงเธดเธเธฒเธ—เธตเธเนเธญเธ idle decay เน€เธฃเธดเนเธก
-            // Vent Explosion เน€เธกเธทเนเธญ OVERHEAT tier drop โ’ tier 2
+            coldDamageMult: 0.75,       // NERF: 0.70 → 0.75 (cold not overly punishing)
+            coldSpeedMult: 0.90,        // move speed ×0.90 ขณะ COLD
+            // Heat idle decay (2s ไม่ hit → heat หาย)
+            heatIdleDecayRate: 8,       // heat/s เมื่อไม่ hit นาน 2s
+            heatIdleDecayDelay: 2.0,    // วินาทีก่อน idle decay เริ่ม
+            // Vent Explosion เมื่อ OVERHEAT tier drop → tier 2
             ventExplosionRange: 160,    // AOE radius
             ventExplosionDamage: 45,    // base damage
 
-            // โ”€โ”€ Feature 2: Rage Engine / Killing Blow Supercharge โ”€
-            heatOnKillSupercharge: 30,  // heat bonus เน€เธกเธทเนเธญ kill เธเธ“เธฐ combo >= 5
-            oraComboSuperchargeMin: 5,  // minimum combo เธชเธณเธซเธฃเธฑเธ supercharge
+            // ── Feature 2: Rage Engine / Killing Blow Supercharge ─
+            heatOnKillSupercharge: 30,  // heat bonus เมื่อ kill ขณะ combo >= 5
+            oraComboSuperchargeMin: 5,  // minimum combo สำหรับ supercharge
 
-            // โ”€โ”€ Feature 3A: Stand Pull (Q เธเธ“เธฐ Wanchai) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            standPullRange: 380,        // pull range เธฃเธญเธ Stand
-            standPullDamage: 18,        // damage เธ•เนเธญ enemy เธ—เธตเนเธ–เธนเธ pull
+            // ── Feature 3A: Stand Pull (Q ขณะ Wanchai) ────────
+            standPullRange: 380,        // pull range รอบ Stand
+            standPullDamage: 18,        // damage ต่อ enemy ที่ถูก pull
 
-            // โ”€โ”€ Feature 3B: Charge Punch (E hold เธเธ“เธฐ Wanchai) โ”€
-            chargeMaxTime: 1.5,         // เธงเธดเธเธฒเธ—เธตเธเธฒเธฃเนเธเน€เธ•เนเธก
-            chargeDamageMultMax: 2.5,   // NERF: 3.5 โ’ 2.5 (sync เธเธฑเธ detonation section)
-            chargeRangeMultMax: 1.3,    // max range multiplier เธ—เธตเนเธเธฒเธฃเนเธเน€เธ•เนเธก
+            // ── Feature 3B: Charge Punch (E hold ขณะ Wanchai) ─
+            chargeMaxTime: 1.5,         // วินาทีชาร์จเต็ม
+            chargeDamageMultMax: 2.5,   // NERF: 3.5 → 2.5 (sync กับ detonation section)
+            chargeRangeMultMax: 1.3,    // max range multiplier ที่ชาร์จเต็ม
 
-            // โ”€โ”€ Feature 3C: Stand Guard (Shift เธเธ“เธฐ Wanchai) โ”€โ”€โ”€
-            standGuardReduction: 0.60,  // damage reduction เธ”เนเธฒเธเธซเธเนเธฒ 60%
-            vacuumEarlyHeatGain: 10,     // heat เธ—เธตเนเนเธ”เนเธเธฒเธ vacuum เธเนเธญเธ passive เธเธฅเธ” (earlyMode)
+            // ── Feature 3C: Stand Guard (Shift ขณะ Wanchai) ───
+            standGuardReduction: 0.60,  // damage reduction ด้านหน้า 60%
+            vacuumEarlyHeatGain: 10,     // heat ที่ได้จาก vacuum ก่อน passive ปลด (earlyMode)
 
-            // โ”€โ”€ Feature 4: Stand Meter (เนเธ—เธ Timer) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Feature 4: Stand Meter (แทน Timer) ────────────
             standMeterMax: 100,
-            standMeterDrainRate: 8,     // meter/s เธเธ“เธฐ Wanchai active
-            standMeterPerHit: 1,        // NERF: 4 โ’ 1 (fix infinite stand loop at OVERHEAT)
-            standMeterOnKill: 8,        // DEBT-FIX: 12 โ’ 8 โ€” break-even normal=1.0 kills/s, HOT=2.0 kills/s (เนเธกเน infinite เนเธฅเนเธง)
-            standMeterDrainCold: 3.0,   // NERF: 1.30 โ’ 3.0 (COLD = real penalty, max ~6s)
-            standMeterDrainOverheat: 2.0, // NERF: 0.50 โ’ 2.0 (drain faster, net 7.5/s โ’ max 13s alone)
-            // โ”€โ”€ AbilityUnlock thresholds โ”€โ”€
-            su1MeleeDmgReq: 400,        // SU1: total L-Click rush damage to unlock Q full vacuum
-            su2OraComboCount: 3,        // SU2: times ORA combo must reach x8 to unlock E detonation
+            standMeterDrainRate: 8,     // meter/s ขณะ Wanchai active
+            standMeterPerHit: 1,        // NERF: 4 → 1 (fix infinite stand loop at OVERHEAT)
+            standMeterOnKill: 8,        // DEBT-FIX: 12 → 8 — break-even normal=1.0 kills/s, HOT=2.0 kills/s (ไม่ infinite แล้ว)
+            standMeterDrainCold: 3.0,   // NERF: 1.30 → 3.0 (COLD = real penalty, max ~6s)
+            standMeterDrainOverheat: 2.0, // NERF: 0.50 → 2.0 (drain faster, net 7.5/s → max 13s alone)
         },
         poom: {
             name: 'Poom',
             radius: 20,
-            hp: 130, maxHp: 130,
+            hp: 165, maxHp: 165,
             energy: 100, maxEnergy: 100,
             energyRegen: 12,
             moveSpeed: 298,
@@ -299,7 +290,7 @@ const BALANCE = {
             dashDistance: 170,
             dashCooldown: 1.65,
             expToNextLevel: 100,
-            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 โ’ 1.30 โ€” player reaches Lv12 at W15 (was Lv9)
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
             riceDamage: 62,
             riceCooldown: 0.42,
             riceSpeed: 600,
@@ -308,53 +299,53 @@ const BALANCE = {
             critChance: 0.12,
             critMultiplier: 3,
             eatRiceCooldown: 10,
-            eatRiceEnergyCost: 15,          // NEW: R-Click EatRice โ€” heal + speed buff เนเธเน focus เน€เธฅเนเธเธเนเธญเธข
+            eatRiceEnergyCost: 15,          // NEW: R-Click EatRice — heal + speed buff ใช้ focus เล็กน้อย
             eatRiceDuration: 6,
             eatRiceSpeedMult: 1.3,
             eatRiceCritBonus: 0.12,
-            nagaCooldown: 22,        // NERF: 20 โ’ 22 (uptime 45% โ’ 41% โ€” เธขเธฑเธเธ”เธตเธญเธขเธนเนเนเธ•เนเธ•เนเธญเธเธเธฑเธ”เธเธฒเธฃ)
-            nagaDuration: 9,         // NERF: 10 โ’ 9 (Cosmic window เนเธเธเธฅเธ โ€” เธ•เนเธญเธเธงเธฒเธ Garuda เนเธซเน sync)
-            nagaEnergyCost: 25,      // NEW: Q Naga โ€” summon เธเธเธฒเธเธฒเธ เธ•เนเธญเธเนเธเน focus
-            nagaDamage: 100,         // BUFF: 95 โ’ 100
+            nagaCooldown: 22,        // NERF: 20 → 22 (uptime 45% → 41% — ยังดีอยู่แต่ต้องจัดการ)
+            nagaDuration: 9,         // NERF: 10 → 9 (Cosmic window แคบลง — ต้องวาง Garuda ให้ sync)
+            nagaEnergyCost: 25,      // NEW: Q Naga — summon พญานาค ต้องใช้ focus
+            nagaDamage: 100,         // BUFF: 95 → 100
             nagaSpeed: 525,
-            nagaSegments: 18,        // BUFF: 12 โ’ 18 (เธเธนเธขเธฒเธงเธเธถเนเธเธเธฑเธ”เน€เธเธ)
-            nagaSegmentDistance: 32, // BUFF: 28 โ’ 32 (เธฃเธฐเธขเธฐเธซเนเธฒเธ segment เธกเธฒเธเธเธถเนเธ โ’ เธ•เธฑเธงเธขเธฒเธงเธเธถเนเธ)
-            nagaRadius: 22,          // BUFF: 20 โ’ 22 (เธ•เธฑเธงเธซเธเธฒเธเธถเนเธเน€เธฅเนเธเธเนเธญเธข)
+            nagaSegments: 18,        // BUFF: 12 → 18 (งูยาวขึ้นชัดเจน)
+            nagaSegmentDistance: 32, // BUFF: 28 → 32 (ระยะห่าง segment มากขึ้น → ตัวยาวขึ้น)
+            nagaRadius: 22,          // BUFF: 20 → 22 (ตัวหนาขึ้นเล็กน้อย)
             speedOnHit: 18,
             speedOnHitDuration: 0.35,
-            damageMultiplierPerLevel: 0.065,  // BALANCE: 0.07 โ’ 0.11 โ’ 0.09 โ’ 0.065
-            cooldownReductionPerLevel: 0.05,  // BUFF: 0.04 โ’ 0.05
-            maxHpPerLevel: 7,                // BALANCE: 7 โ’ 10 โ’ 7
-            // โ”€โ”€ Passive Skill (Ritual Mastery) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // Unlock: เธ—เธณ Ritual Burst เธเธฃเธฑเนเธเนเธฃเธ (เน€เธเธฅเธตเนเธขเธเธเธฒเธ Lv4 เน€เธเธทเนเธญ thematic)
-            passiveUnlockLevel: 4,          // fallback เน€เธ—เนเธฒเธเธฑเนเธ โ€” เนเธกเนเนเธ”เนเนเธเนเธเธฃเธดเธเนเธฅเนเธง
-            passiveUnlockStealthCount: 0,   // เนเธกเนเนเธเน stealth โ€” unlock via Ritual
-            passiveHpBonusPct: 0.28,        // BALANCE: 0.30 โ’ 0.45 โ’ 0.28
-            passiveUnlockText: '๐พ เธฃเธฒเธเธฒเธญเธตเธชเธฒเธ!',
-            passiveCritBonus: 0.06,         // BUFF: 0.04 โ’ 0.06 (เน€เธ—เนเธฒ Auto)
-            passiveLifesteal: 0.025,        // BUFF: 0.015 โ’ 0.025 (เธฃเธนเนเธชเธถเธเนเธ”เนเธเธฃเธดเธ)
-            // โ”€โ”€ Cosmic Balance bonus โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            cosmicDamageMult: 1.25,           // NERF: 1.35 โ’ 1.25 (cosmic bonus -7%)
-            cosmicHpRegen: 6,                 // BUFF: 4 โ’ 6 HP/s
-            cosmicStickyDurationBonus: 1.0,   // NEW: +1.0s เธ•เนเธญ sticky stack duration เธเธ“เธฐ Cosmic active
-            // โ”€โ”€ Sticky Rice Stack System โ”€โ”€
+            damageMultiplierPerLevel: 0.09,  // NERF: 0.07 → 0.11 → 0.09 (align with Kao)
+            cooldownReductionPerLevel: 0.05,  // BUFF: 0.04 → 0.05
+            maxHpPerLevel: 10,                // BUFF: 7 → 10
+            // ── Passive Skill (Ritual Mastery) ────────────────
+            // Unlock: ทำ Ritual Burst ครั้งแรก (เปลี่ยนจาก Lv4 เพื่อ thematic)
+            passiveUnlockLevel: 4,          // fallback เท่านั้น — ไม่ได้ใช้จริงแล้ว
+            passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via Ritual
+            passiveHpBonusPct: 0.45,        // BUFF: 0.30 → 0.45 (ปลดยากสุด ควรได้มากสุด)
+            passiveUnlockText: '🌾 ราชาอีสาน!',
+            passiveCritBonus: 0.06,         // BUFF: 0.04 → 0.06 (เท่า Auto)
+            passiveLifesteal: 0.025,        // BUFF: 0.015 → 0.025 (รู้สึกได้จริง)
+            // ── Cosmic Balance bonus ─────────────────────────────
+            cosmicDamageMult: 1.25,           // NERF: 1.35 → 1.25 (cosmic bonus -7%)
+            cosmicHpRegen: 6,                 // BUFF: 4 → 6 HP/s
+            cosmicStickyDurationBonus: 1.0,   // NEW: +1.0s ต่อ sticky stack duration ขณะ Cosmic active
+            // ── Sticky Rice Stack System ──
             sticky: {
                 maxStacks: 5,
-                stackDuration: 1.5,     // Phase 4: 1.0 โ’ 1.5 (allows ~3 stacks, gives decision window)
+                stackDuration: 1.5,     // Phase 4: 1.0 → 1.5 (allows ~3 stacks, gives decision window)
                 slowPerStack: 0.04,
                 maxSlowDuration: 1.5
             },
-            // โ”€โ”€ Fragment System (Eat Rice Enhancement) โ”€โ”€
+            // ── Fragment System (Eat Rice Enhancement) ──
             fragment: {
                 count: 2,
                 damagePct: 0.5,
                 bounces: 1,
                 bossReflectionMultiplier: 1.35
             },
-            // โ”€โ”€ Garuda Summon (E) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            garudaCooldown: 24,             // NERF: 22 โ’ 24 (Cosmic Balance เธ•เนเธญเธเนเธเนเธ—เธฑเธเธฉเธฐเนเธเธเธฒเธฃ sync)
-            garudaEnergyCost: 30,           // NEW: E Garuda โ€” summon เธเธฃเธธเธ‘ เนเธเน focus เธชเธนเธเธชเธธเธ”เธเธญเธ Poom
-            garudaDuration: 9,              // BUFF: 6 โ’ 9 (uptime 24% โ’ 41%)
+            // ── Garuda Summon (E) ────────────────────────────
+            garudaCooldown: 24,             // NERF: 22 → 24 (Cosmic Balance ต้องใช้ทักษะในการ sync)
+            garudaEnergyCost: 30,           // NEW: E Garuda — summon ครุฑ ใช้ focus สูงสุดของ Poom
+            garudaDuration: 9,              // BUFF: 6 → 9 (uptime 24% → 41%)
             garudaDamage: 120,
             garudaOrbitRadius: 120,
             garudaOrbitSpeed: 2.2,
@@ -362,135 +353,126 @@ const BALANCE = {
             garudaDiveSpeed: 820,
             garudaReturnSpeed: 620,
             garudaEatRiceBonus: 1.5,
-            // โ”€โ”€ Cosmic Balance (Naga + Garuda active simultaneously) โ”€โ”€
-            // cosmicDamageMult เธขเนเธฒเธขเธเธถเนเธเนเธเธญเธขเธนเนเนเธ Passive Skill section เนเธฅเนเธง
-            nagaIgniteDuration: 0.8,        // ignite duration เน€เธกเธทเนเธญ Naga hit เธเธ“เธฐ Cosmic Balance
-            cosmicNagaBurnDPS: 30,          // BUFF: 22 โ’ 30
+            // ── Cosmic Balance (Naga + Garuda active simultaneously) ──
+            // cosmicDamageMult ย้ายขึ้นไปอยู่ใน Passive Skill section แล้ว
+            nagaIgniteDuration: 0.8,        // ignite duration เมื่อ Naga hit ขณะ Cosmic Balance
+            cosmicNagaBurnDPS: 30,          // BUFF: 22 → 30
             cosmicGarudaRadiusMult: 1.5,
-            // โ”€โ”€ Ritual Boss Damage Cap โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Ritual Boss Damage Cap ────────────────────────────
             ritualBossDmgCapPct: 0.35,       // single ritual burst cap = 35% boss maxHP
-            ritualBossDmgCapCosmicPct: 0.45, // cap เธเธ“เธฐ Cosmic Balance active
-            // โ”€โ”€ AbilityUnlock thresholds โ”€โ”€
-            su1StickyTargetReq: 10,     // SU1: unique enemies hit with sticky to unlock Q+R
-            su2RitualMultiHitReq: 1,    // SU2: times Ritual hits 4+ enemies to unlock E
-            specialRitualDmgReq: 5000,  // Special: total Ritual damage to unlock bonus
+            ritualBossDmgCapCosmicPct: 0.45, // cap ขณะ Cosmic Balance active
         },
         pat: {
             name: 'Pat',
-            radius: 17,                     // เน€เธ•เธตเนเธขเธเธงเนเธฒ โ€” hitbox เน€เธฅเนเธเธเธงเนเธฒ auto/poom
+            radius: 17,                     // เตี้ยกว่า — hitbox เล็กกว่า auto/poom
 
-            // โ”€โ”€ Base Stats โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            hp: 112, maxHp: 112,            // BALANCE: 140 โ’ 112 (glass cannon)
+            // ── Base Stats ────────────────────────────────────────────
+            hp: 140, maxHp: 140,            // glass cannon — เร็วแต่บาง
             energy: 100, maxEnergy: 100,
             energyRegen: 18,
-            moveSpeed: 285,                 // เธเธฒเธเธเธฅเธฒเธ (Kao 298, Auto 260)
+            moveSpeed: 285,                 // ปานกลาง (Kao 298, Auto 260)
             dashSpeed: 530,
             dashDistance: 175,
             dashCooldown: 1.6,
 
-            // โ”€โ”€ Katana โ€” Primary Weapon โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Katana — Primary Weapon ────────────────────────────────
             weapons: {
                 katana: {
                     name: 'KATANA',
-                    damage: 42,             // BIG-BALANCE: 34 โ’ 42 (+23%) โ€” Ranged DPS 99โ’146
-                    cooldown: 0.32,         // BIG-BALANCE: 0.38 โ’ 0.32 (tighter rhythm)
+                    damage: 42,             // BIG-BALANCE: 34 → 42 (+23%) — Ranged DPS 99→146
+                    cooldown: 0.32,         // BIG-BALANCE: 0.38 → 0.32 (tighter rhythm)
                     range: 750,             // slash wave range
                     speed: 820,             // projectile speed
                     color: '#7ec8e3',       // ice blue
-                    icon: '๐”ต'
+                    icon: '🔵'
                 }
             },
 
-            // โ”€โ”€ Dual Mode โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            meleeRange: 150,                // เธฃเธฐเธขเธฐ switch โ’ melee combo
-            meleeDamageMulti: 2.0,          // BIG-BALANCE: 1.8 โ’ 2.0 (melee DPS 168โ’198, post-passive ~215)
+            // ── Dual Mode ─────────────────────────────────────────────
+            meleeRange: 150,                // ระยะ switch → melee combo
+            meleeDamageMulti: 2.0,          // BIG-BALANCE: 1.8 → 2.0 (melee DPS 168→198, post-passive ~215)
             meleeComboHits: 3,              // 3-hit combo
-            meleeComboWindow: 0.18,         // เธงเธดเธเธฒเธ—เธตเธ•เนเธญ hit เนเธ combo
-            meleeCooldown: 0.55,            // cooldown เธซเธฅเธฑเธ combo เธเธ
+            meleeComboWindow: 0.18,         // วินาทีต่อ hit ใน combo
+            meleeCooldown: 0.55,            // cooldown หลัง combo จบ
 
-            // โ”€โ”€ Crit & Scaling โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Crit & Scaling ────────────────────────────────────────
             baseCritChance: 0.08,
             critMultiplier: 2.4,
 
-            // โ”€โ”€ Blade Guard (R-Click) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            bladeGuardSpeedMult: 0.6,       // speed ร— 0.6 เธเธ“เธฐเธเธ”เธเนเธฒเธ
-            bladeGuardMaxDuration: 3.0,     // max 3s เธ•เนเธญเธเธฃเธฑเนเธ
-            bladeGuardCooldown: 5.0,        // เธซเธฅเธฑเธ duration เธซเธกเธ”
-            bladeGuardReflectRadius: 55,    // hitbox reflect เธฃเธญเธเธ•เธฑเธง
+            // ── Blade Guard (R-Click) ─────────────────────────────────
+            bladeGuardSpeedMult: 0.6,       // speed × 0.6 ขณะกดค้าง
+            bladeGuardMaxDuration: 3.0,     // max 3s ต่อครั้ง
+            bladeGuardCooldown: 5.0,        // หลัง duration หมด
+            bladeGuardReflectRadius: 55,    // hitbox reflect รอบตัว
 
-            // โ”€โ”€ Zanzo Flash (Q) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Zanzo Flash (Q) ───────────────────────────────────────
             qEnergyCost: 22,
             zanzoRange: 280,                // max teleport distance
             zanzoCooldown: 7.0,
-            zanzoLandingRange: 120,         // radius เน€เธเนเธ enemy เธซเธฅเธฑเธเธฅเธเธเธญเธ”
-            zanzoCritBonus: 0.40,           // +40% crit chance เธเธ“เธฐ ambush window
-            zanzoAmbushWindow: 1.5,         // เธงเธดเธเธฒเธ—เธต window เธซเธฅเธฑเธ blink
-            zanzoGhostCount: 4,             // afterimage เธเธณเธเธงเธ ghost sprites
-            zanzoGhostFadeDur: 0.35,        // เธงเธดเธเธฒเธ—เธต ghost fade out
+            zanzoLandingRange: 120,         // radius เช็ค enemy หลังลงจอด
+            zanzoCritBonus: 0.40,           // +40% crit chance ขณะ ambush window
+            zanzoAmbushWindow: 1.5,         // วินาที window หลัง blink
+            zanzoGhostCount: 4,             // afterimage จำนวน ghost sprites
+            zanzoGhostFadeDur: 0.35,        // วินาที ghost fade out
 
-            // โ”€โ”€ Iaido Strike (R) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Iaido Strike (R) ──────────────────────────────────────
             rEnergyCost: 40,
             iaidoRange: 400,                // max dash distance
             iaidoCooldown: 14.0,
             iaidoChargeDuration: 0.6,       // Phase 1 charge time
-            iaidoDamage: 180,               // BIG-BALANCE: 160 โ’ 180 (single target burst reward)
-            iaidoCritMulti: 3.5,            // crit multiplier เน€เธเธเธฒเธฐ Iaido
+            iaidoDamage: 180,               // BIG-BALANCE: 160 → 180 (single target burst reward)
+            iaidoCritMulti: 3.5,            // crit multiplier เฉพาะ Iaido
             iaidoFreezeDuration: 0.5,       // Phase 3 cinematic freeze (TimeManager)
             iaidoBloodParticles: 18,        // blood burst particle count
 
-            // โ”€โ”€ Level Scaling โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Level Scaling ─────────────────────────────────────────
             expToNextLevel: 100,
-            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 โ’ 1.30 โ€” player reaches Lv12 at W15 (was Lv9)
-            damageMultiplierPerLevel: 0.065,
+            expLevelMult: 1.30,     // BIG-BALANCE: 1.5 → 1.30 — player reaches Lv12 at W15 (was Lv9)
+            damageMultiplierPerLevel: 0.09,
             cooldownReductionPerLevel: 0.04,
-            maxHpPerLevel: 5,
+            maxHpPerLevel: 7,
 
-            // โ”€โ”€ Passive: RONIN'S EDGE โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // Unlock: เนเธเน Iaido เธชเธณเน€เธฃเนเธ (เนเธ”เธ enemy) เธเธฃเธฑเนเธเนเธฃเธ
+            // ── Passive: RONIN'S EDGE ─────────────────────────────────
+            // Unlock: ใช้ Iaido สำเร็จ (โดน enemy) ครั้งแรก
             passiveUnlockLevel: 3,          // fallback
             passiveUnlockStealthCount: 0,
             passiveHpBonusPct: 0.25,
-            passiveUnlockText: 'โ”๏ธ Ronin-Edge!',
+            passiveUnlockText: '⚔️ Ronin-Edge!',
             passiveCritBonus: 0.05,
             passiveLifesteal: 0.02,
-            passiveMeleeDmgBonus: 0.15,     // melee damage +15% เธซเธฅเธฑเธ passive เธเธฅเธ”
+            passiveMeleeDmgBonus: 0.15,     // melee damage +15% หลัง passive ปลด
 
-            // โ”€โ”€ Speed on Hit โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Speed on Hit ──────────────────────────────────────────
             speedOnHit: 18,
             speedOnHitDuration: 0.38,
 
-            // โ”€โ”€ Blade Guard Reflect (R-Click hold) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // reflectDamageMult เนเธซเธกเน: 2.0 (เน€เธ”เธดเธกเน€เธเธตเธขเธ 1.2 hardcode เนเธ tryReflectProjectile)
+            // ── Blade Guard Reflect (R-Click hold) ───────────────────
+            // reflectDamageMult ใหม่: 2.0 (เดิมเขียน 1.2 hardcode ใน tryReflectProjectile)
             reflectDamageMult: 2.0,
 
-            // โ”€โ”€ Perfect Parry (R-Click tap < perfectParryWindow เธงเธดเธเธฒเธ—เธต) โ”€โ”€
-            // tap เนเธ—เธเธ—เธตเนเธเธฐ hold โ’ reflect ร—4 + energy restore + i-frame เธชเธฑเนเธ
-            // เธเธฐเน€เธงเธฅเธฒเธเธฅเธฒเธ” = Blade Guard เนเธกเนเธ—เธณเธเธฒเธ + cooldown เน€เธ•เนเธก
-            perfectParryWindow: 0.15,           // เธงเธดเธเธฒเธ—เธต: tap เธ•เนเธญเธเธชเธฑเนเธเธเธงเนเธฒเธเธตเนเธเธถเธเน€เธเนเธ Perfect Parry
-            perfectParryReflectMult: 4.0,       // reflect damage ร—4 (vs hold ร—2)
-            perfectParryEnergyRestore: 20,      // energy เธเธทเธเน€เธกเธทเนเธญ parry เธชเธณเน€เธฃเนเธ
-            perfectParryIFrameDur: 0.4,         // i-frame เธงเธดเธเธฒเธ—เธตเธซเธฅเธฑเธ Perfect Parry
+            // ── Perfect Parry (R-Click tap < perfectParryWindow วินาที) ──
+            // tap แทนที่จะ hold → reflect ×4 + energy restore + i-frame สั้น
+            // กะเวลาพลาด = Blade Guard ไม่ทำงาน + cooldown เต็ม
+            perfectParryWindow: 0.15,           // วินาที: tap ต้องสั้นกว่านี้จึงเป็น Perfect Parry
+            perfectParryReflectMult: 4.0,       // reflect damage ×4 (vs hold ×2)
+            perfectParryEnergyRestore: 20,      // energy คืนเมื่อ parry สำเร็จ
+            perfectParryIFrameDur: 0.4,         // i-frame วินาทีหลัง Perfect Parry
             perfectParryScreenFreeze: 0.05,     // TimeManager.setBulletTime() duration
 
-            // โ”€โ”€ Iaido Strike โ€” Boss Hit & Point-Blank Execute โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // point-blank = Pat เธซเธขเธธเธ”เธ—เธตเนเธฃเธฐเธขเธฐ โค iaidoPointBlankRange px เธเธฒเธ target
-            iaidoPointBlankRange: 45,           // px โ€” threshold execute range
-            iaidoPointBlankDmgMult: 2.0,        // dmg ร—2 เธ–เนเธฒ point-blank
-            iaidoPointBlankIFrameDur: 1.5,      // เธงเธดเธเธฒเธ—เธต เธญเธกเธ•เธฐเธซเธฅเธฑเธ point-blank hit
+            // ── Iaido Strike — Boss Hit & Point-Blank Execute ─────────
+            // point-blank = Pat หยุดที่ระยะ ≤ iaidoPointBlankRange px จาก target
+            iaidoPointBlankRange: 45,           // px — threshold execute range
+            iaidoPointBlankDmgMult: 2.0,        // dmg ×2 ถ้า point-blank
+            iaidoPointBlankIFrameDur: 1.5,      // วินาที อมตะหลัง point-blank hit
 
-            // โ”€โ”€ Iaido Cinematic โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // (เนเธเนเธญเธขเธนเนเนเธฅเนเธงเนเธ _tickIaido เนเธ•เนเธญเนเธฒเธเธเธฒเธ this.stats โ€” เน€เธเธดเนเธกเนเธซเนเธเธฃเธ)
+            // ── Iaido Cinematic ───────────────────────────────────────
+            // (ใช้อยู่แล้วใน _tickIaido แต่อ่านจาก this.stats — เพิ่มให้ครบ)
             iaidoCinematicDur: 0.55,
 
-            // โ”€โ”€ AbilityUnlock thresholds โ”€โ”€
-            su1IaidoHitReq: 3,         // SU1: Iaido hits to unlock Q Zanzo Flash
-            su2ReflectReq: 2,          // SU2: reflects to unlock Perfect Parry timing window
-            specialParryReq: 5,        // Special: total Perfect Parries for energy bonus
-            passiveSequenceWindow: 10.0, // seconds for Parry->Zanzo->Iaido passive sequence
-            // โ”€โ”€ DeadlyGraph Reflect โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // เธฃเธฐเธขเธฐเธ—เธตเน Pat เธ•เนเธญเธเธญเธขเธนเนเนเธเธฅเนเนเธเธงเธเธฃเธฒเธเน€เธเธทเนเธญ reflect เนเธ”เน
-            graphReflectRange: 80,              // px เธเธฒเธ midpoint เธเธญเธ beam
-            graphReflectDamageMult: 2.0,        // damage ร—2 เธซเธฅเธฑเธ reflect เธเธฅเธฑเธ
+            // ── DeadlyGraph Reflect ───────────────────────────────────
+            // ระยะที่ Pat ต้องอยู่ใกล้แนวกราฟเพื่อ reflect ได้
+            graphReflectRange: 80,              // px จาก midpoint ของ beam
+            graphReflectDamageMult: 2.0,        // damage ×2 หลัง reflect กลับ
         },
     },
     drone: {
@@ -506,7 +488,7 @@ const BALANCE = {
         lerpBase: 0.02,
         bobAmplitude: 8,
         bobSpeed: 3.5,
-        // โ”€โ”€ Overdrive Stats โ”€โ”€
+        // ── Overdrive Stats ──
         overdriveCombo: 15,
         overdriveFireRate: 1.5,
         overdriveColor: '#facc15',
@@ -519,9 +501,9 @@ const BALANCE = {
         expValue: 18,
         chaseRange: 150,
         projectileSpeed: 500,
-        baseHp: 40, hpPerWave: 0.19,  // REBALANCE: 0.16 โ’ 0.19 (Wave15 ~490HP เนเธ—เธ ~410HP โ€” เธขเธฑเธเนเธกเน infinite เนเธ•เนเธฃเธนเนเธชเธถเธเนเธ”เน)
+        baseHp: 40, hpPerWave: 0.19,  // REBALANCE: 0.16 → 0.19 (Wave15 ~490HP แทน ~410HP — ยังไม่ infinite แต่รู้สึกได้)
         baseSpeed: 85, speedPerWave: 6,
-        baseDamage: 8, damagePerWave: 1.4,  // REBALANCE: 1.2 โ’ 1.4 (Wave15 damage ~28 เนเธ—เธ ~24 โ€” เธ•เนเธญเธเธซเธฅเธ)
+        baseDamage: 8, damagePerWave: 1.4,  // REBALANCE: 1.2 → 1.4 (Wave15 damage ~28 แทน ~24 — ต้องหลบ)
         shootCooldown: [2.5, 4.5],
         shootRange: 550
     },
@@ -530,9 +512,9 @@ const BALANCE = {
         color: '#78716c',
         expValue: 45,
         powerupDropMult: 1.5,
-        baseHp: 100, hpPerWave: 0.20,  // BIG-BALANCE: 0.23 โ’ 0.20 (W15 Tank HP ~1350 เธเธฒเธ 1814 โ€” Kao TTK 5.5s เนเธ—เธ 8.3s)
+        baseHp: 100, hpPerWave: 0.20,  // BIG-BALANCE: 0.23 → 0.20 (W15 Tank HP ~1350 จาก 1814 — Kao TTK 5.5s แทน 8.3s)
         baseSpeed: 60, speedPerWave: 3,
-        baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 โ’ 2.5 (melee damage was too punishing)
+        baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
         meleeRange: 55
     },
     mage: {
@@ -542,16 +524,16 @@ const BALANCE = {
         powerupDropMult: 1.3,
         orbitDistance: 300,
         orbitDistanceBuffer: 100,
-        baseHp: 28, hpPerWave: 0.22,  // BIG-BALANCE: 0.25 โ’ 0.22 (W15 Mage HP ~470 เธเธฒเธ 637 โ€” glass cannon identity เธเธเนเธงเน)
+        baseHp: 28, hpPerWave: 0.22,  // BIG-BALANCE: 0.25 → 0.22 (W15 Mage HP ~470 จาก 637 — glass cannon identity คงไว้)
         baseSpeed: 70, speedPerWave: 5,
         baseDamage: 12, damagePerWave: 1.8,
         soundWaveCooldown: 10,
         soundWaveRange: 300,
-        soundWaveConfuseDuration: 0.6,  // NERF: 0.8 โ’ 0.6 (confusion was too long)
+        soundWaveConfuseDuration: 0.6,  // NERF: 0.8 → 0.6 (confusion was too long)
         meteorCooldown: 13,
-        meteorDamage: 24,  // NERF: 28 โ’ 24 (meteor spam was too strong)
+        meteorDamage: 24,  // NERF: 28 → 24 (meteor spam was too strong)
         meteorBurnDuration: 3,
-        meteorBurnDPS: 4.0  // NERF: 4.5 โ’ 4.0
+        meteorBurnDPS: 4.0  // NERF: 4.5 → 4.0
     },
     enemies: {
         sniper: {
@@ -724,7 +706,7 @@ const BALANCE = {
         radius: 50,
         // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
         spawnY: -330,
-        contactDamage: 38,           // BUFF: 30โ’38 (+27% เน€เธเธดเนเธกเธเธงเธฒเธกเธญเธฑเธเธ•เธฃเธฒเธข)
+        contactDamage: 38,           // BUFF: 30→38 (+27% เพิ่มความอันตราย)
         speechInterval: 10,
         nextWaveDelay: 2000,
         log457HealRate: 0.06,
@@ -733,21 +715,21 @@ const BALANCE = {
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
         baseHp: 5200,
-        hpMultiplier: 1.32,      // REBALANCE: 1.28 โ’ 1.32 (Enc5 ~15,000 HP โ€” boss เธเธงเธฃเธฃเธนเนเธชเธถเธ epic)
+        hpMultiplier: 1.32,      // REBALANCE: 1.28 → 1.32 (Enc5 ~15,000 HP — boss ควรรู้สึก epic)
         moveSpeed: 140,
         phase2Speed: 190,
         phase2Threshold: 0.5,   // fallback (overridden per-encounter in KruManop constructor)
-        // Per-encounter phase thresholds โ€” enc 1 triggers phase2 early so wave-3 players see dog
+        // Per-encounter phase thresholds — enc 1 triggers phase2 early so wave-3 players see dog
         phase2ThresholdByEnc: [null, 0.50, null, 0.60, null, 0.65], // index = encounter (1-based)
         phase3ThresholdByEnc: [null, null, null, 0.30, null, 0.35],
-        chalkDamage: 16,            // BUFF: 13โ’16 (+23%)
-        ultimateDamage: 44,          // BUFF: 35โ’44 (+26%)
+        chalkDamage: 16,            // BUFF: 13→16 (+23%)
+        ultimateDamage: 44,          // BUFF: 35→44 (+26%)
         ultimateBullets: 20,
         phase2UltimateBullets: 28,
-        slamDamage: 75,             // BUFF: 60โ’75 (+25%)
+        slamDamage: 75,             // BUFF: 60→75 (+25%)
         slamRadius: 360,
         slamCooldown: 14,
-        graphDamage: 88,            // BUFF: 70โ’88 (+26%)
+        graphDamage: 88,            // BUFF: 70→88 (+26%)
         graphLength: 1600,
         graphDuration: 20,
         graphCooldown: 16,
@@ -758,23 +740,23 @@ const BALANCE = {
         log457Cooldown: 30,
         log457AttackBonus: 0.09,
         log457AttackGrowth: 0.04,
-        // burst armor: เน€เธกเธทเนเธญ HP เธ•เนเธณเธเธงเนเธฒเธเนเธฒเธเธตเน เธฅเธ”เธ”เธฒเน€เธกเธเน€เธเนเธฒ
+        // burst armor: เมื่อ HP ต่ำกว่าค่านี้ ลดดาเมจเข้า
         burstArmorThresholdPct: 0.30,
         burstArmorReduction: 0.40,
         burstArmorDuration: 4.0,
         burstArmorCooldown: 25,
         phase2: {
-            barkDamage: 40,           // BUFF: 32โ’40 (+25%)
+            barkDamage: 40,           // BUFF: 32→40 (+25%)
             barkRange: 600,
             barkCooldown: 3.2,
             enrageSpeedMult: 2.0,
             dogColor: '#d97706',
-            // โ”€โ”€ ChalkWall โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── ChalkWall ────────────────────────────────────
             chalkWallCooldown: 12.0,
             chalkWallDamage: 15,        // damage on contact per crossing
             chalkWallLength: 340,       // world-unit line length
             chalkWallDuration: 6.0,     // seconds the wall persists
-            // โ”€โ”€ DogPackCombo โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── DogPackCombo ─────────────────────────────────
             dogPackCooldown: 18.0,      // minimum gap between combos
         },
         bossDog: {
@@ -810,8 +792,8 @@ const BALANCE = {
             color: 'rgba(186, 230, 253, 0.6)'
         },
         first: {
-            hpBaseMult: 0.72,       // BUFF: 0.62 โ’ 0.72 (Wave6 HP: 6448โ’7488, mid-game boss เธเธงเธฃเธซเธเธฑเธเธเธถเนเธ)
-            advancedHpMult: 0.85,   // NERF: 1.35 โ’ 0.85 (Wave12 HP: 17410โ’12730, TTK 46sโ’40s)
+            hpBaseMult: 0.72,       // BUFF: 0.62 → 0.72 (Wave6 HP: 6448→7488, mid-game boss ควรหนักขึ้น)
+            advancedHpMult: 0.85,   // NERF: 1.35 → 0.85 (Wave12 HP: 17410→12730, TTK 46s→40s)
             speedBaseMult: 1.55,
             advancedSpeedMult: 1.35,
             contactDamageMult: 1.2,
@@ -826,20 +808,20 @@ const BALANCE = {
         domainExpansion: {
             dangerPct: 0.62,
             dangerPctMax: 0.84,
-            // โ”€โ”€ Phase 3 Rework: Sub-phase A / B / C โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            // subPhase A (cycles 1-2): EQUATION RAIN โ€” longer warn, overlay
+            // ── Phase 3 Rework: Sub-phase A / B / C ───────────────
+            // subPhase A (cycles 1-2): EQUATION RAIN — longer warn, overlay
             subPhaseA_warnDur: 2.0,
-            // subPhase B (cycles 3-4): LOG457 OVERDRIVE โ€” faster danger%, chalk volley, safe cell shifts
-            subPhaseB_dangerPctStep: 0.06,  // default 0.04 โ’ faster
+            // subPhase B (cycles 3-4): LOG457 OVERDRIVE — faster danger%, chalk volley, safe cell shifts
+            subPhaseB_dangerPctStep: 0.06,  // default 0.04 → faster
             subPhaseB_chalkInterval: 0.8,   // s between 3-way chalk volleys
             subPhaseB_chalkCount: 3,
             subPhaseB_chalkSpeed: 460,
             subPhaseB_chalkDamage: 18,
             subPhaseB_safeCellShift: true,
-            // subPhase C (cycles 5-6): DOMAIN COLLAPSE โ€” TeacherFury chance
+            // subPhase C (cycles 5-6): DOMAIN COLLAPSE — TeacherFury chance
             subPhaseC_teacherFuryChance: 0.30,
         },
-        // โ”€โ”€ KruFirst Domain Expansion: GRAVITATIONAL SINGULARITY โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+        // ── KruFirst Domain Expansion: GRAVITATIONAL SINGULARITY ──────────────
         gravitationalSingularity: {
             castDur: 2.5,   // casting phase duration (s)
             endDur: 2.0,   // ending fade-out (s)
@@ -851,7 +833,7 @@ const BALANCE = {
             pullForce: 95,    // px/s player pull force (Pulse 1)
             pushForce: 130,   // px/s push force (Pulse 2)
             tidalForce: 110,   // px/s tidal magnitude (Pulse 3)
-            tidalPeriod: 3.0,   // s per pullโ’push cycle (Pulse 3)
+            tidalPeriod: 3.0,   // s per pull→push cycle (Pulse 3)
             collapseForce: 220,   // px/s ramp pull (Pulse 4)
             projPullForce: 60,    // px/s projectile bend (Pulse 1)
             orbitalCount: 6,     // OrbitalDebris projectiles
@@ -864,38 +846,38 @@ const BALANCE = {
             collapseRadius: 380,   // AoE shockwave radius
             collapseDamage: 40,    // shockwave damage
             safeRadius: 75,    // px near boss = safe from push (Pulse 2)
-            // โ”€โ”€ Proximity Punishment (anti-hug mechanics) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Proximity Punishment (anti-hug mechanics) ────────────
             // Prevents player from standing next to boss to avoid gravity damage.
-            // Active on PULL, TIDAL, COLLAPSE โ€” NOT on ESCAPE (safeRadius intentional).
-            contactRadius: 70,    // px โ€” within this = contact damage tick + repulsion
+            // Active on PULL, TIDAL, COLLAPSE — NOT on ESCAPE (safeRadius intentional).
+            contactRadius: 70,    // px — within this = contact damage tick + repulsion
             contactDPS: 18,       // damage per second (applied in ticks every contactTickCd s)
             contactTickCd: 0.7,   // s cooldown between contact damage ticks
             repulseForce: 260,    // px/s outward push when inside contactRadius
-            // โ”€โ”€ Collapse Inner Ring โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Collapse Inner Ring ───────────────────────────────────
             collapseInnerRadius: 110,   // inner ring AoE (higher damage, smaller)
             collapseInnerDamage: 65,    // damage for players inside inner ring at collapse
         },
     },
     powerups: {
         radius: 20,
-        dropRate: 0.18,  // BUFF: 0.15 โ’ 0.18 (more healing opportunities)
+        dropRate: 0.18,  // BUFF: 0.15 → 0.18 (more healing opportunities)
         lifetime: 14,
         healAmount: 20,
-        damageBoost: 1.4,  // NERF: 1.5 โ’ 1.4 (stacking with shop was too strong)
-        damageBoostDuration: 8,  // BUFF: 5 โ’ 8 (lasts longer)
-        speedBoost: 1.3,  // NERF: 1.35 โ’ 1.3
-        speedBoostDuration: 8  // BUFF: 5 โ’ 8
+        damageBoost: 1.4,  // NERF: 1.5 → 1.4 (stacking with shop was too strong)
+        damageBoostDuration: 8,  // BUFF: 5 → 8 (lasts longer)
+        speedBoost: 1.3,  // NERF: 1.35 → 1.3
+        speedBoostDuration: 8  // BUFF: 5 → 8
     },
     waves: {
         spawnDistance: 800,
         bossSpawnDelay: 3000,
-        maxWaves: 15,       // โ extended from 9 (5 boss encounters at waves 3,6,9,12,15)
+        maxWaves: 15,       // ← extended from 9 (5 boss encounters at waves 3,6,9,12,15)
         minKillsForNoDamage: 5,
-        enemiesBase: 5,  // BUFF: 4 โ’ 5 (more action early game)
-        enemiesPerWave: 2.0,  // REBALANCE: 1.8 โ’ 2.0 (เธเธฅเธฑเธเธชเธนเนเธเนเธฒเน€เธ”เธดเธก โ€” late game เธเธงเธฃเธฃเธนเนเธชเธถเธเธ–เธนเธเธ—เนเธงเธก)
+        enemiesBase: 5,  // BUFF: 4 → 5 (more action early game)
+        enemiesPerWave: 2.0,  // REBALANCE: 1.8 → 2.0 (กลับสู่ค่าเดิม — late game ควรรู้สึกถูกท่วม)
         enableExpandedRoster: true,
-        tankSpawnChance: 0.10,  // NERF: 0.12 โ’ 0.10 (fewer tanks)
-        mageSpawnChance: 0.12,  // NERF: 0.15 โ’ 0.12 (fewer mages)
+        tankSpawnChance: 0.10,  // NERF: 0.12 → 0.10 (fewer tanks)
+        mageSpawnChance: 0.12,  // NERF: 0.15 → 0.12 (fewer mages)
         enemyPools: [
             { minWave: 1, weights: { basic: 78, tank: 10, mage: 12 } },
             { minWave: 2, weights: { basic: 58, tank: 10, mage: 12, charger: 10, poison_spitter: 5, shield_bravo: 5 } },
@@ -915,7 +897,7 @@ const BALANCE = {
         },
         bossEveryNWaves: 3,
         glitchGracePeriod: 4000,
-        // โ”€โ”€ Wave Event Configurations โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+        // ── Wave Event Configurations ──────────────────────
         // Boss  : 3, 6, 9, 12, 15
         // Glitch: 5, 10
         // Fog   : 2, 8, 11, 14
@@ -927,20 +909,20 @@ const BALANCE = {
         darkWave: 1
     },
     score: {
-        basicEnemy: 100,  // BUFF: 80 โ’ 100 (more income)
-        tank: 200,  // BUFF: 160 โ’ 200
-        mage: 280,  // BUFF: 220 โ’ 280
-        boss: 6000,  // BUFF: 5000 โ’ 6000 (boss fights are hard)
-        powerup: 120,  // BUFF: 100 โ’ 120
+        basicEnemy: 100,  // BUFF: 80 → 100 (more income)
+        tank: 200,  // BUFF: 160 → 200
+        mage: 280,  // BUFF: 220 → 280
+        boss: 6000,  // BUFF: 5000 → 6000 (boss fights are hard)
+        powerup: 120,  // BUFF: 100 → 120
         achievement: 500
     },
 
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-    // ๐—๏ธ  MTC DATABASE SERVER โ€” location + interaction + visual
+    // ══════════════════════════════════════════════════════
+    // 🗄️  MTC DATABASE SERVER — location + interaction + visual
     // AdminSystem.js reads ALL values from here. Edit here only.
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+    // ══════════════════════════════════════════════════════
     database: {
-        // World position โ€” must match MAP_CONFIG.auras.database + paths.database.to
+        // World position — must match MAP_CONFIG.auras.database + paths.database.to
         x: 500,
         y: -490,
         interactionRadius: 90,
@@ -961,12 +943,12 @@ const BALANCE = {
         labelText: 'MTC DATABASE',
     },
 
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-    // ๐’  MTC CO-OP STORE โ€” location + interaction + shop mechanics
+    // ══════════════════════════════════════════════════════
+    // 🛒  MTC CO-OP STORE — location + interaction + shop mechanics
     // ShopSystem.js reads ALL values from here. Edit here only.
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+    // ══════════════════════════════════════════════════════
     shop: {
-        // World position โ€” must match MAP_CONFIG.auras.shop + paths.shop.to
+        // World position — must match MAP_CONFIG.auras.shop + paths.shop.to
         x: -500,
         y: 490,
         interactionRadius: 90,
@@ -993,49 +975,49 @@ const BALANCE = {
     },
 
     mtcRoom: {
-        healRate: 30,           // เธฅเธ” 40โ’30 (offset by new abilities)
+        healRate: 30,           // ลด 40→30 (offset by new abilities)
         maxStayTime: 4,
         cooldownTime: 10,
         size: 300,
-        // โ”€โ”€ Dash Reset โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+        // ── Dash Reset ──────────────────────────────────────────
         dashResetOnEntry: true,
-        // โ”€โ”€ Crisis Protocol โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-        crisisHpPct: 0.25,      // trigger เธ—เธตเน HP โค 25%
+        // ── Crisis Protocol ─────────────────────────────────────
+        crisisHpPct: 0.25,      // trigger ที่ HP ≤ 25%
         crisisHealBonus: 35,    // instant bonus HP
-        // โ”€โ”€ Rotating Buff Terminal (cycles per visit) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+        // ── Rotating Buff Terminal (cycles per visit) ───────────
         // Index 0 = DMG, 1 = SPD, 2 = CDR Burst
-        buffCycleDuration: [8, 6, 0],  // เธงเธดเธเธฒเธ—เธต (0 = instant)
+        buffCycleDuration: [8, 6, 0],  // วินาที (0 = instant)
         buffCycleMagnitude: [0.15, 0.10, 0.35],  // +15% DMG, +10% SPD, -35% CD
         buffCycleNames: ['DMG +15%', 'SPD +10%', 'CDR BURST'],
         buffCycleColors: ['#f97316', '#22d3ee', '#a78bfa'],
-        buffCycleIcons: ['โ”', '๐’จ', 'โก'],
+        buffCycleIcons: ['⚔', '💨', '⚡'],
     },
     LIGHTING: {
-        ambientLight: 0.72,        // เธฅเธ” 0.9โ’0.72 เน€เธเธดเนเธก drama + เธเธฃเธฃเธขเธฒเธเธฒเธจเธกเธทเธ”
+        ambientLight: 0.72,        // ลด 0.9→0.72 เพิ่ม drama + บรรยากาศมืด
         cycleDuration: 60,
         nightMinLight: 0.12,
         dayMaxLight: 0.95,
-        playerLightRadius: 185,    // เน€เธเธดเนเธก 160โ’185 เธเธนเนเน€เธฅเนเธเธกเธญเธเน€เธซเนเธเธฃเธญเธเธ•เธฑเธงเนเธ”เนเนเธเธฅเธเธถเนเธ
-        projectileLightRadius: 55, // เน€เธเธดเนเธก 50โ’55 เธเธฃเธฐเธชเธธเธเธชเธงเนเธฒเธเธเธถเนเธเน€เธฅเนเธเธเนเธญเธข
-        mtcServerLightRadius: 140, // เน€เธเธดเนเธก 120โ’140
-        shopLightRadius: 100,      // เน€เธเธดเนเธก 85โ’100
-        dataPillarLightRadius: 85, // เน€เธเธดเนเธก 70โ’85 pillar เน€เธ”เนเธเธเธถเนเธ
-        serverRackLightRadius: 65, // เน€เธเธดเนเธก 55โ’65
-        nightR: 3, nightG: 6, nightB: 20  // เน€เธเนเธกเธเธถเนเธ เน€เธเธดเนเธก blue tint
+        playerLightRadius: 185,    // เพิ่ม 160→185 ผู้เล่นมองเห็นรอบตัวได้ไกลขึ้น
+        projectileLightRadius: 55, // เพิ่ม 50→55 กระสุนสว่างขึ้นเล็กน้อย
+        mtcServerLightRadius: 140, // เพิ่ม 120→140
+        shopLightRadius: 100,      // เพิ่ม 85→100
+        dataPillarLightRadius: 85, // เพิ่ม 70→85 pillar เด่นขึ้น
+        serverRackLightRadius: 65, // เพิ่ม 55→65
+        nightR: 3, nightG: 6, nightB: 20  // เข้มขึ้น เพิ่ม blue tint
     },
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-    // ๐ค–  UTILITY AI SYSTEM โ€” enemy decision making
+    // ══════════════════════════════════════════════════════
+    // 🤖  UTILITY AI SYSTEM — enemy decision making
     // UtilityAI.js reads all values from here. Edit here only.
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+    // ══════════════════════════════════════════════════════
     ai: {
         // How often each enemy makes a new decision (seconds)
-        // 0.5 = 2Hz โ€” decoupled from 60Hz game loop
+        // 0.5 = 2Hz — decoupled from 60Hz game loop
         decisionInterval: 0.5,
 
         // Personality weights per enemy type
-        // aggression: desire to attack  (0โ€“1)
-        // caution:    desire to retreat when low HP  (0โ€“1)
-        // teamwork:   desire to flank when allies nearby  (0โ€“1)
+        // aggression: desire to attack  (0–1)
+        // caution:    desire to retreat when low HP  (0–1)
+        // teamwork:   desire to flank when allies nearby  (0–1)
         personalities: {
             basic: { aggression: 0.6, caution: 0.2, teamwork: 0.3 },
             tank: { aggression: 0.8, caution: 0.1, teamwork: 0.5 },
@@ -1061,7 +1043,7 @@ const BALANCE = {
 
         // Squad / ally awareness
         squad: {
-            coordinationRadius: 300,  // px โ€” allies within this range count for teamwork
+            coordinationRadius: 300,  // px — allies within this range count for teamwork
             squadInterval: 1.0,       // seconds between SquadAI role reassignment ticks
             roleDefaults: {
                 basic: 'assault',
@@ -1085,7 +1067,7 @@ const BALANCE = {
         size: 3000,
         objectDensity: 0.12,
         objectTypes: ['desk', 'tree', 'server', 'datapillar', 'bookshelf', 'blackboard', 'database', 'coopstore'],
-        // โ”€โ”€ Object sizes โ€” consumed by generateCampusMap() createCluster() helper โ”€โ”€
+        // ── Object sizes — consumed by generateCampusMap() createCluster() helper ──
         objectSizes: {
             desk: { w: 60, h: 40 },
             tree: { w: 50, h: 50 },
@@ -1095,58 +1077,58 @@ const BALANCE = {
             vendingmachine: { w: 40, h: 70 },
         },
         wallPositions: [
-            // โ”€โ”€ Arena boundary walls (cardinal) โ”€โ”€
+            // ── Arena boundary walls (cardinal) ──
             { x: -1500, y: -50, w: 50, h: 100 },
             { x: 1450, y: -50, w: 50, h: 100 },
             { x: -50, y: -1500, w: 100, h: 50 },
             { x: -50, y: 1450, w: 100, h: 50 },
 
-            // โ”€โ”€ Corridor walls: Server Farm entrance (East) โ”€โ”€
-            // เธ–เธญเธขเธญเธญเธเนเธ x=400 (เน€เธ”เธดเธก x=220) เน€เธเธทเนเธญเน€เธเธดเธ”เธเธทเนเธเธ—เธตเน spawn
+            // ── Corridor walls: Server Farm entrance (East) ──
+            // ถอยออกไป x=400 (เดิม x=220) เพื่อเปิดพื้นที่ spawn
             { x: 400, y: -420, w: 18, h: 200 },   // North wing
             { x: 400, y: -100, w: 18, h: 200 },   // Mid wing
             { x: 400, y: 160, w: 18, h: 120 },   // South guard
 
-            // โ”€โ”€ Corridor walls: Library entrance (West) โ”€โ”€
-            // เธ–เธญเธขเธญเธญเธเนเธ x=-418 (เน€เธ”เธดเธก x=-238)
+            // ── Corridor walls: Library entrance (West) ──
+            // ถอยออกไป x=-418 (เดิม x=-238)
             { x: -418, y: -420, w: 18, h: 200 },
             { x: -418, y: -100, w: 18, h: 200 },
             { x: -418, y: 160, w: 18, h: 120 },
 
-            // โ”€โ”€ Corridor walls: Courtyard entrance (South) โ”€โ”€
-            // เธ–เธญเธขเธญเธญเธเนเธ y=340 (เน€เธ”เธดเธก y=200)
+            // ── Corridor walls: Courtyard entrance (South) ──
+            // ถอยออกไป y=340 (เดิม y=200)
             { x: -180, y: 340, w: 130, h: 18 },
             { x: 50, y: 340, w: 130, h: 18 },
             // Courtyard side rails
             { x: -560, y: 420, w: 18, h: 100 },
             { x: 542, y: 420, w: 18, h: 100 },
 
-            // โ”€โ”€ Corridor walls: Citadel approach (North) โ”€โ”€
+            // ── Corridor walls: Citadel approach (North) ──
             { x: -180, y: -370, w: 130, h: 18 },
             { x: 50, y: -370, w: 130, h: 18 },
-            // Citadel approach side rails โ€” เธซเธขเธธเธ”เธเนเธญเธเธ–เธถเธ entrance (y=-370 โ’ y=-480)
-            // เธ—เธณเนเธซเน entrance เธเธงเนเธฒเธ 300px เนเธฅเนเธเธชเธกเธเธนเธฃเธ“เน
+            // Citadel approach side rails — หยุดก่อนถึง entrance (y=-370 → y=-480)
+            // ทำให้ entrance กว้าง 300px โล่งสมบูรณ์
             { x: -180, y: -480, w: 18, h: 110 },
             { x: 162, y: -480, w: 18, h: 110 },
 
-            // โ”€โ”€ Library safe margin corners โ”€โ”€
+            // ── Library safe margin corners ──
             { x: -1100, y: -620, w: 30, h: 30 },
             { x: -380, y: -620, w: 30, h: 30 },
         ],
         mapColors: {
-            floor: '#080d18',          // เน€เธเนเธกเธเธถเนเธ เน€เธเธดเนเธกเธเธฃเธฃเธขเธฒเธเธฒเธจ night
+            floor: '#080d18',          // เข้มขึ้น เพิ่มบรรยากาศ night
             floorAlt: '#060a14',
-            treeLight: '#4a7a1a',      // เธชเธงเนเธฒเธเธเธถเนเธ เธ•เนเธเนเธกเน pop เธกเธฒเธเธเธถเนเธ
+            treeLight: '#4a7a1a',      // สว่างขึ้น ต้นไม้ pop มากขึ้น
             treeMid: '#243d0e',
             treeDark: '#142208',
             treeTrunk: '#5c2204',
             deskTop: '#251c0a',
             deskLegs: '#140e04',
             serverBody: '#0d1117',
-            serverLightOn: '#fbbf24',  // เธชเธงเนเธฒเธเธเธงเนเธฒเน€เธ”เธดเธก
+            serverLightOn: '#fbbf24',  // สว่างกว่าเดิม
             serverLightOff: '#3d1502',
             pillarBase: '#1e293b',
-            pillarCircuit: '#f59e0b',  // เธชเธงเนเธฒเธเธเธถเนเธ
+            pillarCircuit: '#f59e0b',  // สว่างขึ้น
             bookColors: ['#c26010', '#a85020', '#e8901a', '#8c4010', '#b87010', '#9a5a10', '#fbbf24'],
             wallColor: '#1f1610',
             wallBrick: '#352510',
@@ -1165,11 +1147,8 @@ const BALANCE = {
             shopShelf: '#78350f'
         }
     }
-};
+}
 
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-// ๐’ SHOP ITEMS
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
 const GAME_CONFIG = {
     canvas: {
@@ -1190,53 +1169,53 @@ const GAME_CONFIG = {
             glitch: 'assets/audio/glitch.mp3'
         },
         master: 1.0,
-        shoot: 0.28,        // auto reference level โ€” เธญเนเธฒเธเธญเธดเธเธ—เธธเธเธเธทเธ
-        dash: 0.35,         // เธฅเธ”เธฅเธ 0.4โ’0.35 โ€” dash เนเธกเนเธเธงเธฃเธเธฅเธเน€เธชเธตเธขเธเธเธทเธ
-        hit: 0.35,          // เธฅเธ”เธฅเธ 0.4โ’0.35 โ€” hit feedback เธเธฑเธ”เนเธ•เนเนเธกเนเธ”เธฑเธเน€เธเธดเธ
-        enemyDeath: 0.28,   // เน€เธ—เนเธฒ shoot โ€” death เนเธกเนเธเธงเธฃเธ”เธฑเธเธเธงเนเธฒเธเธทเธ
+        shoot: 0.28,        // auto reference level — อ้างอิงทุกปืน
+        dash: 0.35,         // ลดลง 0.4→0.35 — dash ไม่ควรกลบเสียงปืน
+        hit: 0.35,          // ลดลง 0.4→0.35 — hit feedback ชัดแต่ไม่ดังเกิน
+        enemyDeath: 0.28,   // เท่า shoot — death ไม่ควรดังกว่าปืน
         powerUp: 0.2,
         heal: 0.35,
         levelUp: 0.4,
         victory: 0.6,
         achievement: 0.4,
-        weaponSwitch: 0.25, // เธฅเธ”เธฅเธ 0.3โ’0.25 โ€” UI sound เธเธงเธฃเน€เธเธฒเธ—เธตเนเธชเธธเธ”
+        weaponSwitch: 0.25, // ลดลง 0.3→0.25 — UI sound ควรเบาที่สุด
         bossSpecial: 0.5,
         meteorWarning: 0.3,
 
-        // โ”€โ”€ Shell Casing Drop SFX โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-        // เธ•เนเธญเธเน€เธเธฒเธเธงเนเธฒเน€เธชเธตเธขเธเธเธทเธเน€เธชเธกเธญ auto เธขเธดเธ 5 เธเธฑเธ”/เธงเธดเธเธฒเธ—เธต = 5 เธเธฅเธญเธ/เธงเธดเธเธฒเธ—เธต
-        // shotgun = 3 เธเธฅเธญเธเธเธฃเนเธญเธกเธเธฑเธ โ’ peak โ shellDrop * 3 เธ•เนเธญเธเนเธกเนเธเธฅเธ shoot
-        // เธชเธนเธ•เธฃ: shellDrop * master * sfx * N_casings < shoot * master * sfx * weaponGain
-        // 0.025 * 3 = 0.075 < shoot(0.28) * shotgun(1.3) = 0.364 โ…
+        // ── Shell Casing Drop SFX ─────────────────────────────────────────────
+        // ต้องเบากว่าเสียงปืนเสมอ auto ยิง 5 นัด/วินาที = 5 ปลอก/วินาที
+        // shotgun = 3 ปลอกพร้อมกัน → peak ≈ shellDrop * 3 ต้องไม่กลบ shoot
+        // สูตร: shellDrop * master * sfx * N_casings < shoot * master * sfx * weaponGain
+        // 0.025 * 3 = 0.075 < shoot(0.28) * shotgun(1.3) = 0.364 ✅
         shellDrop: 0.025,
 
-        // โ”€โ”€ Procedural SFX gain multipliers โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+        // ── Procedural SFX gain multipliers ───────────────────────────────────
         // Tweak these to balance character SFX loudness without touching audio.js.
         // Values multiply the base `hit` or `shoot` level used in each playX().
         sfx: {
             stealth: 0.5,   // Kao warp cloaking sweep  (base: masterVol * sfxVol, not 'hit')
             clone: 0.4,     // Kao clone split ping
-            riceShoot: 0.55,    // เธฅเธ”เธฅเธ 0.6โ’0.55 โ€” Poom sticky rice splat
-            ritualBurst: 1.1,   // Poom ritual explosion โ€” ultimate needs presence
-            punch: 0.55,        // เธฅเธ”เธฅเธ 0.6โ’0.55 โ€” Auto heat wave punch
-            standRush: 0.35,    // เธฅเธ”เธฅเธ 0.45โ’0.35 โ€” fires every 60ms, stacks very fast
-            nagaAttack: 0.45,   // เธฅเธ”เธฅเธ 0.55โ’0.45 โ€” rate-limited 220ms เนเธ•เนเธขเธฑเธเธ–เธตเนเธญเธขเธนเน
-            // โ”€โ”€ New skill SFX โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            vacuum: 0.6,        // เธฅเธ”เธฅเธ 0.65โ’0.6 โ€” Auto Q vacuum pull whoosh
-            detonation: 0.85,   // Auto E โ€” overheat explosion (ultimate, เธเธเนเธงเน)
-            phantomShatter: 0.45, // เธฅเธ”เธฅเธ 0.50โ’0.45 โ€” Kao clone expire burst
+            riceShoot: 0.55,    // ลดลง 0.6→0.55 — Poom sticky rice splat
+            ritualBurst: 1.1,   // Poom ritual explosion — ultimate needs presence
+            punch: 0.55,        // ลดลง 0.6→0.55 — Auto heat wave punch
+            standRush: 0.35,    // ลดลง 0.45→0.35 — fires every 60ms, stacks very fast
+            nagaAttack: 0.45,   // ลดลง 0.55→0.45 — rate-limited 220ms แต่ยังถี่อยู่
+            // ── New skill SFX ──────────────────────────────────────
+            vacuum: 0.6,        // ลดลง 0.65→0.6 — Auto Q vacuum pull whoosh
+            detonation: 0.85,   // Auto E — overheat explosion (ultimate, คงไว้)
+            phantomShatter: 0.45, // ลดลง 0.50→0.45 — Kao clone expire burst
         },
 
-        // โ”€โ”€ Per-weapon SFX gain multipliers โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+        // ── Per-weapon SFX gain multipliers ───────────────────────────────────
         // Priority hierarchy: sniper > shotgun > auto
-        // sniper = 1.6 โ€” เธขเธดเธเธเนเธฒ 0.85s cooldown เธเธงเธฃเธฃเธนเนเธชเธถเธเธซเธเธฑเธเธ—เธตเนเธชเธธเธ”
-        // shotgun = 1.3 โ€” เธฅเธ”เธฅเธ 2.0โ’1.3 (2.0 เธ”เธฑเธเน€เธเธดเธเน€เธ”เธดเธก, 1.3 เธขเธฑเธเธเธ punch เนเธงเน)
-        // auto = 1.0 โ€” reference, เธขเธดเธเธ–เธตเนเธชเธธเธ”เธ•เนเธญเธเน€เธเธฒเธชเธธเธ”
+        // sniper = 1.6 — ยิงช้า 0.85s cooldown ควรรู้สึกหนักที่สุด
+        // shotgun = 1.3 — ลดลง 2.0→1.3 (2.0 ดังเกินเดิม, 1.3 ยังคง punch ไว้)
+        // auto = 1.0 — reference, ยิงถี่สุดต้องเบาสุด
         // Fallback: if key is missing, audio.js defaults to 1.0.
         weaponGain: {
             auto: 1.0,
-            sniper: 1.6,    // raised 1.5โ’1.6 โ€” เธขเธดเธเธเนเธฒเธ•เนเธญเธเธฃเธนเนเธชเธถเธเธซเธเธฑเธ
-            shotgun: 1.3,   // เธฅเธ”เธฅเธ 2.0โ’1.3 โ€” เนเธเนเธเธฑเธเธซเธฒ shotgun เธ”เธฑเธเน€เธเธดเธ
+            sniper: 1.6,    // raised 1.5→1.6 — ยิงช้าต้องรู้สึกหนัก
+            shotgun: 1.3,   // ลดลง 2.0→1.3 — แก้ปัญหา shotgun ดังเกิน
         }
     },
     visual: {
@@ -1245,43 +1224,41 @@ const GAME_CONFIG = {
         screenShakeDecay: 0.92,
         gridColor: 'rgba(255, 255, 255, 0.03)'
     },
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-    // ๐ฏ  SHARED ABILITY DEFINITIONS
+    // ══════════════════════════════════════════════════════
+    // 🎯  SHARED ABILITY DEFINITIONS
     // Values that belong to a mechanic, not a specific character.
     // Rule: if a value could meaningfully apply to another character's
-    //       version of the same ability โ’ it lives HERE, not in characters.{}
-    // Rule: if a value is tightly coupled to one character's stats โ’ it
+    //       version of the same ability → it lives HERE, not in characters.{}
+    // Rule: if a value is tightly coupled to one character's stats → it
     //       stays in BALANCE.characters.<id>
     //
-    // โ ๏ธ  AI NOTE: This block is intentionally inside GAME_CONFIG (not
+    // ⚠️  AI NOTE: This block is intentionally inside GAME_CONFIG (not
     //     BALANCE) because it describes ability *behavior*, not *balance*.
-    //     Do NOT move these values to characters.poom โ€” they are consumed
+    //     Do NOT move these values to characters.poom — they are consumed
     //     by PoomPlayer.js via GAME_CONFIG.abilities.ritual.*
-    // โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+    // ══════════════════════════════════════════════════════
     abilities: {
         ritual: {
-            // โ”€โ”€ Damage model โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Damage model ──────────────────────────────────
             damagePerStack: 15,              // flat dmg per stack; 5 stacks = 75 dmg
-            stackBurstPct: 0.15,             // NERF: 0.25 โ’ 0.15 (5 stacks = 75%hp เนเธ—เธ 125%hp โ€” เนเธกเน instakill)
+            stackBurstPct: 0.15,             // NERF: 0.25 → 0.15 (5 stacks = 75%hp แทน 125%hp — ไม่ instakill)
             baseDamage: 75,                  // base AoE damage when no sticky
             baseDamagePct: 0.15,             // 15% of enemy maxHp as base damage
-            // โ”€โ”€ Lifecycle โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-            cooldown: 15,                    // seconds โ€” reduced for better uptime
+            // ── Lifecycle ─────────────────────────────────────
+            cooldown: 15,                    // seconds — reduced for better uptime
             castTime: 0.6,                   // seconds before window opens
             windowDuration: 3.0,             // seconds window stays active
-            // โ”€โ”€ Area of Effect โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Area of Effect ───────────────────────────────
             range: 280,                      // increased from 200 to 280 pixels
-            // โ”€โ”€ Effect modifiers โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+            // ── Effect modifiers ──────────────────────────────
             fullCeremonySpeedPct: 0.25,      // speed bonus during full ceremony
             fullCeremonyExtraSlowPct: 0.05,  // extra slow during full ceremony
             maxPoints: 3                     // ritual points needed for full ceremony
         }
     }
-};
+}
 
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-// ๐จ VISUALS
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+
 const VISUALS = {
     PALETTE: {
         POOM: {
@@ -1314,79 +1291,76 @@ const VISUALS = {
         rotationSpeed: 0.05,
         opacity: 0.6
     }
-};
+}
 
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
-// ๐ ACHIEVEMENT DEFINITIONS
-// โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+
 const ACHIEVEMENT_DEFS = [
-    // โ”€โ”€ Early Game โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'first_blood', name: 'First Blood', desc: 'เน€เธเธฅเธตเธขเธฃเนเธจเธฑเธ•เธฃเธนเธ•เธฑเธงเนเธฃเธ', icon: 'โ”๏ธ', reward: { type: 'hp', value: 5, text: '+5 Max HP' } },
-    { id: 'wave_1', name: 'Wave Survivor', desc: 'เธเนเธฒเธ Wave เนเธฃเธ', icon: '๐', reward: { type: 'hp', value: 5, text: '+5 Max HP' } },
-    { id: 'wave_5', name: 'MTC Veteran', desc: 'เธฃเธญเธ”เธเธตเธงเธดเธ•เธ–เธถเธ Wave 5', icon: '๐–๏ธ', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
-    { id: 'wave_10', name: 'MTC Legend', desc: 'เธฃเธญเธ”เธเธตเธงเธดเธ•เธ–เธถเธ Wave 10', icon: '๐', reward: { type: 'hp', value: 15, text: '+15 Max HP' } },
+    // ── Early Game ──────────────────────────────────────────────────────────
+    { id: 'first_blood', name: 'First Blood', desc: 'เคลียร์ศัตรูตัวแรก', icon: '⚔️', reward: { type: 'hp', value: 5, text: '+5 Max HP' } },
+    { id: 'wave_1', name: 'Wave Survivor', desc: 'ผ่าน Wave แรก', icon: '🌊', reward: { type: 'hp', value: 5, text: '+5 Max HP' } },
+    { id: 'wave_5', name: 'MTC Veteran', desc: 'รอดชีวิตถึง Wave 5', icon: '🎖️', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
+    { id: 'wave_10', name: 'MTC Legend', desc: 'รอดชีวิตถึง Wave 10', icon: '🏆', reward: { type: 'hp', value: 15, text: '+15 Max HP' } },
 
-    // โ”€โ”€ Boss Kills โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'manop_down', name: '1st Manop Slayer', desc: 'เน€เธญเธฒเธเธเธฐเธเธฃเธนเธกเธฒเธเธเธเธฃเธฑเนเธเนเธฃเธ', icon: '๐‘‘', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'first_down', name: 'Physics Breaker', desc: 'เน€เธญเธฒเธเธเธฐเธเธฃเธนเน€เธเธดเธฃเนเธชเนเธเธเธ”เนเธงเธดเธเธซเธกเธน', icon: 'โ๏ธ', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'parry_master', name: 'Return to Sender', desc: 'Parry เนเธเธเธ”เนเธงเธดเธเธซเธกเธนเธเธฅเธฑเธเนเธเธซเธฒเธเธฃเธนเน€เธเธดเธฃเนเธช', icon: '๐ฅช', reward: { type: 'damage', value: 0.03, text: '+3% Damage' } },
+    // ── Boss Kills ──────────────────────────────────────────────────────────
+    { id: 'manop_down', name: '1st Manop Slayer', desc: 'เอาชนะครูมานพครั้งแรก', icon: '👑', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'first_down', name: 'Physics Breaker', desc: 'เอาชนะครูเฟิร์สแซนด์วิชหมู', icon: '⚛️', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'parry_master', name: 'Return to Sender', desc: 'Parry แซนด์วิชหมูกลับไปหาครูเฟิร์ส', icon: '🥪', reward: { type: 'damage', value: 0.03, text: '+3% Damage' } },
 
-    // โ”€โ”€ Combat โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'no_damage', name: 'Untouchable', desc: 'เธเนเธฒเธ Wave เนเธ”เธขเนเธกเนเนเธ”เธเธ”เธฒเน€เธกเธ', icon: '๐ก๏ธ', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
-    { id: 'crit_master', name: 'Critical Master', desc: 'เธ•เธตเธ•เธดเธ”เธเธฃเธดเธ•เธดเธเธญเธฅ 5 เธเธฃเธฑเนเธ', icon: '๐’ฅ', reward: { type: 'crit', value: 0.01, text: '+1% Crit Chance' } },
-    { id: 'bullet_time_kill', name: 'Time Bender', desc: 'เธเนเธฒเธจเธฑเธ•เธฃเธนเธเธ“เธฐ Bullet Time 3 เธ•เธฑเธง', icon: '๐•', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
-    { id: 'barrel_bomber', name: 'Expert Bomber', desc: 'เธเนเธฒเธจเธฑเธ•เธฃเธนเธ”เนเธงเธขเธ–เธฑเธเธฃเธฐเน€เธเธดเธ” 3 เธ•เธฑเธง', icon: '๐ข๏ธ', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    // ── Combat ──────────────────────────────────────────────────────────────
+    { id: 'no_damage', name: 'Untouchable', desc: 'ผ่าน Wave โดยไม่โดนดาเมจ', icon: '🛡️', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
+    { id: 'crit_master', name: 'Critical Master', desc: 'ตีติดคริติคอล 5 ครั้ง', icon: '💥', reward: { type: 'crit', value: 0.01, text: '+1% Crit Chance' } },
+    { id: 'bullet_time_kill', name: 'Time Bender', desc: 'ฆ่าศัตรูขณะ Bullet Time 3 ตัว', icon: '🕐', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
+    { id: 'barrel_bomber', name: 'Expert Bomber', desc: 'ฆ่าศัตรูด้วยถังระเบิด 3 ตัว', icon: '🛢️', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
 
-    // โ”€โ”€ Movement โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'speedster', name: 'Speedster', desc: 'เนเธเน Dash 20 เธเธฃเธฑเนเธ', icon: 'โก', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+    // ── Movement ────────────────────────────────────────────────────────────
+    { id: 'speedster', name: 'Speedster', desc: 'ใช้ Dash 20 ครั้ง', icon: '⚡', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
 
-    // โ”€โ”€ Collection โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'collector', name: 'MTC Collector', desc: 'เน€เธเนเธ Power-up 10 เธเธดเนเธ', icon: '๐’', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
-    { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'เธเธทเนเธญเนเธญเน€เธ—เธกเธเธฒเธเธฃเนเธฒเธเธเนเธฒ 5 เธเธฃเธฑเนเธ', icon: '๐’', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
-    { id: 'shop_max', name: 'Capitalism', desc: 'เธเธทเนเธญเธเธฑเธเธฃเนเธฒเธเธเนเธฒเธเธเน€เธ•เนเธกเธชเนเธ•เนเธ 1.5x', icon: '๐“', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+    // ── Collection ──────────────────────────────────────────────────────────
+    { id: 'collector', name: 'MTC Collector', desc: 'เก็บ Power-up 10 ชิ้น', icon: '💎', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+    { id: 'shopaholic', name: 'MTC Shopaholic', desc: 'ซื้อไอเทมจากร้านค้า 5 ครั้ง', icon: '🛒', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
+    { id: 'shop_max', name: 'Capitalism', desc: 'ซื้อบัฟร้านค้าจนเต็มสแต็ก 1.5x', icon: '📈', reward: { type: 'speed', value: 0.02, text: '+2% Speed' } },
 
-    // โ”€โ”€ Stealth & Weapons โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'ghost', name: 'The Ghost of MTC', desc: 'เธเธธเนเธกเธชเธณเน€เธฃเนเธ 10 เธเธฃเธฑเนเธ', icon: '๐‘ป', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
-    { id: 'weapon_master', name: 'Arsenal', desc: 'เนเธเนเธญเธฒเธงเธธเธเธเธฃเธเธ—เธฑเนเธ 3 เนเธเธเนเธเน€เธเธกเน€เธ”เธตเธขเธง', icon: '๐”ซ', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    // ── Stealth & Weapons ────────────────────────────────────────────────────
+    { id: 'ghost', name: 'The Ghost of MTC', desc: 'ซุ่มสำเร็จ 10 ครั้ง', icon: '👻', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
+    { id: 'weapon_master', name: 'Arsenal', desc: 'ใช้อาวุธครบทั้ง 3 แบบในเกมเดียว', icon: '🔫', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
 
-    // โ”€โ”€ Character-specific โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'kao_awakened', name: 'Weapon Master Awakened', desc: 'เธเธฅเธ”เธฅเนเธญเธเธชเธเธดเธฅ Weapon Master เธเธญเธเน€เธเนเธฒเธชเธณเน€เธฃเนเธ', icon: 'โก', reward: { type: 'crit', value: 0.01, text: '+1% Crit Chance' } },
-    { id: 'drone_master', name: 'Drone Master', desc: 'เธเธฅเธ”เธฅเนเธญเธ Drone Overdrive เธเธฃเธฑเนเธเนเธฃเธ', icon: '๐ค–', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'naga_summoner', name: 'Naga Summoner', desc: 'เธญเธฑเธเน€เธเธดเธเธเธเธฒเธเธฒเธ 3 เธเธฃเธฑเนเธ', icon: '๐', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
-    { id: 'stand_rush_kill', name: 'WANCHAI-REQUIEM', desc: 'เธเนเธฒเธจเธฑเธ•เธฃเธนเธ”เนเธงเธข Stand Rush 10 เธ•เธฑเธง', icon: '๐ฅ', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'ritual_wipe', name: 'Sticky Situation', desc: 'เธเนเธฒเธจเธฑเธ•เธฃเธน 3 เธ•เธฑเธงเธเธถเนเธเนเธเธ”เนเธงเธข Ritual Burst เธเธฃเธฑเนเธเน€เธ”เธตเธขเธง', icon: '๐พ', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    // ── Character-specific ───────────────────────────────────────────────────
+    { id: 'kao_awakened', name: 'Weapon Master Awakened', desc: 'ปลดล็อคสกิล Weapon Master ของเก้าสำเร็จ', icon: '⚡', reward: { type: 'crit', value: 0.01, text: '+1% Crit Chance' } },
+    { id: 'drone_master', name: 'Drone Master', desc: 'ปลดล็อค Drone Overdrive ครั้งแรก', icon: '🤖', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'naga_summoner', name: 'Naga Summoner', desc: 'อัญเชิญพญานาค 3 ครั้ง', icon: '🐍', reward: { type: 'cdr', value: 0.01, text: '-1% Cooldown' } },
+    { id: 'stand_rush_kill', name: 'WANCHAI-REQUIEM', desc: 'ฆ่าศัตรูด้วย Stand Rush 10 ตัว', icon: '🥊', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'ritual_wipe', name: 'Sticky Situation', desc: 'ฆ่าศัตรู 3 ตัวขึ้นไปด้วย Ritual Burst ครั้งเดียว', icon: '🌾', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
 
-    // โ”€โ”€ NEW: Passive Awakenings โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    { id: 'scorched_soul', name: 'SCORCHED SOUL', desc: 'เธเธฅเธ”เธฅเนเธญเธ Passive เธญเธญเนเธ•เนเธ”เนเธงเธขเธเธฒเธฃ Overheat เธเธฃเธฑเนเธเนเธฃเธ', icon: '๐”ฅ', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
-    { id: 'ritual_king', name: 'King of Isan', desc: 'เธเธฅเธ”เธฅเนเธญเธ Passive เธ เธนเธกเธดเธ”เนเธงเธข Ritual Burst เธเธฃเธฑเนเธเนเธฃเธ', icon: '๐พ', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
-];
+    // ── NEW: Passive Awakenings ───────────────────────────────────────────────
+    { id: 'scorched_soul', name: 'SCORCHED SOUL', desc: 'ปลดล็อค Passive ออโต้ด้วยการ Overheat ครั้งแรก', icon: '🔥', reward: { type: 'damage', value: 0.02, text: '+2% Damage' } },
+    { id: 'ritual_king', name: 'King of Isan', desc: 'ปลดล็อค Passive ภูมิด้วย Ritual Burst ครั้งแรก', icon: '🌾', reward: { type: 'hp', value: 10, text: '+10 Max HP' } },
+]
 
-// ... (rest of the code remains the same)
 
 const MAP_CONFIG = {
 
-    // โ”€โ”€ Arena boundary โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // ── Arena boundary ─────────────────────────────────────────
     arena: {
         radius: 1500,
         haloColor: 'rgba(180, 100, 20, {a})',
         midColor: 'rgba(120, 60, 10, {a})',
         rimColor: 'rgba(250, 180, 30, {a})',
         dashColor: 'rgba(245, 158, 11, {a})',
-        // Perf: solid RGB strings for globalAlpha path โ€” avoids .replace()+toFixed() per frame
+        // Perf: solid RGB strings for globalAlpha path — avoids .replace()+toFixed() per frame
         haloColorBase: 'rgb(180,100,20)',
         midColorBase: 'rgb(120,60,10)',
         rimColorBase: 'rgb(250,180,30)',
         dashColorBase: 'rgb(245,158,11)',
-        haloAlphaBase: 0.12,    // เน€เธเธดเนเธก 0.08โ’0.12
-        midAlphaBase: 0.20,     // เน€เธเธดเนเธก 0.15โ’0.20
-        rimAlphaBase: 0.65,     // เน€เธเธดเนเธก 0.55โ’0.65 rim เธเธฑเธ”เธเธถเนเธ
-        dashAlphaBase: 0.38,    // เน€เธเธดเนเธก 0.30โ’0.38
-        rimGlowBlur: 28,                               // glow เนเธซเธเนเธเธถเนเธ 20โ’28
+        haloAlphaBase: 0.12,    // เพิ่ม 0.08→0.12
+        midAlphaBase: 0.20,     // เพิ่ม 0.15→0.20
+        rimAlphaBase: 0.65,     // เพิ่ม 0.55→0.65 rim ชัดขึ้น
+        dashAlphaBase: 0.38,    // เพิ่ม 0.30→0.38
+        rimGlowBlur: 28,                               // glow ใหญ่ขึ้น 20→28
         rimGlowColor: 'rgba(250, 180, 30, 0.95)',
     },
 
-    // โ”€โ”€ Center Landmark โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    // Rotating tech-ring at (0,0) โ€” gives players a persistent
+    // ── Center Landmark ────────────────────────────────────────
+    // Rotating tech-ring at (0,0) — gives players a persistent
     // directional reference and marks the spawn point visually.
     landmark: {
         outerRadius: 90,   // outer ring radius (world px)
@@ -1409,17 +1383,17 @@ const MAP_CONFIG = {
         innerAlphaBase: 0.45,
     },
 
-    // โ”€โ”€ Tech-hex grid โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // ── Tech-hex grid ──────────────────────────────────────────
     hex: {
         size: 64,
-        fillColor: 'rgba(130, 70, 15, {a})',    // เธชเธงเนเธฒเธเธเธถเนเธ
-        strokeColor: 'rgba(210, 130, 25, {a})',  // เน€เธชเนเธ hex เธเธฑเธ”เธเธถเนเธ
-        fillAlpha: 0.07,                          // เน€เธเธดเนเธก 0.05โ’0.07
-        strokeAlpha: 0.22,                        // เน€เธเธดเนเธก 0.15โ’0.22
-        falloffRadius: 1650,                      // เธเธงเนเธฒเธเธเธถเนเธ เธเธฃเธญเธ zone เนเธเธฅ
+        fillColor: 'rgba(130, 70, 15, {a})',    // สว่างขึ้น
+        strokeColor: 'rgba(210, 130, 25, {a})',  // เส้น hex ชัดขึ้น
+        fillAlpha: 0.07,                          // เพิ่ม 0.05→0.07
+        strokeAlpha: 0.22,                        // เพิ่ม 0.15→0.22
+        falloffRadius: 1650,                      // กว้างขึ้น ครอบ zone ไกล
     },
 
-    // โ”€โ”€ Circuit paths โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // ── Circuit paths ──────────────────────────────────────────
     // Update `to` coords here when landmark positions change in game.js
     paths: {
         database: {
@@ -1439,8 +1413,8 @@ const MAP_CONFIG = {
         // Shared path style
         glowWidth: 16,
         coreWidth: 3.5,
-        glowAlphaBase: 0.10,   // 0.20โ’0.10 less dominant
-        coreAlphaBase: 0.65,   // 0.85โ’0.65 less dominant
+        glowAlphaBase: 0.10,   // 0.20→0.10 less dominant
+        coreAlphaBase: 0.65,   // 0.85→0.65 less dominant
         coreGlowBlur: 18,
         packetCount: 3,
         packetSpeed: 0.45,
@@ -1449,9 +1423,9 @@ const MAP_CONFIG = {
         elbowRadius: 5,
     },
 
-    // โ”€โ”€ Object palettes (draw helpers) โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // ── Object palettes (draw helpers) ────────────────────────
     // All hardcoded colors from drawDesk/drawTree/drawServer/drawDataPillar/drawBookshelf live here.
-    // Read by map.js render functions โ€” add new object types here before adding draw logic.
+    // Read by map.js render functions — add new object types here before adding draw logic.
     objects: {
         desk: {
             screenGlow: 'rgba(250,200,100,0.15)',   // monitor top-edge highlight
@@ -1483,10 +1457,10 @@ const MAP_CONFIG = {
             circuit: 'rgba(217,119,6,',           // alpha appended at runtime
         },
         bookshelf: {
-            frameBody: '#92400e',   // #78350fโ’#92400e (+1 stop brighter)
-            frameSide: '#a16207',   // #92400eโ’#a16207
-            shelfBoard: '#b45309',  // #a16207โ’#b45309 warm amber
-            bookGloss: 'rgba(255,255,255,0.25)',   // 0.20โ’0.25
+            frameBody: '#92400e',   // #78350f→#92400e (+1 stop brighter)
+            frameSide: '#a16207',   // #92400e→#a16207
+            shelfBoard: '#b45309',  // #a16207→#b45309 warm amber
+            bookGloss: 'rgba(255,255,255,0.25)',   // 0.20→0.25
             bookShadow: 'rgba(0,0,0,0.3)',
         },
         wall: {
@@ -1507,55 +1481,55 @@ const MAP_CONFIG = {
         },
     },
 
-    // โ”€โ”€ Zone Floor Themes โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
-    // Zone positions เธเธฃเธฐเธเธฒเธขเธญเธญเธเนเธเนเธเนเธเธทเนเธเธ—เธตเนเนเธ”เธก (radius 1500) เธ—เธธเธเธ—เธดเธจ
+    // ── Zone Floor Themes ──────────────────────────────────────
+    // Zone positions กระจายออกไปใช้พื้นที่โดม (radius 1500) ทุกทิศ
     zones: {
         serverFarm: {
             x: 430, y: -680, w: 800, h: 700,
-            floorColor: 'rgba(6, 182, 212, 0.16)',   // 0.07โ’0.16
-            gridColor: 'rgba(6, 182, 212, 0.25)',    // 0.18โ’0.25
+            floorColor: 'rgba(6, 182, 212, 0.16)',   // 0.07→0.16
+            gridColor: 'rgba(6, 182, 212, 0.25)',    // 0.18→0.25
             gridSize: 36,
-            accentColor: 'rgba(34, 211, 238, 0.35)', // 0.28โ’0.35
+            accentColor: 'rgba(34, 211, 238, 0.35)', // 0.28→0.35
             label: 'SERVER FARM',
             ambientColor: 'rgba(34, 211, 238, 0.90)',
         },
         library: {
             x: -1230, y: -680, w: 800, h: 700,
-            floorColor: 'rgba(180, 120, 20, 0.18)',  // 0.09โ’0.18
-            gridColor: 'rgba(251, 191, 36, 0.22)',   // 0.16โ’0.22
+            floorColor: 'rgba(180, 120, 20, 0.18)',  // 0.09→0.18
+            gridColor: 'rgba(251, 191, 36, 0.22)',   // 0.16→0.22
             gridSize: 48,
-            accentColor: 'rgba(253, 224, 71, 0.30)', // 0.22โ’0.30
+            accentColor: 'rgba(253, 224, 71, 0.30)', // 0.22→0.30
             label: 'ARCHIVES',
             ambientColor: 'rgba(251, 191, 36, 0.90)',
         },
         courtyard: {
             x: -600, y: 400, w: 1200, h: 650,
-            floorColor: 'rgba(34, 197, 94, 0.15)',   // 0.08โ’0.15
-            gridColor: 'rgba(74, 222, 128, 0.20)',   // 0.14โ’0.20
+            floorColor: 'rgba(34, 197, 94, 0.15)',   // 0.08→0.15
+            gridColor: 'rgba(74, 222, 128, 0.20)',   // 0.14→0.20
             gridSize: 55,
-            accentColor: 'rgba(134, 239, 172, 0.28)', // 0.20โ’0.28
+            accentColor: 'rgba(134, 239, 172, 0.28)', // 0.20→0.28
             label: 'COURTYARD',
             ambientColor: 'rgba(134, 239, 172, 0.90)',
         },
         lectureHallL: {
             x: -1100, y: 500, w: 420, h: 400,
-            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04โ’0.12
-            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10โ’0.18
+            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04→0.12
+            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10→0.18
             gridSize: 40,
-            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12โ’0.22
+            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12→0.22
             label: 'LECTURE A',
-            ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60โ’0.85
+            ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60→0.85
         },
         lectureHallR: {
             x: 680, y: 500, w: 420, h: 400,
-            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04โ’0.12
-            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10โ’0.18
+            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04→0.12
+            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10→0.18
             gridSize: 40,
-            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12โ’0.22
+            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12→0.22
             label: 'LECTURE B',
-            ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60โ’0.85
+            ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60→0.85
         },
-        // MTC Database โ€” NE zone floor
+        // MTC Database — NE zone floor
         database: {
             x: 330, y: -660, w: 340, h: 340,
             floorColor: 'rgba(251, 191, 36, 0.06)',
@@ -1565,7 +1539,7 @@ const MAP_CONFIG = {
             label: 'MTC DATABASE',
             ambientColor: 'rgba(251, 191, 36, 0.90)',
         },
-        // MTC Co-op Store โ€” SW zone floor
+        // MTC Co-op Store — SW zone floor
         shop: {
             x: -670, y: 320, w: 340, h: 340,
             floorColor: 'rgba(249, 115, 22, 0.06)',
@@ -1577,7 +1551,7 @@ const MAP_CONFIG = {
         },
     },
 
-    // โ”€โ”€ Zone auras โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    // ── Zone auras ─────────────────────────────────────────────
     auras: {
         database: {
             worldX: 500,   // center of database zone (330+170)
@@ -1604,23 +1578,23 @@ const MAP_CONFIG = {
             phase: 3.2,
         },
         // Shared aura style
-        innerAlphaBase: 0.40,   // 0.32โ’0.40 zone beacons more visible
-        midAlphaBase: 0.20,     // 0.15โ’0.20
-        outerAlphaBase: 0.08,   // 0.06โ’0.08
-        rimAlphaBase: 0.45,     // 0.38โ’0.45 rim more defined
-        rimWidth: 2.5,           // เธซเธเธฒเธเธถเนเธ
-        rimGlowBlur: 22,         // glow เธกเธฒเธเธเธถเนเธ 16โ’22
-        dashAlphaBase: 0.18,    // เน€เธเธดเนเธก 0.12โ’0.18
+        innerAlphaBase: 0.40,   // 0.32→0.40 zone beacons more visible
+        midAlphaBase: 0.20,     // 0.15→0.20
+        outerAlphaBase: 0.08,   // 0.06→0.08
+        rimAlphaBase: 0.45,     // 0.38→0.45 rim more defined
+        rimWidth: 2.5,           // หนาขึ้น
+        rimGlowBlur: 22,         // glow มากขึ้น 16→22
+        dashAlphaBase: 0.18,    // เพิ่ม 0.12→0.18
         dashOuterMult: 1.35,
     },
-};
+}
 
-window.MAP_CONFIG = MAP_CONFIG;
 
 window.BALANCE = BALANCE;
 window.GAME_CONFIG = GAME_CONFIG;
 window.VISUALS = VISUALS;
 window.ACHIEVEMENT_DEFS = ACHIEVEMENT_DEFS;
+window.MAP_CONFIG = MAP_CONFIG;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { WAVE_SCHEDULE, BALANCE, GAME_CONFIG, VISUALS, ACHIEVEMENT_DEFS, MAP_CONFIG };

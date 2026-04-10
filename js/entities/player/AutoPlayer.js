@@ -8,6 +8,9 @@
  * Extends: AutoPlayer → Player (PlayerBase) → Entity
  * Exports: window.AutoPlayer
  *
+ * @module js/entities/player/AutoPlayer
+ * @fileoverview Auto character with heat system, Stand entity, and ORA combos
+ *
  * Load order: base.js → PlayerBase.js → AutoPlayer.js
  *   PlayerRenderer.js reads: heatMeter, wanchaiStand, isOverheat,
  *                             _oraComboCount, passiveUnlocked, _anim

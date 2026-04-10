@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.42.1`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.42.2`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
@@ -98,6 +98,7 @@ The legacy `css/main.css` and `js/config.js` bundles have been retired. Their re
 | `js/shop-items.js` | `SHOP_ITEMS` catalog |
 | `js/game-texts.js` | `GAME_TEXTS` localization and HUD copy |
 | `js/rendering/EnemyRenderer.js` | Enemy-only draw dispatcher and renderer helpers |
+| `js/VersionManager.js` | Service worker version sync and UI version display |
 
 ---
 

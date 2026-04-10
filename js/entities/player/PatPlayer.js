@@ -11,6 +11,9 @@
  *                       playIaidoSheathe, playReflect, playMeleeHit)
  * Exports: window.PatPlayer
  *
+ * @module js/entities/player/PatPlayer
+ * @fileoverview Pat character with katana combat, Iaido strike, and Zanzo blink
+ *
  * ── TABLE OF CONTENTS ──────────────────────────────────────────────
  *  L.9   class PatPlayer extends Player         constructor / props
  *  L.71  checkPassiveUnlock()                   "Ronin's Edge" — first Iaido hit
@@ -222,6 +225,7 @@ class PatPlayer extends Player {
       console.warn("[MTC Save] PatPlayer passive:", e);
     }
   }
+}
 
   // ──────────────────────────────────────────────────────────────────────────
   // UPDATE

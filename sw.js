@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.42.1"; // Modular config/render split follow-up — cache refresh for split assets and debug surface sync
+const CACHE_NAME = "mtc-cache-v3.42.2"; // UTF-8 encoding fixes + JSDoc header convention — clean Thai/box-drawing chars + AI navigation headers
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.

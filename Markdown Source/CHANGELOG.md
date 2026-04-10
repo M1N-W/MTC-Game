@@ -4,6 +4,20 @@
 
 ---
 
+## v3.42.2 — Encoding Fixes & Documentation Standards
+*Released: April 10, 2026*
+
+### 🐛 Bug Fixes
+- Fixed UTF-8 double-encoding corruption (mojibake) in `js/rendering/EnemyRenderer.js` — em-dash, multiplication sign, and box-drawing characters now display correctly
+- Fixed UTF-8 corruption in `js/entities/enemy.js` comments — Thai text (e.g., "เริ่มต้น", "นับคิล") and special characters (e.g., "✨", "●", "≈") now render properly
+
+### 📚 Documentation & Standards
+- Established JSDoc header convention across all JavaScript files — every file now opens with `@module`, `@fileoverview`, Table of Contents with `L.<line-number>` entries, and Architecture & Pitfalls sections
+- Added comprehensive headers to `enemy.js`, `KaoPlayer.js`, `AutoPlayer.js`, `PatPlayer.js` enabling AI-assisted navigation via `grep -n 'L\.' <file>`
+- Updated `SKILL.md` with Section 6: timeless architectural patterns (JSDoc navigation, window exports, typeof guards, renderer caching, swap-remove semantics)
+- Updated `mtc-rendering.md` with EnemyRenderer caching pattern and JSDoc convention documentation
+- Updated `PROJECT_OVERVIEW.md` version alignment and added `VersionManager.js` to entry points table
+
 ## v3.42.1 — Refactor Release Sync
 *Released: April 10, 2026*
 
