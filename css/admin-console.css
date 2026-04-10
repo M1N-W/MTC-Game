@@ -1,0 +1,343 @@
+/* ======================================================================== */
+/* === REGION: ADMIN CONSOLE — CRT overlay · Input · Permission badges ==== */
+/* ======================================================================== */
+/* Admin Console Overlay */
+#admin-console {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 9800;
+  justify-content: center;
+  align-items: center;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+
+.console-inner {
+  position: relative;
+  width: min(760px, 92vw);
+  max-height: 85vh;
+  background: #000;
+  border: 2px solid #00ff41;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px #003d10,
+    0 0 40px rgba(0, 255, 65, 0.45),
+    0 0 80px rgba(0, 255, 65, 0.15),
+    inset 0 0 60px rgba(0, 255, 65, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "Courier New", Courier, monospace;
+
+  /* Entrance animation */
+  opacity: 0;
+  transform: scale(0.96) translateY(12px);
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
+}
+
+.console-inner.console-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* CRT scanlines overlay */
+.console-inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.12) 0px,
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 6px;
+}
+
+/* Phosphor flicker */
+@keyframes phosphorFlicker {
+  0%,
+  98%,
+  100% {
+    opacity: 1;
+  }
+
+  99% {
+    opacity: 0.88;
+  }
+}
+
+.console-inner {
+  animation: phosphorFlicker 6s infinite;
+}
+
+/* Console title bar */
+.console-titlebar {
+  background: #001a08;
+  border-bottom: 1px solid #00ff41;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.console-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.console-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-red {
+  background: #ff5f57;
+}
+
+.dot-amber {
+  background: #febc2e;
+}
+
+.dot-green {
+  background: #28c840;
+}
+
+.console-title-text {
+  color: #00ff41;
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.console-close-btn {
+  background: transparent;
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  touch-action: manipulation;
+}
+
+.console-close-btn:hover {
+  background: #00ff41;
+  color: #000;
+}
+
+/* Boot text */
+.console-boot {
+  padding: 14px 20px 0;
+  flex-shrink: 0;
+}
+
+.console-boot-line {
+  color: #00aa2a;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 1.7;
+}
+
+.console-boot-line.highlight {
+  color: #00ff41;
+}
+
+.console-boot-line.dim {
+  color: #004d14;
+}
+
+.console-divider {
+  border: none;
+  border-top: 1px solid #003d10;
+  margin: 10px 20px;
+}
+
+/* Output log area */
+#console-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 180px;
+  max-height: 340px;
+}
+
+/* Firefox 121+; Chrome 121+ — scoped so unsupported engines skip (Edge compat hints) */
+@supports (scrollbar-width: thin) {
+  #console-output {
+    scrollbar-width: thin;
+    scrollbar-color: #00ff41 #001a08;
+  }
+}
+
+#console-output::-webkit-scrollbar {
+  width: 6px;
+}
+
+#console-output::-webkit-scrollbar-track {
+  background: #001a08;
+}
+
+#console-output::-webkit-scrollbar-thumb {
+  background: #00ff41;
+  border-radius: 3px;
+}
+
+.console-line {
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.cline-info {
+  color: #00aa2a;
+}
+
+.cline-ok {
+  color: #00ff41;
+}
+
+.cline-error {
+  color: #ff4444;
+}
+
+.cline-warn {
+  color: #fbbf24;
+}
+
+.cline-cmd {
+  color: #67e8f9;
+}
+
+.cline-sys {
+  color: #004d14;
+}
+
+/* Permission badge — shown in titlebar */
+#console-perm-badge {
+  font-size: 10px;
+  font-family: "Courier New", monospace;
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* God-mode / secret command output */
+.cline-secret {
+  color: #f97316;
+  text-shadow: 0 0 6px rgba(249, 115, 22, 0.6);
+}
+
+/* ROOT-locked command hint (dim) */
+.cline-locked {
+  color: #1f3a20;
+}
+
+/* Input row */
+.console-input-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px 14px;
+  border-top: 1px solid #003d10;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.console-prompt-symbol {
+  color: #00ff41;
+  font-size: 14px;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#console-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #00ff41;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  caret-color: #00ff41;
+  letter-spacing: 1px;
+  /* Override browser defaults for user-select */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+#console-input::placeholder {
+  color: #003d14;
+}
+
+/* Blinking cursor is provided natively by the input caret;
+           add a fake blinking block after the input for flair */
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.console-cursor {
+  display: inline-block;
+  width: 9px;
+  height: 14px;
+  background: #00ff41;
+  animation: blink 1s step-start infinite;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* Help footer */
+.console-help {
+  padding: 6px 20px 12px;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  border-top: 1px dashed #002810;
+  flex-shrink: 0;
+}
+
+.help-cmd {
+  font-size: 10px;
+  color: #005a1c;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+}
+
+.help-cmd span {
+  color: #00aa2a;
+}
+
+/* - END REGION: ADMIN CONSOLE — CRT overlay · Input · Permission badges -- */

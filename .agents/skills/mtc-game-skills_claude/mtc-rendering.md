@@ -61,6 +61,7 @@ Renderers serve as static dispatchers enforcing execution contracts.
 Dispatch checking intrinsically relates to constructor instances, thus maintaining a strict dependency on `index.html` loading orders.
 - **PlayerRenderer Checks**: `AutoPlayer` → `PoomPlayer` → `KaoPlayer` → `PatPlayer`
 - **BossRenderer Checks**: `KruFirst` → `KruManop` → `BossDog`
+- **EnemyRenderer Boundary**: `EnemyRenderer` loads after `entities/enemy.js` and depends on `Enemy`, `TankEnemy`, `MageEnemy`, and `PowerUp` already being on the global scope before its `instanceof` dispatch runs.
 *(Note: `KruFirst` sits higher than `KruManop` explicitly because both extend the same `BossBase`, necessitating strict hierarchical checking).*
 
 ---

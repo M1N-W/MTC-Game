@@ -905,7 +905,15 @@ class BossRenderer {
         const now = performance.now();
         const t = now / 1000;
 
-        const isFacingLeft = Math.abs(e.angle) > Math.PI / 2;
+        // ── Facing direction with hysteresis — prevents rapid flip near Math.PI/2 ──
+        const _absAngle = Math.abs(e.angle);
+        const _FLIP_HYS = 0.1; // ±0.1 rad dead-zone (~5.7°)
+        if (!e._firstFacingLeft && _absAngle > Math.PI / 2 + _FLIP_HYS) {
+          e._firstFacingLeft = true;
+        } else if (e._firstFacingLeft && _absAngle < Math.PI / 2 - _FLIP_HYS) {
+          e._firstFacingLeft = false;
+        }
+        const isFacingLeft = e._firstFacingLeft ?? (_absAngle > Math.PI / 2);
         const R = e.radius;
 
         // ── Hover animation ────────────────────────────────────────────

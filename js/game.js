@@ -669,17 +669,6 @@ function drawGame() {
         return;
     }
 
-    if (!drawGame._diagFrame) drawGame._diagFrame = 0;
-    drawGame._diagFrame++;
-    if (DEBUG_MODE && drawGame._diagFrame % 300 === 1) {
-        /*
-        console.log('[MTC drawGame] frame', drawGame._diagFrame, '| window.gameState:', window.gameState,
-            '| player:', !!window.player, '| UIManager:', typeof UIManager,
-            '| MTC_DB_SERVER on window:', !!window.MTC_DATABASE_SERVER,
-            '| MTC_SHOP on window:', !!window.MTC_SHOP_LOCATION);
-        */
-    }
-
     const _bgTop = GAME_CONFIG.visual.bgColorTop;
     const _bgBot = GAME_CONFIG.visual.bgColorBottom;
     if (!_bgGrad || _bgGradW !== CANVAS.width || _bgGradH !== CANVAS.height ||
@@ -784,7 +773,12 @@ function drawGame() {
         if (p.isOnScreen ? p.isOnScreen(60) : true) EnemyRenderer.draw(p, CTX);
     }
 
-    for (let _i = 0; _i < window.specialEffects.length; _i++) window.specialEffects[_i].draw();
+    for (let _i = 0; _i < window.specialEffects.length; _i++) {
+        const _eff = window.specialEffects[_i];
+        // INP perf: cull off-screen effects (200px margin covers aura/glow overflow)
+        if (typeof _eff.isOnScreen === 'function' && !_eff.isOnScreen(200)) continue;
+        _eff.draw();
+    }
 
     if (window.drone) window.drone.draw();
 
@@ -1018,7 +1012,6 @@ function _teardownRunState() {
 }
 
 function startGame(charType = 'kao') {
-    // console.log('🎮 Starting game... charType:', charType);
     window._selectedChar = charType;
     _pendingRunSummary = null;
     Audio.playBGM('battle');
@@ -1027,14 +1020,12 @@ function startGame(charType = 'kao') {
     if (typeof WorkerBridge !== 'undefined') WorkerBridge.init();
 
     const savedData = getSaveData();
-    // console.log('[MTC Save] Loaded save data:', savedData);
     UIManager.updateHighScoreDisplay(savedData.highScore);
 
     window.player = _createPlayer(charType);
     _resetRunState(window.player);
     _initGameUI(charType);
 
-    // console.log('✅ Game started!');
     if (!GameState.loopRunning && rafId === null) {
         GameState.loopRunning = true;
         rafId = requestAnimationFrame(gameLoop);
@@ -1055,7 +1046,6 @@ function _createPlayer(charType) {
     }
     if (window.isAdmin && typeof player.applyDevBuff === 'function') {
         player.applyDevBuff();
-        // console.log('%c[MTC Admin] 🚀 DEV BUFF applied to player.', 'color:#f97316; font-weight:bold;');
     }
     return player;
 }
@@ -1066,10 +1056,6 @@ function _resetRunState(player) {
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
     GameState.resetRun();
-    // console.log('🐕 Boss encounter counter reset');
-    // console.log('🕐 Bullet Time reset — timeScale 1.0, energy full');
-    // console.log('⚡ Glitch Wave grace period reset');
-
     // Clear shop buff state on player (set before first ShopSystem call this run)
     player.shopDamageBoostActive = false; player.shopDamageBoostTimer = 0; player._baseDamageBoost = undefined;
     player.shopSpeedBoostActive = false; player.shopSpeedBoostTimer = 0; player._baseMoveSpeed = undefined;
@@ -1077,7 +1063,6 @@ function _resetRunState(player) {
     window.drone = new Drone();
     window.drone.x = player.x; window.drone.y = player.y;
     spawnFloatingText(GAME_TEXTS.combat.droneOnline, player.x, player.y - 90, '#00e5ff', 20);
-    // console.log('🤖 Engineering Drone initialised');
 
     weatherSystem.clear();
     UIManager.updateBossHUD(null);
@@ -1190,9 +1175,9 @@ function endGame(result) {
     const mobileUI = document.getElementById('mobile-ui');
     if (mobileUI) mobileUI.style.display = 'none';
 
-    showResumePrompt(false);
-    ShopManager.close();
-    if (AdminConsole.isOpen) AdminConsole.close();
+    if (typeof showResumePrompt === 'function') showResumePrompt(false);
+    if (typeof ShopManager !== 'undefined' && typeof ShopManager.close === 'function') ShopManager.close();
+    if (typeof AdminConsole !== 'undefined' && AdminConsole.isOpen) AdminConsole.close();
 
     window.drone = null;
 
@@ -1203,7 +1188,6 @@ function endGame(result) {
         if (runScore > existing.highScore) {
             _isNewHighScore = true;
             updateSaveData({ highScore: runScore });
-            // console.log(`[MTC Save] 🏆 New high score: ${runScore}`);
             UIManager.updateHighScoreDisplay(runScore);
             try {
                 if (typeof firebaseLogEvent === 'function') {
@@ -1260,8 +1244,6 @@ window.endGame = endGame;
 window.goToMainMenu = goToMainMenu;
 
 window.onload = () => {
-    // console.log('🚀 Initializing game...');
-
     // ── Loading State System (3.3) ─────────────────────────────────────
     const LoadingState = {
         overlay: null,

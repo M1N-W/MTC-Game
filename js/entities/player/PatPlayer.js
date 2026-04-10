@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 /**
  * js/entities/player/PatPlayer.js
  * ════════════════════════════════════════════════════════════════════
@@ -101,9 +101,20 @@ class PatPlayer extends Player {
     this._invincibleTimer = 0;
 
     // ── Passive: RONIN'S EDGE ─────────────────────────────────────────────
-    // Unlock: ใช้ Iaido สำเร็จ (โดน enemy) ครั้งแรก
     this._iaidoKillCount = 0;
     this._passiveUnlockTriggered = false;
+
+    // ── AbilityUnlock trackers ─────────────────────────────────────────────
+    // SU1: Q (Zanzo Flash) — land Iaido 3 times
+    this._iaidoSuccessCount = 0;
+    // SU2: Perfect Parry window — reflect 2 projectiles
+    this._reflectCount = 0;
+    // Special: 5 Perfect Parries total
+    this._totalPerfectParries = 0;
+    // Passive sequence: Parry → Zanzo → Iaido within passiveSequenceWindow
+    this._parryZanzoIaidoTimer = 0;
+    this._parryDone = false;
+    this._zanzoDoneAfterParry = false;
 
     // ── Swing Arc (renderer feedback) ─────────────────────────────────────
     // Set when katana swings — PlayerRenderer reads these to flash arc FX
@@ -139,17 +150,51 @@ class PatPlayer extends Player {
   // PASSIVE UNLOCK — Ronin's Edge
   // Trigger: Iaido โดน enemy ครั้งแรก
   // ──────────────────────────────────────────────────────────────────────────
+  // ── AbilityUnlock — Sequential behavior-gated progression ──────────────
+  // SU1: Q (Zanzo Flash)      — land Iaido 3 times
+  // SU2: Perfect Parry window — reflect 2 projectiles
+  // Passive (Ronin's Edge)    — Perfect Parry -> Zanzo -> Iaido within 10s
+  // Special (Parry Master)    — 5 Perfect Parries total
   checkPassiveUnlock() {
-    if (this.passiveUnlocked) return;
-    if (!this._passiveUnlockTriggered) return;
-
-    this.passiveUnlocked = true;
     const S = this.stats;
+    const AU = this._abilityUnlock;
 
-    const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.25));
-    this.maxHp += hpBonus;
-    this.hp += hpBonus;
-    this.baseCritChance += S.passiveCritBonus ?? 0.05;
+    // SU1: Q (Zanzo Flash) — 3 Iaido hits
+    if (!AU.skillsUnlocked.includes('zanzo')) {
+      const req = S.su1IaidoHitReq ?? 3;
+      if ((this._iaidoSuccessCount ?? 0) < req) return;
+      AU.skillsUnlocked.push('zanzo');
+      spawnFloatingText("Q UNLOCKED: Zanzo Flash!", this.x, this.y - 65, "#7ec8e3", 22);
+      spawnParticles(this.x, this.y, 20, "#7ec8e3");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
+    }
+
+    // SU2: Perfect Parry timing window — 2 total reflects
+    if (!AU.skillsUnlocked.includes('perfectParry')) {
+      const req2 = S.su2ReflectReq ?? 2;
+      if ((this._reflectCount ?? 0) < req2) return;
+      AU.skillsUnlocked.push('perfectParry');
+      AU.allSkillsDone = true;
+      spawnFloatingText("R-Click UNLOCKED: Perfect Parry!", this.x, this.y - 65, "#facc15", 22);
+      spawnParticles(this.x, this.y, 20, "#facc15");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
+      return;
+    }
+
+    if (!AU.allSkillsDone) AU.allSkillsDone = true;
+
+    // Passive: Parry -> Zanzo -> Iaido within passiveSequenceWindow
+    if (!this.passiveUnlocked) {
+      if (!this._passiveUnlockTriggered) return;
+
+      this.passiveUnlocked = true;
+      AU.passiveDone = true;
+      this._showUnlockHint(null);
+
+      const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.25));
+      this.maxHp += hpBonus;
+      this.hp += hpBonus;
+      this.baseCritChance += S.passiveCritBonus ?? 0.05;
 
     const unlockText = S.passiveUnlockText ?? "⚔️ โรนินตื่น!";
     spawnFloatingText(unlockText, this.x, this.y - 70, "#7ec8e3", 28);
@@ -198,6 +243,15 @@ class PatPlayer extends Player {
     if (this._iaidoBloodTrail.alpha > 0) this._iaidoBloodTrail.alpha -= dt / 0.5;
     if (this._invincibleTimer > 0) this._invincibleTimer -= dt;
 
+    // ── Passive sequence timer (Parry->Zanzo->Iaido) ──────────────────────
+    if (this._parryZanzoIaidoTimer > 0) {
+      this._parryZanzoIaidoTimer -= dt;
+      if (this._parryZanzoIaidoTimer <= 0) {
+        this._parryDone = false;
+        this._zanzoDoneAfterParry = false;
+      }
+    }
+
     // ── Iaido cinematic T — 0→1 over cinematic duration ─────────────────
     if (this._iaidoPhase === "cinematic") {
       const dur = (this.stats?.iaidoCinematicDur ?? 0.55);
@@ -232,23 +286,23 @@ class PatPlayer extends Player {
     // ── Blade Guard (R-Click hold) ────────────────────────────────────────
     this._tickBladeGuard(dt, keys, S, mouse);
 
-    // ── Zanzo Flash (Q) ───────────────────────────────────────────────────
-    if (
-      checkInput("q") &&
-      this.skills.zanzo.cd <= 0 &&
-      this._iaidoPhase === "none"
-    ) {
-      const cost = S.qEnergyCost ?? 22;
-      if ((this.energy ?? 0) < cost) {
-        spawnFloatingText("⚡ FOCUS LOW!", this.x, this.y - 50, "#facc15", 16);
-        consumeInput("q");
+    // ── Zanzo Flash (Q) — locked until SU1 (3 Iaido hits) ─────────────────
+    if (checkInput("q") && this.skills.zanzo.cd <= 0 && this._iaidoPhase === "none") {
+      if (this._abilityUnlock.skillsUnlocked.includes('zanzo')) {
+        const cost = S.qEnergyCost ?? 22;
+        if ((this.energy ?? 0) < cost) {
+          spawnFloatingText("FOCUS LOW!", this.x, this.y - 50, "#facc15", 16);
+        } else {
+          this.energy = Math.max(0, (this.energy ?? 0) - cost);
+          this._doZanzoFlash(S, mouse);
+          this.skills.zanzo.cd = this.skills.zanzo.max * this.skillCooldownMult;
+          if (this._anim) this._anim.dashT = 1;
+        }
       } else {
-        this.energy = Math.max(0, (this.energy ?? 0) - cost);
-        this._doZanzoFlash(S, mouse);
-        this.skills.zanzo.cd = this.skills.zanzo.max * this.skillCooldownMult;
-        if (this._anim) this._anim.dashT = 1;
-        consumeInput("q");
+        const req = S.su1IaidoHitReq ?? 3;
+        spawnFloatingText(`Iaido ${this._iaidoSuccessCount ?? 0}/${req} hits -> Q`, this.x, this.y - 40, "#94a3b8", 14);
       }
+      consumeInput("q");
     }
 
     // ── Iaido Strike (R) — start charge ───────────────────────────────────
@@ -281,6 +335,27 @@ class PatPlayer extends Player {
       if (this._anim) this._anim.shootT = 1;
     }
     if (this.cooldowns.shoot > 0) this.cooldowns.shoot -= dt;
+
+    // ── AbilityUnlock: progress check + persistent hint ──────────────────
+    {
+      const AU = this._abilityUnlock;
+      const S2 = this.stats;
+      if (!AU.skillsUnlocked.includes('zanzo')) {
+        const req = S2.su1IaidoHitReq ?? 3;
+        this._showUnlockHint(`Iaido hits: ${this._iaidoSuccessCount ?? 0}/${req} -> Q Zanzo`);
+      } else if (!AU.skillsUnlocked.includes('perfectParry')) {
+        const req2 = S2.su2ReflectReq ?? 2;
+        this._showUnlockHint(`Reflects: ${this._reflectCount ?? 0}/${req2} -> Perfect Parry`);
+      } else if (!this.passiveUnlocked) {
+        this._showUnlockHint('Perfect Parry -> Zanzo -> Iaido within 10s -> Passive');
+      } else if (!AU.specialDone) {
+        const req3 = S2.specialParryReq ?? 5;
+        this._showUnlockHint(`Perfect Parries: ${this._totalPerfectParries ?? 0}/${req3} -> Special`);
+      } else {
+        this._showUnlockHint(null);
+      }
+      this.checkPassiveUnlock();
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -290,9 +365,12 @@ class PatPlayer extends Player {
     const held = !!(mouse && mouse.right);
     const parryWindow = S.perfectParryWindow ?? 0.15;
 
-    // ── Button just pressed: arm Perfect Parry ───────────────────────────
+    // ── Button just pressed: arm Perfect Parry (SU2 required) ──────────────
     if (held && !this._prevRightHeld && this._bladeGuardCooldown <= 0) {
-      this._perfectParryArmed = true;
+      // Perfect Parry timing window only available after SU2 (reflect 2 projectiles)
+      if (this._abilityUnlock.skillsUnlocked.includes('perfectParry')) {
+        this._perfectParryArmed = true;
+      }
       this._bladeGuardDuration = 0; // reset hold timer
     }
 
@@ -374,10 +452,23 @@ class PatPlayer extends Player {
       proj.damage *= S.perfectParryReflectMult ?? 4.0;
       this._perfectParryArmed = false;
       this._invincibleTimer = S.perfectParryIFrameDur ?? 0.4;
+      const baseRestore = S.perfectParryEnergyRestore ?? 20;
+      const specialBonus = this._abilityUnlock.specialDone ? 20 : 0; // Special unlock bonus
       this.energy = Math.min(this.maxEnergy ?? 100,
-        (this.energy ?? 0) + (S.perfectParryEnergyRestore ?? 20));
+        (this.energy ?? 0) + baseRestore + specialBonus);
 
-      spawnFloatingText('⚔ PERFECT PARRY!', this.x, this.y - 65, '#facc15', 26);
+      // SU2+Special tracking: count perfect parries + start passive sequence
+      this._reflectCount = (this._reflectCount ?? 0) + 1;
+      this._totalPerfectParries = (this._totalPerfectParries ?? 0) + 1;
+      this.checkPassiveUnlock();
+      // Start passive sequence timer
+      if (this._abilityUnlock.allSkillsDone && !this.passiveUnlocked) {
+        this._parryDone = true;
+        this._parryZanzoIaidoTimer = S.passiveSequenceWindow ?? 10.0;
+        this._zanzoDoneAfterParry = false;
+      }
+
+      spawnFloatingText('PERFECT PARRY!', this.x, this.y - 65, '#facc15', 26);
       spawnParticles(proj.x, proj.y, 14, '#facc15');
       this._bladeGuardCooldown = S.bladeGuardCooldown ?? 5.0;
 
@@ -393,6 +484,9 @@ class PatPlayer extends Player {
         S.bladeGuardExtendMaxBonus ?? 1.5,
         this._bladeGuardBonusDuration + (S.bladeGuardExtendOnReflect ?? 0.35),
       );
+      // SU2 tracking: normal reflects also count toward unlock
+      this._reflectCount = (this._reflectCount ?? 0) + 1;
+      this.checkPassiveUnlock();
       spawnFloatingText('⚔ REFLECT!', this.x, this.y - 55, '#7ec8e3', 20);
       spawnParticles(proj.x, proj.y, 8, '#a8d8ea');
       addScreenShake(3);
@@ -433,6 +527,11 @@ class PatPlayer extends Player {
     addScreenShake(3);
 
     if (typeof Audio !== "undefined" && Audio.playZanzo) Audio.playZanzo();
+
+    // Passive sequence: record zanzo after parry
+    if (this._parryDone && this._parryZanzoIaidoTimer > 0) {
+      this._zanzoDoneAfterParry = true;
+    }
 
     // Check landing: enemy near → ambush crit window
     const landRange = S.zanzoLandingRange ?? 120;
@@ -656,10 +755,16 @@ class PatPlayer extends Player {
     if (typeof Audio !== "undefined" && Audio.playIaidoSheathe)
       Audio.playIaidoSheathe();
 
-    // Passive trigger
-    if (!this._passiveUnlockTriggered) {
-      this._passiveUnlockTriggered = true;
-      this.checkPassiveUnlock();
+    // SU1 tracking: count successful Iaido hits
+    this._iaidoSuccessCount = (this._iaidoSuccessCount ?? 0) + 1;
+    this.checkPassiveUnlock();
+
+    // Passive sequence: Iaido after Zanzo after Parry within window
+    if (!this.passiveUnlocked && this._abilityUnlock.allSkillsDone) {
+      if (this._zanzoDoneAfterParry && this._parryZanzoIaidoTimer > 0) {
+        this._passiveUnlockTriggered = true;
+        this.checkPassiveUnlock();
+      }
     }
 
     // Lifesteal

@@ -1152,6 +1152,34 @@ class UIManager {
         UIManager._vbTimer = true; // mark as active
     }
 
+    // ── setUnlockHint — persistent bottom-center hint for SkillUnlock progress ──
+    // Called every frame from PlayerBase.updateUI(). text=null to hide.
+    static _unlockHintEl = null;
+    static setUnlockHint(text) {
+        if (!UIManager._unlockHintEl) {
+            const el = document.createElement('div');
+            el.id = 'unlock-hint';
+            el.style.cssText = [
+                'position:fixed', 'bottom:108px', 'left:50%', 'transform:translateX(-50%)',
+                'background:rgba(0,0,0,0.82)', 'color:#fbbf24',
+                'border:1px solid rgba(251,191,36,0.6)', 'border-radius:7px',
+                'padding:5px 16px', 'font:bold 12px "Orbitron",monospace',
+                'pointer-events:none', 'z-index:999', 'text-align:center',
+                'white-space:nowrap', 'text-shadow:0 0 8px #fbbf24',
+                'letter-spacing:0.4px', 'transition:opacity 0.35s',
+            ].join(';');
+            document.body.appendChild(el);
+            UIManager._unlockHintEl = el;
+        }
+        const el = UIManager._unlockHintEl;
+        if (text) {
+            el.textContent = text;
+            el.style.opacity = '1';
+            el.style.display = 'block';
+        } else {
+            el.style.opacity = '0';
+        }
+    }
 
     static updateBossHUD(boss) {
         const hud = document.getElementById('boss-hud');

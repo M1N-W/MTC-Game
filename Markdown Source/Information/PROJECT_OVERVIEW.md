@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.41.18`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.42.1`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.
@@ -28,13 +28,15 @@ Frame modes in `gameLoop` are part of the architecture:
 
 Load order is explicit in `index.html` and is a hard contract. New globals must load before their consumers.
 
-### 2.1 Bootstrap and cloud-first scripts
+### 2.1 Bootstrap and config/cloud scripts
 
-1. `js/firebase-bundle.js`
-2. `js/config.js`
-3. `js/utils.js`
-4. `js/systems/CloudSaveSystem.js`
-5. `js/systems/LeaderboardUI.js`
+1. `js/balance.js`
+2. `js/shop-items.js`
+3. `js/game-texts.js`
+4. `js/utils.js`
+5. `js/firebase-bundle.js`
+6. `js/systems/CloudSaveSystem.js`
+7. `js/systems/LeaderboardUI.js`
 
 ### 2.2 Early core systems
 
@@ -65,15 +67,37 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 1. `js/input.js`
 2. `js/rendering/PlayerRenderer.js`
 3. `js/rendering/BossRenderer.js`
-4. `js/systems/GameState.js`
-5. `js/systems/AdminSystem.js`
-6. `js/systems/ShopSystem.js`
-7. `js/systems/TimeManager.js`
-8. `js/systems/WaveManager.js`
-9. `js/systems/WorkerBridge.js`
-10. `js/game.js`
-11. `js/VersionManager.js`
-12. `js/menu.js`
+4. `js/rendering/EnemyRenderer.js`
+5. `js/systems/GameState.js`
+6. `js/systems/AdminSystem.js`
+7. `js/systems/ShopSystem.js`
+8. `js/systems/TimeManager.js`
+9. `js/systems/WaveManager.js`
+10. `js/systems/WorkerBridge.js`
+11. `js/game.js`
+12. `js/VersionManager.js`
+13. `js/menu.js`
+
+### 2.5 Modular split entry points
+
+The legacy `css/main.css` and `js/config.js` bundles have been retired. Their responsibilities are now split across these stable entry modules:
+
+| File | Purpose |
+| --- | --- |
+| `css/base.css` | Reset, fonts, body, canvas, and root layout |
+| `css/overlays.css` | Interaction prompts, pause state, resume prompt |
+| `css/admin-console.css` | Admin terminal layout and CRT styling |
+| `css/shop.css` | Shop modal and item presentation |
+| `css/hud.css` | HUD, boss bar, skill bar, achievements |
+| `css/menus.css` | Main menu overlay and CTA layout |
+| `css/screens.css` | Victory screen presentation |
+| `css/char-select.css` | Character carousel and flip-card system |
+| `css/tutorial.css` | Tutorial overlay layout and prompts |
+| `css/ui-extras.css` | Mobile UI, tooltips, loading, and game-over extras |
+| `js/balance.js` | `WAVE_SCHEDULE`, `BALANCE`, `GAME_CONFIG`, `VISUALS`, `ACHIEVEMENT_DEFS`, `MAP_CONFIG` |
+| `js/shop-items.js` | `SHOP_ITEMS` catalog |
+| `js/game-texts.js` | `GAME_TEXTS` localization and HUD copy |
+| `js/rendering/EnemyRenderer.js` | Enemy-only draw dispatcher and renderer helpers |
 
 ---
 
@@ -120,6 +144,7 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 ### 3.3 Renderer structure
 
 - `PlayerRenderer`, `BossRenderer`, `EnemyRenderer`, and `ProjectileRenderer` are static dispatchers.
+- Enemy simulation types remain in `js/entities/enemy.js`; enemy canvas rendering is decoupled into `js/rendering/EnemyRenderer.js`.
 - Renderer dispatch is keyed by constructor identity and `instanceof`.
 - Renderers are consumers of simulation state, not owners of gameplay rules.
 
@@ -180,7 +205,7 @@ Forbidden render behavior:
 
 ### 6.2 Enemy registry coupling
 
-- `enemy.js` exports constructors and `window.ENEMY_REGISTRY`.
+- `enemy.js` exports constructors and `window.ENEMY_REGISTRY`; `js/rendering/EnemyRenderer.js` consumes those constructors for render dispatch.
 - `WaveManager` consumes the registry for wave composition.
 - `AdminSystem` consumes the same registry for debug spawning.
 

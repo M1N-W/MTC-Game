@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 /**
  * js/entities/player/AutoPlayer.js
  * ════════════════════════════════════════════════════════════════════════════
@@ -111,7 +111,7 @@ class WanchaiStand {
         : ht >= 1
           ? (S.heatPunchRateWarm ?? 0.92)
           : 1.0;
-    this._atkRate = (S.wanchaiPunchRate ?? 0.1) * punchRateMult;
+    this._atkRate = (S.wanchaiPunchRate ?? 0.22) * punchRateMult;
     const atkRange = S.standPunchRange ?? 110; // hitbox reach
     const chaseSpeed = S.standMoveSpeed ?? 340; // px/s
     const leashRadius = S.standLeashRadius ?? 420; // max dist from owner
@@ -317,18 +317,16 @@ class WanchaiStand {
     target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
     target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
-    // VFX
-    if (typeof spawnParticles === "function")
-      spawnParticles(
-        target.x,
-        target.y,
-        isCrit ? 5 : 3,
-        isCrit ? "#facc15" : "#ef4444",
-      );
-    if (isCrit && typeof addScreenShake === "function") addScreenShake(isCrit ? 5 : 2);
-    if (isCrit && typeof triggerHitStop === 'function') triggerHitStop(0.04);
-    if (isCrit && typeof spawnFloatingText === "function")
-      spawnFloatingText("วันชัย!", this.x, this.y - 30, "#facc15", 18);
+    // VFX — throttled: crit always fires; non-crit fires at 33% to cut particle spam
+    if (isCrit) {
+      if (typeof spawnParticles === "function") spawnParticles(target.x, target.y, 5, "#facc15");
+      if (typeof addScreenShake === "function") addScreenShake(5);
+      if (typeof triggerHitStop === 'function') triggerHitStop(0.04);
+      if (typeof spawnFloatingText === "function")
+        spawnFloatingText("วันชัย!", this.x, this.y - 30, "#facc15", 18);
+    } else if (Math.random() < 0.33) {
+      if (typeof spawnParticles === "function") spawnParticles(target.x, target.y, 2, "#ef4444");
+    }
 
     // Punch animation -- alternate fist side each hit
     this._punchPhase = 2;
@@ -490,6 +488,13 @@ class AutoPlayer extends Player {
 
     // ── Feature 4: Stand Meter (แทน wanchaiTimer) ────────
     this.standMeter = 0; // 0–100, แทน countdown timer
+
+    // ── AbilityUnlock trackers ─────────────────────────────────────────
+    // SU1: Q (full Vacuum+Ignite) — 400 total L-Click rush melee damage
+    this._playerMeleeDmgDealt = 0;
+    // SU2: E (Detonation) — ORA combo reach ×8 three separate times
+    this._highOraComboCount = 0;
+    this._oraHighComboReached = false; // edge-detect: true while current combo session ≥8
   }
 
   takeDamage(amt) {
@@ -613,12 +618,12 @@ class AutoPlayer extends Player {
       if (typeof addScreenShake === "function" && newTier === 3)
         addScreenShake(4);
 
-      // ── PASSIVE UNLOCK TRIGGER: ครั้งแรกที่ถึง OVERHEAT ──────────────
-      // ตั้ง flag แล้วส่งต่อให้ checkPassiveUnlock() ตัดสินใจ
-      // (guard !passiveUnlocked เพื่อไม่ยิง floating text ซ้ำ)
-      if (newTier === 3 && !this._hasReachedOverheat && !this.passiveUnlocked) {
+      // ── PASSIVE UNLOCK TRIGGER: ครั้งแรกที่ถึง OVERHEAT (requires SU1+SU2) ──
+      if (newTier === 3 && !this._hasReachedOverheat) {
         this._hasReachedOverheat = true;
-        this.checkPassiveUnlock();
+        if (this._abilityUnlock.allSkillsDone && !this.passiveUnlocked) {
+          this.checkPassiveUnlock();
+        }
       }
     }
     this._heatTier = newTier; // always sync downward too
@@ -823,13 +828,30 @@ class AutoPlayer extends Player {
     //  but shooting is blocked below. Full movement block would frustrate players.)
 
     super.update(dt, keys, mouse);
-
     // ── Tick graphBuffTimer ────────────────────────────────
     if ((this.graphBuffTimer ?? 0) > 0)
       this.graphBuffTimer = Math.max(0, this.graphBuffTimer - dt);
 
     // Stateless restore
     this.speedBoost = oldSpeedBoost;
+
+    // ── AbilityUnlock: progress check + persistent hint ──────────────────
+    {
+      const AU = this._abilityUnlock;
+      const S  = this.stats;
+      if (!AU.skillsUnlocked.includes('vacuum')) {
+        const req = S.su1MeleeDmgReq ?? 400;
+        this._showUnlockHint(`Rush DMG: ${Math.floor(this._playerMeleeDmgDealt ?? 0)}/${req} -> Q Vacuum full`);
+      } else if (!AU.skillsUnlocked.includes('detonation')) {
+        const req2 = S.su2OraComboCount ?? 3;
+        this._showUnlockHint(`ORA x8 count: ${this._highOraComboCount ?? 0}/${req2} -> E Detonation`);
+      } else if (!this.passiveUnlocked) {
+        this._showUnlockHint('Reach OVERHEAT -> SCORCHED SOUL Passive');
+      } else {
+        this._showUnlockHint(null);
+      }
+      this.checkPassiveUnlock();
+    }
 
     // ── Q: Vacuum Heat — ดูดศัตรูเข้ามากอง ────────────────────
     // กด Q ดึงทุกตัวในรัศมี 320px เข้าหาออโต้ทันที
@@ -853,7 +875,7 @@ class AutoPlayer extends Player {
         this._doStandPull();
       }
       consumeInput("q");
-    } else if (checkInput("q") && !this.passiveUnlocked) {
+    } else if (checkInput("q") && !this._abilityUnlock.skillsUnlocked.includes('vacuum')) {
       // ── Vacuum ใช้ได้ตั้งแต่ต้น (basic version: ดูดอย่างเดียว) ──────
       if ((this.cooldowns?.vacuum ?? 0) <= 0) {
         const vCost = this.stats?.vacuumEnergyCost ?? 20;
@@ -881,7 +903,7 @@ class AutoPlayer extends Player {
       consumeInput("q");
     } else if (
       checkInput("q") &&
-      this.passiveUnlocked &&
+      this._abilityUnlock.skillsUnlocked.includes('vacuum') &&
       (this.cooldowns?.vacuum ?? 0) <= 0
     ) {
       const vCost = this.stats?.vacuumEnergyCost ?? 20;
@@ -897,10 +919,10 @@ class AutoPlayer extends Player {
     // ── E: Charge Punch (Feature 3B) / Overheat Detonation ─────
     // กด E ค้างขณะ Wanchai active = charge, ปล่อย = super punch
     // กด E ขณะไม่ได้ unlock = locked message
-    if (!this.passiveUnlocked) {
+    if (!this._abilityUnlock.skillsUnlocked.includes('detonation')) {
       if (checkInput("e")) {
         spawnFloatingText(
-          "🔒 ทำ Heat เต็ม 100 ก่อน!",
+          "LOCKED: ORA x8 combo x3 -> E",
           this.x,
           this.y - 40,
           "#94a3b8",
@@ -908,7 +930,7 @@ class AutoPlayer extends Player {
         );
         consumeInput("e");
       }
-      // reset charge if passive not unlocked
+      // reset charge if detonation not unlocked
       this._chargeTimer = 0;
       this._chargeReady = false;
       this._eHeld = false;
@@ -1044,7 +1066,7 @@ class AutoPlayer extends Player {
         this._chargeTimer = 0;
         this._chargeReady = false;
       }
-    } else if (this.passiveUnlocked && !this.wanchaiActive) {
+    } else if (this._abilityUnlock.skillsUnlocked.includes('detonation') && !this.wanchaiActive) {
       // Not in Wanchai — cooldown message only
       if (checkInput("e")) {
         if ((this.cooldowns?.detonation ?? 0) > 0) {
@@ -1231,6 +1253,10 @@ class AutoPlayer extends Player {
 
     target.takeDamage(dmg, this);
 
+    // SU1 tracking: accumulate rush damage toward Q vacuum unlock
+    this._playerMeleeDmgDealt = (this._playerMeleeDmgDealt ?? 0) + dmg;
+    this.checkPassiveUnlock();
+
     if (this.passiveUnlocked)
       this.hp = Math.min(
         this.maxHp,
@@ -1261,6 +1287,18 @@ class AutoPlayer extends Player {
     // ── ORA Combo escalation from player hits ─────────────────────────
     this._oraComboCount = Math.min(10, (this._oraComboCount ?? 0) + 1);
     this._oraTextTimer = 0.45; // FIX: แสดง ORA text 0.45s แล้วจาง — reset ทุกครั้งที่ punch
+
+    // SU2 tracking: ORA combo edge-detect — count sessions where combo reaches x8
+    if (this._oraComboCount >= 8) {
+      if (!this._oraHighComboReached) {
+        this._oraHighComboReached = true;
+        this._highOraComboCount = (this._highOraComboCount ?? 0) + 1;
+        this.checkPassiveUnlock();
+      }
+    } else {
+      this._oraHighComboReached = false;
+    }
+
     // High combo = escalating ORA text
     if (this._oraComboCount >= 5 && typeof spawnFloatingText === "function") {
       spawnFloatingText(
@@ -1340,9 +1378,38 @@ class AutoPlayer extends Player {
     if (this.passiveUnlocked) return; // guard: ปลดแล้ว ไม่ต้องทำซ้ำ
 
     // ── Condition: ถึง OVERHEAT ครั้งแรก (set โดย gainHeat()) ──────────
+    const AU = this._abilityUnlock;
+
+    // SU1: Q full vacuum (ignite) — 400 total rush melee damage
+    if (!AU.skillsUnlocked.includes('vacuum')) {
+      const req = S.su1MeleeDmgReq ?? 400;
+      if ((this._playerMeleeDmgDealt ?? 0) < req) return;
+      AU.skillsUnlocked.push('vacuum');
+      spawnFloatingText("Q UNLOCKED: Vacuum Heat!", this.x, this.y - 65, "#f97316", 22);
+      spawnParticles(this.x, this.y, 20, "#f97316");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
+    }
+
+    // SU2: E detonation — ORA combo x8 reached three times
+    if (!AU.skillsUnlocked.includes('detonation')) {
+      const req2 = S.su2OraComboCount ?? 3;
+      if ((this._highOraComboCount ?? 0) < req2) return;
+      AU.skillsUnlocked.push('detonation');
+      AU.allSkillsDone = true;
+      spawnFloatingText("E UNLOCKED: Detonation!", this.x, this.y - 65, "#dc2626", 22);
+      spawnParticles(this.x, this.y, 20, "#dc2626");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
+      return;
+    }
+
+    if (!AU.allSkillsDone) AU.allSkillsDone = true;
+
+    // Passive: SU1+SU2 done + first OVERHEAT
     if (!this._hasReachedOverheat) return;
 
     this.passiveUnlocked = true;
+    AU.passiveDone = true;
+    this._showUnlockHint(null);
 
     // ── HP Bonus (เหมือนเดิม) ─────────────────────────────────────────
     const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.35));

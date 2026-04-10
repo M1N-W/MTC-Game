@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 /**
  * js/entities/player/PoomPlayer.js
  * ════════════════════════════════════════════════════════════════════
@@ -84,11 +84,19 @@ class PoomPlayer extends Player {
     this.passiveSpeedBonus = 0; // Poom ไม่มี passive speed bonus
     this.usesOwnLifesteal = false; // ใช้ base lifesteal logic ปกติ
 
-    // ── Passive unlock flags ────────────────────────────────────────────
-    // _nagaUnlocked: Q (Naga) ปลดที่ Lv2 ก่อน passive — สอน mechanic ก่อน
-    // _hasUsedRitual: ปลด passive เมื่อทำ Ritual ครั้งแรกหลัง Naga active
+    // ── Passive unlock flags (kept for legacy routing compat) ───────────
+    // _nagaUnlocked: set by checkPassiveUnlock() SU1 (10 unique sticky targets)
+    // _hasUsedRitual: set by ritualBurst() when Cosmic Balance + 2 kills
     this._nagaUnlocked = false;
     this._hasUsedRitual = false;
+
+    // ── AbilityUnlock trackers ──────────────────────────────────────────
+    // SU1: Q+R (Naga+Ritual) — track unique enemies hit with sticky
+    this._uniqueStickyTargets = new Set();
+    // SU2: E (Garuda) — track times Ritual hits 4+ enemies
+    this._ritualMultiHitDone = false;
+    // Special: total Ritual damage accumulated
+    this._totalRitualDamage = 0;
   }
 
   // ── Second Wind: computed live, no timer needed ──────────
@@ -290,7 +298,7 @@ class PoomPlayer extends Player {
     }
     // ── Milestone Unlock: Q (Naga) ปลดที่ Lv2 — ก่อน passive ─────────────
     // ให้ผู้เล่นเรียน Naga + Sticky + Ritual loop ก่อนที่ passive จะ trigger
-    if (!this._nagaUnlocked && this.level >= 2) {
+    if (!this._nagaUnlocked && false) { // disabled: SU1 now handles this via checkPassiveUnlock()
       this._nagaUnlocked = true;
       spawnFloatingText(
         "🐍 Q UNLOCKED: พญานาคา!",
@@ -331,7 +339,7 @@ class PoomPlayer extends Player {
     }
 
     if (checkInput("e")) {
-      if (this.passiveUnlocked && this.cooldowns.garuda <= 0) {
+      if (this._abilityUnlock.skillsUnlocked.includes('garuda') && this.cooldowns.garuda <= 0) {
         const gCost = S.garudaEnergyCost ?? 30;
         if ((this.energy ?? 0) < gCost) {
           spawnFloatingText(
@@ -346,9 +354,11 @@ class PoomPlayer extends Player {
           this.summonGaruda();
           if (this._anim) this._anim.skillT = 0.6;
         }
-      } else if (!this.passiveUnlocked) {
+      } else if (!this._abilityUnlock.skillsUnlocked.includes('garuda')) {
+        const _gReq = this.stats?.su2RitualMultiHitReq ?? 1;
         spawnFloatingText(
-          "🔒 ปลดล็อคหลัง Ritual ครั้งแรก",
+          `Ritual 4+ hits: ${this._ritualMultiHitDone ? _gReq : 0}/${_gReq} -> E`,
+        //was: locked garuda E
           this.x,
           this.y - 40,
           "#94a3b8",
@@ -365,7 +375,7 @@ class PoomPlayer extends Player {
         if (this._anim) this._anim.skillT = 1.0;
       } else if (!this._nagaUnlocked) {
         spawnFloatingText(
-          "🔒 ปลดล็อค Naga ก่อน (Lv2)",
+          "LOCKED R: Unlock Q (Naga) first",
           this.x,
           this.y - 40,
           "#94a3b8",
@@ -482,6 +492,26 @@ class PoomPlayer extends Player {
         } catch (e) { }
       }
     }
+    // ── AbilityUnlock: progress check + persistent hint ──────────────────
+    {
+      const AU = this._abilityUnlock;
+      const S2 = this.stats;
+      if (!AU.skillsUnlocked.includes('naga')) {
+        const req = S2.su1StickyTargetReq ?? 10;
+        this._showUnlockHint(`Sticky hits: ${this._uniqueStickyTargets?.size ?? 0}/${req} -> Q+R`);
+      } else if (!AU.skillsUnlocked.includes('garuda')) {
+        this._showUnlockHint('Ritual 4+ enemies in 1 cast -> E Garuda');
+      } else if (!this.passiveUnlocked) {
+        this._showUnlockHint('Cosmic Balance + 2 Ritual kills -> Passive');
+      } else if (!AU.specialDone) {
+        const req3 = S2.specialRitualDmgReq ?? 5000;
+        this._showUnlockHint(`Ritual DMG: ${Math.floor(this._totalRitualDamage ?? 0)}/${req3} -> Special`);
+      } else {
+        this._showUnlockHint(null);
+      }
+      this.checkPassiveUnlock();
+    }
+
     this.updateUI();
   }
 
@@ -554,59 +584,82 @@ class PoomPlayer extends Player {
     Audio.playPowerUp();
   }
 
-  // ── Override: Poom ปลดล็อคเมื่อทำ Ritual ครั้งแรก ──────────────────────────
-  // เปลี่ยนจาก "รอ Level 4 เฉยๆ" → "ทำพิธีแล้ว awakens"
-  // Thematic: "ราชาแห่งพิธีกรรม" ต้องทำพิธีก่อนถึงจะเป็น "ราชา"
+  // ── AbilityUnlock — Sequential behavior-gated progression ──────────────
+  // SU1: Q+R (Naga+Ritual)  — 10 unique sticky targets
+  // SU2: E (Garuda)         — Ritual hits 4+ enemies once
+  // Passive (ราชาอีสาน)     — Cosmic Balance + 2 Ritual kills while SU1+SU2 done
+  // Special (Ritual Master) — 5000 total Ritual damage
   checkPassiveUnlock() {
     const S = this.stats;
-    if (this.passiveUnlocked) return; // guard: ปลดแล้ว ไม่ต้องทำซ้ำ
+    const AU = this._abilityUnlock;
 
-    // ── Condition: ทำ Ritual ครั้งแรก (set โดย ritualBurst()) ──────────
-    if (!this._hasUsedRitual) return;
+    // SU1: Q+R unlock — 10 unique sticky target hits
+    if (!AU.skillsUnlocked.includes('naga')) {
+      const req = S.su1StickyTargetReq ?? 10;
+      if ((this._uniqueStickyTargets?.size ?? 0) < req) return;
+      AU.skillsUnlocked.push('naga');
+      this._nagaUnlocked = true; // keep legacy routing flag in sync
+      spawnFloatingText("Q+R UNLOCKED: Naga + Ritual!", this.x, this.y - 65, "#10b981", 22);
+      spawnParticles(this.x, this.y, 25, "#10b981");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
+    }
 
-    this.passiveUnlocked = true;
+    // SU2: E (Garuda) — Ritual must hit 4+ enemies in one cast
+    if (!AU.skillsUnlocked.includes('garuda')) {
+      if (!this._ritualMultiHitDone) return;
+      AU.skillsUnlocked.push('garuda');
+      AU.allSkillsDone = true;
+      spawnFloatingText("E UNLOCKED: Garuda!", this.x, this.y - 65, "#f97316", 22);
+      spawnParticles(this.x, this.y, 25, "#f97316");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
+      return;
+    }
 
-    // ── HP Bonus (BUFF: 0.30 → 0.45) ─────────────────────────────────
-    const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.45));
-    this.maxHp += hpBonus;
-    this.hp += hpBonus;
+    if (!AU.allSkillsDone) AU.allSkillsDone = true;
 
-    // ── Unlock VFX — สีเขียว/ทอง สะท้อน Ritual energy ──────────────
-    const unlockText = S.passiveUnlockText ?? "🌾 ราชาอีสาน!";
-    spawnFloatingText(unlockText, this.x, this.y - 70, "#fbbf24", 32);
-    spawnFloatingText(
-      "✨ E (ครุฑ) UNLOCKED",
-      this.x,
-      this.y - 108,
-      "#10b981",
-      18,
-    );
-    spawnFloatingText(
-      "💚 Lifesteal +2.5% | CRIT +6%",
-      this.x,
-      this.y - 133,
-      "#4ade80",
-      14,
-    );
-    spawnParticles(this.x, this.y, 60, "#fbbf24");
-    spawnParticles(this.x, this.y, 30, "#10b981");
-    addScreenShake(18);
-    this.goldenAuraTimer = 4;
-    Audio.playAchievement();
-    // ── Achievement: ราชาแห่งพิธีกรรม ──────────────────────────────────
-    if (typeof Achievements !== "undefined") Achievements.check("ritual_king");
+    // Passive: requires SU1+SU2 done + Cosmic Balance + 2 Ritual kills in one cast
+    if (!this.passiveUnlocked) {
+      if (!this._hasUsedRitual) return;
 
-    if (typeof UIManager !== "undefined")
-      UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+      this.passiveUnlocked = true;
+      AU.passiveDone = true;
+      this._showUnlockHint(null);
 
-    // ── Persist save ──────────────────────────────────────────────────
-    try {
-      const saved = getSaveData();
-      const set = new Set(saved.unlockedPassives || []);
-      set.add(this.charId);
-      updateSaveData({ unlockedPassives: [...set] });
-    } catch (e) {
-      console.warn("[MTC Save] Could not persist passive unlock:", e);
+      // ── HP Bonus (BUFF: 0.30 → 0.45) ─────────────────────────────────
+      const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.45));
+      this.maxHp += hpBonus;
+      this.hp += hpBonus;
+
+      const unlockText = S.passiveUnlockText ?? "Isan King!";
+      spawnFloatingText(unlockText, this.x, this.y - 70, "#fbbf24", 32);
+      spawnFloatingText("E Garuda + Lifesteal active!", this.x, this.y - 108, "#10b981", 16);
+      spawnParticles(this.x, this.y, 60, "#fbbf24");
+      spawnParticles(this.x, this.y, 30, "#10b981");
+      addScreenShake(18);
+      this.goldenAuraTimer = 4;
+      Audio.playAchievement();
+      if (typeof Achievements !== "undefined") Achievements.check("ritual_king");
+      if (typeof UIManager !== "undefined")
+        UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+      try {
+        const saved = getSaveData();
+        const set = new Set(saved.unlockedPassives || []);
+        set.add(this.charId);
+        updateSaveData({ unlockedPassives: [...set] });
+      } catch (e) {
+        console.warn("[MTC Save] Could not persist passive unlock:", e);
+      }
+      return;
+    }
+
+    // Special: 5000 total Ritual damage → Ritual Power +20%
+    if (!AU.specialDone) {
+      const req3 = S.specialRitualDmgReq ?? 5000;
+      if ((this._totalRitualDamage ?? 0) < req3) return;
+      AU.specialDone = true;
+      spawnFloatingText("SPECIAL: Ritual Power +20%!", this.x, this.y - 65, "#fbbf24", 22);
+      spawnParticles(this.x, this.y, 30, "#fbbf24");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
     }
   }
 
@@ -675,6 +728,7 @@ class PoomPlayer extends Player {
 
     let totalEnemiesAffected = 0;
     let ritualKills = 0; // ✨ [ritual_wipe] นับเฉพาะตัวที่ตายจาก ritual นี้
+    let totalRitualDmgDealt = 0; // AbilityUnlock: accumulate for Special
 
     // Iterate all living enemies and consume their sticky status
     if (window.enemies && window.enemies.length > 0) {
@@ -690,6 +744,7 @@ class PoomPlayer extends Player {
             enemy.maxHp * RC.stackBurstPct * stickyStatus.stacks;
           const totalDamage = flatDamage + pctDamage;
           enemy.takeDamage(totalDamage, this);
+          totalRitualDmgDealt += totalDamage;
           if (enemy.dead) ritualKills++;
           spawnFloatingText(
             Math.round(totalDamage),
@@ -708,9 +763,6 @@ class PoomPlayer extends Player {
 
     // Always trigger cooldown and effects
     if (totalEnemiesAffected === 0) {
-      console.log(
-      "[Poom] No sticky enemies found - dealing base ritual damage",
-      );
       const BASE_DAMAGE = RC.baseDamage || 75;
       const BASE_DAMAGE_PCT = RC.baseDamagePct || 0.15;
       const RITUAL_RANGE = RC.range || 280;
@@ -738,18 +790,6 @@ class PoomPlayer extends Player {
           }
         }
       }
-
-      if (totalEnemiesAffected === 0) {
-        // console.log("[Poom] No enemies in range - ritual used anyway");
-      } else {
-        console.log(
-          `[Poom] Ritual dealt base damage to ${totalEnemiesAffected} enemies`,
-        );
-      }
-    } else {
-      console.log(
-        `[Poom] Ritual burst consumed sticky on ${totalEnemiesAffected} enemies`,
-      );
     }
 
     // Always set cooldown
@@ -823,12 +863,21 @@ class PoomPlayer extends Player {
     if (typeof Audio !== "undefined" && Audio.playRitualBurst)
       Audio.playRitualBurst();
 
-    // ── PASSIVE UNLOCK TRIGGER: Ritual ครั้งแรก = Awakening ──────────────
-    // "ภูมิ awakens หลังจากทำพิธีครั้งแรก" — thematic และสอน Sticky→Ritual loop
-    if (!this._hasUsedRitual && !this.passiveUnlocked) {
-      this._hasUsedRitual = true;
-      this.checkPassiveUnlock();
+    // ── AbilityUnlock tracking ────────────────────────────────────────────
+    // SU2: track Ritual multi-hit sessions (4+ enemies in one cast)
+    if (totalEnemiesAffected >= 4 && !this._ritualMultiHitDone) {
+      this._ritualMultiHitDone = true;
     }
+    // Special: accumulate total Ritual damage
+    this._totalRitualDamage = (this._totalRitualDamage ?? 0) + totalRitualDmgDealt;
+    // Passive: requires allSkillsDone + Cosmic Balance active + 2 ritual kills this cast
+    if (!this._hasUsedRitual && !this.passiveUnlocked && this._abilityUnlock.allSkillsDone) {
+      if (this._cosmicBalance && ritualKills >= 2) {
+        this._hasUsedRitual = true;
+      }
+    }
+    // Always check for any newly satisfied unlock conditions
+    this.checkPassiveUnlock();
   }
 
   dash(ax, ay) {
@@ -993,6 +1042,14 @@ class PoomPlayer extends Player {
       duration: stackDuration,
       meta: { slowPerStack: 0.04 },
     });
+
+    // SU1 tracking: count unique enemies ever hit with sticky
+    if (enemy.id != null) {
+      this._uniqueStickyTargets.add(enemy.id);
+    } else {
+      this._uniqueStickyTargets.add(enemy);
+    }
+    this.checkPassiveUnlock();
   }
 
   // draw() ย้ายไป PlayerRenderer._drawPoom() แล้ว

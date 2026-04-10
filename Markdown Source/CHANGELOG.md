@@ -4,6 +4,30 @@
 
 ---
 
+## v3.42.1 — Refactor Release Sync
+*Released: April 10, 2026*
+
+### 🔧 Technical follow-up
+- Bumped the service worker cache version to `v3.42.1` so clients invalidate the retired `css/main.css` and `js/config.js` cache graph cleanly.
+- Synced runtime entrypoints across `index.html`, `Debug.html`, and `sw.js` to the split config modules: `js/balance.js`, `js/shop-items.js`, and `js/game-texts.js`.
+- Locked the enemy rendering split in documentation and runtime loading order by keeping `js/entities/enemy.js` for simulation classes and `js/rendering/EnemyRenderer.js` for canvas dispatch.
+
+## v3.42.0 — Phase 7e: Refactor + Balance Overhaul
+*Released: April 10, 2026*
+
+### ⚖️ Balance and progression
+- Rebalanced all four characters in the extracted config layer: lower base HP, lower per-level HP scaling, lower damage-per-level scaling, and tighter passive HP bonuses where applicable.
+- Reduced `PlayerBase.COMBO_MAX_STACKS` from `50` to `30` to curb runaway late-wave burst scaling.
+
+### ♻️ File modularization
+- Split the legacy CSS bundle into 10 focused files: `base.css`, `overlays.css`, `admin-console.css`, `shop.css`, `hud.css`, `menus.css`, `screens.css`, `char-select.css`, `tutorial.css`, and `ui-extras.css`.
+- Split the legacy config bundle into `js/balance.js`, `js/shop-items.js`, and `js/game-texts.js`, with `index.html` and `sw.js` updated to load and precache the new files in dependency order.
+- Extracted `EnemyRenderer` out of `js/entities/enemy.js` into `js/rendering/EnemyRenderer.js`, keeping enemy runtime logic and rendering responsibilities separated.
+
+### 🎨 UI and content
+- Updated the character skill-card back-face descriptions in `index.html` to English AbilityUnlock-era copy for Poom, Auto, and Pat.
+- Fixed `.card-back-skills` layout spacing so the back-face skill lists fill their card height cleanly.
+
 ## v3.41.18 — Architecture Documentation Audit & Character UI Updates
 *Released: April 9, 2026*
 

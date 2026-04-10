@@ -114,7 +114,7 @@ class Player extends Entity {
     this.comboCount = 0;
     this.comboTimer = 0;
     this.COMBO_MAX_TIME = 3.0;
-    this.COMBO_MAX_STACKS = 50;
+    this.COMBO_MAX_STACKS = 30;
 
     this.level = 1;
     this.exp = 0;
@@ -141,6 +141,23 @@ class Player extends Entity {
     this.passiveUnlocked = false; // Admin Dev Mode จัดการใน startGame() แทนแล้ว
     this.stealthUseCount = 0;
     this.goldenAuraTimer = 0;
+
+    // ── AbilityUnlock shared state (behavior-gated progression) ───────────
+    // Each subclass adds its own per-character tracker fields in its constructor.
+    // skillsUnlocked: names of skills unlocked so far via SkillUnlock conditions
+    // allSkillsDone:  true when every SkillUnlock for this character is complete
+    // passiveDone:    set true alongside passiveUnlocked (single source of truth)
+    // specialDone:    SpecialUnlock complete
+    this._abilityUnlock = {
+      skillsUnlocked: [],
+      allSkillsDone:  false,
+      passiveDone:    false,
+      specialDone:    false,
+    };
+    // Persistent screen-space hint shown while a SkillUnlock is in progress.
+    // Set via this._showUnlockHint(text, duration). Read by updateUI().
+    this._unlockHintText  = null;
+    this._unlockHintTimer = 0;
 
     // ── Passive behaviour flags (override in subclass, avoids instanceof checks) ──
     // passiveSpeedBonus: speedMult ที่ได้หลัง passive unlock (0 = ไม่มี bonus)
@@ -213,11 +230,6 @@ class Player extends Entity {
             );
             break;
         }
-      }
-      if (unlocked.length > 0) {
-        console.log(
-          `[MTC Meta] Applied ${unlocked.length} achievement reward(s). Speed×${this.metaSpeedMult.toFixed(2)} CDR×${this.skillCooldownMult.toFixed(2)}`,
-        );
       }
     }
   }
@@ -543,9 +555,16 @@ class Player extends Entity {
     spawnParticles(this.x, this.y, 25, "#facc15");
     if (typeof UIManager !== "undefined")
       UIManager.showVoiceBubble("เข้าโหมดซุ่ม!", this.x, this.y - 40);
-    this.checkPassiveUnlock();
     Achievements.stats.stealths++;
     Achievements.check("ghost");
+  }
+
+  // ── AbilityUnlock helper — set a persistent screen-space hint ──────────
+  // Call from character update() when a SkillUnlock condition changes.
+  // Pass text=null to clear. duration defaults to 5 s (refreshes on every call).
+  _showUnlockHint(text, duration = 5) {
+    this._unlockHintText  = text;
+    this._unlockHintTimer = text ? duration : 0;
   }
 
   breakStealth() {
@@ -978,12 +997,6 @@ class Player extends Entity {
       }
     }
 
-    console.log(
-      "[MTC Dev] applyDevBuff() →",
-      `HP ${this.maxHp}  EN ${this.maxEnergy}`,
-      `DMG×${this._damageMultiplier.toFixed(2)}  SPD×${this.metaSpeedMult.toFixed(2)}`,
-      `CDR×${this.skillCooldownMult.toFixed(2)}  Crit ${(this.baseCritChance * 100).toFixed(0)}%`,
-    );
   }
 
   // draw() ย้ายไป PlayerRenderer._drawBase() แล้ว
@@ -1055,6 +1068,18 @@ class Player extends Entity {
         if (skillName)
           skillName.textContent = `${this.stealthUseCount}/${this.stats.passiveUnlockStealthCount ?? 5}`;
       }
+    }
+
+    // ── AbilityUnlock hint ticker + display ──────────────────────────────
+    if (this._unlockHintTimer > 0) {
+      this._unlockHintTimer -= 1 / 60; // approximate dt; fine for hint decay
+      if (this._unlockHintTimer <= 0) {
+        this._unlockHintTimer = 0;
+        this._unlockHintText  = null;
+      }
+    }
+    if (typeof UIManager !== "undefined" && UIManager.setUnlockHint) {
+      UIManager.setUnlockHint(this._unlockHintText);
     }
   }
 }

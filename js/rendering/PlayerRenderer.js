@@ -1756,7 +1756,7 @@ class PlayerRenderer {
       const gs = worldToScreen(g.x, g.y);
       ctx.save();
       ctx.globalAlpha = ga;
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 8;
       ctx.shadowColor = coreCol;
       // Stand silhouette ghost — head + broad shoulders
       ctx.fillStyle = coreCol;
@@ -1817,7 +1817,7 @@ class PlayerRenderer {
       hG.addColorStop(1, "rgba(0,0,0,0)");
       ctx.globalAlpha = 1;
       ctx.fillStyle = hG;
-      ctx.shadowBlur = isPunch ? 40 : 20;
+      ctx.shadowBlur = isPunch ? 24 : 12;
       ctx.shadowColor = coreCol;
       ctx.beginPath();
       ctx.ellipse(0, 0, hw, hw * 0.45, 0, 0, Math.PI * 2);

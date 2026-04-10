@@ -80,12 +80,12 @@ All subclasses of `EnemyBase` must adhere to a strict implementation contract re
 Script loading order defined in the application entrypoint (`index.html`) is a hard architectural constraint. A module must safely load to the global scope before its consumers instantiate.
 
 The deterministic load sequence is:
-1. Environment & Utility (`config.js`, `utils.js`)
+1. Environment & Utility (`balance.js`, `shop-items.js`, `game-texts.js`, `utils.js`, `firebase-bundle.js`)
 2. Core Entity Foundation (`entities/base.js`)
 3. Logic & AI Analyzers (`ai/UtilityAI.js`, `ai/EnemyActions.js`, `ai/PlayerPatternAnalyzer.js`, `ai/SquadAI.js`)
 4. Entity Implementations (`entities/player/*`, `entities/summons.js`, `entities/enemy.js`, `entities/boss/*`)
 5. Sub-Systems & Input (`input.js`)
-6. Rendering Engines (`rendering/PlayerRenderer.js`, `rendering/BossRenderer.js`)
+6. Rendering Engines (`rendering/PlayerRenderer.js`, `rendering/BossRenderer.js`, `rendering/EnemyRenderer.js`)
 7. Central Orchestration (`systems/GameState.js`, `systems/AdminSystem.js`, `systems/TimeManager.js`, `systems/WaveManager.js`, `systems/WorkerBridge.js`)
 8. Main Application Frame (`game.js`, `VersionManager.js`, `menu.js`)
 
@@ -97,5 +97,6 @@ Certain globally scoped channels create implicit system couplings that orchestra
 
 - **Canonical State Ownership**: `GameState` strictly owns phase transitions and loop execution states. Shared arrays (`window.enemies`, `window.specialEffects`) are maintained for surface level compatibility.
 - **Enemy Registry Instantiation**: `window.ENEMY_REGISTRY` serves as the centralized factory. `WaveManager` (for normal gameplay spawns) and `AdminSystem` (for developer tools) both strictly couple to this registry for generic instantiations.
+- **Enemy Rendering Boundary**: Enemy simulation classes remain defined in `entities/enemy.js`, while `rendering/EnemyRenderer.js` consumes those constructors for draw dispatch. Renderer extraction must not move update logic, AI state, or registry ownership out of `EnemyBase` descendants.
 - **Asynchronous Workloads**: `WorkerBridge` couples background pattern analytics to the `PlayerPatternAnalyzer`, creating an asynchronous pipeline feeding back into `UtilityAI`.
 - **System-wide Scaling**: `window.applyWaveModifiersToEnemy` is a required invocation applicable seamlessly across standard spawns, boss-summoned entities, and admin debug creations to ensure standardized stat adjustments.

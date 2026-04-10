@@ -31,9 +31,19 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e293b'/><text x='50' y='70' font-family='Arial' font-size='60' font-weight='bold' fill='%233b82f6' text-anchor='middle'>M</text></svg>">
 
     <!-- Preload critical assets before browser discovers them in CSS -->
-    <link rel="preload" href="css/main.css" as="style">
+    <link rel="preload" href="css/base.css" as="style">
 
-    <link rel="stylesheet" href="css/main.css">
+    <!-- Split CSS modules (v3.42.0 refactor) -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/overlays.css">
+    <link rel="stylesheet" href="css/admin-console.css">
+    <link rel="stylesheet" href="css/shop.css">
+    <link rel="stylesheet" href="css/hud.css">
+    <link rel="stylesheet" href="css/menus.css">
+    <link rel="stylesheet" href="css/screens.css">
+    <link rel="stylesheet" href="css/char-select.css">
+    <link rel="stylesheet" href="css/tutorial.css">
+    <link rel="stylesheet" href="css/ui-extras.css">
 
     <!-- Single consolidated Google Fonts request (replaces @import in main.css + separate Share Tech Mono link) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -515,27 +525,24 @@
                                                 <span class="tt-key">R²</span>
                                                 <span class="tt-icon">🍚</span>
                                                 <div class="tt-info">
-                                                    <div class="tt-name">กินข้าวนึ่ง</div>
-                                                    <div class="tt-desc">R-Click: กินข้าว → สะสม Sticky stack + regen HP
-                                                    </div>
+                                                    <div class="tt-name">Sticky Sap</div>
+                                                    <div class="tt-desc">R-Click to apply Sticky debuff. Build stacks by hitting unique enemies.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
                                                 <span class="tt-key">Q</span>
                                                 <span class="tt-icon">🐍</span>
                                                 <div class="tt-info">
-                                                    <div class="tt-name">อัญเชิญพญานาค</div>
-                                                    <div class="tt-desc">Summon Naga — absorbs 40% max HP as shield,
-                                                        unlocks Lv2</div>
+                                                    <div class="tt-name">Naga Summon</div>
+                                                    <div class="tt-desc">Unlocks after 10 unique sticky targets. Summons Naga — absorbs 40% max HP as shield.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
                                                 <span class="tt-key">E</span>
                                                 <span class="tt-icon">🦅</span>
                                                 <div class="tt-info">
-                                                    <div class="tt-name">อัญเชิญครุฑ</div>
-                                                    <div class="tt-desc">Summon Garuda — Naga+Garuda = Cosmic Balance
-                                                        (regen + ×1.2 dmg)</div>
+                                                    <div class="tt-name">Garuda Summon</div>
+                                                    <div class="tt-desc">Unlocks after Ritual hits 4+ enemies at once. Naga+Garuda = Cosmic Balance (regen + ×1.2 dmg).</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -543,8 +550,7 @@
                                                 <span class="tt-icon">🌾</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Ritual Burst</div>
-                                                    <div class="tt-desc">Detonate all Sticky stacks — damage scales with
-                                                        stacks consumed</div>
+                                                    <div class="tt-desc">Detonate all Sticky stacks — damage scales with stacks consumed.</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -605,7 +611,7 @@
                                                 <span class="tt-icon">👊</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Wanchai Stand</div>
-                                                    <div class="tt-desc">เรียกสแตนด์วันชัยออกมาช่วยต่อสู้</div>
+                                                    <div class="tt-desc">Summon Wanchai Stand to fight alongside you. Unlocks melee Rush mode.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -613,16 +619,15 @@
                                                 <span class="tt-icon">🌀</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Vacuum / Stand Pull</div>
-                                                    <div class="tt-desc">ดึงศัตรูเข้ามาหาตัว</div>
+                                                    <div class="tt-desc">Pull enemies in and ignite on hit. Stand Pull version has longer range and cooldown.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
                                                 <span class="tt-key">E</span>
                                                 <span class="tt-icon">💥</span>
                                                 <div class="tt-info">
-                                                    <div class="tt-name">Charge Punch</div>
-                                                    <div class="tt-desc">ชาร์จหมัดเป็นแรงปะทะก้อนใหญ่
-                                                        เหมาะกับการตัดศัตรูตัวหนาหรือเปิดวง</div>
+                                                    <div class="tt-name">Overheat Detonation</div>
+                                                    <div class="tt-desc">Heat-scaled AoE blast. Full charge at Overheat deals massive damage.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -630,10 +635,7 @@
                                                 <span class="tt-icon">🌡️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Heat Tier System</div>
-                                                    <div class="tt-desc">
-                                                        ยิ่งต่อคอมโบการโจมตี
-                                                        ความร้อนยิ่งเร่งจังหวะโจมตี
-                                                    </div>
+                                                    <div class="tt-desc">Chain attacks to build Heat — higher tiers boost damage and punch speed. Overheat unlocks Scorched Soul passive.</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -694,8 +696,7 @@
                                                 <span class="tt-icon">🛡️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Blade Guard</div>
-                                                    <div class="tt-desc">ยกดาบรับการโจมตีระยะไกลแล้วสะท้อนกลับ
-                                                        การโจมตีของศัตรู</div>
+                                                    <div class="tt-desc">Block ranged attacks and reflect them back. Successful reflects progress toward Perfect Parry unlock.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -703,8 +704,7 @@
                                                 <span class="tt-icon">🌪️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Zanzo Flash</div>
-                                                    <div class="tt-desc">พุ่งวาร์ประยะสั้นพร้อมภาพเงาตามหลัง
-                                                        ใช้เปิดมุมใหม่หรือเข้าไปสร้างจังหวะลอบฟัน</div>
+                                                    <div class="tt-desc">Unlocks after 3 Iaido hits. Short-range dash with afterimage — reposition and open new strike angles.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -712,8 +712,7 @@
                                                 <span class="tt-icon">🗡️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Iaido Strike</div>
-                                                    <div class="tt-desc">ชาร์จท่าฟันแล้วพุ่งตัดผ่านเป้าหมาย
-                                                        สร้างจังหวะหยุดภาพและปิดงานแบบซามูไร</div>
+                                                    <div class="tt-desc">Charge and dash-slash through targets — cinematic hit-stop finish. Core unlock driver for Blade Arts.</div>
                                                 </div>
                                             </div>
                                             <div class="back-skill-row">
@@ -721,9 +720,7 @@
                                                 <span class="tt-icon">⚔️</span>
                                                 <div class="tt-info">
                                                     <div class="tt-name">Dual-Mode Katana</div>
-                                                    <div class="tt-desc">
-                                                        สลับระหว่างคลื่นดาบกับคอมโบประชิดตามตำแหน่งและจังหวะเข้าปะทะ
-                                                    </div>
+                                                    <div class="tt-desc">Auto-switches between sword-wave and close-range combo based on position and timing.</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -993,7 +990,9 @@
         </div>
     </div>
 
-    <script defer src="js/config.js"></script>
+    <script defer src="js/balance.js"></script>
+    <script defer src="js/shop-items.js"></script>
+    <script defer src="js/game-texts.js"></script>
     <script defer src="js/utils.js"></script>
     <!-- firebase-bundle before CloudSave/Leaderboard which depend on Firebase SDK -->
     <script defer src="js/firebase-bundle.js"></script>
@@ -1034,6 +1033,7 @@
     <!-- Step 4: Rendering Decoupled -->
     <script defer src="js/rendering/PlayerRenderer.js"></script>
     <script defer src="js/rendering/BossRenderer.js"></script>
+    <script defer src="js/rendering/EnemyRenderer.js"></script>
 
     <!-- Extracted Systems -->
     <script defer src="js/systems/GameState.js"></script>

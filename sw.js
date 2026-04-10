@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.41.18"; // Doc audit & Character UI updates
+const CACHE_NAME = "mtc-cache-v3.42.1"; // Modular config/render split follow-up — cache refresh for split assets and debug surface sync
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.
@@ -6,8 +6,19 @@ const CACHE_NAME = "mtc-cache-v3.41.18"; // Doc audit & Character UI updates
 const urlsToCache = [
   "./",
   "./index.html",
-  "./css/main.css",
-  "./js/config.js",
+  "./css/base.css",
+  "./css/overlays.css",
+  "./css/admin-console.css",
+  "./css/shop.css",
+  "./css/hud.css",
+  "./css/menus.css",
+  "./css/screens.css",
+  "./css/char-select.css",
+  "./css/tutorial.css",
+  "./css/ui-extras.css",
+  "./js/balance.js",
+  "./js/shop-items.js",
+  "./js/game-texts.js",
   "./js/firebase-bundle.js",
   "./js/systems/CloudSaveSystem.js",
   "./js/systems/LeaderboardUI.js",
@@ -52,6 +63,7 @@ const urlsToCache = [
   // Rendering
   "./js/rendering/PlayerRenderer.js",
   "./js/rendering/BossRenderer.js",
+  "./js/rendering/EnemyRenderer.js",
 ];
 
 // ── Helper: ดึงเลขเวอร์ชันจาก CACHE_NAME ─────────────────
@@ -64,7 +76,6 @@ function getVersion() {
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      console.log("📦 [Service Worker] Caching all assets");
       const failedUrls = [];
 
       await Promise.all(
@@ -93,7 +104,6 @@ self.addEventListener("activate", (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log("🧹 [Service Worker] Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           }
         }),

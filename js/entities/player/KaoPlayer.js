@@ -195,113 +195,104 @@ class KaoPlayer extends Player {
     // ── Passive Lv2 "Awakened" state ────────────────────────────────────
     this.passiveLv2Unlocked = false; // Phantom Blink + crit bonus ปลดที่ Lv2
     this._freeStealthKills = 0; // นับ kills ขณะ isFreeStealthActive
+
+    // ── AbilityUnlock trackers ─────────────────────────────────────────
+    // SU1: Q (Teleport) — deal 200 total guaranteed-crit ambush damage
+    this._ambushDamageDealt = 0;
+    // SU2: E (Clone) — 3 stealth→attack chain completions
+    this._stealthAttackChains = 0;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // PASSIVE UNLOCK — 2-Phase System
+  // ABILITY UNLOCK — Sequential behavior-gated progression
   // ──────────────────────────────────────────────────────────────────────────
-  // Lv1: Stealth ครั้งแรก → HP +30%, Lifesteal 3%, Dash-Stealth, Speed additive +0.4
-  // Lv2: ฆ่าขณะ FreeStealthy 5 ครั้ง → HP +20%, Crit +5%, Phantom Blink ปลด
+  // SU1: Q (Teleport)      — deal 200 total ambush (guaranteed-crit) damage
+  // SU2: E (Clone)         — complete 3 stealth→attack chain sequences
+  // Passive (merged Lv1+2) — SU1+SU2 done + kill 5 enemies during stealth
+  // Special (WeaponMaster) — all 3 weapons reach 5 kills (after passive)
   checkPassiveUnlock() {
     const S = this.stats;
+    const AU = this._abilityUnlock;
 
-    // ── Phase 1: Stealth ครั้งแรก ─────────────────────────────────────
-    if (!this.passiveUnlocked) {
-      if (this.stealthUseCount < 1) return;
-
-      this.passiveUnlocked = true;
-
-      const hpBonus = Math.floor(this.maxHp * (S.passiveHpBonusPct ?? 0.3));
-      this.maxHp += hpBonus;
-      this.hp += hpBonus;
-
-      const unlockText = S.passiveUnlockText ?? "👻 ซุ่มเสรี Lv1!";
-      spawnFloatingText(unlockText, this.x, this.y - 70, "#a855f7", 28);
-      spawnFloatingText(
-        "⚡ Q · E UNLOCKED",
-        this.x,
-        this.y - 105,
-        "#fbbf24",
-        16,
-      );
-      spawnFloatingText(
-        "🎯 ฆ่าขณะ Dash-Stealth 5 ครั้งเพื่อ AWAKEN",
-        this.x,
-        this.y - 130,
-        "#94a3b8",
-        13,
-      );
-      spawnParticles(this.x, this.y, 50, "#a855f7");
-      addScreenShake(15);
-      this.goldenAuraTimer = 3;
-      Audio.playAchievement();
-      if (typeof Achievements !== "undefined")
-        Achievements.check("free_stealth");
+    // ── SU1: Teleport Q — accumulate 200 guaranteed-crit ambush damage ──
+    if (!AU.skillsUnlocked.includes('teleport')) {
+      const req = S.su1AmbushDmgReq ?? 200;
+      if ((this._ambushDamageDealt ?? 0) < req) return;
+      AU.skillsUnlocked.push('teleport');
+      spawnFloatingText("🔮 Q UNLOCKED: Teleport!", this.x, this.y - 65, "#3b82f6", 22);
+      spawnParticles(this.x, this.y, 25, "#3b82f6");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
       if (typeof UIManager !== "undefined")
-        UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+        UIManager.showVoiceBubble("🔮 Teleport Unlocked!", this.x, this.y - 40);
+    }
 
-      try {
-        const saved = getSaveData();
-        const set = new Set(saved.unlockedPassives || []);
-        set.add(this.charId);
-        updateSaveData({ unlockedPassives: [...set] });
-      } catch (e) {
-        console.warn("[MTC Save] Could not persist passive unlock:", e);
-      }
+    // ── SU2: Clone E — complete 3 stealth→attack chain sequences ───────
+    if (!AU.skillsUnlocked.includes('clone')) {
+      const req2 = S.su2ChainReq ?? 3;
+      if ((this._stealthAttackChains ?? 0) < req2) return;
+      AU.skillsUnlocked.push('clone');
+      AU.allSkillsDone = true;
+      spawnFloatingText("👥 E UNLOCKED: Shadow Clone!", this.x, this.y - 65, "#8b5cf6", 22);
+      spawnParticles(this.x, this.y, 25, "#8b5cf6");
+      if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
+      if (typeof UIManager !== "undefined")
+        UIManager.showVoiceBubble("👥 Clone Unlocked!", this.x, this.y - 40);
       return;
     }
 
-    // ── Phase 2: ฆ่าขณะ FreeStealthy 5 ครั้ง → Awakened ────────────
-    if (this.passiveUnlocked && !this.passiveLv2Unlocked) {
+    // Both skills done — ensure flag is set
+    if (!AU.allSkillsDone) AU.allSkillsDone = true;
+
+    // ── Passive (merged Lv1+Lv2): SU1+SU2 + 5 free-stealth kills ──────
+    if (!this.passiveUnlocked) {
       const req = S.passiveLv2KillReq ?? 5;
       if (this._freeStealthKills < req) return;
 
-      this.passiveLv2Unlocked = true;
+      this.passiveUnlocked = true;
+      this.passiveLv2Unlocked = true; // Merged: Phantom Blink available immediately
+      AU.passiveDone = true;
 
-      // HP bonus เพิ่มเติม
-      const hpBonus2 = Math.floor(this.maxHp * (S.passiveLv2HpBonusPct ?? 0.2));
-      this.maxHp += hpBonus2;
-      this.hp += hpBonus2;
-
-      // Crit bonus เพิ่มเข้า baseCritChance
+      const hpBonus = Math.floor(
+        this.maxHp * ((S.passiveHpBonusPct ?? 0.3) + (S.passiveLv2HpBonusPct ?? 0.2)),
+      );
+      this.maxHp += hpBonus;
+      this.hp += hpBonus;
       this.baseCritChance += S.passiveLv2CritBonus ?? 0.04;
 
-      const unlockText2 = S.passiveLv2UnlockText ?? "👻 ซุ่มเสรี AWAKENED!";
-      spawnFloatingText(unlockText2, this.x, this.y - 70, "#fbbf24", 32);
-      spawnFloatingText(
-        "👻 PHANTOM BLINK UNLOCKED",
-        this.x,
-        this.y - 108,
-        "#c4b5fd",
-        18,
-      );
+      const unlockText = S.passiveUnlockText ?? "👻 PHANTOM ASSASSIN!";
+      spawnFloatingText(unlockText, this.x, this.y - 70, "#fbbf24", 32);
+      spawnFloatingText("⚡ BLINK · LIFESTEAL · SPEED", this.x, this.y - 108, "#c4b5fd", 18);
+      spawnFloatingText("👻 PHANTOM BLINK UNLOCKED", this.x, this.y - 130, "#93c5fd", 14);
       spawnParticles(this.x, this.y, 60, "#fbbf24");
       spawnParticles(this.x, this.y, 30, "#a855f7");
       addScreenShake(20);
       this.goldenAuraTimer = 5;
       Audio.playAchievement();
+      if (typeof Achievements !== "undefined") Achievements.check("free_stealth");
       if (typeof UIManager !== "undefined")
-        UIManager.showVoiceBubble(unlockText2, this.x, this.y - 40);
+        UIManager.showVoiceBubble(unlockText, this.x, this.y - 40);
+      this._showUnlockHint(null); // clear progress hint
 
       try {
         const saved = getSaveData();
         const set = new Set(saved.unlockedPassives || []);
+        set.add(this.charId);
         set.add(`${this.charId}_lv2`);
         updateSaveData({ unlockedPassives: [...set] });
       } catch (e) {
-        console.warn("[MTC Save] Could not persist passive Lv2:", e);
+        console.warn("[MTC Save] Could not persist passive unlock:", e);
       }
     }
   }
 
-  // ── Track FreeStealthy kills for Lv2 unlock ──────────────────────────────
+  // ── Track free-stealth kills toward passive unlock ─────────────────────────
   onKillWhileFreeStealthy() {
-    if (this.passiveLv2Unlocked) return;
-    if (!this.passiveUnlocked) return;
+    if (this.passiveUnlocked) return;
+    if (!this._abilityUnlock.allSkillsDone) return; // SU1+SU2 required first
     this._freeStealthKills++;
     const req = this.stats.passiveLv2KillReq ?? 5;
     spawnFloatingText(
-      `👻 ${this._freeStealthKills}/${req} AWAKEN`,
+      `👻 ${this._freeStealthKills}/${req} STEALTH KILL`,
       this.x,
       this.y - 55,
       "#c4b5fd",
@@ -314,14 +305,13 @@ class KaoPlayer extends Player {
   // KILL TRACKING — called from enemy.js after each enemy death
   // ──────────────────────────────────────────────────────────────────────────
   addKill(weaponName) {
-    // 🛡️ STRICT GATE: Cannot build weapon mastery if passive is not unlocked
-    if (!this.passiveUnlocked) return;
-
-    // ── Passive Lv2: นับ kills ขณะ isFreeStealthActive ──────────────────────
-    if (!this.passiveLv2Unlocked && this.isFreeStealthActive) {
+    // Count free-stealth kills toward passive (only when SU1+SU2 both done)
+    if (this._abilityUnlock.allSkillsDone && !this.passiveUnlocked && this.isFreeStealthActive) {
       this.onKillWhileFreeStealthy();
     }
 
+    // 🛡️ STRICT GATE: Weapon mastery requires passive to be fully done
+    if (!this._abilityUnlock.passiveDone) return;
     if (this.isWeaponMaster) return; // already awakened, no need to track weapon kills
 
     const req = BALANCE.characters.kao.weaponMasterReq || 5;
@@ -413,13 +403,26 @@ class KaoPlayer extends Player {
       }
     }
 
-    // ── STRICT GATE: Advanced Skills ──────────────────────────────────
+    // ── SkillUnlock check + persistent hint display ───────────────────────────
+    this.checkPassiveUnlock();
+    {
+      const AU = this._abilityUnlock;
+      if (!AU.skillsUnlocked.includes('teleport')) {
+        const req = S.su1AmbushDmgReq ?? 200;
+        this._showUnlockHint(`🔮 Ambush DMG: ${Math.floor(this._ambushDamageDealt ?? 0)}/${req} → Q Unlock`);
+      } else if (!AU.skillsUnlocked.includes('clone')) {
+        const req = S.su2ChainReq ?? 3;
+        this._showUnlockHint(`👥 Stealth Chains: ${this._stealthAttackChains ?? 0}/${req} → E Unlock`);
+      } else if (!this.passiveUnlocked) {
+        const req = S.passiveLv2KillReq ?? 5;
+        this._showUnlockHint(`👻 Stealth Kills: ${this._freeStealthKills}/${req} → PASSIVE`);
+      }
+    }
+
+    // ── Dash-Stealth — PASSIVE required ───────────────────────────────────
     if (this.passiveUnlocked) {
-      // 1. REWORK: Dash-Stealth (replaces random auto-stealth)
-      // Every dash → predictable free stealth (ambushReady)
-      const dashNow = this.isDashing; // PlayerBase sets isDashing during dash
+      const dashNow = this.isDashing;
       if (dashNow && !this._dashWasActive) {
-        // Rising edge of dash
         this.isFreeStealthActive = true;
         this.lastAutoStealthTrigger = 'dash';
         this.freeStealthRemainingTime = S.dashStealthDuration ?? 1.5;
@@ -434,7 +437,6 @@ class KaoPlayer extends Player {
         );
       }
       this._dashWasActive = dashNow;
-      // Free-Stealth countdown
       if (this.freeStealthRemainingTime > 0) {
         this.freeStealthRemainingTime -= dt;
         if (this.freeStealthRemainingTime <= 0) {
@@ -442,19 +444,18 @@ class KaoPlayer extends Player {
           this.isFreeStealthActive = false;
         }
       }
-
-      // ── Audio hook: playStealth on RISING EDGE only ──────────────────
-      // Checked AFTER isFreeStealthActive is fully updated this frame.
-      // Fires once when isFreeStealthActive flips false→true; stays silent
-      // every subsequent frame while stealth is active.
       if (this.isFreeStealthActive && !this._wasFreeStealthActive) {
-        if (typeof Audio !== "undefined" && Audio.playStealth)
-          Audio.playStealth();
+        if (typeof Audio !== "undefined" && Audio.playStealth) Audio.playStealth();
       }
       this._wasFreeStealthActive = this.isFreeStealthActive;
+    } else {
+      this._dashWasActive = this.isDashing;
+    }
 
-      // 2. Teleport (Q Key) — Independent per-charge cooldown timers
-      // ── Init: ให้ 3 charge เต็มทันทีที่ passive ถูก unlock ────────
+    // ── Teleport (Q) — SU1 required ───────────────────────────────────────
+    const _su1Done = this._abilityUnlock.skillsUnlocked.includes('teleport');
+    if (_su1Done) {
+      // Init: give 3 full charges on first frame after SU1 unlock
       if (!this._teleportInited) {
         this.teleportCharges = this.maxTeleportCharges;
         this._teleportInited = true;
@@ -566,29 +567,29 @@ class KaoPlayer extends Player {
         } // end energy-sufficient branch
       } // end checkInput('q') && teleportCharges > 0
       if (this._blinkAmbushTimer > 0) this._blinkAmbushTimer -= dt;
+    } else if (checkInput("q")) {
+      spawnFloatingText(
+        `🔒 Ambush DMG: ${Math.floor(this._ambushDamageDealt ?? 0)}/${S.su1AmbushDmgReq ?? 200} → Q`,
+        this.x, this.y - 40, "#94a3b8", 13,
+      );
+      consumeInput("q");
+    }
 
-      // 3. Clone of Stealth (Cooldown & E Key)
+    // ── Clone (E) — SU2 required ────────────────────────────────────────
+    const _su2Done = this._abilityUnlock.skillsUnlocked.includes('clone');
+    if (_su2Done) {
       if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
       if (checkInput("e")) {
-        // ── REWORK: E during active clones = manual Phantom Shatter ──
         if (this.clones.length > 0 && this.clonesActiveTimer > 0) {
-          // Manual early detonate
           this.clonesActiveTimer = 0; // force expiry block below
           consumeInput("e");
         } else if (this.cloneSkillCooldown <= 0) {
           const cloneCost = S.cloneEnergyCost ?? 30;
           if ((this.energy ?? 0) < cloneCost) {
-            spawnFloatingText(
-              "⚡ FOCUS LOW!",
-              this.x,
-              this.y - 50,
-              "#facc15",
-              16,
-            );
+            spawnFloatingText("⚡ FOCUS LOW!", this.x, this.y - 50, "#facc15", 16);
             consumeInput("e");
           } else {
             this.energy = Math.max(0, (this.energy ?? 0) - cloneCost);
-            // ── Spawn 2 orbit clones ──
             this.clones = [
               new KaoClone(this, (2 * Math.PI) / 3),
               new KaoClone(this, (4 * Math.PI) / 3),
@@ -596,22 +597,17 @@ class KaoPlayer extends Player {
             this.clonesActiveTimer = S.cloneDuration ?? 8;
             this.cloneSkillCooldown = this.maxCloneCooldown;
             if (this._anim) this._anim.skillT = 0.5;
-            spawnFloatingText(
-              GAME_TEXTS.combat.kaoClones,
-              this.x,
-              this.y - 40,
-              "#3b82f6",
-              25,
-            );
-            if (typeof Audio !== "undefined" && Audio.playClone)
-              Audio.playClone();
+            spawnFloatingText(GAME_TEXTS.combat.kaoClones, this.x, this.y - 40, "#3b82f6", 25);
+            if (typeof Audio !== "undefined" && Audio.playClone) Audio.playClone();
             consumeInput("e");
           }
         }
       }
-    } else {
-      // Force reset keys and buffer if user tries to press before unlocking
-      consumeInput("q");
+    } else if (checkInput("e")) {
+      spawnFloatingText(
+        `🔒 Stealth Chains: ${this._stealthAttackChains ?? 0}/${S.su2ChainReq ?? 3} → E`,
+        this.x, this.y - 40, "#94a3b8", 13,
+      );
       consumeInput("e");
     }
 
@@ -930,6 +926,13 @@ class KaoPlayer extends Player {
       window.mouse.wx - this.x,
     );
     const barrelOffset = 28;
+
+    // ── SU1/SU2 AbilityUnlock tracking ────────────────────────────────────
+    if (isAmbush) {
+      this._ambushDamageDealt = (this._ambushDamageDealt ?? 0) + finalDamage * pellets;
+      this._stealthAttackChains = (this._stealthAttackChains ?? 0) + 1;
+      this.checkPassiveUnlock();
+    }
 
     for (let i = 0; i < pellets; i++) {
       const spreadAngle = pellets > 1 ? (Math.random() - 0.5) * spread : 0;
