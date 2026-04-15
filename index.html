@@ -866,141 +866,148 @@
             </div>
         </div>
 
-        <div id="victory-screen">
-            <!-- Starfield canvas -->
-            <canvas id="victory-stars"></canvas>
+    </div><!-- /#overlay — closed here; victory/gameover/tutorial are direct body children below -->
 
-            <div class="victory-content">
-                <!-- Rank badge (populated by JS) -->
-                <div class="victory-rank-badge" id="victory-rank">⚔ WAVE 15 CLEARED ⚔</div>
-                <div class="victory-new-record" id="victory-new-record">🎉 NEW RECORD!</div>
-
-                <!-- Main title -->
-                <div class="victory-title">MISSION COMPLETE</div>
-
-                <!-- Gold divider -->
-                <div class="victory-divider"></div>
-
-                <!-- Stats -->
-                <div class="victory-stats">
-                    <div class="victory-stat-item">
-                        <span class="victory-stat-icon">🏆</span>
-                        <div class="victory-stat-label">Final Score</div>
-                        <div class="victory-stat-value" id="final-score">0</div>
-                    </div>
-                    <div class="victory-stat-item">
-                        <span class="victory-stat-icon">🌊</span>
-                        <div class="victory-stat-label">Waves Cleared</div>
-                        <div class="victory-stat-value" id="final-wave">0</div>
-                    </div>
-                    <div class="victory-stat-item">
-                        <span class="victory-stat-icon">💀</span>
-                        <div class="victory-stat-label">Total Kills</div>
-                        <div class="victory-stat-value" id="final-kills">0</div>
-                    </div>
-                </div>
-
-                <!-- Unlocked achievements strip -->
-                <div class="victory-achievements" id="victory-achs"></div>
-
-                <!-- CTA -->
-                <button class="victory-play-again" onclick="location.reload()">PLAY AGAIN</button>
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════════════════
-         💀 GAME OVER SCREEN (dedicated overlay)
+    <!-- ══════════════════════════════════════════
+         🏆 VICTORY SCREEN
+         Must be outside #overlay so display:none on menu does not hide it.
     ══════════════════════════════════════════ -->
-        <div id="gameover-screen">
-            <div class="gameover-bg-grid"></div>
-            <div class="gameover-content">
+    <div id="victory-screen">
+        <!-- Starfield canvas -->
+        <canvas id="victory-stars"></canvas>
 
-                <div class="gameover-icon-wrap">
-                    <div class="gameover-skull">💀</div>
+        <div class="victory-content">
+            <!-- Rank badge (populated by JS) -->
+            <div class="victory-rank-badge" id="victory-rank">⚔ WAVE 15 CLEARED ⚔</div>
+            <div class="victory-new-record" id="victory-new-record">🎉 NEW RECORD!</div>
+
+            <!-- Main title -->
+            <div class="victory-title">MISSION COMPLETE</div>
+
+            <!-- Gold divider -->
+            <div class="victory-divider"></div>
+
+            <!-- Stats -->
+            <div class="victory-stats">
+                <div class="victory-stat-item">
+                    <span class="victory-stat-icon">🏆</span>
+                    <div class="victory-stat-label">Final Score</div>
+                    <div class="victory-stat-value" id="final-score">0</div>
                 </div>
-
-                <div class="gameover-title">MISSION FAILED</div>
-                <div class="gameover-new-record" id="go-new-record">🏆 NEW RECORD!</div>
-
-                <div class="gameover-divider"></div>
-
-                <div class="gameover-stats">
-                    <div class="gameover-stat">
-                        <div class="gameover-stat-icon">🏆</div>
-                        <div class="gameover-stat-label">SCORE</div>
-                        <div class="gameover-stat-value" id="go-score">0</div>
-                    </div>
-                    <div class="gameover-stat">
-                        <div class="gameover-stat-icon">🌊</div>
-                        <div class="gameover-stat-label">WAVE</div>
-                        <div class="gameover-stat-value" id="go-wave">0</div>
-                    </div>
-                    <div class="gameover-stat">
-                        <div class="gameover-stat-icon">💀</div>
-                        <div class="gameover-stat-label">KILLS</div>
-                        <div class="gameover-stat-value" id="go-kills">0</div>
-                    </div>
+                <div class="victory-stat-item">
+                    <span class="victory-stat-icon">🌊</span>
+                    <div class="victory-stat-label">Waves Cleared</div>
+                    <div class="victory-stat-value" id="final-wave">0</div>
                 </div>
-
-                <div class="gameover-eval" id="go-eval"></div>
-
-                <div class="gameover-actions">
-                    <button class="gameover-btn gameover-btn--retry" onclick="window.retryMission()"
-                        ontouchstart="event.preventDefault(); window.retryMission();">
-                        ▶ &nbsp;RETRY MISSION
-                    </button>
-                    <button class="gameover-btn gameover-btn--menu" onclick="window.goToMainMenu()"
-                        ontouchstart="event.preventDefault(); window.goToMainMenu();">
-                        ⌂ &nbsp;MAIN MENU
-                    </button>
+                <div class="victory-stat-item">
+                    <span class="victory-stat-icon">💀</span>
+                    <div class="victory-stat-label">Total Kills</div>
+                    <div class="victory-stat-value" id="final-kills">0</div>
                 </div>
-
             </div>
-        </div>
 
-        <!-- ══════════════════════════════════════════
+            <!-- Unlocked achievements strip -->
+            <div class="victory-achievements" id="victory-achs"></div>
+
+            <!-- CTA -->
+            <button class="victory-play-again" onclick="location.reload()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         💀 GAME OVER SCREEN
+         Must be outside #overlay so display:none on menu does not hide it.
+    ══════════════════════════════════════════ -->
+    <div id="gameover-screen">
+        <div class="gameover-bg-grid"></div>
+        <div class="gameover-content">
+
+            <div class="gameover-icon-wrap">
+                <div class="gameover-skull">💀</div>
+            </div>
+
+            <div class="gameover-title">MISSION FAILED</div>
+            <div class="gameover-new-record" id="go-new-record">🏆 NEW RECORD!</div>
+
+            <div class="gameover-divider"></div>
+
+            <div class="gameover-stats">
+                <div class="gameover-stat">
+                    <div class="gameover-stat-icon">🏆</div>
+                    <div class="gameover-stat-label">SCORE</div>
+                    <div class="gameover-stat-value" id="go-score">0</div>
+                </div>
+                <div class="gameover-stat">
+                    <div class="gameover-stat-icon">🌊</div>
+                    <div class="gameover-stat-label">WAVE</div>
+                    <div class="gameover-stat-value" id="go-wave">0</div>
+                </div>
+                <div class="gameover-stat">
+                    <div class="gameover-stat-icon">💀</div>
+                    <div class="gameover-stat-label">KILLS</div>
+                    <div class="gameover-stat-value" id="go-kills">0</div>
+                </div>
+            </div>
+
+            <div class="gameover-eval" id="go-eval"></div>
+
+            <div class="gameover-actions">
+                <button class="gameover-btn gameover-btn--retry" onclick="window.retryMission()"
+                    ontouchstart="event.preventDefault(); window.retryMission();">
+                    ▶ &nbsp;RETRY MISSION
+                </button>
+                <button class="gameover-btn gameover-btn--menu" onclick="window.goToMainMenu()"
+                    ontouchstart="event.preventDefault(); window.goToMainMenu();">
+                    ⌂ &nbsp;MAIN MENU
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
          🎓 TUTORIAL OVERLAY
+         Must be outside #overlay so display:none on menu does not hide it.
     ══════════════════════════════════════════ -->
-        <!-- ── Tutorial Arrow — animated pointer ── -->
-        <div id="tut-arrow" data-dir="down"></div>
+    <!-- ── Tutorial Arrow — animated pointer ── -->
+    <div id="tut-arrow" data-dir="down"></div>
 
-        <div id="tutorial-overlay">
-            <div class="tutorial-card tutorial-card--center" id="tutorial-card">
+    <div id="tutorial-overlay">
+        <div class="tutorial-card tutorial-card--center" id="tutorial-card">
 
-                <!-- Header: icon + title -->
-                <div class="tut-header">
-                    <div id="tut-icon">🎓</div>
-                    <div id="tut-title">ยินดีต้อนรับ!</div>
-                </div>
-
-                <!-- Body text -->
-                <div id="tut-body">กำลังโหลด...</div>
-
-                <!-- Action hint label -->
-                <div id="tut-action-hint">ทำตามคำสั่งเพื่อดำเนินต่อ</div>
-
-                <!-- Action progress bar -->
-                <div id="tut-action-bar">
-                    <div id="tut-action-fill"></div>
-                </div>
-                <div id="tut-action-label"></div>
-
-                <!-- Buttons row -->
-                <div class="tut-btn-row">
-                    <div id="tutorial-progress"></div>
-                    <div class="tut-btn-inner">
-                        <button id="tut-skip-btn" onclick="TutorialSystem.skip()"
-                            ontouchstart="event.preventDefault(); TutorialSystem.skip();">
-                            SKIP
-                        </button>
-                        <button id="tut-next-btn" onclick="TutorialSystem.next()"
-                            ontouchstart="event.preventDefault(); TutorialSystem.next();">
-                            NEXT ▶
-                        </button>
-                    </div>
-                </div>
-
+            <!-- Header: icon + title -->
+            <div class="tut-header">
+                <div id="tut-icon">🎓</div>
+                <div id="tut-title">ยินดีต้อนรับ!</div>
             </div>
+
+            <!-- Body text -->
+            <div id="tut-body">กำลังโหลด...</div>
+
+            <!-- Action hint label -->
+            <div id="tut-action-hint">ทำตามคำสั่งเพื่อดำเนินต่อ</div>
+
+            <!-- Action progress bar -->
+            <div id="tut-action-bar">
+                <div id="tut-action-fill"></div>
+            </div>
+            <div id="tut-action-label"></div>
+
+            <!-- Buttons row -->
+            <div class="tut-btn-row">
+                <div id="tutorial-progress"></div>
+                <div class="tut-btn-inner">
+                    <button id="tut-skip-btn" onclick="TutorialSystem.skip()"
+                        ontouchstart="event.preventDefault(); TutorialSystem.skip();">
+                        SKIP
+                    </button>
+                    <button id="tut-next-btn" onclick="TutorialSystem.next()"
+                        ontouchstart="event.preventDefault(); TutorialSystem.next();">
+                        NEXT ▶
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 

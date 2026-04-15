@@ -322,6 +322,20 @@ class Player extends Entity {
         spawnFloatingText("BUFF ENDED", this.x, this.y - 55, "#6b7280", 14);
       }
     }
+
+    // ── Energy Shield Timer ───────────────────────────────────
+    if ((this.energyShieldTimer ?? 0) > 0) {
+      this.energyShieldTimer -= dt;
+      if (this.energyShieldTimer <= 0) {
+        this.energyShieldTimer = 0;
+        this.energyShieldDamageReduction = 0;
+        if (typeof showItemNotification === 'function') {
+          showItemNotification('shield', 'expire', {
+            x: this.x, y: this.y - 55
+          }, 14);
+        }
+      }
+    }
     if (this.groundedTimer > 0) {
       this.groundedTimer -= dt;
       if (this.groundedTimer < 0) this.groundedTimer = 0;
@@ -757,24 +771,27 @@ class Player extends Entity {
     // ── Shield Bubble — absorbs hits (multi-stack) ───────────
     if ((this.shieldBubbleHits ?? 0) > 0) {
       this.shieldBubbleHits--;
-      spawnFloatingText(
-        `🫧 BUBBLE! (${this.shieldBubbleHits} left)`,
-        this.x,
-        this.y - 45,
-        "#7dd3fc",
-        20,
-      );
+      if (typeof showItemNotification === 'function') {
+        showItemNotification('shieldBubble', 'hit', {
+          x: this.x, y: this.y - 45,
+          remaining: this.shieldBubbleHits
+        }, 20);
+      }
       spawnParticles(this.x, this.y, 12, "#7dd3fc");
       if (typeof Audio !== "undefined" && Audio.playHit) Audio.playHit();
       return;
     }
-    // ── Energy Shield block ──────────────────────────────────
-    if (this.hasShield) {
-      this.hasShield = false;
-      spawnFloatingText("🛡️ BLOCKED!", this.x, this.y - 40, "#8b5cf6", 22);
-      spawnParticles(this.x, this.y, 20, "#c4b5fd");
-      if (typeof Audio !== "undefined" && Audio.playHit) Audio.playHit();
-      return;
+    // ── Energy Shield — duration-based damage reduction ───────
+    if ((this.energyShieldTimer ?? 0) > 0) {
+      const reduction = this.energyShieldDamageReduction || 0.50;
+      const reducedAmt = amt * (1 - reduction);
+      if (typeof showItemNotification === 'function') {
+        showItemNotification('shield', 'hit', {
+          x: this.x, y: this.y - 45,
+          value: Math.round(reduction * 100)
+        }, 18);
+      }
+      amt = reducedAmt;
     }
     if (this.onGraph) {
       amt *= 2;
@@ -795,13 +812,12 @@ class Player extends Entity {
       ) {
         attacker.hp = Math.max(0, attacker.hp - reflected);
         if (attacker.hp <= 0) attacker.dead = true;
-        spawnFloatingText(
-          `🪞 ${Math.round(reflected)}`,
-          attacker.x,
-          attacker.y - 28,
-          "#818cf8",
-          13,
-        );
+        if (typeof showItemNotification === 'function') {
+          showItemNotification('reflectArmor', 'reflect', {
+            x: attacker.x, y: attacker.y - 28,
+            value: Math.round(reflected)
+          }, 13);
+        }
       }
     }
 

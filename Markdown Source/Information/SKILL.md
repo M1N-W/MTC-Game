@@ -200,3 +200,106 @@ for (let i = specialEffects.length - 1; i >= 0; i--) {
 ```
 
 **Invariant**: Arrays are updated in-place during `updateGame()`, then read during `drawGame()` without mid-frame mutation. Draw passes must never `push` to or `splice` entity arrays.
+
+---
+
+### 6.6 Renderer CTX Binding Pattern
+
+Renderers require access to the active canvas context, but `drawGame()` passes `ctx` as a parameter while legacy draw helpers reference `window.CTX`. The binding pattern temporarily assigns the parameter to the global for the duration of the draw call.
+
+**The Pattern (from EnemyRenderer.js):**
+
+```javascript
+static draw(e, ctx) {
+    // Capture previous global state
+    const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;
+    
+    // Bind current context to global for legacy draw helpers
+    if (typeof window !== "undefined") window.CTX = ctx;
+    
+    try {
+        // Dispatch to specific draw methods (may access window.CTX)
+        if (e instanceof MageEnemy) EnemyRenderer.drawMage(e, now);
+        else if (e instanceof TankEnemy) EnemyRenderer.drawTank(e, now);
+        // ... etc
+    } finally {
+        // Always restore previous state (even on throw)
+        if (typeof window !== "undefined" && _prevCTX !== undefined)
+            window.CTX = _prevCTX;
+    }
+}
+```
+
+**Key Invariants:**
+- **try/finally wrapper** ensures restoration even if draw throws
+- **Never assume window.CTX persists** across frames — always rebind
+- **Draw methods must not store ctx** in instance properties
+
+---
+
+### 6.7 Wave Modifier Application Requirement
+
+All enemy spawning must apply wave-scaled modifiers through the canonical `window.applyWaveModifiersToEnemy()` function. This ensures consistent stat scaling across normal spawns, boss-summoned entities, and admin debug creations.
+
+**Required Invocation Sites:**
+
+1. **WaveManager.spawnEnemies()** — normal gameplay spawns
+2. **SummonerEnemy.summon()** — minion summons during waves
+3. **AdminSystem spawn commands** — debug/admin spawning
+
+**Anti-Pattern (Do NOT do this):**
+
+```javascript
+// ❌ WRONG: Manually setting speed without wave scaling
+enemy.speed = baseSpeed;  // Bypasses wave modifiers!
+```
+
+**Correct Pattern:**
+
+```javascript
+// ✅ CORRECT: Apply wave modifiers after construction
+const enemy = new Enemy(x, y);
+if (typeof window.applyWaveModifiersToEnemy === 'function') {
+    window.applyWaveModifiersToEnemy(enemy);
+}
+```
+
+**Why This Matters:**
+- Wave 10 enemies should be stronger than Wave 1 enemies
+- Speed waves multiply enemy speed by 1.5×
+- Glitch waves add HP bonuses
+- Bypassing the modifier function breaks game balance
+
+---
+
+### 6.8 JSDoc Header Navigation Convention
+
+Every JavaScript file must open with a single self-contained JSDoc header block containing three contiguous sections:
+
+1. **Standard JSDoc tags**: `@module`, `@fileoverview`, and key `@exports`
+2. **Table of Contents**: Lists every top-level symbol prefixed with `L.<line-number>`
+3. **Architecture & Pitfalls**: Load-order dependencies, `window.*` exports, and concrete warnings
+
+**Navigation Contract:** Running `grep -n 'L\.' <file>` must return every TOC entry with exact line numbers.
+
+**Example (from base.js):**
+
+```javascript
+/**
+ * js/entities/base.js
+ * ════════════════════════════════════════════════
+ * Root entity class, HealthComponent, and shared systems.
+ *
+ * Load order: FIRST script in index.html
+ *
+ * ── TABLE OF CONTENTS ────────────────────────
+ *  L.28   Entity                   base class
+ *  L.39   .applyPhysics()          integrate velocity
+ *  L.155  HealthComponent          hp/maxHp/dead component
+ *
+ * ⚠️  hp/maxHp/dead are NOT on Entity.prototype
+ * ════════════════════════════════════════════════
+ */
+```
+
+**Maintenance Rule**: Update headers only in the same commit that alters logic — never schedule periodic bulk refreshes.

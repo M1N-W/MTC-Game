@@ -471,16 +471,24 @@ const TutorialSystem = (() => {
         const step = STEPS[_stepIndex];
         const card = _getCard();
         const overlay = _getOverlay();
-        if (!card || !overlay || !step) return;
+        if (!card || !overlay || !step) {
+            console.error('[TutorialSystem] Cannot render: missing DOM elements or step', { card, overlay, step });
+            return;
+        }
 
         overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
 
         const pos = step.position || 'center';
         card.className = 'tutorial-card tutorial-card--' + pos;
 
-        document.getElementById('tut-icon').textContent = step.icon || '🎓';
-        document.getElementById('tut-title').textContent = step.title || '';
-        document.getElementById('tut-body').innerHTML = (step.body || '').replace(/\n/g, '<br>');
+        const tutIcon = document.getElementById('tut-icon');
+        const tutTitle = document.getElementById('tut-title');
+        const tutBody = document.getElementById('tut-body');
+
+        if (tutIcon) tutIcon.textContent = step.icon || '🎓';
+        if (tutTitle) tutTitle.textContent = step.title || '';
+        if (tutBody) tutBody.innerHTML = (step.body || '').replace(/\n/g, '<br>');
 
         const actionHint = document.getElementById('tut-action-hint');
         const nextBtn = document.getElementById('tut-next-btn');
@@ -628,6 +636,15 @@ const TutorialSystem = (() => {
             _stepDone = false;
             _lastWeapon = typeof weaponSystem !== 'undefined' ? weaponSystem.currentWeapon : null;
 
+            // Safety check: ensure required DOM elements exist
+            const card = _getCard();
+            const overlay = _getOverlay();
+            if (!card || !overlay) {
+                console.error('[TutorialSystem] Cannot start: missing tutorial DOM elements. card=', card, 'overlay=', overlay);
+                _active = false;
+                return;
+            }
+
             if (typeof window.enemies !== 'undefined' && window.enemies.length > 0) {
                 window._tutorialEnemyCache = window.enemies;
                 window.enemies = [];
@@ -640,7 +657,12 @@ const TutorialSystem = (() => {
                 _stepIndex++;
             }
 
+            // Ensure overlay is visible before rendering
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+
             _render();
+            console.log('[TutorialSystem] Started for character:', _charType, 'step:', _stepIndex);
         },
 
         isActive() { return _active; },

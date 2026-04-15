@@ -9,6 +9,7 @@ const WAVE_SCHEDULE = Object.freeze({
     fogWaves: [2, 8, 11, 14],
     speedWaves: [4, 7, 13],
     glitchWaves: [5, 10],
+    glitchEveryNWaves: 5,  // NEW: configurable glitch frequency
     darkWave: 1,
     bossWaves: [3, 6, 9, 12, 15],
     weatherChance: 0.35,  // โอกาสมีสภาพอากาศต่อ wave (rain หรือ snow รวมกัน)
@@ -16,6 +17,17 @@ const WAVE_SCHEDULE = Object.freeze({
     maxWaves: 15
 });
 window.WAVE_SCHEDULE = WAVE_SCHEDULE;
+
+// NEW: Boss encounter configuration - flexible boss wave scheduling
+// Supports arbitrary boss wave patterns (e.g., [4, 8, 12] instead of [3, 6, 9, 12, 15])
+const BOSS_ENCOUNTERS = Object.freeze([
+    { wave: 3, boss: 'manop', phase: 'basic', displayLevel: 1 },
+    { wave: 6, boss: 'first', phase: 'basic', displayLevel: 1 },
+    { wave: 9, boss: 'manop', phase: 'dogRider', displayLevel: 2 },
+    { wave: 12, boss: 'first', phase: 'advanced', displayLevel: 2 },
+    { wave: 15, boss: 'manop', phase: 'goldfish', displayLevel: 3 }
+]);
+window.BOSS_ENCOUNTERS = BOSS_ENCOUNTERS;
 
 
 const BALANCE = {
@@ -895,8 +907,17 @@ const BALANCE = {
             supportMixUnlockWave: 10,
             hazardMixUnlockWave: 9
         },
-        bossEveryNWaves: 3,
         glitchGracePeriod: 4000,
+        // ── Trickle Spawn Configuration ────────────────────
+        trickleIntervalBase: 1.4,       // seconds between batches (wave 1)
+        trickleIntervalMin: 0.9,        // floor at late waves
+        trickleIntervalDark: 1.8,       // Dark wave: slower = more ominous
+        // ── Boss Wave Enemy Spawning ─────────────────────
+        bossWaveEnemies: {
+            spawnMultiplier: 1.5,       // 50% more enemies than normal waves
+            trickleBatchSize: 3,        // enemies per batch during boss fight
+            trickleIntervalBase: 2.0      // seconds between batches (boss waves)
+        },
         // ── Wave Event Configurations ──────────────────────
         // Boss  : 3, 6, 9, 12, 15
         // Glitch: 5, 10

@@ -4,6 +4,61 @@
 
 ---
 
+## v3.43.1 — Documentation Audit & Architectural Patterns
+*Released: April 15, 2026*
+
+### 📚 Documentation Improvements
+- **SKILL.md Enhancements**: Added 3 new architectural pattern sections:
+  - Section 6.6: Renderer CTX Binding Pattern (try/finally wrapper for window.CTX)
+  - Section 6.7: Wave Modifier Application Requirement (applyWaveModifiersToEnemy)
+  - Section 6.8: JSDoc Header Navigation Convention (TOC with L. line numbers)
+- **AUDIT_FINDINGS.md**: Created comprehensive documentation audit report verifying PROJECT_OVERVIEW.md, SKILL.md, and mtc-rendering.md accuracy against codebase
+
+### 🔧 Technical Documentation
+- Documented hidden cross-file dependencies (CTX binding, wave modifier function)
+- Verified class hierarchy, load order, and update/draw separation invariants
+- Confirmed mtc-rendering.md comprehensive coverage of rendering pipeline
+
+---
+
+## v3.43.0 — Boss Wave Enemy Spawn + Flexible Boss Scheduling
+*Released: April 11, 2026*
+
+### ✨ New Features
+- **Boss Wave Enemy Spawning**: Enemies now spawn during boss fights! Wave 3 boss spawns ~8 enemies (50% more than normal ~5), Wave 6 boss spawns ~11 enemies (vs ~7 normal)
+- **Trickle Spawn During Boss**: Enemies spawn in batches throughout the boss fight using the existing trickle system for balanced gameplay
+
+### 🔧 Architecture Refactor
+- **Flexible Boss Wave Scheduling**: Boss waves now defined in `BOSS_ENCOUNTERS` config array instead of hard-coded `bossEveryNWaves` logic
+- **Config-Based Boss Phases**: Boss phases (basic, dogRider, advanced, goldfish) now controlled via config, not encounter counting math
+- **Wave > 15 Support**: `expandedRosterRules` arrays now safely handle waves beyond 15 using last-element fallback
+- **New Config**: `BALANCE.waves.bossWaveEnemies` with `spawnMultiplier`, `trickleBatchSize`, `trickleIntervalBase`
+
+### 🎮 Gameplay Changes
+- Boss waves now more challenging with constant enemy pressure while fighting the boss
+- Enemy spawn count scales with wave progression (Wave 15 boss: ~17 enemies vs ~11 normal)
+- Boss spawn delay unchanged (3s) - enemies start spawning immediately after boss appears
+
+### 📁 Files Modified
+- `js/balance.js` — Added `BOSS_ENCOUNTERS` array, `bossWaveEnemies` config, moved trickle constants to config
+- `js/systems/WaveManager.js` — Refactored `_startBossWave()` to use config, added `_startBossWaveWithEnemies()`, added `_isBossWave()` helper
+- `js/game.js` — Updated wave clear check to use `BOSS_ENCOUNTERS` instead of `WAVE_SCHEDULE.bossWaves`
+
+---
+
+## v3.42.3 — Tutorial & Game Over Freeze Fixes
+*Released: April 10, 2026*
+
+### 🐛 Bug Fixes
+- **Fixed Tutorial Freeze**: Added defensive null checks in `js/tutorial.js` `_render()` and `start()` functions to prevent silent failures when DOM elements are missing
+- **Fixed Game Over Freeze**: Added comprehensive null checks in `js/game.js` `_showGameOverScreen()` and `endGame()` functions to ensure game over screen displays properly
+- **Improved Error Logging**: Added detailed console logging to both tutorial and game over flows for easier debugging
+
+### 🔧 Technical Changes
+- Tutorial overlay now explicitly sets `display: flex` and `opacity: 1` when starting to ensure visibility
+- Game over screen now explicitly sets `display: block` and `opacity: 1` when showing
+- Both systems now gracefully handle missing DOM elements with informative error messages
+
 ## v3.42.2 — Encoding Fixes & Documentation Standards
 *Released: April 10, 2026*
 

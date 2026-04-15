@@ -1,6 +1,10 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.42.2`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.43.1`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+
+## Recent Changes
+
+- **v3.42.3**: Fixed tutorial freeze and game over freeze issues — added defensive null checks in `js/tutorial.js` and `js/game.js` to ensure DOM elements exist before accessing them, added explicit visibility handling for overlays
 
 This document is the architecture baseline for the current codebase.
 It intentionally excludes balance values, cooldowns, damage numbers, and release-specific stats.

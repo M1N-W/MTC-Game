@@ -45,7 +45,7 @@ const DEBUG_MODE = false;
  *  L.558  drawGame()            Full render pipeline: bg → map → entities → HUD
  *  L.749  drawDayNightHUD()     Day/night overlay gradient + cycle indicator
  *  L.794  drawGrid()            Debug grid overlay (DEBUG_MODE only)
- *  L.817  initAI()             Instantiate playerAnalyzer + squadAI singletons
+ *  L.817  (removed)            initAI() was removed - no longer used
  *  L.826  _fadeOutOverlay()     CSS opacity fade for loading/transition overlays
  *  L.843  startGame(charType)   Full game init: player factory, reset, UI wire-up
  *  L.867  _createPlayer(t)      Character factory → KaoPlayer|AutoPlayer|Poom|Pat
@@ -445,8 +445,10 @@ function _tickEntities(dt, _inTutorial) {
     }
 
     // Wave clear check — trigger next wave when all enemies dead and no boss/trickle pending
+    // UPDATED: Use BOSS_ENCOUNTERS for flexible boss wave detection
+    const bossEncounter = window.BOSS_ENCOUNTERS?.find(e => e.wave === getWave());
     if (!_inTutorial &&
-        (window.WAVE_SCHEDULE?.bossWaves ? !window.WAVE_SCHEDULE.bossWaves.includes(getWave()) : true) &&
+        !bossEncounter &&
         window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {
         if (Achievements.stats.damageTaken === GameState.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
@@ -920,14 +922,6 @@ function drawGrid() {
 // 🚀 INIT & START
 // ══════════════════════════════════════════════════════════════
 
-function initAI() {
-    const brief = document.getElementById('mission-brief');
-    if (!brief) return;
-    const names = GAME_TEXTS.ai.missionNames;
-    const name = names[Math.floor(Math.random() * names.length)];
-    brief.textContent = GAME_TEXTS.ai.missionPrefix(name);
-}
-
 // ── Overlay fade-out helper (🔴 Fix #1) ──────────────────────────────────
 function _fadeOutOverlay() {
     const el = document.getElementById('overlay');
@@ -954,25 +948,45 @@ function _buildRunSummary(result = 'unknown') {
 }
 
 function _showGameOverScreen(summary) {
-    if (!summary) return;
+    if (!summary) {
+        console.error('[endGame] Cannot show game over screen: summary is null');
+        return;
+    }
 
-    setElementText('go-score', summary.score.toLocaleString());
-    setElementText('go-wave', String(summary.wave));
-    setElementText('go-kills', summary.kills.toLocaleString());
-
+    // Defensive null checks for all DOM elements
+    const goScore = document.getElementById('go-score');
+    const goWave = document.getElementById('go-wave');
+    const goKills = document.getElementById('go-kills');
     const goEval = document.getElementById('go-eval');
-    if (goEval && typeof GAME_TEXTS !== 'undefined') {
+    const goNewRecord = document.getElementById('go-new-record');
+    const gameoverScreen = document.getElementById('gameover-screen');
+
+    if (!gameoverScreen) {
+        console.error('[endGame] Cannot show game over screen: #gameover-screen element not found');
+        return;
+    }
+
+    if (goScore) goScore.textContent = summary.score.toLocaleString();
+    if (goWave) goWave.textContent = String(summary.wave);
+    if (goKills) goKills.textContent = summary.kills.toLocaleString();
+
+    if (goEval && typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.gameOver && GAME_TEXTS.gameOver.reports) {
         let category;
         if (summary.score > 5000) category = 'excellent';
         else if (summary.score > 2000) category = 'good';
         else category = 'poor';
-        const cards = GAME_TEXTS.ai.reportCards[category];
-        goEval.textContent = cards[Math.floor(Math.random() * cards.length)];
+        const cards = GAME_TEXTS.gameOver.reports[category];
+        if (cards && cards.length > 0) {
+            goEval.textContent = cards[Math.floor(Math.random() * cards.length)];
+        }
     }
 
-    const goNewRecord = document.getElementById('go-new-record');
     if (goNewRecord) goNewRecord.classList.toggle('visible', !!summary.isNewHighScore);
-    showElement('gameover-screen');
+
+    // Ensure game over screen is visible
+    gameoverScreen.classList.add('active');
+    gameoverScreen.style.opacity = '1';
+    console.log('[endGame] Game over screen displayed:', summary);
 }
 
 function _teardownRunState() {
@@ -1139,7 +1153,12 @@ function _initGameUI(charType) {
 }
 
 function endGame(result) {
-    if (GameState.phase === 'GAMEOVER') return;
+    if (GameState.phase === 'GAMEOVER') {
+        console.log('[endGame] Already in GAMEOVER state, ignoring duplicate call');
+        return;
+    }
+
+    console.log('[endGame] Game ending with result:', result);
     setGameState('GAMEOVER');
     const summary = _buildRunSummary(result);
     _pendingRunSummary = summary;
@@ -1167,8 +1186,12 @@ function endGame(result) {
         cleanupMobileControls();
     }
 
-    Audio.stopBGM();
-    Audio.playBGM('menu');
+    try {
+        Audio.stopBGM();
+        Audio.playBGM('menu');
+    } catch (e) {
+        console.warn('[endGame] Audio error:', e);
+    }
 
     GameState.hitStopTimer = 0;
 
@@ -1182,13 +1205,15 @@ function endGame(result) {
     window.drone = null;
 
     let _isNewHighScore = false;
-    {
+    try {
         const runScore = summary.score;
         const existing = getSaveData();
         if (runScore > existing.highScore) {
             _isNewHighScore = true;
             updateSaveData({ highScore: runScore });
-            UIManager.updateHighScoreDisplay(runScore);
+            if (typeof UIManager !== 'undefined' && UIManager.updateHighScoreDisplay) {
+                UIManager.updateHighScoreDisplay(runScore);
+            }
             try {
                 if (typeof firebaseLogEvent === 'function') {
                     firebaseLogEvent('high_score', { value: runScore });
@@ -1200,23 +1225,32 @@ function endGame(result) {
                 /* optional analytics / leaderboard */
             }
         } else {
-            UIManager.updateHighScoreDisplay(existing.highScore);
+            if (typeof UIManager !== 'undefined' && UIManager.updateHighScoreDisplay) {
+                UIManager.updateHighScoreDisplay(existing.highScore);
+            }
         }
+    } catch (e) {
+        console.error('[endGame] Error handling high score:', e);
     }
     summary.isNewHighScore = _isNewHighScore;
 
-    if (result === 'victory') {
-        showElement('victory-screen');
-        setElementText('final-score', `SCORE ${summary.score}`);
-        setElementText('final-wave', `WAVES CLEARED ${Math.max(0, summary.wave - 1)}`);
-        setElementText('final-kills', `${summary.kills.toLocaleString()}`);
-        // 🟢 Fix #8: NEW RECORD badge
-        if (_isNewHighScore) {
-            const recBadge = document.getElementById('victory-new-record');
-            if (recBadge) recBadge.classList.add('visible');
+    // Show the appropriate end screen
+    try {
+        if (result === 'victory') {
+            showElement('victory-screen');
+            setElementText('final-score', `SCORE ${summary.score}`);
+            setElementText('final-wave', `WAVES CLEARED ${Math.max(0, summary.wave - 1)}`);
+            setElementText('final-kills', `${summary.kills.toLocaleString()}`);
+            // 🟢 Fix #8: NEW RECORD badge
+            if (_isNewHighScore) {
+                const recBadge = document.getElementById('victory-new-record');
+                if (recBadge) recBadge.classList.add('visible');
+            }
+        } else {
+            _showGameOverScreen(summary);
         }
-    } else {
-        _showGameOverScreen(summary);
+    } catch (e) {
+        console.error('[endGame] Error showing end screen:', e);
     }
 }
 
@@ -1340,7 +1374,6 @@ window.onload = () => {
 
             // Step 3: Audio System
             LoadingState.update('audio', 'Audio System', 'LOADING AUDIO...');
-            initAI();
 
             // Step 4: Game Assets (Audio.init happens here)
             LoadingState.update('assets', 'Game Assets', 'PREPARING ASSETS...');

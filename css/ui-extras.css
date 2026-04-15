@@ -1267,6 +1267,10 @@
   animation: goScreenIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+#gameover-screen.active {
+  display: flex;
+}
+
 @keyframes goScreenIn {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -1288,7 +1292,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0;
-  padding: 48px 32px 40px;
+  padding: 48px 100px 40px;
   max-width: 480px;
   width: 90%;
   text-align: center;

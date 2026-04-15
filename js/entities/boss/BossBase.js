@@ -37,7 +37,7 @@ class BossBase extends Entity {
     // ── Boss speech — ดึงข้อความจาก GAME_TEXTS โดยตรง ────────
     speak(context) {
         if (!window.UIManager) return;
-        const taunts = GAME_TEXTS.ai.bossTaunts;
+        const taunts = GAME_TEXTS.boss.taunts;
         const text = taunts[Math.floor(Math.random() * taunts.length)];
         window.UIManager.showBossSpeech(text);
     }

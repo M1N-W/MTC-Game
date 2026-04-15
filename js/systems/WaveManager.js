@@ -12,7 +12,7 @@
  *     HP bonus, countdown lock until all enemies dead.
  *   - Trickle spawning: enemies drip in over time rather than all at once.
  *     _trickle object owns the queue; updateWaveEvent() ticks it.
- *   - Boss encounter queue: _startBossWave() deterministic per bossEncounterCount.
+ *   - Boss encounter queue: _startBossWave() uses BOSS_ENCOUNTERS config (flexible scheduling).
  *   - SpeedWave patches enemy .speed directly via _patchedEnemies WeakSet;
  *     _restoreEnemySpeeds() reverses on deactivate.
  *
@@ -23,7 +23,8 @@
  *   game.js  → spawnEnemies(count)   (called by startNextWave internally)
  *
  * ── TABLE OF CONTENTS ────────────────────────
- *  L.34   GLITCH_EVERY_N_WAVES       glitch cadence constant
+ *  L.93   _getBossEncounterForWave()  get boss config for wave (flexible scheduling)
+ *  L.99   _isBossWave()              check if wave is boss wave (config-based)
  *  L.51   _getWaveSchedule()         builds wave config from WAVE_SCHEDULE
  *  L.61   SPEED_MULT                 speed-wave enemy multiplier
  *  L.69   window.isGlitchWave        mutable wave-event state (globals)
@@ -85,39 +86,60 @@
 // ══════════════════════════════════════════════════════════════
 
 // ─── Constants ────────────────────────────────────────────────
-const GLITCH_EVERY_N_WAVES = 5;
-window.GLITCH_EVERY_N_WAVES = GLITCH_EVERY_N_WAVES;
+// NOTE: GLITCH_EVERY_N_WAVES moved to WAVE_SCHEDULE.glitchEveryNWaves (configurable)
+// NOTE: Trickle constants moved to BALANCE.waves (configurable)
+
+const SPEED_MULT = 1.5;
+
+// Helper: Get boss encounter config for a specific wave (supports arbitrary boss wave patterns)
+function _getBossEncounterForWave(wave) {
+    const encounters = window.BOSS_ENCOUNTERS || [];
+    return encounters.find(e => e.wave === wave) || null;
+}
+
+// Helper: Check if a wave is a boss wave (works with any boss wave pattern)
+function _isBossWave(wave) {
+    const encounters = window.BOSS_ENCOUNTERS || [];
+    return encounters.some(e => e.wave === wave);
+}
+
+// Helper: Get trickle config from BALANCE with fallbacks
+function _getTrickleConfig() {
+    const w = (typeof BALANCE !== 'undefined' && BALANCE.waves) ? BALANCE.waves : {};
+    return {
+        intervalBase: w.trickleIntervalBase ?? 1.4,
+        intervalMin: w.trickleIntervalMin ?? 0.9,
+        intervalDark: w.trickleIntervalDark ?? 1.8
+    };
+}
 
 // Which waves trigger special events.
-// Rules:  must NOT overlap with multiples of 3 (boss waves: 3,6,9,12,15)
-//         must NOT overlap with multiples of 5 (glitch waves: 5,10)  [handled by isGlitch guard]
-//
 // Wave event configurations now centralized in BALANCE.waves
-// Effective wave schedule (maxWaves=15, bossEveryN=3, glitchEveryN=5):
-//   Boss  : 3, 6, 9, 12, 15
-//   Glitch: 5, 10
-//   Fog   : 2, 8, 11, 14
-//   Speed : 4, 7, 13
-//   Dark  : 1
+// Effective wave schedule (configurable via WAVE_SCHEDULE):
+//   Boss  : from BOSS_ENCOUNTERS array
+//   Glitch: from WAVE_SCHEDULE.glitchWaves
+//   Fog   : from WAVE_SCHEDULE.fogWaves
+//   Speed : from WAVE_SCHEDULE.speedWaves
+//   Dark  : from WAVE_SCHEDULE.darkWave
 // NEW — lazy: อ่านตอน startNextWave() เพื่อให้ config แก้ได้ runtime
-// (ยังเป็น in-memory, JSON-ready: เปลี่ยน BALANCE.waves → parsed JSON ได้ทันที)
 // NEW — JSON-ready: อ่านจาก window.WAVE_SCHEDULE แทนชุดค่าคงที่แบบกระจาย
 function _getWaveSchedule() {
     const ws = window.WAVE_SCHEDULE || {};
+    // Build boss set from BOSS_ENCOUNTERS (supports arbitrary boss wave patterns)
+    const bossWaves = (window.BOSS_ENCOUNTERS || []).map(e => e.wave);
     return {
         fog: new Set(ws.fogWaves ?? [2, 8, 11, 14]),
         speed: new Set(ws.speedWaves ?? [4, 7, 13]),
         glitch: new Set(ws.glitchWaves ?? [5, 10]),
         dark: new Set(Array.isArray(ws.darkWave) ? ws.darkWave : [ws.darkWave ?? 1]),
-        boss: new Set(ws.bossWaves ?? [3, 6, 9, 12, 15]),
+        boss: new Set(bossWaves.length > 0 ? bossWaves : [3, 6, 9, 12, 15]),
     };
 }
-const SPEED_MULT = 1.5;
 
 // Trickle spawn — enemies arrive in small batches over time (normal/fog/speed waves)
-const TRICKLE_INTERVAL_BASE = 1.4;   // seconds between batches (wave 1)
-const TRICKLE_INTERVAL_MIN = 0.9;   // floor at late waves
-const TRICKLE_INTERVAL_DARK = 1.8;   // Dark wave: slower = more ominous
+const TRICKLE_INTERVAL_BASE = _getTrickleConfig().intervalBase;
+const TRICKLE_INTERVAL_MIN = _getTrickleConfig().intervalMin;
+const TRICKLE_INTERVAL_DARK = _getTrickleConfig().intervalDark;
 
 // ─── Mutable state ─────────────────────────────────────────────
 window.isGlitchWave = false;
@@ -529,13 +551,20 @@ function _drawSpeed(ctx) {
 // ══════════════════════════════════════════════════════════════
 // 🌊 _startTrickle — queue batched spawns over time
 // ══════════════════════════════════════════════════════════════
-function _startTrickle(count, wave) {
+function _startTrickle(count, wave, isBossWave = false) {
     const isDark = _getWaveSchedule().dark.has(wave);
     const batchSize = Math.max(1, Math.min(3, Math.ceil(count / 6)));
-    const raw = TRICKLE_INTERVAL_BASE - (wave - 1) * 0.04;
-    const interval = isDark
-        ? TRICKLE_INTERVAL_DARK
-        : Math.max(TRICKLE_INTERVAL_MIN, raw);
+    const tc = _getTrickleConfig();
+    const raw = tc.intervalBase - (wave - 1) * 0.04;
+    let interval = isDark
+        ? tc.intervalDark
+        : Math.max(tc.intervalMin, raw);
+
+    // Boss waves: use slower interval for tension
+    if (isBossWave) {
+        const bossCfg = BALANCE.waves?.bossWaveEnemies;
+        interval = bossCfg?.trickleIntervalBase ?? 2.0;
+    }
 
     _trickle.batchSize = batchSize;
     _trickle.interval = interval;
@@ -567,7 +596,7 @@ function startNextWave() {
     const wave = getWave();
     const count = BALANCE.waves.enemiesBase + (wave - 1) * BALANCE.waves.enemiesPerWave;
     const _sched = _getWaveSchedule();
-    const isBossWave = _sched.boss.has(wave);
+    const isBossWave = _isBossWave(wave);  // NEW: use helper for flexible boss wave detection
     const isGlitch = (!isBossWave) && _sched.glitch.has(wave);
 
     Achievements.check('wave_5');
@@ -578,7 +607,6 @@ function startNextWave() {
     if (!isBossWave) Audio.playBGM(isGlitch ? 'glitch' : 'battle');
 
     if (!isBossWave && !isGlitch) {
-        const _sched = _getWaveSchedule();
         if (_sched.fog.has(wave)) _activateWaveEvent('fog', wave);
         else if (_sched.speed.has(wave)) _activateWaveEvent('speed', wave);
     }
@@ -595,7 +623,7 @@ function startNextWave() {
     }
 
     if (isGlitch) { _startGlitchWave(count); }
-    else if (isBossWave) { _startBossWave(wave); }
+    else if (isBossWave) { _startBossWaveWithEnemies(wave, count); }  // NEW: spawn enemies during boss fight
     else { _startTrickle(count, wave); }
 }
 
@@ -662,31 +690,30 @@ function _startGlitchWave(count) {
     }, 2400);
 }
 
-// ── Boss wave: deterministic encounter queue ──────────────────────────────────
-//
-//  encounter │ wave │ boss
-//  ──────────┼──────┼──────────────────────────────────────
-//      1     │   3  │ Kru Manop  — Basic
-//      2     │   6  │ Kru First  — Basic
-//      3     │   9  │ Kru Manop  — Dog Rider (enablePhase2)
-//      4     │  12  │ Kru First  — Advanced  (isAdvanced flag)
-//      5     │  15  │ Kru Manop  — Goldfish Lover (phase2+3)
+// ── Boss wave: config-based encounter queue ──────────────────────────────────
+// REFACTORED: Now uses BOSS_ENCOUNTERS config instead of hard-coded logic
+// Supports arbitrary boss wave patterns (e.g., [4, 8, 12] instead of [3, 6, 9, 12, 15])
 function _startBossWave(wave) {
     Audio.playBGM('boss');
     setTimeout(() => {
+        // Get encounter config from BOSS_ENCOUNTERS
+        const encounter = _getBossEncounterForWave(wave);
+        if (!encounter) {
+            console.error(`[WaveManager] No boss encounter config found for wave ${wave}`);
+            return;
+        }
+
         // B6 FIX: keep both copies in sync so resetRun() zeroing GameState actually takes effect
         window.bossEncounterCount = (window.bossEncounterCount || 0) + 1;
         if (typeof GameState !== 'undefined') GameState.bossEncounterCount = window.bossEncounterCount;
 
-        const encounter = window.bossEncounterCount;
-        const bossLevel = Math.floor(wave / BALANCE.waves.bossEveryNWaves);
         const bossNameEl = document.getElementById('boss-name');
-        const isFirst = (encounter === 2 || encounter === 4);
-        const displayLevel = isFirst ? Math.floor(encounter / 2) : Math.ceil(encounter / 2);
+        const displayLevel = encounter.displayLevel ?? 1;
 
-        if (isFirst) {
-            const isAdvanced = (encounter === 4);
-            window.boss = new KruFirst(bossLevel, isAdvanced);
+        // Spawn boss based on config
+        if (encounter.boss === 'first') {
+            const isAdvanced = encounter.phase === 'advanced';
+            window.boss = new KruFirst(displayLevel, isAdvanced);
             UIManager.updateBossHUD(window.boss);
             if (bossNameEl) {
                 bossNameEl.innerHTML =
@@ -712,9 +739,10 @@ function _startBossWave(wave) {
                     window.player.x, window.player.y - 40);
             }, 900);
         } else {
-            const enablePhase2 = (encounter >= 3);
-            const enablePhase3 = (encounter >= 5);
-            window.boss = new ManopBoss(bossLevel, enablePhase2, enablePhase3);
+            // ManopBoss
+            const enablePhase2 = encounter.phase === 'dogRider' || encounter.phase === 'goldfish';
+            const enablePhase3 = encounter.phase === 'goldfish';
+            window.boss = new ManopBoss(displayLevel, enablePhase2, enablePhase3);
             UIManager.updateBossHUD(window.boss);
             if (bossNameEl) {
                 let phaseTitle = '';
@@ -744,6 +772,20 @@ function _startBossWave(wave) {
         addScreenShake(15);
         Audio.playBossSpecial();
     }, BALANCE.waves.bossSpawnDelay);
+}
+
+// NEW: Boss wave with enemy spawning (50% more enemies than normal)
+function _startBossWaveWithEnemies(wave, baseCount) {
+    // Start the boss encounter
+    _startBossWave(wave);
+
+    // Calculate enemy count with 50% multiplier
+    const bossCfg = BALANCE.waves?.bossWaveEnemies;
+    const multiplier = bossCfg?.spawnMultiplier ?? 1.5;
+    const enemyCount = Math.ceil(baseCount * multiplier);
+
+    // Start trickle spawn for enemies during boss fight
+    _startTrickle(enemyCount, wave, true);
 }
 
 function spawnEnemies(count) {
@@ -776,3 +818,6 @@ window.spawnEnemies = spawnEnemies;
 window.updateWaveEvent = updateWaveEvent;
 window.drawWaveEvent = drawWaveEvent;
 window.applyWaveModifiersToEnemy = _applyWaveModifiersToEnemy;
+// NEW: Export boss wave helpers for external use
+window.getBossEncounterForWave = _getBossEncounterForWave;
+window.isBossWave = _isBossWave;

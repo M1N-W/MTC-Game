@@ -253,36 +253,72 @@ class PlayerRenderer {
   // ══════════════════════════════════════════════════════════
 
   /**
-   * Energy shield ring — identical block was in _drawBase / _drawAuto / _drawPoom.
+   * Energy Shield Bubble — blue energy field surrounding player
    * Call inside a ctx.save block already translated to entity centre.
    */
-  static _drawEnergyShield(ctx, now) {
-    const shieldT = now / 200;
-    const pulse = 0.6 + Math.sin(shieldT) * 0.2;
+  static _drawEnergyShield(ctx, now, entity) {
+    const timer = entity?.energyShieldTimer ?? 0;
+    if (timer <= 0) return;
+
+    const shieldT = now / 150;
+    const pulse = 0.7 + Math.sin(shieldT) * 0.25;
+    const radius = 32 + Math.sin(shieldT * 0.8) * 3;
+
     ctx.save();
-    ctx.globalAlpha = pulse;
-    ctx.strokeStyle = "#8b5cf6";
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = 8 + Math.sin(shieldT * 1.4) * 3;  // PERF: 15+5x→8+3x
-    ctx.shadowColor = "#8b5cf6";
+
+    // Outer glow ring
+    ctx.globalAlpha = pulse * 0.6;
+    ctx.strokeStyle = "#60a5fa";
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 15 + Math.sin(shieldT * 1.2) * 5;
+    ctx.shadowColor = "#3b82f6";
     ctx.beginPath();
-    ctx.arc(0, 0, 25, 0, Math.PI * 2);
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = "rgba(139,92,246,0.15)";
+
+    // Inner bubble fill
+    ctx.globalAlpha = pulse * 0.25;
+    ctx.fillStyle = "rgba(59,130,246,0.4)";
     ctx.fill();
-    // Rotating shimmer arc
-    ctx.globalAlpha = pulse * 0.55;
-    ctx.strokeStyle = "#c4b5fd";
-    ctx.lineWidth = 1.5;
-    ctx.shadowBlur = 4;  // PERF: 8→4
-    ctx.shadowColor = "#c4b5fd";
-    ctx.setLineDash([6, 10]);
+
+    // Energy hexagon pattern
+    ctx.globalAlpha = pulse * 0.5;
+    ctx.strokeStyle = "#93c5fd";
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#60a5fa";
+    this._drawHexagon(ctx, 0, 0, radius * 0.7, shieldT * 0.5);
+    ctx.stroke();
+
+    // Rotating energy arc
+    ctx.globalAlpha = pulse * 0.7;
+    ctx.strokeStyle = "#bfdbfe";
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#93c5fd";
+    ctx.setLineDash([8, 12]);
     ctx.beginPath();
-    ctx.arc(0, 0, 25, shieldT * 2.5, shieldT * 2.5 + Math.PI * 1.2);
+    ctx.arc(0, 0, radius * 0.85, shieldT * 3, shieldT * 3 + Math.PI * 1.5);
     ctx.stroke();
     ctx.setLineDash([]);
+
     ctx.shadowBlur = 0;
     ctx.restore();
+  }
+
+  /**
+   * Helper to draw hexagon for energy shield pattern
+   */
+  static _drawHexagon(ctx, x, y, r, rotation) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = rotation + (Math.PI / 3) * i;
+      const px = x + r * Math.cos(angle);
+      const py = y + r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
   }
 
   /**
@@ -1593,7 +1629,7 @@ class PlayerRenderer {
     PlayerRenderer._drawHitFlash(ctx, entity, R);
 
     // Energy Shield
-    if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
+    if ((entity.energyShieldTimer ?? 0) > 0) PlayerRenderer._drawEnergyShield(ctx, now, entity);
 
     ctx.restore(); // end LAYER 1
 
@@ -3405,7 +3441,7 @@ class PlayerRenderer {
     PlayerRenderer._drawHitFlash(ctx, entity, R2);
 
     // Energy Shield
-    if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now2);
+    if ((entity.energyShieldTimer ?? 0) > 0) PlayerRenderer._drawEnergyShield(ctx, now2, entity);
 
     ctx.restore(); // end LAYER 1
 
@@ -3628,7 +3664,7 @@ class PlayerRenderer {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════════
   // PAT (แพท — Samurai Ronin)
   // States handled:
   //   bladeGuardActive  → ยกดาบขวาง + shield arc สีฟ้า
@@ -3637,7 +3673,7 @@ class PlayerRenderer {
   //   _zanzoGhosts[]    → afterimage trail สีฟ้า
   //
   // ⚠️ NO Math.random() in this method — deterministic draw only
-  // ══════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════════
 
   static _drawPat(entity, ctx) {
     const now = performance.now();
@@ -4277,7 +4313,7 @@ class PlayerRenderer {
 
     // ── Hit Flash ────────────────────────────────────────────────────────────
     PlayerRenderer._drawHitFlash(ctx, entity, R);
-    if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
+    if ((entity.energyShieldTimer ?? 0) > 0) PlayerRenderer._drawEnergyShield(ctx, now, entity);
 
     ctx.restore(); // end LAYER 1
 
@@ -4788,7 +4824,7 @@ class PlayerRenderer {
       ctx.clip();
       // Shifting hologram gradient that moves over time
       const holoShift = (now / 800) % 1;
-      const holoG = ctx.createLinearGradient(-R, -R, R, R);
+      const holoG = ctx.createLinearGradient(0, -R, 0, R);
       holoG.addColorStop(
         0,
         `rgba(6,182,212,${0.08 + Math.sin(gT * 0.7) * 0.04})`,
@@ -5071,7 +5107,7 @@ class PlayerRenderer {
       PlayerRenderer._drawHitFlash(ctx, entity, R);
 
       // Energy Shield
-      if (entity.hasShield) PlayerRenderer._drawEnergyShield(ctx, now);
+      if ((entity.energyShieldTimer ?? 0) > 0) PlayerRenderer._drawEnergyShield(ctx, now, entity);
 
       ctx.restore(); // end LAYER 1
 
