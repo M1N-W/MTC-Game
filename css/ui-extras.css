@@ -1243,6 +1243,12 @@
 
 /* ══════════════════════════════════════════════════════════════
    💀 GAME OVER SCREEN — Dedicated full-screen overlay
+   ══════════════════════════════════════════════════════════════
+   PREVENTION: Always use showScreen()/hideScreen() from utils.js
+   to control visibility. Manual classList.add('active') may not
+   work due to CSS specificity or inline style conflicts.
+   showScreen() sets: display: flex, opacity: 1, + adds class
+   hideScreen() sets: display: none, opacity: 0, + removes class
    ══════════════════════════════════════════════════════════════ */
 #gameover-screen {
   display: none;

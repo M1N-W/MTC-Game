@@ -1,9 +1,10 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.43.1`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.43.2`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 ## Recent Changes
 
+- **v3.43.2**: Fixed game freeze on death — introduced `showScreen()`/`hideScreen()` utilities in `utils.js` to prevent CSS specificity issues with full-screen overlay visibility, added prevention documentation to CSS
 - **v3.42.3**: Fixed tutorial freeze and game over freeze issues — added defensive null checks in `js/tutorial.js` and `js/game.js` to ensure DOM elements exist before accessing them, added explicit visibility handling for overlays
 
 This document is the architecture baseline for the current codebase.

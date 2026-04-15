@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.43.1"; // Documentation audit — added renderer CTX binding, wave modifier, and JSDoc conventions to SKILL.md
+const CACHE_NAME = "mtc-cache-v3.43.2"; // Fixed game freeze on death - improved RAF stop timing and victory screen z-index
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.

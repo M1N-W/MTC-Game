@@ -21,6 +21,31 @@
 
 ---
 
+## v3.43.2 — Game Freeze on Death Fix + Prevention System
+*Released: April 16, 2026*
+
+### 🐛 Bug Fixes
+- **Fixed game freeze on player death**: Game was showing black screen instead of game over screen
+  - Root cause: `display: flex` was not being applied despite `.active` class being added
+  - Fixed by explicitly setting `style.display = 'flex'` in new `showScreen()` helper
+
+### 🛡️ Prevention System (New)
+- **`showScreen(id, className)`** — New utility in `utils.js` for showing full-screen overlays
+  - Sets `display: flex`, `opacity: 1`, and adds class atomically
+  - Prevents CSS specificity issues that caused the original bug
+- **`hideScreen(id, className)`** — Complementary utility for hiding screens
+  - Sets `display: none`, `opacity: 0`, and removes class
+- **CSS Documentation** — Added prevention comments to `#gameover-screen` and `#victory-screen`
+  - Explains why `showScreen()` must be used instead of manual class manipulation
+
+### 📁 Files Modified
+- `js/utils.js` — Added `showScreen()` and `hideScreen()` with exports
+- `js/game.js` — Updated all screen visibility calls to use new helpers
+- `css/screens.css` — Updated `#victory-screen` positioning (fixed) and z-index (9500)
+- `css/ui-extras.css` — Added prevention documentation to `#gameover-screen`
+
+---
+
 ## v3.43.0 — Boss Wave Enemy Spawn + Flexible Boss Scheduling
 *Released: April 11, 2026*
 

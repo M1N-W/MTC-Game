@@ -178,7 +178,12 @@ function gameLoop(now) {
     // so startGame() can safely restart the loop next round.
     if (GameState.phase === 'GAMEOVER') {
         GameState.loopRunning = false;
-        rafId = null;
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+        // PREVENTION: Force final draw to ensure game over screen is painted
+        drawGame();
         return;
     }
 
@@ -983,9 +988,8 @@ function _showGameOverScreen(summary) {
 
     if (goNewRecord) goNewRecord.classList.toggle('visible', !!summary.isNewHighScore);
 
-    // Ensure game over screen is visible
-    gameoverScreen.classList.add('active');
-    gameoverScreen.style.opacity = '1';
+    // PREVENTION: Use showScreen() to ensure proper visibility (sets display + opacity + class)
+    showScreen('gameover-screen', 'active');
     console.log('[endGame] Game over screen displayed:', summary);
 }
 
@@ -1020,9 +1024,10 @@ function _teardownRunState() {
     const consoleOutput = document.getElementById('console-output');
     if (consoleOutput) consoleOutput.innerHTML = '';
 
-    hideElement('gameover-screen');
-    hideElement('victory-screen');
-    hideElement('report-card');
+    // PREVENTION: Use hideScreen() for full-screen overlays to properly clean up
+    hideScreen('gameover-screen', 'active');
+    hideScreen('victory-screen', null);  // victory-screen doesn't use active class
+    hideElement('report-card');  // report-card is not a full-screen overlay
 }
 
 function startGame(charType = 'kao') {
@@ -1109,7 +1114,9 @@ function _initGameUI(charType) {
     // 🔴 Fix #1: Fade out instead of instant hide
     _fadeOutOverlay();
     hideElement('report-card');
-    hideElement('gameover-screen');
+    // PREVENTION: Use hideScreen() to properly clean up full-screen overlay
+    hideScreen('gameover-screen', 'active');
+    hideScreen('victory-screen', null);
     UIManager.resetGameOverUI();
 
     // 🟡 Fix #6: Reset RETRY label back to original START MISSION
@@ -1235,9 +1242,10 @@ function endGame(result) {
     summary.isNewHighScore = _isNewHighScore;
 
     // Show the appropriate end screen
+    // PREVENTION: Use showScreen() for full-screen overlays to ensure proper visibility
     try {
         if (result === 'victory') {
-            showElement('victory-screen');
+            showScreen('victory-screen');
             setElementText('final-score', `SCORE ${summary.score}`);
             setElementText('final-wave', `WAVES CLEARED ${Math.max(0, summary.wave - 1)}`);
             setElementText('final-kills', `${summary.kills.toLocaleString()}`);

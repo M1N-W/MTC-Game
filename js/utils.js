@@ -283,6 +283,31 @@ const formatNumber = (num) => {
 };
 
 // ─── DOM utilities ────────────────────────────────────────────
+// PREVENTION: showScreen combines class toggle + display to prevent visibility bugs
+const showScreen = (id, className = 'active') => {
+    const el = document.getElementById(id);
+    if (!el) {
+        console.error(`[showScreen] Element #${id} not found`);
+        return false;
+    }
+    // Must set display BEFORE adding class to ensure visibility
+    el.style.display = 'flex';
+    el.style.opacity = '1';
+    if (className) el.classList.add(className);
+    return true;
+};
+
+// PREVENTION: hideScreen properly cleans up both class and inline styles
+const hideScreen = (id, className = 'active') => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    if (className) el.classList.remove(className);
+    el.style.display = 'none';
+    el.style.opacity = '0';
+    return true;
+};
+
+// Legacy helpers - prefer showScreen/hideScreen for full-screen overlays
 const showElement = (id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'flex';
@@ -625,6 +650,8 @@ if (typeof window !== 'undefined') {
     window.getEnemiesKilled  = getEnemiesKilled;
     window.resetEnemiesKilled = resetEnemiesKilled;
     window.formatNumber      = formatNumber;
+    window.showScreen        = showScreen;      // PREVENTION: Use for full-screen overlays
+    window.hideScreen        = hideScreen;      // PREVENTION: Use for full-screen overlays
     window.showElement       = showElement;
     window.hideElement       = hideElement;
     window.setElementText    = setElementText;
@@ -657,6 +684,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getWave, setWave, nextWave,
         addEnemyKill, getEnemiesKilled, resetEnemiesKilled,
         formatNumber,
+        showScreen, hideScreen,      // PREVENTION: Use for full-screen overlays
         showElement, hideElement, setElementText,
         debounce,
         MTC_SAVE_KEY, DEFAULT_SAVE_DATA,
