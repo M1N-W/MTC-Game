@@ -421,15 +421,37 @@ function drawWaveEvent(ctx) {
     if (typeof waveAnnouncementFX !== 'undefined') waveAnnouncementFX.draw(ctx);
 }
 
+// ─── PERF (Phase 1): gradient caches for fog/dark vignettes ───────────────
+// Rebuild only when size (W,H) or alpha bucket (rounded) changes. Saves
+// ~7 createRadialGradient calls per frame during fog waves.
+const WAVE_FX_CACHE = true;
+let _darkCache = null;      // { W, H, flickerBucket, grad }
+let _fogVgCache = null;     // { W, H, aBucket, grad }
+const _fogWispCache = [];   // 6 slots; each { r, grad }
+function _bucket(v, step) { return Math.round(v / step) * step; }
+
 // ── Dark vignette (wave 1 ominous intro) ──────────────────────
 function _drawDark(ctx) {
     const W = ctx.canvas.width, H = ctx.canvas.height;
-    const now = performance.now() / 1000;
+    const now = (typeof _mapNow === 'number' ? _mapNow : performance.now()) / 1000;
     const flicker = 0.82 + Math.sin(now * 1.3) * 0.04 + Math.sin(now * 3.7) * 0.02;
-    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.78);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(0.6, `rgba(0,0,0,${0.28 * flicker})`);
-    vg.addColorStop(1, `rgba(0,0,0,${0.72 * flicker})`);
+    let vg;
+    if (WAVE_FX_CACHE) {
+        const fb = _bucket(flicker, 0.04);
+        if (!_darkCache || _darkCache.W !== W || _darkCache.H !== H || _darkCache.flickerBucket !== fb) {
+            const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.78);
+            g.addColorStop(0, 'rgba(0,0,0,0)');
+            g.addColorStop(0.6, `rgba(0,0,0,${0.28 * fb})`);
+            g.addColorStop(1, `rgba(0,0,0,${0.72 * fb})`);
+            _darkCache = { W, H, flickerBucket: fb, grad: g };
+        }
+        vg = _darkCache.grad;
+    } else {
+        vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.78);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(0.6, `rgba(0,0,0,${0.28 * flicker})`);
+        vg.addColorStop(1, `rgba(0,0,0,${0.72 * flicker})`);
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = vg;
@@ -438,25 +460,45 @@ function _drawDark(ctx) {
 }
 
 function _drawFog(ctx) {
+    const a = _evt.fogAlpha;
+    if (a < 0.02) return;   // early-out — skip alloc churn when effect is idle
     const W = ctx.canvas.width, H = ctx.canvas.height;
-    const now = performance.now() / 1000, a = _evt.fogAlpha;
+    const now = (typeof _mapNow === 'number' ? _mapNow : performance.now()) / 1000;
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
 
-    // Dark amber vignette
-    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
-    vg.addColorStop(0, `rgba(12,8,2,0)`);
-    vg.addColorStop(0.5, `rgba(20,10,2,${a * 0.5})`);
-    vg.addColorStop(1, `rgba(8,4,1,${a})`);
+    // Dark amber vignette — cached by (W,H,a-bucket)
+    let vg;
+    if (WAVE_FX_CACHE) {
+        const ab = _bucket(a, 0.05);
+        if (!_fogVgCache || _fogVgCache.W !== W || _fogVgCache.H !== H || _fogVgCache.aBucket !== ab) {
+            const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
+            g.addColorStop(0, `rgba(12,8,2,0)`);
+            g.addColorStop(0.5, `rgba(20,10,2,${ab * 0.5})`);
+            g.addColorStop(1, `rgba(8,4,1,${ab})`);
+            _fogVgCache = { W, H, aBucket: ab, grad: g };
+        }
+        vg = _fogVgCache.grad;
+    } else {
+        vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
+        vg.addColorStop(0, `rgba(12,8,2,0)`);
+        vg.addColorStop(0.5, `rgba(20,10,2,${a * 0.5})`);
+        vg.addColorStop(1, `rgba(8,4,1,${a})`);
+    }
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
 
     // Drifting fog wisps — amber/gold tones
+    // Wisp gradients are translation-invariant (solid stops), so cache per radius only.
     ctx.globalAlpha = a * 0.28;
     for (let i = 0; i < 6; i++) {
         const ox = ((_evt.fogDriftX * (0.4 + i * 0.15)) % W + W) % W;
         const oy = (H * 0.15 * i + Math.sin(now * 0.3 + i) * 30 + H) % H;
         const r = 160 + i * 40;
+        // Always create wisp gradient here — the radial gradient requires origin
+        // coordinates, so we can't reuse across positions. But skip the outer two
+        // wisps when alpha is low to cut work further.
+        if (a < 0.15 && i >= 4) continue;
         const fg = ctx.createRadialGradient(ox, oy, 0, ox, oy, r);
         fg.addColorStop(0, 'rgba(180,100,20,0.22)');
         fg.addColorStop(0.5, 'rgba(120,60,10,0.10)');
@@ -695,7 +737,16 @@ function _startGlitchWave(count) {
 // Supports arbitrary boss wave patterns (e.g., [4, 8, 12] instead of [3, 6, 9, 12, 15])
 function _startBossWave(wave) {
     Audio.playBGM('boss');
-    setTimeout(() => {
+    // B7 FIX: store timer id on GameState so resetRun() can cancel a pending
+    // boss spawn if the player dies + retries during bossSpawnDelay window.
+    if (typeof GameState !== 'undefined' && GameState._bossSpawnTimer) {
+        clearTimeout(GameState._bossSpawnTimer);
+        GameState._bossSpawnTimer = null;
+    }
+    const _spawnTimer = setTimeout(() => {
+        if (typeof GameState !== 'undefined') GameState._bossSpawnTimer = null;
+        // Guard: if run was reset (GAMEOVER/MENU) during the delay, bail out.
+        if (typeof GameState !== 'undefined' && GameState.phase !== 'PLAYING') return;
         // Get encounter config from BOSS_ENCOUNTERS
         const encounter = _getBossEncounterForWave(wave);
         if (!encounter) {
@@ -772,6 +823,7 @@ function _startBossWave(wave) {
         addScreenShake(15);
         Audio.playBossSpecial();
     }, BALANCE.waves.bossSpawnDelay);
+    if (typeof GameState !== 'undefined') GameState._bossSpawnTimer = _spawnTimer;
 }
 
 // NEW: Boss wave with enemy spawning (50% more enemies than normal)

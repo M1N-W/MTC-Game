@@ -74,12 +74,22 @@ const GameState = {
     waveStartDamage: 0,
     bossEncounterCount: 0,
 
+    // ── Async timers owned by GameState (cleared on resetRun) ─
+    _bossSpawnTimer: null,
+
     setPhase(s) {
         this.phase = s;
         window.gameState = s;
     },
 
     resetRun() {
+        // B7 FIX: clear pending async boss spawn timer so a boss cannot spawn
+        // into a freshly-restarted run (Try Again mid bossSpawnDelay window).
+        if (this._bossSpawnTimer) {
+            clearTimeout(this._bossSpawnTimer);
+            this._bossSpawnTimer = null;
+        }
+
         this.enemies = [];
         this.powerups = [];
         this.specialEffects = [];
@@ -113,6 +123,10 @@ const GameState = {
         window.powerups = this.powerups;
         window.specialEffects = this.specialEffects;
         window.meteorZones = this.meteorZones;
+        // B8 FIX: mirror boss/drone nullability so stale boss can't keep ticking
+        // after resetRun() (Try Again during boss wave → spawn-camp bug).
+        window.boss = this.boss;
+        window.drone = this.drone;
 
         // Primitive types
         window.hitStopTimer = this.hitStopTimer;

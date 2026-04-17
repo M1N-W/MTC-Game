@@ -996,11 +996,19 @@ function _showGameOverScreen(summary) {
 function _teardownRunState() {
     if (typeof WorkerBridge !== 'undefined') WorkerBridge.reset();
 
+    // B9 FIX: abort boss-domain singletons BEFORE resetRun() so any lingering
+    // invincibility flags / screen FX don't leak into the next run.
+    if (typeof DomainExpansion !== 'undefined') DomainExpansion._abort(null);
+    if (typeof GravitationalSingularity !== 'undefined') GravitationalSingularity._abort(null);
+
     GameState.hitStopTimer = 0;
     GameState.resetRun();
     _pendingRunSummary = null;
 
+    // B8 FIX: belt-and-suspenders — GameState._syncAliases() now mirrors boss/drone,
+    // but keep explicit nullification here in case teardown is called pre-sync.
     window.player = null;
+    window.boss = null;
     window.drone = null;
 
     if (typeof cleanupMobileControls === 'function') cleanupMobileControls();

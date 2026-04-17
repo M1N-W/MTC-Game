@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtc-cache-v3.43.2"; // Fixed game freeze on death - improved RAF stop timing and victory screen z-index
+const CACHE_NAME = "mtc-cache-v3.44.0"; // Fixed Try-Again boss spawn-camp bug; fog/dark gradient caching; admin rate-limit + audit log + destructive-command confirm
 
 // รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
 // NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.

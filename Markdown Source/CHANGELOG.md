@@ -4,10 +4,61 @@
 
 ---
 
+## v3.44.0 — Retry Fix, FX Perf, Admin Refactor, LOD
+
+*Released: April 17, 2026*
+
+### ♻️ Admin Console — Registry Refactor (Phase 2)
+
+- Extracted three scattered guard patterns (`ROOT_ONLY` array, `DESTRUCTIVE_SIGS` set, `needsPlayer` exclusion list) into a single `COMMAND_META` metadata table (`js/systems/AdminSystem.js`).
+- New `_meta(base, sub)` lookup (signature-first, then bare base; defaults to `{ perm: GUEST }`) drives all three runtime checks in `_parse()`.
+- Zero behavior change; adding a new ROOT/destructive/no-player command is now a one-line entry in the registry.
+
+### ⚡ Rendering LOD Tier (Phase 3)
+
+- `EnemyRenderer.draw()` now computes a per-entity `_lodFar` flag based on squared screen distance from viewport center vs `0.55 × min(W,H)`.
+- Ambient outer glow rings in `drawEnemy` / `drawTank` / `drawMage` (the heaviest `shadowBlur` sites per frame) are skipped when `_lodFar = true`. Body sprite, HP bar, status pips, ignite overlay, visor/shield/gauntlet are unaffected.
+- Net: 1 `shadowBlur` op saved per off-center enemy per frame; imperceptible visually at edge of viewport.
+
+### 🔍 effects.js Audit (Phase 3) — Passed
+
+- Verified every subsystem (Particle, FloatingText, HitMarker, Weather, Orbital, Decal, ShellCasing) has: object pool + `MAX_POOL`, hard cap + oldest-first eviction, swap-and-pop O(1) removal, and `clear()` hook invoked by `_teardownRunState`.
+- `window.specialEffects` uses swap-and-pop removal via `_tickEnvironment`; no hard cap but self-limited by per-effect lifetime. Flagged as defense-in-depth candidate for a future pass.
+- No code changes required.
+
+### 🐛 Critical Bug Fix — Try Again during Boss Wave
+
+- **Spawn-camp bug eliminated.** Dying during a boss wave and pressing Try Again no longer left a live boss attacking the fresh player.
+- Root cause: `GameState._syncAliases()` never mirrored `boss`/`drone` nullability to `window.*`, so the stale boss instance kept ticking after `resetRun()`. Secondary: pending `setTimeout` inside `_startBossWave()` could fire into the new run.
+- Fix (3 surgical edits):
+  - `js/systems/GameState.js` — `_syncAliases()` now mirrors `window.boss` / `window.drone`; `resetRun()` clears `_bossSpawnTimer`.
+  - `js/systems/WaveManager.js` — `_startBossWave()` stashes `setTimeout` id on `GameState._bossSpawnTimer` and guards against firing outside `PLAYING` phase.
+  - `js/game.js` — `_teardownRunState()` aborts `DomainExpansion` / `GravitationalSingularity` and explicitly nullifies `window.boss` before RAF restart.
+
+### ⚡ Performance — Fog & Dark Wave Rendering
+
+- **Cached radial gradients** in `WaveManager._drawDark` / `_drawFog`. Rebuilds only when canvas size or alpha bucket changes.
+- Early-out in `_drawFog` when `fogAlpha < 0.02`.
+- Outer wisps skipped at low alpha.
+- Replaced per-frame `performance.now()/1000` with shared `_mapNow`.
+- Net: ~6–7 fewer `createRadialGradient` calls per frame during fog/dark waves.
+
+### 🛡️ Admin Console — Security Hardening (Quick Wins)
+
+- **Rate limit:** max 10 commands / 2s; excess rejected with a warn banner.
+- **Confirm gate** for destructive commands (`reset`, `kill all`, `set wave`). Arms a 10s pending-confirm; user must type `yes` to execute, any other input cancels.
+- **Audit log:** ring buffer (200 entries) persisted to `localStorage` under `mtc_admin_audit`. Records timestamp, permission level, command, and result (`ok` / `denied` / `pending_confirm`).
+- **New `audit` command:** `audit` (tail 20), `audit tail N`, `audit clear` (ROOT-only).
+- Scripts using the existing command surface are not affected outside destructive ops.
+
+---
+
 ## v3.43.1 — Documentation Audit & Architectural Patterns
+
 *Released: April 15, 2026*
 
 ### 📚 Documentation Improvements
+
 - **SKILL.md Enhancements**: Added 3 new architectural pattern sections:
   - Section 6.6: Renderer CTX Binding Pattern (try/finally wrapper for window.CTX)
   - Section 6.7: Wave Modifier Application Requirement (applyWaveModifiersToEnemy)
@@ -15,6 +66,7 @@
 - **AUDIT_FINDINGS.md**: Created comprehensive documentation audit report verifying PROJECT_OVERVIEW.md, SKILL.md, and mtc-rendering.md accuracy against codebase
 
 ### 🔧 Technical Documentation
+
 - Documented hidden cross-file dependencies (CTX binding, wave modifier function)
 - Verified class hierarchy, load order, and update/draw separation invariants
 - Confirmed mtc-rendering.md comprehensive coverage of rendering pipeline
@@ -22,14 +74,17 @@
 ---
 
 ## v3.43.2 — Game Freeze on Death Fix + Prevention System
+
 *Released: April 16, 2026*
 
 ### 🐛 Bug Fixes
+
 - **Fixed game freeze on player death**: Game was showing black screen instead of game over screen
   - Root cause: `display: flex` was not being applied despite `.active` class being added
   - Fixed by explicitly setting `style.display = 'flex'` in new `showScreen()` helper
 
 ### 🛡️ Prevention System (New)
+
 - **`showScreen(id, className)`** — New utility in `utils.js` for showing full-screen overlays
   - Sets `display: flex`, `opacity: 1`, and adds class atomically
   - Prevents CSS specificity issues that caused the original bug
@@ -39,6 +94,7 @@
   - Explains why `showScreen()` must be used instead of manual class manipulation
 
 ### 📁 Files Modified
+
 - `js/utils.js` — Added `showScreen()` and `hideScreen()` with exports
 - `js/game.js` — Updated all screen visibility calls to use new helpers
 - `css/screens.css` — Updated `#victory-screen` positioning (fixed) and z-index (9500)
@@ -47,24 +103,29 @@
 ---
 
 ## v3.43.0 — Boss Wave Enemy Spawn + Flexible Boss Scheduling
+
 *Released: April 11, 2026*
 
 ### ✨ New Features
+
 - **Boss Wave Enemy Spawning**: Enemies now spawn during boss fights! Wave 3 boss spawns ~8 enemies (50% more than normal ~5), Wave 6 boss spawns ~11 enemies (vs ~7 normal)
 - **Trickle Spawn During Boss**: Enemies spawn in batches throughout the boss fight using the existing trickle system for balanced gameplay
 
 ### 🔧 Architecture Refactor
+
 - **Flexible Boss Wave Scheduling**: Boss waves now defined in `BOSS_ENCOUNTERS` config array instead of hard-coded `bossEveryNWaves` logic
 - **Config-Based Boss Phases**: Boss phases (basic, dogRider, advanced, goldfish) now controlled via config, not encounter counting math
 - **Wave > 15 Support**: `expandedRosterRules` arrays now safely handle waves beyond 15 using last-element fallback
 - **New Config**: `BALANCE.waves.bossWaveEnemies` with `spawnMultiplier`, `trickleBatchSize`, `trickleIntervalBase`
 
 ### 🎮 Gameplay Changes
+
 - Boss waves now more challenging with constant enemy pressure while fighting the boss
 - Enemy spawn count scales with wave progression (Wave 15 boss: ~17 enemies vs ~11 normal)
 - Boss spawn delay unchanged (3s) - enemies start spawning immediately after boss appears
 
 ### 📁 Files Modified
+
 - `js/balance.js` — Added `BOSS_ENCOUNTERS` array, `bossWaveEnemies` config, moved trickle constants to config
 - `js/systems/WaveManager.js` — Refactored `_startBossWave()` to use config, added `_startBossWaveWithEnemies()`, added `_isBossWave()` helper
 - `js/game.js` — Updated wave clear check to use `BOSS_ENCOUNTERS` instead of `WAVE_SCHEDULE.bossWaves`
@@ -72,26 +133,32 @@
 ---
 
 ## v3.42.3 — Tutorial & Game Over Freeze Fixes
+
 *Released: April 10, 2026*
 
 ### 🐛 Bug Fixes
+
 - **Fixed Tutorial Freeze**: Added defensive null checks in `js/tutorial.js` `_render()` and `start()` functions to prevent silent failures when DOM elements are missing
 - **Fixed Game Over Freeze**: Added comprehensive null checks in `js/game.js` `_showGameOverScreen()` and `endGame()` functions to ensure game over screen displays properly
 - **Improved Error Logging**: Added detailed console logging to both tutorial and game over flows for easier debugging
 
 ### 🔧 Technical Changes
+
 - Tutorial overlay now explicitly sets `display: flex` and `opacity: 1` when starting to ensure visibility
 - Game over screen now explicitly sets `display: block` and `opacity: 1` when showing
 - Both systems now gracefully handle missing DOM elements with informative error messages
 
 ## v3.42.2 — Encoding Fixes & Documentation Standards
+
 *Released: April 10, 2026*
 
 ### 🐛 Bug Fixes
+
 - Fixed UTF-8 double-encoding corruption (mojibake) in `js/rendering/EnemyRenderer.js` — em-dash, multiplication sign, and box-drawing characters now display correctly
 - Fixed UTF-8 corruption in `js/entities/enemy.js` comments — Thai text (e.g., "เริ่มต้น", "นับคิล") and special characters (e.g., "✨", "●", "≈") now render properly
 
 ### 📚 Documentation & Standards
+
 - Established JSDoc header convention across all JavaScript files — every file now opens with `@module`, `@fileoverview`, Table of Contents with `L.<line-number>` entries, and Architecture & Pitfalls sections
 - Added comprehensive headers to `enemy.js`, `KaoPlayer.js`, `AutoPlayer.js`, `PatPlayer.js` enabling AI-assisted navigation via `grep -n 'L\.' <file>`
 - Updated `SKILL.md` with Section 6: timeless architectural patterns (JSDoc navigation, window exports, typeof guards, renderer caching, swap-remove semantics)
@@ -99,70 +166,85 @@
 - Updated `PROJECT_OVERVIEW.md` version alignment and added `VersionManager.js` to entry points table
 
 ## v3.42.1 — Refactor Release Sync
+
 *Released: April 10, 2026*
 
 ### 🔧 Technical follow-up
+
 - Bumped the service worker cache version to `v3.42.1` so clients invalidate the retired `css/main.css` and `js/config.js` cache graph cleanly.
 - Synced runtime entrypoints across `index.html`, `Debug.html`, and `sw.js` to the split config modules: `js/balance.js`, `js/shop-items.js`, and `js/game-texts.js`.
 - Locked the enemy rendering split in documentation and runtime loading order by keeping `js/entities/enemy.js` for simulation classes and `js/rendering/EnemyRenderer.js` for canvas dispatch.
 
 ## v3.42.0 — Phase 7e: Refactor + Balance Overhaul
+
 *Released: April 10, 2026*
 
 ### ⚖️ Balance and progression
+
 - Rebalanced all four characters in the extracted config layer: lower base HP, lower per-level HP scaling, lower damage-per-level scaling, and tighter passive HP bonuses where applicable.
 - Reduced `PlayerBase.COMBO_MAX_STACKS` from `50` to `30` to curb runaway late-wave burst scaling.
 
 ### ♻️ File modularization
+
 - Split the legacy CSS bundle into 10 focused files: `base.css`, `overlays.css`, `admin-console.css`, `shop.css`, `hud.css`, `menus.css`, `screens.css`, `char-select.css`, `tutorial.css`, and `ui-extras.css`.
 - Split the legacy config bundle into `js/balance.js`, `js/shop-items.js`, and `js/game-texts.js`, with `index.html` and `sw.js` updated to load and precache the new files in dependency order.
 - Extracted `EnemyRenderer` out of `js/entities/enemy.js` into `js/rendering/EnemyRenderer.js`, keeping enemy runtime logic and rendering responsibilities separated.
 
 ### 🎨 UI and content
+
 - Updated the character skill-card back-face descriptions in `index.html` to English AbilityUnlock-era copy for Poom, Auto, and Pat.
 - Fixed `.card-back-skills` layout spacing so the back-face skill lists fill their card height cleanly.
 
 ## v3.41.18 — Architecture Documentation Audit & Character UI Updates
+
 *Released: April 9, 2026*
 
 ### 📝 Documentation & Architecture
+
 - **Documentation Audit**: Audited PROJECT_OVERVIEW.md, SKILL.md, mtc-game-conventions.md, and mtc-rendering.md to ensure they strictly document timeless architectural invariants (class hierarchies, update/draw separation, script load order) and removed volatile balance or tuning values.
 - **JSDoc Maintenance**: Updated CloudSaveSystem.js header to follow the strict table of contents format and included architecture/pitfalls notes.
 
 ### 🎨 UI & Quality of Life
+
 - **Character Select UI**: Updated skill descriptions and formatting in index.html for better readability and presentation.
 - **Game Over Screen**: Added missing ontouchstart events to the retry and main menu buttons for better mobile responsiveness.
 
-
 ## v3.41.17 — Perf SEO: SW Cache Fix, defer Scripts, Font Waterfall, Meta Tags
+
 *Released: April 1, 2026*
 
 ### 🔴 P1 Critical Fixes
 
 **SW precache URLs now match actual requests** (`sw.js`)
+
 - Removed `?v=CACHE_TIMESTAMP` from all `urlsToCache` entries. These versioned URLs never matched unversioned script requests from `index.html`, so the precache was populated but never served — every page load fell back to network. Cache-busting is now handled solely by `CACHE_NAME` version bumps.
 - Removed `const CACHE_TIMESTAMP = Date.now()` (no longer needed).
 - Added `./js/systems/WorkerBridge.js` to precache (was missing).
 
 **Google Fonts `@import` replaced with `<link>` in `<head>`** (`index.html` + `main.css`)
+
 - `main.css` had `@import url(…Google Fonts…)` which forced a 2-hop waterfall: download CSS → discover import → download font CSS → download font files. Removed `@import`.
 - Consolidated all 5 font families (Inter, Orbitron, Bebas Neue, Rajdhani, Share Tech Mono) into a single `<link rel="stylesheet">` in `index.html` `<head>`. Removes one full RTT from FCP.
 - Removed the separate `<link>` for Share Tech Mono (was a duplicate request).
 
 **`defer` added to all 31 `<script>` tags** (`index.html`)
+
 - All body scripts now use `defer`. Browser can download all 31 scripts in parallel via the preload scanner. Execution order is preserved (DOM order). Reduces total blocking time on slow connections.
 - `firebase-bundle.js` moved after `config.js` + `utils.js` but before `CloudSaveSystem.js` + `LeaderboardUI.js` (which depend on Firebase SDK). No functional change, correct execution order maintained.
 
 ### 🟡 P2 High-Impact Fixes
 
 **Offline fallback added to SW fetch handler** (`sw.js`)
+
 - When both network and cache fail for a navigation request, now returns a minimal Thai-language offline page instead of `undefined` (which caused a blank error screen).
 
 **`<link rel="preload">` for `main.css` and Orbitron font** (`index.html`)
+
 - `<link rel="preload" href="css/main.css" as="style">` — browser starts downloading CSS earlier in the waterfall.
 - `<link rel="preload" as="font" type="font/woff2" href="…orbitron…woff2" crossorigin>` — eliminates FOUT for the primary display font.
 
 **Meta tags added** (`index.html`)
+
 - `<meta name="description">` — Google search snippet.
 - `<meta name="theme-color" content="#16213e">` — mobile browser chrome colour.
 - `<link rel="canonical">` — prevents duplicate-content indexing.
@@ -190,11 +272,13 @@
 ---
 
 ## v3.41.16 — Fix: Tutorial Freeze, Service Worker Cache Bust
+
 *Released: April 1, 2026*
 
 ### 🐛 Tutorial Mode Freeze — Root Cause and Fixes
 
 **Root cause chain:**
+
 1. `var weaponSystem` and `var projectileManager` were converted to `const` in v3.41.15 but their declarations were accidentally deleted when `spawnHeatWave` body corruption was repaired (separate commit `dc59c45`).
 2. Without these declarations, `weapons.js` threw `ReferenceError: weaponSystem is not defined` at load time and `ReferenceError: projectileManager is not defined` at runtime.
 3. `startGame()` → `_resetRunState()` crashed at `projectileManager.clear()` before `_initGameUI()` could run.
@@ -203,10 +287,12 @@
 6. **Service Worker cache was NOT bumped** for the `weaponSystem`/`projectileManager` restore commit (`a449bde`), so users with the v3.41.15 cache still received the broken `weapons.js`.
 
 **Fixes applied:**
+
 - `sw.js`: bumped to `v3.41.16` — forces all clients to fetch updated `weapons.js` and `game.js`.
 - `js/game.js`: clear `window._tutorialModeRequested = false` immediately before `TutorialSystem.start()` so that `retryMission()` after a tutorial run does not re-trigger the tutorial.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: sw.js                (v3.41.16 — critical cache bust)
 ✅ MODIFIED: js/game.js           (clear _tutorialModeRequested before TutorialSystem.start)
@@ -217,12 +303,15 @@
 ---
 
 ## v3.41.15 — Refactor: var→const/let, Debug.html Fixes, Remove ccflare
+
 *Released: April 1, 2026*
 
 ### ♻️ `var` → `const`/`let` Modernisation
+
 All top-level `var` declarations converted to `const` or `let` across 6 files. Each global that previously relied on `var`-hoisting to `window` now has an explicit `window.xxx = xxx` export.
 
 **Files modified:**
+
 - `js/utils.js` — ~57 `var` declarations → `const`; `CANVAS`/`CTX` → `let` (reassigned inside `initCanvas`); `initCanvas()` now sets `window.CANVAS`/`window.CTX` explicitly; new `window` exports block added before `module.exports`.
 - `js/input.js` — `keys`, `mouse`, `joysticks`, `inputBuffer` → `const`; `_mobileHandlers` → `let` (reassigned in `cleanupMobileControls`); `InputSystem` → `const`; all local `var` inside functions → `const`/`let`; `window.keys`, `window.mouse`, `window.joysticks` added.
 - `js/effects.js` — 7 singleton `var` → `const`; added `window.hitMarkerSystem`, `window.weatherSystem`, `window.particleSystem`, `window.floatingTextSystem` (previously missing).
@@ -231,6 +320,7 @@ All top-level `var` declarations converted to `const` or `let` across 6 files. E
 - `js/weapons.js` — `var weaponSystem`, `var projectileManager` → `const`; window exports already present.
 
 ### 🐛 Debug.html — 7 Bugs Fixed
+
 - **`switchTab` implicit `event` global** — added `evt` parameter; all 4 `onclick` callers now pass `event` explicitly.
 - **Stale boss script paths** — replaced `js/entities/boss.js` and `js/entities/boss_attacks.js` with correct split paths: `boss/BossBase.js`, `boss/ManopBoss.js`, `boss/FirstBoss.js`, `boss/boss_attacks_shared.js`, `boss/boss_attacks_manop.js`, `boss/boss_attacks_first.js`.
 - **Missing AI scripts** — added `js/ai/UtilityAI.js`, `EnemyActions.js`, `PlayerPatternAnalyzer.js`, `SquadAI.js` (required by `enemy.js`).
@@ -240,15 +330,18 @@ All top-level `var` declarations converted to `const` or `let` across 6 files. E
 - **Missing DOM stubs** — added `#console-input` and `#gameover-screen` stubs.
 
 ### 📄 `PROJECT_OVERVIEW.md` — Markdown Lint Fixes
+
 - MD032: added blank lines around 5 list blocks (lines 19, 133, 138, 235, 241).
 - MD060: fixed table separator row `|---|---|---|` → `| --- | --- | --- |`.
 
 ### 🗑️ Removed Unnecessary Files
+
 - `ccflare/` — accidentally cloned third-party Claude API proxy tool; has own `.git`; zero relation to MTC game.
 - `tmp/` — dev artifacts (Chrome profiles, PDFs).
 - `output/` — generated PDF output folder.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/utils.js          (var→const/let + window exports block)
 ✅ MODIFIED: js/input.js          (var→const/let + window exports)
@@ -268,27 +361,33 @@ All top-level `var` declarations converted to `const` or `let` across 6 files. E
 ---
 
 ## v3.41.14 — Bug Fix: Firebase Offline, Tutorial Freeze, Game Over Screen, Menu Dots
+
 *Released: March 31, 2026*
 
 ### 🔥 Firebase Offline Fix (`js/firebase-init.js`)
+
 - Replaced `getFirestore(app, {...})` call with `initializeFirestore(app, { experimentalForceLongPolling: true })`.
 - `getFirestore` ignores the settings object when called after initialization, silently omitting long-polling and causing offline errors.
 - `initializeFirestore` is the correct API surface for applying Firestore settings at construction time.
 
 ### 🎓 Tutorial Freeze Fix (`js/menu.js`, `js/game.js`)
+
 - Added `window._tutorialModeRequested` flag: set to `false` in `_startModalPlay`, set to `true` in `_startModalTutorial`.
 - Guarded `TutorialSystem.start()` in `_initGameUI` behind `window._tutorialModeRequested` so tutorial no longer auto-starts on every game start, only when explicitly selected.
 
 ### 💀 Game Over Black Screen Fix (`js/game.js`, `index.html`, `css/main.css`)
+
 - Replaced `showElement('overlay')` on defeat with a dedicated `#gameover-screen` overlay to prevent lingering `.fade-out` class on `#overlay` from causing a black screen.
 - Added full-screen `#gameover-screen` HTML overlay with run stats, retry button, and main menu button.
 - Added `retryMission()` and `goToMainMenu()` global handlers; `goToMainMenu` clears `.fade-out` from `#overlay` before showing it.
 - Added comprehensive CSS for `#gameover-screen` including entrance animation, stat layout, and button styling.
 
 ### 🎨 Menu Dots Layout Fix (`css/main.css`)
+
 - Changed `.char-dots--vertical` from absolute positioning to static horizontal flex layout so pagination dots render correctly below the character card.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/firebase-init.js   (initializeFirestore + experimentalForceLongPolling)
 ✅ MODIFIED: js/menu.js            (_tutorialModeRequested flag)
@@ -303,12 +402,15 @@ All top-level `var` declarations converted to `const` or `let` across 6 files. E
 ---
 
 ## v3.41.13 — Gameplay: Expanded Enemy Roster Stabilization
+
 *Released: March 30, 2026*
 
 ### ⚔️ Enemy Roster — 9 New Enemy Types Stabilized
+
 All 9 expanded enemies are now playtest-ready and verified at runtime.
 
 **New enemy classes** (`js/entities/enemy.js`):
+
 - `SniperEnemy` — long-range, charge-then-fire with aim telegraph
 - `ShieldBraverEnemy` — tank subclass, front-arc damage reduction
 - `PoisonSpitterEnemy` — places `PoisonPoolEffect` hazard zones with pool spacing guard (`minPoolSpacing`)
@@ -320,27 +422,32 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - `BufferEnemy` — alternates speed/damage buffs on non-support non-minion allies
 
 **New supporting entity** (`js/entities/enemy.js`):
+
 - `SummonedMinionEnemy` — lifetime-capped minion; cleans up on `owner.dead` or lifetime expiry; decrements `owner._activeMinions` on death
 
 ### 🌊 Wave Spawning Layer (`js/systems/WaveManager.js`)
+
 - `_waveRuleValue(rule, wave)` — reads per-wave array OR flat cap value from `expandedRosterRules`
 - `_getExpandedEnemyLiveCounts()` — live census by type, support family, hazard family
 - `_isEnemyEligibleForWave(key, wave, liveCounts)` — filters candidates against support/hazard/sniper/summoner/buffer caps before weighted selection
 - `_spawnEnemyFromRegistry()` patched to run eligibility filter before weighting and selection
 
 ### ⚙️ Config Balance Layer (`js/config.js`)
+
 - `BALANCE.enemies.*` — per-type metadata with `category`, `support`, `hazard` flags
 - `BALANCE.waves.enemyPools` — per-wave weighted pools (minWave-indexed tiers)
 - `BALANCE.waves.expandedRosterRules` — live caps: `maxSupportAlive[]`, `maxHazardAlive[]`, `maxSnipersAlive[]`, `supportMixUnlockWave`, `hazardMixUnlockWave`, `maxSummonersAlive`, `maxBuffersAlive`
 - `BALANCE.waves.enableExpandedRoster` flag guards old-path fallback
 
 ### 🛠️ Admin Playtest Tooling (`js/systems/AdminSystem.js`)
+
 - `spawn pack <preset>` — presets: `duel`, `anchor`, `pressure`, `support`, `supportpressure`, `crossfire`
 - `enemy report` — live roster snapshot with support/hazard counts vs. wave caps
 - `_spawnEnemyByKey()` helper — centralized registry-based spawning used by both `spawn enemy` and `spawn pack`
 - `_expandedEnemySnapshot()` helper — reads `_enemyConfig.support/.hazard` flags for report
 
 ### ✅ Runtime Verification Results
+
 - All 9 individual enemies: spawn, engage, telegraph, and clean up correctly
 - All 4 pack presets (`anchor`, `pressure`, `support`, `supportpressure`): all types alive after spawning
 - `enemy report` command: live counts and wave caps display correctly
@@ -350,6 +457,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - `PoisonSpitterEnemy` logic confirmed: pool created at t≈4.8s, spacing guard correctly prevents duplicate pools on stationary player
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/config.js       (enemy metadata, wave pools, expandedRosterRules)
 ✅ MODIFIED: js/entities/enemy.js  (9 new enemy classes + SummonedMinionEnemy + registry)
@@ -364,9 +472,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.12 — UI Polish: Character Menu Layout & Pat Portrait Glow
+
 *Released: March 29, 2026*
 
 ### 🎨 Character Selection UI Enhancements
+
 - **Menu layout improvements** (`index.html`, `css/main.css`):
   - Swapped position of pagination dots with next button (dots now on right, button below)
   - Added vertical dots styling with `char-dots--vertical` class
@@ -378,6 +488,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Added Pat-specific styles: stat-bar-fill (blue gradient), char-title, char-tag with theme colors
 
 ### Files touched
+
 ```
 ✅ MODIFIED: index.html (swapped dots/next button positions)
 ✅ MODIFIED: css/main.css (Pat glow effects + vertical dots layout)
@@ -388,9 +499,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.11 — Enemy Roster Expansion, Registry Spawn Flow, and Architecture Doc Audit
+
 *Released: March 29, 2026*
 
 ### 🤖 Enemy and AI Architecture
+
 - **Expanded enemy roster** (`js/entities/enemy.js`, `js/config.js`):
   - Added registry-backed enemy classes for sniper, shield, poison, pressure, and support families.
   - Introduced `window.ENEMY_REGISTRY` as the shared constructor surface for wave spawning and admin spawning.
@@ -401,6 +514,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Preserved the `_aiMoveX/_aiMoveY` intent contract so AI continues to steer without taking ownership of physics velocity.
 
 ### 🌊 Wave and Debug Tooling
+
 - **WaveManager registry spawn flow** (`js/systems/WaveManager.js`):
   - Added registry-aware enemy selection and per-wave enemy pool support.
   - Centralized speed-wave patching into `applyWaveModifiersToEnemy` so normal waves, admin spawns, and summoned minions reuse the same modifier path.
@@ -410,6 +524,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Synced enemy projectile collision logic with the active stealth flag name used by the player implementation.
 
 ### 📚 Documentation Audit
+
 - **PROJECT_OVERVIEW.md**:
   - Re-audited class hierarchy, load order, hidden coupling, rendering ownership, and wave-registry flow against the current codebase.
 - **SKILL.md / mtc-game-conventions / mtc-rendering**:
@@ -417,6 +532,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Corrected the rendering-skill path and aligned docs with the current renderer and wave architecture.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/entities/enemy.js (expanded enemy roster + registry + render overlays)
 ✅ MODIFIED: js/config.js (expanded enemy definitions + wave pool support)
@@ -437,9 +553,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.10 — UI: Start Modal, Carousel Theme System & CSS Refactor
+
 *Released: March 27, 2026*
 
 ### ✨ UI/UX Enhancements
+
 - **Start Mission Modal** (`js/menu.js`, `css/main.css`):
   - Added `_openStartModal()` / `_closeStartModal()` — START MISSION button now opens a sub-panel before launching the game.
   - Two choices in modal: **START GAME** → `startGame()` and **TUTORIAL MODE** → `TutorialSystem.reset()` + `startGame()`.
@@ -456,6 +574,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Skill tooltip section replaced with comment (`disabled — skills now live on card back face`).
 
 ### Files touched
+
 ```
 ✅ MODIFIED: css/main.css (Prettier reformat + Start Modal styles + theme selectors)
 ✅ MODIFIED: js/menu.js (Prettier reformat + Start Modal JS logic)
@@ -468,9 +587,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.9 — Audit: Codebase Integrity, Bug Fixes & Architecture Documentation
+
 *Released: March 27, 2026*
 
 ### 🐛 Bug Fixes & Stability
+
 - **Weapons System** (`js/weapons.js`):
   - Fixed property name mismatch: `isFreeStealthy` → `isFreeStealthActive` (synced with `KaoPlayer.js` definition).
   - Removed redundant duplicate `tryReflectProjectile` call in enemy→player collision branch.
@@ -484,6 +605,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Removed deprecated `BALANCE.player.auto` block (no active references; replaced by `BALANCE.characters.auto`).
 
 ### 📚 Architecture Documentation
+
 - **Created `SKILL.md`** (`Markdown Source/Information/SKILL.md`):
   - §2 Class Name Map — all constructor→window alias mappings
   - §3 Inheritance Chain — Entity tree including BossDog/GoldfishMinion caveats (extend Entity, NOT EnemyBase/BossBase)
@@ -512,6 +634,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Added §9 Living Documentation Files table pointing to all doc files
 
 ### Files touched
+
 ```
 ✅ MODIFIED: index.html (v3.41.9 update)
 ✅ MODIFIED: sw.js (v3.41.9 update)
@@ -529,9 +652,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.8 — UI: Character Selection Carousel Redesign
+
 *Released: March 26, 2026*
 
 ### ✨ UI/UX — Menu Redesign
+
 - **Character Carousel**: Replaced the 4-card grid with a single-character carousel for a more focused and cinematic selection experience.
 - **Dynamic Background Themes**: Implemented smooth background transitions on the `#overlay` element. The background color now dynamically updates to match the selected character's theme (Gold, Green, Red, Blue) when navigating.
 - **Interactive Navigation**:
@@ -544,10 +669,12 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - **Login**: Google Sign-in moved to the bottom.
 
 ### 🛠️ Technical Improvements
+
 - **CSS Architecture**: Introduced theme-specific classes (`.theme-kao`, `.theme-poom`, etc.) to manage global overlay state. Added `-webkit-user-select: none` to navigation buttons for Safari/iOS compatibility.
 - **JS State Management**: Centralized character navigation in `js/menu.js` with `_navigateChar` and `_updateCarousel`, ensuring synchronization with existing HUD and selection logic.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: index.html (carousel structure + button reorganization)
 ✅ MODIFIED: css/main.css (carousel styles + dynamic theme classes)
@@ -560,9 +687,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.7 — Fix: Rebuild Firebase Bundle (Critical)
+
 *Released: March 26, 2026*
 
 ### 🐛 Critical Bug Fix
+
 - **Root Cause**: All Firebase auth and Firestore fixes in `v3.41.4`–`v3.41.6` were applied to `js/firebase-init.js` (the source) but `js/firebase-bundle.js` (the compiled output that browsers actually load) was **never rebuilt**. The browser was running the original, unfixed code the entire time.
 - **Fix**: Ran `npm run build:firebase` (`esbuild`) to recompile `firebase-init.js` → `firebase-bundle.js`. All fixes from previous versions now take effect:
   - `experimentalForceLongPolling` for Firestore connectivity.
@@ -570,6 +699,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Improved error diagnostics.
 
 ### Files touched
+
 ```
 ✅ REBUILT: js/firebase-bundle.js (recompiled from firebase-init.js)
 ✅ MODIFIED: sw.js (v3.41.7)
@@ -581,14 +711,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.6 — Firebase: Robust Auth Linking & Popup Resilience
+
 *Released: March 26, 2026*
 
 ### ☁️ Firebase — `js/firebase-init.js`
+
 - **Simplified Auth Flow**: Refactored `signInWithGoogle` to handle account linking more aggressively. Any error during linking (like `credential-already-in-use`) now automatically triggers a direct sign-in fallback, ensuring the user can always entry the game.
 - **Improved UX**: Added explicit checks for blocked popups with user-facing alerts.
 - **Diagnostics**: Added `signOut` method hook for manual troubleshooting.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/firebase-init.js (linking fallback refactor + signOut)
 ✅ MODIFIED: sw.js (v3.41.6)
@@ -600,14 +733,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.5 — Firebase: Fix Connectivity & Account Linking
+
 *Released: March 26, 2026*
 
 ### ☁️ Firebase — `js/firebase-init.js`
+
 - **Firestore Connectivity**: Enabled `experimentalForceLongPolling: true` to resolve "client is offline" errors on environments with restrictive network policies (common on some GitHub Pages configurations).
 - **Google Sign-in Overhaul**: Improved `signInWithGoogle` to handle `auth/credential-already-in-use` and `auth/email-already-in-use`. The system now gracefully switches from an anonymous session to an existing Google account if linking fails.
 - **COOP Policy Handling**: Improved popup polling logic resilience.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/firebase-init.js (long-polling enabled + auth linking fix)
 ✅ MODIFIED: sw.js (v3.41.5)
@@ -619,18 +755,22 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.4 — Firebase: GitHub Pages Integration & Improved Diagnostics
+
 *Released: March 26, 2026*
 
 ### ☁️ Firebase — `js/firebase-init.js`
+
 - **GitHub Pages Support**: Confirmed `m1n-w.github.io` authorization.
 - **Improved Logging**: Added `console.log` for successful anonymous sign-in and `console.error` with specific troubleshooting advice for GitHub Pages.
 - **Connectivity Fallback**: Added `experimentalForceLongPolling` as a commented-out option for environments with restrictive network policies.
 
 ### 💾 Cloud Save — `js/systems/CloudSaveSystem.js`
+
 - **Error Handling**: Improved Firestore error parsing in `pullThenMergePush`.
 - **Diagnostic Feedback**: Added specific console warnings for "offline" and "permission denied" states to help distinguish between network issues and authorization problems.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/firebase-init.js (logging + long-polling comment)
 ✅ MODIFIED: js/systems/CloudSaveSystem.js (improved offline/permission error handling)
@@ -643,19 +783,23 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.3 — Security Fix: API Key Exposure + Debug Logging
+
 *Released: March 26, 2026*
 
 ### 🔒 Security Fix — `js/config.js`
+
 - **Root Cause**: `window.API_KEY = API_KEY;` exposed the API key globally, making it accessible via browser console (`window.API_KEY`).
 - **Fix**: Removed the global assignment. The `API_KEY` constant remains available within the config module scope for internal use, but is no longer attached to `window`.
 
 ### 🐛 Debug Logging — `js/entities/player/PoomPlayer.js`
+
 - **Enabled `console.log` statements** in `ritualBurst()` method for development visibility:
   - Logs when ritual deals base damage (no sticky enemies found)
   - Logs ritual damage dealt to enemies count
   - Logs ritual burst consumed sticky on enemies count
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/config.js (removed window.API_KEY global exposure)
 ✅ MODIFIED: js/entities/player/PoomPlayer.js (enabled debug console.log)
@@ -667,14 +811,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.2 — Fix: Zone Aura Flickering
+
 *Released: March 26, 2026*
 
 ### 🐛 Bug Fix — `js/map.js`
+
 - **Root Cause**: The `drawZoneAura` function was throttled to only draw the radial gradient fill every 4th frame (`_drawAuraGrad = (_terrainFrame & 3) === 0`) while the rim stroke and dashed ring were drawn every frame. This mismatch caused the fill to visually "strobe" on and off, creating a rapid flickering effect visible on all zone auras (MTC Room/Citadel, Database, Co-op Store, spawn point origin).
 - **Fix**: Removed the 4-frame gradient skip. `drawZoneAura` now draws its gradient fill unconditionally every frame, matching the cadence of the rim and dash elements. The gradient is inexpensive (4 fixed color stops, single `arc` fill) and does not justify a per-frame skip.
 - **Affected zones**: MTC Citadel aura, Database aura, Co-op Store aura, origin/spawn aura.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/map.js (removed _drawAuraGrad throttle from drawZoneAura)
 ✅ MODIFIED: sw.js (v3.41.2)
@@ -685,17 +832,21 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.1 — Documentation Lint Fixes & Production Cleanup
+
 *Released: March 26, 2026*
 
 ### 📝 Documentation — `.agents/skills/`
+
 - **Lint Cleanup**: Fixed MD034 (bare URLs), MD040 (fenced code language), MD041 (H1 headings), MD032 (list spacing), and MD060 (table styles) across 15+ architectural and skill files.
 - **Improved Readability**: Standardized table formats and link wrapping for better IDE and web rendering.
 
 ### 🛠️ Optimization & Cleanup
+
 - **Production Logs**: Commented out `console.log` statements in core game systems (`game.js`, `audio.js`, `input.js`, `map.js`, `menu.js`, `AdminSystem.js`) and boss modules to reduce main-thread overhead and console noise.
 - **Bug Fix**: Fixed a minor typo in `js/config.js` for FirstBoss taunt text.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: .agents/skills/ (multiple files - lint fixes)
 ✅ MODIFIED: js/game.js, audio.js, input.js, map.js, menu.js, AdminSystem.js (log cleanup)
@@ -708,30 +859,37 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.41.0 — Projectile Visual Revamp: All Characters + Crit States
+
 *Released: March 24, 2026*
 
 ### 🎨 Bug Fix — `js/weapons.js`
+
 - **No-Spin Fix**: `Projectile.update()` now only increments `this.angle` when `this.team === "enemy"`. Player bullets stay locked to their flight direction — no more unintended continuous rotation.
 
 ### 🎨 Visual — Kao (Cyber/Gamer) — `js/weapons.js`
+
 - **Auto Rifle**: Replaced generic tracer with a *Cyber Plasma Tracer*: outer heat-glow wake, core plasma beam, 3-tick digital scanline shimmer (normal), sharp diamond tip. Crit/Golden: double rotating elliptical burst rings + 8 animated spikes.
 - **Shotgun**: Replaced with a *Molten Shrapnel Fragment*: jagged 6-vertex elongated diamond with gradient fill, heat-wake ellipse behind, glowing molten hot-spot core, 3 trailing ember dots. Crit/Golden: circuit-crack lines + golden burst ring.
 - **Sniper (Normal)**: *Railgun Needle* — 4-layer sonic boom cones, thick wake glow, gradient needle core + white tip dot. Crit/Golden: energy rings along shaft + electric arc zigzag.
 - **Sniper (Charged / Weapon Master)**: *Golden Lance* — wide diffuse aura, 8px thick core beam with bright inner line, golden V-shaped shockwave at tip, energy rings along shaft.
 
 ### 🎨 Visual — Poom (Enchanted Rice) — `js/weapons.js`
+
 - **Normal**: Enhanced emerald wisp trail (5 layers), soft aura, 5-grain cluster with golden radial gradients, pulsing emerald vein highlights.
 - **Crit**: *Golden Harvest* — large diffuse gold aura, pulsing burst ring, **6 orbiting golden husk particles** (rotated ellipses), harvest spokes with phase-offset animation.
 
 ### 🎨 Visual — Auto (Heat/Stand) — `js/weapons.js`
+
 - **Heatwave Crit**: *Superheated Punch* — white-hot translucent core overlay (r=11), 4 solar flare arcs at rotating phase, golden arc shockwave (r=24) on leading edge.
 - **Wanchai Punch Crit**: White-hot knuckle flash over fist face, double golden arc burst rings (r=22 / r=28).
 
 ### 🎨 Visual — Pat (Ronin/Wind) — `js/weapons.js`
+
 - **Katana Normal**: *Ronin Wind Blade* — 2 fading ghost wind-streak blade copies behind main blade, longer trail, animated pressure-wave arcs at tip.
 - **Katana Crit/Golden**: *Golden Sakura Slash* — 5 orbiting sakura petal ellipses (pink/gold), diagonal slice accent line, golden burst ring, 8 animated spark spokes.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/weapons.js (no-spin fix + full projectile draw revamp for all 4 characters)
 ✅ MODIFIED: sw.js (v3.41.0)
@@ -741,23 +899,29 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.40.0 — Performance Optimization: Full Pass (CPU + GPU)
+
 *Released: March 23, 2026*
 
 ### ⚡ CPU — `js/map.js` + `js/entities/base.js`
+
 - **Phase 1 — Static Spatial Grid**: `MapSystem._buildStaticGrid()` builds a 128px-cell grid of all map objects once at `init()` (objects never move). Both `MapSystem.update()` collision and `Entity._steerAroundObstacles()` now call `queryNearby(x, y, r)` instead of iterating all ~150 objects. Estimated: ~98% fewer checks per frame at 20 enemies.
 
 ### ⚡ GPU — `js/map.js`
+
 - **Phase 2 — Lighting Throttle**: `drawLighting()` skips full offscreen canvas repaint on odd frames (`_lightFrame & 1`), blitting cached canvas instead. Halves `createRadialGradient` cost for 20+ light sources (~40 gradient allocs/frame → ~20).
 - **Phase 3 — Zone Aura Throttle**: `createRadialGradient` fill inside `drawZoneAura` gated to every 4th frame (`_terrainFrame & 3`). Cheap rim stroke and dashed ring drawn every frame. Saves 3/4 of 4×4=16 gradient allocs per 4 frames.
 
 ### ⚡ GPU — `js/entities/enemy.js`
+
 - **Phase 4 — Enemy Body Sprite Cache**: `EnemyRenderer._getBodySprite(key, R, fn)` lazy-creates a per-type offscreen canvas (created once per game session). `drawEnemy/drawTank/drawMage` now call `CTX.drawImage(sprite, ...)` instead of `CTX.createRadialGradient(...)` every frame. Eliminates 1 gradient alloc per enemy per frame (~15–20 saves/frame at peak).
 - **Phase 5 — Shared Timestamp**: `EnemyRenderer.draw()` captures `performance.now()` once and passes it to `drawEnemy/drawTank/drawMage` via a parameter. Removes 1 `performance.now()` call per enemy draw per frame.
 
 ### ⚡ CPU — `js/game.js`
+
 - **Phase 6 — Skill Icon DOM Throttle**: `UIManager.updateSkillIcons()` throttled to every 2nd frame via `_skillIconFrame` counter. Halves DOM update frequency for skill cooldown icons.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/map.js (static grid, lighting throttle, zone aura throttle)
 ✅ MODIFIED: js/entities/base.js (_steerAroundObstacles uses queryNearby)
@@ -770,9 +934,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.39.0 — UIUX Smooth Pass: Motion Tokens, Parallax, Tutorial Throttle, Cooldown Smoothing
+
 *Released: March 23, 2026*
 
 ### ✨ UX — `css/main.css`
+
 - **Motion Tokens**: Added `:root` CSS variables `--ease-tactical`, `--ease-organic`, `--ease-flow`, `--dur-fast/med/slow`, `--ls-tactical/title/header` for design-system-wide consistency
 - **Interaction Prompts**: `#db-prompt`, `#console-prompt`, `#shop-prompt` now have organic entry animation (`dbAppear`/etc.) and slower 3s pulse (was 1.5s) — less "robotic", more "handmade"
 - **Char Card Transitions**: Replaced `all 0.28s` with specific property transitions using motion tokens; avatar lifts on hover `translateY(-4px) scale(1.06)` for parallax depth effect
@@ -783,13 +949,16 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - `prefers-reduced-motion` blanket rule covers all new animations (existing rule extended)
 
 ### ⚡ Performance — `js/tutorial.js`
+
 - **Arrow Throttle**: `_updateArrow()` throttled to ~20Hz (50ms interval) instead of 60Hz — eliminates ~40 `getBoundingClientRect` calls per second
 - **Highlight Cache**: `_applyUIHighlight()` now caches the current highlighted element; only clears/re-adds `.tut-highlighted` class when the target actually changes, not every frame
 
 ### ✨ UX — `js/ui.js`
+
 - **Cooldown Arc Smoothing**: `_setCooldownVisual()` now lerps the conic-gradient arc progress toward the target value each frame (LERP=0.18) using a `WeakMap` per icon — eliminates jitter on the cooldown arc visual
 
 ### Files touched
+
 ```
 ✅ MODIFIED: css/main.css (motion tokens, parallax, pulse timing, focus-visible)
 ✅ MODIFIED: js/tutorial.js (arrow throttle, highlight cache)
@@ -801,20 +970,24 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.38.10 — Rendering Performance: shadowBlur Reduction + Viewport Culling
+
 *Released: March 23, 2026*
 
 ### ⚡ Performance — `EnemyRenderer.js` (`js/entities/enemy.js`)
+
 - Reduced `shadowBlur` across all enemy types by ~50%: hit flash 10→8, sticky pip 5→3, ignite ring 14→10/6→4, body glow 12→6, visor slits 12→6/10→5, front hand/spike 6→3/8→4, back hand 3→2
 - Tank: threat glow 16→8, heat slit 10x→5x/4→2, shield 10x→5x, shield boss 8→4, back gauntlet 5→3
 - Mage: aura 16→8, core 16x→8x/6x→3x, blaster 10x→5x/8→4, orbs 10x→5x/6→3
 - PowerUp icon: 20→10
 
 ### ⚡ Performance — `PlayerRenderer.js` (`js/rendering/PlayerRenderer.js`)
+
 - **Added viewport culling** to `PlayerRenderer.draw()` — players fully off-screen are skipped entirely (saves all draw calls for off-screen players)
 - Reduced `shadowBlur` in all shared helpers: contact warning ring 20→10, energy shield 15+5x→8+3x/8→4, low-HP glow 18+8x→10+4x, hit flash 18/8→10/5 and 12→6
 - Auto aura: ghost silhouettes 14/8→8/4, inner ring 30/14→16/8, symbol ring 22/11→12/6
 
 ### ⚡ Performance — `BossRenderer.js` (`js/rendering/BossRenderer.js`)
+
 - Low-HP glow ring 20+6x→12+4x (shared across all bosses)
 - BossDog eye glow 16x→8x
 - Manop: heal aura 28x→14x, log457 active 30x→15x, ultimate wind-up 28x→14x
@@ -823,6 +996,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - Glasses glow 14→8, ruler glow 12x→6x
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/entities/enemy.js, js/rendering/PlayerRenderer.js, js/rendering/BossRenderer.js
 ✅ MODIFIED: sw.js (v3.38.10), Markdown Source/CHANGELOG.md, Markdown Source/Information/PROJECT_OVERVIEW.md
@@ -831,25 +1005,31 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.38.9 — Balance Nerf + Domain Expansion Performance & Visibility
+
 *Released: March 23, 2026*
 
 ### ⚡ Performance — Domain Expansion (Manop boss)
+
 - **`boss_attacks_manop.js`:** `CELL_SIZE` 60→90 — reduces grid cell count ~55% (from ~1900 to ~870 cells inside arena circle)
 - **`boss_attacks_manop.js`:** `RAIN_COLS` 32→20 — fewer matrix rain columns each frame
 - **`boss_attacks_manop.js`:** `SHADOW_BUDGET` 80→40 — halves max shadow-blur draws per frame (most expensive canvas op)
 - **`boss_attacks_manop.js`:** Tendril count 8→4, rune symbols 12→6 — fewer decorative elements during active phase
 
 ### 👁️ Visibility — Domain Expansion dark overlay
+
 - **`boss_attacks_manop.js`:** Dark overlay `globalAlpha` stays at 0.55 (confirmed value) — player character remains visible during Domain Expansion
 
 ### ⚖️ Balance — Player nerf (feedback: "ตัวละคร OP ไม่ตายเลย")
+
 - **Kao:** `passiveLifesteal` 0.02→0.01, `maxHpPerLevel` 8→6 (Lv12 HP: 207→185), `phantomBlinkDmgMult` 1.4→1.2
 - **Auto:** `hp/maxHp` 230→190, `standDamageReduction` 0.40→0.30, `heatHealOnKillWanchai` 0.05→0.03, `heatHpDrainOverheat` 5→8 HP/s
 
 ### ⚔️ Balance — Boss buff (harder challenge)
+
 - **Manop all attacks +~25%:** `contactDamage` 30→38, `chalkDamage` 13→16, `ultimateDamage` 35→44, `slamDamage` 60→75, `graphDamage` 70→88, `barkDamage` 32→40
 
 ### Files touched
+
 ```
 ✅ MODIFIED: js/entities/boss/boss_attacks_manop.js, js/config.js, sw.js (v3.38.9)
 ✅ MODIFIED: Markdown Source/CHANGELOG.md, Markdown Source/Information/PROJECT_OVERVIEW.md
@@ -858,14 +1038,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.38.8 — A11y: Viewport zoom, scrollbar compat, dev console input
+
 *Released: March 23, 2026*
 
 ### Accessibility and compatibility
+
 - **`index.html`:** Viewport meta no longer sets `maximum-scale=1` or `user-scalable=no` so pinch-zoom works (WCAG / Edge Tools meta-viewport rule).
 - **`index.html`:** Removed `autocapitalize` from `#console-input` (not supported on Safari; behavior unchanged for command typing).
 - **`css/main.css`:** Wrapped `#console-output` `scrollbar-width` / `scrollbar-color` in `@supports (scrollbar-width: thin)` so engines without support skip those declarations cleanly.
 
 ### Files touched
+
 ```
 ✅ MODIFIED: index.html, css/main.css, sw.js (v3.38.8)
 ✅ MODIFIED: Markdown Source/CHANGELOG.md, Markdown Source/Information/PROJECT_OVERVIEW.md
@@ -874,30 +1057,37 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.38.7 — Firebase (Spark), Leaderboard UI, Campus Map v3, Docs
+
 *Released: March 23, 2026*
 
 ### ☁️ Firebase & persistence (Spark / no Cloud Functions)
+
 - **Client SDK:** `npm` + `esbuild` → `js/firebase-bundle.js` from `js/firebase-init.js` (Auth anonymous + Google link/popup, Firestore, Analytics, Remote Config).
 - **Cloud save:** `js/systems/CloudSaveSystem.js` syncs local save + tutorial flag to `users/{uid}` with merge semantics; hooks from `utils.js` / `tutorial.js`.
 - **Leaderboard:** `js/systems/LeaderboardUI.js` + menu controls; score submit uses Firestore under **Security Rules** (Google identity + bounds + monotonic score updates) — suitable for Spark without deploying Functions.
 - **Project aux:** `firestore.rules`, `firebase.json`, `.firebaserc`, `GITHUB_PAGES_FIREBASE.md`; `functions/` retained as optional reference only.
 
 ### 🗺️ Campus map generation
+
 - **MapSystem:** `_isClearZone` predicate for spawn and landmark approaches; `createCluster` center-anchored grids with jitter; zone-aligned placement refactor.
 - **Config:** `BALANCE.map.objectSizes` table for generator footprint lookup.
 
 ### 🎮 Game loop & UI wiring
+
 - **Analytics events:** `game_start`, `game_end`, `high_score` from `game.js` when Firebase is present.
 - **Styles:** Google auth row, leaderboard modal (`css/main.css`); `index.html` script order updated for Firebase + new systems.
 
 ### 📚 Documentation
+
 - **PROJECT_OVERVIEW.md:** Release alignment line; campus map generation subsection (architecture, no numeric tuning).
 - **SKILL.md / mtc-game-conventions.md / mtc-rendering.md:** Synced with load order, coupling, and rendering pipeline.
 
 ### 🧹 Repository hygiene
+
 - Removed stray artifact files (`_diff.txt`, `_diff_cached.txt`, `_status.txt`, `commit_msg.txt`).
 
 ### 📁 Files touched (summary)
+
 ```
 ✅ ADDED/MODIFIED: package.json, package-lock.json, firebase.json, firestore.rules, .firebaserc, GITHUB_PAGES_FIREBASE.md
 ✅ ADDED: js/firebase-init.js, js/firebase-bundle.js, js/systems/CloudSaveSystem.js, js/systems/LeaderboardUI.js, functions/*, .agents/.../SKILL.md
@@ -909,15 +1099,19 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.38.2 — System Reversion & Architecture Checklist
+
 *Released: March 21, 2026*
 
 ### ⏪ System Reversion
+
 - **Full Codebase Revert:** Reverted all game logic, rendering, and configurations back to the stable `v3.38.1` state to resolve persistent bugs introduced in later versions.
 
 ### 📝 Architecture & Rules
+
 - **Architecture Consistency Checklist:** Created a universal `.agents/skills/architecture-consistency-checklist/SKILL.md` to prevent future documentation drift and ensure strict update/draw separation and load-order invariants.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: All core files restored to v3.38.1 state
 ✅ ADDED: .agents/skills/architecture-consistency-checklist/SKILL.md
@@ -928,18 +1122,22 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.38.1 — UI & Compatibility Polish (CSS Prefixes & Viewport)
+
 *Released: March 16, 2026*
 
 ### 🎨 UI & CSS Compatibility
+
 - **WebKit Prefixing:** Added `-webkit-clip-path` to all elements using `clip-path` for better compatibility with Safari and mobile browsers.
 - **Backdrop Filter Polish:** Verified and added missing `-webkit-backdrop-filter` prefixes for consistent blur effects across devices.
 - **Viewport Optimization:** Updated `index.html` viewport meta tag to `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover` to prevent accidental zooming and improve mobile layout.
 
 ### 🧹 Code Cleanup & Refactoring
+
 - **Inline Style Extraction:** Removed 17 instances of inline `style=` attributes from `index.html`.
 - **CSS Utility Classes:** Introduced `.hud-labels` and `.stat-bar-fill-[percent]` utility classes in `main.css` to manage UI styles centrally.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: css/main.css (Prefixes, utility classes)
 ✅ MODIFIED: index.html (Viewport meta, inline styles removal)
@@ -950,9 +1148,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.38.0 — Environment: Arena Layout Overhaul & Visual Polish
+
 *Released: March 16, 2026*
 
 ### 🗺️ Arena & Map Layout
+
 - **Anti-Trap Geometry (Jittered Grid):** Implemented random jitter for all environmental objects to break straight-line channels.
   - Servers (±18px), Bookshelves (±14px), Desks (±12px), Datapillars/Trees (±10-12px).
 - **Tactical Cover:** Added 4 center-cover objects (Servers, Vending, Datapillar) at r=300-400px to provide depth near spawn without blocking.
@@ -964,13 +1164,15 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - **Destructibles:** Increased explosive barrel count (8→12) and reduced `tooClose` spawn distance (60→45px).
 
 ### 🎨 Visual Enhancements
+
 - **Zone Visibility:** Significantly boosted floor alpha for Server Farm (x2.3), Library (x2), Courtyard (x1.9), and Lecture Halls (x3).
-- **UI & Attention Polish:** 
+- **UI & Attention Polish:**
   - Dimmed circuit path brightness (glowAlpha 0.10, coreAlpha 0.65) to focus attention on zones.
   - Brightened Bookshelf frames (#92400e) for better visibility during Fog waves.
   - Boosted Aura/Beacon alpha (inner 0.40, rim 0.45) for better long-range navigation.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/map.js (Layout logic, jitter, object placement)
 ✅ MODIFIED: js/config.js (Visual constants, zone alpha, colors)
@@ -982,13 +1184,16 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.37.1 — Docs: Fast Patch Efficiency Rule & Command Update
+
 *Released: March 15, 2026*
 
 ### 🛠️ Workflow & Automation
+
 - **Efficiency Rule (Fast Patch):** Added a new rule to `working-standards.md` to skip manual file scanning when the user provides patch details directly in the command. This improves speed and reduces token consumption.
 - **Command Update:** Updated `commit-push.md` to include a template for users to provide "Patch Details" for faster commit processing.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: .agents/skills/mtc-game-skills_claude/working-standards.md
 ✅ MODIFIED: Markdown Source/Command/commit-push.md
@@ -999,9 +1204,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.37.0 — Balance: Big-Balancing Session (Characters & Bosses)
+
 *Released: March 15, 2026*
 
 ### ⚖️ Gameplay Balancing
+
 - **Auto (AutoPlayer)**:
   - Reduced `wanchaiDamage` from 24 to 18 (HOT DPS nerf).
   - Reduced `standCritBonus` from 0.18 to 0.10 (OVERHEAT DPS nerf).
@@ -1019,15 +1226,18 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Reduced Mage enemy HP scaling (`hpPerWave`) from 0.25 to 0.22.
 
 ### 👹 Boss & Enemy Adjustments
+
 - **First Boss (Kru First)**:
   - Refactored constructor to use `BALANCE.boss.first` config values (`hpBaseMult`, `advancedHpMult`, etc.).
   - Reduced effective HP: Wave 6 (~15% reduction) and Wave 12 (~47% reduction).
   - Reduced `PorkSandwich.damage` from 160 to 120.
 
 ### 🛠️ Maintenance
+
 - **Internal Tools**: Updated AI working standards and reorganized agent skills.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/config.js (Big-Balancing constants)
 ✅ MODIFIED: js/entities/boss/FirstBoss.js (Config-driven scaling)
@@ -1040,9 +1250,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.36.0 — Mechanics: Pat Perfect Parry & Reflect Overhaul
+
 *Released: March 15, 2026*
 
 ### ⚔️ Combat Mechanics (Pat Player)
+
 - **Perfect Parry System**: Tapping R-Click within 0.15s now triggers a Perfect Parry.
   - **Rewards**: ×4 Reflect Damage (vs ×2 for hold), 20 Energy restore, and 0.4s I-Frames.
   - **Risk**: Missing the window results in a full cooldown with no guard active.
@@ -1051,10 +1263,12 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - **I-Frame Integration**: Added `_invincibleTimer` for Pat, triggered by point-blank Iaido executes and Perfect Parries.
 
 ### 🛠️ Core Systems
+
 - **VFX System Update**: `specialEffects.update()` now receives the `boss` reference to allow interaction with boss-spawned entities (like DeadlyGraph).
 - **Projectile System**: Standardized `tryReflectProjectile` calls within `ProjectileManager` to use centralized config values.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/config.js (Pat balance & reflect multipliers)
 ✅ MODIFIED: js/entities/player/PatPlayer.js (Perfect Parry & Invincibility logic)
@@ -1068,17 +1282,20 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.35.1 — UI/UX: HUD Emojis & Visual Polish
+
 *Released: March 14, 2026*
 
 ### 🎨 UI & HUD Enhancement
+
 - **Centralized HUD Emojis**: Migrated all skill and action emojis to `GAME_TEXTS.hudEmoji` in `config.js` for easier customization.
 - **Dynamic Tooltip Emojis**: Implemented `UIManager.patchTooltipEmojis()` to synchronize character select tooltips with centralized config.
 - **Eat Rice Visuals**: Added a pulsing glow effect (`eat-buff-active`) and a countdown timer to Poom's rice buff icon.
 - **Tooltip Position Fix**: Changed skill tooltips to `position: fixed` to resolve clipping issues on mobile and high-zoom layouts.
 
 ### ⚔️ Combat & Visuals
+
 - **Poom Muzzle Correction**: Fixed muzzle spawn coordinates for Poom's Gatling Rice to match the weapon's barrel position.
-- **Pat Visual Polish**: 
+- **Pat Visual Polish**:
   - Added `_meleeVisualStep` for distinct combo slash shapes.
   - Implemented `_reflectFlashTimer` for a visual burst on successful Blade Guard reflects.
   - Added speed streaks behind Pat during high-speed movement and dashing.
@@ -1086,6 +1303,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - **Kao Portrait Update**: Cleaned up SVG path data in Kao's character select portrait.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/config.js (hudEmoji centralization)
 ✅ MODIFIED: js/ui.js (UIManager emoji logic, Eat Rice polish, portrait cleanup)
@@ -1102,9 +1320,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.35.0 — Architecture: Performance Audit Phase 1 (Invariants)
+
 *Released: March 13, 2026*
 
 ### ⚡ Performance & Optimization
+
 - **Standardized Performance Invariants**: Implemented Tier 1 performance rules across all high-impact files (`enemy.js`, `effects.js`, `ui.js`, `weapons.js`, `game.js`).
 - **Zero-Allocation Rendering**: Replaced all template literals and string concatenations in `draw()` paths with `ctx.globalAlpha` and solid hex/RGB strings to eliminate GC stutter.
 - **Viewport Culling**: Standardized viewport culling logic in `Decal.draw()`, `EnemyRenderer.draw()`, and `CanvasHUD` radar systems.
@@ -1112,14 +1332,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - **Memory Reuse**: Implemented reusable buffers for entity processing in `game.js` to avoid frame-by-frame allocations.
 
 ### 🗺️ Map & World
+
 - **Citadel Corridor Clearance**: Moved trees and vending machines out of the "Citadel approach corridor" (`x∈[-200,200], y∈[-500,-340]`) to prevent collision blocking.
 - **Updated Documentation**: Added `PERF_PLAN.md` to track the ongoing performance audit status.
 
 ### 📝 Documentation & Rules
+
 - **PROJECT_OVERVIEW.md**: Added "Citadel Approach Corridor" to MTC Room section and added `PERF_PLAN.md` to file structure.
 - **SKILL.md**: Added `PERF_PLAN.md` to §13 checklist and formalized §19 Performance Invariants.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/config.js (Formatting & WAVE_SCHEDULE update)
 ✅ MODIFIED: js/effects.js (Performance Audit: Decal culling, swap-and-pop)
@@ -1137,14 +1360,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.34.2 — Documentation: Full JSDoc Header Standardization
+
 *Released: March 13, 2026*
 
 ### 📝 Documentation & Code Quality
+
 - **Standardized JSDoc Headers**: Completed the project-wide documentation audit by adding structured module-level JSDoc headers to ALL remaining JavaScript files. Headers include load order, internal Table of Contents (TOC) with line references, and critical pitfall warnings.
 - **Project Structure Update**: Migrated all core documentation files (`PROJECT_OVERVIEW.md`, `CHANGELOG.md`, `walkthrough.md`, `commit-push.md`) to the `Markdown Source/` directory for better organization.
 - **Architecture Section**: Updated `PROJECT_OVERVIEW.md` to include "Module-level JSDoc Headers" as a key architectural pattern for improved AI assistant navigation.
 
 ### 🛡️ Bug Fixes & Refactoring
+
 - **WaveManager Bug Fixes**:
   - **B1 [CRITICAL]**: Fixed Glitch wave state synchronization between `window` and `GameState`.
   - **B2 [CRITICAL]**: Fixed premature wave clearing during trickle spawning by exposing `isTrickleActive`.
@@ -1152,6 +1378,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - **B4 [MINOR]**: Reset fog drift accumulation in `_deactivateWaveEvent()`.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/config.js (Full JSDoc Header)
 ✅ MODIFIED: js/weapons.js (Full JSDoc Header)
@@ -1183,16 +1410,20 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.34.1 — Documentation: JSDoc Headers & Stealth Logic Fix
+
 *Released: March 13, 2026*
 
 ### 📝 Documentation & Code Quality
+
 - **Standardized JSDoc Headers**: Added comprehensive module headers for `js/game.js` and `js/entities/player/KaoPlayer.js` including load order, internal TOC, and critical pitfalls.
 - **Audit Update**: Updated `mtc-game-conventions.md` (SKILL.md) priority queue to reflect completed headers.
 
 ### 🛡️ Bug Fixes & Refactoring
+
 - **Stealth Property Fix**: Corrected property name from `isFreeStealthy` to `isFreeStealthActive` in `PlayerRenderer.js` to match the implementation in `KaoPlayer.js`. This fixes footstep rendering and clone transparency during free stealth.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/game.js (Header Documentation)
 ✅ MODIFIED: js/entities/player/KaoPlayer.js (Header Documentation)
@@ -1205,19 +1436,23 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.34.0 — Performance: Static Bitmap Caching & Rendering Refactor
+
 *Released: March 12, 2026*
 
 ### 🚀 Performance & Rendering
+
 - **Static Bitmap Caching**: Introduced `OffscreenCanvas` caching in `BossRenderer` and `PlayerRenderer` to cache static body parts. This significantly reduces redundant draw calls and GPU state switching by pre-rendering static elements.
 - **Improved Camera Scaling**: Refactored `PlayerRenderer` to use `window.camera.zoom` for camera scale detection, with a robust fallback for legacy camera systems.
 - **Rendering Dispatcher Optimization**: Cleaned up dispatcher logic and added safety resets to prevent `shadowBlur` leaks.
 
 ### 📝 Documentation & Tooling
+
 - **PROJECT_OVERVIEW.md**: Updated file structure table and architecture section to reflect new rendering patterns.
 - **SKILL.md (mtc-game-conventions)**: Added `mtc-rendering.skill` to the new content checklist.
 - **New Skills/Instructions**: Added `mtc-rendering.skill` for specialized rendering logic and `commit-push.md` for standardized commit workflows.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/rendering/BossRenderer.js (Static Bitmap Cache)
 ✅ MODIFIED: js/rendering/PlayerRenderer.js (Camera scale & caching refactor)
@@ -1232,13 +1467,16 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.33.3 — Documentation Audit & Version Bump
+
 *Released: March 12, 2026*
 
 ### 📝 Documentation Audit
+
 - **Standardized JSDoc Headers**: Fully audited and updated headers for AI, Map, Rendering, and Tutorial systems to include load order, internal TOC, and critical pitfall warnings.
 - **Improved Traceability**: Standardized `window.*` export patterns and established clear inheritance/dependency chains in module headers.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/ai/UtilityAI.js
 ✅ MODIFIED: js/ai/EnemyActions.js
@@ -1257,14 +1495,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.33.2 — Performance: Terrain Rendering & GC Reduction
+
 +*Released: March 12, 2026*
 +
 +### 🚀 Performance Optimizations
-+- **Terrain Rendering Engine**: 
-+  - **Pre-computed Geometry**: Moved hex corner calculations outside the draw loop to eliminate ~1,200 trig calls/frame.
-+  - **String Formatting Fix**: Replaced heavy `.replace('{a}', ...)` string manipulation with template literals using pre-parsed RGB strings, eliminating hundreds of allocations per frame.
-+  - **Loop Hoisting**: Cached critical config properties before loop entry to minimize property lookup overhead.
-+
++- **Terrain Rendering Engine**:
+
+- - **Pre-computed Geometry**: Moved hex corner calculations outside the draw loop to eliminate ~1,200 trig calls/frame.
+- - **String Formatting Fix**: Replaced heavy `.replace('{a}', ...)` string manipulation with template literals using pre-parsed RGB strings, eliminating hundreds of allocations per frame.
+- - **Loop Hoisting**: Cached critical config properties before loop entry to minimize property lookup overhead.
+-
+
 +### 📁 Files Modified
 +```
 +✅ MODIFIED: js/map.js (Major performance refactor in drawTerrain)
@@ -1301,20 +1542,22 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 *Released: March 12, 2026*
 
 ### 🏗️ Architecture & Performance (Phase 1.1 - 1.3)
+
 - **ECS Migration**: Extracted `HealthComponent` from base entity logic. `EnemyBase` and `PlayerBase` now use composition with Proxy getters for backward compatibility, drastically cleaning up the core tick cycle.
-- **Zero-GC Optimization**: 
+- **Zero-GC Optimization**:
   - Eliminated per-frame array allocations in `EnemyBase.tickStatuses()` by introducing a shared scratch array (`this._statusToRemove`).
   - Removed unused `Date.now()` allocations from `_standAura_update()` ghost frame spawning.
 - **Data-Driven Prep (JSON)**: Decoupled wave timing data from `BALANCE` into a centralized `window.WAVE_SCHEDULE`. `WaveManager` now lazy-loads this structure, laying the groundwork for asynchronous JSON fetching.
-- **Scoped Web Worker Integration**: 
+- **Scoped Web Worker Integration**:
   - Offloaded the heavy predictive ring-buffer math of `PlayerPatternAnalyzer` to a dedicated Web Worker (`analyzer-worker.js`).
   - Built `WorkerBridge.js` to handle asynchronous message passing and graceful main-thread fallbacks.
-- **GPU Throttling**: 
+- **GPU Throttling**:
   - Implemented `isOnScreen(200)` culling in `BossRenderer` to skip drawing off-screen aura rings.
   - Added strict `ctx.shadowBlur = 0` guards to prevent expensive shadow state leaks between draw calls.
   - Throttled the `drawTerrain` circuit packet animation from 60fps to 30fps.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/entities/base.js (HealthComponent, Zero-GC updates)
 ✅ MODIFIED: js/entities/enemy.js (ECS integration, Status effect GC fixes)
@@ -1332,15 +1575,18 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.32.3 — Remove README-info References & Version Doc Sync
+
 *Released: March 12, 2026*
 
 ### 📚 Documentation & Workflow Updates
+
 - **README-info.md removed from project:** Removed all references to `README-info.md` across documentation and workflow files (file no longer exists in repo).
 - **PROJECT_OVERVIEW.md:** Removed README-info from File Structure table; updated version bump list and Commit & Push Workflow to only reference sw.js, CHANGELOG.md, and PROJECT_OVERVIEW.md.
 - **Cursor / Windsurf:** Updated `.cursor/commands/commit-push.md`, `.cursor/rules/version-bump.mdc`, `.windsurfrules` to drop README-info from version bump steps and doc lists.
 - **mtc-game-conventions.md (§15):** Version sync list is now sw.js → CHANGELOG.md → PROJECT_OVERVIEW.md only.
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: PROJECT_OVERVIEW.md (File Structure, version list, workflow, Recent Changes)
 ✅ MODIFIED: .cursor/commands/commit-push.md (STEP 2.6)
@@ -1353,15 +1599,18 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.32.2 — PlayerRenderer Parameter Enhancement & Rendering System Consistency
+
 *Released: March 11, 2026*
 
 ### 🎨 Rendering System Improvements
+
 - **Parameter Enhancement**: Added `shadowScaleX`, `shadowScaleY`, `shadowAlphaMod`, `footL`, `footR` parameters to `_getLimbParams()` destructuring across all player rendering methods
 - **Standardized Parameter Handling**: Enhanced consistency in `_drawAuto`, `_drawPoom`, `_drawPat`, and `_drawBase` methods with unified limb parameter access
 - **Ground Shadow & Foot Rendering**: Improved parameter passing for enhanced shadow scaling and foot positioning calculations
 - **Code Consistency**: Standardized formatting in PlayerRenderer.js for better maintainability
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/rendering/PlayerRenderer.js (+20 lines - parameter destructuring enhancement)
 ✅ MODIFIED: PROJECT_OVERVIEW.md (updated Recent Changes)
@@ -1371,9 +1620,11 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.32.1 — Animation System Documentation & Rendering Architecture Updates
+
 *Released: March 11, 2026*
 
 ### 📚 Documentation Enhancements
+
 - **Animation State Machine (§16)**: Added comprehensive documentation for the `_anim` system used across all player characters
 - **Rendering Architecture Updates**: Enhanced §8 Rendering Architecture with detailed layer order, helper methods, and limb parameter system
 - **Shared Helper Methods**: Documented `_getLimbParams()`, `_drawGroundShadow()`, and `_drawGroundFeet()` functions
@@ -1381,6 +1632,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - **Per-Character Effects**: Detailed rendering effects for skillT timers across all characters
 
 ### 🎨 Animation System Details
+
 - **_anim Object Structure**: Documented state machine with timers (shootT, hurtT, dashT, skillT)
 - **Smooth Movement**: Added smoothMoveT and smoothAngle lerp system for fluid animations
 - **Character-Specific Triggers**: Complete table of where each character sets animation timers
@@ -1388,12 +1640,14 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - **Guard Patterns**: Safe access patterns for _anim object properties
 
 ### 🔧 Technical Architecture
+
 - **Layer Order Updates**: Clarified Body (LAYER 1) and Weapon (LAYER 2) rendering with new transforms
 - **Pre-Draw System**: Documented ground shadow and feet rendering before main layers
 - **Limb Parameter System**: Centralized motion calculation with character-specific speed caps
 - **Animation Decay Rates**: Specified timer decay speeds (shootT ×5/s, hurtT ×3/s, dashT ×4/s)
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: .agents/skills/MTC-Game's skills for Claude/mtc-game-conventions.md (+55 lines - §16 Animation System)
 ✅ MODIFIED: PROJECT_OVERVIEW.md (updated Recent Changes)
@@ -1403,14 +1657,17 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.32.0 — Player Code Standardization & HUD Improvements
+
 *Released: March 11, 2026*
 
 ### 🔧 Code Quality & Standardization
+
 - **Universal Code Formatting**: Standardized all player files to use double quotes, consistent spacing, and proper line breaks
 - **Rendering System Refactor**: Added shared helper methods `_getLimbParams()` and `_drawGroundShadow()` for consistency
 - **HUD System Improvements**: Enhanced `updateUI()` methods across all characters with proper cooldown visual handling
 
 ### 🐛 Bug Fixes & Enhancements
+
 - **PlayerBase.js**: Fixed obstacle proximity detection, mobile joystick input handling, and passive unlock display
 - **AutoPlayer.js**: Fixed Wanchai Stand meter display, heat tier HUD updates, and config path resolution
 - **KaoPlayer.js**: Added missing `updateUI()`, fixed projectile spawning at barrel tip, improved lifesteal mechanics
@@ -1419,12 +1676,14 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 - **PlayerRenderer.js**: Refactored limb parameter handling, added shoot arm lift animations, improved shadow rendering
 
 ### 🎨 Visual & Animation Improvements
+
 - **Shared Limb System**: Centralized movement calculations for consistent animations across all characters
 - **Enhanced Shoot Animations**: Added arm lift and reach parameters for more realistic weapon handling
 - **Improved Shadow Rendering**: Dynamic shadow scaling based on movement state and special effects
 - **Better Hit Feedback**: Enhanced hurt push, recoil, and visual impact responses
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/entities/player/PlayerBase.js (+421 lines - obstacle detection, mobile fixes)
 ✅ MODIFIED: js/entities/player/AutoPlayer.js (+429 lines - HUD fixes, config path)
@@ -1439,21 +1698,25 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.31.11 — Documentation Update: PatPlayer Critical Implementation Notes
+
 *Released: March 11, 2026*
 
 ### 📚 Documentation Enhancements
+
 - **PatPlayer Critical Pitfalls**: Added essential implementation warnings for Blade Guard collision routing
 - **Katana Rendering Guidelines**: Documented proper context save/restore hierarchy for hand positioning
 - **Collision Routing Fix**: Clarified that `proj.team` must be set alongside `proj.owner` for proper collision detection
 - **Transform Context**: Specified that katana hands must be drawn inside katana local transform context
 
 ### ⚠️ Critical Implementation Notes Added
+
 - **Blade Guard Speed Penalty**: Documented implementation in PlayerBase.js with 0.6x speed multiplier
 - **Projectile Reflection**: Added warning about setting both `proj.team='player'` AND `proj.owner='player'`
 - **Katana Hand Positioning**: Specified local space coordinates within ctx.save() block
 - **Iaido Time Management**: Confirmed TimeManager integration in damage resolution
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: PROJECT_OVERVIEW.md (+2 lines - PatPlayer critical notes)
 ✅ MODIFIED: sw.js (v3.31.11)
@@ -1462,10 +1725,12 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 ---
 
 ## v3.31.10 — Visual Overhaul: MageEnemy & Auto Weapon Enhancements
+
 *Released: March 11, 2026*
 
 ### 🎨 Visual Enhancements
-- **MageEnemy Complete Redesign**: 
+
+- **MageEnemy Complete Redesign**:
   - Added floating animation with hover bob effect
   - Implemented arcane outer aura ring with spinning accent
   - Created emerald gradient body with diamond silhouette
@@ -1482,10 +1747,12 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
   - Upgraded core energy cell with hexagonal design
 
 ### 🔧 Code Quality
+
 - **PlayerRenderer.js**: Standardized code formatting and style consistency
 - **Performance**: Optimized rendering loops with proper context save/restore management
 
 ### 📁 Files Modified
+
 ```
 ✅ MODIFIED: js/entities/enemy.js (+447 lines - MageEnemy rendering overhaul)
 ✅ MODIFIED: js/weapons.js (+399 lines - Auto weapon visual enhancement)
@@ -1498,7 +1765,7 @@ All 9 expanded enemies are now playtest-ready and verified at runtime.
 
 ## v3.31.9 — Documentation Update: Critical Pitfalls & Bug Fixes
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 📚 Documentation Enhancements
 
@@ -1548,7 +1815,7 @@ _Released: March 11, 2026_
 
 ## v3.31.8 — Combat Polish: Blade Guard & Katana Animation
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🛡️ Blade Guard Team Fix
 
@@ -1605,7 +1872,7 @@ _Released: March 11, 2026_
 
 ## v3.31.7 — Input & Rendering Polish: Katana System Refinement
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🖱️ Input System Improvements
 
@@ -1676,7 +1943,7 @@ _Released: March 11, 2026_
 
 ## v3.31.6 — Combat FX Enhancement: Slash Arc System
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### ⚔️ Dynamic Slash Arc Effects
 
@@ -1739,7 +2006,7 @@ _Released: March 11, 2026_
 
 ## v3.31.5 — Visual Refinement: Pat Ronin Authenticity
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 Traditional Ronin Design Overhaul
 
@@ -1803,7 +2070,7 @@ _Released: March 11, 2026_
 
 ## v3.31.4 — Rendering Restoration: Pat Character Detail
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 Visual Identity Restoration
 
@@ -1860,7 +2127,7 @@ _Released: March 11, 2026_
 
 ## v3.31.3 — Rendering Refactor: Pat Character Simplification
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 Rendering System Optimization
 
@@ -1908,7 +2175,7 @@ _Released: March 11, 2026_
 
 ## v3.31.2 — Integration Fixes: Pat Character System
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🔧 Character System Integration
 
@@ -1957,7 +2224,7 @@ _Released: March 11, 2026_
 
 ## v3.31.1 — UI Polish: Pat Character Card & Tooltips
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 Character Selection UI Enhancements
 
@@ -1991,7 +2258,7 @@ _Released: March 11, 2026_
 
 ## v3.31.0 — NEW CHARACTER: Pat (แพท) - Samurai Ronin
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### ⚔️ New Playable Character: Pat (Samurai Ronin)
 
@@ -2070,7 +2337,7 @@ _Released: March 11, 2026_
 
 ## v3.30.10 — Character Selection UI Enhancement
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 UI & Visual Improvements
 
@@ -2093,7 +2360,7 @@ _Released: March 11, 2026_
 
 ## v3.30.13 — Character Selection UI Enhancements
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 Visual Improvements
 
@@ -2117,7 +2384,7 @@ _Released: March 11, 2026_
 
 ## v3.30.12 — Numeric Literals Cleanup & Balance
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🔧 Code Quality Improvements
 
@@ -2142,7 +2409,7 @@ _Released: March 11, 2026_
 
 ## v3.30.11 — Documentation Updates
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 📝 Documentation Corrections
 
@@ -2175,7 +2442,7 @@ _Released: March 11, 2026_
 
 ## v3.30.10 — Character Balance Adjustments
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎯 Balance Changes
 
@@ -2224,7 +2491,7 @@ _Released: March 11, 2026_
 
 ## v3.30.9 — AutoPlayer Heat Damage Synchronization Fix
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🔧 Balance & Consistency
 
@@ -2246,7 +2513,7 @@ _Released: March 11, 2026_
 
 ## v3.30.8 — Wave Event Announcement Integration
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 UI/UX Enhancements
 
@@ -2266,7 +2533,7 @@ _Released: March 11, 2026_
 
 ## v3.30.7 — Service Worker Cache Fix
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -2278,7 +2545,7 @@ _Released: March 11, 2026_
 
 ## v3.30.6 — Auto Player Rendering Refactoring
 
-_Released: March 11, 2026_
+*Released: March 11, 2026*
 
 ### 🎨 Rendering System Improvements
 
@@ -2304,7 +2571,7 @@ _Released: March 11, 2026_
 
 ## v3.30.5 — Boss Attack Architecture Refactoring
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🏗️ Architecture Overhaul
 
@@ -2385,7 +2652,7 @@ _Released: March 10, 2026_
 
 ## v3.30.4 — Major Balance Patch
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### ⚖️ Global Balance Overhaul
 
@@ -2447,7 +2714,7 @@ _Released: March 10, 2026_
 
 ## v3.30.3 — Boss Attacks Safety Improvements
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🛡️ Stability & Safety Enhancements
 
@@ -2487,7 +2754,7 @@ _Released: March 10, 2026_
 
 ## v3.30.2 — Boss Class Alias Enhancement
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🏷️ Class Naming & Compatibility
 
@@ -2521,7 +2788,7 @@ _Released: March 10, 2026_
 
 ## v3.30.1 — AI System Code Quality Improvements
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🧠 AI System Enhancements
 
@@ -2569,7 +2836,7 @@ _Released: March 10, 2026_
 
 ## v3.30.0 — Boss Attacks Refactoring (Major Architecture Improvement)
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🏗️ Code Organization & Architecture
 
@@ -2613,7 +2880,7 @@ _Released: March 10, 2026_
 
 ## v3.29.9 — Global Variable References & Voice Bubble Namespacing Fix
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -2652,7 +2919,7 @@ _Released: March 10, 2026_
 
 ## v3.29.8 — Minimap Method Call Class Correction
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -2673,7 +2940,7 @@ _Released: March 10, 2026_
 
 ## v3.29.7 — Minimap Method Call Correction & Cache Cleanup
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -2699,7 +2966,7 @@ _Released: March 10, 2026_
 
 ## v3.29.6 — Minimap Method Call Bug Fix
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -2720,7 +2987,7 @@ _Released: March 10, 2026_
 
 ## v3.29.5 — Major Code Architecture Refactoring
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🏗️ Function Organization & Modularization
 
@@ -2795,7 +3062,7 @@ _Released: March 10, 2026_
 
 ## v3.29.4 — Character HUD Theming System Enhancement
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🎨 Personalized Character HUD Themes
 
@@ -2830,7 +3097,7 @@ _Released: March 10, 2026_
 
 ## v3.29.3 — Documentation Update
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 📝 Project Documentation Enhancement
 
@@ -2851,7 +3118,7 @@ _Released: March 10, 2026_
 
 ## v3.29.2 — Wave Announcement & Shop Timer Fixes
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🎬 Wave Announcement System Fix
 
@@ -2874,7 +3141,7 @@ _Released: March 10, 2026_
 
 ## v3.29.1 — Shop System Bug Fixes
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🛒 Shop System Fixes
 
@@ -2892,7 +3159,7 @@ _Released: March 10, 2026_
 
 ## v3.29.0 — Priority 2 & 3 Systems Implementation
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🎬 Cinematic Wave Announcement System
 
@@ -2960,7 +3227,7 @@ _Released: March 10, 2026_
 
 ## v3.28.1 — Priority 1 Mobile UI Improvements
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 📱 Mobile Experience Enhancements
 
@@ -2992,7 +3259,7 @@ _Released: March 10, 2026_
 
 ## v3.28.0 — AI Enhancement System (Major Gameplay Update)
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🧠 AI System Implementation
 
@@ -3055,7 +3322,7 @@ _Released: March 10, 2026_
 
 ## v3.27.11 — BGM Crossfade System (Audio Enhancement)
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 🎵 Audio System Improvements
 
@@ -3084,7 +3351,7 @@ _Released: March 10, 2026_
 
 ## v3.27.10 — Documentation Update (Next.js Skills Frontmatter)
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 📚 Documentation Improvements
 
@@ -3102,7 +3369,7 @@ _Released: March 10, 2026_
 
 ## v3.27.9 — Documentation Update (Debugging Section)
 
-_Released: March 10, 2026_
+*Released: March 10, 2026*
 
 ### 📚 Documentation Improvements
 
@@ -3123,7 +3390,7 @@ _Released: March 10, 2026_
 
 ## v3.27.8 — UI Language & Theme Updates
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🌐 Language Localization
 
@@ -3157,7 +3424,7 @@ _Released: March 9, 2026_
 
 ## v3.27.7 — UI Cooldown Bug Fixes
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🔄 Auto Character Cooldown Fixes
 
@@ -3186,7 +3453,7 @@ _Released: March 9, 2026_
 
 ## v3.27.6 — Visual Enhancements & Rendering Improvements
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🎨 Wall Rendering Overhaul
 
@@ -3230,7 +3497,7 @@ _Released: March 9, 2026_
 
 ## v3.27.5 — Major Map Refactor & Blocking Issues Fix
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🏰 MTC Citadel Approach Clearing
 
@@ -3270,7 +3537,7 @@ _Released: March 9, 2026_
 
 ## v3.27.4 — Map Layout Optimization & Shop System Simplification
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🗺️ Zone F.1 Database Layout Cleanup
 
@@ -3312,7 +3579,7 @@ _Released: March 9, 2026_
 
 ## v3.27.3 — MTC Game Map Position Adjustments
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🗺️ Database & Shop Position Refinement
 
@@ -3331,7 +3598,7 @@ _Released: March 9, 2026_
 
 ## v3.27.2 — MTC Game Map Refactor
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🗄️ Database & Shop Relocation
 
@@ -3355,7 +3622,7 @@ _Released: March 9, 2026_
 
 ## v3.27.1 — Map Reorganization & Spawn Fix
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🗺️ Critical Map Layout Fixes
 
@@ -3391,7 +3658,7 @@ _Released: March 9, 2026_
 
 ## v3.27.0 — Major Visual Upgrades
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🌟 Character Visual Enhancements
 
@@ -3419,7 +3686,7 @@ _Released: March 9, 2026_
 
 ## v3.26.9 — Comprehensive Game Enhancement
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🎨 Visual Enhancements
 
@@ -3455,7 +3722,7 @@ _Released: March 9, 2026_
 
 ## v3.26.8 — Boss Null Reference Crash Fix
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -3469,7 +3736,7 @@ _Released: March 9, 2026_
 
 ## v3.26.7 — ORA Text Timer System Fix
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -3483,7 +3750,7 @@ _Released: March 9, 2026_
 
 ## v3.26.6 — KaoPlayer Complete Bug Fixes
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -3515,7 +3782,7 @@ _Released: March 9, 2026_
 
 ## v3.26.5 — Character Bug Fixes
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -3553,7 +3820,7 @@ _Released: March 9, 2026_
 
 ## v3.26.4 — Auto Character Balance Rework
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### ⚖️ Balance Changes
 
@@ -3589,7 +3856,7 @@ _Released: March 9, 2026_
 
 ## v3.26.3 — Character Stat Accuracy & Documentation Update
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🔧 Bug Fixes
 
@@ -3621,7 +3888,7 @@ _Released: March 9, 2026_
 
 ## v3.26.2 — Enhanced Pause Modal UI Design
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🎨 UI/UX Improvements
 
@@ -3641,7 +3908,7 @@ _Released: March 9, 2026_
 
 ## v3.26.1 — Stand Rush Cooldown Fix
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -3653,7 +3920,7 @@ _Released: March 9, 2026_
 
 ## v3.26.0 — Complete Stand System Features Overhaul
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🔥 Feature 1: Heat System Overhaul
 
@@ -3711,7 +3978,7 @@ _Released: March 9, 2026_
 
 ## v3.25.6 — WanchaiStand Visual Rework & ORA Combo System
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🎨 Complete Visual Transformation — JoJo-Style WanchaiStand
 
@@ -3761,7 +4028,7 @@ _Released: March 9, 2026_
 
 ## v3.25.5 — Mongkhon Crown Rework
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 👑 Complete Crown Enhancement
 
@@ -3788,7 +4055,7 @@ _Released: March 9, 2026_
 
 ## v3.25.4 — Realistic Boxing Glove Rush System
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🥊 Complete Rush Fist Redesign
 
@@ -3819,7 +4086,7 @@ _Released: March 9, 2026_
 
 ## v3.25.3 — Rush Fist Advanced Rendering Fixes
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🥊 Rush Fist Rendering Advanced Fixes
 
@@ -3838,7 +4105,7 @@ _Released: March 9, 2026_
 
 ## v3.25.2 — Wanchai Stand Visual Fixes
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🥊 Rush Fist Rendering Fixes
 
@@ -3858,7 +4125,7 @@ _Released: March 9, 2026_
 
 ## v3.25.1 — Wanchai Stand Visual Refinements
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🥊 Rush Fist Rendering Improvements
 
@@ -3888,7 +4155,7 @@ _Released: March 9, 2026_
 
 ## v3.25.0 — Wanchai Stand Visual Enhancement
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🔥 Muay Thai Knee-Bend Animation System
 
@@ -3909,7 +4176,7 @@ _Released: March 9, 2026_
 ### 👑 OVERHEAT Flame Crown System
 
 - **Conditional Activation:** 7 flame tongues appear only when heat level ≥ 3 (OVERHEAT state)
-- **Individual Flame Animation:** Each flame oscillates at different frequency using Math.sin(t _ 5.5 + fi _ 1.1) offset
+- **Individual Flame Animation:** Each flame oscillates at different frequency using Math.sin(t *5.5 + fi* 1.1) offset
 - **Gradient System:** Amber base → orange body → red tips → white apex for realistic fire appearance
 - **Dynamic Height:** Flame heights vary 8-17px based on individual oscillation cycles
 
@@ -3938,7 +4205,7 @@ _Released: March 9, 2026_
 
 ## v3.24.1 — Documentation Updates: Boss Architecture Guidelines
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 📚 PROJECT_OVERVIEW.md Enhancements
 
@@ -3958,7 +4225,7 @@ _Released: March 9, 2026_
 
 ## v3.24.0 — Boss Architecture Refactor
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🔧 Major Code Restructuring
 
@@ -3992,7 +4259,7 @@ _Released: March 9, 2026_
 
 ## v3.23.0 — Energy Cost System Implementation
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### ⚡ Comprehensive Energy Management System
 
@@ -4038,7 +4305,7 @@ _Released: March 9, 2026_
 
 ## v3.22.0 — Comprehensive Balance Patch
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### ⚔️ Enemy Scaling Overhaul
 
@@ -4085,7 +4352,7 @@ _Released: March 9, 2026_
 
 ## v3.21.2 — AdminSystem Defensive Fixes
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🛡️ Enhanced Domain Leak Prevention
 
@@ -4109,7 +4376,7 @@ _Released: March 9, 2026_
 
 ## v3.21.1 — GravitationalSingularity Bug Fix
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🐛 Critical Bug Fixes
 
@@ -4134,7 +4401,7 @@ _Released: March 9, 2026_
 
 ## v3.21.0 — Complete Boss Rework Implementation
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### ⚫ Phase 1 — KruFirst GravitationalSingularity Domain
 
@@ -4185,7 +4452,7 @@ _Released: March 9, 2026_
 
 ## v3.20.2 — Boss Safe-Zone Protection System
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🛡️ MTC Room Boss Exclusion
 
@@ -4212,7 +4479,7 @@ _Released: March 9, 2026_
 
 ## v3.20.1 — UI Polish: Level Up & Wave Event Display Improvements
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### ✨ Level Up Display Enhancement
 
@@ -4251,7 +4518,7 @@ _Released: March 9, 2026_
 
 ## v3.20.0 — Enhanced Tutorial System v3
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🎓 Tutorial System Improvements
 
@@ -4279,7 +4546,7 @@ _Released: March 9, 2026_
 
 ## v3.19.2 — Service Worker Cache Cleanup
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🧹 Service Worker Maintenance
 
@@ -4297,7 +4564,7 @@ _Released: March 9, 2026_
 
 ## v3.19.1 — PoomPlayer Hit Flash Timer Fix
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -4316,7 +4583,7 @@ _Released: March 9, 2026_
 
 ## v3.19.0 — Gemini AI Dependency Removal
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🤖 AI System Refactoring
 
@@ -4349,7 +4616,7 @@ _Released: March 9, 2026_
 
 ## v3.18.4 — PlayerRenderer Code Organization & Optimization
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🔧 Code Structure Improvements
 
@@ -4374,7 +4641,7 @@ _Released: March 9, 2026_
 
 ## v3.18.3 — Enhanced Weapon Muzzle Offset System
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### 🔫 Character-Specific Bullet Spawn Positions
 
@@ -4394,7 +4661,7 @@ _Released: March 9, 2026_
 
 ## v3.18.2 — Enhanced Player Rendering & Visual Effects
 
-_Released: March 9, 2026_
+*Released: March 9, 2026*
 
 ### ⚡ Hit Flash System Improvements
 
@@ -4437,7 +4704,7 @@ _Released: March 9, 2026_
 
 ## v3.18.1 — Character Selection UI Redesign: Enhanced Stat Bars & Visual Identity
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 📊 Stat Bar System Overhaul
 
@@ -4467,7 +4734,7 @@ _Released: March 8, 2026_
 
 ## v3.18.0 — Boss Derivation Mode: PhysicsFormulaZone & Combat System Overhaul
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔴 Derivation Mode System (HP < 40%)
 
@@ -4546,7 +4813,7 @@ _Released: March 8, 2026_
 
 ## v3.17.0 — Major Map Redesign & Visual Enhancement
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🚀 Character-Agnostic Dev Buff Implementation
 
@@ -4579,7 +4846,7 @@ _Released: March 8, 2026_
 
 ## v3.17.0 — Major Map Redesign & Visual Enhancement
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🗺️ Complete Layout Overhaul
 
@@ -4632,7 +4899,7 @@ _Released: March 8, 2026_
 
 ## v3.16.9 — Documentation Updates & PROJECT_OVERVIEW.md Enhancement
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 📚 Comprehensive Documentation Updates
 
@@ -4662,7 +4929,7 @@ _Released: March 8, 2026_
 
 ## v3.16.8 — Universal Dev Buff System
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔐 Complete Permission System Redesign
 
@@ -4702,7 +4969,7 @@ _Released: March 8, 2026_
 
 ## v3.16.6 — Domain Expansion Bug Fixes & Visual Rework
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🐛 Critical Domain Expansion Bug Fixes
 
@@ -4732,7 +4999,7 @@ _Released: March 8, 2026_
 
 ## v3.16.5 — Enhanced Boss HP Bar: Visual Effects & Phase System
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎨 Boss HP Bar Complete Overhaul
 
@@ -4794,7 +5061,7 @@ _Released: March 8, 2026_
 
 ## v3.16.4 — UI/UX Improvements: HUD Layout & Text Display
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎨 Floating Text System Enhancements
 
@@ -4849,7 +5116,7 @@ _Released: March 8, 2026_
 
 ## v3.16.3 — Game Balance Rework: Weapon Scaling & Boss Adjustments
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### ⚖️ Weapon Balance Changes
 
@@ -4895,7 +5162,7 @@ _Released: March 8, 2026_
 
 ## v3.16.2 — Repository Cleanup: Skill File Consolidation
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🧹 Repository Cleanup
 
@@ -4925,7 +5192,7 @@ _Released: March 8, 2026_
 
 ## v3.16.1 — Critical Bug Fixes: Boss Scoring & Game Balance
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🐛 Critical Bug Fixes
 
@@ -4956,7 +5223,7 @@ _Released: March 8, 2026_
 
 ## v3.16.0 — Major Character Balance Rework: Two-Phase Systems & Early Access
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔄 Kao Character: Two-Phase Passive System
 
@@ -5003,7 +5270,7 @@ _Released: March 8, 2026_
 
 ## v3.15.1 — Auto Character Design Restoration: Original Skill Availability
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔄 Character Design Reversion
 
@@ -5037,7 +5304,7 @@ _Released: March 8, 2026_
 
 ## v3.15.0 — Complete Achievement System Overhaul: Character Progression & Stat Tracking
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🏆 Major Achievement System Expansion
 
@@ -5103,7 +5370,7 @@ _Released: March 8, 2026_
 
 ## v3.14.0 — Complete Thematic Unlock Overhaul: All Characters Action-Based
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎮 Major Gameplay Achievement: Unified Thematic Unlocks
 
@@ -5152,7 +5419,7 @@ _Released: March 8, 2026_
 
 ## v3.13.2 — UI Clarity: Better Unlock Condition Communication
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎨 UI/UX Improvements
 
@@ -5184,7 +5451,7 @@ _Released: March 8, 2026_
 
 ## v3.13.1 — Gameplay Fix: Restored Basic Skills Availability
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎮 Gameplay Regression Fix
 
@@ -5211,7 +5478,7 @@ _Released: March 8, 2026_
 
 ## v3.13.0 — Major Gameplay Overhaul: Thematic Passive Unlocks
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎮 Complete Passive Unlock Redesign
 
@@ -5266,7 +5533,7 @@ _Released: March 8, 2026_
 
 ## v3.12.14 — UI Fix: Basic Skills Lock Overlays
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎨 UI/UX Fixes
 
@@ -5285,7 +5552,7 @@ _Released: March 8, 2026_
 
 ## v3.12.13 — Input Routing Migration & Basic Skill Unlock
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎮 Gameplay Changes
 
@@ -5327,7 +5594,7 @@ _Released: March 8, 2026_
 
 ## v3.12.12 — Critical Architecture Fixes & Passive Unlock Improvements
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🏗️ Architecture Improvements
 
@@ -5372,7 +5639,7 @@ _Released: March 8, 2026_
 
 ## v3.12.11 — Feature: Skill Locking System for Poom & Auto
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔥 New Features
 
@@ -5412,7 +5679,7 @@ _Released: March 8, 2026_
 
 ## v3.12.10 — Critical Bug Fix: BALANCE Object Structure
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -5435,7 +5702,7 @@ _Released: March 8, 2026_
 
 ## v3.12.9 — Critical Bug Fix: Missing Configuration
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🐛 Bug Fixes
 
@@ -5454,7 +5721,7 @@ _Released: March 8, 2026_
 
 ## v3.12.8 — Tutorial Texts Enhancement
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 📚 Tutorial System Improvements
 
@@ -5488,7 +5755,7 @@ Focus Crystal (700), Energy Shield (600), Vital Supplement (500)
 
 ## v3.12.7 — Configuration Centralization
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🎯 Major Refactor: Single Source of Truth
 
@@ -5525,7 +5792,7 @@ GAME_TEXTS.tutorial = { welcome, movement, shooting, ... }
 
 ## v3.12.6 — Config Syntax Fix & Text Localization
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🐛 Critical Bug Fix
 
@@ -5555,7 +5822,7 @@ _Released: March 8, 2026_
 
 ## v3.12.5 — Garuda NaN Coordinates Fix
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🐛 Critical Bug Fix
 
@@ -5596,7 +5863,7 @@ _Released: March 8, 2026_
 
 ## v3.12.4 — Garuda Draw Call Debugging
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔍 Draw System Debugging
 
@@ -5627,7 +5894,7 @@ _Released: March 8, 2026_
 
 ## v3.12.3 — Enhanced Garuda Diagnostic Logging
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔍 Debug Improvements
 
@@ -5653,7 +5920,7 @@ _Released: March 8, 2026_
 
 ## v3.12.2 — Bug Fixes & Stability Improvements
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🐛 Critical Bug Fixes
 
@@ -5683,7 +5950,7 @@ _Released: March 8, 2026_
 
 ## v3.12.1 — Kao Phantom Blink Rework & Poom Garuda Summon System
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🥊 Kao Advanced Skills Rework
 
@@ -5756,7 +6023,7 @@ _Released: March 8, 2026_
 
 ## v3.12.0 — Heat Gauge System & Wanchai Stand Spirit of Muay Thai Overhaul
 
-_Released: March 8, 2026_
+*Released: March 8, 2026*
 
 ### 🔥 Heat Gauge System Implementation
 
@@ -5832,7 +6099,7 @@ _Released: March 8, 2026_
 
 ## v3.11.19 — Floating Text Overlap Fix & Documentation Updates
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🔧 Critical Bug Fixes
 
@@ -5878,7 +6145,7 @@ _Released: March 7, 2026_
 
 ## v3.11.18 — Documentation Stability System & MTC Room Abilities
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 📚 Documentation Improvements
 
@@ -5940,7 +6207,7 @@ _Released: March 7, 2026_
 
 ## v3.11.17 — Boss Spawn Fix & MTC Room Visual Enhancement
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🐛 Critical Bug Fixes
 
@@ -6015,7 +6282,7 @@ _Released: March 7, 2026_
 
 ## v3.11.14 — Boss Attacks Performance Optimization
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### ⚡ Performance Improvements
 
@@ -6061,7 +6328,7 @@ _Released: March 7, 2026_
 
 ## v3.11.13 — Boss Attack Class Consolidation
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🔧 Code Organization Improvements
 
@@ -6120,7 +6387,7 @@ _Released: March 7, 2026_
 
 ## v3.11.12 — Complete Boss Attack Visual Rework
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🔊 Enhanced Attack Visuals
 
@@ -6198,7 +6465,7 @@ _Released: March 7, 2026_
 
 ## v3.11.11 — Domain Expansion Enhanced Visuals & New Abilities
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🌌 Visual System Overhaul
 
@@ -6265,7 +6532,7 @@ _Released: March 7, 2026_
 
 ## v3.11.10 — Comprehensive Visual Polish Overhaul
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🎨 Player Renderer Refactor
 
@@ -6375,7 +6642,7 @@ _Released: March 7, 2026_
 
 ## v3.11.9 — Enemy Renderer Refactor & Visual Polish
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🚀 Performance Optimization
 
@@ -6451,7 +6718,7 @@ _Released: March 7, 2026_
 
 ## v3.11.8 — Bullet Time Visual System Overhaul
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### ⏱️ Complete Bullet Time Visual Redesign
 
@@ -6569,7 +6836,7 @@ _Released: March 7, 2026_
 
 ## v3.11.7 — UX Improvements Patch
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🔧 Critical UX Fixes & Enhancements
 
@@ -6657,7 +6924,7 @@ _Released: March 7, 2026_
 
 ## v3.11.6 — Comprehensive Frontend Design Overhaul
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🎨 Military HUD Theme Implementation
 
@@ -6739,7 +7006,7 @@ _Released: March 7, 2026_
 
 ## v3.11.5 — Auto Character Combat Buffs & Visual Polish
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### ⚔️ Wanchai Stand Combat Enhancements
 
@@ -6798,7 +7065,7 @@ _Released: March 7, 2026_
 
 ## v3.11.4 — Tutorial Enhancements - Wave Events & Boss Encounter Details
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🌊 Wave Events Documentation
 
@@ -6845,7 +7112,7 @@ _Released: March 7, 2026_
 
 ## v3.11.3 — Tutorial System Sync - Updated for v3.11.2 Game State
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 📚 Tutorial Content Updates
 
@@ -6885,7 +7152,7 @@ _Released: March 7, 2026_
 
 ## v3.11.1 — AutoPlayer Stand Rush System - Comprehensive Gameplay & Visual Overhaul
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🎮 Gameplay Enhancements
 
@@ -6932,7 +7199,7 @@ _Released: March 7, 2026_
 
 ## v3.11.0 — Documentation Updates - Wanchai Stand Humanoid Redesign
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 📚 Documentation Changes
 
@@ -6969,7 +7236,7 @@ _Released: March 5, 2026_
 
 ## v3.10.8 — Wanchai Stand Visual Overhaul - Complete 6-Layer Rendering System
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎨 Visual Enhancement
 
@@ -7013,7 +7280,7 @@ _Released: March 5, 2026_
 
 ## v3.10.7 — SVG Portrait System - Replaced Emoji Avatars
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎨 Visual Enhancement
 
@@ -7044,7 +7311,7 @@ _Released: March 5, 2026_
 
 ## v3.10.6 — Code Restructure - CSS Extraction & Menu System
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🏗️ Major Restructure
 
@@ -7076,7 +7343,7 @@ _Released: March 5, 2026_
 
 ## v3.10.5 — Configuration Consistency Fixes & Balance Adjustments
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### ⚖️ Weapon Balance - Shotgun Nerf
 
@@ -7121,7 +7388,7 @@ _Released: March 5, 2026_
 
 ## v3.10.4 — Critical Bug Fixes & Passive Skill System Implementation
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🐛 Critical Bug Fixes
 
@@ -7144,7 +7411,7 @@ _Released: March 5, 2026_
 
 ## v3.10.3 — Naga Visual Overhaul & Configuration Balance
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🐉 Naga Visual Enhancement
 
@@ -7168,7 +7435,7 @@ _Released: March 5, 2026_
 
 ## v3.10.2 — Naga Shield System Rework & Balance Adjustments
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🛡️ Shield System Rework
 
@@ -7192,7 +7459,7 @@ _Released: March 5, 2026_
 
 ## v3.10.1 — Comprehensive Game Balance Overhaul
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### ⚖️ Global Balance Changes
 
@@ -7218,7 +7485,7 @@ _Released: March 5, 2026_
 
 ## v3.10.0 — Wanchai Stand Dual-Layer Rendering Architecture
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🏗️ Rendering Architecture
 
@@ -7242,7 +7509,7 @@ _Released: March 5, 2026_
 
 ## v3.9.9 — Wanchai Stand Orientation Fix & Teleportation Combat System
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🧭 Orientation System
 
@@ -7266,7 +7533,7 @@ _Released: March 5, 2026_
 
 ## v3.9.8 — Wanchai Stand Fire Demon Transformation
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🔥 Fire Demon Form
 
@@ -7290,7 +7557,7 @@ _Released: March 5, 2026_
 
 ## v3.9.7 — Wanchai Stand Ethereal Wraith Transformation
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 👻 Ethereal Form
 
@@ -7314,7 +7581,7 @@ _Released: March 5, 2026_
 
 ## v3.9.6 — Wanchai Stand Humanoid Redesign - Detailed Anatomy System
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🧬 Humanoid Anatomy
 
@@ -7338,7 +7605,7 @@ _Released: March 5, 2026_
 
 ## v3.9.5 — Rush Fist Overlay Ownership Fix
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🥊 Fist Overlay System
 
@@ -7362,7 +7629,7 @@ _Released: March 5, 2026_
 
 ## v3.9.4 — Wanchai Stand Ghost Redesign & Visual Enhancement
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 👻 Ghost Redesign
 
@@ -7386,7 +7653,7 @@ _Released: March 5, 2026_
 
 ## v3.9.3 — Wanchai Stand Simplification & Dual Combat System
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎯 Stand Simplification
 
@@ -7410,7 +7677,7 @@ _Released: March 5, 2026_
 
 ## v3.9.2 — Wanchai Stand Rendering Architecture Refactoring
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🏗️ Rendering Refactor
 
@@ -7434,7 +7701,7 @@ _Released: March 5, 2026_
 
 ## v3.9.1 — ORA ORA Combo System - Advanced Wanchai Stand Rush Mechanics
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 👊 ORA Combo System
 
@@ -7458,7 +7725,7 @@ _Released: March 5, 2026_
 
 ## v3.9.0 — Revolutionary Wanchai Stand Autonomous System + Enhanced Vacuum Heat
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🤖 Autonomous Stand System
 
@@ -7489,7 +7756,7 @@ _Released: March 5, 2026_
 
 ## v3.8.12 — Major Visual Overhaul - Enhanced Weapons and Summons Rendering
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎨 Visual Enhancement
 
@@ -7520,7 +7787,7 @@ _Released: March 5, 2026_
 
 ## v3.8.11 — Fixed Domain Expansion Text Correction
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 📝 Text Correction
 
@@ -7544,7 +7811,7 @@ _Released: March 5, 2026_
 
 ## v3.8.10 — Major Player Rendering Overhaul with Enhanced Armor, Visor, and Tactical Details
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎨 Player Visual Overhaul
 
@@ -7585,7 +7852,7 @@ _Released: March 5, 2026_
 
 ## v3.8.9 — Full Arena Domain Expansion with Circular Boundary and Physics Lock System
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🌐 Arena Domain Expansion
 
@@ -7626,7 +7893,7 @@ _Released: March 5, 2026_
 
 ## v3.8.8 — Enhanced Domain Expansion with Chromatic Effects, Slow Debuff, and Progressive Difficulty
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🌈 Chromatic Effects
 
@@ -7667,7 +7934,7 @@ _Released: March 5, 2026_
 
 ## v3.8.7 — Fixed Domain State Recovery Bug After Domain Ends
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🐛 Critical Bug Fix
 
@@ -7694,7 +7961,7 @@ _Released: March 5, 2026_
 
 ## v3.8.6 — Added Domain Expansion: Metrics-Major Ultimate Boss Ability
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🌟 Ultimate Ability
 
@@ -7728,7 +7995,7 @@ _Released: March 5, 2026_
 
 ## v3.8.5 — Critical Bug Fixes and Wave System Overhaul with Trickle Spawning
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🐛 Critical Bug Fixes
 
@@ -7762,7 +8029,7 @@ _Released: March 5, 2026_
 
 ## v3.8.4 — Enhanced Voice Bubble and Boss Speech with Queue System and Typewriter Effects
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 💬 Voice Bubble System
 
@@ -7796,7 +8063,7 @@ _Released: March 5, 2026_
 
 ## v3.8.3 — Implemented Military HUD Floating Text System with Categorized Rendering
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎖️ Military HUD System
 
@@ -7830,7 +8097,7 @@ _Released: March 5, 2026_
 
 ## v3.8.2 — Implemented Gold/Amber Military HUD Theme Across All UI Elements
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎨 Military Theme Implementation
 
@@ -7864,7 +8131,7 @@ _Released: March 5, 2026_
 
 ## v3.8.1 — Enhanced Poom Sticky System to Support Boss Entities
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🟩 Sticky System Enhancement
 
@@ -7898,7 +8165,7 @@ _Released: March 5, 2026_
 
 ## v3.8.0 — Refactored PoomPlayer to Extend Player Base Class
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🏗️ Architecture Refactor
 
@@ -7932,7 +8199,7 @@ _Released: March 5, 2026_
 
 ## v3.7.9 — Unified Gold/Amber Military HUD Theme Across All Screens
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎨 Theme Unification
 
@@ -7966,7 +8233,7 @@ _Released: March 5, 2026_
 
 ## v3.7.8 — Advanced MTC Citadel Visual Overhaul with Holographic Systems
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🏰 Citadel Visual Overhaul
 
@@ -8000,7 +8267,7 @@ _Released: March 5, 2026_
 
 ## v3.11.2 — Boss Architecture Refactor & Heat System Removal
 
-_Released: March 7, 2026_
+*Released: March 7, 2026*
 
 ### 🏛️ Boss System Refactoring
 
@@ -8066,7 +8333,7 @@ _Released: March 7, 2026_
 
 ## v3.11.0 — Wanchai Stand Humanoid Redesign & Manual Stand Rush
 
-_Released: March 5, 2026_
+*Released: March 5, 2026*
 
 ### 🎨 Visual Overhaul: WanchaiStand Entity (AutoPlayer)
 
@@ -8098,7 +8365,7 @@ _Released: March 5, 2026_
 
 - `AutoPlayer.js` — `WanchaiStand.draw()` full rewrite, `_doPlayerMelee()` manual rush logic, `WanchaiStand.update()` leash grace period
 - `PlayerRenderer.js` — Ghost figure block removed from `_drawAuto()`
-  _Released: February 27, 2026_
+  *Released: February 27, 2026*
 
 ### ✨ Feature Rework: DeadlyGraph (Boss Kru Manop)
 
@@ -8122,7 +8389,7 @@ _Released: March 5, 2026_
 
 ## v3.6.1 — Cooldown UI Hybrid System & Invisible Pets Fix
 
-_Released: February 27, 2026_
+*Released: February 27, 2026*
 
 ### 🎨 UI Overhaul: Hybrid Cooldown Display
 
@@ -8152,7 +8419,7 @@ _Released: February 27, 2026_
 
 ## v3.4.1 — StatusEffect Framework Migration
 
-_Released: February 26, 2026_
+*Released: February 26, 2026*
 
 ### 🎯 Major Features
 
@@ -8232,5 +8499,4 @@ _Released: February 26, 2026_
 
 ---
 
-_Older versions not archived._
-
+*Older versions not archived.*

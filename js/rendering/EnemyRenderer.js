@@ -29,6 +29,13 @@ class EnemyRenderer {
     return oc;
   }
 
+  // PERF Phase 6: LOD flag set per-frame by dispatcher. Draw methods check
+  // EnemyRenderer._lodFar to skip purely decorative outer-glow rings
+  // (biggest per-entity shadowBlur cost) for enemies near the viewport edge.
+  // Body, HP bar, status pips, ignite overlay, and weapons are unaffected —
+  // only the ambient aura halo is skipped, which is imperceptible at edge.
+  static _lodFar = false;
+
   // —€—€ Dispatcher —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
   // Call this from the game loop instead of entity.draw().
   static draw(e, ctx) {
@@ -39,6 +46,12 @@ class EnemyRenderer {
       screen.y < -R || screen.y > CANVAS.height + R) return;
     // PERF Phase 5: capture timestamp once for all three draw methods
     const _now = performance.now();
+    // PERF Phase 6: LOD — mark far-from-viewport-center entities
+    const _cx = CANVAS.width * 0.5, _cy = CANVAS.height * 0.5;
+    const _ddx = screen.x - _cx, _ddy = screen.y - _cy;
+    // Threshold: 55% of min viewport dimension (squared, avoids sqrt)
+    const _lodThresh = Math.min(CANVAS.width, CANVAS.height) * 0.55;
+    EnemyRenderer._lodFar = (_ddx * _ddx + _ddy * _ddy) > (_lodThresh * _lodThresh);
     // —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;
     if (typeof window !== "undefined") window.CTX = ctx;
@@ -345,16 +358,18 @@ class EnemyRenderer {
     const breathe = Math.sin(now / 200);
     CTX.scale(1 + breathe * 0.028, 1 - breathe * 0.028);
 
-    // —€—€ Outer glow ring (corrupted purple) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
-    const glowPulse = 0.45 + Math.sin(now / 320) * 0.2;
-    CTX.shadowBlur = 6;  // PERF: 12โ’6
-    CTX.shadowColor = `rgba(168,85,247,${glowPulse})`;
-    CTX.strokeStyle = `rgba(168,85,247,${glowPulse * 0.8})`;
-    CTX.lineWidth = 2;
-    CTX.beginPath();
-    CTX.arc(0, 0, R + 2, 0, Math.PI * 2);
-    CTX.stroke();
-    CTX.shadowBlur = 0;
+    // —€—€ Outer glow ring (corrupted purple) — LOD-gated —€—€—€—€—€—€—€—€—€—€—€—€
+    if (!EnemyRenderer._lodFar) {
+      const glowPulse = 0.45 + Math.sin(now / 320) * 0.2;
+      CTX.shadowBlur = 6;  // PERF: 12โ’6
+      CTX.shadowColor = `rgba(168,85,247,${glowPulse})`;
+      CTX.strokeStyle = `rgba(168,85,247,${glowPulse * 0.8})`;
+      CTX.lineWidth = 2;
+      CTX.beginPath();
+      CTX.arc(0, 0, R + 2, 0, Math.PI * 2);
+      CTX.stroke();
+      CTX.shadowBlur = 0;
+    }
 
     // PERF Phase 4: body gradient cached as offscreen sprite
     const _eKey = `enemy_${R}`;
@@ -406,14 +421,14 @@ class EnemyRenderer {
     const vp2 = 0.55 + Math.sin(now / 220 + 0.9) * 0.28;
     // Left shard
     CTX.fillStyle = `rgba(239,68,68,${visorPulse})`;
-    CTX.shadowBlur = 6;  // PERF: 12โ’6
+    CTX.shadowBlur = 6;  // PERF: 12โ’6
     CTX.shadowColor = "#ef4444";
     CTX.beginPath();
     CTX.roundRect(-R * 0.45, -R * 0.22, R * 0.38, R * 0.18, R * 0.05);
     CTX.fill();
     // Right shard (slightly offset, slightly different pulse)
     CTX.fillStyle = `rgba(239,68,68,${vp2})`;
-    CTX.shadowBlur = 5;  // PERF: 10โ’5
+    CTX.shadowBlur = 5;  // PERF: 10โ’5
     CTX.beginPath();
     CTX.roundRect(R * 0.08, -R * 0.22, R * 0.38, R * 0.18, R * 0.05);
     CTX.fill();
@@ -438,7 +453,7 @@ class EnemyRenderer {
     CTX.fillStyle = "#3b3b55";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2;
-    CTX.shadowBlur = 3;  // PERF: 6โ’3
+    CTX.shadowBlur = 3;  // PERF: 6โ’3
     CTX.shadowColor = "rgba(168,85,247,0.55)";
     CTX.beginPath();
     CTX.arc(R + 7, 0, handR, 0, Math.PI * 2);
@@ -448,7 +463,7 @@ class EnemyRenderer {
     // Front spike — larger jagged triangle + inner glow tip
     const fsx = R + 7 + handR;
     CTX.fillStyle = "#ef4444";
-    CTX.shadowBlur = 4;  // PERF: 8โ’4
+    CTX.shadowBlur = 4;  // PERF: 8โ’4
     CTX.shadowColor = "#ef4444";
     CTX.beginPath();
     CTX.moveTo(fsx, -1.5); // base top
@@ -463,7 +478,7 @@ class EnemyRenderer {
     CTX.fillStyle = "#2d2d44";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2;
-    CTX.shadowBlur = 2;  // PERF: 3โ’2
+    CTX.shadowBlur = 2;  // PERF: 3โ’2
     CTX.shadowColor = "rgba(168,85,247,0.35)";
     CTX.beginPath();
     CTX.arc(-(R + 6), 0, handR - 1, 0, Math.PI * 2);
@@ -491,7 +506,7 @@ class EnemyRenderer {
     EnemyRenderer._drawHpBar(sx, sy, R, e.hp, e.maxHp, 30, 10, now);
   }
 
-  // —€—€ Tank Enemy (Heavy Armored Brute) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
+  // —€—€ Tank Enemy (Heavy Armored Brute) —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
   static drawTank(e, now = performance.now()) {
     // โ•”══════════════════════════════════════════════════════════╗
     // ║  TANK ENEMY — Heavy Armored Brute                       ║
@@ -515,16 +530,18 @@ class EnemyRenderer {
     const breathe = Math.sin(now / 320);
     CTX.scale(1 + breathe * 0.022, 1 - breathe * 0.022);
 
-    // —€—€ Threat glow ring —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
-    const threatPulse = 0.55 + Math.sin(now / 250) * 0.22;
-    CTX.shadowBlur = 8;  // PERF: 16โ’8
-    CTX.shadowColor = `rgba(185,28,28,${threatPulse})`;
-    CTX.strokeStyle = `rgba(185,28,28,${threatPulse * 0.75})`;
-    CTX.lineWidth = 3;
-    CTX.beginPath();
-    CTX.arc(0, 0, R + 3, 0, Math.PI * 2);
-    CTX.stroke();
-    CTX.shadowBlur = 0;
+    // —€—€ Threat glow ring — LOD-gated —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
+    if (!EnemyRenderer._lodFar) {
+      const threatPulse = 0.55 + Math.sin(now / 250) * 0.22;
+      CTX.shadowBlur = 8;  // PERF: 16โ’8
+      CTX.shadowColor = `rgba(185,28,28,${threatPulse})`;
+      CTX.strokeStyle = `rgba(185,28,28,${threatPulse * 0.75})`;
+      CTX.lineWidth = 3;
+      CTX.beginPath();
+      CTX.arc(0, 0, R + 3, 0, Math.PI * 2);
+      CTX.stroke();
+      CTX.shadowBlur = 0;
+    }
 
     // PERF Phase 4: tank body gradient cached as offscreen sprite
     CTX.save();
@@ -541,7 +558,7 @@ class EnemyRenderer {
     CTX.drawImage(_tSprite, -(_tSprite.width / 2), -(_tSprite.height / 2));
     CTX.restore();
 
-    // —€—€ Layered armor plates —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
+    // —€—€ Layered armor plates —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     // Front chest plate
     CTX.fillStyle = "#57121a";
     CTX.strokeStyle = "#1e293b";
@@ -581,17 +598,17 @@ class EnemyRenderer {
     }
     CTX.shadowBlur = 0;
 
-    // —€—€ Overheating slit — orange engine glow —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
+    // —€—€ Overheating slit — orange engine glow —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
     const heatPulse = 0.5 + Math.sin(now / 220) * 0.45;
     CTX.fillStyle = `rgba(251,146,60,${heatPulse * 0.9})`;
-    CTX.shadowBlur = 5 * heatPulse;  // PERF: 10xโ’5x
+    CTX.shadowBlur = 5 * heatPulse;  // PERF: 10xโ’5x
     CTX.shadowColor = "#fb923c";
     CTX.beginPath();
     CTX.roundRect(R * 0.18, -R * 0.08, R * 0.42, R * 0.18, R * 0.05);
     CTX.fill();
     // Second glint line above slit
     CTX.fillStyle = `rgba(255,200,100,${heatPulse * 0.45})`;
-    CTX.shadowBlur = 2;  // PERF: 4โ’2
+    CTX.shadowBlur = 2;  // PERF: 4โ’2
     CTX.beginPath();
     CTX.roundRect(R * 0.2, -R * 0.12, R * 0.38, R * 0.04, 1);
     CTX.fill();
@@ -616,7 +633,7 @@ class EnemyRenderer {
     CTX.fillStyle = "#57121a";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2.5;
-    CTX.shadowBlur = 5 * shieldGlow;  // PERF: 10xโ’5x
+    CTX.shadowBlur = 5 * shieldGlow;  // PERF: 10xโ’5x
     CTX.shadowColor = "#dc2626";
     CTX.beginPath();
     CTX.moveTo(R + 5, -R * 0.55);
@@ -630,7 +647,7 @@ class EnemyRenderer {
     CTX.stroke();
     // Shield boss + glow
     CTX.fillStyle = "#dc2626";
-    CTX.shadowBlur = 4;  // PERF: 8โ’4
+    CTX.shadowBlur = 4;  // PERF: 8โ’4
     CTX.shadowColor = "#ef4444";
     CTX.beginPath();
     CTX.arc(R + 6, 0, 4, 0, Math.PI * 2);
@@ -652,7 +669,7 @@ class EnemyRenderer {
     CTX.fillStyle = "#3d0808";
     CTX.strokeStyle = "#1e293b";
     CTX.lineWidth = 2.5;
-    CTX.shadowBlur = 3;  // PERF: 5โ’3
+    CTX.shadowBlur = 3;  // PERF: 5โ’3
     CTX.shadowColor = "#dc2626";
     CTX.beginPath();
     CTX.arc(-(R + 7), 0, R * 0.42, 0, Math.PI * 2);
@@ -712,27 +729,30 @@ class EnemyRenderer {
     const breathe = Math.sin(now / 170);
     CTX.scale(1 + breathe * 0.025, 1 - breathe * 0.03);
 
-    // —€—€ Arcane outer aura ring —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
+    // —€—€ Arcane outer aura ring — LOD-gated —€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€—€
+    const _drawMageAura = !EnemyRenderer._lodFar;
     const auraA = 0.45 + Math.sin(now / 240) * 0.22;
-    CTX.shadowBlur = 8;  // PERF: 16โ’8
-    CTX.shadowColor = "rgba(126,34,206,0.85)";
-    CTX.strokeStyle = `rgba(167,139,250,${auraA})`;
-    CTX.lineWidth = 2.5;
-    CTX.beginPath();
-    CTX.arc(0, 0, R + 3, 0, Math.PI * 2);
-    CTX.stroke();
-    // Thin spinning accent ring (rotates with now)
-    CTX.save();
-    CTX.rotate(now / 1800);
-    CTX.strokeStyle = `rgba(74,222,128,${auraA * 0.45})`;
-    CTX.lineWidth = 1;
-    CTX.setLineDash([4, 6]);
-    CTX.beginPath();
-    CTX.arc(0, 0, R + 6, 0, Math.PI * 2);
-    CTX.stroke();
-    CTX.setLineDash([]);
-    CTX.restore();
-    CTX.shadowBlur = 0;
+    if (_drawMageAura) {
+      CTX.shadowBlur = 8;  // PERF: 16โ’8
+      CTX.shadowColor = "rgba(126,34,206,0.85)";
+      CTX.strokeStyle = `rgba(167,139,250,${auraA})`;
+      CTX.lineWidth = 2.5;
+      CTX.beginPath();
+      CTX.arc(0, 0, R + 3, 0, Math.PI * 2);
+      CTX.stroke();
+      // Thin spinning accent ring (rotates with now)
+      CTX.save();
+      CTX.rotate(now / 1800);
+      CTX.strokeStyle = `rgba(74,222,128,${auraA * 0.45})`;
+      CTX.lineWidth = 1;
+      CTX.setLineDash([4, 6]);
+      CTX.beginPath();
+      CTX.arc(0, 0, R + 6, 0, Math.PI * 2);
+      CTX.stroke();
+      CTX.setLineDash([]);
+      CTX.restore();
+      CTX.shadowBlur = 0;
+    }
 
     // PERF Phase 4: mage body gradient cached as offscreen sprite
     CTX.save();

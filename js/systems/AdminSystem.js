@@ -111,6 +111,7 @@ const AdminConsole = (() => {
         'spawn first', 'spawn first advanced',
         'god', 'god off', 'devbuff',
         'energy', 'kill all', 'speed', 'fps', 'info', 'reset buffs',
+        'audit', 'audit 50', 'audit clear',
         'clear', 'help', 'exit',
         // Easter egg commands kept for discoverability
         'whoami', 'ls', 'ls -la', 'cat kru_manop_passwords.txt',
@@ -211,11 +212,103 @@ const AdminConsole = (() => {
     }
 
     // ─────────────────────────────────────────────────────────
+    // SECURITY HARDENING (Phase 1 quick wins)
+    //   - Rate limit: max RATE_LIMIT_MAX commands per RATE_LIMIT_WINDOW_MS
+    //   - Audit log: ring buffer persisted to localStorage (AUDIT_KEY)
+    //   - Confirm prompt: destructive commands require typing 'yes' within
+    //     CONFIRM_TTL_MS after first attempt, else abort.
+    // Trade-off: adds a single round-trip for destructive ops. Keeps the
+    //   existing command surface identical — no breaking change for scripts.
+    // ─────────────────────────────────────────────────────────
+    const RATE_LIMIT_WINDOW_MS = 2000;
+    const RATE_LIMIT_MAX = 10;
+    const AUDIT_KEY = 'mtc_admin_audit';
+    const AUDIT_MAX = 200;
+    const CONFIRM_TTL_MS = 10_000;
+    const _rateWindow = [];           // timestamps (ms) of recent commands
+    let _pendingConfirm = null;       // { raw, sig, expires }
+
+    function _sig(base, sub) {
+        return sub ? `${base} ${sub}` : base;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // COMMAND METADATA REGISTRY  (Phase 2 refactor)
+    //   Single source of truth for permission / destructive / noPlayer gates.
+    //   Lookup precedence: exact "base sub" signature first, then bare "base".
+    //   Commands absent from the table default to:
+    //     { perm: PERM.GUEST, destructive: false, noPlayer: false }
+    //   — i.e. any admin console user can run them, they mutate non-catastrophically,
+    //   and they require a live `window.player`.
+    //
+    //   Adding a new command:
+    //     1. Implement the handler in the if/else chain below.
+    //     2. Add an entry here ONLY if it needs ROOT, confirm-gate, or no-player.
+    //     3. (Optional) Add to `COMMANDS` autocomplete list.
+    // ─────────────────────────────────────────────────────────
+    const COMMAND_META = {
+        // — No-player commands (run without an active run) —
+        help: { noPlayer: true },
+        clear: { noPlayer: true },
+        exit: { noPlayer: true },
+        quit: { noPlayer: true },
+        q: { noPlayer: true },
+        whoami: { noPlayer: true },
+        ls: { noPlayer: true },
+        cat: { noPlayer: true },
+        sudo: { noPlayer: true },
+        audit: { noPlayer: true },
+        yes: { noPlayer: true },
+        y: { noPlayer: true },
+        // — ROOT-only, non-destructive —
+        god: { perm: PERM.ROOT },
+        kill: { perm: PERM.ROOT },
+        speed: { perm: PERM.ROOT },
+        // — Destructive (ROOT + yes-confirm) —
+        reset: { perm: PERM.ROOT, destructive: true },
+        'kill all': { perm: PERM.ROOT, destructive: true },
+        // — Destructive only (any admin, yes-confirm) —
+        'set wave': { destructive: true },
+        // NOTE: `reset buffs` is intentionally absent — it's reversible.
+    };
+    const _EMPTY_META = Object.freeze({});
+    function _meta(base, sub) {
+        return COMMAND_META[_sig(base, sub)] || COMMAND_META[base] || _EMPTY_META;
+    }
+
+    function _rateLimited(nowMs) {
+        // Drop old entries then check
+        while (_rateWindow.length && nowMs - _rateWindow[0] > RATE_LIMIT_WINDOW_MS) {
+            _rateWindow.shift();
+        }
+        if (_rateWindow.length >= RATE_LIMIT_MAX) return true;
+        _rateWindow.push(nowMs);
+        return false;
+    }
+
+    function _audit(entry) {
+        try {
+            const raw = localStorage.getItem(AUDIT_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            arr.push(entry);
+            while (arr.length > AUDIT_MAX) arr.shift();
+            localStorage.setItem(AUDIT_KEY, JSON.stringify(arr));
+        } catch (e) { /* localStorage unavailable — silently skip */ }
+    }
+
+    // ─────────────────────────────────────────────────────────
     // COMMAND PARSER  (arg-based, no "sudo" prefix required)
     // ─────────────────────────────────────────────────────────
     function _parse(raw) {
         const trimmed = raw.trim();
         if (!trimmed) return;
+
+        // ── Rate limit (applies before anything else) ─────────
+        const nowMs = Date.now();
+        if (_rateLimited(nowMs)) {
+            _appendLine(`⚠ RATE LIMIT: >${RATE_LIMIT_MAX} cmds / ${RATE_LIMIT_WINDOW_MS}ms — slow down.`, 'cline-warn', true);
+            return;
+        }
 
         _cmdCount++;
         const perm = _getPermLevel();
@@ -232,18 +325,58 @@ const AdminConsole = (() => {
         const sub = args[1] || '';    // second token
         const rest = args.slice(2);    // remainder
 
-        // ── Permission guard ───────────────────────────────────
-        const ROOT_ONLY = ['god', 'kill', 'speed', 'reset'];
-        if (ROOT_ONLY.includes(base) && perm < PERM.ROOT) {
-            _appendLine('⛔ ERR: Permission denied. Required: ROOT', 'cline-error');
+        // ── Confirm gate for destructive commands ─────────────
+        // If a pending confirm exists and user types 'yes', replay the stashed
+        // command. If it expired or user typed anything else, drop the pending
+        // state and process this input normally.
+        if (_pendingConfirm) {
+            if (nowMs > _pendingConfirm.expires) {
+                _pendingConfirm = null;
+            } else if (base === 'yes' || base === 'y') {
+                const replay = _pendingConfirm.raw;
+                _pendingConfirm = null;
+                _appendLine('✔ Confirmed — executing...', 'cline-info');
+                // Re-invoke parser with the stashed command; bypass confirm gate
+                // by marking it as confirmed for this single call.
+                _parse.__confirmed = true;
+                try { _parse(replay); } finally { _parse.__confirmed = false; }
+                return;
+            } else {
+                // Any other input cancels the pending confirmation
+                _pendingConfirm = null;
+                _appendLine('✖ Confirmation cleared — previous command aborted.', 'cline-warn', true);
+                // fall through to process this new input normally
+            }
+        }
+
+        // ── Registry-driven guards (permission / destructive / player) ─
+        const meta = _meta(base, sub);
+        const requiredPerm = meta.perm ?? PERM.GUEST;
+        const signature = _sig(base, sub);
+
+        // Permission guard
+        if (perm < requiredPerm) {
+            const label = PERM_LABEL[requiredPerm]?.text || 'ROOT';
+            _appendLine(`⛔ ERR: Permission denied. Required: ${label}`, 'cline-error');
             _appendLine(`   Your level: ${PERM_LABEL[perm].text}  — contact system admin.`, 'cline-warn', true);
+            _audit({ t: nowMs, perm: permInfo.text, raw, result: 'denied' });
             return;
         }
 
-        // ── Player guard (most commands need an active player) ─
-        const needsPlayer = !['help', 'clear', 'exit', 'quit', 'q',
-            'whoami', 'ls', 'cat', 'sudo'].includes(base);
-        if (needsPlayer && !window.player) {
+        // Destructive command confirm gate
+        if (meta.destructive && !_parse.__confirmed) {
+            _pendingConfirm = { raw: trimmed, sig: signature, expires: nowMs + CONFIRM_TTL_MS };
+            _appendLine(`⚠ DESTRUCTIVE: "${signature}" will reset/mutate run state.`, 'cline-warn', true);
+            _appendLine(`  Type "yes" within ${CONFIRM_TTL_MS / 1000}s to confirm, or any key to abort.`, 'cline-info', true);
+            _audit({ t: nowMs, perm: permInfo.text, raw, result: 'pending_confirm' });
+            return;
+        }
+
+        // Audit every accepted command from here on
+        _audit({ t: nowMs, perm: permInfo.text, raw, result: 'ok' });
+
+        // Player guard (most commands need an active player)
+        if (!meta.noPlayer && !window.player) {
             _appendLine(GAME_TEXTS.admin.noPlayer, 'cline-error');
             return;
         }
@@ -808,6 +941,35 @@ const AdminConsole = (() => {
         else if (base === 'clear') {
             const out = document.getElementById('console-output');
             if (out) out.innerHTML = '';
+        }
+
+        // ══════════════════════════════════════════════════════
+        // audit [tail N]   — inspect the admin audit log
+        // ══════════════════════════════════════════════════════
+        else if (base === 'audit') {
+            try {
+                const rawLog = localStorage.getItem(AUDIT_KEY);
+                const arr = rawLog ? JSON.parse(rawLog) : [];
+                if (sub === 'clear') {
+                    if (perm < PERM.ROOT) {
+                        _appendLine('⛔ ERR: audit clear requires ROOT', 'cline-error');
+                    } else {
+                        localStorage.removeItem(AUDIT_KEY);
+                        _appendLine('✔ Audit log cleared.', 'cline-ok');
+                    }
+                } else {
+                    const n = Math.max(1, Math.min(AUDIT_MAX, parseInt(args[2]) || 20));
+                    const slice = arr.slice(-n);
+                    _appendLine(`─ Audit log (last ${slice.length} / ${arr.length}) ─`, 'cline-info');
+                    for (const e of slice) {
+                        const ts = new Date(e.t).toLocaleTimeString();
+                        _appendLine(`[${ts}] ${e.perm.padEnd(8)} ${e.result.padEnd(16)} ${e.raw}`, 'cline-info', true);
+                    }
+                    if (slice.length === 0) _appendLine('  (empty)', 'cline-warn', true);
+                }
+            } catch (e) {
+                _appendLine('ERR: audit log unavailable (localStorage blocked)', 'cline-error');
+            }
         }
 
         // ══════════════════════════════════════════════════════
