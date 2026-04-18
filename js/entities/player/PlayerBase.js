@@ -148,6 +148,11 @@ class Player extends Entity {
     // allSkillsDone:  true when every SkillUnlock for this character is complete
     // passiveDone:    set true alongside passiveUnlocked (single source of truth)
     // specialDone:    SpecialUnlock complete
+    //
+    // v3.44.3: prefer `this.isUnlocked(SKILL.XXX.YYY)` / `this.unlock(...)`
+    // over direct `skillsUnlocked.includes(...)` / `.push(...)` — the helpers
+    // validate the key against js/systems/SkillRegistry.js so typos surface
+    // at dev time instead of silently never unlocking (Pat-Zanzo-class bug).
     this._abilityUnlock = {
       skillsUnlocked: [],
       allSkillsDone:  false,
@@ -579,6 +584,38 @@ class Player extends Entity {
   _showUnlockHint(text, duration = 5) {
     this._unlockHintText  = text;
     this._unlockHintTimer = text ? duration : 0;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  Skill unlock helpers (v3.44.3 — tech-debt remediation)
+  //
+  //  Prefer these over direct `skillsUnlocked.includes('x')` /
+  //  `skillsUnlocked.push('x')` so the key is validated against
+  //  js/systems/SkillRegistry.js (catches typos at dev time).
+  //
+  //  Example:
+  //      if (this.isUnlocked(SKILL.KAO.TELEPORT)) { ... }
+  //      this.unlock(SKILL.KAO.CLONE);
+  // ══════════════════════════════════════════════════════════════════
+
+  /** Return true iff the skill key is unlocked on this player. */
+  isUnlocked(key) {
+    if (typeof window !== 'undefined' && typeof window.assertValidSkillKey === 'function') {
+      window.assertValidSkillKey(key);
+    }
+    const arr = this._abilityUnlock && this._abilityUnlock.skillsUnlocked;
+    return Array.isArray(arr) && arr.indexOf(key) !== -1;
+  }
+
+  /** Mark a skill key as unlocked. No-op if already unlocked. Returns true on change. */
+  unlock(key) {
+    if (typeof window !== 'undefined' && typeof window.assertValidSkillKey === 'function') {
+      window.assertValidSkillKey(key);
+    }
+    const arr = this._abilityUnlock && this._abilityUnlock.skillsUnlocked;
+    if (!Array.isArray(arr) || arr.indexOf(key) !== -1) return false;
+    arr.push(key);
+    return true;
   }
 
   breakStealth() {

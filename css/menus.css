@@ -50,7 +50,12 @@
   transition: background 0.55s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Character theme backgrounds for #overlay ── */
+/* ── Character theme backgrounds for #overlay ─────────────────────────────
+   Each theme block also declares --menu-* tokens consumed by .menu-container
+   below. This makes the container background tint with the character theme
+   (~15 % lighter than the overlay bg so foreground/background layering stays
+   legible). See also Markdown Source/Information/CHARACTER_CARD_CHECKLIST.md
+   ─────────────────────────────────────────────────────────────────────── */
 #overlay.theme-kao {
   background:
     repeating-linear-gradient(
@@ -66,6 +71,11 @@
       rgba(30, 20, 4, 0.97) 35%,
       rgba(4, 2, 12, 1) 80%
     );
+  /* menu-container tokens (v3.44.2) */
+  --menu-bg-start: rgba(76, 46, 10, 0.98);
+  --menu-bg-end:   rgba(22, 14, 30, 0.99);
+  --menu-border:   rgba(250, 204, 21, 0.22);
+  --menu-glow:     rgba(250, 180, 20, 0.14);
 }
 
 #overlay.theme-poom {
@@ -83,6 +93,10 @@
       rgba(3, 20, 10, 0.97) 35%,
       rgba(4, 2, 12, 1) 80%
     );
+  --menu-bg-start: rgba(10, 58, 24, 0.98);
+  --menu-bg-end:   rgba(8, 22, 22, 0.99);
+  --menu-border:   rgba(74, 222, 128, 0.22);
+  --menu-glow:     rgba(34, 197, 94, 0.14);
 }
 
 #overlay.theme-auto {
@@ -100,6 +114,10 @@
       rgba(28, 4, 4, 0.97) 35%,
       rgba(4, 2, 12, 1) 80%
     );
+  --menu-bg-start: rgba(78, 16, 16, 0.98);
+  --menu-bg-end:   rgba(24, 8, 22, 0.99);
+  --menu-border:   rgba(239, 68, 68, 0.22);
+  --menu-glow:     rgba(220, 38, 38, 0.14);
 }
 
 #overlay.theme-pat {
@@ -117,6 +135,10 @@
       rgba(3, 12, 30, 0.97) 35%,
       rgba(4, 2, 12, 1) 80%
     );
+  --menu-bg-start: rgba(12, 34, 82, 0.98);
+  --menu-bg-end:   rgba(10, 16, 34, 0.99);
+  --menu-border:   rgba(96, 165, 250, 0.22);
+  --menu-glow:     rgba(96, 165, 250, 0.14);
 }
 
 /* Animated gold sweep bar at top of overlay */
@@ -152,15 +174,28 @@
 }
 
 .menu-container {
-  background: radial-gradient(
-    ellipse at 50% 0%,
-    rgba(36, 15, 4, 0.99) 0%,
-    rgba(10, 5, 22, 0.99) 100%
-  );
-  border: 1px solid rgba(250, 204, 21, 0.22);
+  /* v3.44.2: token-driven per-character tint.  Defaults (Kao) are used
+     as var() fallbacks so the container renders correctly before any
+     theme class is applied (boot) and if a new character is added
+     without overrides in #overlay.theme-*. */
+  background-image:
+    radial-gradient(
+      ellipse at 50% 0%,
+      var(--menu-bg-start, rgba(36, 15, 4, 0.99)) 0%,
+      var(--menu-bg-end,   rgba(10, 5, 22, 0.99)) 100%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.07) 4px
+    );
+  background-blend-mode: normal;
+  border: 1px solid var(--menu-border, rgba(250, 204, 21, 0.22));
   box-shadow:
-    0 0 0 1px rgba(250, 204, 21, 0.05) inset,
-    0 0 120px rgba(250, 180, 20, 0.12),
+    0 0 0 1px var(--menu-border, rgba(250, 204, 21, 0.05)) inset,
+    0 0 120px var(--menu-glow,   rgba(250, 180, 20, 0.12)),
     0 0 50px rgba(249, 115, 22, 0.05) inset,
     0 32px 80px rgba(0, 0, 0, 0.95);
   border-radius: 4px;
@@ -177,21 +212,10 @@
   -webkit-clip-path: polygon(16px 0%, 100% 0%, calc(100% - 16px) 100%, 0% 100%);
   clip-path: polygon(16px 0%, 100% 0%, calc(100% - 16px) 100%, 0% 100%);
   animation: menuContainerIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  /* scanline texture */
-  background-image:
-    radial-gradient(
-      ellipse at 50% 0%,
-      rgba(36, 15, 4, 0.99) 0%,
-      rgba(10, 5, 22, 0.99) 100%
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(0, 0, 0, 0.07) 3px,
-      rgba(0, 0, 0, 0.07) 4px
-    );
-  background-blend-mode: normal;
+  transition:
+    background-image 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.55s,
+    box-shadow 0.55s;
 }
 
 @keyframes menuContainerIn {

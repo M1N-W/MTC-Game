@@ -14,8 +14,8 @@ const GAME_TEXTS = {
         // ── BossFirst (Kru First) announce texts ──────────────
         firstIncoming: `⚛️ KRU FIRST — BOSS INCOMING!`,
         firstAdvanced: `⚛️ KRU FIRST — ADVANCED MODE ⚡`,
-        firstTagline: `F=ma · v=u+at · หลบให้ทัน!`,
-        firstTaglineAdvanced: `F=ma · E=mc² · ไม่มีทางรอด!`,
+        firstTagline: `F=ma · v=u+at`,
+        firstTaglineAdvanced: `F=ma · E=mc²`,
         glitchWave: `⚡ GLITCH WAVE ⚡`,
         glitchAnomaly: `SYSTEM ANOMALY DETECTED...⚠️`,
         glitchControls: `CONTROLS INVERTED!`,
@@ -41,6 +41,25 @@ const GAME_TEXTS = {
         spdBoostActive: `👟 SPD. ×1.1!`,
         spdBoostExtended: `👟 SPD +30s.`,
         spdBoostExpired: `หมดบัฟความเร็ว`,
+    },
+    // ══════════════════════════════════════════════════════
+    // 📜 MISSION BRIEF — แสดงใต้ subtitle ในเมนูหลัก
+    // initAI() ใน game.js สุ่มชื่อภารกิจจาก `missionNames`
+    // แล้ว wrap ด้วย `missionPrefix()` ก่อนเขียนลง #mission-brief
+    // (คงโครงเดิมจาก v3.19 ก่อน commit 2ec3094 ที่ลบทิ้งพร้อม Gemini cleanup)
+    // ══════════════════════════════════════════════════════
+    ai: {
+        loading: `The Mission is coming up...`,
+        missionPrefix: (name) => `Mission "${name}"`,
+        missionFallback: `MTC Adventure`,
+        missionNames: [
+            `Equation War`,
+            `Math Operation`,
+            `MTC Adventure`,
+            `Final Exam Survival`,
+            `Midterm Mayhem`,
+            `The Last Homework`,
+        ],
     },
     // ══════════════════════════════════════════════════════
     // 🎮 SKILL NAMES — ชื่อที่แสดงใต้ปุ่มสกิลใน HUD
@@ -254,7 +273,6 @@ const GAME_TEXTS = {
                 `ตายง่ายขนาดนี้ กลับไปเรียนอนุบาลใหม่ไป๊!`,
                 `สภาพพพ`,
                 `ไอสั_ กลับไปอ่านหนังสือ!`,
-                `นี่ขนาดผมเนิร์ฟศัตรูให้แล้วนะ`,
             ],
         },
     },
@@ -290,23 +308,23 @@ const GAME_TEXTS = {
     // ══════════════════════════════════════════════════════
     tutorial: {
         welcome: {
-            title: `ยินดีต้อนรับสู่ MTC the Game`,
-            body: `มาเรียนรู้วิธีเล่นกันก่อน\n\nกด NEXT หรือ Space Bar เพื่อเริ่มบทเรียน`,
+            title: `ยินดีต้อนรับสู่ MTC the Game!`,
+            body: `มาเรียนรู้วิธีเล่นกันก่อนครับ\n\nกด NEXT หรือ Space Bar เพื่อเริ่มบทเรียน`,
             icon: `🎓`,
         },
         movement: {
             title: `บทที่ 1 : การเคลื่อนที่`,
-            body: `กด W A S D เพื่อเดินไปรอบๆ\n\n(หวังว่าแค่นี้คงไม่ต้องให้จับมือทำนะ)`,
+            body: `กด W A S D เพื่อลองเดินไปรอบๆ\n\n(หวังว่าแค่นี้คงไม่ต้องให้จับมือทำนะ)`,
             icon: `🕹️`,
         },
         shooting: {
             title: `บทที่ 2 : การยิง`,
-            body: `เล็งด้วยเมาส์ แล้วกดคลิกซ้ายเพื่อยิงกระสุน\n\nลองยิง 3 ครั้ง`,
+            body: `เล็งทิศทางด้วยเมาส์ แล้วกดคลิกซ้ายเพื่อยิงกระสุน\n\nลองกดยิง 3 ครั้ง`,
             icon: `🔫`,
         },
         dash: {
             title: `บทที่ 3 : Dash`,
-            body: `กด Space Bar เพื่อ Dash หลบ\nแต่การ Dash จะมีคูลดาวน์ ควรใช้ให้ถูกจังหวะนะ\n\nลอง Dash 1 ครั้ง`,
+            body: `กด Space Bar เพื่อ Dash หลบการโจมตี\nแต่การ Dash จะมีคูลดาวน์ ควรใช้ให้ถูกจังหวะนะ\n\nลอง Dash 1 ครั้ง`,
             icon: `💨`,
         },
         rclick: {
@@ -342,7 +360,7 @@ const GAME_TEXTS = {
         poomPassive: {
             title: `ฝึกสอน : ภูมิ`,
             body: `ยิงข้าวเหนียวติด Sticky สะสมได้\nกินข้าวเหนียวฟื้น HP + เร็วขึ้น\n\nSU1 : ติด Sticky 10 ตัว → ปลด Q+R\nSU2 : Ritual โดน 4+ ตัว → ปลด E\nPassive : Naga+Garuda พร้อมกัน + ฆ่า Ritual 2 ตัว`,
-            icon: `�`,
+            icon: `🍚`,
         },
         patPassive: {
             title: `ฝึกสอน : แพท`,

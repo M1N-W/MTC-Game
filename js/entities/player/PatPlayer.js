@@ -43,7 +43,22 @@
  * ⚠️  triggerHitStop called at L.477 — uses seconds (0.09 / 0.07), not ms.
  * ⚠️  skills.zanzo.cd / skills.iaido.cd use the {cd, max} object pattern
  *     (not flat this.cooldowns.*) — don't mix the two accessor styles.
- * ════════════════════════════════════════════════════════════════════
+ *
+ * ── STATE MACHINE INVARIANTS (v3.44.3 audit) ────────────────────────────
+ *   A. Blade Guard    : bladeGuardActive ↔ _bladeGuardCooldown ↔ _bladeGuardDuration
+ *   B. Perfect Parry  : _perfectParryArmed (SU2-gated; ORTHOGONAL to A)
+ *   C. Iaido          : _iaidoPhase ∈ {'none','charge','flash','cinematic'}
+ *                       (EXCLUSIVE with A+B — returns early from update())
+ *   D. Zanzo Flash    : _zanzoGhosts[] object pool + _zanzoAmbushTimer
+ *                       (triggered by Q, independent of A/B/C)
+ *
+ * ⚠️  A and B must remain ORTHOGONAL.  Do NOT gate A on B — pre-SU2 players
+ *     never arm B, and gating A on B would make Blade Guard dead before
+ *     SU2 (this was the actual Wave-1 Pat regression fixed in v3.44.1).
+ * ⚠️  C is exclusive with A+B: during 'charge' or 'cinematic' the update()
+ *     returns before _tickBladeGuard() runs, so A/B input is silently
+ *     consumed.  Any new skill input must be placed outside that early-return.
+ * ═══════════════════════════════════════════════════════════════════════
  */
 // ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  PatPlayer.js — "แพท" Samurai Ronin Character                           ║
@@ -163,20 +178,20 @@ class PatPlayer extends Player {
     const AU = this._abilityUnlock;
 
     // SU1: Q (Zanzo Flash) — 3 Iaido hits
-    if (!AU.skillsUnlocked.includes('zanzo')) {
+    if (!this.isUnlocked(SKILL.PAT.ZANZO)) {
       const req = S.su1IaidoHitReq ?? 3;
       if ((this._iaidoSuccessCount ?? 0) < req) return;
-      AU.skillsUnlocked.push('zanzo');
+      this.unlock(SKILL.PAT.ZANZO);
       spawnFloatingText("Q UNLOCKED: Zanzo Flash!", this.x, this.y - 65, "#7ec8e3", 22);
       spawnParticles(this.x, this.y, 20, "#7ec8e3");
       if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
     }
 
     // SU2: Perfect Parry timing window — 2 total reflects
-    if (!AU.skillsUnlocked.includes('perfectParry')) {
+    if (!this.isUnlocked(SKILL.PAT.PERFECT_PARRY)) {
       const req2 = S.su2ReflectReq ?? 2;
       if ((this._reflectCount ?? 0) < req2) return;
-      AU.skillsUnlocked.push('perfectParry');
+      this.unlock(SKILL.PAT.PERFECT_PARRY);
       AU.allSkillsDone = true;
       spawnFloatingText("R-Click UNLOCKED: Perfect Parry!", this.x, this.y - 65, "#facc15", 22);
       spawnParticles(this.x, this.y, 20, "#facc15");
@@ -292,7 +307,7 @@ class PatPlayer extends Player {
 
     // ── Zanzo Flash (Q) — locked until SU1 (3 Iaido hits) ─────────────────
     if (checkInput("q") && this.skills.zanzo.cd <= 0 && this._iaidoPhase === "none") {
-      if (this._abilityUnlock.skillsUnlocked.includes('zanzo')) {
+      if (this.isUnlocked(SKILL.PAT.ZANZO)) {
         const cost = S.qEnergyCost ?? 22;
         if ((this.energy ?? 0) < cost) {
           spawnFloatingText("FOCUS LOW!", this.x, this.y - 50, "#facc15", 16);
@@ -342,12 +357,11 @@ class PatPlayer extends Player {
 
     // ── AbilityUnlock: progress check + persistent hint ──────────────────
     {
-      const AU = this._abilityUnlock;
       const S2 = this.stats;
-      if (!AU.skillsUnlocked.includes('zanzo')) {
+      if (!this.isUnlocked(SKILL.PAT.ZANZO)) {
         const req = S2.su1IaidoHitReq ?? 3;
         this._showUnlockHint(`Iaido hits: ${this._iaidoSuccessCount ?? 0}/${req} -> Q Zanzo`);
-      } else if (!AU.skillsUnlocked.includes('perfectParry')) {
+      } else if (!this.isUnlocked(SKILL.PAT.PERFECT_PARRY)) {
         const req2 = S2.su2ReflectReq ?? 2;
         this._showUnlockHint(`Reflects: ${this._reflectCount ?? 0}/${req2} -> Perfect Parry`);
       } else if (!this.passiveUnlocked) {
@@ -372,7 +386,7 @@ class PatPlayer extends Player {
     // ── Button just pressed: arm Perfect Parry (SU2 required) ──────────────
     if (held && !this._prevRightHeld && this._bladeGuardCooldown <= 0) {
       // Perfect Parry timing window only available after SU2 (reflect 2 projectiles)
-      if (this._abilityUnlock.skillsUnlocked.includes('perfectParry')) {
+      if (this.isUnlocked(SKILL.PAT.PERFECT_PARRY)) {
         this._perfectParryArmed = true;
       }
       this._bladeGuardDuration = 0; // reset hold timer
@@ -382,13 +396,16 @@ class PatPlayer extends Player {
     if (held && this._bladeGuardCooldown <= 0) {
       this._bladeGuardDuration += dt;
 
-      // Held past parry window → switch to normal Blade Guard
-      if (this._perfectParryArmed && this._bladeGuardDuration >= parryWindow) {
-        this._perfectParryArmed = false;
-        if (!this.bladeGuardActive) {
-          this.bladeGuardActive = true;
-          spawnFloatingText('🛡 BLADE GUARD', this.x, this.y - 45, '#a8d8ea', 16);
-        }
+      // Held past parry window → switch to normal Blade Guard.
+      // FIX (v3.44.1): decouple activation from `_perfectParryArmed`. Pre-SU2
+      // `_perfectParryArmed` is never set, which previously left Blade Guard
+      // permanently unable to enter active state. Now normal Blade Guard
+      // always engages after parryWindow; Perfect Parry arming is consumed
+      // here only if it happened to be set (SU2 path).
+      if (this._bladeGuardDuration >= parryWindow && !this.bladeGuardActive) {
+        if (this._perfectParryArmed) this._perfectParryArmed = false;
+        this.bladeGuardActive = true;
+        spawnFloatingText('🛡 BLADE GUARD', this.x, this.y - 45, '#a8d8ea', 16);
       }
 
       if (this.bladeGuardActive) {

@@ -39,7 +39,27 @@
  *     from BALANCE.characters.poom — missing keys silently fall back to 0.35/0.45.
  * ⚠️  applyStickyTo: bosses lack addStatus() → falls back to direct stickyStacks++;
  *     do not add StatusEffect calls to boss path.
- * ════════════════════════════════════════════════════════════════════
+ *
+ * ── STATE MACHINE INVARIANTS (v3.44.3 audit) ────────────────────────────
+ *   A. Sticky Stacks  : _uniqueStickyTargets Set (drives SU1 unlock at 10)
+ *   B. Naga (Q+R)     : naga?.active + _nagaUnlocked (SU1-gated)
+ *                       Ritual R triggered while B=active → ritualBurst()
+ *   C. Garuda (E)     : garuda?.active (SU2-gated; requires Ritual 4+ hits)
+ *   D. Ritual Burst   : _ritualMultiHitDone flag — set when one cast hits
+ *                       4+ enemies (drives SU2 unlock for C)
+ *   E. Cosmic Balance : _cosmicBalance = (B=active && C=active)
+ *                       (derived — no setter; drives passive + damage bonuses)
+ *   F. Eat Rice       : isEatingRice + cooldowns.eat (always available)
+ *
+ * ⚠️  B and C are ORTHOGONAL summon lifecycles.  Both must be active
+ *     simultaneously for E to fire.  Do not gate C on B — they unlock
+ *     independently via skillsUnlocked[].
+ * ⚠️  E is READ-ONLY derived.  Never assign to _cosmicBalance; recompute
+ *     it inline where needed (see dealDamage() + ritualBurst()).
+ * ⚠️  D is a one-shot flag — set true on first qualifying Ritual, stays
+ *     true after SU2 unlock fires.  Do not reset it for repeat unlocks.
+ * ⚠️  F has its own cooldown + energy cost, not part of any unlock chain.
+ * ═══════════════════════════════════════════════════════════════════════
  */
 
 // ════════════════════════════════════════════════════════════
@@ -339,7 +359,7 @@ class PoomPlayer extends Player {
     }
 
     if (checkInput("e")) {
-      if (this._abilityUnlock.skillsUnlocked.includes('garuda') && this.cooldowns.garuda <= 0) {
+      if (this.isUnlocked(SKILL.POOM.GARUDA) && this.cooldowns.garuda <= 0) {
         const gCost = S.garudaEnergyCost ?? 30;
         if ((this.energy ?? 0) < gCost) {
           spawnFloatingText(
@@ -354,7 +374,7 @@ class PoomPlayer extends Player {
           this.summonGaruda();
           if (this._anim) this._anim.skillT = 0.6;
         }
-      } else if (!this._abilityUnlock.skillsUnlocked.includes('garuda')) {
+      } else if (!this.isUnlocked(SKILL.POOM.GARUDA)) {
         const _gReq = this.stats?.su2RitualMultiHitReq ?? 1;
         spawnFloatingText(
           `Ritual 4+ hits: ${this._ritualMultiHitDone ? _gReq : 0}/${_gReq} -> E`,
@@ -494,12 +514,11 @@ class PoomPlayer extends Player {
     }
     // ── AbilityUnlock: progress check + persistent hint ──────────────────
     {
-      const AU = this._abilityUnlock;
       const S2 = this.stats;
-      if (!AU.skillsUnlocked.includes('naga')) {
+      if (!this.isUnlocked(SKILL.POOM.NAGA)) {
         const req = S2.su1StickyTargetReq ?? 10;
         this._showUnlockHint(`Sticky hits: ${this._uniqueStickyTargets?.size ?? 0}/${req} -> Q+R`);
-      } else if (!AU.skillsUnlocked.includes('garuda')) {
+      } else if (!this.isUnlocked(SKILL.POOM.GARUDA)) {
         this._showUnlockHint('Ritual 4+ enemies in 1 cast -> E Garuda');
       } else if (!this.passiveUnlocked) {
         this._showUnlockHint('Cosmic Balance + 2 Ritual kills -> Passive');
@@ -594,10 +613,10 @@ class PoomPlayer extends Player {
     const AU = this._abilityUnlock;
 
     // SU1: Q+R unlock — 10 unique sticky target hits
-    if (!AU.skillsUnlocked.includes('naga')) {
+    if (!this.isUnlocked(SKILL.POOM.NAGA)) {
       const req = S.su1StickyTargetReq ?? 10;
       if ((this._uniqueStickyTargets?.size ?? 0) < req) return;
-      AU.skillsUnlocked.push('naga');
+      this.unlock(SKILL.POOM.NAGA);
       this._nagaUnlocked = true; // keep legacy routing flag in sync
       spawnFloatingText("Q+R UNLOCKED: Naga + Ritual!", this.x, this.y - 65, "#10b981", 22);
       spawnParticles(this.x, this.y, 25, "#10b981");
@@ -605,9 +624,9 @@ class PoomPlayer extends Player {
     }
 
     // SU2: E (Garuda) — Ritual must hit 4+ enemies in one cast
-    if (!AU.skillsUnlocked.includes('garuda')) {
+    if (!this.isUnlocked(SKILL.POOM.GARUDA)) {
       if (!this._ritualMultiHitDone) return;
-      AU.skillsUnlocked.push('garuda');
+      this.unlock(SKILL.POOM.GARUDA);
       AU.allSkillsDone = true;
       spawnFloatingText("E UNLOCKED: Garuda!", this.x, this.y - 65, "#f97316", 22);
       spawnParticles(this.x, this.y, 25, "#f97316");

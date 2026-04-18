@@ -1235,7 +1235,7 @@
 .char-dots--vertical {
   position: static;
   flex-direction: row;
-  margin-top: 14px;
+  margin: 20px;
   transform: none;
   top: auto;
   right: auto;

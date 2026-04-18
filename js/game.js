@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const DEBUG_MODE = false;
 
@@ -27,7 +27,7 @@ const DEBUG_MODE = false;
  *   GameState.js → WaveManager.js → ShopSystem.js → game.js
  *   WorkerBridge.js   ← loads BEFORE game.js in index.html (typeof guard used for access)
 
- 
+
  * ── TABLE OF CONTENTS ───────────────────────────────────────────────────
  *  L.69   Module-level vars     rafId, _bgGrad, dayNightTimer, window.player
  *  L.73   setGameState(s)       Thin alias → GameState.setPhase(); window export
@@ -45,7 +45,8 @@ const DEBUG_MODE = false;
  *  L.558  drawGame()            Full render pipeline: bg → map → entities → HUD
  *  L.749  drawDayNightHUD()     Day/night overlay gradient + cycle indicator
  *  L.794  drawGrid()            Debug grid overlay (DEBUG_MODE only)
- *  L.817  (removed)            initAI() was removed - no longer used
+ *  L.817  initAI()             Pick random mission name from GAME_TEXTS.ai.missionNames
+ *                               and write it to #mission-brief (replaces "loading" placeholder)
  *  L.826  _fadeOutOverlay()     CSS opacity fade for loading/transition overlays
  *  L.843  startGame(charType)   Full game init: player factory, reset, UI wire-up
  *  L.867  _createPlayer(t)      Character factory → KaoPlayer|AutoPlayer|Poom|Pat
@@ -927,6 +928,99 @@ function drawGrid() {
 // 🚀 INIT & START
 // ══════════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════════
+// 📜 initAI() — populate #mission-brief with a random mission name.
+//
+// Historical note:
+//   Until v3.19, this used Gemini AI to generate mission names live.
+//   v3.19 removed the Gemini dep and switched to a static list in
+//   `GAME_TEXTS.ai.missionNames`. Commit 2ec3094 (v3.43.1 docs audit)
+//   accidentally deleted the whole `GAME_TEXTS.ai` section and the
+//   `initAI()` call site together with the Gemini cleanup pass, which
+//   left #mission-brief stuck on the "The Mission is coming up..." placeholder.
+//   Restored in v3.44.1 using the static-list path only (no network).
+//
+// Fallback chain:
+//   GAME_TEXTS.ai.missionNames → random pick → missionPrefix(name)
+//   → missionFallback if list empty → placeholder stays if GAME_TEXTS
+//     has not loaded yet.
+// ══════════════════════════════════════════════════════════════
+function initAI() {
+    const brief = document.getElementById('mission-brief');
+    if (!brief) return;
+    const ai = (typeof GAME_TEXTS !== 'undefined' && GAME_TEXTS.ai) || null;
+    if (!ai) return; // leave placeholder if texts not loaded
+    const names = Array.isArray(ai.missionNames) ? ai.missionNames : [];
+    const name = names.length
+        ? names[Math.floor(Math.random() * names.length)]
+        : (ai.missionFallback || 'MTC Adventure');
+    brief.textContent = typeof ai.missionPrefix === 'function'
+        ? ai.missionPrefix(name)
+        : `Mission "${name}"`;
+}
+
+// Expose so other scripts (e.g. menu re-entry from game-over) can call it
+if (typeof window !== 'undefined') window.initAI = initAI;
+
+// ══════════════════════════════════════════════════════════════
+// 🛡 _assertBootInvariants — structural self-check at boot time
+//
+// v3.44.3 — added after tech-debt audit (TECH_DEBT_v3.44.md §5).
+// Catches regressions like commit 2ec3094 which silently deleted
+// `GAME_TEXTS.ai` and shipped to production unnoticed.
+//
+// Each check emits `console.error` with a descriptive message.  Non-fatal:
+// the game still boots so the user sees something, but the error is loud
+// in DevTools + reportable by automated smoke tests.
+// ══════════════════════════════════════════════════════════════
+function _assertBootInvariants() {
+    const errors = [];
+    const warn = (msg) => errors.push(msg);
+
+    // 1. GAME_TEXTS sections that the UI/game logic cannot operate without.
+    if (typeof GAME_TEXTS === 'undefined' || !GAME_TEXTS) {
+        warn('GAME_TEXTS is undefined — game-texts.js failed to load');
+    } else {
+        const REQUIRED_TEXT_SECTIONS = ['ui', 'skillNames', 'combat', 'ai'];
+        for (const key of REQUIRED_TEXT_SECTIONS) {
+            if (!GAME_TEXTS[key] || typeof GAME_TEXTS[key] !== 'object') {
+                warn(`GAME_TEXTS.${key} missing — likely deleted by a docs/cleanup pass`);
+            }
+        }
+        // Specific deep-key the 2ec3094 regression removed:
+        if (GAME_TEXTS.ai && !Array.isArray(GAME_TEXTS.ai.missionNames)) {
+            warn('GAME_TEXTS.ai.missionNames missing or not an array — mission-brief will be stuck on placeholder');
+        }
+    }
+
+    // 2. Critical globals must exist after the <script defer> chain runs.
+    // `Player` is the class declared in PlayerBase.js (not `PlayerBase`).
+    const REQUIRED_GLOBALS = ['SKILL', 'Player', 'UIManager', 'BALANCE', 'GameState'];
+    for (const g of REQUIRED_GLOBALS) {
+        if (typeof window[g] === 'undefined') {
+            warn(`window.${g} is undefined — script load order broken`);
+        }
+    }
+
+    // 3. SkillRegistry sanity — every char's skill set must be non-empty.
+    if (typeof window.SKILL === 'object') {
+        for (const char of ['KAO', 'POOM', 'AUTO', 'PAT']) {
+            const set = window.SKILL[char];
+            if (!set || Object.keys(set).length === 0) {
+                warn(`SKILL.${char} is empty — no unlockable skills defined`);
+            }
+        }
+    }
+
+    if (errors.length === 0) return;
+    console.error(
+        `[boot-assert] ${errors.length} invariant(s) violated:\n  - ` + errors.join('\n  - ')
+    );
+    // Surface a flag that smoke tests can read.
+    if (typeof window !== 'undefined') window.__bootAssertErrors = errors.slice();
+}
+if (typeof window !== 'undefined') window._assertBootInvariants = _assertBootInvariants;
+
 // ── Overlay fade-out helper (🔴 Fix #1) ──────────────────────────────────
 function _fadeOutOverlay() {
     const el = document.getElementById('overlay');
@@ -1380,10 +1474,16 @@ window.onload = () => {
 
         try {
             // Step 1: Canvas System
+            // ── Boot assertion (v3.44.3) ─────────────────────────────────────
+            // Catches structural regressions like commit 2ec3094 (GAME_TEXTS.ai
+            // deletion) at boot instead of silently shipping with missing UI
+            // text. Runs in production too — non-fatal, only console.error.
+            try { _assertBootInvariants(); } catch (e) { console.error('[boot-assert]', e); }
+
             LoadingState.update('canvas', 'Canvas System', 'INITIALIZING CANVAS...');
             initCanvas();
 
-            // Step 2: Input System  
+            // Step 2: Input System
             LoadingState.update('input', 'Input System', 'SETTING UP INPUTS...');
             setGameState('MENU');
             if (typeof InputSystem !== 'undefined') InputSystem.init();
@@ -1400,6 +1500,11 @@ window.onload = () => {
 
             // Step 5: Ready to Play
             LoadingState.update('ready', 'Ready to Play', 'FINALIZING...');
+
+            // Populate mission brief with a random mission name (replaces
+            // "The Mission is coming up..." placeholder). Restored in v3.44.1 after
+            // commit 2ec3094 accidentally deleted it.
+            try { initAI(); } catch (e) { console.warn('[initAI] failed:', e); }
 
             // Finish loading
             setTimeout(() => LoadingState.finish(), 500);

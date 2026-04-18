@@ -58,7 +58,28 @@
  * ⚠️  WanchaiStand accesses window.enemies[] directly — guard with typeof check.
  * ⚠️  triggerHitStop() called on crit in _doPlayerMelee — use seconds (0.04),
  *     not milliseconds. Guard: typeof triggerHitStop !== 'undefined'.
- * ════════════════════════════════════════════════════════════════════════════
+ * ── STATE MACHINE INVARIANTS (v3.44.3 audit) ────────────────────────────
+ *   A. Heat Tier       : heatMeter → _heatTier ∈ {0 COLD, 1 WARM, 2 HOT, 3 OVERHEAT}
+ *   B. Wanchai Stand   : wanchaiActive ↔ wanchaiStand + standMeter
+ *                        (always available from frame 1 — NOT unlock-gated)
+ *   C. Vacuum (Q)      : two modes routed by B —
+ *                          B=inactive → _doVacuum() (earlyMode pre-SU1, full post)
+ *                          B=active   → _doStandPull() (passive-gated)
+ *   D. Detonation (E)  : _chargeTimer + _chargeReady + _eHeld
+ *                        (SU2-gated; only usable while B=active)
+ *   E. ORA Combo       : _oraComboCount + _highOraComboCount (drives SU2 unlock)
+ *   F. Rage Mode       : _rageMode = passive && A=3 && hp/maxHp < 0.3
+ *
+ * ⚠️  B is NEVER locked — Wanchai Stand must work from Wave 1.  Only the
+ *     passive heat-gain bonuses require unlock — do not gate B on passive.
+ * ⚠️  D requires BOTH the detonation SU2 unlock AND B=active.  When B ends
+ *     mid-charge, D must fully reset (_chargeTimer=0, _chargeReady=false,
+ *     _eHeld=false) — see "if (this.standMeter <= 0)" in update().
+ * ⚠️  A and B are ORTHOGONAL: heat drain rate differs when B is active,
+ *     but B can activate at any heat tier.
+ * ⚠️  F is a derived flag (no setter) — read-only in renderer.  Its value
+ *     is recomputed every frame from A + passive + hp ratio.
+ * ═══════════════════════════════════════════════════════════════════════
  */
 // ════════════════════════════════════════════════════════════
 // 👊 WANCHAI STAND — Autonomous Stand Entity
@@ -842,10 +863,10 @@ class AutoPlayer extends Player {
     {
       const AU = this._abilityUnlock;
       const S  = this.stats;
-      if (!AU.skillsUnlocked.includes('vacuum')) {
+      if (!this.isUnlocked(SKILL.AUTO.VACUUM)) {
         const req = S.su1MeleeDmgReq ?? 400;
         this._showUnlockHint(`Rush DMG: ${Math.floor(this._playerMeleeDmgDealt ?? 0)}/${req} -> Q Vacuum full`);
-      } else if (!AU.skillsUnlocked.includes('detonation')) {
+      } else if (!this.isUnlocked(SKILL.AUTO.DETONATION)) {
         const req2 = S.su2OraComboCount ?? 3;
         this._showUnlockHint(`ORA x8 count: ${this._highOraComboCount ?? 0}/${req2} -> E Detonation`);
       } else if (!this.passiveUnlocked) {
@@ -878,7 +899,7 @@ class AutoPlayer extends Player {
         this._doStandPull();
       }
       consumeInput("q");
-    } else if (checkInput("q") && !this._abilityUnlock.skillsUnlocked.includes('vacuum')) {
+    } else if (checkInput("q") && !this.isUnlocked(SKILL.AUTO.VACUUM)) {
       // ── Vacuum ใช้ได้ตั้งแต่ต้น (basic version: ดูดอย่างเดียว) ──────
       if ((this.cooldowns?.vacuum ?? 0) <= 0) {
         const vCost = this.stats?.vacuumEnergyCost ?? 20;
@@ -906,7 +927,7 @@ class AutoPlayer extends Player {
       consumeInput("q");
     } else if (
       checkInput("q") &&
-      this._abilityUnlock.skillsUnlocked.includes('vacuum') &&
+      this.isUnlocked(SKILL.AUTO.VACUUM) &&
       (this.cooldowns?.vacuum ?? 0) <= 0
     ) {
       const vCost = this.stats?.vacuumEnergyCost ?? 20;
@@ -922,7 +943,7 @@ class AutoPlayer extends Player {
     // ── E: Charge Punch (Feature 3B) / Overheat Detonation ─────
     // กด E ค้างขณะ Wanchai active = charge, ปล่อย = super punch
     // กด E ขณะไม่ได้ unlock = locked message
-    if (!this._abilityUnlock.skillsUnlocked.includes('detonation')) {
+    if (!this.isUnlocked(SKILL.AUTO.DETONATION)) {
       if (checkInput("e")) {
         spawnFloatingText(
           "LOCKED: ORA x8 combo x3 -> E",
@@ -1069,7 +1090,7 @@ class AutoPlayer extends Player {
         this._chargeTimer = 0;
         this._chargeReady = false;
       }
-    } else if (this._abilityUnlock.skillsUnlocked.includes('detonation') && !this.wanchaiActive) {
+    } else if (this.isUnlocked(SKILL.AUTO.DETONATION) && !this.wanchaiActive) {
       // Not in Wanchai — cooldown message only
       if (checkInput("e")) {
         if ((this.cooldowns?.detonation ?? 0) > 0) {
@@ -1384,20 +1405,20 @@ class AutoPlayer extends Player {
     const AU = this._abilityUnlock;
 
     // SU1: Q full vacuum (ignite) — 400 total rush melee damage
-    if (!AU.skillsUnlocked.includes('vacuum')) {
+    if (!this.isUnlocked(SKILL.AUTO.VACUUM)) {
       const req = S.su1MeleeDmgReq ?? 400;
       if ((this._playerMeleeDmgDealt ?? 0) < req) return;
-      AU.skillsUnlocked.push('vacuum');
+      this.unlock(SKILL.AUTO.VACUUM);
       spawnFloatingText("Q UNLOCKED: Vacuum Heat!", this.x, this.y - 65, "#f97316", 22);
       spawnParticles(this.x, this.y, 20, "#f97316");
       if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
     }
 
     // SU2: E detonation — ORA combo x8 reached three times
-    if (!AU.skillsUnlocked.includes('detonation')) {
+    if (!this.isUnlocked(SKILL.AUTO.DETONATION)) {
       const req2 = S.su2OraComboCount ?? 3;
       if ((this._highOraComboCount ?? 0) < req2) return;
-      AU.skillsUnlocked.push('detonation');
+      this.unlock(SKILL.AUTO.DETONATION);
       AU.allSkillsDone = true;
       spawnFloatingText("E UNLOCKED: Detonation!", this.x, this.y - 65, "#dc2626", 22);
       spawnParticles(this.x, this.y, 20, "#dc2626");

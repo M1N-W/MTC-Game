@@ -4,6 +4,268 @@
 
 ---
 
+## v3.44.4 — HIGH #2 Phase 2-5 Complete (ui.js split finalised)
+
+*Released: April 19, 2026*
+
+Finishes HIGH #2 of the v3.44.x tech-debt roadmap.  `js/ui.js` is
+reduced from **2 757 → 2 083 lines (−24 %)** by moving `ShopManager`,
+`CanvasHUD`, and the combo module-scope state into their own files
+under `js/ui/`.  Pure refactor — zero user-visible change.
+All 39 Playwright assertions still green.
+
+### 🧩 Phase 2 — Generic `_applyHUDConfig()` updater
+
+- New `UIManager._applyHUDConfig(player, setLockOverlay)` drives lock
+  overlays + cooldown arcs for every slot in `window.HUD_CONFIG[charId]`.
+- Wired into `UIManager.updateSkillIcons()` as a first-pass before the
+  per-character bespoke updaters (`_updateIconsKao / Pat / Auto / Poom`).
+- Per-character updaters remain responsible for character-specific
+  visuals (teleport charges, iaido phase, heat-tier colouring) and are
+  idempotent wrt the config pass.
+- Adding a new skill slot for an existing char is now 1 line in
+  `js/ui/hud-config.js` — no JS edit required.
+
+### 📦 Phase 3 — `ShopManager` extracted
+
+- Moved the 99-line `ShopManager` class from `ui.js` to
+  `@c:\Mawin-Game\MTC-Game\js\ui\ShopManager.js`.
+- Registered on `window.ShopManager` — every existing call site
+  (ShopSystem, game.js, menu.js) works unchanged.
+- `<script defer src="js/ui/ShopManager.js">` loads before `js/ui.js`.
+
+### 📦 Phase 4 — `CanvasHUD` + combo state extracted
+
+- Moved the 577-line `CanvasHUD` class and the 6 module-scope combo
+  variables (`comboCount`, `comboTimer`, `comboScale`, `comboShake`,
+  `comboShakeDecay`, `comboScaleDecay`) + `addCombo()` into
+  `@c:\Mawin-Game\MTC-Game\js\ui\CanvasHUD.js`.
+- Registered on `window.CanvasHUD` + `window.addCombo` — every existing
+  call site (`game.js` draw loop, any combo incrementors) works unchanged.
+- `CanvasHUD.draw()` guards `window.UIManager?.injectCooldownStyles` so
+  load order between `ui.js` and `CanvasHUD.js` no longer matters.
+
+### 📦 Phase 5 — Barrel export (deferred)
+
+Intentionally **not** shipped.  An ESM barrel (`js/ui/index.js`) adds
+zero value while the codebase is global-script.  Will revisit when the
+full module system migration begins.
+
+### 📦 Files Added
+
+- `@c:\Mawin-Game\MTC-Game\js\ui\ShopManager.js` — shop modal controller
+- `@c:\Mawin-Game\MTC-Game\js\ui\CanvasHUD.js` — combo + confused + minimap
+
+### 📦 Files Touched
+
+- `@c:\Mawin-Game\MTC-Game\js\ui.js` — 674 lines removed; `_applyHUDConfig()` added
+- `@c:\Mawin-Game\MTC-Game\index.html` — 2 new `<script defer>` tags
+- `@c:\Mawin-Game\MTC-Game\package.json` — version 3.44.4
+- `@c:\Mawin-Game\MTC-Game\sw.js` — auto-regenerated (61 assets)
+
+### ✅ Automated Verification
+
+```bash
+node -c js/ui.js           # syntax sanity
+node -c js/ui/CanvasHUD.js
+node -c js/ui/ShopManager.js
+npm run gen:sw             # regen SW manifest
+npm run test:smoke         # 39/39 PASS
+```
+
+---
+
+## v3.44.3 — Tech Debt Sprint (6½ of 7 roadmap items shipped)
+
+*Released: April 19, 2026*
+
+Pure refactor release.  No user-visible change.  Every sprint item is
+**additive / non-breaking** and covered by the new automated smoke suite
+(`tests/ui_smoke.py` — 39/39 PASS).
+
+### ✨ HIGH #1 — SkillRegistry + `isUnlocked()` / `unlock()` helpers
+
+- New `js/systems/SkillRegistry.js` freezes the 8 unlock keys (per-char
+  sub-objects: `SKILL.KAO`, `SKILL.POOM`, `SKILL.AUTO`, `SKILL.PAT`).
+- `PlayerBase.prototype.isUnlocked(key)` / `.unlock(key)` validate against
+  the registry — typos surface at dev time (`DEBUG_MODE` throws, prod
+  `console.warn`s and returns false — non-fatal).
+- **39 call sites migrated** across `KaoPlayer.js`, `AutoPlayer.js`,
+  `PoomPlayer.js`, `PatPlayer.js`, `ui.js`.  Zero runtime behaviour change.
+- Eliminates the class of bug that caused the Pat Zanzo lock miss in
+  v3.44.0 (single-string typo, no compiler catches it).
+
+### 🛡 LOW #5 — Boot assertion + persistent smoke suite
+
+- New `_assertBootInvariants()` in `js/game.js` runs at boot.  Surfaces
+  structural regressions (missing `GAME_TEXTS.ai`, missing critical globals,
+  empty `SKILL.*`) via `console.error` + `window.__bootAssertErrors`.
+  Non-fatal — game still boots so users see something.
+- New `tests/ui_smoke.py` — 39 Playwright-driven assertions covering all
+  v3.44.1 → v3.44.3 invariants.  Run via `npm run test:smoke`.
+- New `tests/README.md` documents setup and CI-hookup plan.
+
+### ♻ MEDIUM #3 — Auto-generated Service Worker manifest
+
+- New `scripts/gen-sw-manifest.js` regenerates `CACHE_NAME` and
+  `urlsToCache` inside `sw.js` from `package.json` version + an
+  `index.html` scan.  Markers `// AUTO-GEN:START` / `// AUTO-GEN:END`
+  delimit the generated region.
+- `npm run gen:sw` writes; `node scripts/gen-sw-manifest.js --check`
+  exits 1 if stale (CI-ready).
+- Retired: hand-maintained ~400-char comment + scattered `urlsToCache`
+  entries.
+
+### 🎨 MEDIUM #4 — Token refactor extended (stat-bar / char-tag / avatar-bg)
+
+Continues the v3.44.2 design-token migration:
+
+- `.stat-bar-fill` — one unified rule using `color-mix()` + `--glow-color`,
+  replaces 4 per-char blocks.  Fallback for pre-Chrome-111 browsers kept.
+- `.char-tag` — one unified rule, replaces 4 scattered blocks (including
+  Auto's duplicate that had its own specificity tier).
+- `.char-avatar` radial-gradient bg — one unified rule using
+  `color-mix()` + `--glow-color-soft`, replaces 4 per-char blocks.
+
+### 🎨 MEDIUM #6 — Avatar filter cascade unified
+
+- Previously 3 specificity tiers (base / hover / selected / per-char-selected)
+  overwrote `filter: drop-shadow()` each — impossible to audit.
+- Collapsed to 2 token-driven rules: base (`--glow-color-soft` halo) and
+  hover/selected (`--glow-color` halo + `brightness(1.1)`).  Auto-specific
+  box-shadow override kept for its 28 px inset halo.
+
+### 📝 LOW #7 — STATE MACHINE INVARIANTS documented
+
+Added `── STATE MACHINE INVARIANTS ──` JSDoc blocks to all four player
+subclasses (`Pat`, `Kao`, `Auto`, `Poom`).  Each block names the
+orthogonal state groups (A…F), their gating conditions, and explicit
+`⚠️` warnings about which flags MUST NOT be coupled (e.g. Pat's A and B
+must stay orthogonal — the v3.44.1 Blade Guard regression was a
+violation of this invariant).
+
+### 🧩 HIGH #2 — Phase 1 of `js/ui.js` split
+
+- `js/ui/CooldownVisual.js` extracted (~110 lines out of ui.js).
+  `UIManager._setCooldownVisual()` is a thin proxy — zero call-site changes.
+- `js/ui/hud-config.js` — declarative per-character skill slot spec,
+  consumable by a future generic `_applyHUDConfig()` updater.
+- Phase 2 (generic updater) + Phase 3 (`ShopManager` extract) + Phase 4
+  (`CanvasHUD` extract) scoped in `Markdown Source/Successed-Plan/HIGH2-ui-split-phase2-plan.md`.
+  Deferred to a separate PR — the work is pure refactor with zero
+  urgency now that correctness (HIGH #1) is addressed.
+
+### 📦 Files Added
+
+- `js/systems/SkillRegistry.js` — canonical unlock-key registry
+- `js/ui/CooldownVisual.js` — extracted cooldown overlay module
+- `js/ui/hud-config.js` — declarative HUD slot spec
+- `scripts/gen-sw-manifest.js` — SW manifest generator
+- `tests/ui_smoke.py` — 39-assertion smoke suite
+- `tests/README.md` — test setup docs
+- `Markdown Source/Successed-Plan/HIGH2-ui-split-phase2-plan.md` — deferred work
+
+### 📦 Files Touched (summary)
+
+- `js/entities/player/PlayerBase.js` — `isUnlocked/unlock()` methods
+- `js/entities/player/{Kao,Pat,Auto,Poom}Player.js` — 39 call-site migrations + STATE MACHINE INVARIANTS JSDoc blocks
+- `js/game.js` — boot assertion wiring
+- `js/ui.js` — `_setCooldownVisual` proxy to CooldownVisual
+- `css/char-select.css` — 4 per-char blocks → 3 unified rules (stat-bar / char-tag / avatar-bg) + unified avatar filter cascade
+- `index.html` — new script tags (SkillRegistry, CooldownVisual, hud-config)
+- `package.json` — `version: 3.44.3` + `gen:sw` + `test:smoke` scripts
+- `sw.js` — auto-generated between markers
+
+### ✅ Automated Verification
+
+```bash
+npm run gen:sw          # regenerate SW manifest (idempotent)
+npm run test:smoke      # 39/39 Playwright assertions
+node -c js/ui.js        # syntax sanity
+```
+
+---
+
+## v3.44.1 — HUD Unlock Gates, Mission Brief Regression, Cooldown/Minimap Perf
+
+*Released: April 19, 2026*
+
+### 🐛 HUD Lock Overlay — Skill Unlock Gates (Patches C1–C4)
+
+Skill icon 🔒 overlays were gated on the monolithic `player.passiveUnlocked`
+flag, so HUD showed skills as locked even though they were already usable
+after their per-skill `SkillUnlock` milestone. Switched every per-character
+HUD updater to read `player._abilityUnlock.skillsUnlocked[]` directly.
+
+- **Kao** (`UIManager._updateIconsKao`, `js/ui.js`): Teleport (Q) gates on
+  SU1 `teleport`, Clone (E) gates on SU2 `clone` — both fire **before**
+  passive. Also added per-frame re-sync of the passive icon (`R-Click!` →
+  `MAX`) which previously was only written once inside `setupCharacterHUD`.
+- **Auto** (`UIManager._updateIconsAuto`): Vacuum (Q) is usable from frame 1
+  (early-mode), so no 🔒 ever. Detonation (E) now gates on SU2 `detonation`.
+- **Poom** (`UIManager._updateIconsPoom`): Garuda (E) now gates on SU2
+  `garuda` (ritual-unlocked), not passive.
+- **Pat** (`UIManager._updateIconsPat`): Added `setLockOverlay(#zanzo-icon,
+  !SU1.zanzo)` — Zanzo previously showed no lock at all before its own
+  SU1 milestone was met.
+
+### 🛡️ Pat Blade Guard — Re-enabled Pre-SU2 (Patch B)
+
+`PatPlayer._tickBladeGuard()` refused to activate Blade Guard unless
+`_perfectParryArmed` was true, which was only set after SU2 and a subsequent
+parry window. Net effect: R-Click did nothing in Wave 1. Decoupled the two
+state machines — normal Blade Guard now activates any time R-Click is held
+with the weapon drawn; perfect-parry remains layered on top for SU2+ runs.
+
+### 📜 Mission Brief Regression — Restored from commit `2ec3094`
+
+Commit `2ec3094` (v3.43.1 docs audit) accidentally deleted the whole
+`GAME_TEXTS.ai` section and the `initAI()` call together with a Gemini
+cleanup pass. `#mission-brief` was stuck on the "The Mission is coming up..."
+placeholder forever.
+
+- Restored `GAME_TEXTS.ai` in `js/game-texts.js`: `loading`, `missionPrefix(name)`,
+  `missionFallback`, and `missionNames[]` (10 MTC-themed names).
+- Restored `initAI()` in `js/game.js` (with fallback chain:
+  `missionNames` → random pick → `missionPrefix(name)` → `missionFallback` →
+  placeholder stays) and wired it into `initializeGame()` step 5.
+
+### ⚡ Performance — Cooldown Arc + Minimap (Patches E1, E2)
+
+- **E1 — `_setCooldownVisual` memoize** (`js/ui.js`). Added per-element
+  `WeakMap` caches for the last applied `conic-gradient` background, timer
+  label text, and timer display mode. Quantized the percentage from
+  `.toFixed(1)` → `Math.round()` (0.1 % → 1 % steps), cutting unique style
+  strings by ~10×. Style setter writes are skipped entirely when the
+  visible value has not changed, eliminating repeated style-invalidation
+  for every skill icon × 60 Hz × 4 characters.
+- **E2 — Minimap offscreen throttle** (`js/ui.js`). Extracted the draw body
+  into `CanvasHUD._minimapRender(ctx, cx, cy, radarRadius, scale, now)`.
+  The public `drawMinimap(ctx)` now keeps a `132×94` offscreen canvas and
+  only repaints it at ~15 Hz (`THROTTLE_MS = 66`); every other frame just
+  blits the cached bitmap. Preserves sweep/fog/POI/enemy/label semantics
+  without touching phase helpers.
+
+### ⏸ Deferred to Future PRs
+
+- **E3 — shadowBlur audit across renderers** — Too large a visual surface
+  (three renderers, ≥60 sites each, several already hand-tuned per
+  `PERF:` comments). Needs Chrome Performance profile before/after numbers
+  per targeted cut to avoid visual regression.
+- **E4 — `setupCharacterHUD` fragment cache** — Cold path (character
+  select only), impact below noise floor.
+
+### 📦 Files Touched
+
+- `js/ui.js` — Patches C1–C4, E1, E2 (+131 / −20)
+- `js/entities/player/PatPlayer.js` — Patch B (+14 / −3)
+- `js/game-texts.js` — `GAME_TEXTS.ai` restore (+28 / −8)
+- `js/game.js` — `initAI()` restore + TOC + wiring (+45 / −3)
+- `index.html` — `#mission-brief` placeholder (+8 / −8 across menu)
+- `sw.js` — CACHE_NAME bump v3.44.0 → v3.44.1
+
+---
+
 ## v3.44.0 — Retry Fix, FX Perf, Admin Refactor, LOD
 
 *Released: April 17, 2026*

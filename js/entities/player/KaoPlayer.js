@@ -62,7 +62,24 @@
  * ⚠️  draw() lives in PlayerRenderer._drawKao() — nothing renders here.
  * ⚠️  isFreeStealthActive is NOT the same as isInvisible (R-Click stealth).
  *     Both can be true simultaneously. Renderer checks both independently.
- * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ── STATE MACHINE INVARIANTS (v3.44.3 audit) ────────────────────────────
+ *   A. Teleport       : teleportCharges + teleportTimers[] (SU1-gated)
+ *   B. Clone          : clones[], clonesActiveTimer, cloneSkillCooldown (SU2-gated)
+ *   C. Free-Stealth   : isFreeStealthActive ↔ freeStealthRemainingTime
+ *                       (passive-gated; triggered by dash rising edge)
+ *   D. R-Click Stealth: isInvisible (base PlayerBase, independent of C)
+ *   E. Phantom Blink  : _phantomBlinkActive + _blinkAmbushTimer
+ *                       (Lv2-passive-gated; consumes C+D on trigger)
+ *   F. Weapon Master  : isWeaponMaster (Special-gated; independent of A-E)
+ *
+ * ⚠️  A, B, C, D, F are ORTHOGONAL.  Do not gate B on A or vice versa —
+ *     each has its own unlock condition via _abilityUnlock.skillsUnlocked.
+ * ⚠️  E is STRICTLY AFTER C+D (consumes both on trigger).  Adding a new
+ *     ability that mutates isInvisible must account for E's break.
+ * ⚠️  C kills count toward passive only when A+B are BOTH unlocked
+ *     (see addKill() → this._abilityUnlock.allSkillsDone gate).
+ * ═══════════════════════════════════════════════════════════════════════
  */
 
 // ── KaoClone ─────────────────────────────────────────────────────────────────
@@ -222,10 +239,10 @@ class KaoPlayer extends Player {
     const AU = this._abilityUnlock;
 
     // ── SU1: Teleport Q — accumulate 200 guaranteed-crit ambush damage ──
-    if (!AU.skillsUnlocked.includes('teleport')) {
+    if (!this.isUnlocked(SKILL.KAO.TELEPORT)) {
       const req = S.su1AmbushDmgReq ?? 200;
       if ((this._ambushDamageDealt ?? 0) < req) return;
-      AU.skillsUnlocked.push('teleport');
+      this.unlock(SKILL.KAO.TELEPORT);
       spawnFloatingText("🔮 Q UNLOCKED: Teleport!", this.x, this.y - 65, "#3b82f6", 22);
       spawnParticles(this.x, this.y, 25, "#3b82f6");
       if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
@@ -234,17 +251,16 @@ class KaoPlayer extends Player {
     }
 
     // ── SU2: Clone E — complete 3 stealth→attack chain sequences ───────
-    if (!AU.skillsUnlocked.includes('clone')) {
+    if (!this.isUnlocked(SKILL.KAO.CLONE)) {
       const req2 = S.su2ChainReq ?? 3;
       if ((this._stealthAttackChains ?? 0) < req2) return;
-      AU.skillsUnlocked.push('clone');
+      this.unlock(SKILL.KAO.CLONE);
       AU.allSkillsDone = true;
       spawnFloatingText("👥 E UNLOCKED: Shadow Clone!", this.x, this.y - 65, "#8b5cf6", 22);
       spawnParticles(this.x, this.y, 25, "#8b5cf6");
       if (typeof Audio !== "undefined" && Audio.playAchievement) Audio.playAchievement();
       if (typeof UIManager !== "undefined")
         UIManager.showVoiceBubble("👥 Clone Unlocked!", this.x, this.y - 40);
-      return;
     }
 
     // Both skills done — ensure flag is set
@@ -414,10 +430,10 @@ class KaoPlayer extends Player {
     this.checkPassiveUnlock();
     {
       const AU = this._abilityUnlock;
-      if (!AU.skillsUnlocked.includes('teleport')) {
+      if (!this.isUnlocked(SKILL.KAO.TELEPORT)) {
         const req = S.su1AmbushDmgReq ?? 200;
         this._showUnlockHint(`🔮 Ambush DMG: ${Math.floor(this._ambushDamageDealt ?? 0)}/${req} → Q Unlock`);
-      } else if (!AU.skillsUnlocked.includes('clone')) {
+      } else if (!this.isUnlocked(SKILL.KAO.CLONE)) {
         const req = S.su2ChainReq ?? 3;
         this._showUnlockHint(`👥 Stealth Chains: ${this._stealthAttackChains ?? 0}/${req} → E Unlock`);
       } else if (!this.passiveUnlocked) {
@@ -460,7 +476,7 @@ class KaoPlayer extends Player {
     }
 
     // ── Teleport (Q) — SU1 required ───────────────────────────────────────
-    const _su1Done = this._abilityUnlock.skillsUnlocked.includes('teleport');
+    const _su1Done = this.isUnlocked(SKILL.KAO.TELEPORT);
     if (_su1Done) {
       // Init: give 3 full charges on first frame after SU1 unlock
       if (!this._teleportInited) {
@@ -583,7 +599,7 @@ class KaoPlayer extends Player {
     }
 
     // ── Clone (E) — SU2 required ────────────────────────────────────────
-    const _su2Done = this._abilityUnlock.skillsUnlocked.includes('clone');
+    const _su2Done = this.isUnlocked(SKILL.KAO.CLONE);
     if (_su2Done) {
       if (this.cloneSkillCooldown > 0) this.cloneSkillCooldown -= dt;
       if (checkInput("e")) {

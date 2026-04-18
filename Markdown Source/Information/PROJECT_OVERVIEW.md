@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.44.0`** (`sw.js` `CACHE_NAME`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.44.4`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 ## Recent Changes
 
@@ -50,8 +50,13 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 2. `js/effects.js`
 3. `js/weapons.js`
 4. `js/map.js`
-5. `js/ui.js`
-6. `js/tutorial.js`
+5. `js/systems/SkillRegistry.js` — frozen per-character unlock-key constants (v3.44.3)
+6. `js/ui/CooldownVisual.js` — extracted cooldown arc + memoize (v3.44.3)
+7. `js/ui/hud-config.js` — declarative HUD slot spec (v3.44.3)
+8. `js/ui/ShopManager.js` — shop modal controller (v3.44.4)
+9. `js/ui/CanvasHUD.js` — combo + confused banner + minimap (v3.44.4)
+10. `js/ui.js` — UIManager + Achievements (post-split, ~2 083 lines)
+11. `js/tutorial.js`
 
 ### 2.3 Entity and AI foundations
 

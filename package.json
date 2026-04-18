@@ -1,8 +1,11 @@
 {
   "name": "mtc-game",
+  "version": "3.44.4",
   "private": true,
   "scripts": {
-    "build:firebase": "esbuild js/firebase-init.js --bundle --outfile=js/firebase-bundle.js --format=iife --platform=browser"
+    "build:firebase": "esbuild js/firebase-init.js --bundle --outfile=js/firebase-bundle.js --format=iife --platform=browser",
+    "gen:sw": "node scripts/gen-sw-manifest.js",
+    "test:smoke": "python tests/ui_smoke.py"
   },
   "dependencies": {
     "firebase": "^11.6.0"

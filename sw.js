@@ -1,70 +1,80 @@
-const CACHE_NAME = "mtc-cache-v3.44.0"; // Fixed Try-Again boss spawn-camp bug; fog/dark gradient caching; admin rate-limit + audit log + destructive-command confirm
+// ═══════════════════════════════════════════════════════════════════
+//  AUTO-GENERATED CONTENT between AUTO-GEN:START / AUTO-GEN:END markers.
+//  Source of truth:
+//    - CACHE_NAME     ← `version` field in package.json
+//    - urlsToCache    ← scanned from js/, css/, and index.html
+//  Regenerate with:  npm run gen:sw    (or: node scripts/gen-sw-manifest.js)
+//
+//  DO NOT hand-edit between markers — your edits will be overwritten.
+//  Release notes belong in Markdown Source/CHANGELOG.md, not here.
+// ═══════════════════════════════════════════════════════════════════
+// AUTO-GEN:START
+const CACHE_NAME = "mtc-cache-v3.44.4";
 
-// รายชื่อไฟล์ทั้งหมดที่ต้องการโหลดเก็บไว้ในเครื่องผู้เล่น
-// NOTE: No ?v= suffix here — URLs must match the actual requests from index.html.
-// Cache-busting is handled by changing CACHE_NAME (triggers full SW reinstall).
 const urlsToCache = [
   "./",
   "./index.html",
-  "./css/base.css",
-  "./css/overlays.css",
   "./css/admin-console.css",
-  "./css/shop.css",
+  "./css/base.css",
+  "./css/char-select.css",
   "./css/hud.css",
   "./css/menus.css",
+  "./css/overlays.css",
   "./css/screens.css",
-  "./css/char-select.css",
+  "./css/shop.css",
   "./css/tutorial.css",
   "./css/ui-extras.css",
-  "./js/balance.js",
-  "./js/shop-items.js",
-  "./js/game-texts.js",
-  "./js/firebase-bundle.js",
-  "./js/systems/CloudSaveSystem.js",
-  "./js/systems/LeaderboardUI.js",
-  "./js/utils.js",
+  "./js/ai/EnemyActions.js",
+  "./js/ai/PlayerPatternAnalyzer.js",
+  "./js/ai/SquadAI.js",
+  "./js/ai/UtilityAI.js",
   "./js/audio.js",
+  "./js/balance.js",
+  "./js/effects.js",
+  "./js/entities/base.js",
+  "./js/entities/boss/boss_attacks_first.js",
+  "./js/entities/boss/boss_attacks_manop.js",
+  "./js/entities/boss/boss_attacks_shared.js",
+  "./js/entities/boss/BossBase.js",
+  "./js/entities/boss/FirstBoss.js",
+  "./js/entities/boss/ManopBoss.js",
+  "./js/entities/enemy.js",
+  "./js/entities/player/AutoPlayer.js",
+  "./js/entities/player/KaoPlayer.js",
+  "./js/entities/player/PatPlayer.js",
+  "./js/entities/player/PlayerBase.js",
+  "./js/entities/player/PoomPlayer.js",
+  "./js/entities/summons.js",
+  "./js/firebase-bundle.js",
+  "./js/game.js",
+  "./js/game-texts.js",
   "./js/input.js",
   "./js/map.js",
   "./js/menu.js",
-  "./js/effects.js",
-  "./js/weapons.js",
-  "./js/ui.js",
-  "./js/game.js",
-  "./js/tutorial.js",
-  // AI System
-  "./js/ai/UtilityAI.js",
-  "./js/ai/EnemyActions.js",
-  "./js/ai/SquadAI.js",
-  "./js/ai/PlayerPatternAnalyzer.js",
-  // Entities
-  "./js/entities/base.js",
-  "./js/entities/player/PlayerBase.js",
-  "./js/entities/player/KaoPlayer.js",
-  "./js/entities/player/AutoPlayer.js",
-  "./js/entities/player/PoomPlayer.js",
-  "./js/entities/player/PatPlayer.js",
-  "./js/entities/enemy.js",
-  "./js/entities/boss/boss_attacks_shared.js",
-  "./js/entities/boss/boss_attacks_manop.js",
-  "./js/entities/boss/boss_attacks_first.js",
-  "./js/entities/boss/BossBase.js",
-  "./js/entities/boss/ManopBoss.js",
-  "./js/entities/boss/FirstBoss.js",
-  "./js/entities/summons.js",
-  // Systems
-  "./js/systems/WaveManager.js",
-  "./js/systems/ShopSystem.js",
-  "./js/systems/TimeManager.js",
-  "./js/systems/AdminSystem.js",
-  "./js/systems/GameState.js",
-  "./js/systems/WorkerBridge.js",
-  "./js/VersionManager.js",
-  // Rendering
-  "./js/rendering/PlayerRenderer.js",
   "./js/rendering/BossRenderer.js",
   "./js/rendering/EnemyRenderer.js",
+  "./js/rendering/PlayerRenderer.js",
+  "./js/shop-items.js",
+  "./js/systems/AdminSystem.js",
+  "./js/systems/CloudSaveSystem.js",
+  "./js/systems/GameState.js",
+  "./js/systems/LeaderboardUI.js",
+  "./js/systems/ShopSystem.js",
+  "./js/systems/SkillRegistry.js",
+  "./js/systems/TimeManager.js",
+  "./js/systems/WaveManager.js",
+  "./js/systems/WorkerBridge.js",
+  "./js/tutorial.js",
+  "./js/ui/CanvasHUD.js",
+  "./js/ui/CooldownVisual.js",
+  "./js/ui/hud-config.js",
+  "./js/ui.js",
+  "./js/ui/ShopManager.js",
+  "./js/utils.js",
+  "./js/VersionManager.js",
+  "./js/weapons.js",
 ];
+// AUTO-GEN:END
 
 // ── Helper: ดึงเลขเวอร์ชันจาก CACHE_NAME ─────────────────
 function getVersion() {

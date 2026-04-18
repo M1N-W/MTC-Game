@@ -270,25 +270,9 @@
   opacity: 1;
 }
 
-/* Top-left corner bracket */
-.char-card::after {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 10px;
-  height: 10px;
-  border-top: 1.5px solid rgba(250, 204, 21, 0.3);
-  border-left: 1.5px solid rgba(250, 204, 21, 0.3);
-  transition: all 0.28s;
-}
-
-.char-card:hover::after,
-.char-card.selected::after {
-  border-color: #facc15;
-  width: 14px;
-  height: 14px;
-}
+/* v3.44.2 NOTE: single top-left bracket retired —
+   replaced by <i class="card-corner card-corner--tl/tr/bl/br"> ×4 spans
+   inside .char-card-inner (see index.html). .char-card::after is now free. */
 
 /* ── Carousel: hide all cards; only .selected is visible ── */
 .char-card {
@@ -382,36 +366,65 @@
     border-color 0.4s,
     box-shadow 0.4s;
 }
-/* Per-character frame tint */
-.char-card[data-char="kao"] .char-portrait-frame {
-  --frame-color: rgba(250, 204, 21, 0.65);
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS per character (v3.44.2)
+
+   Each .char-card[data-char="X"] declares 6 vars. Consumers:
+     --frame-color          : .char-portrait-frame::before/::after border
+     --frame-color-bright   : framePulse peak colour + selected emphasis
+     --glow-color           : charGlow box-shadow inner ring
+     --glow-color-soft      : charGlow box-shadow outer halo
+     --corner-color         : .card-corner border (unselected)
+     --corner-color-bright  : .card-corner border (hover/selected)
+
+   To add a new character: copy a block, change data-char, swap colours.
+   See Markdown Source/Information/CHARACTER_CARD_CHECKLIST.md
+   ══════════════════════════════════════════════════════════════ */
+.char-card[data-char="kao"] {
+  --frame-color:         rgba(250, 204, 21, 0.65);
+  --frame-color-bright:  #fde047;
+  --glow-color:          rgba(250, 204, 21, 0.60);
+  --glow-color-soft:     rgba(249, 115, 22, 0.25);
+  --corner-color:        rgba(250, 204, 21, 0.55);
+  --corner-color-bright: #facc15;
 }
-.char-card[data-char="poom"] .char-portrait-frame {
-  --frame-color: rgba(74, 222, 128, 0.65);
+.char-card[data-char="poom"] {
+  --frame-color:         rgba(74, 222, 128, 0.65);
+  --frame-color-bright:  #86efac;
+  --glow-color:          rgba(34, 197, 94, 0.55);
+  --glow-color-soft:     rgba(74, 222, 128, 0.20);
+  --corner-color:        rgba(74, 222, 128, 0.55);
+  --corner-color-bright: #4ade80;
 }
-.char-card[data-char="auto"] .char-portrait-frame {
-  --frame-color: rgba(252, 165, 165, 0.65);
+.char-card[data-char="auto"] {
+  --frame-color:         rgba(252, 165, 165, 0.65);
+  --frame-color-bright:  #fecaca;
+  --glow-color:          rgba(220, 38, 38, 0.70);
+  --glow-color-soft:     rgba(249, 115, 22, 0.30);
+  --corner-color:        rgba(252, 165, 165, 0.55);
+  --corner-color-bright: #fca5a5;
 }
-.char-card[data-char="pat"] .char-portrait-frame {
-  --frame-color: rgba(147, 197, 253, 0.65);
-}
-/* Brighter when selected */
-.char-card.selected[data-char="kao"] .char-portrait-frame {
-  --frame-color: rgba(250, 204, 21, 0.95);
-}
-.char-card.selected[data-char="poom"] .char-portrait-frame {
-  --frame-color: rgba(74, 222, 128, 0.95);
-}
-.char-card.selected[data-char="auto"] .char-portrait-frame {
-  --frame-color: rgba(252, 165, 165, 0.95);
-}
-.char-card.selected[data-char="pat"] .char-portrait-frame {
-  --frame-color: rgba(147, 197, 253, 0.95);
+.char-card[data-char="pat"] {
+  --frame-color:         rgba(147, 197, 253, 0.65);
+  --frame-color-bright:  #bfdbfe;
+  --glow-color:          rgba(96, 165, 250, 0.55);
+  --glow-color-soft:     rgba(147, 197, 253, 0.20);
+  --corner-color:        rgba(147, 197, 253, 0.55);
+  --corner-color-bright: #93c5fd;
 }
 
+/* Selected state brightens frame colour — glow/corner use their own bright var */
+.char-card.selected[data-char="kao"]  { --frame-color: rgba(250, 204, 21, 0.95); }
+.char-card.selected[data-char="poom"] { --frame-color: rgba(74, 222, 128, 0.95); }
+.char-card.selected[data-char="auto"] { --frame-color: rgba(252, 165, 165, 0.95); }
+.char-card.selected[data-char="pat"]  { --frame-color: rgba(147, 197, 253, 0.95); }
+
 .char-card .char-avatar {
-  width: 100px;
-  height: 120px;
+  /* v3.44.2: aspect matches the 96×112 viewBox of every char SVG so the
+     bracket frame hugs the portrait cleanly (was 100×120 → letterboxed). */
+  width: 104px;
+  height: auto;
+  aspect-ratio: 96 / 112;
   margin: 0;
   display: block;
   overflow: hidden;
@@ -460,6 +473,8 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* Explicit aspect-preserving fit — backup for SVGs without inline attr. */
+  object-fit: contain;
 }
 
 .char-card .char-name {
@@ -643,26 +658,30 @@
   }
 }
 
-.char-card[data-char="kao"] .stat-bar-fill {
+/* ═══════════════════════════════════════════════════════════════
+   UNIFIED STAT-BAR FILL (v3.44.3)
+   Reads --glow-color / --corner-color-bright from the char token
+   block. color-mix() derives the dark/bright gradient stops from
+   one source hue.  Previously 4 duplicated per-char rules.
+   ══════════════════════════════════════════════════════════════ */
+.char-card .stat-bar-fill {
+  /* Fallback: plain Kao-gold gradient for browsers without color-mix
+     support (Chrome < 111 / Safari < 16.2 / Firefox < 113). */
   background: linear-gradient(90deg, #eab308, #facc15, #fde68a);
-  box-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--glow-color, #facc15) 100%, black 25%),
+    var(--glow-color, #facc15),
+    color-mix(in srgb, var(--corner-color-bright, #fde68a), white 40%)
+  );
+  box-shadow: 0 0 8px var(--glow-color, rgba(250, 204, 21, 0.5));
 }
 
-.char-card[data-char="poom"] .stat-bar-fill {
-  background: linear-gradient(90deg, #16a34a, #22c55e, #4ade80);
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
-}
-
-.char-card[data-char="auto"] .stat-bar-fill {
-  background: linear-gradient(90deg, #dc2626, #ef4444, #fb7185);
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.55);
-}
-
-.char-card[data-char="pat"] .stat-bar-fill {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
-  box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
-}
-
+/* ═══════════════════════════════════════════════════════════════
+   UNIFIED CHAR-TAG (v3.44.3)
+   Previously 3 duplicated blocks (kao/poom/pat) + auto declared
+   elsewhere. All derive from --glow-color via color-mix alpha.
+   ══════════════════════════════════════════════════════════════ */
 .char-card .char-tag {
   display: inline-block;
   font-size: 9px;
@@ -673,24 +692,12 @@
   letter-spacing: 2px;
   font-family: "Rajdhani", sans-serif;
   clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
-}
-
-.char-card[data-char="kao"] .char-tag {
-  background: rgba(250, 204, 21, 0.12);
-  border: 1px solid rgba(250, 204, 21, 0.3);
-  color: #facc15;
-}
-
-.char-card[data-char="poom"] .char-tag {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.38);
-  color: #4ade80;
-}
-
-.char-card[data-char="pat"] .char-tag {
-  background: rgba(96, 165, 250, 0.12);
-  border: 1px solid rgba(96, 165, 250, 0.38);
-  color: #93c5fd;
+  /* Fallback: Kao-gold for pre-color-mix browsers */
+  background: rgba(250, 204, 21, 0.14);
+  background: color-mix(in srgb, var(--glow-color, #facc15) 14%, transparent);
+  border: 1px solid rgba(250, 204, 21, 0.36);
+  border: 1px solid color-mix(in srgb, var(--glow-color, #facc15) 36%, transparent);
+  color: var(--corner-color-bright, #facc15);
 }
 
 /* ── AUTO — Thermodynamic Brawler ─────────────────────── */
@@ -718,7 +725,7 @@
     0 0 0 1px rgba(239, 68, 68, 0.08) inset,
     0 0 40px rgba(239, 68, 68, 0.1),
     0 8px 32px rgba(0, 0, 0, 0.7);
-  animation: wanchaiGlow 1.6s ease-in-out infinite;
+  /* v3.44.2: animation now inherited from .char-card.selected (charGlow 1.8s) */
 }
 
 .char-card[data-char="auto"] .char-name {
@@ -733,77 +740,50 @@
   color: rgba(252, 165, 165, 0.7);
 }
 
-.char-card[data-char="auto"] .char-tag {
-  background: rgba(220, 38, 38, 0.15);
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  color: #fca5a5;
-}
+/* v3.44.3: auto-specific .char-tag override removed — unified rule
+   above (.char-card .char-tag) uses --glow-color tokens. */
 
-.char-card[data-char="auto"] .char-avatar {
-  filter: drop-shadow(0 0 12px rgba(220, 38, 38, 0.65));
-}
-
+/* v3.44.3: Auto-specific filter overrides moved into the unified
+   .char-card .char-avatar filter cascade below (see "UNIFIED AVATAR
+   FILTER CASCADE" block). Only box-shadow override remains here —
+   it needs auto's deeper red tint and 28px inset halo. */
 .char-card[data-char="auto"].selected .char-avatar,
 .char-card[data-char="auto"]:hover .char-avatar {
-  filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.9)) brightness(1.1);
   box-shadow:
-    0 0 0 1px rgba(239, 68, 68, 0.4),
-    0 0 28px rgba(239, 68, 68, 0.2) inset;
+    0 0 0 1px var(--glow-color, rgba(239, 68, 68, 0.4)),
+    0 0 28px var(--glow-color-soft, rgba(239, 68, 68, 0.2)) inset;
 }
 
-@keyframes wanchaiGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
-  }
+/* ═══════════════════════════════════════════════════════════════
+   UNIFIED GLOW ANIMATION (v3.44.2)
 
+   Replaces the former 4 per-char keyframes (kaoGlow/poomGlow/patGlow/
+   wanchaiGlow). Reads --glow-color / --glow-color-soft tokens declared
+   per .char-card[data-char="X"]. All 4 chars run at 1.8 s master tempo.
+
+   Adding a new character: declare the two --glow-color* vars and the
+   selected card picks up this animation automatically — no new keyframe.
+   ══════════════════════════════════════════════════════════════ */
+@keyframes charGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 10px var(--glow-color-soft, rgba(250, 204, 21, 0.2));
+  }
   50% {
     box-shadow:
-      0 0 28px rgba(220, 38, 38, 0.7),
-      0 0 50px rgba(249, 115, 22, 0.3);
+      0 0 28px var(--glow-color, rgba(250, 204, 21, 0.6)),
+      0 0 50px var(--glow-color-soft, rgba(249, 115, 22, 0.25));
   }
 }
 
-.char-card[data-char="auto"].selected {
-  animation: wanchaiGlow 1.6s ease-in-out infinite;
+.char-card.selected {
+  animation: charGlow 1.8s ease-in-out infinite;
 }
 
-/* Character glow animations */
-@keyframes kaoGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 10px rgba(250, 204, 21, 0.2);
-  }
-
-  50% {
-    box-shadow:
-      0 0 28px rgba(250, 204, 21, 0.6),
-      0 0 50px rgba(249, 115, 22, 0.25);
-  }
-}
-
-@keyframes poomGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
-  }
-
-  50% {
-    box-shadow:
-      0 0 28px rgba(34, 197, 94, 0.55),
-      0 0 50px rgba(74, 222, 128, 0.2);
-  }
-}
-
+/* Per-char selected border + backdrop (non-animated parts kept as-is) */
 .char-card[data-char="kao"].selected {
   border-color: rgba(250, 204, 21, 0.55);
-  box-shadow:
-    0 0 0 1px rgba(250, 204, 21, 0.1) inset,
-    0 0 40px rgba(250, 204, 21, 0.08),
-    0 8px 32px rgba(0, 0, 0, 0.7);
-  animation: kaoGlow 1.8s ease-in-out infinite;
 }
-
 .char-card[data-char="poom"].selected {
   border-color: rgba(34, 197, 94, 0.55);
   background: linear-gradient(
@@ -811,35 +791,7 @@
     rgba(5, 22, 10, 0.99) 0%,
     rgba(5, 14, 22, 0.99) 100%
   );
-  box-shadow:
-    0 0 0 1px rgba(34, 197, 94, 0.1) inset,
-    0 0 40px rgba(34, 197, 94, 0.08),
-    0 8px 32px rgba(0, 0, 0, 0.7);
-  animation: poomGlow 1.8s ease-in-out infinite;
 }
-
-.char-card[data-char="kao"].selected .char-avatar {
-  filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.9)) brightness(1.1);
-}
-
-.char-card[data-char="poom"].selected .char-avatar {
-  filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.85)) brightness(1.1);
-}
-
-/* Pat glow effects */
-@keyframes patGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
-  }
-
-  50% {
-    box-shadow:
-      0 0 28px rgba(96, 165, 250, 0.55),
-      0 0 50px rgba(147, 197, 253, 0.2);
-  }
-}
-
 .char-card[data-char="pat"].selected {
   border-color: rgba(96, 165, 250, 0.55);
   background: linear-gradient(
@@ -847,18 +799,38 @@
     rgba(5, 15, 35, 0.99) 0%,
     rgba(4, 8, 22, 0.99) 100%
   );
-  box-shadow:
-    0 0 0 1px rgba(96, 165, 250, 0.1) inset,
-    0 0 40px rgba(96, 165, 250, 0.08),
-    0 8px 32px rgba(0, 0, 0, 0.7);
-  animation: patGlow 1.8s ease-in-out infinite;
+}
+/* (.char-card[data-char="auto"].selected already declared above with border + bg) */
+
+/* v3.44.3: per-char .selected .char-avatar filter rules retired —
+   replaced by the token-driven UNIFIED AVATAR FILTER CASCADE below.
+   Adding a new char requires NO new filter rule; --glow-color drives it. */
+
+/* ═══════════════════════════════════════════════════════════════
+   PORTRAIT FRAME PULSE (v3.44.2)
+   framePulse runs on ::before/::after of selected card's portrait frame.
+   ::after offset by 0.9s (half-beat) for a cross-fade breathing feel.
+   ══════════════════════════════════════════════════════════════ */
+@keyframes framePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 transparent;
+    border-color: var(--frame-color, rgba(250, 204, 21, 0.65));
+  }
+  50% {
+    box-shadow: 0 0 14px 0 var(--frame-color, rgba(250, 204, 21, 0.65));
+    border-color: var(--frame-color-bright, var(--frame-color, rgba(250, 204, 21, 0.95)));
+  }
 }
 
-.char-card[data-char="pat"].selected .char-avatar {
-  filter: drop-shadow(0 0 16px rgba(96, 165, 250, 0.9)) brightness(1.1);
+.char-card.selected .char-portrait-frame::before,
+.char-card.selected .char-portrait-frame::after {
+  animation: framePulse 1.8s ease-in-out infinite;
+}
+.char-card.selected .char-portrait-frame::after {
+  animation-delay: 0.9s; /* half-beat offset for cross-fade */
 }
 
-/* ── Portrait idle float — selected card only ──────────────────────────────── */
+/* ── Portrait idle float — selected card only ───────────────────────────── */
 @keyframes portraitFloat {
   0%,
   100% {
@@ -871,7 +843,9 @@
 }
 
 .char-card.selected .char-avatar {
-  animation: portraitFloat 2.8s ease-in-out infinite;
+  /* v3.44.2: 2.8s → 3.6s (= 2× charGlow 1.8s) — half-tempo harmonic.
+     Peaks align with every 2nd glow pulse for a synchronised breathing feel. */
+  animation: portraitFloat 3.6s ease-in-out infinite;
 }
 
 /* Freeze float on hover so it doesn't fight the card lift transform */
@@ -879,51 +853,43 @@
   animation: none;
 }
 
-.char-cards.has-selection .char-card:not(.selected):hover {
-  filter: saturate(0.75) brightness(0.85);
-  transform: scale(1.01) translateY(-2px);
-}
+/* ═══════════════════════════════════════════════════════════════
+   UNIFIED AVATAR BACKGROUND + FILTER CASCADE (v3.44.3)
 
-/* ── Per-character avatar background gradient ──────────────────────────────── */
-.char-card[data-char="kao"] .char-avatar {
+   Previously 4 per-char .char-avatar blocks (background + filter) +
+   3 per-char .selected .char-avatar blocks (filter) + 1 hover
+   combination — impossible to audit which drop-shadow applies at
+   which specificity.  Now one cascade, token-driven:
+
+     base   : dark drop-shadow + themed soft halo
+     hover/selected : brighter themed halo + brightness(1.1)
+
+   Radial-gradient bg derives from --glow-color-soft with a black mix
+   for the outer edge.  Per-char kao/poom/auto/pat tokens drive all.
+   Fallback (first `background:` line) = Kao navy for pre-color-mix
+   browsers (Chrome < 111 / Safari < 16.2 / Firefox < 113).
+   ══════════════════════════════════════════════════════════════ */
+.char-card[data-char] .char-avatar {
   background: radial-gradient(
     ellipse at 50% 30%,
     rgba(30, 50, 90, 0.9) 0%,
     rgba(8, 10, 24, 0.98) 75%
   );
-}
-
-.char-card[data-char="poom"] .char-avatar {
   background: radial-gradient(
     ellipse at 50% 30%,
-    rgba(5, 40, 22, 0.9) 0%,
-    rgba(4, 12, 20, 0.98) 75%
+    color-mix(in srgb, var(--glow-color-soft, rgba(30, 50, 90, 0.9)) 85%, black 15%) 0%,
+    color-mix(in srgb, var(--glow-color-soft, rgba(8, 10, 24, 0.98)) 10%, #070712 90%) 75%
   );
+  filter:
+    drop-shadow(0 4px 14px rgba(0, 0, 0, 0.85))
+    drop-shadow(0 0 10px var(--glow-color-soft, transparent));
 }
-
-.char-card[data-char="auto"] .char-avatar {
-  background: radial-gradient(
-    ellipse at 50% 30%,
-    rgba(50, 10, 10, 0.9) 0%,
-    rgba(12, 4, 8, 0.98) 75%
-  );
-}
-
-.char-card[data-char="pat"] .char-avatar {
-  background: radial-gradient(
-    ellipse at 50% 30%,
-    rgba(20, 40, 80, 0.9) 0%,
-    rgba(6, 8, 20, 0.98) 75%
-  );
-  filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.55));
-}
-
-.char-card[data-char="pat"].selected .char-avatar,
-.char-card[data-char="pat"]:hover .char-avatar {
-  filter: drop-shadow(0 0 18px rgba(96, 165, 250, 0.85)) brightness(1.1);
-  box-shadow:
-    0 0 0 1px rgba(96, 165, 250, 0.35),
-    0 0 28px rgba(96, 165, 250, 0.2) inset;
+.char-card:hover .char-avatar,
+.char-card.selected .char-avatar {
+  filter:
+    drop-shadow(0 4px 14px rgba(0, 0, 0, 0.85))
+    drop-shadow(0 0 16px var(--glow-color, rgba(250, 204, 21, 0.9)))
+    brightness(1.1);
 }
 
 .char-select-hint {
@@ -937,6 +903,65 @@
   pointer-events: none;
   display: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   FOUR GOLD CORNER BRACKETS (v3.44.2)
+
+   Injected as 4 <i class="card-corner card-corner--{tl|tr|bl|br}">
+   spans inside .char-card-inner (see index.html). Each corner draws
+   two borders of the L-bracket; colour follows per-char tokens via
+   --corner-color / --corner-color-bright.
+
+   Staggered clockwise pulse: TL @0ms → TR @450ms → BR @900ms →
+   BL @1350ms, all at 1.8 s period (= charGlow master beat).
+   ══════════════════════════════════════════════════════════════ */
+.card-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--corner-color, rgba(250, 204, 21, 0.55));
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.7;
+  transition:
+    opacity 0.28s ease,
+    border-color 0.4s,
+    width 0.28s ease,
+    height 0.28s ease;
+}
+
+.card-corner--tl { top: 0;    left: 0;  border-top-width: 1.5px;    border-left-width:  1.5px; }
+.card-corner--tr { top: 0;    right: 0; border-top-width: 1.5px;    border-right-width: 1.5px; }
+.card-corner--bl { bottom: 0; left: 0;  border-bottom-width: 1.5px; border-left-width:  1.5px; }
+.card-corner--br { bottom: 0; right: 0; border-bottom-width: 1.5px; border-right-width: 1.5px; }
+
+/* Brighten + enlarge on hover/selected */
+.char-card:hover .card-corner,
+.char-card.selected .card-corner {
+  opacity: 1;
+  width: 18px;
+  height: 18px;
+  border-color: var(--corner-color-bright, var(--corner-color, #facc15));
+}
+
+/* Staggered clockwise pulse on selected — 4 corners × 0.45 s phase = 1.8 s */
+@keyframes cornerPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: none;
+  }
+  50% {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 5px var(--corner-color-bright, var(--corner-color, #facc15)));
+  }
+}
+
+.char-card.selected .card-corner         { animation: cornerPulse 1.8s ease-in-out infinite; }
+.char-card.selected .card-corner--tr     { animation-delay: 0.45s; }
+.char-card.selected .card-corner--br     { animation-delay: 0.9s;  }
+.char-card.selected .card-corner--bl     { animation-delay: 1.35s; }
 
 /* ---- END REGION: CHARACTER SELECT — Cards · Stat bars · Char themes ---- */
 

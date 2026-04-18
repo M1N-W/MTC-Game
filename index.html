@@ -6,18 +6,18 @@
     <!-- No maximum-scale / user-scalable=no — allows pinch-zoom for a11y; Edge Tools meta-viewport rule -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>MTC the Game (Beta Edition)</title>
-    <meta name="description" content="MTC the Game — เกม top-down survival action สไตล์ไทย เล่นได้เลยในเบราว์เซอร์">
-    <meta name="theme-color" content="#16213e">
+    <meta name="description" content="MTC the Game — MTC themed Top-down Survival">
+    <meta name="msapplication-TileColor" content="#16213e">
     <link rel="canonical" href="https://m1n-w.github.io/MTC-Game/">
 
     <!-- Open Graph / social preview -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://m1n-w.github.io/MTC-Game/">
     <meta property="og:title" content="MTC the Game (Beta Edition)">
-    <meta property="og:description" content="เกม top-down survival action สไตล์ไทย เล่นได้เลยในเบราว์เซอร์">
+    <meta property="og:description" content="MTC themed Top-down Survival Action, Play it now on browser!">
     <meta property="twitter:card" content="summary">
     <meta property="twitter:title" content="MTC the Game (Beta Edition)">
-    <meta property="twitter:description" content="เกม top-down survival action สไตล์ไทย">
+    <meta property="twitter:description" content="MTC themed Top-down Survival Action">
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="manifest" href="manifest.json">
@@ -370,7 +370,7 @@
             </div>
             <div class="subtitle">BETA EDITION <span class="version-badge">v3.41.13</span></div>
 
-            <div id="mission-brief">กำลังโหลดภารกิจ...</div>
+            <div id="mission-brief">The Mission is coming up...</div>
 
             <!-- Character Selection -->
             <div class="char-select-section">
@@ -388,6 +388,12 @@
                             <div class="char-card selected" id="card-kao" data-char="kao"
                                 onclick="handleCardClick('kao')">
                                 <div class="char-card-inner">
+                                    <!-- v3.44.2 gold corners (4×) — required for all char cards.
+                                         See Markdown Source/Information/CHARACTER_CARD_CHECKLIST.md -->
+                                    <i class="card-corner card-corner--tl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--tr" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--bl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--br" aria-hidden="true"></i>
                                     <div class="char-card-face char-card-face--front">
                                         <div class="char-portrait-frame">
                                             <div class="char-avatar" id="char-avatar-kao"></div>
@@ -424,8 +430,8 @@
                                                 <div class="stat-val">900</div>
                                             </div>
                                         </div>
-                                        <div class="char-desc">Triple weapon master — blink strike, clone burst &amp;
-                                            dash-stealth.</div>
+                                        <div class="char-desc">Triple weapon &amp;
+                                            God of Stealth</div>
                                         <div class="char-tag">Stealth Ops</div>
                                         <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
                                     </div>
@@ -477,6 +483,10 @@
                             <!-- ── POOM ── -->
                             <div class="char-card" id="card-poom" data-char="poom" onclick="handleCardClick('poom')">
                                 <div class="char-card-inner">
+                                    <i class="card-corner card-corner--tl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--tr" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--bl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--br" aria-hidden="true"></i>
                                     <div class="char-card-face char-card-face--front">
                                         <div class="char-portrait-frame">
                                             <div class="char-avatar" id="char-avatar-poom"></div>
@@ -513,8 +523,7 @@
                                                 <div class="stat-val">750</div>
                                             </div>
                                         </div>
-                                        <div class="char-desc">Mystic summoner — Naga shield, Garuda striker &amp;
-                                            Sticky ritual burst.</div>
+                                        <div class="char-desc">Mystic summoner</div>
                                         <div class="char-tag">Mystic Force</div>
                                         <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
                                     </div>
@@ -566,6 +575,10 @@
                             <!-- ── AUTO ── -->
                             <div class="char-card" id="btn-auto" data-char="auto" onclick="handleCardClick('auto')">
                                 <div class="char-card-inner">
+                                    <i class="card-corner card-corner--tl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--tr" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--bl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--br" aria-hidden="true"></i>
                                     <div class="char-card-face char-card-face--front">
                                         <div class="char-portrait-frame">
                                             <div class="char-avatar" id="char-avatar-auto"></div>
@@ -602,8 +615,7 @@
                                                 <div class="stat-val">MELEE</div>
                                             </div>
                                         </div>
-                                        <div class="char-desc">Heat Wave brawler — Wanchai Stand ORA rush &amp; melee
-                                            inferno.</div>
+                                        <div class="char-desc">Heat Wave brawler</div>
                                         <div class="char-tag">Horsepower</div>
                                         <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
                                     </div>
@@ -656,6 +668,10 @@
                             <!-- ── PAT ── -->
                             <div class="char-card" id="card-pat" data-char="pat" onclick="handleCardClick('pat')">
                                 <div class="char-card-inner">
+                                    <i class="card-corner card-corner--tl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--tr" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--bl" aria-hidden="true"></i>
+                                    <i class="card-corner card-corner--br" aria-hidden="true"></i>
                                     <div class="char-card-face char-card-face--front">
                                         <div class="char-portrait-frame">
                                             <div class="char-avatar" id="char-avatar-pat"></div>
@@ -692,8 +708,7 @@
                                                 <div class="stat-val">750</div>
                                             </div>
                                         </div>
-                                        <div class="char-desc">Samurai ronin — Zanzo Flash blink, Blade Guard parry
-                                            &amp; Iaido cinematic kill.</div>
+                                        <div class="char-desc">Samurai ronin</div>
                                         <div class="char-tag">Blade Arts</div>
                                         <div class="char-flip-hint">✦ TAP FOR SKILLS</div>
                                     </div>
@@ -1023,6 +1038,16 @@
     <script defer src="js/effects.js"></script>
     <script defer src="js/weapons.js"></script>
     <script defer src="js/map.js"></script>
+    <!-- v3.44.3: UI submodules extracted from ui.js (Phase 1 of HIGH #2 split).
+         CooldownVisual is consumed by UIManager._setCooldownVisual via a thin
+         wrapper; HUD_CONFIG is a declarative per-char skill slot spec ready
+         for Phase 2's generic _applyHUDConfig() helper. Note: SkillRegistry
+         must load BEFORE hud-config.js so SKILL.* constants resolve. -->
+    <script defer src="js/systems/SkillRegistry.js"></script>
+    <script defer src="js/ui/CooldownVisual.js"></script>
+    <script defer src="js/ui/hud-config.js"></script>
+    <script defer src="js/ui/ShopManager.js"></script>
+    <script defer src="js/ui/CanvasHUD.js"></script>
     <script defer src="js/ui.js"></script>
     <script defer src="js/tutorial.js"></script>
 
@@ -1035,6 +1060,8 @@
     <script defer src="js/ai/SquadAI.js"></script>
 
     <!-- NEW OOP PLAYER HIERARCHY -->
+    <!-- SkillRegistry is already loaded above (before hud-config.js);
+         PlayerBase uses the same window.SKILL global. -->
     <script defer src="js/entities/player/PlayerBase.js"></script>
     <script defer src="js/entities/player/KaoPlayer.js"></script>
     <script defer src="js/entities/player/AutoPlayer.js"></script>
