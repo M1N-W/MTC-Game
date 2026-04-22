@@ -34,12 +34,22 @@ class BossBase extends Entity {
         this.stickyStacks = 0;
     }
 
-    // ── Boss speech — ดึงข้อความจาก GAME_TEXTS โดยตรง ────────
-    speak(context) {
+    // ── Boss speech ────────────────────────────────────────────
+    // speak()            → pick from boss-specific taunt pool
+    // speak('literal')   → say that exact line (used for triggered one-liners)
+    // Pool is chosen by this._tauntKey, default 'taunts'.
+    speak(textOverride) {
         if (!window.UIManager) return;
-        const taunts = GAME_TEXTS.boss.taunts;
-        const text = taunts[Math.floor(Math.random() * taunts.length)];
-        window.UIManager.showBossSpeech(text);
+        let text;
+        if (typeof textOverride === 'string' && textOverride.trim()) {
+            text = textOverride;
+        } else {
+            const poolKey = this._tauntKey || 'taunts';
+            const pool = (GAME_TEXTS.boss && GAME_TEXTS.boss[poolKey]) || GAME_TEXTS.boss.taunts;
+            if (!pool || !pool.length) return;
+            text = pool[Math.floor(Math.random() * pool.length)];
+        }
+        window.UIManager.showBossSpeech(text, this.name);
     }
 
     // ── Shared: HUD tick (call once per update frame) ─────────

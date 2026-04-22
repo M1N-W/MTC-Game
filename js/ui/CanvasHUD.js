@@ -34,6 +34,13 @@ let comboShake = 0.0;
 const comboShakeDecay = 4.5;
 const comboScaleDecay = 6.0;
 
+// Respect user's motion preference — canvas shake is not governed by CSS.
+// Cached at module load; matchMedia listener would be overkill for this.
+const _PREFERS_REDUCED_MOTION =
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function addCombo() {
     comboCount++;
     comboTimer = 2.0;
@@ -74,9 +81,10 @@ class CanvasHUD {
         if (!ctx || comboCount <= 0) return;
         const canvas = ctx.canvas;
         const x = canvas.width / 2;
-        const y = Math.max(60, canvas.height * 0.14);
+        const y = Math.max(90, canvas.height * 0.22);
         const baseFont = 72;
-        const size = Math.round(baseFont * comboScale + Math.min(40, comboCount * 1.2));
+        const rawSize = baseFont * comboScale + Math.min(28, comboCount * 0.8);
+        const size = Math.round(Math.min(112, rawSize));
 
         ctx.save();
         ctx.font = `bold ${size}px "Orbitron", sans-serif`;
@@ -91,7 +99,7 @@ class CanvasHUD {
         ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 22;
 
         const maxShake = Math.min(12, comboCount * 0.6);
-        const shakeAmp = maxShake * comboShake;
+        const shakeAmp = _PREFERS_REDUCED_MOTION ? 0 : maxShake * comboShake;
         const shakeX = (Math.random() - 0.5) * shakeAmp;
         const shakeY = (Math.random() - 0.5) * shakeAmp;
         ctx.translate(x + shakeX, y + shakeY);
@@ -147,15 +155,15 @@ class CanvasHUD {
         const pillY = cy - pillH / 2;
 
         ctx.shadowBlur = 28;
-        ctx.shadowColor = '#d946ef';
+        ctx.shadowColor = '#ef4444';
 
-        ctx.fillStyle = 'rgba(88, 28, 135, 0.88)';
+        ctx.fillStyle = 'rgba(127, 29, 29, 0.88)';
         CanvasHUD._roundRect(ctx, pillX, pillY, pillW, pillH, radius);
         ctx.fill();
 
         ctx.shadowBlur = 10;
-        ctx.shadowColor = '#e879f9';
-        ctx.strokeStyle = 'rgba(233, 121, 249, 0.90)';
+        ctx.shadowColor = '#fca5a5';
+        ctx.strokeStyle = 'rgba(252, 165, 165, 0.90)';
         ctx.lineWidth = 2;
         CanvasHUD._roundRect(ctx, pillX, pillY, pillW, pillH, radius);
         ctx.stroke();
@@ -185,7 +193,10 @@ class CanvasHUD {
         const canvas = ctx.canvas;
         const radarRadius = 60;
         const scale = 0.1;
-        const cx = canvas.width - 200;
+        const cx = Math.max(
+            radarRadius + 30,
+            Math.min(canvas.width - (radarRadius + 30), canvas.width - 200)
+        );
         const cy = 90;
         const now = Date.now();
 
@@ -504,8 +515,8 @@ class CanvasHUD {
                 ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
             }
             ctx.shadowBlur = 0;
-            ctx.font = '6px monospace'; ctx.fillStyle = 'rgba(203,213,225,0.65)';
-            ctx.fillText(label, lx, ly + 9);
+            ctx.font = 'bold 8px monospace'; ctx.fillStyle = 'rgba(226,232,240,0.85)';
+            ctx.fillText(label, lx, ly + 10);
         });
     }
 

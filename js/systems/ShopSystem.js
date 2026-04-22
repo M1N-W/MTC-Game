@@ -312,6 +312,24 @@ function buyItem(slotIndex) {
             spawnFloatingText('❌ AUTO เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
             ShopManager.renderItems(); return;
         }
+
+    } else if (item.id === 'patEdge') {
+        if (typeof PatPlayer !== 'undefined' && p instanceof PatPlayer) {
+            // Parry window +15% — override via p.stats.perfectParryWindow
+            // (PatPlayer._tickBladeGuard reads S.perfectParryWindow from
+            //  its stats bag each frame).
+            const baseWin = BALANCE.characters?.pat?.perfectParryWindow ?? 0.15;
+            const curWin = p.stats?.perfectParryWindow ?? baseWin;
+            if (p.stats) p.stats.perfectParryWindow = curWin * 1.15;
+            // Swing speed +10% — applied via attackSpeedMult (mirrors the
+            // existing `speedPct` convention used by the speedUp permanent).
+            p.attackSpeedMult = (p.attackSpeedMult || 1.0) * 1.10;
+            showItemNotificationWithParticles('patEdge', { x: p.x, y: p.y, value: 15 }, 12);
+        } else {
+            addScore(item.cost); offer.soldOut = false;
+            spawnFloatingText('❌ PAT เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+            ShopManager.renderItems(); return;
+        }
     }
 
     Achievements.stats.shopPurchases = (Achievements.stats.shopPurchases || 0) + 1;

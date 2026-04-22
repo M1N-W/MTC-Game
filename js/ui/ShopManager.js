@@ -57,7 +57,12 @@ class ShopManager {
                 : `<span class="shop-duration" style="color:#22c55e;">⚡ ทันที</span>`;
 
             // Char-specific badge
-            const charLabels = { kao: { label: 'KAO', color: '#facc15' }, poom: { label: 'POOM', color: '#4ade80' }, auto: { label: 'AUTO', color: '#fb923c' } };
+            const charLabels = {
+                kao:  { label: 'KAO',  color: '#facc15' },
+                poom: { label: 'POOM', color: '#4ade80' },
+                auto: { label: 'AUTO', color: '#fb923c' },
+                pat:  { label: 'PAT',  color: '#7ec8e3' },
+            };
             const charBadge = item.charReq
                 ? `<span class="shop-card-char-badge" style="background:${charLabels[item.charReq]?.color ?? '#94a3b8'}22; border-color:${charLabels[item.charReq]?.color ?? '#94a3b8'}; color:${charLabels[item.charReq]?.color ?? '#94a3b8'};">${charLabels[item.charReq]?.label ?? item.charReq.toUpperCase()} ONLY</span>`
                 : '';
@@ -88,7 +93,6 @@ class ShopManager {
                 <button
                     class="shop-buy-btn"
                     onclick="buyItem(${idx})"
-                    ontouchstart="event.preventDefault(); buyItem(${idx});"
                     style="border-color:${item.color}; --shop-btn-color:${item.color};"
                     ${soldOut || !canAfford ? 'disabled' : ''}
                 >${soldOut ? 'SOLD OUT' : 'BUY'}</button>

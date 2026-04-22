@@ -350,12 +350,22 @@ class ParticleSystem {
      * @param {object} options { rotation, speedScale, spread }
      */
     spawn(x, y, count, color, type = 'circle', options = {}) {
+        const reduceMotion =
+            typeof prefersReducedMotion === 'function' && prefersReducedMotion();
+        if (reduceMotion) {
+            if (type === 'afterimage' || type === 'zanzo' || type === 'slash_arc') {
+                count = Math.min(count, 1);
+            } else {
+                count = Math.max(0, Math.ceil(count * 0.2));
+            }
+        }
+        if (!Number.isFinite(count) || count <= 0) return;
+
         for (let i = 0; i < count; i++) {
             let vx, vy, size, lifetime, data = {};
 
             if (type === 'steam') {
-                // Rise upward with random drift
-                const angle = -Math.PI / 2 + (Math.random() - 0.5); // Upward cone
+                const angle = -Math.PI / 2 + (Math.random() - 0.5);
                 const speed = rand(20, 80);
                 vx = Math.cos(angle) * speed;
                 vy = Math.sin(angle) * speed;
@@ -363,44 +373,39 @@ class ParticleSystem {
                 lifetime = rand(0.5, 1.2);
             }
             else if (type === 'binary') {
-                // Explode outward
                 const angle = Math.random() * Math.PI * 2;
                 const speed = rand(50, 250);
                 vx = Math.cos(angle) * speed;
                 vy = Math.sin(angle) * speed;
-                size = rand(12, 16); // Font size
+                size = rand(12, 16);
                 lifetime = rand(0.4, 0.9);
                 data = { char: Math.random() > 0.5 ? '1' : '0' };
             }
             else if (type === 'afterimage') {
-                // Stationary or very slow drift
                 vx = 0;
                 vy = 0;
-                size = options.size || 30; // Player size
-                lifetime = 0.25; // Very short life
+                size = options.size || 30;
+                lifetime = 0.25;
                 data = { rotation: options.rotation || 0 };
             }
             else if (type === 'zanzo') {
-                // Zanzo ghost — stationary at exact position, pure fade
                 vx = 0;
                 vy = 0;
-                size = options.size || 17;          // Pat's radius
-                lifetime = options.lifetime || 0.35; // zanzoGhostFadeDur
+                size = options.size || 17;
+                lifetime = options.lifetime || 0.35;
                 data = {
-                    angle: options.angle || 0,       // Pat's facing angle
-                    alphaScale: options.alphaScale ?? 1.0  // per-ghost brightness
+                    angle: options.angle || 0,
+                    alphaScale: options.alphaScale ?? 1.0
                 };
             }
             else if (type === 'slash_arc') {
-                // Katana slash energy — fast directional fan, tapers to a point
                 vx = options.vx ?? 0;
                 vy = options.vy ?? 0;
                 size = options.size || rand(2, 4);
                 lifetime = options.lifetime || rand(0.12, 0.22);
-                data = { angle: options.angle ?? 0 }; // blade angle for elongated draw
+                data = { angle: options.angle ?? 0 };
             }
             else {
-                // Standard 'circle' explosion
                 const angle = Math.random() * Math.PI * 2;
                 const speed = rand(100, 400);
                 vx = Math.cos(angle) * speed;
@@ -411,9 +416,7 @@ class ParticleSystem {
 
             this.particles.push(Particle.acquire(x, y, vx, vy, color, size, lifetime, type, data));
 
-            // Evict oldest particle if we exceed the cap
             while (this.particles.length > ParticleSystem.MAX_PARTICLES) {
-                // Release evicted instance back to pool before discarding the reference.
                 this.particles.shift().release();
             }
         }

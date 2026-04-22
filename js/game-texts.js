@@ -8,9 +8,9 @@ const GAME_TEXTS = {
     wave: {
         badge: (wave) => `WAVE ${wave}`,
         floatingTitle: (wave) => `WAVE ${wave}`,
-        bossIncoming: `BOSS INCOMING!`,
-        bossIncomingRider: `BOSS INCOMING!🐕`,
-        bossIncomingFish: `BOSS INCOMING!🐟`,
+        bossIncoming: `👑 KRU MANOP — BOSS INCOMING!`,
+        bossIncomingRider: `🐕 KRU MANOP — BOSS INCOMING!`,
+        bossIncomingFish: `🐟 KRU MANOP — BOSS INCOMING!`,
         // ── BossFirst (Kru First) announce texts ──────────────
         firstIncoming: `⚛️ KRU FIRST — BOSS INCOMING!`,
         firstAdvanced: `⚛️ KRU FIRST — ADVANCED MODE ⚡`,
@@ -309,12 +309,12 @@ const GAME_TEXTS = {
     tutorial: {
         welcome: {
             title: `ยินดีต้อนรับสู่ MTC the Game!`,
-            body: `มาเรียนรู้วิธีเล่นกันก่อนครับ\n\nกด NEXT หรือ Space Bar เพื่อเริ่มบทเรียน`,
+            body: `มาเรียนรู้วิธีเล่นกันก่อนครับ\n\nกดปุ่ม NEXT หรือ Space เพื่อเริ่มบทเรียน`,
             icon: `🎓`,
         },
         movement: {
             title: `บทที่ 1 : การเคลื่อนที่`,
-            body: `กด W A S D เพื่อลองเดินไปรอบๆ\n\n(หวังว่าแค่นี้คงไม่ต้องให้จับมือทำนะ)`,
+            body: `กด W A S D เพื่อเดินไปรอบ ๆ\n\nลองขยับตัวสักหน่อย เพื่อทำความคุ้นเคยก่อน`,
             icon: `🕹️`,
         },
         shooting: {
@@ -323,13 +323,13 @@ const GAME_TEXTS = {
             icon: `🔫`,
         },
         dash: {
-            title: `บทที่ 3 : Dash`,
-            body: `กด Space Bar เพื่อ Dash หลบการโจมตี\nแต่การ Dash จะมีคูลดาวน์ ควรใช้ให้ถูกจังหวะนะ\n\nลอง Dash 1 ครั้ง`,
+            title: `บทที่ 3 : แดช (Dash)`,
+            body: `กด Space เพื่อแดชหลบการโจมตี\nแต่การแดชจะมีคูลดาวน์ ควรใช้ให้ถูกจังหวะนะ\n\nลองแดช 1 ครั้ง`,
             icon: `💨`,
         },
         rclick: {
             title: `บทที่ 4 : สกิลตัวละคร`,
-            body: `กดคลิกขวาใช้สกิลประจำตัว\n\nเก้า : [Stealth] ซุ่มยิง\nภูมิ : [Eat Rice] กินข้าวเหนียวฟื้น HP\nAuto : [Wanchai] เรียกแสตนด์มาช่วยต่อยศัตรู\nแพท : [Blade Guard] ยกดาบป้องกันแล้วสะท้อนกระสุนออกไปหาศัตรู\n\nลองกดคลิกขวา 1 ครั้ง`,
+            body: `กดคลิกขวาใช้สกิลประจำตัว\n\nเก้า : [Stealth] ซุ่มยิง\nภูมิ : [Eat Rice] กินข้าวเหนียวฟื้น HP\nAUTO : [Wanchai] เรียกแสตนด์มาช่วยต่อยศัตรู\nแพท : [Blade Guard] ยกดาบป้องกันแล้วสะท้อนกระสุนออกไปหาศัตรู\n\nลองกดคลิกขวา 1 ครั้ง`,
             icon: `✨`,
         },
         bulletTime: {
@@ -339,12 +339,12 @@ const GAME_TEXTS = {
         },
         levelUp: {
             title: `บทที่ 6 : การอัพเลเวล (Level Up & Skill Unlocking)`,
-            body: `ฆ่าศัตรูได้ EXP → เลเวลอัพ → สกิลแรงขึ้น\n\nSkill 1 : ทำภารกิจแรก → ปลดสกิล Q\nSkill 2 : ทำภารกิจสอง → ปลดสกิลที่เหลือ\nPassive : หลัง Skill Unlocked → ปลดพาสซีฟ`,
+            body: `ฆ่าศัตรูได้ EXP → เลเวลอัพ → สกิลแรงขึ้น\n\nSU1 : ทำภารกิจแรก → ปลดสกิล Q\nSU2 : ทำภารกิจสอง → ปลดสกิลที่เหลือ\nPassive : หลังปลดสกิลครบ → ปลดพาสซีฟ`,
             icon: `📈`,
         },
         shop: {
             title: `บทที่ 7 : ร้านค้า (MTC Co-op Store)`,
-            body: `ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\nไอเทมพื้นฐานมีดังนี้\n• 🧃 Energy Drink — ฟื้น HP 60 หน่วย (300)\n• 🛡️ Energy Shield — บล็อก 1 ครั้ง (600)\n• ❤️ Vital Supplement — HP สูงสุด +15 (500)\n• 🔧 Weapon Tuner — ดาเมจ +5% (800)\n• 👟 Lightweight Boots — ความเร็ว +5% (500)\n• 🔮 Focus Crystal — ลด CD สกิล 5% (700)\n\n⚔️ ไอเทมพิเศษ :\n• 🪞 Reflect Armor — สะท้อน 15% ดาเมจ (900)\n• 🫧 Shield Bubble — บล็อก 3 ครั้ง (500)\n• ⚡ Adrenaline Wave — ความเร็ว +30% 8 วิ (400)\n• 🔄 Cooldown Round — รีเซ็ต CD ทันที (600)\n\n👤 ไอเทมเฉพาะตัวละคร :\n• 👻 ผีซุ่ม [เก้า] — Teleport +1 ชาร์จ (750)\n• 🍚 เทพเจ้าอีสาน [ภูมิ] — Naga/Garuda CD -15% (650)\n• 🔥 วันชัยระเบิด [Auto] — ถึง HOT เร็วขึ้น (850)`,
+            body: `ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\nไอเทมพื้นฐานมีดังนี้ :\n• 🧃 Energy Drink — ฟื้น HP 60 หน่วย (300)\n• 🛡️ Energy Shield — บล็อก 1 ครั้ง (600)\n• ❤️ Vital Supplement — HP สูงสุด +15 (500)\n• 🔧 Weapon Tuner — ดาเมจ +5% (800)\n• 👟 Lightweight Boots — ความเร็ว +5% (500)\n• 🔮 Focus Crystal — ลด CD สกิล 5% (700)\n\n⚔️ ไอเทมพิเศษ :\n• 🪞 Reflect Armor — สะท้อน 15% ดาเมจ (900)\n• 🫧 Shield Bubble — บล็อก 3 ครั้ง (500)\n• ⚡ Adrenaline Wave — ความเร็ว +30% 8 วิ (400)\n• 🔄 Cooldown Round — รีเซ็ต CD ทันที (600)\n\n👤 ไอเทมเฉพาะตัวละคร :\n• 👻 ผีซุ่ม [KAO] — Teleport +1 ชาร์จ (750)\n• 🍚 เทพเจ้าอีสาน [POOM] — Naga/Garuda CD -15% (650)\n• 🔥 วันชัยระเบิด [AUTO] — ถึง HOT เร็วขึ้น (850)\n• ⚔️ คมดาบโรนิน [PAT] — Parry +15% และฟันไวขึ้น (800)`,
             icon: `🛒`,
         },
         kaoPassive: {
@@ -374,22 +374,22 @@ const GAME_TEXTS = {
         },
         database: {
             title: `บทที่ 8 : Database Server`,
-            body: `อยู่มุมขวาบน\nกด E เปิด Database\nกด F เปิด Admin (พิมพ์ help ดูคำสั่ง)`,
+            body: `อยู่มุมขวาบน\nกด E เปิดฐานข้อมูล\nกด F เปิด Admin (พิมพ์ help ดูคำสั่ง)`,
             icon: `🗄️`,
         },
         enemyTypes: {
             title: `บทที่ 9 : ศัตรู`,
-            body: `พื้นฐาน : Basic / Tank / Mage\nเสริม Wave 2+ : Charger / Hunter / Poison Spitter / Shield Braver / Sniper / Bomber / Healer / Summoner\n\nWave Event :\n1 Dark / 2,8,11,14 Fog / 4,7,13 Speed / 5,10 Glitch`,
+            body: `พื้นฐาน : Basic / Tank / Mage\nเสริม Wave 2+ : Charger / Hunter / Poison Spitter / Shield Braver / Sniper / Bomber / Healer / Summoner\n\nอีเวนต์ประจำ Wave :\n1 Dark / 2,8,11,14 Fog / 4,7,13 Speed / 5,10 Glitch`,
             icon: `👾`,
         },
         boss: {
             title: `บทที่ 10 : Boss`,
-            body: `ทุก 3 Wave เจอ Boss\n\nWave 3,9,15 — KruManop\nWave 6,12 — KruFirst\n\nเมื่อ Boss HP ต่ำจะเปิดใช้สกิลอัลติเมท เช่น Domain Expansion`,
+            body: `ทุก 3 Wave จะเจอ Boss\n\nWave 3,9,15 — KruManop\nWave 6,12 — KruFirst\n\nเมื่อ HP ของ Boss ต่ำ จะเปิดใช้สกิลอัลติเมท เช่น Domain Expansion`,
             icon: `👑`,
         },
         ready: {
             title: `พร้อมเล่นแล้ว! 🚀`,
-            body: `คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อค Achievements มากมาย\n🎯 ผ่าน Wave ทั้งหมดเพื่อชนะเกม\n\nกด START เพื่อเข้าสู่เกม!`,
+            body: `คุณรู้ทุกอย่างที่จำเป็นแล้ว!\n\n🏆 ทำคะแนนสูงสุดเพื่อขึ้น Leaderboard\n⭐ ปลดล็อก Achievement ให้ได้มากที่สุด\n🎯 ผ่านทุก Wave เพื่อชนะเกม\n\nกด START เพื่อเข้าสู่เกม!`,
             icon: `🎮`,
         },
     },

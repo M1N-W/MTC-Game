@@ -1118,7 +1118,7 @@ class UIManager {
         }
     }
 
-    static showBossSpeech(text) {
+    static showBossSpeech(text, label) {
         const speech = document.getElementById('boss-speech');
         if (!speech) return;
 
@@ -1126,9 +1126,16 @@ class UIManager {
         if (UIManager._bsTypeTimer) { clearTimeout(UIManager._bsTypeTimer); UIManager._bsTypeTimer = null; }
         if (UIManager._bsHideTimer) { clearTimeout(UIManager._bsHideTimer); UIManager._bsHideTimer = null; }
 
+        // Resolve speaker label: explicit arg → active boss name → generic fallback.
+        let resolvedLabel = (typeof label === 'string' && label.trim())
+            ? label.trim()
+            : (UIManager._bsBossRef && UIManager._bsBossRef.name)
+                ? String(UIManager._bsBossRef.name)
+                : 'BOSS';
+
         // Build DOM: label + text content span
         speech.innerHTML =
-            '<span class="speech-label">⚠ KRU MANOP</span>' +
+            `<span class="speech-label">⚠ ${resolvedLabel}</span>` +
             '<span class="speech-text"></span>';
 
         const textEl = speech.querySelector('.speech-text');

@@ -195,6 +195,17 @@ function _updateCarousel() {
   if (startModalName) startModalName.textContent = charId.toUpperCase();
 }
 
+function _setupSkillInfoA11y() {
+  const rows = document.querySelectorAll(".back-skill-row");
+  rows.forEach((row) => {
+    if (!row.hasAttribute("tabindex")) row.setAttribute("tabindex", "0");
+    const name = row.querySelector(".tt-name")?.textContent?.trim() || "";
+    const desc = row.querySelector(".tt-desc")?.textContent?.trim() || "";
+    const label = [name, desc].filter(Boolean).join(" — ");
+    if (label) row.setAttribute("aria-label", label);
+  });
+}
+
 // Initialise carousel on DOMContentLoaded
 (function _initCarousel() {
   function _setup() {
@@ -220,6 +231,7 @@ function _updateCarousel() {
 
     // Set initial theme & state
     _updateCarousel();
+    _setupSkillInfoA11y();
   }
 
   if (document.readyState === "loading") {

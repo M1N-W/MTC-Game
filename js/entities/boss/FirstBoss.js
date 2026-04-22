@@ -70,6 +70,8 @@ class KruFirst extends BossBase {
         this.maxHp = BALANCE.boss.baseHp * difficulty * hpBase * hpAdv;
         this.hp = this.maxHp;
         this.name = 'KRU FIRST';
+        // Use physics-flavored taunt pool for ambient speech.
+        this._tauntKey = 'firstTaunts';
         this.moveSpeed = Math.min(
             BALANCE.boss.moveSpeed * 2.2,
             BALANCE.boss.moveSpeed * spdBase * spdAdv
@@ -755,9 +757,10 @@ class KruFirst extends BossBase {
             this.moveSpeed *= 1.18;         // ← NEW: speed bump on phase break
             // NEW: reset analyzer — player often shifts strategy at phase break
             if (typeof playerAnalyzer !== 'undefined') playerAnalyzer.reset();
-            const taunts = GAME_TEXTS.boss.firstTaunts;
-            const taunt = taunts[Math.floor(Math.random() * taunts.length)];
-            spawnFloatingText(`⚛️ ${taunt}`, this.x, this.y - 90, '#39ff14', 28);
+            // Phase-break taunt: route through the shared boss speech chip
+            // for consistency with ManopBoss, keep the BERSERK MODE badge
+            // as a floating callout for combat readability.
+            this.speak();
             addScreenShake(8);
             this._enterState('BERSERK');
             spawnFloatingText('⚠️ BERSERK MODE!', this.x, this.y - 130, '#ef4444', 32);

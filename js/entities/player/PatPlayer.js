@@ -871,8 +871,9 @@ class PatPlayer extends Player {
     // Recoil + cooldown
     this.vx -= Math.cos(aimAngle) * 30;
     this.vy -= Math.sin(aimAngle) * 30;
+    const _aSpdSlash = this.attackSpeedMult || 1.0;
     this.cooldowns.shoot =
-      (wep.cooldown ?? 0.38) * this.cooldownMultiplier * this.skillCooldownMult;
+      ((wep.cooldown ?? 0.38) * this.cooldownMultiplier * this.skillCooldownMult) / _aSpdSlash;
 
     spawnParticles(sx, sy, 3, color);
     if (typeof Audio !== "undefined" && Audio.playShoot)
@@ -955,13 +956,14 @@ class PatPlayer extends Player {
     if (typeof spawnKatanaSlashArc !== "undefined")
       spawnKatanaSlashArc(this.x, this.y, aimAngle, this._isCritArc);
 
+    const _aSpdMelee = this.attackSpeedMult || 1.0;
     if (this._meleeComboStep === 0) {
       // Combo finished — full cooldown
-      this._meleeCooldownTimer = S.meleeCooldown ?? 0.55;
-      this.cooldowns.shoot = S.meleeCooldown ?? 0.55;
+      this._meleeCooldownTimer = (S.meleeCooldown ?? 0.55) / _aSpdMelee;
+      this.cooldowns.shoot = this._meleeCooldownTimer;
     } else {
       // Next hit in combo — short window
-      this.cooldowns.shoot = comboWindow;
+      this.cooldowns.shoot = comboWindow / _aSpdMelee;
     }
 
     // Push Pat slightly toward cursor on melee

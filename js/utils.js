@@ -134,11 +134,22 @@ const showVoiceBubble = (text, worldX, worldY) => {
 // ─── Screen shake ─────────────────────────────────────────────
 let screenShake = 0;
 
+let _prefersReducedMotion = false;
+try {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+        const _rmq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        _prefersReducedMotion = !!_rmq.matches;
+        const _rmUpdate = (ev) => { _prefersReducedMotion = !!ev.matches; };
+        if (typeof _rmq.addEventListener === 'function') _rmq.addEventListener('change', _rmUpdate);
+        else if (typeof _rmq.addListener === 'function') _rmq.addListener(_rmUpdate);
+    }
+} catch (_) { /* non-browser or restricted env */ }
+
+const prefersReducedMotion = () => _prefersReducedMotion;
+
 const addScreenShake = (amount) => {
-    // Guard: ignore non-finite values to prevent NaN screenShake
-    // which would propagate into CTX.translate(NaN,NaN) and destabilize rendering.
     if (!Number.isFinite(amount)) return;
-    // Hard cap to keep shake bounded even if a caller passes an extreme value.
+    if (_prefersReducedMotion) return;
     const capped = Math.max(0, Math.min(80, amount));
     screenShake = Math.max(screenShake, capped);
 };
@@ -619,6 +630,7 @@ if (typeof window !== 'undefined') {
     window.lerpColorHex      = lerpColorHex;
     window.lerpColor         = lerpColor;
     window.showVoiceBubble   = showVoiceBubble;
+    window.prefersReducedMotion = prefersReducedMotion;
     window.addScreenShake    = addScreenShake;
     window.updateScreenShake = updateScreenShake;
     window.getScreenShakeOffset = getScreenShakeOffset;
@@ -674,6 +686,7 @@ if (typeof module !== 'undefined' && module.exports) {
         pointToLineDistance,
         hexToRgb, rgbaString, lerpColorHex, lerpColor,
         showVoiceBubble,
+        prefersReducedMotion,
         addScreenShake, updateScreenShake, getScreenShakeOffset,
         addScore, getScore, resetScore,
         initCanvas, resizeCanvas, getCanvas, getContext,

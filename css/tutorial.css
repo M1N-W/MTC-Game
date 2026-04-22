@@ -24,15 +24,34 @@
   pointer-events: auto;
   width: min(520px, 92vw);
   background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
-  border: 2px solid #8b5cf6;
-  border-radius: 20px;
+  border: 2px solid rgba(250, 204, 21, 0.6);
+  border-radius: 4px;
   padding: 28px 32px 24px;
   box-shadow:
-    0 0 0 1px rgba(139, 92, 246, 0.25),
-    0 0 40px rgba(139, 92, 246, 0.35),
+    0 0 0 1px rgba(250, 204, 21, 0.18),
+    0 0 40px rgba(250, 204, 21, 0.28),
     0 24px 60px rgba(0, 0, 0, 0.8);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+}
+
+/* “TUTORIAL” badge — preserves the guided-mode signal without
+   swamping the whole card in purple. Positioned top-left across
+   every card position variant. */
+.tutorial-card::before {
+  content: "TUTORIAL";
+  position: absolute;
+  top: -10px;
+  left: 18px;
+  font: 700 9px/1 "Orbitron", "Rajdhani", monospace;
+  letter-spacing: 3px;
+  background: #8b5cf6;
+  color: #ffffff;
+  padding: 4px 11px 3px;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.55);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .tutorial-card--center {
@@ -107,7 +126,7 @@
 
 #tut-action-hint::before {
   content: "▶";
-  color: #8b5cf6;
+  color: #facc15;
 }
 
 #tut-action-bar {
@@ -117,21 +136,21 @@
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 18px;
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(250, 204, 21, 0.3);
 }
 
 #tut-action-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #8b5cf6, #a855f7);
-  box-shadow: 0 0 8px #8b5cf6;
+  background: linear-gradient(90deg, #facc15, #f97316);
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
   transition: width 0.2s ease-out;
   border-radius: 4px;
 }
 
 #tut-action-label {
   font-size: 11px;
-  color: #a78bfa;
+  color: #fbbf24;
   text-align: right;
   margin-top: -14px;
   margin-bottom: 14px;
@@ -147,8 +166,8 @@
 }
 
 #tut-next-btn {
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-  color: white;
+  background: linear-gradient(135deg, #facc15, #f97316);
+  color: #0a0a0a;
   border: none;
   padding: 11px 32px;
   font-size: 15px;
@@ -157,7 +176,7 @@
   border-radius: 10px;
   cursor: pointer;
   letter-spacing: 1px;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.5);
   transition: all 0.18s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -165,7 +184,7 @@
 
 #tut-next-btn:hover {
   transform: scale(1.05) translateY(-1px);
-  box-shadow: 0 0 32px rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 32px rgba(250, 204, 21, 0.7);
 }
 
 #tut-skip-btn {
@@ -204,15 +223,15 @@
 }
 
 .tut-dot--active {
-  background: #8b5cf6;
-  border-color: #8b5cf6;
-  box-shadow: 0 0 6px #8b5cf6;
+  background: #facc15;
+  border-color: #facc15;
+  box-shadow: 0 0 6px rgba(250, 204, 21, 0.8);
   transform: scale(1.3);
 }
 
 .tut-dot--done {
-  background: #4c1d95;
-  border-color: #6d28d9;
+  background: #78350f;
+  border-color: #f59e0b;
 }
 
 /* Spotlight pulse ring — drawn around highlighted elements */
@@ -220,14 +239,14 @@
   0%,
   100% {
     box-shadow:
-      0 0 0 4px rgba(139, 92, 246, 0.5),
-      0 0 20px rgba(139, 92, 246, 0.3);
+      0 0 0 4px rgba(250, 204, 21, 0.5),
+      0 0 20px rgba(250, 204, 21, 0.3);
   }
 
   50% {
     box-shadow:
-      0 0 0 8px rgba(139, 92, 246, 0.8),
-      0 0 40px rgba(139, 92, 246, 0.6);
+      0 0 0 8px rgba(250, 204, 21, 0.8),
+      0 0 40px rgba(250, 204, 21, 0.6);
   }
 }
 

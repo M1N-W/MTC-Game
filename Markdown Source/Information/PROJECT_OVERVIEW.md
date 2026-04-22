@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.44.4`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.44.8`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 ## Recent Changes
 
@@ -105,11 +105,12 @@ The legacy `css/main.css` and `js/config.js` bundles have been retired. Their re
 | `css/char-select.css` | Character carousel and flip-card system |
 | `css/tutorial.css` | Tutorial overlay layout and prompts |
 | `css/ui-extras.css` | Mobile UI, tooltips, loading, and game-over extras |
+| `css/update-toast.css` | Update-available toast banner (Reload / Dismiss) |
 | `js/balance.js` | `WAVE_SCHEDULE`, `BALANCE`, `GAME_CONFIG`, `VISUALS`, `ACHIEVEMENT_DEFS`, `MAP_CONFIG` |
 | `js/shop-items.js` | `SHOP_ITEMS` catalog |
 | `js/game-texts.js` | `GAME_TEXTS` localization and HUD copy |
 | `js/rendering/EnemyRenderer.js` | Enemy-only draw dispatcher and renderer helpers |
-| `js/VersionManager.js` | Service worker version sync and UI version display |
+| `js/VersionManager.js` | Service worker version sync, UI version display, and update-available toast |
 
 ---
 

@@ -4,6 +4,146 @@
 
 ---
 
+## v3.44.8 — UX Polish pass (tutorial tone · boss speech · update toast · copy)
+
+*Released: April 22, 2026*
+
+Executes the UX Polish backlog that follows the Design Review batches.
+
+- `js/game-texts.js`: softened the tutorial tone for the `movement` step
+  and normalized boss-incoming banners so `Kru Manop` arrivals read the
+  same shape as `Kru First` (`👑 KRU MANOP — BOSS INCOMING!`, etc).
+- `js/ui.js`: `UIManager.showBossSpeech()` now derives the speaker label
+  from the active boss's `name` instead of a hardcoded `KRU MANOP`, and
+  accepts an optional explicit label argument.
+- `js/entities/boss/BossBase.js`: `speak()` now honors an explicit text
+  override (previously silently ignored) and selects its random taunt
+  pool via `this._tauntKey`, passing `this.name` to the speech chip.
+- `js/entities/boss/FirstBoss.js`: sets `_tauntKey = 'firstTaunts'` so
+  ambient taunts come from the physics pool, and routes the half-HP
+  phase-break taunt through the shared speech chip (preserves the
+  floating `BERSERK MODE!` callout for combat readability).
+- `js/VersionManager.js` + `css/update-toast.css` (new): detects when a
+  newer service worker activates during the session and surfaces a
+  non-blocking toast with `Reload` / `✕` actions; reuses the existing
+  `VERSION` postMessage channel and adds `updatefound` as a fallback.
+- `index.html` + `sw.js`: register and precache the new
+  `css/update-toast.css` stylesheet.
+
+---
+
+## v3.44.7 — Design Review Batch 2 complete (locale unification · reduced motion)
+
+*Released: April 21, 2026*
+
+Closes the remaining partial items from Batch 2 so the review pass is now
+complete.
+
+- `js/game-texts.js`: normalized tutorial copy across the section instead of
+  patching only the Pat shop line — unified Thai wording, aligned colon usage,
+  standardized labels like `AUTO` / `KAO` / `POOM` / `PAT`, and cleaned mixed
+  phrasing in `dash`, `levelUp`, `database`, `enemyTypes`, `boss`, and `ready`.
+- `js/effects.js`: added reduced-motion support at the central particle
+  chokepoint (`ParticleSystem.spawn()`), shrinking decorative bursts globally
+  while preserving semantic trail types (`afterimage`, `zanzo`, `slash_arc`).
+- `js/entities/player/PatPlayer.js`, `js/ui/CanvasHUD.js`, and `js/utils.js`:
+  trimmed explanatory comments that had grown beyond the intended implementation
+  scope; runtime behavior is unchanged.
+
+---
+
+## v3.44.6 — Design Review Batch 2 (icon clarity · HUD config fix · a11y)
+
+*Released: April 21, 2026*
+
+Continues the senior design-review follow-up with focused UX cleanup and
+consistency fixes.
+
+- `js/shop-items.js`: resolved icon ambiguity by changing `reflectArmor`
+  from `🔮` to `🪞` (including buy/reflect notifications), so it no longer
+  clashes with `cdr` (`Focus Crystal`).
+- `js/ui/hud-config.js`: fixed Kao E-slot config id mismatch
+  (`clone-icon` → `kao-clone-icon`) so generic HUD lock/resolve logic points
+  at the real DOM node.
+- `js/ui/ShopManager.js`: removed duplicate touch handler on buy button
+  (kept `onclick` only) to prevent double-fire purchases on touch devices.
+- `js/utils.js`: added central reduced-motion gate in `addScreenShake()` and
+  exported `prefersReducedMotion` for shared motion policy.
+- `js/menu.js` + `css/char-select.css`: made back-face skill info rows
+  keyboard-focusable (`tabindex=0`), added computed `aria-label`, and
+  added visible `:focus-visible` styling.
+- `js/game-texts.js`: updated tutorial shop copy to include the new
+  Pat-exclusive item (`คมดาบโรนิน`) in the character-specific list.
+
+---
+
+## v3.44.5 — Design Review Batch 1 (UI polish · Pat shop item · reduced-motion)
+
+*Released: April 21, 2026*
+
+Implements **Batch 1 (P0)** of the senior design review addendum — eight
+legibility / hierarchy / accessibility / roster fixes. Pure polish:
+zero balance changes, zero new systems.
+
+### 🎨 HUD legibility
+
+- **Skill bar (`css/hud.css`)** — skill-name `7 → 8.5 px`, key-hint
+  `7.5 → 9 px`, letter-spacing tightened to preserve icon width.
+  Text-shadow reinforced with black drop + overflow guard.
+  `.skill-divider` bumped `1 → 2 px / 36 → 44 px`, colour changed to
+  gold so group boundaries read as intentional structure.
+- **Tooltips (`css/ui-extras.css`)** — `.tt-desc` `9.5 → 11 px`,
+  opacity `0.55 → 0.88` (failed WCAG AA 4.5:1 before); `.tt-name`
+  `11 → 12.5 px`; `.tt-key` `8 → 10 px`.
+- **HUD top (`css/base.css`)** — `.stats-box` chip background /
+  border / blur / clip-path removed. Score now reads via reinforced
+  triple-layer text-shadow, letting the player card (HP / EN / LV / EXP)
+  visually dominate the HUD-top band.
+
+### 🎨 Tutorial brand unification
+
+- **`css/tutorial.css`** — purple accent (`#8b5cf6`) replaced with
+  the game's brand gold (`#facc15 / #f97316`) across card border,
+  action-bar, action-fill, next-button, progress dots, and spotlight
+  pulse. A compact purple `TUTORIAL` badge (`::before`) preserves
+  the "guided mode" signal without taking over the whole palette.
+- Card `border-radius 20 → 4 px` for HUD consistency.
+
+### 🎨 CanvasHUD (`js/ui/CanvasHUD.js`)
+
+- **Combo counter** — size now capped at **112 px** (was unbounded,
+  could reach ~152 px and overlap the boss HP bar). Vertical anchor
+  moved from `canvas.height × 0.14 → 0.22` to clear the top HUD band.
+  Per-hit bump reduced from `+1.2 / hit` to `+0.8 / hit`, max bump
+  `40 → 28`.
+- **Reduced-motion** — shake disabled entirely when
+  `prefers-reduced-motion: reduce`. Cached at module load.
+- **Confused warning** — purple palette
+  (`rgba(88,28,135)` / `#d946ef` / `#e879f9`) replaced with red
+  (`rgba(127,29,29)` / `#ef4444` / `#fca5a5`). Purple now reads as
+  "tutorial"; red reads as "bad status" — no cross-signal.
+- **Minimap** — anchor is collision-safe on narrow canvases:
+  `cx = max(radarR+30, min(W−(radarR+30), W−200))`. Legend font
+  `6 → 8 px bold`, alpha `0.65 → 0.85`.
+
+### 🛒 Pat-exclusive shop item
+
+- **`js/shop-items.js`** — added `patEdge` (Ronin Edge / คมดาบโรนิน,
+  800 pts, permanent, pat-only). Pat is no longer the only character
+  missing a char-specific shop item.
+- **`js/systems/ShopSystem.js`** — handler mirrors the
+  `kaoAmmo / poomRice / autoCore` pattern: bumps
+  `p.stats.perfectParryWindow × 1.15` and
+  `p.attackSpeedMult × 1.10`.
+- **`js/entities/player/PatPlayer.js`** — both attack-cooldown
+  call sites (`_doSlashWave`, `_doMeleeCombo`) now divide by
+  `this.attackSpeedMult || 1.0` so the bonus actually takes effect.
+- **`js/ui/ShopManager.js`** — `charLabels` map now includes
+  `pat: { label: 'PAT', color: '#7ec8e3' }`; the new item's badge
+  renders in ice-blue instead of fallback grey.
+
+---
+
 ## v3.44.4 — HIGH #2 Phase 2-5 Complete (ui.js split finalised)
 
 *Released: April 19, 2026*

@@ -9,7 +9,7 @@
 //  Release notes belong in Markdown Source/CHANGELOG.md, not here.
 // ═══════════════════════════════════════════════════════════════════
 // AUTO-GEN:START
-const CACHE_NAME = "mtc-cache-v3.44.4";
+const CACHE_NAME = "mtc-cache-v3.44.8";
 
 const urlsToCache = [
   "./",
@@ -24,6 +24,7 @@ const urlsToCache = [
   "./css/shop.css",
   "./css/tutorial.css",
   "./css/ui-extras.css",
+  "./css/update-toast.css",
   "./js/ai/EnemyActions.js",
   "./js/ai/PlayerPatternAnalyzer.js",
   "./js/ai/SquadAI.js",

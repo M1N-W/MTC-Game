@@ -1053,6 +1053,13 @@
   gap: 7px;
 }
 
+.back-skill-row:focus-visible {
+  outline: 2px solid rgba(250, 204, 21, 0.75);
+  outline-offset: 2px;
+  border-radius: 4px;
+  background: rgba(250, 204, 21, 0.08);
+}
+
 .back-skill-row .tt-key {
   flex-shrink: 0;
   min-width: 28px;

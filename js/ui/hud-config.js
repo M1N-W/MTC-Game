@@ -33,7 +33,7 @@
       // full UI is driven by bespoke code in _updateIconsKao (charges arc,
       // penalty timers).  Still useful to register the lock key here.
       { iconId: 'teleport-icon', lockKey: SK.KAO?.TELEPORT, cdPath: '', cdMaxPath: 0 },
-      { iconId: 'clone-icon',    lockKey: SK.KAO?.CLONE,    cdPath: '', cdMaxPath: 0 },
+      { iconId: 'kao-clone-icon', lockKey: SK.KAO?.CLONE,   cdPath: '', cdMaxPath: 0 },
     ]),
     poom: Object.freeze([
       { iconId: 'eat-icon',    lockKey: null,             cdPath: 'cooldowns.eat',    cdMaxPath: 'stats.eatRiceCooldown' },
