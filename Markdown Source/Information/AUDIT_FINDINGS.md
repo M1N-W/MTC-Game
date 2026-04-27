@@ -11,6 +11,7 @@
 This audit compares the architectural documentation in `PROJECT_OVERVIEW.md` and `SKILL.md` against the actual implementation in the MTC Game codebase. Overall, the documentation is **well-maintained and accurate**, with minor gaps in rendering pipeline documentation and cross-file dependency mapping.
 
 **Overall Assessment:**
+
 - PROJECT_OVERVIEW.md: **95% accurate** — minor updates needed
 - SKILL.md: **92% accurate** — structural patterns documented correctly, missing some rendering invariants
 - mtc-rendering.skill: **Does not exist** — needs creation
@@ -86,6 +87,7 @@ The documented invariant is correctly implemented:
 - Renderers are pure consumers of simulation state
 
 **Evidence from codebase:**
+
 ```javascript
 // game.js:558 — drawGame() has NO state mutations
 function drawGame() {
@@ -99,10 +101,12 @@ function drawGame() {
 The documented frame draw sequence is accurate but **missing critical details**:
 
 **Documented (Correct):**
+
 - World-space pass (steps 1-16) inside camera transform
 - Screen-space pass (steps 17-22) outside camera transform
 
 **Missing from documentation:**
+
 1. **Renderer context restoration pattern** — `EnemyRenderer.draw()` saves/restores `window.CTX` (lines 43-55)
 2. **Camera transform boundaries** — exact `CTX.save()`/`CTX.restore()` locations
 3. **Viewport culling** — all renderers check `isOnScreen()` before drawing
@@ -119,6 +123,7 @@ The ASCII tree diagram correctly represents the actual inheritance structure. Al
 ### ✅ ACCURATE: Update/Draw Separation Axiom (Section 2)
 
 The strict separation is correctly documented:
+
 - `update()` owns authoritative mutation
 - `draw()` owns pure view manifestation
 - **Prohibition of state mutation in draw() is correctly stated**
@@ -126,11 +131,13 @@ The strict separation is correctly documented:
 ### ✅ ACCURATE: _tickShared Invariant (Section 3)
 
 Correctly documented:
+
 - `_tickShared(dt, player)` must be FIRST operation in enemy update()
 - Handles status effects, elemental reactions, hit-flash decay
 - AI Movement intent delegation via `_aiMoveX`/`_aiMoveY`
 
 **Code Evidence (enemy.js:139-144):**
+
 ```javascript
 update(dt, player) {
     if (this.dead) return;
@@ -144,6 +151,7 @@ update(dt, player) {
 The documented sequence is correct but **missing critical dependency details**:
 
 **Missing:**
+
 1. **typeof guards pattern** — files use `typeof X !== 'undefined'` for optional dependencies
 2. **window.* export pattern timing** — exports happen at END of files, not inline
 3. **WorkerBridge special handling** — loads AFTER game.js but accessed via typeof guard
@@ -170,24 +178,28 @@ The documented sequence is correct but **missing critical dependency details**:
 
 The mtc-rendering.skill file **does not exist** in the codebase. Based on the actual rendering implementation, the following patterns need documentation:
 
-### Required Content for mtc-rendering.skill:
+### Required Content for mtc-rendering.skill
 
 #### 1. Rendering Pipeline Structure
+
 - **Entry Points**: `PlayerRenderer.draw()`, `BossRenderer.draw()`, `EnemyRenderer.draw()`
 - **Dispatch Pattern**: `instanceof` checks in priority order (KruFirst before KruManop)
 - **Frame Lifecycle**: World-space → Camera transform → Screen-space sequence
 
 #### 2. Batching Strategies
+
 - **Static Bitmap Caching**: `BossRenderer._bitmapCache`, `EnemyRenderer._bodyCache`
 - **Offscreen Canvas Pattern**: Lazy creation with key format `'${type}_${R}'`
 - **Viewport Culling**: `isOnScreen(margin)` checks before ANY canvas API calls
 
 #### 3. Resource Management
+
 - **CTX Global Binding**: Temporary `window.CTX` reassignment in `EnemyRenderer.draw()`
 - **Shadow Blur Reset**: Mandatory `ctx.shadowBlur = 0` after draws
 - **Cache Invalidation**: Lazy GC — old entries collected when no longer referenced
 
 #### 4. Frame Lifecycle Management
+
 - **Camera Transform Stack**: `CTX.save()` → `translate(shake)` → ... → `CTX.restore()`
 - **Deterministic Animation**: `performance.now()` trig — NO `Math.random()` in draw
 - **Layer Order**: Background → Terrain → Decals → Entities → Projectiles → Lighting → HUD
@@ -231,28 +243,32 @@ The mtc-rendering.skill file **does not exist** in the codebase. Based on the ac
 
 ### Secondary Actions
 
-4. **Add Section 6.6** to SKILL.md: Renderer CTX binding pattern
-5. **Update PROJECT_OVERVIEW.md Section 7** with exact transform boundaries
-6. **Add Section 6.7** to SKILL.md: Wave modifier application requirement
+1. **Add Section 6.6** to SKILL.md: Renderer CTX binding pattern
+2. **Update PROJECT_OVERVIEW.md Section 7** with exact transform boundaries
+3. **Add Section 6.7** to SKILL.md: Wave modifier application requirement
 
 ### Verification Commands
 
 To verify the class hierarchy:
+
 ```bash
 grep -n "class.*extends" js/entities/**/*.js js/entities/*.js
 ```
 
 To verify load order:
+
 ```bash
 grep -n "script defer" index.html
 ```
 
 To verify _tickShared pattern:
+
 ```bash
 grep -n "_tickShared" js/entities/enemy.js
 ```
 
 To verify draw separation:
+
 ```bash
 grep -n "\.hp\s*[=+-]\|\.dead\s*[=]\|\.vx\s*[=+-]" js/rendering/*.js
 # Should return NO results — no state mutation in renderers
@@ -263,6 +279,7 @@ grep -n "\.hp\s*[=+-]\|\.dead\s*[=]\|\.vx\s*[=+-]" js/rendering/*.js
 ## Appendix: Verified Code Patterns
 
 ### Pattern 1: _tickShared First Invariant
+
 ```javascript
 // enemy.js:update()
 if (this.dead) return;
@@ -271,6 +288,7 @@ this._tickShared(dt, player); // ← ALWAYS FIRST
 ```
 
 ### Pattern 2: Swap-Remove Semantics
+
 ```javascript
 // game.js:550-556
 for (let i = window.specialEffects.length - 1; i >= 0; i--) {
@@ -283,6 +301,7 @@ for (let i = window.specialEffects.length - 1; i >= 0; i--) {
 ```
 
 ### Pattern 3: typeof Guard Pattern
+
 ```javascript
 // Used throughout codebase for optional dependencies
 if (typeof WorkerBridge !== 'undefined' && WorkerBridge.isReady) {
@@ -291,6 +310,7 @@ if (typeof WorkerBridge !== 'undefined' && WorkerBridge.isReady) {
 ```
 
 ### Pattern 4: Renderer CTX Binding
+
 ```javascript
 // EnemyRenderer.js:43-55
 const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;

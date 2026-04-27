@@ -9,7 +9,7 @@
 //  Release notes belong in Markdown Source/CHANGELOG.md, not here.
 // ═══════════════════════════════════════════════════════════════════
 // AUTO-GEN:START
-const CACHE_NAME = "mtc-cache-v3.44.8";
+const CACHE_NAME = "mtc-cache-v3.44.9";
 
 const urlsToCache = [
   "./",

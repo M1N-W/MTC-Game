@@ -583,6 +583,7 @@
     0 0 8px currentColor,
     0 2px 4px rgba(0, 0, 0, 0.5);
   pointer-events: none;
+  -webkit-user-select: none;
   user-select: none;
   will-change: transform, opacity;
 }

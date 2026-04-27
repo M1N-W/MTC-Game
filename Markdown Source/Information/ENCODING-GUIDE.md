@@ -39,6 +39,7 @@ A git hook has been installed that blocks commits with encoding corruption:
 ```
 
 **What it does:**
+
 - Checks all staged JS/CSS/HTML files
 - Detects UTF-8 corruption patterns
 - Blocks the commit if corruption found
@@ -104,6 +105,7 @@ Add to `.vscode/settings.json`:
 ### Windows Notepad Users
 
 ⚠️ **Notepad has issues with UTF-8.** When saving:
+
 1. Use "Save As"
 2. Select "Encoding: UTF-8" (NOT "UTF-8 BOM")
 3. Or better: Use VS Code, Notepad++, or Sublime Text
@@ -113,12 +115,14 @@ Add to `.vscode/settings.json`:
 When splitting/combining files with Thai text:
 
 1. **Read files as UTF-8 bytes, not text**
+
    ```python
    with open('file.js', 'rb') as f:
        content = f.read()
    ```
 
 2. **Write as UTF-8 without BOM**
+
    ```python
    with open('newfile.js', 'w', encoding='utf-8') as f:
        f.write(content)
@@ -129,6 +133,7 @@ When splitting/combining files with Thai text:
    - Use file-level copy or Python scripts
 
 4. **Verify immediately after migration**
+
    ```bash
    python scripts/check_encoding.py --files=newfile.js
    ```
@@ -165,12 +170,14 @@ If you've committed corrupted files:
 1. **Don't panic** - git history has clean versions
 
 2. **Find last clean commit**
+
    ```bash
    git log --oneline -- js/game-texts.js
    # Look for commit before the corruption
    ```
 
 3. **Restore clean version**
+
    ```bash
    git checkout 42b705a -- js/game-texts.js
    # or
@@ -182,6 +189,7 @@ If you've committed corrupted files:
    - Manually re-apply to clean file
 
 5. **Commit the fix**
+
    ```bash
    git add js/game-texts.js
    git commit -m "v3.42.2: Fix UTF-8 encoding corruption"

@@ -4,6 +4,19 @@
 
 ---
 
+## v3.44.9 — CSS compat fixes + docs update
+
+*Released: April 27, 2026*
+
+Quick patch rolling back a `color-mix` usage and refreshing documentation.
+
+- `css/char-select.css`: reverted `border` from `color-mix(in srgb, …)` to plain `rgba(250, 204, 21, 0.36)` for broader browser compatibility.
+- `css/shop.css`: added `-webkit-user-select: none` alongside the existing `user-select: none` for Safari support.
+- `js/tutorial.js`: trimmed Poom `Naga Summon` tutorial text to remove the hard-coded duration line.
+- Documentation refresh: `AUDIT_FINDINGS.md`, `ENCODING-GUIDE.md`, `PERF_PLAN.md`, `claude_master_prompt.md`, `walkthrough.md`, and `README.md`.
+
+---
+
 ## v3.44.8 — UX Polish pass (tutorial tone · boss speech · update toast · copy)
 
 *Released: April 22, 2026*

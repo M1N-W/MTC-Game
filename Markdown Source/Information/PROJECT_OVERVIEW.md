@@ -1,9 +1,10 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.44.8`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.44.9`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 ## Recent Changes
 
+- **v3.44.9**: CSS border rollback (`char-select.css` reverts `color-mix` to `rgba` for wider browser compat), added `-webkit-user-select` in `shop.css`, trimmed Poom tutorial duration text, updated audit findings and walkthrough docs
 - **v3.44.0**: Fixed Try-Again boss spawn-camp bug (`GameState._syncAliases` now mirrors `window.boss`/`window.drone`; `resetRun()` clears `_bossSpawnTimer`; `WaveManager._startBossWave` stashes timer id and guards against firing outside `PLAYING`; `game.js _teardownRunState` aborts Domain singletons). Cached fog/dark radial gradients in `WaveManager` with canvas-size + alpha-bucket keys; early-out on low fog alpha. Admin console hardened: 10 cmd / 2 s rate limit, `localStorage` audit ring buffer (`mtc_admin_audit`), destructive-command (`reset` / `kill all` / `set wave`) `yes` confirm gate, new `audit` command. Admin command guards unified under `COMMAND_META` registry in `AdminSystem.js`. `EnemyRenderer` adds per-entity `_lodFar` flag (screen-distance from viewport center) that skips ambient outer glow rings in `drawEnemy` / `drawTank` / `drawMage`. `effects.js` audit confirmed all subsystems (Particle / FloatingText / HitMarker / Weather / Orbital / Decal / ShellCasing) use pooled acquire-release + hard cap + swap-pop + `clear()` hook.
 - **v3.43.2**: Fixed game freeze on death — introduced `showScreen()`/`hideScreen()` utilities in `utils.js` to prevent CSS specificity issues with full-screen overlay visibility, added prevention documentation to CSS
 - **v3.42.3**: Fixed tutorial freeze and game over freeze issues — added defensive null checks in `js/tutorial.js` and `js/game.js` to ensure DOM elements exist before accessing them, added explicit visibility handling for overlays

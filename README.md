@@ -20,16 +20,20 @@
 เพื่อให้โค้ดสามารถขยายผลและดูแลรักษาได้ง่าย ผมได้เลือกใช้โครงสร้างแบบ **System-based Architecture** ที่แยกส่วนการทำงานออกจากกันอย่างชัดเจน:
 
 ### 1. Game Loop & State Management
+
 - **Separation of Concerns**: แยกส่วน Logic (`update`) ออกจากส่วน Rendering (`draw`) อย่างเด็ดขาด เพื่อความแม่นยำในการคำนวณและประสิทธิภาพในการวาดภาพ
 - **Centralized State**: ใช้ Singleton Pattern ในการจัดการ Game State (js/systems/GameState.js) เพื่อให้เป็น Single Source of Truth ของทั้งระบบ
 
 ### 2. Advanced AI Stack
+
 ศัตรูในเกมนี้ไม่ได้เดินเข้าหาผู้เล่นทื่อๆ แต่ทำงานผ่านเลเยอร์ต่างๆ:
+
 - **Utility AI**: ตัดสินใจเลือก Action ตามสถานการณ์ (Health, Distance, Squad Role) โดยใช้ระบบ Scoring
 - **Squad AI**: ระบบประสานงานกลุ่มที่แบ่งหน้าที่ให้ศัตรู (เช่น Assault, Flanker, Support) เพื่อโอบล้อมหรือกดดันผู้เล่น
 - **Pattern Analyzer**: ใช้ Web Worker วิเคราะห์พฤติกรรมการเล่นของผู้เล่นแบบ Real-time เพื่อส่งข้อมูลกลับไปให้ AI ปรับเปลี่ยนกลยุทธ์
 
 ### 3. Performance Optimization Strategies
+
 - **Object Pooling**: ลด Garbage Collection (GC) churn โดยการนำ Object กระสุนและ Particle กลับมาใช้ใหม่
 - **Spatial Grid**: ใช้ระบบ Grid ในการจัดการ Collision Detection (O(1) query) แทนการวน Loop ตรวจสอบทุก Object
 - **Viewport Culling**: วาดเฉพาะสิ่งที่อยู่บนหน้าจอเท่านั้นเพื่อประหยัดทรัพยากร GPU/CPU

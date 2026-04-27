@@ -696,7 +696,7 @@
   background: rgba(250, 204, 21, 0.14);
   background: color-mix(in srgb, var(--glow-color, #facc15) 14%, transparent);
   border: 1px solid rgba(250, 204, 21, 0.36);
-  border: 1px solid color-mix(in srgb, var(--glow-color, #facc15) 36%, transparent);
+  border: 1px solid rgba(250, 204, 21, 0.36);
   color: var(--corner-color-bright, #facc15);
 }
 
