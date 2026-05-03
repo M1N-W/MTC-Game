@@ -1,9 +1,10 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.44.9`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.44.10`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 ## Recent Changes
 
+- **v3.44.10**: Removed hardcoded Firebase Web API key from `js/firebase-init.js` / rebuilt `js/firebase-bundle.js`; `index.html` now loads ignored `js/secrets.js` before Firebase, and GitHub Pages deployment generates it from `FIREBASE_CONFIG_JSON`
 - **v3.44.9**: CSS border rollback (`char-select.css` reverts `color-mix` to `rgba` for wider browser compat), added `-webkit-user-select` in `shop.css`, trimmed Poom tutorial duration text, updated audit findings and walkthrough docs
 - **v3.44.0**: Fixed Try-Again boss spawn-camp bug (`GameState._syncAliases` now mirrors `window.boss`/`window.drone`; `resetRun()` clears `_bossSpawnTimer`; `WaveManager._startBossWave` stashes timer id and guards against firing outside `PLAYING`; `game.js _teardownRunState` aborts Domain singletons). Cached fog/dark radial gradients in `WaveManager` with canvas-size + alpha-bucket keys; early-out on low fog alpha. Admin console hardened: 10 cmd / 2 s rate limit, `localStorage` audit ring buffer (`mtc_admin_audit`), destructive-command (`reset` / `kill all` / `set wave`) `yes` confirm gate, new `audit` command. Admin command guards unified under `COMMAND_META` registry in `AdminSystem.js`. `EnemyRenderer` adds per-entity `_lodFar` flag (screen-distance from viewport center) that skips ambient outer glow rings in `drawEnemy` / `drawTank` / `drawMage`. `effects.js` audit confirmed all subsystems (Particle / FloatingText / HitMarker / Weather / Orbital / Decal / ShellCasing) use pooled acquire-release + hard cap + swap-pop + `clear()` hook.
 - **v3.43.2**: Fixed game freeze on death — introduced `showScreen()`/`hideScreen()` utilities in `utils.js` to prevent CSS specificity issues with full-screen overlay visibility, added prevention documentation to CSS
@@ -41,9 +42,10 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 2. `js/shop-items.js`
 3. `js/game-texts.js`
 4. `js/utils.js`
-5. `js/firebase-bundle.js`
-6. `js/systems/CloudSaveSystem.js`
-7. `js/systems/LeaderboardUI.js`
+5. `js/secrets.js` (ignored/generated runtime Firebase config)
+6. `js/firebase-bundle.js`
+7. `js/systems/CloudSaveSystem.js`
+8. `js/systems/LeaderboardUI.js`
 
 ### 2.2 Early core systems
 

@@ -1,3 +1,8 @@
+---
+name: information
+description: Architectural conventions for MTC Game.
+---
+
 # MTC Game — Architectural Conventions (SKILL.md)
 
 > **SCOPE:** This document exclusively captures **timeless architectural patterns**. It deliberately excludes configurable values, balance statistics (like cooldowns, damage multipliers, durations), feature lists, and any numeric constants tied to gameplay tuning. This ensures the skill file remains a stable, robust reference across all versions.
@@ -80,7 +85,7 @@ All subclasses of `EnemyBase` must adhere to a strict implementation contract re
 Script loading order defined in the application entrypoint (`index.html`) is a hard architectural constraint. A module must safely load to the global scope before its consumers instantiate.
 
 The deterministic load sequence is:
-1. Environment & Utility (`balance.js`, `shop-items.js`, `game-texts.js`, `utils.js`, `firebase-bundle.js`)
+1. Environment & Utility (`balance.js`, `shop-items.js`, `game-texts.js`, `utils.js`, `secrets.js`, `firebase-bundle.js`)
 2. Core Entity Foundation (`entities/base.js`)
 3. Logic & AI Analyzers (`ai/UtilityAI.js`, `ai/EnemyActions.js`, `ai/PlayerPatternAnalyzer.js`, `ai/SquadAI.js`)
 4. Entity Implementations (`entities/player/*`, `entities/summons.js`, `entities/enemy.js`, `entities/boss/*`)
@@ -161,7 +166,7 @@ static draw(e, ctx) {
     const R = (e.radius ?? 20) + 40;
     if (screen.x < -R || screen.x > CANVAS.width + R ||
         screen.y < -R || screen.y > CANVAS.height + R) return;
-    
+
     // ... actual draw logic
 }
 ```
@@ -213,10 +218,10 @@ Renderers require access to the active canvas context, but `drawGame()` passes `
 static draw(e, ctx) {
     // Capture previous global state
     const _prevCTX = typeof window !== 'undefined' ? window.CTX : undefined;
-    
+
     // Bind current context to global for legacy draw helpers
     if (typeof window !== "undefined") window.CTX = ctx;
-    
+
     try {
         // Dispatch to specific draw methods (may access window.CTX)
         if (e instanceof MageEnemy) EnemyRenderer.drawMage(e, now);

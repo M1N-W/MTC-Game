@@ -72,6 +72,8 @@ js/
 2. เปิดไฟล์ `index.html` ผ่าน Local Server (แนะนำให้ใช้ VS Code Live Server หรือ `npx serve`)
 3. สนุกกับเกมได้เลย!
 
+หากต้องการเปิดระบบ Firebase ในเครื่อง ให้สร้างไฟล์ `js/secrets.js` เองโดยไม่ commit ไฟล์นี้ และกำหนด `window.CONFIG_SECRETS.FIREBASE_CONFIG` ให้ตรงกับโปรเจกต์ Firebase ของคุณ
+
 ---
 
 **MTC The Game** คือบทพิสูจน์ว่า Web Technologies พื้นฐานสามารถสร้างประสบการณ์เกมที่ซับซ้อนและลื่นไหลได้ หากมีการออกแบบสถาปัตยกรรมและการจัดการทรัพยากรที่ดีพอ

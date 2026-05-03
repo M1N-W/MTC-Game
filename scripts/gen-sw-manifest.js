@@ -51,6 +51,7 @@ for (const m of indexSrc.matchAll(/<script[^>]*\bsrc="([^"]+\.js)"/g)) {
   const p = m[1].replace(/^\.\//, '');
   // skip remote bundles (http://, https://, //cdn…)
   if (/^https?:|^\/\//.test(p)) continue;
+  if (p === 'js/secrets.js') continue;
   refs.add('./' + p);
 }
 

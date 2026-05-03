@@ -32,11 +32,15 @@ firebase deploy --only firestore:rules
 
 (ไม่ต้อง `firebase deploy --only functions` ถ้าใช้ Spark แบบนี้)
 
-## 4. หลัง push ไป GitHub
+## 4. GitHub Pages runtime config
+
+ตั้งค่า Repository Secret ชื่อ `FIREBASE_CONFIG_JSON` เป็น Firebase web config JSON ของโปรเจกต์ เพื่อให้ workflow สร้าง `js/secrets.js` ตอน deploy โดยไม่เก็บ API key ใน repository
+
+## 5. หลัง push ไป GitHub
 
 - รอ GitHub Pages build / refresh เกม
 - ถ้าใช้ Service Worker อาจต้อง hard refresh หลังอัปเดต `sw.js`
 
-## 5. โฟลเดอร์ `functions/`
+## 6. โฟลเดอร์ `functions/`
 
 เป็นโค้ดตัวอย่าง/สำรองสำหรับอนาคตถ้าอัปเกรด Blaze — **ไม่จำเป็นต้อง deploy** บน Spark

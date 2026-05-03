@@ -1402,11 +1402,11 @@
         event
       ));
     }
-    openPromise.then((db2) => {
+    openPromise.then((db) => {
       if (terminated)
-        db2.addEventListener("close", () => terminated());
+        db.addEventListener("close", () => terminated());
       if (blocking) {
-        db2.addEventListener("versionchange", (event) => blocking(event.oldVersion, event.newVersion, event));
+        db.addEventListener("versionchange", (event) => blocking(event.oldVersion, event.newVersion, event));
       }
     }).catch(() => {
     });
@@ -1537,11 +1537,11 @@
   var _apps = /* @__PURE__ */ new Map();
   var _serverApps = /* @__PURE__ */ new Map();
   var _components = /* @__PURE__ */ new Map();
-  function _addComponent(app2, component) {
+  function _addComponent(app, component) {
     try {
-      app2.container.addComponent(component);
+      app.container.addComponent(component);
     } catch (e) {
-      logger.debug(`Component ${component.name} failed to register with FirebaseApp ${app2.name}`, e);
+      logger.debug(`Component ${component.name} failed to register with FirebaseApp ${app.name}`, e);
     }
   }
   function _registerComponent(component) {
@@ -1551,20 +1551,20 @@
       return false;
     }
     _components.set(componentName, component);
-    for (const app2 of _apps.values()) {
-      _addComponent(app2, component);
+    for (const app of _apps.values()) {
+      _addComponent(app, component);
     }
     for (const serverApp of _serverApps.values()) {
       _addComponent(serverApp, component);
     }
     return true;
   }
-  function _getProvider(app2, name7) {
-    const heartbeatController = app2.container.getProvider("heartbeat").getImmediate({ optional: true });
+  function _getProvider(app, name7) {
+    const heartbeatController = app.container.getProvider("heartbeat").getImmediate({ optional: true });
     if (heartbeatController) {
       void heartbeatController.triggerHeartbeat();
     }
-    return app2.container.getProvider(name7);
+    return app.container.getProvider(name7);
   }
   function _isFirebaseServerApp(obj) {
     if (obj === null || obj === void 0) {
@@ -1723,14 +1723,14 @@
     return newApp;
   }
   function getApp(name7 = DEFAULT_ENTRY_NAME2) {
-    const app2 = _apps.get(name7);
-    if (!app2 && name7 === DEFAULT_ENTRY_NAME2 && getDefaultAppConfig()) {
+    const app = _apps.get(name7);
+    if (!app && name7 === DEFAULT_ENTRY_NAME2 && getDefaultAppConfig()) {
       return initializeApp();
     }
-    if (!app2) {
+    if (!app) {
       throw ERROR_FACTORY.create("no-app", { appName: name7 });
     }
-    return app2;
+    return app;
   }
   function registerVersion(libraryKeyOrName, version7, variant) {
     var _a;
@@ -1770,11 +1770,11 @@
   function getDbPromise() {
     if (!dbPromise) {
       dbPromise = openDB(DB_NAME, DB_VERSION, {
-        upgrade: (db2, oldVersion) => {
+        upgrade: (db, oldVersion) => {
           switch (oldVersion) {
             case 0:
               try {
-                db2.createObjectStore(STORE_NAME);
+                db.createObjectStore(STORE_NAME);
               } catch (e) {
                 console.warn(e);
               }
@@ -1788,11 +1788,11 @@
     }
     return dbPromise;
   }
-  async function readHeartbeatsFromIndexedDB(app2) {
+  async function readHeartbeatsFromIndexedDB(app) {
     try {
-      const db2 = await getDbPromise();
-      const tx = db2.transaction(STORE_NAME);
-      const result = await tx.objectStore(STORE_NAME).get(computeKey(app2));
+      const db = await getDbPromise();
+      const tx = db.transaction(STORE_NAME);
+      const result = await tx.objectStore(STORE_NAME).get(computeKey(app));
       await tx.done;
       return result;
     } catch (e) {
@@ -1806,12 +1806,12 @@
       }
     }
   }
-  async function writeHeartbeatsToIndexedDB(app2, heartbeatObject) {
+  async function writeHeartbeatsToIndexedDB(app, heartbeatObject) {
     try {
-      const db2 = await getDbPromise();
-      const tx = db2.transaction(STORE_NAME, "readwrite");
+      const db = await getDbPromise();
+      const tx = db.transaction(STORE_NAME, "readwrite");
       const objectStore = tx.objectStore(STORE_NAME);
-      await objectStore.put(heartbeatObject, computeKey(app2));
+      await objectStore.put(heartbeatObject, computeKey(app));
       await tx.done;
     } catch (e) {
       if (e instanceof FirebaseError) {
@@ -1824,8 +1824,8 @@
       }
     }
   }
-  function computeKey(app2) {
-    return `${app2.name}!${app2.options.appId}`;
+  function computeKey(app) {
+    return `${app.name}!${app.options.appId}`;
   }
   var MAX_HEADER_BYTES = 1024;
   var MAX_NUM_STORED_HEARTBEATS = 30;
@@ -1833,8 +1833,8 @@
     constructor(container) {
       this.container = container;
       this._heartbeatsCache = null;
-      const app2 = this.container.getProvider("app").getImmediate();
-      this._storage = new HeartbeatStorageImpl(app2);
+      const app = this.container.getProvider("app").getImmediate();
+      this._storage = new HeartbeatStorageImpl(app);
       this._heartbeatsCachePromise = this._storage.read().then((result) => {
         this._heartbeatsCache = result;
         return result;
@@ -1940,8 +1940,8 @@
     };
   }
   var HeartbeatStorageImpl = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
       this._canUseIndexedDBPromise = this.runIndexedDBEnvironmentCheck();
     }
     async runIndexedDBEnvironmentCheck() {
@@ -2244,10 +2244,10 @@
   function getDbPromise2() {
     if (!dbPromise2) {
       dbPromise2 = openDB(DATABASE_NAME, DATABASE_VERSION, {
-        upgrade: (db2, oldVersion) => {
+        upgrade: (db, oldVersion) => {
           switch (oldVersion) {
             case 0:
-              db2.createObjectStore(OBJECT_STORE_NAME);
+              db.createObjectStore(OBJECT_STORE_NAME);
           }
         }
       });
@@ -2256,8 +2256,8 @@
   }
   async function set(appConfig, value) {
     const key = getKey(appConfig);
-    const db2 = await getDbPromise2();
-    const tx = db2.transaction(OBJECT_STORE_NAME, "readwrite");
+    const db = await getDbPromise2();
+    const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
     const objectStore = tx.objectStore(OBJECT_STORE_NAME);
     const oldValue = await objectStore.get(key);
     await objectStore.put(value, key);
@@ -2269,15 +2269,15 @@
   }
   async function remove(appConfig) {
     const key = getKey(appConfig);
-    const db2 = await getDbPromise2();
-    const tx = db2.transaction(OBJECT_STORE_NAME, "readwrite");
+    const db = await getDbPromise2();
+    const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
     await tx.objectStore(OBJECT_STORE_NAME).delete(key);
     await tx.done;
   }
   async function update(appConfig, updateFn) {
     const key = getKey(appConfig);
-    const db2 = await getDbPromise2();
-    const tx = db2.transaction(OBJECT_STORE_NAME, "readwrite");
+    const db = await getDbPromise2();
+    const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
     const store = tx.objectStore(OBJECT_STORE_NAME);
     const oldValue = await store.get(key);
     const newValue = updateFn(oldValue);
@@ -2558,11 +2558,11 @@
       await registrationPromise;
     }
   }
-  function extractAppConfig(app2) {
-    if (!app2 || !app2.options) {
+  function extractAppConfig(app) {
+    if (!app || !app.options) {
       throw getMissingValueError("App Configuration");
     }
-    if (!app2.name) {
+    if (!app.name) {
       throw getMissingValueError("App Name");
     }
     const configKeys = [
@@ -2571,15 +2571,15 @@
       "appId"
     ];
     for (const keyName of configKeys) {
-      if (!app2.options[keyName]) {
+      if (!app.options[keyName]) {
         throw getMissingValueError(keyName);
       }
     }
     return {
-      appName: app2.name,
-      projectId: app2.options.projectId,
-      apiKey: app2.options.apiKey,
-      appId: app2.options.appId
+      appName: app.name,
+      projectId: app.options.projectId,
+      apiKey: app.options.apiKey,
+      appId: app.options.appId
     };
   }
   function getMissingValueError(valueName) {
@@ -2590,11 +2590,11 @@
   var INSTALLATIONS_NAME = "installations";
   var INSTALLATIONS_NAME_INTERNAL = "installations-internal";
   var publicFactory = (container) => {
-    const app2 = container.getProvider("app").getImmediate();
-    const appConfig = extractAppConfig(app2);
-    const heartbeatServiceProvider = _getProvider(app2, "heartbeat");
+    const app = container.getProvider("app").getImmediate();
+    const appConfig = extractAppConfig(app);
+    const heartbeatServiceProvider = _getProvider(app, "heartbeat");
     const installationsImpl = {
-      app: app2,
+      app,
       appConfig,
       heartbeatServiceProvider,
       _delete: () => Promise.resolve()
@@ -2602,8 +2602,8 @@
     return installationsImpl;
   };
   var internalFactory = (container) => {
-    const app2 = container.getProvider("app").getImmediate();
-    const installations = _getProvider(app2, INSTALLATIONS_NAME).getImmediate();
+    const app = container.getProvider("app").getImmediate();
+    const installations = _getProvider(app, INSTALLATIONS_NAME).getImmediate();
     const installationsInternal = {
       getId: () => getId(installations),
       getToken: (forceRefresh) => getToken(installations, forceRefresh)
@@ -2870,8 +2870,8 @@
     }
     return response.json();
   }
-  async function fetchDynamicConfigWithRetry(app2, retryData = defaultRetryData, timeoutMillis) {
-    const { appId, apiKey, measurementId } = app2.options;
+  async function fetchDynamicConfigWithRetry(app, retryData = defaultRetryData, timeoutMillis) {
+    const { appId, apiKey, measurementId } = app.options;
     if (!appId) {
       throw ERROR_FACTORY3.create(
         "no-app-id"
@@ -3003,13 +3003,13 @@
     }
     return true;
   }
-  async function _initializeAnalytics(app2, dynamicConfigPromisesList2, measurementIdToAppId2, installations, gtagCore, dataLayerName2, options) {
+  async function _initializeAnalytics(app, dynamicConfigPromisesList2, measurementIdToAppId2, installations, gtagCore, dataLayerName2, options) {
     var _a;
-    const dynamicConfigPromise = fetchDynamicConfigWithRetry(app2);
+    const dynamicConfigPromise = fetchDynamicConfigWithRetry(app);
     dynamicConfigPromise.then((config) => {
       measurementIdToAppId2[config.measurementId] = config.appId;
-      if (app2.options.measurementId && config.measurementId !== app2.options.measurementId) {
-        logger2.warn(`The measurement ID in the local Firebase config (${app2.options.measurementId}) does not match the measurement ID fetched from the server (${config.measurementId}). To ensure analytics events are always sent to the correct Analytics property, update the measurement ID field in the local config or remove it from the local config.`);
+      if (app.options.measurementId && config.measurementId !== app.options.measurementId) {
+        logger2.warn(`The measurement ID in the local Firebase config (${app.options.measurementId}) does not match the measurement ID fetched from the server (${config.measurementId}). To ensure analytics events are always sent to the correct Analytics property, update the measurement ID field in the local config or remove it from the local config.`);
       }
     }).catch((e) => logger2.error(e));
     dynamicConfigPromisesList2.push(dynamicConfigPromise);
@@ -3046,8 +3046,8 @@
     return dynamicConfig.measurementId;
   }
   var AnalyticsService = class {
-    constructor(app2) {
-      this.app = app2;
+    constructor(app) {
+      this.app = app;
     }
     _delete() {
       delete initializationPromisesMap[this.app.options.appId];
@@ -3078,18 +3078,18 @@
       logger2.warn(err.message);
     }
   }
-  function factory(app2, installations, options) {
+  function factory(app, installations, options) {
     warnOnBrowserContextMismatch();
-    const appId = app2.options.appId;
+    const appId = app.options.appId;
     if (!appId) {
       throw ERROR_FACTORY3.create(
         "no-app-id"
         /* AnalyticsError.NO_APP_ID */
       );
     }
-    if (!app2.options.apiKey) {
-      if (app2.options.measurementId) {
-        logger2.warn(`The "apiKey" field is empty in the local Firebase config. This is needed to fetch the latest measurement ID for this Firebase app. Falling back to the measurement ID ${app2.options.measurementId} provided in the "measurementId" field in the local Firebase config.`);
+    if (!app.options.apiKey) {
+      if (app.options.measurementId) {
+        logger2.warn(`The "apiKey" field is empty in the local Firebase config. This is needed to fetch the latest measurement ID for this Firebase app. Falling back to the measurement ID ${app.options.measurementId} provided in the "measurementId" field in the local Firebase config.`);
       } else {
         throw ERROR_FACTORY3.create(
           "no-api-key"
@@ -3109,20 +3109,20 @@
       gtagCoreFunction = gtagCore;
       globalInitDone = true;
     }
-    initializationPromisesMap[appId] = _initializeAnalytics(app2, dynamicConfigPromisesList, measurementIdToAppId, installations, gtagCoreFunction, dataLayerName, options);
-    const analyticsInstance = new AnalyticsService(app2);
+    initializationPromisesMap[appId] = _initializeAnalytics(app, dynamicConfigPromisesList, measurementIdToAppId, installations, gtagCoreFunction, dataLayerName, options);
+    const analyticsInstance = new AnalyticsService(app);
     return analyticsInstance;
   }
-  function getAnalytics(app2 = getApp()) {
-    app2 = getModularInstance(app2);
-    const analyticsProvider = _getProvider(app2, ANALYTICS_TYPE);
+  function getAnalytics(app = getApp()) {
+    app = getModularInstance(app);
+    const analyticsProvider = _getProvider(app, ANALYTICS_TYPE);
     if (analyticsProvider.isInitialized()) {
       return analyticsProvider.getImmediate();
     }
-    return initializeAnalytics(app2);
+    return initializeAnalytics(app);
   }
-  function initializeAnalytics(app2, options = {}) {
-    const analyticsProvider = _getProvider(app2, ANALYTICS_TYPE);
+  function initializeAnalytics(app, options = {}) {
+    const analyticsProvider = _getProvider(app, ANALYTICS_TYPE);
     if (analyticsProvider.isInitialized()) {
       const existingInstance = analyticsProvider.getImmediate();
       if (deepEqual(options, analyticsProvider.getOptions())) {
@@ -3164,9 +3164,9 @@
     _registerComponent(new Component(
       ANALYTICS_TYPE,
       (container, { options: analyticsOptions }) => {
-        const app2 = container.getProvider("app").getImmediate();
+        const app = container.getProvider("app").getImmediate();
         const installations = container.getProvider("installations-internal").getImmediate();
-        return factory(app2, installations, analyticsOptions);
+        return factory(app, installations, analyticsOptions);
       },
       "PUBLIC"
       /* ComponentType.PUBLIC */
@@ -3181,9 +3181,9 @@
     registerVersion(name4, version4, "esm2017");
     function internalFactory2(container) {
       try {
-        const analytics2 = container.getProvider(ANALYTICS_TYPE).getImmediate();
+        const analytics = container.getProvider(ANALYTICS_TYPE).getImmediate();
         return {
-          logEvent: (eventName, eventParams, options) => logEvent(analytics2, eventName, eventParams, options)
+          logEvent: (eventName, eventParams, options) => logEvent(analytics, eventName, eventParams, options)
         };
       } catch (e) {
         throw ERROR_FACTORY3.create("interop-component-reg-failed", {
@@ -3235,27 +3235,27 @@
   function _createError(authOrCode, ...rest) {
     return createErrorInternal(authOrCode, ...rest);
   }
-  function _errorWithCustomMessage(auth2, code, message) {
+  function _errorWithCustomMessage(auth, code, message) {
     const errorMap = Object.assign(Object.assign({}, prodErrorMap()), { [code]: message });
     const factory2 = new ErrorFactory("auth", "Firebase", errorMap);
     return factory2.create(code, {
-      appName: auth2.name
+      appName: auth.name
     });
   }
-  function _serverAppCurrentUserOperationNotSupportedError(auth2) {
-    return _errorWithCustomMessage(auth2, "operation-not-supported-in-this-environment", "Operations that alter the current user are not supported in conjunction with FirebaseServerApp");
+  function _serverAppCurrentUserOperationNotSupportedError(auth) {
+    return _errorWithCustomMessage(auth, "operation-not-supported-in-this-environment", "Operations that alter the current user are not supported in conjunction with FirebaseServerApp");
   }
-  function _assertInstanceOf(auth2, object, instance) {
+  function _assertInstanceOf(auth, object, instance) {
     const constructorInstance = instance;
     if (!(object instanceof constructorInstance)) {
       if (constructorInstance.name !== object.constructor.name) {
         _fail(
-          auth2,
+          auth,
           "argument-error"
           /* AuthErrorCode.ARGUMENT_ERROR */
         );
       }
-      throw _errorWithCustomMessage(auth2, "argument-error", `Type of ${object.constructor.name} does not match expected instance.Did you pass a reference from a different Auth SDK?`);
+      throw _errorWithCustomMessage(auth, "argument-error", `Type of ${object.constructor.name} does not match expected instance.Did you pass a reference from a different Auth SDK?`);
     }
   }
   function createErrorInternal(authOrCode, ...rest) {
@@ -3626,14 +3626,14 @@
     /* Endpoint.TOKEN */
   ];
   var DEFAULT_API_TIMEOUT_MS = new Delay(3e4, 6e4);
-  function _addTidIfNecessary(auth2, request) {
-    if (auth2.tenantId && !request.tenantId) {
-      return Object.assign(Object.assign({}, request), { tenantId: auth2.tenantId });
+  function _addTidIfNecessary(auth, request) {
+    if (auth.tenantId && !request.tenantId) {
+      return Object.assign(Object.assign({}, request), { tenantId: auth.tenantId });
     }
     return request;
   }
-  async function _performApiRequest(auth2, method, path, request, customErrorMap = {}) {
-    return _performFetchWithErrorHandling(auth2, customErrorMap, async () => {
+  async function _performApiRequest(auth, method, path, request, customErrorMap = {}) {
+    return _performFetchWithErrorHandling(auth, customErrorMap, async () => {
       let body = {};
       let params = {};
       if (request) {
@@ -3645,17 +3645,17 @@
           };
         }
       }
-      const query2 = querystring(Object.assign({ key: auth2.config.apiKey }, params)).slice(1);
-      const headers = await auth2._getAdditionalHeaders();
+      const query2 = querystring(Object.assign({ key: auth.config.apiKey }, params)).slice(1);
+      const headers = await auth._getAdditionalHeaders();
       headers[
         "Content-Type"
         /* HttpHeader.CONTENT_TYPE */
       ] = "application/json";
-      if (auth2.languageCode) {
+      if (auth.languageCode) {
         headers[
           "X-Firebase-Locale"
           /* HttpHeader.X_FIREBASE_LOCALE */
-        ] = auth2.languageCode;
+        ] = auth.languageCode;
       }
       const fetchArgs = Object.assign({
         method,
@@ -3664,17 +3664,17 @@
       if (!isCloudflareWorker()) {
         fetchArgs.referrerPolicy = "no-referrer";
       }
-      if (auth2.emulatorConfig && isCloudWorkstation(auth2.emulatorConfig.host)) {
+      if (auth.emulatorConfig && isCloudWorkstation(auth.emulatorConfig.host)) {
         fetchArgs.credentials = "include";
       }
-      return FetchProvider.fetch()(await _getFinalTarget(auth2, auth2.config.apiHost, path, query2), fetchArgs);
+      return FetchProvider.fetch()(await _getFinalTarget(auth, auth.config.apiHost, path, query2), fetchArgs);
     });
   }
-  async function _performFetchWithErrorHandling(auth2, customErrorMap, fetchFn) {
-    auth2._canInitEmulator = false;
+  async function _performFetchWithErrorHandling(auth, customErrorMap, fetchFn) {
+    auth._canInitEmulator = false;
     const errorMap = Object.assign(Object.assign({}, SERVER_ERROR_MAP), customErrorMap);
     try {
-      const networkTimeout = new NetworkTimeout(auth2);
+      const networkTimeout = new NetworkTimeout(auth);
       const response = await Promise.race([
         fetchFn(),
         networkTimeout.promise
@@ -3682,7 +3682,7 @@
       networkTimeout.clearNetworkTimeout();
       const json = await response.json();
       if ("needConfirmation" in json) {
-        throw _makeTaggedError(auth2, "account-exists-with-different-credential", json);
+        throw _makeTaggedError(auth, "account-exists-with-different-credential", json);
       }
       if (response.ok && !("errorMessage" in json)) {
         return json;
@@ -3690,39 +3690,39 @@
         const errorMessage = response.ok ? json.errorMessage : json.error.message;
         const [serverErrorCode, serverErrorMessage] = errorMessage.split(" : ");
         if (serverErrorCode === "FEDERATED_USER_ID_ALREADY_LINKED") {
-          throw _makeTaggedError(auth2, "credential-already-in-use", json);
+          throw _makeTaggedError(auth, "credential-already-in-use", json);
         } else if (serverErrorCode === "EMAIL_EXISTS") {
-          throw _makeTaggedError(auth2, "email-already-in-use", json);
+          throw _makeTaggedError(auth, "email-already-in-use", json);
         } else if (serverErrorCode === "USER_DISABLED") {
-          throw _makeTaggedError(auth2, "user-disabled", json);
+          throw _makeTaggedError(auth, "user-disabled", json);
         }
         const authError = errorMap[serverErrorCode] || serverErrorCode.toLowerCase().replace(/[_\s]+/g, "-");
         if (serverErrorMessage) {
-          throw _errorWithCustomMessage(auth2, authError, serverErrorMessage);
+          throw _errorWithCustomMessage(auth, authError, serverErrorMessage);
         } else {
-          _fail(auth2, authError);
+          _fail(auth, authError);
         }
       }
     } catch (e) {
       if (e instanceof FirebaseError) {
         throw e;
       }
-      _fail(auth2, "network-request-failed", { "message": String(e) });
+      _fail(auth, "network-request-failed", { "message": String(e) });
     }
   }
-  async function _performSignInRequest(auth2, method, path, request, customErrorMap = {}) {
-    const serverResponse = await _performApiRequest(auth2, method, path, request, customErrorMap);
+  async function _performSignInRequest(auth, method, path, request, customErrorMap = {}) {
+    const serverResponse = await _performApiRequest(auth, method, path, request, customErrorMap);
     if ("mfaPendingCredential" in serverResponse) {
-      _fail(auth2, "multi-factor-auth-required", {
+      _fail(auth, "multi-factor-auth-required", {
         _serverResponse: serverResponse
       });
     }
     return serverResponse;
   }
-  async function _getFinalTarget(auth2, host, path, query2) {
+  async function _getFinalTarget(auth, host, path, query2) {
     const base = `${host}${path}?${query2}`;
-    const authInternal = auth2;
-    const finalTarget = authInternal.config.emulator ? _emulatorUrl(auth2.config, base) : `${auth2.config.apiScheme}://${base}`;
+    const authInternal = auth;
+    const finalTarget = authInternal.config.emulator ? _emulatorUrl(auth.config, base) : `${auth.config.apiScheme}://${base}`;
     if (CookieAuthProxiedEndpoints.includes(path)) {
       await authInternal._persistenceManagerAvailable;
       if (authInternal._getPersistenceType() === "COOKIE") {
@@ -3748,8 +3748,8 @@
     clearNetworkTimeout() {
       clearTimeout(this.timer);
     }
-    constructor(auth2) {
-      this.auth = auth2;
+    constructor(auth) {
+      this.auth = auth;
       this.timer = null;
       this.promise = new Promise((_, reject) => {
         this.timer = setTimeout(() => {
@@ -3762,9 +3762,9 @@
       });
     }
   };
-  function _makeTaggedError(auth2, code, response) {
+  function _makeTaggedError(auth, code, response) {
     const errorParams = {
-      appName: auth2.name
+      appName: auth.name
     };
     if (response.email) {
       errorParams.email = response.email;
@@ -3772,7 +3772,7 @@
     if (response.phoneNumber) {
       errorParams.phoneNumber = response.phoneNumber;
     }
-    const error = _createError(auth2, code, errorParams);
+    const error = _createError(auth, code, errorParams);
     error.customData._tokenResponse = response;
     return error;
   }
@@ -3831,14 +3831,14 @@
       );
     }
   };
-  async function getRecaptchaConfig(auth2, request) {
-    return _performApiRequest(auth2, "GET", "/v2/recaptchaConfig", _addTidIfNecessary(auth2, request));
+  async function getRecaptchaConfig(auth, request) {
+    return _performApiRequest(auth, "GET", "/v2/recaptchaConfig", _addTidIfNecessary(auth, request));
   }
-  async function deleteAccount(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v1/accounts:delete", request);
+  async function deleteAccount(auth, request) {
+    return _performApiRequest(auth, "POST", "/v1/accounts:delete", request);
   }
-  async function getAccountInfo(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v1/accounts:lookup", request);
+  async function getAccountInfo(auth, request) {
+    return _performApiRequest(auth, "POST", "/v1/accounts:lookup", request);
   }
   function utcTimestampToDateString(utcTimestamp) {
     if (!utcTimestamp) {
@@ -4021,12 +4021,12 @@
   };
   async function _reloadWithoutSaving(user) {
     var _a;
-    const auth2 = user.auth;
+    const auth = user.auth;
     const idToken = await user.getIdToken();
-    const response = await _logoutIfInvalidated(user, getAccountInfo(auth2, { idToken }));
+    const response = await _logoutIfInvalidated(user, getAccountInfo(auth, { idToken }));
     _assert(
       response === null || response === void 0 ? void 0 : response.users.length,
-      auth2,
+      auth,
       "internal-error"
       /* AuthErrorCode.INTERNAL_ERROR */
     );
@@ -4074,15 +4074,15 @@
       };
     });
   }
-  async function requestStsToken(auth2, refreshToken) {
-    const response = await _performFetchWithErrorHandling(auth2, {}, async () => {
+  async function requestStsToken(auth, refreshToken) {
+    const response = await _performFetchWithErrorHandling(auth, {}, async () => {
       const body = querystring({
         "grant_type": "refresh_token",
         "refresh_token": refreshToken
       }).slice(1);
-      const { tokenApiHost, apiKey } = auth2.config;
-      const url = await _getFinalTarget(auth2, tokenApiHost, "/v1/token", `key=${apiKey}`);
-      const headers = await auth2._getAdditionalHeaders();
+      const { tokenApiHost, apiKey } = auth.config;
+      const url = await _getFinalTarget(auth, tokenApiHost, "/v1/token", `key=${apiKey}`);
+      const headers = await auth._getAdditionalHeaders();
       headers[
         "Content-Type"
         /* HttpHeader.CONTENT_TYPE */
@@ -4092,7 +4092,7 @@
         headers,
         body
       };
-      if (auth2.emulatorConfig && isCloudWorkstation(auth2.emulatorConfig.host)) {
+      if (auth.emulatorConfig && isCloudWorkstation(auth.emulatorConfig.host)) {
         options.credentials = "include";
       }
       return FetchProvider.fetch()(url, options);
@@ -4103,8 +4103,8 @@
       refreshToken: response.refresh_token
     };
   }
-  async function revokeToken(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts:revokeToken", _addTidIfNecessary(auth2, request));
+  async function revokeToken(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts:revokeToken", _addTidIfNecessary(auth, request));
   }
   var StsTokenManager = class _StsTokenManager {
     constructor() {
@@ -4143,18 +4143,18 @@
       const expiresIn = _tokenExpiresIn(idToken);
       this.updateTokensAndExpiration(idToken, null, expiresIn);
     }
-    async getToken(auth2, forceRefresh = false) {
+    async getToken(auth, forceRefresh = false) {
       if (!forceRefresh && this.accessToken && !this.isExpired) {
         return this.accessToken;
       }
       _assert(
         this.refreshToken,
-        auth2,
+        auth,
         "user-token-expired"
         /* AuthErrorCode.TOKEN_EXPIRED */
       );
       if (this.refreshToken) {
-        await this.refresh(auth2, this.refreshToken);
+        await this.refresh(auth, this.refreshToken);
         return this.accessToken;
       }
       return null;
@@ -4162,8 +4162,8 @@
     clearRefreshToken() {
       this.refreshToken = null;
     }
-    async refresh(auth2, oldToken) {
-      const { accessToken, refreshToken, expiresIn } = await requestStsToken(auth2, oldToken);
+    async refresh(auth, oldToken) {
+      const { accessToken, refreshToken, expiresIn } = await requestStsToken(auth, oldToken);
       this.updateTokensAndExpiration(accessToken, refreshToken, Number(expiresIn));
     }
     updateTokensAndExpiration(accessToken, refreshToken, expiresInSec) {
@@ -4218,13 +4218,13 @@
   }
   var UserImpl = class _UserImpl {
     constructor(_a) {
-      var { uid, auth: auth2, stsTokenManager } = _a, opt = __rest(_a, ["uid", "auth", "stsTokenManager"]);
+      var { uid, auth, stsTokenManager } = _a, opt = __rest(_a, ["uid", "auth", "stsTokenManager"]);
       this.providerId = "firebase";
       this.proactiveRefresh = new ProactiveRefresh(this);
       this.reloadUserInfo = null;
       this.reloadListener = null;
       this.uid = uid;
-      this.auth = auth2;
+      this.auth = auth;
       this.stsTokenManager = stsTokenManager;
       this.accessToken = stsTokenManager.accessToken;
       this.displayName = opt.displayName || null;
@@ -4279,8 +4279,8 @@
       this.metadata._copy(user.metadata);
       this.stsTokenManager._assign(user.stsTokenManager);
     }
-    _clone(auth2) {
-      const newUser = new _UserImpl(Object.assign(Object.assign({}, this), { auth: auth2, stsTokenManager: this.stsTokenManager._clone() }));
+    _clone(auth) {
+      const newUser = new _UserImpl(Object.assign(Object.assign({}, this), { auth, stsTokenManager: this.stsTokenManager._clone() }));
       newUser.metadata._copy(this.metadata);
       return newUser;
     }
@@ -4357,7 +4357,7 @@
     get refreshToken() {
       return this.stsTokenManager.refreshToken || "";
     }
-    static _fromJSON(auth2, object) {
+    static _fromJSON(auth, object) {
       var _a, _b, _c, _d, _e, _f, _g, _h;
       const displayName = (_a = object.displayName) !== null && _a !== void 0 ? _a : void 0;
       const email = (_b = object.email) !== null && _b !== void 0 ? _b : void 0;
@@ -4370,40 +4370,40 @@
       const { uid, emailVerified, isAnonymous, providerData, stsTokenManager: plainObjectTokenManager } = object;
       _assert(
         uid && plainObjectTokenManager,
-        auth2,
+        auth,
         "internal-error"
         /* AuthErrorCode.INTERNAL_ERROR */
       );
       const stsTokenManager = StsTokenManager.fromJSON(this.name, plainObjectTokenManager);
       _assert(
         typeof uid === "string",
-        auth2,
+        auth,
         "internal-error"
         /* AuthErrorCode.INTERNAL_ERROR */
       );
-      assertStringOrUndefined(displayName, auth2.name);
-      assertStringOrUndefined(email, auth2.name);
+      assertStringOrUndefined(displayName, auth.name);
+      assertStringOrUndefined(email, auth.name);
       _assert(
         typeof emailVerified === "boolean",
-        auth2,
+        auth,
         "internal-error"
         /* AuthErrorCode.INTERNAL_ERROR */
       );
       _assert(
         typeof isAnonymous === "boolean",
-        auth2,
+        auth,
         "internal-error"
         /* AuthErrorCode.INTERNAL_ERROR */
       );
-      assertStringOrUndefined(phoneNumber, auth2.name);
-      assertStringOrUndefined(photoURL, auth2.name);
-      assertStringOrUndefined(tenantId, auth2.name);
-      assertStringOrUndefined(_redirectEventId, auth2.name);
-      assertStringOrUndefined(createdAt, auth2.name);
-      assertStringOrUndefined(lastLoginAt, auth2.name);
+      assertStringOrUndefined(phoneNumber, auth.name);
+      assertStringOrUndefined(photoURL, auth.name);
+      assertStringOrUndefined(tenantId, auth.name);
+      assertStringOrUndefined(_redirectEventId, auth.name);
+      assertStringOrUndefined(createdAt, auth.name);
+      assertStringOrUndefined(lastLoginAt, auth.name);
       const user = new _UserImpl({
         uid,
-        auth: auth2,
+        auth,
         email,
         emailVerified,
         displayName,
@@ -4428,12 +4428,12 @@
      * @param auth
      * @param idTokenResponse
      */
-    static async _fromIdTokenResponse(auth2, idTokenResponse, isAnonymous = false) {
+    static async _fromIdTokenResponse(auth, idTokenResponse, isAnonymous = false) {
       const stsTokenManager = new StsTokenManager();
       stsTokenManager.updateFromServerResponse(idTokenResponse);
       const user = new _UserImpl({
         uid: idTokenResponse.localId,
-        auth: auth2,
+        auth,
         stsTokenManager,
         isAnonymous
       });
@@ -4445,7 +4445,7 @@
      * @param auth
      * @param idTokenResponse
      */
-    static async _fromGetAccountInfoResponse(auth2, response, idToken) {
+    static async _fromGetAccountInfoResponse(auth, response, idToken) {
       const coreAccount = response.users[0];
       _assert(
         coreAccount.localId !== void 0,
@@ -4458,7 +4458,7 @@
       stsTokenManager.updateFromIdToken(idToken);
       const user = new _UserImpl({
         uid: coreAccount.localId,
-        auth: auth2,
+        auth,
         stsTokenManager,
         isAnonymous
       });
@@ -4521,14 +4521,14 @@
     return `${"firebase"}:${key}:${apiKey}:${appName}`;
   }
   var PersistenceUserManager = class _PersistenceUserManager {
-    constructor(persistence, auth2, userKey) {
+    constructor(persistence, auth, userKey) {
       this.persistence = persistence;
-      this.auth = auth2;
+      this.auth = auth;
       this.userKey = userKey;
       const { config, name: name7 } = this.auth;
       this.fullUserKey = _persistenceKeyName(this.userKey, config.apiKey, name7);
       this.fullPersistenceKey = _persistenceKeyName("persistence", config.apiKey, name7);
-      this.boundEventHandler = auth2._onStorageEvent.bind(auth2);
+      this.boundEventHandler = auth._onStorageEvent.bind(auth);
       this.persistence._addListener(this.fullUserKey, this.boundEventHandler);
     }
     setCurrentUser(user) {
@@ -4568,9 +4568,9 @@
     delete() {
       this.persistence._removeListener(this.fullUserKey, this.boundEventHandler);
     }
-    static async create(auth2, persistenceHierarchy, userKey = "authUser") {
+    static async create(auth, persistenceHierarchy, userKey = "authUser") {
       if (!persistenceHierarchy.length) {
-        return new _PersistenceUserManager(_getInstance(inMemoryPersistence), auth2, userKey);
+        return new _PersistenceUserManager(_getInstance(inMemoryPersistence), auth, userKey);
       }
       const availablePersistences = (await Promise.all(persistenceHierarchy.map(async (persistence) => {
         if (await persistence._isAvailable()) {
@@ -4579,7 +4579,7 @@
         return void 0;
       }))).filter((persistence) => persistence);
       let selectedPersistence = availablePersistences[0] || _getInstance(inMemoryPersistence);
-      const key = _persistenceKeyName(userKey, auth2.config.apiKey, auth2.name);
+      const key = _persistenceKeyName(userKey, auth.config.apiKey, auth.name);
       let userToMigrate = null;
       for (const persistence of persistenceHierarchy) {
         try {
@@ -4587,15 +4587,15 @@
           if (blob) {
             let user;
             if (typeof blob === "string") {
-              const response = await getAccountInfo(auth2, {
+              const response = await getAccountInfo(auth, {
                 idToken: blob
               }).catch(() => void 0);
               if (!response) {
                 break;
               }
-              user = await UserImpl._fromGetAccountInfoResponse(auth2, response, blob);
+              user = await UserImpl._fromGetAccountInfoResponse(auth, response, blob);
             } else {
-              user = UserImpl._fromJSON(auth2, blob);
+              user = UserImpl._fromJSON(auth, blob);
             }
             if (persistence !== selectedPersistence) {
               userToMigrate = user;
@@ -4608,7 +4608,7 @@
       }
       const migrationHierarchy = availablePersistences.filter((p) => p._shouldAllowMigration);
       if (!selectedPersistence._shouldAllowMigration || !migrationHierarchy.length) {
-        return new _PersistenceUserManager(selectedPersistence, auth2, userKey);
+        return new _PersistenceUserManager(selectedPersistence, auth, userKey);
       }
       selectedPersistence = migrationHierarchy[0];
       if (userToMigrate) {
@@ -4622,7 +4622,7 @@
           }
         }
       }));
-      return new _PersistenceUserManager(selectedPersistence, auth2, userKey);
+      return new _PersistenceUserManager(selectedPersistence, auth, userKey);
     }
   };
   function _getBrowserName(userAgent) {
@@ -4709,8 +4709,8 @@
     return `${reportedPlatform}/${"JsCore"}/${SDK_VERSION}/${reportedFrameworks}`;
   }
   var AuthMiddlewareQueue = class {
-    constructor(auth2) {
-      this.auth = auth2;
+    constructor(auth) {
+      this.auth = auth;
       this.queue = [];
     }
     pushCallback(callback, onAbort) {
@@ -4755,8 +4755,8 @@
       }
     }
   };
-  async function _getPasswordPolicy(auth2, request = {}) {
-    return _performApiRequest(auth2, "GET", "/v2/passwordPolicy", _addTidIfNecessary(auth2, request));
+  async function _getPasswordPolicy(auth, request = {}) {
+    return _performApiRequest(auth, "GET", "/v2/passwordPolicy", _addTidIfNecessary(auth, request));
   }
   var MINIMUM_MIN_PASSWORD_LENGTH = 6;
   var PasswordPolicyImpl = class {
@@ -4881,8 +4881,8 @@
     }
   };
   var AuthImpl = class {
-    constructor(app2, heartbeatServiceProvider, appCheckServiceProvider, config) {
-      this.app = app2;
+    constructor(app, heartbeatServiceProvider, appCheckServiceProvider, config) {
+      this.app = app;
       this.heartbeatServiceProvider = heartbeatServiceProvider;
       this.appCheckServiceProvider = appCheckServiceProvider;
       this.config = config;
@@ -4911,7 +4911,7 @@
       this.tenantId = null;
       this.settings = { appVerificationDisabledForTesting: false };
       this.frameworks = [];
-      this.name = app2.name;
+      this.name = app.name;
       this.clientVersion = config.sdkClientVersion;
       this._persistenceManagerAvailable = new Promise((resolve) => this._resolvePersistenceManagerAvailable = resolve);
     }
@@ -5403,12 +5403,12 @@
       return appCheckTokenResult === null || appCheckTokenResult === void 0 ? void 0 : appCheckTokenResult.token;
     }
   };
-  function _castAuth(auth2) {
-    return getModularInstance(auth2);
+  function _castAuth(auth) {
+    return getModularInstance(auth);
   }
   var Subscription = class {
-    constructor(auth2) {
-      this.auth = auth2;
+    constructor(auth) {
+      this.auth = auth;
       this.observer = null;
       this.addObserver = createSubscribe((observer) => this.observer = observer);
     }
@@ -5488,17 +5488,17 @@
      * @returns A Promise for a token that can be used to assert the validity of a request.
      */
     async verify(action = "verify", forceRefresh = false) {
-      async function retrieveSiteKey(auth2) {
+      async function retrieveSiteKey(auth) {
         if (!forceRefresh) {
-          if (auth2.tenantId == null && auth2._agentRecaptchaConfig != null) {
-            return auth2._agentRecaptchaConfig.siteKey;
+          if (auth.tenantId == null && auth._agentRecaptchaConfig != null) {
+            return auth._agentRecaptchaConfig.siteKey;
           }
-          if (auth2.tenantId != null && auth2._tenantRecaptchaConfigs[auth2.tenantId] !== void 0) {
-            return auth2._tenantRecaptchaConfigs[auth2.tenantId].siteKey;
+          if (auth.tenantId != null && auth._tenantRecaptchaConfigs[auth.tenantId] !== void 0) {
+            return auth._tenantRecaptchaConfigs[auth.tenantId].siteKey;
           }
         }
         return new Promise(async (resolve, reject) => {
-          getRecaptchaConfig(auth2, {
+          getRecaptchaConfig(auth, {
             clientType: "CLIENT_TYPE_WEB",
             version: "RECAPTCHA_ENTERPRISE"
             /* RecaptchaVersion.ENTERPRISE */
@@ -5507,10 +5507,10 @@
               reject(new Error("recaptcha Enterprise site key undefined"));
             } else {
               const config = new RecaptchaConfig(response);
-              if (auth2.tenantId == null) {
-                auth2._agentRecaptchaConfig = config;
+              if (auth.tenantId == null) {
+                auth._agentRecaptchaConfig = config;
               } else {
-                auth2._tenantRecaptchaConfigs[auth2.tenantId] = config;
+                auth._tenantRecaptchaConfigs[auth.tenantId] = config;
               }
               return resolve(config.siteKey);
             }
@@ -5562,8 +5562,8 @@
       });
     }
   };
-  async function injectRecaptchaFields(auth2, request, action, isCaptchaResp = false, isFakeToken = false) {
-    const verifier = new RecaptchaEnterpriseVerifier(auth2);
+  async function injectRecaptchaFields(auth, request, action, isCaptchaResp = false, isFakeToken = false) {
+    const verifier = new RecaptchaEnterpriseVerifier(auth);
     let captchaResponse;
     if (isFakeToken) {
       captchaResponse = FAKE_TOKEN;
@@ -5694,8 +5694,8 @@
       return Promise.reject(recaptchaAuthProvider + " provider is not supported.");
     }
   }
-  async function _initializeRecaptchaConfig(auth2) {
-    const authInternal = _castAuth(auth2);
+  async function _initializeRecaptchaConfig(auth) {
+    const authInternal = _castAuth(auth);
     const response = await getRecaptchaConfig(authInternal, {
       clientType: "CLIENT_TYPE_WEB",
       version: "RECAPTCHA_ENTERPRISE"
@@ -5712,34 +5712,34 @@
       void verifier.verify();
     }
   }
-  function initializeAuth(app2, deps) {
-    const provider = _getProvider(app2, "auth");
+  function initializeAuth(app, deps) {
+    const provider = _getProvider(app, "auth");
     if (provider.isInitialized()) {
-      const auth3 = provider.getImmediate();
+      const auth2 = provider.getImmediate();
       const initialOptions = provider.getOptions();
       if (deepEqual(initialOptions, deps !== null && deps !== void 0 ? deps : {})) {
-        return auth3;
+        return auth2;
       } else {
         _fail(
-          auth3,
+          auth2,
           "already-initialized"
           /* AuthErrorCode.ALREADY_INITIALIZED */
         );
       }
     }
-    const auth2 = provider.initialize({ options: deps });
-    return auth2;
+    const auth = provider.initialize({ options: deps });
+    return auth;
   }
-  function _initializeAuthInstance(auth2, deps) {
+  function _initializeAuthInstance(auth, deps) {
     const persistence = (deps === null || deps === void 0 ? void 0 : deps.persistence) || [];
     const hierarchy = (Array.isArray(persistence) ? persistence : [persistence]).map(_getInstance);
     if (deps === null || deps === void 0 ? void 0 : deps.errorMap) {
-      auth2._updateErrorMap(deps.errorMap);
+      auth._updateErrorMap(deps.errorMap);
     }
-    auth2._initializeWithPersistence(hierarchy, deps === null || deps === void 0 ? void 0 : deps.popupRedirectResolver);
+    auth._initializeWithPersistence(hierarchy, deps === null || deps === void 0 ? void 0 : deps.popupRedirectResolver);
   }
-  function connectAuthEmulator(auth2, url, options) {
-    const authInternal = _castAuth(auth2);
+  function connectAuthEmulator(auth, url, options) {
+    const authInternal = _castAuth(auth);
     _assert(
       /^https?:\/\//.test(url),
       authInternal,
@@ -5868,17 +5868,17 @@
       return debugFail("not implemented");
     }
   };
-  async function linkEmailPassword(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v1/accounts:signUp", request);
+  async function linkEmailPassword(auth, request) {
+    return _performApiRequest(auth, "POST", "/v1/accounts:signUp", request);
   }
-  async function signInWithPassword(auth2, request) {
-    return _performSignInRequest(auth2, "POST", "/v1/accounts:signInWithPassword", _addTidIfNecessary(auth2, request));
+  async function signInWithPassword(auth, request) {
+    return _performSignInRequest(auth, "POST", "/v1/accounts:signInWithPassword", _addTidIfNecessary(auth, request));
   }
-  async function signInWithEmailLink$1(auth2, request) {
-    return _performSignInRequest(auth2, "POST", "/v1/accounts:signInWithEmailLink", _addTidIfNecessary(auth2, request));
+  async function signInWithEmailLink$1(auth, request) {
+    return _performSignInRequest(auth, "POST", "/v1/accounts:signInWithEmailLink", _addTidIfNecessary(auth, request));
   }
-  async function signInWithEmailLinkForLinking(auth2, request) {
-    return _performSignInRequest(auth2, "POST", "/v1/accounts:signInWithEmailLink", _addTidIfNecessary(auth2, request));
+  async function signInWithEmailLinkForLinking(auth, request) {
+    return _performSignInRequest(auth, "POST", "/v1/accounts:signInWithEmailLink", _addTidIfNecessary(auth, request));
   }
   var EmailAuthCredential = class _EmailAuthCredential extends AuthCredential {
     /** @internal */
@@ -5930,7 +5930,7 @@
       return null;
     }
     /** @internal */
-    async _getIdTokenResponse(auth2) {
+    async _getIdTokenResponse(auth) {
       switch (this.signInMethod) {
         case "password":
           const request = {
@@ -5941,7 +5941,7 @@
             /* RecaptchaClientType.WEB */
           };
           return handleRecaptchaFlow(
-            auth2,
+            auth,
             request,
             "signInWithPassword",
             signInWithPassword,
@@ -5949,20 +5949,20 @@
             /* RecaptchaAuthProvider.EMAIL_PASSWORD_PROVIDER */
           );
         case "emailLink":
-          return signInWithEmailLink$1(auth2, {
+          return signInWithEmailLink$1(auth, {
             email: this._email,
             oobCode: this._password
           });
         default:
           _fail(
-            auth2,
+            auth,
             "internal-error"
             /* AuthErrorCode.INTERNAL_ERROR */
           );
       }
     }
     /** @internal */
-    async _linkToIdToken(auth2, idToken) {
+    async _linkToIdToken(auth, idToken) {
       switch (this.signInMethod) {
         case "password":
           const request = {
@@ -5974,7 +5974,7 @@
             /* RecaptchaClientType.WEB */
           };
           return handleRecaptchaFlow(
-            auth2,
+            auth,
             request,
             "signUpPassword",
             linkEmailPassword,
@@ -5982,26 +5982,26 @@
             /* RecaptchaAuthProvider.EMAIL_PASSWORD_PROVIDER */
           );
         case "emailLink":
-          return signInWithEmailLinkForLinking(auth2, {
+          return signInWithEmailLinkForLinking(auth, {
             idToken,
             email: this._email,
             oobCode: this._password
           });
         default:
           _fail(
-            auth2,
+            auth,
             "internal-error"
             /* AuthErrorCode.INTERNAL_ERROR */
           );
       }
     }
     /** @internal */
-    _getReauthenticationResolver(auth2) {
-      return this._getIdTokenResponse(auth2);
+    _getReauthenticationResolver(auth) {
+      return this._getIdTokenResponse(auth);
     }
   };
-  async function signInWithIdp(auth2, request) {
-    return _performSignInRequest(auth2, "POST", "/v1/accounts:signInWithIdp", _addTidIfNecessary(auth2, request));
+  async function signInWithIdp(auth, request) {
+    return _performSignInRequest(auth, "POST", "/v1/accounts:signInWithIdp", _addTidIfNecessary(auth, request));
   }
   var IDP_REQUEST_URI$1 = "http://localhost";
   var OAuthCredential = class _OAuthCredential extends AuthCredential {
@@ -6072,21 +6072,21 @@
       return cred;
     }
     /** @internal */
-    _getIdTokenResponse(auth2) {
+    _getIdTokenResponse(auth) {
       const request = this.buildRequest();
-      return signInWithIdp(auth2, request);
+      return signInWithIdp(auth, request);
     }
     /** @internal */
-    _linkToIdToken(auth2, idToken) {
+    _linkToIdToken(auth, idToken) {
       const request = this.buildRequest();
       request.idToken = idToken;
-      return signInWithIdp(auth2, request);
+      return signInWithIdp(auth, request);
     }
     /** @internal */
-    _getReauthenticationResolver(auth2) {
+    _getReauthenticationResolver(auth) {
       const request = this.buildRequest();
       request.autoCreate = false;
-      return signInWithIdp(auth2, request);
+      return signInWithIdp(auth, request);
     }
     buildRequest() {
       const request = {
@@ -6115,16 +6115,16 @@
       return request;
     }
   };
-  async function sendPhoneVerificationCode(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v1/accounts:sendVerificationCode", _addTidIfNecessary(auth2, request));
+  async function sendPhoneVerificationCode(auth, request) {
+    return _performApiRequest(auth, "POST", "/v1/accounts:sendVerificationCode", _addTidIfNecessary(auth, request));
   }
-  async function signInWithPhoneNumber$1(auth2, request) {
-    return _performSignInRequest(auth2, "POST", "/v1/accounts:signInWithPhoneNumber", _addTidIfNecessary(auth2, request));
+  async function signInWithPhoneNumber$1(auth, request) {
+    return _performSignInRequest(auth, "POST", "/v1/accounts:signInWithPhoneNumber", _addTidIfNecessary(auth, request));
   }
-  async function linkWithPhoneNumber$1(auth2, request) {
-    const response = await _performSignInRequest(auth2, "POST", "/v1/accounts:signInWithPhoneNumber", _addTidIfNecessary(auth2, request));
+  async function linkWithPhoneNumber$1(auth, request) {
+    const response = await _performSignInRequest(auth, "POST", "/v1/accounts:signInWithPhoneNumber", _addTidIfNecessary(auth, request));
     if (response.temporaryProof) {
-      throw _makeTaggedError(auth2, "account-exists-with-different-credential", response);
+      throw _makeTaggedError(auth, "account-exists-with-different-credential", response);
     }
     return response;
   }
@@ -6135,9 +6135,9 @@
     ]: "user-not-found"
     /* AuthErrorCode.USER_DELETED */
   };
-  async function verifyPhoneNumberForExisting(auth2, request) {
+  async function verifyPhoneNumberForExisting(auth, request) {
     const apiRequest = Object.assign(Object.assign({}, request), { operation: "REAUTH" });
-    return _performSignInRequest(auth2, "POST", "/v1/accounts:signInWithPhoneNumber", _addTidIfNecessary(auth2, apiRequest), VERIFY_PHONE_NUMBER_FOR_EXISTING_ERROR_MAP_);
+    return _performSignInRequest(auth, "POST", "/v1/accounts:signInWithPhoneNumber", _addTidIfNecessary(auth, apiRequest), VERIFY_PHONE_NUMBER_FOR_EXISTING_ERROR_MAP_);
   }
   var PhoneAuthCredential = class _PhoneAuthCredential extends AuthCredential {
     constructor(params) {
@@ -6157,16 +6157,16 @@
       return new _PhoneAuthCredential({ phoneNumber, temporaryProof });
     }
     /** @internal */
-    _getIdTokenResponse(auth2) {
-      return signInWithPhoneNumber$1(auth2, this._makeVerificationRequest());
+    _getIdTokenResponse(auth) {
+      return signInWithPhoneNumber$1(auth, this._makeVerificationRequest());
     }
     /** @internal */
-    _linkToIdToken(auth2, idToken) {
-      return linkWithPhoneNumber$1(auth2, Object.assign({ idToken }, this._makeVerificationRequest()));
+    _linkToIdToken(auth, idToken) {
+      return linkWithPhoneNumber$1(auth, Object.assign({ idToken }, this._makeVerificationRequest()));
     }
     /** @internal */
-    _getReauthenticationResolver(auth2) {
-      return verifyPhoneNumberForExisting(auth2, this._makeVerificationRequest());
+    _getReauthenticationResolver(auth) {
+      return verifyPhoneNumberForExisting(auth, this._makeVerificationRequest());
     }
     /** @internal */
     _makeVerificationRequest() {
@@ -6653,8 +6653,8 @@
   };
   TwitterAuthProvider.TWITTER_SIGN_IN_METHOD = "twitter.com";
   TwitterAuthProvider.PROVIDER_ID = "twitter.com";
-  async function signUp(auth2, request) {
-    return _performSignInRequest(auth2, "POST", "/v1/accounts:signUp", _addTidIfNecessary(auth2, request));
+  async function signUp(auth, request) {
+    return _performSignInRequest(auth, "POST", "/v1/accounts:signUp", _addTidIfNecessary(auth, request));
   }
   var UserCredentialImpl = class _UserCredentialImpl {
     constructor(params) {
@@ -6663,8 +6663,8 @@
       this._tokenResponse = params._tokenResponse;
       this.operationType = params.operationType;
     }
-    static async _fromIdTokenResponse(auth2, operationType, idTokenResponse, isAnonymous = false) {
-      const user = await UserImpl._fromIdTokenResponse(auth2, idTokenResponse, isAnonymous);
+    static async _fromIdTokenResponse(auth, operationType, idTokenResponse, isAnonymous = false) {
+      const user = await UserImpl._fromIdTokenResponse(auth, idTokenResponse, isAnonymous);
       const providerId = providerIdForResponse(idTokenResponse);
       const userCred = new _UserCredentialImpl({
         user,
@@ -6698,12 +6698,12 @@
     }
     return null;
   }
-  async function signInAnonymously(auth2) {
+  async function signInAnonymously(auth) {
     var _a;
-    if (_isFirebaseServerApp(auth2.app)) {
-      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth2));
+    if (_isFirebaseServerApp(auth.app)) {
+      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth));
     }
-    const authInternal = _castAuth(auth2);
+    const authInternal = _castAuth(auth);
     await authInternal._initializationPromise;
     if ((_a = authInternal.currentUser) === null || _a === void 0 ? void 0 : _a.isAnonymous) {
       return new UserCredentialImpl({
@@ -6721,28 +6721,28 @@
     return userCredential;
   }
   var MultiFactorError = class _MultiFactorError extends FirebaseError {
-    constructor(auth2, error, operationType, user) {
+    constructor(auth, error, operationType, user) {
       var _a;
       super(error.code, error.message);
       this.operationType = operationType;
       this.user = user;
       Object.setPrototypeOf(this, _MultiFactorError.prototype);
       this.customData = {
-        appName: auth2.name,
-        tenantId: (_a = auth2.tenantId) !== null && _a !== void 0 ? _a : void 0,
+        appName: auth.name,
+        tenantId: (_a = auth.tenantId) !== null && _a !== void 0 ? _a : void 0,
         _serverResponse: error.customData._serverResponse,
         operationType
       };
     }
-    static _fromErrorAndOperation(auth2, error, operationType, user) {
-      return new _MultiFactorError(auth2, error, operationType, user);
+    static _fromErrorAndOperation(auth, error, operationType, user) {
+      return new _MultiFactorError(auth, error, operationType, user);
     }
   };
-  function _processCredentialSavingMfaContextIfNecessary(auth2, operationType, credential, user) {
-    const idTokenProvider = operationType === "reauthenticate" ? credential._getReauthenticationResolver(auth2) : credential._getIdTokenResponse(auth2);
+  function _processCredentialSavingMfaContextIfNecessary(auth, operationType, credential, user) {
+    const idTokenProvider = operationType === "reauthenticate" ? credential._getReauthenticationResolver(auth) : credential._getIdTokenResponse(auth);
     return idTokenProvider.catch((error) => {
       if (error.code === `auth/${"multi-factor-auth-required"}`) {
-        throw MultiFactorError._fromErrorAndOperation(auth2, error, operationType, user);
+        throw MultiFactorError._fromErrorAndOperation(auth, error, operationType, user);
       }
       throw error;
     });
@@ -6752,30 +6752,30 @@
     return UserCredentialImpl._forOperation(user, "link", response);
   }
   async function _reauthenticate(user, credential, bypassAuthState = false) {
-    const { auth: auth2 } = user;
-    if (_isFirebaseServerApp(auth2.app)) {
-      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth2));
+    const { auth } = user;
+    if (_isFirebaseServerApp(auth.app)) {
+      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth));
     }
     const operationType = "reauthenticate";
     try {
-      const response = await _logoutIfInvalidated(user, _processCredentialSavingMfaContextIfNecessary(auth2, operationType, credential, user), bypassAuthState);
+      const response = await _logoutIfInvalidated(user, _processCredentialSavingMfaContextIfNecessary(auth, operationType, credential, user), bypassAuthState);
       _assert(
         response.idToken,
-        auth2,
+        auth,
         "internal-error"
         /* AuthErrorCode.INTERNAL_ERROR */
       );
       const parsed = _parseToken(response.idToken);
       _assert(
         parsed,
-        auth2,
+        auth,
         "internal-error"
         /* AuthErrorCode.INTERNAL_ERROR */
       );
       const { sub: localId } = parsed;
       _assert(
         user.uid === localId,
-        auth2,
+        auth,
         "user-mismatch"
         /* AuthErrorCode.USER_MISMATCH */
       );
@@ -6783,7 +6783,7 @@
     } catch (e) {
       if ((e === null || e === void 0 ? void 0 : e.code) === `auth/${"user-not-found"}`) {
         _fail(
-          auth2,
+          auth,
           "user-mismatch"
           /* AuthErrorCode.USER_MISMATCH */
         );
@@ -6791,38 +6791,38 @@
       throw e;
     }
   }
-  async function _signInWithCredential(auth2, credential, bypassAuthState = false) {
-    if (_isFirebaseServerApp(auth2.app)) {
-      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth2));
+  async function _signInWithCredential(auth, credential, bypassAuthState = false) {
+    if (_isFirebaseServerApp(auth.app)) {
+      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth));
     }
     const operationType = "signIn";
-    const response = await _processCredentialSavingMfaContextIfNecessary(auth2, operationType, credential);
-    const userCredential = await UserCredentialImpl._fromIdTokenResponse(auth2, operationType, response);
+    const response = await _processCredentialSavingMfaContextIfNecessary(auth, operationType, credential);
+    const userCredential = await UserCredentialImpl._fromIdTokenResponse(auth, operationType, response);
     if (!bypassAuthState) {
-      await auth2._updateCurrentUser(userCredential.user);
+      await auth._updateCurrentUser(userCredential.user);
     }
     return userCredential;
   }
-  function onIdTokenChanged(auth2, nextOrObserver, error, completed) {
-    return getModularInstance(auth2).onIdTokenChanged(nextOrObserver, error, completed);
+  function onIdTokenChanged(auth, nextOrObserver, error, completed) {
+    return getModularInstance(auth).onIdTokenChanged(nextOrObserver, error, completed);
   }
-  function beforeAuthStateChanged(auth2, callback, onAbort) {
-    return getModularInstance(auth2).beforeAuthStateChanged(callback, onAbort);
+  function beforeAuthStateChanged(auth, callback, onAbort) {
+    return getModularInstance(auth).beforeAuthStateChanged(callback, onAbort);
   }
-  function onAuthStateChanged(auth2, nextOrObserver, error, completed) {
-    return getModularInstance(auth2).onAuthStateChanged(nextOrObserver, error, completed);
+  function onAuthStateChanged(auth, nextOrObserver, error, completed) {
+    return getModularInstance(auth).onAuthStateChanged(nextOrObserver, error, completed);
   }
-  function startEnrollPhoneMfa(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts/mfaEnrollment:start", _addTidIfNecessary(auth2, request));
+  function startEnrollPhoneMfa(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts/mfaEnrollment:start", _addTidIfNecessary(auth, request));
   }
-  function finalizeEnrollPhoneMfa(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts/mfaEnrollment:finalize", _addTidIfNecessary(auth2, request));
+  function finalizeEnrollPhoneMfa(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts/mfaEnrollment:finalize", _addTidIfNecessary(auth, request));
   }
-  function startEnrollTotpMfa(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts/mfaEnrollment:start", _addTidIfNecessary(auth2, request));
+  function startEnrollTotpMfa(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts/mfaEnrollment:start", _addTidIfNecessary(auth, request));
   }
-  function finalizeEnrollTotpMfa(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts/mfaEnrollment:finalize", _addTidIfNecessary(auth2, request));
+  function finalizeEnrollTotpMfa(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts/mfaEnrollment:finalize", _addTidIfNecessary(auth, request));
   }
   var STORAGE_AVAILABLE_KEY = "__sak";
   var BrowserPersistenceClass = class {
@@ -7375,8 +7375,8 @@
       });
     }
   };
-  function getObjectStore(db2, isReadWrite) {
-    return db2.transaction([DB_OBJECTSTORE_NAME], isReadWrite ? "readwrite" : "readonly").objectStore(DB_OBJECTSTORE_NAME);
+  function getObjectStore(db, isReadWrite) {
+    return db.transaction([DB_OBJECTSTORE_NAME], isReadWrite ? "readwrite" : "readonly").objectStore(DB_OBJECTSTORE_NAME);
   }
   function _deleteDatabase() {
     const request = indexedDB.deleteDatabase(DB_NAME2);
@@ -7389,39 +7389,39 @@
         reject(request.error);
       });
       request.addEventListener("upgradeneeded", () => {
-        const db2 = request.result;
+        const db = request.result;
         try {
-          db2.createObjectStore(DB_OBJECTSTORE_NAME, { keyPath: DB_DATA_KEYPATH });
+          db.createObjectStore(DB_OBJECTSTORE_NAME, { keyPath: DB_DATA_KEYPATH });
         } catch (e) {
           reject(e);
         }
       });
       request.addEventListener("success", async () => {
-        const db2 = request.result;
-        if (!db2.objectStoreNames.contains(DB_OBJECTSTORE_NAME)) {
-          db2.close();
+        const db = request.result;
+        if (!db.objectStoreNames.contains(DB_OBJECTSTORE_NAME)) {
+          db.close();
           await _deleteDatabase();
           resolve(await _openDatabase());
         } else {
-          resolve(db2);
+          resolve(db);
         }
       });
     });
   }
-  async function _putObject(db2, key, value) {
-    const request = getObjectStore(db2, true).put({
+  async function _putObject(db, key, value) {
+    const request = getObjectStore(db, true).put({
       [DB_DATA_KEYPATH]: key,
       value
     });
     return new DBPromise(request).toPromise();
   }
-  async function getObject(db2, key) {
-    const request = getObjectStore(db2, false).get(key);
+  async function getObject(db, key) {
+    const request = getObjectStore(db, false).get(key);
     const data = await new DBPromise(request).toPromise();
     return data === void 0 ? null : data.value;
   }
-  function _deleteObject(db2, key) {
-    const request = getObjectStore(db2, true).delete(key);
+  function _deleteObject(db, key) {
+    const request = getObjectStore(db, true).delete(key);
     return new DBPromise(request).toPromise();
   }
   var _POLLING_INTERVAL_MS = 800;
@@ -7453,8 +7453,8 @@
       let numAttempts = 0;
       while (true) {
         try {
-          const db2 = await this._openDb();
-          return await op(db2);
+          const db = await this._openDb();
+          return await op(db);
         } catch (e) {
           if (numAttempts++ > _TRANSACTION_RETRY_COUNT) {
             throw e;
@@ -7550,9 +7550,9 @@
         if (!indexedDB) {
           return false;
         }
-        const db2 = await _openDatabase();
-        await _putObject(db2, STORAGE_AVAILABLE_KEY, "1");
-        await _deleteObject(db2, STORAGE_AVAILABLE_KEY);
+        const db = await _openDatabase();
+        await _putObject(db, STORAGE_AVAILABLE_KEY, "1");
+        await _deleteObject(db, STORAGE_AVAILABLE_KEY);
         return true;
       } catch (_a) {
       }
@@ -7568,26 +7568,26 @@
     }
     async _set(key, value) {
       return this._withPendingWrite(async () => {
-        await this._withRetries((db2) => _putObject(db2, key, value));
+        await this._withRetries((db) => _putObject(db, key, value));
         this.localCache[key] = value;
         return this.notifyServiceWorker(key);
       });
     }
     async _get(key) {
-      const obj = await this._withRetries((db2) => getObject(db2, key));
+      const obj = await this._withRetries((db) => getObject(db, key));
       this.localCache[key] = obj;
       return obj;
     }
     async _remove(key) {
       return this._withPendingWrite(async () => {
-        await this._withRetries((db2) => _deleteObject(db2, key));
+        await this._withRetries((db) => _deleteObject(db, key));
         delete this.localCache[key];
         return this.notifyServiceWorker(key);
       });
     }
     async _poll() {
-      const result = await this._withRetries((db2) => {
-        const getAllRequest = getObjectStore(db2, false).getAll();
+      const result = await this._withRetries((db) => {
+        const getAllRequest = getObjectStore(db, false).getAll();
         return new DBPromise(getAllRequest).toPromise();
       });
       if (!result) {
@@ -7658,23 +7658,23 @@
   };
   IndexedDBLocalPersistence.type = "LOCAL";
   var indexedDBLocalPersistence = IndexedDBLocalPersistence;
-  function startSignInPhoneMfa(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts/mfaSignIn:start", _addTidIfNecessary(auth2, request));
+  function startSignInPhoneMfa(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts/mfaSignIn:start", _addTidIfNecessary(auth, request));
   }
-  function finalizeSignInPhoneMfa(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts/mfaSignIn:finalize", _addTidIfNecessary(auth2, request));
+  function finalizeSignInPhoneMfa(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts/mfaSignIn:finalize", _addTidIfNecessary(auth, request));
   }
-  function finalizeSignInTotpMfa(auth2, request) {
-    return _performApiRequest(auth2, "POST", "/v2/accounts/mfaSignIn:finalize", _addTidIfNecessary(auth2, request));
+  function finalizeSignInTotpMfa(auth, request) {
+    return _performApiRequest(auth, "POST", "/v2/accounts/mfaSignIn:finalize", _addTidIfNecessary(auth, request));
   }
   var _JSLOAD_CALLBACK = _generateCallbackName("rcb");
   var NETWORK_TIMEOUT_DELAY = new Delay(3e4, 6e4);
   var RECAPTCHA_VERIFIER_TYPE = "recaptcha";
-  async function _verifyPhoneNumber(auth2, options, verifier) {
+  async function _verifyPhoneNumber(auth, options, verifier) {
     var _a;
-    if (!auth2._getRecaptchaConfig()) {
+    if (!auth._getRecaptchaConfig()) {
       try {
-        await _initializeRecaptchaConfig(auth2);
+        await _initializeRecaptchaConfig(auth);
       } catch (error) {
         console.log("Failed to initialize reCAPTCHA Enterprise config. Triggering the reCAPTCHA v2 verification.");
       }
@@ -7693,7 +7693,7 @@
         if ("phoneNumber" in phoneInfoOptions) {
           _assert(
             session.type === "enroll",
-            auth2,
+            auth,
             "internal-error"
             /* AuthErrorCode.INTERNAL_ERROR */
           );
@@ -7719,7 +7719,7 @@
             return startEnrollPhoneMfa(authInstance, request);
           };
           const startPhoneMfaEnrollmentResponse = handleRecaptchaFlow(
-            auth2,
+            auth,
             startPhoneMfaEnrollmentRequest,
             "mfaSmsEnrollment",
             startEnrollPhoneMfaActionCallback,
@@ -7733,14 +7733,14 @@
         } else {
           _assert(
             session.type === "signin",
-            auth2,
+            auth,
             "internal-error"
             /* AuthErrorCode.INTERNAL_ERROR */
           );
           const mfaEnrollmentId = ((_a = phoneInfoOptions.multiFactorHint) === null || _a === void 0 ? void 0 : _a.uid) || phoneInfoOptions.multiFactorUid;
           _assert(
             mfaEnrollmentId,
-            auth2,
+            auth,
             "missing-multi-factor-info"
             /* AuthErrorCode.MISSING_MFA_INFO */
           );
@@ -7766,7 +7766,7 @@
             return startSignInPhoneMfa(authInstance, request);
           };
           const startPhoneMfaSignInResponse = handleRecaptchaFlow(
-            auth2,
+            auth,
             startPhoneMfaSignInRequest,
             "mfaSmsSignIn",
             startSignInPhoneMfaActionCallback,
@@ -7798,7 +7798,7 @@
           return sendPhoneVerificationCode(authInstance, request);
         };
         const sendPhoneVerificationCodeResponse = handleRecaptchaFlow(
-          auth2,
+          auth,
           sendPhoneVerificationCodeRequest,
           "sendVerificationCode",
           sendPhoneVerificationCodeActionCallback,
@@ -7814,17 +7814,17 @@
       verifier === null || verifier === void 0 ? void 0 : verifier._reset();
     }
   }
-  async function injectRecaptchaV2Token(auth2, request, recaptchaV2Verifier) {
+  async function injectRecaptchaV2Token(auth, request, recaptchaV2Verifier) {
     _assert(
       recaptchaV2Verifier.type === RECAPTCHA_VERIFIER_TYPE,
-      auth2,
+      auth,
       "argument-error"
       /* AuthErrorCode.ARGUMENT_ERROR */
     );
     const recaptchaV2Token = await recaptchaV2Verifier.verify();
     _assert(
       typeof recaptchaV2Token === "string",
-      auth2,
+      auth,
       "argument-error"
       /* AuthErrorCode.ARGUMENT_ERROR */
     );
@@ -7867,9 +7867,9 @@
      * @param auth - The Firebase {@link Auth} instance in which sign-ins should occur.
      *
      */
-    constructor(auth2) {
+    constructor(auth) {
       this.providerId = _PhoneAuthProvider.PROVIDER_ID;
-      this.auth = _castAuth(auth2);
+      this.auth = _castAuth(auth);
     }
     /**
      *
@@ -7993,17 +7993,17 @@
   };
   PhoneAuthProvider.PROVIDER_ID = "phone";
   PhoneAuthProvider.PHONE_SIGN_IN_METHOD = "phone";
-  function _withDefaultResolver(auth2, resolverOverride) {
+  function _withDefaultResolver(auth, resolverOverride) {
     if (resolverOverride) {
       return _getInstance(resolverOverride);
     }
     _assert(
-      auth2._popupRedirectResolver,
-      auth2,
+      auth._popupRedirectResolver,
+      auth,
       "argument-error"
       /* AuthErrorCode.ARGUMENT_ERROR */
     );
-    return auth2._popupRedirectResolver;
+    return auth._popupRedirectResolver;
   }
   var IdpCredential = class extends AuthCredential {
     constructor(params) {
@@ -8014,14 +8014,14 @@
       );
       this.params = params;
     }
-    _getIdTokenResponse(auth2) {
-      return signInWithIdp(auth2, this._buildIdpRequest());
+    _getIdTokenResponse(auth) {
+      return signInWithIdp(auth, this._buildIdpRequest());
     }
-    _linkToIdToken(auth2, idToken) {
-      return signInWithIdp(auth2, this._buildIdpRequest(idToken));
+    _linkToIdToken(auth, idToken) {
+      return signInWithIdp(auth, this._buildIdpRequest(idToken));
     }
-    _getReauthenticationResolver(auth2) {
-      return signInWithIdp(auth2, this._buildIdpRequest());
+    _getReauthenticationResolver(auth) {
+      return signInWithIdp(auth, this._buildIdpRequest());
     }
     _buildIdpRequest(idToken) {
       const request = {
@@ -8043,28 +8043,28 @@
     return _signInWithCredential(params.auth, new IdpCredential(params), params.bypassAuthState);
   }
   function _reauth(params) {
-    const { auth: auth2, user } = params;
+    const { auth, user } = params;
     _assert(
       user,
-      auth2,
+      auth,
       "internal-error"
       /* AuthErrorCode.INTERNAL_ERROR */
     );
     return _reauthenticate(user, new IdpCredential(params), params.bypassAuthState);
   }
   async function _link(params) {
-    const { auth: auth2, user } = params;
+    const { auth, user } = params;
     _assert(
       user,
-      auth2,
+      auth,
       "internal-error"
       /* AuthErrorCode.INTERNAL_ERROR */
     );
     return _link$1(user, new IdpCredential(params), params.bypassAuthState);
   }
   var AbstractPopupRedirectOperation = class {
-    constructor(auth2, filter, resolver, user, bypassAuthState = false) {
-      this.auth = auth2;
+    constructor(auth, filter, resolver, user, bypassAuthState = false) {
+      this.auth = auth;
       this.resolver = resolver;
       this.user = user;
       this.bypassAuthState = bypassAuthState;
@@ -8146,16 +8146,16 @@
     }
   };
   var _POLL_WINDOW_CLOSE_TIMEOUT = new Delay(2e3, 1e4);
-  async function signInWithPopup(auth2, provider, resolver) {
-    if (_isFirebaseServerApp(auth2.app)) {
+  async function signInWithPopup(auth, provider, resolver) {
+    if (_isFirebaseServerApp(auth.app)) {
       return Promise.reject(_createError(
-        auth2,
+        auth,
         "operation-not-supported-in-this-environment"
         /* AuthErrorCode.OPERATION_NOT_SUPPORTED */
       ));
     }
-    const authInternal = _castAuth(auth2);
-    _assertInstanceOf(auth2, provider, FederatedAuthProvider);
+    const authInternal = _castAuth(auth);
+    _assertInstanceOf(auth, provider, FederatedAuthProvider);
     const resolverInternal = _withDefaultResolver(authInternal, resolver);
     const action = new PopupOperation(authInternal, "signInViaPopup", provider, resolverInternal);
     return action.executeNotNull();
@@ -8168,8 +8168,8 @@
     return action.executeNotNull();
   }
   var PopupOperation = class _PopupOperation extends AbstractPopupRedirectOperation {
-    constructor(auth2, filter, provider, resolver, user) {
-      super(auth2, filter, resolver, user);
+    constructor(auth, filter, provider, resolver, user) {
+      super(auth, filter, resolver, user);
       this.provider = provider;
       this.authWindow = null;
       this.pollId = null;
@@ -8262,8 +8262,8 @@
   var PENDING_REDIRECT_KEY = "pendingRedirect";
   var redirectOutcomeMap = /* @__PURE__ */ new Map();
   var RedirectAction = class extends AbstractPopupRedirectOperation {
-    constructor(auth2, resolver, bypassAuthState = false) {
-      super(auth2, [
+    constructor(auth, resolver, bypassAuthState = false) {
+      super(auth, [
         "signInViaRedirect",
         "linkViaRedirect",
         "reauthViaRedirect",
@@ -8315,8 +8315,8 @@
     cleanUp() {
     }
   };
-  async function _getAndClearPendingRedirectStatus(resolver, auth2) {
-    const key = pendingRedirectKey(auth2);
+  async function _getAndClearPendingRedirectStatus(resolver, auth) {
+    const key = pendingRedirectKey(auth);
     const persistence = resolverPersistence(resolver);
     if (!await persistence._isAvailable()) {
       return false;
@@ -8325,20 +8325,20 @@
     await persistence._remove(key);
     return hasPendingRedirect;
   }
-  function _overrideRedirectResult(auth2, result) {
-    redirectOutcomeMap.set(auth2._key(), result);
+  function _overrideRedirectResult(auth, result) {
+    redirectOutcomeMap.set(auth._key(), result);
   }
   function resolverPersistence(resolver) {
     return _getInstance(resolver._redirectPersistence);
   }
-  function pendingRedirectKey(auth2) {
-    return _persistenceKeyName(PENDING_REDIRECT_KEY, auth2.config.apiKey, auth2.name);
+  function pendingRedirectKey(auth) {
+    return _persistenceKeyName(PENDING_REDIRECT_KEY, auth.config.apiKey, auth.name);
   }
-  async function _getRedirectResult(auth2, resolverExtern, bypassAuthState = false) {
-    if (_isFirebaseServerApp(auth2.app)) {
-      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth2));
+  async function _getRedirectResult(auth, resolverExtern, bypassAuthState = false) {
+    if (_isFirebaseServerApp(auth.app)) {
+      return Promise.reject(_serverAppCurrentUserOperationNotSupportedError(auth));
     }
-    const authInternal = _castAuth(auth2);
+    const authInternal = _castAuth(auth);
     const resolver = _withDefaultResolver(authInternal, resolverExtern);
     const action = new RedirectAction(authInternal, resolver, bypassAuthState);
     const result = await action.execute();
@@ -8351,8 +8351,8 @@
   }
   var EVENT_DUPLICATION_CACHE_DURATION_MS = 10 * 60 * 1e3;
   var AuthEventManager = class {
-    constructor(auth2) {
-      this.auth = auth2;
+    constructor(auth) {
+      this.auth = auth;
       this.cachedEventUids = /* @__PURE__ */ new Set();
       this.consumers = /* @__PURE__ */ new Set();
       this.queuedRedirectEvent = null;
@@ -8434,16 +8434,16 @@
         return false;
     }
   }
-  async function _getProjectConfig(auth2, request = {}) {
-    return _performApiRequest(auth2, "GET", "/v1/projects", request);
+  async function _getProjectConfig(auth, request = {}) {
+    return _performApiRequest(auth, "GET", "/v1/projects", request);
   }
   var IP_ADDRESS_REGEX = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
   var HTTP_REGEX = /^https?/;
-  async function _validateOrigin(auth2) {
-    if (auth2.config.emulator) {
+  async function _validateOrigin(auth) {
+    if (auth.config.emulator) {
       return;
     }
-    const { authorizedDomains } = await _getProjectConfig(auth2);
+    const { authorizedDomains } = await _getProjectConfig(auth);
     for (const domain of authorizedDomains) {
       try {
         if (matchDomain(domain)) {
@@ -8453,7 +8453,7 @@
       }
     }
     _fail(
-      auth2,
+      auth,
       "unauthorized-domain"
       /* AuthErrorCode.INVALID_ORIGIN */
     );
@@ -8494,7 +8494,7 @@
       }
     }
   }
-  function loadGapi(auth2) {
+  function loadGapi(auth) {
     return new Promise((resolve, reject) => {
       var _a, _b, _c;
       function loadGapiIframe() {
@@ -8506,7 +8506,7 @@
           ontimeout: () => {
             resetUnloadedGapiModules();
             reject(_createError(
-              auth2,
+              auth,
               "network-request-failed"
               /* AuthErrorCode.NETWORK_REQUEST_FAILED */
             ));
@@ -8525,7 +8525,7 @@
             loadGapiIframe();
           } else {
             reject(_createError(
-              auth2,
+              auth,
               "network-request-failed"
               /* AuthErrorCode.NETWORK_REQUEST_FAILED */
             ));
@@ -8539,8 +8539,8 @@
     });
   }
   var cachedGApiLoader = null;
-  function _loadGapi(auth2) {
-    cachedGApiLoader = cachedGApiLoader || loadGapi(auth2);
+  function _loadGapi(auth) {
+    cachedGApiLoader = cachedGApiLoader || loadGapi(auth);
     return cachedGApiLoader;
   }
   var PING_TIMEOUT = new Delay(5e3, 15e3);
@@ -8564,42 +8564,42 @@
     ["test-identitytoolkit.sandbox.googleapis.com", "t"]
     // test
   ]);
-  function getIframeUrl(auth2) {
-    const config = auth2.config;
+  function getIframeUrl(auth) {
+    const config = auth.config;
     _assert(
       config.authDomain,
-      auth2,
+      auth,
       "auth-domain-config-required"
       /* AuthErrorCode.MISSING_AUTH_DOMAIN */
     );
-    const url = config.emulator ? _emulatorUrl(config, EMULATED_IFRAME_PATH) : `https://${auth2.config.authDomain}/${IFRAME_PATH}`;
+    const url = config.emulator ? _emulatorUrl(config, EMULATED_IFRAME_PATH) : `https://${auth.config.authDomain}/${IFRAME_PATH}`;
     const params = {
       apiKey: config.apiKey,
-      appName: auth2.name,
+      appName: auth.name,
       v: SDK_VERSION
     };
-    const eid = EID_FROM_APIHOST.get(auth2.config.apiHost);
+    const eid = EID_FROM_APIHOST.get(auth.config.apiHost);
     if (eid) {
       params.eid = eid;
     }
-    const frameworks = auth2._getFrameworks();
+    const frameworks = auth._getFrameworks();
     if (frameworks.length) {
       params.fw = frameworks.join(",");
     }
     return `${url}?${querystring(params).slice(1)}`;
   }
-  async function _openIframe(auth2) {
-    const context = await _loadGapi(auth2);
+  async function _openIframe(auth) {
+    const context = await _loadGapi(auth);
     const gapi2 = _window().gapi;
     _assert(
       gapi2,
-      auth2,
+      auth,
       "internal-error"
       /* AuthErrorCode.INTERNAL_ERROR */
     );
     return context.open({
       where: document.body,
-      url: getIframeUrl(auth2),
+      url: getIframeUrl(auth),
       messageHandlersFilter: gapi2.iframes.CROSS_ORIGIN_IFRAMES_FILTER,
       attributes: IFRAME_ATTRIBUTES,
       dontclear: true
@@ -8609,7 +8609,7 @@
         setHideOnLeave: false
       });
       const networkError = _createError(
-        auth2,
+        auth,
         "network-request-failed"
         /* AuthErrorCode.NETWORK_REQUEST_FAILED */
       );
@@ -8649,7 +8649,7 @@
       }
     }
   };
-  function _open(auth2, url, name7, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT) {
+  function _open(auth, url, name7, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT) {
     const top = Math.max((window.screen.availHeight - height) / 2, 0).toString();
     const left = Math.max((window.screen.availWidth - width) / 2, 0).toString();
     let target = "";
@@ -8675,7 +8675,7 @@
     const newWin = window.open(url || "", target, optionsString);
     _assert(
       newWin,
-      auth2,
+      auth,
       "popup-blocked"
       /* AuthErrorCode.POPUP_BLOCKED */
     );
@@ -8696,29 +8696,29 @@
   var WIDGET_PATH = "__/auth/handler";
   var EMULATOR_WIDGET_PATH = "emulator/auth/handler";
   var FIREBASE_APP_CHECK_FRAGMENT_ID = encodeURIComponent("fac");
-  async function _getRedirectUrl(auth2, provider, authType, redirectUrl, eventId, additionalParams) {
+  async function _getRedirectUrl(auth, provider, authType, redirectUrl, eventId, additionalParams) {
     _assert(
-      auth2.config.authDomain,
-      auth2,
+      auth.config.authDomain,
+      auth,
       "auth-domain-config-required"
       /* AuthErrorCode.MISSING_AUTH_DOMAIN */
     );
     _assert(
-      auth2.config.apiKey,
-      auth2,
+      auth.config.apiKey,
+      auth,
       "invalid-api-key"
       /* AuthErrorCode.INVALID_API_KEY */
     );
     const params = {
-      apiKey: auth2.config.apiKey,
-      appName: auth2.name,
+      apiKey: auth.config.apiKey,
+      appName: auth.name,
       authType,
       redirectUrl,
       v: SDK_VERSION,
       eventId
     };
     if (provider instanceof FederatedAuthProvider) {
-      provider.setDefaultLanguage(auth2.languageCode);
+      provider.setDefaultLanguage(auth.languageCode);
       params.providerId = provider.providerId || "";
       if (!isEmpty(provider.getCustomParameters())) {
         params.customParameters = JSON.stringify(provider.getCustomParameters());
@@ -8733,8 +8733,8 @@
         params.scopes = scopes.join(",");
       }
     }
-    if (auth2.tenantId) {
-      params.tid = auth2.tenantId;
+    if (auth.tenantId) {
+      params.tid = auth.tenantId;
     }
     const paramsDict = params;
     for (const key of Object.keys(paramsDict)) {
@@ -8742,9 +8742,9 @@
         delete paramsDict[key];
       }
     }
-    const appCheckToken = await auth2._getAppCheckToken();
+    const appCheckToken = await auth._getAppCheckToken();
     const appCheckTokenFragment = appCheckToken ? `#${FIREBASE_APP_CHECK_FRAGMENT_ID}=${encodeURIComponent(appCheckToken)}` : "";
-    return `${getHandlerBase(auth2)}?${querystring(paramsDict).slice(1)}${appCheckTokenFragment}`;
+    return `${getHandlerBase(auth)}?${querystring(paramsDict).slice(1)}${appCheckTokenFragment}`;
   }
   function getHandlerBase({ config }) {
     if (!config.emulator) {
@@ -8764,21 +8764,21 @@
     }
     // Wrapping in async even though we don't await anywhere in order
     // to make sure errors are raised as promise rejections
-    async _openPopup(auth2, provider, authType, eventId) {
+    async _openPopup(auth, provider, authType, eventId) {
       var _a;
-      debugAssert((_a = this.eventManagers[auth2._key()]) === null || _a === void 0 ? void 0 : _a.manager, "_initialize() not called before _openPopup()");
-      const url = await _getRedirectUrl(auth2, provider, authType, _getCurrentUrl(), eventId);
-      return _open(auth2, url, _generateEventId());
+      debugAssert((_a = this.eventManagers[auth._key()]) === null || _a === void 0 ? void 0 : _a.manager, "_initialize() not called before _openPopup()");
+      const url = await _getRedirectUrl(auth, provider, authType, _getCurrentUrl(), eventId);
+      return _open(auth, url, _generateEventId());
     }
-    async _openRedirect(auth2, provider, authType, eventId) {
-      await this._originValidation(auth2);
-      const url = await _getRedirectUrl(auth2, provider, authType, _getCurrentUrl(), eventId);
+    async _openRedirect(auth, provider, authType, eventId) {
+      await this._originValidation(auth);
+      const url = await _getRedirectUrl(auth, provider, authType, _getCurrentUrl(), eventId);
       _setWindowLocation(url);
       return new Promise(() => {
       });
     }
-    _initialize(auth2) {
-      const key = auth2._key();
+    _initialize(auth) {
+      const key = auth._key();
       if (this.eventManagers[key]) {
         const { manager, promise: promise2 } = this.eventManagers[key];
         if (manager) {
@@ -8788,20 +8788,20 @@
           return promise2;
         }
       }
-      const promise = this.initAndGetManager(auth2);
+      const promise = this.initAndGetManager(auth);
       this.eventManagers[key] = { promise };
       promise.catch(() => {
         delete this.eventManagers[key];
       });
       return promise;
     }
-    async initAndGetManager(auth2) {
-      const iframe = await _openIframe(auth2);
-      const manager = new AuthEventManager(auth2);
+    async initAndGetManager(auth) {
+      const iframe = await _openIframe(auth);
+      const manager = new AuthEventManager(auth);
       iframe.register("authEvent", (iframeEvent) => {
         _assert(
           iframeEvent === null || iframeEvent === void 0 ? void 0 : iframeEvent.authEvent,
-          auth2,
+          auth,
           "invalid-auth-event"
           /* AuthErrorCode.INVALID_AUTH_EVENT */
         );
@@ -8811,12 +8811,12 @@
           /* GapiOutcome.ERROR */
         };
       }, gapi.iframes.CROSS_ORIGIN_IFRAMES_FILTER);
-      this.eventManagers[auth2._key()] = { manager };
-      this.iframes[auth2._key()] = iframe;
+      this.eventManagers[auth._key()] = { manager };
+      this.iframes[auth._key()] = iframe;
       return manager;
     }
-    _isIframeWebStorageSupported(auth2, cb) {
-      const iframe = this.iframes[auth2._key()];
+    _isIframeWebStorageSupported(auth, cb) {
+      const iframe = this.iframes[auth._key()];
       iframe.send(WEB_STORAGE_SUPPORT_KEY, { type: WEB_STORAGE_SUPPORT_KEY }, (result) => {
         var _a;
         const isSupported2 = (_a = result === null || result === void 0 ? void 0 : result[0]) === null || _a === void 0 ? void 0 : _a[WEB_STORAGE_SUPPORT_KEY];
@@ -8824,16 +8824,16 @@
           cb(!!isSupported2);
         }
         _fail(
-          auth2,
+          auth,
           "internal-error"
           /* AuthErrorCode.INTERNAL_ERROR */
         );
       }, gapi.iframes.CROSS_ORIGIN_IFRAMES_FILTER);
     }
-    _originValidation(auth2) {
-      const key = auth2._key();
+    _originValidation(auth) {
+      const key = auth._key();
       if (!this.originValidationPromises[key]) {
-        this.originValidationPromises[key] = _validateOrigin(auth2);
+        this.originValidationPromises[key] = _validateOrigin(auth);
       }
       return this.originValidationPromises[key];
     }
@@ -8846,12 +8846,12 @@
     constructor(factorId) {
       this.factorId = factorId;
     }
-    _process(auth2, session, displayName) {
+    _process(auth, session, displayName) {
       switch (session.type) {
         case "enroll":
-          return this._finalizeEnroll(auth2, session.credential, displayName);
+          return this._finalizeEnroll(auth, session.credential, displayName);
         case "signin":
-          return this._finalizeSignIn(auth2, session.credential);
+          return this._finalizeSignIn(auth, session.credential);
         default:
           return debugFail("unexpected MultiFactorSessionType");
       }
@@ -8870,16 +8870,16 @@
       return new _PhoneMultiFactorAssertionImpl(credential);
     }
     /** @internal */
-    _finalizeEnroll(auth2, idToken, displayName) {
-      return finalizeEnrollPhoneMfa(auth2, {
+    _finalizeEnroll(auth, idToken, displayName) {
+      return finalizeEnrollPhoneMfa(auth, {
         idToken,
         displayName,
         phoneVerificationInfo: this.credential._makeVerificationRequest()
       });
     }
     /** @internal */
-    _finalizeSignIn(auth2, mfaPendingCredential) {
-      return finalizeSignInPhoneMfa(auth2, {
+    _finalizeSignIn(auth, mfaPendingCredential) {
+      return finalizeSignInPhoneMfa(auth, {
         mfaPendingCredential,
         phoneVerificationInfo: this.credential._makeVerificationRequest()
       });
@@ -8973,29 +8973,29 @@
       return new _TotpMultiFactorAssertionImpl(otp, enrollmentId);
     }
     /** @internal */
-    async _finalizeEnroll(auth2, idToken, displayName) {
+    async _finalizeEnroll(auth, idToken, displayName) {
       _assert(
         typeof this.secret !== "undefined",
-        auth2,
+        auth,
         "argument-error"
         /* AuthErrorCode.ARGUMENT_ERROR */
       );
-      return finalizeEnrollTotpMfa(auth2, {
+      return finalizeEnrollTotpMfa(auth, {
         idToken,
         displayName,
         totpVerificationInfo: this.secret._makeTotpVerificationInfo(this.otp)
       });
     }
     /** @internal */
-    async _finalizeSignIn(auth2, mfaPendingCredential) {
+    async _finalizeSignIn(auth, mfaPendingCredential) {
       _assert(
         this.enrollmentId !== void 0 && this.otp !== void 0,
-        auth2,
+        auth,
         "argument-error"
         /* AuthErrorCode.ARGUMENT_ERROR */
       );
       const totpVerificationInfo = { verificationCode: this.otp };
-      return finalizeSignInTotpMfa(auth2, {
+      return finalizeSignInTotpMfa(auth, {
         mfaPendingCredential,
         mfaEnrollmentId: this.enrollmentId,
         totpVerificationInfo
@@ -9004,9 +9004,9 @@
   };
   var TotpSecret = class _TotpSecret {
     // The public members are declared outside the constructor so the docs can be generated.
-    constructor(secretKey, hashingAlgorithm, codeLength, codeIntervalSeconds, enrollmentCompletionDeadline, sessionInfo, auth2) {
+    constructor(secretKey, hashingAlgorithm, codeLength, codeIntervalSeconds, enrollmentCompletionDeadline, sessionInfo, auth) {
       this.sessionInfo = sessionInfo;
-      this.auth = auth2;
+      this.auth = auth;
       this.secretKey = secretKey;
       this.hashingAlgorithm = hashingAlgorithm;
       this.codeLength = codeLength;
@@ -9014,8 +9014,8 @@
       this.enrollmentCompletionDeadline = enrollmentCompletionDeadline;
     }
     /** @internal */
-    static _fromStartTotpMfaEnrollmentResponse(response, auth2) {
-      return new _TotpSecret(response.totpSessionInfo.sharedSecretKey, response.totpSessionInfo.hashingAlgorithm, response.totpSessionInfo.verificationCodeLength, response.totpSessionInfo.periodSec, new Date(response.totpSessionInfo.finalizeEnrollmentTime).toUTCString(), response.totpSessionInfo.sessionInfo, auth2);
+    static _fromStartTotpMfaEnrollmentResponse(response, auth) {
+      return new _TotpSecret(response.totpSessionInfo.sharedSecretKey, response.totpSessionInfo.hashingAlgorithm, response.totpSessionInfo.verificationCodeLength, response.totpSessionInfo.periodSec, new Date(response.totpSessionInfo.finalizeEnrollmentTime).toUTCString(), response.totpSessionInfo.sessionInfo, auth);
     }
     /** @internal */
     _makeTotpVerificationInfo(otp) {
@@ -9054,8 +9054,8 @@
   var name5 = "@firebase/auth";
   var version5 = "1.10.8";
   var AuthInterop = class {
-    constructor(auth2) {
-      this.auth = auth2;
+    constructor(auth) {
+      this.auth = auth;
       this.internalListeners = /* @__PURE__ */ new Map();
     }
     getUid() {
@@ -9128,11 +9128,11 @@
     _registerComponent(new Component(
       "auth",
       (container, { options: deps }) => {
-        const app2 = container.getProvider("app").getImmediate();
+        const app = container.getProvider("app").getImmediate();
         const heartbeatServiceProvider = container.getProvider("heartbeat");
         const appCheckServiceProvider = container.getProvider("app-check-internal");
-        const { apiKey, authDomain } = app2.options;
-        _assert(apiKey && !apiKey.includes(":"), "invalid-api-key", { appName: app2.name });
+        const { apiKey, authDomain } = app.options;
+        _assert(apiKey && !apiKey.includes(":"), "invalid-api-key", { appName: app.name });
         const config = {
           apiKey,
           authDomain,
@@ -9142,7 +9142,7 @@
           apiScheme: "https",
           sdkClientVersion: _getClientVersion(clientPlatform)
         };
-        const authInstance = new AuthImpl(app2, heartbeatServiceProvider, appCheckServiceProvider, config);
+        const authInstance = new AuthImpl(app, heartbeatServiceProvider, appCheckServiceProvider, config);
         _initializeAuthInstance(authInstance, deps);
         return authInstance;
       },
@@ -9161,11 +9161,11 @@
     _registerComponent(new Component(
       "auth-internal",
       (container) => {
-        const auth2 = _castAuth(container.getProvider(
+        const auth = _castAuth(container.getProvider(
           "auth"
           /* _ComponentName.AUTH */
         ).getImmediate());
-        return ((auth3) => new AuthInterop(auth3))(auth2);
+        return ((auth2) => new AuthInterop(auth2))(auth);
       },
       "PRIVATE"
       /* ComponentType.PRIVATE */
@@ -9197,12 +9197,12 @@
       } : {}
     });
   };
-  function getAuth(app2 = getApp()) {
-    const provider = _getProvider(app2, "auth");
+  function getAuth(app = getApp()) {
+    const provider = _getProvider(app, "auth");
     if (provider.isInitialized()) {
       return provider.getImmediate();
     }
-    const auth2 = initializeAuth(app2, {
+    const auth = initializeAuth(app, {
       popupRedirectResolver: browserPopupRedirectResolver,
       persistence: [
         indexedDBLocalPersistence,
@@ -9215,15 +9215,15 @@
       const authTokenSyncUrl = new URL(authTokenSyncPath, location.origin);
       if (location.origin === authTokenSyncUrl.origin) {
         const mintCookie = mintCookieFactory(authTokenSyncUrl.toString());
-        beforeAuthStateChanged(auth2, mintCookie, () => mintCookie(auth2.currentUser));
-        onIdTokenChanged(auth2, (user) => mintCookie(user));
+        beforeAuthStateChanged(auth, mintCookie, () => mintCookie(auth.currentUser));
+        onIdTokenChanged(auth, (user) => mintCookie(user));
       }
     }
     const authEmulatorHost = getDefaultEmulatorHost("auth");
     if (authEmulatorHost) {
-      connectAuthEmulator(auth2, `http://${authEmulatorHost}`);
+      connectAuthEmulator(auth, `http://${authEmulatorHost}`);
     }
-    return auth2;
+    return auth;
   }
   function getScriptParentElement() {
     var _a, _b;
@@ -10629,8 +10629,8 @@
                   f.g || -1 == ya.indexOf("spdy") && -1 == ya.indexOf("quic") && -1 == ya.indexOf("h2") || (f.j = f.l, f.g = /* @__PURE__ */ new Set(), f.h && (bc(f, f.h), f.h = null));
                 }
                 if (d.D) {
-                  const db2 = B2.g ? B2.g.getResponseHeader("X-HTTP-Session-Id") : null;
-                  db2 && (d.ya = db2, S(d.I, d.D, db2));
+                  const db = B2.g ? B2.g.getResponseHeader("X-HTTP-Session-Id") : null;
+                  db && (d.ya = db, S(d.I, d.D, db));
                 }
               }
               c.G = 3;
@@ -21855,10 +21855,10 @@ This typically indicates that your device does not have a healthy Internet conne
       return this._source;
     }
   };
-  function getRemoteConfig(app2 = getApp(), options = {}) {
+  function getRemoteConfig(app = getApp(), options = {}) {
     var _a, _b;
-    app2 = getModularInstance(app2);
-    const rcProvider = _getProvider(app2, RC_COMPONENT_NAME);
+    app = getModularInstance(app);
+    const rcProvider = _getProvider(app, RC_COMPONENT_NAME);
     if (rcProvider.isInitialized()) {
       const initialOptions = rcProvider.getOptions();
       if (deepEqual(initialOptions, options)) {
@@ -21883,8 +21883,8 @@ This typically indicates that your device does not have a healthy Internet conne
     }
     return rc;
   }
-  async function activate(remoteConfig2) {
-    const rc = getModularInstance(remoteConfig2);
+  async function activate(remoteConfig) {
+    const rc = getModularInstance(remoteConfig);
     const [lastSuccessfulFetchResponse, activeConfigEtag] = await Promise.all([
       rc._storage.getLastSuccessfulFetchResponse(),
       rc._storage.getActiveConfigEtag()
@@ -21898,8 +21898,8 @@ This typically indicates that your device does not have a healthy Internet conne
     ]);
     return true;
   }
-  function ensureInitialized(remoteConfig2) {
-    const rc = getModularInstance(remoteConfig2);
+  function ensureInitialized(remoteConfig) {
+    const rc = getModularInstance(remoteConfig);
     if (!rc._initializePromise) {
       rc._initializePromise = rc._storageCache.loadFromStorage().then(() => {
         rc._isInitializationComplete = true;
@@ -21907,8 +21907,8 @@ This typically indicates that your device does not have a healthy Internet conne
     }
     return rc._initializePromise;
   }
-  async function fetchConfig(remoteConfig2) {
-    const rc = getModularInstance(remoteConfig2);
+  async function fetchConfig(remoteConfig) {
+    const rc = getModularInstance(remoteConfig);
     const abortSignal = new RemoteConfigAbortSignal();
     setTimeout(async () => {
       abortSignal.abort();
@@ -21934,8 +21934,8 @@ This typically indicates that your device does not have a healthy Internet conne
       throw e;
     }
   }
-  function getValue(remoteConfig2, key) {
-    const rc = getModularInstance(remoteConfig2);
+  function getValue(remoteConfig, key) {
+    const rc = getModularInstance(remoteConfig);
     if (!rc._isInitializationComplete) {
       rc._logger.debug(`A value was requested for key "${key}" before SDK initialization completed. Await on ensureInitialized if the intent was to get a previously activated value.`);
     }
@@ -22166,8 +22166,8 @@ This typically indicates that your device does not have a healthy Internet conne
     get lastFetchStatus() {
       return this._storageCache.getLastFetchStatus() || "no-fetch-yet";
     }
-    constructor(app2, _client, _storageCache, _storage, _logger) {
-      this.app = app2;
+    constructor(app, _client, _storageCache, _storage, _logger) {
+      this.app = app;
       this._client = _client;
       this._storageCache = _storageCache;
       this._storage = _storage;
@@ -22204,10 +22204,10 @@ This typically indicates that your device does not have a healthy Internet conne
           resolve(event.target.result);
         };
         request.onupgradeneeded = (event) => {
-          const db2 = event.target.result;
+          const db = event.target.result;
           switch (event.oldVersion) {
             case 0:
-              db2.createObjectStore(APP_NAMESPACE_STORE, {
+              db.createObjectStore(APP_NAMESPACE_STORE, {
                 keyPath: "compositeKey"
               });
           }
@@ -22279,8 +22279,8 @@ This typically indicates that your device does not have a healthy Internet conne
       this.openDbPromise = openDbPromise;
     }
     async setCustomSignals(customSignals) {
-      const db2 = await this.openDbPromise;
-      const transaction = db2.transaction([APP_NAMESPACE_STORE], "readwrite");
+      const db = await this.openDbPromise;
+      const transaction = db.transaction([APP_NAMESPACE_STORE], "readwrite");
       const storedSignals = await this.getWithTransaction("custom_signals", transaction);
       const updatedSignals = mergeCustomSignals(customSignals, storedSignals || {});
       await this.setWithTransaction("custom_signals", updatedSignals, transaction);
@@ -22356,19 +22356,19 @@ This typically indicates that your device does not have a healthy Internet conne
       });
     }
     async get(key) {
-      const db2 = await this.openDbPromise;
-      const transaction = db2.transaction([APP_NAMESPACE_STORE], "readonly");
+      const db = await this.openDbPromise;
+      const transaction = db.transaction([APP_NAMESPACE_STORE], "readonly");
       return this.getWithTransaction(key, transaction);
     }
     async set(key, value) {
-      const db2 = await this.openDbPromise;
-      const transaction = db2.transaction([APP_NAMESPACE_STORE], "readwrite");
+      const db = await this.openDbPromise;
+      const transaction = db.transaction([APP_NAMESPACE_STORE], "readwrite");
       return this.setWithTransaction(key, value, transaction);
     }
     async delete(key) {
-      const db2 = await this.openDbPromise;
+      const db = await this.openDbPromise;
       return new Promise((resolve, reject) => {
-        const transaction = db2.transaction([APP_NAMESPACE_STORE], "readwrite");
+        const transaction = db.transaction([APP_NAMESPACE_STORE], "readwrite");
         const objectStore = transaction.objectStore(APP_NAMESPACE_STORE);
         const compositeKey = this.createCompositeKey(key);
         try {
@@ -22505,9 +22505,9 @@ This typically indicates that your device does not have a healthy Internet conne
     registerVersion(name6, version6);
     registerVersion(name6, version6, "esm2017");
     function remoteConfigFactory(container, { options }) {
-      const app2 = container.getProvider("app").getImmediate();
+      const app = container.getProvider("app").getImmediate();
       const installations = container.getProvider("installations-internal").getImmediate();
-      const { projectId, apiKey, appId } = app2.options;
+      const { projectId, apiKey, appId } = app.options;
       if (!projectId) {
         throw ERROR_FACTORY4.create(
           "registration-project-id"
@@ -22527,7 +22527,7 @@ This typically indicates that your device does not have a healthy Internet conne
         );
       }
       const namespace = (options === null || options === void 0 ? void 0 : options.templateId) || "firebase";
-      const storage = isIndexedDBAvailable() ? new IndexedDbStorage(appId, app2.name, namespace) : new InMemoryStorage();
+      const storage = isIndexedDBAvailable() ? new IndexedDbStorage(appId, app.name, namespace) : new InMemoryStorage();
       const storageCache = new StorageCache(storage);
       const logger3 = new Logger(name6);
       logger3.logLevel = LogLevel.ERROR;
@@ -22542,162 +22542,184 @@ This typically indicates that your device does not have a healthy Internet conne
       );
       const retryingClient = new RetryingClient(restClient, storage);
       const cachingClient = new CachingClient(retryingClient, storage, storageCache, logger3);
-      const remoteConfigInstance = new RemoteConfig(app2, cachingClient, storageCache, storage, logger3);
+      const remoteConfigInstance = new RemoteConfig(app, cachingClient, storageCache, storage, logger3);
       ensureInitialized(remoteConfigInstance);
       return remoteConfigInstance;
     }
   }
-  async function fetchAndActivate(remoteConfig2) {
-    remoteConfig2 = getModularInstance(remoteConfig2);
-    await fetchConfig(remoteConfig2);
-    return activate(remoteConfig2);
+  async function fetchAndActivate(remoteConfig) {
+    remoteConfig = getModularInstance(remoteConfig);
+    await fetchConfig(remoteConfig);
+    return activate(remoteConfig);
   }
   registerRemoteConfig();
 
   // js/firebase-init.js
-  var DEFAULT_FIREBASE_CONFIG = {
-    apiKey: "AIzaSyD2VAzAEGDd1hVjHrlz0Yuym2_iPxQFhsI",
-    authDomain: "mtc-game-d6c4e.firebaseapp.com",
-    projectId: "mtc-game-d6c4e",
-    storageBucket: "mtc-game-d6c4e.firebasestorage.app",
-    messagingSenderId: "565929955805",
-    appId: "1:565929955805:web:130dd0681079c91b6ba634",
-    measurementId: "G-BRL2NRBHG6"
-  };
-  var firebaseConfig = typeof CONFIG_SECRETS !== "undefined" && CONFIG_SECRETS && CONFIG_SECRETS.FIREBASE_CONFIG ? CONFIG_SECRETS.FIREBASE_CONFIG : DEFAULT_FIREBASE_CONFIG;
-  var app = initializeApp(firebaseConfig);
-  var auth = getAuth(app);
-  var db = initializeFirestore(app, { experimentalForceLongPolling: true });
-  var googleProvider = new GoogleAuthProvider();
-  var analytics = null;
-  isSupported().then((ok) => {
-    if (ok) {
-      analytics = getAnalytics(app);
-    }
-  }).catch(() => {
-  });
-  window.firebaseApp = app;
-  window.firebaseAuth = auth;
-  window.firebaseDb = db;
-  Object.defineProperty(window, "firebaseAnalytics", {
-    configurable: true,
-    enumerable: true,
-    get() {
-      return analytics;
-    }
-  });
-  window.firebaseLogEvent = (eventName, eventParams) => {
-    if (!analytics) return;
-    try {
-      logEvent(analytics, eventName, eventParams || {});
-    } catch (e) {
-    }
-  };
-  var _userReadyResolved = false;
-  window.firebaseUserReady = new Promise((resolve) => {
-    onAuthStateChanged(auth, (user) => {
-      if (user && !_userReadyResolved) {
-        _userReadyResolved = true;
-        resolve(user);
+  var firebaseConfig = typeof CONFIG_SECRETS !== "undefined" && CONFIG_SECRETS && CONFIG_SECRETS.FIREBASE_CONFIG ? CONFIG_SECRETS.FIREBASE_CONFIG : null;
+  if (!firebaseConfig || !firebaseConfig.apiKey) {
+    console.warn("[Firebase] Missing config. Cloud save, leaderboard, analytics, and remote config are disabled.");
+    window.firebaseApp = null;
+    window.firebaseAuth = null;
+    window.firebaseDb = null;
+    window.firebaseUserReady = Promise.resolve(null);
+    window.firebaseRemoteConfig = null;
+    window._remoteConfigReady = true;
+    window.firebaseRemoteConfigReady = Promise.resolve();
+    window.firebaseLogEvent = () => {
+    };
+    window.getRemoteConfigString = (key, defaultVal) => defaultVal;
+    window.MTCFirebase = {
+      async saveUserGameData() {
+      },
+      async loadUserGameData() {
+        return null;
+      },
+      async signInWithGoogle() {
+        throw new Error("Firebase config is not available.");
+      },
+      async signOut() {
+      },
+      async submitLeaderboard() {
+      },
+      async fetchLeaderboardTop() {
+        return [];
       }
-      try {
-        window.dispatchEvent(new CustomEvent("mtc-auth-changed", { detail: { user } }));
-      } catch (e) {
+    };
+  } else {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = initializeFirestore(app, { experimentalForceLongPolling: true });
+    const googleProvider = new GoogleAuthProvider();
+    let analytics = null;
+    isSupported().then((ok) => {
+      if (ok) {
+        analytics = getAnalytics(app);
+      }
+    }).catch(() => {
+    });
+    window.firebaseApp = app;
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    Object.defineProperty(window, "firebaseAnalytics", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return analytics;
       }
     });
-  });
-  signInAnonymously(auth).then((result) => {
-    console.log("[Firebase] Anonymous sign-in successful:", result.user.uid);
-  }).catch((err) => {
-    console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
-  });
-  var remoteConfig = getRemoteConfig(app);
-  remoteConfig.settings.minimumFetchIntervalMillis = 36e5;
-  remoteConfig.defaultConfig = {
-    shop_banner: "",
-    announcement: ""
-  };
-  window.firebaseRemoteConfig = remoteConfig;
-  window._remoteConfigReady = false;
-  window.firebaseRemoteConfigReady = fetchAndActivate(remoteConfig).then(() => {
-    window._remoteConfigReady = true;
-  }).catch(() => {
-    window._remoteConfigReady = true;
-  });
-  window.getRemoteConfigString = (key, defaultVal) => {
-    try {
-      if (!window.firebaseRemoteConfig) return defaultVal;
-      const v = getValue(window.firebaseRemoteConfig, key);
-      const s = v.asString();
-      return s || defaultVal;
-    } catch (e) {
-      return defaultVal;
-    }
-  };
-  window.MTCFirebase = {
-    async saveUserGameData(uid, payload) {
-      const ref = doc(db, "users", uid);
-      await setDoc(ref, {
-        ...payload,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-    },
-    async loadUserGameData(uid) {
-      const ref = doc(db, "users", uid);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) return null;
-      return snap.data();
-    },
-    async signInWithGoogle() {
-      const u = auth.currentUser;
-      if (u && u.isAnonymous) {
+    window.firebaseLogEvent = (eventName, eventParams) => {
+      if (!analytics) return;
+      try {
+        logEvent(analytics, eventName, eventParams || {});
+      } catch (e) {
+      }
+    };
+    let _userReadyResolved = false;
+    window.firebaseUserReady = new Promise((resolve) => {
+      onAuthStateChanged(auth, (user) => {
+        if (user && !_userReadyResolved) {
+          _userReadyResolved = true;
+          resolve(user);
+        }
         try {
-          await linkWithPopup(u, googleProvider);
-          return auth.currentUser;
-        } catch (err) {
-          console.warn("[Firebase] Linking failed, falling back to direct sign-in:", err.code || err);
+          window.dispatchEvent(new CustomEvent("mtc-auth-changed", { detail: { user } }));
+        } catch (e) {
+        }
+      });
+    });
+    signInAnonymously(auth).then((result) => {
+      console.log("[Firebase] Anonymous sign-in successful:", result.user.uid);
+    }).catch((err) => {
+      console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
+    });
+    const remoteConfig = getRemoteConfig(app);
+    remoteConfig.settings.minimumFetchIntervalMillis = 36e5;
+    remoteConfig.defaultConfig = {
+      shop_banner: "",
+      announcement: ""
+    };
+    window.firebaseRemoteConfig = remoteConfig;
+    window._remoteConfigReady = false;
+    window.firebaseRemoteConfigReady = fetchAndActivate(remoteConfig).then(() => {
+      window._remoteConfigReady = true;
+    }).catch(() => {
+      window._remoteConfigReady = true;
+    });
+    window.getRemoteConfigString = (key, defaultVal) => {
+      try {
+        if (!window.firebaseRemoteConfig) return defaultVal;
+        const v = getValue(window.firebaseRemoteConfig, key);
+        const s = v.asString();
+        return s || defaultVal;
+      } catch (e) {
+        return defaultVal;
+      }
+    };
+    window.MTCFirebase = {
+      async saveUserGameData(uid, payload) {
+        const ref = doc(db, "users", uid);
+        await setDoc(ref, {
+          ...payload,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      },
+      async loadUserGameData(uid) {
+        const ref = doc(db, "users", uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return null;
+        return snap.data();
+      },
+      async signInWithGoogle() {
+        const u = auth.currentUser;
+        if (u && u.isAnonymous) {
           try {
-            return await signInWithPopup(auth, googleProvider);
-          } catch (popupErr) {
-            if (popupErr.code === "auth/popup-blocked") {
-              alert("Browser \u0E1A\u0E25\u0E47\u0E2D\u0E01 Popup! \u0E42\u0E1B\u0E23\u0E14\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 Popup \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E04\u0E23\u0E31\u0E1A");
+            await linkWithPopup(u, googleProvider);
+            return auth.currentUser;
+          } catch (err) {
+            console.warn("[Firebase] Linking failed, falling back to direct sign-in:", err.code || err);
+            try {
+              return await signInWithPopup(auth, googleProvider);
+            } catch (popupErr) {
+              if (popupErr.code === "auth/popup-blocked") {
+                alert("Browser \u0E1A\u0E25\u0E47\u0E2D\u0E01 Popup! \u0E42\u0E1B\u0E23\u0E14\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 Popup \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E04\u0E23\u0E31\u0E1A");
+              }
+              throw popupErr;
             }
-            throw popupErr;
           }
         }
+        return await signInWithPopup(auth, googleProvider);
+      },
+      async signOut() {
+        await auth.signOut();
+      },
+      /**
+       * Leaderboard แบบ Spark: เขียน Firestore โดยตรง (กฎบังคับ Google + ขอบเขตคะแนน)
+       */
+      async submitLeaderboard(uid, score, wave) {
+        const u = auth.currentUser;
+        const displayName = u && u.displayName || u && u.email || "Player";
+        const photoURL = u && u.photoURL || "";
+        const ref = doc(db, "leaderboard", uid);
+        await setDoc(ref, {
+          uid,
+          score,
+          wave,
+          displayName,
+          photoURL,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      },
+      async fetchLeaderboardTop(limitCount) {
+        const q2 = query(
+          collection(db, "leaderboard"),
+          orderBy("score", "desc"),
+          limit(limitCount)
+        );
+        const snap = await getDocs(q2);
+        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       }
-      return await signInWithPopup(auth, googleProvider);
-    },
-    async signOut() {
-      await auth.signOut();
-    },
-    /**
-     * Leaderboard แบบ Spark: เขียน Firestore โดยตรง (กฎบังคับ Google + ขอบเขตคะแนน)
-     */
-    async submitLeaderboard(uid, score, wave) {
-      const u = auth.currentUser;
-      const displayName = u && u.displayName || u && u.email || "Player";
-      const photoURL = u && u.photoURL || "";
-      const ref = doc(db, "leaderboard", uid);
-      await setDoc(ref, {
-        uid,
-        score,
-        wave,
-        displayName,
-        photoURL,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-    },
-    async fetchLeaderboardTop(limitCount) {
-      const q2 = query(
-        collection(db, "leaderboard"),
-        orderBy("score", "desc"),
-        limit(limitCount)
-      );
-      const snap = await getDocs(q2);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    }
-  };
+    };
+  }
 })();
 /*! Bundled license information:
 

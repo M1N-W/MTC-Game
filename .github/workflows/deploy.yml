@@ -25,15 +25,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1  # Only fetch latest commit (faster)
-      
+
+      - name: Create Firebase runtime config
+        env:
+          FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
+        run: |
+          printf 'window.CONFIG_SECRETS = window.CONFIG_SECRETS || {};\n' > js/secrets.js
+          if [ -n "$FIREBASE_CONFIG_JSON" ]; then
+            printf 'window.CONFIG_SECRETS.FIREBASE_CONFIG = %s;\n' "$FIREBASE_CONFIG_JSON" >> js/secrets.js
+          fi
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-  
+
   # Deployment job
   deploy:
     environment:

@@ -32,21 +32,32 @@ import {
 } from 'firebase/firestore';
 import { getRemoteConfig, fetchAndActivate, getValue } from 'firebase/remote-config';
 
-const DEFAULT_FIREBASE_CONFIG = {
-    apiKey: 'AIzaSyD2VAzAEGDd1hVjHrlz0Yuym2_iPxQFhsI',
-    authDomain: 'mtc-game-d6c4e.firebaseapp.com',
-    projectId: 'mtc-game-d6c4e',
-    storageBucket: 'mtc-game-d6c4e.firebasestorage.app',
-    messagingSenderId: '565929955805',
-    appId: '1:565929955805:web:130dd0681079c91b6ba634',
-    measurementId: 'G-BRL2NRBHG6',
-};
-
 const firebaseConfig = (typeof CONFIG_SECRETS !== 'undefined'
     && CONFIG_SECRETS
     && CONFIG_SECRETS.FIREBASE_CONFIG)
     ? CONFIG_SECRETS.FIREBASE_CONFIG
-    : DEFAULT_FIREBASE_CONFIG;
+    : null;
+
+if (!firebaseConfig || !firebaseConfig.apiKey) {
+    console.warn('[Firebase] Missing config. Cloud save, leaderboard, analytics, and remote config are disabled.');
+    window.firebaseApp = null;
+    window.firebaseAuth = null;
+    window.firebaseDb = null;
+    window.firebaseUserReady = Promise.resolve(null);
+    window.firebaseRemoteConfig = null;
+    window._remoteConfigReady = true;
+    window.firebaseRemoteConfigReady = Promise.resolve();
+    window.firebaseLogEvent = () => {};
+    window.getRemoteConfigString = (key, defaultVal) => defaultVal;
+    window.MTCFirebase = {
+        async saveUserGameData() {},
+        async loadUserGameData() { return null; },
+        async signInWithGoogle() { throw new Error('Firebase config is not available.'); },
+        async signOut() {},
+        async submitLeaderboard() {},
+        async fetchLeaderboardTop() { return []; },
+    };
+} else {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -208,3 +219,4 @@ window.MTCFirebase = {
         return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
 };
+}

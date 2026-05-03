@@ -4,6 +4,20 @@
 
 ---
 
+## v3.44.10 — Firebase runtime config secret hardening
+
+*Released: May 3, 2026*
+
+Removes the publicly leaked Firebase Web API key from committed source and bundle output.
+
+- `js/firebase-init.js`: removed the hardcoded Firebase config fallback; Firebase now initializes only when `window.CONFIG_SECRETS.FIREBASE_CONFIG` is present, otherwise cloud save, leaderboard, analytics, and remote config fail soft.
+- `js/firebase-bundle.js`: rebuilt from source so the leaked key is no longer present in the shipped bundle.
+- `index.html`: loads ignored/generated `js/secrets.js` before `firebase-bundle.js`.
+- `.github/workflows/deploy.yml`: generates `js/secrets.js` during GitHub Pages deployment from repository secret `FIREBASE_CONFIG_JSON`.
+- `package.json` / `sw.js`: bumped cache/version alignment to `v3.44.10`.
+
+---
+
 ## v3.44.9 — CSS compat fixes + docs update
 
 *Released: April 27, 2026*
