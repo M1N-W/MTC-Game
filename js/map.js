@@ -1168,6 +1168,12 @@ class MapSystem {
         }
     }
 
+    _ensureSortedObjectBuffer() {
+        if (this._sortedObjects) return this._sortedObjects;
+        this._sortedObjects = [];
+        return this._sortedObjects;
+    }
+
     // PERF Phase 1: build the static grid from this.objects
     // Called once after generateCampusMap(). Objects never move so this is valid forever.
     _buildStaticGrid() {
@@ -1232,7 +1238,7 @@ class MapSystem {
 
         this.generateCampusMap();
         this._buildStaticGrid(); // PERF Phase 1: build once after map generation
-        this._sortedObjects.length = 0;
+        this._ensureSortedObjectBuffer().length = 0;
         this._objectsDirty = true;
         this._terrainCacheReady = false;
         this.initialized = true;
@@ -1827,15 +1833,15 @@ class MapSystem {
 
         const CULL = 80; // ลด 120→80 objects เล็กไม่ต้องรอ margin ใหญ่
         // Re-sort only when objects change (dirty flag) — ป้องกัน sort ทุกเฟรม
+        const sortedObjects = this._ensureSortedObjectBuffer();
         if (this._objectsDirty) {
-            const sorted = this._sortedObjects;
-            sorted.length = 0;
-            for (let i = 0; i < this.objects.length; i++) sorted.push(this.objects[i]);
-            sorted.sort(_sortMapObjectByY);
+            sortedObjects.length = 0;
+            for (let i = 0; i < this.objects.length; i++) sortedObjects.push(this.objects[i]);
+            sortedObjects.sort(_sortMapObjectByY);
             this._objectsDirty = false;
         }
-        for (let i = 0; i < this._sortedObjects.length; i++) {
-            const obj = this._sortedObjects[i];
+        for (let i = 0; i < sortedObjects.length; i++) {
+            const obj = sortedObjects[i];
             const screen = worldToScreen(obj.x, obj.y);
             if (screen.x + obj.w < -CULL || screen.x > CANVAS.width + CULL) continue;
             if (screen.y + obj.h < -CULL || screen.y > CANVAS.height + CULL) continue;
@@ -1974,7 +1980,7 @@ class MapSystem {
         }
     }
 
-    clear() { this.objects = []; this.mtcRoom = null; this.initialized = false; this._sortedObjects.length = 0; this._objectsDirty = true; }
+    clear() { this.objects = []; this.mtcRoom = null; this.initialized = false; this._ensureSortedObjectBuffer().length = 0; this._objectsDirty = true; }
     getObjects() { return this.objects; }
     isBlocked(x, y, radius = 0) { for (const obj of this.objects) if (obj.checkCollision(x, y, radius)) return true; return false; }
     findSafeSpawn(preferredX, preferredY, radius) {

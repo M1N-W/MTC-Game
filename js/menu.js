@@ -439,6 +439,8 @@ window._openStartModal = _openStartModal;
 function _closeStartModal() {
   const modal = document.getElementById("start-modal");
   if (!modal) return;
+  if (document.activeElement && modal.contains(document.activeElement))
+    document.activeElement.blur();
   modal.classList.remove("start-modal--open");
   modal.setAttribute("aria-hidden", "true");
 }

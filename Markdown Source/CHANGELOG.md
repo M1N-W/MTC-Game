@@ -4,6 +4,17 @@
 
 ---
 
+## v3.44.12 — Gameplay hotfix for map draw recovery
+
+*Released: May 22, 2026*
+
+- `js/map.js`: hardens the reusable draw-order buffer so legacy/null `_sortedObjects` state is repaired once before drawing instead of crashing the game loop.
+- `js/menu.js`: blurs focused start-modal controls before setting `aria-hidden="true"` to avoid browser accessibility warnings.
+- `js/secrets.js` (new): adds a public empty `CONFIG_SECRETS` fallback so static hosts no longer 404 before Firebase gracefully disables cloud features.
+- `sw.js` / `package.json` / `PROJECT_OVERVIEW.md`: bump release/cache alignment to `v3.44.12`.
+
+---
+
 ## v3.44.11 — MTC gameplay mechanics foundation
 
 *Released: May 22, 2026*
