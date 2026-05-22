@@ -472,7 +472,7 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("sw.js")
-      .then((r) => console.log("✅ ServiceWorker registered:", r.scope))
+      .then(() => {})
       .catch((e) => console.error("❌ ServiceWorker failed:", e));
   });
 }

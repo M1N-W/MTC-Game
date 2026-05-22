@@ -1,9 +1,10 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.44.10`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.44.11`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 ## Recent Changes
 
+- **Unreleased**: Added mechanics-only `MTC_CROSSHAIRS`, draw-only `js/systems/CrosshairSystem.js`, one-active-portal `js/systems/PortalSystem.js` wave transitions, config-driven slow-motion energy in `js/systems/TimeManager.js`, snapshot-only Data Hijack via `js/systems/BodySwapSystem.js`, bounded status overlays in `js/systems/AlertSystem.js`, capped terminal feedback via `js/systems/TerminalLog.js`, portal-gated 3-choice run patches plus boss-data reward pools via `js/systems/RunUpgradeSystem.js`, and Kao sniper-crit Hardlight Bridges via `js/systems/BridgeSystem.js`. MTC lore, character identities, and campus survival theme remain unchanged.
 - **v3.44.10**: Removed hardcoded Firebase Web API key from `js/firebase-init.js` / rebuilt `js/firebase-bundle.js`; `index.html` now loads ignored `js/secrets.js` before Firebase, and GitHub Pages deployment generates it from `FIREBASE_CONFIG_JSON`
 - **v3.44.9**: CSS border rollback (`char-select.css` reverts `color-mix` to `rgba` for wider browser compat), added `-webkit-user-select` in `shop.css`, trimmed Poom tutorial duration text, updated audit findings and walkthrough docs
 - **v3.44.0**: Fixed Try-Again boss spawn-camp bug (`GameState._syncAliases` now mirrors `window.boss`/`window.drone`; `resetRun()` clears `_bossSpawnTimer`; `WaveManager._startBossWave` stashes timer id and guards against firing outside `PLAYING`; `game.js _teardownRunState` aborts Domain singletons). Cached fog/dark radial gradients in `WaveManager` with canvas-size + alpha-bucket keys; early-out on low fog alpha. Admin console hardened: 10 cmd / 2 s rate limit, `localStorage` audit ring buffer (`mtc_admin_audit`), destructive-command (`reset` / `kill all` / `set wave`) `yes` confirm gate, new `audit` command. Admin command guards unified under `COMMAND_META` registry in `AdminSystem.js`. `EnemyRenderer` adds per-entity `_lodFar` flag (screen-distance from viewport center) that skips ambient outer glow rings in `drawEnemy` / `drawTank` / `drawMage`. `effects.js` audit confirmed all subsystems (Particle / FloatingText / HitMarker / Weather / Orbital / Decal / ShellCasing) use pooled acquire-release + hard cap + swap-pop + `clear()` hook.
@@ -79,18 +80,25 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 ### 2.4 Input, rendering, systems, orchestration
 
 1. `js/input.js`
-2. `js/rendering/PlayerRenderer.js`
-3. `js/rendering/BossRenderer.js`
-4. `js/rendering/EnemyRenderer.js`
-5. `js/systems/GameState.js`
-6. `js/systems/AdminSystem.js`
-7. `js/systems/ShopSystem.js`
-8. `js/systems/TimeManager.js`
-9. `js/systems/WaveManager.js`
-10. `js/systems/WorkerBridge.js`
-11. `js/game.js`
-12. `js/VersionManager.js`
-13. `js/menu.js`
+2. `js/systems/CrosshairSystem.js`
+3. `js/systems/PortalSystem.js`
+4. `js/systems/BodySwapSystem.js`
+5. `js/systems/AlertSystem.js`
+6. `js/systems/TerminalLog.js`
+7. `js/systems/RunUpgradeSystem.js`
+8. `js/systems/BridgeSystem.js`
+9. `js/rendering/PlayerRenderer.js`
+10. `js/rendering/BossRenderer.js`
+11. `js/rendering/EnemyRenderer.js`
+12. `js/systems/GameState.js`
+13. `js/systems/AdminSystem.js`
+14. `js/systems/ShopSystem.js`
+15. `js/systems/TimeManager.js`
+16. `js/systems/WaveManager.js`
+17. `js/systems/WorkerBridge.js`
+18. `js/game.js`
+18. `js/VersionManager.js`
+19. `js/menu.js`
 
 ### 2.5 Modular split entry points
 
@@ -109,7 +117,7 @@ The legacy `css/main.css` and `js/config.js` bundles have been retired. Their re
 | `css/tutorial.css` | Tutorial overlay layout and prompts |
 | `css/ui-extras.css` | Mobile UI, tooltips, loading, and game-over extras |
 | `css/update-toast.css` | Update-available toast banner (Reload / Dismiss) |
-| `js/balance.js` | `WAVE_SCHEDULE`, `BALANCE`, `GAME_CONFIG`, `VISUALS`, `ACHIEVEMENT_DEFS`, `MAP_CONFIG` |
+| `js/balance.js` | `WAVE_SCHEDULE`, `BOSS_ENCOUNTERS`, `MTC_CROSSHAIRS`, `MTC_TIME_ENERGY`, `BALANCE`, `GAME_CONFIG`, `VISUALS`, `ACHIEVEMENT_DEFS`, `MAP_CONFIG` |
 | `js/shop-items.js` | `SHOP_ITEMS` catalog |
 | `js/game-texts.js` | `GAME_TEXTS` localization and HUD copy |
 | `js/rendering/EnemyRenderer.js` | Enemy-only draw dispatcher and renderer helpers |

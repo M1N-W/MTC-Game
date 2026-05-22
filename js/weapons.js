@@ -1427,6 +1427,7 @@ class WeaponSystem {
         projOptions,
       );
       p.weaponKind = this.currentWeapon;
+      p.canCreateBridge = player.charId === "kao" && this.currentWeapon === "sniper" && isCrit;
       projectiles.push(p);
     }
 
@@ -1722,8 +1723,21 @@ class ProjectileManager {
       if (proj.pierce > 0 && !proj.hitSet) proj.hitSet = new Set();
 
       if (proj.team === "player") {
+        if (proj.canCreateBridge && typeof BridgeSystem !== "undefined" &&
+          typeof mapSystem !== "undefined" && typeof mapSystem.queryNearby === "function") {
+          const nearbyWalls = mapSystem.queryNearby(proj.x, proj.y, (proj.radius || 10) + 12);
+          for (let wi = 0; wi < nearbyWalls.length; wi++) {
+            const obj = nearbyWalls[wi];
+            if (!BridgeSystem.isBridgeTargetObject(obj)) continue;
+            if (!obj.checkCollision(proj.x, proj.y, proj.radius || 10)) continue;
+            BridgeSystem.tryCreateBridge(proj, { obj, x: proj.x, y: proj.y });
+            hit = true;
+            break;
+          }
+        }
+
         // ── PLAYER → BOSS collision ───────────────────────────────────
-        if (boss && !boss.dead && proj.checkCollision(boss)) {
+        if (!hit && boss && !boss.dead && proj.checkCollision(boss)) {
           if (!proj.hitSet || !proj.hitSet.has(boss)) {
             boss.takeDamage(proj.damage);
 

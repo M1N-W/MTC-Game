@@ -213,8 +213,6 @@ function _activateWaveEvent(type, wave) {
         const voiceLine = type === 'fog' ? '⚠ Radar offline...' : "⚡ They're moving fast!";
         window.UIManager.showVoiceBubble(voiceLine, window.player.x, window.player.y - 40);
     }
-
-    console.log(`[WaveManager] ${type.toUpperCase()} WAVE — wave ${wave}`);
 }
 
 function _deactivateWaveEvent() {
@@ -669,6 +667,13 @@ function startNextWave() {
     else { _startTrickle(count, wave); }
 }
 
+function isWaveClearReady() {
+    return (window.enemies || []).length === 0 &&
+        !window.boss &&
+        !(typeof GameState !== 'undefined' && GameState.waveSpawnLocked) &&
+        !window.isTrickleActive;
+}
+
 // ── Per-wave mutable state reset ─────────────────────────────────────────────
 function _resetWaveState() {
     if (window._glitchWaveHpBonus > 0 && window.player) {
@@ -870,6 +875,7 @@ window.spawnEnemies = spawnEnemies;
 window.updateWaveEvent = updateWaveEvent;
 window.drawWaveEvent = drawWaveEvent;
 window.applyWaveModifiersToEnemy = _applyWaveModifiersToEnemy;
+window.isWaveClearReady = isWaveClearReady;
 // NEW: Export boss wave helpers for external use
 window.getBossEncounterForWave = _getBossEncounterForWave;
 window.isBossWave = _isBossWave;

@@ -22627,8 +22627,7 @@ This typically indicates that your device does not have a healthy Internet conne
         }
       });
     });
-    signInAnonymously(auth).then((result) => {
-      console.log("[Firebase] Anonymous sign-in successful:", result.user.uid);
+    signInAnonymously(auth).then(() => {
     }).catch((err) => {
       console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
     });

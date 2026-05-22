@@ -76,8 +76,6 @@ window.WorkerBridge = {
                 console.warn('[WorkerBridge] Analyzer Worker error, falling back to main thread.', err);
                 this._isReady = false; // Graceful fallback
             };
-
-            console.log('[WorkerBridge] Analyzer Worker initialized successfully.');
         } catch (err) {
             console.warn('[WorkerBridge] Failed to initialize Worker (CORS?). Falling back to main thread.', err);
             this._isReady = false;

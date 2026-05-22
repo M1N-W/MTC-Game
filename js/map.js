@@ -523,6 +523,8 @@ class MapObject {
 
     resolveCollision(entity) {
         if (!this.solid) return;
+        if (typeof BridgeSystem !== 'undefined' &&
+            BridgeSystem.shouldSuppressCollision(entity, this)) return;
         const closestX = clamp(entity.x, this.x, this.x + this.w);
         const closestY = clamp(entity.y, this.y, this.y + this.h);
         const dx = entity.x - closestX, dy = entity.y - closestY;
@@ -1138,6 +1140,7 @@ class MTCRoom {
 // ════════════════════════════════════════════════════════════
 // PERF: static grid cell size — matches SpatialGrid in weapons.js for consistency
 const _MAP_GRID_CELL = 128;
+function _sortMapObjectByY(a, b) { return a.y - b.y; }
 
 class MapSystem {
     constructor() {
@@ -1149,6 +1152,7 @@ class MapSystem {
         // PERF Phase 1: static spatial grid for map objects (never move)
         this._staticGrid = new Map(); // cellKey → MapObject[]
         this._staticGridResults = [];  // reusable query result buffer
+        this._sortedObjects = [];      // reusable draw-order buffer
         this._terrainCacheCanvas = null;
         this._terrainCacheCtx = null;
         this._terrainCacheReady = false;
@@ -1228,7 +1232,7 @@ class MapSystem {
 
         this.generateCampusMap();
         this._buildStaticGrid(); // PERF Phase 1: build once after map generation
-        this._sortedObjects = null;
+        this._sortedObjects.length = 0;
         this._objectsDirty = true;
         this._terrainCacheReady = false;
         this.initialized = true;
@@ -1823,11 +1827,15 @@ class MapSystem {
 
         const CULL = 80; // ลด 120→80 objects เล็กไม่ต้องรอ margin ใหญ่
         // Re-sort only when objects change (dirty flag) — ป้องกัน sort ทุกเฟรม
-        if (!this._sortedObjects || this._objectsDirty) {
-            this._sortedObjects = [...this.objects].sort((a, b) => a.y - b.y);
+        if (this._objectsDirty) {
+            const sorted = this._sortedObjects;
+            sorted.length = 0;
+            for (let i = 0; i < this.objects.length; i++) sorted.push(this.objects[i]);
+            sorted.sort(_sortMapObjectByY);
             this._objectsDirty = false;
         }
-        for (const obj of this._sortedObjects) {
+        for (let i = 0; i < this._sortedObjects.length; i++) {
+            const obj = this._sortedObjects[i];
             const screen = worldToScreen(obj.x, obj.y);
             if (screen.x + obj.w < -CULL || screen.x > CANVAS.width + CULL) continue;
             if (screen.y + obj.h < -CULL || screen.y > CANVAS.height + CULL) continue;
@@ -1954,7 +1962,7 @@ class MapSystem {
                 if (typeof addScreenShake === 'function') addScreenShake(5);
             } else { surviving.push(obj); }
         }
-        this.objects = surviving; this._sortedObjects = null; this._objectsDirty = true;
+        this.objects = surviving; this._objectsDirty = true;
 
         if (this.mtcRoom) {
             const r = this.mtcRoom;
@@ -1966,7 +1974,7 @@ class MapSystem {
         }
     }
 
-    clear() { this.objects = []; this.mtcRoom = null; this.initialized = false; this._sortedObjects = null; this._objectsDirty = true; }
+    clear() { this.objects = []; this.mtcRoom = null; this.initialized = false; this._sortedObjects.length = 0; this._objectsDirty = true; }
     getObjects() { return this.objects; }
     isBlocked(x, y, radius = 0) { for (const obj of this.objects) if (obj.checkCollision(x, y, radius)) return true; return false; }
     findSafeSpawn(preferredX, preferredY, radius) {

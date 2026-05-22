@@ -59,6 +59,9 @@ const GameState = {
     timeScale: 1.0,
     isSlowMotion: false,
     slowMoEnergy: 1.0,
+    slowMoCurrentEnergy: 100,
+    slowMoMaxEnergy: 100,
+    slowMoMinActivateEnergy: 20,
 
     // ── Glitch Wave ───────────────────────────────────────────
     isGlitchWave: false,
@@ -100,6 +103,9 @@ const GameState = {
         this.hitStopTimer = 0;
         this.timeScale = 1.0;
         this.isSlowMotion = false;
+        this.slowMoMaxEnergy = (typeof MTC_TIME_ENERGY !== 'undefined' && MTC_TIME_ENERGY.maxEnergy) || 100;
+        this.slowMoMinActivateEnergy = (typeof MTC_TIME_ENERGY !== 'undefined' && MTC_TIME_ENERGY.minActivateEnergy) || 20;
+        this.slowMoCurrentEnergy = this.slowMoMaxEnergy;
         this.slowMoEnergy = 1.0;
 
         this.isGlitchWave = false;
@@ -133,6 +139,9 @@ const GameState = {
         window.timeScale = this.timeScale;
         window.isSlowMotion = this.isSlowMotion;
         window.slowMoEnergy = this.slowMoEnergy;
+        window.slowMoCurrentEnergy = this.slowMoCurrentEnergy;
+        window.slowMoMaxEnergy = this.slowMoMaxEnergy;
+        window.slowMoMinActivateEnergy = this.slowMoMinActivateEnergy;
         window.isGlitchWave = this.isGlitchWave;
         window.glitchIntensity = this.glitchIntensity;
         window.controlsInverted = this.controlsInverted;

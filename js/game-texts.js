@@ -161,8 +161,8 @@ const GAME_TEXTS = {
         droneOnline: `🤖 DRONE DEPLOYED`,
         droneOverdrive: `🔥 DRONE OVERDRIVE!`,
         // ── Kao skill texts ──
-        kaoWeaponAwaken: `⚡ WEAPON MASTER!`,
-        kaoTeleport: `⚡ BLINK READY`,
+        kaoWeaponAwaken: `🔫 WEAPON MASTER!`,
+        kaoTeleport: `⚡ BLINK's READY`,
         kaoClones: `👥 PHANTOM CLONE!`,
         kaoFreeStealth: `👻 FREE STEALTH`,
         // ── Poom — Garuda & Cosmic Balance texts ──

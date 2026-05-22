@@ -4,6 +4,26 @@
 
 ---
 
+## v3.44.11 — MTC gameplay mechanics foundation
+
+*Released: May 22, 2026*
+
+- `js/balance.js`: added mechanics-only `MTC_CROSSHAIRS` config for per-character custom crosshairs without changing MTC lore or character identities.
+- `js/game-texts.js`: keeps existing MTC UI and story text authoritative with no crossover lore copy.
+- `js/systems/CrosshairSystem.js` (new): adds a draw-only geometric MTC crosshair renderer and gameplay-only browser cursor hiding.
+- `js/systems/PortalSystem.js` (new): adds a one-active-portal wave transition gate with school-tech anomaly placeholder visuals.
+- `js/systems/TimeManager.js`, `js/systems/GameState.js`, and `js/balance.js`: add config-driven 0-100 slow-motion energy with activation threshold, drain, recharge, forced shutdown at zero, and reset hooks.
+- `js/systems/BodySwapSystem.js` (new), `js/entities/enemy.js`, and `js/game.js`: add Data Hijack snapshots from eligible defeated enemies, `F` activation, energy cost integration, timed stat restore, and glitch-ring placeholder feedback.
+- `js/systems/AlertSystem.js` and `js/systems/TerminalLog.js` (new): add bounded MTC system-status overlays and a capped terminal-style DOM log for portal and Data Hijack feedback.
+- `js/systems/RunUpgradeSystem.js` (new): adds 3-choice system patch upgrades after portal transitions, boss-data reward pools after boss clears, DOM-only selection, terminal install logs, and run-reset cleanup.
+- `js/systems/BridgeSystem.js` (new), `js/map.js`, and `js/weapons.js`: add Kao sniper-crit Hardlight Bridges that temporarily suppress safe internal obstacle collision without rebuilding the map grid.
+- `js/game.js`, `js/systems/WaveManager.js`, and `js/entities/boss/BossBase.js`: route normal and boss wave clears through the portal before advancing waves.
+- `index.html`, `Debug.html`, and `sw.js`: load and precache the new runtime systems in dependency order.
+- `js/map.js`: replaces the dirty object render-order spread copy with a persistent in-place draw-order buffer and cached y-axis comparator.
+- `sw.js` / `package.json` / `PROJECT_OVERVIEW.md`: bump release/cache alignment to `v3.44.11`.
+
+---
+
 ## v3.44.10 — Firebase runtime config secret hardening
 
 *Released: May 3, 2026*

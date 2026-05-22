@@ -9,7 +9,7 @@
 //  Release notes belong in Markdown Source/CHANGELOG.md, not here.
 // ═══════════════════════════════════════════════════════════════════
 // AUTO-GEN:START
-const CACHE_NAME = "mtc-cache-v3.44.10";
+const CACHE_NAME = "mtc-cache-v3.44.11";
 
 const urlsToCache = [
   "./",
@@ -57,11 +57,18 @@ const urlsToCache = [
   "./js/rendering/PlayerRenderer.js",
   "./js/shop-items.js",
   "./js/systems/AdminSystem.js",
+  "./js/systems/AlertSystem.js",
+  "./js/systems/BridgeSystem.js",
+  "./js/systems/BodySwapSystem.js",
   "./js/systems/CloudSaveSystem.js",
+  "./js/systems/CrosshairSystem.js",
   "./js/systems/GameState.js",
   "./js/systems/LeaderboardUI.js",
+  "./js/systems/PortalSystem.js",
+  "./js/systems/RunUpgradeSystem.js",
   "./js/systems/ShopSystem.js",
   "./js/systems/SkillRegistry.js",
+  "./js/systems/TerminalLog.js",
   "./js/systems/TimeManager.js",
   "./js/systems/WaveManager.js",
   "./js/systems/WorkerBridge.js",

@@ -6,12 +6,17 @@
 // ══════════════════════════════════════════════════════════════
 
 // ─── Constants (immutable — safe as local consts) ─────────────
-const SLOW_MO_TIMESCALE = 0.30;
-const SLOW_MO_DRAIN_RATE = 0.14;
-const SLOW_MO_RECHARGE_RATE = 0.07;
+const TIME_ENERGY_CONFIG = (typeof MTC_TIME_ENERGY !== 'undefined') ? MTC_TIME_ENERGY : {};
+const SLOW_MO_MAX_ENERGY = TIME_ENERGY_CONFIG.maxEnergy || 100;
+const SLOW_MO_MIN_ACTIVATE_ENERGY = TIME_ENERGY_CONFIG.minActivateEnergy || 20;
+const SLOW_MO_TIMESCALE = TIME_ENERGY_CONFIG.slowScale || 0.30;
+const SLOW_MO_DRAIN_RATE = TIME_ENERGY_CONFIG.drainPerSecond || 24;
+const SLOW_MO_RECHARGE_RATE = TIME_ENERGY_CONFIG.rechargePerSecond || 16;
 const SM_BAR_W = 180;
 const SM_BAR_H = 8;
 
+window.SLOW_MO_MAX_ENERGY = SLOW_MO_MAX_ENERGY;
+window.SLOW_MO_MIN_ACTIVATE_ENERGY = SLOW_MO_MIN_ACTIVATE_ENERGY;
 window.SLOW_MO_TIMESCALE = SLOW_MO_TIMESCALE;
 window.SLOW_MO_DRAIN_RATE = SLOW_MO_DRAIN_RATE;
 window.SLOW_MO_RECHARGE_RATE = SLOW_MO_RECHARGE_RATE;
@@ -21,6 +26,9 @@ window.SM_BAR_H = SM_BAR_H;
 // ─── Mutable state — initialised on window directly ───────────
 window.timeScale = 1.0;
 window.isSlowMotion = false;
+window.slowMoMaxEnergy = SLOW_MO_MAX_ENERGY;
+window.slowMoMinActivateEnergy = SLOW_MO_MIN_ACTIVATE_ENERGY;
+window.slowMoCurrentEnergy = SLOW_MO_MAX_ENERGY;
 window.slowMoEnergy = 1.0;
 window.hitStopTimer = 0;
 
@@ -40,9 +48,9 @@ window.triggerHitStop = (ms) => {
 
 let _smFlashAlpha = 0;   // activation flash  0→1→0
 let _smLetterboxH = 0;   // cinematic bar height in px (animated)
-let _smRipples = [];  // [{r, alpha}] — expanded in _smUpdateVisuals
+let _smRipples = [];  // bounded active pool refs, expanded in updateSlowMoVisuals()
 let _smRippleTimer = 0;   // seconds until next ripple spawn
-let _smStreaks = [];  // [{angle, r, len, alpha, drift, speed}]
+let _smStreaks = [];  // bounded active pool refs
 
 const SM_LETTERBOX_TARGET = 36;   // px  — full letterbox height
 const SM_LETTERBOX_SPEED = 220;  // px/s — slide animation speed
@@ -50,24 +58,58 @@ const SM_ARC_R = 38;   // px  — circular arc radius
 const SM_ARC_STROKE = 6;    // px  — arc stroke width
 const SM_RIPPLE_INTERVAL = 0.22; // s   — seconds between ripple rings
 const SM_RIPPLE_MAX_R = 260;  // px  — ripple fade-out radius
+const SM_RIPPLE_MAX = 8;
 const SM_STREAK_MAX = 14;   // max simultaneous streak particles
-
-// Wall-clock timestamp — for real-dt so visuals aren't slowed by timeScale
-let _smLastNow = 0;
+const SM_CORNER_X = [0, 1, 1, 0];
+const SM_CORNER_Y = [0, 0, 1, 1];
+const _smScreenFallback = { x: 0, y: 0 };
+const _smRipplePool = [];
+const _smStreakPool = [];
+for (let i = 0; i < SM_RIPPLE_MAX; i++) _smRipplePool.push({ active: false, r: 0, alpha: 0 });
+for (let i = 0; i < SM_STREAK_MAX; i++) _smStreakPool.push({ active: false, angle: 0, r: 0, len: 0, alpha: 0, drift: 0, speed: 0 });
+let _slowMoMaxEnergy = SLOW_MO_MAX_ENERGY;
 
 // ══════════════════════════════════════════════════════════════
 // 🕐 BULLET TIME — TOGGLE & TICK
 // ══════════════════════════════════════════════════════════════
 
+function _syncEnergyState(currentEnergy) {
+    const clamped = Math.max(0, Math.min(_slowMoMaxEnergy, currentEnergy));
+    window.slowMoCurrentEnergy = clamped;
+    window.slowMoMaxEnergy = _slowMoMaxEnergy;
+    window.slowMoMinActivateEnergy = SLOW_MO_MIN_ACTIVATE_ENERGY;
+    window.slowMoEnergy = clamped / _slowMoMaxEnergy;
+    if (typeof GameState !== 'undefined') {
+        GameState.slowMoCurrentEnergy = clamped;
+        GameState.slowMoMaxEnergy = _slowMoMaxEnergy;
+        GameState.slowMoMinActivateEnergy = SLOW_MO_MIN_ACTIVATE_ENERGY;
+        GameState.slowMoEnergy = window.slowMoEnergy;
+    }
+    return clamped;
+}
+
+function _setSlowMotionActive(active) {
+    window.isSlowMotion = active;
+    window.timeScale = active ? SLOW_MO_TIMESCALE : 1.0;
+    if (typeof GameState !== 'undefined') {
+        GameState.isSlowMotion = active;
+        GameState.timeScale = window.timeScale;
+    }
+}
+
 function toggleSlowMotion() {
     if (!window.isSlowMotion) {
-        if (window.slowMoEnergy < 0.05) {
+        if (window.slowMoCurrentEnergy < SLOW_MO_MIN_ACTIVATE_ENERGY) {
+            if (window.player && typeof AlertSystem !== 'undefined') {
+                AlertSystem.emit(window.player, 'warning', { text: '[LOW ENERGY]' });
+            }
+            if (typeof TerminalLog !== 'undefined') {
+                TerminalLog.push({ sender: 'TIME CORE', text: 'ENERGY BELOW ACTIVATION THRESHOLD', type: 'warn' });
+            }
             if (window.player) spawnFloatingText(GAME_TEXTS.time.noEnergy, window.player.x, window.player.y - 60, '#ef4444', 20);
             return;
         }
-        window.isSlowMotion = true;
-        window.timeScale = SLOW_MO_TIMESCALE;
-        if (typeof GameState !== 'undefined') { GameState.isSlowMotion = true; GameState.timeScale = SLOW_MO_TIMESCALE; }
+        _setSlowMotionActive(true);
         addScreenShake(6);
 
         // 🎨 Activation flash + immediate ripple
@@ -77,27 +119,62 @@ function toggleSlowMotion() {
         if (window.player) spawnFloatingText(GAME_TEXTS.time.bulletTime, window.player.x, window.player.y - 70, '#00e5ff', 26);
         if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
     } else {
-        window.isSlowMotion = false;
-        window.timeScale = 1.0;
-        if (typeof GameState !== 'undefined') { GameState.isSlowMotion = false; GameState.timeScale = 1.0; }
+        _setSlowMotionActive(false);
         if (window.player) spawnFloatingText(GAME_TEXTS.time.normalSpeed, window.player.x, window.player.y - 55, '#34d399', 20);
     }
 }
 
 function _tickSlowMoEnergy(realDt) {
     if (window.isSlowMotion) {
-        window.slowMoEnergy = Math.max(0, window.slowMoEnergy - SLOW_MO_DRAIN_RATE * realDt);
-        if (typeof GameState !== 'undefined') GameState.slowMoEnergy = window.slowMoEnergy;
-        if (window.slowMoEnergy <= 0) {
-            window.isSlowMotion = false;
-            window.timeScale = 1.0;
-            if (typeof GameState !== 'undefined') { GameState.isSlowMotion = false; GameState.timeScale = 1.0; GameState.slowMoEnergy = 0; }
+        const current = _syncEnergyState(window.slowMoCurrentEnergy - SLOW_MO_DRAIN_RATE * realDt);
+        if (current <= 0) {
+            _setSlowMotionActive(false);
+            if (window.player && typeof AlertSystem !== 'undefined') {
+                AlertSystem.emit(window.player, 'warning', { text: '[ENERGY EMPTY]' });
+            }
+            if (typeof TerminalLog !== 'undefined') {
+                TerminalLog.push({ sender: 'TIME CORE', text: 'ENERGY DEPLETED', type: 'warn' });
+            }
             if (window.player) spawnFloatingText(GAME_TEXTS.time.energyDepleted, window.player.x, window.player.y - 60, '#ef4444', 20);
         }
     } else {
-        window.slowMoEnergy = Math.min(1.0, window.slowMoEnergy + SLOW_MO_RECHARGE_RATE * realDt);
-        if (typeof GameState !== 'undefined') GameState.slowMoEnergy = window.slowMoEnergy;
+        _syncEnergyState(window.slowMoCurrentEnergy + SLOW_MO_RECHARGE_RATE * realDt);
     }
+}
+
+function resetSlowMoEnergy() {
+    _setSlowMotionActive(false);
+    _syncEnergyState(_slowMoMaxEnergy);
+    _smFlashAlpha = 0;
+    _smLetterboxH = 0;
+    _smRippleTimer = 0;
+    for (let i = 0; i < _smRipplePool.length; i++) _smRipplePool[i].active = false;
+    for (let i = 0; i < _smStreakPool.length; i++) _smStreakPool[i].active = false;
+    _smRipples.length = 0;
+    _smStreaks.length = 0;
+}
+
+function addSlowMoMaxEnergy(amount) {
+    if (!Number.isFinite(amount)) return false;
+    _slowMoMaxEnergy = Math.max(SLOW_MO_MAX_ENERGY, _slowMoMaxEnergy + amount);
+    _syncEnergyState(window.slowMoCurrentEnergy + amount);
+    return true;
+}
+
+function resetSlowMoEnergyTuning() {
+    _slowMoMaxEnergy = SLOW_MO_MAX_ENERGY;
+    resetSlowMoEnergy();
+}
+
+function canUseTimeEnergy(amount) {
+    return Number.isFinite(amount) && amount >= 0 && window.slowMoCurrentEnergy >= amount;
+}
+
+function consumeTimeEnergy(amount) {
+    if (!canUseTimeEnergy(amount)) return false;
+    _syncEnergyState(window.slowMoCurrentEnergy - amount);
+    if (window.isSlowMotion && window.slowMoCurrentEnergy <= 0) _setSlowMotionActive(false);
+    return true;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -105,7 +182,7 @@ function _tickSlowMoEnergy(realDt) {
 // Uses real wall-clock dt so animations are never slowed by timeScale.
 // ══════════════════════════════════════════════════════════════
 
-function _smUpdateVisuals(realDt) {
+function updateSlowMoVisuals(realDt) {
     // Activation flash decay
     if (_smFlashAlpha > 0) _smFlashAlpha = Math.max(0, _smFlashAlpha - realDt * 3.5);
 
@@ -118,9 +195,17 @@ function _smUpdateVisuals(realDt) {
     // Ripple rings — spawn + age (swap-and-pop, no splice)
     if (window.isSlowMotion) {
         _smRippleTimer -= realDt;
-        if (_smRippleTimer <= 0) {
+        if (_smRippleTimer <= 0 && _smRipples.length < SM_RIPPLE_MAX) {
             _smRippleTimer = SM_RIPPLE_INTERVAL;
-            _smRipples.push({ r: 20, alpha: 0.7 });
+            for (let i = 0; i < _smRipplePool.length; i++) {
+                const rp = _smRipplePool[i];
+                if (rp.active) continue;
+                rp.active = true;
+                rp.r = 20;
+                rp.alpha = 0.7;
+                _smRipples.push(rp);
+                break;
+            }
         }
     }
     for (let i = _smRipples.length - 1; i >= 0; i--) {
@@ -128,6 +213,7 @@ function _smUpdateVisuals(realDt) {
         rp.r += realDt * 180;
         rp.alpha -= realDt * 1.1;
         if (rp.alpha <= 0 || rp.r > SM_RIPPLE_MAX_R) {
+            rp.active = false;
             _smRipples[i] = _smRipples[_smRipples.length - 1];
             _smRipples.pop();
         }
@@ -135,14 +221,19 @@ function _smUpdateVisuals(realDt) {
 
     // Streak particles — spawn + age (swap-and-pop)
     if (window.isSlowMotion && _smStreaks.length < SM_STREAK_MAX && Math.random() < 0.35) {
-        _smStreaks.push({
-            angle: Math.random() * Math.PI * 2,
-            r: 18 + Math.random() * 22,
-            len: 12 + Math.random() * 18,
-            alpha: 0.55 + Math.random() * 0.35,
-            drift: (Math.random() - 0.5) * 1.2,
-            speed: 30 + Math.random() * 50,
-        });
+        for (let i = 0; i < _smStreakPool.length; i++) {
+            const st = _smStreakPool[i];
+            if (st.active) continue;
+            st.active = true;
+            st.angle = Math.random() * Math.PI * 2;
+            st.r = 18 + Math.random() * 22;
+            st.len = 12 + Math.random() * 18;
+            st.alpha = 0.55 + Math.random() * 0.35;
+            st.drift = (Math.random() - 0.5) * 1.2;
+            st.speed = 30 + Math.random() * 50;
+            _smStreaks.push(st);
+            break;
+        }
     }
     for (let i = _smStreaks.length - 1; i >= 0; i--) {
         const s = _smStreaks[i];
@@ -150,6 +241,7 @@ function _smUpdateVisuals(realDt) {
         s.angle += s.drift * realDt;
         s.alpha -= realDt * (window.isSlowMotion ? 1.4 : 3.0);
         if (s.alpha <= 0 || s.r > 90) {
+            s.active = false;
             _smStreaks[i] = _smStreaks[_smStreaks.length - 1];
             _smStreaks.pop();
         }
@@ -172,44 +264,30 @@ function drawSlowMoOverlay() {
     const H = CANVAS.height;
     const now = performance.now();
 
-    // Real-time dt — unaffected by timeScale
-    const realDt = Math.min(0.05, _smLastNow > 0 ? (now - _smLastNow) / 1000 : 0);
-    _smLastNow = now;
-    _smUpdateVisuals(realDt);
-
     // ── 1. MULTI-LAYER VIGNETTE ────────────────────────────────────────
     if (window.isSlowMotion || _smFlashAlpha > 0) {
         CTX.save();
 
-        // Dark outer vignette
-        const vig1 = CTX.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.82);
-        vig1.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        vig1.addColorStop(0.60, 'rgba(0, 10, 20, 0.10)');
-        vig1.addColorStop(1, 'rgba(0, 0, 10, 0.60)');
-        CTX.fillStyle = vig1;
+        // Dark overlay: solid fill avoids per-frame CanvasGradient allocation.
+        CTX.fillStyle = 'rgba(0, 4, 12, 0.30)';
         CTX.fillRect(0, 0, W, H);
 
-        // Animated cyan inner bloom — breathing pulse
+        // Animated cyan screen wash — breathing pulse
         if (window.isSlowMotion) {
             const pulse = 0.5 + Math.sin(now / 280) * 0.5;
             const vigAlpha = 0.08 + pulse * 0.06;
-            const vig2 = CTX.createRadialGradient(W / 2, H / 2, H * 0.05, W / 2, H / 2, H * 0.72);
-            vig2.addColorStop(0, `rgba(0, 229, 255, ${vigAlpha})`);
-            vig2.addColorStop(0.5, `rgba(0, 180, 240, ${vigAlpha * 0.4})`);
-            vig2.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            CTX.fillStyle = vig2;
+            CTX.fillStyle = `rgba(0, 180, 240, ${vigAlpha * 0.22})`;
             CTX.fillRect(0, 0, W, H);
 
             // 4-corner accent glows
             const cornerR = Math.min(W, H) * 0.38;
             const cAlpha = 0.12 + pulse * 0.10;
-            [[0, 0], [W, 0], [W, H], [0, H]].forEach(([cx, cy]) => {
-                const cg = CTX.createRadialGradient(cx, cy, 0, cx, cy, cornerR);
-                cg.addColorStop(0, `rgba(0, 229, 255, ${cAlpha})`);
-                cg.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                CTX.fillStyle = cg;
-                CTX.fillRect(0, 0, W, H);
-            });
+            CTX.fillStyle = `rgba(0, 229, 255, ${cAlpha * 0.18})`;
+            for (let i = 0; i < 4; i++) {
+                const cx = SM_CORNER_X[i] * W;
+                const cy = SM_CORNER_Y[i] * H;
+                CTX.fillRect(cx - cornerR * 0.5, cy - cornerR * 0.5, cornerR, cornerR);
+            }
         }
         CTX.restore();
     }
@@ -294,7 +372,8 @@ function drawSlowMoOverlay() {
     if (_smRipples.length > 0 && window.player) {
         const sc = typeof worldToScreen === 'function'
             ? worldToScreen(window.player.x, window.player.y)
-            : { x: W / 2, y: H / 2 };
+            : _smScreenFallback;
+        if (sc === _smScreenFallback) { sc.x = W / 2; sc.y = H / 2; }
 
         CTX.save();
         for (let i = 0; i < _smRipples.length; i++) {
@@ -322,7 +401,8 @@ function drawSlowMoOverlay() {
     if (_smStreaks.length > 0 && window.player) {
         const sc = typeof worldToScreen === 'function'
             ? worldToScreen(window.player.x, window.player.y)
-            : { x: W / 2, y: H / 2 };
+            : _smScreenFallback;
+        if (sc === _smScreenFallback) { sc.x = W / 2; sc.y = H / 2; }
 
         CTX.save();
         for (let i = 0; i < _smStreaks.length; i++) {
@@ -332,15 +412,10 @@ function drawSlowMoOverlay() {
             const ex = sc.x + Math.cos(s.angle) * (s.r - s.len);
             const ey = sc.y + Math.sin(s.angle) * (s.r - s.len);
 
-            const g = CTX.createLinearGradient(ex, ey, sx, sy);
-            g.addColorStop(0, `rgba(0, 229, 255, 0)`);
-            g.addColorStop(0.4, `rgba(0, 229, 255, ${s.alpha * 0.4})`);
-            g.addColorStop(1, `rgba(180, 245, 255, ${s.alpha})`);
-
             CTX.beginPath();
             CTX.moveTo(ex, ey);
             CTX.lineTo(sx, sy);
-            CTX.strokeStyle = g;
+            CTX.strokeStyle = `rgba(180, 245, 255, ${s.alpha})`;
             CTX.lineWidth = 1.5 + s.alpha;
             CTX.shadowBlur = 5;
             CTX.shadowColor = '#00e5ff';
@@ -445,7 +520,7 @@ function drawSlowMoOverlay() {
         CTX.fillStyle = window.isSlowMotion
             ? `rgba(0, 229, 255, ${0.55 + pulse * 0.3})`
             : 'rgba(0, 180, 220, 0.35)';
-        CTX.fillText('BULLET TIME', cx, cy + R + 14);
+        CTX.fillText('TIME ENERGY', cx, cy + R + 14);
 
         CTX.restore();
     }
@@ -476,5 +551,11 @@ function _roundRectPath(ctx, x, y, w, h, r) {
 
 window.toggleSlowMotion = toggleSlowMotion;
 window._tickSlowMoEnergy = _tickSlowMoEnergy;
+window.resetSlowMoEnergy = resetSlowMoEnergy;
+window.addSlowMoMaxEnergy = addSlowMoMaxEnergy;
+window.resetSlowMoEnergyTuning = resetSlowMoEnergyTuning;
+window.canUseTimeEnergy = canUseTimeEnergy;
+window.consumeTimeEnergy = consumeTimeEnergy;
+window.updateSlowMoVisuals = updateSlowMoVisuals;
 window.drawSlowMoOverlay = drawSlowMoOverlay;
 window._roundRectPath = _roundRectPath;

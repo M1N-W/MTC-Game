@@ -795,7 +795,11 @@ class EnemyBase extends Entity {
     }
 
 
+    const wasAlive = !this.dead;
     this.health.takeDamage(amt, player);
+    if (wasAlive && this.dead && typeof BodySwapSystem !== "undefined") {
+      BodySwapSystem.capture(this, player);
+    }
 
 
   }

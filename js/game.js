@@ -87,6 +87,9 @@ let _bgGradTop = '', _bgGradBot = '';
 
 // ── Achievement throttle ─────────────────────────────────────
 let _achFrame = 0;
+let _pendingPortalTargetWave = 0;
+let _pendingPortalWasBoss = false;
+const _portalSpawnRequest = { x: 0, y: 0, targetWave: 1, mapId: 'campus', isBossWave: false };
 
 // PERF Phase 6: skill icon DOM update throttle — every 2nd frame
 let _skillIconFrame = 0;
@@ -154,6 +157,7 @@ function gameLoop(now) {
     if (GameState.phase === 'PLAYING') {
         // BUG-3 FIX: guard in case TimeManager.js hasn't loaded yet
         if (typeof _tickSlowMoEnergy === 'function') _tickSlowMoEnergy(dt);
+        if (typeof updateSlowMoVisuals === 'function') updateSlowMoVisuals(dt);
     }
 
     const scaledDt = dt * GameState.timeScale;
@@ -213,9 +217,93 @@ function triggerHitStop(duration = 0.05) {
 }
 window.triggerHitStop = triggerHitStop;
 
+function _advanceToWave(targetWave) {
+    if (!Number.isFinite(targetWave)) return;
+    setWave(targetWave);
+    if (getWave() > BALANCE.waves.maxWaves) {
+        window.endGame('victory');
+        return;
+    }
+    Achievements.check('wave_1');
+    if (typeof startNextWave === 'function') startNextWave();
+}
+
+function requestWavePortal(targetWave, options) {
+    if (!Number.isFinite(targetWave)) return;
+    const isBossWaveClear = !!(options && options.isBossWave);
+    if (targetWave > BALANCE.waves.maxWaves) {
+        window.endGame('victory');
+        return;
+    }
+    if (typeof PortalSystem === 'undefined') {
+        _advanceToWave(targetWave);
+        return;
+    }
+    if (PortalSystem.isActive()) return;
+    const clearReady = (typeof isWaveClearReady === 'function')
+        ? isWaveClearReady()
+        : window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive;
+    if (!clearReady) {
+        _pendingPortalTargetWave = targetWave;
+        _pendingPortalWasBoss = _pendingPortalWasBoss || isBossWaveClear;
+        return;
+    }
+
+    const p = window.player;
+    const bounds = GAME_CONFIG.physics.worldBounds || 1500;
+    const baseX = p ? p.x + 120 : 0;
+    const baseY = p ? p.y : 0;
+    _portalSpawnRequest.x = Math.max(-bounds + 120, Math.min(bounds - 120, baseX));
+    _portalSpawnRequest.y = Math.max(-bounds + 120, Math.min(bounds - 120, baseY));
+    _portalSpawnRequest.targetWave = targetWave;
+    _portalSpawnRequest.mapId = 'campus';
+    _portalSpawnRequest.isBossWave = _pendingPortalWasBoss || isBossWaveClear;
+    _pendingPortalWasBoss = false;
+    PortalSystem.spawn(_portalSpawnRequest);
+
+    if (typeof TerminalLog !== 'undefined') {
+        TerminalLog.push({ sender: 'SYSTEM', text: `ANOMALY GATE OPEN -> WAVE ${targetWave}`, type: 'info' });
+    }
+    if (typeof spawnFloatingText === 'function') {
+        spawnFloatingText('ANOMALY GATE OPEN', _portalSpawnRequest.x, _portalSpawnRequest.y - 76, '#22d3ee', 22);
+    }
+}
+window.requestWavePortal = requestWavePortal;
+
+function _tickPortalTransition() {
+    if (typeof PortalSystem === 'undefined') return;
+    const targetWave = PortalSystem.consumeTransition();
+    if (!targetWave) return;
+    // Load-order checked: BodySwapSystem/BridgeSystem load before game.js consumers.
+    if (typeof BodySwapSystem !== 'undefined') BodySwapSystem.cancel(window.player);
+    if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+    if (typeof RunUpgradeSystem !== 'undefined' &&
+        RunUpgradeSystem.offer(window.player, !!_portalSpawnRequest.isBossWave, () => _advanceToWave(targetWave))) {
+        _portalSpawnRequest.isBossWave = false;
+        return;
+    }
+    _portalSpawnRequest.isBossWave = false;
+    _advanceToWave(targetWave);
+}
+
 // ── PERF: reusable entity buffer for mapSystem.update ────────────────────
 // Avoids [...spread] + .filter() allocating 2 new arrays every frame.
 const _mapUpdateEntities = [];
+const _effectiveKeys = { w: 0, a: 0, s: 0, d: 0, space: 0, q: 0, e: 0, b: 0, t: 0, f: 0, r: 0, shift: 0 };
+const _effectiveMouse = { x: 0, y: 0, wx: 0, wy: 0, left: 0, right: 0 };
+
+function _copyGameplayKeys(target, source) {
+    target.w = source.w; target.a = source.a; target.s = source.s; target.d = source.d;
+    target.space = source.space; target.q = source.q; target.e = source.e; target.b = source.b;
+    target.t = source.t; target.f = source.f; target.r = source.r; target.shift = source.shift;
+    return target;
+}
+
+function _copyGameplayMouse(target, source) {
+    target.x = source.x; target.y = source.y; target.wx = source.wx; target.wy = source.wy;
+    target.left = source.left; target.right = source.right;
+    return target;
+}
 
 function updateGame(dt) {
     if (!window.player) return;
@@ -232,6 +320,12 @@ function updateGame(dt) {
 
     updateCamera(window.player.x, window.player.y);
     updateMouseWorld();
+    if (typeof CrosshairSystem !== 'undefined') CrosshairSystem.update(dt);
+    if (typeof PortalSystem !== 'undefined') PortalSystem.update(dt, window.player);
+    if (typeof BodySwapSystem !== 'undefined') BodySwapSystem.update(dt, window.player);
+    if (typeof AlertSystem !== 'undefined') AlertSystem.update(dt);
+    if (typeof BridgeSystem !== 'undefined') BridgeSystem.update(dt);
+    _tickPortalTransition();
 
     // Glitch intensity ramp
     const GLITCH_RAMP = 0.8;
@@ -330,6 +424,10 @@ function _checkProximityInteractions(_inTutorial) {
     if (!_inTutorial && dToShop < MTC_SHOP_LOCATION.INTERACTION_RADIUS && keys.b === 1) {
         keys.b = 0; openShop(); return;
     }
+    if (!_inTutorial && keys.f === 1 && typeof BodySwapSystem !== 'undefined') {
+        keys.f = 0;
+        BodySwapSystem.activate(window.player);
+    }
 }
 
 // ── Player, weapon, boss, enemies, AI tick ────────────────────────────────────
@@ -338,15 +436,24 @@ function _tickEntities(dt, _inTutorial) {
     // Combat lock: only when room is ACTIVE (cooldown=0) AND player is inside.
     // When room is on cooldown, player fights normally and enemies may enter freely.
     const _playerInMTC = !!(_mtcRoom && _mtcRoom.isPlayerInside && _mtcRoom.cooldown <= 0);
-    const effectiveKeys = GameState.controlsInverted
-        ? { ...keys, w: keys.s, s: keys.w, a: keys.d, d: keys.a }
-        : keys;
+    let effectiveKeys = keys;
+    if (GameState.controlsInverted) {
+        effectiveKeys = _copyGameplayKeys(_effectiveKeys, keys);
+        effectiveKeys.w = keys.s; effectiveKeys.s = keys.w;
+        effectiveKeys.a = keys.d; effectiveKeys.d = keys.a;
+    }
     // MTC Room combat lock — block all attack/skill keys, keep movement + dash
     if (_playerInMTC) {
+        if (effectiveKeys === keys) effectiveKeys = _copyGameplayKeys(_effectiveKeys, keys);
         effectiveKeys.q = effectiveKeys.e = effectiveKeys.r = 0;
     }
     // effectiveMouse blocks L-Click shoot and R-Click skills inside player.update()
-    const effectiveMouse = _playerInMTC ? { ...mouse, left: 0, right: 0 } : mouse;
+    let effectiveMouse = mouse;
+    if (_playerInMTC) {
+        effectiveMouse = _copyGameplayMouse(_effectiveMouse, mouse);
+        effectiveMouse.left = 0;
+        effectiveMouse.right = 0;
+    }
     window.player.update(dt, effectiveKeys, effectiveMouse);
 
     if (!(window.player instanceof PoomPlayer) && !(typeof AutoPlayer === 'function' && window.player instanceof AutoPlayer)) {
@@ -453,16 +560,24 @@ function _tickEntities(dt, _inTutorial) {
     // Wave clear check — trigger next wave when all enemies dead and no boss/trickle pending
     // UPDATED: Use BOSS_ENCOUNTERS for flexible boss wave detection
     const bossEncounter = window.BOSS_ENCOUNTERS?.find(e => e.wave === getWave());
-    if (!_inTutorial &&
-        !bossEncounter &&
-        window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive) {
+    const waveClearReady = (typeof isWaveClearReady === 'function')
+        ? isWaveClearReady()
+        : window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive;
+    const portalWaiting = typeof PortalSystem !== 'undefined' && PortalSystem.isActive();
+    if (!_inTutorial && waveClearReady && !portalWaiting && _pendingPortalTargetWave) {
+        const targetWave = _pendingPortalTargetWave;
+        const wasBossWave = _pendingPortalWasBoss;
+        _pendingPortalTargetWave = 0;
+        _pendingPortalWasBoss = false;
+        requestWavePortal(targetWave, { isBossWave: wasBossWave });
+        return;
+    }
+    if (!_inTutorial && !bossEncounter && waveClearReady && !portalWaiting) {
         if (Achievements.stats.damageTaken === GameState.waveStartDamage && getEnemiesKilled() >= BALANCE.waves.minKillsForNoDamage) {
             Achievements.check('no_damage');
         }
         GameState.waveStartDamage = Achievements.stats.damageTaken;
-        setWave(getWave() + 1);
-        Achievements.check('wave_1');
-        if (typeof startNextWave === 'function') startNextWave();
+        requestWavePortal(getWave() + 1);
     }
 }
 
@@ -719,6 +834,8 @@ function drawGame() {
     // ── Battle Scars — floor decals & shell casings (below all entities) ──
     if (typeof decalSystem !== 'undefined') decalSystem.draw();
     if (typeof shellCasingSystem !== 'undefined') shellCasingSystem.draw();
+    if (typeof PortalSystem !== 'undefined') PortalSystem.draw(CTX);
+    if (typeof BridgeSystem !== 'undefined') BridgeSystem.draw(CTX);
 
     // ── Low-HP Navigation Guide ───────────────────────────────
     // Draws a subtle, animated dashed floor-line toward the nearest
@@ -791,6 +908,7 @@ function drawGame() {
     if (window.drone) window.drone.draw();
 
     if (window.player) PlayerRenderer.draw(window.player, CTX);
+    if (typeof BodySwapSystem !== 'undefined') BodySwapSystem.draw(CTX, window.player);
 
     for (const e of window.enemies) {
         if (e.isOnScreen(80)) {
@@ -802,6 +920,7 @@ function drawGame() {
             }
         }
     }
+    if (typeof AlertSystem !== 'undefined') AlertSystem.draw(CTX);
 
     if (window.boss && !window.boss.dead && window.boss.isOnScreen(200)) BossRenderer.draw(window.boss, CTX);
 
@@ -843,6 +962,7 @@ function drawGame() {
     if (typeof drawWaveEvent === 'function') drawWaveEvent(CTX);
     if (typeof DomainExpansion !== 'undefined') DomainExpansion.draw(CTX);
     if (typeof GravitationalSingularity !== 'undefined') GravitationalSingularity.draw(CTX);
+    if (typeof CrosshairSystem !== 'undefined') CrosshairSystem.draw(CTX);
 
     if (typeof CanvasHUD !== 'undefined' && CanvasHUD.draw) {
         CanvasHUD.draw(CTX, _lastDrawDt);
@@ -1084,7 +1204,6 @@ function _showGameOverScreen(summary) {
 
     // PREVENTION: Use showScreen() to ensure proper visibility (sets display + opacity + class)
     showScreen('gameover-screen', 'active');
-    console.log('[endGame] Game over screen displayed:', summary);
 }
 
 function _teardownRunState() {
@@ -1101,11 +1220,20 @@ function _teardownRunState() {
 
     // B8 FIX: belt-and-suspenders — GameState._syncAliases() now mirrors boss/drone,
     // but keep explicit nullification here in case teardown is called pre-sync.
+    if (typeof cleanupMobileControls === 'function') cleanupMobileControls();
+    if (typeof CrosshairSystem !== 'undefined') CrosshairSystem.clear();
+    if (typeof PortalSystem !== 'undefined') PortalSystem.clear();
+    if (typeof BodySwapSystem !== 'undefined') BodySwapSystem.clear();
+    if (typeof AlertSystem !== 'undefined') AlertSystem.clear();
+    if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
+    if (typeof RunUpgradeSystem !== 'undefined') RunUpgradeSystem.clearRun();
+    if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+
     window.player = null;
     window.boss = null;
     window.drone = null;
-
-    if (typeof cleanupMobileControls === 'function') cleanupMobileControls();
+    _pendingPortalTargetWave = 0;
+    _pendingPortalWasBoss = false;
     if (typeof projectileManager !== 'undefined' && projectileManager) projectileManager.clear();
     if (typeof particleSystem !== 'undefined' && particleSystem) particleSystem.clear();
     if (typeof floatingTextSystem !== 'undefined' && floatingTextSystem) floatingTextSystem.clear();
@@ -1115,6 +1243,7 @@ function _teardownRunState() {
     if (typeof resetScore === 'function') resetScore();
     if (typeof setWave === 'function') setWave(1);
     if (typeof resetEnemiesKilled === 'function') resetEnemiesKilled();
+    if (typeof resetSlowMoEnergy === 'function') resetSlowMoEnergy();
 
     showResumePrompt(false);
     if (typeof ShopManager !== 'undefined' && ShopManager) ShopManager.close();
@@ -1177,6 +1306,15 @@ function _resetRunState(player) {
     BALANCE.LIGHTING.ambientLight = BALANCE.LIGHTING.dayMaxLight;
 
     GameState.resetRun();
+    if (typeof RunUpgradeSystem !== 'undefined') RunUpgradeSystem.clearRun();
+    if (typeof resetSlowMoEnergy === 'function') resetSlowMoEnergy();
+    if (typeof PortalSystem !== 'undefined') PortalSystem.clear();
+    if (typeof BodySwapSystem !== 'undefined') BodySwapSystem.clear();
+    if (typeof AlertSystem !== 'undefined') AlertSystem.clear();
+    if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
+    if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+    _pendingPortalTargetWave = 0;
+    _pendingPortalWasBoss = false;
     // Clear shop buff state on player (set before first ShopSystem call this run)
     player.shopDamageBoostActive = false; player.shopDamageBoostTimer = 0; player._baseDamageBoost = undefined;
     player.shopSpeedBoostActive = false; player.shopSpeedBoostTimer = 0; player._baseMoveSpeed = undefined;
@@ -1207,6 +1345,10 @@ function _resetRunState(player) {
 function _initGameUI(charType) {
     const player = window.player;
     weaponSystem.setActiveChar(charType);
+    if (typeof CrosshairSystem !== 'undefined') {
+        const profile = window.MTC_CROSSHAIRS && window.MTC_CROSSHAIRS[charType];
+        CrosshairSystem.setCrosshair(profile?.key || 'kao-sight');
+    }
     try { weaponSystem.updateWeaponUI(); } catch (err) {
         console.error('[startGame] updateWeaponUI threw — continuing anyway:', err);
     }
@@ -1263,11 +1405,9 @@ function _initGameUI(charType) {
 
 function endGame(result) {
     if (GameState.phase === 'GAMEOVER') {
-        console.log('[endGame] Already in GAMEOVER state, ignoring duplicate call');
         return;
     }
 
-    console.log('[endGame] Game ending with result:', result);
     setGameState('GAMEOVER');
     const summary = _buildRunSummary(result);
     _pendingRunSummary = summary;
@@ -1294,6 +1434,15 @@ function endGame(result) {
     if (typeof cleanupMobileControls === 'function') {
         cleanupMobileControls();
     }
+    if (typeof CrosshairSystem !== 'undefined') CrosshairSystem.clear();
+    if (typeof PortalSystem !== 'undefined') PortalSystem.clear();
+    if (typeof BodySwapSystem !== 'undefined') BodySwapSystem.clear();
+    if (typeof AlertSystem !== 'undefined') AlertSystem.clear();
+    if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
+    if (typeof RunUpgradeSystem !== 'undefined') RunUpgradeSystem.clearRun();
+    if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+    _pendingPortalTargetWave = 0;
+    _pendingPortalWasBoss = false;
 
     try {
         Audio.stopBGM();
@@ -1487,6 +1636,13 @@ window.onload = () => {
             LoadingState.update('input', 'Input System', 'SETTING UP INPUTS...');
             setGameState('MENU');
             if (typeof InputSystem !== 'undefined') InputSystem.init();
+            if (typeof CrosshairSystem !== 'undefined') CrosshairSystem.init();
+            if (typeof PortalSystem !== 'undefined') PortalSystem.clear();
+            if (typeof BodySwapSystem !== 'undefined') BodySwapSystem.clear();
+            if (typeof AlertSystem !== 'undefined') AlertSystem.clear();
+            if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
+            if (typeof RunUpgradeSystem !== 'undefined') RunUpgradeSystem.clearRun();
+            if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
 
             // Step 3: Audio System
             LoadingState.update('audio', 'Audio System', 'LOADING AUDIO...');

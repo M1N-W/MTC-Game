@@ -662,7 +662,6 @@ const TutorialSystem = (() => {
             overlay.style.opacity = '1';
 
             _render();
-            console.log('[TutorialSystem] Started for character:', _charType, 'step:', _stepIndex);
         },
 
         isActive() { return _active; },

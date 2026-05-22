@@ -83,9 +83,14 @@ class BossBase extends Entity {
         window.lastBossKilled = true;
         window.boss = null;
         setTimeout(() => {
-            setWave(getWave() + 1);
-            if (getWave() > BALANCE.waves.maxWaves) window.endGame('victory');
-            else if (typeof window.startNextWave === 'function') window.startNextWave();
+            const targetWave = getWave() + 1;
+            // Load-order checked: game.js exports requestWavePortal after BossBase loads.
+            if (targetWave > BALANCE.waves.maxWaves) window.endGame('victory');
+            else if (typeof window.requestWavePortal === 'function') window.requestWavePortal(targetWave, { isBossWave: true });
+            else {
+                setWave(targetWave);
+                if (typeof window.startNextWave === 'function') window.startNextWave();
+            }
         }, BALANCE.boss.nextWaveDelay);
     }
 

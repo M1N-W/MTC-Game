@@ -80,7 +80,7 @@
                 if (!window.MTCFirebase || typeof window.MTCFirebase.signInWithGoogle !== 'function') return;
                 window.MTCFirebase.signInWithGoogle().catch((err) => {
                     console.warn('[Google sign-in]', err && err.message ? err.message : err);
-                    alert('ลงชื่อ Google ไม่สำเร็จ: ' + (err && err.message ? err.message : err));
+                    alert('ลงชื่อเข้าใช้ Google ไม่สำเร็จ, เหตุผล: ' + (err && err.message ? err.message : err));
                 });
             });
         }

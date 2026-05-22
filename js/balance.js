@@ -29,6 +29,39 @@ const BOSS_ENCOUNTERS = Object.freeze([
 ]);
 window.BOSS_ENCOUNTERS = BOSS_ENCOUNTERS;
 
+const MTC_CROSSHAIRS = Object.freeze({
+    kao: Object.freeze({
+        key: 'kao-sight',
+        color: '#a855f7',
+        accent: '#f0abfc'
+    }),
+    auto: Object.freeze({
+        key: 'wanchai-sight',
+        color: '#ef4444',
+        accent: '#facc15'
+    }),
+    poom: Object.freeze({
+        key: 'sticky-rice-seal',
+        color: '#22c55e',
+        accent: '#bbf7d0'
+    }),
+    pat: Object.freeze({
+        key: 'katana-focus',
+        color: '#7ec8e3',
+        accent: '#e0f2fe'
+    })
+});
+window.MTC_CROSSHAIRS = MTC_CROSSHAIRS;
+
+const MTC_TIME_ENERGY = Object.freeze({
+    maxEnergy: 100,
+    drainPerSecond: 24,
+    rechargePerSecond: 16,
+    minActivateEnergy: 20,
+    slowScale: 0.30
+});
+window.MTC_TIME_ENERGY = MTC_TIME_ENERGY;
+
 
 const BALANCE = {
     physics: {
@@ -1618,5 +1651,15 @@ window.ACHIEVEMENT_DEFS = ACHIEVEMENT_DEFS;
 window.MAP_CONFIG = MAP_CONFIG;
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { WAVE_SCHEDULE, BALANCE, GAME_CONFIG, VISUALS, ACHIEVEMENT_DEFS, MAP_CONFIG };
+    module.exports = {
+        WAVE_SCHEDULE,
+        BOSS_ENCOUNTERS,
+        MTC_CROSSHAIRS,
+        MTC_TIME_ENERGY,
+        BALANCE,
+        GAME_CONFIG,
+        VISUALS,
+        ACHIEVEMENT_DEFS,
+        MAP_CONFIG
+    };
 }

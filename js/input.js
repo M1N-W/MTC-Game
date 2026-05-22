@@ -36,7 +36,7 @@
 /**
  * Digital keyboard state.
  * keys.t  → Bullet Time toggle  (fires on keydown; no keyup needed)
- * keys.f  → Admin Terminal open (proximity-gated in game.js)
+ * keys.f  → Admin Terminal near server, Data Hijack elsewhere (game.js)
  */
 const keys = {
     w: 0, a: 0, s: 0, d: 0,

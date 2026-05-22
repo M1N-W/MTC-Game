@@ -93,7 +93,7 @@ const SHOP_ITEMS = [
         cost: 900,
         type: "permanent",
         reflectPct: 0.15,
-        desc: "สะท้อน 15% ดาเมจกลับหาศัตรู",
+        desc: "สะท้อนดาเมจ 15% กลับหาศัตรู",
         color: "#818cf8",
         notifyOnBuy: {
             icon: "🪞",
@@ -208,7 +208,7 @@ const SHOP_ITEMS = [
         cost: 800,
         type: "permanent",
         charReq: "pat",
-        desc: "[PAT] Parry window +15% และฟันเร็วขึ้น 10%",
+        desc: "[PAT] Parry Ability +15% และฟันเร็วขึ้น 10%",
         color: "#7ec8e3",
         notifyOnBuy: {
             icon: "⚔️",
