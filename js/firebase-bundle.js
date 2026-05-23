@@ -6803,6 +6803,9 @@
     }
     return userCredential;
   }
+  function setPersistence(auth, persistence) {
+    return getModularInstance(auth).setPersistence(persistence);
+  }
   function onIdTokenChanged(auth, nextOrObserver, error, completed) {
     return getModularInstance(auth).onIdTokenChanged(nextOrObserver, error, completed);
   }
@@ -8158,13 +8161,6 @@
     _assertInstanceOf(auth, provider, FederatedAuthProvider);
     const resolverInternal = _withDefaultResolver(authInternal, resolver);
     const action = new PopupOperation(authInternal, "signInViaPopup", provider, resolverInternal);
-    return action.executeNotNull();
-  }
-  async function linkWithPopup(user, provider, resolver) {
-    const userInternal = getModularInstance(user);
-    _assertInstanceOf(userInternal.auth, provider, FederatedAuthProvider);
-    const resolverInternal = _withDefaultResolver(userInternal.auth, resolver);
-    const action = new PopupOperation(userInternal.auth, "linkViaPopup", provider, resolverInternal, userInternal);
     return action.executeNotNull();
   }
   var PopupOperation = class _PopupOperation extends AbstractPopupRedirectOperation {
@@ -22587,11 +22583,24 @@ This typically indicates that your device does not have a healthy Internet conne
       }
     };
   } else {
+    let ensureAnonymousUser = function() {
+      if (anonymousSignInStarted || auth.currentUser) return;
+      anonymousSignInStarted = true;
+      signInAnonymously(auth).then(() => {
+      }).catch((err) => {
+        anonymousSignInStarted = false;
+        console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
+      });
+    };
     window.firebaseConfigAvailable = true;
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = initializeFirestore(app, { experimentalForceLongPolling: true });
     const googleProvider = new GoogleAuthProvider();
+    const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((err) => {
+      console.warn("[Firebase] Local auth persistence setup failed:", err && err.code ? err.code : err);
+    });
+    let anonymousSignInStarted = false;
     let analytics = null;
     isSupported().then((ok) => {
       if (ok) {
@@ -22622,16 +22631,14 @@ This typically indicates that your device does not have a healthy Internet conne
         if (user && !_userReadyResolved) {
           _userReadyResolved = true;
           resolve(user);
+        } else if (!user) {
+          authPersistenceReady.then(ensureAnonymousUser);
         }
         try {
           window.dispatchEvent(new CustomEvent("mtc-auth-changed", { detail: { user } }));
         } catch (e) {
         }
       });
-    });
-    signInAnonymously(auth).then(() => {
-    }).catch((err) => {
-      console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
     });
     const remoteConfig = getRemoteConfig(app);
     remoteConfig.settings.minimumFetchIntervalMillis = 36e5;
@@ -22672,23 +22679,15 @@ This typically indicates that your device does not have a healthy Internet conne
       },
       async signInWithGoogle() {
         const u = auth.currentUser;
-        if (u && u.isAnonymous) {
-          try {
-            await linkWithPopup(u, googleProvider);
-            return auth.currentUser;
-          } catch (err) {
-            console.warn("[Firebase] Linking failed, falling back to direct sign-in:", err.code || err);
-            try {
-              return await signInWithPopup(auth, googleProvider);
-            } catch (popupErr) {
-              if (popupErr.code === "auth/popup-blocked") {
-                alert("Browser \u0E1A\u0E25\u0E47\u0E2D\u0E01 Popup! \u0E42\u0E1B\u0E23\u0E14\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 Popup \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E04\u0E23\u0E31\u0E1A");
-              }
-              throw popupErr;
-            }
+        if (u && !u.isAnonymous) return u;
+        try {
+          return await signInWithPopup(auth, googleProvider);
+        } catch (popupErr) {
+          if (popupErr.code === "auth/popup-blocked") {
+            alert("Browser \u0E1A\u0E25\u0E47\u0E2D\u0E01 Popup! \u0E42\u0E1B\u0E23\u0E14\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 Popup \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E04\u0E23\u0E31\u0E1A");
           }
+          throw popupErr;
         }
-        return await signInWithPopup(auth, googleProvider);
       },
       async signOut() {
         await auth.signOut();

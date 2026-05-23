@@ -4,6 +4,29 @@
 
 ---
 
+## v3.44.15 — Firebase auth popup and cloud-sync cleanup
+
+*Released: May 23, 2026*
+
+- `js/firebase-init.js`: changes Google login to direct popup sign-in instead of anonymous account linking, removing the `auth/credential-already-in-use` second-popup path.
+- `js/systems/CloudSaveSystem.js`: syncs cloud save and leaderboard submissions from the current Google user only, avoiding anonymous-user Firestore permission noise.
+- `js/firebase-bundle.js`: rebuilt from source so GitHub Pages serves the updated auth flow.
+- `.github/workflows/deploy.yml`: opts GitHub Pages actions into Node 24 ahead of GitHub Actions Node 20 deprecation.
+- `sw.js` / `package.json` / `PROJECT_OVERVIEW.md`: bump release/cache alignment to `v3.44.15`.
+
+---
+
+## v3.44.14 — Firebase Google sign-in session fix
+
+*Released: May 23, 2026*
+
+- `js/firebase-init.js`: preserves existing Google auth persistence on reload by starting anonymous sign-in only when Firebase reports no current user.
+- `js/firebase-init.js`: handles `auth/credential-already-in-use` from anonymous-to-Google linking with the returned Google credential, avoiding a second account picker popup.
+- `js/firebase-bundle.js`: rebuilt from Firebase source so GitHub Pages serves the corrected auth flow.
+- `sw.js` / `package.json` / `PROJECT_OVERVIEW.md`: bump release/cache alignment to `v3.44.14`.
+
+---
+
 ## v3.44.13 — Cloud auth unavailable-state cleanup
 
 *Released: May 23, 2026*

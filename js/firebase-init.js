@@ -16,7 +16,8 @@ import {
     onAuthStateChanged,
     GoogleAuthProvider,
     signInWithPopup,
-    linkWithPopup,
+    browserLocalPersistence,
+    setPersistence,
 } from 'firebase/auth';
 import {
     initializeFirestore,
@@ -65,6 +66,22 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 const googleProvider = new GoogleAuthProvider();
+const authPersistenceReady = setPersistence(auth, browserLocalPersistence)
+    .catch((err) => {
+        console.warn('[Firebase] Local auth persistence setup failed:', err && err.code ? err.code : err);
+    });
+let anonymousSignInStarted = false;
+
+function ensureAnonymousUser() {
+    if (anonymousSignInStarted || auth.currentUser) return;
+    anonymousSignInStarted = true;
+    signInAnonymously(auth)
+        .then(() => {})
+        .catch((err) => {
+            anonymousSignInStarted = false;
+            console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
+        });
+}
 
 let analytics = null;
 isSupported()
@@ -102,6 +119,8 @@ window.firebaseUserReady = new Promise((resolve) => {
         if (user && !_userReadyResolved) {
             _userReadyResolved = true;
             resolve(user);
+        } else if (!user) {
+            authPersistenceReady.then(ensureAnonymousUser);
         }
         try {
             window.dispatchEvent(new CustomEvent('mtc-auth-changed', { detail: { user } }));
@@ -110,12 +129,6 @@ window.firebaseUserReady = new Promise((resolve) => {
         }
     });
 });
-
-signInAnonymously(auth)
-    .then(() => {})
-    .catch((err) => {
-        console.error('[Firebase] Anonymous sign-in failed. If this is on GitHub Pages, ensure the domain is added to "Authorized domains" in Firebase Console.', err);
-    });
 
 const remoteConfig = getRemoteConfig(app);
 remoteConfig.settings.minimumFetchIntervalMillis = 3600000;
@@ -164,26 +177,15 @@ window.MTCFirebase = {
 
     async signInWithGoogle() {
         const u = auth.currentUser;
-        if (u && u.isAnonymous) {
-            try {
-                // Try linking first to preserve anonymous progress
-                await linkWithPopup(u, googleProvider);
-                return auth.currentUser;
-            } catch (err) {
-                console.warn('[Firebase] Linking failed, falling back to direct sign-in:', err.code || err);
-                // If account exists or linking is blocked, just sign in directly
-                // (This will switch to the Google account and drop the anonymous data)
-                try {
-                    return await signInWithPopup(auth, googleProvider);
-                } catch (popupErr) {
-                    if (popupErr.code === 'auth/popup-blocked') {
-                        alert('Browser บล็อก Popup! โปรดอนุญาต Popup สำหรับหน้านี้แล้วลองใหม่ครับ');
-                    }
-                    throw popupErr;
-                }
+        if (u && !u.isAnonymous) return u;
+        try {
+            return await signInWithPopup(auth, googleProvider);
+        } catch (popupErr) {
+            if (popupErr.code === 'auth/popup-blocked') {
+                alert('Browser บล็อก Popup! โปรดอนุญาต Popup สำหรับหน้านี้แล้วลองใหม่ครับ');
             }
+            throw popupErr;
         }
-        return await signInWithPopup(auth, googleProvider);
     },
 
     async signOut() {

@@ -2,7 +2,7 @@
 /**
  * @module CloudSaveSystem
  * @fileoverview Cloud sync for local persistence (mtc_save_v1, tutorial flag) via Firestore users/{uid}.
- * Depends: utils.js (getSaveData, saveData), firebase-bundle.js (MTCFirebase, firebaseUserReady).
+ * Depends: utils.js (getSaveData, saveData), firebase-bundle.js (MTCFirebase, firebaseAuth).
  * 
  * L.8    CLOUD_META_KEY
  * L.16   getLocalMeta
@@ -30,6 +30,7 @@
 
     let _pushTimer = null;
     let _inited = false;
+    let _lastSyncUid = '';
 
     function getLocalMeta() {
         try {
@@ -133,11 +134,10 @@
         if (!_inited) return;
         clearTimeout(_pushTimer);
         _pushTimer = setTimeout(() => {
-            if (!window.firebaseUserReady || !window.MTCFirebase) return;
-            window.firebaseUserReady.then((user) => {
-                if (!user) return;
-                return pushToCloud(user.uid);
-            }).catch(() => {});
+            if (!window.MTCFirebase) return;
+            const user = getCurrentGoogleUser();
+            if (!user) return;
+            pushToCloud(user.uid).catch(() => {});
         }, 1500);
     }
 
@@ -146,10 +146,22 @@
         return user.providerData.some((p) => p.providerId === 'google.com');
     }
 
+    function getCurrentGoogleUser() {
+        const auth = window.firebaseAuth;
+        const user = auth && auth.currentUser;
+        return userHasGoogle(user) ? user : null;
+    }
+
+    function syncGoogleUser(user) {
+        if (!user || _lastSyncUid === user.uid) return;
+        _lastSyncUid = user.uid;
+        pullThenMergePush(user.uid).catch(() => {});
+    }
+
     /** Leaderboard แบบ Spark: เขียน Firestore โดยตรง (กฎบังคับ Google + ขอบเขตใน rules) */
     async function submitLeaderboardScore(score, wave) {
-        if (!window.firebaseUserReady || !window.MTCFirebase) return;
-        const user = await window.firebaseUserReady;
+        if (!window.MTCFirebase) return;
+        const user = getCurrentGoogleUser();
         if (!user || !userHasGoogle(user)) return;
         if (typeof window.MTCFirebase.submitLeaderboard !== 'function') return;
         const n = Number(score);
@@ -176,13 +188,12 @@
     function init() {
         if (_inited) return;
         _inited = true;
-        if (!window.firebaseUserReady || !window.MTCFirebase) return;
-        window.firebaseUserReady
-            .then((user) => {
-                if (!user) return;
-                return pullThenMergePush(user.uid);
-            })
-            .catch(() => {});
+        if (!window.MTCFirebase) return;
+        window.addEventListener('mtc-auth-changed', (event) => {
+            const user = event && event.detail ? event.detail.user : null;
+            if (userHasGoogle(user)) syncGoogleUser(user);
+        });
+        syncGoogleUser(getCurrentGoogleUser());
     }
 
     window.CloudSaveSystem = {
