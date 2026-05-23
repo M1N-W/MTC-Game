@@ -13,7 +13,13 @@
         const btn = document.getElementById('btn-google-signin');
         const status = document.getElementById('google-auth-status');
         const auth = window.firebaseAuth;
-        if (!btn || !status || !auth) return;
+        if (!btn || !status) return;
+        if (!auth) {
+            btn.style.display = 'none';
+            status.style.display = 'inline';
+            status.textContent = 'Cloud leaderboard unavailable';
+            return;
+        }
         const u = auth.currentUser;
         if (!u) return;
         if (userHasGoogle(u)) {
@@ -77,6 +83,10 @@
         const signBtn = document.getElementById('btn-google-signin');
         if (signBtn) {
             signBtn.addEventListener('click', () => {
+                if (!window.firebaseAuth || window.firebaseConfigAvailable === false) {
+                    updateGoogleAuthUI();
+                    return;
+                }
                 if (!window.MTCFirebase || typeof window.MTCFirebase.signInWithGoogle !== 'function') return;
                 window.MTCFirebase.signInWithGoogle().catch((err) => {
                     console.warn('[Google sign-in]', err && err.message ? err.message : err);

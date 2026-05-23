@@ -40,6 +40,7 @@ const firebaseConfig = (typeof CONFIG_SECRETS !== 'undefined'
 
 if (!firebaseConfig || !firebaseConfig.apiKey) {
     console.warn('[Firebase] Missing config. Cloud save, leaderboard, analytics, and remote config are disabled.');
+    window.firebaseConfigAvailable = false;
     window.firebaseApp = null;
     window.firebaseAuth = null;
     window.firebaseDb = null;
@@ -59,6 +60,7 @@ if (!firebaseConfig || !firebaseConfig.apiKey) {
     };
 } else {
 
+window.firebaseConfigAvailable = true;
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = initializeFirestore(app, { experimentalForceLongPolling: true });

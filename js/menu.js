@@ -471,10 +471,21 @@ document.addEventListener("keydown", (e) => {
 
 // ── Service Worker Registration ───────────────────────────────────────────────
 if ("serviceWorker" in navigator) {
+  let _mtcReloadingForSwUpdate = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (_mtcReloadingForSwUpdate) return;
+    if (sessionStorage.getItem("mtc-sw-reloaded") === "1") return;
+    _mtcReloadingForSwUpdate = true;
+    sessionStorage.setItem("mtc-sw-reloaded", "1");
+    window.location.reload();
+  });
+
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("sw.js")
-      .then(() => {})
+      .then((reg) => {
+        if (reg && typeof reg.update === "function") reg.update();
+      })
       .catch((e) => console.error("❌ ServiceWorker failed:", e));
   });
 }

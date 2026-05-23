@@ -1,6 +1,6 @@
 # MTC Game - Project Overview (Architecture-Only)
 
-**Release alignment:** service worker cache id **`mtc-cache-v3.44.12`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
+**Release alignment:** service worker cache id **`mtc-cache-v3.44.13`** (`sw.js` `CACHE_NAME`, auto-generated from `package.json` by `scripts/gen-sw-manifest.js`); see `Markdown Source/CHANGELOG.md` for per-version notes.
 
 ## Recent Changes
 

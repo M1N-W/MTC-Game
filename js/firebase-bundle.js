@@ -22558,6 +22558,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var firebaseConfig = typeof CONFIG_SECRETS !== "undefined" && CONFIG_SECRETS && CONFIG_SECRETS.FIREBASE_CONFIG ? CONFIG_SECRETS.FIREBASE_CONFIG : null;
   if (!firebaseConfig || !firebaseConfig.apiKey) {
     console.warn("[Firebase] Missing config. Cloud save, leaderboard, analytics, and remote config are disabled.");
+    window.firebaseConfigAvailable = false;
     window.firebaseApp = null;
     window.firebaseAuth = null;
     window.firebaseDb = null;
@@ -22586,6 +22587,7 @@ This typically indicates that your device does not have a healthy Internet conne
       }
     };
   } else {
+    window.firebaseConfigAvailable = true;
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = initializeFirestore(app, { experimentalForceLongPolling: true });

@@ -4,6 +4,17 @@
 
 ---
 
+## v3.44.13 — Cloud auth unavailable-state cleanup
+
+*Released: May 23, 2026*
+
+- `js/systems/LeaderboardUI.js`: disables Google sign-in when Firebase config is unavailable instead of repeatedly throwing user-facing errors.
+- `js/firebase-init.js`: exposes `window.firebaseConfigAvailable` so UI layers can distinguish graceful cloud disable from an auth failure.
+- `js/menu.js`: asks the service worker to update on load and reloads once on controller change so newly activated runtime/cache fixes are applied sooner.
+- `sw.js` / `package.json` / `PROJECT_OVERVIEW.md`: bump release/cache alignment to `v3.44.13`.
+
+---
+
 ## v3.44.12 — Gameplay hotfix for map draw recovery
 
 *Released: May 22, 2026*
