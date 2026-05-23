@@ -23,6 +23,8 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +38,9 @@ jobs:
           printf 'window.CONFIG_SECRETS = window.CONFIG_SECRETS || {};\n' > js/secrets.js
           if [ -n "$FIREBASE_CONFIG_JSON" ]; then
             printf 'window.CONFIG_SECRETS.FIREBASE_CONFIG = %s;\n' "$FIREBASE_CONFIG_JSON" >> js/secrets.js
+            echo "Firebase runtime config injected into js/secrets.js."
+          else
+            echo "::warning::FIREBASE_CONFIG_JSON is not set. Firebase features will be disabled in this deployment."
           fi
 
       - name: Setup Pages
