@@ -9,7 +9,7 @@
 //  Release notes belong in Markdown Source/CHANGELOG.md, not here.
 // ═══════════════════════════════════════════════════════════════════
 // AUTO-GEN:START
-const CACHE_NAME = "mtc-cache-v3.44.15";
+const CACHE_NAME = "mtc-cache-v3.44.16";
 
 const urlsToCache = [
   "./",
@@ -151,6 +151,13 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(request.url);
   if (requestUrl.protocol !== "http:" && requestUrl.protocol !== "https:")
     return;
+
+  // Runtime config is generated per deployment; never serve a stale cached fallback.
+  if (requestUrl.origin === self.location.origin &&
+      requestUrl.pathname.endsWith("/js/secrets.js")) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then((response) => {

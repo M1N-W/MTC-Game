@@ -4,6 +4,15 @@
 
 ---
 
+## v3.44.16 — Firebase runtime config cache bypass
+
+*Released: May 23, 2026*
+
+- `sw.js`: treats `js/secrets.js` as deployment runtime config and always fetches it from network with `cache: "no-store"` so a stale fallback cannot disable Firebase after config injection succeeds.
+- `sw.js` / `package.json` / `PROJECT_OVERVIEW.md`: bump release/cache alignment to `v3.44.16`.
+
+---
+
 ## v3.44.15 — Firebase auth popup and cloud-sync cleanup
 
 *Released: May 23, 2026*
