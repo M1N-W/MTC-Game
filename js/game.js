@@ -602,18 +602,18 @@ function _tickBarrelExplosions() {
                 obj.hp -= proj.damage || 10;
                 spawnParticles(proj.x, proj.y, 5, '#f59e0b');
                 proj.dead = true;
-                window.mapSystem._sortedObjects = null;
                 break;
             }
         }
     }
 
     // Pass B: barrel death → AoE explosion
-    const survivingObjects = [];
+    let explodedBarrelCount = 0;
     for (const obj of window.mapSystem.objects) {
-        if (!(obj instanceof ExplosiveBarrel)) { survivingObjects.push(obj); continue; }
+        if (!(obj instanceof ExplosiveBarrel)) continue;
         if (obj.hp <= 0 && !obj.isExploded) {
             obj.isExploded = true;
+            explodedBarrelCount++;
             const bCX = obj.x + obj.w / 2;
             const bCY = obj.y + obj.h / 2;
             addScreenShake(20);
@@ -655,14 +655,10 @@ function _tickBarrelExplosions() {
                     spawnFloatingText(GAME_TEXTS.environment?.barrelHit ?? 'BARREL HIT!', window.boss.x, window.boss.y - 80, '#f97316', 26);
                 }
             }
-            window.mapSystem._sortedObjects = null;
-        } else if (!obj.isExploded) {
-            survivingObjects.push(obj);
         }
     }
-    if (survivingObjects.length !== window.mapSystem.objects.length) {
-        window.mapSystem.objects = survivingObjects;
-        window.mapSystem._sortedObjects = null;
+    if (explodedBarrelCount > 0) {
+        window.mapSystem.removeObjectsByFlag('isExploded');
     }
 }
 

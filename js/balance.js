@@ -1170,19 +1170,19 @@ const BALANCE = {
             { x: -380, y: -620, w: 30, h: 30 },
         ],
         mapColors: {
-            floor: '#080d18',          // เข้มขึ้น เพิ่มบรรยากาศ night
+            floor: '#080C12',
             floorAlt: '#060a14',
-            treeLight: '#4a7a1a',      // สว่างขึ้น ต้นไม้ pop มากขึ้น
+            treeLight: '#4ADE80',
             treeMid: '#243d0e',
             treeDark: '#142208',
             treeTrunk: '#5c2204',
             deskTop: '#251c0a',
             deskLegs: '#140e04',
             serverBody: '#0d1117',
-            serverLightOn: '#fbbf24',  // สว่างกว่าเดิม
+            serverLightOn: '#22D3EE',
             serverLightOff: '#3d1502',
             pillarBase: '#1e293b',
-            pillarCircuit: '#f59e0b',  // สว่างขึ้น
+            pillarCircuit: '#F59E0B',
             bookColors: ['#c26010', '#a85020', '#e8901a', '#8c4010', '#b87010', '#9a5a10', '#fbbf24'],
             wallColor: '#1f1610',
             wallBrick: '#352510',
@@ -1442,8 +1442,8 @@ const MAP_CONFIG = {
         size: 64,
         fillColor: 'rgba(130, 70, 15, {a})',    // สว่างขึ้น
         strokeColor: 'rgba(210, 130, 25, {a})',  // เส้น hex ชัดขึ้น
-        fillAlpha: 0.07,                          // เพิ่ม 0.05→0.07
-        strokeAlpha: 0.22,                        // เพิ่ม 0.15→0.22
+        fillAlpha: 0.04,
+        strokeAlpha: 0.12,
         falloffRadius: 1650,                      // กว้างขึ้น ครอบ zone ไกล
     },
 
@@ -1490,13 +1490,13 @@ const MAP_CONFIG = {
         },
         tree: {
             shadowFill: 'rgba(0,0,0,0.25)',
-            leafSparkle: 'rgba(255,255,255,0.55)',
-            leafHex: 'rgba(134,239,172,0.6)',
+            leafSparkle: '#FFFFFF',
+            leafHex: '#4ADE80',
         },
         server: {
             inner: '#1a1005',
             unitSlot: '#120c04',
-            dataLedOn: '#f59e0b',
+            dataLedOn: '#22D3EE',
             dataLedOff: '#451a03',
             ventStroke: '#0f0b04',
             headerFill: '#1c1408',
@@ -1540,69 +1540,90 @@ const MAP_CONFIG = {
     zones: {
         serverFarm: {
             x: 430, y: -680, w: 800, h: 700,
-            floorColor: 'rgba(6, 182, 212, 0.16)',   // 0.07→0.16
-            gridColor: 'rgba(6, 182, 212, 0.25)',    // 0.18→0.25
+            floorColor: 'rgba(34, 211, 238, 0.10)',
+            gridColor: 'rgba(34, 211, 238, 0.14)',
             gridSize: 36,
-            accentColor: 'rgba(34, 211, 238, 0.35)', // 0.28→0.35
+            accentColor: '#22D3EE',
+            borderAlphaBase: 0.18, borderAlphaPulse: 0.08,
             label: 'SERVER FARM',
             ambientColor: 'rgba(34, 211, 238, 0.90)',
         },
         library: {
             x: -1230, y: -680, w: 800, h: 700,
-            floorColor: 'rgba(180, 120, 20, 0.18)',  // 0.09→0.18
-            gridColor: 'rgba(251, 191, 36, 0.22)',   // 0.16→0.22
+            floorColor: 'rgba(245, 158, 11, 0.12)',
+            gridColor: 'rgba(245, 158, 11, 0.14)',
             gridSize: 48,
-            accentColor: 'rgba(253, 224, 71, 0.30)', // 0.22→0.30
+            accentColor: '#F59E0B',
+            borderAlphaBase: 0.18, borderAlphaPulse: 0.08,
             label: 'ARCHIVES',
             ambientColor: 'rgba(251, 191, 36, 0.90)',
         },
         courtyard: {
             x: -600, y: 400, w: 1200, h: 650,
-            floorColor: 'rgba(34, 197, 94, 0.15)',   // 0.08→0.15
-            gridColor: 'rgba(74, 222, 128, 0.20)',   // 0.14→0.20
+            floorColor: 'rgba(74, 222, 128, 0.10)',
+            gridColor: 'rgba(74, 222, 128, 0.12)',
             gridSize: 55,
-            accentColor: 'rgba(134, 239, 172, 0.28)', // 0.20→0.28
+            accentColor: '#4ADE80',
+            borderAlphaBase: 0.16, borderAlphaPulse: 0.06,
             label: 'COURTYARD',
             ambientColor: 'rgba(134, 239, 172, 0.90)',
         },
         lectureHallL: {
             x: -1100, y: 500, w: 420, h: 400,
-            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04→0.12
-            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10→0.18
+            floorColor: 'rgba(168, 85, 247, 0.10)',
+            gridColor: 'rgba(192, 132, 252, 0.12)',
             gridSize: 40,
-            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12→0.22
+            accentColor: '#D8B4FE',
+            borderAlphaBase: 0.12, borderAlphaPulse: 0.04,
             label: 'LECTURE A',
             ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60→0.85
         },
         lectureHallR: {
             x: 680, y: 500, w: 420, h: 400,
-            floorColor: 'rgba(168, 85, 247, 0.12)',  // 0.04→0.12
-            gridColor: 'rgba(192, 132, 252, 0.18)',  // 0.10→0.18
+            floorColor: 'rgba(168, 85, 247, 0.10)',
+            gridColor: 'rgba(192, 132, 252, 0.12)',
             gridSize: 40,
-            accentColor: 'rgba(216, 180, 254, 0.22)', // 0.12→0.22
+            accentColor: '#D8B4FE',
+            borderAlphaBase: 0.12, borderAlphaPulse: 0.04,
             label: 'LECTURE B',
             ambientColor: 'rgba(216, 180, 254, 0.85)', // 0.60→0.85
         },
         // MTC Database — NE zone floor
         database: {
             x: 330, y: -660, w: 340, h: 340,
-            floorColor: 'rgba(251, 191, 36, 0.06)',
-            gridColor: 'rgba(251, 191, 36, 0.18)',
+            floorColor: 'rgba(245, 158, 11, 0.10)',
+            gridColor: 'rgba(245, 158, 11, 0.12)',
             gridSize: 30,
-            accentColor: 'rgba(251, 191, 36, 0.30)',
+            accentColor: '#F59E0B',
+            borderAlphaBase: 0.18, borderAlphaPulse: 0.08,
             label: 'MTC DATABASE',
             ambientColor: 'rgba(251, 191, 36, 0.90)',
         },
         // MTC Co-op Store — SW zone floor
         shop: {
             x: -670, y: 320, w: 340, h: 340,
-            floorColor: 'rgba(249, 115, 22, 0.06)',
-            gridColor: 'rgba(249, 115, 22, 0.16)',
+            floorColor: 'rgba(249, 115, 22, 0.10)',
+            gridColor: 'rgba(249, 115, 22, 0.12)',
             gridSize: 32,
-            accentColor: 'rgba(249, 115, 22, 0.28)',
+            accentColor: '#F97316',
+            borderAlphaBase: 0.18, borderAlphaPulse: 0.08,
             label: 'CO-OP STORE',
             ambientColor: 'rgba(249, 115, 22, 0.90)',
         },
+    },
+
+    biotech: {
+        palette: {
+            arenaCharcoal: '#080C12', panelCharcoal: '#0D1117', commandAmber: '#F59E0B',
+            hazardOrange: '#F97316', dataTeal: '#22D3EE', foliageGreen: '#4ADE80', darkLeaf: '#243D0E',
+        },
+        timing: { infrastructureMs: 2400, foliageMs: 3600, sparkleMs: 4800 },
+        containmentRails: [
+            { x1: -588, y1: 418, x2: -100, y2: 418, color: 'commandAmber' },
+            { x1: 100, y1: 418, x2: 588, y2: 418, color: 'commandAmber' },
+            { x1: -588, y1: 480, x2: -588, y2: 1025, color: 'dataTeal' },
+            { x1: 588, y1: 480, x2: 588, y2: 1025, color: 'dataTeal' },
+        ],
     },
 
     // ── Zone auras ─────────────────────────────────────────────

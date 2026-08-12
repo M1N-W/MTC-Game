@@ -113,6 +113,21 @@ class Entity {
     _steerAroundObstacles(dt) {
         if (typeof mapSystem === 'undefined' || !mapSystem.objects || mapSystem.objects.length === 0) return;
 
+        // MapObject.resolveCollision() runs after entity updates. Consume its primitive
+        // contact data on the next steering pass; no query or allocation is needed here.
+        if (typeof this._mapContactNX === 'number' && typeof this._mapContactNY === 'number') {
+            const nx = this._mapContactNX, ny = this._mapContactNY;
+            const turn = (typeof this.id === 'number' && (this.id & 1) === 1) ? -1 : 1;
+            const tangentX = -ny * turn, tangentY = nx * turn;
+            this._aiMoveX += tangentX * 0.75;
+            this._aiMoveY += tangentY * 0.75;
+            this.vx += tangentX * 260 * dt;
+            this.vy += tangentY * 260 * dt;
+            this._mapContactNX = undefined;
+            this._mapContactNY = undefined;
+            this._mapContactFrame = -1;
+        }
+
         const PROBE_DIST = 80;   // px ahead to probe
         const FORCE = 520;  // steering impulse magnitude (px/s added to vx/vy)
         const PROBE_COUNT = 5;    // rays: centre ± 30° ± 60°

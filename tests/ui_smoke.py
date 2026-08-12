@@ -169,6 +169,155 @@ def main():
         check("HUD_CONFIG.pat contains zanzo-icon entry",
               page.evaluate("() => (HUD_CONFIG.pat || []).some(e => e.iconId === 'zanzo-icon' && e.lockKey === SKILL.PAT.ZANZO)"))
 
+        # ── 3c. Biotech Data Commons collision and cache regressions ───────
+        barrel_cache = page.evaluate("""() => {
+            const map = new MapSystem();
+            const desk = new MapObject(0, 0, 60, 40, 'desk');
+            const barrel = new ExplosiveBarrel(160, 0);
+            map.objects.push(desk, barrel);
+            map._buildStaticGrid();
+            map._objectsDirty = false;
+            const removed = map.removeObjectsByFlag('isExploded');
+            const unchanged = removed === 0 && map.objects.length === 2 && !map._objectsDirty;
+            barrel.isExploded = true;
+            const removedAfterExplosion = map.removeObjectsByFlag('isExploded');
+            const nearby = map.queryNearby(160, 0, 60);
+            return {
+                unchanged,
+                removedAfterExplosion,
+                objects: map.objects.length,
+                dirty: map._objectsDirty,
+                barrelStillIndexed: nearby.includes(barrel),
+            };
+        }""")
+        check("Unexploded barrels do not mutate map caches",
+              barrel_cache["unchanged"], str(barrel_cache))
+        check("Exploded barrel removal preserves remaining props and rebuilds caches",
+              barrel_cache["removedAfterExplosion"] == 1 and barrel_cache["objects"] == 1
+              and barrel_cache["dirty"] and not barrel_cache["barrelStillIndexed"],
+              str(barrel_cache))
+
+        decorative_collision = page.evaluate("""() => {
+            const map = new MapSystem();
+            const desk = new MapObject(0, 0, 60, 40, 'desk');
+            const tree = new MapObject(160, 0, 50, 50, 'tree', false);
+            const server = new MapObject(260, 0, 40, 70, 'server', { solid: false });
+            map.objects.push(desk, tree, server);
+            map._buildStaticGrid();
+            const nearTree = map.queryNearby(185, 25, 40);
+            const nearServer = map.queryNearby(280, 35, 40);
+            return {
+                renderable: map.objects.includes(tree) && map.objects.includes(server),
+                treeSolid: tree.solid,
+                serverSolid: server.solid,
+                treeIndexed: nearTree.includes(tree),
+                serverIndexed: nearServer.includes(server),
+                treeBlocked: map.isBlocked(185, 25, 5),
+                serverBlocked: map.isBlocked(280, 35, 5),
+            };
+        }""")
+        check("Decorative garden props remain renderable but never enter collision queries",
+              decorative_collision["renderable"] and not decorative_collision["treeSolid"]
+              and not decorative_collision["serverSolid"] and not decorative_collision["treeIndexed"]
+              and not decorative_collision["serverIndexed"] and not decorative_collision["treeBlocked"]
+              and not decorative_collision["serverBlocked"], str(decorative_collision))
+
+        damage_cache = page.evaluate("""() => {
+            const map = new MapSystem();
+            const hit = new MapObject(0, 0, 60, 60, 'desk');
+            const untouched = new MapObject(220, 0, 60, 60, 'desk');
+            map.objects.push(hit, untouched);
+            map._buildStaticGrid();
+            map._objectsDirty = false;
+            const removed = map.damageArea(-30, 30, 90, 30);
+            return {
+                removed,
+                hitPresent: map.objects.includes(hit),
+                untouchedPresent: map.objects.includes(untouched),
+                hitIndexed: map.queryNearby(30, 30, 50).includes(hit),
+                untouchedIndexed: map.queryNearby(250, 30, 50).includes(untouched),
+                dirty: map._objectsDirty,
+            };
+        }""")
+        check("Line-area destruction compacts in place and refreshes collision caches",
+              damage_cache["removed"] == 1 and not damage_cache["hitPresent"]
+              and damage_cache["untouchedPresent"] and not damage_cache["hitIndexed"]
+              and damage_cache["untouchedIndexed"] and damage_cache["dirty"], str(damage_cache))
+
+        clear_cache = page.evaluate("""() => {
+            const map = new MapSystem();
+            const prop = new MapObject(0, 0, 50, 50, 'desk');
+            map.objects.push(prop); map._buildStaticGrid(); map.clear();
+            return { objects: map.objects.length, nearby: map.queryNearby(25, 25, 40).length };
+        }""")
+        check("Map clear removes stale static-grid references",
+              clear_cache["objects"] == 0 and clear_cache["nearby"] == 0, str(clear_cache))
+
+        map_layout = page.evaluate("""() => {
+            const map = new MapSystem();
+            map.generateCampusMap();
+            const solidTreePositions = [[-520, 585], [-405, 660], [-500, 780], [-350, 915], [420, 560], [300, 685], [435, 780], [320, 925]];
+            const decorativeTreePositions = [[-550, 500], [-450, 540], [-340, 590], [-545, 700], [-430, 740], [-315, 820], [325, 525], [455, 610], [350, 760], [475, 830], [300, 900], [460, 970]];
+            const markerPositions = [[-255, 690], [215, 835]];
+            const at = (obj, p, type) => obj.type === type && obj.x === p[0] && obj.y === p[1];
+            const anchors = solidTreePositions.map(p => map.objects.find(obj => at(obj, p, 'tree')));
+            const decorativeTrees = decorativeTreePositions.map(p => map.objects.find(obj => at(obj, p, 'tree')));
+            const markers = markerPositions.map(p => map.objects.find(obj => at(obj, p, 'server')));
+            const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+            const routes = [{ x: -80, y: 400, w: 160, h: 160 }, { x: -120, y: 560, w: 240, h: 490 }];
+            const routeClear = anchors.every(obj => routes.every(route => !overlaps(obj, route)));
+            const noAnchorOverlap = anchors.every((obj, index) => obj && anchors.every((other, otherIndex) => index === otherIndex || !overlaps(obj, other)));
+            return {
+                barrels: map.objects.filter(obj => obj.type === 'barrel').map(obj => [obj.x, obj.y]),
+                anchors: anchors.length,
+                solidAnchors: anchors.filter(obj => obj && obj.solid).length,
+                decorativeTrees: decorativeTrees.length,
+                nonSolidTrees: decorativeTrees.filter(obj => obj && !obj.solid).length,
+                markers: markers.length,
+                nonSolidMarkers: markers.filter(obj => obj && !obj.solid).length,
+                noAnchorOverlap,
+                routeClear,
+            };
+        }""")
+        check("Ordered campus layout uses four deliberate barrel chokepoints",
+              sorted(map_layout["barrels"]) == sorted([[1020, -410], [-1020, -410], [800, 520], [-1020, 520]]), str(map_layout))
+        check("Biotech courtyard has eight solid anchors, twelve decorative trees, and two data markers",
+              map_layout["anchors"] == 8 and map_layout["solidAnchors"] == 8
+              and map_layout["decorativeTrees"] == 12 and map_layout["nonSolidTrees"] == 12
+              and map_layout["markers"] == 2 and map_layout["nonSolidMarkers"] == 2,
+              str(map_layout))
+        check("Biotech courtyard anchors do not overlap and preserve 160/240-unit routes",
+              map_layout["noAnchorOverlap"] and map_layout["routeClear"], str(map_layout))
+
+        anti_stuck = page.evaluate("""() => {
+            const map = window.mapSystem;
+            const originalObjects = map.objects.slice();
+            const originalRoom = map.mtcRoom;
+            const originalDirty = map._objectsDirty;
+            const obstacle = new MapObject(0, 0, 50, 50, 'desk');
+            try {
+                map.objects.length = 0; map.objects.push(obstacle); map._buildStaticGrid();
+                const entity = new Entity(25, 25, 10);
+                entity._aiMoveX = 1; entity._aiMoveY = 0; entity.vx = 100;
+                map.update([entity], 1 / 60);
+                const contact = [entity._mapContactNX, entity._mapContactNY, entity._mapContactFrame];
+                entity._steerAroundObstacles(1 / 60);
+                return {
+                    escapedZeroDistance: entity.x < 0 && !map.isBlocked(entity.x, entity.y, entity.radius),
+                    tangentApplied: entity.vy < 0,
+                    contact,
+                    contactConsumed: entity._mapContactNX === undefined && entity._mapContactNY === undefined,
+                };
+            } finally {
+                map.objects.length = 0;
+                for (let i = 0; i < originalObjects.length; i++) map.objects.push(originalObjects[i]);
+                map.mtcRoom = originalRoom; map._buildStaticGrid(); map._objectsDirty = originalDirty;
+            }
+        }""")
+        check("Enemy recovery uses the nearest-face normal and deterministic tangent without allocations",
+              anti_stuck["escapedZeroDistance"] and anti_stuck["tangentApplied"]
+              and anti_stuck["contact"][:2] == [-1, 0] and anti_stuck["contactConsumed"], str(anti_stuck))
+
         # ── 4. No uncaught browser errors ──────────────────────────────
         check("No [pageerror] or [console error] during boot",
               len(console_errs) == 0,

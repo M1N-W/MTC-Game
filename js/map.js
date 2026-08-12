@@ -115,34 +115,45 @@ function drawDesk(w, h) {
     CTX.fillStyle = dp.notePen; CTX.fillRect(Math.floor(w * .65) - 4, Math.floor(h * .25), 4, 4);
 }
 
-function drawTree(size) {
+function drawTree(size, decorative = false, seed = 0) {
     const pal = BALANCE.map.mapColors;
     const dt = MAP_CONFIG.objects.tree;
-    const t = _mapNow / 2000;
+    const sparklePhase = (_mapNow / MAP_CONFIG.biotech.timing.sparkleMs) * Math.PI * 2 + seed;
+    const foliagePulse = 0.5 - 0.5 * Math.cos((_mapNow / MAP_CONFIG.biotech.timing.foliageMs) * Math.PI * 2 + seed);
+    const baseAlpha = decorative ? 0.68 : 1;
     CTX.fillStyle = dt.shadowFill;
+    CTX.globalAlpha = decorative ? 0.14 : 0.25;
     CTX.beginPath(); CTX.ellipse(0, size * .3, size * .7, size * .2, 0, 0, Math.PI * 2); CTX.fill();
+    CTX.globalAlpha = baseAlpha;
     CTX.fillStyle = pal.treeTrunk;
     CTX.beginPath(); CTX.roundRect(-5, -size * .15, 10, size * .5, 3); CTX.fill();
     CTX.fillStyle = pal.treeDark; CTX.beginPath(); CTX.arc(0, -size * .1, size * .72, 0, Math.PI * 2); CTX.fill();
     CTX.fillStyle = pal.treeMid; CTX.beginPath(); CTX.arc(0, -size * .45, size * .58, 0, Math.PI * 2); CTX.fill();
+    CTX.globalAlpha = baseAlpha * 0.80;
     CTX.fillStyle = pal.treeLight; CTX.beginPath(); CTX.arc(0, -size * .78, size * .40, 0, Math.PI * 2); CTX.fill();
     CTX.fillStyle = dt.leafSparkle;
+    CTX.globalAlpha = (0.10 + foliagePulse * 0.25) * baseAlpha;
     for (let i = 0; i < 3; i++) {
-        const a = t + (Math.PI * 2 / 3) * i, r = size * .3;
-        CTX.beginPath(); CTX.arc(Math.cos(a) * r, -size * .45 + Math.sin(a) * r * .5, 3, 0, Math.PI * 2); CTX.fill();
+        const a = sparklePhase + (Math.PI * 2 / 3) * i, r = size * .3;
+        CTX.beginPath(); CTX.arc(Math.cos(a) * r, -size * .45 + Math.sin(a) * r * .5, 2, 0, Math.PI * 2); CTX.fill();
     }
-    CTX.strokeStyle = dt.leafHex; CTX.lineWidth = 1.5; CTX.beginPath();
+    CTX.strokeStyle = pal.treeMid; CTX.globalAlpha = baseAlpha; CTX.lineWidth = 2; CTX.beginPath();
     for (let i = 0; i < 6; i++) {
         const a = (Math.PI / 3) * i - Math.PI / 6, r = size * .42;
         i === 0 ? CTX.moveTo(Math.cos(a) * r, -size * .78 + Math.sin(a) * r) : CTX.lineTo(Math.cos(a) * r, -size * .78 + Math.sin(a) * r);
     }
     CTX.closePath(); CTX.stroke();
+    CTX.strokeStyle = dt.leafHex;
+    CTX.globalAlpha = decorative ? 0.26 : 0.16 + foliagePulse * 0.12;
+    CTX.lineWidth = 1.5; CTX.stroke();
+    CTX.globalAlpha = 1;
 }
 
-function drawServer(w, h) {
+function drawServer(w, h, decorative = false) {
     const pal = BALANCE.map.mapColors;
     const ds = MAP_CONFIG.objects.server;
     const now = _mapNow;
+    const infrastructurePulse = 0.5 - 0.5 * Math.cos((now / MAP_CONFIG.biotech.timing.infrastructureMs) * Math.PI * 2);
     CTX.fillStyle = pal.serverBody;
     CTX.beginPath(); CTX.roundRect(0, 0, w, h, 5); CTX.fill();
     CTX.fillStyle = ds.inner; CTX.fillRect(4, 4, w - 8, h - 8);
@@ -151,13 +162,13 @@ function drawServer(w, h) {
         const uy = 8 + u * unitH;
         CTX.fillStyle = ds.unitSlot;
         CTX.beginPath(); CTX.roundRect(6, uy, w - 12, unitH - 3, 2); CTX.fill();
-        const blinkOffset = u * 317;
-        const isOn = Math.sin((now + blinkOffset) / (400 + u * 100)) > 0;
+        const blinkOffset = u * 0.16;
+        const isOn = infrastructurePulse + blinkOffset > 0.52;
         CTX.fillStyle = isOn ? pal.serverLightOn : pal.serverLightOff;
-        CTX.shadowBlur = isOn ? 8 : 0; CTX.shadowColor = pal.serverLightOn;
+        CTX.shadowBlur = isOn ? (decorative ? 5 : 8) : 0; CTX.shadowColor = pal.serverLightOn;
         CTX.beginPath(); CTX.arc(12, uy + unitH * .45, 3, 0, Math.PI * 2); CTX.fill(); CTX.shadowBlur = 0;
         for (let d = 0; d < 3; d++) {
-            const dOn = Math.sin((now + blinkOffset + d * 150) / 200) > 0.6;
+            const dOn = infrastructurePulse + blinkOffset + d * 0.09 > 0.66;
             CTX.fillStyle = dOn ? ds.dataLedOn : ds.dataLedOff;
             CTX.fillRect(18 + d * 6, uy + unitH * .3, 4, 4);
         }
@@ -511,9 +522,13 @@ function drawVendingMachine(w, h) {
 // 🗺️ MAP OBJECT CLASS
 // ════════════════════════════════════════════════════════════
 class MapObject {
-    constructor(x, y, w, h, type) {
+    constructor(x, y, w, h, type, options) {
         this.x = x; this.y = y; this.w = w; this.h = h;
-        this.type = type; this.solid = (type !== 'decoration');
+        this.type = type;
+        // Existing props remain solid by type; new garden props may opt out without post-construction mutation.
+        this.solid = typeof options === 'boolean'
+            ? options
+            : (options && typeof options.solid === 'boolean' ? options.solid : type !== 'decoration');
     }
 
     checkCollision(cx, cy, radius) {
@@ -521,7 +536,7 @@ class MapObject {
         return circleRectCollision(cx, cy, radius, this.x, this.y, this.w, this.h);
     }
 
-    resolveCollision(entity) {
+    resolveCollision(entity, contactFrame = 0) {
         if (!this.solid) return;
         if (typeof BridgeSystem !== 'undefined' &&
             BridgeSystem.shouldSuppressCollision(entity, this)) return;
@@ -530,15 +545,23 @@ class MapObject {
         const dx = entity.x - closestX, dy = entity.y - closestY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < entity.radius) {
-            const overlap = entity.radius - distance;
             // ── Push entity out ───────────────────────────────────────────
-            let nx = 0, ny = 1; // surface normal (up by default when distance===0)
+            let nx = 0, ny = 1;
+            let pushDistance = entity.radius - distance;
             if (distance > 0) {
                 nx = dx / distance; ny = dy / distance;
-                entity.x += nx * overlap; entity.y += ny * overlap;
             } else {
-                entity.x += overlap;
+                // A centre inside an AABB has no closest-point direction. Use its nearest face
+                // so the normal, displacement, and cancelled velocity all agree.
+                const left = entity.x - this.x, right = this.x + this.w - entity.x;
+                const top = entity.y - this.y, bottom = this.y + this.h - entity.y;
+                let nearest = left; nx = -1; ny = 0;
+                if (right < nearest) { nearest = right; nx = 1; ny = 0; }
+                if (top < nearest) { nearest = top; nx = 0; ny = -1; }
+                if (bottom < nearest) { nearest = bottom; nx = 0; ny = 1; }
+                pushDistance = entity.radius + nearest;
             }
+            entity.x += nx * pushDistance; entity.y += ny * pushDistance;
             // ── Cancel velocity components moving INTO the surface ────────
             // vx/vy: physics velocity (player, projectiles)
             const vDot = (entity.vx || 0) * nx + (entity.vy || 0) * ny;
@@ -550,9 +573,12 @@ class MapObject {
                 if (aDot < 0) { entity._aiMoveX -= aDot * nx; entity._aiMoveY -= aDot * ny; }
                 // Extra positional boost along the escape normal so AI clears the
                 // surface in fewer frames. Scaled by overlap depth — deep stuck = bigger nudge.
-                const boostDist = Math.min(overlap * 2.0, entity.radius * 0.5);
+                const boostDist = Math.min(pushDistance * 2.0, entity.radius * 0.5);
                 entity.x += nx * boostDist;
                 entity.y += ny * boostDist;
+                entity._mapContactNX = nx;
+                entity._mapContactNY = ny;
+                entity._mapContactFrame = contactFrame;
             }
         }
     }
@@ -562,8 +588,11 @@ class MapObject {
         CTX.save(); CTX.translate(screen.x, screen.y);
         switch (this.type) {
             case 'desk': drawDesk(this.w, this.h); break;
-            case 'tree': drawTree(this.w / 2); break;
-            case 'server': drawServer(this.w, this.h); break;
+            case 'tree': drawTree(this.w / 2, !this.solid, (this.x * 0.013 + this.y * 0.021)); break;
+            case 'server':
+                if (!this.solid) CTX.globalAlpha = 0.68;
+                drawServer(this.w, this.h, !this.solid);
+                break;
             case 'datapillar': drawDataPillar(this.w, this.h); break;
             case 'bookshelf': drawBookshelf(this.w, this.h); break;
             case 'blackboard': this.drawBlackboard(); break;
@@ -1181,6 +1210,7 @@ class MapSystem {
         const C = _MAP_GRID_CELL;
         for (let i = 0; i < this.objects.length; i++) {
             const obj = this.objects[i];
+            if (!obj || !obj.solid) continue;
             // Register object in every cell it overlaps
             const x0 = Math.floor(obj.x / C);
             const x1 = Math.floor((obj.x + obj.w) / C);
@@ -1195,6 +1225,30 @@ class MapSystem {
                 }
             }
         }
+    }
+
+    // Object collection mutations must refresh both derived caches before draw/collision.
+    _removeObjectsIf(shouldRemove) {
+        let writeIndex = 0;
+        let removed = 0;
+        for (let readIndex = 0; readIndex < this.objects.length; readIndex++) {
+            const obj = this.objects[readIndex];
+            if (shouldRemove(obj)) {
+                removed++;
+                continue;
+            }
+            this.objects[writeIndex++] = obj;
+        }
+        if (removed === 0) return 0;
+
+        this.objects.length = writeIndex;
+        this._buildStaticGrid();
+        this._objectsDirty = true;
+        return removed;
+    }
+
+    removeObjectsByFlag(flagName) {
+        return this._removeObjectsIf((obj) => !!obj && !!obj[flagName]);
     }
 
     // PERF Phase 1: return nearby map objects within a square radius of (wx, wy)
@@ -1427,8 +1481,8 @@ class MapSystem {
             const startY = centerY - ((rows - 1) * ySpacing) / 2;
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    const jx = (Math.random() - 0.5) * jitter;
-                    const jy = (Math.random() - 0.5) * jitter;
+                    const jx = jitter ? (Math.random() - 0.5) * jitter : 0;
+                    const jy = jitter ? (Math.random() - 0.5) * jitter : 0;
                     const objX = startX + c * xSpacing + jx;
                     const objY = startY + r * ySpacing + jy;
                     if (!this._isClearZone(objX, objY, sz.w, sz.h))
@@ -1475,38 +1529,52 @@ class MapSystem {
             this.objects.push(new MapObject(shopX - 55, shopY + 55, 40, 70, 'vendingmachine'));
 
         // ── 4. ZONE A: Server Farm (East) ─────────────────────────
-        // 3 aisles (N/M/S) × 4 servers + datapillar east wall
-        createCluster({ centerX: 800, centerY: -530, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'server' });
-        createCluster({ centerX: 800, centerY: -330, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'server' });
-        createCluster({ centerX: 800, centerY: -130, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'server' });
+        // Two sparse rack rows leave a readable service lane through the wing.
+        createCluster({ centerX: 800, centerY: -500, rows: 1, cols: 3, xSpacing: 150, ySpacing: 0, type: 'server' });
+        createCluster({ centerX: 800, centerY: -180, rows: 1, cols: 3, xSpacing: 150, ySpacing: 0, type: 'server' });
         createCluster({ centerX: 1120, centerY: -330, rows: 5, cols: 1, xSpacing: 0, ySpacing: 135, type: 'datapillar' });
 
         // ── 5. ZONE B: Library Archives (West) ────────────────────
-        // 4 bookshelf rows + reading desks in aisles
-        createCluster({ centerX: -830, centerY: -540, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
+        // Three shelf rows and two reading islands preserve a central aisle.
+        createCluster({ centerX: -830, centerY: -540, rows: 1, cols: 3, xSpacing: 150, ySpacing: 0, type: 'bookshelf' });
         createCluster({ centerX: -830, centerY: -455, rows: 1, cols: 2, xSpacing: 100, ySpacing: 0, type: 'desk' });
-        createCluster({ centerX: -830, centerY: -370, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
-        createCluster({ centerX: -830, centerY: -200, rows: 1, cols: 4, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
+        createCluster({ centerX: -830, centerY: -300, rows: 1, cols: 3, xSpacing: 150, ySpacing: 0, type: 'bookshelf' });
         createCluster({ centerX: -830, centerY: -130, rows: 1, cols: 2, xSpacing: 100, ySpacing: 0, type: 'desk' });
-        createCluster({ centerX: -830, centerY: -80, rows: 1, cols: 2, xSpacing: 120, ySpacing: 0, type: 'bookshelf' });
+        createCluster({ centerX: -830, centerY: -80, rows: 1, cols: 3, xSpacing: 150, ySpacing: 0, type: 'bookshelf' });
 
-        // ── 6. ZONE C: Courtyard (South) ──────────────────────────
-        // 4 corner groves (NW/NE/SW/SE) + back hedge; center lane clear
-        createCluster({ centerX: -400, centerY: 540, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
-        createCluster({ centerX: 400, centerY: 540, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
-        createCluster({ centerX: -400, centerY: 840, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
-        createCluster({ centerX: 400, centerY: 840, rows: 2, cols: 2, xSpacing: 80, ySpacing: 80, type: 'tree' });
-        createCluster({ centerX: 0, centerY: 970, rows: 1, cols: 5, xSpacing: 160, ySpacing: 0, type: 'tree' });
+        // ── 6. ZONE C: Biotech Data Commons (South) ───────────────
+        // Fixed placement preserves the 160-unit entrance and 240-unit central garden route.
+        const courtyardSolidTrees = [
+            [-520, 585], [-405, 660], [-500, 780], [-350, 915],
+            [420, 560], [300, 685], [435, 780], [320, 925],
+        ];
+        const courtyardDecorativeTrees = [
+            [-550, 500], [-450, 540], [-340, 590], [-545, 700], [-430, 740], [-315, 820],
+            [325, 525], [455, 610], [350, 760], [475, 830], [300, 900], [460, 970],
+        ];
+        const courtyardDataMarkers = [[-255, 690], [215, 835]];
+        for (let i = 0; i < courtyardSolidTrees.length; i++) {
+            const p = courtyardSolidTrees[i];
+            this.objects.push(new MapObject(p[0], p[1], 50, 50, 'tree'));
+        }
+        for (let i = 0; i < courtyardDecorativeTrees.length; i++) {
+            const p = courtyardDecorativeTrees[i];
+            this.objects.push(new MapObject(p[0], p[1], 50, 50, 'tree', false));
+        }
+        for (let i = 0; i < courtyardDataMarkers.length; i++) {
+            const p = courtyardDataMarkers[i];
+            this.objects.push(new MapObject(p[0], p[1], 40, 70, 'server', false));
+        }
 
         // ── 7. LECTURE HALLS ──────────────────────────────────────
-        createCluster({ centerX: -890, centerY: 720, rows: 3, cols: 2, xSpacing: 85, ySpacing: 80, type: 'desk' });
-        createCluster({ centerX: 890, centerY: 720, rows: 3, cols: 2, xSpacing: 85, ySpacing: 80, type: 'desk' });
+        createCluster({ centerX: -940, centerY: 720, rows: 2, cols: 2, xSpacing: 85, ySpacing: 90, type: 'desk' });
+        createCluster({ centerX: 940, centerY: 720, rows: 2, cols: 2, xSpacing: 85, ySpacing: 90, type: 'desk' });
 
         // ── 9. VENDING MACHINES at zone gates ─────────────────────
         const vendingSpots = [
             { x: 550, y: -250 },  // East wall gate
             { x: -550, y: -250 },  // West wall gate
-            { x: 0, y: 550 },  // Courtyard south entrance
+            { x: -250, y: 550 },  // Courtyard edge, outside the central garden route
         ];
         for (const vs of vendingSpots) {
             if (!this._isClearZone(vs.x, vs.y, 40, 70))
@@ -1515,16 +1583,10 @@ class MapSystem {
 
         // ── 10. EXPLOSIVE BARRELS (tactical chokepoints) ──────────
         const barrelSpots = [
-            { x: 830, y: -430 },  // serverFarm — between N and M aisles
-            { x: 830, y: -50 },  // serverFarm — south side
-            { x: -830, y: -430 },  // library — north aisle flank
-            { x: -830, y: -50 },  // library — south side
-            { x: 560, y: -50 },  // east gate approach
-            { x: -580, y: -50 },  // west gate approach
-            { x: -225, y: 460 },  // courtyard N approach
-            { x: 165, y: 460 },  // courtyard N approach
-            { x: 720, y: 520 },  // lectureHallR approach
-            { x: -900, y: 520 },  // lectureHallL approach
+            { x: 1020, y: -410 }, // serverFarm flank, outside service lane
+            { x: -1020, y: -410 }, // library flank, outside reading aisle
+            { x: 800, y: 520 },   // lectureHallR outer cover
+            { x: -1020, y: 520 }, // lectureHallL outer cover
         ];
         for (const spot of barrelSpots) {
             let tooClose = false;
@@ -1537,12 +1599,13 @@ class MapSystem {
     }
 
     update(entities, dt = 0) {
+        this._collisionFrame = (this._collisionFrame || 0) + 1;
         // PERF Phase 1: query only nearby objects per entity instead of all objects
         for (const entity of entities) {
             if (entity.dead) continue;
             const r = (entity.radius || 20) + 48; // 48px margin covers object half-widths
             const nearby = this.queryNearby(entity.x, entity.y, r);
-            for (let i = 0; i < nearby.length; i++) nearby[i].resolveCollision(entity);
+            for (let i = 0; i < nearby.length; i++) nearby[i].resolveCollision(entity, this._collisionFrame);
         }
         if (this.mtcRoom && window.player) {
             this.mtcRoom.update(dt, window.player);
@@ -1758,9 +1821,9 @@ class MapSystem {
             ctx.beginPath(); ctx.rect(tl.x, tl.y, sw, sh); ctx.clip();
 
             // Pulsing inner border accent
-            const pulse = 0.5 + Math.sin(t * 1.2 + zi) * 0.5;
+            const pulse = 0.5 - 0.5 * Math.cos(t * Math.PI * 2 / 2.4 + zi);
             ctx.strokeStyle = z.accentColor;
-            ctx.globalAlpha = 0.08 + pulse * 0.12;
+            ctx.globalAlpha = z.borderAlphaBase + pulse * z.borderAlphaPulse;
             ctx.lineWidth = 3;
             ctx.strokeRect(tl.x + 2, tl.y + 2, sw - 4, sh - 4);
 
@@ -1768,20 +1831,20 @@ class MapSystem {
             {
                 ctx.font = 'bold 11px monospace';
                 ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-                const labelAlpha = 0.70 + pulse * 0.20;
+                const labelAlpha = 0.88;
                 const lw = this._zoneLabelWidths[zoneKeys[zi]] ?? ctx.measureText(z.label).width;
                 const px = 6, py = 5, lh = 13;
                 const pillX = tl.x + 8, pillY = tl.y + 6;
 
                 // Pill background
-                ctx.globalAlpha = 0.30 + pulse * 0.10;
-                ctx.fillStyle = 'rgba(0,0,0,0.55)';
+                ctx.globalAlpha = 0.72;
+                ctx.fillStyle = MAP_CONFIG.biotech.palette.panelCharcoal;
                 ctx.beginPath();
                 ctx.roundRect(pillX - px, pillY - py * 0.5, lw + px * 2, lh + py, 5);
                 ctx.fill();
 
                 // Pill border (zone accent)
-                ctx.globalAlpha = 0.20 + pulse * 0.12;
+                ctx.globalAlpha = z.borderAlphaBase + pulse * z.borderAlphaPulse;
                 ctx.strokeStyle = z.accentColor;
                 ctx.lineWidth = 1;
                 ctx.stroke();
@@ -1824,6 +1887,23 @@ class MapSystem {
 
             ctx.restore();
         }
+
+        // Containment is terrain only: it frames the Data Commons without adding collision clutter.
+        const rails = MAP_CONFIG.biotech.containmentRails;
+        const railPulse = 0.5 - 0.5 * Math.cos((_mapNow / MAP_CONFIG.biotech.timing.infrastructureMs) * Math.PI * 2);
+        ctx.save();
+        ctx.globalAlpha = 0.14 + railPulse * 0.12;
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 6;
+        for (let i = 0; i < rails.length; i++) {
+            const rail = rails[i];
+            const start = worldToScreen(rail.x1, rail.y1);
+            const end = worldToScreen(rail.x2, rail.y2);
+            ctx.strokeStyle = MAP_CONFIG.biotech.palette[rail.color];
+            ctx.shadowColor = ctx.strokeStyle;
+            ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+        }
+        ctx.restore();
     }
 
     draw() {
@@ -1953,10 +2033,10 @@ class MapSystem {
             return true;
         };
 
-        const surviving = [];
-        for (const obj of this.objects) {
+        for (let i = 0; i < this.objects.length; i++) {
+            const obj = this.objects[i];
             // Indestructible Citadel Walls
-            if (obj.type === 'mtcwall') { surviving.push(obj); continue; }
+            if (obj.type === 'mtcwall') continue;
 
             if (lineHitsAABB(startX, startY, endX, endY, obj.x, obj.y, obj.w, obj.h)) {
                 const cx = obj.x + obj.w * 0.5, cy = obj.y + obj.h * 0.5;
@@ -1966,9 +2046,10 @@ class MapSystem {
                 }
                 if (typeof spawnFloatingText === 'function') spawnFloatingText('💥 DESTROYED', cx, cy - 24, '#f97316', 20);
                 if (typeof addScreenShake === 'function') addScreenShake(5);
-            } else { surviving.push(obj); }
+            }
         }
-        this.objects = surviving; this._objectsDirty = true;
+        const removed = this._removeObjectsIf((obj) => obj && obj.type !== 'mtcwall'
+            && lineHitsAABB(startX, startY, endX, endY, obj.x, obj.y, obj.w, obj.h));
 
         if (this.mtcRoom) {
             const r = this.mtcRoom;
@@ -1978,11 +2059,25 @@ class MapSystem {
                 if (typeof spawnFloatingText === 'function') spawnFloatingText('🛡️ SHIELD HIT!', rcx, rcy - 35, '#38bdf8', 22);
             }
         }
+        return removed;
     }
 
-    clear() { this.objects = []; this.mtcRoom = null; this.initialized = false; this._ensureSortedObjectBuffer().length = 0; this._objectsDirty = true; }
+    clear() {
+        this.objects.length = 0;
+        this._staticGrid.clear();
+        this._staticGridResults.length = 0;
+        if (this._staticGridSeen) this._staticGridSeen.clear();
+        this.mtcRoom = null;
+        this.initialized = false;
+        this._ensureSortedObjectBuffer().length = 0;
+        this._objectsDirty = true;
+    }
     getObjects() { return this.objects; }
-    isBlocked(x, y, radius = 0) { for (const obj of this.objects) if (obj.checkCollision(x, y, radius)) return true; return false; }
+    isBlocked(x, y, radius = 0) {
+        const nearby = this.queryNearby(x, y, radius);
+        for (let i = 0; i < nearby.length; i++) if (nearby[i].checkCollision(x, y, radius)) return true;
+        return false;
+    }
     findSafeSpawn(preferredX, preferredY, radius) {
         for (let i = 0; i < 50; i++) {
             const angle = (Math.PI * 2 / 50) * i, distance = 100 + i * 50;
