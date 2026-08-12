@@ -124,19 +124,22 @@
 
     function draw(ctx) {
         if (!ctx || typeof CANVAS === 'undefined') return;
-        const cam = (typeof camera !== 'undefined') ? camera : window.camera;
+        const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
         for (let i = 0; i < _bridges.length; i++) {
             const bridge = _bridges[i];
             if (!bridge.active) continue;
 
-            const sx = cam ? bridge.x - cam.x : bridge.x;
-            const sy = cam ? bridge.y - cam.y : bridge.y;
+            const screen = typeof worldToScreen === 'function'
+                ? worldToScreen(bridge.x, bridge.y) : { x: bridge.x, y: bridge.y };
+            const sx = screen.x;
+            const sy = screen.y;
             if (sx < -CULL || sx > CANVAS.width + CULL || sy < -CULL || sy > CANVAS.height + CULL) continue;
 
             const lifeAlpha = Math.max(0.18, bridge.ttl / TTL);
             const pulse = 0.5 + Math.sin(bridge.pulse * 10) * 0.5;
             ctx.save();
             ctx.translate(sx, sy);
+            ctx.scale(zoom, zoom);
             ctx.rotate(bridge.angle);
             ctx.globalAlpha = lifeAlpha;
             ctx.fillStyle = 'rgba(34, 211, 238, 0.22)';

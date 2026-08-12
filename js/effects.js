@@ -1136,7 +1136,8 @@ class Raindrop {
         this.x += this.wind * dt;
 
         // Remove if below visible screen (camera-relative)
-        const screenBottom = camera.y + CANVAS.height + 100;
+        const zoom = camera && camera.zoom ? camera.zoom : 1;
+        const screenBottom = camera.y + CANVAS.height / zoom + 100;
         return this.y > screenBottom;
     }
 
@@ -1166,7 +1167,8 @@ class Snowflake {
         this.x += Math.sin(this.time) * this.swayAmount * dt;
 
         // Remove if below visible screen
-        const screenBottom = camera.y + CANVAS.height + 100;
+        const zoom = camera && camera.zoom ? camera.zoom : 1;
+        const screenBottom = camera.y + CANVAS.height / zoom + 100;
         return this.y > screenBottom;
     }
 
@@ -1291,9 +1293,10 @@ class WeatherSystem {
     }
 
     _spawnParticle(camera) {
+        const zoom = camera && camera.zoom ? camera.zoom : 1;
         const screenTop = camera.y - 10;
         const screenLeft = camera.x - 50;
-        const screenRight = camera.x + CANVAS.width + 50;
+        const screenRight = camera.x + CANVAS.width / zoom + 50;
         const x = screenLeft + Math.random() * (screenRight - screenLeft);
 
         if (this.mode === 'rain') {

@@ -68,6 +68,11 @@ class Entity {
         this.vx = 0; this.vy = 0;
         this.radius = radius;
         this.angle = 0;
+        // Collision recovery is primitive-only so the 60 FPS movement path stays allocation-free.
+        this._mapContactNX = undefined; this._mapContactNY = undefined; this._mapContactFrame = -1;
+        this._mapRecoveryTTL = 0; this._mapRecoverySide = 1;
+        this._mapRecoveryX = x; this._mapRecoveryY = y;
+        this._mapRecoveryNoProgress = 0;
         // hp / maxHp / dead are NOT set here — subclasses that use
         // HealthComponent define proxy getters that shadow these names.
         // Subclasses that don't use HealthComponent must set them manually.
@@ -113,19 +118,37 @@ class Entity {
     _steerAroundObstacles(dt) {
         if (typeof mapSystem === 'undefined' || !mapSystem.objects || mapSystem.objects.length === 0) return;
 
-        // MapObject.resolveCollision() runs after entity updates. Consume its primitive
-        // contact data on the next steering pass; no query or allocation is needed here.
+        // MapObject.resolveCollision() runs after entity updates.  The aggregate contact
+        // normal is deliberately applied before probe steering, so direct AI velocity
+        // cannot overwrite the escape tangent in a two-prop pinch.
         if (typeof this._mapContactNX === 'number' && typeof this._mapContactNY === 'number') {
             const nx = this._mapContactNX, ny = this._mapContactNY;
-            const turn = (typeof this.id === 'number' && (this.id & 1) === 1) ? -1 : 1;
+            if (nx !== 0 || ny !== 0) {
+                this._mapRecoveryTTL = 0.42;
+                this._mapRecoveryX = this.x;
+                this._mapRecoveryY = this.y;
+                this._mapRecoveryNoProgress = 0;
+            }
+            const turn = this._mapRecoverySide || ((typeof this.id === 'number' && (this.id & 1) === 1) ? -1 : 1);
             const tangentX = -ny * turn, tangentY = nx * turn;
-            this._aiMoveX += tangentX * 0.75;
-            this._aiMoveY += tangentY * 0.75;
-            this.vx += tangentX * 260 * dt;
-            this.vy += tangentY * 260 * dt;
-            this._mapContactNX = undefined;
-            this._mapContactNY = undefined;
-            this._mapContactFrame = -1;
+            this._aiMoveX = (this._aiMoveX || 0) + tangentX * 1.6 + nx * 0.45;
+            this._aiMoveY = (this._aiMoveY || 0) + tangentY * 1.6 + ny * 0.45;
+            this.vx += tangentX * 420 * dt + nx * 160 * dt;
+            this.vy += tangentY * 420 * dt + ny * 160 * dt;
+            this._mapContactNX = undefined; this._mapContactNY = undefined;
+        }
+        if (this._mapRecoveryTTL > 0) {
+            const moved = Math.hypot(this.x - this._mapRecoveryX, this.y - this._mapRecoveryY);
+            this._mapRecoveryTTL -= dt;
+            if (moved < Math.max(6, (this.radius || 20) * 0.28)) {
+                this._mapRecoveryNoProgress += dt;
+                const escape = this._mapRecoverySide;
+                this.vx += -this.vy * 0.008 * escape + 42 * dt;
+                this.vy += this.vx * 0.008 * escape + 42 * dt;
+            } else {
+                this._mapRecoveryTTL = 0;
+                this._mapRecoveryNoProgress = 0;
+            }
         }
 
         const PROBE_DIST = 80;   // px ahead to probe

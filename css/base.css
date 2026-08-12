@@ -137,6 +137,12 @@ body {
   cursor: crosshair;
 }
 
+/* CrosshairSystem toggles this only while an active game pointer is over the
+   canvas. HTML controls keep their normal pointer/focus affordances. */
+#gameCanvas.gameplay-cursor-hidden {
+  cursor: none !important;
+}
+
 #ui-layer {
   position: absolute;
   top: 0;

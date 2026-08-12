@@ -32,8 +32,8 @@ window.BOSS_ENCOUNTERS = BOSS_ENCOUNTERS;
 const MTC_CROSSHAIRS = Object.freeze({
     kao: Object.freeze({
         key: 'kao-sight',
-        color: '#a855f7',
-        accent: '#f0abfc'
+        color: '#38bdf8',
+        accent: '#e0f2fe'
     }),
     auto: Object.freeze({
         key: 'wanchai-sight',

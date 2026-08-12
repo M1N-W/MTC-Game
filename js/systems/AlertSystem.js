@@ -124,7 +124,6 @@
 
     function draw(ctx) {
         if (!ctx || typeof CANVAS === 'undefined') return;
-        const cam = (typeof camera !== 'undefined') ? camera : window.camera;
 
         for (let i = 0; i < _active.length; i++) {
             const slot = _active[i];
@@ -132,27 +131,30 @@
             if (!entity || entity.dead) continue;
 
             const radius = entity.radius || 18;
-            const sx = cam ? entity.x - cam.x : entity.x;
-            const sy = cam ? entity.y - cam.y : entity.y;
+            const screen = typeof worldToScreen === 'function' ? worldToScreen(entity.x, entity.y) : { x: entity.x, y: entity.y };
+            const sx = screen.x;
+            const sy = screen.y;
             if (sx < -80 || sx > CANVAS.width + 80 || sy < -100 || sy > CANVAS.height + 60) continue;
 
             const life = slot.duration > 0 ? slot.ttl / slot.duration : 0;
             const bob = Math.sin(slot.pulse * 10) * 3;
 
             ctx.save();
-            ctx.translate(sx, sy - radius - 28 + bob);
+            ctx.translate(sx, sy - radius - 24 + bob);
             ctx.globalAlpha = Math.max(0.25, Math.min(1, life + 0.2));
-            ctx.font = '700 11px Consolas, monospace';
+            ctx.font = '700 10px monospace';
             ctx.textAlign = 'center';
             ctx.lineWidth = 1.5;
             ctx.strokeStyle = slot.color;
             ctx.fillStyle = slot.color;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = slot.color;
-            ctx.beginPath();
-            ctx.arc(-42, -3, 5, 0, TWO_PI);
-            ctx.stroke();
-            ctx.fillText(slot.label, 8, 0);
+            const width = Math.min(128, ctx.measureText(slot.label).width + 16);
+            ctx.fillStyle = 'rgba(8,12,18,0.86)';
+            ctx.fillRect(-width * 0.5, -10, width, 17);
+            ctx.strokeStyle = slot.color; ctx.globalAlpha *= 0.75;
+            ctx.strokeRect(-width * 0.5, -10, width, 17);
+            ctx.globalAlpha = Math.max(0.25, Math.min(1, life + 0.2));
+            ctx.fillStyle = slot.color;
+            ctx.fillText(slot.label, 0, 2);
             ctx.restore();
         }
     }

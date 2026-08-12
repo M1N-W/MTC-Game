@@ -194,6 +194,10 @@ const updateScoreUI = () => {
 // ─── Canvas utilities ─────────────────────────────────────────
 let CANVAS, CTX;
 
+// Render-space zoom is intentionally independent of browser zoom. Keeping it
+// here makes terrain, world props, input, and overlays share one transform.
+const CAMERA_RENDER_SCALE = 1.25;
+
 const initCanvas = () => {
     CANVAS = document.getElementById('gameCanvas');
     if (!CANVAS) { console.error('[MTC] #gameCanvas not found!'); return; }
@@ -206,32 +210,43 @@ const initCanvas = () => {
 
 const resizeCanvas = () => {
     if (!CANVAS) return;
-    CANVAS.width  = window.innerWidth;
-    CANVAS.height = window.innerHeight;
+    const rect = CANVAS.getBoundingClientRect();
+    CANVAS.width = Math.max(1, Math.round(rect.width || window.innerWidth));
+    CANVAS.height = Math.max(1, Math.round(rect.height || window.innerHeight));
 };
 
 const getCanvas  = () => CANVAS;
 const getContext = () => CTX;
 
 // ─── Camera system ────────────────────────────────────────────
-const camera = { x: 0, y: 0 };
+const camera = { x: 0, y: 0, zoom: CAMERA_RENDER_SCALE };
+
+const getViewportWorldSize = () => {
+    const zoom = camera.zoom || CAMERA_RENDER_SCALE;
+    return {
+        width: (CANVAS ? CANVAS.width : 0) / zoom,
+        height: (CANVAS ? CANVAS.height : 0) / zoom
+    };
+};
 
 const updateCamera = (targetX, targetY) => {
+    if (!CANVAS || !Number.isFinite(targetX) || !Number.isFinite(targetY)) return;
     const smoothing = GAME_CONFIG.canvas.cameraSmooth;
-    camera.x += (targetX - CANVAS.width  / 2 - camera.x) * smoothing;
-    camera.y += (targetY - CANVAS.height / 2 - camera.y) * smoothing;
+    const view = getViewportWorldSize();
+    camera.x += (targetX - view.width / 2 - camera.x) * smoothing;
+    camera.y += (targetY - view.height / 2 - camera.y) * smoothing;
 };
 
 const getCamera = () => camera;
 
 const screenToWorld = (screenX, screenY) => ({
-    x: screenX + camera.x,
-    y: screenY + camera.y
+    x: screenX / camera.zoom + camera.x,
+    y: screenY / camera.zoom + camera.y
 });
 
 const worldToScreen = (worldX, worldY) => ({
-    x: worldX - camera.x,
-    y: worldY - camera.y
+    x: (worldX - camera.x) * camera.zoom,
+    y: (worldY - camera.y) * camera.zoom
 });
 
 // ─── Mouse world-position update ──────────────────────────────
@@ -642,9 +657,11 @@ if (typeof window !== 'undefined') {
     window.resizeCanvas      = resizeCanvas;
     window.getCanvas         = getCanvas;
     window.getContext        = getContext;
+    window.CAMERA_RENDER_SCALE = CAMERA_RENDER_SCALE;
     window.camera            = camera;
     window.updateCamera      = updateCamera;
     window.getCamera         = getCamera;
+    window.getViewportWorldSize = getViewportWorldSize;
     window.screenToWorld     = screenToWorld;
     window.worldToScreen     = worldToScreen;
     window.updateMouseWorld  = updateMouseWorld;
@@ -690,7 +707,7 @@ if (typeof module !== 'undefined' && module.exports) {
         addScreenShake, updateScreenShake, getScreenShakeOffset,
         addScore, getScore, resetScore,
         initCanvas, resizeCanvas, getCanvas, getContext,
-        updateCamera, getCamera, screenToWorld, worldToScreen,
+        CAMERA_RENDER_SCALE, updateCamera, getCamera, getViewportWorldSize, screenToWorld, worldToScreen,
         updateMouseWorld, getMouse,
         getDeltaTime, resetTime,
         randomChoice, randomInt, randomBool,

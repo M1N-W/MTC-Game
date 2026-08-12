@@ -1,0 +1,45 @@
+- generic [active] [ref=f6e1]:
+  - text: ✦ ✦ ✦ ✦
+  - generic:
+    - generic: AUTO RIFLE
+    - generic: หมุนลูกเลื่อนเพื่อสลับอาวุธ
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - img:
+            - generic: MTC
+        - generic:
+          - generic: HP & FOCUS
+          - generic: Lv.1
+      - generic:
+        - generic: "0"
+        - generic: SCORE
+        - generic: WAVE 1
+    - generic:
+      - generic:
+        - generic: KAO
+        - generic: ASSASSIN
+      - generic:
+        - generic: L-Click
+        - generic: 🔫
+        - generic: SHOOT
+      - generic:
+        - generic: SPACE
+        - text: 💨
+        - generic: DASH
+      - generic:
+        - generic: R-Click
+        - generic: 👻
+        - generic: STEALTH
+      - generic:
+        - generic: Q
+        - generic: ⚡
+        - generic: TELEPORT
+        - generic: 🔒
+      - generic:
+        - generic: E
+        - generic: 👥
+        - generic: CLONE
+        - generic: 🔒
+  - text: TUTORIAL ▶

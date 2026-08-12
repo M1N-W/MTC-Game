@@ -318,6 +318,43 @@ def main():
               anti_stuck["escapedZeroDistance"] and anti_stuck["tangentApplied"]
               and anti_stuck["contact"][:2] == [-1, 0] and anti_stuck["contactConsumed"], str(anti_stuck))
 
+        portal_lifecycle = page.evaluate("""() => {
+            const portal = PortalSystem;
+            const priorPhase = GameState.phase;
+            GameState.setPhase('PLAYING');
+            portal.clear();
+            try {
+                const created = portal.spawn({ x: 100, y: 100, targetWave: 2 });
+                const duplicateRejected = portal.spawn({ x: 200, y: 200, targetWave: 3 }) === false;
+                portal.update(1 / 60, { x: 100, y: 100, radius: 18, dead: false });
+                const pickedUp = portal.getSnapshot();
+                const firstTransition = portal.consumeTransition();
+                const advancing = portal.getSnapshot();
+                const secondTransition = portal.consumeTransition();
+                const blockedWhileAdvancing = portal.spawn({ x: 300, y: 300, targetWave: 3 }) === false;
+                const completed = portal.completeTransition();
+                const reopened = portal.spawn({ x: 300, y: 300, targetWave: 3 });
+                return { created, duplicateRejected, pickedUp, firstTransition, advancing,
+                    secondTransition, blockedWhileAdvancing, completed, reopened };
+            } finally {
+                portal.clear();
+                GameState.setPhase(priorPhase);
+            }
+        }""")
+        check("Anomaly gate lifecycle permits one gate and one transition per wave",
+              portal_lifecycle["created"] and portal_lifecycle["duplicateRejected"]
+              and portal_lifecycle["pickedUp"]["state"] == "rewardPending"
+              and portal_lifecycle["firstTransition"] == 2
+              and portal_lifecycle["advancing"]["state"] == "advancing"
+              and portal_lifecycle["secondTransition"] == 0
+              and portal_lifecycle["blockedWhileAdvancing"] and portal_lifecycle["completed"]
+              and portal_lifecycle["reopened"], str(portal_lifecycle))
+
+        portal_src = (REPO / "js" / "systems" / "PortalSystem.js").read_text(encoding="utf-8")
+        check("Anomaly relay uses a containment frame instead of a spinning circle",
+              "_drawBrokenHex" in portal_src and "WAVE ${_targetWave} // ENTER" in portal_src
+              and "ctx.rotate" not in portal_src)
+
         # ── 4. No uncaught browser errors ──────────────────────────────
         check("No [pageerror] or [console error] during boot",
               len(console_errs) == 0,

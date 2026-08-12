@@ -537,8 +537,11 @@ function _setupMouseListeners() {
     window.addEventListener('mousemove', function (e) {
         if (!CANVAS) return;
         const r = CANVAS.getBoundingClientRect();
-        mouse.x = e.clientX - r.left;
-        mouse.y = e.clientY - r.top;
+        if (!r.width || !r.height) return;
+        // Pointer events are CSS pixels while canvas coordinates may differ
+        // after resize/display scaling. Normalise before screenToWorld().
+        mouse.x = (e.clientX - r.left) * (CANVAS.width / r.width);
+        mouse.y = (e.clientY - r.top) * (CANVAS.height / r.height);
         // updateMouseWorld is defined in utils.js (loaded before input.js)
         if (typeof updateMouseWorld === 'function') updateMouseWorld();
     });

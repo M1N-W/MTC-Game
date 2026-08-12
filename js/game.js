@@ -221,11 +221,13 @@ function _advanceToWave(targetWave) {
     if (!Number.isFinite(targetWave)) return;
     setWave(targetWave);
     if (getWave() > BALANCE.waves.maxWaves) {
+        if (typeof PortalSystem !== 'undefined') PortalSystem.completeTransition();
         window.endGame('victory');
         return;
     }
     Achievements.check('wave_1');
     if (typeof startNextWave === 'function') startNextWave();
+    if (typeof PortalSystem !== 'undefined') PortalSystem.completeTransition();
 }
 
 function requestWavePortal(targetWave, options) {
@@ -239,7 +241,9 @@ function requestWavePortal(targetWave, options) {
         _advanceToWave(targetWave);
         return;
     }
-    if (PortalSystem.isActive()) return;
+    if (typeof PortalSystem.isIdle === 'function'
+        ? !PortalSystem.isIdle()
+        : PortalSystem.isActive()) return;
     const clearReady = (typeof isWaveClearReady === 'function')
         ? isWaveClearReady()
         : window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive;
@@ -259,7 +263,7 @@ function requestWavePortal(targetWave, options) {
     _portalSpawnRequest.mapId = 'campus';
     _portalSpawnRequest.isBossWave = _pendingPortalWasBoss || isBossWaveClear;
     _pendingPortalWasBoss = false;
-    PortalSystem.spawn(_portalSpawnRequest);
+    if (!PortalSystem.spawn(_portalSpawnRequest)) return;
 
     if (typeof TerminalLog !== 'undefined') {
         TerminalLog.push({ sender: 'SYSTEM', text: `ANOMALY GATE OPEN -> WAVE ${targetWave}`, type: 'info' });
@@ -538,6 +542,7 @@ function _tickEntities(dt, _inTutorial) {
             }
         }
         if (typeof window.squadAI !== 'undefined') window.squadAI.update(dt, window.enemies, window.player);
+        if (typeof AbilityCoach !== 'undefined') AbilityCoach.update(dt);
 
         // MTC Room enemy exclusion — only while room is ACTIVE (cooldown=0).
         // During cooldown the room is open: enemies may enter and player may fight back.
@@ -563,7 +568,8 @@ function _tickEntities(dt, _inTutorial) {
     const waveClearReady = (typeof isWaveClearReady === 'function')
         ? isWaveClearReady()
         : window.enemies.length === 0 && !window.boss && !GameState.waveSpawnLocked && !window.isTrickleActive;
-    const portalWaiting = typeof PortalSystem !== 'undefined' && PortalSystem.isActive();
+    const portalWaiting = typeof PortalSystem !== 'undefined' &&
+        (typeof PortalSystem.isIdle === 'function' ? !PortalSystem.isIdle() : PortalSystem.isActive());
     if (!_inTutorial && waveClearReady && !portalWaiting && _pendingPortalTargetWave) {
         const targetWave = _pendingPortalTargetWave;
         const wasBossWave = _pendingPortalWasBoss;
@@ -949,6 +955,7 @@ function drawGame() {
     drawDayNightHUD();
     // WARN-3 FIX: guard in case TimeManager.js loads after drawGame fires
     if (typeof drawSlowMoOverlay === 'function') drawSlowMoOverlay();
+    if (typeof AbilityCoach !== 'undefined') AbilityCoach.draw(CTX);
 
     if (GameState.glitchIntensity > 0) {
         drawGlitchEffect(GameState.glitchIntensity, GameState.controlsInverted);

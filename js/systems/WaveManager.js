@@ -722,19 +722,12 @@ function _startGlitchWave(count) {
         GameState.lastGlitchCountdown = -1;
     }
 
-    spawnFloatingText(GAME_TEXTS.wave.glitchWave, window.player.x, window.player.y - 200, '#d946ef', 44);
     addScreenShake(20); Audio.playBossSpecial();
-    setTimeout(() => { if (window.player && !window.player.dead) spawnFloatingText(GAME_TEXTS.wave.glitchAnomaly, window.player.x, window.player.y - 175, '#f472b6', 28); }, 400);
-    setTimeout(() => {
-        if (window.player && !window.player.dead && typeof GameState !== 'undefined' && GameState.waveSpawnLocked) {
-            spawnFloatingText(GAME_TEXTS.wave.glitchControls, window.player.x, window.player.y - 158, '#f472b6', 28);
-            if (window.UIManager) window.UIManager.showVoiceBubble('Controls inverted!', window.player.x, window.player.y - 40);
-        }
-    }, 1200);
-    setTimeout(() => {
-        if (window.player && !window.player.dead && typeof GameState !== 'undefined' && GameState.waveSpawnLocked)
-            spawnFloatingText(GAME_TEXTS.wave.glitchBrace, window.player.x, window.player.y - 148, '#ef4444', 30);
-    }, 2400);
+    // One event-rail alert replaces stacked world text and delayed timers.  The
+    // wave announcement already owns the high-hierarchy anomaly treatment.
+    if (typeof TerminalLog !== 'undefined') {
+        TerminalLog.push({ sender: 'ANOMALY', text: 'CONTROL INVERSION ACTIVE — HOLD POSITION', type: 'warn' });
+    }
 }
 
 // ── Boss wave: config-based encounter queue ──────────────────────────────────

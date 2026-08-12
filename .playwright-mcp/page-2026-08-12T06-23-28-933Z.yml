@@ -1,0 +1,127 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]: 🎮
+      - generic [ref=f2e7]: MTC THE GAME
+      - generic [ref=f2e8]: BETA EDITION
+    - generic [ref=f2e9]: FINALIZING...
+    - generic [ref=f2e12]:
+      - generic [ref=f2e13]: ⏳ Canvas System
+      - generic [ref=f2e14]: ⏳ Input System
+      - generic [ref=f2e15]: ⏳ Audio System
+      - generic [ref=f2e16]: ⏳ Game Assets
+      - generic [ref=f2e17]: ⏳ Ready to Play
+    - generic [ref=f2e18]: "💡 TIP: Use WASD to move, Mouse to aim"
+  - text: ✦ ✦ ✦ ✦
+  - generic:
+    - generic: AUTO RIFLE
+    - generic: หมุนลูกเลื่อนเพื่อสลับอาวุธ
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - img:
+            - generic: MTC
+        - generic:
+          - generic: HP & FOCUS
+          - generic: Lv.1
+      - generic:
+        - generic: "0"
+        - generic: SCORE
+        - generic: WAVE 1
+    - generic:
+      - generic:
+        - generic: L-Click
+        - generic: 🔫
+        - generic: SHOOT
+      - generic:
+        - generic: SPACE
+        - text: 💨
+        - generic: DASH
+      - generic:
+        - generic: R-Click
+        - generic: 👻
+        - generic: STEALTH
+  - generic [ref=f2e21]:
+    - generic [ref=f2e22]: MTC the Game
+    - generic [ref=f2e23]: BETA EDITION v3.44.16
+    - generic [ref=f2e24]: Mission "MTC Adventure"
+    - generic [ref=f2e25]:
+      - heading "SELECT YOUR OPERATOR" [level=3] [ref=f2e26]
+      - generic [ref=f2e27]:
+        - button "Previous character" [ref=f2e28] [cursor=pointer]: ❮
+        - generic [ref=f2e30]:
+          - generic [ref=f2e32] [cursor=pointer]:
+            - generic [ref=f2e33]:
+              - img [ref=f2e36]:
+                - generic [ref=f2e37]: MTC
+              - generic [ref=f2e99]: KAO
+              - generic [ref=f2e100]: Tactical Ranged
+              - generic [ref=f2e101]:
+                - generic [ref=f2e102]:
+                  - generic [ref=f2e103]:
+                    - generic [ref=f2e104]: ❤️
+                    - text: HP
+                  - generic [ref=f2e107]: "119"
+                - generic [ref=f2e108]:
+                  - generic [ref=f2e109]:
+                    - generic [ref=f2e110]: ⚔️
+                    - text: DMG
+                  - generic [ref=f2e113]: "118"
+                - generic [ref=f2e114]:
+                  - generic [ref=f2e115]:
+                    - generic [ref=f2e116]: 💨
+                    - text: SPD
+                  - generic [ref=f2e119]: "298"
+                - generic [ref=f2e120]:
+                  - generic [ref=f2e121]:
+                    - generic [ref=f2e122]: 🎯
+                    - text: RANGE
+                  - generic [ref=f2e125]: "900"
+              - generic [ref=f2e126]: Triple weapon & God of Stealth
+              - generic [ref=f2e127]: Stealth Ops
+              - generic: ✦ TAP FOR SKILLS
+            - generic:
+              - generic: 🎓 KAO — SKILL SET
+              - generic:
+                - generic "Teleport Charge — Blink through danger, reposition instantly, and turn stealth openings into burst windows.":
+                  - generic: Q
+                  - generic: ⚡
+                  - generic:
+                    - generic: Teleport Charge
+                    - generic: Blink through danger, reposition instantly, and turn stealth openings into burst windows.
+                - generic "Clone Orbit — 2 orbiting clones mirror shots. E again to detonate early.":
+                  - generic: E
+                  - generic: 👥
+                  - generic:
+                    - generic: Clone Orbit
+                    - generic: 2 orbiting clones mirror shots. E again to detonate early.
+                - generic "Dash-Stealth — Every dash triggers stealth — next shot is ambush crit.":
+                  - generic: DASH
+                  - generic: 🌫️
+                  - generic:
+                    - generic: Dash-Stealth
+                    - generic: Every dash triggers stealth — next shot is ambush crit.
+                - generic "Weapon Mastery — Kill 5× with each weapon to unlock passive awakening.":
+                  - generic: MAS
+                  - generic: 🔫
+                  - generic:
+                    - generic: Weapon Mastery
+                    - generic: Kill 5× with each weapon to unlock passive awakening.
+              - generic: ✦ TAP TO FLIP BACK
+          - generic [ref=f2e128]:
+            - generic [ref=f2e129] [cursor=pointer]
+            - generic [ref=f2e130] [cursor=pointer]
+            - generic [ref=f2e131] [cursor=pointer]
+            - generic [ref=f2e132] [cursor=pointer]
+        - button "Next character" [ref=f2e133] [cursor=pointer]: ❯
+      - generic:
+        - generic: 🏆
+        - generic: ALL-TIME HIGH SCORE
+        - generic: — —
+      - button "▶ START MISSION" [ref=f2e135] [cursor=pointer]
+      - generic [ref=f2e136]:
+        - button "🏆 ACHIEVEMENTS" [ref=f2e137] [cursor=pointer]
+        - button "📋 LEADERBOARD" [ref=f2e138] [cursor=pointer]
+      - generic [ref=f2e139]: Cloud leaderboard unavailable
+  - text: TUTORIAL ▶

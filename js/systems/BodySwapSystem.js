@@ -7,9 +7,9 @@
  * Stores primitive snapshot data only; never stores enemy object references.
  */
 (function () {
-    const SNAPSHOT_TTL = 4.0;
-    const ACTIVE_DURATION = 6.0;
-    const ENERGY_COST = 40;
+    const SNAPSHOT_TTL = 5.0;
+    const ACTIVE_DURATION = 8.0;
+    const ENERGY_COST = 30;
     const RING_MARGIN = 14;
     const RING_DASH = Object.freeze([6, 5]);
     const EMPTY_DASH = Object.freeze([]);
@@ -68,14 +68,16 @@
         _snapshot.type = type;
         _snapshot.radius = Math.max(16, Math.min(34, radius));
         _snapshot.color = color;
-        _snapshot.speedMult = Math.max(0.9, Math.min(1.35, speed > 0 ? speed / 150 : 1));
-        _snapshot.damageMult = Math.max(1.0, Math.min(1.25, damage > 0 ? damage / 18 : 1));
+        _snapshot.speedMult = Math.max(1.15, Math.min(1.45, speed > 0 ? speed / 120 : 1.15));
+        _snapshot.damageMult = Math.max(1.15, Math.min(1.45, damage > 0 ? damage / 14 : 1.15));
         return true;
     }
 
     function capture(enemy, killer) {
         if (!enemy || !killer || killer !== window.player) return false;
-        return _syncSnapshotFromEnemy(enemy);
+        const captured = _syncSnapshotFromEnemy(enemy);
+        if (captured && typeof AbilityCoach !== 'undefined') AbilityCoach.notifyHijackReady(_snapshot.ttl, _energyCost, _snapshot.type);
+        return captured;
     }
 
     function canSwap(player) {
@@ -177,9 +179,9 @@
     function draw(ctx, player) {
         if (!_active || !ctx || !player || player.dead) return;
         if (typeof CANVAS === 'undefined') return;
-        const cam = (typeof camera !== 'undefined') ? camera : window.camera;
-        const sx = cam ? player.x - cam.x : player.x;
-        const sy = cam ? player.y - cam.y : player.y;
+        const screen = typeof worldToScreen === 'function' ? worldToScreen(player.x, player.y) : { x: player.x, y: player.y };
+        const sx = screen.x;
+        const sy = screen.y;
         const r = (player.radius || 20) + RING_MARGIN;
         if (sx < -r || sx > CANVAS.width + r || sy < -r || sy > CANVAS.height + r) return;
 
@@ -224,6 +226,9 @@
         _energyCost = ENERGY_COST;
     }
 
+    function isReady() { return _snapshot.active && !_active; }
+    function getRemaining() { return _snapshot.active ? _snapshot.ttl : (_active ? _timer : 0); }
+
     window.BodySwapSystem = {
         capture,
         canSwap,
@@ -234,6 +239,8 @@
         clear,
         tuneEnergyCost,
         resetTuning,
+        isReady,
+        getRemaining,
     };
     window.tuneBodySwapEnergyCost = tuneEnergyCost;
     window.resetBodySwapTuning = resetTuning;

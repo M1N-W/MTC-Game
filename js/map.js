@@ -264,11 +264,10 @@ function drawDatabase(w, h) {
     CTX.lineWidth = 1;
     CTX.beginPath(); CTX.moveTo(0, 14); CTX.lineTo(w, 14); CTX.stroke();
 
-    // Banner text
+    // Header remains a compact status strip. Zone identity is owned by MapSystem
+    // so this landmark never competes with the sector label.
     CTX.fillStyle = `rgba(253,224,71,${0.8 + pulse * 0.2})`;
-    CTX.font = 'bold 7px monospace';
-    CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-    CTX.fillText('MTC DATABASE', w / 2, 7);
+    CTX.fillRect(w * 0.38, 5, w * 0.24, 3);
 
     // ── Server rack units (4 rows) ──
     const rackStartY = 18, unitH = Math.floor((h - rackStartY - 16) / 4);
@@ -367,11 +366,10 @@ function drawCoopStore(w, h) {
     CTX.lineWidth = 1.5;
     CTX.beginPath(); CTX.roundRect(8, 12, w - 16, signH, 3); CTX.stroke();
 
-    // Sign text
+    // Keep the store recognisable through its stripe/code motif; its navigational
+    // name is rendered once by the map label pass.
     CTX.fillStyle = `rgba(252,211,77,${0.85 + pulse * 0.15})`;
-    CTX.font = 'bold 8px monospace';
-    CTX.textAlign = 'center'; CTX.textBaseline = 'middle';
-    CTX.fillText('🛒 CO-OP STORE', w / 2, 12 + signH / 2);
+    CTX.fillRect(w * 0.30, 19, w * 0.40, 3);
 
     // ── Glass window / display case ──
     const winY = 34, winH = Math.floor(h * 0.32);
@@ -576,8 +574,21 @@ class MapObject {
                 const boostDist = Math.min(pushDistance * 2.0, entity.radius * 0.5);
                 entity.x += nx * boostDist;
                 entity.y += ny * boostDist;
-                entity._mapContactNX = nx;
-                entity._mapContactNY = ny;
+                // Map update can resolve more than one solid in a single frame.  Keep
+                // an aggregate normal; last-contact-wins is what trapped enemies in gaps.
+                if (entity._mapContactFrame !== contactFrame) {
+                    entity._mapContactNX = nx;
+                    entity._mapContactNY = ny;
+                    entity._mapRecoverySide = (typeof entity.id === 'number' && (entity.id & 1)) ? -1 : 1;
+                } else {
+                    entity._mapContactNX += nx;
+                    entity._mapContactNY += ny;
+                    const contactLength = Math.hypot(entity._mapContactNX, entity._mapContactNY);
+                    if (contactLength > 0) {
+                        entity._mapContactNX /= contactLength;
+                        entity._mapContactNY /= contactLength;
+                    }
+                }
                 entity._mapContactFrame = contactFrame;
             }
         }
@@ -585,7 +596,8 @@ class MapObject {
 
     draw() {
         const screen = worldToScreen(this.x, this.y);
-        CTX.save(); CTX.translate(screen.x, screen.y);
+        const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
+        CTX.save(); CTX.translate(screen.x, screen.y); CTX.scale(zoom, zoom);
         switch (this.type) {
             case 'desk': drawDesk(this.w, this.h); break;
             case 'tree': drawTree(this.w / 2, !this.solid, (this.x * 0.013 + this.y * 0.021)); break;
@@ -773,10 +785,11 @@ class ExplosiveBarrel extends MapObject {
 
     draw() {
         const screen = worldToScreen(this.x, this.y);
-        const cx = screen.x + this.w / 2, cy = screen.y + this.h / 2;
+        const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
+        const cx = screen.x + this.w * zoom / 2, cy = screen.y + this.h * zoom / 2;
         const now = _mapNow, W = this.w, H = this.h;
 
-        CTX.save(); CTX.translate(screen.x, screen.y);
+        CTX.save(); CTX.translate(screen.x, screen.y); CTX.scale(zoom, zoom);
         CTX.fillStyle = 'rgba(0,0,0,0.30)'; CTX.beginPath(); CTX.ellipse(W / 2, H + 5, W * 0.55, 6, 0, 0, Math.PI * 2); CTX.fill();
 
         const hpFrac = this.hp / this.maxHp;
@@ -801,9 +814,9 @@ class ExplosiveBarrel extends MapObject {
         if (this.hp < this.maxHp) {
             const pct = Math.max(0, this.hp / this.maxHp);
             const barCol = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
-            CTX.fillStyle = 'rgba(0,0,0,0.60)'; CTX.fillRect(cx - 17, screen.y - 10, 34, 5);
-            CTX.fillStyle = barCol; CTX.fillRect(cx - 17, screen.y - 10, 34 * pct, 5);
-            CTX.strokeStyle = 'rgba(0,0,0,0.80)'; CTX.lineWidth = 1; CTX.strokeRect(cx - 17, screen.y - 10, 34, 5);
+            CTX.fillStyle = 'rgba(0,0,0,0.60)'; CTX.fillRect(cx - 17 * zoom, screen.y - 10 * zoom, 34 * zoom, 5 * zoom);
+            CTX.fillStyle = barCol; CTX.fillRect(cx - 17 * zoom, screen.y - 10 * zoom, 34 * pct * zoom, 5 * zoom);
+            CTX.strokeStyle = 'rgba(0,0,0,0.80)'; CTX.lineWidth = zoom; CTX.strokeRect(cx - 17 * zoom, screen.y - 10 * zoom, 34 * zoom, 5 * zoom);
         }
     }
 }
@@ -893,7 +906,8 @@ class MTCRoom {
 
     draw() {
         const s = worldToScreen(this.x, this.y);
-        const W = this.w, H = this.h;
+        const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
+        const W = this.w * zoom, H = this.h * zoom;
         const now = _mapNow;
         const cx = s.x + W / 2, cy = s.y + H / 2;
         const active = this.cooldown <= 0;
@@ -1421,13 +1435,16 @@ class MapSystem {
     _drawStaticTerrain(ctx, camera) {
         if (!this._terrainCacheReady || !this._terrainCacheCanvas) return;
         const tc = this._terrainCacheCanvas;
-        const srcW = Math.min(CANVAS.width, tc.width);
-        const srcH = Math.min(CANVAS.height, tc.height);
+        const zoom = camera && camera.zoom ? camera.zoom : 1;
+        // Cache pixels remain world pixels. Crop the smaller world viewport and
+        // stretch only the blit destination, so terrain and world props share zoom.
+        const srcW = Math.min(Math.ceil(CANVAS.width / zoom), tc.width);
+        const srcH = Math.min(Math.ceil(CANVAS.height / zoom), tc.height);
         const maxSrcX = Math.max(0, tc.width - srcW);
         const maxSrcY = Math.max(0, tc.height - srcH);
         const srcX = Math.min(maxSrcX, Math.max(0, Math.floor(camera.x - this._terrainCacheOriginX)));
         const srcY = Math.min(maxSrcY, Math.max(0, Math.floor(camera.y - this._terrainCacheOriginY)));
-        ctx.drawImage(tc, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+        ctx.drawImage(tc, srcX, srcY, srcW, srcH, 0, 0, CANVAS.width, CANVAS.height);
     }
 
     // Returns true if (x,y,w,h) overlaps any reserved clear zone.
@@ -1807,6 +1824,8 @@ class MapSystem {
         if (typeof MAP_CONFIG === 'undefined' || !MAP_CONFIG.zones) return;
         const t = _mapNow * 0.001;
         const zoneKeys = Object.keys(MAP_CONFIG.zones);
+        let labelKey = '';
+        let labelScore = -Infinity;
 
         for (let zi = 0; zi < zoneKeys.length; zi++) {
             const z = MAP_CONFIG.zones[zoneKeys[zi]];
@@ -1823,39 +1842,16 @@ class MapSystem {
             // Pulsing inner border accent
             const pulse = 0.5 - 0.5 * Math.cos(t * Math.PI * 2 / 2.4 + zi);
             ctx.strokeStyle = z.accentColor;
-            ctx.globalAlpha = z.borderAlphaBase + pulse * z.borderAlphaPulse;
-            ctx.lineWidth = 3;
+            ctx.globalAlpha = Math.min(0.18, z.borderAlphaBase * 0.58 + pulse * z.borderAlphaPulse * 0.35);
+            ctx.lineWidth = 1;
             ctx.strokeRect(tl.x + 2, tl.y + 2, sw - 4, sh - 4);
 
-            // Zone label — pill badge, top-left corner
-            {
-                ctx.font = 'bold 11px monospace';
-                ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-                const labelAlpha = 0.88;
-                const lw = this._zoneLabelWidths[zoneKeys[zi]] ?? ctx.measureText(z.label).width;
-                const px = 6, py = 5, lh = 13;
-                const pillX = tl.x + 8, pillY = tl.y + 6;
-
-                // Pill background
-                ctx.globalAlpha = 0.72;
-                ctx.fillStyle = MAP_CONFIG.biotech.palette.panelCharcoal;
-                ctx.beginPath();
-                ctx.roundRect(pillX - px, pillY - py * 0.5, lw + px * 2, lh + py, 5);
-                ctx.fill();
-
-                // Pill border (zone accent)
-                ctx.globalAlpha = z.borderAlphaBase + pulse * z.borderAlphaPulse;
-                ctx.strokeStyle = z.accentColor;
-                ctx.lineWidth = 1;
-                ctx.stroke();
-
-                // Label text
-                ctx.globalAlpha = labelAlpha;
-                ctx.fillStyle = z.accentColor;
-                ctx.fillText(z.label, pillX, pillY);
-
-                ctx.globalAlpha = 1;
-            }
+            // One sector label wins by focus, then by smaller nested sector area.
+            const zoneCenterX = tl.x + sw * 0.5;
+            const zoneCenterY = tl.y + sh * 0.5;
+            const focused = zoneCenterX >= 0 && zoneCenterX <= CANVAS.width && zoneCenterY >= 0 && zoneCenterY <= CANVAS.height;
+            const score = (focused ? 1e9 : 0) - (z.w * z.h) - Math.hypot(zoneCenterX - CANVAS.width * 0.5, zoneCenterY - CANVAS.height * 0.5);
+            if (score > labelScore) { labelScore = score; labelKey = zoneKeys[zi]; }
 
             ctx.globalAlpha = 1;
 
@@ -1885,6 +1881,24 @@ class MapSystem {
                 ctx.restore();
             }
 
+            ctx.restore();
+        }
+
+        if (labelKey) {
+            const z = MAP_CONFIG.zones[labelKey];
+            const anchor = worldToScreen(z.x + 14, z.y + 14);
+            ctx.save();
+            ctx.font = 'bold 11px monospace';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            const text = z.label.length > 18 ? `${z.label.slice(0, 17)}…` : z.label;
+            const width = Math.min(152, ctx.measureText(text).width + 16);
+            ctx.globalAlpha = 0.88;
+            ctx.fillStyle = MAP_CONFIG.biotech.palette.panelCharcoal;
+            ctx.beginPath(); ctx.roundRect(anchor.x - 7, anchor.y - 4, width, 22, 4); ctx.fill();
+            ctx.globalAlpha = 0.5; ctx.strokeStyle = z.accentColor; ctx.lineWidth = 1;
+            ctx.strokeRect(anchor.x - 7, anchor.y - 4, width, 22);
+            ctx.globalAlpha = 0.96; ctx.fillStyle = '#E0F2FE';
+            ctx.fillText(text, anchor.x + 1, anchor.y + 2);
             ctx.restore();
         }
 
@@ -1923,8 +1937,9 @@ class MapSystem {
         for (let i = 0; i < sortedObjects.length; i++) {
             const obj = sortedObjects[i];
             const screen = worldToScreen(obj.x, obj.y);
-            if (screen.x + obj.w < -CULL || screen.x > CANVAS.width + CULL) continue;
-            if (screen.y + obj.h < -CULL || screen.y > CANVAS.height + CULL) continue;
+            const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
+            if (screen.x + obj.w * zoom < -CULL || screen.x > CANVAS.width + CULL) continue;
+            if (screen.y + obj.h * zoom < -CULL || screen.y > CANVAS.height + CULL) continue;
             obj.draw();
         }
     }
@@ -1957,7 +1972,8 @@ class MapSystem {
 
         const punchLight = (wx, wy, radius, type = 'neutral', intensity = 1.0) => {
             const { x, y } = toSS(wx, wy);
-            const r = radius * intensity;
+            const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
+            const r = radius * intensity * zoom;
 
             lctx.globalCompositeOperation = 'destination-out';
             const erase = lctx.createRadialGradient(x, y, 0, x, y, r);
