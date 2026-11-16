@@ -103,6 +103,9 @@ class BossDog extends Entity {
             spawnParticles(this.x, this.y, 25, BALANCE.boss.bossDog.color);
             spawnFloatingText('Go Get EM! 🐕', this.x, this.y - 40, '#d97706', 26);
             addScore(Math.round(BALANCE.score.boss * 0.15));
+            if (typeof awardEnemyCredits === 'function') {
+                awardEnemyCredits(BALANCE.shop?.credits?.bossDog ?? 80, typeof getWave === 'function' ? getWave() : 1);
+            }
         }
     }
 

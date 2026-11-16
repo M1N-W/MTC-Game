@@ -1616,6 +1616,7 @@ class Enemy extends EnemyBase {
 
 
     addScore(BALANCE.score.basicEnemy * getWave());
+    if (typeof awardEnemyCredits === "function") awardEnemyCredits(BALANCE.shop?.credits?.basicEnemy ?? 12, getWave());
 
 
     addEnemyKill();
@@ -1967,6 +1968,7 @@ class TankEnemy extends EnemyBase {
 
 
     addScore(BALANCE.score.tank * getWave());
+    if (typeof awardEnemyCredits === "function") awardEnemyCredits(BALANCE.shop?.credits?.tank ?? 26, getWave());
 
 
     addEnemyKill();
@@ -2396,6 +2398,7 @@ class MageEnemy extends EnemyBase {
 
 
     addScore(BALANCE.score.mage * getWave());
+    if (typeof awardEnemyCredits === "function") awardEnemyCredits(BALANCE.shop?.credits?.mage ?? 30, getWave());
 
 
     addEnemyKill();
@@ -2605,10 +2608,14 @@ function _expandedEnemyDeath(enemy, player, scoreValue, dropMult = 1) {
   }
 
 
-  if (typeof addScore === "function" && typeof getWave === "function")
-
-
+  if (typeof addScore === "function" && typeof getWave === "function") {
     addScore(scoreValue * getWave());
+  }
+  if (typeof awardEnemyCredits === "function") {
+    const _cr = BALANCE.shop?.credits;
+    const _baseCr = dropMult === 0 ? (_cr?.minion ?? 4) : (_cr?.expandedEnemy ?? 22);
+    awardEnemyCredits(_baseCr, typeof getWave === "function" ? getWave() : 1);
+  }
 
 
   if (typeof addEnemyKill === "function") addEnemyKill();
@@ -2710,7 +2717,8 @@ class PoisonPoolEffect {
     this.life = cfg.poolDuration;
 
 
-    this.damagePerSec = cfg.poolDamagePerSec;
+    const w = typeof getWave === "function" ? getWave() : 1;
+    this.damagePerSec = cfg.poolDamagePerSec + Math.max(0, w - 1) * (cfg.poolDamagePerWave ?? 1.2);
 
 
     this.color = cfg.color;
@@ -2878,7 +2886,8 @@ class FatalityExplosionEffect {
     this.radius = cfg.explosionRadius;
 
 
-    this.damage = cfg.explosionDamage;
+    const w = typeof getWave === "function" ? getWave() : 1;
+    this.damage = cfg.explosionDamage + Math.max(0, w - 1) * (cfg.explosionDamagePerWave ?? 2.5);
 
 
     this.delay = cfg.explosionDelay;
@@ -3985,15 +3994,11 @@ class HealerEnemy extends Enemy {
     if (!ally) return;
 
 
-    ally.heal(cfg.healAmount);
-
-
+    const w = typeof getWave === "function" ? getWave() : 1;
+    const healAmt = Math.round(cfg.healAmount + Math.max(0, w - 1) * (cfg.healAmountPerWave ?? 2.0));
+    ally.heal(healAmt);
     if (typeof spawnFloatingText === "function") {
-
-
-      spawnFloatingText(`+${cfg.healAmount}`, ally.x, ally.y - 42, "#34d399", 16);
-
-
+      spawnFloatingText(`+${healAmt}`, ally.x, ally.y - 42, "#34d399", 16);
     }
 
 
@@ -4616,6 +4621,7 @@ class PowerUp {
 
 
     addScore(BALANCE.score.powerup);
+    if (typeof addCredits === "function") addCredits(BALANCE.shop?.credits?.powerup ?? 15);
 
 
     Audio.playPowerUp();

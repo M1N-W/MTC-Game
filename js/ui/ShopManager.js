@@ -44,17 +44,32 @@ class ShopManager {
         container.innerHTML = '';
 
         const offers = window.currentShopOffers || [];
-        const currentScore = typeof getScore === 'function' ? getScore() : 0;
+        const currentCredits = typeof getCredits === 'function' ? getCredits() : 0;
 
         const scoreDisplay = document.getElementById('shop-score-display');
-        if (scoreDisplay) scoreDisplay.textContent = currentScore.toLocaleString();
+        if (scoreDisplay) scoreDisplay.textContent = currentCredits.toLocaleString();
+
+        const rerollCost = typeof getCurrentRerollCost === 'function'
+            ? getCurrentRerollCost()
+            : (BALANCE?.shop?.rerollCost ?? 120);
+        const rerollCostEl = document.querySelector('#shop-reroll-btn .shop-reroll-cost, .shop-reroll-btn .shop-reroll-cost');
+        if (rerollCostEl) rerollCostEl.textContent = `(${rerollCost.toLocaleString()} 🪙)`;
+        const rerollBtn = document.getElementById('shop-reroll-btn') || document.querySelector('.shop-reroll-btn');
+        if (rerollBtn) rerollBtn.disabled = currentCredits < rerollCost;
 
         offers.forEach((offer, idx) => {
             const { item, soldOut } = offer;
-            const canAfford = !soldOut && currentScore >= item.cost;
+            const bought = typeof getShopItemPurchases === 'function' ? getShopItemPurchases(item.id) : 0;
+            const maxed = !!(item.maxPurchases && bought >= item.maxPurchases);
+            const itemCost = typeof getShopItemCost === 'function' ? getShopItemCost(item) : item.cost;
+            const disabledCard = soldOut || maxed;
+            const canAfford = !disabledCard && currentCredits >= itemCost;
             const typeLabel = item.type === 'permanent'
                 ? `<span class="shop-duration" style="color:#a78bfa;">♾ ถาวร</span>`
                 : `<span class="shop-duration" style="color:#22c55e;">⚡ ทันที</span>`;
+            const stackBadge = item.maxPurchases
+                ? `<span class="shop-card-stacks">${bought}/${item.maxPurchases}</span>`
+                : '';
 
             // Char-specific badge
             const charLabels = {
@@ -68,7 +83,7 @@ class ShopManager {
                 : '';
 
             const card = document.createElement('div');
-            card.className = `shop-card${soldOut ? ' shop-card-disabled' : ''}`;
+            card.className = `shop-card${disabledCard ? ' shop-card-disabled' : ''}`;
             card.id = `shop-card-slot-${idx}`;
             card.setAttribute('data-item-id', item.id);
             if (item.charReq) card.style.setProperty('--shop-char-color', charLabels[item.charReq]?.color ?? '#94a3b8');
@@ -79,23 +94,26 @@ class ShopManager {
                 ? `<span class="shop-card-active-badge">⚡ ${Math.ceil(window.player.shopSpeedBoostTimer)}s</span>`
                 : '';
 
+            const statusText = maxed ? '<span style="color:#64748b;">— MAXED —</span>' : (soldOut ? '<span style="color:#64748b;">— SOLD OUT —</span>' : item.desc);
+            const btnText = maxed ? 'MAXED' : (soldOut ? 'SOLD OUT' : 'BUY');
+
             card.innerHTML = `
                 ${charBadge}
                 ${activeBadge}
-                <div class="shop-card-icon" style="color:${item.color};${soldOut ? 'filter:grayscale(1) opacity(.35);' : ''}">${item.icon}</div>
+                <div class="shop-card-icon" style="color:${item.color};${disabledCard ? 'filter:grayscale(1) opacity(.35);' : ''}">${item.icon}</div>
                 <div class="shop-card-name">${item.name}</div>
-                <div class="shop-card-desc">${soldOut ? '<span style="color:#64748b;">— SOLD OUT —</span>' : item.desc}</div>
-                ${typeLabel}
+                <div class="shop-card-desc">${statusText}</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">${typeLabel}${stackBadge}</div>
                 <div class="shop-card-cost">
-                    <span class="shop-cost-icon">🏆</span>
-                    <span class="shop-cost-value">${item.cost.toLocaleString()}</span>
+                    <span class="shop-cost-icon">🪙</span>
+                    <span class="shop-cost-value">${itemCost.toLocaleString()}</span>
                 </div>
                 <button
                     class="shop-buy-btn"
                     onclick="buyItem(${idx})"
                     style="border-color:${item.color}; --shop-btn-color:${item.color};"
-                    ${soldOut || !canAfford ? 'disabled' : ''}
-                >${soldOut ? 'SOLD OUT' : 'BUY'}</button>
+                    ${disabledCard || !canAfford ? 'disabled' : ''}
+                >${btnText}</button>
             `;
             container.appendChild(card);
         });

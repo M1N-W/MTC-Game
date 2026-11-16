@@ -135,7 +135,7 @@ class WanchaiStand {
         : ht >= 1
           ? (S.heatPunchRateWarm ?? 0.92)
           : 1.0;
-    this._atkRate = (S.wanchaiPunchRate ?? 0.22) * punchRateMult;
+    this._atkRate = (S.wanchaiPunchRate ?? 0.14) * punchRateMult;
     const atkRange = S.standPunchRange ?? 110; // hitbox reach
     const chaseSpeed = S.standMoveSpeed ?? 340; // px/s
     const leashRadius = S.standLeashRadius ?? 420; // max dist from owner
@@ -265,11 +265,14 @@ class WanchaiStand {
         for (const f of this._rushFists) f.alpha = Math.max(0, fade);
     }
 
-    // ── Attack logic (auto-fires regardless of L-Click) ──
+    // ── Attack logic (unified cadence: yields while player actively Rushes with L-Click) ──
     this._atkTimer -= dt;
     this._phaseTimer = Math.max(0, this._phaseTimer - dt);
 
-    if (this._atkTimer <= 0 && target) {
+    const playerControllingRush = !!(this._playerRushing || owner.isStandAttacking || (owner.cooldowns?.shoot ?? 0) > 0);
+    if (playerControllingRush) {
+      this._atkTimer = Math.max(this._atkTimer, this._atkRate);
+    } else if (this._atkTimer <= 0 && target) {
       const distToTarget = Math.hypot(target.x - this.x, target.y - this.y);
       if (distToTarget < atkRange + (target.radius ?? 14)) {
         this._atkTimer = this._atkRate;
@@ -303,7 +306,7 @@ class WanchaiStand {
             : (S.coldDamageMult ?? 0.75); // COLD penalty
 
     let dmg =
-      (S.wanchaiDamage ?? 24) * (owner.damageMultiplier || 1.0) * heatDmgMult;
+      (S.wanchaiDamage ?? 14) * (owner.damageMultiplier || 1.0) * heatDmgMult;
 
     // Second Wind bonus
     if (owner.isSecondWind) dmg *= BALANCE?.player?.secondWindDamageMult || 1.5;
@@ -335,9 +338,11 @@ class WanchaiStand {
       ); // BUG FIX: was hardcode 0.01 ≠ config 0.025
     }
 
-    // Knockback — push enemy away from stand
+    // Knockback — push enemy away from stand (bosses heavily resist Ora stunlock)
     const ka = Math.atan2(target.y - this.y, target.x - this.x);
-    const kf = S.standKnockback ?? 240;
+    const isBossTarget = target === window.boss;
+    const kbScale = isBossTarget ? (S.bossKnockbackMult ?? 0.08) : 1;
+    const kf = (S.standKnockback ?? 180) * kbScale;
     target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
     target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
@@ -402,7 +407,7 @@ class WanchaiStand {
       // ── Feature 4: Stand Meter on kill ──────────────────
       owner.standMeter = Math.min(
         S2.standMeterMax ?? 100,
-        (owner.standMeter ?? 0) + (S2.standMeterOnKill ?? 12),
+        (owner.standMeter ?? 0) + (S2.standMeterOnKill ?? 7),
       );
 
       // ── Feature 2: Killing Blow Supercharge from Stand punch ──
@@ -423,7 +428,7 @@ class WanchaiStand {
         if (typeof owner.gainHeat === "function")
           owner.gainHeat(S2.heatOnKillWanchai ?? 15, true);
       }
-      const healPct = S2.heatHealOnKillWanchai ?? 0.05;
+      const healPct = S2.heatHealOnKillWanchai ?? 0.02;
       owner.hp = Math.min(owner.maxHp, owner.hp + owner.maxHp * healPct);
       if (typeof spawnFloatingText === "function")
         spawnFloatingText(
@@ -435,13 +440,16 @@ class WanchaiStand {
         );
     }
 
-    // ── Feature 4: Stand Meter fill on hit ──────────────────
+    // ── Feature 4: Stand Meter fill on hit (disabled when standMeterPerHit === 0) ──
     if (owner.wanchaiActive) {
       const S3 = owner.stats ?? {};
-      owner.standMeter = Math.min(
-        S3.standMeterMax ?? 100,
-        (owner.standMeter ?? 0) + (S3.standMeterPerHit ?? 1),
-      );
+      const _hitGain = S3.standMeterPerHit ?? 0;
+      if (_hitGain > 0) {
+        owner.standMeter = Math.min(
+          S3.standMeterMax ?? 100,
+          (owner.standMeter ?? 0) + _hitGain,
+        );
+      }
     }
   }
 
@@ -537,7 +545,7 @@ class AutoPlayer extends Player {
       spawnFloatingText("EXPOSED!", this.x, this.y - 40, "#ef4444", 16);
     }
     const reduction = this.wanchaiActive
-      ? (this.stats?.standDamageReduction ?? 0.3)
+      ? (this.stats?.standDamageReduction ?? 0.25)
       : 0; // fix: was 0.5 ≠ config 0.30
     const scaled = amt * (1 - reduction);
     // Heat gain from damage taken
@@ -743,7 +751,7 @@ class AutoPlayer extends Player {
 
       // OVERHEAT: HP drain
       if (newTier === 3) {
-        const drain = (S.heatHpDrainOverheat ?? 5) * dt;
+        const drain = (S.heatHpDrainOverheat ?? 10) * dt;
         this.hp = Math.max(1, this.hp - drain);
       }
 
@@ -764,7 +772,7 @@ class AutoPlayer extends Player {
     if (this.wanchaiActive) {
       // ── Feature 4: Stand Meter drain (แทน wanchaiTimer) ──────────
       const S4 = this.stats ?? {};
-      let drainRate = S4.standMeterDrainRate ?? 8;
+      let drainRate = S4.standMeterDrainRate ?? 12;
       const ht4 = this._heatTier ?? 0;
       if (ht4 >= 3) drainRate *= S4.standMeterDrainOverheat ?? 2.0;
       else if (ht4 === 0) drainRate *= S4.standMeterDrainCold ?? 3.0;
@@ -798,7 +806,10 @@ class AutoPlayer extends Player {
     }
 
     // ── Tick WanchaiStand each frame ──────────────────────
-    if (this.wanchaiStand?.active) this.wanchaiStand.update(dt);
+    if (this.wanchaiStand?.active) {
+      this.wanchaiStand._playerRushing = !!(mouse && mouse.left === 1 && !(this.wanchaiActive && keys?.shift));
+      this.wanchaiStand.update(dt);
+    }
 
     // Decay player-owned rush fist overlay alpha
     if ((this._rushFistTimer ?? 0) > 0) {
@@ -838,7 +849,7 @@ class AutoPlayer extends Player {
     // Apply Awakening speed buff instead of slowing down
     if (this.wanchaiActive)
       this.speedBoost =
-        (this.speedBoost || 1) * (this.stats?.standSpeedMod ?? 1.5);
+        (this.speedBoost || 1) * (this.stats?.standSpeedMod ?? 1.35);
 
     // ── Feature 1: COLD tier — speed penalty ──────────────────
     if ((this._heatTier ?? 0) === 0) {
@@ -1135,7 +1146,7 @@ class AutoPlayer extends Player {
       }
       if ((this.cooldowns?.shoot ?? 0) <= 0) {
         this.isStandAttacking = true;
-        this.cooldowns.shoot = this.stats?.playerRushCooldown ?? 0.1;
+        this.cooldowns.shoot = this.stats?.playerRushCooldown ?? 0.14;
         this._doPlayerMelee(mouse);
         if (this._anim) this._anim.shootT = 1;
       }
@@ -1177,16 +1188,20 @@ class AutoPlayer extends Player {
   // Finds nearest enemy within playerRushRange of cursor, deals wanchaiDamage
   _doPlayerMelee(mouse) {
     const S = this.stats ?? {};
-    const range = S.playerRushRange ?? 200;
+    const range = S.playerRushRange ?? 150;
+    const maxReach = (this._heatTier ?? 0) >= 2
+      ? (S.playerMeleeRangeFar ?? 210)
+      : (S.playerMeleeRange ?? 150);
     const cx = mouse?.wx ?? this.x;
     const cy = mouse?.wy ?? this.y;
 
-    // Find nearest enemy to cursor within range
-    // +15 = enemy radius allowance เท่านั้น ไม่ใช่ +60 ที่ทำให้ hit range = 145px
+    // Find nearest enemy to cursor WITHIN physical brawler reach from AutoPlayer
     let target = null;
     let bestD = range + 15;
     for (const e of window.enemies || []) {
       if (e.dead) continue;
+      const distFromPlayer = Math.hypot(e.x - this.x, e.y - this.y);
+      if (distFromPlayer > maxReach + (e.radius ?? 20)) continue;
       const d = Math.hypot(e.x - cx, e.y - cy);
       if (d < bestD) {
         bestD = d;
@@ -1194,8 +1209,11 @@ class AutoPlayer extends Player {
       }
     }
     if (!target && window.boss && !window.boss.dead) {
-      const d = Math.hypot(window.boss.x - cx, window.boss.y - cy);
-      if (d < bestD) target = window.boss;
+      const bossDistFromPlayer = Math.hypot(window.boss.x - this.x, window.boss.y - this.y);
+      if (bossDistFromPlayer <= maxReach + (window.boss.radius ?? 45)) {
+        const d = Math.hypot(window.boss.x - cx, window.boss.y - cy);
+        if (d < range + (window.boss.radius ?? 45)) target = window.boss;
+      }
     }
 
     if (!target) {
@@ -1260,7 +1278,7 @@ class AutoPlayer extends Player {
             ? (S.heatDmgWarm ?? 1.1)
             : (S.coldDamageMult ?? 0.75); // COLD penalty
     let dmg =
-      (S.wanchaiDamage ?? 24) * (this.damageMultiplier || 1.0) * pHeatMult;
+      (S.wanchaiDamage ?? 14) * (this.damageMultiplier || 1.0) * pHeatMult;
     let critChance = (this.baseCritChance ?? 0.06) + (S.standCritBonus ?? 0.18); // BUG-5 fix: was 0.40
     if (this.passiveUnlocked) critChance += S.passiveCritBonus ?? 0;
     if (pht >= 3) critChance += S.heatCritBonusOverheat ?? 0.12;
@@ -1287,9 +1305,11 @@ class AutoPlayer extends Player {
         this.hp + dmg * (S.passiveLifesteal ?? 0.025),
       ); // BUG-4 fix: was 0.02
 
-    // Knockback
+    // Knockback (bosses heavily resist Ora stunlock)
     const ka = Math.atan2(target.y - this.y, target.x - this.x);
-    const kf = (S.standKnockback ?? 240) * 0.6;
+    const isBossTarget = target === window.boss;
+    const kbScale = isBossTarget ? (S.bossKnockbackMult ?? 0.08) : 1;
+    const kf = (S.standKnockback ?? 180) * 0.6 * kbScale;
     target.vx = (target.vx ?? 0) + Math.cos(ka) * kf;
     target.vy = (target.vy ?? 0) + Math.sin(ka) * kf;
 
@@ -1333,12 +1353,16 @@ class AutoPlayer extends Player {
         16,
       );
     }
-    // Attack speed bonus from combo — faster playerRushCooldown at high combo
-    const _comboSpeedBonus = Math.min(0.04, this._oraComboCount * 0.006);
-    this.cooldowns.shoot = Math.max(
-      0.04,
-      (this.stats?.playerRushCooldown ?? 0.1) - _comboSpeedBonus,
+    // Attack speed bonus from combo — capped floor prevents machine-gun DPS
+    const _comboSpeedBonus = Math.min(0.03, this._oraComboCount * 0.004);
+    const rushCd = Math.max(
+      0.09,
+      (this.stats?.playerRushCooldown ?? 0.14) - _comboSpeedBonus,
     );
+    this.cooldowns.shoot = rushCd;
+    if (this.wanchaiStand?.active) {
+      this.wanchaiStand._atkTimer = Math.max(this.wanchaiStand._atkTimer ?? 0, rushCd);
+    }
 
     // Precompute rush fist positions — combo-scaled barrage (drawn by PlayerRenderer)
     this._rushFists = this._rushFists ?? [];
@@ -1374,12 +1398,21 @@ class AutoPlayer extends Player {
       Achievements.check?.("stand_rush_kill");
     }
 
-    // ── Feature 4: Stand Meter fill on hit ──────────────────
+    // ── Feature 4: Stand Meter fill (kills grant meter; hit gain disabled when standMeterPerHit === 0) ──
     const S_meter = this.stats ?? {};
-    this.standMeter = Math.min(
-      S_meter.standMeterMax ?? 100,
-      (this.standMeter ?? 0) + (S_meter.standMeterPerHit ?? 1),
-    );
+    const _rushHitGain = S_meter.standMeterPerHit ?? 0;
+    if (_rushHitGain > 0) {
+      this.standMeter = Math.min(
+        S_meter.standMeterMax ?? 100,
+        (this.standMeter ?? 0) + _rushHitGain,
+      );
+    }
+    if (this.wanchaiActive && target.hp <= 0) {
+      this.standMeter = Math.min(
+        S_meter.standMeterMax ?? 100,
+        (this.standMeter ?? 0) + (S_meter.standMeterOnKill ?? 7),
+      );
+    }
 
     // ── Feature 2: Killing Blow Supercharge ─────────────────
     if (

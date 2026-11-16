@@ -519,6 +519,16 @@
   white-space: nowrap;
 }
 
+.shop-card-stacks {
+  font-size: 11px;
+  font-family: "Orbitron", monospace;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+
 /* Char-specific cards get a subtle border tint */
 .shop-card:has(.shop-card-char-badge) {
   border-color: var(--shop-char-color, #334155);

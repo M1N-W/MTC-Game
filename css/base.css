@@ -292,6 +292,48 @@ body {
   letter-spacing: 2px;
 }
 
+.credits-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.credits-icon {
+  font-size: 13px;
+}
+
+.credits-num {
+  font-family: "Orbitron", "Bebas Neue", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #60a5fa;
+  text-shadow:
+    0 0 10px rgba(96, 165, 250, 0.45),
+    0 1px 4px rgba(0, 0, 0, 0.9);
+  letter-spacing: 1px;
+}
+
+.credits-num.credits-pulse {
+  animation: creditsPop 0.25s ease-out;
+}
+
+@keyframes creditsPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.16); color: #93c5fd; }
+  100% { transform: scale(1); }
+}
+
+.credits-label {
+  font-family: "Rajdhani", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #93c5fd;
+  opacity: 0.85;
+}
+
 .wave-badge {
   background: linear-gradient(
     135deg,

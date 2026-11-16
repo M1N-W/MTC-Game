@@ -1244,6 +1244,8 @@ function _teardownRunState() {
     if (typeof decalSystem !== 'undefined' && decalSystem) decalSystem.clear();
     if (typeof shellCasingSystem !== 'undefined' && shellCasingSystem) shellCasingSystem.clear();
     if (typeof resetScore === 'function') resetScore();
+    if (typeof resetCredits === 'function') resetCredits();
+    window.shopRerollCountThisWave = 0;
     if (typeof setWave === 'function') setWave(1);
     if (typeof resetEnemiesKilled === 'function') resetEnemiesKilled();
     if (typeof resetSlowMoEnergy === 'function') resetSlowMoEnergy();
@@ -1321,6 +1323,9 @@ function _resetRunState(player) {
     // Clear shop buff state on player (set before first ShopSystem call this run)
     player.shopDamageBoostActive = false; player.shopDamageBoostTimer = 0; player._baseDamageBoost = undefined;
     player.shopSpeedBoostActive = false; player.shopSpeedBoostTimer = 0; player._baseMoveSpeed = undefined;
+    player._shopPurchaseCounts = {};
+    player._shopBuffStacks = 0;
+    window.shopRerollCountThisWave = 0;
 
     window.drone = new Drone();
     window.drone.x = player.x; window.drone.y = player.y;
@@ -1329,6 +1334,7 @@ function _resetRunState(player) {
     weatherSystem.clear();
     UIManager.updateBossHUD(null);
     resetScore();
+    if (typeof resetCredits === 'function') resetCredits();
     setWave(1);
     projectileManager.clear();
     particleSystem.clear();

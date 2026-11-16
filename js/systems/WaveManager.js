@@ -628,6 +628,7 @@ function _startTrickle(count, wave, isBossWave = false) {
 function startNextWave() {
     _deactivateWaveEvent();
 
+    window.shopRerollCountThisWave = 0;
     // B3 FIX: one guarded call only (was called twice — second had no guard)
     if (typeof rollShopItems === 'function') rollShopItems();
 
@@ -758,11 +759,13 @@ function _startBossWave(wave) {
 
         const bossNameEl = document.getElementById('boss-name');
         const displayLevel = encounter.displayLevel ?? 1;
+        const encounterIdx = encounter.encounterIndex ?? window.bossEncounterCount ?? displayLevel;
 
         // Spawn boss based on config
         if (encounter.boss === 'first') {
             const isAdvanced = encounter.phase === 'advanced';
-            window.boss = new KruFirst(displayLevel, isAdvanced);
+            window.boss = new KruFirst(encounterIdx, isAdvanced);
+            window.boss.displayLevel = displayLevel;
             UIManager.updateBossHUD(window.boss);
             if (bossNameEl) {
                 bossNameEl.innerHTML =
@@ -791,7 +794,8 @@ function _startBossWave(wave) {
             // ManopBoss
             const enablePhase2 = encounter.phase === 'dogRider' || encounter.phase === 'goldfish';
             const enablePhase3 = encounter.phase === 'goldfish';
-            window.boss = new ManopBoss(displayLevel, enablePhase2, enablePhase3);
+            window.boss = new ManopBoss(encounterIdx, enablePhase2, enablePhase3);
+            window.boss.displayLevel = displayLevel;
             UIManager.updateBossHUD(window.boss);
             if (bossNameEl) {
                 let phaseTitle = '';

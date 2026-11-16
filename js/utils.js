@@ -191,6 +191,45 @@ const updateScoreUI = () => {
     if (scoreEl) scoreEl.textContent = score.toLocaleString();
 };
 
+// ─── Shop Currency (MTC Credits) management ──────────────────
+let credits = 0;
+
+const addCredits = (val) => {
+    credits = Math.max(0, Math.round(credits + (Number(val) || 0)));
+    updateCreditsUI();
+    if (typeof ShopManager !== 'undefined' && document.getElementById('shop-modal')?.style.display === 'flex') {
+        ShopManager.renderItems();
+    }
+};
+
+const getCredits = () => credits;
+
+const resetCredits = () => {
+    credits = 0;
+    updateCreditsUI();
+};
+
+const awardEnemyCredits = (baseAmount, wave = null) => {
+    const crCfg = (typeof BALANCE !== 'undefined' && BALANCE.shop?.credits) ? BALANCE.shop.credits : null;
+    const growth = crCfg?.waveGrowthPct ?? 0.06;
+    const w = Math.max(1, (typeof wave === 'number' && Number.isFinite(wave)) ? wave : (typeof getWave === 'function' ? getWave() : 1));
+    const amount = Math.max(1, Math.round((baseAmount || 1) * (1 + Math.max(0, w - 1) * growth)));
+    addCredits(amount);
+    return amount;
+};
+
+const updateCreditsUI = () => {
+    const creditsEl = document.getElementById('credits');
+    if (creditsEl) {
+        creditsEl.textContent = credits.toLocaleString();
+        creditsEl.classList.remove('credits-pulse');
+        void creditsEl.offsetWidth;
+        creditsEl.classList.add('credits-pulse');
+    }
+    const shopDisplayEl = document.getElementById('shop-score-display');
+    if (shopDisplayEl) shopDisplayEl.textContent = credits.toLocaleString();
+};
+
 // ─── Canvas utilities ─────────────────────────────────────────
 let CANVAS, CTX;
 
@@ -653,6 +692,11 @@ if (typeof window !== 'undefined') {
     window.getScore          = getScore;
     window.resetScore        = resetScore;
     window.updateScoreUI     = updateScoreUI;
+    window.addCredits        = addCredits;
+    window.getCredits        = getCredits;
+    window.resetCredits      = resetCredits;
+    window.awardEnemyCredits = awardEnemyCredits;
+    window.updateCreditsUI   = updateCreditsUI;
     window.initCanvas        = initCanvas;
     window.resizeCanvas      = resizeCanvas;
     window.getCanvas         = getCanvas;
@@ -706,6 +750,7 @@ if (typeof module !== 'undefined' && module.exports) {
         prefersReducedMotion,
         addScreenShake, updateScreenShake, getScreenShakeOffset,
         addScore, getScore, resetScore,
+        addCredits, getCredits, resetCredits, awardEnemyCredits, updateCreditsUI,
         initCanvas, resizeCanvas, getCanvas, getContext,
         CAMERA_RENDER_SCALE, updateCamera, getCamera, getViewportWorldSize, screenToWorld, worldToScreen,
         updateMouseWorld, getMouse,

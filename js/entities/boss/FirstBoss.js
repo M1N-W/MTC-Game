@@ -270,7 +270,7 @@ class KruFirst extends BossBase {
 
                     // Hit player
                     if (d < this.radius + player.radius + 12) {
-                        player.takeDamage(80);
+                        player.takeDamage(BALANCE.boss.first?.suvat?.damage ?? 95);
                         addScreenShake(14);
                         spawnFloatingText('v=u+at IMPACT!', player.x, player.y - 55, '#fbbf24', 28);
                         if (this._singularityMode) {
@@ -310,7 +310,8 @@ class KruFirst extends BossBase {
                     const aimA = Math.atan2(player.y - this.y, player.x - this.x);
                     projectileManager.add(new Projectile(
                         this.x, this.y, aimA,
-                        520, 24,
+                        BALANCE.boss.first?.orbit?.projSpeed ?? 560,
+                        BALANCE.boss.first?.orbit?.projDamage ?? 30,
                         '#818cf8', false, 'enemy'
                     ));
                 }
@@ -332,10 +333,11 @@ class KruFirst extends BossBase {
                     this.x = this._fallTargetX;
                     this.y = this._fallTargetY;
                     // AoE damage
-                    const aoeR = 140;
+                    const aoeR = BALANCE.boss.first?.freeFall?.aoeRadius ?? 145;
                     const fdx = player.x - this.x, fdy = player.y - this.y;
                     if (Math.hypot(fdx, fdy) < aoeR + player.radius) {
-                        player.takeDamage(95 * (this.isAdvanced ? 1.25 : 1.0));
+                        const ffCfg = BALANCE.boss.first?.freeFall;
+                        player.takeDamage((ffCfg?.damage ?? 112) * (this.isAdvanced ? (ffCfg?.advMult ?? 1.28) : 1.0));
                         spawnFloatingText('h=½gt² CRASH!', player.x, player.y - 60, '#ef4444', 30);
                         addScreenShake(20);
                     }
@@ -360,8 +362,9 @@ class KruFirst extends BossBase {
                     // Fire scaled rocket projectile — p = mv
                     const dist_ = Math.max(100, Math.min(700, d));
                     const scale = 0.5 + ((dist_ - 100) / 600) * 2.0;  // 0.5 – 2.5
-                    const rDmg = 28 * scale * (this.isAdvanced ? 1.3 : 1.0);
-                    const rSpeed = 480 + scale * 180;
+                    const rCfg = BALANCE.boss.first?.rocket;
+                    const rDmg = (rCfg?.baseDmg ?? 34) * scale * (this.isAdvanced ? (rCfg?.advMult ?? 1.32) : 1.0);
+                    const rSpeed = (rCfg?.baseSpeed ?? 520) + scale * 180;
                     const rRad = 14 + scale * 8;
                     projectileManager.add(new Projectile(
                         this.x, this.y, this.angle, rSpeed, rDmg,
@@ -423,11 +426,13 @@ class KruFirst extends BossBase {
                 this.applyPhysics(dt);
 
                 if (this._berserkFireCd <= 0) {
-                    this._berserkFireCd = 2.2;
+                    const bCfg = BALANCE.boss.first?.berserk;
+                    this._berserkFireCd = bCfg?.fireCd ?? 1.9;
                     for (let i = -1; i <= 1; i++) {
                         projectileManager.add(new Projectile(
                             this.x, this.y, this.angle + i * 0.22,
-                            540, 22 * (this.isAdvanced ? 1.3 : 1.0),
+                            bCfg?.projSpeed ?? 580,
+                            (bCfg?.projDamage ?? 28) * (this.isAdvanced ? (bCfg?.advMult ?? 1.32) : 1.0),
                             '#ef4444', false, 'enemy'
                         ));
                     }

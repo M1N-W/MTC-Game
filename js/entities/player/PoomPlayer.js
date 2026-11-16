@@ -376,8 +376,9 @@ class PoomPlayer extends Player {
         }
       } else if (!this.isUnlocked(SKILL.POOM.GARUDA)) {
         const _gReq = this.stats?.su2RitualMultiHitReq ?? 1;
+        const _multiReq = this.stats?.su2RitualMultiHitCount ?? 3;
         spawnFloatingText(
-          `Ritual 4+ hits: ${this._ritualMultiHitDone ? _gReq : 0}/${_gReq} -> E`,
+          `Ritual ${_multiReq}+ hits: ${this._ritualMultiHitDone ? _gReq : 0}/${_gReq} -> E`,
         //was: locked garuda E
           this.x,
           this.y - 40,
@@ -519,7 +520,8 @@ class PoomPlayer extends Player {
         const req = S2.su1StickyTargetReq ?? 10;
         this._showUnlockHint(`Sticky hits: ${this._uniqueStickyTargets?.size ?? 0}/${req} -> Q+R`);
       } else if (!this.isUnlocked(SKILL.POOM.GARUDA)) {
-        this._showUnlockHint('Ritual 4+ enemies in 1 cast -> E Garuda');
+        const _multiReq = S2.su2RitualMultiHitCount ?? 3;
+        this._showUnlockHint(`Ritual ${_multiReq}+ enemies in 1 cast -> E Garuda`);
       } else if (!this.passiveUnlocked) {
         this._showUnlockHint('Cosmic Balance + 2 Ritual kills -> Passive');
       } else if (!AU.specialDone) {
@@ -883,8 +885,9 @@ class PoomPlayer extends Player {
       Audio.playRitualBurst();
 
     // ── AbilityUnlock tracking ────────────────────────────────────────────
-    // SU2: track Ritual multi-hit sessions (4+ enemies in one cast)
-    if (totalEnemiesAffected >= 4 && !this._ritualMultiHitDone) {
+    // SU2: track Ritual multi-hit sessions (su2RitualMultiHitCount enemies in one cast)
+    const _multiHitReq = this.stats?.su2RitualMultiHitCount ?? 3;
+    if (totalEnemiesAffected >= _multiHitReq && !this._ritualMultiHitDone) {
       this._ritualMultiHitDone = true;
     }
     // Special: accumulate total Ritual damage

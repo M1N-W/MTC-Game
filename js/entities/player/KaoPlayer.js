@@ -991,7 +991,7 @@ class KaoPlayer extends Player {
     }
 
     // Clones deal 60% damage — scaling done here, KaoClone.shoot() uses damage as-is
-    const cloneDamage = finalDamage * 0.6;
+    const cloneDamage = finalDamage * (this.stats?.cloneDamageMult ?? 0.45);
     this.clones.forEach((c) =>
       c.shoot(wep, cloneDamage, color, pellets, spread, wepKey, isCrit),
     );

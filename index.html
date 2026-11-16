@@ -194,12 +194,12 @@
                     MTC CO-OP STORE
                 </div>
                 <div class="shop-score-info">
-                    <span>💰 คะแนน:</span>
+                    <span>🪙 เครดิต:</span>
                     <span class="shop-score-value" id="shop-score-display">0</span>
                 </div>
-                <button class="shop-buy-btn shop-reroll-btn" onclick="rerollShop()"
-                    ontouchstart="event.preventDefault(); rerollShop();" title="สุ่มไอเทมใหม่ทั้งหมด (เสีย 200 คะแนน)">
-                    🎲 REROLL <span class="shop-reroll-cost">(200 🏆)</span>
+                <button class="shop-buy-btn shop-reroll-btn" id="shop-reroll-btn" onclick="rerollShop()"
+                    ontouchstart="event.preventDefault(); rerollShop();" title="สุ่มไอเทมใหม่ทั้งหมด (ราคาเพิ่มต่อครั้งใน Wave นี้)">
+                    🎲 REROLL <span class="shop-reroll-cost">(120 🪙)</span>
                 </button>
                 <button class="shop-close-btn" onclick="closeShop()" ontouchstart="event.preventDefault(); closeShop();"
                     title="ปิดร้าน (Escape)">✕</button>
@@ -207,7 +207,7 @@
             <div class="shop-subtitle">✦ สุ่ม 3 ไอเทม — ซื้อแล้ว SOLD OUT — ขึ้น Wave ใหม่รีเฟรชฟรี ✦</div>
             <div id="shop-items"></div>
             <div class="shop-footer">
-                ♾ ถาวร &nbsp;|&nbsp; ⚡ ทันที &nbsp;|&nbsp; 🎲 REROLL ราคา 200 คะแนน &nbsp;|&nbsp; รีเฟรชฟรีทุก Wave
+                ♾ ถาวร (มีจำกัดจำนวน) &nbsp;|&nbsp; ⚡ ทันที &nbsp;|&nbsp; 🎲 REROLL ใช้ 🪙 Credits (เพิ่มราคาต่อครั้งใน Wave เดียวกัน) &nbsp;|&nbsp; รีเฟรชฟรีทุก Wave
             </div>
         </div>
     </div>
@@ -284,6 +284,11 @@
             <div class="stats-box">
                 <div class="score-num" id="score">0</div>
                 <div class="score-label">SCORE</div>
+                <div class="credits-row">
+                    <span class="credits-icon">🪙</span>
+                    <span class="credits-num" id="credits">0</span>
+                    <span class="credits-label">CREDITS</span>
+                </div>
                 <div class="wave-badge" id="wave-badge">WAVE 1</div>
             </div>
         </div>

@@ -32,7 +32,7 @@ const GAME_TEXTS = {
     shop: {
         open: `🛒 MTC CO-OP STORE`,
         resumed: `▶ RESUMED`,
-        notEnoughScore: `คะแนนไม่พอ! 💸`,
+        notEnoughScore: `เครดิตไม่พอ! 🪙`,
         hpFull: `HP เต็มแล้ว!`,
         healPickup: (amt) => `+${amt} HP 🧃`,
         dmgBoostActive: `🔧 DMG. ×1.1!`,
@@ -344,7 +344,7 @@ const GAME_TEXTS = {
         },
         shop: {
             title: `บทที่ 7 : ร้านค้า (MTC Co-op Store)`,
-            body: `ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน\n\nไอเทมพื้นฐานมีดังนี้ :\n• 🧃 Energy Drink — ฟื้น HP 60 หน่วย (300)\n• 🛡️ Energy Shield — บล็อก 1 ครั้ง (600)\n• ❤️ Vital Supplement — HP สูงสุด +15 (500)\n• 🔧 Weapon Tuner — ดาเมจ +5% (800)\n• 👟 Lightweight Boots — ความเร็ว +5% (500)\n• 🔮 Focus Crystal — ลด CD สกิล 5% (700)\n\n⚔️ ไอเทมพิเศษ :\n• 🪞 Reflect Armor — สะท้อน 15% ดาเมจ (900)\n• 🫧 Shield Bubble — บล็อก 3 ครั้ง (500)\n• ⚡ Adrenaline Wave — ความเร็ว +30% 8 วิ (400)\n• 🔄 Cooldown Round — รีเซ็ต CD ทันที (600)\n\n👤 ไอเทมเฉพาะตัวละคร :\n• 👻 ผีซุ่ม [KAO] — Teleport +1 ชาร์จ (750)\n• 🍚 เทพเจ้าอีสาน [POOM] — Naga/Garuda CD -15% (650)\n• 🔥 วันชัยระเบิด [AUTO] — ถึง HOT เร็วขึ้น (850)\n• ⚔️ คมดาบโรนิน [PAT] — Parry +15% และฟันไวขึ้น (800)`,
+            body: `ร้านค้าอยู่มุมซ้ายล่างของแผนที่\nเดินเข้าใกล้แล้วกด B เพื่อเปิดร้าน (ใช้ 🪙 CREDITS แยกจาก SCORE!)\n\nไอเทมพื้นฐาน (ราคาเพิ่มขึ้นทุกครั้งที่ซื้อ + มีจำกัดจำนวน) :\n• 🧃 Energy Drink — ฟื้น HP 45 หน่วย (200 🪙, max 6)\n• 💠 Energy Shield — ลดดาเมจ 40% 4 วิ (380 🪙, max 4)\n• ❤️ Vital Supplement — HP สูงสุด +12 (420 🪙, max 4)\n• 🔧 Weapon Tuner — ดาเมจ +4% (520 🪙, max 4)\n• 👟 Lightweight Boots — ความเร็ว +4% (360 🪙, max 3)\n• 🔮 Focus Crystal — ลด CD สกิล 4% (520 🪙, max 3)\n\n⚔️ ไอเทมพิเศษ :\n• 🪞 Reflect Armor — สะท้อน 8% ดาเมจ (560 🪙, max 3)\n• 🛡️ Shield Bubble — บล็อก 2 ครั้ง (460 🪙, max 3)\n• ⚡ Adrenaline Wave — ความเร็ว +20% 6 วิ (300 🪙, max 4)\n• 🔄 Cooldown Round — รีเซ็ต CD ทันที (480 🪙, max 3)\n\n👤 ไอเทมเฉพาะตัวละคร (max 1) :\n• 👻 ผีซุ่ม [KAO] — Teleport +1 ชาร์จ (640 🪙)\n• 🍚 เทพเจ้าอีสาน [POOM] — Naga/Garuda CD -8% (580 🪙)\n• 🔥 วันชัยระเบิด [AUTO] — ถึง HOT เร็วขึ้น 10% (680 🪙)\n• ⚔️ คมดาบโรนิน [PAT] — Parry +8% และฟันไวขึ้น 6% (640 🪙)`,
             icon: `🛒`,
         },
         kaoPassive: {

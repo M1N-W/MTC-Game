@@ -105,7 +105,7 @@ const AdminConsole = (() => {
 
     // ── Available commands for Tab auto-complete ───────────────
     const COMMANDS = [
-        'heal', 'score', 'next wave', 'set wave', 'give weapon',
+        'heal', 'score', 'credits', 'next wave', 'set wave', 'give weapon',
         'spawn enemy', 'spawn pack', 'enemy report',
         'spawn manop', 'spawn manop 2', 'spawn manop 3',
         'spawn first', 'spawn first advanced',
@@ -401,18 +401,25 @@ const AdminConsole = (() => {
         }
 
         // ══════════════════════════════════════════════════════
-        // score [amount]
+        // score / credits [amount]
         // ══════════════════════════════════════════════════════
-        else if (base === 'score') {
+        else if (base === 'score' || base === 'credits') {
             const amount = parseInt(args[1]) || 5000;
             _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
             _appendLine(GAME_TEXTS.admin.scorePatching, 'cline-info');
-            if (typeof addScore === 'function') addScore(amount);
-            _appendLine(GAME_TEXTS.admin.scoreResult(typeof getScore === 'function' ? getScore().toLocaleString() : '?'), 'cline-ok');
-            const scoreEl = document.getElementById('score');
-            if (scoreEl && typeof getScore === 'function') scoreEl.textContent = getScore().toLocaleString();
-            if (typeof spawnFloatingText === 'function')
-                spawnFloatingText(`+${amount.toLocaleString()} pts`, window.player.x, window.player.y - 70, '#fbbf24', 22);
+            if (base === 'score' && typeof addScore === 'function') addScore(amount);
+            if (typeof addCredits === 'function') addCredits(amount);
+            if (base === 'credits') {
+                _appendLine(`✔ Credits updated: ${(typeof getCredits === 'function' ? getCredits() : 0).toLocaleString()} 🪙`, 'cline-ok');
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText(`+${amount.toLocaleString()} 🪙 CREDITS`, window.player.x, window.player.y - 70, '#60a5fa', 22);
+            } else {
+                _appendLine(GAME_TEXTS.admin.scoreResult(typeof getScore === 'function' ? getScore().toLocaleString() : '?'), 'cline-ok');
+                const scoreEl = document.getElementById('score');
+                if (scoreEl && typeof getScore === 'function') scoreEl.textContent = getScore().toLocaleString();
+                if (typeof spawnFloatingText === 'function')
+                    spawnFloatingText(`+${amount.toLocaleString()} pts / 🪙`, window.player.x, window.player.y - 70, '#fbbf24', 22);
+            }
             if (typeof spawnParticles === 'function')
                 spawnParticles(window.player.x, window.player.y, 14, '#fbbf24');
             if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -822,6 +829,8 @@ const AdminConsole = (() => {
             if (typeof p.mtcBuffTimer !== 'undefined') p.mtcBuffTimer = 0;
             if (typeof p.damageBoost !== 'undefined') p.damageBoost = 0;
             if (typeof p.speedBoost !== 'undefined') p.speedBoost = 0;
+            p._shopPurchaseCounts = {};
+            p._shopBuffStacks = 0;
             _appendLine(GAME_TEXTS.admin.authOk, 'cline-info');
             _appendLine('> Flushing all player buff registers...', 'cline-info');
             _appendLine('✔ All buffs cleared. Player state normalized.', 'cline-ok');
@@ -872,6 +881,7 @@ const AdminConsole = (() => {
             const p = window.player;
             const wave = typeof getWave === 'function' ? getWave() : (window.wave || '?');
             const score = typeof getScore === 'function' ? getScore() : (window.score || 0);
+            const curCredits = typeof getCredits === 'function' ? getCredits() : 0;
             const enemyCnt = (window.enemies || []).filter(e => e && !e.dead).length;
             const bossAlive = window.boss && !window.boss.dead;
             const permLvl = _getPermLevel();
@@ -879,6 +889,7 @@ const AdminConsole = (() => {
             const infoLines = [
                 `  Wave      : ${wave}`,
                 `  Score     : ${score.toLocaleString()}`,
+                `  Credits   : ${curCredits.toLocaleString()} 🪙`,
                 `  HP        : ${Math.round(p.hp)}/${p.maxHp || 110}`,
                 `  Energy    : ${Math.round(p.energy || 0)}/${p.maxEnergy || 100}`,
                 `  Speed     : ${p.moveSpeed?.toFixed(2) ?? '?'}`,

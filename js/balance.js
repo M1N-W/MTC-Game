@@ -21,11 +21,11 @@ window.WAVE_SCHEDULE = WAVE_SCHEDULE;
 // NEW: Boss encounter configuration - flexible boss wave scheduling
 // Supports arbitrary boss wave patterns (e.g., [4, 8, 12] instead of [3, 6, 9, 12, 15])
 const BOSS_ENCOUNTERS = Object.freeze([
-    { wave: 3, boss: 'manop', phase: 'basic', displayLevel: 1 },
-    { wave: 6, boss: 'first', phase: 'basic', displayLevel: 1 },
-    { wave: 9, boss: 'manop', phase: 'dogRider', displayLevel: 2 },
-    { wave: 12, boss: 'first', phase: 'advanced', displayLevel: 2 },
-    { wave: 15, boss: 'manop', phase: 'goldfish', displayLevel: 3 }
+    { wave: 3, boss: 'manop', phase: 'basic', displayLevel: 1, encounterIndex: 1 },
+    { wave: 6, boss: 'first', phase: 'basic', displayLevel: 1, encounterIndex: 2 },
+    { wave: 9, boss: 'manop', phase: 'dogRider', displayLevel: 2, encounterIndex: 3 },
+    { wave: 12, boss: 'first', phase: 'advanced', displayLevel: 2, encounterIndex: 4 },
+    { wave: 15, boss: 'manop', phase: 'goldfish', displayLevel: 3, encounterIndex: 5 }
 ]);
 window.BOSS_ENCOUNTERS = BOSS_ENCOUNTERS;
 
@@ -122,14 +122,14 @@ const BALANCE = {
             passiveUnlockLevel: 1,          // fallback เท่านั้น — KaoPlayer.checkPassiveUnlock() override
             passiveUnlockStealthCount: 1,   // fallback: ปลดตั้งแต่ stealth ครั้งแรก
             // ── Passive Lv1 (Stealth ครั้งแรก) ──
-            passiveHpBonusPct: 0.30,        // REWORK: 0.50 → 0.30 (ส่วนที่เหลือรอ Lv2)
+            passiveHpBonusPct: 0.20,        // REBALANCE: 0.30 → 0.20 (ลดความถึกสายลอบสังหาร)
             passiveUnlockText: '👻 ซุ่มเสรี',
             passiveCritBonus: 0.0,          // REWORK: crit ย้ายไป Lv2
             passiveLifesteal: 0.01,         // NERF: 0.03 → 0.02 → 0.01 (ผู้เล่นแจ้งว่ารอดง่ายเกินไป)
-            passiveSpeedAdditive: 0.4,      // NEW: additive +0.4 (แทน Math.max ×1.4 ที่ทับ shop bonus)
+            passiveSpeedAdditive: 0.25,     // REBALANCE: 0.4 → 0.25 (additive ไม่ทับ shop bonus)
             // ── Passive Lv2 "Awakened" (ฆ่าขณะ FreeStealthy 5 ครั้ง) ──
             passiveLv2KillReq: 5,           // NEW: จำนวน FreeStealthy-kills ที่ต้องการ
-            passiveLv2HpBonusPct: 0.20,     // NEW: HP +20% เพิ่มเติมเมื่อถึง Lv2
+            passiveLv2HpBonusPct: 0.12,     // REBALANCE: 0.20 → 0.12 (รวม Lv1+2 = +32% HP)
             passiveLv2UnlockText: '👻 เทพแห่งซุ่ม!',
             passiveLv2CritBonus: 0.04,      // NERF: 0.05 → 0.04 (minor crit trim)
             speedOnHit: 20,
@@ -143,6 +143,7 @@ const BALANCE = {
             cloneCooldown: 25,              // 60 → 25 (REWORK: usable mid-game)
             cloneEnergyCost: 30,            // NEW: E Clone — summon clone ใช้พลังงานสร้าง
             cloneDuration: 8,               // 10 → 8 (shorter but sharper)
+            cloneDamageMult: 0.45,          // REBALANCE: 0.60 → 0.45 (ลดดาเมจร่างโคลนให้สมดุล)
             cloneProximityRange: 90,        // NEW: clone proximity burst trigger range
             cloneProximityDmgMult: 0.60,    // NEW: proximity burst dmg mult
             dashStealthDuration: 1.5,       // NEW: free stealth after every dash
@@ -162,7 +163,7 @@ const BALANCE = {
             radius: 20,
 
             // ── Base Stats (Tank Brawler) ──────────────────────
-            hp: 190, maxHp: 190,           // NERF: 230 → 190 (ผู้เล่นแจ้งว่ารอดง่ายเกินไป)
+            hp: 185, maxHp: 185,           // REBALANCE: 190 → 185 (brawler tankiness balanced)
             energy: 100, maxEnergy: 100,
             energyRegen: 20,
             moveSpeed: 260,                 // 250 → 260 (ยังช้ากว่าคนอื่น)
@@ -175,29 +176,30 @@ const BALANCE = {
             heatWaveCooldown: 0.22,
 
             // ── Wanchai Stand (R-Click) ───────────────────────
-            wanchaiDuration: 8.0,           // 6.0 → 8.0 (longer payoff window)
-            wanchaiCooldown: 12,            // 9 → 12 (trade longer for less spammy)
+            wanchaiDuration: 6.5,           // REBALANCE: 8.0 → 6.5 (shorter Stand burst window)
+            wanchaiCooldown: 14,            // REBALANCE: 12 → 14 (less Stand uptime)
             wanchaiEnergyCost: 25,          // 32 → 25 (easier loop)
-            wanchaiPunchRate: 0.10,          // NERF: 0.09 → 0.10 (10 punches/s แทน 11.1 — ลด sustained DPS)
-            wanchaiDamage: 18,              // BIG-BALANCE: 24 → 18 (−25%) — HOT DPS 461→315, ratio vs Poom 2.5×→1.7×
-            standSpeedMod: 1.5,
-            standDamageReduction: 0.30,     // NERF: 0.40 → 0.30 (ลด damage reduction เพื่อเพิ่มความเสี่ยง)
-            standCritBonus: 0.10,           // BIG-BALANCE: 0.18 → 0.10 (−8% crit stack, กด ceiling)
+            wanchaiPunchRate: 0.14,          // REBALANCE: 0.10 → 0.14 (~7.1 punches/s unified cadence)
+            wanchaiDamage: 14,              // REBALANCE: 18 → 14 (prevents Lv1 boss melt)
+            standSpeedMod: 1.35,
+            standDamageReduction: 0.25,     // REBALANCE: 0.30 → 0.25 (clearer frontline risk)
+            standCritBonus: 0.06,           // REBALANCE: 0.10 → 0.06 (lower crit ceiling)
             standMoveSpeed: 340,
             standPunchRange: 110,
             standLeashRadius: 420,
-            standKnockback: 240,            // 180 → 240 (BUFF)
+            standKnockback: 180,            // REBALANCE: 240 → 180
+            bossKnockbackMult: 0.08,        // NEW: Boss resistant to Ora stunlock (92% reduction)
 
             // ── Attack Mode Toggle ────────────────────────────
             // ระหว่าง Wanchai active: กด F (หรือ Middle-Click) สลับโหมด
             // MODE 0 = RANGE: ยิง Heat Wave ปกติ (ไม่จำกัดระยะ)
             // MODE 1 = MELEE: รัวหมัด Stand Rush (ระยะใกล้)
             // ทั้งสองโหมดใช้ cooldowns.shoot เดียวกัน
-            playerMeleeCooldown: 0.12,      // 0.15 → 0.12 (MELEE mode punch rate)
-            playerMeleeRange: 200,          // 85 → 200 (REWORK: เพิ่มระยะ melee ให้ใช้งานได้จริง)
-            playerMeleeRangeFar: 320,       // range เมื่อ Heat >= 67% (HOT tier)
-            playerRushRange: 200,           // radius รอบ cursor สำหรับ Stand Rush L-click (sync กับ playerMeleeRange)
-            playerRushCooldown: 0.10,       // cooldown ต่อ Stand Rush (combo speed bonus หักจากนี้)
+            playerMeleeCooldown: 0.14,      // REBALANCE: 0.12 → 0.14 (unified melee cadence)
+            playerMeleeRange: 150,          // REBALANCE: 200 → 150 (player-centered brawler reach)
+            playerMeleeRangeFar: 210,       // REBALANCE: 320 → 210 when Heat >= 67% (HOT tier)
+            playerRushRange: 150,           // REBALANCE: 200 → 150 (sync กับ playerMeleeRange)
+            playerRushCooldown: 0.14,       // REBALANCE: 0.10 → 0.14 (unified with wanchaiPunchRate)
 
             // ── Vacuum Heat (Q) — REWORK: Pull + Ignite ──────
             vacuumRange: 340,               // 320 → 340
@@ -227,8 +229,8 @@ const BALANCE = {
             // ── Heat Gauge (NEW SYSTEM) ───────────────────────
             // สะสมจากการชก → ให้ bonus tier ตาม heat level
             heatMax: 100,
-            heatPerHit: 12,                 // +Heat ต่อ Stand punch
-            heatPerPlayerHit: 8,            // +Heat ต่อ Stand Rush / Heat Wave
+            heatPerHit: 8,                  // REBALANCE: 12 → 8 (+Heat ต่อ Stand punch)
+            heatPerPlayerHit: 6,            // REBALANCE: 8 → 6 (+Heat ต่อ Stand Rush / Heat Wave)
             heatPerDamageTaken: 0.5,        // +Heat ต่อ 1 damage ที่รับ
             heatDecayRate: 8,               // -Heat/s ตอน out of Wanchai
             heatDecayRateActive: 0,         // ไม่ decay ระหว่าง Wanchai
@@ -239,15 +241,15 @@ const BALANCE = {
             heatTierWarm: 34,
             heatTierHot: 67,
             heatTierOverheat: 100,
-            heatDmgWarm: 1.10,
-            heatDmgHot: 1.20,
-            heatDmgOverheat: 1.30,
-            heatPunchRateWarm: 0.92,        // NERF: 0.85 → 0.92 (compress tier gap)
-            heatPunchRateHot: 0.85,         // NERF: 0.70 → 0.85 (slower punch, OVERHEAT uses this too)
-            heatCritBonusOverheat: 0.12,
-            heatHpDrainOverheat: 8,         // NERF: 3 → 5 → 8 HP/s (overheat เป็น risk จริง — ต้องระวัง)
+            heatDmgWarm: 1.08,
+            heatDmgHot: 1.15,
+            heatDmgOverheat: 1.24,
+            heatPunchRateWarm: 0.94,        // REBALANCE: 0.92 → 0.94 (compress tier gap)
+            heatPunchRateHot: 0.88,         // REBALANCE: 0.85 → 0.88 (slower punch, OVERHEAT uses this too)
+            heatCritBonusOverheat: 0.08,
+            heatHpDrainOverheat: 10,        // REBALANCE: 8 → 10 HP/s (high overheat risk)
             heatOnKillWanchai: 15,          // +Heat ต่อการฆ่าขณะ Wanchai active
-            heatHealOnKillWanchai: 0.03,    // NERF: 0.08 → 0.05 → 0.03 (heal ต่อ kill ลดลง ผู้เล่นไม่ควร full heal จากการฆ่า)
+            heatHealOnKillWanchai: 0.02,    // REBALANCE: 0.03 → 0.02
 
             // ── Crit & Scaling ────────────────────────────────
             baseCritChance: 0.06,
@@ -270,10 +272,10 @@ const BALANCE = {
             // Unlock: ถึง OVERHEAT ครั้งแรก (เปลี่ยนจาก Lv5 เพื่อ thematic)
             passiveUnlockLevel: 5,          // fallback เท่านั้น — ไม่ได้ใช้จริงแล้ว
             passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via OVERHEAT
-            passiveHpBonusPct: 0.35,
+            passiveHpBonusPct: 0.25,
             passiveUnlockText: '💥 วันชัยโอเวอร์ไดรฟ์!',
             passiveCritBonus: 0.06,         // 0.04 → 0.06
-            passiveLifesteal: 0.025,        // 0.01 → 0.025 (brawler identity)
+            passiveLifesteal: 0.015,        // REBALANCE: 0.025 → 0.015
             passiveHeatGainBonus: 1.20,     // NERF: 1.50 → 1.20 (กัน permanent OVERHEAT loop)
             passiveHeatNoDecayOnMove: false, // NERF: ปิด — passive ไม่ยกเลิก decay ขณะเดิน (OVERHEAT ไม่ควรฟรี)
             vacuumEarlyUnlock: true,        // NEW: Vacuum ปลดพร้อม Wanchai (ต้นเกม) ไม่รอ passive
@@ -318,9 +320,9 @@ const BALANCE = {
 
             // ── Feature 4: Stand Meter (แทน Timer) ────────────
             standMeterMax: 100,
-            standMeterDrainRate: 8,     // meter/s ขณะ Wanchai active
-            standMeterPerHit: 1,        // NERF: 4 → 1 (fix infinite stand loop at OVERHEAT)
-            standMeterOnKill: 8,        // DEBT-FIX: 12 → 8 — break-even normal=1.0 kills/s, HOT=2.0 kills/s (ไม่ infinite แล้ว)
+            standMeterDrainRate: 12,    // REBALANCE: 8 → 12 meter/s ขณะ Wanchai active
+            standMeterPerHit: 0,        // REBALANCE: 1 → 0 (kills only — prevents infinite boss Stand)
+            standMeterOnKill: 7,        // REBALANCE: 8 → 7
             standMeterDrainCold: 3.0,   // NERF: 1.30 → 3.0 (COLD = real penalty, max ~6s)
             standMeterDrainOverheat: 2.0, // NERF: 0.50 → 2.0 (drain faster, net 7.5/s → max 13s alone)
         },
@@ -365,7 +367,9 @@ const BALANCE = {
             // Unlock: ทำ Ritual Burst ครั้งแรก (เปลี่ยนจาก Lv4 เพื่อ thematic)
             passiveUnlockLevel: 4,          // fallback เท่านั้น — ไม่ได้ใช้จริงแล้ว
             passiveUnlockStealthCount: 0,   // ไม่ใช้ stealth — unlock via Ritual
-            passiveHpBonusPct: 0.45,        // BUFF: 0.30 → 0.45 (ปลดยากสุด ควรได้มากสุด)
+            passiveHpBonusPct: 0.30,        // REBALANCE: 0.45 → 0.30
+            su1StickyTargetReq: 7,          // REBALANCE: 10 → 7 unique sticky targets
+            su2RitualMultiHitCount: 3,      // REBALANCE: 4 → 3 enemies in 1 Ritual cast
             passiveUnlockText: '🌾 ราชาอีสาน!',
             passiveCritBonus: 0.06,         // BUFF: 0.04 → 0.06 (เท่า Auto)
             passiveLifesteal: 0.025,        // BUFF: 0.015 → 0.025 (รู้สึกได้จริง)
@@ -404,8 +408,8 @@ const BALANCE = {
             cosmicNagaBurnDPS: 30,          // BUFF: 22 → 30
             cosmicGarudaRadiusMult: 1.5,
             // ── Ritual Boss Damage Cap ────────────────────────────
-            ritualBossDmgCapPct: 0.35,       // single ritual burst cap = 35% boss maxHP
-            ritualBossDmgCapCosmicPct: 0.45, // cap ขณะ Cosmic Balance active
+            ritualBossDmgCapPct: 0.20,       // REBALANCE: 0.35 → 0.20 (single ritual burst cap = 20% boss maxHP)
+            ritualBossDmgCapCosmicPct: 0.26, // REBALANCE: 0.45 → 0.26 (cap ขณะ Cosmic Balance active)
         },
         pat: {
             name: 'Pat',
@@ -465,8 +469,8 @@ const BALANCE = {
             iaidoRange: 400,                // max dash distance
             iaidoCooldown: 14.0,
             iaidoChargeDuration: 0.6,       // Phase 1 charge time
-            iaidoDamage: 180,               // BIG-BALANCE: 160 → 180 (single target burst reward)
-            iaidoCritMulti: 3.5,            // crit multiplier เฉพาะ Iaido
+            iaidoDamage: 155,               // REBALANCE: 180 → 155
+            iaidoCritMulti: 2.8,            // REBALANCE: 3.5 → 2.8 crit multiplier เฉพาะ Iaido
             iaidoFreezeDuration: 0.5,       // Phase 3 cinematic freeze (TimeManager)
             iaidoBloodParticles: 18,        // blood burst particle count
 
@@ -499,7 +503,7 @@ const BALANCE = {
             // tap แทนที่จะ hold → reflect ×4 + energy restore + i-frame สั้น
             // กะเวลาพลาด = Blade Guard ไม่ทำงาน + cooldown เต็ม
             perfectParryWindow: 0.15,           // วินาที: tap ต้องสั้นกว่านี้จึงเป็น Perfect Parry
-            perfectParryReflectMult: 4.0,       // reflect damage ×4 (vs hold ×2)
+            perfectParryReflectMult: 3.2,       // REBALANCE: 4.0 → 3.2 reflect damage
             perfectParryEnergyRestore: 20,      // energy คืนเมื่อ parry สำเร็จ
             perfectParryIFrameDur: 0.4,         // i-frame วินาทีหลัง Perfect Parry
             perfectParryScreenFreeze: 0.05,     // TimeManager.setBulletTime() duration
@@ -507,8 +511,8 @@ const BALANCE = {
             // ── Iaido Strike — Boss Hit & Point-Blank Execute ─────────
             // point-blank = Pat หยุดที่ระยะ ≤ iaidoPointBlankRange px จาก target
             iaidoPointBlankRange: 45,           // px — threshold execute range
-            iaidoPointBlankDmgMult: 2.0,        // dmg ×2 ถ้า point-blank
-            iaidoPointBlankIFrameDur: 1.5,      // วินาที อมตะหลัง point-blank hit
+            iaidoPointBlankDmgMult: 1.65,       // REBALANCE: 2.0 → 1.65 dmg ถ้า point-blank
+            iaidoPointBlankIFrameDur: 0.8,      // REBALANCE: 1.5 → 0.8 วินาที อมตะหลัง point-blank hit
 
             // ── Iaido Cinematic ───────────────────────────────────────
             // (ใช้อยู่แล้วใน _tickIaido แต่อ่านจาก this.stats — เพิ่มให้ครบ)
@@ -546,10 +550,10 @@ const BALANCE = {
         expValue: 18,
         chaseRange: 150,
         projectileSpeed: 500,
-        baseHp: 40, hpPerWave: 0.19,  // REBALANCE: 0.16 → 0.19 (Wave15 ~490HP แทน ~410HP — ยังไม่ infinite แต่รู้สึกได้)
+        baseHp: 54, hpPerWave: 0.23,  // REBALANCE: 40/0.19 → 54/0.23 (+35% base + harder late wave scaling)
         baseSpeed: 85, speedPerWave: 6,
-        baseDamage: 8, damagePerWave: 1.4,  // REBALANCE: 1.2 → 1.4 (Wave15 damage ~28 แทน ~24 — ต้องหลบ)
-        shootCooldown: [2.5, 4.5],
+        baseDamage: 11, damagePerWave: 1.8,  // REBALANCE: 8/1.4 → 11/1.8
+        shootCooldown: [2.1, 3.8],
         shootRange: 550
     },
     tank: {
@@ -557,9 +561,9 @@ const BALANCE = {
         color: '#78716c',
         expValue: 45,
         powerupDropMult: 1.5,
-        baseHp: 100, hpPerWave: 0.20,  // BIG-BALANCE: 0.23 → 0.20 (W15 Tank HP ~1350 จาก 1814 — Kao TTK 5.5s แทน 8.3s)
+        baseHp: 135, hpPerWave: 0.24,  // REBALANCE: 100/0.20 → 135/0.24 (+35% base)
         baseSpeed: 60, speedPerWave: 3,
-        baseDamage: 18, damagePerWave: 2.5,  // NERF: 3 → 2.5 (melee damage was too punishing)
+        baseDamage: 24, damagePerWave: 3.1,  // REBALANCE: 18/2.5 → 24/3.1
         meleeRange: 55
     },
     mage: {
@@ -569,16 +573,16 @@ const BALANCE = {
         powerupDropMult: 1.3,
         orbitDistance: 300,
         orbitDistanceBuffer: 100,
-        baseHp: 28, hpPerWave: 0.22,  // BIG-BALANCE: 0.25 → 0.22 (W15 Mage HP ~470 จาก 637 — glass cannon identity คงไว้)
+        baseHp: 38, hpPerWave: 0.25,  // REBALANCE: 28/0.22 → 38/0.25
         baseSpeed: 70, speedPerWave: 5,
-        baseDamage: 12, damagePerWave: 1.8,
+        baseDamage: 16, damagePerWave: 2.3,
         soundWaveCooldown: 10,
         soundWaveRange: 300,
         soundWaveConfuseDuration: 0.6,  // NERF: 0.8 → 0.6 (confusion was too long)
         meteorCooldown: 13,
-        meteorDamage: 24,  // NERF: 28 → 24 (meteor spam was too strong)
+        meteorDamage: 30,  // REBALANCE: 24 → 30
         meteorBurnDuration: 3,
-        meteorBurnDPS: 4.0  // NERF: 4.5 → 4.0
+        meteorBurnDPS: 5.5  // REBALANCE: 4.0 → 5.5
     },
     enemies: {
         sniper: {
@@ -588,9 +592,9 @@ const BALANCE = {
             personality: 'sniper',
             squadRole: 'anchor',
             category: 'anchor',
-            baseHp: 34, hpPerWave: 0.19,
+            baseHp: 45, hpPerWave: 0.23,
             baseSpeed: 72, speedPerWave: 4,
-            baseDamage: 26, damagePerWave: 2.0,
+            baseDamage: 34, damagePerWave: 2.6,
             minRange: 260,
             preferredRange: 680,
             shootRange: 980,
@@ -608,11 +612,11 @@ const BALANCE = {
             personality: 'anchor',
             squadRole: 'anchor',
             category: 'anchor',
-            baseHp: 135, hpPerWave: 0.21,
+            baseHp: 175, hpPerWave: 0.24,
             baseSpeed: 58, speedPerWave: 3,
-            baseDamage: 18, damagePerWave: 2.2,
+            baseDamage: 23, damagePerWave: 2.8,
             meleeRange: 62,
-            frontReduction: 0.45,
+            frontReduction: 0.50,
             frontArcCos: 0.26
         },
         poison_spitter: {
@@ -623,15 +627,16 @@ const BALANCE = {
             squadRole: 'anchor',
             category: 'anchor',
             hazard: true,
-            baseHp: 42, hpPerWave: 0.18,
+            baseHp: 56, hpPerWave: 0.22,
             baseSpeed: 74, speedPerWave: 4,
-            baseDamage: 5, damagePerWave: 0.5,
+            baseDamage: 7, damagePerWave: 0.7,
             preferredRange: 460,
             spitRange: 760,
             cooldown: 4.8,
             poolRadius: 86,
             poolDuration: 3.6,
-            poolDamagePerSec: 12,
+            poolDamagePerSec: 15,
+            poolDamagePerWave: 1.2,
             maxPools: 3,
             minPoolSpacing: 150
         },
@@ -642,9 +647,9 @@ const BALANCE = {
             personality: 'pressure',
             squadRole: 'pressure',
             category: 'pressure',
-            baseHp: 58, hpPerWave: 0.18,
+            baseHp: 76, hpPerWave: 0.22,
             baseSpeed: 92, speedPerWave: 5,
-            baseDamage: 20, damagePerWave: 1.8,
+            baseDamage: 26, damagePerWave: 2.3,
             chargeMinRange: 120,
             chargeMaxRange: 420,
             windup: 0.34,
@@ -660,9 +665,9 @@ const BALANCE = {
             personality: 'pressure',
             squadRole: 'pressure',
             category: 'pressure',
-            baseHp: 72, hpPerWave: 0.18,
+            baseHp: 94, hpPerWave: 0.22,
             baseSpeed: 98, speedPerWave: 5,
-            baseDamage: 24, damagePerWave: 2.2,
+            baseDamage: 30, damagePerWave: 2.8,
             lockRange: 820,
             attackRange: 46,
             attackCooldown: 1.15,
@@ -676,12 +681,13 @@ const BALANCE = {
             squadRole: 'pressure',
             category: 'pressure',
             hazard: true,
-            baseHp: 64, hpPerWave: 0.19,
+            baseHp: 84, hpPerWave: 0.23,
             baseSpeed: 54, speedPerWave: 3,
-            baseDamage: 8, damagePerWave: 0.6,
+            baseDamage: 11, damagePerWave: 0.8,
             explosionRadius: 160,
             explosionDelay: 0.72,
-            explosionDamage: 38
+            explosionDamage: 48,
+            explosionDamagePerWave: 2.5
         },
         healer: {
             radius: 17,
@@ -691,11 +697,12 @@ const BALANCE = {
             squadRole: 'support',
             category: 'support',
             support: true,
-            baseHp: 34, hpPerWave: 0.18,
+            baseHp: 46, hpPerWave: 0.22,
             baseSpeed: 70, speedPerWave: 4,
-            baseDamage: 4, damagePerWave: 0.3,
+            baseDamage: 7, damagePerWave: 0.6,
             healRange: 320,
-            healAmount: 16,
+            healAmount: 20,
+            healAmountPerWave: 2.0,
             healCooldown: 3.2,
             healThreshold: 0.78
         },
@@ -707,10 +714,10 @@ const BALANCE = {
             squadRole: 'support',
             category: 'support',
             support: true,
-            baseHp: 40, hpPerWave: 0.18,
+            baseHp: 54, hpPerWave: 0.22,
             baseSpeed: 68, speedPerWave: 4,
-            baseDamage: 5, damagePerWave: 0.4,
-            summonCooldown: 6.0,
+            baseDamage: 7, damagePerWave: 0.6,
+            summonCooldown: 5.0,
             summonRange: 260,
             summonEngageRange: 620,
             maxMinions: 2
@@ -723,15 +730,15 @@ const BALANCE = {
             squadRole: 'support',
             category: 'support',
             support: true,
-            baseHp: 38, hpPerWave: 0.18,
+            baseHp: 50, hpPerWave: 0.22,
             baseSpeed: 70, speedPerWave: 4,
-            baseDamage: 4, damagePerWave: 0.3,
+            baseDamage: 7, damagePerWave: 0.6,
             buffRadius: 235,
             buffCooldown: 4.8,
             buffDuration: 2.1,
             maxBuffTargets: 3,
-            speedMult: 1.14,
-            damageMult: 1.18
+            speedMult: 1.18,
+            damageMult: 1.25
         },
         summon_minion: {
             radius: 13,
@@ -740,9 +747,9 @@ const BALANCE = {
             personality: 'pressure',
             squadRole: 'pressure',
             category: 'pressure',
-            baseHp: 18, hpPerWave: 0.12,
+            baseHp: 25, hpPerWave: 0.16,
             baseSpeed: 118, speedPerWave: 4,
-            baseDamage: 9, damagePerWave: 0.8,
+            baseDamage: 12, damagePerWave: 1.1,
             meleeRange: 30,
             lifetime: 10
         }
@@ -751,7 +758,7 @@ const BALANCE = {
         radius: 50,
         // MTC Room occupies y: -700 to -460 (h=240). Keep boss spawn clear below it.
         spawnY: -330,
-        contactDamage: 38,           // BUFF: 30→38 (+27% เพิ่มความอันตราย)
+        contactDamage: 46,           // REBALANCE: 38 → 46
         speechInterval: 10,
         nextWaveDelay: 2000,
         log457HealRate: 0.06,
@@ -759,22 +766,22 @@ const BALANCE = {
         attackFireRate: 0.1,
         phase2AttackFireRate: 0.05,
         ultimateProjectileSpeed: 400,
-        baseHp: 5200,
-        hpMultiplier: 1.32,      // REBALANCE: 1.28 → 1.32 (Enc5 ~15,000 HP — boss ควรรู้สึก epic)
+        baseHp: 6500,
+        hpMultiplier: 1.36,      // REBALANCE: 1.32 → 1.36 (Enc5 Manop Goldfish ~22.2k HP)
         moveSpeed: 140,
         phase2Speed: 190,
         phase2Threshold: 0.5,   // fallback (overridden per-encounter in KruManop constructor)
         // Per-encounter phase thresholds — enc 1 triggers phase2 early so wave-3 players see dog
         phase2ThresholdByEnc: [null, 0.50, null, 0.60, null, 0.65], // index = encounter (1-based)
         phase3ThresholdByEnc: [null, null, null, 0.30, null, 0.35],
-        chalkDamage: 16,            // BUFF: 13→16 (+23%)
-        ultimateDamage: 44,          // BUFF: 35→44 (+26%)
+        chalkDamage: 22,            // REBALANCE: 16 → 22
+        ultimateDamage: 54,          // REBALANCE: 44 → 54
         ultimateBullets: 20,
         phase2UltimateBullets: 28,
-        slamDamage: 75,             // BUFF: 60→75 (+25%)
+        slamDamage: 92,             // REBALANCE: 75 → 92
         slamRadius: 360,
         slamCooldown: 14,
-        graphDamage: 88,            // BUFF: 70→88 (+26%)
+        graphDamage: 105,           // REBALANCE: 88 → 105
         graphLength: 1600,
         graphDuration: 20,
         graphCooldown: 16,
@@ -791,23 +798,23 @@ const BALANCE = {
         burstArmorDuration: 4.0,
         burstArmorCooldown: 25,
         phase2: {
-            barkDamage: 40,           // BUFF: 32→40 (+25%)
+            barkDamage: 50,           // REBALANCE: 40 → 50
             barkRange: 600,
             barkCooldown: 3.2,
             enrageSpeedMult: 2.0,
             dogColor: '#d97706',
             // ── ChalkWall ────────────────────────────────────
             chalkWallCooldown: 12.0,
-            chalkWallDamage: 15,        // damage on contact per crossing
+            chalkWallDamage: 22,        // REBALANCE: 15 → 22 damage on contact per crossing
             chalkWallLength: 340,       // world-unit line length
             chalkWallDuration: 6.0,     // seconds the wall persists
             // ── DogPackCombo ─────────────────────────────────
             dogPackCooldown: 18.0,      // minimum gap between combos
         },
         bossDog: {
-            hp: 2000,
-            speed: 280,
-            damage: 30,
+            hp: 2700,
+            speed: 300,
+            damage: 38,
             radius: 24,
             color: '#d97706'
         },
@@ -822,32 +829,32 @@ const BALANCE = {
             slowDuration: 2.0
         },
         goldfishMinion: {
-            hp: 100,
-            speed: 165,
-            damage: 18,
+            hp: 140,
+            speed: 185,
+            damage: 24,
             radius: 12,
             wobbleAmp: 40,
             wobbleFreq: 3.5,
             color: '#fb923c'
         },
         bubbleProjectile: {
-            speed: 100,
-            damage: 30,
+            speed: 120,
+            damage: 38,
             radius: 18,
             color: 'rgba(186, 230, 253, 0.6)'
         },
         first: {
-            hpBaseMult: 0.72,       // BUFF: 0.62 → 0.72 (Wave6 HP: 6448→7488, mid-game boss ควรหนักขึ้น)
+            hpBaseMult: 0.80,       // REBALANCE: 0.72 → 0.80
             advancedHpMult: 0.85,   // NERF: 1.35 → 0.85 (Wave12 HP: 17410→12730, TTK 46s→40s)
             speedBaseMult: 1.55,
             advancedSpeedMult: 1.35,
             contactDamageMult: 1.2,
             cooldowns: { suvat: 8.0, orbit: 12.0, freeFall: 15.0, rocket: 9.0, sandwich: 18.0 },
-            suvat: { windUp: 0.9, accel: 1900, maxDur: 1.2, damage: 80 },
-            orbit: { radius: 115, speed: 2.8, duration: 3.5, projDamage: 24, projSpeed: 520 },
-            freeFall: { warnDur: 1.8, aoeRadius: 140, damage: 95, advMult: 1.25 },
-            rocket: { baseDmg: 28, advMult: 1.3, baseSpeed: 480 },
-            berserk: { projDamage: 22, advMult: 1.3, projSpeed: 540, fireCd: 2.2 },
+            suvat: { windUp: 0.85, accel: 2050, maxDur: 1.2, damage: 95 },
+            orbit: { radius: 115, speed: 3.0, duration: 3.5, projDamage: 30, projSpeed: 560 },
+            freeFall: { warnDur: 1.65, aoeRadius: 145, damage: 112, advMult: 1.28 },
+            rocket: { baseDmg: 34, advMult: 1.32, baseSpeed: 520 },
+            berserk: { projDamage: 28, advMult: 1.32, projSpeed: 580, fireCd: 1.9 },
             dodge: { radius: 130, impulse: 420, cd: 1.2 }
         },
         domainExpansion: {
@@ -1008,7 +1015,20 @@ const BALANCE = {
         interactionRadius: 90,
         // Roguelite shop mechanics
         slotCount: 3,
-        rerollCost: 200,
+        rerollCost: 120,
+        rerollCostIncrement: 80,
+        credits: {
+            basicEnemy: 12,
+            tank: 26,
+            mage: 30,
+            expandedEnemy: 22,
+            minion: 4,
+            goldfish: 6,
+            bossDog: 80,
+            boss: 220,
+            powerup: 15,
+            waveGrowthPct: 0.06,
+        },
         // Proximity aura visual
         auraColor: '#facc15',
         auraLineWidth: 2,

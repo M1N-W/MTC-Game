@@ -229,6 +229,9 @@ class GoldfishMinion extends Entity {
             this.dead = true;
             spawnParticles(this.x, this.y, 12, BALANCE.boss.goldfishMinion.color);
             addScore(50);
+            if (typeof awardEnemyCredits === 'function') {
+                awardEnemyCredits(BALANCE.shop?.credits?.goldfish ?? 6, typeof getWave === 'function' ? getWave() : 1);
+            }
         }
     }
 

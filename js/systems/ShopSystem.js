@@ -151,12 +151,34 @@ function closeShop() {
 
 window.currentShopOffers = [];
 
-// ⚠️  slotCount และ rerollCost อ่านจาก BALANCE.shop ใน config.js
+function getShopItemPurchases(itemId) {
+    return window.player?._shopPurchaseCounts?.[itemId] ?? 0;
+}
+
+function getShopItemCost(item) {
+    if (!item) return 0;
+    const bought = getShopItemPurchases(item.id);
+    const scale = item.costScale ?? 1.45;
+    return Math.round(item.cost * Math.pow(scale, bought));
+}
+
+function getCurrentRerollCost() {
+    const base = BALANCE.shop?.rerollCost ?? 120;
+    const inc = BALANCE.shop?.rerollCostIncrement ?? 80;
+    const count = window.shopRerollCountThisWave || 0;
+    return base + count * inc;
+}
+
+// ⚠️  slotCount และ rerollCost อ่านจาก BALANCE.shop ใน balance.js
 function rollShopItems() {
-    // Filter char-specific items to only show current character's items
+    // Filter char-specific items + exclude items that already reached maxPurchases
     const charType = (typeof _selectedChar !== 'undefined') ? _selectedChar
         : (window.player?.constructor?.name?.toLowerCase().replace('player', '') ?? null);
-    const pool = SHOP_ITEMS.filter(it => !it.charReq || it.charReq === charType);
+    const pool = SHOP_ITEMS.filter(it => {
+        if (it.charReq && it.charReq !== charType) return false;
+        if (it.maxPurchases && getShopItemPurchases(it.id) >= it.maxPurchases) return false;
+        return true;
+    });
     const slotCount = BALANCE.shop.slotCount;
     window.currentShopOffers = [];
     for (let i = 0; i < slotCount && pool.length > 0; i++) {
@@ -170,13 +192,14 @@ function rollShopItems() {
 
 function rerollShop() {
     if (!window.player) return;
-    const rerollCost = BALANCE.shop.rerollCost;
-    const score = typeof getScore === 'function' ? getScore() : 0;
-    if (score < rerollCost) {
-        spawnFloatingText('คะแนนไม่พอ Reroll!', window.player.x, window.player.y - 60, '#ef4444', 18);
+    const rerollCost = getCurrentRerollCost();
+    const currentCredits = typeof getCredits === 'function' ? getCredits() : 0;
+    if (currentCredits < rerollCost) {
+        spawnFloatingText('เครดิตไม่พอ Reroll! 🪙', window.player.x, window.player.y - 60, '#ef4444', 18);
         return;
     }
-    addScore(-rerollCost);
+    addCredits(-rerollCost);
+    window.shopRerollCountThisWave = (window.shopRerollCountThisWave || 0) + 1;
     rollShopItems();
     ShopManager.renderItems();
     if (typeof Audio !== 'undefined' && Audio.playPowerUp) Audio.playPowerUp();
@@ -187,24 +210,64 @@ function buyItem(slotIndex) {
     if (!offer || offer.soldOut) return;
     if (!window.player) return;
 
+    const p = window.player;
     const item = offer.item;
-    const currentScore = typeof getScore === 'function' ? getScore() : 0;
-    if (currentScore < item.cost) {
-        spawnFloatingText(GAME_TEXTS.shop.notEnoughScore, window.player.x, window.player.y - 60, '#ef4444', 18);
+
+    // Enforce stack cap before charging Credits
+    const boughtCount = getShopItemPurchases(item.id);
+    if (item.maxPurchases && boughtCount >= item.maxPurchases) {
+        spawnFloatingText('ซื้อครบจำนวนสูงสุดแล้ว!', p.x, p.y - 60, '#94a3b8', 16);
+        offer.soldOut = true;
+        ShopManager.renderItems();
+        return;
+    }
+
+    const itemCost = getShopItemCost(item);
+    const currentCredits = typeof getCredits === 'function' ? getCredits() : 0;
+    if (currentCredits < itemCost) {
+        spawnFloatingText(GAME_TEXTS.shop.notEnoughScore, p.x, p.y - 60, '#ef4444', 18);
         if (typeof Audio !== 'undefined' && Audio.playHit) Audio.playHit();
         return;
     }
 
-    const p = window.player;
-
-    // BUG 6 FIX: guard duplicate-purchase items BEFORE deducting score/soldOut
+    // Guards BEFORE deducting Credits or marking soldOut
+    if (item.id === 'potion' && p.hp >= p.maxHp) {
+        spawnFloatingText(GAME_TEXTS.shop.hpFull, p.x, p.y - 60, '#94a3b8', 16);
+        return;
+    }
     if (item.id === 'shield' && (p.energyShieldTimer ?? 0) > 0) {
         spawnFloatingText('มีโล่พลังงานอยู่แล้ว!', p.x, p.y - 60, '#94a3b8', 16);
         return;
     }
+    if (item.id === 'shieldBubble' && (p.shieldBubbleHits || 0) >= 4) {
+        spawnFloatingText('เกราะฟองสบู่เต็มแล้ว!', p.x, p.y - 60, '#94a3b8', 16);
+        return;
+    }
+    if (item.id === 'kaoAmmo' && !(typeof KaoPlayer !== 'undefined' && p instanceof KaoPlayer)) {
+        spawnFloatingText('❌ KAO เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+        return;
+    }
+    if (item.id === 'poomRice' && !(typeof PoomPlayer !== 'undefined' && p instanceof PoomPlayer)) {
+        spawnFloatingText('❌ POOM เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+        return;
+    }
+    if (item.id === 'autoCore' && !(typeof AutoPlayer !== 'undefined' && p instanceof AutoPlayer)) {
+        spawnFloatingText('❌ AUTO เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+        return;
+    }
+    if (item.id === 'patEdge' && !(typeof PatPlayer !== 'undefined' && p instanceof PatPlayer)) {
+        spawnFloatingText('❌ PAT เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
+        return;
+    }
 
-    addScore(-item.cost);
+    addCredits(-itemCost);
     offer.soldOut = true;
+    p._shopPurchaseCounts = p._shopPurchaseCounts || {};
+    p._shopPurchaseCounts[item.id] = boughtCount + 1;
+    if (item.type === 'permanent') {
+        p._shopBuffStacks = (p._shopBuffStacks || 0) + 1;
+        if (typeof Achievements !== 'undefined') Achievements.check('shop_max');
+    }
 
     if (item.id === 'potion') {
         const lacking = p.maxHp - p.hp;
@@ -219,8 +282,8 @@ function buyItem(slotIndex) {
         }
 
     } else if (item.id === 'shield') {
-        p.energyShieldTimer = item.duration || 8;
-        p.energyShieldDamageReduction = item.damageReduction || 0.50;
+        p.energyShieldTimer = item.duration || 4;
+        p.energyShieldDamageReduction = item.damageReduction || 0.40;
         showItemNotificationWithParticles('shield', { x: p.x, y: p.y }, 20);
 
     } else if (item.id === 'maxHp') {
@@ -241,27 +304,25 @@ function buyItem(slotIndex) {
         showItemNotificationWithParticles('speedUp', { x: p.x, y: p.y, value: Math.round(item.speedPct * 100) }, 8);
 
     } else if (item.id === 'cdr') {
-        // Compound each purchase: floor at 10% of base (never zero)
-        p.skillCooldownMult = Math.max(0.1, (p.skillCooldownMult || 1.0) * (1 - item.cdrPct));
+        // Compound each purchase: capped floor at 75% (max -25% CDR)
+        p.skillCooldownMult = Math.max(0.75, (p.skillCooldownMult || 1.0) * (1 - item.cdrPct));
         showItemNotificationWithParticles('cdr', { x: p.x, y: p.y, value: Math.round(item.cdrPct * 100) }, 8);
 
         // ── Defensive ──────────────────────────────────────────────
     } else if (item.id === 'reflectArmor') {
-        p.damageReflectPct = Math.min(0.45, (p.damageReflectPct || 0) + item.reflectPct);
+        p.damageReflectPct = Math.min(0.30, (p.damageReflectPct || 0) + item.reflectPct);
         showItemNotificationWithParticles('reflectArmor', { x: p.x, y: p.y, value: Math.round(item.reflectPct * 100) }, 12);
 
     } else if (item.id === 'shieldBubble') {
-        p.shieldBubbleHits = (p.shieldBubbleHits || 0) + item.bubbleHits;
+        p.shieldBubbleHits = Math.min(4, (p.shieldBubbleHits || 0) + item.bubbleHits);
         showItemNotificationWithParticles('shieldBubble', { x: p.x, y: p.y, value: p.shieldBubbleHits }, 15);
 
         // ── Utility ────────────────────────────────────────────────
     } else if (item.id === 'speedWave') {
-        // BUG 2 FIX: use shopSpeedBoostActive/shopSpeedBoostTimer — the properties
-        // game.js actually ticks. _speedWaveTimer/_speedWaveMult were dead props.
         p.shopSpeedBoostActive = true;
         p.shopSpeedBoostTimer = (p.shopSpeedBoostTimer > 0 ? p.shopSpeedBoostTimer : 0) + item.duration;
         if (p._baseMoveSpeed === undefined) p._baseMoveSpeed = p.stats?.moveSpeed ?? p.moveSpeed;
-        const mult = item.speedMult ?? 1.4;
+        const mult = item.speedMult ?? 1.2;
         if (p.stats) p.stats.moveSpeed = p._baseMoveSpeed * mult;
         else p.moveSpeed = p._baseMoveSpeed * mult;
         showItemNotificationWithParticles('speedWave', { x: p.x, y: p.y, value: item.duration }, 12);
@@ -281,55 +342,30 @@ function buyItem(slotIndex) {
 
         // ── Character-specific ─────────────────────────────────────
     } else if (item.id === 'kaoAmmo') {
-        if (typeof KaoPlayer !== 'undefined' && p instanceof KaoPlayer) {
-            p.maxTeleportCharges = Math.min(4, (p.maxTeleportCharges || 3) + 1);
-            p.teleportCharges = Math.min(p.maxTeleportCharges, (p.teleportCharges || 0) + 1);
-            showItemNotificationWithParticles('kaoAmmo', { x: p.x, y: p.y, value: p.maxTeleportCharges }, 12);
-        } else {
-            addScore(item.cost); offer.soldOut = false;
-            spawnFloatingText('❌ KAO เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
-            ShopManager.renderItems(); return;
-        }
+        p.maxTeleportCharges = Math.min(4, (p.maxTeleportCharges || 3) + 1);
+        p.teleportCharges = Math.min(p.maxTeleportCharges, (p.teleportCharges || 0) + 1);
+        showItemNotificationWithParticles('kaoAmmo', { x: p.x, y: p.y, value: p.maxTeleportCharges }, 12);
 
     } else if (item.id === 'poomRice') {
-        if (typeof PoomPlayer !== 'undefined' && p instanceof PoomPlayer) {
-            p.skillCooldownMult = Math.max(0.1, (p.skillCooldownMult || 1.0) * 0.85);
-            showItemNotificationWithParticles('poomRice', { x: p.x, y: p.y }, 12);
-        } else {
-            addScore(item.cost); offer.soldOut = false;
-            spawnFloatingText('❌ POOM เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
-            ShopManager.renderItems(); return;
-        }
+        const cdrPct = item.cdrPct ?? 0.08;
+        p.skillCooldownMult = Math.max(0.75, (p.skillCooldownMult || 1.0) * (1 - cdrPct));
+        showItemNotificationWithParticles('poomRice', { x: p.x, y: p.y }, 12);
 
     } else if (item.id === 'autoCore') {
-        if (typeof AutoPlayer !== 'undefined' && p instanceof AutoPlayer) {
-            const current = p.stats?.heatTierHot ?? (p._heatTierHotOverride ?? BALANCE.characters?.auto?.heatTierHot ?? 67);
-            p._heatTierHotOverride = Math.max(20, Math.round(current * 0.85));
-            if (p.stats) p.stats.heatTierHot = p._heatTierHotOverride;
-            showItemNotificationWithParticles('autoCore', { x: p.x, y: p.y, value: p._heatTierHotOverride }, 15);
-        } else {
-            addScore(item.cost); offer.soldOut = false;
-            spawnFloatingText('❌ AUTO เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
-            ShopManager.renderItems(); return;
-        }
+        const current = p.stats?.heatTierHot ?? (p._heatTierHotOverride ?? BALANCE.characters?.auto?.heatTierHot ?? 67);
+        const hotMult = item.hotMult ?? 0.90;
+        p._heatTierHotOverride = Math.max(25, Math.round(current * hotMult));
+        if (p.stats) p.stats.heatTierHot = p._heatTierHotOverride;
+        showItemNotificationWithParticles('autoCore', { x: p.x, y: p.y, value: p._heatTierHotOverride }, 15);
 
     } else if (item.id === 'patEdge') {
-        if (typeof PatPlayer !== 'undefined' && p instanceof PatPlayer) {
-            // Parry window +15% — override via p.stats.perfectParryWindow
-            // (PatPlayer._tickBladeGuard reads S.perfectParryWindow from
-            //  its stats bag each frame).
-            const baseWin = BALANCE.characters?.pat?.perfectParryWindow ?? 0.15;
-            const curWin = p.stats?.perfectParryWindow ?? baseWin;
-            if (p.stats) p.stats.perfectParryWindow = curWin * 1.15;
-            // Swing speed +10% — applied via attackSpeedMult (mirrors the
-            // existing `speedPct` convention used by the speedUp permanent).
-            p.attackSpeedMult = (p.attackSpeedMult || 1.0) * 1.10;
-            showItemNotificationWithParticles('patEdge', { x: p.x, y: p.y, value: 15 }, 12);
-        } else {
-            addScore(item.cost); offer.soldOut = false;
-            spawnFloatingText('❌ PAT เท่านั้น!', p.x, p.y - 60, '#ef4444', 16);
-            ShopManager.renderItems(); return;
-        }
+        const baseWin = BALANCE.characters?.pat?.perfectParryWindow ?? 0.15;
+        const curWin = p.stats?.perfectParryWindow ?? baseWin;
+        const parryMult = item.parryMult ?? 1.08;
+        const atkSpdMult = item.atkSpdMult ?? 1.06;
+        if (p.stats) p.stats.perfectParryWindow = curWin * parryMult;
+        p.attackSpeedMult = (p.attackSpeedMult || 1.0) * atkSpdMult;
+        showItemNotificationWithParticles('patEdge', { x: p.x, y: p.y, value: Math.round((parryMult - 1) * 100) }, 12);
     }
 
     Achievements.stats.shopPurchases = (Achievements.stats.shopPurchases || 0) + 1;
@@ -405,3 +441,6 @@ window.closeShop = closeShop;
 window.buyItem = buyItem;
 window.rollShopItems = rollShopItems;
 window.rerollShop = rerollShop;
+window.getShopItemPurchases = getShopItemPurchases;
+window.getShopItemCost = getShopItemCost;
+window.getCurrentRerollCost = getCurrentRerollCost;

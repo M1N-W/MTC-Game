@@ -68,6 +68,9 @@ class BossBase extends Entity {
         spawnParticles(this.x, this.y, 60, '#dc2626');
         spawnFloatingText('CLASS DISMISSED!', this.x, this.y, '#facc15', 35);
         addScore(BALANCE.score.boss * this.difficulty);
+        if (typeof awardEnemyCredits === 'function') {
+            awardEnemyCredits(BALANCE.shop?.credits?.boss ?? 220, typeof getWave === 'function' ? getWave() : 1);
+        }
         if (window.UIManager) window.UIManager.updateBossHUD(null);
         Audio.playAchievement();
         for (let i = 0; i < 3; i++) {

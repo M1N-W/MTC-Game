@@ -154,7 +154,7 @@ class AchievementSystem {
             case 'first_down': unlock = this.stats.firstKills >= 1; break;
             // ── Shop max buff ─────────────────────────────────────────────────
             // shop_max: ซื้อบัฟจนถึง 1.5x — ตรวจสอบจาก player.damageBoost หรือ shopStack
-            case 'shop_max': unlock = !!(window.player?.damageBoost >= 1.5 || window.player?._shopBuffStacks >= 5); break;
+            case 'shop_max': unlock = !!(window.player?.damageBoost >= 1.5 || window.player?._shopBuffStacks >= 4); break;
             case 'no_damage': unlock = this.stats.damageTaken === 0 && getEnemiesKilled() >= 5; break;
             case 'crit_master': unlock = this.stats.crits >= 5; break;
             case 'speedster': unlock = this.stats.dashes >= 20; break;
