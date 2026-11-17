@@ -53,6 +53,10 @@
     let _timer = 0;
     let _pulse = 0;
     let _energyCost = ENERGY_COST;
+    let _activeType = '';
+    let _activeColor = '#22d3ee';
+    let _activeSpeedMult = 1;
+    let _activeDamageMult = 1;
 
     function _syncSnapshotFromEnemy(enemy) {
         const type = typeof enemy.type === 'string' ? enemy.type : '';
@@ -133,6 +137,10 @@
         _active = true;
         _timer = ACTIVE_DURATION;
         _pulse = 0;
+        _activeType = _snapshot.type;
+        _activeColor = _snapshot.color;
+        _activeSpeedMult = _snapshot.speedMult;
+        _activeDamageMult = _snapshot.damageMult;
         _snapshot.active = false;
         _snapshot.ttl = 0;
 
@@ -159,6 +167,10 @@
         }
         _active = false;
         _timer = 0;
+        _activeType = '';
+        _activeColor = '#22d3ee';
+        _activeSpeedMult = 1;
+        _activeDamageMult = 1;
         _baseline.active = false;
     }
 
@@ -182,26 +194,116 @@
         const screen = typeof worldToScreen === 'function' ? worldToScreen(player.x, player.y) : { x: player.x, y: player.y };
         const sx = screen.x;
         const sy = screen.y;
-        const r = (player.radius || 20) + RING_MARGIN;
-        if (sx < -r || sx > CANVAS.width + r || sy < -r || sy > CANVAS.height + r) return;
+        const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
+        const r = ((player.radius || 20) + RING_MARGIN) * zoom;
+        const cullR = r + 40;
+        if (sx < -cullR || sx > CANVAS.width + cullR || sy < -cullR || sy > CANVAS.height + cullR) return;
 
-        const pulse = 0.5 + Math.sin(_pulse * 12) * 0.5;
+        const color = _activeColor || player._dataHijackColor || '#22d3ee';
+        const isExpiring = _timer > 0 && _timer <= 2.0;
+        const warnBlink = isExpiring ? (0.5 + Math.sin(_pulse * 22) * 0.5) : 0;
+        const ringColor = isExpiring ? (warnBlink > 0.5 ? '#fb7185' : '#f59e0b') : color;
+        const progress = Math.max(0, Math.min(1, _timer / ACTIVE_DURATION));
+        const pulse = 0.5 + Math.sin(_pulse * 8) * 0.5;
+        const typeLabel = String(_activeType || player._dataHijackType || 'DATA').replace(/_/g, ' ').toUpperCase();
+
         ctx.save();
         ctx.translate(sx, sy);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = player._dataHijackColor || '#22d3ee';
-        ctx.shadowBlur = 10 + pulse * 8;
-        ctx.shadowColor = ctx.strokeStyle;
-        ctx.setLineDash(RING_DASH);
+
+        // 1. Soft radial hologram glow beneath player
+        const floorGrad = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.38);
+        floorGrad.addColorStop(0, isExpiring ? 'rgba(251, 113, 133, 0.12)' : 'rgba(34, 211, 238, 0.08)');
+        floorGrad.addColorStop(0.65, isExpiring ? 'rgba(245, 158, 11, 0.16)' : 'rgba(34, 211, 238, 0.14)');
+        floorGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = floorGrad;
         ctx.beginPath();
-        ctx.arc(0, 0, r + pulse * 5, 0, Math.PI * 2);
+        ctx.arc(0, 0, r * 1.38, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Inner translucent tint + subtle ring
+        ctx.globalAlpha = 0.14 + pulse * 0.08;
+        ctx.fillStyle = ringColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Outer segmented containment ring (animated dash offset)
+        ctx.globalAlpha = isExpiring ? (0.7 + warnBlink * 0.3) : (0.75 + pulse * 0.2);
+        ctx.lineWidth = Math.max(1.5, 1.8 * zoom);
+        ctx.strokeStyle = ringColor;
+        ctx.shadowBlur = isExpiring ? (12 + warnBlink * 10) : (10 + pulse * 8);
+        ctx.shadowColor = ringColor;
+        ctx.setLineDash(RING_DASH);
+        ctx.lineDashOffset = -_pulse * (isExpiring ? 34 : 22);
+        ctx.beginPath();
+        ctx.arc(0, 0, r + pulse * 2.5 * zoom, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash(EMPTY_DASH);
-        ctx.globalAlpha = 0.25 + pulse * 0.15;
-        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineDashOffset = 0;
+
+        // 4. Duration progress arc
+        const arcR = r * 0.86;
+        ctx.globalAlpha = 0.22;
+        ctx.lineWidth = Math.max(2, 2.5 * zoom);
+        ctx.shadowBlur = 0;
         ctx.beginPath();
-        ctx.arc(0, 0, r * 0.58, 0, Math.PI * 2);
+        ctx.arc(0, 0, arcR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (progress > 0) {
+            ctx.globalAlpha = 0.95;
+            ctx.strokeStyle = ringColor;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = ringColor;
+            ctx.beginPath();
+            ctx.arc(0, 0, arcR, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * progress);
+            ctx.stroke();
+        }
+
+        // 5. Six orbiting data nodes on outer ring
+        const orbitR = r + 3.5 * zoom;
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = '#e0f2fe';
+        for (let i = 0; i < 6; i++) {
+            const ang = _pulse * 1.6 + (Math.PI * 2 * i) / 6;
+            const nx = Math.cos(ang) * orbitR;
+            const ny = Math.sin(ang) * orbitR;
+            ctx.globalAlpha = i % 2 === 0 ? 0.9 : 0.5;
+            ctx.beginPath();
+            ctx.arc(nx, ny, i % 2 === 0 ? 2.4 * zoom : 1.6 * zoom, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 6. Compact tactical tag below the ring
+        const tagText = `${isExpiring ? '⚠ ' : ''}HIJACK // ${typeLabel} ${_timer.toFixed(1)}s`;
+        const fontSize = Math.max(9, Math.round(9.5 * zoom));
+        ctx.font = `700 ${fontSize}px "Share Tech Mono", Consolas, monospace`;
+        const textW = ctx.measureText(tagText).width;
+        const pillW = textW + 14;
+        const pillH = fontSize + 8;
+        const pillY = r + 10 * zoom;
+
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = isExpiring ? 'rgba(30, 8, 16, 0.94)' : 'rgba(6, 11, 22, 0.9)';
+        ctx.beginPath();
+        ctx.moveTo(-pillW * 0.5, pillY);
+        ctx.lineTo(pillW * 0.5 - 5, pillY);
+        ctx.lineTo(pillW * 0.5, pillY + 5);
+        ctx.lineTo(pillW * 0.5, pillY + pillH);
+        ctx.lineTo(-pillW * 0.5 + 5, pillY + pillH);
+        ctx.lineTo(-pillW * 0.5, pillY + pillH - 5);
+        ctx.closePath();
         ctx.fill();
+        ctx.strokeStyle = ringColor;
+        ctx.lineWidth = isExpiring ? 1.4 : 1;
+        ctx.stroke();
+
+        ctx.fillStyle = isExpiring ? (warnBlink > 0.5 ? '#fecdd3' : '#fde68a') : '#e0f2fe';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tagText, 0, pillY + pillH * 0.5 + 0.5);
+
         ctx.restore();
     }
 
@@ -213,6 +315,10 @@
         _active = false;
         _timer = 0;
         _pulse = 0;
+        _activeType = '';
+        _activeColor = '#22d3ee';
+        _activeSpeedMult = 1;
+        _activeDamageMult = 1;
         _baseline.active = false;
     }
 
@@ -228,6 +334,40 @@
 
     function isReady() { return _snapshot.active && !_active; }
     function getRemaining() { return _snapshot.active ? _snapshot.ttl : (_active ? _timer : 0); }
+    function getEnergyCost() { return _energyCost; }
+
+    function getHudState() {
+        if (_active) {
+            return {
+                mode: 'active',
+                ready: false,
+                active: true,
+                expiring: _timer > 0 && _timer <= 2.0,
+                remaining: _timer,
+                duration: ACTIVE_DURATION,
+                type: _activeType || (typeof window !== 'undefined' && window.player && window.player._dataHijackType) || 'ENEMY',
+                color: _activeColor || (typeof window !== 'undefined' && window.player && window.player._dataHijackColor) || '#22d3ee',
+                energyCost: _energyCost,
+                speedMult: _activeSpeedMult || 1.15,
+                damageMult: _activeDamageMult || 1.15,
+            };
+        }
+        if (_snapshot.active) {
+            return {
+                mode: 'ready',
+                ready: true,
+                active: false,
+                remaining: _snapshot.ttl,
+                duration: SNAPSHOT_TTL,
+                type: _snapshot.type || 'ENEMY',
+                color: _snapshot.color || '#4ade80',
+                energyCost: _energyCost,
+                speedMult: _snapshot.speedMult || 1.15,
+                damageMult: _snapshot.damageMult || 1.15,
+            };
+        }
+        return { mode: 'idle', ready: false, active: false, remaining: 0, duration: 0 };
+    }
 
     window.BodySwapSystem = {
         capture,
@@ -241,6 +381,8 @@
         resetTuning,
         isReady,
         getRemaining,
+        getEnergyCost,
+        getHudState,
     };
     window.tuneBodySwapEnergyCost = tuneEnergyCost;
     window.resetBodySwapTuning = resetTuning;

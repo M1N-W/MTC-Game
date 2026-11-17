@@ -355,6 +355,73 @@ def main():
               "_drawBrokenHex" in portal_src and "WAVE ${_targetWave} // ENTER" in portal_src
               and "ctx.rotate" not in portal_src)
 
+        tactical_map_and_hud = page.evaluate("""() => {
+            const priorPhase = GameState.phase;
+            const priorPlayer = window.player;
+            const dummyPlayer = {
+                x: 0, y: 0, radius: 20, hp: 70, maxHp: 100, dead: false,
+                metaSpeedMult: 1, skillCooldownMult: 1, _damageMultiplier: 1,
+                stats: { moveSpeed: 200 }, moveSpeed: 200, damageMultiplier: 1,
+            };
+            window.player = dummyPlayer;
+            GameState.setPhase('PLAYING');
+            try {
+                // 1. Tactical map + waypoint + teardown lifecycle
+                CanvasHUD.drawMinimap(CTX);
+                const opened = CanvasHUD.openFullMap();
+                const pausedOnOpen = GameState.phase === 'PAUSED';
+                const wpSet = CanvasHUD.setWaypoint(500, -490, 'DATABASE', '#38bdf8');
+                const wpSnap = CanvasHUD.getWaypoint();
+                CanvasHUD.clear();
+                const modalEl = document.getElementById('tactical-map-modal');
+                const hitBtn = document.getElementById('radar-hit-btn');
+                const clearedCleanly = !CanvasHUD._mapOpen
+                    && CanvasHUD.getWaypoint() === null
+                    && (!modalEl || modalEl.style.display === 'none')
+                    && (!hitBtn || hitBtn.style.display === 'none');
+
+                // 2. Data Hijack expiring flag when <= 2.0s
+                GameState.setPhase('PLAYING');
+                window.slowMoCurrentEnergy = 100;
+                BodySwapSystem.clear();
+                BodySwapSystem.capture({ type: 'mage', radius: 20, speed: 150, damage: 20, color: '#c084fc' }, dummyPlayer);
+                BodySwapSystem.activate(dummyPlayer);
+                BodySwapSystem.update(6.5, dummyPlayer); // 8.0 - 6.5 = 1.5s remaining
+                const hijackHud = BodySwapSystem.getHudState();
+                BodySwapSystem.clear();
+
+                // 3. RunUpgradeSystem before -> after stat preview
+                RunUpgradeSystem.clearRun();
+                RunUpgradeSystem.offer(dummyPlayer, false);
+                const pills = Array.from(document.querySelectorAll('#run-upgrade-overlay .ru-stat-pill')).map(el => el.textContent || '');
+                const hasArrowPreview = pills.length === 3 && pills.every(t => t.includes('→'));
+                RunUpgradeSystem.clearRun();
+
+                return {
+                    opened, pausedOnOpen, wpSet,
+                    wpLabel: wpSnap && wpSnap.label,
+                    clearedCleanly,
+                    hijackExpiring: !!(hijackHud && hijackHud.mode === 'active' && hijackHud.expiring),
+                    hasArrowPreview,
+                    pills,
+                };
+            } finally {
+                CanvasHUD.clear();
+                BodySwapSystem.clear();
+                RunUpgradeSystem.clearRun();
+                window.player = priorPlayer;
+                GameState.setPhase(priorPhase);
+            }
+        }""")
+        check("Tactical map modal, waypoint pinning, and CanvasHUD.clear() lifecycle work cleanly",
+              tactical_map_and_hud["opened"] and tactical_map_and_hud["pausedOnOpen"]
+              and tactical_map_and_hud["wpSet"] and tactical_map_and_hud["wpLabel"] == "DATABASE"
+              and tactical_map_and_hud["clearedCleanly"],
+              str(tactical_map_and_hud))
+        check("Data Hijack reports expiring warning state in the last 2.0s and upgrade cards show Before -> After stats",
+              tactical_map_and_hud["hijackExpiring"] and tactical_map_and_hud["hasArrowPreview"],
+              str(tactical_map_and_hud))
+
         # ── 4. No uncaught browser errors ──────────────────────────────
         check("No [pageerror] or [console error] during boot",
               len(console_errs) == 0,

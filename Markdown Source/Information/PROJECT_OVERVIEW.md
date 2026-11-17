@@ -4,7 +4,7 @@
 
 ## Recent Changes
 
-- **Unreleased**: Added mechanics-only `MTC_CROSSHAIRS`, draw-only `js/systems/CrosshairSystem.js`, one-active-portal `js/systems/PortalSystem.js` wave transitions, config-driven slow-motion energy in `js/systems/TimeManager.js`, snapshot-only Data Hijack via `js/systems/BodySwapSystem.js`, bounded status overlays in `js/systems/AlertSystem.js`, capped terminal feedback via `js/systems/TerminalLog.js`, portal-gated 3-choice run patches plus boss-data reward pools via `js/systems/RunUpgradeSystem.js`, and Kao sniper-crit Hardlight Bridges via `js/systems/BridgeSystem.js`. MTC lore, character identities, and campus survival theme remain unchanged.
+- **Unreleased**: Added mechanics-only `MTC_CROSSHAIRS`, draw-only `js/systems/CrosshairSystem.js`, one-active-portal `js/systems/PortalSystem.js` wave transitions, config-driven slow-motion energy in `js/systems/TimeManager.js`, snapshot-only Data Hijack via `js/systems/BodySwapSystem.js`, presentation-only tactical prompt/HUD card via `js/systems/AbilityCoach.js`, bounded status overlays in `js/systems/AlertSystem.js`, capped terminal feedback via `js/systems/TerminalLog.js`, portal-gated 3-choice run patches plus boss-data reward pools via `js/systems/RunUpgradeSystem.js`, Kao sniper-crit Hardlight Bridges via `js/systems/BridgeSystem.js`, and interactive Tactical Radar + Full-Screen Campus Map (`CanvasHUD.openFullMap`, `CanvasHUD.setWaypoint`, `CanvasHUD.clear`). MTC lore, character identities, and campus survival theme remain unchanged.
 - **v3.44.10**: Removed hardcoded Firebase Web API key from `js/firebase-init.js` / rebuilt `js/firebase-bundle.js`; `index.html` now loads ignored `js/secrets.js` before Firebase, and GitHub Pages deployment generates it from `FIREBASE_CONFIG_JSON`
 - **v3.44.9**: CSS border rollback (`char-select.css` reverts `color-mix` to `rgba` for wider browser compat), added `-webkit-user-select` in `shop.css`, trimmed Poom tutorial duration text, updated audit findings and walkthrough docs
 - **v3.44.0**: Fixed Try-Again boss spawn-camp bug (`GameState._syncAliases` now mirrors `window.boss`/`window.drone`; `resetRun()` clears `_bossSpawnTimer`; `WaveManager._startBossWave` stashes timer id and guards against firing outside `PLAYING`; `game.js _teardownRunState` aborts Domain singletons). Cached fog/dark radial gradients in `WaveManager` with canvas-size + alpha-bucket keys; early-out on low fog alpha. Admin console hardened: 10 cmd / 2 s rate limit, `localStorage` audit ring buffer (`mtc_admin_audit`), destructive-command (`reset` / `kill all` / `set wave`) `yes` confirm gate, new `audit` command. Admin command guards unified under `COMMAND_META` registry in `AdminSystem.js`. `EnemyRenderer` adds per-entity `_lodFar` flag (screen-distance from viewport center) that skips ambient outer glow rings in `drawEnemy` / `drawTank` / `drawMage`. `effects.js` audit confirmed all subsystems (Particle / FloatingText / HitMarker / Weather / Orbital / Decal / ShellCasing) use pooled acquire-release + hard cap + swap-pop + `clear()` hook.
@@ -83,22 +83,23 @@ Load order is explicit in `index.html` and is a hard contract. New globals must 
 2. `js/systems/CrosshairSystem.js`
 3. `js/systems/PortalSystem.js`
 4. `js/systems/BodySwapSystem.js`
-5. `js/systems/AlertSystem.js`
-6. `js/systems/TerminalLog.js`
-7. `js/systems/RunUpgradeSystem.js`
-8. `js/systems/BridgeSystem.js`
-9. `js/rendering/PlayerRenderer.js`
-10. `js/rendering/BossRenderer.js`
-11. `js/rendering/EnemyRenderer.js`
-12. `js/systems/GameState.js`
-13. `js/systems/AdminSystem.js`
-14. `js/systems/ShopSystem.js`
-15. `js/systems/TimeManager.js`
-16. `js/systems/WaveManager.js`
-17. `js/systems/WorkerBridge.js`
-18. `js/game.js`
-18. `js/VersionManager.js`
-19. `js/menu.js`
+5. `js/systems/AbilityCoach.js`
+6. `js/systems/AlertSystem.js`
+7. `js/systems/TerminalLog.js`
+8. `js/systems/RunUpgradeSystem.js`
+9. `js/systems/BridgeSystem.js`
+10. `js/rendering/PlayerRenderer.js`
+11. `js/rendering/BossRenderer.js`
+12. `js/rendering/EnemyRenderer.js`
+13. `js/systems/GameState.js`
+14. `js/systems/AdminSystem.js`
+15. `js/systems/ShopSystem.js`
+16. `js/systems/TimeManager.js`
+17. `js/systems/WaveManager.js`
+18. `js/systems/WorkerBridge.js`
+19. `js/game.js`
+20. `js/VersionManager.js`
+21. `js/menu.js`
 
 ### 2.5 Modular split entry points
 
@@ -263,13 +264,13 @@ Forbidden render behavior:
 4. `meteorZones` visual indicators
 5. `mapSystem.draw()` — walls, zone objects, MTC room
 6. `drawDatabaseServer()`, `drawShopObject()` — interactive world objects
-7. `decalSystem.draw()`, `shellCasingSystem.draw()` — floor-level battle scars
+7. `decalSystem.draw()`, `shellCasingSystem.draw()`, `PortalSystem.draw(CTX)`, `BridgeSystem.draw(CTX)` — floor-level scars, anomaly gate, and hardlight bridges
 8. Low-HP navigation guide (dashed line to nearest heal source)
 9. `powerups` via `EnemyRenderer`
 10. `specialEffects` (update-driven, drawn sequentially)
 11. `drone.draw()`
-12. `PlayerRenderer.draw(window.player, CTX)`
-13. Enemy list: `EnemyRenderer.draw()` per enemy; `BossDog` instances route to `BossRenderer`
+12. `PlayerRenderer.draw(window.player, CTX)` and `BodySwapSystem.draw(CTX, window.player)`
+13. Enemy list: `EnemyRenderer.draw()` per enemy (`BossDog` instances route to `BossRenderer`), followed by `AlertSystem.draw(CTX)`
 14. `BossRenderer.draw(window.boss, CTX)`
 15. `ProjectileRenderer.drawAll()`, `particleSystem.draw()`, `floatingTextSystem.draw()`
 16. `drawOrbitalEffects()`, `hitMarkerSystem.draw()`, `weatherSystem.draw()`
@@ -278,8 +279,8 @@ Forbidden render behavior:
 **Screen-space (outside camera transform):**
 
 1. `mapSystem.drawLighting()` — full-screen lighting pass; receives projectile array and landmark positions
-2. `drawDayNightHUD()`, `drawSlowMoOverlay()`, glitch effect
-3. `drawWaveEvent()`, `DomainExpansion.draw()`, `GravitationalSingularity.draw()`
+2. `drawDayNightHUD()`, `drawSlowMoOverlay()`, `AbilityCoach.draw(CTX)`, glitch effect
+3. `drawWaveEvent()`, `DomainExpansion.draw()`, `GravitationalSingularity.draw()`, `CrosshairSystem.draw(CTX)`
 4. `CanvasHUD.draw()` with `UIManager.draw` as fallback
 5. `TutorialSystem.draw()` last
 

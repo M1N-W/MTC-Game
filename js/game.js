@@ -1231,6 +1231,7 @@ function _teardownRunState() {
     if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
     if (typeof RunUpgradeSystem !== 'undefined') RunUpgradeSystem.clearRun();
     if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+    if (typeof CanvasHUD !== 'undefined' && typeof CanvasHUD.clear === 'function') CanvasHUD.clear();
 
     window.player = null;
     window.boss = null;
@@ -1318,6 +1319,7 @@ function _resetRunState(player) {
     if (typeof AlertSystem !== 'undefined') AlertSystem.clear();
     if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
     if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+    if (typeof CanvasHUD !== 'undefined' && typeof CanvasHUD.clear === 'function') CanvasHUD.clear();
     _pendingPortalTargetWave = 0;
     _pendingPortalWasBoss = false;
     // Clear shop buff state on player (set before first ShopSystem call this run)
@@ -1450,6 +1452,7 @@ function endGame(result) {
     if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
     if (typeof RunUpgradeSystem !== 'undefined') RunUpgradeSystem.clearRun();
     if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+    if (typeof CanvasHUD !== 'undefined' && typeof CanvasHUD.clear === 'function') CanvasHUD.clear();
     _pendingPortalTargetWave = 0;
     _pendingPortalWasBoss = false;
 
@@ -1652,6 +1655,7 @@ window.onload = () => {
             if (typeof TerminalLog !== 'undefined') TerminalLog.clear();
             if (typeof RunUpgradeSystem !== 'undefined') RunUpgradeSystem.clearRun();
             if (typeof BridgeSystem !== 'undefined') BridgeSystem.clearAll();
+            if (typeof CanvasHUD !== 'undefined' && typeof CanvasHUD.clear === 'function') CanvasHUD.clear();
 
             // Step 3: Audio System
             LoadingState.update('audio', 'Audio System', 'LOADING AUDIO...');
