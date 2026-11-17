@@ -64,27 +64,35 @@
 // ============================================================================
 class Projectile {
   constructor(x, y, angle, speed, damage, color, isCrit, team, options = {}) {
-    this.x = x;
-    this.y = y;
-    this.vx = Math.cos(angle) * speed;
-    this.vy = Math.sin(angle) * speed;
-    this.damage = damage;
+    const validOrigin = Number.isFinite(x) && Number.isFinite(y);
+    const safeAngle = Number.isFinite(angle) ? angle : 0;
+    const safeSpeed = Number.isFinite(speed) ? speed : 0;
+    this.x = validOrigin ? x : 0;
+    this.y = validOrigin ? y : 0;
+    this.vx = Math.cos(safeAngle) * safeSpeed;
+    this.vy = Math.sin(safeAngle) * safeSpeed;
+    this.damage = Number.isFinite(damage) ? damage : 0;
     this.color = color;
     this.team = team;
 
-    this.life = options && options.life !== undefined ? options.life : 3;
-    this.angle = angle;
+    this.life = options && Number.isFinite(options.life) ? options.life : 3;
+    this.angle = safeAngle;
     this.isCrit = isCrit;
 
     this.kind = options?.kind || "bullet";
     this.size =
-      options && options.size !== undefined ? options.size : isCrit ? 24 : 14;
-    this.radius = options && options.radius !== undefined ? options.radius : 10;
-    this.pierce = options && options.pierce !== undefined ? options.pierce : 0;
+      options && Number.isFinite(options.size) ? options.size : isCrit ? 24 : 14;
+    this.radius = options && Number.isFinite(options.radius) ? options.radius : 10;
+    this.pierce = options && Number.isFinite(options.pierce) ? options.pierce : 0;
 
     // --- RICOCHET PROPERTY ---
     this.bounces =
-      options && options.bounces !== undefined ? options.bounces : 0;
+      options && Number.isFinite(options.bounces) ? options.bounces : 0;
+
+    if (!validOrigin || !Number.isFinite(angle) || !Number.isFinite(speed)) {
+      this.dead = true;
+      this.life = 0;
+    }
 
     this.hitSet = null;
     this.symbol = options?.symbol || this.getSymbol(isCrit, team);
@@ -101,9 +109,26 @@ class Projectile {
   }
 
   update(dt) {
+    if (this.dead) return true;
+    if (!Number.isFinite(dt)) dt = 0;
+    if (
+      !Number.isFinite(this.x) ||
+      !Number.isFinite(this.y) ||
+      !Number.isFinite(this.vx) ||
+      !Number.isFinite(this.vy)
+    ) {
+      this.dead = true;
+      this.life = 0;
+      return true;
+    }
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
+    if (!Number.isFinite(this.x) || !Number.isFinite(this.y)) {
+      this.dead = true;
+      this.life = 0;
+      return true;
+    }
     // Spinning only for enemy hex-symbol projectiles — player bullets stay aligned with flight direction
     if (this.visualTeam === "enemy") this.angle += dt * 2;
 
@@ -167,6 +192,7 @@ class Projectile {
   }
 
   draw() {
+    if (this.dead || !Number.isFinite(this.x) || !Number.isFinite(this.y)) return;
     const screen = worldToScreen(this.x, this.y);
     const renderKind = this.visualKind || this.kind;
     const renderColor = this.visualColor || this.color;
@@ -1696,9 +1722,18 @@ class ProjectileManager {
     this._grid = new SpatialGrid();
   }
 
+  _isValidProjectile(p) {
+    return !!(p && !p.dead && Number.isFinite(p.x) && Number.isFinite(p.y));
+  }
+
   add(projectile) {
-    if (Array.isArray(projectile)) this.projectiles.push(...projectile);
-    else if (projectile) this.projectiles.push(projectile);
+    if (Array.isArray(projectile)) {
+      for (let i = 0; i < projectile.length; i++) {
+        if (this._isValidProjectile(projectile[i])) this.projectiles.push(projectile[i]);
+      }
+    } else if (this._isValidProjectile(projectile)) {
+      this.projectiles.push(projectile);
+    }
   }
 
   update(dt, player, enemies, boss) {
@@ -1716,7 +1751,17 @@ class ProjectileManager {
     // already processed in a previous iteration).
     for (let i = projs.length - 1; i >= 0; i--) {
       const proj = projs[i];
+      if (!proj || proj.dead) {
+        projs[i] = projs[projs.length - 1];
+        projs.pop();
+        continue;
+      }
       const expired = proj.update(dt);
+      if (proj.dead || !Number.isFinite(proj.x) || !Number.isFinite(proj.y)) {
+        projs[i] = projs[projs.length - 1];
+        projs.pop();
+        continue;
+      }
       let hit = false;
 
       // Ensure hit memory exists for piercing projectiles
@@ -2740,7 +2785,7 @@ window.drawAutoWeapon = drawAutoWeapon;
 class ProjectileRenderer {
   static drawAll(projectiles, ctx) {
     for (let i = 0; i < projectiles.length; i++) {
-      projectiles[i].draw();
+      if (projectiles[i]) projectiles[i].draw();
     }
   }
 }

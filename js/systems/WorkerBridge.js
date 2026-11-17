@@ -62,7 +62,7 @@ window.WorkerBridge = {
                     window.playerAnalyzer._circleScore = data.circleScore;
                     window.playerAnalyzer._standScore = data.standScore;
 
-                    if (data.predictX !== null && data.predictY !== null) {
+                    if (Number.isFinite(data.predictX) && Number.isFinite(data.predictY)) {
                         window.playerAnalyzer._workerPredReady = true;
                         window.playerAnalyzer._workerPredX = data.predictX;
                         window.playerAnalyzer._workerPredY = data.predictY;

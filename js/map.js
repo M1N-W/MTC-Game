@@ -1291,14 +1291,19 @@ class MapSystem {
         return results;
     }
 
+    _ensureLightCanvas() {
+        if (!this._lightCanvas && typeof document !== 'undefined') {
+            this._lightCanvas = document.createElement('canvas');
+            this._lightCtx = this._lightCanvas.getContext('2d');
+        }
+        return !!(this._lightCanvas && this._lightCtx);
+    }
+
     init() {
         if (this.initialized) return;
         this.objects = [];
 
-        if (!this._lightCanvas) {
-            this._lightCanvas = document.createElement('canvas');
-            this._lightCtx = this._lightCanvas.getContext('2d');
-        }
+        this._ensureLightCanvas();
         if (!this._terrainCacheCanvas) {
             this._terrainCacheCanvas = document.createElement('canvas');
             this._terrainCacheCtx = this._terrainCacheCanvas.getContext('2d');
@@ -1945,9 +1950,11 @@ class MapSystem {
     }
 
     drawLighting(player, projectiles = [], extraLights = []) {
+        if (typeof CANVAS === 'undefined' || !CANVAS || !CTX || CANVAS.width <= 0 || CANVAS.height <= 0) return;
         const L = BALANCE.LIGHTING;
         const darkness = 1.0 - L.ambientLight;
         if (darkness < 0.02) return;
+        if (!this._ensureLightCanvas()) return;
 
         const lc = this._lightCanvas, lctx = this._lightCtx;
         const sizeChanged = lc.width !== CANVAS.width || lc.height !== CANVAS.height;
@@ -1971,9 +1978,13 @@ class MapSystem {
         lctx.fillRect(0, 0, lc.width, lc.height);
 
         const punchLight = (wx, wy, radius, type = 'neutral', intensity = 1.0) => {
+            if (!Number.isFinite(wx) || !Number.isFinite(wy) ||
+                !Number.isFinite(radius) || !Number.isFinite(intensity) ||
+                radius <= 0 || intensity <= 0) return;
             const { x, y } = toSS(wx, wy);
-            const zoom = (typeof camera !== 'undefined' && camera.zoom) ? camera.zoom : 1;
+            const zoom = (typeof camera !== 'undefined' && Number.isFinite(camera.zoom) && camera.zoom > 0) ? camera.zoom : 1;
             const r = radius * intensity * zoom;
+            if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r) || r <= 0) return;
 
             lctx.globalCompositeOperation = 'destination-out';
             const erase = lctx.createRadialGradient(x, y, 0, x, y, r);
@@ -1996,13 +2007,15 @@ class MapSystem {
         if (player && !player.dead) punchLight(player.x, player.y, L.playerLightRadius, 'warm', player.isDashing ? 1.25 : 1.0);
 
         if (Array.isArray(projectiles)) {
-            const PROJ_MARGIN = L.projectileLightRadius + 60;
+            const projRadius = Number.isFinite(L.projectileLightRadius) ? L.projectileLightRadius : 55;
+            const PROJ_MARGIN = projRadius + 60;
             for (const proj of projectiles) {
-                if (!proj || proj.dead) continue;
+                if (!proj || proj.dead || !Number.isFinite(proj.x) || !Number.isFinite(proj.y)) continue;
                 const ss = toSS(proj.x, proj.y);
+                if (!Number.isFinite(ss.x) || !Number.isFinite(ss.y)) continue;
                 if (ss.x < -PROJ_MARGIN || ss.x > lc.width + PROJ_MARGIN ||
                     ss.y < -PROJ_MARGIN || ss.y > lc.height + PROJ_MARGIN) continue;
-                punchLight(proj.x, proj.y, L.projectileLightRadius, proj.team === 'player' ? 'cool' : 'warm');
+                punchLight(proj.x, proj.y, projRadius, proj.team === 'player' ? 'cool' : 'warm');
             }
         }
 

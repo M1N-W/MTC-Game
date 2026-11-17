@@ -506,44 +506,6 @@ function _drawFog(ctx) {
         ctx.ellipse(ox, oy, r, r * 0.45, Math.sin(now * 0.1 + i) * 0.4, 0, Math.PI * 2);
         ctx.fill();
     }
-
-    // Radar OFFLINE indicator — gold parallelogram chip
-    if (a > 0.3) {
-        const rx = W - 200, ry = 90;
-        const p = 0.6 + Math.sin(now * 3) * 0.4;
-        ctx.globalAlpha = a * p;
-        ctx.shadowBlur = 18;
-        ctx.shadowColor = '#d97706';
-
-        ctx.fillStyle = 'rgba(8,4,1,0.92)';
-        ctx.beginPath();
-        ctx.moveTo(rx - 60 + 8, ry - 28);
-        ctx.lineTo(rx + 60, ry - 28);
-        ctx.lineTo(rx + 60 - 8, ry + 28);
-        ctx.lineTo(rx - 60, ry + 28);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.strokeStyle = `rgba(217,119,6,${p * 0.9})`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        ctx.shadowColor = '#d97706';
-        ctx.font = 'bold 9px "Orbitron",Arial,sans-serif';
-        ctx.fillStyle = `rgba(250,180,30,${p})`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('RADAR', rx, ry - 7);
-        ctx.fillText('OFFLINE', rx, ry + 7);
-
-        ctx.strokeStyle = `rgba(239,68,68,${p * 0.9})`;
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = '#ef4444';
-        ctx.beginPath();
-        ctx.moveTo(rx - 36, ry - 36); ctx.lineTo(rx + 36, ry + 36);
-        ctx.moveTo(rx + 36, ry - 36); ctx.lineTo(rx - 36, ry + 36);
-        ctx.stroke();
-    }
     ctx.restore();
 }
 

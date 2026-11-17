@@ -228,7 +228,7 @@ class PlayerPatternAnalyzer {
      */
     predictedPosition(aheadSeconds = 0.25) {
         // Worker path — use pre-computed prediction (avoids ring-buffer walk)
-        if (this._workerPredReady) {
+        if (this._workerPredReady && Number.isFinite(this._workerPredX) && Number.isFinite(this._workerPredY)) {
             return { x: this._workerPredX, y: this._workerPredY };
         }
         // Fallback: local calculation

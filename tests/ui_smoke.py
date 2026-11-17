@@ -422,6 +422,72 @@ def main():
               tactical_map_and_hud["hijackExpiring"] and tactical_map_and_hud["hasArrowPreview"],
               str(tactical_map_and_hud))
 
+        lighting_and_proj_safety = page.evaluate("""() => {
+            const origAmbient = BALANCE.LIGHTING.ambientLight;
+            const origFrame = mapSystem._lightFrame;
+            BALANCE.LIGHTING.ambientLight = 0.5;
+            mapSystem._lightFrame = 1; // force full redraw path on next drawLighting() call
+            projectileManager.clear();
+            let lightingThrew = false;
+            let projThrew = false;
+            try {
+                mapSystem.drawLighting(
+                    { x: NaN, y: undefined, dead: false, isDashing: false },
+                    [
+                        { x: NaN, y: 10, dead: false, team: 'player' },
+                        { x: 20, y: Infinity, dead: false, team: 'enemy' },
+                        { x: undefined, y: undefined, dead: false, team: 'player' },
+                    ],
+                    [
+                        { x: NaN, y: 0, radius: 100, type: 'cool', intensity: 1 },
+                        { x: 0, y: 0, radius: 0, type: 'warm', intensity: 1 },
+                        { x: 0, y: 0, radius: -10, type: 'warm', intensity: 1 },
+                    ]
+                );
+            } catch (e) {
+                lightingThrew = String(e);
+            } finally {
+                BALANCE.LIGHTING.ambientLight = origAmbient;
+                mapSystem._lightFrame = origFrame;
+            }
+
+            let rejectedNaNOrigin = false;
+            let rejectedNaNAngle = false;
+            let culledMidFlightNaN = false;
+            try {
+                const badOrigin = new Projectile(NaN, 0, 0, 500, 10, '#fff', false, 'player');
+                const badAngle = new Projectile(0, 0, NaN, 500, 10, '#fff', false, 'player');
+                projectileManager.add([badOrigin, badAngle]);
+                rejectedNaNOrigin = !!badOrigin.dead;
+                rejectedNaNAngle = !!badAngle.dead && projectileManager.projectiles.length === 0;
+
+                const validProj = new Projectile(10, 20, 0, 500, 10, '#fff', false, 'player');
+                projectileManager.add(validProj);
+                validProj.x = NaN;
+                projectileManager.update(1 / 60, { x: 0, y: 0, radius: 20, dead: false, isInvisible: false, addSpeedBoost() {} }, [], null);
+                culledMidFlightNaN = projectileManager.projectiles.length === 0 && !!validProj.dead;
+            } catch (e) {
+                projThrew = String(e);
+            } finally {
+                projectileManager.clear();
+            }
+
+            return {
+                lightingThrew,
+                projThrew,
+                rejectedNaNOrigin,
+                rejectedNaNAngle,
+                culledMidFlightNaN,
+            };
+        }""")
+        check("MapSystem.drawLighting and ProjectileManager ignore or cull non-finite inputs without throwing",
+              lighting_and_proj_safety["lightingThrew"] is False
+              and lighting_and_proj_safety["projThrew"] is False
+              and lighting_and_proj_safety["rejectedNaNOrigin"]
+              and lighting_and_proj_safety["rejectedNaNAngle"]
+              and lighting_and_proj_safety["culledMidFlightNaN"],
+              str(lighting_and_proj_safety))
+
         # ── 4. No uncaught browser errors ──────────────────────────────
         check("No [pageerror] or [console error] during boot",
               len(console_errs) == 0,
